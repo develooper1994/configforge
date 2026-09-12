@@ -1,0 +1,33 @@
+# Checks chosen, not accumulated.
+#
+# The C89 baseline rules out most of what clang-tidy suggests by
+# default: modernize-* wants C11 and later, readability-* often wants
+# declarations at first use. Enabling a check whose advice cannot be
+# taken teaches the team to run clang-tidy with the output ignored,
+# which is worse than not running it.
+Checks: >
+  -*,
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  misc-*,
+  performance-*,
+  portability-*,
+  readability-inconsistent-declaration-parameter-name,
+  readability-misleading-indentation,
+  readability-non-const-parameter,
+  readability-redundant-control-flow,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-suspicious-include,
+  -cert-dcl37-c,
+  -cert-dcl51-cpp,
+  -misc-include-cleaner,
+  -misc-no-recursion
+
+WarningsAsErrors: '*'
+HeaderFilterRegex: 'configforge/.*\.h$'
+FormatStyle: file
+
+CheckOptions:
+  - key: readability-identifier-naming.FunctionCase
+    value: lower_case

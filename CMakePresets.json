@@ -1,0 +1,60 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 20, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "default",
+      "displayName": "C89 conformance build",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "sanitize",
+      "displayName": "Address and undefined behaviour sanitizers",
+      "binaryDir": "${sourceDir}/build-sanitize",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CF_SANITIZE": "ON"
+      }
+    },
+    {
+      "name": "analyze",
+      "displayName": "GCC -fanalyzer and cppcheck",
+      "binaryDir": "${sourceDir}/build-analyze",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CF_ANALYZER": "ON",
+        "CF_CPPCHECK": "ON"
+      }
+    },
+    {
+      "name": "portable",
+      "displayName": "Every opportunistic upgrade disabled",
+      "binaryDir": "${sourceDir}/build-portable",
+      "cacheVariables": {
+        "CF_FORCE_PORTABLE": "ON",
+        "CF_SINGLE_THREADED": "ON"
+      }
+    },
+    {
+      "name": "minimal",
+      "displayName": "No floating point, for very small targets",
+      "binaryDir": "${sourceDir}/build-minimal",
+      "cacheVariables": { "CF_WITH_REAL": "OFF" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "default",  "configurePreset": "default"  },
+    { "name": "sanitize", "configurePreset": "sanitize" },
+    { "name": "analyze",  "configurePreset": "analyze"  },
+    { "name": "portable", "configurePreset": "portable" },
+    { "name": "minimal",  "configurePreset": "minimal"  }
+  ],
+  "testPresets": [
+    { "name": "default",  "configurePreset": "default",  "output": { "outputOnFailure": true } },
+    { "name": "sanitize", "configurePreset": "sanitize", "output": { "outputOnFailure": true } },
+    { "name": "analyze",  "configurePreset": "analyze",  "output": { "outputOnFailure": true } },
+    { "name": "portable", "configurePreset": "portable", "output": { "outputOnFailure": true } },
+    { "name": "minimal",  "configurePreset": "minimal",  "output": { "outputOnFailure": true } }
+  ]
+}

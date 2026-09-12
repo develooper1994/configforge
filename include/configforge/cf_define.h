@@ -1,0 +1,166 @@
+/*
+ * cf_define.h - definitions, the typed contract.
+ *
+ * A definition is what turns configuration from a bag of strings into
+ * a contract. With one present, the definition decides the type and no
+ * inference happens at all; without one, Tier 0 inference applies and
+ * is deliberately timid.
+ *
+ * Definitions are also what make the useful diagnostics possible: typo
+ * detection needs the set of legal keys, required-parameter checking
+ * needs to know what is required, and redaction needs to know what is
+ * sensitive. None of that can be recovered from the values alone.
+ */
+
+#ifndef CONFIGFORGE_CF_DEFINE_H
+#define CONFIGFORGE_CF_DEFINE_H
+
+#include "configforge/cf_keyspace.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+enum {
+    CF_REQUIRED   = 1u << 0, /* absence is an error                  */
+    CF_SENSITIVE  = 1u << 1, /* redacted in diagnostics and reports  */
+    CF_DEPRECATED = 1u << 2  /* accepted, reported                   */
+};
+
+typedef enum cf_on_invalid {
+    /* Default. A malformed production value must not quietly degrade
+       to a development default: that is precisely the implicit
+       behaviour this library exists to prevent. */
+    CF_INVALID_STRICT = 0,
+    /* Opt-in. The value is refused and resolution continues down the
+       chain; the refusal stays visible in explain(). */
+    CF_INVALID_FALLBACK
+} cf_on_invalid;
+
+/* A descriptor rather than a chained builder. C89 has no designated
+   initializers, so a positionally filled struct would be fragile and
+   one filled only by assignment would be verbose; cf_def_init plus
+   field assignment is safe and explicit, and the convenience
+   functions below cover the ordinary cases.
+   The size field is what lets fields be added later without changing
+   a single signature. */
+typedef struct cf_def {
+    size_t        size;
+    cf_type       type;
+    const char*   key;
+    unsigned      flags;
+    cf_on_invalid on_invalid;
+    const char*   description;
+    const char*   replaced_by; /* when CF_DEPRECATED              */
+
+    cf_bool  has_default;
+    cf_value default_value;
+
+    cf_bool has_range;
+    cf_i64  imin, imax;
+#if CF_WITH_REAL
+    double rmin, rmax;
+#endif
+    size_t min_len, max_len; /* CF_TYPE_TEXT                    */
+
+    /* NULL-terminated list of permitted spellings, for CF_TYPE_TEXT. */
+    const char* const* allowed;
+} cf_def;
+
+void cf_def_init(cf_def* d, cf_type type, const char* key);
+
+/* ------------------------------------------------------------------ *
+ * Definition set
+ * ------------------------------------------------------------------ */
+
+typedef struct cf_defset {
+    cf_arena* arena;
+    cf_def*   defs;
+    size_t    count;
+    size_t    capacity;
+    cf_bool   sealed;
+} cf_defset;
+
+cf_bool cf_defset_init(cf_defset* ds, cf_arena* arena, size_t hint);
+
+/* Copies the descriptor. Rejects a definition that contradicts itself:
+   a default outside its own range, an empty enum, a range on a type
+   that has none. Those are programming errors and are worth refusing
+   at the point they are written. */
+cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err);
+
+cf_bool cf_def_bool(cf_defset* ds, const char* key, cf_bool dflt, unsigned flags,
+                    cf_error* err);
+cf_bool cf_def_int(cf_defset* ds, const char* key, cf_i64 dflt, cf_i64 min, cf_i64 max,
+                   unsigned flags, cf_error* err);
+cf_bool cf_def_text(cf_defset* ds, const char* key, const char* dflt, unsigned flags,
+                    cf_error* err);
+#if CF_WITH_REAL
+cf_bool cf_def_real(cf_defset* ds, const char* key, double dflt, double min, double max,
+                    unsigned flags, cf_error* err);
+#endif
+
+/* Sorts. Required before lookup; calling twice is harmless. */
+void cf_defset_seal(cf_defset* ds);
+
+const cf_def* cf_defset_find(const cf_defset* ds, const char* key, size_t keylen);
+size_t        cf_defset_count(const cf_defset* ds);
+const cf_def* cf_defset_at(const cf_defset* ds, size_t i);
+
+/* Nearest defined key by edit distance, or NULL when nothing is close.
+   This is what turns "unknown key server.pot" into "did you mean
+   server.port", and it is available only because the definition set is
+   a contract rather than documentation. */
+const cf_def* cf_defset_nearest(const cf_defset* ds, const char* key, size_t keylen,
+                                size_t* distance);
+
+/* ------------------------------------------------------------------ *
+ * Applying the contract
+ *
+ * Run after cf_ks_resolve. Converts every textual candidate to the
+ * type its definition names, validates it, and marks failures as
+ * rejected with a reason rather than discarding them. Re-selects
+ * afterwards, so a rejected winner hands over to the next candidate
+ * down the chain only when that is what the definition asked for.
+ * ------------------------------------------------------------------ */
+
+typedef enum cf_unknown_policy {
+    CF_UNKNOWN_IGNORE = 0, /* shared files legitimately carry others' keys */
+    CF_UNKNOWN_WARN,
+    CF_UNKNOWN_REJECT
+} cf_unknown_policy;
+
+typedef struct cf_apply_report {
+    size_t converted;
+    size_t rejected;
+    size_t unknown;
+    size_t deprecated;
+    size_t defaults_used;
+} cf_apply_report;
+
+cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, cf_unknown_policy unknown,
+                      cf_apply_report* report, cf_error* err);
+
+/* Definition defaults, as an ordinary source. Declared here because
+   it is the one source that reads a definition set; it is implemented
+   with the others.
+
+   A default is a value from the lowest-precedence source rather than a
+   separate mechanism, which is why explain() shows one losing to a
+   file with no special case anywhere - and why it has a name to print
+   rather than a question mark. */
+struct cf_source;
+cf_bool cf_source_defaults(struct cf_source* s, const char* name, int rank,
+                           const cf_defset* ds);
+
+/* Give the environment source the key list, so it accepts the natural
+   single-underscore spelling as well as the escaped one. Without a
+   contract only the escaped spelling can be enumerated unambiguously;
+   with one, both work and nobody has to type the escape. */
+void cf_source_env_defs(struct cf_source* s, const cf_defset* ds);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* CONFIGFORGE_CF_DEFINE_H */

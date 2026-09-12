@@ -1,0 +1,39 @@
+/*
+ * cf_code.def - the error codes, once.
+ *
+ *   CF_CODE_X(symbol, name, description)
+ *
+ * The description is what a tool prints when it explains a category
+ * rather than an instance; keeping it here means a new code cannot be
+ * added without one.
+ *
+ * X-macro rather than an enum beside a switch, because the two drift:
+ * adding a value and forgetting its name gives a "?" at runtime and no
+ * diagnostic at all.
+ *
+ * The last entry uses CF_CODE_LAST_X so the enum expansion can leave off the
+ * trailing comma, which is C99 and rejected by -std=c89 -pedantic. Every
+ * other site gets it for free through the default below, so only the
+ * enum has to know.
+ */
+
+#ifndef CF_CODE_LAST_X
+#define CF_CODE_LAST_X(sym, name, desc) CF_CODE_X(sym, name, desc)
+#define CF_CODE_LAST_X_IS_DEFAULT
+#endif
+
+CF_CODE_X(CF_OK,           "ok",         "no error")
+CF_CODE_X(CF_E_KEY,        "key",        "malformed or unknown key")
+CF_CODE_X(CF_E_DEFINITION, "definition", "a definition contradicts itself")
+CF_CODE_X(CF_E_CONVERT,    "convert",    "text does not denote that type")
+CF_CODE_X(CF_E_VALIDATE,   "validate",   "outside a range, or not permitted")
+CF_CODE_X(CF_E_REQUIRED,   "required",   "a required parameter has no value")
+CF_CODE_X(CF_E_SOURCE,     "source",     "a source could not be read")
+CF_CODE_X(CF_E_CAPABILITY, "capability", "a source cannot do what was asked")
+CF_CODE_X(CF_E_POLICY,     "policy",     "policy conflict")
+CF_CODE_LAST_X(CF_E_MEMORY, "memory",    "allocation refused or arena full")
+
+#ifdef CF_CODE_LAST_X_IS_DEFAULT
+#undef CF_CODE_LAST_X
+#undef CF_CODE_LAST_X_IS_DEFAULT
+#endif

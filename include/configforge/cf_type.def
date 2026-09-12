@@ -1,0 +1,30 @@
+/*
+ * cf_type.def - the value types, once.
+ *
+ *   CF_TYPE_X(symbol, name, json_name)
+ *
+ * X-macro rather than an enum beside a switch, because the two drift:
+ * adding a value and forgetting its name gives a "?" at runtime and no
+ * diagnostic at all.
+ *
+ * The last entry uses CF_TYPE_LAST_X so the enum expansion can leave off the
+ * trailing comma, which is C99 and rejected by -std=c89 -pedantic. Every
+ * other site gets it for free through the default below, so only the
+ * enum has to know.
+ */
+
+#ifndef CF_TYPE_LAST_X
+#define CF_TYPE_LAST_X(sym, name, json) CF_TYPE_X(sym, name, json)
+#define CF_TYPE_LAST_X_IS_DEFAULT
+#endif
+
+CF_TYPE_X(CF_TYPE_NULL, "null", "null")
+CF_TYPE_X(CF_TYPE_BOOL, "bool", "boolean")
+CF_TYPE_X(CF_TYPE_INT,  "int",  "integer")
+CF_TYPE_X(CF_TYPE_REAL, "real", "number")
+CF_TYPE_LAST_X(CF_TYPE_TEXT, "text", "string")
+
+#ifdef CF_TYPE_LAST_X_IS_DEFAULT
+#undef CF_TYPE_LAST_X
+#undef CF_TYPE_LAST_X_IS_DEFAULT
+#endif

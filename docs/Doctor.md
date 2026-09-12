@@ -1,0 +1,361 @@
+# ConfigForge Doctor
+
+**ConfigForge Doctor** answers "why is this value what it is?" before deployment
+rather than after an incident.
+
+It is a command-line tool, not a library feature. It consumes **provenance reports**
+produced by ConfigForge (or by an adapter over a foreign ecosystem), compares them,
+and applies rules that a single running process cannot apply to itself.
+
+The library answers the question for one process, now. Doctor answers it for two
+environments, before the deployment happens.
+
+---
+
+## 1. Purpose
+
+Three questions motivate the tool. None of them can be answered by looking at a
+configuration file, and none of them are answered by existing tooling.
+
+**Which values are set but unreachable?** A key is defined in `app.toml`, and a
+higher-precedence source always supplies it. Editing the file does nothing. This is
+the most common real configuration defect and nothing reports it today.
+
+**Which values agree by coincidence?** Production and staging both resolve
+`database.pool_size` to 32. Production reads it from the environment; staging reads it
+from a file baked into the image. A value diff shows no difference. The next time the
+environment variable is missing, the two environments behave differently.
+
+**Which overrides exist in one environment and not the other?** A key is overridden by
+a command-line flag in staging and not in production. The code path exercised during
+testing is not the code path that runs in production.
+
+---
+
+## 2. What It Is Not
+
+* Not a resolver. It never computes configuration; it reads reports.
+* Not a secret store, and it does not need to see secret values.
+* Not a manifest validator. Manifests are `conftest`, `kubeconform` and `helm --dry-run`.
+* Not a runtime agent. It runs in CI and on a developer's machine.
+* Not a replacement for `explain()`. It is `explain()` applied across environments.
+
+---
+
+## 3. The Gap It Fills
+
+Existing tools work in one of two layers and neither reaches the value a process
+actually sees.
+
+| Tool class | Examples | What it validates | What it misses |
+| ---------- | -------- | ----------------- | -------------- |
+| Manifest | `helm --dry-run`, `kubectl diff`, `conftest`, `kubeconform` | manifest structure and policy | the value after precedence resolution |
+| Secret store | Vault, Doppler, Infisical | drift inside that store | every other source in the chain |
+| Single-process introspection | Spring `/actuator/env`, .NET `GetDebugView()`, `git config --show-origin` | one process, one moment | no diff, no rules, no CI integration |
+| File linting | `dotenv-linter` | one file's syntax | precedence, contract, cross-environment |
+
+Doctor occupies the empty cell: **resolved value, with origin, compared across
+environments, with rules.**
+
+The closest conceptual precedents are `terraform plan` (show the effect before
+applying) and `systemd-analyze cat-config` (show the merged result with origins).
+Neither applies to application configuration.
+
+---
+
+## 4. The Provenance Report
+
+The report is the only interface between Doctor and anything else. Its schema is
+specified in `Decisions.md` (D-16) and is a Phase 1 deliverable of the library.
+
+```text
+schema version
+profile label                     e.g. "production"
+producing application and version
+library version
+timestamp
+policy summary                    effective precedence, per-parameter overrides
+per key (the key space is flat; see the value model)
+    definition    type, required, default, sensitive, deprecated, array mode
+    candidates    per source: present, value or redacted form, rejection reason
+    selected      source and reason
+    warnings      unknown keys, coercions, deprecated usage
+```
+
+The report is also readable *by the library*, not only by Doctor. See Report Replay in the
+specification: a full report loaded as a source reproduces a production configuration
+locally. That is why the schema belongs to the library rather than to this tool, and why a
+value-blind report must be structurally distinguishable from a full one.
+
+The report is produced in two ways:
+
+* **Predicted.** Doctor resolves offline from files and a declared environment. Used
+  for the change under review.
+* **Observed.** The running process emits its own report at startup. Used as ground
+  truth for an environment the CI job cannot enter.
+
+---
+
+## 5. Value-Blind Mode
+
+This is the decision that determines whether the tool is deployable at all.
+
+Production values cannot be brought into CI. If Doctor requires them, it will not be
+adopted in the environments where it matters most.
+
+In value-blind mode a report carries, for every sensitive key:
+
+```text
+present          yes / no
+origin           which source supplied it
+length           integer
+digest           salted hash, salt per report-pair
+```
+
+Every rule in section 8 except the type and range checks operates on presence, origin
+and digest alone. Doctor can therefore audit a production environment without ever
+seeing a production credential, and the digest still detects "the value changed"
+without revealing what it changed to.
+
+This works because it reuses the redaction mechanism from `Decisions.md` D-13. One
+mechanism, two features.
+
+---
+
+## 6. Collecting a Production Report
+
+The gap Doctor must cross is that CI cannot resolve production configuration. The
+answer is that production reports itself.
+
+```text
+Deploy N
+    application starts
+    emits observed report (value-blind)
+    report stored as a build artifact
+
+Deploy N+1 in CI
+    Doctor computes the predicted report for the change
+    Doctor diffs predicted(N+1) against observed(N)
+    rules run over the pair
+```
+
+Two consequences follow. The library needs a startup-time report emission hook, which
+is small and belongs to Phase 1. And the very first run has no baseline, which is what
+the baseline mechanism in section 9 handles.
+
+---
+
+## 7. Commands
+
+```text
+configforge doctor explain <key> [--report R]
+    single key, full candidate chain, selection reason
+
+configforge doctor dump [--format table|json|md] [--blind]
+    the full matrix for one environment
+
+configforge doctor diff <reportA> <reportB>
+    value differences, origin differences, shadow differences, presence differences
+
+configforge doctor lint <report> [--rules R] [--baseline B]
+    rule catalogue against a single report
+
+configforge doctor parity <reportA> <reportB> [--require-same-origin]
+    contract-level comparison: which keys exist, which are required, which are
+    satisfied by the same kind of source
+
+configforge doctor emit [--blind] [--out F]
+    produce a report from the current environment
+```
+
+`explain` and `dump` are convenience wrappers over the library's own capability, made
+available without adding a flag to the host application.
+
+---
+
+## 8. Rule Catalogue
+
+Each rule has a stable identifier so it can be suppressed individually. Rules marked
+**blind-safe** operate without value access.
+
+| ID | Rule | Default severity | Blind-safe |
+| -- | ---- | ---------------- | ---------- |
+| CFD001 | **Unreachable value.** A key is set in a source that can never win for it. | error | yes |
+| CFD002 | **Origin drift.** Same value in both environments, different source kind. | warning | yes |
+| CFD003 | **Shadow divergence.** Overridden in one environment, not the other. | warning | yes |
+| CFD004 | **Missing required.** Required key resolves to nothing. | error | yes |
+| CFD005 | **Undefined key present.** A source key matches no definition; nearest match suggested. | warning | yes |
+| CFD006 | **Contract violation.** Value fails type or range. | error | no |
+| CFD007 | **Sensitive value from an unsafe source.** Key marked sensitive is supplied by a committed or world-readable file. | error | yes |
+| CFD008 | **Default-only in production.** Key resolves to its built-in default with no source supplying it. | warning | yes |
+| CFD009 | **Deprecated key still set.** | warning | yes |
+| CFD010 | **Dead source.** A configured source wins for no key at all. | info | yes |
+| CFD011 | **Present but empty.** Distinguishes empty from absent. | warning | yes |
+| CFD012 | **Parity gap.** Key present in one environment's contract and absent in the other's. | warning | yes |
+| CFD013 | **Precedence inversion.** Policy places a less specific source above a more specific one for a parameter. | info | yes |
+| CFD014 | **Digest change on a sensitive key** without a corresponding change entry. | info | yes |
+| CFD015 | **Array truncation hazard.** A lower-precedence source supplies more elements than the winning `<key>.count`; the extras were discarded. | warning | yes |
+
+CFD001, CFD002 and CFD003 are the rules that justify the tool. The rest come almost
+free once the report exists, and they are what make it worth running every build.
+
+Example output:
+
+```text
+CFD001  error   server.port
+        set in:      app.toml (line 14) = 3000
+        always lost to: MYAPP_SERVER_PORT (environment)
+        effective:   8080
+        editing app.toml has no effect on this parameter
+
+CFD002  warning database.pool_size
+        production: 32  from environment
+        staging:    32  from file (bundled in image)
+        values agree; sources do not
+```
+
+---
+
+## 9. Severity, Baseline and Adoption
+
+The most common way a lint tool dies is producing two hundred findings on first run in
+an existing repository. Three mechanisms prevent that, and all three are required from
+the first release rather than added after the first complaint.
+
+**Baseline.** `doctor lint --baseline .configforge-baseline.json` records existing
+findings as accepted. Only new findings fail the build. A baseline entry carries a
+reason field and the tool reports entries that no longer match anything.
+
+**Configurable severity.** Every rule's severity is overridable per project.
+
+**Progressive mode.** `--only-changed` restricts rules to keys touched by the change
+under review.
+
+---
+
+## 10. Exit Codes
+
+```text
+0   no findings above the failure threshold
+1   findings at or above the threshold
+2   report unreadable, schema version unsupported, or reports not comparable
+3   internal error
+```
+
+Reports are not comparable when their schema versions differ across a breaking
+boundary, or when one is value-blind and a requested rule needs values. Doctor says so
+rather than silently skipping rules.
+
+---
+
+## 11. CI Integration
+
+```text
+- run: configforge doctor emit --blind --out predicted.json
+- run: configforge doctor diff observed-prod.json predicted.json --fail-on error
+- run: configforge doctor lint predicted.json --baseline .configforge-baseline.json
+```
+
+Output formats: human-readable text, JSON, and SARIF. SARIF matters more than it
+looks: it makes findings appear inline on a pull request in most forges without any
+per-forge integration work.
+
+---
+
+## 12. Foreign Ecosystem Adapters
+
+There is a strong temptation to make Doctor ecosystem-independent by reimplementing
+the precedence rules of Viper, Spring, dotenv and others. **This should be refused.**
+It is the same trap as maintaining hand-curated hardware compatibility data: knowledge
+that is not published in structured form, that goes stale with every upstream release,
+and that one person cannot maintain across ten ecosystems.
+
+The sustainable position is that **Doctor owns the report format, not the resolution
+logic.** Each ecosystem supplies its own origin data and a thin adapter converts it.
+
+| Ecosystem | Native origin source | Adapter effort |
+| --------- | -------------------- | -------------- |
+| ConfigForge | native report | none |
+| .NET | `ConfigurationRoot.GetDebugView()` | small; format is already key plus provider |
+| Spring Boot | `/actuator/env`, origin-tracked | small; JSON already carries origins |
+| Git config | `git config --list --show-origin --show-scope` | trivial |
+| systemd | `systemd-analyze cat-config` | small |
+| Go / viper | none available | requires a helper in the host application |
+| dotenv | file parse only, no precedence | partial; presence and origin only |
+
+Adapters that cannot supply origins produce presence-only reports, and Doctor says
+which rules it is unable to run rather than reporting a clean result.
+
+---
+
+## 12a. Replay Is Not a Doctor Feature
+
+Doctor reads reports to compare them. The library reads reports to *become* them. These
+are different capabilities over one artifact, and keeping them separate matters:
+
+* Doctor never needs values and should default to value-blind operation.
+* Replay needs values and therefore handles a credential-bearing file.
+
+A report produced for Doctor should be value-blind. A report produced for replay is
+produced deliberately, used immediately and deleted. Conflating the two would mean either
+crippling replay or routinely writing secrets into CI artifacts.
+
+---
+
+## 13. Non-Goals
+
+* Resolving configuration itself, outside of reading reports.
+* Storing secrets, or requiring access to them.
+* Reimplementing any other library's precedence rules.
+* Editing configuration. Doctor reports; it does not fix.
+* A hosted service, a dashboard, or drift alerting.
+* Replaying reports. That is a library capability, not a Doctor command.
+* Kubernetes-specific behaviour.
+
+---
+
+## 14. Roadmap
+
+Doctor depends on exactly one library deliverable: the provenance report artifact from
+Phase 1. It can start any time after that.
+
+```text
+D-Phase 1   report reader, dump, explain, diff, CFD001–CFD003
+D-Phase 2   full rule catalogue, baseline, severity configuration
+D-Phase 3   SARIF output, CI templates, emit hook in the library
+D-Phase 4   foreign adapters: .NET, Spring, git config
+```
+
+Estimated size if the library already emits reports: 1500–2500 lines, three to four
+weeks. The expensive part, provenance, lives in the library and is paid for there.
+
+---
+
+## 15. Honest Positioning
+
+Doctor does not generate revenue and is not expected to. `conftest`, `kubeconform` and
+`dotenv-linter` are all free and all widely used, and the one company that built a
+business in the adjacent manifest-policy space was acquired and its product eventually
+discontinued. Treating that category as a revenue bet would be reading the evidence
+backwards.
+
+Doctor is worth building for different reasons, and they are the reasons this whole
+ecosystem exists:
+
+**It makes the library worth adopting.** "A C++ config library" competes with a dozen
+good free options. "The config library that tells you why your production value is
+what it is, and catches it in CI" is a distinct proposition.
+
+**It is the demonstrable artifact.** A library is read; a tool is run. CFD001 firing on
+someone's real repository and revealing a file they have been editing for months with
+no effect is a more convincing argument than any README.
+
+**It validates the design cheaply.** If the provenance model is wrong, Doctor will
+fail to express a rule, and that failure surfaces in weeks rather than after the ABI
+is frozen.
+
+**It closes the loop on repeated code.** The recurring work being removed is not only
+parsing and precedence. It is also the debugging session that happens every time a
+deployment behaves unexpectedly and someone adds print statements to find out where a
+value came from. Doctor removes that session from every future project, which is the
+same goal the library has, applied one layer up.

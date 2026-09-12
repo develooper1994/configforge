@@ -1,0 +1,39 @@
+# Build trees. Anything CMake generates, under any name: an ignore list
+# that names only the directories somebody happened to use is an ignore
+# list that misses the next one - which is how 298 object files ended up
+# in the first commit here.
+build/
+build-*/
+bt/
+cmake-build*/
+out/
+_deps/
+
+# Objects and libraries
+*.o
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.obj
+*.lib
+*.pdb
+
+# Tooling
+compile_commands.json
+.cache/
+.clangd/
+*.gcda
+*.gcno
+
+# Fixtures the tests write into the working directory
+cf_fx_*.json
+cf_fx_*.ini
+cf_t*.json
+cf_t*.ini
+cf_rep*.json
+cf_blind.json
+cf_notrep.json
+cf_v99.json

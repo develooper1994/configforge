@@ -1,0 +1,5 @@
+if(CF_WITH_JSON)
+  add_subdirectory(doctor)
+else()
+  message(STATUS "doctor needs JSON support; not built")
+endif()

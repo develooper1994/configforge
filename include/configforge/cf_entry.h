@@ -1,0 +1,137 @@
+/*
+ * cf_entry.h - flat entry producers, and how a source spells a key.
+ *
+ * Sources divide by what they have to do with the bytes.
+ *
+ *   flat        env, command line, .env files, a registry
+ *               already key-and-value; the work is lexing and naming
+ *   hierarchical  JSON, TOML, XML, INI
+ *               a document; the work is parsing, and the flattener
+ *               turns the events into keys
+ *   direct      memory pairs, defaults, a replayed report
+ *               no bytes to read at all
+ *
+ * The middle group already had a seam: a parser is an event producer
+ * and never touches a key space. The first group did not, and each of
+ * its sources reached into the key space itself. That made every lexer
+ * need an arena and a key space to be tested at all, and it put the
+ * decision "what does a candidate look like" in three files.
+ *
+ * A lexer now produces entries into a sink. Recording them into a key
+ * space is one implementation of that sink; a test's implementation is
+ * an array.
+ */
+
+#ifndef CONFIGFORGE_CF_ENTRY_H
+#define CONFIGFORGE_CF_ENTRY_H
+
+#include "configforge/cf_keyspace.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* ------------------------------------------------------------------ *
+ * Key mapping
+ *
+ * Each flat source spells a key its own way, and the spelling is a
+ * separate concern from the lexing. Keeping them apart is what makes
+ * the direction that matters possible: given a definition, a source
+ * can be asked what *it* would call that key, which is how the
+ * environment gains its natural single-underscore spelling once a
+ * contract exists.
+ * ------------------------------------------------------------------ */
+
+typedef enum cf_keymap_kind {
+    /* The source already writes canonical keys. A command line can
+       carry a dot, so it has no escape to invent. */
+    CF_KEYMAP_DIRECT = 0,
+    /* PREFIX_A__B  ->  a.b, and a single underscore stays literal.
+       Mapping a single underscore to a dot cannot be reversed:
+       MYAPP_A_B_C could be a.b.c, a.b_c, a_b.c or a_b_c. */
+    CF_KEYMAP_ENV
+} cf_keymap_kind;
+
+typedef struct cf_keymap {
+    cf_keymap_kind kind;
+    const char*    prefix; /* "MYAPP_", or NULL */
+} cf_keymap;
+
+void cf_keymap_init(cf_keymap* m, cf_keymap_kind kind, const char* prefix);
+
+/* Source spelling to canonical. Returns the length written, or 0 when
+   the name does not belong to this source or does not derive a valid
+   key. Skipped rather than repaired: PATH and HOME land here. */
+size_t cf_keymap_to_key(const cf_keymap* m, const char* raw, size_t n, char* out,
+                        size_t cap);
+
+/* Canonical to source spelling. `escaped` selects between the form the
+   mapping can read back unaided and the natural one a person writes:
+
+     server.tls_min_version
+       escaped -> MYAPP_SERVER__TLS_MIN_VERSION   enumerable
+       natural -> MYAPP_SERVER_TLS_MIN_VERSION    ambiguous alone,
+                                                  unambiguous with a
+                                                  definition to match
+   Both are accepted when a contract exists, which is the whole gain:
+   the escape is what enumeration needs, and nobody has to type it. */
+size_t cf_keymap_from_key(const cf_keymap* m, const char* key, size_t n,
+                          cf_bool escaped, char* out, size_t cap);
+
+/* ------------------------------------------------------------------ *
+ * Entry sink
+ * ------------------------------------------------------------------ */
+
+typedef struct cf_entry_sink {
+    /* As written. The type is decided later, by a definition if one
+       exists and by Tier 0 inference otherwise. */
+    cf_bool (*text)(void* ctx, const char* key, size_t klen, const char* value,
+                    size_t vlen, const char* at);
+    /* Already typed, from a source that carries types. */
+    cf_bool (*typed)(void* ctx, const char* key, size_t klen, const cf_value* v,
+                     const char* at);
+    void* ctx;
+} cf_entry_sink;
+
+/* The sink that records into a key space at a rank. */
+typedef struct cf_keysink {
+    cf_keyspace*  ks;
+    int           rank;
+    size_t        count;
+    cf_bool       failed;
+    cf_entry_sink sink;
+} cf_keysink;
+
+cf_bool              cf_keysink_init(cf_keysink* k, cf_keyspace* ks, int rank);
+const cf_entry_sink* cf_keysink_of(cf_keysink* k);
+
+/* ------------------------------------------------------------------ *
+ * Lexers
+ *
+ * No arena, no key space, no source object. Everything these need is
+ * an argument, which is what makes them testable against an array.
+ * ------------------------------------------------------------------ */
+
+/* Entries that do not belong to this prefix, or do not derive a valid
+   key, are skipped. An environment is shared with every other program
+   on the machine, so refusing it would be refusing the machine. */
+cf_bool cf_lex_env(char* const* environment, const cf_keymap* map,
+                   const cf_entry_sink* out, cf_error* err);
+
+/*   --server.port=8080     value
+ *   --tls.enabled          bool true
+ *   --                     stop
+ *
+ * A malformed option is rejected rather than skipped. A command line
+ * belongs to this program alone, so an unparseable option is the
+ * user's typo, and ignoring it is how a misspelled flag becomes an
+ * hour of confusion.
+ */
+cf_bool cf_lex_cli(int argc, char* const* argv, const cf_keymap* map,
+                   const cf_entry_sink* out, cf_error* err);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* CONFIGFORGE_CF_ENTRY_H */

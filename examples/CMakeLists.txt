@@ -1,0 +1,34 @@
+# Examples are built as part of the build so a broken example is a
+# broken build. The first page of the documentation is an example and
+# must not be allowed to rot.
+foreach(ex tier0 tier1 explain_demo)
+  add_executable(${ex} ${ex}.c)
+  target_link_libraries(${ex} PRIVATE configforge)
+  set_target_properties(${ex} PROPERTIES
+    C_STANDARD 90 C_STANDARD_REQUIRED ON C_EXTENSIONS OFF)
+  configforge_apply_warnings(${ex})
+  configforge_apply_analysis(${ex})
+  add_test(NAME example.${ex} COMMAND ${ex})
+endforeach()
+
+if(CF_WITH_CXX)
+  # Built as C++98 on purpose: the wrapper claims C++03 and a claim the
+  # build does not check is a claim that decays.
+  add_executable(tier1_cpp tier1.cpp)
+  target_link_libraries(tier1_cpp PRIVATE configforge)
+  set_target_properties(tier1_cpp PROPERTIES
+    CXX_STANDARD 98 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    target_compile_options(tier1_cpp PRIVATE -pedantic -Werror -Wall -Wextra)
+  endif()
+  configforge_apply_analysis(tier1_cpp)
+  add_test(NAME example.tier1_cpp COMMAND tier1_cpp)
+endif()
+
+# The failure paths are part of the documentation too, so they are run
+# and their exit status is asserted rather than described.
+add_test(NAME example.tier1.range   COMMAND tier1 --server.port=99999)
+add_test(NAME example.tier1.typo    COMMAND tier1 --server.pot=1)
+add_test(NAME example.tier1.enum    COMMAND tier1 --log.level=verbose)
+set_tests_properties(example.tier1.range example.tier1.typo example.tier1.enum
+                     PROPERTIES WILL_FAIL TRUE)

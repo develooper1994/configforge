@@ -1,0 +1,34 @@
+/*
+ * cf_outcome.def - what became of a candidate, once.
+ *
+ *   CF_OUTCOME_X(symbol, name, wins)
+ *
+ * `wins` is what the resolver asks: a candidate that does not win is
+ * kept in the chain anyway, because explain() has to be able to say
+ * that the value was there and why it lost.
+ *
+ * X-macro rather than an enum beside a switch, because the two drift:
+ * adding a value and forgetting its name gives a "?" at runtime and no
+ * diagnostic at all.
+ *
+ * The last entry uses CF_OUTCOME_LAST_X so the enum expansion can leave off the
+ * trailing comma, which is C99 and rejected by -std=c89 -pedantic. Every
+ * other site gets it for free through the default below, so only the
+ * enum has to know.
+ */
+
+#ifndef CF_OUTCOME_LAST_X
+#define CF_OUTCOME_LAST_X(sym, name, wins) CF_OUTCOME_X(sym, name, wins)
+#define CF_OUTCOME_LAST_X_IS_DEFAULT
+#endif
+
+CF_OUTCOME_X(CF_OUT_PENDING,   "pending",   1)
+CF_OUTCOME_X(CF_OUT_SELECTED,  "selected",  1)
+CF_OUTCOME_X(CF_OUT_SHADOWED,  "shadowed",  1)
+CF_OUTCOME_X(CF_OUT_REJECTED,  "rejected",  0)
+CF_OUTCOME_LAST_X(CF_OUT_TRUNCATED, "truncated", 0)
+
+#ifdef CF_OUTCOME_LAST_X_IS_DEFAULT
+#undef CF_OUTCOME_LAST_X
+#undef CF_OUTCOME_LAST_X_IS_DEFAULT
+#endif

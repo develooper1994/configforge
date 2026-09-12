@@ -1,0 +1,63 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate the locales the suite needs
+        run: |
+          sudo locale-gen tr_TR.UTF-8 de_DE.UTF-8
+          sudo update-locale
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  portable:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build both ways and compare output
+        run: |
+          cmake -S . -B a && cmake --build a
+          cmake -S . -B b -DCF_FORCE_PORTABLE=ON -DCF_SINGLE_THREADED=ON && cmake --build b
+          ./a/tests/unit/test_numeric > a.txt
+          ./b/tests/unit/test_numeric > b.txt
+          diff a.txt b.txt
+
+  matrix:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build
+      - run: cmake --build build
+      - run: ctest --test-dir build --output-on-failure
+
+  minimal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake --preset minimal && cmake --build --preset minimal
+      - run: ctest --preset minimal
+
+  sanitize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake --preset sanitize && cmake --build --preset sanitize
+      - run: ctest --preset sanitize
+
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y cppcheck
+      - run: cmake --preset analyze && cmake --build --preset analyze
+      - run: ctest --preset analyze
