@@ -61,3 +61,25 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y cppcheck
       - run: cmake --preset analyze && cmake --build --preset analyze
       - run: ctest --preset analyze
+
+  clang:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y clang clang-tidy clang-format
+      # A second compiler is the cheapest portability test there is, and
+      # it found GCC-only warning flags being handed to every compiler
+      # before any clang user did.
+      - name: Build and test with clang
+        run: |
+          cmake -S . -B bclang -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          cmake --build bclang
+          ctest --test-dir bclang --output-on-failure
+      - name: clang-tidy
+        run: |
+          cmake -S . -B btidy -DCF_CLANG_TIDY=ON
+          cmake --build btidy
+      - name: clang-format
+        run: |
+          cmake -S . -B bfmt
+          ctest --test-dir bfmt -R gate.format --output-on-failure
