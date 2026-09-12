@@ -62,6 +62,7 @@ gets reopened every six months.
 | D-29 | Command line portability | every consumer | **Decided** |
 | D-30 | Which sources exist, and which are deferred | scope | **Decided** |
 | D-31 | The no-build-system path | distribution, maintenance | **Decided** |
+| D-32 | The compiler warning standard | every build, every compiler | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -1145,6 +1146,67 @@ in step.
 
 **Consequence.** One fewer place to forget a file. The claim "works without CMake" is now
 checked by a test instead of asserted by a file nobody runs.
+
+---
+
+## D-32 — The Compiler Warning Standard
+
+**Question.** The warning set should be as close to common across compilers as it can be,
+with per-compiler additions where it cannot. How is that kept true?
+
+**What went wrong first.** The flags were written as one list under a branch testing for
+`GNU` *or* `Clang`, so GCC-only flags were handed to clang as well. That would have
+broken the first real clang build; clang-tidy's front end found it before anyone tried
+one. The obvious repair — a hand-maintained table of which flag belongs to which
+compiler — replaces one guess with a larger one, because the table is wrong the moment a
+compiler adds or drops a flag and nothing says so.
+
+**The measurement problem.** Writing that table honestly needs a way to ask a compiler
+whether it knows a flag. Attempting it here failed: without clang installed, probing
+through clang-tidy's front end reported every flag as accepted, including ones clang
+demonstrably rejects. A standard built on a measurement that cannot be trusted is worse
+than no standard.
+
+**Decision.** Do not keep a table. Ask the compiler.
+
+```text
+one list        grouped by what each flag protects, not by which compiler has it
+per compiler    a short list of additions that only one compiler offers
+verification    check_c_compiler_flag, at configure time, with -Werror set so that
+                a compiler which merely warns about an unknown -W flag still fails
+                the check
+unknown flag    skipped, and named in the configure output
+```
+
+The `-Werror` part matters: clang warns rather than errors on an unknown `-W` flag, so a
+naive check passes for flags it does not support. Without it the mechanism would report
+success exactly where it is needed.
+
+**What this buys beyond correctness.** The measurement happens on the machine doing the
+build, with the compiler doing the build. A flag a future compiler drops stops being
+applied instead of breaking the build, and a flag a future compiler adds can be listed
+before every supported compiler has it. The build prints the set it settled on, so the
+answer to "what is this enforcing" is in the configure log rather than in a file someone
+has to read.
+
+**MSVC is weaker and says so.** `/W4 /WX` is not equivalent to the GCC and Clang set;
+several of the classes below have no MSVC counterpart. Stating the gap is better than a
+comment implying parity: a project that claims one standard and enforces two has the
+weaker one.
+
+| What it protects | GCC and Clang | MSVC |
+| ---------------- | ------------- | ---- |
+| Conformance | `-std=c89 -pedantic -Werror -Wall -Wextra` | `/W4 /WX` |
+| Conversions | `-Wconversion -Wsign-conversion -Wdouble-promotion -Wcast-qual -Wcast-align -Wbad-function-cast` | partial, `/W4` |
+| Shadowing and aliasing | `-Wshadow -Wwrite-strings -Wpointer-arith` | partial |
+| Declarations | `-Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wold-style-definition -Wnested-externs -Wredundant-decls -Wundef` | none |
+| Logic mistakes | `-Wnull-dereference -Wswitch-enum -Wvla -Wformat=2` | partial |
+| Resources | `-Wstack-usage=` (GCC) | none |
+| Compiler-specific | GCC: `-Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wshift-overflow=2`; Clang: `-Wcomma -Wassign-enum -Wconditional-uninitialized -Wimplicit-fallthrough` | — |
+
+**Consequence.** One place describes the standard, and the build discovers rather than
+asserts which compiler implements which part of it. Adding a flag means adding it to the
+list it belongs to; nothing has to be researched about who supports it.
 
 ---
 

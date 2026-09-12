@@ -5,15 +5,18 @@
 file(GLOB headers "${SRC}/include/configforge/*.h")
 set(bad 0)
 foreach(h ${headers})
-  get_filename_component(name "${h}" NAME)
-  set(probe "${BIN}/probe_${name}.c")
-  file(WRITE "${probe}" "#include <configforge/${name}>\nint main(void){return 0;}\n")
+  get_filename_component(basename "${h}" NAME)
+  set(probe "${BIN}/probe_${basename}.c")
+  file(WRITE "${probe}"
+       "#include <configforge/${basename}>\nint main(void){return 0;}\n")
   execute_process(
-    COMMAND ${CC} -std=c89 -pedantic -Werror -I${SRC}/include
-            -c -o "${BIN}/probe_${name}.o" "${probe}"
-    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE out)
+    COMMAND ${CC} -std=c89 -pedantic -Werror -I${SRC}/include -c -o
+            "${BIN}/probe_${basename}.o" "${probe}"
+    RESULT_VARIABLE rc
+    OUTPUT_VARIABLE out
+    ERROR_VARIABLE out)
   if(NOT rc EQUAL 0)
-    message("VIOLATION: ${name} does not compile standalone as C89")
+    message("VIOLATION: ${basename} does not compile standalone as C89")
     message("${out}")
     set(bad 1)
   endif()
@@ -29,9 +32,11 @@ if(CXX AND EXISTS "${SRC}/include/configforge/configforge.hpp")
   file(WRITE "${BIN}/probe_hpp.cpp"
        "#include <configforge/configforge.hpp>\nint main(){return 0;}\n")
   execute_process(
-    COMMAND ${CXX} -std=c++98 -pedantic -Werror -Wall -Wextra
-            -I${SRC}/include -c -o "${BIN}/probe_hpp.o" "${BIN}/probe_hpp.cpp"
-    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE out)
+    COMMAND ${CXX} -std=c++98 -pedantic -Werror -Wall -Wextra -I${SRC}/include
+            -c -o "${BIN}/probe_hpp.o" "${BIN}/probe_hpp.cpp"
+    RESULT_VARIABLE rc
+    OUTPUT_VARIABLE out
+    ERROR_VARIABLE out)
   if(NOT rc EQUAL 0)
     message("VIOLATION: configforge.hpp does not compile standalone as C++98")
     message("${out}")

@@ -28,6 +28,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - `cf_version()`, `cf_feature_at()`, and a gate that fails when the
   header version and the project version disagree.
 - clang-format and clang-tidy as build targets and gates.
+- cmake-format and cmake-lint, so the build files get the same treatment
+  as the C sources.
+- **A compiler-verified warning standard** (D-32). The flags are grouped
+  by what they protect rather than by which compiler has them, and each
+  one is put to the compiler at configure time with `-Werror` set, so a
+  compiler that merely warns about an unknown `-W` flag still fails the
+  check. No table to keep true.
 
 ### Fixed
 
@@ -49,6 +56,15 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - Arena leak in Doctor, unaligned fixed arenas, a key space that kept
   working after a failed init, `-Wundef` on a feature macro visible in
   one translation unit and not another.
+
+### Notes
+
+- `cmake-format` with `keyword_case: upper` rewrote the *variable* in
+  `get_filename_component(name "${f}" NAME)` to `NAME`, because the token
+  matches a keyword of that command, and silently broke two gates. The
+  setting is now `unchanged`: a formatter that can change meaning by
+  spelling gets one job, whitespace. The gates caught it, which is the
+  argument for having them.
 
 ### Removed
 

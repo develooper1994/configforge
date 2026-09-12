@@ -7,12 +7,36 @@ if(NOT NM_EXE)
   return()
 endif()
 
-set(FORBIDDEN strtod atof atoi atol strtol strtoul
-              tolower toupper isalpha isdigit isspace isalnum isupper islower
-              strcoll strxfrm localeconv setlocale
-              sprintf snprintf vsprintf vsnprintf printf fprintf)
+set(FORBIDDEN
+    strtod
+    atof
+    atoi
+    atol
+    strtol
+    strtoul
+    tolower
+    toupper
+    isalpha
+    isdigit
+    isspace
+    isalnum
+    isupper
+    islower
+    strcoll
+    strxfrm
+    localeconv
+    setlocale
+    sprintf
+    snprintf
+    vsprintf
+    vsnprintf
+    printf
+    fprintf)
 
-execute_process(COMMAND ${NM_EXE} -u "${LIB}" OUTPUT_VARIABLE undef ERROR_QUIET)
+execute_process(
+  COMMAND ${NM_EXE} -u "${LIB}"
+  OUTPUT_VARIABLE undef
+  ERROR_QUIET)
 set(bad 0)
 foreach(f ${FORBIDDEN})
   if(undef MATCHES "[ \t]U[ \t]+${f}\n")
@@ -21,8 +45,10 @@ foreach(f ${FORBIDDEN})
   endif()
 endforeach()
 
-execute_process(COMMAND ${NM_EXE} -g --defined-only "${LIB}"
-                OUTPUT_VARIABLE defs ERROR_QUIET)
+execute_process(
+  COMMAND ${NM_EXE} -g --defined-only "${LIB}"
+  OUTPUT_VARIABLE defs
+  ERROR_QUIET)
 string(REPLACE "\n" ";" lines "${defs}")
 foreach(line ${lines})
   if(line MATCHES "[0-9a-fA-F]+[ \t]+[TDBRW][ \t]+([A-Za-z_][A-Za-z0-9_]*)")

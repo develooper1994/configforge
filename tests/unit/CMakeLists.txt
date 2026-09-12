@@ -2,28 +2,31 @@
 # No test framework: a framework would be the library's first external
 # dependency, and the tests are simple enough not to need one.
 set(CF_UNIT_TESTS
-  test_port
-  test_numeric
-  test_alloc
-  test_value
-  test_keyspace
-  test_lex
-  test_sources
-  test_explain
-  test_scale
-  test_define
-  test_config
-  test_golden
-  test_serialize
-  test_file
-  test_report
-  test_image)
+    test_port
+    test_numeric
+    test_alloc
+    test_value
+    test_keyspace
+    test_lex
+    test_sources
+    test_explain
+    test_scale
+    test_define
+    test_config
+    test_golden
+    test_serialize
+    test_file
+    test_report
+    test_image)
 
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)
   target_link_libraries(${t} PRIVATE configforge)
-  set_target_properties(${t} PROPERTIES
-    C_STANDARD 90 C_STANDARD_REQUIRED ON C_EXTENSIONS OFF)
+  set_target_properties(
+    ${t}
+    PROPERTIES C_STANDARD 90
+               C_STANDARD_REQUIRED ON
+               C_EXTENSIONS OFF)
   configforge_apply_warnings(${t})
   configforge_apply_analysis(${t})
   add_test(NAME unit.${t} COMMAND ${t})
@@ -33,5 +36,5 @@ endforeach()
 # The Turkish case is the standard test for the tolower hazard.
 foreach(loc de_DE.UTF-8 tr_TR.UTF-8)
   add_test(NAME unit.test_numeric.${loc} COMMAND test_numeric ${loc})
-  add_test(NAME unit.test_value.${loc}   COMMAND test_value   ${loc})
+  add_test(NAME unit.test_value.${loc} COMMAND test_value ${loc})
 endforeach()

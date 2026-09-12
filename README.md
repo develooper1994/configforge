@@ -118,7 +118,8 @@ a claim that decays.
 | symbols | no locale-sensitive libc function; every export prefixed `cf_` |
 | amalgamation | the single-file build compiles as C89 and runs |
 | version | `cf_version.h` and `CMakeLists.txt` agree |
-| format | `clang-format --dry-run -Werror` |
+| format | `clang-format` and `cmake-format`, reporting rather than rewriting |
+| cmake lint | `cmake-lint` over every build file |
 | headers | every public header compiles standalone as C89 |
 | golden | `explain()` output compared line by line against a fixed expectation |
 | locale | the suite runs under a comma-decimal and a Turkish locale |

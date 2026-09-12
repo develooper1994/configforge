@@ -2,24 +2,30 @@
 # every commit rather than generated at release time and hoped over.
 # It also catches the one class of error that only a single translation
 # unit can have: two static functions in different files sharing a name.
-find_package(Python3 COMPONENTS Interpreter QUIET)
+find_package(
+  Python3
+  COMPONENTS Interpreter
+  QUIET)
 if(NOT Python3_Interpreter_FOUND)
   message("amalgamation gate: no python, skipped")
   return()
 endif()
 
 execute_process(
-  COMMAND ${Python3_EXECUTABLE} "${SRC}/tools/amalgamate/amalgamate.py"
-          "${SRC}" "${BIN}/amalgamation"
-  RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE out)
+  COMMAND ${Python3_EXECUTABLE} "${SRC}/tools/amalgamate/amalgamate.py" "${SRC}"
+          "${BIN}/amalgamation"
+  RESULT_VARIABLE rc
+  OUTPUT_VARIABLE out
+  ERROR_VARIABLE out)
 if(NOT rc EQUAL 0)
   message("${out}")
   message(FATAL_ERROR "amalgamation could not be generated")
 endif()
 message("${out}")
 
-file(WRITE "${BIN}/amalgamation/smoke.c"
-"#include \"configforge.h\"
+file(
+  WRITE "${BIN}/amalgamation/smoke.c"
+  "#include \"configforge.h\"
 #include <stdio.h>
 #include <string.h>
 int main(int argc, char** argv)
@@ -36,11 +42,13 @@ int main(int argc, char** argv)
 }
 ")
 execute_process(
-  COMMAND ${CC} -std=c89 -pedantic -Werror -Wall -Wextra -Wshadow
-          -I "${BIN}/amalgamation"
-          -o "${BIN}/amalgamation/smoke"
-          "${BIN}/amalgamation/smoke.c" "${BIN}/amalgamation/configforge.c"
-  RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE out)
+  COMMAND
+    ${CC} -std=c89 -pedantic -Werror -Wall -Wextra -Wshadow -I
+    "${BIN}/amalgamation" -o "${BIN}/amalgamation/smoke"
+    "${BIN}/amalgamation/smoke.c" "${BIN}/amalgamation/configforge.c"
+  RESULT_VARIABLE rc
+  OUTPUT_VARIABLE out
+  ERROR_VARIABLE out)
 if(NOT rc EQUAL 0)
   message("${out}")
   message(FATAL_ERROR "the amalgamation does not compile as C89")

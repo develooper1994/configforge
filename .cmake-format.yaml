@@ -1,0 +1,48 @@
+# CMake is source code here, so it gets the same treatment: one format,
+# checked by a gate rather than agreed on in a review.
+format:
+  line_width: 80
+  tab_size: 2
+  max_subgroups_hwrap: 2
+  max_pargs_hwrap: 4
+  dangle_parens: false
+  command_case: lower
+
+  # Left alone deliberately. With `upper`, cmake-format rewrote the
+  # variable in `get_filename_component(name "${f}" NAME)` to `NAME`,
+  # because the token matches a keyword of that command - and the gate
+  # it broke then reported every header as unreadable. A formatter that
+  # can change meaning by spelling is a formatter that gets one job:
+  # whitespace.
+  keyword_case: unchanged
+  enable_sort: false          # argument order is meaningful here
+  autosort: false
+
+markup:
+  bullet_char: '-'
+  enable_markup: false        # comments are prose, not markup
+
+lint:
+  disabled_codes:
+    - C0113                   # missing COMMENT on a custom target
+
+  # The default patterns reject two things that are not mistakes: this
+  # project's CF_ namespace, and CMake's own variables such as
+  # CMAKE_REQUIRED_FLAGS, which a function has to set by that name. A
+  # naming rule that flags the platform's own names teaches people to
+  # ignore the naming rule.
+  local_var_pattern: '(CF_[A-Z0-9_]+|CMAKE_[A-Z0-9_]+|[a-z][a-z0-9_]*)'
+  global_var_pattern: '(CF_[A-Z0-9_]+|[A-Z][0-9A-Z_]+)'
+  internal_var_pattern: '_(CF_)?[A-Z][0-9A-Z_]*'
+  argument_var_pattern: '[a-z][a-z0-9_]*'
+
+  # The gate scripts run under `cmake -P`, where everything is
+  # top-level and lowercase temporaries are the CMake convention. The
+  # default pattern classifies them as directory variables and demands
+  # upper case, which would mean renaming correct code to satisfy a
+  # rule that does not apply in script mode.
+  public_var_pattern: '(CF_[A-Z0-9_]+|[A-Z][0-9A-Z_]+|[a-z][a-z0-9_]*)'
+  private_var_pattern: '_[0-9a-zA-Z_]+'
+
+  max_arguments: 12
+  max_statements: 60

@@ -1,7 +1,12 @@
 # Compiler and standard detection may appear only in cf_port.h and
 # port.c. The value of a portability layer is that it is the only place
 # with conditional compilation in it.
-file(GLOB_RECURSE files "${SRC}/src/*.c" "${SRC}/src/*.h" "${SRC}/include/*.h")
+file(
+  GLOB_RECURSE
+  files
+  "${SRC}/src/*.c"
+  "${SRC}/src/*.h"
+  "${SRC}/include/*.h")
 set(bad 0)
 foreach(f ${files})
   get_filename_component(name "${f}" NAME)

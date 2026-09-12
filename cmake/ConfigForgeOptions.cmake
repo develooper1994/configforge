@@ -4,25 +4,37 @@
 # format that is compiled out must fail loudly when a source needs it,
 # never silently. See the Build-Time Feature Selection section.
 
-option(CF_WITH_INI      "INI subset codec (built in, no dependency)"   ON)
-option(CF_WITH_JSON     "JSON codec (built in; required by reports)"   ON)
-option(CF_WITH_TOML     "TOML codec"                                   OFF)
-option(CF_WITH_XML      "XML codec (requires expat)"                   OFF)
-option(CF_WITH_SQLITE   "SQLite store source (requires sqlite3)"       OFF)
-option(CF_WITH_REAL     "CF_REAL value type and its conversions"       ON)
-option(CF_WITH_WATCH    "File watching and reload"                     OFF)
-option(CF_WITH_CXX      "C++03 wrapper header"                         ON)
+option(CF_WITH_INI "INI subset codec (built in, no dependency)" ON)
+option(CF_WITH_JSON "JSON codec (built in; required by reports)" ON)
+option(CF_WITH_TOML "TOML codec" OFF)
+option(CF_WITH_XML "XML codec (requires expat)" OFF)
+option(CF_WITH_SQLITE "SQLite store source (requires sqlite3)" OFF)
+option(CF_WITH_REAL "CF_REAL value type and its conversions" ON)
+option(CF_WITH_WATCH "File watching and reload" OFF)
+option(CF_WITH_CXX "C++03 wrapper header" ON)
 
-option(CF_SINGLE_THREADED "Compile out all synchronisation"            OFF)
-option(CF_FORCE_PORTABLE  "Disable every opportunistic upgrade"        OFF)
+option(CF_SINGLE_THREADED "Compile out all synchronisation" OFF)
+option(CF_FORCE_PORTABLE "Disable every opportunistic upgrade" OFF)
 
-option(CF_BUILD_TESTING   "Build the test suite"  ON)
-option(CF_BUILD_EXAMPLES  "Build the examples"    ON)
-option(CF_ENABLE_GATES    "Run conformance and symbol gates in CI"     ON)
+option(CF_BUILD_TESTING "Build the test suite" ON)
+option(CF_BUILD_EXAMPLES "Build the examples" ON)
+option(CF_ENABLE_GATES "Run conformance and symbol gates in CI" ON)
 
+# Turn the CF_WITH_* options into compile definitions on a target.
+#
+# ~~~
+# configforge_apply_options(<target>)
+# ~~~
 function(configforge_apply_options tgt)
-  foreach(opt CF_WITH_INI CF_WITH_JSON CF_WITH_TOML CF_WITH_XML
-              CF_WITH_SQLITE CF_WITH_REAL CF_WITH_WATCH)
+  foreach(
+    opt
+    CF_WITH_INI
+    CF_WITH_JSON
+    CF_WITH_TOML
+    CF_WITH_XML
+    CF_WITH_SQLITE
+    CF_WITH_REAL
+    CF_WITH_WATCH)
     if(${opt})
       target_compile_definitions(${tgt} PUBLIC ${opt}=1)
     else()

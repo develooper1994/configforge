@@ -3,7 +3,10 @@
 # growing a resolver of its own.
 add_executable(doctor doctor.c)
 target_link_libraries(doctor PRIVATE configforge)
-set_target_properties(doctor PROPERTIES
-  C_STANDARD 90 C_STANDARD_REQUIRED ON C_EXTENSIONS OFF)
+set_target_properties(
+  doctor
+  PROPERTIES C_STANDARD 90
+             C_STANDARD_REQUIRED ON
+             C_EXTENSIONS OFF)
 configforge_apply_warnings(doctor)
 configforge_apply_analysis(doctor)

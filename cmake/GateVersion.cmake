@@ -14,8 +14,7 @@ endforeach()
 
 set(from_header "${HDR_MAJOR}.${HDR_MINOR}.${HDR_PATCH}")
 if(NOT from_header STREQUAL PROJECT_VER)
-  message(FATAL_ERROR
-          "version drift: cf_version.h says ${from_header}, "
-          "CMakeLists.txt says ${PROJECT_VER}")
+  message(FATAL_ERROR "version drift: cf_version.h says ${from_header}, "
+                      "CMakeLists.txt says ${PROJECT_VER}")
 endif()
 message("version gate: ${from_header}")

@@ -7,10 +7,11 @@
 
 cmake_minimum_required(VERSION 3.10)
 
-project(ConfigForge
-        VERSION 0.2.0
-        DESCRIPTION "Configuration resolution that explains itself"
-        LANGUAGES C)
+project(
+  ConfigForge
+  VERSION 0.2.0
+  DESCRIPTION "Configuration resolution that explains itself"
+  LANGUAGES C)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -34,10 +35,9 @@ set(CMAKE_C_EXTENSIONS OFF)
 add_library(configforge)
 add_library(ConfigForge::configforge ALIAS configforge)
 
-target_include_directories(configforge
-  PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>)
+target_include_directories(
+  configforge PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+                     $<INSTALL_INTERFACE:include>)
 
 configforge_setup_cppcheck()
 configforge_apply_warnings(configforge)
@@ -46,12 +46,13 @@ configforge_apply_analysis(configforge)
 
 add_subdirectory(src)
 
-set_target_properties(configforge PROPERTIES
-  VERSION   ${PROJECT_VERSION}
-  SOVERSION ${PROJECT_VERSION_MAJOR}
-  C_STANDARD 90
-  C_STANDARD_REQUIRED ON
-  C_EXTENSIONS OFF)
+set_target_properties(
+  configforge
+  PROPERTIES VERSION ${PROJECT_VERSION}
+             SOVERSION ${PROJECT_VERSION_MAJOR}
+             C_STANDARD 90
+             C_STANDARD_REQUIRED ON
+             C_EXTENSIONS OFF)
 
 option(CF_BUILD_TOOLS "Build ConfigForge Doctor" ON)
 if(CF_BUILD_TOOLS)
