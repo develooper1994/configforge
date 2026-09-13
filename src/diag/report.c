@@ -167,6 +167,19 @@ static void report_definition(cf_sink* out, const cf_def* d) {
         cf_sink_puts(out, ", \"description\": ");
         report_quote_z(out, d->description);
     }
+    if (d->policy != NULL) {
+        /* The policy travels with the report so an audit can answer
+           "what may set this key" without the program that wrote it. */
+        int i;
+        cf_sink_puts(out, ", \"policy\": [");
+        for (i = 0; d->policy[i] != NULL; ++i) {
+            if (i > 0) {
+                cf_sink_puts(out, ", ");
+            }
+            report_quote_z(out, d->policy[i]);
+        }
+        cf_sink_putc(out, ']');
+    }
     cf_sink_putc(out, '}');
 }
 

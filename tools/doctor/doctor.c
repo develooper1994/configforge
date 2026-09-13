@@ -404,6 +404,31 @@ static void rule_refused(const report* r) {
     }
 }
 
+/* CFD016. A source outside the key's policy supplied it. The library
+   rejects the candidate rather than refusing to start - see D-33 - so
+   the loud part is here, where a deployment pipeline can fail on it.
+   For a secret this is the finding that matters: the value reached a
+   place it was not allowed to be, and the rejection did not un-leak
+   it. */
+static void rule_policy(const report* r) {
+    size_t i, j;
+
+    for (i = 0; i < r->nkeys; ++i) {
+        const rkey* k = &r->keys[i];
+        char        name[CF_KEY_MAX];
+        key_name(k, name, sizeof name);
+        for (j = 0; j < k->nc; ++j) {
+            if (k->c[j].reason == NULL || strncmp(k->c[j].reason, "policy:", 7) != 0) {
+                continue;
+            }
+            finding("CFD016", "error", name, "%s supplied this from %s, and %s",
+                    k->c[j].source,
+                    (k->c[j].at != NULL) ? k->c[j].at : "an unnamed place",
+                    k->c[j].reason);
+        }
+    }
+}
+
 /* CFD008. Nothing configured it; the built-in default is the answer.
    Benign in development, worth knowing in production. */
 static void rule_default_only(const report* r) {
@@ -629,6 +654,7 @@ static void cmd_lint(const report* r) {
     rule_unreachable(r);
     rule_required(r);
     rule_refused(r);
+    rule_policy(r);
     rule_truncated(r);
     rule_default_only(r);
 }

@@ -40,7 +40,17 @@ static int emit(const char* out, const char* profile, int argc, char* const* arg
     cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
     cf_builder_text(b, "server.host", "0.0.0.0", 0);
     cf_builder_text(b, "log.level", "info", 0);
-    cf_builder_text(b, "db.password", NULL, CF_REQUIRED | CF_SENSITIVE);
+    {
+        /* A secret that may only come from the environment. When a
+           command line supplies it anyway the library rejects the
+           candidate and Doctor is where that becomes loud. */
+        static const char* const only_env[] = {"env", NULL};
+        cf_def                   d;
+        cf_def_init(&d, CF_TYPE_TEXT, "db.password");
+        d.flags  = CF_REQUIRED | CF_SENSITIVE;
+        d.policy = only_env;
+        cf_builder_define(b, &d);
+    }
 
     c = cf_builder_create(b, &err);
     if (c == NULL) {
@@ -66,6 +76,12 @@ int main(void) {
 
     static char  sa1[]   = "--server.port=5000";
     static char* sargv[] = {a0, sa1, NULL};
+
+    /* A secret on the command line, in a fixture of its own so the
+       clean case stays clean. The library rejects the candidate under
+       the key's policy; Doctor is where that becomes loud. */
+    static char  la1[]   = "--db.password=leaked-on-the-command-line";
+    static char* largv[] = {a0, la1, NULL};
     static char  se0[]   = "MYAPP_DB__PASSWORD=devsecret";
     static char* senv[]  = {se0, NULL};
 
@@ -88,6 +104,9 @@ int main(void) {
        secret differs. Every cross-environment rule has something to
        find between this and production. */
     if (emit("cf_fx_staging.json", "staging", 2, sargv, senv, "cf_fx_staging.ini")) {
+        return 1;
+    }
+    if (emit("cf_fx_leak.json", "staging", 2, largv, senv, NULL)) {
         return 1;
     }
     /* A file whose every key is overridden: the case CFD001 exists for. */

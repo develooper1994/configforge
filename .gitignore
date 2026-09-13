@@ -31,6 +31,7 @@ compile_commands.json
 # Fixtures the tests write into the working directory
 cf_fx_*.json
 cf_fx_*.ini
+cf_fx_*.ini
 cf_t*.json
 cf_t*.ini
 cf_rep*.json
