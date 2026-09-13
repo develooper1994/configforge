@@ -71,8 +71,14 @@ endforeach()
 # holding pointers lands in .data.rel.ro and nm calls it `d`, so a gate
 # reading the letter would fail on correct code and teach everyone to
 # ignore it. .data and .bss are the mutable ones.
+#
+# Not under a sanitiser. AddressSanitizer instruments globals, which
+# moves `const` data out of .data.rel.ro into .data and adds its own
+# __odr_asan descriptors - so the measurement stops meaning what it
+# means everywhere else. A gate that fires on correct code teaches
+# people to ignore it, which is worse than not having the gate.
 find_program(OBJDUMP_EXE objdump)
-if(OBJDUMP_EXE)
+if(OBJDUMP_EXE AND NOT SANITIZE)
   execute_process(
     COMMAND ${OBJDUMP_EXE} -t "${LIB}"
     OUTPUT_VARIABLE syms

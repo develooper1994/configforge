@@ -50,8 +50,10 @@ function(configforge_add_gates tgt)
   # 5. No locale-sensitive C library function may be referenced, and
   #    every exported symbol must carry the cf_ prefix.
   if(UNIX)
-    add_test(NAME gate.symbols
-             COMMAND ${CMAKE_COMMAND} -DLIB=$<TARGET_FILE:${tgt}> -P
-                     ${CMAKE_SOURCE_DIR}/cmake/GateSymbols.cmake)
+    add_test(
+      NAME gate.symbols
+      COMMAND
+        ${CMAKE_COMMAND} -DLIB=$<TARGET_FILE:${tgt}> -DSANITIZE=${CF_SANITIZE}
+        -P ${CMAKE_SOURCE_DIR}/cmake/GateSymbols.cmake)
   endif()
 endfunction()

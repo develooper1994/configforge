@@ -22,6 +22,13 @@ Rules below marked **[gate]** are enforced by the build; the sentence is
 a pointer, not the authority. The rest are judgement, and judgement
 should be re-examined.
 
+A gate also has to be told when its measurement stops being valid. The
+mutable-global check reads object sections, and AddressSanitizer moves
+`const` data into `.data` to instrument it — so the check is skipped
+under the sanitiser rather than left to fire on correct code. **A gate
+that fires on correct code teaches people to ignore it**, which costs
+more than not having it.
+
 ## Language
 
 C89 is the baseline and `-std=c89 -pedantic -Werror` is the gate. Where
@@ -214,3 +221,18 @@ names, not `100% passed`.
 **Undo narrowly.** `git checkout -- <directory>` reverted a whole
 directory to fix two files and silently took a turn's worth of other
 work with it. Revert files, not directories.
+
+**Verify with `scripts/verify.sh`, not by hand.** Chaining the steps
+manually got a failing tree committed once: `ctest | grep passed`
+matched the word inside "98% tests passed" and the commit went through.
+A checkpoint of a broken tree is worse than no checkpoint. The script
+exits non-zero on the first failure and prints the tail of that step's
+log, so the failure is attributable without re-running anything.
+
+**Patch the formatted text.** The build files are rewritten by
+`cmake-format`, so a search-and-replace written against the shape a file
+had before the formatter touched it silently matches nothing. Two edits
+were lost that way. Assert that the patch target was found.
+
+**Commit each verified unit.** Not each file and not each session: each
+thing that is true on its own. `scripts/verify.sh` first, always.
