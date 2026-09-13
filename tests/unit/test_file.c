@@ -5,6 +5,7 @@
 #include <configforge/configforge.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static int  g_fail = 0, g_run = 0;
@@ -329,11 +330,96 @@ static void test_dotenv_file(void) {
     remove("cf_t8.env");
 }
 
+/* conf.d: every file at one rank, byte order, later wins. The ordering
+   falls out of a decision made elsewhere - within one source the later
+   candidate wins - so nothing here needed a merge rule. */
+static void test_drop_in_directory(void) {
+    cf_error    err = CF_ERROR_INIT;
+    cf_builder* b;
+    cf_config*  cfg;
+    static char buf[4096];
+
+#ifdef _WIN32
+    check(system("mkdir cf_confd >nul 2>&1") >= 0, "made a directory");
+#else
+    check(system("mkdir -p cf_confd") == 0, "made a directory");
+#endif
+    check(spill("cf_confd/10-base.ini", "[server]\nport = 1000\nhost = 0.0.0.0\n"),
+          "wrote the base file");
+    check(spill("cf_confd/90-site.ini", "[server]\nport = 9000\n"),
+          "wrote the override");
+    check(spill("cf_confd/.10-editor.ini.swp", "[server]\nport = 7\n"),
+          "wrote something an editor would leave behind");
+
+    b = cf_build(NULL);
+    cf_builder_dir(b, "conf.d", CF_RANK_SYS_FILE, "cf_confd", NULL, 0);
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    cf_builder_text(b, "server.host", "0.0.0.0", 0);
+    cfg = cf_builder_create(b, &err);
+    check(cfg != NULL, "a directory source builds");
+    if (cfg == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+
+    check(cf_get_int(cfg, "server.port", 0) == 9000, "90-site overrides 10-base");
+    check(strcmp(cf_get_text(cfg, "server.host", ""), "0.0.0.0") == 0,
+          "and what it does not set is left alone");
+
+    /* Precedence, not a merge rule: the losing file is still in the
+       chain with its own line number. */
+    cf_explain(cfg, "server.port", buf, sizeof buf);
+    has(buf, "cf_confd/90-site.ini", "the winner is named");
+    has(buf, "cf_confd/10-base.ini", "and so is the file it beat");
+    has(buf, "shadowed", "which did not silently disappear");
+
+    /* A dotfile is not configuration. */
+    check(cf_get_int(cfg, "server.port", 0) != 7, "the .swp was skipped");
+    cf_config_free(cfg);
+
+    /* A missing directory is an error unless it was declared optional,
+       exactly like a missing file. */
+    b = cf_build(NULL);
+    cf_builder_dir(b, "conf.d", CF_RANK_SYS_FILE, "cf_absent.d", NULL, 0);
+    check(cf_builder_create(b, &err) == NULL, "a missing directory fails");
+
+    b = cf_build(NULL);
+    cf_builder_dir(b, "conf.d", CF_RANK_SYS_FILE, "cf_absent.d", NULL,
+                   CF_FILE_OPTIONAL);
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    cfg = cf_builder_create(b, &err);
+    check(cfg != NULL && cf_get_int(cfg, "server.port", 0) == 8080,
+          "an optional missing directory is accepted");
+    if (cfg != NULL) {
+        cf_config_free(cfg);
+    }
+
+    /* A file the build cannot read is named rather than skipped: a
+       directory that silently ignores half its contents is the worst
+       possible place for a build option to hide. */
+    check(spill("cf_confd/50-extra.toml", "port = 1\n"), "wrote a toml file");
+    b = cf_build(NULL);
+    cf_builder_dir(b, "conf.d", CF_RANK_SYS_FILE, "cf_confd", NULL, 0);
+    check(cf_builder_create(b, &err) == NULL, "an unreadable format fails");
+    has(err.message, "CF_WITH_TOML", "naming the option to turn on");
+
+    remove("cf_confd/10-base.ini");
+    remove("cf_confd/90-site.ini");
+    remove("cf_confd/50-extra.toml");
+    remove("cf_confd/.10-editor.ini.swp");
+#ifdef _WIN32
+    (void)system("rmdir cf_confd >nul 2>&1");
+#else
+    (void)system("rmdir cf_confd");
+#endif
+}
+
 int main(void) {
     (void)argv0;
     test_ini_file();
     test_cli_tier1_end_to_end();
     test_dotenv_file();
+    test_drop_in_directory();
     test_json_file_and_precedence();
     test_missing_file();
     test_uncompiled_format();

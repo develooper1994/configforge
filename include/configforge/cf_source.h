@@ -180,6 +180,28 @@ cf_bool cf_source_dotenv(cf_source* s, const char* name, int rank, const char* p
 
 const cf_error* cf_source_dotenv_error(const cf_source* s);
 
+/* ------------------------------------------------------------------ *
+ * A drop-in directory
+ *
+ * conf.d is how systemd, sudo, apt and a dozen others let a package add
+ * configuration without editing a file it does not own. Files are read
+ * in byte order, and every one shares the source's rank, so 10-base
+ * losing to 90-site is precedence rather than a merge rule and
+ * explain() names the file that won.
+ *
+ * Dotfiles are skipped: an editor's .swp and a package manager's
+ * .dpkg-new both land in such a directory and neither is
+ * configuration.
+ * ------------------------------------------------------------------ */
+
+size_t cf_source_dir_state_size(void);
+
+cf_bool cf_source_dir(cf_source* s, const char* name, int rank, const char* path,
+                      const char* format, unsigned flags, void* state,
+                      size_t state_size);
+
+const cf_error* cf_source_dir_error(const cf_source* s);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1,0 +1,267 @@
+/*
+ * dir.c - a drop-in directory as a source. C89 where it can be.
+ *
+ * conf.d is how systemd, sudo, apt and a dozen others let a package add
+ * configuration without editing a file it does not own. Each file is
+ * read in lexical order, so 10-base.ini losing to 90-site.ini is
+ * precedence rather than a merge rule, and explain() names the file
+ * that won.
+ *
+ * The ordering falls out of a decision made elsewhere: within one
+ * source the later candidate wins. Every file here shares a rank, so
+ * reading them in order is all it takes.
+ *
+ * Directory listing is the one thing C89 has no answer for. POSIX
+ * dirent and the Windows find API are both here; a target with neither
+ * gets CF_NO_DIRENT and an error that says so rather than an empty
+ * directory that looks like an empty configuration.
+ */
+
+#include "configforge/cf_flatten.h"
+#include "configforge/cf_serialize.h"
+#include "configforge/cf_source.h"
+
+#include <string.h>
+
+#define CF_DIR_MAX_FILES 256
+#define CF_DIR_PATH_MAX 512
+
+typedef struct dir_state {
+    const char* path;
+    const char* format; /* explicit override, or NULL for by-extension */
+    unsigned    flags;
+    cf_error    err;
+    cf_bool     failed;
+} dir_state;
+
+/* ------------------------------------------------------------------ *
+ * Listing
+ * ------------------------------------------------------------------ */
+
+#if defined(CF_NO_DIRENT)
+
+static int dir_list(const char* path, char names[][CF_DIR_PATH_MAX], int max,
+                    cf_error* err) {
+    (void)path;
+    (void)names;
+    (void)max;
+    cf_error_set(err, CF_E_CAPABILITY, NULL, path,
+                 "this build cannot list a directory");
+    return -1;
+}
+
+#elif defined(_WIN32)
+
+#include <windows.h>
+
+static int dir_list(const char* path, char names[][CF_DIR_PATH_MAX], int max,
+                    cf_error* err) {
+    char             pattern[CF_DIR_PATH_MAX];
+    WIN32_FIND_DATAA fd;
+    HANDLE           h;
+    int              n = 0;
+
+    if (cf_fmt(pattern, sizeof pattern, "%s\\*", path) >= sizeof pattern) {
+        cf_error_set(err, CF_E_SOURCE, NULL, path, "path is too long");
+        return -1;
+    }
+    h = FindFirstFileA(pattern, &fd);
+    if (h == INVALID_HANDLE_VALUE) {
+        cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot read '%s'", path);
+        return -1;
+    }
+    do {
+        if ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+            continue;
+        }
+        if (n >= max) {
+            break;
+        }
+        if (cf_fmt(names[n], CF_DIR_PATH_MAX, "%s", fd.cFileName) < CF_DIR_PATH_MAX) {
+            ++n;
+        }
+    } while (FindNextFileA(h, &fd) != 0);
+    FindClose(h);
+    return n;
+}
+
+#else
+
+#include <dirent.h>
+
+static int dir_list(const char* path, char names[][CF_DIR_PATH_MAX], int max,
+                    cf_error* err) {
+    DIR*           d = opendir(path);
+    struct dirent* e;
+    int            n = 0;
+
+    if (d == NULL) {
+        cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot read '%s'", path);
+        return -1;
+    }
+    while ((e = readdir(d)) != NULL) {
+        if (e->d_name[0] == '.') {
+            /* Skips . and .. and, deliberately, dotfiles: an editor's
+               .swp and a package manager's .dpkg-new both land here and
+               neither is configuration. */
+            continue;
+        }
+        if (n >= max) {
+            break;
+        }
+        if (cf_fmt(names[n], CF_DIR_PATH_MAX, "%s", e->d_name) < CF_DIR_PATH_MAX) {
+            ++n;
+        }
+    }
+    closedir(d);
+    return n;
+}
+
+#endif
+
+/* Insertion sort over the names. A drop-in directory holds tens of
+   files and the comparison is byte-wise, so this is both the fastest
+   and the least code. Byte-wise and not strcoll: the order decides
+   which file wins, and an order that depends on the reader's locale is
+   a configuration that depends on it too. */
+static void dir_sort(char names[][CF_DIR_PATH_MAX], int n) {
+    int i, j;
+
+    for (i = 1; i < n; ++i) {
+        char tmp[CF_DIR_PATH_MAX];
+        memcpy(tmp, names[i], CF_DIR_PATH_MAX);
+        j = i;
+        while (j > 0 &&
+               cf_cmp_bytes(names[j - 1], strlen(names[j - 1]), tmp, strlen(tmp)) > 0) {
+            memcpy(names[j], names[j - 1], CF_DIR_PATH_MAX);
+            --j;
+        }
+        memcpy(names[j], tmp, CF_DIR_PATH_MAX);
+    }
+}
+
+/* ------------------------------------------------------------------ *
+ * Loading
+ * ------------------------------------------------------------------ */
+
+static cf_bool dir_load(const cf_source* s, cf_keyspace* ks) {
+    dir_state* st = (dir_state*)s->ext;
+    cf_arena*  ar = cf_ks_arena(ks);
+    char (*names)[CF_DIR_PATH_MAX];
+    char full[CF_DIR_PATH_MAX];
+    int  n, i;
+
+    st->failed = CF_FALSE;
+    cf_error_clear(&st->err);
+
+    names = (char (*)[CF_DIR_PATH_MAX])cf_arena_alloc(ar, (size_t)CF_DIR_MAX_FILES *
+                                                              CF_DIR_PATH_MAX);
+    if (names == NULL) {
+        st->failed = CF_TRUE;
+        return cf_error_set(&st->err, CF_E_MEMORY, NULL, st->path,
+                            "no room to list '%s'", st->path);
+    }
+
+    n = dir_list(st->path, names, CF_DIR_MAX_FILES, &st->err);
+    if (n < 0) {
+        if ((st->flags & CF_FILE_OPTIONAL) != 0) {
+            cf_error_clear(&st->err);
+            return CF_TRUE;
+        }
+        st->failed = CF_TRUE;
+        return CF_FALSE;
+    }
+    dir_sort(names, n);
+
+    for (i = 0; i < n; ++i) {
+        const cf_codec* codec;
+        cf_blob         blob;
+        cf_flatten      fl;
+
+        if (cf_fmt(full, sizeof full, "%s/%s", st->path, names[i]) >= sizeof full) {
+            continue;
+        }
+        codec = (st->format != NULL) ? cf_codec_by_name(st->format)
+                                     : cf_codec_by_path(full);
+        if (codec == NULL) {
+            /* A file the build cannot read is named, not skipped: a
+               directory that silently ignores half its contents is the
+               worst possible place for a build option to hide. */
+            const char* fmt = cf_format_of_path(full);
+            st->failed      = CF_TRUE;
+            if (fmt != NULL) {
+                return cf_error_set(&st->err, CF_E_CAPABILITY, NULL, full,
+                                    "'%s' requires %s support; this build "
+                                    "was compiled without %s",
+                                    full, fmt, cf_format_option(fmt));
+            }
+            return cf_error_set(&st->err, CF_E_CAPABILITY, NULL, full,
+                                "cannot tell the format of '%s' from its "
+                                "name; set one for the whole directory",
+                                full);
+        }
+        if (!cf_blob_file(&blob, ar, full, &st->err)) {
+            st->failed = CF_TRUE;
+            return CF_FALSE;
+        }
+        /* Every file shares the source's rank, so the later one wins by
+           the same rule that makes --port=2 beat --port=1. */
+        if (!cf_flatten_init(&fl, ks, s->rank)) {
+            st->failed = CF_TRUE;
+            return cf_error_set(&st->err, CF_E_MEMORY, NULL, full,
+                                "no room to read '%s'", full);
+        }
+        if (!codec->decode(&blob, cf_flatten_sink(&fl), &st->err)) {
+            st->failed = CF_TRUE;
+            return CF_FALSE;
+        }
+        if (fl.failed || fl.overflow) {
+            st->failed = CF_TRUE;
+            return cf_error_set(&st->err, CF_E_KEY, NULL, full,
+                                "'%s' contains a key this build cannot hold", full);
+        }
+    }
+    return CF_TRUE;
+}
+
+static void dir_destroy(cf_source* s) {
+    (void)s;
+}
+
+static const cf_source_vtable cf_dir_vt = {"dir", dir_load, dir_destroy};
+
+size_t cf_source_dir_state_size(void) {
+    return sizeof(dir_state);
+}
+
+cf_bool cf_source_dir(cf_source* s, const char* name, int rank, const char* path,
+                      const char* format, unsigned flags, void* state,
+                      size_t state_size) {
+    dir_state* st = (dir_state*)state;
+
+    if (s == NULL || path == NULL || st == NULL || state_size < sizeof(dir_state)) {
+        return CF_FALSE;
+    }
+    memset(st, 0, sizeof *st);
+    st->path     = path;
+    st->format   = format;
+    st->flags    = flags;
+    st->err.size = sizeof(cf_error);
+
+    s->vt   = &cf_dir_vt;
+    s->name = (name != NULL) ? name : path;
+    s->rank = rank;
+    s->ext  = st;
+    s->ref  = NULL;
+    return CF_TRUE;
+}
+
+const cf_error* cf_source_dir_error(const cf_source* s) {
+    const dir_state* st;
+
+    if (s == NULL || s->vt != &cf_dir_vt || s->ext == NULL) {
+        return NULL;
+    }
+    st = (const dir_state*)s->ext;
+    return st->failed ? &st->err : NULL;
+}

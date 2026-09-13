@@ -92,6 +92,12 @@ cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const char* p
 cf_bool cf_builder_dotenv(cf_builder* b, const char* name, int rank, const char* path,
                           const char* prefix, unsigned flags);
 
+/* A drop-in directory: every file in byte order, all at one rank, so
+   10-base losing to 90-site is precedence rather than a merge rule and
+   explain() names the file that won. */
+cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank, const char* path,
+                       const char* format, unsigned flags);
+
 /* Register a source the caller built itself. The source object is
    copied, so the caller's may be on the stack; any state it points at
    must outlive the configuration. */

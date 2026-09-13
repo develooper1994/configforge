@@ -224,6 +224,29 @@ cf_bool cf_builder_dotenv(cf_builder* b, const char* name, int rank, const char*
     return CF_TRUE;
 }
 
+cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank, const char* path,
+                       const char* format, unsigned flags) {
+    cf_source* s = builder_slot(b);
+    void*      st;
+
+    if (s == NULL) {
+        return CF_FALSE;
+    }
+    st = cf_arena_calloc(b->arena, cf_source_dir_state_size());
+    if (st == NULL) {
+        cf_error e = CF_ERROR_INIT;
+        cf_error_set(&e, CF_E_MEMORY, NULL, path, "no room for a directory source");
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    if (!cf_source_dir(s, name, rank, path, format, flags, st,
+                       cf_source_dir_state_size())) {
+        return CF_FALSE;
+    }
+    ++b->nsources;
+    return CF_TRUE;
+}
+
 cf_bool cf_builder_replay(cf_builder* b, const char* name, int rank, const char* path) {
     cf_source* s = builder_slot(b);
     void*      st;
@@ -425,6 +448,9 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
             }
             if (detail == NULL) {
                 detail = cf_source_image_error(&c->sources[i]);
+            }
+            if (detail == NULL) {
+                detail = cf_source_dir_error(&c->sources[i]);
             }
             if (detail != NULL) {
                 return create_failed(b, err, detail);

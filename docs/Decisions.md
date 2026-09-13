@@ -1110,9 +1110,9 @@ because an untested source is a claim rather than a feature.
 | environment, command line | built | flat lexers |
 | file: INI, JSON | built | built-in codecs |
 | provenance report replay | built | JSON plus the report schema |
-| `.env` file | **building** | a flat lexer over a file; the seam already exists |
-| directory of drop-in files | **building** | composes file sources in lexical order |
-| binary image | **building** | D-28 |
+| `.env` file | built | a flat lexer over a file; the seam already existed |
+| directory of drop-in files | built | one rank, byte order, later wins |
+| binary image | built | D-28 |
 | TOML, XML, SQLite | deferred | D-23; a vendored parser or a linked dependency |
 | Windows Registry | deferred | needs Windows to test |
 | gsettings, macOS defaults | deferred | needs the platform to test |

@@ -44,6 +44,14 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   the code page dropped cannot be converted back, which is why it reads
   `GetCommandLineW` rather than converting argv. Identity everywhere
   else.
+- **Drop-in directory source** (`conf.d`), which is how systemd, sudo
+  and apt let a package add configuration without editing a file it does
+  not own. Files are read in byte order at one shared rank, so
+  `10-base` losing to `90-site` is precedence rather than a merge rule
+  and `explain()` names the file that won — which is the ordering that
+  fell out of last-occurrence-wins rather than needing a rule of its
+  own. Dotfiles are skipped, because an editor's `.swp` and a package
+  manager's `.dpkg-new` both land in such a directory.
 - **ConfigForge Doctor**: `dump`, `explain`, `lint`, `diff`.
 - **Provenance report** (schema v1) and **Report Replay**.
 - **C++03 wrapper**, compiled as C++98 by a gate.
