@@ -102,6 +102,27 @@ char* const* cf_platform_args(int argc, char* const* argv, cf_arena* arena,
    count, or -1 with `err` set. The caller sorts, because the order
    decides which file wins and that is the caller's rule, not the
    platform's. */
+/* ------------------------------------------------------------------ *
+ * File stamps
+ *
+ * Modification time and size, which is what a change check compares.
+ * Cheap, portable and pollable - and it misses a file rewritten inside
+ * one clock tick with the same length, which is said out loud here
+ * rather than discovered later. The exact answer is to rebuild and
+ * compare digests.
+ * ------------------------------------------------------------------ */
+
+typedef struct cf_stamp {
+    cf_i64  mtime;
+    cf_i64  size;
+    cf_bool present;
+} cf_stamp;
+
+/* False when the path cannot be stamped, which is not an error: a file
+   that is not there yet has a stamp saying so, and its arrival is a
+   change like any other. */
+cf_bool cf_platform_stamp(const char* path, cf_stamp* out);
+
 int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], int max,
                          cf_error* err);
 

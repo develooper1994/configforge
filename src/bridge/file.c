@@ -96,7 +96,12 @@ static void file_destroy(cf_source* s) {
     (void)s;
 }
 
-static const cf_source_vtable cf_file_vt = {"file", file_load, file_destroy};
+static const char* file_path(const cf_source* s) {
+    const file_state* st = (const file_state*)s->ext;
+    return (st != NULL) ? st->path : NULL;
+}
+
+static const cf_source_vtable cf_file_vt = {"file", file_load, file_destroy, file_path};
 
 cf_bool cf_source_file(cf_source* s, const char* name, int rank, const char* path,
                        const char* format, unsigned flags, void* state,

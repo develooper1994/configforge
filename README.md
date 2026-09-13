@@ -85,7 +85,8 @@ nothing, and `1.0` is where semantic versioning starts.
 | writing an overrides file (`cf_emit`) | done |
 | threading contract (D-14), reference-counted snapshots | done |
 | `cf_derive`: changing a value without mutating a snapshot | done |
-| change notification | next |
+| change notification (`cf_changed`) | done |
+| a handle an event loop can wait on | next |
 | change notification | after |
 | TOML, XML, SQLite codecs | deferred, see D-23 |
 | Windows Registry, gsettings, macOS defaults | deferred, see D-30 |

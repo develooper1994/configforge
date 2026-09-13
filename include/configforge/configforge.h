@@ -260,6 +260,33 @@ cf_config* cf_derive(const cf_config* base, const char* source_name,
 cf_config* cf_derive_in(const cf_config* base, cf_arena* arena, const char* source_name,
                         const cf_pair* pairs, size_t count, cf_error* err);
 
+/* ------------------------------------------------------------------ *
+ * Change notification
+ *
+ * Pollable, never a callback: a library that owns a thread and calls
+ * you back has made a threading decision that belongs to you.
+ *
+ *     if (cf_changed(cfg)) {
+ *         cf_config* next = rebuild();
+ *         cf_config_free(cfg);
+ *         cfg = next;
+ *     }
+ *
+ * The old snapshot stays valid while anything holds it, so reloading
+ * changes no contract: cf_get_text's pointer is valid until *that*
+ * configuration is released, watched or not.
+ *
+ * What is compared is modification time and size. That is cheap,
+ * portable and pollable, and it misses a file rewritten inside one
+ * clock tick at the same length. Treat a true as worth acting on, not
+ * as a guarantee; the exact answer is to rebuild and compare digests,
+ * which costs the re-read you were about to do anyway.
+ * ------------------------------------------------------------------ */
+
+cf_bool     cf_changed(const cf_config* c);
+size_t      cf_watch_count(const cf_config* c);
+const char* cf_watch_path(const cf_config* c, size_t i);
+
 void cf_config_ref(cf_config* c);
 void cf_config_free(cf_config* c);
 

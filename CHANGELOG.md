@@ -122,6 +122,20 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   unknown-key policy are inherited, because a derived configuration that
   accepted what the original refused would be a different contract
   wearing the same name.
+- **Change notification** (D-35): `cf_changed`, `cf_watch_count`,
+  `cf_watch_path`. Pollable, never a callback — a library that owns a
+  thread and calls you back has made a threading decision that belongs
+  to the caller, and calling back while that caller reads is the race
+  the threading contract exists to avoid.
+  A conflict the design expected did not appear. It predicted that
+  enabling watch would change `cf_get_text`'s lifetime contract; because
+  snapshots became immutable and reference counted for other reasons, a
+  reload produces a *new* snapshot and the old one stays valid while
+  anything holds it. Watching changes no contract at all.
+  What is compared is modification time and size, which misses a file
+  rewritten inside one clock tick at the same length. That is documented
+  as a hint worth acting on rather than a guarantee; the exact answer is
+  to rebuild and compare digests.
 - **ConfigForge Doctor**: `dump`, `explain`, `lint`, `diff`.
 - **Provenance report** (schema v1) and **Report Replay**.
 - **C++03 wrapper**, compiled as C++98 by a gate.

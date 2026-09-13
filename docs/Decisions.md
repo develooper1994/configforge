@@ -65,6 +65,7 @@ gets reopened every six months.
 | D-32 | The compiler warning standard | every build, every compiler | **Decided** |
 | D-33 | Per-parameter policy: shape, and what a violation does | resolver, security | **Decided** |
 | D-34 | What `set()` means on an immutable snapshot | ownership, provenance | **Decided** |
+| D-35 | Change notification: what the library hands back | threading, contract | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -1406,6 +1407,51 @@ rank above everything". Rank is explicit on the source, so the position looked
 irrelevant — and was not. Deriving twice puts two candidates at the same override rank,
 where the later one wins, and adding the new one first made the *inherited* override the
 later of the two. A second change to the same key did nothing.
+
+---
+
+## D-35 — Change Notification
+
+**Question.** A file this configuration was built from changes on disk. What does the
+library do about it?
+
+**The question that matters is not which API.** inotify, kqueue and
+ReadDirectoryChangesW are three implementations of a detail. What decides the design is
+what the library hands back, because that choice is what a caller cannot undo.
+
+**Options.**
+
+1. **A callback.** The library owns a thread and calls you. This forces a threading
+   model on every caller, and calling back from the library's thread while the caller
+   reads is exactly the race the threading contract (D-14) exists to avoid. Rejected.
+2. **A pollable question.** The caller asks "has anything changed", and decides for
+   itself when to act. No thread, no callback, nothing imposed.
+3. **A handle to wait on**, for a program that already has an event loop.
+
+**Decision: option 2, with option 3 reserved.** A library that forces a thread on its
+caller has made a decision that belongs to the caller.
+
+**And reload is a rebuild, not a mutation.** The caller runs its builder again and swaps
+the result. This is where a conflict the design anticipated simply evaporated:
+
+> *"With watch enabled, the pointer is valid until the next reload... This is the one
+> genuine conflict between Tier 0 simplicity and Tier 4 capability."*
+
+It is not a conflict any more, and nothing was done about it on purpose. Snapshots
+became immutable and reference counted for other reasons — D-14 and D-34 — and a reload
+that produces a *new* snapshot leaves the old one valid for as long as somebody holds
+it. `cf_get_text` returns a pointer valid until *that* configuration is released, with
+or without watching. Enabling watch changes no contract at all.
+
+**What is actually detected, stated plainly.** `cf_changed` compares modification time
+and size. That is cheap, portable and pollable, and it can miss a file rewritten inside
+one clock tick with the same length. The exact answer is to rebuild and compare
+`cf_digest`, which costs a re-read — most of the price of the reload you were about to
+do anyway.
+
+So `cf_changed` is documented as a *hint that is worth acting on*, not a guarantee.
+Describing it as exact would be the more attractive sentence and the one that produces a
+bug report about a change nobody saw.
 
 ---
 

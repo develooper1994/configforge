@@ -144,7 +144,12 @@ static void dir_destroy(cf_source* s) {
     (void)s;
 }
 
-static const cf_source_vtable cf_dir_vt = {"dir", dir_load, dir_destroy};
+static const char* dir_path(const cf_source* s) {
+    const dir_state* st = (const dir_state*)s->ext;
+    return (st != NULL) ? st->path : NULL;
+}
+
+static const cf_source_vtable cf_dir_vt = {"dir", dir_load, dir_destroy, dir_path};
 
 size_t cf_source_dir_state_size(void) {
     return sizeof(dir_state);

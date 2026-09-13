@@ -7,6 +7,7 @@
  */
 
 #include "configforge/configforge.h"
+#include "configforge/cf_platform.h"
 
 #include <string.h>
 
@@ -52,6 +53,13 @@ struct cf_config {
        accepted unknown keys the original refused would be a different
        contract wearing the same name. */
     cf_unknown_policy unknown;
+
+    /* The files this configuration was read from, stamped as they were
+       when it was built. Kept so a caller can ask whether any of them
+       has moved on without holding the paths itself. */
+    const char** watch_paths;
+    cf_stamp*    watch_stamps;
+    size_t       watch_count;
 };
 
 /* ------------------------------------------------------------------ *
@@ -457,6 +465,12 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
         cf_ref_init(&c->refs, 1);
         c->owns_arena = b->owns_arena;
         c->unknown    = b->unknown;
+        /* One slot per source; the ones that read no file stay unused,
+           which costs a pointer each and saves a second pass. */
+        c->watch_paths =
+            (const char**)cf_arena_calloc(b->arena, (b->nsources + 1) * sizeof(char*));
+        c->watch_stamps =
+            (cf_stamp*)cf_arena_calloc(b->arena, (b->nsources + 1) * sizeof(cf_stamp));
     }
     if (c == NULL) {
         cf_error_set(&e, CF_E_MEMORY, NULL, NULL, "no room for the config");
@@ -531,6 +545,22 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
             cf_error_set(&e, CF_E_SOURCE, NULL, c->sources[i].name,
                          "source '%s' could not be read", c->sources[i].name);
             return create_failed(b, err, &e);
+        }
+    }
+
+    /* Stamped after the sources were read, not before: a file that
+       changed while it was being read has already produced a
+       configuration nobody asked for, and the stamp taken afterwards is
+       the one that makes the next check notice. */
+    if (c->watch_paths != NULL && c->watch_stamps != NULL) {
+        for (i = 0; i < c->sv.count; ++i) {
+            const char* p = cf_source_path(&c->sources[i]);
+            if (p == NULL) {
+                continue;
+            }
+            c->watch_paths[c->watch_count] = p;
+            cf_platform_stamp(p, &c->watch_stamps[c->watch_count]);
+            ++c->watch_count;
         }
     }
 
@@ -689,6 +719,53 @@ cf_config* cf_derive_in(const cf_config* base, cf_arena* arena, const char* sour
         return NULL;
     }
     return derive_onto(base, arena, CF_FALSE, source_name, pairs, count, err);
+}
+
+/* ------------------------------------------------------------------ *
+ * Change notification
+ *
+ * A pollable question, not a callback. A library that owns a thread and
+ * calls you back has made a threading decision that belongs to the
+ * caller, and calling back while that caller reads is the race the
+ * threading contract exists to avoid.
+ *
+ * Reload is a rebuild: run the builder again and swap. The old snapshot
+ * stays valid for as long as anybody holds it, so enabling this changes
+ * no contract - which the design expected to be the one real conflict
+ * between the simple and the capable tiers, and is not, because
+ * snapshots became immutable and counted for other reasons.
+ * ------------------------------------------------------------------ */
+
+size_t cf_watch_count(const cf_config* c) {
+    return (c != NULL) ? c->watch_count : 0;
+}
+
+const char* cf_watch_path(const cf_config* c, size_t i) {
+    if (c == NULL || i >= c->watch_count) {
+        return NULL;
+    }
+    return c->watch_paths[i];
+}
+
+cf_bool cf_changed(const cf_config* c) {
+    size_t i;
+
+    if (c == NULL) {
+        return CF_FALSE;
+    }
+    for (i = 0; i < c->watch_count; ++i) {
+        cf_stamp now;
+        cf_platform_stamp(c->watch_paths[i], &now);
+        /* Appearing and disappearing are both changes: an optional file
+           that was missing and now is not is exactly the case somebody
+           wants to be told about. */
+        if (now.present != c->watch_stamps[i].present ||
+            now.mtime != c->watch_stamps[i].mtime ||
+            now.size != c->watch_stamps[i].size) {
+            return CF_TRUE;
+        }
+    }
+    return CF_FALSE;
 }
 
 void cf_config_ref(cf_config* c) {

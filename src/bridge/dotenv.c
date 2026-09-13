@@ -56,7 +56,13 @@ static void dotenv_destroy(cf_source* s) {
     (void)s;
 }
 
-static const cf_source_vtable cf_dotenv_vt = {"dotenv", dotenv_load, dotenv_destroy};
+static const char* dotenv_path(const cf_source* s) {
+    const dotenv_state* st = (const dotenv_state*)s->ext;
+    return (st != NULL) ? st->path : NULL;
+}
+
+static const cf_source_vtable cf_dotenv_vt = {"dotenv", dotenv_load, dotenv_destroy,
+                                              dotenv_path};
 
 size_t cf_source_dotenv_state_size(void) {
     return sizeof(dotenv_state);

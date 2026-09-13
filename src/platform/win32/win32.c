@@ -84,6 +84,25 @@ char* const* cf_platform_args(int argc, char* const* argv, cf_arena* arena,
     return (char* const*)out;
 }
 
+cf_bool cf_platform_stamp(const char* path, cf_stamp* out) {
+    WIN32_FILE_ATTRIBUTE_DATA fa;
+
+    if (out == NULL) {
+        return CF_FALSE;
+    }
+    out->mtime   = 0;
+    out->size    = 0;
+    out->present = CF_FALSE;
+    if (path == NULL || !GetFileAttributesExA(path, GetFileExInfoStandard, &fa)) {
+        return CF_FALSE;
+    }
+    out->mtime   = ((cf_i64)fa.ftLastWriteTime.dwHighDateTime << 32) |
+                   (cf_i64)fa.ftLastWriteTime.dwLowDateTime;
+    out->size    = ((cf_i64)fa.nFileSizeHigh << 32) | (cf_i64)fa.nFileSizeLow;
+    out->present = CF_TRUE;
+    return CF_TRUE;
+}
+
 int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], int max,
                          cf_error* err) {
     char             pattern[CF_PLATFORM_NAME_MAX];

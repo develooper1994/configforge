@@ -461,7 +461,8 @@ static void replay_destroy(cf_source* s) {
     (void)s;
 }
 
-static const cf_source_vtable cf_replay_vt = {"replay", replay_load, replay_destroy};
+static const cf_source_vtable cf_replay_vt = {"replay", replay_load, replay_destroy,
+                                              NULL};
 
 size_t cf_source_replay_state_size(void) {
     return sizeof(replay_state);

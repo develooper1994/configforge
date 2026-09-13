@@ -42,7 +42,7 @@ static void cf_memory_destroy(cf_source* s) {
 }
 
 static const cf_source_vtable cf_memory_vt = {"memory", cf_memory_load,
-                                              cf_memory_destroy};
+                                              cf_memory_destroy, NULL};
 
 /* The pair array is borrowed, not copied. Values are duplicated into
    the key space arena when added, so the caller's array only has to

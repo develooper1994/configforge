@@ -11,6 +11,13 @@
 #include "configforge/cf_platform.h"
 #include "configforge/cf_source.h"
 
+const char* cf_source_path(const cf_source* s) {
+    if (s == NULL || s->vt == NULL || s->vt->path == NULL) {
+        return NULL;
+    }
+    return s->vt->path(s);
+}
+
 char* const* cf_environ(void) {
     return cf_platform_environ();
 }

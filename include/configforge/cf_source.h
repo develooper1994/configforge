@@ -36,6 +36,13 @@ typedef struct cf_source_vtable {
     const char* kind;
     cf_bool (*load)(const cf_source* s, cf_keyspace* ks);
     void (*destroy)(cf_source* s);
+
+    /* The file this source reads, and NULL for a source that reads
+       none - written out at every construction site rather than left to
+       C89's implicit zero, because -Wmissing-field-initializers is on
+       and that is the point of having it: a new member is a decision at
+       each site, not a default that nobody looked at. */
+    const char* (*path)(const cf_source* s);
 } cf_source_vtable;
 
 typedef struct cf_pair {
@@ -217,6 +224,9 @@ const cf_error* cf_source_dotenv_error(const cf_source* s);
    explaining itself must not lose provenance at the moment a value
    changes, which is exactly when somebody asks. */
 cf_bool cf_source_snapshot(cf_source* s, const char* name, const cf_keyspace* ks);
+
+/* The file a source reads, or NULL. */
+const char* cf_source_path(const cf_source* s);
 
 size_t cf_source_dir_state_size(void);
 

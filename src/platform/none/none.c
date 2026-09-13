@@ -38,6 +38,16 @@ char* const* cf_platform_args(int argc, char* const* argv, cf_arena* arena,
     return argv;
 }
 
+cf_bool cf_platform_stamp(const char* path, cf_stamp* out) {
+    (void)path;
+    if (out != NULL) {
+        out->mtime   = 0;
+        out->size    = 0;
+        out->present = CF_FALSE;
+    }
+    return CF_FALSE;
+}
+
 int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], int max,
                          cf_error* err) {
     (void)names;

@@ -41,7 +41,7 @@ static void cf_defaults_destroy(cf_source* s) {
 }
 
 static const cf_source_vtable cf_defaults_vt = {"default", cf_defaults_load,
-                                                cf_defaults_destroy};
+                                                cf_defaults_destroy, NULL};
 
 cf_bool cf_source_defaults(cf_source* s, const char* name, int rank,
                            const cf_defset* ds) {

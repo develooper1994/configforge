@@ -14,6 +14,7 @@
 #if CF_PLATFORM_POSIX
 
 #include <dirent.h>
+#include <sys/stat.h>
 #include <string.h>
 
 /* Not C89, which is the whole reason this file exists. Declared here
@@ -48,6 +49,24 @@ char* const* cf_platform_args(int argc, char* const* argv, cf_arena* arena,
     (void)arena;
     *out_argc = argc;
     return argv;
+}
+
+cf_bool cf_platform_stamp(const char* path, cf_stamp* out) {
+    struct stat st;
+
+    if (out == NULL) {
+        return CF_FALSE;
+    }
+    out->mtime   = 0;
+    out->size    = 0;
+    out->present = CF_FALSE;
+    if (path == NULL || stat(path, &st) != 0) {
+        return CF_FALSE;
+    }
+    out->mtime   = (cf_i64)st.st_mtime;
+    out->size    = (cf_i64)st.st_size;
+    out->present = CF_TRUE;
+    return CF_TRUE;
 }
 
 int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], int max,

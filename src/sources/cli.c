@@ -78,7 +78,7 @@ static void cf_cli_destroy(cf_source* s) {
     (void)s;
 }
 
-static const cf_source_vtable cf_cli_vt = {"cli", cf_cli_load, cf_cli_destroy};
+static const cf_source_vtable cf_cli_vt = {"cli", cf_cli_load, cf_cli_destroy, NULL};
 
 cf_bool cf_source_cli(cf_source* s, const char* name, int rank, int argc,
                       char* const* argv) {

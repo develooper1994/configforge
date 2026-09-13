@@ -24,7 +24,8 @@ set(CF_UNIT_TESTS
     test_fuzz
     test_starve
     test_oom
-    test_derive)
+    test_derive
+    test_watch)
 
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)
