@@ -102,13 +102,30 @@ static void derive_prefix(const char* name, char* out, size_t cap) {
 }
 
 cf_builder* cf_app_builder(const char* name, int argc, char* const* argv) {
-    cf_builder* b = cf_build(NULL);
+    cf_builder* b        = cf_build(NULL);
+    cf_error    e        = CF_ERROR_INIT;
+    int         n        = argc;
+    char**      expanded = NULL;
 
     if (b == NULL) {
         return NULL;
     }
     derive_prefix(name, b->prefix, sizeof b->prefix);
-    cf_builder_cli(b, "cli", CF_RANK_CLI, argc, argv);
+
+    /* UTF-8 first, then response files: the file's name may itself
+       contain a character the code page dropped. Both are identity on
+       platforms that need neither, so the conventional path pays
+       nothing for them. */
+    argv = cf_cli_args(argc, argv, b->arena, &n);
+    if (cf_cli_expand(n, argv, b->arena, &n, &expanded, &e)) {
+        argv = expanded;
+    } else {
+        /* A response file that cannot be read is a command line the
+           user meant and did not get, so it is held and reported by
+           create() rather than quietly ignored. */
+        builder_fail(b, &e);
+    }
+    cf_builder_cli(b, "cli", CF_RANK_CLI, n, argv);
     cf_builder_env(b, "env", CF_RANK_ENV, b->prefix, cf_environ());
     return b;
 }

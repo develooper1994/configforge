@@ -3,6 +3,7 @@
  */
 
 #include "configforge/cf_entry.h"
+#include "configforge/cf_serialize.h"
 
 #include <string.h>
 
@@ -331,6 +332,130 @@ cf_bool cf_lex_cli(int argc, char* const* argv, const cf_keymap* map,
                                 key);
         }
     }
+    return CF_TRUE;
+}
+
+/* ------------------------------------------------------------------ *
+ * Response files
+ * ------------------------------------------------------------------ */
+
+typedef struct argv_build {
+    char**    v;
+    int       n;
+    int       cap;
+    cf_arena* arena;
+} argv_build;
+
+static cf_bool argv_push(argv_build* b, const char* p, size_t len) {
+    char* copy;
+
+    if (b->n == b->cap) {
+        int    ncap = (b->cap < 16) ? 16 : b->cap * 2;
+        char** nv   = (char**)cf_arena_alloc(b->arena, (size_t)ncap * sizeof(char*));
+        if (nv == NULL) {
+            return CF_FALSE;
+        }
+        if (b->n > 0) {
+            memcpy(nv, b->v, (size_t)b->n * sizeof(char*));
+        }
+        b->v   = nv;
+        b->cap = ncap;
+    }
+    copy = cf_arena_dup(b->arena, p, len);
+    if (copy == NULL) {
+        return CF_FALSE;
+    }
+    b->v[b->n++] = copy;
+    return CF_TRUE;
+}
+
+cf_bool cf_cli_expand(int argc, char* const* argv, cf_arena* arena, int* out_argc,
+                      char*** out_argv, cf_error* err) {
+    argv_build b;
+    int        i;
+
+    if (argv == NULL || arena == NULL || out_argc == NULL || out_argv == NULL) {
+        return cf_error_set(err, CF_E_SOURCE, NULL, "cli", "nothing to expand");
+    }
+    b.v     = NULL;
+    b.n     = 0;
+    b.cap   = 0;
+    b.arena = arena;
+
+    for (i = 0; i < argc; ++i) {
+        const char* a = argv[i];
+        cf_blob     blob;
+        size_t      at = 0;
+
+        if (a == NULL) {
+            continue;
+        }
+        /* Only past argv[0], and never after "--": everything beyond
+           that belongs to the program, and an argument that happens to
+           start with @ is its business. */
+        if (i == 0 || a[0] != '@' || a[1] == '\0') {
+            if (!argv_push(&b, a, strlen(a))) {
+                return cf_error_set(err, CF_E_MEMORY, NULL, "cli",
+                                    "no room to expand the command line");
+            }
+            if (a[0] == '-' && a[1] == '-' && a[2] == '\0') {
+                /* Copy the rest verbatim. */
+                for (++i; i < argc; ++i) {
+                    if (argv[i] != NULL && !argv_push(&b, argv[i], strlen(argv[i]))) {
+                        return cf_error_set(err, CF_E_MEMORY, NULL, "cli",
+                                            "no room to expand");
+                    }
+                }
+                break;
+            }
+            continue;
+        }
+
+        if (!cf_blob_file(&blob, arena, a + 1, err)) {
+            return CF_FALSE;
+        }
+        while (at < blob.n) {
+            size_t      start = at;
+            const char* line;
+            size_t      len;
+
+            while (at < blob.n && blob.p[at] != '\n') {
+                ++at;
+            }
+            len = at - start;
+            while (len > 0 &&
+                   (blob.p[start + len - 1] == '\r' || blob.p[start + len - 1] == ' ' ||
+                    blob.p[start + len - 1] == '\t')) {
+                --len;
+            }
+            line = blob.p + start;
+            while (len > 0 && (*line == ' ' || *line == '\t')) {
+                ++line;
+                --len;
+            }
+            if (at < blob.n) {
+                ++at;
+            }
+            if (len == 0 || line[0] == '#') {
+                continue;
+            }
+            if (line[0] == '@') {
+                /* A response file that includes another is a command
+                   line nobody can follow from the one they typed, and
+                   one that includes itself is a loop. */
+                return cf_error_set(err, CF_E_SOURCE, NULL, a + 1,
+                                    "%s: a response file may not include "
+                                    "another",
+                                    a + 1);
+            }
+            if (!argv_push(&b, line, len)) {
+                return cf_error_set(err, CF_E_MEMORY, NULL, a + 1,
+                                    "no room to expand '%s'", a + 1);
+            }
+        }
+    }
+    *out_argc = b.n;
+    *out_argv = b.v;
     return CF_TRUE;
 }
 

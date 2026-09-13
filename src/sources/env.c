@@ -74,10 +74,10 @@ static cf_bool cf_env_load(const cf_source* s, cf_keyspace* ks) {
         return CF_FALSE;
     }
     cf_keymap_init(&map, CF_KEYMAP_ENV, s->u.env.prefix);
-    if (!cf_lex_env(s->u.env.env, &map, cf_keysink_of(&out), &err)) {
+    if (!env_natural_pass(s, &out)) {
         return CF_FALSE;
     }
-    return env_natural_pass(s, &out);
+    return cf_lex_env(s->u.env.env, &map, cf_keysink_of(&out), &err);
 }
 
 static void cf_env_destroy(cf_source* s) {

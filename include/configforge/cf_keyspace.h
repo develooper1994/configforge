@@ -75,6 +75,9 @@ typedef struct cf_candidate {
     struct cf_candidate* next;   /* next lower precedence            */
 } cf_candidate;
 
+/* Candidates are ordered by precedence rank, and within one rank the
+   later occurrence comes first: a source that can repeat a key means
+   the last assignment to win. */
 typedef struct cf_entry {
     const char*   key;
     size_t        keylen;

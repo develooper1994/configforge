@@ -126,6 +126,40 @@ static void test_rejected_is_skipped(cf_arena* ar) {
     check(e->chain->reason != NULL, "rejection reason retained");
 }
 
+/* Within one source the later occurrence wins. That is the convention
+   everywhere a source can repeat a key, and getting it backwards made a
+   response file beat the arguments typed after it. */
+static void test_later_occurrence_wins(cf_arena* ar) {
+    cf_keyspace     ks;
+    const cf_value* v;
+    const cf_entry* e;
+
+    cf_ks_init(&ks, ar, 4);
+    add_int(&ks, "a.b", SRC_CLI, 1, "argv[1]");
+    add_int(&ks, "a.b", SRC_CLI, 2, "argv[2]");
+    add_int(&ks, "a.b", SRC_CLI, 3, "argv[3]");
+    add_int(&ks, "a.b", SRC_DEFAULT, 99, NULL);
+    cf_ks_resolve(&ks);
+
+    v = cf_ks_get(&ks, "a.b", 3);
+    check(v != NULL && v->u.i == 3, "the last of three wins");
+
+    /* And the earlier ones are shadowed rather than dropped, so
+       explain() can still show that the option was given twice. */
+    e = cf_ks_find(&ks, "a.b", 3);
+    check(e->chain->value.u.i == 3, "chain leads with the winner");
+    check(e->chain->next != NULL && e->chain->next->value.u.i == 2,
+          "then the one before it");
+    check(e->chain->next->next != NULL && e->chain->next->next->value.u.i == 1,
+          "then the first");
+
+    /* Rank still beats order: a later default does not overtake an
+       earlier command line. */
+    check(e->chain->next->next->next != NULL &&
+              e->chain->next->next->next->value.u.i == 99,
+          "and the lower-precedence source is last whenever it arrived");
+}
+
 static void test_sorted_and_search(cf_arena* ar) {
     cf_keyspace ks;
     size_t      i;
@@ -248,6 +282,7 @@ int main(void) {
     test_key_validation();
     test_precedence(ar);
     test_rejected_is_skipped(ar);
+    test_later_occurrence_wins(ar);
     test_sorted_and_search(ar);
     test_determinism(ar);
     test_exhaustion();

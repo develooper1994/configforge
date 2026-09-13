@@ -170,6 +170,41 @@ cf_bool cf_lex_cli(int argc, char* const* argv, const cf_keymap* map,
                    const cf_cli_spec* spec, const cf_entry_sink* out, cf_error* err);
 
 /* ------------------------------------------------------------------ *
+ * Response files
+ *
+ *   myapp @args.txt --port=8080
+ *
+ * One argument per line, `#` comments, blank lines skipped. Accepted
+ * because the Windows command-line length limit is real and this is the
+ * universal way around it.
+ *
+ * Expansion is a separate pass rather than something the lexer does, so
+ * the lexer keeps needing nothing but its arguments. Nesting is
+ * refused: a response file that includes another is a command line
+ * nobody can follow from the one they typed, and one that includes
+ * itself is a loop.
+ * ------------------------------------------------------------------ */
+
+cf_bool cf_cli_expand(int argc, char* const* argv, cf_arena* arena, int* out_argc,
+                      char*** out_argv, cf_error* err);
+
+/* ------------------------------------------------------------------ *
+ * The command line in UTF-8
+ *
+ * The real portability problem with a command line is not syntax. On
+ * Windows `main`'s argv arrives in the active ANSI code page, so a
+ * value containing any non-ASCII character is wrong before any parser
+ * sees it - and what the code page dropped cannot be converted back,
+ * which is why the Windows path reads GetCommandLineW rather than
+ * converting argv.
+ *
+ * Identity everywhere else, so a caller writes the same two lines on
+ * every platform and only one of them needed them.
+ * ------------------------------------------------------------------ */
+
+char* const* cf_cli_args(int argc, char* const* argv, cf_arena* arena, int* out_argc);
+
+/* ------------------------------------------------------------------ *
  * A .env file
  *
  *   # comment

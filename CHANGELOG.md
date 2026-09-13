@@ -33,6 +33,17 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   Unlike the environment it belongs to this program, so a name that
   derives no key is an error with a line number rather than somebody
   else's variable.
+- **`@file` response files**, because the Windows command-line length
+  limit is real and this is the universal way around it. Expansion is a
+  pass of its own, so the lexer keeps needing nothing but its arguments.
+  Nesting is refused: a response file that includes another is a command
+  line nobody can follow from the one they typed.
+- **`cf_cli_args()`**, which returns the arguments in UTF-8. On Windows
+  `main`'s argv arrives in the active code page, so a value containing
+  any non-ASCII character is wrong before any parser sees it — and what
+  the code page dropped cannot be converted back, which is why it reads
+  `GetCommandLineW` rather than converting argv. Identity everywhere
+  else.
 - **ConfigForge Doctor**: `dump`, `explain`, `lint`, `diff`.
 - **Provenance report** (schema v1) and **Report Replay**.
 - **C++03 wrapper**, compiled as C++98 by a gate.
@@ -47,6 +58,18 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   one is put to the compiler at configure time with `-Werror` set, so a
   compiler that merely warns about an unknown `-W` flag still fails the
   check. No table to keep true.
+
+### Changed
+
+- **Within one source, the later occurrence of a key now wins.** It was
+  the first, which is the convention nowhere: a command line where
+  `--port=1 --port=2` gives 2, an INI file where the second assignment
+  wins, a drop-in directory where `90-site` overrides `10-base`. Found
+  by an end-to-end run where a response file beat the arguments typed
+  after it.
+  The environment is a set and has no order of its own, so where both
+  the escaped and the natural spelling are present the escaped one wins
+  by construction rather than by which pass happened to run second.
 
 ### Fixed
 

@@ -46,7 +46,7 @@ SOURCES = [
     "serialize/blob.c", "serialize/codec.c", "serialize/ini.c",
     "serialize/json.c",
     "sources/entry.c", "sources/memory.c", "sources/defaults.c", "sources/env.c",
-    "sources/environ.c", "sources/cli.c",
+    "sources/environ.c", "sources/cliargs.c", "sources/cli.c",
     "bridge/flatten.c", "bridge/file.c", "bridge/dotenv.c", "bridge/image.c",
     "diag/explain.c", "diag/report.c",
 ]

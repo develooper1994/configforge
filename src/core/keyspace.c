@@ -229,8 +229,14 @@ static int cand_cmp(const cf_cand_rec* a, const cf_cand_rec* b) {
     if (a->cand.source != b->cand.source) {
         return (a->cand.source < b->cand.source) ? -1 : 1;
     }
+    /* Descending, so that within one source the *later* occurrence wins.
+       That is the convention everywhere a source can repeat a key: a
+       command line where --port=1 --port=2 gives 2, an INI file where
+       the second assignment wins, a drop-in directory where 90-site
+       overrides 10-base. Ascending looked natural and made a response
+       file beat the arguments typed after it. */
     if (a->seq != b->seq) {
-        return (a->seq < b->seq) ? -1 : 1;
+        return (a->seq > b->seq) ? -1 : 1;
     }
     return 0;
 }

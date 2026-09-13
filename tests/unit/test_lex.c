@@ -8,6 +8,7 @@
 #include <configforge/configforge.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static int  g_fail = 0, g_run = 0;
@@ -435,6 +436,83 @@ static void test_dotenv(void) {
     }
 }
 
+static cf_bool spill(const char* path, const char* text) {
+    FILE* f = fopen(path, "wb");
+    if (f == NULL) {
+        return CF_FALSE;
+    }
+    fputs(text, f);
+    fclose(f);
+    return CF_TRUE;
+}
+
+static void test_response_file(void) {
+    static char  a0[]   = "prog";
+    static char  a1[]   = "@cf_args.txt";
+    static char  a2[]   = "--after=1";
+    static char* argv[] = {a0, a1, a2, NULL};
+    cf_arena*    ar     = cf_arena_new(NULL, 0);
+    cf_error     err    = CF_ERROR_INIT;
+    int          n      = 0;
+    char**       out    = NULL;
+
+    check(spill("cf_args.txt", "# a comment\n"
+                               "--server.port=8080\n"
+                               "\n"
+                               "   --server.host=1.2.3.4   \n"),
+          "wrote a response file");
+
+    check(cf_cli_expand(3, argv, ar, &n, &out, &err), "expansion succeeds");
+    check(n == 4, "two lines in, one comment and one blank out");
+    check(strcmp(out[0], "prog") == 0, "argv[0] is never a response file");
+    check(strcmp(out[1], "--server.port=8080") == 0, "first line");
+    check(strcmp(out[2], "--server.host=1.2.3.4") == 0, "trimmed");
+    check(strcmp(out[3], "--after=1") == 0, "arguments after it survive");
+
+    /* A response file that includes another is a command line nobody
+       can follow from the one they typed. */
+    {
+        static char  b1[]     = "@cf_nest.txt";
+        static char* nested[] = {a0, b1, NULL};
+        cf_error     e2       = CF_ERROR_INIT;
+        check(spill("cf_nest.txt", "@cf_args.txt\n"), "wrote a nested file");
+        check(!cf_cli_expand(2, nested, ar, &n, &out, &e2), "nesting is refused");
+        check(strstr(e2.message, "may not include") != NULL, "and says why");
+        remove("cf_nest.txt");
+    }
+
+    /* Everything after "--" belongs to the program, including an
+       argument that happens to start with @. */
+    {
+        static char  c1[]   = "--";
+        static char  c2[]   = "@notafile";
+        static char* rest[] = {a0, c1, c2, NULL};
+        cf_error     e3     = CF_ERROR_INIT;
+        check(cf_cli_expand(3, rest, ar, &n, &out, &e3), "-- stops expansion");
+        check(n == 3 && strcmp(out[2], "@notafile") == 0,
+              "and the argument is left alone");
+    }
+
+    {
+        static char  d1[]   = "@cf_absent.txt";
+        static char* miss[] = {a0, d1, NULL};
+        cf_error     e4     = CF_ERROR_INIT;
+        check(!cf_cli_expand(2, miss, ar, &n, &out, &e4),
+              "a missing response file is an error");
+    }
+
+    /* Identity on this platform, and the caller writes the same two
+       lines everywhere. */
+    {
+        int          m = 0;
+        char* const* u = cf_cli_args(3, argv, ar, &m);
+        check(m == 3 && u != NULL, "cf_cli_args returns the arguments");
+    }
+
+    cf_arena_free(ar);
+    remove("cf_args.txt");
+}
+
 int main(void) {
     test_keymap();
     test_lex_env();
@@ -442,6 +520,7 @@ int main(void) {
     test_cli_with_a_contract();
     test_cli_without_a_contract();
     test_dotenv();
+    test_response_file();
     test_sink_refusal_is_reported();
 
     printf("%d checks, %d failures\n", g_run, g_fail);
