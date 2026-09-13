@@ -118,17 +118,72 @@ const cf_entry_sink* cf_keysink_of(cf_keysink* k);
 cf_bool cf_lex_env(char* const* environment, const cf_keymap* map,
                    const cf_entry_sink* out, cf_error* err);
 
-/*   --server.port=8080     value
- *   --tls.enabled          bool true
- *   --                     stop
+/* ------------------------------------------------------------------ *
+ * Command line
+ *
+ *   --key=value        everywhere
+ *   --key              true, when the key is a flag or undeclared
+ *   --key value        when a declaration says the key takes one
+ *   --no-key           false, when the key is a declared flag
+ *   -k value           when a declaration names the alias
+ *   --                 stop
+ *
+ * The forms below the first two need to know whether an option takes a
+ * value, which is the one thing a command line cannot be parsed
+ * correctly without. A parser that guesses eats positional arguments,
+ * and getopt takes a spec for exactly this reason.
+ *
+ * So the lexer asks. Tier 0 passes no spec and gets the two forms that
+ * need no knowledge; Tier 1 passes one built from the definitions and
+ * gets the rest. Same shape as the environment's two spellings: a
+ * contract buys capability, and its absence buys predictability rather
+ * than guesswork.
+ * ------------------------------------------------------------------ */
+
+typedef enum cf_cli_kind {
+    /* No declaration. Only the = form carries a value. */
+    CF_CLI_UNKNOWN = 0,
+    /* A boolean: the bare form is true and --no- makes it false. */
+    CF_CLI_FLAG,
+    /* Takes a value, so the separate form is unambiguous. */
+    CF_CLI_VALUE
+} cf_cli_kind;
+
+typedef struct cf_cli_spec {
+    cf_cli_kind (*classify)(void* ctx, const char* key, size_t klen);
+    /* Canonical key for an alias such as "-p" or "--port", or 0 when
+       the token is not an alias. */
+    size_t (*alias)(void* ctx, const char* raw, size_t rawlen, char* out,
+                    size_t cap);
+    void* ctx;
+} cf_cli_spec;
+
+/* `spec` may be NULL, which is Tier 0.
  *
  * A malformed option is rejected rather than skipped. A command line
- * belongs to this program alone, so an unparseable option is the
- * user's typo, and ignoring it is how a misspelled flag becomes an
- * hour of confusion.
- */
+ * belongs to this program alone, so an unparseable option is the user's
+ * typo, and ignoring it is how a misspelled flag becomes an hour of
+ * confusion. */
 cf_bool cf_lex_cli(int argc, char* const* argv, const cf_keymap* map,
-                   const cf_entry_sink* out, cf_error* err);
+                   const cf_cli_spec* spec, const cf_entry_sink* out,
+                   cf_error* err);
+
+/* ------------------------------------------------------------------ *
+ * A .env file
+ *
+ *   # comment
+ *   KEY=value
+ *   export KEY=value        the shell convention, accepted and ignored
+ *   KEY="quoted value"
+ *
+ * The same shape as the environment, which is the point: a .env file is
+ * an environment written down. It takes the same key mapping, so the
+ * escape and the natural spelling behave identically in both.
+ * ------------------------------------------------------------------ */
+
+cf_bool cf_lex_dotenv(const char* text, size_t n, const char* origin,
+                      const cf_keymap* map, const cf_entry_sink* out,
+                      cf_error* err);
 
 #ifdef __cplusplus
 }
