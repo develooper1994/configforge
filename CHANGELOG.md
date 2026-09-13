@@ -21,6 +21,18 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - **Key mappings** (`cf_keymap`), which made the reverse direction
   possible and closed D-06: with a definition set the environment
   accepts `MYAPP_SERVER_PORT` as well as `MYAPP_SERVER__PORT`.
+- **The command line's remaining forms** (D-29): `--key value`,
+  `--no-key`, and aliases such as `-p`. All three need to know whether
+  an option takes a value, which is the one thing a command line cannot
+  be parsed correctly without, so all three arrive with a definition set
+  and none exist at Tier 0. The lexer asks through a small spec
+  interface rather than taking the definitions, which is what lets a
+  test answer the questions with no definition set existing.
+- **`.env` file source.** An environment written down, so it takes the
+  same key mapping and `export NAME=value` is accepted and ignored.
+  Unlike the environment it belongs to this program, so a name that
+  derives no key is an error with a line number rather than somebody
+  else's variable.
 - **ConfigForge Doctor**: `dump`, `explain`, `lint`, `diff`.
 - **Provenance report** (schema v1) and **Report Replay**.
 - **C++03 wrapper**, compiled as C++98 by a gate.

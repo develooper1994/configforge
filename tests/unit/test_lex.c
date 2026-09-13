@@ -214,7 +214,7 @@ static void test_lex_cli(void) {
 
     rec_init(&r);
     cf_keymap_init(&map, CF_KEYMAP_DIRECT, NULL);
-    check(cf_lex_cli(6, argv, &map, &r.sink, &err), "cli lexes");
+    check(cf_lex_cli(6, argv, &map, NULL, &r.sink, &err), "cli lexes");
 
     entry_is(&r, "server.port", "8080", "argv[1]", "equals form");
     /* A bare option is a true boolean. The separate "--key value" form
@@ -232,7 +232,8 @@ static void test_lex_cli(void) {
         static char  b1[]  = "--Server.Port=1";
         static char* bad[] = {b0, b1, NULL};
         cf_error     e2    = CF_ERROR_INIT;
-        check(!cf_lex_cli(2, bad, &map, &r.sink, &e2), "an invalid option is rejected");
+        check(!cf_lex_cli(2, bad, &map, NULL, &r.sink, &e2),
+              "an invalid option is rejected");
         check(e2.code == CF_E_KEY, "reported as a key error");
         check(strstr(e2.message, "argv[1]") != NULL, "naming the argument");
         check(strstr(e2.message, "--Server.Port") != NULL, "and the option");
@@ -245,7 +246,7 @@ static void test_lex_cli(void) {
         static char  c1[] = "--a.b=";
         static char* ce[] = {c0, c1, NULL};
         cf_error     e3   = CF_ERROR_INIT;
-        check(cf_lex_cli(2, ce, &map, &r.sink, &e3), "empty value lexes");
+        check(cf_lex_cli(2, ce, &map, NULL, &r.sink, &e3), "empty value lexes");
         entry_is(&r, "a.b", "", "argv[1]", "and is empty, not absent");
     }
 }
@@ -270,16 +271,177 @@ static void test_sink_refusal_is_reported(void) {
 
     rec_init(&r);
     cf_keymap_init(&map, CF_KEYMAP_DIRECT, NULL);
-    check(!cf_lex_cli(CAP + 3, argv, &map, &r.sink, &err),
+    check(!cf_lex_cli(CAP + 3, argv, &map, NULL, &r.sink, &err),
           "a full sink stops the lexer");
     check(err.code == CF_E_MEMORY, "and says why");
     check(r.n == CAP, "with nothing written past the end");
+}
+
+/* ---------------------------------------------------------------- *
+ * A spec, written by hand. The lexer asks questions and never guesses,
+ * so a test can answer them without a definition set existing.
+ * ---------------------------------------------------------------- */
+
+static cf_cli_kind fake_classify(const void* ctx, const char* key, size_t klen) {
+    (void)ctx;
+    if (klen == 11 && memcmp(key, "server.port", 11) == 0) {
+        return CF_CLI_VALUE;
+    }
+    if (klen == 11 && memcmp(key, "tls.enabled", 11) == 0) {
+        return CF_CLI_FLAG;
+    }
+    if (klen == 8 && memcmp(key, "no-proxy", 8) == 0) {
+        return CF_CLI_VALUE;
+    }
+    return CF_CLI_UNKNOWN;
+}
+
+static size_t fake_alias(const void* ctx, const char* raw, size_t rawlen, char* out,
+                         size_t cap) {
+    (void)ctx;
+    (void)cap;
+    if (rawlen == 1 && raw[0] == 'p') {
+        memcpy(out, "server.port", 12);
+        return 11;
+    }
+    return 0;
+}
+
+static void spec_init(cf_cli_spec* sp) {
+    sp->classify = fake_classify;
+    sp->alias    = fake_alias;
+    sp->ctx      = NULL;
+}
+
+static void test_cli_with_a_contract(void) {
+    static char  a0[]   = "prog";
+    static char  a1[]   = "--server.port";
+    static char  a2[]   = "8080";
+    static char  a3[]   = "--no-tls.enabled";
+    static char  a4[]   = "-p";
+    static char  a5[]   = "9090";
+    static char* argv[] = {a0, a1, a2, a3, a4, a5, NULL};
+    static rec   r;
+    cf_keymap    map;
+    cf_cli_spec  sp;
+    cf_error     err = CF_ERROR_INIT;
+
+    rec_init(&r);
+    cf_keymap_init(&map, CF_KEYMAP_DIRECT, NULL);
+    spec_init(&sp);
+    check(cf_lex_cli(6, argv, &map, &sp, &r.sink, &err), "cli lexes");
+
+    /* Both occurrences are recorded. The lexer does not resolve; that is
+       the key space's job, and hiding one here would take the second
+       occurrence out of the chain that explain() prints. */
+    check(r.n == 3, "three entries, and no positional eaten");
+    check(strcmp(r.key[0], "server.port") == 0 && strcmp(r.val[0], "8080") == 0 &&
+              strcmp(r.at[0], "argv[2]") == 0,
+          "the separate form, safe only because the spec allowed it");
+    check(strcmp(r.key[2], "server.port") == 0 && strcmp(r.val[2], "9090") == 0 &&
+              strcmp(r.at[2], "argv[5]") == 0,
+          "and the alias, recorded as its canonical key");
+    /* --no- negates a declared flag and nothing else. */
+    entry_is(&r, "tls.enabled", "false", "argv[3]", "--no- negates a flag");
+
+    /* A value-taking option with nothing after it is an error rather
+       than a true boolean: guessing here is what eats an argument. */
+    {
+        static char  b0[]  = "prog";
+        static char  b1[]  = "--server.port";
+        static char* bad[] = {b0, b1, NULL};
+        cf_error     e2    = CF_ERROR_INIT;
+        rec_init(&r);
+        check(!cf_lex_cli(2, bad, &map, &sp, &r.sink, &e2),
+              "a value option with no value is refused");
+        check(strstr(e2.message, "needs a value") != NULL, "and says so");
+    }
+
+    /* A key that genuinely begins with "no-" is read literally, because
+       only a declared flag can be negated and this one is not. */
+    {
+        static char  c0[] = "prog";
+        static char  c1[] = "--no-proxy";
+        static char  c2[] = "1.2.3.4";
+        static char* lit  = NULL;
+        static char* ce[] = {c0, c1, c2, NULL};
+        cf_error     e3   = CF_ERROR_INIT;
+        (void)lit;
+        rec_init(&r);
+        check(cf_lex_cli(3, ce, &map, &sp, &r.sink, &e3), "no-proxy lexes");
+        entry_is(&r, "no-proxy", "1.2.3.4", "argv[2]",
+                 "a key that starts with no- is not a negation");
+    }
+}
+
+static void test_cli_without_a_contract(void) {
+    static char  a0[]   = "prog";
+    static char  a1[]   = "--server.port";
+    static char  a2[]   = "8080";
+    static char* argv[] = {a0, a1, a2, NULL};
+    static rec   r;
+    cf_keymap    map;
+    cf_error     err = CF_ERROR_INIT;
+
+    rec_init(&r);
+    cf_keymap_init(&map, CF_KEYMAP_DIRECT, NULL);
+    /* No spec, so the separate form does not exist and the positional
+       argument survives. Predictability rather than guesswork. */
+    check(cf_lex_cli(3, argv, &map, NULL, &r.sink, &err), "tier 0 lexes");
+    entry_is(&r, "server.port", "true", "argv[1]", "bare option is true");
+    check(r.n == 1, "the next argument is left alone");
+}
+
+/* ---------------------------------------------------------------- */
+
+static void test_dotenv(void) {
+    static const char* const doc = "# a comment\n"
+                                   "SERVER__PORT=9090\n"
+                                   "export SERVER__HOST=0.0.0.0\n"
+                                   "GREETING=\"hello world\"\n"
+                                   "\n"
+                                   "EMPTY=\n";
+    static rec               r;
+    cf_keymap                map;
+    cf_error                 err = CF_ERROR_INIT;
+
+    rec_init(&r);
+    cf_keymap_init(&map, CF_KEYMAP_ENV, NULL);
+    check(cf_lex_dotenv(doc, strlen(doc), "app.env", &map, &r.sink, &err),
+          "dotenv lexes");
+    if (err.message[0] != 0) {
+        printf("  %s\n", err.message);
+    }
+
+    entry_is(&r, "server.port", "9090", "app.env:2", "value and line");
+    /* "export NAME=value" is what a shell-sourced file looks like. */
+    entry_is(&r, "server.host", "0.0.0.0", "app.env:3", "export is ignored");
+    entry_is(&r, "greeting", "hello world", "app.env:4", "quotes stripped");
+    entry_is(&r, "empty", "", "app.env:6", "empty is a value");
+    check(r.n == 4, "comments and blank lines produce nothing");
+
+    /* Unlike the environment, this file belongs to the program, so a
+       name that derives no key is a mistake rather than another
+       program's variable. */
+    {
+        cf_error e2 = CF_ERROR_INIT;
+        rec_init(&r);
+        check(!cf_lex_dotenv("BAD KEY=1\n", 10, "app.env", &map, &r.sink, &e2),
+              "an unusable name is refused");
+        check(strstr(e2.message, "app.env:1") != NULL, "with the line");
+        rec_init(&r);
+        check(!cf_lex_dotenv("novalue\n", 8, "app.env", &map, &r.sink, &e2),
+              "a line with no = is refused");
+    }
 }
 
 int main(void) {
     test_keymap();
     test_lex_env();
     test_lex_cli();
+    test_cli_with_a_contract();
+    test_cli_without_a_contract();
+    test_dotenv();
     test_sink_refusal_is_reported();
 
     printf("%d checks, %d failures\n", g_run, g_fail);

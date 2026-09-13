@@ -184,6 +184,29 @@ cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const char* p
     return CF_TRUE;
 }
 
+cf_bool cf_builder_dotenv(cf_builder* b, const char* name, int rank, const char* path,
+                          const char* prefix, unsigned flags) {
+    cf_source* s = builder_slot(b);
+    void*      st;
+
+    if (s == NULL) {
+        return CF_FALSE;
+    }
+    st = cf_arena_calloc(b->arena, cf_source_dotenv_state_size());
+    if (st == NULL) {
+        cf_error e = CF_ERROR_INIT;
+        cf_error_set(&e, CF_E_MEMORY, NULL, path, "no room for a .env source");
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    if (!cf_source_dotenv(s, name, rank, path, prefix, flags, st,
+                          cf_source_dotenv_state_size())) {
+        return CF_FALSE;
+    }
+    ++b->nsources;
+    return CF_TRUE;
+}
+
 cf_bool cf_builder_replay(cf_builder* b, const char* name, int rank, const char* path) {
     cf_source* s = builder_slot(b);
     void*      st;
@@ -338,13 +361,19 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
 
     cf_defset_seal(&c->defs);
 
-    /* Hand the key list to any environment source, which is what lets
-       MYAPP_SERVER_PORT work alongside MYAPP_SERVER__PORT. */
+    /* Hand the key list to the sources that can use it: the
+       environment gains its natural spelling, the command line gains
+       --key value, --no-key and aliases. Neither can be parsed
+       unambiguously without it, which is why both are Tier 1. */
     if (cf_defset_count(&c->defs) > 0) {
         for (i = 0; i < c->sv.count; ++i) {
-            if (c->sources[i].vt != NULL &&
-                strcmp(c->sources[i].vt->kind, "env") == 0) {
+            if (c->sources[i].vt == NULL) {
+                continue;
+            }
+            if (strcmp(c->sources[i].vt->kind, "env") == 0) {
                 cf_source_env_defs(&c->sources[i], &c->defs);
+            } else if (strcmp(c->sources[i].vt->kind, "cli") == 0) {
+                cf_source_cli_defs(&c->sources[i], &c->defs);
             }
         }
     }
@@ -373,6 +402,12 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
             const cf_error* detail = cf_source_file_error(&c->sources[i]);
             if (detail == NULL) {
                 detail = cf_source_replay_error(&c->sources[i]);
+            }
+            if (detail == NULL) {
+                detail = cf_source_dotenv_error(&c->sources[i]);
+            }
+            if (detail == NULL) {
+                detail = cf_source_image_error(&c->sources[i]);
             }
             if (detail != NULL) {
                 return create_failed(b, err, detail);

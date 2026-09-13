@@ -65,6 +65,12 @@ typedef struct cf_def {
 
     /* NULL-terminated list of permitted spellings, for CF_TYPE_TEXT. */
     const char* const* allowed;
+
+    /* NULL-terminated command-line aliases, written without the dashes:
+       { "p", "port", NULL } accepts -p and --port. An alias is only
+       meaningful with a declaration, which is what makes it
+       unambiguous. */
+    const char* const* aliases;
 } cf_def;
 
 void cf_def_init(cf_def* d, cf_type type, const char* key);
@@ -158,6 +164,11 @@ cf_bool cf_source_defaults(struct cf_source* s, const char* name, int rank,
    contract only the escaped spelling can be enumerated unambiguously;
    with one, both work and nobody has to type the escape. */
 void cf_source_env_defs(struct cf_source* s, const cf_defset* ds);
+
+/* Give the command-line source the key list, which is what unlocks
+   --key value, --no-key and aliases. Without it only the = form carries
+   a value, because nothing else can be parsed correctly. */
+void cf_source_cli_defs(struct cf_source* s, const cf_defset* ds);
 
 #ifdef __cplusplus
 }

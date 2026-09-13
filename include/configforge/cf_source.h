@@ -168,6 +168,18 @@ cf_bool cf_source_file(cf_source* s, const char* name, int rank, const char* pat
    a file can fail in a dozen, and the caller needs the detail. */
 const cf_error* cf_source_file_error(const cf_source* s);
 
+/* A .env file: the same key mapping as the environment, because a .env
+   file is an environment written down. Unlike the environment it
+   belongs to this program, so a name that derives no key is an error
+   rather than another program's variable. */
+size_t cf_source_dotenv_state_size(void);
+
+cf_bool cf_source_dotenv(cf_source* s, const char* name, int rank, const char* path,
+                         const char* prefix, unsigned flags, void* state,
+                         size_t state_size);
+
+const cf_error* cf_source_dotenv_error(const cf_source* s);
+
 #ifdef __cplusplus
 }
 #endif

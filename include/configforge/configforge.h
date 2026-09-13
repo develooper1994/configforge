@@ -86,6 +86,12 @@ cf_bool cf_builder_cli(cf_builder* b, const char* name, int rank, int argc,
 cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const char* path,
                         const char* format, unsigned flags);
 
+/* A .env file, read with the environment's key mapping: a .env file is
+   an environment written down, so the escape and the natural spelling
+   behave identically in both. */
+cf_bool cf_builder_dotenv(cf_builder* b, const char* name, int rank, const char* path,
+                          const char* prefix, unsigned flags);
+
 /* Register a source the caller built itself. The source object is
    copied, so the caller's may be on the stack; any state it points at
    must outlive the configuration. */

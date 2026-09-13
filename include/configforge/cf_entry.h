@@ -149,13 +149,15 @@ typedef enum cf_cli_kind {
     CF_CLI_VALUE
 } cf_cli_kind;
 
+/* The context is const: a spec answers questions and changes nothing.
+   The entry sink's context is not, because recording is what it does. */
 typedef struct cf_cli_spec {
-    cf_cli_kind (*classify)(void* ctx, const char* key, size_t klen);
+    cf_cli_kind (*classify)(const void* ctx, const char* key, size_t klen);
     /* Canonical key for an alias such as "-p" or "--port", or 0 when
        the token is not an alias. */
-    size_t (*alias)(void* ctx, const char* raw, size_t rawlen, char* out,
+    size_t (*alias)(const void* ctx, const char* raw, size_t rawlen, char* out,
                     size_t cap);
-    void* ctx;
+    const void* ctx;
 } cf_cli_spec;
 
 /* `spec` may be NULL, which is Tier 0.
@@ -165,8 +167,7 @@ typedef struct cf_cli_spec {
  * typo, and ignoring it is how a misspelled flag becomes an hour of
  * confusion. */
 cf_bool cf_lex_cli(int argc, char* const* argv, const cf_keymap* map,
-                   const cf_cli_spec* spec, const cf_entry_sink* out,
-                   cf_error* err);
+                   const cf_cli_spec* spec, const cf_entry_sink* out, cf_error* err);
 
 /* ------------------------------------------------------------------ *
  * A .env file
@@ -182,8 +183,7 @@ cf_bool cf_lex_cli(int argc, char* const* argv, const cf_keymap* map,
  * ------------------------------------------------------------------ */
 
 cf_bool cf_lex_dotenv(const char* text, size_t n, const char* origin,
-                      const cf_keymap* map, const cf_entry_sink* out,
-                      cf_error* err);
+                      const cf_keymap* map, const cf_entry_sink* out, cf_error* err);
 
 #ifdef __cplusplus
 }

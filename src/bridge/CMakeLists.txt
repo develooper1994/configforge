@@ -8,4 +8,5 @@ target_sources(
   configforge
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/flatten.c
           ${CMAKE_CURRENT_SOURCE_DIR}/image.c
-          ${CMAKE_CURRENT_SOURCE_DIR}/file.c)
+          ${CMAKE_CURRENT_SOURCE_DIR}/file.c
+          ${CMAKE_CURRENT_SOURCE_DIR}/dotenv.c)

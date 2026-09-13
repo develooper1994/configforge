@@ -236,9 +236,104 @@ static void test_file_over_defaults_over_nothing(void) {
     remove("cf_t6b.json");
 }
 
+/* The command line gains its remaining forms only with a contract,
+   which is the same shape as the environment's two spellings. */
+static void test_cli_tier1_end_to_end(void) {
+    static char  b0[]   = "prog";
+    static char  b1[]   = "--server.port";
+    static char  b2[]   = "7000";
+    static char  b3[]   = "--no-tls.enabled";
+    static char* argv[] = {b0, b1, b2, b3, NULL};
+    cf_error     err    = CF_ERROR_INIT;
+    cf_builder*  b;
+    cf_config*   cfg;
+    cf_def       d;
+
+    b = cf_build(NULL);
+    cf_builder_cli(b, "cli", CF_RANK_CLI, 4, argv);
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    cf_builder_bool(b, "tls.enabled", CF_TRUE, 0);
+    cfg = cf_builder_create(b, &err);
+    check(cfg != NULL, "tier 1 command line builds");
+    if (cfg == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+    check(cf_get_int(cfg, "server.port", 0) == 7000, "--key value works");
+    check(cf_get_bool(cfg, "tls.enabled", CF_TRUE) == CF_FALSE,
+          "--no-key turns a declared flag off");
+    cf_config_free(cfg);
+
+    /* An alias is only meaningful with a declaration, which is what
+       makes it unambiguous. */
+    {
+        static const char* const aliases[] = {"p", NULL};
+        static char              c1[]      = "-p";
+        static char              c2[]      = "5555";
+        static char*             cargv[]   = {b0, c1, c2, NULL};
+
+        b = cf_build(NULL);
+        cf_builder_cli(b, "cli", CF_RANK_CLI, 3, cargv);
+        cf_def_init(&d, CF_TYPE_INT, "server.port");
+        d.has_default = CF_TRUE;
+        cf_value_int(&d.default_value, 8080);
+        d.aliases = aliases;
+        cf_builder_define(b, &d);
+        cfg = cf_builder_create(b, &err);
+        check(cfg != NULL, "alias builds");
+        if (cfg != NULL) {
+            check(cf_get_int(cfg, "server.port", 0) == 5555, "-p resolves");
+            cf_config_free(cfg);
+        }
+    }
+}
+
+static void test_dotenv_file(void) {
+    cf_error    err = CF_ERROR_INIT;
+    cf_builder* b;
+    cf_config*  cfg;
+    static char buf[2048];
+
+    check(spill("cf_t7.env", "# written by the test\n"
+                             "export MYAPP_SERVER__PORT=3000\n"
+                             "MYAPP_SERVER__HOST=\"10.0.0.1\"\n"),
+          "wrote a .env fixture");
+
+    b = cf_build(NULL);
+    cf_builder_dotenv(b, "dotenv", CF_RANK_USER_FILE, "cf_t7.env", "MYAPP_", 0);
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    cf_builder_text(b, "server.host", "0.0.0.0", 0);
+    cfg = cf_builder_create(b, &err);
+    check(cfg != NULL, "a .env source builds");
+    if (cfg == NULL) {
+        printf("  %s\n", err.message);
+        remove("cf_t7.env");
+        return;
+    }
+    check(cf_get_int(cfg, "server.port", 0) == 3000, "the file wins");
+    check(strcmp(cf_get_text(cfg, "server.host", ""), "10.0.0.1") == 0,
+          "quotes stripped");
+
+    cf_explain(cfg, "server.port", buf, sizeof buf);
+    has(buf, "cf_t7.env:2", "the file and line are reported");
+    cf_config_free(cfg);
+
+    /* Unlike the environment, this file belongs to the program. */
+    check(spill("cf_t8.env", "BAD KEY=1\n"), "wrote a broken fixture");
+    b = cf_build(NULL);
+    cf_builder_dotenv(b, "dotenv", CF_RANK_USER_FILE, "cf_t8.env", NULL, 0);
+    check(cf_builder_create(b, &err) == NULL, "a bad name fails construction");
+    has(err.message, "cf_t8.env:1", "with the line");
+
+    remove("cf_t7.env");
+    remove("cf_t8.env");
+}
+
 int main(void) {
     (void)argv0;
     test_ini_file();
+    test_cli_tier1_end_to_end();
+    test_dotenv_file();
     test_json_file_and_precedence();
     test_missing_file();
     test_uncompiled_format();
