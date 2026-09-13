@@ -52,6 +52,14 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   fell out of last-occurrence-wins rather than needing a rule of its
   own. Dotfiles are skipped, because an editor's `.swp` and a package
   manager's `.dpkg-new` both land in such a directory.
+- **Prefix iteration** (`cf_iter_keys`, `cf_iter_children`) and array
+  helpers. The questions a program actually asks are rarely "what is
+  server.port" — they are "what are the elements of this array" and
+  "which plugins are configured", and both needed the caller to build
+  keys by hand and guess where to stop. Both are now a scan from one
+  binary search, and nothing is allocated.
+  A prefix matches at a segment boundary only, so `server` does not
+  match `servername` — the bug every hand-written prefix check has.
 - **ConfigForge Doctor**: `dump`, `explain`, `lint`, `diff`.
 - **Provenance report** (schema v1) and **Report Replay**.
 - **C++03 wrapper**, compiled as C++98 by a gate.

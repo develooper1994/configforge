@@ -31,6 +31,7 @@
 #include "configforge/cf_flatten.h"
 #include "configforge/cf_image.h"
 #include "configforge/cf_explain.h"
+#include "configforge/cf_iterate.h"
 #include "configforge/cf_report.h"
 
 #ifdef __cplusplus

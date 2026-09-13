@@ -438,6 +438,26 @@ cf_bool cf_ks_is_sorted(const cf_keyspace* ks) {
     return CF_TRUE;
 }
 
+size_t cf_ks_lower_bound(const cf_keyspace* ks, const char* key, size_t keylen) {
+    size_t lo = 0;
+    size_t hi;
+
+    if (ks == NULL || key == NULL) {
+        return 0;
+    }
+    hi = ks->count;
+    while (lo < hi) {
+        size_t mid = lo + (hi - lo) / 2;
+        if (cf_cmp_bytes(ks->entries[mid].key, ks->entries[mid].keylen, key, keylen) <
+            0) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    return lo;
+}
+
 const cf_entry* cf_ks_find(const cf_keyspace* ks, const char* key, size_t keylen) {
     size_t lo, hi;
 

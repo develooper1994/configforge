@@ -17,7 +17,8 @@ set(CF_UNIT_TESTS
     test_serialize
     test_file
     test_report
-    test_image)
+    test_image
+    test_iterate)
 
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)

@@ -64,15 +64,31 @@ Git has `config --show-origin`. C has nothing.
 
 ## Status
 
-Early. Milestone M0 in progress.
+Working, and not finished. The interface is not frozen: `0.x` promises
+nothing, and `1.0` is where semantic versioning starts.
 
 | Component | State |
 | --------- | ----- |
-| portability layer | done |
-| numeric conversion, exact shortest round-trip | done |
-| public API header | next |
-| key space, resolver, snapshot | next |
-| codecs, sources, diagnostics | after M0 |
+| portability layer, numeric conversion with exact shortest round-trip | done |
+| value model, flat key space, provenance chain, resolver | done |
+| definitions, validation, `cf_config` facade | done |
+| `explain()` and `inspect()` | done |
+| serialization layer: blob, sink, codecs, document events | done |
+| INI and JSON codecs; file, `.env` and drop-in directory sources | done |
+| command line: `--key=value`, `--key value`, `--no-key`, aliases, `@file` | done |
+| environment with both spellings; UTF-8 arguments on Windows | done |
+| provenance report, schema v1, and Report Replay | done |
+| binary snapshot image, optionally carrying provenance | done |
+| prefix iteration, children, array helpers | done |
+| C++03 wrapper; amalgamation; ConfigForge Doctor | done |
+| per-parameter policy (D-10) | next |
+| `write()` and `propagate()` | next |
+| change notification | after |
+| TOML, XML, SQLite codecs | deferred, see D-23 |
+| Windows Registry, gsettings, macOS defaults | deferred, see D-30 |
+
+Every line marked done is covered by the suite and by the gates below;
+`cmake -P scripts/verify.cmake` is what says so.
 
 ## Build
 

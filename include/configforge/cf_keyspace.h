@@ -167,6 +167,12 @@ void cf_ks_reselect(cf_keyspace* ks);
    returning a provisional one would be worse than returning none. */
 const cf_entry* cf_ks_find(const cf_keyspace* ks, const char* key, size_t keylen);
 
+/* Index of the first key that is not less than `key`, which is where a
+   prefix scan starts. Returns cf_ks_count when every key sorts before
+   it. The space is sorted, so this is a binary search and a prefix scan
+   costs O(log n) plus the matches rather than a walk. */
+size_t cf_ks_lower_bound(const cf_keyspace* ks, const char* key, size_t keylen);
+
 /* The selected value, or NULL when the key is absent or every
    candidate was rejected. */
 const cf_value* cf_ks_get(const cf_keyspace* ks, const char* key, size_t keylen);
