@@ -157,6 +157,33 @@ macro. That single guard is not a scattered `#ifdef`: the build normally
 compiles one file, and the guard exists so the amalgamation — one
 translation unit with no build to choose for it — can carry all three.
 
+### Writing a configuration out
+
+Restricted, on purpose, to a file ConfigForge owns and rewrites in full.
+Editing a hand-written file in place means preserving its comments, its
+ordering and its whitespace: the parser would have to keep a concrete
+syntax tree that every codec then maintains, and getting it slightly
+wrong silently destroys something a person wrote.
+
+```text
+CF_EMIT_ALL           every resolved key, defaults included
+CF_EMIT_CONFIGURED    what a source configured; the overrides file
+CF_EMIT_FROM_RANK     what one rank supplied
+```
+
+Three rules the implementation encodes, each of which was a decision:
+
+* **"Configured" means "did not come from the defaults source"**, not
+  "differs from the default value". The two part company when someone
+  sets a value that happens to equal the default: comparing values would
+  drop it and let a later release move it, while provenance keeps the
+  intent that was expressed.
+* **An array is all or nothing.** Emitting only the members that pass a
+  filter produces a shorter array, which is a different configuration
+  rather than a subset of one.
+* **A format with no array syntax refuses before writing anything.**
+  Discovering it halfway leaves a truncated file that looks complete.
+
 ### Adding a flat source
 
 1. Write the lexer in `src/sources/entry.c`, taking
