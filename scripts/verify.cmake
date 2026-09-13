@@ -25,7 +25,12 @@ endif()
 if(MODE STREQUAL "quick")
   set(PRESETS default)
 else()
-  set(PRESETS default sanitize portable minimal analyze)
+  set(PRESETS
+      default
+      sanitize
+      portable
+      minimal
+      analyze)
 endif()
 
 # Run one step. Anything other than a zero exit stops the whole run and
@@ -59,7 +64,12 @@ endfunction()
 
 foreach(p ${PRESETS})
   step("${p} configure" ${CMAKE_COMMAND} --preset ${p})
-  step("${p} build" ${CMAKE_COMMAND} --build --preset ${p})
+  step(
+    "${p} build"
+    ${CMAKE_COMMAND}
+    --build
+    --preset
+    ${p})
   step("${p} test" ${CMAKE_CTEST_COMMAND} --preset ${p})
 endforeach()
 

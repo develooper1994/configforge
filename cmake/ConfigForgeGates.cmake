@@ -5,6 +5,11 @@
 
 # Register the architectural gates as tests. See the README.
 #
+# The gate scripts live in cmake/gates because they are *run* by ctest,
+# while the modules beside this file are *included* by CMakeLists. Two
+# different kinds of file sharing one directory is how a directory stops
+# telling you anything.
+#
 # ~~~
 # configforge_add_gates(<target>)
 # ~~~
@@ -19,17 +24,17 @@ function(configforge_add_gates tgt)
     COMMAND
       ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR}
       -DPROJECT_VER=${PROJECT_VERSION} -P
-      ${CMAKE_SOURCE_DIR}/cmake/GateVersion.cmake)
+      ${CMAKE_SOURCE_DIR}/cmake/gates/GateVersion.cmake)
 
   # 2. The core may not reach into sources, platform or serialize.
   add_test(NAME gate.layering
            COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR}/src -P
-                   ${CMAKE_SOURCE_DIR}/cmake/GateLayering.cmake)
+                   ${CMAKE_SOURCE_DIR}/cmake/gates/GateLayering.cmake)
 
   # 2. Feature detection macros may appear only in the portability layer.
   add_test(NAME gate.detection
            COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
-                   ${CMAKE_SOURCE_DIR}/cmake/GateDetection.cmake)
+                   ${CMAKE_SOURCE_DIR}/cmake/gates/GateDetection.cmake)
 
   # 3. Every public header compiles standalone as C89.
   add_test(
@@ -37,7 +42,7 @@ function(configforge_add_gates tgt)
     COMMAND
       ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR}
       -DCC=${CMAKE_C_COMPILER} -DCXX=${CMAKE_CXX_COMPILER} -P
-      ${CMAKE_SOURCE_DIR}/cmake/GateHeaders.cmake)
+      ${CMAKE_SOURCE_DIR}/cmake/gates/GateHeaders.cmake)
 
   # 4. The amalgamation builds and runs.
   add_test(
@@ -45,7 +50,7 @@ function(configforge_add_gates tgt)
     COMMAND
       ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR}
       -DCC=${CMAKE_C_COMPILER} -P
-      ${CMAKE_SOURCE_DIR}/cmake/GateAmalgamation.cmake)
+      ${CMAKE_SOURCE_DIR}/cmake/gates/GateAmalgamation.cmake)
 
   # 5. No locale-sensitive C library function may be referenced, and
   #    every exported symbol must carry the cf_ prefix.
@@ -54,6 +59,6 @@ function(configforge_add_gates tgt)
       NAME gate.symbols
       COMMAND
         ${CMAKE_COMMAND} -DLIB=$<TARGET_FILE:${tgt}> -DSANITIZE=${CF_SANITIZE}
-        -P ${CMAKE_SOURCE_DIR}/cmake/GateSymbols.cmake)
+        -P ${CMAKE_SOURCE_DIR}/cmake/gates/GateSymbols.cmake)
   endif()
 endfunction()

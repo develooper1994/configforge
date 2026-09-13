@@ -22,6 +22,8 @@ file(
   CF_CMAKE_SOURCES
   "${CMAKE_SOURCE_DIR}/CMakeLists.txt"
   "${CMAKE_SOURCE_DIR}/cmake/*.cmake"
+  "${CMAKE_SOURCE_DIR}/cmake/gates/*.cmake"
+  "${CMAKE_SOURCE_DIR}/scripts/*.cmake"
   "${CMAKE_SOURCE_DIR}/src/CMakeLists.txt"
   "${CMAKE_SOURCE_DIR}/src/*/CMakeLists.txt"
   "${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt"

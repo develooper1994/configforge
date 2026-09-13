@@ -104,7 +104,7 @@ Options: `CF_WITH_INI` `CF_WITH_JSON` `CF_WITH_TOML` `CF_WITH_XML` `CF_WITH_SQLI
 ### Without a build system
 
 ```sh
-python3 tools/amalgamate/amalgamate.py . out
+python3 scripts/amalgamate.py . out
 cc -std=c89 -Iout out/configforge.c myapp.c
 ```
 
