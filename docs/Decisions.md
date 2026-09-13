@@ -44,7 +44,7 @@ gets reopened every six months.
 | D-11 | Unknown-key behaviour | resolver, diagnostics | Open |
 | D-12 | Profiles as a core concept | policy model, Doctor | Open |
 | D-13 | Sensitivity and redaction | diagnostics, report artifact | Open |
-| D-14 | Thread-safety contract | ABI, snapshot | Open |
+| D-14 | Thread-safety contract | ABI, snapshot | **Decided** |
 | D-15 | Text encoding boundary | platform providers, ABI | Open |
 | D-16 | Provenance report schema | Doctor, diagnostics, Report Replay | **Decided** |
 | D-17 | Reference parser and dependency stance | build, portability | Open |
@@ -513,6 +513,34 @@ implementers.
 
 **Consequence.** Determines which operations need atomics and whether a
 single-threaded build can compile them out.
+
+**Decided: option 2, and written into the public header rather than here.**
+
+```text
+Reads are safe concurrently.
+Building and releasing are the caller's to synchronise.
+```
+
+Reads need nothing to be safe, because there is nothing to protect: a resolved snapshot
+is immutable and a read is a binary search over a sorted array. Locking that path would
+contradict the performance model and buy nothing.
+
+**A snapshot is reference counted now, which is stronger than the contract requires.**
+The type and the atomics already existed in the portability layer and were tested;
+using them costs fifteen lines and gives the reload story a foundation. Retrofitting
+ownership later is the same class of mistake as retrofitting the provenance chain —
+possible, and it means rewriting the thing that was built without it.
+
+Two details the implementation had to get right. The count starts at one explicitly:
+`calloc` left it at zero, which is correct exactly as long as nobody takes a second
+reference. And the count is decremented *before* the arena is released, with the result
+read from a local — the configuration lives inside the arena it frees, so touching it
+afterwards is a use-after-free of the object doing the freeing.
+
+**The test states the contract where threads do not exist.** `test_threads` runs every
+read path twice and compares the whole snapshot, provenance chain included, byte for
+byte. That proves the property the contract rests on without needing a second thread,
+and where pthreads are present it also runs eight readers over sixteen thousand rounds.
 
 ---
 

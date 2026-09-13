@@ -18,6 +18,10 @@
 #include <windows.h>
 #endif
 
+void cf_ref_init(cf_refcount* rc, cf_i32 n) {
+    rc->v = n;
+}
+
 cf_i32 cf_ref_inc(cf_refcount* rc) {
 #if defined(CF_ATOMIC_GCC_ATOMIC)
     return __atomic_add_fetch(&rc->v, 1, __ATOMIC_ACQ_REL);

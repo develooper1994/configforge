@@ -217,6 +217,10 @@ typedef struct cf_refcount {
 } cf_refcount;
 
 /* Returns the value after the operation. */
+/* Sets the initial count. Not a plain assignment at the call site:
+   the member is volatile on some builds and its spelling is this
+   layer's business, not the caller's. */
+void   cf_ref_init(cf_refcount* rc, cf_i32 n);
 cf_i32 cf_ref_inc(cf_refcount* rc);
 cf_i32 cf_ref_dec(cf_refcount* rc);
 cf_i32 cf_ref_get(const cf_refcount* rc);

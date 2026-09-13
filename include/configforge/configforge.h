@@ -197,6 +197,27 @@ const cf_keyspace*     cf_keys(const cf_config* c);
 const cf_source_view*  cf_sources(const cf_config* c);
 const cf_defset*       cf_defs(const cf_config* c);
 
+/* ------------------------------------------------------------------ *
+ * Ownership and threads
+ *
+ * The contract, decision D-14:
+ *
+ *   Reads are safe concurrently. Building and releasing are the
+ *   caller's to synchronise.
+ *
+ * Concurrent reads are the entire point of an immutable snapshot;
+ * locking the read path would contradict the performance model and buy
+ * nothing, because there is nothing to protect. An unstated threading
+ * contract is assumed to be full internal locking by users and nothing
+ * at all by implementers, which is why this is written down rather than
+ * left to be inferred.
+ *
+ * A snapshot is reference counted, so a reader can keep using one while
+ * another is built. The count is atomic; everything it protects is
+ * immutable.
+ * ------------------------------------------------------------------ */
+
+void cf_config_ref(cf_config* c);
 void cf_config_free(cf_config* c);
 
 #ifdef __cplusplus

@@ -100,6 +100,15 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   someone believe they can stay in C++ and then drops them into C.
   Iteration is `begin`/`end` over a real iterator type, which is valid
   C++03 and gives a C++11 consumer range-for over the same interface.
+- **The threading contract is settled and written into the public
+  header** (D-14): reads are safe concurrently, building and releasing
+  are the caller's to synchronise. An unstated threading contract is
+  assumed to be full internal locking by users and nothing at all by
+  implementers.
+- **Snapshots are reference counted** (`cf_config_ref`), which is
+  stronger than the contract requires and gives the reload story a
+  foundation. Retrofitting ownership later is the same class of mistake
+  as retrofitting the provenance chain.
 - **ConfigForge Doctor**: `dump`, `explain`, `lint`, `diff`.
 - **Provenance report** (schema v1) and **Report Replay**.
 - **C++03 wrapper**, compiled as C++98 by a gate.

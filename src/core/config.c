@@ -35,6 +35,12 @@ struct cf_config {
     const cf_source* view[CF_BUILDER_SOURCES];
     cf_source_view   sv;
     cf_apply_report  report;
+
+    /* Shared ownership, so a reader can hold a snapshot while another
+       is built. Atomic because the threading contract (D-14) says reads
+       are safe concurrently, and a release is a read of the count
+       followed by at most one free. */
+    cf_refcount refs;
 };
 
 /* ------------------------------------------------------------------ *
@@ -416,6 +422,13 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
     }
 
     c = (cf_config*)cf_arena_calloc(b->arena, sizeof(cf_config));
+    if (c != NULL) {
+        /* One owner to start with. calloc left it at zero, which would
+           make the first release free a configuration nobody had taken
+           a second reference to - correct today and wrong the moment
+           anyone does. */
+        cf_ref_init(&c->refs, 1);
+    }
     if (c == NULL) {
         cf_error_set(&e, CF_E_MEMORY, NULL, NULL, "no room for the config");
         return create_failed(b, err, &e);
@@ -548,8 +561,21 @@ cf_config* cf_app(const char* name, int argc, char* const* argv, cf_error* err) 
     return cf_builder_create(cf_app_builder(name, argc, argv), err);
 }
 
-void cf_config_free(cf_config* c) {
+void cf_config_ref(cf_config* c) {
     if (c != NULL) {
+        cf_ref_inc(&c->refs);
+    }
+}
+
+void cf_config_free(cf_config* c) {
+    if (c == NULL) {
+        return;
+    }
+    /* The config lives inside the arena it releases, so the count has
+       to be decremented before anything is freed and its result read
+       from a local. Touching c after the free is a use-after-free of
+       the object doing the freeing. */
+    if (cf_ref_dec(&c->refs) == 0) {
         cf_arena_free(c->arena);
     }
 }

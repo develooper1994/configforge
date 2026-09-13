@@ -19,7 +19,8 @@ set(CF_UNIT_TESTS
     test_report
     test_image
     test_iterate
-    test_emit)
+    test_emit
+    test_threads)
 
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)
@@ -40,3 +41,13 @@ foreach(loc de_DE.UTF-8 tr_TR.UTF-8)
   add_test(NAME unit.test_numeric.${loc} COMMAND test_numeric ${loc})
   add_test(NAME unit.test_value.${loc} COMMAND test_value ${loc})
 endforeach()
+
+# Threads are not in C89. Where they exist the contract in D-14 is
+# exercised for real; where they do not, the same test still checks the
+# invariants the contract rests on - that a read touches nothing
+# mutable, and that the reference count is the only thing that moves.
+find_package(Threads QUIET)
+if(CMAKE_USE_PTHREADS_INIT)
+  target_compile_definitions(test_threads PRIVATE CF_TEST_PTHREADS=1)
+  target_link_libraries(test_threads PRIVATE Threads::Threads)
+endif()
