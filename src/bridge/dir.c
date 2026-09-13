@@ -11,20 +11,21 @@
  * source the later candidate wins. Every file here shares a rank, so
  * reading them in order is all it takes.
  *
- * Directory listing is the one thing C89 has no answer for. POSIX
- * dirent and the Windows find API are both here; a target with neither
- * gets CF_NO_DIRENT and an error that says so rather than an empty
- * directory that looks like an empty configuration.
+ * Directory listing is the one thing C89 has no answer for, so it comes
+ * from the platform layer and this file never names a platform. A
+ * target with no listing gets an error that says so rather than an
+ * empty directory, which looks exactly like an empty configuration.
  */
 
 #include "configforge/cf_flatten.h"
+#include "configforge/cf_platform.h"
 #include "configforge/cf_serialize.h"
 #include "configforge/cf_source.h"
 
 #include <string.h>
 
 #define CF_DIR_MAX_FILES 256
-#define CF_DIR_PATH_MAX 512
+#define CF_DIR_PATH_MAX CF_PLATFORM_NAME_MAX
 
 typedef struct dir_state {
     const char* path;
@@ -33,91 +34,6 @@ typedef struct dir_state {
     cf_error    err;
     cf_bool     failed;
 } dir_state;
-
-/* ------------------------------------------------------------------ *
- * Listing
- * ------------------------------------------------------------------ */
-
-#if defined(CF_NO_DIRENT)
-
-static int dir_list(const char* path, char names[][CF_DIR_PATH_MAX], int max,
-                    cf_error* err) {
-    (void)path;
-    (void)names;
-    (void)max;
-    cf_error_set(err, CF_E_CAPABILITY, NULL, path,
-                 "this build cannot list a directory");
-    return -1;
-}
-
-#elif defined(_WIN32)
-
-#include <windows.h>
-
-static int dir_list(const char* path, char names[][CF_DIR_PATH_MAX], int max,
-                    cf_error* err) {
-    char             pattern[CF_DIR_PATH_MAX];
-    WIN32_FIND_DATAA fd;
-    HANDLE           h;
-    int              n = 0;
-
-    if (cf_fmt(pattern, sizeof pattern, "%s\\*", path) >= sizeof pattern) {
-        cf_error_set(err, CF_E_SOURCE, NULL, path, "path is too long");
-        return -1;
-    }
-    h = FindFirstFileA(pattern, &fd);
-    if (h == INVALID_HANDLE_VALUE) {
-        cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot read '%s'", path);
-        return -1;
-    }
-    do {
-        if ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
-            continue;
-        }
-        if (n >= max) {
-            break;
-        }
-        if (cf_fmt(names[n], CF_DIR_PATH_MAX, "%s", fd.cFileName) < CF_DIR_PATH_MAX) {
-            ++n;
-        }
-    } while (FindNextFileA(h, &fd) != 0);
-    FindClose(h);
-    return n;
-}
-
-#else
-
-#include <dirent.h>
-
-static int dir_list(const char* path, char names[][CF_DIR_PATH_MAX], int max,
-                    cf_error* err) {
-    DIR*           d = opendir(path);
-    struct dirent* e;
-    int            n = 0;
-
-    if (d == NULL) {
-        cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot read '%s'", path);
-        return -1;
-    }
-    while ((e = readdir(d)) != NULL) {
-        if (e->d_name[0] == '.') {
-            /* Skips . and .. and, deliberately, dotfiles: an editor's
-               .swp and a package manager's .dpkg-new both land here and
-               neither is configuration. */
-            continue;
-        }
-        if (n >= max) {
-            break;
-        }
-        if (cf_fmt(names[n], CF_DIR_PATH_MAX, "%s", e->d_name) < CF_DIR_PATH_MAX) {
-            ++n;
-        }
-    }
-    closedir(d);
-    return n;
-}
-
-#endif
 
 /* Insertion sort over the names. A drop-in directory holds tens of
    files and the comparison is byte-wise, so this is both the fastest
@@ -162,7 +78,7 @@ static cf_bool dir_load(const cf_source* s, cf_keyspace* ks) {
                             "no room to list '%s'", st->path);
     }
 
-    n = dir_list(st->path, names, CF_DIR_MAX_FILES, &st->err);
+    n = cf_platform_dir_list(st->path, names, CF_DIR_MAX_FILES, &st->err);
     if (n < 0) {
         if ((st->flags & CF_FILE_OPTIONAL) != 0) {
             cf_error_clear(&st->err);

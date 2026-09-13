@@ -89,11 +89,51 @@ endfunction()
 # ~~~
 function(configforge_apply_warnings tgt)
   if(MSVC)
-    # Not equivalent to the set above, and saying so is better than a
-    # comment implying parity. A project that claims one standard and
-    # enforces two has the weaker one.
-    target_compile_options(${tgt} PRIVATE /W4 /WX /wd4200)
+    # /W4 alone is weaker than the set above, so the classes that have
+    # an MSVC counterpart are turned on by number. It is still not
+    # parity, and D-32 says which classes have no counterpart at all - a
+    # project that claims one standard and enforces two has the weaker
+    # one, and the honest thing is to name the gap rather than let /W4
+    # imply there isn't one.
+    #
+    # Untested here: there is no MSVC in the environment this was
+    # written in. The CI matrix compiles it on windows-latest, which is
+    # what makes this a check rather than a hope.
+    target_compile_options(
+      ${tgt}
+      PRIVATE /W4
+              /WX
+              /permissive- # conformance, the closest thing to -pedantic
+              /wd4200 # zero-sized array, used deliberately
+              # Conversions, the class C89 loses bits in.
+              /w14242 # conversion, possible loss of data
+              /w14254 # bit-field conversion, possible loss
+              /w14287 # unsigned/negative constant mismatch
+              /we4296 # expression is always true/false
+              /w14311 # pointer truncation
+              /w14826 # sign-extending conversion
+              # Declarations and lifetime.
+              /w14263 # member function does not override
+              /w14265 # class has virtual functions, non-virtual dtor
+              /w14296 # comparison always true
+              /w14545 # expression before comma has no effect
+              /w14546 # call before comma missing argument list
+              /w14547 # operator before comma has no effect
+              /w14549 # operator before comma has no effect
+              /w14555 # expression has no effect
+              /w14619 # unknown #pragma warning number
+              /w14640 # thread-unsafe static initialisation
+              /w14905 # wide string literal cast
+              /w14906 # string literal cast
+              /w14928 # illegal copy-initialisation
+    )
     target_compile_definitions(${tgt} PRIVATE _CRT_SECURE_NO_WARNINGS)
+
+    # MSVC has no C89 mode: /std:c11 is the oldest it offers and its
+    # default is C89 with extensions. CMake's C_STANDARD 90 is a no-op
+    # here, so the C89 conformance claim rests on the GCC and Clang
+    # jobs. Said out loud because a silent no-op is how a standard stops
+    # being enforced without anyone deciding to stop enforcing it.
     return()
   endif()
 

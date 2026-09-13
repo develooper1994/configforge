@@ -25,6 +25,7 @@ HEADERS = [
     "cf_numeric.h",
     "cf_value.h",
     "cf_alloc.h",
+    "cf_platform.h",
     "cf_keyspace.h",
     "cf_entry.h",
     "cf_serialize.h",
@@ -40,13 +41,17 @@ HEADERS = [
 # Sources.  The amalgamation carries the built-in codecs only, which is
 # what keeps it dependency-free.
 SOURCES = [
+    # Every platform, each guarded internally: the amalgamation is one
+    # translation unit and has no build to choose for it.
+    "platform/posix/posix.c", "platform/win32/win32.c",
+    "platform/none/none.c",
     "core/version.c", "core/port.c", "core/error.c", "core/numeric.c", "core/alloc.c",
     "core/value.c", "core/keyspace.c", "core/define.c", "core/validate.c",
     "core/config.c",
     "serialize/blob.c", "serialize/codec.c", "serialize/ini.c",
     "serialize/json.c",
     "sources/entry.c", "sources/memory.c", "sources/defaults.c", "sources/env.c",
-    "sources/environ.c", "sources/cliargs.c", "sources/cli.c",
+    "sources/cli.c", "sources/compat.c",
     "bridge/flatten.c", "bridge/file.c", "bridge/dotenv.c", "bridge/dir.c", "bridge/image.c",
     "diag/explain.c", "diag/report.c",
 ]

@@ -29,13 +29,21 @@ When a change would make `explain()` harder, the change is wrong.
           sources        serialize     lexers   |   blob, sink, codecs
                  \      /
                   core          value, key space, definitions, facade
-                    |
-              portability       cf_port.h: the only file with #ifdef
+                   / \
+       portability     platform
+       cf_port.h       src/platform/<name>/
+       which compiler  which operating system
 ```
+
+Two doors, not one. `cf_port.h` decides which *compiler* this is;
+`src/platform/` decides which *operating system*. They are separate
+because they vary separately — MinGW is GCC on Windows, and clang-cl is
+the Microsoft platform with a Clang front end.
 
 | Layer | Owns | May use | May not use |
 | ----- | ---- | ------- | ----------- |
-| `src/core` | value model, key space, definitions, validation, `cf_config` | portability | anything above it |
+| `src/platform` | the environment, UTF-8 arguments, directory listing | portability | anything above it |
+| `src/core` | value model, key space, definitions, validation, `cf_config` | portability, platform | anything above it |
 | `src/serialize` | readers, writers, codecs, document events | portability, `cf_value`, `cf_error`, `cf_alloc` | the key space, definitions, sources |
 | `src/sources` | flat lexers, key mappings, the sources with no bytes to read | core | serialize, bridge |
 | `src/bridge` | flattener, file source, binary image | core **and** serialize | diag |
@@ -125,6 +133,30 @@ implementation of `cf_entry_sink`; a test's implementation is an array.
 5. Tests: a round trip through the key space digest, and one refusal per
    grammar mistake the format can make.
 
+### Adding a platform capability
+
+Three things a configuration library needs that C89 has no answer for
+live behind `cf_platform.h`: the environment, UTF-8 arguments, and a
+directory listing. To add a fourth — file watching is the obvious next
+one:
+
+1. Declare the neutral function and a `cf_platform_has_*` query in
+   `cf_platform.h`. The query matters: a caller has to be able to say
+   "this build cannot do that" instead of returning an empty result,
+   because an empty directory listing looks exactly like an empty
+   configuration and the silent answer is the dangerous one.
+2. Implement it in all three of `posix/`, `win32/` and `none/`. The
+   `none` implementation is not a placeholder — it is the answer for a
+   target with no operating system, and it must fail with a message
+   naming the capability.
+3. Never name a platform macro outside `src/platform/`;
+   `gate.detection` fails the build if you do.
+
+Each implementation guards its whole body with its own `CF_PLATFORM_*`
+macro. That single guard is not a scattered `#ifdef`: the build normally
+compiles one file, and the guard exists so the amalgamation — one
+translation unit with no build to choose for it — can carry all three.
+
 ### Adding a flat source
 
 1. Write the lexer in `src/sources/entry.c`, taking
@@ -195,7 +227,7 @@ exists because something in the design is otherwise only a sentence.
 | ---- | -------- |
 | `gate.version` | `cf_version.h` and `CMakeLists.txt` agreeing |
 | `gate.layering` | the dependency rules above |
-| `gate.detection` | `#ifdef` appearing only in the portability layer |
+| `gate.detection` | compiler detection only in `cf_port.h`, platform detection only in `cf_platform.h` and `src/platform/` |
 | `gate.headers` | every public header compiling standalone, C89 and C++98 |
 | `gate.amalgamation` | the no-build-system path compiling and running |
 | `gate.symbols` | no locale-sensitive libc function; every export prefixed; no mutable global data; only `alloc.c` calls the allocator |

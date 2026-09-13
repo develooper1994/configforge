@@ -1189,10 +1189,16 @@ before every supported compiler has it. The build prints the set it settled on, 
 answer to "what is this enforcing" is in the configure log rather than in a file someone
 has to read.
 
-**MSVC is weaker and says so.** `/W4 /WX` is not equivalent to the GCC and Clang set;
-several of the classes below have no MSVC counterpart. Stating the gap is better than a
-comment implying parity: a project that claims one standard and enforces two has the
-weaker one.
+**MSVC is weaker and says so.** `/W4 /WX` is not equivalent to the GCC and Clang set,
+so the classes that do have an MSVC counterpart are enabled by number (`/w14242`,
+`/w14311`, `/w14640` and the rest) and `/permissive-` stands in for `-pedantic`. It is
+still not parity: the declaration class has no counterpart, and MSVC has no C89 mode at
+all — `/std:c11` is the oldest it offers, so CMake's `C_STANDARD 90` is a silent no-op
+there and the C89 conformance claim rests on the GCC and Clang jobs.
+
+Naming the gap is the point. A project that claims one standard and enforces two has the
+weaker one, and a silent no-op is how a standard stops being enforced without anyone
+deciding to stop enforcing it.
 
 | What it protects | GCC and Clang | MSVC |
 | ---------------- | ------------- | ---- |

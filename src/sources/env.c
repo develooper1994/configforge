@@ -10,6 +10,7 @@
 #include "configforge/cf_entry.h"
 #include "configforge/cf_source.h"
 #include "configforge/cf_define.h"
+#include "configforge/cf_platform.h"
 
 #include <string.h>
 

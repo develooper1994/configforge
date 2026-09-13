@@ -107,7 +107,7 @@ cf_bool cf_source_env(cf_source* s, const char* name, int rank, const char* pref
                       char* const* environment);
 
 /* The platform environment, or NULL where none is reachable. */
-char* const* cf_environ(void);
+char* const* cf_environ(void); /* cf_platform_environ, kept for callers */
 
 /* Exposed for testing: derive a canonical key from a variable name.
    Returns the length written, or 0 when the name does not belong to

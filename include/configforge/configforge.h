@@ -19,6 +19,7 @@
 
 #include "configforge/cf_port.h"
 #include "configforge/cf_version.h"
+#include "configforge/cf_platform.h"
 #include "configforge/cf_error.h"
 #include "configforge/cf_value.h"
 #include "configforge/cf_alloc.h"
