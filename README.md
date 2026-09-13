@@ -174,6 +174,8 @@ nothing a leak would want.
 
 ## Documentation
 
+* [`docs/Decisions.md`](docs/Decisions.md) — every decision, the options weighed, and what
+  settled it. Two are still open, and both say why
 * [`docs/Architecture.md`](docs/Architecture.md) — the layers, the rules that keep them, and recipes for adding a format, a source, a definition attribute or a Doctor rule
 * [`docs/Conventions.md`](docs/Conventions.md) — naming, memory, errors, project idioms, the forbidden list, and what a good test looks like here
 * [`docs/Design.md`](docs/Design.md) — the full specification

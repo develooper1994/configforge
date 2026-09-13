@@ -33,25 +33,25 @@ gets reopened every six months.
 | -- | ------- | ------ | ------ |
 | D-01 | Type set and composite support | value model, ABI, mapping | **Decided** |
 | D-02 | Merge semantics for composites | resolver, snapshot layout | **Decided** |
-| D-03 | Snapshot ownership and string lifetime | ABI, hot path, watch | Open |
-| D-04 | Definition representation in C | ABI, builder ergonomics | Open |
-| D-05 | Validation failure behaviour | resolver, error model | Open |
+| D-03 | Snapshot ownership and string lifetime | ABI, hot path, watch | **Decided**, closed |
+| D-04 | Definition representation in C | ABI, builder ergonomics | **Decided**, closed |
+| D-05 | Validation failure behaviour | resolver, error model | **Decided**, closed |
 | D-06 | Key naming, case and normalisation | mapping, every source | **Decided**, closed |
-| D-07 | Allocation and freestanding model | core, all constrained targets | Open |
-| D-08 | Error model shape | ABI, every API | Open |
-| D-09 | Zero-config entry point | public API, principles | Open |
+| D-07 | Allocation and freestanding model | core, all constrained targets | **Decided**, closed |
+| D-08 | Error model shape | ABI, every API | **Decided**, closed |
+| D-09 | Zero-config entry point | public API, principles | **Decided**, closed |
 | D-10 | Value interpolation | resolver, provenance | Open |
-| D-11 | Unknown-key behaviour | resolver, diagnostics | Open |
+| D-11 | Unknown-key behaviour | resolver, diagnostics | **Decided**, closed |
 | D-12 | Profiles as a core concept | policy model, Doctor | Open |
-| D-13 | Sensitivity and redaction | diagnostics, report artifact | Open |
+| D-13 | Sensitivity and redaction | diagnostics, report artifact | **Decided**, closed |
 | D-14 | Thread-safety contract | ABI, snapshot | **Decided** |
-| D-15 | Text encoding boundary | platform providers, ABI | Open |
+| D-15 | Text encoding boundary | platform providers, ABI | **Decided**, closed |
 | D-16 | Provenance report schema | Doctor, diagnostics, Report Replay | **Decided** |
-| D-17 | Reference parser and dependency stance | build, portability | Open |
+| D-17 | Reference parser and dependency stance | build, portability | **Decided**, closed |
 | D-18 | Project name availability | everything public | **Decided** |
 | D-19 | **Implementation language and standard** | every other decision | **Decided** |
-| D-20 | Location of the error surface | every read call site | Open |
-| D-21 | Distribution form | adoption, build | Open |
+| D-20 | Location of the error surface | every read call site | **Decided**, closed |
+| D-21 | Distribution form | adoption, build | **Decided**, closed |
 | D-22 | Opportunistic feature substitution policy | portability layer, determinism | **Decided** |
 | D-23 | Format set and the parser seam | every source, build options | **Decided** |
 | D-24 | Type inference for typeless sources | resolver, Tier 0 behaviour | **Decided** |
@@ -180,6 +180,12 @@ fixes what watch is allowed to do, and determines whether the destruction of an 
 snapshot can be on the hot path. It also means a `Config`-level read cannot return a
 `string_view`.
 
+**Closed in implementation.** One arena per configuration, released whole. Text handed
+to the key space is copied, so a caller's buffer need only survive the call; text read
+from a binary image is borrowed, so the image must outlive the configuration - which is
+the point on a target where the image is a `const char[]` in flash. Snapshots are
+reference counted (D-14) so a reader can hold one while another is built.
+
 ---
 
 ## D-04 — Definition Representation in C
@@ -227,6 +233,11 @@ definition is a state that then needs its own error semantics.
 **Consequence.** Determines whether definitions are mutable after creation, and fixes
 the extension mechanism for definition attributes for the life of the ABI.
 
+**Closed in implementation.** A `cf_def` struct carrying its own `size`, so fields can
+be added without changing a signature or a layout - `aliases` and `policy` were both
+added that way after the struct shipped. Builder helpers cover the common shapes;
+`cf_builder_define` takes the struct for everything else.
+
 ---
 
 ## D-05 — Validation Failure Behaviour
@@ -252,6 +263,12 @@ in the provenance chain with its rejection reason rather than being erased.
 
 **Consequence.** Determines whether the resolver is fail-fast or collecting, and
 determines whether rejected values are retained in the snapshot.
+
+**Closed in implementation.** A candidate that fails its contract is marked rejected
+with a reason and stays in the chain; the next candidate is selected, which is usually
+the default. Construction fails only when nothing usable is left and the parameter is
+required. The rejected value and the reason both appear in `explain()`, which is what
+makes "why is this the default" answerable.
 
 ---
 
@@ -337,6 +354,12 @@ later decision, which is the same error as publishing an ABI with no binding.
 parser, forces every allocation through one interface, and makes the contiguous snapshot
 layout in the specification a requirement rather than an optimisation.
 
+**Closed in implementation.** Everything allocates through `cf_allocator`; `gate.symbols`
+fails if any object but `alloc.c` references `malloc`. `cf_arena_fixed` works inside a
+caller's buffer and fails cleanly when it runs out, and `CF_PLATFORM_NONE` reports every
+platform capability as absent rather than pretending. The binary image (D-28) is the
+artifact that makes a filesystem-free target work at all.
+
 ---
 
 ## D-08 — Error Model Shape
@@ -367,6 +390,13 @@ format, not the ergonomics.
 **Consequence.** Appears in every fallible ABI function signature and cannot be
 changed afterwards.
 
+**Closed in implementation.** A caller-supplied fixed-size `cf_error`: not a
+thread-local last-error, because global error state contradicts a stated principle, and
+not an allocation, because the failure path has to work in the fixed-capacity profile,
+which is exactly where allocation fails. `cf_error_set` returns `CF_FALSE` so a call
+site reads `return cf_error_set(...)`, and is safe with a NULL error so no call site
+needs a guard.
+
 ---
 
 ## D-09 — Zero-Config Entry Point
@@ -390,6 +420,11 @@ the specification as a worked example so that the principle is not later read as
 forbidding convenience constructors.
 
 **Consequence.** Defines Tier 0 and therefore the first page of the documentation.
+
+**Closed in implementation.** `cf_app(name, argc, argv, &err)` wires the command line,
+the environment with the derived prefix, and the definition defaults, and now also
+expands `@file` response files and takes UTF-8 arguments on Windows. Tier 0 needs no
+definitions at all.
 
 ---
 
@@ -440,6 +475,12 @@ possible if derivation is mechanical.
 
 **Consequence.** Requires sources to enumerate their keys, which is a capability not
 every source has. Feeds rule CFD005 in Doctor.
+
+**Closed in implementation.** `CF_UNKNOWN_IGNORE`, `CF_UNKNOWN_WARN` and
+`CF_UNKNOWN_REJECT`, with a Levenshtein suggestion on rejection - `did you mean
+'server.port'?`. `cf_builder_open` exempts a prefix, because a plugin's settings cannot
+be in the program's contract when the plugin is not in the program either; without that,
+strict rejection and a dynamic key space were mutually exclusive.
 
 ---
 
@@ -492,6 +533,12 @@ than an aspiration.
 
 **Consequence.** Adds a definition attribute (bearing on D-04's struct layout) and
 fixes the redacted representation in the report schema.
+
+**Closed in implementation.** `CF_SENSITIVE` redacts in `explain()`, `inspect()` and the
+value-blind report, which keeps presence, origin, length and a digest - everything an
+audit needs and nothing a leak would want. The digest distinguishes: there is a test that
+a different secret gives a different one, written after a session in which every digest
+was the literal format string and the test only checked the prefix.
 
 ---
 
@@ -556,6 +603,12 @@ lengths, never null-terminated wide strings.
 
 **Consequence.** Every string in the ABI carries a length, which also serves the
 embedded-string case in D-07.
+
+**Closed in implementation.** UTF-8 throughout, validated nowhere and passed through
+everywhere, with one exception that matters: `cf_platform_args` reads the wide command
+line on Windows, because `argv` there arrives in the active code page and what the code
+page dropped cannot be converted back. JSON `\u` escapes are decoded to UTF-8 including
+surrogate pairs; a lone surrogate is refused.
 
 ---
 
@@ -679,6 +732,11 @@ behaviour this project exists to prevent.
 **Consequence.** The amalgamation stays dependency-free. Fixes what a bare-metal build can
 read. Moves a small JSON reader into Phase 1, which the earlier plan had not accounted
 for.
+
+**Closed in implementation.** INI and JSON are written here - roughly 370 and 600 lines -
+because the available C parsers all build a DOM and allocate, and this design needs an
+event producer with exact locations and no allocation. TOML, XML and SQLite stay deferred
+behind their options (D-23, D-26); the codec seam accepts them without changes.
 
 ---
 
@@ -955,6 +1013,12 @@ makes the snapshot larger and the cold path slower. Both are the correct side of
 trade for this design. Also interacts with D-05: strict validation is what makes
 infallible reads truthful.
 
+**Closed in implementation.** The whole error surface is at construction. Once a
+`cf_config` exists, reading is infallible for any key with a default or a definition.
+This is the largest single simplicity decision in the design: a status on every read
+costs three lines of ceremony per parameter, which is why typed configuration libraries
+feel heavy.
+
 ---
 
 ## D-21 — Distribution Form
@@ -973,6 +1037,13 @@ CI, never maintained by hand.
 **Consequence.** Requires that the hosted default configuration have no mandatory
 external dependency, which constrains D-17: the default file parser must either be
 vendorable or the amalgamation ships with the built-in INI subset only.
+
+**Closed in implementation.** Three forms. CMake with an installed package, checked by
+`gate.install` from a project that has never heard of this source tree. An amalgamation -
+two files, any compiler, no build system - generated from the real sources and compiled
+and run by `gate.amalgamation`. And the binary image for a target that cannot compile
+anything at all. The hand-written `Makefile` was deleted (D-31) because the amalgamation
+is a better answer to the same question and is tested rather than asserted.
 
 ---
 
@@ -1290,6 +1361,19 @@ existing.
 **Consequence.** `cf_source_view` moved from `cf_explain.h` to `cf_source.h`, where a
 view over sources belongs; having it in the diagnostics header meant nothing below could
 name a source without including the top layer.
+
+---
+
+## Status of the log
+
+Two decisions are open, and both are open because nothing has been built: value
+interpolation (D-10) and profiles as a core concept (D-12). Everything else is decided,
+and where the implementation settled the question rather than this document, the section
+says so and names what settled it.
+
+That audit was worth doing on its own. Fourteen entries were still marked open while the
+code they described had been written, tested and shipped — and a status column where
+half the entries are wrong teaches a reader not to trust the column.
 
 ---
 
