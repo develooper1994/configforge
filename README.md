@@ -145,6 +145,7 @@ a claim that decays.
 | symbols | no locale-sensitive libc function; every export prefixed `cf_` |
 | amalgamation | the single-file build compiles as C89 and runs |
 | interface | what including the library costs: no unexpected system header, no size jump |
+| install | a separate project finds the package, compiles against it and runs |
 | version | `cf_version.h` and `CMakeLists.txt` agree |
 | format | `clang-format` and `cmake-format`, reporting rather than rewriting |
 | cmake lint | `cmake-lint` over every build file |

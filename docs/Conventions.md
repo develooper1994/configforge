@@ -239,6 +239,17 @@ build, so the driver adds nothing.
 built one on the stack. Field-by-field initialisation is correct exactly
 until someone adds a field, and the compiler says nothing.
 
+**Use the exit code, never the output.** Two commits here went in on a
+broken tree because the verification was piped to `grep`, and `grep`
+succeeds when it *finds* the word "FAILED". The only correct shape is
+
+```sh
+cmake -P scripts/verify.cmake > /dev/null 2>&1 && git commit ...
+```
+
+Reading the log is for diagnosing a failure, not for deciding whether
+there was one.
+
 **Read the failure, not the summary.** `ctest | grep 'Failed'` missed a
 `SEGFAULT` line for one run, because the word ctest prints for a crash
 is not the word it prints for a failed assertion. `scripts/verify.cmake`
