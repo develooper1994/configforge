@@ -68,6 +68,10 @@ function(configforge_add_gates tgt)
         -DEXPECT_JSON=$<BOOL:${CF_WITH_JSON}> -P
         ${CMAKE_SOURCE_DIR}/cmake/gates/GateInstall.cmake)
 
+    add_test(NAME gate.formats
+             COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
+                     ${CMAKE_SOURCE_DIR}/cmake/gates/GateFormats.cmake)
+
     add_test(
       NAME gate.interface
       COMMAND

@@ -146,6 +146,15 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   and the binary image. The seed is the bug report; the generator is
   written out rather than taken from `rand()`, which is reproducible on
   no two machines.
+- **`gate.formats`**, which checks every format string in the library
+  against what `cf_fmt` actually supports. `cf_fmt` has no width,
+  precision or flags, and an unsupported conversion is copied out
+  literally — which is how every provenance report carried `%08x` for a
+  whole session. Proved by putting that bug back.
+- **`test_complexity`**, which measures the claims that are shapes:
+  resolution at one size and four times it, where `O(n log n)` and
+  `O(n squared)` are 4.3x and 16x apart. A regression from a binary
+  search to a scan would have passed every other test here.
 - clang-format and clang-tidy as build targets and gates.
 - cmake-format and cmake-lint, so the build files get the same treatment
   as the C sources.

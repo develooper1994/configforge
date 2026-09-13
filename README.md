@@ -205,6 +205,7 @@ a claim that decays.
 | amalgamation | the single-file build compiles as C89 and runs |
 | interface | what including the library costs: no unexpected system header, no size jump |
 | install | a separate project finds the package, compiles against it and runs |
+| formats | every format string against what `cf_fmt` supports |
 
 Beyond the gates, `test_fuzz` corrupts valid documents and requires every
 reader to return rather than crash. It runs one fixed seed in the suite,

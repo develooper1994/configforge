@@ -261,6 +261,7 @@ exists because something in the design is otherwise only a sentence.
 | `gate.symbols` | no locale-sensitive libc function; every export prefixed; no mutable global data; only `alloc.c` calls the allocator |
 | `gate.interface` | what including the library costs a consumer |
 | `gate.install` | that anyone can actually use it: install, `find_package`, compile, run |
+| `gate.formats` | every format string against what `cf_fmt` supports |
 | `gate.format.c`, `gate.format.cmake`, `gate.cmake.lint` | one style, checked not agreed |
 | conformance | `-std=c89 -pedantic -Werror` plus the D-32 warning set |
 | portability | the whole suite under `CF_FORCE_PORTABLE`, byte-identical |
@@ -268,6 +269,33 @@ exists because something in the design is otherwise only a sentence.
 
 Every gate has been proved by breaking it on purpose at least once. A
 gate that has never failed is a gate nobody knows works.
+
+## Run time
+
+The complexity claims are shapes rather than numbers, so they are
+checked as shapes: measured at one size and at four times that, where
+`O(n log n)` and `O(n squared)` are about 4.3x and 16x apart and no
+amount of machine noise closes the gap.
+
+```text
+resolve       4,000 keys   5.7 ms      16,000 keys  27.0 ms    4.7x
+lookup        200,000 over 4,000 keys  66.7 ms
+              200,000 over 16,000 keys 72.9 ms                 1.09x
+arena         3.3 MiB                  13.3 MiB               4.0x
+read          52 ns each, unoptimised
+```
+
+Four times the candidates cost about four times the work, not sixteen:
+resolution is still one merge sort rather than an insertion per key. The
+same number of lookups over four times the keys costs nine percent more,
+which is a binary search paying one extra comparison per doubling. And
+the arena grows in proportion, so no per-key allocation has crept back
+in.
+
+`test_scale` checks that a large configuration is *correct*;
+`test_complexity` checks that it is correct *quickly*. A regression from
+a search to a scan would have passed every other test in the suite while
+turning a pause into a hang.
 
 ## Compile time
 
