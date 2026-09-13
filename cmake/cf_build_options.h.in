@@ -1,0 +1,25 @@
+/*
+ * cf_build_options.h - which features this build has.
+ *
+ * GENERATED. Do not edit, and do not override these: the public headers
+ * change shape with them, so a consumer who disagrees with the library
+ * about CF_WITH_REAL has a different sizeof for cf_value and a quiet
+ * kind of corruption. They are defined unconditionally here for exactly
+ * that reason - this file describes a library that is already compiled.
+ *
+ * The source tree's copy of this file holds defaults behind #ifndef
+ * guards instead, for someone compiling the sources themselves.
+ */
+
+#ifndef CONFIGFORGE_CF_BUILD_OPTIONS_H
+#define CONFIGFORGE_CF_BUILD_OPTIONS_H
+
+#define CF_WITH_REAL   @CF_OPT_REAL@
+#define CF_WITH_INI    @CF_OPT_INI@
+#define CF_WITH_JSON   @CF_OPT_JSON@
+#define CF_WITH_TOML   @CF_OPT_TOML@
+#define CF_WITH_XML    @CF_OPT_XML@
+#define CF_WITH_SQLITE @CF_OPT_SQLITE@
+#define CF_WITH_WATCH  @CF_OPT_WATCH@
+
+#endif /* CONFIGFORGE_CF_BUILD_OPTIONS_H */

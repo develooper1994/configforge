@@ -157,6 +157,24 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   it had no way to be true. The arena is borrowed: `cf_config_free`
   never frees a buffer this library did not allocate.
 
+### Interface safety
+
+- **An installed library now ships facts about itself, not defaults.**
+  The `CF_WITH_*` options were defaulted in `cf_port.h`, so a consumer
+  compiling with a plain `-I` against an installed library saw
+  `CF_WITH_REAL` as 1 even when the library had been built with 0. That
+  is not a link error in general: `CF_WITH_REAL` decides whether
+  `cf_value`'s union holds a double, so the two sides disagree about
+  `sizeof` and the corruption surfaces somewhere else entirely. The link
+  error that revealed it was the lucky outcome.
+  The defaults moved to `cf_build_options.h`, which exists twice on
+  purpose: the source tree's copy holds `#ifndef`-guarded defaults for
+  someone compiling the sources, and the copy generated at configure
+  time states this build's values unconditionally and is the one that
+  gets installed. `gate.install` compiles a consumer with a plain `-I`
+  and checks both the headers and the compiled library agree — proved by
+  making the generated header lie.
+
 ### Security
 
 - **The binary image reader dereferenced a file-supplied index without

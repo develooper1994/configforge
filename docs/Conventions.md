@@ -272,6 +272,16 @@ there was one.
 is not the word it prints for a failed assertion. `scripts/verify.cmake`
 shows the step's whole output for this reason.
 
+**A compiled library ships facts about itself, not defaults.** The
+`CF_WITH_*` options change the shape of the public headers —
+`CF_WITH_REAL` decides whether `cf_value`'s union holds a double — so a
+consumer who disagrees has a different `sizeof` and a corruption that
+surfaces somewhere else. The source tree's `cf_build_options.h` holds
+defaults behind `#ifndef`; the installed one states this build's values
+unconditionally. `gate.install` compiles a consumer with a plain `-I`,
+which is the path where nothing hands the definitions over and where
+the defaults used to win.
+
 **A function that can fail does not return `void`.** `cf_ks_resolve`
 allocated a scratch array, set the key count to zero when it could not,
 and returned nothing. A caller out of arena got a configuration with no

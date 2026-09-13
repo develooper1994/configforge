@@ -41,6 +41,7 @@ target_include_directories(
 
 configforge_setup_cppcheck()
 configforge_apply_warnings(configforge)
+configforge_generate_options(configforge)
 configforge_apply_options(configforge)
 configforge_apply_analysis(configforge)
 

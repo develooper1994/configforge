@@ -36,6 +36,81 @@ option(CF_ENABLE_GATES "Run conformance and symbol gates in CI" ON)
 # ~~~
 # configforge_apply_options(<target>)
 # ~~~
+# The same definitions as a list of -D flags, for the places that
+# compile by hand rather than through a target: the differential
+# amalgamation check has to build both halves with the same options, or
+# it is comparing two different libraries rather than two builds of one.
+set(_CF_OPTION_DEFS "")
+foreach(
+  opt
+  CF_WITH_INI
+  CF_WITH_JSON
+  CF_WITH_TOML
+  CF_WITH_XML
+  CF_WITH_SQLITE
+  CF_WITH_REAL
+  CF_WITH_WATCH)
+  if(${opt})
+    list(APPEND _CF_OPTION_DEFS "-D${opt}=1")
+  else()
+    list(APPEND _CF_OPTION_DEFS "-D${opt}=0")
+  endif()
+endforeach()
+if(CF_FORCE_PORTABLE)
+  list(APPEND _CF_OPTION_DEFS "-DCF_FORCE_PORTABLE=1")
+endif()
+if(CF_SINGLE_THREADED)
+  list(APPEND _CF_OPTION_DEFS "-DCF_SINGLE_THREADED=1")
+endif()
+string(REPLACE ";" "|" _CF_OPTION_DEFS "${_CF_OPTION_DEFS}")
+
+# Turn the CF_WITH_* options into compile definitions on a target.
+#
+# ~~~
+# configforge_apply_options(<target>)
+# ~~~
+# Generate the header that records which features this build has, and
+# put it ahead of the source tree's copy. The source copy holds defaults
+# behind #ifndef guards for someone compiling the sources themselves;
+# this one states facts about a library that is already compiled, so a
+# consumer cannot disagree with it by accident.
+#
+# ~~~
+# configforge_generate_options(<target>)
+# ~~~
+function(configforge_generate_options tgt)
+  foreach(
+    name
+    REAL
+    INI
+    JSON
+    TOML
+    XML
+    SQLITE
+    WATCH)
+    if(CF_WITH_${name})
+      set(CF_OPT_${name} 1)
+    else()
+      set(CF_OPT_${name} 0)
+    endif()
+  endforeach()
+
+  set(gen "${CMAKE_BINARY_DIR}/generated/configforge")
+  configure_file("${CMAKE_SOURCE_DIR}/cmake/cf_build_options.h.in"
+                 "${gen}/cf_build_options.h" @ONLY)
+
+  # Ahead of the source include directory, so the generated file wins
+  # inside this build; consumers get the installed copy, which is this
+  # one.
+  target_include_directories(
+    ${tgt} BEFORE PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/generated>)
+endfunction()
+
+# Turn the CF_WITH_* options into compile definitions on a target.
+#
+# ~~~
+# configforge_apply_options(<target>)
+# ~~~
 function(configforge_apply_options tgt)
   foreach(
     opt

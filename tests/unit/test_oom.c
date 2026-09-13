@@ -88,15 +88,18 @@ static char* g_env[] = {e0, e1, NULL};
 
 typedef enum outcome { OUT_NO_BUILDER = 0, OUT_NO_CONFIG, OUT_COMPLETE } outcome;
 
-/* `block` is the arena's block size. The default takes five large
-   blocks for a whole configuration, which is five injection points; a
-   small one takes dozens, and each is a place the machine could have
-   filled up. Both are swept, because they fail in different places: a
-   large block runs out between objects, a small one runs out inside
-   them. */
-static outcome run_with(failing* f, size_t block, cf_u64* digest, cf_error* err) {
+/* `extra` is how many additional keys a memory source supplies.
+   A small configuration takes five blocks from the allocator, which is
+   five injection points; a few hundred keys take dozens, and every one
+   is a place the machine could have filled up.
+
+   Driving it with the configuration's size rather than the arena's
+   block size is deliberate. The arena floors a block at a kilobyte for
+   a good reason - below that each block spends most of itself on its
+   own header - and lowering a floor so a test can reach further is
+   bending the library to suit the test. */
+static outcome run_with(failing* f, size_t extra, cf_u64* digest, cf_error* err) {
     cf_allocator alloc;
-    cf_arena*    ar = NULL;
     cf_builder*  b;
     cf_config*   c;
     static char  scratch[2048];
@@ -107,16 +110,8 @@ static outcome run_with(failing* f, size_t block, cf_u64* digest, cf_error* err)
     alloc.ctx     = f;
 
     *digest = 0;
-    if (block == 0) {
-        b = cf_build(&alloc);
-    } else {
-        ar = cf_arena_new(&alloc, block);
-        b  = (ar != NULL) ? cf_build_in(ar) : NULL;
-    }
+    b       = cf_build(&alloc);
     if (b == NULL) {
-        if (ar != NULL) {
-            cf_arena_free(ar);
-        }
         return OUT_NO_BUILDER;
     }
     cf_builder_cli(b, "cli", CF_RANK_CLI, 4, g_argv);
@@ -126,19 +121,33 @@ static outcome run_with(failing* f, size_t block, cf_u64* digest, cf_error* err)
     cf_builder_text(b, "log.level", "info", 0);
     cf_builder_bool(b, "tls.enabled", CF_FALSE, 0);
     cf_builder_text(b, "db.password", NULL, CF_SENSITIVE);
+    if (extra > 0) {
+        /* Static, because the pairs have to outlive the builder and
+           because a few hundred of them is more stack than the budget
+           allows. */
+        static cf_pair pairs[512];
+        static char    keys[512][16];
+        size_t         i;
+        if (extra > 512) {
+            extra = 512;
+        }
+        for (i = 0; i < extra; ++i) {
+            cf_fmt(keys[i], sizeof keys[i], "bulk.k%u", (unsigned)i);
+            pairs[i].key   = keys[i];
+            pairs[i].value = "1";
+        }
+        cf_builder_memory(b, "bulk", CF_RANK_SYS_FILE, pairs, extra);
+    }
 
     c = cf_builder_create(b, err);
     if (c == NULL) {
-        if (ar != NULL) {
-            cf_arena_free(ar);
-        }
         return OUT_NO_CONFIG;
     }
 
     /* It said it worked, so everything it promised holds. A snapshot
        assembled from a key space that lost half its candidates would
        show up here rather than at construction. */
-    check(cf_count(c) == 5, "five keys, none dropped");
+    check(cf_count(c) == 5 + extra, "every key survived, none dropped");
     check(cf_get_int(c, "server.port", 0) == 9000, "the command line");
     check(strcmp(cf_get_text(c, "server.host", ""), "10.0.0.1") == 0, "and its text");
     check(strcmp(cf_get_text(c, "db.password", ""), "secret") == 0, "the environment");
@@ -155,37 +164,29 @@ static outcome run_with(failing* f, size_t block, cf_u64* digest, cf_error* err)
     *digest = cf_digest(c);
     result  = OUT_COMPLETE;
     cf_config_free(c);
-    if (ar != NULL) {
-        /* Borrowed, so releasing it is the caller's job - which is the
-           contract cf_build_in states and this is the test of it. */
-        cf_arena_free(ar);
-    }
     return result;
 }
 
 /* ---------------------------------------------------------------- */
 
-/* How many distinct allocation counts the sweeps saw. Two sweeps that
-   agree exactly are two sweeps of the same thing, and a test that
-   cannot tell whether it tested anything is worse than no test. */
-static size_t g_counts[8];
-static int    g_ncounts         = 0;
-static int    g_distinct_counts = 0;
+/* A bigger configuration must take strictly more allocations. Two
+   sweeps that agree exactly are two sweeps of the same thing, and a
+   test that cannot tell whether it tested anything is worse than no
+   test - which this caught: an earlier version passed block sizes to a
+   function that had started taking key counts, and both were clamped to
+   the same number. Counting distinct values was too weak to see it,
+   because the first sweep differed and the other two did not. */
+static size_t g_last_count  = 0;
+static int    g_not_growing = 0;
 
 static void note_count(size_t n) {
-    int i;
-    for (i = 0; i < g_ncounts; ++i) {
-        if (g_counts[i] == n) {
-            return;
-        }
+    if (g_last_count != 0 && n <= g_last_count) {
+        ++g_not_growing;
     }
-    if (g_ncounts < (int)(sizeof g_counts / sizeof g_counts[0])) {
-        g_counts[g_ncounts++] = n;
-    }
-    ++g_distinct_counts;
+    g_last_count = n;
 }
 
-static void sweep(size_t block, const char* what) {
+static void sweep(size_t extra, const char* what) {
     cf_u64 reference = 0;
     cf_u64 digest    = 0;
     size_t budget;
@@ -201,7 +202,7 @@ static void sweep(size_t block, const char* what) {
         f.budget     = (size_t)-1;
         f.calls      = 0;
         f.live       = 0;
-        check(run_with(&f, block, &reference, &err) == OUT_COMPLETE, what);
+        check(run_with(&f, extra, &reference, &err) == OUT_COMPLETE, what);
         check(f.live == 0, "and leaves nothing outstanding");
         total_calls = f.calls;
         note_count(total_calls);
@@ -217,7 +218,7 @@ static void sweep(size_t block, const char* what) {
         f.calls  = 0;
         f.live   = 0;
 
-        o = run_with(&f, block, &digest, &err);
+        o = run_with(&f, extra, &digest, &err);
 
         if (o == OUT_COMPLETE) {
             if (!found_success) {
@@ -300,19 +301,18 @@ static void test_sweep_with_sources(void) {
 }
 
 int main(void) {
-    /* The default block size, and a small one. They fail in different
-       places: a large block runs out between objects, a small one runs
-       out inside them. */
-    /* Different block sizes fail in different places: a large block
-       runs out between objects, a small one runs out inside them.
-       Sizes below 1024 are clamped by the arena, so asking for 64 would
-       sweep the default again and report a number that means nothing -
-       which the first version of this test did, three times, with the
-       same answer each time. sweep() now refuses to agree with itself. */
-    sweep(0, "default blocks");
-    sweep(1024, "1 KiB blocks");
-    sweep(8192, "8 KiB blocks");
-    check(g_distinct_counts >= 2, "the block sizes actually produced different sweeps");
+    /* Every allocation in a run, refused in turn, at three sizes. The
+       count has to grow with the configuration or the sweeps are not
+       reaching further than each other. */
+    sweep(0, "a small configuration");
+    sweep(64, "sixty-four more keys");
+    sweep(400, "four hundred more keys");
+    /* The widest sweep: enough keys that the arena takes dozens of
+       blocks, so dozens of different places in the library get to be
+       the one where the machine ran out. */
+    sweep(512, "five hundred more keys");
+    check(g_not_growing == 0, "a bigger configuration took strictly more allocations");
+
     test_sweep_with_sources();
 
     printf("%d checks, %d failures\n", g_run, g_fail);

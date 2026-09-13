@@ -81,4 +81,35 @@ if(WITH_CXX AND EXISTS "${work}/consumer_cpp")
   message("${out}")
 endif()
 
+# The path with no CMake: a plain -I against the install prefix, which
+# is where nothing hands over the feature definitions and where the
+# defaults used to win. A consumer who disagrees with the library about
+# CF_WITH_REAL has a different sizeof for cf_value, so this is checked
+# at compile time and again at run time - a header can say one thing
+# while the archive was built from another.
+execute_process(
+  COMMAND
+    ${CC} -std=c89 -pedantic -Werror -I "${prefix}/include"
+    -DCF_EXPECT_REAL=${EXPECT_REAL} -DCF_EXPECT_JSON=${EXPECT_JSON} -o
+    "${work}/options" "${SRC}/tests/consumer/options.c"
+    "${prefix}/lib/libconfigforge.a"
+  RESULT_VARIABLE rc
+  OUTPUT_VARIABLE out
+  ERROR_VARIABLE out)
+if(NOT rc EQUAL 0)
+  message("${out}")
+  message(
+    FATAL_ERROR "the installed headers disagree with the installed library")
+endif()
+
+execute_process(
+  COMMAND "${work}/options"
+  RESULT_VARIABLE rc
+  OUTPUT_VARIABLE out
+  ERROR_VARIABLE out)
+message("${out}")
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "the installed headers and library disagree at run time")
+endif()
+
 message("install gate: clean")

@@ -97,6 +97,11 @@ cf_arena* cf_arena_new(const cf_allocator* a, size_t block_size) {
     if (a == NULL) {
         return NULL;
     }
+    /* A floor, not a suggestion. Below about a kilobyte an arena stops
+       being an arena: each block carries a header, so tiny ones spend
+       most of themselves on bookkeeping and turn the arena into a
+       linked list of singletons with worse locality than malloc. A
+       caller who wants a small budget wants cf_arena_fixed. */
     if (block_size < 1024) {
         block_size = 4096;
     }

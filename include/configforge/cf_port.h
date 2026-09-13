@@ -45,33 +45,20 @@ extern "C" {
 /* ------------------------------------------------------------------ *
  * Build features
  *
- * Defaults live here rather than in the header that uses each one, so
- * that every translation unit agrees on them whether or not it
- * includes that header. A feature macro visible in one file and absent
- * in another is how two objects end up with different struct layouts.
+ * In a header of their own, because there are two versions of it: the
+ * source tree's holds defaults, and the one generated at configure time
+ * holds the values a compiled library actually used. An installed
+ * library ships the generated one, so a consumer cannot disagree with
+ * it by accident - and disagreeing is not a small thing, because
+ * CF_WITH_REAL decides whether cf_value's union has a double in it.
+ *
+ * Included here rather than where each option is used, so that every
+ * translation unit agrees whether or not it includes that header. A
+ * feature macro visible in one file and absent in another is how two
+ * objects end up with different struct layouts.
  * ------------------------------------------------------------------ */
 
-#ifndef CF_WITH_REAL
-#define CF_WITH_REAL 1
-#endif
-#ifndef CF_WITH_INI
-#define CF_WITH_INI 1
-#endif
-#ifndef CF_WITH_JSON
-#define CF_WITH_JSON 1
-#endif
-#ifndef CF_WITH_TOML
-#define CF_WITH_TOML 0
-#endif
-#ifndef CF_WITH_XML
-#define CF_WITH_XML 0
-#endif
-#ifndef CF_WITH_SQLITE
-#define CF_WITH_SQLITE 0
-#endif
-#ifndef CF_WITH_WATCH
-#define CF_WITH_WATCH 0
-#endif
+#include "configforge/cf_build_options.h"
 
 /* ------------------------------------------------------------------ *
  * 64-bit integer
