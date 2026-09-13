@@ -237,6 +237,23 @@ CFD002  warning server.port  same key resolved from 'env' here and 'cli' there
 CFD014  info    db.password  sensitive value differs (by digest)
 ```
 
+```sh
+$ doctor lint staging.json --baseline .configforge-baseline
+CFD008  info    log.level    no source configured this; the default applies
+
+1 new finding(s), 0 at error severity; 1 accepted by the baseline
+```
+
+A baseline records what is already there as accepted, one line per
+finding, so only new ones fail. The commonest way a lint tool dies is
+two hundred findings on its first run against a repository that already
+exists: nobody fixes two hundred things, so everybody turns the tool off
+and the fifteen that mattered go with the rest. An entry that no longer
+matches anything is reported — a rule that stopped firing is either a
+fix worth noticing or a rule that quietly broke — but it does not fail
+the build, because failing would make people stop keeping the file
+rather than start pruning it.
+
 Doctor reads provenance reports and never resolves configuration itself,
 which is what keeps it from becoming a second implementation of every
 ecosystem's precedence rules. Reports can be value-blind: presence,

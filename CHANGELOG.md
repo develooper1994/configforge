@@ -136,7 +136,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   rewritten inside one clock tick at the same length. That is documented
   as a hint worth acting on rather than a guarantee; the exact answer is
   to rebuild and compare digests.
-- **ConfigForge Doctor**: `dump`, `explain`, `lint`, `diff`.
+- **ConfigForge Doctor**: `dump`, `explain`, `lint`, `diff`, and
+  `lint --baseline`, which records existing findings as accepted so that
+  only new ones fail. A tool that cannot be adopted gradually is a tool
+  nobody adopts.
 - **Provenance report** (schema v1) and **Report Replay**.
 - **C++03 wrapper**, compiled as C++98 by a gate.
 - **Amalgamation**, compiled and run by a gate.

@@ -58,8 +58,9 @@ typedef struct report {
     size_t      nkeys;
 } report;
 
-static int g_findings = 0;
-static int g_errors   = 0;
+static int g_findings  = 0;
+static int g_errors    = 0;
+static int g_baselined = 0;
 
 /* ------------------------------------------------------------------ *
  * Reading a report
@@ -284,6 +285,103 @@ static const char* shown(const cand* c) {
  * Findings
  * ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ *
+ * Baseline
+ *
+ * The commonest way a lint tool dies is two hundred findings on its
+ * first run against a repository that already exists. Nobody fixes two
+ * hundred things, so everybody turns the tool off, and the fifteen
+ * findings that mattered go with the rest.
+ *
+ * A baseline records what was already there as accepted, so only new
+ * findings fail. A stale entry - one that no longer matches anything -
+ * is reported rather than dropped silently, because a rule that stopped
+ * firing is either a fix worth noticing or a rule that quietly broke.
+ *
+ * One finding per line, "CFD001 server.port". Not JSON, on purpose:
+ * this file is read in code review, and a line somebody can delete by
+ * hand is a baseline somebody will actually shrink.
+ * ------------------------------------------------------------------ */
+
+#define MAX_BASELINE 512
+
+typedef struct baseline {
+    char    id[MAX_BASELINE][16];
+    char    key[MAX_BASELINE][CF_KEY_MAX];
+    cf_bool matched[MAX_BASELINE];
+    size_t  count;
+    cf_bool loaded;
+} baseline;
+
+static baseline g_baseline;
+
+static void baseline_load(const char* path) {
+    FILE*       f;
+    static char line[CF_KEY_MAX + 32];
+
+    g_baseline.loaded = CF_TRUE;
+    f                 = fopen(path, "rb");
+    if (f == NULL) {
+        /* A missing baseline is an empty one: the first run of a tool
+           should not need a file to exist before it says anything. */
+        return;
+    }
+    while (fgets(line, (int)sizeof line, f) != NULL &&
+           g_baseline.count < MAX_BASELINE) {
+        char*  key;
+        size_t n = strlen(line);
+
+        while (n > 0 && (line[n - 1] == '\n' || line[n - 1] == '\r')) {
+            line[--n] = '\0';
+        }
+        if (line[0] == '\0' || line[0] == '#') {
+            continue;
+        }
+        key = strchr(line, ' ');
+        if (key == NULL) {
+            continue;
+        }
+        *key++ = '\0';
+        while (*key == ' ') {
+            ++key;
+        }
+        cf_fmt(g_baseline.id[g_baseline.count], 16, "%s", line);
+        cf_fmt(g_baseline.key[g_baseline.count], CF_KEY_MAX, "%s", key);
+        g_baseline.matched[g_baseline.count] = CF_FALSE;
+        ++g_baseline.count;
+    }
+    fclose(f);
+}
+
+/* Already accepted? Marks it seen, so what is left unmatched afterwards
+   is the stale part of the file. */
+static cf_bool baseline_accepts(const char* id, const char* key) {
+    size_t i;
+
+    for (i = 0; i < g_baseline.count; ++i) {
+        if (strcmp(g_baseline.id[i], id) == 0 && strcmp(g_baseline.key[i], key) == 0) {
+            g_baseline.matched[i] = CF_TRUE;
+            return CF_TRUE;
+        }
+    }
+    return CF_FALSE;
+}
+
+static int baseline_stale(void) {
+    size_t i;
+    int    stale = 0;
+
+    for (i = 0; i < g_baseline.count; ++i) {
+        if (!g_baseline.matched[i]) {
+            printf("%-7s %-7s %-28s %s\n", g_baseline.id[i], "stale", g_baseline.key[i],
+                   "in the baseline and no longer found: either it was fixed "
+                   "or the rule stopped working");
+            ++stale;
+        }
+    }
+    return stale;
+}
+
 static void finding(const char* id, const char* sev, const char* key, const char* fmt,
                     ...) {
     char    msg[512];
@@ -293,6 +391,12 @@ static void finding(const char* id, const char* sev, const char* key, const char
     cf_vfmt(msg, sizeof msg, fmt, ap);
     va_end(ap);
 
+    if (g_baseline.loaded && baseline_accepts(id, key)) {
+        /* Counted but not printed. A baselined finding that printed on
+           every run would be the noise the baseline exists to remove. */
+        ++g_baselined;
+        return;
+    }
     printf("%-7s %-7s %-28s %s\n", id, sev, key, msg);
     ++g_findings;
     if (strcmp(sev, "error") == 0) {
@@ -668,17 +772,28 @@ static void cmd_diff(const report* a, const report* b) {
 }
 
 static int usage(void) {
+    /* Split across several calls: C90 requires support for string
+       literals only up to 509 characters, and one long one is the sort
+       of limit that is invisible until a toolchain enforces it. */
     fputs("ConfigForge Doctor\n"
           "\n"
           "  doctor dump    <report>\n"
           "  doctor explain <report> <key>\n"
-          "  doctor lint    <report>\n"
+          "  doctor lint    <report> [--baseline <file>]\n"
           "  doctor diff    <report-a> <report-b>\n"
-          "\n"
-          "Reads provenance reports. Never resolves configuration itself:\n"
-          "it reads what a process already resolved, which is what keeps it\n"
-          "from becoming a second implementation of every ecosystem's\n"
-          "precedence rules.\n"
+          "\n",
+          stderr);
+    fputs("Reads provenance reports and never resolves configuration\n"
+          "itself: it reads what a process already resolved, which is what\n"
+          "keeps it from becoming a second implementation of every\n"
+          "ecosystem's precedence rules.\n"
+          "\n",
+          stderr);
+    fputs("A baseline records findings already accepted, one per line as\n"
+          "\"CFD001 server.port\", so that only new ones fail. The\n"
+          "commonest way a lint tool dies is two hundred findings on its\n"
+          "first run: nobody fixes two hundred things, so everybody turns\n"
+          "the tool off and the fifteen that mattered go with the rest.\n"
           "\n"
           "Exit codes: 0 clean, 1 findings at error severity, 2 unusable\n"
           "input.\n",
@@ -718,13 +833,34 @@ int main(int argc, char** argv) {
         return rc;
     }
     if (strcmp(argv[1], "lint") == 0) {
+        int stale = 0;
+
+        /* Read before anything runs, so a finding is matched as it is
+           produced rather than filtered afterwards - filtering
+           afterwards would mean printing and then unprinting. */
+        if (argc >= 5 && strcmp(argv[3], "--baseline") == 0) {
+            baseline_load(argv[4]);
+        }
         if (!load(&a, argv[2])) {
             release(&a);
             return 2;
         }
         cmd_lint(&a);
         release(&a);
-        printf("\n%d finding(s), %d at error severity\n", g_findings, g_errors);
+        if (g_baseline.loaded) {
+            stale = baseline_stale();
+        }
+        printf("\n%d new finding(s), %d at error severity", g_findings, g_errors);
+        if (g_baselined > 0) {
+            printf("; %d accepted by the baseline", g_baselined);
+        }
+        if (stale > 0) {
+            printf("; %d baseline entry(s) no longer match", stale);
+        }
+        printf("\n");
+        /* A stale entry does not fail the build. It says the file has
+           drifted, and failing on it would make people stop keeping the
+           file rather than start pruning it. */
         return (g_errors > 0) ? 1 : 0;
     }
     if (strcmp(argv[1], "diff") == 0) {

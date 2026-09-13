@@ -43,3 +43,12 @@ doctor_case(explain 0 explain|cf_fx_prod.json|server.port)
 doctor_case(explain_missing 2 explain|cf_fx_prod.json|no.such.key)
 doctor_case(diff 0 diff|cf_fx_prod.json|cf_fx_staging.json)
 doctor_case(not_a_report 2 dump|cf_fx_staging.ini)
+
+# A baseline turns a failing run into a passing one and reports what no
+# longer matches. Written by the test rather than checked in, so it
+# cannot drift away from the fixture it refers to.
+add_test(NAME doctor.baseline
+         COMMAND ${CMAKE_COMMAND} -DDOCTOR=$<TARGET_FILE:doctor> -P
+                 ${CMAKE_SOURCE_DIR}/tests/doctor/baseline.cmake)
+set_tests_properties(doctor.baseline PROPERTIES FIXTURES_REQUIRED
+                                                DOCTOR_REPORTS)
