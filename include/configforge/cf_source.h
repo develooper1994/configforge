@@ -20,6 +20,9 @@ extern "C" {
 /* Conventional ranks. Lower wins. Callers may use any integers; these
    are the ones cf_app installs. */
 enum {
+    /* Above the command line, for a value set at run time: the user
+       just did it, deliberately, now. */
+    CF_RANK_OVERRIDE  = -10,
     CF_RANK_CLI       = 0,
     CF_RANK_ENV       = 10,
     CF_RANK_USER_FILE = 20,
@@ -208,6 +211,12 @@ const cf_error* cf_source_dotenv_error(const cf_source* s);
  * .dpkg-new both land in such a directory and neither is
  * configuration.
  * ------------------------------------------------------------------ */
+
+/* An existing key space, replayed. Every candidate at the rank it
+   originally had, not only the winners: a library whose premise is
+   explaining itself must not lose provenance at the moment a value
+   changes, which is exactly when somebody asks. */
+cf_bool cf_source_snapshot(cf_source* s, const char* name, const cf_keyspace* ks);
 
 size_t cf_source_dir_state_size(void);
 

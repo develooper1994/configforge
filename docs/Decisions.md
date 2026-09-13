@@ -64,6 +64,7 @@ gets reopened every six months.
 | D-31 | The no-build-system path | distribution, maintenance | **Decided** |
 | D-32 | The compiler warning standard | every build, every compiler | **Decided** |
 | D-33 | Per-parameter policy: shape, and what a violation does | resolver, security | **Decided** |
+| D-34 | What `set()` means on an immutable snapshot | ownership, provenance | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -1361,6 +1362,50 @@ existing.
 **Consequence.** `cf_source_view` moved from `cf_explain.h` to `cf_source.h`, where a
 view over sources belongs; having it in the diagnostics header meant nothing below could
 name a source without including the top layer.
+
+---
+
+## D-34 — Setting a Value
+
+**Question.** A snapshot is immutable. What does changing a setting at run time mean?
+
+**Decision.** It derives another one. `cf_derive` returns a new configuration with the
+change applied; the original stays valid and unchanged.
+
+That is not a workaround for immutability, it is what immutability is for. A reader
+holding the old snapshot keeps seeing a configuration that does not move underneath it,
+and a thread reading while another sets needs no lock, because nothing is being written.
+Mutating in place would have required exactly the lock the threading contract (D-14)
+avoids, on the read path.
+
+**The derived configuration is independent rather than layered.** It copies what it
+needs, so neither has to outlive the other. Layering would have been cheaper — hold a
+reference and fall through — and would have left the caller a lifetime to reason about
+and every accessor a second path to walk. A pass over the key space is microseconds for
+a configuration, and this library prefers the version with nothing to explain.
+
+**Provenance survives, and grows.** The change arrives from a source of its own, ranked
+above the command line because the user just did it deliberately, and the displaced
+value stays in the chain. After a change, `explain()` says what it is now, what it was,
+and where *that* came from — which is exactly the question somebody asks after changing
+a setting. Replaying only the winners would have been simpler and would have made the
+derived configuration explain itself *less* than the one it came from, which is the
+wrong direction for this library to move in.
+
+**The contract travels.** Definitions, open prefixes and the unknown-key policy are all
+inherited: a derived configuration that accepted what the original refused would be a
+different contract wearing the same name.
+
+**A fixed arena has to supply its own.** A configuration built with `cf_build_in` has no
+allocator to borrow, and falling back to `malloc` is the one thing a target with no heap
+cannot survive. `cf_derive` refuses and names `cf_derive_in`.
+
+**One thing the implementation got wrong first,** worth recording because the reasoning
+sounded right: the override source was added before the replayed base, "so it takes the
+rank above everything". Rank is explicit on the source, so the position looked
+irrelevant — and was not. Deriving twice puts two candidates at the same override rank,
+where the later one wins, and adding the new one first made the *inherited* override the
+later of the two. A second change to the same key did nothing.
 
 ---
 

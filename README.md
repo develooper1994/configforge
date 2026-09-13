@@ -84,7 +84,8 @@ nothing, and `1.0` is where semantic versioning starts.
 | per-parameter policy (D-33) | done |
 | writing an overrides file (`cf_emit`) | done |
 | threading contract (D-14), reference-counted snapshots | done |
-| `set()` and propagation to a source | next |
+| `cf_derive`: changing a value without mutating a snapshot | done |
+| change notification | next |
 | change notification | after |
 | TOML, XML, SQLite codecs | deferred, see D-23 |
 | Windows Registry, gsettings, macOS defaults | deferred, see D-30 |

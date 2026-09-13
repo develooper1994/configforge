@@ -7,4 +7,5 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/defaults.c
           ${CMAKE_CURRENT_SOURCE_DIR}/env.c
           ${CMAKE_CURRENT_SOURCE_DIR}/cli.c
-          ${CMAKE_CURRENT_SOURCE_DIR}/compat.c)
+          ${CMAKE_CURRENT_SOURCE_DIR}/compat.c
+          ${CMAKE_CURRENT_SOURCE_DIR}/snapshot.c)

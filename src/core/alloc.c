@@ -165,6 +165,10 @@ cf_arena* cf_arena_fixed(void* buffer, size_t size) {
     return ar;
 }
 
+const cf_allocator* cf_arena_allocator(const cf_arena* ar) {
+    return (ar != NULL && !ar->fixed) ? ar->alloc : NULL;
+}
+
 void cf_arena_free(cf_arena* ar) {
     cf_block*           b;
     const cf_allocator* a;

@@ -47,6 +47,11 @@ cf_arena* cf_arena_new(const cf_allocator* a, size_t block_size);
 cf_arena* cf_arena_fixed(void* buffer, size_t size);
 void      cf_arena_free(cf_arena* ar);
 
+/* The allocator this arena takes blocks from, or NULL for a fixed one.
+   Needed so that deriving a configuration keeps using the allocator the
+   caller supplied rather than quietly falling back to malloc. */
+const cf_allocator* cf_arena_allocator(const cf_arena* ar);
+
 void* cf_arena_alloc(cf_arena* ar, size_t n);
 void* cf_arena_calloc(cf_arena* ar, size_t n);
 

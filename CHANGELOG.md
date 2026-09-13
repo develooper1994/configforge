@@ -109,6 +109,19 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   stronger than the contract requires and gives the reload story a
   foundation. Retrofitting ownership later is the same class of mistake
   as retrofitting the provenance chain.
+- **`cf_derive`** (D-34), which is what setting a value means when a
+  snapshot is immutable: it returns another one. The original stays
+  valid and unchanged, so a reader holding it does not have it move
+  underneath them and a thread reading while another sets needs no lock.
+  Provenance grows rather than collapsing. The change arrives from a
+  source of its own above the command line, and the displaced value
+  stays in the chain — so `explain()` afterwards says what it is now,
+  what it was, and where that came from, which is the question somebody
+  asks right after changing a setting.
+  The contract travels with it: definitions, open prefixes and the
+  unknown-key policy are inherited, because a derived configuration that
+  accepted what the original refused would be a different contract
+  wearing the same name.
 - **ConfigForge Doctor**: `dump`, `explain`, `lint`, `diff`.
 - **Provenance report** (schema v1) and **Report Replay**.
 - **C++03 wrapper**, compiled as C++98 by a gate.

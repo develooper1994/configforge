@@ -47,6 +47,11 @@ struct cf_config {
        followed by at most one free. */
     cf_refcount refs;
     cf_bool     owns_arena;
+
+    /* Kept so that deriving inherits it: a derived configuration that
+       accepted unknown keys the original refused would be a different
+       contract wearing the same name. */
+    cf_unknown_policy unknown;
 };
 
 /* ------------------------------------------------------------------ *
@@ -451,6 +456,7 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
            anyone does. */
         cf_ref_init(&c->refs, 1);
         c->owns_arena = b->owns_arena;
+        c->unknown    = b->unknown;
     }
     if (c == NULL) {
         cf_error_set(&e, CF_E_MEMORY, NULL, NULL, "no room for the config");
@@ -586,6 +592,103 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
 
 cf_config* cf_app(const char* name, int argc, char* const* argv, cf_error* err) {
     return cf_builder_create(cf_app_builder(name, argc, argv), err);
+}
+
+/* ------------------------------------------------------------------ *
+ * Deriving
+ *
+ * A snapshot is immutable, so setting a value means building another
+ * one. The derived configuration copies what it needs rather than
+ * pointing into the original, so neither has to outlive the other -
+ * which costs a pass over the key space and saves the caller a lifetime
+ * to reason about.
+ * ------------------------------------------------------------------ */
+
+static cf_config* derive_onto(const cf_config* base, cf_arena* ar, cf_bool owns,
+                              const char* source_name, const cf_pair* pairs,
+                              size_t count, cf_error* err) {
+    cf_builder* b;
+    size_t      i;
+
+    b = builder_on(ar, owns);
+    if (b == NULL) {
+        cf_error_set(err, CF_E_MEMORY, NULL, NULL, "no room to derive a configuration");
+        return NULL;
+    }
+
+    /* Every candidate the base holds, not only the winners: dropping
+       the losers would make explain() on the derived configuration say
+       less than on the one it came from, which is the wrong direction
+       for this library to move in. */
+    {
+        cf_source* s = builder_slot(b);
+        if (s == NULL || !cf_source_snapshot(s, "inherited", &base->keys)) {
+            cf_error_set(err, CF_E_MEMORY, NULL, NULL,
+                         "no room for the inherited configuration");
+            cf_builder_abort(b);
+            return NULL;
+        }
+        ++b->nsources;
+    }
+
+    /* The overrides go in after the base, not before. Rank already puts
+       them above everything, so the order looks irrelevant - and is
+       not, because deriving twice gives two candidates at the same
+       override rank and the later one has to win. Adding them first
+       made the *inherited* override the later of the two, so a second
+       change to the same key did nothing. */
+    if (count > 0) {
+        cf_builder_memory(b, (source_name != NULL) ? source_name : "set",
+                          CF_RANK_OVERRIDE, pairs, count);
+    }
+
+    /* The contract travels with it, or the derived configuration would
+       accept values the original refused. */
+    for (i = 0; i < base->defs.count; ++i) {
+        if (!cf_builder_define(b, &base->defs.defs[i])) {
+            cf_error_set(err, CF_E_MEMORY, base->defs.defs[i].key, NULL,
+                         "no room for the inherited definitions");
+            cf_builder_abort(b);
+            return NULL;
+        }
+    }
+    for (i = 0; i < base->defs.open_count; ++i) {
+        cf_builder_open(b, base->defs.open_prefixes[i]);
+    }
+    cf_builder_unknown(b, base->unknown);
+
+    return cf_builder_create(b, err);
+}
+
+cf_config* cf_derive(const cf_config* base, const char* source_name,
+                     const cf_pair* pairs, size_t count, cf_error* err) {
+    const cf_allocator* alloc;
+
+    if (base == NULL) {
+        cf_error_set(err, CF_E_SOURCE, NULL, NULL, "nothing to derive from");
+        return NULL;
+    }
+    alloc = cf_arena_allocator(base->arena);
+    if (alloc == NULL) {
+        /* Built inside a caller's buffer, so there is no allocator to
+           borrow and falling back to malloc would be the one thing a
+           target with no heap cannot survive. */
+        cf_error_set(err, CF_E_CAPABILITY, NULL, NULL,
+                     "this configuration was built in a fixed arena; derive "
+                     "into one with cf_derive_in");
+        return NULL;
+    }
+    return derive_onto(base, cf_arena_new(alloc, 0), CF_TRUE, source_name, pairs, count,
+                       err);
+}
+
+cf_config* cf_derive_in(const cf_config* base, cf_arena* arena, const char* source_name,
+                        const cf_pair* pairs, size_t count, cf_error* err) {
+    if (base == NULL || arena == NULL) {
+        cf_error_set(err, CF_E_SOURCE, NULL, NULL, "nothing to derive from");
+        return NULL;
+    }
+    return derive_onto(base, arena, CF_FALSE, source_name, pairs, count, err);
 }
 
 void cf_config_ref(cf_config* c) {

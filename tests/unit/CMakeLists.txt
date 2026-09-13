@@ -23,7 +23,8 @@ set(CF_UNIT_TESTS
     test_threads
     test_fuzz
     test_starve
-    test_oom)
+    test_oom
+    test_derive)
 
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)

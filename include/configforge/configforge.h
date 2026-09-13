@@ -231,6 +231,35 @@ const cf_defset*       cf_defs(const cf_config* c);
  * immutable.
  * ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ *
+ * Changing a value
+ *
+ * A snapshot is immutable, so setting one means deriving another. The
+ * original stays valid and unchanged, which is the point: a reader
+ * holding it keeps seeing a configuration that does not move underneath
+ * it, and a thread reading while another sets needs no lock because
+ * nothing is being written.
+ *
+ * The derived configuration is independent - it copies what it needs -
+ * so neither has to outlive the other. That costs a pass over the key
+ * space, which is microseconds for a configuration and buys the caller
+ * one less lifetime to reason about.
+ *
+ * Provenance survives. The new value arrives from a source of its own,
+ * above the command line because the user just did it deliberately, and
+ * the value it displaced is still in the chain. explain() afterwards
+ * says "set at run time, and before that it came from the file", which
+ * is the question people actually ask after changing a setting.
+ * ------------------------------------------------------------------ */
+
+cf_config* cf_derive(const cf_config* base, const char* source_name,
+                     const cf_pair* pairs, size_t count, cf_error* err);
+
+/* The same, inside an arena the caller owns. A configuration built with
+   cf_build_in has no allocator to borrow, so it must use this one. */
+cf_config* cf_derive_in(const cf_config* base, cf_arena* arena, const char* source_name,
+                        const cf_pair* pairs, size_t count, cf_error* err);
+
 void cf_config_ref(cf_config* c);
 void cf_config_free(cf_config* c);
 
