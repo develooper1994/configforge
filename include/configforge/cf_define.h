@@ -24,7 +24,12 @@ extern "C" {
 enum {
     CF_REQUIRED   = 1u << 0, /* absence is an error                  */
     CF_SENSITIVE  = 1u << 1, /* redacted in diagnostics and reports  */
-    CF_DEPRECATED = 1u << 2  /* accepted, reported                   */
+    CF_DEPRECATED = 1u << 2, /* accepted, reported                   */
+
+    /* A command rather than a setting. --cf.explain asks a question; it
+       configures nothing, so it must never be written into a file that
+       is read back as configuration. */
+    CF_TRANSIENT = 1u << 3
 };
 
 typedef enum cf_on_invalid {
@@ -98,12 +103,23 @@ void cf_def_init(cf_def* d, cf_type type, const char* key);
    they are, which is the direction the layering requires. */
 struct cf_source;
 
+#define CF_MAX_OPEN_PREFIXES 8
+
 typedef struct cf_defset {
     cf_arena* arena;
     cf_def*   defs;
     size_t    count;
     size_t    capacity;
     cf_bool   sealed;
+
+    /* Prefixes exempt from unknown-key rejection.
+
+       A plugin's settings cannot be in the program's contract, because
+       the plugin is not in the program either. Without this, Tier 1 and
+       a dynamic key space are mutually exclusive - which the first
+       example that tried to iterate plugins discovered immediately. */
+    const char* open_prefixes[CF_MAX_OPEN_PREFIXES];
+    size_t      open_count;
 } cf_defset;
 
 cf_bool cf_defset_init(cf_defset* ds, cf_arena* arena, size_t hint);
@@ -127,6 +143,13 @@ cf_bool cf_def_real(cf_defset* ds, const char* key, double dflt, double min, dou
 
 /* Sorts. Required before lookup; calling twice is harmless. */
 void cf_defset_seal(cf_defset* ds);
+
+/* Exempt a prefix from unknown-key rejection. */
+cf_bool cf_defset_open(cf_defset* ds, const char* prefix, cf_error* err);
+
+/* Is this key under an exempt prefix? Matches at a segment boundary
+   only, so opening "plugins" does not open "pluginsomething". */
+cf_bool cf_defset_is_open(const cf_defset* ds, const char* key, size_t keylen);
 
 const cf_def* cf_defset_find(const cf_defset* ds, const char* key, size_t keylen);
 size_t        cf_defset_count(const cf_defset* ds);

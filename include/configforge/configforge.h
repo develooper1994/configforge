@@ -107,6 +107,11 @@ cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank, const char* pa
 cf_bool cf_builder_source(cf_builder* b, const cf_source* s);
 
 cf_bool cf_builder_define(cf_builder* b, const cf_def* d);
+
+/* Exempt a prefix from unknown-key rejection, for a key space the
+   program cannot know in advance: a plugin's settings are not in the
+   contract because the plugin is not either. */
+cf_bool cf_builder_open(cf_builder* b, const char* prefix);
 cf_bool cf_builder_bool(cf_builder* b, const char* key, cf_bool dflt, unsigned flags);
 cf_bool cf_builder_int(cf_builder* b, const char* key, cf_i64 dflt, cf_i64 min,
                        cf_i64 max, unsigned flags);

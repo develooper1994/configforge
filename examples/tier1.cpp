@@ -16,7 +16,9 @@ int main(int argc, char** argv)
                         .defineInt ("server.port", 8080, 1, 65535)
                         .defineText("server.host", "0.0.0.0")
                         .defineBool("tls.enabled", false)
-                        .defineText("cf.explain")
+                        .defineText("cf.explain", 0, CF_TRANSIENT)
+                        .defineBool("cf.save", false, CF_TRANSIENT)
+                        .open("plugins")
                         .unknown(CF_UNKNOWN_REJECT)
                         .create();
 
@@ -31,6 +33,29 @@ int main(int argc, char** argv)
 
     if (cfg.has("cf.explain")) {
         std::fputs(cfg.explain(cfg.text("cf.explain").c_str()).c_str(), stdout);
+        return 0;
+    }
+
+    /* Walking a prefix. C++03 has no range-for, so this is begin/end -
+       and because it is a real iterator type, a C++11 consumer gets
+       range-for over the same interface with no second API. */
+    {
+        cf::Config::Range r = cfg.children("plugins");
+        for (cf::Config::Range::iterator i = r.begin(); i != r.end(); ++i) {
+            std::printf("plugin: %s\n", (*i).name().c_str());
+        }
+    }
+
+    /* What someone configured, in a form that can be saved and read
+       back: an overrides file, not a snapshot of every default. */
+    if (cfg.has("cf.save")) {
+        cf::Error e;
+        std::string out = cfg.emit("json", CF_EMIT_CONFIGURED, &e);
+        if (out.empty()) {
+            std::fprintf(stderr, "%s\n", e.message());
+            return 1;
+        }
+        std::fputs(out.c_str(), stdout);
         return 0;
     }
 

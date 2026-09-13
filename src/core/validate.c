@@ -276,7 +276,8 @@ cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names*
                     c->flags &= ~(unsigned)CF_CAND_TEXTUAL;
                 }
             }
-            if (unknown == CF_UNKNOWN_REJECT) {
+            if (unknown == CF_UNKNOWN_REJECT &&
+                !cf_defset_is_open(ds, e->key, e->keylen)) {
                 size_t        dist = 0;
                 const cf_def* near = cf_defset_nearest(ds, e->key, e->keylen, &dist);
                 const char*   at =

@@ -279,6 +279,19 @@ cf_bool cf_builder_source(cf_builder* b, const cf_source* src) {
     return CF_TRUE;
 }
 
+cf_bool cf_builder_open(cf_builder* b, const char* prefix) {
+    cf_error e = CF_ERROR_INIT;
+
+    if (b == NULL) {
+        return CF_FALSE;
+    }
+    if (!cf_defset_open(&b->defs, prefix, &e)) {
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    return CF_TRUE;
+}
+
 cf_bool cf_builder_define(cf_builder* b, const cf_def* d) {
     cf_error e = CF_ERROR_INIT;
 

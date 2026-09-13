@@ -24,6 +24,11 @@ cf_bool cf_defset_init(cf_defset* ds, cf_arena* arena, size_t hint) {
     if (hint < 8) {
         hint = 8;
     }
+    /* Zeroed whole rather than field by field. Adding open_prefixes and
+       forgetting to initialise open_count segfaulted every caller that
+       built a defset on the stack, and the next field added would do
+       the same. */
+    memset(ds, 0, sizeof *ds);
     ds->arena    = arena;
     ds->count    = 0;
     ds->capacity = hint;
@@ -246,6 +251,38 @@ static void def_swap(cf_def* a, cf_def* b) {
 /* Definition counts are in the tens, and the set is built once and
    never appended to afterwards, so insertion sort is both the fastest
    and the least code here. Nothing larger would change that. */
+cf_bool cf_defset_open(cf_defset* ds, const char* prefix, cf_error* err) {
+    if (ds == NULL || prefix == NULL || prefix[0] == '\0') {
+        return cf_error_set(err, CF_E_DEFINITION, NULL, NULL,
+                            "an open prefix must name something");
+    }
+    if (ds->open_count >= CF_MAX_OPEN_PREFIXES) {
+        return cf_error_set(err, CF_E_DEFINITION, prefix, NULL,
+                            "more than %d open prefixes", CF_MAX_OPEN_PREFIXES);
+    }
+    ds->open_prefixes[ds->open_count++] = prefix;
+    return CF_TRUE;
+}
+
+cf_bool cf_defset_is_open(const cf_defset* ds, const char* key, size_t keylen) {
+    size_t i;
+
+    if (ds == NULL || key == NULL) {
+        return CF_FALSE;
+    }
+    for (i = 0; i < ds->open_count; ++i) {
+        const char* p = ds->open_prefixes[i];
+        size_t      n = strlen(p);
+        /* At a segment boundary only: opening "plugins" must not open
+           "pluginsomething", which is the bug every prefix check
+           has. */
+        if (keylen > n && memcmp(key, p, n) == 0 && key[n] == '.') {
+            return CF_TRUE;
+        }
+    }
+    return CF_FALSE;
+}
+
 void cf_defset_seal(cf_defset* ds) {
     size_t i, j;
 

@@ -86,6 +86,20 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   configuration rather than a subset of one. And a format with no array
   syntax refuses before writing anything, keeping the promise the INI
   encoder made.
+- **Open prefixes** (`cf_builder_open`). Unknown-key rejection and a
+  dynamic key space were mutually exclusive: a plugin's settings cannot
+  be in the program's contract because the plugin is not in the program
+  either. An exempt prefix is a hole of a stated size — everything
+  outside it is still checked, and the prefix matches at a segment
+  boundary so opening `plugins` does not open `pluginsomething`.
+- **`CF_TRANSIENT`**, for a key that is a command rather than a setting.
+  `--cf.explain` asks a question; a file that recorded it would ask the
+  question again on every run that read the file.
+- **The C++03 wrapper now covers iteration, emitting and reporting.**
+  A wrapper that covers half its library is worse than none: it lets
+  someone believe they can stay in C++ and then drops them into C.
+  Iteration is `begin`/`end` over a real iterator type, which is valid
+  C++03 and gives a C++11 consumer range-for over the same interface.
 - **ConfigForge Doctor**: `dump`, `explain`, `lint`, `diff`.
 - **Provenance report** (schema v1) and **Report Replay**.
 - **C++03 wrapper**, compiled as C++98 by a gate.

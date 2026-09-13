@@ -177,6 +177,88 @@ static void test_from_one_rank(void) {
     cf_config_free(c);
 }
 
+/* A command is never written out. --cf.explain asks a question; a file
+   that recorded it would ask the question again on every run that reads
+   the file. */
+static void test_transient_is_not_written(void) {
+    static char  a1[]   = "--server.port=9000";
+    static char  a2[]   = "--cf.explain=server.port";
+    static char* argv[] = {a0, a1, a2, NULL};
+    cf_error     err    = CF_ERROR_INIT;
+    cf_builder*  b      = cf_build(NULL);
+    cf_config*   c;
+    static char  buf[2048];
+
+    cf_builder_cli(b, "cli", CF_RANK_CLI, 3, argv);
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    cf_builder_text(b, "cf.explain", NULL, CF_TRANSIENT);
+    c = cf_builder_create(b, &err);
+    if (c == NULL) {
+        check(0, "builds");
+        printf("  %s\n", err.message);
+        return;
+    }
+    check(cf_has(c, "cf.explain"), "the command is readable");
+    cf_emit(c, "json", CF_EMIT_CONFIGURED, 0, buf, sizeof buf, &err);
+    has(buf, "9000", "the setting is written");
+    lacks(buf, "explain", "the command is not");
+    cf_config_free(c);
+}
+
+/* A key space the program cannot know in advance. Without this, Tier 1
+   and a dynamic key space are mutually exclusive, which the first
+   example that tried to iterate plugins discovered immediately. */
+static void test_open_prefix(void) {
+    static char  a1[]   = "--plugins.auth.enabled=true";
+    static char  a2[]   = "--server.port=9000";
+    static char* argv[] = {a0, a1, a2, NULL};
+    cf_error     err    = CF_ERROR_INIT;
+    cf_builder*  b      = cf_build(NULL);
+    cf_config*   c;
+
+    cf_builder_cli(b, "cli", CF_RANK_CLI, 3, argv);
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    cf_builder_unknown(b, CF_UNKNOWN_REJECT);
+    cf_builder_open(b, "plugins");
+    c = cf_builder_create(b, &err);
+    check(c != NULL, "an open prefix survives strict rejection");
+    if (c == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+    check(cf_get_bool(c, "plugins.auth.enabled", CF_FALSE), "and is readable");
+    cf_config_free(c);
+
+    /* Everything outside the open prefix is still checked, which is the
+       point: the exemption is a hole of a stated size. */
+    {
+        static char  b1[]    = "--serverr.port=1";
+        static char* bargv[] = {a0, b1, NULL};
+        cf_error     e2      = CF_ERROR_INIT;
+        b                    = cf_build(NULL);
+        cf_builder_cli(b, "cli", CF_RANK_CLI, 2, bargv);
+        cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+        cf_builder_unknown(b, CF_UNKNOWN_REJECT);
+        cf_builder_open(b, "plugins");
+        check(cf_builder_create(b, &e2) == NULL, "a typo is still caught");
+        has(e2.message, "did you mean", "with the suggestion intact");
+    }
+
+    /* At a segment boundary only: opening "plugins" must not open
+       "pluginsomething". */
+    {
+        static char  c1[]    = "--pluginsomething=1";
+        static char* cargv[] = {a0, c1, NULL};
+        cf_error     e3      = CF_ERROR_INIT;
+        b                    = cf_build(NULL);
+        cf_builder_cli(b, "cli", CF_RANK_CLI, 2, cargv);
+        cf_builder_unknown(b, CF_UNKNOWN_REJECT);
+        cf_builder_open(b, "plugins");
+        check(cf_builder_create(b, &e3) == NULL,
+              "an open prefix does not open a longer name");
+    }
+}
+
 int main(void) {
     cf_arena* ar = cf_arena_new(NULL, 1 << 16);
 
@@ -185,6 +267,8 @@ int main(void) {
     test_arrays_are_all_or_nothing(ar);
     test_format_refusals();
     test_from_one_rank();
+    test_transient_is_not_written();
+    test_open_prefix();
 
     cf_arena_free(ar);
     printf("%d checks, %d failures\n", g_run, g_fail);

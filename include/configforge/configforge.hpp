@@ -95,6 +95,128 @@ public:
     cf_type typeOf(const char* key) const
     { return cf_type_of(c_, key); }
 
+    /* ---------------------------------------------------------- *
+     * Walking a prefix
+     *
+     * Written as begin/end over a real iterator type rather than a
+     * callback, because that is valid C++03 *and* it makes range-for
+     * work on C++11 and later without a second interface. A wrapper
+     * that covers half its library is worse than none: it lets someone
+     * believe they can stay in C++ and then drops them into C.
+     * ---------------------------------------------------------- */
+
+    class Entry {
+    public:
+        Entry() : it_(0) {}
+        explicit Entry(const cf_iter* it) : it_(it) {}
+
+        std::string key() const
+        { return std::string(it_->key, it_->keylen); }
+        std::string name() const
+        { return std::string(it_->name, it_->namelen); }
+
+        bool isTable() const { return it_->value == 0; }
+        cf_type type() const
+        { return it_->value ? it_->value->type : CF_TYPE_NULL; }
+
+        std::string text() const
+        {
+            char tmp[CF_VALUE_TEXT_MAX];
+            if (it_->value == 0) {
+                return std::string();
+            }
+            if (it_->value->type == CF_TYPE_TEXT) {
+                return std::string(it_->value->u.t.p, it_->value->u.t.n);
+            }
+            return std::string(tmp, cf_value_to_text(it_->value, tmp,
+                                                     sizeof tmp));
+        }
+
+    private:
+        const cf_iter* it_;
+    };
+
+    class Range {
+    public:
+        class iterator {
+        public:
+            iterator() : done_(true) {}
+            explicit iterator(const Range* r) : done_(false), it_(r->start_)
+            { advance(); }
+
+            bool operator!=(const iterator& o) const
+            { return done_ != o.done_; }
+            iterator& operator++() { advance(); return *this; }
+            Entry operator*() const { return Entry(&it_); }
+
+        private:
+            void advance()
+            { if (!done_ && !cf_iter_next(&it_)) { done_ = true; } }
+            bool    done_;
+            cf_iter it_;
+        };
+
+        Range(const cf_config* c, const char* prefix, bool children)
+        {
+            if (children) {
+                cf_iter_children(&start_, c, prefix);
+            } else {
+                cf_iter_keys(&start_, c, prefix);
+            }
+        }
+        iterator begin() const { return iterator(this); }
+        iterator end() const { return iterator(); }
+
+    private:
+        friend class iterator;
+        cf_iter start_;
+    };
+
+    /* Every key under a prefix. */
+    Range keys(const char* prefix = 0) const
+    { return Range(c_, prefix, false); }
+
+    /* Each distinct immediate child, once: how a program discovers what
+       is configured rather than being told in advance. */
+    Range children(const char* prefix) const
+    { return Range(c_, prefix, true); }
+
+    size_t arrayCount(const char* key) const
+    { return cf_array_count(c_, key); }
+
+    /* ---------------------------------------------------------- *
+     * Writing and reporting
+     * ---------------------------------------------------------- */
+
+    /* An overrides file: what a source configured, and nothing nobody
+       touched. Throws nothing; an empty string means the error is in
+       `err`. */
+    std::string emit(const char* format,
+                     cf_emit_what what = CF_EMIT_CONFIGURED,
+                     Error* err = 0) const
+    {
+        Error  local;
+        Error& e = (err != 0) ? *err : local;
+        size_t n = cf_emit(c_, format, what, 0, 0, 0, e.raw());
+        if (n == 0) {
+            return std::string();
+        }
+        std::string s(n, '\0');
+        cf_emit(c_, format, what, 0, &s[0], n + 1, e.raw());
+        return s;
+    }
+
+    std::string report(const cf_report_info& info) const
+    {
+        size_t n = cf_report(c_, &info, 0, 0);
+        if (n == 0) {
+            return std::string();
+        }
+        std::string s(n, '\0');
+        cf_report(c_, &info, &s[0], n + 1);
+        return s;
+    }
+
     std::string explain(const char* key) const { return render(key); }
     std::string inspect() const                { return render(0); }
 
@@ -220,6 +342,10 @@ public:
                         double hi = 0.0, unsigned flags = 0)
     { if (b_) { cf_builder_real(b_, key, dflt, lo, hi, flags); } return *this; }
 #endif
+
+    /* A key space the program cannot know in advance. */
+    Builder& open(const char* prefix)
+    { if (b_) { cf_builder_open(b_, prefix); } return *this; }
 
     Builder& unknown(cf_unknown_policy p)
     { if (b_) { cf_builder_unknown(b_, p); } return *this; }

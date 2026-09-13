@@ -234,6 +234,16 @@ need a batch file kept in step with it — which is the duplication the
 hand-written Makefile was deleted to avoid. CMake is already required to
 build, so the driver adds nothing.
 
+**Zero a struct whole, not field by field.** Adding two fields to
+`cf_defset` and initialising one of them segfaulted every caller that
+built one on the stack. Field-by-field initialisation is correct exactly
+until someone adds a field, and the compiler says nothing.
+
+**Read the failure, not the summary.** `ctest | grep 'Failed'` missed a
+`SEGFAULT` line for one run, because the word ctest prints for a crash
+is not the word it prints for a failed assertion. `scripts/verify.cmake`
+shows the step's whole output for this reason.
+
 **A static archive hides a missing definition.** A function declared in
 a header, called from one file and defined nowhere links fine into
 `libconfigforge.a` and stays hidden until something pulls that object

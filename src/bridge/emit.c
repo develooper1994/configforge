@@ -18,8 +18,9 @@
 #include <string.h>
 
 typedef struct emit_filter {
-    cf_emit_what what;
-    int          rank;
+    cf_emit_what     what;
+    int              rank;
+    const cf_defset* defs;
 } emit_filter;
 
 static cf_bool keep(const void* ctx, const cf_entry* e) {
@@ -27,6 +28,15 @@ static cf_bool keep(const void* ctx, const cf_entry* e) {
 
     if (e->selected == NULL) {
         return CF_FALSE;
+    }
+    /* A command is never written out. --cf.explain asks a question; a
+       file that records it would ask the question again on every run
+       that reads the file. */
+    {
+        const cf_def* d = cf_defset_find(f->defs, e->key, e->keylen);
+        if (d != NULL && (d->flags & CF_TRANSIENT) != 0) {
+            return CF_FALSE;
+        }
     }
     switch (f->what) {
     case CF_EMIT_ALL:
@@ -123,6 +133,7 @@ size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int ra
 
     f.what = what;
     f.rank = rank;
+    f.defs = cf_defs(c);
 
     cf_sink_init(&out, buf, cap);
     if (!codec->encoder(&out, state.b, &sink)) {
