@@ -342,6 +342,11 @@ static cf_bool bad(cf_error* err, const char* what) {
     return cf_error_set(err, CF_E_SOURCE, NULL, "image", "%s", what);
 }
 
+/* Does a region of `len` bytes at `off` lie inside `limit`? */
+static cf_bool region_fits(cf_u32 off, size_t len, size_t limit) {
+    return ((size_t)off <= limit && len <= limit - (size_t)off) ? CF_TRUE : CF_FALSE;
+}
+
 cf_bool cf_image_open(cf_image* img, const char* buf, size_t n, cf_error* err) {
     cf_u32 major, total, string_off, string_len, count;
     size_t addr;
@@ -387,10 +392,25 @@ cf_bool cf_image_open(cf_image* img, const char* buf, size_t n, cf_error* err) {
     /* Every offset is checked before anything is read through it. A
        truncated image and a corrupt one look identical from inside, and
        neither may produce a configuration. */
-    if ((size_t)get_u32(buf + 16) + (size_t)count * IDX_SIZE > total ||
-        (size_t)get_u32(buf + 20) + (size_t)count * VAL_SIZE > total ||
-        (size_t)string_off + (size_t)string_len > total) {
-        return bad(err, "image offsets fall outside the image");
+    {
+        /* Every region the header describes has to lie inside the image,
+           including the chain: a reader added later would otherwise
+           inherit an unchecked offset, which is how this kind of bug
+           comes back. Subtraction rather than addition, so nothing can
+           wrap where size_t is 32 bits. */
+        cf_u32 chain_off   = get_u32(buf + 32);
+        cf_u32 chain_count = get_u32(buf + 36);
+        size_t limit       = total;
+
+        if (!region_fits(get_u32(buf + 16), (size_t)count * IDX_SIZE, limit) ||
+            !region_fits(get_u32(buf + 20), (size_t)count * VAL_SIZE, limit) ||
+            !region_fits(string_off, string_len, limit) ||
+            !region_fits(chain_off, (size_t)chain_count * CHAIN_SIZE, limit)) {
+            return bad(err, "image offsets fall outside the image");
+        }
+        if (chain_count > 0 && chain_off == 0) {
+            return bad(err, "image claims a chain and does not say where");
+        }
     }
 
     img->base    = buf;
@@ -432,7 +452,10 @@ static cf_bool read_value(const cf_image* img, const char* rec, cf_value* v) {
     case CF_TYPE_TEXT: {
         cf_u32 off = (cf_u32)get_u64(rec + 8);
         cf_u32 len = get_u32(rec + 4);
-        if ((size_t)off + len + 1 > img->size) {
+        /* Written so it cannot overflow where size_t is 32 bits: two
+           u32 values and a one can wrap there, and a wrapped bound
+           passes every check it was meant to fail. */
+        if ((size_t)off > img->size || (size_t)len + 1 > img->size - (size_t)off) {
             return CF_FALSE;
         }
         cf_value_text(v, img->base + off, len);
@@ -453,7 +476,7 @@ cf_bool cf_image_at(const cf_image* img, size_t i, const char** key, size_t* kle
     rec = img->index + i * IDX_SIZE;
     off = get_u32(rec);
     len = get_u32(rec + 4);
-    if ((size_t)off + len + 1 > img->size) {
+    if ((size_t)off > img->size || (size_t)len + 1 > img->size - (size_t)off) {
         return CF_FALSE;
     }
     if (key != NULL) {
@@ -463,7 +486,16 @@ cf_bool cf_image_at(const cf_image* img, size_t i, const char** key, size_t* kle
         *klen = len;
     }
     if (v != NULL) {
-        return read_value(img, img->values + get_u32(rec + 8) * VAL_SIZE, v);
+        /* The value index comes straight out of the file. The header's
+           extents were checked when the image opened, and this was not:
+           a corrupt index pointed anywhere, which the mutation fuzzer
+           found on its first run. An image is untrusted input - every
+           number in it is a claim, not a fact. */
+        cf_u32 vi = get_u32(rec + 8);
+        if (vi >= img->count) {
+            return CF_FALSE;
+        }
+        return read_value(img, img->values + (size_t)vi * VAL_SIZE, v);
     }
     return CF_TRUE;
 }

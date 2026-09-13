@@ -204,6 +204,17 @@ tests are not complicated enough to need one.
   when it is handed to an API taking `char* const*`, because
   `-Wwrite-strings` is on and because the API matches `argv` so that callers never cast.
 
+**Fuzz what reads untrusted bytes.** `test_fuzz` takes a valid document,
+corrupts it, and requires the parser to return — success or error, never
+a crash and never a read past the end. It is deterministic: the seed is
+the bug report, and the generator is written out rather than taken from
+`rand()`, which differs between implementations and is reproducible on
+no two machines. It found a real out-of-bounds read in the image reader
+on its first run.
+
+A fuzzer earns its place under the sanitiser, where a read one byte past
+the end is a report instead of a pass.
+
 **Negative tests for gates.** A gate is proved by breaking the thing it
 protects and watching it fail, then restoring. Do this once per gate and
 say so.

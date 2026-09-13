@@ -255,10 +255,51 @@ static void test_provenance_travels(void) {
     cf_config_free(cfg);
 }
 
+/* Every number in an image is a claim, not a fact. The value index in
+   particular comes straight out of the file and was dereferenced
+   without a bound, which the mutation fuzzer found on its first run. */
+static void test_corrupt_index_is_refused(void) {
+    cf_error   err = CF_ERROR_INIT;
+    cf_config* cfg = build(&err, 0);
+    cf_image   img;
+    size_t     n;
+    cf_value   v;
+
+    if (cfg == NULL) {
+        check(0, "builds");
+        return;
+    }
+    n = cf_image_write(cf_keys(cfg), NULL, 0, g_img.b, sizeof g_img.b);
+    cf_config_free(cfg);
+
+    memcpy(g_img2.b, g_img.b, n);
+    /* The first index record's value_index, at offset 8 of the record,
+       pointed anywhere it liked. */
+    {
+        size_t idx_off         = 64; /* the header is 64 bytes */
+        g_img2.b[idx_off + 8]  = (char)0xFF;
+        g_img2.b[idx_off + 9]  = (char)0xFF;
+        g_img2.b[idx_off + 10] = (char)0xFF;
+        g_img2.b[idx_off + 11] = (char)0x7F;
+    }
+    check(cf_image_open(&img, g_img2.b, n, &err),
+          "the header still describes a plausible image");
+    check(!cf_image_at(&img, 0, NULL, NULL, &v),
+          "and the entry with the impossible value index is refused");
+
+    /* A chain count with nowhere to put it. */
+    memcpy(g_img2.b, g_img.b, n);
+    g_img2.b[36] = (char)0xFF;
+    g_img2.b[37] = (char)0xFF;
+    check(!cf_image_open(&img, g_img2.b, n, &err),
+          "a chain that does not fit is refused at the door");
+}
+
 int main(void) {
     test_round_trip();
     test_as_a_source();
     test_refusals();
+    test_corrupt_index_is_refused();
     test_provenance_travels();
 
     printf("%d checks, %d failures\n", g_run, g_fail);

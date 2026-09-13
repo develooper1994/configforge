@@ -20,7 +20,8 @@ set(CF_UNIT_TESTS
     test_image
     test_iterate
     test_emit
-    test_threads)
+    test_threads
+    test_fuzz)
 
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)
@@ -51,3 +52,9 @@ if(CMAKE_USE_PTHREADS_INIT)
   target_compile_definitions(test_threads PRIVATE CF_TEST_PTHREADS=1)
   target_link_libraries(test_threads PRIVATE Threads::Threads)
 endif()
+
+# The fuzzer is the slowest test here and the one most worth running
+# under the sanitiser, where a read one byte past the end is a report
+# rather than a pass. Given a longer timeout because a future corpus
+# will make it slower and a timeout failure reads like a hang.
+set_tests_properties(unit.test_fuzz PROPERTIES TIMEOUT 120)

@@ -94,6 +94,20 @@ one pass and it catches truncation, a partial write and a corrupted
 flash page - three failures that otherwise produce a configuration that
 looks fine.
 
+**Every number in an image is a claim, not a fact.** The reader validates
+each region against the image's own length before dereferencing
+anything, and the value index in every entry against the entry count.
+
+The first version validated the header's regions and not the per-entry
+index, and a mutation fuzzer found it on its first run: a corrupt index
+pointed anywhere. This is the one reader in the library that
+dereferences offsets taken from its input, so it is the one that has to
+treat its input as hostile.
+
+Bounds are written as subtraction — `len <= limit - off` — rather than
+addition, because two 32-bit values and a one can wrap where `size_t` is
+32 bits, and a wrapped bound passes every check it was meant to fail.
+
 **Provenance is optional and it is the interesting half.** A
 resolved-only image is what a boot path wants. An image carrying the
 chain is what lets a device with no filesystem still answer why a value

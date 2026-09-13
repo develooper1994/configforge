@@ -115,6 +115,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - **Amalgamation**, compiled and run by a gate.
 - `cf_version()`, `cf_feature_at()`, and a gate that fails when the
   header version and the project version disagree.
+- **A deterministic mutation fuzzer** over the codecs, the `.env` lexer
+  and the binary image. The seed is the bug report; the generator is
+  written out rather than taken from `rand()`, which is reproducible on
+  no two machines.
 - clang-format and clang-tidy as build targets and gates.
 - cmake-format and cmake-lint, so the build files get the same treatment
   as the C sources.
@@ -135,6 +139,21 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   The environment is a set and has no order of its own, so where both
   the escaped and the natural spelling are present the escaped one wins
   by construction rather than by which pass happened to run second.
+
+### Security
+
+- **The binary image reader dereferenced a file-supplied index without
+  bounding it.** Every region the header describes was validated against
+  the image's length; the value index inside each entry was not, so a
+  corrupt image could read anywhere. Found by a mutation fuzzer on its
+  first run — the image reader is the one reader here that dereferences
+  offsets taken from its input, which is exactly why it was the most
+  valuable thing to fuzz.
+  Bounds are now written as subtraction rather than addition, because
+  two 32-bit values and a one can wrap where `size_t` is 32 bits and a
+  wrapped bound passes every check it was meant to fail. The chain
+  region is validated too, so a reader added later does not inherit an
+  unchecked offset.
 
 ### Fixed
 
