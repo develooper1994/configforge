@@ -39,6 +39,9 @@ jobs:
       - run: cmake -S . -B build
       - run: cmake --build build
       - run: ctest --test-dir build --output-on-failure
+      # The same driver a contributor runs, on the platform that would
+      # otherwise have no way to run it.
+      - run: cmake -DMODE=quick -P scripts/verify.cmake
 
   minimal:
     runs-on: ubuntu-latest

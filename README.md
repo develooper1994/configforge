@@ -80,6 +80,16 @@ Early. Milestone M0 in progress.
 cmake --preset default && cmake --build --preset default && ctest --preset default
 ```
 
+Before a commit, everything:
+
+```sh
+cmake -P scripts/verify.cmake          # every preset
+cmake -DMODE=quick -P scripts/verify.cmake
+```
+
+Written in CMake rather than a shell script so it runs wherever the
+build does.
+
 | Preset | What it is for |
 | ------ | -------------- |
 | `default` | C89 conformance, full warning set |

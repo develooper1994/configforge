@@ -222,12 +222,17 @@ names, not `100% passed`.
 directory to fix two files and silently took a turn's worth of other
 work with it. Revert files, not directories.
 
-**Verify with `scripts/verify.sh`, not by hand.** Chaining the steps
+**Verify with `cmake -P scripts/verify.cmake`, not by hand.** Chaining the steps
 manually got a failing tree committed once: `ctest | grep passed`
 matched the word inside "98% tests passed" and the commit went through.
-A checkpoint of a broken tree is worse than no checkpoint. The script
-exits non-zero on the first failure and prints the tail of that step's
-log, so the failure is attributable without re-running anything.
+A checkpoint of a broken tree is worse than no checkpoint. The script exits non-zero on the first failure and prints that step's
+output, so the failure is attributable without re-running anything.
+
+It is written in CMake rather than in a shell on purpose. A shell script
+covers half the platforms this library claims, and the other half would
+need a batch file kept in step with it — which is the duplication the
+hand-written Makefile was deleted to avoid. CMake is already required to
+build, so the driver adds nothing.
 
 **Patch the formatted text.** The build files are rewritten by
 `cmake-format`, so a search-and-replace written against the shape a file
