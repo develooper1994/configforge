@@ -50,6 +50,17 @@ const cf_doc_sink* cf_flatten_sink(cf_flatten* f);
    enclose them both, so the sort is already the tree. */
 cf_bool cf_doc_emit(const cf_keyspace* ks, const cf_doc_sink* out, cf_error* err);
 
+/* The same walk, with a say in what is included.
+ *
+ * An array is all or nothing. Emitting only the members that pass would
+ * produce a shorter array than the one that was read, which is a
+ * different configuration rather than a subset of one - so a group with
+ * any surviving member keeps all of them. */
+typedef cf_bool (*cf_emit_pred)(const void* ctx, const cf_entry* e);
+
+cf_bool cf_doc_emit_where(const cf_keyspace* ks, const cf_doc_sink* out,
+                          cf_emit_pred pred, const void* ctx, cf_error* err);
+
 #ifdef __cplusplus
 }
 #endif

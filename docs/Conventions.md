@@ -234,6 +234,13 @@ need a batch file kept in step with it — which is the duplication the
 hand-written Makefile was deleted to avoid. CMake is already required to
 build, so the driver adds nothing.
 
+**A static archive hides a missing definition.** A function declared in
+a header, called from one file and defined nowhere links fine into
+`libconfigforge.a` and stays hidden until something pulls that object
+in. The amalgamation is one translation unit, so `gate.amalgamation`
+finds it on the next run — which is a second reason that gate is worth
+its second of build time.
+
 **Patch the formatted text.** The build files are rewritten by
 `cmake-format`, so a search-and-replace written against the shape a file
 had before the formatter touched it silently matches nothing. Two edits

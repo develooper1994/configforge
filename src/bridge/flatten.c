@@ -284,9 +284,38 @@ static size_t seg_len(const cf_entry* e, size_t plen, cf_bool* is_leaf) {
     return j - plen;
 }
 
+typedef struct emit_ctx {
+    cf_emit_pred pred;
+    const void*  ctx;
+} emit_ctx;
+
+static cf_bool included(const emit_ctx* f, const cf_entry* e) {
+    if (e->selected == NULL) {
+        return CF_FALSE;
+    }
+    if (f == NULL || f->pred == NULL) {
+        return CF_TRUE;
+    }
+    return f->pred(f->ctx, e);
+}
+
+/* Does anything in this range survive the filter? Asked before a group
+   is opened, so an empty table is never written - and, for an array,
+   because an array is all or nothing. */
+static cf_bool any_included(const cf_keyspace* ks, const emit_ctx* f, size_t lo,
+                            size_t hi) {
+    size_t i;
+    for (i = lo; i < hi; ++i) {
+        if (included(f, cf_ks_at(ks, i))) {
+            return CF_TRUE;
+        }
+    }
+    return CF_FALSE;
+}
+
 static cf_bool emit_range(const cf_keyspace* ks, const cf_doc_sink* out, size_t lo,
                           size_t hi, size_t plen, int depth, cf_bool in_array,
-                          cf_error* err) {
+                          const emit_ctx* f, cf_error* err) {
     size_t i;
 
     if (depth > CF_EMIT_MAX_DEPTH) {
@@ -314,6 +343,14 @@ static cf_bool emit_range(const cf_keyspace* ks, const cf_doc_sink* out, size_t 
         if (in_array && !all_digits(e->key + plen, n)) {
             continue;
         }
+        /* Inside an array the filter was answered for the whole group,
+           so every member goes. */
+        if (!in_array && !included(f, e)) {
+            continue;
+        }
+        if (in_array && e->selected == NULL) {
+            continue;
+        }
         if (!out->scalar(out->ctx, in_array ? NULL : e->key + plen, in_array ? 0 : n,
                          &e->selected->value, CF_FALSE, NULL)) {
             return cf_error_set(err, CF_E_SOURCE, NULL, NULL, "sink refused '%s'",
@@ -337,22 +374,27 @@ static cf_bool emit_range(const cf_keyspace* ks, const cf_doc_sink* out, size_t 
         }
         j = i;
         while (j < hi) {
-            const cf_entry* f = cf_ks_at(ks, j);
-            cf_bool         fleaf;
-            size_t          fn = seg_len(f, plen, &fleaf);
-            if (fleaf || fn != n || memcmp(f->key + plen, e->key + plen, n) != 0) {
+            const cf_entry* g = cf_ks_at(ks, j);
+            cf_bool         gleaf;
+            size_t          gn = seg_len(g, plen, &gleaf);
+            if (gleaf || gn != n || memcmp(g->key + plen, e->key + plen, n) != 0) {
                 break;
             }
             ++j;
         }
 
         is_array = group_is_array(ks, e->key, plen + n);
+        if (!any_included(ks, f, i, j)) {
+            i = j;
+            continue;
+        }
         if (!(is_array ? out->begin_array(out->ctx, e->key + plen, n)
                        : out->begin_table(out->ctx, e->key + plen, n))) {
             return cf_error_set(err, CF_E_SOURCE, NULL, NULL, "sink refused '%S'",
                                 e->key + plen, n);
         }
-        if (!emit_range(ks, out, i, j, plen + n + 1, depth + 1, is_array, err)) {
+        if (!emit_range(ks, out, i, j, plen + n + 1, depth + 1, is_array,
+                        is_array ? NULL : f, err)) {
             return CF_FALSE;
         }
         if (!out->end(out->ctx)) {
@@ -365,13 +407,23 @@ static cf_bool emit_range(const cf_keyspace* ks, const cf_doc_sink* out, size_t 
 }
 
 cf_bool cf_doc_emit(const cf_keyspace* ks, const cf_doc_sink* out, cf_error* err) {
+    return cf_doc_emit_where(ks, out, NULL, NULL, err);
+}
+
+cf_bool cf_doc_emit_where(const cf_keyspace* ks, const cf_doc_sink* out,
+                          cf_emit_pred pred, const void* ctx, cf_error* err) {
+    emit_ctx f;
+
+    f.pred = pred;
+    f.ctx  = ctx;
+
     if (ks == NULL || out == NULL) {
         return cf_error_set(err, CF_E_SOURCE, NULL, NULL, "nothing to emit");
     }
     if (!out->begin_table(out->ctx, NULL, 0)) {
         return cf_error_set(err, CF_E_SOURCE, NULL, NULL, "sink refused");
     }
-    if (!emit_range(ks, out, 0, cf_ks_count(ks), 0, 0, CF_FALSE, err)) {
+    if (!emit_range(ks, out, 0, cf_ks_count(ks), 0, 0, CF_FALSE, &f, err)) {
         return CF_FALSE;
     }
     return out->end(out->ctx)

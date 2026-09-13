@@ -10,4 +10,5 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/image.c
           ${CMAKE_CURRENT_SOURCE_DIR}/file.c
           ${CMAKE_CURRENT_SOURCE_DIR}/dotenv.c
-          ${CMAKE_CURRENT_SOURCE_DIR}/dir.c)
+          ${CMAKE_CURRENT_SOURCE_DIR}/dir.c
+          ${CMAKE_CURRENT_SOURCE_DIR}/emit.c)

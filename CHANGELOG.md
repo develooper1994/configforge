@@ -71,6 +71,21 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   locked option, and for a secret on the command line the damage is done
   the moment it is typed. It is reported instead — in `explain()`, in
   the report, and at error severity in Doctor.
+- **`cf_emit`**, which writes a configuration out — restricted, as the
+  specification says, to a file ConfigForge owns and rewrites in full.
+  `CF_EMIT_CONFIGURED` is the one that matters: it writes what a source
+  configured and leaves out what nobody touched, so an overrides file
+  stays small and a later release can still move a default.
+  "Configured" means "did not come from the defaults source" rather than
+  "differs from the default value". The two part company when someone
+  sets a value that happens to equal the default: comparing values would
+  drop it and let a later release move it, while provenance keeps the
+  intent that was expressed.
+  An array is all or nothing — emitting only the members that pass a
+  filter would produce a shorter array, which is a different
+  configuration rather than a subset of one. And a format with no array
+  syntax refuses before writing anything, keeping the promise the INI
+  encoder made.
 - **ConfigForge Doctor**: `dump`, `explain`, `lint`, `diff`.
 - **Provenance report** (schema v1) and **Report Replay**.
 - **C++03 wrapper**, compiled as C++98 by a gate.

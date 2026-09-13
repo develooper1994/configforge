@@ -29,6 +29,7 @@
 #include "configforge/cf_define.h"
 #include "configforge/cf_serialize.h"
 #include "configforge/cf_flatten.h"
+#include "configforge/cf_emit.h"
 #include "configforge/cf_image.h"
 #include "configforge/cf_explain.h"
 #include "configforge/cf_iterate.h"

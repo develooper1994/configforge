@@ -82,7 +82,8 @@ nothing, and `1.0` is where semantic versioning starts.
 | prefix iteration, children, array helpers | done |
 | C++03 wrapper; amalgamation; ConfigForge Doctor | done |
 | per-parameter policy (D-33) | done |
-| `write()` and `propagate()` | next |
+| writing an overrides file (`cf_emit`) | done |
+| `set()` and propagation to a source | next |
 | change notification | after |
 | TOML, XML, SQLite codecs | deferred, see D-23 |
 | Windows Registry, gsettings, macOS defaults | deferred, see D-30 |
