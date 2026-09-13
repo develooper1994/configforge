@@ -24,6 +24,7 @@
 #include <configforge/configforge.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static int  g_fail = 0, g_run = 0;
@@ -211,6 +212,104 @@ static void feed_image(const blob* v) {
     }
 }
 
+/* The flat lexers. argv and the environment are user input too, and a
+   lexer that walks off the end of a malformed one is the same bug in a
+   less interesting place. */
+static void feed_argv(const blob* v) {
+    static char  storage[MAX_INPUT + 1];
+    static char* argv[64];
+    int          argc = 1;
+    size_t       at   = 0;
+    cf_arena*    ar;
+    cf_keyspace  ks;
+    cf_keysink   out;
+    cf_keymap    map;
+    cf_error     err = CF_ERROR_INIT;
+
+    /* The mutated blob, split on NUL and newline into arguments. */
+    memcpy(storage, v->b, v->n);
+    storage[v->n] = '\0';
+    argv[0]       = storage;
+    while (at < v->n && argc < 63) {
+        if (storage[at] == '\0' || storage[at] == '\n') {
+            storage[at] = '\0';
+            if (at + 1 < v->n) {
+                argv[argc++] = storage + at + 1;
+            }
+        }
+        ++at;
+    }
+    argv[argc] = NULL;
+
+    ar = cf_arena_fixed(g_arena, sizeof g_arena);
+    if (ar == NULL || !cf_ks_init(&ks, ar, 32)) {
+        return;
+    }
+    cf_keysink_init(&out, &ks, 0);
+    cf_keymap_init(&map, CF_KEYMAP_DIRECT, NULL);
+    (void)cf_lex_cli(argc, argv, &map, NULL, cf_keysink_of(&out), &err);
+
+    /* And the same bytes read as an environment, where the prefix and
+       the escape give the key mapping more to get wrong. */
+    cf_keymap_init(&map, CF_KEYMAP_ENV, "MYAPP_");
+    (void)cf_lex_env(argv, &map, cf_keysink_of(&out), &err);
+}
+
+/* A provenance report is untrusted input the moment it arrives from
+   another machine, and replay reads a structure out of it rather than
+   just a document. */
+static void feed_replay(const blob* v) {
+    cf_error    err = CF_ERROR_INIT;
+    cf_builder* b;
+    FILE*       f = fopen("cf_fuzz_report.json", "wb");
+
+    if (f == NULL) {
+        return;
+    }
+    fwrite(v->b, 1, v->n, f);
+    fclose(f);
+
+    b = cf_build(NULL);
+    cf_builder_replay(b, "replay", CF_RANK_ENV, "cf_fuzz_report.json");
+    {
+        cf_config* c = cf_builder_create(b, &err);
+        if (c != NULL) {
+            /* It accepted the corrupted report, so everything built on
+               top of it has to hold as well. */
+            char buf[1024];
+            (void)cf_inspect(c, buf, sizeof buf);
+            (void)cf_digest(c);
+            cf_config_free(c);
+        } else {
+            check(err.message[0] != '\0', "a refused replay says why");
+        }
+    }
+}
+
+/* Response files are read from disk and expanded into arguments. */
+static void feed_response_file(const blob* v) {
+    static char  a0[]   = "prog";
+    static char  a1[]   = "@cf_fuzz_args.txt";
+    static char* argv[] = {a0, a1, NULL};
+    cf_arena*    ar;
+    cf_error     err = CF_ERROR_INIT;
+    int          n   = 0;
+    char**       out = NULL;
+    FILE*        f   = fopen("cf_fuzz_args.txt", "wb");
+
+    if (f == NULL) {
+        return;
+    }
+    fwrite(v->b, 1, v->n, f);
+    fclose(f);
+
+    ar = cf_arena_fixed(g_arena, sizeof g_arena);
+    if (ar == NULL) {
+        return;
+    }
+    (void)cf_cli_expand(2, argv, ar, &n, &out, &err);
+}
+
 /* ---------------------------------------------------------------- */
 
 static const char* const g_json =
@@ -225,12 +324,25 @@ static const char* const g_ini = "# a comment\n"
                                  "[server.tls]\n"
                                  "enabled = true\n";
 
+static const char* const g_report =
+    "{\"configforge_report\": 1, \"mode\": \"full\", \"profile\": \"p\","
+    "\"application\": {\"name\": \"a\", \"version\": \"1\"},"
+    "\"library\": {\"version\": \"0.2.0\", \"features\": [\"json\"]},"
+    "\"generated\": \"now\", \"sources\": [{\"name\": \"cli\","
+    "\"kind\": \"cli\", \"rank\": 0}], \"keys\": {\"server.port\": {"
+    "\"definition\": {\"type\": \"int\", \"required\": false,"
+    "\"sensitive\": false, \"deprecated\": false, \"default\": 8080},"
+    "\"candidates\": [{\"source\": \"cli\", \"present\": true,"
+    "\"value\": 9000, \"at\": \"argv[1]\"}],"
+    "\"selected\": {\"source\": \"cli\", \"reason\": \"r\"}}}}";
+
 static const char* const g_env = "# comment\n"
                                  "export SERVER__PORT=8080\n"
                                  "SERVER__HOST=\"0.0.0.0\"\n"
                                  "EMPTY=\n";
 
 #define ROUNDS 4000
+#define FILE_ROUNDS 400 /* these touch the disk, so fewer */
 
 static void fuzz_text(const char* name, const char* corpus, int is_ini) {
     static blob v;
@@ -251,6 +363,45 @@ static void fuzz_text(const char* name, const char* corpus, int is_ini) {
             feed_codec(name, &v);
         }
     }
+}
+
+/* Bytes that were never a document. A mutation fuzzer starts from
+   something valid and reaches this only by accident; a parser's first
+   few branches are exactly where it is most likely to trust its
+   input. */
+static void fuzz_from_nothing(void) {
+    static blob v;
+    int         i;
+
+    for (i = 0; i < ROUNDS; ++i) {
+        size_t j;
+        v.n = pick(200) + 1;
+        for (j = 0; j < v.n; ++j) {
+            v.b[j] = (char)(next() & 0xFF);
+        }
+        feed_codec("json", &v);
+        feed_codec("ini", &v);
+        feed_dotenv(&v);
+        feed_argv(&v);
+        feed_image(&v);
+    }
+}
+
+static void fuzz_files(const char* corpus) {
+    static blob v;
+    int         i;
+
+    for (i = 0; i < FILE_ROUNDS; ++i) {
+        int m;
+        load(&v, corpus);
+        for (m = (int)pick(4) + 1; m > 0; --m) {
+            mutate(&v);
+        }
+        feed_replay(&v);
+        feed_response_file(&v);
+    }
+    remove("cf_fuzz_report.json");
+    remove("cf_fuzz_args.txt");
 }
 
 static void fuzz_image(void) {
@@ -310,6 +461,8 @@ int main(int argc, char** argv) {
     fuzz_text("ini", g_ini, 1);
     fuzz_text(NULL, g_env, -1);
     fuzz_image();
+    fuzz_from_nothing();
+    fuzz_files(g_report);
 
     printf("%d checks, %d failures\n", g_run, g_fail);
     return g_fail == 0 ? 0 : 1;

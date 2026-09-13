@@ -32,6 +32,7 @@ compile_commands.json
 cf_fx_*.json
 cf_fx_*.ini
 cf_fx_*.ini
+cf_fuzz_*
 cf_t*.json
 cf_t*.ini
 cf_rep*.json
