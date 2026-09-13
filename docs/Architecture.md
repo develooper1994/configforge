@@ -231,6 +231,7 @@ exists because something in the design is otherwise only a sentence.
 | `gate.headers` | every public header compiling standalone, C89 and C++98 |
 | `gate.amalgamation` | the no-build-system path compiling and running |
 | `gate.symbols` | no locale-sensitive libc function; every export prefixed; no mutable global data; only `alloc.c` calls the allocator |
+| `gate.interface` | what including the library costs a consumer |
 | `gate.format.c`, `gate.format.cmake`, `gate.cmake.lint` | one style, checked not agreed |
 | conformance | `-std=c89 -pedantic -Werror` plus the D-32 warning set |
 | portability | the whole suite under `CF_FORCE_PORTABLE`, byte-identical |
@@ -238,6 +239,30 @@ exists because something in the design is otherwise only a sentence.
 
 Every gate has been proved by breaking it on purpose at least once. A
 gate that has never failed is a gate nobody knows works.
+
+## Compile time
+
+Measured rather than assumed, single-threaded, on the machine this was
+written on:
+
+```text
+whole project, clean        2.9 s     library, tests, examples, Doctor
+one source file             37-56 ms
+the public interface         3 ms     over an empty translation unit
+amalgamation, one TU       395 ms     8,700 lines
+```
+
+Three milliseconds is about what one standard header costs, and it is
+not an accident: the public headers reach for `stddef.h`, `stdarg.h` and
+`stdint.h` and nothing else. Everything that needs `stdio.h` — reading a
+file, listing a directory — is behind an implementation file, so a
+consumer who never reads a file never pays for the ability.
+
+It is also one careless `#include` away from being untrue, and the
+person who adds `<stdio.h>` to a public header will never see the cost
+while every consumer will. So `gate.interface` checks both the include
+list and the preprocessed size. Nothing here needed optimising; what it
+needed was protecting.
 
 ## What is deliberately not here
 

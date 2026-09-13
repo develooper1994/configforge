@@ -56,6 +56,13 @@ function(configforge_add_gates tgt)
   #    every exported symbol must carry the cf_ prefix.
   if(UNIX)
     add_test(
+      NAME gate.interface
+      COMMAND
+        ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR}
+        -DCC=${CMAKE_C_COMPILER} -P
+        ${CMAKE_SOURCE_DIR}/cmake/gates/GateInterface.cmake)
+
+    add_test(
       NAME gate.symbols
       COMMAND
         ${CMAKE_COMMAND} -DLIB=$<TARGET_FILE:${tgt}> -DSANITIZE=${CF_SANITIZE}
