@@ -31,6 +31,23 @@ if(CF_WITH_CXX)
   add_test(NAME example.tier1_cpp COMMAND tier1_cpp)
 endif()
 
+add_executable(settings settings.c)
+target_link_libraries(settings PRIVATE configforge)
+set_target_properties(
+  settings
+  PROPERTIES C_STANDARD 90
+             C_STANDARD_REQUIRED ON
+             C_EXTENSIONS OFF)
+configforge_apply_warnings(settings)
+configforge_apply_analysis(settings)
+
+# The whole lifecycle, driven from a script so that every line of the
+# README's output is produced by the code rather than transcribed from
+# it. Run in its own directory because it writes a file.
+add_test(NAME example.settings
+         COMMAND ${CMAKE_COMMAND} -DSETTINGS=$<TARGET_FILE:settings> -P
+                 ${CMAKE_CURRENT_SOURCE_DIR}/settings_test.cmake)
+
 # The failure paths are part of the documentation too, so they are run
 # and their exit status is asserted rather than described.
 add_test(NAME example.tier1.range COMMAND tier1 --server.port=99999)

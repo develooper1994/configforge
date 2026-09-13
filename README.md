@@ -42,6 +42,62 @@ configuration error (key): unknown key 'server.pot'; did you mean 'server.port'?
 Those are `examples/tier1.c`. Both the success and the failure paths are
 run by the test suite, so the output above cannot drift from the code.
 
+### The rest of a setting's life
+
+Reading a value is the first half. `examples/settings.c` is the second:
+change one, save it, and notice the file moving underneath you.
+
+```
+$ settings
+0.0.0.0:8080  log=info tls=off
+
+$ settings --set=server.port=9000
+saved settings.json
+0.0.0.0:9000  log=info tls=off
+
+$ cat settings.json
+{
+  "server": {
+    "port": 9000
+  }
+}
+```
+
+The file holds what somebody configured and nothing else, so a later
+release can still move a default the user never touched.
+
+```
+$ settings --explain=server.port
+server.port = 9000  (int)
+  settings    9000                  selected   settings.json:3:13
+  default     8080                  shadowed
+  cli         not present
+  env         not present
+
+$ settings --set=server.port=99999
+settings: server.port: 99999 is outside 1..65535
+```
+
+Changing a setting derives a new configuration rather than altering the
+old one, and the contract travels with it — so a value the original
+would have refused is refused before anything is written. The old
+snapshot stays valid, which is what lets another thread go on reading
+it without a lock.
+
+```
+$ settings --watch
+watching 1 file(s)
+  settings.json
+changed: no
+after an edit, changed: yes
+reloaded, changed: no
+```
+
+Change notification is a question you ask, never a callback: a library
+that owns a thread and calls you back has made a threading decision that
+belongs to you. Every line above is produced by the test suite, so none
+of it can drift from the code.
+
 ## Why
 
 `get()` is easy. Precedence is easy. What nobody in C answers is which source won and
