@@ -204,6 +204,12 @@ tests are not complicated enough to need one.
   when it is handed to an API taking `char* const*`, because
   `-Wwrite-strings` is on and because the API matches `argv` so that callers never cast.
 
+**A test that cannot tell whether it tested anything is worse than no
+test.** Three allocation sweeps at different block sizes reported
+identical numbers, because the arena clamps anything under a kilobyte
+and all three had silently become the default. The sweep now asserts
+that the runs disagreed with each other.
+
 **Fuzz what reads untrusted bytes.** `test_fuzz` takes a valid document,
 corrupts it, and requires the parser to return — success or error, never
 a crash and never a read past the end. It is deterministic: the seed is

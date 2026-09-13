@@ -38,6 +38,11 @@ const cf_allocator* cf_default_allocator(void);
 
 typedef struct cf_arena cf_arena;
 
+/* `block_size` is a hint: anything below 1 KiB is replaced by a sensible
+   default, because an arena that takes sixty-four bytes at a time is a
+   malloc wrapper with extra steps. Said out loud because a silently
+   ignored parameter is how a test ends up measuring the default three
+   times and reporting it as three results. */
 cf_arena* cf_arena_new(const cf_allocator* a, size_t block_size);
 cf_arena* cf_arena_fixed(void* buffer, size_t size);
 void      cf_arena_free(cf_arena* ar);
