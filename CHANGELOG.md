@@ -60,6 +60,17 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   binary search, and nothing is allocated.
   A prefix matches at a segment boundary only, so `server` does not
   match `servername` — the bug every hand-written prefix check has.
+- **Per-parameter policy** (D-33). A definition can carry the source
+  names permitted to supply that key, in decreasing precedence —
+  `{ "env", "user-file", NULL }`, which reads as the specification
+  writes it. One list restricts and reorders at once, which is how an
+  operator-controlled setting survives a command line trying to override
+  it.
+  A violation rejects the candidate rather than failing construction:
+  refusing to start would let any user stop the program by passing a
+  locked option, and for a secret on the command line the damage is done
+  the moment it is typed. It is reported instead — in `explain()`, in
+  the report, and at error severity in Doctor.
 - **ConfigForge Doctor**: `dump`, `explain`, `lint`, `diff`.
 - **Provenance report** (schema v1) and **Report Replay**.
 - **C++03 wrapper**, compiled as C++98 by a gate.

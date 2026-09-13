@@ -148,7 +148,8 @@ static void test_definition_decides_the_type(cf_arena* ar) {
     load(&ks, ar, env, 0, NULL);
     seed_defaults(&ks, &ds);
     cf_ks_resolve(&ks);
-    check(cf_defs_apply(&ks, &ds, CF_UNKNOWN_IGNORE, &rep, &err), "apply succeeds");
+    check(cf_defs_apply(&ks, &ds, NULL, CF_UNKNOWN_IGNORE, &rep, &err),
+          "apply succeeds");
 
     v = cf_ks_get(&ks, "server.port", 11);
     check(v != NULL && v->type == CF_TYPE_TEXT, "declaration beats inference");
@@ -172,7 +173,7 @@ static void test_range_rejection_is_strict(cf_arena* ar) {
 
     /* Strict is the default on purpose: a malformed production value
        must not quietly degrade to a development default. */
-    check(!cf_defs_apply(&ks, &ds, CF_UNKNOWN_IGNORE, NULL, &err),
+    check(!cf_defs_apply(&ks, &ds, NULL, CF_UNKNOWN_IGNORE, NULL, &err),
           "out-of-range value fails construction");
     check(err.code == CF_E_VALIDATE, "reported as a validation error");
     has(err.message, "99999", "names the offending value");
@@ -204,7 +205,7 @@ static void test_fallback_is_opt_in(cf_arena* ar) {
     load(&ks, ar, env, 0, NULL);
     seed_defaults(&ks, &ds);
     cf_ks_resolve(&ks);
-    check(cf_defs_apply(&ks, &ds, CF_UNKNOWN_IGNORE, NULL, &err),
+    check(cf_defs_apply(&ks, &ds, NULL, CF_UNKNOWN_IGNORE, NULL, &err),
           "fallback survives construction");
 
     v = cf_ks_get(&ks, "server.port", 11);
@@ -234,7 +235,7 @@ static void test_required_and_unknown(cf_arena* ar) {
     seed_defaults(&ks, &ds);
     cf_ks_resolve(&ks);
 
-    check(!cf_defs_apply(&ks, &ds, CF_UNKNOWN_IGNORE, NULL, &err),
+    check(!cf_defs_apply(&ks, &ds, NULL, CF_UNKNOWN_IGNORE, NULL, &err),
           "missing required parameter fails");
     check(err.code == CF_E_REQUIRED, "reported as required");
     has(err.message, "db.password", "names the parameter");
@@ -253,9 +254,9 @@ static void test_required_and_unknown(cf_arena* ar) {
         seed_defaults(&ks2, &ds2);
         cf_ks_resolve(&ks2);
 
-        check(cf_defs_apply(&ks2, &ds2, CF_UNKNOWN_IGNORE, NULL, &e2),
+        check(cf_defs_apply(&ks2, &ds2, NULL, CF_UNKNOWN_IGNORE, NULL, &e2),
               "unknown keys ignored by default");
-        check(!cf_defs_apply(&ks2, &ds2, CF_UNKNOWN_REJECT, NULL, &e2),
+        check(!cf_defs_apply(&ks2, &ds2, NULL, CF_UNKNOWN_REJECT, NULL, &e2),
               "unknown keys refused when asked");
         has(e2.message, "did you mean", "a typo is reported as a suggestion");
         has(e2.message, "server.port", "the suggestion is the right key");
@@ -279,7 +280,7 @@ static void test_typed_source_mismatch(cf_arena* ar) {
     cf_ks_add(&ks, "a.b", 3, CF_RANK_ENV, &v, "doc.json:3:5");
     cf_ks_resolve(&ks);
 
-    check(!cf_defs_apply(&ks, &ds, CF_UNKNOWN_IGNORE, NULL, &err),
+    check(!cf_defs_apply(&ks, &ds, NULL, CF_UNKNOWN_IGNORE, NULL, &err),
           "typed mismatch is not coerced");
     has(err.message, "text where int", "mismatch explained");
 }
@@ -304,7 +305,7 @@ static void test_allowed_values(cf_arena* ar) {
     load(&ks, ar, env, 0, NULL);
     seed_defaults(&ks, &ds);
     cf_ks_resolve(&ks);
-    check(!cf_defs_apply(&ks, &ds, CF_UNKNOWN_IGNORE, NULL, &err),
+    check(!cf_defs_apply(&ks, &ds, NULL, CF_UNKNOWN_IGNORE, NULL, &err),
           "value outside the permitted set refused");
     /* Naming what was permitted matters more than naming what was
        given: the reader already knows what they wrote. */
@@ -331,7 +332,7 @@ static void test_defaults_are_ordinary_candidates(cf_arena* ar) {
     load(&ks, ar, NULL, 2, argv);
     seed_defaults(&ks, &ds);
     cf_ks_resolve(&ks);
-    check(cf_defs_apply(&ks, &ds, CF_UNKNOWN_IGNORE, &rep, &err), "apply ok");
+    check(cf_defs_apply(&ks, &ds, NULL, CF_UNKNOWN_IGNORE, &rep, &err), "apply ok");
 
     v = cf_ks_get(&ks, "server.port", 11);
     check(v != NULL && v->u.i == 7000, "command line beats the default");

@@ -71,6 +71,21 @@ typedef struct cf_def {
        meaningful with a declaration, which is what makes it
        unambiguous. */
     const char* const* aliases;
+
+    /* Per-parameter policy: source names in decreasing precedence, and
+       the only sources permitted to supply this key.
+
+           { "env", "user-file", NULL }
+
+       reads as the specification writes it - "database.password:
+       Environment > Local" - and does both jobs at once. A source not
+       named may not set the key; the named ones are tried in this order
+       rather than the global one, which is how an operator-controlled
+       setting survives a command line that tries to override it.
+
+       NULL means the global precedence order, which is what almost
+       every key wants. */
+    const char* const* policy;
 } cf_def;
 
 void cf_def_init(cf_def* d, cf_type type, const char* key);
@@ -78,6 +93,10 @@ void cf_def_init(cf_def* d, cf_type type, const char* key);
 /* ------------------------------------------------------------------ *
  * Definition set
  * ------------------------------------------------------------------ */
+
+/* The definition model knows that sources exist and nothing about what
+   they are, which is the direction the layering requires. */
+struct cf_source;
 
 typedef struct cf_defset {
     cf_arena* arena;
@@ -144,8 +163,27 @@ typedef struct cf_apply_report {
     size_t defaults_used;
 } cf_apply_report;
 
-cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, cf_unknown_policy unknown,
-                      cf_apply_report* report, cf_error* err);
+/* Turning a candidate's rank into the source name a policy names is the
+   one thing the apply pass needs from outside the core. It asks rather
+   than taking a cf_source_view, so the core keeps knowing that sources
+   exist and nothing about what they are - the same shape as the command
+   line's spec, and for the same reason: a test can answer the question
+   with no sources existing.
+
+   May be NULL when no key carries a policy. */
+/* Renders a policy list as the specification writes it: "env > local".
+   Shared because both the rejection message and the coherence check
+   below want the same spelling, and two renderings of one thing drift. */
+void cf_policy_text(const char* const* policy, char* buf, size_t cap);
+
+typedef struct cf_rank_names {
+    const char* (*name_of)(const void* ctx, int rank);
+    const void* ctx;
+} cf_rank_names;
+
+cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names* names,
+                      cf_unknown_policy unknown, cf_apply_report* report,
+                      cf_error* err);
 
 /* Definition defaults, as an ordinary source. Declared here because
    it is the one source that reads a definition set; it is implemented

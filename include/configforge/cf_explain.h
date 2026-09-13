@@ -22,11 +22,6 @@ extern "C" {
    exists to prevent rather than to scale. */
 #define CF_MAX_SOURCES 32
 
-typedef struct cf_source_view {
-    const cf_source* const* items;
-    size_t                  count;
-} cf_source_view;
-
 /* Render the chain for one key. The caller supplies the buffer, in
    keeping with the allocation rules; the return value is the length
    that would have been written, so a caller can size a buffer by

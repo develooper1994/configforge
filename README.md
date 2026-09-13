@@ -81,7 +81,7 @@ nothing, and `1.0` is where semantic versioning starts.
 | binary snapshot image, optionally carrying provenance | done |
 | prefix iteration, children, array helpers | done |
 | C++03 wrapper; amalgamation; ConfigForge Doctor | done |
-| per-parameter policy (D-10) | next |
+| per-parameter policy (D-33) | done |
 | `write()` and `propagate()` | next |
 | change notification | after |
 | TOML, XML, SQLite codecs | deferred, see D-23 |

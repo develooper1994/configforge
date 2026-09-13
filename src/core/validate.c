@@ -129,8 +129,115 @@ static cf_bool apply_entry(cf_keyspace* ks, const cf_def* d, cf_entry* e,
     return CF_TRUE;
 }
 
-cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, cf_unknown_policy unknown,
-                      cf_apply_report* report, cf_error* err) {
+/* ------------------------------------------------------------------ *
+ * Per-parameter policy
+ *
+ * The specification writes it as "database.password: Environment >
+ * Local", and the definition carries exactly that: the source names
+ * permitted to supply the key, in decreasing precedence. One list does
+ * both jobs - a source not named may not set the key, and the named
+ * ones are tried in this order rather than the global one, which is how
+ * an operator-controlled setting survives a command line that tries to
+ * override it.
+ *
+ * A violation is a rejected candidate with a reason, not a failed
+ * construction. Two arguments for that. Refusing to start would let any
+ * user stop the program by passing a locked option, which turns a
+ * policy into a denial of service. And for the secret case the damage
+ * is already done: a password on the command line is in `ps` whether or
+ * not this library uses it, so the useful response is to say so loudly
+ * - in explain(), in the report, and at error severity in Doctor -
+ * rather than to refuse to run.
+ * ------------------------------------------------------------------ */
+
+static const char* source_name(const cf_rank_names* names, int rank) {
+    if (names == NULL || names->name_of == NULL) {
+        return NULL;
+    }
+    return names->name_of(names->ctx, rank);
+}
+
+/* Position in the policy list, or -1 when the source is not permitted. */
+static int policy_index(const char* const* policy, const char* name) {
+    int i;
+
+    if (policy == NULL || name == NULL) {
+        return -1;
+    }
+    for (i = 0; policy[i] != NULL; ++i) {
+        if (strcmp(policy[i], name) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void cf_policy_text(const char* const* policy, char* buf, size_t cap) {
+    size_t at = 0;
+    int    i;
+
+    for (i = 0; policy != NULL && policy[i] != NULL; ++i) {
+        if (i > 0) {
+            at = cf_fmt_append(buf, cap, at, " > ");
+        }
+        at = cf_fmt_append(buf, cap, at, "%s", policy[i]);
+    }
+    if (at == 0 && cap > 0) {
+        buf[0] = '\0';
+    }
+}
+
+/* Re-selects one entry under its policy. The chain keeps its rank order
+   so explain() shows what actually happened; the reason on each loser
+   says why the usual answer is not the answer. */
+static void apply_policy(cf_entry* e, const cf_def* d, const cf_rank_names* names,
+                         cf_arena* arena) {
+    char          list[CF_MESSAGE_MAX];
+    cf_candidate* c;
+    cf_candidate* best    = NULL;
+    int           best_at = -1;
+
+    cf_policy_text(d->policy, list, sizeof list);
+
+    for (c = e->chain; c != NULL; c = c->next) {
+        const char* name = source_name(names, c->source);
+        int         at;
+
+        if (!cf_outcome_can_win(c->outcome)) {
+            continue;
+        }
+        at = policy_index(d->policy, name);
+        if (at < 0) {
+            char msg[CF_MESSAGE_MAX];
+            c->outcome = CF_OUT_REJECTED;
+            cf_fmt(msg, sizeof msg, "policy: '%s' may only be set from %s", e->key,
+                   list);
+            c->reason = cf_arena_dup(arena, msg, cf_fmt(NULL, 0, "%s", msg));
+            continue;
+        }
+        if (best == NULL || at < best_at) {
+            best    = c;
+            best_at = at;
+        }
+    }
+
+    for (c = e->chain; c != NULL; c = c->next) {
+        if (c == best) {
+            c->outcome = CF_OUT_SELECTED;
+        } else if (c->outcome == CF_OUT_SELECTED) {
+            char msg[CF_MESSAGE_MAX];
+            c->outcome = CF_OUT_SHADOWED;
+            cf_fmt(msg, sizeof msg, "policy puts %s first for this key",
+                   (best != NULL) ? source_name(names, best->source) : "nothing");
+            c->reason = cf_arena_dup(arena, msg, cf_fmt(NULL, 0, "%s", msg));
+        }
+    }
+    e->selected = best;
+}
+
+cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names* names,
+                      cf_unknown_policy unknown, cf_apply_report* report,
+                      cf_error* err) {
     cf_apply_report local;
     size_t          i;
 
@@ -193,6 +300,24 @@ cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, cf_unknown_policy un
     }
 
     cf_ks_reselect(ks);
+
+    /* Policy after reselection, because it re-selects: a candidate
+       rejected for its type is out of the running before policy looks
+       at the rest, and a policy that picked a rejected candidate would
+       hand back a value the contract already refused. */
+    for (i = 0; i < cf_ks_count(ks); ++i) {
+        cf_entry*     e = cf_ks_at_mut(ks, i);
+        const cf_def* d;
+
+        if (e == NULL) {
+            continue;
+        }
+        d = cf_defset_find(ds, e->key, e->keylen);
+        if (d == NULL || d->policy == NULL) {
+            continue;
+        }
+        apply_policy(e, d, names, cf_ks_arena(ks));
+    }
 
     /* Required parameters, and defaults that ended up being the
        answer. Both are counted after reselection, because a rejected

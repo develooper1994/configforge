@@ -357,6 +357,24 @@ void cf_builder_unknown(cf_builder* b, cf_unknown_policy policy) {
  * The whole error surface of the library is this function.
  * ------------------------------------------------------------------ */
 
+/* The one thing the apply pass asks of the world outside the core: what
+   is this rank called. Supplied here because this is where the sources
+   are; the core never sees a cf_source. */
+static const char* config_name_of_rank(const void* ctx, int rank) {
+    const cf_source_view* sv = (const cf_source_view*)ctx;
+    size_t                i;
+
+    if (sv == NULL) {
+        return NULL;
+    }
+    for (i = 0; i < sv->count; ++i) {
+        if (sv->items[i] != NULL && sv->items[i]->rank == rank) {
+            return sv->items[i]->name;
+        }
+    }
+    return NULL;
+}
+
 static cf_config* create_failed(cf_builder* b, cf_error* err, const cf_error* what) {
     if (err != NULL) {
         *err = *what;
@@ -467,8 +485,48 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
        in one place. Everything that can go wrong has gone wrong by the
        time this returns, which is what lets every read afterwards be
        infallible. */
-    if (!cf_defs_apply(&c->keys, &c->defs, b->unknown, &c->report, &e)) {
-        return create_failed(b, err, &e);
+    /* A policy that names no source this build actually has means the
+       key can never be set by anything, which is a typo rather than an
+       intention. Checked here because this is where the sources are,
+       and only when *none* of the named ones exists: naming a source
+       that is present on some deployments and absent on others is
+       legitimate, and failing on that would make the feature unusable
+       for the case it exists for. */
+    for (i = 0; i < c->defs.count; ++i) {
+        const cf_def* d = &c->defs.defs[i];
+        size_t        j, k;
+        cf_bool       any = CF_FALSE;
+
+        if (d->policy == NULL) {
+            continue;
+        }
+        for (j = 0; d->policy[j] != NULL && !any; ++j) {
+            for (k = 0; k < c->sv.count; ++k) {
+                if (c->sv.items[k] != NULL && c->sv.items[k]->name != NULL &&
+                    strcmp(c->sv.items[k]->name, d->policy[j]) == 0) {
+                    any = CF_TRUE;
+                    break;
+                }
+            }
+        }
+        if (!any) {
+            char list[CF_MESSAGE_MAX];
+            cf_policy_text(d->policy, list, sizeof list);
+            cf_error_set(&e, CF_E_POLICY, d->key, NULL,
+                         "the policy for '%s' names only %s, and this build "
+                         "has none of them, so nothing could ever set it",
+                         d->key, list);
+            return create_failed(b, err, &e);
+        }
+    }
+
+    {
+        cf_rank_names names;
+        names.name_of = config_name_of_rank;
+        names.ctx     = &c->sv;
+        if (!cf_defs_apply(&c->keys, &c->defs, &names, b->unknown, &c->report, &e)) {
+            return create_failed(b, err, &e);
+        }
     }
     return c;
 }

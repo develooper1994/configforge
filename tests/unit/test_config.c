@@ -304,8 +304,109 @@ static void test_both_spellings(void) {
     cf_config_free(cfg);
 }
 
+/* Per-parameter policy. The specification writes it as
+   "database.password: Environment > Local", and the definition carries
+   exactly that list. */
+static void test_policy(void) {
+    static const char* const only_env[] = {"env", NULL};
+    static char              c1[]       = "--db.password=from-cli";
+    static char*             cargv[]    = {a0, c1, NULL};
+    static char              e1[]       = "MYAPP_DB__PASSWORD=from-env";
+    static char*             cenv[]     = {e1, NULL};
+    cf_error                 err        = CF_ERROR_INIT;
+    cf_builder*              b;
+    cf_config*               cfg;
+    cf_def                   d;
+    static char              buf[2048];
+
+    b = cf_build(NULL);
+    cf_builder_cli(b, "cli", CF_RANK_CLI, 2, cargv);
+    cf_builder_env(b, "env", CF_RANK_ENV, "MYAPP_", cenv);
+    cf_def_init(&d, CF_TYPE_TEXT, "db.password");
+    d.policy = only_env;
+    cf_builder_define(b, &d);
+    cfg = cf_builder_create(b, &err);
+
+    check(cfg != NULL, "a policy builds");
+    if (cfg == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+
+    /* The command line normally wins and here it must not: the whole
+       point of a per-parameter policy is that one key departs from the
+       global order. */
+    check(strcmp(cf_get_text(cfg, "db.password", ""), "from-env") == 0,
+          "the policy beats the global precedence");
+
+    /* A violation is visible, not silent. Refusing to start would let
+       any user stop the program by passing a locked option, and for a
+       secret the damage is done the moment it reaches the command line
+       - so the useful response is to say so loudly. */
+    cf_explain(cfg, "db.password", buf, sizeof buf);
+    has(buf, "rejected", "the forbidden source is marked");
+    has(buf, "may only be set from env", "with the policy in the reason");
+    has(buf, "from-cli", "and the value it offered is still shown");
+    cf_config_free(cfg);
+}
+
+/* A policy is an order, not just a set: naming two sources says which
+   of the two wins. */
+/* A policy naming only sources this build does not have means the key
+   can never be set, which is a typo rather than an intention. */
+static void test_policy_typo(void) {
+    static const char* const nowhere[] = {"envrionment", NULL};
+    cf_error                 err       = CF_ERROR_INIT;
+    cf_builder*              b         = cf_build(NULL);
+    cf_def                   d;
+
+    cf_builder_env(b, "env", CF_RANK_ENV, "MYAPP_", NULL);
+    cf_def_init(&d, CF_TYPE_TEXT, "db.password");
+    d.policy = nowhere;
+    cf_builder_define(b, &d);
+
+    check(cf_builder_create(b, &err) == NULL, "an unreachable policy fails");
+    check(err.code == CF_E_POLICY, "reported as a policy error");
+    has(err.message, "nothing could ever set it", "and says what is wrong");
+    has(err.message, "envrionment", "naming the source that does not exist");
+}
+
+static void test_policy_reorders(void) {
+    static const char* const file_first[] = {"file", "cli", NULL};
+    static char              c1[]         = "--tls.min=1.2";
+    static char*             cargv[]      = {a0, c1, NULL};
+    static cf_pair           pairs[]      = {{"tls.min", "1.3"}};
+    cf_error                 err          = CF_ERROR_INIT;
+    cf_builder*              b            = cf_build(NULL);
+    cf_config*               cfg;
+    cf_def                   d;
+    static char              buf[2048];
+
+    cf_builder_cli(b, "cli", CF_RANK_CLI, 2, cargv);
+    cf_builder_memory(b, "file", CF_RANK_SYS_FILE, pairs, 1);
+    cf_def_init(&d, CF_TYPE_TEXT, "tls.min");
+    d.policy = file_first;
+    cf_builder_define(b, &d);
+    cfg = cf_builder_create(b, &err);
+    if (cfg == NULL) {
+        check(0, "builds");
+        printf("  %s\n", err.message);
+        return;
+    }
+    /* An operator-controlled setting surviving a command line that
+       tries to override it, which is the case this exists for. */
+    check(strcmp(cf_get_text(cfg, "tls.min", ""), "1.3") == 0,
+          "the lower-ranked source wins where the policy says so");
+    cf_explain(cfg, "tls.min", buf, sizeof buf);
+    has(buf, "policy puts file first", "and the loser is told why");
+    cf_config_free(cfg);
+}
+
 int main(void) {
     test_tier0();
+    test_policy();
+    test_policy_reorders();
+    test_policy_typo();
     test_natural_env_spelling();
     test_both_spellings();
     test_one_error_site();

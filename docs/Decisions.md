@@ -63,6 +63,7 @@ gets reopened every six months.
 | D-30 | Which sources exist, and which are deferred | scope | **Decided** |
 | D-31 | The no-build-system path | distribution, maintenance | **Decided** |
 | D-32 | The compiler warning standard | every build, every compiler | **Decided** |
+| D-33 | Per-parameter policy: shape, and what a violation does | resolver, security | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -1213,6 +1214,54 @@ deciding to stop enforcing it.
 **Consequence.** One place describes the standard, and the build discovers rather than
 asserts which compiler implements which part of it. Adding a flag means adding it to the
 list it belongs to; nothing has to be researched about who supports it.
+
+---
+
+## D-33 — Per-Parameter Policy
+
+**Question.** The specification writes a per-parameter policy as
+`database.password: Environment > Local`. What carries that, and what happens when a
+source outside the list supplies the key anyway?
+
+**Shape.** One field on the definition: the source names permitted to supply this key,
+in decreasing precedence. One list does both jobs. A source not named may not set the
+key, and the named ones are tried in that order rather than the global one — which is
+how an operator-controlled setting survives a command line that tries to override it.
+A separate "allowed set" and "ordering" would have been two fields that can disagree.
+
+**A violation rejects the candidate; it does not fail construction.** Two arguments, and
+the second is the one that settles it.
+
+Refusing to start would let any user stop the program by passing a locked option, which
+turns a policy into a denial of service — the opposite of what an operator lock is for.
+
+And for the case the feature exists for, refusing is theatre. A password on the command
+line is in `ps` the moment it is typed, whether or not this library goes on to use it.
+The damage is done; the useful response is to say so loudly — in `explain()`, in the
+provenance report, and at error severity in Doctor — rather than to refuse to run and
+imply the secret is safe.
+
+So a forbidden candidate becomes `rejected` with the policy in its reason, and stays in
+the chain. `explain()` shows the value that was offered, where it came from, and why it
+was not used. That is the whole premise of the library applied to its own security
+feature.
+
+**A policy naming no source this build has is an error.** The key could never be set by
+anything, which is a typo rather than an intention. Checked only when *none* of the
+named sources exists: naming a source that is present on some deployments and absent on
+others is legitimate, and failing on that would make the feature unusable for the case
+it is for.
+
+**The core asks rather than taking the model.** The apply pass needs one thing from
+outside itself — what a rank is called — and it takes a `cf_rank_names` callback instead
+of a `cf_source_view`. The layering gate is what surfaced this: the first version
+included `cf_source.h` from the core and the gate refused it. Same shape as the command
+line's spec, and for the same reason: a test can answer the question with no sources
+existing.
+
+**Consequence.** `cf_source_view` moved from `cf_explain.h` to `cf_source.h`, where a
+view over sources belongs; having it in the diagnostics header meant nothing below could
+name a source without including the top layer.
 
 ---
 

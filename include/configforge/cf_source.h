@@ -71,6 +71,21 @@ cf_bool cf_source_load(const cf_source* s, cf_keyspace* ks);
 void    cf_source_destroy(cf_source* s);
 
 /* ------------------------------------------------------------------ *
+ * A view over the sources
+ *
+ * Defined here rather than with the diagnostics that consume it: it is
+ * a view over sources, and having it in cf_explain.h meant the core
+ * could not name a source without including the top layer. The apply
+ * pass needs exactly that to resolve a per-parameter policy, which is
+ * what made the misplacement visible.
+ * ------------------------------------------------------------------ */
+
+typedef struct cf_source_view {
+    const cf_source* const* items;
+    size_t                  count;
+} cf_source_view;
+
+/* ------------------------------------------------------------------ *
  * Memory source
  *
  * Explicit pairs. Also serves as the defaults source: a default is a
