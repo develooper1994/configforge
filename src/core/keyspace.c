@@ -291,24 +291,34 @@ static cf_cand_rec** cand_sort(cf_arena* ar, cf_cand_rec* recs, size_t n) {
  * Resolution
  * ------------------------------------------------------------------ */
 
-void cf_ks_resolve(cf_keyspace* ks) {
+size_t cf_ks_candidate_count(const cf_keyspace* ks) {
+    return (ks != NULL) ? ks->ncand : 0;
+}
+
+cf_bool cf_ks_resolve(cf_keyspace* ks) {
     cf_cand_rec** sorted;
     size_t        i, distinct;
 
     if (ks == NULL || ks->resolved) {
-        return;
+        return (ks != NULL) ? CF_TRUE : CF_FALSE;
     }
     ks->resolved = CF_TRUE;
     if (ks->ncand == 0) {
         ks->entries = NULL;
         ks->count   = 0;
-        return;
+        return CF_TRUE;
     }
 
     sorted = cand_sort(ks->arena, ks->cands, ks->ncand);
     if (sorted == NULL) {
+        /* Reported rather than swallowed. This used to set the count to
+           zero and return void, so a caller out of arena got a
+           configuration with no keys in it and no way to find out - a
+           device would have booted with every value at its default and
+           nothing to say why. A function that can fail does not return
+           void. */
         ks->count = 0;
-        return;
+        return CF_FALSE;
     }
 
     distinct = 1;
@@ -324,7 +334,7 @@ void cf_ks_resolve(cf_keyspace* ks) {
     ks->entries = (cf_entry*)cf_arena_alloc(ks->arena, distinct * sizeof(cf_entry));
     if (ks->entries == NULL) {
         ks->count = 0;
-        return;
+        return CF_FALSE;
     }
     ks->count = distinct;
 
@@ -367,6 +377,7 @@ void cf_ks_resolve(cf_keyspace* ks) {
             i = j;
         }
     }
+    return CF_TRUE;
 }
 
 void cf_ks_infer_untyped(cf_keyspace* ks) {

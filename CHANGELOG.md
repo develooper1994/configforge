@@ -140,6 +140,23 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   the escaped and the natural spelling are present the escaped one wins
   by construction rather than by which pass happened to run second.
 
+### Fixed, and it mattered
+
+- **`cf_ks_resolve` could fail silently.** It allocated a scratch array
+  for the merge sort, set the key count to zero when there was no room,
+  and returned `void`. Between roughly 11.7 and 12 kilobytes of fixed
+  arena, `cf_builder_create` therefore *succeeded* and handed back a
+  configuration with no keys in it — a device in that window would have
+  booted with every value at its default and no indication that anything
+  had gone wrong, which is worse than not booting.
+  It returns `cf_bool` now and the builder reports it, naming the number
+  of candidates it could not sort.
+- **`cf_build_in`**, which was missing. `cf_arena_fixed` existed and
+  nothing in the builder accepted an arena, so the claim that a target
+  with no heap can hand over a buffer and have the library work inside
+  it had no way to be true. The arena is borrowed: `cf_config_free`
+  never frees a buffer this library did not allocate.
+
 ### Security
 
 - **The binary image reader dereferenced a file-supplied index without

@@ -21,7 +21,8 @@ set(CF_UNIT_TESTS
     test_iterate
     test_emit
     test_threads
-    test_fuzz)
+    test_fuzz
+    test_starve)
 
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)

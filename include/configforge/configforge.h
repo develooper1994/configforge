@@ -72,6 +72,20 @@ cf_config* cf_app(const char* name, int argc, char* const* argv, cf_error* err);
  * ------------------------------------------------------------------ */
 
 cf_builder* cf_build(const cf_allocator* alloc);
+
+/* Build inside a buffer the caller owns.
+ *
+ * This is the freestanding path, and it was missing: cf_arena_fixed
+ * existed and nothing in the builder accepted an arena, so the claim
+ * that a target with no heap can hand over a buffer had no way to be
+ * true. Found by writing the test for it.
+ *
+ * The arena is borrowed, not owned: cf_config_free releases the
+ * configuration's hold on it and never frees the caller's buffer.
+ * Everything the configuration points at lives in that buffer, so it
+ * has to outlive the configuration - which on the target this exists
+ * for is a static array, and outlives everything. */
+cf_builder* cf_build_in(cf_arena* arena);
 cf_builder* cf_app_builder(const char* name, int argc, char* const* argv);
 void        cf_builder_abort(cf_builder* b);
 

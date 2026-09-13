@@ -25,6 +25,11 @@ struct cf_builder {
     cf_error pending;
     cf_bool  failed;
     char     prefix[CF_SOURCE_MAX];
+
+    /* Whether the arena is ours to free. A caller who built inside
+       their own buffer keeps it; freeing it would be freeing memory
+       this library never allocated. */
+    cf_bool owns_arena;
 };
 
 struct cf_config {
@@ -41,6 +46,7 @@ struct cf_config {
        are safe concurrently, and a release is a read of the count
        followed by at most one free. */
     cf_refcount refs;
+    cf_bool     owns_arena;
 };
 
 /* ------------------------------------------------------------------ *
@@ -55,33 +61,47 @@ static void builder_fail(cf_builder* b, const cf_error* e) {
     b->pending = *e;
 }
 
-cf_builder* cf_build(const cf_allocator* alloc) {
-    cf_arena*   ar;
+static cf_builder* builder_on(cf_arena* ar, cf_bool owns) {
     cf_builder* b;
 
-    ar = cf_arena_new(alloc, 0);
     if (ar == NULL) {
         return NULL;
     }
     b = (cf_builder*)cf_arena_calloc(ar, sizeof(cf_builder));
     if (b == NULL) {
-        cf_arena_free(ar);
+        if (owns) {
+            cf_arena_free(ar);
+        }
         return NULL;
     }
-    b->arena   = ar;
-    b->unknown = CF_UNKNOWN_IGNORE;
+    b->owns_arena = owns;
+    b->arena      = ar;
+    b->unknown    = CF_UNKNOWN_IGNORE;
     cf_error_clear(&b->pending);
     b->pending.size = sizeof(cf_error);
 
     if (!cf_defset_init(&b->defs, ar, 16)) {
-        cf_arena_free(ar);
+        if (owns) {
+            cf_arena_free(ar);
+        }
         return NULL;
     }
     return b;
 }
 
+cf_builder* cf_build(const cf_allocator* alloc) {
+    return builder_on(cf_arena_new(alloc, 0), CF_TRUE);
+}
+
+cf_builder* cf_build_in(cf_arena* arena) {
+    /* Borrowed. The caller's buffer holds everything the configuration
+       points at, so it has to outlive the configuration - on the target
+       this exists for it is a static array and outlives everything. */
+    return builder_on(arena, CF_FALSE);
+}
+
 void cf_builder_abort(cf_builder* b) {
-    if (b != NULL) {
+    if (b != NULL && b->owns_arena) {
         cf_arena_free(b->arena);
     }
 }
@@ -398,7 +418,9 @@ static cf_config* create_failed(cf_builder* b, cf_error* err, const cf_error* wh
     if (err != NULL) {
         *err = *what;
     }
-    cf_arena_free(b->arena);
+    if (b->owns_arena) {
+        cf_arena_free(b->arena);
+    }
     return NULL;
 }
 
@@ -428,6 +450,7 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
            a second reference to - correct today and wrong the moment
            anyone does. */
         cf_ref_init(&c->refs, 1);
+        c->owns_arena = b->owns_arena;
     }
     if (c == NULL) {
         cf_error_set(&e, CF_E_MEMORY, NULL, NULL, "no room for the config");
@@ -505,7 +528,11 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
         }
     }
 
-    cf_ks_resolve(&c->keys);
+    if (!cf_ks_resolve(&c->keys)) {
+        cf_error_set(&e, CF_E_MEMORY, NULL, NULL, "no room to resolve %u candidates",
+                     (unsigned)cf_ks_candidate_count(&c->keys));
+        return create_failed(b, err, &e);
+    }
 
     /* Conversion, validation and Tier 0 inference, in that order and
        in one place. Everything that can go wrong has gone wrong by the
@@ -575,7 +602,7 @@ void cf_config_free(cf_config* c) {
        to be decremented before anything is freed and its result read
        from a local. Touching c after the free is a use-after-free of
        the object doing the freeing. */
-    if (cf_ref_dec(&c->refs) == 0) {
+    if (cf_ref_dec(&c->refs) == 0 && c->owns_arena) {
         cf_arena_free(c->arena);
     }
 }

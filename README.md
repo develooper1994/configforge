@@ -153,6 +153,12 @@ reader to return rather than crash. It runs one fixed seed in the suite,
 so a failure is reproducible, and fresh seeds under the sanitiser in CI.
 It found an out-of-bounds read in the binary image reader on its first
 run.
+
+`test_starve` does the same for the resource dimension: it runs the whole
+pipeline in a fixed buffer, shrinking it byte by byte, and requires that
+every size either works correctly or fails with a reason. It found a
+window where construction succeeded and returned an empty
+configuration.
 | version | `cf_version.h` and `CMakeLists.txt` agree |
 | format | `clang-format` and `cmake-format`, reporting rather than rewriting |
 | cmake lint | `cmake-lint` over every build file |

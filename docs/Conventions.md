@@ -266,6 +266,17 @@ there was one.
 is not the word it prints for a failed assertion. `scripts/verify.cmake`
 shows the step's whole output for this reason.
 
+**A function that can fail does not return `void`.** `cf_ks_resolve`
+allocated a scratch array, set the key count to zero when it could not,
+and returned nothing. A caller out of arena got a configuration with no
+keys and no way to find out — on the freestanding profile, a device that
+boots with every value at its default and nothing to say why. That is
+worse than not booting.
+
+Audit the `void` functions whenever one gains an allocation. There is no
+gate for this yet because the check is "can this fail", which the build
+cannot see.
+
 **A static archive hides a missing definition.** A function declared in
 a header, called from one file and defined nowhere links fine into
 `libconfigforge.a` and stays hidden until something pulls that object

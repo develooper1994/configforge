@@ -139,7 +139,15 @@ cf_bool cf_ks_reject(cf_keyspace* ks, const char* key, size_t keylen, int source
 /* Sort the candidates, group them into entries, and mark the
    highest-precedence non-rejected candidate of each as selected.
    Lookup is available afterwards, not before. */
-void cf_ks_resolve(cf_keyspace* ks);
+/* Sorts and groups the candidates. Returns false when there was no room
+   to do it, which is not the same as an empty configuration: the caller
+   must distinguish, or a target out of memory gets a snapshot with no
+   keys and nothing to say why. */
+cf_bool cf_ks_resolve(cf_keyspace* ks);
+
+/* Candidates appended so far, which is what an out-of-room message
+   should name: the caller sized a buffer, not a key count. */
+size_t cf_ks_candidate_count(const cf_keyspace* ks);
 
 /* Tier 0 typing. Every textual candidate that no definition claimed
    gets a type by inference, which is deliberately timid: see D-24.
