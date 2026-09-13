@@ -65,6 +65,26 @@ jobs:
       - run: cmake --preset analyze && cmake --build --preset analyze
       - run: ctest --preset analyze
 
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate locales
+        run: |
+          sudo locale-gen tr_TR.UTF-8 de_DE.UTF-8
+          sudo update-locale
+      # The suite runs one fixed seed so that a failure is reproducible.
+      # Here it gets fresh ones under the sanitiser, which is where a
+      # read one byte past the end is a report rather than a pass. A
+      # failing seed is printed and goes straight into the suite.
+      - name: Fuzz with fresh seeds
+        run: |
+          cmake --preset sanitize && cmake --build --preset sanitize
+          for i in $(seq 1 25); do
+            seed=$(( (RANDOM << 16) ^ RANDOM ^ $(date +%s) ^ i ))
+            ./build-sanitize/tests/unit/test_fuzz "$seed" || exit 1
+          done
+
   clang:
     runs-on: ubuntu-latest
     steps:

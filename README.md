@@ -147,6 +147,12 @@ a claim that decays.
 | amalgamation | the single-file build compiles as C89 and runs |
 | interface | what including the library costs: no unexpected system header, no size jump |
 | install | a separate project finds the package, compiles against it and runs |
+
+Beyond the gates, `test_fuzz` corrupts valid documents and requires every
+reader to return rather than crash. It runs one fixed seed in the suite,
+so a failure is reproducible, and fresh seeds under the sanitiser in CI.
+It found an out-of-bounds read in the binary image reader on its first
+run.
 | version | `cf_version.h` and `CMakeLists.txt` agree |
 | format | `clang-format` and `cmake-format`, reporting rather than rewriting |
 | cmake lint | `cmake-lint` over every build file |
