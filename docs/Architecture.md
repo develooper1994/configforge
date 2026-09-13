@@ -175,7 +175,7 @@ exists because something in the design is otherwise only a sentence.
 | `gate.detection` | `#ifdef` appearing only in the portability layer |
 | `gate.headers` | every public header compiling standalone, C89 and C++98 |
 | `gate.amalgamation` | the no-build-system path compiling and running |
-| `gate.symbols` | no locale-sensitive libc function; every export prefixed |
+| `gate.symbols` | no locale-sensitive libc function; every export prefixed; no mutable global data; only `alloc.c` calls the allocator |
 | `gate.format.c`, `gate.format.cmake`, `gate.cmake.lint` | one style, checked not agreed |
 | conformance | `-std=c89 -pedantic -Werror` plus the D-32 warning set |
 | portability | the whole suite under `CF_FORCE_PORTABLE`, byte-identical |

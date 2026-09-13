@@ -3,6 +3,25 @@
 The house style. Most of these were paid for: the reason is given where
 the reason is a mistake that was made.
 
+## How this document stays true
+
+A document of rules decays. It accumulates entries nobody re-reads,
+contradictions nobody notices, and eventually a rule that was right once
+and is wrong now. The mitigation is not discipline, which is the thing
+that failed in the first place.
+
+> **A rule the build can check should be a gate, not a sentence.**
+
+So when something is learned here, the first question is whether it can
+be enforced rather than written. Only what genuinely cannot be checked
+stays as prose, and prose rules carry the incident that produced them —
+so a later reader can judge whether the rule still applies instead of
+obeying it because it is written down.
+
+Rules below marked **[gate]** are enforced by the build; the sentence is
+a pointer, not the authority. The rest are judgement, and judgement
+should be re-examined.
+
 ## Language
 
 C89 is the baseline and `-std=c89 -pedantic -Werror` is the gate. Where
@@ -26,15 +45,16 @@ cfi_       internal symbols with external linkage
 static     everything else
 ```
 
-A C library has no namespaces, so the prefix rule *is* the namespace and
-`gate.symbols` enforces it: a leaked unprefixed symbol breaks somebody
+**[gate]** A C library has no namespaces, so the prefix rule *is* the
+namespace and `gate.symbols` enforces it: a leaked unprefixed symbol breaks somebody
 else's build and is found by whoever links it, not whoever wrote it.
 
-**Give file-local statics a file-specific prefix.** `js_quote` in the
+**[gate]** **Give file-local statics a file-specific prefix.** `js_quote` in the
 JSON codec, `report_quote` in the report writer. Two `static` functions
 with the same name in different files compile fine until the
 amalgamation puts them in one translation unit — which is exactly how
-`put_value` was found.
+`put_value` was found, and why `gate.amalgamation` now catches the next
+one.
 
 ## Memory
 
@@ -49,8 +69,9 @@ cf_arena_fixed   works inside a caller's buffer and fails cleanly
 
 Rules:
 
-* Every allocation goes through `cf_allocator`. Nothing calls `malloc`
-  outside `alloc.c`.
+* **[gate]** Every allocation goes through `cf_allocator`. Nothing calls
+  `malloc` outside `alloc.c`, and `gate.symbols` reads the built
+  objects to make sure.
 * **Text handed to the key space is copied**, so a caller's buffer need
   only survive the call. Text read from a binary image is **borrowed**,
   so the image must outlive the configuration — which is the point on a
@@ -60,8 +81,12 @@ Rules:
   caller guess the size**: a 256-byte guess was refused by
   `cf_source_image_mem`, and the uninitialised `cf_source` that followed
   crashed.
-* **No global mutable state.** A static pool inside a source file is
-  global mutable state: not reentrant, not thread-safe, and a direct
+* **[gate]** **No global mutable state.** `gate.symbols` fails on any
+  symbol in `.data` or `.bss`. The test is the section rather than
+  `nm`'s letter: under PIE a `const` struct holding pointers lands in
+  `.data.rel.ro` and `nm` calls it `d`, so a gate reading the letter
+  would fail on correct code and teach everyone to ignore it. A static
+  pool inside a source file is global mutable state: not reentrant, not thread-safe, and a direct
   breach of the architectural principle. Simple sources keep state in an
   inline union inside `cf_source`; `ext` is owned, `ref` is borrowed and
   read-only.
@@ -137,9 +162,10 @@ standard level:
 `gate.symbols` checks the built library's undefined symbols against this
 list, which works everywhere and does not need a generated locale.
 
-Also absent by rule: variable-length arrays, `complex`, `tgmath.h`,
-allocation on a failure path, and `#ifdef` on a compiler or standard
-macro outside `cf_port.h` and `port.c`.
+Also absent by rule: variable-length arrays **[gate: `-Wvla`]**,
+`complex`, `tgmath.h`, allocation on a failure path, and `#ifdef` on a
+compiler or standard macro outside `cf_port.h` and `port.c`
+**[gate: `gate.detection`]**.
 
 ## Tests
 
@@ -165,11 +191,11 @@ tests are not complicated enough to need one.
 * **A weak assertion is worse than none.** Checking that a digest starts
   with `fnv1a:` passed for a whole session while every digest was the
   literal `%08x%08x`. Assert the shape *and* that it distinguishes.
-* Buffers over a kilobyte are `static`. The stack budget applies to
-  tests, and it has caught three of them.
-* Test data that is a string literal must be a mutable array when it is
-  handed to an API taking `char* const*`, because `-Wwrite-strings` is
-  on and because the API matches `argv` so that callers never cast.
+* **[gate]** Buffers over a kilobyte are `static`. The stack budget
+  applies to tests too, and it has caught three of them.
+* **[gate]** Test data that is a string literal must be a mutable array
+  when it is handed to an API taking `char* const*`, because
+  `-Wwrite-strings` is on and because the API matches `argv` so that callers never cast.
 
 **Negative tests for gates.** A gate is proved by breaking the thing it
 protects and watching it fail, then restoring. Do this once per gate and

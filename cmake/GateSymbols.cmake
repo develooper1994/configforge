@@ -60,6 +60,55 @@ foreach(line ${lines})
   endif()
 endforeach()
 
+# No mutable global state.
+#
+# A static pool inside a source file is global mutable state: not
+# reentrant, not thread-safe, and a direct breach of a stated
+# principle - which is exactly the mistake the memory source made
+# before anything checked.
+#
+# The test is the section, not nm's letter. Under PIE a `const` struct
+# holding pointers lands in .data.rel.ro and nm calls it `d`, so a gate
+# reading the letter would fail on correct code and teach everyone to
+# ignore it. .data and .bss are the mutable ones.
+find_program(OBJDUMP_EXE objdump)
+if(OBJDUMP_EXE)
+  execute_process(
+    COMMAND ${OBJDUMP_EXE} -t "${LIB}"
+    OUTPUT_VARIABLE syms
+    ERROR_QUIET)
+  string(REPLACE "\n" ";" symlines "${syms}")
+  foreach(line ${symlines})
+    if(line MATCHES "[ \t]O[ \t]+(\\.data|\\.bss)[ \t]")
+      string(REGEX MATCH "[^ \t]+$" sym "${line}")
+      message("VIOLATION: mutable global '${sym}'")
+      set(bad 1)
+    endif()
+  endforeach()
+endif()
+
+# Only the allocator may call the allocator.
+#
+# Every allocation goes through cf_allocator so that a caller can supply
+# their own and the fixed-capacity profile can refuse to allocate at
+# all. One file reaching past it would make both untrue quietly.
+execute_process(
+  COMMAND ${NM_EXE} -u "${LIB}"
+  OUTPUT_VARIABLE undefs
+  ERROR_QUIET)
+string(REPLACE "\n" ";" ulines "${undefs}")
+set(member "")
+foreach(line ${ulines})
+  if(line MATCHES "^(.+\\.o):$")
+    set(member "${CMAKE_MATCH_1}")
+  elseif(line MATCHES "[ \t]U[ \t]+(malloc|free|calloc|realloc)$")
+    if(NOT member STREQUAL "alloc.c.o")
+      message("VIOLATION: ${member} calls ${CMAKE_MATCH_1} directly")
+      set(bad 1)
+    endif()
+  endif()
+endforeach()
+
 if(bad)
   message(FATAL_ERROR "symbol gate failed")
 endif()
