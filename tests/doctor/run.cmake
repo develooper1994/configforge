@@ -11,7 +11,7 @@ endif()
 
 list(GET argv 0 cmd)
 if(cmd STREQUAL "lint" AND EXPECT_FAIL EQUAL 1)
-  if(NOT out MATCHES "CFD001")
+  if(NOT out MATCHES "CFD010")
     message(FATAL_ERROR "a dead source was not reported")
   endif()
   if(NOT out MATCHES "wins none")

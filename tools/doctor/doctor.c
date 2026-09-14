@@ -410,14 +410,16 @@ static void key_name(const rkey* k, char* buf, size_t cap) {
     buf[n] = '\0';
 }
 
-/* CFD001. A source supplies values and wins none of them, so somebody
-   is editing a file that has no effect.
-   Note what this is not: a single shadowed candidate. Being shadowed
-   is precedence working as designed, and reporting it would bury the
-   real finding under one line per key. The signal is a source that
-   never wins, which nothing else in a configuration system says out
-   loud. */
-static void rule_unreachable(const report* r) {
+/* CFD010, dead source. A configured source wins for no key at all, so
+   somebody is editing a file that has no effect.
+   This was labelled CFD001 for a while, which is a different rule: an
+   unreachable *value* is one key set where it can never win, and a dead
+   *source* wins nothing anywhere. The implementation was right and the
+   label was not.
+   Note what this is still not: a single shadowed candidate. Being
+   shadowed is precedence working as designed, and reporting it would
+   bury the real finding under one line per key. */
+static void rule_dead_source(const report* r) {
     const char* names[CF_MAX_SOURCES];
     int         supplied[CF_MAX_SOURCES];
     int         won[CF_MAX_SOURCES];
@@ -467,7 +469,7 @@ static void rule_unreachable(const report* r) {
         if (strcmp(names[s], "default") == 0) {
             continue;
         }
-        finding("CFD001", "error", names[s],
+        finding("CFD010", "error", names[s],
                 "supplies %d value(s) and wins none; everything it sets is "
                 "shadowed%s%s",
                 supplied[s], (first_at[s] != NULL) ? ", e.g. " : "",
@@ -755,7 +757,7 @@ static int cmd_explain(const report* r, const char* key) {
 }
 
 static void cmd_lint(const report* r) {
-    rule_unreachable(r);
+    rule_dead_source(r);
     rule_required(r);
     rule_refused(r);
     rule_policy(r);

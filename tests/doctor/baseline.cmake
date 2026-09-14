@@ -17,7 +17,7 @@ endif()
 
 # With the finding accepted, the same report passes and says how much it
 # is carrying.
-file(WRITE "${work}/base.txt" "CFD001 user-file\n")
+file(WRITE "${work}/base.txt" "CFD010 user-file\n")
 execute_process(COMMAND ${DOCTOR} lint cf_fx_dead.json --baseline base.txt
                 WORKING_DIRECTORY "${work}" RESULT_VARIABLE rc
                 OUTPUT_VARIABLE out ERROR_VARIABLE out)
@@ -28,14 +28,14 @@ endif()
 if(NOT out MATCHES "1 accepted by the baseline")
   message(FATAL_ERROR "the summary does not say what is being carried")
 endif()
-if(out MATCHES "CFD001")
+if(out MATCHES "CFD010")
   message(FATAL_ERROR "a baselined finding was printed anyway, which is the "
                       "noise a baseline exists to remove")
 endif()
 
 # An entry that matches nothing is reported. A rule that stopped firing
 # is either a fix worth noticing or a rule that quietly broke.
-file(WRITE "${work}/base2.txt" "CFD001 user-file\nCFD099 gone.away\n")
+file(WRITE "${work}/base2.txt" "CFD010 user-file\nCFD099 gone.away\n")
 execute_process(COMMAND ${DOCTOR} lint cf_fx_dead.json --baseline base2.txt
                 WORKING_DIRECTORY "${work}" RESULT_VARIABLE rc
                 OUTPUT_VARIABLE out ERROR_VARIABLE out)

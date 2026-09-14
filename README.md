@@ -229,7 +229,7 @@ configuration.
 
 ```sh
 $ doctor lint staging.json
-CFD001  error   user-file    supplies 2 value(s) and wins none; everything it
+CFD010  error   user-file    supplies 2 value(s) and wins none; everything it
                              sets is shadowed, e.g. staging.ini:3:1
 
 $ doctor diff prod.json staging.json
