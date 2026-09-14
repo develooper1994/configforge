@@ -109,6 +109,47 @@ int main(void) {
     if (emit("cf_fx_leak.json", "staging", 2, largv, senv, NULL)) {
         return 1;
     }
+
+    /* A report with the three things a single-report lint can prove
+       from the definitions alone: a key nobody declared, a deprecated
+       one still being supplied, and one set to nothing at all. */
+    {
+        static char    ra1[]   = "--nonesuch.key=1";
+        static char    ra2[]   = "--old.name=still-here";
+        static char    ra3[]   = "--server.host=";
+        static char*   rargv[] = {a0, ra1, ra2, ra3, NULL};
+        cf_error       err     = CF_ERROR_INIT;
+        cf_builder*    b       = cf_build(NULL);
+        cf_config*     c;
+        cf_report_info info;
+        static char    buf[65536];
+        cf_def         d;
+
+        cf_builder_cli(b, "cli", CF_RANK_CLI, 4, rargv);
+        cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+        cf_builder_text(b, "server.host", "0.0.0.0", 0);
+        cf_def_init(&d, CF_TYPE_TEXT, "old.name");
+        d.flags       = CF_DEPRECATED;
+        d.has_default = CF_TRUE;
+        cf_value_text(&d.default_value, "", 0);
+        cf_builder_define(b, &d);
+
+        c = cf_builder_create(b, &err);
+        if (c == NULL) {
+            fprintf(stderr, "fixtures: rules: %s\n", err.message);
+            return 1;
+        }
+        memset(&info, 0, sizeof info);
+        info.mode        = CF_REPORT_BLIND;
+        info.profile     = "staging";
+        info.application = "myapp";
+        info.generated   = "2026-09-12T00:00:00Z";
+        cf_report(c, &info, buf, sizeof buf);
+        cf_config_free(c);
+        if (!spill("cf_fx_rules.json", buf)) {
+            return 1;
+        }
+    }
     /* A file whose every key is overridden: the case CFD001 exists for. */
     if (emit("cf_fx_dead.json", "staging", 3, dargv, senv, "cf_fx_dead.ini")) {
         return 1;

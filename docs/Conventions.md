@@ -221,6 +221,13 @@ on its first run.
 A fuzzer earns its place under the sanitiser, where a read one byte past
 the end is a report instead of a pass.
 
+**A negative test must check that the build succeeded.** Disabling a
+rule by deleting its call makes the function unused, `-Werror` rejects
+that, the build fails, and the *stale binary* runs — so five rules in a
+row appeared to be untested when what was actually broken was the
+experiment. Disable a rule by returning early from it, after its
+declarations, and assert the build before believing the result.
+
 **Negative tests for gates.** A gate is proved by breaking the thing it
 protects and watching it fail, then restoring. Do this once per gate and
 say so.

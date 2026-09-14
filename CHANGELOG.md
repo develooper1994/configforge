@@ -136,6 +136,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   rewritten inside one clock tick at the same length. That is documented
   as a hint worth acting on rather than a guarantee; the exact answer is
   to rebuild and compare digests.
+- **Three more Doctor rules** that a single report can prove from its
+  definitions alone: `CFD005` a key with no definition, `CFD009` a
+  deprecated key something is still supplying, `CFD011` a key set to an
+  empty value — which is not the same as being unset, and is usually a
+  variable that expanded to nothing rather than a decision.
 - **ConfigForge Doctor**: `dump`, `explain`, `lint`, `diff`, and
   `lint --baseline`, which records existing findings as accepted so that
   only new ones fail. A tool that cannot be adopted gradually is a tool

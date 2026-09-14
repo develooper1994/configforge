@@ -42,6 +42,8 @@ doctor_case(dump 0 dump|cf_fx_prod.json)
 doctor_case(explain 0 explain|cf_fx_prod.json|server.port)
 doctor_case(explain_missing 2 explain|cf_fx_prod.json|no.such.key)
 doctor_case(diff 0 diff|cf_fx_prod.json|cf_fx_staging.json)
+doctor_case(lint_policy 1 lint|cf_fx_leak.json)
+doctor_case(lint_rules 0 lint|cf_fx_rules.json)
 doctor_case(not_a_report 2 dump|cf_fx_staging.ini)
 
 # A baseline turns a failing run into a passing one and reports what no

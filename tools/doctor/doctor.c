@@ -45,6 +45,8 @@ typedef struct rkey {
     const char* selected; /* winning source name           */
     cf_bool     required;
     cf_bool     sensitive;
+    cf_bool     deprecated;
+    cf_bool     defined;
     const char* type;
 } rkey;
 
@@ -216,7 +218,15 @@ static cf_bool load(report* r, const char* path) {
 
         rk->type     = text_at(&r->doc, "keys.%S.definition.type", rk->key, rk->keylen);
         rk->required = flag_at(&r->doc, rk->key, rk->keylen, "required");
-        rk->sensitive = flag_at(&r->doc, rk->key, rk->keylen, "sensitive");
+        rk->sensitive  = flag_at(&r->doc, rk->key, rk->keylen, "sensitive");
+        rk->deprecated = flag_at(&r->doc, rk->key, rk->keylen, "deprecated");
+        /* A key with no definition has a null one in the report, which
+           is how an undefined key is told from a defined one without a
+           type. */
+        rk->defined =
+            (text_at(&r->doc, "keys.%S.definition.type", rk->key, rk->keylen) != NULL)
+                ? CF_TRUE
+                : CF_FALSE;
 
         /* Candidates counted the same way, so a chain of any length
            fits and none is silently dropped. Dropping one would lose
@@ -474,6 +484,92 @@ static void rule_dead_source(const report* r) {
                 "shadowed%s%s",
                 supplied[s], (first_at[s] != NULL) ? ", e.g. " : "",
                 (first_at[s] != NULL) ? first_at[s] : "");
+    }
+}
+
+/* CFD005, undefined key present. A source supplied a key the program
+   has no definition for. At Tier 0 that is normal and this rule says
+   nothing; it fires only where the report shows definitions, because
+   then a key outside them is either a typo or a setting the program
+   stopped reading. */
+static void rule_undefined(const report* r) {
+    size_t i, defined = 0;
+
+    for (i = 0; i < r->nkeys; ++i) {
+        if (r->keys[i].defined) {
+            ++defined;
+        }
+    }
+    if (defined == 0) {
+        return; /* Tier 0: there is no contract to be outside of. */
+    }
+    for (i = 0; i < r->nkeys; ++i) {
+        char name[CF_KEY_MAX];
+        if (r->keys[i].defined) {
+            continue;
+        }
+        key_name(&r->keys[i], name, sizeof name);
+        finding("CFD005", "warning", name,
+                "no definition for this key; either it is a typo or the "
+                "program stopped reading it");
+    }
+}
+
+/* CFD009, a deprecated key still set. Not that it exists - a definition
+   may keep one for years - but that something is still supplying it, so
+   somebody has work to do before it goes. */
+static void rule_deprecated(const report* r) {
+    size_t i, j;
+
+    for (i = 0; i < r->nkeys; ++i) {
+        const rkey* k = &r->keys[i];
+        char        name[CF_KEY_MAX];
+
+        if (!k->deprecated || k->selected == NULL) {
+            continue;
+        }
+        if (strcmp(k->selected, "default") == 0) {
+            continue; /* nothing is setting it; only the default is */
+        }
+        key_name(k, name, sizeof name);
+        for (j = 0; j < k->nc; ++j) {
+            if (k->c[j].outcome != NULL) {
+                continue;
+            }
+            finding("CFD009", "warning", name,
+                    "deprecated and still supplied by %s%s%s", k->c[j].source,
+                    (k->c[j].at != NULL) ? " at " : "",
+                    (k->c[j].at != NULL) ? k->c[j].at : "");
+            break;
+        }
+    }
+}
+
+/* CFD011, present but empty. Empty and absent are different states and
+   conflating them is a recurring defect elsewhere; a key set to nothing
+   is usually a variable that expanded to nothing rather than a decision
+   to set it to nothing. */
+static void rule_empty(const report* r) {
+    size_t i, j;
+
+    for (i = 0; i < r->nkeys; ++i) {
+        const rkey* k = &r->keys[i];
+        char        name[CF_KEY_MAX];
+
+        key_name(k, name, sizeof name);
+        for (j = 0; j < k->nc; ++j) {
+            if (k->c[j].outcome != NULL || k->c[j].value == NULL) {
+                continue;
+            }
+            if (k->c[j].value[0] != '\0') {
+                continue;
+            }
+            finding("CFD011", "warning", name,
+                    "set to an empty value by %s%s%s, which is not the same "
+                    "as being unset",
+                    k->c[j].source, (k->c[j].at != NULL) ? " at " : "",
+                    (k->c[j].at != NULL) ? k->c[j].at : "");
+        }
     }
 }
 
@@ -761,6 +857,9 @@ static void cmd_lint(const report* r) {
     rule_required(r);
     rule_refused(r);
     rule_policy(r);
+    rule_undefined(r);
+    rule_deprecated(r);
+    rule_empty(r);
     rule_truncated(r);
     rule_default_only(r);
 }
