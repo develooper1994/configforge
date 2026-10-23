@@ -48,7 +48,18 @@ typedef struct rkey {
     cf_bool     deprecated;
     cf_bool     defined;
     const char* type;
+    /* The definition's policy: the sources permitted to supply this
+       key, in decreasing precedence. NULL-terminated, NULL if none. */
+    const char** policy;
 } rkey;
+
+/* One entry of the report's "sources" list. Rank is the library's own:
+   lower wins. */
+typedef struct rsrc {
+    const char* name;
+    const char* kind;
+    cf_i64      rank;
+} rsrc;
 
 typedef struct report {
     cf_arena*   arena;
@@ -58,6 +69,8 @@ typedef struct report {
     const char* profile;
     rkey*       keys;
     size_t      nkeys;
+    rsrc*       src;
+    size_t      nsrc;
 } report;
 
 static int g_findings  = 0;
@@ -172,6 +185,33 @@ static cf_bool load(report* r, const char* path) {
     r->mode    = text_at(&r->doc, "mode");
     r->profile = text_at(&r->doc, "profile");
 
+    /* The sources, so a rule can ask what kind a source is and where it
+       ranks. Counted first, like everything else here, so there is no
+       limit to exceed. */
+    {
+        size_t count = 0;
+        while (text_at(&r->doc, "sources.%zu.name", count) != NULL) {
+            ++count;
+        }
+        if (count > 0) {
+            r->src = (rsrc*)cf_arena_calloc(r->arena, count * sizeof(rsrc));
+            if (r->src == NULL) {
+                fprintf(stderr, "doctor: '%s' is too large to read\n", path);
+                return CF_FALSE;
+            }
+        }
+        for (i = 0; i < count; ++i) {
+            const char* rank = text_at(&r->doc, "sources.%zu.rank", i);
+            r->src[i].name   = text_at(&r->doc, "sources.%zu.name", i);
+            r->src[i].kind   = text_at(&r->doc, "sources.%zu.kind", i);
+            r->src[i].rank   = 0;
+            if (rank != NULL) {
+                cf_text_to_i64(rank, strlen(rank), &r->src[i].rank, NULL);
+            }
+        }
+        r->nsrc = count;
+    }
+
     /* Every "keys.<key>.selected.source" names one configuration key.
        Counted first so the array is allocated at exactly the size it
        needs, which is also the only way to have no arbitrary limit. */
@@ -227,6 +267,26 @@ static cf_bool load(report* r, const char* path) {
             (text_at(&r->doc, "keys.%S.definition.type", rk->key, rk->keylen) != NULL)
                 ? CF_TRUE
                 : CF_FALSE;
+
+        {
+            size_t np = 0;
+            while (text_at(&r->doc, "keys.%S.definition.policy.%zu", rk->key,
+                           rk->keylen, np) != NULL) {
+                ++np;
+            }
+            if (np > 0) {
+                rk->policy =
+                    (const char**)cf_arena_calloc(r->arena, (np + 1) * sizeof(char*));
+                if (rk->policy == NULL) {
+                    fprintf(stderr, "doctor: '%s' is too large to read\n", path);
+                    return CF_FALSE;
+                }
+                for (j = 0; j < np; ++j) {
+                    rk->policy[j] = text_at(&r->doc, "keys.%S.definition.policy.%zu",
+                                            rk->key, rk->keylen, j);
+                }
+            }
+        }
 
         /* Candidates counted the same way, so a chain of any length
            fits and none is silently dropped. Dropping one would lose
@@ -289,6 +349,69 @@ static const rkey* find_key(const report* r, const char* key, size_t n) {
 
 static const char* shown(const cand* c) {
     return (c->value != NULL) ? c->value : "<redacted>";
+}
+
+static const rsrc* find_source(const report* r, const char* name) {
+    size_t i;
+    if (name == NULL) {
+        return NULL;
+    }
+    for (i = 0; i < r->nsrc; ++i) {
+        if (r->src[i].name != NULL && strcmp(r->src[i].name, name) == 0) {
+            return &r->src[i];
+        }
+    }
+    return NULL;
+}
+
+/* Where inside its origin a candidate was set: "app.ini:14:3" is
+   app.ini at line 14, "argv[3]" is the command line at position 3. The
+   origin's length is returned through `len`. False for an origin with
+   no position in it, such as an environment variable, which can occur
+   only once. Read from the right, so "C:\app.ini:14:3" keeps its
+   drive letter. */
+static cf_bool place_of(const char* at, size_t* len, long* pos) {
+    size_t n, i, colon = 0, seen = 0;
+
+    if (at == NULL) {
+        return CF_FALSE;
+    }
+    n = strlen(at);
+    if (n > 6 && memcmp(at, "argv[", 5) == 0 && at[n - 1] == ']') {
+        *len = 4;
+        *pos = 0;
+        for (i = 5; i + 1 < n; ++i) {
+            if (!cf_is_digit(at[i])) {
+                return CF_FALSE;
+            }
+            *pos = *pos * 10 + (at[i] - '0');
+        }
+        return CF_TRUE;
+    }
+    /* Up to two numeric fields at the end, line and then column. The
+       line is the leftmost of them. */
+    i = n;
+    while (seen < 2) {
+        size_t end = i;
+        while (i > 0 && cf_is_digit(at[i - 1])) {
+            --i;
+        }
+        if (i == end || i == 0 || at[i - 1] != ':') {
+            break;
+        }
+        --i;
+        colon = i;
+        ++seen;
+    }
+    if (seen == 0) {
+        return CF_FALSE;
+    }
+    *len = colon;
+    *pos = 0;
+    for (i = colon + 1; i < n && cf_is_digit(at[i]); ++i) {
+        *pos = *pos * 10 + (at[i] - '0');
+    }
+    return CF_TRUE;
 }
 
 /* ------------------------------------------------------------------ *
@@ -453,6 +576,13 @@ static void rule_dead_source(const report* r) {
             if (nm == NULL) {
                 continue;
             }
+            /* Only what lost to precedence. A rejected or truncated
+               candidate did not lose, it was refused, and CFD006,
+               CFD015 and CFD016 already say so: counting it here made a
+               secret on the command line three errors at once. */
+            if (k->c[j].outcome != NULL && strcmp(k->c[j].outcome, "shadowed") != 0) {
+                continue;
+            }
             for (s = 0; s < nsrc; ++s) {
                 if (strcmp(names[s], nm) == 0) {
                     break;
@@ -578,6 +708,124 @@ static void rule_empty(const report* r) {
     }
 }
 
+/* CFD001, unreachable value. Set where it can never win: the same
+   origin sets the key again later, and within one source the later
+   occurrence wins, so nothing about the environment can change the
+   outcome. Editing the earlier line has no effect, which is the thing
+   somebody spends an afternoon discovering.
+
+   Why this narrowly. A candidate shadowed by another *source* is
+   precedence working, and the same file may win in another environment
+   where the variable is unset - one report cannot prove "never" about
+   that, and saying it anyway would be the noise that gets a tool turned
+   off. A source that wins nothing anywhere is CFD010. Two files in one
+   drop-in directory are precedence too, so the origin has to match, not
+   only the source. */
+static void rule_unreachable(const report* r) {
+    size_t i, j, m;
+
+    for (i = 0; i < r->nkeys; ++i) {
+        const rkey* k = &r->keys[i];
+        char        name[CF_KEY_MAX];
+
+        for (j = 0; j < k->nc; ++j) {
+            const cand* c = &k->c[j];
+            size_t      clen;
+            long        cpos;
+
+            if (c->outcome == NULL || strcmp(c->outcome, "shadowed") != 0 ||
+                !place_of(c->at, &clen, &cpos)) {
+                continue;
+            }
+            for (m = 0; m < k->nc; ++m) {
+                const cand* d = &k->c[m];
+                size_t      dlen;
+                long        dpos;
+                if (m == j || d->source == NULL || c->source == NULL ||
+                    strcmp(d->source, c->source) != 0 ||
+                    !place_of(d->at, &dlen, &dpos) || dlen != clen ||
+                    memcmp(d->at, c->at, clen) != 0 || dpos <= cpos) {
+                    continue;
+                }
+                key_name(k, name, sizeof name);
+                finding("CFD001", "error", name,
+                        "%s always loses to %s, set later by the same source; "
+                        "editing it has no effect",
+                        c->at, d->at);
+                break;
+            }
+        }
+    }
+}
+
+/* CFD007, a sensitive value from an unsafe source. A command line is
+   readable by every user of the machine for as long as the process
+   runs, and lands in shell history besides, so a secret passed there
+   has leaked whether or not it won. Policy can refuse it, and then
+   CFD016 is the finding; this is the case where nothing refused it.
+
+   What this cannot see yet: a secret in a committed or world-readable
+   file. The report records which file, not its permissions or whether
+   version control tracks it, and guessing from a path would be wrong
+   in both directions. */
+static void rule_sensitive_source(const report* r) {
+    size_t i, j;
+
+    for (i = 0; i < r->nkeys; ++i) {
+        const rkey* k = &r->keys[i];
+        char        name[CF_KEY_MAX];
+
+        if (!k->sensitive) {
+            continue;
+        }
+        for (j = 0; j < k->nc; ++j) {
+            const rsrc* s = find_source(r, k->c[j].source);
+            if (s == NULL || s->kind == NULL || strcmp(s->kind, "cli") != 0) {
+                continue;
+            }
+            if (k->c[j].reason != NULL && strncmp(k->c[j].reason, "policy:", 7) == 0) {
+                continue; /* CFD016's */
+            }
+            key_name(k, name, sizeof name);
+            finding("CFD007", "error", name,
+                    "sensitive, and supplied on the command line at %s, which every "
+                    "user of the machine can read",
+                    (k->c[j].at != NULL) ? k->c[j].at : "an unnamed position");
+        }
+    }
+}
+
+/* CFD013, precedence inversion. A policy lists the sources permitted
+   for a key in the order it wants them to win, and that order can put
+   a less specific source above a more specific one - the environment
+   above the command line, say. Usually deliberate, which is why this
+   is information rather than a warning; it is worth seeing because
+   explain() otherwise shows a command line losing to a variable and
+   nothing on the page says why. */
+static void rule_inversion(const report* r) {
+    size_t i, j;
+
+    for (i = 0; i < r->nkeys; ++i) {
+        const rkey* k = &r->keys[i];
+        char        name[CF_KEY_MAX];
+
+        if (k->policy == NULL) {
+            continue;
+        }
+        for (j = 0; k->policy[j] != NULL && k->policy[j + 1] != NULL; ++j) {
+            const rsrc* hi = find_source(r, k->policy[j]);
+            const rsrc* lo = find_source(r, k->policy[j + 1]);
+            if (hi == NULL || lo == NULL || hi->rank <= lo->rank) {
+                continue;
+            }
+            key_name(k, name, sizeof name);
+            finding("CFD013", "info", name,
+                    "policy puts %s above %s, the reverse of their usual precedence",
+                    hi->name, lo->name);
+        }
+    }
+}
+
 /* CFD004. A required parameter resolved to nothing. */
 static void rule_required(const report* r) {
     size_t i;
@@ -602,6 +850,13 @@ static void rule_refused(const report* r) {
         char        name[CF_KEY_MAX];
         key_name(k, name, sizeof name);
         for (j = 0; j < k->nc; ++j) {
+            /* A rejection under policy is CFD016's: the value may be
+               perfectly valid, it came from somewhere it may not. Two
+               findings for one problem is how the first one stops
+               being read. */
+            if (k->c[j].reason != NULL && strncmp(k->c[j].reason, "policy:", 7) == 0) {
+                continue;
+            }
             if (k->c[j].outcome != NULL && strcmp(k->c[j].outcome, "rejected") == 0) {
                 finding("CFD006", "error", name, "%s refused %s: %s", k->c[j].source,
                         shown(&k->c[j]),
@@ -858,10 +1113,13 @@ static int cmd_explain(const report* r, const char* key) {
 }
 
 static void cmd_lint(const report* r) {
+    rule_unreachable(r);
     rule_dead_source(r);
     rule_required(r);
     rule_refused(r);
     rule_policy(r);
+    rule_sensitive_source(r);
+    rule_inversion(r);
     rule_undefined(r);
     rule_deprecated(r);
     rule_empty(r);

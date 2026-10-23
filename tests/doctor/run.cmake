@@ -33,6 +33,34 @@ if(cmd STREQUAL "lint" AND argv MATCHES "leak")
   if(NOT out MATCHES "db.password")
     message(FATAL_ERROR "the policy finding does not name the key")
   endif()
+  # And only once. The same rejected candidate used to be CFD006 (a
+  # contract violation it was not) and CFD010 (a source that lost, when
+  # it was refused) as well: three errors for one problem, which is how
+  # the one that matters stops being read.
+  foreach(rule CFD006 CFD010)
+    if(out MATCHES "${rule}")
+      message(FATAL_ERROR "one leaked secret was also reported as ${rule}")
+    endif()
+  endforeach()
+endif()
+
+if(cmd STREQUAL "lint" AND argv MATCHES "twice")
+  # The earlier of two lines in one file can never win.
+  if(NOT out MATCHES "CFD001[^\n]*server.port[^\n]*cf_fx_twice.ini:2")
+    message(FATAL_ERROR "the unreachable line was not reported, or not named")
+  endif()
+  if(out MATCHES "CFD001[^\n]*server.host")
+    message(FATAL_ERROR "a key set once was reported as unreachable")
+  endif()
+endif()
+
+if(cmd STREQUAL "lint" AND argv MATCHES "sources")
+  if(NOT out MATCHES "CFD007[^\n]*api.token")
+    message(FATAL_ERROR "a secret on the command line was not reported")
+  endif()
+  if(NOT out MATCHES "CFD013[^\n]*server.port[^\n]*env above cli")
+    message(FATAL_ERROR "the policy that inverts precedence was not reported")
+  endif()
 endif()
 
 if(cmd STREQUAL "lint" AND argv MATCHES "rules")

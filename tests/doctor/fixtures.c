@@ -150,9 +150,63 @@ int main(void) {
             return 1;
         }
     }
-    /* A file whose every key is overridden: the case CFD001 exists for. */
+    /* A file whose every key is overridden: the case CFD010 exists for. */
     if (emit("cf_fx_dead.json", "staging", 3, dargv, senv, "cf_fx_dead.ini")) {
         return 1;
+    }
+
+    /* A key set twice in one file. The second line wins wherever this
+       file is read, so the first is unreachable - CFD001. The host is
+       set once, and must not be reported. */
+    if (!spill("cf_fx_twice.ini",
+               "[server]\nport = 3000\nhost = 10.0.0.1\nport = 4000\n")) {
+        return 1;
+    }
+    if (emit("cf_fx_twice.json", "staging", 1, noargs, senv, "cf_fx_twice.ini")) {
+        return 1;
+    }
+
+    /* What the sources themselves say: a secret on the command line
+       with no policy to refuse it (CFD007), and a policy that ranks the
+       environment above the command line (CFD013). */
+    {
+        static const char* const env_first[] = {"env", "cli", NULL};
+        static char              xa1[]       = "--api.token=typed-into-a-terminal";
+        static char              xa2[]       = "--server.port=7000";
+        static char*             xargv[]     = {a0, xa1, xa2, NULL};
+        static char              xe0[]       = "MYAPP_SERVER__PORT=9090";
+        static char*             xenv[]      = {xe0, NULL};
+        cf_error                 err         = CF_ERROR_INIT;
+        cf_builder*              b           = cf_build(NULL);
+        cf_config*               c;
+        cf_report_info           info;
+        static char              buf[65536];
+        cf_def                   d;
+
+        cf_builder_cli(b, "cli", CF_RANK_CLI, 3, xargv);
+        cf_builder_env(b, "env", CF_RANK_ENV, "MYAPP_", xenv);
+        cf_def_init(&d, CF_TYPE_TEXT, "api.token");
+        d.flags = CF_SENSITIVE;
+        cf_builder_define(b, &d);
+        cf_def_init(&d, CF_TYPE_INT, "server.port");
+        d.policy = env_first;
+        cf_builder_define(b, &d);
+
+        c = cf_builder_create(b, &err);
+        if (c == NULL) {
+            fprintf(stderr, "fixtures: sources: %s\n", err.message);
+            return 1;
+        }
+        memset(&info, 0, sizeof info);
+        info.mode        = CF_REPORT_BLIND;
+        info.profile     = "staging";
+        info.application = "myapp";
+        info.generated   = "2026-09-12T00:00:00Z";
+        cf_report(c, &info, buf, sizeof buf);
+        cf_config_free(c);
+        if (!spill("cf_fx_sources.json", buf)) {
+            return 1;
+        }
     }
     return 0;
 }

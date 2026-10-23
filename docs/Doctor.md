@@ -180,33 +180,50 @@ Each rule has a stable identifier so it can be suppressed individually. Rules ma
 
 | ID | Rule | Default severity | Blind-safe |
 | -- | ---- | ---------------- | ---------- |
-| CFD001 | **Unreachable value.** A key is set in a source that can never win for it. | error | yes |
+| CFD001 | **Unreachable value.** A key is set where it can never win: the same source sets it again later in the same file or command line, and within one source the later occurrence wins. | error | yes |
 | CFD002 | **Origin drift.** Same value in both environments, different source kind. | warning | yes |
 | CFD003 | **Shadow divergence.** Overridden in one environment, not the other. | warning | yes |
 | CFD004 | **Missing required.** Required key resolves to nothing. | error | yes |
 | CFD005 | **Undefined key present.** A source key matches no definition; nearest match suggested. | warning | yes |
 | CFD006 | **Contract violation.** Value fails type or range. | error | no |
-| CFD007 | **Sensitive value from an unsafe source.** Key marked sensitive is supplied by a committed or world-readable file. | error | yes |
-| CFD008 | **Default-only in production.** Key resolves to its built-in default with no source supplying it. | warning | yes |
+| CFD007 | **Sensitive value from an unsafe source.** Key marked sensitive is supplied on the command line, readable by every user of the machine. A committed or world-readable file is the other half, and needs permissions the report does not carry yet. | error | yes |
+| CFD008 | **Default-only in production.** Key resolves to its built-in default with no source supplying it. Information rather than a warning: benign in development, worth knowing in production. | info | yes |
 | CFD009 | **Deprecated key still set.** | warning | yes |
-| CFD010 | **Dead source.** A configured source wins for no key at all. | info | yes |
+| CFD010 | **Dead source.** A configured source wins for no key at all; everything it sets lost to precedence. | error | yes |
 | CFD011 | **Present but empty.** Distinguishes empty from absent. | warning | yes |
 | CFD012 | **Parity gap.** Key present in one environment's contract and absent in the other's. | warning | yes |
 | CFD013 | **Precedence inversion.** Policy places a less specific source above a more specific one for a parameter. | info | yes |
 | CFD014 | **Digest change on a sensitive key** without a corresponding change entry. | info | yes |
 | CFD015 | **Array truncation hazard.** A lower-precedence source supplies more elements than the winning `<key>.count`; the extras were discarded. | warning | yes |
+| CFD016 | **Policy violation.** A source outside the key's per-parameter policy supplied it. The library rejected the candidate (D-33); this is where that becomes loud. | error | yes |
+
+**What one report can prove.** The first draft of CFD001 read "a key set in a source
+that can never win", and the natural implementation — every shadowed candidate — is
+wrong twice over. A file shadowed by an environment variable here may win in the next
+environment, where the variable is unset, so one report cannot prove "never"; and a
+finding per shadowed key buries the real one under precedence working as designed. Two
+rules came out of it instead. CFD001 is the case that *is* provable: the same origin
+sets the key twice, the later line wins wherever the file is read, and editing the
+earlier one has no effect. CFD010 is the aggregate: a source that wins nothing at all.
+
+**One problem, one finding.** A rejected candidate is reported by the rule that owns the
+rejection — CFD006 for a contract, CFD016 for policy, CFD015 for truncation — and by no
+other. A secret on the command line used to be three errors at once (CFD006, CFD010 and
+CFD016), and a report that says one thing three times teaches its reader to skim.
+
+Not implemented yet: CFD012 against a contract rather than a key list, and CFD007 for
+files, both for want of information the report does not record.
 
 CFD001, CFD002 and CFD003 are the rules that justify the tool. The rest come almost
 free once the report exists, and they are what make it worth running every build.
 
-Example output:
+Example output, as the tool prints it:
 
 ```text
-CFD001  error   server.port
-        set in:      app.toml (line 14) = 3000
-        always lost to: MYAPP_SERVER_PORT (environment)
-        effective:   8080
-        editing app.toml has no effect on this parameter
+CFD001  error   server.port   app.ini:2:1 always loses to app.ini:9:1, set later by
+                              the same source; editing it has no effect
+CFD010  error   user-file     supplies 2 value(s) and wins none; everything it sets is
+                              shadowed, e.g. staging.ini:3:1
 
 CFD002  warning database.pool_size
         production: 32  from environment
@@ -222,9 +239,14 @@ The most common way a lint tool dies is producing two hundred findings on first 
 an existing repository. Three mechanisms prevent that, and all three are required from
 the first release rather than added after the first complaint.
 
-**Baseline.** `doctor lint --baseline .configforge-baseline.json` records existing
-findings as accepted. Only new findings fail the build. A baseline entry carries a
-reason field and the tool reports entries that no longer match anything.
+**Baseline.** `doctor lint <report> --baseline .configforge-baseline` records existing
+findings as accepted. Only new findings fail the build, and the tool reports entries
+that no longer match anything without failing on them.
+
+As built, the file is one finding per line — `CFD001 server.port`, with `#` comments —
+rather than the JSON with a reason field this section first described. It is read in
+code review, and a line somebody can delete by hand is a baseline somebody will
+actually shrink; the reason goes in the comment above the line.
 
 **Configurable severity.** Every rule's severity is overridable per project.
 
