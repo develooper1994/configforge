@@ -7,6 +7,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **An API reference that cannot fall behind** (`docs/API.md`): every one
+  of the 241 public functions with the comment written above it, under
+  its header's section banners, generated from the headers by
+  `scripts/apiref.cmake`. `gate.apiref` regenerates it and fails when it
+  differs from the committed file, so documenting a function means
+  writing its header comment, and nothing else can disagree with it. No
+  Doxygen: the comments are prose and stay prose.
 - **Coverage-guided fuzzing** (`fuzz` preset, `CF_FUZZ`, `EXTRA=fuzz`, a
   CI job a minute per reader): libFuzzer harnesses for JSON, INI, TOML,
   `.env`, the image, Report Replay and the command line, under the
