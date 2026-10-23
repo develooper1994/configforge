@@ -28,7 +28,7 @@ If a change makes a value harder to explain, it is the wrong change.
 | `tools/doctor` | the Doctor CLI and its adapters | `docs/Doctor.md` |
 | `tests/unit` | one C program per area; also the best usage examples | |
 | `tests/doctor` | Doctor's fixtures and CLI tests | |
-| `examples/` | programs the README quotes, run by the suite | |
+| `examples/` | programs the README and `docs/Guide.md` quote, run by the suite and checked for their output (`expect.cmake`) | `docs/Guide.md` |
 | `cmake/`, `cmake/gates/` | build modules, and the gates that enforce the design | `docs/Architecture.md` |
 | `scripts/` | verify, format, stack, apiref, amalgamate | `scripts/README.md` |
 | `conanfile.py`, `packaging/` | the Conan recipe and its test package; the vcpkg overlay port | README.md, "From a package manager" |

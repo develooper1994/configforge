@@ -1,0 +1,8 @@
+# Shipped with the program: the vendor's idea of a good start.
+[server]
+host = "0.0.0.0"
+port = 8000
+workers = 4
+
+[db]
+url = "postgres://localhost/app"

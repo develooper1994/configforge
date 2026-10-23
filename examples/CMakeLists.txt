@@ -64,3 +64,71 @@ add_test(NAME example.tier1.typo COMMAND tier1 --server.pot=1)
 add_test(NAME example.tier1.enum COMMAND tier1 --log.level=verbose)
 set_tests_properties(example.tier1.range example.tier1.typo example.tier1.enum
                      PROPERTIES WILL_FAIL TRUE)
+
+# The examples docs/Guide.md walks through. Each is built in every build,
+# so it compiles against any set of options, and run where the parts it
+# uses are compiled in - checked for a clean exit and for the lines that
+# show it did what its comment says (expect.cmake).
+foreach(ex layers reload embedded schema)
+  add_executable(${ex} ${ex}.c)
+  target_link_libraries(${ex} PRIVATE configforge)
+  set_target_properties(
+    ${ex}
+    PROPERTIES C_STANDARD 90
+               C_STANDARD_REQUIRED ON
+               C_EXTENSIONS OFF)
+  configforge_apply_warnings(${ex})
+  configforge_apply_analysis(${ex})
+endforeach()
+
+# Register a run of one example.
+#
+# ~~~
+# example_expect(<name> <working-dir> <regex>...)
+# ~~~
+function(example_expect name dir)
+  string(REPLACE ";" "|||" wanted "${ARGN}")
+  add_test(
+    NAME example.${name}
+    COMMAND ${CMAKE_COMMAND} -DEXE=$<TARGET_FILE:${name}> -DDIR=${dir}
+            "-DEXPECT=${wanted}" -P ${CMAKE_CURRENT_SOURCE_DIR}/expect.cmake)
+endfunction()
+
+if(CF_WITH_TOML
+   AND CF_WITH_INI
+   AND CF_WITH_DIR
+   AND CF_WITH_DOTENV)
+  # Read-only: it reads the files that ship beside it.
+  example_expect(
+    layers
+    ${CMAKE_CURRENT_SOURCE_DIR}/layers
+    "server.host = \"0.0.0.0\""
+    "server.port = 9443"
+    "server.workers = 12"
+    "conf.d +12 +selected +conf.d/90-local.ini"
+    "db.url = <sensitive"
+    "log.level = \"warn\""
+    "cache.size = 64")
+endif()
+if(CF_WITH_TOML)
+  example_expect(
+    reload
+    ${CMAKE_CURRENT_BINARY_DIR}/reload-run
+    "server.port: 8080 -> 9443"
+    "db.password: changed, <sensitive>"
+    "now on port 9443")
+endif()
+if(CF_WITH_IMAGE)
+  example_expect(
+    embedded ${CMAKE_CURRENT_BINARY_DIR}/embedded-run
+    "channel 11, power 14 dBm, period 1000 ms"
+    "firmware +11 +selected +release.ini:2:")
+endif()
+if(CF_WITH_REPORT AND CF_WITH_JSON)
+  example_expect(
+    schema
+    ${CMAKE_CURRENT_BINARY_DIR}/schema-run
+    "\"maximum\": 65535"
+    "\"enum\": .\"debug\""
+    "\"writeOnly\": true")
+endif()
