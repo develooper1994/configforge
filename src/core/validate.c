@@ -72,6 +72,66 @@ static const char* validate_value(const cf_def* d, const cf_value* v, char* reas
 }
 
 /* ------------------------------------------------------------------ *
+ * The reserved syntax (D-10)
+ *
+ * ${...} will one day refer to another value. Until it does, a value
+ * containing it is refused rather than taken literally: taken literally,
+ * cache.dir = ${HOME}/cache creates a directory called "${HOME}", and
+ * the day references arrive every such configuration would change
+ * meaning without a word. Refusing it now is what makes adding them
+ * later an addition rather than a break.
+ *
+ * $${ is the escape, and means a literal ${. It is unescaped here, once,
+ * so the value a program reads - and the one a report records - is what
+ * was meant.
+ * ------------------------------------------------------------------ */
+
+static const char* reserved_syntax(cf_arena* ar, cf_candidate* c, char* reason,
+                                   size_t rcap) {
+    const char* p;
+    size_t      n, i, escapes = 0;
+
+    if ((c->flags & CF_CAND_AUTHORED) == 0 || c->value.type != CF_TYPE_TEXT) {
+        return NULL;
+    }
+    c->flags &= ~(unsigned)CF_CAND_AUTHORED; /* checked once */
+    p = c->value.u.t.p;
+    n = c->value.u.t.n;
+    for (i = 0; i + 1 < n; ++i) {
+        if (p[i] != '$') {
+            continue;
+        }
+        if (p[i + 1] == '$' && i + 2 < n && p[i + 2] == '{') {
+            ++escapes;
+            i += 2; /* "$${" is the escape; its "{" opens nothing */
+        } else if (p[i + 1] == '{') {
+            cf_fmt(reason, rcap,
+                   "'${' is reserved for references to other values, which are not "
+                   "supported yet; write '$${' for a literal '${'");
+            return reason;
+        }
+    }
+    if (escapes > 0) {
+        char*  out = (char*)cf_arena_alloc(ar, n - escapes + 1);
+        size_t j   = 0;
+        if (out == NULL) {
+            cf_fmt(reason, rcap, "no room to unescape '$${'");
+            return reason;
+        }
+        for (i = 0; i < n; ++i) {
+            if (p[i] == '$' && i + 2 < n && p[i + 1] == '$' && p[i + 2] == '{') {
+                ++i; /* drop one '$' of the pair */
+            }
+            out[j++] = p[i];
+        }
+        out[j]         = '\0';
+        c->value.u.t.p = out;
+        c->value.u.t.n = j;
+    }
+    return NULL;
+}
+
+/* ------------------------------------------------------------------ *
  * Applying the whole contract
  * ------------------------------------------------------------------ */
 
@@ -87,7 +147,8 @@ static cf_bool apply_entry(cf_keyspace* ks, const cf_def* d, cf_entry* e,
             continue;
         }
 
-        if ((c->flags & CF_CAND_TEXTUAL) != 0) {
+        why = reserved_syntax(ks->arena, c, reason, sizeof reason);
+        if (why == NULL && (c->flags & CF_CAND_TEXTUAL) != 0) {
             cf_value converted;
             if (!cf_value_from_text(d->type, c->value.u.t.p, c->value.u.t.n,
                                     &converted)) {
@@ -101,7 +162,7 @@ static cf_bool apply_entry(cf_keyspace* ks, const cf_def* d, cf_entry* e,
                 c->flags &= ~(unsigned)CF_CAND_TEXTUAL;
                 ++rep->converted;
             }
-        } else if (c->value.type != d->type) {
+        } else if (why == NULL && c->value.type != d->type) {
             /* A typed source said something different from the
                declaration. Coercing here would undo the only reason to
                have a typed source at all. */
@@ -268,6 +329,16 @@ cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names*
                win over a guess. */
             for (c = e->chain; c != NULL; c = c->next) {
                 cf_value v;
+                char     why[CF_MESSAGE_MAX];
+                /* No definition, so no fallback to ask for: the
+                   reserved syntax fails construction, as any invalid
+                   value does by default (D-05). */
+                if (cf_outcome_can_win(c->outcome) &&
+                    reserved_syntax(cf_ks_arena(ks), c, why, sizeof why) != NULL) {
+                    return cf_error_set(err, CF_E_VALIDATE, e->key,
+                                        (c->at != NULL) ? c->at : "", "%s: %s", e->key,
+                                        why);
+                }
                 if ((c->flags & CF_CAND_TEXTUAL) == 0) {
                     continue;
                 }
