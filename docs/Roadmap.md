@@ -15,8 +15,10 @@ Things that are wrong or unproven today, most serious first.
 1. **The kqueue path has run only against libkqueue**, which reports
    more than a real kqueue for in-place edits and less for new
    directories. *Done:* the macOS CI job green.
-2. **Nothing measures test coverage**, so nobody knows which lines no
-   test reaches. *Done:* a coverage build, and a gate on the core.
+2. **Branch coverage is 75%** where line coverage is 85% (functions
+   93%): error paths are reached less than the paths through them.
+   `EXTRA=coverage` holds lines at 84% now; *done* is a branch floor
+   too, and the line floor raised as the gap closes.
 3. **The fuzzer is deterministic mutation only.** Good for regression,
    weak at finding new paths. *Done:* libFuzzer harnesses for every
    reader of untrusted bytes - JSON, INI, TOML, `.env`, image, report -
@@ -29,8 +31,9 @@ Things that are wrong or unproven today, most serious first.
    dependency. libyaml's events map onto `cf_doc_sink` one to one; the
    work is anchors and tags, which should be refused with a message as
    TOML's dates are.
-5. **Packaging**: a pkg-config file, a vcpkg port and a Conan recipe,
-   each installed and consumed by a test project in CI.
+5. **Packaging**: a vcpkg port and a Conan recipe, each installed and
+   consumed by a test project in CI. (pkg-config is done; the install
+   gate consumes it.)
 6. **API reference** generated from the header comments.
 7. **1.0**, once 1-3 are done: a symbol list, an ABI check in CI
    (abidiff), and semantic versioning from then on. Before 1.0 is when
@@ -40,20 +43,16 @@ Things that are wrong or unproven today, most serious first.
 
 Worth building, in the order they serve the library's purpose.
 
-* **`cf_diff(old, new)`** - what changed between two snapshots, *with
-  provenance*: `server.port: 8080 (default) -> 9090 (env
-  MYAPP_SERVER__PORT)`. The watcher and `cf_derive` already make
-  reloads; this makes them explain themselves.
-* **JSON Schema from the definitions** (Design.md, section 41). Editors
-  then validate and complete `settings.json` as it is written, so the
-  contract reaches the person before the program runs.
 * **Machine-readable `explain()`** for an administration endpoint, the
-  way Spring's `/actuator/env` works.
-* **Wiping sensitive values** when a configuration is released.
-* **A ThreadSanitizer preset**, so the threading contract (D-14) is
-  checked under real concurrency rather than reasoned about.
-* **Doctor as a GitHub Action**, with SARIF upload, so adopting it is
-  four lines of YAML.
+  way Spring's `/actuator/env` works. Half there: the provenance report
+  is that data, and Doctor.md 7a's jq recipes select one key from it;
+  what is missing is one key's chain without writing the whole report.
+* **JSON Schema import** - definitions *from* a schema - the other
+  direction of Design.md section 41, with unsupported keywords refused
+  by name.
+* **Limits in the report and the image header**, so a reader built with
+  shorter keys than the writer says so by name rather than as a key it
+  cannot add.
 * **More Doctor adapters**: .NET's `GetDebugView()`, Spring's
   `/actuator/env` (Doctor.md, section 12).
 * **Doctor `--only-changed`** and **CFD012 against the contract** rather

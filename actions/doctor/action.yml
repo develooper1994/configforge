@@ -1,0 +1,80 @@
+# ConfigForge Doctor as a GitHub Action.
+#
+#   - uses: develooper1994/configforge/actions/doctor@main
+#     with:
+#       report: build/provenance.json
+#   - uses: github/codeql-action/upload-sarif@v3
+#     if: always()
+#     with:
+#       sarif_file: configforge-doctor.sarif
+#
+# Builds Doctor from this repository's sources - nothing is downloaded but
+# what the checkout already fetched - lints the report, prints the
+# findings and writes them as SARIF, which upload-sarif turns into
+# annotations on the pull request. docs/Doctor.md has the rules.
+#
+# The inputs reach the shell through the environment, never by being
+# pasted into the script: a report path that came from a pull request is
+# text somebody else wrote.
+name: ConfigForge Doctor
+description: Find configuration mistakes in a ConfigForge provenance report
+branding:
+  icon: check-circle
+  color: green
+
+inputs:
+  report:
+    description: The provenance report to lint
+    required: true
+  baseline:
+    description: Findings already accepted, one per line ("CFD001 server.port")
+    required: false
+    default: ""
+  severity:
+    description: This project's severities ("CFD010 warning")
+    required: false
+    default: ""
+  fail-on:
+    description: The level that fails the step - error, warning, info or never
+    required: false
+    default: error
+  sarif:
+    description: Where to write the SARIF file
+    required: false
+    default: configforge-doctor.sarif
+
+outputs:
+  sarif:
+    description: The SARIF file written
+    value: ${{ inputs.sarif }}
+
+runs:
+  using: composite
+  steps:
+    - name: Build Doctor
+      shell: bash
+      env:
+        CF_SRC: ${{ github.action_path }}/../..
+        CF_BUILD: ${{ runner.temp }}/cf-doctor
+      run: |
+        cmake -S "$CF_SRC" -B "$CF_BUILD" -DCMAKE_BUILD_TYPE=Release \
+          -DCF_BUILD_TESTING=OFF -DCF_BUILD_EXAMPLES=OFF -DCF_ENABLE_GATES=OFF
+        cmake --build "$CF_BUILD" --target doctor --config Release --parallel
+    - name: Lint the report
+      shell: bash
+      env:
+        CF_BUILD: ${{ runner.temp }}/cf-doctor
+        CF_REPORT: ${{ inputs.report }}
+        CF_BASELINE: ${{ inputs.baseline }}
+        CF_SEVERITY: ${{ inputs.severity }}
+        CF_FAIL_ON: ${{ inputs.fail-on }}
+        CF_SARIF: ${{ inputs.sarif }}
+      run: |
+        doctor="$(find "$CF_BUILD" -type f \( -name doctor -o -name doctor.exe \) | head -n 1)"
+        args=(lint "$CF_REPORT")
+        if [ -n "$CF_BASELINE" ]; then args+=(--baseline "$CF_BASELINE"); fi
+        if [ -n "$CF_SEVERITY" ]; then args+=(--severity "$CF_SEVERITY"); fi
+        # SARIF whatever it holds - unusable input still fails here, with
+        # exit code 2 - and then the text, whose exit code is the verdict.
+        "$doctor" "${args[@]}" --format sarif --fail-on never > "$CF_SARIF"
+        "$doctor" "${args[@]}" --fail-on "$CF_FAIL_ON"

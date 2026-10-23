@@ -7,6 +7,27 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **Coverage, measured and held** (`coverage` preset, `EXTRA=coverage`
+  in `verify.cmake`, a CI job): 85.4% of the library's lines, 93.3% of
+  its functions and 74.8% of its branches are reached by the suite.
+  The step fails below `COVERAGE_MIN`, 84% of lines - a ratchet, to be
+  raised as tests are added, not a target to reach once.
+- **pkg-config**: an installed, relocatable `configforge.pc` - the prefix
+  is found from where the file is, so an install moved with `--prefix`
+  still describes itself - for builds that are not CMake. The install
+  gate now also builds a consumer from what `pkg-config` says, and from
+  nothing else.
+- **A thread-sanitiser preset** (`tsan`, `CF_SANITIZE_THREAD`; `EXTRA=tsan`
+  in `verify.cmake`, a CI job): the threading contract (D-14) under a race
+  detector rather than reasoned about. The whole suite passes, `test_threads`
+  included. On Linux 6.x the runtime cannot place its shadow memory when
+  mmap is randomised with 32 bits, and every test dies before its first
+  line; the step runs with randomisation off, as the CI job does.
+- **Doctor as a GitHub Action** (`actions/doctor`): builds Doctor from the
+  checkout, lints a report, prints the findings and writes SARIF for
+  `upload-sarif`. Inputs reach the shell through the environment, never
+  pasted into the script, because a path from a pull request is text
+  somebody else wrote. A CI job uses it on a fixture report.
 - **The contract as a JSON Schema** (`cf_schema`, `cf_schema_write`;
   C++: `Config::schema`), Design.md section 41: a configuration file
   that names it gets completion, inline documentation and validation in

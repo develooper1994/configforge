@@ -112,4 +112,48 @@ if(NOT rc EQUAL 0)
   message(FATAL_ERROR "the installed headers and library disagree at run time")
 endif()
 
+# The path for a build that is not CMake: pkg-config, from the installed
+# .pc file and nothing else. Skipped where there is no pkg-config.
+find_program(PKG_CONFIG_EXE pkg-config)
+if(PKG_CONFIG_EXE)
+  file(GLOB_RECURSE pcs "${prefix}/*/configforge.pc")
+  if(NOT pcs)
+    message(FATAL_ERROR "no configforge.pc was installed")
+  endif()
+  list(GET pcs 0 pc)
+  get_filename_component(pcdir "${pc}" DIRECTORY)
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E env PKG_CONFIG_PATH=${pcdir} ${PKG_CONFIG_EXE}
+            --cflags --libs configforge
+    RESULT_VARIABLE rc
+    OUTPUT_VARIABLE flags
+    ERROR_VARIABLE err
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(NOT rc EQUAL 0)
+    message("${err}")
+    message(FATAL_ERROR "pkg-config does not understand configforge.pc")
+  endif()
+  separate_arguments(flags UNIX_COMMAND "${flags}")
+  execute_process(
+    COMMAND ${CC} -std=c89 -pedantic -Werror -o "${work}/consumer_pc"
+            "${SRC}/tests/consumer/consumer.c" ${flags}
+    RESULT_VARIABLE rc
+    OUTPUT_VARIABLE out
+    ERROR_VARIABLE out)
+  if(NOT rc EQUAL 0)
+    message("${out}")
+    message(FATAL_ERROR "a consumer cannot build from what pkg-config says")
+  endif()
+  execute_process(
+    COMMAND "${work}/consumer_pc"
+    RESULT_VARIABLE rc
+    OUTPUT_VARIABLE out
+    ERROR_VARIABLE out)
+  if(NOT rc EQUAL 0)
+    message("${out}")
+    message(FATAL_ERROR "the pkg-config consumer builds but does not run")
+  endif()
+  message("install gate: pkg-config works")
+endif()
+
 message("install gate: clean")

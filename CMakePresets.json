@@ -18,6 +18,24 @@
       }
     },
     {
+      "name": "tsan",
+      "displayName": "Thread sanitizer: the threading contract under a race detector",
+      "binaryDir": "${sourceDir}/build-tsan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CF_SANITIZE_THREAD": "ON"
+      }
+    },
+    {
+      "name": "coverage",
+      "displayName": "Line coverage of the library by the suite (gcov, gcovr)",
+      "binaryDir": "${sourceDir}/build-coverage",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CF_COVERAGE": "ON"
+      }
+    },
+    {
       "name": "analyze",
       "displayName": "GCC -fanalyzer and cppcheck",
       "binaryDir": "${sourceDir}/build-analyze",
@@ -59,6 +77,8 @@
   "buildPresets": [
     { "name": "default",  "configurePreset": "default",  "configuration": "Debug" },
     { "name": "sanitize", "configurePreset": "sanitize", "configuration": "Debug" },
+    { "name": "tsan",     "configurePreset": "tsan",     "configuration": "Debug" },
+    { "name": "coverage", "configurePreset": "coverage", "configuration": "Debug" },
     { "name": "analyze",  "configurePreset": "analyze",  "configuration": "Debug" },
     { "name": "portable", "configurePreset": "portable", "configuration": "Release" },
     { "name": "minimal",  "configurePreset": "minimal",  "configuration": "MinSizeRel" }
@@ -66,6 +86,8 @@
   "testPresets": [
     { "name": "default",  "configurePreset": "default",  "configuration": "Debug", "output": { "outputOnFailure": true } },
     { "name": "sanitize", "configurePreset": "sanitize", "configuration": "Debug", "output": { "outputOnFailure": true } },
+    { "name": "tsan",     "configurePreset": "tsan",     "configuration": "Debug", "output": { "outputOnFailure": true } },
+    { "name": "coverage", "configurePreset": "coverage", "configuration": "Debug", "output": { "outputOnFailure": true } },
     { "name": "analyze",  "configurePreset": "analyze",  "configuration": "Debug", "output": { "outputOnFailure": true } },
     { "name": "portable", "configurePreset": "portable", "configuration": "Release", "output": { "outputOnFailure": true } },
     { "name": "minimal",  "configurePreset": "minimal",  "configuration": "MinSizeRel", "output": { "outputOnFailure": true } }

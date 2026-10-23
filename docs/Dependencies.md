@@ -59,7 +59,9 @@ system, no generated header, no options.
 | clang, clang++ | Apache-2.0 WITH LLVM-exception | `EXTRA=clang` in `scripts/verify.cmake`: the suite under a second compiler |
 | git | GPL-2.0-only | `scripts/verify.cmake -DSOURCE=index` and `scripts/format.cmake`, which ask it what is staged or changed |
 | Python 3 | PSF-2.0 | `scripts/amalgamate.py`, `scripts/check_formats.py` |
-| pkg-config | GPL-2.0-or-later | finding libkqueue |
+| pkg-config | GPL-2.0-or-later | finding libkqueue; the install gate's pkg-config consumer |
+| gcovr | BSD-3-Clause | `EXTRA=coverage`: line coverage from gcov's data |
+| setarch (util-linux) | GPL-2.0-or-later | `EXTRA=tsan`: running the thread-sanitised suite with address randomisation off |
 | clang-format | Apache-2.0 WITH LLVM-exception | `gate.format.c`, the `format` target |
 | clang-tidy | Apache-2.0 WITH LLVM-exception | `CF_CLANG_TIDY=ON` |
 | cmake-format, cmake-lint (cmakelang) | GPL-3.0 | `gate.format.cmake`, `gate.cmake.lint` |

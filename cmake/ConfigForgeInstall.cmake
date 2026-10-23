@@ -47,3 +47,30 @@ configure_package_config_file(
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/ConfigForgeConfig.cmake"
               "${CMAKE_CURRENT_BINARY_DIR}/ConfigForgeConfigVersion.cmake"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ConfigForge)
+
+# For a build that is not CMake: make, meson, autotools and a hand-written
+# command line all ask pkg-config. The prefix is found from where the
+# file is installed, so an install moved with --prefix still works.
+#
+# Counted rather than computed with file(RELATIVE_PATH), which needs a
+# full path and "/" is not one on Windows. A directory configured as an
+# absolute path cannot move with the prefix, so it is written as it is.
+set(CF_PC_PREFIX "\${pcfiledir}")
+string(REPLACE "/" ";" levels "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+foreach(level ${levels})
+  string(APPEND CF_PC_PREFIX "/..")
+endforeach()
+if(IS_ABSOLUTE "${CMAKE_INSTALL_LIBDIR}")
+  set(CF_PC_PREFIX "${CMAKE_INSTALL_PREFIX}")
+endif()
+foreach(dir LIBDIR INCLUDEDIR)
+  if(IS_ABSOLUTE "${CMAKE_INSTALL_${dir}}")
+    set(CF_PC_${dir} "${CMAKE_INSTALL_${dir}}")
+  else()
+    set(CF_PC_${dir} "\${prefix}/${CMAKE_INSTALL_${dir}}")
+  endif()
+endforeach()
+configure_file("${CMAKE_SOURCE_DIR}/cmake/configforge.pc.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/configforge.pc" @ONLY)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/configforge.pc"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)

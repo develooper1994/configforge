@@ -88,6 +88,43 @@ jobs:
       - run: cmake --preset sanitize && cmake --build --preset sanitize
       - run: ctest --preset sanitize
 
+  # The threading contract (D-14) under a race detector. The runner's
+  # kernel randomises mmap with more bits than the thread sanitiser's
+  # shadow layout allows, so the tests run with randomisation off.
+  tsan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake --preset tsan && cmake --build --preset tsan
+      - run: setarch "$(uname -m)" -R ctest --preset tsan
+
+  # Which lines no test reaches, and a floor under the number: a ratchet
+  # in verify.cmake (COVERAGE_MIN), raised as tests are added.
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y gcovr
+      - run: cmake -DEXTRA=coverage -DMODE=quick -DJOBS=4 -P scripts/verify.cmake
+
+  # The Doctor action, used the way a project would use it, on a report
+  # the fixtures generator writes: a finding at info level passes when
+  # the step fails on warnings, and the SARIF exists afterwards.
+  doctor-action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          cmake -S . -B build -DCF_ENABLE_GATES=OFF
+          cmake --build build --target doctor_fixtures
+          cd build/tests/doctor && ./doctor_fixtures
+      - id: doctor
+        uses: ./actions/doctor
+        with:
+          report: build/tests/doctor/cf_fx_staging.json
+          fail-on: warning
+      - run: test -s "${{ steps.doctor.outputs.sarif }}"
+
   analyze:
     runs-on: ubuntu-latest
     steps:

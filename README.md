@@ -197,6 +197,7 @@ build does. `scripts/README.md` lists the options.
 | `sanitize` | AddressSanitizer and UndefinedBehaviorSanitizer |
 | `analyze` | GCC `-fanalyzer` symbolic execution, plus cppcheck when present |
 | `portable` | every opportunistic upgrade disabled, output compared against `default`; built `-O2` |
+| `tsan` | the thread sanitiser over the whole suite (`EXTRA=tsan` in `verify.cmake`) |
 | `minimal` | every optional part off, short limits (64-byte keys) and a 1024-byte stack budget, for very small targets; built `-Os` |
 
 The last two are optimised on purpose: inlining merges frames, so a stack
@@ -275,6 +276,14 @@ kilobyte, which the `minimal` preset checks on every verify.
 A frame is one link of a call chain: a thread also needs room for
 `CF_MAX_DEPTH` levels of a decoder's recursion. GCC and Clang report
 frame sizes; MSVC does not, and there the budget is not checked.
+
+### From a build that is not CMake
+
+The install carries a relocatable `configforge.pc`:
+
+```sh
+cc app.c $(pkg-config --cflags --libs configforge)
+```
 
 ### Without a build system
 

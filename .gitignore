@@ -40,3 +40,8 @@ cf_rep*.json
 cf_blind.json
 cf_notrep.json
 cf_v99.json
+
+# Coverage output: gcov writes it beside whatever ran it.
+*.gcov
+*.gcda
+*.gcno

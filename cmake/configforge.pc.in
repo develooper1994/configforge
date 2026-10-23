@@ -1,0 +1,13 @@
+# Relocatable: the prefix is found from where this file is, so an
+# install moved with `cmake --install --prefix` still describes itself.
+prefix=@CF_PC_PREFIX@
+exec_prefix=${prefix}
+libdir=@CF_PC_LIBDIR@
+includedir=@CF_PC_INCLUDEDIR@
+
+Name: ConfigForge
+Description: Configuration for C whose every value can say why it is what it is
+URL: https://github.com/develooper1994/configforge
+Version: @PROJECT_VERSION@
+Libs: -L${libdir} -lconfigforge
+Cflags: -I${includedir}

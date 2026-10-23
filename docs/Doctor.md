@@ -329,6 +329,20 @@ rather than silently skipping rules.
             --severity .configforge-severity --format sarif > doctor.sarif
 ```
 
+On GitHub the same is an action in this repository, which builds Doctor
+from source and writes SARIF for the code-scanning upload:
+
+```yaml
+- uses: develooper1994/configforge/actions/doctor@main
+  with:
+    report: build/provenance.json
+    baseline: .configforge-baseline
+- uses: github/codeql-action/upload-sarif@v3
+  if: always()
+  with:
+    sarif_file: configforge-doctor.sarif
+```
+
 Output formats: human-readable text and SARIF 2.1.0 (`--format sarif`). SARIF matters
 more than it looks: it makes findings appear inline on a pull request in most forges
 without any per-forge integration work. A finding that knows where its value was set

@@ -86,7 +86,7 @@ function(configforge_add_gates tgt)
     COMMAND
       ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR}
       -DCC=${CMAKE_C_COMPILER} -DLIB=$<TARGET_FILE:${tgt}>
-      -DSANITIZE=${CF_SANITIZE} ${options} -P
+      -DSANITIZE=${CF_INSTRUMENTED} ${options} -P
       ${CMAKE_SOURCE_DIR}/cmake/gates/GateAmalgamation.cmake)
 
   # 5. No locale-sensitive C library function may be referenced, and
@@ -97,7 +97,7 @@ function(configforge_add_gates tgt)
       COMMAND
         ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR}
         -DCC=${CMAKE_C_COMPILER} -DWITH_CXX=${CF_WITH_CXX}
-        -DSANITIZE=${CF_SANITIZE} -DEXPECT_REAL=$<BOOL:${CF_WITH_REAL}>
+        -DSANITIZE=${CF_INSTRUMENTED} -DEXPECT_REAL=$<BOOL:${CF_WITH_REAL}>
         -DEXPECT_JSON=$<BOOL:${CF_WITH_JSON}> -P
         ${CMAKE_SOURCE_DIR}/cmake/gates/GateInstall.cmake)
 
@@ -115,7 +115,8 @@ function(configforge_add_gates tgt)
     add_test(
       NAME gate.symbols
       COMMAND
-        ${CMAKE_COMMAND} -DLIB=$<TARGET_FILE:${tgt}> -DSANITIZE=${CF_SANITIZE}
-        -P ${CMAKE_SOURCE_DIR}/cmake/gates/GateSymbols.cmake)
+        ${CMAKE_COMMAND} -DLIB=$<TARGET_FILE:${tgt}>
+        -DSANITIZE=${CF_INSTRUMENTED} -P
+        ${CMAKE_SOURCE_DIR}/cmake/gates/GateSymbols.cmake)
   endif()
 endfunction()
