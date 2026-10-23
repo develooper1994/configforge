@@ -61,6 +61,32 @@ set_tests_properties(
   unit.test_watch PROPERTIES WORKING_DIRECTORY
                              ${CMAKE_CURRENT_BINARY_DIR}/watch)
 
+# Change notification through the C++03 wrapper, built as C++98 like
+# every other wrapper consumer, in a directory of its own for the same
+# reason as the C test.
+if(CF_WITH_CXX)
+  add_executable(test_wrapper_watch test_wrapper_watch.cpp)
+  target_link_libraries(test_wrapper_watch PRIVATE configforge)
+  set_target_properties(
+    test_wrapper_watch
+    PROPERTIES CXX_STANDARD 98
+               CXX_STANDARD_REQUIRED ON
+               CXX_EXTENSIONS OFF)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    target_compile_options(test_wrapper_watch PRIVATE -pedantic -Werror -Wall
+                                                      -Wextra)
+  elseif(MSVC)
+    # The C set is GCC's C flags; MSVC's is language-neutral and applies.
+    configforge_apply_warnings(test_wrapper_watch)
+  endif()
+  configforge_apply_analysis(test_wrapper_watch)
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/watch_cxx)
+  add_test(NAME unit.test_wrapper_watch COMMAND test_wrapper_watch)
+  set_tests_properties(
+    unit.test_wrapper_watch PROPERTIES WORKING_DIRECTORY
+                                       ${CMAKE_CURRENT_BINARY_DIR}/watch_cxx)
+endif()
+
 # A non-ASCII argument, round-tripped. On Windows this is the only test
 # of the wide command-line path: ctest starts the process with the
 # argument in UTF-16, the CRT's argv holds the active code page's
