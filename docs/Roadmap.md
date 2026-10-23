@@ -19,10 +19,10 @@ Things that are wrong or unproven today, most serious first.
    93%): error paths are reached less than the paths through them.
    `EXTRA=coverage` holds lines at 84% now; *done* is a branch floor
    too, and the line floor raised as the gap closes.
-3. **The fuzzer is deterministic mutation only.** Good for regression,
-   weak at finding new paths. *Done:* libFuzzer harnesses for every
-   reader of untrusted bytes - JSON, INI, TOML, `.env`, image, report -
-   run for a bounded time in CI.
+3. **The libFuzzer corpus is not kept.** Each run starts from the
+   deterministic fuzzer's seeds, so what one run learned the next has to
+   learn again. *Done:* a corpus cached between CI runs, minimised
+   (`-merge=1`) and pruned so it does not grow without bound.
 
 ## Next
 

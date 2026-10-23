@@ -29,6 +29,8 @@
 #   tidy     clang-tidy over the library and Doctor (CF_CLANG_TIDY=ON)
 #   clang    the whole suite built with clang
 #   tsan     the whole suite under the thread sanitiser (the tsan preset)
+#   fuzz     libFuzzer on every reader for FUZZ_SECONDS each (default 10),
+#            clang only
 #   coverage line coverage of src/ by the suite, failing below COVERAGE_MIN
 #            percent (default 84: a ratchet, raised as tests are added)
 #
@@ -224,6 +226,29 @@ foreach(x ${EXTRA})
       -DCMAKE_CXX_COMPILER=${CLANGXX_EXE})
     step("clang build" ${build} build-clang ${debug})
     step("clang test" ${test} build-clang)
+  elseif(x STREQUAL "fuzz")
+    find_program(CLANG_EXE clang)
+    if(NOT CLANG_EXE OR WIN32)
+      message("fuzz                  skipped: no clang with libFuzzer")
+      continue()
+    endif()
+    if(NOT DEFINED FUZZ_SECONDS)
+      set(FUZZ_SECONDS 10)
+    endif()
+    step(
+      "fuzz configure"
+      ${CMAKE_COMMAND}
+      --preset
+      fuzz
+      -DCF_FUZZ_SECONDS=${FUZZ_SECONDS})
+    step(
+      "fuzz build"
+      ${CMAKE_COMMAND}
+      --build
+      --preset
+      fuzz
+      ${parallel})
+    step("fuzz run" ${CMAKE_CTEST_COMMAND} --preset fuzz)
   elseif(x STREQUAL "coverage")
     find_program(GCOVR_EXE gcovr)
     if(NOT GCOVR_EXE OR MSVC)
@@ -295,7 +320,8 @@ foreach(x ${EXTRA})
   else()
     message(
       FATAL_ERROR
-        "unknown EXTRA step '${x}': kqueue, tidy, clang, tsan or coverage")
+        "unknown EXTRA step '${x}': kqueue, tidy, clang, tsan, fuzz or coverage"
+    )
   endif()
 endforeach()
 
