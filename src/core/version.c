@@ -30,6 +30,9 @@ static const char* const cf_features[] = {
 #if CF_WITH_XML
     "xml",
 #endif
+#if CF_WITH_YAML
+    "yaml",
+#endif
 #if CF_WITH_SQLITE
     "sqlite",
 #endif

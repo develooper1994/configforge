@@ -29,10 +29,12 @@
 #   tidy     clang-tidy over the library and Doctor (CF_CLANG_TIDY=ON)
 #   clang    the whole suite built with clang
 #   tsan     the whole suite under the thread sanitiser (the tsan preset)
+#   yaml     the whole suite with CF_WITH_YAML, where libyaml is installed
 #   fuzz     libFuzzer on every reader for FUZZ_SECONDS each (default 10),
 #            clang only
 #   coverage line coverage of src/ by the suite, failing below COVERAGE_MIN
-#            percent (default 84: a ratchet, raised as tests are added)
+#            percent of lines (default 84) or COVERAGE_BRANCH_MIN of
+#            branches (default 74): ratchets, raised as tests are added
 #
 # WORK puts the staged copy somewhere other than build-verify/. Under
 # WSL, verifying a checkout on /mnt/c needs it: that filesystem has no
@@ -226,6 +228,26 @@ foreach(x ${EXTRA})
       -DCMAKE_CXX_COMPILER=${CLANGXX_EXE})
     step("clang build" ${build} build-clang ${debug})
     step("clang test" ${test} build-clang)
+  elseif(x STREQUAL "yaml")
+    # Named, because a -P script has no platform search path: the
+    # configure step below finds it properly; this only decides whether
+    # to try.
+    find_path(YAML_H yaml.h PATHS /usr/include /usr/local/include
+                                  /opt/homebrew/include /opt/local/include)
+    if(NOT YAML_H)
+      message("yaml                  skipped: no libyaml")
+      continue()
+    endif()
+    step(
+      "yaml configure"
+      ${CMAKE_COMMAND}
+      -S
+      .
+      -B
+      build-yaml
+      -DCF_WITH_YAML=ON)
+    step("yaml build" ${build} build-yaml ${debug})
+    step("yaml test" ${test} build-yaml)
   elseif(x STREQUAL "fuzz")
     find_program(CLANG_EXE clang)
     if(NOT CLANG_EXE OR WIN32)
@@ -258,6 +280,9 @@ foreach(x ${EXTRA})
     if(NOT DEFINED COVERAGE_MIN)
       set(COVERAGE_MIN 84)
     endif()
+    if(NOT DEFINED COVERAGE_BRANCH_MIN)
+      set(COVERAGE_BRANCH_MIN 74)
+    endif()
     step("coverage configure" ${CMAKE_COMMAND} --preset coverage)
     step(
       "coverage build"
@@ -271,7 +296,7 @@ foreach(x ${EXTRA})
     # gcovr refuses by default; they are branches, and the gate is on
     # lines.
     step(
-      "coverage >= ${COVERAGE_MIN}%"
+      "coverage >= ${COVERAGE_MIN}/${COVERAGE_BRANCH_MIN}%"
       ${GCOVR_EXE}
       -r
       .
@@ -280,6 +305,8 @@ foreach(x ${EXTRA})
       --gcov-ignore-parse-errors=negative_hits.warn_once_per_file
       --fail-under-line
       ${COVERAGE_MIN}
+      --fail-under-branch
+      ${COVERAGE_BRANCH_MIN}
       --txt-summary
       build-coverage)
   elseif(x STREQUAL "tsan")
@@ -318,10 +345,8 @@ foreach(x ${EXTRA})
       step("tsan test" ${CMAKE_CTEST_COMMAND} --preset tsan)
     endif()
   else()
-    message(
-      FATAL_ERROR
-        "unknown EXTRA step '${x}': kqueue, tidy, clang, tsan, fuzz or coverage"
-    )
+    message(FATAL_ERROR "unknown EXTRA step '${x}': kqueue, tidy, clang, "
+                        "tsan, yaml, fuzz or coverage")
   endif()
 endforeach()
 

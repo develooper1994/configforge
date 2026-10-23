@@ -70,6 +70,11 @@ foreach(dir LIBDIR INCLUDEDIR)
     set(CF_PC_${dir} "\${prefix}/${CMAKE_INSTALL_${dir}}")
   endif()
 endforeach()
+# What a static link needs besides the library: libyaml, when YAML is in.
+set(CF_PC_LIBS_PRIVATE "")
+if(CF_WITH_YAML)
+  set(CF_PC_LIBS_PRIVATE "-lyaml")
+endif()
 configure_file("${CMAKE_SOURCE_DIR}/cmake/configforge.pc.in"
                "${CMAKE_CURRENT_BINARY_DIR}/configforge.pc" @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/configforge.pc"

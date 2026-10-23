@@ -93,6 +93,15 @@ foreach(lim CF_KEY_MAX CF_MESSAGE_MAX CF_PATH_MAX CF_MAX_DEPTH)
   endif()
 endforeach()
 
+# A codec with a dependency (CF_WITH_YAML) needs its header to compile
+# and its library to link, on both sides of the comparison.
+set(DEP_INC "")
+set(DEP_LIB "")
+if(DEFINED YAML_INC AND NOT YAML_INC STREQUAL "")
+  set(DEP_INC "-I${YAML_INC}")
+  set(DEP_LIB "${YAML_LIB}")
+endif()
+
 # The two sides learn their options differently, on purpose. The library
 # side gets the generated cf_build_options.h on its include path, which
 # is exactly how an installed consumer learns them. The amalgamation has
@@ -111,9 +120,9 @@ endforeach()
 # all three have happened here, and a smoke test survives all three.
 execute_process(
   COMMAND
-    ${CC} -std=c89 ${DEFS} -I "${BIN}/amalgamation" -o
+    ${CC} -std=c89 ${DEFS} ${DEP_INC} -I "${BIN}/amalgamation" -o
     "${BIN}/amalgamation/digest_amalg" "${SRC}/tests/consumer/digest.c"
-    "${BIN}/amalgamation/configforge.c"
+    "${BIN}/amalgamation/configforge.c" ${DEP_LIB}
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE out
   ERROR_VARIABLE out)
@@ -127,6 +136,7 @@ execute_process(
   COMMAND
     ${CC} -std=c89 -I "${BIN}/generated" -I "${SRC}/include" -o
     "${BIN}/amalgamation/digest_lib" "${SRC}/tests/consumer/digest.c" "${LIB}"
+    ${DEP_LIB}
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE out
   ERROR_VARIABLE out)

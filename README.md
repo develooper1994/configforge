@@ -168,6 +168,7 @@ nothing, and `1.0` is where semantic versioning starts.
 | limits and the stack budget as build options, measured per feature (D-37) | done |
 | parts a program can leave out, each refusing by name (D-38) | done |
 | secrets kept out of diagnostics and out of freed memory | done |
+| YAML through libyaml, typed by the contract, behind `CF_WITH_YAML` (D-39) | done |
 | XML, SQLite codecs | deferred, see D-23 |
 | Windows Registry, gsettings, macOS defaults | deferred, see D-30 |
 

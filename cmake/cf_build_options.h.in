@@ -20,6 +20,7 @@
 #define CF_WITH_JSON   @CF_OPT_JSON@
 #define CF_WITH_TOML   @CF_OPT_TOML@
 #define CF_WITH_XML    @CF_OPT_XML@
+#define CF_WITH_YAML   @CF_OPT_YAML@
 #define CF_WITH_SQLITE @CF_OPT_SQLITE@
 #define CF_WITH_DIR    @CF_OPT_DIR@
 #define CF_WITH_DOTENV @CF_OPT_DOTENV@

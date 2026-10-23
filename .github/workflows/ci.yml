@@ -88,6 +88,16 @@ jobs:
       - run: cmake --preset sanitize && cmake --build --preset sanitize
       - run: ctest --preset sanitize
 
+  # YAML is off by default because it links libyaml; this is the build
+  # that has it, the whole suite included.
+  yaml:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y libyaml-dev
+      - run: cmake -S . -B build -DCF_WITH_YAML=ON && cmake --build build --parallel
+      - run: ctest --test-dir build --output-on-failure
+
   # The threading contract (D-14) under a race detector. The runner's
   # kernel randomises mmap with more bits than the thread sanitiser's
   # shadow layout allows, so the tests run with randomisation off.
@@ -104,7 +114,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # What earlier runs learned: a new cache entry each run, restored
+      # from the latest, so the corpus moves forward and never backward.
+      - uses: actions/cache@v4
+        with:
+          path: build-fuzz/tests/fuzz/corpus_*
+          key: fuzz-corpus-${{ github.run_id }}
+          restore-keys: fuzz-corpus-
       - run: cmake -DEXTRA=fuzz -DFUZZ_SECONDS=60 -DMODE=quick -DJOBS=4 -P scripts/verify.cmake
+      # Minimised before it is saved: only the inputs that still reach
+      # something no other input does, so the cache does not grow with
+      # every run.
+      - name: Minimise the corpus
+        if: success()
+        run: |
+          cd build-fuzz/tests/fuzz
+          for c in corpus_*; do
+            r="${c#corpus_}"
+            mkdir -p "min_$r"
+            ./"fuzz_$r" -merge=1 "min_$r" "$c" > /dev/null 2>&1 && rm -rf "$c" && mv "min_$r" "$c"
+          done
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
