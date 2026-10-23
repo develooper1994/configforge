@@ -393,6 +393,7 @@ static void test_cli_without_a_contract(void) {
     check(r.n == 1, "the next argument is left alone");
 }
 
+#if CF_WITH_DOTENV
 /* ---------------------------------------------------------------- */
 
 static void test_dotenv(void) {
@@ -435,6 +436,7 @@ static void test_dotenv(void) {
               "a line with no = is refused");
     }
 }
+#endif
 
 static cf_bool spill(const char* path, const char* text) {
     FILE* f = fopen(path, "wb");
@@ -557,7 +559,9 @@ int main(int argc, char** argv) {
     test_lex_cli();
     test_cli_with_a_contract();
     test_cli_without_a_contract();
+#if CF_WITH_DOTENV
     test_dotenv();
+#endif
     test_response_file();
     test_sink_refusal_is_reported();
 

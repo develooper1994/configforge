@@ -2018,17 +2018,29 @@ worth more than a full implementation that silently drops constraints.
 
 ## 42. Build-Time Feature Selection
 
-Every format beyond the built-in set is a compile-time option.
+Every format beyond the built-in set is a compile-time option, and so is every part of
+the library a program can do without (D-38).
 
 ```text
 CF_WITH_INI        ON     built in, no dependency, inside the amalgamation
-CF_WITH_JSON       ON     built in; required by the report and Report Replay
+CF_WITH_JSON       ON     built in; Report Replay and Doctor read it
 CF_WITH_TOML       ON     built in, the documented subset (D-23); no dependency
 CF_WITH_XML        OFF    vendored C parser
 CF_WITH_SQLITE     OFF    links libsqlite3
 CF_WITH_REGISTRY   OFF    Windows
+CF_WITH_REAL       ON     the floating-point value type and its exact formatter
+CF_WITH_DIR        ON     the drop-in directory source (conf.d)
+CF_WITH_DOTENV     ON     the .env source and its lexer
+CF_WITH_EMIT       ON     writing a configuration out: cf_emit and every encoder
+CF_WITH_IMAGE      ON     the binary snapshot image, writer and reader
+CF_WITH_REPORT     ON     the provenance report and Report Replay; Doctor needs it
 CF_WITH_CXX        ON     header only; costs nothing when unused
 ```
+
+A part that is compiled out keeps its functions, so a program links against any build,
+and each function fails by name: a directory source in a build without one stops the
+configuration from being built with "this build was compiled without CF_WITH_DIR" -
+the same rule as a disabled format, below, and for the same reason.
 
 ### A Disabled Format Fails Loudly
 

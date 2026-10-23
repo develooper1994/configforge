@@ -48,6 +48,24 @@
 #ifndef CF_WITH_SQLITE
 #define CF_WITH_SQLITE 0
 #endif
+/* Parts of the library a program can do without. Off, each keeps its
+   functions - a program still links - and each says which option it
+   needs instead of doing nothing quietly. */
+#ifndef CF_WITH_DIR
+#define CF_WITH_DIR 1
+#endif
+#ifndef CF_WITH_DOTENV
+#define CF_WITH_DOTENV 1
+#endif
+#ifndef CF_WITH_EMIT
+#define CF_WITH_EMIT 1
+#endif
+#ifndef CF_WITH_IMAGE
+#define CF_WITH_IMAGE 1
+#endif
+#ifndef CF_WITH_REPORT
+#define CF_WITH_REPORT 1
+#endif
 
 /* ------------------------------------------------------------------ *
  * Limits. Each one is a fixed buffer somewhere, so each one is stack:

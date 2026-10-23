@@ -172,6 +172,7 @@ static void drop_dir(const char* posix, const char* win) {
     check(system(cmd) >= 0, "removed a directory");
 }
 
+#if CF_WITH_DIR
 /* A drop-in directory edited in place. Its own modification time moves
    when a file is added or removed and not when one is rewritten, so a
    stamp of the directory alone saw nothing - and editing one file in
@@ -201,6 +202,7 @@ static void test_directory_edited_in_place(void) {
     cf_config_free(c);
     drop_dir("cf_wconf", "cf_wconf");
 }
+#endif
 
 /* Wait until nothing more arrives. A rewrite is several events, and on
    Windows a change made between a completion and the next read is
@@ -364,7 +366,9 @@ int main(void) {
     test_watch();
     test_appearance();
     test_nothing_to_watch();
+#if CF_WITH_DIR
     test_directory_edited_in_place();
+#endif
     test_wake();
     test_wake_missing_directory();
 

@@ -31,7 +31,11 @@ if(CF_WITH_CXX)
     target_compile_options(tier1_cpp PRIVATE -pedantic -Werror -Wall -Wextra)
   endif()
   configforge_apply_analysis(tier1_cpp)
-  add_test(NAME example.tier1_cpp COMMAND tier1_cpp)
+  # It writes the configuration back out, which needs the emitter. Built
+  # either way, so the example compiles against every build.
+  if(CF_WITH_EMIT)
+    add_test(NAME example.tier1_cpp COMMAND tier1_cpp)
+  endif()
 endif()
 
 add_executable(settings settings.c)
@@ -47,9 +51,11 @@ configforge_apply_analysis(settings)
 # The whole lifecycle, driven from a script so that every line of the
 # README's output is produced by the code rather than transcribed from
 # it. Run in its own directory because it writes a file.
-add_test(NAME example.settings
-         COMMAND ${CMAKE_COMMAND} -DSETTINGS=$<TARGET_FILE:settings> -P
-                 ${CMAKE_CURRENT_SOURCE_DIR}/settings_test.cmake)
+if(CF_WITH_EMIT)
+  add_test(NAME example.settings
+           COMMAND ${CMAKE_COMMAND} -DSETTINGS=$<TARGET_FILE:settings> -P
+                   ${CMAKE_CURRENT_SOURCE_DIR}/settings_test.cmake)
+endif()
 
 # The failure paths are part of the documentation too, so they are run
 # and their exit status is asserted rather than described.

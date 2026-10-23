@@ -69,28 +69,28 @@ if(SANITIZE)
   return()
 endif()
 
-# Compiling and running proves it is *a* library. This proves it is
-# *the* library: the same program, built both ways, has to produce the
-# Built here from one value per option rather than received as a
-# pre-joined list: a list of -D flags passed through a -D of its own
-# arrives quoted in a way that depends on three layers agreeing, and
-# when they did not the compiler saw CF_WITH_INI defined as something
-# containing an equals sign.
+# The options, built here from one value each rather than received as a
+# pre-joined list of flags: a list of -D flags passed through a -D of
+# its own arrives quoted in a way that depends on three layers agreeing,
+# and when they did not the compiler saw CF_WITH_INI defined as
+# something containing an equals sign. FEATURES names them, separated
+# by '|' for the same reason; O_<name> is each one's value, L_<limit>
+# each limit's. All of them: when only the formats were passed, the
+# minimal preset compared a library built at 64-byte keys and without
+# the emitter against an amalgamation built with neither difference.
 set(DEFS "")
-foreach(
-  pair
-  "INI;${O_INI}"
-  "JSON;${O_JSON}"
-  "REAL;${O_REAL}"
-  "TOML;${O_TOML}"
-  "XML;${O_XML}"
-  "SQLITE;${O_SQLITE}")
-  list(GET pair 0 name)
-  list(GET pair 1 value)
+string(REPLACE "|" ";" features "${FEATURES}")
+foreach(name ${features})
+  set(value "${O_${name}}")
   if(NOT value)
     set(value 0)
   endif()
   list(APPEND DEFS "-DCF_WITH_${name}=${value}")
+endforeach()
+foreach(lim CF_KEY_MAX CF_MESSAGE_MAX CF_PATH_MAX CF_MAX_DEPTH)
+  if(DEFINED L_${lim})
+    list(APPEND DEFS "-D${lim}=${L_${lim}}")
+  endif()
 endforeach()
 
 # The two sides learn their options differently, on purpose. The library
@@ -104,6 +104,8 @@ endforeach()
 # be compared as though the difference were a defect rather than the
 # point of having options.
 #
+# Compiling and running proves it is *a* library. This proves it is
+# *the* library: the same program, built both ways, has to produce the
 # same configuration. A source file left out of the generator's list, an
 # X-macro inlined at the wrong point, two static functions that merged -
 # all three have happened here, and a smoke test survives all three.

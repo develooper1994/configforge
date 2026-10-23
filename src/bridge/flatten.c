@@ -234,6 +234,8 @@ const cf_doc_sink* cf_flatten_sink(cf_flatten* f) {
     return (f != NULL) ? &f->sink : NULL;
 }
 
+#if CF_WITH_EMIT
+
 /* ------------------------------------------------------------------ *
  * Encoding: the key space back into events
  *
@@ -447,3 +449,21 @@ cf_bool cf_doc_emit_where(const cf_keyspace* ks, const cf_doc_sink* out,
                ? CF_TRUE
                : cf_error_set(err, CF_E_SOURCE, NULL, NULL, "sink refused the end");
 }
+
+#else /* !CF_WITH_EMIT */
+
+cf_bool cf_doc_emit(const cf_keyspace* ks, const cf_doc_sink* out, cf_error* err) {
+    return cf_doc_emit_where(ks, out, NULL, NULL, err);
+}
+
+cf_bool cf_doc_emit_where(const cf_keyspace* ks, const cf_doc_sink* out,
+                          cf_emit_pred pred, const void* ctx, cf_error* err) {
+    (void)ks;
+    (void)out;
+    (void)pred;
+    (void)ctx;
+    return cf_error_set(err, CF_E_CAPABILITY, NULL, NULL,
+                        "this build was compiled without CF_WITH_EMIT");
+}
+
+#endif /* CF_WITH_EMIT */

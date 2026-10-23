@@ -35,6 +35,8 @@ typedef struct dir_state {
     cf_bool     failed;
 } dir_state;
 
+#if CF_WITH_DIR
+
 /* Insertion sort over the names. A drop-in directory holds tens of
    files and the comparison is byte-wise, so this is both the fastest
    and the least code. Byte-wise and not strcoll: the order decides
@@ -144,6 +146,26 @@ static cf_bool dir_load(const cf_source* s, cf_keyspace* ks) {
     }
     return CF_TRUE;
 }
+
+#else /* !CF_WITH_DIR */
+
+/* Compiled without the drop-in directory source. The source still
+   exists, so a program that adds one fails when its configuration is
+   built and says why: not at link time, which would make the option a
+   breaking change, and never by reading nothing, which looks exactly
+   like an empty directory. */
+static cf_bool dir_load(const cf_source* s, cf_keyspace* ks) {
+    dir_state* st = (dir_state*)s->ext;
+
+    (void)ks;
+    st->failed = CF_TRUE;
+    return cf_error_set(&st->err, CF_E_CAPABILITY, NULL, st->path,
+                        "'%s' is a drop-in directory, and this build was compiled "
+                        "without CF_WITH_DIR",
+                        st->path);
+}
+
+#endif /* CF_WITH_DIR */
 
 static void dir_destroy(cf_source* s) {
     (void)s;

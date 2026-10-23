@@ -18,15 +18,11 @@ function(configforge_generate_sbom)
   string(TIMESTAMP CF_SBOM_CREATED "%Y-%m-%dT%H:%M:%SZ" UTC)
 
   set(opts "")
-  foreach(
-    opt
-    CF_WITH_INI
-    CF_WITH_JSON
-    CF_WITH_REAL
-    CF_WITH_TOML
-    CF_WITH_XML
-    CF_WITH_SQLITE
-    CF_WAKE_KQUEUE)
+  set(sbom_opts "")
+  foreach(f ${CF_FEATURES})
+    list(APPEND sbom_opts CF_WITH_${f})
+  endforeach()
+  foreach(opt ${sbom_opts} CF_WAKE_KQUEUE)
     if(${opt})
       string(APPEND opts "${opt}=ON ")
     else()

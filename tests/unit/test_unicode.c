@@ -108,6 +108,7 @@ static void test_file(void) {
     cf_config_free(c);
 }
 
+#if CF_WITH_DIR
 static void test_directory(void) {
     cf_error    err = CF_ERROR_INIT;
     cf_builder* b   = cf_build(NULL);
@@ -127,6 +128,7 @@ static void test_directory(void) {
     has(ex, "ayar\xc4\xb1.ini", "and the listed name came back in UTF-8");
     cf_config_free(c);
 }
+#endif
 
 int main(void) {
     if (!make_tree()) {
@@ -137,7 +139,9 @@ int main(void) {
         return 0;
     }
     test_file();
+#if CF_WITH_DIR
     test_directory();
+#endif
     drop_tree();
 
     printf("%d checks, %d failures\n", g_run, g_fail);

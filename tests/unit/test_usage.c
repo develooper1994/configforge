@@ -231,10 +231,14 @@ static void tier4(void) {
           "tier 4: and leaves the original alone");
 
     if (next != NULL) {
+#if CF_WITH_EMIT
         cf_emit(next, "ini", CF_EMIT_CONFIGURED, 0, saved, sizeof saved, &err);
         check(strstr(saved, "9443") != NULL, "tier 4: emit writes what was configured");
         check(strstr(saved, "tls") == NULL,
               "tier 4: and not the defaults nobody touched");
+#else
+        (void)saved;
+#endif
         cf_config_free(next);
     }
 

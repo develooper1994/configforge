@@ -520,6 +520,8 @@ static cf_bool json_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     return CF_TRUE;
 }
 
+#if CF_WITH_EMIT
+
 /* ================================================================== *
  * Encoding
  * ================================================================== */
@@ -715,5 +717,13 @@ const cf_codec cf_codec_json = {"json",
                                 json_decode,
                                 json_encoder,
                                 sizeof(js_enc)};
+
+#else /* !CF_WITH_EMIT: read only */
+
+const cf_codec cf_codec_json = {
+    "json",      ".json;.jsn", CF_CODEC_READ | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
+    json_decode, NULL,         0};
+
+#endif /* CF_WITH_EMIT */
 
 #endif /* CF_WITH_JSON */

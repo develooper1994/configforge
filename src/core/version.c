@@ -42,7 +42,21 @@ static const char* const cf_features[] = {
 #ifdef CF_FORCE_PORTABLE
     "portable",
 #endif
+#if CF_WITH_DIR
+    "dir",
+#endif
+#if CF_WITH_DOTENV
+    "dotenv",
+#endif
+#if CF_WITH_EMIT
+    "emit",
+#endif
+#if CF_WITH_IMAGE
     "image",
+#endif
+#if CF_WITH_REPORT
+    "report",
+#endif
     NULL};
 
 static size_t compiled_count(void) {

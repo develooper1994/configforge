@@ -31,12 +31,16 @@ static bool spill(const char* path, const char* text) {
     return true;
 }
 
+/* With a drop-in directory where the build has one: a watcher over a
+   file and a directory is the case worth testing, and one over a file
+   alone is what is left without CF_WITH_DIR. */
 static cf::Config build() {
-    return cf::Builder()
-        .file("file", CF_RANK_USER_FILE, "cf_cxx.ini")
-        .dir("conf.d", CF_RANK_SYS_FILE, "cf_cxx.d", 0, CF_FILE_OPTIONAL)
-        .defineInt("server.port", 8080, 1, 65535)
-        .create();
+    cf::Builder b;
+    b.file("file", CF_RANK_USER_FILE, "cf_cxx.ini");
+#if CF_WITH_DIR
+    b.dir("conf.d", CF_RANK_SYS_FILE, "cf_cxx.d", 0, CF_FILE_OPTIONAL);
+#endif
+    return b.defineInt("server.port", 8080, 1, 65535).create();
 }
 
 int main() {

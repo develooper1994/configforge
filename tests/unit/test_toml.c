@@ -180,6 +180,7 @@ static void test_later_wins(void) {
     }
 }
 
+#if CF_WITH_EMIT
 /* What TOML writes, TOML reads, and it is the same configuration. */
 static void test_round_trip(void) {
     cf_error    err = CF_ERROR_INIT;
@@ -219,6 +220,7 @@ static void test_round_trip(void) {
     cf_config_free(a);
     cf_config_free(b);
 }
+#endif
 
 #endif /* CF_WITH_TOML */
 
@@ -228,7 +230,9 @@ int main(void) {
     test_floats();
     test_refuses();
     test_later_wins();
+#if CF_WITH_EMIT
     test_round_trip();
+#endif
     remove("cf_toml.toml");
 #else
     printf("skipped: this build has no TOML (CF_WITH_TOML=OFF)\n");

@@ -21,6 +21,11 @@
 #define CF_WITH_TOML   @CF_OPT_TOML@
 #define CF_WITH_XML    @CF_OPT_XML@
 #define CF_WITH_SQLITE @CF_OPT_SQLITE@
+#define CF_WITH_DIR    @CF_OPT_DIR@
+#define CF_WITH_DOTENV @CF_OPT_DOTENV@
+#define CF_WITH_EMIT   @CF_OPT_EMIT@
+#define CF_WITH_IMAGE  @CF_OPT_IMAGE@
+#define CF_WITH_REPORT @CF_OPT_REPORT@
 
 /* The limits this build was compiled with; see the source tree's copy
    of this file for what each one costs. */
