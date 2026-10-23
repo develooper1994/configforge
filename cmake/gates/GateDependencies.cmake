@@ -12,6 +12,7 @@ file(
   build_files
   "${SRC}/CMakeLists.txt"
   "${SRC}/cmake/*.cmake"
+  "${SRC}/scripts/*.cmake"
   "${SRC}/src/CMakeLists.txt"
   "${SRC}/src/*/CMakeLists.txt"
   "${SRC}/tests/CMakeLists.txt"
@@ -57,8 +58,11 @@ list(REMOVE_DUPLICATES names)
 
 set(bad 0)
 foreach(n ${names})
-  # As a word, so "nm" is not found inside "named".
-  if(NOT page MATCHES "(^|[^A-Za-z0-9_-])${n}([^A-Za-z0-9_-]|$)")
+  # As a word, so "nm" is not found inside "named"; and escaped, so the
+  # "+" in clang++ is a character rather than a repetition.
+  string(REPLACE "." "\\." esc "${n}")
+  string(REPLACE "+" "\\+" esc "${esc}")
+  if(NOT page MATCHES "(^|[^A-Za-z0-9_+-])${esc}([^A-Za-z0-9_+-]|$)")
     message("VIOLATION: the build looks for '${n}' and docs/Dependencies.md "
             "does not name it")
     set(bad 1)

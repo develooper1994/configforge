@@ -1,7 +1,10 @@
 # Everything that has to be true before a commit.
 #
-#   cmake -P scripts/verify.cmake
-#   cmake -DMODE=quick -P scripts/verify.cmake
+#   cmake -P scripts/verify.cmake                     every preset
+#   cmake -DMODE=quick -P scripts/verify.cmake        the default preset only
+#   cmake -DSOURCE=index -P scripts/verify.cmake      what is staged, alone
+#   cmake -DEXTRA="kqueue;tidy;clang" -P ...          and the extra builds
+#   cmake -DJOBS=2 -P scripts/verify.cmake            at most two jobs at once
 #
 # Written in CMake rather than in a shell, because a shell script covers
 # half the platforms this library claims and the other half would need a
@@ -13,13 +16,34 @@
 # committed once: `ctest | grep passed` matched the word inside "98%
 # tests passed". A checkpoint of a broken tree is worse than none, so
 # this stops at the first failure and prints that step's output.
+#
+# SOURCE=index verifies the staged tree in a copy of its own, under
+# build-verify/, which is what a commit will contain - not the working
+# tree, which may hold the next change half written. The copy is removed
+# when everything passes and kept when something fails, so the failure
+# can be looked at where it happened.
+#
+# EXTRA steps, each skipped with a note where its tool is missing:
+#   kqueue   the macOS and BSD wait handle on Linux, through libkqueue
+#   tidy     clang-tidy over the library and Doctor (CF_CLANG_TIDY=ON)
+#   clang    the whole suite built with clang
+#
+# JOBS bounds the parallelism of every build. A full run builds five
+# presets, and unbounded parallel builds have filled a workstation's
+# memory doing it.
 
 cmake_minimum_required(VERSION 3.10)
 
-get_filename_component(ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+get_filename_component(REPO "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 
 if(NOT DEFINED MODE)
   set(MODE "full")
+endif()
+if(NOT DEFINED SOURCE)
+  set(SOURCE "tree")
+endif()
+if(NOT DEFINED EXTRA)
+  set(EXTRA "")
 endif()
 
 if(MODE STREQUAL "quick")
@@ -31,6 +55,11 @@ else()
       portable
       minimal
       analyze)
+endif()
+
+set(parallel "")
+if(DEFINED JOBS)
+  set(parallel --parallel ${JOBS})
 endif()
 
 # Run one step. Anything other than a zero exit stops the whole run and
@@ -58,9 +87,47 @@ function(step label)
   else()
     message("${padded}FAILED")
     message("${out}")
+    if(SOURCE STREQUAL "index")
+      message("the staged copy is kept at ${ROOT}")
+    endif()
     message(FATAL_ERROR "verification stopped at: ${label}")
   endif()
 endfunction()
+
+# Where the verification runs: the working tree, or a fresh copy of the
+# staged tree. git archive of `git write-tree` is exactly what a commit
+# would record, untracked and unstaged files excluded.
+if(SOURCE STREQUAL "index")
+  find_program(GIT_EXE git)
+  if(NOT GIT_EXE)
+    message(FATAL_ERROR "SOURCE=index needs git")
+  endif()
+  set(ROOT "${REPO}/build-verify/staged")
+  file(REMOVE_RECURSE "${ROOT}")
+  file(MAKE_DIRECTORY "${ROOT}")
+  execute_process(
+    COMMAND "${GIT_EXE}" write-tree
+    WORKING_DIRECTORY "${REPO}"
+    OUTPUT_VARIABLE tree
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE rc)
+  if(NOT rc EQUAL 0)
+    message(FATAL_ERROR "git write-tree failed: is this a repository?")
+  endif()
+  execute_process(
+    COMMAND "${GIT_EXE}" archive --format=tar -o "${ROOT}/../staged.tar" ${tree}
+    WORKING_DIRECTORY "${REPO}"
+    RESULT_VARIABLE rc)
+  if(NOT rc EQUAL 0)
+    message(FATAL_ERROR "git archive failed")
+  endif()
+  execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf "${ROOT}/../staged.tar"
+                  WORKING_DIRECTORY "${ROOT}")
+  file(REMOVE "${ROOT}/../staged.tar")
+  message("verifying the staged tree ${tree}")
+else()
+  set(ROOT "${REPO}")
+endif()
 
 foreach(p ${PRESETS})
   step("${p} configure" ${CMAKE_COMMAND} --preset ${p})
@@ -69,12 +136,92 @@ foreach(p ${PRESETS})
     ${CMAKE_COMMAND}
     --build
     --preset
-    ${p})
+    ${p}
+    ${parallel})
   step("${p} test" ${CMAKE_CTEST_COMMAND} --preset ${p})
 endforeach()
 
+# Build and test commands for the extra steps. Debug is named because a
+# multi-config generator, Visual Studio among them, builds nothing and
+# tests nothing without it.
+set(build ${CMAKE_COMMAND} --build)
+set(test ${CMAKE_CTEST_COMMAND} -C Debug --test-dir)
+set(debug --config Debug ${parallel})
+
+foreach(x ${EXTRA})
+  if(x STREQUAL "kqueue")
+    find_program(PKG_CONFIG_EXE pkg-config)
+    set(have 0)
+    if(PKG_CONFIG_EXE)
+      execute_process(COMMAND "${PKG_CONFIG_EXE}" --exists libkqueue
+                      RESULT_VARIABLE have_rc)
+      if(have_rc EQUAL 0)
+        set(have 1)
+      endif()
+    endif()
+    if(NOT have)
+      message("kqueue                skipped: no libkqueue")
+      continue()
+    endif()
+    step(
+      "kqueue configure"
+      ${CMAKE_COMMAND}
+      -S
+      .
+      -B
+      build-kqueue
+      -DCF_WAKE_KQUEUE=ON)
+    step("kqueue build" ${build} build-kqueue ${debug})
+    step(
+      "kqueue test"
+      ${test}
+      build-kqueue
+      -R
+      "^unit\\.")
+  elseif(x STREQUAL "tidy")
+    find_program(CLANG_TIDY_EXE clang-tidy)
+    if(NOT CLANG_TIDY_EXE)
+      message("tidy                  skipped: no clang-tidy")
+      continue()
+    endif()
+    step(
+      "tidy configure"
+      ${CMAKE_COMMAND}
+      -S
+      .
+      -B
+      build-tidy
+      -DCF_CLANG_TIDY=ON)
+    step("tidy build" ${build} build-tidy ${debug})
+  elseif(x STREQUAL "clang")
+    find_program(CLANG_EXE clang)
+    find_program(CLANGXX_EXE clang++)
+    if(NOT CLANG_EXE OR NOT CLANGXX_EXE)
+      message("clang                 skipped: no clang")
+      continue()
+    endif()
+    step(
+      "clang configure"
+      ${CMAKE_COMMAND}
+      -S
+      .
+      -B
+      build-clang
+      -DCMAKE_C_COMPILER=${CLANG_EXE}
+      -DCMAKE_CXX_COMPILER=${CLANGXX_EXE})
+    step("clang build" ${build} build-clang ${debug})
+    step("clang test" ${test} build-clang)
+  else()
+    message(FATAL_ERROR "unknown EXTRA step '${x}': kqueue, tidy or clang")
+  endif()
+endforeach()
+
+if(SOURCE STREQUAL "index")
+  file(REMOVE_RECURSE "${REPO}/build-verify")
+endif()
+
 # The formatter rewrites and the gate reports, so this only checks:
-# `cmake --build build --target format` is the fix. A verification that
-# edited the tree would hide a disagreement instead of surfacing it.
+# `cmake -P scripts/format.cmake` is the fix. A verification that edited
+# the tree would hide a disagreement instead of surfacing it.
 message("")
 message("all green")
