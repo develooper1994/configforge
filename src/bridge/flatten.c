@@ -246,7 +246,14 @@ const cf_doc_sink* cf_flatten_sink(cf_flatten* f) {
    configuration than the one written. That is the classic way a
    hand-written INI writer corrupts its own output, and ordering the
    document properly fixes it for every format at once instead of
-   making each codec buffer. */
+   making each codec buffer.
+
+   Among the containers, arrays come before tables, for the same
+   reason one level up. Every format that has arrays writes them inline
+   - JSON, TOML - so to the format an array is a leaf, and TOML cannot
+   go back to a parent once a sub-table's [header] is written: an array
+   after it would land in the sub-table. Found by a TOML round trip that
+   moved a top-level array into the last table before it. */
 
 static cf_bool all_digits(const char* p, size_t n) {
     size_t i;
@@ -319,6 +326,7 @@ static cf_bool emit_range(const cf_keyspace* ks, const cf_doc_sink* out, size_t 
                           size_t hi, size_t plen, int depth, cf_bool in_array,
                           const emit_ctx* f, cf_error* err) {
     size_t i;
+    int    pass;
 
     if (depth > CF_EMIT_MAX_DEPTH) {
         return cf_error_set(err, CF_E_KEY, NULL, NULL,
@@ -361,49 +369,51 @@ static cf_bool emit_range(const cf_keyspace* ks, const cf_doc_sink* out, size_t 
     }
 
     /* Then the containers, each a contiguous run because the keys are
-       sorted. */
-    i = lo;
-    while (i < hi) {
-        const cf_entry* e = cf_ks_at(ks, i);
-        cf_bool         leaf;
-        size_t          n = seg_len(e, plen, &leaf);
-        size_t          j;
-        cf_bool         is_array;
+       sorted: the arrays in one pass, then the tables. */
+    for (pass = 0; pass < 2; ++pass) {
+        i = lo;
+        while (i < hi) {
+            const cf_entry* e = cf_ks_at(ks, i);
+            cf_bool         leaf;
+            size_t          n = seg_len(e, plen, &leaf);
+            size_t          j;
+            cf_bool         is_array;
 
-        if (leaf) {
-            ++i;
-            continue;
-        }
-        j = i;
-        while (j < hi) {
-            const cf_entry* g = cf_ks_at(ks, j);
-            cf_bool         gleaf;
-            size_t          gn = seg_len(g, plen, &gleaf);
-            if (gleaf || gn != n || memcmp(g->key + plen, e->key + plen, n) != 0) {
-                break;
+            if (leaf) {
+                ++i;
+                continue;
             }
-            ++j;
-        }
+            j = i;
+            while (j < hi) {
+                const cf_entry* g = cf_ks_at(ks, j);
+                cf_bool         gleaf;
+                size_t          gn = seg_len(g, plen, &gleaf);
+                if (gleaf || gn != n || memcmp(g->key + plen, e->key + plen, n) != 0) {
+                    break;
+                }
+                ++j;
+            }
 
-        is_array = group_is_array(ks, e->key, plen + n);
-        if (!any_included(ks, f, i, j)) {
+            is_array = group_is_array(ks, e->key, plen + n);
+            if ((pass == 0) != (is_array != CF_FALSE) || !any_included(ks, f, i, j)) {
+                i = j;
+                continue;
+            }
+            if (!(is_array ? out->begin_array(out->ctx, e->key + plen, n)
+                           : out->begin_table(out->ctx, e->key + plen, n))) {
+                return cf_error_set(err, CF_E_SOURCE, NULL, NULL, "sink refused '%S'",
+                                    e->key + plen, n);
+            }
+            if (!emit_range(ks, out, i, j, plen + n + 1, depth + 1, is_array,
+                            is_array ? NULL : f, err)) {
+                return CF_FALSE;
+            }
+            if (!out->end(out->ctx)) {
+                return cf_error_set(err, CF_E_SOURCE, NULL, NULL,
+                                    "sink refused the end of '%S'", e->key + plen, n);
+            }
             i = j;
-            continue;
         }
-        if (!(is_array ? out->begin_array(out->ctx, e->key + plen, n)
-                       : out->begin_table(out->ctx, e->key + plen, n))) {
-            return cf_error_set(err, CF_E_SOURCE, NULL, NULL, "sink refused '%S'",
-                                e->key + plen, n);
-        }
-        if (!emit_range(ks, out, i, j, plen + n + 1, depth + 1, is_array,
-                        is_array ? NULL : f, err)) {
-            return CF_FALSE;
-        }
-        if (!out->end(out->ctx)) {
-            return cf_error_set(err, CF_E_SOURCE, NULL, NULL,
-                                "sink refused the end of '%S'", e->key + plen, n);
-        }
-        i = j;
     }
     return CF_TRUE;
 }

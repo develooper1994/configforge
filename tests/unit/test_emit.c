@@ -152,9 +152,9 @@ static void test_format_refusals(void) {
         check(0, "builds");
         return;
     }
-    check(cf_emit(c, "toml", CF_EMIT_ALL, 0, buf, sizeof buf, &err) == 0,
+    check(cf_emit(c, "xml", CF_EMIT_ALL, 0, buf, sizeof buf, &err) == 0,
           "a format this build lacks is refused");
-    has(err.message, "CF_WITH_TOML", "naming the option to turn on");
+    has(err.message, "CF_WITH_XML", "naming the option to turn on");
 
     check(cf_emit(c, "nonesuch", CF_EMIT_ALL, 0, buf, sizeof buf, &err) == 0,
           "an unknown format is refused");

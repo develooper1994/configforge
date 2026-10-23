@@ -28,7 +28,8 @@ set(CF_UNIT_TESTS
     test_watch
     test_complexity
     test_reserved
-    test_unicode)
+    test_unicode
+    test_toml)
 
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)

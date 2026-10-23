@@ -6,7 +6,7 @@
 
 option(CF_WITH_INI "INI subset codec (built in, no dependency)" ON)
 option(CF_WITH_JSON "JSON codec (built in; required by reports)" ON)
-option(CF_WITH_TOML "TOML codec" OFF)
+option(CF_WITH_TOML "TOML subset codec (built in, no dependency)" ON)
 option(CF_WITH_XML "XML codec (requires expat)" OFF)
 option(CF_WITH_SQLITE "SQLite store source (requires sqlite3)" OFF)
 set(CF_PLATFORM

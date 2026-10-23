@@ -136,6 +136,18 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   rewritten inside one clock tick at the same length. That is documented
   as a hint worth acting on rather than a guarantee; the exact answer is
   to rebuild and compare digests.
+- **TOML**, as the subset D-23 described, built in and on by default:
+  tables and arrays of tables, inline tables, dotted keys, basic and
+  literal strings with every escape, integers in four bases, floats,
+  booleans and arrays, each value with its line and column. Dates,
+  multi-line strings and inf/nan are refused with a message saying what
+  to write instead. It reads, it writes for `cf_emit`, and what it
+  writes reads back as the same configuration; it is in the fuzzer and
+  the amalgamation like the other readers.
+  The round trip found that the emitter wrote arrays after tables,
+  which TOML cannot express - an array after a sub-table's header lands
+  in the sub-table. Arrays come before tables at every level now, which
+  every format with arrays writes inline.
 - **A handle an event loop can wait on** (D-35, option 3): `cf_watcher`,
   an inotify descriptor on Linux and one event HANDLE on Windows, plus
   `cf_watcher_wait` for a program with no loop. Still no callback and no

@@ -394,9 +394,12 @@ static void test_registry(void) {
     /* A format the library knows but this build left out must be
        nameable, so the error can say which option to turn on rather
        than claiming the file is unrecognisable. */
-    check(cf_codec_by_path("app.toml") == NULL, "toml is not compiled in");
-    eq(cf_format_of_path("app.toml"), "toml", "but it is still named");
-    eq(cf_format_option("toml"), "CF_WITH_TOML", "and so is its option");
+    check(cf_codec_by_path("app.xml") == NULL, "xml is not compiled in");
+    eq(cf_format_of_path("app.xml"), "xml", "but it is still named");
+    eq(cf_format_option("xml"), "CF_WITH_XML", "and so is its option");
+#if CF_WITH_TOML
+    check(cf_codec_by_path("app.toml") != NULL, "toml is built in");
+#endif
     check(cf_format_of_path("app.zzz") == NULL, "a truly unknown extension");
 }
 

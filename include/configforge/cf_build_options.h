@@ -40,7 +40,7 @@
 #define CF_WITH_JSON 1
 #endif
 #ifndef CF_WITH_TOML
-#define CF_WITH_TOML 0
+#define CF_WITH_TOML 1
 #endif
 #ifndef CF_WITH_XML
 #define CF_WITH_XML 0

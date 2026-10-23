@@ -324,6 +324,21 @@ static const char* const g_ini = "# a comment\n"
                                  "[server.tls]\n"
                                  "enabled = true\n";
 
+/* Every construct the TOML subset reads, so a mutation lands in each
+   of them: headers, arrays of tables, inline tables, escapes, every
+   integer base. */
+static const char* const g_toml = "title = \"a\\u00e9\" # comment\n"
+                                  "[server]\n"
+                                  "port = 8_080\n"
+                                  "host = '0.0.0.0'\n"
+                                  "masks = [0x1F, 0o17, 0b1,]\n"
+                                  "tls = { on = true, r = 0.5 }\n"
+                                  "a.b.c = -1e3\n"
+                                  "[[up]]\n"
+                                  "h = \"x\"\n"
+                                  "[up.t]\n"
+                                  "k = 1\n";
+
 static const char* const g_report =
     "{\"configforge_report\": 1, \"mode\": \"full\", \"profile\": \"p\","
     "\"application\": {\"name\": \"a\", \"version\": \"1\"},"
@@ -381,6 +396,7 @@ static void fuzz_from_nothing(void) {
         }
         feed_codec("json", &v);
         feed_codec("ini", &v);
+        feed_codec("toml", &v); /* skipped in a build without it */
         feed_dotenv(&v);
         feed_argv(&v);
         feed_image(&v);
@@ -459,6 +475,7 @@ int main(int argc, char** argv) {
 
     fuzz_text("json", g_json, 0);
     fuzz_text("ini", g_ini, 1);
+    fuzz_text("toml", g_toml, 0);
     fuzz_text(NULL, g_env, -1);
     fuzz_image();
     fuzz_from_nothing();
