@@ -41,6 +41,8 @@ int LLVMFuzzerTestOneInput(const unsigned char* data, size_t size) {
     feed_replay(&v);
 #elif CF_FUZZ_TARGET == 7
     feed_argv(&v);
+#elif CF_FUZZ_TARGET == 8
+    feed_codec("yaml", &v);
 #else
 #error "CF_FUZZ_TARGET names no reader"
 #endif

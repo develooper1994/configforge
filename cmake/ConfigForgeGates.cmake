@@ -28,6 +28,10 @@ function(configforge_add_gates tgt)
   foreach(lim CF_KEY_MAX CF_MESSAGE_MAX CF_PATH_MAX CF_MAX_DEPTH)
     list(APPEND options "-DL_${lim}=${${lim}}")
   endforeach()
+  if(CF_WITH_YAML)
+    list(APPEND options "-DYAML_INC=${CF_YAML_INCLUDE_DIR}"
+         "-DYAML_LIB=${CF_YAML_LIBRARY}")
+  endif()
 
   # 1. The header version and the project version agree.
   add_test(
@@ -104,7 +108,7 @@ function(configforge_add_gates tgt)
         ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR}
         -DCC=${CMAKE_C_COMPILER} -DWITH_CXX=${CF_WITH_CXX}
         -DSANITIZE=${CF_INSTRUMENTED} -DEXPECT_REAL=$<BOOL:${CF_WITH_REAL}>
-        -DEXPECT_JSON=$<BOOL:${CF_WITH_JSON}> -P
+        -DEXPECT_JSON=$<BOOL:${CF_WITH_JSON}> -DYAML_LIB=${CF_YAML_LIBRARY} -P
         ${CMAKE_SOURCE_DIR}/cmake/gates/GateInstall.cmake)
 
     add_test(NAME gate.formats

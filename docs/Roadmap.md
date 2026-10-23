@@ -19,24 +19,18 @@ Things that are wrong or unproven today, most serious first.
    93%): error paths are reached less than the paths through them.
    `EXTRA=coverage` holds lines at 84% now; *done* is a branch floor
    too, and the line floor raised as the gap closes.
-3. **The libFuzzer corpus is not kept.** Each run starts from the
-   deterministic fuzzer's seeds, so what one run learned the next has to
-   learn again. *Done:* a corpus cached between CI runs, minimised
-   (`-merge=1`) and pruned so it does not grow without bound.
+3. **Error paths are the least tested.** Branch coverage (74.8%) trails
+   line coverage (85.4%) by ten points, and the branches not taken are
+   mostly refusals. `EXTRA=coverage` holds both, at 74% and 84%; *done*
+   is both floors raised as refusal tests are added, the branch one past
+   80%.
 
 ## Next
 
-4. **A YAML codec over libyaml**, now that a codec can come from
-   outside: behind `CF_WITH_YAML`, off by default because it brings a
-   dependency. libyaml's events map onto `cf_doc_sink` one to one; the
-   work is anchors and tags, which should be refused with a message as
-   TOML's dates are. Waiting on the development machine: it needs
-   `libyaml-dev` installed (`sudo apt install libyaml-dev`), which an
-   agent should not do on the owner's behalf.
-5. **Packaging**: a vcpkg port and a Conan recipe, each installed and
+4. **Packaging**: a vcpkg port and a Conan recipe, each installed and
    consumed by a test project in CI. (pkg-config is done; the install
    gate consumes it.)
-6. **1.0**, once 1-3 are done: a symbol list, an ABI check in CI
+5. **1.0**, once 1-3 are done: a symbol list, an ABI check in CI
    (abidiff), and semantic versioning from then on. Before 1.0 is when
    an interface mistake is cheap.
 
@@ -79,4 +73,4 @@ that needs the live configuration rather than its record.
 
 ## Decisions waiting for the owner
 
-* When to call it 1.0 (item 6).
+* When to call it 1.0 (item 5).

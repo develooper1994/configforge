@@ -92,7 +92,7 @@ execute_process(
     ${CC} -std=c89 -pedantic -Werror -I "${prefix}/include"
     -DCF_EXPECT_REAL=${EXPECT_REAL} -DCF_EXPECT_JSON=${EXPECT_JSON} -o
     "${work}/options" "${SRC}/tests/consumer/options.c"
-    "${prefix}/lib/libconfigforge.a"
+    "${prefix}/lib/libconfigforge.a" ${YAML_LIB}
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE out
   ERROR_VARIABLE out)
@@ -124,7 +124,7 @@ if(PKG_CONFIG_EXE)
   get_filename_component(pcdir "${pc}" DIRECTORY)
   execute_process(
     COMMAND ${CMAKE_COMMAND} -E env PKG_CONFIG_PATH=${pcdir} ${PKG_CONFIG_EXE}
-            --cflags --libs configforge
+            --cflags --libs --static configforge
     RESULT_VARIABLE rc
     OUTPUT_VARIABLE flags
     ERROR_VARIABLE err

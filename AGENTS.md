@@ -59,7 +59,7 @@ runs wherever the build does.
 cmake --preset default && cmake --build --preset default && ctest --preset default
 cmake -P scripts/format.cmake                       # format and lint what changed
 cmake -DSOURCE=index -DJOBS=2 -P scripts/verify.cmake   # verify exactly what is staged
-cmake -DSOURCE=index -DEXTRA="kqueue;tidy;clang;tsan;fuzz;coverage" -P scripts/verify.cmake
+cmake -DSOURCE=index -DEXTRA="kqueue;tidy;clang;tsan;yaml;fuzz;coverage" -P scripts/verify.cmake
 ```
 
 `verify.cmake` runs five presets (default, sanitize, portable, minimal,

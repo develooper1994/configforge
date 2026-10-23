@@ -45,6 +45,11 @@
 #ifndef CF_WITH_XML
 #define CF_WITH_XML 0
 #endif
+/* Off by default: it links libyaml, and a default build has no
+   third-party dependency. */
+#ifndef CF_WITH_YAML
+#define CF_WITH_YAML 0
+#endif
 #ifndef CF_WITH_SQLITE
 #define CF_WITH_SQLITE 0
 #endif

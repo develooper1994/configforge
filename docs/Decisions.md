@@ -69,6 +69,7 @@ gets reopened every six months.
 | D-36 | Licence | distribution, every user | **Decided** |
 | D-37 | Limits and the stack budget: whose trade it is | memory, embedded, every builder | **Decided** |
 | D-38 | Leaving parts out: what a missing part does | size, embedded, every builder | **Decided** |
+| D-39 | YAML: the subset, and who types a value | formats, provenance | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -1653,6 +1654,42 @@ amalgamation, and code reached through a table, as every codec's encoder is.
 `tests/unit/test_features.c` checks each part in both directions - working when it is
 on, refusing by name when it is off - and the `minimal` preset turns them all off, so
 both directions run on every verify.
+
+---
+
+## D-39 — YAML
+
+**Question.** What YAML does the library read, and how are its values typed?
+
+**What decides it.** YAML is the format most configuration is written in and the one
+whose reading most often surprises its writer. Under YAML 1.1 `country: no` is false and
+`version: 3.10` is 3.1; under 1.2 neither is, and which one a reader follows is decided by
+the library somebody picked, not by the file. Anchors and aliases let one value appear
+under two keys, which is a value with two origins. Tags let the file override the type
+the program declared.
+
+**Options.**
+
+1. **Full YAML, typed by the reader's schema.** The surprises above, inherited from
+   whichever schema libyaml's caller implements.
+2. **A subset, typed by the file** (as JSON and TOML are). Settles 1.1 against 1.2 by
+   choosing one, which the writer of the file still has to know.
+3. **A subset, typed by the contract.** A plain scalar is text until a definition types
+   it, as an INI value is; a quoted one is text and says so.
+
+**Decision: option 3**, read through libyaml (`CF_WITH_YAML`, off by default: it is the
+one codec with a dependency) and written by hand. The library already has one spelling of
+a boolean (D-24, `true` and `false` only), so `no` is the text "no" under either YAML
+version and under a definition too. Null - `~`, `null`, or nothing - is the one plain
+scalar typed by the file, because it is a value here as JSON's null is. Anchors, aliases,
+tags, a second document, a key that is not a scalar and a top level that is not a mapping
+are refused by name with what to write instead. Written YAML quotes every string, so it
+reads back the same under 1.1 and 1.2, and quotes any key a reader could take for a
+value.
+
+**What it costs.** Without a contract, Tier 0 inference applies, and a plain `3.10` is the
+number it looks like - quote what is meant as text. That is INI's behaviour, stated rather
+than inherited.
 
 ---
 

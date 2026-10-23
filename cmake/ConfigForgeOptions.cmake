@@ -11,6 +11,7 @@ option(CF_WITH_JSON "JSON codec (built in; Report Replay and Doctor read it)"
        ON)
 option(CF_WITH_TOML "TOML subset codec (built in, no dependency)" ON)
 option(CF_WITH_XML "XML codec (requires expat)" OFF)
+option(CF_WITH_YAML "YAML codec (requires libyaml)" OFF)
 option(CF_WITH_SQLITE "SQLite store source (requires sqlite3)" OFF)
 option(CF_WITH_DIR "Drop-in directory source (conf.d)" ON)
 option(CF_WITH_DOTENV ".env file source" ON)
@@ -101,6 +102,7 @@ set(CF_FEATURES
     JSON
     TOML
     XML
+    YAML
     SQLITE
     REAL
     DIR

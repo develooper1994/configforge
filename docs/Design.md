@@ -2034,6 +2034,7 @@ CF_WITH_INI        ON     built in, no dependency, inside the amalgamation
 CF_WITH_JSON       ON     built in; Report Replay and Doctor read it
 CF_WITH_TOML       ON     built in, the documented subset (D-23); no dependency
 CF_WITH_XML        OFF    vendored C parser
+CF_WITH_YAML       OFF    links libyaml; the subset and its typing are D-39
 CF_WITH_SQLITE     OFF    links libsqlite3
 CF_WITH_REGISTRY   OFF    Windows
 CF_WITH_REAL       ON     the floating-point value type and its exact formatter

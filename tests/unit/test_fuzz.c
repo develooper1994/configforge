@@ -351,6 +351,23 @@ static const char* const g_report =
     "\"value\": 9000, \"at\": \"argv[1]\"}],"
     "\"selected\": {\"source\": \"cli\", \"reason\": \"r\"}}}}";
 
+/* Every construct the YAML reader takes, and two it refuses, so that a
+   mutation reaches the refusals too. Skipped in a build without it. */
+static const char* const g_yaml = "# comment\n"
+                                  "server:\n"
+                                  "  port: 8080\n"
+                                  "  host: \"0.0.0.0\"\n"
+                                  "  tls: {on: true, cert: 'c.pem'}\n"
+                                  "  tags: [a, \"b\"]\n"
+                                  "up:\n"
+                                  "  - h: a\n"
+                                  "  - h: b\n"
+                                  "nothing: ~\n"
+                                  "motd: |\n"
+                                  "  two\n"
+                                  "base: &b 1\n"
+                                  "copy: *b\n";
+
 static const char* const g_env = "# comment\n"
                                  "export SERVER__PORT=8080\n"
                                  "SERVER__HOST=\"0.0.0.0\"\n"
@@ -397,6 +414,7 @@ static void fuzz_from_nothing(void) {
         feed_codec("json", &v);
         feed_codec("ini", &v);
         feed_codec("toml", &v); /* skipped in a build without it */
+        feed_codec("yaml", &v); /* and this one too */
         feed_dotenv(&v);
         feed_argv(&v);
         feed_image(&v);
@@ -491,6 +509,7 @@ int main(void) {
     write_seed("seed_json", g_json, strlen(g_json));
     write_seed("seed_ini", g_ini, strlen(g_ini));
     write_seed("seed_toml", g_toml, strlen(g_toml));
+    write_seed("seed_yaml", g_yaml, strlen(g_yaml));
     write_seed("seed_dotenv", g_env, strlen(g_env));
     write_seed("seed_replay", g_report, strlen(g_report));
     write_seed("seed_argv", argv_seed, sizeof argv_seed - 1);
@@ -524,6 +543,7 @@ int main(int argc, char** argv) {
     fuzz_text("json", g_json, 0);
     fuzz_text("ini", g_ini, 1);
     fuzz_text("toml", g_toml, 0);
+    fuzz_text("yaml", g_yaml, 0);
     fuzz_text(NULL, g_env, -1);
 #if CF_WITH_IMAGE
     fuzz_image();

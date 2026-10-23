@@ -31,11 +31,16 @@ saying so here is a broken build, not a stale document.
 | BSD and macOS: `kqueue` | the platform's | macOS and BSD builds | in the system C library |
 | Windows: kernel32, shell32 | the platform's | Windows builds | `CommandLineToArgvW` is shell32's; every Windows toolchain links both by default |
 
-That is the whole list. The library has no third-party dependency in any
-build a program would ship. TOML is built in like INI and JSON, with its
-own parser and no dependency. The formats the design names and the build
-does not yet have - XML and SQLite (D-23) - would each add a row here
-when they arrive.
+That is the whole list for a default build: no third-party dependency.
+TOML is built in like INI and JSON, with its own parser. One format is
+not, and has to be asked for:
+
+| Library | Licence | When | Notes |
+| ------- | ------- | ---- | ----- |
+| libyaml | MIT | `CF_WITH_YAML=ON`, off by default | reading YAML; writing it is done here, by hand. Found as `yaml.h` and a library named `yaml`, which every packager agrees on |
+
+The formats the design names and the build does not yet have - XML and
+SQLite (D-23) - would each add a row here when they arrive.
 
 The single-file amalgamation needs the same and nothing else: no build
 system, no generated header, no options.

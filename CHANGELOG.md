@@ -7,6 +7,17 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **YAML** (D-39, `CF_WITH_YAML`, off by default: the one codec with a
+  dependency). Read through libyaml's event parser, which maps onto the
+  document events one to one, and written by hand in block style. A
+  plain scalar is text until a definition types it, a quoted one is text
+  and says so, and with the library's one spelling of a boolean (D-24)
+  `country: no` is the text "no" under YAML 1.1 and 1.2 alike - the
+  problem every YAML configuration has met, answered by the contract
+  instead of by whichever schema a reader picked. Anchors, aliases,
+  tags, several documents and non-scalar keys are refused by name. A
+  `.yaml` file in a build without it names the option, as every disabled
+  format does. `test_yaml` reads, refuses and round-trips.
 - **An API reference that cannot fall behind** (`docs/API.md`): every one
   of the 241 public functions with the comment written above it, under
   its header's section banners, generated from the headers by
@@ -14,6 +25,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   differs from the committed file, so documenting a function means
   writing its header comment, and nothing else can disagree with it. No
   Doxygen: the comments are prose and stay prose.
+- **The fuzz corpus is kept**: each reader's inputs that reached new code
+  are written to `corpus_<reader>`, which the next run starts from; CI
+  caches the directories and minimises them with `-merge=1` before
+  saving, so they move forward without growing with every run.
 - **Coverage-guided fuzzing** (`fuzz` preset, `CF_FUZZ`, `EXTRA=fuzz`, a
   CI job a minute per reader): libFuzzer harnesses for JSON, INI, TOML,
   `.env`, the image, Report Replay and the command line, under the
@@ -24,8 +39,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - **Coverage, measured and held** (`coverage` preset, `EXTRA=coverage`
   in `verify.cmake`, a CI job): 85.4% of the library's lines, 93.3% of
   its functions and 74.8% of its branches are reached by the suite.
-  The step fails below `COVERAGE_MIN`, 84% of lines - a ratchet, to be
-  raised as tests are added, not a target to reach once.
+  The step fails below `COVERAGE_MIN`, 84% of lines, or
+  `COVERAGE_BRANCH_MIN`, 74% of branches - ratchets, to be raised as
+  tests are added, not targets to reach once.
 - **pkg-config**: an installed, relocatable `configforge.pc` - the prefix
   is found from where the file is, so an install moved with `--prefix`
   still describes itself - for builds that are not CMake. The install
