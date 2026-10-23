@@ -186,10 +186,10 @@ Each rule has a stable identifier so it can be suppressed individually. Rules ma
 | CFD004 | **Missing required.** Required key resolves to nothing. | error | yes |
 | CFD005 | **Undefined key present.** A source key matches no definition; nearest match suggested. | warning | yes |
 | CFD006 | **Contract violation.** Value fails type or range. | error | no |
-| CFD007 | **Sensitive value from an unsafe source.** Key marked sensitive is supplied on the command line, readable by every user of the machine. A committed or world-readable file is the other half, and needs permissions the report does not carry yet. | error | yes |
-| CFD008 | **Default-only in production.** Key resolves to its built-in default with no source supplying it. Information rather than a warning: benign in development, worth knowing in production. | info | yes |
+| CFD007 | **Sensitive value from an unsafe source.** Key marked sensitive is supplied on the command line, or by a file every user of the machine can read. Whether a file is committed to version control is deliberately out of scope: that is the repository's business, not the configuration's. | error | yes |
+| CFD008 | **Default-only in production.** Key resolves to its built-in default with no source supplying it. Benign in development, worth knowing in production, so its severity follows the report's profile. | info; warning in `production` | yes |
 | CFD009 | **Deprecated key still set.** | warning | yes |
-| CFD010 | **Dead source.** A configured source wins for no key at all; everything it sets lost to precedence. | error | yes |
+| CFD010 | **Dead source.** A configured source wins for no key at all; everything it sets lost to precedence. A warning rather than an error, because a system file wholly overridden by a user's is often what somebody meant. | warning | yes |
 | CFD011 | **Present but empty.** Distinguishes empty from absent. | warning | yes |
 | CFD012 | **Parity gap.** Key present in one environment's contract and absent in the other's. | warning | yes |
 | CFD013 | **Precedence inversion.** Policy places a less specific source above a more specific one for a parameter. | info | yes |
@@ -211,8 +211,14 @@ rejection â€” CFD006 for a contract, CFD016 for policy, CFD015 for truncation â€
 other. A secret on the command line used to be three errors at once (CFD006, CFD010 and
 CFD016), and a report that says one thing three times teaches its reader to skim.
 
-Not implemented yet: CFD012 against a contract rather than a key list, and CFD007 for
-files, both for want of information the report does not record.
+**Doctor never looks at its own disk.** It judges reports from other machines, so
+whether a file is world-readable is recorded *by the library, in the report*, at the only
+point the file is at hand: `"world_readable": true` on a sensitive candidate that came
+from a file. Where the platform cannot say - Windows, where "everyone may read this" is
+an access-control walk rather than a bit - the field is absent and the rule is silent,
+because an answer that guessed would be wrong in both directions.
+
+Not implemented yet: CFD012 against a contract rather than a key list.
 
 CFD001, CFD002 and CFD003 are the rules that justify the tool. The rest come almost
 free once the report exists, and they are what make it worth running every build.
@@ -222,7 +228,7 @@ Example output, as the tool prints it:
 ```text
 CFD001  error   server.port   app.ini:2:1 always loses to app.ini:9:1, set later by
                               the same source; editing it has no effect
-CFD010  error   user-file     supplies 2 value(s) and wins none; everything it sets is
+CFD010  warning user-file     supplies 2 value(s) and wins none; everything it sets is
                               shadowed, e.g. staging.ini:3:1
 
 CFD002  warning database.pool_size
@@ -248,21 +254,41 @@ rather than the JSON with a reason field this section first described. It is rea
 code review, and a line somebody can delete by hand is a baseline somebody will
 actually shrink; the reason goes in the comment above the line.
 
-**Configurable severity.** Every rule's severity is overridable per project.
+**Configurable severity.** Every rule's severity is overridable per project, in a file
+of the same shape as the baseline and for the same reason - it is read in review:
+
+```text
+CFD010 warning              this rule, everywhere
+CFD008 error production     this rule, in reports with this profile
+CFD011 off                  not this rule at all
+```
+
+`doctor lint <report> --severity .configforge-severity`. A profile line wins over a plain
+one, a plain one over the profile defaults the catalogue states, and those over the
+rule's default. An unknown severity is unusable input (exit 2) rather than a line
+skipped: a file half understood leaves the other half silently at its default.
+
+This is also what profiles are for, as D-12 decided them: a label on the report, not a
+concept in the library. A rule whose meaning depends on the environment says so in its
+catalogue entry, and the severity follows the label.
 
 **Progressive mode.** `--only-changed` restricts rules to keys touched by the change
-under review.
+under review. Not built yet: it needs the change, which Doctor does not have, and the
+baseline covers the case that matters first - an existing repository.
 
 ---
 
 ## 10. Exit Codes
 
 ```text
-0   no findings above the failure threshold
+0   no findings at or above the failure threshold
 1   findings at or above the threshold
-2   report unreadable, schema version unsupported, or reports not comparable
+2   report unreadable, schema version unsupported, or unusable options
 3   internal error
 ```
+
+The threshold is `--fail-on error|warning|info|never`, error by default. SARIF output
+keeps the same exit code, so one invocation can both annotate and gate.
 
 Reports are not comparable when their schema versions differ across a breaking
 boundary, or when one is value-blind and a requested rule needs values. Doctor says so
@@ -275,12 +301,15 @@ rather than silently skipping rules.
 ```text
 - run: configforge doctor emit --blind --out predicted.json
 - run: configforge doctor diff observed-prod.json predicted.json --fail-on error
-- run: configforge doctor lint predicted.json --baseline .configforge-baseline.json
+- run: configforge doctor lint predicted.json --baseline .configforge-baseline
+            --severity .configforge-severity --format sarif > doctor.sarif
 ```
 
-Output formats: human-readable text, JSON, and SARIF. SARIF matters more than it
-looks: it makes findings appear inline on a pull request in most forges without any
-per-forge integration work.
+Output formats: human-readable text and SARIF 2.1.0 (`--format sarif`). SARIF matters
+more than it looks: it makes findings appear inline on a pull request in most forges
+without any per-forge integration work. A finding that knows where its value was set
+carries the file and line; one that does not - a variable, a command-line argument -
+points at the report itself, which is still the artifact the finding is about.
 
 ---
 

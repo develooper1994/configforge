@@ -11,8 +11,13 @@
  *
  *     doctor dump    <report>
  *     doctor explain <report> <key>
- *     doctor lint    <report>
- *     doctor diff    <a> <b>
+ *     doctor lint    <report> [options]
+ *     doctor diff    <a> <b>  [options]
+ *
+ *     --baseline <file>   findings already accepted, one per line
+ *     --severity <file>   this project's severities, one per line
+ *     --fail-on <level>   error (default), warning, info or never
+ *     --format <name>     text (default) or sarif
  */
 
 #include <configforge/configforge.h>
@@ -35,6 +40,7 @@ typedef struct cand {
     const char* reason;
     const char* digest;
     cf_i64      length;
+    cf_bool     world_readable; /* a file every user can read; see CFD007 */
 } cand;
 
 typedef struct rkey {
@@ -322,6 +328,13 @@ static cf_bool load(report* r, const char* path) {
                                       rk->keylen, j);
             rk->c[j].digest = text_at(&r->doc, "keys.%S.candidates.%zu.digest", rk->key,
                                       rk->keylen, j);
+            {
+                const char* wr =
+                    text_at(&r->doc, "keys.%S.candidates.%zu.world_readable", rk->key,
+                            rk->keylen, j);
+                rk->c[j].world_readable =
+                    (wr != NULL && strcmp(wr, "true") == 0) ? CF_TRUE : CF_FALSE;
+            }
             ++rk->nc;
         }
     }
@@ -515,25 +528,358 @@ static int baseline_stale(void) {
     return stale;
 }
 
-static void finding(const char* id, const char* sev, const char* key, const char* fmt,
-                    ...) {
-    char    msg[512];
-    va_list ap;
+/* ------------------------------------------------------------------ *
+ * Severity
+ *
+ * Every rule has a default, and a project can disagree with it. The
+ * disagreement is written down in a file read in code review, one line
+ * per rule, in the same spirit as the baseline:
+ *
+ *     CFD010 warning              this rule, everywhere
+ *     CFD008 error production     this rule, in reports with this profile
+ *     CFD011 off                  not this rule at all
+ *
+ * A profile line wins over a plain one, a plain one over the built-in
+ * profile defaults, and those over the rule's own default. The built-in
+ * profile defaults are the rules whose catalogue entry names a profile:
+ * CFD008 is "default-only in production", benign anywhere else.
+ * ------------------------------------------------------------------ */
 
-    va_start(ap, fmt);
-    cf_vfmt(msg, sizeof msg, fmt, ap);
-    va_end(ap);
+#define MAX_SEVERITY 256
 
+typedef struct severity_line {
+    char id[16];
+    char level[16];
+    char profile[64]; /* empty: every profile */
+} severity_line;
+
+static severity_line g_sev[MAX_SEVERITY];
+static size_t        g_nsev;
+static const char*   g_profile; /* the report being linted, when there is one */
+
+static const severity_line g_sev_builtin[] = {{"CFD008", "warning", "production"}};
+
+static cf_bool level_known(const char* l) {
+    return (strcmp(l, "error") == 0 || strcmp(l, "warning") == 0 ||
+            strcmp(l, "info") == 0 || strcmp(l, "off") == 0)
+               ? CF_TRUE
+               : CF_FALSE;
+}
+
+/* False, having said why, when the file cannot be used: a severity file
+   that is half understood is worse than none, because the half that was
+   not would be silently at its default. */
+static cf_bool severity_load(const char* path) {
+    FILE*       f = fopen(path, "rb");
+    static char line[256];
+    int         n = 0;
+
+    if (f == NULL) {
+        fprintf(stderr, "doctor: cannot read severity file '%s'\n", path);
+        return CF_FALSE;
+    }
+    while (fgets(line, (int)sizeof line, f) != NULL) {
+        char  id[16], level[16], profile[64];
+        char* p = line;
+        int   field;
+
+        ++n;
+        id[0] = level[0] = profile[0] = '\0';
+        for (field = 0; field < 3; ++field) {
+            char*  dst = (field == 0) ? id : (field == 1) ? level : profile;
+            size_t cap = (field == 0)   ? sizeof id
+                         : (field == 1) ? sizeof level
+                                        : sizeof profile;
+            size_t k   = 0;
+            while (*p == ' ' || *p == '\t') {
+                ++p;
+            }
+            while (*p != '\0' && *p != ' ' && *p != '\t' && *p != '\n' && *p != '\r') {
+                if (k + 1 < cap) {
+                    dst[k++] = *p;
+                }
+                ++p;
+            }
+            dst[k] = '\0';
+        }
+        if (id[0] == '\0' || id[0] == '#') {
+            continue;
+        }
+        if (!level_known(level)) {
+            fprintf(stderr,
+                    "doctor: %s:%d: '%s' is not a severity; use error, warning, info "
+                    "or off\n",
+                    path, n, level);
+            fclose(f);
+            return CF_FALSE;
+        }
+        if (g_nsev >= MAX_SEVERITY) {
+            fprintf(stderr, "doctor: %s: more than %d lines\n", path, MAX_SEVERITY);
+            fclose(f);
+            return CF_FALSE;
+        }
+        memcpy(g_sev[g_nsev].id, id, sizeof id);
+        memcpy(g_sev[g_nsev].level, level, sizeof level);
+        memcpy(g_sev[g_nsev].profile, profile, sizeof profile);
+        ++g_nsev;
+    }
+    fclose(f);
+    return CF_TRUE;
+}
+
+static const char* severity_of(const char* id, const char* dflt) {
+    size_t i;
+    /* Most specific first: this project, this profile. */
+    for (i = 0; i < g_nsev; ++i) {
+        if (g_sev[i].profile[0] != '\0' && g_profile != NULL &&
+            strcmp(g_sev[i].id, id) == 0 && strcmp(g_sev[i].profile, g_profile) == 0) {
+            return g_sev[i].level;
+        }
+    }
+    for (i = 0; i < g_nsev; ++i) {
+        if (g_sev[i].profile[0] == '\0' && strcmp(g_sev[i].id, id) == 0) {
+            return g_sev[i].level;
+        }
+    }
+    for (i = 0; i < sizeof g_sev_builtin / sizeof g_sev_builtin[0]; ++i) {
+        if (g_profile != NULL && strcmp(g_sev_builtin[i].id, id) == 0 &&
+            strcmp(g_sev_builtin[i].profile, g_profile) == 0) {
+            return g_sev_builtin[i].level;
+        }
+    }
+    return dflt;
+}
+
+static int level_rank(const char* l) {
+    if (strcmp(l, "error") == 0) {
+        return 3;
+    }
+    if (strcmp(l, "warning") == 0) {
+        return 2;
+    }
+    if (strcmp(l, "info") == 0) {
+        return 1;
+    }
+    return 0; /* "never", as a threshold: nothing reaches it */
+}
+
+/* ------------------------------------------------------------------ *
+ * Findings
+ *
+ * Collected rather than printed as they are found, because SARIF is one
+ * JSON document and has to be written whole. Each carries where it was
+ * set when the report knows, which is what lets a forge put it on the
+ * line rather than on the pull request.
+ * ------------------------------------------------------------------ */
+
+typedef struct dfinding {
+    char id[16];
+    char level[16];
+    char key[CF_KEY_MAX];
+    char at[256];
+    char msg[512];
+} dfinding;
+
+static dfinding* g_found;
+static size_t    g_nfound;
+static size_t    g_capfound;
+static int       g_warnings = 0;
+static int       g_infos    = 0;
+
+static cf_bool found_push(void) {
+    const cf_allocator* a = cf_default_allocator();
+    if (g_nfound < g_capfound) {
+        return CF_TRUE;
+    }
+    {
+        size_t    ncap = (g_capfound == 0) ? 32 : g_capfound * 2;
+        dfinding* nv   = (dfinding*)a->alloc(a->ctx, ncap * sizeof(dfinding));
+        if (nv == NULL) {
+            return CF_FALSE;
+        }
+        if (g_nfound > 0) {
+            memcpy(nv, g_found, g_nfound * sizeof(dfinding));
+        }
+        if (g_found != NULL) {
+            a->release(a->ctx, g_found);
+        }
+        g_found    = nv;
+        g_capfound = ncap;
+    }
+    return CF_TRUE;
+}
+
+static void found_release(void) {
+    const cf_allocator* a = cf_default_allocator();
+    if (g_found != NULL) {
+        a->release(a->ctx, g_found);
+    }
+    g_found  = NULL;
+    g_nfound = g_capfound = 0;
+}
+
+static void vfinding(const char* id, const char* sev, const char* key, const char* at,
+                     const char* fmt, va_list ap) {
+    const char* level = severity_of(id, sev);
+    dfinding*   f;
+
+    if (strcmp(level, "off") == 0) {
+        return; /* a project said so, in a file somebody reviewed */
+    }
     if (g_baseline.loaded && baseline_accepts(id, key)) {
         /* Counted but not printed. A baselined finding that printed on
            every run would be the noise the baseline exists to remove. */
         ++g_baselined;
         return;
     }
-    printf("%-7s %-7s %-28s %s\n", id, sev, key, msg);
+    if (!found_push()) {
+        fprintf(stderr, "doctor: out of memory recording %s\n", id);
+        return;
+    }
+    f = &g_found[g_nfound++];
+    cf_fmt(f->id, sizeof f->id, "%s", id);
+    cf_fmt(f->level, sizeof f->level, "%s", level);
+    cf_fmt(f->key, sizeof f->key, "%s", key);
+    cf_fmt(f->at, sizeof f->at, "%s", (at != NULL) ? at : "");
+    cf_vfmt(f->msg, sizeof f->msg, fmt, ap);
     ++g_findings;
-    if (strcmp(sev, "error") == 0) {
+    if (strcmp(level, "error") == 0) {
         ++g_errors;
+    } else if (strcmp(level, "warning") == 0) {
+        ++g_warnings;
+    } else {
+        ++g_infos;
+    }
+}
+
+static void finding(const char* id, const char* sev, const char* key, const char* fmt,
+                    ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    vfinding(id, sev, key, NULL, fmt, ap);
+    va_end(ap);
+}
+
+/* The same, knowing where the value was set: "app.ini:14:3", "argv[2]". */
+static void finding_at(const char* id, const char* sev, const char* key, const char* at,
+                       const char* fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    vfinding(id, sev, key, at, fmt, ap);
+    va_end(ap);
+}
+
+/* ------------------------------------------------------------------ *
+ * SARIF 2.1.0
+ *
+ * The format most forges read natively, which puts a finding on the
+ * line of the pull request that caused it without an integration per
+ * forge. Doctor.md asked for it from the start for exactly that reason.
+ * ------------------------------------------------------------------ */
+
+static const struct {
+    const char* id;
+    const char* text;
+} g_rules[] = {
+    {"CFD001",
+     "Unreachable value: set where a later line of the same source always wins"},
+    {"CFD002", "Origin drift: same value, different source kind"},
+    {"CFD003", "Shadow divergence: overridden in one environment, not the other"},
+    {"CFD004", "Missing required parameter"},
+    {"CFD005", "Undefined key present"},
+    {"CFD006", "Contract violation"},
+    {"CFD007", "Sensitive value from an unsafe source"},
+    {"CFD008", "Default-only in production"},
+    {"CFD009", "Deprecated key still set"},
+    {"CFD010", "Dead source: wins for no key at all"},
+    {"CFD011", "Present but empty"},
+    {"CFD012", "Parity gap between environments"},
+    {"CFD013", "Precedence inversion in a policy"},
+    {"CFD014", "Sensitive value differs"},
+    {"CFD015", "Array truncation hazard"},
+    {"CFD016", "Policy violation"},
+    {"VALUE", "Value differs between environments"}};
+
+static void sarif_quote(const char* t) {
+    putchar('"');
+    for (; *t != '\0'; ++t) {
+        unsigned char ch = (unsigned char)*t;
+        if (ch == '"' || ch == '\\') {
+            putchar('\\');
+            putchar((int)ch);
+        } else if (ch < 0x20) {
+            printf("\\u%04x", (unsigned)ch);
+        } else {
+            putchar((int)ch);
+        }
+    }
+    putchar('"');
+}
+
+static const char* sarif_level(const char* l) {
+    return (strcmp(l, "error") == 0)     ? "error"
+           : (strcmp(l, "warning") == 0) ? "warning"
+                                         : "note";
+}
+
+static void print_sarif(const char* report_path) {
+    size_t i;
+
+    printf("{\n  \"$schema\": \"https://json.schemastore.org/sarif-2.1.0.json\",\n");
+    printf("  \"version\": \"2.1.0\",\n  \"runs\": [{\n");
+    printf("    \"tool\": { \"driver\": { \"name\": \"ConfigForge Doctor\", ");
+    printf("\"version\": ");
+    sarif_quote(cf_version());
+    printf(", \"rules\": [");
+    for (i = 0; i < sizeof g_rules / sizeof g_rules[0]; ++i) {
+        printf("%s\n      { \"id\": \"%s\", \"shortDescription\": { \"text\": ",
+               (i > 0) ? "," : "", g_rules[i].id);
+        sarif_quote(g_rules[i].text);
+        printf(" } }");
+    }
+    printf("] } },\n    \"results\": [");
+    for (i = 0; i < g_nfound; ++i) {
+        const dfinding* f = &g_found[i];
+        size_t          plen;
+        long            line;
+        char            uri[256];
+
+        printf("%s\n      { \"ruleId\": \"%s\", \"level\": \"%s\", \"message\": { "
+               "\"text\": ",
+               (i > 0) ? "," : "", f->id, sarif_level(f->level));
+        {
+            char text[CF_KEY_MAX + 520];
+            cf_fmt(text, sizeof text, "%s: %s", f->key, f->msg);
+            sarif_quote(text);
+        }
+        printf(" }, \"locations\": [{ \"physicalLocation\": { \"artifactLocation\": { "
+               "\"uri\": ");
+        /* A file and a line when the value came from one; otherwise the
+           report itself, which is still the artifact the finding is
+           about. argv[3] is a place, but not one a forge can show. */
+        if (place_of(f->at, &plen, &line) &&
+            !(plen == 4 && memcmp(f->at, "argv", 4) == 0) && plen + 1 < sizeof uri) {
+            size_t k;
+            for (k = 0; k < plen; ++k) {
+                /* One cast over the choice: '/' is an int in C. */
+                uri[k] = (char)((f->at[k] == '\\') ? '/' : f->at[k]);
+            }
+            uri[plen] = '\0';
+            sarif_quote(uri);
+            printf(" }, \"region\": { \"startLine\": %ld } } }] }", line);
+        } else {
+            sarif_quote(report_path);
+            printf(" } } }] }");
+        }
+    }
+    printf("\n    ]\n  }]\n}\n");
+}
+
+static void print_text(void) {
+    size_t i;
+    for (i = 0; i < g_nfound; ++i) {
+        printf("%-7s %-7s %-28s %s\n", g_found[i].id, g_found[i].level, g_found[i].key,
+               g_found[i].msg);
     }
 }
 
@@ -614,11 +960,11 @@ static void rule_dead_source(const report* r) {
         if (strcmp(names[s], "default") == 0) {
             continue;
         }
-        finding("CFD010", "error", names[s],
-                "supplies %d value(s) and wins none; everything it sets is "
-                "shadowed%s%s",
-                supplied[s], (first_at[s] != NULL) ? ", e.g. " : "",
-                (first_at[s] != NULL) ? first_at[s] : "");
+        finding_at("CFD010", "warning", names[s], first_at[s],
+                   "supplies %d value(s) and wins none; everything it sets is "
+                   "shadowed%s%s",
+                   supplied[s], (first_at[s] != NULL) ? ", e.g. " : "",
+                   (first_at[s] != NULL) ? first_at[s] : "");
     }
 }
 
@@ -644,9 +990,10 @@ static void rule_undefined(const report* r) {
             continue;
         }
         key_name(&r->keys[i], name, sizeof name);
-        finding("CFD005", "warning", name,
-                "no definition for this key; either it is a typo or the "
-                "program stopped reading it");
+        finding_at("CFD005", "warning", name,
+                   (r->keys[i].nc > 0) ? r->keys[i].c[0].at : NULL,
+                   "no definition for this key; either it is a typo or the "
+                   "program stopped reading it");
     }
 }
 
@@ -671,10 +1018,10 @@ static void rule_deprecated(const report* r) {
             if (k->c[j].outcome != NULL) {
                 continue;
             }
-            finding("CFD009", "warning", name,
-                    "deprecated and still supplied by %s%s%s", k->c[j].source,
-                    (k->c[j].at != NULL) ? " at " : "",
-                    (k->c[j].at != NULL) ? k->c[j].at : "");
+            finding_at("CFD009", "warning", name, k->c[j].at,
+                       "deprecated and still supplied by %s%s%s", k->c[j].source,
+                       (k->c[j].at != NULL) ? " at " : "",
+                       (k->c[j].at != NULL) ? k->c[j].at : "");
             break;
         }
     }
@@ -699,11 +1046,11 @@ static void rule_empty(const report* r) {
             if (k->c[j].value[0] != '\0') {
                 continue;
             }
-            finding("CFD011", "warning", name,
-                    "set to an empty value by %s%s%s, which is not the same "
-                    "as being unset",
-                    k->c[j].source, (k->c[j].at != NULL) ? " at " : "",
-                    (k->c[j].at != NULL) ? k->c[j].at : "");
+            finding_at("CFD011", "warning", name, k->c[j].at,
+                       "set to an empty value by %s%s%s, which is not the same "
+                       "as being unset",
+                       k->c[j].source, (k->c[j].at != NULL) ? " at " : "",
+                       (k->c[j].at != NULL) ? k->c[j].at : "");
         }
     }
 }
@@ -748,10 +1095,10 @@ static void rule_unreachable(const report* r) {
                     continue;
                 }
                 key_name(k, name, sizeof name);
-                finding("CFD001", "error", name,
-                        "%s always loses to %s, set later by the same source; "
-                        "editing it has no effect",
-                        c->at, d->at);
+                finding_at("CFD001", "error", name, c->at,
+                           "%s always loses to %s, set later by the same source; "
+                           "editing it has no effect",
+                           c->at, d->at);
                 break;
             }
         }
@@ -764,10 +1111,11 @@ static void rule_unreachable(const report* r) {
    has leaked whether or not it won. Policy can refuse it, and then
    CFD016 is the finding; this is the case where nothing refused it.
 
-   What this cannot see yet: a secret in a committed or world-readable
-   file. The report records which file, not its permissions or whether
-   version control tracks it, and guessing from a path would be wrong
-   in both directions. */
+   The other unsafe place is a file every user of the machine can read,
+   which the report records when its platform can tell. Whether a file
+   is committed to version control it does not record and will not:
+   that is the repository's business rather than the configuration's,
+   and guessing from a path would be wrong in both directions. */
 static void rule_sensitive_source(const report* r) {
     size_t i, j;
 
@@ -780,17 +1128,29 @@ static void rule_sensitive_source(const report* r) {
         }
         for (j = 0; j < k->nc; ++j) {
             const rsrc* s = find_source(r, k->c[j].source);
-            if (s == NULL || s->kind == NULL || strcmp(s->kind, "cli") != 0) {
+            cf_bool cli = (s != NULL && s->kind != NULL && strcmp(s->kind, "cli") == 0)
+                              ? CF_TRUE
+                              : CF_FALSE;
+            const char* where = (k->c[j].at != NULL) ? k->c[j].at : "an unnamed place";
+
+            if (!cli && !k->c[j].world_readable) {
                 continue;
             }
             if (k->c[j].reason != NULL && strncmp(k->c[j].reason, "policy:", 7) == 0) {
                 continue; /* CFD016's */
             }
             key_name(k, name, sizeof name);
-            finding("CFD007", "error", name,
-                    "sensitive, and supplied on the command line at %s, which every "
-                    "user of the machine can read",
-                    (k->c[j].at != NULL) ? k->c[j].at : "an unnamed position");
+            if (cli) {
+                finding_at("CFD007", "error", name, k->c[j].at,
+                           "sensitive, and supplied on the command line at %s, which "
+                           "every user of the machine can read",
+                           where);
+            } else {
+                finding_at("CFD007", "error", name, k->c[j].at,
+                           "sensitive, and supplied by %s, a file every user of the "
+                           "machine can read",
+                           where);
+            }
         }
     }
 }
@@ -858,9 +1218,9 @@ static void rule_refused(const report* r) {
                 continue;
             }
             if (k->c[j].outcome != NULL && strcmp(k->c[j].outcome, "rejected") == 0) {
-                finding("CFD006", "error", name, "%s refused %s: %s", k->c[j].source,
-                        shown(&k->c[j]),
-                        (k->c[j].reason != NULL) ? k->c[j].reason : "invalid");
+                finding_at("CFD006", "error", name, k->c[j].at, "%s refused %s: %s",
+                           k->c[j].source, shown(&k->c[j]),
+                           (k->c[j].reason != NULL) ? k->c[j].reason : "invalid");
             }
         }
     }
@@ -883,10 +1243,10 @@ static void rule_policy(const report* r) {
             if (k->c[j].reason == NULL || strncmp(k->c[j].reason, "policy:", 7) != 0) {
                 continue;
             }
-            finding("CFD016", "error", name, "%s supplied this from %s, and %s",
-                    k->c[j].source,
-                    (k->c[j].at != NULL) ? k->c[j].at : "an unnamed place",
-                    k->c[j].reason);
+            finding_at("CFD016", "error", name, k->c[j].at,
+                       "%s supplied this from %s, and %s", k->c[j].source,
+                       (k->c[j].at != NULL) ? k->c[j].at : "an unnamed place",
+                       k->c[j].reason);
         }
     }
 }
@@ -923,8 +1283,8 @@ static void rule_truncated(const report* r) {
         key_name(k, name, sizeof name);
         for (j = 0; j < k->nc; ++j) {
             if (k->c[j].outcome != NULL && strcmp(k->c[j].outcome, "truncated") == 0) {
-                finding("CFD015", "warning", name,
-                        "discarded: beyond the winning array length");
+                finding_at("CFD015", "warning", name, k->c[j].at,
+                           "discarded: beyond the winning array length");
             }
         }
     }
@@ -1143,8 +1503,13 @@ static int usage(void) {
           "\n"
           "  doctor dump    <report>\n"
           "  doctor explain <report> <key>\n"
-          "  doctor lint    <report> [--baseline <file>]\n"
-          "  doctor diff    <report-a> <report-b>\n"
+          "  doctor lint    <report> [options]\n"
+          "  doctor diff    <report-a> <report-b> [options]\n"
+          "\n"
+          "  --baseline <file>  findings already accepted\n"
+          "  --severity <file>  this project's severities\n"
+          "  --fail-on <level>  error (default), warning, info, never\n"
+          "  --format <name>    text (default) or sarif\n"
           "\n",
           stderr);
     fputs("Reads provenance reports and never resolves configuration\n"
@@ -1158,9 +1523,14 @@ static int usage(void) {
           "commonest way a lint tool dies is two hundred findings on its\n"
           "first run: nobody fixes two hundred things, so everybody turns\n"
           "the tool off and the fifteen that mattered go with the rest.\n"
+          "\n",
+          stderr);
+    fputs("A severity file says where a project disagrees with a rule's\n"
+          "default, one per line: \"CFD010 warning\", \"CFD008 error\n"
+          "production\" for one profile, \"CFD011 off\".\n"
           "\n"
-          "Exit codes: 0 clean, 1 findings at error severity, 2 unusable\n"
-          "input.\n",
+          "Exit codes: 0 nothing at the --fail-on level, 1 something at\n"
+          "it, 2 unusable input.\n",
           stderr);
     return 2;
 }
@@ -1196,51 +1566,92 @@ int main(int argc, char** argv) {
         release(&a);
         return rc;
     }
-    if (strcmp(argv[1], "lint") == 0) {
-        int stale = 0;
+    if (strcmp(argv[1], "lint") == 0 || strcmp(argv[1], "diff") == 0) {
+        cf_bool     is_diff = (strcmp(argv[1], "diff") == 0) ? CF_TRUE : CF_FALSE;
+        int         first   = is_diff ? 4 : 3;
+        const char* fail_on = "error";
+        const char* format  = "text";
+        int         i;
+        int         over = 0;
+        int         threshold;
 
-        /* Read before anything runs, so a finding is matched as it is
-           produced rather than filtered afterwards - filtering
-           afterwards would mean printing and then unprinting. */
-        if (argc >= 5 && strcmp(argv[3], "--baseline") == 0) {
-            baseline_load(argv[4]);
-        }
-        if (!load(&a, argv[2])) {
-            release(&a);
-            return 2;
-        }
-        cmd_lint(&a);
-        release(&a);
-        if (g_baseline.loaded) {
-            stale = baseline_stale();
-        }
-        printf("\n%d new finding(s), %d at error severity", g_findings, g_errors);
-        if (g_baselined > 0) {
-            printf("; %d accepted by the baseline", g_baselined);
-        }
-        if (stale > 0) {
-            printf("; %d baseline entry(s) no longer match", stale);
-        }
-        printf("\n");
-        /* A stale entry does not fail the build. It says the file has
-           drifted, and failing on it would make people stop keeping the
-           file rather than start pruning it. */
-        return (g_errors > 0) ? 1 : 0;
-    }
-    if (strcmp(argv[1], "diff") == 0) {
-        if (argc < 4) {
+        if (is_diff && argc < 4) {
             return usage();
         }
-        if (!load(&a, argv[2]) || !load(&b, argv[3])) {
+        /* Options read before anything runs, so a finding is matched
+           as it is produced rather than filtered afterwards. */
+        for (i = first; i < argc; ++i) {
+            if (i + 1 >= argc) {
+                return usage();
+            }
+            if (strcmp(argv[i], "--baseline") == 0) {
+                baseline_load(argv[++i]);
+            } else if (strcmp(argv[i], "--severity") == 0) {
+                if (!severity_load(argv[++i])) {
+                    return 2;
+                }
+            } else if (strcmp(argv[i], "--fail-on") == 0) {
+                fail_on = argv[++i];
+                if (strcmp(fail_on, "never") != 0 && !level_known(fail_on)) {
+                    return usage();
+                }
+            } else if (strcmp(argv[i], "--format") == 0) {
+                format = argv[++i];
+                if (strcmp(format, "text") != 0 && strcmp(format, "sarif") != 0) {
+                    return usage();
+                }
+            } else {
+                return usage();
+            }
+        }
+        threshold = level_rank(fail_on);
+
+        if (!load(&a, argv[2]) || (is_diff && !load(&b, argv[3]))) {
             release(&a);
             release(&b);
             return 2;
         }
-        cmd_diff(&a, &b);
+        if (is_diff) {
+            cmd_diff(&a, &b);
+        } else {
+            /* A profile decides some severities; a diff spans two, so
+               only lint has one to apply. */
+            g_profile = a.profile;
+            cmd_lint(&a);
+            g_profile = NULL;
+        }
+
+        if (strcmp(format, "sarif") == 0) {
+            print_sarif(argv[2]);
+        } else {
+            int stale = 0;
+            print_text();
+            if (g_baseline.loaded) {
+                stale = baseline_stale();
+            }
+            printf("\n%d new finding(s): %d error, %d warning, %d info", g_findings,
+                   g_errors, g_warnings, g_infos);
+            if (g_baselined > 0) {
+                printf("; %d accepted by the baseline", g_baselined);
+            }
+            if (stale > 0) {
+                printf("; %d baseline entry(s) no longer match", stale);
+            }
+            printf("\n");
+        }
         release(&a);
         release(&b);
-        printf("\n%d finding(s), %d at error severity\n", g_findings, g_errors);
-        return (g_errors > 0) ? 1 : 0;
+
+        /* A stale entry does not fail the build. It says the file has
+           drifted, and failing on it would make people stop keeping the
+           file rather than start pruning it. */
+        for (i = 0; (size_t)i < g_nfound; ++i) {
+            if (threshold > 0 && level_rank(g_found[i].level) >= threshold) {
+                ++over;
+            }
+        }
+        found_release();
+        return (over > 0) ? 1 : 0;
     }
     return usage();
 }

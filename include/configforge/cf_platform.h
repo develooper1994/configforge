@@ -134,6 +134,19 @@ typedef struct cf_stamp {
 cf_bool cf_platform_stamp(const char* path, cf_stamp* out);
 
 /* ------------------------------------------------------------------ *
+ * Who can read a file
+ *
+ * 1 when every user of the machine can read it, 0 when not, -1 when
+ * this platform cannot say. Windows says -1: whether "everyone" may read
+ * a file is a walk over an access control list with inheritance and
+ * group membership in it, and an answer that guessed would be wrong in
+ * both directions - which, for the one question this exists to answer,
+ * "is this secret exposed", is worse than no answer.
+ * ------------------------------------------------------------------ */
+
+int cf_platform_world_readable(const char* path);
+
+/* ------------------------------------------------------------------ *
  * A handle to wait on (D-35, option 3)
  *
  * Something an event loop can wait on beside its own descriptors: an

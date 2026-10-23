@@ -10,6 +10,7 @@
 #include <configforge/configforge.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static char a0[] = "app";
@@ -205,6 +206,52 @@ int main(void) {
         cf_report(c, &info, buf, sizeof buf);
         cf_config_free(c);
         if (!spill("cf_fx_sources.json", buf)) {
+            return 1;
+        }
+    }
+
+    /* Two secrets in two files, one that every user can read and one
+       that only its owner can. The report records which is which where
+       the platform can tell, and Doctor judges from the report alone. */
+    {
+        cf_error       err = CF_ERROR_INIT;
+        cf_builder*    b;
+        cf_config*     c;
+        cf_report_info info;
+        static char    buf[65536];
+        cf_def         d;
+
+        if (!spill("cf_fx_open.ini", "[api]\nkey = readable-by-all\n") ||
+            !spill("cf_fx_closed.ini", "[db]\nkey = owner-only\n")) {
+            return 1;
+        }
+#ifndef _WIN32
+        /* fopen leaves the umask's 0644, which is the open case; the
+           closed one is made so explicitly. */
+        if (system("chmod 644 cf_fx_open.ini && chmod 600 cf_fx_closed.ini") != 0) {
+            return 1;
+        }
+#endif
+        b = cf_build(NULL);
+        cf_builder_file(b, "user-file", CF_RANK_USER_FILE, "cf_fx_open.ini", NULL, 0);
+        cf_builder_file(b, "sys-file", CF_RANK_SYS_FILE, "cf_fx_closed.ini", NULL, 0);
+        cf_def_init(&d, CF_TYPE_TEXT, "api.key");
+        d.flags = CF_SENSITIVE;
+        cf_builder_define(b, &d);
+        cf_def_init(&d, CF_TYPE_TEXT, "db.key");
+        d.flags = CF_SENSITIVE;
+        cf_builder_define(b, &d);
+        c = cf_builder_create(b, &err);
+        if (c == NULL) {
+            fprintf(stderr, "fixtures: files: %s\n", err.message);
+            return 1;
+        }
+        memset(&info, 0, sizeof info);
+        info.mode    = CF_REPORT_BLIND;
+        info.profile = "production";
+        cf_report(c, &info, buf, sizeof buf);
+        cf_config_free(c);
+        if (!spill("cf_fx_files.json", buf)) {
             return 1;
         }
     }

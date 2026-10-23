@@ -159,6 +159,23 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   refused; CFD013 a policy that ranks a less specific source above a
   more specific one, which is what explains an `explain()` where the
   command line loses to a variable.
+- **Doctor can be adopted on a project's own terms.** `--severity`
+  reads a file of `CFD010 warning` lines, with an optional profile -
+  `CFD008 error production` - and `off`; `--fail-on` sets the threshold;
+  `--format sarif` writes SARIF 2.1.0 so a forge shows each finding on
+  the line that caused it. Doctor.md had asked for all three from the
+  first release, because a lint tool that cannot be tuned is turned off.
+  Profiles arrive the way D-12 decided: as a label a rule's severity can
+  follow - CFD008, "default-only in production", is a warning there and
+  information elsewhere - not as a concept in the library.
+  CFD010 is a warning by default now. A system file wholly overridden by
+  a user's is often what somebody meant, and an error made that a
+  failed build.
+- **CFD007 sees files.** A report records, for a sensitive value that
+  came from a file, whether every user of the machine can read that
+  file - the library records it because Doctor judges other machines'
+  reports and must never look at its own disk. Windows cannot say with
+  a single bit, so it says nothing rather than guessing.
 - **The C++03 wrapper covers change notification**: `Config::changed()`
   and `Watcher`, which owns the handle and is not copyable - two owners
   of one descriptor is a double close - plus the `dir()` and `dotenv()`
