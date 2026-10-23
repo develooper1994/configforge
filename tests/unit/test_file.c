@@ -407,10 +407,17 @@ static void test_drop_in_directory(void) {
     remove("cf_confd/90-site.ini");
     remove("cf_confd/50-extra.xml");
     remove("cf_confd/.10-editor.ini.swp");
+    /* C89 has no rmdir. The result is kept rather than cast away: glibc
+       marks system() warn_unused_result once optimised, and a (void)
+       cast does not silence that. A directory left behind is harmless. */
 #ifdef _WIN32
-    (void)system("rmdir cf_confd >nul 2>&1");
+    if (system("rmdir cf_confd >nul 2>&1") != 0) {
+        printf("note: cf_confd left behind\n");
+    }
 #else
-    (void)system("rmdir cf_confd");
+    if (system("rmdir cf_confd") != 0) {
+        printf("note: cf_confd left behind\n");
+    }
 #endif
 }
 

@@ -29,32 +29,33 @@
     },
     {
       "name": "portable",
-      "displayName": "Every opportunistic upgrade disabled",
+      "displayName": "Every opportunistic upgrade disabled, optimised (-O2)",
       "binaryDir": "${sourceDir}/build-portable",
       "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
         "CF_FORCE_PORTABLE": "ON",
         "CF_SINGLE_THREADED": "ON"
       }
     },
     {
       "name": "minimal",
-      "displayName": "No floating point, for very small targets",
+      "displayName": "No floating point, size-optimised (-Os), for very small targets",
       "binaryDir": "${sourceDir}/build-minimal",
-      "cacheVariables": { "CF_WITH_REAL": "OFF" }
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "MinSizeRel", "CF_WITH_REAL": "OFF" }
     }
   ],
   "buildPresets": [
     { "name": "default",  "configurePreset": "default",  "configuration": "Debug" },
     { "name": "sanitize", "configurePreset": "sanitize", "configuration": "Debug" },
     { "name": "analyze",  "configurePreset": "analyze",  "configuration": "Debug" },
-    { "name": "portable", "configurePreset": "portable", "configuration": "Debug" },
-    { "name": "minimal",  "configurePreset": "minimal",  "configuration": "Debug" }
+    { "name": "portable", "configurePreset": "portable", "configuration": "Release" },
+    { "name": "minimal",  "configurePreset": "minimal",  "configuration": "MinSizeRel" }
   ],
   "testPresets": [
     { "name": "default",  "configurePreset": "default",  "configuration": "Debug", "output": { "outputOnFailure": true } },
     { "name": "sanitize", "configurePreset": "sanitize", "configuration": "Debug", "output": { "outputOnFailure": true } },
     { "name": "analyze",  "configurePreset": "analyze",  "configuration": "Debug", "output": { "outputOnFailure": true } },
-    { "name": "portable", "configurePreset": "portable", "configuration": "Debug", "output": { "outputOnFailure": true } },
-    { "name": "minimal",  "configurePreset": "minimal",  "configuration": "Debug", "output": { "outputOnFailure": true } }
+    { "name": "portable", "configurePreset": "portable", "configuration": "Release", "output": { "outputOnFailure": true } },
+    { "name": "minimal",  "configurePreset": "minimal",  "configuration": "MinSizeRel", "output": { "outputOnFailure": true } }
   ]
 }

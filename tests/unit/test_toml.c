@@ -130,6 +130,17 @@ static void test_floats(void) {
     check(cf_get_real(c, "small", 0.0) == -0.0025, "a negative exponent");
     cf_config_free(c);
 }
+#else
+/* A build without floating point refuses a float by name rather than
+   reading it as something else - and still compiles a TOML reader. */
+static void test_floats(void) {
+    cf_error   err = CF_ERROR_INIT;
+    cf_config* c   = load("ratio = 0.75\n", &err);
+
+    check(c == NULL, "a float is refused without CF_WITH_REAL");
+    has(err.message, "no floating point", "and the reason is given");
+    cf_config_free(c);
+}
 #endif
 
 /* Each refusal names the construct and what to write instead, with the
@@ -214,9 +225,7 @@ static void test_round_trip(void) {
 int main(void) {
 #if CF_WITH_TOML
     test_reads();
-#if CF_WITH_REAL
     test_floats();
-#endif
     test_refuses();
     test_later_wins();
     test_round_trip();

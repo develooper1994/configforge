@@ -191,8 +191,11 @@ build does. `scripts/README.md` lists the options.
 | `default` | C89 conformance, full warning set |
 | `sanitize` | AddressSanitizer and UndefinedBehaviorSanitizer |
 | `analyze` | GCC `-fanalyzer` symbolic execution, plus cppcheck when present |
-| `portable` | every opportunistic upgrade disabled, output compared against `default` |
-| `minimal` | `CF_WITH_REAL=OFF`, for targets with no floating point |
+| `portable` | every opportunistic upgrade disabled, output compared against `default`; built `-O2` |
+| `minimal` | `CF_WITH_REAL=OFF`, for targets with no floating point; built `-Os` |
+
+The last two are optimised on purpose: inlining merges frames, so a stack
+frame that fits in a Debug build can break the budget in a release one.
 
 Options: `CF_WITH_INI` `CF_WITH_JSON` `CF_WITH_TOML` `CF_WITH_XML` `CF_WITH_SQLITE`
 `CF_WITH_REAL` `CF_WITH_CXX` `CF_FORCE_PORTABLE` `CF_SINGLE_THREADED`.

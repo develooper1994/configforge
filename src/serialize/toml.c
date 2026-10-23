@@ -49,9 +49,14 @@
    an array of tables is one segment plus an element that has no name. */
 typedef enum toml_kind { TOML_TABLE, TOML_ARRAY, TOML_ELEMENT } toml_kind;
 
+/* Names are kept one after another in a single key-sized buffer, not a
+   key-sized buffer each: the whole path has to fit in one configuration
+   key anyway, and thirty-two of those would be eight kilobytes of stack
+   spent on nothing (the budget is two). */
 typedef struct toml_open {
-    char      name[CF_KEY_MAX];
-    toml_kind kind;
+    unsigned short at; /* the name, in toml_scan.names */
+    unsigned short n;
+    toml_kind      kind;
 } toml_open;
 
 typedef struct toml_scan {
@@ -62,11 +67,25 @@ typedef struct toml_scan {
     unsigned int       line;
     const cf_doc_sink* out;
     cf_error*          err;
-    int                depth; /* nesting inside one value */
-    toml_open*         open;  /* the header path currently open */
+    int                depth;                /* nesting inside one value */
+    toml_open          open[TOML_MAX_DEPTH]; /* the header path currently open */
     int                nopen;
+    char               names[CF_KEY_MAX];
+    size_t             nused;
     char               closed[CF_KEY_MAX]; /* last array of tables left */
 } toml_scan;
+
+/* A dotted key, its segments in one buffer for the same reason. */
+#define TOML_KEY_PARTS 8
+
+typedef struct toml_dkey {
+    char   buf[CF_KEY_MAX];
+    size_t at[TOML_KEY_PARTS];
+    size_t len[TOML_KEY_PARTS];
+    int    n;
+} toml_dkey;
+
+#define TOML_SEG(k, i) ((k)->buf + (k)->at[i])
 
 static void toml_loc(const toml_scan* s, const char* at, cf_loc* out) {
     out->file = s->file;
@@ -303,27 +322,35 @@ static size_t toml_key_segment(toml_scan* s, char* dst, size_t cap) {
     return n;
 }
 
-/* A dotted key into segments. Returns the count, or -1. */
-static int toml_key(toml_scan* s, char (*seg)[CF_KEY_MAX], size_t* len, int max) {
-    int n = 0;
+/* A dotted key into segments. */
+static cf_bool toml_key(toml_scan* s, toml_dkey* k) {
+    size_t used = 0;
 
+    k->n = 0;
     for (;;) {
+        size_t n;
+
         toml_blank(s);
-        if (n >= max) {
-            toml_fail(s, s->p, "the key has too many parts");
-            return -1;
+        if (k->n >= TOML_KEY_PARTS) {
+            return toml_fail(s, s->p, "the key has too many parts");
         }
-        len[n] = toml_key_segment(s, seg[n], CF_KEY_MAX);
-        if (len[n] == (size_t)-1) {
-            return -1;
+        if (used + 2 > sizeof k->buf) {
+            return toml_fail(s, s->p, "the key is too long");
         }
-        ++n;
+        n = toml_key_segment(s, k->buf + used, sizeof k->buf - used);
+        if (n == (size_t)-1) {
+            return CF_FALSE;
+        }
+        k->at[k->n]  = used;
+        k->len[k->n] = n;
+        ++k->n;
+        used += n + 1;
         toml_blank(s);
         if (s->p < s->end && *s->p == '.') {
             ++s->p;
             continue;
         }
-        return n;
+        return CF_TRUE;
     }
 }
 
@@ -331,7 +358,7 @@ static int toml_key(toml_scan* s, char (*seg)[CF_KEY_MAX], size_t* len, int max)
    recognised in order to refuse them. */
 static cf_bool toml_number(toml_scan* s, cf_value* v) {
     const char* start = s->p;
-    char        buf[CF_F64_DIGITS + 8];
+    char        buf[CF_VALUE_TEXT_MAX + 8]; /* the digits of either kind */
     size_t      n       = 0;
     cf_bool     is_real = CF_FALSE;
     int         base    = 10;
@@ -425,25 +452,24 @@ static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen);
 /* Open the leading segments of a dotted key as tables, run the value,
    close them again. "a.b.c = 1" is a table a, a table b, a scalar c. */
 static cf_bool toml_keyval(toml_scan* s) {
-    char   seg[8][CF_KEY_MAX];
-    size_t len[8];
-    int    n = toml_key(s, seg, len, 8);
-    int    i;
+    toml_dkey k;
+    int       n, i;
 
-    if (n < 0) {
+    if (!toml_key(s, &k)) {
         return CF_FALSE;
     }
+    n = k.n;
     if (s->p >= s->end || *s->p != '=') {
         return toml_fail(s, s->p, "expected '=' after the key");
     }
     ++s->p;
     toml_blank(s);
     for (i = 0; i + 1 < n; ++i) {
-        if (!s->out->begin_table(s->out->ctx, seg[i], len[i])) {
+        if (!s->out->begin_table(s->out->ctx, TOML_SEG(&k, i), k.len[i])) {
             return toml_fail(s, s->p, "not a valid key");
         }
     }
-    if (!toml_value(s, seg[n - 1], len[n - 1])) {
+    if (!toml_value(s, TOML_SEG(&k, n - 1), k.len[n - 1])) {
         return CF_FALSE;
     }
     for (i = 0; i + 1 < n; ++i) {
@@ -596,11 +622,13 @@ static cf_bool toml_close_to(toml_scan* s, int keep) {
             /* Remembered, so that reopening it later can be refused:
                an event stream cannot reopen an array, and appending
                to a closed one would restart its numbering. */
-            memcpy(s->closed, o->name, sizeof s->closed);
+            memcpy(s->closed, s->names + o->at, o->n);
+            s->closed[o->n] = '\0';
         }
         if (!s->out->end(s->out->ctx)) {
             return toml_fail(s, s->p, "the document could not be recorded");
         }
+        s->nused = o->at;
         --s->nopen;
     }
     return CF_TRUE;
@@ -613,15 +641,21 @@ static cf_bool toml_push(toml_scan* s, const char* name, size_t n, toml_kind kin
     if (s->nopen >= TOML_MAX_DEPTH) {
         return toml_fail(s, s->p, "tables are nested too deeply");
     }
-    o = &s->open[s->nopen];
+    o     = &s->open[s->nopen];
+    o->at = (unsigned short)s->nused;
+    o->n  = 0;
     if (kind == TOML_ELEMENT) {
-        ok         = s->out->begin_table(s->out->ctx, NULL, 0);
-        o->name[0] = '\0';
+        ok = s->out->begin_table(s->out->ctx, NULL, 0);
     } else {
+        if (s->nused + n + 1 > sizeof s->names) {
+            return toml_fail(s, s->p, "the key is too long");
+        }
         ok = (kind == TOML_ARRAY) ? s->out->begin_array(s->out->ctx, name, n)
                                   : s->out->begin_table(s->out->ctx, name, n);
-        memcpy(o->name, name, n);
-        o->name[n] = '\0';
+        memcpy(s->names + s->nused, name, n);
+        s->names[s->nused + n] = '\0';
+        o->n                   = (unsigned short)n;
+        s->nused += n + 1;
     }
     if (!ok) {
         return toml_fail(s, s->p, "not a valid key");
@@ -632,8 +666,7 @@ static cf_bool toml_push(toml_scan* s, const char* name, size_t n, toml_kind kin
 }
 
 static cf_bool toml_header(toml_scan* s) {
-    char        seg[8][CF_KEY_MAX];
-    size_t      len[8];
+    toml_dkey   k;
     cf_bool     is_array = CF_FALSE;
     const char* at       = s->p;
     int         n, i, o, keep;
@@ -643,10 +676,10 @@ static cf_bool toml_header(toml_scan* s) {
         is_array = CF_TRUE;
         ++s->p;
     }
-    n = toml_key(s, seg, len, 8);
-    if (n < 0) {
+    if (!toml_key(s, &k)) {
         return CF_FALSE;
     }
+    n = k.n;
     if (s->p >= s->end || *s->p != ']' ||
         (is_array && (s->end - s->p < 2 || s->p[1] != ']'))) {
         return toml_fail(s, s->p, is_array ? "expected ']]'" : "expected ']'");
@@ -661,8 +694,8 @@ static cf_bool toml_header(toml_scan* s) {
             keep = o + 1;
             continue;
         }
-        if (i >= n || len[i] != strlen(s->open[o].name) ||
-            memcmp(seg[i], s->open[o].name, len[i]) != 0) {
+        if (i >= n || k.len[i] != (size_t)s->open[o].n ||
+            memcmp(TOML_SEG(&k, i), s->names + s->open[o].at, k.len[i]) != 0) {
             break;
         }
         /* The same array of tables again: a new element in it. */
@@ -678,15 +711,15 @@ static cf_bool toml_header(toml_scan* s) {
     if (!toml_close_to(s, keep)) {
         return CF_FALSE;
     }
-    if (is_array && strlen(s->closed) == len[n - 1] &&
-        memcmp(s->closed, seg[n - 1], len[n - 1]) == 0) {
+    if (is_array && strlen(s->closed) == k.len[n - 1] &&
+        memcmp(s->closed, TOML_SEG(&k, n - 1), k.len[n - 1]) == 0) {
         return toml_fail(s, at,
                          "an array of tables reopened after another table; keep its "
                          "[[blocks]] together");
     }
     for (; i < n; ++i) {
         toml_kind kind = (is_array && i == n - 1) ? TOML_ARRAY : TOML_TABLE;
-        if (!toml_push(s, seg[i], len[i], kind)) {
+        if (!toml_push(s, TOML_SEG(&k, i), k.len[i], kind)) {
             return CF_FALSE;
         }
     }
@@ -698,7 +731,6 @@ static cf_bool toml_header(toml_scan* s) {
 
 static cf_bool toml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* err) {
     toml_scan s;
-    toml_open open[TOML_MAX_DEPTH];
 
     s.p          = in->p;
     s.end        = in->p + in->n;
@@ -708,8 +740,8 @@ static cf_bool toml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     s.out        = out;
     s.err        = err;
     s.depth      = 0;
-    s.open       = open;
     s.nopen      = 0;
+    s.nused      = 0;
     s.closed[0]  = '\0';
 
     if (!out->begin_table(out->ctx, NULL, 0)) {
