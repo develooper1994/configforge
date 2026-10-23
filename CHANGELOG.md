@@ -297,6 +297,20 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed, and it mattered
 
+- **The TOML decoder broke the stack budget**, by four times: thirty-two
+  open tables and two dotted keys each held a key-sized buffer per name,
+  8.7 KB in one frame (10.9 KB once `-Os` inlined the callers). Linux
+  CI had been red since TOML landed, because MSVC, where it was tested,
+  has no stack check. The names now share one key-sized buffer, which
+  costs nothing: the whole path has to fit in one key anyway. The
+  `portable` and `minimal` presets now build optimised (`-O2`, `-Os`),
+  so the inlined case is checked on every verify; that also found a
+  `system()` result that a `(void)` cast does not silence under glibc's
+  fortified headers.
+- **TOML did not compile without floating point** (`CF_WITH_REAL=OFF`,
+  the `minimal` preset): its number buffer was sized by the float
+  digits. It is sized by `CF_VALUE_TEXT_MAX` now, and a float in such a
+  build is refused by name, which `test_toml` checks.
 - **`cf_ks_resolve` could fail silently.** It allocated a scratch array
   for the merge sort, set the key count to zero when there was no room,
   and returned `void`. Between roughly 11.7 and 12 kilobytes of fixed

@@ -128,6 +128,14 @@ unbounded parallel builds have filled a workstation's memory.
   string can lose backslashes on the way, which turns `'\0'` into a NUL
   byte and `\n` into a line break in C source. Write the new text to a
   file and patch from the file, then check the result byte for byte.
+* **MSVC checks no stack budget, and Debug inlines nothing.** A frame
+  that breaks the budget can pass Windows and Debug and fail an
+  optimised GCC build; the `portable` (`-O2`) and `minimal` (`-Os`)
+  presets are the check. Verify on Linux before merging anything that
+  adds a buffer.
+* **Under WSL, verify off `/mnt/c`**: `-DWORK=$HOME/cfv`. That
+  filesystem has no inotify and no Unix permissions, so `test_watch`
+  and Doctor's permission rule fail there for reasons not in the code.
 * **Watch the disk on a long session.** Each preset is a full build;
   `verify.cmake` removes its staged copy on success, and `build-*`
   directories are disposable and in `.gitignore`.

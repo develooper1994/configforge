@@ -5,6 +5,7 @@
 #   cmake -DSOURCE=index -P scripts/verify.cmake      what is staged, alone
 #   cmake -DEXTRA="kqueue;tidy;clang" -P ...          and the extra builds
 #   cmake -DJOBS=2 -P scripts/verify.cmake            at most two jobs at once
+#   cmake -DSOURCE=index -DWORK=$HOME/cfv -P ...      the staged copy elsewhere
 #
 # Written in CMake rather than in a shell, because a shell script covers
 # half the platforms this library claims and the other half would need a
@@ -27,6 +28,11 @@
 #   kqueue   the macOS and BSD wait handle on Linux, through libkqueue
 #   tidy     clang-tidy over the library and Doctor (CF_CLANG_TIDY=ON)
 #   clang    the whole suite built with clang
+#
+# WORK puts the staged copy somewhere other than build-verify/. Under
+# WSL, verifying a checkout on /mnt/c needs it: that filesystem has no
+# inotify and no Unix permissions, so the watcher test and Doctor's
+# file-permission rule fail there for reasons that are not the code's.
 #
 # JOBS bounds the parallelism of every build. A full run builds five
 # presets, and unbounded parallel builds have filled a workstation's
@@ -102,7 +108,11 @@ if(SOURCE STREQUAL "index")
   if(NOT GIT_EXE)
     message(FATAL_ERROR "SOURCE=index needs git")
   endif()
-  set(ROOT "${REPO}/build-verify/staged")
+  if(DEFINED WORK)
+    get_filename_component(ROOT "${WORK}/staged" ABSOLUTE)
+  else()
+    set(ROOT "${REPO}/build-verify/staged")
+  endif()
   file(REMOVE_RECURSE "${ROOT}")
   file(MAKE_DIRECTORY "${ROOT}")
   execute_process(
@@ -216,8 +226,14 @@ foreach(x ${EXTRA})
   endif()
 endforeach()
 
+# Only what this script made: WORK may name a directory that holds
+# other things too.
 if(SOURCE STREQUAL "index")
-  file(REMOVE_RECURSE "${REPO}/build-verify")
+  if(DEFINED WORK)
+    file(REMOVE_RECURSE "${ROOT}")
+  else()
+    file(REMOVE_RECURSE "${REPO}/build-verify")
+  endif()
 endif()
 
 # The formatter rewrites and the gate reports, so this only checks:
