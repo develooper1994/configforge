@@ -42,8 +42,8 @@ typedef enum cf_emit_what {
    Refuses rather than truncates: a format with no array syntax meeting
    an array is an error before anything is written, not a surprise
    halfway through a file. */
-size_t cf_emit(const struct cf_config* c, const char* format, cf_emit_what what,
-               int rank, char* buf, size_t cap, cf_error* err);
+CF_API size_t cf_emit(const struct cf_config* c, const char* format, cf_emit_what what,
+                      int rank, char* buf, size_t cap, cf_error* err);
 
 #ifdef __cplusplus
 }

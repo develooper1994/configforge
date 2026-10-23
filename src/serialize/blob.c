@@ -2,6 +2,7 @@
  * blob.c - whole-document input and measure-or-write output. C89.
  */
 
+#include "configforge/cf_platform.h"
 #include "configforge/cf_serialize.h"
 
 #include <stdarg.h>
@@ -31,7 +32,8 @@ cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err) 
     if (b == NULL || ar == NULL || path == NULL) {
         return cf_error_set(err, CF_E_SOURCE, NULL, path, "no path given");
     }
-    f = fopen(path, "rb");
+    /* Through the platform, so a path is UTF-8 on every system. */
+    f = cf_platform_fopen(path, "rb");
     if (f == NULL) {
         return cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot open '%s'", path);
     }

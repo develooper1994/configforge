@@ -51,8 +51,8 @@ enum {
 /* Write the image. Measure-or-write, like everything else that renders:
    with a NULL buffer nothing is stored and the length still
    accumulates. */
-size_t cf_image_write(const cf_keyspace* ks, const cf_source_view* sv, unsigned flags,
-                      char* buf, size_t cap);
+CF_API size_t cf_image_write(const cf_keyspace* ks, const cf_source_view* sv,
+                             unsigned flags, char* buf, size_t cap);
 
 /* ------------------------------------------------------------------ *
  * Reading
@@ -77,34 +77,37 @@ typedef struct cf_image {
 /* Validates the header, the bounds and the digest. Refuses rather than
    guesses: a truncated image and a corrupt one look the same from
    inside, and neither should produce a configuration. */
-cf_bool cf_image_open(cf_image* img, const char* buf, size_t n, cf_error* err);
+CF_API cf_bool cf_image_open(cf_image* img, const char* buf, size_t n, cf_error* err);
 
-size_t  cf_image_count(const cf_image* img);
-cf_bool cf_image_at(const cf_image* img, size_t i, const char** key, size_t* klen,
-                    cf_value* v);
-cf_bool cf_image_get(const cf_image* img, const char* key, size_t klen, cf_value* v);
+CF_API size_t  cf_image_count(const cf_image* img);
+CF_API cf_bool cf_image_at(const cf_image* img, size_t i, const char** key,
+                           size_t* klen, cf_value* v);
+CF_API cf_bool cf_image_get(const cf_image* img, const char* key, size_t klen,
+                            cf_value* v);
 
 /* Load an image into a key space at a rank, which is what a source
    does. Text values point into the image, so it must outlive the
    configuration. */
-cf_bool cf_image_load(const cf_image* img, cf_keyspace* ks, int rank, cf_error* err);
+CF_API cf_bool cf_image_load(const cf_image* img, cf_keyspace* ks, int rank,
+                             cf_error* err);
 
 /* ------------------------------------------------------------------ *
  * As a source
  * ------------------------------------------------------------------ */
 
-size_t cf_source_image_state_size(void);
+CF_API size_t cf_source_image_state_size(void);
 
 /* From memory: a build-time image linked into the program. No file, no
    parser, no allocation - the freestanding path. */
-cf_bool cf_source_image_mem(cf_source* s, const char* name, int rank, const char* buf,
-                            size_t n, void* state, size_t state_size);
+CF_API cf_bool cf_source_image_mem(cf_source* s, const char* name, int rank,
+                                   const char* buf, size_t n, void* state,
+                                   size_t state_size);
 
 /* From a file, for hosted targets. */
-cf_bool cf_source_image_file(cf_source* s, const char* name, int rank, const char* path,
-                             void* state, size_t state_size);
+CF_API cf_bool cf_source_image_file(cf_source* s, const char* name, int rank,
+                                    const char* path, void* state, size_t state_size);
 
-const cf_error* cf_source_image_error(const cf_source* s);
+CF_API const cf_error* cf_source_image_error(const cf_source* s);
 
 #ifdef __cplusplus
 }

@@ -7,9 +7,11 @@
  * unit.test_lex.utf8 asserts the non-ASCII argument round trip that the
  * wide-argument path exists for.
  *
- * Paths go through the ANSI ("A") functions, as everywhere else in this
- * file. A configuration path outside the active code page is a gap that
- * belongs to D-15 and is not closed here.
+ * Paths are UTF-8 at the interface (D-15) and UTF-16 to Windows: every
+ * one goes through win32_wide and into a "W" function. The "A"
+ * functions this file used at first take the active code page, so a
+ * configuration under a user name that page cannot spell could not be
+ * opened at all.
  *
  * Guarded once at the top, for the reason given in posix.c.
  */
@@ -18,8 +20,10 @@
 
 #if CF_PLATFORM_WIN32
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 #include <windows.h>
 
 /* _environ is MSVC's spelling, and it has to come from <stdlib.h>: the
@@ -90,6 +94,42 @@ char* const* cf_platform_args(int argc, char* const* argv, cf_arena* arena,
     return (char* const*)out;
 }
 
+/* UTF-8 in, UTF-16 out, refusing a malformed sequence rather than
+   substituting for it: a path with a replacement character in it names
+   a different file. False when it does not convert or does not fit. */
+static cf_bool win32_wide(const char* utf8, wchar_t* out, int cap) {
+    if (utf8 == NULL || out == NULL) {
+        return CF_FALSE;
+    }
+    return (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8, -1, out, cap) > 0)
+               ? CF_TRUE
+               : CF_FALSE;
+}
+
+/* "<dir>\*", in UTF-16, for FindFirstFileW. */
+static cf_bool win32_pattern(const char* dir, wchar_t* out, int cap) {
+    size_t n;
+
+    if (!win32_wide(dir, out, cap - 2)) {
+        return CF_FALSE;
+    }
+    n          = wcslen(out);
+    out[n]     = L'\\';
+    out[n + 1] = L'*';
+    out[n + 2] = L'\0';
+    return CF_TRUE;
+}
+
+void* cf_platform_fopen(const char* path, const char* mode) {
+    wchar_t wpath[CF_PLATFORM_NAME_MAX];
+    wchar_t wmode[8];
+
+    if (!win32_wide(path, wpath, CF_PLATFORM_NAME_MAX) || !win32_wide(mode, wmode, 8)) {
+        return NULL;
+    }
+    return _wfopen(wpath, wmode);
+}
+
 /* Two 32-bit halves, joined. A function rather than an expression at
    each site because one shift-and-or spread over two lines is laid out
    differently by every version of clang-format. */
@@ -101,20 +141,20 @@ static cf_i64 win32_join(DWORD hi, DWORD lo) {
 /* A directory by what it holds. See cf_platform.h for why the
    directory's own time is not enough. */
 static void win32_stamp_dir(const char* path, cf_stamp* out) {
-    char             pattern[CF_PLATFORM_NAME_MAX];
-    WIN32_FIND_DATAA fd;
+    wchar_t          pattern[CF_PLATFORM_NAME_MAX];
+    WIN32_FIND_DATAW fd;
     HANDLE           h;
 
-    if (cf_fmt(pattern, sizeof pattern, "%s\\*", path) >= sizeof pattern) {
+    if (!win32_pattern(path, pattern, CF_PLATFORM_NAME_MAX)) {
         return;
     }
-    h = FindFirstFileA(pattern, &fd);
+    h = FindFirstFileW(pattern, &fd);
     if (h == INVALID_HANDLE_VALUE) {
         return;
     }
     do {
         cf_i64 t;
-        if (fd.cFileName[0] == '.') {
+        if (fd.cFileName[0] == L'.') {
             continue;
         }
         t = win32_join(fd.ftLastWriteTime.dwHighDateTime,
@@ -123,12 +163,13 @@ static void win32_stamp_dir(const char* path, cf_stamp* out) {
             out->mtime = t;
         }
         out->size += win32_join(fd.nFileSizeHigh, fd.nFileSizeLow) + 1;
-    } while (FindNextFileA(h, &fd) != 0);
+    } while (FindNextFileW(h, &fd) != 0);
     FindClose(h);
 }
 
 cf_bool cf_platform_stamp(const char* path, cf_stamp* out) {
     WIN32_FILE_ATTRIBUTE_DATA fa;
+    wchar_t                   wpath[CF_PLATFORM_NAME_MAX];
 
     if (out == NULL) {
         return CF_FALSE;
@@ -136,7 +177,8 @@ cf_bool cf_platform_stamp(const char* path, cf_stamp* out) {
     out->mtime   = 0;
     out->size    = 0;
     out->present = CF_FALSE;
-    if (path == NULL || !GetFileAttributesExA(path, GetFileExInfoStandard, &fa)) {
+    if (!win32_wide(path, wpath, CF_PLATFORM_NAME_MAX) ||
+        !GetFileAttributesExW(wpath, GetFileExInfoStandard, &fa)) {
         return CF_FALSE;
     }
     out->mtime =
@@ -157,8 +199,8 @@ int cf_platform_world_readable(const char* path) {
 
 int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], int max,
                          cf_error* err) {
-    char             pattern[CF_PLATFORM_NAME_MAX];
-    WIN32_FIND_DATAA fd;
+    wchar_t          pattern[CF_PLATFORM_NAME_MAX];
+    WIN32_FIND_DATAW fd;
     HANDLE           h;
     int              n = 0;
 
@@ -166,33 +208,34 @@ int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], 
         cf_error_set(err, CF_E_SOURCE, NULL, path, "no directory given");
         return -1;
     }
-    if (cf_fmt(pattern, sizeof pattern, "%s\\*", path) >= sizeof pattern) {
-        cf_error_set(err, CF_E_SOURCE, NULL, path, "path is too long");
+    if (!win32_pattern(path, pattern, CF_PLATFORM_NAME_MAX)) {
+        cf_error_set(err, CF_E_SOURCE, NULL, path,
+                     "'%s' is too long, or is not valid UTF-8", path);
         return -1;
     }
-    h = FindFirstFileA(pattern, &fd);
+    h = FindFirstFileW(pattern, &fd);
     if (h == INVALID_HANDLE_VALUE) {
         cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot read '%s'", path);
         return -1;
     }
     do {
-        size_t len;
         if ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
             continue;
         }
-        if (fd.cFileName[0] == '.') {
+        if (fd.cFileName[0] == L'.') {
             continue;
         }
         if (n >= max) {
             break;
         }
-        len = strlen(fd.cFileName);
-        if (len + 1 > CF_PLATFORM_NAME_MAX) {
+        /* Back to UTF-8, which is what every name is above this layer.
+           A name that does not fit is skipped, as on POSIX. */
+        if (WideCharToMultiByte(CP_UTF8, 0, fd.cFileName, -1, names[n],
+                                CF_PLATFORM_NAME_MAX, NULL, NULL) <= 0) {
             continue;
         }
-        memcpy(names[n], fd.cFileName, len + 1);
         ++n;
-    } while (FindNextFileA(h, &fd) != 0);
+    } while (FindNextFileW(h, &fd) != 0);
     FindClose(h);
     return n;
 }
@@ -263,14 +306,17 @@ static cf_bool win32_up(char* dir) {
 
 /* The directory a path lives in, or the path when it is a directory. */
 static cf_bool win32_dir_of(const char* path, char* out, size_t cap) {
-    size_t len = strlen(path);
-    DWORD  at;
+    size_t  len = strlen(path);
+    DWORD   at  = INVALID_FILE_ATTRIBUTES;
+    wchar_t wpath[CF_PLATFORM_NAME_MAX];
 
     if (len + 1 > cap) {
         return CF_FALSE;
     }
     memcpy(out, path, len + 1);
-    at = GetFileAttributesA(path);
+    if (win32_wide(path, wpath, CF_PLATFORM_NAME_MAX)) {
+        at = GetFileAttributesW(wpath);
+    }
     if (at != INVALID_FILE_ATTRIBUTES && (at & FILE_ATTRIBUTE_DIRECTORY) != 0) {
         return CF_TRUE;
     }
@@ -281,7 +327,13 @@ static cf_bool win32_dir_of(const char* path, char* out, size_t cap) {
 }
 
 static HANDLE win32_open_dir(const char* dir) {
-    return CreateFileA(dir, FILE_LIST_DIRECTORY,
+    wchar_t wdir[CF_PLATFORM_NAME_MAX];
+
+    if (!win32_wide(dir, wdir, CF_PLATFORM_NAME_MAX)) {
+        SetLastError(ERROR_INVALID_NAME);
+        return INVALID_HANDLE_VALUE;
+    }
+    return CreateFileW(wdir, FILE_LIST_DIRECTORY,
                        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
                        OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
                        NULL);
@@ -381,7 +433,7 @@ cf_platform_wake* cf_platform_wake_open(const char* const* paths, size_t n,
     for (i = 0; i < n; ++i) {
         w->t[i].h = INVALID_HANDLE_VALUE;
     }
-    w->ev = CreateEventA(NULL, TRUE, FALSE, NULL);
+    w->ev = CreateEventW(NULL, TRUE, FALSE, NULL);
     if (w->ev == NULL) {
         cf_error_set(err, CF_E_CAPABILITY, NULL, NULL,
                      "cannot create an event to wait on");

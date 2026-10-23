@@ -45,11 +45,11 @@ typedef struct cf_blob {
     const char* name; /* shown in locations: "app.toml" */
 } cf_blob;
 
-void cf_blob_mem(cf_blob* b, const char* p, size_t n, const char* name);
+CF_API void cf_blob_mem(cf_blob* b, const char* p, size_t n, const char* name);
 
 /* Reads a whole file into the arena. CF_E_SOURCE when it cannot be
    opened or read; the caller decides whether that is fatal. */
-cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err);
+CF_API cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err);
 
 /* ------------------------------------------------------------------ *
  * Bytes out
@@ -65,13 +65,13 @@ typedef struct cf_sink {
     size_t len; /* what would have been written */
 } cf_sink;
 
-void    cf_sink_init(cf_sink* s, char* buf, size_t cap);
-void    cf_sink_write(cf_sink* s, const char* p, size_t n);
-void    cf_sink_putc(cf_sink* s, char c);
-void    cf_sink_puts(cf_sink* s, const char* z);
-void    cf_sink_fmt(cf_sink* s, const char* fmt, ...);
-void    cf_sink_terminate(cf_sink* s);
-cf_bool cf_sink_overflowed(const cf_sink* s);
+CF_API void    cf_sink_init(cf_sink* s, char* buf, size_t cap);
+CF_API void    cf_sink_write(cf_sink* s, const char* p, size_t n);
+CF_API void    cf_sink_putc(cf_sink* s, char c);
+CF_API void    cf_sink_puts(cf_sink* s, const char* z);
+CF_API void    cf_sink_fmt(cf_sink* s, const char* fmt, ...);
+CF_API void    cf_sink_terminate(cf_sink* s);
+CF_API cf_bool cf_sink_overflowed(const cf_sink* s);
 
 /* ------------------------------------------------------------------ *
  * Locations
@@ -84,7 +84,7 @@ typedef struct cf_loc {
 } cf_loc;
 
 /* "app.toml:14:3", or just the file when there is no position. */
-size_t cf_loc_text(const cf_loc* at, char* buf, size_t cap);
+CF_API size_t cf_loc_text(const cf_loc* at, char* buf, size_t cap);
 
 /* ------------------------------------------------------------------ *
  * Document events
@@ -141,16 +141,16 @@ typedef struct cf_codec {
    left it out, which the caller must report rather than ignore: a
    configuration system whose purpose is explaining where values come
    from must not have a build option that makes a file invisible. */
-const cf_codec* cf_codec_by_name(const char* name);
-const cf_codec* cf_codec_by_path(const char* path);
+CF_API const cf_codec* cf_codec_by_name(const char* name);
+CF_API const cf_codec* cf_codec_by_path(const char* path);
 
 /* Names a format this library knows about whether or not it was
    compiled in, so the error can say which option to turn on. */
-const char* cf_format_of_path(const char* path);
-const char* cf_format_option(const char* format);
+CF_API const char* cf_format_of_path(const char* path);
+CF_API const char* cf_format_option(const char* format);
 
-size_t          cf_codec_count(void);
-const cf_codec* cf_codec_at(size_t i);
+CF_API size_t          cf_codec_count(void);
+CF_API const cf_codec* cf_codec_at(size_t i);
 
 #ifdef __cplusplus
 }

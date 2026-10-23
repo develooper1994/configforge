@@ -54,17 +54,17 @@ typedef struct cf_error {
 #define CF_ERROR_INIT {sizeof(cf_error), 0, {0}, {0}, {0}}
 /* clang-format on */
 
-void cf_error_clear(cf_error* e);
+CF_API void cf_error_clear(cf_error* e);
 
 /* Set code, key, source and a formatted message. Safe with a NULL
    error, so every call site can report unconditionally instead of
    guarding. Returns CF_FALSE so a caller can write
    `return cf_error_set(err, ...);` */
-cf_bool cf_error_set(cf_error* e, cf_code code, const char* key, const char* source,
-                     const char* fmt, ...);
+CF_API cf_bool cf_error_set(cf_error* e, cf_code code, const char* key,
+                            const char* source, const char* fmt, ...);
 
-const char* cf_code_name(cf_code c);
-const char* cf_code_description(cf_code c);
+CF_API const char* cf_code_name(cf_code c);
+CF_API const char* cf_code_description(cf_code c);
 
 #ifdef __cplusplus
 }

@@ -55,7 +55,7 @@ extern "C" {
 #endif
 
 /* The name this build was compiled for, for explain() and the report. */
-const char* cf_platform_name(void);
+CF_API const char* cf_platform_name(void);
 
 /* ------------------------------------------------------------------ *
  * Capabilities
@@ -66,9 +66,9 @@ const char* cf_platform_name(void);
  * two answers.
  * ------------------------------------------------------------------ */
 
-cf_bool cf_platform_has_environ(void);
-cf_bool cf_platform_has_dir_list(void);
-cf_bool cf_platform_has_wide_args(void);
+CF_API cf_bool cf_platform_has_environ(void);
+CF_API cf_bool cf_platform_has_dir_list(void);
+CF_API cf_bool cf_platform_has_wide_args(void);
 
 /* ------------------------------------------------------------------ *
  * The environment
@@ -76,7 +76,7 @@ cf_bool cf_platform_has_wide_args(void);
 
 /* NULL where none is reachable, which is not an error: a program with
    no environment is a normal thing on a small target. */
-char* const* cf_platform_environ(void);
+CF_API char* const* cf_platform_environ(void);
 
 /* ------------------------------------------------------------------ *
  * The command line in UTF-8
@@ -89,8 +89,8 @@ char* const* cf_platform_environ(void);
  * writes the same two lines on every platform.
  * ------------------------------------------------------------------ */
 
-char* const* cf_platform_args(int argc, char* const* argv, cf_arena* arena,
-                              int* out_argc);
+CF_API char* const* cf_platform_args(int argc, char* const* argv, cf_arena* arena,
+                                     int* out_argc);
 
 /* ------------------------------------------------------------------ *
  * Directory listing
@@ -102,8 +102,8 @@ char* const* cf_platform_args(int argc, char* const* argv, cf_arena* arena,
    count, or -1 with `err` set. The caller sorts, because the order
    decides which file wins and that is the caller's rule, not the
    platform's. */
-int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], int max,
-                         cf_error* err);
+CF_API int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX],
+                                int max, cf_error* err);
 
 /* ------------------------------------------------------------------ *
  * File stamps
@@ -131,7 +131,25 @@ typedef struct cf_stamp {
 /* False when the path cannot be stamped, which is not an error: a file
    that is not there yet has a stamp saying so, and its arrival is a
    change like any other. */
-cf_bool cf_platform_stamp(const char* path, cf_stamp* out);
+CF_API cf_bool cf_platform_stamp(const char* path, cf_stamp* out);
+
+/* ------------------------------------------------------------------ *
+ * Opening a file by a UTF-8 path
+ *
+ * fopen, with the path in UTF-8 everywhere (D-15). On Windows fopen
+ * takes the active code page, which cannot spell most of the world's
+ * names - a home directory under a Turkish or Greek user name cannot
+ * be opened through it on a Western code page - so the Windows
+ * implementation converts to UTF-16 and calls _wfopen. Identity
+ * elsewhere.
+ *
+ * Returns a FILE* as void*, so that this header does not include
+ * <stdio.h> for everyone who includes the library: gate.interface
+ * holds the public headers to the system headers they need. NULL when
+ * the file cannot be opened, or on a build with no stdio.
+ * ------------------------------------------------------------------ */
+
+CF_API void* cf_platform_fopen(const char* path, const char* mode);
 
 /* ------------------------------------------------------------------ *
  * Who can read a file
@@ -144,7 +162,7 @@ cf_bool cf_platform_stamp(const char* path, cf_stamp* out);
  * "is this secret exposed", is worse than no answer.
  * ------------------------------------------------------------------ */
 
-int cf_platform_world_readable(const char* path);
+CF_API int cf_platform_world_readable(const char* path);
 
 /* ------------------------------------------------------------------ *
  * A handle to wait on (D-35, option 3)
@@ -169,29 +187,29 @@ int cf_platform_world_readable(const char* path);
 
 typedef struct cf_platform_wake cf_platform_wake;
 
-cf_bool cf_platform_has_wake(void);
+CF_API cf_bool cf_platform_has_wake(void);
 
 /* NULL with `err` set, naming the path and the reason. The paths are
    copied; nothing passed here need outlive the call. */
-cf_platform_wake* cf_platform_wake_open(const char* const* paths, size_t n,
-                                        const cf_allocator* a, cf_error* err);
+CF_API cf_platform_wake* cf_platform_wake_open(const char* const* paths, size_t n,
+                                               const cf_allocator* a, cf_error* err);
 
 /* A descriptor that becomes readable, or -1 where the handle is not a
    descriptor. */
-int cf_platform_wake_fd(const cf_platform_wake* w);
+CF_API int cf_platform_wake_fd(const cf_platform_wake* w);
 
 /* A HANDLE that becomes signalled, or NULL where the handle is not one. */
-void* cf_platform_wake_handle(const cf_platform_wake* w);
+CF_API void* cf_platform_wake_handle(const cf_platform_wake* w);
 
 /* Consume what woke the handle and re-arm anything that needs it. False
    when some path can no longer wake it; polling cf_changed still works. */
-cf_bool cf_platform_wake_drain(cf_platform_wake* w);
+CF_API cf_bool cf_platform_wake_drain(cf_platform_wake* w);
 
 /* Wait up to `timeout_ms` (negative: without limit). 1 when woken, and
    then already drained; 0 on timeout; -1 when waiting failed. */
-int cf_platform_wake_wait(cf_platform_wake* w, long timeout_ms);
+CF_API int cf_platform_wake_wait(cf_platform_wake* w, long timeout_ms);
 
-void cf_platform_wake_close(cf_platform_wake* w);
+CF_API void cf_platform_wake_close(cf_platform_wake* w);
 
 #ifdef __cplusplus
 }
