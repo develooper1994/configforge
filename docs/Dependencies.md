@@ -62,6 +62,9 @@ system, no generated header, no options.
 | a C89 compiler: GCC, Clang or MSVC | GPL-3.0-or-later with the GCC Runtime Library Exception; Apache-2.0 WITH LLVM-exception; proprietary | compiling. None of their code ends up in a program except each one's own runtime support, under its exception |
 | a C++98 compiler, the same three | as above | the C++03 wrapper's example and test |
 | clang, clang++ | Apache-2.0 WITH LLVM-exception | `EXTRA=clang` in `scripts/verify.cmake`: the suite under a second compiler |
+| musl, through `musl-gcc` (musl-tools) | MIT | `EXTRA=compilers`: the suite against a second C library |
+| tcc (the Tiny C Compiler) | LGPL-2.1-or-later | `EXTRA=compilers`: the suite under a compiler that shares nothing with GCC |
+| pcc (the Portable C Compiler) | BSD-2-Clause | `EXTRA=compilers`: the same, from the other end of C's history |
 | git | GPL-2.0-only | `scripts/verify.cmake -DSOURCE=index` and `scripts/format.cmake`, which ask it what is staged or changed |
 | Python 3 | PSF-2.0 | `scripts/amalgamate.py`, `scripts/check_formats.py` |
 | Conan | MIT | the Conan recipe, `conanfile.py`, and its CI job |

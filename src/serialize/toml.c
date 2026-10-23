@@ -45,6 +45,13 @@
 
 #define TOML_MAX_DEPTH CF_MAX_DEPTH
 
+/* Split after the backslash: the Portable C Compiler reads a "\\" followed
+   by u as the start of a universal character name, and stops. */
+#define TOML_UNICODE_DIGITS                                                            \
+    "\\"                                                                               \
+    "u needs four hex digits and \\"                                                   \
+    "U eight"
+
 /* What the open path is made of. A table segment is one header segment;
    an array of tables is one segment plus an element that has no name. */
 typedef enum toml_kind { TOML_TABLE, TOML_ARRAY, TOML_ELEMENT } toml_kind;
@@ -253,13 +260,13 @@ static size_t toml_string(toml_scan* s, char* dst, size_t cap) {
                 size_t k;
                 int    i;
                 if (s->end - s->p < digits) {
-                    toml_fail(s, s->p, "\\u needs four hex digits and \\U eight");
+                    toml_fail(s, s->p, TOML_UNICODE_DIGITS);
                     return (size_t)-1;
                 }
                 for (i = 0; i < digits; ++i) {
                     int h = toml_hex((unsigned char)s->p[i]);
                     if (h < 0) {
-                        toml_fail(s, s->p, "\\u needs four hex digits and \\U eight");
+                        toml_fail(s, s->p, TOML_UNICODE_DIGITS);
                         return (size_t)-1;
                     }
                     cp = (cp << 4) | (cf_u32)h;

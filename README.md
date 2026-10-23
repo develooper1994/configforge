@@ -141,7 +141,7 @@ nothing, and `1.0` is where semantic versioning starts.
 
 | Component | State |
 | --------- | ----- |
-| built and tested with GCC, Clang (Linux) and MSVC (Windows) | done |
+| built and tested with GCC, Clang and MSVC; against glibc and musl; with tcc and pcc | done |
 | portability layer, numeric conversion with exact shortest round-trip | done |
 | value model, flat key space, provenance chain, resolver | done |
 | definitions, validation, `cf_config` facade | done |

@@ -30,6 +30,10 @@
 #   clang    the whole suite built with clang
 #   tsan     the whole suite under the thread sanitiser (the tsan preset)
 #   yaml     the whole suite with CF_WITH_YAML, where libyaml is installed
+#   compilers the whole suite against musl (musl-gcc) and with the Tiny C
+#            Compiler and the Portable C Compiler, each where installed:
+#            the claim that the library needs a C89 compiler and a C
+#            library, and nothing about which
 #   fuzz     libFuzzer on every reader for FUZZ_SECONDS each (default 10),
 #            clang only
 #   coverage line coverage of src/ by the suite, failing below COVERAGE_MIN
@@ -228,6 +232,43 @@ foreach(x ${EXTRA})
       -DCMAKE_CXX_COMPILER=${CLANGXX_EXE})
     step("clang build" ${build} build-clang ${debug})
     step("clang test" ${test} build-clang)
+  elseif(x STREQUAL "compilers")
+    # name:compiler:extra option. pcc has no atomics, so its build is the
+    # single-threaded one the support matrix promises for such a
+    # toolchain. C++ is off in all three: the wrapper's tests would link
+    # a C++ runtime built for another C library.
+    # pcc also warns at glibc's own headers (__cold__ in stdio.h), which
+    # nothing can mark as system headers there, so its warnings are shown
+    # and not fatal.
+    foreach(entry musl:musl-gcc: tcc:tcc:
+                  pcc:pcc:-DCF_SINGLE_THREADED=ON|-DCF_WERROR=OFF)
+      string(REPLACE ":" ";" parts "${entry}")
+      list(GET parts 0 name)
+      list(GET parts 1 cc)
+      list(LENGTH parts n)
+      set(extra "")
+      if(n GREATER 2)
+        list(GET parts 2 extra)
+        string(REPLACE "|" ";" extra "${extra}")
+      endif()
+      find_program(CC_${name} ${cc})
+      if(NOT CC_${name})
+        message("${name}                  skipped: no ${cc}")
+        continue()
+      endif()
+      step(
+        "${name} configure"
+        ${CMAKE_COMMAND}
+        -S
+        .
+        -B
+        build-${name}
+        -DCMAKE_C_COMPILER=${CC_${name}}
+        -DCF_WITH_CXX=OFF
+        ${extra})
+      step("${name} build" ${build} build-${name} ${debug})
+      step("${name} test" ${test} build-${name})
+    endforeach()
   elseif(x STREQUAL "yaml")
     # Named, because a -P script has no platform search path: the
     # configure step below finds it properly; this only decides whether
@@ -346,7 +387,7 @@ foreach(x ${EXTRA})
     endif()
   else()
     message(FATAL_ERROR "unknown EXTRA step '${x}': kqueue, tidy, clang, "
-                        "tsan, yaml, fuzz or coverage")
+                        "tsan, yaml, compilers, fuzz or coverage")
   endif()
 endforeach()
 

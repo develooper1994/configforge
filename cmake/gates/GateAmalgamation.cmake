@@ -2,6 +2,13 @@
 # every commit rather than generated at release time and hoped over.
 # It also catches the one class of error that only a single translation
 # unit can have: two static functions in different files sharing a name.
+# Warnings are errors unless the build said otherwise (CF_WERROR): the
+# Portable C Compiler warns at the C library's own headers.
+set(werror -Werror)
+if(DEFINED WERROR AND NOT WERROR)
+  set(werror "")
+endif()
+
 find_package(
   Python3
   COMPONENTS Interpreter
@@ -43,7 +50,7 @@ int main(int argc, char** argv)
 ")
 execute_process(
   COMMAND
-    ${CC} -std=c89 -pedantic -Werror -Wall -Wextra -Wshadow -I
+    ${CC} -std=c89 -pedantic ${werror} -Wall -Wextra -Wshadow -I
     "${BIN}/amalgamation" -o "${BIN}/amalgamation/smoke"
     "${BIN}/amalgamation/smoke.c" "${BIN}/amalgamation/configforge.c"
   RESULT_VARIABLE rc

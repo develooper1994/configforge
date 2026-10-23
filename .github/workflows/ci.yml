@@ -118,6 +118,27 @@ jobs:
           cmake --build "$RUNNER_TEMP/consumer"
           "$RUNNER_TEMP/consumer/package_test"
 
+  # The library needs a C89 compiler and a C library, and not a particular
+  # one of either: musl through musl-gcc, the Tiny C Compiler and the
+  # Portable C Compiler, besides GCC, Clang and MSVC above.
+  compilers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y musl-tools tcc pcc
+      - run: cmake -DEXTRA=compilers -DMODE=quick -DJOBS=4 -P scripts/verify.cmake
+
+  # musl as a distribution ships it, rather than musl-gcc over glibc's
+  # tools: the same environment the release's static Linux build uses.
+  alpine:
+    runs-on: ubuntu-latest
+    container: alpine:3.20
+    steps:
+      - run: apk add --no-cache build-base cmake ninja git python3
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -G Ninja && cmake --build build
+      - run: ctest --test-dir build --output-on-failure
+
   # YAML is off by default because it links libyaml; this is the build
   # that has it, the whole suite included.
   yaml:
