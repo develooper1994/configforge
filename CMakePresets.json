@@ -36,6 +36,17 @@
       }
     },
     {
+      "name": "fuzz",
+      "displayName": "libFuzzer harnesses with ASan and UBSan (clang)",
+      "binaryDir": "${sourceDir}/build-fuzz",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CF_FUZZ": "ON"
+      }
+    },
+    {
       "name": "analyze",
       "displayName": "GCC -fanalyzer and cppcheck",
       "binaryDir": "${sourceDir}/build-analyze",
@@ -79,6 +90,7 @@
     { "name": "sanitize", "configurePreset": "sanitize", "configuration": "Debug" },
     { "name": "tsan",     "configurePreset": "tsan",     "configuration": "Debug" },
     { "name": "coverage", "configurePreset": "coverage", "configuration": "Debug" },
+    { "name": "fuzz",     "configurePreset": "fuzz",     "configuration": "RelWithDebInfo" },
     { "name": "analyze",  "configurePreset": "analyze",  "configuration": "Debug" },
     { "name": "portable", "configurePreset": "portable", "configuration": "Release" },
     { "name": "minimal",  "configurePreset": "minimal",  "configuration": "MinSizeRel" }
@@ -88,6 +100,7 @@
     { "name": "sanitize", "configurePreset": "sanitize", "configuration": "Debug", "output": { "outputOnFailure": true } },
     { "name": "tsan",     "configurePreset": "tsan",     "configuration": "Debug", "output": { "outputOnFailure": true } },
     { "name": "coverage", "configurePreset": "coverage", "configuration": "Debug", "output": { "outputOnFailure": true } },
+    { "name": "fuzz",     "configurePreset": "fuzz",     "configuration": "RelWithDebInfo", "output": { "outputOnFailure": true }, "filter": { "include": { "label": "fuzz" } } },
     { "name": "analyze",  "configurePreset": "analyze",  "configuration": "Debug", "output": { "outputOnFailure": true } },
     { "name": "portable", "configurePreset": "portable", "configuration": "Release", "output": { "outputOnFailure": true } },
     { "name": "minimal",  "configurePreset": "minimal",  "configuration": "MinSizeRel", "output": { "outputOnFailure": true } }

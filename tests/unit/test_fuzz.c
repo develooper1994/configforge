@@ -421,14 +421,13 @@ static void fuzz_files(const char* corpus) {
 }
 
 #if CF_WITH_IMAGE
-static void fuzz_image(void) {
-    static blob  v;
-    static char  written[MAX_INPUT];
+/* A valid image with provenance, to corrupt: the image's corpus is
+   written by the library rather than kept as bytes here. */
+static size_t image_seed(char* out, size_t cap) {
     cf_error     err = CF_ERROR_INIT;
     cf_builder*  b;
     cf_config*   c;
     size_t       n;
-    int          i;
     static char  a0[]   = "prog";
     static char  a1[]   = "--server.port=8080";
     static char  a2[]   = "--server.host=0.0.0.0";
@@ -440,13 +439,21 @@ static void fuzz_image(void) {
     cf_builder_text(b, "server.host", "0.0.0.0", 0);
     c = cf_builder_create(b, &err);
     if (c == NULL) {
-        check(0, "the image corpus builds");
-        return;
+        return 0;
     }
-    n = cf_image_write(cf_keys(c), NULL, CF_IMAGE_PROVENANCE, written, sizeof written);
+    n = cf_image_write(cf_keys(c), NULL, CF_IMAGE_PROVENANCE, out, cap);
     cf_config_free(c);
-    if (n == 0 || n > MAX_INPUT) {
-        check(0, "the image corpus fits");
+    return (n <= cap) ? n : 0;
+}
+
+static void fuzz_image(void) {
+    static blob v;
+    static char written[MAX_INPUT];
+    size_t      n = image_seed(written, sizeof written);
+    int         i;
+
+    if (n == 0) {
+        check(0, "the image corpus builds and fits");
         return;
     }
 
@@ -461,6 +468,45 @@ static void fuzz_image(void) {
     }
 }
 #endif
+
+#if defined(CF_FUZZ_SEEDS)
+
+/* The corpora above as files, one per reader, for libFuzzer's
+   -seed_inputs: the coverage-guided harnesses (tests/fuzz) start from
+   the same documents as this one, so there is one corpus, not two. */
+static void write_seed(const char* name, const char* p, size_t n) {
+    FILE* f = fopen(name, "wb");
+    if (f == NULL) {
+        printf("FAIL: cannot write %s\n", name);
+        ++g_fail;
+        return;
+    }
+    fwrite(p, 1, n, f);
+    fclose(f);
+}
+
+int main(void) {
+    static const char argv_seed[] = "--server.port=8080 --no-tls -p 1 @none";
+
+    write_seed("seed_json", g_json, strlen(g_json));
+    write_seed("seed_ini", g_ini, strlen(g_ini));
+    write_seed("seed_toml", g_toml, strlen(g_toml));
+    write_seed("seed_dotenv", g_env, strlen(g_env));
+    write_seed("seed_replay", g_report, strlen(g_report));
+    write_seed("seed_argv", argv_seed, sizeof argv_seed - 1);
+#if CF_WITH_IMAGE
+    {
+        static char img[MAX_INPUT];
+        size_t      n = image_seed(img, sizeof img);
+        write_seed("seed_image", img, n);
+    }
+#else
+    write_seed("seed_image", "", 0);
+#endif
+    return g_fail == 0 ? 0 : 1;
+}
+
+#elif !defined(CF_LIBFUZZER)
 
 int main(int argc, char** argv) {
     cf_u64 s = 20260913;
@@ -488,3 +534,5 @@ int main(int argc, char** argv) {
     printf("%d checks, %d failures\n", g_run, g_fail);
     return g_fail == 0 ? 0 : 1;
 }
+
+#endif /* CF_FUZZ_SEEDS, CF_LIBFUZZER */

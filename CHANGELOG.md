@@ -7,6 +7,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **Coverage-guided fuzzing** (`fuzz` preset, `CF_FUZZ`, `EXTRA=fuzz`, a
+  CI job a minute per reader): libFuzzer harnesses for JSON, INI, TOML,
+  `.env`, the image, Report Replay and the command line, under the
+  address and undefined-behaviour sanitisers. They are `test_fuzz.c`'s
+  own readers fed by libFuzzer instead of a fixed generator, and they
+  start from its corpora, so there is one corpus and not two; a finding
+  leaves its input as `crash-<hash>`, which CI keeps.
 - **Coverage, measured and held** (`coverage` preset, `EXTRA=coverage`
   in `verify.cmake`, a CI job): 85.4% of the library's lines, 93.3% of
   its functions and 74.8% of its branches are reached by the suite.

@@ -60,6 +60,7 @@ system, no generated header, no options.
 | git | GPL-2.0-only | `scripts/verify.cmake -DSOURCE=index` and `scripts/format.cmake`, which ask it what is staged or changed |
 | Python 3 | PSF-2.0 | `scripts/amalgamate.py`, `scripts/check_formats.py` |
 | pkg-config | GPL-2.0-or-later | finding libkqueue; the install gate's pkg-config consumer |
+| libFuzzer (part of LLVM) | Apache-2.0 WITH LLVM-exception | `CF_FUZZ`, `EXTRA=fuzz`: the coverage-guided harnesses in `tests/fuzz` |
 | gcovr | BSD-3-Clause | `EXTRA=coverage`: line coverage from gcov's data |
 | setarch (util-linux) | GPL-2.0-or-later | `EXTRA=tsan`: running the thread-sanitised suite with address randomisation off |
 | clang-format | Apache-2.0 WITH LLVM-exception | `gate.format.c`, the `format` target |

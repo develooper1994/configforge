@@ -13,3 +13,7 @@ if(CF_BUILD_TOOLS
    AND CF_WITH_REPORT)
   add_subdirectory(doctor)
 endif()
+
+if(CF_FUZZ)
+  add_subdirectory(fuzz)
+endif()

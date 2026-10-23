@@ -98,6 +98,19 @@ jobs:
       - run: cmake --preset tsan && cmake --build --preset tsan
       - run: setarch "$(uname -m)" -R ctest --preset tsan
 
+  # Coverage-guided fuzzing of every reader of untrusted bytes, a minute
+  # each. A finding leaves its input as crash-<hash>, kept as an artifact.
+  libfuzzer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -DEXTRA=fuzz -DFUZZ_SECONDS=60 -DMODE=quick -DJOBS=4 -P scripts/verify.cmake
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: fuzz-findings
+          path: build-fuzz/tests/fuzz/crash-*
+
   # Which lines no test reaches, and a floor under the number: a ratchet
   # in verify.cmake (COVERAGE_MIN), raised as tests are added.
   coverage:

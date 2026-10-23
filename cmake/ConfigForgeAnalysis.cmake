@@ -12,6 +12,17 @@ option(CF_SANITIZE "Address and undefined behaviour" OFF)
 option(CF_SANITIZE_THREAD "Thread sanitiser" OFF)
 # Line coverage, read by gcovr in `verify.cmake -DEXTRA=coverage`.
 option(CF_COVERAGE "Coverage instrumentation (gcov)" OFF)
+# Coverage-guided fuzzing: every target instrumented for libFuzzer and
+# built with the address and undefined-behaviour sanitisers, and the
+# harnesses in tests/fuzz. Clang only.
+option(CF_FUZZ "libFuzzer harnesses (clang)" OFF)
+if(CF_FUZZ AND NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
+  message(FATAL_ERROR "CF_FUZZ needs clang: libFuzzer is part of it")
+endif()
+if(CF_FUZZ AND CF_SANITIZE_THREAD)
+  message(FATAL_ERROR "CF_FUZZ uses the address sanitiser, which the thread "
+                      "sanitiser excludes")
+endif()
 if(CF_SANITIZE AND CF_SANITIZE_THREAD)
   message(FATAL_ERROR "CF_SANITIZE and CF_SANITIZE_THREAD cannot be combined: "
                       "the address and thread sanitisers exclude each other")
@@ -21,7 +32,8 @@ endif()
 # budget, step aside for both.
 if(CF_SANITIZE
    OR CF_SANITIZE_THREAD
-   OR CF_COVERAGE)
+   OR CF_COVERAGE
+   OR CF_FUZZ)
   set(CF_INSTRUMENTED ON)
 else()
   set(CF_INSTRUMENTED OFF)
@@ -52,6 +64,12 @@ function(configforge_apply_analysis tgt)
     target_compile_options(
       ${tgt} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer
                      -fno-sanitize-recover=all -g)
+    target_link_options(${tgt} PRIVATE -fsanitize=address,undefined)
+  endif()
+  if(CF_FUZZ)
+    target_compile_options(
+      ${tgt} PRIVATE -fsanitize=fuzzer-no-link,address,undefined
+                     -fno-omit-frame-pointer -g)
     target_link_options(${tgt} PRIVATE -fsanitize=address,undefined)
   endif()
   if(CF_COVERAGE)
