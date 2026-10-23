@@ -57,6 +57,11 @@ int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], 
     return -1;
 }
 
+int cf_platform_world_readable(const char* path) {
+    (void)path;
+    return -1;
+}
+
 cf_bool cf_platform_has_wake(void) {
     return CF_FALSE;
 }

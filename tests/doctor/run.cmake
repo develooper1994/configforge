@@ -2,8 +2,11 @@
 # was supposed to produce are in the output. Checking only the exit
 # code would pass on a tool that printed nothing.
 string(REPLACE "|" ";" argv "${ARGS}")
-execute_process(COMMAND ${DOCTOR} ${argv}
-                RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE errout)
+execute_process(
+  COMMAND ${DOCTOR} ${argv}
+  RESULT_VARIABLE rc
+  OUTPUT_VARIABLE out
+  ERROR_VARIABLE errout)
 message("${out}${errout}")
 if(NOT rc EQUAL EXPECT_FAIL)
   message(FATAL_ERROR "expected exit ${EXPECT_FAIL}, got ${rc}")
@@ -77,6 +80,20 @@ if(cmd STREQUAL "lint" AND argv MATCHES "rules")
     message(FATAL_ERROR "the deprecated key was not named")
   endif()
 endif()
+if(cmd STREQUAL "lint" AND argv MATCHES "files")
+  # Only the secret every user can read is reported, and only where the
+  # platform can tell: Windows cannot, and says nothing rather than
+  # guessing in either direction.
+  if(UNIX)
+    if(NOT out MATCHES "CFD007[^\n]*api.key[^\n]*every user")
+      message(FATAL_ERROR "a secret in a world-readable file was not reported")
+    endif()
+  endif()
+  if(out MATCHES "CFD007[^\n]*db.key")
+    message(FATAL_ERROR "a secret only its owner can read was reported")
+  endif()
+endif()
+
 if(cmd STREQUAL "diff")
   foreach(rule CFD002 CFD003 CFD014)
     if(NOT out MATCHES "${rule}")

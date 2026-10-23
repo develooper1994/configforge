@@ -145,6 +145,15 @@ cf_bool cf_platform_stamp(const char* path, cf_stamp* out) {
     return CF_TRUE;
 }
 
+int cf_platform_world_readable(const char* path) {
+    struct stat st;
+
+    if (path == NULL || stat(path, &st) != 0) {
+        return -1;
+    }
+    return ((st.st_mode & S_IROTH) != 0) ? 1 : 0;
+}
+
 int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], int max,
                          cf_error* err) {
     DIR*           d;

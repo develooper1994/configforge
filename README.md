@@ -160,7 +160,7 @@ nothing, and `1.0` is where semantic versioning starts.
 | `cf_derive`: changing a value without mutating a snapshot | done |
 | change notification (`cf_changed`) | done |
 | a handle an event loop can wait on (`cf_watcher`): inotify, kqueue, Windows | done |
-| Doctor: SARIF output, configurable severity | next |
+| Doctor: SARIF, `--fail-on`, per-project and per-profile severity | done |
 | TOML, XML, SQLite codecs | deferred, see D-23 |
 | Windows Registry, gsettings, macOS defaults | deferred, see D-30 |
 
@@ -254,7 +254,7 @@ configuration.
 $ doctor lint staging.json
 CFD001  error   server.port  app.ini:2:1 always loses to app.ini:9:1, set later
                              by the same source; editing it has no effect
-CFD010  error   user-file    supplies 2 value(s) and wins none; everything it
+CFD010  warning user-file    supplies 2 value(s) and wins none; everything it
                              sets is shadowed, e.g. staging.ini:3:1
 CFD007  error   api.token    sensitive, and supplied on the command line at
                              argv[1], which every user of the machine can read
@@ -265,10 +265,12 @@ CFD014  info    db.password  sensitive value differs (by digest)
 ```
 
 ```sh
-$ doctor lint staging.json --baseline .configforge-baseline
-CFD008  info    log.level    no source configured this; the default applies
+$ doctor lint prod.json --baseline .configforge-baseline --fail-on warning
+CFD008  warning log.level    no source configured this; the default applies
 
-1 new finding(s), 0 at error severity; 1 accepted by the baseline
+1 new finding(s): 0 error, 1 warning, 0 info; 1 accepted by the baseline
+
+$ doctor lint prod.json --format sarif > doctor.sarif   # for the pull request
 ```
 
 A baseline records what is already there as accepted, one line per
@@ -280,6 +282,11 @@ matches anything is reported — a rule that stopped firing is either a
 fix worth noticing or a rule that quietly broke — but it does not fail
 the build, because failing would make people stop keeping the file
 rather than start pruning it.
+
+Severity is the project's to choose, in a file of the same shape:
+`CFD010 error`, `CFD011 off`, or `CFD008 error production` for one
+profile. That last form is what profiles are here - a label on the
+report that a rule's severity can follow, not a concept in the library.
 
 Doctor reads provenance reports and never resolves configuration itself,
 which is what keeps it from becoming a second implementation of every

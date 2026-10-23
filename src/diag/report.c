@@ -11,6 +11,7 @@
  * cannot.
  */
 
+#include "configforge/cf_platform.h"
 #include "configforge/cf_report.h"
 #include "configforge/cf_version.h"
 
@@ -183,6 +184,30 @@ static void report_definition(cf_sink* out, const cf_def* d) {
     cf_sink_putc(out, '}');
 }
 
+/* The file a location names: "app.ini:14:3" is app.ini. Read from the
+   right, so a drive letter keeps its colon. */
+static cf_bool report_file_of(const char* at, char* out, size_t cap) {
+    size_t n = strlen(at), cut = n, fields = 0;
+
+    while (fields < 2) {
+        size_t i = cut;
+        while (i > 0 && cf_is_digit((unsigned char)at[i - 1])) {
+            --i;
+        }
+        if (i == cut || i == 0 || at[i - 1] != ':') {
+            break;
+        }
+        cut = i - 1;
+        ++fields;
+    }
+    if (cut == 0 || cut + 1 > cap) {
+        return CF_FALSE;
+    }
+    memcpy(out, at, cut);
+    out[cut] = '\0';
+    return CF_TRUE;
+}
+
 static void report_candidate(cf_sink* out, const cf_candidate* c,
                              const cf_source_view* sv, const cf_def* d,
                              cf_report_mode mode) {
@@ -211,6 +236,23 @@ static void report_candidate(cf_sink* out, const cf_candidate* c,
     if (c->at != NULL) {
         cf_sink_puts(out, ", \"at\": ");
         report_quote_z(out, c->at);
+    }
+    /* For a secret that came from a file: whether everyone on the
+       machine can read that file. Recorded here because this is the
+       only point where the file is at hand - Doctor reads reports from
+       other machines and must never look at its own disk to judge them.
+       Absent when the platform cannot say. */
+    if (d != NULL && (d->flags & CF_SENSITIVE) != 0 && c->at != NULL && s != NULL &&
+        s->vt != NULL &&
+        (strcmp(s->vt->kind, "file") == 0 || strcmp(s->vt->kind, "dir") == 0 ||
+         strcmp(s->vt->kind, "dotenv") == 0)) {
+        char path[CF_PLATFORM_NAME_MAX];
+        int  wr = report_file_of(c->at, path, sizeof path)
+                      ? cf_platform_world_readable(path)
+                      : -1;
+        if (wr >= 0) {
+            cf_sink_fmt(out, ", \"world_readable\": %s", (wr > 0) ? "true" : "false");
+        }
     }
     if (c->outcome != CF_OUT_SELECTED) {
         cf_sink_puts(out, ", \"outcome\": ");
