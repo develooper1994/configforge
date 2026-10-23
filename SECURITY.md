@@ -37,6 +37,10 @@ A report that leaks one is a vulnerability.
   wrap where `size_t` is 32 bits.
 * A fixed-arena profile exercises every size from too small to enough,
   and each one either works or fails with a reason.
+* Memory a configuration gives back is zeroed first, so a value or a
+  file's text does not survive into the next allocation, a core dump or
+  a swap file (`cf_arena_free`, `cf_arena_wipe`). Memory the C library
+  keeps for itself - stdio's buffers, the environment - is outside it.
 * Doctor reports a secret supplied on the command line or by a
   world-readable file (CFD007) and one supplied from a source its policy
   forbids (CFD016).

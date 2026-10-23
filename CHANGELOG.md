@@ -381,6 +381,18 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Security
 
+- **Freed memory no longer holds the configuration's secrets.** An
+  arena now zeroes every byte it handed out before giving it back -
+  through a volatile pointer, because a store to memory about to be
+  freed is the textbook dead store an optimiser removes. That covers
+  every value and the raw text of every file read, on a successful
+  build, a failed one and an abandoned one; `cf_arena_wipe` does the
+  same for a caller-owned arena (`cf_build_in`). `test_wipe` watches
+  every block as it is released and searches it for the secret; with
+  the wipe disabled, all three of its cases fail. A first version also
+  tested an abandoned builder, which never holds the secret because
+  nothing is read before create - a test that passed either way, so it
+  was replaced by a build that fails after reading.
 - **The binary image reader dereferenced a file-supplied index without
   bounding it.** Every region the header describes was validated against
   the image's length; the value index inside each entry was not, so a

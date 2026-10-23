@@ -177,11 +177,39 @@ const cf_allocator* cf_arena_allocator(const cf_arena* ar) {
     return (ar != NULL && !ar->fixed) ? ar->alloc : NULL;
 }
 
+/* Zeroed through a volatile pointer, so the stores survive the
+   optimiser: memory about to be released is exactly the memory it may
+   prove nobody reads again, and memset before free is the textbook
+   dead store it removes. */
+static void cf_wipe(void* p, size_t n) {
+    volatile unsigned char* q = (volatile unsigned char*)p;
+
+    while (n > 0) {
+        *q++ = 0;
+        --n;
+    }
+}
+
+void cf_arena_wipe(cf_arena* ar) {
+    cf_block* b;
+
+    if (ar == NULL) {
+        return;
+    }
+    for (b = ar->head; b != NULL; b = b->next) {
+        cf_wipe(b->data, b->used);
+    }
+}
+
 void cf_arena_free(cf_arena* ar) {
     cf_block*           b;
     const cf_allocator* a;
 
-    if (ar == NULL || ar->fixed) {
+    if (ar == NULL) {
+        return;
+    }
+    cf_arena_wipe(ar);
+    if (ar->fixed) {
         return;
     }
     a = ar->alloc;
