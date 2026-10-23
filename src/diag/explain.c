@@ -119,6 +119,10 @@ size_t cf_ks_explain(const cf_keyspace* ks, const cf_source_view* sv, const char
     const cf_entry* e = cf_ks_find(ks, key, keylen);
     size_t          at;
 
+    /* No buffer is measuring, whatever the capacity says. */
+    if (buf == NULL) {
+        cap = 0;
+    }
     if (buf != NULL && cap > 0) {
         buf[0] = '\0';
     }
@@ -137,6 +141,9 @@ size_t cf_ks_inspect(const cf_keyspace* ks, const cf_source_view* sv, char* buf,
     size_t at = 0;
     size_t i, j;
 
+    if (buf == NULL) {
+        cap = 0;
+    }
     if (buf != NULL && cap > 0) {
         buf[0] = '\0';
     }

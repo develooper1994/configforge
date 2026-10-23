@@ -236,6 +236,32 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- **The Windows build had never been built.** The first MSVC run failed
+  to compile `win32.c` - `_environ` declared by hand collided with the
+  CRT's macro - and two `/W4` warnings stopped the tests and Doctor. The
+  suite then failed one test for the right reason: `cf_cli_args` reads
+  the real wide command line on Windows, and the test handed it an
+  invented argv. It now uses the process's own arguments, and
+  `unit.test_lex.utf8` asserts the non-ASCII round trip the wide path
+  exists for. The four gates that drive the compiler with a GCC-style
+  command line are registered only where one exists.
+- **The `analyze` preset had never analysed anything.** cppcheck defines
+  none of the compiler's macros, so `cf_port.h` stopped it at its
+  `#error` for want of a 64-bit type in every translation unit. Told
+  which compiler it is looking at, it analyses the library clean; the
+  tests get its warnings and not its style class, which calls a test
+  asserting a constant on purpose "a condition that is always true".
+- **The clang job could not have passed.** Clang 18 rejected the fixed
+  arena's casts under `-Wcast-align`, and clang-tidy 18 failed the
+  library on nineteen findings, two of them analyzer paths through an
+  image that had not opened and an explain buffer that was NULL with a
+  capacity. Both are closed - the image is zeroed before anything can
+  fail, a NULL buffer always measures - and the rest were one-line
+  fixes. clang-tidy now checks the library and Doctor, not the tests
+  and examples, whose forty findings were unchecked `printf` results.
+- **The C format gate depended on the formatter's version.**
+  clang-format 18, which CI installs, and 22 disagreed on three lines;
+  they are written so that both leave them alone.
 - **Rounding carry did not travel past the last digit.** The formatter
   handled a carry out of the leading digit and silently produced `"1:"`
   when the last one overflowed. Found by clang-tidy noticing the dead

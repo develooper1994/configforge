@@ -74,7 +74,7 @@ cf_bool cf_outcome_can_win(cf_outcome o) {
     switch (o) {
 #define CF_OUTCOME_X(sym, name, wins)                                                  \
     case sym:                                                                          \
-        return wins ? CF_TRUE : CF_FALSE;
+        return (wins) ? CF_TRUE : CF_FALSE;
 #include "configforge/cf_outcome.def"
 #undef CF_OUTCOME_X
     }

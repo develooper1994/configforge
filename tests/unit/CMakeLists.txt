@@ -38,6 +38,9 @@ foreach(t ${CF_UNIT_TESTS})
                C_EXTENSIONS OFF)
   configforge_apply_warnings(${t})
   configforge_apply_analysis(${t})
+  if(CF_CPPCHECK_TESTS)
+    set_target_properties(${t} PROPERTIES C_CPPCHECK "${CF_CPPCHECK_TESTS}")
+  endif()
   add_test(NAME unit.${t} COMMAND ${t})
 endforeach()
 
@@ -47,6 +50,12 @@ foreach(loc de_DE.UTF-8 tr_TR.UTF-8)
   add_test(NAME unit.test_numeric.${loc} COMMAND test_numeric ${loc})
   add_test(NAME unit.test_value.${loc} COMMAND test_value ${loc})
 endforeach()
+
+# A non-ASCII argument, round-tripped. On Windows this is the only test
+# of the wide command-line path: ctest starts the process with the
+# argument in UTF-16, the CRT's argv holds the active code page's
+# approximation of it, and cf_cli_args has to recover the original.
+add_test(NAME unit.test_lex.utf8 COMMAND test_lex --utf8 "çğı")
 
 # Threads are not in C89. Where they exist the contract in D-14 is
 # exercised for real; where they do not, the same test still checks the

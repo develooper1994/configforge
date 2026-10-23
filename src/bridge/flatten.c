@@ -194,7 +194,7 @@ static cf_bool fl_end(void* ctx) {
 
         if (plen + 7 < sizeof idx) {
             memcpy(idx, f->path, plen);
-            memcpy(idx + plen, ".count", 6);
+            memcpy(idx + plen, ".count", 7); /* with its terminator: room was checked */
             cf_value_int(&count, (cf_i64)fr->index);
             if (!cf_ks_add(f->ks, idx, plen + 6, f->rank, &count, NULL)) {
                 f->failed = CF_TRUE;
@@ -270,7 +270,7 @@ static cf_bool group_is_array(const cf_keyspace* ks, const char* key, size_t upt
         return CF_FALSE;
     }
     memcpy(probe, key, upto);
-    memcpy(probe + upto, ".count", 6);
+    memcpy(probe + upto, ".count", 7); /* with its terminator: room was checked */
     return (cf_ks_find(ks, probe, upto + 6) != NULL) ? CF_TRUE : CF_FALSE;
 }
 

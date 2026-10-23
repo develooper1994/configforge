@@ -44,8 +44,15 @@ typedef struct cf_error {
 
 /* The size field is what allows fields to be added after 1.0 without
    breaking the interface: a newer library sees an older caller's
-   smaller struct and writes only what fits. */
+   smaller struct and writes only what fits.
+
+   Fenced from the formatter because clang-format 18 and 22 disagree
+   about a brace initialiser inside a macro - one keeps it on a line,
+   the other spreads it over six - and the gate cannot pass under both
+   unless neither touches it. */
+/* clang-format off */
 #define CF_ERROR_INIT {sizeof(cf_error), 0, {0}, {0}, {0}}
+/* clang-format on */
 
 void cf_error_clear(cf_error* e);
 

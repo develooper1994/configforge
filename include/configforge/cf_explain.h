@@ -30,12 +30,12 @@ extern "C" {
 /* The low-level renderers. The public API in configforge.h wraps
    these; these take a key space and a source list directly, which is
    what the tests and the Doctor tool need. */
-size_t cf_ks_explain(const cf_keyspace* ks, const cf_source_view* sources,
-                     const char* key, size_t keylen, char* buf, size_t cap);
+size_t cf_ks_explain(const cf_keyspace* ks, const cf_source_view* sv, const char* key,
+                     size_t keylen, char* buf, size_t cap);
 
 /* Render every key. Sources that never win appear in the trailing
    summary, which is what makes a dead source visible. */
-size_t cf_ks_inspect(const cf_keyspace* ks, const cf_source_view* sources, char* buf,
+size_t cf_ks_inspect(const cf_keyspace* ks, const cf_source_view* sv, char* buf,
                      size_t cap);
 
 #ifdef __cplusplus

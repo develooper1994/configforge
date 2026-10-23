@@ -274,12 +274,14 @@ static void test_corrupt_index_is_refused(void) {
 
     memcpy(g_img2.b, g_img.b, n);
     /* The first index record's value_index, at offset 8 of the record,
-       pointed anywhere it liked. */
+       pointed anywhere it liked. All bits set is spelled (char)-1:
+       (char)-1 truncates a constant where char is signed, and MSVC
+       says so at /W4. */
     {
         size_t idx_off         = 64; /* the header is 64 bytes */
-        g_img2.b[idx_off + 8]  = (char)0xFF;
-        g_img2.b[idx_off + 9]  = (char)0xFF;
-        g_img2.b[idx_off + 10] = (char)0xFF;
+        g_img2.b[idx_off + 8]  = (char)-1;
+        g_img2.b[idx_off + 9]  = (char)-1;
+        g_img2.b[idx_off + 10] = (char)-1;
         g_img2.b[idx_off + 11] = (char)0x7F;
     }
     check(cf_image_open(&img, g_img2.b, n, &err),
@@ -289,8 +291,8 @@ static void test_corrupt_index_is_refused(void) {
 
     /* A chain count with nowhere to put it. */
     memcpy(g_img2.b, g_img.b, n);
-    g_img2.b[36] = (char)0xFF;
-    g_img2.b[37] = (char)0xFF;
+    g_img2.b[36] = (char)-1;
+    g_img2.b[37] = (char)-1;
     check(!cf_image_open(&img, g_img2.b, n, &err),
           "a chain that does not fit is refused at the door");
 }

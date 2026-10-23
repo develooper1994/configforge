@@ -43,7 +43,7 @@ cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err) 
     cap = 4096;
     buf = (char*)cf_arena_alloc(ar, cap);
     if (buf == NULL) {
-        fclose(f);
+        (void)fclose(f);
         return cf_error_set(err, CF_E_MEMORY, NULL, path, "no room to read '%s'", path);
     }
     for (;;) {
@@ -57,7 +57,7 @@ cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err) 
             size_t ncap = cap * 2;
             nb          = (char*)cf_arena_alloc(ar, ncap);
             if (nb == NULL) {
-                fclose(f);
+                (void)fclose(f);
                 return cf_error_set(err, CF_E_MEMORY, NULL, path,
                                     "'%s' is larger than the arena", path);
             }
@@ -67,11 +67,13 @@ cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err) 
         }
     }
     if (ferror(f)) {
-        fclose(f);
+        (void)fclose(f);
         return cf_error_set(err, CF_E_SOURCE, NULL, path, "error while reading '%s'",
                             path);
     }
-    fclose(f);
+    /* Read-only, and everything wanted was read: a failure to close
+       cannot lose data, so there is nothing to report. */
+    (void)fclose(f);
 
     buf[len] = '\0';
     b->p     = buf;

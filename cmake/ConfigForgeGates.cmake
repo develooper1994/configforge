@@ -36,6 +36,18 @@ function(configforge_add_gates tgt)
            COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
                    ${CMAKE_SOURCE_DIR}/cmake/gates/GateDetection.cmake)
 
+  # The rest drive the compiler with a GCC-style command line, which
+  # MSVC rejects at the first flag - and it has no C89 mode to ask for
+  # in any case (see ConfigForgeCompiler.cmake). They are about the
+  # sources rather than the compiler, so the GCC and Clang jobs answer
+  # them for every platform; on MSVC the library and every test are
+  # still built at /W4 /WX, which is the check this compiler can give.
+  # Registering them anyway would make the Windows suite fail on a
+  # command line rather than on anything in the code.
+  if(MSVC)
+    return()
+  endif()
+
   # 3. Every public header compiles standalone as C89.
   add_test(
     NAME gate.headers

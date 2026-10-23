@@ -37,8 +37,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: cmake -S . -B build
-      - run: cmake --build build
-      - run: ctest --test-dir build --output-on-failure
+      # The configuration is named because Visual Studio is a
+      # multi-config generator: without -C, ctest on Windows finds every
+      # test "not available" and runs none of them.
+      - run: cmake --build build --config Debug
+      - run: ctest --test-dir build -C Debug --output-on-failure
       # The same driver a contributor runs, on the platform that would
       # otherwise have no way to run it.
       - run: cmake -DMODE=quick -P scripts/verify.cmake

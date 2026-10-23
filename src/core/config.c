@@ -133,8 +133,10 @@ static void derive_prefix(const char* name, char* out, size_t cap) {
         return;
     }
     for (i = 0; name[i] != '\0' && n + 2 < cap; ++i) {
-        int c    = (unsigned char)name[i];
-        out[n++] = cf_is_alnum(c) ? (char)cf_to_upper(c) : '_';
+        int c = (unsigned char)name[i];
+        /* One cast over the whole choice: '_' is an int in C, so a
+           cast on one arm alone left the other arm narrowing. */
+        out[n++] = (char)(cf_is_alnum(c) ? cf_to_upper(c) : '_');
     }
     out[n++] = '_';
     out[n]   = '\0';

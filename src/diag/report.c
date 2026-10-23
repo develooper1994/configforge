@@ -443,7 +443,7 @@ static cf_bool replay_load(const cf_source* s, cf_keyspace* ks) {
                 continue;
             }
             memcpy(probe, e->key, plen);
-            memcpy(probe + plen, ".outcome", 8);
+            memcpy(probe + plen, ".outcome", 9); /* and its terminator */
             if (cf_ks_find(&doc, probe, plen + 8) != NULL) {
                 continue; /* shadowed, refused or truncated */
             }
