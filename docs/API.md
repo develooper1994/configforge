@@ -1511,6 +1511,15 @@ makes cross-platform determinism impossible.
 Deliberately not _Bool even where available: an ABI type must not
 change size with the consumer's language standard.
 
+### GCC's extensions
+
+CF_GNUC is GCC's version where GCC's extensions are really there, and
+0 where they are not. __GNUC__ alone cannot say: the Portable C
+Compiler defines it as 4 to get past system headers that test for it,
+and has neither the atomic builtins nor all of the attributes, so a
+test of __GNUC__ chose __sync_add_and_fetch and pcc stopped at the
+first file. Everything below asks CF_GNUC.
+
 ### inline
 
 ### Export control

@@ -143,6 +143,25 @@ typedef int cf_bool;
 #define CF_FALSE 0
 
 /* ------------------------------------------------------------------ *
+ * GCC's extensions
+ *
+ * CF_GNUC is GCC's version where GCC's extensions are really there, and
+ * 0 where they are not. __GNUC__ alone cannot say: the Portable C
+ * Compiler defines it as 4 to get past system headers that test for it,
+ * and has neither the atomic builtins nor all of the attributes, so a
+ * test of __GNUC__ chose __sync_add_and_fetch and pcc stopped at the
+ * first file. Everything below asks CF_GNUC.
+ * ------------------------------------------------------------------ */
+
+#if defined(__GNUC__) && !defined(__PCC__)
+#define CF_GNUC __GNUC__
+#define CF_GNUC_MINOR __GNUC_MINOR__
+#else
+#define CF_GNUC 0
+#define CF_GNUC_MINOR 0
+#endif
+
+/* ------------------------------------------------------------------ *
  * inline
  * ------------------------------------------------------------------ */
 
@@ -150,7 +169,7 @@ typedef int cf_bool;
 #define CF_INLINE static inline
 #elif defined(_MSC_VER)
 #define CF_INLINE static __inline
-#elif defined(__GNUC__)
+#elif CF_GNUC
 #define CF_INLINE static __inline__
 #else
 #define CF_INLINE static
@@ -179,7 +198,7 @@ typedef int cf_bool;
 #else
 #define CF_API __declspec(dllimport)
 #endif
-#elif defined(__GNUC__) && __GNUC__ >= 4
+#elif CF_GNUC >= 4
 #define CF_API __attribute__((visibility("default")))
 #else
 #define CF_API
@@ -208,7 +227,7 @@ typedef int cf_bool;
  * Function attributes
  * ------------------------------------------------------------------ */
 
-#if !defined(CF_FORCE_PORTABLE) && defined(__GNUC__)
+#if !defined(CF_FORCE_PORTABLE) && CF_GNUC
 #define CF_PRINTFLIKE(fmt, first) __attribute__((format(printf, fmt, first)))
 #define CF_UNUSED_RESULT __attribute__((warn_unused_result))
 #define CF_LIKELY(x) __builtin_expect(!!(x), 1)
@@ -231,12 +250,12 @@ typedef int cf_bool;
 
 #if defined(CF_SINGLE_THREADED)
 #define CF_ATOMIC_KIND "single-threaded"
-#elif !defined(CF_FORCE_PORTABLE) && defined(__GNUC__) &&                              \
-    (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7))
+#elif !defined(CF_FORCE_PORTABLE) &&                                                   \
+    (CF_GNUC > 4 || (CF_GNUC == 4 && CF_GNUC_MINOR >= 7))
 #define CF_ATOMIC_GCC_ATOMIC 1
 #define CF_ATOMIC_KIND "gcc __atomic"
-#elif !defined(CF_FORCE_PORTABLE) && defined(__GNUC__) &&                              \
-    (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1))
+#elif !defined(CF_FORCE_PORTABLE) &&                                                   \
+    (CF_GNUC > 4 || (CF_GNUC == 4 && CF_GNUC_MINOR >= 1))
 #define CF_ATOMIC_GCC_SYNC 1
 #define CF_ATOMIC_KIND "gcc __sync"
 #elif !defined(CF_FORCE_PORTABLE) && defined(_MSC_VER)
