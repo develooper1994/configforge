@@ -7,6 +7,14 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **A usage guide and the examples it walks through** (`docs/Guide.md`):
+  getting the library into a build, a contract, sources and precedence,
+  asking why, errors, formats, secrets, reloading, the editor and
+  Doctor, small targets, C++ and threads. Four new examples, each run
+  by the suite and checked for the lines that show it does what its
+  comment says: `layers` (six sources at once, and why each value won),
+  `reload` (watch, rebuild, log what changed), `embedded` (a fixed
+  buffer and an image, no heap) and `schema`.
 - **Any C89 compiler, any C library**, checked rather than claimed:
   `EXTRA=compilers` in `verify.cmake` and a CI job run the whole suite
   against musl (`musl-gcc`) and with the Tiny C Compiler and the Portable

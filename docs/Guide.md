@@ -1,0 +1,372 @@
+# Using ConfigForge
+
+A guide from the first line of code to a configuration on a device with
+no heap. Every program it quotes is in `examples/` and is built and run
+by the test suite, so what you read here is what the library does today.
+The reference for each function is [`API.md`](API.md); the reasons are in
+[`Decisions.md`](Decisions.md).
+
+1. [Getting it into a build](#1-getting-it-into-a-build)
+2. [The first program](#2-the-first-program)
+3. [A contract](#3-a-contract)
+4. [Sources and precedence](#4-sources-and-precedence)
+5. [Asking why](#5-asking-why)
+6. [Reading values](#6-reading-values)
+7. [Errors](#7-errors)
+8. [Formats](#8-formats)
+9. [Secrets](#9-secrets)
+10. [Changing, saving, reloading](#10-changing-saving-reloading)
+11. [The editor, the report and Doctor](#11-the-editor-the-report-and-doctor)
+12. [Small targets](#12-small-targets)
+13. [C++](#13-c)
+14. [Threads](#14-threads)
+
+## 1. Getting it into a build
+
+Pick whichever your project already uses; each one gives you the same
+library and the same header, `<configforge/configforge.h>`.
+
+**CMake, from source**, inside your tree or fetched:
+
+```cmake
+add_subdirectory(third_party/configforge)            # or FetchContent
+target_link_libraries(app PRIVATE ConfigForge::configforge)
+```
+
+**CMake, installed**: `find_package(ConfigForge REQUIRED)` and the same
+target.
+
+**Not CMake**: the install carries a relocatable pkg-config file.
+
+```sh
+cc app.c $(pkg-config --cflags --libs configforge)
+```
+
+**A package manager**:
+
+```sh
+conan create . --build=missing -tf packaging/conan/test_package
+vcpkg install configforge --overlay-ports=packaging/vcpkg
+```
+
+**No build system at all**: `scripts/amalgamate.py` writes
+`configforge/configforge.h` and `configforge.c`. Compile the one file
+with the rest of your program.
+
+The library is C89 and needs nothing but the C library. It is built and
+tested with GCC, Clang and MSVC, against glibc and musl, and compiles
+with the Tiny C Compiler. The build options are in the README's
+"Leaving parts out" and "Limits and the stack budget" sections.
+
+## 2. The first program
+
+`examples/tier0.c`:
+
+```c
+cf_error   err = CF_ERROR_INIT;
+cf_config* cfg = cf_app("myapp", argc, argv, &err);
+if (cfg == NULL) { fputs(err.message, stderr); return 1; }
+
+port = cf_get_int(cfg, "server.port", 8080);
+cf_config_free(cfg);
+```
+
+`cf_app` reads the command line and the environment, in that order of
+precedence, above the defaults you give at each read:
+
+```sh
+MYAPP_SERVER__PORT=9090 ./app            # environment: double underscore is a dot
+./app --server.port=7000                 # command line beats environment
+./app --server.port 7000                 # the same, once there is a contract (3)
+```
+
+Keys are lowercase, dotted paths: `server.port`, `upstream.1.host`. A
+key is the same key in every source - that is what makes "which source
+won" a question with one answer.
+
+## 3. A contract
+
+Tier 0 infers types and accepts anything. A contract - a definition for
+each key the program reads - buys typo detection, ranges, permitted
+values, required keys and a type that beats inference, and it does not
+add a single place where things can fail: everything is checked in
+`cf_builder_create`. `examples/tier1.c`:
+
+```c
+cf_builder* b = cf_app_builder("myapp", argc, argv);
+
+cf_builder_int (b, "server.port", 8080, 1, 65535, 0);
+cf_builder_text(b, "server.host", "0.0.0.0", 0);
+cf_builder_bool(b, "tls.enabled", CF_FALSE, 0);
+cf_builder_unknown(b, CF_UNKNOWN_REJECT);   /* a typo is an error */
+
+cfg = cf_builder_create(b, &err);           /* the one place it can fail */
+```
+
+```text
+$ ./tier1 --server.port=99999
+configuration error (validate): server.port: 99999 is outside 1..65535
+$ ./tier1 --server.pot=1
+configuration error (key): unknown key 'server.pot'; did you mean 'server.port'?
+```
+
+The flags on a definition: `CF_REQUIRED` (a source must supply it - a
+default does not count), `CF_SENSITIVE` (never shown, section 9),
+`CF_DEPRECATED`, and `CF_TRANSIENT` for a command such as `--explain`
+that must never be saved into a file. For anything the convenience
+calls do not cover - a permitted set, a description, a policy saying
+which sources may set the key - fill a `cf_def` and pass it to
+`cf_builder_define`; `examples/tier1.c` does it for `log.level`.
+
+A prefix you cannot know in advance - a plugin's settings - is exempted
+from unknown-key rejection with `cf_builder_open(b, "plugins")`.
+
+## 4. Sources and precedence
+
+Every source has a rank, and the lowest rank wins. The library's own
+ranks are `CF_RANK_CLI` (0), `CF_RANK_ENV` (10), `CF_RANK_USER_FILE`
+(20), `CF_RANK_SYS_FILE` (30) and `CF_RANK_DEFAULT` (40); any integer
+works, so a program places a source exactly where it belongs. Within one
+source, a later assignment beats an earlier one.
+
+| Call | Source |
+| ---- | ------ |
+| `cf_builder_cli` | `--key=value`, `--key value`, `--no-key`, aliases, `@file` |
+| `cf_builder_env` | `PREFIX_A__B`, and `PREFIX_A_B` too once a definition makes it unambiguous |
+| `cf_builder_file` | a file, its format by extension; `CF_FILE_OPTIONAL` if it may be absent |
+| `cf_builder_dir` | a drop-in directory: every file in byte order, at one rank |
+| `cf_builder_dotenv` | a `.env` file, read as the environment is |
+| `cf_builder_memory` | pairs from the program itself |
+| `cf_builder_replay` | a provenance report, reproducing another process's configuration |
+| `cf_builder_source` | a source you wrote; `cf_builder_file_codec` for a format you parse |
+
+`examples/layers.c` uses all of the usual ones at once - a shipped
+`app.toml`, a `conf.d/`, a `.env`, the environment and the command line -
+and asks, for one key from each layer, why it has the value it has.
+
+## 5. Asking why
+
+This is the question the library exists to answer:
+
+```c
+cf_explain(cfg, "server.workers", buf, sizeof buf);
+```
+
+```text
+server.workers = 12  (int)
+  conf.d      12                    selected   conf.d/90-local.ini:3:1
+  conf.d      8                     shadowed   conf.d/10-site.ini:3:1
+  app.toml    4                     shadowed   app.toml:5:11
+  default     2                     shadowed
+  .env        not present
+  env         not present
+  cli         not present
+
+db.url = <sensitive, 26 bytes>  (text)
+  .env        <sensitive, 26 bytes> selected   .env:2
+  app.toml    <sensitive, 24 bytes> shadowed   app.toml:8:7
+  default     <sensitive, 13 bytes> shadowed
+  conf.d      not present
+  env         not present
+  cli         not present
+```
+
+Every candidate, from every source, in precedence order, with the file,
+line and column it came from; and every source that had nothing, which
+is how somebody learns which flag they could have passed. `cf_inspect`
+does the same for every key and adds a note for a source that supplied
+values and won none of them - the file somebody is editing to no effect.
+
+A common pattern is a transient `--cf.explain=<key>` definition and a
+check after `cf_builder_create`, as `examples/tier1.c` does.
+
+## 6. Reading values
+
+```c
+cf_i64      port = cf_get_int (cfg, "server.port", 8080);   /* fallback if absent */
+const char* host = cf_get_text(cfg, "server.host", "");
+double      r    = cf_get_real(cfg, "ratio", 0.5);
+cf_bool     tls  = cf_get_bool(cfg, "tls.enabled", CF_FALSE);
+```
+
+Once a key is defined, reading it cannot fail: the value was checked
+when the configuration was built. `cf_try_int` and its siblings return a
+`cf_code` for the rare caller that wants to tell "absent" from "wrong
+type". `cf_has` and `cf_type_of` answer the obvious questions.
+
+Arrays are index keys and a count: `upstream.0.host`, `upstream.1.host`,
+with `cf_array_count(cfg, "upstream")` and `cf_array_key` to build a key.
+`cf_iter_keys(&it, cfg, "server")` walks every key under a prefix and
+`cf_iter_children` the names one level down - which is how a program
+discovers the plugins under an open prefix.
+
+## 7. Errors
+
+A `cf_error` is a plain struct the caller owns, filled by the call that
+failed: `code` (`cf_code_name` names it), `message`, and `key` and
+`source` where they are known - the key, and where it was set
+(`argv[1]`, `app.ini:3:8`). No global error state, no allocation, so it
+works in the fixed-arena profile where allocation is exactly what fails.
+
+The codes: `key` (malformed or unknown key), `definition`, `convert`,
+`validate`, `required`, `source` (a source could not be read),
+`capability` (a source cannot do what was asked - a format this build
+left out, say), `policy` and `memory`.
+
+## 8. Formats
+
+| Format | Option | Notes |
+| ------ | ------ | ----- |
+| INI | `CF_WITH_INI` | sections and keys; typed by the contract |
+| JSON | `CF_WITH_JSON` | typed by the file |
+| TOML | `CF_WITH_TOML` | the subset in D-23: tables, arrays of tables, inline tables, every scalar but dates |
+| YAML | `CF_WITH_YAML`, off by default | through libyaml; typed by the contract (D-39) |
+
+The format is taken from the extension, never guessed from the content.
+A file in a format the build left out is an error that names the option
+to turn on - never a file quietly read as nothing. All four can also be
+written (section 10), and a format of your own is a `cf_codec` handed to
+`cf_builder_file_codec`; `tests/unit/test_codec.c` is a complete one.
+
+On YAML in particular: a plain value is text until a definition types
+it, and the library has one spelling of a boolean, `true` and `false`,
+so `country: no` stays the text "no" whichever YAML version a reader
+follows. Anchors, aliases and tags are refused by name.
+
+## 9. Secrets
+
+Define a key `CF_SENSITIVE` and its value never appears in a diagnostic:
+`explain()`, `inspect()`, `cf_diff_text`, a validation message and a
+value-blind report all show that it exists, where it was set and how
+long it is - `<sensitive, 13 bytes>` - and not what it is. The memory a
+configuration releases is zeroed first, so a password does not survive
+into the next allocation or a core dump; for a buffer you own,
+`cf_arena_wipe` does the same. Doctor reports a secret passed on the
+command line, where `ps` shows it to everyone (CFD007).
+
+## 10. Changing, saving, reloading
+
+A configuration never changes once built. Changing a value derives a new
+one, under the same contract, with the change recorded as a source of
+its own:
+
+```c
+static const cf_pair change[] = {{"server.port", "9000"}};
+cf_config* next = cf_derive(cfg, "settings", change, 1, &err);
+```
+
+Writing what somebody configured - and not the defaults, which a later
+release may want to move - is `cf_emit(cfg, "json", CF_EMIT_CONFIGURED,
+0, buf, cap, &err)`. `examples/settings.c` is the whole cycle: read,
+explain, set, save, notice the file change.
+
+Noticing a change is a question you ask, never a callback - the library
+owns no thread. `cf_changed(cfg)` asks whether a file it read has moved
+on. A program with an event loop opens a `cf_watcher` and waits on its
+descriptor (`cf_watcher_fd`, or `cf_watcher_handle` on Windows); one
+without calls `cf_watcher_wait(w, timeout_ms)`. Then it rebuilds from the
+same recipe, logs what changed, and swaps. `examples/reload.c`:
+
+```c
+next = load(&err);
+if (next != NULL) {
+    cf_diff_text(cfg, next, changes, sizeof changes);   /* the log line */
+    cf_config_free(cfg);
+    cfg = next;
+}
+```
+
+```text
+reloaded:
+db.password: changed, <sensitive> (file reload.toml:6:12)
+pool.size: 4 -> 16 (file reload.toml:4:8)
+server.port: 8080 -> 9443 (file reload.toml:2:8)
+```
+
+A reload whose new file is broken fails to build, and the program keeps
+the configuration it has.
+
+## 11. The editor, the report and Doctor
+
+**The editor.** `cf_schema(cfg, "myapp", buf, cap)` writes the contract
+as a JSON Schema. A settings file that names it - `"$schema":
+"./myapp.schema.json"` - gets completion, descriptions and validation in
+most editors with no plugin. `examples/schema.c`.
+
+**The report.** `cf_report` writes everything the configuration knows:
+every key, every candidate, where each came from, which won and why. A
+value-blind report (the default) carries the presence, length and digest
+of a sensitive value and never the value; a full one can be replayed
+with `cf_builder_replay` to reproduce, on a developer's machine, exactly
+what a production process was running.
+
+**Doctor** (`tools/doctor`) reads reports and finds the mistakes no
+single process can see: a value set twice in one file, a source that
+never wins, a secret on the command line, two environments that drifted
+apart. `doctor lint`, `doctor diff`, `doctor explain`; SARIF for code
+scanning; a severity file and a baseline so a project can adopt it
+without fixing everything on day one; and a GitHub Action. See
+[`Doctor.md`](Doctor.md).
+
+## 12. Small targets
+
+Everything above works with no heap. Hand the builder a buffer:
+
+```c
+static char buf[16384];
+cf_arena*   arena = cf_arena_fixed(buf, sizeof buf);
+cf_builder* b     = cf_build_in(arena);
+```
+
+and every allocation comes out of it, or fails with `memory` and a
+message. With no filesystem, resolve the configuration at build time and
+ship it as a binary snapshot image - `cf_image_write` on the build
+machine, a const array in the firmware, `cf_source_image_mem` on the
+device - which is read in place, without parsing, and still explains
+itself, down to the line on the build machine:
+
+```text
+radio.channel = 11  (int)
+  firmware    11                    selected   release.ini:2:1
+  default     1                     shadowed
+```
+
+`examples/embedded.c` is both halves.
+
+For such a target:
+
+* turn off what it does not use - `CF_WITH_DIR`, `CF_WITH_DOTENV`,
+  `CF_WITH_EMIT`, `CF_WITH_REPORT`, even `CF_WITH_REAL` - and each part
+  you leave out refuses by name if something still asks for it;
+* shorten the limits (`CF_KEY_MAX`, `CF_MESSAGE_MAX`, `CF_PATH_MAX`,
+  `CF_MAX_DEPTH`) and set `CF_STACK_BUDGET`: the build measures every
+  function's frame and says which ones do not fit and what to turn off;
+  the `minimal` preset holds the library to a kilobyte per function;
+* `CF_PLATFORM=none` for a target with no operating system, and
+  `CF_SINGLE_THREADED` where there are no threads (or no atomics).
+
+## 13. C++
+
+`<configforge/configforge.hpp>` is a C++03 wrapper over the same
+library: a `Builder` with chained calls, a reference-counted `Config`,
+`get<T>`, ranges over keys and children, `explain()`, `emit()`,
+`changesSince()` and a `Watcher`. `examples/tier1.cpp`:
+
+```cpp
+cf::Config cfg = cf::Builder("myapp", argc, argv)
+                     .defineInt("server.port", 8080, 1, 65535)
+                     .unknown(CF_UNKNOWN_REJECT)
+                     .create();
+if (!cfg) { std::fputs(cfg.error().message(), stderr); return 1; }
+int port = cfg.get<int>("server.port", 8080);
+```
+
+## 14. Threads
+
+A configuration is immutable once built, so any number of threads read
+it without a lock. `cf_config_ref` and `cf_config_free` count
+references atomically, so a reload can swap in a new snapshot while
+readers finish with the old one; the last reader's `cf_config_free`
+releases it. Change notification and reload are the program's to
+schedule - the library starts no thread and calls nobody back. D-14 has
+the full contract.
