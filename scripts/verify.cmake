@@ -28,6 +28,9 @@
 #   kqueue   the macOS and BSD wait handle on Linux, through libkqueue
 #   tidy     clang-tidy over the library and Doctor (CF_CLANG_TIDY=ON)
 #   clang    the whole suite built with clang
+#   tsan     the whole suite under the thread sanitiser (the tsan preset)
+#   coverage line coverage of src/ by the suite, failing below COVERAGE_MIN
+#            percent (default 84: a ratchet, raised as tests are added)
 #
 # WORK puts the staged copy somewhere other than build-verify/. Under
 # WSL, verifying a checkout on /mnt/c needs it: that filesystem has no
@@ -221,8 +224,78 @@ foreach(x ${EXTRA})
       -DCMAKE_CXX_COMPILER=${CLANGXX_EXE})
     step("clang build" ${build} build-clang ${debug})
     step("clang test" ${test} build-clang)
+  elseif(x STREQUAL "coverage")
+    find_program(GCOVR_EXE gcovr)
+    if(NOT GCOVR_EXE OR MSVC)
+      message("coverage              skipped: no gcovr")
+      continue()
+    endif()
+    if(NOT DEFINED COVERAGE_MIN)
+      set(COVERAGE_MIN 84)
+    endif()
+    step("coverage configure" ${CMAKE_COMMAND} --preset coverage)
+    step(
+      "coverage build"
+      ${CMAKE_COMMAND}
+      --build
+      --preset
+      coverage
+      ${parallel})
+    step("coverage test" ${CMAKE_CTEST_COMMAND} --preset coverage)
+    # gcov's branch counts can come out negative (GCC bug 68080), which
+    # gcovr refuses by default; they are branches, and the gate is on
+    # lines.
+    step(
+      "coverage >= ${COVERAGE_MIN}%"
+      ${GCOVR_EXE}
+      -r
+      .
+      --filter
+      src/
+      --gcov-ignore-parse-errors=negative_hits.warn_once_per_file
+      --fail-under-line
+      ${COVERAGE_MIN}
+      --txt-summary
+      build-coverage)
+  elseif(x STREQUAL "tsan")
+    if(WIN32)
+      message("tsan                  skipped: no thread sanitiser here")
+      continue()
+    endif()
+    step("tsan configure" ${CMAKE_COMMAND} --preset tsan)
+    step(
+      "tsan build"
+      ${CMAKE_COMMAND}
+      --build
+      --preset
+      tsan
+      ${parallel})
+    # The thread sanitiser maps its shadow memory at fixed addresses, and
+    # a kernel that randomises mmap with more bits than the runtime
+    # expects (Linux 6.x defaults to 32) puts a library in the way: the
+    # tests then die with "unexpected memory mapping" before running a
+    # line. With address randomisation off for the run, they do not.
+    find_program(SETARCH_EXE setarch)
+    if(SETARCH_EXE)
+      execute_process(
+        COMMAND uname -m
+        OUTPUT_VARIABLE arch
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+      step(
+        "tsan test"
+        ${SETARCH_EXE}
+        ${arch}
+        -R
+        ${CMAKE_CTEST_COMMAND}
+        --preset
+        tsan)
+    else()
+      step("tsan test" ${CMAKE_CTEST_COMMAND} --preset tsan)
+    endif()
   else()
-    message(FATAL_ERROR "unknown EXTRA step '${x}': kqueue, tidy or clang")
+    message(
+      FATAL_ERROR
+        "unknown EXTRA step '${x}': kqueue, tidy, clang, tsan or coverage")
   endif()
 endforeach()
 

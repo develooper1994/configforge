@@ -5,6 +5,27 @@
 
 option(CF_ANALYZER "GCC -fanalyzer symbolic execution" OFF)
 option(CF_SANITIZE "Address and undefined behaviour" OFF)
+# Data races. The threading contract (D-14) says a configuration is read
+# from any number of threads without a lock; this is the check that the
+# claim holds under a tool that watches every access, not only under a
+# test that did not happen to race.
+option(CF_SANITIZE_THREAD "Thread sanitiser" OFF)
+# Line coverage, read by gcovr in `verify.cmake -DEXTRA=coverage`.
+option(CF_COVERAGE "Coverage instrumentation (gcov)" OFF)
+if(CF_SANITIZE AND CF_SANITIZE_THREAD)
+  message(FATAL_ERROR "CF_SANITIZE and CF_SANITIZE_THREAD cannot be combined: "
+                      "the address and thread sanitisers exclude each other")
+endif()
+# Either sanitiser instruments every frame and every access, so the
+# gates that compare against an uninstrumented build, and the stack
+# budget, step aside for both.
+if(CF_SANITIZE
+   OR CF_SANITIZE_THREAD
+   OR CF_COVERAGE)
+  set(CF_INSTRUMENTED ON)
+else()
+  set(CF_INSTRUMENTED OFF)
+endif()
 option(CF_CPPCHECK "cppcheck, when present" OFF)
 option(CF_CLANG_TIDY "clang-tidy, when present" OFF)
 
@@ -32,6 +53,15 @@ function(configforge_apply_analysis tgt)
       ${tgt} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer
                      -fno-sanitize-recover=all -g)
     target_link_options(${tgt} PRIVATE -fsanitize=address,undefined)
+  endif()
+  if(CF_COVERAGE)
+    target_compile_options(${tgt} PRIVATE --coverage)
+    target_link_options(${tgt} PRIVATE --coverage)
+  endif()
+  if(CF_SANITIZE_THREAD)
+    target_compile_options(${tgt} PRIVATE -fsanitize=thread
+                                          -fno-omit-frame-pointer -g)
+    target_link_options(${tgt} PRIVATE -fsanitize=thread)
   endif()
 endfunction()
 
