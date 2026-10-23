@@ -77,8 +77,16 @@ endforeach()
 # __odr_asan descriptors - so the measurement stops meaning what it
 # means everywhere else. A gate that fires on correct code teaches
 # people to ignore it, which is worse than not having the gate.
+#
+# Not under the Tiny C Compiler either, which puts `const` data - string
+# literals, constant tables - in .data rather than .rodata, so every one
+# of them would read as mutable. That is where tcc puts things, not what
+# the code is, and the same sources pass this check under GCC and Clang.
 find_program(OBJDUMP_EXE objdump)
-if(OBJDUMP_EXE AND NOT SANITIZE)
+if(COMPILER STREQUAL "TinyCC")
+  message("symbol gate: mutable-global check skipped: tcc places const "
+          "data in .data")
+elseif(OBJDUMP_EXE AND NOT SANITIZE)
   execute_process(
     COMMAND ${OBJDUMP_EXE} -t "${LIB}"
     OUTPUT_VARIABLE syms

@@ -60,7 +60,7 @@ runs wherever the build does.
 cmake --preset default && cmake --build --preset default && ctest --preset default
 cmake -P scripts/format.cmake                       # format and lint what changed
 cmake -DSOURCE=index -DJOBS=2 -P scripts/verify.cmake   # verify exactly what is staged
-cmake -DSOURCE=index -DEXTRA="kqueue;tidy;clang;tsan;yaml;fuzz;coverage" -P scripts/verify.cmake
+cmake -DSOURCE=index -DEXTRA="kqueue;tidy;clang;tsan;yaml;compilers;fuzz;coverage" -P scripts/verify.cmake
 ```
 
 `verify.cmake` runs five presets (default, sanitize, portable, minimal,
@@ -126,6 +126,11 @@ unbounded parallel builds have filled a workstation's memory.
 * **Code-page tests need characters the machine's code page lacks.** A
   Windows machine on code page 1254 spells Turkish letters, so a test
   using only those passes against code-page functions too.
+* **`__GNUC__` does not mean GCC.** pcc defines it as 4 and has none of
+  GCC's builtins. Test `CF_GNUC` (`cf_port.h`), which is 0 there.
+* **pcc's lexer reads `"\\u"` as a universal character name**; split
+  such a literal after the backslash (`"\\" "u..."`). tcc puts `const`
+  data in `.data`. `EXTRA=compilers` is the check for all of this.
 * **A `static` name is unique across the whole library**, not just its
   file: the amalgamation puts every `.c` in one translation unit, so two
   files each with a `static source_name` compile everywhere except

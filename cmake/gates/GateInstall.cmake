@@ -15,6 +15,13 @@
 # not a shippable artifact, so "can a consumer use this" is not a
 # question that applies there, and a gate that fires on correct code
 # teaches people to ignore it.
+# Warnings are errors unless the build said otherwise (CF_WERROR): the
+# Portable C Compiler warns at the C library's own headers.
+set(werror -Werror)
+if(DEFINED WERROR AND NOT WERROR)
+  set(werror "")
+endif()
+
 if(SANITIZE)
   message("install gate: skipped under the sanitiser")
   return()
@@ -89,7 +96,7 @@ endif()
 # while the archive was built from another.
 execute_process(
   COMMAND
-    ${CC} -std=c89 -pedantic -Werror -I "${prefix}/include"
+    ${CC} -std=c89 -pedantic ${werror} -I "${prefix}/include"
     -DCF_EXPECT_REAL=${EXPECT_REAL} -DCF_EXPECT_JSON=${EXPECT_JSON} -o
     "${work}/options" "${SRC}/tests/consumer/options.c"
     "${prefix}/lib/libconfigforge.a" ${YAML_LIB}
@@ -135,7 +142,7 @@ if(PKG_CONFIG_EXE)
   endif()
   separate_arguments(flags UNIX_COMMAND "${flags}")
   execute_process(
-    COMMAND ${CC} -std=c89 -pedantic -Werror -o "${work}/consumer_pc"
+    COMMAND ${CC} -std=c89 -pedantic ${werror} -o "${work}/consumer_pc"
             "${SRC}/tests/consumer/consumer.c" ${flags}
     RESULT_VARIABLE rc
     OUTPUT_VARIABLE out

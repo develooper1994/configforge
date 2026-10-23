@@ -21,7 +21,7 @@ function(configforge_add_gates tgt)
   # Every option and limit, for the gates that compile the library a
   # second way and have to compile the same one: see GateAmalgamation.
   string(REPLACE ";" "|" features "${CF_FEATURES}")
-  set(options "-DFEATURES=${features}")
+  set(options "-DFEATURES=${features}" "-DWERROR=$<BOOL:${CF_WERROR}>")
   foreach(f ${CF_FEATURES})
     list(APPEND options "-DO_${f}=$<BOOL:${CF_WITH_${f}}>")
   endforeach()
@@ -108,7 +108,8 @@ function(configforge_add_gates tgt)
         ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR}
         -DCC=${CMAKE_C_COMPILER} -DWITH_CXX=${CF_WITH_CXX}
         -DSANITIZE=${CF_INSTRUMENTED} -DEXPECT_REAL=$<BOOL:${CF_WITH_REAL}>
-        -DEXPECT_JSON=$<BOOL:${CF_WITH_JSON}> -DYAML_LIB=${CF_YAML_LIBRARY} -P
+        -DEXPECT_JSON=$<BOOL:${CF_WITH_JSON}> -DYAML_LIB=${CF_YAML_LIBRARY}
+        -DWERROR=$<BOOL:${CF_WERROR}> -P
         ${CMAKE_SOURCE_DIR}/cmake/gates/GateInstall.cmake)
 
     add_test(NAME gate.formats
@@ -126,7 +127,7 @@ function(configforge_add_gates tgt)
       NAME gate.symbols
       COMMAND
         ${CMAKE_COMMAND} -DLIB=$<TARGET_FILE:${tgt}>
-        -DSANITIZE=${CF_INSTRUMENTED} -P
+        -DSANITIZE=${CF_INSTRUMENTED} -DCOMPILER=${CMAKE_C_COMPILER_ID} -P
         ${CMAKE_SOURCE_DIR}/cmake/gates/GateSymbols.cmake)
   endif()
 endfunction()

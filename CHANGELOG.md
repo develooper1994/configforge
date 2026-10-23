@@ -7,6 +7,19 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **Any C89 compiler, any C library**, checked rather than claimed:
+  `EXTRA=compilers` in `verify.cmake` and a CI job run the whole suite
+  against musl (`musl-gcc`) and with the Tiny C Compiler and the Portable
+  C Compiler, and an Alpine job runs it on musl as a distribution ships
+  it. All three pass. pcc found that `cf_port.h` trusted `__GNUC__`,
+  which pcc defines without having GCC's builtins (fixed by `CF_GNUC`),
+  and that its lexer reads `"\\u"` as a universal character name (two
+  messages split after the backslash). tcc showed that it puts `const`
+  data in `.data`, which the symbol gate now says and skips for it, and
+  that it accepts `-fstack-usage` without measuring anything, so the
+  stack budget is checked with GCC and Clang only. `CF_WERROR` (on by
+  default) lets a compiler that warns at the C library's own headers -
+  pcc at glibc's `__cold__` - build with its warnings shown.
 - **Conan and vcpkg packages**, built from the checkout and consumed by a
   project that knows only the package, in CI and here: `conanfile.py`
   with every `CF_WITH_*` as an option (`with_yaml` brings libyaml from

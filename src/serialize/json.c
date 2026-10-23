@@ -224,7 +224,10 @@ static size_t js_string(js_scan* s, char* dst, size_t cap) {
             size_t k;
 
             if (s->end - s->p < 5 || !js_hex4(s->p + 1, &cp)) {
-                js_fail(s, s->p, "\\u needs four hexadecimal digits");
+                /* Split after the backslash, as toml.c explains. */
+                js_fail(s, s->p,
+                        "\\"
+                        "u needs four hexadecimal digits");
                 return (size_t)-1;
             }
             s->p += 5;

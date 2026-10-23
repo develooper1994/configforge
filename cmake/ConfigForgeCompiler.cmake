@@ -10,7 +10,18 @@ include(CheckCCompilerFlag)
 
 # Conformance. -pedantic is the C89 gate and it caught a C99 integer
 # literal on the very first build.
-set(CF_W_CONFORMANCE -pedantic -Werror -Wall -Wextra)
+#
+# Warnings are errors, except where a compiler warns about the C
+# library's own headers and offers no way to say they are system
+# headers: the Portable C Compiler warns at glibc's __cold__ attribute,
+# in stdio.h, on every file. That build turns CF_WERROR off and still
+# shows every warning; every other build keeps it on.
+option(CF_WERROR "Treat warnings as errors" ON)
+if(CF_WERROR)
+  set(CF_W_CONFORMANCE -pedantic -Werror -Wall -Wextra)
+else()
+  set(CF_W_CONFORMANCE -pedantic -Wall -Wextra)
+endif()
 
 # Conversions, where a C89 codebase quietly loses bits.
 set(CF_W_CONVERSION
@@ -96,13 +107,12 @@ function(configforge_apply_warnings tgt)
     # one, and the honest thing is to name the gap rather than let /W4
     # imply there isn't one.
     #
-    # Untested here: there is no MSVC in the environment this was
-    # written in. The CI matrix compiles it on windows-latest, which is
-    # what makes this a check rather than a hope.
+    # Built and tested with this set on every verify of a Windows
+    # checkout, and by the windows-latest CI job.
     target_compile_options(
       ${tgt}
       PRIVATE /W4
-              /WX
+              $<$<BOOL:${CF_WERROR}>:/WX>
               /permissive- # conformance, the closest thing to -pedantic
               /wd4200 # zero-sized array, used deliberately
               # Conversions, the class C89 loses bits in.
@@ -193,8 +203,11 @@ function(configforge_stack_budget tgt)
     message(STATUS "stack: not measured under the sanitiser")
     return()
   endif()
+  # Asked of GCC and Clang only: the Tiny C Compiler accepts any flag it
+  # does not know without a word, so the check passes there and nothing
+  # is ever measured.
   check_c_compiler_flag("-fstack-usage" CF_HAS_FSTACK_USAGE)
-  if(NOT CF_HAS_FSTACK_USAGE)
+  if(NOT CF_HAS_FSTACK_USAGE OR NOT CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     message(STATUS "stack: this compiler reports no frame sizes; "
                    "CF_STACK_BUDGET is not checked here")
     return()
