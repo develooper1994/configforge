@@ -15,11 +15,7 @@ Things that are wrong or unproven today, most serious first.
 1. **The kqueue path has run only against libkqueue**, which reports
    more than a real kqueue for in-place edits and less for new
    directories. *Done:* the macOS CI job green.
-2. **Branch coverage is 75%** where line coverage is 85% (functions
-   93%): error paths are reached less than the paths through them.
-   `EXTRA=coverage` holds lines at 84% now; *done* is a branch floor
-   too, and the line floor raised as the gap closes.
-3. **Error paths are the least tested.** Branch coverage (74.8%) trails
+2. **Error paths are the least tested.** Branch coverage (74.8%) trails
    line coverage (85.4%) by ten points, and the branches not taken are
    mostly refusals. `EXTRA=coverage` holds both, at 74% and 84%; *done*
    is both floors raised as refusal tests are added, the branch one past
@@ -27,10 +23,7 @@ Things that are wrong or unproven today, most serious first.
 
 ## Next
 
-4. **Packaging**: a vcpkg port and a Conan recipe, each installed and
-   consumed by a test project in CI. (pkg-config is done; the install
-   gate consumes it.)
-5. **1.0**, once 1-3 are done: a symbol list, an ABI check in CI
+3. **1.0**, once 1-2 are done: a symbol list, an ABI check in CI
    (abidiff), and semantic versioning from then on. Before 1.0 is when
    an interface mistake is cheap.
 
@@ -73,4 +66,4 @@ that needs the live configuration rather than its record.
 
 ## Decisions waiting for the owner
 
-* When to call it 1.0 (item 5).
+* When to call it 1.0 (item 3).

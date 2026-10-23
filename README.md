@@ -280,6 +280,19 @@ A frame is one link of a call chain: a thread also needs room for
 `CF_MAX_DEPTH` levels of a decoder's recursion. GCC and Clang report
 frame sizes; MSVC does not, and there the budget is not checked.
 
+### From a package manager
+
+```sh
+conan create . --build=missing -tf packaging/conan/test_package
+vcpkg install configforge --overlay-ports=packaging/vcpkg
+```
+
+Both build from this checkout and are tested against it in CI: Conan
+with every `CF_WITH_*` as a recipe option (`with_yaml` brings libyaml
+from ConanCenter), vcpkg with a `yaml` feature. Either way the package
+carries the library and its headers, and `find_package(ConfigForge)`
+gives `ConfigForge::configforge`.
+
 ### From a build that is not CMake
 
 The install carries a relocatable `configforge.pc`:

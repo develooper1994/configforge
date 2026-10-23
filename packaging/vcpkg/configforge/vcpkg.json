@@ -1,0 +1,17 @@
+{
+  "name": "configforge",
+  "version": "0.2.0",
+  "description": "Configuration for C whose every value can say why it is what it is",
+  "homepage": "https://github.com/develooper1994/configforge",
+  "license": "Zlib",
+  "dependencies": [
+    { "name": "vcpkg-cmake", "host": true },
+    { "name": "vcpkg-cmake-config", "host": true }
+  ],
+  "features": {
+    "yaml": {
+      "description": "The YAML codec, through libyaml (CF_WITH_YAML)",
+      "dependencies": ["libyaml"]
+    }
+  }
+}

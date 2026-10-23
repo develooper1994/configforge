@@ -88,6 +88,36 @@ jobs:
       - run: cmake --preset sanitize && cmake --build --preset sanitize
       - run: ctest --preset sanitize
 
+  # The packages, built by their package managers from this checkout
+  # and used by a project that knows only the package.
+  conan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pipx install conan
+      - run: conan profile detect
+      - run: conan create . --build=missing -tf packaging/conan/test_package
+      - run: >-
+          conan create . --build=missing -o "configforge/*:shared=True"
+          -tf packaging/conan/test_package
+
+  vcpkg:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          git clone --depth 1 https://github.com/microsoft/vcpkg.git "$RUNNER_TEMP/vcpkg"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+      - run: >-
+          "$RUNNER_TEMP/vcpkg/vcpkg" install configforge
+          --overlay-ports=packaging/vcpkg --x-install-root="$RUNNER_TEMP/installed"
+      - run: |
+          cmake -S packaging/conan/test_package -B "$RUNNER_TEMP/consumer" \
+            -DCMAKE_TOOLCHAIN_FILE="$RUNNER_TEMP/vcpkg/scripts/buildsystems/vcpkg.cmake" \
+            -DVCPKG_INSTALLED_DIR="$RUNNER_TEMP/installed"
+          cmake --build "$RUNNER_TEMP/consumer"
+          "$RUNNER_TEMP/consumer/package_test"
+
   # YAML is off by default because it links libyaml; this is the build
   # that has it, the whole suite included.
   yaml:
