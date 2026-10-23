@@ -10,9 +10,11 @@
  *
  * The measurement is deliberately coarse. Separating O(n log n) from
  * O(n squared) across a fourfold size step is the difference between
- * about 4.3x and 16x, which no amount of machine noise closes - so the
- * bounds here are wide enough to be quiet on a loaded CI runner and
- * still fail the moment a complexity class changes.
+ * about 4.3x and 16x - so the bounds here are wide enough to be quiet
+ * on a loaded CI runner and still fail the moment a complexity class
+ * changes. Noise alone does not close that gap; a cache boundary
+ * between the two sizes did, which is why resolution is now timed at
+ * sizes that stay in cache, over the same total work.
  *
  * Where the work is too small to measure, the test says so and skips
  * rather than asserting something about the clock's granularity.
@@ -45,9 +47,13 @@ static double now_ms(void) {
     return (double)t * 1000.0 / (double)CLOCKS_PER_SEC;
 }
 
-#define SMALL 4000
-#define LARGE 16000 /* four times, so the classes are far apart */
+#define SMALL 1000
+#define LARGE 4000 /* four times, so the classes are far apart */
 #define REPEATS 3
+
+/* Keys resolved per measurement, at either size: SMALL keys built
+   WORK / SMALL times against LARGE keys built WORK / LARGE times. */
+#define WORK 32000
 
 static char g_key[32];
 
@@ -72,44 +78,57 @@ static const char* key_of(size_t i) {
 }
 
 /* Build and resolve a key space of `n` keys with three candidates each,
-   returning the best of several runs: the fastest is the one least
-   polluted by whatever else the machine was doing. */
+   returning the arena it took in KiB, or 0 if it failed. */
+static size_t build_once(size_t n) {
+    cf_arena*   ar = cf_arena_new(NULL, 0);
+    cf_keyspace ks;
+    cf_value    v;
+    size_t      i;
+    size_t      kib;
+
+    if (ar == NULL || !cf_ks_init(&ks, ar, 64)) {
+        cf_arena_free(ar);
+        return 0;
+    }
+    for (i = 0; i < n; ++i) {
+        int rank;
+        for (rank = 0; rank < 3; ++rank) {
+            const char* k = key_of(i);
+            cf_value_int(&v, (cf_i64)(i + (size_t)rank));
+            if (!cf_ks_add(&ks, k, strlen(k), rank * 10, &v, NULL)) {
+                cf_arena_free(ar);
+                return 0;
+            }
+        }
+    }
+    if (!cf_ks_resolve(&ks)) {
+        cf_arena_free(ar);
+        return 0;
+    }
+    kib = cf_arena_used(ar) / 1024 + 1;
+    cf_arena_free(ar);
+    return kib;
+}
+
+/* Build key spaces of `n` keys until WORK keys have been resolved, and
+   time it, returning the best of several runs: the fastest is the one
+   least polluted by whatever else the machine was doing. */
 static double time_resolve(size_t n, size_t* arena_kib) {
     double best = 0.0;
     int    r;
 
     for (r = 0; r < REPEATS; ++r) {
-        cf_arena*   ar = cf_arena_new(NULL, 0);
-        cf_keyspace ks;
-        cf_value    v;
-        size_t      i;
-        double      t0, t1;
+        double t0 = now_ms();
+        double t1;
+        size_t k;
 
-        if (ar == NULL || !cf_ks_init(&ks, ar, 64)) {
-            return -1.0;
-        }
-        t0 = now_ms();
-        for (i = 0; i < n; ++i) {
-            int rank;
-            for (rank = 0; rank < 3; ++rank) {
-                const char* k = key_of(i);
-                cf_value_int(&v, (cf_i64)(i + (size_t)rank));
-                if (!cf_ks_add(&ks, k, strlen(k), rank * 10, &v, NULL)) {
-                    cf_arena_free(ar);
-                    return -1.0;
-                }
+        for (k = 0; k < WORK / n; ++k) {
+            *arena_kib = build_once(n);
+            if (*arena_kib == 0) {
+                return -1.0;
             }
         }
-        if (!cf_ks_resolve(&ks)) {
-            cf_arena_free(ar);
-            return -1.0;
-        }
         t1 = now_ms();
-
-        if (arena_kib != NULL) {
-            *arena_kib = cf_arena_used(ar) / 1024;
-        }
-        cf_arena_free(ar);
         if (r == 0 || t1 - t0 < best) {
             best = t1 - t0;
         }
@@ -180,8 +199,10 @@ static void test_resolution_is_not_quadratic(void) {
     if (small < 0.0 || large < 0.0) {
         return;
     }
-    printf("  resolve %d keys: %.1f ms (%u KiB), %d keys: %.1f ms (%u KiB)\n", SMALL,
-           small, (unsigned)small_kib, LARGE, large, (unsigned)large_kib);
+    printf("  %d keys resolved as %d x %d: %.1f ms (%u KiB each), as %d x %d: %.1f ms "
+           "(%u KiB each)\n",
+           WORK, WORK / SMALL, SMALL, small, (unsigned)small_kib, WORK / LARGE, LARGE,
+           large, (unsigned)large_kib);
 
     if (small < 2.0) {
         /* Below a couple of milliseconds the ratio is measuring the
@@ -189,11 +210,21 @@ static void test_resolution_is_not_quadratic(void) {
         printf("  (too fast to compare; ratio not checked)\n");
         return;
     }
-    /* Fourfold data. O(m log m) predicts about 4.3x, quadratic predicts
-       16x. Eight sits between them with room on both sides. */
-    check(large < small * 8.0,
-          "four times the candidates cost far less than sixteen times the "
-          "work, so resolution did not become quadratic");
+    /* The same number of keys either way, in key spaces a quarter the
+       size or four times as many of them. O(m log m) predicts about
+       1.2x for the larger spaces, quadratic - in adding or in resolving
+       - about 4x. Two and a half sits between them.
+
+       Both sizes stay within a processor's cache (3 MiB at most), on
+       purpose. Comparing one space of 4000 keys against one of 16000
+       measured the cache instead: the small one fit a 12 MiB cache and
+       the large one did not, and on a loaded machine correct code took 8
+       to 12 times as long for four times the keys, which failed this
+       check. Held to the same work and in cache, it took 0.8 to 1.7
+       times at every size, build and load tried. */
+    check(large < small * 2.5,
+          "four times the keys per space cost far less than four times as "
+          "much per key, so resolution did not become quadratic");
 
     /* Memory is linear in candidates, and a per-key allocation that
        crept back in would show up as superlinear growth here. */
