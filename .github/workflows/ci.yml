@@ -46,6 +46,20 @@ jobs:
       # otherwise have no way to run it.
       - run: cmake -DMODE=quick -P scripts/verify.cmake
 
+  # The kqueue change handle, on a machine that is not a BSD: libkqueue
+  # emulates kqueue on Linux, so the macOS and BSD path is compiled and
+  # run on every commit rather than only where a Mac is in the matrix.
+  # Unit tests only: the gates link the library by hand and would need
+  # -lkqueue taught to each of them, for a build nobody ships.
+  kqueue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y libkqueue-dev
+      - run: cmake -S . -B bk -DCF_WAKE_KQUEUE=ON
+      - run: cmake --build bk
+      - run: ctest --test-dir bk -R "^unit\." --output-on-failure
+
   minimal:
     runs-on: ubuntu-latest
     steps:

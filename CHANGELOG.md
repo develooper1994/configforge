@@ -144,8 +144,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   `cf_changed` remains the answer. A directory that does not exist yet
   is watched through its nearest ancestor and the watch moves down as
   the levels appear, so an optional file nobody has created can still
-  wake the caller when it arrives. macOS and the BSDs say they have no
-  handle rather than pretending; `kqueue` is next.
+  wake the caller when it arrives. On macOS and the BSDs it is a kqueue,
+  which watches what it has open rather than a name, so it watches each
+  file as well as its directory and reopens everything on every drain.
+  `CF_WAKE_KQUEUE` builds that path on Linux against libkqueue, and CI
+  runs it there on every commit as well as on macOS.
 - **Doctor proves CFD001, CFD007 and CFD013.** CFD001, an unreachable
   value, fires where it can be proved from one report: the same source
   sets a key twice in one file or command line, the later occurrence

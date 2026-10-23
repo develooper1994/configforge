@@ -137,9 +137,10 @@ cf_bool cf_platform_stamp(const char* path, cf_stamp* out);
  * A handle to wait on (D-35, option 3)
  *
  * Something an event loop can wait on beside its own descriptors: an
- * inotify descriptor on Linux, an event HANDLE on Windows. It is not a
- * callback and it owns no thread - the caller waits, on a thread of its
- * choosing, when it chooses.
+ * inotify descriptor on Linux, a kqueue descriptor on macOS and the
+ * BSDs, an event HANDLE on Windows. It is not a callback and it owns no
+ * thread - the caller waits, on a thread of its choosing, when it
+ * chooses.
  *
  * What is watched is the directory each path lives in, or the path
  * itself when that is a directory. Editors save by writing a new file

@@ -318,8 +318,9 @@ const char* cf_watch_path(const cf_config* c, size_t i);
  * on may be released first. It is the caller's to use from one thread
  * at a time; the configuration's own threading contract is unchanged.
  *
- * Linux and Windows. Elsewhere cf_watcher_open fails with
- * CF_E_CAPABILITY and says so, and cf_changed works as before.
+ * Linux (inotify), macOS and the BSDs (kqueue), and Windows. Elsewhere
+ * cf_watcher_open fails with CF_E_CAPABILITY and says so, and
+ * cf_changed works as before.
  * ------------------------------------------------------------------ */
 
 typedef struct cf_platform_wake cf_watcher;

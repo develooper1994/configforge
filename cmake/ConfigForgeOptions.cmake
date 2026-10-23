@@ -23,6 +23,11 @@ set_property(
 option(CF_WITH_REAL "CF_REAL value type and its conversions" ON)
 option(CF_WITH_WATCH "File watching and reload" OFF)
 option(CF_WITH_CXX "C++03 wrapper header" ON)
+# The kqueue change handle on Linux, through libkqueue: how the macOS and
+# BSD implementation is compiled and run by a machine that is neither.
+# A test build. Nothing needs it on a BSD, where kqueue is the default.
+option(CF_WAKE_KQUEUE "Use kqueue for the change handle (libkqueue on Linux)"
+       OFF)
 
 option(CF_SINGLE_THREADED "Compile out all synchronisation" OFF)
 option(CF_FORCE_PORTABLE "Disable every opportunistic upgrade" OFF)
