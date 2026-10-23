@@ -44,8 +44,5 @@
 #ifndef CF_WITH_SQLITE
 #define CF_WITH_SQLITE 0
 #endif
-#ifndef CF_WITH_WATCH
-#define CF_WITH_WATCH 0
-#endif
 
 #endif /* CONFIGFORGE_CF_BUILD_OPTIONS_H */

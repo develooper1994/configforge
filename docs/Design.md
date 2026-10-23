@@ -2008,7 +2008,6 @@ CF_WITH_TOML       OFF    vendored C parser
 CF_WITH_XML        OFF    vendored C parser
 CF_WITH_SQLITE     OFF    links libsqlite3
 CF_WITH_REGISTRY   OFF    Windows
-CF_WITH_WATCH      OFF    requires platform file notification
 CF_WITH_CXX        ON     header only; costs nothing when unused
 ```
 
@@ -2086,8 +2085,12 @@ CONFIGFORGE_ENABLE_ENV
 CONFIGFORGE_ENABLE_FILE
 CONFIGFORGE_ENABLE_TOML
 CONFIGFORGE_ENABLE_NATIVE
-CONFIGFORGE_ENABLE_WATCH
 ```
+
+Watching is not on this list as built. Whether a handle to wait on
+exists is the platform's answer rather than a build choice, so
+`cf_has_feature("watch")` reports what the platform provides; an option
+for it switched nothing and made every report claim it was absent.
 
 The exact build interface may differ.
 

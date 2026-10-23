@@ -84,8 +84,7 @@ foreach(
   "REAL;${O_REAL}"
   "TOML;${O_TOML}"
   "XML;${O_XML}"
-  "SQLITE;${O_SQLITE}"
-  "WATCH;${O_WATCH}")
+  "SQLITE;${O_SQLITE}")
   list(GET pair 0 name)
   list(GET pair 1 value)
   if(NOT value)

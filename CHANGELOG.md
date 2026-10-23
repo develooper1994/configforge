@@ -356,6 +356,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Removed
 
+- **`CF_WITH_WATCH`**, which switched nothing. It was off by default, so
+  `cf_has_feature("watch")` said no on every build while `cf_changed`
+  and `cf_watcher` worked on all of them. The feature list now reports
+  "watch" where the platform has a handle to wait on, which is the only
+  thing the word could honestly mean.
+
 - The hand-written `Makefile` (D-31). The no-build-system path is the
   amalgamation, which is generated from the real sources and tested on
   every commit rather than merely present.
