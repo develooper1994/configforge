@@ -788,13 +788,16 @@ typedef struct toml_enc {
     char     path[CF_KEY_MAX];
     size_t   plen;
     size_t   hlen; /* how much of path the current [header] covers */
-    size_t   stack[TOML_MAX_DEPTH + 2];
-    int      depth; /* tables open outside any inline value */
-    int      inl;   /* inline levels open: arrays and inline tables */
-    cf_bool  first[TOML_MAX_DEPTH + 2];
-    cf_bool  is_array[TOML_MAX_DEPTH + 2];
+    cf_u16   stack[TOML_MAX_DEPTH + 2]; /* lengths within path */
+    int      depth;                     /* tables open outside any inline value */
+    int      inl; /* inline levels open: arrays and inline tables */
+    cf_u8    first[TOML_MAX_DEPTH + 2];
+    cf_u8    is_array[TOML_MAX_DEPTH + 2];
     cf_bool  header_pending;
 } toml_enc;
+
+/* cf_emit keeps this on its own frame, in CF_ENCODER_STATE_MAX bytes. */
+typedef char toml_enc_fits[(sizeof(toml_enc) <= CF_ENCODER_STATE_MAX) ? 1 : -1];
 
 static void toml_quote(cf_sink* out, const char* p, size_t n) {
     size_t i;
@@ -872,7 +875,7 @@ static cf_bool toml_enc_open_inline(toml_enc* e, const char* name, size_t n,
     cf_sink_puts(e->out, array ? "[" : "{ ");
     ++e->inl;
     e->first[e->inl]    = CF_TRUE;
-    e->is_array[e->inl] = array;
+    e->is_array[e->inl] = (cf_u8)(array ? 1 : 0);
     return CF_TRUE;
 }
 
@@ -885,7 +888,7 @@ static cf_bool toml_enc_table(void* ctx, const char* name, size_t n) {
     if (e->depth >= TOML_MAX_DEPTH) {
         return CF_FALSE;
     }
-    e->stack[e->depth++] = e->plen;
+    e->stack[e->depth++] = (cf_u16)e->plen;
     if (name == NULL) {
         return CF_TRUE; /* the document itself */
     }

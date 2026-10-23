@@ -238,17 +238,20 @@ typedef struct ini_enc {
     cf_sink* out;
     char     path[CF_KEY_MAX];
     size_t   plen;
-    size_t   stack[32];
+    cf_u16   stack[CF_MAX_DEPTH]; /* lengths within path */
     int      depth;
     cf_bool  in_array;
     cf_bool  header_pending;
 } ini_enc;
 
+/* cf_emit keeps this on its own frame, in CF_ENCODER_STATE_MAX bytes. */
+typedef char ini_enc_fits[(sizeof(ini_enc) <= CF_ENCODER_STATE_MAX) ? 1 : -1];
+
 static cf_bool ini_enc_push(ini_enc* e, const char* name, size_t n) {
     if (e->depth >= (int)(sizeof e->stack / sizeof e->stack[0])) {
         return CF_FALSE;
     }
-    e->stack[e->depth++] = e->plen;
+    e->stack[e->depth++] = (cf_u16)e->plen;
     if (name != NULL) {
         if (e->plen + n + 2 > sizeof e->path) {
             return CF_FALSE;

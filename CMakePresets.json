@@ -46,7 +46,8 @@
         "CF_WITH_REAL": "OFF",
         "CF_KEY_MAX": "64",
         "CF_MESSAGE_MAX": "128",
-        "CF_PATH_MAX": "256"
+        "CF_PATH_MAX": "256",
+        "CF_STACK_BUDGET": "1024"
       }
     }
   ],

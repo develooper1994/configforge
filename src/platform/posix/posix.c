@@ -375,14 +375,20 @@ void* cf_platform_wake_handle(const cf_platform_wake* w) {
     return NULL;
 }
 
+/* Linux's NAME_MAX, the longest name an inotify record carries. Spelled
+   out because <limits.h> declares it only under POSIX feature macros,
+   which a strict C89 compile does not set. */
+#define CF_INOTIFY_NAME_MAX 255
+
 cf_bool cf_platform_wake_drain(cf_platform_wake* w) {
-    /* Aligned for the event records the kernel writes into it. A
-       kilobyte rather than the customary four: the library's stack
-       budget is two, and the loop below reads until the queue is empty
-       however small the buffer, as long as one record fits. */
+    /* Aligned for the event records the kernel writes into it, and room
+       for two of the largest: the loop below reads until the queue is
+       empty however small the buffer, as long as one record fits, so
+       anything larger is stack spent to save a system call on a path
+       that runs once per change. */
     union {
         struct inotify_event e;
-        char                 b[1024];
+        char b[2 * (sizeof(struct inotify_event) + CF_INOTIFY_NAME_MAX + 1)];
     } buf;
     cf_bool lost = CF_FALSE;
     cf_bool ok   = CF_TRUE;

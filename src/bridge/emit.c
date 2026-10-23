@@ -77,14 +77,14 @@ size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int ra
     cf_doc_sink        sink;
     cf_sink            out;
     emit_filter        f;
-    /* The encoder's state, on the stack and within the budget the build
-       enforces. The widest one needs about five hundred bytes; the
-       check below is what catches a future codec that needs more,
-       rather than a larger buffer that hides it. Aligned through the
-       union because a char array is not aligned for a struct. */
+    /* The encoder's state, on the stack: CF_ENCODER_STATE_MAX, which
+       follows the limits as the encoders' state does, and which each
+       built-in encoder is asserted at compile time to fit. The check
+       below is for a codec that does not. Aligned through the union
+       because a char array is not aligned for a struct. */
     union {
         cf_i64 align;
-        char   b[1024];
+        char   b[CF_ENCODER_STATE_MAX];
     } state;
 
     if (buf != NULL && cap > 0) {

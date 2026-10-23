@@ -527,12 +527,15 @@ static cf_bool json_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
 typedef struct js_enc {
     cf_sink* out;
     int      depth;
-    cf_bool  need_comma[JS_MAX_DEPTH + 2];
+    cf_u8    need_comma[JS_MAX_DEPTH + 2];
     /* Which bracket opened each level. A table and an array close
        differently and the event that closes them is the same, so the
        encoder has to remember. */
     char brace[JS_MAX_DEPTH + 2];
 } js_enc;
+
+/* cf_emit keeps this on its own frame, in CF_ENCODER_STATE_MAX bytes. */
+typedef char js_enc_fits[(sizeof(js_enc) <= CF_ENCODER_STATE_MAX) ? 1 : -1];
 
 /* Members sit one level inside their container, and a closing bracket
    sits at the container's own level. Both are depth + 1 once the
@@ -552,7 +555,7 @@ static void js_sep(js_enc* e) {
     }
     js_indent(e);
     if (e->depth >= 0 && e->depth <= JS_MAX_DEPTH) {
-        e->need_comma[e->depth] = CF_TRUE;
+        e->need_comma[e->depth] = 1;
     }
 }
 
@@ -617,7 +620,7 @@ static cf_bool js_enc_open(js_enc* e, const char* name, size_t n, char brace) {
     js_name(e, name, n);
     cf_sink_putc(e->out, brace);
     ++e->depth;
-    e->need_comma[e->depth] = CF_FALSE;
+    e->need_comma[e->depth] = 0;
     e->brace[e->depth]      = brace;
     return CF_TRUE;
 }
@@ -626,7 +629,7 @@ static cf_bool js_enc_table(void* ctx, const char* name, size_t n) {
     js_enc* e = (js_enc*)ctx;
     if (e->depth < 0) { /* the document itself */
         e->depth         = 0;
-        e->need_comma[0] = CF_FALSE;
+        e->need_comma[0] = 0;
         e->brace[0]      = '{';
         cf_sink_putc(e->out, '{');
         return CF_TRUE;

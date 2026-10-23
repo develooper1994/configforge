@@ -137,6 +137,12 @@ typedef struct cf_codec {
     size_t encoder_state_size;
 } cf_codec;
 
+/* The most encoder state cf_emit can hold, on its own frame. It follows
+   the limits, as an encoder's state does - a key-sized path and a few
+   bytes for each level of nesting - and every built-in encoder asserts
+   at compile time that it fits, so the bound cannot drift from them. */
+#define CF_ENCODER_STATE_MAX (CF_KEY_MAX + (CF_MAX_DEPTH + 2) * 8 + 64)
+
 /* Compiled-in codecs only. NULL when the format exists but this build
    left it out, which the caller must report rather than ignore: a
    configuration system whose purpose is explaining where values come
