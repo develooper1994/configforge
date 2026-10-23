@@ -398,6 +398,7 @@ nothing a leak would want.
   settled it. Two are still open, and both say why
 * [`docs/Architecture.md`](docs/Architecture.md) — the layers, the rules that keep them, and recipes for adding a format, a source, a definition attribute or a Doctor rule
 * [`docs/Conventions.md`](docs/Conventions.md) — naming, memory, errors, project idioms, the forbidden list, and what a good test looks like here
+* [`docs/API.md`](docs/API.md) — every function, with the comment above it in its header; generated, and checked against the headers by `gate.apiref`
 * [`docs/Design.md`](docs/Design.md) — the full specification
 * [`docs/Doctor.md`](docs/Doctor.md) — the pre-deployment analysis tool
 * [`docs/Roadmap.md`](docs/Roadmap.md) — what is next, what is known to be wrong, and the ideas not yet built

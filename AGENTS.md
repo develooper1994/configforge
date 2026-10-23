@@ -18,7 +18,7 @@ If a change makes a value harder to explain, it is the wrong change.
 
 | Path | What | Read |
 | ---- | ---- | ---- |
-| `include/configforge/` | the public headers; `configforge.h` is the facade | the header comments are the API reference |
+| `include/configforge/` | the public headers; `configforge.h` is the facade | the header comments are the API reference; `docs/API.md` collects them |
 | `src/core` | value model, key space, definitions, validation, `cf_config` | |
 | `src/sources` | defaults, memory, environment, command line | |
 | `src/serialize` | blob, sink, INI and JSON codecs | |
@@ -74,7 +74,8 @@ unbounded parallel builds have filled a workstation's memory.
    commit only on "all green". Never decide from `grep` on the output;
    the exit code is the answer (Conventions.md says why).
 2. **Code and documents change together.** A behaviour change updates
-   the header comment, the relevant `docs/` page, `CHANGELOG.md` and,
+   the header comment (then `cmake -P scripts/apiref.cmake`, or
+   `gate.apiref` fails), the relevant `docs/` page, `CHANGELOG.md` and,
    where it is a decision, `docs/Decisions.md` - in the same commit.
    Where a claim can be checked, add a gate rather than a sentence.
 3. **Prove a test can fail.** Disable the behaviour by returning early

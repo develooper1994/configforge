@@ -53,6 +53,12 @@ function(configforge_add_gates tgt)
   add_test(NAME gate.dependencies
            COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
                    ${CMAKE_SOURCE_DIR}/cmake/gates/GateDependencies.cmake)
+  # The API reference is the headers' comments, regenerated and compared.
+  add_test(
+    NAME gate.apiref
+    COMMAND
+      ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR} -P
+      ${CMAKE_SOURCE_DIR}/cmake/gates/GateApiref.cmake)
   add_test(
     NAME gate.sbom
     COMMAND
