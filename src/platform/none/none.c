@@ -57,4 +57,42 @@ int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], 
     return -1;
 }
 
+cf_bool cf_platform_has_wake(void) {
+    return CF_FALSE;
+}
+
+cf_platform_wake* cf_platform_wake_open(const char* const* paths, size_t n,
+                                        const cf_allocator* a, cf_error* err) {
+    (void)paths;
+    (void)n;
+    (void)a;
+    cf_error_set(err, CF_E_CAPABILITY, NULL, NULL, "this build has no change handle");
+    return NULL;
+}
+
+int cf_platform_wake_fd(const cf_platform_wake* w) {
+    (void)w;
+    return -1;
+}
+
+void* cf_platform_wake_handle(const cf_platform_wake* w) {
+    (void)w;
+    return NULL;
+}
+
+cf_bool cf_platform_wake_drain(cf_platform_wake* w) {
+    (void)w;
+    return CF_FALSE;
+}
+
+int cf_platform_wake_wait(cf_platform_wake* w, long timeout_ms) {
+    (void)w;
+    (void)timeout_ms;
+    return -1;
+}
+
+void cf_platform_wake_close(cf_platform_wake* w) {
+    (void)w;
+}
+
 #endif /* CF_PLATFORM_NONE */

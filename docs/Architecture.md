@@ -42,7 +42,7 @@ the Microsoft platform with a Clang front end.
 
 | Layer | Owns | May use | May not use |
 | ----- | ---- | ------- | ----------- |
-| `src/platform` | the environment, UTF-8 arguments, directory listing | portability | anything above it |
+| `src/platform` | the environment, UTF-8 arguments, directory listing, file stamps, the change handle | portability | anything above it |
 | `src/core` | value model, key space, definitions, validation, `cf_config` | portability, platform | anything above it |
 | `src/serialize` | readers, writers, codecs, document events | portability, `cf_value`, `cf_error`, `cf_alloc` | the key space, definitions, sources |
 | `src/sources` | flat lexers, key mappings, the sources with no bytes to read | core | serialize, bridge |
@@ -135,10 +135,10 @@ implementation of `cf_entry_sink`; a test's implementation is an array.
 
 ### Adding a platform capability
 
-Three things a configuration library needs that C89 has no answer for
-live behind `cf_platform.h`: the environment, UTF-8 arguments, and a
-directory listing. To add a fourth — file watching is the obvious next
-one:
+What a configuration library needs that C89 has no answer for lives
+behind `cf_platform.h`: the environment, UTF-8 arguments, a directory
+listing, file stamps, and a handle to wait on for changes. The last was
+added this way, and the recipe held:
 
 1. Declare the neutral function and a `cf_platform_has_*` query in
    `cf_platform.h`. The query matters: a caller has to be able to say

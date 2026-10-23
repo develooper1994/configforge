@@ -102,6 +102,9 @@ char* const* cf_platform_args(int argc, char* const* argv, cf_arena* arena,
    count, or -1 with `err` set. The caller sorts, because the order
    decides which file wins and that is the caller's rule, not the
    platform's. */
+int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], int max,
+                         cf_error* err);
+
 /* ------------------------------------------------------------------ *
  * File stamps
  *
@@ -110,6 +113,13 @@ char* const* cf_platform_args(int argc, char* const* argv, cf_arena* arena,
  * one clock tick with the same length, which is said out loud here
  * rather than discovered later. The exact answer is to rebuild and
  * compare digests.
+ *
+ * A directory is stamped by what it holds: the latest modification time
+ * among it and its entries, and their total size plus their count, with
+ * dotfiles skipped as the listing skips them. A directory's own time
+ * moves when an entry is added or removed and not when one is edited in
+ * place, so stamping only the directory missed the commonest change to
+ * a drop-in directory there is.
  * ------------------------------------------------------------------ */
 
 typedef struct cf_stamp {
@@ -123,8 +133,51 @@ typedef struct cf_stamp {
    change like any other. */
 cf_bool cf_platform_stamp(const char* path, cf_stamp* out);
 
-int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], int max,
-                         cf_error* err);
+/* ------------------------------------------------------------------ *
+ * A handle to wait on (D-35, option 3)
+ *
+ * Something an event loop can wait on beside its own descriptors: an
+ * inotify descriptor on Linux, an event HANDLE on Windows. It is not a
+ * callback and it owns no thread - the caller waits, on a thread of its
+ * choosing, when it chooses.
+ *
+ * What is watched is the directory each path lives in, or the path
+ * itself when that is a directory. Editors save by writing a new file
+ * and renaming it over the old one, and a watch on the old file follows
+ * it into the bin. So a wake-up means "ask now", never "it changed": a
+ * neighbouring file wakes it too, and cf_changed stays the authority.
+ *
+ * A directory that does not exist yet is watched through its nearest
+ * ancestor that does, and drain() moves the watch down as the missing
+ * levels appear - so an optional file in a directory nobody has created
+ * still wakes the caller when it arrives.
+ * ------------------------------------------------------------------ */
+
+typedef struct cf_platform_wake cf_platform_wake;
+
+cf_bool cf_platform_has_wake(void);
+
+/* NULL with `err` set, naming the path and the reason. The paths are
+   copied; nothing passed here need outlive the call. */
+cf_platform_wake* cf_platform_wake_open(const char* const* paths, size_t n,
+                                        const cf_allocator* a, cf_error* err);
+
+/* A descriptor that becomes readable, or -1 where the handle is not a
+   descriptor. */
+int cf_platform_wake_fd(const cf_platform_wake* w);
+
+/* A HANDLE that becomes signalled, or NULL where the handle is not one. */
+void* cf_platform_wake_handle(const cf_platform_wake* w);
+
+/* Consume what woke the handle and re-arm anything that needs it. False
+   when some path can no longer wake it; polling cf_changed still works. */
+cf_bool cf_platform_wake_drain(cf_platform_wake* w);
+
+/* Wait up to `timeout_ms` (negative: without limit). 1 when woken, and
+   then already drained; 0 on timeout; -1 when waiting failed. */
+int cf_platform_wake_wait(cf_platform_wake* w, long timeout_ms);
+
+void cf_platform_wake_close(cf_platform_wake* w);
 
 #ifdef __cplusplus
 }

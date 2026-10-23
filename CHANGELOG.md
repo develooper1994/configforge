@@ -136,6 +136,16 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   rewritten inside one clock tick at the same length. That is documented
   as a hint worth acting on rather than a guarantee; the exact answer is
   to rebuild and compare digests.
+- **A handle an event loop can wait on** (D-35, option 3): `cf_watcher`,
+  an inotify descriptor on Linux and one event HANDLE on Windows, plus
+  `cf_watcher_wait` for a program with no loop. Still no callback and no
+  thread. It watches each file's *directory*, because editors save by
+  renaming a new file over the old one, so a wake-up means "ask now" and
+  `cf_changed` remains the answer. A directory that does not exist yet
+  is watched through its nearest ancestor and the watch moves down as
+  the levels appear, so an optional file nobody has created can still
+  wake the caller when it arrives. macOS and the BSDs say they have no
+  handle rather than pretending; `kqueue` is next.
 - **Three more Doctor rules** that a single report can prove from its
   definitions alone: `CFD005` a key with no definition, `CFD009` a
   deprecated key something is still supplying, `CFD011` a key set to an
@@ -245,6 +255,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   `unit.test_lex.utf8` asserts the non-ASCII round trip the wide path
   exists for. The four gates that drive the compiler with a GCC-style
   command line are registered only where one exists.
+- **A drop-in directory edited in place was not a change.** `cf_changed`
+  stamped a directory by its own modification time, which moves when a
+  file is added or removed and not when one is rewritten. A directory is
+  now stamped by what it holds.
 - **The `analyze` preset had never analysed anything.** cppcheck defines
   none of the compiler's macros, so `cf_port.h` stopped it at its
   `#error` for want of a 64-bit type in every translation unit. Told

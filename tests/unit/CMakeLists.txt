@@ -51,6 +51,16 @@ foreach(loc de_DE.UTF-8 tr_TR.UTF-8)
   add_test(NAME unit.test_value.${loc} COMMAND test_value ${loc})
 endforeach()
 
+# A directory of its own for the watch test. It asserts that a handle
+# goes quiet, and every other test writes its files into the shared
+# working directory - which is exactly what the handle watches. Run in
+# parallel, the neighbours kept it awake and the test failed on correct
+# code.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/watch)
+set_tests_properties(
+  unit.test_watch PROPERTIES WORKING_DIRECTORY
+                             ${CMAKE_CURRENT_BINARY_DIR}/watch)
+
 # A non-ASCII argument, round-tripped. On Windows this is the only test
 # of the wide command-line path: ctest starts the process with the
 # argument in UTF-16, the CRT's argv holds the active code page's

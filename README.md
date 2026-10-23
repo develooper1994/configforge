@@ -98,6 +98,21 @@ that owns a thread and calls you back has made a threading decision that
 belongs to you. Every line above is produced by the test suite, so none
 of it can drift from the code.
 
+A program that already has an event loop can wait instead of polling:
+
+```c
+cf_watcher* w = cf_watcher_open(cfg, NULL, &err);
+/* add cf_watcher_fd(w) - or cf_watcher_handle(w) on Windows - to the loop */
+
+cf_watcher_drain(w);            /* when it is ready */
+if (cf_changed(cfg)) { /* rebuild, swap, reopen the watcher */ }
+```
+
+It watches each file's directory, because editors save by renaming a
+new file over the old one, so a wake-up means "ask now" and `cf_changed`
+stays the answer. Linux and Windows; elsewhere opening it says so, and
+polling works as before.
+
 ## Why
 
 `get()` is easy. Precedence is easy. What nobody in C answers is which source won and
@@ -143,8 +158,9 @@ nothing, and `1.0` is where semantic versioning starts.
 | threading contract (D-14), reference-counted snapshots | done |
 | `cf_derive`: changing a value without mutating a snapshot | done |
 | change notification (`cf_changed`) | done |
-| a handle an event loop can wait on | next |
-| change notification | after |
+| a handle an event loop can wait on (`cf_watcher`), Linux and Windows | done |
+| the same handle on macOS and the BSDs (`kqueue`) | next |
+| Doctor: SARIF output, configurable severity | after |
 | TOML, XML, SQLite codecs | deferred, see D-23 |
 | Windows Registry, gsettings, macOS defaults | deferred, see D-30 |
 

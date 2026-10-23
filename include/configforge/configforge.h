@@ -287,6 +287,55 @@ cf_bool     cf_changed(const cf_config* c);
 size_t      cf_watch_count(const cf_config* c);
 const char* cf_watch_path(const cf_config* c, size_t i);
 
+/* ------------------------------------------------------------------ *
+ * A handle an event loop can wait on
+ *
+ * For a program that already has a loop and would rather wait than
+ * poll. Still not a callback and still no thread: the library hands
+ * over something to wait on, and the waiting is the caller's.
+ *
+ *     cf_watcher* w = cf_watcher_open(cfg, NULL, &err);
+ *
+ *     add cf_watcher_fd(w) (POSIX) or cf_watcher_handle(w) (Windows)
+ *     to the loop, and when it is ready:
+ *
+ *     cf_watcher_drain(w);
+ *     if (cf_changed(cfg)) {
+ *         rebuild and swap, then close w and open one on the new
+ *         configuration, whose files may not be the same ones
+ *     }
+ *
+ * With no loop at all, cf_watcher_wait(w, timeout_ms) waits and drains
+ * in one call, on whichever thread the caller gives it.
+ *
+ * A wake-up means "ask now", never "it changed". What is watched is
+ * each file's directory - editors save by renaming a new file over the
+ * old one - so a neighbour can wake it, and cf_changed is the answer.
+ * Drain before asking: the other order can consume a wake-up for a
+ * change that arrived after the question.
+ *
+ * The watcher copies what it needs, so the configuration it was opened
+ * on may be released first. It is the caller's to use from one thread
+ * at a time; the configuration's own threading contract is unchanged.
+ *
+ * Linux and Windows. Elsewhere cf_watcher_open fails with
+ * CF_E_CAPABILITY and says so, and cf_changed works as before.
+ * ------------------------------------------------------------------ */
+
+typedef struct cf_platform_wake cf_watcher;
+
+/* `a` NULL means the default allocator. Fails when the configuration
+   read no file, since there would be nothing to wake it. */
+cf_watcher* cf_watcher_open(const cf_config* c, const cf_allocator* a, cf_error* err);
+
+int     cf_watcher_fd(const cf_watcher* w);     /* -1 where it is not a descriptor */
+void*   cf_watcher_handle(const cf_watcher* w); /* NULL where it is not a HANDLE */
+cf_bool cf_watcher_drain(cf_watcher* w);
+
+/* 1 woken (and drained), 0 timed out, -1 failed. Negative: no limit. */
+int  cf_watcher_wait(cf_watcher* w, long timeout_ms);
+void cf_watcher_close(cf_watcher* w);
+
 void cf_config_ref(cf_config* c);
 void cf_config_free(cf_config* c);
 
