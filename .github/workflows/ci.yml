@@ -46,6 +46,20 @@ jobs:
       # otherwise have no way to run it.
       - run: cmake -DMODE=quick -P scripts/verify.cmake
 
+  # A shared library on every system: a DLL exports only what CF_API
+  # marks, and everywhere else -fvisibility=hidden keeps the internals
+  # out of the dynamic symbol table. Every test links the shared build.
+  shared:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B bs -DBUILD_SHARED_LIBS=ON
+      - run: cmake --build bs --config Debug
+      - run: ctest --test-dir bs -C Debug --output-on-failure
+
   # The kqueue change handle, on a machine that is not a BSD: libkqueue
   # emulates kqueue on Linux, so the macOS and BSD path is compiled and
   # run on every commit rather than only where a Mac is in the matrix.

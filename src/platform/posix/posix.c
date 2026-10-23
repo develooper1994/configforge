@@ -26,6 +26,7 @@
 #if CF_PLATFORM_POSIX
 
 #include <dirent.h>
+#include <stdio.h>
 #include <sys/stat.h>
 #include <string.h>
 
@@ -143,6 +144,11 @@ cf_bool cf_platform_stamp(const char* path, cf_stamp* out) {
         out->size = (cf_i64)st.st_size;
     }
     return CF_TRUE;
+}
+
+void* cf_platform_fopen(const char* path, const char* mode) {
+    /* Paths are bytes here, and UTF-8 bytes are a path like any other. */
+    return (path != NULL && mode != NULL) ? fopen(path, mode) : NULL;
 }
 
 int cf_platform_world_readable(const char* path) {

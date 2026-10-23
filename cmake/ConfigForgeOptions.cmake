@@ -97,6 +97,15 @@ function(configforge_generate_options tgt)
     endif()
   endforeach()
 
+  # Whether this build is a shared library is a fact about it, like the
+  # formats: a consumer of the installed DLL needs dllimport, and gets it
+  # from the header rather than from remembering a -D.
+  if(BUILD_SHARED_LIBS)
+    set(CF_OPT_SHARED 1)
+  else()
+    set(CF_OPT_SHARED 0)
+  endif()
+
   set(gen "${CMAKE_BINARY_DIR}/generated/configforge")
   configure_file("${CMAKE_SOURCE_DIR}/cmake/cf_build_options.h.in"
                  "${gen}/cf_build_options.h" @ONLY)

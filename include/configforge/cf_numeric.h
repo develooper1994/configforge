@@ -29,15 +29,15 @@ extern "C" {
 
 /* Write the decimal form of v. Returns the length written, or 0 when
    cap is too small. Always terminates when cap > 0. */
-size_t cf_i64_to_text(cf_i64 v, char* buf, size_t cap);
-size_t cf_u64_to_text(cf_u64 v, char* buf, size_t cap);
+CF_API size_t cf_i64_to_text(cf_i64 v, char* buf, size_t cap);
+CF_API size_t cf_u64_to_text(cf_u64 v, char* buf, size_t cap);
 
 /* Parse an optionally signed decimal integer. Returns CF_TRUE on
    success. Rejects overflow, empty input, and surrounding space;
    callers trim deliberately. When end is NULL the whole input must be
    consumed; otherwise *end receives the number of bytes consumed. */
-cf_bool cf_text_to_i64(const char* s, size_t len, cf_i64* out, size_t* end);
-cf_bool cf_text_to_u64(const char* s, size_t len, cf_u64* out, size_t* end);
+CF_API cf_bool cf_text_to_i64(const char* s, size_t len, cf_i64* out, size_t* end);
+CF_API cf_bool cf_text_to_u64(const char* s, size_t len, cf_u64* out, size_t* end);
 
 /* ------------------------------------------------------------------ *
  * Floating point
@@ -60,12 +60,12 @@ cf_bool cf_text_to_u64(const char* s, size_t len, cf_u64* out, size_t* end);
    NaN and infinity are deliberately not representable: a configuration
    value cannot be either, and rejecting them here keeps every codec
    from having to invent a spelling. */
-size_t cf_f64_to_text(double v, char* buf, size_t cap);
+CF_API size_t cf_f64_to_text(double v, char* buf, size_t cap);
 
 /* Parse a C-locale floating point number. The decimal separator is
    always '.', never the locale's. Accepts the forms produced by
    cf_f64_to_text and the usual hand-written ones. */
-cf_bool cf_text_to_f64(const char* s, size_t len, double* out, size_t* end);
+CF_API cf_bool cf_text_to_f64(const char* s, size_t len, double* out, size_t* end);
 
 #endif /* CF_WITH_REAL */
 
@@ -83,7 +83,7 @@ typedef enum cf_scalar_kind {
     CF_SCALAR_REAL
 } cf_scalar_kind;
 
-cf_scalar_kind cf_infer_scalar(const char* s, size_t len);
+CF_API cf_scalar_kind cf_infer_scalar(const char* s, size_t len);
 
 #ifdef __cplusplus
 }

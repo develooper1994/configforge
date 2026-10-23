@@ -47,15 +47,15 @@ extern "C" {
    the header the caller compiled against. A program that links a shared
    build can compare the two and say so, which is the only way that
    mismatch is ever noticed before it misbehaves. */
-const char* cf_version(void);
-int         cf_version_number(void);
+CF_API const char* cf_version(void);
+CF_API int         cf_version_number(void);
 
 /* What this build can do, as a NUL-terminated list: "ini", "json",
    "real", and so on. Recorded in the provenance report as well, so a
    report from a restricted build is distinguishable from a full one. */
-size_t      cf_feature_count(void);
-const char* cf_feature_at(size_t i);
-cf_bool     cf_has_feature(const char* name);
+CF_API size_t      cf_feature_count(void);
+CF_API const char* cf_feature_at(size_t i);
+CF_API cf_bool     cf_has_feature(const char* name);
 
 #ifdef __cplusplus
 }

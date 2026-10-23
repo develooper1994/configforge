@@ -310,6 +310,28 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- **A path outside the Windows code page could not be opened.** The
+  platform layer called the code-page ("A") functions and the file
+  reader called `fopen`, so a configuration under a name the active code
+  page cannot spell - a Greek letter on a Turkish or Western machine -
+  was unreadable, unstampable and unlistable. Paths are UTF-8 at the
+  interface (D-15) and now UTF-16 to Windows: every path goes through
+  one conversion into a "W" function, and files open through
+  `cf_platform_fopen`, which is `_wfopen` there and `fopen` everywhere
+  else. `test_unicode` builds such a tree and reads it as a file, a
+  drop-in directory and a change check; against the old calls it fails.
+  Its first version used only Turkish letters and passed against the
+  old code too, because this machine's code page spells them - the
+  alpha in its directory name is the part that proves anything.
+- **A shared library was unusable on Windows and leaked internals
+  elsewhere.** Nothing was marked for export, so a DLL exported nothing.
+  Every public function is `CF_API` now - dllexport building the DLL,
+  dllimport using it, `visibility("default")` under
+  `-fvisibility=hidden` on ELF and Mach-O - and whether the build is
+  shared is stated in the generated `cf_build_options.h`, so a consumer
+  of an installed DLL is told rather than having to know. A CI job
+  builds and runs the whole suite as a shared library on all three
+  systems.
 - **The Windows build had never been built.** The first MSVC run failed
   to compile `win32.c` - `_environ` declared by hand collided with the
   CRT's macro - and two `/W4` warnings stopped the tests and Doctor. The

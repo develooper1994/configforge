@@ -29,6 +29,10 @@
 #ifndef CF_WITH_REAL
 #define CF_WITH_REAL 1
 #endif
+/* A static library unless the build says otherwise; see CF_API. */
+#ifndef CF_SHARED
+#define CF_SHARED 0
+#endif
 #ifndef CF_WITH_INI
 #define CF_WITH_INI 1
 #endif

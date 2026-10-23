@@ -55,7 +55,7 @@ typedef struct cf_config  cf_config;
  * anything.
  * ------------------------------------------------------------------ */
 
-cf_config* cf_app(const char* name, int argc, char* const* argv, cf_error* err);
+CF_API cf_config* cf_app(const char* name, int argc, char* const* argv, cf_error* err);
 
 /* ------------------------------------------------------------------ *
  * Tier 1 and 2
@@ -71,7 +71,7 @@ cf_config* cf_app(const char* name, int argc, char* const* argv, cf_error* err);
  * ceremony this design exists to remove.
  * ------------------------------------------------------------------ */
 
-cf_builder* cf_build(const cf_allocator* alloc);
+CF_API cf_builder* cf_build(const cf_allocator* alloc);
 
 /* Build inside a buffer the caller owns.
  *
@@ -85,60 +85,61 @@ cf_builder* cf_build(const cf_allocator* alloc);
  * Everything the configuration points at lives in that buffer, so it
  * has to outlive the configuration - which on the target this exists
  * for is a static array, and outlives everything. */
-cf_builder* cf_build_in(cf_arena* arena);
-cf_builder* cf_app_builder(const char* name, int argc, char* const* argv);
-void        cf_builder_abort(cf_builder* b);
+CF_API cf_builder* cf_build_in(cf_arena* arena);
+CF_API cf_builder* cf_app_builder(const char* name, int argc, char* const* argv);
+CF_API void        cf_builder_abort(cf_builder* b);
 
-cf_bool cf_builder_memory(cf_builder* b, const char* name, int rank,
-                          const cf_pair* pairs, size_t count);
-cf_bool cf_builder_env(cf_builder* b, const char* name, int rank, const char* prefix,
-                       char* const* environment);
-cf_bool cf_builder_cli(cf_builder* b, const char* name, int rank, int argc,
-                       char* const* argv);
+CF_API cf_bool cf_builder_memory(cf_builder* b, const char* name, int rank,
+                                 const cf_pair* pairs, size_t count);
+CF_API cf_bool cf_builder_env(cf_builder* b, const char* name, int rank,
+                              const char* prefix, char* const* environment);
+CF_API cf_bool cf_builder_cli(cf_builder* b, const char* name, int rank, int argc,
+                              char* const* argv);
 
 /* The format is taken from the extension unless one is named. A file
    whose format this build left out is an error that says which option
    to turn on; CF_FILE_OPTIONAL makes a *missing* file acceptable, and
    never makes an unreadable one acceptable. */
-cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const char* path,
-                        const char* format, unsigned flags);
+CF_API cf_bool cf_builder_file(cf_builder* b, const char* name, int rank,
+                               const char* path, const char* format, unsigned flags);
 
 /* A .env file, read with the environment's key mapping: a .env file is
    an environment written down, so the escape and the natural spelling
    behave identically in both. */
-cf_bool cf_builder_dotenv(cf_builder* b, const char* name, int rank, const char* path,
-                          const char* prefix, unsigned flags);
+CF_API cf_bool cf_builder_dotenv(cf_builder* b, const char* name, int rank,
+                                 const char* path, const char* prefix, unsigned flags);
 
 /* A drop-in directory: every file in byte order, all at one rank, so
    10-base losing to 90-site is precedence rather than a merge rule and
    explain() names the file that won. */
-cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank, const char* path,
-                       const char* format, unsigned flags);
+CF_API cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank,
+                              const char* path, const char* format, unsigned flags);
 
 /* Register a source the caller built itself. The source object is
    copied, so the caller's may be on the stack; any state it points at
    must outlive the configuration. */
-cf_bool cf_builder_source(cf_builder* b, const cf_source* s);
+CF_API cf_bool cf_builder_source(cf_builder* b, const cf_source* s);
 
-cf_bool cf_builder_define(cf_builder* b, const cf_def* d);
+CF_API cf_bool cf_builder_define(cf_builder* b, const cf_def* d);
 
 /* Exempt a prefix from unknown-key rejection, for a key space the
    program cannot know in advance: a plugin's settings are not in the
    contract because the plugin is not either. */
-cf_bool cf_builder_open(cf_builder* b, const char* prefix);
-cf_bool cf_builder_bool(cf_builder* b, const char* key, cf_bool dflt, unsigned flags);
-cf_bool cf_builder_int(cf_builder* b, const char* key, cf_i64 dflt, cf_i64 min,
-                       cf_i64 max, unsigned flags);
-cf_bool cf_builder_text(cf_builder* b, const char* key, const char* dflt,
-                        unsigned flags);
+CF_API cf_bool cf_builder_open(cf_builder* b, const char* prefix);
+CF_API cf_bool cf_builder_bool(cf_builder* b, const char* key, cf_bool dflt,
+                               unsigned flags);
+CF_API cf_bool cf_builder_int(cf_builder* b, const char* key, cf_i64 dflt, cf_i64 min,
+                              cf_i64 max, unsigned flags);
+CF_API cf_bool cf_builder_text(cf_builder* b, const char* key, const char* dflt,
+                               unsigned flags);
 #if CF_WITH_REAL
-cf_bool cf_builder_real(cf_builder* b, const char* key, double dflt, double min,
-                        double max, unsigned flags);
+CF_API cf_bool cf_builder_real(cf_builder* b, const char* key, double dflt, double min,
+                               double max, unsigned flags);
 #endif
 
-void cf_builder_unknown(cf_builder* b, cf_unknown_policy policy);
+CF_API void cf_builder_unknown(cf_builder* b, cf_unknown_policy policy);
 
-cf_config* cf_builder_create(cf_builder* b, cf_error* err);
+CF_API cf_config* cf_builder_create(cf_builder* b, cf_error* err);
 
 /* ------------------------------------------------------------------ *
  * Reading
@@ -152,29 +153,31 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err);
  * callers who want to know, and cf_type_of answers directly.
  * ------------------------------------------------------------------ */
 
-cf_bool     cf_get_bool(const cf_config* c, const char* key, cf_bool fallback);
-cf_i64      cf_get_int(const cf_config* c, const char* key, cf_i64 fallback);
-const char* cf_get_text(const cf_config* c, const char* key, const char* fallback);
+CF_API cf_bool     cf_get_bool(const cf_config* c, const char* key, cf_bool fallback);
+CF_API cf_i64      cf_get_int(const cf_config* c, const char* key, cf_i64 fallback);
+CF_API const char* cf_get_text(const cf_config* c, const char* key,
+                               const char* fallback);
 #if CF_WITH_REAL
-double cf_get_real(const cf_config* c, const char* key, double fallback);
+CF_API double cf_get_real(const cf_config* c, const char* key, double fallback);
 #endif
 
 /* Pointer and length, for text that may contain anything. The stored
    value is NUL-terminated as well, so cf_get_text stays free. */
-const char* cf_get_text_n(const cf_config* c, const char* key, size_t* len,
-                          const char* fallback);
+CF_API const char* cf_get_text_n(const cf_config* c, const char* key, size_t* len,
+                                 const char* fallback);
 
 /* CF_OK, CF_E_KEY when absent, CF_E_CONVERT on a type mismatch. */
-cf_code cf_try_bool(const cf_config* c, const char* key, cf_bool* out);
-cf_code cf_try_int(const cf_config* c, const char* key, cf_i64* out);
-cf_code cf_try_text(const cf_config* c, const char* key, const char** out, size_t* len);
+CF_API cf_code cf_try_bool(const cf_config* c, const char* key, cf_bool* out);
+CF_API cf_code cf_try_int(const cf_config* c, const char* key, cf_i64* out);
+CF_API cf_code cf_try_text(const cf_config* c, const char* key, const char** out,
+                           size_t* len);
 #if CF_WITH_REAL
-cf_code cf_try_real(const cf_config* c, const char* key, double* out);
+CF_API cf_code cf_try_real(const cf_config* c, const char* key, double* out);
 #endif
 
 /* CF_TYPE_NULL when the key is absent. */
-cf_type cf_type_of(const cf_config* c, const char* key);
-cf_bool cf_has(const cf_config* c, const char* key);
+CF_API cf_type cf_type_of(const cf_config* c, const char* key);
+CF_API cf_bool cf_has(const cf_config* c, const char* key);
 
 /* ------------------------------------------------------------------ *
  * Diagnostics
@@ -183,12 +186,12 @@ cf_bool cf_has(const cf_config* c, const char* key);
  * get() reads, so printing it costs nothing that was not already paid.
  * ------------------------------------------------------------------ */
 
-size_t cf_explain(const cf_config* c, const char* key, char* buf, size_t cap);
-size_t cf_inspect(const cf_config* c, char* buf, size_t cap);
+CF_API size_t cf_explain(const cf_config* c, const char* key, char* buf, size_t cap);
+CF_API size_t cf_inspect(const cf_config* c, char* buf, size_t cap);
 
 /* Order-independent over the resolved configuration, identical on
    every platform and in both portability modes. */
-cf_u64 cf_digest(const cf_config* c);
+CF_API cf_u64 cf_digest(const cf_config* c);
 
 /* The provenance report: the whole key space with every candidate,
    serialised. Doctor compares two of them; the library can read one
@@ -198,18 +201,20 @@ cf_u64 cf_digest(const cf_config* c);
    credential-bearing artifact. The blind form keeps presence, origin,
    length and a digest, which is everything an audit needs and nothing
    a leak would want. */
-size_t cf_report(const cf_config* c, const cf_report_info* info, char* buf, size_t cap);
+CF_API size_t cf_report(const cf_config* c, const cf_report_info* info, char* buf,
+                        size_t cap);
 
 /* Load a full report as a source. Reproduces exactly the configuration
    a process was running, rather than a reconstruction from files that
    may have changed since. */
-cf_bool cf_builder_replay(cf_builder* b, const char* name, int rank, const char* path);
+CF_API cf_bool cf_builder_replay(cf_builder* b, const char* name, int rank,
+                                 const char* path);
 
-size_t                 cf_count(const cf_config* c);
-const cf_apply_report* cf_apply_stats(const cf_config* c);
-const cf_keyspace*     cf_keys(const cf_config* c);
-const cf_source_view*  cf_sources(const cf_config* c);
-const cf_defset*       cf_defs(const cf_config* c);
+CF_API size_t                 cf_count(const cf_config* c);
+CF_API const cf_apply_report* cf_apply_stats(const cf_config* c);
+CF_API const cf_keyspace*     cf_keys(const cf_config* c);
+CF_API const cf_source_view*  cf_sources(const cf_config* c);
+CF_API const cf_defset*       cf_defs(const cf_config* c);
 
 /* ------------------------------------------------------------------ *
  * Ownership and threads
@@ -252,13 +257,14 @@ const cf_defset*       cf_defs(const cf_config* c);
  * is the question people actually ask after changing a setting.
  * ------------------------------------------------------------------ */
 
-cf_config* cf_derive(const cf_config* base, const char* source_name,
-                     const cf_pair* pairs, size_t count, cf_error* err);
+CF_API cf_config* cf_derive(const cf_config* base, const char* source_name,
+                            const cf_pair* pairs, size_t count, cf_error* err);
 
 /* The same, inside an arena the caller owns. A configuration built with
    cf_build_in has no allocator to borrow, so it must use this one. */
-cf_config* cf_derive_in(const cf_config* base, cf_arena* arena, const char* source_name,
-                        const cf_pair* pairs, size_t count, cf_error* err);
+CF_API cf_config* cf_derive_in(const cf_config* base, cf_arena* arena,
+                               const char* source_name, const cf_pair* pairs,
+                               size_t count, cf_error* err);
 
 /* ------------------------------------------------------------------ *
  * Change notification
@@ -283,9 +289,9 @@ cf_config* cf_derive_in(const cf_config* base, cf_arena* arena, const char* sour
  * which costs the re-read you were about to do anyway.
  * ------------------------------------------------------------------ */
 
-cf_bool     cf_changed(const cf_config* c);
-size_t      cf_watch_count(const cf_config* c);
-const char* cf_watch_path(const cf_config* c, size_t i);
+CF_API cf_bool     cf_changed(const cf_config* c);
+CF_API size_t      cf_watch_count(const cf_config* c);
+CF_API const char* cf_watch_path(const cf_config* c, size_t i);
 
 /* ------------------------------------------------------------------ *
  * A handle an event loop can wait on
@@ -327,18 +333,19 @@ typedef struct cf_platform_wake cf_watcher;
 
 /* `a` NULL means the default allocator. Fails when the configuration
    read no file, since there would be nothing to wake it. */
-cf_watcher* cf_watcher_open(const cf_config* c, const cf_allocator* a, cf_error* err);
+CF_API cf_watcher* cf_watcher_open(const cf_config* c, const cf_allocator* a,
+                                   cf_error* err);
 
-int     cf_watcher_fd(const cf_watcher* w);     /* -1 where it is not a descriptor */
-void*   cf_watcher_handle(const cf_watcher* w); /* NULL where it is not a HANDLE */
-cf_bool cf_watcher_drain(cf_watcher* w);
+CF_API int   cf_watcher_fd(const cf_watcher* w); /* -1 where it is not a descriptor */
+CF_API void* cf_watcher_handle(const cf_watcher* w); /* NULL where it is not a HANDLE */
+CF_API cf_bool cf_watcher_drain(cf_watcher* w);
 
 /* 1 woken (and drained), 0 timed out, -1 failed. Negative: no limit. */
-int  cf_watcher_wait(cf_watcher* w, long timeout_ms);
-void cf_watcher_close(cf_watcher* w);
+CF_API int  cf_watcher_wait(cf_watcher* w, long timeout_ms);
+CF_API void cf_watcher_close(cf_watcher* w);
 
-void cf_config_ref(cf_config* c);
-void cf_config_free(cf_config* c);
+CF_API void cf_config_ref(cf_config* c);
+CF_API void cf_config_free(cf_config* c);
 
 #ifdef __cplusplus
 }

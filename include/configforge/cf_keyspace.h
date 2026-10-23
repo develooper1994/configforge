@@ -28,14 +28,14 @@ extern "C" {
  * source that needs it, not here.
  * ------------------------------------------------------------------ */
 
-cf_bool cf_key_valid(const char* key, size_t len);
+CF_API cf_bool cf_key_valid(const char* key, size_t len);
 
 /* Number of dot-separated segments, 0 when the key is invalid. */
-size_t cf_key_segments(const char* key, size_t len);
+CF_API size_t cf_key_segments(const char* key, size_t len);
 
 /* Byte-wise, never strcoll: a reproducible snapshot hash depends on a
    reproducible order. */
-int cf_key_cmp(const char* a, size_t alen, const char* b, size_t blen);
+CF_API int cf_key_cmp(const char* a, size_t alen, const char* b, size_t blen);
 
 /* ------------------------------------------------------------------ *
  * Provenance
@@ -49,12 +49,12 @@ typedef enum cf_outcome {
 #undef CF_OUTCOME_LAST_X
 } cf_outcome;
 
-const char* cf_outcome_name(cf_outcome o);
+CF_API const char* cf_outcome_name(cf_outcome o);
 
 /* Whether a candidate with this outcome may still be selected. The
    resolver asks this instead of listing the losing outcomes, so a new
    one cannot be added and forgotten in the one place it matters. */
-cf_bool cf_outcome_can_win(cf_outcome o);
+CF_API cf_bool cf_outcome_can_win(cf_outcome o);
 
 /* A candidate from a textual source carries the bytes as written; its
    type is decided later, by a definition if one exists and by Tier 0
@@ -121,33 +121,34 @@ typedef struct cf_keyspace {
     cf_bool resolved;
 } cf_keyspace;
 
-cf_bool cf_ks_init(cf_keyspace* ks, cf_arena* arena, size_t hint);
+CF_API cf_bool cf_ks_init(cf_keyspace* ks, cf_arena* arena, size_t hint);
 
 /* The arena everything in this space lives in. Sources that have to
    read a document into memory borrow it, so a configuration remains
    one arena and one release. */
-cf_arena* cf_ks_arena(const cf_keyspace* ks);
+CF_API cf_arena* cf_ks_arena(const cf_keyspace* ks);
 
 /* Record a candidate. Keys and text are copied into the arena, so the
    caller's buffers need not outlive the call. Candidates may arrive in
    any order; the chain is kept ordered by precedence. */
-cf_bool cf_ks_add(cf_keyspace* ks, const char* key, size_t keylen, int source,
-                  const cf_value* value, const char* at);
+CF_API cf_bool cf_ks_add(cf_keyspace* ks, const char* key, size_t keylen, int source,
+                         const cf_value* value, const char* at);
 
 /* Record a candidate as written, leaving its type to be decided. */
-cf_bool cf_ks_add_text(cf_keyspace* ks, const char* key, size_t keylen, int source,
-                       const char* text, size_t textlen, const char* at);
+CF_API cf_bool cf_ks_add_text(cf_keyspace* ks, const char* key, size_t keylen,
+                              int source, const char* text, size_t textlen,
+                              const char* at);
 
 /* Record a typed candidate that somebody wrote - a JSON string, say -
    so the reserved syntax applies to it as it does to raw text. */
-cf_bool cf_ks_add_authored(cf_keyspace* ks, const char* key, size_t keylen, int source,
-                           const cf_value* value, const char* at);
+CF_API cf_bool cf_ks_add_authored(cf_keyspace* ks, const char* key, size_t keylen,
+                                  int source, const cf_value* value, const char* at);
 
 /* Record a candidate that failed conversion or validation. It never
    wins, and it is never erased: explain() has to be able to say that
    the environment did supply a value and why it was refused. */
-cf_bool cf_ks_reject(cf_keyspace* ks, const char* key, size_t keylen, int source,
-                     const cf_value* value, const char* at, const char* reason);
+CF_API cf_bool cf_ks_reject(cf_keyspace* ks, const char* key, size_t keylen, int source,
+                            const cf_value* value, const char* at, const char* reason);
 
 /* Sort the candidates, group them into entries, and mark the
    highest-precedence non-rejected candidate of each as selected.
@@ -156,11 +157,11 @@ cf_bool cf_ks_reject(cf_keyspace* ks, const char* key, size_t keylen, int source
    to do it, which is not the same as an empty configuration: the caller
    must distinguish, or a target out of memory gets a snapshot with no
    keys and nothing to say why. */
-cf_bool cf_ks_resolve(cf_keyspace* ks);
+CF_API cf_bool cf_ks_resolve(cf_keyspace* ks);
 
 /* Candidates appended so far, which is what an out-of-room message
    should name: the caller sized a buffer, not a key count. */
-size_t cf_ks_candidate_count(const cf_keyspace* ks);
+CF_API size_t cf_ks_candidate_count(const cf_keyspace* ks);
 
 /* Tier 0 typing. Every textual candidate that no definition claimed
    gets a type by inference, which is deliberately timid: see D-24.
@@ -170,45 +171,46 @@ size_t cf_ks_candidate_count(const cf_keyspace* ks);
    it just read. Running it before the definitions were applied would
    mean inferring first and overriding afterwards, which is how a
    declared type ends up losing to a guess. */
-void cf_ks_infer_untyped(cf_keyspace* ks);
+CF_API void cf_ks_infer_untyped(cf_keyspace* ks);
 
 /* Mutable access, for the passes that legitimately change outcomes:
    applying definitions marks candidates rejected. Casting away const
    at the call site would work and would also hide which passes write,
    so the write path is named instead. */
-cf_entry* cf_ks_at_mut(cf_keyspace* ks, size_t i);
+CF_API cf_entry* cf_ks_at_mut(cf_keyspace* ks, size_t i);
 
 /* Recompute the selected candidate of every entry. Needed after
    anything that changes an outcome, which in practice means after the
    definitions have been applied and some winners have been refused. */
-void cf_ks_reselect(cf_keyspace* ks);
+CF_API void cf_ks_reselect(cf_keyspace* ks);
 
 /* Binary search over the resolved entries. NULL when absent, and NULL
    before cf_ks_resolve: a half-built space has no answer to give, and
    returning a provisional one would be worse than returning none. */
-const cf_entry* cf_ks_find(const cf_keyspace* ks, const char* key, size_t keylen);
+CF_API const cf_entry* cf_ks_find(const cf_keyspace* ks, const char* key,
+                                  size_t keylen);
 
 /* Index of the first key that is not less than `key`, which is where a
    prefix scan starts. Returns cf_ks_count when every key sorts before
    it. The space is sorted, so this is a binary search and a prefix scan
    costs O(log n) plus the matches rather than a walk. */
-size_t cf_ks_lower_bound(const cf_keyspace* ks, const char* key, size_t keylen);
+CF_API size_t cf_ks_lower_bound(const cf_keyspace* ks, const char* key, size_t keylen);
 
 /* The selected value, or NULL when the key is absent or every
    candidate was rejected. */
-const cf_value* cf_ks_get(const cf_keyspace* ks, const char* key, size_t keylen);
+CF_API const cf_value* cf_ks_get(const cf_keyspace* ks, const char* key, size_t keylen);
 
-size_t          cf_ks_count(const cf_keyspace* ks);
-const cf_entry* cf_ks_at(const cf_keyspace* ks, size_t i);
+CF_API size_t          cf_ks_count(const cf_keyspace* ks);
+CF_API const cf_entry* cf_ks_at(const cf_keyspace* ks, size_t i);
 
 /* Verifies the ordering invariant the design depends on. */
-cf_bool cf_ks_is_sorted(const cf_keyspace* ks);
+CF_API cf_bool cf_ks_is_sorted(const cf_keyspace* ks);
 
 /* Order-independent digest over the resolved space. Two runs that
    produce the same configuration produce the same digest, on every
    platform and in both portability modes. This is the determinism
    requirement made checkable. */
-cf_u64 cf_ks_digest(const cf_keyspace* ks);
+CF_API cf_u64 cf_ks_digest(const cf_keyspace* ks);
 
 #ifdef __cplusplus
 }

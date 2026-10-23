@@ -93,7 +93,7 @@ typedef struct cf_def {
     const char* const* policy;
 } cf_def;
 
-void cf_def_init(cf_def* d, cf_type type, const char* key);
+CF_API void cf_def_init(cf_def* d, cf_type type, const char* key);
 
 /* ------------------------------------------------------------------ *
  * Definition set
@@ -122,45 +122,46 @@ typedef struct cf_defset {
     size_t      open_count;
 } cf_defset;
 
-cf_bool cf_defset_init(cf_defset* ds, cf_arena* arena, size_t hint);
+CF_API cf_bool cf_defset_init(cf_defset* ds, cf_arena* arena, size_t hint);
 
 /* Copies the descriptor. Rejects a definition that contradicts itself:
    a default outside its own range, an empty enum, a range on a type
    that has none. Those are programming errors and are worth refusing
    at the point they are written. */
-cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err);
+CF_API cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err);
 
-cf_bool cf_def_bool(cf_defset* ds, const char* key, cf_bool dflt, unsigned flags,
-                    cf_error* err);
-cf_bool cf_def_int(cf_defset* ds, const char* key, cf_i64 dflt, cf_i64 min, cf_i64 max,
-                   unsigned flags, cf_error* err);
-cf_bool cf_def_text(cf_defset* ds, const char* key, const char* dflt, unsigned flags,
-                    cf_error* err);
+CF_API cf_bool cf_def_bool(cf_defset* ds, const char* key, cf_bool dflt, unsigned flags,
+                           cf_error* err);
+CF_API cf_bool cf_def_int(cf_defset* ds, const char* key, cf_i64 dflt, cf_i64 min,
+                          cf_i64 max, unsigned flags, cf_error* err);
+CF_API cf_bool cf_def_text(cf_defset* ds, const char* key, const char* dflt,
+                           unsigned flags, cf_error* err);
 #if CF_WITH_REAL
-cf_bool cf_def_real(cf_defset* ds, const char* key, double dflt, double min, double max,
-                    unsigned flags, cf_error* err);
+CF_API cf_bool cf_def_real(cf_defset* ds, const char* key, double dflt, double min,
+                           double max, unsigned flags, cf_error* err);
 #endif
 
 /* Sorts. Required before lookup; calling twice is harmless. */
-void cf_defset_seal(cf_defset* ds);
+CF_API void cf_defset_seal(cf_defset* ds);
 
 /* Exempt a prefix from unknown-key rejection. */
-cf_bool cf_defset_open(cf_defset* ds, const char* prefix, cf_error* err);
+CF_API cf_bool cf_defset_open(cf_defset* ds, const char* prefix, cf_error* err);
 
 /* Is this key under an exempt prefix? Matches at a segment boundary
    only, so opening "plugins" does not open "pluginsomething". */
-cf_bool cf_defset_is_open(const cf_defset* ds, const char* key, size_t keylen);
+CF_API cf_bool cf_defset_is_open(const cf_defset* ds, const char* key, size_t keylen);
 
-const cf_def* cf_defset_find(const cf_defset* ds, const char* key, size_t keylen);
-size_t        cf_defset_count(const cf_defset* ds);
-const cf_def* cf_defset_at(const cf_defset* ds, size_t i);
+CF_API const cf_def* cf_defset_find(const cf_defset* ds, const char* key,
+                                    size_t keylen);
+CF_API size_t        cf_defset_count(const cf_defset* ds);
+CF_API const cf_def* cf_defset_at(const cf_defset* ds, size_t i);
 
 /* Nearest defined key by edit distance, or NULL when nothing is close.
    This is what turns "unknown key server.pot" into "did you mean
    server.port", and it is available only because the definition set is
    a contract rather than documentation. */
-const cf_def* cf_defset_nearest(const cf_defset* ds, const char* key, size_t keylen,
-                                size_t* distance);
+CF_API const cf_def* cf_defset_nearest(const cf_defset* ds, const char* key,
+                                       size_t keylen, size_t* distance);
 
 /* ------------------------------------------------------------------ *
  * Applying the contract
@@ -197,16 +198,16 @@ typedef struct cf_apply_report {
 /* Renders a policy list as the specification writes it: "env > local".
    Shared because both the rejection message and the coherence check
    below want the same spelling, and two renderings of one thing drift. */
-void cf_policy_text(const char* const* policy, char* buf, size_t cap);
+CF_API void cf_policy_text(const char* const* policy, char* buf, size_t cap);
 
 typedef struct cf_rank_names {
     const char* (*name_of)(const void* ctx, int rank);
     const void* ctx;
 } cf_rank_names;
 
-cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names* names,
-                      cf_unknown_policy unknown, cf_apply_report* report,
-                      cf_error* err);
+CF_API cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds,
+                             const cf_rank_names* names, cf_unknown_policy unknown,
+                             cf_apply_report* report, cf_error* err);
 
 /* Definition defaults, as an ordinary source. Declared here because
    it is the one source that reads a definition set; it is implemented
@@ -217,19 +218,19 @@ cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names*
    file with no special case anywhere - and why it has a name to print
    rather than a question mark. */
 struct cf_source;
-cf_bool cf_source_defaults(struct cf_source* s, const char* name, int rank,
-                           const cf_defset* ds);
+CF_API cf_bool cf_source_defaults(struct cf_source* s, const char* name, int rank,
+                                  const cf_defset* ds);
 
 /* Give the environment source the key list, so it accepts the natural
    single-underscore spelling as well as the escaped one. Without a
    contract only the escaped spelling can be enumerated unambiguously;
    with one, both work and nobody has to type the escape. */
-void cf_source_env_defs(struct cf_source* s, const cf_defset* ds);
+CF_API void cf_source_env_defs(struct cf_source* s, const cf_defset* ds);
 
 /* Give the command-line source the key list, which is what unlocks
    --key value, --no-key and aliases. Without it only the = form carries
    a value, because nothing else can be parsed correctly. */
-void cf_source_cli_defs(struct cf_source* s, const cf_defset* ds);
+CF_API void cf_source_cli_defs(struct cf_source* s, const cf_defset* ds);
 
 #ifdef __cplusplus
 }

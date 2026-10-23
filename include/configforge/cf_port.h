@@ -141,6 +141,38 @@ typedef int cf_bool;
 #endif
 
 /* ------------------------------------------------------------------ *
+ * Export control
+ *
+ * CF_API marks every function a program may call. In a static build it
+ * is nothing. In a shared one it is what makes the library usable at
+ * all on Windows - a DLL exports only what is marked, so without it the
+ * DLL exported nothing - and on ELF and Mach-O it pairs with
+ * -fvisibility=hidden, so the library's internals stay internal and the
+ * dynamic symbol table holds the interface and nothing else.
+ *
+ * CF_SHARED comes from cf_build_options.h, which states the build's
+ * facts: a consumer of an installed DLL gets dllimport without being
+ * told. CF_BUILDING_LIBRARY is defined only while the library's own
+ * sources compile.
+ * ------------------------------------------------------------------ */
+
+#if CF_SHARED
+#if defined(_WIN32) || defined(__CYGWIN__)
+#ifdef CF_BUILDING_LIBRARY
+#define CF_API __declspec(dllexport)
+#else
+#define CF_API __declspec(dllimport)
+#endif
+#elif defined(__GNUC__) && __GNUC__ >= 4
+#define CF_API __attribute__((visibility("default")))
+#else
+#define CF_API
+#endif
+#else
+#define CF_API
+#endif
+
+/* ------------------------------------------------------------------ *
  * Compile-time assertion
  *
  * The C89 fallback is the negative-array-size idiom. The typedef name
@@ -207,10 +239,10 @@ typedef struct cf_refcount {
 /* Sets the initial count. Not a plain assignment at the call site:
    the member is volatile on some builds and its spelling is this
    layer's business, not the caller's. */
-void   cf_ref_init(cf_refcount* rc, cf_i32 n);
-cf_i32 cf_ref_inc(cf_refcount* rc);
-cf_i32 cf_ref_dec(cf_refcount* rc);
-cf_i32 cf_ref_get(const cf_refcount* rc);
+CF_API void   cf_ref_init(cf_refcount* rc, cf_i32 n);
+CF_API cf_i32 cf_ref_inc(cf_refcount* rc);
+CF_API cf_i32 cf_ref_dec(cf_refcount* rc);
+CF_API cf_i32 cf_ref_get(const cf_refcount* rc);
 
 /* ------------------------------------------------------------------ *
  * ASCII-only character handling
@@ -247,8 +279,8 @@ CF_INLINE int cf_to_upper(int c) {
 }
 
 /* Byte-wise comparison. Never strcoll: ordering must be reproducible. */
-int cf_cmp_bytes(const char* a, size_t alen, const char* b, size_t blen);
-int cf_cmp_ascii_ci(const char* a, size_t alen, const char* b, size_t blen);
+CF_API int cf_cmp_bytes(const char* a, size_t alen, const char* b, size_t blen);
+CF_API int cf_cmp_ascii_ci(const char* a, size_t alen, const char* b, size_t blen);
 
 /* ------------------------------------------------------------------ *
  * Bounded formatting
@@ -269,16 +301,16 @@ int cf_cmp_ascii_ci(const char* a, size_t alen, const char* b, size_t blen);
  * when cap > 0.
  * ------------------------------------------------------------------ */
 
-size_t cf_fmt(char* buf, size_t cap, const char* fmt, ...);
-size_t cf_fmt_append(char* buf, size_t cap, size_t at, const char* fmt, ...);
-size_t cf_vfmt(char* buf, size_t cap, const char* fmt, va_list ap);
+CF_API size_t cf_fmt(char* buf, size_t cap, const char* fmt, ...);
+CF_API size_t cf_fmt_append(char* buf, size_t cap, size_t at, const char* fmt, ...);
+CF_API size_t cf_vfmt(char* buf, size_t cap, const char* fmt, va_list ap);
 
 /* ------------------------------------------------------------------ *
  * Build description, reported in explain() and in the provenance
  * report so that a restricted build is distinguishable from a full one.
  * ------------------------------------------------------------------ */
 
-const char* cf_port_description(void);
+CF_API const char* cf_port_description(void);
 
 #ifdef __cplusplus
 }

@@ -44,9 +44,9 @@ typedef struct cf_report_info {
 
 /* Render the report. Measure-or-write: with a NULL buffer nothing is
    stored and the length still accumulates. */
-size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
-                       const cf_source_view* sv, const cf_report_info* info, char* buf,
-                       size_t cap);
+CF_API size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
+                              const cf_source_view* sv, const cf_report_info* info,
+                              char* buf, size_t cap);
 
 /* ------------------------------------------------------------------ *
  * Report Replay
@@ -60,12 +60,12 @@ size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
  * refused rather than half-applied.
  * ------------------------------------------------------------------ */
 
-size_t cf_source_replay_state_size(void);
+CF_API size_t cf_source_replay_state_size(void);
 
-cf_bool cf_source_replay(cf_source* s, const char* name, int rank, const char* path,
-                         void* state, size_t state_size);
+CF_API cf_bool cf_source_replay(cf_source* s, const char* name, int rank,
+                                const char* path, void* state, size_t state_size);
 
-const cf_error* cf_source_replay_error(const cf_source* s);
+CF_API const cf_error* cf_source_replay_error(const cf_source* s);
 
 #ifdef __cplusplus
 }

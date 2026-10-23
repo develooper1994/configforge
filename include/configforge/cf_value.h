@@ -45,34 +45,34 @@ typedef struct cf_value {
     } u;
 } cf_value;
 
-const char* cf_type_name(cf_type t);
+CF_API const char* cf_type_name(cf_type t);
 
 /* JSON Schema spells the same types differently; the report and the
    schema generator both need that spelling. Two names, one list. */
-const char* cf_type_json_name(cf_type t);
+CF_API const char* cf_type_json_name(cf_type t);
 
-void cf_value_null(cf_value* v);
-void cf_value_bool(cf_value* v, cf_bool b);
-void cf_value_int(cf_value* v, cf_i64 i);
+CF_API void cf_value_null(cf_value* v);
+CF_API void cf_value_bool(cf_value* v, cf_bool b);
+CF_API void cf_value_int(cf_value* v, cf_i64 i);
 #if CF_WITH_REAL
-void cf_value_real(cf_value* v, double r);
+CF_API void cf_value_real(cf_value* v, double r);
 #endif
-void cf_value_text(cf_value* v, const char* p, size_t n);
+CF_API void cf_value_text(cf_value* v, const char* p, size_t n);
 
 /* Convert text to the requested type. Returns CF_FALSE when the text
    does not denote a value of that type; the caller then reports a
    conversion failure naming the parameter and the source, which is
    the only place conversion errors are allowed to appear. */
-cf_bool cf_value_from_text(cf_type t, const char* s, size_t n, cf_value* out);
+CF_API cf_bool cf_value_from_text(cf_type t, const char* s, size_t n, cf_value* out);
 
 /* Infer a type from text. Used only where no definition exists, and
    deliberately timid: see decision D-24. */
-cf_bool cf_value_infer(const char* s, size_t n, cf_value* out);
+CF_API cf_bool cf_value_infer(const char* s, size_t n, cf_value* out);
 
 /* Canonical text form. Identical on every platform, which is what
    makes the determinism hash and the golden fixtures meaningful.
    Returns the length written, or 0 when cap is too small. */
-size_t cf_value_to_text(const cf_value* v, char* buf, size_t cap);
+CF_API size_t cf_value_to_text(const cf_value* v, char* buf, size_t cap);
 
 /* Longest output cf_value_to_text can produce for a non-text value. */
 #if CF_WITH_REAL
@@ -81,8 +81,8 @@ size_t cf_value_to_text(const cf_value* v, char* buf, size_t cap);
 #define CF_VALUE_TEXT_MAX CF_I64_DIGITS
 #endif
 
-int     cf_value_cmp(const cf_value* a, const cf_value* b);
-cf_bool cf_value_equal(const cf_value* a, const cf_value* b);
+CF_API int     cf_value_cmp(const cf_value* a, const cf_value* b);
+CF_API cf_bool cf_value_equal(const cf_value* a, const cf_value* b);
 
 #ifdef __cplusplus
 }

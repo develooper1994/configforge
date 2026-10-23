@@ -57,13 +57,13 @@ typedef struct cf_keymap {
     const char*    prefix; /* "MYAPP_", or NULL */
 } cf_keymap;
 
-void cf_keymap_init(cf_keymap* m, cf_keymap_kind kind, const char* prefix);
+CF_API void cf_keymap_init(cf_keymap* m, cf_keymap_kind kind, const char* prefix);
 
 /* Source spelling to canonical. Returns the length written, or 0 when
    the name does not belong to this source or does not derive a valid
    key. Skipped rather than repaired: PATH and HOME land here. */
-size_t cf_keymap_to_key(const cf_keymap* m, const char* raw, size_t n, char* out,
-                        size_t cap);
+CF_API size_t cf_keymap_to_key(const cf_keymap* m, const char* raw, size_t n, char* out,
+                               size_t cap);
 
 /* Canonical to source spelling. `escaped` selects between the form the
    mapping can read back unaided and the natural one a person writes:
@@ -75,8 +75,8 @@ size_t cf_keymap_to_key(const cf_keymap* m, const char* raw, size_t n, char* out
                                                   definition to match
    Both are accepted when a contract exists, which is the whole gain:
    the escape is what enumeration needs, and nobody has to type it. */
-size_t cf_keymap_from_key(const cf_keymap* m, const char* key, size_t n,
-                          cf_bool escaped, char* out, size_t cap);
+CF_API size_t cf_keymap_from_key(const cf_keymap* m, const char* key, size_t n,
+                                 cf_bool escaped, char* out, size_t cap);
 
 /* ------------------------------------------------------------------ *
  * Entry sink
@@ -102,8 +102,8 @@ typedef struct cf_keysink {
     cf_entry_sink sink;
 } cf_keysink;
 
-cf_bool              cf_keysink_init(cf_keysink* k, cf_keyspace* ks, int rank);
-const cf_entry_sink* cf_keysink_of(cf_keysink* k);
+CF_API cf_bool              cf_keysink_init(cf_keysink* k, cf_keyspace* ks, int rank);
+CF_API const cf_entry_sink* cf_keysink_of(cf_keysink* k);
 
 /* ------------------------------------------------------------------ *
  * Lexers
@@ -115,8 +115,8 @@ const cf_entry_sink* cf_keysink_of(cf_keysink* k);
 /* Entries that do not belong to this prefix, or do not derive a valid
    key, are skipped. An environment is shared with every other program
    on the machine, so refusing it would be refusing the machine. */
-cf_bool cf_lex_env(char* const* environment, const cf_keymap* map,
-                   const cf_entry_sink* out, cf_error* err);
+CF_API cf_bool cf_lex_env(char* const* environment, const cf_keymap* map,
+                          const cf_entry_sink* out, cf_error* err);
 
 /* ------------------------------------------------------------------ *
  * Command line
@@ -166,8 +166,9 @@ typedef struct cf_cli_spec {
  * belongs to this program alone, so an unparseable option is the user's
  * typo, and ignoring it is how a misspelled flag becomes an hour of
  * confusion. */
-cf_bool cf_lex_cli(int argc, char* const* argv, const cf_keymap* map,
-                   const cf_cli_spec* spec, const cf_entry_sink* out, cf_error* err);
+CF_API cf_bool cf_lex_cli(int argc, char* const* argv, const cf_keymap* map,
+                          const cf_cli_spec* spec, const cf_entry_sink* out,
+                          cf_error* err);
 
 /* ------------------------------------------------------------------ *
  * Response files
@@ -185,8 +186,8 @@ cf_bool cf_lex_cli(int argc, char* const* argv, const cf_keymap* map,
  * itself is a loop.
  * ------------------------------------------------------------------ */
 
-cf_bool cf_cli_expand(int argc, char* const* argv, cf_arena* arena, int* out_argc,
-                      char*** out_argv, cf_error* err);
+CF_API cf_bool cf_cli_expand(int argc, char* const* argv, cf_arena* arena,
+                             int* out_argc, char*** out_argv, cf_error* err);
 
 /* ------------------------------------------------------------------ *
  * The command line in UTF-8
@@ -202,7 +203,8 @@ cf_bool cf_cli_expand(int argc, char* const* argv, cf_arena* arena, int* out_arg
  * every platform and only one of them needed them.
  * ------------------------------------------------------------------ */
 
-char* const* cf_cli_args(int argc, char* const* argv, cf_arena* arena, int* out_argc);
+CF_API char* const* cf_cli_args(int argc, char* const* argv, cf_arena* arena,
+                                int* out_argc);
 
 /* ------------------------------------------------------------------ *
  * A .env file
@@ -217,8 +219,9 @@ char* const* cf_cli_args(int argc, char* const* argv, cf_arena* arena, int* out_
  * escape and the natural spelling behave identically in both.
  * ------------------------------------------------------------------ */
 
-cf_bool cf_lex_dotenv(const char* text, size_t n, const char* origin,
-                      const cf_keymap* map, const cf_entry_sink* out, cf_error* err);
+CF_API cf_bool cf_lex_dotenv(const char* text, size_t n, const char* origin,
+                             const cf_keymap* map, const cf_entry_sink* out,
+                             cf_error* err);
 
 #ifdef __cplusplus
 }

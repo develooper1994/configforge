@@ -77,8 +77,8 @@ struct cf_source {
     } u;
 };
 
-cf_bool cf_source_load(const cf_source* s, cf_keyspace* ks);
-void    cf_source_destroy(cf_source* s);
+CF_API cf_bool cf_source_load(const cf_source* s, cf_keyspace* ks);
+CF_API void    cf_source_destroy(cf_source* s);
 
 /* ------------------------------------------------------------------ *
  * A view over the sources
@@ -102,8 +102,8 @@ typedef struct cf_source_view {
  * value from the lowest-precedence source, not a separate mechanism.
  * ------------------------------------------------------------------ */
 
-cf_bool cf_source_memory(cf_source* s, const char* name, int rank, const cf_pair* pairs,
-                         size_t count);
+CF_API cf_bool cf_source_memory(cf_source* s, const char* name, int rank,
+                                const cf_pair* pairs, size_t count);
 
 /* ------------------------------------------------------------------ *
  * Environment source
@@ -128,17 +128,17 @@ cf_bool cf_source_memory(cf_source* s, const char* name, int rank, const cf_pair
  * key, are skipped rather than guessed at.
  * ------------------------------------------------------------------ */
 
-cf_bool cf_source_env(cf_source* s, const char* name, int rank, const char* prefix,
-                      char* const* environment);
+CF_API cf_bool cf_source_env(cf_source* s, const char* name, int rank,
+                             const char* prefix, char* const* environment);
 
 /* The platform environment, or NULL where none is reachable. */
-char* const* cf_environ(void); /* cf_platform_environ, kept for callers */
+CF_API char* const* cf_environ(void); /* cf_platform_environ, kept for callers */
 
 /* Exposed for testing: derive a canonical key from a variable name.
    Returns the length written, or 0 when the name does not belong to
    this prefix or does not derive a valid key. */
-size_t cf_env_key(const char* prefix, const char* var, size_t varlen, char* out,
-                  size_t cap);
+CF_API size_t cf_env_key(const char* prefix, const char* var, size_t varlen, char* out,
+                         size_t cap);
 
 /* ------------------------------------------------------------------ *
  * Command line source
@@ -162,8 +162,8 @@ size_t cf_env_key(const char* prefix, const char* var, size_t varlen, char* out,
  * positional arguments, not configuration.
  * ------------------------------------------------------------------ */
 
-cf_bool cf_source_cli(cf_source* s, const char* name, int rank, int argc,
-                      char* const* argv);
+CF_API cf_bool cf_source_cli(cf_source* s, const char* name, int rank, int argc,
+                             char* const* argv);
 
 /* ------------------------------------------------------------------ *
  * File source
@@ -182,28 +182,28 @@ enum {
     CF_FILE_OPTIONAL = 1u << 0
 };
 
-size_t cf_source_file_state_size(void);
+CF_API size_t cf_source_file_state_size(void);
 
-cf_bool cf_source_file(cf_source* s, const char* name, int rank, const char* path,
-                       const char* format, unsigned flags, void* state,
-                       size_t state_size);
+CF_API cf_bool cf_source_file(cf_source* s, const char* name, int rank,
+                              const char* path, const char* format, unsigned flags,
+                              void* state, size_t state_size);
 
 /* The reason a file source failed, or NULL when it did not. Sources
    return a plain boolean because most cannot fail in interesting ways;
    a file can fail in a dozen, and the caller needs the detail. */
-const cf_error* cf_source_file_error(const cf_source* s);
+CF_API const cf_error* cf_source_file_error(const cf_source* s);
 
 /* A .env file: the same key mapping as the environment, because a .env
    file is an environment written down. Unlike the environment it
    belongs to this program, so a name that derives no key is an error
    rather than another program's variable. */
-size_t cf_source_dotenv_state_size(void);
+CF_API size_t cf_source_dotenv_state_size(void);
 
-cf_bool cf_source_dotenv(cf_source* s, const char* name, int rank, const char* path,
-                         const char* prefix, unsigned flags, void* state,
-                         size_t state_size);
+CF_API cf_bool cf_source_dotenv(cf_source* s, const char* name, int rank,
+                                const char* path, const char* prefix, unsigned flags,
+                                void* state, size_t state_size);
 
-const cf_error* cf_source_dotenv_error(const cf_source* s);
+CF_API const cf_error* cf_source_dotenv_error(const cf_source* s);
 
 /* ------------------------------------------------------------------ *
  * A drop-in directory
@@ -223,18 +223,19 @@ const cf_error* cf_source_dotenv_error(const cf_source* s);
    originally had, not only the winners: a library whose premise is
    explaining itself must not lose provenance at the moment a value
    changes, which is exactly when somebody asks. */
-cf_bool cf_source_snapshot(cf_source* s, const char* name, const cf_keyspace* ks);
+CF_API cf_bool cf_source_snapshot(cf_source* s, const char* name,
+                                  const cf_keyspace* ks);
 
 /* The file a source reads, or NULL. */
-const char* cf_source_path(const cf_source* s);
+CF_API const char* cf_source_path(const cf_source* s);
 
-size_t cf_source_dir_state_size(void);
+CF_API size_t cf_source_dir_state_size(void);
 
-cf_bool cf_source_dir(cf_source* s, const char* name, int rank, const char* path,
-                      const char* format, unsigned flags, void* state,
-                      size_t state_size);
+CF_API cf_bool cf_source_dir(cf_source* s, const char* name, int rank, const char* path,
+                             const char* format, unsigned flags, void* state,
+                             size_t state_size);
 
-const cf_error* cf_source_dir_error(const cf_source* s);
+CF_API const cf_error* cf_source_dir_error(const cf_source* s);
 
 #ifdef __cplusplus
 }

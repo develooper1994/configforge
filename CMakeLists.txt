@@ -32,6 +32,15 @@ set(CMAKE_C_STANDARD 90)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
+# Windows finds a DLL beside the executable or on PATH and nowhere else.
+# With every binary of a shared build in one directory, every test and
+# tool finds the library it was linked against.
+if(WIN32
+   AND BUILD_SHARED_LIBS
+   AND NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+endif()
+
 add_library(configforge)
 add_library(ConfigForge::configforge ALIAS configforge)
 
@@ -47,10 +56,16 @@ configforge_apply_analysis(configforge)
 
 add_subdirectory(src)
 
+# Only what CF_API marks is visible from a shared library, and the
+# library's own sources are the ones that export rather than import.
+target_compile_definitions(configforge PRIVATE CF_BUILDING_LIBRARY=1)
+
 set_target_properties(
   configforge
   PROPERTIES VERSION ${PROJECT_VERSION}
              SOVERSION ${PROJECT_VERSION_MAJOR}
+             C_VISIBILITY_PRESET hidden
+             CXX_VISIBILITY_PRESET hidden
              C_STANDARD 90
              C_STANDARD_REQUIRED ON
              C_EXTENSIONS OFF)

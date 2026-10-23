@@ -40,7 +40,7 @@ typedef struct cf_iter {
    boundary only, so "server" does not match "servername" - the bug
    every hand-written prefix check has. An empty or NULL prefix walks
    the whole configuration. */
-cf_bool cf_iter_keys(cf_iter* it, const struct cf_config* c, const char* prefix);
+CF_API cf_bool cf_iter_keys(cf_iter* it, const struct cf_config* c, const char* prefix);
 
 /* Each distinct immediate child of `prefix`, once:
  *
@@ -52,9 +52,10 @@ cf_bool cf_iter_keys(cf_iter* it, const struct cf_config* c, const char* prefix)
  * told in advance, which is what plugin and per-tenant configuration
  * both need.
  */
-cf_bool cf_iter_children(cf_iter* it, const struct cf_config* c, const char* prefix);
+CF_API cf_bool cf_iter_children(cf_iter* it, const struct cf_config* c,
+                                const char* prefix);
 
-cf_bool cf_iter_next(cf_iter* it);
+CF_API cf_bool cf_iter_next(cf_iter* it);
 
 /* ------------------------------------------------------------------ *
  * Arrays
@@ -64,11 +65,11 @@ cf_bool cf_iter_next(cf_iter* it);
    keys present: a high-precedence source that shortens an array leaves
    the longer one's extra elements in the key space, and counting them
    would report the union of two arrays. */
-size_t cf_array_count(const struct cf_config* c, const char* key);
+CF_API size_t cf_array_count(const struct cf_config* c, const char* key);
 
 /* Builds "<key>.<index>", so a loop does not have to. Measure-or-write
    like everything else that renders. */
-size_t cf_array_key(char* buf, size_t cap, const char* key, size_t index);
+CF_API size_t cf_array_key(char* buf, size_t cap, const char* key, size_t index);
 
 #ifdef __cplusplus
 }
