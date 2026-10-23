@@ -62,6 +62,12 @@ add_test(NAME doctor.baseline
 set_tests_properties(doctor.baseline PROPERTIES FIXTURES_REQUIRED
                                                 DOCTOR_REPORTS)
 
+# The git config adapter, the first of the foreign ones. It writes its
+# own input, so it needs no fixture.
+add_test(NAME doctor.git
+         COMMAND ${CMAKE_COMMAND} -DDOCTOR=$<TARGET_FILE:doctor> -P
+                 ${CMAKE_SOURCE_DIR}/tests/doctor/git.cmake)
+
 # Severity a project chose, severity a profile implies, and SARIF.
 add_test(NAME doctor.severity
          COMMAND ${CMAKE_COMMAND} -DDOCTOR=$<TARGET_FILE:doctor> -P

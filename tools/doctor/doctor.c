@@ -26,6 +26,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "adapters.h"
+
 /* Both arrays come from the report's own arena rather than sitting
    inside the struct. An earlier version held them inline and put 7.7
    megabytes on the stack, which the build's stack budget caught: that
@@ -1505,6 +1507,7 @@ static int usage(void) {
           "  doctor explain <report> <key>\n"
           "  doctor lint    <report> [options]\n"
           "  doctor diff    <report-a> <report-b> [options]\n"
+          "  doctor import-git [--full]  < git config output\n"
           "\n"
           "  --baseline <file>  findings already accepted\n"
           "  --severity <file>  this project's severities\n"
@@ -1538,6 +1541,11 @@ static int usage(void) {
 int main(int argc, char** argv) {
     report a, b;
 
+    /* An adapter writes a report rather than reading one, so it takes no
+       report argument and is dispatched before anything expects one. */
+    if (argc >= 2 && strcmp(argv[1], "import-git") == 0) {
+        return doctor_import_git(argc - 2, argv + 2);
+    }
     if (argc < 3) {
         return usage();
     }

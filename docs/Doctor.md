@@ -329,13 +329,36 @@ logic.** Each ecosystem supplies its own origin data and a thin adapter converts
 | ConfigForge | native report | none |
 | .NET | `ConfigurationRoot.GetDebugView()` | small; format is already key plus provider |
 | Spring Boot | `/actuator/env`, origin-tracked | small; JSON already carries origins |
-| Git config | `git config --list --show-origin --show-scope` | trivial |
+| Git config | `git config --list --show-origin --show-scope` | built: `doctor import-git` |
 | systemd | `systemd-analyze cat-config` | small |
 | Go / viper | none available | requires a helper in the host application |
 | dotenv | file parse only, no precedence | partial; presence and origin only |
 
 Adapters that cannot supply origins produce presence-only reports, and Doctor says
 which rules it is unable to run rather than reporting a clean result.
+
+**The git adapter, as built.**
+
+```text
+git config --list --show-origin --show-scope | doctor import-git > git.json
+doctor lint git.json
+```
+
+Git publishes everything this needs, so the adapter decides only how to write it down,
+and goes through the library's own report writer so the result cannot drift from the
+schema. Four decisions, each written where it is made:
+
+* precedence is git's documented order - command, worktree, local, global, system - and
+  within one scope the later line wins, which is ConfigForge's rule too.
+* a multi-valued key such as `remote.origin.fetch` looks in this output exactly like a key
+  set twice and overridden. It is recorded as git printed it. Git gives no line numbers,
+  so CFD001 - the one rule that would call the earlier occurrence a mistake - cannot
+  fire on it.
+* a key a report cannot carry, such as one with a URL in its subsection, is left out and
+  counted on stderr rather than rewritten into a spelling that could collide with
+  another.
+* the report is value-blind unless `--full`: git configuration carries credentials more
+  often than it looks.
 
 ---
 
