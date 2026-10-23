@@ -252,8 +252,12 @@ configuration.
 
 ```sh
 $ doctor lint staging.json
+CFD001  error   server.port  app.ini:2:1 always loses to app.ini:9:1, set later
+                             by the same source; editing it has no effect
 CFD010  error   user-file    supplies 2 value(s) and wins none; everything it
                              sets is shadowed, e.g. staging.ini:3:1
+CFD007  error   api.token    sensitive, and supplied on the command line at
+                             argv[1], which every user of the machine can read
 
 $ doctor diff prod.json staging.json
 CFD002  warning server.port  same key resolved from 'env' here and 'cli' there

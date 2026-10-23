@@ -146,6 +146,16 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   the levels appear, so an optional file nobody has created can still
   wake the caller when it arrives. macOS and the BSDs say they have no
   handle rather than pretending; `kqueue` is next.
+- **Doctor proves CFD001, CFD007 and CFD013.** CFD001, an unreachable
+  value, fires where it can be proved from one report: the same source
+  sets a key twice in one file or command line, the later occurrence
+  wins wherever it is read, and editing the earlier line has no effect.
+  The broader reading - every shadowed candidate - cannot be proved from
+  one environment and would bury the finding under precedence working
+  as designed. CFD007 is a secret on the command line that no policy
+  refused; CFD013 a policy that ranks a less specific source above a
+  more specific one, which is what explains an `explain()` where the
+  command line loses to a variable.
 - **Three more Doctor rules** that a single report can prove from its
   definitions alone: `CFD005` a key with no definition, `CFD009` a
   deprecated key something is still supplying, `CFD011` a key set to an
@@ -276,6 +286,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - **The C format gate depended on the formatter's version.**
   clang-format 18, which CI installs, and 22 disagreed on three lines;
   they are written so that both leave them alone.
+- **One leaked secret was three Doctor errors.** A candidate rejected by
+  policy was also counted as a contract violation (CFD006) and as a
+  source that lost (CFD010). A rejection is reported once, by the rule
+  that owns it.
 - **Rounding carry did not travel past the last digit.** The formatter
   handled a carry out of the leading digit and silently produced `"1:"`
   when the last one overflowed. Found by clang-tidy noticing the dead
