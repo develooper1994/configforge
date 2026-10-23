@@ -136,6 +136,23 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   rewritten inside one clock tick at the same length. That is documented
   as a hint worth acting on rather than a guarantee; the exact answer is
   to rebuild and compare digests.
+- **A way in for whoever continues the work.** `AGENTS.md` - read by a
+  person or an AI agent, on any machine - maps the repository, gives the
+  build-verify-commit loop, the house rules and every trap this work
+  fell into, and the recipes for extending it; `CLAUDE.md` points at it.
+  `docs/Roadmap.md` holds what is next, what is known to be wrong, and
+  the ideas not yet built, and is kept in the same commit as the work.
+  `CONTRIBUTING.md`, `SECURITY.md` (private reporting, and what is in
+  scope: every reader of untrusted bytes), `CODE_OF_CONDUCT.md`, issue
+  and pull request templates, and Dependabot for the CI actions.
+- **Usage as a test.** `tests/unit/test_usage.c` is the smallest real
+  program for each usage tier, compiled and run, so the tiers cannot
+  name an interface that does not exist - which Design.md's did: its
+  Tier 1 and Tier 2 examples called functions from an early draft that
+  the library never had. They show the real API now.
+- **jq recipes for reports** (Doctor.md, section 7a), each run against
+  a real report, and the reasoning for not writing a query language of
+  our own (Roadmap.md).
 - **TOML**, as the subset D-23 described, built in and on by default:
   tables and arrays of tables, inline tables, dotted keys, basic and
   literal strings with every escape, integers in four bases, floats,

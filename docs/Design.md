@@ -141,21 +141,31 @@ Tier 0 — Read
     cf_i64     port = cf_get_int(cfg, "server.port", 8080);
 
 Tier 1 — Contract
-    cf_def_int_v(b, "server.port", 8080, 1, 65535);
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
 
 Tier 2 — Explicit sources
-    auto cfg = cf::build()
-                 .add(cf::File("app.toml"))
-                 .add(cf::Env("MYAPP_"))
-                 .add(cf::Cli(argc, argv))
-                 .create();
+    cf_builder* b = cf_build(NULL);
+    cf_builder_file(b, "file", CF_RANK_USER_FILE, "app.ini", NULL, 0);
+    cf_builder_env (b, "env",  CF_RANK_ENV, "MYAPP_", cf_environ());
+    cf_builder_cli (b, "cli",  CF_RANK_CLI, argc, argv);
+
+    cf::Config cfg = cf::Builder()                       // the same, C++03
+                         .file("file", CF_RANK_USER_FILE, "app.ini")
+                         .env("env", CF_RANK_ENV, "MYAPP_", cf_environ())
+                         .cli("cli", CF_RANK_CLI, argc, argv)
+                         .create();
 
 Tier 3 — Policy
-    per-parameter precedence, write targets, source permissions
+    per-parameter precedence and source permissions (cf_def.policy)
 
 Tier 4 — Extension
-    custom providers, propagation, watch, declarative policy, snapshots
+    custom sources, cf_derive, cf_emit, watching, snapshot images
 ```
+
+`tests/unit/test_usage.c` is this list as a program: the smallest real use
+of each tier, compiled and run by the suite, so the tiers here cannot name
+an interface that does not exist. They once did - Tier 1 and Tier 2 above
+showed functions from an early draft that the library never had.
 
 `cf_app()` returns an ordinary object with the conventional sources and the
 conventional precedence for a named application. It is a convenience constructor, not a
@@ -2118,7 +2128,7 @@ core                 C89 baseline, opportunistic upgrades where detected
 public C header      C89, must compile standalone under -std=c89 -pedantic
 C++ header           C++03
 optional C++ header  C++11 and later conveniences, additive
-build                CMake 3.10, plus a plain Makefile for toolchains without it
+build                CMake 3.10; toolchains without it use the amalgamation (D-31)
 ```
 
 ### Why C Rather Than C++
@@ -2352,7 +2362,6 @@ Doctor               separate binary
 Amalgamation     generated configforge.c + configforge.h, dropped into a project
                  with no build system change at all
 CMake package    find_package(ConfigForge) or FetchContent
-Plain Makefile   for toolchains without CMake
 System package   later, once the interface is frozen
 ```
 

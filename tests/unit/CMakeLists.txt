@@ -29,6 +29,7 @@ set(CF_UNIT_TESTS
     test_complexity
     test_reserved
     test_unicode
+    test_usage
     test_toml)
 
 foreach(t ${CF_UNIT_TESTS})

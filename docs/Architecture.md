@@ -131,7 +131,23 @@ implementation of `cf_entry_sink`; a test's implementation is an array.
    `cf_version.h`'s feature list.
 4. Add the source file to `scripts/amalgamate.py`.
 5. Tests: a round trip through the key space digest, and one refusal per
-   grammar mistake the format can make.
+   grammar mistake the format can make. `tests/unit/test_toml.c` is the
+   model: it prints what was written and both configurations when the
+   digests disagree, which is how the TOML round trip found the
+   emitter writing arrays after tables.
+6. Give `tests/unit/test_fuzz.c` a corpus that reaches every construct,
+   and feed the codec from nothing as well. A reader of untrusted bytes
+   that is not fuzzed is not finished.
+
+**Through another library's parser.** A streaming parser elsewhere -
+libyaml's events, expat's callbacks - is already the shape a codec is:
+its start-mapping, start-sequence, scalar and end events are
+`begin_table`, `begin_array`, `scalar` and `end`, and the adapter is a
+translation with locations attached. Such a codec belongs behind its
+own `CF_WITH_*` option and on `docs/Dependencies.md`, because it brings
+a dependency the built-in three do not. A codec defined *outside* the
+library cannot yet be handed to a builder; that is item 4 in
+`docs/Roadmap.md`, and the reason it is not a run-time registry.
 
 ### Adding a platform capability
 

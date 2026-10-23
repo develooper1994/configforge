@@ -177,12 +177,13 @@ cmake --preset default && cmake --build --preset default && ctest --preset defau
 Before a commit, everything:
 
 ```sh
-cmake -P scripts/verify.cmake          # every preset
-cmake -DMODE=quick -P scripts/verify.cmake
+cmake -P scripts/format.cmake                    # format and lint what changed
+cmake -DSOURCE=index -P scripts/verify.cmake     # every preset, on what is staged
+cmake -DMODE=quick -P scripts/verify.cmake       # the default preset only
 ```
 
-Written in CMake rather than a shell script so it runs wherever the
-build does.
+Written in CMake rather than a shell script so they run wherever the
+build does. `scripts/README.md` lists the options.
 
 | Preset | What it is for |
 | ------ | -------------- |
@@ -308,7 +309,14 @@ nothing a leak would want.
 * [`docs/Conventions.md`](docs/Conventions.md) — naming, memory, errors, project idioms, the forbidden list, and what a good test looks like here
 * [`docs/Design.md`](docs/Design.md) — the full specification
 * [`docs/Doctor.md`](docs/Doctor.md) — the pre-deployment analysis tool
+* [`docs/Roadmap.md`](docs/Roadmap.md) — what is next, what is known to be wrong, and the ideas not yet built
 * [`docs/Dependencies.md`](docs/Dependencies.md) — every dependency and its licence; the build generates an SPDX SBOM to match
+
+## Contributing
+
+Start with [`AGENTS.md`](AGENTS.md) - written for whoever continues the
+work, a person or an AI agent - then [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Security reports go privately, as [`SECURITY.md`](SECURITY.md) describes.
 
 ## Licence
 

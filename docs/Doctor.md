@@ -171,6 +171,30 @@ configforge doctor emit [--blind] [--out F]
 `explain` and `dump` are convenience wrappers over the library's own capability, made
 available without adding a flag to the host application.
 
+### 7a. Querying a report with jq
+
+A report is JSON with a published schema, so a question the commands do not ask is a jq
+filter away - no code here, and no second query language to learn (Roadmap.md says why
+one was decided against). Each of these was run against a fixture report:
+
+```sh
+# Which keys did the environment win?
+jq -r '.keys | to_entries[] | select(.value.selected.source == "env") | .key' report.json
+
+# Every losing candidate, from which source, and where it was set.
+jq -r '.keys | to_entries[] | .key as $k | .value.candidates[]
+       | select(.outcome == "shadowed") | "\($k)  \(.source)  \(.at // "-")"' report.json
+
+# The sensitive keys, and the source each one came from.
+jq -r '.keys | to_entries[] | select(.value.definition.sensitive == true)
+       | "\(.key)  \(.value.selected.source)"' report.json
+```
+
+The shape they rely on: `keys` maps each key to its `definition` (or `null`), its
+`candidates` in precedence order - each with `source`, `at`, and an `outcome` unless it
+was selected - and the `selected` source. `sources` lists every source with its `kind`
+and `rank`.
+
 ---
 
 ## 8. Rule Catalogue
