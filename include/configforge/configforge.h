@@ -201,6 +201,45 @@ CF_API cf_bool cf_has(const cf_config* c, const char* key);
 CF_API size_t cf_explain(const cf_config* c, const char* key, char* buf, size_t cap);
 CF_API size_t cf_inspect(const cf_config* c, char* buf, size_t cap);
 
+/* What changed between two configurations: after a reload, the line a
+   log should carry instead of two dumps side by side. One pass over two
+   sorted key spaces.
+
+   A value that is the same but now comes from somewhere else is a
+   change of its own kind: the configuration means the same thing, its
+   provenance does not, and the source it now comes from is the one an
+   edit would have to touch. */
+typedef enum cf_change {
+    CF_CHANGE_ADDED,   /* a value now, none before                */
+    CF_CHANGE_REMOVED, /* a value before, none now                */
+    CF_CHANGE_VALUE,   /* a different value                       */
+    CF_CHANGE_ORIGIN   /* the same value, from a different place  */
+} cf_change;
+
+/* Called once per changed key, in key order. `before` is NULL for an
+   added key and `after` for a removed one; each is the winning
+   candidate, with its value, source rank and location. Return CF_FALSE
+   to stop. The values are not redacted: a caller who prints them
+   decides, and cf_diff_text below does. */
+typedef cf_bool (*cf_diff_fn)(void* ctx, const char* key, size_t klen, cf_change kind,
+                              const cf_candidate* before, const cf_candidate* after);
+
+/* The number of changed keys; `fn` may be NULL to only count them. */
+CF_API size_t cf_diff(const cf_config* before, const cf_config* after, cf_diff_fn fn,
+                      void* ctx);
+
+/* One line per change, with where each new value came from, and the
+   values of CF_SENSITIVE keys redacted as explain() redacts them:
+
+     server.port: 8080 -> 9443 (file app.ini:2:8)
+     log.level: added, "debug" (cli)
+     cache.size: 64, now from file app.ini:7:14, was from default
+     db.password: changed, <sensitive> (env)
+
+   Measure-or-write, like every renderer here. */
+CF_API size_t cf_diff_text(const cf_config* before, const cf_config* after, char* buf,
+                           size_t cap);
+
 /* Order-independent over the resolved configuration, identical on
    every platform and in both portability modes. */
 CF_API cf_u64 cf_digest(const cf_config* c);
