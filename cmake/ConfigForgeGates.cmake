@@ -65,8 +65,8 @@ function(configforge_add_gates tgt)
       -DSANITIZE=${CF_SANITIZE} -DO_INI=$<BOOL:${CF_WITH_INI}>
       -DO_JSON=$<BOOL:${CF_WITH_JSON}> -DO_REAL=$<BOOL:${CF_WITH_REAL}>
       -DO_TOML=$<BOOL:${CF_WITH_TOML}> -DO_XML=$<BOOL:${CF_WITH_XML}>
-      -DO_SQLITE=$<BOOL:${CF_WITH_SQLITE}> -DO_WATCH=$<BOOL:${CF_WITH_WATCH}>
-      -P ${CMAKE_SOURCE_DIR}/cmake/gates/GateAmalgamation.cmake)
+      -DO_SQLITE=$<BOOL:${CF_WITH_SQLITE}> -P
+      ${CMAKE_SOURCE_DIR}/cmake/gates/GateAmalgamation.cmake)
 
   # 5. No locale-sensitive C library function may be referenced, and
   #    every exported symbol must carry the cf_ prefix.

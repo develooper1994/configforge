@@ -21,7 +21,6 @@ set_property(
            none)
 
 option(CF_WITH_REAL "CF_REAL value type and its conversions" ON)
-option(CF_WITH_WATCH "File watching and reload" OFF)
 option(CF_WITH_CXX "C++03 wrapper header" ON)
 # The kqueue change handle on Linux, through libkqueue: how the macOS and
 # BSD implementation is compiled and run by a machine that is neither.
@@ -53,8 +52,7 @@ foreach(
   CF_WITH_TOML
   CF_WITH_XML
   CF_WITH_SQLITE
-  CF_WITH_REAL
-  CF_WITH_WATCH)
+  CF_WITH_REAL)
   if(${opt})
     list(APPEND _CF_OPTION_DEFS "-D${opt}=1")
   else()
@@ -91,8 +89,7 @@ function(configforge_generate_options tgt)
     JSON
     TOML
     XML
-    SQLITE
-    WATCH)
+    SQLITE)
     if(CF_WITH_${name})
       set(CF_OPT_${name} 1)
     else()
@@ -124,8 +121,7 @@ function(configforge_apply_options tgt)
     CF_WITH_TOML
     CF_WITH_XML
     CF_WITH_SQLITE
-    CF_WITH_REAL
-    CF_WITH_WATCH)
+    CF_WITH_REAL)
     if(${opt})
       target_compile_definitions(${tgt} PUBLIC ${opt}=1)
     else()

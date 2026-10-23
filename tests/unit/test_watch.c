@@ -356,6 +356,11 @@ static void test_wake_missing_directory(void) {
 }
 
 int main(void) {
+    /* The feature list says what is true: "watch" exactly where there is
+       a handle to wait on. It was once an option that switched nothing
+       and reported the feature absent on every build. */
+    check((cf_has_feature("watch") ? 1 : 0) == (cf_platform_has_wake() ? 1 : 0),
+          "the feature list agrees with the platform about watching");
     test_watch();
     test_appearance();
     test_nothing_to_watch();
