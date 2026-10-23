@@ -220,6 +220,20 @@ public:
     std::string explain(const char* key) const { return render(key); }
     std::string inspect() const                { return render(0); }
 
+    /* What changed since `before`, a line per key with where each new
+       value came from and secrets redacted (cf_diff_text): the line a
+       reload should log. */
+    std::string changesSince(const Config& before) const
+    {
+        size_t n = cf_diff_text(before.c_, c_, 0, 0);
+        if (n == 0) {
+            return std::string();
+        }
+        std::string s(n, '\0');
+        cf_diff_text(before.c_, c_, &s[0], n + 1);
+        return s;
+    }
+
     cf_u64 digest() const { return cf_digest(c_); }
     size_t count()  const { return cf_count(c_); }
 

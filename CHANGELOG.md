@@ -7,6 +7,16 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **What a reload changed** (`cf_diff`, `cf_diff_text`; C++:
+  `Config::changesSince`). One pass over two sorted key spaces, a line
+  per changed key with where the new value came from - the line a
+  program that watches its files should log, instead of two dumps side
+  by side. A value that is the same but now comes from somewhere else
+  is a change of its own kind: the configuration means the same thing,
+  and the file an edit would have to touch is a different one. Secrets
+  read `changed, <sensitive>` - not even their lengths, since a changed
+  length is a fact about the secret. Proved by disabling the origin
+  check: four of `test_diff`'s checks failed.
 - **Parts of the library can be left out** (D-38): `CF_WITH_DIR`,
   `CF_WITH_DOTENV`, `CF_WITH_EMIT` (which takes every encoder with it),
   `CF_WITH_IMAGE` and `CF_WITH_REPORT`, all on by default. Off, the

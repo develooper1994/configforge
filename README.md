@@ -163,6 +163,10 @@ nothing, and `1.0` is where semantic versioning starts.
 | Doctor: SARIF, `--fail-on`, per-project and per-profile severity | done |
 | TOML, as the D-23 subset: tables, arrays of tables, inline tables, every scalar but dates | done |
 | a codec defined in the program, not the library (`cf_builder_file_codec`) | done |
+| what a reload changed, and where each new value came from (`cf_diff`) | done |
+| limits and the stack budget as build options, measured per feature (D-37) | done |
+| parts a program can leave out, each refusing by name (D-38) | done |
+| secrets kept out of diagnostics and out of freed memory | done |
 | XML, SQLite codecs | deferred, see D-23 |
 | Windows Registry, gsettings, macOS defaults | deferred, see D-30 |
 

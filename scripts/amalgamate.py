@@ -56,7 +56,7 @@ SOURCES = [
     "sources/entry.c", "sources/memory.c", "sources/defaults.c", "sources/env.c",
     "sources/cli.c", "sources/compat.c", "sources/snapshot.c",
     "bridge/flatten.c", "bridge/file.c", "bridge/dotenv.c", "bridge/dir.c", "bridge/emit.c", "bridge/image.c",
-    "diag/explain.c", "diag/report.c",
+    "diag/explain.c", "diag/report.c", "diag/diff.c",
 ]
 
 LOCAL_INCLUDE = re.compile(r'^\s*#\s*include\s*"configforge/([^"]+)"\s*$')
