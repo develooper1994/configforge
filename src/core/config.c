@@ -987,7 +987,8 @@ size_t cf_explain(const cf_config* c, const char* key, char* buf, size_t cap) {
         }
         return 0;
     }
-    return cf_ks_explain(&c->keys, &c->sv, key, strlen(key), buf, cap);
+    return cf_ks_explain_redacted(&c->keys, &c->sv, &c->defs, key, strlen(key), buf,
+                                  cap);
 }
 
 size_t cf_inspect(const cf_config* c, char* buf, size_t cap) {
@@ -997,7 +998,7 @@ size_t cf_inspect(const cf_config* c, char* buf, size_t cap) {
         }
         return 0;
     }
-    return cf_ks_inspect(&c->keys, &c->sv, buf, cap);
+    return cf_ks_inspect_redacted(&c->keys, &c->sv, &c->defs, buf, cap);
 }
 
 cf_u64 cf_digest(const cf_config* c) {

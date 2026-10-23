@@ -192,6 +192,10 @@ CF_API cf_bool cf_has(const cf_config* c, const char* key);
  *
  * No setup, no flag, no build option. The provenance chain is what
  * get() reads, so printing it costs nothing that was not already paid.
+ *
+ * A key defined CF_SENSITIVE has its chain shown in full and its values
+ * shown as "<sensitive, N bytes>": which source won and where it was
+ * set is the question, and it is not the secret.
  * ------------------------------------------------------------------ */
 
 CF_API size_t cf_explain(const cf_config* c, const char* key, char* buf, size_t cap);

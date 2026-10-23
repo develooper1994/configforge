@@ -33,7 +33,8 @@ set(CF_UNIT_TESTS
     test_toml
     test_codec
     test_features
-    test_wipe)
+    test_wipe
+    test_secrets)
 
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)

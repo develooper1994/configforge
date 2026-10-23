@@ -15,11 +15,20 @@
  * Validation of one value against one definition
  * ------------------------------------------------------------------ */
 
+/* A reason never quotes a sensitive value: it is stored on the candidate,
+   shown by explain() and carried in the error a strict definition
+   raises, and an out-of-range PIN is still a PIN. */
 static const char* validate_value(const cf_def* d, const cf_value* v, char* reason,
                                   size_t rcap) {
+    cf_bool secret = ((d->flags & CF_SENSITIVE) != 0) ? CF_TRUE : CF_FALSE;
+
     if (d->has_range && d->type == CF_TYPE_INT) {
         if (v->u.i < d->imin || v->u.i > d->imax) {
-            cf_fmt(reason, rcap, "%I is outside %I..%I", v->u.i, d->imin, d->imax);
+            if (secret) {
+                cf_fmt(reason, rcap, "the value is outside %I..%I", d->imin, d->imax);
+            } else {
+                cf_fmt(reason, rcap, "%I is outside %I..%I", v->u.i, d->imin, d->imax);
+            }
             return reason;
         }
     }
@@ -30,7 +39,8 @@ static const char* validate_value(const cf_def* d, const cf_value* v, char* reas
             cf_f64_to_text(v->u.r, got, sizeof got);
             cf_f64_to_text(d->rmin, lo, sizeof lo);
             cf_f64_to_text(d->rmax, hi, sizeof hi);
-            cf_fmt(reason, rcap, "%s is outside %s..%s", got, lo, hi);
+            cf_fmt(reason, rcap, "%s is outside %s..%s", secret ? "the value" : got, lo,
+                   hi);
             return reason;
         }
     }
@@ -152,8 +162,13 @@ static cf_bool apply_entry(cf_keyspace* ks, const cf_def* d, cf_entry* e,
             cf_value converted;
             if (!cf_value_from_text(d->type, c->value.u.t.p, c->value.u.t.n,
                                     &converted)) {
-                cf_fmt(reason, sizeof reason, "\"%s\" is not a valid %s",
-                       c->value.u.t.p, cf_type_name(d->type));
+                if ((d->flags & CF_SENSITIVE) != 0) {
+                    cf_fmt(reason, sizeof reason, "the value is not a valid %s",
+                           cf_type_name(d->type));
+                } else {
+                    cf_fmt(reason, sizeof reason, "\"%s\" is not a valid %s",
+                           c->value.u.t.p, cf_type_name(d->type));
+                }
                 why = reason;
             } else {
                 /* The converted text is already in the arena when the
