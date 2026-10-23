@@ -288,6 +288,11 @@ Severity is the project's to choose, in a file of the same shape:
 profile. That last form is what profiles are here - a label on the
 report that a rule's severity can follow, not a concept in the library.
 
+Reports do not have to come from this library. `doctor import-git` turns
+`git config --list --show-origin --show-scope` into one, and every
+command above runs on it unchanged - a scope that wins nothing is
+CFD010 there too.
+
 Doctor reads provenance reports and never resolves configuration itself,
 which is what keeps it from becoming a second implementation of every
 ecosystem's precedence rules. Reports can be value-blind: presence,

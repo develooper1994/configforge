@@ -171,6 +171,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   CFD010 is a warning by default now. A system file wholly overridden by
   a user's is often what somebody meant, and an error made that a
   failed build.
+- **`doctor import-git`**, the first foreign adapter. It turns
+  `git config --list --show-origin --show-scope` into a provenance
+  report through the library's own writer, so every Doctor command runs
+  on git's configuration unchanged - a scope that wins nothing is CFD010
+  there too. Blind unless `--full`, because git configuration carries
+  credentials more often than it looks; a key a report cannot carry is
+  left out and counted rather than mangled into one that collides.
 - **A licence: zlib.** A binary built with the library, firmware
   included, owes nobody a notice; every source distribution keeps one,
   so the single-file amalgamation carries it at its top. Installed with

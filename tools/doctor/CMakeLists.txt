@@ -1,7 +1,7 @@
 # A separate binary, not a library feature. Doctor reads reports; the
 # library produces them. Keeping them apart is what stops the tool from
 # growing a resolver of its own.
-add_executable(doctor doctor.c)
+add_executable(doctor doctor.c git.c)
 target_link_libraries(doctor PRIVATE configforge)
 set_target_properties(
   doctor
