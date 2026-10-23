@@ -157,17 +157,61 @@ function(configforge_apply_warnings tgt)
 
   target_compile_options(${tgt} PRIVATE ${_CF_WARNING_FLAGS})
 
-  # The design claims the library is usable where a few kilobytes of
-  # stack is the whole budget, and the exact-digit generator is the one
-  # place that could quietly break that. A number in the build is a
-  # claim that stays true; a sentence in a document is not.
+  # The library's frames are measured against the builder's budget
+  # (configforge_stack_budget, D-37). The project's own code - tests,
+  # Doctor, the examples - is held to the budget it was written for,
+  # 2048 bytes, at the limits it was written for; with other limits its
+  # frames grow with them, and it is not what ships.
   #
-  # AddressSanitizer inflates every frame with redzones, so the budget
-  # means nothing under the sanitiser.
-  if(NOT CF_SANITIZE)
+  # AddressSanitizer inflates every frame with redzones, so no budget
+  # means anything under the sanitiser.
+  if(tgt STREQUAL "configforge")
+    configforge_stack_budget(${tgt})
+  elseif(NOT CF_SANITIZE AND CF_DEFAULT_LIMITS)
     check_c_compiler_flag("-Wstack-usage=2048" CF_HAS_STACK_USAGE)
     if(CF_HAS_STACK_USAGE)
       target_compile_options(${tgt} PRIVATE -Wstack-usage=2048)
     endif()
   endif()
+endfunction()
+
+# Measure every frame of the library and check it against
+# CF_STACK_BUDGET once the library links, with scripts/stack.cmake.
+#
+# Measured after the build rather than refused during it (-Wstack-usage)
+# because the answer a builder needs is a table, not the first function
+# that failed: which frames are over, which feature each belongs to, and
+# so what to turn off or lower. The table is written to
+# configforge-stack.txt either way, so the cost of the chosen limits can
+# be read without breaking anything.
+#
+# ~~~
+# configforge_stack_budget(<target>)
+# ~~~
+function(configforge_stack_budget tgt)
+  if(CF_SANITIZE)
+    message(STATUS "stack: not measured under the sanitiser")
+    return()
+  endif()
+  check_c_compiler_flag("-fstack-usage" CF_HAS_FSTACK_USAGE)
+  if(NOT CF_HAS_FSTACK_USAGE)
+    message(STATUS "stack: this compiler reports no frame sizes; "
+                   "CF_STACK_BUDGET is not checked here")
+    return()
+  endif()
+  if(CF_STACK_BUDGET EQUAL 0)
+    message(WARNING "CF_STACK_BUDGET=0: the library's frames are measured "
+                    "and reported, not checked")
+  endif()
+  target_compile_options(${tgt} PRIVATE -fstack-usage)
+  add_custom_command(
+    TARGET ${tgt}
+    POST_BUILD
+    COMMAND
+      ${CMAKE_COMMAND}
+      -DOBJDIR=${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${tgt}.dir
+      -DBUDGET=${CF_STACK_BUDGET}
+      -DOUT=${CMAKE_BINARY_DIR}/configforge-stack.txt
+      -DLIB=$<TARGET_FILE:${tgt}> -P ${CMAKE_SOURCE_DIR}/scripts/stack.cmake
+    VERBATIM)
 endfunction()

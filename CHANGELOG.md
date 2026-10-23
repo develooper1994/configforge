@@ -7,6 +7,18 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **Limits and the stack budget are the builder's** (D-37):
+  `CF_KEY_MAX`, `CF_MESSAGE_MAX`, `CF_PATH_MAX`, `CF_MAX_DEPTH` and
+  `CF_STACK_BUDGET` are build options, the limits written into the
+  generated `cf_build_options.h` because they shape the public structs.
+  Every library frame is measured with the compiler's own figures after
+  the link (`scripts/stack.cmake`), checked against the budget, and
+  reported by feature - "what fits in a kilobyte" is answered with
+  options, and the same script answers "what if" for another budget
+  without a rebuild. One nesting limit replaces three that disagreed:
+  JSON accepted 64 levels that the flattener then refused at 32. The
+  `minimal` preset runs the suite at 64-byte keys, 128-byte messages and
+  256-byte paths.
 - **Binary snapshot image** (`docs/ImageFormat.md`, decision D-28). Loads
   without parsing and without allocating, which is what a target with no
   filesystem and no heap needs and what the freestanding profile was

@@ -28,6 +28,59 @@ option(CF_WITH_CXX "C++03 wrapper header" ON)
 option(CF_WAKE_KQUEUE "Use kqueue for the change handle (libkqueue on Linux)"
        OFF)
 
+# Limits and the stack budget (D-37). Every limit is a fixed buffer, so
+# every limit is stack; which way to trade is the builder's decision, and
+# the build measures the result against CF_STACK_BUDGET rather than
+# asserting a number of its own. cf_build_options.h says what each costs.
+set(CF_KEY_MAX
+    256
+    CACHE STRING "Longest key in bytes, terminator included (32-65535)")
+set(CF_MESSAGE_MAX
+    256
+    CACHE STRING "Longest error message in bytes (64-65535)")
+set(CF_PATH_MAX
+    512
+    CACHE STRING "Longest file path in bytes (64-65535)")
+set(CF_MAX_DEPTH
+    32
+    CACHE STRING "Deepest nesting a document may have (4-1024)")
+set(CF_STACK_BUDGET
+    2048
+    CACHE
+      STRING
+      "Largest stack frame a library function may have, in bytes; 0 = unchecked"
+)
+
+foreach(
+  lim
+  CF_KEY_MAX:32:65535
+  CF_MESSAGE_MAX:64:65535
+  CF_PATH_MAX:64:65535
+  CF_MAX_DEPTH:4:1024
+  CF_STACK_BUDGET:0:1048576)
+  string(REPLACE ":" ";" lim "${lim}")
+  list(GET lim 0 name)
+  list(GET lim 1 lo)
+  list(GET lim 2 hi)
+  if(NOT "${${name}}" MATCHES "^[0-9]+$"
+     OR ${name} LESS ${lo}
+     OR ${name} GREATER ${hi})
+    message(
+      FATAL_ERROR "${name}=${${name}}: must be a number from ${lo} to ${hi}")
+  endif()
+endforeach()
+
+# Whether the limits are the ones this project's own code - tests,
+# Doctor, examples - is written and checked against.
+if(CF_KEY_MAX EQUAL 256
+   AND CF_MESSAGE_MAX EQUAL 256
+   AND CF_PATH_MAX EQUAL 512
+   AND CF_MAX_DEPTH EQUAL 32)
+  set(CF_DEFAULT_LIMITS ON)
+else()
+  set(CF_DEFAULT_LIMITS OFF)
+endif()
+
 option(CF_SINGLE_THREADED "Compile out all synchronisation" OFF)
 option(CF_FORCE_PORTABLE "Disable every opportunistic upgrade" OFF)
 
@@ -58,6 +111,9 @@ foreach(
   else()
     list(APPEND _CF_OPTION_DEFS "-D${opt}=0")
   endif()
+endforeach()
+foreach(lim CF_KEY_MAX CF_MESSAGE_MAX CF_PATH_MAX CF_MAX_DEPTH)
+  list(APPEND _CF_OPTION_DEFS "-D${lim}=${${lim}}")
 endforeach()
 if(CF_FORCE_PORTABLE)
   list(APPEND _CF_OPTION_DEFS "-DCF_FORCE_PORTABLE=1")
@@ -136,6 +192,9 @@ function(configforge_apply_options tgt)
     else()
       target_compile_definitions(${tgt} PUBLIC ${opt}=0)
     endif()
+  endforeach()
+  foreach(lim CF_KEY_MAX CF_MESSAGE_MAX CF_PATH_MAX CF_MAX_DEPTH)
+    target_compile_definitions(${tgt} PUBLIC ${lim}=${${lim}})
   endforeach()
 
   if(CF_SINGLE_THREADED)

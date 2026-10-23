@@ -37,7 +37,7 @@ typedef struct js_scan {
     int                depth;
 } js_scan;
 
-#define JS_MAX_DEPTH 64
+#define JS_MAX_DEPTH CF_MAX_DEPTH
 
 static void js_loc(const js_scan* s, const char* at, cf_loc* out) {
     out->file = s->file;

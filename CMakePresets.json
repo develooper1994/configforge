@@ -39,9 +39,15 @@
     },
     {
       "name": "minimal",
-      "displayName": "No floating point, size-optimised (-Os), for very small targets",
+      "displayName": "No floating point, short limits, size-optimised (-Os), for very small targets",
       "binaryDir": "${sourceDir}/build-minimal",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "MinSizeRel", "CF_WITH_REAL": "OFF" }
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MinSizeRel",
+        "CF_WITH_REAL": "OFF",
+        "CF_KEY_MAX": "64",
+        "CF_MESSAGE_MAX": "128",
+        "CF_PATH_MAX": "256"
+      }
     }
   ],
   "buildPresets": [

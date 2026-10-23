@@ -43,7 +43,7 @@
  * Decoding
  * ================================================================== */
 
-#define TOML_MAX_DEPTH 32
+#define TOML_MAX_DEPTH CF_MAX_DEPTH
 
 /* What the open path is made of. A table segment is one header segment;
    an array of tables is one segment plus an element that has no name. */

@@ -287,7 +287,7 @@ exists because something in the design is otherwise only a sentence.
 | `gate.format.c`, `gate.format.cmake`, `gate.cmake.lint` | one style, checked not agreed |
 | conformance | `-std=c89 -pedantic -Werror` plus the D-32 warning set |
 | portability | the whole suite under `CF_FORCE_PORTABLE`, byte-identical |
-| stack budget | `-Wstack-usage=2048`, because "runs on small targets" is a number |
+| stack budget | every library frame measured (`-fstack-usage`) against `CF_STACK_BUDGET` after the link, by `scripts/stack.cmake`; the builder sets the number (D-37), the build proves it |
 
 Every gate has been proved by breaking it on purpose at least once. A
 gate that has never failed is a gate nobody knows works.

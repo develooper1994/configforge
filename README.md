@@ -192,13 +192,51 @@ build does. `scripts/README.md` lists the options.
 | `sanitize` | AddressSanitizer and UndefinedBehaviorSanitizer |
 | `analyze` | GCC `-fanalyzer` symbolic execution, plus cppcheck when present |
 | `portable` | every opportunistic upgrade disabled, output compared against `default`; built `-O2` |
-| `minimal` | `CF_WITH_REAL=OFF`, for targets with no floating point; built `-Os` |
+| `minimal` | `CF_WITH_REAL=OFF` and short limits (64-byte keys), for very small targets; built `-Os` |
 
 The last two are optimised on purpose: inlining merges frames, so a stack
 frame that fits in a Debug build can break the budget in a release one.
 
 Options: `CF_WITH_INI` `CF_WITH_JSON` `CF_WITH_TOML` `CF_WITH_XML` `CF_WITH_SQLITE`
 `CF_WITH_REAL` `CF_WITH_CXX` `CF_FORCE_PORTABLE` `CF_SINGLE_THREADED`.
+
+### Limits and the stack budget
+
+Every limit is a fixed buffer, and every buffer is stack, so how long a
+key may be and how much stack a function may take are one trade - and
+it is yours to make (D-37):
+
+| Option | Default | What it bounds, and what it costs |
+| ------ | ------- | --------------------------------- |
+| `CF_KEY_MAX` | 256 | longest key; held by every error and by the flattener and decoders |
+| `CF_MESSAGE_MAX` | 256 | longest error message; every `cf_error` holds one |
+| `CF_PATH_MAX` | 512 | longest file path; the directory source holds several |
+| `CF_MAX_DEPTH` | 32 | deepest nesting; the decoders recurse once per level |
+| `CF_STACK_BUDGET` | 2048 | bytes a library function's frame may take; `0` measures without checking |
+
+```sh
+cmake -B build -DCF_KEY_MAX=64 -DCF_MESSAGE_MAX=128 -DCF_PATH_MAX=256 -DCF_STACK_BUDGET=1024
+```
+
+The build measures every frame with the compiler's own figures and
+checks it against the budget after the library links:
+
+```text
+stack: largest frame 1808 bytes (dir_load), within 2048
+```
+
+The full table is in `build/configforge-stack.txt`. When a frame does
+not fit, the build lists every one that does not, by how much, and the
+feature it belongs to - so the choice is between named options, not a
+guess. To ask "what if" without rebuilding:
+
+```sh
+cmake -DOBJDIR=build/CMakeFiles/configforge.dir -DBUDGET=1024 -P scripts/stack.cmake
+```
+
+A frame is one link of a call chain: a thread also needs room for
+`CF_MAX_DEPTH` levels of a decoder's recursion. GCC and Clang report
+frame sizes; MSVC does not, and there the budget is not checked.
 
 ### Without a build system
 

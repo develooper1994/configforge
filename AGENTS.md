@@ -30,7 +30,7 @@ If a change makes a value harder to explain, it is the wrong change.
 | `tests/doctor` | Doctor's fixtures and CLI tests | |
 | `examples/` | programs the README quotes, run by the suite | |
 | `cmake/`, `cmake/gates/` | build modules, and the gates that enforce the design | `docs/Architecture.md` |
-| `scripts/` | verify, format, amalgamate | `scripts/README.md` |
+| `scripts/` | verify, format, stack, amalgamate | `scripts/README.md` |
 
 The documents, and what each is for:
 
