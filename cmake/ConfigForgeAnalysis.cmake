@@ -49,13 +49,33 @@ function(configforge_setup_cppcheck)
     message(STATUS "cppcheck requested but not found; skipping")
     return()
   endif()
-  set(CMAKE_C_CPPCHECK
+  # cppcheck defines none of the compiler's own macros, so cf_port.h saw
+  # a C89 compiler that was neither GCC nor MSVC and stopped at its
+  # #error for want of a 64-bit type - before analysing a line. Every
+  # build of this preset failed that way and the analysis never ran.
+  # Saying which compiler this is gives it the configuration the
+  # compiler actually compiles; Clang defines __GNUC__ as well.
+  set(compiler)
+  if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    set(compiler "-D__GNUC__")
+  endif()
+  set(common
       "${CPPCHECK_EXE}"
       "--std=c89"
-      "--enable=warning,style,performance,portability"
+      ${compiler}
       "--inline-suppr"
       "--error-exitcode=1"
       "--suppress=missingIncludeSystem"
-      "--suppress=unusedFunction"
+      "--suppress=unusedFunction")
+  set(CMAKE_C_CPPCHECK
+      ${common} "--enable=warning,style,performance,portability"
+      PARENT_SCOPE)
+  # Tests without the style class. A test asserting that
+  # cf_to_upper('i') is 'I' is asserting a constant on purpose, and
+  # "condition is always true" is that class's name for the point of the
+  # test. Warnings still apply: a test that reads memory it does not own
+  # is broken, whatever it is for.
+  set(CF_CPPCHECK_TESTS
+      ${common} "--enable=warning,performance,portability"
       PARENT_SCOPE)
 endfunction()

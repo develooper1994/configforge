@@ -40,7 +40,13 @@ typedef struct dir_state {
    and the least code. Byte-wise and not strcoll: the order decides
    which file wins, and an order that depends on the reader's locale is
    a configuration that depends on it too. */
-static void dir_sort(char names[][CF_DIR_PATH_MAX], int n) {
+/* One name, as a type. A pointer to an array spelled out in place is
+   the one declarator clang-format 18 and 22 space differently, and a
+   format gate that depends on the formatter's version is a gate one of
+   the two CI jobs fails. */
+typedef char dir_name[CF_DIR_PATH_MAX];
+
+static void dir_sort(dir_name* names, int n) {
     int i, j;
 
     for (i = 1; i < n; ++i) {
@@ -63,15 +69,14 @@ static void dir_sort(char names[][CF_DIR_PATH_MAX], int n) {
 static cf_bool dir_load(const cf_source* s, cf_keyspace* ks) {
     dir_state* st = (dir_state*)s->ext;
     cf_arena*  ar = cf_ks_arena(ks);
-    char (*names)[CF_DIR_PATH_MAX];
-    char full[CF_DIR_PATH_MAX];
-    int  n, i;
+    dir_name*  names;
+    char       full[CF_DIR_PATH_MAX];
+    int        n, i;
 
     st->failed = CF_FALSE;
     cf_error_clear(&st->err);
 
-    names = (char (*)[CF_DIR_PATH_MAX])cf_arena_alloc(ar, (size_t)CF_DIR_MAX_FILES *
-                                                              CF_DIR_PATH_MAX);
+    names = (dir_name*)cf_arena_alloc(ar, (size_t)CF_DIR_MAX_FILES * CF_DIR_PATH_MAX);
     if (names == NULL) {
         st->failed = CF_TRUE;
         return cf_error_set(&st->err, CF_E_MEMORY, NULL, st->path,

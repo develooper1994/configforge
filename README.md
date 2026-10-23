@@ -125,6 +125,7 @@ nothing, and `1.0` is where semantic versioning starts.
 
 | Component | State |
 | --------- | ----- |
+| built and tested with GCC, Clang (Linux) and MSVC (Windows) | done |
 | portability layer, numeric conversion with exact shortest round-trip | done |
 | value model, flat key space, provenance chain, resolver | done |
 | definitions, validation, `cf_config` facade | done |
@@ -206,6 +207,18 @@ a claim that decays.
 | interface | what including the library costs: no unexpected system header, no size jump |
 | install | a separate project finds the package, compiles against it and runs |
 | formats | every format string against what `cf_fmt` supports |
+| version | `cf_version.h` and `CMakeLists.txt` agree |
+| format | `clang-format` and `cmake-format`, reporting rather than rewriting |
+| cmake lint | `cmake-lint` over every build file |
+| headers | every public header compiles standalone as C89 |
+| golden | `explain()` output compared line by line against a fixed expectation |
+| locale | the suite runs under a comma-decimal and a Turkish locale |
+
+The gates that drive the compiler with a GCC-style command line - headers,
+amalgamation, install, interface - run under GCC and Clang. They are
+about the sources rather than the compiler, and MSVC has no C89 mode to
+ask for; under MSVC the library and every test are built at `/W4 /WX` and
+the suite runs, which is the check that compiler can give.
 
 Beyond the gates, `test_fuzz` corrupts valid documents and requires every
 reader to return rather than crash. It runs one fixed seed in the suite,
@@ -218,12 +231,6 @@ pipeline in a fixed buffer, shrinking it byte by byte, and requires that
 every size either works correctly or fails with a reason. It found a
 window where construction succeeded and returned an empty
 configuration.
-| version | `cf_version.h` and `CMakeLists.txt` agree |
-| format | `clang-format` and `cmake-format`, reporting rather than rewriting |
-| cmake lint | `cmake-lint` over every build file |
-| headers | every public header compiles standalone as C89 |
-| golden | `explain()` output compared line by line against a fixed expectation |
-| locale | the suite runs under a comma-decimal and a Turkish locale |
 
 ## Doctor
 
@@ -267,7 +274,6 @@ nothing a leak would want.
 * [`docs/Architecture.md`](docs/Architecture.md) — the layers, the rules that keep them, and recipes for adding a format, a source, a definition attribute or a Doctor rule
 * [`docs/Conventions.md`](docs/Conventions.md) — naming, memory, errors, project idioms, the forbidden list, and what a good test looks like here
 * [`docs/Design.md`](docs/Design.md) — the full specification
-* [`docs/Decisions.md`](docs/Decisions.md) — every design decision, its reasoning and its cost
 * [`docs/Doctor.md`](docs/Doctor.md) — the pre-deployment analysis tool
 
 ## Licence

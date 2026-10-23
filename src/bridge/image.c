@@ -351,6 +351,12 @@ cf_bool cf_image_open(cf_image* img, const char* buf, size_t n, cf_error* err) {
     cf_u32 major, total, string_off, string_len, count;
     size_t addr;
 
+    /* Zeroed whole before anything can fail, so an image that did not
+       open is an empty one rather than whatever the stack held - which
+       a caller ignoring the result would otherwise iterate. */
+    if (img != NULL) {
+        memset(img, 0, sizeof *img);
+    }
     if (img == NULL || buf == NULL) {
         return bad(err, "no image given");
     }

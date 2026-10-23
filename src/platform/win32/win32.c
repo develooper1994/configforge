@@ -1,10 +1,11 @@
 /*
  * win32.c - the Windows platform.
  *
- * Untested where this was written, and saying so is better than a
- * comment that implies otherwise. The CI matrix compiles and runs it on
- * windows-latest; until a test there asserts a non-ASCII argument round
- * trip, the wide-argument path is code rather than a guarantee.
+ * Written without a Windows machine at first, and the first MSVC build
+ * found the first bug: _environ declared by hand collided with the
+ * CRT's own declaration. It is built and run under MSVC now, and
+ * unit.test_lex.utf8 asserts the non-ASCII argument round trip that the
+ * wide-argument path exists for.
  *
  * Guarded once at the top, for the reason given in posix.c.
  */
@@ -13,12 +14,13 @@
 
 #if CF_PLATFORM_WIN32
 
+#include <stdlib.h>
 #include <string.h>
 #include <windows.h>
 
-/* MSVC's spelling. Declared rather than included so the translation
-   unit is explicit about what it reaches for. */
-extern char** _environ;
+/* _environ is MSVC's spelling, and it has to come from <stdlib.h>: the
+   CRT defines it as a macro over __p__environ(), so declaring it by
+   hand produces a second, conflicting declaration of that function. */
 
 const char* cf_platform_name(void) {
     return "win32";
@@ -84,6 +86,14 @@ char* const* cf_platform_args(int argc, char* const* argv, cf_arena* arena,
     return (char* const*)out;
 }
 
+/* Two 32-bit halves, joined. A function rather than an expression at
+   each site because one shift-and-or spread over two lines is laid out
+   differently by every version of clang-format. */
+static cf_i64 win32_join(DWORD hi, DWORD lo) {
+    cf_i64 v = (cf_i64)hi;
+    return (v << 32) | (cf_i64)lo;
+}
+
 cf_bool cf_platform_stamp(const char* path, cf_stamp* out) {
     WIN32_FILE_ATTRIBUTE_DATA fa;
 
@@ -96,9 +106,9 @@ cf_bool cf_platform_stamp(const char* path, cf_stamp* out) {
     if (path == NULL || !GetFileAttributesExA(path, GetFileExInfoStandard, &fa)) {
         return CF_FALSE;
     }
-    out->mtime   = ((cf_i64)fa.ftLastWriteTime.dwHighDateTime << 32) |
-                   (cf_i64)fa.ftLastWriteTime.dwLowDateTime;
-    out->size    = ((cf_i64)fa.nFileSizeHigh << 32) | (cf_i64)fa.nFileSizeLow;
+    out->mtime =
+        win32_join(fa.ftLastWriteTime.dwHighDateTime, fa.ftLastWriteTime.dwLowDateTime);
+    out->size    = win32_join(fa.nFileSizeHigh, fa.nFileSizeLow);
     out->present = CF_TRUE;
     return CF_TRUE;
 }

@@ -356,7 +356,7 @@ static cf_bool argv_push(argv_build* b, const char* p, size_t len) {
             return CF_FALSE;
         }
         if (b->n > 0) {
-            memcpy(nv, b->v, (size_t)b->n * sizeof(char*));
+            memcpy((void*)nv, (const void*)b->v, (size_t)b->n * sizeof(char*));
         }
         b->v   = nv;
         b->cap = ncap;

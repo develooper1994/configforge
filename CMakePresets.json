@@ -44,17 +44,17 @@
     }
   ],
   "buildPresets": [
-    { "name": "default",  "configurePreset": "default"  },
-    { "name": "sanitize", "configurePreset": "sanitize" },
-    { "name": "analyze",  "configurePreset": "analyze"  },
-    { "name": "portable", "configurePreset": "portable" },
-    { "name": "minimal",  "configurePreset": "minimal"  }
+    { "name": "default",  "configurePreset": "default",  "configuration": "Debug" },
+    { "name": "sanitize", "configurePreset": "sanitize", "configuration": "Debug" },
+    { "name": "analyze",  "configurePreset": "analyze",  "configuration": "Debug" },
+    { "name": "portable", "configurePreset": "portable", "configuration": "Debug" },
+    { "name": "minimal",  "configurePreset": "minimal",  "configuration": "Debug" }
   ],
   "testPresets": [
-    { "name": "default",  "configurePreset": "default",  "output": { "outputOnFailure": true } },
-    { "name": "sanitize", "configurePreset": "sanitize", "output": { "outputOnFailure": true } },
-    { "name": "analyze",  "configurePreset": "analyze",  "output": { "outputOnFailure": true } },
-    { "name": "portable", "configurePreset": "portable", "output": { "outputOnFailure": true } },
-    { "name": "minimal",  "configurePreset": "minimal",  "output": { "outputOnFailure": true } }
+    { "name": "default",  "configurePreset": "default",  "configuration": "Debug", "output": { "outputOnFailure": true } },
+    { "name": "sanitize", "configurePreset": "sanitize", "configuration": "Debug", "output": { "outputOnFailure": true } },
+    { "name": "analyze",  "configurePreset": "analyze",  "configuration": "Debug", "output": { "outputOnFailure": true } },
+    { "name": "portable", "configurePreset": "portable", "configuration": "Debug", "output": { "outputOnFailure": true } },
+    { "name": "minimal",  "configurePreset": "minimal",  "configuration": "Debug", "output": { "outputOnFailure": true } }
   ]
 }

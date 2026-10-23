@@ -306,7 +306,7 @@ static cf_bool js_number(js_scan* s, cf_value* v) {
             cf_value_int(v, i);
             return CF_TRUE;
         }
-        is_real = CF_TRUE;
+        /* Too large for an integer: falls through to the real path. */
     }
 #if CF_WITH_REAL
     {

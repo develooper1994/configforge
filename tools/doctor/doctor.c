@@ -439,7 +439,12 @@ static void rule_dead_source(const report* r) {
 
     memset(supplied, 0, sizeof supplied);
     memset(won, 0, sizeof won);
-    memset(first_at, 0, sizeof first_at);
+    /* A loop rather than memset: all-bits-zero is not a null pointer
+       everywhere, and MSVC rejects handing an array of const pointers
+       to a void*. */
+    for (s = 0; s < CF_MAX_SOURCES; ++s) {
+        first_at[s] = NULL;
+    }
 
     for (i = 0; i < r->nkeys; ++i) {
         const rkey* k = &r->keys[i];

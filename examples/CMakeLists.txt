@@ -1,6 +1,9 @@
 # Examples are built as part of the build so a broken example is a
 # broken build. The first page of the documentation is an example and
 # must not be allowed to rot.
+# clang-tidy is for the product; see tests/CMakeLists.txt.
+set(CMAKE_C_CLANG_TIDY "")
+
 foreach(ex tier0 tier1 explain_demo)
   add_executable(${ex} ${ex}.c)
   target_link_libraries(${ex} PRIVATE configforge)

@@ -501,19 +501,57 @@ static void test_response_file(void) {
               "a missing response file is an error");
     }
 
-    /* Identity on this platform, and the caller writes the same two
-       lines everywhere. */
-    {
-        int          m = 0;
-        char* const* u = cf_cli_args(3, argv, ar, &m);
-        check(m == 3 && u != NULL, "cf_cli_args returns the arguments");
-    }
-
     cf_arena_free(ar);
     remove("cf_args.txt");
 }
 
-int main(void) {
+/* cf_cli_args against the arguments this process was really started
+   with, because on Windows that is what it reads: the wide command
+   line, not the argv it is handed. An invented argv passes on POSIX,
+   where the call is the identity, and fails on Windows for the right
+   reason - so the test has to use the real one.
+
+   Run a second time by the suite with --utf8 and three Turkish
+   letters, which is the round trip win32.c said nothing asserted:
+   argv in the active code page has already lost what that page
+   cannot spell, and what comes back here must be UTF-8 regardless. */
+static void test_cli_args(int argc, char** argv) {
+    static const char want[] = "\xC3\xA7\xC4\x9F\xC4\xB1";
+    cf_arena*         ar     = cf_arena_new(NULL, 0);
+    int               m      = 0;
+    char* const*      u      = cf_cli_args(argc, argv, ar, &m);
+    int               i;
+
+    check(u != NULL && m == argc, "cf_cli_args returns every argument");
+    for (i = 1; u != NULL && i < m && i < argc; ++i) {
+        const unsigned char* p     = (const unsigned char*)argv[i];
+        cf_bool              ascii = CF_TRUE;
+        for (; *p != '\0'; ++p) {
+            if (*p >= 0x80) {
+                ascii = CF_FALSE;
+            }
+        }
+        /* Only where both spellings agree by definition; the
+           non-ASCII one is what the next check is for. */
+        if (ascii) {
+            check(strcmp(u[i], argv[i]) == 0, "an ASCII argument is unchanged");
+        }
+    }
+    if (argc >= 3 && strcmp(argv[1], "--utf8") == 0) {
+        check(u != NULL && m >= 3 && strcmp(u[2], want) == 0,
+              "a non-ASCII argument arrives as UTF-8");
+    }
+    check(cf_cli_args(argc, argv, NULL, &m) == argv && m == argc,
+          "with no arena there is nowhere to convert to, and argv is returned");
+    cf_arena_free(ar);
+}
+
+int main(int argc, char** argv) {
+    test_cli_args(argc, argv);
+    if (argc >= 2 && strcmp(argv[1], "--utf8") == 0) {
+        printf("%d checks, %d failures\n", g_run, g_fail);
+        return g_fail == 0 ? 0 : 1;
+    }
     test_keymap();
     test_lex_env();
     test_lex_cli();

@@ -148,8 +148,16 @@ cf_arena* cf_arena_fixed(void* buffer, size_t size) {
     if (size <= need) {
         return NULL;
     }
-    ar = (cf_arena*)base;
-    b  = (cf_block*)(base + cf_round_up(sizeof(cf_arena)));
+    /* From void*, because the alignment was established above: a cast
+       from char* makes Clang's -Wcast-align object - it cannot see the
+       arithmetic - and a cast through (void*) in one expression is what
+       clang-tidy's bugprone-casting-through-void objects to. */
+    {
+        void* at = base;
+        ar       = (cf_arena*)at;
+        at       = base + cf_round_up(sizeof(cf_arena));
+        b        = (cf_block*)at;
+    }
 
     b->next = NULL;
     b->size = size - need;
