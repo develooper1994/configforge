@@ -192,7 +192,7 @@ build does. `scripts/README.md` lists the options.
 | `sanitize` | AddressSanitizer and UndefinedBehaviorSanitizer |
 | `analyze` | GCC `-fanalyzer` symbolic execution, plus cppcheck when present |
 | `portable` | every opportunistic upgrade disabled, output compared against `default`; built `-O2` |
-| `minimal` | `CF_WITH_REAL=OFF` and short limits (64-byte keys), for very small targets; built `-Os` |
+| `minimal` | `CF_WITH_REAL=OFF`, short limits (64-byte keys) and a 1024-byte stack budget, for very small targets; built `-Os` |
 
 The last two are optimised on purpose: inlining merges frames, so a stack
 frame that fits in a Debug build can break the budget in a release one.
@@ -222,7 +222,7 @@ The build measures every frame with the compiler's own figures and
 checks it against the budget after the library links:
 
 ```text
-stack: largest frame 1808 bytes (dir_load), within 2048
+stack: largest frame 1792 bytes (cf_gen_digits), within 2048
 ```
 
 The full table is in `build/configforge-stack.txt`. When a frame does
@@ -233,6 +233,11 @@ guess. To ask "what if" without rebuilding:
 ```sh
 cmake -DOBJDIR=build/CMakeFiles/configforge.dir -DBUDGET=1024 -P scripts/stack.cmake
 ```
+
+At the default limits the largest frame is the exact float formatter's
+(`CF_WITH_REAL`), and the largest the library always has is about 1.3 KB.
+Without floating point and with 64-byte keys every function fits in a
+kilobyte, which the `minimal` preset checks on every verify.
 
 A frame is one link of a call chain: a thread also needs room for
 `CF_MAX_DEPTH` levels of a decoder's recursion. GCC and Clang report

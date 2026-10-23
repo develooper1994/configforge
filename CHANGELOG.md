@@ -309,6 +309,18 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed, and it mattered
 
+- **Frames that were larger than they needed to be**, found by the stack
+  report on its first run. The flattener kept 24 bytes for each of its
+  32 nesting levels where 8 hold the same (a 32-bit index, a 16-bit
+  length, a flag): 512 bytes off every frame that reads a document,
+  `dir_load` 1344 to 832 at short limits. The inotify drain read into a
+  kilobyte where two of the largest records are enough, the loop
+  draining until empty either way. `cf_emit` held a fixed kilobyte for
+  encoder state; `CF_ENCODER_STATE_MAX` follows the limits now, and each
+  encoder asserts at compile time that it fits. The INI encoder had its
+  nesting fixed at 32 regardless of the limit. Without floating point
+  and with 64-byte keys, every library function now fits in a kilobyte.
+
 - **The TOML decoder broke the stack budget**, by four times: thirty-two
   open tables and two dotted keys each held a key-sized buffer per name,
   8.7 KB in one frame (10.9 KB once `-Os` inlined the callers). Linux

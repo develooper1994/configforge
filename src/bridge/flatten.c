@@ -42,8 +42,8 @@ static cf_bool fl_push(cf_flatten* f, const char* name, size_t n, cf_bool is_arr
     }
 
     fr            = &f->stack[++f->depth];
-    fr->saved_len = f->plen;
-    fr->is_array  = is_array;
+    fr->saved_len = (cf_u16)f->plen;
+    fr->is_array  = (cf_u8)(is_array ? 1 : 0);
     fr->index     = 0;
 
     if (name != NULL) {
@@ -65,7 +65,12 @@ static cf_bool fl_enter_member(cf_flatten* f, const char* name, size_t n,
 
     if (f->depth >= 0 && f->stack[f->depth].is_array) {
         char   idx[CF_I64_DIGITS];
-        size_t k = cf_u64_to_text((cf_u64)f->stack[f->depth].index, idx, sizeof idx);
+        size_t k;
+        if (f->stack[f->depth].index == 0xFFFFFFFFu) {
+            f->overflow = CF_TRUE;
+            return CF_FALSE;
+        }
+        k = cf_u64_to_text((cf_u64)f->stack[f->depth].index, idx, sizeof idx);
         ++f->stack[f->depth].index;
         if (f->plen + k + 2 > sizeof f->path) {
             f->overflow = CF_TRUE;
@@ -111,8 +116,8 @@ static cf_bool fl_begin_table(void* ctx, const char* name, size_t n) {
                 return CF_FALSE;
             }
             fr            = &f->stack[++f->depth];
-            fr->saved_len = saved;
-            fr->is_array  = CF_FALSE;
+            fr->saved_len = (cf_u16)saved;
+            fr->is_array  = 0;
             fr->index     = 0;
             return CF_TRUE;
         }
@@ -136,8 +141,8 @@ static cf_bool fl_begin_array(void* ctx, const char* name, size_t n) {
         return CF_FALSE;
     }
     fr            = &f->stack[++f->depth];
-    fr->saved_len = saved;
-    fr->is_array  = CF_TRUE;
+    fr->saved_len = (cf_u16)saved;
+    fr->is_array  = 1;
     fr->index     = 0;
     return CF_TRUE;
 }

@@ -23,10 +23,14 @@ extern "C" {
 #define CF_FLATTEN_MAX_DEPTH CF_MAX_DEPTH
 #define CF_EMIT_MAX_DEPTH CF_MAX_DEPTH
 
+/* Eight bytes a level rather than twenty-four: a length within a key
+   fits sixteen bits (CF_KEY_MAX is at most 65535), and no configuration
+   array has four billion elements. CF_MAX_DEPTH levels of this sit in
+   the frame of every source that reads a document. */
 typedef struct fl_frame {
-    size_t  saved_len;
-    cf_bool is_array;
-    size_t  index;
+    cf_u32 index;
+    cf_u16 saved_len;
+    cf_u8  is_array;
 } fl_frame;
 
 typedef struct cf_flatten {
