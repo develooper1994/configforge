@@ -7,6 +7,18 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **The contract as a JSON Schema** (`cf_schema`, `cf_schema_write`;
+  C++: `Config::schema`), Design.md section 41: a configuration file
+  that names it gets completion, inline documentation and validation in
+  an editor, from the definitions the program already declared. Types,
+  ranges, lengths, enumerations, descriptions, deprecation; a sensitive
+  key is `writeOnly` and its default is left out. Objects are closed
+  (`additionalProperties: false`) when the configuration rejects unknown
+  keys, except under a prefix opened with `cf_defset_open`, so an editor
+  flags a misspelt key as the program would. `required` is not written:
+  a required key may come from the environment, so a file without it is
+  not wrong, and a schema that said so would flag correct files.
+  `test_schema` walks the result with the library's own JSON reader.
 - **What a reload changed** (`cf_diff`, `cf_diff_text`; C++:
   `Config::changesSince`). One pass over two sorted key spaces, a line
   per changed key with where the new value came from - the line a

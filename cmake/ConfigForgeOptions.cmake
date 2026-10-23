@@ -16,8 +16,8 @@ option(CF_WITH_DIR "Drop-in directory source (conf.d)" ON)
 option(CF_WITH_DOTENV ".env file source" ON)
 option(CF_WITH_EMIT "Writing a configuration out (cf_emit, the encoders)" ON)
 option(CF_WITH_IMAGE "Binary snapshot image, writer and reader" ON)
-option(CF_WITH_REPORT "Provenance report and Report Replay (Doctor needs it)"
-       ON)
+option(CF_WITH_REPORT
+       "Provenance report, Report Replay, JSON Schema (Doctor needs it)" ON)
 set(CF_PLATFORM
     "auto"
     CACHE STRING "posix, win32, none, or auto")

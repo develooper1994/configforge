@@ -1001,6 +1001,20 @@ size_t cf_inspect(const cf_config* c, char* buf, size_t cap) {
     return cf_ks_inspect_redacted(&c->keys, &c->sv, &c->defs, buf, cap);
 }
 
+size_t cf_schema(const cf_config* c, const char* title, char* buf, size_t cap) {
+    cf_error e = CF_ERROR_INIT;
+
+    if (c == NULL) {
+        if (buf != NULL && cap > 0) {
+            buf[0] = '\0';
+        }
+        return 0;
+    }
+    return cf_schema_write(&c->defs, title,
+                           (c->unknown == CF_UNKNOWN_REJECT) ? CF_TRUE : CF_FALSE, buf,
+                           cap, &e);
+}
+
 cf_u64 cf_digest(const cf_config* c) {
     return (c != NULL) ? cf_ks_digest(&c->keys) : 0;
 }

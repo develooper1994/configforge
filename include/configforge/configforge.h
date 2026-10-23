@@ -258,6 +258,10 @@ CF_API size_t cf_report(const cf_config* c, const cf_report_info* info, char* bu
 /* Load a full report as a source. Reproduces exactly the configuration
    a process was running, rather than a reconstruction from files that
    may have changed since. */
+/* The configuration's contract as a JSON Schema, closed when it rejects
+   unknown keys (CF_UNKNOWN_REJECT). See cf_schema_write. */
+CF_API size_t cf_schema(const cf_config* c, const char* title, char* buf, size_t cap);
+
 CF_API cf_bool cf_builder_replay(cf_builder* b, const char* name, int rank,
                                  const char* path);
 

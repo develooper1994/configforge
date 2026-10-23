@@ -11,6 +11,7 @@
  * cannot.
  */
 
+#include "configforge/cf_numeric.h"
 #include "configforge/cf_platform.h"
 #include "configforge/cf_report.h"
 #include "configforge/cf_version.h"
@@ -367,7 +368,285 @@ size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
     return out.len;
 }
 
+/* ------------------------------------------------------------------ *
+ * JSON Schema
+ *
+ * The definitions as an editor reads them (Design.md, section 41): a
+ * file that names the schema gets completion, inline documentation and
+ * validation as it is typed, from the contract the program already
+ * declared, with no plugin.
+ *
+ * Two choices differ from a literal reading of the mapping table.
+ * "required" is not written: a key the program requires may come from
+ * the environment or the command line, so a file without it is not
+ * wrong, and a schema that said so would flag correct files. And a
+ * sensitive key's default is not written, for the reason a blind report
+ * omits its value.
+ * ------------------------------------------------------------------ */
+
+typedef struct schema_ctx {
+    const cf_defset* ds;
+    cf_sink*         out;
+    cf_bool          closed;
+    cf_error*        err;
+    cf_bool          failed;
+} schema_ctx;
+
+/* Every definition, then every open prefix, as one sequence: a level of
+   the schema is made of both. */
+static cf_bool schema_item(const schema_ctx* s, size_t i, const char** key, size_t* n,
+                           const cf_def** d) {
+    size_t count = cf_defset_count(s->ds);
+
+    if (i < count) {
+        *d   = cf_defset_at(s->ds, i);
+        *key = (*d)->key;
+        *n   = strlen(*key);
+        return CF_TRUE;
+    }
+    i -= count;
+    if (i < s->ds->open_count) {
+        *d   = NULL;
+        *key = s->ds->open_prefixes[i];
+        *n   = strlen(*key);
+        return CF_TRUE;
+    }
+    return CF_FALSE;
+}
+
+/* Strictly below the prefix (p, plen); everything is below the root. */
+static cf_bool schema_under(const char* key, size_t n, const char* p, size_t plen) {
+    if (plen == 0) {
+        return CF_TRUE;
+    }
+    return (n > plen && memcmp(key, p, plen) == 0 && key[plen] == '.') ? CF_TRUE
+                                                                       : CF_FALSE;
+}
+
+static const char* schema_segment(const char* key, size_t n, size_t plen,
+                                  size_t* slen) {
+    size_t a = (plen == 0) ? 0 : plen + 1;
+    size_t b = a;
+
+    while (b < n && key[b] != '.') {
+        ++b;
+    }
+    *slen = b - a;
+    return key + a;
+}
+
+static void schema_indent(cf_sink* out, int depth) {
+    int i;
+    for (i = 0; i < depth; ++i) {
+        cf_sink_puts(out, "  ");
+    }
+}
+
+static void schema_leaf(schema_ctx* s, const cf_def* d) {
+    cf_sink* out    = s->out;
+    cf_bool  secret = ((d->flags & CF_SENSITIVE) != 0) ? CF_TRUE : CF_FALSE;
+
+    cf_sink_fmt(out, "{ \"type\": \"%s\"", cf_type_json_name(d->type));
+    if (d->description != NULL) {
+        cf_sink_puts(out, ", \"description\": ");
+        report_quote_z(out, d->description);
+    }
+    if ((d->flags & CF_DEPRECATED) != 0) {
+        cf_sink_puts(out, ", \"deprecated\": true");
+    }
+    if (secret) {
+        /* What JSON Schema has for "never shown back": an editor that
+           honours it will not echo the value in hints. */
+        cf_sink_puts(out, ", \"writeOnly\": true");
+    }
+    if (d->has_default && !secret) {
+        cf_sink_puts(out, ", \"default\": ");
+        report_value(out, &d->default_value);
+    }
+    if (d->has_range && d->type == CF_TYPE_INT) {
+        cf_sink_fmt(out, ", \"minimum\": %I, \"maximum\": %I", d->imin, d->imax);
+    }
+#if CF_WITH_REAL
+    if (d->has_range && d->type == CF_TYPE_REAL) {
+        char lo[CF_F64_DIGITS], hi[CF_F64_DIGITS];
+        cf_f64_to_text(d->rmin, lo, sizeof lo);
+        cf_f64_to_text(d->rmax, hi, sizeof hi);
+        cf_sink_fmt(out, ", \"minimum\": %s, \"maximum\": %s", lo, hi);
+    }
+#endif
+    if (d->type == CF_TYPE_TEXT) {
+        if (d->min_len != 0) {
+            cf_sink_fmt(out, ", \"minLength\": %zu", d->min_len);
+        }
+        if (d->max_len != 0) {
+            cf_sink_fmt(out, ", \"maxLength\": %zu", d->max_len);
+        }
+        if (d->allowed != NULL) {
+            size_t i;
+            cf_sink_puts(out, ", \"enum\": [");
+            for (i = 0; d->allowed[i] != NULL; ++i) {
+                cf_sink_puts(out, (i == 0) ? "" : ", ");
+                report_quote_z(out, d->allowed[i]);
+            }
+            cf_sink_puts(out, "]");
+        }
+    }
+    cf_sink_puts(out, " }");
+}
+
+/* The members of the object for the prefix (p, plen): its type, its
+   properties in byte order of their names, and whether it is closed.
+   Each property is the smallest name after the previous one, found by
+   a scan, so the definitions need not be sealed and no buffer is
+   needed for a name: every name is a slice of a key that exists. */
+static void schema_object(schema_ctx* s, const char* p, size_t plen, cf_bool open,
+                          int depth) {
+    cf_sink*    out   = s->out;
+    const char* last  = NULL;
+    size_t      lastn = 0;
+    cf_bool     first = CF_TRUE;
+
+    if (depth >= CF_MAX_DEPTH) {
+        if (!s->failed) {
+            cf_error_set(s->err, CF_E_KEY, NULL, NULL,
+                         "the definitions nest deeper than %d levels", CF_MAX_DEPTH);
+        }
+        s->failed = CF_TRUE;
+        return;
+    }
+    schema_indent(out, depth + 1);
+    cf_sink_puts(out, "\"type\": \"object\",\n");
+    schema_indent(out, depth + 1);
+    cf_sink_puts(out, "\"properties\": {");
+
+    for (;;) {
+        const char*   best    = NULL;
+        const char*   bestkey = NULL;
+        size_t        bestn   = 0;
+        const cf_def* leaf    = NULL;
+        cf_bool       below   = CF_FALSE;
+        cf_bool       opened  = CF_FALSE;
+        size_t        clen;
+        size_t        i;
+        const char*   key;
+        size_t        n;
+        const cf_def* d;
+
+        for (i = 0; schema_item(s, i, &key, &n, &d); ++i) {
+            size_t      sn;
+            const char* sg;
+            if (!schema_under(key, n, p, plen)) {
+                continue;
+            }
+            sg = schema_segment(key, n, plen, &sn);
+            if (last != NULL && cf_cmp_bytes(sg, sn, last, lastn) <= 0) {
+                continue;
+            }
+            if (best == NULL || cf_cmp_bytes(sg, sn, best, bestn) < 0) {
+                best    = sg;
+                bestn   = sn;
+                bestkey = key;
+            }
+        }
+        if (best == NULL) {
+            break;
+        }
+        /* The property's full name is the prefix of the key it came
+           from, up to the end of its segment. */
+        clen = (size_t)(best - bestkey) + bestn;
+        for (i = 0; schema_item(s, i, &key, &n, &d); ++i) {
+            if (n == clen && memcmp(key, bestkey, clen) == 0) {
+                if (d != NULL) {
+                    leaf = d;
+                } else {
+                    opened = CF_TRUE;
+                }
+            } else if (schema_under(key, n, bestkey, clen)) {
+                below = CF_TRUE;
+            }
+        }
+
+        cf_sink_puts(out, first ? "\n" : ",\n");
+        schema_indent(out, depth + 2);
+        report_quote(out, best, bestn);
+        cf_sink_puts(out, ": ");
+        if (leaf != NULL && !below && !opened) {
+            schema_leaf(s, leaf);
+        } else {
+            cf_sink_puts(out, "{\n");
+            schema_object(s, bestkey, clen, (open || opened) ? CF_TRUE : CF_FALSE,
+                          depth + 2);
+            cf_sink_puts(out, "\n");
+            schema_indent(out, depth + 2);
+            cf_sink_puts(out, "}");
+        }
+        first = CF_FALSE;
+        last  = best;
+        lastn = bestn;
+    }
+    if (!first) {
+        cf_sink_puts(out, "\n");
+        schema_indent(out, depth + 1);
+    }
+    cf_sink_puts(out, "}");
+    if (s->closed && !open) {
+        cf_sink_puts(out, ",\n");
+        schema_indent(out, depth + 1);
+        cf_sink_puts(out, "\"additionalProperties\": false");
+    }
+}
+
+size_t cf_schema_write(const cf_defset* ds, const char* title, cf_bool closed,
+                       char* buf, size_t cap, cf_error* err) {
+    cf_sink    out;
+    schema_ctx s;
+
+    cf_sink_init(&out, buf, cap);
+    if (ds == NULL) {
+        cf_sink_terminate(&out);
+        cf_error_set(err, CF_E_SOURCE, NULL, NULL, "no definitions to describe");
+        return 0;
+    }
+    s.ds     = ds;
+    s.out    = &out;
+    s.closed = closed;
+    s.err    = err;
+    s.failed = CF_FALSE;
+
+    cf_sink_puts(
+        &out, "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n");
+    if (title != NULL) {
+        cf_sink_puts(&out, "  \"title\": ");
+        report_quote_z(&out, title);
+        cf_sink_puts(&out, ",\n");
+    }
+    schema_object(&s, "", 0, CF_FALSE, 0);
+    cf_sink_puts(&out, "\n}\n");
+    cf_sink_terminate(&out);
+    if (s.failed) {
+        if (buf != NULL && cap > 0) {
+            buf[0] = '\0';
+        }
+        return 0;
+    }
+    return out.len;
+}
+
 #else /* !CF_WITH_REPORT */
+
+size_t cf_schema_write(const cf_defset* ds, const char* title, cf_bool closed,
+                       char* buf, size_t cap, cf_error* err) {
+    (void)ds;
+    (void)title;
+    (void)closed;
+    if (buf != NULL && cap > 0) {
+        buf[0] = '\0';
+    }
+    cf_error_set(err, CF_E_CAPABILITY, NULL, NULL,
+                 "a JSON Schema needs CF_WITH_REPORT, and this build was compiled "
+                 "without it");
+    return 0;
+}
 
 /* Compiled without the report: nothing written, and a length of zero,
    which no report has - its opening brace alone is one byte. */

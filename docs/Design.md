@@ -2014,6 +2014,14 @@ Unsupported keywords — `oneOf`, `allOf`, `$ref` across files, `patternProperti
 rejected with a message naming the keyword, never ignored. An honestly documented subset is
 worth more than a full implementation that silently drops constraints.
 
+**As built** (`cf_schema`, export only). Two rows of the table are deliberately not
+followed. `required` is not written: a key the program requires may come from the
+environment or the command line, so a file without it is not wrong, and a schema that
+said so would make an editor flag correct files. And a sensitive key's default is
+omitted, as a blind report omits its value. Objects are closed with
+`additionalProperties: false` when the configuration rejects unknown keys, except under
+a prefix opened with `cf_defset_open`.
+
 ---
 
 ## 42. Build-Time Feature Selection
@@ -2033,7 +2041,7 @@ CF_WITH_DIR        ON     the drop-in directory source (conf.d)
 CF_WITH_DOTENV     ON     the .env source and its lexer
 CF_WITH_EMIT       ON     writing a configuration out: cf_emit and every encoder
 CF_WITH_IMAGE      ON     the binary snapshot image, writer and reader
-CF_WITH_REPORT     ON     the provenance report and Report Replay; Doctor needs it
+CF_WITH_REPORT     ON     the provenance report, Report Replay, the JSON Schema; Doctor needs it
 CF_WITH_CXX        ON     header only; costs nothing when unused
 ```
 

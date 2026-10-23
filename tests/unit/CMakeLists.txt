@@ -35,7 +35,8 @@ set(CF_UNIT_TESTS
     test_features
     test_wipe
     test_secrets
-    test_diff)
+    test_diff
+    test_schema)
 
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)
