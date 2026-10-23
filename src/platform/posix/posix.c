@@ -9,6 +9,18 @@
  * select.
  */
 
+/* Before any header, because it decides what the headers declare.
+   kqueue's timeout is a struct timespec, which glibc hides in strict
+   C89, and on Linux kqueue exists only as libkqueue - which is how the
+   BSD path is built and tested without a BSD. Real BSDs and macOS
+   declare it unconditionally and never take this branch. */
+#if defined(CF_WAKE_KQUEUE) && CF_WAKE_KQUEUE && defined(__linux__) &&                 \
+    !defined(_POSIX_C_SOURCE)
+/* A feature-test macro is the one reserved name a program is meant to
+   define, which bugprone-reserved-identifier cannot know. */
+#define _POSIX_C_SOURCE 200112L /* NOLINT(bugprone-reserved-identifier) */
+#endif
+
 #include "configforge/cf_platform.h"
 
 #if CF_PLATFORM_POSIX
@@ -17,20 +29,37 @@
 #include <sys/stat.h>
 #include <string.h>
 
-/* The wait handle is inotify, which is Linux's. Another POSIX system
-   reports that it has none rather than pretending, and polling
-   cf_changed works there exactly as before. kqueue is the BSD and macOS
-   answer and the obvious next implementation; it is not written yet
-   because nothing here can run it, and a platform file nobody has
-   compiled is a promise rather than code. */
-#if defined(__linux__)
+/* The wait handle: inotify on Linux, kqueue on macOS and the BSDs, and
+   on any other POSIX system a plain statement that there is none, where
+   polling cf_changed works exactly as before.
+
+   CF_WAKE_KQUEUE takes the kqueue path on Linux too, through libkqueue.
+   That is what lets the BSD implementation be compiled and run on every
+   commit by a machine that is not a BSD; it is a test build, not a
+   recommendation. */
+#if defined(CF_WAKE_KQUEUE) && CF_WAKE_KQUEUE
+#define CF_POSIX_WAKE 2
+#elif defined(__linux__)
 #define CF_POSIX_WAKE 1
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) ||             \
+    defined(__OpenBSD__) || defined(__DragonFly__)
+#define CF_POSIX_WAKE 2
+#else
+#define CF_POSIX_WAKE 0
+#endif
+
+#if CF_POSIX_WAKE == 1
 #include <errno.h>
 #include <poll.h>
 #include <sys/inotify.h>
 #include <unistd.h>
-#else
-#define CF_POSIX_WAKE 0
+#elif CF_POSIX_WAKE == 2
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/event.h>
+#include <time.h>
+#include <unistd.h>
 #endif
 
 /* Not C89, which is the whole reason this file exists. Declared here
@@ -159,22 +188,22 @@ int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], 
 
 #if CF_POSIX_WAKE
 
-/* Everything that can make a watched path different: written, replaced
-   by a rename, created, removed, or the directory itself going away. */
-#define POSIX_WAKE_MASK                                                                \
-    (IN_CLOSE_WRITE | IN_MODIFY | IN_ATTRIB | IN_CREATE | IN_DELETE | IN_MOVED_FROM |  \
-     IN_MOVED_TO | IN_DELETE_SELF | IN_MOVE_SELF)
-
 typedef struct posix_target {
-    char    dir[CF_PLATFORM_NAME_MAX];
+    char    path[CF_PLATFORM_NAME_MAX]; /* as the configuration named it */
+    char    dir[CF_PLATFORM_NAME_MAX];  /* the directory that holds it */
     cf_bool direct; /* watched itself, rather than through an ancestor */
 } posix_target;
 
 struct cf_platform_wake {
     const cf_allocator* a;
-    int                 fd;
+    int                 fd; /* the inotify or kqueue descriptor */
     size_t              n;
     posix_target*       t;
+    /* kqueue only: one open descriptor per watched directory and file,
+       because a kqueue watches what it has open rather than a name. */
+    int*   vfd;
+    size_t nvfd;
+    size_t capvfd;
 };
 
 /* One level up, in place. False at the top, where there is nowhere to
@@ -215,6 +244,16 @@ static cf_bool posix_dir_of(const char* path, char* out, size_t cap) {
     }
     return CF_TRUE;
 }
+
+#endif /* CF_POSIX_WAKE */
+
+#if CF_POSIX_WAKE == 1
+
+/* Everything that can make a watched path different: written, replaced
+   by a rename, created, removed, or the directory itself going away. */
+#define POSIX_WAKE_MASK                                                                \
+    (IN_CLOSE_WRITE | IN_MODIFY | IN_ATTRIB | IN_CREATE | IN_DELETE | IN_MOVED_FROM |  \
+     IN_MOVED_TO | IN_DELETE_SELF | IN_MOVE_SELF)
 
 static const char* posix_why(int e) {
     switch (e) {
@@ -284,9 +323,12 @@ cf_platform_wake* cf_platform_wake_open(const char* const* paths, size_t n,
         void* rest = w + 1;
         w->t       = (posix_target*)rest;
     }
-    w->a  = a;
-    w->n  = n;
-    w->fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
+    w->a      = a;
+    w->n      = n;
+    w->vfd    = NULL;
+    w->nvfd   = 0;
+    w->capvfd = 0;
+    w->fd     = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
     if (w->fd < 0) {
         cf_error_set(err, CF_E_CAPABILITY, NULL, NULL, "inotify is unavailable: %s",
                      posix_why(errno));
@@ -400,6 +442,302 @@ void cf_platform_wake_close(cf_platform_wake* w) {
     w->a->release(w->a->ctx, w);
 }
 
+#elif CF_POSIX_WAKE == 2
+
+/* kqueue watches what it has open, not a name, which shapes everything
+   below. A directory's events say an entry was added, removed or
+   renamed - never that a file in it was rewritten in place - so each
+   file is watched as well as its directory. And a descriptor follows
+   the file it was opened on: after an editor renames a new file over
+   the old one, the descriptor watches the old one in the bin. So every
+   drain closes everything and opens it again by name, which is a few
+   system calls per watched file and is the only way to be watching what
+   the names now mean.
+
+   A change in the gap while that happens is not lost: drain, then ask,
+   and cf_changed compares against the files themselves. */
+
+/* NOTE_LINK because a directory created inside a watched one changes
+   its link count, and that is how the missing level of a path arrives. */
+#define KQ_VNODE_EVENTS                                                                \
+    (NOTE_WRITE | NOTE_DELETE | NOTE_RENAME | NOTE_EXTEND | NOTE_ATTRIB | NOTE_LINK)
+
+static const char* kq_why(int e) {
+    switch (e) {
+    case EMFILE:
+    case ENFILE:
+        return "too many open files: kqueue holds one per watched file";
+    case EACCES:
+        return "permission denied";
+    case ENOMEM:
+        return "the kernel is out of memory";
+    default:
+        return "kqueue refused it";
+    }
+}
+
+/* Deleted before it is closed. A real kqueue drops a descriptor's events
+   when it is closed; libkqueue cannot see a close, keeps the event, and
+   attaches the next descriptor to reuse the number to the old file's
+   watch - so the second drain watched nothing it named. Saying it
+   explicitly is correct on both. */
+static void kq_close_all(cf_platform_wake* w) {
+    size_t i;
+    for (i = 0; i < w->nvfd; ++i) {
+        struct kevent ev;
+        EV_SET(&ev, (uintptr_t)w->vfd[i], EVFILT_VNODE, EV_DELETE, 0, 0, NULL);
+        (void)kevent(w->fd, &ev, 1, NULL, 0, NULL);
+        close(w->vfd[i]);
+    }
+    w->nvfd = 0;
+}
+
+/* 1 watched, 0 absent, -1 failed with `err` set. */
+static int kq_add(cf_platform_wake* w, const char* path, cf_error* err) {
+    struct kevent ev;
+    int           flags = O_RDONLY;
+    int           fd;
+
+#ifdef O_EVTONLY
+    /* macOS: an event-only descriptor, which does not keep the volume
+       it is on from being unmounted. */
+    flags = O_EVTONLY;
+#endif
+#ifdef O_CLOEXEC
+    flags |= O_CLOEXEC;
+#endif
+    fd = open(path, flags);
+    if (fd < 0) {
+        int e = errno;
+        if (e == ENOENT || e == ENOTDIR) {
+            return 0;
+        }
+        cf_error_set(err, CF_E_CAPABILITY, NULL, path, "cannot watch '%s': %s", path,
+                     kq_why(e));
+        return -1;
+    }
+    if (w->nvfd == w->capvfd) {
+        size_t ncap = (w->capvfd < 8) ? 8 : w->capvfd * 2;
+        int*   nv   = (int*)w->a->alloc(w->a->ctx, ncap * sizeof(int));
+        if (nv == NULL) {
+            close(fd);
+            cf_error_set(err, CF_E_MEMORY, NULL, path, "no room to watch '%s'", path);
+            return -1;
+        }
+        if (w->nvfd > 0) {
+            memcpy(nv, w->vfd, w->nvfd * sizeof(int));
+        }
+        if (w->vfd != NULL) {
+            w->a->release(w->a->ctx, w->vfd);
+        }
+        w->vfd    = nv;
+        w->capvfd = ncap;
+    }
+    EV_SET(&ev, (uintptr_t)fd, EVFILT_VNODE, EV_ADD | EV_CLEAR, KQ_VNODE_EVENTS, 0,
+           NULL);
+    if (kevent(w->fd, &ev, 1, NULL, 0, NULL) < 0) {
+        int e = errno;
+        close(fd);
+        cf_error_set(err, CF_E_CAPABILITY, NULL, path, "cannot watch '%s': %s", path,
+                     kq_why(e));
+        return -1;
+    }
+    w->vfd[w->nvfd++] = fd;
+    return 1;
+}
+
+/* Every file in a directory, as well as the directory: an edit in place
+   inside conf.d moves nothing the directory's own events can see. */
+static cf_bool kq_add_entries(cf_platform_wake* w, const char* dir, cf_error* err) {
+    DIR*           d = opendir(dir);
+    struct dirent* e;
+    char           full[CF_PLATFORM_NAME_MAX];
+    cf_bool        ok = CF_TRUE;
+
+    if (d == NULL) {
+        return CF_TRUE; /* gone since it was opened; the next drain sees why */
+    }
+    while ((e = readdir(d)) != NULL) {
+        if (e->d_name[0] == '.') {
+            continue; /* skipped as the listing skips it */
+        }
+        if (cf_fmt(full, sizeof full, "%s/%s", dir, e->d_name) >= sizeof full) {
+            continue;
+        }
+        if (kq_add(w, full, err) < 0) {
+            ok = CF_FALSE;
+            break;
+        }
+    }
+    closedir(d);
+    return ok;
+}
+
+/* Watch the target's directory, or the nearest ancestor that exists,
+   and - when the directory itself is there - the target too. */
+static cf_bool kq_arm(cf_platform_wake* w, posix_target* t, cf_error* err) {
+    char        dir[CF_PLATFORM_NAME_MAX];
+    struct stat st;
+    int         r;
+
+    memcpy(dir, t->dir, sizeof dir);
+    t->direct = CF_TRUE;
+    for (;;) {
+        r = kq_add(w, dir, err);
+        if (r < 0) {
+            return CF_FALSE;
+        }
+        if (r > 0) {
+            break;
+        }
+        t->direct = CF_FALSE;
+        if (!posix_up(dir)) {
+            return cf_error_set(err, CF_E_CAPABILITY, NULL, t->dir,
+                                "cannot watch '%s': no part of it exists", t->dir);
+        }
+    }
+    if (!t->direct || stat(t->path, &st) != 0) {
+        return CF_TRUE; /* the file's arrival is the directory's event */
+    }
+    if (S_ISDIR(st.st_mode)) {
+        return kq_add_entries(w, t->path, err);
+    }
+    return (kq_add(w, t->path, err) < 0) ? CF_FALSE : CF_TRUE;
+}
+
+static cf_bool kq_arm_all(cf_platform_wake* w, cf_error* err) {
+    size_t  i;
+    cf_bool ok = CF_TRUE;
+
+    kq_close_all(w);
+    for (i = 0; i < w->n; ++i) {
+        if (!kq_arm(w, &w->t[i], err)) {
+            ok  = CF_FALSE;
+            err = NULL; /* the first failure is the useful one */
+        }
+    }
+    return ok;
+}
+
+cf_bool cf_platform_has_wake(void) {
+    return CF_TRUE;
+}
+
+cf_platform_wake* cf_platform_wake_open(const char* const* paths, size_t n,
+                                        const cf_allocator* a, cf_error* err) {
+    cf_platform_wake* w;
+    size_t            i;
+
+    if (a == NULL || a->alloc == NULL) {
+        cf_error_set(err, CF_E_MEMORY, NULL, NULL, "no allocator to watch with");
+        return NULL;
+    }
+    /* One block: the targets follow the header, whose size is already a
+       multiple of the stricter alignment of the two. */
+    w = (cf_platform_wake*)a->alloc(a->ctx, sizeof *w + n * sizeof(posix_target));
+    if (w == NULL) {
+        cf_error_set(err, CF_E_MEMORY, NULL, NULL, "no room to watch %u path(s)",
+                     (unsigned)n);
+        return NULL;
+    }
+    {
+        void* rest = w + 1;
+        w->t       = (posix_target*)rest;
+    }
+    w->a      = a;
+    w->n      = n;
+    w->vfd    = NULL;
+    w->nvfd   = 0;
+    w->capvfd = 0;
+    w->fd     = kqueue();
+    if (w->fd < 0) {
+        cf_error_set(err, CF_E_CAPABILITY, NULL, NULL, "kqueue is unavailable: %s",
+                     kq_why(errno));
+        a->release(a->ctx, w);
+        return NULL;
+    }
+    for (i = 0; i < n; ++i) {
+        size_t len = (paths[i] != NULL) ? strlen(paths[i]) : 0;
+        if (paths[i] == NULL || len + 1 > sizeof w->t[i].path ||
+            !posix_dir_of(paths[i], w->t[i].dir, sizeof w->t[i].dir)) {
+            cf_error_set(err, CF_E_CAPABILITY, NULL, paths[i],
+                         "cannot watch a path this long");
+            cf_platform_wake_close(w);
+            return NULL;
+        }
+        memcpy(w->t[i].path, paths[i], len + 1);
+    }
+    if (!kq_arm_all(w, err)) {
+        cf_platform_wake_close(w);
+        return NULL;
+    }
+    return w;
+}
+
+/* On macOS and the BSDs a kqueue descriptor is readable when an event
+   is pending, so it goes into an event loop like any other. libkqueue's
+   is not, which is why cf_platform_wake_wait asks kevent rather than
+   poll - and why the test build cannot vouch for this one call. */
+int cf_platform_wake_fd(const cf_platform_wake* w) {
+    return (w != NULL) ? w->fd : -1;
+}
+
+void* cf_platform_wake_handle(const cf_platform_wake* w) {
+    (void)w;
+    return NULL;
+}
+
+cf_bool cf_platform_wake_drain(cf_platform_wake* w) {
+    struct kevent   ev[8];
+    struct timespec zero;
+
+    if (w == NULL) {
+        return CF_FALSE;
+    }
+    zero.tv_sec  = 0;
+    zero.tv_nsec = 0;
+    while (kevent(w->fd, NULL, 0, ev, 8, &zero) > 0) {
+    }
+    return kq_arm_all(w, NULL);
+}
+
+int cf_platform_wake_wait(cf_platform_wake* w, long timeout_ms) {
+    struct kevent   ev;
+    struct timespec ts;
+    int             r;
+
+    if (w == NULL) {
+        return -1;
+    }
+    if (timeout_ms >= 0) {
+        ts.tv_sec  = (time_t)(timeout_ms / 1000);
+        ts.tv_nsec = (long)(timeout_ms % 1000) * 1000000L;
+    }
+    r = kevent(w->fd, NULL, 0, &ev, 1, (timeout_ms >= 0) ? &ts : NULL);
+    if (r < 0) {
+        /* A signal is not a failure: nothing was seen, ask again. */
+        return (errno == EINTR) ? 0 : -1;
+    }
+    if (r == 0) {
+        return 0;
+    }
+    return cf_platform_wake_drain(w) ? 1 : -1;
+}
+
+void cf_platform_wake_close(cf_platform_wake* w) {
+    if (w == NULL) {
+        return;
+    }
+    kq_close_all(w);
+    if (w->vfd != NULL) {
+        w->a->release(w->a->ctx, w->vfd);
+    }
+    if (w->fd >= 0) {
+        close(w->fd);
+    }
+    w->a->release(w->a->ctx, w);
+}
+
 #else /* no wait handle on this POSIX system */
 
 cf_bool cf_platform_has_wake(void) {
@@ -441,6 +779,6 @@ void cf_platform_wake_close(cf_platform_wake* w) {
     (void)w;
 }
 
-#endif /* CF_POSIX_WAKE */
+#endif /* CF_POSIX_WAKE == ... */
 
 #endif /* CF_PLATFORM_POSIX */

@@ -110,8 +110,9 @@ if (cf_changed(cfg)) { /* rebuild, swap, reopen the watcher */ }
 
 It watches each file's directory, because editors save by renaming a
 new file over the old one, so a wake-up means "ask now" and `cf_changed`
-stays the answer. Linux and Windows; elsewhere opening it says so, and
-polling works as before.
+stays the answer. inotify on Linux, kqueue on macOS and the BSDs, one
+event HANDLE on Windows; anywhere else opening it says so, and polling
+works as before.
 
 ## Why
 
@@ -158,9 +159,8 @@ nothing, and `1.0` is where semantic versioning starts.
 | threading contract (D-14), reference-counted snapshots | done |
 | `cf_derive`: changing a value without mutating a snapshot | done |
 | change notification (`cf_changed`) | done |
-| a handle an event loop can wait on (`cf_watcher`), Linux and Windows | done |
-| the same handle on macOS and the BSDs (`kqueue`) | next |
-| Doctor: SARIF output, configurable severity | after |
+| a handle an event loop can wait on (`cf_watcher`): inotify, kqueue, Windows | done |
+| Doctor: SARIF output, configurable severity | next |
 | TOML, XML, SQLite codecs | deferred, see D-23 |
 | Windows Registry, gsettings, macOS defaults | deferred, see D-30 |
 

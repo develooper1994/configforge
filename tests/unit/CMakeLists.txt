@@ -51,6 +51,14 @@ foreach(loc de_DE.UTF-8 tr_TR.UTF-8)
   add_test(NAME unit.test_value.${loc} COMMAND test_value ${loc})
 endforeach()
 
+# Under the libkqueue test build one scenario is the stand-in's to fail,
+# not this code's; test_watch.c says which and why.
+if(CF_WAKE_KQUEUE
+   AND NOT APPLE
+   AND NOT CMAKE_SYSTEM_NAME MATCHES "BSD|DragonFly")
+  target_compile_definitions(test_watch PRIVATE CF_TEST_LIBKQUEUE=1)
+endif()
+
 # A directory of its own for the watch test. It asserts that a handle
 # goes quiet, and every other test writes its files into the shared
 # working directory - which is exactly what the handle watches. Run in

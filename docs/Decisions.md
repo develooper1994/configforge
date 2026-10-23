@@ -1453,9 +1453,22 @@ It lives beside the configuration rather than inside it: an immutable, shareable
 snapshot holding a kernel object that reading mutates would have broken D-14. The
 watcher copies the paths it needs, so either may be released first.
 
-macOS and the BSDs report that they have no handle rather than pretending, and polling
-works there unchanged. `kqueue` is the obvious implementation and is not written,
-because nothing this was built on can run it.
+**kqueue, for macOS and the BSDs,** works differently in the one way that matters: it
+watches what it has open, not a name. A directory's events say an entry was added,
+removed or renamed and never that a file in it was rewritten in place, so each file is
+watched as well as its directory; and a descriptor follows the file it was opened on, so
+after an editor renames a new file over the old one it is watching the old one in the
+bin. Every drain therefore closes everything and opens it again by name. A change in that
+gap is not lost, for the same reason as everywhere else: drain, then ask.
+
+It was written on a machine with no BSD and is tested two ways. `CF_WAKE_KQUEUE` builds
+it on Linux against libkqueue, a kqueue emulation, and a CI job runs the unit tests that
+way on every commit; the macOS job runs it against the real thing. The emulation found a
+real bug — a descriptor's events must be deleted before the descriptor is closed, or the
+next one to reuse the number inherits the old watch — and has two gaps of its own, each
+written down where it bites: it does not report a directory created inside a watched
+one, and its descriptor cannot be waited on with `poll`, which is why
+`cf_watcher_wait` asks `kevent` instead.
 
 **What building it found.** `cf_changed` stamped a drop-in directory by the directory's
 own modification time, which moves when a file is added or removed and not when one is

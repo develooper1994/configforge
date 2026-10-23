@@ -13,4 +13,25 @@ else()
   target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/posix/posix.c)
 endif()
 
+# kqueue is in the C library on macOS and the BSDs. Anywhere else it is
+# libkqueue, which only the test build asks for.
+if(CF_WAKE_KQUEUE)
+  target_compile_definitions(configforge PRIVATE CF_WAKE_KQUEUE=1)
+  if(NOT APPLE AND NOT CMAKE_SYSTEM_NAME MATCHES "BSD|DragonFly")
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(KQUEUE REQUIRED libkqueue)
+    target_include_directories(configforge PRIVATE ${KQUEUE_INCLUDE_DIRS})
+    # A property rather than target_link_libraries, which CMake 3.10 does
+    # not allow on a target from another directory.
+    set_property(
+      TARGET configforge
+      APPEND
+      PROPERTY LINK_LIBRARIES ${KQUEUE_LIBRARIES})
+    set_property(
+      TARGET configforge
+      APPEND
+      PROPERTY INTERFACE_LINK_LIBRARIES ${KQUEUE_LIBRARIES})
+  endif()
+endif()
+
 message(STATUS "platform: ${CF_PLATFORM}")

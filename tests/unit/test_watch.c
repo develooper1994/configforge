@@ -310,6 +310,14 @@ static void test_wake_missing_directory(void) {
     if (!cf_platform_has_wake()) {
         return;
     }
+#if defined(CF_TEST_LIBKQUEUE) && CF_TEST_LIBKQUEUE
+    /* libkqueue, the Linux stand-in for kqueue that the test build uses,
+       does not report a directory created inside a watched one; a real
+       kqueue reports it as NOTE_WRITE and NOTE_LINK. Asserting it here
+       would test the stand-in, not this code. The macOS job runs it. */
+    printf("skipped: libkqueue does not report a new subdirectory\n");
+    return;
+#endif
     drop_dir("cf_wd", "cf_wd");
     b = cf_build(NULL);
     cf_builder_file(b, "late", CF_RANK_USER_FILE, "cf_wd/sub/late.ini", NULL,
