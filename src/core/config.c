@@ -770,6 +770,47 @@ cf_bool cf_changed(const cf_config* c) {
     return CF_FALSE;
 }
 
+/* The watcher is the platform's object under a public name. Nothing is
+   added on top of it, so there is nothing here to keep in step. */
+cf_watcher* cf_watcher_open(const cf_config* c, const cf_allocator* a, cf_error* err) {
+    if (c == NULL) {
+        cf_error_set(err, CF_E_CAPABILITY, NULL, NULL, "no configuration to watch");
+        return NULL;
+    }
+    if (c->watch_count == 0) {
+        /* A handle that can never be signalled would let a loop wait
+           forever on it and look healthy doing so. */
+        cf_error_set(err, CF_E_CAPABILITY, NULL, NULL,
+                     "this configuration was read from no file, so nothing can change "
+                     "under it");
+        return NULL;
+    }
+    if (a == NULL) {
+        a = cf_default_allocator();
+    }
+    return cf_platform_wake_open(c->watch_paths, c->watch_count, a, err);
+}
+
+int cf_watcher_fd(const cf_watcher* w) {
+    return cf_platform_wake_fd(w);
+}
+
+void* cf_watcher_handle(const cf_watcher* w) {
+    return cf_platform_wake_handle(w);
+}
+
+cf_bool cf_watcher_drain(cf_watcher* w) {
+    return cf_platform_wake_drain(w);
+}
+
+int cf_watcher_wait(cf_watcher* w, long timeout_ms) {
+    return cf_platform_wake_wait(w, timeout_ms);
+}
+
+void cf_watcher_close(cf_watcher* w) {
+    cf_platform_wake_close(w);
+}
+
 void cf_config_ref(cf_config* c) {
     if (c != NULL) {
         cf_ref_inc(&c->refs);

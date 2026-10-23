@@ -1431,6 +1431,37 @@ what the library hands back, because that choice is what a caller cannot undo.
 **Decision: option 2, with option 3 reserved.** A library that forces a thread on its
 caller has made a decision that belongs to the caller.
 
+**Option 3, built.** `cf_watcher` hands over an inotify descriptor on Linux and an event
+HANDLE on Windows, for a loop to wait on beside its own; `cf_watcher_wait` does the same
+for a program with no loop. It is still not a callback and it owns no thread. Three
+things decided its shape:
+
+* **It watches directories, not files.** Editors save by writing a new file and renaming
+  it over the old one, and a watch on the old file follows it into the bin. So a wake-up
+  means "ask now", never "it changed" — a neighbour wakes it too — and `cf_changed`
+  stays the answer. Drain, then ask; the other order can consume a wake-up for a change
+  that arrived after the question.
+* **One handle, not one per directory.** On Windows every directory's overlapped read
+  completes into one manual-reset event. `FindFirstChangeNotification` was simpler and
+  would have handed every caller a set of handles to wait on.
+* **A directory that does not exist yet is watched through its nearest ancestor**, and
+  draining moves the watch down as the levels appear. Otherwise an optional file under
+  `~/.config/app/` on a machine that has never run the program could not wake anything
+  when it finally arrived.
+
+It lives beside the configuration rather than inside it: an immutable, shareable
+snapshot holding a kernel object that reading mutates would have broken D-14. The
+watcher copies the paths it needs, so either may be released first.
+
+macOS and the BSDs report that they have no handle rather than pretending, and polling
+works there unchanged. `kqueue` is the obvious implementation and is not written,
+because nothing this was built on can run it.
+
+**What building it found.** `cf_changed` stamped a drop-in directory by the directory's
+own modification time, which moves when a file is added or removed and not when one is
+edited in place — the commonest change such a directory gets. A directory is now stamped
+by what it holds.
+
 **And reload is a rebuild, not a mutation.** The caller runs its builder again and swaps
 the result. This is where a conflict the design anticipated simply evaporated:
 
