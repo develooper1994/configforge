@@ -254,6 +254,44 @@ static void test_provenance_travels(void) {
     check((full.flags & CF_IMAGE_PROVENANCE) != 0, "the other says so");
     check(plain.digest == full.digest, "and both describe the same configuration");
 
+    /* And the chain is read, not only carried: loaded as a source, a
+       value says where it was set before it was baked. */
+    {
+        static union {
+            cf_i64 a;
+            char   b[1024];
+        } state;
+        static char why[2048];
+        cf_source   src;
+        cf_builder* back_b;
+        cf_config*  back;
+
+        back_b = cf_build(NULL);
+        cf_source_image_mem(&src, "firmware", CF_RANK_SYS_FILE, g_img2.b, n2, state.b,
+                            sizeof state.b);
+        cf_builder_source(back_b, &src);
+        cf_builder_int(back_b, "server.port", 8080, 1, 65535, 0);
+        back = cf_builder_create(back_b, &err);
+        check(back != NULL, "the image with its chain loads as a source");
+        if (back != NULL) {
+            cf_explain(back, "server.port", why, sizeof why);
+            has(why, "argv[1]", "and explain() names where the value was set");
+            cf_config_free(back);
+        }
+
+        back_b = cf_build(NULL);
+        cf_source_image_mem(&src, "firmware", CF_RANK_SYS_FILE, g_img.b, n1, state.b,
+                            sizeof state.b);
+        cf_builder_source(back_b, &src);
+        cf_builder_int(back_b, "server.port", 8080, 1, 65535, 0);
+        back = cf_builder_create(back_b, &err);
+        if (back != NULL) {
+            cf_explain(back, "server.port", why, sizeof why);
+            has(why, "image", "a resolved-only image can only say it was the image");
+            cf_config_free(back);
+        }
+    }
+
     cf_config_free(cfg);
 }
 

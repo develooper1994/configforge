@@ -413,6 +413,17 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed, and it mattered
 
+- **An image's provenance travelled and nothing read it.** With
+  `CF_IMAGE_PROVENANCE` the writer stored every candidate - source,
+  outcome, value, location - and the reader loaded the winners and said
+  "image" for all of them, so the reason to carry the chain, a device
+  with no filesystem still able to say why a value is what it is, was a
+  claim. Loading now takes each value's location from its winning
+  candidate: on the device, `explain()` says `release.ini:2:1`, the line
+  on the build machine. Found by writing `examples/embedded.c`, whose
+  comment said so before the code did. With the lookup disabled,
+  `test_image` fails.
+
 - **Frames that were larger than they needed to be**, found by the stack
   report on its first run. The flattener kept 24 bytes for each of its
   32 nesting levels where 8 hold the same (a 32-bit index, a 16-bit
