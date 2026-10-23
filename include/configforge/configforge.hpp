@@ -326,6 +326,14 @@ public:
     { if (b_) { cf_builder_file(b_, name, rank, path, format, flags); }
       return *this; }
 
+    /* A file read by a codec the caller supplies (cf_builder_file_codec).
+       A name of its own rather than a file() overload, which a literal 0
+       for the format would make ambiguous. */
+    Builder& fileWith(const char* name, int rank, const char* path,
+                      const struct cf_codec* codec, unsigned flags = 0)
+    { if (b_) { cf_builder_file_codec(b_, name, rank, path, codec, flags); }
+      return *this; }
+
     Builder& dotenv(const char* name, int rank, const char* path,
                     const char* prefix, unsigned flags = 0)
     { if (b_) { cf_builder_dotenv(b_, name, rank, path, prefix, flags); }

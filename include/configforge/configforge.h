@@ -103,6 +103,14 @@ CF_API cf_bool cf_builder_cli(cf_builder* b, const char* name, int rank, int arg
 CF_API cf_bool cf_builder_file(cf_builder* b, const char* name, int rank,
                                const char* path, const char* format, unsigned flags);
 
+/* A file read by a codec the caller supplies, for a format this library
+   does not have; see cf_source_file_codec. The codec must outlive the
+   configuration. */
+struct cf_codec;
+CF_API cf_bool cf_builder_file_codec(cf_builder* b, const char* name, int rank,
+                                     const char* path, const struct cf_codec* codec,
+                                     unsigned flags);
+
 /* A .env file, read with the environment's key mapping: a .env file is
    an environment written down, so the escape and the natural spelling
    behave identically in both. */

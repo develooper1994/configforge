@@ -24,21 +24,15 @@ Things that are wrong or unproven today, most serious first.
 
 ## Next
 
-4. **A codec from outside the library.** The document-event interface
-   (`cf_doc_sink`) is already format-neutral: begin a table, begin an
-   array, a scalar with its location, end. A streaming parser in
-   another library - libyaml's events, expat's callbacks - maps onto it
-   one to one, which is the whole of what an integration needs. What is
-   missing is a way to hand such a codec to a builder: codecs are a list
-   fixed at compile time, and a registry that code could add to at run
-   time would be global mutable state, which the library forbids.
-   *Done:* `cf_builder_file_codec(b, name, rank, path, codec, flags)`,
-   taking the codec explicitly, and a test that defines a codec outside
-   `src/` and reads a file through it. Architecture.md has the recipe.
+4. **A YAML codec over libyaml**, now that a codec can come from
+   outside: behind `CF_WITH_YAML`, off by default because it brings a
+   dependency. libyaml's events map onto `cf_doc_sink` one to one; the
+   work is anchors and tags, which should be refused with a message as
+   TOML's dates are.
 5. **Packaging**: a pkg-config file, a vcpkg port and a Conan recipe,
    each installed and consumed by a test project in CI.
 6. **API reference** generated from the header comments.
-7. **1.0**, once 1-4 are done: a symbol list, an ABI check in CI
+7. **1.0**, once 1-3 are done: a symbol list, an ABI check in CI
    (abidiff), and semantic versioning from then on. Before 1.0 is when
    an interface mistake is cheap.
 

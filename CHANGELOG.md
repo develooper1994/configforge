@@ -136,6 +136,14 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   rewritten inside one clock tick at the same length. That is documented
   as a hint worth acting on rather than a guarantee; the exact answer is
   to rebuild and compare digests.
+- **A codec from outside the library**: `cf_builder_file_codec` (C++:
+  `Builder::fileWith`) reads a file through a `cf_codec` the caller
+  defines - over libyaml's events, expat's callbacks, any streaming
+  parser - since the document events are already format-neutral. It is
+  handed over rather than registered, because a run-time registry would
+  be global mutable state. `test_codec.c` is a complete one written
+  against the public headers alone, and the values it produces are
+  typed, validated and explained like any other.
 - **A way in for whoever continues the work.** `AGENTS.md` - read by a
   person or an AI agent, on any machine - maps the repository, gives the
   build-verify-commit loop, the house rules and every trap this work

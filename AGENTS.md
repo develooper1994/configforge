@@ -143,6 +143,9 @@ done since:
   and write the report with `cf_report_write` - never by hand, so it
   cannot drift from the schema. Do not reimplement anybody's precedence
   rules (Doctor.md, section 12).
+* **A codec in the program, not the library**: `tests/unit/test_codec.c`
+  is the model - a `cf_codec` whose `decode` drives `cf_doc_sink`,
+  handed to `cf_builder_file_codec`.
 * **A gate**: a `cmake -P` script in `cmake/gates/`, registered in
   `cmake/ConfigForgeGates.cmake`, that fails with `VIOLATION:` lines
   naming what is wrong. Prove it by breaking the thing it guards.
