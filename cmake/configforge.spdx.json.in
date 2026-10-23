@@ -1,0 +1,31 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "configforge-@PROJECT_VERSION@",
+  "documentNamespace": "https://spdx.org/spdxdocs/configforge-@PROJECT_VERSION@-@CF_SBOM_ID@",
+  "creationInfo": {
+    "created": "@CF_SBOM_CREATED@",
+    "creators": ["Tool: ConfigForge CMake (cmake/ConfigForgeSbom.cmake)"]
+  },
+  "packages": [
+    {
+      "name": "configforge",
+      "SPDXID": "SPDXRef-Package-configforge",
+      "versionInfo": "@PROJECT_VERSION@",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "Zlib",
+      "licenseDeclared": "Zlib",
+      "copyrightText": "Copyright (C) 2026 Mustafa Selçuk Çağlar",
+      "comment": "Build options: @CF_SBOM_OPTIONS@"
+    }@CF_SBOM_PACKAGES@
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-configforge"
+    }@CF_SBOM_RELATIONSHIPS@
+  ]
+}

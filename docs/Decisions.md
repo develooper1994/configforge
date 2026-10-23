@@ -66,6 +66,7 @@ gets reopened every six months.
 | D-33 | Per-parameter policy: shape, and what a violation does | resolver, security | **Decided** |
 | D-34 | What `set()` means on an immutable snapshot | ownership, provenance | **Decided** |
 | D-35 | Change notification: what the library hands back | threading, contract | **Decided** |
+| D-36 | Licence | distribution, every user | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -1511,6 +1512,49 @@ do anyway.
 So `cf_changed` is documented as a *hint that is worth acting on*, not a guarantee.
 Describing it as exact would be the more attractive sentence and the one that produces a
 bug report about a change nobody saw.
+
+---
+
+## D-36 — Licence
+
+**Question.** Under what terms may anyone use, ship and change this library?
+
+**What decides it.** Who the users are. The design targets everything from a desktop
+tool to a device with no filesystem and no heap (D-07, the freestanding profile), and
+the distribution form most likely to travel is the single-file amalgamation, copied into
+somebody else's tree (D-21, D-31). A licence that is fine for the first and a burden for
+the second is the wrong one.
+
+**Options.**
+
+1. **MIT.** The most recognised permissive licence. Requires the notice in "all copies
+   or substantial portions", which for a binary inside firmware is read by many legal
+   departments as a notice in the product - a real obligation for a device maker.
+2. **BSD-2-Clause.** The same shape, the binary-notice clause stated outright.
+3. **Apache-2.0.** An explicit patent grant, which is valuable; incompatible with
+   GPLv2-only projects, which excludes part of the C world this library is for, and
+   heavier than a C library of this size needs to carry.
+4. **MPL-2.0.** File-level copyleft. Changes to the library's files must be shared; asks
+   more of an embedder than most will accept for a configuration library.
+5. **zlib.** Permissive; no notice required in a binary distribution, the notice kept in
+   every source distribution; altered versions marked as such. The licence of zlib,
+   libpng and SDL - libraries that live inside other people's products.
+6. **Boost (BSL-1.0).** Like zlib on binaries; less familiar outside C++.
+
+**Decision: zlib.** It is the one whose obligations line up with how this library is
+distributed. A firmware image built with it owes nobody a notice, so a device maker
+carries no paperwork; anybody receiving the *source* - including the amalgamation on its
+own - receives the licence, which is why the amalgamation generator puts it at the top of
+both files and the install puts it beside the headers. It is GPL-compatible, so no C
+project is excluded.
+
+**What it does not give.** An explicit patent grant, which Apache-2.0 would. For a
+configuration library with no novel algorithms that is judged the smaller risk than
+excluding GPLv2-only users and burdening embedded ones.
+
+**Third-party code** carries its own terms, and none of it is required: the default build
+has no dependencies at all. `docs/Dependencies.md` lists every optional and build-time
+one with its licence, so the obligations of a given build can be read off one page.
 
 ---
 

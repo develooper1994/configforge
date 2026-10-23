@@ -36,6 +36,19 @@ function(configforge_add_gates tgt)
            COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
                    ${CMAKE_SOURCE_DIR}/cmake/gates/GateDetection.cmake)
 
+  # The dependency page names everything the build looks for, and the
+  # generated SBOM is a valid document about this build. Neither needs
+  # a compiler, so both run everywhere.
+  add_test(NAME gate.dependencies
+           COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
+                   ${CMAKE_SOURCE_DIR}/cmake/gates/GateDependencies.cmake)
+  add_test(
+    NAME gate.sbom
+    COMMAND
+      ${CMAKE_COMMAND} -DSBOM=${CMAKE_BINARY_DIR}/configforge.spdx.json
+      -DPROJECT_VER=${PROJECT_VERSION} -P
+      ${CMAKE_SOURCE_DIR}/cmake/gates/GateSbom.cmake)
+
   # The rest drive the compiler with a GCC-style command line, which
   # MSVC rejects at the first flag - and it has no C89 mode to ask for
   # in any case (see ConfigForgeCompiler.cmake). They are about the

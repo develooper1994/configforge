@@ -72,3 +72,5 @@ endif()
 configforge_add_gates(configforge)
 
 include(ConfigForgeInstall)
+include(ConfigForgeSbom)
+configforge_generate_sbom()

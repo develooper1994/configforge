@@ -302,7 +302,11 @@ nothing a leak would want.
 * [`docs/Conventions.md`](docs/Conventions.md) — naming, memory, errors, project idioms, the forbidden list, and what a good test looks like here
 * [`docs/Design.md`](docs/Design.md) — the full specification
 * [`docs/Doctor.md`](docs/Doctor.md) — the pre-deployment analysis tool
+* [`docs/Dependencies.md`](docs/Dependencies.md) — every dependency and its licence; the build generates an SPDX SBOM to match
 
 ## Licence
 
-TBD.
+zlib - see [`LICENSE`](LICENSE). Chosen for where this library is meant
+to run: a binary built with it, firmware included, owes nobody a notice,
+while every source distribution keeps one - which is why the single-file
+amalgamation carries the licence at its top.

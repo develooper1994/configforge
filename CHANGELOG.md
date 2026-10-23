@@ -171,6 +171,17 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   CFD010 is a warning by default now. A system file wholly overridden by
   a user's is often what somebody meant, and an error made that a
   failed build.
+- **A licence: zlib.** A binary built with the library, firmware
+  included, owes nobody a notice; every source distribution keeps one,
+  so the single-file amalgamation carries it at its top. Installed with
+  the headers. The options weighed are D-36.
+- **A bill of materials.** `docs/Dependencies.md` lists every
+  dependency with its licence and when it is needed - the default build
+  needs none - and each build generates an SPDX 2.3 SBOM from the
+  options it was configured with, installed beside the licence.
+  `gate.dependencies` fails when the build looks for something the page
+  does not name, and `gate.sbom` when the SBOM does not parse or
+  disagrees with the project's version and licence.
 - **CFD007 sees files.** A report records, for a sensitive value that
   came from a file, whether every user of the machine can read that
   file - the library records it because Doctor judges other machines'

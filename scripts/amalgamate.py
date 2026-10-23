@@ -124,6 +124,26 @@ def strip_source(text, incdir):
     return "\n".join(out).rstrip() + "\n"
 
 
+# Transliteration for the notice the amalgamation carries. ASCII,
+# because the generated files are compiled by whatever compiler
+# receives them, in whatever code page it runs: MSVC reading a Turkish
+# letter outside its code page warns, and at /WX that is a failed build
+# caused by a comment.
+ASCII = str.maketrans("çÇğĞıİöÖşŞüÜ", "cCgGiIoOsSuU")
+
+
+def notice(src):
+    """The licence as a comment. zlib asks that it stay with every source
+    distribution, and the amalgamation is the one most likely to be
+    copied into somebody else's tree on its own."""
+    with open(os.path.join(src, "LICENSE"), encoding="utf-8") as f:
+        text = f.read().translate(ASCII)
+    if any(ord(c) > 127 for c in text):
+        raise SystemExit("amalgamate: LICENSE has characters the notice cannot carry")
+    return "/*\n" + "".join(" * " + l + "\n" if l else " *\n"
+                              for l in text.rstrip().splitlines()) + " */\n\n"
+
+
 def banner(title):
     return ("\n/* " + "=" * 68 + "\n"
             " * " + title + "\n"
@@ -183,6 +203,7 @@ def main():
     os.makedirs(out, exist_ok=True)
 
     head = [
+        notice(src) +
         "/*\n"
         " * configforge/configforge.h - single-file distribution.\n"
         " *\n"
@@ -200,6 +221,7 @@ def main():
     head.append("\n#endif /* CONFIGFORGE_AMALGAMATED_H */\n")
 
     body = [
+        notice(src) +
         "/*\n"
         " * configforge.c - single-file distribution.\n"
         " *\n"
