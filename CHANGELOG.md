@@ -156,6 +156,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   refused; CFD013 a policy that ranks a less specific source above a
   more specific one, which is what explains an `explain()` where the
   command line loses to a variable.
+- **The C++03 wrapper covers change notification**: `Config::changed()`
+  and `Watcher`, which owns the handle and is not copyable - two owners
+  of one descriptor is a double close - plus the `dir()` and `dotenv()`
+  sources it had been missing.
 - **Three more Doctor rules** that a single report can prove from its
   definitions alone: `CFD005` a key with no definition, `CFD009` a
   deprecated key something is still supplying, `CFD011` a key set to an

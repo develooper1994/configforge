@@ -223,6 +223,10 @@ public:
     cf_u64 digest() const { return cf_digest(c_); }
     size_t count()  const { return cf_count(c_); }
 
+    /* Whether a file it was read from has moved on: a hint worth acting
+       on, not a guarantee. See cf_changed. */
+    bool changed() const { return cf_changed(c_) != CF_FALSE; }
+
     const cf_config* raw() const { return c_; }
 
 private:
@@ -322,6 +326,17 @@ public:
     { if (b_) { cf_builder_file(b_, name, rank, path, format, flags); }
       return *this; }
 
+    Builder& dotenv(const char* name, int rank, const char* path,
+                    const char* prefix, unsigned flags = 0)
+    { if (b_) { cf_builder_dotenv(b_, name, rank, path, prefix, flags); }
+      return *this; }
+
+    /* A drop-in directory, conf.d style. */
+    Builder& dir(const char* name, int rank, const char* path,
+                 const char* format = 0, unsigned flags = 0)
+    { if (b_) { cf_builder_dir(b_, name, rank, path, format, flags); }
+      return *this; }
+
     Builder& replay(const char* name, int rank, const char* path)
     { if (b_) { cf_builder_replay(b_, name, rank, path); } return *this; }
 
@@ -370,6 +385,40 @@ inline Config app(const char* name, int argc, char* const* argv)
 {
     return Builder(name, argc, argv).create();
 }
+
+/* ------------------------------------------------------------------ *
+ * Watcher
+ *
+ * The handle an event loop waits on (cf_watcher), owned and closed by
+ * the destructor. Not copyable: it holds a kernel object, and two
+ * owners of one descriptor is a double close. C++03 has no move, so it
+ * lives where it is made and is passed by reference.
+ *
+ * A wake-up means "ask now": drain, then ask Config::changed().
+ * ------------------------------------------------------------------ */
+
+class Watcher {
+public:
+    explicit Watcher(const Config& c, const cf_allocator* a = 0)
+        : err_(), w_(cf_watcher_open(c.raw(), a, err_.raw())) {}
+    ~Watcher() { cf_watcher_close(w_); }
+
+    bool valid() const { return w_ != 0; }
+    const Error& error() const { return err_; }
+
+    int   fd() const     { return cf_watcher_fd(w_); }
+    void* handle() const { return cf_watcher_handle(w_); }
+    bool  drain()        { return cf_watcher_drain(w_) != CF_FALSE; }
+
+    /* 1 woken and drained, 0 timed out, -1 failed. */
+    int wait(long timeoutMs) { return cf_watcher_wait(w_, timeoutMs); }
+
+private:
+    Watcher(const Watcher&);
+    Watcher& operator=(const Watcher&);
+    Error       err_; /* before w_: the constructor writes into it */
+    cf_watcher* w_;
+};
 
 } /* namespace configforge */
 
