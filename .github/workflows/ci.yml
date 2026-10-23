@@ -129,14 +129,17 @@ jobs:
       - run: cmake -DEXTRA=compilers -DMODE=quick -DJOBS=4 -P scripts/verify.cmake
 
   # musl as a distribution ships it, rather than musl-gcc over glibc's
-  # tools: the same environment the release's static Linux build uses.
+  # tools: the same environment the release's static Linux build uses,
+  # and its optimisation. CMake's Release is -O3, where Alpine's gcc
+  # inlines differently from Ubuntu's: Doctor's main once grew past the
+  # stack budget there and nowhere else.
   alpine:
     runs-on: ubuntu-latest
     container: alpine:3.20
     steps:
       - run: apk add --no-cache build-base cmake ninja git python3
       - uses: actions/checkout@v4
-      - run: cmake -S . -B build -G Ninja && cmake --build build
+      - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build
       - run: ctest --test-dir build --output-on-failure
 
   # YAML is off by default because it links libyaml; this is the build

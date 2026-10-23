@@ -413,6 +413,17 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed, and it mattered
 
+- **Doctor did not build at CMake's own Release settings on Alpine.**
+  At `-O3` Alpine's gcc inlined every lint rule into `main` - each is
+  called exactly once - without sharing their buffers, and `main` came to
+  4416 bytes against a budget of 2048; `-Werror` made that a failed
+  build. Ubuntu's gcc at the same level, and every preset (none of which
+  is `-O3`), stayed under, which is why only the release job found it.
+  The rules now run from a table through a pointer, which no compiler
+  inlines into one frame, and `main` is 1328 bytes there. The CI Alpine
+  job now builds Release, so it is checked before a tag rather than at
+  one.
+
 - **An image's provenance travelled and nothing read it.** With
   `CF_IMAGE_PROVENANCE` the writer stored every candidate - source,
   outcome, value, location - and the reader loaded the winners and said
