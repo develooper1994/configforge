@@ -537,6 +537,52 @@ cf_bool cf_image_get(const cf_image* img, const char* key, size_t klen, cf_value
     return CF_FALSE;
 }
 
+/* Where a value was set before it was baked: the location of the
+   winning candidate in the chain, when the image carries one. Without
+   this the chain travelled and nothing read it - every value said
+   "image" - and the reason to carry it, a device with no filesystem
+   still able to say why a value is what it is, was a claim. The string
+   is in the image, which outlives the configuration as its text values
+   do, and every number on the way to it is checked like every other. */
+static const char* image_origin(const cf_image* img, size_t i) {
+    cf_u32 chain_off   = get_u32(img->base + 32);
+    cf_u32 chain_count = get_u32(img->base + 36);
+    cf_u32 first, end;
+    size_t j, k;
+
+    if (chain_count == 0) {
+        return "image";
+    }
+    first = get_u32(img->index + i * IDX_SIZE + 12);
+    if (first == 0xFFFFFFFFu || first >= chain_count) {
+        return "image";
+    }
+    /* A key's candidates run to where the next key's begin. */
+    end = chain_count;
+    for (j = i + 1; j < img->count; ++j) {
+        cf_u32 f = get_u32(img->index + j * IDX_SIZE + 12);
+        if (f != 0xFFFFFFFFu) {
+            end = f;
+            break;
+        }
+    }
+    if (end > chain_count || end < first) {
+        return "image";
+    }
+    for (k = first; k < end; ++k) {
+        const char* rec = img->base + chain_off + k * CHAIN_SIZE;
+        if (get_u32(rec + 4) == (cf_u32)CF_OUT_SELECTED) {
+            cf_u32 at = get_u32(rec + 20);
+            if (at != 0 && (size_t)at < img->size &&
+                memchr(img->base + at, '\0', img->size - (size_t)at) != NULL) {
+                return img->base + at;
+            }
+            return "image";
+        }
+    }
+    return "image";
+}
+
 cf_bool cf_image_load(const cf_image* img, cf_keyspace* ks, int rank, cf_error* err) {
     size_t i;
 
@@ -551,7 +597,7 @@ cf_bool cf_image_load(const cf_image* img, cf_keyspace* ks, int rank, cf_error* 
         if (!cf_image_at(img, i, &key, &klen, &v)) {
             return bad(err, "image entry is malformed");
         }
-        if (!cf_ks_add(ks, key, klen, rank, &v, "image")) {
+        if (!cf_ks_add(ks, key, klen, rank, &v, image_origin(img, i))) {
             return cf_error_set(err, CF_E_MEMORY, key, "image", "no room for '%S'", key,
                                 klen);
         }

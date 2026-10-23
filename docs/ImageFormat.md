@@ -112,4 +112,7 @@ addition, because two 32-bit values and a one can wrap where `size_t` is
 resolved-only image is what a boot path wants. An image carrying the
 chain is what lets a device with no filesystem still answer why a value
 is what it is, which is the whole premise of this library arriving
-somewhere it otherwise could not.
+somewhere it otherwise could not. Loaded as a source, each value takes
+its location from the winning candidate in its chain - `release.ini:2:1`
+rather than `image` - and a key's candidates run from its `chain_off`
+to the next key's.
