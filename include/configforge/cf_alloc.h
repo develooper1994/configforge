@@ -45,7 +45,19 @@ typedef struct cf_arena cf_arena;
    times and reporting it as three results. */
 CF_API cf_arena* cf_arena_new(const cf_allocator* a, size_t block_size);
 CF_API cf_arena* cf_arena_fixed(void* buffer, size_t size);
-CF_API void      cf_arena_free(cf_arena* ar);
+
+/* Release the arena, zeroing every byte it handed out first. A
+   configuration's arena holds its values - passwords and tokens among
+   them - and the text of every file it read, and memory handed back to
+   an allocator is memory the next allocation, a core dump or a swap
+   file can show to someone else. A fixed arena is zeroed and not
+   released: the buffer is the caller's. */
+CF_API void cf_arena_free(cf_arena* ar);
+
+/* Zero every byte the arena has handed out, without releasing it. For a
+   caller who owns the arena - cf_build_in - and is done with what lived
+   in it: nothing allocated from it may be used afterwards. */
+CF_API void cf_arena_wipe(cf_arena* ar);
 
 /* The allocator this arena takes blocks from, or NULL for a fixed one.
    Needed so that deriving a configuration keeps using the allocator the
