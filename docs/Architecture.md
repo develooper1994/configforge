@@ -107,7 +107,7 @@ is what the directories are for.
 | ---- | ------- | -------- | -------- |
 | Direct | memory pairs, definition defaults, replayed report | no bytes | `sources` |
 | Flat | environment, command line, `.env` | lexing and naming | `sources` |
-| Hierarchical | JSON, INI, later TOML and XML | parsing, then flattening | `serialize` + `bridge` |
+| Hierarchical | JSON, INI, TOML, later XML | parsing, then flattening | `serialize` + `bridge` |
 | Image | the binary snapshot | validate and point | `bridge` |
 
 A flat lexer takes no arena, no key space and no source object.

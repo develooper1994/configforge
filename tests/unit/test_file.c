@@ -147,9 +147,9 @@ static void test_uncompiled_format(void) {
     cf_builder* b   = cf_build(NULL);
     cf_config*  cfg;
 
-    check(spill("cf_t3.toml", "port = 1\n"), "wrote a toml fixture");
+    check(spill("cf_t3.xml", "<port>1</port>\n"), "wrote an xml fixture");
 
-    cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_t3.toml", NULL, 0);
+    cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_t3.xml", NULL, 0);
     cfg = cf_builder_create(b, &err);
 
     /* A build option must never make a file invisible. The error has
@@ -157,9 +157,9 @@ static void test_uncompiled_format(void) {
        for a typo that is not there. */
     check(cfg == NULL, "a format this build lacks is an error, not a skip");
     check(err.code == CF_E_CAPABILITY, "reported as a capability error");
-    has(err.message, "toml", "names the format");
-    has(err.message, "CF_WITH_TOML", "names the option to turn on");
-    remove("cf_t3.toml");
+    has(err.message, "xml", "names the format");
+    has(err.message, "CF_WITH_XML", "names the option to turn on");
+    remove("cf_t3.xml");
 }
 
 static void test_unknown_extension(void) {
@@ -397,15 +397,15 @@ static void test_drop_in_directory(void) {
     /* A file the build cannot read is named rather than skipped: a
        directory that silently ignores half its contents is the worst
        possible place for a build option to hide. */
-    check(spill("cf_confd/50-extra.toml", "port = 1\n"), "wrote a toml file");
+    check(spill("cf_confd/50-extra.xml", "<port>1</port>\n"), "wrote an xml file");
     b = cf_build(NULL);
     cf_builder_dir(b, "conf.d", CF_RANK_SYS_FILE, "cf_confd", NULL, 0);
     check(cf_builder_create(b, &err) == NULL, "an unreadable format fails");
-    has(err.message, "CF_WITH_TOML", "naming the option to turn on");
+    has(err.message, "CF_WITH_XML", "naming the option to turn on");
 
     remove("cf_confd/10-base.ini");
     remove("cf_confd/90-site.ini");
-    remove("cf_confd/50-extra.toml");
+    remove("cf_confd/50-extra.xml");
     remove("cf_confd/.10-editor.ini.swp");
 #ifdef _WIN32
     (void)system("rmdir cf_confd >nul 2>&1");

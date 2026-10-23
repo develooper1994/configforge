@@ -753,8 +753,10 @@ for.
 
 **Closed in implementation.** INI and JSON are written here - roughly 370 and 600 lines -
 because the available C parsers all build a DOM and allocate, and this design needs an
-event producer with exact locations and no allocation. TOML, XML and SQLite stay deferred
-behind their options (D-23, D-26); the codec seam accepts them without changes.
+event producer with exact locations and no allocation. TOML followed the same way, as the
+subset D-23 described, in about 900 lines including its writer; it is on by default, being
+as dependency-free as the other two. XML and SQLite stay deferred behind their options
+(D-23, D-26); the codec seam accepts them without changes.
 
 ---
 
@@ -900,7 +902,7 @@ libraries build a DOM while the design needs a streaming event producer.
 | ------ | -------- | --------- |
 | INI subset | **own**, ~300 lines | trivial grammar; needed in the freestanding profile where no dependency can go; ships inside the amalgamation |
 | JSON | **own**, ~700 lines | tiny grammar. Every popular C JSON library (cJSON, parson, jansson, yyjson) builds a DOM and allocates; the design needs a streaming producer with location tracking and no allocation. `jsmn` is streaming but is a tokenizer that does not unescape. None of them fits, and JSON is genuinely easy. |
-| TOML | **deferred**, decide in Phase 5 | full TOML 1.0 is 2,500+ lines with dates, multiline and literal strings, inline tables and arrays of tables. `tomlc99` and its relatives are C99 and DOM-based, so vendoring means a C89 fork plus a DOM-to-events shim. A documented *subset* — no datetimes, no multiline — is about 800 lines and covers most hand-written configuration. Both routes stay open because the codec seam does not care. |
+| TOML | **own, the subset** (built; was deferred) | full TOML 1.0 is 2,500+ lines with dates, multiline and literal strings, inline tables and arrays of tables. `tomlc99` and its relatives are C99 and DOM-based, so vendoring means a C89 fork plus a DOM-to-events shim. A documented *subset* — no datetimes, no multiline — is about 800 lines and covers most hand-written configuration. Both routes stay open because the codec seam does not care. |
 | XML | **expat** | the one clear case for an external library. expat is SAX, which is exactly the document event model, so the adapter is thin. It is C89-portable, MIT, and two decades mature. Writing an XML parser would be a mistake: entities, CDATA, namespaces and encoding declarations are where hand-written parsers go wrong. |
 | SQLite | **sqlite3** | the dependency is the feature. Public domain, C89, distributed as a single amalgamated file, and the most portable C library in existence. It is also what makes transactional writes possible at all. |
 
@@ -1231,7 +1233,8 @@ because an untested source is a claim rather than a feature.
 | `.env` file | built | a flat lexer over a file; the seam already existed |
 | directory of drop-in files | built | one rank, byte order, later wins |
 | binary image | built | D-28 |
-| TOML, XML, SQLite | deferred | D-23; a vendored parser or a linked dependency |
+| TOML | built | the D-23 subset, own parser, on by default |
+| XML, SQLite | deferred | D-23; a linked dependency each |
 | Windows Registry | deferred | needs Windows to test |
 | gsettings, macOS defaults | deferred | needs the platform to test |
 | remote key-value stores | deferred | a non-goal until something asks |

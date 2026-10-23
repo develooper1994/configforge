@@ -1850,9 +1850,18 @@ warning when it does not.
 
 ### TOML
 
-Native types map directly. Arrays of tables become index keys. TOML's datetime types have
-no ConfigForge equivalent and are mapped to `CF_TEXT` in RFC 3339 form; this is stated
-rather than done silently, and a definition may still validate the text.
+Built in, as the subset D-23 describes (`src/serialize/toml.c`). Native types map
+directly; arrays and arrays of tables become index keys; every value carries its line and
+column. TOML's dates and times have no ConfigForge equivalent and are **refused** rather
+than mapped: the error says to quote the value as a string, which keeps the choice of
+meaning with the person who wrote it. Multi-line strings and `inf`/`nan` are refused the
+same way. A key set twice follows this library's rule rather than TOML's - the later
+wins, and Doctor's CFD001 reports the earlier - which answers "why did my edit do
+nothing" better than refusing to start.
+
+Written TOML puts a `[header]` on each top-level table and dotted keys below it, with
+arrays inline, so that no header is ever repeated - TOML forbids that, and the emitter's
+order cannot always avoid it otherwise.
 
 ### XML
 
@@ -2004,7 +2013,7 @@ Every format beyond the built-in set is a compile-time option.
 ```text
 CF_WITH_INI        ON     built in, no dependency, inside the amalgamation
 CF_WITH_JSON       ON     built in; required by the report and Report Replay
-CF_WITH_TOML       OFF    vendored C parser
+CF_WITH_TOML       ON     built in, the documented subset (D-23); no dependency
 CF_WITH_XML        OFF    vendored C parser
 CF_WITH_SQLITE     OFF    links libsqlite3
 CF_WITH_REGISTRY   OFF    Windows
@@ -2015,12 +2024,12 @@ CF_WITH_CXX        ON     header only; costs nothing when unused
 
 This is the rule that matters, and it follows directly from the project's premise.
 
-If `CF_WITH_TOML` is off and an application adds `app.toml` as a source, the result is an
+If `CF_WITH_XML` is off and an application adds `app.xml` as a source, the result is an
 error when the configuration is built:
 
 ```text
-error: source 'app.toml' requires TOML support
-       this build was compiled without CF_WITH_TOML
+error: source 'app.xml' requires XML support
+       this build was compiled without CF_WITH_XML
 ```
 
 Not a silent skip, not a fall back to defaults, not a warning buried in a log. A

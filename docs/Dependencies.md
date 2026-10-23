@@ -32,9 +32,10 @@ saying so here is a broken build, not a stale document.
 | Windows: kernel32, shell32 | the platform's | Windows builds | `CommandLineToArgvW` is shell32's; every Windows toolchain links both by default |
 
 That is the whole list. The library has no third-party dependency in any
-build a program would ship. Formats the design names and the build does
-not yet have - TOML, XML, SQLite (D-23) - would each add a row here when
-they arrive, and none is a dependency today.
+build a program would ship. TOML is built in like INI and JSON, with its
+own parser and no dependency. The formats the design names and the build
+does not yet have - XML and SQLite (D-23) - would each add a row here
+when they arrive.
 
 The single-file amalgamation needs the same and nothing else: no build
 system, no generated header, no options.

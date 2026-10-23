@@ -16,6 +16,9 @@ extern const cf_codec cf_codec_ini;
 #if CF_WITH_JSON
 extern const cf_codec cf_codec_json;
 #endif
+#if CF_WITH_TOML
+extern const cf_codec cf_codec_toml;
+#endif
 
 static const cf_codec* const cf_codecs[] = {
 #if CF_WITH_INI
@@ -23,6 +26,9 @@ static const cf_codec* const cf_codecs[] = {
 #endif
 #if CF_WITH_JSON
     &cf_codec_json,
+#endif
+#if CF_WITH_TOML
+    &cf_codec_toml,
 #endif
     NULL};
 
