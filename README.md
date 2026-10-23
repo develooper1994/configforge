@@ -192,13 +192,41 @@ build does. `scripts/README.md` lists the options.
 | `sanitize` | AddressSanitizer and UndefinedBehaviorSanitizer |
 | `analyze` | GCC `-fanalyzer` symbolic execution, plus cppcheck when present |
 | `portable` | every opportunistic upgrade disabled, output compared against `default`; built `-O2` |
-| `minimal` | `CF_WITH_REAL=OFF`, short limits (64-byte keys) and a 1024-byte stack budget, for very small targets; built `-Os` |
+| `minimal` | every optional part off, short limits (64-byte keys) and a 1024-byte stack budget, for very small targets; built `-Os` |
 
 The last two are optimised on purpose: inlining merges frames, so a stack
 frame that fits in a Debug build can break the budget in a release one.
 
 Options: `CF_WITH_INI` `CF_WITH_JSON` `CF_WITH_TOML` `CF_WITH_XML` `CF_WITH_SQLITE`
-`CF_WITH_REAL` `CF_WITH_CXX` `CF_FORCE_PORTABLE` `CF_SINGLE_THREADED`.
+`CF_WITH_REAL` `CF_WITH_DIR` `CF_WITH_DOTENV` `CF_WITH_EMIT` `CF_WITH_IMAGE`
+`CF_WITH_REPORT` `CF_WITH_CXX` `CF_FORCE_PORTABLE` `CF_SINGLE_THREADED`, and the limits
+below.
+
+### Leaving parts out
+
+What a program does not use, it need not carry. Each part below is on
+by default; turned off, its functions remain - a program links against
+any build - and each one refuses by name instead of doing nothing, so a
+drop-in directory a build cannot read never looks like an empty one
+(D-38).
+
+| Option | What goes | Code it saves (x86-64, `-Os`) |
+| ------ | --------- | ----------------------------- |
+| `CF_WITH_TOML` | the TOML codec | 8.3 KB |
+| `CF_WITH_EMIT` | `cf_emit` and every encoder | 6.7 KB |
+| `CF_WITH_REAL` | floating point and its exact formatter | 5.9 KB |
+| `CF_WITH_REPORT` | the provenance report, Report Replay - and Doctor | 5.5 KB |
+| `CF_WITH_IMAGE` | the binary snapshot image | 4.1 KB |
+| `CF_WITH_INI` | the INI codec | 2.9 KB |
+| `CF_WITH_DOTENV` | the `.env` source | 1.3 KB |
+| `CF_WITH_DIR` | the drop-in directory source | 1.1 KB |
+
+All of them together take the library from 92 KB to 58 KB. A static
+link with `--gc-sections` already drops functions a program never
+calls; the options are for what it cannot drop - a shared library, the
+amalgamation, and code reached through a table, as every codec is.
+`cf_has_feature()` and every provenance report say which parts a build
+has.
 
 ### Limits and the stack budget
 

@@ -1,14 +1,23 @@
 # Feature selection.
 #
-# Every format beyond the built-in set is a compile-time option, and a
-# format that is compiled out must fail loudly when a source needs it,
-# never silently. See the Build-Time Feature Selection section.
+# Every format beyond the built-in set is a compile-time option, and so
+# is every part of the library a program can do without. Something
+# compiled out must fail loudly when it is used, never silently: its
+# functions stay, so a program still links, and each one says which
+# option it needs. See Design.md, Build-Time Feature Selection.
 
 option(CF_WITH_INI "INI subset codec (built in, no dependency)" ON)
-option(CF_WITH_JSON "JSON codec (built in; required by reports)" ON)
+option(CF_WITH_JSON "JSON codec (built in; Report Replay and Doctor read it)"
+       ON)
 option(CF_WITH_TOML "TOML subset codec (built in, no dependency)" ON)
 option(CF_WITH_XML "XML codec (requires expat)" OFF)
 option(CF_WITH_SQLITE "SQLite store source (requires sqlite3)" OFF)
+option(CF_WITH_DIR "Drop-in directory source (conf.d)" ON)
+option(CF_WITH_DOTENV ".env file source" ON)
+option(CF_WITH_EMIT "Writing a configuration out (cf_emit, the encoders)" ON)
+option(CF_WITH_IMAGE "Binary snapshot image, writer and reader" ON)
+option(CF_WITH_REPORT "Provenance report and Report Replay (Doctor needs it)"
+       ON)
 set(CF_PLATFORM
     "auto"
     CACHE STRING "posix, win32, none, or auto")
@@ -84,32 +93,36 @@ endif()
 option(CF_SINGLE_THREADED "Compile out all synchronisation" OFF)
 option(CF_FORCE_PORTABLE "Disable every opportunistic upgrade" OFF)
 
+# Every CF_WITH_* option, once. Everything that turns the options into
+# something - definitions, the generated header, the SBOM - reads this
+# list, so a new option is added here and nowhere else.
+set(CF_FEATURES
+    INI
+    JSON
+    TOML
+    XML
+    SQLITE
+    REAL
+    DIR
+    DOTENV
+    EMIT
+    IMAGE
+    REPORT)
+
 option(CF_BUILD_TESTING "Build the test suite" ON)
 option(CF_BUILD_EXAMPLES "Build the examples" ON)
 option(CF_ENABLE_GATES "Run conformance and symbol gates in CI" ON)
 
-# Turn the CF_WITH_* options into compile definitions on a target.
-#
-# ~~~
-# configforge_apply_options(<target>)
-# ~~~
-# The same definitions as a list of -D flags, for the places that
-# compile by hand rather than through a target: the differential
-# amalgamation check has to build both halves with the same options, or
-# it is comparing two different libraries rather than two builds of one.
+# The definitions as a list of -D flags, for the places that compile by
+# hand rather than through a target: the differential amalgamation check
+# has to build both halves with the same options, or it is comparing two
+# different libraries rather than two builds of one.
 set(_CF_OPTION_DEFS "")
-foreach(
-  opt
-  CF_WITH_INI
-  CF_WITH_JSON
-  CF_WITH_TOML
-  CF_WITH_XML
-  CF_WITH_SQLITE
-  CF_WITH_REAL)
-  if(${opt})
-    list(APPEND _CF_OPTION_DEFS "-D${opt}=1")
+foreach(f ${CF_FEATURES})
+  if(CF_WITH_${f})
+    list(APPEND _CF_OPTION_DEFS "-DCF_WITH_${f}=1")
   else()
-    list(APPEND _CF_OPTION_DEFS "-D${opt}=0")
+    list(APPEND _CF_OPTION_DEFS "-DCF_WITH_${f}=0")
   endif()
 endforeach()
 foreach(lim CF_KEY_MAX CF_MESSAGE_MAX CF_PATH_MAX CF_MAX_DEPTH)
@@ -123,11 +136,6 @@ if(CF_SINGLE_THREADED)
 endif()
 string(REPLACE ";" "|" _CF_OPTION_DEFS "${_CF_OPTION_DEFS}")
 
-# Turn the CF_WITH_* options into compile definitions on a target.
-#
-# ~~~
-# configforge_apply_options(<target>)
-# ~~~
 # Generate the header that records which features this build has, and
 # put it ahead of the source tree's copy. The source copy holds defaults
 # behind #ifndef guards for someone compiling the sources themselves;
@@ -138,18 +146,11 @@ string(REPLACE ";" "|" _CF_OPTION_DEFS "${_CF_OPTION_DEFS}")
 # configforge_generate_options(<target>)
 # ~~~
 function(configforge_generate_options tgt)
-  foreach(
-    name
-    REAL
-    INI
-    JSON
-    TOML
-    XML
-    SQLITE)
-    if(CF_WITH_${name})
-      set(CF_OPT_${name} 1)
+  foreach(f ${CF_FEATURES})
+    if(CF_WITH_${f})
+      set(CF_OPT_${f} 1)
     else()
-      set(CF_OPT_${name} 0)
+      set(CF_OPT_${f} 0)
     endif()
   endforeach()
 
@@ -179,18 +180,11 @@ endfunction()
 # configforge_apply_options(<target>)
 # ~~~
 function(configforge_apply_options tgt)
-  foreach(
-    opt
-    CF_WITH_INI
-    CF_WITH_JSON
-    CF_WITH_TOML
-    CF_WITH_XML
-    CF_WITH_SQLITE
-    CF_WITH_REAL)
-    if(${opt})
-      target_compile_definitions(${tgt} PUBLIC ${opt}=1)
+  foreach(f ${CF_FEATURES})
+    if(CF_WITH_${f})
+      target_compile_definitions(${tgt} PUBLIC CF_WITH_${f}=1)
     else()
-      target_compile_definitions(${tgt} PUBLIC ${opt}=0)
+      target_compile_definitions(${tgt} PUBLIC CF_WITH_${f}=0)
     endif()
   endforeach()
   foreach(lim CF_KEY_MAX CF_MESSAGE_MAX CF_PATH_MAX CF_MAX_DEPTH)

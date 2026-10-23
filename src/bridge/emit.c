@@ -17,6 +17,8 @@
 
 #include <string.h>
 
+#if CF_WITH_EMIT
+
 typedef struct emit_filter {
     cf_emit_what     what;
     int              rank;
@@ -146,3 +148,21 @@ size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int ra
     cf_sink_terminate(&out);
     return out.len;
 }
+
+#else /* !CF_WITH_EMIT */
+
+size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int rank,
+               char* buf, size_t cap, cf_error* err) {
+    (void)c;
+    (void)what;
+    (void)rank;
+    if (buf != NULL && cap > 0) {
+        buf[0] = '\0';
+    }
+    cf_error_set(err, CF_E_CAPABILITY, NULL, format,
+                 "writing a configuration out needs CF_WITH_EMIT, and this build "
+                 "was compiled without it");
+    return 0;
+}
+
+#endif /* CF_WITH_EMIT */

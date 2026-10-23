@@ -42,6 +42,17 @@ static cf_config* build(cf_error* err) {
     return cf_builder_create(b, err);
 }
 
+/* Everything a configuration holds, as bytes: the image with its
+   provenance where the build has one, the inspection text where it
+   does not. Either changes if a read changed anything. */
+static size_t snapshot(const cf_config* c, char* buf, size_t cap) {
+#if CF_WITH_IMAGE
+    return cf_image_write(cf_keys(c), NULL, CF_IMAGE_PROVENANCE, buf, cap);
+#else
+    return cf_inspect(c, buf, cap);
+#endif
+}
+
 /* Every read path, run twice, with a byte-for-byte comparison of the
    whole snapshot in between. A read that mutated anything reachable
    would show up here whether or not a second thread exists. */
@@ -61,7 +72,7 @@ static void test_reads_do_not_mutate(void) {
         return;
     }
 
-    n1 = cf_image_write(cf_keys(c), NULL, CF_IMAGE_PROVENANCE, before, sizeof before);
+    n1 = snapshot(c, before, sizeof before);
     d1 = cf_digest(c);
 
     /* Everything a reader can do. */
@@ -73,7 +84,9 @@ static void test_reads_do_not_mutate(void) {
     (void)cf_count(c);
     (void)cf_explain(c, "server.port", scratch, sizeof scratch);
     (void)cf_inspect(c, scratch, sizeof scratch);
+#if CF_WITH_EMIT
     (void)cf_emit(c, "json", CF_EMIT_ALL, 0, scratch, sizeof scratch, &err);
+#endif
     (void)cf_array_count(c, "server.tags");
     cf_iter_keys(&it, c, NULL);
     while (cf_iter_next(&it)) {
@@ -83,7 +96,7 @@ static void test_reads_do_not_mutate(void) {
     while (cf_iter_next(&it)) {
     }
 
-    n2 = cf_image_write(cf_keys(c), NULL, CF_IMAGE_PROVENANCE, after, sizeof after);
+    n2 = snapshot(c, after, sizeof after);
     d2 = cf_digest(c);
 
     check(n1 == n2 && n1 > 0, "the snapshot is the same size after reading");

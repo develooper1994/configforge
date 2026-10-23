@@ -18,6 +18,17 @@ function(configforge_add_gates tgt)
     return()
   endif()
 
+  # Every option and limit, for the gates that compile the library a
+  # second way and have to compile the same one: see GateAmalgamation.
+  string(REPLACE ";" "|" features "${CF_FEATURES}")
+  set(options "-DFEATURES=${features}")
+  foreach(f ${CF_FEATURES})
+    list(APPEND options "-DO_${f}=$<BOOL:${CF_WITH_${f}}>")
+  endforeach()
+  foreach(lim CF_KEY_MAX CF_MESSAGE_MAX CF_PATH_MAX CF_MAX_DEPTH)
+    list(APPEND options "-DL_${lim}=${${lim}}")
+  endforeach()
+
   # 1. The header version and the project version agree.
   add_test(
     NAME gate.version
@@ -75,10 +86,7 @@ function(configforge_add_gates tgt)
     COMMAND
       ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR}
       -DCC=${CMAKE_C_COMPILER} -DLIB=$<TARGET_FILE:${tgt}>
-      -DSANITIZE=${CF_SANITIZE} -DO_INI=$<BOOL:${CF_WITH_INI}>
-      -DO_JSON=$<BOOL:${CF_WITH_JSON}> -DO_REAL=$<BOOL:${CF_WITH_REAL}>
-      -DO_TOML=$<BOOL:${CF_WITH_TOML}> -DO_XML=$<BOOL:${CF_WITH_XML}>
-      -DO_SQLITE=$<BOOL:${CF_WITH_SQLITE}> -P
+      -DSANITIZE=${CF_SANITIZE} ${options} -P
       ${CMAKE_SOURCE_DIR}/cmake/gates/GateAmalgamation.cmake)
 
   # 5. No locale-sensitive C library function may be referenced, and

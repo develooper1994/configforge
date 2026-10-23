@@ -767,6 +767,8 @@ static cf_bool toml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     return CF_TRUE;
 }
 
+#if CF_WITH_EMIT
+
 /* ================================================================== *
  * Encoding
  *
@@ -999,5 +1001,13 @@ const cf_codec cf_codec_toml = {"toml",
                                 toml_decode,
                                 toml_encoder,
                                 sizeof(toml_enc)};
+
+#else /* !CF_WITH_EMIT: read only */
+
+const cf_codec cf_codec_toml = {
+    "toml",      ".toml", CF_CODEC_READ | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
+    toml_decode, NULL,    0};
+
+#endif /* CF_WITH_EMIT */
 
 #endif /* CF_WITH_TOML */

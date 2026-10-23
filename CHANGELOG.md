@@ -7,6 +7,17 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **Parts of the library can be left out** (D-38): `CF_WITH_DIR`,
+  `CF_WITH_DOTENV`, `CF_WITH_EMIT` (which takes every encoder with it),
+  `CF_WITH_IMAGE` and `CF_WITH_REPORT`, all on by default. Off, the
+  functions stay - a program links against any build - and each refuses
+  by name, the rule a disabled format already followed. Everything
+  optional off takes the library from 92 KB to 58 KB at `-Os`.
+  `test_features.c` checks every part both ways, and the `minimal`
+  preset turns them all off. Every `CF_WITH_*` is now listed once, in
+  `CF_FEATURES`; the amalgamation gate had been given only the formats
+  and none of the limits, so under `minimal` it compared two different
+  libraries as if they were one.
 - **Limits and the stack budget are the builder's** (D-37):
   `CF_KEY_MAX`, `CF_MESSAGE_MAX`, `CF_PATH_MAX`, `CF_MAX_DEPTH` and
   `CF_STACK_BUDGET` are build options, the limits written into the

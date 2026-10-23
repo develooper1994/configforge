@@ -17,6 +17,8 @@
 
 #include <string.h>
 
+#if CF_WITH_REPORT
+
 /* ------------------------------------------------------------------ *
  * Writing
  *
@@ -365,6 +367,25 @@ size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
     return out.len;
 }
 
+#else /* !CF_WITH_REPORT */
+
+/* Compiled without the report: nothing written, and a length of zero,
+   which no report has - its opening brace alone is one byte. */
+size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
+                       const cf_source_view* sv, const cf_report_info* info, char* buf,
+                       size_t cap) {
+    (void)ks;
+    (void)ds;
+    (void)sv;
+    (void)info;
+    if (buf != NULL && cap > 0) {
+        buf[0] = '\0';
+    }
+    return 0;
+}
+
+#endif /* CF_WITH_REPORT */
+
 /* ================================================================== *
  * Report Replay
  * ================================================================== */
@@ -380,6 +401,8 @@ typedef struct replay_state {
    comes back is a flat map of the report's structure, which is then
    read for the selected value of every key. Parsing the report by hand
    would mean a second JSON reader that has to agree with the first. */
+#if CF_WITH_REPORT
+
 static cf_bool replay_load(const cf_source* s, cf_keyspace* ks) {
     replay_state*   st   = (replay_state*)s->ext;
     cf_arena*       ar   = cf_ks_arena(ks);
@@ -498,6 +521,21 @@ static cf_bool replay_load(const cf_source* s, cf_keyspace* ks) {
     }
     return CF_TRUE;
 }
+
+#else /* !CF_WITH_REPORT */
+
+static cf_bool replay_load(const cf_source* s, cf_keyspace* ks) {
+    replay_state* st = (replay_state*)s->ext;
+
+    (void)ks;
+    st->failed = CF_TRUE;
+    return cf_error_set(&st->err, CF_E_CAPABILITY, NULL, st->path,
+                        "replaying '%s' needs CF_WITH_REPORT, and this build was "
+                        "compiled without it",
+                        st->path);
+}
+
+#endif /* CF_WITH_REPORT */
 
 static void replay_destroy(cf_source* s) {
     (void)s;

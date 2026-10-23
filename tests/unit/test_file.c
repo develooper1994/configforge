@@ -289,6 +289,7 @@ static void test_cli_tier1_end_to_end(void) {
     }
 }
 
+#if CF_WITH_DOTENV
 static void test_dotenv_file(void) {
     cf_error    err = CF_ERROR_INIT;
     cf_builder* b;
@@ -329,7 +330,9 @@ static void test_dotenv_file(void) {
     remove("cf_t7.env");
     remove("cf_t8.env");
 }
+#endif
 
+#if CF_WITH_DIR
 /* conf.d: every file at one rank, byte order, later wins. The ordering
    falls out of a decision made elsewhere - within one source the later
    candidate wins - so nothing here needed a merge rule. */
@@ -420,13 +423,18 @@ static void test_drop_in_directory(void) {
     }
 #endif
 }
+#endif
 
 int main(void) {
     (void)argv0;
     test_ini_file();
     test_cli_tier1_end_to_end();
+#if CF_WITH_DOTENV
     test_dotenv_file();
+#endif
+#if CF_WITH_DIR
     test_drop_in_directory();
+#endif
     test_json_file_and_precedence();
     test_missing_file();
     test_uncompiled_format();

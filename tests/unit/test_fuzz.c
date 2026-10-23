@@ -420,6 +420,7 @@ static void fuzz_files(const char* corpus) {
     remove("cf_fuzz_args.txt");
 }
 
+#if CF_WITH_IMAGE
 static void fuzz_image(void) {
     static blob  v;
     static char  written[MAX_INPUT];
@@ -459,6 +460,7 @@ static void fuzz_image(void) {
         feed_image(&v);
     }
 }
+#endif
 
 int main(int argc, char** argv) {
     cf_u64 s = 20260913;
@@ -477,7 +479,9 @@ int main(int argc, char** argv) {
     fuzz_text("ini", g_ini, 1);
     fuzz_text("toml", g_toml, 0);
     fuzz_text(NULL, g_env, -1);
+#if CF_WITH_IMAGE
     fuzz_image();
+#endif
     fuzz_from_nothing();
     fuzz_files(g_report);
 

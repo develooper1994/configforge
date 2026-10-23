@@ -39,11 +39,16 @@
     },
     {
       "name": "minimal",
-      "displayName": "No floating point, short limits, size-optimised (-Os), for very small targets",
+      "displayName": "Every optional part off, short limits, a 1 KB stack budget, -Os",
       "binaryDir": "${sourceDir}/build-minimal",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "MinSizeRel",
         "CF_WITH_REAL": "OFF",
+        "CF_WITH_DIR": "OFF",
+        "CF_WITH_DOTENV": "OFF",
+        "CF_WITH_EMIT": "OFF",
+        "CF_WITH_IMAGE": "OFF",
+        "CF_WITH_REPORT": "OFF",
         "CF_KEY_MAX": "64",
         "CF_MESSAGE_MAX": "128",
         "CF_PATH_MAX": "256",

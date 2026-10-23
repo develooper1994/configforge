@@ -466,6 +466,8 @@ cf_bool cf_cli_expand(int argc, char* const* argv, cf_arena* arena, int* out_arg
  * escape and the natural spelling behave identically in both.
  * ------------------------------------------------------------------ */
 
+#if CF_WITH_DOTENV
+
 static size_t dotenv_trim(const char* p, size_t n, const char** out) {
     size_t a = 0;
     while (a < n && (p[a] == ' ' || p[a] == '\t' || p[a] == '\r')) {
@@ -550,3 +552,17 @@ cf_bool cf_lex_dotenv(const char* text, size_t n, const char* origin,
     }
     return CF_TRUE;
 }
+
+#else /* !CF_WITH_DOTENV */
+
+cf_bool cf_lex_dotenv(const char* text, size_t n, const char* origin,
+                      const cf_keymap* map, const cf_entry_sink* out, cf_error* err) {
+    (void)text;
+    (void)n;
+    (void)map;
+    (void)out;
+    return cf_error_set(err, CF_E_CAPABILITY, NULL, origin,
+                        "this build was compiled without CF_WITH_DOTENV");
+}
+
+#endif /* CF_WITH_DOTENV */

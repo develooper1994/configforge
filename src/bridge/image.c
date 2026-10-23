@@ -10,6 +10,8 @@
 
 #include <string.h>
 
+#if CF_WITH_IMAGE
+
 #define HDR_SIZE 64
 #define IDX_SIZE 16
 #define VAL_SIZE 16
@@ -556,6 +558,64 @@ cf_bool cf_image_load(const cf_image* img, cf_keyspace* ks, int rank, cf_error* 
     }
     return CF_TRUE;
 }
+
+#else /* !CF_WITH_IMAGE */
+
+/* Compiled without the image. Every function is still here, so a program
+   that uses one links, and each says why it did nothing. */
+size_t cf_image_write(const cf_keyspace* ks, const cf_source_view* sv, unsigned flags,
+                      char* buf, size_t cap) {
+    (void)ks;
+    (void)sv;
+    (void)flags;
+    if (buf != NULL && cap > 0) {
+        buf[0] = '\0';
+    }
+    return 0;
+}
+
+cf_bool cf_image_open(cf_image* img, const char* buf, size_t n, cf_error* err) {
+    (void)buf;
+    (void)n;
+    if (img != NULL) {
+        memset(img, 0, sizeof *img);
+    }
+    return cf_error_set(err, CF_E_CAPABILITY, NULL, "image",
+                        "this build was compiled without CF_WITH_IMAGE");
+}
+
+size_t cf_image_count(const cf_image* img) {
+    (void)img;
+    return 0;
+}
+
+cf_bool cf_image_at(const cf_image* img, size_t i, const char** key, size_t* klen,
+                    cf_value* v) {
+    (void)img;
+    (void)i;
+    (void)key;
+    (void)klen;
+    (void)v;
+    return CF_FALSE;
+}
+
+cf_bool cf_image_get(const cf_image* img, const char* key, size_t klen, cf_value* v) {
+    (void)img;
+    (void)key;
+    (void)klen;
+    (void)v;
+    return CF_FALSE;
+}
+
+cf_bool cf_image_load(const cf_image* img, cf_keyspace* ks, int rank, cf_error* err) {
+    (void)img;
+    (void)ks;
+    (void)rank;
+    return cf_error_set(err, CF_E_CAPABILITY, NULL, "image",
+                        "this build was compiled without CF_WITH_IMAGE");
+}
+
+#endif /* CF_WITH_IMAGE */
 
 /* ================================================================== *
  * As a source

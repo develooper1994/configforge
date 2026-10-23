@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#if CF_WITH_REPORT
+
 static int  g_fail = 0, g_run = 0;
 static void check(int c, const char* w) {
     ++g_run;
@@ -354,3 +356,12 @@ int main(void) {
     printf("%d checks, %d failures\n", g_run, g_fail);
     return g_fail == 0 ? 0 : 1;
 }
+
+#else /* !CF_WITH_REPORT */
+
+int main(void) {
+    printf("skipped: this build has no provenance report (CF_WITH_REPORT=OFF)\n");
+    return 0;
+}
+
+#endif /* CF_WITH_REPORT */

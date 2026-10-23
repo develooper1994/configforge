@@ -287,6 +287,7 @@ static void test_json_errors(cf_arena* ar) {
 
 /* ---------------------------------------------------------------- */
 
+#if CF_WITH_EMIT
 static size_t encode(const char* fmt, const cf_keyspace* ks, char* buf, size_t cap,
                      cf_error* err) {
     const cf_codec* c = cf_codec_by_name(fmt);
@@ -377,6 +378,7 @@ static void test_ini_roundtrip(cf_arena* ar) {
     cf_ks_infer_untyped(&ks2);
     check(cf_ks_digest(&ks) == cf_ks_digest(&ks2), "ini round trip");
 }
+#endif
 
 /* ---------------------------------------------------------------- */
 
@@ -447,8 +449,10 @@ int main(void) {
     test_json(ar);
     test_json_strings(ar);
     test_json_errors(ar);
+#if CF_WITH_EMIT
     test_json_roundtrip(ar);
     test_ini_roundtrip(ar);
+#endif
     test_deep_nesting(ar);
 
     cf_arena_free(ar);

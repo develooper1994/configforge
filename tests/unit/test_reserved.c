@@ -176,6 +176,7 @@ static void test_default_is_code(void) {
     cf_config_free(c);
 }
 
+#if CF_WITH_REPORT
 /* An escaped value is unescaped once. Replayed from a full report it is
    already what was meant, and must not be refused the second time. */
 static void test_replay(void) {
@@ -219,6 +220,7 @@ static void test_replay(void) {
     cf_config_free(c);
     remove("cf_res_rep.json");
 }
+#endif
 
 int main(void) {
     test_refused_where_written();
@@ -227,7 +229,9 @@ int main(void) {
     test_tier0();
     test_files();
     test_default_is_code();
+#if CF_WITH_REPORT
     test_replay();
+#endif
 
     printf("%d checks, %d failures\n", g_run, g_fail);
     return g_fail == 0 ? 0 : 1;

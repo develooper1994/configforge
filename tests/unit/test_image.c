@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#if CF_WITH_IMAGE
+
 static int  g_fail = 0, g_run = 0;
 static void check(int c, const char* w) {
     ++g_run;
@@ -307,3 +309,12 @@ int main(void) {
     printf("%d checks, %d failures\n", g_run, g_fail);
     return g_fail == 0 ? 0 : 1;
 }
+
+#else /* !CF_WITH_IMAGE */
+
+int main(void) {
+    printf("skipped: this build has no snapshot image (CF_WITH_IMAGE=OFF)\n");
+    return 0;
+}
+
+#endif /* CF_WITH_IMAGE */

@@ -226,6 +226,8 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
     return CF_TRUE;
 }
 
+#if CF_WITH_EMIT
+
 /* ------------------------------------------------------------------ *
  * Encoding
  *
@@ -362,5 +364,12 @@ static cf_bool ini_encoder(cf_sink* out, void* state, cf_doc_sink* sink) {
 const cf_codec cf_codec_ini = {
     "ini",      ".ini;.cfg;.conf", CF_CODEC_READ | CF_CODEC_WRITE,
     ini_decode, ini_encoder,       sizeof(ini_enc)};
+
+#else /* !CF_WITH_EMIT: read only */
+
+const cf_codec cf_codec_ini = {
+    "ini", ".ini;.cfg;.conf", CF_CODEC_READ, ini_decode, NULL, 0};
+
+#endif /* CF_WITH_EMIT */
 
 #endif /* CF_WITH_INI */

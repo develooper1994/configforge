@@ -68,6 +68,7 @@ gets reopened every six months.
 | D-35 | Change notification: what the library hands back | threading, contract | **Decided** |
 | D-36 | Licence | distribution, every user | **Decided** |
 | D-37 | Limits and the stack budget: whose trade it is | memory, embedded, every builder | **Decided** |
+| D-38 | Leaving parts out: what a missing part does | size, embedded, every builder | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -1614,6 +1615,44 @@ limits their frames grow too, and they are not what ships.
 document between the two was accepted by one layer and refused by the next with a
 less useful message. There is now one `CF_MAX_DEPTH` for every decoder and both
 directions.
+
+---
+
+## D-38 — Leaving Parts Out
+
+**Question.** Which parts of the library can a build leave out, and what happens to a
+program that uses one that is missing?
+
+**What decides it.** A configuration library is linked into everything from a server to
+a sensor, and the sensor does not want an emitter, a report writer or a `.env` reader it
+will never call. But the library's premise is that a value can always say where it came
+from, and a build option that makes a source silently read nothing breaks that premise
+in the worst possible way: an empty drop-in directory and an unreadable one look the
+same.
+
+**Options.**
+
+1. **Formats only**, as until now. Everything else always built.
+2. **Compile the part out entirely**, functions and all. Smallest; and a program that
+   names one fails to link, so turning an option off is a breaking change for every
+   program that mentions the function, even on a path it never takes.
+3. **Compile the work out, keep the functions**, each failing by name.
+
+**Decision: option 3.** `CF_WITH_DIR`, `CF_WITH_DOTENV`, `CF_WITH_EMIT`, `CF_WITH_IMAGE`
+and `CF_WITH_REPORT`, all on by default. Off, a source still exists and its load fails
+with "this build was compiled without CF_WITH_DIR" when the configuration is built - the
+rule for a disabled format, applied to everything; a writer returns nothing and says why
+where it can. The cost of a kept function is a few dozen bytes; the cost of a link error
+is every program that has the call on any path. `cf_has_feature` lists what a build has,
+so a provenance report from a reduced build is distinguishable from a full one.
+
+**What it does not do.** Remove code a static link would remove anyway: `--gc-sections`
+already drops a function nobody calls. The options matter for a shared library, the
+amalgamation, and code reached through a table, as every codec's encoder is.
+
+`tests/unit/test_features.c` checks each part in both directions - working when it is
+on, refusing by name when it is off - and the `minimal` preset turns them all off, so
+both directions run on every verify.
 
 ---
 

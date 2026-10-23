@@ -154,6 +154,11 @@ done since:
 * **A codec in the program, not the library**: `tests/unit/test_codec.c`
   is the model - a `cf_codec` whose `decode` drives `cf_doc_sink`,
   handed to `cf_builder_file_codec`.
+* **An optional part** (D-38): a name in `CF_FEATURES`
+  (`cmake/ConfigForgeOptions.cmake`), a default in both copies of
+  `cf_build_options.h`, the work under `#if CF_WITH_X` with a stub that
+  fails by name, a string in `cf_has_feature`'s list, and both
+  directions in `tests/unit/test_features.c`.
 * **A gate**: a `cmake -P` script in `cmake/gates/`, registered in
   `cmake/ConfigForgeGates.cmake`, that fails with `VIOLATION:` lines
   naming what is wrong. Prove it by breaking the thing it guards.

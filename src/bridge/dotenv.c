@@ -19,6 +19,8 @@ typedef struct dotenv_state {
     cf_bool     failed;
 } dotenv_state;
 
+#if CF_WITH_DOTENV
+
 static cf_bool dotenv_load(const cf_source* s, cf_keyspace* ks) {
     dotenv_state* st = (dotenv_state*)s->ext;
     cf_keysink    out;
@@ -51,6 +53,22 @@ static cf_bool dotenv_load(const cf_source* s, cf_keyspace* ks) {
     }
     return CF_TRUE;
 }
+
+#else /* !CF_WITH_DOTENV */
+
+/* As for the directory source: present, and failing by name. */
+static cf_bool dotenv_load(const cf_source* s, cf_keyspace* ks) {
+    dotenv_state* st = (dotenv_state*)s->ext;
+
+    (void)ks;
+    st->failed = CF_TRUE;
+    return cf_error_set(&st->err, CF_E_CAPABILITY, NULL, st->path,
+                        "'%s' is a .env file, and this build was compiled without "
+                        "CF_WITH_DOTENV",
+                        st->path);
+}
+
+#endif /* CF_WITH_DOTENV */
 
 static void dotenv_destroy(cf_source* s) {
     (void)s;
