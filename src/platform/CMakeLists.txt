@@ -20,6 +20,10 @@ if(CF_WAKE_KQUEUE)
   if(NOT APPLE AND NOT CMAKE_SYSTEM_NAME MATCHES "BSD|DragonFly")
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(KQUEUE REQUIRED libkqueue)
+    # For the SBOM, which is written from the top-level directory.
+    set(_CF_KQUEUE_VERSION
+        "${KQUEUE_VERSION}"
+        CACHE INTERNAL "libkqueue version, for the SBOM")
     target_include_directories(configforge PRIVATE ${KQUEUE_INCLUDE_DIRS})
     # A property rather than target_link_libraries, which CMake 3.10 does
     # not allow on a target from another directory.

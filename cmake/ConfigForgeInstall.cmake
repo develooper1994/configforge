@@ -22,6 +22,9 @@ install(
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   PATTERN "cf_build_options.h" EXCLUDE)
 
+# The licence travels with the headers, which are a source distribution.
+install(FILES "${CMAKE_SOURCE_DIR}/LICENSE"
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/configforge)
 install(FILES "${CMAKE_BINARY_DIR}/generated/configforge/cf_build_options.h"
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/configforge)
 
