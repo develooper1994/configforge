@@ -207,8 +207,11 @@ static void test_f64_roundtrip(void) {
 static void test_f64_rejects_nonfinite(void) {
     char   buf[CF_F64_DIGITS];
     double inf, nan;
-    double zero = 0.0;
-    double one  = 1.0;
+    /* volatile so that no optimiser sees the division coming: MSVC's
+       Release build calls a constant one "potential divide by 0"
+       (C4723), which /WX makes an error. */
+    volatile double zero = 0.0;
+    double          one  = 1.0;
 
     /* Built without relying on INFINITY or NAN, which are C99. */
     inf = one / zero;
