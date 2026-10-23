@@ -242,6 +242,36 @@ cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const char* p
     return CF_TRUE;
 }
 
+cf_bool cf_builder_file_codec(cf_builder* b, const char* name, int rank,
+                              const char* path, const struct cf_codec* codec,
+                              unsigned flags) {
+    cf_source* s = builder_slot(b);
+    void*      st;
+
+    if (s == NULL) {
+        return CF_FALSE;
+    }
+    if (codec == NULL) {
+        cf_error e = CF_ERROR_INIT;
+        cf_error_set(&e, CF_E_SOURCE, NULL, path, "no codec given for '%s'", path);
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    st = cf_arena_calloc(b->arena, cf_source_file_state_size());
+    if (st == NULL) {
+        cf_error e = CF_ERROR_INIT;
+        cf_error_set(&e, CF_E_MEMORY, NULL, path, "no room for a file source");
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    if (!cf_source_file_codec(s, name, rank, path, codec, flags, st,
+                              cf_source_file_state_size())) {
+        return CF_FALSE;
+    }
+    ++b->nsources;
+    return CF_TRUE;
+}
+
 cf_bool cf_builder_dotenv(cf_builder* b, const char* name, int rank, const char* path,
                           const char* prefix, unsigned flags) {
     cf_source* s = builder_slot(b);

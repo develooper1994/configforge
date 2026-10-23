@@ -15,11 +15,12 @@
 #include <string.h>
 
 typedef struct file_state {
-    const char* path;
-    const char* format; /* explicit override, or NULL for by-extension */
-    unsigned    flags;
-    cf_error    err;
-    cf_bool     failed;
+    const char*     path;
+    const char*     format; /* explicit override, or NULL for by-extension */
+    const cf_codec* codec;  /* handed over by the caller, or NULL */
+    unsigned        flags;
+    cf_error        err;
+    cf_bool         failed;
 } file_state;
 
 static cf_bool file_load(const cf_source* s, cf_keyspace* ks) {
@@ -32,7 +33,9 @@ static cf_bool file_load(const cf_source* s, cf_keyspace* ks) {
     st->failed = CF_FALSE;
     cf_error_clear(&st->err);
 
-    if (st->format != NULL) {
+    if (st->codec != NULL) {
+        codec = st->codec;
+    } else if (st->format != NULL) {
         codec = cf_codec_by_name(st->format);
         if (codec == NULL) {
             st->failed = CF_TRUE;
@@ -122,6 +125,17 @@ cf_bool cf_source_file(cf_source* s, const char* name, int rank, const char* pat
     s->rank = rank;
     s->ext  = st;
     s->ref  = NULL;
+    return CF_TRUE;
+}
+
+cf_bool cf_source_file_codec(cf_source* s, const char* name, int rank, const char* path,
+                             const cf_codec* codec, unsigned flags, void* state,
+                             size_t state_size) {
+    if (codec == NULL || codec->decode == NULL ||
+        !cf_source_file(s, name, rank, path, NULL, flags, state, state_size)) {
+        return CF_FALSE;
+    }
+    ((file_state*)state)->codec = codec;
     return CF_TRUE;
 }
 

@@ -162,6 +162,7 @@ nothing, and `1.0` is where semantic versioning starts.
 | a handle an event loop can wait on (`cf_watcher`): inotify, kqueue, Windows | done |
 | Doctor: SARIF, `--fail-on`, per-project and per-profile severity | done |
 | TOML, as the D-23 subset: tables, arrays of tables, inline tables, every scalar but dates | done |
+| a codec defined in the program, not the library (`cf_builder_file_codec`) | done |
 | XML, SQLite codecs | deferred, see D-23 |
 | Windows Registry, gsettings, macOS defaults | deferred, see D-30 |
 

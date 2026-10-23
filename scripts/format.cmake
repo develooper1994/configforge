@@ -4,10 +4,15 @@
 #   cmake -DALL=ON -P scripts/format.cmake      every source the gates cover
 #   cmake -DCHECK=ON -P scripts/format.cmake    report only; change nothing
 #
-# C and C++ go through clang-format, CMake through cmake-format and then
+# C goes through clang-format, CMake through cmake-format and then
 # cmake-lint, each only where it is installed. Prints what needs
 # attention and exits non-zero when anything does, so it can be chained
 # in front of `cmake -P scripts/verify.cmake`.
+#
+# It touches exactly the files the gates check (CF_C_SOURCES in
+# cmake/ConfigForgeFormat.cmake) and nothing else. The C++ wrapper and
+# the private headers are laid out by hand; formatting them would undo
+# that, and no gate would notice.
 #
 # One thing a formatter cannot settle on its own: CI installs
 # clang-format 18, and versions disagree about a handful of layouts.
@@ -38,11 +43,8 @@ if(ALL)
     "${REPO}/src/*.c"
     "${REPO}/include/configforge/*.h"
     "${REPO}/tests/*.c"
-    "${REPO}/tests/*.cpp"
     "${REPO}/tools/*.c"
-    "${REPO}/tools/*.h"
     "${REPO}/examples/*.c"
-    "${REPO}/examples/*.cpp"
     "${REPO}/CMakeLists.txt"
     "${REPO}/cmake/*.cmake"
     "${REPO}/scripts/*.cmake"
@@ -72,7 +74,8 @@ foreach(f ${files})
   if(NOT EXISTS "${REPO}/${f}" OR f MATCHES "^build")
     continue()
   endif()
-  if(f MATCHES "\\.(c|h|cpp|hpp)$")
+  if(f MATCHES "^(src|tests|tools|examples)/.*\\.c$"
+     OR f MATCHES "^include/configforge/.*\\.h$")
     list(APPEND c_files "${f}")
   elseif(f MATCHES "(^|/)CMakeLists\\.txt$" OR f MATCHES "\\.cmake$")
     list(APPEND cmake_files "${f}")

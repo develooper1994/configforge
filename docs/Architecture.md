@@ -143,11 +143,17 @@ implementation of `cf_entry_sink`; a test's implementation is an array.
 libyaml's events, expat's callbacks - is already the shape a codec is:
 its start-mapping, start-sequence, scalar and end events are
 `begin_table`, `begin_array`, `scalar` and `end`, and the adapter is a
-translation with locations attached. Such a codec belongs behind its
-own `CF_WITH_*` option and on `docs/Dependencies.md`, because it brings
-a dependency the built-in three do not. A codec defined *outside* the
-library cannot yet be handed to a builder; that is item 4 in
-`docs/Roadmap.md`, and the reason it is not a run-time registry.
+translation with locations attached. A codec inside the library
+belongs behind its own `CF_WITH_*` option and on `docs/Dependencies.md`,
+because it brings a dependency the built-in three do not.
+
+A codec can also live **outside** the library, in the program that uses
+it: define a `cf_codec` with a `decode` that drives the sink, and pass it
+with `cf_builder_file_codec` (C++: `Builder::fileWith`).
+`tests/unit/test_codec.c` is a complete one in sixty lines, using only
+the public headers. It is handed over explicitly rather than registered,
+because a run-time registry would be global mutable state and two parts
+of one program could register different codecs under one name.
 
 ### Adding a platform capability
 
