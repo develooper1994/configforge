@@ -110,6 +110,10 @@ unbounded parallel builds have filled a workstation's memory.
   the whole `?:`, not one arm.
 * **The stack budget is 2048 bytes per function** in the library
   (`-Wstack-usage`); buffers over a kilobyte in tests are `static`.
+  Inlining adds frames up: a function called once is inlined whole, and
+  a dozen of them called in a row from one place can exceed the budget
+  at `-O3` on one compiler and not another. Call such a list through a
+  table (Doctor's rules are the example).
 * **A test that watches files runs in its own `WORKING_DIRECTORY`**:
   every other test writes into the shared one, which is exactly what a
   watcher sees.

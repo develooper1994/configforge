@@ -1474,27 +1474,38 @@ static int cmd_explain(const report* r, const char* key) {
     return 0;
 }
 
+/* The rules run from tables, through a pointer, rather than as a list of
+   calls. Called directly, each is called once, so a compiler may inline
+   every one into the same frame without sharing their buffers: Alpine's
+   gcc at -O3 made main 4416 bytes that way, over the stack budget. */
+typedef void (*lint_rule)(const report*);
+typedef void (*diff_rule)(const report*, const report*);
+
+static const lint_rule g_lint_rules[] = {
+    rule_unreachable, rule_dead_source, rule_required,
+    rule_refused,     rule_policy,      rule_sensitive_source,
+    rule_inversion,   rule_undefined,   rule_deprecated,
+    rule_empty,       rule_truncated,   rule_default_only};
+
+static const diff_rule g_diff_rules[] = {rule_origin_drift, rule_shadow_divergence,
+                                         rule_value_diff};
+
 static void cmd_lint(const report* r) {
-    rule_unreachable(r);
-    rule_dead_source(r);
-    rule_required(r);
-    rule_refused(r);
-    rule_policy(r);
-    rule_sensitive_source(r);
-    rule_inversion(r);
-    rule_undefined(r);
-    rule_deprecated(r);
-    rule_empty(r);
-    rule_truncated(r);
-    rule_default_only(r);
+    size_t i;
+    for (i = 0; i < sizeof g_lint_rules / sizeof g_lint_rules[0]; ++i) {
+        g_lint_rules[i](r);
+    }
 }
 
 static void cmd_diff(const report* a, const report* b) {
+    size_t i;
+    /* Parity asks what one side has and the other lacks, so it runs both
+       ways round. */
     rule_parity(a, b);
     rule_parity(b, a);
-    rule_origin_drift(a, b);
-    rule_shadow_divergence(a, b);
-    rule_value_diff(a, b);
+    for (i = 0; i < sizeof g_diff_rules / sizeof g_diff_rules[0]; ++i) {
+        g_diff_rules[i](a, b);
+    }
 }
 
 static int usage(void) {
