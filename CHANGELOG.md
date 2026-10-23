@@ -381,6 +381,18 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Security
 
+- **explain() and inspect() printed sensitive values in the clear**, and
+  so did the reason a sensitive value was refused - which explain()
+  shows and a strict definition raises as an error. Design.md said
+  secrets must not appear in diagnostics; nothing checked it. The chain
+  is still shown in full - which source won, which lost, where each was
+  set - and each value of a `CF_SENSITIVE` key reads
+  `<sensitive, N bytes>`, what a blind report gives. A refusal names
+  the range or the type and not the value. `test_secrets` checks all of
+  it; with the redaction disabled it fails five times, printing exactly
+  the leak it is there to prevent. `cf_ks_explain` and `cf_ks_inspect`
+  stay the raw renderers for a key space with no definitions;
+  `cf_ks_explain_redacted` and `cf_ks_inspect_redacted` take them.
 - **Freed memory no longer holds the configuration's secrets.** An
   arena now zeroes every byte it handed out before giving it back -
   through a volatile pointer, because a store to memory about to be

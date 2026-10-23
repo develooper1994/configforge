@@ -26,7 +26,8 @@ The parts of the library that read bytes somebody else controls:
 
 And one property of the design: a **value-blind** report must not carry
 the value of a sensitive key - only presence, origin, length and digest.
-A report that leaks one is a vulnerability.
+Neither may `explain()`, `inspect()` or the reason a sensitive value was
+refused. Any of them leaking one is a vulnerability.
 
 ## What the library already does about it
 
