@@ -124,6 +124,10 @@ unbounded parallel builds have filled a workstation's memory.
 * **Code-page tests need characters the machine's code page lacks.** A
   Windows machine on code page 1254 spells Turkish letters, so a test
   using only those passes against code-page functions too.
+* **A `static` name is unique across the whole library**, not just its
+  file: the amalgamation puts every `.c` in one translation unit, so two
+  files each with a `static source_name` compile everywhere except
+  there. Prefix a file's statics with its own name (`diff_`, `schema_`).
 * **For an agent editing through a shell:** a heredoc or a quoted
   string can lose backslashes on the way, which turns `'\0'` into a NUL
   byte and `\n` into a line break in C source. Write the new text to a

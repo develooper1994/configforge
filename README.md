@@ -164,6 +164,7 @@ nothing, and `1.0` is where semantic versioning starts.
 | TOML, as the D-23 subset: tables, arrays of tables, inline tables, every scalar but dates | done |
 | a codec defined in the program, not the library (`cf_builder_file_codec`) | done |
 | what a reload changed, and where each new value came from (`cf_diff`) | done |
+| the definitions as a JSON Schema for editors (`cf_schema`) | done |
 | limits and the stack budget as build options, measured per feature (D-37) | done |
 | parts a program can leave out, each refusing by name (D-38) | done |
 | secrets kept out of diagnostics and out of freed memory | done |
@@ -219,7 +220,7 @@ drop-in directory a build cannot read never looks like an empty one
 | `CF_WITH_TOML` | the TOML codec | 8.3 KB |
 | `CF_WITH_EMIT` | `cf_emit` and every encoder | 6.7 KB |
 | `CF_WITH_REAL` | floating point and its exact formatter | 5.9 KB |
-| `CF_WITH_REPORT` | the provenance report, Report Replay - and Doctor | 5.5 KB |
+| `CF_WITH_REPORT` | the provenance report, Report Replay, the JSON Schema writer - and Doctor | 5.5 KB |
 | `CF_WITH_IMAGE` | the binary snapshot image | 4.1 KB |
 | `CF_WITH_INI` | the INI codec | 2.9 KB |
 | `CF_WITH_DOTENV` | the `.env` source | 1.3 KB |

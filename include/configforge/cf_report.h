@@ -48,6 +48,20 @@ CF_API size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
                               const cf_source_view* sv, const cf_report_info* info,
                               char* buf, size_t cap);
 
+/* The definitions as a JSON Schema (draft 2020-12), for editors: a file
+   that names it gets completion, documentation and validation as it is
+   typed, from the contract the program declared. Design.md, section 41.
+
+   `closed` puts "additionalProperties": false on every object except
+   under a prefix opened with cf_defset_open, so an editor flags a
+   misspelt key the way CF_UNKNOWN_REJECT does. "required" is never
+   written - a required key may come from the environment, so a file
+   without it is not wrong - and neither is a sensitive key's default.
+   Measure-or-write; 0 with `err` set when the keys nest deeper than
+   CF_MAX_DEPTH, or in a build without CF_WITH_REPORT. */
+CF_API size_t cf_schema_write(const cf_defset* ds, const char* title, cf_bool closed,
+                              char* buf, size_t cap, cf_error* err);
+
 /* ------------------------------------------------------------------ *
  * Report Replay
  *
