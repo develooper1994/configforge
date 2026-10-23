@@ -22,9 +22,9 @@
 extern "C" {
 #endif
 
-#define CF_KEY_MAX 256
+/* CF_KEY_MAX and CF_MESSAGE_MAX are limits the builder chooses; they
+   live in cf_build_options.h with what each one costs. */
 #define CF_SOURCE_MAX 64
-#define CF_MESSAGE_MAX 256
 
 typedef enum cf_code {
 #define CF_CODE_X(sym, name, desc) sym,

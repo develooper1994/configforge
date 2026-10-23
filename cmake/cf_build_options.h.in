@@ -22,4 +22,11 @@
 #define CF_WITH_XML    @CF_OPT_XML@
 #define CF_WITH_SQLITE @CF_OPT_SQLITE@
 
+/* The limits this build was compiled with; see the source tree's copy
+   of this file for what each one costs. */
+#define CF_KEY_MAX     @CF_KEY_MAX@
+#define CF_MESSAGE_MAX @CF_MESSAGE_MAX@
+#define CF_PATH_MAX    @CF_PATH_MAX@
+#define CF_MAX_DEPTH   @CF_MAX_DEPTH@
+
 #endif /* CONFIGFORGE_CF_BUILD_OPTIONS_H */

@@ -67,6 +67,7 @@ gets reopened every six months.
 | D-34 | What `set()` means on an immutable snapshot | ownership, provenance | **Decided** |
 | D-35 | Change notification: what the library hands back | threading, contract | **Decided** |
 | D-36 | Licence | distribution, every user | **Decided** |
+| D-37 | Limits and the stack budget: whose trade it is | memory, embedded, every builder | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -1558,6 +1559,61 @@ excluding GPLv2-only users and burdening embedded ones.
 **Third-party code** carries its own terms, and none of it is required: the default build
 has no dependencies at all. `docs/Dependencies.md` lists every optional and build-time
 one with its licence, so the obligations of a given build can be read off one page.
+
+---
+
+## D-37 — Limits and the Stack Budget
+
+**Question.** How large may the library's fixed buffers be - the longest key, error
+message, path, nesting - and who decides how much stack a function may take?
+
+**What decides it.** Every limit is a buffer, and every buffer is stack. A 256-byte key
+is 256 bytes in every frame that holds one; doubling it doubles those frames. The design
+spans a desktop tool, which wants long keys and does not care about two kilobytes, and a
+device whose whole thread has two kilobytes, which wants short keys and cares about
+nothing else. Any fixed choice is wrong for one of them, and the library cannot know
+which one it is being built for. The builder can.
+
+**Options.**
+
+1. **Fixed limits and a fixed budget**, as until now (256-byte keys, 2048 bytes a frame).
+   Simple, and checked; but a builder who needs 1024-byte keys has to edit headers, and
+   one who has one kilobyte of stack has no way to get there at all.
+2. **Configurable limits, no budget.** The builder chooses; nothing tells them what the
+   choice cost until a thread overflows on a device.
+3. **Configurable limits and budget, the cost measured and reported.** The builder sets
+   both; the build measures every frame with the compiler's own figures and checks them
+   against the budget; when one does not fit it says which, by how much, and which
+   option would remove it.
+
+**Decision: option 3.** The trade is the builder's - the library's job is to make the
+price legible, not to pick it. `CF_KEY_MAX`, `CF_MESSAGE_MAX`, `CF_PATH_MAX` and
+`CF_MAX_DEPTH` are CMake cache variables, written into the generated
+`cf_build_options.h` because they change the public structs (a `cf_error` holds a key
+and a message), so a consumer cannot disagree with the library about them - the same
+rule as `CF_WITH_REAL`. `CF_STACK_BUDGET` is bytes per function, default 2048, 0 to
+measure without checking.
+
+**How it is checked.** With `-fstack-usage`, which writes each function's frame to a
+file, and `scripts/stack.cmake`, run after the library links. Not `-Wstack-usage`, which
+stops at the first function over and says nothing about what to do; the script reports
+all of them, attributes each to the `#if CF_WITH_*` it is compiled under, and lists the
+largest frame each feature brings - so "what fits in a kilobyte" has an answer made of
+options. Run by hand with another `BUDGET`, it answers "what if" without a rebuild.
+Over budget, it removes the library it just linked, so the next build checks again
+rather than reporting a success.
+
+**What it does not cover.** MSVC writes no frame sizes, so there the budget is unchecked
+and the build says so. A frame is one link of a call chain; the decoders recurse once per
+level of nesting, so a thread needs room for `CF_MAX_DEPTH` of those as well, and that is
+the nesting limit's to bound, not the frame budget's. The project's own tests, Doctor and
+examples stay at the 2048 bytes they were written for, at the default limits; with other
+limits their frames grow too, and they are not what ships.
+
+**One limit for nesting.** JSON allowed 64 levels while the flattener held 32, so a
+document between the two was accepted by one layer and refused by the next with a
+less useful message. There is now one `CF_MAX_DEPTH` for every decoder and both
+directions.
 
 ---
 

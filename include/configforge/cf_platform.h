@@ -96,7 +96,8 @@ CF_API char* const* cf_platform_args(int argc, char* const* argv, cf_arena* aren
  * Directory listing
  * ------------------------------------------------------------------ */
 
-#define CF_PLATFORM_NAME_MAX 512
+/* A path: CF_PATH_MAX, a build limit (cf_build_options.h). */
+#define CF_PLATFORM_NAME_MAX CF_PATH_MAX
 
 /* Names only, no path, no order, dotfiles already skipped. Returns the
    count, or -1 with `err` set. The caller sorts, because the order

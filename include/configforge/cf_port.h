@@ -60,6 +60,22 @@ extern "C" {
 
 #include "configforge/cf_build_options.h"
 
+/* The limits, checked where every translation unit sees them. The lower
+   bounds are what the library's own messages and keys need; the upper
+   ones are what its offsets can count (TOML keeps 16-bit ones). */
+#if CF_KEY_MAX < 32 || CF_KEY_MAX > 65535
+#error "CF_KEY_MAX must be between 32 and 65535"
+#endif
+#if CF_MESSAGE_MAX < 64 || CF_MESSAGE_MAX > 65535
+#error "CF_MESSAGE_MAX must be between 64 and 65535"
+#endif
+#if CF_PATH_MAX < 64 || CF_PATH_MAX > 65535
+#error "CF_PATH_MAX must be between 64 and 65535"
+#endif
+#if CF_MAX_DEPTH < 4 || CF_MAX_DEPTH > 1024
+#error "CF_MAX_DEPTH must be between 4 and 1024"
+#endif
+
 /* ------------------------------------------------------------------ *
  * 64-bit integer
  *

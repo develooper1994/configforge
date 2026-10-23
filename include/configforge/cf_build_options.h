@@ -49,4 +49,35 @@
 #define CF_WITH_SQLITE 0
 #endif
 
+/* ------------------------------------------------------------------ *
+ * Limits. Each one is a fixed buffer somewhere, so each one is stack:
+ * a larger limit is a larger frame in every function that holds one,
+ * and a smaller one is a smaller frame and a shorter key. The trade is
+ * the builder's to make (D-37); the build measures what it cost and
+ * says so, against CF_STACK_BUDGET.
+ *
+ *   CF_KEY_MAX      longest key, terminator included. Held by every
+ *                   error, by the flattener, and by the decoders that
+ *                   name the path they are in.
+ *   CF_MESSAGE_MAX  longest error message. Every cf_error holds one,
+ *                   and a builder call keeps a cf_error on its frame.
+ *   CF_PATH_MAX     longest file path. The directory source and the
+ *                   platform layer hold two or three at once.
+ *   CF_MAX_DEPTH    deepest nesting a document may have. The decoders
+ *                   and the flattener keep a small frame per level.
+ * ------------------------------------------------------------------ */
+
+#ifndef CF_KEY_MAX
+#define CF_KEY_MAX 256
+#endif
+#ifndef CF_MESSAGE_MAX
+#define CF_MESSAGE_MAX 256
+#endif
+#ifndef CF_PATH_MAX
+#define CF_PATH_MAX 512
+#endif
+#ifndef CF_MAX_DEPTH
+#define CF_MAX_DEPTH 32
+#endif
+
 #endif /* CONFIGFORGE_CF_BUILD_OPTIONS_H */

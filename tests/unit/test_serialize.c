@@ -404,23 +404,37 @@ static void test_registry(void) {
 }
 
 static void test_deep_nesting(cf_arena* ar) {
-    static char doc[2048];
+    static char doc[(CF_MAX_DEPTH + 8) * 8 + 16];
     cf_keyspace ks;
     cf_error    err = CF_ERROR_INIT;
-    size_t      at  = 0;
+    size_t      at;
     int         i;
 
-    /* Deeper than the flattener's stack: it must refuse rather than
-       overrun, and say so. */
-    for (i = 0; i < 60; ++i) {
+    /* Past CF_MAX_DEPTH, whatever this build chose: it must refuse
+       rather than overrun, and say so. */
+    at = 0;
+    for (i = 0; i < CF_MAX_DEPTH + 4; ++i) {
         at = cf_fmt_append(doc, sizeof doc, at, "{\"a\":");
     }
     at = cf_fmt_append(doc, sizeof doc, at, "1");
-    for (i = 0; i < 60; ++i) {
+    for (i = 0; i < CF_MAX_DEPTH + 4; ++i) {
         at = cf_fmt_append(doc, sizeof doc, at, "}");
     }
     cf_ks_init(&ks, ar, 8);
     check(!decode("json", doc, &ks, ar, 10, &err), "nesting past the limit is refused");
+
+    /* And a document within it is read: the limit is the limit, not
+       somewhere below it. One level is the root object. */
+    at = 0;
+    for (i = 0; i < CF_MAX_DEPTH - 2; ++i) {
+        at = cf_fmt_append(doc, sizeof doc, at, "{\"a\":");
+    }
+    at = cf_fmt_append(doc, sizeof doc, at, "1");
+    for (i = 0; i < CF_MAX_DEPTH - 2; ++i) {
+        at = cf_fmt_append(doc, sizeof doc, at, "}");
+    }
+    cf_ks_init(&ks, ar, 8);
+    check(decode("json", doc, &ks, ar, 10, &err), "nesting within the limit is read");
 }
 
 int main(void) {

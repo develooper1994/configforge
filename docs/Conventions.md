@@ -199,7 +199,12 @@ tests are not complicated enough to need one.
   with `fnv1a:` passed for a whole session while every digest was the
   literal `%08x%08x`. Assert the shape *and* that it distinguishes.
 * **[gate]** Buffers over a kilobyte are `static`. The stack budget
-  applies to tests too, and it has caught three of them.
+  applies to tests too, and it has caught three of them. In the library
+  the budget is the builder's (`CF_STACK_BUDGET`, D-37), so a buffer is
+  sized by a limit (`CF_KEY_MAX`, `CF_PATH_MAX`, ...) and never by a
+  bare number: a builder who lowers the limit gets the smaller frame.
+  Several names of one path share one key-sized buffer rather than one
+  each - the whole path has to fit in a key anyway.
 * **[gate]** Test data that is a string literal must be a mutable array
   when it is handed to an API taking `char* const*`, because
   `-Wwrite-strings` is on and because the API matches `argv` so that callers never cast.

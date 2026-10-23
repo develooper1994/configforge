@@ -6,6 +6,7 @@ Developer scripts: things that build, generate or check.
 | ------ | ------------ |
 | `verify.cmake` | everything that has to be true before a commit; `-DSOURCE=index` checks only what is staged, `-DEXTRA=kqueue;tidy;clang` adds builds, `-DJOBS=N` bounds parallelism, `-DWORK=dir` puts the staged copy in `dir` (under WSL, keep it off `/mnt/c`) |
 | `format.cmake` | formats and lints what changed (`-DALL=ON` everything, `-DCHECK=ON` report only) |
+| `stack.cmake` | every library frame against a budget, by feature; the build runs it after linking, and `-DOBJDIR=build/CMakeFiles/configforge.dir -DBUDGET=N` asks "what if" (D-37) |
 | `amalgamate.py` | generates the single-file distribution |
 | `check_formats.py` | every format string against what `cf_fmt` supports (run by `gate.formats`) |
 

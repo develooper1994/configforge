@@ -17,8 +17,11 @@
 extern "C" {
 #endif
 
-#define CF_FLATTEN_MAX_DEPTH 32
-#define CF_EMIT_MAX_DEPTH 32
+/* Both CF_MAX_DEPTH, a build limit (cf_build_options.h): one nesting
+   limit for every decoder and both directions, so a document that one
+   part of the library accepts no other part refuses. */
+#define CF_FLATTEN_MAX_DEPTH CF_MAX_DEPTH
+#define CF_EMIT_MAX_DEPTH CF_MAX_DEPTH
 
 typedef struct fl_frame {
     size_t  saved_len;
