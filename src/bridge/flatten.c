@@ -164,7 +164,9 @@ static cf_bool fl_scalar(void* ctx, const char* name, size_t n, const cf_value* 
         ok = cf_ks_add_text(f->ks, f->path, f->plen, f->rank, v->u.t.p, v->u.t.n,
                             at_text);
     } else {
-        ok = cf_ks_add(f->ks, f->path, f->plen, f->rank, v, at_text);
+        /* Typed, and still written by somebody: a JSON string can
+           carry ${ as easily as an environment variable can. */
+        ok = cf_ks_add_authored(f->ks, f->path, f->plen, f->rank, v, at_text);
     }
     f->plen = saved;
     if (!ok) {

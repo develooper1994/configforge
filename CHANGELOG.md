@@ -201,6 +201,18 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Changed
 
+- **A value containing `${` is refused** (D-10). References to other
+  values are not supported yet, and taken literally,
+  `cache.dir = ${HOME}/cache` created a directory called `${HOME}` -
+  and the day references arrive, every such configuration would have
+  changed meaning without a word. It is an invalid value like any other:
+  construction fails and says where, unless the parameter asked for
+  fallback, in which case `explain()` shows it refused. `$${` is a
+  literal `${`. A program's own default is code rather than
+  configuration and is left alone, and a replayed report is not refused
+  the second time round. A `.env` written for a tool that does expand
+  `${VAR}` now fails loudly rather than silently meaning something else.
+
 - **Within one source, the later occurrence of a key now wins.** It was
   the first, which is the convention nowhere: a command line where
   `--port=1 --port=2` gives 2, an INI file where the second assignment

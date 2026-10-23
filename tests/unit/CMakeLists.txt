@@ -26,7 +26,8 @@ set(CF_UNIT_TESTS
     test_oom
     test_derive
     test_watch
-    test_complexity)
+    test_complexity
+    test_reserved)
 
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)

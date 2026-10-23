@@ -65,6 +65,14 @@ cf_bool cf_outcome_can_win(cf_outcome o);
    which has only strings, does not have to. */
 #define CF_CAND_TEXTUAL 1u
 
+/* A candidate somebody wrote: text from a file, the environment, the
+   command line. The syntax D-10 reserves, ${...}, is refused in these
+   and only these. Not in a default, which is the program's own code and
+   changes with it; and not in a value replayed from a report or loaded
+   from an image, which was resolved once already - an escaped $${ that
+   became ${ there would otherwise be refused the second time round. */
+#define CF_CAND_AUTHORED 2u
+
 typedef struct cf_candidate {
     int                  source; /* precedence rank; lower wins      */
     unsigned             flags;
@@ -126,13 +134,18 @@ cf_arena* cf_ks_arena(const cf_keyspace* ks);
 cf_bool cf_ks_add(cf_keyspace* ks, const char* key, size_t keylen, int source,
                   const cf_value* value, const char* at);
 
-/* Record a candidate that failed conversion or validation. It never
-   wins, and it is never erased: explain() has to be able to say that
-   the environment did supply a value and why it was refused. */
 /* Record a candidate as written, leaving its type to be decided. */
 cf_bool cf_ks_add_text(cf_keyspace* ks, const char* key, size_t keylen, int source,
                        const char* text, size_t textlen, const char* at);
 
+/* Record a typed candidate that somebody wrote - a JSON string, say -
+   so the reserved syntax applies to it as it does to raw text. */
+cf_bool cf_ks_add_authored(cf_keyspace* ks, const char* key, size_t keylen, int source,
+                           const cf_value* value, const char* at);
+
+/* Record a candidate that failed conversion or validation. It never
+   wins, and it is never erased: explain() has to be able to say that
+   the environment did supply a value and why it was refused. */
 cf_bool cf_ks_reject(cf_keyspace* ks, const char* key, size_t keylen, int source,
                      const cf_value* value, const char* at, const char* reason);
 

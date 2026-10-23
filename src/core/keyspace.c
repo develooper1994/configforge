@@ -196,7 +196,13 @@ cf_bool cf_ks_add_text(cf_keyspace* ks, const char* key, size_t keylen, int sour
     }
     cf_value_text(&v, text, textlen);
     return cf_ks_push(ks, key, keylen, source, &v, at, CF_OUT_PENDING, NULL,
-                      CF_CAND_TEXTUAL);
+                      CF_CAND_TEXTUAL | CF_CAND_AUTHORED);
+}
+
+cf_bool cf_ks_add_authored(cf_keyspace* ks, const char* key, size_t keylen, int source,
+                           const cf_value* value, const char* at) {
+    return cf_ks_push(ks, key, keylen, source, value, at, CF_OUT_PENDING, NULL,
+                      CF_CAND_AUTHORED);
 }
 
 cf_bool cf_ks_reject(cf_keyspace* ks, const char* key, size_t keylen, int source,

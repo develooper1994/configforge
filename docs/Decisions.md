@@ -454,6 +454,21 @@ itself on the simple case.
 **Consequence.** Determines whether a value's origin is a single source or a
 composition, which is the difference between a simple and a recursive `explain()`.
 
+**The reservation is enforced; the feature is still open.** For a long time this entry
+recommended refusing `${` and nothing refused it, so a value such as `${HOME}/cache`
+was taken literally - the exact outcome the recommendation existed to prevent. It is now
+an invalid value under D-05: strict by default, with `explain()` showing the refusal for
+a parameter that asked for fallback. `$${` is the literal. Three boundaries were drawn
+while doing it, each because the alternative was wrong rather than inconvenient:
+
+* only what somebody *wrote* is checked - files, the environment, the command line, a
+  derived value. A program's default is its own code and changes with it.
+* a value replayed from a report or loaded from an image is not checked again, because
+  it was resolved once already; an escaped `$${` that became `${` would otherwise be
+  refused on replay.
+* the escape is undone once, at construction, so what a program reads and what a report
+  records is what was meant.
+
 ---
 
 ## D-11 — Unknown-Key Behaviour
@@ -1502,7 +1517,8 @@ bug report about a change nobody saw.
 ## Status of the log
 
 Two decisions are open, and both are open because nothing has been built: value
-interpolation (D-10) and profiles as a core concept (D-12). Everything else is decided,
+interpolation (D-10), whose syntax is reserved and enforced, and profiles as a core
+concept (D-12). Everything else is decided,
 and where the implementation settled the question rather than this document, the section
 says so and names what settled it.
 
