@@ -7,6 +7,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **Conan and vcpkg packages**, built from the checkout and consumed by a
+  project that knows only the package, in CI and here: `conanfile.py`
+  with every `CF_WITH_*` as an option (`with_yaml` brings libyaml from
+  ConanCenter), static and shared; and an overlay port in
+  `packaging/vcpkg` with a `yaml` feature. The installed headers state
+  the build's options, so neither recipe passes a define a consumer
+  could disagree with.
 - **YAML** (D-39, `CF_WITH_YAML`, off by default: the one codec with a
   dependency). Read through libyaml's event parser, which maps onto the
   document events one to one, and written by hand in block style. A

@@ -64,6 +64,8 @@ system, no generated header, no options.
 | clang, clang++ | Apache-2.0 WITH LLVM-exception | `EXTRA=clang` in `scripts/verify.cmake`: the suite under a second compiler |
 | git | GPL-2.0-only | `scripts/verify.cmake -DSOURCE=index` and `scripts/format.cmake`, which ask it what is staged or changed |
 | Python 3 | PSF-2.0 | `scripts/amalgamate.py`, `scripts/check_formats.py` |
+| Conan | MIT | the Conan recipe, `conanfile.py`, and its CI job |
+| vcpkg | MIT | the overlay port in `packaging/vcpkg`, and its CI job |
 | pkg-config | GPL-2.0-or-later | finding libkqueue; the install gate's pkg-config consumer |
 | libFuzzer (part of LLVM) | Apache-2.0 WITH LLVM-exception | `CF_FUZZ`, `EXTRA=fuzz`: the coverage-guided harnesses in `tests/fuzz` |
 | gcovr | BSD-3-Clause | `EXTRA=coverage`: line coverage from gcov's data |

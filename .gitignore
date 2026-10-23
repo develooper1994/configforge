@@ -45,3 +45,7 @@ cf_v99.json
 *.gcov
 *.gcda
 *.gcno
+
+# What Conan writes into the tree it is run in.
+CMakeUserPresets.json
+packaging/conan/test_package/build/
