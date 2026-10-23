@@ -4,8 +4,18 @@ Developer scripts: things that build, generate or check.
 
 | Script | What it does |
 | ------ | ------------ |
-| `verify.cmake` | everything that has to be true before a commit |
+| `verify.cmake` | everything that has to be true before a commit; `-DSOURCE=index` checks only what is staged, `-DEXTRA=kqueue;tidy;clang` adds builds, `-DJOBS=N` bounds parallelism |
+| `format.cmake` | formats and lints what changed (`-DALL=ON` everything, `-DCHECK=ON` report only) |
 | `amalgamate.py` | generates the single-file distribution |
+| `check_formats.py` | every format string against what `cf_fmt` supports (run by `gate.formats`) |
+
+The usual sequence before a commit:
+
+```sh
+cmake -P scripts/format.cmake
+git add -p
+cmake -DSOURCE=index -DJOBS=2 -P scripts/verify.cmake
+```
 
 The line against `tools/` is what ships: `tools/doctor` is a program a
 user runs, so it is built and installed. Nothing here is.

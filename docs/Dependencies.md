@@ -56,6 +56,8 @@ system, no generated header, no options.
 | CMake (`find_package` of `PkgConfig`, `Threads`, `Python3`, and `ConfigForge` in the install gate) | BSD-3-Clause | the build, the gates, `scripts/verify.cmake` |
 | a C89 compiler: GCC, Clang or MSVC | GPL-3.0-or-later with the GCC Runtime Library Exception; Apache-2.0 WITH LLVM-exception; proprietary | compiling. None of their code ends up in a program except each one's own runtime support, under its exception |
 | a C++98 compiler, the same three | as above | the C++03 wrapper's example and test |
+| clang, clang++ | Apache-2.0 WITH LLVM-exception | `EXTRA=clang` in `scripts/verify.cmake`: the suite under a second compiler |
+| git | GPL-2.0-only | `scripts/verify.cmake -DSOURCE=index` and `scripts/format.cmake`, which ask it what is staged or changed |
 | Python 3 | PSF-2.0 | `scripts/amalgamate.py`, `scripts/check_formats.py` |
 | pkg-config | GPL-2.0-or-later | finding libkqueue |
 | clang-format | Apache-2.0 WITH LLVM-exception | `gate.format.c`, the `format` target |

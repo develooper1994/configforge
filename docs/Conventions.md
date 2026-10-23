@@ -313,4 +313,7 @@ had before the formatter touched it silently matches nothing. Two edits
 were lost that way. Assert that the patch target was found.
 
 **Commit each verified unit.** Not each file and not each session: each
-thing that is true on its own. `scripts/verify.sh` first, always.
+thing that is true on its own. Stage it and run
+`cmake -DSOURCE=index -P scripts/verify.cmake` first, always: that
+verifies exactly what the commit will contain, not the working tree
+around it.
