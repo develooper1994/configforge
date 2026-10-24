@@ -85,6 +85,21 @@ tool is missing is not registered, and the build says which.
 A tool's licence binds the tool, not what it reads: running a GPL
 formatter over this code does not change the code's licence.
 
+### 2c. The build environment (`scripts/buildenv`)
+
+What `setup.sh` installs is the tools above. These are what make the
+environment itself, and what `freebsd.sh` boots; none is needed to
+build or test on a machine that already has the tools.
+
+| Component | Licence | Used for |
+| --------- | ------- | -------- |
+| Ubuntu 24.04 (the `ubuntu:24.04` image; the `ubuntu-base` tarball) | each package its own; Canonical's image terms | the base of the container and of the WSL distribution, checked against `SHA256SUMS` |
+| Podman, or Docker | Apache-2.0 | building and running `Containerfile`; the release's Alpine build, run locally |
+| WSL | proprietary (Microsoft) | `wsl-distro.ps1`: the environment on a drive of your choosing |
+| QEMU (`qemu-system-x86`, `qemu-utils`) | GPL-2.0-only | `freebsd.sh`: the virtual machine |
+| OpenSSH client | BSD-style | `freebsd.sh`: copying the tree in and running the suite |
+| FreeBSD 14 (the official BASIC-CI image) | BSD-2-Clause | `freebsd.sh`: the real kqueue, checked against `CHECKSUM.SHA256` |
+
 ## 3. Continuous integration
 
 | Component | Licence | Used for |

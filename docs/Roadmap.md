@@ -12,9 +12,12 @@ lists finished work stops being read.
 
 Things that are wrong or unproven today, most serious first.
 
-1. **The kqueue path has run only against libkqueue**, which reports
-   more than a real kqueue for in-place edits and less for new
-   directories. *Done:* the macOS CI job green.
+1. **Darwin's kqueue has not been seen to pass.** The kqueue path passes
+   against FreeBSD 14.4's own (`scripts/buildenv/freebsd.sh`: all 41
+   unit tests, `test_watch` with the scenario libkqueue cannot run), so
+   the code is right for a real kqueue; macOS's is a different kernel's,
+   and the macOS CI job is its only check, whose result this machine
+   cannot see. *Done:* the macOS CI job seen green.
 2. **Error paths are the least tested.** Branch coverage (74.8%) trails
    line coverage (85.4%) by ten points, and the branches not taken are
    mostly refusals. `EXTRA=coverage` holds both, at 74% and 84%; *done*
@@ -67,3 +70,7 @@ that needs the live configuration rather than its record.
 ## Decisions waiting for the owner
 
 * When to call it 1.0 (item 3).
+* When to tag 0.2.0. `.github/workflows/release.yml` does the rest, and
+  refuses the tag until the CHANGELOG's `## 0.2.0` heading carries a
+  date instead of "unreleased". Its macOS job will run for the first
+  time then.

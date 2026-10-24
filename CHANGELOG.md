@@ -20,6 +20,17 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   Running the Linux and Windows jobs on a workstation before the first
   tag found Doctor over the stack budget at `-O3` and the suite not
   building in MSVC's Release, both fixed below.
+- **The development environment as a file** (`scripts/buildenv`): one
+  list of every tool the build, the gates and each `EXTRA` step use,
+  `setup.sh`, and two ways to have it - a container (`Containerfile`)
+  and, for Windows, a WSL distribution whose disk is on the drive you
+  name (`wsl-distro.ps1`), so builds do not grow C:. `freebsd.sh` boots
+  a throwaway FreeBSD machine inside it - FreeBSD's CI image, emulated
+  where there is no KVM - and runs the unit tests against the real
+  kqueue, which until now only macOS CI saw: all 41 pass on FreeBSD
+  14.4, after the fix below that its first build found. Downloads come
+  from the projects that publish them and are checked against their
+  published checksums or signatures.
 - **A usage guide and the examples it walks through** (`docs/Guide.md`):
   getting the library into a build, a contract, sources and precedence,
   asking why, errors, formats, secrets, reloading, the editor and

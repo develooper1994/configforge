@@ -68,6 +68,12 @@ analyze) and stops at the first failure with that step's output. Use
 `-DMODE=quick` for the default preset alone. Use `-DJOBS` - five
 unbounded parallel builds have filled a workstation's memory.
 
+The tools every step and every `EXTRA` needs are one list,
+`scripts/buildenv/setup.sh`, which makes a container
+(`Containerfile`) or, on Windows, a WSL distribution on the drive you
+name (`wsl-distro.ps1`). `freebsd.sh`, run inside it, is the real
+kqueue for a machine with no Mac. `scripts/README.md` has the commands.
+
 ## How work is done here
 
 1. **One verified unit per commit.** A unit is a thing that is true on
@@ -119,7 +125,8 @@ unbounded parallel builds have filled a workstation's memory.
   watcher sees.
 * **libkqueue is not a real kqueue.** It does not report a directory
   created inside a watched one, and its descriptor cannot be polled.
-  The macOS CI job is the check on the real thing.
+  `scripts/buildenv/freebsd.sh` is the check on FreeBSD's real one, and
+  the macOS CI job on Darwin's.
 * **gcc `-fanalyzer`, cppcheck and clang-tidy each find different
   things**, and each found a real one here. Fix the code, not the tool;
   suppress only with a comment saying why the finding is wrong.
@@ -180,6 +187,11 @@ done since:
 
 ## Safety
 
-Scripts in this repository run no network command and download nothing.
-The only network use is CI's `actions/checkout` and package installs,
+Nothing that builds, tests or verifies uses the network: `verify`,
+`format`, the gates and the build download nothing. The exceptions are
+named and only run when asked for: the three scripts in
+`scripts/buildenv` that make an environment, which download from the
+projects that publish the thing and check what they download against
+its published checksum or signature, and CI's actions and package
+installs. All are
 listed in `docs/Dependencies.md`.
