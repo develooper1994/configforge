@@ -7,6 +7,8 @@ if(NOT NM_EXE)
   return()
 endif()
 
+cmake_minimum_required(VERSION 3.10)
+
 set(FORBIDDEN
     strtod
     atof
@@ -82,6 +84,16 @@ endforeach()
 # literals, constant tables - in .data rather than .rodata, so every one
 # of them would read as mutable. That is where tcc puts things, not what
 # the code is, and the same sources pass this check under GCC and Clang.
+#
+# A shared library also holds what the toolchain links into every one of
+# them - crtbegin's completed.0, __dso_handle, __TMC_END__ - which are
+# mutable and are not this library's. They are named here rather than
+# matched by pattern, so anything else in .data still fails.
+set(shared FALSE)
+if(LIB MATCHES "\\.(so|dylib)(\\.[0-9.]+)?$")
+  set(shared TRUE)
+endif()
+set(toolchain_globals completed.0 completed.1 __dso_handle __TMC_END__)
 find_program(OBJDUMP_EXE objdump)
 if(COMPILER STREQUAL "TinyCC")
   message("symbol gate: mutable-global check skipped: tcc places const "
@@ -95,6 +107,9 @@ elseif(OBJDUMP_EXE AND NOT SANITIZE)
   foreach(line ${symlines})
     if(line MATCHES "[ \t]O[ \t]+(\\.data|\\.bss)[ \t]")
       string(REGEX MATCH "[^ \t]+$" sym "${line}")
+      if(shared AND sym IN_LIST toolchain_globals)
+        continue()
+      endif()
       message("VIOLATION: mutable global '${sym}'")
       set(bad 1)
     endif()
@@ -106,10 +121,20 @@ endif()
 # Every allocation goes through cf_allocator so that a caller can supply
 # their own and the fixed-capacity profile can refuse to allocate at
 # all. One file reaching past it would make both untrue quietly.
-execute_process(
-  COMMAND ${NM_EXE} -u "${LIB}"
-  OUTPUT_VARIABLE undefs
-  ERROR_QUIET)
+#
+# Asked of the archive, whose members name the file that calls: a shared
+# library is one object, so which of its sources calls malloc cannot be
+# read from it, and the static build of the same sources answers it.
+set(undefs "")
+if(shared)
+  message("symbol gate: allocator check is the static build's: a shared "
+          "library has no members to tell its files apart")
+else()
+  execute_process(
+    COMMAND ${NM_EXE} -u "${LIB}"
+    OUTPUT_VARIABLE undefs
+    ERROR_QUIET)
+endif()
 string(REPLACE "\n" ";" ulines "${undefs}")
 set(member "")
 foreach(line ${ulines})

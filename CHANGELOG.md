@@ -5,6 +5,22 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ## 0.4.0 — unreleased
 
+### Fixed
+
+- **CI was red, and nobody here could see it.** Two jobs had failed on
+  every commit since the change-diff commit: clang-tidy refused
+  `cf_diff` and `cf_diff_text` declaring `before`/`after` and defining
+  `a`/`b`, and a branch chain with two identical bodies; and the shared
+  build's gates had only ever been written for an archive -
+  `gate.amalgamation` and `gate.install` linked a shared library
+  without telling the program where to find it, `gate.install` looked
+  for `libconfigforge.a`, and `gate.symbols` read crtbegin's
+  `completed.0` and `__dso_handle` as this library's mutable globals and
+  could not tell the allocator's file from the others in a library
+  with no members. All four are fixed, and the shared build passes on
+  Linux here; with `gh` now signed in, CI is watched rather than
+  assumed.
+
 ### Changed
 
 - **Every package says who made it.** The Conan recipe's `author`, the
