@@ -85,7 +85,8 @@ static void cf_env_destroy(cf_source* s) {
     (void)s;
 }
 
-static const cf_source_vtable cf_env_vt = {"env", cf_env_load, cf_env_destroy, NULL};
+static const cf_source_vtable cf_env_vt = {"env", cf_env_load, cf_env_destroy, NULL,
+                                           NULL};
 
 cf_bool cf_source_env(cf_source* s, const char* name, int rank, const char* prefix,
                       char* const* environment) {

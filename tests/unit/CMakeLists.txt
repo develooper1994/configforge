@@ -41,7 +41,8 @@ set(CF_UNIT_TESTS
     test_xml
     test_store
     test_secretsdir
-    test_properties)
+    test_properties
+    test_write)
 
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)

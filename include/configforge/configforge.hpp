@@ -377,10 +377,14 @@ public:
     { if (b_) { cf_builder_secrets(b_, name, rank, path, prefix, flags); }
       return *this; }
 
-    /* A SQLite store (CF_WITH_SQLITE); cf_store_set writes one. */
+    /* A SQLite store (CF_WITH_SQLITE); cf_write writes one, granted. */
     Builder& store(const char* name, int rank, const char* path, unsigned flags = 0)
     { if (b_) { cf_builder_store(b_, name, rank, path, flags); }
       return *this; }
+
+    /* Allow cf_write to write this source (cf_builder_writable). */
+    Builder& writable(const char* source_name)
+    { if (b_) { cf_builder_writable(b_, source_name); } return *this; }
 
     Builder& replay(const char* name, int rank, const char* path)
     { if (b_) { cf_builder_replay(b_, name, rank, path); } return *this; }

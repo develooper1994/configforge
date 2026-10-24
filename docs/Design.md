@@ -1938,6 +1938,23 @@ The position that follows is worth stating plainly:
 > where it is not. Hand-maintained documents stay read-only, which is also what the people
 > who maintain them expect.
 
+### Who May Write, and What
+
+A write is authorised before it happens, by three questions in a fixed order (D-42):
+
+```text
+capability      can the source be written?          the source's vtable: only a store
+permission      did the program grant it?           cf_builder_writable, checked at create
+authorization   would the contract accept the value  the read side's own rules
+                from that source?
+```
+
+Any "no" refuses every item before one is written. The third is not a second rule set:
+the items become candidates from the target and the contract is applied to them as it is
+when the store is read back, so a value refused there is refused here - and a key whose
+policy (D-33) leaves the store out stays locked, where a program able to write past it
+would have lifted an operator's lock. A command (`CF_TRANSIENT`) is never written.
+
 ---
 
 ## 40. Type Inference

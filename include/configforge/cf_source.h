@@ -32,6 +32,12 @@ enum {
 
 typedef struct cf_source cf_source;
 
+/* One value to write. */
+typedef struct cf_store_item {
+    const char* key;
+    cf_value    value;
+} cf_store_item;
+
 typedef struct cf_source_vtable {
     const char* kind;
     cf_bool (*load)(const cf_source* s, cf_keyspace* ks);
@@ -43,6 +49,17 @@ typedef struct cf_source_vtable {
        and that is the point of having it: a new member is a decision at
        each site, not a default that nobody looked at. */
     const char* (*path)(const cf_source* s);
+
+    /* Whether this source can be written at all - its capability - and
+       how: every item or none, `meta` saying who, when and why. NULL
+       for a source that cannot, which is every source but a store: a
+       hand-written document has comments and a layout a writer would
+       lose, and the environment and the command line belong to
+       whoever started the process. Capability is not permission;
+       cf_builder_writable is the program's grant, and cf_write asks
+       both, and the contract, before this is called. */
+    cf_bool (*write)(const cf_source* s, const cf_store_item* items, size_t count,
+                     const char* meta, cf_error* err);
 } cf_source_vtable;
 
 typedef struct cf_pair {
@@ -292,19 +309,17 @@ CF_API cf_bool cf_source_store(cf_source* s, const char* name, int rank,
 
 CF_API const cf_error* cf_source_store_error(const cf_source* s);
 
-/* One value to store. */
-typedef struct cf_store_item {
-    const char* key;
-    cf_value    value;
-} cf_store_item;
-
 /* Write `items` to the store at `path`, creating it and its table if
    need be, in one transaction: every item or none, and a key that is
    not valid refuses the lot before anything is written. `meta` - who,
    when, why - is stored with each and is what explain() shows as where
    the value was set; NULL stores none. Hand-written documents are never
    written: a store is where a running program's changes go (Design.md,
-   section 39). */
+   section 39).
+
+   This writes what it is given and asks nothing; it is the tool for
+   provisioning a store. A running program writes through cf_write,
+   which asks whether it may. */
 CF_API cf_bool cf_store_set(const char* path, const cf_store_item* items, size_t count,
                             const char* meta, cf_error* err);
 
