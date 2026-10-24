@@ -422,6 +422,28 @@ scanning; a severity file and a baseline so a project can adopt it
 without fixing everything on day one; and a GitHub Action. See
 [`Doctor.md`](Doctor.md).
 
+**As a library.** The rules are `libconfigforge_doctor` (`cf_doctor.h`,
+`ConfigForge::configforge_doctor`), of which `doctor` is the command
+line. A service can lint its own configuration before it serves - and
+refuse to start in production with a password that came from the
+command line - and a test can assert there are no findings, in process
+and with no report on disk:
+
+```c
+cf_doctor* d = cf_doctor_new();
+cf_doctor_lint(d, cfg, "production", &err);
+if (cf_doctor_count_at(d, "error") > 0) {
+    const cf_finding* f = cf_doctor_finding(d, 0);
+    fprintf(stderr, "%s %s: %s\n", f->rule, f->key, f->message);
+    return 1;
+}
+cf_doctor_free(d);
+```
+
+Baselines, severities, `cf_doctor_diff` and the rule catalogue are
+there too. It is a library of its own, and static, so a device that only
+reads configuration carries none of it.
+
 ## 12. Small targets
 
 Everything above works with no heap. Hand the builder a buffer:

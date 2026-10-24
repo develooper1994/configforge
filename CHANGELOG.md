@@ -42,6 +42,19 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   contract. Read only, because the format has no quoting and text
   written as 8080 would come back a number.
 
+- **Doctor's rules as a library** (D-41): `cf_doctor.h`,
+  `libconfigforge_doctor`, of which `doctor` is now the command line. A
+  program lints its own configuration in process - `cf_doctor_lint(d,
+  cfg, "production", &err)` writes the full report in memory, reads it
+  as `doctor lint` would and wipes it - or a report as text or a file,
+  diffs two, and keeps a baseline and severities; the findings come
+  back with rule, level, key, place and message. What the program kept
+  in globals is a context now, and nothing in it prints. A static
+  library of its own, installed as `ConfigForge::configforge_doctor`
+  and left out of the amalgamation, so a device that reads
+  configuration carries none of it. Every Doctor test passes against
+  the program unchanged; `doctor.api` tests the library.
+
 ### Fixed
 
 - **CI was red, and nobody here could see it.** Two jobs had failed on

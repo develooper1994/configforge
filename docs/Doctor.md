@@ -200,6 +200,33 @@ and `rank`.
 
 ---
 
+## 7b. As a library
+
+Everything above is also `libconfigforge_doctor`: `cf_doctor.h`,
+installed with the configuration library as
+`ConfigForge::configforge_doctor`. The command line is that library with
+argument parsing and printing around it, so the two cannot disagree
+about a rule.
+
+| Call | What it does |
+| ---- | ------------ |
+| `cf_doctor_new`, `cf_doctor_free` | a context; findings accumulate in it until it is freed |
+| `cf_doctor_lint(d, cfg, profile, &err)` | lint a configuration in process: its full report is written in memory, read as `doctor lint` reads a file, and wiped |
+| `cf_doctor_lint_report`, `cf_doctor_lint_file` | lint a report held as text, or in a file |
+| `cf_doctor_diff`, `cf_doctor_diff_report`, `cf_doctor_diff_files` | `doctor diff`, on two configurations, two texts or two files |
+| `cf_doctor_accept`, `cf_doctor_baseline` | a baseline entry, or a `--baseline` file |
+| `cf_doctor_severity`, `cf_doctor_severity_file` | a severity line, or a `--severity` file |
+| `cf_doctor_count`, `cf_doctor_finding`, `cf_doctor_count_at` | the findings, each with its rule, level, key, place and message |
+| `cf_doctor_stale_count`, `cf_doctor_stale` | baseline entries that matched nothing |
+| `cf_doctor_rule_count`, `cf_doctor_rule_id`, `cf_doctor_rule_text` | the catalogue below |
+
+Nothing in it prints, and nothing in it is global: two contexts can run
+at once, one thread to a context. It is static, so there is one ABI to
+keep - the configuration library's - and it is not part of the
+configuration library at all, which is how the line in section 2 holds:
+a program that reads configuration does not carry the rules that audit
+it unless it asks for them.
+
 ## 8. Rule Catalogue
 
 Each rule has a stable identifier so it can be suppressed individually. Rules marked
