@@ -280,6 +280,16 @@ A frame is one link of a call chain: a thread also needs room for
 `CF_MAX_DEPTH` levels of a decoder's recursion. GCC and Clang report
 frame sizes; MSVC does not, and there the budget is not checked.
 
+### From a release
+
+Each release carries the source, the amalgamation, and a built library
+with a Doctor binary for Linux, Windows and macOS, with a `SHA256SUMS`
+beside them. The Linux one is built against musl and linked statically:
+`bin/doctor` runs on any x86-64 Linux with nothing installed beside it,
+and the Windows `doctor.exe` needs no Visual C++ redistributable.
+Every archive is made by the suite's own build after the suite has
+passed on that platform (`.github/workflows/release.yml`).
+
 ### From a package manager
 
 ```sh

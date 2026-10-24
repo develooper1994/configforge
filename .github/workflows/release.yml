@@ -1,0 +1,160 @@
+# A release, built from a tag:
+#
+#   git tag -a v0.2.0 -m "ConfigForge 0.2.0" && git push origin v0.2.0
+#
+# Every artifact is built by the suite's own build and tested before it
+# is packaged, and published with a SHA256SUMS beside it:
+#
+#   configforge-<v>-src.tar.gz             the source, as git archive makes it
+#   configforge-<v>-amalgamation.tar.gz    two files and the licence: no build system
+#   configforge-<v>-linux-x86_64-musl.tar.gz  a static Doctor, the library, headers, SBOM
+#   configforge-<v>-windows-x64.zip        the same, built with MSVC
+#   configforge-<v>-macos-arm64.tar.gz     the same, built with Apple's clang
+#
+# The Linux build is musl, in Alpine, linked statically: one Doctor
+# binary that runs on any Linux with no library beside it, and a library
+# that is the same code a glibc build is - the suite runs against both.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  # A tag that disagrees with the tree is refused before anything is
+  # built: the version CMake says, and a CHANGELOG section for it that no
+  # longer says "unreleased".
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The tag, the build and the CHANGELOG agree
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          built=$(sed -n 's/^ *VERSION \([0-9.]*\)$/\1/p' CMakeLists.txt | head -1)
+          [ "$built" = "$v" ] || { echo "tag $v, CMakeLists.txt says $built"; exit 1; }
+          head=$(grep -E "^## $v( |$)" CHANGELOG.md || true)
+          [ -n "$head" ] || { echo "CHANGELOG.md has no section for $v"; exit 1; }
+          case "$head" in *unreleased*) echo "CHANGELOG.md still says: $head"; exit 1 ;; esac
+
+  source:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Source and amalgamation
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          git archive --format=tar.gz --prefix="configforge-$v/" -o "dist/configforge-$v-src.tar.gz" HEAD
+          python3 scripts/amalgamate.py . "amalgamation/configforge-$v"
+          cp LICENSE "amalgamation/configforge-$v/"
+          tar -C amalgamation -czf "dist/configforge-$v-amalgamation.tar.gz" "configforge-$v"
+      - uses: actions/upload-artifact@v4
+        with: { name: source, path: dist/* }
+
+  linux-musl:
+    needs: check
+    runs-on: ubuntu-latest
+    container: alpine:3.20
+    steps:
+      - run: apk add --no-cache build-base cmake ninja git python3 tar
+      - uses: actions/checkout@v4
+      - name: Build static, test, install
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_EXE_LINKER_FLAGS=-static -DCF_WITH_CXX=OFF \
+            -DCMAKE_INSTALL_PREFIX="$PWD/stage/configforge-$v"
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+          cmake --install build
+          mkdir -p "stage/configforge-$v/bin"
+          install -s -m 755 build/tools/doctor/doctor "stage/configforge-$v/bin/doctor"
+          # Linked statically, Doctor carries musl, whose MIT licence asks
+          # for its notice in every copy; Alpine does not ship the text,
+          # so it comes from musl's own repository, at the version used.
+          m=$(apk info musl | sed -n '1s/^musl-\([0-9.]*\)-r.*/\1/p')
+          d="stage/configforge-$v/share/doc/configforge/third-party"
+          mkdir -p "$d"
+          wget -q -O "$d/musl-COPYRIGHT" "https://git.musl-libc.org/cgit/musl/plain/COPYRIGHT?h=v$m"
+          grep -q "MIT license" "$d/musl-COPYRIGHT"
+          mkdir -p dist
+          tar -C stage -czf "dist/configforge-$v-linux-x86_64-musl.tar.gz" "configforge-$v"
+      - uses: actions/upload-artifact@v4
+        with: { name: linux-musl, path: dist/* }
+
+  windows:
+    needs: check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build, test, install
+        shell: pwsh
+        run: |
+          # Without this a pwsh step fails only on its last command's exit
+          # code, and a failing ctest in the middle would ship.
+          $PSNativeCommandUseErrorActionPreference = $true
+          $v = $env:GITHUB_REF_NAME.TrimStart('v')
+          cmake -S . -B build -DCMAKE_INSTALL_PREFIX="$PWD/stage/configforge-$v"
+          cmake --build build --config Release
+          ctest --test-dir build -C Release --output-on-failure
+          cmake --install build --config Release
+          # The library keeps the DLL runtime (/MD), which is what a program
+          # linking it expects. Doctor is built again on its own with the
+          # static one (/MT): the /MD build needs VCRUNTIME140.dll, which a
+          # clean Windows does not have, and this one needs only KERNEL32.
+          # Its own tests run against the binary that ships.
+          cmake -S . -B build-doctor -DCMAKE_POLICY_DEFAULT_CMP0091=NEW `
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+          cmake --build build-doctor --config Release --target doctor doctor_fixtures
+          ctest --test-dir build-doctor -C Release -R "^doctor\." --output-on-failure
+          New-Item -ItemType Directory -Force "stage/configforge-$v/bin" | Out-Null
+          Copy-Item build-doctor/tools/doctor/Release/doctor.exe "stage/configforge-$v/bin/"
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path "stage/configforge-$v" -DestinationPath "dist/configforge-$v-windows-x64.zip"
+      - uses: actions/upload-artifact@v4
+        with: { name: windows, path: dist/* }
+
+  macos:
+    needs: check
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build, test, install
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$PWD/stage/configforge-$v"
+          cmake --build build --parallel
+          ctest --test-dir build --output-on-failure
+          cmake --install build
+          mkdir -p "stage/configforge-$v/bin"
+          install -s -m 755 build/tools/doctor/doctor "stage/configforge-$v/bin/doctor"
+          mkdir -p dist
+          tar -C stage -czf "dist/configforge-$v-macos-arm64.tar.gz" "configforge-$v"
+      - uses: actions/upload-artifact@v4
+        with: { name: macos, path: dist/* }
+
+  publish:
+    needs: [source, linux-musl, windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: dist, merge-multiple: true }
+      - name: Notes, checksums, release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          # This version's section of the CHANGELOG, and nothing else.
+          awk -v v="$v" '
+            $0 ~ "^## " v "( |$)" { on = 1; next }
+            on && /^## / { exit }
+            on { print }' CHANGELOG.md > notes.md
+          (cd dist && sha256sum * > SHA256SUMS)
+          gh release create "$GITHUB_REF_NAME" dist/* --title "ConfigForge $v" --notes-file notes.md

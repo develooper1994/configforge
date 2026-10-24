@@ -7,6 +7,19 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **Releases from a tag** (`.github/workflows/release.yml`): the source,
+  the amalgamation, and the library with Doctor for Linux, Windows and
+  macOS, each built and tested on its platform before it is packaged,
+  with `SHA256SUMS` and notes taken from this file's section for the
+  version. The Linux build is musl in Alpine, linked statically: one
+  Doctor binary for any Linux. The Windows Doctor is linked against the
+  static C runtime, so it needs no Visual C++ redistributable, while
+  the library keeps the DLL runtime that programs linking it expect. A
+  tag is refused before anything builds if it disagrees with
+  `project(VERSION)` or if its section here still says "unreleased".
+  Running the Linux and Windows jobs on a workstation before the first
+  tag found Doctor over the stack budget at `-O3` and the suite not
+  building in MSVC's Release, both fixed below.
 - **A usage guide and the examples it walks through** (`docs/Guide.md`):
   getting the library into a build, a contract, sources and precedence,
   asking why, errors, formats, secrets, reloading, the editor and
@@ -431,6 +444,20 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   inlines into one frame, and `main` is 1328 bytes there. The CI Alpine
   job now builds Release, so it is checked before a tag rather than at
   one.
+- **The suite did not build in MSVC's Release.** `test_numeric` makes
+  infinity and NaN by dividing by a zero in a variable, since `INFINITY`
+  and `NAN` are C99; the optimiser saw the constant, warned "potential
+  divide by 0" (C4723), and `/WX` made it an error. Every Windows preset
+  is Debug, so only the release job would have built it. The zero is
+  `volatile` now.
+- **`test_complexity` failed on correct code under load.** It compared
+  one key space of 4000 keys against one of 16000, and on a 12 MiB cache
+  the first fit and the second did not, so the ratio measured the cache:
+  8 to 12 times for fourfold data, against a bound of 8. It now resolves
+  the same total number of keys as many small spaces or a few large
+  ones, both in cache, so the ratio is the cost per key: 0.8 to 1.7 for
+  correct code under any load tried, about 4 for a quadratic one, and
+  the bound is 2.5.
 
 - **An image's provenance travelled and nothing read it.** With
   `CF_IMAGE_PROVENANCE` the writer stored every candidate - source,
