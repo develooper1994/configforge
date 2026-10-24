@@ -17,6 +17,10 @@
     "xml": {
       "description": "The XML reader, through expat (CF_WITH_XML)",
       "dependencies": ["expat"]
+    },
+    "sqlite": {
+      "description": "The SQLite store, through sqlite3 (CF_WITH_SQLITE)",
+      "dependencies": ["sqlite3"]
     }
   }
 }

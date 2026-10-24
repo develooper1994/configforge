@@ -251,6 +251,42 @@ CF_API cf_bool cf_source_dir(cf_source* s, const char* name, int rank, const cha
 
 CF_API const cf_error* cf_source_dir_error(const cf_source* s);
 
+/* ------------------------------------------------------------------ *
+ * A SQLite store (CF_WITH_SQLITE)
+ *
+ * The flat key space in one table - configforge(key, type, value,
+ * meta) - read in key order, each value typed by its row, and located
+ * as "<path>: <meta>", so whatever the writer said about a change is
+ * what explain() says about it after a restart. The store is opened
+ * read only and never created by reading; CF_FILE_OPTIONAL makes a
+ * missing one acceptable. Without CF_WITH_SQLITE the source fails, and
+ * says which option it needs.
+ * ------------------------------------------------------------------ */
+
+CF_API size_t cf_source_store_state_size(void);
+
+CF_API cf_bool cf_source_store(cf_source* s, const char* name, int rank,
+                               const char* path, unsigned flags, void* state,
+                               size_t state_size);
+
+CF_API const cf_error* cf_source_store_error(const cf_source* s);
+
+/* One value to store. */
+typedef struct cf_store_item {
+    const char* key;
+    cf_value    value;
+} cf_store_item;
+
+/* Write `items` to the store at `path`, creating it and its table if
+   need be, in one transaction: every item or none, and a key that is
+   not valid refuses the lot before anything is written. `meta` - who,
+   when, why - is stored with each and is what explain() shows as where
+   the value was set; NULL stores none. Hand-written documents are never
+   written: a store is where a running program's changes go (Design.md,
+   section 39). */
+CF_API cf_bool cf_store_set(const char* path, const cf_store_item* items, size_t count,
+                            const char* meta, cf_error* err);
+
 #ifdef __cplusplus
 }
 #endif

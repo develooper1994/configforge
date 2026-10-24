@@ -6,7 +6,7 @@ header, then run the script. Every function is listed with the
 comment written above it, under the section of the header it is
 in; the types are in the headers themselves.
 
-- [`configforge.h`](#configforgeh) - 58
+- [`configforge.h`](#configforgeh) - 59
 - [`cf_alloc.h`](#cf_alloch) - 12
 - [`cf_define.h`](#cf_defineh) - 19
 - [`cf_emit.h`](#cf_emith) - 1
@@ -22,7 +22,7 @@ in; the types are in the headers themselves.
 - [`cf_port.h`](#cf_porth) - 10
 - [`cf_report.h`](#cf_reporth) - 5
 - [`cf_serialize.h`](#cf_serializeh) - 16
-- [`cf_source.h`](#cf_sourceh) - 19
+- [`cf_source.h`](#cf_sourceh) - 23
 - [`cf_value.h`](#cf_valueh) - 12
 - [`cf_version.h`](#cf_versionh) - 6
 
@@ -126,6 +126,13 @@ CF_API cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank, const c
 A drop-in directory: every file in byte order, all at one rank, so
 10-base losing to 90-site is precedence rather than a merge rule and
 explain() names the file that won.
+
+```c
+CF_API cf_bool cf_builder_store(cf_builder* b, const char* name, int rank, const char* path, unsigned flags);
+```
+
+A SQLite store (CF_WITH_SQLITE): typed values, each with what its
+writer said about it. cf_store_set writes one.
 
 ```c
 CF_API cf_bool cf_builder_source(cf_builder* b, const cf_source* s);
@@ -1942,6 +1949,40 @@ CF_API cf_bool cf_source_dir(cf_source* s, const char* name, int rank, const cha
 ```c
 CF_API const cf_error* cf_source_dir_error(const cf_source* s);
 ```
+
+### A SQLite store (CF_WITH_SQLITE)
+
+The flat key space in one table - configforge(key, type, value,
+meta) - read in key order, each value typed by its row, and located
+as "&lt;path>: &lt;meta>", so whatever the writer said about a change is
+what explain() says about it after a restart. The store is opened
+read only and never created by reading; CF_FILE_OPTIONAL makes a
+missing one acceptable. Without CF_WITH_SQLITE the source fails, and
+says which option it needs.
+
+```c
+CF_API size_t cf_source_store_state_size(void);
+```
+
+```c
+CF_API cf_bool cf_source_store(cf_source* s, const char* name, int rank, const char* path, unsigned flags, void* state, size_t state_size);
+```
+
+```c
+CF_API const cf_error* cf_source_store_error(const cf_source* s);
+```
+
+```c
+CF_API cf_bool cf_store_set(const char* path, const cf_store_item* items, size_t count, const char* meta, cf_error* err);
+```
+
+Write `items` to the store at `path`, creating it and its table if
+need be, in one transaction: every item or none, and a key that is
+not valid refuses the lot before anything is written. `meta` - who,
+when, why - is stored with each and is what explain() shows as where
+the value was set; NULL stores none. Hand-written documents are never
+written: a store is where a running program's changes go (Design.md,
+section 39).
 
 ## cf_value.h
 

@@ -24,6 +24,7 @@ FEATURES = {
     "toml": True,
     "yaml": False,
     "xml": False,
+    "sqlite": False,
     "real": True,
     "dir": True,
     "dotenv": True,
@@ -76,6 +77,8 @@ class ConfigForgeConan(ConanFile):
             self.requires("libyaml/0.2.5")
         if self.options.with_xml:
             self.requires("expat/[>=2.6 <3]")
+        if self.options.with_sqlite:
+            self.requires("sqlite3/[>=3.35 <4]")
 
     def layout(self):
         cmake_layout(self)

@@ -104,7 +104,7 @@ endforeach()
 # to compile and its library to link, on both sides of the comparison.
 set(DEP_INC "")
 set(DEP_LIB "")
-foreach(dep YAML XML)
+foreach(dep YAML XML SQLITE)
   if(DEFINED ${dep}_INC AND NOT ${dep}_INC STREQUAL "")
     list(APPEND DEP_INC "-I${${dep}_INC}")
     list(APPEND DEP_LIB "${${dep}_LIB}")
