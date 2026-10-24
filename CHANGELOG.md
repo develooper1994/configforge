@@ -63,6 +63,18 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   and left out of the amalgamation, so a device that reads
   configuration carries none of it. Every Doctor test passes against
   the program unchanged; `doctor.api` tests the library.
+- **`doctor import-spring` and `doctor import-dotnet`**, the second and
+  third foreign adapters. Spring Boot's `/actuator/env` gives the
+  sources in Spring's order and an origin for most properties, which
+  become the report's precedence and places
+  (`application.properties:1:13`); what Spring's sanitiser masked is
+  sensitive, so a masked password on the command line is CFD007, and a
+  variable not yet relaxed into a property is counted, not re-spelled.
+  .NET's `GetDebugView()` names only the provider that won each key, so
+  that report has winners and no chain, blind unless `--full`, for
+  comparing environments with `doctor diff`. Neither adapter knows its
+  ecosystem's precedence rules; each writes down what the ecosystem
+  published (Doctor.md, section 12).
 
 ### Fixed
 

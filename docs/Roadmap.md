@@ -46,8 +46,8 @@ Worth building, in the order they serve the library's purpose.
 * **Limits in the report and the image header**, so a reader built with
   shorter keys than the writer says so by name rather than as a key it
   cannot add.
-* **More Doctor adapters**: .NET's `GetDebugView()`, Spring's
-  `/actuator/env` (Doctor.md, section 12).
+* **More Doctor adapters**: systemd's `systemd-analyze cat-config`
+  (Doctor.md, section 12). .NET and Spring are built.
 * **Doctor `--only-changed`** and **CFD012 against the contract** rather
   than the key list.
 * **Value interpolation** (D-10), now that its syntax is reserved and
