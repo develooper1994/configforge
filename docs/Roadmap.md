@@ -70,7 +70,3 @@ that needs the live configuration rather than its record.
 ## Decisions waiting for the owner
 
 * When to call it 1.0 (item 3).
-* When to tag 0.2.0. `.github/workflows/release.yml` does the rest, and
-  refuses the tag until the CHANGELOG's `## 0.2.0` heading carries a
-  date instead of "unreleased". Its macOS job will run for the first
-  time then.
