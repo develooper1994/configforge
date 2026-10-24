@@ -395,8 +395,8 @@ logic.** Each ecosystem supplies its own origin data and a thin adapter converts
 | Ecosystem | Native origin source | Adapter effort |
 | --------- | -------------------- | -------------- |
 | ConfigForge | native report | none |
-| .NET | `ConfigurationRoot.GetDebugView()` | small; format is already key plus provider |
-| Spring Boot | `/actuator/env`, origin-tracked | small; JSON already carries origins |
+| .NET | `ConfigurationRoot.GetDebugView()` | built: `doctor import-dotnet`; winners only |
+| Spring Boot | `/actuator/env`, origin-tracked | built: `doctor import-spring` |
 | Git config | `git config --list --show-origin --show-scope` | built: `doctor import-git` |
 | systemd | `systemd-analyze cat-config` | small |
 | Go / viper | none available | requires a helper in the host application |
@@ -427,6 +427,43 @@ schema. Four decisions, each written where it is made:
   another.
 * the report is value-blind unless `--full`: git configuration carries credentials more
   often than it looks.
+
+**The Spring Boot adapter, as built.**
+
+```text
+curl -s localhost:8080/actuator/env | doctor import-spring > app.json
+```
+
+Spring publishes the sources in the order it consults them, and an origin for most
+properties. The adapter writes that order down as precedence, Spring's first active
+profile as the report's, and `class path resource [application.properties] - 3:13` as
+`application.properties:3:13`. Two decisions differ from git's:
+
+* a name a report key cannot carry - `SERVER_PORT` from the environment, before Spring's
+  relaxed binding has made it `server.port` - is left out and counted, not re-spelled.
+  The binding is Spring's rule, and re-spelling it here is the reimplementation this
+  section refuses.
+* what is secret is Spring's sanitiser's decision. A value it masked (`******`) is
+  sensitive, and on the command line CFD007 reports it; what it did not mask, it
+  already exposed. Redacting every key, as the git adapter does, would make every
+  command-line property a secret to CFD007.
+
+**The .NET adapter, as built.**
+
+```text
+Console.Write(((IConfigurationRoot)config).GetDebugView());   // in the program
+... | doctor import-dotnet > app.json
+```
+
+`GetDebugView()` prints each key with the provider that won it, and nothing about the
+providers that lost. So the report has one candidate a key, and the rules that need a
+chain - CFD001, CFD010 - have nothing to say about it. Keys are lowered, .NET's being
+case-insensitive, and `:` becomes `.`. A provider's name is the parenthesised group that
+ends the line, counted from the right, because `(Optional)` is part of one. Each
+provider's kind is its own type - `commandline`, `environment`, `json` - rather than
+Doctor's `cli`: the report is value-blind unless `--full`, every key in it sensitive,
+and CFD007 would otherwise call every command-line key a secret. What a blind .NET
+report is for is `doctor diff` of two environments, by digest.
 
 ---
 
@@ -465,7 +502,7 @@ Phase 1. It can start any time after that.
 D-Phase 1   report reader, dump, explain, diff, CFD001–CFD003
 D-Phase 2   full rule catalogue, baseline, severity configuration
 D-Phase 3   SARIF output, CI templates, emit hook in the library
-D-Phase 4   foreign adapters: .NET, Spring, git config
+D-Phase 4   foreign adapters: .NET, Spring, git config (built); systemd next
 ```
 
 Estimated size if the library already emits reports: 1500–2500 lines, three to four

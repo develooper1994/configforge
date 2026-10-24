@@ -17,7 +17,7 @@ set_target_properties(
 configforge_apply_warnings(configforge_doctor)
 configforge_apply_analysis(configforge_doctor)
 
-add_executable(doctor doctor.c git.c)
+add_executable(doctor doctor.c git.c spring.c dotnet.c)
 target_link_libraries(doctor PRIVATE configforge_doctor)
 set_target_properties(
   doctor

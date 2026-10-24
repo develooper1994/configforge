@@ -192,8 +192,12 @@ static int usage(void) {
           "  doctor explain <report> <key>\n"
           "  doctor lint    <report> [options]\n"
           "  doctor diff    <report-a> <report-b> [options]\n"
-          "  doctor import-git [--full]  < git config output\n"
           "  doctor --version\n"
+          "\n",
+          stderr);
+    fputs("  doctor import-git [--full]     < git config output\n"
+          "  doctor import-spring           < /actuator/env JSON\n"
+          "  doctor import-dotnet [--full]  < GetDebugView() text\n"
           "\n"
           "  --baseline <file>  findings already accepted\n"
           "  --severity <file>  this project's severities\n"
@@ -244,6 +248,12 @@ int main(int argc, char** argv) {
        report argument and is dispatched before anything expects one. */
     if (argc >= 2 && strcmp(argv[1], "import-git") == 0) {
         return doctor_import_git(argc - 2, argv + 2);
+    }
+    if (argc >= 2 && strcmp(argv[1], "import-spring") == 0) {
+        return doctor_import_spring(argc - 2, argv + 2);
+    }
+    if (argc >= 2 && strcmp(argv[1], "import-dotnet") == 0) {
+        return doctor_import_dotnet(argc - 2, argv + 2);
     }
     /* The version, and the commit it was built from when the build knew
        it: two Doctors of one version can still differ. */

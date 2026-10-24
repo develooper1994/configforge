@@ -12,4 +12,11 @@
    stdout. Returns Doctor's exit code. */
 int doctor_import_git(int argc, char** argv);
 
+/* Spring Boot's /actuator/env JSON on stdin, a report on stdout. */
+int doctor_import_spring(int argc, char** argv);
+
+/* .NET's IConfigurationRoot.GetDebugView() text on stdin, a report on
+   stdout. */
+int doctor_import_dotnet(int argc, char** argv);
+
 #endif /* CONFIGFORGE_DOCTOR_ADAPTERS_H */
