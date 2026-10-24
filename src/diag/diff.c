@@ -27,7 +27,10 @@ static cf_bool diff_same_origin(const cf_candidate* x, const cf_candidate* y) {
     return (strcmp(x->at, y->at) == 0) ? CF_TRUE : CF_FALSE;
 }
 
-size_t cf_diff(const cf_config* a, const cf_config* b, cf_diff_fn fn, void* ctx) {
+size_t cf_diff(const cf_config* before, const cf_config* after, cf_diff_fn fn,
+               void* ctx) {
+    const cf_config*   a = before;
+    const cf_config*   b = after;
     const cf_keyspace* ka;
     const cf_keyspace* kb;
     size_t             i = 0, j = 0, na, nb, changes = 0;
@@ -72,9 +75,10 @@ size_t cf_diff(const cf_config* a, const cf_config* b, cf_diff_fn fn, void* ctx)
             break;
         }
 
-        if (x == NULL && y == NULL) {
-            continue; /* a key with no value on either side */
-        } else if (x == NULL) {
+        if (x == NULL) {
+            if (y == NULL) {
+                continue; /* a key with no value on either side */
+            }
             kind = CF_CHANGE_ADDED;
         } else if (y == NULL) {
             kind = CF_CHANGE_REMOVED;
@@ -196,8 +200,11 @@ static cf_bool diff_line(void* ctx, const char* key, size_t klen, cf_change kind
     return CF_TRUE;
 }
 
-size_t cf_diff_text(const cf_config* a, const cf_config* b, char* buf, size_t cap) {
-    diff_text t;
+size_t cf_diff_text(const cf_config* before, const cf_config* after, char* buf,
+                    size_t cap) {
+    const cf_config* a = before;
+    const cf_config* b = after;
+    diff_text        t;
 
     /* No buffer is measuring, whatever the capacity says. */
     if (buf == NULL) {

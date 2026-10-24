@@ -139,11 +139,18 @@ if(NOT rc EQUAL 0)
                       "amalgamation")
 endif()
 
+# A shared library is found at run time only where the program is told
+# to look: without this the shared build's program did not start.
+set(rpath "")
+if(LIB MATCHES "\\.(so|dylib)(\\.[0-9.]+)?$")
+  get_filename_component(libdir "${LIB}" DIRECTORY)
+  set(rpath "-Wl,-rpath,${libdir}")
+endif()
 execute_process(
   COMMAND
     ${CC} -std=c89 -I "${BIN}/generated" -I "${SRC}/include" -o
     "${BIN}/amalgamation/digest_lib" "${SRC}/tests/consumer/digest.c" "${LIB}"
-    ${DEP_LIB}
+    ${DEP_LIB} ${rpath}
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE out
   ERROR_VARIABLE out)

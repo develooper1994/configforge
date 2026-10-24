@@ -94,12 +94,20 @@ endif()
 # CF_WITH_REAL has a different sizeof for cf_value, so this is checked
 # at compile time and again at run time - a header can say one thing
 # while the archive was built from another.
+# The installed library as a consumer links it: the archive of a static
+# build, or -l and a run-time path for a shared one, which installs no
+# archive and which the program would not find without being told.
+if(EXISTS "${prefix}/lib/libconfigforge.a")
+  set(installed_lib "${prefix}/lib/libconfigforge.a")
+else()
+  set(installed_lib -L${prefix}/lib -lconfigforge -Wl,-rpath,${prefix}/lib)
+endif()
 execute_process(
   COMMAND
     ${CC} -std=c89 -pedantic ${werror} -I "${prefix}/include"
     -DCF_EXPECT_REAL=${EXPECT_REAL} -DCF_EXPECT_JSON=${EXPECT_JSON} -o
-    "${work}/options" "${SRC}/tests/consumer/options.c"
-    "${prefix}/lib/libconfigforge.a" ${YAML_LIB}
+    "${work}/options" "${SRC}/tests/consumer/options.c" ${installed_lib}
+    ${YAML_LIB}
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE out
   ERROR_VARIABLE out)
@@ -151,8 +159,13 @@ if(PKG_CONFIG_EXE)
     message("${out}")
     message(FATAL_ERROR "a consumer cannot build from what pkg-config says")
   endif()
+  # Run as a user of a shared build in a private prefix runs it: with the
+  # loader told where the library is. The link is left as pkg-config
+  # said, which is the thing under test.
+  get_filename_component(libdir "${pcdir}" DIRECTORY)
   execute_process(
-    COMMAND "${work}/consumer_pc"
+    COMMAND ${CMAKE_COMMAND} -E env LD_LIBRARY_PATH=${libdir}
+            DYLD_LIBRARY_PATH=${libdir} "${work}/consumer_pc"
     RESULT_VARIABLE rc
     OUTPUT_VARIABLE out
     ERROR_VARIABLE out)
