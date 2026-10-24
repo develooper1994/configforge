@@ -6,7 +6,7 @@ header, then run the script. Every function is listed with the
 comment written above it, under the section of the header it is
 in; the types are in the headers themselves.
 
-- [`configforge.h`](#configforgeh) - 59
+- [`configforge.h`](#configforgeh) - 60
 - [`cf_alloc.h`](#cf_alloch) - 12
 - [`cf_define.h`](#cf_defineh) - 19
 - [`cf_emit.h`](#cf_emith) - 1
@@ -22,7 +22,7 @@ in; the types are in the headers themselves.
 - [`cf_port.h`](#cf_porth) - 10
 - [`cf_report.h`](#cf_reporth) - 5
 - [`cf_serialize.h`](#cf_serializeh) - 16
-- [`cf_source.h`](#cf_sourceh) - 23
+- [`cf_source.h`](#cf_sourceh) - 26
 - [`cf_value.h`](#cf_valueh) - 12
 - [`cf_version.h`](#cf_versionh) - 6
 
@@ -126,6 +126,13 @@ CF_API cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank, const c
 A drop-in directory: every file in byte order, all at one rank, so
 10-base losing to 90-site is precedence rather than a merge rule and
 explain() names the file that won.
+
+```c
+CF_API cf_bool cf_builder_secrets(cf_builder* b, const char* name, int rank, const char* path, const char* prefix, unsigned flags);
+```
+
+A directory of secrets, one file a key, as containers mount them and
+systemd passes credentials (cf_source_secrets says how names map).
 
 ```c
 CF_API cf_bool cf_builder_store(cf_builder* b, const char* name, int rank, const char* path, unsigned flags);
@@ -1948,6 +1955,29 @@ CF_API cf_bool cf_source_dir(cf_source* s, const char* name, int rank, const cha
 
 ```c
 CF_API const cf_error* cf_source_dir_error(const cf_source* s);
+```
+
+### A directory of secrets (CF_WITH_DIR)
+
+One file a key, as Docker and Kubernetes mount secrets and systemd
+hands over credentials: the file named db.password is db.password;
+one named as an environment variable would be - MYAPP_DB__PASSWORD,
+with `prefix` "MYAPP_" - is mapped as the environment's is; a name
+that is neither is an error. The value is the file's content without
+its one trailing newline, as text for the contract to type and, for
+a secret, to mark CF_SENSITIVE. Dotfiles are skipped, which is also
+what Kubernetes' own ..data entries are.
+
+```c
+CF_API size_t cf_source_secrets_state_size(void);
+```
+
+```c
+CF_API cf_bool cf_source_secrets(cf_source* s, const char* name, int rank, const char* path, const char* prefix, unsigned flags, void* state, size_t state_size);
+```
+
+```c
+CF_API const cf_error* cf_source_secrets_error(const cf_source* s);
 ```
 
 ### A SQLite store (CF_WITH_SQLITE)

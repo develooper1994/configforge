@@ -302,6 +302,19 @@ db.password = <sensitive, 13 bytes>  (text)
   file        <sensitive, 21 bytes> rejected: policy: 'db.password' may only be set from env   secrets.ini:3:1
 ```
 
+Where secrets are handed over as files - Docker and Kubernetes mount
+them in a directory, systemd passes credentials in
+`$CREDENTIALS_DIRECTORY` - `cf_builder_secrets` reads the directory one
+file a key, so a secret never passes through the environment, where
+every child process can read it. `db.password` is `db.password`, and a
+file named as its variable would be (`MYAPP_DB__PASSWORD`, with the
+prefix `MYAPP_`) maps as the environment's does; the trailing newline
+`echo` leaves is dropped, and explain() names the file:
+
+```c
+cf_builder_secrets(b, "secrets", CF_RANK_ENV, "/run/secrets", "MYAPP_", CF_FILE_OPTIONAL);
+```
+
 The memory a
 configuration releases is zeroed first, so a password does not survive
 into the next allocation or a core dump; for a buffer you own,

@@ -252,6 +252,27 @@ CF_API cf_bool cf_source_dir(cf_source* s, const char* name, int rank, const cha
 CF_API const cf_error* cf_source_dir_error(const cf_source* s);
 
 /* ------------------------------------------------------------------ *
+ * A directory of secrets (CF_WITH_DIR)
+ *
+ * One file a key, as Docker and Kubernetes mount secrets and systemd
+ * hands over credentials: the file named db.password is db.password;
+ * one named as an environment variable would be - MYAPP_DB__PASSWORD,
+ * with `prefix` "MYAPP_" - is mapped as the environment's is; a name
+ * that is neither is an error. The value is the file's content without
+ * its one trailing newline, as text for the contract to type and, for
+ * a secret, to mark CF_SENSITIVE. Dotfiles are skipped, which is also
+ * what Kubernetes' own ..data entries are.
+ * ------------------------------------------------------------------ */
+
+CF_API size_t cf_source_secrets_state_size(void);
+
+CF_API cf_bool cf_source_secrets(cf_source* s, const char* name, int rank,
+                                 const char* path, const char* prefix, unsigned flags,
+                                 void* state, size_t state_size);
+
+CF_API const cf_error* cf_source_secrets_error(const cf_source* s);
+
+/* ------------------------------------------------------------------ *
  * A SQLite store (CF_WITH_SQLITE)
  *
  * The flat key space in one table - configforge(key, type, value,

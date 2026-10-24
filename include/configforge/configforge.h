@@ -123,6 +123,11 @@ CF_API cf_bool cf_builder_dotenv(cf_builder* b, const char* name, int rank,
 CF_API cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank,
                               const char* path, const char* format, unsigned flags);
 
+/* A directory of secrets, one file a key, as containers mount them and
+   systemd passes credentials (cf_source_secrets says how names map). */
+CF_API cf_bool cf_builder_secrets(cf_builder* b, const char* name, int rank,
+                                  const char* path, const char* prefix, unsigned flags);
+
 /* A SQLite store (CF_WITH_SQLITE): typed values, each with what its
    writer said about it. cf_store_set writes one. */
 CF_API cf_bool cf_builder_store(cf_builder* b, const char* name, int rank,

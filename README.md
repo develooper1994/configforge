@@ -171,6 +171,7 @@ nothing, and `1.0` is where semantic versioning starts.
 | YAML through libyaml, typed by the contract, behind `CF_WITH_YAML` (D-39) | done |
 | XML through expat, read only, behind `CF_WITH_XML` (D-23) | done |
 | a SQLite store - typed, written in one transaction, each value with its writer's note - behind `CF_WITH_SQLITE` | done |
+| a directory of secrets, one file a key, as containers and systemd hand them over | done |
 | Windows Registry, gsettings, macOS defaults | deferred, see D-30 |
 
 Every line marked done is covered by the suite and by the gates below;
