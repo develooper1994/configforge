@@ -30,6 +30,14 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   fails when any of them disagree - before, it compared two of four
   copies. Tags are `vX.Y.Z`, and the release workflow refuses one that
   is not the header's version.
+- **Four more examples, each a situation rather than a function**
+  (`docs/Guide.md` has a table of all of them): `mistakes` (what the
+  person running the program reads for each kind of mistake, and the one
+  a contract may forgive), `secrets` (a password only the environment may
+  set, refused from a file, redacted everywhere, wiped), `plugins` (a
+  strict contract with one prefix handed over, discovered by iteration)
+  and `runtime` (an admin's change in a running service, explained the
+  next morning). Each is checked for its output by the suite.
 - **`cf_build_id()` and `doctor --version`**: the commit a build comes
   from, `20d0f4b` or `20d0f4b-dirty`, refreshed on every build and
   carried by a `git archive` source tarball; empty when the build

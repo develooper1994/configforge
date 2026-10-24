@@ -69,7 +69,16 @@ set_tests_properties(example.tier1.range example.tier1.typo example.tier1.enum
 # so it compiles against any set of options, and run where the parts it
 # uses are compiled in - checked for a clean exit and for the lines that
 # show it did what its comment says (expect.cmake).
-foreach(ex layers reload embedded schema)
+foreach(
+  ex
+  layers
+  reload
+  embedded
+  schema
+  mistakes
+  secrets
+  plugins
+  runtime)
   add_executable(${ex} ${ex}.c)
   target_link_libraries(${ex} PRIVATE configforge)
   set_target_properties(
@@ -131,4 +140,48 @@ if(CF_WITH_REPORT AND CF_WITH_JSON)
     "\"maximum\": 65535"
     "\"enum\": .\"debug\""
     "\"writeOnly\": true")
+endif()
+
+# What a user sees when the configuration is wrong: each message is the
+# library's, so a change to one shows up here.
+if(CF_WITH_INI)
+  example_expect(
+    mistakes
+    ${CMAKE_CURRENT_BINARY_DIR}/mistakes-run
+    "started: port 9000, log level info"
+    "unknown key 'server.pot'; did you mean 'server.port'\\?"
+    "server.port: 99999 is outside 1..65535"
+    "log.level: not one of debug info warn error"
+    "'db.url' is required and has no value"
+    "rejected: \"lots\" is not a valid int"
+    "started: cache.size 64")
+  example_expect(
+    runtime
+    ${CMAKE_CURRENT_BINARY_DIR}/runtime-run
+    "the request in flight still sees: info"
+    "a new request sees: +debug"
+    "admin +\"debug\" +selected"
+    "service.ini \"info\" +shadowed"
+    "0 workers: server.workers: 0 is outside 1..64"
+    "still running with 4 workers")
+endif()
+if(CF_WITH_INI AND CF_WITH_REPORT)
+  example_expect(
+    secrets
+    ${CMAKE_CURRENT_BINARY_DIR}/secrets-run
+    "with a password of 13 characters"
+    "rejected: policy: 'db.password' may only be set from env"
+    "db.password: changed, <sensitive>"
+    "the password is not in it"
+    "after free: still there"
+    "after wipe: gone")
+endif()
+if(CF_WITH_TOML)
+  example_expect(
+    plugins
+    ${CMAKE_CURRENT_BINARY_DIR}/plugins-run
+    "plugin auth: on"
+    "plugins.auth.audiences = \\[\"web\", \"mobile\"\\]"
+    "plugin cache: off"
+    "plugins.ratelimit.per_minute = 600")
 endif()
