@@ -1519,6 +1519,7 @@ static int usage(void) {
           "  doctor lint    <report> [options]\n"
           "  doctor diff    <report-a> <report-b> [options]\n"
           "  doctor import-git [--full]  < git config output\n"
+          "  doctor --version\n"
           "\n"
           "  --baseline <file>  findings already accepted\n"
           "  --severity <file>  this project's severities\n"
@@ -1556,6 +1557,14 @@ int main(int argc, char** argv) {
        report argument and is dispatched before anything expects one. */
     if (argc >= 2 && strcmp(argv[1], "import-git") == 0) {
         return doctor_import_git(argc - 2, argv + 2);
+    }
+    /* The version, and the commit it was built from when the build knew
+       it: two Doctors of one version can still differ. */
+    if (argc == 2 && strcmp(argv[1], "--version") == 0) {
+        const char* id = cf_build_id();
+        printf("ConfigForge Doctor %s%s%s%s\n", cf_version(),
+               (id[0] != '\0') ? " (" : "", id, (id[0] != '\0') ? ")" : "");
+        return 0;
     }
     if (argc < 3) {
         return usage();

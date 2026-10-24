@@ -7,6 +7,8 @@ Developer scripts: things that build, generate or check.
 | `verify.cmake` | everything that has to be true before a commit; `-DSOURCE=index` checks only what is staged, `-DEXTRA=kqueue;tidy;clang;tsan;yaml;compilers;fuzz;coverage` adds builds, `-DJOBS=N` bounds parallelism, `-DWORK=dir` puts the staged copy in `dir` (under WSL, keep it off `/mnt/c`) |
 | `format.cmake` | formats and lints what changed (`-DALL=ON` everything, `-DCHECK=ON` report only) |
 | `stack.cmake` | every library frame against a budget, by feature; the build runs it after linking, and `-DOBJDIR=build/CMakeFiles/configforge.dir -DBUDGET=N` asks "what if" (D-37) |
+| `version.cmake` | prints the version, or changes it everywhere it is written: `-DTO=0.3.0` rewrites `cf_version.h` and the vcpkg manifest and opens a CHANGELOG section (D-40) |
+| `buildid.cmake` | writes the commit a build comes from into `cf_build_id.h`; the build runs it on every build |
 | `apiref.cmake` | regenerates `docs/API.md` from the public headers' comments; `gate.apiref` checks it is current |
 | `amalgamate.py` | generates the single-file distribution |
 | `check_formats.py` | every format string against what `cf_fmt` supports (run by `gate.formats`) |

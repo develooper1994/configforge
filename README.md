@@ -280,6 +280,21 @@ A frame is one link of a call chain: a thread also needs room for
 `CF_MAX_DEPTH` levels of a decoder's recursion. GCC and Clang report
 frame sizes; MSVC does not, and there the budget is not checked.
 
+### Versions
+
+The version is written once, in `include/configforge/cf_version.h`;
+everything else reads it, and `gate.version` fails if a copy disagrees.
+A release is that version dated in `CHANGELOG.md` and tagged:
+
+```sh
+cmake -DTO=0.3.0 -P scripts/version.cmake     # header, vcpkg manifest, CHANGELOG section
+git tag -a v0.3.0 -m "ConfigForge 0.3.0" && git push origin v0.3.0
+```
+
+`cf_version()` is the version and `cf_build_id()` the commit it was
+built from (`doctor --version` prints both), so two builds of one
+version can still be told apart.
+
 ### From a release
 
 Each release carries the source, the amalgamation, and a built library

@@ -11,9 +11,12 @@
 # with_yaml brings libyaml from ConanCenter, the one dependency any build
 # of this library can have (docs/Dependencies.md).
 
+import os
+import re
+
 from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
-from conan.tools.files import copy
+from conan.tools.files import copy, load
 
 FEATURES = {
     "ini": True,
@@ -31,7 +34,6 @@ FEATURES = {
 
 class ConfigForgeConan(ConanFile):
     name = "configforge"
-    version = "0.2.0"
     license = "Zlib"
     url = "https://github.com/develooper1994/configforge"
     homepage = url
@@ -47,6 +49,14 @@ class ConfigForgeConan(ConanFile):
     exports_sources = (
         "CMakeLists.txt", "CMakePresets.json", "LICENSE", "cmake/*", "include/*",
         "src/*", "scripts/*", "tools/*", "tests/*", "examples/*", "docs/*")
+
+    def set_version(self):
+        # cf_version.h is the one place the version is written.
+        header = load(self, os.path.join(self.recipe_folder, "include", "configforge",
+                                         "cf_version.h"))
+        parts = [re.search(r"#define CF_VERSION_%s\s+(\d+)" % p, header).group(1)
+                 for p in ("MAJOR", "MINOR", "PATCH")]
+        self.version = ".".join(parts)
 
     def config_options(self):
         if self.settings.os == "Windows":

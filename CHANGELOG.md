@@ -3,6 +3,22 @@
 Versions follow semantic versioning from 1.0. Before that, `0.x` promises
 nothing: the C interface is not frozen, and a minor bump may change it.
 
+## 0.3.0 — unreleased
+
+### Added
+
+- **The version is written in one place** (D-40). `cf_version.h` is the
+  source; CMake reads it before `project()`, the Conan recipe reads it,
+  and `cmake -DTO=x.y.z -P scripts/version.cmake` rewrites the header,
+  the vcpkg manifest and the CHANGELOG heading together. `gate.version`
+  fails when any of them disagree - before, it compared two of four
+  copies. Tags are `vX.Y.Z`, and the release workflow refuses one that
+  is not the header's version.
+- **`cf_build_id()` and `doctor --version`**: the commit a build comes
+  from, `20d0f4b` or `20d0f4b-dirty`, refreshed on every build and
+  carried by a `git archive` source tarball; empty when the build
+  cannot know.
+
 ## 0.2.0 — 2026-10-24
 
 ### Added

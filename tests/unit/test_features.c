@@ -200,7 +200,29 @@ static void test_report(void) {
     remove("cf_feat_report.json");
 }
 
+/* The version is what cf_version.h says, and the build id is either
+   nothing or what git abbreviates a commit to, "-dirty" allowed. */
+static void test_version(void) {
+    const char* id = cf_build_id();
+    size_t      i  = 0;
+
+    check(strcmp(cf_version(), CF_VERSION_STRING) == 0, "the version is the header's");
+    check(cf_version_number() == CF_VERSION_NUMBER, "and so is its number");
+    check(id != NULL, "a build id is never NULL");
+    if (id == NULL) {
+        return;
+    }
+    while ((id[i] >= '0' && id[i] <= '9') || (id[i] >= 'a' && id[i] <= 'f')) {
+        ++i;
+    }
+    check(id[0] == '\0' || (i >= 4 && (id[i] == '\0' || strcmp(id + i, "-dirty") == 0)),
+          "a build id is empty or a commit hash");
+    printf("  version %s, build %s\n", cf_version(),
+           (id[0] != '\0') ? id : "(unknown)");
+}
+
 int main(void) {
+    test_version();
     test_listed();
     test_dir();
     test_dotenv();

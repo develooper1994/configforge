@@ -24,7 +24,7 @@ in; the types are in the headers themselves.
 - [`cf_serialize.h`](#cf_serializeh) - 16
 - [`cf_source.h`](#cf_sourceh) - 19
 - [`cf_value.h`](#cf_valueh) - 12
-- [`cf_version.h`](#cf_versionh) - 5
+- [`cf_version.h`](#cf_versionh) - 6
 
 ## configforge.h
 
@@ -2005,10 +2005,13 @@ CF_API cf_bool cf_value_equal(const cf_value* a, const cf_value* b);
 cf_version.h - one place the version exists.
 
 A version that lives in two places is a version that disagrees with
-itself. These macros are the source; the build reads them and a gate
-checks that the number CMake reports still matches, so a release that
-bumps one and forgets the other fails before it ships rather than
-after.
+itself. These three macros are the only place it is written by hand:
+CMake reads them before project(), the Conan recipe reads them, and
+the one copy that cannot read anything - the vcpkg manifest - is
+rewritten with this file by `cmake -DTO=x.y.z -P scripts/version.cmake`
+and checked against it by gate.version, as is the CHANGELOG's newest
+section. A release is the tag vX.Y.Z on a commit where these say
+X.Y.Z; the release workflow refuses any other.
 
 Compatibility, restated from the design:
 
@@ -2028,6 +2031,19 @@ The version the library was *compiled* as, which is not necessarily
 the header the caller compiled against. A program that links a shared
 build can compare the two and say so, which is the only way that
 mismatch is ever noticed before it misbehaves.
+
+```c
+CF_API const char* cf_build_id(void);
+```
+
+The commit the library was built from, as git abbreviates it -
+"20d0f4b" - with "-dirty" when the tree had uncommitted changes, or ""
+when the build could not know (no git, or a copy that is neither a
+checkout nor a git archive). Build metadata, not part of the version:
+two builds of 0.2.0 compare equal by cf_version_number() and can still
+be told apart by this. Never NULL. Set at build time, not configure
+time, so it follows a checkout without reconfiguring; a build without
+CMake can pass -DCF_BUILD_ID="\"...\"".
 
 ```c
 CF_API size_t cf_feature_count(void);

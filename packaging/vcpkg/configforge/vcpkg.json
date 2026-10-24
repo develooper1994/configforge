@@ -1,6 +1,6 @@
 {
   "name": "configforge",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Configuration for C whose every value can say why it is what it is",
   "homepage": "https://github.com/develooper1994/configforge",
   "license": "Zlib",

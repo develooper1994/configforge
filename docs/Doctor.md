@@ -166,6 +166,9 @@ configforge doctor parity <reportA> <reportB> [--require-same-origin]
 
 configforge doctor emit [--blind] [--out F]
     produce a report from the current environment
+
+configforge doctor --version
+    the version, and the commit Doctor was built from: "ConfigForge Doctor 0.3.0 (20d0f4b)"
 ```
 
 `explain` and `dump` are convenience wrappers over the library's own capability, made
