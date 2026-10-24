@@ -169,7 +169,8 @@ nothing, and `1.0` is where semantic versioning starts.
 | parts a program can leave out, each refusing by name (D-38) | done |
 | secrets kept out of diagnostics and out of freed memory | done |
 | YAML through libyaml, typed by the contract, behind `CF_WITH_YAML` (D-39) | done |
-| XML, SQLite codecs | deferred, see D-23 |
+| XML through expat, read only, behind `CF_WITH_XML` (D-23) | done |
+| SQLite store | deferred, see D-23 |
 | Windows Registry, gsettings, macOS defaults | deferred, see D-30 |
 
 Every line marked done is covered by the suite and by the gates below;

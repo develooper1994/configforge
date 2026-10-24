@@ -16,7 +16,7 @@ apt-get install -y --no-install-recommends \
   clang clang-format clang-tidy libclang-rt-18-dev llvm \
   binutils cppcheck gcovr cmake-format \
   musl-tools tcc pcc \
-  libyaml-dev libkqueue-dev \
+  libyaml-dev libexpat1-dev libkqueue-dev \
   qemu-system-x86 qemu-utils openssh-client \
   podman uidmap fuse-overlayfs
 

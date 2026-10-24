@@ -142,14 +142,16 @@ jobs:
       - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build
       - run: ctest --test-dir build --output-on-failure
 
-  # YAML is off by default because it links libyaml; this is the build
-  # that has it, the whole suite included.
+  # YAML and XML are off by default because they link libyaml and expat;
+  # this is the build that has them, the whole suite included.
   yaml:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y libyaml-dev
-      - run: cmake -S . -B build -DCF_WITH_YAML=ON && cmake --build build --parallel
+      - run: sudo apt-get update && sudo apt-get install -y libyaml-dev libexpat1-dev
+      - run: >-
+          cmake -S . -B build -DCF_WITH_YAML=ON -DCF_WITH_XML=ON &&
+          cmake --build build --parallel
       - run: ctest --test-dir build --output-on-failure
 
   # The threading contract (D-14) under a race detector. The runner's

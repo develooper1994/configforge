@@ -107,7 +107,7 @@ execute_process(
     ${CC} -std=c89 -pedantic ${werror} -I "${prefix}/include"
     -DCF_EXPECT_REAL=${EXPECT_REAL} -DCF_EXPECT_JSON=${EXPECT_JSON} -o
     "${work}/options" "${SRC}/tests/consumer/options.c" ${installed_lib}
-    ${YAML_LIB}
+    ${YAML_LIB} ${XML_LIB}
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE out
   ERROR_VARIABLE out)

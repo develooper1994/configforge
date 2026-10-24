@@ -22,6 +22,9 @@ extern const cf_codec cf_codec_toml;
 #if CF_WITH_YAML
 extern const cf_codec cf_codec_yaml;
 #endif
+#if CF_WITH_XML
+extern const cf_codec cf_codec_xml;
+#endif
 
 static const cf_codec* const cf_codecs[] = {
 #if CF_WITH_INI
@@ -35,6 +38,9 @@ static const cf_codec* const cf_codecs[] = {
 #endif
 #if CF_WITH_YAML
     &cf_codec_yaml,
+#endif
+#if CF_WITH_XML
+    &cf_codec_xml,
 #endif
     NULL};
 

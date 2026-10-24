@@ -100,14 +100,16 @@ foreach(lim CF_KEY_MAX CF_MESSAGE_MAX CF_PATH_MAX CF_MAX_DEPTH)
   endif()
 endforeach()
 
-# A codec with a dependency (CF_WITH_YAML) needs its header to compile
-# and its library to link, on both sides of the comparison.
+# A codec with a dependency (CF_WITH_YAML, CF_WITH_XML) needs its header
+# to compile and its library to link, on both sides of the comparison.
 set(DEP_INC "")
 set(DEP_LIB "")
-if(DEFINED YAML_INC AND NOT YAML_INC STREQUAL "")
-  set(DEP_INC "-I${YAML_INC}")
-  set(DEP_LIB "${YAML_LIB}")
-endif()
+foreach(dep YAML XML)
+  if(DEFINED ${dep}_INC AND NOT ${dep}_INC STREQUAL "")
+    list(APPEND DEP_INC "-I${${dep}_INC}")
+    list(APPEND DEP_LIB "${${dep}_LIB}")
+  endif()
+endforeach()
 
 # The two sides learn their options differently, on purpose. The library
 # side gets the generated cf_build_options.h on its include path, which

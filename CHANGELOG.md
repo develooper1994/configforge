@@ -5,6 +5,18 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ## 0.4.0 — unreleased
 
+### Added
+
+- **XML, through expat, behind `CF_WITH_XML`** (D-23), which until now
+  was an option that compiled nothing while `cf_has_feature("xml")`
+  said yes. Read only; the root's name is in no key, attributes and
+  children share one namespace, adjacent same-named siblings are a
+  list, a leaf's text is trimmed and typed by the contract, and a
+  DOCTYPE, mixed content, namespaces and a scattered list are refused
+  by name. An XML document and the JSON written for it resolve to the
+  same digest. Conan `with_xml`, vcpkg feature `xml`, fuzzed with the
+  other readers.
+
 ### Fixed
 
 - **CI was red, and nobody here could see it.** Two jobs had failed on

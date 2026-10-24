@@ -14,7 +14,9 @@ vcpkg_check_features(
   FEATURE_OPTIONS
   FEATURES
   yaml
-  CF_WITH_YAML)
+  CF_WITH_YAML
+  xml
+  CF_WITH_XML)
 
 vcpkg_cmake_configure(
   SOURCE_PATH

@@ -759,8 +759,9 @@ for.
 because the available C parsers all build a DOM and allocate, and this design needs an
 event producer with exact locations and no allocation. TOML followed the same way, as the
 subset D-23 described, in about 900 lines including its writer; it is on by default, being
-as dependency-free as the other two. XML and SQLite stay deferred behind their options
-(D-23, D-26); the codec seam accepts them without changes.
+as dependency-free as the other two. XML followed through expat, read only, behind
+`CF_WITH_XML`: the seam took it without a change, as promised, and the mapping below is
+the one built. SQLite stays deferred (D-26).
 
 ---
 
@@ -799,6 +800,18 @@ hand-maintained documents stay read-only.
 convention — attributes and children in one namespace, collisions are errors, repeated
 siblings become arrays, mixed content is an error — is declared and tested rather than
 inferred, and XML is read-only.
+
+**As built** (`src/serialize/xml.c`). The root element's name is in no key; its
+attributes and children are the top level. Repeated siblings must be adjacent to be a
+list, since a list scattered among other elements is one nobody reading the file sees as
+one. A leaf's text is trimmed, as an INI value is, and every value is text for the
+contract to type (D-24). A DOCTYPE is refused outright, which is also how entity
+expansion and external references - the ways XML configuration is attacked - never
+arise; namespaces are refused because a key has no room for a prefix. Knowing at the
+first of two siblings that a second follows takes two passes over the text; the first
+records a byte an element in expat's own memory, so the library still allocates nothing
+outside its arenas. `test_xml` checks an XML document and the JSON a person would write
+for it resolve to the same digest.
 
 **Consequence.** Adds one internal interface and one shared flattener to Phase 1 that would
 not otherwise exist. Pays for itself at the second format.

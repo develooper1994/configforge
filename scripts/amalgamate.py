@@ -52,7 +52,7 @@ SOURCES = [
     "core/value.c", "core/keyspace.c", "core/define.c", "core/validate.c",
     "core/config.c", "core/iterate.c",
     "serialize/blob.c", "serialize/codec.c", "serialize/ini.c",
-    "serialize/json.c", "serialize/toml.c", "serialize/yaml.c",
+    "serialize/json.c", "serialize/toml.c", "serialize/yaml.c", "serialize/xml.c",
     "sources/entry.c", "sources/memory.c", "sources/defaults.c", "sources/env.c",
     "sources/cli.c", "sources/compat.c", "sources/snapshot.c",
     "bridge/flatten.c", "bridge/file.c", "bridge/dotenv.c", "bridge/dir.c", "bridge/emit.c", "bridge/image.c",
