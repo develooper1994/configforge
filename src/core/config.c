@@ -31,6 +31,11 @@ struct cf_builder {
        their own buffer keeps it; freeing it would be freeing memory
        this library never allocated. */
     cf_bool owns_arena;
+
+    /* The configuration being derived from, while cf_derive builds:
+       its candidates are loaded before any source, and its files'
+       stamps carried over. NULL for an ordinary build. */
+    const struct cf_config* inherit;
 };
 
 struct cf_config {
@@ -65,6 +70,26 @@ struct cf_config {
 /* ------------------------------------------------------------------ *
  * Builder
  * ------------------------------------------------------------------ */
+
+/* A source of the configuration a derived one came from: its name,
+   rank, kind and file, and nothing to load, because its candidates
+   arrive with the rest of the original's. Without these, a derived
+   configuration knew only "inherited" and the new source, so explain()
+   said "?" for every rank in between, the default appeared twice, and
+   a policy naming the environment could not find it. */
+static cf_bool config_ghost_load(const cf_source* s, cf_keyspace* ks) {
+    (void)s;
+    (void)ks;
+    return CF_TRUE;
+}
+
+static const char* config_ghost_path(const cf_source* s) {
+    return (const char*)s->ref;
+}
+
+static cf_bool config_is_ghost(const cf_source* s) {
+    return (s->vt != NULL && s->vt->load == config_ghost_load) ? CF_TRUE : CF_FALSE;
+}
 
 static void builder_fail(cf_builder* b, const cf_error* e) {
     if (b->failed) {
@@ -526,7 +551,7 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
        unambiguously without it, which is why both are Tier 1. */
     if (cf_defset_count(&c->defs) > 0) {
         for (i = 0; i < c->sv.count; ++i) {
-            if (c->sources[i].vt == NULL) {
+            if (c->sources[i].vt == NULL || config_is_ghost(&c->sources[i])) {
                 continue;
             }
             if (strcmp(c->sources[i].vt->kind, "env") == 0) {
@@ -540,7 +565,11 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
     /* Defaults are a source like any other, at the lowest rank. They
        are appended after the caller's sources so that a caller who
        registered their own default source still gets theirs. */
-    if (cf_defset_count(&c->defs) > 0 && c->sv.count < CF_BUILDER_SOURCES) {
+    /* Not when deriving: the original's defaults arrive with its other
+       candidates, from the same definitions, and seeding them again put
+       every default in the chain twice. */
+    if (cf_defset_count(&c->defs) > 0 && c->sv.count < CF_BUILDER_SOURCES &&
+        b->inherit == NULL) {
         size_t at = c->sv.count;
         cf_source_defaults(&c->sources[at], "default", CF_RANK_DEFAULT, &c->defs);
         c->view[at] = &c->sources[at];
@@ -550,6 +579,22 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
     if (!cf_ks_init(&c->keys, c->arena, 64)) {
         cf_error_set(&e, CF_E_MEMORY, NULL, NULL, "no room for the key space");
         return create_failed(b, err, &e);
+    }
+
+    /* A derived configuration's inheritance: every candidate the
+       original held, at the rank it had. Loaded before the sources, not
+       after - a second change to one key lands at the same override
+       rank as the first, and the later of two equal ranks wins. And not
+       as a source: its candidates belong to the sources their ranks
+       name, which the ghosts stand in for. */
+    if (b->inherit != NULL) {
+        cf_source snap;
+        if (!cf_source_snapshot(&snap, "inherited", &b->inherit->keys) ||
+            !cf_source_load(&snap, &c->keys)) {
+            cf_error_set(&e, CF_E_MEMORY, NULL, NULL,
+                         "no room for the inherited configuration");
+            return create_failed(b, err, &e);
+        }
     }
 
     for (i = 0; i < c->sv.count; ++i) {
@@ -587,12 +632,31 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
     if (c->watch_paths != NULL && c->watch_stamps != NULL) {
         for (i = 0; i < c->sv.count; ++i) {
             const char* p = cf_source_path(&c->sources[i]);
-            if (p == NULL) {
+            if (p == NULL || config_is_ghost(&c->sources[i])) {
                 continue;
             }
             c->watch_paths[c->watch_count] = p;
             cf_platform_stamp(p, &c->watch_stamps[c->watch_count]);
             ++c->watch_count;
+        }
+        /* The original's files with the stamps they had when it was
+           read, not now: a file that changed after the original was
+           built and before the derive is still a change. There is room,
+           as each of those files has a ghost among the sources. */
+        if (b->inherit != NULL) {
+            const cf_config* o = b->inherit;
+            for (i = 0; i < o->watch_count && c->watch_count < c->sv.count + 1; ++i) {
+                const char* p = cf_arena_dup(c->arena, o->watch_paths[i],
+                                             strlen(o->watch_paths[i]));
+                if (p == NULL) {
+                    cf_error_set(&e, CF_E_MEMORY, NULL, NULL,
+                                 "no room for the watched files");
+                    return create_failed(b, err, &e);
+                }
+                c->watch_paths[c->watch_count]  = p;
+                c->watch_stamps[c->watch_count] = o->watch_stamps[i];
+                ++c->watch_count;
+            }
         }
     }
 
@@ -666,11 +730,42 @@ cf_config* cf_app(const char* name, int argc, char* const* argv, cf_error* err) 
  * to reason about.
  * ------------------------------------------------------------------ */
 
+/* A ghost of `o` in `b`: everything copied into the derived arena, so
+   the original may be freed first. */
+static cf_bool derive_ghost(cf_builder* b, const cf_source* o) {
+    cf_source_vtable* vt   = (cf_source_vtable*)cf_arena_calloc(b->arena, sizeof *vt);
+    const char*       path = cf_source_path(o);
+    cf_source*        s;
+
+    if (vt == NULL) {
+        return CF_FALSE;
+    }
+    vt->kind    = cf_arena_dup(b->arena, o->vt->kind, strlen(o->vt->kind));
+    vt->load    = config_ghost_load;
+    vt->destroy = NULL;
+    vt->path    = config_ghost_path;
+    s           = builder_slot(b);
+    if (s == NULL || vt->kind == NULL) {
+        return CF_FALSE;
+    }
+    memset(s, 0, sizeof *s);
+    s->vt   = vt;
+    s->rank = o->rank;
+    s->name = cf_arena_dup(b->arena, o->name, strlen(o->name));
+    s->ref  = (path != NULL) ? cf_arena_dup(b->arena, path, strlen(path)) : NULL;
+    if (s->name == NULL || (path != NULL && s->ref == NULL)) {
+        return CF_FALSE;
+    }
+    ++b->nsources;
+    return CF_TRUE;
+}
+
 static cf_config* derive_onto(const cf_config* base, cf_arena* ar, cf_bool owns,
                               const char* source_name, const cf_pair* pairs,
                               size_t count, cf_error* err) {
     cf_builder* b;
     size_t      i;
+    const char* name;
 
     b = builder_on(ar, owns);
     if (b == NULL) {
@@ -681,16 +776,30 @@ static cf_config* derive_onto(const cf_config* base, cf_arena* ar, cf_bool owns,
     /* Every candidate the base holds, not only the winners: dropping
        the losers would make explain() on the derived configuration say
        less than on the one it came from, which is the wrong direction
-       for this library to move in. */
-    {
-        cf_source* s = builder_slot(b);
-        if (s == NULL || !cf_source_snapshot(s, "inherited", &base->keys)) {
+       for this library to move in. cf_builder_create loads them, before
+       the sources, from here. */
+    b->inherit = base;
+    name       = (source_name != NULL) ? source_name : "set";
+
+    /* And the sources they came from, by name, rank, kind and file, so
+       that the derived configuration explains itself as the original
+       did. A source this derive is about to add again - a second change
+       from "admin" - is left to the live one, or every key it does not
+       set would be "admin: not present" twice. */
+    for (i = 0; i < base->sv.count; ++i) {
+        const cf_source* o = base->sv.items[i];
+        if (o == NULL || o->vt == NULL) {
+            continue;
+        }
+        if (count > 0 && o->rank == CF_RANK_OVERRIDE && strcmp(o->name, name) == 0) {
+            continue;
+        }
+        if (!derive_ghost(b, o)) {
             cf_error_set(err, CF_E_MEMORY, NULL, NULL,
-                         "no room for the inherited configuration");
+                         "no room for the inherited sources");
             cf_builder_abort(b);
             return NULL;
         }
-        ++b->nsources;
     }
 
     /* The overrides go in after the base, not before. Rank already puts
@@ -700,8 +809,7 @@ static cf_config* derive_onto(const cf_config* base, cf_arena* ar, cf_bool owns,
        made the *inherited* override the later of the two, so a second
        change to the same key did nothing. */
     if (count > 0) {
-        cf_builder_memory(b, (source_name != NULL) ? source_name : "set",
-                          CF_RANK_OVERRIDE, pairs, count);
+        cf_builder_memory(b, name, CF_RANK_OVERRIDE, pairs, count);
     }
 
     /* The contract travels with it, or the derived configuration would
