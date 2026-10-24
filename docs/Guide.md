@@ -21,6 +21,27 @@ The reference for each function is [`API.md`](API.md); the reasons are in
 13. [C++](#13-c)
 14. [Threads](#14-threads)
 
+### The examples, by what they show
+
+Each is a short program with the reasoning in its comments, built in
+every build and run by the suite, which checks the lines that show it
+does what its comment says.
+
+| Example | What it shows | Section |
+| ------- | ------------- | ------- |
+| `tier0.c` | the smallest complete program: command line, environment, defaults | 2 |
+| `tier1.c`, `tier1.cpp` | the same with a contract, in C and C++03 | 3, 13 |
+| `layers.c` | six sources at once, and why each value won | 4 |
+| `explain_demo.c` | `explain()` on one key | 5 |
+| `plugins.c` | a strict contract with one prefix handed to plugins, discovered by iteration; lists | 6 |
+| `mistakes.c` | what the person running the program sees for each kind of mistake | 7 |
+| `secrets.c` | a password only the environment may set, never printed, never in a report, wiped | 9 |
+| `settings.c` | read, explain, set, save, notice the file change | 10 |
+| `runtime.c` | an admin changing a setting in a running service: readers unaffected, the change explained | 10 |
+| `reload.c` | watch a file, rebuild, log what changed | 10 |
+| `schema.c` | the contract as a JSON Schema for editors | 11 |
+| `embedded.c` | a fixed buffer and an image, no heap, still explaining itself | 12 |
+
 ## 1. Getting it into a build
 
 Pick whichever your project already uses; each one gives you the same
@@ -213,6 +234,37 @@ The codes: `key` (malformed or unknown key), `definition`, `convert`,
 `capability` (a source cannot do what was asked - a format this build
 left out, say), `policy` and `memory`.
 
+What the person running the program reads, from `examples/mistakes.c`,
+which builds one contract from five files with one mistake each:
+
+```text
+2. a key spelt wrong
+  refused: unknown key 'server.pot'; did you mean 'server.port'?
+
+3. a number out of range
+  refused: server.port: 99999 is outside 1..65535
+
+4. a word the contract does not know
+  refused: log.level: not one of debug info warn error
+
+5. a required setting left out
+  refused: 'db.url' is required and has no value
+```
+
+One key can be told to forgive: `on_invalid = CF_INVALID_FALLBACK` on a
+tuning knob such as a cache size, so nonsense in the file falls back to
+the next candidate down - and the refusal stays in `explain()`:
+
+```text
+cache.size = 64  (int)
+  file        "lots"                rejected: "lots" is not a valid int   mistakes.ini:2:1
+  default     64                    selected
+```
+
+Everything else stays strict, which is the default for a reason: a
+production database address that quietly became a development default
+is worse than a program that refuses to start.
+
 ## 8. Formats
 
 | Format | Option | Notes |
@@ -238,7 +290,18 @@ follows. Anchors, aliases and tags are refused by name.
 Define a key `CF_SENSITIVE` and its value never appears in a diagnostic:
 `explain()`, `inspect()`, `cf_diff_text`, a validation message and a
 value-blind report all show that it exists, where it was set and how
-long it is - `<sensitive, 13 bytes>` - and not what it is. The memory a
+long it is - `<sensitive, 13 bytes>` - and not what it is. A per-key
+policy, `{ "env", NULL }`, says the environment is the only place it may
+come from; a password someone committed to the file is then refused and
+shown as refused, which is how it gets noticed (`examples/secrets.c`):
+
+```text
+db.password = <sensitive, 13 bytes>  (text)
+  env         <sensitive, 13 bytes> selected   SECRETS_DB__PASSWORD
+  file        <sensitive, 21 bytes> rejected: policy: 'db.password' may only be set from env   secrets.ini:3:1
+```
+
+The memory a
 configuration releases is zeroed first, so a password does not survive
 into the next allocation or a core dump; for a buffer you own,
 `cf_arena_wipe` does the same. Doctor reports a secret passed on the
@@ -285,6 +348,20 @@ server.port: 8080 -> 9443 (file reload.toml:2:8)
 
 A reload whose new file is broken fails to build, and the program keeps
 the configuration it has.
+
+A change made at run time - an operator raising the log level from an
+admin page - is the same `cf_derive`. A request already in flight keeps
+the snapshot it started with, the change meets the same contract a file
+would (0 workers is refused, and the running configuration is left as it
+was), and the next morning `explain()` says who did it and what it was
+before (`examples/runtime.c`):
+
+```text
+log.level = "debug"  (text)
+  admin       "debug"               selected
+  service.ini "info"                shadowed   service.ini:2:1
+  default     "warn"                shadowed
+```
 
 ## 11. The editor, the report and Doctor
 
