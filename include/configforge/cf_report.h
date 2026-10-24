@@ -48,6 +48,20 @@ CF_API size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
                               const cf_source_view* sv, const cf_report_info* info,
                               char* buf, size_t cap);
 
+/* One key as the report writes it, alone - explain() for a machine:
+
+     { "configforge_key": 1, "key": "server.port",
+       "value": { "definition": ..., "candidates": [...], "selected": ... } }
+
+   The object under "value" is exactly what the report holds under
+   "keys.<key>", so whatever reads one reads the other. A key nobody
+   supplied has no candidates and a null selection. `mode` redacts as
+   the report does. Measure-or-write; 0 without CF_WITH_REPORT. */
+CF_API size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds,
+                                  const cf_source_view* sv, const char* key,
+                                  size_t keylen, cf_report_mode mode, char* buf,
+                                  size_t cap);
+
 /* The definitions as a JSON Schema (draft 2020-12), for editors: a file
    that names it gets completion, documentation and validation as it is
    typed, from the contract the program declared. Design.md, section 41.

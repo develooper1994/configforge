@@ -143,6 +143,47 @@ static void test_full_report(void) {
     cf_config_free(cfg);
 }
 
+/* explain() for a machine: one key, as the report holds it, valid JSON,
+   redacted as the report is; and the report says which build wrote it. */
+static void test_explain_json(cf_arena* ar) {
+    cf_error        err = CF_ERROR_INIT;
+    cf_config*      cfg = build(&err);
+    static char     buf[4096];
+    const cf_codec* json = cf_codec_by_name("json");
+    cf_keyspace     ks;
+    cf_flatten      fl;
+    cf_blob         blob;
+    size_t          n;
+
+    if (cfg == NULL) {
+        check(0, "builds");
+        return;
+    }
+    n = cf_explain_json(cfg, "server.port", CF_REPORT_BLIND, buf, sizeof buf);
+    check(n > 0 && n < sizeof buf, "one key's chain is written");
+    has(buf, "\"configforge_key\": 1", "marked as one key of a schema-1 report");
+    has(buf, "\"key\": \"server.port\"", "named");
+    has(buf, "\"candidates\"", "with its candidates");
+    has(buf, "\"source\": \"cli\"", "and the winner");
+    check(cf_explain_json(cfg, "server.port", CF_REPORT_BLIND, NULL, 0) == n,
+          "measured as it is written");
+    cf_blob_mem(&blob, buf, strlen(buf), "explain");
+    cf_ks_init(&ks, ar, 64);
+    cf_flatten_init(&fl, &ks, 0);
+    check(json->decode(&blob, cf_flatten_sink(&fl), &err), "and it is JSON");
+
+    cf_explain_json(cfg, "db.password", CF_REPORT_BLIND, buf, sizeof buf);
+    lacks(buf, "hunter2", "a sensitive key's value is not in a blind explanation");
+    has(buf, "\"digest\"", "but its digest is");
+
+    cf_explain_json(cfg, "no.such.key", CF_REPORT_BLIND, buf, sizeof buf);
+    has(buf, "\"selected\": null", "a key nobody supplied has no winner");
+
+    report(cfg, CF_REPORT_BLIND, buf, sizeof buf);
+    has(buf, "\"build\": ", "the report names the build that wrote it");
+    cf_config_free(cfg);
+}
+
 static void test_report_is_valid_json(cf_arena* ar) {
     cf_error        err = CF_ERROR_INIT;
     cf_config*      cfg = build(&err);
@@ -348,6 +389,7 @@ int main(void) {
     test_digest_distinguishes();
     test_full_report();
     test_report_is_valid_json(ar);
+    test_explain_json(ar);
     test_replay();
     test_blind_report_refuses_replay();
     test_replay_rejects_other_json();

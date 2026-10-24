@@ -42,6 +42,15 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   contract. Read only, because the format has no quoting and text
   written as 8080 would come back a number.
 
+- **`cf_explain_json`: explain() for a machine** - one key's chain as
+  JSON, for an administration endpoint, the way Spring's
+  `/actuator/env` serves it. It is exactly the object the provenance
+  report holds under `keys.<key>` (`cf_report_key_write` for a key
+  space), redacted as the report is, so a sensitive key shows where it
+  came from and its digest and never its value.
+- **The report names the build that wrote it**: `library.build`, beside
+  `library.version`, is `cf_build_id()`. An added field, which a reader
+  of schema 1 does not object to, so the schema number stays.
 - **Doctor's rules as a library** (D-41): `cf_doctor.h`,
   `libconfigforge_doctor`, of which `doctor` is now the command line. A
   program lints its own configuration in process - `cf_doctor_lint(d,

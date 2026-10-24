@@ -268,6 +268,72 @@ static void report_candidate(cf_sink* out, const cf_candidate* c,
     cf_sink_putc(out, '}');
 }
 
+/* One key's object - its definition, every candidate, the winner - as
+   the report writes it under "keys", and as cf_report_key_write writes
+   it alone. `e` may be NULL for a key nobody supplied. */
+static void report_key(cf_sink* out, const cf_entry* e, const cf_def* d,
+                       const cf_source_view* sv, cf_report_mode mode,
+                       const char* indent) {
+    const cf_candidate* c;
+    cf_bool             first = CF_TRUE;
+
+    cf_sink_fmt(out, "{\n%s  \"definition\": ", indent);
+    report_definition(out, d);
+    cf_sink_fmt(out, ",\n%s  \"candidates\": [", indent);
+
+    /* Nothing is dropped from the chain: a shadowed or refused
+       candidate is the whole point of the artifact. */
+    for (c = (e != NULL) ? e->chain : NULL; c != NULL; c = c->next) {
+        if (!first) {
+            cf_sink_putc(out, ',');
+        }
+        cf_sink_fmt(out, "\n%s    ", indent);
+        report_candidate(out, c, sv, d, mode);
+        first = CF_FALSE;
+    }
+    cf_sink_fmt(out, "\n%s  ],\n%s  \"selected\": ", indent, indent);
+    if (e != NULL && e->selected != NULL) {
+        const cf_source* s = source_of(sv, e->selected->source);
+        cf_sink_puts(out, "{ \"source\": ");
+        report_quote_z(out, (s != NULL) ? s->name : "?");
+        cf_sink_puts(out, ", \"reason\": \"highest precedence with a "
+                          "usable value\" }");
+    } else {
+        cf_sink_puts(out, "null");
+    }
+    cf_sink_fmt(out, "\n%s}", indent);
+}
+
+size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds,
+                           const cf_source_view* sv, const char* key, size_t keylen,
+                           cf_report_mode mode, char* buf, size_t cap) {
+    cf_sink         out;
+    const cf_entry* e = NULL;
+    size_t          i;
+
+    cf_sink_init(&out, buf, cap);
+    if (ks == NULL || key == NULL) {
+        cf_sink_terminate(&out);
+        return 0;
+    }
+    for (i = 0; i < cf_ks_count(ks); ++i) {
+        const cf_entry* x = cf_ks_at(ks, i);
+        if (x->keylen == keylen && memcmp(x->key, key, keylen) == 0) {
+            e = x;
+            break;
+        }
+    }
+    cf_sink_puts(&out, "{ \"configforge_key\": ");
+    cf_sink_fmt(&out, "%d, \"key\": ", CF_REPORT_SCHEMA);
+    report_quote(&out, key, keylen);
+    cf_sink_puts(&out, ", \"value\": ");
+    report_key(&out, e, (ds != NULL) ? cf_defset_find(ds, key, keylen) : NULL, sv, mode,
+               "");
+    cf_sink_puts(&out, " }\n");
+    cf_sink_terminate(&out);
+    return out.len;
+}
+
 size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
                        const cf_source_view* sv, const cf_report_info* info, char* buf,
                        size_t cap) {
@@ -296,8 +362,13 @@ size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
        is distinguishable from one produced by a full build. Without it
        Doctor would read "this source was unreadable by that build" as
        real drift. */
-    cf_sink_fmt(&out, "  \"library\": { \"version\": \"%s\", \"features\": [",
-                cf_version());
+    /* And the commit it was built from (D-40): two builds of a version
+       are told apart. Added beside the version, which no reader of
+       schema 1 objects to, so the schema number stays. */
+    cf_sink_fmt(&out,
+                "  \"library\": { \"version\": \"%s\", \"build\": ", cf_version());
+    report_quote_z(&out, cf_build_id());
+    cf_sink_puts(&out, ", \"features\": [");
     for (i = 0; i < cf_codec_count(); ++i) {
         if (i > 0) {
             cf_sink_puts(&out, ", ");
@@ -329,39 +400,14 @@ size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
     for (i = 0; i < cf_ks_count(ks); ++i) {
         const cf_entry* e = cf_ks_at(ks, i);
         const cf_def*   d = (ds != NULL) ? cf_defset_find(ds, e->key, e->keylen) : NULL;
-        const cf_candidate* c;
-        cf_bool             first = CF_TRUE;
 
         if (i > 0) {
             cf_sink_putc(&out, ',');
         }
         cf_sink_puts(&out, "\n    ");
         report_quote(&out, e->key, e->keylen);
-        cf_sink_puts(&out, ": {\n      \"definition\": ");
-        report_definition(&out, d);
-        cf_sink_puts(&out, ",\n      \"candidates\": [");
-
-        /* Nothing is dropped from the chain: a shadowed or refused
-           candidate is the whole point of the artifact. */
-        for (c = e->chain; c != NULL; c = c->next) {
-            if (!first) {
-                cf_sink_putc(&out, ',');
-            }
-            cf_sink_puts(&out, "\n        ");
-            report_candidate(&out, c, sv, d, mode);
-            first = CF_FALSE;
-        }
-        cf_sink_puts(&out, "\n      ],\n      \"selected\": ");
-        if (e->selected != NULL) {
-            const cf_source* s = source_of(sv, e->selected->source);
-            cf_sink_puts(&out, "{ \"source\": ");
-            report_quote_z(&out, (s != NULL) ? s->name : "?");
-            cf_sink_puts(&out, ", \"reason\": \"highest precedence with a "
-                               "usable value\" }");
-        } else {
-            cf_sink_puts(&out, "null");
-        }
-        cf_sink_puts(&out, "\n    }");
+        cf_sink_puts(&out, ": ");
+        report_key(&out, e, d, sv, mode, "    ");
     }
     cf_sink_puts(&out, "\n  }\n}\n");
     cf_sink_terminate(&out);
@@ -645,6 +691,21 @@ size_t cf_schema_write(const cf_defset* ds, const char* title, cf_bool closed,
     cf_error_set(err, CF_E_CAPABILITY, NULL, NULL,
                  "a JSON Schema needs CF_WITH_REPORT, and this build was compiled "
                  "without it");
+    return 0;
+}
+
+size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds,
+                           const cf_source_view* sv, const char* key, size_t keylen,
+                           cf_report_mode mode, char* buf, size_t cap) {
+    (void)ks;
+    (void)ds;
+    (void)sv;
+    (void)key;
+    (void)keylen;
+    (void)mode;
+    if (buf != NULL && cap > 0) {
+        buf[0] = '\0';
+    }
     return 0;
 }
 

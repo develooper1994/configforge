@@ -1195,6 +1195,18 @@ const cf_defset* cf_defs(const cf_config* c) {
     return (c != NULL) ? &c->defs : NULL;
 }
 
+size_t cf_explain_json(const cf_config* c, const char* key, cf_report_mode mode,
+                       char* buf, size_t cap) {
+    if (c == NULL || key == NULL) {
+        if (buf != NULL && cap > 0) {
+            buf[0] = '\0';
+        }
+        return 0;
+    }
+    return cf_report_key_write(&c->keys, &c->defs, &c->sv, key, strlen(key), mode, buf,
+                               cap);
+}
+
 size_t cf_report(const cf_config* c, const cf_report_info* info, char* buf,
                  size_t cap) {
     if (c == NULL) {
