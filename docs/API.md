@@ -9,6 +9,7 @@ in; the types are in the headers themselves.
 - [`configforge.h`](#configforgeh) - 60
 - [`cf_alloc.h`](#cf_alloch) - 12
 - [`cf_define.h`](#cf_defineh) - 19
+- [`cf_doctor.h`](#cf_doctorh) - 20
 - [`cf_emit.h`](#cf_emith) - 1
 - [`cf_entry.h`](#cf_entryh) - 10
 - [`cf_error.h`](#cf_errorh) - 4
@@ -615,6 +616,115 @@ CF_API void cf_source_cli_defs(struct cf_source* s, const cf_defset* ds);
 Give the command-line source the key list, which is what unlocks
 --key value, --no-key and aliases. Without it only the = form carries
 a value, because nothing else can be parsed correctly.
+
+## cf_doctor.h
+
+cf_doctor.h - ConfigForge Doctor's rules, as a library.
+
+The `doctor` program is this library with a command line around it.
+A program can run the same rules on itself - at startup, before it
+serves, a service can refuse a production configuration whose
+password came from the command line - and a test can assert that a
+configuration has no findings, without starting a process or writing
+a report to disk.
+
+    cf_doctor* d = cf_doctor_new();
+    cf_doctor_lint(d, cfg, "production", &err);
+    for (i = 0; i &lt; cf_doctor_count(d); ++i) {
+        const cf_finding* f = cf_doctor_finding(d, i);
+        fprintf(stderr, "%s %s %s: %s\n", f->rule, f->level, f->key, f->message);
+    }
+    cf_doctor_free(d);
+
+Doctor reads provenance reports and never resolves configuration
+itself (Doctor.md): linting a cf_config writes its report in memory
+and reads that, so the rules see exactly what `doctor lint` sees.
+Findings accumulate across calls on one context until it is freed;
+a context is used by one thread at a time.
+
+A separate library, libconfigforge_doctor, static, and not part of
+the configuration library: a device that reads configuration does not
+carry the rules that audit it.
+
+```c
+CF_DOCTOR_API cf_doctor* cf_doctor_new(void);
+CF_DOCTOR_API void cf_doctor_free(cf_doctor* d);
+```
+
+A context, or NULL when there is no memory for one.
+
+```c
+CF_DOCTOR_API cf_bool cf_doctor_accept(cf_doctor* d, const char* rule, const char* key);
+CF_DOCTOR_API cf_bool cf_doctor_baseline(cf_doctor* d, const char* path, cf_error* err);
+```
+
+A finding already accepted - "CFD001", "server.port" - so it is
+counted and not reported. cf_doctor_baseline reads them from a file,
+one per line, as `doctor --baseline` does; a missing file is an empty
+baseline.
+
+```c
+CF_DOCTOR_API cf_bool cf_doctor_severity(cf_doctor* d, const char* rule, const char* level, const char* profile, cf_error* err);
+CF_DOCTOR_API cf_bool cf_doctor_severity_file(cf_doctor* d, const char* path, cf_error* err);
+```
+
+Where a project disagrees with a rule's default: `level` is "error",
+"warning", "info" or "off", for every profile or only `profile`.
+cf_doctor_severity_file reads a `doctor --severity` file. Neither
+takes effect for findings already recorded.
+
+```c
+CF_DOCTOR_API cf_bool cf_doctor_lint(cf_doctor* d, const cf_config* c, const char* profile, cf_error* err);
+CF_DOCTOR_API cf_bool cf_doctor_lint_report(cf_doctor* d, const char* json, size_t n, const char* name, cf_error* err);
+CF_DOCTOR_API cf_bool cf_doctor_lint_file(cf_doctor* d, const char* path, cf_error* err);
+```
+
+Lint one configuration. A cf_config is reported in memory, with every
+value, so the type and range rules can run; `profile` is the one the
+report states, which some severities depend on, and may be NULL. A
+report - text, or a file - is linted as `doctor lint` lints it, with
+the profile it carries. False with `err` set when the input cannot be
+read; true otherwise, whatever was found.
+
+```c
+CF_DOCTOR_API cf_bool cf_doctor_diff(cf_doctor* d, const cf_config* a, const cf_config* b, cf_error* err);
+CF_DOCTOR_API cf_bool cf_doctor_diff_report(cf_doctor* d, const char* a, size_t an, const char* aname, const char* b, size_t bn, const char* bname, cf_error* err);
+CF_DOCTOR_API cf_bool cf_doctor_diff_files(cf_doctor* d, const char* a, const char* b, cf_error* err);
+```
+
+Compare two: what one has and the other lacks, values from sources
+of different kinds, overrides in one and not the other, and every
+value that differs - `doctor diff`.
+
+```c
+CF_DOCTOR_API size_t cf_doctor_count(const cf_doctor* d);
+CF_DOCTOR_API const cf_finding* cf_doctor_finding(cf_doctor* d, size_t i);
+```
+
+The findings so far, in the order they were found.
+
+```c
+CF_DOCTOR_API size_t cf_doctor_count_at(const cf_doctor* d, const char* level);
+```
+
+How many at a level - "error", "warning", "info" - or "accepted", for
+the ones the baseline accepted.
+
+```c
+CF_DOCTOR_API size_t cf_doctor_stale_count(const cf_doctor* d);
+CF_DOCTOR_API cf_bool cf_doctor_stale(const cf_doctor* d, size_t i, const char** rule, const char** key);
+```
+
+Baseline entries that matched nothing: a fix worth noticing, or a
+rule that quietly stopped working.
+
+```c
+CF_DOCTOR_API size_t cf_doctor_rule_count(void);
+CF_DOCTOR_API const char* cf_doctor_rule_id(size_t i);
+CF_DOCTOR_API const char* cf_doctor_rule_text(const char* id);
+```
+
+The rule catalogue (Doctor.md): each rule's id and what it finds.
 
 ## cf_emit.h
 

@@ -408,6 +408,10 @@ CFD008  warning log.level    no source configured this; the default applies
 $ doctor lint prod.json --format sarif > doctor.sarif   # for the pull request
 ```
 
+The same rules are a library, `cf_doctor.h`, for a program that lints
+itself in process - a service refusing to start in production with a
+password from the command line, a test asserting there are no findings.
+
 A baseline records what is already there as accepted, one line per
 finding, so only new ones fail. The commonest way a lint tool dies is
 two hundred findings on its first run against a repository that already

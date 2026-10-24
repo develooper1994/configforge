@@ -83,3 +83,16 @@ add_test(NAME doctor.severity
                  ${CMAKE_SOURCE_DIR}/tests/doctor/severity.cmake)
 set_tests_properties(doctor.severity PROPERTIES FIXTURES_REQUIRED
                                                 DOCTOR_REPORTS)
+
+# Doctor as a library (cf_doctor.h): a program linting itself, in
+# process, with no report on disk.
+add_executable(doctor_api test_api.c)
+target_link_libraries(doctor_api PRIVATE configforge_doctor)
+set_target_properties(
+  doctor_api
+  PROPERTIES C_STANDARD 90
+             C_STANDARD_REQUIRED ON
+             C_EXTENSIONS OFF)
+configforge_apply_warnings(doctor_api)
+configforge_apply_analysis(doctor_api)
+add_test(NAME doctor.api COMMAND doctor_api)

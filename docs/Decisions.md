@@ -71,6 +71,7 @@ gets reopened every six months.
 | D-38 | Leaving parts out: what a missing part does | size, embedded, every builder | **Decided** |
 | D-39 | YAML: the subset, and who types a value | formats, provenance | **Decided** |
 | D-40 | Where the version is written, and the commit a build is from | releases, packaging, provenance | **Decided** |
+| D-41 | Doctor's rules as a library | Doctor, embedding | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -1748,6 +1749,37 @@ out of `cf_version()`, so that two builds of a version still compare equal.
 places (CMake, the recipe); the gate is what notices if its form changes. The provenance
 report does not yet record the build id - adding it changes the report schema, and is
 listed in the Roadmap.
+
+---
+
+## D-41 — Doctor's rules as a library
+
+**Question.** Doctor was a program. A program cannot ask it anything without starting a
+process and writing a report to disk. Should its rules be callable?
+
+**What decides it.** The useful moment to find a production password on the command line
+is before the service serves, not in a CI job afterwards; and a test that asserts "no
+findings" should not need a file. Against that, Design.md and Doctor.md both draw a line:
+Doctor reads reports and never resolves anything, and the configuration library should
+not carry the rules that audit it.
+
+**Options.**
+
+1. **Rules in the configuration library.** One library, and every device that reads
+   configuration carries an auditor it never runs.
+2. **A library of its own**, with the program on top of it.
+3. **Keep the program**, and let callers run it as a process.
+
+**Decision: option 2.** `libconfigforge_doctor` (`cf_doctor.h`) holds the rules, the
+baseline and the severities; `doctor` is it plus argument parsing and printing. A
+configuration is linted by writing its full report in memory and reading that, so the
+library still never resolves anything and sees exactly what `doctor lint` sees. What the
+program kept in globals is a context, so two runs can happen at once; nothing in it
+prints. Static, so the configuration library's is the one ABI to keep. The amalgamation
+leaves it out by name.
+
+**What it costs.** A context holds its baseline inline - 512 entries, about 140 KB - which
+a program linting itself pays once, on the heap.
 
 ---
 

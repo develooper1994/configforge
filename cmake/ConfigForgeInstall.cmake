@@ -7,6 +7,14 @@ install(
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+# Doctor's rules, for a program that lints itself (cf_doctor.h):
+# ConfigForge::configforge_doctor, in the same package.
+if(TARGET configforge_doctor)
+  install(
+    TARGETS configforge_doctor
+    EXPORT ConfigForgeTargets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()
 
 # The source tree's cf_build_options.h holds defaults; the installed one
 # has to hold this build's actual values. Installing the defaults would

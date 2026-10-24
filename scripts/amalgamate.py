@@ -43,6 +43,11 @@ HEADERS = [
 
 # Sources.  The amalgamation carries the built-in codecs only, which is
 # what keeps it dependency-free.
+# Public headers that are not the configuration library's, and so not
+# in its single file: Doctor's rules are a library of their own
+# (cf_doctor.h), which a device reading configuration does not carry.
+NOT_AMALGAMATED = {"cf_doctor.h"}
+
 SOURCES = [
     # Every platform, each guarded internally: the amalgamation is one
     # translation unit and has no build to choose for it.
@@ -175,7 +180,7 @@ def check_complete(src):
     for name in os.listdir(os.path.join(src, "include", "configforge")):
         if name.endswith(".h"):
             hdr_disk.add(name)
-    hdr_missing = sorted(hdr_disk - set(HEADERS))
+    hdr_missing = sorted(hdr_disk - set(HEADERS) - NOT_AMALGAMATED)
 
     problems = []
     if missing:
