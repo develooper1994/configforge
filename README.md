@@ -452,7 +452,7 @@ Security reports go privately, as [`SECURITY.md`](SECURITY.md) describes.
 
 ## Licence
 
-zlib - see [`LICENSE`](LICENSE). Chosen for where this library is meant
+zlib, copyright (C) 2026 Mustafa Selçuk Çağlar - see [`LICENSE`](LICENSE). Chosen for where this library is meant
 to run: a binary built with it, firmware included, owes nobody a notice,
 while every source distribution keeps one - which is why the single-file
 amalgamation carries the licence at its top.

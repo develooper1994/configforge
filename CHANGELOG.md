@@ -5,6 +5,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ## 0.4.0 — unreleased
 
+### Changed
+
+- **Every package says who made it.** The Conan recipe's `author`, the
+  vcpkg manifest's `maintainers` and the SBOM's `supplier` and
+  `originator` name Mustafa Selçuk Çağlar, as the licence and the
+  SBOM's copyright already did.
+
 ## 0.3.0 — 2026-10-24
 
 ### Fixed, and it mattered
