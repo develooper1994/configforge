@@ -5,6 +5,22 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ## 0.3.0 — unreleased
 
+### Fixed, and it mattered
+
+- **A derived configuration lost the names of its sources.** `cf_derive`
+  carried the original's candidates in one snapshot source called
+  "inherited", so the derived configuration knew no other source:
+  `explain()` said `?` for the file and the command line and listed the
+  default twice, and a configuration with a per-key policy - `{ "env",
+  NULL }` for a password - could not be derived at all, because no
+  source called "env" was left ("the policy names only env, and this
+  build has none of them"). A run-time change to any configuration
+  with a policy was impossible. The original's sources now travel by
+  name, rank, kind and file, their candidates are loaded ahead of the
+  new source rather than as one, defaults are not seeded twice, and the
+  original's files keep the stamps they had. Found by writing
+  `examples/runtime.c`; `test_derive` covers it and fails without it.
+
 ### Added
 
 - **The version is written in one place** (D-40). `cf_version.h` is the

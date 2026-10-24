@@ -193,8 +193,76 @@ static void test_fixed_arena(void) {
     cf_config_free(base);
 }
 
+static size_t occurrences(const char* hay, const char* needle) {
+    size_t      n = 0;
+    const char* p = hay;
+    while ((p = strstr(p, needle)) != NULL) {
+        ++n;
+        p += strlen(needle);
+    }
+    return n;
+}
+
+/* A derived configuration explains itself as the original did. It used
+   to know only "inherited" and the new source: explain() said "?" for
+   the command line, listed the default twice, and a key whose policy
+   names the environment lost its value, because no source called "env"
+   was left to have supplied it. Found by examples/runtime.c. */
+static void test_names_survive(void) {
+    static const char* const only_env[] = {"env", NULL};
+    static const cf_pair     first[]    = {{"server.port", "9000"}};
+    static const cf_pair     second[]   = {{"server.port", "9100"}};
+    static char              buf[4096];
+    cf_error                 err = CF_ERROR_INIT;
+    cf_builder*              b   = cf_build(NULL);
+    cf_config*               base;
+    cf_config*               once;
+    cf_config*               twice;
+    cf_def                   d;
+
+    cf_builder_cli(b, "cli", CF_RANK_CLI, 2, g_argv);
+    cf_builder_env(b, "env", CF_RANK_ENV, "MYAPP_", g_env);
+    cf_builder_int(b, "server.port", 1234, 1, 65535, 0);
+    cf_def_init(&d, CF_TYPE_TEXT, "server.host");
+    d.policy = only_env;
+    cf_builder_define(b, &d);
+    cf_builder_text(b, "log.level", "info", 0);
+    base = cf_builder_create(b, &err);
+    check(base != NULL, "a base with a policy builds");
+    if (base == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+    once  = cf_derive(base, "admin", first, 1, &err);
+    twice = (once != NULL) ? cf_derive(once, "admin", second, 1, &err) : NULL;
+    check(twice != NULL, "derives twice");
+    if (twice == NULL) {
+        printf("  %s\n", err.message);
+        cf_config_free(once);
+        cf_config_free(base);
+        return;
+    }
+
+    cf_explain(twice, "server.port", buf, sizeof buf);
+    check(strstr(buf, "  ?") == NULL, "every candidate names its source");
+    has(buf, "  cli ", "the command line is still the command line");
+    check(occurrences(buf, "  default ") == 1, "the default appears once");
+    check(cf_get_int(twice, "server.port", 0) == 9100, "the later change wins");
+
+    check(strcmp(cf_get_text(twice, "server.host", ""), "10.0.0.1") == 0,
+          "a key the environment may set keeps the environment's value");
+
+    cf_explain(twice, "log.level", buf, sizeof buf);
+    check(occurrences(buf, "admin") == 1, "a source derived from twice is listed once");
+
+    cf_config_free(twice);
+    cf_config_free(once);
+    cf_config_free(base);
+}
+
 int main(void) {
     test_derive();
+    test_names_survive();
     test_contract_travels();
     test_derive_chain();
     test_fixed_arena();
