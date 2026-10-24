@@ -30,7 +30,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: The tag, the build and the CHANGELOG agree
         run: |
           v="${GITHUB_REF_NAME#v}"
@@ -44,7 +44,7 @@ jobs:
     needs: check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Source and amalgamation
         run: |
           v="${GITHUB_REF_NAME#v}"
@@ -62,7 +62,7 @@ jobs:
     container: alpine:3.20
     steps:
       - run: apk add --no-cache build-base cmake ninja git python3 tar
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build static, test, install
         run: |
           v="${GITHUB_REF_NAME#v}"
@@ -91,7 +91,7 @@ jobs:
     needs: check
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build, test, install
         shell: pwsh
         run: |
@@ -123,7 +123,7 @@ jobs:
     needs: check
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build, test, install
         run: |
           v="${GITHUB_REF_NAME#v}"
@@ -143,7 +143,7 @@ jobs:
     needs: [source, linux-musl, windows, macos]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4
         with: { path: dist, merge-multiple: true }
       - name: Notes, checksums, release
