@@ -64,19 +64,6 @@ foreach(
   configforge_apply_analysis(${ex})
 endforeach()
 
-# Register a run of one example.
-#
-# ~~~
-# example_expect(<name> <working-dir> <regex>...)
-# ~~~
-function(example_expect name dir)
-  string(REPLACE ";" "|||" wanted "${ARGN}")
-  add_test(
-    NAME example.${name}
-    COMMAND ${CMAKE_COMMAND} -DEXE=$<TARGET_FILE:${name}> -DDIR=${dir}
-            "-DEXPECT=${wanted}" -P ${CMAKE_CURRENT_SOURCE_DIR}/expect.cmake)
-endfunction()
-
 if(CF_WITH_TOML
    AND CF_WITH_INI
    AND CF_WITH_DIR

@@ -26,20 +26,22 @@ The reference for each function is [`API.md`](API.md); the reasons are in
 
 Each is a short program with the reasoning in its comments, built in
 every build and run by the suite, which checks the lines that show it
-does what its comment says.
+does what its comment says. Where there is a `.cpp` beside the `.c`, it
+is the same program through the C++03 wrapper, checked for the same
+lines.
 
 | Example | What it shows | Section |
 | ------- | ------------- | ------- |
-| `tier0.c` | the smallest complete program: command line, environment, defaults | 2 |
-| `tier1.c`, `tier1.cpp` | the same with a contract, in C and C++03 | 3, 13 |
-| `layers.c` | six sources at once, and why each value won | 4 |
+| `tier0.c`, `tier0.cpp` | the smallest complete program: command line, environment, defaults | 2 |
+| `tier1.c`, `tier1.cpp` | the same with a contract | 3, 13 |
+| `layers.c`, `layers.cpp` | six sources at once, and why each value won | 4 |
 | `explain_demo.c` | `explain()` on one key | 5 |
 | `plugins.c` | a strict contract with one prefix handed to plugins, discovered by iteration; lists | 6 |
-| `mistakes.c` | what the person running the program sees for each kind of mistake | 7 |
+| `mistakes.c`, `mistakes.cpp` | what the person running the program sees for each kind of mistake | 7 |
 | `secrets.c` | a password only the environment may set, never printed, never in a report, wiped | 9 |
 | `settings.c` | read, explain, set, save, notice the file change | 10 |
-| `runtime.c` | an admin changing a setting in a running service: readers unaffected, the change explained | 10 |
-| `reload.c` | watch a file, rebuild, log what changed | 10 |
+| `runtime.c`, `runtime.cpp` | an admin changing a setting in a running service: readers unaffected, the change explained | 10 |
+| `reload.c`, `reload.cpp` | watch a file, rebuild, log what changed | 10 |
 | `schema.c` | the contract as a JSON Schema for editors | 11 |
 | `embedded.c` | a fixed buffer and an image, no heap, still explaining itself | 12 |
 
@@ -505,7 +507,10 @@ For such a target:
 `<configforge/configforge.hpp>` is a C++03 wrapper over the same
 library: a `Builder` with chained calls, a reference-counted `Config`,
 `get<T>`, ranges over keys and children, `explain()`, `emit()`,
-`changesSince()` and a `Watcher`. `examples/cpp/tier1.cpp`:
+`changesSince()`, `derive()` and `write()` for changing and keeping a
+value, `define()` for a full `cf_def`, and a `Watcher`. Six of the
+examples are in `examples/cpp` as well as `examples/c`, the same
+programs saying the same lines. `examples/cpp/tier1.cpp`:
 
 ```cpp
 cf::Config cfg = cf::Builder("myapp", argc, argv)

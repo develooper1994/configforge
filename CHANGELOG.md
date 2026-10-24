@@ -107,6 +107,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - **The examples are in a directory a language**: `examples/c` and
   `examples/cpp`, so the C++ wrapper in use is not one file among the C
   programs. Targets and tests keep their names.
+- **C++ examples beside the C ones**: `tier0`, `layers`, `mistakes`,
+  `runtime` and `reload` join `tier1` in `examples/cpp`, each the C
+  program through the wrapper and checked by the suite for the same
+  lines, so the two cannot drift. The wrapper gained what they needed:
+  `Config::derive()` and `Config::write()`, `Builder::memory()` and
+  `Builder::define()` for a full `cf_def`.
 - **`cf_source_vtable` has a `write` member**, the source's capability,
   after `path`. A custom source sets it to NULL; one that does not
   compile until it does, by the same `-Wmissing-field-initializers`

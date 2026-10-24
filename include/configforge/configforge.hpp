@@ -246,6 +246,32 @@ public:
         return s;
     }
 
+    /* ---------------------------------------------------------- *
+     * Changing and keeping
+     * ---------------------------------------------------------- */
+
+    /* A new snapshot with `pairs` applied as a source named `source`
+       (cf_derive). This one is unchanged, so a reader holding it keeps
+       what it had; an invalid change gives an invalid Config whose
+       error() says why. */
+    Config derive(const char* source, const cf_pair* pairs, size_t count) const
+    {
+        Error e;
+        cf_config* c = cf_derive(c_, source, pairs, count, e.raw());
+        return Config(c, e);
+    }
+
+    /* Keep a change in a source the program granted (cf_write): the
+       source must be able to be written, be granted, and the contract
+       must accept every item, or nothing is written. */
+    bool write(const char* target, const cf_store_item* items, size_t count,
+               const char* meta = 0, Error* err = 0) const
+    {
+        Error  local;
+        Error& e = (err != 0) ? *err : local;
+        return cf_write(c_, target, items, count, meta, e.raw()) != CF_FALSE;
+    }
+
     cf_u64 digest() const { return cf_digest(c_); }
     size_t count()  const { return cf_count(c_); }
 
@@ -386,6 +412,11 @@ public:
     Builder& writable(const char* source_name)
     { if (b_) { cf_builder_writable(b_, source_name); } return *this; }
 
+    /* Pairs the caller owns, which must outlive the configuration. */
+    Builder& memory(const char* name, int rank, const cf_pair* pairs, size_t count)
+    { if (b_) { cf_builder_memory(b_, name, rank, pairs, count); }
+      return *this; }
+
     Builder& replay(const char* name, int rank, const char* path)
     { if (b_) { cf_builder_replay(b_, name, rank, path); } return *this; }
 
@@ -406,6 +437,11 @@ public:
                         double hi = 0.0, unsigned flags = 0)
     { if (b_) { cf_builder_real(b_, key, dflt, lo, hi, flags); } return *this; }
 #endif
+
+    /* A full definition - an enum, a policy, a fallback - for what the
+       define* shorthands do not say (cf_def_init, then its fields). */
+    Builder& define(const cf_def& d)
+    { if (b_) { cf_builder_define(b_, &d); } return *this; }
 
     /* A key space the program cannot know in advance. */
     Builder& open(const char* prefix)
