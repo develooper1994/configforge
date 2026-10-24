@@ -11,4 +11,21 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/file.c
           ${CMAKE_CURRENT_SOURCE_DIR}/dotenv.c
           ${CMAKE_CURRENT_SOURCE_DIR}/dir.c
-          ${CMAKE_CURRENT_SOURCE_DIR}/emit.c)
+          ${CMAKE_CURRENT_SOURCE_DIR}/emit.c
+          ${CMAKE_CURRENT_SOURCE_DIR}/store.c)
+
+# The store through sqlite3, found as a header and a library like the
+# other dependencies. Without it the source still exists and refuses
+# by name.
+if(CF_WITH_SQLITE)
+  find_path(CF_SQLITE_INCLUDE_DIR sqlite3.h)
+  find_library(CF_SQLITE_LIBRARY NAMES sqlite3 libsqlite3)
+  if(NOT CF_SQLITE_INCLUDE_DIR OR NOT CF_SQLITE_LIBRARY)
+    message(
+      FATAL_ERROR
+        "CF_WITH_SQLITE needs sqlite3: install it (libsqlite3-dev, brew "
+        "install sqlite, vcpkg install sqlite3) or point "
+        "CMAKE_PREFIX_PATH at it")
+  endif()
+  target_include_directories(configforge PRIVATE ${CF_SQLITE_INCLUDE_DIR})
+endif()

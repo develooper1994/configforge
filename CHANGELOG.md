@@ -16,6 +16,16 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   by name. An XML document and the JSON written for it resolve to the
   same digest. Conan `with_xml`, vcpkg feature `xml`, fuzzed with the
   other readers.
+- **A SQLite store, behind `CF_WITH_SQLITE`** - the other option that
+  compiled nothing. `cf_builder_store` reads the table `configforge(key,
+  type, value, meta)` as a source: each value typed by its row, and
+  located as `app.db: <meta>`, so explain() says who changed a value,
+  when and why, after a restart. `cf_store_set` writes typed values in
+  one transaction, every item or none, and creates the store; reading
+  never does. The contract applies to it as to any source. This is
+  where a running program's changes go, as Design.md section 39 has
+  it: hand-written files stay read only. Conan `with_sqlite`, vcpkg
+  feature `sqlite`, `Builder::store` in C++.
 
 ### Fixed
 

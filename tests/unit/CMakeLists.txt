@@ -38,7 +38,8 @@ set(CF_UNIT_TESTS
     test_diff
     test_schema
     test_yaml
-    test_xml)
+    test_xml
+    test_store)
 
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)

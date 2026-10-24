@@ -761,7 +761,10 @@ event producer with exact locations and no allocation. TOML followed the same wa
 subset D-23 described, in about 900 lines including its writer; it is on by default, being
 as dependency-free as the other two. XML followed through expat, read only, behind
 `CF_WITH_XML`: the seam took it without a change, as promised, and the mapping below is
-the one built. SQLite stays deferred (D-26).
+the one built. The SQLite store followed through sqlite3 (D-26) as Design.md section 39
+describes it: the table `configforge(key, type, value, meta)`, read as a source, and
+`cf_store_set`, which writes in one transaction and refuses the whole change for one bad
+key. A store is never created by reading it.
 
 ---
 

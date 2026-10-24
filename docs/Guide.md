@@ -350,6 +350,28 @@ server.port: 8080 -> 9443 (file reload.toml:2:8)
 A reload whose new file is broken fails to build, and the program keeps
 the configuration it has.
 
+A change that has to survive a restart goes to a **store**, never into a
+hand-written file: hand-written files keep their comments and layout
+because nothing but a person writes them. `cf_store_set` writes typed
+values to a SQLite store (`CF_WITH_SQLITE`) in one transaction - every
+item or none - with a note of who, when and why, and `cf_builder_store`
+reads it back as a source, the note shown by `explain()` as where the
+value was set:
+
+```c
+cf_store_item item;
+item.key = "log.level";
+cf_value_text(&item.value, "debug", 5);
+cf_store_set("app.db", &item, 1, "admin, 2026-10-24: incident 42", &err);
+...
+cf_builder_store(b, "store", CF_RANK_USER_FILE, "app.db", CF_FILE_OPTIONAL);
+```
+
+```text
+log.level = "debug"  (text)
+  store       "debug"               selected   app.db: admin, 2026-10-24: incident 42
+```
+
 A change made at run time - an operator raising the log level from an
 admin page - is the same `cf_derive`. A request already in flight keeps
 the snapshot it started with, the change meets the same contract a file

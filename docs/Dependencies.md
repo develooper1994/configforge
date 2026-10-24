@@ -38,6 +38,7 @@ not, and has to be asked for:
 | Library | Licence | When | Notes |
 | ------- | ------- | ---- | ----- |
 | libyaml | MIT | `CF_WITH_YAML=ON`, off by default | reading YAML; writing it is done here, by hand. Found as `yaml.h` and a library named `yaml`, which every packager agrees on |
+| sqlite3 | public domain | `CF_WITH_SQLITE=ON`, off by default | the store: a source that reads typed values with their writer's note, and `cf_store_set`, which writes them in one transaction. Found as `sqlite3.h` and a library named `sqlite3` |
 | expat | MIT | `CF_WITH_XML=ON`, off by default | reading XML, which is read only (D-23). Found as `expat.h` and a library named `expat`; its memory is expat's own, so the library still allocates nothing outside its arenas |
 
 The formats the design names and the build does not yet have - XML and

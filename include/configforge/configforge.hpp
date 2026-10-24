@@ -371,6 +371,11 @@ public:
     { if (b_) { cf_builder_dir(b_, name, rank, path, format, flags); }
       return *this; }
 
+    /* A SQLite store (CF_WITH_SQLITE); cf_store_set writes one. */
+    Builder& store(const char* name, int rank, const char* path, unsigned flags = 0)
+    { if (b_) { cf_builder_store(b_, name, rank, path, flags); }
+      return *this; }
+
     Builder& replay(const char* name, int rank, const char* path)
     { if (b_) { cf_builder_replay(b_, name, rank, path); } return *this; }
 

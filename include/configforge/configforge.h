@@ -123,6 +123,11 @@ CF_API cf_bool cf_builder_dotenv(cf_builder* b, const char* name, int rank,
 CF_API cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank,
                               const char* path, const char* format, unsigned flags);
 
+/* A SQLite store (CF_WITH_SQLITE): typed values, each with what its
+   writer said about it. cf_store_set writes one. */
+CF_API cf_bool cf_builder_store(cf_builder* b, const char* name, int rank,
+                                const char* path, unsigned flags);
+
 /* Register a source the caller built itself. The source object is
    copied, so the caller's may be on the stack; any state it points at
    must outlive the configuration. */

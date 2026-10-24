@@ -36,6 +36,10 @@ function(configforge_add_gates tgt)
     list(APPEND options "-DXML_INC=${CF_EXPAT_INCLUDE_DIR}"
          "-DXML_LIB=${CF_EXPAT_LIBRARY}")
   endif()
+  if(CF_WITH_SQLITE)
+    list(APPEND options "-DSQLITE_INC=${CF_SQLITE_INCLUDE_DIR}"
+         "-DSQLITE_LIB=${CF_SQLITE_LIBRARY}")
+  endif()
 
   # 1. The header version and the project version agree.
   add_test(
@@ -113,7 +117,8 @@ function(configforge_add_gates tgt)
         -DCC=${CMAKE_C_COMPILER} -DWITH_CXX=${CF_WITH_CXX}
         -DSANITIZE=${CF_INSTRUMENTED} -DEXPECT_REAL=$<BOOL:${CF_WITH_REAL}>
         -DEXPECT_JSON=$<BOOL:${CF_WITH_JSON}> -DYAML_LIB=${CF_YAML_LIBRARY}
-        -DXML_LIB=${CF_EXPAT_LIBRARY} -DWERROR=$<BOOL:${CF_WERROR}> -P
+        -DXML_LIB=${CF_EXPAT_LIBRARY} -DSQLITE_LIB=${CF_SQLITE_LIBRARY}
+        -DWERROR=$<BOOL:${CF_WERROR}> -P
         ${CMAKE_SOURCE_DIR}/cmake/gates/GateInstall.cmake)
 
     add_test(NAME gate.formats

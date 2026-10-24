@@ -16,7 +16,9 @@ vcpkg_check_features(
   yaml
   CF_WITH_YAML
   xml
-  CF_WITH_XML)
+  CF_WITH_XML
+  sqlite
+  CF_WITH_SQLITE)
 
 vcpkg_cmake_configure(
   SOURCE_PATH
