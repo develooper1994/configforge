@@ -10,6 +10,8 @@ option(CF_WITH_INI "INI subset codec (built in, no dependency)" ON)
 option(CF_WITH_JSON "JSON codec (built in; Report Replay and Doctor read it)"
        ON)
 option(CF_WITH_TOML "TOML subset codec (built in, no dependency)" ON)
+option(CF_WITH_PROPERTIES "Java .properties reader (built in, no dependency)"
+       ON)
 option(CF_WITH_XML "XML codec (requires expat)" OFF)
 option(CF_WITH_YAML "YAML codec (requires libyaml)" OFF)
 option(CF_WITH_SQLITE "SQLite store source (requires sqlite3)" OFF)
@@ -101,6 +103,7 @@ set(CF_FEATURES
     INI
     JSON
     TOML
+    PROPERTIES
     XML
     YAML
     SQLITE

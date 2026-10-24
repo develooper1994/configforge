@@ -64,6 +64,12 @@ static cf_config* built(cf_builder* b, cf_error* err) {
 }
 
 static void test_listed(void) {
+    check(cf_has_feature("properties") == (CF_WITH_PROPERTIES ? CF_TRUE : CF_FALSE),
+          "the .properties reader, as the build says");
+    check(cf_has_feature("xml") == (CF_WITH_XML ? CF_TRUE : CF_FALSE),
+          "XML, which once said yes with nothing behind it");
+    check(cf_has_feature("sqlite") == (CF_WITH_SQLITE ? CF_TRUE : CF_FALSE),
+          "the store");
     check(cf_has_feature("dir") == (CF_WITH_DIR ? CF_TRUE : CF_FALSE),
           "the feature list says whether there is a directory source");
     check(cf_has_feature("dotenv") == (CF_WITH_DOTENV ? CF_TRUE : CF_FALSE),

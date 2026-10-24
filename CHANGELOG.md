@@ -33,6 +33,14 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   one named as its environment variable would be maps the same way, a
   name that is neither is an error, the trailing newline is dropped and
   explain() names the file. Under `CF_WITH_DIR`, whose listing it uses.
+- **Java `.properties`, read** (`CF_WITH_PROPERTIES`, on by default, no
+  dependency): `=`, `:` or whitespace between key and value, `#` and
+  `!` comments, continuation lines, the escapes and `\uXXXX` with
+  surrogate pairs, as java.util.Properties reads them, in UTF-8. Keys
+  are the library's keys: Spring's camelCase is Spring's to relax and
+  is refused here rather than guessed at. Values are typed by the
+  contract. Read only, because the format has no quoting and text
+  written as 8080 would come back a number.
 
 ### Fixed
 

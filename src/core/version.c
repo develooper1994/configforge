@@ -41,6 +41,9 @@ static const char* const cf_features[] = {
 #if CF_WITH_TOML
     "toml",
 #endif
+#if CF_WITH_PROPERTIES
+    "properties",
+#endif
 #if CF_WITH_XML
     "xml",
 #endif
