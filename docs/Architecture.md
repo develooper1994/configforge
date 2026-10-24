@@ -216,7 +216,10 @@ Three rules the implementation encodes, each of which was a decision:
    definition set be asked "what would this source call this key", which
    is how the environment gained its natural spelling.
 3. Write the thin `cf_source_*` wrapper that builds a `cf_keysink` and
-   calls the lexer.
+   calls the lexer. Its vtable's `write` is NULL: only a store can be
+   written (D-42), and a source that can be must write through
+   `cf_source_path`, so a derived configuration's stand-in for it -
+   which has the path and none of the state - writes to the same place.
 4. Tests: the lexer against a recording sink, and the source once
    end-to-end.
 

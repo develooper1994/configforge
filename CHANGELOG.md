@@ -63,6 +63,16 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   and left out of the amalgamation, so a device that reads
   configuration carries none of it. Every Doctor test passes against
   the program unchanged; `doctor.api` tests the library.
+- **`cf_write`: a change kept, if it may be** (D-42). Before writing,
+  it asks whether the source can be written (a store; nothing else),
+  whether the program granted it (`cf_builder_writable`, checked at
+  create, so a grant to the environment or to a misspelt source fails
+  at start), and whether the contract would accept each value from it -
+  the read side's own rules, so a value that would be rejected on every
+  restart is never stored, and a key whose policy says "environment
+  only" stays that way. Every item or none, and the error says which
+  question said no. `Builder::writable` in C++. `cf_store_set` stays,
+  for provisioning a store, and asks nothing.
 - **`doctor import-spring` and `doctor import-dotnet`**, the second and
   third foreign adapters. Spring Boot's `/actuator/env` gives the
   sources in Spring's order and an origin for most properties, which
@@ -94,6 +104,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Changed
 
+- **`cf_source_vtable` has a `write` member**, the source's capability,
+  after `path`. A custom source sets it to NULL; one that does not
+  compile until it does, by the same `-Wmissing-field-initializers`
+  that made `path` a decision. `cf_store_item` moved above it.
 - **Every package says who made it.** The Conan recipe's `author`, the
   vcpkg manifest's `maintainers` and the SBOM's `supplier` and
   `originator` name Mustafa Selçuk Çağlar, as the licence and the

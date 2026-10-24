@@ -36,6 +36,11 @@ struct cf_builder {
        its candidates are loaded before any source, and its files'
        stamps carried over. NULL for an ordinary build. */
     const struct cf_config* inherit;
+
+    /* The sources the program allows to be written, by name, checked
+       against what each can do when the configuration is created. */
+    const char* writable[CF_BUILDER_SOURCES];
+    size_t      nwritable;
 };
 
 struct cf_config {
@@ -65,6 +70,10 @@ struct cf_config {
     const char** watch_paths;
     cf_stamp*    watch_stamps;
     size_t       watch_count;
+
+    /* Which sources cf_write may write, by slot: granted by the program
+       and able to be written, both checked when this was created. */
+    cf_bool writable[CF_BUILDER_SOURCES];
 };
 
 /* ------------------------------------------------------------------ *
@@ -506,6 +515,24 @@ void cf_builder_unknown(cf_builder* b, cf_unknown_policy policy) {
     }
 }
 
+cf_bool cf_builder_writable(cf_builder* b, const char* source_name) {
+    const char* name;
+
+    if (b == NULL || source_name == NULL) {
+        return CF_FALSE;
+    }
+    name = cf_arena_dup(b->arena, source_name, strlen(source_name));
+    if (name == NULL || b->nwritable >= CF_BUILDER_SOURCES) {
+        cf_error e = CF_ERROR_INIT;
+        cf_error_set(&e, CF_E_MEMORY, NULL, source_name,
+                     "no room to grant '%s' writing", source_name);
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    b->writable[b->nwritable++] = name;
+    return CF_TRUE;
+}
+
 /* ------------------------------------------------------------------ *
  * Creation
  *
@@ -588,6 +615,37 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
     }
     c->sv.items = c->view;
     c->sv.count = b->nsources;
+
+    /* What the program grants, against what each source can do, before
+       anything is read: a grant to a source that cannot be written, or
+       to no source at all, is a mistake in the program, and the time to
+       say so is now rather than at the first write. */
+    for (i = 0; i < b->nwritable; ++i) {
+        size_t  k;
+        cf_bool found = CF_FALSE;
+
+        for (k = 0; k < b->nsources; ++k) {
+            const cf_source* s = &c->sources[k];
+            if (s->name == NULL || strcmp(s->name, b->writable[i]) != 0) {
+                continue;
+            }
+            found = CF_TRUE;
+            if (s->vt == NULL || s->vt->write == NULL) {
+                cf_error_set(&e, CF_E_CAPABILITY, NULL, s->name,
+                             "'%s' is granted writing, and a %s source cannot be "
+                             "written: a running program's changes go to a store",
+                             s->name, (s->vt != NULL) ? s->vt->kind : "?");
+                return create_failed(b, err, &e);
+            }
+            c->writable[k] = CF_TRUE;
+        }
+        if (!found) {
+            cf_error_set(&e, CF_E_POLICY, NULL, b->writable[i],
+                         "'%s' is granted writing, and no source has that name",
+                         b->writable[i]);
+            return create_failed(b, err, &e);
+        }
+    }
 
     cf_defset_seal(&c->defs);
 
@@ -796,6 +854,7 @@ static cf_bool derive_ghost(cf_builder* b, const cf_source* o) {
     vt->load    = config_ghost_load;
     vt->destroy = NULL;
     vt->path    = config_ghost_path;
+    vt->write   = o->vt->write; /* through the path, which the ghost has */
     s           = builder_slot(b);
     if (s == NULL || vt->kind == NULL) {
         return CF_FALSE;
@@ -852,6 +911,18 @@ static cf_config* derive_onto(const cf_config* base, cf_arena* ar, cf_bool owns,
             cf_builder_abort(b);
             return NULL;
         }
+    }
+
+    /* And what it was allowed to write. A grant lost on deriving would
+       make the change just made impossible to keep from the
+       configuration that holds it. */
+    for (i = 0; i < base->sv.count; ++i) {
+        const cf_source* o = base->sv.items[i];
+        if (o == NULL || !base->writable[i] ||
+            (count > 0 && o->rank == CF_RANK_OVERRIDE && strcmp(o->name, name) == 0)) {
+            continue;
+        }
+        cf_builder_writable(b, o->name);
     }
 
     /* The overrides go in after the base, not before. Rank already puts
@@ -911,6 +982,173 @@ cf_config* cf_derive_in(const cf_config* base, cf_arena* arena, const char* sour
         return NULL;
     }
     return derive_onto(base, arena, CF_FALSE, source_name, pairs, count, err);
+}
+
+/* ------------------------------------------------------------------ *
+ * Writing
+ *
+ * Three questions, in the order the specification asks them, and any
+ * "no" refuses every item before one is written: can the source be
+ * written, may this program write it, and would the contract accept
+ * each value from it.
+ *
+ * The last is the read side's own answer, not a second set of rules:
+ * the items become candidates from the target, at its rank, and the
+ * contract is applied to them exactly as it is when the store is read
+ * back. A value that would be rejected there is refused here, because
+ * written it would sit in the store rejected on every start - and a
+ * key whose policy leaves the store out is a lock an operator set,
+ * which a program able to write past it would have lifted.
+ * ------------------------------------------------------------------ */
+
+/* Whether the key's policy leaves this source out: a lock, which is a
+   policy refusal rather than a value the contract found wrong. */
+static cf_bool write_locked(const cf_def* d, const char* name) {
+    size_t j;
+
+    if (d == NULL || d->policy == NULL) {
+        return CF_FALSE;
+    }
+    for (j = 0; d->policy[j] != NULL; ++j) {
+        if (strcmp(d->policy[j], name) == 0) {
+            return CF_FALSE;
+        }
+    }
+    return CF_TRUE;
+}
+
+/* The items as the read side would see them from `s`. Required keys
+   and strict invalidity are left out of the copy of the contract: the
+   items are a few keys, not a configuration, and a refusal is reported
+   here with the reason, not as the first failure the pass meets. */
+static cf_bool write_authorized(const cf_config* c, const cf_source* s,
+                                const cf_store_item* items, size_t count,
+                                cf_error* err) {
+    const cf_allocator* alloc = cf_arena_allocator(c->arena);
+    cf_arena*           ar;
+    cf_keyspace*        ks;
+    cf_defset*          ds;
+    cf_rank_names       names;
+    cf_bool             ok = CF_TRUE;
+    size_t              i;
+
+    /* The write path is cold, and the store's own library allocates
+       whatever this does; a configuration built in a fixed arena
+       borrows the default allocator rather than growing that arena,
+       which readers may be using. */
+    ar = cf_arena_new((alloc != NULL) ? alloc : cf_default_allocator(), 0);
+    ks = (ar != NULL) ? (cf_keyspace*)cf_arena_calloc(ar, sizeof *ks) : NULL;
+    ds = (ar != NULL) ? (cf_defset*)cf_arena_calloc(ar, sizeof *ds) : NULL;
+    if (ks == NULL || ds == NULL || !cf_ks_init(ks, ar, count + 1) ||
+        !cf_defset_init(ds, ar, c->defs.count + 1)) {
+        cf_arena_free(ar);
+        return cf_error_set(err, CF_E_MEMORY, NULL, NULL, "no room to check a write");
+    }
+    for (i = 0; ok && i < c->defs.count; ++i) {
+        cf_def d = c->defs.defs[i];
+        d.flags &= ~(unsigned)CF_REQUIRED;
+        d.on_invalid = CF_INVALID_FALLBACK;
+        ok           = cf_define(ds, &d, err);
+    }
+    for (i = 0; ok && i < c->defs.open_count; ++i) {
+        ok = cf_defset_open(ds, c->defs.open_prefixes[i], err);
+    }
+    cf_defset_seal(ds);
+
+    for (i = 0; ok && i < count; ++i) {
+        const char*   key = items[i].key;
+        size_t        n   = (key != NULL) ? strlen(key) : 0;
+        const cf_def* d;
+
+        if (key == NULL || !cf_key_valid(key, n)) {
+            ok = cf_error_set(err, CF_E_KEY, key, s->name, "'%s' is not a valid key",
+                              (key != NULL) ? key : "");
+            break;
+        }
+        d = cf_defset_find(&c->defs, key, n);
+        if (d != NULL && (d->flags & CF_TRANSIENT) != 0) {
+            /* A command, not a setting: written, it would run again on
+               every start. */
+            ok = cf_error_set(err, CF_E_VALIDATE, key, s->name,
+                              "'%s' is a command, not a setting, and is not written",
+                              key);
+            break;
+        }
+        if (!cf_ks_add(ks, key, n, s->rank, &items[i].value, s->name)) {
+            ok = cf_error_set(err, CF_E_MEMORY, key, s->name,
+                              "no room to check a write");
+        }
+    }
+    if (ok && !cf_ks_resolve(ks)) {
+        ok = cf_error_set(err, CF_E_MEMORY, NULL, NULL, "no room to check a write");
+    }
+    if (ok) {
+        names.name_of = config_name_of_rank;
+        names.ctx     = &c->sv;
+        ok            = cf_defs_apply(ks, ds, &names, c->unknown, NULL, err);
+    }
+    for (i = 0; ok && i < cf_ks_count(ks); ++i) {
+        const cf_entry*     e = cf_ks_at(ks, i);
+        const cf_candidate* k;
+
+        for (k = e->chain; k != NULL; k = k->next) {
+            if (k->outcome == CF_OUT_REJECTED) {
+                const cf_def* d   = cf_defset_find(&c->defs, e->key, e->keylen);
+                const char*   why = (k->reason != NULL) ? k->reason : "refused";
+                cf_code code = write_locked(d, s->name) ? CF_E_POLICY : CF_E_VALIDATE;
+
+                ok = cf_error_set(err, code, e->key, s->name,
+                                  "'%s' is not written to '%s': %s", e->key, s->name,
+                                  why);
+                break;
+            }
+        }
+    }
+    cf_arena_free(ar);
+    return ok;
+}
+
+cf_bool cf_write(const cf_config* c, const char* target, const cf_store_item* items,
+                 size_t count, const char* meta, cf_error* err) {
+    const cf_source* s       = NULL;
+    cf_bool          granted = CF_FALSE;
+    size_t           i;
+
+    if (err != NULL) {
+        cf_error_clear(err);
+    }
+    if (c == NULL || target == NULL || (items == NULL && count > 0)) {
+        return cf_error_set(err, CF_E_SOURCE, NULL, NULL,
+                            "nothing to write, or nowhere to write it");
+    }
+    for (i = 0; i < c->sv.count && !granted; ++i) {
+        const cf_source* o = c->sv.items[i];
+        if (o != NULL && o->name != NULL && strcmp(o->name, target) == 0) {
+            s       = o;
+            granted = c->writable[i];
+        }
+    }
+    if (s == NULL) {
+        return cf_error_set(err, CF_E_SOURCE, NULL, target,
+                            "this configuration has no source named '%s'", target);
+    }
+    /* What it can do, then what it may. */
+    if (s->vt == NULL || s->vt->write == NULL) {
+        return cf_error_set(err, CF_E_CAPABILITY, NULL, target,
+                            "'%s' is a %s source, which cannot be written: a running "
+                            "program's changes go to a store",
+                            target, (s->vt != NULL) ? s->vt->kind : "?");
+    }
+    if (!granted) {
+        return cf_error_set(err, CF_E_POLICY, NULL, target,
+                            "'%s' may not be written: nothing granted it "
+                            "(cf_builder_writable)",
+                            target);
+    }
+    if (!write_authorized(c, s, items, count, err)) {
+        return CF_FALSE;
+    }
+    return s->vt->write(s, items, count, meta, err);
 }
 
 /* ------------------------------------------------------------------ *

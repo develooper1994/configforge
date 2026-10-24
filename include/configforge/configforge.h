@@ -129,9 +129,17 @@ CF_API cf_bool cf_builder_secrets(cf_builder* b, const char* name, int rank,
                                   const char* path, const char* prefix, unsigned flags);
 
 /* A SQLite store (CF_WITH_SQLITE): typed values, each with what its
-   writer said about it. cf_store_set writes one. */
+   writer said about it. cf_write writes one, when it is granted. */
 CF_API cf_bool cf_builder_store(cf_builder* b, const char* name, int rank,
                                 const char* path, unsigned flags);
+
+/* Allow cf_write to write the source of this name - the program's
+   permission, as against the source's capability. Every source is read
+   only until granted. A grant to a source that cannot be written, or to
+   no source of that name, fails cf_builder_create, before anything is
+   read. A derived configuration keeps the grants of the one it came
+   from. */
+CF_API cf_bool cf_builder_writable(cf_builder* b, const char* source_name);
 
 /* Register a source the caller built itself. The source object is
    copied, so the caller's may be on the stack; any state it points at
@@ -337,6 +345,34 @@ CF_API cf_config* cf_derive(const cf_config* base, const char* source_name,
 CF_API cf_config* cf_derive_in(const cf_config* base, cf_arena* arena,
                                const char* source_name, const cf_pair* pairs,
                                size_t count, cf_error* err);
+
+/* ------------------------------------------------------------------ *
+ * Keeping a change
+ *
+ * Deriving changes a snapshot; nothing outlives the process. To keep a
+ * change, write it to a source - which asks three questions first, and
+ * any "no" refuses every item before one is written:
+ *
+ *   capability     can that source be written at all? Only a store can
+ *                  (Design.md, section 39).
+ *   permission     did the program grant it (cf_builder_writable)?
+ *   authorization  would the contract accept each value from that
+ *                  source? The read side's own rules decide - type,
+ *                  range, allowed spellings, unknown keys, and a key's
+ *                  policy (D-33): a key that may only be set from the
+ *                  environment is not written to a store, because
+ *                  writing past an operator's lock would lift it. A
+ *                  command (CF_TRANSIENT) is never written.
+ *
+ * `meta` - who, when, why - goes with each value, and is what explain()
+ * shows as where it was set once the store is read again. The
+ * configuration does not change: it is a snapshot. Rebuild, or derive,
+ * to see the write.
+ * ------------------------------------------------------------------ */
+
+CF_API cf_bool cf_write(const cf_config* c, const char* target,
+                        const cf_store_item* items, size_t count, const char* meta,
+                        cf_error* err);
 
 /* ------------------------------------------------------------------ *
  * Change notification

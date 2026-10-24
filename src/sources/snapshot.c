@@ -49,7 +49,7 @@ static void snapshot_destroy(cf_source* s) {
 }
 
 static const cf_source_vtable cf_snapshot_vt = {"snapshot", snapshot_load,
-                                                snapshot_destroy, NULL};
+                                                snapshot_destroy, NULL, NULL};
 
 cf_bool cf_source_snapshot(cf_source* s, const char* name, const cf_keyspace* ks) {
     if (s == NULL || ks == NULL) {

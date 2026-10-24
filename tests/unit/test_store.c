@@ -127,6 +127,46 @@ static void test_contract(void) {
     cf_config_free(c);
 }
 
+/* A running program's change, kept: granted, checked, written, and
+   explained after the restart with what the writer said. */
+static void test_write_granted(void) {
+    cf_store_item one;
+    cf_error      err = CF_ERROR_INIT;
+    cf_builder*   b;
+    cf_config*    c;
+    static char   ex[2048];
+    int           pass;
+
+    remove(DB);
+    for (pass = 0; pass < 2; ++pass) {
+        b = cf_build(NULL);
+        cf_builder_store(b, "store", CF_RANK_USER_FILE, DB, CF_FILE_OPTIONAL);
+        cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+        cf_builder_writable(b, "store");
+        c = cf_builder_create(b, &err);
+        check(c != NULL, "a granted store builds, missing or not");
+        if (c == NULL) {
+            printf("  %s\n", err.message);
+            return;
+        }
+        if (pass == 0) {
+            one.key = "server.port";
+            cf_value_int(&one.value, 99999);
+            check(!cf_write(c, "store", &one, 1, NULL, &err),
+                  "a value the contract refuses is not written");
+            check(fopen(DB, "rb") == NULL, "and the store is not even created");
+            cf_value_int(&one.value, 9443);
+            check(cf_write(c, "store", &one, 1, "ops, 2026-10-24: move off 8080", &err),
+                  "one it accepts is");
+        } else {
+            check(cf_get_int(c, "server.port", 0) == 9443, "and is read back");
+            cf_explain(c, "server.port", ex, sizeof ex);
+            has(ex, "move off 8080", "explained with what the writer said");
+        }
+        cf_config_free(c);
+    }
+}
+
 static void test_not_a_store(void) {
     cf_error   err = CF_ERROR_INIT;
     cf_config* c;
@@ -183,6 +223,7 @@ int main(void) {
     test_replace();
     test_atomic();
     test_contract();
+    test_write_granted();
     test_not_a_store();
     test_missing();
 #else

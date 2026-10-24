@@ -373,20 +373,31 @@ the configuration it has.
 
 A change that has to survive a restart goes to a **store**, never into a
 hand-written file: hand-written files keep their comments and layout
-because nothing but a person writes them. `cf_store_set` writes typed
-values to a SQLite store (`CF_WITH_SQLITE`) in one transaction - every
-item or none - with a note of who, when and why, and `cf_builder_store`
-reads it back as a source, the note shown by `explain()` as where the
-value was set:
+because nothing but a person writes them. `cf_builder_store` reads a
+SQLite store (`CF_WITH_SQLITE`) as a source, and `cf_write` writes typed
+values to it in one transaction - every item or none - with a note of
+who, when and why, shown by `explain()` as where the value was set:
 
 ```c
+cf_builder_store(b, "store", CF_RANK_USER_FILE, "app.db", CF_FILE_OPTIONAL);
+cf_builder_writable(b, "store");     /* every source is read only until granted */
+cfg = cf_builder_create(b, &err);
+...
 cf_store_item item;
 item.key = "log.level";
 cf_value_text(&item.value, "debug", 5);
-cf_store_set("app.db", &item, 1, "admin, 2026-10-24: incident 42", &err);
-...
-cf_builder_store(b, "store", CF_RANK_USER_FILE, "app.db", CF_FILE_OPTIONAL);
+if (!cf_write(cfg, "store", &item, 1, "admin, 2026-10-24: incident 42", &err)) {
+    /* not written, and err says which question said no */
+}
 ```
+
+Before anything is written, `cf_write` asks whether the source can be
+written (only a store can), whether the program granted it, and whether
+the contract would accept each value from it - the same rules that read
+it back, so `"verbose"` for a level that allows `debug, info, warn` is
+refused, and so is any key whose policy says it may only come from the
+environment. `cf_store_set` writes a store without asking, for
+provisioning one before the program runs.
 
 ```text
 log.level = "debug"  (text)

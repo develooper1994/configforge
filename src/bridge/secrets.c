@@ -146,7 +146,7 @@ static const char* secrets_path(const cf_source* s) {
 }
 
 static const cf_source_vtable cf_secrets_vt = {"secrets", secrets_load, secrets_destroy,
-                                               secrets_path};
+                                               secrets_path, NULL};
 
 size_t cf_source_secrets_state_size(void) {
     return sizeof(secrets_state);

@@ -72,6 +72,7 @@ gets reopened every six months.
 | D-39 | YAML: the subset, and who types a value | formats, provenance | **Decided** |
 | D-40 | Where the version is written, and the commit a build is from | releases, packaging, provenance | **Decided** |
 | D-41 | Doctor's rules as a library | Doctor, embedding | **Decided** |
+| D-42 | Authorization for persistent writes | stores, policy, security | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -1780,6 +1781,61 @@ leaves it out by name.
 
 **What it costs.** A context holds its baseline inline - 512 entries, about 140 KB - which
 a program linting itself pays once, on the heap.
+
+---
+
+## D-42 — Authorization for persistent writes
+
+**Question.** `cf_store_set` writes whatever it is given to whatever path it is given. A
+running program that keeps a change - an admin page raising a log level - needs more:
+which sources may be written, by whom, and which values. The first specification put it
+as *policy check, capability check, writer*, and kept capability ("what can this source
+do") apart from policy ("what may ConfigForge do with it"). How much of that belongs in
+the library, and in what shape?
+
+**Options.**
+
+1. **Leave it to the caller.** `cf_store_set` is the API; the program checks what it
+   likes. Every program then re-implements the contract, or does not, and a store fills
+   with values that are rejected on every start.
+2. **A policy layer of its own** - per-source and per-key write permissions, in the
+   program or in a policy file, compiled and checked for conflicts. The specification's
+   full model, and a second rule set beside the read side's, which can disagree with it.
+3. **Three questions, each answered by something that already exists or is one call**:
+   capability on the source, permission granted by the program, authorization by the
+   read side's contract.
+
+**Decision: option 3.** `cf_write(cfg, target, items, count, meta, &err)` asks, in order:
+
+* **capability** - `write` on the source's vtable, NULL for every source but a store. A
+  hand-written document has comments a writer would lose (Design.md, section 39); the
+  environment and the command line belong to whoever started the process.
+* **permission** - `cf_builder_writable(b, name)`. Every source is read only until the
+  program grants it. A grant to a source that cannot be written, or to no source, fails
+  `cf_builder_create`: the specification's "capability validation before the policy
+  becomes effective", and a typo found at start rather than at the first write.
+* **authorization** - the items become candidates from the target, at its rank, and the
+  contract is applied to them by `cf_defs_apply`, the function that applies it when the
+  store is read back. A value rejected there is refused here; a key whose per-parameter
+  policy (D-33) leaves the store out is refused as `CF_E_POLICY`, because an operator's
+  lock a program can write past is no lock. Required keys are not asked for - a write is
+  a few keys, not a configuration - and a command (`CF_TRANSIENT`) is never written.
+
+Any "no" refuses every item before one is written, and the error names which question
+said it. The configuration does not change; it is a snapshot.
+
+**Rejected: write permission per key** (option 2's core). It would be a list beside the
+policy list, and the two would disagree; D-33's list already says which sources may
+supply a key, and a source that may not supply it has no business storing it. If a key
+needs to be readable from a store but never written by the program, that is a second
+store, not granted.
+
+**Kept: `cf_store_set`** as the unauthorised writer, for provisioning a store before any
+configuration exists - an installer, a migration. It is documented as asking nothing.
+
+**What it costs.** One member on `cf_source_vtable`, so a custom source written before
+this does not compile until it says NULL - which `-Wmissing-field-initializers` was there
+to make a decision rather than a default. Before 1.0, that is the time to add it.
 
 ---
 

@@ -6,7 +6,7 @@ header, then run the script. Every function is listed with the
 comment written above it, under the section of the header it is
 in; the types are in the headers themselves.
 
-- [`configforge.h`](#configforgeh) - 61
+- [`configforge.h`](#configforgeh) - 63
 - [`cf_alloc.h`](#cf_alloch) - 12
 - [`cf_define.h`](#cf_defineh) - 19
 - [`cf_doctor.h`](#cf_doctorh) - 20
@@ -140,7 +140,18 @@ CF_API cf_bool cf_builder_store(cf_builder* b, const char* name, int rank, const
 ```
 
 A SQLite store (CF_WITH_SQLITE): typed values, each with what its
-writer said about it. cf_store_set writes one.
+writer said about it. cf_write writes one, when it is granted.
+
+```c
+CF_API cf_bool cf_builder_writable(cf_builder* b, const char* source_name);
+```
+
+Allow cf_write to write the source of this name - the program's
+permission, as against the source's capability. Every source is read
+only until granted. A grant to a source that cannot be written, or to
+no source of that name, fails cf_builder_create, before anything is
+read. A derived configuration keeps the grants of the one it came
+from.
 
 ```c
 CF_API cf_bool cf_builder_source(cf_builder* b, const cf_source* s);
@@ -343,6 +354,32 @@ CF_API cf_config* cf_derive_in(const cf_config* base, cf_arena* arena, const cha
 
 The same, inside an arena the caller owns. A configuration built with
 cf_build_in has no allocator to borrow, so it must use this one.
+
+### Keeping a change
+
+Deriving changes a snapshot; nothing outlives the process. To keep a
+change, write it to a source - which asks three questions first, and
+any "no" refuses every item before one is written:
+
+  capability     can that source be written at all? Only a store can
+                 (Design.md, section 39).
+  permission     did the program grant it (cf_builder_writable)?
+  authorization  would the contract accept each value from that
+                 source? The read side's own rules decide - type,
+                 range, allowed spellings, unknown keys, and a key's
+                 policy (D-33): a key that may only be set from the
+                 environment is not written to a store, because
+                 writing past an operator's lock would lift it. A
+                 command (CF_TRANSIENT) is never written.
+
+`meta` - who, when, why - goes with each value, and is what explain()
+shows as where it was set once the store is read again. The
+configuration does not change: it is a snapshot. Rebuild, or derive,
+to see the write.
+
+```c
+CF_API cf_bool cf_write(const cf_config* c, const char* target, const cf_store_item* items, size_t count, const char* meta, cf_error* err);
+```
 
 ### Change notification
 
@@ -2146,6 +2183,10 @@ when, why - is stored with each and is what explain() shows as where
 the value was set; NULL stores none. Hand-written documents are never
 written: a store is where a running program's changes go (Design.md,
 section 39).
+
+This writes what it is given and asks nothing; it is the tool for
+provisioning a store. A running program writes through cf_write,
+which asks whether it may.
 
 ## cf_value.h
 

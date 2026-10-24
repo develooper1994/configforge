@@ -707,7 +707,7 @@ static void image_destroy(cf_source* s) {
 }
 
 static const cf_source_vtable cf_image_vt = {"image", image_load_src, image_destroy,
-                                             NULL};
+                                             NULL, NULL};
 
 size_t cf_source_image_state_size(void) {
     return sizeof(image_state);
