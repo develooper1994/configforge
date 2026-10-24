@@ -34,10 +34,8 @@ Things that are wrong or unproven today, most serious first.
 
 Worth building, in the order they serve the library's purpose.
 
-* **The build id in the provenance report and the image header**, so a
-  report says which commit of the library wrote it (`cf_build_id()`,
-  D-40). A schema change, so it waits for a reason to change the schema
-  anyway.
+* **The build id in the image header**, as the report now carries it:
+  a change to the image format, so it waits for a reason to change it.
 * **Machine-readable `explain()`** for an administration endpoint, the
   way Spring's `/actuator/env` works. Half there: the provenance report
   is that data, and Doctor.md 7a's jq recipes select one key from it;

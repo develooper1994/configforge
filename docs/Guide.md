@@ -201,6 +201,13 @@ values and won none of them - the file somebody is editing to no effect.
 A common pattern is a transient `--cf.explain=<key>` definition and a
 check after `cf_builder_create`, as `examples/tier1.c` does.
 
+For a machine - an administration endpoint, the way Spring's
+`/actuator/env` works - `cf_explain_json(cfg, key, CF_REPORT_BLIND, buf,
+cap)` writes the same chain as JSON: exactly the object the provenance
+report holds for that key, so whatever reads one reads the other, and
+blind, so a sensitive key shows where it came from and its digest,
+never its value.
+
 ## 6. Reading values
 
 ```c

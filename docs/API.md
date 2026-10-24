@@ -6,7 +6,7 @@ header, then run the script. Every function is listed with the
 comment written above it, under the section of the header it is
 in; the types are in the headers themselves.
 
-- [`configforge.h`](#configforgeh) - 60
+- [`configforge.h`](#configforgeh) - 61
 - [`cf_alloc.h`](#cf_alloch) - 12
 - [`cf_define.h`](#cf_defineh) - 19
 - [`cf_doctor.h`](#cf_doctorh) - 20
@@ -21,7 +21,7 @@ in; the types are in the headers themselves.
 - [`cf_numeric.h`](#cf_numerich) - 7
 - [`cf_platform.h`](#cf_platformh) - 17
 - [`cf_port.h`](#cf_porth) - 10
-- [`cf_report.h`](#cf_reporth) - 5
+- [`cf_report.h`](#cf_reporth) - 6
 - [`cf_serialize.h`](#cf_serializeh) - 16
 - [`cf_source.h`](#cf_sourceh) - 26
 - [`cf_value.h`](#cf_valueh) - 12
@@ -225,8 +225,17 @@ set is the question, and it is not the secret.
 
 ```c
 CF_API size_t cf_explain(const cf_config* c, const char* key, char* buf, size_t cap);
+```
+
+```c
+CF_API size_t cf_explain_json(const cf_config* c, const char* key, cf_report_mode mode, char* buf, size_t cap);
 CF_API size_t cf_inspect(const cf_config* c, char* buf, size_t cap);
 ```
+
+The same chain as JSON, for an administration endpoint or a tool:
+cf_report_key_write says what it holds. CF_REPORT_BLIND is what an
+endpoint wants - presence, origin, length and digest for a sensitive
+key, never its value.
 
 ```c
 CF_API size_t cf_diff(const cf_config* before, const cf_config* after, cf_diff_fn fn, void* ctx);
@@ -1747,6 +1756,20 @@ CF_API size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds, const 
 
 Render the report. Measure-or-write: with a NULL buffer nothing is
 stored and the length still accumulates.
+
+```c
+CF_API size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds, const cf_source_view* sv, const char* key, size_t keylen, cf_report_mode mode, char* buf, size_t cap);
+```
+
+One key as the report writes it, alone - explain() for a machine:
+
+  { "configforge_key": 1, "key": "server.port",
+    "value": { "definition": ..., "candidates": [...], "selected": ... } }
+
+The object under "value" is exactly what the report holds under
+"keys.&lt;key>", so whatever reads one reads the other. A key nobody
+supplied has no candidates and a null selection. `mode` redacts as
+the report does. Measure-or-write; 0 without CF_WITH_REPORT.
 
 ```c
 CF_API size_t cf_schema_write(const cf_defset* ds, const char* title, cf_bool closed, char* buf, size_t cap, cf_error* err);

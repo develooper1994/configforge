@@ -209,6 +209,13 @@ CF_API cf_bool cf_has(const cf_config* c, const char* key);
  * ------------------------------------------------------------------ */
 
 CF_API size_t cf_explain(const cf_config* c, const char* key, char* buf, size_t cap);
+
+/* The same chain as JSON, for an administration endpoint or a tool:
+   cf_report_key_write says what it holds. CF_REPORT_BLIND is what an
+   endpoint wants - presence, origin, length and digest for a sensitive
+   key, never its value. */
+CF_API size_t cf_explain_json(const cf_config* c, const char* key, cf_report_mode mode,
+                              char* buf, size_t cap);
 CF_API size_t cf_inspect(const cf_config* c, char* buf, size_t cap);
 
 /* What changed between two configurations: after a reload, the line a
