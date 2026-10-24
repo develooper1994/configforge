@@ -3,7 +3,7 @@
 Versions follow semantic versioning from 1.0. Before that, `0.x` promises
 nothing: the C interface is not frozen, and a minor bump may change it.
 
-## 0.3.0 — unreleased
+## 0.3.0 — 2026-10-24
 
 ### Fixed, and it mattered
 
