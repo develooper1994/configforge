@@ -172,6 +172,7 @@ nothing, and `1.0` is where semantic versioning starts.
 | XML through expat, read only, behind `CF_WITH_XML` (D-23) | done |
 | a SQLite store - typed, written in one transaction, each value with its writer's note - behind `CF_WITH_SQLITE` | done |
 | a directory of secrets, one file a key, as containers and systemd hand them over | done |
+| Java `.properties`, read as java.util.Properties reads it, behind `CF_WITH_PROPERTIES` | done |
 | Windows Registry, gsettings, macOS defaults | deferred, see D-30 |
 
 Every line marked done is covered by the suite and by the gates below;
@@ -208,7 +209,7 @@ build does. `scripts/README.md` lists the options.
 The last two are optimised on purpose: inlining merges frames, so a stack
 frame that fits in a Debug build can break the budget in a release one.
 
-Options: `CF_WITH_INI` `CF_WITH_JSON` `CF_WITH_TOML` `CF_WITH_XML` `CF_WITH_SQLITE`
+Options: `CF_WITH_INI` `CF_WITH_JSON` `CF_WITH_TOML` `CF_WITH_PROPERTIES` `CF_WITH_XML` `CF_WITH_SQLITE`
 `CF_WITH_REAL` `CF_WITH_DIR` `CF_WITH_DOTENV` `CF_WITH_EMIT` `CF_WITH_IMAGE`
 `CF_WITH_REPORT` `CF_WITH_CXX` `CF_FORCE_PORTABLE` `CF_SINGLE_THREADED`, and the limits
 below.

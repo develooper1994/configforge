@@ -274,6 +274,7 @@ is worse than a program that refuses to start.
 | TOML | `CF_WITH_TOML` | the subset in D-23: tables, arrays of tables, inline tables, every scalar but dates |
 | YAML | `CF_WITH_YAML`, off by default | through libyaml; typed by the contract (D-39) |
 | XML | `CF_WITH_XML`, off by default | through expat, read only; typed by the contract, mapped as D-23 declares |
+| Java `.properties` | `CF_WITH_PROPERTIES` | read only; as java.util.Properties reads it, UTF-8; typed by the contract |
 
 The format is taken from the extension, never guessed from the content.
 A file in a format the build left out is an error that names the option

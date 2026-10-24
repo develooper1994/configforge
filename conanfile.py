@@ -22,6 +22,7 @@ FEATURES = {
     "ini": True,
     "json": True,
     "toml": True,
+    "properties": True,
     "yaml": False,
     "xml": False,
     "sqlite": False,

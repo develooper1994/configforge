@@ -42,6 +42,9 @@
 #ifndef CF_WITH_TOML
 #define CF_WITH_TOML 1
 #endif
+#ifndef CF_WITH_PROPERTIES
+#define CF_WITH_PROPERTIES 1
+#endif
 #ifndef CF_WITH_XML
 #define CF_WITH_XML 0
 #endif

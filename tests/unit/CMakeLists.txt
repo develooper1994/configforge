@@ -40,7 +40,8 @@ set(CF_UNIT_TESTS
     test_yaml
     test_xml
     test_store
-    test_secretsdir)
+    test_secretsdir
+    test_properties)
 
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)

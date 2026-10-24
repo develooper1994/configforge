@@ -25,6 +25,9 @@ extern const cf_codec cf_codec_yaml;
 #if CF_WITH_XML
 extern const cf_codec cf_codec_xml;
 #endif
+#if CF_WITH_PROPERTIES
+extern const cf_codec cf_codec_properties;
+#endif
 
 static const cf_codec* const cf_codecs[] = {
 #if CF_WITH_INI
@@ -41,6 +44,9 @@ static const cf_codec* const cf_codecs[] = {
 #endif
 #if CF_WITH_XML
     &cf_codec_xml,
+#endif
+#if CF_WITH_PROPERTIES
+    &cf_codec_properties,
 #endif
     NULL};
 
@@ -145,9 +151,13 @@ typedef struct cf_format_info {
 } cf_format_info;
 
 static const cf_format_info cf_formats[] = {
-    {"ini", ".ini;.cfg;.conf", "CF_WITH_INI"}, {"json", ".json;.jsn", "CF_WITH_JSON"},
-    {"toml", ".toml", "CF_WITH_TOML"},         {"xml", ".xml", "CF_WITH_XML"},
-    {"yaml", ".yaml;.yml", "CF_WITH_YAML"},    {NULL, NULL, NULL}};
+    {"ini", ".ini;.cfg;.conf", "CF_WITH_INI"},
+    {"json", ".json;.jsn", "CF_WITH_JSON"},
+    {"toml", ".toml", "CF_WITH_TOML"},
+    {"xml", ".xml", "CF_WITH_XML"},
+    {"yaml", ".yaml;.yml", "CF_WITH_YAML"},
+    {"properties", ".properties", "CF_WITH_PROPERTIES"},
+    {NULL, NULL, NULL}};
 
 const char* cf_format_of_path(const char* path) {
     const char* ext = path_ext(path);

@@ -14,6 +14,9 @@ endif()
 if(CF_WITH_TOML)
   target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/toml.c)
 endif()
+if(CF_WITH_PROPERTIES)
+  target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/properties.c)
+endif()
 
 # The one codec with a dependency, so the one that has to be asked for.
 # libyaml is found as a header and a library rather than through a

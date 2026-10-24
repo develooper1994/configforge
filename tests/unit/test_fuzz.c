@@ -382,6 +382,20 @@ static const char* const g_xml =
     "</c>\n"
     "<!DOCTYPE c>\n";
 
+/* Every construct the .properties reader takes: both separators and
+   whitespace, both comment marks, a continuation, the escapes, a
+   surrogate pair, and a bad escape for a mutation to reach. */
+static const char* const g_properties = "# comment\n"
+                                        "! comment\n"
+                                        "server.port = 8080\n"
+                                        "server.host:0.0.0.0\n"
+                                        "greeting hello world\n"
+                                        "path=C:\\\\x\\tb\n"
+                                        "long = a, \\\n"
+                                        "       b\n"
+                                        "emoji=\\ud83d\\ude00\n"
+                                        "bad=\\u12\n";
+
 static const char* const g_env = "# comment\n"
                                  "export SERVER__PORT=8080\n"
                                  "SERVER__HOST=\"0.0.0.0\"\n"
@@ -430,6 +444,7 @@ static void fuzz_from_nothing(void) {
         feed_codec("toml", &v); /* skipped in a build without it */
         feed_codec("yaml", &v); /* and this one too */
         feed_codec("xml", &v);  /* and this */
+        feed_codec("properties", &v);
         feed_dotenv(&v);
         feed_argv(&v);
         feed_image(&v);
@@ -526,6 +541,7 @@ int main(void) {
     write_seed("seed_toml", g_toml, strlen(g_toml));
     write_seed("seed_yaml", g_yaml, strlen(g_yaml));
     write_seed("seed_xml", g_xml, strlen(g_xml));
+    write_seed("seed_properties", g_properties, strlen(g_properties));
     write_seed("seed_dotenv", g_env, strlen(g_env));
     write_seed("seed_replay", g_report, strlen(g_report));
     write_seed("seed_argv", argv_seed, sizeof argv_seed - 1);
@@ -561,6 +577,7 @@ int main(int argc, char** argv) {
     fuzz_text("toml", g_toml, 0);
     fuzz_text("yaml", g_yaml, 0);
     fuzz_text("xml", g_xml, 0);
+    fuzz_text("properties", g_properties, 0);
     fuzz_text(NULL, g_env, -1);
 #if CF_WITH_IMAGE
     fuzz_image();
