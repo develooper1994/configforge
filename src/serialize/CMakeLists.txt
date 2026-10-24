@@ -33,3 +33,18 @@ if(CF_WITH_YAML)
   # Linked in the top-level CMakeLists.txt, where the target is made:
   # under the policies of CMake 3.10 a subdirectory may not link it.
 endif()
+
+# XML through expat, for the same reason and in the same way: expat's
+# header and library carry the same names everywhere it is packaged.
+if(CF_WITH_XML)
+  find_path(CF_EXPAT_INCLUDE_DIR expat.h)
+  find_library(CF_EXPAT_LIBRARY NAMES expat libexpat libexpatMD)
+  if(NOT CF_EXPAT_INCLUDE_DIR OR NOT CF_EXPAT_LIBRARY)
+    message(
+      FATAL_ERROR
+        "CF_WITH_XML needs expat: install it (libexpat1-dev, brew install "
+        "expat, vcpkg install expat) or point CMAKE_PREFIX_PATH at it")
+  endif()
+  target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/xml.c)
+  target_include_directories(configforge PRIVATE ${CF_EXPAT_INCLUDE_DIR})
+endif()

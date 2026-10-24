@@ -7,6 +7,17 @@
 #include <stdio.h>
 #include <string.h>
 
+/* A format the library knows and this build left out, for the checks of
+   what that does - XML unless it is in, then YAML; none when every one
+   is in, and then those checks have nothing to say. */
+#if !CF_WITH_XML
+#define ABSENT "xml"
+#define ABSENT_OPTION "CF_WITH_XML"
+#elif !CF_WITH_YAML
+#define ABSENT "yaml"
+#define ABSENT_OPTION "CF_WITH_YAML"
+#endif
+
 static int g_fail = 0, g_run = 0;
 
 static void check(int c, const char* w) {
@@ -396,9 +407,15 @@ static void test_registry(void) {
     /* A format the library knows but this build left out must be
        nameable, so the error can say which option to turn on rather
        than claiming the file is unrecognisable. */
-    check(cf_codec_by_path("app.xml") == NULL, "xml is not compiled in");
-    eq(cf_format_of_path("app.xml"), "xml", "but it is still named");
-    eq(cf_format_option("xml"), "CF_WITH_XML", "and so is its option");
+#ifdef ABSENT
+    check(cf_codec_by_path("app." ABSENT) == NULL,
+          "a format left out is not compiled in");
+    eq(cf_format_of_path("app." ABSENT), ABSENT, "but it is still named");
+    eq(cf_format_option(ABSENT), ABSENT_OPTION, "and so is its option");
+#endif
+#if CF_WITH_XML
+    check(cf_codec_by_path("app.xml") != NULL, "xml is compiled in");
+#endif
 #if CF_WITH_TOML
     check(cf_codec_by_path("app.toml") != NULL, "toml is built in");
 #endif

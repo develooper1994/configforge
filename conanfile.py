@@ -23,6 +23,7 @@ FEATURES = {
     "json": True,
     "toml": True,
     "yaml": False,
+    "xml": False,
     "real": True,
     "dir": True,
     "dotenv": True,
@@ -73,6 +74,8 @@ class ConfigForgeConan(ConanFile):
     def requirements(self):
         if self.options.with_yaml:
             self.requires("libyaml/0.2.5")
+        if self.options.with_xml:
+            self.requires("expat/[>=2.6 <3]")
 
     def layout(self):
         cmake_layout(self)

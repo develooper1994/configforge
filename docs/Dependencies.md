@@ -38,6 +38,7 @@ not, and has to be asked for:
 | Library | Licence | When | Notes |
 | ------- | ------- | ---- | ----- |
 | libyaml | MIT | `CF_WITH_YAML=ON`, off by default | reading YAML; writing it is done here, by hand. Found as `yaml.h` and a library named `yaml`, which every packager agrees on |
+| expat | MIT | `CF_WITH_XML=ON`, off by default | reading XML, which is read only (D-23). Found as `expat.h` and a library named `expat`; its memory is expat's own, so the library still allocates nothing outside its arenas |
 
 The formats the design names and the build does not yet have - XML and
 SQLite (D-23) - would each add a row here when they arrive.

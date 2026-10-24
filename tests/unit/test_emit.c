@@ -7,6 +7,17 @@
 #include <stdio.h>
 #include <string.h>
 
+/* A format the library knows and this build left out, for the checks of
+   what that does - XML unless it is in, then YAML; none when every one
+   is in, and then those checks have nothing to say. */
+#if !CF_WITH_XML
+#define ABSENT "xml"
+#define ABSENT_OPTION "CF_WITH_XML"
+#elif !CF_WITH_YAML
+#define ABSENT "yaml"
+#define ABSENT_OPTION "CF_WITH_YAML"
+#endif
+
 #if CF_WITH_EMIT
 
 static int  g_fail = 0, g_run = 0;
@@ -154,9 +165,17 @@ static void test_format_refusals(void) {
         check(0, "builds");
         return;
     }
-    check(cf_emit(c, "xml", CF_EMIT_ALL, 0, buf, sizeof buf, &err) == 0,
+#ifdef ABSENT
+    check(cf_emit(c, ABSENT, CF_EMIT_ALL, 0, buf, sizeof buf, &err) == 0,
           "a format this build lacks is refused");
-    has(err.message, "CF_WITH_XML", "naming the option to turn on");
+    has(err.message, ABSENT_OPTION, "naming the option to turn on");
+#endif
+#if CF_WITH_XML
+    /* XML is read only (D-23): writing it is refused, and says so. */
+    check(cf_emit(c, "xml", CF_EMIT_ALL, 0, buf, sizeof buf, &err) == 0,
+          "XML is not written");
+    has(err.message, "can be read but not written", "and the reason is given");
+#endif
 
     check(cf_emit(c, "nonesuch", CF_EMIT_ALL, 0, buf, sizeof buf, &err) == 0,
           "an unknown format is refused");

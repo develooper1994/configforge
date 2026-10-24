@@ -13,6 +13,10 @@
     "yaml": {
       "description": "The YAML codec, through libyaml (CF_WITH_YAML)",
       "dependencies": ["libyaml"]
+    },
+    "xml": {
+      "description": "The XML reader, through expat (CF_WITH_XML)",
+      "dependencies": ["expat"]
     }
   }
 }

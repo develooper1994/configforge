@@ -66,6 +66,9 @@ add_subdirectory(src)
 if(CF_WITH_YAML)
   target_link_libraries(configforge PRIVATE ${CF_YAML_LIBRARY})
 endif()
+if(CF_WITH_XML)
+  target_link_libraries(configforge PRIVATE ${CF_EXPAT_LIBRARY})
+endif()
 
 # Only what CF_API marks is visible from a shared library, and the
 # library's own sources are the ones that export rather than import.

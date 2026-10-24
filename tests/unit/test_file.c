@@ -8,6 +8,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* A format the library knows and this build left out, for the checks of
+   what that does - XML unless it is in, then YAML; none when every one
+   is in, and then those checks have nothing to say. */
+#if !CF_WITH_XML
+#define ABSENT "xml"
+#define ABSENT_OPTION "CF_WITH_XML"
+#elif !CF_WITH_YAML
+#define ABSENT "yaml"
+#define ABSENT_OPTION "CF_WITH_YAML"
+#endif
+
 static int  g_fail = 0, g_run = 0;
 static void check(int c, const char* w) {
     ++g_run;
@@ -143,13 +154,14 @@ static void test_missing_file(void) {
 }
 
 static void test_uncompiled_format(void) {
+#ifdef ABSENT
     cf_error    err = CF_ERROR_INIT;
     cf_builder* b   = cf_build(NULL);
     cf_config*  cfg;
 
-    check(spill("cf_t3.xml", "<port>1</port>\n"), "wrote an xml fixture");
+    check(spill("cf_t3." ABSENT, "port = 1\n"), "wrote a fixture in a format left out");
 
-    cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_t3.xml", NULL, 0);
+    cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_t3." ABSENT, NULL, 0);
     cfg = cf_builder_create(b, &err);
 
     /* A build option must never make a file invisible. The error has
@@ -157,9 +169,10 @@ static void test_uncompiled_format(void) {
        for a typo that is not there. */
     check(cfg == NULL, "a format this build lacks is an error, not a skip");
     check(err.code == CF_E_CAPABILITY, "reported as a capability error");
-    has(err.message, "xml", "names the format");
-    has(err.message, "CF_WITH_XML", "names the option to turn on");
-    remove("cf_t3.xml");
+    has(err.message, ABSENT, "names the format");
+    has(err.message, ABSENT_OPTION, "names the option to turn on");
+    remove("cf_t3." ABSENT);
+#endif
 }
 
 static void test_unknown_extension(void) {
@@ -400,11 +413,15 @@ static void test_drop_in_directory(void) {
     /* A file the build cannot read is named rather than skipped: a
        directory that silently ignores half its contents is the worst
        possible place for a build option to hide. */
-    check(spill("cf_confd/50-extra.xml", "<port>1</port>\n"), "wrote an xml file");
+#ifdef ABSENT
+    check(spill("cf_confd/50-extra." ABSENT, "port = 1\n"),
+          "wrote a file in a format left out");
     b = cf_build(NULL);
     cf_builder_dir(b, "conf.d", CF_RANK_SYS_FILE, "cf_confd", NULL, 0);
     check(cf_builder_create(b, &err) == NULL, "an unreadable format fails");
-    has(err.message, "CF_WITH_XML", "naming the option to turn on");
+    has(err.message, ABSENT_OPTION, "naming the option to turn on");
+    remove("cf_confd/50-extra." ABSENT);
+#endif
 
     remove("cf_confd/10-base.ini");
     remove("cf_confd/90-site.ini");
