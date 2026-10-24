@@ -371,6 +371,12 @@ public:
     { if (b_) { cf_builder_dir(b_, name, rank, path, format, flags); }
       return *this; }
 
+    /* A directory of secrets, one file a key (cf_source_secrets). */
+    Builder& secrets(const char* name, int rank, const char* path,
+                     const char* prefix = 0, unsigned flags = 0)
+    { if (b_) { cf_builder_secrets(b_, name, rank, path, prefix, flags); }
+      return *this; }
+
     /* A SQLite store (CF_WITH_SQLITE); cf_store_set writes one. */
     Builder& store(const char* name, int rank, const char* path, unsigned flags = 0)
     { if (b_) { cf_builder_store(b_, name, rank, path, flags); }

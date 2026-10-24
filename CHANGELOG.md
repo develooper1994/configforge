@@ -26,6 +26,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   where a running program's changes go, as Design.md section 39 has
   it: hand-written files stay read only. Conan `with_sqlite`, vcpkg
   feature `sqlite`, `Builder::store` in C++.
+- **A directory of secrets as a source** (`cf_builder_secrets`), one
+  file a key, as Docker and Kubernetes mount secrets and systemd passes
+  credentials: a secret never goes through the environment, where
+  every child process can read it. A file named as its key is that key,
+  one named as its environment variable would be maps the same way, a
+  name that is neither is an error, the trailing newline is dropped and
+  explain() names the file. Under `CF_WITH_DIR`, whose listing it uses.
 
 ### Fixed
 

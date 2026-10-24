@@ -12,7 +12,8 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/dotenv.c
           ${CMAKE_CURRENT_SOURCE_DIR}/dir.c
           ${CMAKE_CURRENT_SOURCE_DIR}/emit.c
-          ${CMAKE_CURRENT_SOURCE_DIR}/store.c)
+          ${CMAKE_CURRENT_SOURCE_DIR}/store.c
+          ${CMAKE_CURRENT_SOURCE_DIR}/secrets.c)
 
 # The store through sqlite3, found as a header and a library like the
 # other dependencies. Without it the source still exists and refuses

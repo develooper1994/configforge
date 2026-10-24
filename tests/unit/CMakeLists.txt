@@ -39,7 +39,8 @@ set(CF_UNIT_TESTS
     test_schema
     test_yaml
     test_xml
-    test_store)
+    test_store
+    test_secretsdir)
 
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)
@@ -78,6 +79,11 @@ endif()
 # parallel, the neighbours kept it awake and the test failed on correct
 # code.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/watch)
+
+# The directories test_secretsdir reads, made here because C89 has no
+# way to make one.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_secrets
+     ${CMAKE_CURRENT_BINARY_DIR}/cf_secrets_bad)
 set_tests_properties(
   unit.test_watch PROPERTIES WORKING_DIRECTORY
                              ${CMAKE_CURRENT_BINARY_DIR}/watch)
