@@ -114,6 +114,23 @@ if(CF_WITH_CXX)
   set_tests_properties(
     unit.test_wrapper_watch PROPERTIES WORKING_DIRECTORY
                                        ${CMAKE_CURRENT_BINARY_DIR}/watch_cxx)
+
+  # Changing and keeping through the wrapper, built the same way.
+  add_executable(test_wrapper_write test_wrapper_write.cpp)
+  target_link_libraries(test_wrapper_write PRIVATE configforge)
+  set_target_properties(
+    test_wrapper_write
+    PROPERTIES CXX_STANDARD 98
+               CXX_STANDARD_REQUIRED ON
+               CXX_EXTENSIONS OFF)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    target_compile_options(test_wrapper_write PRIVATE -pedantic -Werror -Wall
+                                                      -Wextra)
+  elseif(MSVC)
+    configforge_apply_warnings(test_wrapper_write)
+  endif()
+  configforge_apply_analysis(test_wrapper_write)
+  add_test(NAME unit.test_wrapper_write COMMAND test_wrapper_write)
 endif()
 
 # A non-ASCII argument, round-tripped. On Windows this is the only test

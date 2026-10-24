@@ -53,7 +53,10 @@ Worth building, in the order they serve the library's purpose.
 * **Value interpolation** (D-10), now that its syntax is reserved and
   refused - which makes adding it later an addition, not a break.
 * **Native OS sources** (D-30): the Windows Registry, macOS defaults.
-* **Bindings**: Rust, and Python for scripting Doctor.
+* **Bindings**: Rust, and Python for scripting Doctor. Rust's arrive
+  with `examples/rust`, the same programs as `examples/c` and
+  `examples/cpp` and checked for the same lines; there are none until
+  the binding exists.
 
 ### Considered, and decided against for now: a jq-like query language
 
