@@ -92,6 +92,11 @@ kqueue for a machine with no Mac. `scripts/README.md` has the commands.
    body says why, what was rejected, and what was found on the way.
    Read `git log` for the register.
 5. **Branches for risky work**, merged back to `main` when verified.
+6. **A release** is `cmake -DTO=x.y.z -P scripts/version.cmake` (the
+   version is written once, in `cf_version.h`), the CHANGELOG heading
+   dated, and the tag `vX.Y.Z` pushed; the release workflow does the
+   rest and refuses a tag that disagrees. Then bump to the next version
+   so new entries have a section.
 
 ## Things that have bitten, so they need not again
 

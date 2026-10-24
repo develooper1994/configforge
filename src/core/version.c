@@ -15,6 +15,20 @@ int cf_version_number(void) {
     return CF_VERSION_NUMBER;
 }
 
+/* The CMake build writes cf_build_id.h on every build
+   (scripts/buildid.cmake) and says so with CF_HAVE_BUILD_ID_H; any
+   other build either defines CF_BUILD_ID itself or has none. */
+#if defined(CF_HAVE_BUILD_ID_H) && !defined(CF_BUILD_ID)
+#include "cf_build_id.h"
+#endif
+#ifndef CF_BUILD_ID
+#define CF_BUILD_ID ""
+#endif
+
+const char* cf_build_id(void) {
+    return CF_BUILD_ID;
+}
+
 /* Built from the same options the rest of the library compiles under,
    so the list cannot describe a build that was not made. */
 static const char* const cf_features[] = {

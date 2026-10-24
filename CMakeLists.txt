@@ -7,9 +7,13 @@
 
 cmake_minimum_required(VERSION 3.10)
 
+# The version is written once, in include/configforge/cf_version.h.
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ConfigForgeVersion.cmake)
+configforge_read_version(CF_VERSION)
+
 project(
   ConfigForge
-  VERSION 0.2.0
+  VERSION ${CF_VERSION}
   DESCRIPTION "Configuration resolution that explains itself"
   LANGUAGES C)
 
@@ -56,6 +60,7 @@ message(STATUS "limits: keys ${CF_KEY_MAX}, messages ${CF_MESSAGE_MAX}, "
 configforge_generate_options(configforge)
 configforge_apply_options(configforge)
 configforge_apply_analysis(configforge)
+configforge_build_id(configforge)
 
 add_subdirectory(src)
 if(CF_WITH_YAML)

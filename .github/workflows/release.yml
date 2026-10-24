@@ -25,8 +25,8 @@ permissions:
 
 jobs:
   # A tag that disagrees with the tree is refused before anything is
-  # built: the version CMake says, and a CHANGELOG section for it that no
-  # longer says "unreleased".
+  # built: the version cf_version.h says, and a CHANGELOG section for it
+  # that no longer says "unreleased".
   check:
     runs-on: ubuntu-latest
     steps:
@@ -34,8 +34,8 @@ jobs:
       - name: The tag, the build and the CHANGELOG agree
         run: |
           v="${GITHUB_REF_NAME#v}"
-          built=$(sed -n 's/^ *VERSION \([0-9.]*\)$/\1/p' CMakeLists.txt | head -1)
-          [ "$built" = "$v" ] || { echo "tag $v, CMakeLists.txt says $built"; exit 1; }
+          built=$(cmake -P scripts/version.cmake)
+          [ "$built" = "$v" ] || { echo "tag $v, cf_version.h says $built"; exit 1; }
           head=$(grep -E "^## $v( |$)" CHANGELOG.md || true)
           [ -n "$head" ] || { echo "CHANGELOG.md has no section for $v"; exit 1; }
           case "$head" in *unreleased*) echo "CHANGELOG.md still says: $head"; exit 1 ;; esac

@@ -53,6 +53,15 @@ doctor_case(lint_sources 1 lint|cf_fx_sources.json)
 doctor_case(lint_files_secret 0 lint|cf_fx_files.json|--fail-on|never)
 doctor_case(not_a_report 2 dump|cf_fx_staging.ini)
 
+# The version Doctor reports is the one cf_version.h says, with the
+# commit after it when the build knew one.
+add_test(NAME doctor.version COMMAND doctor --version)
+set_tests_properties(
+  doctor.version
+  PROPERTIES
+    PASS_REGULAR_EXPRESSION
+    "^ConfigForge Doctor ${PROJECT_VERSION}( \\([0-9a-f]+(-dirty)?\\))?\n$")
+
 # A baseline turns a failing run into a passing one and reports what no
 # longer matches. Written by the test rather than checked in, so it
 # cannot drift away from the fixture it refers to.

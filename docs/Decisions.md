@@ -70,6 +70,7 @@ gets reopened every six months.
 | D-37 | Limits and the stack budget: whose trade it is | memory, embedded, every builder | **Decided** |
 | D-38 | Leaving parts out: what a missing part does | size, embedded, every builder | **Decided** |
 | D-39 | YAML: the subset, and who types a value | formats, provenance | **Decided** |
+| D-40 | Where the version is written, and the commit a build is from | releases, packaging, provenance | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -1690,6 +1691,47 @@ value.
 **What it costs.** Without a contract, Tier 0 inference applies, and a plain `3.10` is the
 number it looks like - quote what is meant as text. That is INI's behaviour, stated rather
 than inherited.
+
+---
+
+## D-40 — Where the version is written, and the commit it was built from
+
+**Question.** Where does the version live, and how does a build say which commit it is?
+
+**What decides it.** The version was in four places - `cf_version.h`, `project()`, the
+Conan recipe, the vcpkg manifest - and a gate compared two of them. Every release would
+have been four edits, and the two unchecked copies are the ones a user installs. Two
+builds of one version are not the same program either: the commit is what tells them
+apart, and a provenance tool that cannot say where it came from is a poor advertisement.
+
+**Options.**
+
+1. **A `VERSION` file**, read by CMake and the recipe. Builds without CMake - the
+   amalgamation, `cc` on the sources - need the version in C, so the header would be
+   generated or copied, which is a second place again.
+2. **The git tag as the source** (`git describe`). A tarball, a vendored copy and the
+   staged tree verify builds have no tags; the version would depend on how the source
+   arrived.
+3. **The header as the source**, everything that can read it reading it, the one copy
+   that cannot (`vcpkg.json`) written by a script and checked by a gate.
+
+**Decision: option 3.** `CF_VERSION_MAJOR`, `_MINOR`, `_PATCH` in `cf_version.h` are
+the only place the number is written by hand. CMake reads them before `project()`, the
+Conan recipe in `set_version()`. `cmake -DTO=x.y.z -P scripts/version.cmake` rewrites
+the header and the vcpkg manifest and opens a CHANGELOG section; `gate.version` fails
+when any copy disagrees. A tag is `vX.Y.Z` with nothing else in it, and the release
+workflow refuses one that is not the header's version.
+
+The commit is build metadata, not version: `cf_build_id()` returns git's abbreviated
+hash, with `-dirty` for uncommitted changes, written by the build on every build so it
+follows a checkout without a reconfigure. A `git archive` carries it through
+`export-subst`; a copy that is neither reports nothing rather than a guess. It is kept
+out of `cf_version()`, so that two builds of a version still compare equal.
+
+**What it costs.** The header's three numbers are parsed by regular expression in two
+places (CMake, the recipe); the gate is what notices if its form changes. The provenance
+report does not yet record the build id - adding it changes the report schema, and is
+listed in the Roadmap.
 
 ---
 
