@@ -30,7 +30,8 @@ file(
   "${CMAKE_SOURCE_DIR}/tests/*/CMakeLists.txt"
   "${CMAKE_SOURCE_DIR}/tools/CMakeLists.txt"
   "${CMAKE_SOURCE_DIR}/tools/*/CMakeLists.txt"
-  "${CMAKE_SOURCE_DIR}/examples/CMakeLists.txt")
+  "${CMAKE_SOURCE_DIR}/examples/CMakeLists.txt"
+  "${CMAKE_SOURCE_DIR}/examples/*/CMakeLists.txt")
 
 set(CF_FORMAT_COMMANDS)
 if(CLANG_FORMAT_EXE)

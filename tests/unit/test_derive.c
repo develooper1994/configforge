@@ -207,7 +207,7 @@ static size_t occurrences(const char* hay, const char* needle) {
    to know only "inherited" and the new source: explain() said "?" for
    the command line, listed the default twice, and a key whose policy
    names the environment lost its value, because no source called "env"
-   was left to have supplied it. Found by examples/runtime.c. */
+   was left to have supplied it. Found by examples/c/runtime.c. */
 static void test_names_survive(void) {
     static const char* const only_env[] = {"env", NULL};
     static const cf_pair     first[]    = {{"server.port", "9000"}};

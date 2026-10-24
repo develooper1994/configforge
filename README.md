@@ -21,7 +21,7 @@ int main(int argc, char** argv)
 }
 ```
 
-That is `examples/tier0.c`, compiled and run by the test suite.
+That is `examples/c/tier0.c`, compiled and run by the test suite.
 
 ```
 $ MYAPP_SERVER__PORT=9090 ./tier1 --server.port=7000 --cf.explain=server.port
@@ -39,12 +39,12 @@ configuration error (key): unknown key 'server.pot'; did you mean 'server.port'?
   set at: argv[1]
 ```
 
-Those are `examples/tier1.c`. Both the success and the failure paths are
+Those are `examples/c/tier1.c`. Both the success and the failure paths are
 run by the test suite, so the output above cannot drift from the code.
 
 ### The rest of a setting's life
 
-Reading a value is the first half. `examples/settings.c` is the second:
+Reading a value is the first half. `examples/c/settings.c` is the second:
 change one, save it, and notice the file moving underneath you.
 
 ```

@@ -1,7 +1,8 @@
 # Using ConfigForge
 
 A guide from the first line of code to a configuration on a device with
-no heap. Every program it quotes is in `examples/` and is built and run
+no heap. Every program it quotes is in `examples/` - C in `examples/c`, C++ in
+`examples/cpp` - and is built and run
 by the test suite, so what you read here is what the library does today.
 The reference for each function is [`API.md`](API.md); the reasons are in
 [`Decisions.md`](Decisions.md).
@@ -81,7 +82,7 @@ with the Tiny C Compiler. The build options are in the README's
 
 ## 2. The first program
 
-`examples/tier0.c`:
+`examples/c/tier0.c`:
 
 ```c
 cf_error   err = CF_ERROR_INIT;
@@ -111,7 +112,7 @@ Tier 0 infers types and accepts anything. A contract - a definition for
 each key the program reads - buys typo detection, ranges, permitted
 values, required keys and a type that beats inference, and it does not
 add a single place where things can fail: everything is checked in
-`cf_builder_create`. `examples/tier1.c`:
+`cf_builder_create`. `examples/c/tier1.c`:
 
 ```c
 cf_builder* b = cf_app_builder("myapp", argc, argv);
@@ -137,7 +138,7 @@ default does not count), `CF_SENSITIVE` (never shown, section 9),
 that must never be saved into a file. For anything the convenience
 calls do not cover - a permitted set, a description, a policy saying
 which sources may set the key - fill a `cf_def` and pass it to
-`cf_builder_define`; `examples/tier1.c` does it for `log.level`.
+`cf_builder_define`; `examples/c/tier1.c` does it for `log.level`.
 
 A prefix you cannot know in advance - a plugin's settings - is exempted
 from unknown-key rejection with `cf_builder_open(b, "plugins")`.
@@ -161,7 +162,7 @@ source, a later assignment beats an earlier one.
 | `cf_builder_replay` | a provenance report, reproducing another process's configuration |
 | `cf_builder_source` | a source you wrote; `cf_builder_file_codec` for a format you parse |
 
-`examples/layers.c` uses all of the usual ones at once - a shipped
+`examples/c/layers.c` uses all of the usual ones at once - a shipped
 `app.toml`, a `conf.d/`, a `.env`, the environment and the command line -
 and asks, for one key from each layer, why it has the value it has.
 
@@ -199,7 +200,7 @@ does the same for every key and adds a note for a source that supplied
 values and won none of them - the file somebody is editing to no effect.
 
 A common pattern is a transient `--cf.explain=<key>` definition and a
-check after `cf_builder_create`, as `examples/tier1.c` does.
+check after `cf_builder_create`, as `examples/c/tier1.c` does.
 
 For a machine - an administration endpoint, the way Spring's
 `/actuator/env` works - `cf_explain_json(cfg, key, CF_REPORT_BLIND, buf,
@@ -241,7 +242,7 @@ The codes: `key` (malformed or unknown key), `definition`, `convert`,
 `capability` (a source cannot do what was asked - a format this build
 left out, say), `policy` and `memory`.
 
-What the person running the program reads, from `examples/mistakes.c`,
+What the person running the program reads, from `examples/c/mistakes.c`,
 which builds one contract from five files with one mistake each:
 
 ```text
@@ -302,7 +303,7 @@ value-blind report all show that it exists, where it was set and how
 long it is - `<sensitive, 13 bytes>` - and not what it is. A per-key
 policy, `{ "env", NULL }`, says the environment is the only place it may
 come from; a password someone committed to the file is then refused and
-shown as refused, which is how it gets noticed (`examples/secrets.c`):
+shown as refused, which is how it gets noticed (`examples/c/secrets.c`):
 
 ```text
 db.password = <sensitive, 13 bytes>  (text)
@@ -342,7 +343,7 @@ cf_config* next = cf_derive(cfg, "settings", change, 1, &err);
 
 Writing what somebody configured - and not the defaults, which a later
 release may want to move - is `cf_emit(cfg, "json", CF_EMIT_CONFIGURED,
-0, buf, cap, &err)`. `examples/settings.c` is the whole cycle: read,
+0, buf, cap, &err)`. `examples/c/settings.c` is the whole cycle: read,
 explain, set, save, notice the file change.
 
 Noticing a change is a question you ask, never a callback - the library
@@ -350,7 +351,7 @@ owns no thread. `cf_changed(cfg)` asks whether a file it read has moved
 on. A program with an event loop opens a `cf_watcher` and waits on its
 descriptor (`cf_watcher_fd`, or `cf_watcher_handle` on Windows); one
 without calls `cf_watcher_wait(w, timeout_ms)`. Then it rebuilds from the
-same recipe, logs what changed, and swaps. `examples/reload.c`:
+same recipe, logs what changed, and swaps. `examples/c/reload.c`:
 
 ```c
 next = load(&err);
@@ -409,7 +410,7 @@ admin page - is the same `cf_derive`. A request already in flight keeps
 the snapshot it started with, the change meets the same contract a file
 would (0 workers is refused, and the running configuration is left as it
 was), and the next morning `explain()` says who did it and what it was
-before (`examples/runtime.c`):
+before (`examples/c/runtime.c`):
 
 ```text
 log.level = "debug"  (text)
@@ -423,7 +424,7 @@ log.level = "debug"  (text)
 **The editor.** `cf_schema(cfg, "myapp", buf, cap)` writes the contract
 as a JSON Schema. A settings file that names it - `"$schema":
 "./myapp.schema.json"` - gets completion, descriptions and validation in
-most editors with no plugin. `examples/schema.c`.
+most editors with no plugin. `examples/c/schema.c`.
 
 **The report.** `cf_report` writes everything the configuration knows:
 every key, every candidate, where each came from, which won and why. A
@@ -485,7 +486,7 @@ radio.channel = 11  (int)
   default     1                     shadowed
 ```
 
-`examples/embedded.c` is both halves.
+`examples/c/embedded.c` is both halves.
 
 For such a target:
 
@@ -504,7 +505,7 @@ For such a target:
 `<configforge/configforge.hpp>` is a C++03 wrapper over the same
 library: a `Builder` with chained calls, a reference-counted `Config`,
 `get<T>`, ranges over keys and children, `explain()`, `emit()`,
-`changesSince()` and a `Watcher`. `examples/tier1.cpp`:
+`changesSince()` and a `Watcher`. `examples/cpp/tier1.cpp`:
 
 ```cpp
 cf::Config cfg = cf::Builder("myapp", argc, argv)

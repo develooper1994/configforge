@@ -2602,7 +2602,7 @@ configforge/
 ├── tools/
 │   ├── amalgamate/
 │   └── doctor/                  separate binary
-├── examples/
+├── examples/                  c/ and cpp/, one directory a language
 └── docs/
 ```
 
