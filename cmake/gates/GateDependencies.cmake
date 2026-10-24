@@ -19,7 +19,8 @@ file(
   "${SRC}/tests/*/CMakeLists.txt"
   "${SRC}/tools/CMakeLists.txt"
   "${SRC}/tools/*/CMakeLists.txt"
-  "${SRC}/examples/CMakeLists.txt")
+  "${SRC}/examples/CMakeLists.txt"
+  "${SRC}/examples/*/CMakeLists.txt")
 
 set(ws "[ \t\r\n]")
 set(names "")

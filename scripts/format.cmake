@@ -52,7 +52,7 @@ if(ALL)
     "${REPO}/tests/*CMakeLists.txt"
     "${REPO}/tests/*.cmake"
     "${REPO}/tools/*CMakeLists.txt"
-    "${REPO}/examples/CMakeLists.txt")
+    "${REPO}/examples/*CMakeLists.txt")
 else()
   if(NOT GIT_EXE)
     message(FATAL_ERROR "without git there is no 'changed'; use -DALL=ON")

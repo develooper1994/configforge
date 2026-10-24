@@ -14,9 +14,9 @@
  *     the command line                    (0)
  *
  * and then it asks, for one key from each layer, why the value is what
- * it is. The files are in examples/layers/; the suite runs this there.
+ * it is. The files are in examples/c/layers/; the suite runs this there.
  *
- *     cd examples/layers && ../../build/examples/layers
+ *     cd examples/c/layers && ../../../build/examples/c/layers
  */
 
 #include <configforge/configforge.h>
