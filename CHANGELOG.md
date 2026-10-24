@@ -434,6 +434,15 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed, and it mattered
 
+- **The library did not build on FreeBSD.** The stack check reads the
+  `.su` files `-fstack-usage` writes, and expected GCC's
+  `file:line:column:function`; FreeBSD's clang 19 writes
+  `file:line:function`, so nothing was read and the check failed the
+  build on an empty table. Both forms are read now, and a file in
+  neither form fails with its first line quoted rather than an internal
+  error. Found by the first build in a real FreeBSD machine
+  (`scripts/buildenv/freebsd.sh`).
+
 - **Doctor did not build at CMake's own Release settings on Alpine.**
   At `-O3` Alpine's gcc inlined every lint rule into `main` - each is
   called exactly once - without sharing their buffers, and `main` came to
