@@ -2,6 +2,7 @@
   "name": "configforge",
   "version": "0.4.0",
   "description": "Configuration for C whose every value can say why it is what it is",
+  "maintainers": "Mustafa Selçuk Çağlar",
   "homepage": "https://github.com/develooper1994/configforge",
   "license": "Zlib",
   "dependencies": [

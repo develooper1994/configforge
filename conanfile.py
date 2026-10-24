@@ -34,6 +34,7 @@ FEATURES = {
 
 class ConfigForgeConan(ConanFile):
     name = "configforge"
+    author = "Mustafa Selçuk Çağlar"
     license = "Zlib"
     url = "https://github.com/develooper1994/configforge"
     homepage = url

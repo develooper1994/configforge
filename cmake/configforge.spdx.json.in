@@ -13,6 +13,8 @@
       "name": "configforge",
       "SPDXID": "SPDXRef-Package-configforge",
       "versionInfo": "@PROJECT_VERSION@",
+      "supplier": "Person: Mustafa Selçuk Çağlar",
+      "originator": "Person: Mustafa Selçuk Çağlar",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
       "licenseConcluded": "Zlib",
