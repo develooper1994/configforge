@@ -90,4 +90,7 @@ formatter over this code does not change the code's licence.
 | Component | Licence | Used for |
 | --------- | ------- | -------- |
 | `actions/checkout` | MIT | every CI job |
+| `actions/upload-artifact`, `actions/download-artifact` | MIT | the release workflow: carrying each platform's archive to the job that publishes them |
+| the `alpine:3.20` image (musl, BusyBox, Alpine's gcc) | MIT; GPL-2.0-only; GPL-3.0-or-later with the runtime exception | the Alpine CI job, and the release's static Linux build. Static linking puts musl's code in Doctor, so the archive carries musl's `COPYRIGHT`, fetched from musl's repository at the version linked |
+| GitHub CLI (`gh`, on the runner) | MIT | the release workflow: creating the release |
 | Ubuntu packages: libkqueue-dev, cppcheck, clang, clang-tidy, clang-format, locales | as above | the jobs that name them |
