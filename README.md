@@ -174,7 +174,14 @@ nothing, and `1.0` is where semantic versioning starts.
 | a SQLite store - typed, written in one transaction, each value with its writer's note - behind `CF_WITH_SQLITE` | done |
 | a directory of secrets, one file a key, as containers and systemd hand them over | done |
 | Java `.properties`, read as java.util.Properties reads it, behind `CF_WITH_PROPERTIES` | done |
-| Windows Registry, gsettings, macOS defaults | deferred, see D-30 |
+| the Windows Registry as a source, a subkey a section (D-30) | done |
+| references between values, `${key}`, after precedence and explained (D-10) | done |
+| keeping a change: `cf_write`, asking capability, permission and the contract (D-42) | done |
+| a renamed key whose old spelling still configures it (D-43) | done |
+| Doctor as a library (`cf_doctor.h`), and adapters for git, Spring Boot, .NET and systemd | done |
+| `explain()` as JSON for one key; the report names the build that wrote it | done |
+| the public interface as a symbol list, held to the headers and the library (`gate.abi`) | done |
+| gsettings, macOS defaults | deferred, see D-30 |
 
 Every line marked done is covered by the suite and by the gates below;
 `cmake -P scripts/verify.cmake` is what says so.
