@@ -65,3 +65,11 @@ rust_expect(
   "selected, from .https://..server.host.:..server.port./."
   "with --server.host=web2, url: https://web2:9443/"
   "a cycle: server.(host|url): its references lead back to it")
+rust_expect(
+  flags
+  ${CMAKE_SOURCE_DIR}/examples/c/flags
+  "new_checkout +on"
+  "dark_mode +off"
+  "search_v2 +off"
+  "env +false +selected +SHOP_FEATURES__SEARCH_V2"
+  "conf.d +true +shadowed +conf.d/50-canary.ini")

@@ -73,6 +73,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   only" stays that way. Every item or none, and the error says which
   question said no. `Builder::writable` in C++. `cf_store_set` stays,
   for provisioning a store, and asks nothing.
+- **The feature-flag scenario, in C, C++ and Rust**: every feature
+  shipped off, a canary drop-in turning two on, an environment variable
+  killing one at three in the morning, and the flags discovered by
+  iterating an open prefix rather than listed in the program;
+  `explain()` says which layer turned it off. The Rust binding gained
+  `children()` and `keys()` for it.
 - **A Rust binding** (`bindings/rust`, D-44): a crate with no
   dependencies whose `build.rs` builds the library from the checkout with
   CMake, so `cargo build --offline` downloads nothing. A consuming

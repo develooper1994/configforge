@@ -108,6 +108,21 @@ pub struct cf_def {
     pub policy: *const *const c_char,
 }
 
+/// cf_iterate.h's iterator: plain fields, filled by the library.
+#[repr(C)]
+pub struct cf_iter {
+    pub cfg: *const cf_config,
+    pub prefix: *const c_char,
+    pub plen: usize,
+    pub pos: usize,
+    pub children: cf_bool,
+    pub key: *const c_char,
+    pub keylen: usize,
+    pub name: *const c_char,
+    pub namelen: usize,
+    pub value: *const cf_value,
+}
+
 #[repr(C)]
 pub struct cf_builder {
     _opaque: [u8; 0],
@@ -202,6 +217,13 @@ extern "C" {
     pub fn cf_builder_open(b: *mut cf_builder, prefix: *const c_char) -> cf_bool;
     pub fn cf_builder_unknown(b: *mut cf_builder, policy: c_int);
 
+    pub fn cf_iter_keys(it: *mut cf_iter, c: *const cf_config, prefix: *const c_char) -> cf_bool;
+    pub fn cf_iter_children(
+        it: *mut cf_iter,
+        c: *const cf_config,
+        prefix: *const c_char,
+    ) -> cf_bool;
+    pub fn cf_iter_next(it: *mut cf_iter) -> cf_bool;
     pub fn cf_config_free(c: *mut cf_config);
     pub fn cf_has(c: *const cf_config, key: *const c_char) -> cf_bool;
     pub fn cf_get_bool(c: *const cf_config, key: *const c_char, fallback: cf_bool) -> cf_bool;

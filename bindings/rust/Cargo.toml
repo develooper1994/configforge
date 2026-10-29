@@ -38,3 +38,7 @@ path = "../../examples/rust/runtime.rs"
 [[example]]
 name = "references"
 path = "../../examples/rust/references.rs"
+
+[[example]]
+name = "flags"
+path = "../../examples/rust/flags.rs"
