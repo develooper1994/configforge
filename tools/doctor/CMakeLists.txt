@@ -5,7 +5,7 @@
 # carry the rules that audit it. Static, so there is one ABI to keep,
 # the configuration library's. The program is the library with a
 # command line around it.
-add_library(configforge_doctor STATIC engine.c)
+add_library(configforge_doctor STATIC engine.c gate.c)
 add_library(ConfigForge::configforge_doctor ALIAS configforge_doctor)
 target_link_libraries(configforge_doctor PUBLIC configforge)
 set_target_properties(

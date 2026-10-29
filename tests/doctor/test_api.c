@@ -149,9 +149,70 @@ static void test_inputs(void) {
     cf_doctor_free(d);
 }
 
+/* The password moves to the command line in the second snapshot: the
+   gate refuses it with the finding, and the first keeps serving. */
+static int g_bad = 0;
+
+static cf_builder* live_build(void* user) {
+    cf_builder* b = cf_build(NULL);
+    cf_def      d;
+
+    (void)user;
+    if (g_bad) {
+        static char  a0[]   = "prog";
+        static char  a1[]   = "--db.password=hunter2";
+        static char* argv[] = {a0, a1, NULL};
+        cf_builder_cli(b, "cli", CF_RANK_CLI, 2, argv);
+    } else {
+        static const cf_pair env[] = {{"db.password", "hunter2"}};
+        cf_builder_memory(b, "vault", CF_RANK_ENV, env, 1);
+    }
+    cf_def_init(&d, CF_TYPE_TEXT, "db.password");
+    d.flags = CF_SENSITIVE;
+    cf_builder_define(b, &d);
+    return b;
+}
+
+static void test_gate(void) {
+    static cf_doctor_gate gate  = {"production", "error", NULL, NULL};
+    static cf_doctor_gate wrong = {NULL, "sometimes", NULL, NULL};
+    cf_error              err   = CF_ERROR_INIT;
+    cf_live*              l;
+    cf_config*            c;
+
+    g_bad = 0;
+    l     = cf_live_open(CF_LIVE_MANUAL, live_build, cf_doctor_live_check, (void*)&gate,
+                         NULL, &err);
+    check(l != NULL, "a clean configuration passes the gate");
+    if (l == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+    g_bad = 1;
+    check(cf_live_reload(l, &err) == CF_LIVE_FAILED, "the reload is refused");
+    check(strstr(err.message, "CFD007") != NULL && strcmp(err.key, "db.password") == 0,
+          "naming the rule and the key");
+    c = cf_live_get(l);
+    {
+        char why[512];
+        (void)cf_explain(c, "db.password", why, sizeof why);
+        check(strstr(why, "vault") != NULL && cf_live_generation(l) == 1,
+              "and the clean one keeps serving");
+    }
+    cf_config_free(c);
+    cf_live_close(l);
+
+    l = cf_live_open(CF_LIVE_MANUAL, live_build, cf_doctor_live_check, (void*)&wrong,
+                     NULL, &err);
+    check(l == NULL && strstr(err.message, "sometimes") != NULL,
+          "a gate that fails on no level refuses itself");
+    g_bad = 0;
+}
+
 int main(void) {
 #if CF_WITH_REPORT && CF_WITH_JSON
     test_lint();
+    test_gate();
     test_baseline_and_severity();
     test_diff();
     test_inputs();

@@ -225,6 +225,11 @@ endif()
 # approximation of it, and cf_cli_args has to recover the original.
 add_test(NAME unit.test_lex.utf8 COMMAND test_lex --utf8 "çğı")
 
+# A ConfigMap is updated through symbolic links, which only POSIX has.
+if(UNIX)
+  target_compile_definitions(test_live PRIVATE CF_TEST_SYMLINKS=1)
+endif()
+
 # Threads are not in C89. Where they exist the contract in D-14 is
 # exercised for real; where they do not, the same test still checks the
 # invariants the contract rests on - that a read touches nothing
