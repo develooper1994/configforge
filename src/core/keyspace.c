@@ -212,6 +212,42 @@ cf_bool cf_ks_add_default(cf_keyspace* ks, const char* key, size_t keylen, int s
                       CF_CAND_DEFAULT);
 }
 
+cf_bool cf_ks_rename(cf_keyspace* ks, const char* from, size_t fromlen, const char* to,
+                     size_t tolen) {
+    size_t i, n;
+
+    if (ks == NULL || ks->resolved || ks->cands == NULL || !cf_key_valid(to, tolen)) {
+        return CF_FALSE;
+    }
+    n = ks->ncand; /* what is there now: the copies are not copied again */
+    for (i = 0; i < n; ++i) {
+        cf_candidate c;
+        size_t       len;
+        char*        at;
+
+        if (ks->cands[i].keylen != fromlen ||
+            memcmp(ks->cands[i].key, from, fromlen) != 0 ||
+            (ks->cands[i].cand.flags & CF_CAND_RENAMED) != 0) {
+            continue;
+        }
+        c   = ks->cands[i].cand; /* a copy: pushing may move the array */
+        len = cf_fmt(NULL, 0, "%s%s(as %S)", (c.at != NULL) ? c.at : "",
+                     (c.at != NULL) ? " " : "", from, fromlen);
+        at  = (char*)cf_arena_alloc(ks->arena, len + 1);
+        if (at == NULL) {
+            return CF_FALSE;
+        }
+        cf_fmt(at, len + 1, "%s%s(as %S)", (c.at != NULL) ? c.at : "",
+               (c.at != NULL) ? " " : "", from, fromlen);
+        if (!cf_ks_push(ks, to, tolen, c.source, &c.value, at, c.outcome, c.reason,
+                        c.flags | CF_CAND_RENAMED)) {
+            return CF_FALSE;
+        }
+        ks->cands[ks->ncand - 1].cand.written = c.written;
+    }
+    return CF_TRUE;
+}
+
 cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key, size_t keylen,
                             const cf_candidate* c) {
     size_t at;
@@ -261,6 +297,11 @@ static int cand_cmp(const cf_cand_rec* a, const cf_cand_rec* b) {
     }
     if (a->cand.source != b->cand.source) {
         return (a->cand.source < b->cand.source) ? -1 : 1;
+    }
+    /* Within one source a value written under a key's old name loses to
+       one written under the new, wherever each appears. */
+    if (((a->cand.flags ^ b->cand.flags) & CF_CAND_RENAMED) != 0) {
+        return ((a->cand.flags & CF_CAND_RENAMED) != 0) ? 1 : -1;
     }
     /* Descending, so that within one source the *later* occurrence wins.
        That is the convention everywhere a source can repeat a key: a

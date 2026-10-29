@@ -75,6 +75,21 @@ static cf_bool def_check(const cf_def* d, cf_error* err) {
         return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
                             "descriptor was not initialised with cf_def_init");
     }
+    if (d->replaced_by != NULL) {
+        size_t rlen = strlen(d->replaced_by);
+        if ((d->flags & CF_DEPRECATED) == 0) {
+            return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
+                                "'%s' names a replacement and is not CF_DEPRECATED",
+                                d->key);
+        }
+        if (!cf_key_valid(d->replaced_by, rlen) ||
+            strcmp(d->replaced_by, d->key) == 0) {
+            return cf_error_set(
+                err, CF_E_DEFINITION, d->key, NULL,
+                "'%s' is replaced by '%s', which is not another valid key", d->key,
+                d->replaced_by);
+        }
+    }
     if (d->has_range && d->type != CF_TYPE_INT && d->type != CF_TYPE_REAL) {
         return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
                             "a range is meaningless on type %s", cf_type_name(d->type));

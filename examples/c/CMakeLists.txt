@@ -53,7 +53,8 @@ foreach(
   secrets
   plugins
   runtime
-  references)
+  references
+  migration)
   add_executable(${ex} ${ex}.c)
   target_link_libraries(${ex} PRIVATE configforge)
   set_target_properties(
@@ -204,4 +205,15 @@ if(WIN32)
     "nightly.  +rejected: policy: 'updatechannel' may only be set from policy")
 else()
   add_test(NAME example.policy COMMAND policy)
+endif()
+
+# Renaming a key without breaking the files written for the old name.
+if(CF_WITH_INI)
+  example_expect(
+    migration
+    ${CMAKE_CURRENT_BINARY_DIR}/migration-run
+    "1. a file written for version 1"
+    "connecting to db1.internal:5432"
+    "app.ini:2:1 .as db.host."
+    "connecting to db2.internal:5432")
 endif()

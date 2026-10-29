@@ -79,6 +79,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   administrator's Registry policy overrides the user's settings and
   alone may set the update channel. Checked by the suite for the same
   lines in both languages; `policy` where there is a Registry.
+- **A renamed key keeps working** (D-43): a definition that is
+  `CF_DEPRECATED` with `replaced_by` - a field nothing read until now -
+  offers each value written under the old name to the new key, at the
+  same rank and below the new spelling in the same source, and
+  `explain()` places it `app.ini:2:1 (as db.host)`. Doctor's CFD009 says
+  what to rename it to. `examples/c/migration.c` and its C++ twin.
 - **The symbol list**: `cmake/configforge.symbols` names every `CF_API`
   function, and `gate.abi` holds the headers and the built library to
   it - every declaration listed and every listed name declared, each

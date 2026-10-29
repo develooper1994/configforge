@@ -88,6 +88,12 @@ CF_API cf_bool cf_outcome_can_win(cf_outcome o);
    policy passes over it rather than refusing it. */
 #define CF_CAND_DEFAULT 16u
 
+/* A copy of a value written under a key's old name (CF_DEPRECATED with
+   replaced_by), supplying the new key: at the same rank, and below
+   anything written under the new name in the same source, because the
+   new spelling is the deliberate one. Its place says "(as <old>)". */
+#define CF_CAND_RENAMED 32u
+
 typedef struct cf_candidate {
     int                  source; /* precedence rank; lower wins      */
     unsigned             flags;
@@ -163,6 +169,12 @@ CF_API cf_bool cf_ks_add_authored(cf_keyspace* ks, const char* key, size_t keyle
 /* Record a definition's default (CF_CAND_DEFAULT). */
 CF_API cf_bool cf_ks_add_default(cf_keyspace* ks, const char* key, size_t keylen,
                                  int source, const cf_value* value);
+
+/* Before resolution: every candidate of `from` offered to `to` as well,
+   CF_CAND_RENAMED. The old key keeps its own, for code that still reads
+   it. False when there is no room. */
+CF_API cf_bool cf_ks_rename(cf_keyspace* ks, const char* from, size_t fromlen,
+                            const char* to, size_t tolen);
 
 /* Record a copy of another key space's candidate, at its rank, with what
    it was - textual, a default, the template it was made from - and not

@@ -160,6 +160,11 @@ static void report_definition(cf_sink* out, const cf_def* d) {
                 ((d->flags & CF_SENSITIVE) != 0) ? "true" : "false");
     cf_sink_fmt(out, ", \"deprecated\": %s",
                 ((d->flags & CF_DEPRECATED) != 0) ? "true" : "false");
+    if (d->replaced_by != NULL) {
+        /* An added field, as "written" is: schema 1 readers skip it. */
+        cf_sink_puts(out, ", \"replaced_by\": ");
+        report_quote_z(out, d->replaced_by);
+    }
     if (d->has_default) {
         cf_sink_puts(out, ", \"default\": ");
         report_value(out, &d->default_value);

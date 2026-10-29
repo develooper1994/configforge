@@ -796,6 +796,22 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
         }
     }
 
+    /* A renamed key's old spelling still configures it: every value
+       written under the old name is offered to the new one, below the
+       new spelling in the same source (CF_CAND_RENAMED). */
+    for (i = 0; i < c->defs.count; ++i) {
+        const cf_def* d = &c->defs.defs[i];
+        if ((d->flags & CF_DEPRECATED) == 0 || d->replaced_by == NULL) {
+            continue;
+        }
+        if (!cf_ks_rename(&c->keys, d->key, strlen(d->key), d->replaced_by,
+                          strlen(d->replaced_by))) {
+            cf_error_set(&e, CF_E_MEMORY, d->key, NULL, "no room to rename '%s'",
+                         d->key);
+            return create_failed(b, err, &e);
+        }
+    }
+
     if (!cf_ks_resolve(&c->keys)) {
         cf_error_set(&e, CF_E_MEMORY, NULL, NULL, "no room to resolve %u candidates",
                      (unsigned)cf_ks_candidate_count(&c->keys));

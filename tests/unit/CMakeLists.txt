@@ -44,7 +44,8 @@ set(CF_UNIT_TESTS
     test_properties
     test_write
     test_registry
-    test_interpolate)
+    test_interpolate
+    test_rename)
 
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)

@@ -38,6 +38,9 @@ static cf_bool snapshot_load(const cf_source* s, cf_keyspace* ks) {
                policy still passes over it. Text is copied by the key
                space, which is what makes the derived configuration
                independent. */
+            if ((c->flags & CF_CAND_RENAMED) != 0) {
+                continue; /* made again from the old key's, as before */
+            }
             if (!cf_ks_add_candidate(ks, e->key, e->keylen, c)) {
                 return CF_FALSE;
             }
