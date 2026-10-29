@@ -38,18 +38,12 @@ Worth building, in the order they serve the library's purpose.
 
 * **The build id in the image header**, as the report now carries it:
   a change to the image format, so it waits for a reason to change it.
-* **Machine-readable `explain()`** for an administration endpoint, the
-  way Spring's `/actuator/env` works. Half there: the provenance report
-  is that data, and Doctor.md 7a's jq recipes select one key from it;
-  what is missing is one key's chain without writing the whole report.
 * **JSON Schema import** - definitions *from* a schema - the other
   direction of Design.md section 41, with unsupported keywords refused
   by name.
 * **Limits in the report and the image header**, so a reader built with
   shorter keys than the writer says so by name rather than as a key it
   cannot add.
-* **More Doctor adapters**: systemd's `systemd-analyze cat-config`
-  (Doctor.md, section 12). .NET and Spring are built.
 * **Doctor `--only-changed`** and **CFD012 against the contract** rather
   than the key list.
 * **Native OS sources** (D-30): macOS defaults and gsettings, each when
