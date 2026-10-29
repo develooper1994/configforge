@@ -108,7 +108,7 @@ static void test_fallback(void) {
           "and the default is the answer");
     cf_explain(c, "cache.dir", ex, sizeof ex);
     has(ex, "rejected", "explain() says the environment's value was refused");
-    has(ex, "reserved", "and why");
+    has(ex, "refers to no key", "and why");
     cf_config_free(c);
 }
 

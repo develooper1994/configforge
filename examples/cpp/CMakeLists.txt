@@ -9,7 +9,8 @@ foreach(
   layers
   mistakes
   runtime
-  reload)
+  reload
+  references)
   add_executable(${ex}_cpp ${ex}.cpp)
   target_link_libraries(${ex}_cpp PRIVATE configforge)
   set_target_properties(
@@ -75,4 +76,15 @@ if(CF_WITH_INI)
     "service.ini \"info\" +shadowed"
     "0 workers: server.workers: 0 is outside 1..64"
     "still running with 4 workers")
+endif()
+
+# One value made from others (D-10), the same lines in both languages.
+if(CF_WITH_INI)
+  example_expect(
+    references_cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/references-run
+    "url: https://web1:9443/"
+    "selected, from .https://..server.host.:..server.port./."
+    "with --server.host=web2, url: https://web2:9443/"
+    "a cycle: server.(host|url): its references lead back to it")
 endif()

@@ -265,6 +265,12 @@ static void report_candidate(cf_sink* out, const cf_candidate* c,
         cf_sink_puts(out, ", \"reason\": ");
         report_quote_z(out, c->reason);
     }
+    /* What a value with references was written as (D-10), redacted with
+       the value it made. An added field: schema 1 readers ignore it. */
+    if (c->written != NULL && (c->flags & CF_CAND_TEMPLATE) == 0 && !redact) {
+        cf_sink_puts(out, ", \"written\": ");
+        report_quote_z(out, c->written);
+    }
     cf_sink_putc(out, '}');
 }
 

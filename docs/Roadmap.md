@@ -50,8 +50,6 @@ Worth building, in the order they serve the library's purpose.
   (Doctor.md, section 12). .NET and Spring are built.
 * **Doctor `--only-changed`** and **CFD012 against the contract** rather
   than the key list.
-* **Value interpolation** (D-10), now that its syntax is reserved and
-  refused - which makes adding it later an addition, not a break.
 * **Native OS sources** (D-30): macOS defaults and gsettings, each when
   there is the platform to test on. The Windows Registry is built.
 * **Bindings**: Rust, and Python for scripting Doctor. Rust's arrive

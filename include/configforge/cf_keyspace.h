@@ -66,12 +66,21 @@ CF_API cf_bool cf_outcome_can_win(cf_outcome o);
 #define CF_CAND_TEXTUAL 1u
 
 /* A candidate somebody wrote: text from a file, the environment, the
-   command line. The syntax D-10 reserves, ${...}, is refused in these
-   and only these. Not in a default, which is the program's own code and
-   changes with it; and not in a value replayed from a report or loaded
-   from an image, which was resolved once already - an escaped $${ that
-   became ${ there would otherwise be refused the second time round. */
+   command line. References, ${key} (D-10), are read in these and only
+   these. Not in a default, which is the program's own code and changes
+   with it; and not in a value replayed from a report or loaded from an
+   image, which was resolved once already - an escaped $${ that became
+   ${ there would otherwise be read the second time round. */
 #define CF_CAND_AUTHORED 2u
+
+/* A value with references in it, waiting for them: `written` holds the
+   text as written, and the value becomes it with each ${key} replaced
+   once precedence has chosen the keys it names. */
+#define CF_CAND_TEMPLATE 4u
+
+/* Internal to that pass: its references are being resolved, so meeting
+   it again is a cycle. */
+#define CF_CAND_EXPANDING 8u
 
 typedef struct cf_candidate {
     int                  source; /* precedence rank; lower wins      */
@@ -79,8 +88,9 @@ typedef struct cf_candidate {
     cf_value             value;
     const char*          at; /* location, arena-owned, may be NULL */
     cf_outcome           outcome;
-    const char*          reason; /* set when rejected                */
-    struct cf_candidate* next;   /* next lower precedence            */
+    const char*          reason;  /* set when rejected                */
+    const char*          written; /* with references: as written      */
+    struct cf_candidate* next;    /* next lower precedence            */
 } cf_candidate;
 
 /* Candidates are ordered by precedence rank, and within one rank the

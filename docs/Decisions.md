@@ -40,7 +40,7 @@ gets reopened every six months.
 | D-07 | Allocation and freestanding model | core, all constrained targets | **Decided**, closed |
 | D-08 | Error model shape | ABI, every API | **Decided**, closed |
 | D-09 | Zero-config entry point | public API, principles | **Decided**, closed |
-| D-10 | Value interpolation | resolver, provenance | Open |
+| D-10 | Value interpolation | resolver, provenance | **Decided** |
 | D-11 | Unknown-key behaviour | resolver, diagnostics | **Decided**, closed |
 | D-12 | Profiles as a core concept | policy model, Doctor | Open |
 | D-13 | Sensitivity and redaction | diagnostics, report artifact | **Decided**, closed |
@@ -475,6 +475,38 @@ while doing it, each because the alternative was wrong rather than inconvenient:
   refused on replay.
 * the escape is undone once, at construction, so what a program reads and what a report
   records is what was meant.
+
+**Decided: references to keys, after precedence.** The provenance model has proven
+itself on the simple case - every source, codec and adapter since the reservation has
+explained itself without exception - so the condition this entry set is met, and
+`${key}` now means the value of another key. Four choices make it explainable rather than
+a second resolver:
+
+* **Precedence first, references after.** Every key's winner is chosen as if nothing
+  referred to anything; then each winner with references has them replaced, a referenced
+  key being finished first. The alternative - references inside resolution, so a
+  reference could pick a candidate other than the winner - is what makes Hydra's and
+  systemd's evaluation order something a user has to learn. Here a reference reads
+  exactly what a program reading that key would get, and `explain()` of the referenced
+  key is the whole story of the part it supplied.
+* **The origin is the template and its keys.** The candidate keeps its text as written;
+  `explain()` shows it (`selected, from "http://${server.host}:${server.port}"`) and the
+  report records it as `written`, an added field. The parts explain themselves under
+  their own keys, so `explain()` stays one level deep - the "recursive `explain()`" this
+  entry worried about is a reader following names, not a tree the library prints.
+* **Keys only.** `${env:HOME}` would be a second environment source with no name in
+  `explain()`, and the environment is already a source; `${HOME}`, which names no key, is
+  still refused, so the case the reservation was for - a directory called "${HOME}" - is
+  still caught.
+* **Typed after.** The result is text, typed by the contract like a value from the
+  environment, so `workers = ${base.workers}` is an integer and a result the contract
+  refuses falls back like any refused value.
+
+Refused, naming the key: a reference to a key with no value, a cycle, and a key that is
+not `CF_SENSITIVE` referring to one that is, because its value would show the secret - a
+sensitive key may refer to another, and neither its value nor its template is shown.
+Only the winner is expanded; a template that lost stays in the chain as written. A
+replayed or derived value was expanded once and is not read again.
 
 ---
 
@@ -1852,9 +1884,8 @@ to make a decision rather than a default. Before 1.0, that is the time to add it
 
 ## Status of the log
 
-Two decisions are open, and both are open because nothing has been built: value
-interpolation (D-10), whose syntax is reserved and enforced, and profiles as a core
-concept (D-12). Everything else is decided,
+One decision is open, because nothing has been built: profiles as a core concept
+(D-12). Value interpolation (D-10), long reserved, is decided and built. Everything else is decided,
 and where the implementation settled the question rather than this document, the section
 says so and names what settled it.
 

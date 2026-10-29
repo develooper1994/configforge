@@ -52,7 +52,8 @@ foreach(
   mistakes
   secrets
   plugins
-  runtime)
+  runtime
+  references)
   add_executable(${ex} ${ex}.c)
   target_link_libraries(${ex} PRIVATE configforge)
   set_target_properties(
@@ -145,4 +146,15 @@ if(CF_WITH_TOML)
     "plugins.auth.audiences = \\[\"web\", \"mobile\"\\]"
     "plugin cache: off"
     "plugins.ratelimit.per_minute = 600")
+endif()
+
+# One value made from others (D-10), the same lines in both languages.
+if(CF_WITH_INI)
+  example_expect(
+    references
+    ${CMAKE_CURRENT_BINARY_DIR}/references-run
+    "url: https://web1:9443/"
+    "selected, from .https://..server.host.:..server.port./."
+    "with --server.host=web2, url: https://web2:9443/"
+    "a cycle: server.(host|url): its references lead back to it")
 endif()

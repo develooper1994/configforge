@@ -91,6 +91,12 @@ static size_t explain_entry(const cf_entry* e, const cf_source_view* sv,
         if (c->reason != NULL) {
             at = cf_fmt_append(buf, cap, at, ": %s", c->reason);
         }
+        /* A value made from others says what it was made from; each key
+           it names explains its own part. Not for a secret, whose
+           template may hold literal parts of it. */
+        if (c->written != NULL && (c->flags & CF_CAND_TEMPLATE) == 0 && !secret) {
+            at = cf_fmt_append(buf, cap, at, ", from \"%s\"", c->written);
+        }
         if (c->at != NULL) {
             at = cf_fmt_append(buf, cap, at, "   %s", c->at);
         }

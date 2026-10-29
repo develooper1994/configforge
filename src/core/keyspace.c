@@ -162,6 +162,7 @@ static cf_bool cf_ks_push(cf_keyspace* ks, const char* key, size_t keylen, int s
     r->cand.at      = NULL;
     r->cand.outcome = outcome;
     r->cand.reason  = reason;
+    r->cand.written = NULL;
     r->cand.next    = NULL;
 
     /* Text is copied so the caller's buffer need not outlive the call. */
