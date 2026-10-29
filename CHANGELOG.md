@@ -135,6 +135,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- **`explain()` ran a wide source name into its value.** A name or a
+  value as wide as its column left no space before the next one -
+  `features.inifalse` - in every chain with a source called
+  `features.ini`. A column is always followed by a space now.
+
 - **`cf_derive` kept the caller's source name, not a copy.** Every
   `explain()` of the derived configuration names the change's source, so
   a name passed from a buffer the caller then reused - a request
