@@ -52,7 +52,8 @@ Worth building, in the order they serve the library's purpose.
   than the key list.
 * **Value interpolation** (D-10), now that its syntax is reserved and
   refused - which makes adding it later an addition, not a break.
-* **Native OS sources** (D-30): the Windows Registry, macOS defaults.
+* **Native OS sources** (D-30): macOS defaults and gsettings, each when
+  there is the platform to test on. The Windows Registry is built.
 * **Bindings**: Rust, and Python for scripting Doctor. Rust's arrive
   with `examples/rust`, the same programs as `examples/c` and
   `examples/cpp` and checked for the same lines; there are none until

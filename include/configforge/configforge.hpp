@@ -403,6 +403,11 @@ public:
     { if (b_) { cf_builder_secrets(b_, name, rank, path, prefix, flags); }
       return *this; }
 
+    /* A key of the Windows Registry (cf_builder_registry). */
+    Builder& registry(const char* name, int rank, const char* root, unsigned flags = 0)
+    { if (b_) { cf_builder_registry(b_, name, rank, root, flags); }
+      return *this; }
+
     /* A SQLite store (CF_WITH_SQLITE); cf_write writes one, granted. */
     Builder& store(const char* name, int rank, const char* path, unsigned flags = 0)
     { if (b_) { cf_builder_store(b_, name, rank, path, flags); }

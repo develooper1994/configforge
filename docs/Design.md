@@ -2053,7 +2053,6 @@ CF_WITH_TOML       ON     built in, the documented subset (D-23); no dependency
 CF_WITH_XML        OFF    vendored C parser
 CF_WITH_YAML       OFF    links libyaml; the subset and its typing are D-39
 CF_WITH_SQLITE     OFF    links libsqlite3
-CF_WITH_REGISTRY   OFF    Windows
 CF_WITH_REAL       ON     the floating-point value type and its exact formatter
 CF_WITH_DIR        ON     the drop-in directory source (conf.d)
 CF_WITH_DOTENV     ON     the .env source and its lexer

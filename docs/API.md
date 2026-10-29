@@ -6,7 +6,7 @@ header, then run the script. Every function is listed with the
 comment written above it, under the section of the header it is
 in; the types are in the headers themselves.
 
-- [`configforge.h`](#configforgeh) - 63
+- [`configforge.h`](#configforgeh) - 64
 - [`cf_alloc.h`](#cf_alloch) - 12
 - [`cf_define.h`](#cf_defineh) - 19
 - [`cf_doctor.h`](#cf_doctorh) - 20
@@ -19,11 +19,11 @@ in; the types are in the headers themselves.
 - [`cf_iterate.h`](#cf_iterateh) - 5
 - [`cf_keyspace.h`](#cf_keyspaceh) - 23
 - [`cf_numeric.h`](#cf_numerich) - 7
-- [`cf_platform.h`](#cf_platformh) - 17
+- [`cf_platform.h`](#cf_platformh) - 19
 - [`cf_port.h`](#cf_porth) - 10
 - [`cf_report.h`](#cf_reporth) - 6
 - [`cf_serialize.h`](#cf_serializeh) - 16
-- [`cf_source.h`](#cf_sourceh) - 26
+- [`cf_source.h`](#cf_sourceh) - 29
 - [`cf_value.h`](#cf_valueh) - 12
 - [`cf_version.h`](#cf_versionh) - 6
 
@@ -134,6 +134,14 @@ CF_API cf_bool cf_builder_secrets(cf_builder* b, const char* name, int rank, con
 
 A directory of secrets, one file a key, as containers mount them and
 systemd passes credentials (cf_source_secrets says how names map).
+
+```c
+CF_API cf_bool cf_builder_registry(cf_builder* b, const char* name, int rank, const char* root, unsigned flags);
+```
+
+A key of the Windows Registry and its subkeys (cf_source_registry
+says how names and types map). Windows only; elsewhere it fails by
+name, CF_FILE_OPTIONAL or not.
 
 ```c
 CF_API cf_bool cf_builder_store(cf_builder* b, const char* name, int rank, const char* path, unsigned flags);
@@ -1525,6 +1533,26 @@ count, or -1 with `err` set. The caller sorts, because the order
 decides which file wins and that is the caller's rule, not the
 platform's.
 
+### The Windows Registry
+
+Every value under one key, in UTF-8, each with the path of the
+subkey holding it. Windows only; everywhere else the walk fails and
+says so, because a registry source that read nothing on Linux would
+look exactly like an empty one.
+
+```c
+CF_API cf_bool cf_platform_has_registry(void);
+```
+
+```c
+CF_API int cf_platform_registry_walk(const char* root, cf_arena* arena, cf_platform_reg_fn fn, void* ctx, cf_error* err);
+```
+
+Every value under `root` - "HKCU\\Software\\MyApp", HKCU, HKLM, HKCR,
+HKU or HKCC first - and every subkey's, to CF_MAX_DEPTH. Buffers come
+from `arena`. 0 when walked, 1 when `root` does not exist, -1 with
+`err` set.
+
 ### File stamps
 
 Modification time and size, which is what a change check compares.
@@ -2148,6 +2176,29 @@ CF_API cf_bool cf_source_secrets(cf_source* s, const char* name, int rank, const
 
 ```c
 CF_API const cf_error* cf_source_secrets_error(const cf_source* s);
+```
+
+### A key of the Windows Registry
+
+Every value under `root` - HKCU\Software\MyApp - and under its
+subkeys, which are sections: Server\Port is server.port. Names are
+lowered. REG_DWORD and REG_QWORD are integers, REG_SZ is text the
+contract types, REG_EXPAND_SZ is not expanded, REG_MULTI_SZ is a list
+(key.0, key.1, key.count); any other type, and a set unnamed value,
+is an error naming it. explain() shows each value's full path.
+CF_FILE_OPTIONAL makes a missing key acceptable. Windows only: on any
+other platform the source fails, optional or not, and says why.
+
+```c
+CF_API size_t cf_source_registry_state_size(void);
+```
+
+```c
+CF_API cf_bool cf_source_registry(cf_source* s, const char* name, int rank, const char* root, unsigned flags, void* state, size_t state_size);
+```
+
+```c
+CF_API const cf_error* cf_source_registry_error(const cf_source* s);
 ```
 
 ### A SQLite store (CF_WITH_SQLITE)

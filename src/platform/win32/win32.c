@@ -532,4 +532,246 @@ void cf_platform_wake_close(cf_platform_wake* w) {
     w->a->release(w->a->ctx, w);
 }
 
+/* ------------------------------------------------------------------ *
+ * The Registry
+ *
+ * One recursive walk, every name through UTF-16 and back. The buffers
+ * are sized by RegQueryInfoKeyW for each key and taken from the
+ * caller's arena, so a value of any length is read whole, and nothing
+ * large sits on the stack of a recursion.
+ * ------------------------------------------------------------------ */
+
+cf_bool cf_platform_has_registry(void) {
+    return CF_TRUE;
+}
+
+typedef struct win32_reg {
+    cf_arena*          arena;
+    cf_platform_reg_fn fn;
+    void*              ctx;
+    cf_error*          err;
+    const char*        root;
+    char               path[CF_PATH_MAX];
+    size_t             pathlen;
+} win32_reg;
+
+/* The hive a root names, and where the subkey after it starts. */
+static HKEY win32_reg_hive(const char* root, const char** rest) {
+    static const struct {
+        const char* name;
+        HKEY        hive;
+    } hives[] = {
+        {"HKCU", HKEY_CURRENT_USER},   {"HKEY_CURRENT_USER", HKEY_CURRENT_USER},
+        {"HKLM", HKEY_LOCAL_MACHINE},  {"HKEY_LOCAL_MACHINE", HKEY_LOCAL_MACHINE},
+        {"HKCR", HKEY_CLASSES_ROOT},   {"HKEY_CLASSES_ROOT", HKEY_CLASSES_ROOT},
+        {"HKU", HKEY_USERS},           {"HKEY_USERS", HKEY_USERS},
+        {"HKCC", HKEY_CURRENT_CONFIG}, {"HKEY_CURRENT_CONFIG", HKEY_CURRENT_CONFIG}};
+    size_t i;
+
+    for (i = 0; i < sizeof hives / sizeof hives[0]; ++i) {
+        size_t n = strlen(hives[i].name);
+        if (_strnicmp(root, hives[i].name, n) == 0 &&
+            (root[n] == '\0' || root[n] == '\\')) {
+            *rest = root + n + (root[n] == '\\' ? 1 : 0);
+            return hives[i].hive;
+        }
+    }
+    return NULL;
+}
+
+/* UTF-16 of known length to UTF-8 in the arena, NUL-terminated; the
+   length written goes to *out_len. Embedded NULs are kept, which is
+   what a REG_MULTI_SZ is. */
+static char* win32_reg_utf8(cf_arena* arena, const wchar_t* w, int wn,
+                            size_t* out_len) {
+    int need =
+        (wn > 0) ? WideCharToMultiByte(CP_UTF8, 0, w, wn, NULL, 0, NULL, NULL) : 0;
+    char* out = (char*)cf_arena_alloc(arena, (size_t)need + 1);
+
+    if (out == NULL) {
+        return NULL;
+    }
+    if (need > 0) {
+        WideCharToMultiByte(CP_UTF8, 0, w, wn, out, need, NULL, NULL);
+    }
+    out[need] = '\0';
+    *out_len  = (size_t)need;
+    return out;
+}
+
+static int win32_reg_fail(win32_reg* w, LONG rc, const char* what) {
+    cf_error_set(w->err, CF_E_SOURCE, NULL, w->root, "%s\\%s: %s failed (error %d)",
+                 w->root, w->path, what, (int)rc);
+    return -1;
+}
+
+/* One value, as the platform-neutral record the callback reads. */
+static int win32_reg_value(win32_reg* w, const wchar_t* name, DWORD namelen, DWORD type,
+                           const BYTE* data, DWORD datalen) {
+    cf_platform_reg_value v;
+    size_t                n = 0;
+
+    memset(&v, 0, sizeof v);
+    v.path = w->path;
+    v.name = win32_reg_utf8(w->arena, name, (int)namelen, &n);
+    if (v.name == NULL) {
+        return win32_reg_fail(w, ERROR_OUTOFMEMORY, "reading a value name");
+    }
+    if (type == REG_SZ || type == REG_EXPAND_SZ || type == REG_MULTI_SZ) {
+        const wchar_t* s  = (const wchar_t*)(const void*)data;
+        int            wn = (int)(datalen / sizeof(wchar_t));
+        int            k;
+
+        /* Trailing NULs: one ends a string, two end a list. */
+        while (wn > 0 && s[wn - 1] == L'\0') {
+            --wn;
+        }
+        v.text = win32_reg_utf8(w->arena, s, wn, &v.textlen);
+        if (v.text == NULL) {
+            return win32_reg_fail(w, ERROR_OUTOFMEMORY, "reading a value");
+        }
+        if (type == REG_MULTI_SZ) {
+            v.kind  = CF_REG_LIST;
+            v.items = (wn > 0) ? 1 : 0;
+            for (k = 0; k < wn; ++k) {
+                if (s[k] == L'\0') {
+                    ++v.items;
+                }
+            }
+        } else {
+            v.kind = CF_REG_TEXT;
+        }
+    } else if (type == REG_DWORD && datalen >= sizeof(DWORD)) {
+        DWORD d;
+        memcpy(&d, data, sizeof d);
+        v.kind = CF_REG_INT;
+        v.i    = (cf_i64)d;
+    } else if (type == REG_QWORD && datalen >= sizeof(cf_i64)) {
+        memcpy(&v.i, data, sizeof v.i);
+        v.kind = CF_REG_INT;
+    } else {
+        v.kind = CF_REG_OTHER;
+    }
+    return w->fn(w->ctx, &v) ? 0 : -1;
+}
+
+static int win32_reg_key(win32_reg* w, HKEY h, int depth) {
+    DWORD    nsub = 0, maxsub = 0, nval = 0, maxname = 0, maxdata = 0, i;
+    wchar_t* wname;
+    wchar_t* wsub;
+    BYTE*    data;
+    LONG     rc;
+
+    rc = RegQueryInfoKeyW(h, NULL, NULL, NULL, &nsub, &maxsub, NULL, &nval, &maxname,
+                          &maxdata, NULL, NULL);
+    if (rc != ERROR_SUCCESS) {
+        return win32_reg_fail(w, rc, "RegQueryInfoKeyW");
+    }
+    wname = (wchar_t*)cf_arena_alloc(w->arena, (maxname + 1) * sizeof(wchar_t));
+    wsub  = (wchar_t*)cf_arena_alloc(w->arena, (maxsub + 1) * sizeof(wchar_t));
+    data  = (BYTE*)cf_arena_alloc(w->arena, maxdata + sizeof(wchar_t) * 2);
+    if (wname == NULL || wsub == NULL || data == NULL) {
+        return win32_reg_fail(w, ERROR_OUTOFMEMORY, "allocating");
+    }
+    for (i = 0; i < nval; ++i) {
+        DWORD namelen = maxname + 1, datalen = maxdata, type = 0;
+        rc = RegEnumValueW(h, i, wname, &namelen, NULL, &type, data, &datalen);
+        if (rc != ERROR_SUCCESS) {
+            return win32_reg_fail(w, rc, "RegEnumValueW");
+        }
+        if (win32_reg_value(w, wname, namelen, type, data, datalen) != 0) {
+            return -1;
+        }
+    }
+    for (i = 0; i < nsub; ++i) {
+        DWORD  sublen = maxsub + 1;
+        HKEY   child;
+        size_t keep = w->pathlen, n = 0;
+        char*  name;
+        int    r;
+
+        rc = RegEnumKeyExW(h, i, wsub, &sublen, NULL, NULL, NULL, NULL);
+        if (rc != ERROR_SUCCESS) {
+            return win32_reg_fail(w, rc, "RegEnumKeyExW");
+        }
+        if (depth + 1 >= CF_MAX_DEPTH) {
+            cf_error_set(w->err, CF_E_SOURCE, NULL, w->root,
+                         "%s\\%s: deeper than %d keys", w->root, w->path, CF_MAX_DEPTH);
+            return -1;
+        }
+        name = win32_reg_utf8(w->arena, wsub, (int)sublen, &n);
+        if (name == NULL || keep + n + 2 > sizeof w->path) {
+            return win32_reg_fail(w, ERROR_BUFFER_OVERFLOW, "naming a subkey");
+        }
+        if (keep > 0) {
+            w->path[w->pathlen++] = '\\';
+        }
+        memcpy(w->path + w->pathlen, name, n);
+        w->pathlen += n;
+        w->path[w->pathlen] = '\0';
+
+        rc = RegOpenKeyExW(h, wsub, 0, KEY_READ, &child);
+        if (rc != ERROR_SUCCESS) {
+            return win32_reg_fail(w, rc, "RegOpenKeyExW");
+        }
+        r = win32_reg_key(w, child, depth + 1);
+        RegCloseKey(child);
+        if (r != 0) {
+            return r;
+        }
+        w->pathlen          = keep;
+        w->path[w->pathlen] = '\0';
+    }
+    return 0;
+}
+
+int cf_platform_registry_walk(const char* root, cf_arena* arena, cf_platform_reg_fn fn,
+                              void* ctx, cf_error* err) {
+    wchar_t*    wide;
+    win32_reg*  w;
+    const char* rest = NULL;
+    HKEY        hive = (root != NULL) ? win32_reg_hive(root, &rest) : NULL;
+    HKEY        h;
+    LONG        rc;
+    int         r;
+
+    if (hive == NULL) {
+        cf_error_set(err, CF_E_SOURCE, NULL, root,
+                     "'%s' does not start with a hive: HKCU, HKLM, HKCR, HKU or HKCC",
+                     (root != NULL) ? root : "");
+        return -1;
+    }
+    /* From the arena, not static: two configurations may be built at
+       once on two threads (D-14). */
+    wide = (wchar_t*)cf_arena_alloc(arena, CF_PATH_MAX * sizeof(wchar_t));
+    if (wide == NULL || !win32_wide(rest, wide, CF_PATH_MAX)) {
+        cf_error_set(err, CF_E_SOURCE, NULL, root,
+                     "'%s' is not valid UTF-8, or too long", root);
+        return -1;
+    }
+    w = (win32_reg*)cf_arena_calloc(arena, sizeof *w);
+    if (w == NULL) {
+        cf_error_set(err, CF_E_MEMORY, NULL, root, "no room to read '%s'", root);
+        return -1;
+    }
+    w->arena = arena;
+    w->fn    = fn;
+    w->ctx   = ctx;
+    w->err   = err;
+    w->root  = root;
+
+    rc = RegOpenKeyExW(hive, wide, 0, KEY_READ, &h);
+    if (rc == ERROR_FILE_NOT_FOUND) {
+        return 1;
+    }
+    if (rc != ERROR_SUCCESS) {
+        cf_error_set(err, CF_E_SOURCE, NULL, root, "cannot open '%s' (error %d)", root,
+                     (int)rc);
+        return -1;
+    }
+    r = win32_reg_key(w, h, 0);
+    RegCloseKey(h);
+    return r;
+}
+
 #endif /* CF_PLATFORM_WIN32 */

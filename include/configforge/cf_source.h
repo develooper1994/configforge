@@ -290,6 +290,27 @@ CF_API cf_bool cf_source_secrets(cf_source* s, const char* name, int rank,
 CF_API const cf_error* cf_source_secrets_error(const cf_source* s);
 
 /* ------------------------------------------------------------------ *
+ * A key of the Windows Registry
+ *
+ * Every value under `root` - HKCU\Software\MyApp - and under its
+ * subkeys, which are sections: Server\Port is server.port. Names are
+ * lowered. REG_DWORD and REG_QWORD are integers, REG_SZ is text the
+ * contract types, REG_EXPAND_SZ is not expanded, REG_MULTI_SZ is a list
+ * (key.0, key.1, key.count); any other type, and a set unnamed value,
+ * is an error naming it. explain() shows each value's full path.
+ * CF_FILE_OPTIONAL makes a missing key acceptable. Windows only: on any
+ * other platform the source fails, optional or not, and says why.
+ * ------------------------------------------------------------------ */
+
+CF_API size_t cf_source_registry_state_size(void);
+
+CF_API cf_bool cf_source_registry(cf_source* s, const char* name, int rank,
+                                  const char* root, unsigned flags, void* state,
+                                  size_t state_size);
+
+CF_API const cf_error* cf_source_registry_error(const cf_source* s);
+
+/* ------------------------------------------------------------------ *
  * A SQLite store (CF_WITH_SQLITE)
  *
  * The flat key space in one table - configforge(key, type, value,
