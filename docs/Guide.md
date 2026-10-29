@@ -36,6 +36,7 @@ lines.
 | `tier1.c`, `tier1.cpp` | the same with a contract | 3, 13 |
 | `layers.c`, `layers.cpp` | six sources at once, and why each value won | 4 |
 | `explain_demo.c` | `explain()` on one key | 5 |
+| `references.c`, `references.cpp` | one value made from others, `${key}`, and a cycle refused | 5 |
 | `plugins.c` | a strict contract with one prefix handed to plugins, discovered by iteration; lists | 6 |
 | `mistakes.c`, `mistakes.cpp` | what the person running the program sees for each kind of mistake | 7 |
 | `secrets.c` | a password only the environment may set, never printed, never in a report, wiped | 9 |
@@ -213,6 +214,36 @@ cap)` writes the same chain as JSON: exactly the object the provenance
 report holds for that key, so whatever reads one reads the other, and
 blind, so a sensitive key shows where it came from and its digest,
 never its value.
+
+### One value made from others
+
+`${key}` in a value somebody wrote - a file, the environment, the command
+line - is the value of another key:
+
+```ini
+[server]
+host = web1
+port = 9443
+url  = https://${server.host}:${server.port}/
+```
+
+Precedence chooses every key first, so `--server.host=web2` changes the
+URL too; then the references are replaced, and the result is typed by
+the contract. `explain()` shows what it was made from
+(`examples/c/references.c`, and its C++ twin):
+
+```text
+server.url = "https://web1:9443/"  (text)
+  app.ini     "https://web1:9443/"  selected, from "https://${server.host}:${server.port}/"   app.ini:4:1
+  cli         not present
+  default     not present
+```
+
+A reference to a key with no value, a cycle, and a plain key showing a
+`CF_SENSITIVE` one are refused at construction, naming the key. `$${`
+is a literal `${`, and `${HOME}`, which names no key, is refused rather
+than read as a directory called "${HOME}". A program's own default is
+never read for references.
 
 ## 6. Reading values
 

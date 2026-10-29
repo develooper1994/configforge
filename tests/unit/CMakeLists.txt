@@ -43,7 +43,8 @@ set(CF_UNIT_TESTS
     test_secretsdir
     test_properties
     test_write
-    test_registry)
+    test_registry
+    test_interpolate)
 
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)

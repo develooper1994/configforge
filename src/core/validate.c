@@ -82,61 +82,114 @@ static const char* validate_value(const cf_def* d, const cf_value* v, char* reas
 }
 
 /* ------------------------------------------------------------------ *
- * The reserved syntax (D-10)
+ * References (D-10)
  *
- * ${...} will one day refer to another value. Until it does, a value
- * containing it is refused rather than taken literally: taken literally,
- * cache.dir = ${HOME}/cache creates a directory called "${HOME}", and
- * the day references arrive every such configuration would change
- * meaning without a word. Refusing it now is what makes adding them
- * later an addition rather than a break.
+ * ${key} in a value somebody wrote is the value of another key, after
+ * precedence has chosen it - url = http://${server.host}:${server.port}.
+ * Three decisions make it explainable rather than a second resolver:
  *
- * $${ is the escape, and means a literal ${. It is unescaped here, once,
- * so the value a program reads - and the one a report records - is what
- * was meant.
+ *   order    precedence first, references after. Each key's winner is
+ *            chosen as if nothing referred to anything; then a winner
+ *            with references has them replaced, a referenced key being
+ *            finished first. So a reference reads exactly what a program
+ *            reading that key would get, and explain() of the referenced
+ *            key is the whole story of the part it supplied.
+ *   typing   the result is text, typed by the contract like a value from
+ *            the environment, so port = ${base.port} is an integer.
+ *   names    only keys: ${env:HOME} would be a second environment source
+ *            with no name in explain(), and the environment is already
+ *            a source. A name that is not a key is refused, which keeps
+ *            ${HOME}/cache from becoming a directory called "${HOME}".
+ *
+ * Refused, each naming the key: a reference to a key with no value; a
+ * cycle; and a key that is not sensitive referring to one that is,
+ * because its value would show the secret. $${ is a literal ${.
  * ------------------------------------------------------------------ */
 
-static const char* reserved_syntax(cf_arena* ar, cf_candidate* c, char* reason,
-                                   size_t rcap) {
+/* The next ${name} at or after *i: 1 with its name and *i past the '}';
+   0 at the end; -1 for a "${" that names no key. "$${" is skipped. */
+static int ref_next(const char* p, size_t n, size_t* i, const char** name,
+                    size_t* nlen) {
+    while (*i + 1 < n) {
+        size_t k = *i;
+
+        if (p[k] == '$' && p[k + 1] == '$' && k + 2 < n && p[k + 2] == '{') {
+            *i = k + 3;
+        } else if (p[k] == '$' && p[k + 1] == '{') {
+            const char* close = (const char*)memchr(p + k + 2, '}', n - k - 2);
+            *name             = p + k + 2;
+            *nlen             = (close != NULL) ? (size_t)(close - *name) : n - k - 2;
+            if (close == NULL || *nlen == 0 || !cf_key_valid(*name, *nlen)) {
+                return -1;
+            }
+            *i = (size_t)(close - p) + 1;
+            return 1;
+        } else {
+            ++*i; /* any other character, a lone '$' among them */
+        }
+    }
+    return 0;
+}
+
+/* $${ undone, once, into the arena. */
+static char* unescape(cf_arena* ar, const char* p, size_t n, size_t* out_n) {
+    char*  out = (char*)cf_arena_alloc(ar, n + 1);
+    size_t i, j = 0;
+
+    if (out == NULL) {
+        return NULL;
+    }
+    for (i = 0; i < n; ++i) {
+        if (p[i] == '$' && i + 2 < n && p[i + 1] == '$' && p[i + 2] == '{') {
+            ++i; /* drop one '$' of the pair */
+        }
+        out[j++] = p[i];
+    }
+    out[j] = '\0';
+    *out_n = j;
+    return out;
+}
+
+/* Whether a value somebody wrote has references, and whether they are
+   well formed. One with none is unescaped now; one with some waits, as
+   written, for the keys it names. */
+static const char* reference_syntax(cf_arena* ar, cf_candidate* c, char* reason,
+                                    size_t rcap) {
     const char* p;
-    size_t      n, i, escapes = 0;
+    const char* name = NULL;
+    size_t      n, i = 0, nlen = 0, refs = 0;
+    int         r;
 
     if ((c->flags & CF_CAND_AUTHORED) == 0 || c->value.type != CF_TYPE_TEXT) {
         return NULL;
     }
-    c->flags &= ~(unsigned)CF_CAND_AUTHORED; /* checked once */
+    c->flags &= ~(unsigned)CF_CAND_AUTHORED; /* read once */
     p = c->value.u.t.p;
     n = c->value.u.t.n;
-    for (i = 0; i + 1 < n; ++i) {
-        if (p[i] != '$') {
-            continue;
-        }
-        if (p[i + 1] == '$' && i + 2 < n && p[i + 2] == '{') {
-            ++escapes;
-            i += 2; /* "$${" is the escape; its "{" opens nothing */
-        } else if (p[i + 1] == '{') {
-            cf_fmt(reason, rcap,
-                   "'${' is reserved for references to other values, which are not "
-                   "supported yet; write '$${' for a literal '${'");
-            return reason;
-        }
+    while ((r = ref_next(p, n, &i, &name, &nlen)) == 1) {
+        ++refs;
     }
-    if (escapes > 0) {
-        char*  out = (char*)cf_arena_alloc(ar, n - escapes + 1);
-        size_t j   = 0;
+    if (r < 0) {
+        cf_fmt(reason, rcap,
+               "'${%S' refers to no key: a reference is ${key}, the key as the "
+               "program names it; write '$${' for a literal '${'",
+               name, (nlen > 40) ? (size_t)40 : nlen);
+        return reason;
+    }
+    if (refs > 0) {
+        c->flags |= CF_CAND_TEMPLATE;
+        c->written = p;
+        return NULL;
+    }
+    if (memchr(p, '$', n) != NULL) {
+        size_t m   = 0;
+        char*  out = unescape(ar, p, n, &m);
         if (out == NULL) {
             cf_fmt(reason, rcap, "no room to unescape '$${'");
             return reason;
         }
-        for (i = 0; i < n; ++i) {
-            if (p[i] == '$' && i + 2 < n && p[i + 1] == '$' && p[i + 2] == '{') {
-                ++i; /* drop one '$' of the pair */
-            }
-            out[j++] = p[i];
-        }
-        out[j]         = '\0';
         c->value.u.t.p = out;
-        c->value.u.t.n = j;
+        c->value.u.t.n = m;
     }
     return NULL;
 }
@@ -145,61 +198,267 @@ static const char* reserved_syntax(cf_arena* ar, cf_candidate* c, char* reason,
  * Applying the whole contract
  * ------------------------------------------------------------------ */
 
+/* One candidate against its definition: converted, type-checked and
+   validated. NULL when it passes; a template passes until it is one. */
+static const char* apply_candidate(const cf_def* d, cf_candidate* c,
+                                   cf_apply_report* rep, char* reason, size_t rcap) {
+    if ((c->flags & CF_CAND_TEMPLATE) != 0) {
+        return NULL;
+    }
+    if ((c->flags & CF_CAND_TEXTUAL) != 0) {
+        cf_value converted;
+        if (!cf_value_from_text(d->type, c->value.u.t.p, c->value.u.t.n, &converted)) {
+            if ((d->flags & CF_SENSITIVE) != 0) {
+                cf_fmt(reason, rcap, "the value is not a valid %s",
+                       cf_type_name(d->type));
+            } else {
+                cf_fmt(reason, rcap, "\"%s\" is not a valid %s", c->value.u.t.p,
+                       cf_type_name(d->type));
+            }
+            return reason;
+        }
+        /* The converted text is already in the arena when the type is
+           text; for the others the value is inline. */
+        c->value = converted;
+        c->flags &= ~(unsigned)CF_CAND_TEXTUAL;
+        ++rep->converted;
+    } else if (c->value.type != d->type) {
+        /* A typed source said something different from the declaration.
+           Coercing here would undo the only reason to have a typed
+           source at all. */
+        cf_fmt(reason, rcap, "source supplied %s where %s was declared",
+               cf_type_name(c->value.type), cf_type_name(d->type));
+        return reason;
+    }
+    return validate_value(d, &c->value, reason, rcap);
+}
+
+/* Refuse a candidate: rejected, with its reason, and the whole
+   construction failed when the definition is strict. */
+static cf_bool reject(cf_keyspace* ks, const cf_def* d, cf_candidate* c,
+                      const char* why, cf_apply_report* rep, cf_error* err) {
+    char* stored = cf_arena_dup(ks->arena, why, strlen(why));
+    c->outcome   = CF_OUT_REJECTED;
+    c->reason    = (stored != NULL) ? stored : "invalid";
+    ++rep->rejected;
+    if (d == NULL || d->on_invalid == CF_INVALID_STRICT) {
+        return cf_error_set(err, CF_E_VALIDATE, (d != NULL) ? d->key : NULL,
+                            (c->at != NULL) ? c->at : "", "%s: %s",
+                            (d != NULL) ? d->key : "", c->reason);
+    }
+    return CF_TRUE;
+}
+
 static cf_bool apply_entry(cf_keyspace* ks, const cf_def* d, cf_entry* e,
                            cf_apply_report* rep, cf_error* err) {
     cf_candidate* c;
     char          reason[CF_MESSAGE_MAX];
 
     for (c = e->chain; c != NULL; c = c->next) {
-        const char* why = NULL;
+        const char* why;
 
         if (!cf_outcome_can_win(c->outcome)) {
             continue;
         }
-
-        why = reserved_syntax(ks->arena, c, reason, sizeof reason);
-        if (why == NULL && (c->flags & CF_CAND_TEXTUAL) != 0) {
-            cf_value converted;
-            if (!cf_value_from_text(d->type, c->value.u.t.p, c->value.u.t.n,
-                                    &converted)) {
-                if ((d->flags & CF_SENSITIVE) != 0) {
-                    cf_fmt(reason, sizeof reason, "the value is not a valid %s",
-                           cf_type_name(d->type));
-                } else {
-                    cf_fmt(reason, sizeof reason, "\"%s\" is not a valid %s",
-                           c->value.u.t.p, cf_type_name(d->type));
-                }
-                why = reason;
-            } else {
-                /* The converted text is already in the arena when the
-                   type is text; for the others the value is inline. */
-                c->value = converted;
-                c->flags &= ~(unsigned)CF_CAND_TEXTUAL;
-                ++rep->converted;
-            }
-        } else if (why == NULL && c->value.type != d->type) {
-            /* A typed source said something different from the
-               declaration. Coercing here would undo the only reason to
-               have a typed source at all. */
-            cf_fmt(reason, sizeof reason, "source supplied %s where %s was declared",
-                   cf_type_name(c->value.type), cf_type_name(d->type));
-            why = reason;
-        }
-
+        why = reference_syntax(ks->arena, c, reason, sizeof reason);
         if (why == NULL) {
-            why = validate_value(d, &c->value, reason, sizeof reason);
+            why = apply_candidate(d, c, rep, reason, sizeof reason);
         }
-        if (why != NULL) {
-            char* stored = cf_arena_dup(ks->arena, why, strlen(why));
-            c->outcome   = CF_OUT_REJECTED;
-            c->reason    = (stored != NULL) ? stored : "invalid";
-            ++rep->rejected;
+        if (why != NULL && !reject(ks, d, c, why, rep, err)) {
+            return CF_FALSE;
+        }
+    }
+    return CF_TRUE;
+}
 
-            if (d->on_invalid == CF_INVALID_STRICT) {
-                return cf_error_set(err, CF_E_VALIDATE, d->key,
-                                    (c->at != NULL) ? c->at : "", "%s: %s", d->key,
-                                    c->reason);
+/* ------------------------------------------------------------------ *
+ * Replacing references
+ * ------------------------------------------------------------------ */
+
+/* The entry for a key, mutable: this pass changes outcomes. */
+static cf_entry* find_mut(cf_keyspace* ks, const char* key, size_t n) {
+    size_t    i = cf_ks_lower_bound(ks, key, n);
+    cf_entry* e = (i < cf_ks_count(ks)) ? cf_ks_at_mut(ks, i) : NULL;
+
+    return (e != NULL && e->keylen == n && memcmp(e->key, key, n) == 0) ? e : NULL;
+}
+
+/* A referenced key's value as text: one append to the result. */
+static size_t ref_text(const cf_entry* t, char* tmp, size_t cap, const char** out) {
+    const cf_value* v = &t->selected->value;
+
+    if (v->type == CF_TYPE_TEXT) {
+        *out = v->u.t.p;
+        return v->u.t.n;
+    }
+    *out = tmp;
+    return cf_value_to_text(v, tmp, cap);
+}
+
+/* The template with each reference replaced, measured and then written,
+   into the arena. Every key it names is finished by now. */
+static cf_bool expand_build(cf_keyspace* ks, cf_candidate* c) {
+    const char* p   = c->written;
+    size_t      n   = strlen(p);
+    char*       out = NULL;
+    size_t      len = 0;
+    int         pass;
+
+    for (pass = 0; pass < 2; ++pass) {
+        size_t i = 0, j = 0;
+        while (i < n) {
+            if (p[i] == '$' && i + 2 < n && p[i + 1] == '$' && p[i + 2] == '{') {
+                if (out != NULL) {
+                    out[j]     = '$';
+                    out[j + 1] = '{';
+                }
+                j += 2;
+                i += 3;
+            } else if (p[i] == '$' && i + 1 < n && p[i + 1] == '{') {
+                const char*     name  = p + i + 2;
+                const char*     close = (const char*)memchr(name, '}', n - i - 2);
+                const cf_entry* t;
+                const char*     s;
+                char            tmp[CF_VALUE_TEXT_MAX];
+                size_t          sn;
+
+                t  = cf_ks_find(ks, name, (size_t)(close - name));
+                sn = ref_text(t, tmp, sizeof tmp, &s);
+                if (out != NULL) {
+                    memcpy(out + j, s, sn);
+                }
+                j += sn;
+                i = (size_t)(close - p) + 1;
+            } else {
+                if (out != NULL) {
+                    out[j] = p[i];
+                }
+                ++j;
+                ++i;
             }
+        }
+        if (pass == 0) {
+            len = j;
+            out = (char*)cf_arena_alloc(ks->arena, len + 1);
+            if (out == NULL) {
+                return CF_FALSE;
+            }
+        } else {
+            out[len] = '\0';
+        }
+    }
+    cf_value_text(&c->value, out, len);
+    c->flags = (c->flags & ~(unsigned)CF_CAND_TEMPLATE) | CF_CAND_TEXTUAL;
+    return CF_TRUE;
+}
+
+typedef struct expand_ctx {
+    cf_keyspace*     ks;
+    const cf_defset* ds;
+    cf_apply_report* rep;
+    cf_error*        err;
+    char             reason[CF_MESSAGE_MAX]; /* one, not one a level */
+} expand_ctx;
+
+/* Finish `e`: its winner's references replaced, each key they name
+   finished first, and the result typed and validated. A result the
+   contract refuses hands over to the next candidate, as any refused
+   value does under fallback. */
+static cf_bool expand_entry(expand_ctx* x, cf_entry* e, int depth) {
+    const cf_def* d = cf_defset_find(x->ds, e->key, e->keylen);
+
+    for (;;) {
+        cf_candidate* c = e->selected;
+        const char*   name;
+        const char*   why;
+        size_t        i = 0, nlen = 0;
+        cf_candidate* k;
+
+        if (c == NULL || (c->flags & CF_CAND_TEMPLATE) == 0) {
+            return CF_TRUE;
+        }
+        if ((c->flags & CF_CAND_EXPANDING) != 0) {
+            return cf_error_set(x->err, CF_E_VALIDATE, e->key,
+                                (c->at != NULL) ? c->at : "",
+                                "%s: its references lead back to it", e->key);
+        }
+        if (depth >= CF_MAX_DEPTH) {
+            return cf_error_set(
+                x->err, CF_E_VALIDATE, e->key, (c->at != NULL) ? c->at : "",
+                "%s: references nest deeper than %d", e->key, CF_MAX_DEPTH);
+        }
+        c->flags |= CF_CAND_EXPANDING;
+        while (ref_next(c->written, strlen(c->written), &i, &name, &nlen) == 1) {
+            cf_entry*     t = find_mut(x->ks, name, nlen);
+            const cf_def* td =
+                (t != NULL) ? cf_defset_find(x->ds, t->key, t->keylen) : NULL;
+
+            if (t == NULL || t->selected == NULL) {
+                return cf_error_set(
+                    x->err, CF_E_VALIDATE, e->key, (c->at != NULL) ? c->at : "",
+                    "%s: ${%S} names a key with no value", e->key, name, nlen);
+            }
+            if (td != NULL && (td->flags & CF_SENSITIVE) != 0 &&
+                (d == NULL || (d->flags & CF_SENSITIVE) == 0)) {
+                return cf_error_set(
+                    x->err, CF_E_VALIDATE, e->key, (c->at != NULL) ? c->at : "",
+                    "%s refers to the sensitive %S and is not sensitive "
+                    "itself, so it would show the secret",
+                    e->key, name, nlen);
+            }
+            if (!expand_entry(x, t, depth + 1)) {
+                return CF_FALSE;
+            }
+        }
+        c->flags &= ~(unsigned)CF_CAND_EXPANDING;
+
+        if (!expand_build(x->ks, c)) {
+            return cf_error_set(x->err, CF_E_MEMORY, e->key, NULL,
+                                "no room to replace the references in '%s'", e->key);
+        }
+        if (d == NULL) {
+            /* No contract: Tier 0 inference, as for any text. */
+            cf_value v;
+            if (cf_value_infer(c->value.u.t.p, c->value.u.t.n, &v)) {
+                c->value = v;
+            }
+            c->flags &= ~(unsigned)CF_CAND_TEXTUAL;
+            return CF_TRUE;
+        }
+        why = apply_candidate(d, c, x->rep, x->reason, sizeof x->reason);
+        if (why == NULL) {
+            return CF_TRUE;
+        }
+        if (!reject(x->ks, d, c, why, x->rep, x->err)) {
+            return CF_FALSE;
+        }
+        /* Fallback: the next candidate down that may still win. */
+        for (k = c->next; k != NULL && !cf_outcome_can_win(k->outcome); k = k->next) {
+        }
+        if (k != NULL) {
+            k->outcome = CF_OUT_SELECTED;
+        }
+        e->selected = k;
+    }
+}
+
+static cf_bool expand_all(cf_keyspace* ks, const cf_defset* ds, cf_apply_report* rep,
+                          cf_error* err) {
+    expand_ctx* x = (expand_ctx*)cf_arena_calloc(ks->arena, sizeof *x);
+    size_t      i;
+
+    if (x == NULL) {
+        return cf_error_set(err, CF_E_MEMORY, NULL, NULL,
+                            "no room to replace references");
+    }
+    x->ks  = ks;
+    x->ds  = ds;
+    x->rep = rep;
+    x->err = err;
+    for (i = 0; i < cf_ks_count(ks); ++i) {
+        cf_entry* e = cf_ks_at_mut(ks, i);
+        if (e != NULL && !expand_entry(x, e, 0)) {
+            return CF_FALSE;
         }
     }
     return CF_TRUE;
@@ -349,12 +608,14 @@ cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names*
                    reserved syntax fails construction, as any invalid
                    value does by default (D-05). */
                 if (cf_outcome_can_win(c->outcome) &&
-                    reserved_syntax(cf_ks_arena(ks), c, why, sizeof why) != NULL) {
+                    reference_syntax(cf_ks_arena(ks), c, why, sizeof why) != NULL) {
                     return cf_error_set(err, CF_E_VALIDATE, e->key,
                                         (c->at != NULL) ? c->at : "", "%s: %s", e->key,
                                         why);
                 }
-                if ((c->flags & CF_CAND_TEXTUAL) == 0) {
+                /* A template is inferred once its references are in. */
+                if ((c->flags & CF_CAND_TEXTUAL) == 0 ||
+                    (c->flags & CF_CAND_TEMPLATE) != 0) {
                     continue;
                 }
                 if (cf_value_infer(c->value.u.t.p, c->value.u.t.n, &v)) {
@@ -404,6 +665,12 @@ cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names*
             continue;
         }
         apply_policy(e, d, names, cf_ks_arena(ks));
+    }
+
+    /* References last: every winner is chosen, so a reference reads what
+       a program reading that key would. */
+    if (!expand_all(ks, ds, report, err)) {
+        return CF_FALSE;
     }
 
     /* Required parameters, and defaults that ended up being the

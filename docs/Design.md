@@ -3044,7 +3044,6 @@ Retained in the design, not scheduled until a real user asks:
   document. See D-28 and `docs/ImageFormat.md`.
 * format-preserving file writing
 * cross-source transactions and rollback
-* value interpolation and references
 * remote and distributed providers
 * dynamic provider loading
 * schema registries

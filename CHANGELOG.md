@@ -73,6 +73,15 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   only" stays that way. Every item or none, and the error says which
   question said no. `Builder::writable` in C++. `cf_store_set` stays,
   for provisioning a store, and asks nothing.
+- **References between values, `${key}`** (D-10, decided): a value
+  somebody wrote can use another key's - `url = https://${server.host}`.
+  Precedence chooses every key first and references are replaced after,
+  so a reference reads what a program reading that key would; the result
+  is typed by the contract; `explain()` shows the template it was made
+  from, and the report records it as `written`. A cycle, a reference to
+  a key with no value, and a plain key showing a sensitive one are
+  refused naming the key. `${HOME}`, naming no key, is still refused, and
+  `$${` is still the literal.
 - **The Windows Registry as a source** (`cf_builder_registry`, D-30):
   every value under a key such as `HKCU\Software\MyApp`, a subkey a
   section, names lowered. DWORD and QWORD are integers, REG_SZ is text
