@@ -21,6 +21,7 @@
 #include "configforge/configforge.h"
 
 #include <string>
+#include <vector>
 
 namespace configforge {
 
@@ -46,6 +47,104 @@ public:
 private:
     cf_error e_;
 };
+
+/* ------------------------------------------------------------------ *
+ * Key
+ *
+ * A key declared once, with its type and default, and then used both
+ * to define the contract and to read it - so the default is written in
+ * one place and the reader cannot ask for the wrong type:
+ *
+ *     static const cf::Key<int> port("server.port", 8080, 1, 65535);
+ *     cf::Config cfg = cf::Builder().define(port).create();
+ *     int p = cfg[port];
+ *
+ * T is one of bool, int, long, cf_i64, double and std::string; any
+ * other is refused at compile time, by Builder::define having no
+ * overload for it. A key without a range has lo == hi, as in
+ * cf_builder_int.
+ * ------------------------------------------------------------------ */
+
+template <typename T> class Key {
+public:
+    explicit Key(const char* name, T dflt = T(), unsigned flags = 0)
+        : name_(name), dflt_(dflt), lo_(), hi_(), flags_(flags) {}
+    Key(const char* name, T dflt, T lo, T hi, unsigned flags = 0)
+        : name_(name), dflt_(dflt), lo_(lo), hi_(hi), flags_(flags) {}
+
+    const char* name() const     { return name_; }
+    const T&    fallback() const { return dflt_; }
+    const T&    lo() const       { return lo_; }
+    const T&    hi() const       { return hi_; }
+    unsigned    flags() const    { return flags_; }
+
+private:
+    const char* name_;
+    T           dflt_;
+    T           lo_, hi_;
+    unsigned    flags_;
+};
+
+namespace detail {
+/* cf_i64 where it is a type of its own, and a stand-in nobody passes
+   where it is long, so the overloads below are never one twice. */
+template <typename A, typename B> struct is_same { enum { value = 0 }; };
+template <typename A> struct is_same<A, A> { enum { value = 1 }; };
+struct no_i64 {
+    operator cf_i64() const { return 0; }
+};
+template <int same_as_long> struct pick_i64 { typedef cf_i64 type; };
+template <> struct pick_i64<1> { typedef no_i64 type; };
+typedef pick_i64<is_same<cf_i64, long>::value>::type i64;
+
+/* The definition for each type a Key may have; the builder copies the
+   key and a text default, so neither has to outlive it. */
+inline void define_key(cf_builder* b, const Key<bool>& k)
+{ cf_builder_bool(b, k.name(), k.fallback() ? CF_TRUE : CF_FALSE, k.flags()); }
+inline void define_key(cf_builder* b, const Key<int>& k)
+{ cf_builder_int(b, k.name(), k.fallback(), k.lo(), k.hi(), k.flags()); }
+inline void define_key(cf_builder* b, const Key<long>& k)
+{ cf_builder_int(b, k.name(), k.fallback(), k.lo(), k.hi(), k.flags()); }
+inline void define_key(cf_builder* b, const Key<i64>& k)
+{ cf_builder_int(b, k.name(), k.fallback(), k.lo(), k.hi(), k.flags()); }
+inline void define_key(cf_builder* b, const Key<std::string>& k)
+{ cf_builder_text(b, k.name(), k.fallback().c_str(), k.flags()); }
+#if CF_WITH_REAL
+inline void define_key(cf_builder* b, const Key<double>& k)
+{ cf_builder_real(b, k.name(), k.fallback(), k.lo(), k.hi(), k.flags()); }
+#endif
+
+/* Keeps a template argument out of deduction, so a field's default
+   may be "0.0.0.0" for a std::string member. */
+template <typename T> struct same { typedef T type; };
+
+/* The reads Config::get makes, one overload a type. A const char*
+   would otherwise convert to bool and read as a pointer made of it, so
+   it gets an overload whose result nothing can be cast from: read text
+   as std::string. */
+struct read_text_as_std_string {};
+read_text_as_std_string read(const cf_config* c, const char* key, const char* f);
+inline bool read(const cf_config* c, const char* key, bool f)
+{ return cf_get_bool(c, key, f ? CF_TRUE : CF_FALSE) != CF_FALSE; }
+inline int read(const cf_config* c, const char* key, int f)
+{ return (int)cf_get_int(c, key, (cf_i64)f); }
+inline long read(const cf_config* c, const char* key, long f)
+{ return (long)cf_get_int(c, key, (cf_i64)f); }
+inline cf_i64 read(const cf_config* c, const char* key, i64 f)
+{ return cf_get_int(c, key, f); }
+#if CF_WITH_REAL
+inline double read(const cf_config* c, const char* key, double f)
+{ return cf_get_real(c, key, f); }
+#endif
+inline std::string read(const cf_config* c, const char* key, const std::string& f)
+{
+    const char* p = cf_get_text(c, key, 0);
+    return (p != 0) ? std::string(p) : f;
+}
+} /* namespace detail */
+
+class Setting;
+template <typename S> class Binding;
 
 /* ------------------------------------------------------------------ *
  * Config
@@ -82,6 +181,16 @@ public:
     /* Reads do not fail. Everything that can go wrong was detected
        while the configuration was being built and reported there. */
     template <typename T> T get(const char* key, T fallback) const;
+
+    /* A declared key, read as its own type with its own default. */
+    template <typename T> T get(const Key<T>& k) const
+    { return get<T>(k.name(), k.fallback()); }
+    template <typename T> T operator[](const Key<T>& k) const
+    { return get<T>(k.name(), k.fallback()); }
+
+    /* A key by name, typed where it is used and not before:
+       `int port = cfg["server"]["port"];`. See Setting. */
+    Setting operator[](const char* key) const;
 
     std::string text(const char* key, const char* fallback = "") const
     {
@@ -326,29 +435,58 @@ private:
     Error      err_;
 };
 
-template <> inline bool Config::get<bool>(const char* key, bool f) const
-{ return cf_get_bool(c_, key, f ? CF_TRUE : CF_FALSE) != CF_FALSE; }
+/* An overload a type, not a specialization: where cf_i64 is long (C++11
+   and later on LP64 systems) a specialization for each would be one
+   specialization twice. */
+template <typename T> inline T Config::get(const char* key, T fallback) const
+{ return (T)detail::read(c_, key, fallback); }
 
-template <> inline int Config::get<int>(const char* key, int f) const
-{ return (int)cf_get_int(c_, key, (cf_i64)f); }
+/* ------------------------------------------------------------------ *
+ * Setting
+ *
+ * One key of a configuration, named a part at a time and typed where it
+ * is read:
+ *
+ *     int         port = cfg["server"]["port"];
+ *     std::string host = cfg["server.host"];
+ *     if (cfg["tls"]["enabled"]) { ... }
+ *
+ * No fallback is passed, because the contract has one: a defined key
+ * always has a value, and its default is the one written in the
+ * definition. A key that is neither defined nor set reads as T() - 0,
+ * false, "" - and exists() is how to tell. Compare with as<T>(), not
+ * with ==: a conversion to any type cannot also choose one for a
+ * comparison.
+ *
+ * It holds the Config, so it stays valid however long it is kept.
+ * ------------------------------------------------------------------ */
 
-template <> inline long Config::get<long>(const char* key, long f) const
-{ return (long)cf_get_int(c_, key, (cf_i64)f); }
+class Setting {
+public:
+    Setting(const Config& c, const std::string& key) : c_(c), key_(key) {}
 
-template <> inline cf_i64 Config::get<cf_i64>(const char* key, cf_i64 f) const
-{ return cf_get_int(c_, key, f); }
+    Setting operator[](const char* child) const
+    { return Setting(c_, key_.empty() ? std::string(child) : key_ + "." + child); }
 
-#if CF_WITH_REAL
-template <> inline double Config::get<double>(const char* key, double f) const
-{ return cf_get_real(c_, key, f); }
-#endif
+    const std::string& key() const { return key_; }
+    bool    exists() const { return c_.has(key_.c_str()); }
+    cf_type type() const   { return c_.typeOf(key_.c_str()); }
 
-template <> inline std::string
-Config::get<std::string>(const char* key, std::string f) const
-{
-    const char* p = cf_get_text(c_, key, 0);
-    return (p != 0) ? std::string(p) : f;
-}
+    template <typename T> T as() const { return c_.get<T>(key_.c_str(), T()); }
+    template <typename T> T as(const T& fallback) const
+    { return c_.get<T>(key_.c_str(), fallback); }
+    template <typename T> operator T() const { return as<T>(); }
+
+    std::string text() const    { return c_.text(key_.c_str()); }
+    std::string explain() const { return c_.explain(key_.c_str()); }
+
+private:
+    Config      c_;
+    std::string key_;
+};
+
+inline Setting Config::operator[](const char* key) const
+{ return Setting(*this, key != 0 ? key : ""); }
 
 /* ------------------------------------------------------------------ *
  * Builder
@@ -448,6 +586,14 @@ public:
     Builder& define(const cf_def& d)
     { if (b_) { cf_builder_define(b_, &d); } return *this; }
 
+    /* A declared key (Key), defined with its type, default and range. */
+    template <typename T> Builder& define(const Key<T>& k)
+    { if (b_) { detail::define_key(b_, k); } return *this; }
+
+    /* Every field of a Binding. */
+    template <typename S> Builder& define(const Binding<S>& bd)
+    { if (b_) { bd.defineInto(b_); } return *this; }
+
     /* A key space the program cannot know in advance. */
     Builder& open(const char* prefix)
     { if (b_) { cf_builder_open(b_, prefix); } return *this; }
@@ -475,6 +621,121 @@ inline Config app(const char* name, int argc, char* const* argv)
 {
     return Builder(name, argc, argv).create();
 }
+
+/* ------------------------------------------------------------------ *
+ * Binding
+ *
+ * A plain struct of the program's own, filled from a configuration and
+ * read as settings.server.port - the dot belongs to the program, which
+ * C++ cannot add to cf::Config itself. Each field is written once, with
+ * its key and default, and the same list defines the contract:
+ *
+ *     struct Server   { std::string host; int port; };
+ *     struct Settings { Server server; bool tls; };
+ *
+ *     cf::Binding<Settings> bind;
+ *     bind.field("server.host", &Settings::server, &Server::host, "0.0.0.0")
+ *         .field("server.port", &Settings::server, &Server::port, 8080, 1, 65535)
+ *         .field("tls.enabled", &Settings::tls, false);
+ *     cf::Config cfg = cf::Builder(...).define(bind).create();
+ *     Settings settings = bind.read(cfg);
+ *
+ * Not copyable, as a list of owned fields in C++03; keep one where the
+ * struct is declared and share it by reference.
+ * ------------------------------------------------------------------ */
+
+template <typename S> class Binding {
+public:
+    Binding() {}
+    ~Binding()
+    {
+        for (size_t i = 0; i < f_.size(); ++i) {
+            delete f_[i];
+        }
+    }
+
+    template <typename M>
+    Binding& field(const char* key, M S::*m,
+                   typename detail::same<M>::type dflt = M(), unsigned flags = 0)
+    { return add(new Direct<M>(Key<M>(key, dflt, flags), m)); }
+
+    template <typename M>
+    Binding& field(const char* key, M S::*m, typename detail::same<M>::type dflt,
+                   typename detail::same<M>::type lo,
+                   typename detail::same<M>::type hi, unsigned flags = 0)
+    { return add(new Direct<M>(Key<M>(key, dflt, lo, hi, flags), m)); }
+
+    /* A field of a struct inside S: settings.server.port. */
+    template <typename N, typename M>
+    Binding& field(const char* key, N S::*outer, M N::*inner,
+                   typename detail::same<M>::type dflt = M(), unsigned flags = 0)
+    { return add(new Nested<N, M>(Key<M>(key, dflt, flags), outer, inner)); }
+
+    template <typename N, typename M>
+    Binding& field(const char* key, N S::*outer, M N::*inner,
+                   typename detail::same<M>::type dflt,
+                   typename detail::same<M>::type lo,
+                   typename detail::same<M>::type hi, unsigned flags = 0)
+    { return add(new Nested<N, M>(Key<M>(key, dflt, lo, hi, flags), outer, inner)); }
+
+    /* Every field read from `c`; a field the configuration lacks keeps
+       its declared default. */
+    void read(const Config& c, S& out) const
+    {
+        for (size_t i = 0; i < f_.size(); ++i) {
+            f_[i]->read(c, out);
+        }
+    }
+    S read(const Config& c) const
+    {
+        S out = S();
+        read(c, out);
+        return out;
+    }
+
+    size_t size() const { return f_.size(); }
+
+    /* Builder::define(binding) calls this. */
+    void defineInto(cf_builder* b) const
+    {
+        for (size_t i = 0; i < f_.size(); ++i) {
+            f_[i]->define(b);
+        }
+    }
+
+private:
+    Binding(const Binding&);
+    Binding& operator=(const Binding&);
+
+    struct Field {
+        virtual ~Field() {}
+        virtual void define(cf_builder* b) const = 0;
+        virtual void read(const Config& c, S& out) const = 0;
+    };
+    template <typename M> struct Direct : Field {
+        Direct(const Key<M>& k, M S::*m) : k_(k), m_(m) {}
+        void define(cf_builder* b) const { detail::define_key(b, k_); }
+        void read(const Config& c, S& out) const { out.*m_ = c.get(k_); }
+        Key<M> k_;
+        M S::*m_;
+    };
+    template <typename N, typename M> struct Nested : Field {
+        Nested(const Key<M>& k, N S::*o, M N::*i) : k_(k), o_(o), i_(i) {}
+        void define(cf_builder* b) const { detail::define_key(b, k_); }
+        void read(const Config& c, S& out) const { (out.*o_).*i_ = c.get(k_); }
+        Key<M> k_;
+        N S::*o_;
+        M N::*i_;
+    };
+
+    Binding& add(Field* f)
+    {
+        f_.push_back(f);
+        return *this;
+    }
+
+    std::vector<Field*> f_;
+};
 
 /* ------------------------------------------------------------------ *
  * Watcher

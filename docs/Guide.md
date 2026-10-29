@@ -566,6 +566,45 @@ if (!cfg) { std::fputs(cfg.error().message(), stderr); return 1; }
 int port = cfg.get<int>("server.port", 8080);
 ```
 
+That writes the default twice, once in the contract and once at the
+read. Three forms write it once (D-46). A declared key is both:
+
+```cpp
+static const cf::Key<int> port("server.port", 8080, 1, 65535);
+cf::Config cfg = cf::Builder("myapp", argc, argv).define(port).create();
+int p = cfg[port];
+```
+
+A key by name, a part at a time, typed where it is converted; a
+defined key has its default, so there is no fallback to pass, and
+`exists()` tells a missing key from a zero:
+
+```cpp
+int         p    = cfg["server"]["port"];
+std::string host = cfg["server.host"];
+if (cfg["tls"]["enabled"]) { /* ... */ }
+```
+
+And the program's own struct, whose field list is the contract:
+
+```cpp
+struct Server   { std::string host; int port; };
+struct Settings { Server server; bool tls; };
+
+cf::Binding<Settings> bind;
+bind.field("server.host", &Settings::server, &Server::host, "0.0.0.0")
+    .field("server.port", &Settings::server, &Server::port, 8080, 1, 65535)
+    .field("tls.enabled", &Settings::tls, false);
+cf::Config cfg      = cf::Builder("myapp", argc, argv).define(bind).create();
+Settings   settings = bind.read(cfg);   /* settings.server.port */
+```
+
+`cfg.server.port` on the configuration itself is not possible in
+standard C++: that would need generated code, and code generated into
+`cf::Config` gives one type two meanings in two programs. The dot in
+`settings.server.port` belongs to the program, which is where C++
+allows it.
+
 ### Rust
 
 `bindings/rust` is a crate over the same library, with no dependencies:
