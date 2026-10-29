@@ -82,6 +82,12 @@ CF_API cf_bool cf_outcome_can_win(cf_outcome o);
    it again is a cycle. */
 #define CF_CAND_EXPANDING 8u
 
+/* The program's own default, from its definition. A per-key policy
+   (D-33) says which sources may set a key, and nobody sets a default:
+   it is what the key is when no permitted source says otherwise, so a
+   policy passes over it rather than refusing it. */
+#define CF_CAND_DEFAULT 16u
+
 typedef struct cf_candidate {
     int                  source; /* precedence rank; lower wins      */
     unsigned             flags;
@@ -153,6 +159,16 @@ CF_API cf_bool cf_ks_add_text(cf_keyspace* ks, const char* key, size_t keylen,
    so the reserved syntax applies to it as it does to raw text. */
 CF_API cf_bool cf_ks_add_authored(cf_keyspace* ks, const char* key, size_t keylen,
                                   int source, const cf_value* value, const char* at);
+
+/* Record a definition's default (CF_CAND_DEFAULT). */
+CF_API cf_bool cf_ks_add_default(cf_keyspace* ks, const char* key, size_t keylen,
+                                 int source, const cf_value* value);
+
+/* Record a copy of another key space's candidate, at its rank, with what
+   it was - textual, a default, the template it was made from - and not
+   what it was waiting for: it is not read for references again. */
+CF_API cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key, size_t keylen,
+                                   const cf_candidate* c);
 
 /* Record a candidate that failed conversion or validation. It never
    wins, and it is never erased: explain() has to be able to say that

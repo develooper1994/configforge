@@ -17,7 +17,7 @@ in; the types are in the headers themselves.
 - [`cf_flatten.h`](#cf_flattenh) - 4
 - [`cf_image.h`](#cf_imageh) - 10
 - [`cf_iterate.h`](#cf_iterateh) - 5
-- [`cf_keyspace.h`](#cf_keyspaceh) - 23
+- [`cf_keyspace.h`](#cf_keyspaceh) - 25
 - [`cf_numeric.h`](#cf_numerich) - 7
 - [`cf_platform.h`](#cf_platformh) - 19
 - [`cf_port.h`](#cf_porth) - 10
@@ -1288,6 +1288,20 @@ CF_API cf_bool cf_ks_add_authored(cf_keyspace* ks, const char* key, size_t keyle
 
 Record a typed candidate that somebody wrote - a JSON string, say -
 so the reserved syntax applies to it as it does to raw text.
+
+```c
+CF_API cf_bool cf_ks_add_default(cf_keyspace* ks, const char* key, size_t keylen, int source, const cf_value* value);
+```
+
+Record a definition's default (CF_CAND_DEFAULT).
+
+```c
+CF_API cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key, size_t keylen, const cf_candidate* c);
+```
+
+Record a copy of another key space's candidate, at its rank, with what
+it was - textual, a default, the template it was made from - and not
+what it was waiting for: it is not read for references again.
 
 ```c
 CF_API cf_bool cf_ks_reject(cf_keyspace* ks, const char* key, size_t keylen, int source, const cf_value* value, const char* at, const char* reason);

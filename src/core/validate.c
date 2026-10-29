@@ -541,6 +541,15 @@ static void apply_policy(cf_entry* e, const cf_def* d, const cf_rank_names* name
         if (!cf_outcome_can_win(c->outcome)) {
             continue;
         }
+        if ((c->flags & CF_CAND_DEFAULT) != 0) {
+            /* Not set by anyone, so not refused: the answer when no
+               permitted source has one, below every one that has. */
+            if (best == NULL) {
+                best    = c;
+                best_at = 1 << 14;
+            }
+            continue;
+        }
         at = policy_index(d->policy, name);
         if (at < 0) {
             char msg[CF_MESSAGE_MAX];
