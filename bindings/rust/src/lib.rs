@@ -95,7 +95,33 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
+/// The library's limits against the ones this binding's cf_error was
+/// written for (D-45): a library built with others would be misread, so
+/// it is refused, once, before the first call that fills an error.
+fn check_limits() {
+    static CHECKED: std::sync::Once = std::sync::Once::new();
+    CHECKED.call_once(|| {
+        for (name, ours) in [
+            ("key", sys::CF_KEY_MAX),
+            ("source", sys::CF_SOURCE_MAX),
+            ("message", sys::CF_MESSAGE_MAX),
+        ] {
+            let n = c(name);
+            let theirs = unsafe { sys::cf_build_limit(n.as_ptr()) };
+            assert_eq!(
+                theirs,
+                ours,
+                "libconfigforge was built with CF_{}_MAX {}, this binding expects {}",
+                name.to_uppercase(),
+                theirs,
+                ours
+            );
+        }
+    });
+}
+
 fn new_error() -> sys::cf_error {
+    check_limits();
     sys::cf_error {
         size: std::mem::size_of::<sys::cf_error>(),
         code: 0,

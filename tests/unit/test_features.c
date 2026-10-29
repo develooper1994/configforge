@@ -229,6 +229,19 @@ static void test_version(void) {
 
 /* CF_OPTIONAL is the spelling; CF_FILE_OPTIONAL, from when every such
    source was a file, is the same flag - this test uses it above. */
+/* The limits that size cf_error are the build's, and it says what they
+   are (D-45). */
+static void test_limits(void) {
+    check(cf_build_limit("key") == CF_KEY_MAX, "the key limit is the build's");
+    check(cf_build_limit("source") == CF_SOURCE_MAX, "the source limit is the build's");
+    check(cf_build_limit("message") == CF_MESSAGE_MAX,
+          "the message limit is the build's");
+    check(cf_build_limit("path") == CF_PATH_MAX, "the path limit is the build's");
+    check(cf_build_limit("depth") == CF_MAX_DEPTH, "the depth limit is the build's");
+    check(cf_build_limit("nonsense") == 0 && cf_build_limit(NULL) == 0,
+          "and a name it does not know is 0");
+}
+
 static void test_optional_spellings(void) {
     check(CF_OPTIONAL == CF_FILE_OPTIONAL, "both spellings are one flag");
 }
@@ -236,6 +249,7 @@ static void test_optional_spellings(void) {
 int main(void) {
     test_version();
     test_optional_spellings();
+    test_limits();
     test_listed();
     test_dir();
     test_dotenv();

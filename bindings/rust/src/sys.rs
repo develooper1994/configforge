@@ -255,5 +255,6 @@ extern "C" {
     ) -> *mut cf_config;
     pub fn cf_code_name(code: c_int) -> *const c_char;
     pub fn cf_version() -> *const c_char;
+    pub fn cf_build_limit(name: *const c_char) -> usize;
     pub fn cf_build_id() -> *const c_char;
 }

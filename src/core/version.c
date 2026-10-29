@@ -105,6 +105,25 @@ const char* cf_feature_at(size_t i) {
     return (i == n && cf_platform_has_wake()) ? "watch" : NULL;
 }
 
+size_t cf_build_limit(const char* name) {
+    static const struct {
+        const char* name;
+        size_t      value;
+    } limits[] = {{"key", CF_KEY_MAX},
+                  {"source", CF_SOURCE_MAX},
+                  {"message", CF_MESSAGE_MAX},
+                  {"path", CF_PATH_MAX},
+                  {"depth", CF_MAX_DEPTH}};
+    size_t i;
+
+    for (i = 0; name != NULL && i < sizeof limits / sizeof limits[0]; ++i) {
+        if (strcmp(limits[i].name, name) == 0) {
+            return limits[i].value;
+        }
+    }
+    return 0;
+}
+
 cf_bool cf_has_feature(const char* name) {
     size_t i;
 

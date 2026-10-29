@@ -70,6 +70,14 @@ CF_API size_t      cf_feature_count(void);
 CF_API const char* cf_feature_at(size_t i);
 CF_API cf_bool     cf_has_feature(const char* name);
 
+/* A build limit, by name: "key" (CF_KEY_MAX), "source" (CF_SOURCE_MAX),
+   "message" (CF_MESSAGE_MAX), "path" (CF_PATH_MAX) and "depth"
+   (CF_MAX_DEPTH); 0 for a name it does not know. The first three size
+   cf_error's buffers, so they are part of a build's ABI (D-45): a
+   program, or a binding that mirrors cf_error, compiled against other
+   limits must not trust the layout, and this is how it can tell. */
+CF_API size_t cf_build_limit(const char* name);
+
 #ifdef __cplusplus
 }
 #endif

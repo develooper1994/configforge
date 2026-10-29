@@ -23,6 +23,7 @@ cf_blob_mem
 cf_build
 cf_build_id
 cf_build_in
+cf_build_limit
 cf_builder_abort
 cf_builder_bool
 cf_builder_cli

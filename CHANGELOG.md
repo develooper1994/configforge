@@ -103,6 +103,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   same rank and below the new spelling in the same source, and
   `explain()` places it `app.ini:2:1 (as db.host)`. Doctor's CFD009 says
   what to rename it to. `examples/c/migration.c` and its C++ twin.
+- **`cf_build_limit`: the build's limits, by name** (D-45). The three
+  that size `cf_error` - key, source, message - are part of a build's
+  ABI, and a consumer that cannot see the headers the library was built
+  with can now ask; the Rust binding checks all three before its first
+  call and refuses a library built with others.
 - **The symbol list**: `cmake/configforge.symbols` names every `CF_API`
   function, and `gate.abi` holds the headers and the built library to
   it - every declaration listed and every listed name declared, each
