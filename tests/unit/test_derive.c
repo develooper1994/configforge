@@ -260,9 +260,42 @@ static void test_names_survive(void) {
     cf_config_free(base);
 }
 
+/* The change's source name is the derived configuration's to keep: a
+   caller naming it from a buffer it then reuses - a request handler, a
+   Rust String - must not leave every explain() pointing at whatever the
+   buffer holds next. */
+static void test_name_is_copied(void) {
+    static const cf_pair pairs[] = {{"server.port", "9000"}};
+    static char          buf[2048];
+    char                 who[32];
+    cf_error             err = CF_ERROR_INIT;
+    cf_builder*          b   = cf_build(NULL);
+    cf_config*           base;
+    cf_config*           d;
+
+    cf_builder_int(b, "server.port", 1234, 1, 65535, 0);
+    base = cf_builder_create(b, &err);
+    if (base == NULL) {
+        check(0, "the base builds");
+        return;
+    }
+    strcpy(who, "operator");
+    d = cf_derive(base, who, pairs, 1, &err);
+    strcpy(who, "XXXXXXXX");
+    check(d != NULL, "derives");
+    if (d != NULL) {
+        cf_explain(d, "server.port", buf, sizeof buf);
+        has(buf, "  operator ", "the source keeps the name it was given");
+        check(strstr(buf, "XXXX") == NULL, "not whatever the buffer holds now");
+    }
+    cf_config_free(d);
+    cf_config_free(base);
+}
+
 int main(void) {
     test_derive();
     test_names_survive();
+    test_name_is_copied();
     test_contract_travels();
     test_derive_chain();
     test_fixed_arena();
