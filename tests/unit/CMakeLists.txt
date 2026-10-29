@@ -167,6 +167,49 @@ if(CF_WITH_CXX)
   configforge_apply_analysis(test_wrapper_access_cxx17)
   add_test(NAME unit.test_wrapper_access_cxx17
            COMMAND test_wrapper_access_cxx17)
+
+  # The C++17 and C++20 interfaces, each where the compiler has its
+  # standard - and, for C++20, a library with <format>, which GCC 12 and
+  # older lack. Required, not decayed to an older standard: a test of
+  # configforge20.hpp built as C++17 tests nothing.
+  include(CheckCXXSourceCompiles)
+
+  # Whether <header> compiles as C++<std>, cached in <var>.
+  function(cf_cxx_library_has std header var)
+    set(CMAKE_CXX_STANDARD ${std})
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    check_cxx_source_compiles("#include <${header}>\nint main(){return 0;}"
+                              ${var})
+  endfunction()
+  set(cf_modern)
+  if("cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+    list(APPEND cf_modern "test_wrapper_cxx17:17")
+  endif()
+  if("cxx_std_20" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+    cf_cxx_library_has(20 format CF_HAVE_CXX20_FORMAT)
+    if(CF_HAVE_CXX20_FORMAT)
+      list(APPEND cf_modern "test_wrapper_cxx20:20")
+    endif()
+  endif()
+  foreach(entry ${cf_modern})
+    string(REPLACE ":" ";" parts "${entry}")
+    list(GET parts 0 t)
+    list(GET parts 1 std)
+    add_executable(${t} ${t}.cpp)
+    target_link_libraries(${t} PRIVATE configforge)
+    set_target_properties(
+      ${t}
+      PROPERTIES CXX_STANDARD ${std}
+                 CXX_STANDARD_REQUIRED ON
+                 CXX_EXTENSIONS OFF)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+      target_compile_options(${t} PRIVATE -pedantic -Werror -Wall -Wextra)
+    elseif(MSVC)
+      configforge_apply_warnings(${t})
+    endif()
+    configforge_apply_analysis(${t})
+    add_test(NAME unit.${t} COMMAND ${t})
+  endforeach()
 endif()
 
 # A non-ASCII argument, round-tripped. On Windows this is the only test

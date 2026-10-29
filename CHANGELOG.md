@@ -7,6 +7,17 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **A C++ interface a standard** (D-47). Under C++11 the wrapper's
+  classes move, have an explicit bool and derive from pairs in braces.
+  `configforge17.hpp` adds `cf::find<T>` as `std::optional` (nothing,
+  never a truncated integer), `cf::value` as a `std::variant`,
+  `cf::items` and `cf::children` for structured bindings, and
+  `cf::fields` - the program's struct by member-pointer paths known at
+  compile time. `configforge20.hpp` adds the `cf::readable` concept,
+  `cf::Items` as a range view, `std::format` of a `cf::Setting`,
+  `std::span` pairs, and under C++23 `cf::lookup<T>` as
+  `std::expected`. The header gate compiles each under every standard
+  it claims.
 - **Reading a value without repeating its default, in C++** (D-46): a
   declared `cf::Key<T>` defines the contract and reads it
   (`cfg[port]`); `cfg["server"]["port"]` is a `cf::Setting`, typed where

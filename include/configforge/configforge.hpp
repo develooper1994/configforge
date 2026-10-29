@@ -3,8 +3,9 @@
  *
  * A thin layer over the C API, not a second design. Every construct
  * here is valid C++03, so it compiles under GCC 3.4 and MSVC 2005
- * alike; a separate optional header adds the conveniences that need
- * C++11 or later.
+ * alike. Under C++11 the same classes gain move, an explicit bool and
+ * pairs in braces; configforge17.hpp and configforge20.hpp add the
+ * interfaces of those standards beside these classes (D-47).
  *
  *     cf::Config cfg = cf::app("myapp", argc, argv);
  *     if (!cfg) { std::fputs(cfg.error().message, stderr); return 1; }
@@ -22,6 +23,24 @@
 
 #include <string>
 #include <vector>
+
+/* The standard the including program is compiled as. MSVC reports 199711L
+   in __cplusplus unless asked otherwise and says the truth in
+   _MSVC_LANG. Under C++11 the classes below gain what C++03 cannot say -
+   move, an explicit bool, a list of pairs in braces - and nothing they
+   already have changes; configforge17.hpp and configforge20.hpp add the
+   interfaces of their standards. */
+#if defined(_MSVC_LANG) && _MSVC_LANG > __cplusplus
+#define CF_CPLUSPLUS _MSVC_LANG
+#else
+#define CF_CPLUSPLUS __cplusplus
+#endif
+#if CF_CPLUSPLUS >= 201103L
+#define CF_CPP11 1
+#include <initializer_list>
+#else
+#define CF_CPP11 0
+#endif
 
 namespace configforge {
 
@@ -175,6 +194,26 @@ public:
        a Config be compared with an int by accident. */
     bool valid() const { return c_ != 0; }
     bool operator!() const { return c_ == 0; }
+#if CF_CPP11
+    explicit operator bool() const { return c_ != 0; }
+
+    /* A move takes the handle and leaves an invalid one, with no count
+       to touch. */
+    Config(Config&& o) noexcept : c_(o.c_), rc_(o.rc_), err_(o.err_)
+    { o.c_ = 0; o.rc_ = 0; }
+    Config& operator=(Config&& o) noexcept
+    {
+        if (this != &o) {
+            release();
+            c_   = o.c_;
+            rc_  = o.rc_;
+            err_ = o.err_;
+            o.c_  = 0;
+            o.rc_ = 0;
+        }
+        return *this;
+    }
+#endif
 
     const Error& error() const { return err_; }
 
@@ -369,6 +408,11 @@ public:
         cf_config* c = cf_derive(c_, source, pairs, count, e.raw());
         return Config(c, e);
     }
+#if CF_CPP11
+    /* cfg.derive("admin", {{"log.level", "debug"}}) */
+    Config derive(const char* source, std::initializer_list<cf_pair> pairs) const
+    { return derive(source, pairs.begin(), pairs.size()); }
+#endif
 
     /* Keep a change in a source the program granted (cf_write): the
        source must be able to be written, be granted, and the contract
@@ -469,6 +513,7 @@ public:
     { return Setting(c_, key_.empty() ? std::string(child) : key_ + "." + child); }
 
     const std::string& key() const { return key_; }
+    const Config&      config() const { return c_; }
     bool    exists() const { return c_.has(key_.c_str()); }
     cf_type type() const   { return c_.typeOf(key_.c_str()); }
 
@@ -502,6 +547,22 @@ public:
     explicit Builder(const char* appName, int argc, char* const* argv)
         : b_(cf_app_builder(appName, argc, argv)) {}
     ~Builder() { if (b_ != 0) { cf_builder_abort(b_); } }
+#if CF_CPP11
+    Builder(Builder&& o) noexcept : b_(o.b_) { o.b_ = 0; }
+    Builder& operator=(Builder&& o) noexcept
+    {
+        if (this != &o) {
+            if (b_ != 0) {
+                cf_builder_abort(b_);
+            }
+            b_   = o.b_;
+            o.b_ = 0;
+        }
+        return *this;
+    }
+    Builder(const Builder&)            = delete;
+    Builder& operator=(const Builder&) = delete;
+#endif
 
     Builder& cli(const char* name, int rank, int argc, char* const* argv)
     { if (b_) { cf_builder_cli(b_, name, rank, argc, argv); } return *this; }
@@ -590,9 +651,10 @@ public:
     template <typename T> Builder& define(const Key<T>& k)
     { if (b_) { detail::define_key(b_, k); } return *this; }
 
-    /* Every field of a Binding. */
-    template <typename S> Builder& define(const Binding<S>& bd)
-    { if (b_) { bd.defineInto(b_); } return *this; }
+    /* Every field of a Binding, or of anything else that defines a list
+       of keys (configforge17.hpp's Fields). */
+    template <typename D> Builder& define(const D& fields)
+    { if (b_) { fields.defineInto(b_); } return *this; }
 
     /* A key space the program cannot know in advance. */
     Builder& open(const char* prefix)
@@ -612,8 +674,10 @@ public:
     }
 
 private:
+#if !CF_CPP11
     Builder(const Builder&);
     Builder& operator=(const Builder&);
+#endif
     cf_builder* b_;
 };
 
@@ -753,6 +817,23 @@ public:
     explicit Watcher(const Config& c, const cf_allocator* a = 0)
         : err_(), w_(cf_watcher_open(c.raw(), a, err_.raw())) {}
     ~Watcher() { cf_watcher_close(w_); }
+#if CF_CPP11
+    /* Movable from C++11: the descriptor has one owner, the one it was
+       moved to. */
+    Watcher(Watcher&& o) noexcept : err_(o.err_), w_(o.w_) { o.w_ = 0; }
+    Watcher& operator=(Watcher&& o) noexcept
+    {
+        if (this != &o) {
+            cf_watcher_close(w_);
+            err_ = o.err_;
+            w_   = o.w_;
+            o.w_ = 0;
+        }
+        return *this;
+    }
+    Watcher(const Watcher&)            = delete;
+    Watcher& operator=(const Watcher&) = delete;
+#endif
 
     bool valid() const { return w_ != 0; }
     const Error& error() const { return err_; }
@@ -765,8 +846,10 @@ public:
     int wait(long timeoutMs) { return cf_watcher_wait(w_, timeoutMs); }
 
 private:
+#if !CF_CPP11
     Watcher(const Watcher&);
     Watcher& operator=(const Watcher&);
+#endif
     Error       err_; /* before w_: the constructor writes into it */
     cf_watcher* w_;
 };

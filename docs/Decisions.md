@@ -2026,6 +2026,34 @@ where it is a type of its own, and a test builds the header as C++17 as well.
 
 ---
 
+## D-47 — One C++ interface, or one a standard
+
+**Question.** C++03 has no move, no `optional`, no `string_view`, no concepts; C++20
+has all of them, ranges and `std::format`. The owner asked whether, since the
+standards differ so much, there should be more than one interface. One header that
+uses each feature where `__cplusplus` allows, or several?
+
+**Options.**
+
+1. **The C++03 wrapper only.** Every compiler, and a modern program writes C++03.
+2. **One header, features by `#if`.** One file grows a branch per standard, and what a
+   class offers depends on a flag the reader cannot see in the code.
+3. **The C++03 classes, gaining only members C++11 can add without changing what they
+   are (move, explicit bool, an initializer list), and a header a later standard, each
+   over the one before, adding free functions and types beside the classes.**
+
+**Decision: option 3.** `cf::Config` is one type in every standard, so a library
+compiled as C++11 and a program compiled as C++20 pass it between them; what C++17 and
+C++20 add are functions over it (`find`, `value`, `items`, `fields`, `lookup`) and
+specializations of the standard's own templates (`enable_view`, `formatter`), which do
+not change its layout or meaning. Each header refuses a standard below its own by
+name. `find<T>` reads through `cf_try_*` and returns nothing for an integer `T` cannot
+represent - a value is either the configured one or absent, never a different number.
+`lookup<T>` exists only where the library has `std::expected`, which clang 18 with
+libstdc++ 13 does not, and its absence there is not an error.
+
+---
+
 
 One decision is open, because nothing has been built: profiles as a core concept
 (D-12). Value interpolation (D-10), long reserved, is decided and built. Everything else is decided,
