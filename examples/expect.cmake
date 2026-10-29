@@ -3,13 +3,17 @@
 #
 #   cmake -DEXE=<program> -DDIR=<dir> -DEXPECT="re1|||re2" -P expect.cmake
 #
+# -DARGS="a1|||a2" passes arguments, for a program that is a command -
+# cargo running a Rust example.
+#
 # Not PASS_REGULAR_EXPRESSION, which ignores the exit code: an example
 # that printed the right line and then crashed would pass.
 cmake_minimum_required(VERSION 3.10)
 
 file(MAKE_DIRECTORY "${DIR}")
+string(REPLACE "|||" ";" args "${ARGS}")
 execute_process(
-  COMMAND "${EXE}"
+  COMMAND "${EXE}" ${args}
   WORKING_DIRECTORY "${DIR}"
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE out

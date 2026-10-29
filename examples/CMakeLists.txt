@@ -27,3 +27,8 @@ add_subdirectory(c)
 if(CF_WITH_CXX)
   add_subdirectory(cpp)
 endif()
+# Rust through bindings/rust, when asked: cargo is not part of the
+# toolchain every build needs, and it builds the library a second time.
+if(CF_RUST)
+  add_subdirectory(rust)
+endif()

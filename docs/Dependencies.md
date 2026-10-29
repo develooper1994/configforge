@@ -79,6 +79,7 @@ system, no generated header, no options.
 | clang-tidy | Apache-2.0 WITH LLVM-exception | `CF_CLANG_TIDY=ON` |
 | cmake-format, cmake-lint (cmakelang) | GPL-3.0 | `gate.format.cmake`, `gate.cmake.lint` |
 | cppcheck | GPL-3.0-or-later | the `analyze` preset |
+| Rust: `rustc`, `cargo` | MIT OR Apache-2.0 | `bindings/rust`, and `CF_RUST`: the Rust examples. The crate has no dependencies, so cargo runs `--offline` |
 | GNU binutils: `nm`, `objdump` | GPL-3.0-or-later | `gate.symbols`, `gate.abi` |
 
 Every tool in 2b is optional except CMake and a compiler: a gate whose

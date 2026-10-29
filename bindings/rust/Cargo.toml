@@ -1,0 +1,40 @@
+[package]
+name = "configforge"
+version = "0.4.0"
+edition = "2021"
+license = "Zlib"
+authors = ["Mustafa Selçuk Çağlar"]
+description = "ConfigForge for Rust: configuration whose every value can say why it is what it is"
+links = "configforge"
+build = "build.rs"
+publish = false
+
+# No dependencies, on purpose: a build that downloads nothing, as every
+# other build of this project is (AGENTS.md, "Safety"). The library is
+# built from this checkout by build.rs, with CMake.
+[dependencies]
+
+[lib]
+path = "src/lib.rs"
+
+# The examples are the C ones in Rust, kept beside them (examples/rust)
+# and checked by the suite for the same lines.
+[[example]]
+name = "tier0"
+path = "../../examples/rust/tier0.rs"
+
+[[example]]
+name = "layers"
+path = "../../examples/rust/layers.rs"
+
+[[example]]
+name = "mistakes"
+path = "../../examples/rust/mistakes.rs"
+
+[[example]]
+name = "runtime"
+path = "../../examples/rust/runtime.rs"
+
+[[example]]
+name = "references"
+path = "../../examples/rust/references.rs"

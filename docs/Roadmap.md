@@ -54,10 +54,9 @@ Worth building, in the order they serve the library's purpose.
   than the key list.
 * **Native OS sources** (D-30): macOS defaults and gsettings, each when
   there is the platform to test on. The Windows Registry is built.
-* **Bindings**: Rust, and Python for scripting Doctor. Rust's arrive
-  with `examples/rust`, the same programs as `examples/c` and
-  `examples/cpp` and checked for the same lines; there are none until
-  the binding exists.
+* **Bindings**: Python, for scripting Doctor. Rust's is built
+  (`bindings/rust`, with `examples/rust`); a Python one would follow its
+  shape - no dependencies, the library built from the checkout.
 
 ### Considered, and decided against for now: a jq-like query language
 

@@ -73,6 +73,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   only" stays that way. Every item or none, and the error says which
   question said no. `Builder::writable` in C++. `cf_store_set` stays,
   for provisioning a store, and asks nothing.
+- **A Rust binding** (`bindings/rust`, D-44): a crate with no
+  dependencies whose `build.rs` builds the library from the checkout with
+  CMake, so `cargo build --offline` downloads nothing. A consuming
+  `Builder`, `Result<Config, Error>`, reads that cannot fail,
+  `explain()`, `derive()`, `Def` for a full definition; `Config` is
+  `Send + Sync`. Five examples in `examples/rust`, the C ones saying the
+  same lines, run by the suite under `-DCF_RUST=ON`.
 - **Scenario examples, each in C and C++**: `preflight`, a service that
   lints its own configuration with Doctor's library and refuses to serve
   with a password typed as a flag; `policy`, a Windows editor whose

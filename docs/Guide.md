@@ -2,7 +2,7 @@
 
 A guide from the first line of code to a configuration on a device with
 no heap. Every program it quotes is in `examples/` - C in `examples/c`, C++ in
-`examples/cpp` - and is built and run
+`examples/cpp`, Rust in `examples/rust` - and is built and run
 by the test suite, so what you read here is what the library does today.
 The reference for each function is [`API.md`](API.md); the reasons are in
 [`Decisions.md`](Decisions.md).
@@ -19,7 +19,7 @@ The reference for each function is [`API.md`](API.md); the reasons are in
 10. [Changing, saving, reloading](#10-changing-saving-reloading)
 11. [The editor, the report and Doctor](#11-the-editor-the-report-and-doctor)
 12. [Small targets](#12-small-targets)
-13. [C++](#13-c)
+13. [C++](#13-c), and [Rust](#rust)
 14. [Threads](#14-threads)
 
 ### The examples, by what they show
@@ -32,16 +32,16 @@ lines.
 
 | Example | What it shows | Section |
 | ------- | ------------- | ------- |
-| `tier0.c`, `tier0.cpp` | the smallest complete program: command line, environment, defaults | 2 |
+| `tier0.c`, `tier0.cpp`, `tier0.rs` | the smallest complete program: command line, environment, defaults | 2 |
 | `tier1.c`, `tier1.cpp` | the same with a contract | 3, 13 |
-| `layers.c`, `layers.cpp` | six sources at once, and why each value won | 4 |
+| `layers.c`, `layers.cpp`, `layers.rs` | six sources at once, and why each value won | 4 |
 | `explain_demo.c` | `explain()` on one key | 5 |
-| `references.c`, `references.cpp` | one value made from others, `${key}`, and a cycle refused | 5 |
+| `references.c`, `references.cpp`, `references.rs` | one value made from others, `${key}`, and a cycle refused | 5 |
 | `plugins.c` | a strict contract with one prefix handed to plugins, discovered by iteration; lists | 6 |
-| `mistakes.c`, `mistakes.cpp` | what the person running the program sees for each kind of mistake | 7 |
+| `mistakes.c`, `mistakes.cpp`, `mistakes.rs` | what the person running the program sees for each kind of mistake | 7 |
 | `secrets.c` | a password only the environment may set, never printed, never in a report, wiped | 9 |
 | `settings.c` | read, explain, set, save, notice the file change | 10 |
-| `runtime.c`, `runtime.cpp` | an admin changing a setting in a running service: readers unaffected, the change explained | 10 |
+| `runtime.c`, `runtime.cpp`, `runtime.rs` | an admin changing a setting in a running service: readers unaffected, the change explained | 10 |
 | `reload.c`, `reload.cpp` | watch a file, rebuild, log what changed | 10 |
 | `schema.c` | the contract as a JSON Schema for editors | 11 |
 | `preflight.c`, `preflight.cpp` | a service that runs Doctor's rules on itself before it serves, and refuses a password typed as a flag | 11 |
@@ -563,6 +563,26 @@ cf::Config cfg = cf::Builder("myapp", argc, argv)
                      .create();
 if (!cfg) { std::fputs(cfg.error().message(), stderr); return 1; }
 int port = cfg.get<int>("server.port", 8080);
+```
+
+### Rust
+
+`bindings/rust` is a crate over the same library, with no dependencies:
+its `build.rs` builds libconfigforge from the checkout with CMake and
+links it, so `cargo build --offline` downloads nothing. A `Builder` that
+consumes itself into a `Result<Config, Error>`, reads that cannot fail,
+`explain()`, `derive()`, and `Def` for a full definition. A `Config` is
+`Send + Sync` - an immutable snapshot (section 14) - so a request can
+hold one in an `Arc` while the next is derived. Five of the examples are
+in `examples/rust`, the C programs saying the same lines; `-DCF_RUST=ON`
+has the suite run them under cargo.
+
+```rust
+let cfg = configforge::Builder::app("myapp")
+    .define_int("server.port", 8080, 1, 65535, 0)
+    .unknown(configforge::Unknown::Reject)
+    .create()?;
+let port = cfg.int("server.port", 8080);
 ```
 
 ## 14. Threads

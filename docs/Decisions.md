@@ -74,6 +74,7 @@ gets reopened every six months.
 | D-41 | Doctor's rules as a library | Doctor, embedding | **Decided** |
 | D-42 | Authorization for persistent writes | stores, policy, security | **Decided** |
 | D-43 | A renamed key | definitions, provenance, Doctor | **Decided** |
+| D-44 | The Rust binding | bindings, build, safety | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -1922,6 +1923,44 @@ A replacement needs `CF_DEPRECATED` and another valid key, refused at definition
 otherwise. A derived configuration makes the copies again from the old key's inherited
 values rather than inheriting them, so each value has one. The report records
 `replaced_by` as an added field.
+
+---
+
+## D-44 — The Rust binding
+
+**Question.** The owner values Rust as C and C++. How does a Rust program use this
+library without the binding becoming a second implementation, or the build a download?
+
+**Options.**
+
+1. **A rewrite in Rust.** Two libraries to keep in step, and every promise - the same
+   input refused with the same message - made twice.
+2. **bindgen and the cc crate**, the usual way. Both are crates.io downloads, and this
+   project's builds download nothing (AGENTS.md, "Safety").
+3. **A hand-written FFI and a `build.rs` that runs CMake.**
+
+**Decision: option 3.** `bindings/rust` declares the C functions it uses by hand
+(`sys.rs`) and wraps them in a safe layer: a `Builder` that consumes itself into a
+`Result<Config, Error>`, reads that cannot fail, `explain()`, `derive()`. Its `build.rs`
+builds the library from the checkout with CMake - the one tool every build already
+needs - in Release, so Windows links the same C runtime Rust does, and links it
+statically. The crate has no dependencies, so `cargo build --offline` works.
+
+**Three things the FFI must get right, and how each is held.** The C side borrows
+strings - a source's name and path, a definition's lists - so every string passed in is
+kept with the `Config` that may point at it. `cf_def` is mirrored as a `repr(C)` struct,
+and `cf_def_init` writes `sizeof(cf_def)` into its first field: the binding compares it
+with Rust's size and refuses a library built another way rather than misreading it.
+And `Config` is `Send + Sync` because the snapshot is immutable and its count atomic
+(D-14), not by assertion alone.
+
+**What it found.** Its first run printed garbage where a derived change's source name
+belonged: `cf_derive` kept the caller's string rather than copying it, which C callers
+passing literals had never shown. Fixed in the library, not worked around in the
+binding.
+
+**Checked** by the examples: five of `examples/c` in `examples/rust`, run under cargo by
+`-DCF_RUST=ON` and held to the same lines as their C twins; rustfmt and clippy clean.
 
 ---
 

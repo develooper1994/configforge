@@ -49,3 +49,7 @@ cf_v99.json
 # What Conan writes into the tree it is run in.
 CMakeUserPresets.json
 packaging/conan/test_package/build/
+
+# The Rust binding's build, and its lock file: it has no dependencies to lock.
+bindings/rust/target/
+bindings/rust/Cargo.lock
