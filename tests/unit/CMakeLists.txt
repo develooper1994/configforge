@@ -169,26 +169,32 @@ if(CF_WITH_CXX)
   add_test(NAME unit.test_wrapper_access_cxx17
            COMMAND test_wrapper_access_cxx17)
 
-  # The C++17 and C++20 interfaces, each where the compiler has its
-  # standard - and, for C++20, a library with <format>, which GCC 12 and
-  # older lack. Required, not decayed to an older standard: a test of
-  # configforge20.hpp built as C++17 tests nothing.
+  # The wrapper's C++17 and C++20 parts, each where the header itself
+  # turns it on: a test of the C++20 part built where the library has no
+  # <format> would test nothing, so it is asked of the header, not the
+  # compiler.
   include(CheckCXXSourceCompiles)
 
-  # Whether <header> compiles as C++<std>, cached in <var>.
-  function(cf_cxx_library_has std header var)
+  # Whether configforge.hpp, compiled as C++<std>, turns on CF_CPP<std>.
+  function(cf_wrapper_part std var)
     set(CMAKE_CXX_STANDARD ${std})
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
-    check_cxx_source_compiles("#include <${header}>\nint main(){return 0;}"
-                              ${var})
+    set(CMAKE_REQUIRED_INCLUDES ${PROJECT_SOURCE_DIR}/include)
+    set(probe "#include <configforge/configforge.hpp>\n")
+    string(APPEND probe "#if !CF_CPP${std}\n#error off\n#endif\n")
+    string(APPEND probe "int main(){return 0;}")
+    check_cxx_source_compiles("${probe}" ${var})
   endfunction()
   set(cf_modern)
   if("cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-    list(APPEND cf_modern "test_wrapper_cxx17:17")
+    cf_wrapper_part(17 CF_WRAPPER_CXX17)
+    if(CF_WRAPPER_CXX17)
+      list(APPEND cf_modern "test_wrapper_cxx17:17")
+    endif()
   endif()
   if("cxx_std_20" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-    cf_cxx_library_has(20 format CF_HAVE_CXX20_FORMAT)
-    if(CF_HAVE_CXX20_FORMAT)
+    cf_wrapper_part(20 CF_WRAPPER_CXX20)
+    if(CF_WRAPPER_CXX20)
       list(APPEND cf_modern "test_wrapper_cxx20:20")
     endif()
   endif()

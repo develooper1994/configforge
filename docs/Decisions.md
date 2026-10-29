@@ -2026,31 +2026,40 @@ where it is a type of its own, and a test builds the header as C++17 as well.
 
 ---
 
-## D-47 — One C++ interface, or one a standard
+## D-47 — One C++ header, whatever the standard
 
 **Question.** C++03 has no move, no `optional`, no `string_view`, no concepts; C++20
 has all of them, ranges and `std::format`. The owner asked whether, since the
-standards differ so much, there should be more than one interface. One header that
-uses each feature where `__cplusplus` allows, or several?
+standards differ so much, there should be more than one interface - and then, once
+there were three headers, whether one would be better: the compiler's standard
+decides, from C++98 to the newest.
 
 **Options.**
 
 1. **The C++03 wrapper only.** Every compiler, and a modern program writes C++03.
-2. **One header, features by `#if`.** One file grows a branch per standard, and what a
-   class offers depends on a flag the reader cannot see in the code.
-3. **The C++03 classes, gaining only members C++11 can add without changing what they
-   are (move, explicit bool, an initializer list), and a header a later standard, each
-   over the one before, adding free functions and types beside the classes.**
+2. **A header a standard** (`configforge.hpp`, `configforge17.hpp`,
+   `configforge20.hpp`), each over the one before. Built first; the program has to
+   know which to include, and a library compiled as C++17 that includes the C++17
+   header forces it on everything that includes the library's own headers.
+3. **One header, its parts turned on by the standard the including program is
+   compiled as.**
 
-**Decision: option 3.** `cf::Config` is one type in every standard, so a library
-compiled as C++11 and a program compiled as C++20 pass it between them; what C++17 and
-C++20 add are functions over it (`find`, `value`, `items`, `fields`, `lookup`) and
-specializations of the standard's own templates (`enable_view`, `formatter`), which do
-not change its layout or meaning. Each header refuses a standard below its own by
-name. `find<T>` reads through `cf_try_*` and returns nothing for an integer `T` cannot
-represent - a value is either the configured one or absent, never a different number.
-`lookup<T>` exists only where the library has `std::expected`, which clang 18 with
-libstdc++ 13 does not, and its absence there is not an error.
+**Decision: option 3**, at the owner's word, and the better one: a program includes
+`configforge.hpp` and gets everything its standard offers, and moving to a newer
+standard needs no change to an include. What made option 2 look safer is kept: under
+every standard `cf::Config`, `cf::Builder` and the rest are the same classes - C++11
+adds only members C++03 cannot spell (move, explicit bool, an initializer list), and
+C++17 and C++20 add functions over them (`find`, `value`, `items`, `fields`, `lookup`)
+and specializations of the standard's own templates (`enable_view`, `formatter`), which
+change no layout and no meaning. So a library compiled as C++11 and a program
+compiled as C++20 still pass a `cf::Config` between them.
+
+A part turns on by what the standard library has, not only by `__cplusplus`
+(`CF_CPP17`, `CF_CPP20`, `CF_CPP_EXPECTED`): GCC 12 says C++20 and has no `<format>`,
+and a header that failed there would be worse than one offering C++17's part. MSVC's
+`_MSVC_LANG` is read where `__cplusplus` is left at 199711L. `find<T>` reads through
+`cf_try_*` and returns nothing for an integer `T` cannot represent - a value is the
+configured one or absent, never a different number.
 
 ---
 

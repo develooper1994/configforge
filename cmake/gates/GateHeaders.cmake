@@ -26,12 +26,12 @@ if(bad)
 endif()
 message("header gate: clean")
 
-# The C++ headers, each standalone under every standard it claims: the
-# wrapper C++03 and later, configforge17.hpp C++17 and later,
-# configforge20.hpp C++20 and later. A claim the build does not check is
-# a claim that decays - the wrapper was checked only as C++98 for years
-# and did not compile as C++11 on LP64. A standard the compiler does not
-# know, or a C++20 library without <format>, is skipped and said.
+# The C++ wrapper, standalone under every standard from C++98 to C++23
+# that the compiler knows: one header, whose C++11, C++17 and C++20
+# parts turn on with the standard (D-47). A claim the build does not
+# check is a claim that decays - the wrapper was checked only as C++98
+# for years and did not compile as C++11 on LP64. A standard the
+# compiler does not know is skipped and said.
 function(probe_cxx header std prereq)
   set(base "${BIN}/probe_${std}_${header}")
   file(WRITE "${base}.pre.cpp" "${prereq}\nint main(){return 0;}\n")
@@ -71,12 +71,6 @@ if(CXX AND EXISTS "${SRC}/include/configforge/configforge.hpp")
     20
     23)
     probe_cxx(configforge.hpp ${std} "")
-  endforeach()
-  foreach(std 17 20 23)
-    probe_cxx(configforge17.hpp ${std} "#include <optional>")
-  endforeach()
-  foreach(std 20 23)
-    probe_cxx(configforge20.hpp ${std} "#include <format>")
   endforeach()
   if(cxx_bad)
     message(FATAL_ERROR "header gate failed")

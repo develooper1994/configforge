@@ -648,20 +648,22 @@ standard C++: that would need generated code, and code generated into
 `settings.server.port` belongs to the program, which is where C++
 allows it.
 
-### One interface a standard
+### One header, every standard
 
-C++03 and C++20 differ too much for one interface to suit both, so
-there are three, each over the one before (D-47), and a program
-includes the newest its compiler has:
+`configforge.hpp` is the whole C++ interface, from C++98 to the newest
+standard. The compiler's standard decides what it offers (D-47); a
+program includes the one header and never says which:
 
-| Header | Standard | Adds |
-| ------ | -------- | ---- |
-| `configforge.hpp` | C++03 | everything above; under C++11 also move, `explicit operator bool`, `derive("admin", {{"k", "v"}})` |
-| `configforge17.hpp` | C++17 | `cf::find<T>` as `std::optional`, `cf::value` as a `std::variant`, `cf::items` for structured bindings, `cf::fields` over member pointers |
-| `configforge20.hpp` | C++20 | the `cf::readable` concept, `cf::Items` as a view, `std::format` of a `cf::Setting`, a `std::span` of pairs; under C++23 `cf::lookup<T>` as `std::expected` |
+| Standard | Adds |
+| -------- | ---- |
+| C++03 | everything above |
+| C++11 | move, `explicit operator bool`, `derive("admin", {{"k", "v"}})`, `cf::Live` with lambdas |
+| C++17 | `cf::find<T>` as `std::optional`, `cf::value` as a `std::variant`, `cf::items` for structured bindings, `cf::fields` over member pointers |
+| C++20 | the `cf::readable` concept, `cf::Items` as a view, `std::format` of a `cf::Setting`, a `std::span` of pairs |
+| C++23 | `cf::lookup<T>` as `std::expected` |
 
 ```cpp
-#include <configforge/configforge20.hpp>
+#include <configforge/configforge.hpp>
 
 std::optional<int> port = cf::find<int>(cfg, "server.port"); // nullopt, not a fallback
 for (auto [key, value] : cf::items(cfg, "server") | std::views::take(3)) { /* ... */ }
@@ -673,9 +675,13 @@ inline const auto fields = cf::fields(
 auto settings = fields.read<Settings>(cf::Builder("myapp", argc, argv).define(fields).create());
 ```
 
-`find<T>` returns nothing for an integer `T` cannot hold, never a
-truncated one. The header gate compiles each header standalone under
-every standard it claims that the compiler knows.
+The C++17 and C++20 parts turn on by what the standard library has,
+not only by `__cplusplus`: a compiler that says C++20 with a library
+that has no `<format>` (GCC 12) gets the C++17 part and still compiles.
+`CF_CPP11`, `CF_CPP17`, `CF_CPP20` and `CF_CPP_EXPECTED` say which are
+on. `find<T>` returns nothing for an integer `T` cannot hold, never a
+truncated one. The header gate compiles the header standalone under
+every standard the compiler knows.
 
 ### Rust
 

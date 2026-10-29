@@ -18,17 +18,19 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   `cf_live_restarts`. No thread of the library's: the loop polls, or
   `cf_live_wait` waits on a watcher. `cf::Live` in C++, with lambdas
   under C++11; `examples/c/live.c` and `live.cpp`.
-- **A C++ interface a standard** (D-47). Under C++11 the wrapper's
-  classes move, have an explicit bool and derive from pairs in braces.
-  `configforge17.hpp` adds `cf::find<T>` as `std::optional` (nothing,
-  never a truncated integer), `cf::value` as a `std::variant`,
-  `cf::items` and `cf::children` for structured bindings, and
-  `cf::fields` - the program's struct by member-pointer paths known at
-  compile time. `configforge20.hpp` adds the `cf::readable` concept,
-  `cf::Items` as a range view, `std::format` of a `cf::Setting`,
-  `std::span` pairs, and under C++23 `cf::lookup<T>` as
-  `std::expected`. The header gate compiles each under every standard
-  it claims.
+- **One C++ header for every standard** (D-47): `configforge.hpp` offers
+  what the standard it is compiled as can say. Under C++11 the classes
+  move, have an explicit bool and derive from pairs in braces. C++17
+  adds `cf::find<T>` as `std::optional` (nothing, never a truncated
+  integer), `cf::value` as a `std::variant`, `cf::items` and
+  `cf::children` for structured bindings, and `cf::fields` - the
+  program's struct by member-pointer paths known at compile time. C++20
+  adds the `cf::readable` concept, `cf::Items` as a range view,
+  `std::format` of a `cf::Setting` and `std::span` pairs; C++23
+  `cf::lookup<T>` as `std::expected`. Each part turns on by what the
+  standard library has, so a C++20 compiler without `<format>` still
+  compiles it. The header gate builds it under every standard from 98
+  to 23.
 - **Reading a value without repeating its default, in C++** (D-46): a
   declared `cf::Key<T>` defines the contract and reads it
   (`cfg[port]`); `cfg["server"]["port"]` is a `cf::Setting`, typed where

@@ -1,11 +1,14 @@
 /*
  * test_wrapper_cxx17.cpp - what the wrapper says under C++11 (move, an
- * explicit bool, pairs in braces) and the C++17 interface in
- * configforge17.hpp: find<T> as std::optional, value() as a variant,
+ * explicit bool, pairs in braces) and its C++17 part: find<T> as std::optional, value() as a variant,
  * items() for a structured binding, and Fields over member pointers.
  */
 
-#include <configforge/configforge17.hpp>
+#include <configforge/configforge.hpp>
+
+#if !CF_CPP17
+#error "built as C++17, and the wrapper's C++17 part is off"
+#endif
 
 #include <cstdint>
 #include <cstdio>

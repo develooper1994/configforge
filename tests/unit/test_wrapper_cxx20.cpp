@@ -1,11 +1,15 @@
 /*
- * test_wrapper_cxx20.cpp - configforge20.hpp: the readable concept,
+ * test_wrapper_cxx20.cpp - the wrapper's C++20 part: the readable concept,
  * Items as a view under the standard adaptors, std::format of a
  * Setting, a span of pairs, and, under C++23, lookup<T> as
  * std::expected.
  */
 
-#include <configforge/configforge20.hpp>
+#include <configforge/configforge.hpp>
+
+#if !CF_CPP20
+#error "built as C++20, and the wrapper's C++20 part is off"
+#endif
 
 #include <cstdio>
 #include <ranges>
