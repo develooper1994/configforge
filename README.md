@@ -154,6 +154,7 @@ nothing, and `1.0` is where semantic versioning starts.
 | binary snapshot image, optionally carrying provenance | done |
 | prefix iteration, children, array helpers | done |
 | C++03 wrapper; amalgamation; ConfigForge Doctor | done |
+| Rust binding (`bindings/rust`), no dependencies | done |
 | per-parameter policy (D-33) | done |
 | writing an overrides file (`cf_emit`) | done |
 | threading contract (D-14), reference-counted snapshots | done |

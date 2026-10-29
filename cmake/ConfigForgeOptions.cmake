@@ -116,6 +116,8 @@ set(CF_FEATURES
 
 option(CF_BUILD_TESTING "Build the test suite" ON)
 option(CF_BUILD_EXAMPLES "Build the examples" ON)
+option(CF_RUST
+       "Run the Rust binding's examples (needs cargo; downloads nothing)" OFF)
 option(CF_ENABLE_GATES "Run conformance and symbol gates in CI" ON)
 
 # The definitions as a list of -D flags, for the places that compile by
