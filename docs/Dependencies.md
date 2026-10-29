@@ -68,7 +68,7 @@ system, no generated header, no options.
 | tcc (the Tiny C Compiler) | LGPL-2.1-or-later | `EXTRA=compilers`: the suite under a compiler that shares nothing with GCC |
 | pcc (the Portable C Compiler) | BSD-2-Clause | `EXTRA=compilers`: the same, from the other end of C's history |
 | git (`find_package` of `Git`) | GPL-2.0-only | `scripts/verify.cmake -DSOURCE=index` and `scripts/format.cmake`, which ask it what is staged or changed; the build, which asks it for the commit `cf_build_id()` reports (`scripts/buildid.cmake`) - without it the id is empty |
-| Python 3 | PSF-2.0 | `scripts/amalgamate.py`, `scripts/check_formats.py` |
+| Python 3 | PSF-2.0 | `scripts/amalgamate.py`, `scripts/check_formats.py`; `bindings/python` and its test, `doctor.python` |
 | Conan | MIT | the Conan recipe, `conanfile.py`, and its CI job |
 | vcpkg | MIT | the overlay port in `packaging/vcpkg`, and its CI job |
 | pkg-config | GPL-2.0-or-later | finding libkqueue; the install gate's pkg-config consumer |

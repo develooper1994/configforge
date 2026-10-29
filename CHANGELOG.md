@@ -73,6 +73,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   only" stays that way. Every item or none, and the error says which
   question said no. `Builder::writable` in C++. `cf_store_set` stays,
   for provisioning a store, and asks nothing.
+- **Doctor from Python** (`bindings/python/configforge_doctor.py`):
+  `lint`, `diff` and `version`, each finding with its rule, level, key,
+  message, file and line. It runs the `doctor` program and reads its
+  SARIF output, so a script sees what CI sees; the standard library
+  only, and no ABI, since Doctor's library is static.
 - **The feature-flag scenario, in C, C++ and Rust**: every feature
   shipped off, a canary drop-in turning two on, an environment variable
   killing one at three in the morning, and the flags discovered by

@@ -227,6 +227,21 @@ configuration library at all, which is how the line in section 2 holds:
 a program that reads configuration does not carry the rules that audit
 it unless it asks for them.
 
+**From Python**, `bindings/python/configforge_doctor.py` runs the `doctor`
+program and reads its SARIF output - so a script sees exactly what a CI
+job sees, from the same rules and severities, and there is no ABI to
+keep, the library being static:
+
+```python
+import configforge_doctor as doctor
+
+for f in doctor.lint("app.json", baseline="doctor.baseline", fail_on="never"):
+    print(f.rule, f.level, f.key, f.message, f.file, f.line)
+```
+
+`lint`, `diff` and `version`; `DoctorError` for input Doctor cannot use.
+The standard library only. `doctor.python` holds it to the fixtures.
+
 ## 8. Rule Catalogue
 
 Each rule has a stable identifier so it can be suppressed individually. Rules marked

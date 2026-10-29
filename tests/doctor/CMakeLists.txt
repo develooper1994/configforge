@@ -53,6 +53,23 @@ doctor_case(lint_sources 1 lint|cf_fx_sources.json)
 doctor_case(lint_files_secret 0 lint|cf_fx_files.json|--fail-on|never)
 doctor_case(not_a_report 2 dump|cf_fx_staging.ini)
 
+# Doctor from Python (bindings/python): the same findings, read from the
+# program's SARIF output. Where there is a Python 3 to run it.
+find_package(
+  Python3
+  COMPONENTS Interpreter
+  QUIET)
+if(Python3_Interpreter_FOUND)
+  add_test(
+    NAME doctor.python
+    COMMAND
+      ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/doctor/test_python.py
+      ${CMAKE_SOURCE_DIR}/bindings/python $<TARGET_FILE:doctor>
+      ${CMAKE_CURRENT_BINARY_DIR})
+  set_tests_properties(doctor.python PROPERTIES FIXTURES_REQUIRED
+                                                DOCTOR_REPORTS)
+endif()
+
 # The version Doctor reports is the one cf_version.h says, with the
 # commit after it when the build knew one.
 add_test(NAME doctor.version COMMAND doctor --version)
