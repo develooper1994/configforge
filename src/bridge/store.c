@@ -189,7 +189,7 @@ static cf_bool store_failed(sqlite3* db, const char* path, cf_error* err) {
     return r;
 }
 
-cf_bool cf_store_set(const char* path, const cf_store_item* items, size_t count,
+cf_bool cf_store_set(const char* path, const cf_write_item* items, size_t count,
                      const char* meta, cf_error* err) {
     sqlite3*      db = NULL;
     sqlite3_stmt* q  = NULL;
@@ -269,7 +269,7 @@ static cf_bool store_load(const cf_source* s, cf_keyspace* ks) {
                         st->path);
 }
 
-cf_bool cf_store_set(const char* path, const cf_store_item* items, size_t count,
+cf_bool cf_store_set(const char* path, const cf_write_item* items, size_t count,
                      const char* meta, cf_error* err) {
     (void)items;
     (void)count;
@@ -292,7 +292,7 @@ static const char* store_path(const cf_source* s) {
 /* Through the source's path, not its state, so that a derived
    configuration's stand-in for the store - which has the path and none
    of the state - writes to the same one. */
-static cf_bool store_write(const cf_source* s, const cf_store_item* items, size_t count,
+static cf_bool store_write(const cf_source* s, const cf_write_item* items, size_t count,
                            const char* meta, cf_error* err) {
     return cf_store_set(cf_source_path(s), items, count, meta, err);
 }

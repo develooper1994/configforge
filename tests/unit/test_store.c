@@ -36,7 +36,7 @@ static cf_config* load(unsigned flags, cf_error* err) {
 #if CF_WITH_SQLITE
 
 static void test_write_and_read(void) {
-    cf_store_item items[4];
+    cf_write_item items[4];
     cf_error      err = CF_ERROR_INIT;
     cf_config*    c;
     static char   ex[2048];
@@ -77,7 +77,7 @@ static void test_write_and_read(void) {
 }
 
 static void test_replace(void) {
-    cf_store_item one;
+    cf_write_item one;
     cf_error      err = CF_ERROR_INIT;
     cf_config*    c;
 
@@ -92,7 +92,7 @@ static void test_replace(void) {
 
 /* One bad item refuses the whole change. */
 static void test_atomic(void) {
-    cf_store_item two[2];
+    cf_write_item two[2];
     cf_error      err = CF_ERROR_INIT;
     cf_config*    c;
 
@@ -110,7 +110,7 @@ static void test_atomic(void) {
 
 /* The contract applies to a store as to any source. */
 static void test_contract(void) {
-    cf_store_item one;
+    cf_write_item one;
     cf_error      err = CF_ERROR_INIT;
     cf_builder*   b;
     cf_config*    c;
@@ -130,7 +130,7 @@ static void test_contract(void) {
 /* A running program's change, kept: granted, checked, written, and
    explained after the restart with what the writer said. */
 static void test_write_granted(void) {
-    cf_store_item one;
+    cf_write_item one;
     cf_error      err = CF_ERROR_INIT;
     cf_builder*   b;
     cf_config*    c;
@@ -199,7 +199,7 @@ static void test_missing(void) {
 #else
 
 static void test_disabled(void) {
-    cf_store_item one;
+    cf_write_item one;
     cf_error      err = CF_ERROR_INIT;
     cf_config*    c   = load(CF_FILE_OPTIONAL, &err);
 

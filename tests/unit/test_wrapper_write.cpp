@@ -62,7 +62,7 @@ int main()
 
     /* write(): a memory source cannot be written, and the handle's
        caller hears why. */
-    cf_store_item one;
+    cf_write_item one;
     one.key = "server.port";
     cf_value_int(&one.value, 9443);
     cf::Error e;

@@ -377,7 +377,7 @@ CF_API cf_config* cf_derive_in(const cf_config* base, cf_arena* arena,
  * ------------------------------------------------------------------ */
 
 CF_API cf_bool cf_write(const cf_config* c, const char* target,
-                        const cf_store_item* items, size_t count, const char* meta,
+                        const cf_write_item* items, size_t count, const char* meta,
                         cf_error* err);
 
 /* ------------------------------------------------------------------ *

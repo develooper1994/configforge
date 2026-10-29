@@ -264,7 +264,7 @@ public:
     /* Keep a change in a source the program granted (cf_write): the
        source must be able to be written, be granted, and the contract
        must accept every item, or nothing is written. */
-    bool write(const char* target, const cf_store_item* items, size_t count,
+    bool write(const char* target, const cf_write_item* items, size_t count,
                const char* meta = 0, Error* err = 0) const
     {
         Error  local;

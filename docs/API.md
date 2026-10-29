@@ -386,7 +386,7 @@ configuration does not change: it is a snapshot. Rebuild, or derive,
 to see the write.
 
 ```c
-CF_API cf_bool cf_write(const cf_config* c, const char* target, const cf_store_item* items, size_t count, const char* meta, cf_error* err);
+CF_API cf_bool cf_write(const cf_config* c, const char* target, const cf_write_item* items, size_t count, const char* meta, cf_error* err);
 ```
 
 ### Change notification
@@ -2246,7 +2246,7 @@ CF_API const cf_error* cf_source_store_error(const cf_source* s);
 ```
 
 ```c
-CF_API cf_bool cf_store_set(const char* path, const cf_store_item* items, size_t count, const char* meta, cf_error* err);
+CF_API cf_bool cf_store_set(const char* path, const cf_write_item* items, size_t count, const char* meta, cf_error* err);
 ```
 
 Write `items` to the store at `path`, creating it and its table if
