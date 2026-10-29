@@ -31,11 +31,8 @@ Things that are wrong or unproven today, most serious first.
    is built (`cmake/configforge.symbols`, `gate.abi`), so a change to the
    interface is already a line in a diff. Before 1.0 is when an
    interface mistake is cheap, and a review of the 0.4.0 interface left
-   these to decide:
-   * `cf_error` holds its strings inline, sized by build limits, and the
-     Rust binding mirrors those sizes. `size` already lets it grow; what
-     1.0 should promise is that the limits are part of the ABI, or that a
-     reader asks for them.
+   three to decide, all decided: `CF_OPTIONAL`, `cf_write_item`, and the
+   limits as part of the ABI (D-45).
 
 ## Ideas
 

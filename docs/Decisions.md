@@ -75,6 +75,7 @@ gets reopened every six months.
 | D-42 | Authorization for persistent writes | stores, policy, security | **Decided** |
 | D-43 | A renamed key | definitions, provenance, Doctor | **Decided** |
 | D-44 | The Rust binding | bindings, build, safety | **Decided** |
+| D-45 | Build limits in the ABI | ABI, bindings, 1.0 | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -1964,7 +1965,31 @@ binding.
 
 ---
 
-## Status of the log
+## D-45 — Build limits in the ABI
+
+**Question.** `cf_error` holds its key, source and message inline, in arrays sized by
+`CF_KEY_MAX`, `CF_SOURCE_MAX` and `CF_MESSAGE_MAX` - build options (D-37). A program,
+or a binding that mirrors the struct, compiled against other limits than the library's
+reads the wrong bytes. Before 1.0 promises an ABI: are the limits part of it?
+
+**Options.**
+
+1. **Pointers instead of arrays**, so the struct's layout does not depend on a limit.
+   Then an error needs memory to report a memory error, and `cf_error` on the stack, the
+   one thing every caller relies on, stops being free.
+2. **The limits are part of a build's ABI**, and nothing checks it.
+3. **They are part of it, and the library says what they are.**
+
+**Decision: option 3.** Two builds of the same version with different limits are
+different ABIs, as two builds with different `CF_WITH_REAL` already are - which the
+symbol list records (`gate.abi`'s `real` marks). `cf_build_limit("key")` and its
+siblings return the build's values, so a consumer that cannot see the headers the
+library was built with can ask: the Rust binding compares all three with the sizes it
+mirrors, once, before the first call that fills an error, and refuses a library built
+otherwise. `cf_error.size` stays what lets the struct grow at its end.
+
+---
+
 
 One decision is open, because nothing has been built: profiles as a core concept
 (D-12). Value interpolation (D-10), long reserved, is decided and built. Everything else is decided,
