@@ -26,9 +26,11 @@ Things that are wrong or unproven today, most serious first.
 
 ## Next
 
-3. **1.0**, once 1-2 are done: a symbol list, an ABI check in CI
-   (abidiff), and semantic versioning from then on. Before 1.0 is when
-   an interface mistake is cheap.
+3. **1.0**, once 1-2 are done: an ABI check in CI (abidiff against the
+   last release), and semantic versioning from then on. The symbol list
+   is built (`cmake/configforge.symbols`, `gate.abi`), so a change to the
+   interface is already a line in a diff. Before 1.0 is when an
+   interface mistake is cheap.
 
 ## Ideas
 

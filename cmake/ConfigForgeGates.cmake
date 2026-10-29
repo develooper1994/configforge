@@ -71,6 +71,14 @@ function(configforge_add_gates tgt)
     COMMAND
       ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR} -P
       ${CMAKE_SOURCE_DIR}/cmake/gates/GateApiref.cmake)
+  # The symbol list is the public interface: against the headers
+  # everywhere, and against the built library where nm can read it.
+  add_test(
+    NAME gate.abi
+    COMMAND
+      ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DLIB=$<TARGET_FILE:${tgt}>
+      -DWITH_REAL=${CF_WITH_REAL} -P
+      ${CMAKE_SOURCE_DIR}/cmake/gates/GateAbi.cmake)
   add_test(
     NAME gate.sbom
     COMMAND
