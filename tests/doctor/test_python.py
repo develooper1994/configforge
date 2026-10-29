@@ -1,7 +1,7 @@
 """The Python module over Doctor: the findings `doctor lint` makes, read
 back from its SARIF output with their rule, level, key and place.
 
-    python3 test_python.py <bindings/python> <doctor> <directory of fixture reports>
+    python3 test_python.py <bindings/python/src> <doctor> <directory of fixture reports>
 """
 
 import os

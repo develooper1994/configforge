@@ -73,3 +73,24 @@ rust_expect(
   "search_v2 +off"
   "env +false +selected +SHOP_FEATURES__SEARCH_V2"
   "conf.d +true +shadowed +conf.d/50-canary.ini")
+
+# The reloading gateway: the same lines as live.c.
+rust_expect(
+  live
+  ${CMAKE_CURRENT_BINARY_DIR}/live-run
+  "1. reload: swapped"
+  "serving on :8080, log debug, 600"
+  "waiting for a restart: server.port"
+  "running +8080 +selected"
+  "gateway.ini 9443 +shadowed"
+  "limit.per_minute: 600 -> 60"
+  "operator: approved"
+  "serving on :8080, log info, 60 requests"
+  "3. reload refused: limit.per_minute: .lots. is not a valid int")
+
+# The binding's own tests and its documentation's examples, under cargo.
+add_test(
+  NAME rust.cargo_test
+  COMMAND ${CMAKE_COMMAND} -E env CARGO_TARGET_DIR=${target} ${CARGO_EXE} test
+          --offline --quiet --manifest-path ${manifest})
+set_tests_properties(rust.cargo_test PROPERTIES RUN_SERIAL TRUE)

@@ -2099,6 +2099,32 @@ no value when the program started had nothing in use to keep and takes the new o
 
 ---
 
+## D-49 — Python reaches the library through ctypes
+
+**Question.** Python had Doctor (over its SARIF) and not the library. How should a
+Python program call it?
+
+**Options.**
+
+1. **A CPython extension module** in C. Fast, but one binary per Python version and
+   platform, and a compiler on every machine that installs from source.
+2. **cffi or pybind11.** A dependency to download, which nothing else here has.
+3. **ctypes over the shared library.** The standard library only; one package for every
+   Python 3.8 and later; the price is that the struct layouts are written again in
+   Python.
+
+**Decision: option 3.** A configuration is read at start-up and on a reload, not in an
+inner loop, so ctypes' call overhead costs nothing a program would notice. The layouts
+are the ones the Rust binding mirrors, and the same check guards them: the library's
+limits (`cf_build_limit`, D-45) are compared at import and a library built otherwise is
+refused by name. The package is pure Python and finds the library at
+`$CONFIGFORGE_LIB`, beside itself, or on the platform's search path, so a wheel that
+carries the library is a packaging step, not a code change. A test of it runs only
+against a shared build, so `verify` gained `EXTRA=shared`, the local twin of CI's
+shared job.
+
+---
+
 
 One decision is open, because nothing has been built: profiles as a core concept
 (D-12). Value interpolation (D-10), long reserved, is decided and built. Everything else is decided,

@@ -153,9 +153,11 @@ nothing, and `1.0` is where semantic versioning starts.
 | provenance report, schema v1, and Report Replay | done |
 | binary snapshot image, optionally carrying provenance | done |
 | prefix iteration, children, array helpers | done |
-| C++03 wrapper; amalgamation; ConfigForge Doctor | done |
-| Rust binding (`bindings/rust`), no dependencies | done |
-| Doctor from Python (`bindings/python`), over the program's SARIF | done |
+| C++ wrapper, one header from C++98 to C++23 (D-47); amalgamation; ConfigForge Doctor | done |
+| a value read without repeating its default: `cf::Key`, `cfg["a"]["b"]`, a bound struct (D-46) | done |
+| reloading in a mode the program chooses, keys that wait for a restart (`cf_live`, D-48) | done |
+| Rust binding (`bindings/rust`), no dependencies: typed keys, `settings!`, `Live` | done |
+| Python binding (`bindings/python`), ctypes, standard library only (D-49); Doctor from Python | done |
 | per-parameter policy (D-33) | done |
 | writing an overrides file (`cf_emit`) | done |
 | threading contract (D-14), reference-counted snapshots | done |

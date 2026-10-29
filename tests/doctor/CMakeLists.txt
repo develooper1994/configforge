@@ -64,7 +64,7 @@ if(Python3_Interpreter_FOUND)
     NAME doctor.python
     COMMAND
       ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/doctor/test_python.py
-      ${CMAKE_SOURCE_DIR}/bindings/python $<TARGET_FILE:doctor>
+      ${CMAKE_SOURCE_DIR}/bindings/python/src $<TARGET_FILE:doctor>
       ${CMAKE_CURRENT_BINARY_DIR})
   set_tests_properties(doctor.python PROPERTIES FIXTURES_REQUIRED
                                                 DOCTOR_REPORTS)

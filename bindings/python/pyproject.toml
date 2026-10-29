@@ -1,0 +1,33 @@
+# The Python package: the binding over the shared library (configforge)
+# and Doctor's driver (configforge_doctor). Pure Python, standard library
+# only; the library itself is built with CMake (-DBUILD_SHARED_LIBS=ON)
+# and found as $CONFIGFORGE_LIB, beside the package, or on the system's
+# library path.
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "configforge"
+version = "0.4.0"
+description = "Configuration whose every value can say why it is what it is"
+readme = "README.md"
+license = { text = "Zlib" }
+authors = [{ name = "Mustafa Selçuk Çağlar" }]
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: zlib/libpng License",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+py-modules = ["configforge_doctor"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+configforge = ["py.typed"]
