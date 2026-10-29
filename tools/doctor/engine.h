@@ -36,6 +36,7 @@ typedef struct rkey {
     cf_bool     required;
     cf_bool     sensitive;
     cf_bool     deprecated;
+    const char* replaced_by; /* the new name, when it was renamed */
     cf_bool     defined;
     const char* type;
     /* The definition's policy: the sources permitted to supply this

@@ -149,6 +149,7 @@ cf_ks_inspect_redacted
 cf_ks_is_sorted
 cf_ks_lower_bound
 cf_ks_reject
+cf_ks_rename
 cf_ks_reselect
 cf_ks_resolve
 cf_lex_cli

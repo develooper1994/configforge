@@ -46,6 +46,7 @@ lines.
 | `schema.c` | the contract as a JSON Schema for editors | 11 |
 | `preflight.c`, `preflight.cpp` | a service that runs Doctor's rules on itself before it serves, and refuses a password typed as a flag | 11 |
 | `policy.c`, `policy.cpp` | a Windows editor: the user's Registry settings, the administrator's policy over them, one key only policy may set | 4 |
+| `migration.c`, `migration.cpp` | a key renamed in version 2, and the files written for version 1 still working | 3 |
 | `embedded.c` | a fixed buffer and an image, no heap, still explaining itself | 12 |
 
 ## 1. Getting it into a build
@@ -144,6 +145,13 @@ that must never be saved into a file. For anything the convenience
 calls do not cover - a permitted set, a description, a policy saying
 which sources may set the key - fill a `cf_def` and pass it to
 `cf_builder_define`; `examples/c/tier1.c` does it for `log.level`.
+
+A key that is renamed keeps its old definition, `CF_DEPRECATED`, with
+`replaced_by` naming the new key: a value written under the old name
+then configures the new one - below the new spelling in the same file,
+by ordinary precedence across sources - and `explain()` places it
+`app.ini:2:1 (as db.host)`, the line somebody has to update. Doctor's
+CFD009 names it too. `examples/c/migration.c`, and its C++ twin.
 
 A prefix you cannot know in advance - a plugin's settings - is exempted
 from unknown-key rejection with `cf_builder_open(b, "plugins")`.

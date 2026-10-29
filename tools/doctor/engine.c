@@ -189,6 +189,8 @@ static cf_bool parse(report* r, const cf_blob* blob, cf_error* err) {
         rk->required = flag_at(&r->doc, rk->key, rk->keylen, "required");
         rk->sensitive  = flag_at(&r->doc, rk->key, rk->keylen, "sensitive");
         rk->deprecated = flag_at(&r->doc, rk->key, rk->keylen, "deprecated");
+        rk->replaced_by =
+            text_at(&r->doc, "keys.%S.definition.replaced_by", rk->key, rk->keylen);
         /* A key with no definition has a null one in the report, which
            is how an undefined key is told from a defined one without a
            type. */
@@ -840,9 +842,11 @@ static void rule_deprecated(const report* r) {
                 continue;
             }
             finding_at(r->D, "CFD009", "warning", name, k->c[j].at,
-                       "deprecated and still supplied by %s%s%s", k->c[j].source,
+                       "deprecated and still supplied by %s%s%s%s%s", k->c[j].source,
                        (k->c[j].at != NULL) ? " at " : "",
-                       (k->c[j].at != NULL) ? k->c[j].at : "");
+                       (k->c[j].at != NULL) ? k->c[j].at : "",
+                       (k->replaced_by != NULL) ? "; rename it to " : "",
+                       (k->replaced_by != NULL) ? k->replaced_by : "");
             break;
         }
     }

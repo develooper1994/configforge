@@ -73,6 +73,7 @@ gets reopened every six months.
 | D-40 | Where the version is written, and the commit a build is from | releases, packaging, provenance | **Decided** |
 | D-41 | Doctor's rules as a library | Doctor, embedding | **Decided** |
 | D-42 | Authorization for persistent writes | stores, policy, security | **Decided** |
+| D-43 | A renamed key | definitions, provenance, Doctor | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -1890,6 +1891,37 @@ configuration exists - an installer, a migration. It is documented as asking not
 **What it costs.** One member on `cf_source_vtable`, so a custom source written before
 this does not compile until it says NULL - which `-Wmissing-field-initializers` was there
 to make a decision rather than a default. Before 1.0, that is the time to add it.
+
+---
+
+## D-43 — A renamed key
+
+**Question.** `cf_def` has had a `replaced_by` field since the definition model was
+written, and nothing read it: a key renamed in version 2 left every file written for
+version 1 configuring nothing. What should the old spelling do?
+
+**Options.**
+
+1. **Nothing**, the deprecation a warning and the rename the user's problem. Every file
+   in the field breaks on upgrade, which is exactly what a deprecation exists to avoid.
+2. **An alias**, the old name read as if it were the new one. Simple, and it erases the
+   fact that the file says the old name - the one thing a person migrating needs to see.
+3. **A copy at the same rank, marked.** Each value written under the old name is offered
+   to the new key as well, `CF_CAND_RENAMED`, its place `app.ini:2:1 (as db.host)`.
+
+**Decision: option 3.** Three rules make it predictable:
+
+* **Precedence across sources is unchanged.** `--db.host` on the command line still beats
+  `database.host` in a file: the person typing a flag meant it, whatever they called it.
+* **Within one source the new spelling wins**, wherever each is written, by the sort
+  order rather than by position: a half-updated file means its new line.
+* **The old key keeps its values**, for code that has not moved yet; Doctor's CFD009
+  still reports it as deprecated and still supplied, and now says what to rename it to.
+
+A replacement needs `CF_DEPRECATED` and another valid key, refused at definition
+otherwise. A derived configuration makes the copies again from the old key's inherited
+values rather than inheriting them, so each value has one. The report records
+`replaced_by` as an added field.
 
 ---
 

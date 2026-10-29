@@ -17,7 +17,7 @@ in; the types are in the headers themselves.
 - [`cf_flatten.h`](#cf_flattenh) - 4
 - [`cf_image.h`](#cf_imageh) - 10
 - [`cf_iterate.h`](#cf_iterateh) - 5
-- [`cf_keyspace.h`](#cf_keyspaceh) - 25
+- [`cf_keyspace.h`](#cf_keyspaceh) - 26
 - [`cf_numeric.h`](#cf_numerich) - 7
 - [`cf_platform.h`](#cf_platformh) - 19
 - [`cf_port.h`](#cf_porth) - 10
@@ -1294,6 +1294,14 @@ CF_API cf_bool cf_ks_add_default(cf_keyspace* ks, const char* key, size_t keylen
 ```
 
 Record a definition's default (CF_CAND_DEFAULT).
+
+```c
+CF_API cf_bool cf_ks_rename(cf_keyspace* ks, const char* from, size_t fromlen, const char* to, size_t tolen);
+```
+
+Before resolution: every candidate of `from` offered to `to` as well,
+CF_CAND_RENAMED. The old key keeps its own, for code that still reads
+it. False when there is no room.
 
 ```c
 CF_API cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key, size_t keylen, const cf_candidate* c);
