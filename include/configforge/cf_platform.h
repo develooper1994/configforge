@@ -107,6 +107,45 @@ CF_API int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME
                                 int max, cf_error* err);
 
 /* ------------------------------------------------------------------ *
+ * The Windows Registry
+ *
+ * Every value under one key, in UTF-8, each with the path of the
+ * subkey holding it. Windows only; everywhere else the walk fails and
+ * says so, because a registry source that read nothing on Linux would
+ * look exactly like an empty one.
+ * ------------------------------------------------------------------ */
+
+enum {
+    CF_REG_TEXT  = 1, /* REG_SZ, REG_EXPAND_SZ (not expanded)        */
+    CF_REG_INT   = 2, /* REG_DWORD, REG_QWORD                        */
+    CF_REG_LIST  = 3, /* REG_MULTI_SZ: `text` holds n NUL-ended items */
+    CF_REG_OTHER = 4  /* anything else, REG_BINARY among them        */
+};
+
+typedef struct cf_platform_reg_value {
+    const char* path; /* below the root, '\\'-separated; "" for it */
+    const char* name; /* "" for the key's unnamed value            */
+    int         kind;
+    const char* text; /* CF_REG_TEXT, CF_REG_LIST                  */
+    size_t      textlen;
+    size_t      items; /* CF_REG_LIST                               */
+    cf_i64      i;     /* CF_REG_INT                                */
+} cf_platform_reg_value;
+
+/* Return false to stop the walk; the walk then returns -1, and the
+   callback is expected to have said why. */
+typedef cf_bool (*cf_platform_reg_fn)(void* ctx, const cf_platform_reg_value* v);
+
+CF_API cf_bool cf_platform_has_registry(void);
+
+/* Every value under `root` - "HKCU\\Software\\MyApp", HKCU, HKLM, HKCR,
+   HKU or HKCC first - and every subkey's, to CF_MAX_DEPTH. Buffers come
+   from `arena`. 0 when walked, 1 when `root` does not exist, -1 with
+   `err` set. */
+CF_API int cf_platform_registry_walk(const char* root, cf_arena* arena,
+                                     cf_platform_reg_fn fn, void* ctx, cf_error* err);
+
+/* ------------------------------------------------------------------ *
  * File stamps
  *
  * Modification time and size, which is what a change check compares.

@@ -78,6 +78,23 @@ int cf_platform_world_readable(const char* path) {
     return -1;
 }
 
+/* There is no registry here, and a source that read none would look
+   like an empty one. */
+cf_bool cf_platform_has_registry(void) {
+    return CF_FALSE;
+}
+
+int cf_platform_registry_walk(const char* root, cf_arena* arena, cf_platform_reg_fn fn,
+                              void* ctx, cf_error* err) {
+    (void)arena;
+    (void)fn;
+    (void)ctx;
+    cf_error_set(err, CF_E_CAPABILITY, NULL, root,
+                 "'%s' is in the Windows Registry, which exists only on Windows",
+                 (root != NULL) ? root : "");
+    return -1;
+}
+
 cf_bool cf_platform_has_wake(void) {
     return CF_FALSE;
 }

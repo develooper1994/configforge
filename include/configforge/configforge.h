@@ -128,6 +128,12 @@ CF_API cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank,
 CF_API cf_bool cf_builder_secrets(cf_builder* b, const char* name, int rank,
                                   const char* path, const char* prefix, unsigned flags);
 
+/* A key of the Windows Registry and its subkeys (cf_source_registry
+   says how names and types map). Windows only; elsewhere it fails by
+   name, CF_FILE_OPTIONAL or not. */
+CF_API cf_bool cf_builder_registry(cf_builder* b, const char* name, int rank,
+                                   const char* root, unsigned flags);
+
 /* A SQLite store (CF_WITH_SQLITE): typed values, each with what its
    writer said about it. cf_write writes one, when it is granted. */
 CF_API cf_bool cf_builder_store(cf_builder* b, const char* name, int rank,

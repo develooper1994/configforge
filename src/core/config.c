@@ -352,6 +352,29 @@ cf_bool cf_builder_secrets(cf_builder* b, const char* name, int rank, const char
     return CF_TRUE;
 }
 
+cf_bool cf_builder_registry(cf_builder* b, const char* name, int rank, const char* root,
+                            unsigned flags) {
+    cf_source* s = builder_slot(b);
+    void*      st;
+
+    if (s == NULL) {
+        return CF_FALSE;
+    }
+    st = cf_arena_calloc(b->arena, cf_source_registry_state_size());
+    if (st == NULL) {
+        cf_error e = CF_ERROR_INIT;
+        cf_error_set(&e, CF_E_MEMORY, NULL, root, "no room for a registry source");
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    if (!cf_source_registry(s, name, rank, root, flags, st,
+                            cf_source_registry_state_size())) {
+        return CF_FALSE;
+    }
+    ++b->nsources;
+    return CF_TRUE;
+}
+
 cf_bool cf_builder_store(cf_builder* b, const char* name, int rank, const char* path,
                          unsigned flags) {
     cf_source* s = builder_slot(b);
@@ -725,6 +748,9 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
             }
             if (detail == NULL) {
                 detail = cf_source_secrets_error(&c->sources[i]);
+            }
+            if (detail == NULL) {
+                detail = cf_source_registry_error(&c->sources[i]);
             }
             if (detail != NULL) {
                 return create_failed(b, err, detail);

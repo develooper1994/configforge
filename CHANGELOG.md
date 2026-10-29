@@ -73,6 +73,15 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   only" stays that way. Every item or none, and the error says which
   question said no. `Builder::writable` in C++. `cf_store_set` stays,
   for provisioning a store, and asks nothing.
+- **The Windows Registry as a source** (`cf_builder_registry`, D-30):
+  every value under a key such as `HKCU\Software\MyApp`, a subkey a
+  section, names lowered. DWORD and QWORD are integers, REG_SZ is text
+  the contract types, REG_EXPAND_SZ is kept unexpanded, REG_MULTI_SZ is
+  a list; any other type and a set unnamed value are refused naming the
+  value, and `explain()` gives each value's full path. A platform
+  capability rather than an option - there is no dependency - so on any
+  other platform the source fails by name, optional or not.
+  `Builder::registry` in C++.
 - **`doctor import-systemd`**: `systemd-analyze cat-config` or
   `systemctl cat` in, a report out. Each file is a source in the order
   systemd applies them, the later above the earlier, and each value is

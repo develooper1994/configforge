@@ -1256,10 +1256,21 @@ because an untested source is a claim rather than a feature.
 | directory of drop-in files | built | one rank, byte order, later wins |
 | binary image | built | D-28 |
 | TOML | built | the D-23 subset, own parser, on by default |
-| XML, SQLite | deferred | D-23; a linked dependency each |
-| Windows Registry | deferred | needs Windows to test |
+| XML, SQLite | built | D-23; a linked dependency each, off by default |
+| directory of secrets, `.properties` | built | a file a key; a flat format |
+| Windows Registry | built | a platform capability, tested on Windows (below) |
 | gsettings, macOS defaults | deferred | needs the platform to test |
 | remote key-value stores | deferred | a non-goal until something asks |
+
+**The Registry is a platform capability, not an option.** It needs no dependency -
+the API is in every Windows system - so there is no `CF_WITH_REGISTRY` to turn on, which
+the specification had planned. The walk is in `src/platform/win32`, the only code that
+knows Windows; everywhere else `cf_platform_registry_walk` fails, and the source with it,
+*optional or not*, because a Registry source that read nothing on Linux would look
+exactly like an empty key. REG_SZ is text the contract types rather than typed text,
+because installers write numbers as strings; REG_EXPAND_SZ is not expanded, because
+expanding it would be a second environment source with no name in `explain()`. Its test
+writes its own keys with `reg.exe` and removes them, so it needs no platform macro.
 
 **The drop-in directory is worth a note.** `conf.d` is how systemd, sudo, apt and a dozen
 others let a package add configuration without editing a file it does not own. Each file
