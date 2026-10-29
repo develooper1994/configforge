@@ -128,6 +128,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- **`cf_derive` kept the caller's source name, not a copy.** Every
+  `explain()` of the derived configuration names the change's source, so
+  a name passed from a buffer the caller then reused - a request
+  handler's, or a Rust `String` - came back as whatever the buffer held
+  next. It is copied into the derived configuration's arena, as its
+  values always were. The Rust binding's first run found it.
+
 - **A per-key policy refused the program's own default.** A key locked
   to one source (D-33) with nothing in that source had no value at all,
   so the program read the getter's fallback instead of the default it

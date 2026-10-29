@@ -932,7 +932,16 @@ static cf_config* derive_onto(const cf_config* base, cf_arena* ar, cf_bool owns,
        for this library to move in. cf_builder_create loads them, before
        the sources, from here. */
     b->inherit = base;
-    name       = (source_name != NULL) ? source_name : "set";
+    /* Copied: the change's source is named in every explain() of the
+       derived configuration, which outlives the caller's string as it
+       outlives the caller's pairs (whose values the load copies). */
+    name = cf_arena_dup(ar, (source_name != NULL) ? source_name : "set",
+                        strlen((source_name != NULL) ? source_name : "set"));
+    if (name == NULL) {
+        cf_error_set(err, CF_E_MEMORY, NULL, NULL, "no room to derive a configuration");
+        cf_builder_abort(b);
+        return NULL;
+    }
 
     /* And the sources they came from, by name, rank, kind and file, so
        that the derived configuration explains itself as the original
