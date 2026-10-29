@@ -54,7 +54,8 @@ foreach(
   plugins
   runtime
   references
-  migration)
+  migration
+  flags)
   add_executable(${ex} ${ex}.c)
   target_link_libraries(${ex} PRIVATE configforge)
   set_target_properties(
@@ -216,4 +217,17 @@ if(CF_WITH_INI)
     "connecting to db1.internal:5432"
     "app.ini:2:1 .as db.host."
     "connecting to db2.internal:5432")
+endif()
+
+# Feature flags: shipped off, a canary drop-in, an environment kill
+# switch, and the flags discovered by iteration. The files are shared.
+if(CF_WITH_INI AND CF_WITH_DIR)
+  example_expect(
+    flags
+    ${CMAKE_CURRENT_SOURCE_DIR}/flags
+    "new_checkout +on"
+    "dark_mode +off"
+    "search_v2 +off"
+    "env +false +selected +SHOP_FEATURES__SEARCH_V2"
+    "conf.d +true +shadowed +conf.d/50-canary.ini")
 endif()

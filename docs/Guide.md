@@ -46,6 +46,7 @@ lines.
 | `schema.c` | the contract as a JSON Schema for editors | 11 |
 | `preflight.c`, `preflight.cpp` | a service that runs Doctor's rules on itself before it serves, and refuses a password typed as a flag | 11 |
 | `policy.c`, `policy.cpp` | a Windows editor: the user's Registry settings, the administrator's policy over them, one key only policy may set | 4 |
+| `flags.c`, `flags.cpp`, `flags.rs` | feature flags shipped off, a canary drop-in turning some on, an environment kill switch, the flags discovered by iteration | 6 |
 | `migration.c`, `migration.cpp` | a key renamed in version 2, and the files written for version 1 still working | 3 |
 | `embedded.c` | a fixed buffer and an image, no heap, still explaining itself | 12 |
 

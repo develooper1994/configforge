@@ -502,6 +502,40 @@ impl Config {
         }
     }
 
+    fn walk(&self, prefix: &str, children: bool) -> Vec<String> {
+        let p = c(prefix);
+        let mut it: sys::cf_iter = unsafe { std::mem::zeroed() };
+        let mut out = Vec::new();
+        unsafe {
+            if children {
+                sys::cf_iter_children(&mut it, self.c, p.as_ptr());
+            } else {
+                sys::cf_iter_keys(&mut it, self.c, p.as_ptr());
+            }
+            while sys::cf_iter_next(&mut it) != 0 {
+                let (s, n) = if children {
+                    (it.name, it.namelen)
+                } else {
+                    (it.key, it.keylen)
+                };
+                let bytes = std::slice::from_raw_parts(s as *const u8, n);
+                out.push(String::from_utf8_lossy(bytes).into_owned());
+            }
+        }
+        out
+    }
+
+    /// Each distinct immediate child of a prefix, once: how a program
+    /// discovers what is configured rather than being told in advance.
+    pub fn children(&self, prefix: &str) -> Vec<String> {
+        self.walk(prefix, true)
+    }
+
+    /// Every key under a prefix.
+    pub fn keys(&self, prefix: &str) -> Vec<String> {
+        self.walk(prefix, false)
+    }
+
     /// Every candidate for one key, the winner and why.
     pub fn explain(&self, key: &str) -> String {
         let k = c(key);
