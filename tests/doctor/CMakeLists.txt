@@ -77,8 +77,9 @@ add_test(NAME doctor.git
          COMMAND ${CMAKE_COMMAND} -DDOCTOR=$<TARGET_FILE:doctor> -P
                  ${CMAKE_SOURCE_DIR}/tests/doctor/git.cmake)
 
-# Spring Boot's /actuator/env and .NET's GetDebugView(), the same way.
-foreach(adapter spring dotnet)
+# Spring Boot's /actuator/env, .NET's GetDebugView() and systemd's
+# cat-config, the same way.
+foreach(adapter spring dotnet systemd)
   add_test(NAME doctor.${adapter}
            COMMAND ${CMAKE_COMMAND} -DDOCTOR=$<TARGET_FILE:doctor> -P
                    ${CMAKE_SOURCE_DIR}/tests/doctor/${adapter}.cmake)

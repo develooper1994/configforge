@@ -19,4 +19,8 @@ int doctor_import_spring(int argc, char** argv);
    stdout. */
 int doctor_import_dotnet(int argc, char** argv);
 
+/* `systemd-analyze cat-config` or `systemctl cat` on stdin, a report on
+   stdout. */
+int doctor_import_systemd(int argc, char** argv);
+
 #endif /* CONFIGFORGE_DOCTOR_ADAPTERS_H */

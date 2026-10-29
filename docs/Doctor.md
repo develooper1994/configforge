@@ -398,7 +398,7 @@ logic.** Each ecosystem supplies its own origin data and a thin adapter converts
 | .NET | `ConfigurationRoot.GetDebugView()` | built: `doctor import-dotnet`; winners only |
 | Spring Boot | `/actuator/env`, origin-tracked | built: `doctor import-spring` |
 | Git config | `git config --list --show-origin --show-scope` | built: `doctor import-git` |
-| systemd | `systemd-analyze cat-config` | small |
+| systemd | `systemd-analyze cat-config`, `systemctl cat` | built: `doctor import-systemd` |
 | Go / viper | none available | requires a helper in the host application |
 | dotenv | file parse only, no precedence | partial; presence and origin only |
 
@@ -465,6 +465,24 @@ Doctor's `cli`: the report is value-blind unless `--full`, every key in it sensi
 and CFD007 would otherwise call every command-line key a secret. What a blind .NET
 report is for is `doctor diff` of two environments, by digest.
 
+**The systemd adapter, as built.**
+
+```text
+systemd-analyze cat-config systemd/journald.conf | doctor import-systemd > journald.json
+systemctl cat nginx.service | doctor import-systemd > nginx.json
+```
+
+Both commands print every file systemd reads, the main one and then each drop-in, in
+the order systemd applies them, each under a `# /path` header. That order is the
+precedence: each file is a source ranked above the one before it, and within a file the
+later line wins. The files are printed whole, so a place is `path:line` counted from the
+header, and CFD001 fires on a key set twice in one file - as CFD010 does on a drop-in
+that wins nothing. `[Journal] Storage` is `journal.storage`. List keys (`ExecStart=`)
+accumulate in systemd and an empty assignment resets them; the adapter records the last
+assignment as the winner and does not reimplement which keys are lists. A `# /...` line
+is a header only at the start or after a blank line, as both commands print it. Blind
+unless `--full`: `Environment=` carries credentials.
+
 ---
 
 ## 12a. Replay Is Not a Doctor Feature
@@ -502,7 +520,7 @@ Phase 1. It can start any time after that.
 D-Phase 1   report reader, dump, explain, diff, CFD001–CFD003
 D-Phase 2   full rule catalogue, baseline, severity configuration
 D-Phase 3   SARIF output, CI templates, emit hook in the library
-D-Phase 4   foreign adapters: .NET, Spring, git config (built); systemd next
+D-Phase 4   foreign adapters: .NET, Spring, git config, systemd (built)
 ```
 
 Estimated size if the library already emits reports: 1500–2500 lines, three to four
