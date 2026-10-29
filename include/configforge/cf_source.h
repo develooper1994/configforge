@@ -194,9 +194,15 @@ CF_API cf_bool cf_source_cli(cf_source* s, const char* name, int rank, int argc,
  * ------------------------------------------------------------------ */
 
 enum {
-    /* A missing file is not an error. It is also not silence: it shows
-       up in explain() as a source that supplied nothing. */
-    CF_FILE_OPTIONAL = 1u << 0
+    /* A source that may be absent - a file, a directory, a .env, a
+       Registry key, a store - is not an error when it is. It is also
+       not silence: it shows up in explain() as a source that supplied
+       nothing. */
+    CF_OPTIONAL = 1u << 0,
+
+    /* The first spelling, from when every such source was a file: the
+       same flag, kept so that nothing written against it changes. */
+    CF_FILE_OPTIONAL = CF_OPTIONAL
 };
 
 CF_API size_t cf_source_file_state_size(void);
@@ -298,7 +304,7 @@ CF_API const cf_error* cf_source_secrets_error(const cf_source* s);
  * contract types, REG_EXPAND_SZ is not expanded, REG_MULTI_SZ is a list
  * (key.0, key.1, key.count); any other type, and a set unnamed value,
  * is an error naming it. explain() shows each value's full path.
- * CF_FILE_OPTIONAL makes a missing key acceptable. Windows only: on any
+ * CF_OPTIONAL makes a missing key acceptable. Windows only: on any
  * other platform the source fails, optional or not, and says why.
  * ------------------------------------------------------------------ */
 
@@ -317,7 +323,7 @@ CF_API const cf_error* cf_source_registry_error(const cf_source* s);
  * meta) - read in key order, each value typed by its row, and located
  * as "<path>: <meta>", so whatever the writer said about a change is
  * what explain() says about it after a restart. The store is opened
- * read only and never created by reading; CF_FILE_OPTIONAL makes a
+ * read only and never created by reading; CF_OPTIONAL makes a
  * missing one acceptable. Without CF_WITH_SQLITE the source fails, and
  * says which option it needs.
  * ------------------------------------------------------------------ */

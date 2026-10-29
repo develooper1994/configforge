@@ -22,7 +22,7 @@ int main()
 
     cf::Config cfg = cf::Builder()
                          .file("features.ini", CF_RANK_SYS_FILE, "features.ini")
-                         .dir("conf.d", CF_RANK_USER_FILE, "conf.d", 0, CF_FILE_OPTIONAL)
+                         .dir("conf.d", CF_RANK_USER_FILE, "conf.d", 0, CF_OPTIONAL)
                          .env("env", CF_RANK_ENV, "SHOP_", env)
                          .open("features") /* discovered, not declared */
                          .unknown(CF_UNKNOWN_REJECT)

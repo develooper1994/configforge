@@ -31,7 +31,7 @@ static cf_bool dotenv_load(const cf_source* s, cf_keyspace* ks) {
     cf_error_clear(&st->err);
 
     if (!cf_blob_file(&blob, cf_ks_arena(ks), st->path, &st->err)) {
-        if ((st->flags & CF_FILE_OPTIONAL) != 0) {
+        if ((st->flags & CF_OPTIONAL) != 0) {
             /* A missing optional file is not an error, and it is also
                not silence: it shows up in explain() as a source that
                supplied nothing. */

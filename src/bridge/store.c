@@ -106,7 +106,7 @@ static cf_bool store_load(const cf_source* s, cf_keyspace* ks) {
     rc = sqlite3_open_v2(st->path, &db, SQLITE_OPEN_READONLY, NULL);
     if (rc != SQLITE_OK) {
         sqlite3_close(db);
-        if ((st->flags & CF_FILE_OPTIONAL) != 0) {
+        if ((st->flags & CF_OPTIONAL) != 0) {
             return CF_TRUE;
         }
         st->failed = CF_TRUE;

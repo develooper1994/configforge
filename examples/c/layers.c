@@ -43,8 +43,8 @@ int main(void) {
     size_t                   i;
 
     cf_builder_file(b, "app.toml", 35, "app.toml", NULL, 0);
-    cf_builder_dir(b, "conf.d", 30, "conf.d", NULL, CF_FILE_OPTIONAL);
-    cf_builder_dotenv(b, ".env", 15, ".env", "LAYERS_", CF_FILE_OPTIONAL);
+    cf_builder_dir(b, "conf.d", 30, "conf.d", NULL, CF_OPTIONAL);
+    cf_builder_dotenv(b, ".env", 15, ".env", "LAYERS_", CF_OPTIONAL);
     cf_builder_env(b, "env", CF_RANK_ENV, "LAYERS_", env);
     cf_builder_cli(b, "cli", CF_RANK_CLI, 2, argv);
 

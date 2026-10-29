@@ -181,7 +181,7 @@ static cf_bool registry_load(const cf_source* s, cf_keyspace* ks) {
     if (rc == 1) {
         /* Missing is not an error when the program said so; on any
            platform without a Registry the walk has already failed. */
-        if ((st->flags & CF_FILE_OPTIONAL) != 0) {
+        if ((st->flags & CF_OPTIONAL) != 0) {
             return CF_TRUE;
         }
         cf_error_set(&st->err, CF_E_SOURCE, NULL, st->root,

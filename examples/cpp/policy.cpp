@@ -47,8 +47,8 @@ int main()
     cf_value_text(&channel.default_value, "stable", 6);
 
     cf::Config cfg = cf::Builder()
-                         .registry("policy", CF_RANK_CLI, POLICY, CF_FILE_OPTIONAL)
-                         .registry("user", CF_RANK_USER_FILE, USER, CF_FILE_OPTIONAL)
+                         .registry("policy", CF_RANK_CLI, POLICY, CF_OPTIONAL)
+                         .registry("user", CF_RANK_USER_FILE, USER, CF_OPTIONAL)
                          .defineInt("fontsize", 11, 6, 72)
                          .defineText("theme", "light")
                          .define(channel)

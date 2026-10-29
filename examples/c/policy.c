@@ -54,8 +54,8 @@ int main(void) {
     reg("add " POLICY " /v UpdateChannel /t REG_SZ /d stable /f");
 
     b = cf_build(NULL);
-    cf_builder_registry(b, "policy", CF_RANK_CLI, POLICY, CF_FILE_OPTIONAL);
-    cf_builder_registry(b, "user", CF_RANK_USER_FILE, USER, CF_FILE_OPTIONAL);
+    cf_builder_registry(b, "policy", CF_RANK_CLI, POLICY, CF_OPTIONAL);
+    cf_builder_registry(b, "user", CF_RANK_USER_FILE, USER, CF_OPTIONAL);
     cf_builder_int(b, "fontsize", 11, 6, 72, 0);
     cf_builder_text(b, "theme", "light", 0);
     cf_def_init(&channel, CF_TYPE_TEXT, "updatechannel");

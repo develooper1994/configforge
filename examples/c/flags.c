@@ -32,7 +32,7 @@ int main(void) {
     cf_iter      it;
 
     cf_builder_file(b, "features.ini", CF_RANK_SYS_FILE, "features.ini", NULL, 0);
-    cf_builder_dir(b, "conf.d", CF_RANK_USER_FILE, "conf.d", NULL, CF_FILE_OPTIONAL);
+    cf_builder_dir(b, "conf.d", CF_RANK_USER_FILE, "conf.d", NULL, CF_OPTIONAL);
     cf_builder_env(b, "env", CF_RANK_ENV, "SHOP_", env);
     cf_builder_open(b, "features"); /* the flags are discovered, not declared */
     cf_builder_unknown(b, CF_UNKNOWN_REJECT);
