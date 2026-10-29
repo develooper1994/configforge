@@ -23,7 +23,13 @@ static const cf_source* find_source(const cf_source_view* sv, int rank) {
     return NULL;
 }
 
+/* To column `to`, and always by at least one space: a source name or a
+   value as wide as its column ran into the next one - "features.inifalse"
+   - which is a column nobody can read. */
 static size_t pad(char* buf, size_t cap, size_t at, size_t to) {
+    if (to <= at) {
+        to = at + 1;
+    }
     while (at < to) {
         if (at + 1 < cap) {
             buf[at] = ' ';

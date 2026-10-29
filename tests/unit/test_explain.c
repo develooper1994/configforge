@@ -117,6 +117,31 @@ int main(void) {
         cf_arena_free(a2);
     }
 
+    /* A source name and a value as wide as their columns still leave a
+       space before the next: "features.inifalse" was nobody's column. */
+    {
+        static cf_pair   wide[] = {{"flag", "abcdefghijklmnopqrstuv"}};
+        cf_arena*        a3     = cf_arena_new(NULL, 0);
+        cf_keyspace      k3;
+        cf_source        s3;
+        const cf_source* l3[1];
+        cf_source_view   v3;
+        static char      b3[1024];
+
+        cf_ks_init(&k3, a3, 4);
+        cf_source_memory(&s3, "features.ini", 20, wide, 1);
+        cf_source_load(&s3, &k3);
+        cf_ks_resolve(&k3);
+        l3[0]    = &s3;
+        v3.items = l3;
+        v3.count = 1;
+        cf_ks_explain(&k3, &v3, "flag", 4, b3, sizeof b3);
+        has(b3, "  features.ini \"",
+            "a name as wide as its column is followed by a space");
+        has(b3, "uv\" selected", "and so is a value as wide as its column");
+        cf_arena_free(a3);
+    }
+
     cf_arena_free(ar);
     printf("%d checks, %d failures\n", g_run, g_fail);
     return g_fail == 0 ? 0 : 1;
