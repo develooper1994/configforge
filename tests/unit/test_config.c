@@ -354,6 +354,51 @@ static void test_policy(void) {
    of the two wins. */
 /* A policy naming only sources this build does not have means the key
    can never be set, which is a typo rather than an intention. */
+/* A policy says who may set a key; nobody sets a default. With no
+   permitted source holding a value, the key is its default - here and in
+   a configuration derived from this one - and not left without one. */
+static void test_policy_keeps_default(void) {
+    static const char* const only_env[] = {"env", NULL};
+    static char              c1[]       = "--update.channel=nightly";
+    static char*             cargv[]    = {a0, c1, NULL};
+    static char*             cenv[]     = {NULL};
+    static char              buf[2048];
+    cf_error                 err = CF_ERROR_INIT;
+    cf_builder*              b   = cf_build(NULL);
+    cf_config*               cfg;
+    cf_config*               d;
+    cf_pair                  p;
+    cf_def                   def;
+
+    cf_builder_cli(b, "cli", CF_RANK_CLI, 2, cargv);
+    cf_builder_env(b, "env", CF_RANK_ENV, "MYAPP_", cenv);
+    cf_def_init(&def, CF_TYPE_TEXT, "update.channel");
+    def.policy      = only_env;
+    def.has_default = CF_TRUE;
+    cf_value_text(&def.default_value, "stable", 6);
+    cf_builder_define(b, &def);
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    cfg = cf_builder_create(b, &err);
+    check(cfg != NULL, "a policy with a default builds");
+    if (cfg == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+    check(strcmp(cf_get_text(cfg, "update.channel", "?"), "stable") == 0,
+          "the default is the answer when no permitted source has one");
+    cf_explain(cfg, "update.channel", buf, sizeof buf);
+    has(buf, "may only be set from env", "the command line is still refused");
+    has(buf, "\"stable\"              selected", "and the default selected");
+
+    p.key   = "server.port";
+    p.value = "9000";
+    d       = cf_derive(cfg, "admin", &p, 1, &err);
+    check(d != NULL && strcmp(cf_get_text(d, "update.channel", "?"), "stable") == 0,
+          "and in a derived configuration too");
+    cf_config_free(d);
+    cf_config_free(cfg);
+}
+
 static void test_policy_typo(void) {
     static const char* const nowhere[] = {"envrionment", NULL};
     cf_error                 err       = CF_ERROR_INIT;
@@ -407,6 +452,7 @@ int main(void) {
     test_policy();
     test_policy_reorders();
     test_policy_typo();
+    test_policy_keeps_default();
     test_natural_env_spelling();
     test_both_spellings();
     test_one_error_site();

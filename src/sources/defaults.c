@@ -29,7 +29,8 @@ static cf_bool cf_defaults_load(const cf_source* s, cf_keyspace* ks) {
         }
         /* No location: a value declared in code has no file, line or
            variable name to point at. */
-        if (!cf_ks_add(ks, d->key, strlen(d->key), s->rank, &d->default_value, NULL)) {
+        if (!cf_ks_add_default(ks, d->key, strlen(d->key), s->rank,
+                               &d->default_value)) {
             return CF_FALSE;
         }
     }

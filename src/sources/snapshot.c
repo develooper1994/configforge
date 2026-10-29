@@ -34,9 +34,11 @@ static cf_bool snapshot_load(const cf_source* s, cf_keyspace* ks) {
         for (c = e->chain; c != NULL; c = c->next) {
             /* At its original rank, so precedence between the inherited
                sources is preserved and only the override sits above
-               them. Text is copied by the key space, which is what
-               makes the derived configuration independent. */
-            if (!cf_ks_add(ks, e->key, e->keylen, c->source, &c->value, c->at)) {
+               them, and with what it was: a default stays one, so a
+               policy still passes over it. Text is copied by the key
+               space, which is what makes the derived configuration
+               independent. */
+            if (!cf_ks_add_candidate(ks, e->key, e->keylen, c)) {
                 return CF_FALSE;
             }
         }

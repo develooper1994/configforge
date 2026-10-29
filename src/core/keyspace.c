@@ -206,6 +206,32 @@ cf_bool cf_ks_add_authored(cf_keyspace* ks, const char* key, size_t keylen, int 
                       CF_CAND_AUTHORED);
 }
 
+cf_bool cf_ks_add_default(cf_keyspace* ks, const char* key, size_t keylen, int source,
+                          const cf_value* value) {
+    return cf_ks_push(ks, key, keylen, source, value, NULL, CF_OUT_PENDING, NULL,
+                      CF_CAND_DEFAULT);
+}
+
+cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key, size_t keylen,
+                            const cf_candidate* c) {
+    size_t at;
+
+    if (c == NULL ||
+        !cf_ks_push(ks, key, keylen, c->source, &c->value, c->at, CF_OUT_PENDING, NULL,
+                    c->flags & (CF_CAND_TEXTUAL | CF_CAND_DEFAULT))) {
+        return CF_FALSE;
+    }
+    if (c->written != NULL) {
+        at = ks->ncand - 1;
+        ks->cands[at].cand.written =
+            cf_arena_dup(ks->arena, c->written, strlen(c->written));
+        if (ks->cands[at].cand.written == NULL) {
+            return CF_FALSE;
+        }
+    }
+    return CF_TRUE;
+}
+
 cf_bool cf_ks_reject(cf_keyspace* ks, const char* key, size_t keylen, int source,
                      const cf_value* value, const char* at, const char* reason) {
     return cf_ks_push(ks, key, keylen, source, value, at, CF_OUT_REJECTED, reason, 0u);

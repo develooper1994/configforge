@@ -111,6 +111,14 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- **A per-key policy refused the program's own default.** A key locked
+  to one source (D-33) with nothing in that source had no value at all,
+  so the program read the getter's fallback instead of the default it
+  declared. A policy says who may set a key, and nobody sets a default:
+  it now wins when no permitted source has a value, and only then, in a
+  derived configuration too. Inherited candidates also keep what they
+  were, so one the original refused keeps its reason.
+
 - **CI was red, and nobody here could see it.** Two jobs had failed on
   every commit since the change-diff commit: clang-tidy refused
   `cf_diff` and `cf_diff_text` declaring `before`/`after` and defining

@@ -1444,6 +1444,17 @@ included `cf_source.h` from the core and the gate refused it. Same shape as the 
 line's spec, and for the same reason: a test can answer the question with no sources
 existing.
 
+**A policy passes over the program's default.** The first version applied the list to
+every candidate, the definition's default among them - and "default" is in nobody's
+list, so a key locked to the environment, with nothing in the environment, had no value
+at all rather than its default. A Windows example found it: `updatechannel` locked to
+Group Policy, no policy set, and the program read the fallback it passed to the getter,
+not the default it declared. A policy says who may *set* a key, and nobody sets a
+default; it is what the key is when no permitted source says otherwise. So a default
+candidate (`CF_CAND_DEFAULT`) is neither refused nor preferred: it wins only when no
+permitted source has a value. A derived configuration keeps it a default, because its
+inherited candidates now carry what they were (`cf_ks_add_candidate`).
+
 **Consequence.** `cf_source_view` moved from `cf_explain.h` to `cf_source.h`, where a
 view over sources belongs; having it in the diagnostics header meant nothing below could
 name a source without including the top layer.
