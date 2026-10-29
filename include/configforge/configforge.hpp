@@ -1,19 +1,22 @@
 /*
- * configforge.hpp - the C++03 wrapper.
+ * configforge.hpp - the C++ interface, one header for every standard.
  *
- * A thin layer over the C API, not a second design. Every construct
- * here is valid C++03, so it compiles under GCC 3.4 and MSVC 2005
- * alike. Under C++11 the same classes gain move, an explicit bool and
- * pairs in braces; configforge17.hpp and configforge20.hpp add the
- * interfaces of those standards beside these classes (D-47).
+ * A thin layer over the C API, not a second design. The core is valid
+ * C++03, so it compiles under GCC 3.4 and MSVC 2005 alike; what a later
+ * standard can say is added by the standard the program is compiled as
+ * (D-47) - under C++11 move, an explicit bool and pairs in braces, under
+ * C++17 std::optional, std::variant and structured bindings, under C++20
+ * concepts, views and std::format, under C++23 std::expected. Nothing a
+ * program writes says which; CF_CPP11, CF_CPP17, CF_CPP20 and
+ * CF_CPP_EXPECTED say what is on.
  *
  *     cf::Config cfg = cf::app("myapp", argc, argv);
- *     if (!cfg) { std::fputs(cfg.error().message, stderr); return 1; }
- *     int port = cfg.get<int>("server.port", 8080);
+ *     if (!cfg) { std::fputs(cfg.error().message(), stderr); return 1; }
+ *     int port = cfg["server"]["port"];
  *
  * Config is a reference-counted handle, so it is copyable and cheap
- * without move semantics and a factory can return it by value. There
- * is no `auto`, no smart pointer and no string_view anywhere below.
+ * without move semantics and a factory can return it by value. The
+ * C++03 core has no `auto`, no smart pointer and no string_view.
  */
 
 #ifndef CONFIGFORGE_HPP
@@ -26,10 +29,10 @@
 
 /* The standard the including program is compiled as. MSVC reports 199711L
    in __cplusplus unless asked otherwise and says the truth in
-   _MSVC_LANG. Under C++11 the classes below gain what C++03 cannot say -
-   move, an explicit bool, a list of pairs in braces - and nothing they
-   already have changes; configforge17.hpp and configforge20.hpp add the
-   interfaces of their standards. */
+   _MSVC_LANG. One header for every standard (D-47): under C++11 the
+   classes below gain what C++03 cannot say - move, an explicit bool, a
+   list of pairs in braces - and nothing they already have changes; the
+   C++17 and C++20 parts at the end add functions over them. */
 #if defined(_MSVC_LANG) && _MSVC_LANG > __cplusplus
 #define CF_CPLUSPLUS _MSVC_LANG
 #else
@@ -41,6 +44,30 @@
 #include <initializer_list>
 #else
 #define CF_CPP11 0
+#endif
+
+/* C++17 and C++20 by what the library has, not only by what the
+   compiler says: GCC 12 says C++20 and has no <format>, and a header
+   that refused to compile there would be worse than one that offers
+   C++17's part. */
+#if CF_CPP11 && defined(__has_include)
+#if __has_include(<version>)
+#include <version>
+#endif
+#endif
+#if CF_CPLUSPLUS >= 201703L && defined(__has_include)
+#if __has_include(<optional>) && __has_include(<string_view>) && __has_include(<variant>)
+#define CF_CPP17 1
+#endif
+#endif
+#ifndef CF_CPP17
+#define CF_CPP17 0
+#endif
+#if CF_CPP17 && CF_CPLUSPLUS >= 202002L && defined(__cpp_concepts) && \
+    defined(__cpp_lib_ranges) && defined(__cpp_lib_format) && defined(__cpp_lib_span)
+#define CF_CPP20 1
+#else
+#define CF_CPP20 0
 #endif
 
 namespace configforge {
@@ -654,7 +681,7 @@ public:
     { if (b_) { detail::define_key(b_, k); } return *this; }
 
     /* Every field of a Binding, or of anything else that defines a list
-       of keys (configforge17.hpp's Fields). */
+       of keys (the C++17 part's Fields). */
     template <typename D> Builder& define(const D& fields)
     { if (b_) { fields.defineInto(b_); } return *this; }
 
@@ -981,6 +1008,438 @@ private:
 };
 
 } /* namespace configforge */
+
+/* ================================================================== *
+ * C++17: find<T> as std::optional, value() as a std::variant, items()
+ * for structured bindings, and fields() over member pointers.
+ *
+ *     auto port = cf::find<int>(cfg, "server.port");    // std::optional
+ *     for (auto [key, value] : cf::items(cfg, "server")) { ... }
+ *
+ *     inline const auto settings_fields = cf::fields(
+ *         cf::field<&Settings::server, &Server::port>("server.port", 8080, 1, 65535),
+ *         cf::field<&Settings::tls>("tls.enabled", false));
+ *     auto settings = settings_fields.read<Settings>(cfg);
+ *
+ * Keys are std::string_view, copied to a terminated buffer for the call
+ * (one under CF_KEY_MAX bytes stays on the stack). Text comes back as a
+ * std::string_view into the configuration, valid while it is.
+ * ================================================================== */
+
+#if CF_CPP17
+#include <cstddef>
+#include <cstring>
+#include <limits>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <variant>
+
+namespace configforge {
+
+namespace detail {
+
+/* A string_view is not terminated, and the C interface reads up to the
+   terminator. */
+class key_text {
+public:
+    explicit key_text(std::string_view k)
+    {
+        if (k.size() < sizeof buf_) {
+            std::memcpy(buf_, k.data(), k.size());
+            buf_[k.size()] = '\0';
+            p_             = buf_;
+        } else {
+            big_ = std::string(k);
+            p_   = big_.c_str();
+        }
+    }
+    key_text(const key_text&)            = delete;
+    key_text& operator=(const key_text&) = delete;
+    const char* c_str() const { return p_; }
+
+private:
+    char        buf_[CF_KEY_MAX + 1];
+    std::string big_;
+    const char* p_;
+};
+
+template <typename> inline constexpr bool always_false = false;
+
+template <typename> struct member_of;
+template <typename C, typename M> struct member_of<M C::*> {
+    using owner = C;
+    using type  = M;
+};
+
+/* settings.*&Settings::server.*&Server::port, for any length of path. */
+template <typename S, typename M> auto& walk(S& s, M m) { return s.*m; }
+template <typename S, typename M, typename... R> auto& walk(S& s, M m, R... r)
+{
+    return walk(s.*m, r...);
+}
+
+} /* namespace detail */
+
+/* ------------------------------------------------------------------ *
+ * find: a value that may not be there
+ *
+ * std::nullopt when the key is absent, holds another type, or holds an
+ * integer T cannot represent - never a wrapped or truncated value. T is
+ * bool, any integer type, float or double, std::string or
+ * std::string_view.
+ * ------------------------------------------------------------------ */
+
+template <typename T> std::optional<T> find(const Config& c, std::string_view key)
+{
+    detail::key_text k(key);
+    if constexpr (std::is_same_v<T, bool>) {
+        cf_bool v = CF_FALSE;
+        if (cf_try_bool(c.raw(), k.c_str(), &v) == CF_OK) {
+            return v != CF_FALSE;
+        }
+    } else if constexpr (std::is_integral_v<T>) {
+        cf_i64 v = 0;
+        if (cf_try_int(c.raw(), k.c_str(), &v) == CF_OK) {
+            if constexpr (std::is_signed_v<T>) {
+                if (v >= (cf_i64)std::numeric_limits<T>::min() &&
+                    v <= (cf_i64)std::numeric_limits<T>::max()) {
+                    return (T)v;
+                }
+            } else {
+                if (v >= 0 && (cf_u64)v <= (cf_u64)std::numeric_limits<T>::max()) {
+                    return (T)v;
+                }
+            }
+        }
+    } else if constexpr (std::is_floating_point_v<T>) {
+#if CF_WITH_REAL
+        double v = 0.0;
+        if (cf_try_real(c.raw(), k.c_str(), &v) == CF_OK) {
+            return (T)v;
+        }
+#endif
+    } else if constexpr (std::is_same_v<T, std::string> ||
+                         std::is_same_v<T, std::string_view>) {
+        const char* p = 0;
+        size_t      n = 0;
+        if (cf_try_text(c.raw(), k.c_str(), &p, &n) == CF_OK) {
+            return T(p, n);
+        }
+    } else {
+        static_assert(detail::always_false<T>, "cf::find reads bool, integers, "
+                                               "reals, std::string and std::string_view");
+    }
+    return std::nullopt;
+}
+
+/* ------------------------------------------------------------------ *
+ * value: whatever type the key has
+ * ------------------------------------------------------------------ */
+
+using Value = std::variant<std::monostate, bool, cf_i64, double, std::string_view>;
+
+inline Value to_value(const cf_value* v)
+{
+    if (v == 0) {
+        return std::monostate();
+    }
+    switch (v->type) {
+    case CF_TYPE_BOOL:
+        return v->u.b != CF_FALSE;
+    case CF_TYPE_INT:
+        return v->u.i;
+#if CF_WITH_REAL
+    case CF_TYPE_REAL:
+        return v->u.r;
+#endif
+    case CF_TYPE_TEXT:
+        return std::string_view(v->u.t.p, v->u.t.n);
+    default:
+        return std::monostate();
+    }
+}
+
+inline Value value(const Config& c, std::string_view key)
+{
+    detail::key_text k(key);
+    switch (cf_type_of(c.raw(), k.c_str())) {
+    case CF_TYPE_BOOL:
+        return *find<bool>(c, key);
+    case CF_TYPE_INT:
+        return *find<cf_i64>(c, key);
+#if CF_WITH_REAL
+    case CF_TYPE_REAL:
+        return *find<double>(c, key);
+#endif
+    case CF_TYPE_TEXT:
+        return *find<std::string_view>(c, key);
+    default:
+        return std::monostate();
+    }
+}
+
+/* ------------------------------------------------------------------ *
+ * items: every key under a prefix, for a structured binding
+ *
+ *     for (auto [key, value] : cf::items(cfg, "server")) { ... }
+ *
+ * items() yields each whole key; children() yields each immediate
+ * child's name, the part after the prefix, since a child that is a
+ * table has no key of its own. Both, and any text, are views into the
+ * configuration.
+ * ------------------------------------------------------------------ */
+
+struct Item {
+    std::string_view key;
+    Value            value;
+};
+
+class Items {
+public:
+    class iterator {
+    public:
+        /* An input iterator, so the C++20 part can make Items a view. */
+        using value_type      = Item;
+        using difference_type = std::ptrdiff_t;
+
+        iterator() = default;
+        iterator(const cf_iter& start, bool names) : it_(start), done_(false), names_(names)
+        {
+            advance();
+        }
+        bool      operator!=(const iterator& o) const { return done_ != o.done_; }
+        bool      operator==(const iterator& o) const { return done_ == o.done_; }
+        iterator& operator++()
+        {
+            advance();
+            return *this;
+        }
+        void operator++(int) { advance(); }
+        Item operator*() const
+        {
+            return Item{names_ ? std::string_view(it_.name, it_.namelen)
+                               : std::string_view(it_.key, it_.keylen),
+                        to_value(it_.value)};
+        }
+
+    private:
+        void advance()
+        {
+            if (!done_ && !cf_iter_next(&it_)) {
+                done_ = true;
+            }
+        }
+        cf_iter it_{};
+        bool    done_  = true;
+        bool    names_ = false;
+    };
+
+    Items() = default;
+    Items(const Config& c, const char* prefix, bool children) : c_(c), names_(children)
+    {
+        if (children) {
+            cf_iter_children(&start_, c_.raw(), prefix);
+        } else {
+            cf_iter_keys(&start_, c_.raw(), prefix);
+        }
+    }
+    iterator begin() const { return iterator(start_, names_); }
+    iterator end() const { return iterator(); }
+
+private:
+    Config  c_; /* keeps what the views point into */
+    cf_iter start_{};
+    bool    names_ = false;
+};
+
+inline Items items(const Config& c, const char* prefix = 0) { return Items(c, prefix, false); }
+
+/* Each immediate child once; a table's value is std::monostate. */
+inline Items children(const Config& c, const char* prefix) { return Items(c, prefix, true); }
+
+/* ------------------------------------------------------------------ *
+ * Fields: the program's struct, by member pointers known at compile time
+ *
+ * The C++17 form of Binding: the field list is a value, not a heap of
+ * objects, it can be declared once beside the struct as an inline
+ * constant, and a nested member is a path of member pointers. As with
+ * Binding, the list is also the contract (Builder::define(fields)).
+ * ------------------------------------------------------------------ */
+
+template <auto First, auto... Rest> class Field {
+public:
+    using owner = typename detail::member_of<decltype(First)>::owner;
+    using type  = typename detail::member_of<
+        std::tuple_element_t<sizeof...(Rest), std::tuple<decltype(First), decltype(Rest)...>>>::
+        type;
+
+    explicit Field(const Key<type>& k) : key_(k) {}
+
+    const Key<type>& key() const { return key_; }
+    void             defineInto(cf_builder* b) const { detail::define_key(b, key_); }
+    void readInto(const Config& c, owner& out) const { detail::walk(out, First, Rest...) = c.get(key_); }
+
+private:
+    Key<type> key_;
+};
+
+template <auto First, auto... Rest>
+Field<First, Rest...>
+field(const char* key, typename Field<First, Rest...>::type dflt = {}, unsigned flags = 0)
+{
+    return Field<First, Rest...>(Key<typename Field<First, Rest...>::type>(key, dflt, flags));
+}
+
+template <auto First, auto... Rest>
+Field<First, Rest...> field(const char* key, typename Field<First, Rest...>::type dflt,
+                            typename Field<First, Rest...>::type lo,
+                            typename Field<First, Rest...>::type hi, unsigned flags = 0)
+{
+    return Field<First, Rest...>(
+        Key<typename Field<First, Rest...>::type>(key, dflt, lo, hi, flags));
+}
+
+template <typename... F> class Fields {
+public:
+    explicit Fields(F... f) : f_(std::move(f)...) {}
+
+    void defineInto(cf_builder* b) const
+    {
+        std::apply([b](const F&... f) { (f.defineInto(b), ...); }, f_);
+    }
+
+    template <typename S> void read(const Config& c, S& out) const
+    {
+        std::apply([&](const F&... f) { (f.readInto(c, out), ...); }, f_);
+    }
+    template <typename S> S read(const Config& c) const
+    {
+        S out{};
+        read(c, out);
+        return out;
+    }
+
+    static constexpr std::size_t size() { return sizeof...(F); }
+
+private:
+    std::tuple<F...> f_;
+};
+
+template <typename... F> Fields<F...> fields(F... f) { return Fields<F...>(std::move(f)...); }
+
+} /* namespace configforge */
+#endif /* CF_CPP17 */
+
+/* ================================================================== *
+ * C++20: a concept for the types a key can be read as, the keys under a
+ * prefix as a view for the standard adaptors, std::format of a Setting,
+ * a std::span of pairs; under C++23, where the library has
+ * std::expected, lookup<T> says why a value is not there.
+ *
+ *     for (auto [key, value] : cf::items(cfg, "server")
+ *                                  | std::views::filter(is_int)) { ... }
+ *     std::string line = std::format("port {}", cfg["server.port"]);
+ *     std::expected<int, cf::Error> port = cf::lookup<int>(cfg, "server.port");
+ * ================================================================== */
+
+#if CF_CPP20
+#include <concepts>
+#include <format>
+#include <ranges>
+#include <span>
+#include <string>
+#include <string_view>
+#if defined(__cpp_lib_expected) && __cpp_lib_expected >= 202202L
+#include <expected>
+#define CF_CPP_EXPECTED 1
+#else
+#define CF_CPP_EXPECTED 0
+#endif
+
+namespace configforge {
+
+/* The types a key can be read as. */
+template <typename T>
+concept readable = std::same_as<T, bool> || std::integral<T> || std::floating_point<T> ||
+                   std::same_as<T, std::string> || std::same_as<T, std::string_view>;
+
+/* find<T>, constrained: cf::get_or<unsigned char>(...) compiles, a
+   cf::get_or<std::vector<int>>(...) is refused by the concept's name. */
+template <readable T> T get_or(const Config& c, std::string_view key, T fallback)
+{
+    std::optional<T> v = find<T>(c, key);
+    return v ? *v : fallback;
+}
+
+/* A derived snapshot from any contiguous run of pairs. */
+inline Config derive(const Config& c, const char* source, std::span<const cf_pair> pairs)
+{
+    return c.derive(source, pairs.data(), pairs.size());
+}
+
+/* The value as text - an int as digits, text as itself, an absent key
+   as nothing - which is what std::format prints for a Setting. */
+inline std::string to_text(const Value& v)
+{
+    return std::visit(
+        [](const auto& x) -> std::string {
+            using X = std::decay_t<decltype(x)>;
+            if constexpr (std::is_same_v<X, std::monostate>) {
+                return std::string();
+            } else if constexpr (std::is_same_v<X, bool>) {
+                return x ? "true" : "false";
+            } else if constexpr (std::is_same_v<X, std::string_view>) {
+                return std::string(x);
+            } else {
+                return std::format("{}", x);
+            }
+        },
+        v);
+}
+
+#if CF_CPP_EXPECTED
+/* A value, or why there is none: CF_E_KEY when the key is absent,
+   CF_E_CONVERT when it holds another type or an integer T cannot
+   represent, with the key in the error. */
+template <readable T> std::expected<T, Error> lookup(const Config& c, std::string_view key)
+{
+    if (std::optional<T> v = find<T>(c, key)) {
+        return *v;
+    }
+    detail::key_text k(key);
+    Error            e;
+    if (cf_has(c.raw(), k.c_str())) {
+        cf_error_set(e.raw(), CF_E_CONVERT, k.c_str(), 0, "'%s' is a %s", k.c_str(),
+                     cf_type_name(cf_type_of(c.raw(), k.c_str())));
+    } else {
+        cf_error_set(e.raw(), CF_E_KEY, k.c_str(), 0, "'%s' is not set", k.c_str());
+    }
+    return std::unexpected(e);
+}
+#endif
+
+} /* namespace configforge */
+
+/* Items is a view: it holds the configuration, is cheap to copy, and
+   walks it in order. */
+template <> inline constexpr bool std::ranges::enable_view<configforge::Items> = true;
+
+/* std::format("{}", cfg["server.port"]) - the value, by the type the
+   contract gave it. */
+template <> struct std::formatter<configforge::Setting> : std::formatter<std::string_view> {
+    auto format(const configforge::Setting& s, std::format_context& ctx) const
+    {
+        std::string t = configforge::to_text(configforge::value(s.config(), s.key()));
+        return std::formatter<std::string_view>::format(t, ctx);
+    }
+};
+#else
+#define CF_CPP_EXPECTED 0
+#endif /* CF_CPP20 */
 
 namespace cf = configforge;
 
