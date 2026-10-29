@@ -98,7 +98,7 @@ CF_API cf_bool cf_builder_cli(cf_builder* b, const char* name, int rank, int arg
 
 /* The format is taken from the extension unless one is named. A file
    whose format this build left out is an error that says which option
-   to turn on; CF_FILE_OPTIONAL makes a *missing* file acceptable, and
+   to turn on; CF_OPTIONAL makes a *missing* file acceptable, and
    never makes an unreadable one acceptable. */
 CF_API cf_bool cf_builder_file(cf_builder* b, const char* name, int rank,
                                const char* path, const char* format, unsigned flags);
@@ -130,7 +130,7 @@ CF_API cf_bool cf_builder_secrets(cf_builder* b, const char* name, int rank,
 
 /* A key of the Windows Registry and its subkeys (cf_source_registry
    says how names and types map). Windows only; elsewhere it fails by
-   name, CF_FILE_OPTIONAL or not. */
+   name, CF_OPTIONAL or not. */
 CF_API cf_bool cf_builder_registry(cf_builder* b, const char* name, int rank,
                                    const char* root, unsigned flags);
 

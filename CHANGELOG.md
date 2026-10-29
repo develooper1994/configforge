@@ -182,6 +182,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Changed
 
+- **`CF_OPTIONAL` is the spelling of "may be absent"**: the flag now
+  also means a Registry key, a store, a directory or a `.env`, so
+  `CF_FILE_OPTIONAL` said less than it did. The old spelling is the same
+  flag, kept, so nothing written against it changes; the documents and
+  examples use the new one.
 - **The examples are in a directory a language**: `examples/c` and
   `examples/cpp`, so the C++ wrapper in use is not one file among the C
   programs. Targets and tests keep their names.

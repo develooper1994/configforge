@@ -47,7 +47,7 @@ pub mod flag {
 }
 
 /// A file or directory that may be absent.
-pub const OPTIONAL: u32 = sys::CF_FILE_OPTIONAL;
+pub const OPTIONAL: u32 = sys::CF_OPTIONAL;
 
 /// What to do with a key nobody defined.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -105,7 +105,7 @@ CF_API cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const 
 
 The format is taken from the extension unless one is named. A file
 whose format this build left out is an error that says which option
-to turn on; CF_FILE_OPTIONAL makes a *missing* file acceptable, and
+to turn on; CF_OPTIONAL makes a *missing* file acceptable, and
 never makes an unreadable one acceptable.
 
 ```c
@@ -141,7 +141,7 @@ CF_API cf_bool cf_builder_registry(cf_builder* b, const char* name, int rank, co
 
 A key of the Windows Registry and its subkeys (cf_source_registry
 says how names and types map). Windows only; elsewhere it fails by
-name, CF_FILE_OPTIONAL or not.
+name, CF_OPTIONAL or not.
 
 ```c
 CF_API cf_bool cf_builder_store(cf_builder* b, const char* name, int rank, const char* path, unsigned flags);
@@ -2208,7 +2208,7 @@ lowered. REG_DWORD and REG_QWORD are integers, REG_SZ is text the
 contract types, REG_EXPAND_SZ is not expanded, REG_MULTI_SZ is a list
 (key.0, key.1, key.count); any other type, and a set unnamed value,
 is an error naming it. explain() shows each value's full path.
-CF_FILE_OPTIONAL makes a missing key acceptable. Windows only: on any
+CF_OPTIONAL makes a missing key acceptable. Windows only: on any
 other platform the source fails, optional or not, and says why.
 
 ```c
@@ -2229,7 +2229,7 @@ The flat key space in one table - configforge(key, type, value,
 meta) - read in key order, each value typed by its row, and located
 as "&lt;path>: &lt;meta>", so whatever the writer said about a change is
 what explain() says about it after a restart. The store is opened
-read only and never created by reading; CF_FILE_OPTIONAL makes a
+read only and never created by reading; CF_OPTIONAL makes a
 missing one acceptable. Without CF_WITH_SQLITE the source fails, and
 says which option it needs.
 

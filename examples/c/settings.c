@@ -33,8 +33,7 @@ static cf_config* load(int argc, char** argv, cf_error* err) {
     /* Optional: the first run has no settings file, and that is not an
        error. It still shows up in explain() as a source that supplied
        nothing, rather than as silence. */
-    cf_builder_file(b, "settings", CF_RANK_USER_FILE, SETTINGS_FILE, NULL,
-                    CF_FILE_OPTIONAL);
+    cf_builder_file(b, "settings", CF_RANK_USER_FILE, SETTINGS_FILE, NULL, CF_OPTIONAL);
 
     cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
     cf_builder_text(b, "server.host", "0.0.0.0", 0);

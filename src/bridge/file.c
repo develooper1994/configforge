@@ -67,7 +67,7 @@ static cf_bool file_load(const cf_source* s, cf_keyspace* ks) {
     }
 
     if (!cf_blob_file(&blob, ar, st->path, &st->err)) {
-        if ((st->flags & CF_FILE_OPTIONAL) != 0) {
+        if ((st->flags & CF_OPTIONAL) != 0) {
             /* A missing optional file is not an error, and it is also
                not silence: it shows up in explain() as a source that
                supplied nothing. */

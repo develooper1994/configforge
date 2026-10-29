@@ -32,10 +32,6 @@ Things that are wrong or unproven today, most serious first.
    interface is already a line in a diff. Before 1.0 is when an
    interface mistake is cheap, and a review of the 0.4.0 interface left
    these to decide:
-   * `CF_FILE_OPTIONAL` now also means a Registry key, a store, a
-     directory that may be absent. A `CF_OPTIONAL` spelling, with the old
-     one kept as its alias, would say what it means; two spellings of one
-     flag is the cost.
    * `cf_error` holds its strings inline, sized by build limits, and the
      Rust binding mirrors those sizes. `size` already lets it grow; what
      1.0 should promise is that the limits are part of the ABI, or that a

@@ -227,8 +227,15 @@ static void test_version(void) {
            (id[0] != '\0') ? id : "(unknown)");
 }
 
+/* CF_OPTIONAL is the spelling; CF_FILE_OPTIONAL, from when every such
+   source was a file, is the same flag - this test uses it above. */
+static void test_optional_spellings(void) {
+    check(CF_OPTIONAL == CF_FILE_OPTIONAL, "both spellings are one flag");
+}
+
 int main(void) {
     test_version();
+    test_optional_spellings();
     test_listed();
     test_dir();
     test_dotenv();

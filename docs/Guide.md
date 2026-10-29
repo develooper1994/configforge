@@ -169,7 +169,7 @@ source, a later assignment beats an earlier one.
 | ---- | ------ |
 | `cf_builder_cli` | `--key=value`, `--key value`, `--no-key`, aliases, `@file` |
 | `cf_builder_env` | `PREFIX_A__B`, and `PREFIX_A_B` too once a definition makes it unambiguous |
-| `cf_builder_file` | a file, its format by extension; `CF_FILE_OPTIONAL` if it may be absent |
+| `cf_builder_file` | a file, its format by extension; `CF_OPTIONAL` if it may be absent |
 | `cf_builder_dir` | a drop-in directory: every file in byte order, at one rank |
 | `cf_builder_dotenv` | a `.env` file, read as the environment is |
 | `cf_builder_secrets` | a directory of secrets, one file a key, as containers mount them |
@@ -368,7 +368,7 @@ prefix `MYAPP_`) maps as the environment's does; the trailing newline
 `echo` leaves is dropped, and explain() names the file:
 
 ```c
-cf_builder_secrets(b, "secrets", CF_RANK_ENV, "/run/secrets", "MYAPP_", CF_FILE_OPTIONAL);
+cf_builder_secrets(b, "secrets", CF_RANK_ENV, "/run/secrets", "MYAPP_", CF_OPTIONAL);
 ```
 
 The memory a
@@ -427,7 +427,7 @@ values to it in one transaction - every item or none - with a note of
 who, when and why, shown by `explain()` as where the value was set:
 
 ```c
-cf_builder_store(b, "store", CF_RANK_USER_FILE, "app.db", CF_FILE_OPTIONAL);
+cf_builder_store(b, "store", CF_RANK_USER_FILE, "app.db", CF_OPTIONAL);
 cf_builder_writable(b, "store");     /* every source is read only until granted */
 cfg = cf_builder_create(b, &err);
 ...
