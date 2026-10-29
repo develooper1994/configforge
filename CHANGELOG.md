@@ -73,6 +73,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   only" stays that way. Every item or none, and the error says which
   question said no. `Builder::writable` in C++. `cf_store_set` stays,
   for provisioning a store, and asks nothing.
+- **The symbol list**: `cmake/configforge.symbols` names every `CF_API`
+  function, and `gate.abi` holds the headers and the built library to
+  it - every declaration listed and every listed name declared, each
+  defined in the library, and a shared library exporting nothing else.
+  The interface is a file now, so a change to it is a line in a diff.
 - **References between values, `${key}`** (D-10, decided): a value
   somebody wrote can use another key's - `url = https://${server.host}`.
   Precedence chooses every key first and references are replaced after,

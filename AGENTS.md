@@ -82,7 +82,9 @@ kqueue for a machine with no Mac. `scripts/README.md` has the commands.
    the exit code is the answer (Conventions.md says why).
 2. **Code and documents change together.** A behaviour change updates
    the header comment (then `cmake -P scripts/apiref.cmake`, or
-   `gate.apiref` fails), the relevant `docs/` page, `CHANGELOG.md` and,
+   `gate.apiref` fails; a new or removed `CF_API` function also goes in
+   `cmake/configforge.symbols`, or `gate.abi` fails), the relevant
+   `docs/` page, `CHANGELOG.md` and,
    where it is a decision, `docs/Decisions.md` - in the same commit.
    Where a claim can be checked, add a gate rather than a sentence.
 3. **Prove a test can fail.** Disable the behaviour by returning early
