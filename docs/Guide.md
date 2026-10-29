@@ -44,6 +44,8 @@ lines.
 | `runtime.c`, `runtime.cpp` | an admin changing a setting in a running service: readers unaffected, the change explained | 10 |
 | `reload.c`, `reload.cpp` | watch a file, rebuild, log what changed | 10 |
 | `schema.c` | the contract as a JSON Schema for editors | 11 |
+| `preflight.c`, `preflight.cpp` | a service that runs Doctor's rules on itself before it serves, and refuses a password typed as a flag | 11 |
+| `policy.c`, `policy.cpp` | a Windows editor: the user's Registry settings, the administrator's policy over them, one key only policy may set | 4 |
 | `embedded.c` | a fixed buffer and an image, no heap, still explaining itself | 12 |
 
 ## 1. Getting it into a build

@@ -158,3 +158,50 @@ if(CF_WITH_INI)
     "with --server.host=web2, url: https://web2:9443/"
     "a cycle: server.(host|url): its references lead back to it")
 endif()
+
+# A service that lints itself before it serves: Doctor's rules as a
+# library (cf_doctor.h), which exists when the tools are built.
+if(TARGET configforge_doctor)
+  add_executable(preflight preflight.c)
+  target_link_libraries(preflight PRIVATE configforge_doctor)
+  set_target_properties(
+    preflight
+    PROPERTIES C_STANDARD 90
+               C_STANDARD_REQUIRED ON
+               C_EXTENSIONS OFF)
+  configforge_apply_warnings(preflight)
+  configforge_apply_analysis(preflight)
+  if(CF_WITH_INI
+     AND CF_WITH_REPORT
+     AND CF_WITH_JSON)
+    example_expect(
+      preflight
+      ${CMAKE_CURRENT_BINARY_DIR}/preflight-run
+      "preflight: CFD007 error db.password at argv.1."
+      "refusing to serve"
+      "preflight clean: serving on :9443, database db.internal")
+  endif()
+endif()
+
+# A Windows application, its user's settings and the administrator's
+# policy, both in the Registry. Built everywhere; its output is checked
+# where there is a Registry to read.
+add_executable(policy policy.c)
+target_link_libraries(policy PRIVATE configforge)
+set_target_properties(
+  policy
+  PROPERTIES C_STANDARD 90
+             C_STANDARD_REQUIRED ON
+             C_EXTENSIONS OFF)
+configforge_apply_warnings(policy)
+configforge_apply_analysis(policy)
+if(WIN32)
+  example_expect(
+    policy
+    ${CMAKE_CURRENT_BINARY_DIR}/policy-run
+    "font 12, theme dark, channel stable"
+    "policy +12 +selected"
+    "nightly.  +rejected: policy: 'updatechannel' may only be set from policy")
+else()
+  add_test(NAME example.policy COMMAND policy)
+endif()
