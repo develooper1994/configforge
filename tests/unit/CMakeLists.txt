@@ -131,22 +131,42 @@ if(CF_WITH_CXX)
     unit.test_wrapper_watch PROPERTIES WORKING_DIRECTORY
                                        ${CMAKE_CURRENT_BINARY_DIR}/watch_cxx)
 
-  # Changing and keeping through the wrapper, built the same way.
-  add_executable(test_wrapper_write test_wrapper_write.cpp)
-  target_link_libraries(test_wrapper_write PRIVATE configforge)
-  set_target_properties(
-    test_wrapper_write
-    PROPERTIES CXX_STANDARD 98
-               CXX_STANDARD_REQUIRED ON
-               CXX_EXTENSIONS OFF)
+  # Changing and keeping, and reading without repeating a default,
+  # through the wrapper, built the same way.
+  foreach(t test_wrapper_write test_wrapper_access)
+    add_executable(${t} ${t}.cpp)
+    target_link_libraries(${t} PRIVATE configforge)
+    set_target_properties(
+      ${t}
+      PROPERTIES CXX_STANDARD 98
+                 CXX_STANDARD_REQUIRED ON
+                 CXX_EXTENSIONS OFF)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+      target_compile_options(${t} PRIVATE -pedantic -Werror -Wall -Wextra)
+    elseif(MSVC)
+      configforge_apply_warnings(${t})
+    endif()
+    configforge_apply_analysis(${t})
+    add_test(NAME unit.${t} COMMAND ${t})
+  endforeach()
+
+  # The same reads under C++17. The header is C++03 but is included by
+  # programs on every later standard, and there cf_i64 can be long: the
+  # wrapper compiled as C++98 for years and not at all as C++11 on
+  # LP64, because nothing built it any other way.
+  add_executable(test_wrapper_access_cxx17 test_wrapper_access.cpp)
+  target_link_libraries(test_wrapper_access_cxx17 PRIVATE configforge)
+  set_target_properties(test_wrapper_access_cxx17 PROPERTIES CXX_STANDARD 17
+                                                             CXX_EXTENSIONS OFF)
   if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-    target_compile_options(test_wrapper_write PRIVATE -pedantic -Werror -Wall
-                                                      -Wextra)
+    target_compile_options(test_wrapper_access_cxx17 PRIVATE -pedantic -Werror
+                                                             -Wall -Wextra)
   elseif(MSVC)
-    configforge_apply_warnings(test_wrapper_write)
+    configforge_apply_warnings(test_wrapper_access_cxx17)
   endif()
-  configforge_apply_analysis(test_wrapper_write)
-  add_test(NAME unit.test_wrapper_write COMMAND test_wrapper_write)
+  configforge_apply_analysis(test_wrapper_access_cxx17)
+  add_test(NAME unit.test_wrapper_access_cxx17
+           COMMAND test_wrapper_access_cxx17)
 endif()
 
 # A non-ASCII argument, round-tripped. On Windows this is the only test

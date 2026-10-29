@@ -7,6 +7,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **Reading a value without repeating its default, in C++** (D-46): a
+  declared `cf::Key<T>` defines the contract and reads it
+  (`cfg[port]`); `cfg["server"]["port"]` is a `cf::Setting`, typed where
+  it is converted, with the contract's default; and `cf::Binding<S>`
+  fills the program's own struct from a field list that is also the
+  contract, so the program reads `settings.server.port`. C++03, so
+  every later standard has it.
 - **XML, through expat, behind `CF_WITH_XML`** (D-23), which until now
   was an option that compiled nothing while `cf_has_feature("xml")`
   said yes. Read only; the root's name is in no key, attributes and
@@ -151,6 +158,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- **The C++ wrapper compiled only as C++98 on LP64 systems.** Under
+  C++11 and later `cf_i64` is `int64_t`, which is `long` there, so
+  `get<long>` and `get<cf_i64>` were one specialization twice. Every
+  example and test built the header as C++98, so nothing noticed. The
+  reads are an overload set now, and a test builds it as C++17 too.
 - **The INI reader could refuse without saying why.** When its consumer
   refused to close a section, it returned failure and an empty error -
   breaking the one promise every reader makes, that a refusal names its

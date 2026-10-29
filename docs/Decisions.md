@@ -1990,6 +1990,42 @@ otherwise. `cf_error.size` stays what lets the struct grow at its end.
 
 ---
 
+## D-46 — Reading a value without repeating its default
+
+**Question.** A defined key has a default, and `cfg.get<int>("server.port", 8080)`
+writes it a second time, where the two can drift. The owner asked for `cfg.server.port`:
+the program names a key and gets its value, whatever source set it. What can each
+language give?
+
+**Options.**
+
+1. **Member access on the configuration itself** (`cfg.server.port`). Standard C++ has
+   no way to add members to a type at run time or from a file; it would need generated
+   code, and generating into `cf::Config` makes one type mean different things in two
+   programs linked together (an ODR violation).
+2. **Code generation into the program's own namespace**, from the contract. ODR-safe,
+   but a build step for every program and a second source of truth.
+3. **Three run-time forms, each written once:** a declared `cf::Key<T>` that both
+   defines the contract and reads it; a `cf::Setting` proxy named a part at a time
+   (`cfg["server"]["port"]`) and typed where it is converted, with no fallback because the
+   contract has one; and a `cf::Binding<S>` that fills the program's own struct, so the
+   program writes `settings.server.port` on a type it owns.
+
+**Decision: option 3**, in C++03, so every later standard has it too. The dot in
+`settings.server.port` is the program's, which is the only place C++ allows it; the
+Binding's field list is also the contract, so the default is written once. A Setting
+converts to any type the wrapper reads and so cannot also be compared with `==`, which
+the header says; `as<T>()` is the comparison. Generation (option 2) stays possible
+for whoever wants it and is not in the library.
+
+Found on the way: on LP64 systems under C++11 and later `cf_i64` is `long`, so the
+wrapper's explicit specializations `get<long>` and `get<cf_i64>` were one specialization
+twice. The header had compiled only as C++98, the one standard every example and test
+built it with. The reads are now an overload set with `cf_i64`'s overload present only
+where it is a type of its own, and a test builds the header as C++17 as well.
+
+---
+
 
 One decision is open, because nothing has been built: profiles as a core concept
 (D-12). Value interpolation (D-10), long reserved, is decided and built. Everything else is decided,
