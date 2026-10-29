@@ -505,7 +505,23 @@ server.port = 8080  (int)
 ```
 
 The check (`preflight` above) sees every snapshot before readers can,
-the first included: a Doctor preflight, a rule of the program's. In C++
+the first included: a rule of the program's, or Doctor itself -
+`cf_doctor_live_check` with a `cf_doctor_gate` lints each snapshot as
+`doctor lint` would and refuses it on a finding at the gate's level, so
+a password moved to the command line by an edit an hour after startup
+is refused as it would have been at startup:
+
+```c
+static cf_doctor_gate gate = {"production", "error", NULL, NULL};
+cf_live* live = cf_live_open(CF_LIVE_AUTO, build, cf_doctor_live_check,
+                             (void*)&gate, NULL, &err);
+```
+
+A Kubernetes ConfigMap mounted as a volume is updated the kubelet's
+way - a new directory, and one rename of the `..data` link over the
+old - and the file a program opens is a link that is never written.
+`cf_live` sees it: the stamp it compares is the file's, through the
+links, and the watcher's directory sees the rename (`test_live`). In C++
 it is `cf::Live`, whose build under C++11 can be a lambda returning a
 `cf::Builder`.
 

@@ -9,7 +9,7 @@ in; the types are in the headers themselves.
 - [`configforge.h`](#configforgeh) - 64
 - [`cf_alloc.h`](#cf_alloch) - 12
 - [`cf_define.h`](#cf_defineh) - 19
-- [`cf_doctor.h`](#cf_doctorh) - 20
+- [`cf_doctor.h`](#cf_doctorh) - 21
 - [`cf_emit.h`](#cf_emith) - 1
 - [`cf_entry.h`](#cf_entryh) - 10
 - [`cf_error.h`](#cf_errorh) - 4
@@ -772,6 +772,30 @@ CF_DOCTOR_API cf_bool cf_doctor_stale(const cf_doctor* d, size_t i, const char**
 
 Baseline entries that matched nothing: a fix worth noticing, or a
 rule that quietly stopped working.
+
+### Doctor as the gate a reload passes through
+
+The preflight a service runs at startup, run again on every snapshot
+cf_live is about to hand out, so an edit an hour later is refused as
+the same mistake would have been at startup - before a reader sees
+it, with the running configuration left serving:
+
+    static cf_doctor_gate gate = {"production", "error", NULL, NULL};
+    cf_live* live = cf_live_open(CF_LIVE_AUTO, build, cf_doctor_live_check,
+                                 (void*)&gate, NULL, &err);
+
+cf_live passes one `user` to both functions, so a build function that
+needs its own state keeps the gate inside it and calls
+cf_doctor_live_check from its own check.
+
+```c
+CF_DOCTOR_API cf_bool cf_doctor_live_check(void* user, const cf_config* running, const cf_config* next, cf_error* err);
+```
+
+A cf_live_check_fn: `user` is a cf_doctor_gate, or NULL for the
+defaults. Refuses `next` when a finding reaches `fail_on`, the first
+such finding in `err` - "CFD007 error db.password: ..." with where it
+was set as the error's source.
 
 ```c
 CF_DOCTOR_API size_t cf_doctor_rule_count(void);

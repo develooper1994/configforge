@@ -219,6 +219,7 @@ about a rule.
 | `cf_doctor_count`, `cf_doctor_finding`, `cf_doctor_count_at` | the findings, each with its rule, level, key, place and message |
 | `cf_doctor_stale_count`, `cf_doctor_stale` | baseline entries that matched nothing |
 | `cf_doctor_rule_count`, `cf_doctor_rule_id`, `cf_doctor_rule_text` | the catalogue below |
+| `cf_doctor_live_check` with a `cf_doctor_gate` | the check a `cf_live` reload passes through: each snapshot linted before readers have it, refused on a finding at the gate's level |
 
 Nothing in it prints, and nothing in it is global: two contexts can run
 at once, one thread to a context. It is static, so there is one ABI to

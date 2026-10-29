@@ -7,6 +7,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **Doctor as the gate a reload passes through**:
+  `cf_doctor_live_check` and `cf_doctor_gate` (a profile, a level to
+  fail on, a baseline and a severity file), handed to `cf_live`, lint
+  every snapshot before readers can have it; the first finding at the
+  gate's level is the refusal's reason, and the running configuration
+  keeps serving. A test also shows `cf_live` noticing a Kubernetes
+  ConfigMap updated the kubelet's way, by renaming the `..data` link.
 - **Python: the library itself, not only Doctor** (D-49). The
   `configforge` package, over the shared library through ctypes, with
   the standard library only: `cfg.server.port` by attribute,

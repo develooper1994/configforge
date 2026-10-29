@@ -2,8 +2,18 @@
  * test_live.c - cf_live: the three reload modes, a check that refuses,
  * a build that fails and leaves the running snapshot in place, a
  * CF_RESTART key kept at its running value and explained, and a reader
- * that keeps the snapshot it holds across a swap.
+ * that keeps the snapshot it holds across a swap; and, where there are
+ * symbolic links, a mounted Kubernetes ConfigMap updated the way the
+ * kubelet updates one.
  */
+
+/* symlink(2) and rename(2) for the ConfigMap test; CMake defines
+   CF_TEST_SYMLINKS only where they exist. */
+#if defined(CF_TEST_SYMLINKS)
+#define _POSIX_C_SOURCE 200112L
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 #include <configforge/configforge.h>
 
@@ -222,6 +232,57 @@ static void test_poll(void) {
     remove("cf_live.ini");
 }
 
+#if defined(CF_TEST_SYMLINKS)
+/* The kubelet writes a new ConfigMap into a fresh directory, points a
+   temporary link at it and renames that over `..data`; the file a
+   program opens, `app.ini`, is a link to `..data/app.ini` and is never
+   written at all. A reload that watched the file's own inode, or
+   trusted the link's stamp, would never see an update. */
+static void test_configmap(void) {
+    cf_error err = CF_ERROR_INIT;
+    cf_live* l;
+    char     buf[64];
+
+    if (!cf_has_feature("ini")) {
+        return;
+    }
+    (void)mkdir("cf_cm", 0755);
+    (void)mkdir("cf_cm/..2026_10_29_1", 0755);
+    check(spill("cf_cm/..2026_10_29_1/app.ini", "[log]\nlevel = info\n"),
+          "the first version");
+    (void)remove("cf_cm/..data");
+    (void)remove("cf_cm/app.ini");
+    check(symlink("..2026_10_29_1", "cf_cm/..data") == 0 &&
+              symlink("..data/app.ini", "cf_cm/app.ini") == 0,
+          "mounted as the kubelet mounts it");
+    g_file = "cf_cm/app.ini";
+    l      = cf_live_open(CF_LIVE_AUTO, build, NULL, NULL, NULL, &err);
+    check(l != NULL && strcmp(level(l, buf, sizeof buf), "info") == 0,
+          "read through the links");
+    if (l == NULL) {
+        g_file = NULL;
+        return;
+    }
+    (void)mkdir("cf_cm/..2026_10_29_2", 0755);
+    check(spill("cf_cm/..2026_10_29_2/app.ini", "[log]\nlevel = debug\n"),
+          "the second version");
+    check(symlink("..2026_10_29_2", "cf_cm/..data_tmp") == 0 &&
+              rename("cf_cm/..data_tmp", "cf_cm/..data") == 0,
+          "swapped in one rename");
+    check(cf_live_wait(l, 2000, &err) == CF_LIVE_SWAPPED, "the update is noticed");
+    check(strcmp(level(l, buf, sizeof buf), "debug") == 0, "and read");
+    cf_live_close(l);
+    g_file = NULL;
+    (void)remove("cf_cm/app.ini");
+    (void)remove("cf_cm/..data");
+    (void)remove("cf_cm/..2026_10_29_1/app.ini");
+    (void)remove("cf_cm/..2026_10_29_2/app.ini");
+    (void)rmdir("cf_cm/..2026_10_29_1");
+    (void)rmdir("cf_cm/..2026_10_29_2");
+    (void)rmdir("cf_cm");
+}
+#endif
+
 static void test_nothing(void) {
     cf_error err = CF_ERROR_INIT;
     char     buf[8];
@@ -304,6 +365,9 @@ int main(void) {
     test_auto_and_manual();
     test_approve();
     test_poll();
+#if defined(CF_TEST_SYMLINKS)
+    test_configmap();
+#endif
     test_nothing();
 #if defined(CF_TEST_PTHREADS) && !defined(CF_SINGLE_THREADED)
     test_threads();
