@@ -7,7 +7,7 @@
  *     # a comment, and so is a line starting with !
  *     server.port = 8080          key, '=' or ':' or whitespace, value
  *     greeting: hello world       the value runs to the end of the line
- *     path=C:\\data\\app          \\ \t \n \r \f and \uXXXX are escapes
+ *     path=C:\\data\\app          \\ \t \n \r \f and the u escape are escapes
  *     long = first \             a line ending in an odd number of
  *            second              backslashes continues on the next
  *
@@ -17,7 +17,10 @@
  * what this library does not do. Values are text, typed by the contract
  * as INI's are (D-24). The file is read as UTF-8, the encoding every
  * other format here uses and the one Java has defaulted to for
- * resource bundles since 9; \uXXXX writes anything else. Read only: the
+ * resource bundles since 9; the u escape - a backslash, u and four hex
+ * digits - writes anything else. (Not spelt out here: pcc's lexer reads
+ * that sequence as a universal character name even in a comment.)
+ * Read only: the
  * format has no quoting, so text written as 8080 would read back as a
  * number.
  *
@@ -144,7 +147,8 @@ static cf_bool prop_element(prop_scan* s, cf_bool is_key, char* out, size_t cap,
                                     ? prop_hex((unsigned char)s->p[1 + k])
                                     : -1;
                         if (h < 0) {
-                            return prop_fail(s, "\\u needs four hexadecimal digits");
+                            return prop_fail(s, "\\"
+                                                "u needs four hexadecimal digits");
                         }
                         cp = cp * 16u + (unsigned long)h;
                     }
@@ -171,7 +175,8 @@ static cf_bool prop_element(prop_scan* s, cf_bool is_key, char* out, size_t cap,
                         }
                     }
                     if (cp >= 0xD800u && cp <= 0xDFFFu) {
-                        return prop_fail(s, "a \\u escape is half a surrogate pair");
+                        return prop_fail(s, "a \\"
+                                            "u escape is half a surrogate pair");
                     }
                     n = prop_utf8(out, n, cap, cp);
                     if (n == 0) {

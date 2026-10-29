@@ -59,7 +59,9 @@ static const char g_doc[] = "# a comment\n"
                             "tab=a\\tb\n"
                             "long = first, \\\n"
                             "       second\n"
-                            "emoji=\\ud83d\\ude00\n"
+                            "emoji=\\"
+                            "ud83d\\"
+                            "ude00\n"
                             "empty=\n"
                             "   indented.key = yes\r\n"
                             "server.port = 9090\n";
@@ -85,7 +87,8 @@ static void test_reads(void) {
     check(strcmp(cf_get_text(c, "long", ""), "first, second") == 0,
           "a continuation joins the lines without the next line's indentation");
     check(strcmp(cf_get_text(c, "emoji", ""), "\xf0\x9f\x98\x80") == 0,
-          "a surrogate pair in \\u escapes is one character");
+          "a surrogate pair in \\"
+          "u escapes is one character");
     check(cf_has(c, "empty") && strcmp(cf_get_text(c, "empty", "x"), "") == 0,
           "an empty value");
     check(strcmp(cf_get_text(c, "indented.key", ""), "yes") == 0,
@@ -110,11 +113,19 @@ static void test_refuses(void) {
     refused("server.Port=1\n", "is not a valid key",
             "a key the library cannot hold - Spring's camelCase - is refused, not "
             "guessed at");
-    refused("caf\\u00e9.name=x\n", "is not a valid key", "so is one it cannot spell");
+    refused("caf\\"
+            "u00e9.name=x\n",
+            "is not a valid key", "so is one it cannot spell");
     refused("colon\\:key=1\n", "'colon:key' is not a valid key",
             "an escaped separator is part of the key, and named when it cannot be one");
-    refused("a=\\u12\n", "four hexadecimal digits", "a short \\u escape");
-    refused("a=\\ud83d\n", "half a surrogate pair", "half a surrogate pair");
+    refused("a=\\"
+            "u12\n",
+            "four hexadecimal digits",
+            "a short \\"
+            "u escape");
+    refused("a=\\"
+            "ud83d\n",
+            "half a surrogate pair", "half a surrogate pair");
     refused("=value\n", "empty key", "a line with no key");
 }
 
