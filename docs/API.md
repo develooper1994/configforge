@@ -18,7 +18,7 @@ in; the types are in the headers themselves.
 - [`cf_image.h`](#cf_imageh) - 10
 - [`cf_iterate.h`](#cf_iterateh) - 5
 - [`cf_keyspace.h`](#cf_keyspaceh) - 26
-- [`cf_live.h`](#cf_liveh) - 11
+- [`cf_live.h`](#cf_liveh) - 12
 - [`cf_numeric.h`](#cf_numerich) - 7
 - [`cf_platform.h`](#cf_platformh) - 19
 - [`cf_port.h`](#cf_porth) - 10
@@ -1547,6 +1547,13 @@ CF_API size_t cf_live_restarts(const cf_live* l, char* buf, size_t cap);
 
 The CF_RESTART keys whose new value waits for a restart, one a line,
 in `buf` as far as `cap` allows; the length it needs, 0 for none.
+
+```c
+CF_API cf_bool cf_live_status_get(cf_live* l, cf_live_status* out);
+```
+
+Copies the status into `out`, whose `size` the caller sets; false for
+a NULL or a size this library does not know.
 
 ## cf_numeric.h
 

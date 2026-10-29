@@ -25,7 +25,7 @@ mod live;
 pub mod sys;
 mod typed;
 
-pub use live::{Live, LiveReader, Mode, Reload};
+pub use live::{Live, LiveReader, Mode, Reload, Status};
 pub use typed::{Field, Key, Value};
 
 use std::ffi::{CStr, CString};

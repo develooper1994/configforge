@@ -166,6 +166,7 @@ cf_live_poll
 cf_live_reject
 cf_live_reload
 cf_live_restarts
+cf_live_status_get
 cf_live_wait
 cf_loc_text
 cf_outcome_can_win

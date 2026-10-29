@@ -131,6 +131,25 @@ CF_API cf_u64 cf_live_generation(cf_live* l);
    in `buf` as far as `cap` allows; the length it needs, 0 for none. */
 CF_API size_t cf_live_restarts(const cf_live* l, char* buf, size_t cap);
 
+/* What a health page says about the reloads: how many were tried and
+   failed, what the last one did, whether a change waits for approval,
+   and why the last failure failed - "running generation 7; the last
+   edit was refused: CFD007 ..." - without the program keeping a copy of
+   its own. Any thread. */
+typedef struct cf_live_status {
+    size_t         size;       /* sizeof(cf_live_status) at the call site */
+    cf_u64         generation; /* as cf_live_generation                  */
+    cf_u64         reloads;    /* rebuilds tried, from poll, reload, wait */
+    cf_u64         failures;   /* of those, refused or failed            */
+    cf_live_result last;       /* what the last rebuild or approval did  */
+    cf_bool        pending;    /* a change waits for cf_live_approve     */
+    cf_error       error;      /* the last failure's; code CF_OK if none */
+} cf_live_status;
+
+/* Copies the status into `out`, whose `size` the caller sets; false for
+   a NULL or a size this library does not know. */
+CF_API cf_bool cf_live_status_get(cf_live* l, cf_live_status* out);
+
 #ifdef __cplusplus
 }
 #endif

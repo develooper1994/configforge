@@ -33,6 +33,23 @@ Things that are wrong or unproven today, most serious first.
 
 Worth building, in the order they serve the library's purpose.
 
+* **A reload diff as JSON** (`cf_diff_json`), for log pipelines that
+  index fields rather than lines: the key, old and new value (redacted
+  as the text diff is), and the source each came from.
+* **Settling a burst of writes**: an editor saving twice, or a
+  deployment writing three files, is three wake-ups. Quiet swaps
+  already make the repeats cheap; a settle interval in `cf_live` would
+  make them one reload, and one log line.
+* **Packages that carry the library**: a Python wheel with the shared
+  library inside (scikit-build-core), and a crate that builds from C
+  sources inside its own package so it can be published. Both are
+  packaging steps over code that already finds the library either way.
+* **More languages over the same C ABI**: Go (cgo) and .NET (P/Invoke)
+  are the next most asked-for, each a thin layer like Python's, checked
+  for the same example lines.
+* **C++20 modules** (`import configforge;`), once the minimum CMake and
+  the compilers the matrix covers all build them; until then the one
+  header is the interface.
 * **The build id in the image header**, as the report now carries it:
   a change to the image format, so it waits for a reason to change it.
 * **JSON Schema import** - definitions *from* a schema - the other

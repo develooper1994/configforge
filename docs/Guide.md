@@ -517,6 +517,13 @@ cf_live* live = cf_live_open(CF_LIVE_AUTO, build, cf_doctor_live_check,
                              (void*)&gate, NULL, &err);
 ```
 
+A health page asks `cf_live_status_get`, from any thread: the
+generation serving, how many rebuilds were tried and failed, what the
+last one did, whether a change waits for approval, and why the last
+failure failed - "generation 7; the last edit was refused: CFD007 ..."
+- without the program keeping a copy of its own. `status()` in C++ and
+Rust, `live.status` in Python.
+
 A Kubernetes ConfigMap mounted as a volume is updated the kubelet's
 way - a new directory, and one rename of the `..data` link over the
 old - and the file a program opens is a link that is never written.
