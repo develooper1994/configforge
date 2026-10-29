@@ -55,7 +55,8 @@ foreach(
   runtime
   references
   migration
-  flags)
+  flags
+  live)
   add_executable(${ex} ${ex}.c)
   target_link_libraries(${ex} PRIVATE configforge)
   set_target_properties(
@@ -230,4 +231,21 @@ if(CF_WITH_INI AND CF_WITH_DIR)
     "search_v2 +off"
     "env +false +selected +SHOP_FEATURES__SEARCH_V2"
     "conf.d +true +shadowed +conf.d/50-canary.ini")
+endif()
+
+# A service that reloads itself (cf_live): applied, waiting for a
+# restart, approved, refused. The C++ program says the same lines.
+if(CF_WITH_INI)
+  example_expect(
+    live
+    ${CMAKE_CURRENT_BINARY_DIR}/live-run
+    "1. reload: swapped"
+    "serving on :8080, log debug, 600"
+    "waiting for a restart: server.port"
+    "running +8080 +selected"
+    "gateway.ini 9443 +shadowed"
+    "limit.per_minute: 600 -> 60"
+    "operator: approved"
+    "serving on :8080, log info, 60 requests"
+    "3. reload refused: limit.per_minute: .lots. is not a valid int")
 endif()

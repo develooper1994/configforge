@@ -37,6 +37,7 @@
 #endif
 #if CF_CPLUSPLUS >= 201103L
 #define CF_CPP11 1
+#include <functional>
 #include <initializer_list>
 #else
 #define CF_CPP11 0
@@ -436,6 +437,7 @@ public:
 
 private:
     friend class Builder;
+    friend class Live;
 
     Config(cf_config* c, const Error& e) : c_(c), rc_(0), err_(e)
     {
@@ -673,6 +675,15 @@ public:
         return Config(c, e);
     }
 
+    /* The C builder, handed over uncreated: what a cf_live build
+       function returns (Live). This one is empty afterwards. */
+    cf_builder* release()
+    {
+        cf_builder* b = b_;
+        b_            = 0;
+        return b;
+    }
+
 private:
 #if !CF_CPP11
     Builder(const Builder&);
@@ -852,6 +863,121 @@ private:
 #endif
     Error       err_; /* before w_: the constructor writes into it */
     cf_watcher* w_;
+};
+
+/* ------------------------------------------------------------------ *
+ * Live
+ *
+ * A configuration that reloads (cf_live.h): get() on any thread, the
+ * rest on the one that drives the reloads.
+ *
+ *     static cf_builder* build(void*)
+ *     {
+ *         return cf::Builder("myapp", 0, 0)
+ *             .defineInt("server.port", 8080, 1, 65535, CF_RESTART)
+ *             .release();
+ *     }
+ *
+ *     cf::Live live(CF_LIVE_AUTO, build);
+ *     cf::Config cfg = live.get();     // one request, one snapshot
+ *     live.poll();                     // in the loop
+ *
+ * Under C++11 the build may be any callable returning a cf::Builder,
+ * and the check any callable with cf_live_check_fn's arguments.
+ * ------------------------------------------------------------------ */
+
+class Live {
+public:
+    Live(cf_live_mode mode, cf_live_build_fn build, void* user = 0,
+         cf_live_check_fn check = 0, const cf_allocator* a = 0)
+        : err_(), l_(cf_live_open(mode, build, check, user, a, err_.raw()))
+#if CF_CPP11
+        , fn_(nullptr)
+#endif
+    {}
+#if CF_CPP11
+    using BuildFn = std::function<Builder()>;
+    using CheckFn = std::function<bool(const cf_config*, const cf_config*, cf_error*)>;
+
+    Live(cf_live_mode mode, BuildFn build, CheckFn check = nullptr)
+        : err_(), l_(0), fn_(new Fns{std::move(build), std::move(check)})
+    {
+        l_ = cf_live_open(mode, &Live::trampoline, fn_->check ? &Live::checker : nullptr,
+                          fn_, nullptr, err_.raw());
+    }
+    Live(Live&& o) noexcept : err_(o.err_), l_(o.l_), fn_(o.fn_)
+    {
+        o.l_  = 0;
+        o.fn_ = nullptr;
+    }
+    Live& operator=(Live&&) = delete;
+    Live(const Live&)            = delete;
+    Live& operator=(const Live&) = delete;
+#endif
+    ~Live()
+    {
+        cf_live_close(l_);
+#if CF_CPP11
+        delete fn_;
+#endif
+    }
+
+    bool         valid() const { return l_ != 0; }
+    const Error& error() const { return err_; }
+
+    /* The current snapshot; any thread. */
+    Config get() const { return Config(cf_live_get(l_), Error()); }
+
+    cf_live_result poll(Error* e = 0)   { return cf_live_poll(l_, out(e)); }
+    cf_live_result reload(Error* e = 0) { return cf_live_reload(l_, out(e)); }
+    cf_live_result wait(long timeoutMs, Error* e = 0)
+    { return cf_live_wait(l_, timeoutMs, out(e)); }
+    cf_live_result approve(Error* e = 0) { return cf_live_approve(l_, out(e)); }
+    void           reject() { cf_live_reject(l_); }
+
+    /* The snapshot waiting for approval; invalid when none is. */
+    Config pending() const
+    {
+        cf_config* p = const_cast<cf_config*>(cf_live_pending(l_));
+        cf_config_ref(p);
+        return Config(p, Error());
+    }
+
+    cf_u64 generation() const { return cf_live_generation(l_); }
+
+    /* The CF_RESTART keys waiting for a restart, a line each. */
+    std::string restarts() const
+    {
+        size_t n = cf_live_restarts(l_, 0, 0);
+        if (n == 0) {
+            return std::string();
+        }
+        std::string s(n, '\0');
+        cf_live_restarts(l_, &s[0], n + 1);
+        return s;
+    }
+
+private:
+#if !CF_CPP11
+    Live(const Live&);
+    Live& operator=(const Live&);
+#endif
+    cf_error* out(Error* e) { return (e != 0) ? e->raw() : err_.raw(); }
+
+    Error    err_;
+    cf_live* l_;
+#if CF_CPP11
+    struct Fns {
+        BuildFn build;
+        CheckFn check;
+    };
+    static cf_builder* trampoline(void* user)
+    { return static_cast<Fns*>(user)->build().release(); }
+    static cf_bool checker(void* user, const cf_config* running, const cf_config* next,
+                           cf_error* err)
+    { return static_cast<Fns*>(user)->check(running, next, err) ? CF_TRUE : CF_FALSE; }
+    Fns* fn_;
+#endif
 };
 
 } /* namespace configforge */

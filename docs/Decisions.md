@@ -2054,6 +2054,42 @@ libstdc++ 13 does not, and its absence there is not an error.
 
 ---
 
+## D-48 — Reloading: who decides, and what cannot change live
+
+**Question.** `cf_changed` and the watcher say that a file moved on. Every program then
+writes the same loop - rebuild, check, swap - and the swap is where it goes wrong: a
+reader on another thread takes the pointer as it is freed. The owner asked for
+automatic, semi-automatic and manual reloading. And some values cannot change while the
+program runs at all: a listening port, a pool's size.
+
+**Options.**
+
+1. **Leave it to the program**, as `examples/c/reload.c` does.
+2. **A library thread that watches and calls back.** The library makes a threading
+   decision that belongs to the program, which this library has refused since D-14.
+3. **A helper with no thread of its own**, driven by the program's loop, in one of three
+   modes, with a lock around the swap only.
+
+**Decision: option 3**, `cf_live`. `CF_LIVE_MANUAL` reloads when asked,
+`CF_LIVE_APPROVE` builds and holds a change until it is approved (an edit after it
+replaces it rather than queueing behind it), `CF_LIVE_AUTO` swaps. A check, given the
+running snapshot and the next, sees every one before readers can - which is where a
+Doctor preflight goes. A failed build or check never replaces what is serving.
+`cf_live_get` takes a reference under a lock made of the port's one atomic (a count
+taken from 0 to 1), held for a pointer copy and an increment; the reloads belong to one
+thread. A rebuild that finds the same values refreshes the file stamps without counting
+a new generation.
+
+**What cannot change live** is a definition flag, `CF_RESTART`. Refusing such a reload
+would refuse the log level changed in the same edit; applying it would make readers
+believe a port the socket is not bound to. Instead the running value is kept as the top
+source, named `running`, so explain() shows the running value selected and the file's
+new one shadowed - why the value is what it is stays answerable - and
+`cf_live_restarts` lists the keys waiting for the restart. A `CF_RESTART` key that had
+no value when the program started had nothing in use to keep and takes the new one.
+
+---
+
 
 One decision is open, because nothing has been built: profiles as a core concept
 (D-12). Value interpolation (D-10), long reserved, is decided and built. Everything else is decided,

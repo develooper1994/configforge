@@ -122,11 +122,60 @@ static void test_binding()
     check(!refused, "a field's range refuses as a definition's does");
 }
 
+static const cf_pair  g_v1[]  = {{"server.port", "8080"}, {"log.level", "info"}};
+static const cf_pair  g_v2[]  = {{"server.port", "9443"}, {"log.level", "debug"}};
+static const cf_pair* g_live = g_v1;
+
+static cf_builder* build_live(void*)
+{
+    return cf::Builder()
+        .memory("mem", CF_RANK_USER_FILE, g_live, 2)
+        .defineInt("server.port", 8080, 1, 65535, CF_RESTART)
+        .defineText("log.level", "info")
+        .release();
+}
+
+static void test_live()
+{
+    g_live = g_v1;
+    cf::Live live(CF_LIVE_APPROVE, build_live);
+    check(live.valid() && live.generation() == 1, "a Live opens");
+    g_live = g_v2;
+    check(live.reload() == CF_LIVE_PENDING && live.pending().text("log.level") == "debug",
+          "a change waits, and can be looked at");
+    check(live.get().text("log.level") == "info", "readers do not see it yet");
+    check(live.approve() == CF_LIVE_SWAPPED && live.get().text("log.level") == "debug",
+          "approved, they do");
+    check(live.get()["server.port"].as<int>() == 8080 && live.restarts() == "server.port\n",
+          "the port waits for a restart");
+    check(!live.pending().valid(), "nothing pending after");
+#if CF_CPP11
+    g_live = g_v1;
+    int      built = 0;
+    cf::Live fn(CF_LIVE_MANUAL,
+                [&built]() {
+                    ++built;
+                    return std::move(cf::Builder().memory("mem", CF_RANK_USER_FILE, g_live, 2));
+                },
+                [](const cf_config*, const cf_config* next, cf_error* err) {
+                    if (cf_get_text(next, "log.level", "")[0] == 'd') {
+                        return cf_error_set(err, CF_E_POLICY, "log.level", 0, "no debug") != 0;
+                    }
+                    return true;
+                });
+    g_live = g_v2;
+    check(fn.valid() && fn.reload() == CF_LIVE_FAILED && built == 2 &&
+              std::string(fn.error().message()).find("no debug") != std::string::npos,
+          "a lambda builds and a lambda refuses");
+#endif
+}
+
 int main()
 {
     test_keys();
     test_settings();
     test_binding();
+    test_live();
     std::printf("%d checks, %d failures\n", g_run, g_fail);
     return g_fail == 0 ? 0 : 1;
 }

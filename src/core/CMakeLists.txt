@@ -11,4 +11,5 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/define.c
           ${CMAKE_CURRENT_SOURCE_DIR}/validate.c
           ${CMAKE_CURRENT_SOURCE_DIR}/config.c
-          ${CMAKE_CURRENT_SOURCE_DIR}/iterate.c)
+          ${CMAKE_CURRENT_SOURCE_DIR}/iterate.c
+          ${CMAKE_CURRENT_SOURCE_DIR}/live.c)
