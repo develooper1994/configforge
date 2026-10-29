@@ -393,8 +393,11 @@ static const char* const g_properties = "# comment\n"
                                         "path=C:\\\\x\\tb\n"
                                         "long = a, \\\n"
                                         "       b\n"
-                                        "emoji=\\ud83d\\ude00\n"
-                                        "bad=\\u12\n";
+                                        "emoji=\\"
+                                        "ud83d\\"
+                                        "ude00\n"
+                                        "bad=\\"
+                                        "u12\n";
 
 static const char* const g_env = "# comment\n"
                                  "export SERVER__PORT=8080\n"

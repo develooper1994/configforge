@@ -147,7 +147,10 @@ kqueue for a machine with no Mac. `scripts/README.md` has the commands.
 * **`__GNUC__` does not mean GCC.** pcc defines it as 4 and has none of
   GCC's builtins. Test `CF_GNUC` (`cf_port.h`), which is 0 there.
 * **pcc's lexer reads `"\\u"` as a universal character name**; split
-  such a literal after the backslash (`"\\" "u..."`). tcc puts `const`
+  such a literal after the backslash (`"\\" "u..."`). It does so in a
+  comment too, and refuses one that is not a valid character - `\uXXXX`
+  in prose, a short `\u12`, a surrogate half - so describe the escape
+  in words there. tcc puts `const`
   data in `.data`. `EXTRA=compilers` is the check for all of this.
 * **A `static` name is unique across the whole library**, not just its
   file: the amalgamation puts every `.c` in one translation unit, so two
