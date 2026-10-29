@@ -43,6 +43,7 @@ lines.
 | `settings.c` | read, explain, set, save, notice the file change | 10 |
 | `runtime.c`, `runtime.cpp`, `runtime.rs` | an admin changing a setting in a running service: readers unaffected, the change explained | 10 |
 | `reload.c`, `reload.cpp` | watch a file, rebuild, log what changed | 10 |
+| `live.c`, `live.cpp` | a gateway that reloads itself: applied, a port waiting for a restart, an operator's approval, a broken edit refused | 10 |
 | `schema.c` | the contract as a JSON Schema for editors | 11 |
 | `preflight.c`, `preflight.cpp` | a service that runs Doctor's rules on itself before it serves, and refuses a password typed as a flag | 11 |
 | `policy.c`, `policy.cpp` | a Windows editor: the user's Registry settings, the administrator's policy over them, one key only policy may set | 4 |
@@ -465,6 +466,48 @@ log.level = "debug"  (text)
   service.ini "info"                shadowed   service.ini:2:1
   default     "warn"                shadowed
 ```
+
+### Reloading, in the mode the operators chose
+
+The loop `reload.c` writes - notice, rebuild, check, swap without a
+reader seeing it half done - is `cf_live` (D-48), in one of three
+modes: `CF_LIVE_MANUAL` reloads only when asked (an admin command, a
+SIGHUP), `CF_LIVE_APPROVE` builds a change and holds it until
+`cf_live_approve`, and `CF_LIVE_AUTO` builds, checks and swaps. A build
+or a check that fails leaves the running snapshot serving, and says
+why. Readers call `cf_live_get` on any thread and keep the snapshot
+they got; the library owns no thread - the program's loop calls
+`cf_live_poll`, or `cf_live_wait` where it has no loop.
+
+```c
+static cf_builder* build(void* user) {
+    cf_builder* b = cf_build(NULL);
+    cf_builder_file(b, "gateway.ini", CF_RANK_USER_FILE, "gateway.ini", NULL, 0);
+    cf_builder_int(b, "server.port", 8080, 1, 65535, CF_RESTART);
+    cf_builder_text(b, "log.level", "info", 0);
+    return b;
+}
+
+cf_live* live = cf_live_open(CF_LIVE_AUTO, build, preflight, NULL, NULL, &err);
+```
+
+A key defined `CF_RESTART` - a port with a bound socket, the size of an
+allocated pool - cannot change live. Its new value does not reach
+readers: the running value is kept as the top source, named
+`running`, `cf_live_restarts` lists the key, and `explain()` shows
+both (`examples/c/live.c`):
+
+```text
+server.port = 8080  (int)
+  running     8080                  selected
+  gateway.ini 9443                  shadowed   gateway.ini:2:1
+  default     8080                  shadowed
+```
+
+The check (`preflight` above) sees every snapshot before readers can,
+the first included: a Doctor preflight, a rule of the program's. In C++
+it is `cf::Live`, whose build under C++11 can be a lambda returning a
+`cf::Builder`.
 
 ## 11. The editor, the report and Doctor
 

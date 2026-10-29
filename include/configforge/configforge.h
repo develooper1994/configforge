@@ -34,6 +34,7 @@
 #include "configforge/cf_explain.h"
 #include "configforge/cf_iterate.h"
 #include "configforge/cf_report.h"
+#include "configforge/cf_live.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -29,7 +29,12 @@ enum {
     /* A command rather than a setting. --cf.explain asks a question; it
        configures nothing, so it must never be written into a file that
        is read back as configuration. */
-    CF_TRANSIENT = 1u << 3
+    CF_TRANSIENT = 1u << 3,
+
+    /* Cannot change while the program runs - a port it listens on, the
+       size of a pool it allocated. cf_live keeps the running value and
+       reports the new one as waiting for a restart (cf_live.h). */
+    CF_RESTART = 1u << 4
 };
 
 typedef enum cf_on_invalid {

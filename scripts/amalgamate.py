@@ -38,6 +38,7 @@ HEADERS = [
     "cf_emit.h",
     "cf_image.h",
     "cf_report.h",
+    "cf_live.h",
     "configforge.h",
 ]
 
@@ -55,7 +56,7 @@ SOURCES = [
     "platform/none/none.c",
     "core/version.c", "core/port.c", "core/error.c", "core/numeric.c", "core/alloc.c",
     "core/value.c", "core/keyspace.c", "core/define.c", "core/validate.c",
-    "core/config.c", "core/iterate.c",
+    "core/config.c", "core/iterate.c", "core/live.c",
     "serialize/blob.c", "serialize/codec.c", "serialize/ini.c",
     "serialize/json.c", "serialize/toml.c", "serialize/yaml.c", "serialize/xml.c", "serialize/properties.c",
     "sources/entry.c", "sources/memory.c", "sources/defaults.c", "sources/env.c",

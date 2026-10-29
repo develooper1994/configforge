@@ -7,6 +7,17 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **A configuration that reloads itself, in a mode the program chooses**
+  (`cf_live`, D-48): manual, approved (a change is built and waits for
+  `cf_live_approve`, and an edit after it replaces it) or automatic. A
+  check sees every snapshot before readers do; a build or a check that
+  fails leaves the running one serving and says why. `cf_live_get` is
+  safe on any thread, and a reader keeps the snapshot it took. A key
+  defined `CF_RESTART` keeps its running value, shown by explain() as
+  the source `running` over the file's new value, and listed by
+  `cf_live_restarts`. No thread of the library's: the loop polls, or
+  `cf_live_wait` waits on a watcher. `cf::Live` in C++, with lambdas
+  under C++11; `examples/c/live.c` and `live.cpp`.
 - **A C++ interface a standard** (D-47). Under C++11 the wrapper's
   classes move, have an explicit bool and derive from pairs in braces.
   `configforge17.hpp` adds `cf::find<T>` as `std::optional` (nothing,

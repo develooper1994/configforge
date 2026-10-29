@@ -50,7 +50,8 @@ set(CF_UNIT_TESTS
     test_edges
     test_codec_edges
     test_lex_edges
-    test_report_edges)
+    test_report_edges
+    test_live)
 
 # The directories test_starve's every-source run reads. C89 has no mkdir.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_starve.d
@@ -226,6 +227,8 @@ find_package(Threads QUIET)
 if(CMAKE_USE_PTHREADS_INIT)
   target_compile_definitions(test_threads PRIVATE CF_TEST_PTHREADS=1)
   target_link_libraries(test_threads PRIVATE Threads::Threads)
+  target_compile_definitions(test_live PRIVATE CF_TEST_PTHREADS=1)
+  target_link_libraries(test_live PRIVATE Threads::Threads)
 endif()
 
 # The fuzzer is the slowest test here and the one most worth running
