@@ -18,15 +18,10 @@ Things that are wrong or unproven today, most serious first.
    the code is right for a real kqueue; macOS's is a different kernel's,
    and the macOS CI job is its only check, whose result this machine
    cannot see. *Done:* the macOS CI job seen green.
-2. **Error paths are the least tested.** Branch coverage (74.8%) trails
-   line coverage (85.4%) by ten points, and the branches not taken are
-   mostly refusals. `EXTRA=coverage` holds both, at 74% and 84%; *done*
-   is both floors raised as refusal tests are added, the branch one past
-   80%.
 
 ## Next
 
-3. **1.0**, once 1-2 are done: an ABI check in CI (abidiff against the
+2. **1.0**, once 1 is done: an ABI check in CI (abidiff against the
    last release), and semantic versioning from then on. The symbol list
    is built (`cmake/configforge.symbols`, `gate.abi`), so a change to the
    interface is already a line in a diff. Before 1.0 is when an

@@ -210,10 +210,223 @@ static void test_small_output_buffers(void) {
     cf_config_free(c);
 }
 
+/* ---------------------------------------------------------------- *
+ * Every source and every feature, run out of room
+ *
+ * The run above reads two sources. Each of the others - a file, a
+ * .env, a drop-in directory, a directory of secrets - takes its state
+ * from the arena, and so does each feature that keeps something: a
+ * reference's expansion, a renamed key's copies, a policy, an enum. A
+ * buffer that ends inside any one of those is a place a device could
+ * run out, so this run uses all of them, and the sweep below walks the
+ * boundary through it eight bytes at a time.
+ * ---------------------------------------------------------------- */
+
+static cf_bool starve_spill(const char* path, const char* text) {
+    FILE* f = fopen(path, "wb");
+    if (f == NULL) {
+        return CF_FALSE;
+    }
+    fputs(text, f);
+    fclose(f);
+    return CF_TRUE;
+}
+
+static char          s_e0[]   = "SHOP_SERVER__HOST=web";
+static char*         s_env[]  = {s_e0, NULL};
+static char          s_a1[]   = "--server.port=9000";
+static char*         s_argv[] = {a0, s_a1, NULL};
+static const cf_pair s_mem[]  = {{"plugins.audit.level", "2"}, {"cache.size", "lots"}};
+
+static stage run_all_in(char* buf, size_t cap, cf_u64* digest, size_t* used,
+                        cf_error* err) {
+    static const char* const levels[]   = {"debug", "info", "warn", NULL};
+    static const char* const from_env[] = {"secrets", "env", NULL};
+    cf_arena*                ar;
+    cf_builder*              b;
+    cf_config*               c;
+    cf_def                   d;
+    static char              scratch[2048];
+
+    *digest = 0;
+    ar      = cf_arena_fixed(buf, cap);
+    if (ar == NULL) {
+        return STAGE_NO_ARENA;
+    }
+    b = cf_build_in(ar);
+    if (b == NULL) {
+        return STAGE_NO_BUILDER;
+    }
+    cf_builder_cli(b, "cli", CF_RANK_CLI, 2, s_argv);
+    cf_builder_env(b, "env", CF_RANK_ENV, "SHOP_", s_env);
+    cf_builder_dotenv(b, ".env", 15, "cf_starve.env", "SHOP_", 0);
+    cf_builder_file(b, "app.ini", CF_RANK_USER_FILE, "cf_starve.ini", NULL, 0);
+#if CF_WITH_DIR
+    cf_builder_dir(b, "conf.d", 25, "cf_starve.d", NULL, CF_OPTIONAL);
+    cf_builder_secrets(b, "secrets", 5, "cf_starve_secrets", NULL, CF_OPTIONAL);
+#endif
+    cf_builder_memory(b, "mem", CF_RANK_SYS_FILE, s_mem, 2);
+
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    cf_builder_text(b, "server.host", "localhost", 0);
+    cf_builder_text(b, "server.url", NULL, 0);
+    cf_def_init(&d, CF_TYPE_TEXT, "log.level");
+    d.allowed     = levels;
+    d.has_default = CF_TRUE;
+    cf_value_text(&d.default_value, "info", 4);
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_INT, "cache.size");
+    d.has_default = CF_TRUE;
+    cf_value_int(&d.default_value, 32);
+    d.on_invalid = CF_INVALID_FALLBACK;
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_TEXT, "db.password");
+    d.flags  = CF_SENSITIVE;
+    d.policy = from_env;
+    cf_builder_define(b, &d);
+    cf_builder_text(b, "app.name", "app", 0);
+    cf_def_init(&d, CF_TYPE_TEXT, "old.name");
+    d.flags       = CF_DEPRECATED;
+    d.replaced_by = "app.name";
+    cf_builder_define(b, &d);
+    cf_builder_open(b, "plugins");
+    cf_builder_unknown(b, CF_UNKNOWN_REJECT);
+
+    c = cf_builder_create(b, err);
+    if (c == NULL) {
+        return STAGE_NO_CONFIG;
+    }
+    check(strcmp(cf_get_text(c, "server.url", ""), "http://web:9000/") == 0,
+          "a reference expanded from the winners");
+    check(strcmp(cf_get_text(c, "log.level", ""), "debug") == 0, "the .env read");
+    check(cf_get_int(c, "cache.size", 0) == 32, "a refused value fell back");
+    check(strcmp(cf_get_text(c, "app.name", ""), "legacy") == 0, "a renamed key fed");
+#if CF_WITH_DIR
+    check(strcmp(cf_get_text(c, "db.password", ""), "hunter2") == 0,
+          "the secrets read");
+#endif
+    check(cf_get_int(c, "plugins.audit.level", 0) == 2, "an open prefix kept");
+    (void)cf_explain(c, "server.url", scratch, sizeof scratch);
+    (void)cf_inspect(c, scratch, sizeof scratch);
+    *digest = cf_digest(c);
+    *used   = cf_arena_used(ar);
+    cf_config_free(c);
+    return STAGE_COMPLETE;
+}
+
+/* A directory listing takes room for every name at its longest, so the
+   buffer is larger than the first run's; the sweep starts just above
+   what a complete run used, where every allocation lies. */
+static void test_every_size_every_source(void) {
+    static char buf[1 << 19];
+    size_t      used = 0, ignored = 0;
+    cf_u64      reference = 0, digest = 0;
+    cf_error    err = CF_ERROR_INIT;
+    size_t      cap;
+    int         complete = 0, silent = 0;
+
+    /* A build without the parts this run reads has nothing to sweep. */
+    if (!cf_has_feature("ini") || !cf_has_feature("dotenv")) {
+        return;
+    }
+    check(starve_spill("cf_starve.ini",
+                       "[server]\nurl = http://${server.host}:${server.port}/\n"
+                       "[old]\nname = legacy\n"),
+          "wrote the file");
+    check(starve_spill("cf_starve.env", "SHOP_LOG__LEVEL=debug\n"), "wrote the .env");
+#if CF_WITH_DIR
+    check(starve_spill("cf_starve.d/10-a.ini", "[server]\nhost = ignored\n"),
+          "wrote the drop-in");
+    check(starve_spill("cf_starve_secrets/db.password", "hunter2\n"),
+          "wrote the secret");
+#endif
+    check(run_all_in(buf, sizeof buf, &reference, &used, &err) == STAGE_COMPLETE,
+          "every source in the whole buffer");
+    if (reference == 0) {
+        printf("  %s\n", err.message);
+        return;
+    }
+    for (cap = used + 4096; cap > 8; cap -= 8) {
+        stage st;
+        cf_error_clear(&err);
+        st = run_all_in(buf, cap, &digest, &ignored, &err);
+        if (st == STAGE_COMPLETE) {
+            ++complete;
+            if (digest != reference) {
+                check(0, "every source: the result does not depend on the buffer");
+                break;
+            }
+        } else if (st == STAGE_NO_CONFIG && err.message[0] == '\0') {
+            ++silent;
+        }
+    }
+    check(complete > 0, "every source: some sizes worked");
+    check(silent == 0, "every source: every refusal came with a reason");
+}
+
+/* A change at run time in a buffer of its own (cf_derive_in), swept the
+   same way: the derived configuration copies the original's sources,
+   definitions, grants and candidates, and each copy can be the one
+   that does not fit. */
+static void test_derive_every_size(void) {
+    static char    base_buf[1 << 16];
+    static char    buf[1 << 16];
+    static cf_pair change[] = {{"server.port", "9443"}, {"old.name", "renamed"}};
+    cf_error       err      = CF_ERROR_INIT;
+    cf_u64         unused;
+    cf_arena*      ar = cf_arena_fixed(base_buf, sizeof base_buf);
+    cf_builder*    b  = cf_build_in(ar);
+    cf_config*     base;
+    size_t         cap;
+    int            complete = 0, silent = 0;
+    cf_def         d;
+
+    (void)unused;
+    /* It reads the file the run above writes, so it needs what that needs. */
+    if (!cf_has_feature("ini") || !cf_has_feature("dotenv")) {
+        return;
+    }
+    cf_builder_cli(b, "cli", CF_RANK_CLI, 2, s_argv);
+    cf_builder_file(b, "app.ini", CF_RANK_USER_FILE, "cf_starve.ini", NULL, 0);
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    cf_builder_text(b, "server.host", "localhost", 0);
+    cf_builder_text(b, "server.url", NULL, 0);
+    cf_builder_text(b, "app.name", "app", 0);
+    cf_def_init(&d, CF_TYPE_TEXT, "old.name");
+    d.flags       = CF_DEPRECATED;
+    d.replaced_by = "app.name";
+    cf_builder_define(b, &d);
+    base = cf_builder_create(b, &err);
+    check(base != NULL, "a base to derive from");
+    if (base == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+    for (cap = sizeof buf; cap > 8; cap -= 8) {
+        cf_config* next;
+        cf_error_clear(&err);
+        next = cf_derive_in(base, cf_arena_fixed(buf, cap), "admin", change, 2, &err);
+        if (next != NULL) {
+            ++complete;
+            check(cf_get_int(next, "server.port", 0) == 9443 &&
+                      strcmp(cf_get_text(next, "app.name", ""), "renamed") == 0,
+                  "a derived configuration that fits is whole");
+            cf_config_free(next);
+        } else if (err.message[0] == '\0') {
+            ++silent;
+        }
+    }
+    check(complete > 0, "derive: some sizes worked");
+    check(silent == 0, "derive: every refusal came with a reason");
+    cf_config_free(base);
+}
+
 int main(void) {
     test_every_size();
     test_degenerate();
     test_small_output_buffers();
+    test_every_size_every_source();
+    test_derive_every_size();
 
     printf("%d checks, %d failures\n", g_run, g_fail);
     return g_fail == 0 ? 0 : 1;

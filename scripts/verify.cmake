@@ -37,8 +37,8 @@
 #   fuzz     libFuzzer on every reader for FUZZ_SECONDS each (default 10),
 #            clang only
 #   coverage line coverage of src/ by the suite, failing below COVERAGE_MIN
-#            percent of lines (default 84) or COVERAGE_BRANCH_MIN of
-#            branches (default 74): ratchets, raised as tests are added
+#            percent of lines (default 89) or COVERAGE_BRANCH_MIN of
+#            branches (default 80): ratchets, raised as tests are added
 #
 # WORK puts the staged copy somewhere other than build-verify/. Under
 # WSL, verifying a checkout on /mnt/c needs it: that filesystem has no
@@ -319,10 +319,10 @@ foreach(x ${EXTRA})
       continue()
     endif()
     if(NOT DEFINED COVERAGE_MIN)
-      set(COVERAGE_MIN 84)
+      set(COVERAGE_MIN 89)
     endif()
     if(NOT DEFINED COVERAGE_BRANCH_MIN)
-      set(COVERAGE_BRANCH_MIN 74)
+      set(COVERAGE_BRANCH_MIN 80)
     endif()
     step("coverage configure" ${CMAKE_COMMAND} --preset coverage)
     step(
