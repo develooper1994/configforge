@@ -73,6 +73,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   only" stays that way. Every item or none, and the error says which
   question said no. `Builder::writable` in C++. `cf_store_set` stays,
   for provisioning a store, and asks nothing.
+- **Scenario examples, each in C and C++**: `preflight`, a service that
+  lints its own configuration with Doctor's library and refuses to serve
+  with a password typed as a flag; `policy`, a Windows editor whose
+  administrator's Registry policy overrides the user's settings and
+  alone may set the update channel. Checked by the suite for the same
+  lines in both languages; `policy` where there is a Registry.
 - **The symbol list**: `cmake/configforge.symbols` names every `CF_API`
   function, and `gate.abi` holds the headers and the built library to
   it - every declaration listed and every listed name declared, each

@@ -88,3 +88,52 @@ if(CF_WITH_INI)
     "with --server.host=web2, url: https://web2:9443/"
     "a cycle: server.(host|url): its references lead back to it")
 endif()
+
+# The same preflight from C++: the wrapper hands Doctor the configuration.
+if(TARGET configforge_doctor)
+  add_executable(preflight_cpp preflight.cpp)
+  target_link_libraries(preflight_cpp PRIVATE configforge_doctor)
+  set_target_properties(
+    preflight_cpp
+    PROPERTIES CXX_STANDARD 98
+               CXX_STANDARD_REQUIRED ON
+               CXX_EXTENSIONS OFF)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    target_compile_options(preflight_cpp PRIVATE -pedantic -Werror -Wall
+                                                 -Wextra)
+  endif()
+  configforge_apply_analysis(preflight_cpp)
+  if(CF_WITH_INI
+     AND CF_WITH_REPORT
+     AND CF_WITH_JSON)
+    example_expect(
+      preflight_cpp
+      ${CMAKE_CURRENT_BINARY_DIR}/preflight-run
+      "preflight: CFD007 error db.password at argv.1."
+      "refusing to serve"
+      "preflight clean: serving on :9443, database db.internal")
+  endif()
+endif()
+
+# The administrator's policy over the user's settings, from C++.
+add_executable(policy_cpp policy.cpp)
+target_link_libraries(policy_cpp PRIVATE configforge)
+set_target_properties(
+  policy_cpp
+  PROPERTIES CXX_STANDARD 98
+             CXX_STANDARD_REQUIRED ON
+             CXX_EXTENSIONS OFF)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+  target_compile_options(policy_cpp PRIVATE -pedantic -Werror -Wall -Wextra)
+endif()
+configforge_apply_analysis(policy_cpp)
+if(WIN32)
+  example_expect(
+    policy_cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/policy-run
+    "font 12, theme dark, channel stable"
+    "policy +12 +selected"
+    "nightly.  +rejected: policy: 'updatechannel' may only be set from policy")
+else()
+  add_test(NAME example.policy_cpp COMMAND policy_cpp)
+endif()
