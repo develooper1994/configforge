@@ -45,7 +45,16 @@ set(CF_UNIT_TESTS
     test_write
     test_registry
     test_interpolate
-    test_rename)
+    test_rename
+    test_null
+    test_edges
+    test_codec_edges
+    test_lex_edges
+    test_report_edges)
+
+# The directories test_starve's every-source run reads. C89 has no mkdir.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_starve.d
+     ${CMAKE_CURRENT_BINARY_DIR}/cf_starve_secrets)
 
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)
@@ -62,6 +71,10 @@ foreach(t ${CF_UNIT_TESTS})
   endif()
   add_test(NAME unit.${t} COMMAND ${t})
 endforeach()
+
+# The documents test_codec_edges reads, where they are in the source tree.
+target_compile_definitions(
+  test_codec_edges PRIVATE CF_EDGES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 
 # The same suite under a comma-decimal locale and a Turkish locale.
 # The Turkish case is the standard test for the tolower hazard.

@@ -151,6 +151,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- **The INI reader could refuse without saying why.** When its consumer
+  refused to close a section, it returned failure and an empty error -
+  breaking the one promise every reader makes, that a refusal names its
+  reason. It says where now, as the TOML reader does; and it no longer
+  ignores the consumer's answer at the end of a document. Found by
+  feeding each codec a sink that refuses at each event in turn.
+
 - **`explain()` ran a wide source name into its value.** A name or a
   value as wide as its column left no space before the next one -
   `features.inifalse` - in every chain with a source called
@@ -187,6 +194,15 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Changed
 
+- **Branch coverage is past 80%**, and the floors follow it: 89% of
+  lines and 80% of branches (`EXTRA=coverage`, CI's coverage job), up
+  from 84 and 74. The tests that did it go where the refusals are: every
+  facade call handed NULL or the wrong type; the core's names, values
+  and contradictory definitions; each codec's malformed and edge-case
+  documents, from data files, and a consumer that refuses at every
+  event; the number conversions and the lexers at their limits; damaged
+  reports for Replay; and every source and feature together in a fixed
+  arena swept eight bytes at a time, with `cf_derive_in` the same way.
 - **`CF_OPTIONAL` is the spelling of "may be absent"**: the flag now
   also means a Registry key, a store, a directory or a `.env`, so
   `CF_FILE_OPTIONAL` said less than it did. The old spelling is the same

@@ -80,7 +80,10 @@ static cf_bool ini_emit_path(const cf_doc_sink* out, const char* path, size_t n,
 
     while (*depth > 0) {
         if (!out->end(out->ctx)) {
-            return CF_FALSE;
+            /* The consumer said no; a refusal still says where. */
+            return cf_error_set(err, CF_E_SOURCE, NULL, file,
+                                "%s:%u: the document could not be recorded", file,
+                                line);
         }
         --*depth;
     }
@@ -219,10 +222,16 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
     }
 
     while (depth > 0) {
-        out->end(out->ctx);
+        if (!out->end(out->ctx)) {
+            return cf_error_set(err, CF_E_SOURCE, NULL, s.file,
+                                "%s: the document could not be recorded", s.file);
+        }
         --depth;
     }
-    out->end(out->ctx);
+    if (!out->end(out->ctx)) {
+        return cf_error_set(err, CF_E_SOURCE, NULL, s.file,
+                            "%s: the document could not be recorded", s.file);
+    }
     return CF_TRUE;
 }
 
