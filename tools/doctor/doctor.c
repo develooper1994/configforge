@@ -198,6 +198,7 @@ static int usage(void) {
     fputs("  doctor import-git [--full]     < git config output\n"
           "  doctor import-spring           < /actuator/env JSON\n"
           "  doctor import-dotnet [--full]  < GetDebugView() text\n"
+          "  doctor import-systemd [--full] < systemd-analyze cat-config\n"
           "\n"
           "  --baseline <file>  findings already accepted\n"
           "  --severity <file>  this project's severities\n"
@@ -254,6 +255,9 @@ int main(int argc, char** argv) {
     }
     if (argc >= 2 && strcmp(argv[1], "import-dotnet") == 0) {
         return doctor_import_dotnet(argc - 2, argv + 2);
+    }
+    if (argc >= 2 && strcmp(argv[1], "import-systemd") == 0) {
+        return doctor_import_systemd(argc - 2, argv + 2);
     }
     /* The version, and the commit it was built from when the build knew
        it: two Doctors of one version can still differ. */

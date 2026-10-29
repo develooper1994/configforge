@@ -431,9 +431,10 @@ Reports do not have to come from this library. `doctor import-git` turns
 `git config --list --show-origin --show-scope` into one, and every
 command above runs on it unchanged - a scope that wins nothing is
 CFD010 there too. `doctor import-spring` does the same for Spring Boot's
-`/actuator/env`, and `doctor import-dotnet` for .NET's
-`GetDebugView()`; neither re-implements its ecosystem's precedence, and
-each writes down only what the ecosystem itself published.
+`/actuator/env`, `doctor import-dotnet` for .NET's `GetDebugView()`,
+and `doctor import-systemd` for `systemd-analyze cat-config`; none
+re-implements its ecosystem's precedence, and each writes down only
+what the ecosystem itself published.
 
 Doctor reads provenance reports and never resolves configuration itself,
 which is what keeps it from becoming a second implementation of every

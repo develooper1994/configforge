@@ -73,6 +73,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   only" stays that way. Every item or none, and the error says which
   question said no. `Builder::writable` in C++. `cf_store_set` stays,
   for provisioning a store, and asks nothing.
+- **`doctor import-systemd`**: `systemd-analyze cat-config` or
+  `systemctl cat` in, a report out. Each file is a source in the order
+  systemd applies them, the later above the earlier, and each value is
+  placed at its file's line - so CFD001 finds a key set twice in one
+  file and CFD010 a drop-in that wins nothing. Blind unless `--full`.
 - **`doctor import-spring` and `doctor import-dotnet`**, the second and
   third foreign adapters. Spring Boot's `/actuator/env` gives the
   sources in Spring's order and an origin for most properties, which
