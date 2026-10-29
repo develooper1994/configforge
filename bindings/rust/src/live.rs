@@ -44,6 +44,23 @@ pub enum Reload {
     Pending,
 }
 
+/// What a health page says about the reloads ([`Live::status`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Status {
+    /// As [`Live::generation`].
+    pub generation: u64,
+    /// Rebuilds tried, from poll, reload and wait.
+    pub reloads: u64,
+    /// Of those, refused or failed.
+    pub failures: u64,
+    /// What the last rebuild or approval did; `None` when it failed.
+    pub last: Option<Reload>,
+    /// A change waits for [`Live::approve`].
+    pub pending: bool,
+    /// Why the last failure failed.
+    pub last_error: Option<Error>,
+}
+
 /// The strings every builder handed to the C side borrows, kept for as
 /// long as any snapshot built from them may be read.
 type Kept = Arc<Mutex<Vec<Keep>>>;
@@ -99,6 +116,27 @@ impl Inner {
         let c = unsafe { sys::cf_live_get(self.l) };
         Config::shared(c, self.kept.clone())
     }
+
+    fn status(&self) -> Status {
+        let mut s = sys::cf_live_status {
+            size: std::mem::size_of::<sys::cf_live_status>(),
+            generation: 0,
+            reloads: 0,
+            failures: 0,
+            last: 0,
+            pending: 0,
+            error: new_error(),
+        };
+        unsafe { sys::cf_live_status_get(self.l, &mut s) };
+        Status {
+            generation: s.generation,
+            reloads: s.reloads,
+            failures: s.failures,
+            last: result(s.last, &s.error).ok(),
+            pending: s.pending != 0,
+            last_error: (s.failures > 0).then(|| Error::from_raw(&s.error)),
+        }
+    }
 }
 
 /// The reloads, driven from one place: poll, reload, approve.
@@ -116,6 +154,11 @@ impl LiveReader {
     /// The current snapshot. A reader keeps the one it got.
     pub fn get(&self) -> Config {
         self.inner.get()
+    }
+
+    /// The reloads' status, for a health page on a worker thread.
+    pub fn status(&self) -> Status {
+        self.inner.status()
     }
 }
 
@@ -219,6 +262,11 @@ impl Live {
         unsafe { sys::cf_live_reject(self.inner.l) };
     }
 
+    /// The reloads' status: counts, the last result, the last failure.
+    pub fn status(&self) -> Status {
+        self.inner.status()
+    }
+
     /// How many snapshots readers have been given.
     pub fn generation(&self) -> u64 {
         unsafe { sys::cf_live_generation(self.inner.l) }
@@ -290,6 +338,10 @@ mod tests {
         which.store(2, Ordering::SeqCst);
         let e = live.reload().unwrap_err();
         assert!(e.message.contains("65535"), "{}", e.message);
+        let st = live.reader().status();
+        assert_eq!((st.generation, st.reloads, st.failures), (2, 2, 1));
+        assert_eq!(st.last, None);
+        assert!(st.last_error.unwrap().message.contains("65535"));
         assert_eq!(
             live.get().text("log.level").as_deref(),
             Some("debug"),

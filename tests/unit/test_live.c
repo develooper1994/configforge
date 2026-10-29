@@ -146,6 +146,21 @@ static void test_auto_and_manual(void) {
           "nothing waits for a restart when the value is back");
     check(cf_live_reload(l, &err) == CF_LIVE_UNCHANGED && cf_live_generation(l) == 3,
           "a reload that changes nothing is not a new generation");
+    {
+        cf_live_status st;
+        memset(&st, 0, sizeof st);
+        check(!cf_live_status_get(l, &st), "a status of an unknown size is refused");
+        st.size = sizeof st;
+        check(cf_live_status_get(l, &st), "the status");
+        check(st.generation == 3 && st.reloads == 5 && st.failures == 2,
+              "counts the generations, the rebuilds and the failures");
+        check(st.last == CF_LIVE_UNCHANGED && !st.pending,
+              "says what the last one did");
+        check(strstr(st.error.message, "trace") != NULL,
+              "and why the last failure failed");
+        check(!cf_live_status_get(NULL, &st) && !cf_live_status_get(l, NULL),
+              "and nothing of nothing");
+    }
     cf_live_close(l);
 }
 
@@ -175,6 +190,16 @@ static void test_approve(void) {
           "approved, it is swapped in");
     check(strcmp(level(l, buf, sizeof buf), "debug") == 0 && cf_live_generation(l) == 2,
           "and readers see it");
+    {
+        cf_live_status st;
+        st.size = sizeof st;
+        g_pairs = g_trace;
+        check(cf_live_reload(l, &err) == CF_LIVE_PENDING, "another waits");
+        check(cf_live_status_get(l, &st) && st.pending && st.last == CF_LIVE_PENDING,
+              "and the status says so");
+        cf_live_reject(l);
+        check(cf_live_status_get(l, &st) && !st.pending, "until it is rejected");
+    }
     cf_live_close(l);
 
     g_pairs = g_info;

@@ -26,12 +26,12 @@ from ._config import (
     flag,
     rank,
 )
-from ._live import Live, Mode, Reload
+from ._live import Live, Mode, Reload, Status
 from ._native import lib as _lib
 from ._settings import define, read, section, setting
 
 __all__ = [
-    "Builder", "Config", "Error", "Live", "Mode", "Reload",
+    "Builder", "Config", "Error", "Live", "Mode", "Reload", "Status",
     "rank", "flag", "OPTIONAL", "UNKNOWN_IGNORE", "UNKNOWN_WARN", "UNKNOWN_REJECT",
     "setting", "section", "define", "read", "version", "has_feature",
 ]

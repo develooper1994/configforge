@@ -24,6 +24,11 @@ struct cf_live {
     char*       restarts; /* the CF_RESTART keys kept, a line each */
     size_t      restarts_len;
 
+    /* For cf_live_status_get, under the lock; `scratch` is where the
+       driving thread assembles a rebuild's error, off the stack. */
+    cf_live_status status;
+    cf_error       scratch;
+
     /* The driving thread's alone. */
     cf_config*  pending;
     char*       pending_restarts;
@@ -249,7 +254,7 @@ static void live_drop_pending(cf_live* l) {
     l->pending_restarts_len = 0;
 }
 
-static cf_live_result live_rebuild(cf_live* l, cf_error* err) {
+static cf_live_result live_rebuild_once(cf_live* l, cf_error* err) {
     char*      list;
     size_t     list_len;
     cf_config* next = live_build(l, l->current, &list, &list_len, err);
@@ -272,6 +277,32 @@ static cf_live_result live_rebuild(cf_live* l, cf_error* err) {
     }
     live_swap(l, next, list, list_len, CF_FALSE);
     return CF_LIVE_SWAPPED;
+}
+
+/* What a rebuild or an approval did, for the status, and the error for
+   the caller who asked for one. */
+static cf_live_result live_record(cf_live* l, cf_live_result r, cf_bool rebuilt,
+                                  cf_error* err) {
+    live_lock(l);
+    l->status.reloads += rebuilt ? 1u : 0u;
+    l->status.last       = r;
+    l->status.pending    = (l->pending != NULL) ? CF_TRUE : CF_FALSE;
+    l->status.generation = l->generation;
+    if (r == CF_LIVE_FAILED) {
+        ++l->status.failures;
+        l->status.error = l->scratch;
+    }
+    live_unlock(l);
+    if (r == CF_LIVE_FAILED && err != NULL) {
+        *err = l->scratch;
+    }
+    return r;
+}
+
+static cf_live_result live_rebuild(cf_live* l, cf_error* err) {
+    cf_error_clear(&l->scratch);
+    l->scratch.size = sizeof l->scratch;
+    return live_record(l, live_rebuild_once(l, &l->scratch), CF_TRUE, err);
 }
 
 /* ------------------------------------------------------------------ *
@@ -315,7 +346,12 @@ cf_live* cf_live_open(cf_live_mode mode, cf_live_build_fn build, cf_live_check_f
         a->release(a->ctx, l);
         return NULL;
     }
-    l->generation = 1;
+    l->generation        = 1;
+    l->status.size       = sizeof l->status;
+    l->status.generation = 1;
+    l->status.last       = CF_LIVE_SWAPPED;
+    cf_error_clear(&l->status.error);
+    l->status.error.size = sizeof l->status.error;
     if (mode != CF_LIVE_MANUAL) {
         live_watch(l);
     }
@@ -396,13 +432,26 @@ cf_live_result cf_live_approve(cf_live* l, cf_error* err) {
     l->pending              = NULL;
     l->pending_restarts     = NULL;
     l->pending_restarts_len = 0;
-    return CF_LIVE_SWAPPED;
+    return live_record(l, CF_LIVE_SWAPPED, CF_FALSE, err);
 }
 
 void cf_live_reject(cf_live* l) {
     if (l != NULL) {
         live_drop_pending(l);
+        live_lock(l);
+        l->status.pending = CF_FALSE;
+        live_unlock(l);
     }
+}
+
+cf_bool cf_live_status_get(cf_live* l, cf_live_status* out) {
+    if (l == NULL || out == NULL || out->size != sizeof *out) {
+        return CF_FALSE;
+    }
+    live_lock(l);
+    *out = l->status;
+    live_unlock(l);
+    return CF_TRUE;
 }
 
 cf_u64 cf_live_generation(cf_live* l) {

@@ -13,6 +13,7 @@ build's own exception as its cause.
 from __future__ import annotations
 
 import ctypes
+import dataclasses
 import enum
 from typing import Any, Callable, List, Optional
 
@@ -30,6 +31,18 @@ class Reload(enum.IntEnum):
     UNCHANGED = 0
     SWAPPED = 1
     PENDING = 2
+
+
+@dataclasses.dataclass(frozen=True)
+class Status:
+    """What a health page says about the reloads."""
+
+    generation: int
+    reloads: int  #: rebuilds tried, from poll, reload and wait
+    failures: int  #: of those, refused or failed
+    last: Optional[Reload]  #: what the last one did; None when it failed
+    pending: bool  #: a change waits for approve()
+    last_error: Optional[Error]  #: why the last failure failed
 
 
 class Live:
@@ -102,6 +115,19 @@ class Live:
 
     def reject(self) -> None:
         n.lib.cf_live_reject(self._l)
+
+    @property
+    def status(self) -> Status:
+        """The reloads' status; safe from any thread."""
+        s = n.cf_live_status()
+        s.size = ctypes.sizeof(n.cf_live_status)
+        n.lib.cf_live_status_get(self._l, ctypes.byref(s))
+        return Status(
+            s.generation, s.reloads, s.failures,
+            Reload(s.last) if s.last >= 0 else None,
+            bool(s.pending),
+            Error._from(s.error) if s.failures else None,
+        )
 
     @property
     def generation(self) -> int:

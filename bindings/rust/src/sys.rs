@@ -150,6 +150,17 @@ pub struct cf_live {
     _opaque: [u8; 0],
 }
 
+#[repr(C)]
+pub struct cf_live_status {
+    pub size: usize,
+    pub generation: u64,
+    pub reloads: u64,
+    pub failures: u64,
+    pub last: c_int,
+    pub pending: cf_bool,
+    pub error: cf_error,
+}
+
 pub type cf_live_build_fn = extern "C" fn(user: *mut std::ffi::c_void) -> *mut cf_builder;
 
 extern "C" {
@@ -309,4 +320,5 @@ extern "C" {
     pub fn cf_live_reject(l: *mut cf_live);
     pub fn cf_live_generation(l: *mut cf_live) -> u64;
     pub fn cf_live_restarts(l: *const cf_live, buf: *mut c_char, cap: usize) -> usize;
+    pub fn cf_live_status_get(l: *mut cf_live, out: *mut cf_live_status) -> cf_bool;
 }

@@ -972,6 +972,19 @@ public:
 
     cf_u64 generation() const { return cf_live_generation(l_); }
 
+    /* What a health page says (cf_live_status); any thread. */
+    cf_live_status status() const
+    {
+        cf_live_status s;
+        s.size = sizeof s;
+        if (!cf_live_status_get(l_, &s)) {
+            s.generation = s.reloads = s.failures = 0;
+            s.last    = CF_LIVE_FAILED;
+            s.pending = CF_FALSE;
+        }
+        return s;
+    }
+
     /* The CF_RESTART keys waiting for a restart, a line each. */
     std::string restarts() const
     {

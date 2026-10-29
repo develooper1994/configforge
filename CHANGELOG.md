@@ -7,6 +7,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **A reload's status, for a health page** (`cf_live_status_get`, any
+  thread): the generation serving, rebuilds tried and failed, what the
+  last one did, whether a change waits for approval, and the last
+  failure's error. `status()` in C++ and Rust, `live.status` in Python.
 - **Doctor as the gate a reload passes through**:
   `cf_doctor_live_check` and `cf_doctor_gate` (a profile, a level to
   fail on, a baseline and a severity file), handed to `cf_live`, lint

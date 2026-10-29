@@ -149,6 +149,9 @@ static void test_live()
     check(live.get()["server.port"].as<int>() == 8080 && live.restarts() == "server.port\n",
           "the port waits for a restart");
     check(!live.pending().valid(), "nothing pending after");
+    check(live.status().reloads == 1 && live.status().generation == 2 &&
+              live.status().failures == 0,
+          "and the status counts it");
 #if CF_CPP11
     g_live = g_v1;
     int      built = 0;

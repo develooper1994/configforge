@@ -63,6 +63,18 @@ class cf_iter(Structure):
     ]
 
 
+class cf_live_status(Structure):
+    _fields_ = [
+        ("size", c_size_t),
+        ("generation", c_uint64),
+        ("reloads", c_uint64),
+        ("failures", c_uint64),
+        ("last", c_int),
+        ("pending", c_int),
+        ("error", cf_error),
+    ]
+
+
 BUILD_FN = CFUNCTYPE(c_void_p, c_void_p)
 
 TYPE_NULL, TYPE_BOOL, TYPE_INT, TYPE_REAL, TYPE_TEXT = range(5)
@@ -162,6 +174,7 @@ for _name, _res, _args in [
     ("cf_live_reject", None, (L,)),
     ("cf_live_generation", c_uint64, (L,)),
     ("cf_live_restarts", c_size_t, (L, c_char_p, c_size_t)),
+    ("cf_live_status_get", c_int, (L, POINTER(cf_live_status))),
 ]:
     _declare(_name, _res, *_args)
 

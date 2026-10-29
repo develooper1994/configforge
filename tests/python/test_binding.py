@@ -135,6 +135,10 @@ class Reloading(unittest.TestCase):
                 live.poll()
             self.assertIn("lots", str(e.exception))
             self.assertIs(live.get().app.debug, True, "still serving")
+            st = live.status
+            self.assertEqual((st.generation, st.reloads, st.failures, st.pending), (2, 2, 1, False))
+            self.assertIsNone(st.last)
+            self.assertIn("lots", st.last_error.message)
         self.assertEqual(cfg.server.port, 8080, "a snapshot outlives its Live")
 
     def test_a_build_that_raises(self):
