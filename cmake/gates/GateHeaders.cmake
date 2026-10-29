@@ -26,21 +26,60 @@ if(bad)
 endif()
 message("header gate: clean")
 
-# The C++ wrapper claims C++03. A claim the build does not check is a
-# claim that decays, so the header is compiled standalone as C++98 too.
-if(CXX AND EXISTS "${SRC}/include/configforge/configforge.hpp")
-  file(WRITE "${BIN}/probe_hpp.cpp"
-       "#include <configforge/configforge.hpp>\nint main(){return 0;}\n")
+# The C++ headers, each standalone under every standard it claims: the
+# wrapper C++03 and later, configforge17.hpp C++17 and later,
+# configforge20.hpp C++20 and later. A claim the build does not check is
+# a claim that decays - the wrapper was checked only as C++98 for years
+# and did not compile as C++11 on LP64. A standard the compiler does not
+# know, or a C++20 library without <format>, is skipped and said.
+function(probe_cxx header std prereq)
+  set(base "${BIN}/probe_${std}_${header}")
+  file(WRITE "${base}.pre.cpp" "${prereq}\nint main(){return 0;}\n")
   execute_process(
-    COMMAND ${CXX} -std=c++98 -pedantic -Werror -Wall -Wextra -I${SRC}/include
-            -c -o "${BIN}/probe_hpp.o" "${BIN}/probe_hpp.cpp"
+    COMMAND ${CXX} -std=c++${std} -c -o "${base}.pre.o" "${base}.pre.cpp"
+    RESULT_VARIABLE rc
+    OUTPUT_QUIET ERROR_QUIET)
+  if(NOT rc EQUAL 0)
+    message("header gate: ${header} as C++${std} skipped, not supported here")
+    return()
+  endif()
+  file(WRITE "${base}.cpp"
+       "#include <configforge/${header}>\nint main(){return 0;}\n")
+  execute_process(
+    COMMAND ${CXX} -std=c++${std} -pedantic -Werror -Wall -Wextra
+            -I${SRC}/include -c -o "${base}.o" "${base}.cpp"
     RESULT_VARIABLE rc
     OUTPUT_VARIABLE out
     ERROR_VARIABLE out)
   if(NOT rc EQUAL 0)
-    message("VIOLATION: configforge.hpp does not compile standalone as C++98")
+    message("VIOLATION: ${header} does not compile standalone as C++${std}")
     message("${out}")
+    set(cxx_bad
+        1
+        PARENT_SCOPE)
+  endif()
+endfunction()
+
+if(CXX AND EXISTS "${SRC}/include/configforge/configforge.hpp")
+  set(cxx_bad 0)
+  foreach(
+    std
+    98
+    11
+    14
+    17
+    20
+    23)
+    probe_cxx(configforge.hpp ${std} "")
+  endforeach()
+  foreach(std 17 20 23)
+    probe_cxx(configforge17.hpp ${std} "#include <optional>")
+  endforeach()
+  foreach(std 20 23)
+    probe_cxx(configforge20.hpp ${std} "#include <format>")
+  endforeach()
+  if(cxx_bad)
     message(FATAL_ERROR "header gate failed")
   endif()
-  message("header gate: C++98 clean")
+  message("header gate: C++ clean")
 endif()
