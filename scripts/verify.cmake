@@ -28,6 +28,9 @@
 #   kqueue   the macOS and BSD wait handle on Linux, through libkqueue
 #   tidy     clang-tidy over the library and Doctor (CF_CLANG_TIDY=ON)
 #   clang    the whole suite built with clang
+#   shared   the whole suite against a shared library (BUILD_SHARED_LIBS),
+#            CI's shared job; the Python binding's tests run only here,
+#            since ctypes loads a shared library
 #   tsan     the whole suite under the thread sanitiser (the tsan preset)
 #   yaml     the whole suite with CF_WITH_YAML, where libyaml is installed
 #   compilers the whole suite against musl (musl-gcc) and with the Tiny C
@@ -232,6 +235,17 @@ foreach(x ${EXTRA})
       -DCMAKE_CXX_COMPILER=${CLANGXX_EXE})
     step("clang build" ${build} build-clang ${debug})
     step("clang test" ${test} build-clang)
+  elseif(x STREQUAL "shared")
+    step(
+      "shared configure"
+      ${CMAKE_COMMAND}
+      -S
+      .
+      -B
+      build-shared
+      -DBUILD_SHARED_LIBS=ON)
+    step("shared build" ${build} build-shared ${debug})
+    step("shared test" ${test} build-shared)
   elseif(x STREQUAL "compilers")
     # name:compiler:extra option. pcc has no atomics, so its build is the
     # single-threaded one the support matrix promises for such a
@@ -387,7 +401,7 @@ foreach(x ${EXTRA})
     endif()
   else()
     message(FATAL_ERROR "unknown EXTRA step '${x}': kqueue, tidy, clang, "
-                        "tsan, yaml, compilers, fuzz or coverage")
+                        "shared, tsan, yaml, compilers, fuzz or coverage")
   endif()
 endforeach()
 

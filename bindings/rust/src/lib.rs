@@ -21,7 +21,12 @@
 //! A [`Config`] is an immutable snapshot (D-14), so it is `Send` and
 //! `Sync`: read it from any thread, change it with [`Config::derive`].
 
+mod live;
 pub mod sys;
+mod typed;
+
+pub use live::{Live, LiveReader, Mode, Reload};
+pub use typed::{Field, Key, Value};
 
 use std::ffi::{CStr, CString};
 use std::fmt;
@@ -44,6 +49,8 @@ pub mod flag {
     pub const SENSITIVE: u32 = super::sys::CF_SENSITIVE;
     pub const DEPRECATED: u32 = super::sys::CF_DEPRECATED;
     pub const TRANSIENT: u32 = super::sys::CF_TRANSIENT;
+    /// Cannot change while the program runs; see [`Live`](crate::Live).
+    pub const RESTART: u32 = super::sys::CF_RESTART;
 }
 
 /// A file or directory that may be absent.
@@ -144,6 +151,11 @@ struct Keep {
     lists: Vec<Vec<*const c_char>>,
     argv: Vec<Vec<*mut c_char>>,
 }
+
+// The raw pointers point into the CStrings and Vecs this same value
+// owns, whose buffers do not move when the Keep does; nothing else
+// reaches them. Moving a Keep to another thread moves its owner too.
+unsafe impl Send for Keep {}
 
 impl Keep {
     fn s(&mut self, v: &str) -> *const c_char {
@@ -461,6 +473,7 @@ impl Builder {
         Ok(Config {
             c,
             _keep: std::mem::take(&mut self.keep),
+            _shared: None,
         })
     }
 }
@@ -484,6 +497,9 @@ impl Drop for Builder {
 pub struct Config {
     c: *mut sys::cf_config,
     _keep: Keep,
+    /// For a snapshot a [`Live`] built: the strings of every builder it
+    /// was given, which the snapshot's sources may point into.
+    _shared: Option<std::sync::Arc<std::sync::Mutex<Vec<Keep>>>>,
 }
 
 // Immutable after construction, its reference count atomic (D-14).
@@ -502,6 +518,14 @@ fn render(f: impl Fn(*mut c_char, usize) -> usize) -> String {
 }
 
 impl Config {
+    fn shared(c: *mut sys::cf_config, kept: std::sync::Arc<std::sync::Mutex<Vec<Keep>>>) -> Config {
+        Config {
+            c,
+            _keep: Keep::default(),
+            _shared: Some(kept),
+        }
+    }
+
     pub fn has(&self, key: &str) -> bool {
         let k = c(key);
         unsafe { sys::cf_has(self.c, k.as_ptr()) != 0 }
@@ -591,7 +615,11 @@ impl Config {
         }
         // The derived configuration copies the name and the values; the
         // strings are kept with it all the same, as the builder's are.
-        Ok(Config { c: d, _keep: keep })
+        Ok(Config {
+            c: d,
+            _keep: keep,
+            _shared: self._shared.clone(),
+        })
     }
 }
 

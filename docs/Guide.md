@@ -691,17 +691,68 @@ links it, so `cargo build --offline` downloads nothing. A `Builder` that
 consumes itself into a `Result<Config, Error>`, reads that cannot fail,
 `explain()`, `derive()`, and `Def` for a full definition. A `Config` is
 `Send + Sync` - an immutable snapshot (section 14) - so a request can
-hold one in an `Arc` while the next is derived. Five of the examples are
-in `examples/rust`, the C programs saying the same lines; `-DCF_RUST=ON`
-has the suite run them under cargo.
+hold one in an `Arc` while the next is derived.
+
+Values are read as the type the program wants, and a default is written
+once (D-46): `cfg.get::<u16>("server.port")` is `None` for a value a
+`u16` cannot hold, never a truncated one; a `Key` is a constant that
+defines and reads; and `settings!` declares the program's own struct,
+whose field list is the contract:
 
 ```rust
-let cfg = configforge::Builder::app("myapp")
-    .define_int("server.port", 8080, 1, 65535, 0)
-    .unknown(configforge::Unknown::Reject)
-    .create()?;
-let port = cfg.int("server.port", 8080);
+const PORT: configforge::Key<u16> = configforge::Key::new("server.port", 8080).range(1, 65535);
+
+configforge::settings! {
+    struct Gateway {
+        port: u16 = "server.port" in 1..=65535 with flag::RESTART => 8080,
+        level: String = "log.level" => "info",
+    }
+}
+
+let mut live = Live::open(Mode::Auto, || Gateway::define(Builder::new().file(/* ... */)))?;
+let reader = live.reader();            // Send + Sync + Clone, for the workers
+let gateway = Gateway::read(&reader.get());
+live.poll()?;                          // in the loop that drives reloads
 ```
+
+`Live` is `cf_live`: a reader keeps the snapshot it took, even past the
+`Live`; a build that panics is a failed build, not an unwound C frame.
+Seven of the examples are in `examples/rust`, the C programs saying the
+same lines; `-DCF_RUST=ON` has the suite run them and `cargo test`.
+
+### Python
+
+`bindings/python` is a package over the shared library (D-49): ctypes,
+the standard library and nothing else, typed (`py.typed`), packaged by
+its `pyproject.toml`. A value is read the way Python reads - in Python,
+unlike C++, `cfg.server.port` is possible:
+
+```python
+import dataclasses
+import configforge as cf
+
+cfg = (cf.Builder.app("myapp")
+       .file("app.ini", cf.rank.USER_FILE, "app.ini", flags=cf.OPTIONAL)
+       .define_int("server.port", 8080, 1, 65535)
+       .create())
+cfg.server.port                 # attributes; a table is a node
+cfg["server.port"]              # KeyError when absent
+cfg.get("server.port", int)     # None when absent or another type
+
+@dataclasses.dataclass
+class Settings:
+    port: int = cf.setting("server.port", 8080, range=(1, 65535), flags=cf.flag.RESTART)
+    debug: bool = cf.setting("app.debug", False)
+
+settings = cf.read(cf.define(cf.Builder.app("myapp"), Settings).create(), Settings)
+```
+
+A refusal raises `cf.Error` with the key, the source and the message;
+`cf.Live` reloads, and a build that raises is reported with its own
+exception as the `Error`'s cause. The library is found as
+`$CONFIGFORGE_LIB`, beside the package, or on the library path; its
+tests run against a shared build (`verify` with `EXTRA=shared`).
+`configforge_doctor`, in the same package, drives Doctor (section 11).
 
 ## 14. Threads
 

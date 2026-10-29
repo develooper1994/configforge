@@ -7,6 +7,21 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **Python: the library itself, not only Doctor** (D-49). The
+  `configforge` package, over the shared library through ctypes, with
+  the standard library only: `cfg.server.port` by attribute,
+  `cfg["server.port"]`, `cfg.get(key, int)`, `explain`, `derive`,
+  `to_dict`, a refusal as `cf.Error` with the key; a dataclass whose
+  fields (`cf.setting`, `cf.section`) are the contract; `cf.Live`. Typed,
+  packaged by `pyproject.toml` with `configforge_doctor` beside it, and
+  tested against a shared build by verify's new `EXTRA=shared` step -
+  CI's shared job, run locally.
+- **Rust: typed reads, keys, a struct, and reloading**:
+  `cfg.get::<T>()` (nothing for a value `T` cannot hold), `Key<T>`
+  constants that define and read, `settings!` for the program's struct
+  with ranges and flags, and `Live` with a `LiveReader` for the workers;
+  a panic in a build function is a failed build. `examples/rust/live.rs`,
+  and `cargo test` in the suite under `CF_RUST`.
 - **A configuration that reloads itself, in a mode the program chooses**
   (`cf_live`, D-48): manual, approved (a change is built and waits for
   `cf_live_approve`, and an edit after it replaces it) or automatic. A
@@ -104,7 +119,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   only" stays that way. Every item or none, and the error says which
   question said no. `Builder::writable` in C++. `cf_store_set` stays,
   for provisioning a store, and asks nothing.
-- **Doctor from Python** (`bindings/python/configforge_doctor.py`):
+- **Doctor from Python** (`bindings/python/src/configforge_doctor.py`):
   `lint`, `diff` and `version`, each finding with its rule, level, key,
   message, file and line. It runs the `doctor` program and reads its
   SARIF output, so a script sees what CI sees; the standard library

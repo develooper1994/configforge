@@ -30,6 +30,18 @@ pub const CF_REQUIRED: u32 = 1 << 0;
 pub const CF_SENSITIVE: u32 = 1 << 1;
 pub const CF_DEPRECATED: u32 = 1 << 2;
 pub const CF_TRANSIENT: u32 = 1 << 3;
+pub const CF_RESTART: u32 = 1 << 4;
+
+pub const CF_OK: c_int = 0;
+
+pub const CF_LIVE_MANUAL: c_int = 0;
+pub const CF_LIVE_APPROVE: c_int = 1;
+pub const CF_LIVE_AUTO: c_int = 2;
+
+pub const CF_LIVE_FAILED: c_int = -1;
+pub const CF_LIVE_UNCHANGED: c_int = 0;
+pub const CF_LIVE_SWAPPED: c_int = 1;
+pub const CF_LIVE_PENDING: c_int = 2;
 
 pub const CF_UNKNOWN_IGNORE: c_int = 0;
 pub const CF_UNKNOWN_WARN: c_int = 1;
@@ -132,6 +144,13 @@ pub struct cf_builder {
 pub struct cf_config {
     _opaque: [u8; 0],
 }
+
+#[repr(C)]
+pub struct cf_live {
+    _opaque: [u8; 0],
+}
+
+pub type cf_live_build_fn = extern "C" fn(user: *mut std::ffi::c_void) -> *mut cf_builder;
 
 extern "C" {
     pub fn cf_build(alloc: *const std::ffi::c_void) -> *mut cf_builder;
@@ -257,4 +276,37 @@ extern "C" {
     pub fn cf_version() -> *const c_char;
     pub fn cf_build_limit(name: *const c_char) -> usize;
     pub fn cf_build_id() -> *const c_char;
+
+    pub fn cf_try_bool(c: *const cf_config, key: *const c_char, out: *mut cf_bool) -> c_int;
+    pub fn cf_try_int(c: *const cf_config, key: *const c_char, out: *mut cf_i64) -> c_int;
+    pub fn cf_try_text(
+        c: *const cf_config,
+        key: *const c_char,
+        out: *mut *const c_char,
+        len: *mut usize,
+    ) -> c_int;
+    pub fn cf_config_ref(c: *mut cf_config);
+
+    pub fn cf_live_open(
+        mode: c_int,
+        build: cf_live_build_fn,
+        check: *const std::ffi::c_void,
+        user: *mut std::ffi::c_void,
+        alloc: *const std::ffi::c_void,
+        err: *mut cf_error,
+    ) -> *mut cf_live;
+    pub fn cf_live_close(l: *mut cf_live);
+    pub fn cf_live_get(l: *mut cf_live) -> *mut cf_config;
+    pub fn cf_live_poll(l: *mut cf_live, err: *mut cf_error) -> c_int;
+    pub fn cf_live_reload(l: *mut cf_live, err: *mut cf_error) -> c_int;
+    pub fn cf_live_wait(
+        l: *mut cf_live,
+        timeout_ms: std::os::raw::c_long,
+        err: *mut cf_error,
+    ) -> c_int;
+    pub fn cf_live_pending(l: *const cf_live) -> *const cf_config;
+    pub fn cf_live_approve(l: *mut cf_live, err: *mut cf_error) -> c_int;
+    pub fn cf_live_reject(l: *mut cf_live);
+    pub fn cf_live_generation(l: *mut cf_live) -> u64;
+    pub fn cf_live_restarts(l: *const cf_live, buf: *mut c_char, cap: usize) -> usize;
 }

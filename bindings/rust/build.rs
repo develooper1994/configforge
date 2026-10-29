@@ -4,7 +4,7 @@
 //! Rust does (/MD, not /MDd).
 
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn run(cmd: &mut Command) {
@@ -16,12 +16,39 @@ fn run(cmd: &mut Command) {
     }
 }
 
+/// A path as CMake and Windows can both spell it: forward slashes, no
+/// verbatim prefix, and on Windows no case.
+fn same_path(p: &Path) -> String {
+    let s = p.to_string_lossy().replace('\\', "/");
+    let s = s.strip_prefix("//?/").unwrap_or(&s).to_string();
+    if cfg!(windows) {
+        s.to_lowercase()
+    } else {
+        s
+    }
+}
+
 fn main() {
     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let root = manifest.join("..").join("..");
     let out = PathBuf::from(env::var("OUT_DIR").unwrap());
     let build = out.join("cf-build");
     let prefix = out.join("cf-install");
+
+    // A cache made from another checkout - the same crate moved, or a
+    // second copy sharing a CARGO_TARGET_DIR - names its own source, and
+    // CMake refuses to reuse it. Start that build over.
+    let cache = build.join("CMakeCache.txt");
+    if let Ok(text) = std::fs::read_to_string(cache) {
+        let ours = same_path(&root.canonicalize().unwrap_or_else(|_| root.clone()));
+        let same = text
+            .lines()
+            .find_map(|l| l.strip_prefix("CMAKE_HOME_DIRECTORY:INTERNAL="))
+            .map(|theirs| same_path(Path::new(theirs)) == ours);
+        if same != Some(true) {
+            let _ = std::fs::remove_dir_all(&build);
+        }
+    }
 
     run(Command::new("cmake")
         .arg("-S")

@@ -227,7 +227,7 @@ configuration library at all, which is how the line in section 2 holds:
 a program that reads configuration does not carry the rules that audit
 it unless it asks for them.
 
-**From Python**, `bindings/python/configforge_doctor.py` runs the `doctor`
+**From Python**, `bindings/python/src/configforge_doctor.py` runs the `doctor`
 program and reads its SARIF output - so a script sees exactly what a CI
 job sees, from the same rules and severities, and there is no ABI to
 keep, the library being static:

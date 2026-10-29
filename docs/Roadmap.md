@@ -45,9 +45,6 @@ Worth building, in the order they serve the library's purpose.
   than the key list.
 * **Native OS sources** (D-30): macOS defaults and gsettings, each when
   there is the platform to test on. The Windows Registry is built.
-* **A Python binding for the configuration library**, as Rust's is
-  (`bindings/rust`). Doctor already has one (`bindings/python`), over
-  the program; the library would need ctypes over a shared build.
 
 ### Considered, and decided against for now: a jq-like query language
 
