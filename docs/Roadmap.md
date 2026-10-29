@@ -30,7 +30,19 @@ Things that are wrong or unproven today, most serious first.
    last release), and semantic versioning from then on. The symbol list
    is built (`cmake/configforge.symbols`, `gate.abi`), so a change to the
    interface is already a line in a diff. Before 1.0 is when an
-   interface mistake is cheap.
+   interface mistake is cheap, and a review of the 0.4.0 interface left
+   three to decide:
+   * `CF_FILE_OPTIONAL` now also means a Registry key, a store, a
+     directory that may be absent. A `CF_OPTIONAL` spelling, with the old
+     one kept as its alias, would say what it means; two spellings of one
+     flag is the cost.
+   * `cf_store_item` is what `cf_write` takes for any writable source,
+     not only a store. `cf_write_item` would be the honest name; it is
+     unreleased, so renaming it breaks nobody.
+   * `cf_error` holds its strings inline, sized by build limits, and the
+     Rust binding mirrors those sizes. `size` already lets it grow; what
+     1.0 should promise is that the limits are part of the ABI, or that a
+     reader asks for them.
 
 ## Ideas
 
