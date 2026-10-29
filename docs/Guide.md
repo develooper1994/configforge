@@ -431,7 +431,7 @@ cf_builder_store(b, "store", CF_RANK_USER_FILE, "app.db", CF_FILE_OPTIONAL);
 cf_builder_writable(b, "store");     /* every source is read only until granted */
 cfg = cf_builder_create(b, &err);
 ...
-cf_store_item item;
+cf_write_item item;
 item.key = "log.level";
 cf_value_text(&item.value, "debug", 5);
 if (!cf_write(cfg, "store", &item, 1, "admin, 2026-10-24: incident 42", &err)) {

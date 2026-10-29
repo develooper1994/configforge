@@ -194,7 +194,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - **`cf_source_vtable` has a `write` member**, the source's capability,
   after `path`. A custom source sets it to NULL; one that does not
   compile until it does, by the same `-Wmissing-field-initializers`
-  that made `path` a decision. `cf_store_item` moved above it.
+  that made `path` a decision. `cf_write_item` moved above it.
 - **Every package says who made it.** The Conan recipe's `author`, the
   vcpkg manifest's `maintainers` and the SBOM's `supplier` and
   `originator` name Mustafa Selçuk Çağlar, as the licence and the

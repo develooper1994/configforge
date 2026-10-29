@@ -1073,7 +1073,7 @@ static cf_bool write_locked(const cf_def* d, const char* name) {
    items are a few keys, not a configuration, and a refusal is reported
    here with the reason, not as the first failure the pass meets. */
 static cf_bool write_authorized(const cf_config* c, const cf_source* s,
-                                const cf_store_item* items, size_t count,
+                                const cf_write_item* items, size_t count,
                                 cf_error* err) {
     const cf_allocator* alloc = cf_arena_allocator(c->arena);
     cf_arena*           ar;
@@ -1159,7 +1159,7 @@ static cf_bool write_authorized(const cf_config* c, const cf_source* s,
     return ok;
 }
 
-cf_bool cf_write(const cf_config* c, const char* target, const cf_store_item* items,
+cf_bool cf_write(const cf_config* c, const char* target, const cf_write_item* items,
                  size_t count, const char* meta, cf_error* err) {
     const cf_source* s       = NULL;
     cf_bool          granted = CF_FALSE;

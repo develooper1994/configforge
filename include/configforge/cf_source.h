@@ -33,10 +33,10 @@ enum {
 typedef struct cf_source cf_source;
 
 /* One value to write. */
-typedef struct cf_store_item {
+typedef struct cf_write_item {
     const char* key;
     cf_value    value;
-} cf_store_item;
+} cf_write_item;
 
 typedef struct cf_source_vtable {
     const char* kind;
@@ -58,7 +58,7 @@ typedef struct cf_source_vtable {
        whoever started the process. Capability is not permission;
        cf_builder_writable is the program's grant, and cf_write asks
        both, and the contract, before this is called. */
-    cf_bool (*write)(const cf_source* s, const cf_store_item* items, size_t count,
+    cf_bool (*write)(const cf_source* s, const cf_write_item* items, size_t count,
                      const char* meta, cf_error* err);
 } cf_source_vtable;
 
@@ -341,7 +341,7 @@ CF_API const cf_error* cf_source_store_error(const cf_source* s);
    This writes what it is given and asks nothing; it is the tool for
    provisioning a store. A running program writes through cf_write,
    which asks whether it may. */
-CF_API cf_bool cf_store_set(const char* path, const cf_store_item* items, size_t count,
+CF_API cf_bool cf_store_set(const char* path, const cf_write_item* items, size_t count,
                             const char* meta, cf_error* err);
 
 #ifdef __cplusplus

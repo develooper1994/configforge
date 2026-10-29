@@ -38,7 +38,7 @@ static cf_bool local_load(const cf_source* s, cf_keyspace* ks) {
     return CF_TRUE;
 }
 
-static cf_bool local_write(const cf_source* s, const cf_store_item* items, size_t count,
+static cf_bool local_write(const cf_source* s, const cf_write_item* items, size_t count,
                            const char* meta, cf_error* err) {
     size_t i;
 
@@ -103,7 +103,7 @@ static cf_config* build(const char* grant, cf_unknown_policy unknown, cf_error* 
 }
 
 static cf_bool write_int(const cf_config* c, const char* key, cf_i64 v, cf_error* err) {
-    cf_store_item one;
+    cf_write_item one;
     one.key = key;
     cf_value_int(&one.value, v);
     g_written = 0;
@@ -112,7 +112,7 @@ static cf_bool write_int(const cf_config* c, const char* key, cf_i64 v, cf_error
 
 static cf_bool write_text(const cf_config* c, const char* key, const char* v,
                           cf_error* err) {
-    cf_store_item one;
+    cf_write_item one;
     one.key = key;
     cf_value_text(&one.value, v, strlen(v));
     g_written = 0;
@@ -120,7 +120,7 @@ static cf_bool write_text(const cf_config* c, const char* key, const char* v,
 }
 
 static void test_granted(void) {
-    cf_store_item two[2];
+    cf_write_item two[2];
     cf_error      err = CF_ERROR_INIT;
     cf_config*    c   = build("local", CF_UNKNOWN_REJECT, &err);
 
@@ -239,7 +239,7 @@ static void test_policy(void) {
 
 /* Every item or none. */
 static void test_all_or_none(void) {
-    cf_store_item two[2];
+    cf_write_item two[2];
     cf_error      err = CF_ERROR_INIT;
     cf_config*    c   = build("local", CF_UNKNOWN_REJECT, &err);
 
