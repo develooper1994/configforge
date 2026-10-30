@@ -41,6 +41,11 @@ struct cf_builder {
        against what each can do when the configuration is created. */
     const char* writable[CF_BUILDER_SOURCES];
     size_t      nwritable;
+
+    /* Where what is worth a log line goes (cf_log.h); NULL for nowhere. */
+    cf_log_fn    log;
+    void*        log_user;
+    cf_log_level log_min;
 };
 
 struct cf_config {
@@ -74,6 +79,12 @@ struct cf_config {
     /* Which sources cf_write may write, by slot: granted by the program
        and able to be written, both checked when this was created. */
     cf_bool writable[CF_BUILDER_SOURCES];
+
+    /* The builder's log, kept so that a derived configuration logs where
+       its original did. */
+    cf_log_fn    log;
+    void*        log_user;
+    cf_log_level log_min;
 };
 
 /* ------------------------------------------------------------------ *
@@ -578,6 +589,96 @@ void cf_builder_unknown(cf_builder* b, cf_unknown_policy policy) {
     }
 }
 
+void cf_builder_log(cf_builder* b, cf_log_fn fn, void* user, cf_log_level min) {
+    if (b != NULL) {
+        b->log      = fn;
+        b->log_user = user;
+        b->log_min  = min;
+    }
+}
+
+static const char* config_name_of_rank(const void* ctx, int rank);
+
+/* One event to the configuration's log, if it has one and the level
+   reaches the floor it asked for. */
+static void config_log(const cf_config* c, cf_log_level level, const char* event,
+                       cf_code code, const char* key, const char* source,
+                       const char* message) {
+    cf_log_event e;
+
+    if (c->log == NULL || level < c->log_min) {
+        return;
+    }
+    e.size    = sizeof e;
+    e.level   = level;
+    e.event   = event;
+    e.code    = code;
+    e.key     = key;
+    e.source  = source;
+    e.message = message;
+    c->log(c->log_user, &e);
+}
+
+/* What a created configuration has to say that is not an error: keys
+   nobody defined (under CF_UNKNOWN_WARN), deprecated keys in use, and
+   values refused and fallen back from. Read from the resolved key space
+   after the fact, so the resolver itself stays free of side effects. */
+static void config_log_events(const cf_config* c) {
+    size_t i;
+    char   msg[CF_MESSAGE_MAX];
+
+    if (c->log == NULL || c->log_min > CF_LOG_WARN) {
+        return;
+    }
+    for (i = 0; i < cf_ks_count(&c->keys); ++i) {
+        const cf_entry*     e = cf_ks_at(&c->keys, i);
+        const cf_def*       d;
+        const cf_candidate* k;
+        const char*         from;
+
+        if (e == NULL || e->selected == NULL) {
+            continue;
+        }
+        from = config_name_of_rank(&c->sv, e->selected->source);
+        d    = cf_defset_find(&c->defs, e->key, e->keylen);
+        if (d == NULL) {
+            if (c->unknown == CF_UNKNOWN_WARN &&
+                !cf_defset_is_open(&c->defs, e->key, e->keylen)) {
+                cf_fmt(msg, sizeof msg, "unknown key '%s', set by %s", e->key,
+                       (from != NULL) ? from : "?");
+                config_log(c, CF_LOG_WARN, "unknown-key", CF_E_KEY, e->key,
+                           (e->selected->at != NULL) ? e->selected->at : from, msg);
+            }
+            continue;
+        }
+        if ((d->flags & CF_DEPRECATED) != 0 && e->selected->source != CF_RANK_DEFAULT) {
+            if (d->replaced_by != NULL) {
+                cf_fmt(msg, sizeof msg, "'%s' is deprecated: use '%s'", e->key,
+                       d->replaced_by);
+            } else {
+                cf_fmt(msg, sizeof msg, "'%s' is deprecated", e->key);
+            }
+            config_log(c, CF_LOG_WARN, "deprecated-key", CF_OK, e->key,
+                       (e->selected->at != NULL) ? e->selected->at : from, msg);
+        }
+        for (k = e->chain; k != NULL; k = k->next) {
+            if (k->outcome == CF_OUT_REJECTED && d->on_invalid == CF_INVALID_FALLBACK) {
+                const char* by = config_name_of_rank(&c->sv, k->source);
+                cf_fmt(msg, sizeof msg, "%s: %s from %s refused (%s); %s used instead",
+                       e->key, (by != NULL) ? by : "?", (k->at != NULL) ? k->at : "-",
+                       /* A reason can quote the value; a secret's never
+                          reaches a log line. */
+                       ((d->flags & CF_SENSITIVE) != 0 || k->reason == NULL)
+                           ? "invalid"
+                           : k->reason,
+                       (from != NULL) ? from : "?");
+                config_log(c, CF_LOG_WARN, "fallback", CF_E_VALIDATE, e->key,
+                           (k->at != NULL) ? k->at : by, msg);
+            }
+        }
+    }
+}
+
 cf_bool cf_builder_writable(cf_builder* b, const char* source_name) {
     const char* name;
 
@@ -654,6 +755,9 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
         cf_ref_init(&c->refs, 1);
         c->owns_arena = b->owns_arena;
         c->unknown    = b->unknown;
+        c->log        = b->log;
+        c->log_user   = b->log_user;
+        c->log_min    = b->log_min;
         /* One slot per source; the ones that read no file stay unused,
            which costs a pointer each and saves a second pass. */
         c->watch_paths =
@@ -901,6 +1005,7 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
             return create_failed(b, err, &e);
         }
     }
+    config_log_events(c);
     return c;
 }
 
@@ -928,6 +1033,7 @@ static cf_bool derive_ghost(cf_builder* b, const cf_source* o) {
     if (vt == NULL) {
         return CF_FALSE;
     }
+    vt->size    = sizeof *vt;
     vt->kind    = cf_arena_dup(b->arena, o->vt->kind, strlen(o->vt->kind));
     vt->load    = config_ghost_load;
     vt->destroy = NULL;
@@ -1036,6 +1142,7 @@ static cf_config* derive_onto(const cf_config* base, cf_arena* ar, cf_bool owns,
         cf_builder_open(b, base->defs.open_prefixes[i]);
     }
     cf_builder_unknown(b, base->unknown);
+    cf_builder_log(b, base->log, base->log_user, base->log_min);
 
     return cf_builder_create(b, err);
 }

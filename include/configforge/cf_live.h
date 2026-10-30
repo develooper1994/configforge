@@ -58,6 +58,7 @@
 #include "configforge/cf_port.h"
 #include "configforge/cf_error.h"
 #include "configforge/cf_alloc.h"
+#include "configforge/cf_log.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -106,10 +107,18 @@ typedef struct cf_live_options {
     cf_live_check_fn    check;      /* may be NULL                      */
     void*               check_user; /* given to check                   */
     const cf_allocator* allocator;  /* NULL: the default                */
+
+    /* Where each reload's result goes (cf_log.h): "reload",
+       "reload-pending", "reload-failed", "restart-pending". Set on every
+       builder the build function returns, so the configuration's own
+       events go there too. NULL for nowhere. */
+    cf_log_fn    log;
+    void*        log_user;
+    cf_log_level log_min;
 } cf_live_options;
 
 /* clang-format off */
-#define CF_LIVE_OPTIONS_INIT {sizeof(cf_live_options), CF_LIVE_MANUAL, NULL, NULL, NULL, NULL, NULL}
+#define CF_LIVE_OPTIONS_INIT {sizeof(cf_live_options), CF_LIVE_MANUAL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, CF_LOG_INFO}
 /* clang-format on */
 
 /* Builds and checks the first snapshot, and fails as that does. A size

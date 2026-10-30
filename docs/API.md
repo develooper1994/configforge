@@ -6,7 +6,7 @@ header, then run the script. Every function is listed with the
 comment written above it, under the section of the header it is
 in; the types are in the headers themselves.
 
-- [`configforge.h`](#configforgeh) - 64
+- [`configforge.h`](#configforgeh) - 65
 - [`cf_alloc.h`](#cf_alloch) - 12
 - [`cf_define.h`](#cf_defineh) - 19
 - [`cf_doctor.h`](#cf_doctorh) - 21
@@ -19,6 +19,7 @@ in; the types are in the headers themselves.
 - [`cf_iterate.h`](#cf_iterateh) - 5
 - [`cf_keyspace.h`](#cf_keyspaceh) - 26
 - [`cf_live.h`](#cf_liveh) - 14
+- [`cf_log.h`](#cf_logh) - 1
 - [`cf_numeric.h`](#cf_numerich) - 7
 - [`cf_platform.h`](#cf_platformh) - 19
 - [`cf_port.h`](#cf_porth) - 10
@@ -189,6 +190,15 @@ contract because the plugin is not either.
 ```c
 CF_API void cf_builder_unknown(cf_builder* b, cf_unknown_policy policy);
 ```
+
+```c
+CF_API void cf_builder_log(cf_builder* b, cf_log_fn fn, void* user, cf_log_level min);
+```
+
+Where what deserves a log line and is not an error goes (cf_log.h):
+unknown keys under CF_UNKNOWN_WARN, deprecated keys in use, values
+refused and fallen back from. Events below `min` are not made. A
+configuration derived from this one logs to the same place.
 
 ```c
 CF_API cf_config* cf_builder_create(cf_builder* b, cf_error* err);
@@ -1603,6 +1613,36 @@ CF_API cf_bool cf_live_last_error(cf_live* l, cf_error* err);
 
 The last failure's error, copied into `err` (cf_error_copy); false,
 and `err` cleared, when no reload has failed. Any thread.
+
+## cf_log.h
+
+cf_log.h - what the library has to say that is not an error.
+
+An error stops a configuration and comes back in a cf_error. Some
+things deserve a line in the program's log without stopping anything:
+a key nobody defined, under CF_UNKNOWN_WARN; a deprecated key still in
+use; a value the contract refused and fell back from; each reload, and
+the keys waiting for a restart. Each is an event with a level, a
+stable name a log pipeline can match on, and the key and source it is
+about, handed to a function the program gives:
+
+    static void to_syslog(void* user, const cf_log_event* e) {
+        syslog(e->level >= CF_LOG_WARN ? LOG_WARNING : LOG_INFO,
+               "configforge %s %s: %s", e->event, e->key ? e->key : "-",
+               e->message);
+    }
+    cf_builder_log(b, to_syslog, NULL, CF_LOG_INFO);
+
+The library never writes to stderr or anywhere else by itself. An
+event's strings belong to the library and are valid during the call.
+The function is called on the thread that creates the configuration,
+or that drives a cf_live's reloads.
+
+```c
+CF_API const char* cf_log_level_name(cf_log_level level);
+```
+
+The name of a level: "debug", "info", "warn", "error".
 
 ## cf_numeric.h
 

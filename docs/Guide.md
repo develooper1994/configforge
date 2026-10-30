@@ -777,6 +777,33 @@ exception as the `Error`'s cause. The library is found as
 tests run against a shared build (`verify` with `EXTRA=shared`).
 `configforge_doctor`, in the same package, drives Doctor (section 11).
 
+### What is worth a log line
+
+An error stops a configuration; some things deserve a line in the
+program's log without stopping anything. `cf_builder_log` gives the
+library a function to call for them (`cf_log.h`): a key nobody defined,
+under `CF_UNKNOWN_WARN`; a deprecated key still in use; a value refused
+and fallen back from; and, through `cf_live_options.log`, each reload's
+result and every key waiting for a restart. Each event has a level, a
+stable name a log pipeline can match on (`"unknown-key"`, `"fallback"`,
+`"reload-failed"`...), the key, the source, the error code where there
+is one, and a sentence for a person. The library writes nowhere by
+itself, and a secret's value is never in a message.
+
+```c
+static void to_log(void* user, const cf_log_event* e) {
+    fprintf(stderr, "%s configforge %s %s: %s\n", cf_log_level_name(e->level),
+            e->event, e->key ? e->key : "-", e->message);
+}
+cf_builder_log(b, to_log, NULL, CF_LOG_INFO);
+```
+
+In Python the levels are `logging`'s own numbers, so `Builder.log()`
+and `Live(..., logger=...)` hand each event to a `logging.Logger` (the
+`configforge` one by default) with `cf_event`, `cf_key`, `cf_source` and
+`cf_code` on the record. Rust has `Builder::log(Level, closure)` and
+`Live::open_logged`; C++ `Builder::log`.
+
 ## 14. Threads
 
 A configuration is immutable once built, so any number of threads read

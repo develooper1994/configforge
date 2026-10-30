@@ -35,6 +35,7 @@ cf_builder_env
 cf_builder_file
 cf_builder_file_codec
 cf_builder_int
+cf_builder_log
 cf_builder_memory
 cf_builder_open
 cf_builder_real real
@@ -172,6 +173,7 @@ cf_live_restarts
 cf_live_status_get
 cf_live_wait
 cf_loc_text
+cf_log_level_name
 cf_outcome_can_win
 cf_outcome_name
 cf_platform_args

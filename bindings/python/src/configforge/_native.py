@@ -75,7 +75,36 @@ class cf_live_status(Structure):
     ]
 
 
+class cf_log_event(Structure):
+    _fields_ = [
+        ("size", c_size_t),
+        ("level", c_int),
+        ("event", c_char_p),
+        ("code", c_int),
+        ("key", c_char_p),
+        ("source", c_char_p),
+        ("message", c_char_p),
+    ]
+
+
+LOG_FN = CFUNCTYPE(None, c_void_p, POINTER(cf_log_event))
 BUILD_FN = CFUNCTYPE(c_void_p, c_void_p)
+CHECK_FN = CFUNCTYPE(c_int, c_void_p, c_void_p, c_void_p, c_void_p)
+
+
+class cf_live_options(Structure):
+    _fields_ = [
+        ("size", c_size_t),
+        ("mode", c_int),
+        ("build", BUILD_FN),
+        ("build_user", c_void_p),
+        ("check", CHECK_FN),
+        ("check_user", c_void_p),
+        ("allocator", c_void_p),
+        ("log", LOG_FN),
+        ("log_user", c_void_p),
+        ("log_min", c_int),
+    ]
 
 TYPE_NULL, TYPE_BOOL, TYPE_INT, TYPE_REAL, TYPE_TEXT = range(5)
 OK = 0
@@ -164,6 +193,8 @@ for _name, _res, _args in [
     ("cf_iter_children", c_int, (POINTER(cf_iter), C, c_char_p)),
     ("cf_iter_next", c_int, (POINTER(cf_iter),)),
     ("cf_live_open", L, (c_int, BUILD_FN, c_void_p, c_void_p, c_void_p, E)),
+    ("cf_live_open_with", L, (POINTER(cf_live_options), E)),
+    ("cf_builder_log", None, (B, LOG_FN, c_void_p, c_int)),
     ("cf_live_close", None, (L,)),
     ("cf_live_get", C, (L,)),
     ("cf_live_poll", c_int, (L, E)),

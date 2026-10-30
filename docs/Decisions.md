@@ -2224,6 +2224,32 @@ far it is safe to write, which a version would need a table to say.
 
 ---
 
+## D-52 — What is not an error goes to a log the program gives
+
+**Question.** An error stops a configuration and is reported once, in a `cf_error`.
+`CF_UNKNOWN_WARN` existed and warned nobody: it counted. A deprecated key in use, a
+value refused and fallen back from, a reload that failed at three in the morning - each
+deserved a line in the program's log, and the library had no way to give one.
+
+**Options.**
+
+1. **Write to stderr.** A library that prints is a library a daemon, a GUI and a test
+   suite all have to silence.
+2. **A list of warnings on the configuration**, read after create. Nothing to say
+   where a reload's warning goes, and a reader has to poll for what happened.
+3. **A sink the program gives**, called with structured events.
+
+**Decision: option 3.** `cf_log_fn` receives a `cf_log_event` - sized (D-51), with a
+level whose numbers are Python's `logging` levels, a stable event name, the key, the
+source, the code and a sentence. Events are made from the resolved key space after
+create, so the resolver itself has no side effects, and a derived configuration logs
+where its original did. `cf_live` adds each reload's result and sets its sink on every
+builder its build function returns. The library never writes anywhere on its own, and a
+secret's value never reaches a message: a refusal's reason is left out for a sensitive
+key, though the reasons are written to carry no value anyway.
+
+---
+
 
 One decision is open, because nothing has been built: profiles as a core concept
 (D-12). Value interpolation (D-10), long reserved, is decided and built. Everything else is decided,

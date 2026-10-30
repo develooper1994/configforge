@@ -23,6 +23,7 @@ HEADERS = [
     "cf_port.h",
     "cf_version.h",
     "cf_error.h",
+    "cf_log.h",
     "cf_numeric.h",
     "cf_value.h",
     "cf_alloc.h",

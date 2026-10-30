@@ -7,6 +7,16 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **A log for what is not an error** (`cf_log.h`, D-52): a function the
+  program gives (`cf_builder_log`, `cf_live_options.log`) receives each
+  unknown key under `CF_UNKNOWN_WARN`, deprecated key in use, value
+  refused and fallen back from, reload, failed reload and key waiting
+  for a restart - with a level, a stable event name, the key, the
+  source and the code. Nothing is written anywhere by the library
+  itself, and a secret's value never reaches a message. Python sends
+  events to `logging` (the levels are the same numbers), Rust to a
+  closure (`Builder::log`, `Live::open_logged`), C++ through
+  `Builder::log`.
 - **Verification in tiers, and fast enough to run every time** (D-50).
   Tier 1 - GCC through the five presets, Clang, MSVC - for every commit
   (`verify -DTIER=1`); tier 2 - the thread sanitizer, the shared build,
