@@ -5,7 +5,7 @@ jobs:
   gates:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Generate the locales the suite needs
         run: |
           sudo locale-gen tr_TR.UTF-8 de_DE.UTF-8
@@ -20,7 +20,7 @@ jobs:
   portable:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build both ways and compare output
         run: |
           cmake -S . -B a && cmake --build a
@@ -35,7 +35,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: cmake -S . -B build
       # The configuration is named because Visual Studio is a
       # multi-config generator: without -C, ctest on Windows finds every
@@ -55,7 +55,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: cmake -S . -B bs -DBUILD_SHARED_LIBS=ON
       - run: cmake --build bs --config Debug
       - run: ctest --test-dir bs -C Debug --output-on-failure
@@ -68,7 +68,7 @@ jobs:
   kqueue:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y libkqueue-dev
       - run: cmake -S . -B bk -DCF_WAKE_KQUEUE=ON
       - run: cmake --build bk
@@ -77,14 +77,14 @@ jobs:
   minimal:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: cmake --preset minimal && cmake --build --preset minimal
       - run: ctest --preset minimal
 
   sanitize:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: cmake --preset sanitize && cmake --build --preset sanitize
       - run: ctest --preset sanitize
 
@@ -93,7 +93,7 @@ jobs:
   conan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: pipx install conan
       - run: conan profile detect
       - run: conan create . --build=missing -tf packaging/conan/test_package
@@ -104,7 +104,7 @@ jobs:
   vcpkg:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: |
           git clone --depth 1 https://github.com/microsoft/vcpkg.git "$RUNNER_TEMP/vcpkg"
           "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
@@ -124,7 +124,7 @@ jobs:
   compilers:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y musl-tools tcc pcc
       - run: cmake -DEXTRA=compilers -DMODE=quick -DJOBS=4 -P scripts/verify.cmake
 
@@ -138,7 +138,7 @@ jobs:
     container: alpine:3.20
     steps:
       - run: apk add --no-cache build-base cmake ninja git python3
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build
       - run: ctest --test-dir build --output-on-failure
 
@@ -148,7 +148,7 @@ jobs:
   yaml:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: >-
           sudo apt-get update &&
           sudo apt-get install -y libyaml-dev libexpat1-dev libsqlite3-dev
@@ -163,7 +163,7 @@ jobs:
   tsan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: cmake --preset tsan && cmake --build --preset tsan
       - run: setarch "$(uname -m)" -R ctest --preset tsan
 
@@ -172,7 +172,7 @@ jobs:
   libfuzzer:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # What earlier runs learned: a new cache entry each run, restored
       # from the latest, so the corpus moves forward and never backward.
       - uses: actions/cache@v4
@@ -204,7 +204,7 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y gcovr
       - run: cmake -DEXTRA=coverage -DMODE=quick -DJOBS=4 -P scripts/verify.cmake
 
@@ -214,7 +214,7 @@ jobs:
   doctor-action:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: |
           cmake -S . -B build -DCF_ENABLE_GATES=OFF
           cmake --build build --target doctor_fixtures
@@ -229,7 +229,7 @@ jobs:
   analyze:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y cppcheck
       - run: cmake --preset analyze && cmake --build --preset analyze
       - run: ctest --preset analyze
@@ -237,7 +237,7 @@ jobs:
   fuzz:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Generate locales
         run: |
           sudo locale-gen tr_TR.UTF-8 de_DE.UTF-8
@@ -257,7 +257,7 @@ jobs:
   clang:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y clang clang-tidy clang-format
       # A second compiler is the cheapest portability test there is, and
       # it found GCC-only warning flags being handed to every compiler
