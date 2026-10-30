@@ -10,7 +10,7 @@ build = "build.rs"
 publish = false
 
 # No dependencies, on purpose: a build that downloads nothing, as every
-# other build of this project is (AGENTS.md, "Safety"). The library is
+# other build of this project is (CONTRIBUTING.md, "Safety"). The library is
 # built from this checkout by build.rs, with CMake.
 [dependencies]
 

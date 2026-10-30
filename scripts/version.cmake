@@ -5,7 +5,8 @@
 #
 # cf_version.h is the one place the version is written; CMake and the
 # Conan recipe read it. Changing it here also rewrites the copy that
-# cannot read it, the vcpkg manifest, and opens a "## 0.3.0 — unreleased"
+# cannot read it - the vcpkg manifest, the Rust crate's and the Python
+# package's - and opens a "## 0.3.0 — unreleased"
 # section at the top of CHANGELOG.md if there is none, so that
 # gate.version passes the moment this has run. A release is then the
 # CHANGELOG heading dated and the tag v0.3.0 pushed; the release workflow
@@ -64,6 +65,15 @@ rewrite(
   "#define CF_VERSION_PATCH ${patch}")
 rewrite(packaging/vcpkg/configforge/vcpkg.json "\"version\": \"[^\"]*\""
         "\"version\": \"${TO}\"")
+# The bindings' packages, whose tools read only their own manifests.
+rewrite(bindings/rust/Cargo.toml "
+version = \"[^\"]*\"" "
+version = \"${TO}\"")
+rewrite(bindings/python/pyproject.toml "
+version = \"[^\"]*\"" "
+version = \"${TO}\"")
+rewrite(bindings/python/src/configforge/__init__.py "__version__ = \"[^\"]*\""
+        "__version__ = \"${TO}\"")
 
 file(STRINGS "${root}/CHANGELOG.md" sections REGEX "^## ")
 list(GET sections 0 newest)

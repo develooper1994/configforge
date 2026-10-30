@@ -468,9 +468,9 @@ nothing a leak would want.
 
 ## Contributing
 
-Start with [`AGENTS.md`](AGENTS.md) - written for whoever continues the
-work, a person or an AI agent - then [`CONTRIBUTING.md`](CONTRIBUTING.md).
-Security reports go privately, as [`SECURITY.md`](SECURITY.md) describes.
+Start with [`CONTRIBUTING.md`](CONTRIBUTING.md): it maps the repository,
+the build-verify-commit loop and the traps already fallen into. Security
+reports go privately, as [`SECURITY.md`](SECURITY.md) describes.
 
 ## Licence
 

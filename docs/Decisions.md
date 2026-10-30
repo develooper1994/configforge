@@ -1937,7 +1937,7 @@ library without the binding becoming a second implementation, or the build a dow
 1. **A rewrite in Rust.** Two libraries to keep in step, and every promise - the same
    input refused with the same message - made twice.
 2. **bindgen and the cc crate**, the usual way. Both are crates.io downloads, and this
-   project's builds download nothing (AGENTS.md, "Safety").
+   project's builds download nothing (CONTRIBUTING.md, "Safety").
 3. **A hand-written FFI and a `build.rs` that runs CMake.**
 
 **Decision: option 3.** `bindings/rust` declares the C functions it uses by hand
@@ -2125,6 +2125,41 @@ shared job.
 
 ---
 
+## D-50 — Platforms in tiers, and a verify that is fast enough to run every time
+
+**Question.** A full verify with every extra step took hours on the owner's workstation
+and held everything else up: Linux and Windows could not run at once, every preset was
+rebuilt from nothing, and a hung test held the run until someone noticed. The owner
+asked for tiers - GCC, Clang and MSVC first, the rest after - and for the work to go
+faster without a larger disk.
+
+**Options.**
+
+1. **Everything on every commit**, as before. Exhaustive, and so slow it was skipped.
+2. **Only the default preset on every commit.** Fast, and the sanitizers, `-fanalyzer`
+   and the `-O2`/`-Os` stack budgets - which found real bugs - would run rarely.
+3. **Tiers, and the same steps made cheaper.**
+
+**Decision: option 3.**
+
+* **Tier 1, every commit:** GCC through the five presets (sanitizers, the analyzer, the
+  portable and minimal optimisations), Clang, and MSVC (the quick run on Windows):
+  `verify -DTIER=1` and the Windows quick run, started together.
+* **Tier 2, before a release and with any unit that touches what it covers:** the thread
+  sanitizer, the shared build with the Python binding, YAML/XML/SQLite, musl, TinyCC and
+  pcc, libkqueue, clang-tidy, fuzzing, coverage, FreeBSD's real kqueue
+  (`scripts/buildenv/freebsd.sh`), the static Alpine build at `-O3`, and the bindings'
+  own tools (cargo test, clippy, rustfmt): `verify -DTIER=2` and the rest by name.
+* **Tier 3, where the hardware is:** macOS, through its CI job when Actions runs.
+
+What makes it fast: Ninja and ccache where they exist (the staged copy sits at the same
+path every run, so a unit recompiles what it changed); a private copy of the index, so
+the Linux and Windows runs start together instead of one failing on `index.lock`; and a
+per-test timeout (`TEST_TIMEOUT`, 900 s), so a hang fails in minutes. ccache is capped
+at 5 GB. A tier-2 failure found at release time is fixed like any other; what tiers
+change is when it is looked for, not whether.
+
+---
 
 One decision is open, because nothing has been built: profiles as a core concept
 (D-12). Value interpolation (D-10), long reserved, is decided and built. Everything else is decided,

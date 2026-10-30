@@ -7,6 +7,23 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **Verification in tiers, and fast enough to run every time** (D-50).
+  Tier 1 - GCC through the five presets, Clang, MSVC - for every commit
+  (`verify -DTIER=1`); tier 2 - the thread sanitizer, the shared build,
+  musl, TinyCC and pcc, YAML, kqueue, clang-tidy, fuzzing, coverage -
+  before a release (`-DTIER=2`). Ninja and ccache where installed, so a
+  rerun compiles what changed; a private copy of the index, so the Linux
+  and Windows runs start together; a per-test timeout.
+- **Releases without CI**: `scripts/release-local.sh` (source,
+  amalgamation, static musl Linux in podman) and `release-local.ps1`
+  (Windows) run the release workflow's jobs from a tag, for while
+  GitHub Actions cannot; `scripts/README.md` has the steps to publish.
+  `version.cmake` and `gate.version` now cover the Rust crate's and the
+  Python package's versions as well.
+- **One guide for every contributor**: `CONTRIBUTING.md` is the way in -
+  the map, the loop, the traps, the recipes - and `docs/Maintaining.md`
+  what the code does not say about how the work is done and on which
+  machines.
 - **A reload's status, for a health page** (`cf_live_status_get`, any
   thread): the generation serving, rebuilds tried and failed, what the
   last one did, whether a change waits for approval, and the last
@@ -637,10 +654,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   be global mutable state. `test_codec.c` is a complete one written
   against the public headers alone, and the values it produces are
   typed, validated and explained like any other.
-- **A way in for whoever continues the work.** `AGENTS.md` - read by a
-  person or an AI agent, on any machine - maps the repository, gives the
+- **A way in for whoever continues the work.** A guide for any
+  contributor, on any machine, maps the repository, gives the
   build-verify-commit loop, the house rules and every trap this work
-  fell into, and the recipes for extending it; `CLAUDE.md` points at it.
+  fell into, and the recipes for extending it (now `CONTRIBUTING.md`).
   `docs/Roadmap.md` holds what is next, what is known to be wrong, and
   the ideas not yet built, and is kept in the same commit as the work.
   `CONTRIBUTING.md`, `SECURITY.md` (private reporting, and what is in

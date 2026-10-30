@@ -12,13 +12,17 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y --no-install-recommends \
   ca-certificates curl git file xz-utils locales util-linux \
-  build-essential cmake ninja-build pkg-config python3 \
+  build-essential cmake ninja-build ccache pkg-config python3 \
   clang clang-format clang-tidy libclang-rt-18-dev llvm \
   binutils cppcheck gcovr cmake-format \
   musl-tools tcc pcc \
   libyaml-dev libexpat1-dev libsqlite3-dev libkqueue-dev \
   qemu-system-x86 qemu-utils openssh-client \
-  podman uidmap fuse-overlayfs
+  podman uidmap fuse-overlayfs \
+  rustc cargo rust-clippy rustfmt
+
+# ccache's cache, bounded: verify reuses it from one unit to the next.
+ccache --max-size=5G >/dev/null
 
 # The locales the suite asks for (test_port), as CI generates them.
 sed -i -e 's/^# *\(tr_TR.UTF-8\)/\1/' -e 's/^# *\(de_DE.UTF-8\)/\1/' /etc/locale.gen

@@ -3,7 +3,7 @@
 #   cmake -P scripts/apiref.cmake                 write docs/API.md
 #   cmake -DOUT=<file> -P scripts/apiref.cmake    write it somewhere else
 #
-# The header comments are the API documentation (AGENTS.md says so), and
+# The header comments are the API documentation (CONTRIBUTING.md says so), and
 # a reference kept by hand beside them is a second copy that drifts. So
 # this one is extracted: every CF_API declaration, with the comment
 # written directly above it, grouped under the section banners of the
