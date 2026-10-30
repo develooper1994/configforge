@@ -9,6 +9,16 @@ if(DEFINED WERROR AND NOT WERROR)
   set(werror "")
 endif()
 
+# How the build is threaded: one without atomics compiles only
+# single-threaded (cf_port.h), and so does its amalgamation.
+set(THREAD_DEFS "")
+if(SINGLE)
+  list(APPEND THREAD_DEFS "-DCF_SINGLE_THREADED=1")
+endif()
+if(PORTABLE)
+  list(APPEND THREAD_DEFS "-DCF_FORCE_PORTABLE=1")
+endif()
+
 find_package(
   Python3
   COMPONENTS Interpreter
@@ -50,7 +60,7 @@ int main(int argc, char** argv)
 ")
 execute_process(
   COMMAND
-    ${CC} -std=c89 -pedantic ${werror} -Wall -Wextra -Wshadow -I
+    ${CC} -std=c89 -pedantic ${werror} -Wall -Wextra -Wshadow ${THREAD_DEFS} -I
     "${BIN}/amalgamation" -o "${BIN}/amalgamation/smoke"
     "${BIN}/amalgamation/smoke.c" "${BIN}/amalgamation/configforge.c"
   RESULT_VARIABLE rc
@@ -94,6 +104,7 @@ foreach(name ${features})
   endif()
   list(APPEND DEFS "-DCF_WITH_${name}=${value}")
 endforeach()
+list(APPEND DEFS ${THREAD_DEFS})
 foreach(lim CF_KEY_MAX CF_MESSAGE_MAX CF_PATH_MAX CF_MAX_DEPTH)
   if(DEFINED L_${lim})
     list(APPEND DEFS "-D${lim}=${L_${lim}}")

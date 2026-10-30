@@ -48,6 +48,9 @@
 # inotify and no Unix permissions, so the watcher test and Doctor's
 # file-permission rule fail there for reasons that are not the code's.
 #
+# TEST_TIMEOUT is the seconds a test may run that sets no timeout of its
+# own (default 900).
+#
 # JOBS bounds the parallelism of every build. A full run builds five
 # presets, and unbounded parallel builds have filled a workstation's
 # memory doing it.
@@ -153,6 +156,14 @@ else()
   set(ROOT "${REPO}")
 endif()
 
+# Every test run under a timeout for the tests that set none of their
+# own: a test that hangs fails this step in minutes, rather than holding
+# the run for hours (cf_live's thread test under tcc once spun for two).
+if(NOT DEFINED TEST_TIMEOUT)
+  set(TEST_TIMEOUT 900)
+endif()
+set(ctest ${CMAKE_CTEST_COMMAND} --timeout ${TEST_TIMEOUT})
+
 foreach(p ${PRESETS})
   step("${p} configure" ${CMAKE_COMMAND} --preset ${p})
   step(
@@ -162,14 +173,14 @@ foreach(p ${PRESETS})
     --preset
     ${p}
     ${parallel})
-  step("${p} test" ${CMAKE_CTEST_COMMAND} --preset ${p})
+  step("${p} test" ${ctest} --preset ${p})
 endforeach()
 
 # Build and test commands for the extra steps. Debug is named because a
 # multi-config generator, Visual Studio among them, builds nothing and
 # tests nothing without it.
 set(build ${CMAKE_COMMAND} --build)
-set(test ${CMAKE_CTEST_COMMAND} -C Debug --test-dir)
+set(test ${ctest} -C Debug --test-dir)
 set(debug --config Debug ${parallel})
 
 foreach(x ${EXTRA})
@@ -247,14 +258,16 @@ foreach(x ${EXTRA})
     step("shared build" ${build} build-shared ${debug})
     step("shared test" ${test} build-shared)
   elseif(x STREQUAL "compilers")
-    # name:compiler:extra option. pcc has no atomics, so its build is the
-    # single-threaded one the support matrix promises for such a
-    # toolchain. C++ is off in all three: the wrapper's tests would link
+    # name:compiler:extra option. pcc and tcc have no atomics, so their
+    # builds are the single-threaded one the support matrix promises for
+    # such a toolchain. C++ is off in all three: the wrapper's tests would link
     # a C++ runtime built for another C library.
     # pcc also warns at glibc's own headers (__cold__ in stdio.h), which
     # nothing can mark as system headers there, so its warnings are shown
     # and not fatal.
-    foreach(entry musl:musl-gcc: tcc:tcc:
+    # tcc has no atomics either, and defines no __GNUC__ to pretend
+    # otherwise: cf_port.h refuses a threaded build of it.
+    foreach(entry musl:musl-gcc: tcc:tcc:-DCF_SINGLE_THREADED=ON
                   pcc:pcc:-DCF_SINGLE_THREADED=ON|-DCF_WERROR=OFF)
       string(REPLACE ":" ";" parts "${entry}")
       list(GET parts 0 name)
@@ -325,7 +338,7 @@ foreach(x ${EXTRA})
       --preset
       fuzz
       ${parallel})
-    step("fuzz run" ${CMAKE_CTEST_COMMAND} --preset fuzz)
+    step("fuzz run" ${ctest} --preset fuzz)
   elseif(x STREQUAL "coverage")
     find_program(GCOVR_EXE gcovr)
     if(NOT GCOVR_EXE OR MSVC)
@@ -346,7 +359,7 @@ foreach(x ${EXTRA})
       --preset
       coverage
       ${parallel})
-    step("coverage test" ${CMAKE_CTEST_COMMAND} --preset coverage)
+    step("coverage test" ${ctest} --preset coverage)
     # gcov's branch counts can come out negative (GCC bug 68080), which
     # gcovr refuses by default; they are branches, and the gate is on
     # lines.
@@ -393,11 +406,11 @@ foreach(x ${EXTRA})
         ${SETARCH_EXE}
         ${arch}
         -R
-        ${CMAKE_CTEST_COMMAND}
+        ${ctest}
         --preset
         tsan)
     else()
-      step("tsan test" ${CMAKE_CTEST_COMMAND} --preset tsan)
+      step("tsan test" ${ctest} --preset tsan)
     endif()
   else()
     message(FATAL_ERROR "unknown EXTRA step '${x}': kqueue, tidy, clang, "

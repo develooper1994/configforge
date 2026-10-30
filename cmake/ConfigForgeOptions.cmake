@@ -136,6 +136,13 @@ foreach(lim CF_KEY_MAX CF_MESSAGE_MAX CF_PATH_MAX CF_MAX_DEPTH)
   list(APPEND _CF_OPTION_DEFS "-D${lim}=${${lim}}")
 endforeach()
 if(CF_FORCE_PORTABLE)
+  # Every upgrade off includes the atomic builtins, and a build without
+  # atomics is single-threaded or not built (cf_port.h): say so here,
+  # where the option is, rather than as an #error in the first file.
+  if(NOT CF_SINGLE_THREADED)
+    message(FATAL_ERROR "CF_FORCE_PORTABLE turns the atomic builtins off, "
+                        "so it needs CF_SINGLE_THREADED=ON")
+  endif()
   list(APPEND _CF_OPTION_DEFS "-DCF_FORCE_PORTABLE=1")
 endif()
 if(CF_SINGLE_THREADED)
@@ -168,6 +175,16 @@ function(configforge_generate_options tgt)
     set(CF_OPT_SHARED 1)
   else()
     set(CF_OPT_SHARED 0)
+  endif()
+
+  set(CF_OPT_THREADING "/* threads: the atomics of the compiler */")
+  if(CF_SINGLE_THREADED)
+    set(CF_OPT_THREADING
+        "#ifndef CF_SINGLE_THREADED\n#define CF_SINGLE_THREADED 1\n#endif")
+  endif()
+  if(CF_FORCE_PORTABLE)
+    string(APPEND CF_OPT_THREADING
+           "\n#ifndef CF_FORCE_PORTABLE\n#define CF_FORCE_PORTABLE 1\n#endif")
   endif()
 
   set(gen "${CMAKE_BINARY_DIR}/generated/configforge")

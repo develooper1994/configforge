@@ -48,9 +48,21 @@ cf_i32 cf_ref_dec(cf_refcount* rc) {
 #endif
 }
 
+/* A read the compiler cannot keep in a register or move: a loop that
+   waits on it (cf_live's lock) must see another thread's write. */
 cf_i32 cf_ref_get(const cf_refcount* rc) {
 #if defined(CF_ATOMIC_GCC_ATOMIC)
     return __atomic_load_n(&rc->v, __ATOMIC_ACQUIRE);
+#elif defined(CF_ATOMIC_GCC_SYNC)
+    /* __sync has no load; a volatile read between two full barriers is
+       one, without casting the const away. */
+    cf_i32 v;
+    __sync_synchronize();
+    v = *(const volatile cf_i32*)&rc->v;
+    __sync_synchronize();
+    return v;
+#elif defined(CF_ATOMIC_WIN32)
+    return (cf_i32)InterlockedCompareExchange((LONG volatile*)&rc->v, 0, 0);
 #else
     return rc->v;
 #endif

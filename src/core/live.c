@@ -18,7 +18,8 @@ struct cf_live {
 
     /* Held only to read or replace `current` and the counters beside
        it; nothing that can fail or allocate happens under it. */
-    cf_refcount lock;
+    cf_refcount ticket_next;
+    cf_refcount ticket_serving;
     cf_config*  current;
     cf_u64      generation;
     char*       restarts; /* the CF_RESTART keys kept, a line each */
@@ -36,18 +37,22 @@ struct cf_live {
     cf_watcher* watcher;
 };
 
-/* A lock made of the one atomic the port has. Holding it means having
-   taken the count from 0 to 1; anyone else sees 2 or more, gives their
-   step back and tries again. The section it guards is a pointer copy
-   and a reference count, so the spin is as short as a spin can be. */
+/* A ticket lock, made of the atomics the port has: take the next
+   ticket, wait until it is served, serve the next on the way out. A
+   lock of one count - take it from 0 to 1, or give the step back and
+   retry - livelocks: with five threads each can step up, see 2 or more,
+   step back, and all of them do it again, forever (the tcc build ran
+   for two hours that way). Tickets are served in order, so every waiter
+   gets in. Equality survives the counters wrapping. The section it
+   guards is a pointer copy and a reference count. */
 static void live_lock(cf_live* l) {
-    while (cf_ref_inc(&l->lock) != 1) {
-        (void)cf_ref_dec(&l->lock);
+    cf_i32 mine = cf_ref_inc(&l->ticket_next) - 1;
+    while (cf_ref_get(&l->ticket_serving) != mine) {
     }
 }
 
 static void live_unlock(cf_live* l) {
-    (void)cf_ref_dec(&l->lock);
+    (void)cf_ref_inc(&l->ticket_serving);
 }
 
 static void live_release(cf_live* l, void* p) {
@@ -340,7 +345,8 @@ cf_live* cf_live_open(cf_live_mode mode, cf_live_build_fn build, cf_live_check_f
     l->build = build;
     l->check = check;
     l->user  = user;
-    cf_ref_init(&l->lock, 0);
+    cf_ref_init(&l->ticket_next, 0);
+    cf_ref_init(&l->ticket_serving, 0);
     l->current = live_build(l, NULL, &list, &list_len, err);
     if (l->current == NULL) {
         a->release(a->ctx, l);
