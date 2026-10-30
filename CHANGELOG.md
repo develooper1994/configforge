@@ -288,6 +288,26 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   `originator` name Mustafa Selçuk Çağlar, as the licence and the
   SBOM's copyright already did.
 
+### Fixed, and it mattered
+
+- **A TinyCC build claimed to be safe on any thread, and was not.**
+  tcc defines no `__GNUC__`, so it got no atomic operations: reference
+  counts were plain additions, while the build did not say
+  "single-threaded". `cf_port.h` now refuses a build without atomics
+  unless `CF_SINGLE_THREADED` is set, as the support matrix always said
+  it would, and `CF_FORCE_PORTABLE` - which turns the atomics off -
+  requires it at configure time. The installed `cf_build_options.h`
+  says when a build is single-threaded, so a program including its
+  headers is too, without a `-D` to remember; cppcheck is told the
+  compiler's version, and analyses the atomic path the build compiles
+  rather than the one with none. Found by `cf_live`'s thread test,
+  which spun for two hours under tcc.
+- **`cf_live`'s lock could livelock** (never released): a lock of one
+  count, taken from 0 to 1 or given back and retried, can have every
+  contender step up and back forever. It is a ticket lock now, served in
+  order. `cf_ref_get` is an atomic read on every path, so a loop waiting
+  on it sees another thread's write.
+
 ## 0.3.0 — 2026-10-24
 
 ### Fixed, and it mattered

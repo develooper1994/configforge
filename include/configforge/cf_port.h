@@ -264,6 +264,12 @@ typedef int cf_bool;
 #else
 #define CF_ATOMIC_NONE 1
 #define CF_ATOMIC_KIND "none (single-threaded only)"
+/* As the support matrix says: a toolchain with no atomics builds only
+   single-threaded. Without this, TinyCC - which defines no __GNUC__ -
+   built a library whose reference counts were plain additions while it
+   claimed, by not saying "single-threaded", to be safe on any thread. */
+#error                                                                                 \
+    "no atomic operations for this compiler: build with CF_SINGLE_THREADED (-DCF_SINGLE_THREADED=ON)"
 #endif
 
 typedef struct cf_refcount {

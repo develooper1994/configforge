@@ -103,9 +103,17 @@ function(configforge_setup_cppcheck)
   # build of this preset failed that way and the analysis never ran.
   # Saying which compiler this is gives it the configuration the
   # compiler actually compiles; Clang defines __GNUC__ as well.
+  # The version too: with a bare -D__GNUC__ (that is, 1) cppcheck took
+  # the path for a compiler with no atomic builtins, analysed code no
+  # build compiles, and stopped there once cf_port.h refused it. GCC is
+  # its own version; Clang says 4.2.
   set(compiler)
-  if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    set(compiler "-D__GNUC__")
+  if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    string(REGEX MATCH "^([0-9]+)\\.([0-9]+)" _ "${CMAKE_C_COMPILER_VERSION}")
+    set(compiler "-D__GNUC__=${CMAKE_MATCH_1}"
+                 "-D__GNUC_MINOR__=${CMAKE_MATCH_2}")
+  elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
+    set(compiler "-D__GNUC__=4" "-D__GNUC_MINOR__=2")
   endif()
   set(common
       "${CPPCHECK_EXE}"

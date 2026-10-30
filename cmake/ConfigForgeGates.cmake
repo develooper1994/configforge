@@ -21,7 +21,10 @@ function(configforge_add_gates tgt)
   # Every option and limit, for the gates that compile the library a
   # second way and have to compile the same one: see GateAmalgamation.
   string(REPLACE ";" "|" features "${CF_FEATURES}")
-  set(options "-DFEATURES=${features}" "-DWERROR=$<BOOL:${CF_WERROR}>")
+  set(options
+      "-DFEATURES=${features}" "-DWERROR=$<BOOL:${CF_WERROR}>"
+      "-DSINGLE=$<BOOL:${CF_SINGLE_THREADED}>"
+      "-DPORTABLE=$<BOOL:${CF_FORCE_PORTABLE}>")
   foreach(f ${CF_FEATURES})
     list(APPEND options "-DO_${f}=$<BOOL:${CF_WITH_${f}}>")
   endforeach()

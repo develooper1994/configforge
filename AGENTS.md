@@ -172,6 +172,11 @@ kqueue for a machine with no Mac. `scripts/README.md` has the commands.
 * **Under WSL, verify off `/mnt/c`**: `-DWORK=$HOME/cfv`. That
   filesystem has no inotify and no Unix permissions, so `test_watch`
   and Doctor's permission rule fail there for reasons not in the code.
+* **A lock made of one counter livelocks.** Increment, and give the
+  step back unless you got 1: under contention every thread can do that
+  forever. Build locks as tickets (`cf_live`'s). And a compiler with no
+  atomics (tcc, pcc) builds only `CF_SINGLE_THREADED`; `cf_port.h`
+  refuses it otherwise.
 * **A single-threaded build compiles the atomics out.** The `portable`
   preset is `CF_SINGLE_THREADED`, so a test that starts threads must
   skip there (`!defined(CF_SINGLE_THREADED)`); `test_live`'s spun

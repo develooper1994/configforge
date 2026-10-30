@@ -84,6 +84,7 @@ The first round, from the session that wrote this file:
 | a thread test hung the single-threaded preset | `AGENTS.md`; the test skips under `CF_SINGLE_THREADED` |
 | the full `EXTRA` verify ran only at the end of a round, and found a clang error late | next: run `EXTRA=clang` with every unit that touches tests, not only at the end |
 | C: filled from WSL traces, twice | one script per unit check; the owner's cleanup noted above |
+| `cf_live`'s lock livelocked, and tcc builds had no atomics while claiming thread safety | a ticket lock; `cf_port.h` refuses a threaded build without atomics; `AGENTS.md`. and one step up, a per-test timeout in `verify` (`TEST_TIMEOUT`, 900 s), so the next hang fails in minutes, not hours |
 
 ## Working habits that paid
 

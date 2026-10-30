@@ -4,13 +4,21 @@
 # user who includes it alone.
 file(GLOB headers "${SRC}/include/configforge/*.h")
 set(bad 0)
+
+# This build's cf_build_options.h ahead of the source tree's defaults, as
+# an installed copy would be: a single-threaded build's headers say so
+# there, and the source tree's defaults would say otherwise.
+set(gen_inc "")
+if(EXISTS "${BIN}/generated/configforge/cf_build_options.h")
+  set(gen_inc "-I${BIN}/generated")
+endif()
 foreach(h ${headers})
   get_filename_component(basename "${h}" NAME)
   set(probe "${BIN}/probe_${basename}.c")
   file(WRITE "${probe}"
        "#include <configforge/${basename}>\nint main(void){return 0;}\n")
   execute_process(
-    COMMAND ${CC} -std=c89 -pedantic -Werror -I${SRC}/include -c -o
+    COMMAND ${CC} -std=c89 -pedantic -Werror ${gen_inc} -I${SRC}/include -c -o
             "${BIN}/probe_${basename}.o" "${probe}"
     RESULT_VARIABLE rc
     OUTPUT_VARIABLE out
@@ -46,7 +54,7 @@ function(probe_cxx header std prereq)
   file(WRITE "${base}.cpp"
        "#include <configforge/${header}>\nint main(){return 0;}\n")
   execute_process(
-    COMMAND ${CXX} -std=c++${std} -pedantic -Werror -Wall -Wextra
+    COMMAND ${CXX} -std=c++${std} -pedantic -Werror -Wall -Wextra ${gen_inc}
             -I${SRC}/include -c -o "${base}.o" "${base}.cpp"
     RESULT_VARIABLE rc
     OUTPUT_VARIABLE out

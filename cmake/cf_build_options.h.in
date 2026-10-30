@@ -36,4 +36,9 @@
 #define CF_PATH_MAX    @CF_PATH_MAX@
 #define CF_MAX_DEPTH   @CF_MAX_DEPTH@
 
+/* Whether this build has threads: a library built single-threaded, or
+   with every upgrade off, is that for every program including it, which
+   gets it from here rather than from remembering a -D. */
+@CF_OPT_THREADING@
+
 #endif /* CONFIGFORGE_CF_BUILD_OPTIONS_H */
