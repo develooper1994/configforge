@@ -212,5 +212,8 @@ endforeach()
 string(APPEND doc "${toc}\n${sections}")
 restore("${doc}" doc)
 string(REGEX REPLACE "\n\n\n+" "\n\n" doc "${doc}")
-file(WRITE "${OUT}" "${doc}")
+# LF on every system: file(WRITE) writes CRLF on Windows, which the text
+# gate refuses and git rewrites on every commit.
+include("${REPO}/cmake/ConfigForgeVersion.cmake")
+configforge_write_lf("${OUT}" "${doc}")
 message("apiref: ${total} functions from ${OUT}")

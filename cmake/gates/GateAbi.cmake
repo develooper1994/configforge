@@ -47,13 +47,17 @@ list(SORT declared)
 
 if(WRITE)
   string(REPLACE ";" "\n" body "${declared}")
-  file(
-    WRITE "${list_file}"
-    "# The public interface of libconfigforge: every CF_API function.\n"
-    "# Checked by gate.abi against the headers and the built library;\n"
-    "# rewrite with cmake -DSRC=. -DWRITE=ON -P cmake/gates/GateAbi.cmake.\n"
-    "# A line added is a minor version, a line removed a major one.\n"
-    "${body}\n")
+  set(text "# The public interface of libconfigforge: every CF_API function.\n")
+  string(APPEND text
+         "# Checked by gate.abi against the headers and the built library;\n")
+  string(APPEND text "# rewrite with cmake -DSRC=. -DWRITE=ON -P "
+         "cmake/gates/GateAbi.cmake.\n")
+  string(APPEND text
+         "# A line added is a minor version, a line removed a major one.\n")
+  string(APPEND text "${body}\n")
+  # LF on every system: file(WRITE) writes CRLF on Windows.
+  include("${SRC}/cmake/ConfigForgeVersion.cmake")
+  configforge_write_lf("${list_file}" "${text}")
   list(LENGTH declared n)
   message("abi: ${n} symbols written to ${list_file}")
   return()
