@@ -68,7 +68,7 @@ system, no generated header, no options.
 | tcc (the Tiny C Compiler) | LGPL-2.1-or-later | `EXTRA=compilers`: the suite under a compiler that shares nothing with GCC |
 | pcc (the Portable C Compiler) | BSD-2-Clause | `EXTRA=compilers`: the same, from the other end of C's history |
 | git (`find_package` of `Git`) | GPL-2.0-only | `scripts/verify.cmake -DSOURCE=index` and `scripts/format.cmake`, which ask it what is staged or changed; the build, which asks it for the commit `cf_build_id()` reports (`scripts/buildid.cmake`) - without it the id is empty |
-| Python 3 | PSF-2.0 | `scripts/amalgamate.py`, `scripts/check_formats.py`; `bindings/python` and its test, `doctor.python` |
+| Python 3 | PSF-2.0 | `scripts/amalgamate.py`, `scripts/check_formats.py`; `bindings/python` (the `configforge` package, ctypes, standard library only, and `configforge_doctor`) and their tests, `python.binding` (shared builds) and `doctor.python` |
 | Conan | MIT | the Conan recipe, `conanfile.py`, and its CI job |
 | vcpkg | MIT | the overlay port in `packaging/vcpkg`, and its CI job |
 | pkg-config | GPL-2.0-or-later | finding libkqueue; the install gate's pkg-config consumer |
@@ -79,7 +79,7 @@ system, no generated header, no options.
 | clang-tidy | Apache-2.0 WITH LLVM-exception | `CF_CLANG_TIDY=ON` |
 | cmake-format, cmake-lint (cmakelang) | GPL-3.0 | `gate.format.cmake`, `gate.cmake.lint` |
 | cppcheck | GPL-3.0-or-later | the `analyze` preset |
-| Rust: `rustc`, `cargo` | MIT OR Apache-2.0 | `bindings/rust`, and `CF_RUST`: the Rust examples. The crate has no dependencies, so cargo runs `--offline` |
+| Rust: `rustc`, `cargo`, `clippy`, `rustfmt` | MIT OR Apache-2.0 | `bindings/rust`, and `CF_RUST`: the Rust examples and `cargo test`; clippy and rustfmt check the crate. The crate has no dependencies, so cargo runs `--offline`; configforge-dev has them from Ubuntu's archive |
 | GNU binutils: `nm`, `objdump` | GPL-3.0-or-later | `gate.symbols`, `gate.abi` |
 
 Every tool in 2b is optional except CMake and a compiler: a gate whose

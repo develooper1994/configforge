@@ -28,7 +28,8 @@ If a change makes a value harder to explain, it is the wrong change.
 | `tools/doctor` | the Doctor CLI and its adapters | `docs/Doctor.md` |
 | `tests/unit` | one C program per area; also the best usage examples | |
 | `tests/doctor` | Doctor's fixtures and CLI tests | |
-| `examples/c`, `examples/cpp` | programs the README and `docs/Guide.md` quote, one directory a language, run by the suite and checked for their output (`expect.cmake`) | `docs/Guide.md` |
+| `examples/c`, `examples/cpp`, `examples/rust` | programs the README and `docs/Guide.md` quote, one directory a language, run by the suite and checked for their output (`expect.cmake`) | `docs/Guide.md` |
+| `bindings/rust`, `bindings/python` | the Rust crate (`build.rs` builds the library) and the Python package (ctypes over a shared build), each with its own tests | `docs/Guide.md`, section 13 |
 | `cmake/`, `cmake/gates/` | build modules, and the gates that enforce the design | `docs/Architecture.md` |
 | `scripts/` | verify, format, stack, apiref, amalgamate | `scripts/README.md` |
 | `conanfile.py`, `packaging/` | the Conan recipe and its test package; the vcpkg overlay port | README.md, "From a package manager" |
@@ -46,6 +47,9 @@ The documents, and what each is for:
 * `docs/Doctor.md` - the rule catalogue and Doctor's design.
 * `docs/Dependencies.md` - every dependency and licence; the build
   generates an SPDX SBOM to match.
+* `docs/Handoff.md` - what an agent learnt that the code does not say:
+  how the owner wants the work done, where it stands, and what each
+  machine needs. Read it second.
 * `docs/Roadmap.md` - **the state of the work**: what is next, what is
   known to be wrong, and the ideas not yet built. Update it in the same
   commit as the work.
@@ -168,6 +172,18 @@ kqueue for a machine with no Mac. `scripts/README.md` has the commands.
 * **Under WSL, verify off `/mnt/c`**: `-DWORK=$HOME/cfv`. That
   filesystem has no inotify and no Unix permissions, so `test_watch`
   and Doctor's permission rule fail there for reasons not in the code.
+* **A single-threaded build compiles the atomics out.** The `portable`
+  preset is `CF_SINGLE_THREADED`, so a test that starts threads must
+  skip there (`!defined(CF_SINGLE_THREADED)`); `test_live`'s spun
+  forever on a lock that was no longer atomic.
+* **`git mv` stages.** Moving a file in the middle of a unit puts the
+  move in the index; `verify -DSOURCE=index` then verifies half of the
+  next unit. Move with the unit that owns it.
+* **The C++ header is checked under every standard** (`gate.headers`,
+  98 to 23). It once compiled only as C++98: on LP64, C++11 makes
+  `cf_i64` `long`, and two explicit specializations became one.
+* **Every `wsl` call writes WSLg traces to C:** (`%TEMP%\DiagOutputDir`),
+  gigabytes a day under load. Batch a unit's checks into one script.
 * **Watch the disk on a long session.** Each preset is a full build;
   `verify.cmake` removes its staged copy on success, and `build-*`
   directories are disposable and in `.gitignore`.
