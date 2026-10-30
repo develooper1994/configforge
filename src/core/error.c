@@ -39,6 +39,18 @@ void cf_error_clear(cf_error* e) {
     e->message[0] = '\0';
 }
 
+void cf_error_copy(cf_error* dst, const cf_error* src) {
+    if (dst == NULL || src == NULL || dst == src) {
+        return;
+    }
+    /* 1.0's fields. A field added in 1.x is copied here only when
+       dst->size reaches past it (offsetof + sizeof). */
+    dst->code = src->code;
+    memcpy(dst->key, src->key, sizeof dst->key);
+    memcpy(dst->source, src->source, sizeof dst->source);
+    memcpy(dst->message, src->message, sizeof dst->message);
+}
+
 static void copy_bounded(char* dst, size_t cap, const char* src) {
     size_t n;
 

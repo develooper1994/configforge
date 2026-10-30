@@ -60,6 +60,7 @@ class cf_iter(Structure):
         ("name", POINTER(c_char)),
         ("namelen", c_size_t),
         ("value", c_void_p),
+        ("reserved", c_void_p * 4),
     ]
 
 
@@ -71,7 +72,6 @@ class cf_live_status(Structure):
         ("failures", c_uint64),
         ("last", c_int),
         ("pending", c_int),
-        ("error", cf_error),
     ]
 
 
@@ -175,6 +175,7 @@ for _name, _res, _args in [
     ("cf_live_generation", c_uint64, (L,)),
     ("cf_live_restarts", c_size_t, (L, c_char_p, c_size_t)),
     ("cf_live_status_get", c_int, (L, POINTER(cf_live_status))),
+    ("cf_live_last_error", c_int, (L, E)),
 ]:
     _declare(_name, _res, *_args)
 
@@ -191,6 +192,14 @@ for _limit, _ours in (("key", KEY_MAX), ("source", SOURCE_MAX), ("message", MESS
             "configforge: libconfigforge was built with CF_%s_MAX %d; this binding expects %d"
             % (_limit.upper(), _theirs, _ours)
         )
+
+# ctypes lets go of the GIL for every call, so two Python threads do reach
+# the library at once; a single-threaded build has no atomics to take that.
+if lib.cf_has_feature(b"single-threaded"):
+    raise ImportError(
+        "configforge: libconfigforge was built CF_SINGLE_THREADED, and Python "
+        "threads call it at the same time"
+    )
 
 
 def new_error() -> cf_error:

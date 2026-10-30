@@ -24,7 +24,7 @@ pub const CF_RANK_USER_FILE: c_int = 20;
 pub const CF_RANK_SYS_FILE: c_int = 30;
 pub const CF_RANK_DEFAULT: c_int = 40;
 
-pub const CF_OPTIONAL: u32 = 1;
+pub const CF_OPTIONAL: u32 = 1 << 16;
 
 pub const CF_REQUIRED: u32 = 1 << 0;
 pub const CF_SENSITIVE: u32 = 1 << 1;
@@ -33,6 +33,7 @@ pub const CF_TRANSIENT: u32 = 1 << 3;
 pub const CF_RESTART: u32 = 1 << 4;
 
 pub const CF_OK: c_int = 0;
+pub const CF_E_CONVERT: c_int = 3;
 
 pub const CF_LIVE_MANUAL: c_int = 0;
 pub const CF_LIVE_APPROVE: c_int = 1;
@@ -95,8 +96,8 @@ pub struct cf_value {
 }
 
 /// cf_define.h's descriptor, with CF_WITH_REAL on (the default build).
-/// The binding checks the size cf_def_init writes against this one, so a
-/// library built another way is refused, not misread.
+/// The binding refuses a library built without reals (check_limits), whose
+/// cf_def has no rmin/rmax and so another layout.
 #[repr(C)]
 pub struct cf_def {
     pub size: usize,
@@ -133,6 +134,7 @@ pub struct cf_iter {
     pub name: *const c_char,
     pub namelen: usize,
     pub value: *const cf_value,
+    pub reserved: [*mut std::ffi::c_void; 4],
 }
 
 #[repr(C)]
@@ -158,7 +160,6 @@ pub struct cf_live_status {
     pub failures: u64,
     pub last: c_int,
     pub pending: cf_bool,
-    pub error: cf_error,
 }
 
 pub type cf_live_build_fn = extern "C" fn(user: *mut std::ffi::c_void) -> *mut cf_builder;
@@ -239,7 +240,8 @@ extern "C" {
         dflt: *const c_char,
         flags: u32,
     ) -> cf_bool;
-    pub fn cf_def_init(d: *mut cf_def, type_: c_int, key: *const c_char);
+    pub fn cf_def_init_sized(d: *mut cf_def, size: usize, type_: c_int, key: *const c_char);
+    pub fn cf_has_feature(name: *const c_char) -> cf_bool;
     pub fn cf_value_text(v: *mut cf_value, p: *const c_char, n: usize);
     pub fn cf_value_int(v: *mut cf_value, i: cf_i64);
     pub fn cf_value_bool(v: *mut cf_value, b: cf_bool);
@@ -321,4 +323,5 @@ extern "C" {
     pub fn cf_live_generation(l: *mut cf_live) -> u64;
     pub fn cf_live_restarts(l: *const cf_live, buf: *mut c_char, cap: usize) -> usize;
     pub fn cf_live_status_get(l: *mut cf_live, out: *mut cf_live_status) -> cf_bool;
+    pub fn cf_live_last_error(l: *mut cf_live, err: *mut cf_error) -> cf_bool;
 }

@@ -314,6 +314,26 @@ mod tests {
     }
 
     #[test]
+    fn a_nul_is_an_error_not_a_panic() {
+        let e = Builder::new()
+            .define_text("a.b", Some("x\0y"), 0)
+            .create()
+            .err()
+            .expect("a value holding a NUL is refused");
+        assert!(e.message.contains("NUL"), "{}", e.message);
+        let cfg = Builder::new()
+            .memory("m", rank::USER_FILE, &[("a.b", "1")])
+            .create()
+            .unwrap();
+        assert_eq!(
+            cfg.get::<i64>("a.b\0"),
+            None,
+            "a key holding a NUL is absent"
+        );
+        assert_eq!(cfg.int("a\0b", 7), 7);
+    }
+
+    #[test]
     fn settings_struct() {
         let cfg = Settings::define(Builder::new().memory(
             "m",

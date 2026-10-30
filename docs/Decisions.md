@@ -2161,6 +2161,70 @@ change is when it is looked for, not whether.
 
 ---
 
+## D-51 — How the interface grows in 1.x
+
+**Question.** From 1.0 a program built against one 1.x must run against every later 1.x.
+A review of the interface before the freeze (2026-10-30) found that the promise in
+`cf_error.h` - "a newer library sees an older caller's smaller struct and writes only
+what fits" - was not kept anywhere: nothing read `cf_error.size`, the library copied
+whole structs of its own size into callers', `cf_def_init` cleared the library's
+`sizeof` over the caller's storage, `cf_builder_define` refused any descriptor smaller
+than the library's, and `cf_live_status_get` accepted only its own exact size. Each is
+harmless while every size is equal, which is exactly why it would have gone unnoticed
+until 1.1.
+
+**Decision.** A struct the caller allocates and the library fills or reads carries its
+size first, and:
+
+* **1.0's fields are the floor.** They are always written and read, whatever `size`
+  says - so a `cf_error` declared without `CF_ERROR_INIT` still works - and a size below
+  1.0's is refused where the struct is an input.
+* **A field added in 1.x is touched only where `size` reaches it.** The library keeps,
+  for each struct, the offset where 1.0 ended.
+* **Never a whole-struct copy into the caller's memory.** `cf_error_copy` copies field by
+  field; `cf_live_status_get` copies as far as both structs reach.
+* **The caller's size travels with the call that initialises.** `cf_def_init` is a
+  macro over `cf_def_init_sized(d, sizeof(cf_def), ...)`, so the size is the one the
+  caller was compiled with, not the library's.
+* **No growable struct inside another.** `cf_live_status` held a `cf_error`, so any
+  field after it would sit where the error's version put it; the error moved to its own
+  call, `cf_live_last_error`.
+
+The same review found the rest of what 1.x would have been stuck with, decided here:
+
+* **What a program implements carries a size too**: `cf_source_vtable`, `cf_codec` and
+  `cf_doc_sink` begin with `size_t size`, so 1.x adds a member and calls it only for a
+  table that has it. `cf_builder_source` and `cf_builder_file_codec` refuse one without,
+  by name; `cf_builder_source` copies a source's 1.0 members one by one.
+* **Flags cannot be confused**: definition flags take bits 0 to 15 and source flags 16
+  and up. `CF_OPTIONAL` and `CF_REQUIRED` were both bit 0 and reached the same
+  `unsigned flags`, so `cf_builder_file(..., CF_REQUIRED)` meant "optional" without a
+  word. A bit a function does not know is refused by name, so a flag from a later 1.x
+  is never silently ignored by an earlier library.
+* **A function that will want more arguments takes a struct**: `cf_live_open_with`
+  and `cf_live_options`, which also give build and check a `user` each.
+  `cf_builder_replay` gained the flags every other file-like source has.
+* **Structs the library fills in the caller's memory keep room**: `cf_iter` and
+  `cf_image` end in `void* reserved[4]`.
+* **An internal tier**: `cf_platform.h`, `cf_flatten.h`, `cf_numeric.h`, the
+  definition set and every `cf_ks_` function but those a source's load uses are exported
+  for Doctor, the bindings and the tests, and outside the 1.x promise; each header says
+  so. Hiding them would break Doctor against a shared library.
+* **The bindings' own surfaces**: Rust's `sys` is hidden and outside the crate's semver,
+  what can grow is `#[non_exhaustive]`, and a NUL inside a string is an error, not a
+  panic. Python's `Config` is a `collections.abc.Mapping`; its methods are the whole
+  set for 1.x, since a method added later would hide a key read as an attribute, and
+  what 1.x adds comes as module functions. Both refuse a single-threaded library, whose
+  snapshots their threads would share.
+* **Exceptions stay out of C**: the C++ `Live` catches what a build or a check throws;
+  a build that throws is a build that failed.
+
+Rejected: a version number instead of a size. A size says the same and also says how
+far it is safe to write, which a version would need a table to say.
+
+---
+
+
 One decision is open, because nothing has been built: profiles as a core concept
 (D-12). Value interpolation (D-10), long reserved, is decided and built. Everything else is decided,
 and where the implementation settled the question rather than this document, the section

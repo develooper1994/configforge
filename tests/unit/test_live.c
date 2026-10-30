@@ -156,10 +156,34 @@ static void test_auto_and_manual(void) {
               "counts the generations, the rebuilds and the failures");
         check(st.last == CF_LIVE_UNCHANGED && !st.pending,
               "says what the last one did");
-        check(strstr(st.error.message, "trace") != NULL,
-              "and why the last failure failed");
+        {
+            cf_error last = CF_ERROR_INIT;
+            check(cf_live_last_error(l, &last) && strstr(last.message, "trace") != NULL,
+                  "and why the last failure failed");
+        }
         check(!cf_live_status_get(NULL, &st) && !cf_live_status_get(l, NULL),
               "and nothing of nothing");
+        {
+            /* A caller built against a later, larger struct: this library
+               fills what it has and leaves the rest alone. */
+            static unsigned char bigger[sizeof(cf_live_status) + 16];
+            cf_live_status*      big = (cf_live_status*)(void*)bigger;
+            memset(bigger, 0xA5, sizeof bigger);
+            big->size = sizeof bigger;
+            check(cf_live_status_get(l, big) && big->generation == 3 &&
+                      bigger[sizeof(cf_live_status)] == 0xA5 &&
+                      bigger[sizeof bigger - 1] == 0xA5,
+                  "a larger struct is filled as far as this library's reaches");
+        }
+    }
+    {
+        cf_live* fresh;
+        cf_error none = CF_ERROR_INIT;
+        g_pairs       = g_info;
+        fresh         = cf_live_open(CF_LIVE_MANUAL, build, NULL, NULL, NULL, &err);
+        check(fresh != NULL && !cf_live_last_error(fresh, &none) && none.code == CF_OK,
+              "no failure, no error");
+        cf_live_close(fresh);
     }
     cf_live_close(l);
 }
@@ -386,7 +410,46 @@ static void test_threads(void) {
 }
 #endif
 
+/* cf_live_open_with: each function gets its own `user`. */
+static int g_build_seen, g_check_seen;
+
+static cf_builder* build_with(void* user) {
+    g_build_seen = (user == (void*)&g_build_seen) ? 1 : -1;
+    return build(NULL);
+}
+
+static cf_bool check_with(void* user, const cf_config* running, const cf_config* next,
+                          cf_error* err) {
+    (void)running;
+    (void)next;
+    (void)err;
+    g_check_seen = (user == (void*)&g_check_seen) ? 1 : -1;
+    return CF_TRUE;
+}
+
+static void test_options(void) {
+    cf_error        err = CF_ERROR_INIT;
+    cf_live_options o   = CF_LIVE_OPTIONS_INIT;
+    cf_live*        l;
+
+    g_pairs      = g_info;
+    o.build      = build_with;
+    o.build_user = &g_build_seen;
+    o.check      = check_with;
+    o.check_user = &g_check_seen;
+    l            = cf_live_open_with(&o, &err);
+    check(l != NULL && g_build_seen == 1 && g_check_seen == 1,
+          "options: build and check each get their own user");
+    cf_live_close(l);
+    o.size = 0;
+    check(cf_live_open_with(&o, &err) == NULL &&
+              strstr(err.message, "OPTIONS_INIT") != NULL,
+          "options without a size are refused, by name");
+    check(cf_live_open_with(NULL, &err) == NULL, "and no options");
+}
+
 int main(void) {
+    test_options();
     test_auto_and_manual();
     test_approve();
     test_poll();

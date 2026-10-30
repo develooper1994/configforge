@@ -297,8 +297,12 @@ static cf_bool store_write(const cf_source* s, const cf_write_item* items, size_
     return cf_store_set(cf_source_path(s), items, count, meta, err);
 }
 
-static const cf_source_vtable cf_store_vt = {"store", store_load, store_destroy,
-                                             store_path, store_write};
+static const cf_source_vtable cf_store_vt = {sizeof(cf_source_vtable),
+                                             "store",
+                                             store_load,
+                                             store_destroy,
+                                             store_path,
+                                             store_write};
 
 size_t cf_source_store_state_size(void) {
     return sizeof(store_state);

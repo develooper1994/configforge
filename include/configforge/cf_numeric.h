@@ -1,6 +1,10 @@
 /*
  * cf_numeric.h - locale-independent numeric conversion.
  *
+ * INTERNAL (D-51): exported for ConfigForge Doctor, the bindings and the
+ * tests, and outside the 1.x promise - a minor release may change it.
+ * A program uses the configforge.h functions instead.
+ *
  * strtod, atoi and printf("%f") all follow the active locale's decimal
  * separator, so a configuration file written on one machine would not
  * parse identically on another. These conversions are therefore always

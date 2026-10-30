@@ -705,6 +705,7 @@ static cf_bool json_encoder(cf_sink* out, void* state, cf_doc_sink* sink) {
     e->out   = out;
     e->depth = -1;
 
+    sink->size        = sizeof(cf_doc_sink);
     sink->begin_table = js_enc_table;
     sink->begin_array = js_enc_array;
     sink->scalar      = js_enc_scalar;
@@ -713,19 +714,21 @@ static cf_bool json_encoder(cf_sink* out, void* state, cf_doc_sink* sink) {
     return CF_TRUE;
 }
 
-const cf_codec cf_codec_json = {"json",
-                                ".json;.jsn",
-                                CF_CODEC_READ | CF_CODEC_WRITE | CF_CODEC_TYPED |
-                                    CF_CODEC_ARRAYS,
-                                json_decode,
-                                json_encoder,
-                                sizeof(js_enc)};
+const cf_codec cf_codec_json = {
+    sizeof(cf_codec), "json",
+    ".json;.jsn",     CF_CODEC_READ | CF_CODEC_WRITE | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
+    json_decode,      json_encoder,
+    sizeof(js_enc)};
 
 #else /* !CF_WITH_EMIT: read only */
 
-const cf_codec cf_codec_json = {
-    "json",      ".json;.jsn", CF_CODEC_READ | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
-    json_decode, NULL,         0};
+const cf_codec cf_codec_json = {sizeof(cf_codec),
+                                "json",
+                                ".json;.jsn",
+                                CF_CODEC_READ | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
+                                json_decode,
+                                NULL,
+                                0};
 
 #endif /* CF_WITH_EMIT */
 

@@ -26,6 +26,7 @@ use std::time::Duration;
 
 /// Who decides that a change is taken.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Mode {
     /// Only [`Live::reload`] rebuilds.
     Manual,
@@ -38,6 +39,7 @@ pub enum Mode {
 /// What a poll, a reload or an approval did. A failure is the `Err` of
 /// the call, and leaves the running snapshot serving.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Reload {
     Unchanged,
     Swapped,
@@ -46,6 +48,7 @@ pub enum Reload {
 
 /// What a health page says about the reloads ([`Live::status`]).
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Status {
     /// As [`Live::generation`].
     pub generation: u64,
@@ -77,6 +80,10 @@ extern "C" fn trampoline(user: *mut c_void) -> *mut sys::cf_builder {
     // that failed, which cf_live already reports as one.
     let made = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| (state.build)()));
     match made {
+        Ok(b) if b.keep.refusal().is_some() => {
+            drop(b); // a string with a NUL: a build that failed
+            std::ptr::null_mut()
+        }
         Ok(mut b) => {
             let raw = b.b;
             b.b = std::ptr::null_mut();
@@ -125,16 +132,17 @@ impl Inner {
             failures: 0,
             last: 0,
             pending: 0,
-            error: new_error(),
         };
+        let mut e = new_error();
         unsafe { sys::cf_live_status_get(self.l, &mut s) };
+        let failed = unsafe { sys::cf_live_last_error(self.l, &mut e) } != 0;
         Status {
             generation: s.generation,
             reloads: s.reloads,
             failures: s.failures,
-            last: result(s.last, &s.error).ok(),
+            last: result(s.last, &e).ok(),
             pending: s.pending != 0,
-            last_error: (s.failures > 0).then(|| Error::from_raw(&s.error)),
+            last_error: failed.then(|| Error::from_raw(&e)),
         }
     }
 }

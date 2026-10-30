@@ -72,6 +72,10 @@ typedef struct cf_image {
     const char* values;
     const char* strings;
     cf_bool     swapped; /* the host reads the other way round */
+
+    /* Room a later 1.x may use without the struct growing: the caller
+       allocates a cf_image and cf_image_open fills it (D-51). */
+    void* reserved[4];
 } cf_image;
 
 /* Validates the header, the bounds and the digest. Refuses rather than

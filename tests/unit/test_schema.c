@@ -209,6 +209,7 @@ static void test_structure(void) {
     cf_config_free(c);
 
     memset(&w, 0, sizeof w);
+    sink.size        = sizeof(cf_doc_sink);
     sink.begin_table = walk_open;
     sink.begin_array = walk_open;
     sink.scalar      = walk_scalar;

@@ -61,7 +61,7 @@ cf_config_free
 cf_config_ref
 cf_count
 cf_def_bool
-cf_def_init
+cf_def_init_sized
 cf_def_int
 cf_def_real real
 cf_def_text
@@ -88,6 +88,7 @@ cf_emit
 cf_env_key
 cf_environ
 cf_error_clear
+cf_error_copy
 cf_error_set
 cf_explain
 cf_explain_json
@@ -160,7 +161,9 @@ cf_live_approve
 cf_live_close
 cf_live_generation
 cf_live_get
+cf_live_last_error
 cf_live_open
+cf_live_open_with
 cf_live_pending
 cf_live_poll
 cf_live_reject

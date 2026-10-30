@@ -40,6 +40,7 @@
 #endif
 #if CF_CPLUSPLUS >= 201103L
 #define CF_CPP11 1
+#include <exception>
 #include <functional>
 #include <initializer_list>
 #else
@@ -650,8 +651,8 @@ public:
     { if (b_) { cf_builder_memory(b_, name, rank, pairs, count); }
       return *this; }
 
-    Builder& replay(const char* name, int rank, const char* path)
-    { if (b_) { cf_builder_replay(b_, name, rank, path); } return *this; }
+    Builder& replay(const char* name, int rank, const char* path, unsigned flags = 0)
+    { if (b_) { cf_builder_replay(b_, name, rank, path, flags); } return *this; }
 
     Builder& defineBool(const char* key, bool dflt, unsigned flags = 0)
     { if (b_) { cf_builder_bool(b_, key, dflt ? CF_TRUE : CF_FALSE, flags); }
@@ -985,6 +986,15 @@ public:
         return s;
     }
 
+    /* Why the last reload failed; an Error whose code is CF_OK when none
+       has. Any thread. */
+    Error lastError() const
+    {
+        Error e;
+        (void)cf_live_last_error(l_, e.raw());
+        return e;
+    }
+
     /* The CF_RESTART keys waiting for a restart, a line each. */
     std::string restarts() const
     {
@@ -1011,11 +1021,31 @@ private:
         BuildFn build;
         CheckFn check;
     };
-    static cf_builder* trampoline(void* user)
-    { return static_cast<Fns*>(user)->build().release(); }
+    /* Called from C: an exception must not unwind through cf_live's frames,
+       which is undefined behaviour. A build that throws is a build that
+       failed, as a NULL builder is; a check that throws refuses, saying
+       what was thrown. */
+    static cf_builder* trampoline(void* user) noexcept
+    {
+        try {
+            return static_cast<Fns*>(user)->build().release();
+        } catch (...) {
+            return nullptr;
+        }
+    }
     static cf_bool checker(void* user, const cf_config* running, const cf_config* next,
-                           cf_error* err)
-    { return static_cast<Fns*>(user)->check(running, next, err) ? CF_TRUE : CF_FALSE; }
+                           cf_error* err) noexcept
+    {
+        try {
+            return static_cast<Fns*>(user)->check(running, next, err) ? CF_TRUE : CF_FALSE;
+        } catch (const std::exception& x) {
+            return cf_error_set(err, CF_E_POLICY, nullptr, nullptr, "the check threw: %s",
+                                x.what());
+        } catch (...) {
+            return cf_error_set(err, CF_E_POLICY, nullptr, nullptr,
+                                "the check threw an exception");
+        }
+    }
     Fns* fn_;
 #endif
 };

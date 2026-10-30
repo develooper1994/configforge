@@ -56,7 +56,8 @@ static cf_bool local_write(const cf_source* s, const cf_write_item* items, size_
     return CF_TRUE;
 }
 
-static const cf_source_vtable local_vt = {"local", local_load, NULL, NULL, local_write};
+static const cf_source_vtable local_vt = {
+    sizeof(cf_source_vtable), "local", local_load, NULL, NULL, local_write};
 
 static const char* const only_env[]  = {"env", NULL};
 static const char* const local_too[] = {"local", "env", NULL};

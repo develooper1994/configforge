@@ -457,6 +457,7 @@ static cf_bool yaml_encoder(cf_sink* out, void* state, cf_doc_sink* sink) {
     }
     memset(e, 0, sizeof *e);
     e->out            = out;
+    sink->size        = sizeof(cf_doc_sink);
     sink->begin_table = yaml_enc_table;
     sink->begin_array = yaml_enc_array;
     sink->scalar      = yaml_enc_scalar;
@@ -466,13 +467,20 @@ static cf_bool yaml_encoder(cf_sink* out, void* state, cf_doc_sink* sink) {
 }
 
 const cf_codec cf_codec_yaml = {
-    "yaml",      ".yaml;.yml", CF_CODEC_READ | CF_CODEC_WRITE | CF_CODEC_ARRAYS,
-    yaml_decode, yaml_encoder, sizeof(yaml_enc)};
+    sizeof(cf_codec), "yaml",
+    ".yaml;.yml",     CF_CODEC_READ | CF_CODEC_WRITE | CF_CODEC_ARRAYS,
+    yaml_decode,      yaml_encoder,
+    sizeof(yaml_enc)};
 
 #else /* !CF_WITH_EMIT: read only */
 
-const cf_codec cf_codec_yaml = {
-    "yaml", ".yaml;.yml", CF_CODEC_READ | CF_CODEC_ARRAYS, yaml_decode, NULL, 0};
+const cf_codec cf_codec_yaml = {sizeof(cf_codec),
+                                "yaml",
+                                ".yaml;.yml",
+                                CF_CODEC_READ | CF_CODEC_ARRAYS,
+                                yaml_decode,
+                                NULL,
+                                0};
 
 #endif /* CF_WITH_EMIT */
 

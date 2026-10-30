@@ -205,7 +205,7 @@ static void test_replay(void) {
 
     b = cf_build(NULL);
     cf_builder_cli(b, "cli", CF_RANK_CLI, 1, plain);
-    cf_builder_replay(b, "replay", CF_RANK_ENV, "cf_res_rep.json");
+    cf_builder_replay(b, "replay", CF_RANK_ENV, "cf_res_rep.json", 0);
     cf_builder_text(b, "prompt", "", 0);
     back = cf_builder_create(b, &err);
     check(back != NULL, "the replay builds");

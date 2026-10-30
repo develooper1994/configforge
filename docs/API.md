@@ -12,13 +12,13 @@ in; the types are in the headers themselves.
 - [`cf_doctor.h`](#cf_doctorh) - 21
 - [`cf_emit.h`](#cf_emith) - 1
 - [`cf_entry.h`](#cf_entryh) - 10
-- [`cf_error.h`](#cf_errorh) - 4
+- [`cf_error.h`](#cf_errorh) - 5
 - [`cf_explain.h`](#cf_explainh) - 4
 - [`cf_flatten.h`](#cf_flattenh) - 4
 - [`cf_image.h`](#cf_imageh) - 10
 - [`cf_iterate.h`](#cf_iterateh) - 5
 - [`cf_keyspace.h`](#cf_keyspaceh) - 26
-- [`cf_live.h`](#cf_liveh) - 12
+- [`cf_live.h`](#cf_liveh) - 14
 - [`cf_numeric.h`](#cf_numerich) - 7
 - [`cf_platform.h`](#cf_platformh) - 19
 - [`cf_port.h`](#cf_porth) - 10
@@ -305,8 +305,12 @@ The configuration's contract as a JSON Schema, closed when it rejects
 unknown keys (CF_UNKNOWN_REJECT). See cf_schema_write.
 
 ```c
-CF_API cf_bool cf_builder_replay(cf_builder* b, const char* name, int rank, const char* path);
+CF_API cf_bool cf_builder_replay(cf_builder* b, const char* name, int rank, const char* path, unsigned flags);
 ```
+
+Load a full report as a source. Reproduces exactly the configuration
+a process was running, rather than a reconstruction from files that
+may have changed since. `flags` is a source's: CF_OPTIONAL, or 0.
 
 ```c
 CF_API size_t cf_count(const cf_config* c);
@@ -572,8 +576,14 @@ needs to know what is required, and redaction needs to know what is
 sensitive. None of that can be recovered from the values alone.
 
 ```c
-CF_API void cf_def_init(cf_def* d, cf_type type, const char* key);
+CF_API void cf_def_init_sized(cf_def* d, size_t size, cf_type type, const char* key);
 ```
+
+Initialise a descriptor: every field zero, `size` the caller's
+sizeof(cf_def), so a library from a later 1.x writes no further than
+the caller's struct reaches (D-51). Call it as cf_def_init, which
+passes that size; cf_def_init_sized is for a binding that lays out
+cf_def itself.
 
 ### Definition set
 
@@ -781,12 +791,12 @@ the same mistake would have been at startup - before a reader sees
 it, with the running configuration left serving:
 
     static cf_doctor_gate gate = {"production", "error", NULL, NULL};
-    cf_live* live = cf_live_open(CF_LIVE_AUTO, build, cf_doctor_live_check,
-                                 (void*)&gate, NULL, &err);
-
-cf_live passes one `user` to both functions, so a build function that
-needs its own state keeps the gate inside it and calls
-cf_doctor_live_check from its own check.
+    cf_live_options       o    = CF_LIVE_OPTIONS_INIT;
+    o.mode       = CF_LIVE_AUTO;
+    o.build      = build;      o.build_user = &app;
+    o.check      = cf_doctor_live_check;
+    o.check_user = &gate;
+    cf_live* live = cf_live_open_with(&o, &err);
 
 ```c
 CF_DOCTOR_API cf_bool cf_doctor_live_check(void* user, const cf_config* running, const cf_config* next, cf_error* err);
@@ -1011,6 +1021,14 @@ CF_API void cf_error_clear(cf_error* e);
 clang-format on
 
 ```c
+CF_API void cf_error_copy(cf_error* dst, const cf_error* src);
+```
+
+What `src` says, copied into `dst` as far as `dst` has room: 1.0's
+fields always, a later field where dst->size covers it. dst->size is
+kept. Safe with NULL on either side.
+
+```c
 CF_API cf_bool cf_error_set(cf_error* e, cf_code code, const char* key, const char* source, const char* fmt, ...);
 ```
 
@@ -1068,6 +1086,10 @@ for a key space with no definitions.
 ## cf_flatten.h
 
 cf_flatten.h - document events to and from the flat key space.
+
+INTERNAL (D-51): exported for ConfigForge Doctor, the bindings and the
+tests, and outside the 1.x promise - a minor release may change it.
+A program uses the configforge.h functions instead.
 
 The bridge between the serialization layer and the configuration
 model. It lives on this side of the boundary on purpose: the
@@ -1234,6 +1256,12 @@ like everything else that renders.
 ## cf_keyspace.h
 
 cf_keyspace.h - the flat key space and the provenance chain.
+
+The 1.x promise (D-51) covers what a source written by a program uses:
+cf_key_valid, cf_ks_arena and the cf_ks_add* functions, called from a
+source's load. The cf_keyspace struct's members, and every other
+cf_ks_ function, are INTERNAL - exported for ConfigForge Doctor and the
+tests, and free to change in a minor release.
 
 This is the core data structure, and the ordering of the design
 depends on it: the chain is not a diagnostic that was added later,
@@ -1483,16 +1511,25 @@ named "running", so explain() shows both - the file's new value
 shadowed, the running one selected - and cf_live_restarts lists the
 keys waiting for a restart.
 
-cf_live_get may be called from any thread, at any time. The others
-belong to one thread at a time, the one that drives the reloads.
+cf_live_get may be called from any thread, at any time - in a build
+with threads: a CF_SINGLE_THREADED build (cf_has_feature reports
+"single-threaded") has one. The others belong to one thread at a
+time, the one that drives the reloads.
+
+```c
+CF_API cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err);
+```
+
+Builds and checks the first snapshot, and fails as that does. A size
+below 1.0's is refused.
 
 ```c
 CF_API cf_live* cf_live_open(cf_live_mode mode, cf_live_build_fn build, cf_live_check_fn check, void* user, const cf_allocator* a, cf_error* err);
 CF_API void cf_live_close(cf_live* l);
 ```
 
-Builds and checks the first snapshot, and fails as that does. `check`
-may be NULL; `a` NULL is the default allocator.
+The shorthand: one `user` for both functions. `check` may be NULL; `a`
+NULL is the default allocator.
 
 ```c
 CF_API struct cf_config* cf_live_get(cf_live* l);
@@ -1513,8 +1550,9 @@ one pending) has changed, rebuild. MANUAL: CF_LIVE_UNCHANGED.
 CF_API cf_live_result cf_live_reload(cf_live* l, cf_error* err);
 ```
 
-Rebuild now, in any mode, as if a file had changed: SWAPPED, or
-PENDING under APPROVE.
+Rebuild now, in any mode, as if a file had changed: SWAPPED, PENDING
+under APPROVE, or UNCHANGED when the rebuild found the same values
+(the file stamps are refreshed, and no new generation counted).
 
 ```c
 CF_API cf_live_result cf_live_wait(cf_live* l, long timeout_ms, cf_error* err);
@@ -1524,7 +1562,9 @@ cf_live_poll after waiting up to `timeout_ms` for a file to change,
 on a watcher cf_live keeps open on the running snapshot's files. For
 a program with no loop of its own, on a thread it gives to this.
 Where the platform has no watcher, or the snapshot read no file, it
-polls at once: C89 has no portable way to sleep.
+polls at once: C89 has no portable way to sleep. Under MANUAL there
+is nothing to wait for and it returns UNCHANGED at once, so a thread
+looping on it spins: use cf_live_reload there.
 
 ```c
 CF_API const struct cf_config* cf_live_pending(const cf_live* l);
@@ -1552,12 +1592,25 @@ in `buf` as far as `cap` allows; the length it needs, 0 for none.
 CF_API cf_bool cf_live_status_get(cf_live* l, cf_live_status* out);
 ```
 
-Copies the status into `out`, whose `size` the caller sets; false for
-a NULL or a size this library does not know.
+Copies the status into `out`, whose `size` the caller sets, as far as
+it reaches (D-51): a caller built against a later, larger struct gets
+what this library has, one built against an earlier gets what it
+asked for. False for a NULL, or a size smaller than 1.0's.
+
+```c
+CF_API cf_bool cf_live_last_error(cf_live* l, cf_error* err);
+```
+
+The last failure's error, copied into `err` (cf_error_copy); false,
+and `err` cleared, when no reload has failed. Any thread.
 
 ## cf_numeric.h
 
 cf_numeric.h - locale-independent numeric conversion.
+
+INTERNAL (D-51): exported for ConfigForge Doctor, the bindings and the
+tests, and outside the 1.x promise - a minor release may change it.
+A program uses the configforge.h functions instead.
 
 strtod, atoi and printf("%f") all follow the active locale's decimal
 separator, so a configuration file written on one machine would not
@@ -1626,6 +1679,10 @@ CF_API cf_scalar_kind cf_infer_scalar(const char* s, size_t len);
 ## cf_platform.h
 
 cf_platform.h - what the platform provides, behind one door.
+
+INTERNAL (D-51): exported for ConfigForge Doctor, the bindings and the
+tests, and outside the 1.x promise - a minor release may change it.
+A program uses the configforge.h functions instead.
 
 Three things a configuration library needs that C89 has no answer
 for: the process environment, the command line as UTF-8, and a
@@ -2035,7 +2092,7 @@ CF_API size_t cf_source_replay_state_size(void);
 ```
 
 ```c
-CF_API cf_bool cf_source_replay(cf_source* s, const char* name, int rank, const char* path, void* state, size_t state_size);
+CF_API cf_bool cf_source_replay(cf_source* s, const char* name, int rank, const char* path, unsigned flags, void* state, size_t state_size);
 ```
 
 ```c

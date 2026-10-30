@@ -300,7 +300,7 @@ static cf_bool prop_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     return CF_TRUE;
 }
 
-const cf_codec cf_codec_properties = {"properties", ".properties", CF_CODEC_READ,
-                                      prop_decode,  NULL,          0};
+const cf_codec cf_codec_properties = {
+    sizeof(cf_codec), "properties", ".properties", CF_CODEC_READ, prop_decode, NULL, 0};
 
 #endif /* CF_WITH_PROPERTIES */

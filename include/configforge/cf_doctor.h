@@ -43,8 +43,9 @@ extern "C" {
 
 typedef struct cf_doctor cf_doctor;
 
-/* One finding. The strings belong to the context and stay valid until
-   the next call on it. `at` is where the value was set, "app.ini:14:3",
+/* One finding. It and its strings belong to the context, each finding
+   its own, and stay valid until the next call that adds findings or
+   frees the context. `at` is where the value was set, "app.ini:14:3",
    or NULL when the report does not say. */
 typedef struct cf_finding {
     const char* rule;  /* "CFD010"                          */
@@ -122,12 +123,12 @@ CF_DOCTOR_API cf_bool cf_doctor_stale(const cf_doctor* d, size_t i, const char**
  * it, with the running configuration left serving:
  *
  *     static cf_doctor_gate gate = {"production", "error", NULL, NULL};
- *     cf_live* live = cf_live_open(CF_LIVE_AUTO, build, cf_doctor_live_check,
- *                                  (void*)&gate, NULL, &err);
- *
- * cf_live passes one `user` to both functions, so a build function that
- * needs its own state keeps the gate inside it and calls
- * cf_doctor_live_check from its own check.
+ *     cf_live_options       o    = CF_LIVE_OPTIONS_INIT;
+ *     o.mode       = CF_LIVE_AUTO;
+ *     o.build      = build;      o.build_user = &app;
+ *     o.check      = cf_doctor_live_check;
+ *     o.check_user = &gate;
+ *     cf_live* live = cf_live_open_with(&o, &err);
  * ------------------------------------------------------------------ */
 
 typedef struct cf_doctor_gate {

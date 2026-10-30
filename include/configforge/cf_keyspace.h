@@ -1,6 +1,12 @@
 /*
  * cf_keyspace.h - the flat key space and the provenance chain.
  *
+ * The 1.x promise (D-51) covers what a source written by a program uses:
+ * cf_key_valid, cf_ks_arena and the cf_ks_add* functions, called from a
+ * source's load. The cf_keyspace struct's members, and every other
+ * cf_ks_ function, are INTERNAL - exported for ConfigForge Doctor and the
+ * tests, and free to change in a minor release.
+ *
  * This is the core data structure, and the ordering of the design
  * depends on it: the chain is not a diagnostic that was added later,
  * it is what get() reads. A resolver that selected a winner and threw

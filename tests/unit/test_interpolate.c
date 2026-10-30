@@ -217,7 +217,7 @@ static void test_report(void) {
         fclose(f);
     }
     b = cf_build(NULL);
-    cf_builder_replay(b, "replay", CF_RANK_USER_FILE, "cf_interp_rep.json");
+    cf_builder_replay(b, "replay", CF_RANK_USER_FILE, "cf_interp_rep.json", 0);
     back = cf_builder_create(b, &err);
     check(back != NULL &&
               strcmp(cf_get_text(back, "server.url", ""), "http://web1") == 0,

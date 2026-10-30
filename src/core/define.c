@@ -6,12 +6,20 @@
 
 #include <string.h>
 
-void cf_def_init(cf_def* d, cf_type type, const char* key) {
-    if (d == NULL) {
+/* cf_def as 1.0 has it: the smallest a caller may pass. When a field is
+   added, this stays the offset just past `policy`, and a field after it
+   is read only where d->size reaches it. */
+#define DEF_SIZE_1_0 sizeof(cf_def)
+
+void cf_def_init_sized(cf_def* d, size_t size, cf_type type, const char* key) {
+    if (d == NULL || size < DEF_SIZE_1_0) {
+        if (d != NULL && size >= sizeof d->size) {
+            d->size = size; /* refused by cf_builder_define, by name */
+        }
         return;
     }
-    memset(d, 0, sizeof *d);
-    d->size       = sizeof *d;
+    memset(d, 0, (size < sizeof *d) ? size : sizeof *d);
+    d->size       = size;
     d->type       = type;
     d->key        = key;
     d->on_invalid = CF_INVALID_STRICT;
@@ -71,9 +79,16 @@ static cf_bool def_check(const cf_def* d, cf_error* err) {
                             "dotted lowercase ASCII",
                             d->key);
     }
-    if (d->size < sizeof(cf_def)) {
+    if (d->size < DEF_SIZE_1_0) {
         return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
                             "descriptor was not initialised with cf_def_init");
+    }
+    if ((d->flags & ~(unsigned)CF_DEF_FLAGS) != 0) {
+        return cf_error_set(
+            err, CF_E_DEFINITION, d->key, NULL,
+            "'%s': flags 0x%x are not definition flags this library "
+            "knows; a source flag such as CF_OPTIONAL belongs on the source",
+            d->key, d->flags & ~(unsigned)CF_DEF_FLAGS);
     }
     if (d->replaced_by != NULL) {
         size_t rlen = strlen(d->replaced_by);

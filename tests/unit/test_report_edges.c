@@ -119,7 +119,7 @@ static void test_report_round_trip(void) {
     check(spill("cf_repedge.json", g_rep), "written");
 
     b = cf_build(NULL);
-    cf_builder_replay(b, "replay", CF_RANK_USER_FILE, "cf_repedge.json");
+    cf_builder_replay(b, "replay", CF_RANK_USER_FILE, "cf_repedge.json", 0);
     back = cf_builder_create(b, &err);
     check(back != NULL && strcmp(cf_get_text(back, "text.ctrl", ""),
                                  cf_get_text(c, "text.ctrl", "x")) == 0,
@@ -173,7 +173,7 @@ static void test_damaged(void) {
         cf_builder* b   = cf_build(NULL);
         cf_config*  c;
         check(spill("cf_repedge_bad.json", docs[i]), "wrote a damaged report");
-        cf_builder_replay(b, "replay", CF_RANK_USER_FILE, "cf_repedge_bad.json");
+        cf_builder_replay(b, "replay", CF_RANK_USER_FILE, "cf_repedge_bad.json", 0);
         c = cf_builder_create(b, &err);
         check(c != NULL || err.message[0] != '\0',
               "a damaged report is refused with a reason");
@@ -183,9 +183,42 @@ static void test_damaged(void) {
         cf_error    err = CF_ERROR_INIT;
         cf_builder* b   = cf_build(NULL);
         cf_config*  c;
-        cf_builder_replay(b, "replay", CF_RANK_USER_FILE, "cf_no_such_report.json");
+        cf_builder_replay(b, "replay", CF_RANK_USER_FILE, "cf_no_such_report.json", 0);
         c = cf_builder_create(b, &err);
         check(c == NULL && err.message[0] != '\0', "a missing report is refused");
+        cf_config_free(c);
+    }
+    {
+        cf_error    err = CF_ERROR_INIT;
+        cf_builder* b   = cf_build(NULL);
+        cf_config*  c;
+        cf_builder_replay(b, "replay", CF_RANK_USER_FILE, "cf_no_such_report.json",
+                          CF_OPTIONAL);
+        c = cf_builder_create(b, &err);
+        check(c != NULL, "an optional one is a source that supplied nothing");
+        cf_config_free(c);
+    }
+    {
+        /* A definition flag handed to a source: once the same bit as
+           CF_OPTIONAL, it meant "optional" without a word. */
+        cf_error    err = CF_ERROR_INIT;
+        cf_builder* b   = cf_build(NULL);
+        cf_config*  c;
+        cf_builder_replay(b, "replay", CF_RANK_USER_FILE, "cf_no_such_report.json",
+                          CF_REQUIRED);
+        c = cf_builder_create(b, &err);
+        check(c == NULL && strstr(err.message, "not source flags") != NULL,
+              "a definition flag on a source is refused, by name");
+        cf_config_free(c);
+    }
+    {
+        cf_error    err = CF_ERROR_INIT;
+        cf_builder* b   = cf_build(NULL);
+        cf_config*  c;
+        cf_builder_text(b, "a.b", "x", CF_OPTIONAL);
+        c = cf_builder_create(b, &err);
+        check(c == NULL && strstr(err.message, "not definition flags") != NULL,
+              "and a source flag on a definition");
         cf_config_free(c);
     }
     remove("cf_repedge_bad.json");

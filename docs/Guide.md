@@ -760,7 +760,7 @@ cfg = (cf.Builder.app("myapp")
        .create())
 cfg.server.port                 # attributes; a table is a node
 cfg["server.port"]              # KeyError when absent
-cfg.get("server.port", int)     # None when absent or another type
+cfg.get("server.port", type=int)  # None when absent or another type
 
 @dataclasses.dataclass
 class Settings:

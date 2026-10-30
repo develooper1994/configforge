@@ -1,6 +1,10 @@
 /*
  * cf_flatten.h - document events to and from the flat key space.
  *
+ * INTERNAL (D-51): exported for ConfigForge Doctor, the bindings and the
+ * tests, and outside the 1.x promise - a minor release may change it.
+ * A program uses the configforge.h functions instead.
+ *
  * The bridge between the serialization layer and the configuration
  * model. It lives on this side of the boundary on purpose: the
  * serialization layer may use the leaf types and may not touch a key
@@ -27,11 +31,11 @@ extern "C" {
    fits sixteen bits (CF_KEY_MAX is at most 65535), and no configuration
    array has four billion elements. CF_MAX_DEPTH levels of this sit in
    the frame of every source that reads a document. */
-typedef struct fl_frame {
+typedef struct cf_flatten_frame {
     cf_u32 index;
     cf_u16 saved_len;
     cf_u8  is_array;
-} fl_frame;
+} cf_flatten_frame;
 
 typedef struct cf_flatten {
     cf_keyspace* ks;
@@ -40,8 +44,8 @@ typedef struct cf_flatten {
     char   path[CF_KEY_MAX];
     size_t plen;
 
-    fl_frame stack[CF_FLATTEN_MAX_DEPTH];
-    int      depth;
+    cf_flatten_frame stack[CF_FLATTEN_MAX_DEPTH];
+    int              depth;
 
     cf_bool     failed;   /* the key space refused a candidate     */
     cf_bool     overflow; /* a key or the nesting grew too large   */

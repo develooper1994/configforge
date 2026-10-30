@@ -104,8 +104,8 @@ static const char* file_path(const cf_source* s) {
     return (st != NULL) ? st->path : NULL;
 }
 
-static const cf_source_vtable cf_file_vt = {"file", file_load, file_destroy, file_path,
-                                            NULL};
+static const cf_source_vtable cf_file_vt = {
+    sizeof(cf_source_vtable), "file", file_load, file_destroy, file_path, NULL};
 
 cf_bool cf_source_file(cf_source* s, const char* name, int rank, const char* path,
                        const char* format, unsigned flags, void* state,
