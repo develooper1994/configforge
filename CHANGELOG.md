@@ -7,6 +7,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **Rust reads text without a copy**: `Config::str` returns a `&str`
+  borrowed from the snapshot, so the compiler holds the caller to its
+  lifetime; and `Config` is `Debug`, showing its keys and digest and
+  never a value, which may be a secret.
 - **`gate.text`**: no tracked text file holds a NUL byte or a carriage
   return, the two ways a file written through a tool stops being the
   same file - named by file and line. It found `docs/API.md` and the

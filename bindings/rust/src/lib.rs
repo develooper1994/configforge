@@ -617,6 +617,23 @@ impl Config {
         }
     }
 
+    /// The text of a key without a copy: a view into this snapshot,
+    /// borrowed for as long as the `Config` is - which the compiler holds
+    /// the caller to. None when the key is absent, holds another type,
+    /// or is not UTF-8.
+    pub fn str(&self, key: &str) -> Option<&str> {
+        let k = c(key);
+        let mut p: *const c_char = ptr::null();
+        let mut n: usize = 0;
+        if unsafe { sys::cf_try_text(self.c, k.as_ptr(), &mut p, &mut n) } != sys::CF_OK {
+            return None;
+        }
+        // The bytes live in the snapshot's arena, which `self` keeps alive
+        // and nothing changes: a snapshot is immutable (D-14).
+        let bytes = unsafe { std::slice::from_raw_parts(p as *const u8, n) };
+        std::str::from_utf8(bytes).ok()
+    }
+
     fn walk(&self, prefix: &str, children: bool) -> Vec<String> {
         let p = c(prefix);
         let mut it: sys::cf_iter = unsafe { std::mem::zeroed() };
@@ -691,6 +708,20 @@ impl Config {
             _keep: keep,
             _shared: self._shared.clone(),
         })
+    }
+}
+
+/// The keys and the digest, not the values: a value may be a secret, and a
+/// `{:?}` in a log line is where secrets leak.
+impl fmt::Debug for Config {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Config")
+            .field("keys", &self.keys(""))
+            .field(
+                "digest",
+                &format_args!("{:016x}", unsafe { sys::cf_digest(self.c) }),
+            )
+            .finish()
     }
 }
 
