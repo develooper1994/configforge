@@ -3,6 +3,7 @@
  */
 
 #include "configforge/cf_error.h"
+#include "configforge/cf_log.h"
 
 #include <stdarg.h>
 #include <string.h>
@@ -37,6 +38,20 @@ void cf_error_clear(cf_error* e) {
     e->key[0]     = '\0';
     e->source[0]  = '\0';
     e->message[0] = '\0';
+}
+
+const char* cf_log_level_name(cf_log_level level) {
+    switch (level) {
+    case CF_LOG_DEBUG:
+        return "debug";
+    case CF_LOG_INFO:
+        return "info";
+    case CF_LOG_WARN:
+        return "warn";
+    case CF_LOG_ERROR:
+        return "error";
+    }
+    return "?";
 }
 
 void cf_error_copy(cf_error* dst, const cf_error* src) {

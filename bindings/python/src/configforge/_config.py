@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import collections.abc
 import ctypes
+import logging
 import os
 import sys
 from typing import Any, Dict, Iterator, List, Mapping, Optional, Sequence, Tuple, Union
@@ -97,6 +98,26 @@ def _text_of(v: Any) -> str:
     if isinstance(v, bool):
         return "true" if v else "false"
     return str(v)
+
+
+def log_sink(logger: Optional[logging.Logger] = None):
+    """A cf_log function that hands each event to ``logger`` (by default
+    the ``configforge`` logger): its level is the event's - the library's
+    levels are Python's numbers - and the event's name, key, source and
+    code travel as the record's ``cf_event``, ``cf_key``, ``cf_source``
+    and ``cf_code`` attributes."""
+    target = logger or logging.getLogger("configforge")
+
+    def emit(_user, ev):
+        e = ev.contents
+        try:
+            target.log(e.level, "%s: %s", n.decode(e.event), n.decode(e.message),
+                       extra={"cf_event": n.decode(e.event), "cf_key": n.decode(e.key) or None,
+                              "cf_source": n.decode(e.source) or None, "cf_code": e.code})
+        except Exception:  # never across the C frame
+            pass
+
+    return n.LOG_FN(emit)
 
 
 class Builder:
@@ -198,6 +219,18 @@ class Builder:
 
     def unknown(self, policy: int) -> "Builder":
         n.lib.cf_builder_unknown(self._live(), policy)
+        return self
+
+    def log(self, logger: Optional[logging.Logger] = None,
+            level: int = logging.INFO) -> "Builder":
+        """Send what is not an error - an unknown key under
+        ``UNKNOWN_WARN``, a deprecated key in use, a value fallen back
+        from - to ``logger`` (the ``configforge`` logger by default),
+        from ``level`` up. Configurations derived from this one log
+        there too."""
+        fn = log_sink(logger)
+        self._keep.items.append(fn)  # the C side keeps the pointer
+        n.lib.cf_builder_log(self._live(), fn, None, level)
         return self
 
     def create(self) -> "Config":

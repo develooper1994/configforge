@@ -35,6 +35,7 @@
 #include "configforge/cf_iterate.h"
 #include "configforge/cf_report.h"
 #include "configforge/cf_live.h"
+#include "configforge/cf_log.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -171,6 +172,12 @@ CF_API cf_bool cf_builder_real(cf_builder* b, const char* key, double dflt, doub
 #endif
 
 CF_API void cf_builder_unknown(cf_builder* b, cf_unknown_policy policy);
+
+/* Where what deserves a log line and is not an error goes (cf_log.h):
+   unknown keys under CF_UNKNOWN_WARN, deprecated keys in use, values
+   refused and fallen back from. Events below `min` are not made. A
+   configuration derived from this one logs to the same place. */
+CF_API void cf_builder_log(cf_builder* b, cf_log_fn fn, void* user, cf_log_level min);
 
 CF_API cf_config* cf_builder_create(cf_builder* b, cf_error* err);
 

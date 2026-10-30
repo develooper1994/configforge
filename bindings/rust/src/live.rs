@@ -102,6 +102,8 @@ struct Inner {
     l: *mut sys::cf_live,
     state: *mut State,
     kept: Kept,
+    /// The reloads' log, alive as long as the cf_live that calls it.
+    _logger: Option<crate::log::SharedLogger>,
 }
 
 // cf_live_get is safe on any thread (cf_live.h); everything else goes
@@ -186,6 +188,27 @@ impl Live {
     where
         F: FnMut() -> Builder + Send + 'static,
     {
+        Live::open_inner(mode, build, None)
+    }
+
+    /// As [`Live::open`], with each reload's result - and the events of
+    /// every configuration built - sent to `log` from `min` up.
+    pub fn open_logged<F, L>(mode: Mode, build: F, min: crate::Level, log: L) -> Result<Live, Error>
+    where
+        F: FnMut() -> Builder + Send + 'static,
+        L: Fn(&crate::LogEvent<'_>) + Send + Sync + 'static,
+    {
+        Live::open_inner(mode, build, Some((min, crate::log::logger(log))))
+    }
+
+    fn open_inner<F>(
+        mode: Mode,
+        build: F,
+        log: Option<(crate::Level, crate::log::SharedLogger)>,
+    ) -> Result<Live, Error>
+    where
+        F: FnMut() -> Builder + Send + 'static,
+    {
         let kept: Kept = Arc::new(Mutex::new(Vec::new()));
         let state = Box::into_raw(Box::new(State {
             build: Box::new(build),
@@ -196,23 +219,35 @@ impl Live {
             Mode::Approve => sys::CF_LIVE_APPROVE,
             Mode::Auto => sys::CF_LIVE_AUTO,
         };
-        let mut e = new_error();
-        let l = unsafe {
-            sys::cf_live_open(
-                m,
-                trampoline,
-                std::ptr::null(),
-                state as *mut c_void,
-                std::ptr::null(),
-                &mut e,
-            )
+        let o = sys::cf_live_options {
+            size: std::mem::size_of::<sys::cf_live_options>(),
+            mode: m,
+            build: Some(trampoline),
+            build_user: state as *mut c_void,
+            check: std::ptr::null(),
+            check_user: std::ptr::null_mut(),
+            allocator: std::ptr::null(),
+            log: log
+                .as_ref()
+                .map(|_| crate::log::trampoline as sys::cf_log_fn),
+            log_user: log
+                .as_ref()
+                .map_or(std::ptr::null_mut(), |(_, lg)| crate::log::Logger::user(lg)),
+            log_min: log.as_ref().map_or(20, |(min, _)| min.raw()),
         };
+        let mut e = new_error();
+        let l = unsafe { sys::cf_live_open_with(&o, &mut e) };
         if l.is_null() {
             unsafe { drop(Box::from_raw(state)) };
             return Err(Error::from_raw(&e));
         }
         Ok(Live {
-            inner: Arc::new(Inner { l, state, kept }),
+            inner: Arc::new(Inner {
+                l,
+                state,
+                kept,
+                _logger: log.map(|(_, lg)| lg),
+            }),
         })
     }
 
@@ -399,5 +434,56 @@ mod tests {
         })
         .unwrap();
         assert!(live.reload().is_err());
+    }
+
+    #[test]
+    fn logs_reach_the_closure() {
+        use crate::{Level, Unknown};
+        use std::sync::Mutex;
+
+        let seen = Arc::new(Mutex::new(Vec::<(Level, String, Option<String>)>::new()));
+        let s = seen.clone();
+        let cfg = Builder::new()
+            .memory("m", rank::USER_FILE, &[("server.prot", "1")])
+            .define_int("server.port", 8080, 1, 65535, 0)
+            .unknown(Unknown::Warn)
+            .log(Level::Info, move |e| {
+                s.lock()
+                    .unwrap()
+                    .push((e.level, e.event.to_string(), e.key.map(str::to_string)))
+            })
+            .create()
+            .unwrap();
+        let derived = cfg.derive("admin", &[("another.typo", "1")]).unwrap();
+        drop(cfg); // the derived one keeps the closure alive
+        drop(derived);
+        let got = seen.lock().unwrap().clone();
+        assert!(got.contains(&(
+            Level::Warn,
+            "unknown-key".into(),
+            Some("server.prot".into())
+        )));
+        assert!(got.contains(&(
+            Level::Warn,
+            "unknown-key".into(),
+            Some("another.typo".into())
+        )));
+
+        let (which, build) = levels();
+        let events = Arc::new(Mutex::new(Vec::<String>::new()));
+        let ev = events.clone();
+        let mut live = Live::open_logged(Mode::Manual, build, Level::Debug, move |e| {
+            ev.lock().unwrap().push(e.event.to_string())
+        })
+        .unwrap();
+        which.store(1, Ordering::SeqCst);
+        live.reload().unwrap();
+        let events = events.lock().unwrap().clone();
+        assert!(events.contains(&"reload".to_string()), "{:?}", events);
+        assert!(
+            events.contains(&"restart-pending".to_string()),
+            "{:?}",
+            events
+        );
     }
 }

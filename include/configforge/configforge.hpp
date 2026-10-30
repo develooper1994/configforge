@@ -693,6 +693,11 @@ public:
     Builder& unknown(cf_unknown_policy p)
     { if (b_) { cf_builder_unknown(b_, p); } return *this; }
 
+    /* Where what is not an error goes (cf_log.h). `user` must outlive
+       every configuration built from here, derived ones included. */
+    Builder& log(cf_log_fn fn, void* user = 0, cf_log_level min = CF_LOG_INFO)
+    { if (b_) { cf_builder_log(b_, fn, user, min); } return *this; }
+
     /* Consumes the builder either way, so there is one release path
        and no way to leak. */
     Config create()

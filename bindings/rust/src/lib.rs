@@ -22,6 +22,7 @@
 //! `Sync`: read it from any thread, change it with [`Config::derive`].
 
 mod live;
+mod log;
 /// The C declarations the safe layer is written over. Hidden, and not part
 /// of this crate's semver: they follow the C headers, and a program that
 /// reaches for them has left what the crate promises.
@@ -30,6 +31,7 @@ pub mod sys;
 mod typed;
 
 pub use live::{Live, LiveReader, Mode, Reload, Status};
+pub use log::{Level, LogEvent};
 pub use typed::{Field, Key, Value};
 
 use std::ffi::{CStr, CString};
@@ -180,6 +182,9 @@ struct Keep {
     /// The first string handed over that held a NUL: refused at create
     /// or derive, rather than silently changed.
     nul: Option<String>,
+    /// The log this builder's configurations call, kept with each of
+    /// them - and with every one derived - so it outlives the calls.
+    logger: Option<log::SharedLogger>,
 }
 
 impl Keep {
@@ -497,6 +502,18 @@ impl Builder {
         self
     }
 
+    /// Where what is not an error goes, from `min` up (cf_log.h); a
+    /// configuration derived from this one logs there too.
+    pub fn log<F>(mut self, min: Level, f: F) -> Builder
+    where
+        F: Fn(&LogEvent<'_>) + Send + Sync + 'static,
+    {
+        let lg = log::logger(f);
+        unsafe { sys::cf_builder_log(self.b, log::trampoline, log::Logger::user(&lg), min.raw()) };
+        self.keep.logger = Some(lg);
+        self
+    }
+
     pub fn unknown(self, policy: Unknown) -> Builder {
         let p = match policy {
             Unknown::Ignore => sys::CF_UNKNOWN_IGNORE,
@@ -653,7 +670,10 @@ impl Config {
     /// A new snapshot with `pairs` applied as a source named `source`;
     /// this one is unchanged.
     pub fn derive(&self, source: &str, pairs: &[(&str, &str)]) -> Result<Config, Error> {
-        let mut keep = Keep::default();
+        let mut keep = Keep {
+            logger: self._keep.logger.clone(),
+            ..Keep::default()
+        };
         let s = keep.s(source);
         let (p, n) = keep.pairs(pairs);
         if let Some(refused) = keep.refusal() {

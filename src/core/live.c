@@ -16,6 +16,9 @@ struct cf_live {
     cf_live_check_fn    check;
     void*               build_user;
     void*               check_user;
+    cf_log_fn           log;
+    void*               log_user;
+    cf_log_level        log_min;
 
     /* Held only to read or replace `current` and the counters beside
        it; nothing that can fail or allocate happens under it. */
@@ -190,6 +193,9 @@ static cf_config* live_build(cf_live* l, const cf_config* running, char** list,
     *list     = NULL;
     *list_len = 0;
     b         = l->build(l->build_user);
+    if (b != NULL && l->log != NULL) {
+        cf_builder_log(b, l->log, l->log_user, l->log_min);
+    }
     if (b == NULL) {
         cf_error_set(err, CF_E_SOURCE, NULL, NULL,
                      "the build function made no builder");
@@ -284,6 +290,48 @@ static cf_live_result live_rebuild_once(cf_live* l, cf_error* err) {
     return CF_LIVE_SWAPPED;
 }
 
+/* One event to the reloads' log, if there is one and it is loud enough. */
+static void live_log(const cf_live* l, cf_log_level level, const char* event,
+                     cf_code code, const char* key, const char* message) {
+    cf_log_event e;
+
+    if (l->log == NULL || level < l->log_min) {
+        return;
+    }
+    e.size    = sizeof e;
+    e.level   = level;
+    e.event   = event;
+    e.code    = code;
+    e.key     = key;
+    e.source  = NULL;
+    e.message = message;
+    l->log(l->log_user, &e);
+}
+
+/* Each key the swap kept at its running value: one line apiece, so a
+   restart's reason is in the log as well as in cf_live_restarts. */
+static void live_log_restarts(const cf_live* l) {
+    char        msg[CF_MESSAGE_MAX];
+    char        key[CF_KEY_MAX];
+    const char* p = l->restarts;
+    const char* nl;
+
+    while (p != NULL && *p != '\0') {
+        size_t n;
+        nl = strchr(p, '\n');
+        n  = (nl != NULL) ? (size_t)(nl - p) : strlen(p);
+        if (n >= sizeof key) {
+            n = sizeof key - 1;
+        }
+        memcpy(key, p, n);
+        key[n] = '\0';
+        cf_fmt(msg, sizeof msg,
+               "'%s' changed and keeps its running value until a restart", key);
+        live_log(l, CF_LOG_WARN, "restart-pending", CF_OK, key, msg);
+        p = (nl != NULL) ? nl + 1 : NULL;
+    }
+}
+
 /* What a rebuild or an approval did, for the status, and the error for
    the caller who asked for one. */
 static cf_live_result live_record(cf_live* l, cf_live_result r, cf_bool rebuilt,
@@ -300,6 +348,21 @@ static cf_live_result live_record(cf_live* l, cf_live_result r, cf_bool rebuilt,
     live_unlock(l);
     if (r == CF_LIVE_FAILED) {
         cf_error_copy(err, &l->scratch);
+        live_log(l, CF_LOG_ERROR, "reload-failed", (cf_code)l->scratch.code,
+                 (l->scratch.key[0] != '\0') ? l->scratch.key : NULL,
+                 l->scratch.message);
+    } else if (l->log != NULL) {
+        char msg[64];
+        if (r == CF_LIVE_SWAPPED) {
+            cf_fmt(msg, sizeof msg, "generation %U serving", l->status.generation);
+            live_log(l, CF_LOG_INFO, "reload", CF_OK, NULL, msg);
+            live_log_restarts(l);
+        } else if (r == CF_LIVE_PENDING) {
+            live_log(l, CF_LOG_INFO, "reload-pending", CF_OK, NULL,
+                     "a change waits for approval");
+        } else {
+            live_log(l, CF_LOG_DEBUG, "reload", CF_OK, NULL, "nothing changed");
+        }
     }
     return r;
 }
@@ -373,6 +436,9 @@ cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err) {
     l->build_user = o->build_user;
     l->check      = o->check;
     l->check_user = o->check_user;
+    l->log        = o->log;
+    l->log_user   = o->log_user;
+    l->log_min    = o->log_min;
     cf_ref_init(&l->ticket_next, 0);
     cf_ref_init(&l->ticket_serving, 0);
     l->current = live_build(l, NULL, &list, &list_len, err);

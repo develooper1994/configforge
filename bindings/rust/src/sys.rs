@@ -162,6 +162,33 @@ pub struct cf_live_status {
     pub pending: cf_bool,
 }
 
+#[repr(C)]
+pub struct cf_log_event {
+    pub size: usize,
+    pub level: c_int,
+    pub event: *const c_char,
+    pub code: c_int,
+    pub key: *const c_char,
+    pub source: *const c_char,
+    pub message: *const c_char,
+}
+
+pub type cf_log_fn = extern "C" fn(user: *mut std::ffi::c_void, e: *const cf_log_event);
+
+#[repr(C)]
+pub struct cf_live_options {
+    pub size: usize,
+    pub mode: c_int,
+    pub build: Option<cf_live_build_fn>,
+    pub build_user: *mut std::ffi::c_void,
+    pub check: *const std::ffi::c_void,
+    pub check_user: *mut std::ffi::c_void,
+    pub allocator: *const std::ffi::c_void,
+    pub log: Option<cf_log_fn>,
+    pub log_user: *mut std::ffi::c_void,
+    pub log_min: c_int,
+}
+
 pub type cf_live_build_fn = extern "C" fn(user: *mut std::ffi::c_void) -> *mut cf_builder;
 
 extern "C" {
@@ -308,6 +335,13 @@ extern "C" {
         alloc: *const std::ffi::c_void,
         err: *mut cf_error,
     ) -> *mut cf_live;
+    pub fn cf_live_open_with(o: *const cf_live_options, err: *mut cf_error) -> *mut cf_live;
+    pub fn cf_builder_log(
+        b: *mut cf_builder,
+        f: cf_log_fn,
+        user: *mut std::ffi::c_void,
+        min: c_int,
+    );
     pub fn cf_live_close(l: *mut cf_live);
     pub fn cf_live_get(l: *mut cf_live) -> *mut cf_config;
     pub fn cf_live_poll(l: *mut cf_live, err: *mut cf_error) -> c_int;

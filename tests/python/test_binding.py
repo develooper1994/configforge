@@ -6,6 +6,7 @@ the key; explain; derive; the dataclass contract; and Live.
 """
 
 import dataclasses
+import logging
 import os
 import sys
 import tempfile
@@ -181,6 +182,53 @@ class Reloading(unittest.TestCase):
             for t in threads:
                 t.join()
             self.assertTrue(seen <= {True, False})
+
+
+class Logging(unittest.TestCase):
+    class Capture(logging.Handler):
+        def __init__(self):
+            super().__init__(logging.DEBUG)
+            self.records = []
+
+        def emit(self, record):
+            self.records.append(record)
+
+    def setUp(self):
+        self.cap = self.Capture()
+        self.logger = logging.getLogger("configforge.test")
+        self.logger.addHandler(self.cap)
+        self.logger.setLevel(logging.DEBUG)
+
+    def tearDown(self):
+        self.logger.removeHandler(self.cap)
+
+    def test_a_warning_is_a_log_record(self):
+        cfg = (cf.Builder()
+               .memory("file", rank.USER_FILE, {"server.prot": "1"})
+               .define_int("server.port", 8080, 1, 65535)
+               .unknown(cf.UNKNOWN_WARN)
+               .log(self.logger)
+               .create())
+        self.assertEqual(cfg.server.port, 8080)
+        r = [x for x in self.cap.records if getattr(x, "cf_event", None) == "unknown-key"]
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0].levelno, logging.WARNING)
+        self.assertEqual(r[0].cf_key, "server.prot")
+        self.assertIn("unknown key", r[0].getMessage())
+
+    def test_reloads_are_logged(self):
+        values = {"server.port": "8080"}
+
+        def build():
+            return (cf.Builder().memory("m", rank.USER_FILE, dict(values))
+                    .define_int("server.port", 80, 1, 65535, flag.RESTART))
+
+        with cf.Live(cf.Mode.MANUAL, build, logger=self.logger, level=logging.DEBUG) as live:
+            values["server.port"] = "9443"
+            live.reload()
+        events = [getattr(x, "cf_event", None) for x in self.cap.records]
+        self.assertIn("reload", events)
+        self.assertIn("restart-pending", events)
 
 
 class Library(unittest.TestCase):

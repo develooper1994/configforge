@@ -15,10 +15,11 @@ from __future__ import annotations
 import ctypes
 import dataclasses
 import enum
+import logging
 from typing import Any, Callable, List, Optional
 
 from . import _native as n
-from ._config import Builder, Config, Error
+from ._config import Builder, Config, Error, log_sink
 
 
 class Mode(enum.IntEnum):
@@ -49,14 +50,24 @@ class Live:
     """The reloads. :meth:`get` may be called from any thread; the rest
     belong to the one thread that drives them."""
 
-    def __init__(self, mode: Mode, build: Callable[[], Builder]):
+    def __init__(self, mode: Mode, build: Callable[[], Builder],
+                 logger: Optional[logging.Logger] = None, level: int = logging.INFO):
+        """``logger``, when given, receives each reload's result and the
+        events of every configuration built - see :meth:`Builder.log`."""
         self._build = build
         self._kept: List[Any] = []  # what every builder handed over borrows
         self._failure: Optional[BaseException] = None
-        # Held for the life of the Live: the C side keeps the pointer.
+        # Held for the life of the Live: the C side keeps the pointers.
         self._fn = n.BUILD_FN(self._trampoline)
+        self._log = log_sink(logger) if logger is not None else n.LOG_FN()
+        o = n.cf_live_options()
+        o.size = ctypes.sizeof(n.cf_live_options)
+        o.mode = int(mode)
+        o.build = self._fn
+        o.log = self._log
+        o.log_min = level
         e = n.new_error()
-        self._l = n.lib.cf_live_open(int(mode), self._fn, None, None, None, ctypes.byref(e))
+        self._l = n.lib.cf_live_open_with(ctypes.byref(o), ctypes.byref(e))
         if not self._l:
             raise self._error(e)
 
