@@ -244,7 +244,7 @@ static void test_replay(void) {
        changed since. */
     b = cf_build(NULL);
     cf_builder_cli(b, "cli", CF_RANK_CLI, 1, plain);
-    cf_builder_replay(b, "replay", CF_RANK_ENV, "cf_rep.json");
+    cf_builder_replay(b, "replay", CF_RANK_ENV, "cf_rep.json", 0);
     cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
     cf_builder_text(b, "server.host", "0.0.0.0", 0);
     cf_builder_text(b, "db.password", NULL, CF_REQUIRED | CF_SENSITIVE);
@@ -293,7 +293,7 @@ static void test_blind_report_refuses_replay(void) {
     check(spill("cf_blind.json", buf), "blind report written");
 
     b = cf_build(NULL);
-    cf_builder_replay(b, "replay", CF_RANK_ENV, "cf_blind.json");
+    cf_builder_replay(b, "replay", CF_RANK_ENV, "cf_blind.json", 0);
     check(cf_builder_create(b, &err) == NULL, "a blind report cannot be replayed");
     /* Half a configuration would look like a whole one, so refusing
        outright is the only honest answer. */
@@ -308,7 +308,7 @@ static void test_replay_rejects_other_json(void) {
 
     check(spill("cf_notrep.json", "{\"server\":{\"port\":1}}"), "wrote a doc");
     b = cf_build(NULL);
-    cf_builder_replay(b, "replay", CF_RANK_ENV, "cf_notrep.json");
+    cf_builder_replay(b, "replay", CF_RANK_ENV, "cf_notrep.json", 0);
     check(cf_builder_create(b, &err) == NULL, "an ordinary document is not a report");
     has(err.message, "not a provenance report", "and says so");
     remove("cf_notrep.json");
@@ -316,7 +316,7 @@ static void test_replay_rejects_other_json(void) {
     check(spill("cf_v99.json", "{\"configforge_report\":99,\"mode\":\"full\"}"),
           "wrote a future report");
     b = cf_build(NULL);
-    cf_builder_replay(b, "replay", CF_RANK_ENV, "cf_v99.json");
+    cf_builder_replay(b, "replay", CF_RANK_ENV, "cf_v99.json", 0);
     check(cf_builder_create(b, &err) == NULL,
           "a schema this build does not speak is refused");
     has(err.message, "schema", "naming the mismatch");

@@ -22,7 +22,7 @@
  * ------------------------------------------------------------------ */
 
 static cf_bool fl_push(cf_flatten* f, const char* name, size_t n, cf_bool is_array) {
-    fl_frame* fr;
+    cf_flatten_frame* fr;
 
     if (f->depth + 1 >= (int)(sizeof f->stack / sizeof f->stack[0])) {
         f->overflow = CF_TRUE;
@@ -110,7 +110,7 @@ static cf_bool fl_begin_table(void* ctx, const char* name, size_t n) {
             return CF_FALSE;
         }
         {
-            fl_frame* fr;
+            cf_flatten_frame* fr;
             if (f->depth + 1 >= (int)(sizeof f->stack / sizeof f->stack[0])) {
                 f->overflow = CF_TRUE;
                 return CF_FALSE;
@@ -126,9 +126,9 @@ static cf_bool fl_begin_table(void* ctx, const char* name, size_t n) {
 }
 
 static cf_bool fl_begin_array(void* ctx, const char* name, size_t n) {
-    cf_flatten* f = (cf_flatten*)ctx;
-    size_t      saved;
-    fl_frame*   fr;
+    cf_flatten*       f = (cf_flatten*)ctx;
+    size_t            saved;
+    cf_flatten_frame* fr;
 
     if (f->depth < 0) {
         return CF_FALSE; /* a document is never an array */
@@ -181,8 +181,8 @@ static cf_bool fl_scalar(void* ctx, const char* name, size_t n, const cf_value* 
 }
 
 static cf_bool fl_end(void* ctx) {
-    cf_flatten* f = (cf_flatten*)ctx;
-    fl_frame*   fr;
+    cf_flatten*       f = (cf_flatten*)ctx;
+    cf_flatten_frame* fr;
 
     if (f->depth < 0) {
         return CF_FALSE;
@@ -222,6 +222,7 @@ cf_bool cf_flatten_init(cf_flatten* f, cf_keyspace* ks, int rank) {
     f->rank  = rank;
     f->depth = -1;
 
+    f->sink.size        = sizeof(cf_doc_sink);
     f->sink.begin_table = fl_begin_table;
     f->sink.begin_array = fl_begin_array;
     f->sink.scalar      = fl_scalar;

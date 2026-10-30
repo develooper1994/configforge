@@ -94,5 +94,5 @@ def read(cfg: Config, cls: Type[T]) -> T:
         if spec is None:
             values[f.name] = read(cfg, tp)
         else:
-            values[f.name] = cfg.get(spec.key, tp, f.default)
+            values[f.name] = cfg.get(spec.key, f.default, type=tp)
     return cls(**values)

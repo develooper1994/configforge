@@ -1502,18 +1502,18 @@ size_t cf_doctor_count(const cf_doctor* d) {
 }
 
 const cf_finding* cf_doctor_finding(cf_doctor* d, size_t i) {
-    const dfinding* f;
+    dfinding* f;
 
     if (d == NULL || i >= d->nfound) {
         return NULL;
     }
     f               = &d->found[i];
-    d->view.rule    = f->id;
-    d->view.level   = f->level;
-    d->view.key     = f->key;
-    d->view.at      = (f->at[0] != '\0') ? f->at : NULL;
-    d->view.message = f->msg;
-    return &d->view;
+    f->view.rule    = f->id;
+    f->view.level   = f->level;
+    f->view.key     = f->key;
+    f->view.at      = (f->at[0] != '\0') ? f->at : NULL;
+    f->view.message = f->msg;
+    return &f->view;
 }
 
 size_t cf_doctor_count_at(const cf_doctor* d, const char* level) {

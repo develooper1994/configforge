@@ -993,6 +993,7 @@ static cf_bool toml_encoder(cf_sink* out, void* state, cf_doc_sink* sink) {
     }
     memset(e, 0, sizeof *e);
     e->out            = out;
+    sink->size        = sizeof(cf_doc_sink);
     sink->begin_table = toml_enc_table;
     sink->begin_array = toml_enc_array;
     sink->scalar      = toml_enc_scalar;
@@ -1001,19 +1002,17 @@ static cf_bool toml_encoder(cf_sink* out, void* state, cf_doc_sink* sink) {
     return CF_TRUE;
 }
 
-const cf_codec cf_codec_toml = {"toml",
-                                ".toml",
-                                CF_CODEC_READ | CF_CODEC_WRITE | CF_CODEC_TYPED |
-                                    CF_CODEC_ARRAYS,
-                                toml_decode,
-                                toml_encoder,
-                                sizeof(toml_enc)};
+const cf_codec cf_codec_toml = {
+    sizeof(cf_codec), "toml",
+    ".toml",          CF_CODEC_READ | CF_CODEC_WRITE | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
+    toml_decode,      toml_encoder,
+    sizeof(toml_enc)};
 
 #else /* !CF_WITH_EMIT: read only */
 
 const cf_codec cf_codec_toml = {
-    "toml",      ".toml", CF_CODEC_READ | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
-    toml_decode, NULL,    0};
+    sizeof(cf_codec), "toml", ".toml", CF_CODEC_READ | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
+    toml_decode,      NULL,   0};
 
 #endif /* CF_WITH_EMIT */
 

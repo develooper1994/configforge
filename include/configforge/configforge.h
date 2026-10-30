@@ -287,15 +287,15 @@ CF_API cf_u64 cf_digest(const cf_config* c);
 CF_API size_t cf_report(const cf_config* c, const cf_report_info* info, char* buf,
                         size_t cap);
 
-/* Load a full report as a source. Reproduces exactly the configuration
-   a process was running, rather than a reconstruction from files that
-   may have changed since. */
 /* The configuration's contract as a JSON Schema, closed when it rejects
    unknown keys (CF_UNKNOWN_REJECT). See cf_schema_write. */
 CF_API size_t cf_schema(const cf_config* c, const char* title, char* buf, size_t cap);
 
+/* Load a full report as a source. Reproduces exactly the configuration
+   a process was running, rather than a reconstruction from files that
+   may have changed since. `flags` is a source's: CF_OPTIONAL, or 0. */
 CF_API cf_bool cf_builder_replay(cf_builder* b, const char* name, int rank,
-                                 const char* path);
+                                 const char* path, unsigned flags);
 
 CF_API size_t                 cf_count(const cf_config* c);
 CF_API const cf_apply_report* cf_apply_stats(const cf_config* c);

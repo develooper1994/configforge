@@ -34,6 +34,11 @@ typedef struct cf_iter {
     const char*     name; /* the part after the prefix          */
     size_t          namelen;
     const cf_value* value; /* NULL for a child that is a table  */
+
+    /* Room a later 1.x may use without the struct growing: the caller
+       allocates a cf_iter and the library fills it, so a larger one
+       would be written past the end of a 1.0 caller's (D-51). */
+    void* reserved[4];
 } cf_iter;
 
 /* Every key under `prefix`, in order. A prefix matches at a segment

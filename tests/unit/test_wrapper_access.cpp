@@ -9,6 +9,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <stdexcept>
 #include <string>
 
 static int  g_fail = 0, g_run = 0;
@@ -152,6 +153,7 @@ static void test_live()
     check(live.status().reloads == 1 && live.status().generation == 2 &&
               live.status().failures == 0,
           "and the status counts it");
+    check(live.lastError().code() == CF_OK, "no failure, no error");
 #if CF_CPP11
     g_live = g_v1;
     int      built = 0;
@@ -170,6 +172,28 @@ static void test_live()
     check(fn.valid() && fn.reload() == CF_LIVE_FAILED && built == 2 &&
               std::string(fn.error().message()).find("no debug") != std::string::npos,
           "a lambda builds and a lambda refuses");
+
+    /* A throw inside a build or a check must not unwind through C. */
+    int      calls = 0;
+    cf::Live thrower(CF_LIVE_MANUAL,
+                     [&calls]() {
+                         if (++calls == 2) {
+                             throw std::runtime_error("no builder today");
+                         }
+                         return std::move(cf::Builder().memory("mem", CF_RANK_USER_FILE, g_live, 2));
+                     },
+                     [&calls](const cf_config*, const cf_config*, cf_error*) -> bool {
+                         if (calls > 2) {
+                             throw std::runtime_error("no check today");
+                         }
+                         return true;
+                     });
+    check(thrower.valid() && thrower.reload() == CF_LIVE_FAILED,
+          "a build that throws is a build that failed");
+    check(thrower.reload() == CF_LIVE_FAILED &&
+              std::string(thrower.lastError().message()).find("no check today") !=
+                  std::string::npos,
+          "a check that throws refuses, saying what was thrown");
 #endif
 }
 

@@ -43,8 +43,11 @@ typedef struct cf_error {
 } cf_error;
 
 /* The size field is what allows fields to be added after 1.0 without
-   breaking the interface: a newer library sees an older caller's
-   smaller struct and writes only what fits.
+   breaking the interface (D-51). The fields above are 1.0's and are
+   always written, whatever `size` says, so a cf_error left without
+   CF_ERROR_INIT still works; a field added later is written only where
+   `size` says the caller's struct has it. The library never copies a
+   whole cf_error into a caller's: cf_error_copy does it field by field.
 
    Fenced from the formatter because clang-format 18 and 22 disagree
    about a brace initialiser inside a macro - one keeps it on a line,
@@ -55,6 +58,11 @@ typedef struct cf_error {
 /* clang-format on */
 
 CF_API void cf_error_clear(cf_error* e);
+
+/* What `src` says, copied into `dst` as far as `dst` has room: 1.0's
+   fields always, a later field where dst->size covers it. dst->size is
+   kept. Safe with NULL on either side. */
+CF_API void cf_error_copy(cf_error* dst, const cf_error* src);
 
 /* Set code, key, source and a formatted message. Safe with a NULL
    error, so every call site can report unconditionally instead of

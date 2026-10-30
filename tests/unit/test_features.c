@@ -192,7 +192,7 @@ static void test_report(void) {
 #endif
 
     b = cf_build(NULL);
-    cf_builder_replay(b, "replay", CF_RANK_ENV, "cf_feat_report.json");
+    cf_builder_replay(b, "replay", CF_RANK_ENV, "cf_feat_report.json", 0);
     back = built(b, &err);
 #if CF_WITH_REPORT && CF_WITH_JSON
     check(back != NULL && cf_get_int(back, "server.port", 0) == 9443,

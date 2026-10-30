@@ -14,7 +14,8 @@ struct cf_live {
     cf_live_mode        mode;
     cf_live_build_fn    build;
     cf_live_check_fn    check;
-    void*               user;
+    void*               build_user;
+    void*               check_user;
 
     /* Held only to read or replace `current` and the counters beside
        it; nothing that can fail or allocate happens under it. */
@@ -28,6 +29,7 @@ struct cf_live {
     /* For cf_live_status_get, under the lock; `scratch` is where the
        driving thread assembles a rebuild's error, off the stack. */
     cf_live_status status;
+    cf_error       last_error;
     cf_error       scratch;
 
     /* The driving thread's alone. */
@@ -187,7 +189,7 @@ static cf_config* live_build(cf_live* l, const cf_config* running, char** list,
 
     *list     = NULL;
     *list_len = 0;
-    b         = l->build(l->user);
+    b         = l->build(l->build_user);
     if (b == NULL) {
         cf_error_set(err, CF_E_SOURCE, NULL, NULL,
                      "the build function made no builder");
@@ -205,14 +207,12 @@ static cf_config* live_build(cf_live* l, const cf_config* running, char** list,
     }
     if (l->check != NULL) {
         cf_error mine = CF_ERROR_INIT;
-        if (!l->check(l->user, running, next, &mine)) {
+        if (!l->check(l->check_user, running, next, &mine)) {
             if (mine.message[0] == '\0') {
                 cf_error_set(&mine, CF_E_POLICY, NULL, NULL,
                              "the check refused the new configuration");
             }
-            if (err != NULL) {
-                *err = mine;
-            }
+            cf_error_copy(err, &mine);
             live_release(l, *list);
             *list     = NULL;
             *list_len = 0;
@@ -295,11 +295,11 @@ static cf_live_result live_record(cf_live* l, cf_live_result r, cf_bool rebuilt,
     l->status.generation = l->generation;
     if (r == CF_LIVE_FAILED) {
         ++l->status.failures;
-        l->status.error = l->scratch;
+        cf_error_copy(&l->last_error, &l->scratch);
     }
     live_unlock(l);
-    if (r == CF_LIVE_FAILED && err != NULL) {
-        *err = l->scratch;
+    if (r == CF_LIVE_FAILED) {
+        cf_error_copy(err, &l->scratch);
     }
     return r;
 }
@@ -316,10 +316,37 @@ static cf_live_result live_rebuild(cf_live* l, cf_error* err) {
 
 cf_live* cf_live_open(cf_live_mode mode, cf_live_build_fn build, cf_live_check_fn check,
                       void* user, const cf_allocator* a, cf_error* err) {
-    cf_live* l;
-    char*    list;
-    size_t   list_len;
+    cf_live_options o = CF_LIVE_OPTIONS_INIT;
 
+    o.mode       = mode;
+    o.build      = build;
+    o.build_user = user;
+    o.check      = check;
+    o.check_user = user;
+    o.allocator  = a;
+    return cf_live_open_with(&o, err);
+}
+
+/* cf_live_options as 1.0 has it; a later member is read only where
+   o->size reaches it. */
+#define LIVE_OPTIONS_SIZE_1_0 sizeof(cf_live_options)
+
+cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err) {
+    cf_live*            l;
+    char*               list;
+    size_t              list_len;
+    const cf_allocator* a;
+    cf_live_mode        mode;
+    cf_live_build_fn    build;
+
+    if (o == NULL || o->size < LIVE_OPTIONS_SIZE_1_0) {
+        cf_error_set(err, CF_E_CAPABILITY, NULL, NULL,
+                     "no reload options, or options without CF_LIVE_OPTIONS_INIT");
+        return NULL;
+    }
+    a     = o->allocator;
+    mode  = o->mode;
+    build = o->build;
     if (a == NULL) {
         a = cf_default_allocator();
     }
@@ -340,11 +367,12 @@ cf_live* cf_live_open(cf_live_mode mode, cf_live_build_fn build, cf_live_check_f
         return NULL;
     }
     memset(l, 0, sizeof *l);
-    l->a     = a;
-    l->mode  = mode;
-    l->build = build;
-    l->check = check;
-    l->user  = user;
+    l->a          = a;
+    l->mode       = mode;
+    l->build      = build;
+    l->build_user = o->build_user;
+    l->check      = o->check;
+    l->check_user = o->check_user;
     cf_ref_init(&l->ticket_next, 0);
     cf_ref_init(&l->ticket_serving, 0);
     l->current = live_build(l, NULL, &list, &list_len, err);
@@ -356,8 +384,8 @@ cf_live* cf_live_open(cf_live_mode mode, cf_live_build_fn build, cf_live_check_f
     l->status.size       = sizeof l->status;
     l->status.generation = 1;
     l->status.last       = CF_LIVE_SWAPPED;
-    cf_error_clear(&l->status.error);
-    l->status.error.size = sizeof l->status.error;
+    cf_error_clear(&l->last_error);
+    l->last_error.size = sizeof l->last_error;
     if (mode != CF_LIVE_MANUAL) {
         live_watch(l);
     }
@@ -446,18 +474,46 @@ void cf_live_reject(cf_live* l) {
         live_drop_pending(l);
         live_lock(l);
         l->status.pending = CF_FALSE;
+        l->status.last    = CF_LIVE_UNCHANGED;
         live_unlock(l);
     }
 }
 
+/* cf_live_status as 1.0 has it: the smallest a caller may pass. When a
+   field is added, this stays the offset just past `pending`. */
+#define LIVE_STATUS_SIZE_1_0 sizeof(cf_live_status)
+
 cf_bool cf_live_status_get(cf_live* l, cf_live_status* out) {
-    if (l == NULL || out == NULL || out->size != sizeof *out) {
+    size_t n;
+
+    if (l == NULL || out == NULL || out->size < LIVE_STATUS_SIZE_1_0) {
+        return CF_FALSE;
+    }
+    n = (out->size < sizeof *out) ? out->size : sizeof *out;
+    live_lock(l);
+    /* Everything after `size`, as far as both structs reach. */
+    memcpy((char*)out + sizeof out->size, (const char*)&l->status + sizeof out->size,
+           n - sizeof out->size);
+    live_unlock(l);
+    return CF_TRUE;
+}
+
+cf_bool cf_live_last_error(cf_live* l, cf_error* err) {
+    cf_bool failed;
+
+    if (l == NULL) {
         return CF_FALSE;
     }
     live_lock(l);
-    *out = l->status;
+    failed = (l->status.failures > 0) ? CF_TRUE : CF_FALSE;
+    if (failed) {
+        cf_error_copy(err, &l->last_error);
+    }
     live_unlock(l);
-    return CF_TRUE;
+    if (!failed && err != NULL) {
+        cf_error_clear(err);
+    }
+    return failed;
 }
 
 cf_u64 cf_live_generation(cf_live* l) {

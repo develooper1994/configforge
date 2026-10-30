@@ -122,11 +122,13 @@ class Live:
         s = n.cf_live_status()
         s.size = ctypes.sizeof(n.cf_live_status)
         n.lib.cf_live_status_get(self._l, ctypes.byref(s))
+        e = n.new_error()
+        failed = n.lib.cf_live_last_error(self._l, ctypes.byref(e)) != 0
         return Status(
             s.generation, s.reloads, s.failures,
             Reload(s.last) if s.last >= 0 else None,
             bool(s.pending),
-            Error._from(s.error) if s.failures else None,
+            Error._from(e) if failed else None,
         )
 
     @property

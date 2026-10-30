@@ -38,14 +38,23 @@ class Reading(unittest.TestCase):
         self.assertEqual(cfg.server["port"], 9443)
         self.assertIn("server.port", cfg)
         self.assertIsNone(cfg.get("server.nope"))
-        self.assertEqual(cfg.get("server.port", str, "x"), "x", "another type is the default")
-        self.assertIsNone(cfg.get("tls.enabled", int), "a bool is not an int here")
+        self.assertEqual(cfg.get("server.port", "x", type=str), "x", "another type is the default")
+        self.assertIsNone(cfg.get("tls.enabled", type=int), "a bool is not an int here")
+        self.assertEqual(cfg.get("server.port"), 9443)
         with self.assertRaises(KeyError):
             cfg["server.nope"]
         with self.assertRaises(AttributeError):
             cfg.server.nope
         self.assertEqual(sorted(cfg.server), ["host", "port"])
         self.assertEqual(cfg.to_dict()["server"], {"host": "web1", "port": 9443})
+        import collections.abc
+        self.assertIsInstance(cfg, collections.abc.Mapping)
+        d = dict(cfg)
+        self.assertEqual(d["server.port"], 9443)
+        self.assertEqual(len(cfg), len(d))
+        self.assertEqual(sorted(cfg), sorted(d))
+        self.assertNotIn("server.nope", cfg)
+        self.assertNotIn(7, cfg)
 
     def test_refused_with_the_key(self):
         with self.assertRaises(cf.Error) as e:

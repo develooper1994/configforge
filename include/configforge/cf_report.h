@@ -91,7 +91,8 @@ CF_API size_t cf_schema_write(const cf_defset* ds, const char* title, cf_bool cl
 CF_API size_t cf_source_replay_state_size(void);
 
 CF_API cf_bool cf_source_replay(cf_source* s, const char* name, int rank,
-                                const char* path, void* state, size_t state_size);
+                                const char* path, unsigned flags, void* state,
+                                size_t state_size);
 
 CF_API const cf_error* cf_source_replay_error(const cf_source* s);
 

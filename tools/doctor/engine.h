@@ -96,6 +96,9 @@ typedef struct dfinding {
     char key[CF_KEY_MAX];
     char at[256];
     char msg[512];
+    /* What cf_doctor_finding hands out for this one: each finding its
+       own, so two can be held at once. */
+    cf_finding view;
 } dfinding;
 
 /* Everything one run of the rules knows, which the program kept in
@@ -109,7 +112,6 @@ struct cf_doctor {
     dfinding*     found;
     size_t        nfound, capfound;
     int           findings, errors, warnings, infos, baselined;
-    cf_finding    view; /* what cf_doctor_finding hands out */
 };
 
 /* Reading reports. False with `err` set, worded for a person. */

@@ -81,6 +81,7 @@ static int feed(const cf_codec* codec, const char* doc, size_t n, int budget) {
     cf_flatten_init(&fl, &ks, 0);
     r.inner          = cf_flatten_sink(&fl);
     r.budget         = (budget < 0) ? 1 << 30 : budget;
+    sink.size        = sizeof(cf_doc_sink);
     sink.begin_table = rf_table;
     sink.begin_array = rf_array;
     sink.scalar      = rf_scalar;
@@ -99,9 +100,10 @@ static int feed(const cf_codec* codec, const char* doc, size_t n, int budget) {
 
 static void run_file(const char* dir, const char* format) {
     const cf_codec* codec = cf_codec_by_name(format);
-    char            path[512];
-    FILE*           f;
-    size_t          n, start = 0, i, docs = 0, accepted = 0;
+    static char     path[512]; /* static: feed() is inlined here, and its
+                                  frame and this one share the budget */
+    FILE*  f;
+    size_t n, start = 0, i, docs = 0, accepted = 0;
 
     if (codec == NULL) {
         return; /* a build without it */

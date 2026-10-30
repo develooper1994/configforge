@@ -221,6 +221,22 @@ static cf_source* builder_slot(cf_builder* b) {
     return &b->sources[b->nsources];
 }
 
+/* A slot for a source that takes flags, refusing a bit that is not a
+   source flag: a definition flag passed here by mistake, or one from a
+   later 1.x this library does not know. */
+static cf_source* builder_slot_flags(cf_builder* b, const char* name, unsigned flags) {
+    if (b != NULL && !b->failed && (flags & ~(unsigned)CF_SOURCE_FLAGS) != 0) {
+        cf_error e = CF_ERROR_INIT;
+        cf_error_set(&e, CF_E_POLICY, NULL, name,
+                     "flags 0x%x are not source flags this library knows (CF_OPTIONAL "
+                     "is); a definition flag such as CF_REQUIRED belongs on the key",
+                     flags & ~(unsigned)CF_SOURCE_FLAGS);
+        builder_fail(b, &e);
+        return NULL;
+    }
+    return builder_slot(b);
+}
+
 cf_bool cf_builder_memory(cf_builder* b, const char* name, int rank,
                           const cf_pair* pairs, size_t count) {
     cf_source* s = builder_slot(b);
@@ -253,7 +269,7 @@ cf_bool cf_builder_cli(cf_builder* b, const char* name, int rank, int argc,
 
 cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const char* path,
                         const char* format, unsigned flags) {
-    cf_source* s = builder_slot(b);
+    cf_source* s = builder_slot_flags(b, name, flags);
     void*      st;
 
     if (s == NULL) {
@@ -279,15 +295,20 @@ cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const char* p
 cf_bool cf_builder_file_codec(cf_builder* b, const char* name, int rank,
                               const char* path, const struct cf_codec* codec,
                               unsigned flags) {
-    cf_source* s = builder_slot(b);
+    cf_source* s = builder_slot_flags(b, name, flags);
     void*      st;
 
     if (s == NULL) {
         return CF_FALSE;
     }
-    if (codec == NULL) {
+    if (codec == NULL || codec->size < sizeof(cf_codec)) {
         cf_error e = CF_ERROR_INIT;
-        cf_error_set(&e, CF_E_SOURCE, NULL, path, "no codec given for '%s'", path);
+        cf_error_set(&e, CF_E_SOURCE, NULL, path,
+                     (codec == NULL)
+                         ? "no codec given for '%s'"
+                         : "the codec for '%s' has no size: its first member is "
+                           "sizeof(cf_codec) (D-51)",
+                     path);
         builder_fail(b, &e);
         return CF_FALSE;
     }
@@ -308,7 +329,7 @@ cf_bool cf_builder_file_codec(cf_builder* b, const char* name, int rank,
 
 cf_bool cf_builder_dotenv(cf_builder* b, const char* name, int rank, const char* path,
                           const char* prefix, unsigned flags) {
-    cf_source* s = builder_slot(b);
+    cf_source* s = builder_slot_flags(b, name, flags);
     void*      st;
 
     if (s == NULL) {
@@ -331,7 +352,7 @@ cf_bool cf_builder_dotenv(cf_builder* b, const char* name, int rank, const char*
 
 cf_bool cf_builder_secrets(cf_builder* b, const char* name, int rank, const char* path,
                            const char* prefix, unsigned flags) {
-    cf_source* s = builder_slot(b);
+    cf_source* s = builder_slot_flags(b, name, flags);
     void*      st;
 
     if (s == NULL) {
@@ -354,7 +375,7 @@ cf_bool cf_builder_secrets(cf_builder* b, const char* name, int rank, const char
 
 cf_bool cf_builder_registry(cf_builder* b, const char* name, int rank, const char* root,
                             unsigned flags) {
-    cf_source* s = builder_slot(b);
+    cf_source* s = builder_slot_flags(b, name, flags);
     void*      st;
 
     if (s == NULL) {
@@ -377,7 +398,7 @@ cf_bool cf_builder_registry(cf_builder* b, const char* name, int rank, const cha
 
 cf_bool cf_builder_store(cf_builder* b, const char* name, int rank, const char* path,
                          unsigned flags) {
-    cf_source* s = builder_slot(b);
+    cf_source* s = builder_slot_flags(b, name, flags);
     void*      st;
 
     if (s == NULL) {
@@ -400,7 +421,7 @@ cf_bool cf_builder_store(cf_builder* b, const char* name, int rank, const char* 
 
 cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank, const char* path,
                        const char* format, unsigned flags) {
-    cf_source* s = builder_slot(b);
+    cf_source* s = builder_slot_flags(b, name, flags);
     void*      st;
 
     if (s == NULL) {
@@ -421,8 +442,9 @@ cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank, const char* pa
     return CF_TRUE;
 }
 
-cf_bool cf_builder_replay(cf_builder* b, const char* name, int rank, const char* path) {
-    cf_source* s = builder_slot(b);
+cf_bool cf_builder_replay(cf_builder* b, const char* name, int rank, const char* path,
+                          unsigned flags) {
+    cf_source* s = builder_slot_flags(b, name, flags);
     void*      st;
 
     if (s == NULL) {
@@ -435,7 +457,8 @@ cf_bool cf_builder_replay(cf_builder* b, const char* name, int rank, const char*
         builder_fail(b, &e);
         return CF_FALSE;
     }
-    if (!cf_source_replay(s, name, rank, path, st, cf_source_replay_state_size())) {
+    if (!cf_source_replay(s, name, rank, path, flags, st,
+                          cf_source_replay_state_size())) {
         return CF_FALSE;
     }
     ++b->nsources;
@@ -448,7 +471,24 @@ cf_bool cf_builder_source(cf_builder* b, const cf_source* src) {
     if (slot == NULL || src == NULL || src->vt == NULL) {
         return CF_FALSE;
     }
-    *slot = *src;
+    if (src->vt->size < sizeof(cf_source_vtable)) {
+        cf_error e = CF_ERROR_INIT;
+        cf_error_set(&e, CF_E_SOURCE, NULL, src->name,
+                     "source '%s' has a table with no size: its first member is "
+                     "sizeof(cf_source_vtable) (D-51)",
+                     (src->name != NULL) ? src->name : "?");
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    /* 1.0's members one by one, never the struct whole: a later 1.x
+       that adds one would read past a 1.0 caller's (D-51). */
+    memset(slot, 0, sizeof *slot);
+    slot->vt   = src->vt;
+    slot->name = src->name;
+    slot->rank = src->rank;
+    slot->ext  = src->ext;
+    slot->ref  = src->ref;
+    slot->u    = src->u;
     ++b->nsources;
     return CF_TRUE;
 }
@@ -581,9 +621,7 @@ static const char* config_name_of_rank(const void* ctx, int rank) {
 }
 
 static cf_config* create_failed(cf_builder* b, cf_error* err, const cf_error* what) {
-    if (err != NULL) {
-        *err = *what;
-    }
+    cf_error_copy(err, what);
     if (b->owns_arena) {
         cf_arena_free(b->arena);
     }
@@ -600,9 +638,7 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
     }
     if (b == NULL) {
         cf_error_set(&e, CF_E_MEMORY, NULL, NULL, "the builder could not be created");
-        if (err != NULL) {
-            *err = e;
-        }
+        cf_error_copy(err, &e);
         return NULL;
     }
     if (b->failed) {

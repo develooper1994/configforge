@@ -34,7 +34,12 @@ enum {
     /* Cannot change while the program runs - a port it listens on, the
        size of a pool it allocated. cf_live keeps the running value and
        reports the new one as waiting for a restart (cf_live.h). */
-    CF_RESTART = 1u << 4
+    CF_RESTART = 1u << 4,
+
+    /* Every definition flag this library knows; bits 16 and up are the
+       source flags' (cf_source.h). */
+    CF_DEF_FLAGS =
+        CF_REQUIRED | CF_SENSITIVE | CF_DEPRECATED | CF_TRANSIENT | CF_RESTART
 };
 
 typedef enum cf_on_invalid {
@@ -98,7 +103,13 @@ typedef struct cf_def {
     const char* const* policy;
 } cf_def;
 
-CF_API void cf_def_init(cf_def* d, cf_type type, const char* key);
+/* Initialise a descriptor: every field zero, `size` the caller's
+   sizeof(cf_def), so a library from a later 1.x writes no further than
+   the caller's struct reaches (D-51). Call it as cf_def_init, which
+   passes that size; cf_def_init_sized is for a binding that lays out
+   cf_def itself. */
+CF_API void cf_def_init_sized(cf_def* d, size_t size, cf_type type, const char* key);
+#define cf_def_init(d, type, key) cf_def_init_sized((d), sizeof(cf_def), (type), (key))
 
 /* ------------------------------------------------------------------ *
  * Definition set
@@ -110,6 +121,11 @@ struct cf_source;
 
 #define CF_MAX_OPEN_PREFIXES 8
 
+/* INTERNAL (D-51): the definition set the builder keeps. Its members and
+   the cf_defset_ and cf_def_ functions over it are exported for
+   ConfigForge Doctor and the tests, and outside the 1.x promise; a
+   program defines keys through cf_builder_define and the cf_builder_
+   shorthands. */
 typedef struct cf_defset {
     cf_arena* arena;
     cf_def*   defs;

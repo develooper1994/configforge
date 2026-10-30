@@ -743,6 +743,7 @@ size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
 
 typedef struct replay_state {
     const char* path;
+    unsigned    flags;
     cf_error    err;
     cf_bool     failed;
 } replay_state;
@@ -774,6 +775,12 @@ static cf_bool replay_load(const cf_source* s, cf_keyspace* ks) {
                             "compiled without CF_WITH_JSON");
     }
     if (!cf_blob_file(&blob, ar, st->path, &st->err)) {
+        if ((st->flags & CF_OPTIONAL) != 0) {
+            /* Absent, and said so by explain(): a source that supplied
+               nothing, as an optional file is. */
+            cf_error_clear(&st->err);
+            return CF_TRUE;
+        }
         st->failed = CF_TRUE;
         return CF_FALSE;
     }
@@ -892,15 +899,15 @@ static void replay_destroy(cf_source* s) {
     (void)s;
 }
 
-static const cf_source_vtable cf_replay_vt = {"replay", replay_load, replay_destroy,
-                                              NULL, NULL};
+static const cf_source_vtable cf_replay_vt = {
+    sizeof(cf_source_vtable), "replay", replay_load, replay_destroy, NULL, NULL};
 
 size_t cf_source_replay_state_size(void) {
     return sizeof(replay_state);
 }
 
 cf_bool cf_source_replay(cf_source* s, const char* name, int rank, const char* path,
-                         void* state, size_t state_size) {
+                         unsigned flags, void* state, size_t state_size) {
     replay_state* st = (replay_state*)state;
 
     if (s == NULL || path == NULL || st == NULL || state_size < sizeof(replay_state)) {
@@ -908,6 +915,7 @@ cf_bool cf_source_replay(cf_source* s, const char* name, int rank, const char* p
     }
     memset(st, 0, sizeof *st);
     st->path     = path;
+    st->flags    = flags;
     st->err.size = sizeof(cf_error);
 
     s->vt   = &cf_replay_vt;

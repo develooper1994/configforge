@@ -101,7 +101,10 @@ CF_API size_t cf_loc_text(const cf_loc* at, char* buf, size_t cap);
  * where position is the name.
  * ------------------------------------------------------------------ */
 
+/* `size` is sizeof(cf_doc_sink) where it was filled (D-51): a later 1.x
+   calls a member added after 1.0 only for a sink that has it. */
 typedef struct cf_doc_sink {
+    size_t size;
     cf_bool (*begin_table)(void* ctx, const char* name, size_t n);
     cf_bool (*begin_array)(void* ctx, const char* name, size_t n);
     cf_bool (*scalar)(void* ctx, const char* name, size_t n, const cf_value* v,
@@ -121,7 +124,9 @@ enum {
     CF_CODEC_ARRAYS = 1u << 3
 };
 
+/* `size` is sizeof(cf_codec) where the codec was compiled (D-51). */
 typedef struct cf_codec {
+    size_t      size;
     const char* name;
     const char* extensions; /* ".json;.jsn", lowercase, with dots */
     unsigned    caps;

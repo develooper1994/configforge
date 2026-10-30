@@ -40,7 +40,7 @@ static void test_null_builder(void) {
     check(!cf_builder_secrets(NULL, "s", 0, "secrets", NULL, 0), "secrets");
     check(!cf_builder_registry(NULL, "r", 0, "HKCU\\Software\\X", 0), "registry");
     check(!cf_builder_store(NULL, "s", 0, "x.db", 0), "store");
-    check(!cf_builder_replay(NULL, "r", 0, "x.json"), "replay");
+    check(!cf_builder_replay(NULL, "r", 0, "x.json", 0), "replay");
     check(!cf_builder_writable(NULL, "s"), "writable");
     check(!cf_builder_source(NULL, NULL), "source");
     check(!cf_builder_define(NULL, &d), "define");

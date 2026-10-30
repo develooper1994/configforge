@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import collections.abc
 import ctypes
 import os
 import sys
@@ -56,7 +57,7 @@ class flag:
     RESTART = 1 << 4
 
 
-OPTIONAL = 1
+OPTIONAL = 1 << 16
 """A file or directory that may be absent."""
 
 UNKNOWN_IGNORE, UNKNOWN_WARN, UNKNOWN_REJECT = 0, 1, 2
@@ -241,18 +242,24 @@ class _Node:
         return "<configforge table %r>" % self._prefix
 
 
-class Config:
+class Config(collections.abc.Mapping):
     """A resolved configuration: an immutable snapshot whose reads cannot
     fail, and which can say why each value is what it is.
 
+    A read-only Mapping of dotted keys to values, so everything that takes
+    a mapping takes it - ``dict(cfg)``, ``**cfg``, ``json.dumps(dict(cfg))``.
     Three ways to read, by taste::
 
-        cfg.server.port              # attributes; a table is a node
-        cfg["server.port"]           # KeyError when absent
-        cfg.get("server.port", int)  # None when absent or another type
+        cfg.server.port                   # attributes; a table is a node
+        cfg["server.port"]                # KeyError when absent
+        cfg.get("server.port", type=int)  # None when absent or another type
 
     An attribute that is also a method's name (``get``, ``keys``) is read
-    with ``cfg["get"]``; methods win, as they do on any Python object.
+    with ``cfg["get"]``; methods win, as they do on any Python object. So
+    that no key a program reads this way is hidden by a later release, the
+    methods and properties below are the whole set for 1.x: what 1.x adds
+    comes as a function of the ``configforge`` module that takes a Config
+    (D-51).
     """
 
     def __init__(self, raw: int, keep: Any):
@@ -312,13 +319,17 @@ class Config:
             raise KeyError(key)
         return v
 
-    def __contains__(self, key: str) -> bool:
-        return n.lib.cf_has(self._c, key.encode("utf-8")) != 0
+    def __contains__(self, key: object) -> bool:
+        return isinstance(key, str) and self._read(key)[0]
 
-    def get(self, key: str, type: Optional[type] = None, default: Any = None) -> Any:
-        """The value of ``key``; ``default`` when it is absent or, with
-        ``type``, of another type. An ``int`` asked for as ``float`` is
-        another type: nothing is converted behind the contract's back."""
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.keys())
+
+    def get(self, key: str, default: Any = None, *, type: Optional[type] = None) -> Any:
+        """The value of ``key``, as ``Mapping.get`` gives it; ``default``
+        when it is absent or, with ``type``, of another type. An ``int``
+        asked for as ``float`` is another type: nothing is converted behind
+        the contract's back."""
         found, v = self._read(key)
         if not found:
             return default
@@ -338,7 +349,7 @@ class Config:
             out.append(ctypes.string_at(s, ln).decode("utf-8", "replace"))
         return out
 
-    def keys(self, prefix: Optional[str] = None) -> List[str]:
+    def keys(self, prefix: Optional[str] = None) -> List[str]:  # type: ignore[override]
         """Every key under a prefix (a segment boundary: "server" is not
         "servername")."""
         return self._walk(prefix, False)
@@ -347,9 +358,9 @@ class Config:
         """Each immediate child of a prefix, once."""
         return self._walk(prefix, True)
 
-    def items(self, prefix: Optional[str] = None) -> Iterator[Tuple[str, Scalar]]:
-        for k in self.keys(prefix):
-            yield k, self[k]
+    def items(self, prefix: Optional[str] = None) -> List[Tuple[str, Scalar]]:  # type: ignore[override]
+        """(key, value) for every key under a prefix."""
+        return [(k, self[k]) for k in self.keys(prefix)]
 
     def to_dict(self, prefix: Optional[str] = None) -> Dict[str, Any]:
         """The keys under ``prefix`` as nested dictionaries."""
@@ -364,7 +375,7 @@ class Config:
         return out
 
     def __len__(self) -> int:
-        return n.lib.cf_count(self._c)
+        return len(self.keys())
 
     # Asking why -------------------------------------------------------
 

@@ -41,7 +41,8 @@
 static const char* const git_scope_names[GIT_SCOPES] = {"command", "worktree", "local",
                                                         "global", "system"};
 
-static const cf_source_vtable git_vt = {"git", NULL, NULL, NULL, NULL};
+static const cf_source_vtable git_vt = {
+    sizeof(cf_source_vtable), "git", NULL, NULL, NULL, NULL};
 
 static int git_scope(const char* s, size_t n) {
     int i;

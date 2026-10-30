@@ -46,8 +46,10 @@
  * shadowed, the running one selected - and cf_live_restarts lists the
  * keys waiting for a restart.
  *
- * cf_live_get may be called from any thread, at any time. The others
- * belong to one thread at a time, the one that drives the reloads.
+ * cf_live_get may be called from any thread, at any time - in a build
+ * with threads: a CF_SINGLE_THREADED build (cf_has_feature reports
+ * "single-threaded") has one. The others belong to one thread at a
+ * time, the one that drives the reloads.
  */
 
 #ifndef CONFIGFORGE_CF_LIVE_H
@@ -91,8 +93,31 @@ typedef struct cf_builder* (*cf_live_build_fn)(void* user);
 typedef cf_bool (*cf_live_check_fn)(void* user, const struct cf_config* running,
                                     const struct cf_config* next, cf_error* err);
 
-/* Builds and checks the first snapshot, and fails as that does. `check`
-   may be NULL; `a` NULL is the default allocator. */
+/* Everything cf_live_open_with takes, so 1.x can add a setting - a
+   settle interval for a burst of writes, say - without another open
+   function (D-51). Start from CF_LIVE_OPTIONS_INIT, which sets `size`
+   and leaves every other member zero: MANUAL, no check, the default
+   allocator. */
+typedef struct cf_live_options {
+    size_t              size;
+    cf_live_mode        mode;
+    cf_live_build_fn    build;
+    void*               build_user; /* given to build                   */
+    cf_live_check_fn    check;      /* may be NULL                      */
+    void*               check_user; /* given to check                   */
+    const cf_allocator* allocator;  /* NULL: the default                */
+} cf_live_options;
+
+/* clang-format off */
+#define CF_LIVE_OPTIONS_INIT {sizeof(cf_live_options), CF_LIVE_MANUAL, NULL, NULL, NULL, NULL, NULL}
+/* clang-format on */
+
+/* Builds and checks the first snapshot, and fails as that does. A size
+   below 1.0's is refused. */
+CF_API cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err);
+
+/* The shorthand: one `user` for both functions. `check` may be NULL; `a`
+   NULL is the default allocator. */
 CF_API cf_live* cf_live_open(cf_live_mode mode, cf_live_build_fn build,
                              cf_live_check_fn check, void* user, const cf_allocator* a,
                              cf_error* err);
@@ -107,15 +132,18 @@ CF_API struct cf_config* cf_live_get(cf_live* l);
    one pending) has changed, rebuild. MANUAL: CF_LIVE_UNCHANGED. */
 CF_API cf_live_result cf_live_poll(cf_live* l, cf_error* err);
 
-/* Rebuild now, in any mode, as if a file had changed: SWAPPED, or
-   PENDING under APPROVE. */
+/* Rebuild now, in any mode, as if a file had changed: SWAPPED, PENDING
+   under APPROVE, or UNCHANGED when the rebuild found the same values
+   (the file stamps are refreshed, and no new generation counted). */
 CF_API cf_live_result cf_live_reload(cf_live* l, cf_error* err);
 
 /* cf_live_poll after waiting up to `timeout_ms` for a file to change,
    on a watcher cf_live keeps open on the running snapshot's files. For
    a program with no loop of its own, on a thread it gives to this.
    Where the platform has no watcher, or the snapshot read no file, it
-   polls at once: C89 has no portable way to sleep. */
+   polls at once: C89 has no portable way to sleep. Under MANUAL there
+   is nothing to wait for and it returns UNCHANGED at once, so a thread
+   looping on it spins: use cf_live_reload there. */
 CF_API cf_live_result cf_live_wait(cf_live* l, long timeout_ms, cf_error* err);
 
 /* The snapshot waiting for approval, or NULL; it stays the cf_live's. */
@@ -132,23 +160,30 @@ CF_API cf_u64 cf_live_generation(cf_live* l);
 CF_API size_t cf_live_restarts(const cf_live* l, char* buf, size_t cap);
 
 /* What a health page says about the reloads: how many were tried and
-   failed, what the last one did, whether a change waits for approval,
-   and why the last failure failed - "running generation 7; the last
-   edit was refused: CFD007 ..." - without the program keeping a copy of
-   its own. Any thread. */
+   failed, what the last one did, whether a change waits for approval -
+   "running generation 7; the last edit was refused: CFD007 ..." with
+   cf_live_last_error - without the program keeping a copy of its own.
+   Any thread. */
 typedef struct cf_live_status {
     size_t         size;       /* sizeof(cf_live_status) at the call site */
     cf_u64         generation; /* as cf_live_generation                  */
     cf_u64         reloads;    /* rebuilds tried, from poll, reload, wait */
     cf_u64         failures;   /* of those, refused or failed            */
-    cf_live_result last;       /* what the last rebuild or approval did  */
-    cf_bool        pending;    /* a change waits for cf_live_approve     */
-    cf_error       error;      /* the last failure's; code CF_OK if none */
+    cf_live_result last;       /* what the last rebuild, approval or
+                                  rejection did; UNCHANGED after a
+                                  rejection                              */
+    cf_bool pending;           /* a change waits for cf_live_approve     */
 } cf_live_status;
 
-/* Copies the status into `out`, whose `size` the caller sets; false for
-   a NULL or a size this library does not know. */
+/* Copies the status into `out`, whose `size` the caller sets, as far as
+   it reaches (D-51): a caller built against a later, larger struct gets
+   what this library has, one built against an earlier gets what it
+   asked for. False for a NULL, or a size smaller than 1.0's. */
 CF_API cf_bool cf_live_status_get(cf_live* l, cf_live_status* out);
+
+/* The last failure's error, copied into `err` (cf_error_copy); false,
+   and `err` cleared, when no reload has failed. Any thread. */
+CF_API cf_bool cf_live_last_error(cf_live* l, cf_error* err);
 
 #ifdef __cplusplus
 }

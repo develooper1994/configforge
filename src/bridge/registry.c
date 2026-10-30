@@ -196,8 +196,8 @@ static void registry_destroy(cf_source* s) {
     (void)s;
 }
 
-static const cf_source_vtable cf_registry_vt = {"registry", registry_load,
-                                                registry_destroy, NULL, NULL};
+static const cf_source_vtable cf_registry_vt = {
+    sizeof(cf_source_vtable), "registry", registry_load, registry_destroy, NULL, NULL};
 
 size_t cf_source_registry_state_size(void) {
     return sizeof(registry_state);

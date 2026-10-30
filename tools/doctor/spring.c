@@ -299,6 +299,7 @@ int doctor_import_spring(int argc, char** argv) {
         cf_arena_free(s.ar);
         return 3;
     }
+    sink.size        = sizeof(cf_doc_sink);
     sink.begin_table = spring_table;
     sink.begin_array = spring_array;
     sink.scalar      = spring_scalar;

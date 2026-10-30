@@ -38,7 +38,11 @@ typedef struct cf_write_item {
     cf_value    value;
 } cf_write_item;
 
+/* Implemented by a source; `size` is sizeof(cf_source_vtable) where the
+   table was compiled, so a later 1.x adds a member and calls it only for
+   a table that has it (D-51). */
 typedef struct cf_source_vtable {
+    size_t      size;
     const char* kind;
     cf_bool (*load)(const cf_source* s, cf_keyspace* ks);
     void (*destroy)(cf_source* s);
@@ -193,16 +197,25 @@ CF_API cf_bool cf_source_cli(cf_source* s, const char* name, int rank, int argc,
  * library about provenance must never do.
  * ------------------------------------------------------------------ */
 
+/* Source flags take bits 16 and up; definition flags (cf_define.h)
+   take 0 to 15. Both reach functions as a plain `unsigned flags`, and
+   when they shared bit 0, CF_REQUIRED handed to cf_builder_file meant
+   "optional" without a word (D-51). A bit a function does not know is
+   refused by name, so a flag from a later 1.x is never silently
+   ignored by an earlier library. */
 enum {
     /* A source that may be absent - a file, a directory, a .env, a
-       Registry key, a store - is not an error when it is. It is also
-       not silence: it shows up in explain() as a source that supplied
-       nothing. */
-    CF_OPTIONAL = 1u << 0,
+       Registry key, a store, a replayed report - is not an error when it
+       is. It is also not silence: it shows up in explain() as a source
+       that supplied nothing. */
+    CF_OPTIONAL = 1u << 16,
 
     /* The first spelling, from when every such source was a file: the
        same flag, kept so that nothing written against it changes. */
-    CF_FILE_OPTIONAL = CF_OPTIONAL
+    CF_FILE_OPTIONAL = CF_OPTIONAL,
+
+    /* Every source flag this library knows. */
+    CF_SOURCE_FLAGS = CF_OPTIONAL
 };
 
 CF_API size_t cf_source_file_state_size(void);

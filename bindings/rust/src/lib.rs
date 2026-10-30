@@ -22,6 +22,10 @@
 //! `Sync`: read it from any thread, change it with [`Config::derive`].
 
 mod live;
+/// The C declarations the safe layer is written over. Hidden, and not part
+/// of this crate's semver: they follow the C headers, and a program that
+/// reaches for them has left what the crate promises.
+#[doc(hidden)]
 pub mod sys;
 mod typed;
 
@@ -58,6 +62,7 @@ pub const OPTIONAL: u32 = sys::CF_OPTIONAL;
 
 /// What to do with a key nobody defined.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Unknown {
     Ignore,
     Warn,
@@ -67,6 +72,7 @@ pub enum Unknown {
 /// What went wrong, with the key and the place - the C library's one
 /// error, built once.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Error {
     pub code: i32,
     pub name: String,
@@ -124,6 +130,20 @@ fn check_limits() {
                 ours
             );
         }
+        // Config and LiveReader are Send + Sync because the library's
+        // reference counts are atomic; in a single-threaded build they are
+        // not, and nothing here could say so to the compiler.
+        let single = c("single-threaded");
+        assert!(
+            unsafe { sys::cf_has_feature(single.as_ptr()) } == 0,
+            "libconfigforge was built CF_SINGLE_THREADED; this binding's types are Send + Sync"
+        );
+        // cf_def's layout has rmin and rmax only where reals are built.
+        let real = c("real");
+        assert!(
+            unsafe { sys::cf_has_feature(real.as_ptr()) } != 0,
+            "libconfigforge was built without CF_WITH_REAL; this binding's cf_def has reals"
+        );
     });
 }
 
@@ -138,8 +158,15 @@ fn new_error() -> sys::cf_error {
     }
 }
 
+/// A string for the C side. No configuration string can hold a NUL, so a
+/// Rust string with one never panics here: each NUL becomes U+0001,
+/// which no key may contain, so a read of such a key finds nothing and a
+/// definition of one is refused by the library. A *value* with a NUL is
+/// refused before it reaches the library (Keep::s).
 fn c(s: &str) -> CString {
-    CString::new(s).expect("a NUL byte inside a configuration string")
+    CString::new(s).unwrap_or_else(|_| {
+        CString::new(s.replace('\0', "\u{1}")).expect("no NUL is left to refuse")
+    })
 }
 
 /// Everything the C side borrows: kept alive with the configuration that
@@ -150,6 +177,25 @@ struct Keep {
     pairs: Vec<Vec<sys::cf_pair>>,
     lists: Vec<Vec<*const c_char>>,
     argv: Vec<Vec<*mut c_char>>,
+    /// The first string handed over that held a NUL: refused at create
+    /// or derive, rather than silently changed.
+    nul: Option<String>,
+}
+
+impl Keep {
+    /// The error for a string with a NUL, if one was handed over.
+    fn refusal(&self) -> Option<Error> {
+        self.nul.as_ref().map(|v| Error {
+            code: sys::CF_E_CONVERT,
+            name: text_of(unsafe { sys::cf_code_name(sys::CF_E_CONVERT) }),
+            key: String::new(),
+            source: String::new(),
+            message: format!(
+                "{:?} holds a NUL byte, which no configuration string can",
+                v
+            ),
+        })
+    }
 }
 
 // The raw pointers point into the CStrings and Vecs this same value
@@ -159,6 +205,9 @@ unsafe impl Send for Keep {}
 
 impl Keep {
     fn s(&mut self, v: &str) -> *const c_char {
+        if v.contains('\0') && self.nul.is_none() {
+            self.nul = Some(v.to_string());
+        }
         let cs = c(v);
         let p = cs.as_ptr();
         self.strings.push(cs);
@@ -398,15 +447,11 @@ impl Builder {
 
     /// A full definition ([`Def`]).
     pub fn define(mut self, def: Def) -> Builder {
+        check_limits();
         unsafe {
             let mut d: sys::cf_def = std::mem::zeroed();
             let k = self.keep.s(&def.key);
-            sys::cf_def_init(&mut d, def.kind, k);
-            assert_eq!(
-                d.size,
-                std::mem::size_of::<sys::cf_def>(),
-                "this binding's cf_def does not match the library's"
-            );
+            sys::cf_def_init_sized(&mut d, std::mem::size_of::<sys::cf_def>(), def.kind, k);
             d.flags = def.flags;
             if def.fallback {
                 d.on_invalid = sys::CF_INVALID_FALLBACK;
@@ -464,6 +509,9 @@ impl Builder {
 
     /// Resolve everything, once. The error names the key and the place.
     pub fn create(mut self) -> Result<Config, Error> {
+        if let Some(refused) = self.keep.refusal() {
+            return Err(refused); /* Drop aborts the builder */
+        }
         let mut e = new_error();
         let c = unsafe { sys::cf_builder_create(self.b, &mut e) };
         self.b = ptr::null_mut(); /* consumed either way */
@@ -608,6 +656,9 @@ impl Config {
         let mut keep = Keep::default();
         let s = keep.s(source);
         let (p, n) = keep.pairs(pairs);
+        if let Some(refused) = keep.refusal() {
+            return Err(refused);
+        }
         let mut e = new_error();
         let d = unsafe { sys::cf_derive(self.c, s, p, n, &mut e) };
         if d.is_null() {

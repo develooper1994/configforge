@@ -100,7 +100,8 @@ static cf_bool kv_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* er
     return out->end(out->ctx);
 }
 
-static const cf_codec kv_codec = {"kv", ".kv", CF_CODEC_READ, kv_decode, NULL, 0};
+static const cf_codec kv_codec = {sizeof(cf_codec), "kv", ".kv", CF_CODEC_READ,
+                                  kv_decode,        NULL, 0};
 
 /* ------------------------------------------------------------------ */
 

@@ -270,7 +270,7 @@ static void feed_replay(const blob* v) {
     fclose(f);
 
     b = cf_build(NULL);
-    cf_builder_replay(b, "replay", CF_RANK_ENV, "cf_fuzz_report.json");
+    cf_builder_replay(b, "replay", CF_RANK_ENV, "cf_fuzz_report.json", 0);
     {
         cf_config* c = cf_builder_create(b, &err);
         if (c != NULL) {

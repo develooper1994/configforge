@@ -273,6 +273,33 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Changed
 
+- **The interface made ready to freeze** (D-51), after an independent
+  review of every public header and both bindings. Breaking, as 0.x
+  may be, and the last time it can be:
+  * a struct the caller allocates is filled only as far as its `size`
+    reaches: `cf_error_copy` instead of whole-struct copies,
+    `cf_def_init` a macro over `cf_def_init_sized` with the caller's
+    size, `cf_live_status_get` accepting any size from 1.0's up, and
+    the last error moved out of `cf_live_status` to
+    `cf_live_last_error`;
+  * `cf_source_vtable`, `cf_codec` and `cf_doc_sink` begin with a
+    `size`; `cf_iter` and `cf_image` end with reserved room;
+  * source flags moved to bit 16 and up (`CF_OPTIONAL` was bit 0, the
+    same as `CF_REQUIRED`), and a flag a function does not know is
+    refused by name; `cf_builder_replay` takes flags, and
+    `CF_OPTIONAL` there means a missing report supplies nothing;
+  * `cf_live_open_with` and `cf_live_options`, with a `user` each for
+    build and check;
+  * the internal layers are marked outside the 1.x promise;
+  * each Doctor finding is its own struct, so two can be held at once;
+  * C++: a build or check that throws inside `cf::Live` no longer
+    unwinds through C; `Live::lastError()`;
+  * Rust: `sys` hidden, `#[non_exhaustive]` on what can grow, a NUL in
+    a string an error rather than a panic, a single-threaded library
+    refused;
+  * Python: `Config` is a `collections.abc.Mapping`, and
+    `get(key, default, *, type=...)` takes its arguments as
+    `Mapping.get` does; a single-threaded library is refused.
 - **Branch coverage is past 80%**, and the floors follow it: 89% of
   lines and 80% of branches (`EXTRA=coverage`, CI's coverage job), up
   from 84 and 74. The tests that did it go where the refusals are: every

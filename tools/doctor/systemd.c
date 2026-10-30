@@ -51,7 +51,8 @@
 
 #define SYSD_SOURCES CF_MAX_SOURCES
 
-static const cf_source_vtable systemd_vt = {"systemd", NULL, NULL, NULL, NULL};
+static const cf_source_vtable systemd_vt = {
+    sizeof(cf_source_vtable), "systemd", NULL, NULL, NULL, NULL};
 
 static int systemd_usage(void) {
     fputs("doctor import-systemd [--full] [--profile <name>]\n"

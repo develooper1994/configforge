@@ -1,6 +1,10 @@
 /*
  * cf_platform.h - what the platform provides, behind one door.
  *
+ * INTERNAL (D-51): exported for ConfigForge Doctor, the bindings and the
+ * tests, and outside the 1.x promise - a minor release may change it.
+ * A program uses the configforge.h functions instead.
+ *
  * Three things a configuration library needs that C89 has no answer
  * for: the process environment, the command line as UTF-8, and a
  * directory listing. Each has a POSIX shape, a Windows shape, and a
