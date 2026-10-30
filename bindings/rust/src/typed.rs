@@ -291,6 +291,8 @@ mod tests {
         assert_eq!(cfg.get::<i8>("neg"), Some(-1));
         assert_eq!(cfg.get::<String>("t").as_deref(), Some("x"));
         assert_eq!(cfg.get::<i64>("t"), None, "another type is absent");
+        assert_eq!(cfg.str("t"), Some("x"), "text without a copy");
+        assert_eq!(cfg.str("big"), None, "an integer is not text");
         assert_eq!(cfg.get::<bool>("nope"), None);
     }
 
@@ -318,8 +320,7 @@ mod tests {
         let e = Builder::new()
             .define_text("a.b", Some("x\0y"), 0)
             .create()
-            .err()
-            .expect("a value holding a NUL is refused");
+            .expect_err("a value holding a NUL is refused");
         assert!(e.message.contains("NUL"), "{}", e.message);
         let cfg = Builder::new()
             .memory("m", rank::USER_FILE, &[("a.b", "1")])
