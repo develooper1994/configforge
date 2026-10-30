@@ -52,7 +52,7 @@ The first round:
 
 | Found | Made into |
 | ----- | --------- |
-| heredocs lost backslashes five times | a rule (below, and `CONTRIBUTING.md`); next step up: write files only through the editor tool, never a heredoc, for C and Rust sources |
+| heredocs lost backslashes, more than five times, and a NUL byte reached C source twice | the rule in `CONTRIBUTING.md`; then, promoted when the rule kept being broken, `gate.text`: a NUL byte or a carriage return in a tracked text file fails the build, naming the file and line. It also found `docs/API.md` and the symbol list written CRLF on Windows, now LF |
 | the wrapper never compiled above C++98, unseen for years | `gate.headers` compiles it under every standard |
 | a thread test hung the single-threaded preset | `CONTRIBUTING.md`; the test skips under `CF_SINGLE_THREADED` |
 | the full `EXTRA` verify ran only at the end of a round, and found a clang error late | next: run `EXTRA=clang` with every unit that touches tests, not only at the end |

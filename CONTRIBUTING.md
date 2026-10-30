@@ -169,7 +169,9 @@ kqueue for a machine with no Mac. `scripts/README.md` has the commands.
 * **For anyone editing through a script or a shell:** a heredoc or a quoted
   string can lose backslashes on the way, which turns `'\0'` into a NUL
   byte and `\n` into a line break in C source. Write the new text to a
-  file and patch from the file, then check the result byte for byte.
+  file and patch from the file, then check the result byte for byte;
+  `gate.text` refuses a NUL byte or a carriage return in any tracked
+  text file, so the worst of it cannot be committed.
 * **MSVC checks no stack budget, and Debug inlines nothing.** A frame
   that breaks the budget can pass Windows and Debug and fail an
   optimised GCC build; the `portable` (`-O2`) and `minimal` (`-Os`)

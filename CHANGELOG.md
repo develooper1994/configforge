@@ -7,6 +7,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **`gate.text`**: no tracked text file holds a NUL byte or a carriage
+  return, the two ways a file written through a tool stops being the
+  same file - named by file and line. It found `docs/API.md` and the
+  symbol list written with CRLF on Windows; both generators write LF now.
 - **A log for what is not an error** (`cf_log.h`, D-52): a function the
   program gives (`cf_builder_log`, `cf_live_options.log`) receives each
   unknown key under `CF_UNKNOWN_WARN`, deprecated key in use, value

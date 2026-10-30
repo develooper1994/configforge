@@ -65,6 +65,12 @@ function(configforge_add_gates tgt)
   # The dependency page names everything the build looks for, and the
   # generated SBOM is a valid document about this build. Neither needs
   # a compiler, so both run everywhere.
+  # Every tracked text file is text: no NUL byte from a lost backslash,
+  # no carriage return from a Windows writer.
+  add_test(NAME gate.text
+           COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
+                   ${CMAKE_SOURCE_DIR}/cmake/gates/GateText.cmake)
+
   add_test(NAME gate.dependencies
            COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
                    ${CMAKE_SOURCE_DIR}/cmake/gates/GateDependencies.cmake)
