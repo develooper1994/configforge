@@ -468,9 +468,9 @@ nothing a leak would want.
 
 ## Contributing
 
-Start with [`WORKING.md`](WORKING.md) - written for whoever continues the
-work, a contributor - then [`CONTRIBUTING.md`](CONTRIBUTING.md).
-Security reports go privately, as [`SECURITY.md`](SECURITY.md) describes.
+Start with [`CONTRIBUTING.md`](CONTRIBUTING.md): it maps the repository,
+the build-verify-commit loop and the traps already fallen into. Security
+reports go privately, as [`SECURITY.md`](SECURITY.md) describes.
 
 ## Licence
 

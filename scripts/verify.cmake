@@ -24,6 +24,8 @@
 # when everything passes and kept when something fails, so the failure
 # can be looked at where it happened.
 #
+# TIER=1 or TIER=2 picks the tiers' steps (below, and D-50).
+#
 # EXTRA steps, each skipped with a note where its tool is missing:
 #   kqueue   the macOS and BSD wait handle on Linux, through libkqueue
 #   tidy     clang-tidy over the library and Doctor (CF_CLANG_TIDY=ON)
@@ -67,6 +69,54 @@ if(NOT DEFINED SOURCE)
 endif()
 if(NOT DEFINED EXTRA)
   set(EXTRA "")
+endif()
+
+# Tiers (D-50): what a unit needs, and what a release needs. Tier 1 is
+# the compilers most users build with - GCC, Clang and MSVC - and every
+# commit passes it: the five presets and the clang build here, the quick
+# run on Windows. Tier 2 is everything else, run before a release and
+# whenever a unit touches what it covers.
+if(DEFINED TIER)
+  set(MODE "full")
+  if(TIER STREQUAL "1")
+    list(APPEND EXTRA clang)
+  elseif(TIER STREQUAL "2")
+    list(
+      APPEND
+      EXTRA
+      clang
+      shared
+      tsan
+      yaml
+      compilers
+      kqueue
+      tidy
+      fuzz
+      coverage)
+  else()
+    message(FATAL_ERROR "TIER is 1 or 2, not \"${TIER}\"")
+  endif()
+  list(REMOVE_DUPLICATES EXTRA)
+endif()
+
+# Faster where the tools are: Ninja over Make, and ccache, so a preset
+# rebuilt for the next unit compiles only what changed (the staged copy
+# is always at the same path, so the cache hits). Not on Windows, whose
+# Visual Studio generator neither needs nor takes them. A generator or
+# launcher the caller set wins.
+# cmake-lint: disable=W0106
+# (ENV{NAME} is the syntax for an environment variable, not a ${NAME}
+# missing its dollar.)
+if(NOT WIN32)
+  find_program(NINJA_EXE ninja)
+  if(NINJA_EXE AND NOT DEFINED ENV{CMAKE_GENERATOR})
+    set(ENV{CMAKE_GENERATOR} Ninja)
+  endif()
+  find_program(CCACHE_EXE ccache)
+  if(CCACHE_EXE AND NOT DEFINED ENV{CMAKE_C_COMPILER_LAUNCHER})
+    set(ENV{CMAKE_C_COMPILER_LAUNCHER} "${CCACHE_EXE}")
+    set(ENV{CMAKE_CXX_COMPILER_LAUNCHER} "${CCACHE_EXE}")
+  endif()
 endif()
 
 if(MODE STREQUAL "quick")
@@ -132,6 +182,19 @@ if(SOURCE STREQUAL "index")
   endif()
   file(REMOVE_RECURSE "${ROOT}")
   file(MAKE_DIRECTORY "${ROOT}")
+  # From a private copy of the index, so `git write-tree` takes no lock
+  # on the real one: a Linux and a Windows run of this script can start
+  # together, where the second used to fail on index.lock.
+  execute_process(
+    COMMAND "${GIT_EXE}" rev-parse --git-path index
+    WORKING_DIRECTORY "${REPO}"
+    OUTPUT_VARIABLE index
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(NOT IS_ABSOLUTE "${index}")
+    set(index "${REPO}/${index}")
+  endif()
+  configure_file("${index}" "${ROOT}/../index" COPYONLY)
+  set(ENV{GIT_INDEX_FILE} "${ROOT}/../index")
   execute_process(
     COMMAND "${GIT_EXE}" write-tree
     WORKING_DIRECTORY "${REPO}"
@@ -150,7 +213,8 @@ if(SOURCE STREQUAL "index")
   endif()
   execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf "${ROOT}/../staged.tar"
                   WORKING_DIRECTORY "${ROOT}")
-  file(REMOVE "${ROOT}/../staged.tar")
+  file(REMOVE "${ROOT}/../staged.tar" "${ROOT}/../index")
+  unset(ENV{GIT_INDEX_FILE})
   message("verifying the staged tree ${tree}")
 else()
   set(ROOT "${REPO}")
