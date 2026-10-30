@@ -198,7 +198,7 @@ static void test_image(void) {
     cf_config*           c;
     cf_image             img;
     const char*          key;
-    size_t               klen, n, flags;
+    size_t               klen, n = 0, flags;
     cf_value             v;
 
     if (!cf_has_feature("image")) {
