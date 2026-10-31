@@ -14,7 +14,7 @@
  *         return b;
  *     }
  *
- *     cf_live* live = cf_live_open(CF_LIVE_AUTO, build, NULL, NULL, &err);
+ *     cf_live* live = cf_live_open(CF_LIVE_AUTO, build, NULL, NULL, NULL, &err);
  *
  *     on any thread, for each request:
  *         cf_config* cfg = cf_live_get(live);
@@ -97,8 +97,8 @@ typedef cf_bool (*cf_live_check_fn)(void* user, const struct cf_config* running,
 /* Everything cf_live_open_with takes, so 1.x can add a setting - a
    settle interval for a burst of writes, say - without another open
    function (D-51). Start from CF_LIVE_OPTIONS_INIT, which sets `size`
-   and leaves every other member zero: MANUAL, no check, the default
-   allocator. */
+   and log_min to CF_LOG_INFO, and leaves every other member zero:
+   MANUAL, no check, the default allocator, no log. */
 typedef struct cf_live_options {
     size_t              size;
     cf_live_mode        mode;
@@ -109,7 +109,8 @@ typedef struct cf_live_options {
     const cf_allocator* allocator;  /* NULL: the default                */
 
     /* Where each reload's result goes (cf_log.h): "reload",
-       "reload-pending", "reload-failed", "restart-pending". Set on every
+       "reload-pending", "reload-failed", "restart-pending",
+       "edit-refused". Set on every
        builder the build function returns, so the configuration's own
        events go there too. NULL for nowhere. */
     cf_log_fn    log;
@@ -155,12 +156,16 @@ CF_API cf_live_result cf_live_reload(cf_live* l, cf_error* err);
    looping on it spins: use cf_live_reload there. */
 CF_API cf_live_result cf_live_wait(cf_live* l, long timeout_ms, cf_error* err);
 
+struct cf_edit;
+
 /* Commit `e` (cf_edit.h) and reload, in one step: the change an
    administrator made reaches readers the way an edit to a file does,
    through the build, the check and the mode - under APPROVE it waits to
    be approved. CF_LIVE_FAILED, with `err` saying why, when the commit
-   was refused, and nothing was written. Consumes the edit. */
-struct cf_edit;
+   was refused, and nothing was written: the log has an "edit-refused"
+   event, and the status is not touched, since nothing was reloaded. An
+   edit that commits and then fails the build or the check is a failed
+   reload like any other. Consumes the edit. */
 CF_NODISCARD CF_API cf_live_result cf_live_commit(cf_live* l, struct cf_edit* e,
                                                   const char* note, cf_error* err);
 
