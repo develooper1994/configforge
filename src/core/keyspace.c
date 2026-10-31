@@ -93,7 +93,15 @@ struct cf_cand_rec {
 };
 
 cf_bool cf_ks_init(cf_keyspace* ks, cf_arena* arena, size_t hint) {
-    if (ks == NULL || arena == NULL) {
+    if (ks == NULL) {
+        return CF_FALSE;
+    }
+    /* Every member defined before anything can fail: a key space whose
+       init failed is an empty one that refuses work, never one whose
+       fields are whatever the stack held (Valgrind found a refusal that
+       read `resolved` uninitialised). */
+    memset(ks, 0, sizeof *ks);
+    if (arena == NULL) {
         return CF_FALSE;
     }
     if (hint < 16) {

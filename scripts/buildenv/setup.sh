@@ -14,7 +14,7 @@ apt-get install -y --no-install-recommends \
   ca-certificates curl git file xz-utils locales util-linux \
   build-essential cmake ninja-build ccache pkg-config python3 \
   clang clang-format clang-tidy libclang-rt-18-dev llvm \
-  binutils cppcheck gcovr cmake-format \
+  binutils cppcheck gcovr cmake-format valgrind cbmc \
   musl-tools tcc pcc \
   libyaml-dev libexpat1-dev libsqlite3-dev libkqueue-dev \
   qemu-system-x86 qemu-utils openssh-client \

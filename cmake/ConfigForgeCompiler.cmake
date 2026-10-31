@@ -228,3 +228,62 @@ function(configforge_stack_budget tgt)
       -DLIB=$<TARGET_FILE:${tgt}> -P ${CMAKE_SOURCE_DIR}/scripts/stack.cmake
     VERBATIM)
 endfunction()
+
+# Hardening for what ships: the library and Doctor (docs/Safety.md).
+# What the compiler and the linker can add at no cost to the code - a
+# canary on each frame that holds an array, probes so a large frame
+# cannot step over the guard page, checked libc calls where the size is
+# known, control-flow protection where the CPU has it, and a relocation
+# table made read-only before main. Each flag is asked of the compiler
+# first: TinyCC and pcc take none of them, and get none.
+option(CF_HARDEN
+       "Stack protector, fortified libc calls, RELRO on shipped targets" ON)
+
+# Apply the hardening flags the compiler has to a shipped target.
+#
+# ~~~
+# configforge_apply_hardening(<target>)
+# ~~~
+function(configforge_apply_hardening tgt)
+  if(NOT CF_HARDEN)
+    return()
+  endif()
+  if(MSVC)
+    target_compile_options(${tgt} PRIVATE /guard:cf)
+    get_target_property(type ${tgt} TYPE)
+    if(type STREQUAL "SHARED_LIBRARY" OR type STREQUAL "EXECUTABLE")
+      target_link_options(${tgt} PRIVATE /guard:cf)
+    endif()
+    return()
+  endif()
+  if(NOT CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    return()
+  endif()
+  check_c_compiler_flag(-fstack-protector-strong CF_HAVE_STACK_PROTECTOR)
+  check_c_compiler_flag(-fstack-clash-protection CF_HAVE_STACK_CLASH)
+  check_c_compiler_flag(-fcf-protection=full CF_HAVE_CF_PROTECTION)
+  if(CF_HAVE_STACK_PROTECTOR)
+    target_compile_options(${tgt} PRIVATE -fstack-protector-strong)
+  endif()
+  if(CF_HAVE_STACK_CLASH)
+    target_compile_options(${tgt} PRIVATE -fstack-clash-protection)
+  endif()
+  if(CF_HAVE_CF_PROTECTION)
+    target_compile_options(${tgt} PRIVATE -fcf-protection=full)
+  endif()
+  # Fortified calls need the optimiser to know sizes, so only where it
+  # runs; and a toolchain that already sets a level is overruled, not
+  # warned at. Not under the sanitisers, whose own checks are stronger
+  # and which replace the same calls.
+  if(NOT CF_SANITIZE AND NOT CF_SANITIZE_THREAD)
+    target_compile_options(
+      ${tgt} PRIVATE $<$<NOT:$<CONFIG:Debug>>:-U_FORTIFY_SOURCE>
+                     $<$<NOT:$<CONFIG:Debug>>:-D_FORTIFY_SOURCE=3>)
+  endif()
+  if(UNIX AND NOT APPLE)
+    get_target_property(type ${tgt} TYPE)
+    if(type STREQUAL "SHARED_LIBRARY" OR type STREQUAL "EXECUTABLE")
+      target_link_options(${tgt} PRIVATE -Wl,-z,relro -Wl,-z,now)
+    endif()
+  endif()
+endfunction()

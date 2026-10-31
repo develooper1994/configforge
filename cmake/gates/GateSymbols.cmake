@@ -1,5 +1,6 @@
 # Two checks over the built library:
-#   forbidden imports  - no locale-sensitive C library function
+#   forbidden imports  - no locale-sensitive C library function, and no
+#                        unbounded copy or tokenizer
 #   symbol prefixes    - every export begins with cf_ or CF_
 find_program(NM_EXE nm)
 if(NOT NM_EXE)
@@ -33,7 +34,20 @@ set(FORBIDDEN
     vsprintf
     vsnprintf
     printf
-    fprintf)
+    fprintf
+    # Unbounded copies and a tokenizer with hidden state: what an
+    # overflow or a race is made of (docs/Safety.md). The fortified
+    # variants _FORTIFY_SOURCE substitutes are the same calls.
+    strcpy
+    strcat
+    strncpy
+    strncat
+    strtok
+    gets
+    __strcpy_chk
+    __strcat_chk
+    __strncpy_chk
+    __strncat_chk)
 
 execute_process(
   COMMAND ${NM_EXE} -u "${LIB}"

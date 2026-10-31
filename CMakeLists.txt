@@ -54,6 +54,7 @@ target_include_directories(
 
 configforge_setup_cppcheck()
 configforge_apply_warnings(configforge)
+configforge_apply_hardening(configforge)
 message(STATUS "limits: keys ${CF_KEY_MAX}, messages ${CF_MESSAGE_MAX}, "
                "paths ${CF_PATH_MAX}, nesting ${CF_MAX_DEPTH}; stack budget "
                "${CF_STACK_BUDGET} bytes per function")

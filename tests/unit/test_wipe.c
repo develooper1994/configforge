@@ -39,7 +39,11 @@ typedef struct watching {
 
 static void* w_alloc(void* ctx, size_t n) {
     watching* w = (watching*)ctx;
-    void*     p = malloc(n);
+    /* Zeroed, because release scans the whole block for the secret and
+       an arena leaves its tail unwritten: a scan of malloc's garbage is
+       a read of uninitialised memory (Valgrind), and could even find the
+       secret where the library never put it. */
+    void* p = calloc(1, n);
     if (p != NULL && w->count < MAX_BLOCKS) {
         w->p[w->count] = p;
         w->n[w->count] = n;

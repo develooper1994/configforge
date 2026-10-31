@@ -30,6 +30,7 @@
 #   kqueue   the macOS and BSD wait handle on Linux, through libkqueue
 #   tidy     clang-tidy over the library and Doctor (CF_CLANG_TIDY=ON)
 #   clang    the whole suite built with clang
+#   valgrind every unit test under memcheck, on an uninstrumented build
 #   shared   the whole suite against a shared library (BUILD_SHARED_LIBS),
 #            CI's shared job; the Python binding's tests run only here,
 #            since ctypes loads a shared library
@@ -86,6 +87,7 @@ if(DEFINED TIER)
       EXTRA
       clang
       shared
+      valgrind
       tsan
       yaml
       compilers
@@ -310,6 +312,41 @@ foreach(x ${EXTRA})
       -DCMAKE_CXX_COMPILER=${CLANGXX_EXE})
     step("clang build" ${build} build-clang ${debug})
     step("clang test" ${test} build-clang)
+  elseif(x STREQUAL "valgrind")
+    # Every unit test under Valgrind's memcheck: what AddressSanitizer
+    # cannot see - a read of memory that was allocated and never
+    # written, a leak in a test that ends - on an uninstrumented build,
+    # the one that ships. Each test runs through a wrapper, the build's
+    # emulator, so the tests' own working directories still apply.
+    find_program(VALGRIND_EXE valgrind)
+    if(NOT VALGRIND_EXE)
+      message("valgrind              skipped: no valgrind")
+      continue()
+    endif()
+    set(wrap "${ROOT}/memcheck.sh")
+    file(
+      WRITE "${wrap}"
+      "#!/bin/sh\nexec ${VALGRIND_EXE} -q --error-exitcode=99 "
+      "--leak-check=full --errors-for-leak-kinds=definite "
+      "--track-origins=yes \"$@\"\n")
+    execute_process(COMMAND chmod +x "${wrap}")
+    step(
+      "valgrind configure"
+      ${CMAKE_COMMAND}
+      -S
+      .
+      -B
+      build-valgrind
+      -DCMAKE_BUILD_TYPE=Debug
+      -DCF_WITH_CXX=OFF
+      -DCMAKE_CROSSCOMPILING_EMULATOR=${wrap})
+    step("valgrind build" ${build} build-valgrind ${debug})
+    step(
+      "valgrind test"
+      ${test}
+      build-valgrind
+      -R
+      "^unit\\.")
   elseif(x STREQUAL "shared")
     step(
       "shared configure"
@@ -477,8 +514,9 @@ foreach(x ${EXTRA})
       step("tsan test" ${ctest} --preset tsan)
     endif()
   else()
-    message(FATAL_ERROR "unknown EXTRA step '${x}': kqueue, tidy, clang, "
-                        "shared, tsan, yaml, compilers, fuzz or coverage")
+    message(
+      FATAL_ERROR "unknown EXTRA step '${x}': kqueue, tidy, clang, "
+                  "shared, valgrind, tsan, yaml, compilers, fuzz or coverage")
   endif()
 endforeach()
 

@@ -49,6 +49,8 @@ The documents, and what each is for:
 * `docs/Doctor.md` - the rule catalogue and Doctor's design.
 * `docs/Dependencies.md` - every dependency and licence; the build
   generates an SPDX SBOM to match.
+* `docs/Safety.md` - what is guaranteed about memory and threads, what
+  holds each guarantee, and what is not yet proven.
 * `docs/Maintaining.md` - what the code does not say: how the work is
   done here, where it stands, and what each machine needs. Read it
   second.
