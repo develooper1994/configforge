@@ -79,11 +79,19 @@ together on both systems; tier 2 before a release. Ninja and ccache
 make a rerun cost what changed. Use `-DJOBS` - five
 unbounded parallel builds have filled a workstation's memory.
 
-The tools every step and every `EXTRA` needs are one list,
-`scripts/buildenv/setup.sh`, which makes a container
-(`Containerfile`) or, on Windows, a WSL distribution on the drive you
-name (`wsl-distro.ps1`). `freebsd.sh`, run inside it, is the real
-kqueue for a machine with no Mac. `scripts/README.md` has the commands.
+The environment is one command, run again whenever it changes:
+
+```sh
+sh scripts/buildenv/dev-setup.sh            # Linux (apt) or macOS (Homebrew); else a container
+pwsh scripts/buildenv/dev-setup.ps1 -WslDir D:\cf-wsl   # Windows: MSVC and tools, and the WSL side
+```
+
+Each takes `--check` (`-Check`) to name every tool and the step it
+serves, changing nothing. The list itself is `scripts/buildenv/setup.sh`,
+the same for CI, the container (`Containerfile`) and the WSL
+distribution (`wsl-distro.ps1`). `freebsd.sh`, run inside it, is the
+real kqueue for a machine with no Mac. `scripts/README.md` has the
+commands.
 
 ## How work is done here
 

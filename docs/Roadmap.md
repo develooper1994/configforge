@@ -32,7 +32,7 @@ string borrowed past its call; `docs/Safety.md`, hardened builds and
 Valgrind; `gate.text`; bounded proofs of the integer parsers and
 printers, type inference and `cf_fmt`; WebAssembly (D-55), which found
 an image read past its end on every 32-bit platform. Left, in order:
-v0.4.0, real kqueue, the ABI check, the documents, 1.0.0.
+v0.4.0, real kqueue, the documents, 1.0.0.
 
 ### Resume here (2026-10-31)
 
@@ -41,15 +41,15 @@ Whoever continues: read `CONTRIBUTING.md`, then do these in order.
 1. **Tier 2** passed on 92cd643 (all green, 18 minutes, without the
    ABI step, which came after). After a rebuilt environment, run
    `scripts/buildenv/setup.sh` first (it now installs `abigail-tools`).
-2. **The ABI step** (item 7, D-56) is written and has never run. Run
-   `cmake -DEXTRA=abi -DJOBS=4 -P scripts/verify.cmake`; against v0.3.0
-   it only reports. Fix the step if it errors, then delete item 7.
+2. **The ABI step** (D-56) ran first on 2026-10-31 against v0.3.0 and
+   reported the 0.4.0 changes, as it should before 1.0. After v0.4.0 is
+   tagged, run it again: it should then report only what changes after.
 3. **v0.4.0** (item 1): date the CHANGELOG heading, commit, tag
    `v0.4.0`, push the tag, build the assets as `scripts/README.md`,
    "Releasing", says, `gh release create` with the notes saying the
    macOS archive is missing; then `cmake -DTO=1.0.0 -P scripts/version.cmake`.
 4. **Real kqueue** (item 6).
-5. **The documents** (item 8). An audit (2026-10-31) found, each
+5. **The documents** (item 7). An audit (2026-10-31) found, each
    checked against the code:
    * README: lines 139-140 and SECURITY.md:15 say 0.x promises nothing -
      rewrite as the 1.x promise (D-56); 459 "Two are still open" is one
@@ -186,10 +186,7 @@ Whoever continues: read `CONTRIBUTING.md`, then do these in order.
    a tier-2 target, and the library in a browser or an edge runtime.
 6. **Real kqueue on the new code**: `scripts/buildenv/freebsd.sh` with
    `test_live` (its waits and the ConfigMap test) and `test_watch`.
-7. **An ABI check**: `abidiff` of the shared library against the last
-   release, as `verify -DEXTRA=abi`; and the policy for 1.x - semantic
-   versioning, what counts as breaking - as a decision.
-8. **The documents audited** against the code (README, Guide, API,
+7. **The documents audited** against the code (README, Guide, API,
    Maintaining), then version 1.0.0, tier 2, and the release.
 
 ## Ideas

@@ -108,9 +108,9 @@ The first round:
 
 ### Another machine
 
-Nothing above is needed to continue. Clone, then follow `CONTRIBUTING.md`:
-`scripts/buildenv/setup.sh` (or its `Containerfile`) installs every tool
-the build, the gates and the `EXTRA` steps use; add `rustc cargo
-rust-clippy rustfmt` for the Rust checks and `-DCF_RUST=ON`. On another
-Windows machine, `wsl-distro.ps1` makes the same distribution on the
-drive you name - pick one with room.
+Nothing above is needed to continue. Clone, then run
+`scripts/buildenv/dev-setup.sh` (Linux, macOS) or `dev-setup.ps1 -WslDir
+<a drive with room>` (Windows): it installs every tool the build, the
+gates and the `EXTRA` steps use, the Rust toolchain included
+(`-DCF_RUST=ON` turns its checks on), and `--check` says what is there.
+Then follow `CONTRIBUTING.md`.
