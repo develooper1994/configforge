@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "configforge"
-version = "0.4.1"
+version = "1.0.0"
 description = "Configuration whose every value can say why it is what it is"
 readme = "README.md"
 license = { text = "Zlib" }
