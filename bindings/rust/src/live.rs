@@ -87,11 +87,24 @@ extern "C" fn trampoline(user: *mut c_void) -> *mut sys::cf_builder {
         Ok(mut b) => {
             let raw = b.b;
             b.b = std::ptr::null_mut();
-            state
-                .kept
-                .lock()
-                .unwrap_or_else(|p| p.into_inner())
-                .push(std::mem::take(&mut b.keep));
+            // The library copies every name and path it is given, and reads
+            // the rest only while it creates; each build creates before the
+            // next begins. So only this build's strings need to live - not
+            // every reload's for as long as the Live does. A log closure is
+            // another matter: any snapshot built with it, or derived from
+            // one, may still call it, so the closures are kept.
+            let mut kept = state.kept.lock().unwrap_or_else(|p| p.into_inner());
+            let loggers: Vec<Keep> = kept
+                .drain(..)
+                .filter_map(|mut k| {
+                    k.logger.take().map(|lg| Keep {
+                        logger: Some(lg),
+                        ..Keep::default()
+                    })
+                })
+                .collect();
+            kept.extend(loggers);
+            kept.push(std::mem::take(&mut b.keep));
             raw
         }
         Err(_) => std::ptr::null_mut(),
@@ -451,6 +464,18 @@ mod tests {
         })
         .unwrap();
         assert!(live.reload().is_err());
+    }
+
+    #[test]
+    fn reloads_do_not_keep_every_builds_strings() {
+        let (_which, build) = levels();
+        let mut live = Live::open(Mode::Manual, build).unwrap();
+        for _ in 0..50 {
+            live.reload().unwrap();
+        }
+        let n = live.inner.kept.lock().unwrap().len();
+        assert!(n <= 1, "{} builds' strings kept after 50 reloads", n);
+        assert_eq!(live.get().text("log.level").as_deref(), Some("info"));
     }
 
     #[test]

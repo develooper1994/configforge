@@ -78,6 +78,12 @@ class Live:
         except BaseException as exc:  # never across the C frame
             self._failure = exc
             return None
+        # The library copies every name and path, and reads the rest only
+        # while it creates: an earlier build's strings can go. Its log
+        # functions cannot - a snapshot built with one may still call it.
+        for old in self._kept:
+            old.items[:] = [x for x in old.items if isinstance(x, n.LOG_FN)]
+        self._kept[:] = [k for k in self._kept if k.items]
         self._kept.append(keep)
         return raw
 
