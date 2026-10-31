@@ -128,6 +128,11 @@ commands.
 * **On Windows `cf_app` and `cf_cli_args` read the process's real
   command line** (for UTF-8), not the argv you pass. A test that invents
   an argv must build with `cf_builder_cli`.
+* **MSVC's Release build sees what Debug does not.** It folds a
+  constant `0.0` and refuses the division by it (C4723); a test that
+  wants infinity divides by a `volatile` zero. The Windows verify is
+  Debug, so the release build (`release-local.ps1`) is where this shows:
+  run it before pushing a tag.
 * **Multi-config generators** (Visual Studio) need `-C Debug` for ctest
   and `--config Debug` for builds; the presets name their configuration.
 * **`cmake -P` scripts start with every policy unset.** Begin each with
