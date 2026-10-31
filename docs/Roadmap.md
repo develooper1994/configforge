@@ -34,6 +34,14 @@ printers, type inference and `cf_fmt`; WebAssembly (D-55), which found
 an image read past its end on every 32-bit platform. Left, in order:
 v0.4.0, real kqueue, the ABI check, the documents, 1.0.0.
 
+Where it stands (2026-10-31): the ABI check (item 7) and its policy
+(D-56) are written and not yet run - the first run is
+`cmake -DEXTRA=abi -P scripts/verify.cmake` against v0.3.0, which only
+reports, since 0.x promises nothing. Tier 2 was running on the commit
+before it; its log is `D:\cf-work\verify_t2.log` on the maintainer's
+machine. A documentation audit is under way; its findings go into
+item 8.
+
 1. **v0.4.0, released locally** (`scripts/release-local.sh`, `.ps1`):
    source, amalgamation, static musl Linux, Windows; the macOS archive
    needs a Mac, and the release notes say so.
