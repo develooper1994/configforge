@@ -7,6 +7,18 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **What Rust guarantees, stated and held for the C** (`docs/Safety.md`):
+  each design rule that rules a class of memory or thread error out, the
+  tool that holds it, and what is not yet proven. With it, hardened
+  shipped targets - stack protector, stack-clash probes, CET, fortified
+  calls, full RELRO, `/guard:cf` (`CF_HARDEN`, on); Valgrind's memcheck
+  over every unit test (`verify -DEXTRA=valgrind`, tier 2); and
+  `gate.symbols` refusing unbounded copies and `strtok` as it refused
+  the locale-dependent calls.
+  Valgrind's first run found a key space whose init failed left with
+  its fields as the stack held them - a later refusal read one
+  uninitialised; `cf_ks_init` now defines every member before anything
+  can fail.
 - **No string borrowed past the call that took it**: a builder copies
   every source name, path, prefix and format it is given, and a
   definition every string and list in it - description, new name,

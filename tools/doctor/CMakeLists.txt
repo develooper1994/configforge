@@ -15,6 +15,7 @@ set_target_properties(
              C_EXTENSIONS OFF
              POSITION_INDEPENDENT_CODE ON)
 configforge_apply_warnings(configforge_doctor)
+configforge_apply_hardening(configforge_doctor)
 configforge_apply_analysis(configforge_doctor)
 
 add_executable(
@@ -31,6 +32,7 @@ set_target_properties(
              C_STANDARD_REQUIRED ON
              C_EXTENSIONS OFF)
 configforge_apply_warnings(doctor)
+configforge_apply_hardening(doctor)
 configforge_apply_analysis(doctor)
 
 # Everything clang-tidy checks, less cert-err33-c: it asks that the

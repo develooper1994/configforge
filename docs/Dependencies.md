@@ -61,6 +61,8 @@ system, no generated header, no options.
 | Tool | Licence | Needed for |
 | ---- | ------- | ---------- |
 | CMake (`find_package` of `PkgConfig`, `Threads`, `Python3`, and `ConfigForge` in the install gate) | BSD-3-Clause | the build, the gates, `scripts/verify.cmake` |
+| Valgrind (`valgrind`) | GPL-2.0-or-later | `verify -DEXTRA=valgrind` (tier 2): every unit test under memcheck; not linked |
+| CBMC (`cbmc`) | BSD-4-Clause | the bounded proofs (`docs/Safety.md`); not linked |
 | Ninja (`ninja`), `ccache` (optional) | Apache-2.0, GPL-3.0-or-later | `scripts/verify.cmake` uses them where installed (D-50): faster, not required; neither is linked |
 | a C89 compiler: GCC, Clang or MSVC | GPL-3.0-or-later with the GCC Runtime Library Exception; Apache-2.0 WITH LLVM-exception; proprietary | compiling. None of their code ends up in a program except each one's own runtime support, under its exception |
 | a C++98 compiler, the same three | as above | the C++03 wrapper's example and test |
