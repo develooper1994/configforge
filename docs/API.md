@@ -14,6 +14,17 @@ and `cf_port.h`'s `cf_ref_*`, `cf_fmt*` and `cf_cmp_*`. The flags a
 definition takes are bits 0-15 and a source's bits 16 and up; an
 unknown bit is refused by name.
 
+A struct the caller fills and the library reads - `cf_error`,
+`cf_def`, `cf_live_options`, `cf_live_status`, `cf_log_event` -
+begins with `size`, so 1.x can append a member (D-51): start from
+`CF_ERROR_INIT`, `cf_def_init` or `CF_LIVE_OPTIONS_INIT`, or set
+`size` to `sizeof` the struct. Their members are in the headers.
+
+In C11 and later `configforge.h` also has `cf_get(cfg, key, &out)`,
+a macro typed by `out` - `int`, `long`, `long long`, `_Bool`,
+`const char*`, and `double` where `CF_WITH_REAL` is on - that calls
+the matching `cf_get_*` below; C++ has `get<T>` instead.
+
 Every error carries one of these codes, stable from 1.0;
 `cf_code_name` and `cf_code_description` give the last two columns.
 
