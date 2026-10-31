@@ -7,6 +7,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **WebAssembly** (D-55): the library and its unit tests for wasm32-wasi,
+  through clang and wasi-libc (`cmake/toolchains/wasm32-wasi.cmake`), run
+  under Node's WASI (`scripts/wasi-run.js`) - single-threaded, no change
+  handle, every unit test passing. `verify -DEXTRA=wasm`, tier 2.
 - **Proofs, not only tests, for the code untrusted input goes through**
   (`tests/proofs`, `verify -DEXTRA=proofs`, tier 2): CBMC shows for every
   input up to a bound that the integer parsers and printers,
@@ -400,6 +404,16 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed, and it mattered
 
+- **An image read out of bounds wherever size_t is 32 bits.** An image
+  header's record count was multiplied by the record size before it was
+  checked; on i386, armv7 or wasm32 a count of 2^28 made the product wrap
+  to 0, the regions "fit", and every record past the real ones was read
+  outside the image - an untrusted file, read past its end. Invisible on
+  64-bit, found by the fuzz test the first time it ran on wasm32. The
+  count is checked against the image's size before it is multiplied.
+  The FNV prime the digests use, and two of the fuzz test's constants,
+  were 64-bit literals a 32-bit long makes `long long`, which C89 has
+  not; they are written as expressions.
 - **A TinyCC build claimed to be safe on any thread, and was not.**
   tcc defines no `__GNUC__`, so it got no atomic operations: reference
   counts were plain additions, while the build did not say

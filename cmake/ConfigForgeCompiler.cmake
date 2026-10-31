@@ -259,9 +259,14 @@ function(configforge_apply_hardening tgt)
   if(NOT CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     return()
   endif()
+  # Asked with -Werror: a flag the target cannot use is only a warning
+  # ("argument unused"), which a plain probe takes for a yes - wasm32
+  # took -fstack-clash-protection that way, and the build then failed.
+  set(CMAKE_REQUIRED_FLAGS "-Werror")
   check_c_compiler_flag(-fstack-protector-strong CF_HAVE_STACK_PROTECTOR)
   check_c_compiler_flag(-fstack-clash-protection CF_HAVE_STACK_CLASH)
   check_c_compiler_flag(-fcf-protection=full CF_HAVE_CF_PROTECTION)
+  unset(CMAKE_REQUIRED_FLAGS)
   if(CF_HAVE_STACK_PROTECTOR)
     target_compile_options(${tgt} PRIVATE -fstack-protector-strong)
   endif()

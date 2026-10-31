@@ -60,6 +60,14 @@ set(CF_UNIT_TESTS
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_starve.d
      ${CMAKE_CURRENT_BINARY_DIR}/cf_starve_secrets)
 
+# WebAssembly (WASI preview 1) has no file notification, so nothing for
+# test_watch to watch with; and no shell, so test_file's drop-in
+# directory is made here rather than by the test.
+if(CMAKE_SYSTEM_NAME STREQUAL "WASI")
+  list(REMOVE_ITEM CF_UNIT_TESTS test_watch)
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_confd)
+endif()
+
 foreach(t ${CF_UNIT_TESTS})
   add_executable(${t} ${t}.c)
   target_link_libraries(${t} PRIVATE configforge)
@@ -113,7 +121,8 @@ endforeach()
 # not this code's; test_watch.c says which and why.
 if(CF_WAKE_KQUEUE
    AND NOT APPLE
-   AND NOT CMAKE_SYSTEM_NAME MATCHES "BSD|DragonFly")
+   AND NOT CMAKE_SYSTEM_NAME MATCHES "BSD|DragonFly"
+   AND TARGET test_watch)
   target_compile_definitions(test_watch PRIVATE CF_TEST_LIBKQUEUE=1)
 endif()
 
@@ -128,9 +137,11 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/watch)
 # way to make one.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_secrets
      ${CMAKE_CURRENT_BINARY_DIR}/cf_secrets_bad)
-set_tests_properties(
-  unit.test_watch PROPERTIES WORKING_DIRECTORY
-                             ${CMAKE_CURRENT_BINARY_DIR}/watch)
+if(TARGET test_watch)
+  set_tests_properties(
+    unit.test_watch PROPERTIES WORKING_DIRECTORY
+                               ${CMAKE_CURRENT_BINARY_DIR}/watch)
+endif()
 
 # Change notification through the C++03 wrapper, built as C++98 like
 # every other wrapper consumer, in a directory of its own for the same
@@ -260,7 +271,7 @@ endif()
 # invariants the contract rests on - that a read touches nothing
 # mutable, and that the reference count is the only thing that moves.
 find_package(Threads QUIET)
-if(CMAKE_USE_PTHREADS_INIT)
+if(CMAKE_USE_PTHREADS_INIT AND NOT CF_SINGLE_THREADED)
   target_compile_definitions(test_threads PRIVATE CF_TEST_PTHREADS=1)
   target_link_libraries(test_threads PRIVATE Threads::Threads)
   target_compile_definitions(test_live PRIVATE CF_TEST_PTHREADS=1)

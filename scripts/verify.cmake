@@ -32,6 +32,7 @@
 #   clang    the whole suite built with clang
 #   valgrind every unit test under memcheck, on an uninstrumented build
 #   proofs   the bounded proofs of tests/proofs under CBMC
+#   wasm     the unit tests built for wasm32-wasi, run under Node's WASI
 #   shared   the whole suite against a shared library (BUILD_SHARED_LIBS),
 #            CI's shared job; the Python binding's tests run only here,
 #            since ctypes loads a shared library
@@ -90,6 +91,7 @@ if(DEFINED TIER)
       shared
       valgrind
       proofs
+      wasm
       tsan
       yaml
       compilers
@@ -314,6 +316,36 @@ foreach(x ${EXTRA})
       -DCMAKE_CXX_COMPILER=${CLANGXX_EXE})
     step("clang build" ${build} build-clang ${debug})
     step("clang test" ${test} build-clang)
+  elseif(x STREQUAL "wasm")
+    # WebAssembly, WASI preview 1 (D-55): the unit tests built for wasm32
+    # and run under Node's WASI. A 32-bit size_t, no threads, no file
+    # notification - the target that found an image header whose count
+    # wrapped where size_t is 32 bits.
+    find_program(CLANG_EXE clang)
+    find_program(WASM_LD_EXE wasm-ld)
+    find_program(NODE_EXE node)
+    if(NOT CLANG_EXE
+       OR NOT WASM_LD_EXE
+       OR NOT NODE_EXE)
+      message("wasm                  skipped: needs clang, wasm-ld and node")
+      continue()
+    endif()
+    step(
+      "wasm configure"
+      ${CMAKE_COMMAND}
+      -S
+      .
+      -B
+      build-wasm
+      --toolchain
+      cmake/toolchains/wasm32-wasi.cmake)
+    step("wasm build" ${build} build-wasm ${parallel})
+    step(
+      "wasm test"
+      ${test}
+      build-wasm
+      -R
+      "^unit\\.")
   elseif(x STREQUAL "proofs")
     # The bounded proofs (docs/Safety.md): no input of up to a bound
     # makes the proved functions read or write out of bounds or overflow.
@@ -533,7 +565,8 @@ foreach(x ${EXTRA})
     message(
       FATAL_ERROR
         "unknown EXTRA step '${x}': kqueue, tidy, clang, "
-        "shared, valgrind, proofs, tsan, yaml, compilers, fuzz or " "coverage")
+        "shared, valgrind, proofs, wasm, tsan, yaml, compilers, fuzz "
+        "or coverage")
   endif()
 endforeach()
 

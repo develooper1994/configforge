@@ -335,6 +335,19 @@ static void test_corrupt_index_is_refused(void) {
     g_img2.b[37] = (char)-1;
     check(!cf_image_open(&img, g_img2.b, n, &err),
           "a chain that does not fit is refused at the door");
+
+    /* A count whose records times their 16 bytes is 2^32: where size_t
+       is 32 bits the product wrapped to 0, the regions "fit", and every
+       record past the real ones was read out of bounds - wasm32 found it
+       under the fuzzer. Refused before it is multiplied, everywhere. */
+    memcpy(g_img2.b, g_img.b, n);
+    g_img2.b[12] = 0;
+    g_img2.b[13] = 0;
+    g_img2.b[14] = 0;
+    g_img2.b[15] = 0x10;
+    check(!cf_image_open(&img, g_img2.b, n, &err) &&
+              strstr(err.message, "outside the image") != NULL,
+          "a count that wraps where size_t is 32 bits is refused at the door");
 }
 
 int main(void) {

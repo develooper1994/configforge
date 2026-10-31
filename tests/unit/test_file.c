@@ -355,7 +355,9 @@ static void test_drop_in_directory(void) {
     cf_config*  cfg;
     static char buf[4096];
 
-#ifdef _WIN32
+#if defined(__wasi__)
+    /* No shell to run mkdir: the build made the directory (CMake). */
+#elif defined(_WIN32)
     check(system("mkdir cf_confd >nul 2>&1") >= 0, "made a directory");
 #else
     check(system("mkdir -p cf_confd") == 0, "made a directory");
@@ -430,7 +432,9 @@ static void test_drop_in_directory(void) {
     /* C89 has no rmdir. The result is kept rather than cast away: glibc
        marks system() warn_unused_result once optimised, and a (void)
        cast does not silence that. A directory left behind is harmless. */
-#ifdef _WIN32
+#if defined(__wasi__)
+    /* Left for the build directory, which made it. */
+#elif defined(_WIN32)
     if (system("rmdir cf_confd >nul 2>&1") != 0) {
         printf("note: cf_confd left behind\n");
     }
