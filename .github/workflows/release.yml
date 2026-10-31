@@ -110,7 +110,7 @@ jobs:
           # Its own tests run against the binary that ships.
           cmake -S . -B build-doctor -DCMAKE_POLICY_DEFAULT_CMP0091=NEW `
             -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
-          cmake --build build-doctor --config Release --target doctor doctor_fixtures
+          cmake --build build-doctor --config Release --target doctor doctor_fixtures doctor_api
           ctest --test-dir build-doctor -C Release -R "^doctor\." --output-on-failure
           New-Item -ItemType Directory -Force "stage/configforge-$v/bin" | Out-Null
           Copy-Item build-doctor/tools/doctor/Release/doctor.exe "stage/configforge-$v/bin/"

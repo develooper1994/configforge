@@ -31,7 +31,7 @@ ctest --test-dir build -C Release --output-on-failure | Select-Object -Last 3
 cmake --install build --config Release | Out-Null
 cmake -S . -B build-doctor -DCMAKE_POLICY_DEFAULT_CMP0091=NEW `
     -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded | Out-Null
-cmake --build build-doctor --config Release --target doctor doctor_fixtures -- /m:4 /v:quiet /nologo | Out-Null
+cmake --build build-doctor --config Release --target doctor doctor_fixtures doctor_api -- /m:4 /v:quiet /nologo | Out-Null
 ctest --test-dir build-doctor -C Release -R "^doctor\." --output-on-failure | Select-Object -Last 3
 New-Item -ItemType Directory -Force "stage/configforge-$v/bin" | Out-Null
 Copy-Item build-doctor/tools/doctor/Release/doctor.exe "stage/configforge-$v/bin/"
