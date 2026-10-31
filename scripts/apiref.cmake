@@ -86,6 +86,25 @@ string(
   "and `cf_port.h`'s `cf_ref_*`, `cf_fmt*` and `cf_cmp_*`. The flags a\n"
   "definition takes are bits 0-15 and a source's bits 16 and up; an\n"
   "unknown bit is refused by name.\n\n")
+
+# The error codes, from the one list every other place takes them from,
+# so the table cannot name a code the library does not have.
+file(STRINGS "${REPO}/include/configforge/cf_code.def" codes
+     REGEX "^CF_CODE_(LAST_)?X\\(CF_")
+string(
+  APPEND
+  doc
+  "Every error carries one of these codes, stable from 1.0;\n"
+  "`cf_code_name` and `cf_code_description` give the last two columns.\n\n"
+  "| Code | Name | Meaning |\n"
+  "| ---- | ---- | ------- |\n")
+foreach(l IN LISTS codes)
+  if(l MATCHES "\\((CF_[A-Z_]+), *\"([a-z]+)\", *\"([^\"]*)\"\\)")
+    string(APPEND doc "| `${CMAKE_MATCH_1}` | `${CMAKE_MATCH_2}` | "
+           "${CMAKE_MATCH_3} |\n")
+  endif()
+endforeach()
+string(APPEND doc "\n")
 set(toc "")
 set(sections "")
 
