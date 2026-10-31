@@ -238,7 +238,6 @@ CF_API cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds,
    separate mechanism, which is why explain() shows one losing to a
    file with no special case anywhere - and why it has a name to print
    rather than a question mark. */
-struct cf_source;
 CF_API cf_bool cf_source_defaults(struct cf_source* s, const char* name, int rank,
                                   const cf_defset* ds);
 

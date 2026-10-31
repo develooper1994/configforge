@@ -54,15 +54,10 @@ Whoever continues: read `CONTRIBUTING.md`, then do these in order.
    `scripts/apiref.cmake` from the header comments - fix there, then
    regenerate):
    * missing: the C11 `cf_get` (a macro, so the generator skips it);
-     the flag-bit rule (definition bits 0-15, source bits 16 and up,
-     unknown bits refused); the error codes of `cf_code.def` as a table;
+     the error codes of `cf_code.def` as a table;
      the members of the sized structs (`cf_error`, `cf_live_options`,
-     `cf_live_status`, `cf_log_event`); an intro paragraph naming the
-     internal tier (`cf_flatten`, `cf_keyspace`, `cf_numeric`,
-     `cf_platform`, `cf_define`'s set - whose INTERNAL notice is lost
-     above a typedef - and `cf_port`'s ref, fmt and cmp functions);
-   * comments lost behind a `struct x;` line: `cf_source_defaults`
-     (cf_define.h), `cf_source_file_codec` (cf_source.h);
+     `cf_live_status`, `cf_log_event`). The internal tier and the flag
+     bits are now in the reference's introduction;
    * to decide before the freeze: `cf_report_info` and `cf_doctor_gate`
      are caller-allocated with no `size`, so they cannot grow in 1.x
      (D-51); a NULL handle is CF_E_SOURCE everywhere but

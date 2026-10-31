@@ -233,6 +233,8 @@ CF_API cf_bool cf_source_file(cf_source* s, const char* name, int rank,
                               const char* path, const char* format, unsigned flags,
                               void* state, size_t state_size);
 
+struct cf_codec;
+
 /* The same, with the codec handed over rather than looked up: a format
    this library does not have, written against cf_doc_sink - over
    libyaml's events, expat's callbacks, anything that streams. The codec
@@ -242,7 +244,6 @@ CF_API cf_bool cf_source_file(cf_source* s, const char* name, int rank,
    time would be global mutable state, which this library has none of,
    and two parts of one program registering different codecs under one
    name would be a conflict nobody could see. */
-struct cf_codec;
 CF_API cf_bool cf_source_file_codec(cf_source* s, const char* name, int rank,
                                     const char* path, const struct cf_codec* codec,
                                     unsigned flags, void* state, size_t state_size);

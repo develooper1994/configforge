@@ -78,7 +78,14 @@ string(
   "checked against them by `gate.apiref`: edit the comment in the\n"
   "header, then run the script. Every function is listed with the\n"
   "comment written above it, under the section of the header it is\n"
-  "in; the types are in the headers themselves.\n\n")
+  "in; the types are in the headers themselves.\n\n"
+  "Semantic versioning covers all of it (D-56) except the internal\n"
+  "tier, which the library's own layers use and 1.x may change:\n"
+  "`cf_flatten.h`, `cf_keyspace.h`, `cf_numeric.h`, `cf_platform.h`,\n"
+  "the definition set's `cf_defset_*` and `cf_def_*` in `cf_define.h`,\n"
+  "and `cf_port.h`'s `cf_ref_*`, `cf_fmt*` and `cf_cmp_*`. The flags a\n"
+  "definition takes are bits 0-15 and a source's bits 16 and up; an\n"
+  "unknown bit is refused by name.\n\n")
 set(toc "")
 set(sections "")
 

@@ -6,6 +6,14 @@ header, then run the script. Every function is listed with the
 comment written above it, under the section of the header it is
 in; the types are in the headers themselves.
 
+Semantic versioning covers all of it (D-56) except the internal
+tier, which the library's own layers use and 1.x may change:
+`cf_flatten.h`, `cf_keyspace.h`, `cf_numeric.h`, `cf_platform.h`,
+the definition set's `cf_defset_*` and `cf_def_*` in `cf_define.h`,
+and `cf_port.h`'s `cf_ref_*`, `cf_fmt*` and `cf_cmp_*`. The flags a
+definition takes are bits 0-15 and a source's bits 16 and up; an
+unknown bit is refused by name.
+
 - [`configforge.h`](#configforgeh) - 65
 - [`cf_alloc.h`](#cf_alloch) - 12
 - [`cf_define.h`](#cf_defineh) - 19
@@ -693,6 +701,15 @@ CF_API cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank
 ```c
 CF_API cf_bool cf_source_defaults(struct cf_source* s, const char* name, int rank, const cf_defset* ds);
 ```
+
+Definition defaults, as an ordinary source. Declared here because
+it is the one source that reads a definition set; it is implemented
+with the others.
+
+A default is a value from the lowest-precedence source rather than a
+separate mechanism, which is why explain() shows one losing to a
+file with no special case anywhere - and why it has a name to print
+rather than a question mark.
 
 ```c
 CF_API void cf_source_env_defs(struct cf_source* s, const cf_defset* ds);
@@ -2472,6 +2489,16 @@ CF_API cf_bool cf_source_file(cf_source* s, const char* name, int rank, const ch
 ```c
 CF_API cf_bool cf_source_file_codec(cf_source* s, const char* name, int rank, const char* path, const struct cf_codec* codec, unsigned flags, void* state, size_t state_size);
 ```
+
+The same, with the codec handed over rather than looked up: a format
+this library does not have, written against cf_doc_sink - over
+libyaml's events, expat's callbacks, anything that streams. The codec
+is borrowed and must outlive the configuration.
+
+Explicit rather than registered. A registry code could add to at run
+time would be global mutable state, which this library has none of,
+and two parts of one program registering different codecs under one
+name would be a conflict nobody could see.
 
 ```c
 CF_API const cf_error* cf_source_file_error(const cf_source* s);
