@@ -3,6 +3,15 @@
 Versions follow semantic versioning from 1.0. Before that, `0.x` promises
 nothing: the C interface is not frozen, and a minor bump may change it.
 
+## 0.4.1 — 2026-10-31
+
+### Fixed
+
+- The test suite builds under MSVC's Release configuration again: one test
+  divided by a constant zero, which MSVC folds and refuses (C4723). The
+  0.4.0 tag has this one difference and was not released; the library is
+  the same.
+
 ## 0.4.0 — 2026-10-31
 
 ### Added
