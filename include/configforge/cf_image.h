@@ -81,7 +81,8 @@ typedef struct cf_image {
 /* Validates the header, the bounds and the digest. Refuses rather than
    guesses: a truncated image and a corrupt one look the same from
    inside, and neither should produce a configuration. */
-CF_API cf_bool cf_image_open(cf_image* img, const char* buf, size_t n, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_image_open(cf_image* img, const char* buf, size_t n,
+                                          cf_error* err);
 
 CF_API size_t  cf_image_count(const cf_image* img);
 CF_API cf_bool cf_image_at(const cf_image* img, size_t i, const char** key,

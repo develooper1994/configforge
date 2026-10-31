@@ -777,6 +777,24 @@ exception as the `Error`'s cause. The library is found as
 tests run against a shared build (`verify` with `EXTRA=shared`).
 `configforge_doctor`, in the same package, drives Doctor (section 11).
 
+### In C11 and later
+
+A program compiled as C11 has one `cf_get`, typed by where the value
+goes, and told apart from absent and wrong-typed by its result:
+
+```c
+int port;          /* CF_E_CONVERT for 5000000000: refused, not truncated */
+bool tls;
+const char* host;
+if (cf_get(cfg, "server.port", &port) != CF_OK) { /* ... */ }
+cf_get(cfg, "tls.enabled", &tls);
+cf_get(cfg, "server.host", &host);
+```
+
+Under C23 (and C++17) the calls whose result is the only sign of
+failure are `[[nodiscard]]`; a `(void)` cast says a result is ignored
+on purpose. Nothing changes for a C89 program (D-53).
+
 ### What is worth a log line
 
 An error stops a configuration; some things deserve a line in the

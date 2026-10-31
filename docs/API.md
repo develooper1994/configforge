@@ -57,7 +57,7 @@ their rank is already reserved, so adding them will not renumber
 anything.
 
 ```c
-CF_API cf_config* cf_app(const char* name, int argc, char* const* argv, cf_error* err);
+CF_NODISCARD CF_API cf_config* cf_app(const char* name, int argc, char* const* argv, cf_error* err);
 ```
 
 ### Tier 1 and 2
@@ -201,7 +201,7 @@ refused and fallen back from. Events below `min` are not made. A
 configuration derived from this one logs to the same place.
 
 ```c
-CF_API cf_config* cf_builder_create(cf_builder* b, cf_error* err);
+CF_NODISCARD CF_API cf_config* cf_builder_create(cf_builder* b, cf_error* err);
 ```
 
 ### Reading
@@ -229,10 +229,10 @@ Pointer and length, for text that may contain anything. The stored
 value is NUL-terminated as well, so cf_get_text stays free.
 
 ```c
-CF_API cf_code cf_try_bool(const cf_config* c, const char* key, cf_bool* out);
-CF_API cf_code cf_try_int(const cf_config* c, const char* key, cf_i64* out);
-CF_API cf_code cf_try_text(const cf_config* c, const char* key, const char** out, size_t* len);
-CF_API cf_code cf_try_real(const cf_config* c, const char* key, double* out);
+CF_NODISCARD CF_API cf_code cf_try_bool(const cf_config* c, const char* key, cf_bool* out);
+CF_NODISCARD CF_API cf_code cf_try_int(const cf_config* c, const char* key, cf_i64* out);
+CF_NODISCARD CF_API cf_code cf_try_text(const cf_config* c, const char* key, const char** out, size_t* len);
+CF_NODISCARD CF_API cf_code cf_try_real(const cf_config* c, const char* key, double* out);
 ```
 
 CF_OK, CF_E_KEY when absent, CF_E_CONVERT on a type mismatch.
@@ -368,7 +368,7 @@ says "set at run time, and before that it came from the file", which
 is the question people actually ask after changing a setting.
 
 ```c
-CF_API cf_config* cf_derive(const cf_config* base, const char* source_name, const cf_pair* pairs, size_t count, cf_error* err);
+CF_NODISCARD CF_API cf_config* cf_derive(const cf_config* base, const char* source_name, const cf_pair* pairs, size_t count, cf_error* err);
 ```
 
 ```c
@@ -401,7 +401,7 @@ configuration does not change: it is a snapshot. Rebuild, or derive,
 to see the write.
 
 ```c
-CF_API cf_bool cf_write(const cf_config* c, const char* target, const cf_write_item* items, size_t count, const char* meta, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_write(const cf_config* c, const char* target, const cf_write_item* items, size_t count, const char* meta, cf_error* err);
 ```
 
 ### Change notification
@@ -1162,7 +1162,7 @@ and the buffer must outlive the view - which is exactly the point on
 a target where the buffer is a `const char[]` in flash.
 
 ```c
-CF_API cf_bool cf_image_open(cf_image* img, const char* buf, size_t n, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_image_open(cf_image* img, const char* buf, size_t n, cf_error* err);
 ```
 
 Validates the header, the bounds and the digest. Refuses rather than
@@ -1527,14 +1527,14 @@ with threads: a CF_SINGLE_THREADED build (cf_has_feature reports
 time, the one that drives the reloads.
 
 ```c
-CF_API cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err);
+CF_NODISCARD CF_API cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err);
 ```
 
 Builds and checks the first snapshot, and fails as that does. A size
 below 1.0's is refused.
 
 ```c
-CF_API cf_live* cf_live_open(cf_live_mode mode, cf_live_build_fn build, cf_live_check_fn check, void* user, const cf_allocator* a, cf_error* err);
+CF_NODISCARD CF_API cf_live* cf_live_open(cf_live_mode mode, cf_live_build_fn build, cf_live_check_fn check, void* user, const cf_allocator* a, cf_error* err);
 CF_API void cf_live_close(cf_live* l);
 ```
 
@@ -1984,6 +1984,18 @@ test of __GNUC__ chose __sync_add_and_fetch and pcc stopped at the
 first file. Everything below asks CF_GNUC.
 
 ### inline
+
+### What a later standard can say (D-53)
+
+The library is C89 so that it builds everywhere; a program compiled
+as a later standard gets what that standard adds to the same
+declarations, as the C++ header does for C++.
+
+CF_NODISCARD marks a call whose result is the only way to know it
+failed - a create, a try, an open, a write. C23's and C++17's
+[[nodiscard]], which a (void) cast silences where ignoring is meant.
+Not GCC's warn_unused_result, which a cast does not silence, so code
+that ignores a result on purpose would have no way to say so.
 
 ### Export control
 

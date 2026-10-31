@@ -123,14 +123,14 @@ typedef struct cf_live_options {
 
 /* Builds and checks the first snapshot, and fails as that does. A size
    below 1.0's is refused. */
-CF_API cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err);
+CF_NODISCARD CF_API cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err);
 
 /* The shorthand: one `user` for both functions. `check` may be NULL; `a`
    NULL is the default allocator. */
-CF_API cf_live* cf_live_open(cf_live_mode mode, cf_live_build_fn build,
-                             cf_live_check_fn check, void* user, const cf_allocator* a,
-                             cf_error* err);
-CF_API void     cf_live_close(cf_live* l);
+CF_NODISCARD CF_API cf_live* cf_live_open(cf_live_mode mode, cf_live_build_fn build,
+                                          cf_live_check_fn check, void* user,
+                                          const cf_allocator* a, cf_error* err);
+CF_API void                  cf_live_close(cf_live* l);
 
 /* The current snapshot, with a reference the caller releases with
    cf_config_free. Any thread. A reader keeps the snapshot it got for as

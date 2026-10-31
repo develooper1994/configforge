@@ -57,7 +57,8 @@ typedef struct cf_config  cf_config;
  * anything.
  * ------------------------------------------------------------------ */
 
-CF_API cf_config* cf_app(const char* name, int argc, char* const* argv, cf_error* err);
+CF_NODISCARD CF_API cf_config* cf_app(const char* name, int argc, char* const* argv,
+                                      cf_error* err);
 
 /* ------------------------------------------------------------------ *
  * Tier 1 and 2
@@ -179,7 +180,7 @@ CF_API void cf_builder_unknown(cf_builder* b, cf_unknown_policy policy);
    configuration derived from this one logs to the same place. */
 CF_API void cf_builder_log(cf_builder* b, cf_log_fn fn, void* user, cf_log_level min);
 
-CF_API cf_config* cf_builder_create(cf_builder* b, cf_error* err);
+CF_NODISCARD CF_API cf_config* cf_builder_create(cf_builder* b, cf_error* err);
 
 /* ------------------------------------------------------------------ *
  * Reading
@@ -207,12 +208,85 @@ CF_API const char* cf_get_text_n(const cf_config* c, const char* key, size_t* le
                                  const char* fallback);
 
 /* CF_OK, CF_E_KEY when absent, CF_E_CONVERT on a type mismatch. */
-CF_API cf_code cf_try_bool(const cf_config* c, const char* key, cf_bool* out);
-CF_API cf_code cf_try_int(const cf_config* c, const char* key, cf_i64* out);
-CF_API cf_code cf_try_text(const cf_config* c, const char* key, const char** out,
-                           size_t* len);
+CF_NODISCARD CF_API cf_code cf_try_bool(const cf_config* c, const char* key,
+                                        cf_bool* out);
+CF_NODISCARD CF_API cf_code cf_try_int(const cf_config* c, const char* key,
+                                       cf_i64* out);
+CF_NODISCARD CF_API cf_code cf_try_text(const cf_config* c, const char* key,
+                                        const char** out, size_t* len);
 #if CF_WITH_REAL
-CF_API cf_code cf_try_real(const cf_config* c, const char* key, double* out);
+CF_NODISCARD CF_API cf_code cf_try_real(const cf_config* c, const char* key,
+                                        double* out);
+#endif
+
+/* C11: one cf_get, typed by where the value goes (D-53).
+
+       int  port;   if (cf_get(cfg, "server.port", &port) != CF_OK) ...
+       bool tls;    cf_get(cfg, "tls.enabled", &tls);
+       const char* host;  cf_get(cfg, "server.host", &host);
+
+   int, long, long long, bool, double and const char*. CF_OK, CF_E_KEY
+   when absent, CF_E_CONVERT for another type or for an integer the
+   target cannot hold - never a truncated one. In C89 the cf_try_
+   functions above say the same. */
+#if CF_HAVE_C11 && !defined(__cplusplus)
+/* An integer the target cannot hold does not survive the round trip:
+   implementation-defined, never undefined, and no <limits.h> in a
+   public header. */
+CF_INLINE cf_code cf_get_int_(const cf_config* c, const char* k, int* out) {
+    cf_i64  v;
+    cf_code r = cf_try_int(c, k, &v);
+    if (r == CF_OK && (cf_i64)(int)v != v) {
+        return CF_E_CONVERT;
+    }
+    if (r == CF_OK) {
+        *out = (int)v;
+    }
+    return r;
+}
+CF_INLINE cf_code cf_get_long_(const cf_config* c, const char* k, long* out) {
+    cf_i64  v;
+    cf_code r = cf_try_int(c, k, &v);
+    if (r == CF_OK && (cf_i64)(long)v != v) {
+        return CF_E_CONVERT;
+    }
+    if (r == CF_OK) {
+        *out = (long)v;
+    }
+    return r;
+}
+CF_INLINE cf_code cf_get_llong_(const cf_config* c, const char* k, long long* out) {
+    cf_i64  v;
+    cf_code r = cf_try_int(c, k, &v);
+    if (r == CF_OK) {
+        *out = (long long)v;
+    }
+    return r;
+}
+CF_INLINE cf_code cf_get_bool_(const cf_config* c, const char* k, _Bool* out) {
+    cf_bool v;
+    cf_code r = cf_try_bool(c, k, &v);
+    if (r == CF_OK) {
+        *out = (v != 0);
+    }
+    return r;
+}
+CF_INLINE cf_code cf_get_text_(const cf_config* c, const char* k, const char** out) {
+    size_t n;
+    return cf_try_text(c, k, out, &n);
+}
+#if CF_WITH_REAL
+#define CF_GET_REAL_ , double* : cf_try_real
+#else
+#define CF_GET_REAL_
+#endif
+#define cf_get(c, key, out)                                                            \
+    _Generic((out),                                                                    \
+        int*: cf_get_int_,                                                             \
+        long*: cf_get_long_,                                                           \
+        long long*: cf_get_llong_,                                                     \
+        _Bool*: cf_get_bool_,                                                          \
+        const char**: cf_get_text_ CF_GET_REAL_)((c), (key), (out))
 #endif
 
 /* CF_TYPE_NULL when the key is absent. */
@@ -351,8 +425,9 @@ CF_API const cf_defset*       cf_defs(const cf_config* c);
  * is the question people actually ask after changing a setting.
  * ------------------------------------------------------------------ */
 
-CF_API cf_config* cf_derive(const cf_config* base, const char* source_name,
-                            const cf_pair* pairs, size_t count, cf_error* err);
+CF_NODISCARD CF_API cf_config* cf_derive(const cf_config* base, const char* source_name,
+                                         const cf_pair* pairs, size_t count,
+                                         cf_error* err);
 
 /* The same, inside an arena the caller owns. A configuration built with
    cf_build_in has no allocator to borrow, so it must use this one. */
@@ -384,9 +459,9 @@ CF_API cf_config* cf_derive_in(const cf_config* base, cf_arena* arena,
  * to see the write.
  * ------------------------------------------------------------------ */
 
-CF_API cf_bool cf_write(const cf_config* c, const char* target,
-                        const cf_write_item* items, size_t count, const char* meta,
-                        cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_write(const cf_config* c, const char* target,
+                                     const cf_write_item* items, size_t count,
+                                     const char* meta, cf_error* err);
 
 /* ------------------------------------------------------------------ *
  * Change notification

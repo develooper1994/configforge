@@ -17,6 +17,9 @@
 #if defined(CF_ATOMIC_WIN32)
 #include <windows.h>
 #endif
+#if defined(CF_ATOMIC_C11)
+#include <stdatomic.h>
+#endif
 
 void cf_ref_init(cf_refcount* rc, cf_i32 n) {
     rc->v = n;
@@ -29,6 +32,9 @@ cf_i32 cf_ref_inc(cf_refcount* rc) {
     return __sync_add_and_fetch(&rc->v, 1);
 #elif defined(CF_ATOMIC_WIN32)
     return (cf_i32)InterlockedIncrement((LONG volatile*)&rc->v);
+#elif defined(CF_ATOMIC_C11)
+    return atomic_fetch_add_explicit((_Atomic cf_i32*)&rc->v, 1, memory_order_acq_rel) +
+           1;
 #else
     rc->v += 1;
     return rc->v;
@@ -42,6 +48,9 @@ cf_i32 cf_ref_dec(cf_refcount* rc) {
     return __sync_sub_and_fetch(&rc->v, 1);
 #elif defined(CF_ATOMIC_WIN32)
     return (cf_i32)InterlockedDecrement((LONG volatile*)&rc->v);
+#elif defined(CF_ATOMIC_C11)
+    return atomic_fetch_sub_explicit((_Atomic cf_i32*)&rc->v, 1, memory_order_acq_rel) -
+           1;
 #else
     rc->v -= 1;
     return rc->v;
@@ -63,6 +72,8 @@ cf_i32 cf_ref_get(const cf_refcount* rc) {
     return v;
 #elif defined(CF_ATOMIC_WIN32)
     return (cf_i32)InterlockedCompareExchange((LONG volatile*)&rc->v, 0, 0);
+#elif defined(CF_ATOMIC_C11)
+    return atomic_load_explicit((const _Atomic cf_i32*)&rc->v, memory_order_acquire);
 #else
     return rc->v;
 #endif

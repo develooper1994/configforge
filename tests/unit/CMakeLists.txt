@@ -74,6 +74,28 @@ foreach(t ${CF_UNIT_TESTS})
   add_test(NAME unit.${t} COMMAND ${t})
 endforeach()
 
+# What configforge.h adds for a C11 program (D-53), where the compiler
+# can build one. CF_FORCE_PORTABLE turns every later-standard path off,
+# so the test has nothing to test there.
+if("c_std_11" IN_LIST CMAKE_C_COMPILE_FEATURES AND NOT CF_FORCE_PORTABLE)
+  add_executable(test_c11 test_c11.c)
+  target_link_libraries(test_c11 PRIVATE configforge)
+  set_target_properties(
+    test_c11
+    PROPERTIES C_STANDARD 11
+               C_STANDARD_REQUIRED ON
+               C_EXTENSIONS OFF)
+  configforge_apply_warnings(test_c11)
+  configforge_apply_analysis(test_c11)
+  # Analysed as what it is: cppcheck is told C89 for everything else,
+  # and would stop at this test's own check that it is C11.
+  if(CF_CPPCHECK_TESTS)
+    string(REPLACE "--std=c89" "--std=c11" c11_cppcheck "${CF_CPPCHECK_TESTS}")
+    set_target_properties(test_c11 PROPERTIES C_CPPCHECK "${c11_cppcheck}")
+  endif()
+  add_test(NAME unit.test_c11 COMMAND test_c11)
+endif()
+
 # The documents test_codec_edges reads, where they are in the source tree.
 target_compile_definitions(
   test_codec_edges PRIVATE CF_EDGES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")

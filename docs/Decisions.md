@@ -2250,6 +2250,32 @@ key, though the reasons are written to carry no value anyway.
 
 ---
 
+## D-53 — C89 inside, the program's own standard at the interface
+
+**Question.** C has versions too, and the owner asked that the library use what a later
+one offers where it is supported. The library is C89 so that it builds with every
+compiler in the matrix, pcc and TinyCC among them; a program compiled as C11 or C23
+should not be held to C89 by that.
+
+**Decision.** As the C++ header does for C++ (D-47): the core stays C89, and the headers
+add what the standard the program is compiled as can say, to the same declarations and
+the same ABI.
+
+* **C11**: `cf_get(cfg, key, &out)`, a `_Generic` over `int`, `long`, `long long`,
+  `bool`, `double` and `const char*` - typed by where the value goes, refusing an integer
+  the target cannot hold rather than truncating it. And `<stdatomic.h>` as an atomics
+  path for a compiler that is neither GCC-like nor MSVC.
+* **C23 and C++17**: `[[nodiscard]]` on the calls whose result is the only way to know
+  they failed - create, derive, try, open, write. Not GCC's `warn_unused_result`, which
+  a `(void)` cast cannot silence, so a call ignored on purpose could not say so.
+* **Any standard**: `CF_STATIC_ASSERT` holds the library to what D-51 rests on - every
+  sized struct begins with its size, and the integer widths are the interface's.
+
+The header gate compiles every public header standalone as C89, C11 and C23, where the
+compiler knows them.
+
+---
+
 
 One decision is open, because nothing has been built: profiles as a core concept
 (D-12). Value interpolation (D-10), long reserved, is decided and built. Everything else is decided,
