@@ -24,6 +24,15 @@ The plan, in order (2026-10-30). GitHub Actions is blocked by billing,
 so each CI job is run locally, as the maintainer decided (`docs/Maintaining.md`).
 Each unit passes tier 1 (D-50); tier 2 runs before each release.
 
+Done since the plan was written, each in its own commit: the interface
+review's findings (D-51); a log for what is not an error (D-52); the
+C standard the program uses (D-53); create, update and delete as one
+edit (D-54); zero-copy text in Rust and a `Mapping` in Python; no
+string borrowed past its call; `docs/Safety.md`, hardened builds and
+Valgrind; `gate.text`; bounded proofs of the integer parsers and
+printers, type inference and `cf_fmt`. Left, in order: v0.4.0, WebAssembly, real kqueue, the ABI check, the
+documents, 1.0.0.
+
 1. **v0.4.0, released locally** (`scripts/release-local.sh`, `.ps1`):
    source, amalgamation, static musl Linux, Windows; the macOS archive
    needs a Mac, and the release notes say so.

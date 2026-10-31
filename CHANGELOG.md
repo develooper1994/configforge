@@ -7,6 +7,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **Proofs, not only tests, for the code untrusted input goes through**
+  (`tests/proofs`, `verify -DEXTRA=proofs`, tier 2): CBMC shows for every
+  input up to a bound that the integer parsers and printers,
+  `cf_infer_scalar` and `cf_fmt` read and write nothing outside their
+  buffers and overflow nothing - and names the line when an off-by-one
+  is put in. `docs/Safety.md` lists what is proven and what is not yet.
 - **What Rust guarantees, stated and held for the C** (`docs/Safety.md`):
   each design rule that rules a class of memory or thread error out, the
   tool that holds it, and what is not yet proven. With it, hardened
