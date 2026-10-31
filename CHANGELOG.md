@@ -9,6 +9,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 - `cf_derive_in` and `cf_watcher_open` are `CF_NODISCARD`, as every other
   call that creates something is (D-53): a result dropped is a leak.
+- `cf_live_commit` without a `cf_live` is `CF_E_CAPABILITY`, as
+  `cf_live_poll`, `cf_live_reload` and `cf_live_approve` are; it said
+  `CF_E_SOURCE`.
 
 ### Fixed
 

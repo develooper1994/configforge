@@ -53,9 +53,7 @@ Whoever continues: read `CONTRIBUTING.md`, then do these in order.
    comments, and the API reference's introduction (internal tier, flag
    bits, sized structs, the C11 `cf_get`, the error codes). Left, to
    decide before the freeze: `cf_report_info` and `cf_doctor_gate` are
-   caller-allocated with no `size`, so they cannot grow in 1.x (D-51);
-   a NULL handle is CF_E_SOURCE everywhere but `cf_live_approve`, which
-   says CF_E_CAPABILITY.
+   caller-allocated with no `size`, so they cannot grow in 1.x (D-51).
 6. **1.0.0**: tier 2, CHANGELOG dated, tag, release as in step 3.
 
 2. **The interface fixed before it freezes.** An independent review of
