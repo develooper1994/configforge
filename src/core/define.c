@@ -155,10 +155,52 @@ static cf_bool def_check(const cf_def* d, cf_error* err) {
     return CF_TRUE;
 }
 
+/* A copy of a NULL-terminated list of strings in the set's arena, so the
+   caller's may go as soon as cf_define returns. */
+static const char* const* defset_dup_list(cf_arena* ar, const char* const* list,
+                                          cf_bool* ok) {
+    size_t       n = 0, i;
+    const char** out;
+
+    if (list == NULL) {
+        return NULL;
+    }
+    while (list[n] != NULL) {
+        ++n;
+    }
+    out = (const char**)cf_arena_calloc(ar, (n + 1) * sizeof *out);
+    if (out == NULL) {
+        *ok = CF_FALSE;
+        return NULL;
+    }
+    for (i = 0; i < n; ++i) {
+        out[i] = cf_arena_dup(ar, list[i], strlen(list[i]));
+        if (out[i] == NULL) {
+            *ok = CF_FALSE;
+            return NULL;
+        }
+    }
+    return out;
+}
+
+static const char* defset_dup(cf_arena* ar, const char* s, cf_bool* ok) {
+    char* out;
+    if (s == NULL) {
+        return NULL;
+    }
+    out = cf_arena_dup(ar, s, strlen(s));
+    if (out == NULL) {
+        *ok = CF_FALSE;
+    }
+    return out;
+}
+
 cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err) {
-    size_t klen;
-    char*  key;
-    size_t i;
+    size_t  klen;
+    char*   key;
+    size_t  i;
+    cf_bool copied = CF_TRUE;
+    cf_def* kept;
 
     if (ds == NULL || ds->defs == NULL) {
         return cf_error_set(err, CF_E_MEMORY, NULL, NULL,
@@ -188,8 +230,26 @@ cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err) {
         return cf_error_set(err, CF_E_MEMORY, d->key, NULL, "no room to copy the key");
     }
 
-    ds->defs[ds->count]     = *d;
-    ds->defs[ds->count].key = key;
+    /* As far as the caller's struct reaches and no further (D-51): a
+       1.0 caller's cf_def is smaller than a later library's. */
+    kept = &ds->defs[ds->count];
+    memset(kept, 0, sizeof *kept);
+    memcpy(kept, d, (d->size < sizeof *kept) ? d->size : sizeof *kept);
+    kept->size = sizeof *kept;
+    kept->key  = key;
+
+    /* Nothing the caller handed over is borrowed past this call: a
+       description, a new name, the lists - each copied, so a buffer the
+       caller frees afterwards is never read. */
+    kept->description = defset_dup(ds->arena, d->description, &copied);
+    kept->replaced_by = defset_dup(ds->arena, d->replaced_by, &copied);
+    kept->allowed     = defset_dup_list(ds->arena, d->allowed, &copied);
+    kept->aliases     = defset_dup_list(ds->arena, d->aliases, &copied);
+    kept->policy      = defset_dup_list(ds->arena, d->policy, &copied);
+    if (!copied) {
+        return cf_error_set(err, CF_E_MEMORY, d->key, NULL,
+                            "no room to copy the definition");
+    }
 
     if (d->has_default && d->type == CF_TYPE_TEXT) {
         char* t =
@@ -198,7 +258,7 @@ cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err) {
             return cf_error_set(err, CF_E_MEMORY, d->key, NULL,
                                 "no room to copy the default");
         }
-        ds->defs[ds->count].default_value.u.t.p = t;
+        kept->default_value.u.t.p = t;
     }
     ++ds->count;
     return CF_TRUE;
@@ -290,7 +350,15 @@ cf_bool cf_defset_open(cf_defset* ds, const char* prefix, cf_error* err) {
         return cf_error_set(err, CF_E_DEFINITION, prefix, NULL,
                             "more than %d open prefixes", CF_MAX_OPEN_PREFIXES);
     }
-    ds->open_prefixes[ds->open_count++] = prefix;
+    {
+        cf_bool     ok   = CF_TRUE;
+        const char* kept = defset_dup(ds->arena, prefix, &ok);
+        if (!ok) {
+            return cf_error_set(err, CF_E_MEMORY, prefix, NULL,
+                                "no room to copy the prefix");
+        }
+        ds->open_prefixes[ds->open_count++] = kept;
+    }
     return CF_TRUE;
 }
 

@@ -232,6 +232,26 @@ cf_builder* cf_app_builder(const char* name, int argc, char* const* argv) {
     return b;
 }
 
+/* A copy of a string the caller handed over, in the builder's arena: no
+   name, path or prefix is borrowed past the call that took it, so a
+   buffer the caller frees afterwards is never read - by create, by
+   explain(), or by a watcher. On no memory the builder fails, and create
+   says so. */
+static const char* builder_dup(cf_builder* b, const char* s) {
+    char* out;
+
+    if (b == NULL || s == NULL) {
+        return s;
+    }
+    out = cf_arena_dup(b->arena, s, strlen(s));
+    if (out == NULL && !b->failed) {
+        cf_error e = CF_ERROR_INIT;
+        cf_error_set(&e, CF_E_MEMORY, NULL, s, "no room to copy '%s'", s);
+        builder_fail(b, &e);
+    }
+    return (out != NULL) ? out : s;
+}
+
 static cf_source* builder_slot(cf_builder* b) {
     if (b == NULL || b->failed) {
         return NULL;
@@ -267,7 +287,7 @@ static cf_source* builder_slot_flags(cf_builder* b, const char* name, unsigned f
 cf_bool cf_builder_memory(cf_builder* b, const char* name, int rank,
                           const cf_pair* pairs, size_t count) {
     cf_source* s = builder_slot(b);
-    if (s == NULL || !cf_source_memory(s, name, rank, pairs, count)) {
+    if (s == NULL || !cf_source_memory(s, builder_dup(b, name), rank, pairs, count)) {
         return CF_FALSE;
     }
     ++b->nsources;
@@ -277,7 +297,8 @@ cf_bool cf_builder_memory(cf_builder* b, const char* name, int rank,
 cf_bool cf_builder_env(cf_builder* b, const char* name, int rank, const char* prefix,
                        char* const* environment) {
     cf_source* s = builder_slot(b);
-    if (s == NULL || !cf_source_env(s, name, rank, prefix, environment)) {
+    if (s == NULL || !cf_source_env(s, builder_dup(b, name), rank,
+                                    builder_dup(b, prefix), environment)) {
         return CF_FALSE;
     }
     ++b->nsources;
@@ -287,7 +308,7 @@ cf_bool cf_builder_env(cf_builder* b, const char* name, int rank, const char* pr
 cf_bool cf_builder_cli(cf_builder* b, const char* name, int rank, int argc,
                        char* const* argv) {
     cf_source* s = builder_slot(b);
-    if (s == NULL || !cf_source_cli(s, name, rank, argc, argv)) {
+    if (s == NULL || !cf_source_cli(s, builder_dup(b, name), rank, argc, argv)) {
         return CF_FALSE;
     }
     ++b->nsources;
@@ -311,7 +332,8 @@ cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const char* p
         builder_fail(b, &e);
         return CF_FALSE;
     }
-    if (!cf_source_file(s, name, rank, path, format, flags, st,
+    if (!cf_source_file(s, builder_dup(b, name), rank, builder_dup(b, path),
+                        builder_dup(b, format), flags, st,
                         cf_source_file_state_size())) {
         return CF_FALSE;
     }
@@ -346,8 +368,8 @@ cf_bool cf_builder_file_codec(cf_builder* b, const char* name, int rank,
         builder_fail(b, &e);
         return CF_FALSE;
     }
-    if (!cf_source_file_codec(s, name, rank, path, codec, flags, st,
-                              cf_source_file_state_size())) {
+    if (!cf_source_file_codec(s, builder_dup(b, name), rank, builder_dup(b, path),
+                              codec, flags, st, cf_source_file_state_size())) {
         return CF_FALSE;
     }
     ++b->nsources;
@@ -369,7 +391,8 @@ cf_bool cf_builder_dotenv(cf_builder* b, const char* name, int rank, const char*
         builder_fail(b, &e);
         return CF_FALSE;
     }
-    if (!cf_source_dotenv(s, name, rank, path, prefix, flags, st,
+    if (!cf_source_dotenv(s, builder_dup(b, name), rank, builder_dup(b, path),
+                          builder_dup(b, prefix), flags, st,
                           cf_source_dotenv_state_size())) {
         return CF_FALSE;
     }
@@ -392,7 +415,8 @@ cf_bool cf_builder_secrets(cf_builder* b, const char* name, int rank, const char
         builder_fail(b, &e);
         return CF_FALSE;
     }
-    if (!cf_source_secrets(s, name, rank, path, prefix, flags, st,
+    if (!cf_source_secrets(s, builder_dup(b, name), rank, builder_dup(b, path),
+                           builder_dup(b, prefix), flags, st,
                            cf_source_secrets_state_size())) {
         return CF_FALSE;
     }
@@ -415,8 +439,8 @@ cf_bool cf_builder_registry(cf_builder* b, const char* name, int rank, const cha
         builder_fail(b, &e);
         return CF_FALSE;
     }
-    if (!cf_source_registry(s, name, rank, root, flags, st,
-                            cf_source_registry_state_size())) {
+    if (!cf_source_registry(s, builder_dup(b, name), rank, builder_dup(b, root), flags,
+                            st, cf_source_registry_state_size())) {
         return CF_FALSE;
     }
     ++b->nsources;
@@ -438,7 +462,7 @@ cf_bool cf_builder_store(cf_builder* b, const char* name, int rank, const char* 
         builder_fail(b, &e);
         return CF_FALSE;
     }
-    if (!cf_source_store(s, name, rank, path, flags, st,
+    if (!cf_source_store(s, builder_dup(b, name), rank, builder_dup(b, path), flags, st,
                          cf_source_store_state_size())) {
         return CF_FALSE;
     }
@@ -461,8 +485,8 @@ cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank, const char* pa
         builder_fail(b, &e);
         return CF_FALSE;
     }
-    if (!cf_source_dir(s, name, rank, path, format, flags, st,
-                       cf_source_dir_state_size())) {
+    if (!cf_source_dir(s, builder_dup(b, name), rank, builder_dup(b, path),
+                       builder_dup(b, format), flags, st, cf_source_dir_state_size())) {
         return CF_FALSE;
     }
     ++b->nsources;
@@ -484,8 +508,8 @@ cf_bool cf_builder_replay(cf_builder* b, const char* name, int rank, const char*
         builder_fail(b, &e);
         return CF_FALSE;
     }
-    if (!cf_source_replay(s, name, rank, path, flags, st,
-                          cf_source_replay_state_size())) {
+    if (!cf_source_replay(s, builder_dup(b, name), rank, builder_dup(b, path), flags,
+                          st, cf_source_replay_state_size())) {
         return CF_FALSE;
     }
     ++b->nsources;
@@ -511,7 +535,7 @@ cf_bool cf_builder_source(cf_builder* b, const cf_source* src) {
        that adds one would read past a 1.0 caller's (D-51). */
     memset(slot, 0, sizeof *slot);
     slot->vt   = src->vt;
-    slot->name = src->name;
+    slot->name = builder_dup(b, src->name);
     slot->rank = src->rank;
     slot->ext  = src->ext;
     slot->ref  = src->ref;
@@ -709,7 +733,7 @@ cf_bool cf_builder_writable(cf_builder* b, const char* source_name) {
         builder_fail(b, &e);
         return CF_FALSE;
     }
-    b->writable[b->nwritable++] = name;
+    b->writable[b->nwritable++] = builder_dup(b, name);
     return CF_TRUE;
 }
 
