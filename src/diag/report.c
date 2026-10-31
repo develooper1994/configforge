@@ -112,7 +112,7 @@ static void report_digest(cf_sink* out, const cf_value* v) {
 
     for (i = 0; i < n; ++i) {
         h ^= (cf_u64)(unsigned char)tmp[i];
-        h *= (cf_u64)1099511628211U;
+        h *= ((cf_u64)256U << 32) | (cf_u64)435U; /* 1099511628211, see keyspace.c */
     }
     /* Sixteen hex digits written by hand. The library's formatter has
        no width specifiers on purpose, and reaching for "%08x" produced

@@ -603,7 +603,10 @@ const cf_entry* cf_ks_at(const cf_keyspace* ks, size_t i) {
  * ------------------------------------------------------------------ */
 
 static cf_u64 fnv1a(cf_u64 h, const char* p, size_t n) {
-    static const cf_u64 prime = (cf_u64)1099511628211U;
+    /* 1099511628211, as an expression for the reason the basis below is:
+       on a 32-bit long the literal would be a long long, which C89 has
+       not (wasm32 found it). */
+    static const cf_u64 prime = ((cf_u64)256U << 32) | (cf_u64)435U;
     size_t              i;
 
     for (i = 0; i < n; ++i) {

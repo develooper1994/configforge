@@ -2301,6 +2301,25 @@ build, the check and the mode.
 
 ---
 
+## D-55 — WebAssembly as a tier-2 target
+
+**Question.** The owner asked that WebAssembly be considered: a configuration library in
+an edge runtime, a plugin host, a browser. And what would it take?
+
+**Decision.** wasm32-wasi (WASI preview 1), through clang's own target and wasi-libc,
+as distributions ship them, with no SDK to download. Preview 1 has no threads, so the
+build is `CF_SINGLE_THREADED` and says so (D-14); it has no file notification, so there
+is no change handle and `cf_changed` polls, as on any platform without one. Tests run
+under Node's WASI, from the distribution like every other tool, through a runner that
+maps the test's working directory and the repository. It is tier 2 (D-50): built and
+run before a release.
+
+It paid for itself on the first run: the only 32-bit target in the matrix found an image
+header whose record count wrapped `size_t` and read past the image - on every 32-bit
+platform, never on 64-bit.
+
+---
+
 
 One decision is open, because nothing has been built: profiles as a core concept
 (D-12). Value interpolation (D-10), long reserved, is decided and built. Everything else is decided,

@@ -32,11 +32,15 @@ static void has(const char* hay, const char* needle, const char* w) {
 
 /* reg.exe, quietly; a failure here is the test's, not the library's. */
 static void reg(const char* args) {
+#ifdef _WIN32
     char cmd[512];
     sprintf(cmd, "reg %s >NUL 2>&1", args);
     if (system(cmd) != 0) {
         printf("  setup: reg %s failed\n", args);
     }
+#else
+    (void)args; /* only Windows has a Registry to set up */
+#endif
 }
 
 static cf_config* load(const char* root, unsigned flags, cf_error* err) {
@@ -131,9 +135,7 @@ static void test_elsewhere(void) {
 int main(void) {
     if (cf_platform_has_registry()) {
         /* Left over from a run that stopped part way; absent is fine. */
-        if (system("reg delete " ROOT " /f >NUL 2>&1") != 0) {
-            (void)0;
-        }
+        reg("delete " ROOT " /f");
         test_values();
         test_refusals();
         reg("delete " ROOT " /f");

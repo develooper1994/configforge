@@ -30,8 +30,9 @@ C standard the program uses (D-53); create, update and delete as one
 edit (D-54); zero-copy text in Rust and a `Mapping` in Python; no
 string borrowed past its call; `docs/Safety.md`, hardened builds and
 Valgrind; `gate.text`; bounded proofs of the integer parsers and
-printers, type inference and `cf_fmt`. Left, in order: v0.4.0, WebAssembly, real kqueue, the ABI check, the
-documents, 1.0.0.
+printers, type inference and `cf_fmt`; WebAssembly (D-55), which found
+an image read past its end on every 32-bit platform. Left, in order:
+v0.4.0, real kqueue, the ABI check, the documents, 1.0.0.
 
 1. **v0.4.0, released locally** (`scripts/release-local.sh`, `.ps1`):
    source, amalgamation, static musl Linux, Windows; the macOS archive

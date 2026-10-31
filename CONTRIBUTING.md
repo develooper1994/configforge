@@ -182,6 +182,12 @@ kqueue for a machine with no Mac. `scripts/README.md` has the commands.
 * **Under WSL, verify off `/mnt/c`**: `-DWORK=$HOME/cfv`. That
   filesystem has no inotify and no Unix permissions, so `test_watch`
   and Doctor's permission rule fail there for reasons not in the code.
+* **32 bits is a different machine.** A count from a file times a
+  record size wraps a 32-bit `size_t` (an image read past its end on
+  i386, armv7 and wasm32, never on 64-bit), and a 64-bit literal is a
+  `long long` where `long` is 32 bits, which C89 has not. Check a count
+  against the limit before multiplying, and write 64-bit constants as
+  two 32-bit halves. `verify -DEXTRA=wasm` is the 32-bit target.
 * **A lock made of one counter livelocks.** Increment, and give the
   step back unless you got 1: under contention every thread can do that
   forever. Build locks as tickets (`cf_live`'s). And a compiler with no

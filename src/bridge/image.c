@@ -349,6 +349,18 @@ static cf_bool region_fits(cf_u32 off, size_t len, size_t limit) {
     return ((size_t)off <= limit && len <= limit - (size_t)off) ? CF_TRUE : CF_FALSE;
 }
 
+/* `count` records of `size` bytes at `off`. The count is checked before
+   it is multiplied: where size_t is 32 bits, a count the file claims
+   times the record size wraps to a small length that fits, and every
+   record past it is read out of bounds (wasm32 found it, under the
+   fuzzer). */
+static cf_bool records_fit(cf_u32 off, cf_u32 count, size_t size, size_t limit) {
+    if ((size_t)count > limit / size) {
+        return CF_FALSE;
+    }
+    return region_fits(off, (size_t)count * size, limit);
+}
+
 cf_bool cf_image_open(cf_image* img, const char* buf, size_t n, cf_error* err) {
     cf_u32 major, total, string_off, string_len, count;
     size_t addr;
@@ -410,10 +422,10 @@ cf_bool cf_image_open(cf_image* img, const char* buf, size_t n, cf_error* err) {
         cf_u32 chain_count = get_u32(buf + 36);
         size_t limit       = total;
 
-        if (!region_fits(get_u32(buf + 16), (size_t)count * IDX_SIZE, limit) ||
-            !region_fits(get_u32(buf + 20), (size_t)count * VAL_SIZE, limit) ||
+        if (!records_fit(get_u32(buf + 16), count, IDX_SIZE, limit) ||
+            !records_fit(get_u32(buf + 20), count, VAL_SIZE, limit) ||
             !region_fits(string_off, string_len, limit) ||
-            !region_fits(chain_off, (size_t)chain_count * CHAIN_SIZE, limit)) {
+            !records_fit(chain_off, chain_count, CHAIN_SIZE, limit)) {
             return bad(err, "image offsets fall outside the image");
         }
         if (chain_count > 0 && chain_off == 0) {

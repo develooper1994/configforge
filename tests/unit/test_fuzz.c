@@ -42,14 +42,16 @@ static void check(int c, const char* w) {
 static cf_u64 g_state;
 
 static void seed(cf_u64 s) {
-    g_state = (s != 0) ? s : (cf_u64)88172645463325252U;
+    /* 88172645463325252 and, below, 2685821657736338717, as expressions:
+       on a 32-bit long the literals are long longs, which C89 has not. */
+    g_state = (s != 0) ? s : (((cf_u64)20529293U << 32) | (cf_u64)3418323524U);
 }
 
 static cf_u64 next(void) {
     g_state ^= g_state >> 12;
     g_state ^= g_state << 25;
     g_state ^= g_state >> 27;
-    return g_state * (cf_u64)2685821657736338717U;
+    return g_state * (((cf_u64)625341585U << 32) | (cf_u64)1332534557U);
 }
 
 static size_t pick(size_t n) {
