@@ -36,28 +36,33 @@ v0.4.0, real kqueue, the documents, 1.0.0.
 
 ### Resume here (2026-10-31)
 
-Whoever continues: read `CONTRIBUTING.md`, then do these in order.
+Where it stands: v0.4.1 is released (0.4.0 was tagged and never
+released, CHANGELOG 0.4.1); the tree says 1.0.0; the documentation audit
+is fixed; tier 2 passed on 92cd643. Everything is on `main`.
 
-1. **Tier 2** passed on 92cd643 (all green, 18 minutes, without the
-   ABI step, which came after). After a rebuilt environment, run
-   `scripts/buildenv/setup.sh` first (it now installs `abigail-tools`).
-2. **The ABI step** (D-56) ran first on 2026-10-31 against v0.3.0 and
-   reported the 0.4.0 changes, as it should before 1.0. After v0.4.0 is
-   tagged, run it again: it should then report only what changes after.
-3. **v0.4.1 is released** (2026-10-31, built locally, no macOS
-   archive); 0.4.0 was tagged and not released (CHANGELOG 0.4.1). The
-   tree is 1.0.0 now.
-4. **Real kqueue** (item 6).
-5. **The documents** (item 7): the audit of 2026-10-31 is fixed - the
-   README, Guide, CONTRIBUTING, Maintaining, SECURITY, the header
-   comments, and the API reference's introduction (internal tier, flag
-   bits, sized structs, the C11 `cf_get`, the error codes). Left, decided
-   by the maintainer (2026-10-31): give `cf_report_info` and
-   `cf_doctor_gate` a leading `size`, as D-51's other structs have, with
-   an `_INIT` macro, the library reading only as far as `size` reaches,
-   every caller (tests, Doctor, bindings) updated, and a test that a
-   short `size` still works.
-6. **1.0.0**: tier 2, CHANGELOG dated, tag, release as in step 3.
+Before anything: read `CONTRIBUTING.md`, then run
+`sh scripts/buildenv/dev-setup.sh --check` (Windows:
+`pwsh scripts/buildenv/dev-setup.ps1 -Check`) and, if a tool is missing,
+the same without the check.
+
+Left, in order - each a verified commit (`CONTRIBUTING.md`, "How work is
+done here"):
+
+1. **A `size` for `cf_report_info` and `cf_doctor_gate`** (decided by
+   the maintainer): the leading member as in D-51's other structs, an
+   `_INIT` macro, the library reading only as far as `size` reaches,
+   every caller updated (tests, `tools/doctor`, the C++ header, the
+   Rust and Python bindings), a test that a short `size` still works,
+   `cmake -P scripts/apiref.cmake`, CHANGELOG under 1.0.0.
+2. **Real kqueue** (item 6 below): `scripts/buildenv/freebsd.sh`.
+3. **Tier 2** (`cmake -DSOURCE=index -DTIER=2 -DJOBS=4 -P
+   scripts/verify.cmake`), the ABI step in it now comparing with
+   v0.4.1; then the CHANGELOG heading dated and **the Windows release
+   build before the tag**: MSVC's Release has failed where Debug passed.
+4. **1.0.0**: tag `v1.0.0`, the archives as `scripts/README.md`,
+   "Releasing without CI", says. Publishing the GitHub release needs the
+   maintainer's yes. Never move a pushed tag: a fix after tagging is
+   the next patch version.
 
 2. **The interface fixed before it freezes.** An independent review of
    every public header and both bindings (2026-10-30) found what 1.x
