@@ -7,6 +7,15 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **No string borrowed past the call that took it**: a builder copies
+  every source name, path, prefix and format it is given, and a
+  definition every string and list in it - description, new name,
+  allowed spellings, aliases, policy - so a caller's buffer freed after
+  the call is never read, by create, by explain(), or by a watcher. A
+  memory source's pairs and a command line's arguments are read by
+  create and not after. `cf_define` also copies a caller's `cf_def` only
+  as far as its `size` reaches (D-51). `test_lifetime` frees every one
+  of them, scribbled over, before create, under AddressSanitizer.
 - **Create, update and delete as one edit** (`cf_edit.h`, D-54): set
   keys, typed or as text, and delete others so the next source down
   supplies them again; commit holds the whole change to the contract and
