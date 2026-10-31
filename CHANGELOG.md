@@ -7,6 +7,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **The development environment in one command**:
+  `scripts/buildenv/dev-setup.sh` (apt, Homebrew, or a container) and
+  `dev-setup.ps1` (winget for MSVC and the tools, and the WSL
+  distribution), each run again to bring a machine up to date, and each
+  with a check that names every missing tool and the step it serves.
 - **What 1.x promises, checked** (D-56): semantic versioning over the C
   interface, with what counts as breaking written down, and
   `verify -DEXTRA=abi` (tier 2) comparing the shared library with the

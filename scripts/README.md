@@ -49,6 +49,7 @@ once so that "works on my machine" has a machine to point at.
 
 | File | What it makes |
 | ---- | ------------- |
+| `buildenv/dev-setup.sh`, `buildenv/dev-setup.ps1` | the whole environment in one command, on the machine it runs on: setup.sh's list through apt, Homebrew's on macOS, the container elsewhere; on Windows MSVC, CMake, Ninja, Git, Python and LLVM through winget, and the WSL distribution below. `--check` / `-Check` names each tool and the verify step it serves, changing nothing |
 | `buildenv/setup.sh` | the list itself: Ubuntu 24.04 packages, as CI runs, and the locales the suite asks for. Run as root, by the two below |
 | `buildenv/Containerfile` | a container image from it, for `docker build` or `podman build` |
 | `buildenv/wsl-distro.ps1` | a WSL distribution from it, `configforge-dev`, whose disk lives on the drive you name (`-Dir D:\cf-wsl`) - for a Windows machine where C: has no room or there is no container runtime |
