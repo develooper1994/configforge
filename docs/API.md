@@ -14,6 +14,22 @@ and `cf_port.h`'s `cf_ref_*`, `cf_fmt*` and `cf_cmp_*`. The flags a
 definition takes are bits 0-15 and a source's bits 16 and up; an
 unknown bit is refused by name.
 
+Every error carries one of these codes, stable from 1.0;
+`cf_code_name` and `cf_code_description` give the last two columns.
+
+| Code | Name | Meaning |
+| ---- | ---- | ------- |
+| `CF_OK` | `ok` | no error |
+| `CF_E_KEY` | `key` | malformed or unknown key |
+| `CF_E_DEFINITION` | `definition` | a definition contradicts itself |
+| `CF_E_CONVERT` | `convert` | text does not denote that type |
+| `CF_E_VALIDATE` | `validate` | outside a range, or not permitted |
+| `CF_E_REQUIRED` | `required` | a required parameter has no value |
+| `CF_E_SOURCE` | `source` | a source could not be read |
+| `CF_E_CAPABILITY` | `capability` | a source cannot do what was asked |
+| `CF_E_POLICY` | `policy` | policy conflict |
+| `CF_E_MEMORY` | `memory` | allocation refused or arena full |
+
 - [`configforge.h`](#configforgeh) - 65
 - [`cf_alloc.h`](#cf_alloch) - 12
 - [`cf_define.h`](#cf_defineh) - 19

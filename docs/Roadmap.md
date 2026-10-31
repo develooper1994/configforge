@@ -54,7 +54,6 @@ Whoever continues: read `CONTRIBUTING.md`, then do these in order.
    `scripts/apiref.cmake` from the header comments - fix there, then
    regenerate):
    * missing: the C11 `cf_get` (a macro, so the generator skips it);
-     the error codes of `cf_code.def` as a table;
      the members of the sized structs (`cf_error`, `cf_live_options`,
      `cf_live_status`, `cf_log_event`). The internal tier and the flag
      bits are now in the reference's introduction;
