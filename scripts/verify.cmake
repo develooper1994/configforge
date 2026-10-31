@@ -31,6 +31,7 @@
 #   tidy     clang-tidy over the library and Doctor (CF_CLANG_TIDY=ON)
 #   clang    the whole suite built with clang
 #   valgrind every unit test under memcheck, on an uninstrumented build
+#   proofs   the bounded proofs of tests/proofs under CBMC
 #   shared   the whole suite against a shared library (BUILD_SHARED_LIBS),
 #            CI's shared job; the Python binding's tests run only here,
 #            since ctypes loads a shared library
@@ -88,6 +89,7 @@ if(DEFINED TIER)
       clang
       shared
       valgrind
+      proofs
       tsan
       yaml
       compilers
@@ -312,6 +314,20 @@ foreach(x ${EXTRA})
       -DCMAKE_CXX_COMPILER=${CLANGXX_EXE})
     step("clang build" ${build} build-clang ${debug})
     step("clang test" ${test} build-clang)
+  elseif(x STREQUAL "proofs")
+    # The bounded proofs (docs/Safety.md): no input of up to a bound
+    # makes the proved functions read or write out of bounds or overflow.
+    find_program(CBMC_EXE cbmc)
+    if(NOT CBMC_EXE)
+      message("proofs                skipped: no cbmc")
+      continue()
+    endif()
+    step(
+      "proofs"
+      ${CMAKE_COMMAND}
+      -DSRC=${ROOT}
+      -P
+      ${ROOT}/scripts/proofs.cmake)
   elseif(x STREQUAL "valgrind")
     # Every unit test under Valgrind's memcheck: what AddressSanitizer
     # cannot see - a read of memory that was allocated and never
@@ -515,8 +531,9 @@ foreach(x ${EXTRA})
     endif()
   else()
     message(
-      FATAL_ERROR "unknown EXTRA step '${x}': kqueue, tidy, clang, "
-                  "shared, valgrind, tsan, yaml, compilers, fuzz or coverage")
+      FATAL_ERROR
+        "unknown EXTRA step '${x}': kqueue, tidy, clang, "
+        "shared, valgrind, proofs, tsan, yaml, compilers, fuzz or " "coverage")
   endif()
 endforeach()
 
