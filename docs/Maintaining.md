@@ -16,13 +16,11 @@ says, as `docs/Roadmap.md` is.
   resources watched.
 * **1.0.0 only when everything is done and checked again.** The plan is
   `docs/Roadmap.md`, "Next: 1.0.0".
-* **GitHub Actions is unavailable for now** (billing). Every job it runs
+* **GitHub Actions has been unavailable since 2026-10** (billing). Every job it runs
   is run locally instead - `scripts/verify.cmake` by tier (D-50),
   `scripts/release-local.sh` and `.ps1` for a release - and counts as CI
   until it returns.
-* **The repository reads as its maintainers wrote it**: no generated
-  attribution in commits or files. Tools that help with the work read
-  `CONTRIBUTING.md` like anyone else.
+* **Commits and files carry their maintainers' names only.**
 * **"Authorization"** in the maintainer's words is the Policy section of
   the original idea document (outside the repository,
   `ProjectIdeas/ideas/library/ConfigForge.md`, sections 8, 22 and 46).
@@ -87,8 +85,8 @@ The first round:
   diskpart `compact vdisk`).
 * **Build on D:.** The WSL distribution `configforge-dev` lives at
   `D:\cf-wsl` (`scripts/buildenv/wsl-distro.ps1`), root, with every
-  tool `setup.sh` lists plus Rust 1.75, clippy and rustfmt from Ubuntu's
-  archive. Linux verify:
+  tool `setup.sh` lists, Rust among them (`dev-setup.ps1` makes or
+  updates it). Linux verify:
   `wsl -d configforge-dev -- cmake -DSOURCE=index -DJOBS=4 -DWORK=/root/cfv -P scripts/verify.cmake`
   run from the checkout under `/mnt/c/...`; `CARGO_TARGET_DIR=/root/rt`.
 * **Windows verify** with temporary files on D::
@@ -102,7 +100,7 @@ The first round:
   300 GB of virtual size). Moving it to D:
   (`wsl --manage Ubuntu --move D:\wsl\Ubuntu`, WSL 2.3 or later) frees
   C: without losing anything in it.
-* `D:\cf-handoff` holds this machine's helper scripts (one-call unit
+* `D:\cf-tools` holds this machine's helper scripts (one-call unit
   checks, negative proofs). They name this machine's paths and are not
   needed elsewhere: `scripts/verify.cmake` is the interface.
 

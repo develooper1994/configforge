@@ -12,7 +12,9 @@ the CHANGELOG unless you ask otherwise.
 
 ## Supported versions
 
-Before 1.0 only the latest release and `main` receive fixes.
+The latest release of the current major version and `main` receive
+fixes. A fix that cannot keep the interface (D-56) waits for the next
+major version, and the advisory says so.
 
 ## What is in scope
 
