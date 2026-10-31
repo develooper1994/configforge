@@ -38,9 +38,9 @@ v0.4.0, real kqueue, the ABI check, the documents, 1.0.0.
 
 Whoever continues: read `CONTRIBUTING.md`, then do these in order.
 
-1. **Tier 2** was run on 92cd643 (log `D:\cf-work\verify_t2.log` on the
-   maintainer's machine); if its result is not known, run it again:
-   `cmake -DSOURCE=index -DTIER=2 -DJOBS=4 -P scripts/verify.cmake`.
+1. **Tier 2** passed on 92cd643 (all green, 18 minutes, without the
+   ABI step, which came after). After a rebuilt environment, run
+   `scripts/buildenv/setup.sh` first (it now installs `abigail-tools`).
 2. **The ABI step** (item 7, D-56) is written and has never run. Run
    `cmake -DEXTRA=abi -DJOBS=4 -P scripts/verify.cmake`; against v0.3.0
    it only reports. Fix the step if it errors, then delete item 7.
