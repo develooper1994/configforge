@@ -55,9 +55,11 @@ static void test_integers(void) {
 #if CF_WITH_REAL
 static void test_reals(void) {
     char   buf[64];
-    double r    = 0.0;
-    size_t end  = 0;
-    double zero = 0.0;
+    double r   = 0.0;
+    size_t end = 0;
+    /* volatile, as in test_numeric: a constant zero is folded, and MSVC's
+       Release build refuses the division it then sees (C4723). */
+    volatile double zero = 0.0;
 
     check(cf_f64_to_text(1.5, NULL, 8) == 0 && cf_f64_to_text(1.5, buf, 0) == 0,
           "nowhere to write a real");
