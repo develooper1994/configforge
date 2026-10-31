@@ -7,6 +7,14 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **The program's own C standard at the interface** (D-53): under C11
+  one `cf_get(cfg, key, &out)` typed by `out` - `int`, `long`,
+  `long long`, `bool`, `double`, `const char*` - refusing an integer the
+  target cannot hold; C11 atomics for a compiler that is neither
+  GCC-like nor MSVC; under C23 and C++17, `[[nodiscard]]` on the calls
+  whose result is the only sign of failure. Compile-time checks hold the
+  library to what D-51 rests on, and the header gate compiles every
+  header as C89, C11 and C23.
 - **Rust reads text without a copy**: `Config::str` returns a `&str`
   borrowed from the snapshot, so the compiler holds the caller to its
   lifetime; and `Config` is `Debug`, showing its keys and digest and

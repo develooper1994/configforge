@@ -12,22 +12,41 @@ set(gen_inc "")
 if(EXISTS "${BIN}/generated/configforge/cf_build_options.h")
   set(gen_inc "-I${BIN}/generated")
 endif()
-foreach(h ${headers})
-  get_filename_component(basename "${h}" NAME)
-  set(probe "${BIN}/probe_${basename}.c")
-  file(WRITE "${probe}"
-       "#include <configforge/${basename}>\nint main(void){return 0;}\n")
+# As C89, and as each later standard the compiler knows: what a header
+# adds for C11 and C23 (D-53) is code too, and compiles nowhere unless
+# something compiles it.
+set(c_stds c89)
+foreach(std c11 c2x)
+  file(WRITE "${BIN}/probe_std_${std}.c" "int main(void){return 0;}\n")
   execute_process(
-    COMMAND ${CC} -std=c89 -pedantic -Werror ${gen_inc} -I${SRC}/include -c -o
-            "${BIN}/probe_${basename}.o" "${probe}"
+    COMMAND ${CC} -std=${std} -c -o "${BIN}/probe_std_${std}.o"
+            "${BIN}/probe_std_${std}.c"
     RESULT_VARIABLE rc
-    OUTPUT_VARIABLE out
-    ERROR_VARIABLE out)
-  if(NOT rc EQUAL 0)
-    message("VIOLATION: ${basename} does not compile standalone as C89")
-    message("${out}")
-    set(bad 1)
+    OUTPUT_QUIET ERROR_QUIET)
+  if(rc EQUAL 0)
+    list(APPEND c_stds ${std})
+  else()
+    message("header gate: C headers as ${std} skipped, not supported here")
   endif()
+endforeach()
+foreach(std ${c_stds})
+  foreach(h ${headers})
+    get_filename_component(basename "${h}" NAME)
+    set(probe "${BIN}/probe_${std}_${basename}.c")
+    file(WRITE "${probe}"
+         "#include <configforge/${basename}>\nint main(void){return 0;}\n")
+    execute_process(
+      COMMAND ${CC} -std=${std} -pedantic -Werror ${gen_inc} -I${SRC}/include -c
+              -o "${BIN}/probe_${std}_${basename}.o" "${probe}"
+      RESULT_VARIABLE rc
+      OUTPUT_VARIABLE out
+      ERROR_VARIABLE out)
+    if(NOT rc EQUAL 0)
+      message("VIOLATION: ${basename} does not compile standalone as ${std}")
+      message("${out}")
+      set(bad 1)
+    endif()
+  endforeach()
 endforeach()
 if(bad)
   message(FATAL_ERROR "header gate failed")

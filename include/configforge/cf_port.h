@@ -29,7 +29,13 @@ extern "C" {
 #if defined(CF_FORCE_PORTABLE)
 #define CF_HAVE_C99 0
 #define CF_HAVE_C11 0
+#define CF_HAVE_C23 0
 #else
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+#define CF_HAVE_C23 1
+#else
+#define CF_HAVE_C23 0
+#endif
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
 #define CF_HAVE_C99 1
 #else
@@ -176,6 +182,27 @@ typedef int cf_bool;
 #endif
 
 /* ------------------------------------------------------------------ *
+ * What a later standard can say (D-53)
+ *
+ * The library is C89 so that it builds everywhere; a program compiled
+ * as a later standard gets what that standard adds to the same
+ * declarations, as the C++ header does for C++.
+ *
+ * CF_NODISCARD marks a call whose result is the only way to know it
+ * failed - a create, a try, an open, a write. C23's and C++17's
+ * [[nodiscard]], which a (void) cast silences where ignoring is meant.
+ * Not GCC's warn_unused_result, which a cast does not silence, so code
+ * that ignores a result on purpose would have no way to say so.
+ * ------------------------------------------------------------------ */
+
+#if CF_HAVE_C23 || (defined(__cplusplus) && __cplusplus >= 201703L) ||                 \
+    (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
+#define CF_NODISCARD [[nodiscard]]
+#else
+#define CF_NODISCARD
+#endif
+
+/* ------------------------------------------------------------------ *
  * Export control
  *
  * CF_API marks every function a program may call. In a static build it
@@ -261,6 +288,11 @@ typedef int cf_bool;
 #elif !defined(CF_FORCE_PORTABLE) && defined(_MSC_VER)
 #define CF_ATOMIC_WIN32 1
 #define CF_ATOMIC_KIND "Interlocked"
+#elif !defined(CF_FORCE_PORTABLE) && CF_HAVE_C11 && !defined(__STDC_NO_ATOMICS__)
+/* Any C11 compiler with the optional atomics: the portable way, for a
+   toolchain that is neither GCC-like nor MSVC. */
+#define CF_ATOMIC_C11 1
+#define CF_ATOMIC_KIND "C11 stdatomic"
 #else
 #define CF_ATOMIC_NONE 1
 #define CF_ATOMIC_KIND "none (single-threaded only)"

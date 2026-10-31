@@ -9,7 +9,23 @@
 #include "configforge/configforge.h"
 #include "configforge/cf_platform.h"
 
+#include <stddef.h>
 #include <string.h>
+
+/* What D-51 rests on, checked by the compiler rather than by a reader:
+   every sized struct begins with its size, so a library and a program
+   of different 1.x releases agree where to find it; and the integer
+   types are the widths the interface says. */
+CF_STATIC_ASSERT(offsetof(cf_error, size) == 0, error_size_first);
+CF_STATIC_ASSERT(offsetof(cf_def, size) == 0, def_size_first);
+CF_STATIC_ASSERT(offsetof(cf_source_vtable, size) == 0, vtable_size_first);
+CF_STATIC_ASSERT(offsetof(cf_codec, size) == 0, codec_size_first);
+CF_STATIC_ASSERT(offsetof(cf_doc_sink, size) == 0, sink_size_first);
+CF_STATIC_ASSERT(offsetof(cf_live_status, size) == 0, status_size_first);
+CF_STATIC_ASSERT(offsetof(cf_live_options, size) == 0, options_size_first);
+CF_STATIC_ASSERT(offsetof(cf_log_event, size) == 0, log_size_first);
+CF_STATIC_ASSERT(sizeof(cf_i64) == 8 && sizeof(cf_u64) == 8, i64_is_64_bits);
+CF_STATIC_ASSERT(sizeof(cf_i32) == 4 && sizeof(cf_u32) == 4, i32_is_32_bits);
 
 #define CF_BUILDER_SOURCES 16
 
