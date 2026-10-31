@@ -33,6 +33,8 @@
 #   valgrind every unit test under memcheck, on an uninstrumented build
 #   proofs   the bounded proofs of tests/proofs under CBMC
 #   wasm     the unit tests built for wasm32-wasi, run under Node's WASI
+#   abi      the shared library against the last release's (abidiff);
+#            ABI_BASE=<tag> to compare with another
 #   shared   the whole suite against a shared library (BUILD_SHARED_LIBS),
 #            CI's shared job; the Python binding's tests run only here,
 #            since ctypes loads a shared library
@@ -92,6 +94,7 @@ if(DEFINED TIER)
       valgrind
       proofs
       wasm
+      abi
       tsan
       yaml
       compilers
@@ -316,6 +319,113 @@ foreach(x ${EXTRA})
       -DCMAKE_CXX_COMPILER=${CLANGXX_EXE})
     step("clang build" ${build} build-clang ${debug})
     step("clang test" ${test} build-clang)
+  elseif(x STREQUAL "abi")
+    # The shared library against the last release's, by abidiff (D-56):
+    # within one major version from 1.0 on, an incompatible change fails;
+    # across a major one it is reported. ABI_BASE names the release to
+    # compare with, by default the newest tag.
+    find_program(ABIDIFF_EXE abidiff)
+    find_program(GIT_EXE git)
+    if(NOT ABIDIFF_EXE OR NOT GIT_EXE)
+      message("abi                   skipped: needs abidiff and git")
+      continue()
+    endif()
+    if(NOT DEFINED ABI_BASE)
+      execute_process(
+        COMMAND ${GIT_EXE} describe --tags --abbrev=0
+        WORKING_DIRECTORY "${REPO}"
+        OUTPUT_VARIABLE ABI_BASE
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif()
+    set(base "${ROOT}/../abi-base")
+    file(REMOVE_RECURSE "${base}")
+    file(MAKE_DIRECTORY "${base}")
+    execute_process(
+      COMMAND ${GIT_EXE} archive --format=tar -o "${base}.tar" "${ABI_BASE}"
+      WORKING_DIRECTORY "${REPO}"
+      RESULT_VARIABLE rc)
+    if(NOT rc EQUAL 0)
+      message(FATAL_ERROR "abi: no release '${ABI_BASE}' to compare with")
+    endif()
+    execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf "${base}.tar"
+                    WORKING_DIRECTORY "${base}")
+    set(abi_opts
+        -DBUILD_SHARED_LIBS=ON
+        -DCMAKE_BUILD_TYPE=Debug
+        -DCF_BUILD_TESTING=OFF
+        -DCF_BUILD_TOOLS=OFF
+        -DCF_BUILD_EXAMPLES=OFF)
+    step(
+      "abi base configure"
+      ${CMAKE_COMMAND}
+      -S
+      "${base}"
+      -B
+      "${base}/build"
+      ${abi_opts})
+    step(
+      "abi base build"
+      ${build}
+      "${base}/build"
+      --target
+      configforge
+      ${parallel})
+    step(
+      "abi configure"
+      ${CMAKE_COMMAND}
+      -S
+      .
+      -B
+      build-abi
+      ${abi_opts})
+    step(
+      "abi build"
+      ${build}
+      build-abi
+      --target
+      configforge
+      ${parallel})
+    file(GLOB old_lib "${base}/build/libconfigforge.so*")
+    file(GLOB new_lib "${ROOT}/build-abi/libconfigforge.so*")
+    if(NOT old_lib OR NOT new_lib)
+      message(FATAL_ERROR "abi: no shared library built to compare")
+    endif()
+    list(SORT old_lib)
+    list(SORT new_lib)
+    list(GET old_lib 0 old_lib)
+    list(GET new_lib 0 new_lib)
+    execute_process(
+      COMMAND ${ABIDIFF_EXE} --headers-dir1 "${base}/include/configforge"
+              --headers-dir2 "${ROOT}/include/configforge" ${old_lib} ${new_lib}
+      RESULT_VARIABLE abi_rc
+      OUTPUT_VARIABLE abi_out
+      ERROR_VARIABLE abi_out)
+    string(REGEX MATCH "^v?([0-9]+)" _ "${ABI_BASE}")
+    set(base_major "${CMAKE_MATCH_1}")
+    include("${ROOT}/cmake/ConfigForgeVersion.cmake")
+    configforge_read_version(now)
+    string(REGEX MATCH "^([0-9]+)" _ "${now}")
+    set(now_major "${CMAKE_MATCH_1}")
+    # abidiff's status: bit 8 an incompatible change, bit 4 a change,
+    # bits 1 and 2 that it could not compare at all.
+    math(EXPR incompatible "${abi_rc} & 8")
+    math(EXPR broken "${abi_rc} & 3")
+    if(broken)
+      message("${abi_out}")
+      message(FATAL_ERROR "abi: abidiff could not compare (status ${abi_rc})")
+    elseif(
+      incompatible
+      AND now_major GREATER_EQUAL 1
+      AND now_major EQUAL base_major)
+      message("abi                   FAILED")
+      message("${abi_out}")
+      message(FATAL_ERROR "an incompatible change within ${now_major}.x")
+    elseif(abi_rc EQUAL 0)
+      message("abi                   ok (same as ${ABI_BASE})")
+    else()
+      message("abi                   ok (${ABI_BASE} -> ${now}, a major "
+              "release may change it):\n${abi_out}")
+    endif()
   elseif(x STREQUAL "wasm")
     # WebAssembly, WASI preview 1 (D-55): the unit tests built for wasm32
     # and run under Node's WASI. A 32-bit size_t, no threads, no file
@@ -565,8 +675,8 @@ foreach(x ${EXTRA})
     message(
       FATAL_ERROR
         "unknown EXTRA step '${x}': kqueue, tidy, clang, "
-        "shared, valgrind, proofs, wasm, tsan, yaml, compilers, fuzz "
-        "or coverage")
+        "shared, valgrind, proofs, wasm, abi, tsan, yaml, compilers, "
+        "fuzz or coverage")
   endif()
 endforeach()
 

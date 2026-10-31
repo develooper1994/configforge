@@ -2320,6 +2320,33 @@ platform, never on 64-bit.
 
 ---
 
+## D-56 — What 1.x promises, and the check that holds it
+
+**Question.** From 1.0 a program built against one 1.x release must keep working with a
+later one, without a rebuild. What exactly is promised, and what keeps the promise
+other than care?
+
+**Decision.** Semantic versioning, over the public headers' C interface: within one
+major version, a later release links and runs where an earlier one did. Breaking, and
+therefore only in a major release: a function, macro or enumerator removed or renamed;
+a parameter, return or enumerator value changed; a struct's member moved, removed or
+retyped; a meaning changed for input that was accepted before. Not breaking: a new
+function, enumerator, flag bit or error code; a member appended to a sized struct (D-51),
+which a caller built against the earlier, smaller size never sees; a refusal of input
+that was always documented as wrong. The internal tier D-51 names (`cf_platform_*`,
+`cf_ks_*`, `cf_flatten*`) is outside the promise, and so are the text of messages and
+the order of findings. The C++ header and the bindings are source interfaces over the
+same C ABI and follow its version.
+
+The check is `verify -DEXTRA=abi`, in tier 2 and so before every release: the shared
+library built from the last release tag and from the tree, with debug information, and
+compared by libabigail's `abidiff` against the public headers. An incompatible change
+within one major version fails the run; across a major version, and before 1.0, the
+report is printed and the run goes on. A change abidiff calls compatible - a function
+added - is printed either way, so the release notes can name it.
+
+---
+
 
 One decision is open, because nothing has been built: profiles as a core concept
 (D-12). Value interpolation (D-10), long reserved, is decided and built. Everything else is decided,

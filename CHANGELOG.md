@@ -7,6 +7,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **What 1.x promises, checked** (D-56): semantic versioning over the C
+  interface, with what counts as breaking written down, and
+  `verify -DEXTRA=abi` (tier 2) comparing the shared library with the
+  last release's by `abidiff` - an incompatible change within one major
+  version from 1.0 fails the run.
 - **WebAssembly** (D-55): the library and its unit tests for wasm32-wasi,
   through clang and wasi-libc (`cmake/toolchains/wasm32-wasi.cmake`), run
   under Node's WASI (`scripts/wasi-run.js`) - single-threaded, no change

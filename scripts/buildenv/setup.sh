@@ -15,7 +15,7 @@ apt-get install -y --no-install-recommends \
   build-essential cmake ninja-build ccache pkg-config python3 \
   clang clang-format clang-tidy libclang-rt-18-dev llvm \
   binutils cppcheck gcovr cmake-format valgrind cbmc \
-  lld wasi-libc libclang-rt-18-dev-wasm32 nodejs \
+  lld wasi-libc libclang-rt-18-dev-wasm32 nodejs abigail-tools \
   musl-tools tcc pcc \
   libyaml-dev libexpat1-dev libsqlite3-dev libkqueue-dev \
   qemu-system-x86 qemu-utils openssh-client \
