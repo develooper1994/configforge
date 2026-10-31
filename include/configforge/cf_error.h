@@ -57,6 +57,8 @@ typedef struct cf_error {
 #define CF_ERROR_INIT {sizeof(cf_error), 0, {0}, {0}, {0}}
 /* clang-format on */
 
+/* Empties `e`: code CF_OK, key, source and message empty. `size` is
+   kept, so a cleared error can be reused. NULL is ignored. */
 CF_API void cf_error_clear(cf_error* e);
 
 /* What `src` says, copied into `dst` as far as `dst` has room: 1.0's

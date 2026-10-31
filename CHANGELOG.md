@@ -5,6 +5,22 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ## 1.0.0 — unreleased
 
+### Changed
+
+- `cf_derive_in` and `cf_watcher_open` are `CF_NODISCARD`, as every other
+  call that creates something is (D-53): a result dropped is a leak.
+
+### Fixed
+
+- The reference says what the code does: `cf_live_open`'s example takes
+  six arguments; `cf_app` reads no file, and `cf_app_builder` is the way
+  to add one; `"edit-refused"` is among the stable log events; a refused
+  `cf_live_commit` touches no status; `CF_LIVE_OPTIONS_INIT` sets
+  `log_min`; `cf_edit_begin` also returns NULL for a NULL argument;
+  `cf_error_clear`, `cf_app_builder` and `cf_builder_abort` have their own
+  descriptions, and `cf_builder_file_codec` and `cf_live_commit` keep
+  theirs.
+
 ## 0.4.1 — 2026-10-31
 
 ### Fixed

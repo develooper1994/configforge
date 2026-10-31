@@ -36,9 +36,11 @@ struct cf_config;
 typedef struct cf_edit cf_edit;
 
 /* A change to `target`, a source of `c` by name. The edit keeps its own
-   reference to `c`. NULL, with `err` saying why, only when there is no
-   memory: whether the source exists, can be written and may be, is asked
-   at commit with the rest, so every refusal comes from one place. */
+   reference to `c`. NULL, with `err` saying why, when `c` or `target`
+   is NULL or there is no memory - an edit allocates from the default
+   allocator, also for a configuration built in an arena. Whether the
+   source exists, can be written and may be, is asked at commit with the
+   rest, so every refusal comes from one place. */
 CF_NODISCARD CF_API cf_edit* cf_edit_begin(struct cf_config* c, const char* target,
                                            cf_error* err);
 

@@ -53,9 +53,10 @@ application:
 
     command line  >  environment (NAME_)  >  built-in default
 
-File sources join that chain when the serialization layer lands;
-their rank is already reserved, so adding them will not renumber
-anything.
+cf_app reads no file. For files, start from cf_app_builder, which
+holds the same two sources, and add cf_builder_file at
+CF_RANK_USER_FILE or CF_RANK_SYS_FILE. Both expand response files
+(@file) and take the command line as UTF-8.
 
 ```c
 CF_NODISCARD CF_API cf_config* cf_app(const char* name, int argc, char* const* argv, cf_error* err);
@@ -79,8 +80,6 @@ CF_API cf_builder* cf_build(const cf_allocator* alloc);
 
 ```c
 CF_API cf_builder* cf_build_in(cf_arena* arena);
-CF_API cf_builder* cf_app_builder(const char* name, int argc, char* const* argv);
-CF_API void cf_builder_abort(cf_builder* b);
 ```
 
 Build inside a buffer the caller owns.
@@ -95,6 +94,21 @@ configuration's hold on it and never frees the caller's buffer.
 Everything the configuration points at lives in that buffer, so it
 has to outlive the configuration - which on the target this exists
 for is a static array, and outlives everything.
+
+```c
+CF_API cf_builder* cf_app_builder(const char* name, int argc, char* const* argv);
+```
+
+cf_app's builder, before create: the command line (CF_RANK_CLI) and
+the NAME_ environment (CF_RANK_ENV), for adding files and definitions
+to.
+
+```c
+CF_API void cf_builder_abort(cf_builder* b);
+```
+
+Frees a builder that will not be created; a cf_build_in arena is the
+caller's and is left alone.
 
 ```c
 CF_API cf_bool cf_builder_memory(cf_builder* b, const char* name, int rank, const cf_pair* pairs, size_t count);
@@ -114,6 +128,10 @@ never makes an unreadable one acceptable.
 ```c
 CF_API cf_bool cf_builder_file_codec(cf_builder* b, const char* name, int rank, const char* path, const struct cf_codec* codec, unsigned flags);
 ```
+
+A file read by a codec the caller supplies, for a format this library
+does not have; see cf_source_file_codec. The codec must outlive the
+configuration.
 
 ```c
 CF_API cf_bool cf_builder_dotenv(cf_builder* b, const char* name, int rank, const char* path, const char* prefix, unsigned flags);
@@ -373,7 +391,7 @@ CF_NODISCARD CF_API cf_config* cf_derive(const cf_config* base, const char* sour
 ```
 
 ```c
-CF_API cf_config* cf_derive_in(const cf_config* base, cf_arena* arena, const char* source_name, const cf_pair* pairs, size_t count, cf_error* err);
+CF_NODISCARD CF_API cf_config* cf_derive_in(const cf_config* base, cf_arena* arena, const char*    source_name, const cf_pair* pairs, size_t count, cf_error* err);
 ```
 
 The same, inside an arena the caller owns. A configuration built with
@@ -467,7 +485,7 @@ cf_watcher_open fails with CF_E_CAPABILITY and says so, and
 cf_changed works as before.
 
 ```c
-CF_API cf_watcher* cf_watcher_open(const cf_config* c, const cf_allocator* a, cf_error* err);
+CF_NODISCARD CF_API cf_watcher* cf_watcher_open(const cf_config* c, const cf_allocator* a, cf_error* err);
 ```
 
 `a` NULL means the default allocator. Fails when the configuration
@@ -855,9 +873,11 @@ CF_NODISCARD CF_API cf_edit* cf_edit_begin(struct cf_config* c, const char* targ
 ```
 
 A change to `target`, a source of `c` by name. The edit keeps its own
-reference to `c`. NULL, with `err` saying why, only when there is no
-memory: whether the source exists, can be written and may be, is asked
-at commit with the rest, so every refusal comes from one place.
+reference to `c`. NULL, with `err` saying why, when `c` or `target`
+is NULL or there is no memory - an edit allocates from the default
+allocator, also for a configuration built in an arena. Whether the
+source exists, can be written and may be, is asked at commit with the
+rest, so every refusal comes from one place.
 
 ```c
 CF_API cf_bool cf_edit_set_text(cf_edit* e, const char* key, const char* value);
@@ -1099,7 +1119,8 @@ fails.
 CF_API void cf_error_clear(cf_error* e);
 ```
 
-clang-format on
+Empties `e`: code CF_OK, key, source and message empty. `size` is
+kept, so a cleared error can be reused. NULL is ignored.
 
 ```c
 CF_API void cf_error_copy(cf_error* dst, const cf_error* src);
@@ -1560,7 +1581,7 @@ it again:
         return b;
     }
 
-    cf_live* live = cf_live_open(CF_LIVE_AUTO, build, NULL, NULL, &err);
+    cf_live* live = cf_live_open(CF_LIVE_AUTO, build, NULL, NULL, NULL, &err);
 
     on any thread, for each request:
         cf_config* cfg = cf_live_get(live);
@@ -1650,6 +1671,15 @@ looping on it spins: use cf_live_reload there.
 ```c
 CF_NODISCARD CF_API cf_live_result cf_live_commit(cf_live* l, struct cf_edit* e, const char* note, cf_error* err);
 ```
+
+Commit `e` (cf_edit.h) and reload, in one step: the change an
+administrator made reaches readers the way an edit to a file does,
+through the build, the check and the mode - under APPROVE it waits to
+be approved. CF_LIVE_FAILED, with `err` saying why, when the commit
+was refused, and nothing was written: the log has an "edit-refused"
+event, and the status is not touched, since nothing was reloaded. An
+edit that commits and then fails the build or the check is a failed
+reload like any other. Consumes the edit.
 
 ```c
 CF_API const struct cf_config* cf_live_pending(const cf_live* l);

@@ -53,9 +53,10 @@ typedef struct cf_config  cf_config;
  *
  *     command line  >  environment (NAME_)  >  built-in default
  *
- * File sources join that chain when the serialization layer lands;
- * their rank is already reserved, so adding them will not renumber
- * anything.
+ * cf_app reads no file. For files, start from cf_app_builder, which
+ * holds the same two sources, and add cf_builder_file at
+ * CF_RANK_USER_FILE or CF_RANK_SYS_FILE. Both expand response files
+ * (@file) and take the command line as UTF-8.
  * ------------------------------------------------------------------ */
 
 CF_NODISCARD CF_API cf_config* cf_app(const char* name, int argc, char* const* argv,
@@ -90,8 +91,15 @@ CF_API cf_builder* cf_build(const cf_allocator* alloc);
  * has to outlive the configuration - which on the target this exists
  * for is a static array, and outlives everything. */
 CF_API cf_builder* cf_build_in(cf_arena* arena);
+
+/* cf_app's builder, before create: the command line (CF_RANK_CLI) and
+   the NAME_ environment (CF_RANK_ENV), for adding files and definitions
+   to. */
 CF_API cf_builder* cf_app_builder(const char* name, int argc, char* const* argv);
-CF_API void        cf_builder_abort(cf_builder* b);
+
+/* Frees a builder that will not be created; a cf_build_in arena is the
+   caller's and is left alone. */
+CF_API void cf_builder_abort(cf_builder* b);
 
 CF_API cf_bool cf_builder_memory(cf_builder* b, const char* name, int rank,
                                  const cf_pair* pairs, size_t count);
@@ -107,10 +115,11 @@ CF_API cf_bool cf_builder_cli(cf_builder* b, const char* name, int rank, int arg
 CF_API cf_bool cf_builder_file(cf_builder* b, const char* name, int rank,
                                const char* path, const char* format, unsigned flags);
 
+struct cf_codec;
+
 /* A file read by a codec the caller supplies, for a format this library
    does not have; see cf_source_file_codec. The codec must outlive the
    configuration. */
-struct cf_codec;
 CF_API cf_bool cf_builder_file_codec(cf_builder* b, const char* name, int rank,
                                      const char* path, const struct cf_codec* codec,
                                      unsigned flags);
@@ -432,9 +441,10 @@ CF_NODISCARD CF_API cf_config* cf_derive(const cf_config* base, const char* sour
 
 /* The same, inside an arena the caller owns. A configuration built with
    cf_build_in has no allocator to borrow, so it must use this one. */
-CF_API cf_config* cf_derive_in(const cf_config* base, cf_arena* arena,
-                               const char* source_name, const cf_pair* pairs,
-                               size_t count, cf_error* err);
+CF_NODISCARD CF_API cf_config* cf_derive_in(const cf_config* base, cf_arena* arena,
+                                            const char*    source_name,
+                                            const cf_pair* pairs, size_t count,
+                                            cf_error* err);
 
 /* ------------------------------------------------------------------ *
  * Keeping a change
@@ -531,8 +541,8 @@ typedef struct cf_platform_wake cf_watcher;
 
 /* `a` NULL means the default allocator. Fails when the configuration
    read no file, since there would be nothing to wake it. */
-CF_API cf_watcher* cf_watcher_open(const cf_config* c, const cf_allocator* a,
-                                   cf_error* err);
+CF_NODISCARD CF_API cf_watcher* cf_watcher_open(const cf_config*    c,
+                                                const cf_allocator* a, cf_error* err);
 
 CF_API int   cf_watcher_fd(const cf_watcher* w); /* -1 where it is not a descriptor */
 CF_API void* cf_watcher_handle(const cf_watcher* w); /* NULL where it is not a HANDLE */
