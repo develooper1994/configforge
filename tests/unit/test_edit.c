@@ -149,6 +149,12 @@ static void test_live(void) {
     c = cf_live_get(l);
     check(r == CF_LIVE_SWAPPED && cf_get_int(c, "pool.size", 0) == 16,
           "cf_live_commit writes and reloads: readers see it");
+    {
+        cf_edit* e = cf_edit_begin(c, "store", &err);
+        r          = cf_live_commit(NULL, e, "admin", &err);
+        check(r == CF_LIVE_FAILED && err.code == CF_E_CAPABILITY,
+              "no cf_live is CF_E_CAPABILITY, as for poll, reload and approve");
+    }
     cf_config_free(c);
     cf_live_close(l);
     remove(DB);

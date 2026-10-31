@@ -552,7 +552,7 @@ void cf_live_reject(cf_live* l) {
 cf_live_result cf_live_commit(cf_live* l, cf_edit* e, const char* note, cf_error* err) {
     if (l == NULL) {
         cf_edit_abort(e);
-        cf_error_set(err, CF_E_SOURCE, NULL, NULL, "no reloads to commit to");
+        cf_error_set(err, CF_E_CAPABILITY, NULL, NULL, "no reloads to commit to");
         return CF_LIVE_FAILED;
     }
     if (!cf_edit_commit(e, note, err)) {
