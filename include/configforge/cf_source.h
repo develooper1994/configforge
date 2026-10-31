@@ -32,10 +32,19 @@ enum {
 
 typedef struct cf_source cf_source;
 
-/* One value to write. */
+/* What a write does to one key: set it to `value`, or delete it from
+   the source so that the next source down supplies it. Any other value
+   of `op` is refused, so an item left uninitialised fails loudly rather
+   than deleting. cf_edit (cf_edit.h) builds these; most programs never
+   do. */
+enum { CF_WRITE_SET = 0, CF_WRITE_DELETE = 1 };
+
+/* One change to write. An element of an array, so its layout is fixed
+   for 1.x (D-51). */
 typedef struct cf_write_item {
     const char* key;
-    cf_value    value;
+    cf_value    value; /* for CF_WRITE_SET */
+    unsigned    op;    /* CF_WRITE_SET or CF_WRITE_DELETE */
 } cf_write_item;
 
 /* Implemented by a source; `size` is sizeof(cf_source_vtable) where the

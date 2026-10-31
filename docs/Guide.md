@@ -467,6 +467,30 @@ log.level = "debug"  (text)
   default     "warn"                shadowed
 ```
 
+### Create, update, delete: one edit
+
+`cf_write` writes a list of values. An administration page wants the
+four verbs: read is the snapshot's, and `cf_edit` gathers the other
+three into one change - set a key, set another, delete a third so the
+file under the store supplies it again - and commits it whole:
+
+```c
+cf_edit* e = cf_edit_begin(cfg, "store", &err);
+cf_edit_set_int(e, "pool.size", 32);
+cf_edit_set_text(e, "log.level", "debug");
+cf_edit_unset(e, "feature.beta");          /* the next source down supplies it */
+if (!cf_edit_commit(e, "admin, 2026-10-30: incident 42", &err)) {
+    /* nothing written; err names the key and why */
+}
+```
+
+Commit asks what `cf_write` asks - can the source be written, may it,
+and does every value meet the contract and its key's policy - for the
+whole change, and writes it in one transaction or not at all. Under
+`cf_live`, `cf_live_commit(live, e, note, &err)` commits and reloads in
+one step, so the change reaches readers through the same build, check
+and mode an edited file does (D-54).
+
 ### Reloading, in the mode the operators chose
 
 The loop `reload.c` writes - notice, rebuild, check, swap without a

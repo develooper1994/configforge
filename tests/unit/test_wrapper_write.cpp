@@ -64,6 +64,7 @@ int main()
        caller hears why. */
     cf_write_item one;
     one.key = "server.port";
+    one.op = CF_WRITE_SET;
     cf_value_int(&one.value, 9443);
     cf::Error e;
     check(!d.write("mem", &one, 1, "test", &e), "write() to a memory source is refused");

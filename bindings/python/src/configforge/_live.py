@@ -127,6 +127,15 @@ class Live:
     def reject(self) -> None:
         n.lib.cf_live_reject(self._l)
 
+    def commit(self, edit, note: Optional[str] = None) -> Reload:
+        """Commit ``edit`` (an :class:`Edit`) and reload, in one step; raise
+        :class:`Error`, with nothing written, when the commit is refused."""
+        raw, edit._e = edit._live(), None
+        e = n.new_error()
+        r = n.lib.cf_live_commit(self._l, raw, n.encode(note if note is not None else edit._note),
+                                 ctypes.byref(e))
+        return self._result(r, e)
+
     @property
     def status(self) -> Status:
         """The reloads' status; safe from any thread."""

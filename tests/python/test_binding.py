@@ -184,6 +184,30 @@ class Reloading(unittest.TestCase):
             self.assertTrue(seen <= {True, False})
 
 
+class Editing(unittest.TestCase):
+    def test_an_edit_is_checked_at_commit(self):
+        cfg = server_cfg()
+        e = cf.edit(cfg, "file")
+        e["server.port"] = 9443
+        e["server.host"] = "web2"
+        del e["tls.enabled"]
+        self.assertEqual(len(e), 3)
+        with self.assertRaises(cf.Error) as x:
+            e.commit("note")
+        self.assertIn("cannot be written", str(x.exception))
+        with self.assertRaises(RuntimeError):
+            e.commit()
+
+    def test_a_block_that_raises_writes_nothing(self):
+        cfg = server_cfg()
+        with self.assertRaises(KeyError):
+            with cf.edit(cfg, "file") as e:
+                e.set("server.port", 1)
+                raise KeyError("stop")
+        with self.assertRaises(TypeError):
+            cf.edit(cfg, "file").set("server.port", [1])
+
+
 class Logging(unittest.TestCase):
     class Capture(logging.Handler):
         def __init__(self):

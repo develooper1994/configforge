@@ -36,6 +36,7 @@
 #include "configforge/cf_report.h"
 #include "configforge/cf_live.h"
 #include "configforge/cf_log.h"
+#include "configforge/cf_edit.h"
 
 #ifdef __cplusplus
 extern "C" {

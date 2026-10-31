@@ -7,6 +7,16 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **Create, update and delete as one edit** (`cf_edit.h`, D-54): set
+  keys, typed or as text, and delete others so the next source down
+  supplies them again; commit holds the whole change to the contract and
+  each key's policy and writes it in one transaction, or writes nothing
+  and names the key. `cf_live_commit` commits and reloads in one step.
+  `cf_write_item` gained `op` (`CF_WRITE_SET`, `CF_WRITE_DELETE`), and
+  any other value is refused, so an item left uninitialised fails
+  loudly rather than deleting. C++ `cf::Edit`, Python `cf.edit()` (a
+  `with` block commits, an exception drops it) and `Live.commit`, Rust
+  `Edit` and `Live::commit`.
 - **The program's own C standard at the interface** (D-53): under C11
   one `cf_get(cfg, key, &out)` typed by `out` - `int`, `long`,
   `long long`, `bool`, `double`, `const char*` - refusing an integer the

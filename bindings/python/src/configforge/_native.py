@@ -195,6 +195,15 @@ for _name, _res, _args in [
     ("cf_live_open", L, (c_int, BUILD_FN, c_void_p, c_void_p, c_void_p, E)),
     ("cf_live_open_with", L, (POINTER(cf_live_options), E)),
     ("cf_builder_log", None, (B, LOG_FN, c_void_p, c_int)),
+    ("cf_edit_begin", c_void_p, (C, c_char_p, E)),
+    ("cf_edit_set_text", c_int, (c_void_p, c_char_p, c_char_p)),
+    ("cf_edit_set_int", c_int, (c_void_p, c_char_p, c_int64)),
+    ("cf_edit_set_bool", c_int, (c_void_p, c_char_p, c_int)),
+    ("cf_edit_unset", c_int, (c_void_p, c_char_p)),
+    ("cf_edit_count", c_size_t, (c_void_p,)),
+    ("cf_edit_commit", c_int, (c_void_p, c_char_p, E)),
+    ("cf_edit_abort", None, (c_void_p,)),
+    ("cf_live_commit", c_int, (L, c_void_p, c_char_p, E)),
     ("cf_live_close", None, (L,)),
     ("cf_live_get", C, (L,)),
     ("cf_live_poll", c_int, (L, E)),
@@ -212,6 +221,7 @@ for _name, _res, _args in [
 
 # Present only where the library was built with reals (CF_WITH_REAL).
 _declare("cf_try_real", c_int, C, c_char_p, POINTER(ctypes.c_double), optional=True)
+_declare("cf_edit_set_real", c_int, c_void_p, c_char_p, ctypes.c_double, optional=True)
 _declare("cf_builder_real", c_int, B, c_char_p, ctypes.c_double, ctypes.c_double,
          ctypes.c_double, c_uint, optional=True)
 HAVE_REAL = hasattr(lib, "cf_try_real") and lib.cf_has_feature(b"real") != 0

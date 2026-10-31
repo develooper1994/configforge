@@ -43,12 +43,16 @@ static void test_write_and_read(void) {
 
     remove(DB);
     items[0].key = "server.port";
+    items[0].op  = CF_WRITE_SET;
     cf_value_int(&items[0].value, 9443);
     items[1].key = "tls.enabled";
+    items[1].op  = CF_WRITE_SET;
     cf_value_bool(&items[1].value, CF_TRUE);
     items[2].key = "log.level";
+    items[2].op  = CF_WRITE_SET;
     cf_value_text(&items[2].value, "debug", 5);
     items[3].key = "proxy";
+    items[3].op  = CF_WRITE_SET;
     cf_value_null(&items[3].value);
     check(cf_store_set(DB, items, 4, "admin, 2026-10-24: incident 42", &err),
           "a store is written, and created");
@@ -82,6 +86,7 @@ static void test_replace(void) {
     cf_config*    c;
 
     one.key = "server.port";
+    one.op  = CF_WRITE_SET;
     cf_value_int(&one.value, 8000);
     check(cf_store_set(DB, &one, 1, NULL, &err), "a second write");
     c = load(0, &err);
@@ -97,8 +102,10 @@ static void test_atomic(void) {
     cf_config*    c;
 
     two[0].key = "cache.size";
+    two[0].op  = CF_WRITE_SET;
     cf_value_int(&two[0].value, 64);
     two[1].key = "Bad Key";
+    two[1].op  = CF_WRITE_SET;
     cf_value_int(&two[1].value, 1);
     check(!cf_store_set(DB, two, 2, NULL, &err),
           "a change with an invalid key is refused");
@@ -116,6 +123,7 @@ static void test_contract(void) {
     cf_config*    c;
 
     one.key = "server.port";
+    one.op  = CF_WRITE_SET;
     cf_value_int(&one.value, 99999);
     check(cf_store_set(DB, &one, 1, "a typo", &err), "a store holds what it is given");
     b = cf_build(NULL);
@@ -151,6 +159,7 @@ static void test_write_granted(void) {
         }
         if (pass == 0) {
             one.key = "server.port";
+            one.op  = CF_WRITE_SET;
             cf_value_int(&one.value, 99999);
             check(!cf_write(c, "store", &one, 1, NULL, &err),
                   "a value the contract refuses is not written");
@@ -208,6 +217,7 @@ static void test_disabled(void) {
     cf_config_free(c);
 
     one.key = "a";
+    one.op  = CF_WRITE_SET;
     cf_value_int(&one.value, 1);
     check(!cf_store_set(DB, &one, 1, NULL, &err), "and so is writing one");
     has(err.message, "CF_WITH_SQLITE", "by name");
