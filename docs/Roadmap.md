@@ -44,10 +44,13 @@ Whoever continues: read `CONTRIBUTING.md`, then do these in order.
 2. **The ABI step** (D-56) ran first on 2026-10-31 against v0.3.0 and
    reported the 0.4.0 changes, as it should before 1.0. After v0.4.0 is
    tagged, run it again: it should then report only what changes after.
-3. **v0.4.0** (item 1): date the CHANGELOG heading, commit, tag
-   `v0.4.0`, push the tag, build the assets as `scripts/README.md`,
-   "Releasing", says, `gh release create` with the notes saying the
-   macOS archive is missing; then `cmake -DTO=1.0.0 -P scripts/version.cmake`.
+3. **v0.4.1** (item 1): tagged and pushed; 0.4.0 was tagged and not
+   released (its MSVC Release build refused a test, CHANGELOG 0.4.1).
+   The four archives and `SHA256SUMS` are built in `D:\cf-dist\v0.4.1`
+   on the maintainer's machine, the notes in `D:\cf-dist\notes-0.4.1.md`;
+   publishing waits for the maintainer's go-ahead:
+   `gh release create v0.4.1 <the files> --title "ConfigForge 0.4.1"
+   --notes-file <notes>`. Then `cmake -DTO=1.0.0 -P scripts/version.cmake`.
 4. **Real kqueue** (item 6).
 5. **The documents** (item 7). An audit (2026-10-31) found, each
    checked against the code:
