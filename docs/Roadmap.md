@@ -34,13 +34,76 @@ printers, type inference and `cf_fmt`; WebAssembly (D-55), which found
 an image read past its end on every 32-bit platform. Left, in order:
 v0.4.0, real kqueue, the ABI check, the documents, 1.0.0.
 
-Where it stands (2026-10-31): the ABI check (item 7) and its policy
-(D-56) are written and not yet run - the first run is
-`cmake -DEXTRA=abi -P scripts/verify.cmake` against v0.3.0, which only
-reports, since 0.x promises nothing. Tier 2 was running on the commit
-before it; its log is `D:\cf-work\verify_t2.log` on the maintainer's
-machine. A documentation audit is under way; its findings go into
-item 8.
+### Resume here (2026-10-31)
+
+Whoever continues: read `CONTRIBUTING.md`, then do these in order.
+
+1. **Tier 2** was run on 92cd643 (log `D:\cf-work\verify_t2.log` on the
+   maintainer's machine); if its result is not known, run it again:
+   `cmake -DSOURCE=index -DTIER=2 -DJOBS=4 -P scripts/verify.cmake`.
+2. **The ABI step** (item 7, D-56) is written and has never run. Run
+   `cmake -DEXTRA=abi -DJOBS=4 -P scripts/verify.cmake`; against v0.3.0
+   it only reports. Fix the step if it errors, then delete item 7.
+3. **v0.4.0** (item 1): date the CHANGELOG heading, commit, tag
+   `v0.4.0`, push the tag, build the assets as `scripts/README.md`,
+   "Releasing", says, `gh release create` with the notes saying the
+   macOS archive is missing; then `cmake -DTO=1.0.0 -P scripts/version.cmake`.
+4. **Real kqueue** (item 6).
+5. **The documents** (item 8). An audit (2026-10-31) found, each
+   checked against the code:
+   * README: lines 139-140 and SECURITY.md:15 say 0.x promises nothing -
+     rewrite as the 1.x promise (D-56); 459 "Two are still open" is one
+     (D-12); 218-220 `minimal` keeps the codecs on, and the optimised
+     presets are `portable` and `minimal` (also CMakePresets.json:71);
+     304-305 and 372: version.cmake and gate.version cover the Cargo and
+     Python manifests too, and the examples should say `x.y.z`, not
+     0.3.0 (also scripts/README.md:10 and scripts/version.cmake's
+     comments); 223-225 options miss `CF_WITH_YAML`, `CF_PLATFORM`,
+     `CF_RUST`, `CF_HARDEN`; the gates table misses `gate.abi`,
+     `gate.apiref`, `gate.text`, `gate.dependencies`, `gate.sbom`.
+   * Guide: 646 twelve C++ examples, not six; 46 add `live.rs`; 86-88
+     add pcc; 22 the contents entry for section 13 (C++, Rust, Python);
+     337 "INI, JSON, TOML and YAML can also be written"; 30 and 642 the
+     C++ header is C++98 to C++23, not a "C++03 wrapper" (also
+     CONTRIBUTING.md:11).
+   * CONTRIBUTING: 24-28 the source table is behind `src/`; 36 the
+     scripts list misses version, buildid, release-local, check_text,
+     proofs; 244-251 `release-local.sh` downloads too (alpine, musl's
+     licence).
+   * Maintaining: 90 and 113-114 Rust is in `setup.sh` now; 19-22 date
+     the Actions-billing note; 23-25 keep only "commits and files carry
+     their maintainers' names"; 105 rename `D:\cf-handoff` to
+     `D:\cf-tools`. scripts/README.md:10 misses the newer EXTRA steps.
+   * Doctor.md:40 "runtime agent" -> "runtime daemon".
+   * docs/API.md is generated (`scripts/apiref.cmake`) and matches every
+     signature; the fixes go in the header comments or the generator,
+     then regenerate. Wrong: cf_live.h:17's example passes five
+     arguments to `cf_live_open`, which takes six; configforge.h:56-58
+     says file sources have not landed (say cf_app reads no file, use
+     cf_app_builder + cf_builder_file); cf_error_clear's text is
+     "clang-format on" (comment it; make the generator skip
+     clang-format lines); `"edit-refused"` missing from the event lists
+     in cf_log.h:129 and cf_live.h:111; a refused `cf_live_commit` is
+     not recorded in status or last_error - say so or record it;
+     CF_LIVE_OPTIONS_INIT sets log_min, not only zeros; cf_edit_begin
+     also returns NULL on a NULL argument and always uses the default
+     allocator, cf_edit_set_text refuses NULL (CF_E_CONVERT); the D-51
+     INTERNAL notice for cf_defset is lost above a typedef;
+     cf_app_builder has no comment of its own; `CF_NODISCARD` missing on
+     `cf_derive_in` and `cf_watcher_open` (add before the freeze).
+     Missing: the C11 `cf_get`; comments lost behind forward
+     declarations (cf_builder_file_codec, cf_live_commit,
+     cf_source_defaults, cf_source_file_codec - move the `struct x;`
+     lines up); the flag-bit rule (definition bits 0-15, source 16 and
+     up); the error codes of cf_code.def as a table; the members of the
+     sized structs (cf_error, cf_live_options, cf_live_status,
+     cf_log_event); an intro paragraph naming the internal tier
+     (cf_flatten, cf_keyspace, cf_numeric, cf_platform, cf_define's
+     set, cf_port's ref/fmt/cmp). Before the freeze, decide:
+     `cf_report_info` and `cf_doctor_gate` are caller-allocated with no
+     `size`, so they cannot grow in 1.x (D-51); NULL handles return
+     CF_E_SOURCE except `cf_live_approve`, CF_E_CAPABILITY.
+6. **1.0.0**: tier 2, CHANGELOG dated, tag, release as in step 3.
 
 1. **v0.4.0, released locally** (`scripts/release-local.sh`, `.ps1`):
    source, amalgamation, static musl Linux, Windows; the macOS archive
