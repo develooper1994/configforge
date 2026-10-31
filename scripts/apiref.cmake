@@ -85,7 +85,16 @@ string(
   "the definition set's `cf_defset_*` and `cf_def_*` in `cf_define.h`,\n"
   "and `cf_port.h`'s `cf_ref_*`, `cf_fmt*` and `cf_cmp_*`. The flags a\n"
   "definition takes are bits 0-15 and a source's bits 16 and up; an\n"
-  "unknown bit is refused by name.\n\n")
+  "unknown bit is refused by name.\n\n"
+  "A struct the caller fills and the library reads - `cf_error`,\n"
+  "`cf_def`, `cf_live_options`, `cf_live_status`, `cf_log_event` -\n"
+  "begins with `size`, so 1.x can append a member (D-51): start from\n"
+  "`CF_ERROR_INIT`, `cf_def_init` or `CF_LIVE_OPTIONS_INIT`, or set\n"
+  "`size` to `sizeof` the struct. Their members are in the headers.\n\n"
+  "In C11 and later `configforge.h` also has `cf_get(cfg, key, &out)`,\n"
+  "a macro typed by `out` - `int`, `long`, `long long`, `_Bool`,\n"
+  "`const char*`, and `double` where `CF_WITH_REAL` is on - that calls\n"
+  "the matching `cf_get_*` below; C++ has `get<T>` instead.\n\n")
 
 # The error codes, from the one list every other place takes them from,
 # so the table cannot name a code the library does not have.
