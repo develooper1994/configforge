@@ -8,7 +8,7 @@ what follows is a check rather than a request.
 
 ## What this is
 
-ConfigForge is a configuration library for C (C89, with a C++03 wrapper)
+ConfigForge is a configuration library for C (C89, with one C++ header from C++98 to C++23)
 whose one distinguishing promise is that every value can answer **why it
 is what it is**: which source won, which lost, and where each was set.
 ConfigForge Doctor (`tools/doctor`) reads the provenance reports the
@@ -22,10 +22,10 @@ If a change makes a value harder to explain, it is the wrong change.
 | ---- | ---- | ---- |
 | `include/configforge/` | the public headers; `configforge.h` is the facade | the header comments are the API reference; `docs/API.md` collects them |
 | `src/core` | value model, key space, definitions, validation, `cf_config` | |
-| `src/sources` | defaults, memory, environment, command line | |
-| `src/serialize` | blob, sink, INI and JSON codecs | |
-| `src/bridge` | file, `.env`, drop-in directory, image, emit | |
-| `src/diag` | `explain()`, provenance report, Report Replay | |
+| `src/sources` | defaults, memory, environment, command line, compatibility shims, entries, snapshots | |
+| `src/serialize` | blob, sink, and the INI, JSON, TOML, YAML, XML and properties codecs | |
+| `src/bridge` | file, `.env`, drop-in directory, image, emit, flatten, registry, secrets, store | |
+| `src/diag` | `explain()`, provenance report, Report Replay, diff | |
 | `src/platform` | the only code that knows the operating system | |
 | `tools/doctor` | the Doctor CLI and its adapters | `docs/Doctor.md` |
 | `tests/unit` | one C program per area; also the best usage examples | |
@@ -33,7 +33,7 @@ If a change makes a value harder to explain, it is the wrong change.
 | `examples/c`, `examples/cpp`, `examples/rust` | programs the README and `docs/Guide.md` quote, one directory a language, run by the suite and checked for their output (`expect.cmake`) | `docs/Guide.md` |
 | `bindings/rust`, `bindings/python` | the Rust crate (`build.rs` builds the library) and the Python package (ctypes over a shared build), each with its own tests | `docs/Guide.md`, section 13 |
 | `cmake/`, `cmake/gates/` | build modules, and the gates that enforce the design | `docs/Architecture.md` |
-| `scripts/` | verify, format, stack, apiref, amalgamate | `scripts/README.md` |
+| `scripts/` | verify, format, stack, apiref, amalgamate, version, buildid, proofs, the text and format checks, the local release, `buildenv/` | `scripts/README.md` |
 | `conanfile.py`, `packaging/` | the Conan recipe and its test package; the vcpkg overlay port | README.md, "From a package manager" |
 
 The documents, and what each is for:
@@ -256,8 +256,9 @@ done since:
 
 Nothing that builds, tests or verifies uses the network: `verify`,
 `format`, the gates and the build download nothing. The exceptions are
-named and only run when asked for: the three scripts in
-`scripts/buildenv` that make an environment, which download from the
+named and only run when asked for: the scripts in `scripts/buildenv`
+that make an environment, `scripts/release-local.sh` (the alpine image
+and musl's licence, as the release workflow takes them), which download from the
 projects that publish the thing and check what they download against
 its published checksum or signature, and CI's actions and package
 installs. All are

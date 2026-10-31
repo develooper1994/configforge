@@ -136,8 +136,10 @@ Git has `config --show-origin`. C has nothing.
 
 ## Status
 
-Working, and not finished. The interface is not frozen: `0.x` promises
-nothing, and `1.0` is where semantic versioning starts.
+From 1.0 the C interface follows semantic versioning: within one major
+version, a program built against an earlier release links and runs with
+a later one. What counts as breaking, and the `abidiff` check that holds
+it before every release, are D-56.
 
 | Component | State |
 | --------- | ----- |
@@ -215,14 +217,15 @@ build does. `scripts/README.md` lists the options.
 | `tsan` | the thread sanitiser over the whole suite (`EXTRA=tsan` in `verify.cmake`) |
 | `fuzz` | libFuzzer on every reader of untrusted bytes, with ASan and UBSan; clang (`EXTRA=fuzz`) |
 | `coverage` | line coverage of the library, held above a floor (`EXTRA=coverage`) |
-| `minimal` | every optional part off, short limits (64-byte keys) and a 1024-byte stack budget, for very small targets; built `-Os` |
+| `minimal` | every optional part but the codecs off, short limits (64-byte keys) and a 1024-byte stack budget, for very small targets; built `-Os` |
 
-The last two are optimised on purpose: inlining merges frames, so a stack
+`portable` and `minimal` are optimised on purpose: inlining merges frames, so a stack
 frame that fits in a Debug build can break the budget in a release one.
 
 Options: `CF_WITH_INI` `CF_WITH_JSON` `CF_WITH_TOML` `CF_WITH_PROPERTIES` `CF_WITH_XML` `CF_WITH_SQLITE`
 `CF_WITH_REAL` `CF_WITH_DIR` `CF_WITH_DOTENV` `CF_WITH_EMIT` `CF_WITH_IMAGE`
-`CF_WITH_REPORT` `CF_WITH_CXX` `CF_FORCE_PORTABLE` `CF_SINGLE_THREADED`, and the limits
+`CF_WITH_REPORT` `CF_WITH_CXX` `CF_WITH_YAML` `CF_PLATFORM` `CF_FORCE_PORTABLE`
+`CF_SINGLE_THREADED` `CF_HARDEN` `CF_RUST` `CF_BUILD_TOOLS`, and the limits
 below.
 
 ### Leaving parts out
@@ -301,8 +304,8 @@ everything else reads it, and `gate.version` fails if a copy disagrees.
 A release is that version dated in `CHANGELOG.md` and tagged:
 
 ```sh
-cmake -DTO=0.3.0 -P scripts/version.cmake     # header, vcpkg manifest, CHANGELOG section
-git tag -a v0.3.0 -m "ConfigForge 0.3.0" && git push origin v0.3.0
+cmake -DTO=x.y.z -P scripts/version.cmake     # header, vcpkg, Cargo and Python manifests, CHANGELOG section
+git tag -a vx.y.z -m "ConfigForge x.y.z" && git push origin vx.y.z
 ```
 
 `cf_version()` is the version and `cf_build_id()` the commit it was
@@ -369,7 +372,12 @@ a claim that decays.
 | interface | what including the library costs: no unexpected system header, no size jump |
 | install | a separate project finds the package, compiles against it and runs |
 | formats | every format string against what `cf_fmt` supports |
-| version | `cf_version.h` and `CMakeLists.txt` agree |
+| version | `cf_version.h` against project(), the vcpkg, Cargo and Python manifests, and the CHANGELOG's newest section |
+| abi | the exports match `cmake/configforge.symbols` |
+| apiref | `docs/API.md` is what `scripts/apiref.cmake` makes from the headers |
+| text | no NUL and no CR in a tracked text file |
+| dependencies | CMake looks for nothing `docs/Dependencies.md` does not name |
+| sbom | the SPDX bill of materials is generated from the configured options |
 | format | `clang-format` and `cmake-format`, reporting rather than rewriting |
 | cmake lint | `cmake-lint` over every build file |
 | headers | every public header compiles standalone as C89 |
@@ -456,7 +464,7 @@ nothing a leak would want.
 ## Documentation
 
 * [`docs/Decisions.md`](docs/Decisions.md) — every decision, the options weighed, and what
-  settled it. Two are still open, and both say why
+  settled it. One is still open (D-12), and it says why
 * [`docs/Architecture.md`](docs/Architecture.md) — the layers, the rules that keep them, and recipes for adding a format, a source, a definition attribute or a Doctor rule
 * [`docs/Conventions.md`](docs/Conventions.md) — naming, memory, errors, project idioms, the forbidden list, and what a good test looks like here
 * [`docs/Guide.md`](docs/Guide.md) — **start here**: from the first line of code to a device with no heap, every program it quotes run by the suite; its first table lists every example in `examples/` by the situation it shows

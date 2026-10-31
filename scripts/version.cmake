@@ -1,15 +1,15 @@
 # The version: print it, or change it everywhere at once.
 #
-#   cmake -P scripts/version.cmake                 prints 0.2.0
-#   cmake -DTO=0.3.0 -P scripts/version.cmake      changes it
+#   cmake -P scripts/version.cmake                 prints x.y.z
+#   cmake -DTO=x.y.z -P scripts/version.cmake      changes it
 #
 # cf_version.h is the one place the version is written; CMake and the
 # Conan recipe read it. Changing it here also rewrites the copy that
 # cannot read it - the vcpkg manifest, the Rust crate's and the Python
-# package's - and opens a "## 0.3.0 — unreleased"
+# package's - and opens a "## x.y.z — unreleased"
 # section at the top of CHANGELOG.md if there is none, so that
 # gate.version passes the moment this has run. A release is then the
-# CHANGELOG heading dated and the tag v0.3.0 pushed; the release workflow
+# CHANGELOG heading dated and the tag vx.y.z pushed; the release workflow
 # refuses a tag that disagrees with cf_version.h.
 
 cmake_minimum_required(VERSION 3.10)

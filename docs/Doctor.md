@@ -37,7 +37,7 @@ testing is not the code path that runs in production.
 * Not a resolver. It never computes configuration; it reads reports.
 * Not a secret store, and it does not need to see secret values.
 * Not a manifest validator. Manifests are `conftest`, `kubeconform` and `helm --dry-run`.
-* Not a runtime agent. It runs in CI and on a developer's machine.
+* Not a runtime daemon. It runs in CI and on a developer's machine.
 * Not a replacement for `explain()`. It is `explain()` applied across environments.
 
 ---

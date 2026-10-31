@@ -19,7 +19,7 @@ The reference for each function is [`API.md`](API.md); the reasons are in
 10. [Changing, saving, reloading](#10-changing-saving-reloading)
 11. [The editor, the report and Doctor](#11-the-editor-the-report-and-doctor)
 12. [Small targets](#12-small-targets)
-13. [C++](#13-c), and [Rust](#rust)
+13. [C++](#13-c), [Rust](#rust) and [Python](#python)
 14. [Threads](#14-threads)
 
 ### The examples, by what they show
@@ -27,7 +27,7 @@ The reference for each function is [`API.md`](API.md); the reasons are in
 Each is a short program with the reasoning in its comments, built in
 every build and run by the suite, which checks the lines that show it
 does what its comment says. Where there is a `.cpp` beside the `.c`, it
-is the same program through the C++03 wrapper, checked for the same
+is the same program through the C++ header, checked for the same
 lines.
 
 | Example | What it shows | Section |
@@ -43,7 +43,7 @@ lines.
 | `settings.c` | read, explain, set, save, notice the file change | 10 |
 | `runtime.c`, `runtime.cpp`, `runtime.rs` | an admin changing a setting in a running service: readers unaffected, the change explained | 10 |
 | `reload.c`, `reload.cpp` | watch a file, rebuild, log what changed | 10 |
-| `live.c`, `live.cpp` | a gateway that reloads itself: applied, a port waiting for a restart, an operator's approval, a broken edit refused | 10 |
+| `live.c`, `live.cpp`, `live.rs` | a gateway that reloads itself: applied, a port waiting for a restart, an operator's approval, a broken edit refused | 10 |
 | `schema.c` | the contract as a JSON Schema for editors | 11 |
 | `preflight.c`, `preflight.cpp` | a service that runs Doctor's rules on itself before it serves, and refuses a password typed as a flag | 11 |
 | `policy.c`, `policy.cpp` | a Windows editor: the user's Registry settings, the administrator's policy over them, one key only policy may set | 4 |
@@ -85,7 +85,7 @@ with the rest of your program.
 
 The library is C89 and needs nothing but the C library. It is built and
 tested with GCC, Clang and MSVC, against glibc and musl, and compiles
-with the Tiny C Compiler. The build options are in the README's
+with the Tiny C Compiler and the Portable C Compiler. The build options are in the README's
 "Leaving parts out" and "Limits and the stack budget" sections.
 
 ## 2. The first program
@@ -334,8 +334,8 @@ is worse than a program that refuses to start.
 
 The format is taken from the extension, never guessed from the content.
 A file in a format the build left out is an error that names the option
-to turn on - never a file quietly read as nothing. All four can also be
-written (section 10), and a format of your own is a `cf_codec` handed to
+to turn on - never a file quietly read as nothing. INI, JSON, TOML and
+YAML can also be written (section 10), and a format of your own is a `cf_codec` handed to
 `cf_builder_file_codec`; `tests/unit/test_codec.c` is a complete one.
 
 On YAML in particular: a plain value is text until a definition types
@@ -639,11 +639,11 @@ For such a target:
 
 ## 13. C++
 
-`<configforge/configforge.hpp>` is a C++03 wrapper over the same
-library: a `Builder` with chained calls, a reference-counted `Config`,
-`get<T>`, ranges over keys and children, `explain()`, `emit()`,
+`<configforge/configforge.hpp>` is one header over the same library,
+from C++98 to C++23 (D-47): a `Builder` with chained calls, a
+reference-counted `Config`, `get<T>`, ranges over keys and children, `explain()`, `emit()`,
 `changesSince()`, `derive()` and `write()` for changing and keeping a
-value, `define()` for a full `cf_def`, and a `Watcher`. Six of the
+value, `define()` for a full `cf_def`, and a `Watcher`. Twelve of the
 examples are in `examples/cpp` as well as `examples/c`, the same
 programs saying the same lines. `examples/cpp/tier1.cpp`:
 
