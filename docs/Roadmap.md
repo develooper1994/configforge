@@ -51,9 +51,12 @@ Whoever continues: read `CONTRIBUTING.md`, then do these in order.
 5. **The documents** (item 7): the audit of 2026-10-31 is fixed - the
    README, Guide, CONTRIBUTING, Maintaining, SECURITY, the header
    comments, and the API reference's introduction (internal tier, flag
-   bits, sized structs, the C11 `cf_get`, the error codes). Left, to
-   decide before the freeze: `cf_report_info` and `cf_doctor_gate` are
-   caller-allocated with no `size`, so they cannot grow in 1.x (D-51).
+   bits, sized structs, the C11 `cf_get`, the error codes). Left, decided
+   by the maintainer (2026-10-31): give `cf_report_info` and
+   `cf_doctor_gate` a leading `size`, as D-51's other structs have, with
+   an `_INIT` macro, the library reading only as far as `size` reaches,
+   every caller (tests, Doctor, bindings) updated, and a test that a
+   short `size` still works.
 6. **1.0.0**: tier 2, CHANGELOG dated, tag, release as in step 3.
 
 2. **The interface fixed before it freezes.** An independent review of
