@@ -16,6 +16,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   create and not after. `cf_define` also copies a caller's `cf_def` only
   as far as its `size` reaches (D-51). `test_lifetime` frees every one
   of them, scribbled over, before create, under AddressSanitizer.
+  The bindings' `Live` no longer keeps every reload's strings for as
+  long as it lives - only the last build's, and any log callbacks a
+  snapshot may still call.
 - **Create, update and delete as one edit** (`cf_edit.h`, D-54): set
   keys, typed or as text, and delete others so the next source down
   supplies them again; commit holds the whole change to the contract and

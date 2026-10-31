@@ -151,6 +151,13 @@ class Reloading(unittest.TestCase):
             self.assertIn("lots", st.last_error.message)
         self.assertEqual(cfg.server.port, 8080, "a snapshot outlives its Live")
 
+    def test_reloads_do_not_keep_every_builds_strings(self):
+        with cf.Live(cf.Mode.MANUAL, self.build) as live:
+            for _ in range(50):
+                live.reload()
+            self.assertLessEqual(len(live._kept), 1)
+            self.assertIs(live.get().app.debug, False)
+
     def test_a_build_that_raises(self):
         calls = []
 
