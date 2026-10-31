@@ -197,12 +197,29 @@ static void test_live()
 #endif
 }
 
+static void test_edit()
+{
+    cf::Config cfg = cf::Builder().memory("mem", CF_RANK_USER_FILE, g_v1, 2).create();
+    cf::Error  err;
+    cf::Edit   e(cfg, "mem");
+    e.set("server.port", 9443).set("log.level", "debug").unset("old.key");
+    check(e.size() == 3, "an edit gathers its changes");
+    check(!e.commit("note", &err) && err.code() == CF_E_CAPABILITY,
+          "and a source that cannot be written refuses them");
+    check(!e.commit("again"), "an edit commits once");
+    {
+        cf::Edit dropped(cfg, "mem");
+        dropped.set("server.port", 1);
+    } /* dropped without a commit: nothing written, nothing leaked */
+}
+
 int main()
 {
     test_keys();
     test_settings();
     test_binding();
     test_live();
+    test_edit();
     std::printf("%d checks, %d failures\n", g_run, g_fail);
     return g_fail == 0 ? 0 : 1;
 }

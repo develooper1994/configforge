@@ -21,6 +21,7 @@
 //! A [`Config`] is an immutable snapshot (D-14), so it is `Send` and
 //! `Sync`: read it from any thread, change it with [`Config::derive`].
 
+mod edit;
 mod live;
 mod log;
 /// The C declarations the safe layer is written over. Hidden, and not part
@@ -30,6 +31,7 @@ mod log;
 pub mod sys;
 mod typed;
 
+pub use edit::{Edit, EditValue};
 pub use live::{Live, LiveReader, Mode, Reload, Status};
 pub use log::{Level, LogEvent};
 pub use typed::{Field, Key, Value};

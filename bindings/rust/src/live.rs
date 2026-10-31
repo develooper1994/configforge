@@ -305,6 +305,23 @@ impl Live {
         unsafe { sys::cf_live_reject(self.inner.l) };
     }
 
+    /// Commit `edit` and reload, in one step; nothing is written when the
+    /// commit is refused.
+    pub fn commit(&mut self, edit: crate::Edit, note: Option<&str>) -> Result<Reload, Error> {
+        let raw = edit.into_raw();
+        let n = note.map(crate::c);
+        let mut e = new_error();
+        let r = unsafe {
+            sys::cf_live_commit(
+                self.inner.l,
+                raw,
+                n.as_ref().map_or(std::ptr::null(), |n| n.as_ptr()),
+                &mut e,
+            )
+        };
+        result(r, &e)
+    }
+
     /// The reloads' status: counts, the last result, the last failure.
     pub fn status(&self) -> Status {
         self.inner.status()

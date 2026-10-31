@@ -2276,6 +2276,31 @@ compiler knows them.
 
 ---
 
+## D-54 — Create, update, delete: one edit, one transaction
+
+**Question.** The owner asked for an accessor layer that makes CRUD easy. Reading was
+already easy; the rest was `cf_write` over an array of items built by hand, with no way
+to delete - a key written to a store stayed there, shadowing the file under it for good.
+
+**Options.**
+
+1. **A key handle with set and delete** (`cf_key_set(cfg, "a.b", ...)`), each call a
+   write. Several calls are several transactions, and the contract sees each value
+   alone: a change that is only valid as a whole could not be made.
+2. **An edit gathered and committed whole.**
+
+**Decision: option 2.** `cf_edit_begin` on a snapshot and a writable source;
+`cf_edit_set_*` and `cf_edit_unset` gather the change, copying every string; commit is
+`cf_write` over it, so an edit is checked by exactly the rules a direct write is, and the
+store writes it in one transaction. Deleting is a `cf_write_item` with
+`op = CF_WRITE_DELETE`; since items are often filled member by member, every `op` other
+than `CF_WRITE_SET` and `CF_WRITE_DELETE` is refused, so an uninitialised one fails
+instead of deleting. A snapshot never changes; `cf_live_commit` commits and reloads, so
+an administrator's change reaches readers the way an edited file does, through the
+build, the check and the mode.
+
+---
+
 
 One decision is open, because nothing has been built: profiles as a core concept
 (D-12). Value interpolation (D-10), long reserved, is decided and built. Everything else is decided,

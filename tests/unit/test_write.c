@@ -106,6 +106,7 @@ static cf_config* build(const char* grant, cf_unknown_policy unknown, cf_error* 
 static cf_bool write_int(const cf_config* c, const char* key, cf_i64 v, cf_error* err) {
     cf_write_item one;
     one.key = key;
+    one.op  = CF_WRITE_SET;
     cf_value_int(&one.value, v);
     g_written = 0;
     return cf_write(c, "local", &one, 1, "test", err);
@@ -115,6 +116,7 @@ static cf_bool write_text(const cf_config* c, const char* key, const char* v,
                           cf_error* err) {
     cf_write_item one;
     one.key = key;
+    one.op  = CF_WRITE_SET;
     cf_value_text(&one.value, v, strlen(v));
     g_written = 0;
     return cf_write(c, "local", &one, 1, "test", err);
@@ -131,8 +133,10 @@ static void test_granted(void) {
         return;
     }
     two[0].key = "server.port";
+    two[0].op  = CF_WRITE_SET;
     cf_value_int(&two[0].value, 9443);
     two[1].key = "log.level";
+    two[1].op  = CF_WRITE_SET;
     cf_value_text(&two[1].value, "debug", 5);
     g_written = 0;
     check(cf_write(c, "local", two, 2, "admin: incident 42", &err), "a granted write");
@@ -249,13 +253,16 @@ static void test_all_or_none(void) {
         return;
     }
     two[0].key = "log.level";
+    two[0].op  = CF_WRITE_SET;
     cf_value_text(&two[0].value, "info", 4);
     two[1].key = "server.port";
+    two[1].op  = CF_WRITE_SET;
     cf_value_int(&two[1].value, 0);
     g_written = 0;
     check(!cf_write(c, "local", two, 2, NULL, &err) && g_written == 0,
           "one refused item refuses the lot before anything is written");
     two[1].key = "Bad Key";
+    two[1].op  = CF_WRITE_SET;
     check(!cf_write(c, "local", two, 2, NULL, &err) && err.code == CF_E_KEY,
           "so does a key that is not valid");
     cf_config_free(c);

@@ -191,8 +191,9 @@ static cf_bool store_failed(sqlite3* db, const char* path, cf_error* err) {
 
 cf_bool cf_store_set(const char* path, const cf_write_item* items, size_t count,
                      const char* meta, cf_error* err) {
-    sqlite3*      db = NULL;
-    sqlite3_stmt* q  = NULL;
+    sqlite3*      db  = NULL;
+    sqlite3_stmt* q   = NULL;
+    sqlite3_stmt* del = NULL;
     size_t        i;
 
     if (path == NULL || (items == NULL && count > 0)) {
@@ -206,6 +207,11 @@ cf_bool cf_store_set(const char* path, const cf_write_item* items, size_t count,
                                 "'%s' is not a valid key",
                                 (items[i].key != NULL) ? items[i].key : "");
         }
+        if (items[i].op != CF_WRITE_SET && items[i].op != CF_WRITE_DELETE) {
+            return cf_error_set(err, CF_E_CAPABILITY, items[i].key, path,
+                                "'%s': %u is not a write operation", items[i].key,
+                                items[i].op);
+        }
     }
     if (sqlite3_open_v2(path, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL) !=
             SQLITE_OK ||
@@ -215,7 +221,10 @@ cf_bool cf_store_set(const char* path, const cf_write_item* items, size_t count,
             db,
             "INSERT OR REPLACE INTO configforge (key, type, value, meta) "
             "VALUES (?1, ?2, ?3, ?4)",
-            -1, &q, NULL) != SQLITE_OK) {
+            -1, &q, NULL) != SQLITE_OK ||
+        sqlite3_prepare_v2(db, "DELETE FROM configforge WHERE key = ?1", -1, &del,
+                           NULL) != SQLITE_OK) {
+        sqlite3_finalize(q);
         return store_failed(db, path, err);
     }
     for (i = 0; i < count; ++i) {
@@ -223,6 +232,20 @@ cf_bool cf_store_set(const char* path, const cf_write_item* items, size_t count,
         char            tmp[CF_VALUE_TEXT_MAX];
         const char*     text;
         size_t          n;
+
+        if (items[i].op == CF_WRITE_DELETE) {
+            /* Gone from the store, so the next source down supplies the
+               key - in the same transaction as every set beside it. */
+            sqlite3_reset(del);
+            if (sqlite3_bind_text(del, 1, items[i].key, -1, SQLITE_TRANSIENT) !=
+                    SQLITE_OK ||
+                sqlite3_step(del) != SQLITE_DONE) {
+                sqlite3_finalize(q);
+                sqlite3_finalize(del);
+                return store_failed(db, path, err);
+            }
+            continue;
+        }
 
         if (v->type == CF_TYPE_TEXT) {
             text = v->u.t.p;
@@ -243,10 +266,12 @@ cf_bool cf_store_set(const char* path, const cf_write_item* items, size_t count,
                           : sqlite3_bind_null(q, 4)) != SQLITE_OK ||
             sqlite3_step(q) != SQLITE_DONE) {
             sqlite3_finalize(q);
+            sqlite3_finalize(del);
             return store_failed(db, path, err);
         }
     }
     sqlite3_finalize(q);
+    sqlite3_finalize(del);
     if (sqlite3_exec(db, "COMMIT", NULL, NULL, NULL) != SQLITE_OK) {
         return store_failed(db, path, err);
     }

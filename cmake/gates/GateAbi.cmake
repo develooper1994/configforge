@@ -20,6 +20,14 @@
 # (D-41), so there is one ABI to keep, and this is it.
 cmake_minimum_required(VERSION 3.10)
 
+# Refused rather than guessed: a shell that splits -DSRC=. from its value
+# (PowerShell does) left SRC empty, and the list was written to
+# /cmake/configforge.symbols at the root of the drive, twice.
+if(NOT DEFINED SRC OR NOT EXISTS "${SRC}/include/configforge/configforge.h")
+  message(FATAL_ERROR "gate.abi: SRC must name the repository (-DSRC=<repo>), "
+                      "not \"${SRC}\"")
+endif()
+
 set(list_file "${SRC}/cmake/configforge.symbols")
 
 # Every CF_API name in the headers, "name" or "name real".

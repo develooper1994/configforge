@@ -153,6 +153,11 @@ pub struct cf_live {
 }
 
 #[repr(C)]
+pub struct cf_edit {
+    _opaque: [u8; 0],
+}
+
+#[repr(C)]
 pub struct cf_live_status {
     pub size: usize,
     pub generation: u64,
@@ -344,6 +349,25 @@ extern "C" {
         min: c_int,
     );
     pub fn cf_live_close(l: *mut cf_live);
+    pub fn cf_edit_begin(
+        c: *mut cf_config,
+        target: *const c_char,
+        err: *mut cf_error,
+    ) -> *mut cf_edit;
+    pub fn cf_edit_set_text(e: *mut cf_edit, key: *const c_char, v: *const c_char) -> cf_bool;
+    pub fn cf_edit_set_int(e: *mut cf_edit, key: *const c_char, v: i64) -> cf_bool;
+    pub fn cf_edit_set_bool(e: *mut cf_edit, key: *const c_char, v: cf_bool) -> cf_bool;
+    pub fn cf_edit_set_real(e: *mut cf_edit, key: *const c_char, v: f64) -> cf_bool;
+    pub fn cf_edit_unset(e: *mut cf_edit, key: *const c_char) -> cf_bool;
+    pub fn cf_edit_count(e: *const cf_edit) -> usize;
+    pub fn cf_edit_commit(e: *mut cf_edit, note: *const c_char, err: *mut cf_error) -> cf_bool;
+    pub fn cf_edit_abort(e: *mut cf_edit);
+    pub fn cf_live_commit(
+        l: *mut cf_live,
+        e: *mut cf_edit,
+        note: *const c_char,
+        err: *mut cf_error,
+    ) -> c_int;
     pub fn cf_live_get(l: *mut cf_live) -> *mut cf_config;
     pub fn cf_live_poll(l: *mut cf_live, err: *mut cf_error) -> c_int;
     pub fn cf_live_reload(l: *mut cf_live, err: *mut cf_error) -> c_int;

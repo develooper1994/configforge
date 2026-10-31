@@ -549,6 +549,22 @@ void cf_live_reject(cf_live* l) {
    field is added, this stays the offset just past `pending`. */
 #define LIVE_STATUS_SIZE_1_0 sizeof(cf_live_status)
 
+cf_live_result cf_live_commit(cf_live* l, cf_edit* e, const char* note, cf_error* err) {
+    if (l == NULL) {
+        cf_edit_abort(e);
+        cf_error_set(err, CF_E_SOURCE, NULL, NULL, "no reloads to commit to");
+        return CF_LIVE_FAILED;
+    }
+    if (!cf_edit_commit(e, note, err)) {
+        live_log(l, CF_LOG_ERROR, "edit-refused",
+                 (err != NULL) ? (cf_code)err->code : CF_E_POLICY,
+                 (err != NULL && err->key[0] != 0) ? err->key : NULL,
+                 (err != NULL) ? err->message : "an edit was refused");
+        return CF_LIVE_FAILED;
+    }
+    return cf_live_reload(l, err);
+}
+
 cf_bool cf_live_status_get(cf_live* l, cf_live_status* out) {
     size_t n;
 

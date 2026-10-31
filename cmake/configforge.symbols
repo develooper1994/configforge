@@ -85,6 +85,15 @@ cf_diff_text
 cf_digest
 cf_doc_emit
 cf_doc_emit_where
+cf_edit_abort
+cf_edit_begin
+cf_edit_commit
+cf_edit_count
+cf_edit_set_bool
+cf_edit_set_int
+cf_edit_set_real real
+cf_edit_set_text
+cf_edit_unset
 cf_emit
 cf_env_key
 cf_environ
@@ -160,6 +169,7 @@ cf_lex_dotenv
 cf_lex_env
 cf_live_approve
 cf_live_close
+cf_live_commit
 cf_live_generation
 cf_live_get
 cf_live_last_error

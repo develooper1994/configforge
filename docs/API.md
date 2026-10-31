@@ -10,6 +10,7 @@ in; the types are in the headers themselves.
 - [`cf_alloc.h`](#cf_alloch) - 12
 - [`cf_define.h`](#cf_defineh) - 19
 - [`cf_doctor.h`](#cf_doctorh) - 21
+- [`cf_edit.h`](#cf_edith) - 9
 - [`cf_emit.h`](#cf_emith) - 1
 - [`cf_entry.h`](#cf_entryh) - 10
 - [`cf_error.h`](#cf_errorh) - 5
@@ -18,7 +19,7 @@ in; the types are in the headers themselves.
 - [`cf_image.h`](#cf_imageh) - 10
 - [`cf_iterate.h`](#cf_iterateh) - 5
 - [`cf_keyspace.h`](#cf_keyspaceh) - 26
-- [`cf_live.h`](#cf_liveh) - 14
+- [`cf_live.h`](#cf_liveh) - 15
 - [`cf_log.h`](#cf_logh) - 1
 - [`cf_numeric.h`](#cf_numerich) - 7
 - [`cf_platform.h`](#cf_platformh) - 19
@@ -825,6 +826,76 @@ CF_DOCTOR_API const char* cf_doctor_rule_text(const char* id);
 
 The rule catalogue (Doctor.md): each rule's id and what it finds.
 
+## cf_edit.h
+
+cf_edit.h - creating, changing and deleting settings, as one change.
+
+Reading is the snapshot's (cf_get_*, explain). Writing goes to a
+source that can be written - a store (cf_builder_store) the program
+granted with cf_builder_writable - and an edit gathers a change to it
+before anything is written:
+
+    cf_edit* e = cf_edit_begin(cfg, "store", &err);
+    cf_edit_set_int(e, "pool.size", 32);
+    cf_edit_set_text(e, "log.level", "debug");
+    cf_edit_unset(e, "feature.beta");            -- the next source down supplies it
+    if (!cf_edit_commit(e, "admin, 2026-10-30: incident 42", &err)) { ... }
+
+Commit holds the whole change to the contract - the types, ranges and
+spellings, and each key's policy (D-33) - and writes it in one
+transaction, its note beside every value, or writes nothing and says
+why. The snapshot does not change: rebuild, or under cf_live call
+cf_live_commit, which commits and reloads in one step.
+
+An edit is used by one thread. Its strings are copied, so the caller's
+may go as soon as each call returns.
+
+```c
+CF_NODISCARD CF_API cf_edit* cf_edit_begin(struct cf_config* c, const char* target, cf_error* err);
+```
+
+A change to `target`, a source of `c` by name. The edit keeps its own
+reference to `c`. NULL, with `err` saying why, only when there is no
+memory: whether the source exists, can be written and may be, is asked
+at commit with the rest, so every refusal comes from one place.
+
+```c
+CF_API cf_bool cf_edit_set_text(cf_edit* e, const char* key, const char* value);
+CF_API cf_bool cf_edit_set_int(cf_edit* e, const char* key, cf_i64 value);
+CF_API cf_bool cf_edit_set_bool(cf_edit* e, const char* key, cf_bool value);
+CF_API cf_bool cf_edit_set_real(cf_edit* e, const char* key, double value);
+```
+
+Set a key: as text, which the contract types as it types a file's, or
+already typed. A key set twice keeps the second. False for no memory
+or a key that is not one, which commit then reports.
+
+```c
+CF_API cf_bool cf_edit_unset(cf_edit* e, const char* key);
+```
+
+Delete a key from the target, so that the next source down - a file,
+the defaults - supplies it again.
+
+```c
+CF_API size_t cf_edit_count(const cf_edit* e);
+```
+
+How many keys the edit changes.
+
+```c
+CF_NODISCARD CF_API cf_bool cf_edit_commit(cf_edit* e, const char* note, cf_error* err);
+```
+
+Check and write the whole change, `note` (who, when, why) beside each
+value. Consumes the edit either way.
+
+```c
+CF_API void cf_edit_abort(cf_edit* e);
+```
+
+Drop the edit; nothing is written.
+
 ## cf_emit.h
 
 cf_emit.h - writing a configuration out.
@@ -1575,6 +1646,10 @@ Where the platform has no watcher, or the snapshot read no file, it
 polls at once: C89 has no portable way to sleep. Under MANUAL there
 is nothing to wait for and it returns UNCHANGED at once, so a thread
 looping on it spins: use cf_live_reload there.
+
+```c
+CF_NODISCARD CF_API cf_live_result cf_live_commit(cf_live* l, struct cf_edit* e, const char* note, cf_error* err);
+```
 
 ```c
 CF_API const struct cf_config* cf_live_pending(const cf_live* l);

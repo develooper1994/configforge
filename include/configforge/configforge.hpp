@@ -466,6 +466,7 @@ public:
 private:
     friend class Builder;
     friend class Live;
+    friend class Edit;
 
     Config(cf_config* c, const Error& e) : c_(c), rc_(0), err_(e)
     {
@@ -562,6 +563,58 @@ private:
 
 inline Setting Config::operator[](const char* key) const
 { return Setting(*this, key != 0 ? key : ""); }
+
+
+/* ------------------------------------------------------------------ *
+ * Edit: create, update and delete as one change (cf_edit.h)
+ *
+ *     cf::Edit e(cfg, "store");
+ *     e.set("pool.size", 32).set("log.level", "debug").unset("feature.beta");
+ *     if (!e.commit("admin, 2026-10-30: incident 42", &err)) { ... }
+ *
+ * Commits once; an edit not committed is dropped, nothing written.
+ * ------------------------------------------------------------------ */
+
+class Edit {
+public:
+    Edit(const Config& c, const char* target) : e_(0), err_()
+    {
+        e_ = cf_edit_begin(c.c_, target, err_.raw());
+    }
+    ~Edit() { cf_edit_abort(e_); }
+
+    Edit& set(const char* key, const char* text)
+    { (void)cf_edit_set_text(e_, key, text); return *this; }
+    Edit& set(const char* key, const std::string& text) { return set(key, text.c_str()); }
+    Edit& set(const char* key, int v) { (void)cf_edit_set_int(e_, key, v); return *this; }
+    Edit& set(const char* key, cf_i64 v) { (void)cf_edit_set_int(e_, key, v); return *this; }
+    Edit& set(const char* key, bool v)
+    { (void)cf_edit_set_bool(e_, key, v ? CF_TRUE : CF_FALSE); return *this; }
+#if CF_WITH_REAL
+    Edit& set(const char* key, double v) { (void)cf_edit_set_real(e_, key, v); return *this; }
+#endif
+    Edit& unset(const char* key) { (void)cf_edit_unset(e_, key); return *this; }
+    size_t size() const { return cf_edit_count(e_); }
+
+    /* Check and write the whole change; false, with `err` saying why,
+       when nothing was written. The edit is spent either way. */
+    bool commit(const char* note = 0, Error* err = 0)
+    {
+        Error&  e  = (err != 0) ? *err : err_;
+        cf_edit* d = e_;
+        e_         = 0;
+        if (d == 0) {
+            return false; /* err_ says why the edit could not begin */
+        }
+        return cf_edit_commit(d, note, e.raw()) != CF_FALSE;
+    }
+
+private:
+    Edit(const Edit&);
+    Edit& operator=(const Edit&);
+    cf_edit* e_;
+    Error    err_;
+};
 
 /* ------------------------------------------------------------------ *
  * Builder

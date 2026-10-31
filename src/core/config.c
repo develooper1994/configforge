@@ -1275,6 +1275,16 @@ static cf_bool write_authorized(const cf_config* c, const cf_source* s,
                               (key != NULL) ? key : "");
             break;
         }
+        if (items[i].op != CF_WRITE_SET && items[i].op != CF_WRITE_DELETE) {
+            ok = cf_error_set(err, CF_E_CAPABILITY, key, s->name,
+                              "'%s': %u is not a write operation (CF_WRITE_SET, "
+                              "CF_WRITE_DELETE)",
+                              key, items[i].op);
+            break;
+        }
+        if (items[i].op == CF_WRITE_DELETE) {
+            continue; /* no value to hold to the contract */
+        }
         d = cf_defset_find(&c->defs, key, n);
         if (d != NULL && (d->flags & CF_TRANSIENT) != 0) {
             /* A command, not a setting: written, it would run again on
