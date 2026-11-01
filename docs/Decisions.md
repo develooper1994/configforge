@@ -2455,6 +2455,35 @@ into a virtual environment too: a runner whose system site-packages is
 read-only makes pip use the user site, which Python's `-I` correctly
 excludes. Do not weaken the isolation to accommodate that installation.
 
+## D-59 — The documentation site reads the source documents
+
+**Decision.** Build with MkDocs, its bundled Read the Docs theme and search, and
+Pygments for build-time highlighting. A small file hook retains the
+repository-relative layout, including the root README and contributor
+documents. No copied Markdown tree, parallel API reference, hosted
+search, remote fonts or browser-side highlighter is needed.
+
+A separate documentation source would eventually disagree with the
+repository. A larger theme adds dependencies without improving the
+contract here: readers need navigation, searchable API names and links
+that work. Browser testing rejected the default theme: its colour
+toggle assumes highlight.js stylesheets exist, and its scroll tracking
+fails on this repository's numbered heading anchors. The bundled
+alternative needs neither a theme fork nor changed source anchors.
+Wide tables scroll within the page, and long names wrap on narrow screens.
+
+The site follows `main`, including unreleased changes, and says so on
+its homepage. Its workflow builds pull requests but only deploys
+`main`; publishing documentation does not publish a library release.
+
+**Checks.** A strict build checks links and anchors after the generated
+API gate. `scripts/check-docs.py` requires the rendered entry points and
+searchable API symbols; an empty-index negative proof confirms it
+refuses missing search data. Browser checks exercise actual search,
+its result links and narrow-screen navigation under the deployment
+path prefix. Documentation dependencies are tested in a clean
+environment, not one retaining an earlier theme's packages.
+
 ---
 
 One decision is open, because nothing has been built: profiles as a core concept

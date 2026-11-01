@@ -271,6 +271,8 @@ part of the normal CMake build: pip/build may fetch their declared
 build tools from PyPI. Install those tools first and use
 `python -m build --no-isolation` for an offline package check.
 Rust packaging uses `cargo --offline` and fetches nothing.
+The optional documentation environment installs its declared tools from
+PyPI too; `mkdocs build` itself works offline.
 
 ## Licence
 

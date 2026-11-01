@@ -1,0 +1,66 @@
+site_name: ConfigForge
+site_description: Configuration resolution that explains itself
+site_url: https://develooper1994.github.io/configforge/
+repo_url: https://github.com/develooper1994/configforge
+repo_name: develooper1994/configforge
+edit_uri: edit/main/
+docs_dir: docs
+site_dir: build/docs-site
+strict: true
+
+theme:
+  name: readthedocs
+  highlightjs: false
+
+plugins:
+  - search
+
+hooks:
+  - scripts/docs_site.py
+
+extra_css:
+  - docs/stylesheets/site.css
+
+watch:
+  - README.md
+  - CONTRIBUTING.md
+  - CHANGELOG.md
+  - SECURITY.md
+  - CODE_OF_CONDUCT.md
+  - LICENSE
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - fenced_code
+  - codehilite:
+      guess_lang: false
+      noclasses: true
+  - toc:
+      permalink: true
+
+validation:
+  links:
+    anchors: warn
+    unrecognized_links: warn
+
+nav:
+  - Home: README.md
+  - Guide: docs/Guide.md
+  - API: docs/API.md
+  - Doctor: docs/Doctor.md
+  - Design:
+      - Architecture: docs/Architecture.md
+      - Specification: docs/Design.md
+      - Image format: docs/ImageFormat.md
+      - Decisions: docs/Decisions.md
+      - Safety: docs/Safety.md
+  - Contributing:
+      - Getting started: CONTRIBUTING.md
+      - Maintenance: docs/Maintaining.md
+      - Conventions: docs/Conventions.md
+      - Dependencies: docs/Dependencies.md
+      - Roadmap: docs/Roadmap.md
+      - Changelog: CHANGELOG.md
+      - Security: SECURITY.md
+      - Code of conduct: CODE_OF_CONDUCT.md

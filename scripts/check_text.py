@@ -21,7 +21,7 @@ import sys
 TEXT = (
     ".c", ".h", ".hpp", ".cpp", ".def", ".in", ".rs", ".py", ".toml",
     ".cmake", ".txt", ".md", ".json", ".ini", ".yml", ".yaml", ".sh",
-    ".ps1", ".cfg", ".env", ".properties", ".xml",
+    ".ps1", ".cfg", ".env", ".properties", ".xml", ".css",
 )
 
 

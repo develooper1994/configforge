@@ -2,6 +2,11 @@
 
 Configuration resolution for C that answers **why** a value is what it is.
 
+[Searchable documentation](https://develooper1994.github.io/configforge/) follows
+`main`, including unreleased work. See the
+[release follow-up](docs/Roadmap.md#release-follow-up) before using an existing
+release archive.
+
 ```c
 #include <configforge/configforge.h>
 

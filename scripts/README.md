@@ -14,6 +14,7 @@ Developer scripts: things that build, generate or check.
 | `check_formats.py` | every format string against what `cf_fmt` supports (run by `gate.formats`) |
 | `release-local.sh`, `release-local.ps1` | the release workflow's jobs run on this machine, from a tag: amalgamation and static musl Linux (podman), and Windows (MSVC) - for when Actions cannot run |
 | `package-rust.cmake` | `-DWORK=<new-directory>` stages the C sources and examples inside a standalone crate, runs `cargo package --offline` with verification, then tests the unpacked package; never publishes |
+| `docs_site.py`, `check-docs.py` | MkDocs reads the existing repository Markdown with its original relative paths; the check requires rendered pages and searchable API entries before Pages deployment |
 
 The usual sequence before a commit:
 
@@ -63,6 +64,30 @@ than maintaining another copy. Cargo verifies the package and runs its
 tests offline. `WORK/target/package/` holds the resulting `.crate`.
 The shared CI jobs check both package forms on Linux, Windows and macOS.
 Neither command publishes a package or creates a release.
+
+## Documentation site
+
+From an activated Python virtual environment:
+
+```sh
+python -m pip install -r scripts/docs-requirements.txt
+python -m mkdocs build --strict
+python scripts/check-docs.py build/docs-site
+python -m mkdocs serve
+```
+
+The site reads the root README, contributor documents and `docs/`
+directly, without maintained copies. Their repository-relative links
+and edit links still point at the right files; the root documents are
+also watched by `serve`. Search and code highlighting are built into
+the static output, without a hosted search service, remote fonts or
+browser-side highlighter downloads.
+
+The `docs` workflow checks the generated API, builds with strict links
+and anchors, verifies the search index, and deploys `main` to GitHub
+Pages. Pull requests build and validate but cannot deploy. Pages must
+be configured to use GitHub Actions in the repository settings. This
+publishes development documentation, not a library release.
 
 ## buildenv: the environment, as a file
 

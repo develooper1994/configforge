@@ -29,13 +29,12 @@ fails an incompatible change within 1.x.
 
 ### Resume here (2026-11-01)
 
-Where it stands: v1.0.0 is tagged from the commit that dated its
-CHANGELOG heading, after tier 2 and the Windows Release build passed on
-its tree, and the release workflow built and published its archives,
-macOS's among them. CI's `shared (windows-latest)` job had failed on
-every push since 2026-10-31 in `gate.abi`, which read a DLL with nm; it
-reads the import library now. Everything is on `main`, which is 1.0.1,
-unreleased.
+Where it stands: the three release corrections passed the Linux and
+Windows verification, including format round trips and the 1.x ABI
+comparison. Standalone Python and Rust packages passed their installed
+tests on Linux, Windows and macOS. Searchable documentation reads the
+same Markdown as the repository (D-59). These changes are on `main`,
+which is 1.0.1, unreleased; the existing 1.0.0 archives are unchanged.
 
 Before anything: read `CONTRIBUTING.md`, then run
 `sh scripts/buildenv/dev-setup.sh --check` (Windows:
@@ -45,16 +44,16 @@ the same without the check.
 Left, in order - each a verified commit (`CONTRIBUTING.md`, "How work is
 done here"):
 
-1. **Complete the release follow-up**, including compatibility and
-   format-conformance checks for the corrected readers and writers.
-2. **The decisions below**, once the owner has made them.
-3. **The ideas**, in their order, each a minor version.
+1. **The flat-source list forms and append merge** below.
+2. **The accepted follow-up**, with its own tests and compatibility
+   checks before a new release.
+3. **The remaining decisions and ideas**, only when selected, each
+   addition a minor version.
 
 ### Accepted follow-up
 
-These additions are agreed, not completed: searchable documentation,
-Doctor history/blame across a
-sequence of reports, preflight detection of changed application
+These additions are agreed, not completed: Doctor history/blame across
+a sequence of reports, preflight detection of changed application
 defaults, and optional configuration read/use coverage. The original
 flat-source list forms and append merge below also remain open. Each
 needs implementation and tests; no release is a substitute for them.
@@ -63,11 +62,6 @@ needs implementation and tests; no release is a substitute for them.
 
 Worth building, in the order they serve the library's purpose.
 
-* **A documentation site** as the best-kept projects on GitHub have one:
-  the Markdown in `docs/` rendered to GitHub Pages - navigation, search,
-  the API reference from the headers, the examples with their checked
-  output - built from the same files, so the site cannot drift from the
-  repository. The Markdown is the source until then.
 * **A reload diff as JSON** (`cf_diff_json`), for log pipelines that
   index fields rather than lines: the key, old and new value (redacted
   as the text diff is), and the source each came from.

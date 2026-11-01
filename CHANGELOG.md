@@ -7,6 +7,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- A searchable documentation site built directly from the existing
+  Markdown and generated API reference, retaining repository-relative
+  links. Strict builds, anchor validation and search-index checks run
+  before GitHub Pages deployment; pull requests cannot deploy.
 - Python wheels carry the shared library alongside the binding. The
   root `pyproject.toml` uses scikit-build-core, and a source distribution
   includes the native sources needed to build without the checkout.

@@ -75,6 +75,7 @@ system, no generated header, no options.
 | git (`find_package` of `Git`) | GPL-2.0-only | `scripts/verify.cmake -DSOURCE=index` and `scripts/format.cmake`, which ask it what is staged or changed; the build, which asks it for the commit `cf_build_id()` reports (`scripts/buildid.cmake`) - without it the id is empty |
 | Python 3 | PSF-2.0 | `scripts/amalgamate.py`, `scripts/check_formats.py`; `bindings/python` (the `configforge` package, ctypes, standard library only, and `configforge_doctor`) and their tests, `python.binding` (shared builds) and `doctor.python` |
 | scikit-build-core, build | MIT | Python wheel/source packaging only: the root `pyproject.toml` uses scikit-build-core to build the shared library with CMake; `python -m build` is the optional frontend. Neither is a runtime dependency or needed for a normal CMake build |
+| MkDocs, Pygments | BSD-2-Clause | Documentation site only, pinned in `scripts/docs-requirements.txt`; the built-in theme and search, with code highlighted at build time. No dependency of the library or language bindings |
 | Conan | MIT | the Conan recipe, `conanfile.py`, and its CI job |
 | vcpkg | MIT | the overlay port in `packaging/vcpkg`, and its CI job |
 | pkg-config | GPL-2.0-or-later | finding libkqueue; the install gate's pkg-config consumer |
