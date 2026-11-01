@@ -148,7 +148,7 @@ static const cf_source* source_of(const cf_source_view* sv, int rank) {
     return NULL;
 }
 
-static void report_definition(cf_sink* out, const cf_def* d) {
+static void report_definition(cf_sink* out, const cf_def* d, cf_report_mode mode) {
     if (d == NULL) {
         cf_sink_puts(out, "null");
         return;
@@ -165,7 +165,7 @@ static void report_definition(cf_sink* out, const cf_def* d) {
         cf_sink_puts(out, ", \"replaced_by\": ");
         report_quote_z(out, d->replaced_by);
     }
-    if (d->has_default) {
+    if (d->has_default && (mode == CF_REPORT_FULL || (d->flags & CF_SENSITIVE) == 0)) {
         cf_sink_puts(out, ", \"default\": ");
         report_value(out, &d->default_value);
     }
@@ -289,7 +289,7 @@ static void report_key(cf_sink* out, const cf_entry* e, const cf_def* d,
     cf_bool             first = CF_TRUE;
 
     cf_sink_fmt(out, "{\n%s  \"definition\": ", indent);
-    report_definition(out, d);
+    report_definition(out, d, mode);
     cf_sink_fmt(out, ",\n%s  \"candidates\": [", indent);
 
     /* Nothing is dropped from the chain: a shadowed or refused
@@ -323,7 +323,8 @@ size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds,
     size_t          i;
 
     cf_sink_init(&out, buf, cap);
-    if (ks == NULL || key == NULL) {
+    if (ks == NULL || key == NULL ||
+        (mode != CF_REPORT_BLIND && mode != CF_REPORT_FULL)) {
         cf_sink_terminate(&out);
         return 0;
     }
@@ -358,7 +359,9 @@ size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
     cf_report_mode mode;
 
     cf_sink_init(&out, buf, cap);
-    if (ks == NULL || (info != NULL && info->size < REPORT_INFO_SIZE_1_0)) {
+    if (ks == NULL || (info != NULL && (info->size < REPORT_INFO_SIZE_1_0 ||
+                                        (info->mode != CF_REPORT_BLIND &&
+                                         info->mode != CF_REPORT_FULL)))) {
         cf_sink_terminate(&out);
         return 0;
     }

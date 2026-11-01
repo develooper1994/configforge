@@ -30,6 +30,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- Blind reports and single-key JSON omit sensitive defaults from
+  definition metadata as well as redacting candidates. Previously a
+  selected or shadowed secret default was still visible there.
+  Unsupported report modes now refuse output instead of producing
+  unredacted values under a `blind` label; explicit full mode is
+  unchanged.
 - Configuration emission escapes literal `${` as `$${`, so values and
   defaults survive loading the written file without being expanded
   again. Measurement and every truncated buffer keep the same escaped

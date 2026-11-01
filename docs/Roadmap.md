@@ -16,6 +16,12 @@ CHANGELOG section: long JSON/TOML values, literal references on emit,
 and refusing a value/container key collision (D-57). The existing
 1.0.0 archives still have those defects.
 
+The report follow-up also found that sensitive defaults appeared in
+blind reports' definition metadata, and an unsupported report mode
+could expose values under a `blind` label. The unreleased fixes cover
+both whole reports and single-key JSON. Reports made with an affected
+build must not be assumed value-blind merely because of their label.
+
 A deferred item remains open. Passing the release matrix does not
 complete an unimplemented feature, and publishing a version does not
 complete this roadmap. No further release is planned until the agreed

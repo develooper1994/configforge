@@ -2298,8 +2298,9 @@ Render the report. Measure-or-write: with a NULL buffer nothing is
 stored and the length still accumulates. `info` may be NULL, for a
 blind report that names nothing. 0, and an empty `buf`, when there is
 no key space or `info` did not start from CF_REPORT_INFO_INIT - its
-size is below 1.0's, and a call with no error to give refuses by
-writing nothing.
+size is below 1.0's - or its mode is neither CF_REPORT_BLIND nor
+CF_REPORT_FULL. A call with no error to give refuses by writing
+nothing.
 
 ```c
 CF_API size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds, const cf_source_view* sv, const char* key, size_t keylen, cf_report_mode mode, char* buf, size_t cap);
@@ -2313,7 +2314,8 @@ One key as the report writes it, alone - explain() for a machine:
 The object under "value" is exactly what the report holds under
 "keys.&lt;key>", so whatever reads one reads the other. A key nobody
 supplied has no candidates and a null selection. `mode` redacts as
-the report does. Measure-or-write; 0 without CF_WITH_REPORT.
+the report does. Unsupported modes return 0 and an empty buffer.
+Measure-or-write; 0 without CF_WITH_REPORT.
 
 ```c
 CF_API size_t cf_schema_write(const cf_defset* ds, const char* title, cf_bool closed, char* buf, size_t cap, cf_error* err);

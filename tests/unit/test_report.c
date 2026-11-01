@@ -142,6 +142,95 @@ static void test_full_report(void) {
     cf_config_free(cfg);
 }
 
+static void test_sensitive_defaults(void) {
+    static char        setting[]  = "PRIVATE_SECRET__OVERRIDE=private-live-43";
+    static char*       settings[] = {setting, NULL};
+    static const char* keys[] = {"secret.untouched", "secret.override", "secret.pin"};
+    static const char* defaults[] = {"\"default\": \"private-default-17\"",
+                                     "\"default\": \"private-fallback-89\"",
+                                     "\"default\": 817263"};
+    cf_error           err        = CF_ERROR_INIT;
+    cf_builder*        b          = cf_build(NULL);
+    cf_config*         cfg;
+    static char        buf[16384];
+    char               short_buf[31];
+    size_t             i, n;
+
+    cf_builder_env(b, "env", CF_RANK_ENV, "PRIVATE_", settings);
+    cf_builder_text(b, "secret.untouched", "private-default-17", CF_SENSITIVE);
+    cf_builder_text(b, "secret.override", "private-fallback-89", CF_SENSITIVE);
+    cf_builder_int(b, "secret.pin", 817263, 0, 0, CF_SENSITIVE);
+    cf_builder_text(b, "ordinary.default", "public-value", 0);
+    cfg = cf_builder_create(b, &err);
+    check(cfg != NULL, "sensitive selected and shadowed defaults build");
+    if (cfg == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+
+    n = report(cfg, CF_REPORT_BLIND, buf, sizeof buf);
+    check(n > 0 && n < sizeof buf, "blind default report fits");
+    lacks(buf, "private-default-17", "a selected secret default is absent");
+    lacks(buf, "private-fallback-89", "a shadowed secret default is absent");
+    lacks(buf, "private-live-43", "the explicit secret stays absent too");
+    lacks(buf, "817263", "a numeric secret default is absent");
+    has(buf, "\"default\": \"public-value\"", "public default metadata survives");
+    check(report(cfg, CF_REPORT_BLIND, NULL, 0) == n,
+          "redacting definition defaults preserves measurement");
+    check(report(cfg, CF_REPORT_BLIND, short_buf, sizeof short_buf) == n &&
+              memcmp(short_buf, buf, sizeof short_buf - 1) == 0 &&
+              short_buf[sizeof short_buf - 1] == '\0',
+          "a short blind report has the same length and safe prefix");
+
+    for (i = 0; i < sizeof keys / sizeof keys[0]; ++i) {
+        n = cf_explain_json(cfg, keys[i], CF_REPORT_BLIND, buf, sizeof buf);
+        check(n > 0 && n < sizeof buf, "one sensitive default's report fits");
+        lacks(buf, "\"default\":", "blind key metadata omits the secret default");
+        has(buf, "\"redacted\": true", "default candidates are still redacted");
+        has(buf, "\"digest\":", "default candidates retain change evidence");
+        cf_explain_json(cfg, keys[i], CF_REPORT_FULL, buf, sizeof buf);
+        has(buf, defaults[i], "explicit full key reports retain default metadata");
+    }
+
+    cf_report(cfg, NULL, buf, sizeof buf);
+    lacks(buf, "private-default-17", "NULL report info is blind for defaults too");
+    lacks(buf, "private-fallback-89", "NULL info also hides shadowed defaults");
+    report(cfg, CF_REPORT_FULL, buf, sizeof buf);
+    for (i = 0; i < sizeof defaults / sizeof defaults[0]; ++i) {
+        has(buf, defaults[i], "explicit full reports retain default metadata");
+    }
+    has(buf, "private-live-43", "full reports retain the explicit value");
+    cf_config_free(cfg);
+}
+
+static void test_invalid_modes(void) {
+    cf_error       err  = CF_ERROR_INIT;
+    cf_config*     cfg  = build(&err);
+    cf_report_info info = CF_REPORT_INFO_INIT;
+    static char    buf[16384];
+    int            mode;
+
+    check(cfg != NULL, "invalid-mode fixture builds");
+    if (cfg == NULL) {
+        return;
+    }
+    for (mode = -1; mode <= 2; mode += 3) {
+        info.mode = (cf_report_mode)mode;
+        buf[0]    = 'x';
+        check(cf_report(cfg, &info, buf, sizeof buf) == 0 && buf[0] == '\0',
+              "an unsupported mode refuses the report instead of exposing values");
+        check(cf_report(cfg, &info, NULL, 0) == 0,
+              "an unsupported report mode measures zero");
+        buf[0] = 'x';
+        check(cf_explain_json(cfg, "db.password", info.mode, buf, sizeof buf) == 0 &&
+                  buf[0] == '\0',
+              "an unsupported mode refuses a single-key report too");
+        check(cf_explain_json(cfg, "db.password", info.mode, NULL, 0) == 0,
+              "an unsupported single-key mode measures zero");
+    }
+    cf_config_free(cfg);
+}
+
 /* D-51: cf_report_info carries its size. An info that never had it set
    is refused - cf_report has no error to give, so it writes nothing; one
    longer than 1.0's, as a later release's would be, is read as far as 1.0
@@ -434,6 +523,8 @@ int main(void) {
     test_blind_report();
     test_digest_distinguishes();
     test_full_report();
+    test_sensitive_defaults();
+    test_invalid_modes();
     test_info_size();
     test_report_is_valid_json(ar);
     test_explain_json(ar);

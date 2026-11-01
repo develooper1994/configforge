@@ -25,8 +25,10 @@ extern "C" {
 
 typedef enum cf_report_mode {
     /* Values omitted for sensitive keys, replaced by presence, length
-       and a digest. Every Doctor rule but the type and range checks
-       works on this, so an audit never needs the secrets. */
+       and a digest. Sensitive defaults are omitted from definition
+       metadata too, whether selected or shadowed. Every Doctor rule
+       but the type and range checks works on this, so an audit never
+       needs the secrets. */
     CF_REPORT_BLIND = 0,
     /* Every value present. Needed for Report Replay, and therefore a
        credential-bearing artifact: produced deliberately, used
@@ -56,8 +58,9 @@ typedef struct cf_report_info {
    stored and the length still accumulates. `info` may be NULL, for a
    blind report that names nothing. 0, and an empty `buf`, when there is
    no key space or `info` did not start from CF_REPORT_INFO_INIT - its
-   size is below 1.0's, and a call with no error to give refuses by
-   writing nothing. */
+   size is below 1.0's - or its mode is neither CF_REPORT_BLIND nor
+   CF_REPORT_FULL. A call with no error to give refuses by writing
+   nothing. */
 CF_API size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
                               const cf_source_view* sv, const cf_report_info* info,
                               char* buf, size_t cap);
@@ -70,7 +73,8 @@ CF_API size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
    The object under "value" is exactly what the report holds under
    "keys.<key>", so whatever reads one reads the other. A key nobody
    supplied has no candidates and a null selection. `mode` redacts as
-   the report does. Measure-or-write; 0 without CF_WITH_REPORT. */
+   the report does. Unsupported modes return 0 and an empty buffer.
+   Measure-or-write; 0 without CF_WITH_REPORT. */
 CF_API size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds,
                                   const cf_source_view* sv, const char* key,
                                   size_t keylen, cf_report_mode mode, char* buf,
