@@ -184,6 +184,12 @@ source, a later assignment beats an earlier one.
 `app.toml`, a `conf.d/`, a `.env`, the environment and the command line -
 and asks, for one key from each layer, why it has the value it has.
 
+`cf_builder_cli`, `cf_builder_env` and `cf_builder_memory` borrow the
+command line, the environment and the pairs they are given, and read them
+in `cf_builder_create`: they have to stay valid until it returns, and no
+longer, because the configuration keeps its own copy of what it read.
+Names, paths and prefixes are copied as the call is made.
+
 ## 5. Asking why
 
 This is the question the library exists to answer:

@@ -153,6 +153,13 @@ CF_API cf_bool cf_builder_env(cf_builder* b, const char* name, int rank, const c
 CF_API cf_bool cf_builder_cli(cf_builder* b, const char* name, int rank, int argc, char* const* argv);
 ```
 
+The pairs, the environment and the command line are borrowed: the
+builder keeps the pointer, not a copy, and reads it when
+cf_builder_create runs, so what it points at has to stay valid until
+that returns - an argument vector filled in an inner block is gone by
+then. What the configuration holds is its own copy, so none of the
+three has to outlive it. The name and the prefix are copied at once.
+
 ```c
 CF_API cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const char* path, const char* format, unsigned flags);
 ```

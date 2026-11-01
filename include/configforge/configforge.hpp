@@ -649,6 +649,9 @@ public:
     Builder& operator=(const Builder&) = delete;
 #endif
 
+    /* cli(), env() and memory() borrow what they are given until
+       create(), as the C calls do: a std::vector<char*> that has gone out
+       of scope by then is read after it is gone. */
     Builder& cli(const char* name, int rank, int argc, char* const* argv)
     { if (b_) { cf_builder_cli(b_, name, rank, argc, argv); } return *this; }
 

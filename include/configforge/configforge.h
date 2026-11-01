@@ -101,6 +101,12 @@ CF_API cf_builder* cf_app_builder(const char* name, int argc, char* const* argv)
    caller's and is left alone. */
 CF_API void cf_builder_abort(cf_builder* b);
 
+/* The pairs, the environment and the command line are borrowed: the
+   builder keeps the pointer, not a copy, and reads it when
+   cf_builder_create runs, so what it points at has to stay valid until
+   that returns - an argument vector filled in an inner block is gone by
+   then. What the configuration holds is its own copy, so none of the
+   three has to outlive it. The name and the prefix are copied at once. */
 CF_API cf_bool cf_builder_memory(cf_builder* b, const char* name, int rank,
                                  const cf_pair* pairs, size_t count);
 CF_API cf_bool cf_builder_env(cf_builder* b, const char* name, int rank,

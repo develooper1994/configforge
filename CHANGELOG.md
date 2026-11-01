@@ -34,6 +34,8 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   to add one; `"edit-refused"` is among the stable log events; a refused
   `cf_live_commit` touches no status; `CF_LIVE_OPTIONS_INIT` sets
   `log_min`; `cf_edit_begin` also returns NULL for a NULL argument;
+  a builder borrows the pairs, the environment and the command line it is
+  given until `cf_builder_create`, and copies names and prefixes at once;
   `cf_error_clear`, `cf_app_builder` and `cf_builder_abort` have their own
   descriptions, and `cf_builder_file_codec` and `cf_live_commit` keep
   theirs.
