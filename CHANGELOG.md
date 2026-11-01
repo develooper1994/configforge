@@ -22,6 +22,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- `doctor diff` reported origin drift (CFD002) for every key whose source
+  differed, a key whose value differed too among them, so one difference
+  came out as CFD002, CFD003 and a value diff. CFD002 is now what Doctor.md
+  says it is: the same value - the same digest, for a secret - from a
+  different *kind* of source. Two sources of one kind under different names
+  are not drift, and a digest set against a value (a blind report against a
+  full one) is not compared at all.
 - The reference says what the code does: `cf_live_open`'s example takes
   six arguments; `cf_app` reads no file, and `cf_app_builder` is the way
   to add one; `"edit-refused"` is among the stable log events; a refused

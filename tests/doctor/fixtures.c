@@ -71,7 +71,8 @@ static int emit(const char* out, const char* profile, int argc, char* const* arg
 int main(void) {
     static char  pe0[]    = "MYAPP_SERVER__PORT=9090";
     static char  pe1[]    = "MYAPP_DB__PASSWORD=prodsecret";
-    static char* penv[]   = {pe0, pe1, NULL};
+    static char  pe2[]    = "MYAPP_SERVER__HOST=127.0.0.1";
+    static char* penv[]   = {pe0, pe1, pe2, NULL};
     static char* noargs[] = {a0, NULL};
 
     static char  sa1[]   = "--server.port=5000";
@@ -96,13 +97,16 @@ int main(void) {
         return 1;
     }
 
-    /* Production: environment wins the port, nothing overridden twice. */
+    /* Production: the environment wins the port and the host, nothing
+       overridden twice. */
     if (emit("cf_fx_prod.json", "production", 1, noargs, penv, NULL)) {
         return 1;
     }
     /* Staging: the command line wins, a file supplies the host, and the
        secret differs. Every cross-environment rule has something to
-       find between this and production. */
+       find between this and production: the host is the same value from
+       another kind of source (CFD002), the port a different value from
+       one (which is not). */
     if (emit("cf_fx_staging.json", "staging", 2, sargv, senv, "cf_fx_staging.ini")) {
         return 1;
     }

@@ -414,7 +414,7 @@ CFD007  error   api.token    sensitive, and supplied on the command line at
                              argv[1], which every user of the machine can read
 
 $ doctor diff prod.json staging.json
-CFD002  warning server.port  same key resolved from 'env' here and 'cli' there
+CFD002  warning server.host  same value, from 'env' here and 'user-file' there
 CFD014  info    db.password  sensitive value differs (by digest)
 ```
 

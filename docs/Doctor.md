@@ -281,6 +281,15 @@ rejection â€” CFD006 for a contract, CFD016 for policy, CFD015 for truncation â€
 other. A secret on the command line used to be three errors at once (CFD006, CFD010 and
 CFD016), and a report that says one thing three times teaches its reader to skim.
 
+**Drift is only drift when the values agree.** CFD002 is the same value from a different
+kind of source - an environment variable here, a file there - which a diff of the values
+shows nothing of. Two values that differ are a difference, and the value diff says so
+once; calling it drift as well reported every such key twice, and put a warning on the
+commonest difference there is. Kinds are compared, not names: `cli` and `args` are both
+the command line. A secret is compared by its digest, so a blind report can be audited;
+a digest set against a value - a blind report against a full one - neither agrees nor
+differs, and is not reported.
+
 **Doctor never looks at its own disk.** It judges reports from other machines, so
 whether a file is world-readable is recorded *by the library, in the report*, at the only
 point the file is at hand: `"world_readable": true` on a sensitive candidate that came

@@ -100,6 +100,26 @@ if(cmd STREQUAL "diff")
       message(FATAL_ERROR "diff did not produce ${rule}")
     endif()
   endforeach()
+  # The host is the same value from an environment variable here and a
+  # file there: drift, and not a difference. The port is another value
+  # from another source: a difference, and not drift. A value diff says
+  # so once, and calling it drift as well would put a warning on the
+  # commonest difference there is.
+  if(NOT out MATCHES
+     "CFD002[^\n]*server.host[^\n]*'env' here and 'user-file' there")
+    message(
+      FATAL_ERROR "the same host from two kinds of source was not reported")
+  endif()
+  if(out MATCHES "VALUE[^\n]*server.host")
+    message(FATAL_ERROR "a host that agrees was reported as a difference")
+  endif()
+  if(out MATCHES "CFD002[^\n]*server.port")
+    message(FATAL_ERROR "a port that differs was reported as origin drift")
+  endif()
+  if(NOT out MATCHES "VALUE[^\n]*server.port[^\n]*9090 here, 5000 there")
+    message(
+      FATAL_ERROR "the port that differs was not reported as a difference")
+  endif()
 endif()
 if(cmd STREQUAL "explain" AND EXPECT_FAIL EQUAL 0)
   if(NOT out MATCHES "shadowed")

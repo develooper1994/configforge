@@ -1119,28 +1119,77 @@ static void rule_truncated(const report* r) {
  * Comparing two reports
  * ------------------------------------------------------------------ */
 
-/* CFD002. The two agree on the value and disagree on where it came
-   from. A plain value diff shows nothing here, which is exactly why it
-   is dangerous: the day the environment variable is missing, the two
-   environments stop behaving the same. */
+/* The candidate that won: the one the report gives no outcome. */
+static const cand* winner(const rkey* k) {
+    size_t j;
+
+    for (j = 0; j < k->nc; ++j) {
+        if (k->c[j].outcome == NULL) {
+            return &k->c[j];
+        }
+    }
+    return NULL;
+}
+
+typedef enum { AGREE_UNKNOWN, AGREE_YES, AGREE_NO } agreement;
+
+/* Whether two winners hold the same value. A redacted one has a digest
+   and no value, so a pair with either side redacted is compared by
+   digest, which is how a production report can be audited without the
+   secret being in it at all. What the two reports cannot compare - a
+   digest on one side and the value on the other - is neither agreement
+   nor a difference. */
+static agreement values_agree(const cand* a, const cand* b) {
+    const char *x = a->value, *y = b->value;
+
+    if (x == NULL || y == NULL) {
+        x = a->digest;
+        y = b->digest;
+    }
+    if (x == NULL || y == NULL) {
+        return AGREE_UNKNOWN;
+    }
+    return (strcmp(x, y) == 0) ? AGREE_YES : AGREE_NO;
+}
+
+/* What kind of source supplied a key: "env", "file", "cli". The report's
+   own table of sources says; a source it does not list is told apart by
+   its name alone. */
+static const char* origin_kind(const report* r, const rkey* k) {
+    const rsrc* s = find_source(r, k->selected);
+
+    return (s != NULL && s->kind != NULL) ? s->kind : k->selected;
+}
+
+/* CFD002. The two agree on the value and disagree on what kind of
+   source it came from. A plain value diff shows nothing here, which is
+   exactly why it is dangerous: the day the environment variable is
+   missing, the two environments stop behaving the same. Values that
+   differ are not drift: the value diff has said so, once. */
 static void rule_origin_drift(const report* a, const report* b) {
     size_t i;
 
     for (i = 0; i < a->nkeys; ++i) {
         const rkey* ka = &a->keys[i];
         const rkey* kb = doctor_find_key(b, ka->key, ka->keylen);
+        const cand *ca, *cb;
         char        name[CF_KEY_MAX];
 
         if (kb == NULL || ka->selected == NULL || kb->selected == NULL) {
             continue;
         }
-        if (strcmp(ka->selected, kb->selected) == 0) {
+        ca = winner(ka);
+        cb = winner(kb);
+        if (ca == NULL || cb == NULL || values_agree(ca, cb) != AGREE_YES) {
+            continue;
+        }
+        if (strcmp(origin_kind(a, ka), origin_kind(b, kb)) == 0) {
             continue;
         }
 
         doctor_key_name(ka, name, sizeof name);
         finding(a->D, "CFD002", "warning", name,
-                "same key resolved from '%s' here and '%s' there", ka->selected,
+                "same value, from '%s' here and '%s' there", ka->selected,
                 kb->selected);
     }
 }
@@ -1199,43 +1248,23 @@ static void rule_value_diff(const report* a, const report* b) {
     for (i = 0; i < a->nkeys; ++i) {
         const rkey* ka = &a->keys[i];
         const rkey* kb = doctor_find_key(b, ka->key, ka->keylen);
+        const cand *ca, *cb;
         char        name[CF_KEY_MAX];
-        const cand *ca = NULL, *cb = NULL;
-        size_t      j;
 
         if (kb == NULL || ka->selected == NULL || kb->selected == NULL) {
             continue;
         }
-        for (j = 0; j < ka->nc; ++j) {
-            if (ka->c[j].outcome == NULL) {
-                ca = &ka->c[j];
-                break;
-            }
-        }
-        for (j = 0; j < kb->nc; ++j) {
-            if (kb->c[j].outcome == NULL) {
-                cb = &kb->c[j];
-                break;
-            }
-        }
-        if (ca == NULL || cb == NULL) {
+        ca = winner(ka);
+        cb = winner(kb);
+        if (ca == NULL || cb == NULL || values_agree(ca, cb) != AGREE_NO) {
             continue;
         }
 
         doctor_key_name(ka, name, sizeof name);
-
-        /* A redacted pair is compared by digest, which is how a
-           production report can be audited without the secret being in
-           it at all. */
         if (ca->value == NULL || cb->value == NULL) {
-            if (ca->digest != NULL && cb->digest != NULL &&
-                strcmp(ca->digest, cb->digest) != 0) {
-                finding(a->D, "CFD014", "info", name,
-                        "sensitive value differs (by digest)");
-            }
-            continue;
-        }
-        if (strcmp(ca->value, cb->value) != 0) {
+            finding(a->D, "CFD014", "info", name,
+                    "sensitive value differs (by digest)");
+        } else {
             finding(a->D, "VALUE", "info", name, "%s here, %s there", ca->value,
                     cb->value);
         }

@@ -134,6 +134,126 @@ static void test_diff(void) {
     cf_config_free(b);
 }
 
+/* One side of a comparison: where two keys came from - "level", and
+   "license", which is sensitive - and how its report was written. */
+typedef struct drift_side {
+    const char*    kind; /* "cli" or "env"            */
+    const char*    name; /* what the source is called */
+    const char*    level;
+    const char*    license;
+    cf_report_mode mode;
+} drift_side;
+
+/* The report of that side, written by the library as a program writes
+   one. A builder reads the arguments or the environment it was given at
+   cf_builder_create, not when it is told of them, so what it was given
+   lives to that call. */
+static size_t side_report(const drift_side* s, char* buf, size_t cap) {
+    static char    prog[] = "prog";
+    char           a1[64], a2[64];
+    char*          list[4];
+    cf_error       err = CF_ERROR_INIT;
+    cf_builder*    b   = cf_build(NULL);
+    cf_def         d;
+    cf_config*     c;
+    cf_report_info info = CF_REPORT_INFO_INIT;
+    size_t         n;
+
+    if (strcmp(s->kind, "cli") == 0) {
+        cf_fmt(a1, sizeof a1, "--level=%s", s->level);
+        cf_fmt(a2, sizeof a2, "--license=%s", s->license);
+        list[0] = prog;
+        list[1] = a1;
+        list[2] = a2;
+        list[3] = NULL;
+        cf_builder_cli(b, s->name, CF_RANK_CLI, 3, list);
+    } else {
+        cf_fmt(a1, sizeof a1, "APP_LEVEL=%s", s->level);
+        cf_fmt(a2, sizeof a2, "APP_LICENSE=%s", s->license);
+        list[0] = a1;
+        list[1] = a2;
+        list[2] = NULL;
+        cf_builder_env(b, s->name, CF_RANK_ENV, "APP_", list);
+    }
+    cf_builder_text(b, "level", "info", 0);
+    cf_def_init(&d, CF_TYPE_TEXT, "license");
+    d.flags = CF_SENSITIVE;
+    cf_builder_define(b, &d);
+    c = cf_builder_create(b, &err);
+    if (c == NULL) {
+        return 0;
+    }
+    info.mode = s->mode;
+    n         = cf_report(c, &info, buf, cap);
+    cf_config_free(c);
+    /* A report longer than the buffer was cut short: not one to compare. */
+    return n < cap ? n : 0;
+}
+
+static cf_doctor* drift_compare(const drift_side* a, const drift_side* b) {
+    static char ra[16384], rb[16384];
+    cf_error    err = CF_ERROR_INIT;
+    cf_doctor*  d   = cf_doctor_new();
+    size_t      an  = side_report(a, ra, sizeof ra);
+    size_t      bn  = side_report(b, rb, sizeof rb);
+
+    check(an > 0 && bn > 0 && d != NULL, "two reports are written");
+    if (an > 0 && bn > 0 && d != NULL) {
+        check(cf_doctor_diff_report(d, ra, an, "<a>", rb, bn, "<b>", &err),
+              "and compared");
+    }
+    return d;
+}
+
+/* CFD002 is the same value from two kinds of source, which a value diff
+   shows nothing of. It is not a different value from another source,
+   which it shows, and the rule used to say both: every key whose source
+   differed was drift. */
+static void test_origin_drift(void) {
+    drift_side cli     = {"cli", "cli", "info", "alpha", CF_REPORT_BLIND};
+    drift_side env     = {"env", "env", "info", "alpha", CF_REPORT_BLIND};
+    drift_side args    = {"cli", "args", "info", "alpha", CF_REPORT_BLIND};
+    drift_side other   = {"env", "env", "debug", "bravo", CF_REPORT_BLIND};
+    drift_side env_all = {"env", "env", "info", "alpha", CF_REPORT_FULL};
+    cf_doctor* d;
+
+    d = drift_compare(&cli, &env);
+    {
+        const cf_finding* f = find(d, "CFD002", "level");
+        check(f != NULL && strstr(f->message, "'cli'") != NULL &&
+                  strstr(f->message, "'env'") != NULL,
+              "the same value from the command line and from the environment is "
+              "origin drift, and names both");
+    }
+    check(find(d, "CFD002", "license") != NULL,
+          "a secret is the same when its digests are, and drifts as well");
+    check(find(d, "VALUE", "level") == NULL && find(d, "CFD014", "license") == NULL,
+          "and is no difference in value");
+    cf_doctor_free(d);
+
+    d = drift_compare(&cli, &other);
+    check(find(d, "VALUE", "level") != NULL && find(d, "CFD014", "license") != NULL,
+          "values that differ are reported as differing");
+    check(find(d, "CFD002", "level") == NULL && find(d, "CFD002", "license") == NULL,
+          "and not as origin drift besides");
+    cf_doctor_free(d);
+
+    d = drift_compare(&cli, &args);
+    check(find(d, "CFD002", "level") == NULL && find(d, "CFD002", "license") == NULL,
+          "two names for one kind of source is no drift");
+    cf_doctor_free(d);
+
+    d = drift_compare(&cli, &env_all);
+    check(find(d, "CFD002", "level") != NULL,
+          "an ordinary value is compared whichever way its report was written");
+    check(find(d, "CFD002", "license") == NULL &&
+              find(d, "CFD014", "license") == NULL &&
+              find(d, "VALUE", "license") == NULL,
+          "a secret one report digests and the other shows is not compared: it "
+          "neither agrees nor differs");
+    cf_doctor_free(d);
+}
+
 static void test_inputs(void) {
     cf_error   err = CF_ERROR_INIT;
     cf_doctor* d   = cf_doctor_new();
@@ -270,6 +390,7 @@ int main(void) {
     test_gate();
     test_baseline_and_severity();
     test_diff();
+    test_origin_drift();
     test_inputs();
 #else
     /* A configuration's report needs both; without them the library
