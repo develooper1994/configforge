@@ -28,7 +28,8 @@ typedef enum cf_report_mode {
        and a digest. Sensitive defaults are omitted from definition
        metadata too, whether selected or shadowed. Every Doctor rule
        but the type and range checks works on this, so an audit never
-       needs the secrets. */
+       needs the secrets. Text length and digest cover all bytes,
+       including embedded NUL, without a numeric formatting limit. */
     CF_REPORT_BLIND = 0,
     /* Every value present. Needed for Report Replay, and therefore a
        credential-bearing artifact: produced deliberately, used

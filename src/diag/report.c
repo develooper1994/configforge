@@ -106,12 +106,14 @@ static void report_value(cf_sink* out, const cf_value* v) {
    meant to be safe to keep. */
 static void report_digest(cf_sink* out, const cf_value* v) {
     char   tmp[CF_VALUE_TEXT_MAX];
-    size_t n = cf_value_to_text(v, tmp, sizeof tmp);
-    cf_u64 h = ((cf_u64)3421674724U << 32) | (cf_u64)2216829733U;
-    size_t i;
+    size_t n =
+        v->type == CF_TYPE_TEXT ? v->u.t.n : cf_value_to_text(v, tmp, sizeof tmp);
+    const char* bytes = v->type == CF_TYPE_TEXT ? v->u.t.p : tmp;
+    cf_u64      h     = ((cf_u64)3421674724U << 32) | (cf_u64)2216829733U;
+    size_t      i;
 
     for (i = 0; i < n; ++i) {
-        h ^= (cf_u64)(unsigned char)tmp[i];
+        h ^= (cf_u64)(unsigned char)bytes[i];
         h *= ((cf_u64)256U << 32) | (cf_u64)435U; /* 1099511628211, see keyspace.c */
     }
     /* Sixteen hex digits written by hand. The library's formatter has
@@ -279,7 +281,9 @@ static void report_candidate(cf_sink* out, const cf_candidate* c,
            Doctor rule works on exactly this, which is how a production
            report can be audited without leaving the secret in it. */
         char   tmp[CF_VALUE_TEXT_MAX];
-        size_t n = cf_value_to_text(&c->value, tmp, sizeof tmp);
+        size_t n = c->value.type == CF_TYPE_TEXT
+                       ? c->value.u.t.n
+                       : cf_value_to_text(&c->value, tmp, sizeof tmp);
         cf_sink_puts(out, ", \"redacted\": true");
         cf_sink_fmt(out, ", \"length\": %zu", n);
         cf_sink_puts(out, ", \"digest\": ");

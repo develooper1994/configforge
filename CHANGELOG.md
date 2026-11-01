@@ -44,6 +44,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- Blind reports hash all sensitive text bytes and retain their actual
+  length, including embedded NUL. Text longer than the numeric
+  formatting buffer previously had length zero and the empty digest,
+  so changes to long secrets were invisible to report comparisons.
 - The list provenance table uses explicit byte-copy conversions for
   clang-tidy. Response-file argument growth uses an equivalent branch:
   PCC's preprocessor misplaced its ternary token at an input-buffer

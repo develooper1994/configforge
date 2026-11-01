@@ -124,13 +124,20 @@ In value-blind mode a report carries, for every sensitive key:
 present          yes / no
 origin           which source supplied it
 length           integer
-digest           salted hash, salt per report-pair
+digest           producer-specific change fingerprint
 ```
 
 Every rule in section 8 except the type and range checks operates on presence, origin
 and digest alone. Doctor can therefore audit a production environment without ever
 seeing a production credential, and the digest still detects "the value changed"
 without revealing what it changed to.
+
+The native writer's `fnv1a:` digest is an unsalted, non-cryptographic
+change fingerprint, not proof of equality or protection against guessing.
+It covers the complete text byte sequence, including embedded NUL.
+Reports from releases through 1.0.0 used the numeric formatting buffer
+for text: long sensitive values could carry length zero and the empty
+fingerprint. Regenerate those reports before relying on comparisons.
 
 This works because it reuses the redaction mechanism from `Decisions.md` D-13. One
 mechanism, two features.

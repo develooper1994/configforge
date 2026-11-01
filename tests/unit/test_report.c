@@ -517,11 +517,67 @@ static void test_digest_distinguishes(void) {
     }
 }
 
+static void test_digest_text_bytes(void) {
+    static char before[4096], after[4096];
+    char        text[64];
+    cf_def      def;
+    cf_error    err = CF_ERROR_INIT;
+    cf_builder* b;
+    cf_config*  c;
+    const char* first;
+    const char* second;
+    size_t      i;
+
+    memset(text, 'a', sizeof text);
+    for (i = 0; i < 4; ++i) {
+        if (i == 1) {
+            text[sizeof text - 1] = 'b';
+        } else if (i == 2) {
+            text[2] = '\0';
+        } else if (i == 3) {
+            memset(text, 'a', sizeof text);
+        }
+        cf_def_init(&def, CF_TYPE_TEXT, "secret");
+        def.flags       = CF_SENSITIVE;
+        def.has_default = CF_TRUE;
+        cf_value_text(&def.default_value, text, sizeof text);
+        b = cf_build(NULL);
+        check(b != NULL, "a byte-length secret builder");
+        if (b == NULL) {
+            return;
+        }
+        check(cf_builder_define(b, &def), "a byte-length secret definition");
+        c = cf_builder_create(b, &err);
+        check(c != NULL, "a byte-length secret configuration");
+        if (c == NULL) {
+            return;
+        }
+        report(c, CF_REPORT_BLIND, i == 0 ? before : after, sizeof before);
+        cf_config_free(c);
+        has(i == 0 ? before : after, "\"length\": 64",
+            "redacted text retains its actual byte length");
+        first = strstr(before, "\"digest\": \"fnv1a:");
+        check(first != NULL, "the long secret has a digest");
+        if (i > 0 && i < 3) {
+            second = strstr(after, "\"digest\": \"fnv1a:");
+            check(first != NULL && second != NULL &&
+                      strncmp(first, second, strlen("\"digest\": \"fnv1a:") + 16) != 0,
+                  "changes past the numeric buffer and embedded NUL are hashed");
+        } else if (i == 3) {
+            second = strstr(after, "\"digest\": \"fnv1a:");
+            check(first != NULL && second != NULL &&
+                      strncmp(first, second, strlen("\"digest\": \"fnv1a:") + 16) == 0,
+                  "identical long text has identical comparison evidence");
+        }
+    }
+}
+
 int main(void) {
     cf_arena* ar = cf_arena_new(NULL, 1 << 16);
 
     test_blind_report();
     test_digest_distinguishes();
+    test_digest_text_bytes();
     test_full_report();
     test_sensitive_defaults();
     test_invalid_modes();
