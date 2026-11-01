@@ -22,6 +22,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- Doctor did not see a key no source won: an optional key with no default
+  whose only value came from a source its policy refuses, which a report
+  writes with `"selected": null`. CFD016 never fired for it, so a secret
+  passed on the command line to such a key went unreported; `doctor explain`
+  said the key was not in the report; and a report with no other key was
+  refused as describing none. Doctor now finds a key by either entry.
+  CFD004, CFD012 and CFD015 had no test at all, and now have one.
 - `doctor diff` reported origin drift (CFD002) for every key whose source
   differed, a key whose value differed too among them, so one difference
   came out as CFD002, CFD003 and a value diff. CFD002 is now what Doctor.md

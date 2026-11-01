@@ -121,7 +121,26 @@ if(cmd STREQUAL "diff")
       FATAL_ERROR "the port that differs was not reported as a difference")
   endif()
 endif()
-if(cmd STREQUAL "explain" AND EXPECT_FAIL EQUAL 0)
+if(cmd STREQUAL "lint" AND argv MATCHES "unset")
+  # A key nothing won - an optional secret with no default, offered only
+  # where its policy refuses it - was left out of what Doctor read, so
+  # the secret it refused went unreported.
+  if(NOT out MATCHES "CFD016[^\n]*license.code")
+    message(FATAL_ERROR "a secret refused by policy, with no value left, "
+                        "was not reported")
+  endif()
+  if(out MATCHES "ab12cd")
+    message(FATAL_ERROR "the finding carries the secret")
+  endif()
+endif()
+if(cmd STREQUAL "explain" AND argv MATCHES "unset")
+  if(NOT out MATCHES "cli[^\n]*rejected[^\n]*policy")
+    message(FATAL_ERROR "explain did not show the refused candidate and why")
+  endif()
+endif()
+if(cmd STREQUAL "explain"
+   AND EXPECT_FAIL EQUAL 0
+   AND NOT argv MATCHES "unset")
   if(NOT out MATCHES "shadowed")
     message(FATAL_ERROR "explain did not show the losing candidate")
   endif()

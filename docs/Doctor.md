@@ -195,8 +195,8 @@ jq -r '.keys | to_entries[] | select(.value.definition.sensitive == true)
 
 The shape they rely on: `keys` maps each key to its `definition` (or `null`), its
 `candidates` in precedence order - each with `source`, `at`, and an `outcome` unless it
-was selected - and the `selected` source. `sources` lists every source with its `kind`
-and `rank`.
+was selected - and the `selected` source, which is `null` for a key no candidate won.
+`sources` lists every source with its `kind` and `rank`.
 
 ---
 
@@ -280,6 +280,15 @@ earlier one has no effect. CFD010 is the aggregate: a source that wins nothing a
 rejection — CFD006 for a contract, CFD016 for policy, CFD015 for truncation — and by no
 other. A secret on the command line used to be three errors at once (CFD006, CFD010 and
 CFD016), and a report that says one thing three times teaches its reader to skim.
+
+**A key nothing won is still a key.** An optional key with no default, whose only value
+came from a source its policy refuses, is in the report with `"selected": null`, and
+Doctor reads it as it reads any other: CFD016 is how a secret that reached the command
+line of such a key is found at all. Doctor used to find keys by their winner, so this
+one was in no rule's sight - and a report with no other key was refused as describing
+none. CFD004 reads the same state for a *required* key, which the library cannot write:
+it will not build a configuration with a required key unset, so that finding comes from
+a report another producer wrote.
 
 **Drift is only drift when the values agree.** CFD002 is the same value from a different
 kind of source - an environment variable here, a file there - which a diff of the values

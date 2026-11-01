@@ -269,6 +269,145 @@ static void test_inputs(void) {
     cf_doctor_free(d);
 }
 
+/* An optional secret with no default, offered only where its policy
+   refuses it, is a key nothing won: its report entry says "selected":
+   null. Doctor used to find keys by their winner, so this one was in no
+   rule's sight - the secret on the command line went unreported - and a
+   report with no other key was no report at all. */
+static cf_config* build_unset(int with_port) {
+    static const char* const only_env[] = {"env", NULL};
+    static char              a0[]       = "prog";
+    static char              a1[]       = "--license.code=ab12cd";
+    static char*             argv[]     = {a0, a1, NULL};
+    static char*             noenv[]    = {NULL};
+    cf_error                 err        = CF_ERROR_INIT;
+    cf_builder*              b          = cf_build(NULL);
+    cf_def                   d;
+
+    cf_builder_cli(b, "cli", CF_RANK_CLI, 2, argv);
+    cf_builder_env(b, "env", CF_RANK_ENV, "APP_", noenv);
+    if (with_port) {
+        cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    }
+    cf_def_init(&d, CF_TYPE_TEXT, "license.code");
+    d.flags  = CF_SENSITIVE;
+    d.policy = only_env;
+    cf_builder_define(b, &d);
+    return cf_builder_create(b, &err);
+}
+
+static void test_unselected_key(void) {
+    int with_port;
+
+    for (with_port = 0; with_port < 2; ++with_port) {
+        cf_error          err = CF_ERROR_INIT;
+        cf_config*        c   = build_unset(with_port);
+        cf_doctor*        d   = cf_doctor_new();
+        const cf_finding* f;
+
+        check(c != NULL && d != NULL, "a configuration with a key nothing won");
+        if (c == NULL || d == NULL) {
+            cf_config_free(c);
+            cf_doctor_free(d);
+            continue;
+        }
+        check(cf_doctor_lint(d, c, NULL, &err),
+              with_port ? "is linted, among other keys" : "is linted, as its only key");
+        f = find(d, "CFD016", "license.code");
+        check(f != NULL && strcmp(f->level, "error") == 0,
+              with_port ? "and the secret it refused is found, among other keys"
+                        : "and the secret it refused is found, as its only key");
+        check(f != NULL && strstr(f->message, "policy:") != NULL &&
+                  strstr(f->message, "ab12cd") == NULL,
+              "naming the policy and not the secret");
+        check(find(d, "CFD007", "license.code") == NULL,
+              "once: what policy refused is not reported again for being on the "
+              "command line");
+        cf_doctor_free(d);
+        cf_config_free(c);
+    }
+}
+
+/* The report as a program writes it, and as one the library could not:
+   it will not build a configuration with a required key unset, so a
+   required key that nothing won comes from another producer's report. */
+static void test_required(void) {
+    static const char text[] =
+        "{\"configforge_report\":1,\"keys\":{"
+        "\"db.host\":{\"definition\":{\"type\":\"text\",\"required\":true},"
+        "\"candidates\":[],\"selected\":null},"
+        "\"db.port\":{\"definition\":{\"type\":\"int\",\"required\":true},"
+        "\"candidates\":[{\"source\":\"file\",\"value\":\"5432\"}],"
+        "\"selected\":{\"source\":\"file\"}}}}";
+    cf_error          err = CF_ERROR_INIT;
+    cf_doctor*        d   = cf_doctor_new();
+    const cf_finding* f;
+
+    check(cf_doctor_lint_report(d, text, strlen(text), "required.json", &err),
+          "a report is linted");
+    f = find(d, "CFD004", "db.host");
+    check(f != NULL && strcmp(f->level, "error") == 0,
+          "a required key with no value is an error");
+    check(find(d, "CFD004", "db.port") == NULL, "and one with a value is not reported");
+    cf_doctor_free(d);
+}
+
+/* The smallest report: one key both sides have, and one only this side. */
+static size_t keys_report(char* buf, size_t cap, const char* only) {
+    return cf_fmt(buf, cap,
+                  "{\"configforge_report\":1,\"keys\":{"
+                  "\"shared\":{\"candidates\":[{\"source\":\"file\",\"value\":\"1\"}],"
+                  "\"selected\":{\"source\":\"file\"}},"
+                  "\"%s\":{\"candidates\":[{\"source\":\"file\",\"value\":\"2\"}],"
+                  "\"selected\":{\"source\":\"file\"}}}}",
+                  only);
+}
+
+static void test_parity(void) {
+    static char       ra[512], rb[512];
+    cf_error          err = CF_ERROR_INIT;
+    cf_doctor*        d   = cf_doctor_new();
+    size_t            an  = keys_report(ra, sizeof ra, "only.a");
+    size_t            bn  = keys_report(rb, sizeof rb, "only.b");
+    const cf_finding* f;
+
+    check(cf_doctor_diff_report(d, ra, an, "a.json", rb, bn, "b.json", &err),
+          "two reports are compared");
+    f = find(d, "CFD012", "only.a");
+    check(f != NULL &&
+              strstr(f->message, "present in a.json, absent in b.json") != NULL,
+          "a key only the first has is found, with where it is and where it is not");
+    f = find(d, "CFD012", "only.b");
+    check(f != NULL &&
+              strstr(f->message, "present in b.json, absent in a.json") != NULL,
+          "as is one only the second has: parity runs both ways");
+    check(find(d, "CFD012", "shared") == NULL, "and a key both have is not found");
+    cf_doctor_free(d);
+}
+
+/* An array longer than the one that won: what is beyond its length is
+   discarded, and the report says so with "truncated". */
+static void test_truncated(void) {
+    static const char text[] =
+        "{\"configforge_report\":1,\"keys\":{"
+        "\"hosts.0\":{\"candidates\":[{\"source\":\"file\",\"value\":\"a\"}],"
+        "\"selected\":{\"source\":\"file\"}},"
+        "\"hosts.1\":{\"candidates\":[{\"source\":\"file\",\"value\":\"b\","
+        "\"at\":\"app.ini:3\",\"outcome\":\"truncated\"}],\"selected\":null}}}";
+    cf_error          err = CF_ERROR_INIT;
+    cf_doctor*        d   = cf_doctor_new();
+    const cf_finding* f;
+
+    check(cf_doctor_lint_report(d, text, strlen(text), "truncated.json", &err),
+          "a report is linted");
+    f = find(d, "CFD015", "hosts.1");
+    check(f != NULL && strcmp(f->level, "warning") == 0 && f->at != NULL &&
+              strcmp(f->at, "app.ini:3") == 0,
+          "an element beyond the winning length is found, and where it was set");
+    check(find(d, "CFD015", "hosts.0") == NULL, "and one within it, that won, is not");
+    cf_doctor_free(d);
+}
+
 /* The password moves to the command line in the second snapshot: the
    gate refuses it with the finding, and the first keeps serving. */
 static int g_bad = 0;
@@ -391,6 +530,10 @@ int main(void) {
     test_baseline_and_severity();
     test_diff();
     test_origin_drift();
+    test_unselected_key();
+    test_required();
+    test_parity();
+    test_truncated();
     test_inputs();
 #else
     /* A configuration's report needs both; without them the library

@@ -50,6 +50,10 @@ doctor_case(lint_policy 1 lint|cf_fx_leak.json)
 doctor_case(lint_rules 0 lint|cf_fx_rules.json)
 doctor_case(lint_twice 1 lint|cf_fx_twice.json)
 doctor_case(lint_sources 1 lint|cf_fx_sources.json)
+# A key nothing won is still a key: the secret it refused is found, and
+# explain shows the candidate that was refused.
+doctor_case(lint_unset 1 lint|cf_fx_unset.json)
+doctor_case(explain_unset 0 explain|cf_fx_unset.json|license.code)
 doctor_case(lint_files_secret 0 lint|cf_fx_files.json|--fail-on|never)
 doctor_case(not_a_report 2 dump|cf_fx_staging.ini)
 

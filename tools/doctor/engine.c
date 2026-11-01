@@ -75,6 +75,34 @@ static cf_bool flag_at(const cf_keyspace* ks, const char* key, size_t klen,
     return (v != NULL && v->type == CF_TYPE_BOOL && v->u.b) ? CF_TRUE : CF_FALSE;
 }
 
+/* The length of the configuration key a report entry names, or 0 when it
+   names none. A key is written as "selected.source" when a candidate won
+   it and as a "selected" that is null when none did: an optional key
+   with no default, whose only value came from a source its policy
+   refuses. Looking for the first alone left that key out of every rule,
+   which is how a secret passed on the command line to one was never
+   found. */
+static size_t entry_key_length(const cf_entry* e) {
+    static const char won[]  = ".selected.source";
+    static const char none[] = ".selected";
+    size_t            n      = e->keylen;
+
+    if (n < 5 || memcmp(e->key, "keys.", 5) != 0) {
+        return 0;
+    }
+    n -= 5;
+    if (n > sizeof won - 1 &&
+        memcmp(e->key + 5 + n - (sizeof won - 1), won, sizeof won - 1) == 0) {
+        return n - (sizeof won - 1);
+    }
+    if (n > sizeof none - 1 &&
+        memcmp(e->key + 5 + n - (sizeof none - 1), none, sizeof none - 1) == 0 &&
+        e->selected != NULL && e->selected->value.type == CF_TYPE_NULL) {
+        return n - (sizeof none - 1);
+    }
+    return 0;
+}
+
 /* Report keys are escaped into the document's own key space, so a
    configuration key "server.port" appears as "keys.server.port.*".
    Recovering the original means stripping the prefix and the field
@@ -141,15 +169,13 @@ static cf_bool parse(report* r, const cf_blob* blob, cf_error* err) {
         r->nsrc = count;
     }
 
-    /* Every "keys.<key>.selected.source" names one configuration key.
-       Counted first so the array is allocated at exactly the size it
-       needs, which is also the only way to have no arbitrary limit. */
+    /* Every entry that entry_key_length() finds names one configuration
+       key. Counted first so the array is allocated at exactly the size
+       it needs, which is also the only way to have no arbitrary limit. */
     {
         size_t count = 0;
         for (i = 0; i < cf_ks_count(&r->doc); ++i) {
-            const cf_entry* e = cf_ks_at(&r->doc, i);
-            if (e->keylen >= 21 && memcmp(e->key, "keys.", 5) == 0 &&
-                memcmp(e->key + e->keylen - 16, ".selected.source", 16) == 0) {
+            if (entry_key_length(cf_ks_at(&r->doc, i)) > 0) {
                 ++count;
             }
         }
@@ -165,22 +191,18 @@ static cf_bool parse(report* r, const cf_blob* blob, cf_error* err) {
     }
 
     for (i = 0; i < cf_ks_count(&r->doc); ++i) {
-        const cf_entry* e = cf_ks_at(&r->doc, i);
-        const char*     k = e->key;
-        size_t          n = e->keylen;
+        const cf_entry* e  = cf_ks_at(&r->doc, i);
+        size_t          kl = entry_key_length(e);
         rkey*           rk;
         size_t          j, ncand;
 
-        if (n < 21 || memcmp(k, "keys.", 5) != 0) {
-            continue;
-        }
-        if (memcmp(k + n - 16, ".selected.source", 16) != 0) {
+        if (kl == 0) {
             continue;
         }
         rk = &r->keys[r->nkeys++];
         memset(rk, 0, sizeof *rk);
-        rk->key      = k + 5;
-        rk->keylen   = n - 5 - 16;
+        rk->key      = e->key + 5;
+        rk->keylen   = kl;
         rk->selected = (e->selected != NULL && e->selected->value.type == CF_TYPE_TEXT)
                            ? e->selected->value.u.t.p
                            : NULL;

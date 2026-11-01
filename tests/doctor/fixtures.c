@@ -211,6 +211,47 @@ int main(void) {
         }
     }
 
+    /* A key nothing won: an optional secret with no default, offered
+       only on the command line, which its policy refuses. Its report
+       entry says "selected": null. A Doctor that found keys by their
+       winner never saw it, and the secret on the command line went
+       unreported. */
+    {
+        static const char* const only_env[] = {"env", NULL};
+        static char              ua1[]      = "--license.code=ab12cd";
+        static char*             uargv[]    = {a0, ua1, NULL};
+        static char*             noenv[]    = {NULL};
+        cf_error                 err        = CF_ERROR_INIT;
+        cf_builder*              b          = cf_build(NULL);
+        cf_config*               c;
+        cf_report_info           info = CF_REPORT_INFO_INIT;
+        static char              buf[65536];
+        cf_def                   d;
+
+        cf_builder_cli(b, "cli", CF_RANK_CLI, 2, uargv);
+        cf_builder_env(b, "env", CF_RANK_ENV, "MYAPP_", noenv);
+        cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+        cf_def_init(&d, CF_TYPE_TEXT, "license.code");
+        d.flags  = CF_SENSITIVE;
+        d.policy = only_env;
+        cf_builder_define(b, &d);
+
+        c = cf_builder_create(b, &err);
+        if (c == NULL) {
+            fprintf(stderr, "fixtures: unset: %s\n", err.message);
+            return 1;
+        }
+        info.mode        = CF_REPORT_BLIND;
+        info.profile     = "production";
+        info.application = "myapp";
+        info.generated   = "2026-09-12T00:00:00Z";
+        cf_report(c, &info, buf, sizeof buf);
+        cf_config_free(c);
+        if (!spill("cf_fx_unset.json", buf)) {
+            return 1;
+        }
+    }
+
     /* Two secrets in two files, one that every user can read and one
        that only its owner can. The report records which is which where
        the platform can tell, and Doctor judges from the report alone. */
