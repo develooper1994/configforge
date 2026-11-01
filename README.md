@@ -337,6 +337,13 @@ from ConanCenter), vcpkg with a `yaml` feature. Either way the package
 carries the library and its headers, and `find_package(ConfigForge)`
 gives `ConfigForge::configforge`.
 
+For Python, `python -m pip install .` from a virtual environment builds
+and installs a wheel with the native library inside. `python -m build`
+creates the source distribution and builds its wheel. For Rust,
+`cmake -DWORK=<new-directory> -P scripts/package-rust.cmake` makes a
+verified standalone crate containing its native sources. Both paths
+need CMake and a C compiler when building, and publish nothing.
+
 ### From a build that is not CMake
 
 The install carries a relocatable `configforge.pc`:

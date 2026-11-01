@@ -53,3 +53,12 @@ packaging/conan/test_package/build/
 # The Rust binding's build, and its lock file: it has no dependencies to lock.
 bindings/rust/target/
 bindings/rust/Cargo.lock
+
+# Python development and distributable packages.
+.venv/
+dist/
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.whl
+*.crate

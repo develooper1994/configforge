@@ -7,11 +7,14 @@ authors = ["Mustafa Selçuk Çağlar"]
 description = "ConfigForge for Rust: configuration whose every value can say why it is what it is"
 links = "configforge"
 build = "build.rs"
-publish = false
+repository = "https://github.com/develooper1994/configforge"
+readme = "README.md"
+include = ["src/**", "build.rs", "Cargo.toml", "README.md", "LICENSE", "native/**", "examples/**"]
 
 # No dependencies, on purpose: a build that downloads nothing, as every
 # other build of this project is (CONTRIBUTING.md, "Safety"). The library is
-# built from this checkout by build.rs, with CMake.
+# built by build.rs with CMake. scripts/package-rust.cmake stages the
+# native sources and examples inside the crate before cargo packages it.
 [dependencies]
 
 [lib]

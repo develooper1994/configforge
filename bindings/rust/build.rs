@@ -1,4 +1,4 @@
-//! Builds libconfigforge from this checkout with CMake - the one tool
+//! Builds libconfigforge from the package or checkout with CMake - the one tool
 //! every build of the project needs - and links it statically. Nothing is
 //! downloaded. Release, so that on Windows it uses the same C runtime as
 //! Rust does (/MD, not /MDd).
@@ -30,7 +30,16 @@ fn same_path(p: &Path) -> String {
 
 fn main() {
     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let root = manifest.join("..").join("..");
+    let native = manifest.join("native");
+    let root = if native.join("CMakeLists.txt").is_file() {
+        native
+    } else {
+        manifest.join("..").join("..")
+    };
+    assert!(
+        root.join("CMakeLists.txt").is_file(),
+        "native sources are missing; prepare the crate with scripts/package-rust.cmake"
+    );
     let out = PathBuf::from(env::var("OUT_DIR").unwrap());
     let build = out.join("cf-build");
     let prefix = out.join("cf-install");
@@ -56,12 +65,14 @@ fn main() {
         .arg("-B")
         .arg(&build)
         .arg("-DCMAKE_BUILD_TYPE=Release")
+        .arg("-DBUILD_SHARED_LIBS=OFF")
         .arg(format!("-DCMAKE_INSTALL_PREFIX={}", prefix.display()))
         .arg("-DCMAKE_INSTALL_LIBDIR=lib")
         .arg("-DCMAKE_POSITION_INDEPENDENT_CODE=ON")
         .arg("-DCF_BUILD_TESTING=OFF")
         .arg("-DCF_BUILD_EXAMPLES=OFF")
         .arg("-DCF_BUILD_TOOLS=OFF")
+        .arg("-DCF_ENABLE_GATES=OFF")
         .arg("-DCF_WITH_CXX=OFF"));
     run(Command::new("cmake")
         .arg("--build")

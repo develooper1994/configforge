@@ -59,6 +59,17 @@ jobs:
       - run: cmake -S . -B bs -DBUILD_SHARED_LIBS=ON
       - run: cmake --build bs --config Debug
       - run: ctest --test-dir bs -C Debug --output-on-failure
+      - name: Build source packages and test installed bindings
+        shell: bash
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: "2"
+          CARGO_BUILD_JOBS: "2"
+        run: |
+          python -m pip install build "scikit-build-core>=0.10"
+          python -m build --no-isolation --outdir "$RUNNER_TEMP/python-dist"
+          python -m pip install --no-index --no-deps "$RUNNER_TEMP"/python-dist/*.whl
+          python -I tests/python/test_package.py
+          cmake "-DWORK=$RUNNER_TEMP/rust-package" -P scripts/package-rust.cmake
 
   # The kqueue change handle, on a machine that is not a BSD: libkqueue
   # emulates kqueue on Linux, so the macOS and BSD path is compiled and

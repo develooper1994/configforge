@@ -843,11 +843,21 @@ live.poll()?;                          // in the loop that drives reloads
 Seven of the examples are in `examples/rust`, the C programs saying the
 same lines; `-DCF_RUST=ON` has the suite run them and `cargo test`.
 
+`cmake -DWORK=<new-directory> -P scripts/package-rust.cmake` makes a
+standalone crate containing the native C sources and those examples,
+then verifies and tests the unpacked package offline. The `.crate` is
+under `WORK/target/package/`; nothing is published. Native copies are
+made only for packaging, never maintained as another source tree.
+
 ### Python
 
 `bindings/python` is a package over the shared library (D-49): ctypes,
 the standard library and nothing else, typed (`py.typed`), packaged by
-its `pyproject.toml`. A value is read the way Python reads - in Python,
+the root `pyproject.toml`. `python -m pip install .` builds and installs
+a wheel with the shared library inside; `python -m build` creates a
+source distribution and builds the wheel from that isolated source.
+Both need CMake and a C compiler when building, neither when installing
+an already-built wheel. A value is read the way Python reads - in Python,
 unlike C++, `cfg.server.port` is possible:
 
 ```python
@@ -875,7 +885,10 @@ A refusal raises `cf.Error` with the key, the source and the message;
 exception as the `Error`'s cause. The library is found as
 `$CONFIGFORGE_LIB`, beside the package, or on the library path; its
 tests run against a shared build (`verify` with `EXTRA=shared`).
-`configforge_doctor`, in the same package, drives Doctor (section 11).
+`configforge_doctor`, in the same package, drives a separately installed
+Doctor (section 11). `python -I tests/python/test_package.py` checks an
+installed wheel and runs the binding suite against its bundled library,
+without importing from the source checkout.
 
 ### In C11 and later
 

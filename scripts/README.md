@@ -13,6 +13,7 @@ Developer scripts: things that build, generate or check.
 | `amalgamate.py` | generates the single-file distribution |
 | `check_formats.py` | every format string against what `cf_fmt` supports (run by `gate.formats`) |
 | `release-local.sh`, `release-local.ps1` | the release workflow's jobs run on this machine, from a tag: amalgamation and static musl Linux (podman), and Windows (MSVC) - for when Actions cannot run |
+| `package-rust.cmake` | `-DWORK=<new-directory>` stages the C sources and examples inside a standalone crate, runs `cargo package --offline` with verification, then tests the unpacked package; never publishes |
 
 The usual sequence before a commit:
 
@@ -47,6 +48,21 @@ an old artifact or checksum file cannot enter a new manifest.
 
 The line against `tools/` is what ships: `tools/doctor` is a program a
 user runs, so it is built and installed. Nothing here is.
+
+## Language packages
+
+From the repository root, `python -m build` uses the root
+`pyproject.toml` to make a source distribution and a wheel built from it.
+The wheel carries the shared library; no separate library installation
+is needed. After installing the wheel, run
+`python -I tests/python/test_package.py`.
+
+For Rust, `cmake -DWORK=<new-directory> -P scripts/package-rust.cmake`
+copies the native sources into the crate only while packaging, rather
+than maintaining another copy. Cargo verifies the package and runs its
+tests offline. `WORK/target/package/` holds the resulting `.crate`.
+The shared CI jobs check both package forms on Linux, Windows and macOS.
+Neither command publishes a package or creates a release.
 
 ## buildenv: the environment, as a file
 

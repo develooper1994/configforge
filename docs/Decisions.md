@@ -2419,6 +2419,39 @@ every output capacity, and filtered collisions.
 
 ---
 
+## D-58 — Language packages carry the native library
+
+**Decision.** Use each language's packaging tools over the existing
+CMake build, without introducing runtime dependencies or maintaining a
+second native implementation.
+
+A pure Python wheel that requires a separately located shared library
+is not a standalone installation. scikit-build-core builds that library
+and installs it beside the ctypes package, under the filename the
+loader already searches. The root `pyproject.toml` keeps both source
+trees inside the source distribution; a manifest below `bindings/`
+would leave the C sources outside its archive. The wheel uses
+`py3-none` and a platform tag: ctypes does not use the CPython extension
+ABI. Only the Python install component enters the wheel, not a CMake
+SDK or Doctor executable. `CONFIGFORGE_LIB` remains an explicit override.
+
+Cargo cannot include sources or examples outside its package directory.
+Checking in a vendored copy would create another tree to keep current.
+Instead, `scripts/package-rust.cmake` stages the crate, native CMake
+sources, licence and examples together before `cargo package`.
+`build.rs` prefers those packaged sources and otherwise builds from the
+checkout. It refuses missing sources instead of linking a system
+library that might have different limits. Cargo stays dependency-free
+and offline. Packaging is not registry publication.
+
+**Checks.** Build a Python source distribution and its wheel, install
+without dependencies, verify that the loaded library is inside the
+installed package, then run the binding suite there. Cargo verifies its
+archive and tests the unpacked crate without the original checkout.
+The shared CI jobs perform both checks on Linux, Windows and macOS.
+
+---
+
 One decision is open, because nothing has been built: profiles as a core concept
 (D-12). Value interpolation (D-10), long reserved, is decided and built. Everything else is decided,
 and where the implementation settled the question rather than this document, the section

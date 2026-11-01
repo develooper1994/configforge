@@ -69,7 +69,7 @@ rewrite(packaging/vcpkg/configforge/vcpkg.json "\"version\": \"[^\"]*\""
 rewrite(bindings/rust/Cargo.toml "
 version = \"[^\"]*\"" "
 version = \"${TO}\"")
-rewrite(bindings/python/pyproject.toml "
+rewrite(pyproject.toml "
 version = \"[^\"]*\"" "
 version = \"${TO}\"")
 rewrite(bindings/python/src/configforge/__init__.py "__version__ = \"[^\"]*\""

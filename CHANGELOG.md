@@ -5,6 +5,18 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ## 1.0.1 — unreleased
 
+### Added
+
+- Python wheels carry the shared library alongside the binding. The
+  root `pyproject.toml` uses scikit-build-core, and a source distribution
+  includes the native sources needed to build without the checkout.
+  `CONFIGFORGE_LIB` still selects a custom library; Doctor's Python
+  driver still needs a separate Doctor executable.
+- `scripts/package-rust.cmake` stages a standalone crate with its C
+  sources, licence and examples, then verifies and tests the unpacked
+  package with Cargo offline. Native sources are copied when packaging,
+  not maintained twice. Nothing is published by either packaging path.
+
 ### Changed
 
 - Releases use GitHub's source zip and tar downloads rather than

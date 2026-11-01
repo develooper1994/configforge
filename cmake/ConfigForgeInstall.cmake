@@ -1,6 +1,25 @@
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
+if(SKBUILD)
+  if(NOT BUILD_SHARED_LIBS)
+    message(FATAL_ERROR "The Python wheel needs BUILD_SHARED_LIBS=ON")
+  endif()
+  set(wheel_library "configforge${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  if(NOT WIN32)
+    set(wheel_library "lib${wheel_library}")
+  endif()
+  install(
+    FILES "$<TARGET_FILE:configforge>"
+    DESTINATION configforge
+    RENAME "${wheel_library}"
+    COMPONENT python)
+  install(
+    FILES "${CMAKE_SOURCE_DIR}/bindings/python/src/configforge_doctor.py"
+    DESTINATION .
+    COMPONENT python)
+endif()
+
 install(
   TARGETS configforge
   EXPORT ConfigForgeTargets

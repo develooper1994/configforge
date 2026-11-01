@@ -30,7 +30,7 @@ foreach(
   pair
   "bindings/rust/Cargo.toml|
 version = \"([^\"]*)\""
-  "bindings/python/pyproject.toml|
+  "pyproject.toml|
 version = \"([^\"]*)\""
   "bindings/python/src/configforge/__init__.py|__version__ = \"([^\"]*)\"")
   string(FIND "${pair}" "|" bar)

@@ -12,7 +12,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y --no-install-recommends \
   ca-certificates curl git file xz-utils locales util-linux \
-  build-essential cmake ninja-build ccache pkg-config python3 \
+  build-essential cmake ninja-build ccache pkg-config python3 python3-venv \
   clang clang-format clang-tidy libclang-rt-18-dev llvm \
   binutils cppcheck gcovr cmake-format valgrind cbmc \
   lld wasi-libc libclang-rt-18-dev-wasm32 nodejs abigail-tools \

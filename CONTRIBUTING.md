@@ -31,7 +31,7 @@ If a change makes a value harder to explain, it is the wrong change.
 | `tests/unit` | one C program per area; also the best usage examples | |
 | `tests/doctor` | Doctor's fixtures and CLI tests | |
 | `examples/c`, `examples/cpp`, `examples/rust` | programs the README and `docs/Guide.md` quote, one directory a language, run by the suite and checked for their output (`expect.cmake`) | `docs/Guide.md` |
-| `bindings/rust`, `bindings/python` | the Rust crate (`build.rs` builds the library) and the Python package (ctypes over a shared build), each with its own tests | `docs/Guide.md`, section 13 |
+| `bindings/rust`, `bindings/python` | the Rust crate (`build.rs` builds the library) and the Python package (ctypes over a shared build), each with its own tests; the root `pyproject.toml` includes native sources in Python distributions | `docs/Guide.md`, section 13 |
 | `cmake/`, `cmake/gates/` | build modules, and the gates that enforce the design | `docs/Architecture.md` |
 | `scripts/` | verify, format, stack, apiref, amalgamate, version, buildid, proofs, the text and format checks, the local release, `buildenv/` | `scripts/README.md` |
 | `conanfile.py`, `packaging/` | the Conan recipe and its test package; the vcpkg overlay port | README.md, "From a package manager" |
@@ -265,6 +265,12 @@ projects that publish the thing and check what they download against
 its published checksum or signature, and CI's actions and package
 installs. All are
 listed in `docs/Dependencies.md`.
+
+Python source-package builds are explicit packaging operations, not
+part of the normal CMake build: pip/build may fetch their declared
+build tools from PyPI. Install those tools first and use
+`python -m build --no-isolation` for an offline package check.
+Rust packaging uses `cargo --offline` and fetches nothing.
 
 ## Licence
 

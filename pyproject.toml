@@ -1,0 +1,41 @@
+# The project root includes both the Python binding and its native
+# sources, so a source distribution can build without this checkout.
+[build-system]
+requires = ["scikit-build-core>=0.10"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "configforge"
+version = "1.0.1"
+description = "Configuration whose every value can say why it is what it is"
+readme = "bindings/python/README.md"
+license = { text = "Zlib" }
+authors = [{ name = "Mustafa Selçuk Çağlar" }]
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: zlib/libpng License",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Repository = "https://github.com/develooper1994/configforge"
+Documentation = "https://github.com/develooper1994/configforge/blob/main/docs/Guide.md"
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+wheel.packages = ["bindings/python/src/configforge"]
+wheel.py-api = "py3"
+wheel.license-files = ["LICENSE"]
+install.components = ["python"]
+build.targets = ["configforge"]
+sdist.exclude = [".github/**", "build/**", "dist/**", "**/target/**", "**/Cargo.lock"]
+
+[tool.scikit-build.cmake.define]
+BUILD_SHARED_LIBS = "ON"
+CF_BUILD_TESTING = "OFF"
+CF_BUILD_EXAMPLES = "OFF"
+CF_BUILD_TOOLS = "OFF"
+CF_ENABLE_GATES = "OFF"
+CF_WITH_CXX = "OFF"
