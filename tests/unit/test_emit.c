@@ -156,6 +156,68 @@ static void test_arrays_are_all_or_nothing(cf_arena* ar) {
     cf_config_free(c);
 }
 
+/* A table with a member called `count` is a table. Taken for an array,
+   it was written as `[]` with its size gone - and INI, which has no
+   arrays, refused to write it at all. */
+static void test_count_is_a_key(void) {
+    static char  a1[]   = "--pool.count=4";
+    static char  a2[]   = "--pool.size=10";
+    static char* argv[] = {a0, a1, a2, NULL};
+    cf_error     err    = CF_ERROR_INIT;
+    cf_builder*  b      = cf_build(NULL);
+    cf_config*   c;
+    static char  buf[1024];
+
+    cf_builder_cli(b, "cli", CF_RANK_CLI, 3, argv);
+    c = cf_builder_create(b, &err);
+    if (c == NULL) {
+        check(0, "builds");
+        return;
+    }
+    check(cf_emit(c, "ini", CF_EMIT_ALL, 0, buf, sizeof buf, &err) > 0,
+          "INI writes a table that has a count");
+    has(buf, "[pool]", "as a table");
+    has(buf, "count = 4", "keeping the count");
+    has(buf, "size = 10", "and the rest of it");
+
+    check(cf_emit(c, "json", CF_EMIT_ALL, 0, buf, sizeof buf, &err) > 0,
+          "JSON writes it too");
+    has(buf, "\"count\": 4", "with the count a member");
+    has(buf, "\"size\": 10", "beside the size");
+    lacks(buf, "[]", "and not an empty array");
+    cf_config_free(c);
+}
+
+/* INI is refused for an array that would be written, not for one the
+   selection leaves out: the check asks what the encoder will be given. */
+static void test_refusal_follows_the_selection(void) {
+    static const cf_pair low[]  = {{"t.0", "x"}, {"t.1", "y"}, {"t.count", "2"}};
+    static const cf_pair high[] = {{"server.port", "9000"}};
+    cf_error             err    = CF_ERROR_INIT;
+    cf_error             e2     = CF_ERROR_INIT;
+    cf_builder*          b      = cf_build(NULL);
+    cf_config*           c;
+    static char          buf[1024];
+
+    cf_builder_memory(b, "low", CF_RANK_USER_FILE, low, 3);
+    cf_builder_memory(b, "high", CF_RANK_CLI, high, 1);
+    c = cf_builder_create(b, &err);
+    if (c == NULL) {
+        check(0, "builds");
+        return;
+    }
+    check(cf_emit(c, "ini", CF_EMIT_FROM_RANK, CF_RANK_CLI, buf, sizeof buf, &err) > 0,
+          "INI writes what one source set when no array is among it");
+    has(buf, "9000", "which is the setting");
+    lacks(buf, "[t]", "and not the array another source set");
+
+    check(cf_emit(c, "ini", CF_EMIT_ALL, 0, buf, sizeof buf, &e2) == 0,
+          "but refuses the whole configuration, which has one");
+    check(e2.code == CF_E_CAPABILITY, "as a capability limit");
+    check(buf[0] == '\0', "and writes nothing");
+    cf_config_free(c);
+}
+
 static void test_format_refusals(void) {
     cf_error    err = CF_ERROR_INIT;
     cf_config*  c   = build(&err);
@@ -286,6 +348,8 @@ int main(void) {
     test_configured_only();
     test_round_trip(ar);
     test_arrays_are_all_or_nothing(ar);
+    test_count_is_a_key();
+    test_refusal_follows_the_selection();
     test_format_refusals();
     test_from_one_rank();
     test_transient_is_not_written();

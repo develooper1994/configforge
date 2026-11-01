@@ -639,6 +639,20 @@ MYAPP_TAGS = "a,b,c"          separator form; separator declared in the definiti
 Both expand to index keys plus a count during source reading, so the resolver sees only
 one representation.
 
+**Writing them back.** The emitter turns the flat keys into a document again, and an
+array is the one thing the flat keys do not announce. A group is an array when it holds
+index keys and the synthesised `count` and nothing else; a group with any other member is
+a table, even one that has a member called `count`, because a pool size or a retry count
+is a table's member and taken for an array it came out as `[]` with the rest of it lost.
+Two pairs of documents cannot be told apart this way and are written as the array:
+`{"count": 0}` and `[]`, and `{"0": "a", "count": 1}` and `["a"]`.
+
+The keys are in byte order, where `10` comes before `2`, so an array is walked by the
+length of its index first and then by its bytes, which is numeric order for indexes
+written without leading zeros, with nothing allocated for it. It never counts up to
+`count`, which a source can set to anything. A missing index is skipped and those after
+it move up.
+
 ### Addressing
 
 ```text

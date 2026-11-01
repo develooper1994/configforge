@@ -41,13 +41,15 @@ typedef struct cf_iter {
     void* reserved[4];
 } cf_iter;
 
-/* Every key under `prefix`, in order. A prefix matches at a segment
-   boundary only, so "server" does not match "servername" - the bug
-   every hand-written prefix check has. An empty or NULL prefix walks
-   the whole configuration. */
+/* Every key under `prefix`, in key order. That is byte order, not the
+   order a document had it: under an array "upstream.10" comes before
+   "upstream.2", so an array is read with cf_array_count and cf_array_key
+   below. A prefix matches at a segment boundary only, so "server" does
+   not match "servername" - the bug every hand-written prefix check has.
+   An empty or NULL prefix walks the whole configuration. */
 CF_API cf_bool cf_iter_keys(cf_iter* it, const struct cf_config* c, const char* prefix);
 
-/* Each distinct immediate child of `prefix`, once:
+/* Each distinct immediate child of `prefix`, once, in key order:
  *
  *     plugins.auth.enabled     -> auth
  *     plugins.auth.timeout

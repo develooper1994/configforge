@@ -57,19 +57,59 @@ static cf_bool keep(const void* ctx, const cf_entry* e) {
     return CF_FALSE;
 }
 
-/* Does anything here nest deeply enough to be an array? Asked before
-   encoding rather than discovered during it, because a codec that meets
-   an array it cannot write has already emitted half a document. */
-static cf_bool has_array(const cf_keyspace* ks) {
-    size_t i;
+/* A sink that writes nothing and notes whether it was given an array.
+   Asked before encoding rather than discovered during it, because a
+   codec that meets an array it cannot write has already emitted half a
+   document.
 
-    for (i = 0; i < cf_ks_count(ks); ++i) {
-        const cf_entry* e = cf_ks_at(ks, i);
-        if (e->keylen > 6 && memcmp(e->key + e->keylen - 6, ".count", 6) == 0) {
-            return CF_TRUE;
-        }
-    }
-    return CF_FALSE;
+   It is the same walk with the same filter as the real one, so "has an
+   array" means exactly "would write one". Looking for a key called
+   `count` took a table with a retry count for an array, and an array
+   that was not going to be written for one that was. */
+static cf_bool probe_table(void* ctx, const char* name, size_t n) {
+    (void)ctx;
+    (void)name;
+    (void)n;
+    return CF_TRUE;
+}
+
+static cf_bool probe_array(void* ctx, const char* name, size_t n) {
+    (void)name;
+    (void)n;
+    *(cf_bool*)ctx = CF_TRUE;
+    return CF_TRUE;
+}
+
+static cf_bool probe_scalar(void* ctx, const char* name, size_t n, const cf_value* v,
+                            cf_bool textual, const cf_loc* at) {
+    (void)ctx;
+    (void)name;
+    (void)n;
+    (void)v;
+    (void)textual;
+    (void)at;
+    return CF_TRUE;
+}
+
+static cf_bool probe_end(void* ctx) {
+    (void)ctx;
+    return CF_TRUE;
+}
+
+/* CF_FALSE when the walk itself failed; `err` says why. */
+static cf_bool find_array(const cf_keyspace* ks, const emit_filter* f, cf_bool* found,
+                          cf_error* err) {
+    cf_doc_sink probe;
+
+    *found = CF_FALSE;
+    memset(&probe, 0, sizeof probe);
+    probe.size        = sizeof probe;
+    probe.begin_table = probe_table;
+    probe.begin_array = probe_array;
+    probe.scalar      = probe_scalar;
+    probe.end         = probe_end;
+    probe.ctx         = found;
+    return cf_doc_emit_where(ks, &probe, keep, f, err);
 }
 
 size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int rank,
@@ -117,25 +157,32 @@ size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int ra
                      "format '%s' can be read but not written", format);
         return 0;
     }
-    if ((codec->caps & CF_CODEC_ARRAYS) == 0 && has_array(ks)) {
-        /* The promise the INI encoder makes: the caller checks before
-           encoding. Discovering it halfway through would leave a
-           truncated file that looks like a complete one. */
-        cf_error_set(err, CF_E_CAPABILITY, NULL, format,
-                     "this configuration has an array and '%s' has no syntax "
-                     "for one; use a format that does",
-                     format);
-        return 0;
+    f.what = what;
+    f.rank = rank;
+    f.defs = cf_defs(c);
+
+    if ((codec->caps & CF_CODEC_ARRAYS) == 0) {
+        cf_bool array;
+
+        if (!find_array(ks, &f, &array, err)) {
+            return 0;
+        }
+        if (array) {
+            /* The promise the INI encoder makes: the caller checks before
+               encoding. Discovering it halfway through would leave a
+               truncated file that looks like a complete one. */
+            cf_error_set(err, CF_E_CAPABILITY, NULL, format,
+                         "this configuration has an array and '%s' has no syntax "
+                         "for one; use a format that does",
+                         format);
+            return 0;
+        }
     }
     if (codec->encoder_state_size > sizeof state.b) {
         cf_error_set(err, CF_E_MEMORY, NULL, format, "no room for the '%s' encoder",
                      format);
         return 0;
     }
-
-    f.what = what;
-    f.rank = rank;
-    f.defs = cf_defs(c);
 
     cf_sink_init(&out, buf, cap);
     if (!codec->encoder(&out, state.b, &sink)) {

@@ -29,6 +29,19 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   said the key was not in the report; and a report with no other key was
   refused as describing none. Doctor now finds a key by either entry.
   CFD004, CFD012 and CFD015 had no test at all, and now have one.
+- `cf_emit` wrote some configurations as a different one. An array of
+  eleven elements or more came out in the order of its keys, `0, 1, 10,
+  11, 2`, so the third of twelve was the twelfth; an array that held both
+  scalars and tables wrote the scalars first; a table in an array was
+  given a name, which made the JSON `["a", "1": {...}]`; and a table with
+  a member called `count` - a pool size, a retry count - was taken for an
+  array and written as `[]` with everything else in it lost, or refused
+  outright by INI. Members now come out in index order whatever they are,
+  with no name inside an array, and a group is an array only when it holds
+  index keys and the `count` the readers record and nothing else. INI also
+  refused a configuration for an array that `CF_EMIT_CONFIGURED` or
+  `CF_EMIT_FROM_RANK` would not have written; it refuses only what it
+  would have written.
 - `doctor diff` reported origin drift (CFD002) for every key whose source
   differed, a key whose value differed too among them, so one difference
   came out as CFD002, CFD003 and a value diff. CFD002 is now what Doctor.md

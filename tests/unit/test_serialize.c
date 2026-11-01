@@ -367,6 +367,147 @@ static void test_json_roundtrip(cf_arena* ar) {
     check(encode("json", &ks, NULL, 0, &err) == n, "encoder can be measured first");
 }
 
+/* A document read, written and read again is the same document. A format
+   typed by its contract (YAML, D-39) reads a plain 11 as text, and gets
+   the number back the way INI does: by inference. */
+static void round_trip(cf_arena* ar, const char* fmt, cf_bool by_contract,
+                       const char* doc, const char* what) {
+    static char buf[8192];
+    static char msg[160];
+    cf_keyspace ks, ks2;
+    cf_error    err = CF_ERROR_INIT;
+
+    cf_ks_init(&ks, ar, 128);
+    cf_fmt(msg, sizeof msg, "%s: the document reads", what);
+    check(decode("json", doc, &ks, ar, 10, &err), msg);
+    cf_ks_resolve(&ks);
+
+    cf_fmt(msg, sizeof msg, "%s: %s writes it", what, fmt);
+    check(encode(fmt, &ks, buf, sizeof buf, &err) > 0, msg);
+
+    cf_ks_init(&ks2, ar, 128);
+    cf_fmt(msg, sizeof msg, "%s: %s reads it back", what, fmt);
+    check(decode(fmt, buf, &ks2, ar, 10, &err), msg);
+    cf_ks_resolve(&ks2);
+    if (by_contract) {
+        cf_ks_infer_untyped(&ks);
+        cf_ks_infer_untyped(&ks2);
+    }
+
+    cf_fmt(msg, sizeof msg, "%s: through %s it is the same configuration", what, fmt);
+    check(cf_ks_digest(&ks) == cf_ks_digest(&ks2), msg);
+}
+
+/* What the JSON encoder writes for a JSON document, exactly. */
+static void written_as(cf_arena* ar, const char* doc, const char* want,
+                       const char* what) {
+    static char buf[8192];
+    cf_keyspace ks;
+    cf_error    err = CF_ERROR_INIT;
+
+    cf_ks_init(&ks, ar, 128);
+    check(decode("json", doc, &ks, ar, 10, &err), what);
+    cf_ks_resolve(&ks);
+    check(encode("json", &ks, buf, sizeof buf, &err) > 0, what);
+    eq(buf, want, what);
+}
+
+static void round_trips(cf_arena* ar, const char* doc, const char* what) {
+    round_trip(ar, "json", CF_FALSE, doc, what);
+#if CF_WITH_TOML
+    round_trip(ar, "toml", CF_FALSE, doc, what);
+#endif
+#if CF_WITH_YAML
+    round_trip(ar, "yaml", CF_TRUE, doc, what);
+#endif
+}
+
+/* The key space is in byte order, where "10" comes before "2", and the
+   members of an array are its positions: written in key order, the
+   third of twelve elements was the twelfth. A hundred and one elements
+   have indexes of one, two and three digits. */
+static void test_array_order(cf_arena* ar) {
+    static char doc[2048];
+    static char want[4096];
+    size_t      d, w;
+    int         i;
+
+    d = cf_fmt(doc, sizeof doc, "{\"v\":[");
+    w = cf_fmt(want, sizeof want, "{\n  \"v\": [\n");
+    for (i = 0; i <= 100; ++i) {
+        d = cf_fmt_append(doc, sizeof doc, d, "%s\"e%d\"", (i > 0) ? "," : "", i);
+        w = cf_fmt_append(want, sizeof want, w, "    \"e%d\"%s\n", i,
+                          (i < 100) ? "," : "");
+    }
+    cf_fmt_append(doc, sizeof doc, d, "]}");
+    cf_fmt_append(want, sizeof want, w, "  ]\n}\n");
+
+    written_as(ar, doc, want, "a hundred and one elements are written in order");
+    round_trips(ar, doc, "a hundred and one elements");
+
+    /* Twelve, the shortest array that shows it, and one nested in a
+       table in an array, which is a second place the order could go. */
+    written_as(ar,
+               "{\"v\":[\"a\",\"b\",\"c\",\"d\",\"e\",\"f\",\"g\",\"h\",\"i\",\"j\","
+               "\"k\",\"l\"]}",
+               "{\n  \"v\": [\n    \"a\",\n    \"b\",\n    \"c\",\n    \"d\",\n"
+               "    \"e\",\n    \"f\",\n    \"g\",\n    \"h\",\n    \"i\",\n"
+               "    \"j\",\n    \"k\",\n    \"l\"\n  ]\n}\n",
+               "twelve elements are written in order");
+    round_trips(ar, "{\"s\":[{\"t\":[1,2,3,4,5,6,7,8,9,10,11]}]}",
+                "an eleven element array in a table in an array");
+}
+
+/* Inside an array a table has no name - position is its name - and
+   what is in the array keeps the order it had. Given "1" as a name, the
+   JSON encoder wrote ["a", "1": {...}]: a key in the middle of a list. */
+static void test_array_members(cf_arena* ar) {
+    written_as(ar, "{\"m\":[\"a\",{\"x\":\"b\"},\"c\"]}",
+               "{\n  \"m\": [\n    \"a\",\n    {\n      \"x\": \"b\"\n    },\n"
+               "    \"c\"\n  ]\n}\n",
+               "a table sits in a mixed array where it was");
+    round_trips(ar, "{\"m\":[\"a\",{\"x\":\"b\"},\"c\"]}", "a mixed array");
+
+    written_as(ar,
+               "{\"g\":[[1,2],[3]],"
+               "\"s\":[{\"host\":\"a\",\"port\":1},{\"host\":\"b\",\"port\":2}]}",
+               "{\n  \"g\": [\n    [\n      1,\n      2\n    ],\n    [\n      3\n"
+               "    ]\n  ],\n  \"s\": [\n    {\n      \"host\": \"a\",\n"
+               "      \"port\": 1\n    },\n    {\n      \"host\": \"b\",\n"
+               "      \"port\": 2\n    }\n  ]\n}\n",
+               "arrays of arrays and of tables carry no names");
+    round_trips(ar,
+                "{\"g\":[[1,2],[3]],"
+                "\"s\":[{\"host\":\"a\",\"port\":1},{\"host\":\"b\",\"port\":2}]}",
+                "arrays of arrays and of tables");
+}
+
+/* An empty array is an array, and a table that has a member called
+   `count` is a table: taken for an array, `pool` came out as `[]` with
+   its size lost. */
+static void test_count_is_a_key(cf_arena* ar) {
+    written_as(ar, "{\"a\":[],\"t\":{\"b\":[]}}",
+               "{\n  \"a\": [],\n  \"t\": {\n    \"b\": []\n  }\n}\n",
+               "an empty array stays an array");
+    round_trips(ar, "{\"a\":[],\"t\":{\"b\":[]}}", "empty arrays");
+
+    written_as(ar, "{\"pool\":{\"count\":4,\"size\":10},\"retry\":{\"count\":3}}",
+               "{\n  \"pool\": {\n    \"count\": 4,\n    \"size\": 10\n  },\n"
+               "  \"retry\": {\n    \"count\": 3\n  }\n}\n",
+               "a table with a count is a table");
+    round_trips(ar, "{\"pool\":{\"count\":4,\"size\":10},\"retry\":{\"count\":3}}",
+                "tables with a count");
+
+    /* The flat model cannot tell {"0":"a","count":1} from ["a"], so that
+       one is an array. A group with any other member is not an array
+       in anyone's reading, and dropping `size` to make it one would be
+       losing data. */
+    written_as(ar, "{\"t\":{\"0\":\"a\",\"count\":1,\"size\":3}}",
+               "{\n  \"t\": {\n    \"0\": \"a\",\n    \"count\": 1,\n    \"size\": 3\n"
+               "  }\n}\n",
+               "a table with index-like keys and others stays a table");
+}
+
 static void test_ini_roundtrip(cf_arena* ar) {
     static const char* const doc = "top = 1\n[server]\nhost = 0.0.0.0\nport = 8080\n";
     cf_keyspace              ks, ks2;
@@ -468,6 +609,9 @@ int main(void) {
     test_json_errors(ar);
 #if CF_WITH_EMIT
     test_json_roundtrip(ar);
+    test_array_order(ar);
+    test_array_members(ar);
+    test_count_is_a_key(ar);
     test_ini_roundtrip(ar);
 #endif
     test_deep_nesting(ar);

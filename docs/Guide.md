@@ -281,7 +281,9 @@ Arrays are index keys and a count: `upstream.0.host`, `upstream.1.host`,
 with `cf_array_count(cfg, "upstream")` and `cf_array_key` to build a key.
 `cf_iter_keys(&it, cfg, "server")` walks every key under a prefix and
 `cf_iter_children` the names one level down - which is how a program
-discovers the plugins under an open prefix.
+discovers the plugins under an open prefix. Both go in byte order, where
+`upstream.10` comes before `upstream.2`: an array is read with
+`cf_array_count` and `cf_array_key`, which is in order.
 
 ## 7. Errors
 
@@ -399,6 +401,18 @@ Writing what somebody configured - and not the defaults, which a later
 release may want to move - is `cf_emit(cfg, "json", CF_EMIT_CONFIGURED,
 0, buf, cap, &err)`. `examples/c/settings.c` is the whole cycle: read,
 explain, set, save, notice the file change.
+
+What is written is the document the keys describe. A group of keys is an
+array when it holds index keys and the `count` the readers record, and
+nothing else, and its members come out in index order, whatever they are.
+Any other group is a table: `pool.count` and `pool.size` are a table with
+a member called `count`. The flat keys cannot tell two pairs of documents
+apart, and write each as the array: `{"count": 0}` and `[]`, and
+`{"0": "a", "count": 1}` and `["a"]`. An index that is missing is not
+written, and those after it move up. INI has no syntax for an array, so
+it refuses a configuration only when what is being written has one: an
+array that `CF_EMIT_CONFIGURED` or `CF_EMIT_FROM_RANK` leaves out does
+not count.
 
 Noticing a change is a question you ask, never a callback - the library
 owns no thread. `cf_changed(cfg)` asks whether a file it read has moved

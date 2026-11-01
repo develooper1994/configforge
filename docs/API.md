@@ -996,8 +996,9 @@ Measure-or-write, like everything else that renders: with a NULL
 buffer nothing is stored and the length still accumulates.
 `rank` is read only for CF_EMIT_FROM_RANK.
 Refuses rather than truncates: a format with no array syntax meeting
-an array is an error before anything is written, not a surprise
-halfway through a file.
+an array it would have to write is an error before anything is
+written, not a surprise halfway through a file. An array that `what`
+leaves out is not one it would have to write.
 
 ## cf_entry.h
 
@@ -1267,9 +1268,17 @@ CF_API cf_bool cf_doc_emit(const cf_keyspace* ks, const cf_doc_sink* out, cf_err
 ```
 
 Walk a resolved key space, emitting the document it describes.
-Structure is reconstructed from the sorted keys in one pass: two
-adjacent keys share a prefix exactly as deep as the tables that
-enclose them both, so the sort is already the tree.
+Structure is reconstructed from the sorted keys with nothing built:
+the keys under one prefix are a contiguous run, so the sort is
+already the tree.
+
+A group of keys is an array when it holds index keys and the `count`
+the readers record for every array, and nothing else. Any other group
+is a table, so a table with a member called `count` is a table. The
+members of an array come out in index order, whatever they are, and
+carry no name; in a table the scalars come first, then the arrays,
+then the tables, because a format that has written a sub-table's
+header cannot go back to its parent.
 
 ```c
 CF_API cf_bool cf_doc_emit_where(const cf_keyspace* ks, const cf_doc_sink* out, cf_emit_pred pred, const void* ctx, cf_error* err);
@@ -1373,16 +1382,18 @@ sorted. Nothing is allocated: the iterator is the caller's.
 CF_API cf_bool cf_iter_keys(cf_iter* it, const struct cf_config* c, const char* prefix);
 ```
 
-Every key under `prefix`, in order. A prefix matches at a segment
-boundary only, so "server" does not match "servername" - the bug
-every hand-written prefix check has. An empty or NULL prefix walks
-the whole configuration.
+Every key under `prefix`, in key order. That is byte order, not the
+order a document had it: under an array "upstream.10" comes before
+"upstream.2", so an array is read with cf_array_count and cf_array_key
+below. A prefix matches at a segment boundary only, so "server" does
+not match "servername" - the bug every hand-written prefix check has.
+An empty or NULL prefix walks the whole configuration.
 
 ```c
 CF_API cf_bool cf_iter_children(cf_iter* it, const struct cf_config* c, const char* prefix);
 ```
 
-Each distinct immediate child of `prefix`, once:
+Each distinct immediate child of `prefix`, once, in key order:
 
     plugins.auth.enabled     -> auth
     plugins.auth.timeout

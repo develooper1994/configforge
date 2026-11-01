@@ -56,9 +56,17 @@ CF_API cf_bool            cf_flatten_init(cf_flatten* f, cf_keyspace* ks, int ra
 CF_API const cf_doc_sink* cf_flatten_sink(cf_flatten* f);
 
 /* Walk a resolved key space, emitting the document it describes.
-   Structure is reconstructed from the sorted keys in one pass: two
-   adjacent keys share a prefix exactly as deep as the tables that
-   enclose them both, so the sort is already the tree. */
+   Structure is reconstructed from the sorted keys with nothing built:
+   the keys under one prefix are a contiguous run, so the sort is
+   already the tree.
+
+   A group of keys is an array when it holds index keys and the `count`
+   the readers record for every array, and nothing else. Any other group
+   is a table, so a table with a member called `count` is a table. The
+   members of an array come out in index order, whatever they are, and
+   carry no name; in a table the scalars come first, then the arrays,
+   then the tables, because a format that has written a sub-table's
+   header cannot go back to its parent. */
 CF_API cf_bool cf_doc_emit(const cf_keyspace* ks, const cf_doc_sink* out,
                            cf_error* err);
 
