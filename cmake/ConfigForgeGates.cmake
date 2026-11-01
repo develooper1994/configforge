@@ -81,12 +81,14 @@ function(configforge_add_gates tgt)
       ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR} -P
       ${CMAKE_SOURCE_DIR}/cmake/gates/GateApiref.cmake)
   # The symbol list is the public interface: against the headers
-  # everywhere, and against the built library where nm can read it.
+  # everywhere, and against the built library where nm can read it. A DLL
+  # is read through its import library, the linker file: nm reads no
+  # export table, and an import library names exactly what is exported.
   add_test(
     NAME gate.abi
     COMMAND
-      ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DLIB=$<TARGET_FILE:${tgt}>
-      -DWITH_REAL=${CF_WITH_REAL} -P
+      ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR}
+      -DLIB=$<TARGET_LINKER_FILE:${tgt}> -DWITH_REAL=${CF_WITH_REAL} -P
       ${CMAKE_SOURCE_DIR}/cmake/gates/GateAbi.cmake)
   add_test(
     NAME gate.sbom

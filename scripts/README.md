@@ -24,7 +24,7 @@ cmake -DSOURCE=index -DJOBS=2 -P scripts/verify.cmake
 
 ## Releasing without CI
 
-When GitHub Actions cannot run (2026-10: blocked by billing), a release
+When GitHub Actions cannot run (as in 2026-10, blocked by billing), a release
 is the same steps by hand. After `version.cmake -DTO=x.y.z`, the dated
 CHANGELOG heading and the tag pushed:
 
@@ -37,7 +37,8 @@ gh release create vx.y.z * --title "ConfigForge x.y.z" --notes-file ../notes.md
 ```
 
 The macOS archive needs a Mac; without one the release says so in its
-notes. When Actions runs again, the workflow is the way.
+notes. When Actions runs, the workflow is the way: pushing the tag
+builds and publishes every archive, macOS's included (v1.0.0 was).
 
 The line against `tools/` is what ships: `tools/doctor` is a program a
 user runs, so it is built and installed. Nothing here is.

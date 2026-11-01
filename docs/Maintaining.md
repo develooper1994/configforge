@@ -19,10 +19,12 @@ says, as `docs/Roadmap.md` is.
 * **1.0.0 only when everything was done and checked again**, as it was
   on 2026-11-01. From there a fix is a patch and an addition a minor
   version; the plan is `docs/Roadmap.md`, "Next: 1.x".
-* **GitHub Actions has been unavailable since 2026-10** (billing). Every job it runs
-  is run locally instead - `scripts/verify.cmake` by tier (D-50),
-  `scripts/release-local.sh` and `.ps1` for a release - and counts as CI
-  until it returns.
+* **GitHub Actions runs again** (2026-11-01; billing blocked it through
+  2026-10): the v1.0.0 tag was built and published by the release
+  workflow, macOS included. Every job is still run locally before a
+  push - `scripts/verify.cmake` by tier (D-50) - and
+  `scripts/release-local.sh` and `.ps1` remain the way to release when
+  Actions cannot run.
 * **Commits and files carry their maintainers' names only.**
 * **"Authorization"** in the maintainer's words is the Policy section of
   the original idea document (outside the repository,

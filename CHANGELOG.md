@@ -3,6 +3,17 @@
 Versions follow semantic versioning from 1.0. Before that, `0.x` promises
 nothing: the C interface is not frozen, and a minor bump may change it.
 
+## 1.0.1 — unreleased
+
+### Fixed
+
+- `gate.abi` failed every Windows shared build: it listed the DLL's
+  symbols with nm, which finds none in a PE export table, and reported
+  all 292 public functions missing. It now reads the import library,
+  which names them (on Linux and macOS the linker file is the shared
+  library itself). CI's `shared (windows-latest)` job had failed on it
+  since 2026-10-31; the library was never at fault.
+
 ## 1.0.0 — 2026-11-01
 
 The C interface is frozen: from here it follows semantic versioning,

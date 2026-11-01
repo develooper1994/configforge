@@ -42,8 +42,11 @@ fails an incompatible change within 1.x.
 
 Where it stands: v1.0.0 is tagged from the commit that dated its
 CHANGELOG heading, after tier 2 and the Windows Release build passed on
-its tree; its archives are those `scripts/README.md`, "Releasing without
-CI", lists, with no macOS one for want of a Mac. Everything is on `main`.
+its tree, and the release workflow built and published its archives,
+macOS's among them. CI's `shared (windows-latest)` job had failed on
+every push since 2026-10-31 in `gate.abi`, which read a DLL with nm; it
+reads the import library now. Everything is on `main`, which is 1.0.1,
+unreleased.
 
 Before anything: read `CONTRIBUTING.md`, then run
 `sh scripts/buildenv/dev-setup.sh --check` (Windows:
