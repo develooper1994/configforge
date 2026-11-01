@@ -65,10 +65,16 @@ jobs:
           CMAKE_BUILD_PARALLEL_LEVEL: "2"
           CARGO_BUILD_JOBS: "2"
         run: |
-          python -m pip install build "scikit-build-core>=0.10"
-          python -m build --no-isolation --outdir "$RUNNER_TEMP/python-dist"
-          python -m pip install --no-index --no-deps "$RUNNER_TEMP"/python-dist/*.whl
-          python -I tests/python/test_package.py
+          python -m venv "$RUNNER_TEMP/python-package-env"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            py="$RUNNER_TEMP/python-package-env/Scripts/python.exe"
+          else
+            py="$RUNNER_TEMP/python-package-env/bin/python"
+          fi
+          "$py" -m pip install build "scikit-build-core>=0.10"
+          "$py" -m build --no-isolation --outdir "$RUNNER_TEMP/python-dist"
+          "$py" -m pip install --no-index --no-deps "$RUNNER_TEMP"/python-dist/*.whl
+          "$py" -I tests/python/test_package.py
           cmake "-DWORK=$RUNNER_TEMP/rust-package" -P scripts/package-rust.cmake
 
   # The kqueue change handle, on a machine that is not a BSD: libkqueue

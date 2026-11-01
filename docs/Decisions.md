@@ -2450,6 +2450,11 @@ installed package, then run the binding suite there. Cargo verifies its
 archive and tests the unpacked crate without the original checkout.
 The shared CI jobs perform both checks on Linux, Windows and macOS.
 
+The package check uses an isolated Python environment. CI must install
+into a virtual environment too: a runner whose system site-packages is
+read-only makes pip use the user site, which Python's `-I` correctly
+excludes. Do not weaken the isolation to accommodate that installation.
+
 ---
 
 One decision is open, because nothing has been built: profiles as a core concept
