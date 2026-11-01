@@ -158,10 +158,11 @@ static void test_arrays(void) {
 }
 
 static void test_shortened_array(void) {
-    /* The reason the length is recorded rather than counted: a
-       high-precedence source that shortens an array leaves the longer
-       one's extra elements in the key space, and counting the index
-       keys present would report the union of two arrays. */
+    /* A high-precedence source that shortens an array. The length is
+       recorded rather than counted, and the longer source's extra
+       elements are not part of the configuration: counting the index
+       keys present would report the union of two arrays, and reading
+       them would be the ghosts D-02 names. */
     static char  a1[]   = "--t.0=x";
     static char  a2[]   = "--t.count=1";
     static char* argv[] = {a0, a1, a2, NULL};
@@ -173,6 +174,9 @@ static void test_shortened_array(void) {
     cf_error     err    = CF_ERROR_INIT;
     cf_builder*  b      = cf_build(NULL);
     cf_config*   c;
+    cf_iter      it;
+    static char  got[16][64];
+    size_t       n;
 
     cf_builder_cli(b, "cli", CF_RANK_CLI, 3, argv);
     cf_builder_env(b, "env", CF_RANK_ENV, "T", env);
@@ -184,6 +188,18 @@ static void test_shortened_array(void) {
     }
     check(cf_array_count(c, "t") == 1,
           "the winning length wins, not the count of keys present");
+    check(cf_has(c, "t.0") && strcmp(cf_get_text(c, "t.0", ""), "x") == 0,
+          "the element below the length is the winning source's");
+    check(!cf_has(c, "t.1") && !cf_has(c, "t.2"),
+          "the elements past the length are not there");
+    check(strcmp(cf_get_text(c, "t.1", "none"), "none") == 0,
+          "and read as absent, not as the lower source's value");
+
+    cf_iter_keys(&it, c, "t");
+    n = collect(&it, got, 16);
+    check(n == 2, "iterating sees the element and the length, and no ghost");
+    check(n == 2 && strcmp(got[0], "0") == 0 && strcmp(got[1], "count") == 0,
+          "in key order: the element, then the length");
     cf_config_free(c);
 }
 

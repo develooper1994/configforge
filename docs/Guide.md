@@ -279,6 +279,14 @@ type". `cf_has` and `cf_type_of` answer the obvious questions.
 
 Arrays are index keys and a count: `upstream.0.host`, `upstream.1.host`,
 with `cf_array_count(cfg, "upstream")` and `cf_array_key` to build a key.
+The count is also where the array ends. Whichever source wins
+`upstream.count` fixes the length, and an element at or past it - a
+longer list in a file, under a shorter count from the command line - is
+not in the configuration: it is not read, listed or written, and
+`cf_explain` shows it as `truncated`, with the count that cut it. Below
+the length each element is still the winner of its own key, so a source
+that means to replace a list supplies its count with it. A count that is
+not an integer, is negative, or is a `${...}` template fixes no length.
 `cf_iter_keys(&it, cfg, "server")` walks every key under a prefix and
 `cf_iter_children` the names one level down - which is how a program
 discovers the plugins under an open prefix. Both go in byte order, where
@@ -409,10 +417,11 @@ Any other group is a table: `pool.count` and `pool.size` are a table with
 a member called `count`. The flat keys cannot tell two pairs of documents
 apart, and write each as the array: `{"count": 0}` and `[]`, and
 `{"0": "a", "count": 1}` and `["a"]`. An index that is missing is not
-written, and those after it move up. INI has no syntax for an array, so
-it refuses a configuration only when what is being written has one: an
-array that `CF_EMIT_CONFIGURED` or `CF_EMIT_FROM_RANK` leaves out does
-not count.
+written, and those after it move up; one at or past the count is not in
+the configuration at all, and is not written either. INI has no syntax for
+an array, so it refuses a configuration only when what is being written
+has one: an array that `CF_EMIT_CONFIGURED` or `CF_EMIT_FROM_RANK` leaves
+out does not count.
 
 A document nests as deep as a reader takes, `CF_MAX_DEPTH` levels with
 the document itself the first, which is tables and arrays 31 levels

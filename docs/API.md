@@ -396,6 +396,11 @@ CF_API const cf_source_view* cf_sources(const cf_config* c);
 CF_API const cf_defset* cf_defs(const cf_config* c);
 ```
 
+How many keys the configuration knows. A key is known once anything
+supplied it, so one that has no value is counted too: every candidate
+for it was refused, or it is an element beyond the end of its array.
+cf_has says which keys have one.
+
 ### Ownership and threads
 
 The contract, decision D-14:
@@ -1420,9 +1425,12 @@ CF_API size_t cf_array_count(const struct cf_config* c, const char* key);
 ```
 
 The recorded length, which is not the same as the number of index
-keys present: a high-precedence source that shortens an array leaves
-the longer one's extra elements in the key space, and counting them
-would report the union of two arrays.
+keys present: an element below it may be missing. The length is also
+where the array ends - the source that wins "&lt;key>.count" fixes it,
+and an element at or past it, from any source, is not in the
+configuration: it is not read, listed or written, and explain() shows
+it as a "truncated" candidate. A count that is not an integer, or is
+negative, fixes nothing, and nor does one that is a template.
 
 ```c
 CF_API size_t cf_array_key(char* buf, size_t cap, const char* key, size_t index);

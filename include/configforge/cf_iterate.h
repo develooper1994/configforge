@@ -69,9 +69,12 @@ CF_API cf_bool cf_iter_next(cf_iter* it);
  * ------------------------------------------------------------------ */
 
 /* The recorded length, which is not the same as the number of index
-   keys present: a high-precedence source that shortens an array leaves
-   the longer one's extra elements in the key space, and counting them
-   would report the union of two arrays. */
+   keys present: an element below it may be missing. The length is also
+   where the array ends - the source that wins "<key>.count" fixes it,
+   and an element at or past it, from any source, is not in the
+   configuration: it is not read, listed or written, and explain() shows
+   it as a "truncated" candidate. A count that is not an integer, or is
+   negative, fixes nothing, and nor does one that is a template. */
 CF_API size_t cf_array_count(const struct cf_config* c, const char* key);
 
 /* Builds "<key>.<index>", so a loop does not have to. Measure-or-write

@@ -626,18 +626,19 @@ four elements, the last two elements survive as ghosts. This is a real and docum
 defect in .NET's configuration binding.
 
 **Rule.** The winning source for `<key>.count` determines the array length. Index keys
-beyond that count are dropped during resolution, remain visible in `explain()` as
-discarded candidates, and are reported by Doctor as a distinct finding.
+at or beyond that count are dropped during resolution, remain visible in `explain()` as
+`truncated` candidates, and are reported by Doctor as a distinct finding (CFD015).
 
-Two further forms exist for arrays of scalars in flat sources:
+Two further forms were designed for arrays of scalars in flat sources, and neither is
+built (D-02):
 
 ```text
 MYAPP_TAGS = "a,b,c"          separator form; separator declared in the definition
 --tag a --tag b --tag c       repeated form
 ```
 
-Both expand to index keys plus a count during source reading, so the resolver sees only
-one representation.
+Both would expand to index keys plus a count during source reading, so the resolver would
+see only one representation.
 
 **Writing them back.** The emitter turns the flat keys into a document again, and an
 array is the one thing the flat keys do not announce. A group is an array when it holds
@@ -1079,11 +1080,12 @@ table, which is exactly the repetition this project exists to remove.
 Arrays are the one place where per-key independence is not sufficient, because array
 length is a property of the whole array rather than of any single element. The rule is
 in the value model section: the winning source for `<key>.count` fixes the length, and
-index keys beyond it are discarded rather than left as ghosts.
+index keys at or beyond it are discarded rather than left as ghosts.
 
-`MergeMode::Append` is available per definition for the case where an override should
-extend rather than replace a list. It is opt-in, because appending silently is the more
-surprising of the two behaviours.
+`MergeMode::Append` was designed for the case where an override should extend rather than
+replace a list: per definition, and opt-in, because appending silently is the more
+surprising of the two behaviours. It is not built. The library has no such setting, and
+an override that wants a longer list supplies its count with it.
 
 ### Consequence for Provenance
 

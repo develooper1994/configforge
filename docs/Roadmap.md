@@ -175,6 +175,13 @@ Worth building, in the order they serve the library's purpose.
   cannot add.
 * **Doctor `--only-changed`** and **CFD012 against the contract** rather
   than the key list.
+* **Lists from a flat source**: D-02's append mode, and Design.md's
+  separator form (`MYAPP_TAGS="a,b,c"`) and repeated flag (`--tag a
+  --tag b`), were designed and never built; the documents say so. A list
+  from the environment or the command line is index keys and a count.
+  Done looks like a definition that declares a separator, the two
+  sources expanding to index keys and a count as they are read, and a
+  merge mode that extends a lower source's list, each with a test.
 * **Native OS sources** (D-30): macOS defaults and gsettings, each when
   there is the platform to test on. The Windows Registry is built.
 

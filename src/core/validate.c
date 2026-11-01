@@ -579,6 +579,182 @@ static void apply_policy(cf_entry* e, const cf_def* d, const cf_rank_names* name
     e->selected = best;
 }
 
+/* ------------------------------------------------------------------ *
+ * The length of an array
+ *
+ * An array is index keys and a length key, `<key>.count`, and the source
+ * that wins the length fixes it: an element whose index is not below it
+ * is not part of the array, whichever source supplied it (D-02).
+ * Without this, a command line that shortens a file's array leaves the
+ * file's extra elements behind as ghosts - readable by index, written
+ * out by cf_emit - and that is the whole reason the length is a key.
+ *
+ * What is cut is not deleted. Each candidate stays in its chain with
+ * the outcome "truncated" and the reason, so explain() and the report
+ * still say that the value was there and why nothing reads it, and
+ * Doctor's CFD015 reports from that.
+ *
+ * What an array is is decided as cf_emit decides it: a group of keys
+ * that are all index keys but for the length. A group with any other
+ * member is a table that happens to have a member called count - a
+ * pool size, a retry count - and is left alone, as it is written out
+ * alone.
+ * ------------------------------------------------------------------ */
+
+#define COUNT_KEY_TAIL ".count"
+#define COUNT_KEY_TAIL_LEN 6u
+
+enum { ARRAY_INDEX, ARRAY_LENGTH, ARRAY_OTHER };
+
+/* What the key is to the array whose name, and the dot after it, end at
+   `from`: an index, the length itself, or something that makes the group
+   a table. `n` is the length of the first segment. */
+static int array_member(const cf_entry* e, size_t from, size_t* n) {
+    size_t  j      = from;
+    cf_bool digits = CF_TRUE;
+
+    while (j < e->keylen && e->key[j] != '.') {
+        if (!cf_is_digit((unsigned char)e->key[j])) {
+            digits = CF_FALSE;
+        }
+        ++j;
+    }
+    *n = j - from;
+    if (*n == 5 && j == e->keylen && memcmp(e->key + from, "count", 5) == 0) {
+        return ARRAY_LENGTH;
+    }
+    return (digits && *n > 0) ? ARRAY_INDEX : ARRAY_OTHER;
+}
+
+/* Whether the digits are a number that reaches `limit`, given as text.
+   Compared as text, because the index is whatever a source wrote and a
+   number it cannot be held in is not a reason to misjudge it; leading
+   zeros do not change it, so "007" is 7, as the writer reads it. */
+static cf_bool index_reaches(const char* d, size_t n, const char* limit, size_t lim) {
+    while (n > 1 && *d == '0') {
+        ++d;
+        --n;
+    }
+    if (n != lim) {
+        return (n > lim) ? CF_TRUE : CF_FALSE;
+    }
+    return (memcmp(d, limit, n) >= 0) ? CF_TRUE : CF_FALSE;
+}
+
+/* What is said once for the whole array, because it is the same for every
+   element: whose length it is that they are beyond. `shown` is that length
+   as text; a reason does not quote a sensitive value, so for one it is a
+   placeholder, and where the length came from is said either way, as
+   explain() says it. */
+static const char* cut_reason(cf_keyspace* ks, const cf_entry* length,
+                              const char* shown, const cf_rank_names* names) {
+    const cf_candidate* w = length->selected;
+    const char*         from;
+    const char*         sep;
+    char*               msg;
+    size_t              n;
+
+    if ((w->flags & CF_CAND_DEFAULT) != 0) {
+        from = "the default";
+    } else {
+        from = source_name(names, w->source);
+    }
+    sep = (from != NULL) ? ", from " : "";
+    if (from == NULL) {
+        from = "";
+    }
+    n   = cf_fmt(NULL, 0, "past the end: %s is %s%s%s", length->key, shown, sep, from);
+    msg = (char*)cf_arena_alloc(cf_ks_arena(ks), n + 1);
+    if (msg == NULL) {
+        return "past the end of the array";
+    }
+    cf_fmt(msg, n + 1, "past the end: %s is %s%s%s", length->key, shown, sep, from);
+    return msg;
+}
+
+/* One array: the keys under "<array>." are the contiguous run that
+   starts at its length key's prefix. */
+static void cut_array(cf_keyspace* ks, const cf_defset* ds, const cf_entry* length,
+                      const cf_rank_names* names) {
+    size_t        plen   = length->keylen - COUNT_KEY_TAIL_LEN;
+    size_t        first  = cf_ks_lower_bound(ks, length->key, plen + 1);
+    size_t        last   = first;
+    const char*   reason = NULL;
+    const cf_def* d;
+    char          limit[CF_I64_DIGITS];
+    size_t        lim, i, n;
+
+    while (last < cf_ks_count(ks)) {
+        const cf_entry* m = cf_ks_at(ks, last);
+        if (m->keylen <= plen || memcmp(m->key, length->key, plen + 1) != 0) {
+            break;
+        }
+        ++last;
+    }
+    for (i = first; i < last; ++i) {
+        const cf_entry* m = cf_ks_at(ks, i);
+        if (m->selected != NULL && array_member(m, plen + 1, &n) == ARRAY_OTHER) {
+            return;
+        }
+    }
+
+    lim = cf_u64_to_text((cf_u64)length->selected->value.u.i, limit, sizeof limit);
+    d   = cf_defset_find(ds, length->key, length->keylen);
+    for (i = first; i < last; ++i) {
+        cf_entry*     m = cf_ks_at_mut(ks, i);
+        cf_candidate* c;
+
+        if (m->selected == NULL || array_member(m, plen + 1, &n) != ARRAY_INDEX ||
+            !index_reaches(m->key + plen + 1, n, limit, lim)) {
+            continue;
+        }
+        if (reason == NULL) {
+            reason = cut_reason(
+                ks, length,
+                (d != NULL && (d->flags & CF_SENSITIVE) != 0) ? "<sensitive>" : limit,
+                names);
+        }
+        /* A candidate refused for its own value keeps that, which says
+           more; everything that could have been the answer is cut. */
+        for (c = m->chain; c != NULL; c = c->next) {
+            if (cf_outcome_can_win(c->outcome)) {
+                c->outcome = CF_OUT_TRUNCATED;
+                c->reason  = reason;
+            }
+        }
+        m->selected = NULL;
+    }
+}
+
+/* Every array whose length is settled. A length that is not an integer,
+   or is negative, fixes nothing. Nor does one that is still a template:
+   it is a number only once its references are in, and this runs before
+   they are read. */
+static void cut_arrays(cf_keyspace* ks, const cf_defset* ds,
+                       const cf_rank_names* names) {
+    size_t i = cf_ks_count(ks);
+
+    /* Last key first. An array's length key sorts after those of the
+       arrays inside it - "t.count" after "t.0.u.count", since a digit
+       sorts before a letter - so the outer array is cut first, its
+       inner ones have no value left to fix a length by, and the reason
+       an element gives is the outermost that took it out. */
+    while (i-- > 0) {
+        const cf_entry* e = cf_ks_at(ks, i);
+        const cf_value* v;
+
+        if (e == NULL || e->selected == NULL || e->keylen <= COUNT_KEY_TAIL_LEN ||
+            memcmp(e->key + e->keylen - COUNT_KEY_TAIL_LEN, COUNT_KEY_TAIL,
+                   COUNT_KEY_TAIL_LEN) != 0) {
+            continue;
+        }
+        v = &e->selected->value;
+        if (v->type == CF_TYPE_INT && v->u.i >= 0) {
+            cut_array(ks, ds, e, names);
+        }
+    }
+}
+
 cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names* names,
                       cf_unknown_policy unknown, cf_apply_report* report,
                       cf_error* err) {
@@ -675,6 +851,12 @@ cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names*
         }
         apply_policy(e, d, names, cf_ks_arena(ks));
     }
+
+    /* Arrays are cut to their length once every winner is chosen and
+       before references are read: a value that names an element which
+       was cut then fails as naming a key with no value, and does not
+       read what a program asking for that key would not get. */
+    cut_arrays(ks, ds, names);
 
     /* References last: every winner is chosen, so a reference reads what
        a program reading that key would. */

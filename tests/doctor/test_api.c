@@ -405,7 +405,55 @@ static void test_truncated(void) {
               strcmp(f->at, "app.ini:3") == 0,
           "an element beyond the winning length is found, and where it was set");
     check(find(d, "CFD015", "hosts.0") == NULL, "and one within it, that won, is not");
+    check(f != NULL &&
+              strcmp(f->message, "discarded: beyond the winning array length") == 0,
+          "a report that does not say why gets the general sentence");
     cf_doctor_free(d);
+}
+
+/* The same finding from a configuration the library built, which is how
+   a program that lints itself meets it: the file lists three hosts and
+   says there are three, and the command line says there is one. The
+   library keeps what it cut in its report, with the count that cut it.
+   Only the elements beyond the length are found. The one inside it is
+   not, and neither is the count the file lost, which is shadowed and not
+   cut; nothing else takes a key that has no value for a key that is
+   wrong. */
+static void test_cut_by_the_library(void) {
+    static const cf_pair file[] = {
+        {"hosts.0", "a"}, {"hosts.1", "b"}, {"hosts.2", "c"}, {"hosts.count", "3"}};
+    static char       a0[]   = "prog";
+    static char       a1[]   = "--hosts.count=1";
+    static char*      argv[] = {a0, a1, NULL};
+    cf_error          err    = CF_ERROR_INIT;
+    cf_builder*       b      = cf_build(NULL);
+    cf_config*        c;
+    cf_doctor*        d = cf_doctor_new();
+    const cf_finding* f;
+
+    cf_builder_memory(b, "file", CF_RANK_USER_FILE, file, 4);
+    cf_builder_cli(b, "cli", CF_RANK_CLI, 2, argv);
+    c = cf_builder_create(b, &err);
+    check(c != NULL && d != NULL,
+          "a configuration with a file's three hosts and a count");
+    if (c == NULL || d == NULL) {
+        cf_config_free(c);
+        cf_doctor_free(d);
+        return;
+    }
+    check(cf_doctor_lint(d, c, NULL, &err), "is linted");
+    f = find(d, "CFD015", "hosts.1");
+    check(f != NULL && strcmp(f->level, "warning") == 0 &&
+              strcmp(f->message,
+                     "discarded: past the end: hosts.count is 1, from cli") == 0,
+          "the second host is found, with the count that cut it and whose it is");
+    check(find(d, "CFD015", "hosts.2") != NULL, "and so is the third");
+    check(find(d, "CFD015", "hosts.0") == NULL &&
+              find(d, "CFD015", "hosts.count") == NULL,
+          "but not the host inside the length, or the count");
+    check(cf_doctor_count(d) == 2, "and nothing else is said about the two it cut");
+    cf_doctor_free(d);
+    cf_config_free(c);
 }
 
 /* The password moves to the command line in the second snapshot: the
@@ -534,6 +582,7 @@ int main(void) {
     test_required();
     test_parity();
     test_truncated();
+    test_cut_by_the_library();
     test_inputs();
 #else
     /* A configuration's report needs both; without them the library

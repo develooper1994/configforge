@@ -145,15 +145,31 @@ supplies four, the last two survive as ghosts. This is a real and documented def
 ```text
 scalars   per-key resolution against the precedence chain
 arrays    the winning source for <key>.count fixes the length
-          index keys beyond that count are discarded during resolution
-          discarded elements remain visible in explain() as rejected candidates
-          an opt-in append mode exists per definition
+          index keys at or beyond that count are discarded during resolution
+          discarded elements remain visible in explain() as truncated candidates
+          an opt-in append mode per definition (not built; see below)
 ```
 
 **Consequence.** Provenance is per key and has one shape for every parameter in the
 system, which is what allows the diagnostics output to be specified as a stable, testable
 contract. The truncation rule requires array-aware sources to emit a count, and it becomes
 a dedicated Doctor finding and a required test fixture.
+
+**As built** (`src/core/validate.c`, between policy and interpolation). The length is
+`<array>.count` when its winning value is an integer of zero or more, from whichever
+source wins it, the default included. An element is a key `<array>.<n>` with `n` all
+digits, compared as a number (`007` is 7). One whose `n` reaches the length has every
+candidate marked `truncated` - "past the end: hosts.count is 1, from cli" - and no value,
+so it is not read, listed, written or in the digest, while `explain()` and the report
+keep it. That holds for an element from any source, including one that outranks the
+source of the count: the count decides, whoever supplied the element. Within the length
+keys still resolve one at a time, so one source's `hosts.0` and another's `hosts.1` can
+make an array neither wrote whole; a source that means to replace a list supplies its
+count with it. A count that is not an integer, is negative, or is a template when the
+pass runs fixes no length. A group with any member besides indexes and `count` is a
+table and is left alone, and arrays inside arrays are cut outermost first. The append
+mode, and the separator and repeated-flag forms of the value model, are not built: a
+list in a flat source is index keys and a count.
 
 ---
 

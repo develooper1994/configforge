@@ -1118,9 +1118,13 @@ static void rule_default_only(const report* r) {
     }
 }
 
-/* CFD015. A lower-precedence source supplied more elements than the
-   winning length, so the extras were discarded. Inherited from the
-   flat model and worth saying out loud. */
+/* CFD015. An element lies beyond the length its array's winning count
+   gives, so the library discarded it: it is not read, listed or written,
+   whichever source supplied it - most often a longer list in a file the
+   command line's shorter count overrode. Inherited from the flat model
+   and worth saying out loud. The report's reason names the count that
+   cut it and where that count came from; a report from another producer
+   may have none, and then gets the general sentence. */
 static void rule_truncated(const report* r) {
     size_t i, j;
 
@@ -1129,10 +1133,12 @@ static void rule_truncated(const report* r) {
         char        name[CF_KEY_MAX];
         doctor_key_name(k, name, sizeof name);
         for (j = 0; j < k->nc; ++j) {
-            if (k->c[j].outcome != NULL && strcmp(k->c[j].outcome, "truncated") == 0) {
-                finding_at(r->D, "CFD015", "warning", name, k->c[j].at,
-                           "discarded: beyond the winning array length");
+            if (k->c[j].outcome == NULL || strcmp(k->c[j].outcome, "truncated") != 0) {
+                continue;
             }
+            finding_at(r->D, "CFD015", "warning", name, k->c[j].at, "discarded: %s",
+                       (k->c[j].reason != NULL) ? k->c[j].reason
+                                                : "beyond the winning array length");
         }
     }
 }

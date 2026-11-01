@@ -397,6 +397,10 @@ CF_API size_t cf_schema(const cf_config* c, const char* title, char* buf, size_t
 CF_API cf_bool cf_builder_replay(cf_builder* b, const char* name, int rank,
                                  const char* path, unsigned flags);
 
+/* How many keys the configuration knows. A key is known once anything
+   supplied it, so one that has no value is counted too: every candidate
+   for it was refused, or it is an element beyond the end of its array.
+   cf_has says which keys have one. */
 CF_API size_t                 cf_count(const cf_config* c);
 CF_API const cf_apply_report* cf_apply_stats(const cf_config* c);
 CF_API const cf_keyspace*     cf_keys(const cf_config* c);

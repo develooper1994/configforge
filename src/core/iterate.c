@@ -129,11 +129,11 @@ size_t cf_array_count(const cf_config* c, const char* key) {
     if (n >= sizeof probe) {
         return 0;
     }
-    /* The length the flattener recorded, not a count of the index keys
-       that happen to be present. A high-precedence source that shortens
-       an array leaves the longer one's extra elements behind in the key
-       space; counting them would report the union of two arrays, which
-       is the defect the length key exists to prevent. */
+    /* The length the winning source recorded, not a count of the index
+       keys that are present: the two differ when an element below the
+       length is missing. An element at or past the length is not in the
+       configuration at all - the resolver cuts it - so the length is
+       also where the array ends. */
     v = cf_get_int(c, probe, -1);
     return (v > 0) ? (size_t)v : 0;
 }

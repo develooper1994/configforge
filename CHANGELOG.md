@@ -55,6 +55,25 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   formats that stopped it, and wrote a document no reader would take for
   the rest. A refused `cf_emit` also leaves an empty string in the buffer,
   where it left the front of a document that stopped in the middle.
+- An array's length did not end the array. A command line that said
+  `hosts.count=1` over a file that listed three hosts left `hosts.1` and
+  `hosts.2` in the key space: `cf_get_text` read them, `cf_iter_keys` listed
+  them, `cf_emit` wrote them and the digest held them, a list no source had
+  asked for. D-02 decided the elements past the length are discarded, and
+  the report schema has a `truncated` outcome for them, but nothing ever
+  assigned it. The source that wins `<array>.count` now fixes the length,
+  and an element at or past it has no value, whichever source supplied it
+  - the default count included. It is not read, listed, written or in the
+  digest; `cf_explain` and the report still show it, as `truncated`, with
+  "past the end: hosts.count is 1, from cli" (a sensitive length is not
+  quoted), and CFD015 says the same. A count that is not an integer, is
+  negative, or is a `${...}` template fixes no length, and a group with a
+  member besides indexes and `count` is a table and is left alone. Code
+  that read an element past a shortened array no longer finds it;
+  `cf_count` still counts it as a key, as it counts one whose candidates
+  were all refused, and `cf_has` says which have a value. D-02 and the
+  Design also describe an append mode and separator and repeated-flag forms
+  for lists; none was ever built, and they now say so.
 - `doctor diff` reported origin drift (CFD002) for every key whose source
   differed, a key whose value differed too among them, so one difference
   came out as CFD002, CFD003 and a value diff. CFD002 is now what Doctor.md

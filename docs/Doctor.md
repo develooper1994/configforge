@@ -264,7 +264,7 @@ Each rule has a stable identifier so it can be suppressed individually. Rules ma
 | CFD012 | **Parity gap.** Key present in one environment's contract and absent in the other's. | warning | yes |
 | CFD013 | **Precedence inversion.** Policy places a less specific source above a more specific one for a parameter. | info | yes |
 | CFD014 | **Digest change on a sensitive key** without a corresponding change entry. | info | yes |
-| CFD015 | **Array truncation hazard.** A lower-precedence source supplies more elements than the winning `<key>.count`; the extras were discarded. | warning | yes |
+| CFD015 | **Array truncation hazard.** An element lies at or beyond the length the winning `<key>.count` gives its array - most often a longer list in a lower-precedence file under a shorter count from the command line - and was discarded. The finding names the count and where it came from. | warning | yes |
 | CFD016 | **Policy violation.** A source outside the key's per-parameter policy supplied it. The library rejected the candidate (D-33); this is where that becomes loud. | error | yes |
 
 **What one report can prove.** The first draft of CFD001 read "a key set in a source
