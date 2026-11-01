@@ -34,7 +34,13 @@ typedef enum cf_report_mode {
     CF_REPORT_FULL
 } cf_report_mode;
 
+/* What a report says about itself and how much it shows. A struct the
+   caller fills and cf_report_write reads, so it begins with `size` and
+   1.x can append a member (D-51): start from CF_REPORT_INFO_INIT, which
+   sets `size` and leaves a blind report that names nothing, then set
+   what is known. */
 typedef struct cf_report_info {
+    size_t         size;
     cf_report_mode mode;
     const char*    profile; /* "production"; may be NULL          */
     const char*    application;
@@ -42,8 +48,16 @@ typedef struct cf_report_info {
     const char*    generated; /* ISO 8601; the caller supplies it   */
 } cf_report_info;
 
+/* clang-format off */
+#define CF_REPORT_INFO_INIT {sizeof(cf_report_info), CF_REPORT_BLIND, NULL, NULL, NULL, NULL}
+/* clang-format on */
+
 /* Render the report. Measure-or-write: with a NULL buffer nothing is
-   stored and the length still accumulates. */
+   stored and the length still accumulates. `info` may be NULL, for a
+   blind report that names nothing. 0, and an empty `buf`, when there is
+   no key space or `info` did not start from CF_REPORT_INFO_INIT - its
+   size is below 1.0's, and a call with no error to give refuses by
+   writing nothing. */
 CF_API size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
                               const cf_source_view* sv, const cf_report_info* info,
                               char* buf, size_t cap);

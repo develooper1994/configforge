@@ -95,7 +95,7 @@ int doctor_import_git(int argc, char** argv) {
     cf_source        src[GIT_SCOPES];
     const cf_source* view[GIT_SCOPES];
     cf_source_view   sv;
-    cf_report_info   info;
+    cf_report_info   info    = CF_REPORT_INFO_INIT;
     cf_bool          full    = CF_FALSE;
     const char*      profile = NULL;
     int              lineno  = 0;
@@ -232,7 +232,6 @@ int doctor_import_git(int argc, char** argv) {
     }
     sv.items = view;
 
-    memset(&info, 0, sizeof info);
     info.mode        = full ? CF_REPORT_FULL : CF_REPORT_BLIND;
     info.profile     = profile;
     info.application = "git";

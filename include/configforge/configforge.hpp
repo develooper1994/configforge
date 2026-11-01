@@ -383,6 +383,8 @@ public:
         return s;
     }
 
+    /* `info` starts from CF_REPORT_INFO_INIT; one that does not is
+       refused, and the string is empty (D-51). */
     std::string report(const cf_report_info& info) const
     {
         size_t n = cf_report(c_, &info, 0, 0);

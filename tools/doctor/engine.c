@@ -1358,11 +1358,10 @@ cf_bool cf_doctor_severity_file(cf_doctor* d, const char* path, cf_error* err) {
    buffer is wiped before it is released, since it held them. */
 static char* doctor_report_of(const cf_config* c, const char* profile, size_t* n,
                               cf_error* err) {
-    const cf_allocator* a = cf_default_allocator();
-    cf_report_info      info;
+    const cf_allocator* a    = cf_default_allocator();
+    cf_report_info      info = CF_REPORT_INFO_INIT;
     char*               buf;
 
-    memset(&info, 0, sizeof info);
     info.mode        = CF_REPORT_FULL;
     info.profile     = profile;
     info.application = "cf_doctor";

@@ -51,9 +51,8 @@ static cf_config* build(cf_error* err) {
 }
 
 static size_t report(cf_config* c, cf_report_mode mode, char* buf, size_t cap) {
-    cf_report_info info;
+    cf_report_info info = CF_REPORT_INFO_INIT;
 
-    memset(&info, 0, sizeof info);
     info.mode        = mode;
     info.profile     = "production";
     info.application = "myapp";
@@ -140,6 +139,53 @@ static void test_full_report(void) {
     has(buf, "\"mode\": \"full\"", "a full report says so");
     has(buf, "hunter2", "a full report carries the values");
     lacks(buf, "\"redacted\": true", "and does not redact");
+    cf_config_free(cfg);
+}
+
+/* D-51: cf_report_info carries its size. An info that never had it set
+   is refused - cf_report has no error to give, so it writes nothing; one
+   longer than 1.0's, as a later release's would be, is read as far as 1.0
+   reaches; and CF_REPORT_INFO_INIT alone is the blind report a NULL info
+   asks for. */
+static void test_info_size(void) {
+    cf_error       err  = CF_ERROR_INIT;
+    cf_config*     cfg  = build(&err);
+    cf_report_info init = CF_REPORT_INFO_INIT;
+    cf_report_info info;
+    static char    blind[16384], other[16384];
+    union {
+        cf_report_info info;
+        unsigned char  bytes[sizeof(cf_report_info) + 16];
+    } bigger;
+    size_t n, m;
+
+    if (cfg == NULL) {
+        check(0, "builds");
+        return;
+    }
+    n = cf_report(cfg, NULL, blind, sizeof blind);
+    m = cf_report(cfg, &init, other, sizeof other);
+    check(n > 0 && m == n && strcmp(blind, other) == 0,
+          "CF_REPORT_INFO_INIT alone is the blind report that a NULL info gives");
+
+    info      = init;
+    info.size = 0;
+    memset(other, 'x', sizeof other);
+    check(cf_report(cfg, &info, other, sizeof other) == 0 && other[0] == '\0',
+          "an info that never had its size set writes nothing");
+    info.size = sizeof info - 1;
+    memset(other, 'x', sizeof other);
+    check(cf_report(cfg, &info, other, sizeof other) == 0 && other[0] == '\0',
+          "nor does one a byte short of 1.0's");
+    check(cf_report(cfg, &info, NULL, 0) == 0, "and measuring it says 0");
+
+    memset(bigger.bytes, 0xA5, sizeof bigger.bytes);
+    bigger.info      = init;
+    bigger.info.size = sizeof bigger;
+    memset(other, 'x', sizeof other);
+    m = cf_report(cfg, &bigger.info, other, sizeof other);
+    check(m == n && strcmp(blind, other) == 0,
+          "an info longer than 1.0's is read as far as 1.0 reaches");
     cf_config_free(cfg);
 }
 
@@ -388,6 +434,7 @@ int main(void) {
     test_blind_report();
     test_digest_distinguishes();
     test_full_report();
+    test_info_size();
     test_report_is_valid_json(ar);
     test_explain_json(ar);
     test_replay();

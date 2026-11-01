@@ -74,7 +74,7 @@ int main(void) {
     cf_arena*      arena;
     cf_config*     cfg;
     cf_config*     rotated;
-    cf_report_info info;
+    cf_report_info info = CF_REPORT_INFO_INIT;
     size_t         n;
     FILE*          f = fopen(FILE_NAME, "wb");
 
@@ -120,7 +120,6 @@ int main(void) {
        presence, origin, length and a digest of the secret - enough to
        ask "is production's password set, and from where" - and not the
        secret. */
-    memset(&info, 0, sizeof info);
     info.mode        = CF_REPORT_BLIND;
     info.application = "secrets";
     n                = cf_report(rotated, &info, text, sizeof text);

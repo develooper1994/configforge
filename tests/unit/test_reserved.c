@@ -189,7 +189,7 @@ static void test_replay(void) {
     cf_config*   c;
     cf_config*   back;
 
-    cf_report_info info;
+    cf_report_info info = CF_REPORT_INFO_INIT;
 
     cf_builder_cli(b, "cli", CF_RANK_CLI, 2, argv);
     cf_builder_text(b, "prompt", "", 0);
@@ -198,7 +198,6 @@ static void test_replay(void) {
         check(0, "builds");
         return;
     }
-    memset(&info, 0, sizeof info);
     info.mode = CF_REPORT_FULL;
     cf_report(c, &info, buf, sizeof buf);
     check(spill("cf_res_rep.json", buf), "report written");

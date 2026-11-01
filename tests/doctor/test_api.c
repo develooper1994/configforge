@@ -173,16 +173,40 @@ static cf_builder* live_build(void* user) {
     return b;
 }
 
+/* Whether `gate` passes the clean snapshot and refuses, naming the rule,
+   the one that has a password on the command line. */
+static int gate_works(void* gate) {
+    cf_error err = CF_ERROR_INIT;
+    cf_live* l;
+    int      refused;
+
+    g_bad = 0;
+    l     = cf_live_open(CF_LIVE_MANUAL, live_build, cf_doctor_live_check, gate, NULL,
+                         &err);
+    if (l == NULL) {
+        return 0;
+    }
+    g_bad   = 1;
+    refused = cf_live_reload(l, &err) == CF_LIVE_FAILED &&
+              strstr(err.message, "CFD007") != NULL;
+    cf_live_close(l);
+    g_bad = 0;
+    return refused;
+}
+
 static void test_gate(void) {
-    static cf_doctor_gate gate  = {"production", "error", NULL, NULL};
-    static cf_doctor_gate wrong = {NULL, "sometimes", NULL, NULL};
+    static cf_doctor_gate gate  = CF_DOCTOR_GATE_INIT;
+    static cf_doctor_gate wrong = CF_DOCTOR_GATE_INIT;
     cf_error              err   = CF_ERROR_INIT;
     cf_live*              l;
     cf_config*            c;
 
-    g_bad = 0;
-    l     = cf_live_open(CF_LIVE_MANUAL, live_build, cf_doctor_live_check, (void*)&gate,
-                         NULL, &err);
+    gate.profile  = "production";
+    gate.fail_on  = "error";
+    wrong.fail_on = "sometimes";
+    g_bad         = 0;
+    l = cf_live_open(CF_LIVE_MANUAL, live_build, cf_doctor_live_check, (void*)&gate,
+                     NULL, &err);
     check(l != NULL, "a clean configuration passes the gate");
     if (l == NULL) {
         printf("  %s\n", err.message);
@@ -207,6 +231,37 @@ static void test_gate(void) {
     check(l == NULL && strstr(err.message, "sometimes") != NULL,
           "a gate that fails on no level refuses itself");
     g_bad = 0;
+
+    /* D-51: a gate carries its size. One whose size was never set is
+       refused, by name; one longer than 1.0's, as a later release's
+       would be, is read as far as 1.0 reaches; and no gate at all is the
+       defaults. */
+    {
+        static cf_doctor_gate bare; /* size 0: not from CF_DOCTOR_GATE_INIT */
+        cf_doctor_gate        init = CF_DOCTOR_GATE_INIT;
+        union {
+            cf_doctor_gate gate;
+            unsigned char  bytes[sizeof(cf_doctor_gate) + 16];
+        } bigger;
+
+        l = cf_live_open(CF_LIVE_MANUAL, live_build, cf_doctor_live_check, &bare, NULL,
+                         &err);
+        check(l == NULL && strstr(err.message, "CF_DOCTOR_GATE_INIT") != NULL,
+              "a gate that did not start from CF_DOCTOR_GATE_INIT is refused, by name");
+        bare.size = sizeof bare - 1;
+        l = cf_live_open(CF_LIVE_MANUAL, live_build, cf_doctor_live_check, &bare, NULL,
+                         &err);
+        check(l == NULL, "and so is one a byte short of 1.0's");
+
+        memset(bigger.bytes, 0xA5, sizeof bigger.bytes);
+        bigger.gate      = init;
+        bigger.gate.size = sizeof bigger;
+        check(gate_works(&init),
+              "a gate with only its size set works as the defaults do");
+        check(gate_works(&bigger.gate),
+              "a gate longer than 1.0's is read as far as 1.0 reaches");
+        check(gate_works(NULL), "and no gate at all is the defaults too");
+    }
 }
 
 int main(void) {

@@ -171,7 +171,7 @@ static void test_report(void) {
     cf_error       err = CF_ERROR_INIT;
     cf_config*     c   = small(&err);
     static char    rep[8192];
-    cf_report_info info;
+    cf_report_info info = CF_REPORT_INFO_INIT;
     size_t         n;
     cf_builder*    b;
     cf_config*     back;
@@ -180,7 +180,6 @@ static void test_report(void) {
     if (c == NULL) {
         return;
     }
-    memset(&info, 0, sizeof info);
     info.mode = CF_REPORT_FULL;
     n         = cf_report(c, &info, rep, sizeof rep);
 #if CF_WITH_REPORT

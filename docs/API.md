@@ -15,10 +15,12 @@ definition takes are bits 0-15 and a source's bits 16 and up; an
 unknown bit is refused by name.
 
 A struct the caller fills and the library reads - `cf_error`,
-`cf_def`, `cf_live_options`, `cf_live_status`, `cf_log_event` -
-begins with `size`, so 1.x can append a member (D-51): start from
-`CF_ERROR_INIT`, `cf_def_init` or `CF_LIVE_OPTIONS_INIT`, or set
-`size` to `sizeof` the struct. Their members are in the headers.
+`cf_def`, `cf_live_options`, `cf_live_status`, `cf_log_event`,
+`cf_report_info` and Doctor's `cf_doctor_gate` - begins with
+`size`, so 1.x can append a member (D-51): start from
+`CF_ERROR_INIT`, `cf_def_init`, `CF_LIVE_OPTIONS_INIT`,
+`CF_REPORT_INFO_INIT` or `CF_DOCTOR_GATE_INIT`, or set `size` to
+`sizeof` the struct. Their members are in the headers.
 
 In C11 and later `configforge.h` also has `cf_get(cfg, key, &out)`,
 a macro typed by `out` - `int`, `long`, `long long`, `_Bool`,
@@ -354,7 +356,10 @@ CF_API size_t cf_report(const cf_config* c, const cf_report_info* info, char* bu
 
 The provenance report: the whole key space with every candidate,
 serialised. Doctor compares two of them; the library can read one
-back with cf_builder_replay. Measure-or-write.
+back with cf_builder_replay. Measure-or-write. `info` starts from
+CF_REPORT_INFO_INIT, or is NULL for a blind report that names
+nothing; one that did not start there is refused, as cf_report_write
+says, and nothing is written.
 
 A full report contains every value and is therefore a
 credential-bearing artifact. The blind form keeps presence, origin,
@@ -863,8 +868,9 @@ cf_live is about to hand out, so an edit an hour later is refused as
 the same mistake would have been at startup - before a reader sees
 it, with the running configuration left serving:
 
-    static cf_doctor_gate gate = {"production", "error", NULL, NULL};
+    static cf_doctor_gate gate = CF_DOCTOR_GATE_INIT;
     cf_live_options       o    = CF_LIVE_OPTIONS_INIT;
+    gate.profile = "production";
     o.mode       = CF_LIVE_AUTO;
     o.build      = build;      o.build_user = &app;
     o.check      = cf_doctor_live_check;
@@ -878,7 +884,9 @@ CF_DOCTOR_API cf_bool cf_doctor_live_check(void* user, const cf_config* running,
 A cf_live_check_fn: `user` is a cf_doctor_gate, or NULL for the
 defaults. Refuses `next` when a finding reaches `fail_on`, the first
 such finding in `err` - "CFD007 error db.password: ..." with where it
-was set as the error's source.
+was set as the error's source. A gate that did not start from
+CF_DOCTOR_GATE_INIT - its size is below 1.0's - refuses every
+snapshot, saying so.
 
 ```c
 CF_DOCTOR_API size_t cf_doctor_rule_count(void);
@@ -2246,7 +2254,11 @@ CF_API size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds, const 
 ```
 
 Render the report. Measure-or-write: with a NULL buffer nothing is
-stored and the length still accumulates.
+stored and the length still accumulates. `info` may be NULL, for a
+blind report that names nothing. 0, and an empty `buf`, when there is
+no key space or `info` did not start from CF_REPORT_INFO_INIT - its
+size is below 1.0's, and a call with no error to give refuses by
+writing nothing.
 
 ```c
 CF_API size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds, const cf_source_view* sv, const char* key, size_t keylen, cf_report_mode mode, char* buf, size_t cap);

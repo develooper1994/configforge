@@ -86,7 +86,7 @@ static void test_report_round_trip(void) {
     cf_config*     c;
     cf_config*     back;
     cf_builder*    b;
-    cf_report_info info;
+    cf_report_info info = CF_REPORT_INFO_INIT;
     size_t         n;
 
     /* The report, its reader and the file it reads, or nothing to test. */
@@ -102,7 +102,6 @@ static void test_report_round_trip(void) {
         printf("  %s\n", err.message);
         return;
     }
-    memset(&info, 0, sizeof info);
     info.mode        = CF_REPORT_FULL;
     info.profile     = "staging";
     info.application = "edges";

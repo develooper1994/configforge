@@ -25,7 +25,8 @@ so each CI job is run locally, as the maintainer decided (`docs/Maintaining.md`)
 Each unit passes tier 1 (D-50); tier 2 runs before each release.
 
 Done since the plan was written, each in its own commit: the interface
-review's findings (D-51); a log for what is not an error (D-52); the
+review's findings (D-51), and its second pass, which gave `cf_report_info`
+and `cf_doctor_gate` a size; a log for what is not an error (D-52); the
 C standard the program uses (D-53); create, update and delete as one
 edit (D-54); zero-copy text in Rust and a `Mapping` in Python; no
 string borrowed past its call; `docs/Safety.md`, hardened builds and
@@ -48,18 +49,12 @@ the same without the check.
 Left, in order - each a verified commit (`CONTRIBUTING.md`, "How work is
 done here"):
 
-1. **A `size` for `cf_report_info` and `cf_doctor_gate`** (decided by
-   the maintainer): the leading member as in D-51's other structs, an
-   `_INIT` macro, the library reading only as far as `size` reaches,
-   every caller updated (tests, `tools/doctor`, the C++ header, the
-   Rust and Python bindings), a test that a short `size` still works,
-   `cmake -P scripts/apiref.cmake`, CHANGELOG under 1.0.0.
-2. **Real kqueue** (item 6 below): `scripts/buildenv/freebsd.sh`.
-3. **Tier 2** (`cmake -DSOURCE=index -DTIER=2 -DJOBS=4 -P
+1. **Real kqueue** (item 6 below): `scripts/buildenv/freebsd.sh`.
+2. **Tier 2** (`cmake -DSOURCE=index -DTIER=2 -DJOBS=4 -P
    scripts/verify.cmake`), the ABI step in it now comparing with
    v0.4.1; then the CHANGELOG heading dated and **the Windows release
    build before the tag**: MSVC's Release has failed where Debug passed.
-4. **1.0.0**: tag `v1.0.0`, the archives as `scripts/README.md`,
+3. **1.0.0**: tag `v1.0.0`, the archives as `scripts/README.md`,
    "Releasing without CI", says. Publishing the GitHub release needs the
    maintainer's yes. Never move a pushed tag: a fix after tagging is
    the next patch version.

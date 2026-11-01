@@ -2196,6 +2196,15 @@ The same review found the rest of what 1.x would have been stuck with, decided h
   `cf_doc_sink` begin with `size_t size`, so 1.x adds a member and calls it only for a
   table that has it. `cf_builder_source` and `cf_builder_file_codec` refuse one without,
   by name; `cf_builder_source` copies a source's 1.0 members one by one.
+* **What a program fills for a call that only reads it carries a size too** - a second
+  pass (2026-11-01) found two the first had missed: `cf_report_info`, which `cf_report`
+  reads, and `cf_doctor_gate`, which `cf_doctor_live_check` reads. Each begins with
+  `size_t size` and has an `_INIT` macro, `CF_REPORT_INFO_INIT` and
+  `CF_DOCTOR_GATE_INIT`; `NULL` is still the defaults. A report has no error to give,
+  so an `info` below 1.0's size writes nothing - the empty string, as for a library
+  without `CF_WITH_REPORT` - and a gate below it refuses every snapshot, naming
+  `CF_DOCTOR_GATE_INIT`. Done before 1.0 because adding a member to either later would
+  have been an ABI break.
 * **Flags cannot be confused**: definition flags take bits 0 to 15 and source flags 16
   and up. `CF_OPTIONAL` and `CF_REQUIRED` were both bit 0 and reached the same
   `unsigned flags`, so `cf_builder_file(..., CF_REQUIRED)` meant "optional" without a

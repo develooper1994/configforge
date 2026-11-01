@@ -122,8 +122,9 @@ CF_DOCTOR_API cf_bool cf_doctor_stale(const cf_doctor* d, size_t i, const char**
  * the same mistake would have been at startup - before a reader sees
  * it, with the running configuration left serving:
  *
- *     static cf_doctor_gate gate = {"production", "error", NULL, NULL};
+ *     static cf_doctor_gate gate = CF_DOCTOR_GATE_INIT;
  *     cf_live_options       o    = CF_LIVE_OPTIONS_INIT;
+ *     gate.profile = "production";
  *     o.mode       = CF_LIVE_AUTO;
  *     o.build      = build;      o.build_user = &app;
  *     o.check      = cf_doctor_live_check;
@@ -131,17 +132,28 @@ CF_DOCTOR_API cf_bool cf_doctor_stale(const cf_doctor* d, size_t i, const char**
  *     cf_live* live = cf_live_open_with(&o, &err);
  * ------------------------------------------------------------------ */
 
+/* What the gate refuses on. A struct the program fills and
+   cf_doctor_live_check reads, so it begins with `size` and 1.x can
+   append a member (D-51): start from CF_DOCTOR_GATE_INIT, which sets
+   `size` and leaves every other member NULL - the defaults. */
 typedef struct cf_doctor_gate {
+    size_t      size;
     const char* profile;  /* linted as; NULL for none                 */
     const char* fail_on;  /* "error" (NULL means it) or "warning"      */
     const char* baseline; /* a baseline file, as --baseline; or NULL  */
     const char* severity; /* a severity file, as --severity; or NULL  */
 } cf_doctor_gate;
 
+/* clang-format off */
+#define CF_DOCTOR_GATE_INIT {sizeof(cf_doctor_gate), NULL, NULL, NULL, NULL}
+/* clang-format on */
+
 /* A cf_live_check_fn: `user` is a cf_doctor_gate, or NULL for the
    defaults. Refuses `next` when a finding reaches `fail_on`, the first
    such finding in `err` - "CFD007 error db.password: ..." with where it
-   was set as the error's source. */
+   was set as the error's source. A gate that did not start from
+   CF_DOCTOR_GATE_INIT - its size is below 1.0's - refuses every
+   snapshot, saying so. */
 CF_DOCTOR_API cf_bool cf_doctor_live_check(void* user, const cf_config* running,
                                            const cf_config* next, cf_error* err);
 

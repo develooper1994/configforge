@@ -369,7 +369,10 @@ CF_API cf_u64 cf_digest(const cf_config* c);
 
 /* The provenance report: the whole key space with every candidate,
    serialised. Doctor compares two of them; the library can read one
-   back with cf_builder_replay. Measure-or-write.
+   back with cf_builder_replay. Measure-or-write. `info` starts from
+   CF_REPORT_INFO_INIT, or is NULL for a blind report that names
+   nothing; one that did not start there is refused, as cf_report_write
+   says, and nothing is written.
 
    A full report contains every value and is therefore a
    credential-bearing artifact. The blind form keeps presence, origin,

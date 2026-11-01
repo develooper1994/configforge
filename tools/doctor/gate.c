@@ -10,7 +10,12 @@
 
 #include "configforge/cf_doctor.h"
 
+#include <stddef.h>
 #include <string.h>
+
+/* D-51 rests on `size` being first, as config.c asserts for the
+   library's own structs. */
+CF_STATIC_ASSERT(offsetof(cf_doctor_gate, size) == 0, gate_size_first);
 
 /* Whether a finding at `level` stops the snapshot, under `fail_on`. */
 static cf_bool gate_stops(const char* level, const char* fail_on) {
@@ -20,18 +25,27 @@ static cf_bool gate_stops(const char* level, const char* fail_on) {
     return strcmp(fail_on, "warning") == 0 && strcmp(level, "warning") == 0;
 }
 
+/* cf_doctor_gate as 1.0 has it: the smallest a program may pass. A
+   member added later is read only where g->size reaches it. */
+#define GATE_SIZE_1_0 sizeof(cf_doctor_gate)
+
 /* `user` stays a plain pointer: this is a cf_live_check_fn, whose type
    cppcheck cannot see from here. */
 /* cppcheck-suppress constParameterPointer */
 cf_bool cf_doctor_live_check(void* user, const cf_config* running,
                              const cf_config* next, cf_error* err) {
     const cf_doctor_gate* g = (const cf_doctor_gate*)user;
-    const char* fail_on     = (g != NULL && g->fail_on != NULL) ? g->fail_on : "error";
-    cf_doctor*  d;
-    size_t      i;
-    cf_bool     ok = CF_TRUE;
+    const char*           fail_on;
+    cf_doctor*            d;
+    size_t                i;
+    cf_bool               ok = CF_TRUE;
 
     (void)running;
+    if (g != NULL && g->size < GATE_SIZE_1_0) {
+        return cf_error_set(err, CF_E_CAPABILITY, NULL, NULL,
+                            "a gate that was not started from CF_DOCTOR_GATE_INIT");
+    }
+    fail_on = (g != NULL && g->fail_on != NULL) ? g->fail_on : "error";
     if (strcmp(fail_on, "error") != 0 && strcmp(fail_on, "warning") != 0) {
         return cf_error_set(err, CF_E_POLICY, NULL, NULL,
                             "the gate fails on \"%s\"; it fails on error or warning",

@@ -7,6 +7,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Changed
 
+- `cf_report_info` and `cf_doctor_gate` begin with `size`, as every struct a
+  program fills does (D-51), and start from `CF_REPORT_INFO_INIT` and
+  `CF_DOCTOR_GATE_INIT`. Code from 0.4 that cleared one with `memset` or
+  listed its members now passes a size of 0: `cf_report` writes nothing for
+  it, and `cf_doctor_live_check` refuses every snapshot, naming the macro.
+  `NULL` is still the defaults. Done before 1.0 because a member added to
+  either afterwards would have broken the ABI.
 - `cf_derive_in` and `cf_watcher_open` are `CF_NODISCARD`, as every other
   call that creates something is (D-53): a result dropped is a leak.
 - `cf_live_commit` without a `cf_live` is `CF_E_CAPABILITY`, as

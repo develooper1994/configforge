@@ -24,6 +24,7 @@ CF_STATIC_ASSERT(offsetof(cf_doc_sink, size) == 0, sink_size_first);
 CF_STATIC_ASSERT(offsetof(cf_live_status, size) == 0, status_size_first);
 CF_STATIC_ASSERT(offsetof(cf_live_options, size) == 0, options_size_first);
 CF_STATIC_ASSERT(offsetof(cf_log_event, size) == 0, log_size_first);
+CF_STATIC_ASSERT(offsetof(cf_report_info, size) == 0, report_info_size_first);
 CF_STATIC_ASSERT(sizeof(cf_i64) == 8 && sizeof(cf_u64) == 8, i64_is_64_bits);
 CF_STATIC_ASSERT(sizeof(cf_i32) == 4 && sizeof(cf_u32) == 4, i32_is_32_bits);
 

@@ -20,7 +20,7 @@ claim is never larger than the evidence.
 | **Bounded buffers, measured first.** Every text a function writes is measure-or-write (`cap` honoured, length returned); the library imports no unbounded copy, no `sprintf` family, no `strtok`, no locale-dependent conversion. | No overflow of a caller's buffer, and a file read the same way on every system. | `gate.symbols`, which reads the built library's imports; `docs/Conventions.md` |
 | **Bounded stacks.** No library function's frame exceeds 2048 bytes, at every optimisation level the presets build. | A deep call chain on a small thread stack is still safe. | `-Wstack-usage`, `scripts/stack.cmake`, the `portable` and `minimal` presets |
 | **No global mutable state.** | Two configurations, two threads, two libraries in one process never interfere. | `gate.symbols` (no writable globals) |
-| **Sized structs.** A struct crossing the boundary carries its size, and the library reads and writes only as far as it reaches. | A program and a library of different 1.x releases never overrun each other. | D-51; `CF_STATIC_ASSERT`; `test_live`'s larger-struct check |
+| **Sized structs.** A struct crossing the boundary carries its size, and the library reads and writes only as far as it reaches. | A program and a library of different 1.x releases never overrun each other. | D-51; `CF_STATIC_ASSERT`; the larger-struct checks of `test_live`, `test_report` and Doctor's `test_api` |
 
 ## The tools: what finds what the design missed
 

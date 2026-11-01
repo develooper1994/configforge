@@ -195,7 +195,7 @@ static void test_report(void) {
     cf_config*           c   = build(file, 2, NULL, 0, &err);
     cf_config*           back;
     cf_builder*          b;
-    cf_report_info       info;
+    cf_report_info       info = CF_REPORT_INFO_INIT;
     FILE*                f;
 
     if (c == NULL) {
@@ -206,7 +206,6 @@ static void test_report(void) {
         cf_config_free(c); /* a build without the report or its reader */
         return;
     }
-    memset(&info, 0, sizeof info);
     info.mode = CF_REPORT_FULL;
     cf_report(c, &info, rep, sizeof rep);
     has(rep, "\"written\": \"http://${server.host}\"",

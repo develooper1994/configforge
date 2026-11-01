@@ -345,18 +345,24 @@ size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds,
     return out.len;
 }
 
+/* cf_report_info as 1.0 has it: the smallest a caller may pass. When a
+   member is added, this stays the offset just past `generated`, and a
+   member after it is read only where info->size reaches it. */
+#define REPORT_INFO_SIZE_1_0 sizeof(cf_report_info)
+
 size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
                        const cf_source_view* sv, const cf_report_info* info, char* buf,
                        size_t cap) {
     cf_sink        out;
     size_t         i;
-    cf_report_mode mode = (info != NULL) ? info->mode : CF_REPORT_BLIND;
+    cf_report_mode mode;
 
     cf_sink_init(&out, buf, cap);
-    if (ks == NULL) {
+    if (ks == NULL || (info != NULL && info->size < REPORT_INFO_SIZE_1_0)) {
         cf_sink_terminate(&out);
         return 0;
     }
+    mode = (info != NULL) ? info->mode : CF_REPORT_BLIND;
 
     cf_sink_fmt(&out, "{\n  \"configforge_report\": %d,\n", CF_REPORT_SCHEMA);
     cf_sink_fmt(&out, "  \"mode\": \"%s\",\n",

@@ -269,7 +269,7 @@ int doctor_import_spring(int argc, char** argv) {
     const cf_source*        view[SPRING_SOURCES];
     const cf_codec*         json = cf_codec_by_name("json");
     cf_source_view          sv;
-    cf_report_info          info;
+    cf_report_info          info = CF_REPORT_INFO_INIT;
     cf_doc_sink             sink;
     cf_blob                 blob;
     cf_error                err     = CF_ERROR_INIT;
@@ -337,7 +337,6 @@ int doctor_import_spring(int argc, char** argv) {
     sv.items = view;
     sv.count = s.nsources;
 
-    memset(&info, 0, sizeof info);
     info.mode        = CF_REPORT_BLIND; /* what Spring masked stays masked */
     info.profile     = (profile != NULL)        ? profile
                        : (s.profile[0] != '\0') ? s.profile

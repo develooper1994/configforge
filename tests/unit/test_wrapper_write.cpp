@@ -72,6 +72,17 @@ int main()
     has(e.message(), "cannot be written", "and says so");
     check(!d.write("nowhere", &one, 1), "and to no source, without an Error to fill");
 
+    /* report(): an info that starts from CF_REPORT_INFO_INIT names what
+       it is given; one that never had its size set is refused, and the
+       string is empty (D-51). */
+    if (cf_has_feature("report")) {
+        cf_report_info info = CF_REPORT_INFO_INIT;
+        info.application    = "wrapper";
+        has(c.report(info).c_str(), "\"name\": \"wrapper\"", "report() names the application");
+        info.size = 0;
+        check(c.report(info).empty(), "and is empty for an info that was never sized");
+    }
+
     std::printf("%d checks, %d failures\n", g_run, g_fail);
     return g_fail == 0 ? 0 : 1;
 }

@@ -30,7 +30,7 @@ static int emit(const char* out, const char* profile, int argc, char* const* arg
     cf_error       err = CF_ERROR_INIT;
     cf_builder*    b   = cf_build(NULL);
     cf_config*     c;
-    cf_report_info info;
+    cf_report_info info = CF_REPORT_INFO_INIT;
     static char    buf[65536];
 
     cf_builder_cli(b, "cli", CF_RANK_CLI, argc, argv);
@@ -58,7 +58,6 @@ static int emit(const char* out, const char* profile, int argc, char* const* arg
         fprintf(stderr, "fixtures: %s: %s\n", out, err.message);
         return 1;
     }
-    memset(&info, 0, sizeof info);
     info.mode        = CF_REPORT_BLIND;
     info.profile     = profile;
     info.application = "myapp";
@@ -122,7 +121,7 @@ int main(void) {
         cf_error       err     = CF_ERROR_INIT;
         cf_builder*    b       = cf_build(NULL);
         cf_config*     c;
-        cf_report_info info;
+        cf_report_info info = CF_REPORT_INFO_INIT;
         static char    buf[65536];
         cf_def         d;
 
@@ -140,7 +139,6 @@ int main(void) {
             fprintf(stderr, "fixtures: rules: %s\n", err.message);
             return 1;
         }
-        memset(&info, 0, sizeof info);
         info.mode        = CF_REPORT_BLIND;
         info.profile     = "staging";
         info.application = "myapp";
@@ -180,7 +178,7 @@ int main(void) {
         cf_error                 err         = CF_ERROR_INIT;
         cf_builder*              b           = cf_build(NULL);
         cf_config*               c;
-        cf_report_info           info;
+        cf_report_info           info = CF_REPORT_INFO_INIT;
         static char              buf[65536];
         cf_def                   d;
 
@@ -198,7 +196,6 @@ int main(void) {
             fprintf(stderr, "fixtures: sources: %s\n", err.message);
             return 1;
         }
-        memset(&info, 0, sizeof info);
         info.mode        = CF_REPORT_BLIND;
         info.profile     = "staging";
         info.application = "myapp";
@@ -217,7 +214,7 @@ int main(void) {
         cf_error       err = CF_ERROR_INIT;
         cf_builder*    b;
         cf_config*     c;
-        cf_report_info info;
+        cf_report_info info = CF_REPORT_INFO_INIT;
         static char    buf[65536];
         cf_def         d;
 
@@ -246,7 +243,6 @@ int main(void) {
             fprintf(stderr, "fixtures: files: %s\n", err.message);
             return 1;
         }
-        memset(&info, 0, sizeof info);
         info.mode    = CF_REPORT_BLIND;
         info.profile = "production";
         cf_report(c, &info, buf, sizeof buf);

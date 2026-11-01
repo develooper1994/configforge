@@ -536,10 +536,17 @@ a password moved to the command line by an edit an hour after startup
 is refused as it would have been at startup:
 
 ```c
-static cf_doctor_gate gate = {"production", "error", NULL, NULL};
-cf_live* live = cf_live_open(CF_LIVE_AUTO, build, cf_doctor_live_check,
-                             (void*)&gate, NULL, &err);
+static cf_doctor_gate gate = CF_DOCTOR_GATE_INIT;
+cf_live*              live;
+
+gate.profile = "production";
+live = cf_live_open(CF_LIVE_AUTO, build, cf_doctor_live_check,
+                    (void*)&gate, NULL, &err);
 ```
+
+The gate is a struct the program fills, so it starts from its `_INIT`
+macro, which sets the `size` that lets 1.x add a member (D-51); one that
+did not is refused, by name.
 
 A health page asks `cf_live_status_get`, from any thread: the
 generation serving, how many rebuilds were tried and failed, what the
@@ -564,8 +571,11 @@ as a JSON Schema. A settings file that names it - `"$schema":
 most editors with no plugin. `examples/c/schema.c`.
 
 **The report.** `cf_report` writes everything the configuration knows:
-every key, every candidate, where each came from, which won and why. A
-value-blind report (the default) carries the presence, length and digest
+every key, every candidate, where each came from, which won and why. Its
+`cf_report_info` - the profile, the application, the time - starts from
+`CF_REPORT_INFO_INIT`, or is `NULL` for a report that names nothing; one
+that did not is refused, and nothing is written (D-51). A value-blind
+report (the default) carries the presence, length and digest
 of a sensitive value and never the value; a full one can be replayed
 with `cf_builder_replay` to reproduce, on a developer's machine, exactly
 what a production process was running.

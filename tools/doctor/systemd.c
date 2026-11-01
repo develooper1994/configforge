@@ -102,7 +102,7 @@ int doctor_import_systemd(int argc, char** argv) {
     cf_keyspace      ks;
     cf_defset        ds;
     cf_source_view   sv;
-    cf_report_info   info;
+    cf_report_info   info    = CF_REPORT_INFO_INIT;
     cf_bool          full    = CF_FALSE;
     const char*      profile = NULL;
     int              lineno = 0, header = 0, k;
@@ -286,7 +286,6 @@ int doctor_import_systemd(int argc, char** argv) {
     sv.items = view;
     sv.count = (size_t)file + 1;
 
-    memset(&info, 0, sizeof info);
     info.mode        = full ? CF_REPORT_FULL : CF_REPORT_BLIND;
     info.profile     = profile;
     info.application = "systemd";
