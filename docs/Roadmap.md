@@ -15,8 +15,9 @@ answered by the v0.3.0 release run: its macOS (arm64) job ran the whole
 suite, 88 of 88, `test_watch` among them, with kqueue the change handle
 on Darwin; `src/platform/posix/posix.c`'s kqueue code is unchanged since.
 What Darwin has not run is what came after - `cf_live`'s waits and the
-ConfigMap test - and FreeBSD's real kqueue is the check for those
-(item 3 below) until a macOS job runs again.
+ConfigMap test - and FreeBSD's real kqueue has: `scripts/buildenv/freebsd.sh`
+ran all 59 unit tests on FreeBSD 14.4 at 16d2654, `test_live` and
+`test_watch` among them, and all passed.
 
 ## Next: 1.0.0
 
@@ -33,13 +34,14 @@ string borrowed past its call; `docs/Safety.md`, hardened builds and
 Valgrind; `gate.text`; bounded proofs of the integer parsers and
 printers, type inference and `cf_fmt`; WebAssembly (D-55), which found
 an image read past its end on every 32-bit platform. Left, in order:
-v0.4.0, real kqueue, the documents, 1.0.0.
+tier 2, 1.0.0.
 
 ### Resume here (2026-10-31)
 
 Where it stands: v0.4.1 is released (0.4.0 was tagged and never
 released, CHANGELOG 0.4.1); the tree says 1.0.0; the documentation audit
-is fixed; tier 2 passed on 92cd643. Everything is on `main`.
+is fixed; tier 2 passed on 92cd643; the real kqueue passed on 16d2654.
+Everything is on `main`.
 
 Before anything: read `CONTRIBUTING.md`, then run
 `sh scripts/buildenv/dev-setup.sh --check` (Windows:
@@ -49,12 +51,11 @@ the same without the check.
 Left, in order - each a verified commit (`CONTRIBUTING.md`, "How work is
 done here"):
 
-1. **Real kqueue** (item 6 below): `scripts/buildenv/freebsd.sh`.
-2. **Tier 2** (`cmake -DSOURCE=index -DTIER=2 -DJOBS=4 -P
+1. **Tier 2** (`cmake -DSOURCE=index -DTIER=2 -DJOBS=4 -P
    scripts/verify.cmake`), the ABI step in it now comparing with
    v0.4.1; then the CHANGELOG heading dated and **the Windows release
    build before the tag**: MSVC's Release has failed where Debug passed.
-3. **1.0.0**: tag `v1.0.0`, the archives as `scripts/README.md`,
+2. **1.0.0**: tag `v1.0.0`, the archives as `scripts/README.md`,
    "Releasing without CI", says. Publishing the GitHub release needs the
    maintainer's yes. Never move a pushed tag: a fix after tagging is
    the next patch version.
@@ -135,9 +136,7 @@ done here"):
 5. **WebAssembly**: `wasm32-wasi` through clang and wasi-libc, the
    suite run under wasmtime, single-threaded and with no change handle -
    a tier-2 target, and the library in a browser or an edge runtime.
-6. **Real kqueue on the new code**: `scripts/buildenv/freebsd.sh` with
-   `test_live` (its waits and the ConfigMap test) and `test_watch`.
-7. **The documents audited** against the code (README, Guide, API,
+6. **The documents audited** against the code (README, Guide, API,
    Maintaining), then version 1.0.0, tier 2, and the release.
 
 ## Ideas
