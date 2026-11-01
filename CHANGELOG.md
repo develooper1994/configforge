@@ -44,6 +44,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- The list provenance table uses explicit byte-copy conversions for
+  clang-tidy. Response-file argument growth uses an equivalent branch:
+  PCC's preprocessor misplaced its ternary token at an input-buffer
+  boundary after the flat list sink enlarged the source file.
 - Reload preserves typed running values without reinterpreting literal
   `${...}` text. Replaying a snapshot retains original insertion order,
   including same-source duplicate precedence.

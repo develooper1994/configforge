@@ -508,8 +508,12 @@ static cf_bool argv_push(argv_build* b, const char* p, size_t len) {
     char* copy;
 
     if (b->n == b->cap) {
-        int    ncap = (b->cap < 16) ? 16 : b->cap * 2;
-        char** nv   = (char**)cf_arena_alloc(b->arena, (size_t)ncap * sizeof(char*));
+        int    ncap = 16;
+        char** nv;
+        if (b->cap >= 16) {
+            ncap = b->cap * 2;
+        }
+        nv = (char**)cf_arena_alloc(b->arena, (size_t)ncap * sizeof(char*));
         if (nv == NULL) {
             return CF_FALSE;
         }

@@ -74,6 +74,14 @@ The first round:
   "passes". Treat any build error as "proof not run".
 * **A new build type or toolchain is worth one real run**: `-O3` Alpine,
   MSVC Release and FreeBSD clang each found a bug no preset could.
+* **A native Clang pass is not clang-tidy.** CI runs both. A broad native
+  addition also needs `EXTRA=tidy` and `EXTRA=compilers`, not only the
+  tier-1 compiler run. The list unit passed Clang but missed a
+  multilevel-pointer byte copy in tidy and a PCC preprocessing defect.
+  PCC 1.2 moved a `?` near its input-buffer boundary to the start of an
+  included header; `pcc -E` proved the corruption, and an equivalent
+  `if` in response-file argument growth avoids it. Inspect preprocessed
+  output before treating a reported header line as the faulty source.
 * **Batch the checks of a unit into one script per shell call** - fewer
   calls, and on Windows each `wsl` call costs disk (below).
 * **Write source through a file, not a heredoc**: heredocs lost

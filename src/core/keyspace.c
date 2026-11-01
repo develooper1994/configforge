@@ -234,7 +234,7 @@ static cf_bool cf_ks_remember_original(cf_keyspace* ks, size_t index, const char
             return CF_FALSE;
         }
         if (ks->original_capacity != 0) {
-            memcpy(originals, ks->original_keys,
+            memcpy((void*)originals, (const void*)ks->original_keys,
                    ks->original_capacity * sizeof *originals);
         }
         ks->original_keys     = originals;
