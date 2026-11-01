@@ -112,11 +112,98 @@ static cf_bool find_array(const cf_keyspace* ks, const emit_filter* f, cf_bool* 
     return cf_doc_emit_where(ks, &probe, keep, f, err);
 }
 
+typedef struct emit_literals {
+    cf_doc_sink* encoded;
+    cf_sink*     out;
+} emit_literals;
+
+static cf_bool literal_table(void* ctx, const char* name, size_t n) {
+    cf_doc_sink* encoded = ((emit_literals*)ctx)->encoded;
+    return encoded->begin_table(encoded->ctx, name, n);
+}
+
+static cf_bool literal_array(void* ctx, const char* name, size_t n) {
+    cf_doc_sink* encoded = ((emit_literals*)ctx)->encoded;
+    return encoded->begin_array(encoded->ctx, name, n);
+}
+
+static cf_bool literal_end(void* ctx) {
+    cf_doc_sink* encoded = ((emit_literals*)ctx)->encoded;
+    return encoded->end(encoded->ctx);
+}
+
+/* Each built-in writer leaves ${ intact. Keys cannot contain $, so
+   only the scalar's text needs escaping. Work backwards over stored
+   bytes, not the measured length: even a truncated output must be the
+   prefix of the full escaped document, without allocating a copy. */
+static void escape_written(cf_sink* out, size_t from) {
+    size_t limit, end, i, extra = 0;
+    char   next = '\0';
+
+    if (out->buf == NULL || out->cap == 0) {
+        return;
+    }
+    limit = out->cap - 1;
+    end   = out->len < limit ? out->len : limit;
+    if (from >= end) {
+        return;
+    }
+    for (i = from; i + 1 < end; ++i) {
+        if (out->buf[i] == '$' && out->buf[i + 1] == '{') {
+            ++extra;
+        }
+    }
+    i = end;
+    while (i > from) {
+        char c = out->buf[--i];
+        if (extra < limit - i) {
+            out->buf[i + extra] = c;
+        }
+        if (c == '$' && next == '{') {
+            --extra;
+            if (extra < limit - i) {
+                out->buf[i + extra] = '$';
+            }
+        }
+        next = c;
+    }
+}
+
+static cf_bool literal_scalar(void* ctx, const char* name, size_t n, const cf_value* v,
+                              cf_bool textual, const cf_loc* at) {
+    emit_literals* literals = (emit_literals*)ctx;
+    cf_doc_sink*   encoded  = literals->encoded;
+    cf_sink*       out      = literals->out;
+    size_t         from     = out->len;
+    size_t         i, extra = 0;
+
+    if (!encoded->scalar(encoded->ctx, name, n, v, textual, at)) {
+        return CF_FALSE;
+    }
+    if (v->type == CF_TYPE_TEXT) {
+        for (i = 0; i + 1 < v->u.t.n; ++i) {
+            if (v->u.t.p[i] == '$' && v->u.t.p[i + 1] == '{') {
+                ++extra;
+            }
+        }
+    }
+    if (extra > (size_t)-1 - out->len) {
+        return CF_FALSE;
+    }
+    if (extra != 0) {
+        escape_written(out, from);
+        out->len += extra;
+    }
+    return CF_TRUE;
+}
+
 size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int rank,
                char* buf, size_t cap, cf_error* err) {
     const cf_codec*    codec;
     const cf_keyspace* ks;
     cf_doc_sink        sink;
+    cf_doc_sink        literal_sink;
+    emit_literals      literals;
     cf_sink            out;
     emit_filter        f;
     /* The encoder's state, on the stack: CF_ENCODER_STATE_MAX, which
@@ -189,7 +276,16 @@ size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int ra
         cf_error_set(err, CF_E_MEMORY, NULL, format, "encoder refused");
         return 0;
     }
-    if (!cf_doc_emit_where(ks, &sink, keep, &f, err)) {
+    literals.encoded = &sink;
+    literals.out     = &out;
+    memset(&literal_sink, 0, sizeof literal_sink);
+    literal_sink.size        = sizeof literal_sink;
+    literal_sink.begin_table = literal_table;
+    literal_sink.begin_array = literal_array;
+    literal_sink.scalar      = literal_scalar;
+    literal_sink.end         = literal_end;
+    literal_sink.ctx         = &literals;
+    if (!cf_doc_emit_where(ks, &literal_sink, keep, &f, err)) {
         /* The walk may have written part of the document before it failed,
            and half a file reads as a whole one to anything that looks no
            further than the buffer. */

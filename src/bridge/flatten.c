@@ -225,6 +225,28 @@ static cf_bool fl_end(void* ctx) {
     return CF_TRUE;
 }
 
+static char* fl_reserve_text(void* ctx, size_t n) {
+    cf_flatten* f = (cf_flatten*)ctx;
+    if (n > f->text_cap) {
+        size_t cap = f->text_cap == 0 ? 256 : f->text_cap;
+        char*  text;
+        while (cap < n) {
+            if (cap > (size_t)-1 / 2) {
+                cap = n;
+                break;
+            }
+            cap *= 2;
+        }
+        text = (char*)cf_arena_alloc(f->ks->arena, cap);
+        if (text == NULL) {
+            return NULL;
+        }
+        f->text     = text;
+        f->text_cap = cap;
+    }
+    return f->text;
+}
+
 cf_bool cf_flatten_init(cf_flatten* f, cf_keyspace* ks, int rank) {
     if (f == NULL || ks == NULL) {
         return CF_FALSE;
@@ -234,12 +256,13 @@ cf_bool cf_flatten_init(cf_flatten* f, cf_keyspace* ks, int rank) {
     f->rank  = rank;
     f->depth = -1;
 
-    f->sink.size        = sizeof(cf_doc_sink);
-    f->sink.begin_table = fl_begin_table;
-    f->sink.begin_array = fl_begin_array;
-    f->sink.scalar      = fl_scalar;
-    f->sink.end         = fl_end;
-    f->sink.ctx         = f;
+    f->sink.size         = sizeof(cf_doc_sink);
+    f->sink.begin_table  = fl_begin_table;
+    f->sink.begin_array  = fl_begin_array;
+    f->sink.scalar       = fl_scalar;
+    f->sink.end          = fl_end;
+    f->sink.ctx          = f;
+    f->sink.reserve_text = fl_reserve_text;
     return CF_TRUE;
 }
 
@@ -577,6 +600,14 @@ static cf_bool emit_table(const cf_keyspace* ks, const cf_doc_sink* out, size_t 
             if ((pass == 0) != (is_array != CF_FALSE) || !any_included(ks, f, i, j)) {
                 i = j;
                 continue;
+            }
+            {
+                const cf_entry* value = cf_ks_find(ks, e->key, plen + n);
+                if (value != NULL && included(f, value)) {
+                    return cf_error_set(err, CF_E_KEY, value->key, NULL,
+                                        "key '%s' is both a value and a container",
+                                        value->key);
+                }
             }
             if (!emit_group(ks, out, i, j, plen, n, is_array, CF_FALSE, depth, f,
                             err)) {

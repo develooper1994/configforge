@@ -16,9 +16,11 @@ says, as `docs/Roadmap.md` is.
   resources watched. A maintained library behind a `CF_WITH_*` option
   rather than one written here (2026-11-01), the default build still
   needing none.
-* **1.0.0 only when everything was done and checked again**, as it was
-  on 2026-11-01. From there a fix is a patch and an addition a minor
-  version; the plan is `docs/Roadmap.md`, "Next: 1.x".
+* **Complete the agreed work before publishing.** 1.0.0 was released
+  on 2026-11-01 with known defects and unfinished work; that was not
+  completion. Deferred work stays open, and the next release waits for
+  the agreed scope and its checks. A fix is a patch and an addition a
+  minor version; the plan is `docs/Roadmap.md`, "Next: 1.x".
 * **GitHub Actions runs again** (2026-11-01; billing blocked it through
   2026-10): the v1.0.0 tag was built and published by the release
   workflow, macOS included. Every job is still run locally before a

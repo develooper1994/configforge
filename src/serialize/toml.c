@@ -188,8 +188,7 @@ static size_t toml_utf8(cf_u32 cp, char* out) {
     return 4;
 }
 
-/* A basic "..." or literal '...' string into dst. Returns the length or
-   (size_t)-1 having said why. */
+/* Decode, or measure with a NULL destination, using the same grammar. */
 static size_t toml_string(toml_scan* s, char* dst, size_t cap) {
     char   q = *s->p;
     size_t n = 0;
@@ -205,7 +204,9 @@ static size_t toml_string(toml_scan* s, char* dst, size_t cap) {
         unsigned char c = (unsigned char)*s->p;
         if (c == (unsigned char)q) {
             ++s->p;
-            dst[n] = '\0';
+            if (dst != NULL) {
+                dst[n] = '\0';
+            }
             return n;
         }
         if (c == '\n') {
@@ -284,14 +285,19 @@ static size_t toml_string(toml_scan* s, char* dst, size_t cap) {
                     toml_fail(s, s->p, "the string is too long");
                     return (size_t)-1;
                 }
-                memcpy(dst + n, enc, k);
+                if (dst != NULL) {
+                    memcpy(dst + n, enc, k);
+                }
                 n += k;
             } else {
                 if (n + 2 > cap) {
                     toml_fail(s, s->p, "the string is too long");
                     return (size_t)-1;
                 }
-                dst[n++] = one;
+                if (dst != NULL) {
+                    dst[n] = one;
+                }
+                ++n;
             }
             continue;
         }
@@ -299,7 +305,10 @@ static size_t toml_string(toml_scan* s, char* dst, size_t cap) {
             toml_fail(s, s->p, "the string is too long");
             return (size_t)-1;
         }
-        dst[n++] = (char)c;
+        if (dst != NULL) {
+            dst[n] = (char)c;
+        }
+        ++n;
         ++s->p;
     }
     toml_fail(s, s->p, "the string is not closed");
@@ -580,9 +589,26 @@ static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen) {
         return toml_inline_table(s, name, nlen);
     case '"':
     case '\'': {
-        char   text[CF_MESSAGE_MAX];
-        size_t n = toml_string(s, text, sizeof text);
+        char   local[256];
+        char*  text = local;
+        size_t n    = toml_string(s, NULL, (size_t)-1);
         if (n == (size_t)-1) {
+            return CF_FALSE;
+        }
+        if (n >= sizeof local) {
+            if (s->out->size <
+                    offsetof(cf_doc_sink, reserve_text) + sizeof s->out->reserve_text ||
+                s->out->reserve_text == NULL) {
+                return toml_fail(s, start, "a long string needs sink text storage");
+            }
+            text = s->out->reserve_text(s->out->ctx, n + 1);
+            if (text == NULL) {
+                return cf_error_set(s->err, CF_E_MEMORY, NULL, s->file,
+                                    "no room to decode a TOML string");
+            }
+        }
+        s->p = start;
+        if (toml_string(s, text, n + 1) == (size_t)-1) {
             return CF_FALSE;
         }
         cf_value_text(&v, text, n);
@@ -998,7 +1024,7 @@ static cf_bool toml_encoder(cf_sink* out, void* state, cf_doc_sink* sink) {
     }
     memset(e, 0, sizeof *e);
     e->out            = out;
-    sink->size        = sizeof(cf_doc_sink);
+    sink->size        = offsetof(cf_doc_sink, reserve_text);
     sink->begin_table = toml_enc_table;
     sink->begin_array = toml_enc_array;
     sink->scalar      = toml_enc_scalar;

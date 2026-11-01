@@ -2378,6 +2378,47 @@ added - is printed either way, so the release notes can name it.
 ---
 
 
+## D-57 — Written configurations preserve their values
+
+**Question.** The 1.0.0 release left three known round-trip defects:
+long JSON/TOML strings, literal references on write, and names that are
+both scalars and containers. Which fixes preserve the library's model?
+
+**Alternatives.** Refusing long values on write would hide the reader's
+accidental limit by removing useful output. A larger fixed buffer would
+only move it and spend stack. Replacing the built-in readers with a new
+dependency would change the default build without fixing its contract.
+Instead, the reader measures a string with its existing grammar and
+asks the document sink for storage. D-51's size permits an optional
+`reserve_text` callback; the flattener supplies geometrically growing,
+reusable arena storage. Missing storage and exhausted storage produce
+different explicit errors. The codec owns no allocator, and a fixed
+arena never falls back to the heap.
+
+An encoder is also a producer of `cf_doc_sink`, so it must not write a
+new, larger struct into an old caller's object. It fills and advertises
+only the 1.0 prefix; the new callback is for reader-owned sinks.
+
+For literal `${`, refusing values would reject valid defaults, and
+escaping in the codecs would change raw document and report semantics.
+`cf_emit` instead wraps the encoder and inserts one dollar per literal
+opening. A backwards move over only the stored bytes preserves every
+truncated prefix without allocating; the original value supplies the
+full measured length.
+
+A value and a container with one name cannot be represented portably
+without inventing a format convention. Refuse the collision at the
+shared document walk, after applying the selection. Flat configurations
+remain valid, and writing only one side remains valid. No parser is
+asked to accept duplicate member names.
+
+**Checks.** Round trips include kilobyte strings, raw and escaped
+characters, fixed-arena exhaustion, old and partially sized sinks,
+encoder output-prefix canaries, literal references through construction,
+every output capacity, and filtered collisions.
+
+---
+
 One decision is open, because nothing has been built: profiles as a core concept
 (D-12). Value interpolation (D-10), long reserved, is decided and built. Everything else is decided,
 and where the implementation settled the question rather than this document, the section

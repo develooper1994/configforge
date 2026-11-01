@@ -32,8 +32,7 @@ typedef struct js_scan {
     unsigned int       line;
     const cf_doc_sink* out;
     cf_error*          err;
-    cf_arena*          arena; /* for unescaped strings; may be NULL */
-    char               scratch[CF_MESSAGE_MAX];
+    char               scratch[CF_KEY_MAX];
     int                depth;
 } js_scan;
 
@@ -114,10 +113,7 @@ static cf_bool js_hex4(const char* p, cf_u32* out) {
     return CF_TRUE;
 }
 
-/* Reads a string into dst. Returns the length, or (size_t)-1 on
-   error. When the string has no escapes the caller can use the slice
-   in place; this always copies, because the arena is cheap and the
-   alternative is two code paths that have to agree. */
+/* Decode, or measure with a NULL destination, using the same grammar. */
 static size_t js_string(js_scan* s, char* dst, size_t cap) {
     size_t n = 0;
 
@@ -131,7 +127,7 @@ static size_t js_string(js_scan* s, char* dst, size_t cap) {
 
         if (c == '"') {
             ++s->p;
-            if (n < cap) {
+            if (dst != NULL && n < cap) {
                 dst[n] = '\0';
             }
             return n;
@@ -151,7 +147,10 @@ static size_t js_string(js_scan* s, char* dst, size_t cap) {
                 js_fail(s, s->p, "string is too long");
                 return (size_t)-1;
             }
-            dst[n++] = (char)c;
+            if (dst != NULL) {
+                dst[n] = (char)c;
+            }
+            ++n;
             ++s->p;
             continue;
         }
@@ -163,56 +162,56 @@ static size_t js_string(js_scan* s, char* dst, size_t cap) {
         }
         switch (*s->p) {
         case '"':
-            if (n + 1 < cap) {
+            if (dst != NULL && n + 1 < cap) {
                 dst[n] = '"';
             }
             ++n;
             ++s->p;
             break;
         case '\\':
-            if (n + 1 < cap) {
+            if (dst != NULL && n + 1 < cap) {
                 dst[n] = '\\';
             }
             ++n;
             ++s->p;
             break;
         case '/':
-            if (n + 1 < cap) {
+            if (dst != NULL && n + 1 < cap) {
                 dst[n] = '/';
             }
             ++n;
             ++s->p;
             break;
         case 'b':
-            if (n + 1 < cap) {
+            if (dst != NULL && n + 1 < cap) {
                 dst[n] = '\b';
             }
             ++n;
             ++s->p;
             break;
         case 'f':
-            if (n + 1 < cap) {
+            if (dst != NULL && n + 1 < cap) {
                 dst[n] = '\f';
             }
             ++n;
             ++s->p;
             break;
         case 'n':
-            if (n + 1 < cap) {
+            if (dst != NULL && n + 1 < cap) {
                 dst[n] = '\n';
             }
             ++n;
             ++s->p;
             break;
         case 'r':
-            if (n + 1 < cap) {
+            if (dst != NULL && n + 1 < cap) {
                 dst[n] = '\r';
             }
             ++n;
             ++s->p;
             break;
         case 't':
-            if (n + 1 < cap) {
+            if (dst != NULL && n + 1 < cap) {
                 dst[n] = '\t';
             }
             ++n;
@@ -245,11 +244,13 @@ static size_t js_string(js_scan* s, char* dst, size_t cap) {
                 return (size_t)-1;
             }
             k = js_utf8(cp, enc);
-            if (n + k + 1 >= cap) {
+            if (k >= cap - n) {
                 js_fail(s, s->p, "string is too long");
                 return (size_t)-1;
             }
-            memcpy(dst + n, enc, k);
+            if (dst != NULL) {
+                memcpy(dst + n, enc, k);
+            }
             n += k;
             break;
         }
@@ -257,7 +258,7 @@ static size_t js_string(js_scan* s, char* dst, size_t cap) {
             js_fail(s, s->p, "unknown escape");
             return (size_t)-1;
         }
-        if (n + 1 >= cap) {
+        if (n >= cap) {
             js_fail(s, s->p, "string is too long");
             return (size_t)-1;
         }
@@ -443,9 +444,26 @@ static cf_bool js_value(js_scan* s, const char* name, size_t nlen) {
         return js_array(s, name, nlen);
 
     case '"': {
-        char   text[CF_MESSAGE_MAX];
-        size_t n = js_string(s, text, sizeof text);
+        char   local[256];
+        char*  text = local;
+        size_t n    = js_string(s, NULL, (size_t)-1);
         if (n == (size_t)-1) {
+            return CF_FALSE;
+        }
+        if (n >= sizeof local) {
+            if (s->out->size <
+                    offsetof(cf_doc_sink, reserve_text) + sizeof s->out->reserve_text ||
+                s->out->reserve_text == NULL) {
+                return js_fail(s, start, "a long string needs sink text storage");
+            }
+            text = s->out->reserve_text(s->out->ctx, n + 1);
+            if (text == NULL) {
+                return cf_error_set(s->err, CF_E_MEMORY, NULL, s->file,
+                                    "no room to decode a JSON string");
+            }
+        }
+        s->p = start;
+        if (js_string(s, text, n + 1) == (size_t)-1) {
             return CF_FALSE;
         }
         cf_value_text(&v, text, n);
@@ -502,7 +520,6 @@ static cf_bool json_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     s.line       = 1;
     s.out        = out;
     s.err        = err;
-    s.arena      = NULL;
     s.depth      = 0;
 
     js_space(&s);
@@ -707,7 +724,7 @@ static cf_bool json_encoder(cf_sink* out, void* state, cf_doc_sink* sink) {
     e->out   = out;
     e->depth = -1;
 
-    sink->size        = sizeof(cf_doc_sink);
+    sink->size        = offsetof(cf_doc_sink, reserve_text);
     sink->begin_table = js_enc_table;
     sink->begin_array = js_enc_array;
     sink->scalar      = js_enc_scalar;

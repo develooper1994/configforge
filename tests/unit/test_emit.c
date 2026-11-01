@@ -455,6 +455,190 @@ static void test_open_prefix(void) {
     }
 }
 
+static void test_value_container_refusal(void) {
+    static const char*   formats[] = {"json", "toml", "yaml", "ini"};
+    static const cf_pair low[]     = {{"a", "value"}, {"z", "unrelated"}};
+    static const cf_pair high[]    = {{"a.child", "child"}};
+    cf_error             err       = CF_ERROR_INIT;
+    cf_builder*          b         = cf_build(NULL);
+    cf_config*           c;
+    char                 buf[512];
+    size_t               i;
+
+    cf_builder_memory(b, "low", CF_RANK_USER_FILE, low, 2);
+    cf_builder_memory(b, "high", CF_RANK_CLI, high, 1);
+    c = cf_builder_create(b, &err);
+    check(c != NULL, "flat keys may share a value and a container prefix");
+    if (c == NULL) {
+        return;
+    }
+    for (i = 0; i < sizeof formats / sizeof formats[0]; ++i) {
+        if (cf_codec_by_name(formats[i]) == NULL) {
+            continue;
+        }
+        buf[0] = '!';
+        check(cf_emit(c, formats[i], CF_EMIT_ALL, 0, buf, sizeof buf, &err) == 0,
+              "no format writes conflicting names");
+        check(err.code == CF_E_KEY, "the conflict is a key error");
+        check(strcmp(err.key, "a") == 0, "the error names the full conflicting key");
+        has(err.message, "both a value and a container",
+            "the error explains the conflict");
+        check(buf[0] == '\0', "a conflict leaves no partial document");
+        check(cf_emit(c, formats[i], CF_EMIT_ALL, 0, NULL, 0, &err) == 0,
+              "measurement refuses the same conflict");
+        check(cf_emit(c, formats[i], CF_EMIT_FROM_RANK, CF_RANK_USER_FILE, buf,
+                      sizeof buf, &err) > 0,
+              "selecting only the value can be written");
+        lacks(buf, "child", "a filtered-out container causes no refusal");
+        check(cf_emit(c, formats[i], CF_EMIT_FROM_RANK, CF_RANK_CLI, buf, sizeof buf,
+                      &err) > 0,
+              "selecting only the container can be written");
+        lacks(buf, "unrelated", "other values remain filtered");
+    }
+    cf_config_free(c);
+}
+
+static cf_config* read_emitted(const char* text, const cf_codec* codec, cf_error* err) {
+    cf_arena*   ar = cf_arena_new(NULL, 4096);
+    cf_keyspace ks;
+    cf_flatten  fl;
+    cf_blob     blob;
+    cf_pair     pairs[16];
+    static char converted[16][CF_VALUE_TEXT_MAX];
+    cf_builder* b;
+    cf_config*  c;
+    size_t      i, count;
+
+    if (ar == NULL) {
+        check(0, "reader arena exists");
+        return NULL;
+    }
+    cf_ks_init(&ks, ar, 16);
+    cf_flatten_init(&fl, &ks, 0);
+    cf_blob_mem(&blob, text, strlen(text), "emitted");
+    if (!codec->decode(&blob, cf_flatten_sink(&fl), err)) {
+        check(0, "emitted literals decode");
+        cf_arena_free(ar);
+        return NULL;
+    }
+    cf_ks_resolve(&ks);
+    count = cf_ks_count(&ks);
+    check(count <= sizeof pairs / sizeof pairs[0], "pairs fit");
+    if (count > sizeof pairs / sizeof pairs[0]) {
+        cf_arena_free(ar);
+        return NULL;
+    }
+    for (i = 0; i < count; ++i) {
+        const cf_entry* e = cf_ks_at(&ks, i);
+        if (e->selected == NULL) {
+            check(0, "emitted keys have values");
+            cf_arena_free(ar);
+            return NULL;
+        }
+        pairs[i].key = e->key;
+        if (e->selected->value.type == CF_TYPE_TEXT) {
+            pairs[i].value = e->selected->value.u.t.p;
+        } else {
+            check(cf_value_to_text(&e->selected->value, converted[i],
+                                   sizeof converted[i]) != 0,
+                  "an array count converts back to source text");
+            pairs[i].value = converted[i];
+        }
+    }
+    b = cf_build(NULL);
+    cf_builder_memory(b, "emitted", CF_RANK_USER_FILE, pairs, count);
+    c = cf_builder_create(b, err);
+    cf_arena_free(ar);
+    return c;
+}
+
+static void test_literal_references(cf_bool arrays) {
+    static const cf_pair values[]   = {{"plain", "unchanged"},
+                                       {"dollar", "$${missing}"},
+                                       {"chain", "$$${missing}"},
+                                       {"open", "$${"},
+                                       {"nested.value", "a$${missing}b$${}c"},
+                                       {"nested.last", "\"\\\t$${missing}"},
+                                       {"tail", "end$$"}};
+    static const cf_pair elements[] = {
+        {"list.0", "$${missing}"}, {"list.1", "quote\"$${"}, {"list.count", "2"}};
+    static const char* formats[] = {"json", "toml", "yaml", "ini"};
+    static char        raw[4096], expected[8192], actual[8192];
+    cf_error           err = CF_ERROR_INIT;
+    cf_builder*        b   = cf_build(NULL);
+    cf_config*         c;
+    size_t             f;
+
+    cf_builder_memory(b, "memory", CF_RANK_USER_FILE, values,
+                      sizeof values / sizeof values[0]);
+    if (arrays) {
+        cf_builder_memory(b, "elements", CF_RANK_USER_FILE, elements,
+                          sizeof elements / sizeof elements[0]);
+    }
+    cf_builder_text(b, "default", "${untouched}", 0);
+    c = cf_builder_create(b, &err);
+    check(c != NULL, "literal configuration builds");
+    if (c == NULL) {
+        return;
+    }
+    for (f = 0; f < sizeof formats / sizeof formats[0]; ++f) {
+        const cf_codec* codec = cf_codec_by_name(formats[f]);
+        cf_doc_sink     sink;
+        cf_sink         out;
+        cf_config*      reread;
+        size_t          i, n = 0, cap;
+        static union {
+            cf_i64 align;
+            char   b[CF_ENCODER_STATE_MAX];
+        } state;
+
+        if (codec == NULL || (arrays && (codec->caps & CF_CODEC_ARRAYS) == 0)) {
+            continue;
+        }
+        cf_sink_init(&out, raw, sizeof raw);
+        check(codec->encoder(&out, state.b, &sink), "raw encoder opens");
+        check(cf_doc_emit(cf_keys(c), &sink, &err), "raw document emits");
+        cf_sink_terminate(&out);
+        has(raw, "${untouched}", "raw document keeps the literal untouched");
+        lacks(raw, "$${untouched}", "only configuration emission escapes references");
+        for (i = 0; raw[i] != '\0'; ++i) {
+            if (raw[i] == '$' && raw[i + 1] == '{') {
+                expected[n++] = '$';
+            }
+            expected[n++] = raw[i];
+        }
+        expected[n] = '\0';
+        check(cf_emit(c, formats[f], CF_EMIT_ALL, 0, actual, sizeof actual, &err) == n,
+              "configuration length counts each extra dollar");
+        check(strcmp(actual, expected) == 0, "configuration escapes exactly each ${");
+        reread = read_emitted(actual, codec, &err);
+        check(reread != NULL, "emitted literals survive reference expansion");
+        if (reread != NULL) {
+            check(cf_digest(reread) == cf_digest(c),
+                  "literal values have the same digest");
+            check(strcmp(cf_get_text(reread, "default", ""), "${untouched}") == 0,
+                  "a default is still literal after being written as configuration");
+            check(strcmp(cf_get_text(reread, "chain", ""), "$${missing}") == 0,
+                  "an already doubled dollar gains exactly one escape");
+            cf_config_free(reread);
+        }
+        for (cap = 0; cap <= n + 2; ++cap) {
+            size_t stored = cap == 0 ? 0 : (cap - 1 < n ? cap - 1 : n);
+            memset(actual, '!', sizeof actual);
+            check(cf_emit(c, formats[f], CF_EMIT_ALL, 0, actual, cap, &err) == n,
+                  "every capacity measures the full escaped length");
+            check(memcmp(actual, expected, stored) == 0,
+                  "every truncated prefix is the full escaped output's prefix");
+            check(cap == 0 || actual[stored] == '\0',
+                  "each stored prefix is terminated");
+            check(actual[cap] == '!', "nothing beyond capacity is written");
+            check(cf_emit(c, formats[f], CF_EMIT_ALL, 0, NULL, cap, &err) == n,
+                  "a null buffer measures the same length at every capacity");
+        }
+    }
+    cf_config_free(c);
+}
+
 int main(void) {
     cf_arena* ar = cf_arena_new(NULL, 1 << 16);
 
@@ -470,6 +654,9 @@ int main(void) {
     test_from_one_rank();
     test_transient_is_not_written();
     test_open_prefix();
+    test_value_container_refusal();
+    test_literal_references(CF_FALSE);
+    test_literal_references(CF_TRUE);
 
     cf_arena_free(ar);
     printf("%d checks, %d failures\n", g_run, g_fail);

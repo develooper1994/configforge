@@ -8,29 +8,18 @@ Each item says **why** it matters and **what done looks like**. When an
 item lands, move it to the CHANGELOG and delete it here; a roadmap that
 lists finished work stops being read.
 
-## Known issues
+## Release follow-up
 
-The three limits of 1.0 that `docs/Guide.md`, section 10, names: what an
-emitted file holds that does not come back the same. Each is written down
-rather than silent, and each can be fixed within 1.x without breaking a
-caller.
+1.0.0 was published with three known round-trip defects, before the
+agreed work was complete. Their corrections are in the unreleased
+CHANGELOG section: long JSON/TOML values, literal references on emit,
+and refusing a value/container key collision (D-57). The existing
+1.0.0 archives still have those defects.
 
-* **A JSON or TOML string longer than `CF_MESSAGE_MAX - 2` bytes** is
-  refused by its reader, which decodes a string into a buffer the size
-  of an error message. Why it matters: a certificate or a long URL is an
-  ordinary value, and the writers write it. Done looks like: every reader
-  takes a string of any length - through a member a later `cf_doc_sink`
-  has (D-51 gave it a size for this), or through an established reader
-  behind an option (Ideas) - and `test_roundtrip`'s long values reach
-  kilobytes in every format.
-* **A text value holding `${`** is written as it is and read back as a
-  reference. Done looks like: each writer escapes it as `$${`, which every
-  source already reads as a literal `${`, and `test_roundtrip` writing it
-  among the syntax characters.
-* **A key that is both a value and a table**, `a` and `a.b`, is written
-  as a name that appears twice, which this library reads back and a
-  stricter parser may refuse. Done looks like: the owner's choice between
-  refusing it on write and a form each format reads.
+A deferred item remains open. Passing the release matrix does not
+complete an unimplemented feature, and publishing a version does not
+complete this roadmap. No further release is planned until the agreed
+work and its validation are complete.
 
 ## Next: 1.x
 
@@ -56,8 +45,8 @@ the same without the check.
 Left, in order - each a verified commit (`CONTRIBUTING.md`, "How work is
 done here"):
 
-1. **The known issues above**, as 1.0.x patches: the JSON and TOML
-   string limit first, then `${` on write.
+1. **Complete the release follow-up**, including compatibility and
+   format-conformance checks for the corrected readers and writers.
 2. **The decisions below**, once the owner has made them.
 3. **The ideas**, in their order, each a minor version.
 
@@ -130,8 +119,6 @@ that needs the live configuration rather than its record.
 
 ## Decisions waiting for the owner
 
-* **A key that is both a value and a table** (Known issues): refused on
-  write, or written in a form each format reads.
 * **Arrays in INI**: INI has none, so an array is refused there. Its
   index keys and count, as plain keys, would round-trip through this
   library alone.

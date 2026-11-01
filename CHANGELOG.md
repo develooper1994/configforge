@@ -7,6 +7,21 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- Configuration emission escapes literal `${` as `$${`, so values and
+  defaults survive loading the written file without being expanded
+  again. Measurement and every truncated buffer keep the same escaped
+  length and prefix. Raw document encoding remains unchanged.
+- JSON and TOML configuration strings are no longer limited by the
+  error-message buffer. Decoders measure with the same grammar they
+  use to copy, then borrow reusable workspace from the flattener's
+  arena. The optional, size-gated `cf_doc_sink.reserve_text` callback
+  gives custom readers the same facility; older sinks still work for
+  strings up to 255 bytes. Encoders write only the original sink
+  prefix, so a 1.0 caller's output object is not overrun.
+- A selected key that is both a value and a container prefix is refused
+  on emission as `CF_E_KEY`, naming the key, instead of producing
+  duplicate members that other parsers reject. A selection containing
+  only one side remains writable.
 - `gate.abi` failed every Windows shared build: it listed the DLL's
   symbols with nm, which finds none in a PE export table, and reported
   all 292 public functions missing. It now reads the import library,

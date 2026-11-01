@@ -520,7 +520,7 @@ static cf_bool yaml_encoder(cf_sink* out, void* state, cf_doc_sink* sink) {
     }
     memset(e, 0, sizeof *e);
     e->out            = out;
-    sink->size        = sizeof(cf_doc_sink);
+    sink->size        = offsetof(cf_doc_sink, reserve_text);
     sink->begin_table = yaml_enc_table;
     sink->begin_array = yaml_enc_array;
     sink->scalar      = yaml_enc_scalar;

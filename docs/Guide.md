@@ -432,18 +432,25 @@ is an empty array, which it cannot write either. A value INI would read
 differently bare - empty, with a space at either end, or holding `"`, `#`
 or `;` - is written in quotes.
 
-Three things are not refused and do not come back the same, and are
-known limits of 1.0:
+JSON and TOML string values are limited by the configuration's arena,
+not `CF_MESSAGE_MAX`. Their readers use a reusable workspace owned by
+the flattener; a fixed arena refuses exhaustion rather than falling
+back to heap allocation. A custom document sink provides `reserve_text`
+for decoded strings longer than 255 bytes, advertises its size, and
+copies any text it needs to retain beyond the scalar callback.
 
-* JSON and TOML read a string of up to `CF_MESSAGE_MAX - 2` bytes, 254
-  by default, and refuse a longer one as too long, so a longer value
-  written to either is not read back by it. INI and YAML have no such
-  limit.
-* A text value that holds `${` - one written `$${` in its source, or a
-  default - is written as it is, and read back it is a reference again.
-* A key that is both a value and a table, `a` and `a.b`, is written as a
-  name that appears twice. The library reads it back as the same keys; a
-  stricter parser elsewhere may refuse it.
+A literal `${` in a resolved text value is written as `$${`, including
+one supplied by a program's default. Loading the emitted configuration
+undoes that escape exactly once, preserving the value. This is a
+configuration-level rule: `cf_doc_emit` and the codecs themselves write
+raw document values, as provenance reports require.
+
+A key that is both a value and a container, `a` and `a.b`, remains legal
+in the flat key space but cannot be written together. Emission refuses
+it as `CF_E_KEY` and names `a`, rather than writing duplicate names.
+Selecting only one side with `CF_EMIT_FROM_RANK` is still writable.
+
+These correct three round-trip limitations present in the 1.0.0 release.
 
 A document nests as deep as a reader takes, `CF_MAX_DEPTH` levels with
 the document itself the first, which is tables and arrays 31 levels

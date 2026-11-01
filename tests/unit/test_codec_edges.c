@@ -61,6 +61,10 @@ static cf_bool rf_end(void* ctx) {
     refusing* r = (refusing*)ctx;
     return rf_spend(r) && r->inner->end(r->inner->ctx);
 }
+static char* rf_reserve_text(void* ctx, size_t n) {
+    refusing* r = (refusing*)ctx;
+    return r->inner->reserve_text(r->inner->ctx, n);
+}
 
 /* One document through one codec, with a sink that allows `budget`
    events (-1 for all). Returns 1 accepted, 0 refused. */
@@ -79,15 +83,17 @@ static int feed(const cf_codec* codec, const char* doc, size_t n, int budget) {
     }
     cf_blob_mem(&b, doc, n, "edges");
     cf_flatten_init(&fl, &ks, 0);
-    r.inner          = cf_flatten_sink(&fl);
-    r.budget         = (budget < 0) ? 1 << 30 : budget;
-    sink.size        = sizeof(cf_doc_sink);
-    sink.begin_table = rf_table;
-    sink.begin_array = rf_array;
-    sink.scalar      = rf_scalar;
-    sink.end         = rf_end;
-    sink.ctx         = &r;
-    ok               = codec->decode(&b, &sink, &err) ? 1 : 0;
+    r.inner  = cf_flatten_sink(&fl);
+    r.budget = (budget < 0) ? 1 << 30 : budget;
+    memset(&sink, 0, sizeof sink);
+    sink.size         = sizeof(cf_doc_sink);
+    sink.begin_table  = rf_table;
+    sink.begin_array  = rf_array;
+    sink.scalar       = rf_scalar;
+    sink.end          = rf_end;
+    sink.ctx          = &r;
+    sink.reserve_text = rf_reserve_text;
+    ok                = codec->decode(&b, &sink, &err) ? 1 : 0;
     if (!ok) {
         check(err.message[0] != '\0', "a refusal says why");
     } else {

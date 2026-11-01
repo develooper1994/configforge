@@ -53,6 +53,8 @@ typedef struct cf_flatten {
     cf_bool     failed;   /* the key space refused a candidate     */
     cf_bool     overflow; /* a key or the nesting grew too large   */
     cf_doc_sink sink;
+    char*       text;
+    size_t      text_cap;
 } cf_flatten;
 
 CF_API cf_bool            cf_flatten_init(cf_flatten* f, cf_keyspace* ks, int rank);
@@ -71,7 +73,9 @@ CF_API const cf_doc_sink* cf_flatten_sink(cf_flatten* f);
    members of an array come out in index order, whatever they are, and
    carry no name; in a table the scalars come first, then the arrays,
    then the tables, because a format that has written a sub-table's
-   header cannot go back to its parent. */
+   header cannot go back to its parent. A selected key that is both a
+   scalar and a container prefix is refused as CF_E_KEY, naming the key,
+   rather than written as two members with the same name. */
 CF_API cf_bool cf_doc_emit(const cf_keyspace* ks, const cf_doc_sink* out,
                            cf_error* err);
 

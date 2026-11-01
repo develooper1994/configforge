@@ -84,6 +84,36 @@ if(out MATCHES "CFD007[^\n]*server.port")
   message(FATAL_ERROR "a value Spring did not mask was called a secret")
 endif()
 
+# Long properties survive the adapter and the report reader.
+string(REPEAT "long value " 100 long_value)
+file(WRITE "${work}/spring_long.json"
+     "{\"propertySources\":[{\"name\":\"commandLineArgs\","
+     "\"properties\":{\"app.description\":{\"value\":\"${long_value}\"}}}]}\n")
+execute_process(
+  COMMAND ${DOCTOR} import-spring
+  WORKING_DIRECTORY "${work}"
+  INPUT_FILE "${work}/spring_long.json"
+  OUTPUT_FILE "${work}/spring_long_report.json"
+  ERROR_VARIABLE err
+  RESULT_VARIABLE rc)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "import-spring refused a long property value: ${err}")
+endif()
+file(READ "${work}/spring_long_report.json" report)
+string(FIND "${report}" "${long_value}" found)
+if(found LESS 0)
+  message(FATAL_ERROR "import-spring did not preserve the complete long value")
+endif()
+execute_process(
+  COMMAND ${DOCTOR} dump spring_long_report.json
+  WORKING_DIRECTORY "${work}"
+  OUTPUT_QUIET
+  ERROR_VARIABLE err
+  RESULT_VARIABLE rc)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "Doctor could not read its report's long value: ${err}")
+endif()
+
 # Output it was not written for is refused, not guessed at.
 file(WRITE "${work}/spring_bad.json" "{\"status\": \"UP\"}\n")
 execute_process(

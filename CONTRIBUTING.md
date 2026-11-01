@@ -96,7 +96,9 @@ commands.
 ## How work is done here
 
 1. **One verified unit per commit.** A unit is a thing that is true on
-   its own. Format, then stage it (formatting after staging verifies
+   its own. Batch related corrections before running their focused
+   tests; do not rerun the full matrix after each small edit. Run the
+   complete verification once the unit is ready. Format, then stage it (formatting after staging verifies
    the unformatted copy), then `verify.cmake -DSOURCE=index -DTIER=1`,
    and commit only on "all green". Never decide from `grep` on the output;
    the exit code is the answer (Conventions.md says why).

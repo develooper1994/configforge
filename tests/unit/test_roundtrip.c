@@ -819,10 +819,7 @@ static void test_written_as(void) {
                  "and is not when it is below nothing");
 }
 
-/* A key that is a value and a table both - `t.0` and `t.0.a` - is not an
-   index and not an element: written as an array it was two, and the key
-   space that was read back had different keys. It is written as a table,
-   with the name twice, and the readers here read both of them. */
+/* A value and a container cannot share a name in the written document. */
 static void test_value_and_table(void) {
     cf_arena*   ar = cf_arena_new(NULL, 1 << 16);
     cf_keyspace ks;
@@ -845,11 +842,10 @@ static void test_value_and_table(void) {
     for (f = 0; f < g_nhave; ++f) {
         cf_error err = CF_ERROR_INIT;
 
-        expect(trip(g_have[f], &ks, &err), TRIP_SAME, g_have[f],
+        expect(trip(g_have[f], &ks, &err), TRIP_REFUSED, g_have[f],
                "t.0 as a value and a table", &err);
-        if (strcmp(g_have[f]->name, "json") == 0) {
-            check(strchr(g_out, '[') == NULL, "and it is not written as an array");
-        }
+        check(err.code == CF_E_KEY, "a colliding key is refused as a key error");
+        check(strcmp(err.key, "t.0") == 0, "the full conflicting key is named");
     }
     cf_arena_free(ar);
 }
@@ -1311,17 +1307,17 @@ static void test_long_array_key(void) {
     }
 }
 
-/* Values of the lengths at which a buffer might end, of letters and of
-   the characters that are syntax somewhere, up to the longest string
-   the JSON and TOML readers take in 1.0: CF_MESSAGE_MAX - 2 bytes. */
+/* Values at buffer boundaries, independent of the error message limit. */
 static void test_long_values(void) {
     static char         big[8192];
-    static const size_t sizes[] = {1, 2, 3, 63, 64, 65, 127, 128, 129, 253, 254};
+    static const size_t sizes[] = {1,    2,    3,    63,   64,   65,   127, 128, 129,
+                                   253,  254,  255,  256,  257,  511,  512, 513, 1023,
+                                   1024, 1025, 4095, 4096, 4097, 8191, 8192};
     static const char   plain[] = "abcdefghijklmnopqrstuvwxyz0123456789";
     static const char   odd[]   = "a b\"c\\d\te#f;g'h=i[j]k{l}m:n,o ";
     size_t              i, k;
 
-    for (i = 0; i < LEN(sizes) && sizes[i] + 2 <= CF_MESSAGE_MAX; ++i) {
+    for (i = 0; i < LEN(sizes); ++i) {
         for (k = 0; k < sizes[i]; ++k) {
             big[k] = plain[k % (sizeof plain - 1)];
         }

@@ -101,8 +101,10 @@ CF_API size_t cf_loc_text(const cf_loc* at, char* buf, size_t cap);
  * where position is the name.
  * ------------------------------------------------------------------ */
 
-/* `size` is sizeof(cf_doc_sink) where it was filled (D-51): a later 1.x
-   calls a member added after 1.0 only for a sink that has it. */
+/* Zero-initialize a reader's sink before filling its callbacks and
+   `size`. A later member is called only when `size` reaches past it.
+   Encoders fill only the 1.0 prefix: an older caller may have supplied
+   that smaller object as their output. */
 typedef struct cf_doc_sink {
     size_t size;
     cf_bool (*begin_table)(void* ctx, const char* name, size_t n);
@@ -111,6 +113,13 @@ typedef struct cf_doc_sink {
                       cf_bool textual, const cf_loc* at);
     cf_bool (*end)(void* ctx);
     void* ctx;
+
+    /* Optional reader workspace, including room for a trailing NUL.
+       The buffer must survive until scalar returns; the next call may
+       reuse it. NULL reports exhaustion. Without this callback, the
+       built-in JSON/TOML readers refuse strings over 255 bytes. The
+       configuration loader supplies it from the caller's arena. */
+    char* (*reserve_text)(void* ctx, size_t n);
 } cf_doc_sink;
 
 /* ------------------------------------------------------------------ *

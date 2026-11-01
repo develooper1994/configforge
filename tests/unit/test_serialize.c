@@ -765,6 +765,130 @@ static void test_deep_nesting(cf_arena* ar) {
     check(decode("json", doc, &ks, ar, 10, &err), "nesting within the limit is read");
 }
 
+static int g_reserves;
+
+static char* deny_text_storage(void* ctx, size_t n) {
+    (void)ctx;
+    (void)n;
+    ++g_reserves;
+    return NULL;
+}
+
+static void test_reader_text_storage(void) {
+    static const char* formats[] = {"json", "toml"};
+    static char        doc[4096], expected[513], fixed[2048];
+    cf_error           err = CF_ERROR_INIT;
+    cf_keyspace        ks;
+    cf_flatten         fl;
+    cf_doc_sink        sink;
+    cf_blob            blob;
+    size_t             f, i, at;
+    int                escaped, mode;
+
+    memset(expected, 'a', sizeof expected - 1);
+    expected[sizeof expected - 1] = '\0';
+    for (f = 0; f < sizeof formats / sizeof formats[0]; ++f) {
+        const cf_codec* codec = cf_codec_by_name(formats[f]);
+        if (codec == NULL) {
+            continue;
+        }
+        for (escaped = 0; escaped < 2; ++escaped) {
+            at = cf_fmt(doc, sizeof doc, "%s", f == 0 ? "{\"k\":\"" : "k=\"");
+            for (i = 0; i < sizeof expected - 1; ++i) {
+                at =
+                    cf_fmt_append(doc, sizeof doc, at, "%s", escaped ? "\\u0061" : "a");
+            }
+            cf_fmt_append(doc, sizeof doc, at, "%s", f == 0 ? "\"}" : "\"");
+            cf_blob_mem(&blob, doc, strlen(doc), "storage");
+            for (mode = 0; mode < 5; ++mode) {
+                cf_arena* ar = cf_arena_new(NULL, 4096);
+                cf_bool   read;
+                if (ar == NULL) {
+                    check(0, "text storage arena exists");
+                    return;
+                }
+                cf_ks_init(&ks, ar, 8);
+                cf_flatten_init(&fl, &ks, 10);
+                sink = *cf_flatten_sink(&fl);
+                if (mode < 4) {
+                    sink.reserve_text = mode == 2 ? NULL : deny_text_storage;
+                }
+                if (mode == 0) {
+                    sink.size = offsetof(cf_doc_sink, reserve_text);
+                } else if (mode == 1) {
+                    sink.size = offsetof(cf_doc_sink, reserve_text) +
+                                sizeof sink.reserve_text - 1;
+                }
+                g_reserves = 0;
+                cf_error_clear(&err);
+                read = codec->decode(&blob, &sink, &err);
+                check(read == (mode == 4),
+                      "long strings require available advertised storage");
+                check(g_reserves == (mode == 3 ? 1 : 0),
+                      "legacy, partial-size and null callbacks are never invoked");
+                if (mode < 4) {
+                    check(err.code == (mode == 3 ? CF_E_MEMORY : CF_E_SOURCE),
+                          "storage exhaustion and absent storage have explicit errors");
+                    check(err.message[0] != '\0', "the storage error says why");
+                } else {
+                    const cf_value* value;
+                    cf_ks_resolve(&ks);
+                    value = cf_ks_get(&ks, "k", 1);
+                    check(value != NULL && value->type == CF_TYPE_TEXT &&
+                              value->u.t.n == sizeof expected - 1,
+                          "long text keeps its decoded length");
+                    if (value != NULL && value->type == CF_TYPE_TEXT) {
+                        eq(value->u.t.p, expected,
+                           "long text is decoded and NUL-terminated");
+                    }
+                }
+                cf_arena_free(ar);
+            }
+            {
+                cf_arena* ar = cf_arena_fixed(fixed, sizeof fixed);
+                check(ar != NULL && cf_ks_init(&ks, ar, 1), "a fixed arena starts");
+                if (ar == NULL) {
+                    return;
+                }
+                cf_flatten_init(&fl, &ks, 10);
+                cf_error_clear(&err);
+                /* Ask for more than the entire fixed arena can hold. */
+                check(cf_flatten_sink(&fl)->reserve_text(&fl, sizeof fixed + 1) == NULL,
+                      "fixed workspace refuses exhaustion instead of using the heap");
+                cf_arena_free(ar);
+            }
+        }
+    }
+}
+
+#if CF_WITH_EMIT
+static void test_encoder_sink_prefix(void) {
+    size_t i;
+    for (i = 0; i < cf_codec_count(); ++i) {
+        const cf_codec* codec = cf_codec_at(i);
+        cf_doc_sink     sink;
+        cf_sink         out;
+        unsigned char   tail[sizeof sink.reserve_text];
+        union {
+            cf_i64 align;
+            char   bytes[CF_ENCODER_STATE_MAX];
+        } state;
+        if (codec->encoder == NULL) {
+            continue;
+        }
+        memset(&sink, 0x5a, sizeof sink);
+        memcpy(tail, &sink.reserve_text, sizeof tail);
+        cf_sink_init(&out, NULL, 0);
+        check(codec->encoder(&out, state.bytes, &sink),
+              "an encoder initializes its sink");
+        check(sink.size == offsetof(cf_doc_sink, reserve_text),
+              "an encoder advertises only the 1.0 output prefix");
+        check(memcmp(tail, &sink.reserve_text, sizeof tail) == 0,
+              "an encoder never writes beyond a 1.0 caller's sink");
+    }
+}
+#endif
+
 int main(void) {
     cf_arena* ar = cf_arena_new(NULL, 1 << 16);
 
@@ -775,7 +899,9 @@ int main(void) {
     test_json(ar);
     test_json_strings(ar);
     test_json_errors(ar);
+    test_reader_text_storage();
 #if CF_WITH_EMIT
+    test_encoder_sink_prefix();
     test_json_roundtrip(ar);
     test_array_order(ar);
     test_array_members(ar);

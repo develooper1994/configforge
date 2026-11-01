@@ -390,7 +390,7 @@ static cf_bool ini_encoder(cf_sink* out, void* state, cf_doc_sink* sink) {
     memset(e, 0, sizeof *e);
     e->out = out;
 
-    sink->size        = sizeof(cf_doc_sink);
+    sink->size        = offsetof(cf_doc_sink, reserve_text);
     sink->begin_table = ini_enc_table;
     sink->begin_array = ini_enc_array;
     sink->scalar      = ini_enc_scalar;

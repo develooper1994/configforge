@@ -46,6 +46,10 @@ typedef enum cf_emit_what {
    A configuration nested deeper than CF_MAX_DEPTH (cf_build_options.h)
    is refused as CF_E_KEY in every format: it is as deep as a reader
    takes, and a file past that could not be read back.
+   A selected key that is both a value and a container is also CF_E_KEY.
+   Literal ${ in a text value is written as $${ so construction from
+   the emitted file preserves it, rather than expanding it again.
+   The lower-level cf_doc_emit does not interpret or escape references.
    Whatever the reason, a refusal returns 0 with `err` set, and a buffer
    that was given holds an empty string - not the front of a document
    that the walk had written before it came to the reason. */

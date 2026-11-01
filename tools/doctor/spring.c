@@ -251,6 +251,10 @@ static cf_bool spring_read_all(cf_arena* ar, cf_blob* blob) {
     return CF_TRUE;
 }
 
+static char* spring_reserve_text(void* ctx, size_t n) {
+    return (char*)cf_arena_alloc(((spring_scan*)ctx)->ar, n);
+}
+
 static int spring_usage(void) {
     fputs("doctor import-spring [--profile <name>]\n"
           "\n"
@@ -299,12 +303,14 @@ int doctor_import_spring(int argc, char** argv) {
         cf_arena_free(s.ar);
         return 3;
     }
-    sink.size        = sizeof(cf_doc_sink);
-    sink.begin_table = spring_table;
-    sink.begin_array = spring_array;
-    sink.scalar      = spring_scalar;
-    sink.end         = spring_end;
-    sink.ctx         = &s;
+    memset(&sink, 0, sizeof sink);
+    sink.size         = sizeof(cf_doc_sink);
+    sink.begin_table  = spring_table;
+    sink.begin_array  = spring_array;
+    sink.scalar       = spring_scalar;
+    sink.end          = spring_end;
+    sink.ctx          = &s;
+    sink.reserve_text = spring_reserve_text;
     if (!json->decode(&blob, &sink, &err) || s.failed) {
         fprintf(stderr, "doctor: %s\n",
                 (err.message[0] != '\0') ? err.message

@@ -1007,6 +1007,10 @@ leaves out is not one it would have to write.
 A configuration nested deeper than CF_MAX_DEPTH (cf_build_options.h)
 is refused as CF_E_KEY in every format: it is as deep as a reader
 takes, and a file past that could not be read back.
+A selected key that is both a value and a container is also CF_E_KEY.
+Literal ${ in a text value is written as $${ so construction from
+the emitted file preserves it, rather than expanding it again.
+The lower-level cf_doc_emit does not interpret or escape references.
 Whatever the reason, a refusal returns 0 with `err` set, and a buffer
 that was given holds an empty string - not the front of a document
 that the walk had written before it came to the reason.
@@ -1291,7 +1295,9 @@ as the same keys; a table with a member called `count` is a table. The
 members of an array come out in index order, whatever they are, and
 carry no name; in a table the scalars come first, then the arrays,
 then the tables, because a format that has written a sub-table's
-header cannot go back to its parent.
+header cannot go back to its parent. A selected key that is both a
+scalar and a container prefix is refused as CF_E_KEY, naming the key,
+rather than written as two members with the same name.
 
 ```c
 CF_API cf_bool cf_doc_emit_where(const cf_keyspace* ks, const cf_doc_sink* out, cf_emit_pred pred, const void* ctx, cf_error* err);
