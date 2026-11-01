@@ -410,18 +410,40 @@ release may want to move - is `cf_emit(cfg, "json", CF_EMIT_CONFIGURED,
 0, buf, cap, &err)`. `examples/c/settings.c` is the whole cycle: read,
 explain, set, save, notice the file change.
 
-What is written is the document the keys describe. A group of keys is an
-array when it holds index keys and the `count` the readers record, and
-nothing else, and its members come out in index order, whatever they are.
-Any other group is a table: `pool.count` and `pool.size` are a table with
-a member called `count`. The flat keys cannot tell two pairs of documents
-apart, and write each as the array: `{"count": 0}` and `[]`, and
-`{"0": "a", "count": 1}` and `["a"]`. An index that is missing is not
-written, and those after it move up; one at or past the count is not in
-the configuration at all, and is not written either. INI has no syntax for
-an array, so it refuses a configuration only when what is being written
-has one: an array that `CF_EMIT_CONFIGURED` or `CF_EMIT_FROM_RANK` leaves
-out does not count.
+What is written is the document the keys describe, and it reads back as
+the same keys. A group of keys is written as an array when it is exactly
+one: the indexes 0, 1, 2 and on with none missing, as the readers write
+them, and a `count` that says how many there are, and nothing else. Its
+members come out in index order, whatever they are. Any other group is a
+table: `pool.count` and `pool.size` are a table with a member called
+`count`, and so are indexes with one missing, or a `count` that does not
+match them, written as the keys they are. The flat keys cannot tell two
+pairs of documents apart, and write each as the array: `{"count": 0}` and
+`[]`, and `{"0": "a", "count": 1}` and `["a"]`. An element at or past the
+count is not in the configuration at all, and is not written either. INI
+has no syntax for an array, so it refuses a configuration only when what
+is being written has one: an array that `CF_EMIT_CONFIGURED` or
+`CF_EMIT_FROM_RANK` leaves out does not count.
+
+What a format cannot hold is refused, never written as something else:
+TOML has no null; YAML takes only valid UTF-8; INI has no array and no
+line break inside a value, and a group whose only member is `count = 0`
+is an empty array, which it cannot write either. A value INI would read
+differently bare - empty, with a space at either end, or holding `"`, `#`
+or `;` - is written in quotes.
+
+Three things are not refused and do not come back the same, and are
+known limits of 1.0:
+
+* JSON and TOML read a string of up to `CF_MESSAGE_MAX - 2` bytes, 254
+  by default, and refuse a longer one as too long, so a longer value
+  written to either is not read back by it. INI and YAML have no such
+  limit.
+* A text value that holds `${` - one written `$${` in its source, or a
+  default - is written as it is, and read back it is a reference again.
+* A key that is both a value and a table, `a` and `a.b`, is written as a
+  name that appears twice. The library reads it back as the same keys; a
+  stricter parser elsewhere may refuse it.
 
 A document nests as deep as a reader takes, `CF_MAX_DEPTH` levels with
 the document itself the first, which is tables and arrays 31 levels

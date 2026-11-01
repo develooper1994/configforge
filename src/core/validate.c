@@ -594,11 +594,14 @@ static void apply_policy(cf_entry* e, const cf_def* d, const cf_rank_names* name
  * still say that the value was there and why nothing reads it, and
  * Doctor's CFD015 reports from that.
  *
- * What an array is is decided as cf_emit decides it: a group of keys
- * that are all index keys but for the length. A group with any other
- * member is a table that happens to have a member called count - a
- * pool size, a retry count - and is left alone, as it is written out
- * alone.
+ * What an array is, here, is the group of keys that are all index keys
+ * but for the length. A group with any other member is a table that
+ * happens to have a member called count - a pool size, a retry count -
+ * and is left alone. cf_emit is stricter about what it writes as an
+ * array, because it has to write what reads back as it was: a group with
+ * an index left out, or with a length that is not how many there are, is
+ * written as a table. What is cut here is cut whatever it would be
+ * written as.
  * ------------------------------------------------------------------ */
 
 #define COUNT_KEY_TAIL ".count"
@@ -629,7 +632,7 @@ static int array_member(const cf_entry* e, size_t from, size_t* n) {
 /* Whether the digits are a number that reaches `limit`, given as text.
    Compared as text, because the index is whatever a source wrote and a
    number it cannot be held in is not a reason to misjudge it; leading
-   zeros do not change it, so "007" is 7, as the writer reads it. */
+   zeros do not change it, so "007" is 7. */
 static cf_bool index_reaches(const char* d, size_t n, const char* limit, size_t lim) {
     while (n > 1 && *d == '0') {
         ++d;

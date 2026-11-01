@@ -27,11 +27,12 @@ extern "C" {
 /* ------------------------------------------------------------------ *
  * Keys
  *
- * Canonical form is dotted, lowercase ASCII. Comparison is byte-wise
- * and case-sensitive: case-insensitive keys are Viper's most-reported
- * defect, because they silently collapse two distinct parameters.
- * Derivation to MYAPP_SERVER_PORT and --server-port belongs to the
- * source that needs it, not here.
+ * Canonical form is dotted, lowercase ASCII, and at most CF_KEY_MAX - 1
+ * bytes, so that a key and its terminator fit the buffers sized by the
+ * limit. Comparison is byte-wise and case-sensitive: case-insensitive
+ * keys are Viper's most-reported defect, because they silently collapse
+ * two distinct parameters. Derivation to MYAPP_SERVER_PORT and
+ * --server-port belongs to the source that needs it, not here.
  * ------------------------------------------------------------------ */
 
 CF_API cf_bool cf_key_valid(const char* key, size_t len);

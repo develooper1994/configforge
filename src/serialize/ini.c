@@ -18,6 +18,10 @@
  *
  * Values are emitted as text. INI carries no types, so the definition
  * decides, and Tier 0 inference decides when there is no definition.
+ *
+ * A value that holds a line break is not written. INI has no escape for
+ * one, the line would end at it, and a file that reads back as something
+ * else than what was written is worse than an error that says which key.
  */
 
 #include "configforge/cf_serialize.h"
@@ -291,16 +295,50 @@ static cf_bool ini_enc_array(void* ctx, const char* name, size_t n) {
     return ini_enc_push(e, name, n);
 }
 
+/* How a text value goes into its line: 0 as it stands, 1 in quotes, and
+   -1 not at all. The reader takes the blanks and the carriage returns at
+   either end of a value to be the line's, and a pair of quotes round the
+   whole of it to be quoting, so a value that has either of those at its
+   ends has to be quoted to come back as it was; and one that holds a
+   space, a quote or a comment character is quoted for the sake of the
+   readers that are not this one. A line break has no escape in INI, and
+   a value that holds one is not written: the line would end there. */
+static int ini_text_form(const char* p, size_t n) {
+    int    form = (n == 0) ? 1 : 0;
+    size_t i;
+
+    for (i = 0; i < n; ++i) {
+        if (p[i] == '\n') {
+            return -1;
+        }
+        if (p[i] == ' ' || p[i] == '\t' || p[i] == '\r' || p[i] == '"' || p[i] == '#' ||
+            p[i] == ';') {
+            form = 1;
+        }
+    }
+    if (n >= 2 && p[0] == '\'' && p[n - 1] == '\'') {
+        form = 1;
+    }
+    return form;
+}
+
 static cf_bool ini_enc_scalar(void* ctx, const char* name, size_t n, const cf_value* v,
                               cf_bool textual, const cf_loc* at) {
     ini_enc* e = (ini_enc*)ctx;
     char     tmp[CF_VALUE_TEXT_MAX];
     size_t   len;
+    int      form = 0;
 
     (void)textual;
     (void)at;
     if (e->in_array) {
         return CF_FALSE;
+    }
+    if (v->type == CF_TYPE_TEXT) {
+        form = ini_text_form(v->u.t.p, v->u.t.n);
+        if (form < 0) {
+            return CF_FALSE;
+        }
     }
     if (e->header_pending && e->plen > 0) {
         cf_sink_puts(e->out, "\n[");
@@ -314,24 +352,14 @@ static cf_bool ini_enc_scalar(void* ctx, const char* name, size_t n, const cf_va
     cf_sink_puts(e->out, " = ");
 
     if (v->type == CF_TYPE_TEXT) {
-        /* Quoted when the value would otherwise lose its shape: it is
-           the only escape INI has. */
-        const char* p = v->u.t.p;
-        size_t      i;
-        cf_bool     need = (v->u.t.n == 0) ? CF_TRUE : CF_FALSE;
-        for (i = 0; i < v->u.t.n; ++i) {
-            if (p[i] == ' ' || p[i] == '\t' || p[i] == '"' || p[i] == '#' ||
-                p[i] == ';' || p[i] == '\n') {
-                need = CF_TRUE;
-                break;
-            }
+        /* The quotes are the only escape INI has, and what is between
+           them is written as it is. */
+        if (form) {
+            cf_sink_putc(e->out, '"');
         }
-        if (need) {
+        cf_sink_write(e->out, v->u.t.p, v->u.t.n);
+        if (form) {
             cf_sink_putc(e->out, '"');
-            cf_sink_write(e->out, p, v->u.t.n);
-            cf_sink_putc(e->out, '"');
-        } else {
-            cf_sink_write(e->out, p, v->u.t.n);
         }
     } else {
         len = cf_value_to_text(v, tmp, sizeof tmp);

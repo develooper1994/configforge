@@ -262,8 +262,8 @@ it is yours to make (D-37):
 
 | Option | Default | What it bounds, and what it costs |
 | ------ | ------- | --------------------------------- |
-| `CF_KEY_MAX` | 256 | longest key; held by every error and by the flattener and decoders |
-| `CF_MESSAGE_MAX` | 256 | longest error message; every `cf_error` holds one |
+| `CF_KEY_MAX` | 256 | longest key, terminator included, so 255 bytes; held by every error and by the flattener and decoders |
+| `CF_MESSAGE_MAX` | 256 | longest error message; every `cf_error` holds one. Also the longest string the JSON and TOML readers take, less two bytes |
 | `CF_PATH_MAX` | 512 | longest file path; the directory source holds several |
 | `CF_MAX_DEPTH` | 32 | deepest nesting; the decoders recurse once per level |
 | `CF_STACK_BUDGET` | 2048 | bytes a library function's frame may take; `0` measures without checking |

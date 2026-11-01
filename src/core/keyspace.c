@@ -14,7 +14,9 @@ cf_bool cf_key_valid(const char* key, size_t len) {
     size_t i;
     int    seg = 0;
 
-    if (key == NULL || len == 0 || len > CF_KEY_MAX) {
+    /* CF_KEY_MAX counts the terminator, as every buffer that holds a key
+       does: the longest key is one byte shorter. */
+    if (key == NULL || len == 0 || len >= CF_KEY_MAX) {
         return CF_FALSE;
     }
     if (key[0] == '.' || key[len - 1] == '.') {

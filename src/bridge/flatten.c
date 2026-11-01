@@ -21,6 +21,14 @@
  * Decoding: events into the key space
  * ------------------------------------------------------------------ */
 
+/* Whether a name of n bytes can be added to the path: the dot before it,
+   when there is a path, and the terminator after it. A key that fills
+   the buffer but for its terminator is the longest key, and is read. */
+static cf_bool fl_room(const cf_flatten* f, size_t n) {
+    return (f->plen + ((f->plen > 0) ? 1u : 0u) + n < sizeof f->path) ? CF_TRUE
+                                                                      : CF_FALSE;
+}
+
 static cf_bool fl_push(cf_flatten* f, const char* name, size_t n, cf_bool is_array) {
     cf_flatten_frame* fr;
 
@@ -35,7 +43,7 @@ static cf_bool fl_push(cf_flatten* f, const char* name, size_t n, cf_bool is_arr
         if (!cf_key_valid(name, n)) {
             return CF_FALSE;
         }
-        if (f->plen + n + 2 > sizeof f->path) {
+        if (!fl_room(f, n)) {
             f->overflow = CF_TRUE;
             return CF_FALSE;
         }
@@ -72,7 +80,7 @@ static cf_bool fl_enter_member(cf_flatten* f, const char* name, size_t n,
         }
         k = cf_u64_to_text((cf_u64)f->stack[f->depth].index, idx, sizeof idx);
         ++f->stack[f->depth].index;
-        if (f->plen + k + 2 > sizeof f->path) {
+        if (!fl_room(f, k)) {
             f->overflow = CF_TRUE;
             return CF_FALSE;
         }
@@ -89,7 +97,7 @@ static cf_bool fl_enter_member(cf_flatten* f, const char* name, size_t n,
     if (!cf_key_valid(name, n)) {
         return CF_FALSE;
     }
-    if (f->plen + n + 2 > sizeof f->path) {
+    if (!fl_room(f, n)) {
         f->overflow = CF_TRUE;
         return CF_FALSE;
     }
@@ -199,13 +207,17 @@ static cf_bool fl_end(void* ctx) {
         cf_value count;
         size_t   plen = f->plen;
 
-        if (plen + 7 < sizeof idx) {
+        if (plen + 7 <= sizeof idx) {
             memcpy(idx, f->path, plen);
             memcpy(idx + plen, ".count", 7); /* with its terminator: room was checked */
             cf_value_int(&count, (cf_i64)fr->index);
             if (!cf_ks_add(f->ks, idx, plen + 6, f->rank, &count, NULL)) {
                 f->failed = CF_TRUE;
             }
+        } else {
+            /* Its elements fit and its length does not. Read without
+               it, the array would be one no source could shorten. */
+            f->overflow = CF_TRUE;
         }
     }
     f->plen = fr->saved_len;
@@ -294,55 +306,129 @@ static size_t seg_len(const cf_entry* e, size_t plen, cf_bool* is_leaf) {
     return j - plen;
 }
 
-static cf_bool count_is_zero(const cf_entry* e) {
-    const cf_value* v = &e->selected->value;
-    cf_value        n;
+/* The length key's value, when it is a whole number that is not negative:
+   an integer, or the text of one that nothing has typed yet, which is
+   what it is in a keyspace read from a text format and not applied to
+   definitions. A string somebody wrote is a string and not a length: as
+   an array it would come back an integer. */
+static cf_bool count_value(const cf_entry* e, cf_u64* out) {
+    const cf_candidate* c = e->selected;
+    const cf_value*     v = &c->value;
+    cf_value            n;
 
-    if (v->type == CF_TYPE_INT) {
-        return (v->u.i == 0) ? CF_TRUE : CF_FALSE;
-    }
-    if (v->type == CF_TYPE_TEXT &&
+    if (v->type == CF_TYPE_TEXT && (c->flags & CF_CAND_TEXTUAL) != 0 &&
         cf_value_from_text(CF_TYPE_INT, v->u.t.p, v->u.t.n, &n)) {
-        return (n.u.i == 0) ? CF_TRUE : CF_FALSE;
+        v = &n;
     }
-    return CF_FALSE;
+    if (v->type != CF_TYPE_INT || v->u.i < 0) {
+        return CF_FALSE;
+    }
+    *out = (cf_u64)v->u.i;
+    return CF_TRUE;
+}
+
+/* An index in the form the readers write it: digits, no leading zero,
+   and few enough of them to be held. "007" is a name, not a position. */
+#define INDEX_DIGITS_MAX 18
+
+static cf_bool index_value(const char* d, size_t n, cf_u64* out) {
+    cf_u64 v = 0;
+    size_t i;
+
+    if (n == 0 || n > INDEX_DIGITS_MAX || (n > 1 && d[0] == '0')) {
+        return CF_FALSE;
+    }
+    for (i = 0; i < n; ++i) {
+        if (!cf_is_digit((unsigned char)d[i])) {
+            return CF_FALSE;
+        }
+        v = v * 10u + (cf_u64)(d[i] - '0');
+    }
+    *out = v;
+    return CF_TRUE;
 }
 
 /* An array is a group of index keys and the length key the flattener
-   synthesises, and nothing else. The group is told by what is in it:
-   a table that merely has a member called `count` - a pool size, a
-   retry count - is a table, and taken for an array it came out as `[]`
-   with everything else in it lost, and INI refused to write it at all.
+   synthesises, and nothing else; and a group that is written as one has
+   to be one exactly, or what is written is not what was there. The
+   indexes are 0, 1, 2 and so on with none left out, each as the readers
+   write it and none of them both a value and a table, and the length is
+   a whole number that is how many there are.
 
-   An array with no index key left is the empty one, which is why a
-   `count` of zero is enough to make one and any other count with no
-   element is a table's member. Without that case an empty array would
-   silently become a table. [lo, hi) are the keys under "<group>." and
-   `glen` is the length of "<group>". */
+   Any other group is a table, with its index keys and its `count` as
+   members, and that reads back as the same keys. Written as an array,
+   {"count": 2, "0": "a"} was ["a"] and came back with a length of one;
+   with an index missing, the ones after it moved up a place; and an
+   index that was both a value and a table became two elements. A table
+   that merely has a member called `count` - a pool size, a retry count -
+   is a table as well, and taken for an array it came out as `[]` with
+   everything else in it lost, and INI refused to write it at all.
+
+   An array with no index key is the empty one, which is why a `count` of
+   zero is enough to make one and any other count with no element is a
+   table's member. Without that case an empty array would silently
+   become a table.
+
+   It is counted from what is there, in one pass and without a buffer:
+   the keys are in byte order, so in a group of indexes and a length the
+   keys of one index are together, each index is counted where it first
+   appears, and the largest says whether any was left out. The length is
+   never counted up to, which a source can set to anything. [lo, hi) are
+   the keys under "<group>." and `glen` is the length of "<group>". */
 static cf_bool group_is_array(const cf_keyspace* ks, size_t lo, size_t hi,
                               size_t glen) {
-    const cf_entry* count   = NULL;
-    cf_bool         element = CF_FALSE;
+    const cf_entry* count  = NULL;
+    const char*     last   = NULL; /* the index counted last */
+    size_t          last_n = 0;
+    cf_bool         value  = CF_FALSE; /* it has a value of its own */
+    cf_bool         table  = CF_FALSE; /* and keys below it */
+    cf_u64          have   = 0;        /* indexes counted */
+    cf_u64          top    = 0;        /* the largest of them */
+    cf_u64          want   = 0;        /* what the length says */
     size_t          i;
 
     for (i = lo; i < hi; ++i) {
         const cf_entry* e = cf_ks_at(ks, i);
+        const char*     seg;
         cf_bool         leaf;
         size_t          n;
+        cf_u64          v;
 
         if (e->selected == NULL) {
             continue;
         }
-        n = seg_len(e, glen + 1, &leaf);
-        if (leaf && n == 5 && memcmp(e->key + glen + 1, "count", 5) == 0) {
+        seg = e->key + glen + 1;
+        n   = seg_len(e, glen + 1, &leaf);
+        if (leaf && n == 5 && memcmp(seg, "count", 5) == 0) {
             count = e;
-        } else if (all_digits(e->key + glen + 1, n)) {
-            element = CF_TRUE;
-        } else {
+            continue;
+        }
+        if (!index_value(seg, n, &v)) {
             return CF_FALSE;
         }
+        if (last == NULL || n != last_n || memcmp(seg, last, n) != 0) {
+            ++have;
+            last   = seg;
+            last_n = n;
+            value  = CF_FALSE;
+            table  = CF_FALSE;
+        }
+        if (leaf) {
+            value = CF_TRUE;
+        } else {
+            table = CF_TRUE;
+        }
+        if (value && table) {
+            return CF_FALSE;
+        }
+        if (v > top) {
+            top = v;
+        }
     }
-    return (count != NULL && (element || count_is_zero(count))) ? CF_TRUE : CF_FALSE;
+    if (count == NULL || !count_value(count, &want) || want != have) {
+        return CF_FALSE;
+    }
+    return (have == 0 || top + 1 == have) ? CF_TRUE : CF_FALSE;
 }
 
 typedef struct emit_ctx {

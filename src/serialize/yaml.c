@@ -293,6 +293,11 @@ static cf_bool yaml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
  * YAML's - so that nothing written here reads back as anything else
  * under 1.1 or 1.2. A key is written bare when it is a word no YAML
  * reader could take for a value, and quoted otherwise.
+ *
+ * A string is written as it is, but for what a reader would not take
+ * as it stands (see yaml_quote), and a string that is not UTF-8 is not
+ * written, because a YAML reader refuses the bytes and the file would
+ * be one this library could not read back.
  * ================================================================== */
 
 #if CF_WITH_EMIT
@@ -307,27 +312,83 @@ typedef struct yaml_enc {
 /* cf_emit keeps this on its own frame, in CF_ENCODER_STATE_MAX bytes. */
 typedef char yaml_enc_fits[(sizeof(yaml_enc) <= CF_ENCODER_STATE_MAX) ? 1 : -1];
 
-static void yaml_quote(cf_sink* out, const char* p, size_t n) {
+/* The code point at the front of p[0..n) and how many bytes it takes;
+   0 when they are not UTF-8 as a YAML reader takes it: the shortest form
+   only, no surrogate, nothing past U+10FFFF. */
+static size_t yaml_utf8(const unsigned char* p, size_t n, cf_u32* cp) {
+    size_t len;
     size_t i;
+    cf_u32 v;
+
+    if (p[0] < 0x80u) {
+        *cp = p[0];
+        return 1;
+    }
+    if (p[0] >= 0xC2u && p[0] <= 0xDFu) {
+        len = 2;
+        v   = p[0] & 0x1Fu;
+    } else if (p[0] >= 0xE0u && p[0] <= 0xEFu) {
+        len = 3;
+        v   = p[0] & 0x0Fu;
+    } else if (p[0] >= 0xF0u && p[0] <= 0xF4u) {
+        len = 4;
+        v   = p[0] & 0x07u;
+    } else {
+        return 0;
+    }
+    if (n < len) {
+        return 0;
+    }
+    for (i = 1; i < len; ++i) {
+        if ((p[i] & 0xC0u) != 0x80u) {
+            return 0;
+        }
+        v = (v << 6) | (p[i] & 0x3Fu);
+    }
+    if ((len == 3 && v < 0x800u) || (len == 4 && v < 0x10000u) ||
+        (v >= 0xD800u && v <= 0xDFFFu) || v > 0x10FFFFu) {
+        return 0;
+    }
+    *cp = v;
+    return len;
+}
+
+/* One double-quoted scalar. Escaped is what a reader would not give
+   back as written: the C0 controls, DEL, and the C1 controls, which
+   libyaml refuses outright - but for U+0085, which it takes for a line
+   break and folds into a space - and U+FFFE and U+FFFF, which it refuses
+   as well. False for a string that is not UTF-8, with the scalar left
+   unfinished. */
+static cf_bool yaml_quote(cf_sink* out, const char* p, size_t n) {
+    static const char hex[] = "0123456789abcdef";
+    size_t            i     = 0;
 
     cf_sink_putc(out, '"');
-    for (i = 0; i < n; ++i) {
-        unsigned char c = (unsigned char)p[i];
-        if (c == '"' || c == '\\') {
-            cf_sink_putc(out, '\\');
-            cf_sink_putc(out, (char)c);
-        } else if (c == '\n') {
-            cf_sink_puts(out, "\\n");
-        } else if (c == '\t') {
-            cf_sink_puts(out, "\\t");
-        } else if (c < 0x20u || c == 0x7Fu) {
-            cf_sink_fmt(out, "\\x%c%c", "0123456789abcdef"[(c >> 4) & 0xF],
-                        "0123456789abcdef"[c & 0xF]);
-        } else {
-            cf_sink_putc(out, (char)c);
+    while (i < n) {
+        cf_u32 cp;
+        size_t len = yaml_utf8((const unsigned char*)p + i, n - i, &cp);
+
+        if (len == 0) {
+            return CF_FALSE;
         }
+        if (cp == '"' || cp == '\\') {
+            cf_sink_putc(out, '\\');
+            cf_sink_putc(out, (char)cp);
+        } else if (cp == '\n') {
+            cf_sink_puts(out, "\\n");
+        } else if (cp == '\t') {
+            cf_sink_puts(out, "\\t");
+        } else if (cp < 0x20u || (cp >= 0x7Fu && cp <= 0x9Fu)) {
+            cf_sink_fmt(out, "\\x%c%c", hex[(cp >> 4) & 0xFu], hex[cp & 0xFu]);
+        } else if (cp == 0xFFFEu || cp == 0xFFFFu) {
+            cf_sink_fmt(out, "\\ufff%c", hex[cp & 0xFu]);
+        } else {
+            cf_sink_write(out, p + i, len);
+        }
+        i += len;
     }
     cf_sink_putc(out, '"');
+    return CF_TRUE;
 }
 
 /* Words a YAML reader of either version takes for something other than
@@ -360,7 +421,7 @@ static void yaml_key(cf_sink* out, const char* p, size_t n) {
     if (bare) {
         cf_sink_write(out, p, n);
     } else {
-        yaml_quote(out, p, n);
+        (void)yaml_quote(out, p, n); /* a key is ASCII, and ASCII is UTF-8 */
     }
 }
 
@@ -427,7 +488,9 @@ static cf_bool yaml_enc_scalar(void* ctx, const char* name, size_t n, const cf_v
         cf_sink_write(e->out, tmp, cf_value_to_text(v, tmp, sizeof tmp));
         break;
     case CF_TYPE_TEXT:
-        yaml_quote(e->out, v->u.t.p, v->u.t.n);
+        if (!yaml_quote(e->out, v->u.t.p, v->u.t.n)) {
+            return CF_FALSE;
+        }
         break;
     }
     cf_sink_putc(e->out, '\n');

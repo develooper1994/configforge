@@ -19,6 +19,15 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - `cf_live_commit` without a `cf_live` is `CF_E_CAPABILITY`, as
   `cf_live_poll`, `cf_live_reload` and `cf_live_approve` are; it said
   `CF_E_SOURCE`.
+- The longest key is `CF_KEY_MAX - 1` bytes, 255 by default, as
+  `cf_build_options.h` has always said: the limit counts the terminator.
+  `cf_key_valid` took a key one byte longer, which a builder's pairs, the
+  command line and the environment then accepted, though no buffer that
+  holds a key had room for it, and no reader took it back from a file.
+  Every reader now takes a key of 255 bytes, which each refused, as one
+  name or as many; and an array whose length key, `<array>.count`, would
+  be longer than that is refused as a key this build cannot hold, where it
+  was read without a length, which no source could then shorten.
 
 ### Fixed
 
@@ -74,6 +83,23 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   were all refused, and `cf_has` says which have a value. D-02 and the
   Design also describe an append mode and separator and repeated-flag forms
   for lists; none was ever built, and they now say so.
+- `cf_emit` wrote some configurations that its own readers read back as
+  different ones. A group of index keys with one missing, or whose `count`
+  did not match its elements, was written as an array, so the gap closed
+  or the length changed; an index that was both a value and a table became
+  two elements. Only a group that is an array exactly - the indexes 0 to
+  n - 1 and a `count` of n, which may still be text in a key space no
+  definition has typed - is written as one now, and any other is a table
+  of the keys it holds. YAML wrote C1 control characters, U+FFFE and
+  U+FFFF as they were, which a YAML reader refuses, and text that is not
+  UTF-8; it escapes the first and refuses the second. INI wrote a value
+  with a line break in it, which its reader cannot read, and wrote bare a
+  value its reader takes differently: one with a carriage return at an end
+  or wrapped in single quotes. It refuses the first and quotes the second.
+  A new test writes some ten thousand values and shapes in every format
+  and reads each back. What still does not come back the same - a JSON or
+  TOML string longer than `CF_MESSAGE_MAX - 2` bytes, a value holding
+  `${`, a key that is both a value and a table - is in the Guide, §10.
 - `doctor diff` reported origin drift (CFD002) for every key whose source
   differed, a key whose value differed too among them, so one difference
   came out as CFD002, CFD003 and a value diff. CFD002 is now what Doctor.md

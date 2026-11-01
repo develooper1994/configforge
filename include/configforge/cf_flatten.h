@@ -63,9 +63,11 @@ CF_API const cf_doc_sink* cf_flatten_sink(cf_flatten* f);
    the keys under one prefix are a contiguous run, so the sort is
    already the tree.
 
-   A group of keys is an array when it holds index keys and the `count`
-   the readers record for every array, and nothing else. Any other group
-   is a table, so a table with a member called `count` is a table. The
+   A group of keys is an array when it is exactly the one a reader
+   records: the indexes 0 to n - 1 as a reader writes them, none missing,
+   and a `count` of n, and nothing else. Any other group is a table, with
+   its indexes and `count` as members, so that what is written reads back
+   as the same keys; a table with a member called `count` is a table. The
    members of an array come out in index order, whatever they are, and
    carry no name; in a table the scalars come first, then the arrays,
    then the tables, because a format that has written a sub-table's
