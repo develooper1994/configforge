@@ -477,12 +477,15 @@ nothing a leak would want.
 
 ## Documentation
 
+The Markdown documents are complete on their own. The searchable site
+is an optional presentation of the same files.
+
 * [`docs/Decisions.md`](docs/Decisions.md) — every decision, the options weighed, and what
   settled it. One is still open (D-12), and it says why
 * [`docs/Architecture.md`](docs/Architecture.md) — the layers, the rules that keep them, and recipes for adding a format, a source, a definition attribute or a Doctor rule
 * [`docs/Conventions.md`](docs/Conventions.md) — naming, memory, errors, project idioms, the forbidden list, and what a good test looks like here
 * [`docs/Guide.md`](docs/Guide.md) — **start here**: from the first line of code to a device with no heap, every program it quotes run by the suite; its first table lists every example in `examples/` by the situation it shows
-* [`docs/API.md`](docs/API.md) — every function, with the comment above it in its header; generated, and checked against the headers by `gate.apiref`
+* [`docs/API.md`](docs/API.md) — every function, its header comment and implementation links; generated, and checked against headers and source by `gate.apiref`
 * [`docs/Design.md`](docs/Design.md) — the full specification
 * [`docs/Doctor.md`](docs/Doctor.md) — the pre-deployment analysis tool
 * [`docs/Roadmap.md`](docs/Roadmap.md) — what is next, what is known to be wrong, and the ideas not yet built

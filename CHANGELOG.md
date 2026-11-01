@@ -7,6 +7,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- API reference entries link directly to their implementation lines,
+  including platform variants. The reference gate checks the targets
+  against source, keeping the Markdown usable without a site generator.
 - Declared scalar lists with copied typed defaults, per-element
   constraints, separator-delimited environment/dotenv inputs and
   repeated command-line options. REPLACE keeps per-index resolution;

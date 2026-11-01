@@ -67,6 +67,11 @@ Neither command publishes a package or creates a release.
 
 ## Documentation site
 
+Markdown is the complete documentation; building or serving the site is
+optional and is not needed to build, use or maintain the library.
+`apiref.cmake` extracts header comments and implementation links into
+`docs/API.md`; it does not generate library source code.
+
 From an activated Python virtual environment:
 
 ```sh

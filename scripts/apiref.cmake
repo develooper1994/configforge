@@ -69,6 +69,66 @@ function(prose text out)
       PARENT_SCOPE)
 endfunction()
 
+# Index definitions, not calls or declarations, including platform variants.
+file(
+  GLOB_RECURSE implementations
+  RELATIVE "${REPO}"
+  "${REPO}/src/*.c" "${REPO}/tools/doctor/*.c")
+list(SORT implementations)
+set(definition_pattern "(^|\n)[A-Za-z_][A-Za-z0-9_ \t*]*[ \t*]")
+string(APPEND definition_pattern
+       "(cf_[A-Za-z0-9_]+)[ \t]*\\([^;{}]*\\)[ \t\r\n]*\\{")
+foreach(source IN LISTS implementations)
+  file(READ "${REPO}/${source}" implementation)
+  string(REPLACE "[" "<LB>" implementation "${implementation}")
+  string(REPLACE "]" "<RB>" implementation "${implementation}")
+  string(REGEX MATCHALL "${definition_pattern}" definitions "${implementation}")
+  set(seen "")
+  foreach(definition IN LISTS definitions)
+    string(REGEX MATCH "(cf_[A-Za-z0-9_]+)[ \t]*\\(" match "${definition}")
+    set(symbol "${CMAKE_MATCH_1}")
+    if(symbol IN_LIST seen)
+      continue()
+    endif()
+    list(APPEND seen "${symbol}")
+    string(REGEX REPLACE "^\n" "" definition "${definition}")
+    string(FIND "${implementation}" "${definition}" offset)
+    string(SUBSTRING "${implementation}" 0 ${offset} prefix)
+    string(REGEX MATCHALL "\n" preceding_lines "${prefix}")
+    list(LENGTH preceding_lines line)
+    math(EXPR line "${line} + 1")
+    set(link "[`${symbol}` (${source})](")
+    string(APPEND link "https://github.com/develooper1994/configforge/"
+           "blob/main/${source}#L${line})")
+    list(APPEND source_links_${symbol} "${link}")
+  endforeach()
+endforeach()
+
+# Render a declaration group with its comments and implementation links.
+function(render_group declarations comment out)
+  string(REPLACE ";" "\n" g "${declarations}")
+  restore("${g}" g)
+  set(rendered "```c\n${g}\n```\n\n")
+  set(links "")
+  foreach(declaration IN LISTS declarations)
+    string(REGEX MATCH "(cf_[A-Za-z0-9_]+)[ \t]*\\(" match "${declaration}")
+    set(symbol "${CMAKE_MATCH_1}")
+    if(NOT source_links_${symbol})
+      message(FATAL_ERROR "no implementation found for ${symbol}")
+    endif()
+    list(APPEND links ${source_links_${symbol}})
+  endforeach()
+  string(REPLACE ";" ", " links "${links}")
+  string(APPEND rendered "Implementation: ${links}.\n\n")
+  if(NOT comment STREQUAL "")
+    prose("${comment}" gc)
+    string(APPEND rendered "${gc}\n\n")
+  endif()
+  set(${out}
+      "${rendered}"
+      PARENT_SCOPE)
+endfunction()
+
 set(doc "")
 string(
   APPEND
@@ -78,7 +138,8 @@ string(
   "checked against them by `gate.apiref`: edit the comment in the\n"
   "header, then run the script. Every function is listed with the\n"
   "comment written above it, under the section of the header it is\n"
-  "in; the types are in the headers themselves.\n\n"
+  "in; the types are in the headers themselves. Implementation links\n"
+  "open the source on `main`, with platform variants listed together.\n\n"
   "Semantic versioning covers all of it (D-56) except the internal\n"
   "tier, which the library's own layers use and 1.x may change:\n"
   "`cf_flatten.h`, `cf_keyspace.h`, `cf_numeric.h`, `cf_platform.h`,\n"
@@ -179,13 +240,8 @@ foreach(h ${names})
     if(l MATCHES "^[ \t]*/\\*")
       # A new comment ends any group the previous one introduced.
       if(group)
-        string(REPLACE ";" "\n" g "${group}")
-        restore("${g}" g)
-        string(APPEND body "```c\n${g}\n```\n\n")
-        if(NOT group_comment STREQUAL "")
-          prose("${group_comment}" gc)
-          string(APPEND body "${gc}\n\n")
-        endif()
+        render_group("${group}" "${group_comment}" rendered)
+        string(APPEND body "${rendered}")
         set(group "")
       endif()
       set(raw "${l}")
@@ -219,13 +275,8 @@ foreach(h ${names})
       continue() # a declaration under a feature test still belongs
     endif()
     if(group)
-      string(REPLACE ";" "\n" g "${group}")
-      restore("${g}" g)
-      string(APPEND body "```c\n${g}\n```\n\n")
-      if(NOT group_comment STREQUAL "")
-        prose("${group_comment}" gc)
-        string(APPEND body "${gc}\n\n")
-      endif()
+      render_group("${group}" "${group_comment}" rendered)
+      string(APPEND body "${rendered}")
       set(group "")
     endif()
     if(NOT s STREQUAL "")
