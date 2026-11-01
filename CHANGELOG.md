@@ -3,7 +3,15 @@
 Versions follow semantic versioning from 1.0. Before that, `0.x` promises
 nothing: the C interface is not frozen, and a minor bump may change it.
 
-## 1.0.0 — unreleased
+## 1.0.0 — 2026-11-01
+
+The C interface is frozen: from here it follows semantic versioning,
+additive within 1.x (D-56), and `verify -DEXTRA=abi` fails an
+incompatible change. Three things an emitted file holds do not come back
+the same, and are written down rather than silent: a JSON or TOML string
+longer than `CF_MESSAGE_MAX - 2` bytes, a text value holding `${`, and a
+key that is both a value and a table (`docs/Guide.md`, section 10;
+`docs/Roadmap.md` has the plan for each).
 
 ### Changed
 

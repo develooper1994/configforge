@@ -10,38 +10,40 @@ lists finished work stops being read.
 
 ## Known issues
 
-None open. The last, "Darwin's kqueue has not been seen to pass", was
-answered by the v0.3.0 release run: its macOS (arm64) job ran the whole
-suite, 88 of 88, `test_watch` among them, with kqueue the change handle
-on Darwin; `src/platform/posix/posix.c`'s kqueue code is unchanged since.
-What Darwin has not run is what came after - `cf_live`'s waits and the
-ConfigMap test - and FreeBSD's real kqueue has: `scripts/buildenv/freebsd.sh`
-ran all 59 unit tests on FreeBSD 14.4 at 16d2654, `test_live` and
-`test_watch` among them, and all passed.
+The three limits of 1.0 that `docs/Guide.md`, section 10, names: what an
+emitted file holds that does not come back the same. Each is written down
+rather than silent, and each can be fixed within 1.x without breaking a
+caller.
 
-## Next: 1.0.0
+* **A JSON or TOML string longer than `CF_MESSAGE_MAX - 2` bytes** is
+  refused by its reader, which decodes a string into a buffer the size
+  of an error message. Why it matters: a certificate or a long URL is an
+  ordinary value, and the writers write it. Done looks like: every reader
+  takes a string of any length - through a member a later `cf_doc_sink`
+  has (D-51 gave it a size for this), or through an established reader
+  behind an option (Ideas) - and `test_roundtrip`'s long values reach
+  kilobytes in every format.
+* **A text value holding `${`** is written as it is and read back as a
+  reference. Done looks like: each writer escapes it as `$${`, which every
+  source already reads as a literal `${`, and `test_roundtrip` writing it
+  among the syntax characters.
+* **A key that is both a value and a table**, `a` and `a.b`, is written
+  as a name that appears twice, which this library reads back and a
+  stricter parser may refuse. Done looks like: the owner's choice between
+  refusing it on write and a form each format reads.
 
-The plan, in order (2026-10-30). GitHub Actions is blocked by billing,
-so each CI job is run locally, as the maintainer decided (`docs/Maintaining.md`).
-Each unit passes tier 1 (D-50); tier 2 runs before each release.
+## Next: 1.x
 
-Done since the plan was written, each in its own commit: the interface
-review's findings (D-51), and its second pass, which gave `cf_report_info`
-and `cf_doctor_gate` a size; a log for what is not an error (D-52); the
-C standard the program uses (D-53); create, update and delete as one
-edit (D-54); zero-copy text in Rust and a `Mapping` in Python; no
-string borrowed past its call; `docs/Safety.md`, hardened builds and
-Valgrind; `gate.text`; bounded proofs of the integer parsers and
-printers, type inference and `cf_fmt`; WebAssembly (D-55), which found
-an image read past its end on every 32-bit platform. Left, in order:
-tier 2, 1.0.0.
+1.0.0 is released: from here the C interface follows semantic versioning
+(D-56), a patch fixes, a minor version adds, and `verify -DEXTRA=abi`
+fails an incompatible change within 1.x.
 
-### Resume here (2026-10-31)
+### Resume here (2026-11-01)
 
-Where it stands: v0.4.1 is released (0.4.0 was tagged and never
-released, CHANGELOG 0.4.1); the tree says 1.0.0; the documentation audit
-is fixed; tier 2 passed on 92cd643; the real kqueue passed on 16d2654.
-Everything is on `main`.
+Where it stands: v1.0.0 is tagged from the commit that dated its
+CHANGELOG heading, after tier 2 and the Windows Release build passed on
+its tree; its archives are those `scripts/README.md`, "Releasing without
+CI", lists, with no macOS one for want of a Mac. Everything is on `main`.
 
 Before anything: read `CONTRIBUTING.md`, then run
 `sh scripts/buildenv/dev-setup.sh --check` (Windows:
@@ -51,93 +53,10 @@ the same without the check.
 Left, in order - each a verified commit (`CONTRIBUTING.md`, "How work is
 done here"):
 
-1. **Tier 2** (`cmake -DSOURCE=index -DTIER=2 -DJOBS=4 -P
-   scripts/verify.cmake`), the ABI step in it now comparing with
-   v0.4.1; then the CHANGELOG heading dated and **the Windows release
-   build before the tag**: MSVC's Release has failed where Debug passed.
-2. **1.0.0**: tag `v1.0.0`, the archives as `scripts/README.md`,
-   "Releasing without CI", says. Publishing the GitHub release needs the
-   maintainer's yes. Never move a pushed tag: a fix after tagging is
-   the next patch version.
-
-2. **The interface fixed before it freezes.** An independent review of
-   every public header and both bindings (2026-10-30) found what 1.x
-   would be stuck with; each is fixed or decided:
-   * `cf_error.size` is never read, and `cf_def`'s size check runs the
-     wrong way: a struct that grows in 1.x would overrun a 1.0 caller's.
-     Every sized struct copied by the smaller size; `cf_def_init` by
-     the caller's.
-   * `cf_live_status_get` accepts only its exact size; its error moves
-     to `cf_live_last_error`.
-   * the interfaces callers implement - `cf_source_vtable`, `cf_codec`
-     - carry a size, so 1.x can add a member.
-   * `CF_OPTIONAL` and `CF_REQUIRED` share a bit and reach the same
-     `flags` parameters; source flags move up, and unknown bits are
-     refused.
-   * `cf_live_open` grows through a sized options struct.
-   * internal layers (`cf_platform_*`, `cf_ks_*`, `cf_flatten*`) are
-     exported: an internal tier outside the 1.x promise, hidden where
-     the platform allows.
-   * structs callers allocate that expose internals (`cf_iter`,
-     `cf_image`, `cf_keyspace`, `cf_defset`): reserved room, or opaque.
-   * the C++ `Live` lets an exception unwind through C; the Doctor
-     finding view is one reused struct; `cf_builder_replay` has no
-     flags; header and implementation disagree in three places in
-     `cf_live`.
-   * Rust: `sys` hidden, `#[non_exhaustive]` on what can grow, no panic
-     on a NUL in a key. Python: one convention for properties, and a
-     frozen method set before attribute reads.
-3. **What 1.0 adds** (the owner, 2026-10-30), each assessed:
-   * **The C standard the user compiles with**, as the C++ header does:
-     the core stays C89, so it builds everywhere; the headers add, where
-     the standard has them, C11 `<stdatomic.h>` atomics (a portable path
-     beside the GCC builtins), `_Static_assert` on the sizes the ABI
-     promises, a `_Generic` `cf_get(cfg, key, &out)` typed by `out`, and
-     C23 `[[nodiscard]]` on every call whose result is an error.
-   * **The standard library of each language**: Python's `Config` a
-     `collections.abc.Mapping`, Rust's the standard traits (`Index`,
-     `IntoIterator`, `Debug`, `TryFrom`), C++'s already ranges and
-     `std::format`. Not the locale-dependent parts of C's (`<ctype.h>`,
-     `strtod`): they read one file two ways on a Turkish system, which
-     is why they are on the forbidden list.
-   * **One CRUD accessor**: create, update and delete are spread over
-     `cf_derive` and `cf_write` today. `cf_edit` - begin from a
-     snapshot, set and unset keys, commit - checks the whole change
-     against the contract, writes it to the store with its note in one
-     transaction, and hands the new snapshot to a `cf_live`.
-   * **Copies avoided where the lifetime is enforced**: text is already
-     a view into its snapshot; Rust's reads return `&str` borrowed from
-     the `Config`, so the compiler holds the lifetime. Not memory-mapped
-     files: one changed under the mapping kills the process.
-   * **Errors and logging at a professional level**: a structured log
-     sink (`cf_log`: level, code, key, source, message) for what is a
-     warning rather than an error - an unknown key under
-     `CF_UNKNOWN_WARN`, a deprecated key, each reload's result -
-     delivered to Python's `logging`, to a Rust and a C++ callback; and
-     every error code stable, named and documented.
-4. **Rust-level safety, for the C.** The owner asked for it: what Rust
-   proves at compile time, proven here by tools and kept proven - a
-   written safety model (`docs/Safety.md`: ownership, bounds, the
-   forbidden list, what each tool covers); hardened release builds
-   (`_FORTIFY_SOURCE=3`, stack protector and clash protection, CET,
-   full RELRO); bounds checking in the sanitize preset
-   (`-fsanitize=bounds`); **no string borrowed past the call that took
-   it** - a builder copies every name, path and prefix it is given into
-   its own arena, so a caller's buffer freed after `cf_builder_file`
-   cannot be read later, and the bindings stop keeping every reload's
-   strings for the life of a `Live`; Valgrind's memcheck as a tier-2 step for what
-   ASan cannot see; and bounded proofs (CBMC) of the parsers' core
-   functions - the UTF-8 decoder, `cf_fmt`, the number parsers - that no
-   input reads or writes out of bounds, and of `cf_live`'s lock that
-   it excludes and cannot livelock. Memory and thread errors are the
-   kind found late and fixed at great cost, so the claim is what can be
-   proven, written in `docs/Safety.md` with the tool that proves each
-   part, and kept by the tier-2 run.
-5. **WebAssembly**: `wasm32-wasi` through clang and wasi-libc, the
-   suite run under wasmtime, single-threaded and with no change handle -
-   a tier-2 target, and the library in a browser or an edge runtime.
-6. **The documents audited** against the code (README, Guide, API,
-   Maintaining), then version 1.0.0, tier 2, and the release.
+1. **The known issues above**, as 1.0.x patches: the JSON and TOML
+   string limit first, then `${` on write.
+2. **The decisions below**, once the owner has made them.
+3. **The ideas**, in their order, each a minor version.
 
 ## Ideas
 
@@ -182,6 +101,13 @@ Worth building, in the order they serve the library's purpose.
   Done looks like a definition that declares a separator, the two
   sources expanding to index keys and a count as they are read, and a
   merge mode that extends a lower source's list, each with a test.
+* **Established readers behind options**: the owner (2026-11-01) would
+  rather a maintained library, behind a `CF_WITH_*` option, than one
+  written here - as libyaml, expat and SQLite already are. A JSON reader
+  (yyjson) and a TOML one (tomlc17), both MIT-licensed C, are the
+  candidates; each passes the conformance, fuzz and round-trip tests
+  the built-in reader passes, and the built-in readers stay the default,
+  so a build with no dependency keeps every format it has today.
 * **Native OS sources** (D-30): macOS defaults and gsettings, each when
   there is the platform to test on. The Windows Registry is built.
 
@@ -201,5 +127,8 @@ that needs the live configuration rather than its record.
 
 ## Decisions waiting for the owner
 
-None. When to call it 1.0 was decided on 2026-10-30: when the plan
-above is done, with authority given to finish it.
+* **A key that is both a value and a table** (Known issues): refused on
+  write, or written in a form each format reads.
+* **Arrays in INI**: INI has none, so an array is refused there. Its
+  index keys and count, as plain keys, would round-trip through this
+  library alone.

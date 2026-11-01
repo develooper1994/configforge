@@ -13,9 +13,12 @@ says, as `docs/Roadmap.md` is.
 * **The bar** (2026-10-29): SOLID, state of the art, each language with
   its own tools and packaging (clippy and rustfmt, `pyproject.toml`,
   `py.typed`); ideas only where they are genuinely useful; the machine's
-  resources watched.
-* **1.0.0 only when everything is done and checked again.** The plan is
-  `docs/Roadmap.md`, "Next: 1.0.0".
+  resources watched. A maintained library behind a `CF_WITH_*` option
+  rather than one written here (2026-11-01), the default build still
+  needing none.
+* **1.0.0 only when everything was done and checked again**, as it was
+  on 2026-11-01. From there a fix is a patch and an addition a minor
+  version; the plan is `docs/Roadmap.md`, "Next: 1.x".
 * **GitHub Actions has been unavailable since 2026-10** (billing). Every job it runs
   is run locally instead - `scripts/verify.cmake` by tier (D-50),
   `scripts/release-local.sh` and `.ps1` for a release - and counts as CI
