@@ -1,5 +1,5 @@
 #!/bin/sh
-# The release workflow's check, source and linux-musl jobs, run on this
+# The release workflow's check, amalgamation and linux-musl jobs, run on this
 # machine - for when GitHub Actions cannot run (.github/workflows/release.yml
 # is the reference; keep the two in step).
 #
@@ -32,9 +32,7 @@ head=$(grep -E "^## $v( |\$)" CHANGELOG.md || true)
 [ -n "$head" ] || { echo "CHANGELOG.md has no section for $v"; exit 1; }
 case "$head" in *unreleased*) echo "CHANGELOG.md still says: $head"; exit 1 ;; esac
 
-# source
-git -C "$repo" archive --format=tar.gz --prefix="configforge-$v/" \
-  -o "$dist/configforge-$v-src.tar.gz" "v$v"
+# amalgamation; GitHub supplies source archives for the tag.
 python3 scripts/amalgamate.py . "$work/amalgamation/configforge-$v"
 cp LICENSE "$work/amalgamation/configforge-$v/"
 tar -C "$work/amalgamation" -czf "$dist/configforge-$v-amalgamation.tar.gz" "configforge-$v"

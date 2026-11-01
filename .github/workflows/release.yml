@@ -5,11 +5,12 @@
 # Every artifact is built by the suite's own build and tested before it
 # is packaged, and published with a SHA256SUMS beside it:
 #
-#   configforge-<v>-src.tar.gz             the source, as git archive makes it
 #   configforge-<v>-amalgamation.tar.gz    two files and the licence: no build system
 #   configforge-<v>-linux-x86_64-musl.tar.gz  a static Doctor, the library, headers, SBOM
 #   configforge-<v>-windows-x64.zip        the same, built with MSVC
 #   configforge-<v>-macos-arm64.tar.gz     the same, built with Apple's clang
+#
+# GitHub supplies the source zip and tar archives for the tag.
 #
 # The Linux build is musl, in Alpine, linked statically: one Doctor
 # binary that runs on any Linux with no library beside it, and a library
@@ -40,21 +41,20 @@ jobs:
           [ -n "$head" ] || { echo "CHANGELOG.md has no section for $v"; exit 1; }
           case "$head" in *unreleased*) echo "CHANGELOG.md still says: $head"; exit 1 ;; esac
 
-  source:
+  amalgamation:
     needs: check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Source and amalgamation
+      - name: Amalgamation
         run: |
           v="${GITHUB_REF_NAME#v}"
           mkdir -p dist
-          git archive --format=tar.gz --prefix="configforge-$v/" -o "dist/configforge-$v-src.tar.gz" HEAD
           python3 scripts/amalgamate.py . "amalgamation/configforge-$v"
           cp LICENSE "amalgamation/configforge-$v/"
           tar -C amalgamation -czf "dist/configforge-$v-amalgamation.tar.gz" "configforge-$v"
       - uses: actions/upload-artifact@v4
-        with: { name: source, path: dist/* }
+        with: { name: amalgamation, path: dist/* }
 
   linux-musl:
     needs: check
@@ -140,7 +140,7 @@ jobs:
         with: { name: macos, path: dist/* }
 
   publish:
-    needs: [source, linux-musl, windows, macos]
+    needs: [amalgamation, linux-musl, windows, macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

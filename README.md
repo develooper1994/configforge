@@ -314,9 +314,11 @@ version can still be told apart.
 
 ### From a release
 
-Each release carries the source, the amalgamation, and a built library
-with a Doctor binary for Linux, Windows and macOS, with a `SHA256SUMS`
-beside them. The Linux one is built against musl and linked statically:
+GitHub supplies the source zip and tar archives for each release tag.
+Uploaded archives carry the amalgamation and a built library with a
+Doctor binary for Linux, Windows and macOS; `SHA256SUMS` covers those
+uploaded archives, not GitHub's generated source downloads. The Linux
+one is built against musl and linked statically:
 `bin/doctor` runs on any x86-64 Linux with nothing installed beside it,
 and the Windows `doctor.exe` needs no Visual C++ redistributable.
 Every archive is made by the suite's own build after the suite has

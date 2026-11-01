@@ -12,7 +12,7 @@ Developer scripts: things that build, generate or check.
 | `apiref.cmake` | regenerates `docs/API.md` from the public headers' comments; `gate.apiref` checks it is current |
 | `amalgamate.py` | generates the single-file distribution |
 | `check_formats.py` | every format string against what `cf_fmt` supports (run by `gate.formats`) |
-| `release-local.sh`, `release-local.ps1` | the release workflow's jobs run on this machine, from a tag: source, amalgamation and static musl Linux (podman), and Windows (MSVC) - for when Actions cannot run |
+| `release-local.sh`, `release-local.ps1` | the release workflow's jobs run on this machine, from a tag: amalgamation and static musl Linux (podman), and Windows (MSVC) - for when Actions cannot run |
 
 The usual sequence before a commit:
 
@@ -39,6 +39,11 @@ gh release create vx.y.z * --title "ConfigForge x.y.z" --notes-file ../notes.md
 The macOS archive needs a Mac; without one the release says so in its
 notes. When Actions runs, the workflow is the way: pushing the tag
 builds and publishes every archive, macOS's included (v1.0.0 was).
+
+GitHub supplies the source zip and tar archives from the tag. Do not
+upload another source archive; `SHA256SUMS` covers only the uploaded
+amalgamation and platform archives. Use an empty `dist` directory so
+an old artifact or checksum file cannot enter a new manifest.
 
 The line against `tools/` is what ships: `tools/doctor` is a program a
 user runs, so it is built and installed. Nothing here is.

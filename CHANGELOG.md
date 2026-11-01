@@ -5,6 +5,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ## 1.0.1 — unreleased
 
+### Changed
+
+- Releases use GitHub's source zip and tar downloads rather than
+  uploading a duplicate source archive. The release workflow and local
+  release script still build the amalgamation and platform archives;
+  `SHA256SUMS` covers those uploaded artifacts.
+
 ### Fixed
 
 - Configuration emission escapes literal `${` as `$${`, so values and

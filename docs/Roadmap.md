@@ -50,6 +50,15 @@ done here"):
 2. **The decisions below**, once the owner has made them.
 3. **The ideas**, in their order, each a minor version.
 
+### Accepted follow-up
+
+These additions are agreed, not completed: installable Python and Rust
+packages, searchable documentation, Doctor history/blame across a
+sequence of reports, preflight detection of changed application
+defaults, and optional configuration read/use coverage. The original
+flat-source list forms and append merge below also remain open. Each
+needs implementation and tests; no release is a substitute for them.
+
 ## Ideas
 
 Worth building, in the order they serve the library's purpose.
