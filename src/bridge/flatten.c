@@ -399,10 +399,23 @@ static cf_bool emit_table(const cf_keyspace* ks, const cf_doc_sink* out, size_t 
 static cf_bool emit_array(const cf_keyspace* ks, const cf_doc_sink* out, size_t lo,
                           size_t hi, size_t plen, int depth, cf_error* err);
 
+static cf_bool too_deep(cf_error* err) {
+    return cf_error_set(err, CF_E_KEY, NULL, NULL,
+                        "the document nests deeper than %d levels", CF_EMIT_MAX_DEPTH);
+}
+
 /* One container: [i, j) are its keys and `n` is the length of its
    segment at `plen`. Inside an array it has no name, because there its
    position is the name: handed "1", the JSON encoder wrote
-   ["a", "1": {...}] - a key in the middle of a list. */
+   ["a", "1": {...}] - a key in the middle of a list.
+
+   `depth` is the level of the container this one sits in, the document
+   itself being 0. The readers take the document and CF_MAX_DEPTH - 1
+   levels inside it, and it is the walk that holds the writers to that:
+   left to each encoder it was whichever of them noticed first, which
+   for JSON was one level too late to be read back, and the one that did
+   notice refused the container with "sink refused", which says nothing
+   about why. */
 static cf_bool emit_group(const cf_keyspace* ks, const cf_doc_sink* out, size_t i,
                           size_t j, size_t plen, size_t n, cf_bool is_array,
                           cf_bool in_array, int depth, const emit_ctx* f,
@@ -411,6 +424,9 @@ static cf_bool emit_group(const cf_keyspace* ks, const cf_doc_sink* out, size_t 
     const char*     name = in_array ? NULL : e->key + plen;
     size_t          nlen = in_array ? 0 : n;
 
+    if (depth + 1 >= CF_EMIT_MAX_DEPTH) {
+        return too_deep(err);
+    }
     if (!(is_array ? out->begin_array(out->ctx, name, nlen)
                    : out->begin_table(out->ctx, name, nlen))) {
         return cf_error_set(err, CF_E_SOURCE, NULL, NULL, "sink refused '%S'",
@@ -429,20 +445,11 @@ static cf_bool emit_group(const cf_keyspace* ks, const cf_doc_sink* out, size_t 
     return CF_TRUE;
 }
 
-static cf_bool too_deep(cf_error* err) {
-    return cf_error_set(err, CF_E_KEY, NULL, NULL,
-                        "the document nests deeper than %d levels", CF_EMIT_MAX_DEPTH);
-}
-
 static cf_bool emit_table(const cf_keyspace* ks, const cf_doc_sink* out, size_t lo,
                           size_t hi, size_t plen, int depth, const emit_ctx* f,
                           cf_error* err) {
     size_t i;
     int    pass;
-
-    if (depth > CF_EMIT_MAX_DEPTH) {
-        return too_deep(err);
-    }
 
     /* Leaves first. */
     for (i = lo; i < hi; ++i) {
@@ -502,9 +509,6 @@ static cf_bool emit_array(const cf_keyspace* ks, const cf_doc_sink* out, size_t 
                           size_t hi, size_t plen, int depth, cf_error* err) {
     size_t done = 0; /* indexes of this many digits are written */
 
-    if (depth > CF_EMIT_MAX_DEPTH) {
-        return too_deep(err);
-    }
     for (;;) {
         size_t want = 0;
         size_t i;

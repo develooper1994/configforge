@@ -616,7 +616,9 @@ static void js_name(js_enc* e, const char* name, size_t n) {
 }
 
 static cf_bool js_enc_open(js_enc* e, const char* name, size_t n, char brace) {
-    if (e->depth >= JS_MAX_DEPTH) {
+    /* The document and JS_MAX_DEPTH - 1 levels inside it: what the
+       decoder takes, so that nothing written is refused when read. */
+    if (e->depth + 1 >= JS_MAX_DEPTH) {
         return CF_FALSE;
     }
     if (e->depth >= 0) {

@@ -42,6 +42,19 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   refused a configuration for an array that `CF_EMIT_CONFIGURED` or
   `CF_EMIT_FROM_RANK` would not have written; it refuses only what it
   would have written.
+- A format's writer and its own reader disagreed about how deep a document
+  may nest, so a configuration `cf_emit` wrote could be one its reader
+  refused. TOML wrote a table nested nine levels or more, and its reader
+  refused a header of more than eight parts, a limit nothing documented;
+  it counted the levels of an inline array without the tables around
+  them, and so wrote one a level too deep; and JSON wrote a level more
+  than its reader takes. Every format now reads and writes the document
+  and `CF_MAX_DEPTH - 1` levels inside it, and `cf_emit` refuses the next
+  one in every format alike, as `CF_E_KEY`: "the document nests deeper
+  than 32 levels". It said "sink refused 'a'", as `CF_E_SOURCE`, for the
+  formats that stopped it, and wrote a document no reader would take for
+  the rest. A refused `cf_emit` also leaves an empty string in the buffer,
+  where it left the front of a document that stopped in the middle.
 - `doctor diff` reported origin drift (CFD002) for every key whose source
   differed, a key whose value differed too among them, so one difference
   came out as CFD002, CFD003 and a value diff. CFD002 is now what Doctor.md

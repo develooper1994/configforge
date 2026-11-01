@@ -1691,7 +1691,12 @@ limits their frames grow too, and they are not what ships.
 **One limit for nesting.** JSON allowed 64 levels while the flattener held 32, so a
 document between the two was accepted by one layer and refused by the next with a
 less useful message. There is now one `CF_MAX_DEPTH` for every decoder and both
-directions.
+directions. It is the document and `CF_MAX_DEPTH - 1` levels inside it, and a writer
+writes that much and no more: the JSON encoder had written one level past what its own
+reader took, the TOML encoder had counted only the inline levels of an array, and the
+TOML reader had held a key or a header to eight parts, so tables nested nine deep and
+more were written and could not be read back. The emitter now refuses the level after the
+last before any format sees it, with the same error for all of them.
 
 ---
 

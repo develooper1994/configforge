@@ -367,12 +367,16 @@ static void test_json_roundtrip(cf_arena* ar) {
     check(encode("json", &ks, NULL, 0, &err) == n, "encoder can be measured first");
 }
 
+/* Room for a document at the deepest nesting: a line is indented by its
+   level, so the text grows with the square of the limit. */
+#define OUT_MAX (8192 + 4 * (CF_MAX_DEPTH + 2) * (CF_MAX_DEPTH + 2))
+
 /* A document read, written and read again is the same document. A format
    typed by its contract (YAML, D-39) reads a plain 11 as text, and gets
    the number back the way INI does: by inference. */
 static void round_trip(cf_arena* ar, const char* fmt, cf_bool by_contract,
                        const char* doc, const char* what) {
-    static char buf[8192];
+    static char buf[OUT_MAX];
     static char msg[160];
     cf_keyspace ks, ks2;
     cf_error    err = CF_ERROR_INIT;
@@ -401,7 +405,7 @@ static void round_trip(cf_arena* ar, const char* fmt, cf_bool by_contract,
 /* What the JSON encoder writes for a JSON document, exactly. */
 static void written_as(cf_arena* ar, const char* doc, const char* want,
                        const char* what) {
-    static char buf[8192];
+    static char buf[OUT_MAX];
     cf_keyspace ks;
     cf_error    err = CF_ERROR_INIT;
 
@@ -508,6 +512,170 @@ static void test_count_is_a_key(cf_arena* ar) {
                "a table with index-like keys and others stays a table");
 }
 
+/* The deepest document there is: the document itself and CF_MAX_DEPTH - 1
+   levels inside it, as much as any reader takes. A writer has to write
+   all of that, or a configuration cannot be saved, and no more, or it
+   writes a file that cannot be read: through TOML a table below the
+   eighth was written and refused on the way back, and JSON wrote a level
+   that its own reader turned away. The levels are tables, arrays, and
+   the two in turn, because a format counts a table in an array in its
+   own way. Whether such a document fits a key is the build's to say. */
+#if 2 * CF_MAX_DEPTH + 8 <= CF_KEY_MAX
+
+static cf_bool level_is_table(char shape, int level) {
+    return (shape == 't' || (shape == 'm' && level % 2 == 0)) ? CF_TRUE : CF_FALSE;
+}
+
+/* The JSON text of a document with `levels` containers inside it. */
+static const char* nested_doc(char* doc, size_t cap, char shape, int levels) {
+    size_t at;
+    int    i;
+
+    at = cf_fmt(doc, cap, "{\"a\":");
+    for (i = 1; i <= levels; ++i) {
+        at = cf_fmt_append(doc, cap, at, "%s",
+                           level_is_table(shape, i) ? "{\"a\":" : "[");
+    }
+    at = cf_fmt_append(doc, cap, at, "1");
+    for (i = levels; i >= 1; --i) {
+        at = cf_fmt_append(doc, cap, at, "%s", level_is_table(shape, i) ? "}" : "]");
+    }
+    cf_fmt_append(doc, cap, at, "}");
+    return doc;
+}
+
+/* The same document as keys, put in directly: no reader reads one past
+   the limit, and that is the one to hand a writer. */
+static cf_bool nested_keys(cf_keyspace* ks, char shape, int levels) {
+    char     path[CF_KEY_MAX];
+    char     key[CF_KEY_MAX];
+    cf_value one;
+    cf_bool  ok = CF_TRUE;
+    size_t   at;
+    int      i;
+
+    cf_value_int(&one, 1);
+    at = cf_fmt(path, sizeof path, "a");
+    for (i = 1; i <= levels; ++i) {
+        if (!level_is_table(shape, i)) {
+            /* The length the readers record for every array. */
+            size_t n = cf_fmt(key, sizeof key, "%s.count", path);
+            ok       = cf_ks_add(ks, key, n, 10, &one, NULL) && ok;
+        }
+        at = cf_fmt_append(path, sizeof path, at, "%s",
+                           level_is_table(shape, i) ? ".a" : ".0");
+    }
+    return cf_ks_add_authored(ks, path, at, 10, &one, NULL) && ok;
+}
+
+/* One level too many: no writer writes it, and each says why. */
+static void too_deep_for(const cf_keyspace* ks, const char* fmt, const char* what) {
+    static char buf[OUT_MAX];
+    static char msg[160];
+    cf_error    err = CF_ERROR_INIT;
+
+    cf_fmt(msg, sizeof msg, "%s: %s refuses to write it", what, fmt);
+    check(encode(fmt, ks, buf, sizeof buf, &err) == 0, msg);
+    cf_fmt(msg, sizeof msg, "%s: %s says the document nests too deep", what, fmt);
+    check(err.code == CF_E_KEY && strstr(err.message, "nests deeper") != NULL, msg);
+}
+
+static void test_deepest_document(cf_arena* ar) {
+    static const char        shapes[] = "tam";
+    static const char* const names[]  = {"the deepest tables", "the deepest arrays",
+                                         "the deepest tables and arrays"};
+    static char              doc[(CF_MAX_DEPTH + 2) * 8 + 16];
+    int                      s;
+
+    for (s = 0; shapes[s] != '\0'; ++s) {
+        cf_keyspace read, built;
+        cf_error    err = CF_ERROR_INIT;
+
+        /* The deepest one is read and written by every format, and
+           comes back the same. */
+        nested_doc(doc, sizeof doc, shapes[s], CF_MAX_DEPTH - 1);
+        round_trips(ar, doc, names[s]);
+        if (shapes[s] == 't') {
+            round_trip(ar, "ini", CF_TRUE, doc, names[s]);
+        }
+
+        /* The keys put in directly are that document, so the one past
+           it is the same shape and nothing else. */
+        cf_ks_init(&read, ar, CF_MAX_DEPTH + 8);
+        check(decode("json", doc, &read, ar, 10, &err), names[s]);
+        cf_ks_resolve(&read);
+        cf_ks_init(&built, ar, CF_MAX_DEPTH + 8);
+        check(nested_keys(&built, shapes[s], CF_MAX_DEPTH - 1), names[s]);
+        cf_ks_resolve(&built);
+        check(cf_ks_digest(&read) == cf_ks_digest(&built),
+              "the keys made directly are the keys that were read");
+
+        cf_ks_init(&built, ar, CF_MAX_DEPTH + 8);
+        check(nested_keys(&built, shapes[s], CF_MAX_DEPTH), names[s]);
+        cf_ks_resolve(&built);
+        too_deep_for(&built, "json", names[s]);
+#if CF_WITH_TOML
+        too_deep_for(&built, "toml", names[s]);
+#endif
+#if CF_WITH_YAML
+        too_deep_for(&built, "yaml", names[s]);
+#endif
+        if (shapes[s] == 't') {
+            too_deep_for(&built, "ini", names[s]);
+        }
+    }
+}
+
+/* Level `level` of a chain of tables, or of arrays, below the document. */
+static cf_bool open_level(const cf_doc_sink* sink, cf_bool arrays, int level) {
+    if (!arrays) {
+        return sink->begin_table(sink->ctx, "a", 1);
+    }
+    return (level == 1) ? sink->begin_array(sink->ctx, "a", 1)
+                        : sink->begin_array(sink->ctx, NULL, 0);
+}
+
+/* A writer used on its own, the way a program with a source of documents
+   of its own would, keeps to the same limit as the walk does. */
+static void test_writer_limit(void) {
+    static const char* const formats[] = {"json", "toml", "yaml", "ini"};
+    static char              state[CF_ENCODER_STATE_MAX];
+    static char              msg[160];
+    size_t                   f;
+
+    for (f = 0; f < sizeof formats / sizeof formats[0]; ++f) {
+        const cf_codec* c = cf_codec_by_name(formats[f]);
+        int             arrays;
+
+        if (c == NULL || (c->caps & CF_CODEC_WRITE) == 0) {
+            continue;
+        }
+        for (arrays = 0; arrays < 2; ++arrays) {
+            cf_doc_sink sink;
+            cf_sink     out;
+            cf_bool     within = CF_TRUE;
+            int         level;
+
+            if (arrays && (c->caps & CF_CODEC_ARRAYS) == 0) {
+                continue;
+            }
+            cf_sink_init(&out, NULL, 0);
+            check(c->encoder(&out, state, &sink), formats[f]);
+            check(sink.begin_table(sink.ctx, NULL, 0), formats[f]);
+            for (level = 1; level < CF_MAX_DEPTH; ++level) {
+                within = open_level(&sink, arrays, level) && within;
+            }
+            cf_fmt(msg, sizeof msg, "%s writes %d levels of %s inside the document",
+                   formats[f], CF_MAX_DEPTH - 1, arrays ? "arrays" : "tables");
+            check(within, msg);
+            cf_fmt(msg, sizeof msg, "%s does not write %d levels of %s", formats[f],
+                   CF_MAX_DEPTH, arrays ? "arrays" : "tables");
+            check(!open_level(&sink, arrays, CF_MAX_DEPTH), msg);
+        }
+    }
+}
+#endif
+
 static void test_ini_roundtrip(cf_arena* ar) {
     static const char* const doc = "top = 1\n[server]\nhost = 0.0.0.0\nport = 8080\n";
     cf_keyspace              ks, ks2;
@@ -612,6 +780,10 @@ int main(void) {
     test_array_order(ar);
     test_array_members(ar);
     test_count_is_a_key(ar);
+#if 2 * CF_MAX_DEPTH + 8 <= CF_KEY_MAX
+    test_deepest_document(ar);
+    test_writer_limit();
+#endif
     test_ini_roundtrip(ar);
 #endif
     test_deep_nesting(ar);

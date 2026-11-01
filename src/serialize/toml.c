@@ -82,13 +82,16 @@ typedef struct toml_scan {
     char               closed[CF_KEY_MAX]; /* last array of tables left */
 } toml_scan;
 
-/* A dotted key, its segments in one buffer for the same reason. */
-#define TOML_KEY_PARTS 8
+/* A dotted key, its segments in one buffer for the same reason. A key
+   may have as many segments as a document has levels, and no more: the
+   encoder writes the whole path of a table in one header, so a smaller
+   limit here is a document that is written and cannot be read back. */
+#define TOML_KEY_PARTS TOML_MAX_DEPTH
 
 typedef struct toml_dkey {
     char   buf[CF_KEY_MAX];
-    size_t at[TOML_KEY_PARTS];
-    size_t len[TOML_KEY_PARTS];
+    cf_u16 at[TOML_KEY_PARTS];
+    cf_u16 len[TOML_KEY_PARTS];
     int    n;
 } toml_dkey;
 
@@ -348,8 +351,8 @@ static cf_bool toml_key(toml_scan* s, toml_dkey* k) {
         if (n == (size_t)-1) {
             return CF_FALSE;
         }
-        k->at[k->n]  = used;
-        k->len[k->n] = n;
+        k->at[k->n]  = (cf_u16)used;
+        k->len[k->n] = (cf_u16)n;
         ++k->n;
         used += n + 1;
         toml_blank(s);
@@ -701,7 +704,7 @@ static cf_bool toml_header(toml_scan* s) {
             keep = o + 1;
             continue;
         }
-        if (i >= n || k.len[i] != (size_t)s->open[o].n ||
+        if (i >= n || (size_t)k.len[i] != (size_t)s->open[o].n ||
             memcmp(TOML_SEG(&k, i), s->names + s->open[o].at, k.len[i]) != 0) {
             break;
         }
@@ -718,7 +721,7 @@ static cf_bool toml_header(toml_scan* s) {
     if (!toml_close_to(s, keep)) {
         return CF_FALSE;
     }
-    if (is_array && strlen(s->closed) == k.len[n - 1] &&
+    if (is_array && strlen(s->closed) == (size_t)k.len[n - 1] &&
         memcmp(s->closed, TOML_SEG(&k, n - 1), k.len[n - 1]) == 0) {
         return toml_fail(s, at,
                          "an array of tables reopened after another table; keep its "
@@ -877,7 +880,9 @@ static void toml_enc_lead(toml_enc* e, const char* name, size_t n) {
 
 static cf_bool toml_enc_open_inline(toml_enc* e, const char* name, size_t n,
                                     cf_bool array) {
-    if (e->inl >= TOML_MAX_DEPTH) {
+    /* The tables above it count too: the decoder allows the document and
+       TOML_MAX_DEPTH - 1 levels inside it, however they are written. */
+    if (e->depth + e->inl >= TOML_MAX_DEPTH) {
         return CF_FALSE;
     }
     toml_enc_lead(e, name, n);

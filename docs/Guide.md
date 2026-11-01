@@ -414,6 +414,14 @@ it refuses a configuration only when what is being written has one: an
 array that `CF_EMIT_CONFIGURED` or `CF_EMIT_FROM_RANK` leaves out does
 not count.
 
+A document nests as deep as a reader takes, `CF_MAX_DEPTH` levels with
+the document itself the first, which is tables and arrays 31 levels
+inside it by default. Every format writes all of that, and a
+configuration one level deeper is refused in every format in the same
+words, `CF_E_KEY` and "the document nests deeper than 32 levels": a file
+nested more deeply than that could not be read back. A refused `cf_emit`
+leaves an empty string in the buffer, not the front of a document.
+
 Noticing a change is a question you ask, never a callback - the library
 owns no thread. `cf_changed(cfg)` asks whether a file it read has moved
 on. A program with an event loop opens a `cf_watcher` and waits on its

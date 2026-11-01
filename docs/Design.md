@@ -653,6 +653,17 @@ written without leading zeros, with nothing allocated for it. It never counts up
 `count`, which a source can set to anything. A missing index is skipped and those after
 it move up.
 
+The walk is where nesting is counted. It refuses a container at level `CF_MAX_DEPTH`
+before it asks an encoder to open one, so the refusal reads the same in every format -
+`CF_E_KEY`, "the document nests deeper than 32 levels" - and no format has to be right
+about a count of its own. The readers take the document and `CF_MAX_DEPTH - 1` levels in
+it, and the writers write exactly that: an encoder that stopped a level early could not
+save a configuration the library had read, and one that stopped a level late, or
+counted only part of what it opened, wrote a file the reader then turned away. Each
+encoder still holds the limit for a program that drives it directly. A failed walk
+leaves an empty string in the caller's buffer, because a half-written document looks
+like a whole one to anything that does not check the return value.
+
 ### Addressing
 
 ```text

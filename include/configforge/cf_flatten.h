@@ -23,7 +23,10 @@ extern "C" {
 
 /* Both CF_MAX_DEPTH, a build limit (cf_build_options.h): one nesting
    limit for every decoder and both directions, so a document that one
-   part of the library accepts no other part refuses. */
+   part of the library accepts no other part refuses. It is the document
+   and CF_MAX_DEPTH - 1 levels of tables and arrays inside it: the walk
+   that writes a document refuses the level after, whatever the format,
+   and an encoder driven on its own stops at the same one. */
 #define CF_FLATTEN_MAX_DEPTH CF_MAX_DEPTH
 #define CF_EMIT_MAX_DEPTH CF_MAX_DEPTH
 

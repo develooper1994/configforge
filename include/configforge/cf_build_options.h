@@ -89,8 +89,11 @@
  *                   and a builder call keeps a cf_error on its frame.
  *   CF_PATH_MAX     longest file path. The directory source and the
  *                   platform layer hold two or three at once.
- *   CF_MAX_DEPTH    deepest nesting a document may have. The decoders
- *                   and the flattener keep a small frame per level.
+ *   CF_MAX_DEPTH    deepest nesting a document may have, the document
+ *                   itself counting as the first level: the default of
+ *                   32 allows tables and arrays 31 levels inside it.
+ *                   Every reader and writer takes that much and no more,
+ *                   and each keeps a small frame per level.
  * ------------------------------------------------------------------ */
 
 #ifndef CF_KEY_MAX

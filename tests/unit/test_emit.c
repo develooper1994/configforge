@@ -218,6 +218,119 @@ static void test_refusal_follows_the_selection(void) {
     cf_config_free(c);
 }
 
+#if 2 * (CF_MAX_DEPTH + 1) + 8 <= CF_KEY_MAX
+
+#define DEEP_KEY (2 * (CF_MAX_DEPTH + 1) + 8)
+#define DEEP_OUT (8192 + 4 * (CF_MAX_DEPTH + 2) * (CF_MAX_DEPTH + 2))
+
+static cf_pair g_deep[CF_MAX_DEPTH + 3];
+static char    g_deep_key[CF_MAX_DEPTH + 3][DEEP_KEY];
+static char    g_deep_out[DEEP_OUT];
+
+/* `levels` tables around one value, or `levels` arrays, each holding the
+   next as its only member. A value of its own comes first, so that the
+   writer has written something by the time it finds the document too
+   deep. */
+static cf_config* deep(int levels, cf_bool arrays, cf_error* err) {
+    cf_builder* b = cf_build(NULL);
+    size_t      n = 2;
+    size_t      at;
+    int         i, j;
+
+    g_deep[0].key   = "lead";
+    g_deep[0].value = "1";
+    if (!arrays) {
+        at = 0;
+        for (i = 0; i < levels; ++i) {
+            at = cf_fmt_append(g_deep_key[1], DEEP_KEY, at, "z.");
+        }
+        cf_fmt_append(g_deep_key[1], DEEP_KEY, at, "v");
+        g_deep[1].key   = g_deep_key[1];
+        g_deep[1].value = "1";
+    } else {
+        for (i = 0; i <= levels; ++i) {
+            at = cf_fmt(g_deep_key[i + 1], DEEP_KEY, "z");
+            for (j = 0; j < i; ++j) {
+                at = cf_fmt_append(g_deep_key[i + 1], DEEP_KEY, at, ".0");
+            }
+            if (i < levels) {
+                cf_fmt_append(g_deep_key[i + 1], DEEP_KEY, at, ".count");
+            }
+            g_deep[i + 1].key   = g_deep_key[i + 1];
+            g_deep[i + 1].value = (i < levels) ? "1" : "x";
+        }
+        n = (size_t)levels + 2;
+    }
+    cf_builder_memory(b, "deep", CF_RANK_USER_FILE, g_deep, n);
+    return cf_builder_create(b, err);
+}
+
+/* The document and CF_MAX_DEPTH - 1 levels inside it is the most that
+   any format reads, so it is the most that any writes: all of it, or a
+   configuration that deep cannot be saved, and no more, or a file is
+   written that cannot be read back. One level past it is refused in the
+   same words whichever format was asked for, and what had been written
+   before the walk came to it is not left in the buffer. */
+static void test_deepest_document(void) {
+    static const char* const formats[] = {"json", "toml", "yaml", "ini"};
+    static char              msg[160];
+    size_t                   f;
+    int                      arrays;
+
+    for (f = 0; f < sizeof formats / sizeof formats[0]; ++f) {
+        const cf_codec* codec = cf_codec_by_name(formats[f]);
+
+        if (codec == NULL) {
+            continue;
+        }
+        for (arrays = 0; arrays < 2; ++arrays) {
+            const char* kind = arrays ? "arrays" : "tables";
+            cf_error    err  = CF_ERROR_INIT;
+            cf_error    e2   = CF_ERROR_INIT;
+            cf_config*  c;
+            size_t      n;
+
+            if (arrays && (codec->caps & CF_CODEC_ARRAYS) == 0) {
+                continue;
+            }
+
+            c = deep(CF_MAX_DEPTH - 1, (cf_bool)arrays, &err);
+            cf_fmt(msg, sizeof msg, "%d levels of %s build", CF_MAX_DEPTH - 1, kind);
+            check(c != NULL, msg);
+            if (c != NULL) {
+                n = cf_emit(c, formats[f], CF_EMIT_ALL, 0, g_deep_out,
+                            sizeof g_deep_out, &err);
+                cf_fmt(msg, sizeof msg, "%s writes %d levels of %s", formats[f],
+                       CF_MAX_DEPTH - 1, kind);
+                check(n > 0 && n < sizeof g_deep_out, msg);
+                cf_config_free(c);
+            }
+
+            c = deep(CF_MAX_DEPTH, (cf_bool)arrays, &err);
+            cf_fmt(msg, sizeof msg, "%d levels of %s build", CF_MAX_DEPTH, kind);
+            check(c != NULL, msg);
+            if (c == NULL) {
+                continue;
+            }
+            g_deep_out[0] = 'x';
+            n = cf_emit(c, formats[f], CF_EMIT_ALL, 0, g_deep_out, sizeof g_deep_out,
+                        &err);
+            cf_fmt(msg, sizeof msg, "%s refuses %d levels of %s", formats[f],
+                   CF_MAX_DEPTH, kind);
+            check(n == 0, msg);
+            check(err.code == CF_E_KEY, "as a key that is out of bounds");
+            has(err.message, "nests deeper", "and says the document is too deep");
+            check(g_deep_out[0] == '\0', "leaving nothing in the buffer");
+            check(cf_emit(c, formats[f], CF_EMIT_ALL, 0, NULL, 0, &e2) == 0,
+                  "measuring it is refused as well");
+            check(e2.code == CF_E_KEY, "for the same reason");
+            cf_config_free(c);
+        }
+    }
+}
+
+#endif
+
 static void test_format_refusals(void) {
     cf_error    err = CF_ERROR_INIT;
     cf_config*  c   = build(&err);
@@ -350,6 +463,9 @@ int main(void) {
     test_arrays_are_all_or_nothing(ar);
     test_count_is_a_key();
     test_refusal_follows_the_selection();
+#if 2 * (CF_MAX_DEPTH + 1) + 8 <= CF_KEY_MAX
+    test_deepest_document();
+#endif
     test_format_refusals();
     test_from_one_rank();
     test_transient_is_not_written();

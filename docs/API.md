@@ -999,6 +999,12 @@ Refuses rather than truncates: a format with no array syntax meeting
 an array it would have to write is an error before anything is
 written, not a surprise halfway through a file. An array that `what`
 leaves out is not one it would have to write.
+A configuration nested deeper than CF_MAX_DEPTH (cf_build_options.h)
+is refused as CF_E_KEY in every format: it is as deep as a reader
+takes, and a file past that could not be read back.
+Whatever the reason, a refusal returns 0 with `err` set, and a buffer
+that was given holds an empty string - not the front of a document
+that the walk had written before it came to the reason.
 
 ## cf_entry.h
 

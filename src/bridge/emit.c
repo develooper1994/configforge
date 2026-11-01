@@ -190,6 +190,12 @@ size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int ra
         return 0;
     }
     if (!cf_doc_emit_where(ks, &sink, keep, &f, err)) {
+        /* The walk may have written part of the document before it failed,
+           and half a file reads as a whole one to anything that looks no
+           further than the buffer. */
+        if (buf != NULL && cap > 0) {
+            buf[0] = '\0';
+        }
         return 0;
     }
     cf_sink_terminate(&out);
