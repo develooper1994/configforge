@@ -6,12 +6,14 @@ the key; explain; derive; the dataclass contract; and Live.
 """
 
 import dataclasses
+import json
 import logging
 import os
 import sys
 import tempfile
 import threading
 import unittest
+from unittest import mock
 
 sys.path.insert(0, sys.argv.pop(1))
 WORK = sys.argv.pop(1) if len(sys.argv) > 1 else tempfile.mkdtemp()
@@ -27,6 +29,101 @@ def server_cfg(values=None):
             .define_text("server.host", "0.0.0.0")
             .define_bool("tls.enabled", False)
             .create())
+
+
+class Lists(unittest.TestCase):
+    @staticmethod
+    def values(cfg, key):
+        return [cfg["%s.%d" % (key, i)] for i in range(cfg[key + ".count"])]
+
+    def test_append_defaults_aliases_and_derivation(self):
+        defaults = ["base"]
+        b = (cf.Builder()
+             .define_list("tags", str, defaults, append=True, aliases=["t"])
+             .env("env", rank.ENV, "APP_", {"APP_TAGS": "e1,e2"})
+             .cli("cli", rank.CLI, ["app", "--tags=c1", "-t", "c2"]))
+        defaults[0] = "changed after definition"
+        cfg = b.create()
+        expected = ["base", "e1", "e2", "c1", "c2"]
+        self.assertEqual(self.values(cfg, "tags"), expected)
+        self.assertEqual(json.loads(cfg.schema("Lists"))["properties"]["tags"]["default"], ["base"])
+        derived = cfg.derive("view", {})
+        del cfg
+        self.assertEqual(self.values(derived, "tags"), expected)
+
+    def test_empty_and_unsplit_inputs(self):
+        cfg = (cf.Builder()
+               .define_list("empty", str, [])
+               .define_list("whole", str, separator="")
+               .define_list("cli_empty", str)
+               .env("env", rank.ENV, "APP_", {"APP_EMPTY": "", "APP_WHOLE": "a,b"})
+               .cli("cli", rank.CLI, ["app", "--cli_empty="])
+               .create())
+        self.assertEqual(self.values(cfg, "empty"), [])
+        self.assertEqual(self.values(cfg, "whole"), ["a,b"])
+        self.assertEqual(self.values(cfg, "cli_empty"), [""])
+
+    def test_element_types_constraints_and_policy(self):
+        cfg = (cf.Builder()
+               .define_list("ports", int, [1], min=1, max=9, policy=["env"])
+               .define_list("switches", bool, [False], append=True)
+               .define_list("required", str, flags=flag.REQUIRED)
+               .env("env", rank.ENV, "APP_", {"APP_PORTS": "2,3"})
+               .cli("cli", rank.CLI,
+                    ["app", "--ports=8", "--switches=true", "--required=present"])
+               .create())
+        self.assertEqual(self.values(cfg, "ports"), [2, 3])
+        self.assertEqual(self.values(cfg, "switches"), [False, True])
+        self.assertEqual(self.values(cfg, "required"), ["present"])
+        with self.assertRaises(cf.Error):
+            cf.Builder().define_list("ports", int, [10], min=1, max=9).create()
+        with self.assertRaises(cf.Error):
+            cf.Builder().define_list("tags", str, ["bad"], allowed=["good"]).create()
+        with self.assertRaises(cf.Error):
+            cf.Builder().define_list("required", str, flags=flag.REQUIRED).create()
+
+    @unittest.skipUnless(cf.has_feature("real"), "real-valued build")
+    def test_real_elements(self):
+        cfg = (cf.Builder().define_list("ratios", float, [0.125], append=True, min=0, max=1)
+               .cli("cli", rank.CLI, ["app", "--ratios=0.25"]).create())
+        self.assertEqual(self.values(cfg, "ratios"), [0.125, 0.25])
+
+    def test_invalid_binding_arguments_are_not_coerced(self):
+        with self.assertRaises(TypeError):
+            cf.Builder().define_list("ports", int, [True])
+        with self.assertRaises(OverflowError):
+            cf.Builder().define_list("ports", int, [1 << 64])
+        with self.assertRaises(OverflowError):
+            cf.Builder().define_list("ports", int, min=0, max=1 << 64)
+        with self.assertRaises(TypeError):
+            cf.Builder().define_list("tags", str, "not a sequence of defaults")
+        for separator in (",;", "\u00e9"):
+            with self.assertRaises(ValueError):
+                cf.Builder().define_list("tags", str, separator=separator)
+        from configforge import _native
+        with mock.patch.object(_native, "HAVE_LIST", False):
+            with self.assertRaisesRegex(RuntimeError, "list contracts"):
+                cf.Builder().define_list("tags", str)
+
+    def test_secret_defaults_and_live_reload(self):
+        state = {"tags": "$${literal}", "level": "info"}
+
+        def build():
+            return (cf.Builder()
+                    .define_list("tags", str, ["default-canary"], append=True,
+                                 flags=flag.SENSITIVE | flag.RESTART, policy=["env"])
+                    .define_text("level", "info")
+                    .env("env", rank.ENV, "APP_", {"APP_TAGS": state["tags"]})
+                    .memory("file", rank.USER_FILE, {"level": state["level"]}))
+
+        with cf.Live(cf.Mode.MANUAL, build) as live:
+            cfg = live.get()
+            self.assertNotIn("default-canary", cfg.schema("Lists"))
+            state.update(tags="changed,extra", level="debug")
+            live.reload()
+            cfg = live.get()
+            self.assertEqual(self.values(cfg, "tags"), ["default-canary", "${literal}"])
+            self.assertEqual(cfg["level"], "debug")
 
 
 class Reading(unittest.TestCase):

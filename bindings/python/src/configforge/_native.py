@@ -107,6 +107,7 @@ class cf_live_options(Structure):
     ]
 
 TYPE_NULL, TYPE_BOOL, TYPE_INT, TYPE_REAL, TYPE_TEXT = range(5)
+LIST_REPLACE, LIST_APPEND = 1, 2
 OK = 0
 
 
@@ -225,6 +226,40 @@ _declare("cf_edit_set_real", c_int, c_void_p, c_char_p, ctypes.c_double, optiona
 _declare("cf_builder_real", c_int, B, c_char_p, ctypes.c_double, ctypes.c_double,
          ctypes.c_double, c_uint, optional=True)
 HAVE_REAL = hasattr(lib, "cf_try_real") and lib.cf_has_feature(b"real") != 0
+HAVE_LIST = lib.cf_has_feature(b"lists") != 0
+
+
+class cf_text(Structure):
+    _fields_ = [("p", c_char_p), ("n", c_size_t)]
+
+
+class cf_value_u(ctypes.Union):
+    _fields_ = [
+        ("b", c_int), ("i", c_int64), ("t", cf_text),
+    ] + ([("r", ctypes.c_double)] if HAVE_REAL else [])
+
+
+class cf_value(Structure):
+    _fields_ = [("type", c_int), ("u", cf_value_u)]
+
+
+class cf_def(Structure):
+    _fields_ = [
+        ("size", c_size_t), ("type", c_int), ("key", c_char_p),
+        ("flags", c_uint), ("on_invalid", c_int), ("description", c_char_p),
+        ("replaced_by", c_char_p), ("has_default", c_int),
+        ("default_value", cf_value), ("has_range", c_int),
+        ("imin", c_int64), ("imax", c_int64),
+    ] + ([("rmin", ctypes.c_double), ("rmax", ctypes.c_double)] if HAVE_REAL else []) + [
+        ("min_len", c_size_t), ("max_len", c_size_t),
+        ("allowed", ARGV), ("aliases", ARGV), ("policy", ARGV),
+        ("list_mode", c_int), ("list_separator", c_char),
+        ("list_defaults", POINTER(cf_value)), ("list_default_count", c_size_t),
+    ]
+
+
+_declare("cf_def_init_sized", None, POINTER(cf_def), c_size_t, c_int, c_char_p)
+_declare("cf_builder_define", c_int, B, POINTER(cf_def))
 
 for _limit, _ours in (("key", KEY_MAX), ("source", SOURCE_MAX), ("message", MESSAGE_MAX)):
     _theirs = lib.cf_build_limit(_limit.encode())

@@ -148,7 +148,24 @@ static const cf_source* source_of(const cf_source_view* sv, int rank) {
     return NULL;
 }
 
-static void report_definition(cf_sink* out, const cf_def* d, cf_report_mode mode) {
+static void report_default(cf_sink* out, const cf_def* d) {
+    size_t i;
+    if (d->list_mode == CF_LIST_NONE) {
+        report_value(out, &d->default_value);
+        return;
+    }
+    cf_sink_putc(out, '[');
+    for (i = 0; i < d->list_default_count; ++i) {
+        if (i != 0) {
+            cf_sink_puts(out, ", ");
+        }
+        report_value(out, &d->list_defaults[i]);
+    }
+    cf_sink_putc(out, ']');
+}
+
+static void report_definition(cf_sink* out, const cf_def* d, const cf_def* list,
+                              cf_report_mode mode) {
     if (d == NULL) {
         cf_sink_puts(out, "null");
         return;
@@ -167,7 +184,26 @@ static void report_definition(cf_sink* out, const cf_def* d, cf_report_mode mode
     }
     if (d->has_default && (mode == CF_REPORT_FULL || (d->flags & CF_SENSITIVE) == 0)) {
         cf_sink_puts(out, ", \"default\": ");
-        report_value(out, &d->default_value);
+        report_default(out, d);
+    }
+    if (list != NULL) {
+        cf_sink_puts(out, ", \"list\": { \"key\": ");
+        report_quote_z(out, list->key);
+        cf_sink_fmt(out, ", \"merge\": \"%s\", \"separator\": ",
+                    list->list_mode == CF_LIST_APPEND ? "append" : "replace");
+        if (list->list_separator == 0) {
+            cf_sink_puts(out, "null");
+        } else {
+            char separator[2];
+            separator[0] = list->list_separator;
+            separator[1] = '\0';
+            report_quote_z(out, separator);
+        }
+        if (list->replaced_by != NULL) {
+            cf_sink_puts(out, ", \"replaced_by\": ");
+            report_quote_z(out, list->replaced_by);
+        }
+        cf_sink_puts(out, " }");
     }
     if (d->has_range && d->type == CF_TYPE_INT) {
         cf_sink_fmt(out, ", \"min\": %I, \"max\": %I", d->imin, d->imax);
@@ -218,14 +254,25 @@ static cf_bool report_file_of(const char* at, char* out, size_t cap) {
 
 static void report_candidate(cf_sink* out, const cf_candidate* c,
                              const cf_source_view* sv, const cf_def* d,
-                             cf_report_mode mode) {
-    const cf_source* s = source_of(sv, c->source);
+                             cf_report_mode mode, const cf_keyspace* ks) {
+    const cf_source* s        = source_of(sv, c->source);
+    const char*      original = cf_ks_original_key(ks, c);
     cf_bool          redact =
         (mode == CF_REPORT_BLIND) && d != NULL && (d->flags & CF_SENSITIVE) != 0;
 
     cf_sink_puts(out, "{ \"source\": ");
     report_quote_z(out, (s != NULL) ? s->name : "?");
     cf_sink_puts(out, ", \"present\": true");
+    if ((c->flags & CF_CAND_LIST_RESULT) != 0) {
+        cf_sink_puts(out, ", \"synthesized\": true");
+    }
+    if ((c->flags & CF_CAND_PINNED) != 0) {
+        cf_sink_puts(out, ", \"pinned\": true");
+    }
+    if (original != NULL) {
+        cf_sink_puts(out, ", \"written_key\": ");
+        report_quote_z(out, original);
+    }
 
     if (redact) {
         /* Presence, origin, length and a digest. Every value-blind
@@ -282,14 +329,28 @@ static void report_candidate(cf_sink* out, const cf_candidate* c,
 /* One key's object - its definition, every candidate, the winner - as
    the report writes it under "keys", and as cf_report_key_write writes
    it alone. `e` may be NULL for a key nobody supplied. */
-static void report_key(cf_sink* out, const cf_entry* e, const cf_def* d,
-                       const cf_source_view* sv, cf_report_mode mode,
-                       const char* indent) {
+static void report_key(cf_sink* out, const cf_keyspace* ks, const cf_entry* e,
+                       const cf_def* d, const cf_defset* ds, const cf_source_view* sv,
+                       cf_report_mode mode, const char* indent) {
     const cf_candidate* c;
     cf_bool             first = CF_TRUE;
+    cf_def              projected;
+    const cf_def* list = d != NULL ? cf_defset_list(ds, d->key, strlen(d->key)) : NULL;
 
+    if (list != NULL && e != NULL && d->list_mode == CF_LIST_NONE &&
+        strcmp(d->key, e->key) != 0) {
+        projected = *d;
+        for (c = e->chain; c != NULL; c = c->next) {
+            if ((c->flags & CF_CAND_DEFAULT) != 0) {
+                projected.has_default   = CF_TRUE;
+                projected.default_value = c->value;
+                break;
+            }
+        }
+        d = &projected;
+    }
     cf_sink_fmt(out, "{\n%s  \"definition\": ", indent);
-    report_definition(out, d, mode);
+    report_definition(out, d, list, mode);
     cf_sink_fmt(out, ",\n%s  \"candidates\": [", indent);
 
     /* Nothing is dropped from the chain: a shadowed or refused
@@ -299,7 +360,7 @@ static void report_key(cf_sink* out, const cf_entry* e, const cf_def* d,
             cf_sink_putc(out, ',');
         }
         cf_sink_fmt(out, "\n%s    ", indent);
-        report_candidate(out, c, sv, d, mode);
+        report_candidate(out, c, sv, d, mode, ks);
         first = CF_FALSE;
     }
     cf_sink_fmt(out, "\n%s  ],\n%s  \"selected\": ", indent, indent);
@@ -307,8 +368,11 @@ static void report_key(cf_sink* out, const cf_entry* e, const cf_def* d,
         const cf_source* s = source_of(sv, e->selected->source);
         cf_sink_puts(out, "{ \"source\": ");
         report_quote_z(out, (s != NULL) ? s->name : "?");
-        cf_sink_puts(out, ", \"reason\": \"highest precedence with a "
-                          "usable value\" }");
+        cf_sink_puts(out, ", \"reason\": ");
+        report_quote_z(out, (e->selected->flags & CF_CAND_LIST_RESULT) != 0
+                                ? e->selected->reason
+                                : "highest precedence with a usable value");
+        cf_sink_puts(out, " }");
     } else {
         cf_sink_puts(out, "null");
     }
@@ -339,8 +403,8 @@ size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds,
     cf_sink_fmt(&out, "%d, \"key\": ", CF_REPORT_SCHEMA);
     report_quote(&out, key, keylen);
     cf_sink_puts(&out, ", \"value\": ");
-    report_key(&out, e, (ds != NULL) ? cf_defset_find(ds, key, keylen) : NULL, sv, mode,
-               "");
+    report_key(&out, ks, e, (ds != NULL) ? cf_defset_find(ds, key, keylen) : NULL, ds,
+               sv, mode, "");
     cf_sink_puts(&out, " }\n");
     cf_sink_terminate(&out);
     return out.len;
@@ -427,7 +491,7 @@ size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
         cf_sink_puts(&out, "\n    ");
         report_quote(&out, e->key, e->keylen);
         cf_sink_puts(&out, ": ");
-        report_key(&out, e, d, sv, mode, "    ");
+        report_key(&out, ks, e, d, ds, sv, mode, "    ");
     }
     cf_sink_puts(&out, "\n  }\n}\n");
     cf_sink_terminate(&out);
@@ -508,11 +572,9 @@ static void schema_indent(cf_sink* out, int depth) {
     }
 }
 
-static void schema_leaf(schema_ctx* s, const cf_def* d) {
-    cf_sink* out    = s->out;
-    cf_bool  secret = ((d->flags & CF_SENSITIVE) != 0) ? CF_TRUE : CF_FALSE;
+static void schema_annotations(cf_sink* out, const cf_def* d) {
+    cf_bool secret = ((d->flags & CF_SENSITIVE) != 0) ? CF_TRUE : CF_FALSE;
 
-    cf_sink_fmt(out, "{ \"type\": \"%s\"", cf_type_json_name(d->type));
     if (d->description != NULL) {
         cf_sink_puts(out, ", \"description\": ");
         report_quote_z(out, d->description);
@@ -527,8 +589,14 @@ static void schema_leaf(schema_ctx* s, const cf_def* d) {
     }
     if (d->has_default && !secret) {
         cf_sink_puts(out, ", \"default\": ");
-        report_value(out, &d->default_value);
+        report_default(out, d);
     }
+}
+
+static void schema_scalar(schema_ctx* s, const cf_def* d) {
+    cf_sink* out = s->out;
+    cf_sink_fmt(out, "{ \"type\": \"%s\"", cf_type_json_name(d->type));
+    schema_annotations(out, d);
     if (d->has_range && d->type == CF_TYPE_INT) {
         cf_sink_fmt(out, ", \"minimum\": %I, \"maximum\": %I", d->imin, d->imax);
     }
@@ -558,6 +626,24 @@ static void schema_leaf(schema_ctx* s, const cf_def* d) {
         }
     }
     cf_sink_puts(out, " }");
+}
+
+static void schema_leaf(schema_ctx* s, const cf_def* d) {
+    cf_def item;
+    if (d->list_mode == CF_LIST_NONE) {
+        schema_scalar(s, d);
+        return;
+    }
+    cf_sink_puts(s->out, "{ \"type\": \"array\"");
+    schema_annotations(s->out, d);
+    cf_sink_puts(s->out, ", \"items\": ");
+    item             = *d;
+    item.list_mode   = CF_LIST_NONE;
+    item.has_default = CF_FALSE;
+    item.description = NULL;
+    item.flags       = 0;
+    schema_scalar(s, &item);
+    cf_sink_puts(s->out, " }");
 }
 
 /* The members of the object for the prefix (p, plen): its type, its
@@ -880,7 +966,7 @@ static cf_bool replay_load(const cf_source* s, cf_keyspace* ks) {
                 continue; /* shadowed, refused or truncated */
             }
         }
-        if (!cf_ks_add(ks, k, klen, s->rank, &e->selected->value, st->path)) {
+        if (!cf_ks_add_resolved(ks, k, klen, s->rank, &e->selected->value, st->path)) {
             st->failed = CF_TRUE;
             return cf_error_set(&st->err, CF_E_MEMORY, NULL, st->path,
                                 "no room for a replayed key");

@@ -27,6 +27,24 @@ static cf_bool cf_defaults_load(const cf_source* s, cf_keyspace* ks) {
         if (d == NULL || !d->has_default) {
             continue;
         }
+        if (d->list_mode != CF_LIST_NONE) {
+            char     key[CF_KEY_MAX];
+            cf_value count;
+            size_t   j, n;
+            for (j = 0; j < d->list_default_count; ++j) {
+                n = cf_fmt(key, sizeof key, "%s.%zu", d->key, j);
+                if (n >= sizeof key ||
+                    !cf_ks_add_default(ks, key, n, s->rank, &d->list_defaults[j])) {
+                    return CF_FALSE;
+                }
+            }
+            n = cf_fmt(key, sizeof key, "%s.count", d->key);
+            cf_value_int(&count, (cf_i64)d->list_default_count);
+            if (n >= sizeof key || !cf_ks_add_default(ks, key, n, s->rank, &count)) {
+                return CF_FALSE;
+            }
+            continue;
+        }
         /* No location: a value declared in code has no file, line or
            variable name to point at. */
         if (!cf_ks_add_default(ks, d->key, strlen(d->key), s->rank,

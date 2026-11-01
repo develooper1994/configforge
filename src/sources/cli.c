@@ -22,7 +22,8 @@ static cf_cli_kind cli_kind_of(const void* ctx, const char* key, size_t klen) {
     if (d == NULL) {
         return CF_CLI_UNKNOWN;
     }
-    return (d->type == CF_TYPE_BOOL) ? CF_CLI_FLAG : CF_CLI_VALUE;
+    return (d->type == CF_TYPE_BOOL && d->list_mode == CF_LIST_NONE) ? CF_CLI_FLAG
+                                                                     : CF_CLI_VALUE;
 }
 
 static size_t cli_alias_of(const void* ctx, const char* raw, size_t rawlen, char* out,
@@ -53,7 +54,7 @@ static size_t cli_alias_of(const void* ctx, const char* raw, size_t rawlen, char
 
 static cf_bool cf_cli_load(const cf_source* s, cf_keyspace* ks) {
     const cf_defset*   ds = (const cf_defset*)s->ref;
-    cf_keysink         out;
+    cf_listsink        out;
     cf_keymap          map;
     cf_cli_spec        built;
     const cf_cli_spec* spec = NULL;
@@ -66,12 +67,13 @@ static cf_bool cf_cli_load(const cf_source* s, cf_keyspace* ks) {
         spec           = &built;
     }
 
-    if (!cf_keysink_init(&out, ks, s->rank)) {
+    if (!cf_listsink_init(&out, ks, s->rank, ds, CF_TRUE)) {
         return CF_FALSE;
     }
     cf_keymap_init(&map, CF_KEYMAP_DIRECT, NULL);
-    return cf_lex_cli(s->u.cli.argc, s->u.cli.argv, &map, spec, cf_keysink_of(&out),
-                      &err);
+    return cf_lex_cli(s->u.cli.argc, s->u.cli.argv, &map, spec, cf_listsink_of(&out),
+                      &err) &&
+           cf_listsink_finish(&out);
 }
 
 static void cf_cli_destroy(cf_source* s) {

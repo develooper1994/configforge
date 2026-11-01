@@ -609,7 +609,7 @@ cf_bool cf_image_load(const cf_image* img, cf_keyspace* ks, int rank, cf_error* 
         if (!cf_image_at(img, i, &key, &klen, &v)) {
             return bad(err, "image entry is malformed");
         }
-        if (!cf_ks_add(ks, key, klen, rank, &v, image_origin(img, i))) {
+        if (!cf_ks_add_resolved(ks, key, klen, rank, &v, image_origin(img, i))) {
             return cf_error_set(err, CF_E_MEMORY, key, "image", "no room for '%S'", key,
                                 klen);
         }

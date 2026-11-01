@@ -212,6 +212,81 @@ class Builder:
         n.lib.cf_builder_real(self._live(), self._keep.s(key), default, min, max, flags)
         return self
 
+    def define_list(self, key: str, element_type: type,
+                    default: Optional[Sequence[Scalar]] = None, *,
+                    append: bool = False, separator: str = ",", flags: int = 0,
+                    min: float = 0, max: float = 0,
+                    allowed: Optional[Sequence[str]] = None,
+                    aliases: Optional[Sequence[str]] = None,
+                    policy: Optional[Sequence[str]] = None) -> "Builder":
+        """Declare a scalar list; defaults are copied, and ``[]`` is an
+        empty default. ``append`` combines lower-precedence lists.
+        ``separator=""`` disables environment splitting. Numeric bounds
+        apply to elements; equal bounds mean no range, as in define_int.
+        Read ``key.count`` and ``key.0`` etc. with the existing getters."""
+        raw = self._live()
+        if not n.HAVE_LIST:
+            raise RuntimeError("this libconfigforge does not support list contracts")
+        kinds = {bool: n.TYPE_BOOL, int: n.TYPE_INT, float: n.TYPE_REAL, str: n.TYPE_TEXT}
+        if element_type not in kinds:
+            raise TypeError("a list element type must be bool, int, float or str")
+        if element_type is float and not n.HAVE_REAL:
+            raise RuntimeError("this libconfigforge was built without reals")
+        if not isinstance(separator, str) or len(separator) > 1:
+            raise ValueError("a separator must be one ASCII character, or empty")
+        encoded_separator = separator.encode("ascii") if separator else b"\0"
+        if isinstance(default, (str, bytes)):
+            raise TypeError("list defaults must be a sequence of elements, not text")
+        d = n.cf_def()
+        n.lib.cf_def_init_sized(ctypes.byref(d), ctypes.sizeof(d),
+                                kinds[element_type], self._keep.s(key))
+        d.flags = flags
+        d.list_mode = n.LIST_APPEND if append else n.LIST_REPLACE
+        d.list_separator = encoded_separator
+        if min != max:
+            if element_type is int:
+                if not isinstance(min, int) or not isinstance(max, int):
+                    raise TypeError("integer list bounds must be integers")
+                if not -(1 << 63) <= min < (1 << 63) or not -(1 << 63) <= max < (1 << 63):
+                    raise OverflowError("integer list bounds must fit a signed 64-bit value")
+                d.imin, d.imax = min, max
+            elif element_type is float:
+                d.rmin, d.rmax = min, max
+            else:
+                raise TypeError("numeric bounds apply only to int or float lists")
+            d.has_range = 1
+        if allowed is not None:
+            d.allowed = self._keep.argv(allowed)
+        if aliases is not None:
+            d.aliases = self._keep.argv(aliases)
+        if policy is not None:
+            d.policy = self._keep.argv(policy)
+        if default is not None:
+            values = (n.cf_value * len(default))()
+            for i, value in enumerate(default):
+                if type(value) is not element_type:
+                    raise TypeError("each list default must match its element type")
+                values[i].type = kinds[element_type]
+                if isinstance(value, bool):
+                    values[i].u.b = int(value)
+                elif isinstance(value, int):
+                    if not -(1 << 63) <= value < (1 << 63):
+                        raise OverflowError("a list integer must fit a signed 64-bit value")
+                    values[i].u.i = value
+                elif isinstance(value, float):
+                    values[i].u.r = value
+                else:
+                    text = value.encode("utf-8")
+                    self._keep.items.append(text)
+                    values[i].u.t.p = text
+                    values[i].u.t.n = len(text)
+            self._keep.items.append(values)
+            d.has_default = 1
+            d.list_defaults = values
+            d.list_default_count = len(default)
+        n.lib.cf_builder_define(raw, ctypes.byref(d))
+        return self
+
     def open(self, prefix: str) -> "Builder":
         """Exempt a prefix from unknown-key rejection: a plugin's settings."""
         n.lib.cf_builder_open(self._live(), self._keep.s(prefix))

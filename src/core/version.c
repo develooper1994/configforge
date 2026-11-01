@@ -31,53 +31,53 @@ const char* cf_build_id(void) {
 
 /* Built from the same options the rest of the library compiles under,
    so the list cannot describe a build that was not made. */
-static const char* const cf_features[] = {
+static const char* const cf_features[] = {"lists",
 #if CF_WITH_INI
-    "ini",
+                                          "ini",
 #endif
 #if CF_WITH_JSON
-    "json",
+                                          "json",
 #endif
 #if CF_WITH_TOML
-    "toml",
+                                          "toml",
 #endif
 #if CF_WITH_PROPERTIES
-    "properties",
+                                          "properties",
 #endif
 #if CF_WITH_XML
-    "xml",
+                                          "xml",
 #endif
 #if CF_WITH_YAML
-    "yaml",
+                                          "yaml",
 #endif
 #if CF_WITH_SQLITE
-    "sqlite",
+                                          "sqlite",
 #endif
 #if CF_WITH_REAL
-    "real",
+                                          "real",
 #endif
 #ifdef CF_SINGLE_THREADED
-    "single-threaded",
+                                          "single-threaded",
 #endif
 #ifdef CF_FORCE_PORTABLE
-    "portable",
+                                          "portable",
 #endif
 #if CF_WITH_DIR
-    "dir",
+                                          "dir",
 #endif
 #if CF_WITH_DOTENV
-    "dotenv",
+                                          "dotenv",
 #endif
 #if CF_WITH_EMIT
-    "emit",
+                                          "emit",
 #endif
 #if CF_WITH_IMAGE
-    "image",
+                                          "image",
 #endif
 #if CF_WITH_REPORT
-    "report",
+                                          "report",
 #endif
-    NULL};
+                                          NULL};
 
 static size_t compiled_count(void) {
     size_t n = 0;

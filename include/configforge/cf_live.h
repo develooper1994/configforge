@@ -45,6 +45,10 @@
  * named "running", so explain() shows both - the file's new value
  * shadowed, the running one selected - and cf_live_restarts lists the
  * keys waiting for a restart.
+ * A declared scalar list is held as a whole, including its count, when
+ * any member changes. Its resolved values are not appended or expanded
+ * again. The held members remain pinned in derived views of that
+ * snapshot; a fresh build after restart reads the new list normally.
  *
  * cf_live_get may be called from any thread, at any time - in a build
  * with threads: a CF_SINGLE_THREADED build (cf_has_feature reports
@@ -207,6 +211,12 @@ CF_API cf_bool cf_live_status_get(cf_live* l, cf_live_status* out);
 /* The last failure's error, copied into `err` (cf_error_copy); false,
    and `err` cleared, when no reload has failed. Any thread. */
 CF_API cf_bool cf_live_last_error(cf_live* l, cf_error* err);
+
+/* Internal typed overlay used by reload; not a public derivation API. */
+struct cf_config* cfi_config_keep_values(const struct cf_config* base,
+                                         const struct cf_config* running,
+                                         const char* const* keys, size_t count,
+                                         cf_error* err);
 
 #ifdef __cplusplus
 }

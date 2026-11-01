@@ -213,6 +213,26 @@ static void test_edit()
     } /* dropped without a commit: nothing written, nothing leaked */
 }
 
+static void test_lists()
+{
+    static const cf_pair pairs[] = {{"tags.count", "1"}, {"tags.0", "source"}};
+    cf_def d;
+    cf_value value;
+    cf_def_init(&d, CF_TYPE_TEXT, "tags");
+    d.list_mode = CF_LIST_APPEND;
+    d.has_default = CF_TRUE;
+    cf_value_text(&value, "base", 4);
+    d.list_defaults = &value;
+    d.list_default_count = 1;
+    cf::Config cfg = cf::Builder().define(d)
+                         .memory("file", CF_RANK_USER_FILE, pairs, 2).create();
+    check(cfg.valid(), "the full-definition C++ API accepts a list contract");
+    check(cfg["tags.count"].as<int>() == 2 &&
+              cfg["tags.0"].as<std::string>() == "base" &&
+              cfg["tags.1"].as<std::string>() == "source",
+          "existing C++ typed reads access the appended elements");
+}
+
 int main()
 {
     test_keys();
@@ -220,6 +240,7 @@ int main()
     test_binding();
     test_live();
     test_edit();
+    test_lists();
     std::printf("%d checks, %d failures\n", g_run, g_fail);
     return g_fail == 0 ? 0 : 1;
 }

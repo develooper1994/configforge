@@ -65,8 +65,9 @@ static cf_bool is_secret(const cf_defset* ds, const cf_entry* e) {
     return (d != NULL && (d->flags & CF_SENSITIVE) != 0) ? CF_TRUE : CF_FALSE;
 }
 
-static size_t explain_entry(const cf_entry* e, const cf_source_view* sv,
-                            const cf_defset* ds, char* buf, size_t cap, size_t at) {
+static size_t explain_entry(const cf_keyspace* ks, const cf_entry* e,
+                            const cf_source_view* sv, const cf_defset* ds, char* buf,
+                            size_t cap, size_t at) {
     const cf_candidate* c;
     size_t              line;
     cf_bool             secret = is_secret(ds, e);
@@ -82,7 +83,8 @@ static size_t explain_entry(const cf_entry* e, const cf_source_view* sv,
     }
 
     for (c = e->chain; c != NULL; c = c->next) {
-        const cf_source* s = find_source(sv, c->source);
+        const cf_source* s        = find_source(sv, c->source);
+        const char*      original = cf_ks_original_key(ks, c);
 
         at   = cf_fmt_append(buf, cap, at, "  ");
         line = at;
@@ -96,6 +98,9 @@ static size_t explain_entry(const cf_entry* e, const cf_source_view* sv,
         at = cf_fmt_append(buf, cap, at, "%s", cf_outcome_name(c->outcome));
         if (c->reason != NULL) {
             at = cf_fmt_append(buf, cap, at, ": %s", c->reason);
+        }
+        if (original != NULL) {
+            at = cf_fmt_append(buf, cap, at, ", written as %s", original);
         }
         /* A value made from others says what it was made from; each key
            it names explains its own part. Not for a secret, whose
@@ -166,7 +171,7 @@ size_t cf_ks_explain_redacted(const cf_keyspace* ks, const cf_source_view* sv,
     if (e == NULL) {
         return 0;
     }
-    at = explain_entry(e, sv, ds, buf, cap, 0);
+    at = explain_entry(ks, e, sv, ds, buf, cap, 0);
     if (buf != NULL && cap > 0) {
         buf[(at < cap) ? at : cap - 1] = '\0';
     }
@@ -188,7 +193,7 @@ size_t cf_ks_inspect_redacted(const cf_keyspace* ks, const cf_source_view* sv,
         return 0;
     }
     for (i = 0; i < cf_ks_count(ks); ++i) {
-        at = explain_entry(cf_ks_at(ks, i), sv, ds, buf, cap, at);
+        at = explain_entry(ks, cf_ks_at(ks, i), sv, ds, buf, cap, at);
     }
 
     /* Two different findings, and conflating them wastes the more

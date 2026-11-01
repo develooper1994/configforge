@@ -481,6 +481,15 @@ CF_NODISCARD CF_API cf_config* cf_derive_in(const cf_config* base, cf_arena* are
  * shows as where it was set once the store is read again. The
  * configuration does not change: it is a snapshot. Rebuild, or derive,
  * to see the write.
+ *
+ * Declared APPEND lists use final indices here. Setting an existing
+ * element owned by the target translates to its source-local index;
+ * a target without a list count may set or remove final-index patches.
+ * Changing a count, deleting a contributing element, or addressing
+ * another contributor's element is CF_E_CAPABILITY before any write.
+ * Such structural edits need a complete source-local list update, not
+ * an ambiguous change to the aggregate count. REPLACE lists keep their
+ * ordinary index keys. The source's write callback sees local keys.
  * ------------------------------------------------------------------ */
 
 CF_NODISCARD CF_API cf_bool cf_write(const cf_config* c, const char* target,

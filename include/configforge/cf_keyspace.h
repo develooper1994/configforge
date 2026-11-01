@@ -101,6 +101,16 @@ CF_API cf_bool cf_outcome_can_win(cf_outcome o);
    new spelling is the deliberate one. Its place says "(as <old>)". */
 #define CF_CAND_RENAMED 32u
 
+/* An aggregate count, not another assignment by its named source. */
+#define CF_CAND_LIST_RESULT 64u
+
+/* A resolved snapshot is an append base, not another raw contribution
+   to which the program's defaults should be added a second time. */
+#define CF_CAND_RESOLVED 128u
+
+/* A running restart-only list, held as one resolved snapshot. */
+#define CF_CAND_PINNED 256u
+
 typedef struct cf_candidate {
     int                  source; /* precedence rank; lower wins      */
     unsigned             flags;
@@ -147,8 +157,23 @@ typedef struct cf_keyspace {
     cf_entry* entries; /* resolved phase: sorted, exact size */
     size_t    count;
 
-    cf_bool resolved;
+    cf_bool      resolved;
+    cf_bool      lists_merged;
+    const char** original_keys;
+    size_t       original_capacity;
 } cf_keyspace;
+
+/* Internal append plan: source-local bounds and final offsets.
+   A negative length means the source's count was refused; included is
+   false below a resolved snapshot's boundary. */
+typedef struct cf_list_part {
+    int      source;
+    cf_i64   length;
+    cf_i64   offset;
+    cf_bool  included;
+    int      priority;
+    unsigned flags;
+} cf_list_part;
 
 CF_API cf_bool cf_ks_init(cf_keyspace* ks, cf_arena* arena, size_t hint);
 
@@ -173,6 +198,13 @@ CF_API cf_bool cf_ks_add_text(cf_keyspace* ks, const char* key, size_t keylen,
 CF_API cf_bool cf_ks_add_authored(cf_keyspace* ks, const char* key, size_t keylen,
                                   int source, const cf_value* value, const char* at);
 
+CF_API cf_bool cf_ks_add_resolved(cf_keyspace* ks, const char* key, size_t keylen,
+                                  int source, const cf_value* value, const char* at);
+
+/* Internal to live reload, not exported as a source API. */
+cf_bool cfi_ks_add_pinned(cf_keyspace* ks, const char* key, size_t keylen, int source,
+                          const cf_value* value);
+
 /* Record a definition's default (CF_CAND_DEFAULT). */
 CF_API cf_bool cf_ks_add_default(cf_keyspace* ks, const char* key, size_t keylen,
                                  int source, const cf_value* value);
@@ -182,12 +214,30 @@ CF_API cf_bool cf_ks_add_default(cf_keyspace* ks, const char* key, size_t keylen
    it. False when there is no room. */
 CF_API cf_bool cf_ks_rename(cf_keyspace* ks, const char* from, size_t fromlen,
                             const char* to, size_t tolen);
+CF_API cf_bool cf_ks_rename_list(cf_keyspace* ks, const char* from, size_t fromlen,
+                                 const char* to, size_t tolen);
 
 /* Record a copy of another key space's candidate, at its rank, with what
    it was - textual, a default, the template it was made from - and not
    what it was waiting for: it is not read for references again. */
 CF_API cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key, size_t keylen,
                                    const cf_candidate* c);
+
+/* Internal snapshot replay, in original insertion order and at the
+   source-local keys of appended lists. Derived counts are not replayed. */
+CF_API cf_bool cf_ks_replay(cf_keyspace* ks, const cf_keyspace* base);
+
+/* Internal: plans are collected before this changes the key index.
+   Resolve once after applying all plans. */
+CF_API cf_bool cf_ks_append_list(cf_keyspace* ks, const char* key, size_t keylen,
+                                 const cf_list_part* parts, size_t count,
+                                 const cf_candidate* result, cf_error* err);
+
+/* Original source-local key for a candidate from this space, or NULL
+   when it was not moved. The candidate must belong to this keyspace. */
+/* The source-local key before remapping, or NULL if it never moved.
+   c must be an owned candidate of this space, not a copied descriptor. */
+CF_API const char* cf_ks_original_key(const cf_keyspace* ks, const cf_candidate* c);
 
 /* Record a candidate that failed conversion or validation. It never
    wins, and it is never erased: explain() has to be able to say that

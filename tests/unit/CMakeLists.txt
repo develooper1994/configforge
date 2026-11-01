@@ -12,6 +12,7 @@ set(CF_UNIT_TESTS
     test_explain
     test_scale
     test_define
+    test_lists
     test_config
     test_golden
     test_serialize

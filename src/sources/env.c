@@ -14,71 +14,27 @@
 
 #include <string.h>
 
-/* The escaped spelling is what enumeration needs; nobody wants to type
-   it. Once a definition set exists the natural spelling can be
-   accepted too, because the key list makes it unambiguous - which is
-   the gap D-06 recorded and deferred.
-   Run after the enumeration pass, so if both spellings are set the
-   escaped one wins on rank order and the natural one shows up shadowed
-   rather than silently disappearing. Setting the same parameter twice
-   two ways is worth seeing. */
-static cf_bool env_natural_pass(const cf_source* s, cf_keysink* out) {
-    const cf_defset* ds = (const cf_defset*)s->ref;
-    cf_keymap        map;
-    size_t           i;
-
-    if (ds == NULL || s->u.env.env == NULL) {
-        return CF_TRUE;
-    }
-    cf_keymap_init(&map, CF_KEYMAP_ENV, s->u.env.prefix);
-
-    for (i = 0; i < cf_defset_count(ds); ++i) {
-        const cf_def* d = cf_defset_at(ds, i);
-        char          natural[CF_KEY_MAX];
-        char          escaped[CF_KEY_MAX];
-        size_t        klen, nlen, elen;
-        char* const*  e;
-
-        if (d == NULL || d->key == NULL) {
-            continue;
-        }
-        klen = strlen(d->key);
-        nlen =
-            cf_keymap_from_key(&map, d->key, klen, CF_FALSE, natural, sizeof natural);
-        elen = cf_keymap_from_key(&map, d->key, klen, CF_TRUE, escaped, sizeof escaped);
-        /* When the key has no dot the two spellings are identical and
-           the enumeration pass already saw it. */
-        if (nlen == 0 || nlen == elen) {
-            continue;
-        }
-        for (e = s->u.env.env; *e != NULL; ++e) {
-            const char* line = *e;
-            if (strncmp(line, natural, nlen) != 0 || line[nlen] != '=') {
-                continue;
-            }
-            if (!out->sink.text(out->sink.ctx, d->key, klen, line + nlen + 1,
-                                strlen(line + nlen + 1), natural)) {
-                return CF_FALSE;
-            }
-            break;
-        }
-    }
-    return CF_TRUE;
-}
-
 static cf_bool cf_env_load(const cf_source* s, cf_keyspace* ks) {
-    cf_keysink out;
-    cf_keymap  map;
-    cf_error   err = CF_ERROR_INIT;
+    cf_listsink out;
+    cf_keymap   map;
+    cf_error    err = CF_ERROR_INIT;
 
-    if (!cf_keysink_init(&out, ks, s->rank)) {
+    if (!cf_listsink_init(&out, ks, s->rank, (const cf_defset*)s->ref, CF_FALSE)) {
         return CF_FALSE;
     }
     cf_keymap_init(&map, CF_KEYMAP_ENV, s->u.env.prefix);
-    if (!env_natural_pass(s, &out)) {
-        return CF_FALSE;
+    if (cf_defset_count((const cf_defset*)s->ref) != 0) {
+        /* Separate passes make escaped names win independently of
+           environment enumeration order, without recording aliases as
+           additional unknown keys. */
+        out.natural_pass = CF_TRUE;
+        if (!cf_lex_env(s->u.env.env, &map, cf_listsink_of(&out), &err)) {
+            return CF_FALSE;
+        }
+        out.natural_pass = CF_FALSE;
     }
-    return cf_lex_env(s->u.env.env, &map, cf_keysink_of(&out), &err);
+    return cf_lex_env(s->u.env.env, &map, cf_listsink_of(&out), &err) &&
+           cf_listsink_finish(&out);
 }
 
 static void cf_env_destroy(cf_source* s) {

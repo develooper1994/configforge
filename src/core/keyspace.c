@@ -222,8 +222,32 @@ cf_bool cf_ks_add_default(cf_keyspace* ks, const char* key, size_t keylen, int s
                       CF_CAND_DEFAULT);
 }
 
-cf_bool cf_ks_rename(cf_keyspace* ks, const char* from, size_t fromlen, const char* to,
-                     size_t tolen) {
+static cf_bool cf_ks_remember_original(cf_keyspace* ks, size_t index, const char* key) {
+    if (index >= ks->original_capacity) {
+        const char** originals;
+        if (ks->ccand > (size_t)-1 / sizeof *originals) {
+            return CF_FALSE;
+        }
+        originals =
+            (const char**)cf_arena_calloc(ks->arena, ks->ccand * sizeof *originals);
+        if (originals == NULL) {
+            return CF_FALSE;
+        }
+        if (ks->original_capacity != 0) {
+            memcpy(originals, ks->original_keys,
+                   ks->original_capacity * sizeof *originals);
+        }
+        ks->original_keys     = originals;
+        ks->original_capacity = ks->ccand;
+    }
+    if (ks->original_keys[index] == NULL) {
+        ks->original_keys[index] = key;
+    }
+    return CF_TRUE;
+}
+
+static cf_bool cf_ks_rename_impl(cf_keyspace* ks, const char* from, size_t fromlen,
+                                 const char* to, size_t tolen, cf_bool members) {
     size_t i, n;
 
     if (ks == NULL || ks->resolved || ks->cands == NULL || !cf_key_valid(to, tolen)) {
@@ -234,28 +258,50 @@ cf_bool cf_ks_rename(cf_keyspace* ks, const char* from, size_t fromlen, const ch
         cf_candidate c;
         size_t       len;
         char*        at;
+        char         target[CF_KEY_MAX];
+        const char*  original     = ks->cands[i].key;
+        size_t       original_len = ks->cands[i].keylen;
+        size_t       target_len;
 
-        if (ks->cands[i].keylen != fromlen ||
-            memcmp(ks->cands[i].key, from, fromlen) != 0 ||
+        if (original_len < fromlen || memcmp(original, from, fromlen) != 0 ||
+            (original_len != fromlen && (!members || original[fromlen] != '.')) ||
             (ks->cands[i].cand.flags & CF_CAND_RENAMED) != 0) {
             continue;
         }
+        target_len = cf_fmt(target, sizeof target, "%S%S", to, tolen,
+                            original + fromlen, original_len - fromlen);
+        if (target_len >= sizeof target) {
+            return CF_FALSE;
+        }
         c   = ks->cands[i].cand; /* a copy: pushing may move the array */
         len = cf_fmt(NULL, 0, "%s%s(as %S)", (c.at != NULL) ? c.at : "",
-                     (c.at != NULL) ? " " : "", from, fromlen);
+                     (c.at != NULL) ? " " : "", original, original_len);
         at  = (char*)cf_arena_alloc(ks->arena, len + 1);
         if (at == NULL) {
             return CF_FALSE;
         }
         cf_fmt(at, len + 1, "%s%s(as %S)", (c.at != NULL) ? c.at : "",
-               (c.at != NULL) ? " " : "", from, fromlen);
-        if (!cf_ks_push(ks, to, tolen, c.source, &c.value, at, c.outcome, c.reason,
-                        c.flags | CF_CAND_RENAMED)) {
+               (c.at != NULL) ? " " : "", original, original_len);
+        if (!cf_ks_push(ks, target, target_len, c.source, &c.value, at, c.outcome,
+                        c.reason, c.flags | CF_CAND_RENAMED)) {
+            return CF_FALSE;
+        }
+        if (members && !cf_ks_remember_original(ks, ks->ncand - 1, original)) {
             return CF_FALSE;
         }
         ks->cands[ks->ncand - 1].cand.written = c.written;
     }
     return CF_TRUE;
+}
+
+cf_bool cf_ks_rename(cf_keyspace* ks, const char* from, size_t fromlen, const char* to,
+                     size_t tolen) {
+    return cf_ks_rename_impl(ks, from, fromlen, to, tolen, CF_FALSE);
+}
+
+cf_bool cf_ks_rename_list(cf_keyspace* ks, const char* from, size_t fromlen,
+                          const char* to, size_t tolen) {
+    return cf_ks_rename_impl(ks, from, fromlen, to, tolen, CF_TRUE);
 }
 
 cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key, size_t keylen,
@@ -264,7 +310,8 @@ cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key, size_t keylen,
 
     if (c == NULL ||
         !cf_ks_push(ks, key, keylen, c->source, &c->value, c->at, CF_OUT_PENDING, NULL,
-                    c->flags & (CF_CAND_TEXTUAL | CF_CAND_DEFAULT))) {
+                    c->flags & (CF_CAND_TEXTUAL | CF_CAND_DEFAULT | CF_CAND_RESOLVED |
+                                CF_CAND_PINNED))) {
         return CF_FALSE;
     }
     if (c->written != NULL) {
@@ -274,6 +321,127 @@ cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key, size_t keylen,
         if (ks->cands[at].cand.written == NULL) {
             return CF_FALSE;
         }
+    }
+    return CF_TRUE;
+}
+
+cf_bool cf_ks_add_resolved(cf_keyspace* ks, const char* key, size_t keylen, int source,
+                           const cf_value* value, const char* at) {
+    return cf_ks_push(ks, key, keylen, source, value, at, CF_OUT_PENDING, NULL,
+                      CF_CAND_RESOLVED);
+}
+
+cf_bool cfi_ks_add_pinned(cf_keyspace* ks, const char* key, size_t keylen, int source,
+                          const cf_value* value) {
+    return cf_ks_push(ks, key, keylen, source, value, NULL, CF_OUT_PENDING, NULL,
+                      CF_CAND_RESOLVED | CF_CAND_PINNED);
+}
+
+const char* cf_ks_original_key(const cf_keyspace* ks, const cf_candidate* c) {
+    const cf_cand_rec* r;
+    const void*        at;
+    if (ks == NULL || c == NULL || ks->original_keys == NULL) {
+        return NULL;
+    }
+    /* c is an embedded member of this space's arena-aligned record. */
+    at = (const char*)c - offsetof(cf_cand_rec, cand);
+    r  = (const cf_cand_rec*)at;
+    return r->seq < ks->original_capacity ? ks->original_keys[r->seq] : NULL;
+}
+
+cf_bool cf_ks_replay(cf_keyspace* ks, const cf_keyspace* base) {
+    size_t i;
+    if (ks == NULL || base == NULL || !base->resolved) {
+        return CF_FALSE;
+    }
+    for (i = 0; i < base->ncand; ++i) {
+        const cf_cand_rec* r        = &base->cands[i];
+        const char*        original = cf_ks_original_key(base, &r->cand);
+        const char*        key      = original != NULL ? original : r->key;
+        if ((r->cand.flags & (CF_CAND_RENAMED | CF_CAND_LIST_RESULT)) != 0) {
+            continue;
+        }
+        if (!cf_ks_add_candidate(ks, key, strlen(key), &r->cand)) {
+            return CF_FALSE;
+        }
+        /* A losing template was never expanded. Only resolved values
+           are frozen; a template that becomes selected must still run. */
+        if ((r->cand.flags & CF_CAND_TEMPLATE) != 0) {
+            ks->cands[ks->ncand - 1].cand.flags |= CF_CAND_AUTHORED | CF_CAND_TEMPLATE;
+        }
+    }
+    return CF_TRUE;
+}
+
+cf_bool cf_ks_append_list(cf_keyspace* ks, const char* key, size_t keylen,
+                          const cf_list_part* parts, size_t count,
+                          const cf_candidate* result, cf_error* err) {
+    size_t i, j;
+    char   renamed[CF_KEY_MAX];
+    size_t n;
+    for (i = 0; i < ks->ncand; ++i) {
+        cf_cand_rec* r = &ks->cands[i];
+        cf_i64       index;
+        cf_value     number;
+        if (r->keylen <= keylen + 1 || r->key[keylen] != '.' ||
+            memcmp(r->key, key, keylen) != 0 ||
+            !cf_is_digit((unsigned char)r->key[keylen + 1])) {
+            continue;
+        }
+        for (j = 0; j < count && parts[j].source != r->cand.source; ++j) {
+        }
+        if (j == count) {
+            continue; /* no local count: an explicit final-index patch */
+        }
+        if (!cf_value_from_text(CF_TYPE_INT, r->key + keylen + 1,
+                                r->keylen - keylen - 1, &number)) {
+            return cf_error_set(err, CF_E_KEY, r->key, r->cand.at,
+                                "list index is not a nonnegative integer");
+        }
+        index = number.u.i;
+        if (!parts[j].included || index >= parts[j].length) {
+            if (cf_outcome_can_win(r->cand.outcome)) {
+                r->cand.outcome = CF_OUT_TRUNCATED;
+                r->cand.reason =
+                    "outside the source-local list or below a resolved snapshot";
+            }
+        }
+        if (parts[j].included && index < parts[j].length && parts[j].offset != 0) {
+            if (index > CF_I64_MAX - parts[j].offset) {
+                return cf_error_set(err, CF_E_KEY, r->key, r->cand.at,
+                                    "appended list index overflows");
+            }
+            n = cf_fmt(renamed, sizeof renamed, "%S.%I", key, keylen,
+                       index + parts[j].offset);
+            if (n >= sizeof renamed) {
+                return cf_error_set(err, CF_E_KEY, r->key, r->cand.at,
+                                    "appended list index exceeds the key limit");
+            }
+            if (!cf_ks_remember_original(ks, i, r->key)) {
+                return cf_error_set(err, CF_E_MEMORY, key, NULL,
+                                    "no room for original list keys");
+            }
+            r->key = cf_arena_dup(ks->arena, renamed, n);
+            if (r->key == NULL) {
+                return cf_error_set(err, CF_E_MEMORY, key, NULL,
+                                    "no room for appended list keys");
+            }
+            r->keylen = n;
+        }
+    }
+    ks->resolved = CF_FALSE;
+    if (result == NULL) {
+        return CF_TRUE;
+    }
+    n = cf_fmt(renamed, sizeof renamed, "%S.count", key, keylen);
+    if (n >= sizeof renamed ||
+        !cf_ks_push(ks, renamed, n, result->source, &result->value, result->at,
+                    CF_OUT_PENDING,
+                    "appended permitted source lists, lowest precedence first",
+                    (result->flags & (CF_CAND_DEFAULT | CF_CAND_PINNED)) |
+                        CF_CAND_LIST_RESULT)) {
+        return cf_error_set(err, CF_E_MEMORY, key, NULL,
+                            "no room for appended list count");
     }
     return CF_TRUE;
 }
@@ -304,6 +472,9 @@ static int cand_cmp(const cf_cand_rec* a, const cf_cand_rec* b) {
 
     if (r != 0) {
         return r;
+    }
+    if (((a->cand.flags ^ b->cand.flags) & CF_CAND_PINNED) != 0) {
+        return (a->cand.flags & CF_CAND_PINNED) != 0 ? -1 : 1;
     }
     if (a->cand.source != b->cand.source) {
         return (a->cand.source < b->cand.source) ? -1 : 1;

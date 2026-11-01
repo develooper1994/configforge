@@ -6,6 +6,7 @@
  */
 
 #include "configforge/cf_entry.h"
+#include "configforge/cf_define.h"
 #include "configforge/cf_serialize.h"
 #include "configforge/cf_source.h"
 
@@ -23,7 +24,7 @@ typedef struct dotenv_state {
 
 static cf_bool dotenv_load(const cf_source* s, cf_keyspace* ks) {
     dotenv_state* st = (dotenv_state*)s->ext;
-    cf_keysink    out;
+    cf_listsink   out;
     cf_keymap     map;
     cf_blob       blob;
 
@@ -41,15 +42,30 @@ static cf_bool dotenv_load(const cf_source* s, cf_keyspace* ks) {
         st->failed = CF_TRUE;
         return CF_FALSE;
     }
-    if (!cf_keysink_init(&out, ks, s->rank)) {
+    if (!cf_listsink_init(&out, ks, s->rank, (const cf_defset*)s->ref, CF_FALSE)) {
         st->failed = CF_TRUE;
         return cf_error_set(&st->err, CF_E_MEMORY, NULL, st->path,
                             "no room to read '%s'", st->path);
     }
     cf_keymap_init(&map, CF_KEYMAP_ENV, st->prefix);
-    if (!cf_lex_dotenv(blob.p, blob.n, st->path, &map, cf_keysink_of(&out), &st->err)) {
+    if (cf_defset_count((const cf_defset*)s->ref) != 0) {
+        out.natural_pass = CF_TRUE;
+        if (!cf_lex_dotenv(blob.p, blob.n, st->path, &map, cf_listsink_of(&out),
+                           &st->err)) {
+            st->failed = CF_TRUE;
+            return CF_FALSE;
+        }
+        out.natural_pass = CF_FALSE;
+    }
+    if (!cf_lex_dotenv(blob.p, blob.n, st->path, &map, cf_listsink_of(&out),
+                       &st->err)) {
         st->failed = CF_TRUE;
         return CF_FALSE;
+    }
+    if (!cf_listsink_finish(&out)) {
+        st->failed = CF_TRUE;
+        return cf_error_set(&st->err, CF_E_MEMORY, NULL, st->path,
+                            "no room to record lists from '%s'", st->path);
     }
     return CF_TRUE;
 }
@@ -116,4 +132,10 @@ const cf_error* cf_source_dotenv_error(const cf_source* s) {
     }
     st = (const dotenv_state*)s->ext;
     return st->failed ? &st->err : NULL;
+}
+
+void cf_source_dotenv_defs(cf_source* s, const cf_defset* ds) {
+    if (s != NULL) {
+        s->ref = ds;
+    }
 }

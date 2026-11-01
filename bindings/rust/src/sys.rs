@@ -69,6 +69,10 @@ pub const CF_TYPE_INT: c_int = 2;
 pub const CF_TYPE_REAL: c_int = 3;
 pub const CF_TYPE_TEXT: c_int = 4;
 
+pub const CF_LIST_NONE: c_int = 0;
+pub const CF_LIST_REPLACE: c_int = 1;
+pub const CF_LIST_APPEND: c_int = 2;
+
 pub const CF_INVALID_STRICT: c_int = 0;
 pub const CF_INVALID_FALLBACK: c_int = 1;
 
@@ -119,6 +123,10 @@ pub struct cf_def {
     pub allowed: *const *const c_char,
     pub aliases: *const *const c_char,
     pub policy: *const *const c_char,
+    pub list_mode: c_int,
+    pub list_separator: c_char,
+    pub list_defaults: *const cf_value,
+    pub list_default_count: usize,
 }
 
 /// cf_iterate.h's iterator: plain fields, filled by the library.

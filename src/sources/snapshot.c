@@ -22,31 +22,7 @@
 
 static cf_bool snapshot_load(const cf_source* s, cf_keyspace* ks) {
     const cf_keyspace* base = (const cf_keyspace*)s->ref;
-    size_t             i;
-
-    if (base == NULL) {
-        return CF_FALSE;
-    }
-    for (i = 0; i < cf_ks_count(base); ++i) {
-        const cf_entry*     e = cf_ks_at(base, i);
-        const cf_candidate* c;
-
-        for (c = e->chain; c != NULL; c = c->next) {
-            /* At its original rank, so precedence between the inherited
-               sources is preserved and only the override sits above
-               them, and with what it was: a default stays one, so a
-               policy still passes over it. Text is copied by the key
-               space, which is what makes the derived configuration
-               independent. */
-            if ((c->flags & CF_CAND_RENAMED) != 0) {
-                continue; /* made again from the old key's, as before */
-            }
-            if (!cf_ks_add_candidate(ks, e->key, e->keylen, c)) {
-                return CF_FALSE;
-            }
-        }
-    }
-    return CF_TRUE;
+    return cf_ks_replay(ks, base);
 }
 
 static void snapshot_destroy(cf_source* s) {

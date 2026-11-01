@@ -45,17 +45,17 @@ Every error carries one of these codes, stable from 1.0;
 
 - [`configforge.h`](#configforgeh) - 65
 - [`cf_alloc.h`](#cf_alloch) - 12
-- [`cf_define.h`](#cf_defineh) - 19
+- [`cf_define.h`](#cf_defineh) - 21
 - [`cf_doctor.h`](#cf_doctorh) - 21
 - [`cf_edit.h`](#cf_edith) - 9
 - [`cf_emit.h`](#cf_emith) - 1
-- [`cf_entry.h`](#cf_entryh) - 10
+- [`cf_entry.h`](#cf_entryh) - 13
 - [`cf_error.h`](#cf_errorh) - 5
 - [`cf_explain.h`](#cf_explainh) - 4
 - [`cf_flatten.h`](#cf_flattenh) - 4
 - [`cf_image.h`](#cf_imageh) - 10
 - [`cf_iterate.h`](#cf_iterateh) - 5
-- [`cf_keyspace.h`](#cf_keyspaceh) - 26
+- [`cf_keyspace.h`](#cf_keyspaceh) - 31
 - [`cf_live.h`](#cf_liveh) - 15
 - [`cf_log.h`](#cf_logh) - 1
 - [`cf_numeric.h`](#cf_numerich) - 7
@@ -471,6 +471,15 @@ shows as where it was set once the store is read again. The
 configuration does not change: it is a snapshot. Rebuild, or derive,
 to see the write.
 
+Declared APPEND lists use final indices here. Setting an existing
+element owned by the target translates to its source-local index;
+a target without a list count may set or remove final-index patches.
+Changing a count, deleting a contributing element, or addressing
+another contributor's element is CF_E_CAPABILITY before any write.
+Such structural edits need a complete source-local list update, not
+an ambiguous change to the aggregate count. REPLACE lists keep their
+ordinary index keys. The source's write callback sees local keys.
+
 ```c
 CF_NODISCARD CF_API cf_bool cf_write(const cf_config* c, const char* target, const cf_write_item* items, size_t count, const char* meta, cf_error* err);
 ```
@@ -692,7 +701,7 @@ CF_API cf_bool cf_def_real(cf_defset* ds, const char* key, double dflt, double m
 CF_API void cf_defset_seal(cf_defset* ds);
 ```
 
-Sorts. Required before lookup; calling twice is harmless.
+Sorts for binary lookup; calling twice is harmless.
 
 ```c
 CF_API cf_bool cf_defset_open(cf_defset* ds, const char* prefix, cf_error* err);
@@ -709,9 +718,23 @@ only, so opening "plugins" does not open "pluginsomething".
 
 ```c
 CF_API const cf_def* cf_defset_find(const cf_defset* ds, const char* key, size_t keylen);
+```
+
+Authored descriptors are returned for exact keys. A declared list's
+count and canonical decimal indices return immutable scalar
+projections; an item projection's key is the list root. Enumeration
+still returns only authored descriptors.
+
+```c
+CF_API const cf_def* cf_defset_list(const cf_defset* ds, const char* key, size_t keylen);
 CF_API size_t cf_defset_count(const cf_defset* ds);
 CF_API const cf_def* cf_defset_at(const cf_defset* ds, size_t i);
 ```
+
+The declared list containing a key, including its root. Unlike find,
+this also finds a list whose caller supplied an invalid member name,
+so the apply pass can refuse that member instead of treating it as
+an unrelated, undefined setting.
 
 ```c
 CF_API const cf_def* cf_defset_nearest(const cf_defset* ds, const char* key, size_t keylen, size_t* distance);
@@ -763,6 +786,12 @@ Give the environment source the key list, so it accepts the natural
 single-underscore spelling as well as the escaped one. Without a
 contract only the escaped spelling can be enumerated unambiguously;
 with one, both work and nobody has to type the escape.
+
+```c
+CF_API void cf_source_dotenv_defs(struct cf_source* s, const cf_defset* ds);
+```
+
+Give a .env file the same natural names and list separators.
 
 ```c
 CF_API void cf_source_cli_defs(struct cf_source* s, const cf_defset* ds);
@@ -1080,6 +1109,12 @@ the escape is what enumeration needs, and nobody has to type it.
 ```c
 CF_API cf_bool cf_keysink_init(cf_keysink* k, cf_keyspace* ks, int rank);
 CF_API const cf_entry_sink* cf_keysink_of(cf_keysink* k);
+```
+
+```c
+CF_API cf_bool cf_listsink_init(cf_listsink* out, cf_keyspace* ks, int rank, const struct cf_defset* defs, cf_bool repeated);
+CF_API const cf_entry_sink* cf_listsink_of(cf_listsink* out);
+CF_API cf_bool cf_listsink_finish(cf_listsink* out);
 ```
 
 ### Lexers
@@ -1538,6 +1573,10 @@ Record a typed candidate that somebody wrote - a JSON string, say -
 so the reserved syntax applies to it as it does to raw text.
 
 ```c
+CF_API cf_bool cf_ks_add_resolved(cf_keyspace* ks, const char* key, size_t keylen, int source, const cf_value* value, const char* at);
+```
+
+```c
 CF_API cf_bool cf_ks_add_default(cf_keyspace* ks, const char* key, size_t keylen, int source, const cf_value* value);
 ```
 
@@ -1545,6 +1584,7 @@ Record a definition's default (CF_CAND_DEFAULT).
 
 ```c
 CF_API cf_bool cf_ks_rename(cf_keyspace* ks, const char* from, size_t fromlen, const char* to, size_t tolen);
+CF_API cf_bool cf_ks_rename_list(cf_keyspace* ks, const char* from, size_t fromlen, const char* to, size_t tolen);
 ```
 
 Before resolution: every candidate of `from` offered to `to` as well,
@@ -1558,6 +1598,27 @@ CF_API cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key, size_t keyl
 Record a copy of another key space's candidate, at its rank, with what
 it was - textual, a default, the template it was made from - and not
 what it was waiting for: it is not read for references again.
+
+```c
+CF_API cf_bool cf_ks_replay(cf_keyspace* ks, const cf_keyspace* base);
+```
+
+Internal snapshot replay, in original insertion order and at the
+source-local keys of appended lists. Derived counts are not replayed.
+
+```c
+CF_API cf_bool cf_ks_append_list(cf_keyspace* ks, const char* key, size_t keylen, const cf_list_part* parts, size_t count, const cf_candidate* result, cf_error* err);
+```
+
+Internal: plans are collected before this changes the key index.
+Resolve once after applying all plans.
+
+```c
+CF_API const char* cf_ks_original_key(const cf_keyspace* ks, const cf_candidate* c);
+```
+
+The source-local key before remapping, or NULL if it never moved.
+c must be an owned candidate of this space, not a copied descriptor.
 
 ```c
 CF_API cf_bool cf_ks_reject(cf_keyspace* ks, const char* key, size_t keylen, int source, const cf_value* value, const char* at, const char* reason);
@@ -1705,6 +1766,10 @@ does not reach readers; the running one is kept as the top source,
 named "running", so explain() shows both - the file's new value
 shadowed, the running one selected - and cf_live_restarts lists the
 keys waiting for a restart.
+A declared scalar list is held as a whole, including its count, when
+any member changes. Its resolved values are not appended or expanded
+again. The held members remain pinned in derived views of that
+snapshot; a fresh build after restart reads the new list normally.
 
 cf_live_get may be called from any thread, at any time - in a build
 with threads: a CF_SINGLE_THREADED build (cf_has_feature reports
@@ -2841,6 +2906,9 @@ CF_API cf_bool cf_has_feature(const char* name);
 What this build can do, as a NUL-terminated list: "ini", "json",
 "real", and so on. Recorded in the provenance report as well, so a
 report from a restricted build is distinguishable from a full one.
+"lists" means the sized definition supports scalar lists, their
+flat-source forms and append merging; it is present in every build
+that implements them, including a minimal build.
 
 ```c
 CF_API size_t cf_build_limit(const char* name);

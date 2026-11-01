@@ -571,6 +571,51 @@ static void test_gate(void) {
     }
 }
 
+static void test_synthesized_list_count(void) {
+    static char  a0[] = "app", a1[] = "--tokens=list-canary";
+    static char* argv[] = {a0, a1};
+    cf_error     err    = CF_ERROR_INIT;
+    cf_builder*  b      = cf_build(NULL);
+    cf_config*   c;
+    cf_doctor*   doctor = cf_doctor_new();
+    cf_def       def;
+    cf_value     value;
+    cf_def_init(&def, CF_TYPE_TEXT, "tokens");
+    def.list_mode   = CF_LIST_APPEND;
+    def.flags       = CF_SENSITIVE;
+    def.has_default = CF_TRUE;
+    cf_value_text(&value, "default-canary", 14);
+    def.list_defaults      = &value;
+    def.list_default_count = 1;
+    cf_builder_define(b, &def);
+    cf_builder_cli(b, "cli", CF_RANK_CLI, 2, argv);
+    c = cf_builder_create(b, &err);
+    check(c != NULL && doctor != NULL, "build a secret appended list and Doctor");
+    if (c != NULL && doctor != NULL) {
+        size_t i, count_findings = 0, item_findings = 0;
+        check(cf_doctor_lint(doctor, c, "production", &err), err.message);
+        check(find(doctor, "CFD001", "tokens.count") == NULL,
+              "a synthesized aggregate count is not an overwritten assignment");
+        for (i = 0; i < cf_doctor_count(doctor); ++i) {
+            const cf_finding* f = cf_doctor_finding(doctor, i);
+            if (strcmp(f->rule, "CFD007") == 0) {
+                if (strcmp(f->key, "tokens.count") == 0) {
+                    ++count_findings;
+                } else if (strcmp(f->key, "tokens.1") == 0) {
+                    ++item_findings;
+                }
+                check(strstr(f->message, "list-canary") == NULL &&
+                          strstr(f->message, "default-canary") == NULL,
+                      "list exposure findings never repeat secret contents");
+            }
+        }
+        check(count_findings == 1 && item_findings == 1,
+              "only original count and item exposures are reported, not the aggregate");
+    }
+    cf_doctor_free(doctor);
+    cf_config_free(c);
+}
+
 int main(void) {
 #if CF_WITH_REPORT && CF_WITH_JSON
     test_lint();
@@ -584,6 +629,7 @@ int main(void) {
     test_truncated();
     test_cut_by_the_library();
     test_inputs();
+    test_synthesized_list_count();
 #else
     /* A configuration's report needs both; without them the library
        says so. */

@@ -75,6 +75,7 @@ cf_defset_count
 cf_defset_find
 cf_defset_init
 cf_defset_is_open
+cf_defset_list
 cf_defset_nearest
 cf_defset_open
 cf_defset_seal
@@ -143,7 +144,9 @@ cf_ks_add
 cf_ks_add_authored
 cf_ks_add_candidate
 cf_ks_add_default
+cf_ks_add_resolved
 cf_ks_add_text
+cf_ks_append_list
 cf_ks_arena
 cf_ks_at
 cf_ks_at_mut
@@ -160,13 +163,19 @@ cf_ks_inspect
 cf_ks_inspect_redacted
 cf_ks_is_sorted
 cf_ks_lower_bound
+cf_ks_original_key
 cf_ks_reject
 cf_ks_rename
+cf_ks_rename_list
+cf_ks_replay
 cf_ks_reselect
 cf_ks_resolve
 cf_lex_cli
 cf_lex_dotenv
 cf_lex_env
+cf_listsink_finish
+cf_listsink_init
+cf_listsink_of
 cf_live_approve
 cf_live_close
 cf_live_commit
@@ -231,6 +240,7 @@ cf_source_dir
 cf_source_dir_error
 cf_source_dir_state_size
 cf_source_dotenv
+cf_source_dotenv_defs
 cf_source_dotenv_error
 cf_source_dotenv_state_size
 cf_source_env

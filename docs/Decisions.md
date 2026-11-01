@@ -147,7 +147,7 @@ scalars   per-key resolution against the precedence chain
 arrays    the winning source for <key>.count fixes the length
           index keys at or beyond that count are discarded during resolution
           discarded elements remain visible in explain() as truncated candidates
-          an opt-in append mode per definition (not built; see below)
+          an opt-in append mode per scalar-list definition (see below)
 ```
 
 **Consequence.** Provenance is per key and has one shape for every parameter in the
@@ -167,9 +167,45 @@ keys still resolve one at a time, so one source's `hosts.0` and another's `hosts
 make an array neither wrote whole; a source that means to replace a list supplies its
 count with it. A count that is not an integer, is negative, or is a template when the
 pass runs fixes no length. A group with any member besides indexes and `count` is a
-table and is left alone, and arrays inside arrays are cut outermost first. The append
-mode, and the separator and repeated-flag forms of the value model, are not built: a
-list in a flat source is index keys and a count.
+table and is left alone, and arrays inside arrays are cut outermost first.
+
+**Declared scalar lists.** A sized extension to `cf_def` adds REPLACE
+and APPEND, a separator and copied typed defaults. Existing descriptors,
+including incomplete extensions and old tail padding, remain scalars.
+The element model stays flat; immutable count/item projections supply
+the contract without a mutable lookup cache. Declared indices are
+canonical decimals and the selected list must be dense.
+
+APPEND concatenates each permitted source's bounded contribution from
+low to high precedence, or in policy order. A count-free source patches
+final indices. Plans are collected before keys move; original keys,
+locations and insertion order survive, and aggregate counts are marked
+as synthesized. Snapshot derivation replays original coordinates, not
+already shifted keys. Resolved images and Report Replay are append
+bases rather than extra raw contributions. References run after layout;
+append counts must therefore be literal integers.
+
+The flat-source forms share one sink. Environment and dotenv values
+split at the declared separator; repeated command-line flags are
+individual elements. An empty environment value means an empty list,
+while an empty CLI argument is an empty element. Natural environment
+names are accepted only when unambiguous; canonical escaped names win.
+
+Reload holds an entire restart-only list as typed resolved values.
+Ordinary text overrides were rejected as a solution: they would append
+the list again and reinterpret literal reference text. Held list
+members are pinned ahead of source policy and remain pinned in derived
+views; this preserves the running value rather than accepting a new
+source assignment.
+
+Writes use final indices at the facade and source-local indices at the
+callback. Existing contributing elements can be mapped exactly.
+Blindly forwarding indices would update the wrong element; treating an
+aggregate count as a local count would change the wrong length. Those
+structural changes, and contributor deletions that could create holes,
+are refused rather than guessed. Count-free stores can set and remove
+final-index patches. Complete source-local structural updates remain
+provisioning operations, outside `cf_write`.
 
 ---
 

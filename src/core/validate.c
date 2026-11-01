@@ -10,6 +10,7 @@
 #include "configforge/cf_define.h"
 
 #include <string.h>
+#include <limits.h>
 
 /* ------------------------------------------------------------------ *
  * Validation of one value against one definition
@@ -541,6 +542,13 @@ static void apply_policy(cf_entry* e, const cf_def* d, const cf_rank_names* name
         if (!cf_outcome_can_win(c->outcome)) {
             continue;
         }
+        if ((c->flags & CF_CAND_PINNED) != 0) {
+            if (best == NULL || (best->flags & CF_CAND_PINNED) == 0) {
+                best    = c;
+                best_at = -1;
+            }
+            continue;
+        }
         if ((c->flags & CF_CAND_DEFAULT) != 0) {
             /* Not set by anyone, so not refused: the answer when no
                permitted source has one, below every one that has. */
@@ -758,6 +766,190 @@ static void cut_arrays(cf_keyspace* ks, const cf_defset* ds,
     }
 }
 
+struct validate_list_plan {
+    const cf_def*              def;
+    cf_list_part*              parts;
+    size_t                     count;
+    cf_candidate               result;
+    cf_bool                    have_result;
+    struct validate_list_plan* next;
+};
+
+static void validate_policies(cf_keyspace* ks, const cf_defset* ds,
+                              const cf_rank_names* names) {
+    size_t i;
+    for (i = 0; i < cf_ks_count(ks); ++i) {
+        cf_entry*     e = cf_ks_at_mut(ks, i);
+        const cf_def* d = cf_defset_find(ds, e->key, e->keylen);
+        if (d != NULL && d->policy != NULL) {
+            apply_policy(e, d, names, cf_ks_arena(ks));
+        }
+    }
+}
+
+static cf_bool validate_part_later(const cf_list_part* a, const cf_list_part* b) {
+    /* INT_MIN is also a valid source rank, not an exclusive pin priority. */
+    if (((a->flags ^ b->flags) & CF_CAND_PINNED) != 0) {
+        return (a->flags & CF_CAND_PINNED) != 0;
+    }
+    return a->priority < b->priority ||
+           (a->priority == b->priority && a->source < b->source);
+}
+
+static cf_bool validate_append_lists(cf_keyspace* ks, const cf_defset* ds,
+                                     const cf_rank_names* names, cf_error* err) {
+    struct validate_list_plan* plans = NULL;
+    struct validate_list_plan* p;
+    size_t                     i;
+    if (ds->partial || ks->lists_merged) {
+        return CF_TRUE;
+    }
+    for (i = 0; i < ds->count; ++i) {
+        const cf_def*       d = &ds->defs[i];
+        const cf_entry*     e;
+        const cf_candidate* c;
+        char                key[CF_KEY_MAX];
+        size_t              n, j, capacity = 0, barrier = 0;
+        cf_i64              total = 0;
+        if (d->list_mode != CF_LIST_APPEND) {
+            continue;
+        }
+        n = cf_fmt(key, sizeof key, "%s.count", d->key);
+        e = cf_ks_find(ks, key, n);
+        if (e == NULL) {
+            continue;
+        }
+        for (c = e->chain; c != NULL; c = c->next) {
+            ++capacity;
+        }
+        p = (struct validate_list_plan*)cf_arena_calloc(ks->arena, sizeof *p);
+        if (p == NULL || capacity > (size_t)-1 / sizeof *p->parts) {
+            return cf_error_set(err, CF_E_MEMORY, d->key, NULL,
+                                "no room for a list append plan");
+        }
+        p->parts =
+            (cf_list_part*)cf_arena_calloc(ks->arena, capacity * sizeof *p->parts);
+        if (p->parts == NULL) {
+            return cf_error_set(err, CF_E_MEMORY, d->key, NULL,
+                                "no room for list source bounds");
+        }
+        p->def         = d;
+        p->have_result = e->selected != NULL;
+        if (p->have_result) {
+            p->result = *e->selected;
+        }
+        for (c = e->chain; c != NULL; c = c->next) {
+            cf_list_part* part;
+            for (j = 0; j < p->count && p->parts[j].source != c->source; ++j) {
+            }
+            part = &p->parts[j];
+            if (j == p->count) {
+                ++p->count;
+                part->source   = c->source;
+                part->length   = -1;
+                part->priority = c->source;
+            }
+            if (part->length >= 0 || !cf_outcome_can_win(c->outcome)) {
+                continue;
+            }
+            if (c->value.type != CF_TYPE_INT || (c->flags & CF_CAND_TEMPLATE) != 0) {
+                return cf_error_set(err, CF_E_VALIDATE, key, c->at,
+                                    "append list counts must be literal integers");
+            }
+            part->length = c->value.u.i;
+            part->flags  = c->flags;
+            if ((c->flags & CF_CAND_PINNED) != 0) {
+                part->priority = INT_MIN;
+            } else if (d->policy != NULL) {
+                part->priority =
+                    (c->flags & CF_CAND_DEFAULT) != 0
+                        ? INT_MAX
+                        : policy_index(d->policy, source_name(names, c->source));
+            }
+        }
+        for (j = 1; j < p->count; ++j) {
+            size_t       k    = j;
+            cf_list_part part = p->parts[j];
+            while (k > 0 && validate_part_later(&p->parts[k - 1], &part)) {
+                p->parts[k] = p->parts[k - 1];
+                --k;
+            }
+            p->parts[k] = part;
+        }
+        for (j = 0; j < p->count; ++j) {
+            if (p->parts[j].length >= 0 &&
+                (p->parts[j].flags & CF_CAND_RESOLVED) != 0) {
+                barrier = j;
+            }
+        }
+        for (j = 0; j < p->count; ++j) {
+            cf_list_part* part = &p->parts[j];
+            part->included     = j >= barrier && part->length >= 0;
+            part->offset       = total;
+            if (!part->included) {
+                continue;
+            }
+            if (part->length > CF_I64_MAX - total) {
+                return cf_error_set(err, CF_E_VALIDATE, key, NULL,
+                                    "appended list length overflows");
+            }
+            total += part->length;
+        }
+        cf_value_int(&p->result.value, total);
+        p->next = plans;
+        plans   = p;
+    }
+    for (p = plans; p != NULL; p = p->next) {
+        if (!cf_ks_append_list(ks, p->def->key, strlen(p->def->key), p->parts, p->count,
+                               p->have_result ? &p->result : NULL, err)) {
+            return CF_FALSE;
+        }
+    }
+    if (plans != NULL) {
+        if (!cf_ks_resolve(ks)) {
+            return cf_error_set(err, CF_E_MEMORY, NULL, NULL,
+                                "no room to index appended lists");
+        }
+        ks->lists_merged = CF_TRUE;
+        validate_policies(ks, ds, names);
+    }
+    return CF_TRUE;
+}
+
+static cf_bool validate_list_shape(const cf_keyspace* ks, const cf_def* d,
+                                   const cf_entry* count, cf_bool* default_used,
+                                   cf_error* err) {
+    size_t  i, members = 0, n = strlen(d->key);
+    cf_bool present = count != NULL && count->selected != NULL;
+    *default_used   = present && (count->selected->flags & CF_CAND_DEFAULT) != 0;
+    for (i = cf_ks_lower_bound(ks, d->key, n); i < cf_ks_count(ks); ++i) {
+        const cf_entry* e = cf_ks_at(ks, i);
+        if (e->keylen < n || memcmp(e->key, d->key, n) != 0) {
+            break;
+        }
+        if (e->keylen > n + 1 && e->key[n] == '.' && memcmp(e->key, d->key, n) == 0 &&
+            cf_is_digit((unsigned char)e->key[n + 1]) && e->selected != NULL) {
+            ++members;
+            if ((e->selected->flags & CF_CAND_DEFAULT) != 0) {
+                *default_used = CF_TRUE;
+            }
+        }
+    }
+    if (!present && members != 0) {
+        return cf_error_set(err, CF_E_VALIDATE, d->key, NULL,
+                            "'%s': list elements need a .count value", d->key);
+    }
+    /* Canonical, distinct indices below the count were checked and
+       truncated already. Equality proves density without iterating an
+       attacker-supplied count up to INT64_MAX. */
+    if (present && (cf_u64)members != (cf_u64)count->selected->value.u.i) {
+        return cf_error_set(err, CF_E_VALIDATE, d->key, count->selected->at,
+                            "'%s': list count %I has only %zu selected elements",
+                            d->key, count->selected->value.u.i, members);
+    }
+    return CF_TRUE;
+}
+
 cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names* names,
                       cf_unknown_policy unknown, cf_apply_report* report,
                       cf_error* err) {
@@ -773,6 +965,22 @@ cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names*
         return cf_error_set(err, CF_E_MEMORY, NULL, NULL,
                             "apply called with nothing to apply");
     }
+    for (i = 0; i < ds->count; ++i) {
+        const cf_def* d = &ds->defs[i];
+        const cf_def* replacement;
+        if (d->list_mode == CF_LIST_NONE || d->replaced_by == NULL) {
+            continue;
+        }
+        replacement = cf_defset_find(ds, d->replaced_by, strlen(d->replaced_by));
+        if (replacement == NULL || replacement->list_mode == CF_LIST_NONE ||
+            replacement->type != d->type ||
+            ((d->flags & CF_SENSITIVE) != 0 &&
+             (replacement->flags & CF_SENSITIVE) == 0)) {
+            return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
+                                "list replacement must be a declared list of the same "
+                                "element type and must retain sensitivity");
+        }
+    }
 
     for (i = 0; i < cf_ks_count(ks); ++i) {
         cf_entry*     e = cf_ks_at_mut(ks, i);
@@ -783,6 +991,13 @@ cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names*
         }
         d = cf_defset_find(ds, e->key, e->keylen);
 
+        if ((d != NULL && d->list_mode != CF_LIST_NONE) ||
+            (d == NULL && cf_defset_list(ds, e->key, e->keylen) != NULL)) {
+            return cf_error_set(err, CF_E_KEY, e->key, NULL,
+                                "'%s': a declared list uses .count and canonical "
+                                "decimal indices, not scalar or nested members",
+                                e->key);
+        }
         if (d == NULL) {
             cf_candidate* c;
             ++report->unknown;
@@ -841,18 +1056,9 @@ cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names*
        rejected for its type is out of the running before policy looks
        at the rest, and a policy that picked a rejected candidate would
        hand back a value the contract already refused. */
-    for (i = 0; i < cf_ks_count(ks); ++i) {
-        cf_entry*     e = cf_ks_at_mut(ks, i);
-        const cf_def* d;
-
-        if (e == NULL) {
-            continue;
-        }
-        d = cf_defset_find(ds, e->key, e->keylen);
-        if (d == NULL || d->policy == NULL) {
-            continue;
-        }
-        apply_policy(e, d, names, cf_ks_arena(ks));
+    validate_policies(ks, ds, names);
+    if (!validate_append_lists(ks, ds, names, err)) {
+        return CF_FALSE;
     }
 
     /* Arrays are cut to their length once every winner is chosen and
@@ -871,8 +1077,17 @@ cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names*
        answer. Both are counted after reselection, because a rejected
        winner can hand over to a default. */
     for (i = 0; i < ds->count; ++i) {
-        const cf_def*   d = &ds->defs[i];
-        const cf_entry* e = cf_ks_find(ks, d->key, strlen(d->key));
+        const cf_def*   d            = &ds->defs[i];
+        const cf_entry* e            = cf_ks_find(ks, d->key, strlen(d->key));
+        cf_bool         list_default = CF_FALSE;
+        if (d->list_mode != CF_LIST_NONE) {
+            char   key[CF_KEY_MAX];
+            size_t n = cf_fmt(key, sizeof key, "%s.count", d->key);
+            e        = cf_ks_find(ks, key, n);
+            if (!ds->partial && !validate_list_shape(ks, d, e, &list_default, err)) {
+                return CF_FALSE;
+            }
+        }
 
         if (e == NULL || e->selected == NULL) {
             if ((d->flags & CF_REQUIRED) != 0) {
@@ -881,8 +1096,10 @@ cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names*
             }
             continue;
         }
-        if (d->has_default && e->selected->at == NULL &&
-            cf_value_equal(&e->selected->value, &d->default_value)) {
+        if (d->has_default &&
+            ((d->list_mode != CF_LIST_NONE && list_default) ||
+             (d->list_mode == CF_LIST_NONE && e->selected->at == NULL &&
+              cf_value_equal(&e->selected->value, &d->default_value)))) {
             ++report->defaults_used;
         }
     }

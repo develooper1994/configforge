@@ -866,6 +866,8 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
                 cf_source_env_defs(&c->sources[i], &c->defs);
             } else if (strcmp(c->sources[i].vt->kind, "cli") == 0) {
                 cf_source_cli_defs(&c->sources[i], &c->defs);
+            } else if (strcmp(c->sources[i].vt->kind, "dotenv") == 0) {
+                cf_source_dotenv_defs(&c->sources[i], &c->defs);
             }
         }
     }
@@ -982,11 +984,16 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
        new spelling in the same source (CF_CAND_RENAMED). */
     for (i = 0; i < c->defs.count; ++i) {
         const cf_def* d = &c->defs.defs[i];
+        cf_bool       renamed;
         if ((d->flags & CF_DEPRECATED) == 0 || d->replaced_by == NULL) {
             continue;
         }
-        if (!cf_ks_rename(&c->keys, d->key, strlen(d->key), d->replaced_by,
-                          strlen(d->replaced_by))) {
+        renamed = d->list_mode != CF_LIST_NONE
+                      ? cf_ks_rename_list(&c->keys, d->key, strlen(d->key),
+                                          d->replaced_by, strlen(d->replaced_by))
+                      : cf_ks_rename(&c->keys, d->key, strlen(d->key), d->replaced_by,
+                                     strlen(d->replaced_by));
+        if (!renamed) {
             cf_error_set(&e, CF_E_MEMORY, d->key, NULL, "no room to rename '%s'",
                          d->key);
             return create_failed(b, err, &e);
@@ -1098,7 +1105,7 @@ static cf_bool derive_ghost(cf_builder* b, const cf_source* o) {
 
 static cf_config* derive_onto(const cf_config* base, cf_arena* ar, cf_bool owns,
                               const char* source_name, const cf_pair* pairs,
-                              size_t count, cf_error* err) {
+                              size_t count, const cf_source* overlay, cf_error* err) {
     cf_builder* b;
     size_t      i;
     const char* name;
@@ -1166,7 +1173,11 @@ static cf_config* derive_onto(const cf_config* base, cf_arena* ar, cf_bool owns,
        made the *inherited* override the later of the two, so a second
        change to the same key did nothing. */
     if (count > 0) {
-        cf_builder_memory(b, name, CF_RANK_OVERRIDE, pairs, count);
+        if (overlay != NULL) {
+            cf_builder_source(b, overlay);
+        } else {
+            cf_builder_memory(b, name, CF_RANK_OVERRIDE, pairs, count);
+        }
     }
 
     /* The contract travels with it, or the derived configuration would
@@ -1207,7 +1218,7 @@ cf_config* cf_derive(const cf_config* base, const char* source_name,
         return NULL;
     }
     return derive_onto(base, cf_arena_new(alloc, 0), CF_TRUE, source_name, pairs, count,
-                       err);
+                       NULL, err);
 }
 
 cf_config* cf_derive_in(const cf_config* base, cf_arena* arena, const char* source_name,
@@ -1216,7 +1227,60 @@ cf_config* cf_derive_in(const cf_config* base, cf_arena* arena, const char* sour
         cf_error_set(err, CF_E_SOURCE, NULL, NULL, "nothing to derive from");
         return NULL;
     }
-    return derive_onto(base, arena, CF_FALSE, source_name, pairs, count, err);
+    return derive_onto(base, arena, CF_FALSE, source_name, pairs, count, NULL, err);
+}
+
+cf_config* cfi_config_keep_values(const cf_config* base, const cf_config* running,
+                                  const char* const* keys, size_t count,
+                                  cf_error* err) {
+    const cf_allocator* alloc = cf_arena_allocator(base->arena);
+    cf_arena*           ar;
+    cf_keyspace*        values;
+    cf_source           source;
+    size_t              i;
+
+    if (alloc == NULL) {
+        cf_error_set(err, CF_E_CAPABILITY, NULL, NULL,
+                     "cannot keep restart values in a fixed-arena configuration");
+        return NULL;
+    }
+    ar     = cf_arena_new(alloc, 0);
+    values = ar != NULL ? (cf_keyspace*)cf_arena_alloc(ar, sizeof *values) : NULL;
+    if (values == NULL) {
+        cf_arena_free(ar);
+        cf_error_set(err, CF_E_MEMORY, NULL, NULL, "no room for running values");
+        return NULL;
+    }
+    if (!cf_ks_init(values, ar, count)) {
+        cf_arena_free(ar);
+        cf_error_set(err, CF_E_MEMORY, NULL, NULL, "no room for running values");
+        return NULL;
+    }
+    for (i = 0; i < count; ++i) {
+        size_t          n = strlen(keys[i]);
+        const cf_value* v = cf_ks_get(cf_keys(running), keys[i], n);
+        cf_bool         added;
+        if (v == NULL) {
+            cf_error_set(err, CF_E_SOURCE, keys[i], NULL, "running value is absent");
+            cf_arena_free(ar);
+            return NULL;
+        }
+        added = cf_defset_list(&base->defs, keys[i], n) != NULL
+                    ? cfi_ks_add_pinned(values, keys[i], n, CF_RANK_OVERRIDE, v)
+                    : cf_ks_add_resolved(values, keys[i], n, CF_RANK_OVERRIDE, v, NULL);
+        if (!added) {
+            cf_error_set(err, CF_E_MEMORY, keys[i], NULL, "no room for running values");
+            cf_arena_free(ar);
+            return NULL;
+        }
+    }
+    if (!cf_ks_resolve(values) || !cf_source_snapshot(&source, "running", values)) {
+        cf_error_set(err, CF_E_MEMORY, NULL, NULL, "no room for running values");
+        cf_arena_free(ar);
+        return NULL;
+    }
+    source.rank = CF_RANK_OVERRIDE;
+    return derive_onto(base, ar, CF_TRUE, "running", NULL, count, &source, err);
 }
 
 /* ------------------------------------------------------------------ *
@@ -1289,6 +1353,7 @@ static cf_bool write_authorized(const cf_config* c, const cf_source* s,
         ok = cf_defset_open(ds, c->defs.open_prefixes[i], err);
     }
     cf_defset_seal(ds);
+    ds->partial = CF_TRUE;
 
     for (i = 0; ok && i < count; ++i) {
         const char*   key = items[i].key;
@@ -1353,11 +1418,117 @@ static cf_bool write_authorized(const cf_config* c, const cf_source* s,
     return ok;
 }
 
+/* Only an existing contributing element has an unambiguous local
+   coordinate. A count-free source instead writes final-index patches.
+   Item constraints are shared by every index, so mapping cannot change
+   the authorization just checked. */
+static cf_bool write_local_keys(const cf_config* c, const cf_source* s,
+                                const cf_write_item* items, size_t count,
+                                cf_arena** storage, const cf_write_item** local,
+                                cf_error* err) {
+    cf_write_item* mapped = NULL;
+    size_t         i;
+    for (i = 0; i < count; ++i) {
+        const char*         key = items[i].key;
+        size_t              n   = strlen(key);
+        const cf_def*       d   = cf_defset_list(&c->defs, key, n);
+        const cf_entry*     length;
+        const cf_entry*     element;
+        const cf_candidate* candidate;
+        const char*         original;
+        const char*         suffix;
+        size_t              rootlen;
+        char                physical[CF_KEY_MAX];
+        cf_bool             contributes = CF_FALSE;
+        if (d == NULL || d->list_mode != CF_LIST_APPEND) {
+            continue;
+        }
+        rootlen = strlen(d->key);
+        if (n <= rootlen + 1 || !cf_is_digit((unsigned char)key[rootlen + 1]) ||
+            cf_defset_find(&c->defs, key, n) == NULL) {
+            return cf_error_set(err, CF_E_CAPABILITY, key, s->name,
+                                "append list structure requires a source-local edit; "
+                                "cf_write addresses existing final indices");
+        }
+        element = cf_ks_find(&c->keys, key, n);
+        if (element == NULL || element->selected == NULL) {
+            return cf_error_set(err, CF_E_CAPABILITY, key, s->name,
+                                "'%s' is not an existing appended element", key);
+        }
+        n      = cf_fmt(physical, sizeof physical, "%s.count", d->key);
+        length = cf_ks_find(&c->keys, physical, n);
+        for (candidate = length != NULL ? length->chain : NULL; candidate != NULL;
+             candidate = candidate->next) {
+            if (candidate->source == s->rank &&
+                (candidate->flags & CF_CAND_LIST_RESULT) == 0) {
+                contributes = CF_TRUE;
+                break;
+            }
+        }
+        if (!contributes) {
+            continue;
+        }
+        if (items[i].op == CF_WRITE_DELETE) {
+            return cf_error_set(err, CF_E_CAPABILITY, key, s->name,
+                                "removing an appended element requires a source-local "
+                                "edit of the list and its count");
+        }
+        for (candidate = element->chain; candidate != NULL;
+             candidate = candidate->next) {
+            if (candidate->source == s->rank &&
+                cf_outcome_can_win(candidate->outcome)) {
+                break;
+            }
+        }
+        if (candidate == NULL) {
+            return cf_error_set(err, CF_E_CAPABILITY, key, s->name,
+                                "'%s' does not contribute this appended element",
+                                s->name);
+        }
+        original = cf_ks_original_key(&c->keys, candidate);
+        if (original == NULL) {
+            continue;
+        }
+        suffix = strrchr(original, '.');
+        if (suffix == NULL || cf_fmt(physical, sizeof physical, "%s%s", d->key,
+                                     suffix) >= sizeof physical) {
+            return cf_error_set(err, CF_E_KEY, key, s->name,
+                                "the source-local list key exceeds the key limit");
+        }
+        if (strcmp(key, physical) == 0) {
+            continue;
+        }
+        if (mapped == NULL) {
+            const cf_allocator* alloc = cf_arena_allocator(c->arena);
+            *storage = cf_arena_new(alloc != NULL ? alloc : cf_default_allocator(), 0);
+            if (*storage != NULL && count <= (size_t)-1 / sizeof *mapped) {
+                mapped =
+                    (cf_write_item*)cf_arena_alloc(*storage, count * sizeof *mapped);
+            }
+            if (mapped == NULL) {
+                return cf_error_set(err, CF_E_MEMORY, key, s->name,
+                                    "no room to map appended list indices");
+            }
+            memcpy(mapped, items, count * sizeof *mapped);
+            *local = mapped;
+        }
+        mapped[i].key = cf_arena_dup(*storage, physical, strlen(physical));
+        if (mapped[i].key == NULL) {
+            return cf_error_set(err, CF_E_MEMORY, key, s->name,
+                                "no room to map appended list indices");
+        }
+    }
+    return CF_TRUE;
+}
+
 cf_bool cf_write(const cf_config* c, const char* target, const cf_write_item* items,
                  size_t count, const char* meta, cf_error* err) {
-    const cf_source* s       = NULL;
-    cf_bool          granted = CF_FALSE;
-    size_t           i;
+    const cf_source*     s       = NULL;
+    cf_bool              granted = CF_FALSE;
+    cf_bool              ok;
+    cf_arena*            storage = NULL;
+    const cf_write_item* local   = items;
+    size_t               i;
 
     if (err != NULL) {
         cf_error_clear(err);
@@ -1393,7 +1564,12 @@ cf_bool cf_write(const cf_config* c, const char* target, const cf_write_item* it
     if (!write_authorized(c, s, items, count, err)) {
         return CF_FALSE;
     }
-    return s->vt->write(s, items, count, meta, err);
+    ok = write_local_keys(c, s, items, count, &storage, &local, err);
+    if (ok) {
+        ok = s->vt->write(s, local, count, meta, err);
+    }
+    cf_arena_free(storage);
+    return ok;
 }
 
 /* ------------------------------------------------------------------ *

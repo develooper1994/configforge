@@ -25,6 +25,7 @@ typedef struct cand {
     const char* digest;
     cf_i64      length;
     cf_bool     world_readable; /* a file every user can read; see CFD007 */
+    cf_bool     synthesized;
 } cand;
 
 typedef struct rkey {

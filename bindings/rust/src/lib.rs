@@ -268,12 +268,38 @@ pub struct Def {
     policy: Vec<String>,
     replaced_by: Option<String>,
     range: Option<(i64, i64)>,
+    list_mode: Option<ListMode>,
+    list_separator: u8,
+    list_defaults: Option<Vec<DefValue>>,
+    aliases: Vec<String>,
+}
+
+/// How a declared scalar list combines its sources.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum ListMode {
+    Replace,
+    Append,
 }
 
 enum DefValue {
     Text(String),
     Int(i64),
     Bool(bool),
+}
+
+impl DefValue {
+    fn native(&self, keep: &mut Keep) -> sys::cf_value {
+        unsafe {
+            let mut value: sys::cf_value = std::mem::zeroed();
+            match self {
+                DefValue::Text(t) => sys::cf_value_text(&mut value, keep.s(t), t.len()),
+                DefValue::Int(i) => sys::cf_value_int(&mut value, *i),
+                DefValue::Bool(b) => sys::cf_value_bool(&mut value, *b as sys::cf_bool),
+            }
+            value
+        }
+    }
 }
 
 impl Def {
@@ -288,6 +314,10 @@ impl Def {
             policy: Vec::new(),
             replaced_by: None,
             range: None,
+            list_mode: None,
+            list_separator: 0,
+            list_defaults: None,
+            aliases: Vec::new(),
         }
     }
     pub fn text(key: &str) -> Def {
@@ -298,6 +328,35 @@ impl Def {
     }
     pub fn boolean(key: &str) -> Def {
         Def::new(sys::CF_TYPE_BOOL, key)
+    }
+    /// Make this element contract a list. A zero separator disables
+    /// environment splitting; CLI occurrences are separate elements.
+    pub fn list(mut self, mode: ListMode, separator: u8) -> Def {
+        self.list_mode = Some(mode);
+        self.list_separator = separator;
+        self
+    }
+    pub fn default_text_list(mut self, values: &[&str]) -> Def {
+        self.list_defaults = Some(
+            values
+                .iter()
+                .map(|v| DefValue::Text(v.to_string()))
+                .collect(),
+        );
+        self
+    }
+    pub fn default_int_list(mut self, values: &[i64]) -> Def {
+        self.list_defaults = Some(values.iter().map(|v| DefValue::Int(*v)).collect());
+        self
+    }
+    pub fn default_bool_list(mut self, values: &[bool]) -> Def {
+        self.list_defaults = Some(values.iter().map(|v| DefValue::Bool(*v)).collect());
+        self
+    }
+    /// Command-line aliases, without dashes.
+    pub fn aliases(mut self, items: &[&str]) -> Def {
+        self.aliases = items.iter().map(|s| s.to_string()).collect();
+        self
     }
     pub fn flags(mut self, flags: u32) -> Def {
         self.flags = flags;
@@ -455,6 +514,12 @@ impl Builder {
     /// A full definition ([`Def`]).
     pub fn define(mut self, def: Def) -> Builder {
         check_limits();
+        if def.list_mode.is_some() || def.list_defaults.is_some() {
+            assert!(
+                unsafe { sys::cf_has_feature(c("lists").as_ptr()) } != 0,
+                "libconfigforge does not support list contracts"
+            );
+        }
         unsafe {
             let mut d: sys::cf_def = std::mem::zeroed();
             let k = self.keep.s(&def.key);
@@ -465,16 +530,23 @@ impl Builder {
             }
             if let Some(v) = &def.default {
                 d.has_default = 1;
-                match v {
-                    DefValue::Text(t) => {
-                        let p = self.keep.s(t);
-                        sys::cf_value_text(&mut d.default_value, p, t.len());
-                    }
-                    DefValue::Int(i) => sys::cf_value_int(&mut d.default_value, *i),
-                    DefValue::Bool(b) => {
-                        sys::cf_value_bool(&mut d.default_value, *b as sys::cf_bool)
-                    }
-                }
+                d.default_value = v.native(&mut self.keep);
+            }
+            if let Some(mode) = def.list_mode {
+                d.list_mode = match mode {
+                    ListMode::Replace => sys::CF_LIST_REPLACE,
+                    ListMode::Append => sys::CF_LIST_APPEND,
+                };
+            }
+            d.list_separator = def.list_separator as c_char;
+            let list_defaults: Option<Vec<sys::cf_value>> = def
+                .list_defaults
+                .as_ref()
+                .map(|values| values.iter().map(|v| v.native(&mut self.keep)).collect());
+            if let Some(values) = &list_defaults {
+                d.has_default = 1;
+                d.list_defaults = values.as_ptr();
+                d.list_default_count = values.len();
             }
             if let Some((lo, hi)) = def.range {
                 d.has_range = 1;
@@ -488,6 +560,10 @@ impl Builder {
             if !def.policy.is_empty() {
                 let items: Vec<&str> = def.policy.iter().map(|s| s.as_str()).collect();
                 d.policy = self.keep.list(&items);
+            }
+            if !def.aliases.is_empty() {
+                let items: Vec<&str> = def.aliases.iter().map(|s| s.as_str()).collect();
+                d.aliases = self.keep.list(&items);
             }
             if let Some(r) = &def.replaced_by {
                 d.replaced_by = self.keep.s(r);
@@ -740,4 +816,101 @@ pub fn version() -> String {
         text_of(unsafe { sys::cf_version() }),
         text_of(unsafe { sys::cf_build_id() })
     )
+}
+
+#[cfg(test)]
+mod list_tests {
+    use super::{rank, Builder, Def, ListMode};
+
+    #[test]
+    fn lists_append_and_keep_their_contract_when_derived() {
+        let cfg = Builder::new()
+            .define(
+                Def::text("tags")
+                    .list(ListMode::Append, b',')
+                    .default_text_list(&["base"])
+                    .aliases(&["t"]),
+            )
+            .env("env", rank::ENV, "APP_", &[("APP_TAGS", "e1,e2")])
+            .cli("cli", rank::CLI, &["--tags=c1", "-t", "c2"])
+            .create()
+            .unwrap();
+        assert_eq!(cfg.int("tags.count", -1), 5);
+        for (i, expected) in ["base", "e1", "e2", "c1", "c2"].iter().enumerate() {
+            assert_eq!(cfg.text(&format!("tags.{i}")).as_deref(), Some(*expected));
+        }
+        let derived = cfg.derive("view", &[]).unwrap();
+        drop(cfg);
+        assert_eq!(derived.int("tags.count", -1), 5);
+        assert_eq!(derived.text("tags.4").as_deref(), Some("c2"));
+    }
+
+    #[test]
+    fn list_defaults_are_typed_and_can_be_empty() {
+        let cfg = Builder::new()
+            .define(
+                Def::int("ports")
+                    .list(ListMode::Replace, b',')
+                    .default_int_list(&[1, 2])
+                    .range(1, 9),
+            )
+            .define(
+                Def::boolean("switches")
+                    .list(ListMode::Append, 0)
+                    .default_bool_list(&[false, true]),
+            )
+            .define(
+                Def::text("empty")
+                    .list(ListMode::Replace, b',')
+                    .default_text_list(&[]),
+            )
+            .create()
+            .unwrap();
+        assert_eq!(cfg.int("ports.1", 0), 2);
+        assert!(!cfg.boolean("switches.0", true));
+        assert!(cfg.boolean("switches.1", false));
+        assert_eq!(cfg.int("empty.count", -1), 0);
+        assert!(Builder::new()
+            .define(
+                Def::int("ports")
+                    .list(ListMode::Append, b',')
+                    .default_int_list(&[10])
+                    .range(1, 9)
+            )
+            .create()
+            .is_err());
+        assert!(Builder::new()
+            .define(
+                Def::int("ports")
+                    .list(ListMode::Append, b',')
+                    .default_text_list(&["1"])
+            )
+            .create()
+            .is_err());
+        assert!(Builder::new()
+            .define(
+                Def::text("tags")
+                    .list(ListMode::Append, b',')
+                    .default_text("not a list")
+            )
+            .create()
+            .is_err());
+    }
+
+    #[test]
+    fn list_policy_and_unsplit_environment_are_preserved() {
+        let cfg = Builder::new()
+            .define(
+                Def::text("tags")
+                    .list(ListMode::Append, 0)
+                    .default_text_list(&["base"])
+                    .policy(&["env"]),
+            )
+            .env("env", rank::ENV, "APP_", &[("APP_TAGS", "a,b")])
+            .cli("cli", rank::CLI, &["--tags=ignored"])
+            .create()
+            .unwrap();
+        assert_eq!(cfg.int("tags.count", -1), 2);
+        assert_eq!(cfg.text("tags.1").as_deref(), Some("a,b"));
+    }
 }

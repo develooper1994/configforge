@@ -70,11 +70,15 @@ static void live_release(cf_live* l, void* p) {
  * Keeping what cannot change live
  * ------------------------------------------------------------------ */
 
-/* Every CF_RESTART key whose value in `next` is not the one `running`
-   has becomes a pair holding the running value, in `ar`. A key that had
-   no value when it started has nothing to keep and takes the new one. */
-static size_t live_pins(const cf_config* running, const cf_config* next, cf_arena* ar,
-                        cf_pair* pairs, size_t cap) {
+static cf_bool live_member(const cf_entry* e, const char* root, size_t n) {
+    return e != NULL && e->keylen > n + 1 && e->key[n] == '.' &&
+           memcmp(e->key, root, n) == 0;
+}
+
+/* A list is kept whole when any member changes. A previously absent
+   setting has nothing to keep and may take its first value. */
+static size_t live_pins(const cf_config* running, const cf_config* next,
+                        const char** keys, size_t cap) {
     const cf_defset* ds = cf_defs(next);
     size_t           i, n = 0;
 
@@ -88,32 +92,52 @@ static size_t live_pins(const cf_config* running, const cf_config* next, cf_aren
             continue;
         }
         klen = strlen(d->key);
-        was  = cf_ks_get(cf_keys(running), d->key, klen);
-        now  = cf_ks_get(cf_keys(next), d->key, klen);
+        if (d->list_mode != CF_LIST_NONE) {
+            const cf_keyspace* old = cf_keys(running);
+            const cf_entry*    e;
+            char               prefix[CF_KEY_MAX];
+            size_t             first, j;
+            cf_bool            changed = CF_FALSE;
+            cf_fmt(prefix, sizeof prefix, "%s.", d->key);
+            first = cf_ks_lower_bound(old, prefix, klen + 1);
+            for (j = first; live_member((e = cf_ks_at(old, j)), d->key, klen); ++j) {
+                if (e->selected == NULL) {
+                    continue;
+                }
+                now = cf_ks_get(cf_keys(next), e->key, e->keylen);
+                if (now == NULL || !cf_value_equal(&e->selected->value, now)) {
+                    changed = CF_TRUE;
+                    break;
+                }
+            }
+            if (changed) {
+                for (j = first; live_member((e = cf_ks_at(old, j)), d->key, klen);
+                     ++j) {
+                    if (e->selected != NULL) {
+                        if (keys != NULL && n < cap) {
+                            keys[n] = e->key;
+                        }
+                        ++n;
+                    }
+                }
+            }
+            continue;
+        }
+        was = cf_ks_get(cf_keys(running), d->key, klen);
+        now = cf_ks_get(cf_keys(next), d->key, klen);
         if (was == NULL || (now != NULL && cf_value_equal(was, now))) {
             continue;
         }
-        if (pairs != NULL && n < cap) {
-            pairs[n].key = d->key;
-            if (was->type == CF_TYPE_TEXT) {
-                /* Stored terminated, and `running` outlives the derive. */
-                pairs[n].value = was->u.t.p;
-            } else {
-                char* t = (char*)cf_arena_alloc(ar, CF_VALUE_TEXT_MAX + 1);
-                if (t == NULL) {
-                    return (size_t)-1;
-                }
-                t[cf_value_to_text(was, t, CF_VALUE_TEXT_MAX + 1)] = '\0';
-                pairs[n].value                                     = t;
-            }
+        if (keys != NULL && n < cap) {
+            keys[n] = d->key;
         }
         ++n;
     }
     return n;
 }
 
-/* The keys of `pairs`, a line each, from the allocator. */
-static char* live_list(cf_live* l, const cf_pair* pairs, size_t n, size_t* len) {
+/* The held keys, a line each, from the allocator. */
+static char* live_list(cf_live* l, const char* const* keys, size_t n, size_t* len) {
     size_t i, need = 0;
     char*  out;
     char*  p;
@@ -123,7 +147,7 @@ static char* live_list(cf_live* l, const cf_pair* pairs, size_t n, size_t* len) 
         return NULL;
     }
     for (i = 0; i < n; ++i) {
-        need += strlen(pairs[i].key) + 1;
+        need += strlen(keys[i]) + 1;
     }
     out = (char*)l->a->alloc(l->a->ctx, need + 1);
     if (out == NULL) {
@@ -131,8 +155,8 @@ static char* live_list(cf_live* l, const cf_pair* pairs, size_t n, size_t* len) 
     }
     p = out;
     for (i = 0; i < n; ++i) {
-        size_t k = strlen(pairs[i].key);
-        memcpy(p, pairs[i].key, k);
+        size_t k = strlen(keys[i]);
+        memcpy(p, keys[i], k);
         p += k;
         *p++ = '\n';
     }
@@ -145,29 +169,29 @@ static char* live_list(cf_live* l, const cf_pair* pairs, size_t n, size_t* len) 
    as a source named "running"; `next` itself is consumed. */
 static cf_config* live_keep(cf_live* l, const cf_config* running, cf_config* next,
                             char** list, size_t* list_len, cf_error* err) {
-    cf_arena*  ar;
-    cf_pair*   pairs;
-    size_t     n;
-    cf_config* kept;
+    cf_arena*    ar;
+    const char** keys;
+    size_t       n;
+    cf_config*   kept;
 
     *list     = NULL;
     *list_len = 0;
-    n         = live_pins(running, next, NULL, NULL, 0);
+    n         = live_pins(running, next, NULL, 0);
     if (n == 0) {
         return next;
     }
-    ar    = cf_arena_new(l->a, 0);
-    pairs = (ar != NULL) ? (cf_pair*)cf_arena_alloc(ar, n * sizeof *pairs) : NULL;
-    if (pairs == NULL || live_pins(running, next, ar, pairs, n) != n) {
+    ar   = cf_arena_new(l->a, 0);
+    keys = (ar != NULL) ? (const char**)cf_arena_alloc(ar, n * sizeof *keys) : NULL;
+    if (keys == NULL || live_pins(running, next, keys, n) != n) {
         cf_arena_free(ar);
         cf_config_free(next);
         cf_error_set(err, CF_E_MEMORY, NULL, NULL,
                      "no room to keep the keys that need a restart");
         return NULL;
     }
-    kept = cf_derive(next, "running", pairs, n, err);
+    kept = cfi_config_keep_values(next, running, keys, n, err);
     if (kept != NULL) {
-        *list = live_list(l, pairs, n, list_len);
+        *list = live_list(l, keys, n, list_len);
         if (*list == NULL) {
             cf_config_free(kept);
             kept = NULL;

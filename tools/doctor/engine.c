@@ -281,6 +281,10 @@ static cf_bool parse(report* r, const cf_blob* blob, cf_error* err) {
                             rk->keylen, j);
                 rk->c[j].world_readable =
                     (wr != NULL && strcmp(wr, "true") == 0) ? CF_TRUE : CF_FALSE;
+                wr = text_at(&r->doc, "keys.%S.candidates.%zu.synthesized", rk->key,
+                             rk->keylen, j);
+                rk->c[j].synthesized =
+                    (wr != NULL && strcmp(wr, "true") == 0) ? CF_TRUE : CF_FALSE;
             }
             ++rk->nc;
         }
@@ -927,7 +931,8 @@ static void rule_unreachable(const report* r) {
             size_t      clen;
             long        cpos;
 
-            if (c->outcome == NULL || strcmp(c->outcome, "shadowed") != 0 ||
+            if (c->synthesized || c->outcome == NULL ||
+                strcmp(c->outcome, "shadowed") != 0 ||
                 !doctor_place_of(c->at, &clen, &cpos)) {
                 continue;
             }
@@ -935,8 +940,8 @@ static void rule_unreachable(const report* r) {
                 const cand* d = &k->c[m];
                 size_t      dlen;
                 long        dpos;
-                if (m == j || d->source == NULL || c->source == NULL ||
-                    strcmp(d->source, c->source) != 0 ||
+                if (m == j || d->synthesized || d->source == NULL ||
+                    c->source == NULL || strcmp(d->source, c->source) != 0 ||
                     !doctor_place_of(d->at, &dlen, &dpos) || dlen != clen ||
                     memcmp(d->at, c->at, clen) != 0 || dpos <= cpos) {
                     continue;
@@ -980,7 +985,7 @@ static void rule_sensitive_source(const report* r) {
                               : CF_FALSE;
             const char* where = (k->c[j].at != NULL) ? k->c[j].at : "an unnamed place";
 
-            if (!cli && !k->c[j].world_readable) {
+            if (k->c[j].synthesized || (!cli && !k->c[j].world_readable)) {
                 continue;
             }
             if (k->c[j].reason != NULL && strncmp(k->c[j].reason, "policy:", 7) == 0) {

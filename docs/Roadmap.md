@@ -21,6 +21,8 @@ blind reports' definition metadata, and an unsupported report mode
 could expose values under a `blind` label. The unreleased fixes cover
 both whole reports and single-key JSON. Reports made with an affected
 build must not be assumed value-blind merely because of their label.
+The existing 0.2.0, 0.3.0, 0.4.1 and 1.0.0 release notes now warn
+about this; their tags and archives have not been replaced.
 
 A deferred item remains open. Passing the release matrix does not
 complete an unimplemented feature, and publishing a version does not
@@ -39,7 +41,10 @@ Where it stands: the three release corrections passed the Linux and
 Windows verification, including format round trips and the 1.x ABI
 comparison. Standalone Python and Rust packages passed their installed
 tests on Linux, Windows and macOS. Searchable documentation reads the
-same Markdown as the repository (D-59). These changes are on `main`,
+same Markdown as the repository (D-59). Scalar lists cover flat inputs,
+append merging, reloads, writes and the language bindings (D-02).
+Their verification includes allocation failures, wasm32 and frozen
+1.0.0 clients on 32-bit and 64-bit Windows. These changes are on `main`,
 which is 1.0.1, unreleased; the existing 1.0.0 archives are unchanged.
 
 Before anything: read `CONTRIBUTING.md`, then run
@@ -50,9 +55,10 @@ the same without the check.
 Left, in order - each a verified commit (`CONTRIBUTING.md`, "How work is
 done here"):
 
-1. **The flat-source list forms and append merge** below.
-2. **The accepted follow-up**, with its own tests and compatibility
-   checks before a new release.
+1. **Doctor history/blame and default-drift preflight**, using observed
+   reports rather than implementing another resolver.
+2. **Optional configuration read/use coverage**, with its secrecy,
+   concurrency and binding checks.
 3. **The remaining decisions and ideas**, only when selected, each
    addition a minor version.
 
@@ -60,9 +66,8 @@ done here"):
 
 These additions are agreed, not completed: Doctor history/blame across
 a sequence of reports, preflight detection of changed application
-defaults, and optional configuration read/use coverage. The original
-flat-source list forms and append merge below also remain open. Each
-needs implementation and tests; no release is a substitute for them.
+defaults, and optional configuration read/use coverage. Each needs
+implementation and tests; no release is a substitute for them.
 
 ## Ideas
 
@@ -91,13 +96,6 @@ Worth building, in the order they serve the library's purpose.
   cannot add.
 * **Doctor `--only-changed`** and **CFD012 against the contract** rather
   than the key list.
-* **Lists from a flat source**: D-02's append mode, and Design.md's
-  separator form (`MYAPP_TAGS="a,b,c"`) and repeated flag (`--tag a
-  --tag b`), were designed and never built; the documents say so. A list
-  from the environment or the command line is index keys and a count.
-  Done looks like a definition that declares a separator, the two
-  sources expanding to index keys and a count as they are read, and a
-  merge mode that extends a lower source's list, each with a test.
 * **Established readers behind options**: the owner (2026-11-01) would
   rather a maintained library, behind a `CF_WITH_*` option, than one
   written here - as libyaml, expat and SQLite already are. A JSON reader

@@ -105,6 +105,31 @@ typedef struct cf_keysink {
 CF_API cf_bool              cf_keysink_init(cf_keysink* k, cf_keyspace* ks, int rank);
 CF_API const cf_entry_sink* cf_keysink_of(cf_keysink* k);
 
+struct cf_defset;
+struct cf_list_input;
+
+/* Definition-aware flat input. Repeated mode treats each occurrence
+   as one command-line element; otherwise each environment assignment
+   replaces the source's list and uses its declared separator.
+   Finish emits the repeated lists' counts once, not once per element.
+   Environment and dotenv lexers run twice: natural_pass true accepts
+   unique definition-derived names, then false accepts canonical names.
+   Exact canonical definitions win ambiguity; escaped spellings win
+   over natural aliases regardless of enumeration order. */
+typedef struct cf_listsink {
+    cf_keysink              base;
+    const struct cf_defset* defs;
+    struct cf_list_input*   lists;
+    cf_bool                 repeated;
+    cf_bool                 natural_pass;
+    cf_entry_sink           sink;
+} cf_listsink;
+
+CF_API cf_bool cf_listsink_init(cf_listsink* out, cf_keyspace* ks, int rank,
+                                const struct cf_defset* defs, cf_bool repeated);
+CF_API const cf_entry_sink* cf_listsink_of(cf_listsink* out);
+CF_API cf_bool              cf_listsink_finish(cf_listsink* out);
+
 /* ------------------------------------------------------------------ *
  * Lexers
  *

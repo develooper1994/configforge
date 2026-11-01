@@ -300,6 +300,185 @@ static void test_sweep_with_sources(void) {
     check(leaks == 0, "an arena releases every block on every path");
 }
 
+struct oom_list_input {
+    const cf_allocator* allocator;
+    const cf_pair*      pairs;
+    size_t              count;
+    cf_bool             writable;
+};
+
+static unsigned g_oom_writes;
+
+static cf_bool oom_store_load(const cf_source* s, cf_keyspace* ks) {
+    return cf_ks_add_text(ks, "tags.count", 10, s->rank, "1", 1, "test store") &&
+           cf_ks_add_text(ks, "tags.0", 6, s->rank, "stored", 6, "test store");
+}
+
+static cf_bool oom_store_write(const cf_source* s, const cf_write_item* items,
+                               size_t count, const char* meta, cf_error* err) {
+    (void)s;
+    (void)meta;
+    (void)err;
+    ++g_oom_writes;
+    check(count == 1 && strcmp(items[0].key, "tags.0") == 0 &&
+              items[0].op == CF_WRITE_SET && items[0].value.type == CF_TYPE_TEXT &&
+              items[0].value.u.t.n == 3 && memcmp(items[0].value.u.t.p, "new", 3) == 0,
+          "the write callback receives the complete source-local assignment");
+    return CF_TRUE;
+}
+
+static const cf_source_vtable oom_store_vt = {
+    sizeof(cf_source_vtable), "test-store", oom_store_load, NULL, NULL,
+    oom_store_write};
+
+static cf_builder* oom_list_build(void* user) {
+    struct oom_list_input* input = (struct oom_list_input*)user;
+    cf_builder*            b     = cf_build(input->allocator);
+    cf_def                 d;
+    cf_value               v;
+    if (b == NULL) {
+        return NULL;
+    }
+    cf_def_init(&d, CF_TYPE_TEXT, "tags");
+    d.list_mode   = CF_LIST_APPEND;
+    d.flags       = CF_RESTART;
+    d.has_default = CF_TRUE;
+    cf_value_text(&v, "default", 7);
+    d.list_defaults      = &v;
+    d.list_default_count = 1;
+    cf_builder_define(b, &d);
+    cf_builder_text(b, "level", "old", 0);
+    if (input->writable) {
+        cf_source s;
+        memset(&s, 0, sizeof s);
+        s.vt   = &oom_store_vt;
+        s.name = "store";
+        s.rank = CF_RANK_USER_FILE;
+        cf_builder_source(b, &s);
+        cf_builder_writable(b, "store");
+    } else {
+        cf_builder_memory(b, "mem", CF_RANK_USER_FILE, input->pairs, input->count);
+    }
+    return b;
+}
+
+static void test_list_reload_sweep(void) {
+    static const cf_pair before[] = {
+        {"tags.count", "1"}, {"tags.0", "$${literal}"}, {"level", "old"}};
+    static const cf_pair after[] = {
+        {"tags.count", "2"}, {"tags.0", "new"}, {"tags.1", "extra"}, {"level", "new"}};
+    size_t  budget, refused = 0;
+    cf_bool complete = CF_FALSE;
+    for (budget = 0; budget < 128; ++budget) {
+        failing               f;
+        cf_allocator          alloc;
+        struct oom_list_input input;
+        cf_live*              live;
+        cf_config*            c;
+        cf_live_result        result;
+        cf_error              err = CF_ERROR_INIT;
+        cf_u64                digest;
+        f.budget = (size_t)-1;
+        f.calls = f.live = 0;
+        alloc.alloc      = failing_alloc;
+        alloc.release    = failing_release;
+        alloc.ctx        = &f;
+        input.allocator  = &alloc;
+        input.pairs      = before;
+        input.count      = 3;
+        input.writable   = CF_FALSE;
+        live = cf_live_open(CF_LIVE_MANUAL, oom_list_build, NULL, &input, &alloc, &err);
+        check(live != NULL, "open the list before injecting reload failures");
+        if (live == NULL) {
+            break;
+        }
+        c      = cf_live_get(live);
+        digest = cf_digest(c);
+        cf_config_free(c);
+        input.pairs = after;
+        input.count = 4;
+        f.budget    = budget;
+        result      = cf_live_reload(live, &err);
+        c           = cf_live_get(live);
+        if (result == CF_LIVE_FAILED) {
+            ++refused;
+            check(err.code != CF_OK && err.message[0] != '\0' &&
+                      cf_digest(c) == digest && cf_live_generation(live) == 1,
+                  "a failed list reload reports why and leaves the running snapshot "
+                  "intact");
+        } else {
+            check(
+                result == CF_LIVE_SWAPPED && cf_get_int(c, "tags.count", -1) == 2 &&
+                    strcmp(cf_get_text(c, "tags.1", ""), "${literal}") == 0 &&
+                    strcmp(cf_get_text(c, "level", ""), "new") == 0,
+                "a successful reload keeps the complete list, never a partial overlay");
+            complete = f.budget > 0;
+        }
+        cf_config_free(c);
+        cf_live_close(live);
+        check(f.live == 0,
+              "every failed or successful list reload releases its allocations");
+        if (complete) {
+            break;
+        }
+    }
+    check(refused > 0 && complete,
+          "reload sweep reaches failure and unconstrained success");
+}
+
+static void test_list_write_sweep(void) {
+    size_t  budget, refused = 0;
+    cf_bool complete = CF_FALSE;
+    for (budget = 0; budget < 128; ++budget) {
+        failing               f;
+        cf_allocator          alloc;
+        struct oom_list_input input;
+        cf_config*            c;
+        cf_write_item         item;
+        cf_error              err = CF_ERROR_INIT;
+        cf_u64                digest;
+        f.budget = (size_t)-1;
+        f.calls = f.live = 0;
+        alloc.alloc      = failing_alloc;
+        alloc.release    = failing_release;
+        alloc.ctx        = &f;
+        memset(&input, 0, sizeof input);
+        input.allocator = &alloc;
+        input.writable  = CF_TRUE;
+        c               = cf_builder_create(oom_list_build(&input), &err);
+        check(c != NULL, "build the list before injecting write failures");
+        if (c == NULL) {
+            break;
+        }
+        digest   = cf_digest(c);
+        item.key = "tags.1";
+        item.op  = CF_WRITE_SET;
+        cf_value_text(&item.value, "new", 3);
+        g_oom_writes = 0;
+        f.budget     = budget;
+        if (!cf_write(c, "store", &item, 1, NULL, &err)) {
+            ++refused;
+            check(err.code == CF_E_MEMORY && err.message[0] != '\0' &&
+                      g_oom_writes == 0,
+                  "a failed write never calls the source with partial mapped keys");
+        } else {
+            check(g_oom_writes == 1,
+                  "a successful write calls its source exactly once");
+            complete = f.budget > 0;
+        }
+        check(cf_digest(c) == digest && cf_get_int(c, "tags.count", -1) == 2 &&
+                  strcmp(cf_get_text(c, "tags.1", ""), "stored") == 0,
+              "write authorization and mapping never mutate the read snapshot");
+        cf_config_free(c);
+        check(f.live == 0, "a mapped write releases every temporary allocation");
+        if (complete) {
+            break;
+        }
+    }
+    check(refused > 0 && complete,
+          "write sweep reaches failure and unconstrained success");
+}
+
 int main(void) {
     /* Every allocation in a run, refused in turn, at three sizes. The
        count has to grow with the configuration or the sweeps are not
@@ -314,6 +493,8 @@ int main(void) {
     check(g_not_growing == 0, "a bigger configuration took strictly more allocations");
 
     test_sweep_with_sources();
+    test_list_reload_sweep();
+    test_list_write_sweep();
 
     printf("%d checks, %d failures\n", g_run, g_fail);
     return g_fail == 0 ? 0 : 1;

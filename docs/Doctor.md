@@ -87,6 +87,21 @@ specification: a full report loaded as a source reproduces a production configur
 locally. That is why the schema belongs to the library rather than to this tool, and why a
 value-blind report must be structurally distinguishable from a full one.
 
+Declared scalar lists retain the flat `<key>.<index>` and `<key>.count`
+entries. Their definition metadata adds a `list` object with `key`,
+`merge` (`replace` or `append`), and `separator` (one character, or
+`null` for no splitting). A list root's default is an array; an element's
+default follows its actual default candidate, not its final appended
+index. Sensitive defaults are absent from blind reports.
+
+Candidates moved by append merging carry `written_key`, their original
+source-local key. Aggregate counts have `synthesized: true`: they are not
+another assignment or a duplicate exposure by that source. A running
+restart-only list held through reload has `pinned: true` on its held
+candidates. These are additive schema-1 fields; readers that do not use
+them can ignore them. Full Report Replay loads the resolved list as an
+append base, so lower defaults are not appended again.
+
 The report is produced in two ways:
 
 * **Predicted.** Doctor resolves offline from files and a declared environment. Used

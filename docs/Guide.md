@@ -293,6 +293,53 @@ discovers the plugins under an open prefix. Both go in byte order, where
 `upstream.10` comes before `upstream.2`: an array is read with
 `cf_array_count` and `cf_array_key`, which is in order.
 
+### Declared scalar lists
+
+For a list of scalars, declare the element contract once:
+
+```c
+cf_def tags;
+cf_value initial;
+cf_def_init(&tags, CF_TYPE_TEXT, "tags");
+tags.list_mode = CF_LIST_APPEND;       /* or CF_LIST_REPLACE */
+tags.list_separator = ',';
+cf_value_text(&initial, "built-in", 8);
+tags.has_default = CF_TRUE;
+tags.list_defaults = &initial;
+tags.list_default_count = 1;
+cf_builder_define(b, &tags);
+```
+
+The definition and defaults are copied. Type, range, text-length limits,
+allowed spellings, sensitivity and policy apply to every element.
+`has_default` with a zero count declares an empty default. Read the
+result with the existing `cf_array_count`, `cf_array_key` and getters;
+there is no separate array value type.
+
+`APP_TAGS=a,,b` supplies three elements, including the empty middle one,
+when the environment or dotenv source uses prefix `APP_`. An empty
+assignment supplies an empty list. A zero separator disables splitting;
+there is no CSV quoting or trimming at the split step. Command-line
+`--tags=a --tags=b` supplies two elements; aliases share the same list,
+commas are literal and `--tags=` is one empty text element. Even boolean
+lists take explicit values.
+
+REPLACE uses the winning count and ordinary per-index resolution.
+APPEND concatenates permitted source-local lists from lowest to highest
+precedence, using the definition's policy order where present. Each
+contributor supplies its own count; a source without one supplies
+final-index patches instead. Count templates are refused in APPEND mode
+because offsets must be known before references expand. References in
+elements resolve against the final layout.
+
+Declared lists require canonical decimal indices and a dense selected
+range below their count; nested members and scalar root assignments
+are refused. Undeclared arrays retain the earlier, looser rules.
+Reports keep original assignments and locations, add `written_key` for
+moved candidates, and mark aggregate counts `synthesized`. Images and
+full Report Replay are resolved bases, so reloading one does not append
+the program's defaults again.
+
 ## 7. Errors
 
 A `cf_error` is a plain struct the caller owns, filled by the call that
@@ -514,6 +561,15 @@ refused, and so is any key whose policy says it may only come from the
 environment. `cf_store_set` writes a store without asking, for
 provisioning one before the program runs.
 
+For an APPEND list, `cf_write` and `cf_edit` address the final list:
+updating `tags.2` may write `tags.0` in its contributing store. A store
+without a count can instead set or delete final-index patches. Count
+changes, deleting a contributing element, and patching another
+contributor from a count-bearing store are explicitly refused before
+any item is written. Structural changes need a complete source-local
+update during provisioning; `cf_store_set` bypasses grants and
+validation and is not an administration-page substitute for `cf_write`.
+
 ```text
 log.level = "debug"  (text)
   store       "debug"               selected   app.db: admin, 2026-10-24: incident 42
@@ -593,6 +649,13 @@ server.port = 8080  (int)
   gateway.ini 9443                  shadowed   gateway.ini:2:1
   default     8080                  shadowed
 ```
+
+A `CF_RESTART` scalar list is held whole when its count or any element
+changes, even in APPEND mode or under a restrictive source policy.
+The count and held members appear in `cf_live_restarts`; an initially
+empty list stays empty. Held values retain their types and literal
+reference text. Derived views preserve a held list; a fresh build after
+restart accepts the newly configured list.
 
 The check (`preflight` above) sees every snapshot before readers can,
 the first included: a rule of the program's, or Doctor itself -

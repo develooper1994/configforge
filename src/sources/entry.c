@@ -3,9 +3,167 @@
  */
 
 #include "configforge/cf_entry.h"
+#include "configforge/cf_define.h"
 #include "configforge/cf_serialize.h"
 
 #include <string.h>
+
+struct cf_list_input {
+    const cf_def*         def;
+    size_t                count;
+    const char*           at;
+    struct cf_list_input* next;
+};
+
+static cf_bool entry_list_count(cf_listsink* out, const cf_def* d, size_t count,
+                                const char* at) {
+    char     key[CF_KEY_MAX];
+    size_t   n = cf_fmt(key, sizeof key, "%s.count", d->key);
+    cf_value v;
+    if (n >= sizeof key || (cf_u64)count > (cf_u64)CF_I64_MAX) {
+        out->base.failed = CF_TRUE;
+        return CF_FALSE;
+    }
+    cf_value_int(&v, (cf_i64)count);
+    return out->base.sink.typed(out->base.sink.ctx, key, n, &v, at);
+}
+
+static cf_bool entry_list_item(cf_listsink* out, const cf_def* d, size_t index,
+                               const char* value, size_t n, const char* at) {
+    char   key[CF_KEY_MAX];
+    size_t klen = cf_fmt(key, sizeof key, "%s.%zu", d->key, index);
+    if (klen >= sizeof key || (cf_u64)index >= (cf_u64)CF_I64_MAX) {
+        out->base.failed = CF_TRUE;
+        return CF_FALSE;
+    }
+    return out->base.sink.text(out->base.sink.ctx, key, klen, value, n, at);
+}
+
+static const cf_def* entry_natural_def(const cf_defset* ds, const char* key,
+                                       size_t klen) {
+    const cf_def* found = NULL;
+    cf_keymap     map;
+    size_t        i;
+    cf_keymap_init(&map, CF_KEYMAP_ENV, NULL);
+    for (i = 0; i < cf_defset_count(ds); ++i) {
+        const cf_def* d = cf_defset_at(ds, i);
+        char          natural[CF_KEY_MAX], mapped[CF_KEY_MAX];
+        size_t n = cf_keymap_from_key(&map, d->key, strlen(d->key), CF_FALSE, natural,
+                                      sizeof natural);
+        size_t m = cf_keymap_to_key(&map, natural, n, mapped, sizeof mapped);
+        if (n == 0 || m != klen || memcmp(mapped, key, klen) != 0) {
+            continue;
+        }
+        if (found != NULL) {
+            return NULL;
+        }
+        found = d;
+    }
+    return found;
+}
+
+static cf_bool entry_list_text(void* ctx, const char* key, size_t klen,
+                               const char* value, size_t n, const char* at) {
+    cf_listsink*  out = (cf_listsink*)ctx;
+    const cf_def* d   = cf_defset_find(out->defs, key, klen);
+    size_t        i, start = 0, count = 0;
+    if (!out->repeated) {
+        const cf_def* natural =
+            d == NULL ? entry_natural_def(out->defs, key, klen) : NULL;
+        if (out->natural_pass) {
+            if (natural == NULL) {
+                return CF_TRUE;
+            }
+            d    = natural;
+            key  = d->key;
+            klen = strlen(key);
+        } else if (natural != NULL) {
+            return CF_TRUE; /* already recorded by the natural pass */
+        }
+    }
+    if (d == NULL || d->list_mode == CF_LIST_NONE) {
+        return out->base.sink.text(out->base.sink.ctx, key, klen, value, n, at);
+    }
+    if (out->repeated) {
+        struct cf_list_input* p;
+        for (p = out->lists; p != NULL && p->def != d; p = p->next) {
+        }
+        if (p == NULL) {
+            p = (struct cf_list_input*)cf_arena_calloc(out->base.ks->arena, sizeof *p);
+            if (p == NULL) {
+                out->base.failed = CF_TRUE;
+                return CF_FALSE;
+            }
+            p->def     = d;
+            p->next    = out->lists;
+            out->lists = p;
+        }
+        if (!entry_list_item(out, d, p->count, value, n, at)) {
+            return CF_FALSE;
+        }
+        ++p->count;
+        p->at = at != NULL ? cf_arena_dup(out->base.ks->arena, at, strlen(at)) : NULL;
+        if (at != NULL && p->at == NULL) {
+            out->base.failed = CF_TRUE;
+            return CF_FALSE;
+        }
+        return CF_TRUE;
+    }
+    if (n != 0) {
+        for (i = 0; i <= n; ++i) {
+            if (i != n && (d->list_separator == 0 || value[i] != d->list_separator)) {
+                continue;
+            }
+            if (!entry_list_item(out, d, count, value + start, i - start, at)) {
+                return CF_FALSE;
+            }
+            ++count;
+            start = i + 1;
+        }
+    }
+    return entry_list_count(out, d, count, at);
+}
+
+static cf_bool entry_list_typed(void* ctx, const char* key, size_t klen,
+                                const cf_value* value, const char* at) {
+    cf_listsink* out = (cf_listsink*)ctx;
+    return out->base.sink.typed(out->base.sink.ctx, key, klen, value, at);
+}
+
+cf_bool cf_listsink_init(cf_listsink* out, cf_keyspace* ks, int rank,
+                         const cf_defset* defs, cf_bool repeated) {
+    if (out == NULL) {
+        return CF_FALSE;
+    }
+    memset(out, 0, sizeof *out);
+    if (!cf_keysink_init(&out->base, ks, rank)) {
+        return CF_FALSE;
+    }
+    out->defs       = defs;
+    out->repeated   = repeated;
+    out->sink.ctx   = out;
+    out->sink.text  = entry_list_text;
+    out->sink.typed = entry_list_typed;
+    return CF_TRUE;
+}
+
+const cf_entry_sink* cf_listsink_of(cf_listsink* out) {
+    return out != NULL ? &out->sink : NULL;
+}
+
+cf_bool cf_listsink_finish(cf_listsink* out) {
+    struct cf_list_input* p;
+    if (out == NULL || out->base.failed) {
+        return CF_FALSE;
+    }
+    for (p = out->lists; p != NULL; p = p->next) {
+        if (!entry_list_count(out, p->def, p->count, p->at)) {
+            return CF_FALSE;
+        }
+    }
+    out->lists = NULL;
+    return CF_TRUE;
+}
 
 /* ================================================================== *
  * Key mapping

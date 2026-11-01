@@ -40,6 +40,26 @@ print(cfg.server.port, cf.read(cfg, Settings).debug)
 print(cfg.explain("server.port"))
 ```
 
+Declare scalar lists with `define_list`. The element type is `str`,
+`int`, `bool` or `float` (when reals are built); defaults are copied.
+
+```python
+cfg = (cf.Builder()
+       .define_list("tags", str, ["base"], append=True, aliases=["t"])
+       .env("env", cf.rank.ENV, "APP_", {"APP_TAGS": "one,two"})
+       .cli("cli", cf.rank.CLI, ["app", "-t", "three"])
+       .create())
+tags = [cfg["tags.%d" % i] for i in range(cfg["tags.count"])]
+assert tags == ["base", "one", "two", "three"]
+```
+
+Without `append`, the winning count replaces the length. An empty
+environment value is an empty list; an empty CLI argument is an empty
+element. `separator=""` disables splitting. `min`, `max`, `allowed`,
+`policy`, `aliases` and definition flags apply through the native list
+contract. A custom older library without `has_feature("lists")` is
+refused when this method is used rather than silently defining a scalar.
+
 For an existing custom shared build, `CONFIGFORGE_LIB` still overrides
 the bundled library; the library's limits must match the binding.
 `configforge_doctor` drives a separately installed Doctor program from

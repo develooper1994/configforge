@@ -35,7 +35,10 @@ file(GLOB headers "${SRC}/include/configforge/*.h")
 list(SORT headers)
 set(declared "")
 foreach(h ${headers})
-  file(STRINGS "${h}" lines)
+  # Comments can contain unmatched brackets, which join CMake list
+  # elements. Only declarations and the relevant directives are tokens.
+  file(STRINGS "${h}" lines
+       REGEX "^(#if CF_WITH_REAL|#endif|(CF_NODISCARD[ \t]+)?CF_API[ \t])")
   set(real FALSE)
   foreach(l IN LISTS lines)
     if(l MATCHES "^#if CF_WITH_REAL")

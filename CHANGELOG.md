@@ -7,6 +7,20 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- Declared scalar lists with copied typed defaults, per-element
+  constraints, separator-delimited environment/dotenv inputs and
+  repeated command-line options. REPLACE keeps per-index resolution;
+  APPEND combines source-local contributions in precedence or policy
+  order while preserving original keys and assignment history.
+  Reports and JSON Schema describe the list contract. Resolved
+  snapshots do not append defaults twice.
+- Python `Builder.define_list` and Rust `Def::list` with typed list
+  defaults and aliases. The `lists` runtime capability lets bindings
+  refuse unsupported libraries rather than silently define scalars.
+- Whole-list restart protection during live reload, and source-local
+  index translation for writes to existing appended elements.
+  Ambiguous structural writes are refused before the source callback.
+
 - A searchable documentation site built directly from the existing
   Markdown and generated API reference, retaining repository-relative
   links. Strict builds, anchor validation and search-index checks run
@@ -30,6 +44,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- Reload preserves typed running values without reinterpreting literal
+  `${...}` text. Replaying a snapshot retains original insertion order,
+  including same-source duplicate precedence.
+- Natural environment and dotenv spellings no longer also create an
+  unknown underscore key. Exact canonical definitions win ambiguous
+  spellings, and escaped names win independently of enumeration order.
 - Blind reports and single-key JSON omit sensitive defaults from
   definition metadata as well as redacting candidates. Previously a
   selected or shadowed secret default was still visible there.

@@ -52,6 +52,12 @@ typedef enum cf_on_invalid {
     CF_INVALID_FALLBACK
 } cf_on_invalid;
 
+typedef enum cf_list_mode {
+    CF_LIST_NONE = 0,
+    CF_LIST_REPLACE,
+    CF_LIST_APPEND
+} cf_list_mode;
+
 /* A descriptor rather than a chained builder. C89 has no designated
    initializers, so a positionally filled struct would be fragile and
    one filled only by assignment would be verbose; cf_def_init plus
@@ -101,6 +107,25 @@ typedef struct cf_def {
        NULL means the global precedence order, which is what almost
        every key wants. */
     const char* const* policy;
+
+    /* A scalar list still consists of <key>.0, <key>.1, ... and
+       <key>.count. `type`, ranges, allowed spellings and length bounds
+       describe its elements. NONE retains the scalar contract above.
+       REPLACE uses the winning count; APPEND extends lower-precedence
+       lists. Both are explicit, never inferred from a text value.
+
+       Environment values split at this ASCII separator, without CSV
+       quoting or whitespace trimming. Zero disables splitting. An
+       empty environment value is an empty list. Each command-line
+       occurrence supplies one element, including an empty text value.
+
+       With has_default, list_defaults[0..list_default_count) is the
+       typed default list; a zero count is an empty default. The values
+       and their text are copied. default_value is for scalars only. */
+    cf_list_mode    list_mode;
+    char            list_separator;
+    const cf_value* list_defaults;
+    size_t          list_default_count;
 } cf_def;
 
 /* Initialise a descriptor: every field zero, `size` the caller's
@@ -118,6 +143,7 @@ CF_API void cf_def_init_sized(cf_def* d, size_t size, cf_type type, const char* 
 /* The definition model knows that sources exist and nothing about what
    they are, which is the direction the layering requires. */
 struct cf_source;
+struct cf_list_projection;
 
 #define CF_MAX_OPEN_PREFIXES 8
 
@@ -139,8 +165,10 @@ typedef struct cf_defset {
        the plugin is not in the program either. Without this, Tier 1 and
        a dynamic key space are mutually exclusive - which the first
        example that tried to iterate plugins discovered immediately. */
-    const char* open_prefixes[CF_MAX_OPEN_PREFIXES];
-    size_t      open_count;
+    const char*                open_prefixes[CF_MAX_OPEN_PREFIXES];
+    size_t                     open_count;
+    struct cf_list_projection* lists;
+    cf_bool partial; /* write authorization checks only the supplied keys */
 } cf_defset;
 
 CF_API cf_bool cf_defset_init(cf_defset* ds, cf_arena* arena, size_t hint);
@@ -162,7 +190,7 @@ CF_API cf_bool cf_def_real(cf_defset* ds, const char* key, double dflt, double m
                            double max, unsigned flags, cf_error* err);
 #endif
 
-/* Sorts. Required before lookup; calling twice is harmless. */
+/* Sorts for binary lookup; calling twice is harmless. */
 CF_API void cf_defset_seal(cf_defset* ds);
 
 /* Exempt a prefix from unknown-key rejection. */
@@ -172,7 +200,17 @@ CF_API cf_bool cf_defset_open(cf_defset* ds, const char* prefix, cf_error* err);
    only, so opening "plugins" does not open "pluginsomething". */
 CF_API cf_bool cf_defset_is_open(const cf_defset* ds, const char* key, size_t keylen);
 
+/* Authored descriptors are returned for exact keys. A declared list's
+   count and canonical decimal indices return immutable scalar
+   projections; an item projection's key is the list root. Enumeration
+   still returns only authored descriptors. */
 CF_API const cf_def* cf_defset_find(const cf_defset* ds, const char* key,
+                                    size_t keylen);
+/* The declared list containing a key, including its root. Unlike find,
+   this also finds a list whose caller supplied an invalid member name,
+   so the apply pass can refuse that member instead of treating it as
+   an unrelated, undefined setting. */
+CF_API const cf_def* cf_defset_list(const cf_defset* ds, const char* key,
                                     size_t keylen);
 CF_API size_t        cf_defset_count(const cf_defset* ds);
 CF_API const cf_def* cf_defset_at(const cf_defset* ds, size_t i);
@@ -246,6 +284,9 @@ CF_API cf_bool cf_source_defaults(struct cf_source* s, const char* name, int ran
    contract only the escaped spelling can be enumerated unambiguously;
    with one, both work and nobody has to type the escape. */
 CF_API void cf_source_env_defs(struct cf_source* s, const cf_defset* ds);
+
+/* Give a .env file the same natural names and list separators. */
+CF_API void cf_source_dotenv_defs(struct cf_source* s, const cf_defset* ds);
 
 /* Give the command-line source the key list, which is what unlocks
    --key value, --no-key and aliases. Without it only the = form carries

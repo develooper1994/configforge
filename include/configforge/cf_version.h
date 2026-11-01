@@ -65,7 +65,10 @@ CF_API const char* cf_build_id(void);
 
 /* What this build can do, as a NUL-terminated list: "ini", "json",
    "real", and so on. Recorded in the provenance report as well, so a
-   report from a restricted build is distinguishable from a full one. */
+   report from a restricted build is distinguishable from a full one.
+   "lists" means the sized definition supports scalar lists, their
+   flat-source forms and append merging; it is present in every build
+   that implements them, including a minimal build. */
 CF_API size_t      cf_feature_count(void);
 CF_API const char* cf_feature_at(size_t i);
 CF_API cf_bool     cf_has_feature(const char* name);

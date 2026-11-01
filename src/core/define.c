@@ -6,10 +6,17 @@
 
 #include <string.h>
 
-/* cf_def as 1.0 has it: the smallest a caller may pass. When a field is
-   added, this stays the offset just past `policy`, and a field after it
-   is read only where d->size reaches it. */
-#define DEF_SIZE_1_0 sizeof(cf_def)
+/* Do not read an extension from the tail padding of an older caller. */
+#define DEF_SIZE_1_0 (offsetof(cf_def, policy) + sizeof(((cf_def*)0)->policy))
+#define DEF_SIZE_LIST                                                                  \
+    (offsetof(cf_def, list_default_count) + sizeof(((cf_def*)0)->list_default_count))
+
+struct cf_list_projection {
+    cf_def                     count;
+    cf_def                     item;
+    size_t                     keylen;
+    struct cf_list_projection* next;
+};
 
 void cf_def_init_sized(cf_def* d, size_t size, cf_type type, const char* key) {
     if (d == NULL || size < DEF_SIZE_1_0) {
@@ -66,8 +73,30 @@ static cf_bool defset_grow(cf_defset* ds) {
  * value happens to exercise it.
  * ------------------------------------------------------------------ */
 
+static cf_bool def_check_default(const cf_def* d, const cf_value* v, cf_error* err) {
+    if (v->type != d->type) {
+        return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
+                            "default is %s but the parameter is %s",
+                            cf_type_name(v->type), cf_type_name(d->type));
+    }
+    if (d->has_range && d->type == CF_TYPE_INT &&
+        (v->u.i < d->imin || v->u.i > d->imax)) {
+        return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
+                            "default %I is outside its own range %I..%I", v->u.i,
+                            d->imin, d->imax);
+    }
+#if CF_WITH_REAL
+    if (d->has_range && d->type == CF_TYPE_REAL &&
+        (v->u.r < d->rmin || v->u.r > d->rmax)) {
+        return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
+                            "default is outside its own range");
+    }
+#endif
+    return CF_TRUE;
+}
+
 static cf_bool def_check(const cf_def* d, cf_error* err) {
-    size_t klen;
+    size_t klen, i;
 
     if (d == NULL || d->key == NULL) {
         return cf_error_set(err, CF_E_DEFINITION, NULL, NULL, "definition has no key");
@@ -131,26 +160,72 @@ static cf_bool def_check(const cf_def* d, cf_error* err) {
                             "required and defaulted at once: a default "
                             "means it can never be absent");
     }
-    if (d->has_default) {
-        if (d->default_value.type != d->type) {
+    if (d->list_mode != CF_LIST_NONE && d->list_mode != CF_LIST_REPLACE &&
+        d->list_mode != CF_LIST_APPEND) {
+        return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
+                            "unsupported list mode");
+    }
+    if (d->list_mode == CF_LIST_NONE) {
+        if (d->list_separator != 0 || d->list_defaults != NULL ||
+            d->list_default_count != 0) {
             return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
-                                "default is %s but the parameter is %s",
-                                cf_type_name(d->default_value.type),
-                                cf_type_name(d->type));
+                                "list settings need an explicit list mode");
         }
-        if (d->has_range && d->type == CF_TYPE_INT &&
-            (d->default_value.u.i < d->imin || d->default_value.u.i > d->imax)) {
+        return !d->has_default || def_check_default(d, &d->default_value, err);
+    }
+    if (klen > CF_KEY_MAX - sizeof(".count")) {
+        return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
+                            "list key leaves no room for its .count member");
+    }
+    if (d->default_value.type != CF_TYPE_NULL) {
+        return cf_error_set(
+            err, CF_E_DEFINITION, d->key, NULL,
+            "a list default belongs in list_defaults, not default_value");
+    }
+    if ((unsigned char)d->list_separator > 127) {
+        return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
+                            "list separator must be ASCII");
+    }
+    if ((!d->has_default && (d->list_defaults != NULL || d->list_default_count != 0)) ||
+        (d->list_default_count != 0 && d->list_defaults == NULL)) {
+        return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
+                            "list default needs has_default and its element values");
+    }
+    if (d->list_default_count > (size_t)-1 / sizeof(cf_value) ||
+        (cf_u64)d->list_default_count > (cf_u64)CF_I64_MAX) {
+        return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
+                            "list default is too large");
+    }
+    if (d->list_default_count != 0 &&
+        cf_fmt(NULL, 0, "%s.%zu", d->key, d->list_default_count - 1) >= CF_KEY_MAX) {
+        return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
+                            "list default indices exceed the key limit");
+    }
+    for (i = 0; i < d->list_default_count; ++i) {
+        if (!def_check_default(d, &d->list_defaults[i], err)) {
+            return CF_FALSE;
+        }
+        if (d->type == CF_TYPE_TEXT &&
+            (d->list_defaults[i].u.t.n < d->min_len ||
+             (d->max_len != 0 && d->list_defaults[i].u.t.n > d->max_len))) {
             return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
-                                "default %I is outside its own range %I..%I",
-                                d->default_value.u.i, d->imin, d->imax);
+                                "list default element %zu violates its length bounds",
+                                i);
         }
-#if CF_WITH_REAL
-        if (d->has_range && d->type == CF_TYPE_REAL &&
-            (d->default_value.u.r < d->rmin || d->default_value.u.r > d->rmax)) {
-            return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
-                                "default is outside its own range");
+        if (d->allowed != NULL) {
+            size_t j;
+            for (j = 0; d->allowed[j] != NULL; ++j) {
+                if (strlen(d->allowed[j]) == d->list_defaults[i].u.t.n &&
+                    memcmp(d->allowed[j], d->list_defaults[i].u.t.p,
+                           d->list_defaults[i].u.t.n) == 0) {
+                    break;
+                }
+            }
+            if (d->allowed[j] == NULL) {
+                return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
+                                    "list default element %zu is not permitted", i);
+            }
         }
-#endif
     }
     return CF_TRUE;
 }
@@ -195,12 +270,53 @@ static const char* defset_dup(cf_arena* ar, const char* s, cf_bool* ok) {
     return out;
 }
 
+static cf_bool defset_under(const char* key, size_t n, const char* parent, size_t pn) {
+    return n > pn && key[pn] == '.' && memcmp(key, parent, pn) == 0;
+}
+
+static cf_bool defset_project_list(cf_defset* ds, const cf_def* d, size_t klen) {
+    struct cf_list_projection* p;
+    char*                      count_key;
+    p         = (struct cf_list_projection*)cf_arena_alloc(ds->arena, sizeof *p);
+    count_key = (char*)cf_arena_alloc(ds->arena, klen + sizeof(".count"));
+    if (p == NULL || count_key == NULL) {
+        return CF_FALSE;
+    }
+    memcpy(count_key, d->key, klen);
+    memcpy(count_key + klen, ".count", sizeof(".count"));
+    cf_def_init(&p->count, CF_TYPE_INT, count_key);
+    p->count.flags       = d->flags;
+    p->count.on_invalid  = d->on_invalid;
+    p->count.description = d->description;
+    p->count.policy      = d->policy;
+    p->count.has_range   = CF_TRUE;
+    p->count.imin        = 0;
+    p->count.imax        = CF_I64_MAX;
+    p->count.has_default = d->has_default;
+    cf_value_int(&p->count.default_value, (cf_i64)d->list_default_count);
+    p->item = *d;
+    p->item.flags &= ~(unsigned)CF_REQUIRED;
+    p->item.has_default = CF_FALSE;
+    cf_value_null(&p->item.default_value);
+    p->item.aliases            = NULL;
+    p->item.replaced_by        = NULL;
+    p->item.list_mode          = CF_LIST_NONE;
+    p->item.list_separator     = 0;
+    p->item.list_defaults      = NULL;
+    p->item.list_default_count = 0;
+    p->keylen                  = klen;
+    p->next                    = ds->lists;
+    ds->lists                  = p;
+    return CF_TRUE;
+}
+
 cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err) {
     size_t  klen;
     char*   key;
     size_t  i;
     cf_bool copied = CF_TRUE;
     cf_def* kept;
+    cf_def  normalized;
 
     if (ds == NULL || ds->defs == NULL) {
         return cf_error_set(err, CF_E_MEMORY, NULL, NULL,
@@ -210,15 +326,36 @@ cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err) {
         return cf_error_set(err, CF_E_DEFINITION, d ? d->key : NULL, NULL,
                             "the definition set is sealed");
     }
+    if (d == NULL || d->size < DEF_SIZE_1_0) {
+        return cf_error_set(err, CF_E_DEFINITION, NULL, NULL,
+                            "descriptor was not initialised with cf_def_init");
+    }
+    memset(&normalized, 0, sizeof normalized);
+    memcpy(&normalized, d, (d->size < sizeof normalized) ? d->size : sizeof normalized);
+    if (d->size < DEF_SIZE_LIST) {
+        normalized.list_mode          = CF_LIST_NONE;
+        normalized.list_separator     = 0;
+        normalized.list_defaults      = NULL;
+        normalized.list_default_count = 0;
+    }
+    d = &normalized;
     if (!def_check(d, err)) {
         return CF_FALSE;
     }
     klen = strlen(d->key);
 
     for (i = 0; i < ds->count; ++i) {
-        if (cf_key_cmp(ds->defs[i].key, strlen(ds->defs[i].key), d->key, klen) == 0) {
+        size_t n = strlen(ds->defs[i].key);
+        if (cf_key_cmp(ds->defs[i].key, n, d->key, klen) == 0) {
             return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
                                 "'%s' is defined twice", d->key);
+        }
+        if ((d->list_mode != CF_LIST_NONE &&
+             defset_under(ds->defs[i].key, n, d->key, klen)) ||
+            (ds->defs[i].list_mode != CF_LIST_NONE &&
+             defset_under(d->key, klen, ds->defs[i].key, n))) {
+            return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
+                                "a list owns its count and indexed member definitions");
         }
     }
     if (ds->count == ds->capacity && !defset_grow(ds)) {
@@ -234,7 +371,7 @@ cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err) {
        1.0 caller's cf_def is smaller than a later library's. */
     kept = &ds->defs[ds->count];
     memset(kept, 0, sizeof *kept);
-    memcpy(kept, d, (d->size < sizeof *kept) ? d->size : sizeof *kept);
+    *kept      = *d;
     kept->size = sizeof *kept;
     kept->key  = key;
 
@@ -251,7 +388,7 @@ cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err) {
                             "no room to copy the definition");
     }
 
-    if (d->has_default && d->type == CF_TYPE_TEXT) {
+    if (d->list_mode == CF_LIST_NONE && d->has_default && d->type == CF_TYPE_TEXT) {
         char* t =
             cf_arena_dup(ds->arena, d->default_value.u.t.p, d->default_value.u.t.n);
         if (t == NULL) {
@@ -259,6 +396,35 @@ cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err) {
                                 "no room to copy the default");
         }
         kept->default_value.u.t.p = t;
+    }
+    if (d->list_mode != CF_LIST_NONE) {
+        if (d->list_default_count != 0) {
+            cf_value* values = (cf_value*)cf_arena_alloc(
+                ds->arena, d->list_default_count * sizeof *values);
+            if (values == NULL) {
+                copied = CF_FALSE;
+            } else {
+                memcpy(values, d->list_defaults,
+                       d->list_default_count * sizeof *values);
+                for (i = 0; i < d->list_default_count && copied; ++i) {
+                    if (values[i].type == CF_TYPE_TEXT) {
+                        values[i].u.t.p =
+                            cf_arena_dup(ds->arena, values[i].u.t.p, values[i].u.t.n);
+                        if (values[i].u.t.p == NULL) {
+                            copied = CF_FALSE;
+                        }
+                    }
+                }
+                kept->list_defaults = values;
+            }
+        } else {
+            kept->list_defaults = NULL;
+        }
+        cf_value_null(&kept->default_value);
+        if (!copied || !defset_project_list(ds, kept, klen)) {
+            return cf_error_set(err, CF_E_MEMORY, d->key, NULL,
+                                "no room to copy the list definition");
+        }
     }
     ++ds->count;
     return CF_TRUE;
@@ -399,7 +565,7 @@ void cf_defset_seal(cf_defset* ds) {
     ds->sealed = CF_TRUE;
 }
 
-const cf_def* cf_defset_find(const cf_defset* ds, const char* key, size_t keylen) {
+static const cf_def* defset_exact(const cf_defset* ds, const char* key, size_t keylen) {
     size_t lo, hi;
 
     if (ds == NULL || ds->count == 0 || key == NULL) {
@@ -430,6 +596,55 @@ const cf_def* cf_defset_find(const cf_defset* ds, const char* key, size_t keylen
         }
     }
     return NULL;
+}
+
+static const struct cf_list_projection*
+defset_list_projection(const cf_defset* ds, const char* key, size_t keylen) {
+    const struct cf_list_projection* p;
+    if (ds == NULL || key == NULL) {
+        return NULL;
+    }
+    for (p = ds->lists; p != NULL; p = p->next) {
+        if ((keylen == p->keylen && memcmp(key, p->item.key, keylen) == 0) ||
+            defset_under(key, keylen, p->item.key, p->keylen)) {
+            return p;
+        }
+    }
+    return NULL;
+}
+
+const cf_def* cf_defset_find(const cf_defset* ds, const char* key, size_t keylen) {
+    const cf_def*                    d = defset_exact(ds, key, keylen);
+    const struct cf_list_projection* p;
+    size_t                           i;
+    cf_u64                           index = 0;
+    if (d != NULL) {
+        return d;
+    }
+    p = defset_list_projection(ds, key, keylen);
+    if (p == NULL || keylen <= p->keylen + 1) {
+        return NULL;
+    }
+    i = p->keylen + 1;
+    if (keylen - i == 5 && memcmp(key + i, "count", 5) == 0) {
+        return &p->count;
+    }
+    if (key[i] == '0' && keylen - i != 1) {
+        return NULL;
+    }
+    for (; i < keylen; ++i) {
+        unsigned digit = (unsigned char)key[i] - (unsigned)'0';
+        if (digit > 9 || index > ((cf_u64)CF_I64_MAX - digit) / 10) {
+            return NULL;
+        }
+        index = index * 10 + digit;
+    }
+    return &p->item;
+}
+
+const cf_def* cf_defset_list(const cf_defset* ds, const char* key, size_t keylen) {
+    const struct cf_list_projection* p = defset_list_projection(ds, key, keylen);
+    return p != NULL ? defset_exact(ds, p->item.key, p->keylen) : NULL;
 }
 
 size_t cf_defset_count(const cf_defset* ds) {

@@ -1,7 +1,8 @@
 # Two checks over the built library:
 #   forbidden imports  - no locale-sensitive C library function, and no
 #                        unbounded copy or tokenizer
-#   symbol prefixes    - every export begins with cf_ or CF_
+#   symbol prefixes    - cf_ and CF_ are public; cfi_ is internal, with
+#                        external linkage but without CF_API
 find_program(NM_EXE nm)
 if(NOT NM_EXE)
   message("symbol gate: nm not found, skipped")
@@ -69,7 +70,7 @@ string(REPLACE "\n" ";" lines "${defs}")
 foreach(line ${lines})
   if(line MATCHES "[0-9a-fA-F]+[ \t]+[TDBRW][ \t]+([A-Za-z_][A-Za-z0-9_]*)")
     set(sym "${CMAKE_MATCH_1}")
-    if(NOT sym MATCHES "^(cf_|CF_|_)")
+    if(NOT sym MATCHES "^(cf_|cfi_|CF_|_)")
       message("VIOLATION: unprefixed export ${sym}")
       set(bad 1)
     endif()

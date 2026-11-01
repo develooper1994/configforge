@@ -448,9 +448,42 @@ static void test_options(void) {
     check(cf_live_open_with(NULL, &err) == NULL, "and no options");
 }
 
+static cf_builder* live_literal_build(void* user) {
+    const cf_pair* const* pairs = (const cf_pair* const*)user;
+    cf_builder*           b     = cf_build(NULL);
+    cf_builder_text(b, "literal", NULL, CF_RESTART);
+    cf_builder_text(b, "level", "old", 0);
+    cf_builder_memory(b, "mem", CF_RANK_USER_FILE, *pairs, 2);
+    return b;
+}
+
+static void test_literal_pin(void) {
+    static const cf_pair before[] = {{"literal", "$${kept}"}, {"level", "old"}};
+    static const cf_pair after[]  = {{"literal", "changed"}, {"level", "new"}};
+    const cf_pair*       pairs    = before;
+    cf_error             err      = CF_ERROR_INIT;
+    cf_live*             live =
+        cf_live_open(CF_LIVE_MANUAL, live_literal_build, NULL, &pairs, NULL, &err);
+    cf_config* c;
+    check(live != NULL, "open a scalar containing a literal reference");
+    if (live == NULL) {
+        return;
+    }
+    pairs = after;
+    check(cf_live_reload(live, &err) == CF_LIVE_SWAPPED,
+          "keeping text does not reparse it as an authored template");
+    c = cf_live_get(live);
+    check(strcmp(cf_get_text(c, "literal", ""), "${kept}") == 0 &&
+              strcmp(cf_get_text(c, "level", ""), "new") == 0,
+          "literal scalar text is held while unrelated settings change");
+    cf_config_free(c);
+    cf_live_close(live);
+}
+
 int main(void) {
     test_options();
     test_auto_and_manual();
+    test_literal_pin();
     test_approve();
     test_poll();
 #if defined(CF_TEST_SYMLINKS)
