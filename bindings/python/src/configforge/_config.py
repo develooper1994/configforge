@@ -296,6 +296,14 @@ class Builder:
         n.lib.cf_builder_unknown(self._live(), policy)
         return self
 
+    def track_reads(self) -> "Builder":
+        """Record which keys the program reads. Reading a value, ``in`` and
+        ``get`` count; iterating keys, explaining and reporting do not, but
+        ``items()`` and ``to_dict()`` read every key they return. The
+        report then marks each key ``"read": true`` or ``false``."""
+        n.lib.cf_builder_track_reads(self._live())
+        return self
+
     def log(self, logger: Optional[logging.Logger] = None,
             level: int = logging.INFO) -> "Builder":
         """Send what is not an error - an unknown key under
@@ -512,6 +520,20 @@ class Config(collections.abc.Mapping):
     def changed(self) -> bool:
         """Whether a file it was read from has moved on: a hint."""
         return n.lib.cf_changed(self._c) != 0
+
+    @property
+    def tracks_reads(self) -> bool:
+        """Whether the builder asked for :meth:`Builder.track_reads`."""
+        return n.lib.cf_tracks_reads(self._c) != 0
+
+    def was_read(self, key: str) -> bool:
+        """Whether the program has read ``key``; asking is not a read."""
+        return n.lib.cf_was_read(self._c, key.encode("utf-8")) != 0
+
+    @property
+    def read_count(self) -> int:
+        """How many keys the program has read, each counted once."""
+        return n.lib.cf_read_count(self._c)
 
     # Changing ------------------------------------------------------------
 

@@ -44,6 +44,9 @@ typedef struct rkey {
     /* The definition's policy: the sources permitted to supply this
        key, in decreasing precedence. NULL-terminated, NULL if none. */
     const char** policy;
+    /* Read coverage: 1 read, 0 never read, -1 the report does not say
+       (the program did not track reads). See CFD018. */
+    int read;
 } rkey;
 
 /* One entry of the report's "sources" list. Rank is the library's own:

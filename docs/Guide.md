@@ -365,7 +365,13 @@ function returns asks to. A report from a tracking
 configuration gives every key `"read": true` or `false`, a boolean even
 in a blind report, so it shows configuration the program never used
 without showing a value. A key nothing supplied and no definition names
-is not in the configuration, so a read of one is not recorded.
+is not in the configuration, so a read of one is not recorded. Doctor
+reads it: CFD018 names each key a source set and the program never read.
+The bindings have the same calls: `Builder.track_reads()`,
+`Config.was_read(key)` and `Config.read_count` in Python;
+`Builder::track_reads`, `Config::was_read` and `Config::read_count` in
+Rust; `Builder::trackReads`, `Config::wasRead` and `Config::readCount`
+in C++.
 
 ## 7. Errors
 

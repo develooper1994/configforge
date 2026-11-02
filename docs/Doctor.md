@@ -335,6 +335,7 @@ Each rule has a stable identifier so it can be suppressed individually. Rules ma
 | CFD015 | **Array truncation hazard.** An element lies at or beyond the length the winning `<key>.count` gives its array - most often a longer list in a lower-precedence file under a shorter count from the command line - and was discarded. The finding names the count and where it came from. | warning | yes |
 | CFD016 | **Policy violation.** A source outside the key's per-parameter policy supplied it. The library rejected the candidate (D-33); this is where that becomes loud. | error | yes |
 | CFD017 | **Default drift.** In a diff, a key takes its declared default on one side or both, and the two defaults differ, or one side has none. A program's new default reaches every deployment that never set the key, and no configuration file shows it: `doctor diff deployed.json upgrade.json` names those keys before the upgrade does. Where both sides take their defaults, this is the finding and the value difference is not repeated. | warning | yes |
+| CFD018 | **Set but never read.** A source set the key and the program never read it: a setting that changes nothing, most often one the program has stopped reading. Only a report from a program that tracks its reads (`cf_builder_track_reads`) carries the evidence, and only for reads before the report was taken, so take it once the program has done its work. A key whose default won is not a setting and is not reported. | info | yes |
 
 `HISTORY` and `BLAME` are not rules of a configuration but records of a
 sequence (section 7c): each is `info`, and a severity file, a baseline or
@@ -631,6 +632,7 @@ D-Phase 3   SARIF output, CI templates, emit hook in the library
 D-Phase 4   foreign adapters: .NET, Spring, git config, systemd (built)
 D-Phase 5   history and blame over a sequence of reports (built)
 D-Phase 6   default drift between two reports, CFD017 (built)
+D-Phase 7   keys set and never read, from read coverage, CFD018 (built)
 ```
 
 Estimated size if the library already emits reports: 1500–2500 lines, three to four

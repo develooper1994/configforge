@@ -75,6 +75,22 @@ static cf_bool flag_at(const cf_keyspace* ks, const char* key, size_t klen,
     return (v != NULL && v->type == CF_TYPE_BOOL && v->u.b) ? CF_TRUE : CF_FALSE;
 }
 
+/* The key's "read": a boolean only where the program tracked reads. */
+static int read_at(const cf_keyspace* ks, const char* key, size_t klen) {
+    char            probe[CF_KEY_MAX];
+    const cf_value* v;
+    size_t          n = cf_fmt(probe, sizeof probe, "keys.%S.read", key, klen);
+
+    if (n >= sizeof probe) {
+        return -1;
+    }
+    v = cf_ks_get(ks, probe, n);
+    if (v == NULL || v->type != CF_TYPE_BOOL) {
+        return -1;
+    }
+    return v->u.b ? 1 : 0;
+}
+
 /* The length of the configuration key a report entry names, or 0 when it
    names none. A key is written as "selected.source" when a candidate won
    it and as a "selected" that is null when none did: an optional key
@@ -239,6 +255,7 @@ static cf_bool parse(report* r, const cf_blob* blob, cf_error* err) {
         rk->deprecated = flag_at(&r->doc, rk->key, rk->keylen, "deprecated");
         rk->replaced_by =
             text_at(&r->doc, "keys.%S.definition.replaced_by", rk->key, rk->keylen);
+        rk->read = read_at(&r->doc, rk->key, rk->keylen);
         /* A key with no definition has a null one in the report, which
            is how an undefined key is told from a defined one without a
            type. */
@@ -797,6 +814,7 @@ static const struct {
     {"CFD015", "Array truncation hazard"},
     {"CFD016", "Policy violation"},
     {"CFD017", "Default drift: the default a key falls back to differs"},
+    {"CFD018", "Set but never read"},
     {"VALUE", "Value differs between environments"},
     {"HISTORY", "Changed between one report of a sequence and the next"},
     {"BLAME", "The report a key's present state dates from"}};
@@ -1439,6 +1457,34 @@ static void rule_default_drift(const report* a, const report* b) {
     }
 }
 
+/* CFD018. A source set the key and the program never read it, as far
+   as the report saw: a setting that changes nothing, most often one the
+   program has stopped reading. Only a report from a program that
+   tracked reads (cf_builder_track_reads) says, and only what was read
+   before it was written, so take it once the program has done its
+   work. A key whose default won, or whose count a list made up, is not
+   a setting. */
+static void rule_unread(const report* r) {
+    size_t i;
+
+    for (i = 0; i < r->nkeys; ++i) {
+        const rkey* k = &r->keys[i];
+        const cand* w;
+        char        name[CF_KEY_MAX];
+
+        if (k->read != 0) {
+            continue;
+        }
+        w = winner(k);
+        if (w == NULL || w->is_default || w->synthesized) {
+            continue;
+        }
+        doctor_key_name(k, name, sizeof name);
+        finding_at(r->D, "CFD018", "info", name, w->at, "set by %s and never read",
+                   w->source);
+    }
+}
+
 /* The rules run from tables, through a pointer, rather than as a list of
    calls. Called directly, each is called once, so a compiler may inline
    every one into the same frame without sharing their buffers: Alpine's
@@ -1450,7 +1496,8 @@ static const lint_rule g_lint_rules[] = {
     rule_unreachable, rule_dead_source, rule_required,
     rule_refused,     rule_policy,      rule_sensitive_source,
     rule_inversion,   rule_undefined,   rule_deprecated,
-    rule_empty,       rule_truncated,   rule_default_only};
+    rule_empty,       rule_truncated,   rule_default_only,
+    rule_unread};
 
 static const diff_rule g_diff_rules[] = {rule_origin_drift, rule_shadow_divergence,
                                          rule_default_drift, rule_value_diff};

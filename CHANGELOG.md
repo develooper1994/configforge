@@ -42,7 +42,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   and a report from a tracking configuration gives every key a
   `read` boolean, blind reports included. Off by default, with no
   change to a read; on, each key's flag is atomic and set once, so
-  concurrent reads stay safe (D-14). Bindings and a Doctor rule follow.
+  concurrent reads stay safe (D-14). The Python, Rust and C++ bindings
+  have the same calls, and Doctor's CFD018 names each key a source set
+  and the program never read.
 
 - A searchable documentation site built directly from the existing
   Markdown and generated API reference, retaining repository-relative

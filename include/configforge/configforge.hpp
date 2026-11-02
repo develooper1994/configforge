@@ -269,6 +269,16 @@ public:
     bool has(const char* key) const
     { return cf_has(c_, key) != CF_FALSE; }
 
+    /* Read coverage (Builder::trackReads); asking is not a read. */
+    bool tracksReads() const
+    { return cf_tracks_reads(c_) != CF_FALSE; }
+
+    bool wasRead(const char* key) const
+    { return cf_was_read(c_, key) != CF_FALSE; }
+
+    size_t readCount() const
+    { return cf_read_count(c_); }
+
     cf_type typeOf(const char* key) const
     { return cf_type_of(c_, key); }
 
@@ -750,6 +760,10 @@ public:
 
     Builder& unknown(cf_unknown_policy p)
     { if (b_) { cf_builder_unknown(b_, p); } return *this; }
+
+    /* Record which keys the program reads (cf_builder_track_reads). */
+    Builder& trackReads()
+    { if (b_) { cf_builder_track_reads(b_); } return *this; }
 
     /* Where what is not an error goes (cf_log.h). `user` must outlive
        every configuration built from here, derived ones included. */

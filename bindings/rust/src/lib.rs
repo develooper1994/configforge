@@ -602,6 +602,14 @@ impl Builder {
         self
     }
 
+    /// Record which keys the program reads: a getter and `has` count;
+    /// iterating, explaining and reporting do not. A derived snapshot
+    /// tracks too, from nothing.
+    pub fn track_reads(self) -> Builder {
+        unsafe { sys::cf_builder_track_reads(self.b) };
+        self
+    }
+
     /// Resolve everything, once. The error names the key and the place.
     pub fn create(mut self) -> Result<Config, Error> {
         if let Some(refused) = self.keep.refusal() {
@@ -672,6 +680,22 @@ impl Config {
     pub fn has(&self, key: &str) -> bool {
         let k = c(key);
         unsafe { sys::cf_has(self.c, k.as_ptr()) != 0 }
+    }
+
+    /// Whether the builder asked for [`Builder::track_reads`].
+    pub fn tracks_reads(&self) -> bool {
+        unsafe { sys::cf_tracks_reads(self.c) != 0 }
+    }
+
+    /// Whether the program has read `key`; asking is not a read.
+    pub fn was_read(&self, key: &str) -> bool {
+        let k = c(key);
+        unsafe { sys::cf_was_read(self.c, k.as_ptr()) != 0 }
+    }
+
+    /// How many keys the program has read, each counted once.
+    pub fn read_count(&self) -> usize {
+        unsafe { sys::cf_read_count(self.c) }
     }
 
     pub fn int(&self, key: &str, fallback: i64) -> i64 {
@@ -912,5 +936,38 @@ mod list_tests {
             .unwrap();
         assert_eq!(cfg.int("tags.count", -1), 2);
         assert_eq!(cfg.text("tags.1").as_deref(), Some("a,b"));
+    }
+}
+
+#[cfg(test)]
+mod read_tests {
+    use super::{Builder, Def};
+
+    #[test]
+    fn reads_are_recorded_when_asked_for() {
+        let plain = Builder::new()
+            .define(Def::int("port").default_int(8080))
+            .create()
+            .unwrap();
+        assert!(!plain.tracks_reads());
+        let cfg = Builder::new()
+            .define(Def::int("port").default_int(8080))
+            .define(Def::text("host").default_text("web1"))
+            .define(Def::boolean("tls").default_bool(false))
+            .track_reads()
+            .create()
+            .unwrap();
+        assert!(cfg.tracks_reads());
+        cfg.explain("port");
+        cfg.keys("");
+        assert!(!cfg.was_read("port"), "explaining and listing are not reads");
+        assert_eq!(cfg.int("port", 0), 8080);
+        assert!(cfg.has("tls"));
+        assert!(cfg.was_read("port") && cfg.was_read("tls"));
+        assert!(!cfg.was_read("host"));
+        assert_eq!(cfg.read_count(), 2);
+        let derived = cfg.derive("admin", &[]).unwrap();
+        assert!(derived.tracks_reads());
+        assert_eq!(derived.read_count(), 0, "a derived snapshot starts afresh");
     }
 }

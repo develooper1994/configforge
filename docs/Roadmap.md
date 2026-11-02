@@ -47,9 +47,10 @@ Their verification includes allocation failures, wasm32 and frozen
 1.0.0 clients on 32-bit and 64-bit Windows. These changes are on `main`,
 which is 1.0.1, unreleased; the existing 1.0.0 archives are unchanged.
 Doctor history/blame is built (`docs/Doctor.md`, section 7c), and so is
-default drift (CFD017, section 8). Read coverage is built in C
-(`cf_builder_track_reads`, `docs/Guide.md` section 6, and a `read`
-boolean per key in a tracking configuration's report).
+default drift (CFD017, section 8). Read coverage is built
+(`cf_builder_track_reads`, `docs/Guide.md` section 6, a `read` boolean
+per key in a tracking configuration's report, the three bindings, and
+Doctor's CFD018).
 
 Before anything: read `CONTRIBUTING.md`, then run
 `sh scripts/buildenv/dev-setup.sh --check` (Windows:
@@ -59,22 +60,17 @@ the same without the check.
 Left, in order - each a verified commit (`CONTRIBUTING.md`, "How work is
 done here"):
 
-1. **Read coverage, the rest**: the Python, Rust and C++ bindings
-   (`track_reads`, `was_read`, `read_count`), and a Doctor rule that
-   names a key an operator set and the program never read, from a
-   report's `read`.
-2. **A last organization pass**: CMake modules in their own directory,
+1. **A last organization pass**: CMake modules in their own directory,
    no generation step that is not needed, and C99 only where it makes
    the code simpler without losing a supported compiler.
-3. **The remaining decisions and ideas**, only when selected, each
+2. **The remaining decisions and ideas**, only when selected, each
    addition a minor version.
 
 ### Accepted follow-up
 
-These additions are agreed, not completed: read coverage's bindings and
-Doctor rule. Its C side is built, with its secrecy and concurrency
-checks; no release is a substitute for the rest. Doctor history/blame
-and default-drift detection are built.
+The agreed additions are built: Doctor history/blame, default-drift
+detection and read coverage. What is left is the organization pass
+above; no release is a substitute for it.
 
 ## Ideas
 

@@ -912,6 +912,60 @@ static void test_default_marks(void) {
     cf_doctor_free(d);
 }
 
+/* CFD018. A program that tracks its reads: what a source set and the
+   program never read is a setting that changes nothing. One that does
+   not track says nothing either way. */
+static void test_unread(void) {
+    static char prog[] = "prog", port[] = "--port=9000", host[] = "--host=web1";
+    char*       argv[4];
+    int         track;
+
+    argv[0] = prog;
+    argv[1] = port;
+    argv[2] = host;
+    argv[3] = NULL;
+    for (track = 1; track >= 0; --track) {
+        cf_error          err = CF_ERROR_INIT;
+        cf_builder*       b   = cf_build(NULL);
+        cf_doctor*        d   = cf_doctor_new();
+        cf_config*        c;
+        const cf_finding* f;
+
+        cf_builder_cli(b, "cli", CF_RANK_CLI, 3, argv);
+        cf_builder_int(b, "port", 8080, 1, 65535, 0);
+        cf_builder_text(b, "host", "localhost", 0);
+        cf_builder_bool(b, "tls", CF_FALSE, 0);
+        if (track) {
+            cf_builder_track_reads(b);
+        }
+        c = cf_builder_create(b, &err);
+        check(c != NULL && d != NULL, err.message);
+        if (c == NULL || d == NULL) {
+            cf_config_free(c);
+            cf_doctor_free(d);
+            return;
+        }
+        (void)cf_get_int(c, "port", 0);
+        (void)cf_get_bool(c, "tls", CF_FALSE);
+        check(cf_doctor_lint(d, c, NULL, &err),
+              "a configuration that tracks is linted");
+        f = find(d, "CFD018", "host");
+        if (track) {
+            check(f != NULL && strcmp(f->level, "info") == 0 && f->at != NULL &&
+                      strcmp(f->at, "argv[2]") == 0 &&
+                      strstr(f->message, "set by cli and never read") != NULL,
+                  "a value the command line set and nothing read");
+            check(find(d, "CFD018", "port") == NULL, "a value read is not one");
+            check(find(d, "CFD018", "tls") == NULL, "nor is a default never read");
+        } else {
+            check(count_rule(d, "CFD018", NULL) == 0,
+                  "without tracking there is no finding");
+        }
+        cf_doctor_free(d);
+        cf_config_free(c);
+    }
+}
+
 int main(void) {
 #if CF_WITH_REPORT && CF_WITH_JSON
     test_lint();
@@ -929,6 +983,7 @@ int main(void) {
     test_history();
     test_default_drift();
     test_default_marks();
+    test_unread();
 #else
     /* A configuration's report needs both; without them the library
        says so. */

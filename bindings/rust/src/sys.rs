@@ -288,6 +288,10 @@ extern "C" {
     pub fn cf_builder_define(b: *mut cf_builder, d: *const cf_def) -> cf_bool;
     pub fn cf_builder_open(b: *mut cf_builder, prefix: *const c_char) -> cf_bool;
     pub fn cf_builder_unknown(b: *mut cf_builder, policy: c_int);
+    pub fn cf_builder_track_reads(b: *mut cf_builder);
+    pub fn cf_tracks_reads(c: *const cf_config) -> cf_bool;
+    pub fn cf_was_read(c: *const cf_config, key: *const c_char) -> cf_bool;
+    pub fn cf_read_count(c: *const cf_config) -> usize;
 
     pub fn cf_iter_keys(it: *mut cf_iter, c: *const cf_config, prefix: *const c_char) -> cf_bool;
     pub fn cf_iter_children(

@@ -177,6 +177,27 @@ class Reading(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             b.create()
 
+    def test_read_coverage(self):
+        self.assertFalse(server_cfg().tracks_reads, "off unless asked for")
+        cfg = (cf.Builder()
+               .memory("file", rank.USER_FILE, {"server.port": 9443})
+               .define_int("server.port", 8080, 1, 65535)
+               .define_text("server.host", "0.0.0.0")
+               .define_bool("tls.enabled", False)
+               .track_reads()
+               .create())
+        self.assertTrue(cfg.tracks_reads)
+        cfg.explain("server.port")
+        cfg.keys()
+        self.assertFalse(cfg.was_read("server.port"), "explaining and listing are not reads")
+        self.assertEqual(cfg.server.port, 9443)
+        self.assertIn("tls.enabled", cfg)
+        self.assertTrue(cfg.was_read("server.port"))
+        self.assertTrue(cfg.was_read("tls.enabled"))
+        self.assertFalse(cfg.was_read("server.host"))
+        self.assertEqual(cfg.read_count, 2)
+        self.assertEqual(cfg.derive("admin", {}).read_count, 0, "a derived snapshot starts afresh")
+
 
 @dataclasses.dataclass
 class Server:

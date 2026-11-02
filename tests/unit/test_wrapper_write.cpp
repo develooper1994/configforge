@@ -83,6 +83,21 @@ int main()
         check(c.report(info).empty(), "and is empty for an info that was never sized");
     }
 
+    /* Read coverage: off unless asked for; a getter and has() read,
+       wasRead() does not. */
+    check(!c.tracksReads(), "reads are not tracked unless asked for");
+    cf::Config t = cf::Builder()
+                       .memory("mem", CF_RANK_USER_FILE, pairs, 1)
+                       .defineInt("server.port", 8080, 1, 65535)
+                       .defineBool("tls.enabled", false)
+                       .trackReads()
+                       .create();
+    check(t.valid() && t.tracksReads(), "trackReads() reaches the builder");
+    check(!t.wasRead("server.port"), "nothing is read yet");
+    check(t.get<int>("server.port", 0) == 9000 && t.has("tls.enabled"), "two reads");
+    check(t.wasRead("server.port") && t.wasRead("tls.enabled"), "both recorded");
+    check(t.readCount() == 2, "readCount() counts keys");
+
     std::printf("%d checks, %d failures\n", g_run, g_fail);
     return g_fail == 0 ? 0 : 1;
 }
