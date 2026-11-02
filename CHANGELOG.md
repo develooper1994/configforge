@@ -31,6 +31,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   report is read and room for every finding reserved before anything is
   recorded, so failure adds nothing. `cf_doctor_history_files`,
   `cf_doctor_blame_files` and Python `history`/`blame` expose the same.
+- Default drift (CFD017): `doctor diff` warns where a key takes its
+  declared default on either side and the defaults differ, or one side
+  has none, so an upgrade's changed default is found by diffing the
+  deployed report against the upgrade's. Report candidates that are a
+  declared default carry `declared_default: true`, an additive schema-1
+  field; Doctor reads an older report's defaults by source kind.
 
 - A searchable documentation site built directly from the existing
   Markdown and generated API reference, retaining repository-relative

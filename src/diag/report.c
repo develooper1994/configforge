@@ -271,6 +271,14 @@ static void report_candidate(cf_sink* out, const cf_candidate* c,
     if ((c->flags & CF_CAND_PINNED) != 0) {
         cf_sink_puts(out, ", \"pinned\": true");
     }
+    /* Which candidate is a declared default, said by the candidate: the
+       source a report names is found by rank, and a caller's own source
+       at the defaults' rank, or a derived configuration's stand-in,
+       answers to it. An aggregate list count is a result, not a
+       default, even when a default fed it. */
+    if ((c->flags & CF_CAND_DEFAULT) != 0 && (c->flags & CF_CAND_LIST_RESULT) == 0) {
+        cf_sink_puts(out, ", \"declared_default\": true");
+    }
     if (original != NULL) {
         cf_sink_puts(out, ", \"written_key\": ");
         report_quote_z(out, original);

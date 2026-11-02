@@ -966,7 +966,7 @@ CF_DOCTOR_API cf_doctor* cf_doctor_new(void);
 CF_DOCTOR_API void cf_doctor_free(cf_doctor* d);
 ```
 
-Implementation: [`cf_doctor_new` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1557), [`cf_doctor_free` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1567).
+Implementation: [`cf_doctor_new` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1660), [`cf_doctor_free` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1670).
 
 A context, or NULL when there is no memory for one.
 
@@ -975,7 +975,7 @@ CF_DOCTOR_API cf_bool cf_doctor_accept(cf_doctor* d, const char* rule, const cha
 CF_DOCTOR_API cf_bool cf_doctor_baseline(cf_doctor* d, const char* path, cf_error* err);
 ```
 
-Implementation: [`cf_doctor_accept` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1577), [`cf_doctor_baseline` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1589).
+Implementation: [`cf_doctor_accept` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1680), [`cf_doctor_baseline` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1692).
 
 A finding already accepted - "CFD001", "server.port" - so it is
 counted and not reported. cf_doctor_baseline reads them from a file,
@@ -987,7 +987,7 @@ CF_DOCTOR_API cf_bool cf_doctor_severity(cf_doctor* d, const char* rule, const c
 CF_DOCTOR_API cf_bool cf_doctor_severity_file(cf_doctor* d, const char* path, cf_error* err);
 ```
 
-Implementation: [`cf_doctor_severity` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1597), [`cf_doctor_severity_file` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1620).
+Implementation: [`cf_doctor_severity` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1700), [`cf_doctor_severity_file` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1723).
 
 Where a project disagrees with a rule's default: `level` is "error",
 "warning", "info" or "off", for every profile or only `profile`.
@@ -1000,7 +1000,7 @@ CF_DOCTOR_API cf_bool cf_doctor_lint_report(cf_doctor* d, const char* json, size
 CF_DOCTOR_API cf_bool cf_doctor_lint_file(cf_doctor* d, const char* path, cf_error* err);
 ```
 
-Implementation: [`cf_doctor_lint` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1698), [`cf_doctor_lint_report` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1667), [`cf_doctor_lint_file` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1683).
+Implementation: [`cf_doctor_lint` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1801), [`cf_doctor_lint_report` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1770), [`cf_doctor_lint_file` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1786).
 
 Lint one configuration. A cf_config is reported in memory, with every
 value, so the type and range rules can run; `profile` is the one the
@@ -1015,7 +1015,7 @@ CF_DOCTOR_API cf_bool cf_doctor_diff_report(cf_doctor* d, const char* a, size_t 
 CF_DOCTOR_API cf_bool cf_doctor_diff_files(cf_doctor* d, const char* a, const char* b, cf_error* err);
 ```
 
-Implementation: [`cf_doctor_diff` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1752), [`cf_doctor_diff_report` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1714), [`cf_doctor_diff_files` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1734).
+Implementation: [`cf_doctor_diff` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1855), [`cf_doctor_diff_report` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1817), [`cf_doctor_diff_files` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1837).
 
 Compare two: what one has and the other lacks, values from sources
 of different kinds, overrides in one and not the other, and every
@@ -1026,7 +1026,7 @@ CF_DOCTOR_API cf_bool cf_doctor_history_files(cf_doctor* d, const char* const* p
 CF_DOCTOR_API cf_bool cf_doctor_blame_files(cf_doctor* d, const char* const* paths, size_t n, const char* key, cf_error* err);
 ```
 
-Implementation: [`cf_doctor_history_files` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1827), [`cf_doctor_blame_files` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1847).
+Implementation: [`cf_doctor_history_files` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1930), [`cf_doctor_blame_files` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1950).
 
 A sequence of reports, oldest first - one service's report from each
 deployment - in the order given; a report's own date is not trusted
@@ -1048,7 +1048,7 @@ CF_DOCTOR_API size_t cf_doctor_count(const cf_doctor* d);
 CF_DOCTOR_API const cf_finding* cf_doctor_finding(cf_doctor* d, size_t i);
 ```
 
-Implementation: [`cf_doctor_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1871), [`cf_doctor_finding` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1875).
+Implementation: [`cf_doctor_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1974), [`cf_doctor_finding` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1978).
 
 The findings so far, in the order they were found.
 
@@ -1056,7 +1056,7 @@ The findings so far, in the order they were found.
 CF_DOCTOR_API size_t cf_doctor_count_at(const cf_doctor* d, const char* level);
 ```
 
-Implementation: [`cf_doctor_count_at` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1890).
+Implementation: [`cf_doctor_count_at` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1993).
 
 How many at a level - "error", "warning", "info" - or "accepted", for
 the ones the baseline accepted.
@@ -1066,7 +1066,7 @@ CF_DOCTOR_API size_t cf_doctor_stale_count(const cf_doctor* d);
 CF_DOCTOR_API cf_bool cf_doctor_stale(const cf_doctor* d, size_t i, const char** rule, const char** key);
 ```
 
-Implementation: [`cf_doctor_stale_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1909), [`cf_doctor_stale` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1923).
+Implementation: [`cf_doctor_stale_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2012), [`cf_doctor_stale` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2026).
 
 Baseline entries that matched nothing: a fix worth noticing, or a
 rule that quietly stopped working.
@@ -1106,7 +1106,7 @@ CF_DOCTOR_API const char* cf_doctor_rule_id(size_t i);
 CF_DOCTOR_API const char* cf_doctor_rule_text(const char* id);
 ```
 
-Implementation: [`cf_doctor_rule_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1944), [`cf_doctor_rule_id` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1948), [`cf_doctor_rule_text` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1952).
+Implementation: [`cf_doctor_rule_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2047), [`cf_doctor_rule_id` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2051), [`cf_doctor_rule_text` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2055).
 
 The rule catalogue (Doctor.md): each rule's id and what it finds.
 
@@ -2748,7 +2748,7 @@ distinguishable at the top rather than by inspection.
 CF_API size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds, const cf_source_view* sv, const cf_report_info* info, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_report_write` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L422).
+Implementation: [`cf_report_write` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L430).
 
 Render the report. Measure-or-write: with a NULL buffer nothing is
 stored and the length still accumulates. `info` may be NULL, for a
@@ -2762,7 +2762,7 @@ nothing.
 CF_API size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds, const cf_source_view* sv, const char* key, size_t keylen, cf_report_mode mode, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_report_key_write` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L386).
+Implementation: [`cf_report_key_write` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L394).
 
 One key as the report writes it, alone - explain() for a machine:
 
@@ -2779,7 +2779,7 @@ Measure-or-write; 0 without CF_WITH_REPORT.
 CF_API size_t cf_schema_write(const cf_defset* ds, const char* title, cf_bool closed, char* buf, size_t cap, cf_error* err);
 ```
 
-Implementation: [`cf_schema_write` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L755).
+Implementation: [`cf_schema_write` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L763).
 
 The definitions as a JSON Schema (draft 2020-12), for editors: a file
 that names it gets completion, documentation and validation as it is
@@ -2807,19 +2807,19 @@ refused rather than half-applied.
 CF_API size_t cf_source_replay_state_size(void);
 ```
 
-Implementation: [`cf_source_replay_state_size` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L1004).
+Implementation: [`cf_source_replay_state_size` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L1012).
 
 ```c
 CF_API cf_bool cf_source_replay(cf_source* s, const char* name, int rank, const char* path, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_replay` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L1008).
+Implementation: [`cf_source_replay` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L1016).
 
 ```c
 CF_API const cf_error* cf_source_replay_error(const cf_source* s);
 ```
 
-Implementation: [`cf_source_replay_error` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L1028).
+Implementation: [`cf_source_replay_error` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L1036).
 
 ## cf_serialize.h
 

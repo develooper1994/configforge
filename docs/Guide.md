@@ -336,7 +336,9 @@ Declared lists require canonical decimal indices and a dense selected
 range below their count; nested members and scalar root assignments
 are refused. Undeclared arrays retain the earlier, looser rules.
 Reports keep original assignments and locations, add `written_key` for
-moved candidates, and mark aggregate counts `synthesized`. Images and
+moved candidates, and mark aggregate counts `synthesized`. A declared
+default's candidate says `declared_default`, which is how `doctor diff`
+finds a default an upgrade changed (CFD017). Images and
 full Report Replay are resolved bases, so reloading one does not append
 the program's defaults again.
 

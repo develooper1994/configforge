@@ -103,6 +103,31 @@ static size_t entry_key_length(const cf_entry* e) {
     return 0;
 }
 
+/* A report from before candidates said which one is a default marks
+   none, and there the source does: a source of the kind "default", or,
+   absent from the table of sources, one named so. A caller's own source
+   at the defaults' rank is not told apart this way, which is why the
+   mark exists. */
+static void defaults_by_source(report* r) {
+    size_t i, j, s;
+
+    for (i = 0; i < r->nkeys; ++i) {
+        for (j = 0; j < r->keys[i].nc; ++j) {
+            cand*       c    = &r->keys[i].c[j];
+            const char* kind = c->source;
+
+            for (s = 0; s < r->nsrc; ++s) {
+                if (r->src[s].name != NULL && strcmp(r->src[s].name, c->source) == 0) {
+                    kind = (r->src[s].kind != NULL) ? r->src[s].kind : "";
+                    break;
+                }
+            }
+            c->is_default =
+                (!c->synthesized && strcmp(kind, "default") == 0) ? CF_TRUE : CF_FALSE;
+        }
+    }
+}
+
 /* Report keys are escaped into the document's own key space, so a
    configuration key "server.port" appears as "keys.server.port.*".
    Recovering the original means stripping the prefix and the field
@@ -112,6 +137,7 @@ static cf_bool parse(report* r, const cf_blob* blob, cf_error* err) {
     const char*     path = r->path;
     cf_flatten      fl;
     size_t          i;
+    cf_bool         marked = CF_FALSE;
 
     if (json == NULL) {
         return cf_error_set(err, CF_E_CAPABILITY, NULL, path,
@@ -285,9 +311,19 @@ static cf_bool parse(report* r, const cf_blob* blob, cf_error* err) {
                              rk->keylen, j);
                 rk->c[j].synthesized =
                     (wr != NULL && strcmp(wr, "true") == 0) ? CF_TRUE : CF_FALSE;
+                wr = text_at(&r->doc, "keys.%S.candidates.%zu.declared_default",
+                             rk->key, rk->keylen, j);
+                rk->c[j].is_default =
+                    (wr != NULL && strcmp(wr, "true") == 0) ? CF_TRUE : CF_FALSE;
+                if (rk->c[j].is_default) {
+                    marked = CF_TRUE;
+                }
             }
             ++rk->nc;
         }
+    }
+    if (!marked) {
+        defaults_by_source(r);
     }
     return CF_TRUE;
 }
@@ -760,6 +796,7 @@ static const struct {
     {"CFD014", "Sensitive value differs"},
     {"CFD015", "Array truncation hazard"},
     {"CFD016", "Policy violation"},
+    {"CFD017", "Default drift: the default a key falls back to differs"},
     {"VALUE", "Value differs between environments"},
     {"HISTORY", "Changed between one report of a sequence and the next"},
     {"BLAME", "The report a key's present state dates from"}};
@@ -1324,6 +1361,9 @@ static void rule_value_diff(const report* a, const report* b) {
         if (ca == NULL || cb == NULL || values_agree(ca, cb) != AGREE_NO) {
             continue;
         }
+        if (ca->is_default && cb->is_default) {
+            continue; /* CFD017's: two defaults, not two configurations */
+        }
 
         doctor_key_name(ka, name, sizeof name);
         if (ca->value == NULL || cb->value == NULL) {
@@ -1332,6 +1372,69 @@ static void rule_value_diff(const report* a, const report* b) {
         } else {
             finding(a->D, "VALUE", "info", name, "%s here, %s there", ca->value,
                     cb->value);
+        }
+    }
+}
+
+/* The candidate that is the key's declared default, if it has one. */
+static const cand* default_of(const rkey* k) {
+    size_t j;
+
+    for (j = 0; j < k->nc; ++j) {
+        if (k->c[j].is_default && !k->c[j].synthesized) {
+            return &k->c[j];
+        }
+    }
+    return NULL;
+}
+
+/* CFD017. A key takes its declared default on one side or both, and the
+   defaults are not the same: the program changed what it falls back
+   to, which no configuration file shows. A new release's default
+   reaches every deployment that never set the key, so diffing the
+   deployed report against the candidate's names those keys before the
+   upgrade does. A default on one side only is the same hazard. */
+static void rule_default_drift(const report* a, const report* b) {
+    size_t i;
+
+    for (i = 0; i < a->nkeys; ++i) {
+        const rkey* ka = &a->keys[i];
+        const rkey* kb = doctor_find_key(b, ka->key, ka->keylen);
+        const cand *da, *db;
+        cf_bool     here, there;
+        const char* side;
+        char        name[CF_KEY_MAX];
+
+        if (kb == NULL) {
+            continue;
+        }
+        da    = default_of(ka);
+        db    = default_of(kb);
+        here  = (da != NULL && winner(ka) == da) ? CF_TRUE : CF_FALSE;
+        there = (db != NULL && winner(kb) == db) ? CF_TRUE : CF_FALSE;
+        if (!here && !there) {
+            continue;
+        }
+        doctor_key_name(ka, name, sizeof name);
+        side = (here && there) ? "in both" : here ? "here" : "there";
+        if (da == NULL || db == NULL) {
+            finding(a->D, "CFD017", "warning", name,
+                    "takes its default %s; %s it has none", side,
+                    here ? "there" : "here");
+        } else if (values_agree(da, db) != AGREE_NO) {
+            continue;
+        } else if (da->value == NULL || db->value == NULL) {
+            finding(a->D, "CFD017", "warning", name,
+                    "takes its default %s; the defaults differ (by digest)", side);
+        } else if (here && there) {
+            finding(a->D, "CFD017", "warning", name,
+                    "takes its default in both, '%s' here and '%s' there", da->value,
+                    db->value);
+        } else {
+            finding(a->D, "CFD017", "warning", name,
+                    "takes its default %s, '%s'; %s the default is '%s'", side,
+                    here ? da->value : db->value, here ? "there" : "here",
+                    here ? db->value : da->value);
         }
     }
 }
@@ -1350,7 +1453,7 @@ static const lint_rule g_lint_rules[] = {
     rule_empty,       rule_truncated,   rule_default_only};
 
 static const diff_rule g_diff_rules[] = {rule_origin_drift, rule_shadow_divergence,
-                                         rule_value_diff};
+                                         rule_default_drift, rule_value_diff};
 
 void doctor_lint_reports(const report* r) {
     size_t i;

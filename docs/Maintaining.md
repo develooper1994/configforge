@@ -65,6 +65,7 @@ The first round:
 | a script that restaged formatted files also pulled the next unit's edits into the index | the verify scripts never restage; format before staging, and `gate.format` refuses what was not; a unit's version of a shared file is built into the index with `git hash-object` and `update-index` |
 | `cmake -DSRC=. -P ...` run from PowerShell lost its value, and `gate.abi` wrote the symbol list to the root of the drive, twice | the gate refuses a `SRC` that is not the repository; `-D` scripts run from a POSIX shell |
 | `cf_live`'s lock livelocked, and tcc builds had no atomics while claiming thread safety | a ticket lock; `cf_port.h` refuses a threaded build without atomics; `CONTRIBUTING.md`. and one step up, a per-test timeout in `verify` (`TEST_TIMEOUT`, 900 s), so the next hang fails in minutes, not hours |
+| a full Windows verify stopped every test of MSVC's sanitize preset at a dialog for a missing DLL | `ConfigForgeAnalysis.cmake` copies AddressSanitizer's runtime beside each program; the note on the Windows verify below |
 
 ## Working habits that paid
 
@@ -72,6 +73,9 @@ The first round:
   false at run time (`x == -77777 && ...`), never a constant: `/WX`
   turns C4127 into a build failure, the old binary stays, and the test
   "passes". Treat any build error as "proof not run".
+* **Undo a mutation by writing the file, or touch it after a copy**:
+  `Copy-Item` and `cp -p` keep the saved file's older time, the build
+  takes the mutant's objects as current, and the restored code "fails".
 * **A new build type or toolchain is worth one real run**: `-O3` Alpine,
   MSVC Release and FreeBSD clang each found a bug no preset could.
 * **A native Clang pass is not clang-tidy.** CI runs both. A broad native

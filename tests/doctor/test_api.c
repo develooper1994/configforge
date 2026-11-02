@@ -787,6 +787,131 @@ static void test_history(void) {
     }
 }
 
+/* A program's blind report: a port it defaults to `port`, a token, a
+   secret, it defaults to `token`, and the command line `arg` if any. */
+static size_t default_report(cf_i64 port, const char* token, const char* arg, char* buf,
+                             size_t cap) {
+    static char    prog[] = "prog";
+    char           a1[64];
+    char*          list[3];
+    cf_error       err = CF_ERROR_INIT;
+    cf_builder*    b   = cf_build(NULL);
+    cf_config*     c;
+    cf_report_info info = CF_REPORT_INFO_INIT;
+    size_t         n;
+    int            argc = 1;
+
+    list[0] = prog;
+    if (arg != NULL) {
+        cf_fmt(a1, sizeof a1, "%s", arg);
+        list[argc++] = a1;
+    }
+    list[argc] = NULL;
+    cf_builder_cli(b, "cli", CF_RANK_CLI, argc, list);
+    cf_builder_int(b, "port", port, 1, 65535, 0);
+    cf_builder_text(b, "token", token, CF_SENSITIVE);
+    c = cf_builder_create(b, &err);
+    if (c == NULL) {
+        return 0;
+    }
+    info.mode = CF_REPORT_BLIND;
+    n         = cf_report(c, &info, buf, cap);
+    cf_config_free(c);
+    return n < cap ? n : 0;
+}
+
+static cf_doctor* default_compare(const char* a, size_t an, const char* b, size_t bn) {
+    cf_error   err = CF_ERROR_INIT;
+    cf_doctor* d   = cf_doctor_new();
+
+    check(d != NULL && an > 0 && bn > 0 &&
+              cf_doctor_diff_report(d, a, an, "<a>", b, bn, "<b>", &err),
+          "two reports are compared");
+    return d;
+}
+
+/* CFD017. Today's deployment and an upgrade's: the same value from
+   different defaults is invisible to a value diff and reaches every
+   deployment that never set the key. */
+static void test_default_drift(void) {
+    static char       ra[16384], rb[16384], rc[16384];
+    size_t            an = default_report(8080, "alpha", NULL, ra, sizeof ra);
+    size_t            bn = default_report(9090, "bravo", "--port=8080", rb, sizeof rb);
+    size_t            cn = default_report(9090, "alpha", NULL, rc, sizeof rc);
+    cf_doctor*        d;
+    const cf_finding* f;
+
+    d = default_compare(ra, an, rb, bn);
+    f = find(d, "CFD017", "port");
+    check(f != NULL && strcmp(f->level, "warning") == 0 &&
+              strstr(f->message, "takes its default here, '8080'; there the default "
+                                 "is '9090'") != NULL,
+          "a value one side defaults to and the other sets: the defaults differ");
+    check(find(d, "VALUE", "port") == NULL, "which no value diff shows");
+    f = find(d, "CFD017", "token");
+    check(f != NULL && strstr(f->message, "takes its default in both; the defaults "
+                                          "differ (by digest)") != NULL,
+          "a secret's defaults are compared by digest");
+    check(find(d, "CFD014", "token") == NULL, "and said once, as a default");
+    cf_doctor_free(d);
+
+    d = default_compare(ra, an, rc, cn);
+    f = find(d, "CFD017", "port");
+    check(f != NULL &&
+              strstr(f->message, "takes its default in both, '8080' here and '9090' "
+                                 "there") != NULL,
+          "two defaults that differ, both taken");
+    check(find(d, "VALUE", "port") == NULL, "are one finding, not a value diff too");
+    check(find(d, "CFD017", "token") == NULL, "the same default is no drift");
+    cf_doctor_free(d);
+
+    d = default_compare(ra, an, ra, an);
+    check(count_rule(d, "CFD017", NULL) == 0, "and a report against itself has none");
+    cf_doctor_free(d);
+}
+
+/* What the candidate says decides; a report without the mark is read by
+   its sources, a kind "default" or a name, as it was before the mark. */
+static void test_default_marks(void) {
+    /* clang-format off */
+    static const char marked[] =
+        "{\"configforge_report\":1,\"keys\":{"
+        SEQ_KEY("k", "app", "\"value\":\"1\",\"declared_default\":true") "}}";
+    static const char by_kind[] =
+        "{\"configforge_report\":1,\"sources\":[{\"name\":\"base\","
+        "\"kind\":\"default\",\"rank\":0}],\"keys\":{"
+        SEQ_KEY("k", "base", "\"value\":\"2\"") "}}";
+    static const char unmarked[] =
+        "{\"configforge_report\":1,\"keys\":{"
+        SEQ_KEY("k", "app", "\"value\":\"1\"") "}}";
+    static const char by_name[] =
+        "{\"configforge_report\":1,\"keys\":{"
+        SEQ_KEY("k", "default", "\"value\":\"2\"") "}}";
+    /* clang-format on */
+    cf_doctor*        d;
+    const cf_finding* f;
+
+    d = default_compare(marked, sizeof marked - 1, by_kind, sizeof by_kind - 1);
+    f = find(d, "CFD017", "k");
+    check(f != NULL && strstr(f->message, "in both, '1' here and '2' there") != NULL,
+          "a marked default, and one a source of the kind 'default' supplied");
+    cf_doctor_free(d);
+
+    d = default_compare(marked, sizeof marked - 1, unmarked, sizeof unmarked - 1);
+    f = find(d, "CFD017", "k");
+    check(f != NULL &&
+              strstr(f->message, "takes its default here; there it has none") != NULL,
+          "the mark, not the source's name, makes a default");
+    cf_doctor_free(d);
+
+    d = default_compare(unmarked, sizeof unmarked - 1, by_name, sizeof by_name - 1);
+    f = find(d, "CFD017", "k");
+    check(f != NULL &&
+              strstr(f->message, "takes its default there; here it has none") != NULL,
+          "and without a table of sources, a source named 'default' is one");
+    cf_doctor_free(d);
+}
+
 int main(void) {
 #if CF_WITH_REPORT && CF_WITH_JSON
     test_lint();
@@ -802,6 +927,8 @@ int main(void) {
     test_inputs();
     test_synthesized_list_count();
     test_history();
+    test_default_drift();
+    test_default_marks();
 #else
     /* A configuration's report needs both; without them the library
        says so. */

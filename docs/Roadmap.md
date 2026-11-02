@@ -46,7 +46,8 @@ append merging, reloads, writes and the language bindings (D-02).
 Their verification includes allocation failures, wasm32 and frozen
 1.0.0 clients on 32-bit and 64-bit Windows. These changes are on `main`,
 which is 1.0.1, unreleased; the existing 1.0.0 archives are unchanged.
-Doctor history/blame is built (`docs/Doctor.md`, section 7c).
+Doctor history/blame is built (`docs/Doctor.md`, section 7c), and so is
+default drift (CFD017, section 8).
 
 Before anything: read `CONTRIBUTING.md`, then run
 `sh scripts/buildenv/dev-setup.sh --check` (Windows:
@@ -56,20 +57,20 @@ the same without the check.
 Left, in order - each a verified commit (`CONTRIBUTING.md`, "How work is
 done here"):
 
-1. **Default-drift preflight**: a report records which default a key
-   was given, so Doctor can tell a changed application default from an
-   unchanged one, using observed reports rather than another resolver.
-2. **Optional configuration read/use coverage**, with its secrecy,
+1. **Optional configuration read/use coverage**, with its secrecy,
    concurrency and binding checks.
+2. **A last organization pass**: CMake modules in their own directory,
+   no generation step that is not needed, and C99 only where it makes
+   the code simpler without losing a supported compiler.
 3. **The remaining decisions and ideas**, only when selected, each
    addition a minor version.
 
 ### Accepted follow-up
 
-These additions are agreed, not completed: preflight detection of
-changed application defaults, and optional configuration read/use
-coverage. Each needs implementation and tests; no release is a
-substitute for them. Doctor history/blame, the first of them, is built.
+These additions are agreed, not completed: optional configuration
+read/use coverage. It needs implementation and tests; no release is a
+substitute for it. Doctor history/blame and default-drift detection,
+the first two, are built.
 
 ## Ideas
 

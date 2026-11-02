@@ -203,6 +203,49 @@ static void test_sensitive_defaults(void) {
     cf_config_free(cfg);
 }
 
+/* Which candidate is the declared default is said by the candidate, and
+   not by an appended list's count: that count is a result, even where a
+   default is all that fed it. */
+static void test_default_marks(void) {
+    static char  p0[]   = "prog";
+    static char  p1[]   = "--server.port=7000";
+    static char* args[] = {p0, p1, NULL};
+    cf_error     err    = CF_ERROR_INIT;
+    cf_builder*  b      = cf_build(NULL);
+    cf_config*   cfg;
+    cf_def       def;
+    cf_value     value;
+    static char  buf[16384];
+    const char*  mark;
+
+    cf_builder_cli(b, "cli", CF_RANK_CLI, 2, args);
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    cf_def_init(&def, CF_TYPE_TEXT, "tags");
+    def.list_mode   = CF_LIST_APPEND;
+    def.has_default = CF_TRUE;
+    cf_value_text(&value, "a", 1);
+    def.list_defaults      = &value;
+    def.list_default_count = 1;
+    cf_builder_define(b, &def);
+    cfg = cf_builder_create(b, &err);
+    check(cfg != NULL, "a default, a value over one, and a defaulted list build");
+    if (cfg == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+    cf_explain_json(cfg, "server.port", CF_REPORT_FULL, buf, sizeof buf);
+    has(buf, "\"value\": 8080, \"outcome\": \"shadowed\"",
+        "the shadowed default is in the chain");
+    mark = strstr(buf, "\"declared_default\": true");
+    check(mark != NULL && strstr(mark + 1, "\"declared_default\"") == NULL,
+          "and is the one candidate marked a default");
+    report(cfg, CF_REPORT_FULL, buf, sizeof buf);
+    has(buf, "\"synthesized\": true", "the list's count is synthesized");
+    lacks(buf, "\"synthesized\": true, \"declared_default\"",
+          "and is not marked a default");
+    cf_config_free(cfg);
+}
+
 static void test_invalid_modes(void) {
     cf_error       err  = CF_ERROR_INIT;
     cf_config*     cfg  = build(&err);
@@ -580,6 +623,7 @@ int main(void) {
     test_digest_text_bytes();
     test_full_report();
     test_sensitive_defaults();
+    test_default_marks();
     test_invalid_modes();
     test_info_size();
     test_report_is_valid_json(ar);

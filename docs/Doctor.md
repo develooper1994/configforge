@@ -102,6 +102,13 @@ candidates. These are additive schema-1 fields; readers that do not use
 them can ignore them. Full Report Replay loads the resolved list as an
 append base, so lower defaults are not appended again.
 
+A candidate that is its definition's declared default carries
+`declared_default: true` (an aggregate count never does). Ranks cannot say
+it: a caller's own source may share the defaults' rank, and a derived
+configuration stands in for the defaults it was built from. A report
+without the mark is older; Doctor then takes a candidate from a source of
+the kind `default`, or one named `default`, as the default.
+
 The report is produced in two ways:
 
 * **Predicted.** Doctor resolves offline from files and a declared environment. Used
@@ -177,7 +184,8 @@ configforge doctor dump [--format table|json|md] [--blind]
     the full matrix for one environment
 
 configforge doctor diff <reportA> <reportB>
-    value differences, origin differences, shadow differences, presence differences
+    value differences, origin differences, shadow differences, presence
+    differences, and defaults that differ where a key takes one
 
 doctor history <report>... [--key K]
     each change from one report to the next, oldest first: a key added or
@@ -326,6 +334,7 @@ Each rule has a stable identifier so it can be suppressed individually. Rules ma
 | CFD014 | **Digest change on a sensitive key** without a corresponding change entry. | info | yes |
 | CFD015 | **Array truncation hazard.** An element lies at or beyond the length the winning `<key>.count` gives its array - most often a longer list in a lower-precedence file under a shorter count from the command line - and was discarded. The finding names the count and where it came from. | warning | yes |
 | CFD016 | **Policy violation.** A source outside the key's per-parameter policy supplied it. The library rejected the candidate (D-33); this is where that becomes loud. | error | yes |
+| CFD017 | **Default drift.** In a diff, a key takes its declared default on one side or both, and the two defaults differ, or one side has none. A program's new default reaches every deployment that never set the key, and no configuration file shows it: `doctor diff deployed.json upgrade.json` names those keys before the upgrade does. Where both sides take their defaults, this is the finding and the value difference is not repeated. | warning | yes |
 
 `HISTORY` and `BLAME` are not rules of a configuration but records of a
 sequence (section 7c): each is `info`, and a severity file, a baseline or
@@ -452,6 +461,8 @@ rather than silently skipping rules.
 ```text
 - run: configforge doctor emit --blind --out predicted.json
 - run: configforge doctor diff observed-prod.json predicted.json --fail-on error
+- run: configforge doctor diff observed-prod.json upgrade.json --fail-on warning
+            # an upgrade's changed defaults (CFD017), before it is deployed
 - run: configforge doctor lint predicted.json --baseline .configforge-baseline
             --severity .configforge-severity --format sarif > doctor.sarif
 ```
@@ -619,6 +630,7 @@ D-Phase 2   full rule catalogue, baseline, severity configuration
 D-Phase 3   SARIF output, CI templates, emit hook in the library
 D-Phase 4   foreign adapters: .NET, Spring, git config, systemd (built)
 D-Phase 5   history and blame over a sequence of reports (built)
+D-Phase 6   default drift between two reports, CFD017 (built)
 ```
 
 Estimated size if the library already emits reports: 1500–2500 lines, three to four

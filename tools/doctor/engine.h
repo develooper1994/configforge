@@ -26,6 +26,7 @@ typedef struct cand {
     cf_i64      length;
     cf_bool     world_readable; /* a file every user can read; see CFD007 */
     cf_bool     synthesized;
+    cf_bool     is_default; /* the definition's declared default; see CFD017 */
 } cand;
 
 typedef struct rkey {
