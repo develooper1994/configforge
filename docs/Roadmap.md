@@ -35,42 +35,40 @@ work and its validation are complete.
 (D-56), a patch fixes, a minor version adds, and `verify -DEXTRA=abi`
 fails an incompatible change within 1.x.
 
-### Resume here (2026-11-01)
+### Resume here (2026-11-02)
 
-Where it stands: the three release corrections passed the Linux and
-Windows verification, including format round trips and the 1.x ABI
-comparison. Standalone Python and Rust packages passed their installed
-tests on Linux, Windows and macOS. Searchable documentation reads the
-same Markdown as the repository (D-59). Scalar lists cover flat inputs,
-append merging, reloads, writes and the language bindings (D-02).
-Their verification includes allocation failures, wasm32 and frozen
-1.0.0 clients on 32-bit and 64-bit Windows. These changes are on `main`,
-which is 1.0.1, unreleased; the existing 1.0.0 archives are unchanged.
-Doctor history/blame is built (`docs/Doctor.md`, section 7c), and so is
-default drift (CFD017, section 8). Read coverage is built
-(`cf_builder_track_reads`, `docs/Guide.md` section 6, a `read` boolean
-per key in a tracking configuration's report, the three bindings, and
-Doctor's CFD018).
+The agreed additions are implemented on `main`, which is 1.0.1,
+unreleased; the existing 1.0.0 archives are unchanged. Doctor
+history/blame (`a183b3e`), the MSVC sanitizer runtime fix (`7d2530d`),
+default drift (CFD017, `5917bd5`), and read coverage in C (`fb383c4`)
+and the bindings plus Doctor CFD018 (`ec24578`) are built. Their full
+Linux and Windows verification passed. The Python binding tests also
+passed against an older shared library without the read-tracking
+symbols: existing calls remain usable, while requesting read tracking
+fails explicitly (`ac26e6c`).
+
+The organization pass is complete. Project CMake modules live in
+`cmake/`, gates in `cmake/gates/`, and toolchains in `cmake/toolchains/`;
+per-directory `CMakeLists.txt` files own their subtrees. Each generated
+artifact has a consumer: build options, commit identity, and the SBOM
+are build-specific; the API reference links declarations to source; and
+the amalgamation is the tested no-build-system distribution. No
+unnecessary generation step was found. The core stays C89: the public
+header and compiler gates enforce it, and no C99 feature was needed to
+complete the agreed work.
 
 Before anything: read `CONTRIBUTING.md`, then run
 `sh scripts/buildenv/dev-setup.sh --check` (Windows:
 `pwsh scripts/buildenv/dev-setup.ps1 -Check`) and, if a tool is missing,
 the same without the check.
 
-Left, in order - each a verified commit (`CONTRIBUTING.md`, "How work is
-done here"):
-
-1. **A last organization pass**: CMake modules in their own directory,
-   no generation step that is not needed, and C99 only where it makes
-   the code simpler without losing a supported compiler.
-2. **The remaining decisions and ideas**, only when selected, each
-   addition a minor version.
+No accepted implementation work remains. The ideas below are not
+approved scope; if selected, each addition is a minor version.
 
 ### Accepted follow-up
 
-The agreed additions are built: Doctor history/blame, default-drift
-detection and read coverage. What is left is the organization pass
-above; no release is a substitute for it.
+The agreed additions and organization review are complete; no release
+is a substitute for the final review and verification.
 
 ## Ideas
 

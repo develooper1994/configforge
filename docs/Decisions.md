@@ -1070,7 +1070,7 @@ core                 C89 baseline, opportunistic upgrades where detected
 public C header      C89, compiles standalone under -std=c89 -pedantic
 C++ header           C++03
 optional C++ header  C++11 and later, additive
-build                CMake 3.10, plus a plain Makefile
+build                CMake 3.10; the no-build-system path is the amalgamation (D-31)
 ```
 
 ### Why C Rather Than C++
