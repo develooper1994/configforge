@@ -196,10 +196,6 @@ for _name, _res, _args in [
     ("cf_live_open", L, (c_int, BUILD_FN, c_void_p, c_void_p, c_void_p, E)),
     ("cf_live_open_with", L, (POINTER(cf_live_options), E)),
     ("cf_builder_log", None, (B, LOG_FN, c_void_p, c_int)),
-    ("cf_builder_track_reads", None, (B,)),
-    ("cf_tracks_reads", c_int, (C,)),
-    ("cf_was_read", c_int, (C, c_char_p)),
-    ("cf_read_count", c_size_t, (C,)),
     ("cf_edit_begin", c_void_p, (C, c_char_p, E)),
     ("cf_edit_set_text", c_int, (c_void_p, c_char_p, c_char_p)),
     ("cf_edit_set_int", c_int, (c_void_p, c_char_p, c_int64)),
@@ -229,8 +225,16 @@ _declare("cf_try_real", c_int, C, c_char_p, POINTER(ctypes.c_double), optional=T
 _declare("cf_edit_set_real", c_int, c_void_p, c_char_p, ctypes.c_double, optional=True)
 _declare("cf_builder_real", c_int, B, c_char_p, ctypes.c_double, ctypes.c_double,
          ctypes.c_double, c_uint, optional=True)
+_declare("cf_builder_track_reads", None, B, optional=True)
+_declare("cf_tracks_reads", c_int, C, optional=True)
+_declare("cf_was_read", c_int, C, c_char_p, optional=True)
+_declare("cf_read_count", c_size_t, C, optional=True)
 HAVE_REAL = hasattr(lib, "cf_try_real") and lib.cf_has_feature(b"real") != 0
 HAVE_LIST = lib.cf_has_feature(b"lists") != 0
+HAVE_READ_TRACKING = all(
+    hasattr(lib, name)
+    for name in ("cf_builder_track_reads", "cf_tracks_reads", "cf_was_read", "cf_read_count")
+)
 
 
 class cf_text(Structure):

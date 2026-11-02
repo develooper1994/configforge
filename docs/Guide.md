@@ -981,6 +981,9 @@ A refusal raises `cf.Error` with the key, the source and the message;
 exception as the `Error`'s cause. The library is found as
 `$CONFIGFORGE_LIB`, beside the package, or on the library path; its
 tests run against a shared build (`verify` with `EXTRA=shared`).
+When the selected library lacks the read-tracking symbols, the rest of the
+binding remains usable: `Builder.track_reads()` reports that limitation,
+and the read-status queries return false or zero.
 `configforge_doctor`, in the same package, drives a separately installed
 Doctor (section 11). `python -I tests/python/test_package.py` checks an
 installed wheel and runs the binding suite against its bundled library,

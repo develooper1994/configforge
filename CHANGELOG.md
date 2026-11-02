@@ -113,6 +113,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   which names them (on Linux and macOS the linker file is the shared
   library itself). CI's `shared (windows-latest)` job had failed on it
   since 2026-10-31; the library was never at fault.
+- The Python binding remains importable when a selected library does
+  not export read-tracking functions; requesting tracking reports the
+  missing capability instead of failing during import.
 
 ## 1.0.0 — 2026-11-01
 

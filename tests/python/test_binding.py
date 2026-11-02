@@ -19,6 +19,7 @@ sys.path.insert(0, sys.argv.pop(1))
 WORK = sys.argv.pop(1) if len(sys.argv) > 1 else tempfile.mkdtemp()
 
 import configforge as cf  # noqa: E402
+from configforge import _native as native  # noqa: E402
 from configforge import flag, rank, section, setting  # noqa: E402
 
 
@@ -179,6 +180,15 @@ class Reading(unittest.TestCase):
 
     def test_read_coverage(self):
         self.assertFalse(server_cfg().tracks_reads, "off unless asked for")
+        with mock.patch("configforge._native.HAVE_READ_TRACKING", False):
+            with self.assertRaisesRegex(RuntimeError, "does not support read tracking"):
+                cf.Builder().track_reads()
+            plain = server_cfg()
+            self.assertFalse(plain.tracks_reads)
+            self.assertFalse(plain.was_read("server.port"))
+            self.assertEqual(plain.read_count, 0)
+        if not native.HAVE_READ_TRACKING:
+            return
         cfg = (cf.Builder()
                .memory("file", rank.USER_FILE, {"server.port": 9443})
                .define_int("server.port", 8080, 1, 65535)
