@@ -55,6 +55,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- `CF_SANITIZE` under MSVC copies AddressSanitizer's runtime DLL
+  beside every program it builds. Without it on PATH, Windows stopped
+  each test with a dialog that waited for someone to press OK.
 - Blind reports hash all sensitive text bytes and retain their actual
   length, including embedded NUL. Text longer than the numeric
   formatting buffer previously had length zero and the empty digest,

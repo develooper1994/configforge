@@ -108,6 +108,12 @@ The first round:
   `wsl --` hands the line to a shell that expands them first, to nothing.
 * **Windows verify** with temporary files on D::
   `$env:TEMP=$env:TMP='D:\cf-tmp'`, `-DWORK=D:/cf-work -DMODE=quick`.
+* **MSVC's sanitize preset** links AddressSanitizer's runtime DLL, which
+  sits beside `cl.exe` and on no PATH. A program started without it
+  does not fail: Windows opens a dialog per test and waits for OK.
+  `cmake/ConfigForgeAnalysis.cmake` copies the DLL beside every
+  program, so a full Windows verify runs unattended; the quick run is
+  still the per-commit one.
 * **The Linux and Windows verifies can run at once** since D-50 (each
   writes its tree from a private copy of the index); before that, the
   second failed on `index.lock`.

@@ -38,6 +38,23 @@ if(CF_SANITIZE
 else()
   set(CF_INSTRUMENTED OFF)
 endif()
+# MSVC links AddressSanitizer's runtime as a DLL that sits beside cl.exe,
+# on no PATH outside a developer prompt. A program started without it
+# does not fail: Windows stops it with a dialog and waits for someone to
+# press OK, once per program, so a test run hangs on a desktop and times
+# out on a server. Each program gets a copy beside it instead.
+set(CF_ASAN_RUNTIME "")
+if(CF_SANITIZE AND CMAKE_C_COMPILER_ID STREQUAL "MSVC")
+  get_filename_component(CF_CL_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
+  file(GLOB CF_ASAN_RUNTIME "${CF_CL_DIR}/clang_rt.asan*_dynamic-*.dll")
+  if(NOT CF_ASAN_RUNTIME)
+    message(
+      FATAL_ERROR
+        "CF_SANITIZE: no clang_rt.asan_dynamic-*.dll beside "
+        "${CMAKE_C_COMPILER}; install Visual Studio's "
+        "C++ AddressSanitizer component")
+  endif()
+endif()
 option(CF_CPPCHECK "cppcheck, when present" OFF)
 option(CF_CLANG_TIDY "clang-tidy, when present" OFF)
 
@@ -65,6 +82,14 @@ function(configforge_apply_analysis tgt)
       ${tgt} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer
                      -fno-sanitize-recover=all -g)
     target_link_options(${tgt} PRIVATE -fsanitize=address,undefined)
+    get_target_property(kind ${tgt} TYPE)
+    if(CF_ASAN_RUNTIME AND kind STREQUAL "EXECUTABLE")
+      add_custom_command(
+        TARGET ${tgt}
+        POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different ${CF_ASAN_RUNTIME}
+                "$<TARGET_FILE_DIR:${tgt}>")
+    endif()
   endif()
   if(CF_FUZZ)
     target_compile_options(
