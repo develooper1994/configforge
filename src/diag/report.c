@@ -340,10 +340,12 @@ static void report_candidate(cf_sink* out, const cf_candidate* c,
 
 /* One key's object - its definition, every candidate, the winner - as
    the report writes it under "keys", and as cf_report_key_write writes
-   it alone. `e` may be NULL for a key nobody supplied. */
+   it alone. `e` may be NULL for a key nobody supplied. `read` is 1 or
+   0 when the configuration tracks reads, and -1, writing nothing, when
+   it does not. */
 static void report_key(cf_sink* out, const cf_keyspace* ks, const cf_entry* e,
                        const cf_def* d, const cf_defset* ds, const cf_source_view* sv,
-                       cf_report_mode mode, const char* indent) {
+                       cf_report_mode mode, const char* indent, int read) {
     const cf_candidate* c;
     cf_bool             first = CF_TRUE;
     cf_def              projected;
@@ -388,6 +390,9 @@ static void report_key(cf_sink* out, const cf_keyspace* ks, const cf_entry* e,
     } else {
         cf_sink_puts(out, "null");
     }
+    if (read >= 0) {
+        cf_sink_fmt(out, ",\n%s  \"read\": %s", indent, read ? "true" : "false");
+    }
     cf_sink_fmt(out, "\n%s}", indent);
 }
 
@@ -416,7 +421,7 @@ size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds,
     report_quote(&out, key, keylen);
     cf_sink_puts(&out, ", \"value\": ");
     report_key(&out, ks, e, (ds != NULL) ? cf_defset_find(ds, key, keylen) : NULL, ds,
-               sv, mode, "");
+               sv, mode, "", -1);
     cf_sink_puts(&out, " }\n");
     cf_sink_terminate(&out);
     return out.len;
@@ -430,6 +435,12 @@ size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds,
 size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
                        const cf_source_view* sv, const cf_report_info* info, char* buf,
                        size_t cap) {
+    return cfi_report_reads(ks, ds, sv, info, NULL, buf, cap);
+}
+
+size_t cfi_report_reads(const cf_keyspace* ks, const cf_defset* ds,
+                        const cf_source_view* sv, const cf_report_info* info,
+                        const cf_refcount* reads, char* buf, size_t cap) {
     cf_sink        out;
     size_t         i;
     cf_report_mode mode;
@@ -503,7 +514,8 @@ size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
         cf_sink_puts(&out, "\n    ");
         report_quote(&out, e->key, e->keylen);
         cf_sink_puts(&out, ": ");
-        report_key(&out, ks, e, d, ds, sv, mode, "    ");
+        report_key(&out, ks, e, d, ds, sv, mode, "    ",
+                   (reads == NULL) ? -1 : (cf_ref_get(&reads[i]) != 0));
     }
     cf_sink_puts(&out, "\n  }\n}\n");
     cf_sink_terminate(&out);
@@ -832,10 +844,17 @@ size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds,
 size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
                        const cf_source_view* sv, const cf_report_info* info, char* buf,
                        size_t cap) {
+    return cfi_report_reads(ks, ds, sv, info, NULL, buf, cap);
+}
+
+size_t cfi_report_reads(const cf_keyspace* ks, const cf_defset* ds,
+                        const cf_source_view* sv, const cf_report_info* info,
+                        const cf_refcount* reads, char* buf, size_t cap) {
     (void)ks;
     (void)ds;
     (void)sv;
     (void)info;
+    (void)reads;
     if (buf != NULL && cap > 0) {
         buf[0] = '\0';
     }

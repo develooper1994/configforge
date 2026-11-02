@@ -45,6 +45,7 @@ cf_builder_secrets
 cf_builder_source
 cf_builder_store
 cf_builder_text
+cf_builder_track_reads
 cf_builder_unknown
 cf_builder_writable
 cf_changed
@@ -216,6 +217,7 @@ cf_platform_wake_wait
 cf_platform_world_readable
 cf_policy_text
 cf_port_description
+cf_read_count
 cf_ref_dec
 cf_ref_get
 cf_ref_inc
@@ -274,6 +276,7 @@ cf_store_set
 cf_text_to_f64 real
 cf_text_to_i64
 cf_text_to_u64
+cf_tracks_reads
 cf_try_bool
 cf_try_int
 cf_try_real real
@@ -295,6 +298,7 @@ cf_value_to_text
 cf_version
 cf_version_number
 cf_vfmt
+cf_was_read
 cf_watch_count
 cf_watch_path
 cf_watcher_close

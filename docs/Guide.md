@@ -342,6 +342,31 @@ finds a default an upgrade changed (CFD017). Images and
 full Report Replay are resolved bases, so reloading one does not append
 the program's defaults again.
 
+### Which keys the program reads
+
+`cf_builder_track_reads(b)` makes the configuration record each key the
+program asks for: through a `cf_get_*` or `cf_try_*` call, `cf_has` or
+`cf_type_of`, even when the answer is the fallback. Explaining,
+inspecting, iterating and reporting are not reads. It is off by default,
+and then nothing about a read changes.
+
+```c
+cf_builder_track_reads(b);
+cfg = cf_builder_create(b, &err);
+/* ... the program runs ... */
+if (!cf_was_read(cfg, "cache.size")) { /* set, and nothing uses it */ }
+printf("%u of %u keys read\n", (unsigned)cf_read_count(cfg), (unsigned)cf_count(cfg));
+```
+
+Reads stay safe on any thread: each key's flag is atomic and written
+once, the first time. Each snapshot records its own reads: a derived
+one tracks from nothing, and a reload tracks when the builder its build
+function returns asks to. A report from a tracking
+configuration gives every key `"read": true` or `false`, a boolean even
+in a blind report, so it shows configuration the program never used
+without showing a value. A key nothing supplied and no definition names
+is not in the configuration, so a read of one is not recorded.
+
 ## 7. Errors
 
 A `cf_error` is a plain struct the caller owns, filled by the call that
@@ -1008,4 +1033,5 @@ references atomically, so a reload can swap in a new snapshot while
 readers finish with the old one; the last reader's `cf_config_free`
 releases it. Change notification and reload are the program's to
 schedule - the library starts no thread and calls nobody back. D-14 has
-the full contract.
+the full contract. Read tracking (`cf_builder_track_reads`, section 6)
+keeps it: the one write a read makes is an atomic flag, set once.

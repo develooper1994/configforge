@@ -66,6 +66,12 @@ CF_API size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
                               const cf_source_view* sv, const cf_report_info* info,
                               char* buf, size_t cap);
 
+/* Internal to cf_report, not exported: the same, with each key's
+   "read" from one flag per key index, or none when `reads` is NULL. */
+size_t cfi_report_reads(const cf_keyspace* ks, const cf_defset* ds,
+                        const cf_source_view* sv, const cf_report_info* info,
+                        const cf_refcount* reads, char* buf, size_t cap);
+
 /* One key as the report writes it, alone - explain() for a machine:
 
      { "configforge_key": 1, "key": "server.port",

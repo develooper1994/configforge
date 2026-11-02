@@ -196,6 +196,17 @@ CF_API void cf_builder_unknown(cf_builder* b, cf_unknown_policy policy);
    configuration derived from this one logs to the same place. */
 CF_API void cf_builder_log(cf_builder* b, cf_log_fn fn, void* user, cf_log_level min);
 
+/* Record which keys the program reads, for finding configuration
+   nothing uses. Off by default, and nothing changes for a read when it
+   is off. On, a key counts as read the first time cf_get_*, cf_try_*,
+   cf_has or cf_type_of asks for it through this snapshot; listing or
+   reporting is not a read. Reads stay safe concurrently (D-14): the
+   flag is atomic and written once. A configuration derived from this
+   one tracks too, from nothing. cf_was_read and cf_read_count answer;
+   cf_report adds "read" to every key, a boolean, so a blind report
+   still carries no value. */
+CF_API void cf_builder_track_reads(cf_builder* b);
+
 CF_NODISCARD CF_API cf_config* cf_builder_create(cf_builder* b, cf_error* err);
 
 /* ------------------------------------------------------------------ *
@@ -308,6 +319,13 @@ CF_INLINE cf_code cf_get_text_(const cf_config* c, const char* k, const char** o
 /* CF_TYPE_NULL when the key is absent. */
 CF_API cf_type cf_type_of(const cf_config* c, const char* key);
 CF_API cf_bool cf_has(const cf_config* c, const char* key);
+
+/* Read coverage (cf_builder_track_reads). CF_FALSE and 0 for a
+   configuration that does not track. cf_read_count counts keys, not
+   reads; neither of these is itself a read. */
+CF_API cf_bool cf_tracks_reads(const cf_config* c);
+CF_API cf_bool cf_was_read(const cf_config* c, const char* key);
+CF_API size_t  cf_read_count(const cf_config* c);
 
 /* ------------------------------------------------------------------ *
  * Diagnostics

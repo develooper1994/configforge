@@ -36,6 +36,7 @@ struct cf_builder {
     size_t            nsources;
     cf_defset         defs;
     cf_unknown_policy unknown;
+    cf_bool           track_reads;
 
     /* The first failure, held until create reports it. A definition
        block should read as a block rather than as an error check after
@@ -80,6 +81,12 @@ struct cf_config {
        followed by at most one free. */
     cf_refcount refs;
     cf_bool     owns_arena;
+
+    /* One flag per key, by its index, set the first time a read asks
+       for it; NULL unless the builder asked for cf_builder_track_reads.
+       The one thing a read writes, so each flag is atomic and written
+       only while clear: a key read on every request costs a load. */
+    cf_refcount* reads;
 
     /* Kept so that deriving inherits it: a derived configuration that
        accepted unknown keys the original refused would be a different
@@ -630,6 +637,12 @@ void cf_builder_unknown(cf_builder* b, cf_unknown_policy policy) {
     }
 }
 
+void cf_builder_track_reads(cf_builder* b) {
+    if (b != NULL) {
+        b->track_reads = CF_TRUE;
+    }
+}
+
 void cf_builder_log(cf_builder* b, cf_log_fn fn, void* user, cf_log_level min) {
     if (b != NULL) {
         b->log      = fn;
@@ -1053,6 +1066,16 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
             return create_failed(b, err, &e);
         }
     }
+    /* After the definitions, which may add keys. One more than the
+       count, so an empty configuration still says it tracks. */
+    if (b->track_reads) {
+        c->reads = (cf_refcount*)cf_arena_calloc(c->arena, (cf_ks_count(&c->keys) + 1) *
+                                                               sizeof(cf_refcount));
+        if (c->reads == NULL) {
+            cf_error_set(&e, CF_E_MEMORY, NULL, NULL, "no room to track reads");
+            return create_failed(b, err, &e);
+        }
+    }
     config_log_events(c);
     return c;
 }
@@ -1195,6 +1218,9 @@ static cf_config* derive_onto(const cf_config* base, cf_arena* ar, cf_bool owns,
     }
     cf_builder_unknown(b, base->unknown);
     cf_builder_log(b, base->log, base->log_user, base->log_min);
+    /* Tracking travels, the reads do not: each snapshot records what
+       was read through it. */
+    b->track_reads = (base->reads != NULL) ? CF_TRUE : CF_FALSE;
 
     return cf_builder_create(b, err);
 }
@@ -1684,10 +1710,22 @@ void cf_config_free(cf_config* c) {
  * ------------------------------------------------------------------ */
 
 static const cf_value* lookup(const cf_config* c, const char* key) {
+    const cf_entry* e;
+
     if (c == NULL || key == NULL) {
         return NULL;
     }
-    return cf_ks_get(&c->keys, key, strlen(key));
+    e = cf_ks_find(&c->keys, key, strlen(key));
+    if (e == NULL) {
+        return NULL;
+    }
+    if (c->reads != NULL) {
+        cf_refcount* flag = &c->reads[e - c->keys.entries];
+        if (cf_ref_get(flag) == 0) {
+            cf_ref_inc(flag);
+        }
+    }
+    return (e->selected != NULL) ? &e->selected->value : NULL;
 }
 
 cf_bool cf_get_bool(const cf_config* c, const char* key, cf_bool fallback) {
@@ -1795,6 +1833,35 @@ cf_bool cf_has(const cf_config* c, const char* key) {
     return (lookup(c, key) != NULL) ? CF_TRUE : CF_FALSE;
 }
 
+cf_bool cf_tracks_reads(const cf_config* c) {
+    return (c != NULL && c->reads != NULL) ? CF_TRUE : CF_FALSE;
+}
+
+cf_bool cf_was_read(const cf_config* c, const char* key) {
+    const cf_entry* e;
+
+    if (c == NULL || c->reads == NULL || key == NULL) {
+        return CF_FALSE;
+    }
+    e = cf_ks_find(&c->keys, key, strlen(key));
+    return (e != NULL && cf_ref_get(&c->reads[e - c->keys.entries]) != 0) ? CF_TRUE
+                                                                          : CF_FALSE;
+}
+
+size_t cf_read_count(const cf_config* c) {
+    size_t i, n = 0;
+
+    if (c == NULL || c->reads == NULL) {
+        return 0;
+    }
+    for (i = 0; i < cf_ks_count(&c->keys); ++i) {
+        if (cf_ref_get(&c->reads[i]) != 0) {
+            ++n;
+        }
+    }
+    return n;
+}
+
 /* ------------------------------------------------------------------ *
  * Diagnostics
  * ------------------------------------------------------------------ */
@@ -1874,7 +1941,7 @@ size_t cf_report(const cf_config* c, const cf_report_info* info, char* buf,
         }
         return 0;
     }
-    return cf_report_write(&c->keys, &c->defs, &c->sv, info, buf, cap);
+    return cfi_report_reads(&c->keys, &c->defs, &c->sv, info, c->reads, buf, cap);
 }
 
 const cf_keyspace* cf_keys(const cf_config* c) {

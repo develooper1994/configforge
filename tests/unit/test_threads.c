@@ -224,14 +224,139 @@ static void test_concurrent_release(void) {
     check(1, "concurrent release does not double free");
 }
 
+/* Eight readers on a tracking snapshot: the flags are the one thing a
+   read writes, and each must end set, once, with every value intact. */
+static void test_concurrent_tracked_reads(void) {
+    cf_error    err = CF_ERROR_INIT;
+    cf_builder* b   = cf_build(NULL);
+    cf_config*  c;
+    pthread_t   th[READERS];
+    reader_arg  args[READERS];
+    int         i, total = 0;
+
+    cf_builder_int(b, "server.port", 9000, 1, 65535, 0);
+    cf_builder_text(b, "server.host", "10.0.0.1", 0);
+    cf_builder_text(b, "log.level", "info", 0);
+    cf_builder_track_reads(b);
+    c = cf_builder_create(b, &err);
+    if (c == NULL) {
+        check(0, "builds tracking");
+        return;
+    }
+    for (i = 0; i < READERS; ++i) {
+        args[i].c          = c;
+        args[i].digest     = cf_digest(c);
+        args[i].mismatches = 0;
+        check(pthread_create(&th[i], NULL, reader, &args[i]) == 0, "reader started");
+    }
+    for (i = 0; i < READERS; ++i) {
+        pthread_join(th[i], NULL);
+        total += args[i].mismatches;
+    }
+    check(total == 0, "tracking readers agree on every value");
+    check(cf_read_count(c) == 2 && !cf_was_read(c, "log.level"),
+          "and leave exactly the two keys they read marked");
+    cf_config_free(c);
+}
+
 #endif /* CF_TEST_PTHREADS */
+
+#if CF_WITH_REPORT
+static size_t count_of(const char* hay, const char* needle) {
+    size_t      n = 0;
+    const char* p = hay;
+    while ((p = strstr(p, needle)) != NULL) {
+        ++n;
+        p += strlen(needle);
+    }
+    return n;
+}
+#endif
+
+/* Read coverage, off and on: what counts as a read, what does not, and
+   what the report says. */
+static void test_track_reads(void) {
+    cf_error    err   = CF_ERROR_INIT;
+    cf_config*  plain = build(&err);
+    cf_builder* b     = cf_build(NULL);
+    cf_config*  c;
+    cf_config*  d;
+    static char scratch[8192];
+    cf_iter     it;
+    cf_pair     pair;
+
+    check(plain != NULL && !cf_tracks_reads(plain), "tracking is off by default");
+    (void)cf_get_int(plain, "server.port", 0);
+    check(!cf_was_read(plain, "server.port") && cf_read_count(plain) == 0,
+          "and an untracked configuration reports no reads");
+#if CF_WITH_REPORT
+    (void)cf_report(plain, NULL, scratch, sizeof scratch);
+    check(strstr(scratch, "\"read\"") == NULL, "nor any \"read\" in its report");
+#endif
+    cf_config_free(plain);
+
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    cf_builder_text(b, "server.host", "0.0.0.0", 0);
+    cf_builder_text(b, "log.level", "info", 0);
+    cf_builder_bool(b, "feature.x", CF_FALSE, 0);
+    cf_builder_track_reads(b);
+    c = cf_builder_create(b, &err);
+    check(c != NULL && cf_tracks_reads(c), "tracking is on when asked for");
+    if (c == NULL) {
+        return;
+    }
+    check(cf_read_count(c) == 0, "nothing is read yet");
+
+    (void)cf_explain(c, "log.level", scratch, sizeof scratch);
+    (void)cf_inspect(c, scratch, sizeof scratch);
+    cf_iter_keys(&it, c, NULL);
+    while (cf_iter_next(&it)) {
+    }
+    (void)cf_was_read(c, "log.level");
+    check(cf_read_count(c) == 0,
+          "explaining, inspecting, walking and asking are not reads");
+
+    (void)cf_get_int(c, "server.port", 0);
+    (void)cf_get_int(c, "server.port", 0);
+    (void)cf_get_int(c, "server.host", 0);
+    (void)cf_has(c, "feature.x");
+    (void)cf_get_text(c, "nothing.here", "");
+    check(cf_was_read(c, "server.port"), "a getter marks its key");
+    check(cf_was_read(c, "server.host"), "a read of the wrong type still uses the key");
+    check(cf_was_read(c, "feature.x"), "cf_has is a read");
+    check(!cf_was_read(c, "log.level"), "a key never asked for stays unread");
+    check(!cf_was_read(c, "nothing.here"), "a key nothing supplied is not recorded");
+    check(cf_read_count(c) == 3, "three keys read, the repeat counted once");
+
+#if CF_WITH_REPORT
+    (void)cf_report(c, NULL, scratch, sizeof scratch);
+    check(count_of(scratch, "\"read\": true") == 3 &&
+              count_of(scratch, "\"read\": false") == 1,
+          "the blind report marks each key read or not");
+#endif
+
+    pair.key   = "log.level";
+    pair.value = "debug";
+    d          = cf_derive(c, "admin", &pair, 1, &err);
+    check(d != NULL && cf_tracks_reads(d) && cf_read_count(d) == 0,
+          "a derived configuration tracks, from nothing");
+    if (d != NULL) {
+        (void)cf_get_text(d, "log.level", "");
+        check(cf_was_read(d, "log.level") && !cf_was_read(c, "log.level"),
+              "and a read through it marks it alone");
+        cf_config_free(d);
+    }
+    cf_config_free(c);
+}
 
 int main(void) {
     test_reads_do_not_mutate();
     test_refcount();
+    test_track_reads();
 #if defined(CF_TEST_PTHREADS)
     test_concurrent_reads();
     test_concurrent_release();
+    test_concurrent_tracked_reads();
 #else
     printf("  (no threads here; the invariants above are what the "
            "contract rests on)\n");

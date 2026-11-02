@@ -37,6 +37,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   deployed report against the upgrade's. Report candidates that are a
   declared default carry `declared_default: true`, an additive schema-1
   field; Doctor reads an older report's defaults by source kind.
+- Read coverage: `cf_builder_track_reads` records each key the program
+  asks for; `cf_was_read`, `cf_read_count` and `cf_tracks_reads` answer,
+  and a report from a tracking configuration gives every key a
+  `read` boolean, blind reports included. Off by default, with no
+  change to a read; on, each key's flag is atomic and set once, so
+  concurrent reads stay safe (D-14). Bindings and a Doctor rule follow.
 
 - A searchable documentation site built directly from the existing
   Markdown and generated API reference, retaining repository-relative
