@@ -430,6 +430,10 @@ CFD007  error   api.token    sensitive, and supplied on the command line at
 $ doctor diff prod.json staging.json
 CFD002  warning server.host  same value, from 'env' here and 'user-file' there
 CFD014  info    db.password  sensitive value differs (by digest)
+
+$ doctor blame server.port prod.json staging.json   # oldest first
+BLAME   info    server.port  from 'cli' since staging.json: value changed, now
+                             from 'cli' rather than 'env'
 ```
 
 ```sh

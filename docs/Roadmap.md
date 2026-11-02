@@ -46,6 +46,7 @@ append merging, reloads, writes and the language bindings (D-02).
 Their verification includes allocation failures, wasm32 and frozen
 1.0.0 clients on 32-bit and 64-bit Windows. These changes are on `main`,
 which is 1.0.1, unreleased; the existing 1.0.0 archives are unchanged.
+Doctor history/blame is built (`docs/Doctor.md`, section 7c).
 
 Before anything: read `CONTRIBUTING.md`, then run
 `sh scripts/buildenv/dev-setup.sh --check` (Windows:
@@ -55,8 +56,9 @@ the same without the check.
 Left, in order - each a verified commit (`CONTRIBUTING.md`, "How work is
 done here"):
 
-1. **Doctor history/blame and default-drift preflight**, using observed
-   reports rather than implementing another resolver.
+1. **Default-drift preflight**: a report records which default a key
+   was given, so Doctor can tell a changed application default from an
+   unchanged one, using observed reports rather than another resolver.
 2. **Optional configuration read/use coverage**, with its secrecy,
    concurrency and binding checks.
 3. **The remaining decisions and ideas**, only when selected, each
@@ -64,10 +66,10 @@ done here"):
 
 ### Accepted follow-up
 
-These additions are agreed, not completed: Doctor history/blame across
-a sequence of reports, preflight detection of changed application
-defaults, and optional configuration read/use coverage. Each needs
-implementation and tests; no release is a substitute for them.
+These additions are agreed, not completed: preflight detection of
+changed application defaults, and optional configuration read/use
+coverage. Each needs implementation and tests; no release is a
+substitute for them. Doctor history/blame, the first of them, is built.
 
 ## Ideas
 

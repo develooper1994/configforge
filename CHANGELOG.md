@@ -23,6 +23,14 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - Whole-list restart protection during live reload, and source-local
   index translation for writes to existing appended elements.
   Ambiguous structural writes are refused before the source callback.
+- `doctor history` and `doctor blame` follow one service through a
+  sequence of reports, oldest first: each key added, removed, changed
+  (by digest for a secret) or moved to another source, and the report a
+  key's present state dates from. A step that cannot be compared is
+  reported as such, not as unchanged; no message carries a value. Every
+  report is read and room for every finding reserved before anything is
+  recorded, so failure adds nothing. `cf_doctor_history_files`,
+  `cf_doctor_blame_files` and Python `history`/`blame` expose the same.
 
 - A searchable documentation site built directly from the existing
   Markdown and generated API reference, retaining repository-relative

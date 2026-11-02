@@ -642,6 +642,36 @@ static cf_bool found_push(cf_doctor* D) {
     return CF_TRUE;
 }
 
+/* Room for `extra` more findings, made before any is recorded, by a
+   caller that counted them first: those findings cannot then be lost
+   to an allocation that fails half way through. */
+static cf_bool found_reserve(cf_doctor* D, size_t extra) {
+    const cf_allocator* a = cf_default_allocator();
+    size_t              need;
+    dfinding*           nv;
+
+    if (extra > (size_t)-1 / sizeof(dfinding) - D->nfound) {
+        return CF_FALSE;
+    }
+    need = D->nfound + extra;
+    if (need <= D->capfound) {
+        return CF_TRUE;
+    }
+    nv = (dfinding*)a->alloc(a->ctx, need * sizeof(dfinding));
+    if (nv == NULL) {
+        return CF_FALSE;
+    }
+    if (D->nfound > 0) {
+        memcpy(nv, D->found, D->nfound * sizeof(dfinding));
+    }
+    if (D->found != NULL) {
+        a->release(a->ctx, D->found);
+    }
+    D->found    = nv;
+    D->capfound = need;
+    return CF_TRUE;
+}
+
 static void found_release(cf_doctor* D) {
     const cf_allocator* a = cf_default_allocator();
     if (D->found != NULL) {
@@ -730,7 +760,9 @@ static const struct {
     {"CFD014", "Sensitive value differs"},
     {"CFD015", "Array truncation hazard"},
     {"CFD016", "Policy violation"},
-    {"VALUE", "Value differs between environments"}};
+    {"VALUE", "Value differs between environments"},
+    {"HISTORY", "Changed between one report of a sequence and the next"},
+    {"BLAME", "The report a key's present state dates from"}};
 
 void doctor_key_name(const rkey* k, char* buf, size_t cap) {
     size_t n = (k->keylen + 1 < cap) ? k->keylen : cap - 1;
@@ -1343,6 +1375,182 @@ void doctor_diff_reports(const report* a, const report* b) {
 }
 
 /* ------------------------------------------------------------------ *
+ * A sequence of reports
+ *
+ * The same service's report from one deployment after another, oldest
+ * first: what changed from each to the next, and since which report a
+ * key has been what it is now. The order is the caller's - a report
+ * says when it was written, and a re-run of an old build would put it
+ * in the wrong place. No value is printed: a history is pasted into
+ * tickets the reports themselves never go near, so it names reports
+ * and sources, and compares digests without showing them.
+ * ------------------------------------------------------------------ */
+
+typedef enum { STEP_SAME, STEP_CHANGED, STEP_UNKNOWN } step_result;
+
+static const cand* chosen(const rkey* k) {
+    return (k != NULL && k->selected != NULL) ? winner(k) : NULL;
+}
+
+/* What happened to one key from one report to the next: `was` its
+   entry in the earlier, `now` in the later, NULL where a report lacks
+   it. A step the two cannot settle - one shows the value and the other
+   only its digest - is STEP_UNKNOWN, neither same nor changed, as
+   values_agree has it. */
+static step_result key_step(const rkey* was, const rkey* now, char* what, size_t cap) {
+    const cand* wa = chosen(was);
+    const cand* wb = chosen(now);
+    agreement   agree;
+    cf_bool     moved;
+
+    if (was == NULL || now == NULL) {
+        if (was == NULL && now == NULL) {
+            return STEP_SAME;
+        }
+        if (now == NULL) {
+            cf_fmt(what, cap, "removed");
+        } else if (wb != NULL) {
+            cf_fmt(what, cap, "added, from '%s'", now->selected);
+        } else {
+            cf_fmt(what, cap, "added, with no value");
+        }
+        return STEP_CHANGED;
+    }
+    if (wa == NULL || wb == NULL) {
+        if (wa == NULL && wb == NULL) {
+            return STEP_SAME;
+        }
+        if (wb != NULL) {
+            cf_fmt(what, cap, "now set, from '%s'", now->selected);
+        } else {
+            cf_fmt(what, cap, "no longer set; it was from '%s'", was->selected);
+        }
+        return STEP_CHANGED;
+    }
+    agree = values_agree(wa, wb);
+    moved = (strcmp(was->selected, now->selected) != 0) ? CF_TRUE : CF_FALSE;
+    if (agree == AGREE_YES) {
+        if (!moved) {
+            return STEP_SAME;
+        }
+        cf_fmt(what, cap, "same value, now from '%s' rather than '%s'", now->selected,
+               was->selected);
+    } else if (agree == AGREE_NO) {
+        const char* how =
+            (wa->value == NULL || wb->value == NULL) ? " (by digest)" : "";
+        if (moved) {
+            cf_fmt(what, cap, "value changed%s, now from '%s' rather than '%s'", how,
+                   now->selected, was->selected);
+        } else {
+            cf_fmt(what, cap, "value changed%s, still from '%s'", how, now->selected);
+        }
+    } else if (moved) {
+        cf_fmt(what, cap,
+               "now from '%s' rather than '%s'; whether the value changed cannot "
+               "be told",
+               now->selected, was->selected);
+    } else {
+        cf_fmt(what, cap,
+               "whether the value changed cannot be told: one report has it only "
+               "as a digest, and the other has no digest to match");
+        return STEP_UNKNOWN;
+    }
+    return STEP_CHANGED;
+}
+
+/* One step's finding, recorded or only counted. */
+static size_t history_step(const report* later, const rkey* was, const rkey* now,
+                           cf_bool record) {
+    char what[256];
+
+    if (key_step(was, now, what, sizeof what) == STEP_SAME) {
+        return 0;
+    }
+    if (record) {
+        char        name[CF_KEY_MAX];
+        const cand* w = chosen(now);
+
+        doctor_key_name((now != NULL) ? now : was, name, sizeof name);
+        finding_at(later->D, "HISTORY", "info", name, (w != NULL) ? w->at : NULL,
+                   "%s: %s", later->path, what);
+    }
+    return 1;
+}
+
+/* Every change from each report to the next, in order: the keys of the
+   later report, then those it lost. Run once to count and once to
+   record, so room for all of them is reserved before the first. */
+static size_t history_pass(const report* rs, size_t n, const char* key,
+                           cf_bool record) {
+    size_t i, j, count = 0;
+
+    for (i = 1; i < n; ++i) {
+        const report* was = &rs[i - 1];
+        const report* now = &rs[i];
+
+        if (key != NULL) {
+            size_t kl = strlen(key);
+            count += history_step(now, doctor_find_key(was, key, kl),
+                                  doctor_find_key(now, key, kl), record);
+            continue;
+        }
+        for (j = 0; j < now->nkeys; ++j) {
+            const rkey* k = &now->keys[j];
+            count +=
+                history_step(now, doctor_find_key(was, k->key, k->keylen), k, record);
+        }
+        for (j = 0; j < was->nkeys; ++j) {
+            const rkey* k = &was->keys[j];
+            if (doctor_find_key(now, k->key, k->keylen) == NULL) {
+                count += history_step(now, k, NULL, record);
+            }
+        }
+    }
+    return count;
+}
+
+/* Since which report `key` has been as the last one has it: walked back
+   from the last report while nothing changes. One finding, placed where
+   that report says the value was set. */
+static void blame_key(const report* rs, size_t n, const char* key) {
+    size_t      kl   = strlen(key);
+    size_t      k    = n - 1;
+    step_result step = STEP_SAME;
+    const rkey* now  = doctor_find_key(&rs[n - 1], key, kl);
+    const cand* w;
+    char        what[256];
+    char        state[160];
+
+    while (k > 0) {
+        step = key_step(doctor_find_key(&rs[k - 1], key, kl),
+                        doctor_find_key(&rs[k], key, kl), what, sizeof what);
+        if (step != STEP_SAME) {
+            break;
+        }
+        --k;
+    }
+    w = chosen(doctor_find_key(&rs[k], key, kl));
+    if (now == NULL) {
+        cf_fmt(state, sizeof state, "absent");
+    } else if (chosen(now) == NULL) {
+        cf_fmt(state, sizeof state, "set by no source");
+    } else {
+        cf_fmt(state, sizeof state, "from '%s'", now->selected);
+    }
+    if (step == STEP_SAME) {
+        finding_at(rs[0].D, "BLAME", "info", key, (w != NULL) ? w->at : NULL,
+                   "%s since %s, the first of %u report(s)", state, rs[0].path,
+                   (unsigned)n);
+    } else if (step == STEP_CHANGED) {
+        finding_at(rs[0].D, "BLAME", "info", key, (w != NULL) ? w->at : NULL,
+                   "%s since %s: %s", state, rs[k].path, what);
+    } else {
+        finding_at(rs[0].D, "BLAME", "info", key, (w != NULL) ? w->at : NULL,
+                   "%s since %s at least; before it, %s", state, rs[k].path, what);
+    }
+}
+
+/* ------------------------------------------------------------------ *
  * The library (cf_doctor.h)
  * ------------------------------------------------------------------ */
 
@@ -1555,6 +1763,108 @@ cf_bool cf_doctor_diff(cf_doctor* d, const cf_config* a, const cf_config* b,
     }
     doctor_report_free(ra, an);
     doctor_report_free(rb, bn);
+    return ok;
+}
+
+static void reports_release(report* rs, size_t n) {
+    const cf_allocator* a = cf_default_allocator();
+    size_t              i;
+
+    for (i = 0; i < n; ++i) {
+        doctor_release(&rs[i]);
+    }
+    a->release(a->ctx, rs);
+}
+
+/* Every report of a sequence, or none: one that cannot be read leaves
+   no finding from the rest, as a sequence missing a step would tell a
+   different history. */
+static report* reports_load(cf_doctor* d, const char* const* paths, size_t n,
+                            cf_error* err) {
+    const cf_allocator* a = cf_default_allocator();
+    report*             rs;
+    size_t              i;
+
+    if (d == NULL || paths == NULL || n == 0) {
+        cf_error_set(err, CF_E_SOURCE, NULL, NULL, "no reports to read");
+        return NULL;
+    }
+    rs = (n <= (size_t)-1 / sizeof(report))
+             ? (report*)a->alloc(a->ctx, n * sizeof(report))
+             : NULL;
+    if (rs == NULL) {
+        cf_error_set(err, CF_E_MEMORY, NULL, NULL, "no room for %u reports",
+                     (unsigned)n);
+        return NULL;
+    }
+    memset(rs, 0, n * sizeof(report));
+    for (i = 0; i < n; ++i) {
+        if (paths[i] == NULL) {
+            cf_error_set(err, CF_E_SOURCE, NULL, NULL, "report %u has no path",
+                         (unsigned)(i + 1));
+            reports_release(rs, i);
+            return NULL;
+        }
+        if (!doctor_load(&rs[i], d, paths[i], err)) {
+            reports_release(rs, i + 1);
+            return NULL;
+        }
+    }
+    return rs;
+}
+
+static cf_bool key_in_any(const report* rs, size_t n, const char* key) {
+    size_t i;
+
+    for (i = 0; i < n; ++i) {
+        if (doctor_find_key(&rs[i], key, strlen(key)) != NULL) {
+            return CF_TRUE;
+        }
+    }
+    return CF_FALSE;
+}
+
+cf_bool cf_doctor_history_files(cf_doctor* d, const char* const* paths, size_t n,
+                                const char* key, cf_error* err) {
+    report* rs = reports_load(d, paths, n, err);
+    cf_bool ok = CF_FALSE;
+
+    if (rs == NULL) {
+        return CF_FALSE;
+    }
+    if (key != NULL && !key_in_any(rs, n, key)) {
+        cf_error_set(err, CF_E_KEY, key, NULL, "'%s' is in none of the reports", key);
+    } else if (!found_reserve(d, history_pass(rs, n, key, CF_FALSE))) {
+        cf_error_set(err, CF_E_MEMORY, key, NULL, "no room for the history");
+    } else {
+        (void)history_pass(rs, n, key, CF_TRUE);
+        ok = CF_TRUE;
+    }
+    reports_release(rs, n);
+    return ok;
+}
+
+cf_bool cf_doctor_blame_files(cf_doctor* d, const char* const* paths, size_t n,
+                              const char* key, cf_error* err) {
+    report* rs;
+    cf_bool ok = CF_FALSE;
+
+    if (key == NULL) {
+        return cf_error_set(err, CF_E_KEY, NULL, NULL, "no key to blame");
+    }
+    rs = reports_load(d, paths, n, err);
+    if (rs == NULL) {
+        return CF_FALSE;
+    }
+    if (!key_in_any(rs, n, key)) {
+        cf_error_set(err, CF_E_KEY, key, NULL, "'%s' is in none of the reports", key);
+    } else if (!found_reserve(d, 1)) {
+        cf_error_set(err, CF_E_MEMORY, key, NULL, "no room for the answer");
+    } else {
+        blame_key(rs, n, key);
+        ok = CF_TRUE;
+    }
+    reports_release(rs, n);
     return ok;
 }
 

@@ -104,6 +104,8 @@ The first round:
   updates it). Linux verify:
   `wsl -d configforge-dev -- cmake -DSOURCE=index -DJOBS=4 -DWORK=/root/cfv -P scripts/verify.cmake`
   run from the checkout under `/mnt/c/...`; `CARGO_TARGET_DIR=/root/rt`.
+  With `$` variables in the command use `wsl -d configforge-dev -e bash -lc '...'`:
+  `wsl --` hands the line to a shell that expands them first, to nothing.
 * **Windows verify** with temporary files on D::
   `$env:TEMP=$env:TMP='D:\cf-tmp'`, `-DWORK=D:/cf-work -DMODE=quick`.
 * **The Linux and Windows verifies can run at once** since D-50 (each

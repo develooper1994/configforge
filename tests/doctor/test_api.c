@@ -616,6 +616,177 @@ static void test_synthesized_list_count(void) {
     cf_config_free(c);
 }
 
+/* A report file of a sequence: `keys` is the body of its "keys". */
+static int seq_write(const char* path, const char* keys) {
+    char   text[1024];
+    size_t n =
+        cf_fmt(text, sizeof text, "{\"configforge_report\":1,\"keys\":{%s}}", keys);
+    FILE* f = fopen(path, "wb");
+    int   ok;
+
+    if (f == NULL || n >= sizeof text) {
+        if (f != NULL) {
+            fclose(f);
+        }
+        return 0;
+    }
+    ok = fwrite(text, 1, n, f) == n;
+    return (fclose(f) == 0) && ok;
+}
+
+/* clang-format off */
+#define SEQ_KEY(name, src, cand) \
+    "\"" name "\":{\"candidates\":[{\"source\":\"" src "\"," cand "}]," \
+    "\"selected\":{\"source\":\"" src "\"}}"
+/* clang-format on */
+
+static size_t count_rule(cf_doctor* d, const char* rule, const char* key) {
+    size_t i, n = 0;
+    for (i = 0; i < cf_doctor_count(d); ++i) {
+        const cf_finding* f = cf_doctor_finding(d, i);
+        if (strcmp(f->rule, rule) == 0 && (key == NULL || strcmp(f->key, key) == 0)) {
+            ++n;
+        }
+    }
+    return n;
+}
+
+/* Four deployments of one service. The port moves from a file to the
+   environment with its value, then changes value; the token, a secret,
+   changes by digest and is then shown where it was digested, which
+   nothing can compare; one key is dropped and another added. */
+static void test_history(void) {
+    static const char* const seq[] = {"cf_seq_1.json", "cf_seq_2.json", "cf_seq_3.json",
+                                      "cf_seq_4.json"};
+    static const char* const gap[] = {"cf_seq_1.json", "cf_seq_none.json",
+                                      "cf_seq_3.json"};
+    cf_error                 err   = CF_ERROR_INIT;
+    cf_doctor*               d     = cf_doctor_new();
+    const cf_finding*        f;
+    size_t                   i;
+    int                      leaked = 0;
+
+    check(
+        d != NULL &&
+            seq_write(
+                seq[0],
+                SEQ_KEY("port", "file", "\"value\":\"80\",\"at\":\"app.ini:2:1\"") "," SEQ_KEY(
+                    "token", "env",
+                    "\"digest\":\"aaaa\"") "," SEQ_KEY("old.key", "file",
+                                                       "\"value\":\"x\"")) &&
+            seq_write(seq[1],
+                      SEQ_KEY("port", "env", "\"value\":\"80\"") "," SEQ_KEY(
+                          "token", "env",
+                          "\"digest\":\"aaaa\"") "," SEQ_KEY("new.key", "file",
+                                                             "\"value\":\"y\"")) &&
+            seq_write(
+                seq[2],
+                SEQ_KEY("port", "env", "\"value\":\"81\",\"at\":\"deploy.ini:5:1\"") "," SEQ_KEY(
+                    "token", "env",
+                    "\"digest\":\"bbbb\"") "," SEQ_KEY("new.key", "file",
+                                                       "\"value\":\"y\"")) &&
+            seq_write(
+                seq[3],
+                SEQ_KEY("port", "env", "\"value\":\"81\",\"at\":\"deploy.ini:5:1\"") "," SEQ_KEY(
+                    "token", "env",
+                    "\"value\":\"secret-canary\"") "," SEQ_KEY("new.key", "file",
+                                                               "\"value\":\"y\"")),
+        "four reports of one service are written");
+    if (d == NULL) {
+        return;
+    }
+
+    check(cf_doctor_history_files(d, seq, 4, NULL, &err), err.message);
+    check(count_rule(d, "HISTORY", NULL) == 6 && cf_doctor_count(d) == 6,
+          "a history is one finding a change, and nothing for what did not");
+    f = find(d, "HISTORY", "port");
+    check(f != NULL && strstr(f->message, "cf_seq_2.json: same value, now from 'env' "
+                                          "rather than 'file'") != NULL,
+          "a value that moved to another source, at the report it moved in");
+    check(count_rule(d, "HISTORY", "port") == 2, "then changed once, and only once");
+    f = find(d, "HISTORY", "old.key");
+    check(f != NULL && strstr(f->message, "removed") != NULL, "a key dropped");
+    f = find(d, "HISTORY", "new.key");
+    check(f != NULL && strstr(f->message, "added, from 'file'") != NULL,
+          "and a key added");
+    for (i = 0; i < cf_doctor_count(d); ++i) {
+        f = cf_doctor_finding(d, i);
+        if (strcmp(f->key, "port") == 0 &&
+            strstr(f->message, "value changed") != NULL) {
+            check(strstr(f->message, "cf_seq_3.json") != NULL &&
+                      strcmp(f->at, "deploy.ini:5:1") == 0,
+                  "a changed value, placed where the later report says it was set");
+        }
+        if (strcmp(f->key, "token") == 0 &&
+            strstr(f->message, "cf_seq_3.json") != NULL) {
+            check(strstr(f->message, "value changed (by digest), still from 'env'") !=
+                      NULL,
+                  "a secret that changed is told by its digest");
+        }
+        if (strcmp(f->key, "token") == 0 &&
+            strstr(f->message, "cf_seq_4.json") != NULL) {
+            check(strstr(f->message, "cannot be told") != NULL,
+                  "and a step nothing can compare is said to be one");
+        }
+        if (strstr(f->message, "secret-canary") != NULL ||
+            strstr(f->message, "aaaa") != NULL || strstr(f->message, "bbbb") != NULL ||
+            strstr(f->message, "81") != NULL) {
+            ++leaked;
+        }
+    }
+    check(leaked == 0, "no value or digest is in any message");
+    cf_doctor_free(d);
+
+    d = cf_doctor_new();
+    check(d != NULL && cf_doctor_history_files(d, seq, 4, "port", &err) &&
+              cf_doctor_count(d) == 2,
+          "one key's history is that key's alone");
+    cf_doctor_free(d);
+
+    d = cf_doctor_new();
+    check(d != NULL && cf_doctor_blame_files(d, seq, 4, "port", &err), err.message);
+    f = (d != NULL) ? find(d, "BLAME", "port") : NULL;
+    check(f != NULL && cf_doctor_count(d) == 1 &&
+              strstr(f->message, "from 'env' since cf_seq_3.json: value changed") !=
+                  NULL &&
+              strcmp(f->at, "deploy.ini:5:1") == 0,
+          "blame names the report a value dates from, and where it set it");
+    check(cf_doctor_blame_files(d, seq, 4, "token", &err) &&
+              (f = find(d, "BLAME", "token")) != NULL &&
+              strstr(f->message, "since cf_seq_4.json at least") != NULL,
+          "and says 'at least' where an earlier step cannot be compared");
+    check(cf_doctor_blame_files(d, seq, 4, "old.key", &err) &&
+              (f = find(d, "BLAME", "old.key")) != NULL &&
+              strstr(f->message, "absent since cf_seq_2.json: removed") != NULL,
+          "a key that is gone is blamed on the report that dropped it");
+    check(cf_doctor_blame_files(d, seq, 1, "new.key", &err) == CF_FALSE &&
+              err.code == CF_E_KEY,
+          "a key in none of the reports is an error, not an empty answer");
+    cf_doctor_free(d);
+
+    d = cf_doctor_new();
+    check(d != NULL && cf_doctor_blame_files(d, seq, 1, "port", &err) &&
+              (f = find(d, "BLAME", "port")) != NULL &&
+              strstr(f->message, "from 'file' since cf_seq_1.json, the first of 1") !=
+                  NULL,
+          "unchanged throughout dates from the first report");
+    check(!cf_doctor_history_files(d, gap, 3, NULL, &err) &&
+              strstr(err.message, "cf_seq_none.json") != NULL &&
+              cf_doctor_count(d) == 1,
+          "a sequence with an unreadable report records nothing from the rest");
+    check(!cf_doctor_history_files(d, seq, 4, "no.such.key", &err) &&
+              err.code == CF_E_KEY && cf_doctor_count(d) == 1,
+          "nor does one asked about a key none of them has");
+    check(!cf_doctor_history_files(d, seq, 0, NULL, &err) &&
+              !cf_doctor_blame_files(d, seq, 4, NULL, &err) && cf_doctor_count(d) == 1,
+          "and no reports, or no key to blame, is refused");
+    cf_doctor_free(d);
+
+    for (i = 0; i < 4; ++i) {
+        remove(seq[i]);
+    }
+}
+
 int main(void) {
 #if CF_WITH_REPORT && CF_WITH_JSON
     test_lint();
@@ -630,6 +801,7 @@ int main(void) {
     test_cut_by_the_library();
     test_inputs();
     test_synthesized_list_count();
+    test_history();
 #else
     /* A configuration's report needs both; without them the library
        says so. */

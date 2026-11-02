@@ -1,4 +1,4 @@
-"""ConfigForge Doctor from Python: lint and diff provenance reports.
+"""ConfigForge Doctor from Python: lint, diff and trace provenance reports.
 
     import configforge_doctor as doctor
 
@@ -21,7 +21,8 @@ import os
 import shutil
 import subprocess
 
-__all__ = ["Finding", "DoctorError", "lint", "diff", "version", "find_doctor"]
+__all__ = ["Finding", "DoctorError", "lint", "diff", "history", "blame", "version",
+           "find_doctor"]
 
 
 class DoctorError(Exception):
@@ -113,6 +114,23 @@ def diff(before, after, baseline=None, severity=None, fail_on=None, doctor=None)
     """The findings `doctor diff` makes between two reports."""
     return _findings(
         _run(["diff", before, after] + _options(baseline, severity, fail_on), doctor))
+
+
+def history(reports, key=None, baseline=None, severity=None, fail_on=None, doctor=None):
+    """Each change from one report to the next, oldest first, as
+    `doctor history` finds them: rule HISTORY, one finding a change."""
+    args = ["history"] + list(reports)
+    if key:
+        args += ["--key", key]
+    return _findings(_run(args + _options(baseline, severity, fail_on), doctor))
+
+
+def blame(key, reports, baseline=None, severity=None, fail_on=None, doctor=None):
+    """Since which report, oldest first, `key` has been as the last one
+    has it - `doctor blame`, one BLAME finding."""
+    return _findings(
+        _run(["blame", key] + list(reports) + _options(baseline, severity, fail_on),
+             doctor))
 
 
 def version(doctor=None):

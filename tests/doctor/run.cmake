@@ -145,3 +145,32 @@ if(cmd STREQUAL "explain"
     message(FATAL_ERROR "explain did not show the losing candidate")
   endif()
 endif()
+
+# A sequence names what changed and where it comes from now, and never
+# the value: production's port 9090, staging's 5000, and the secrets.
+if(cmd MATCHES "^(history|blame)$" AND out MATCHES "9090|5000|prodsecret|devsecret")
+  message(FATAL_ERROR "${cmd} printed a value")
+endif()
+if(cmd STREQUAL "history" AND EXPECT_FAIL LESS 2)
+  if(NOT out MATCHES
+     "HISTORY[^\n]*server.port[^\n]*value changed, now from 'cli' rather than 'env'")
+    message(FATAL_ERROR "the port's change was not reported")
+  endif()
+  if(NOT out MATCHES
+     "HISTORY[^\n]*db.password[^\n]*value changed \\(by digest\\), still from 'env'")
+    message(FATAL_ERROR "the secret's change was not told by its digest")
+  endif()
+  if(NOT out MATCHES
+     "HISTORY[^\n]*server.host[^\n]*same value, now from 'user-file' rather than 'env'")
+    message(FATAL_ERROR "the host that moved with its value was not reported")
+  endif()
+  if(out MATCHES "HISTORY[^\n]*log.level")
+    message(FATAL_ERROR "a key that did not change has a history")
+  endif()
+endif()
+if(cmd STREQUAL "blame" AND EXPECT_FAIL EQUAL 0)
+  if(NOT out MATCHES
+     "BLAME[^\n]*server.port[^\n]*from 'cli' since cf_fx_staging.json: value changed")
+    message(FATAL_ERROR "blame did not name the report the port dates from")
+  endif()
+endif()

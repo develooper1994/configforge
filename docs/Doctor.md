@@ -179,6 +179,15 @@ configforge doctor dump [--format table|json|md] [--blind]
 configforge doctor diff <reportA> <reportB>
     value differences, origin differences, shadow differences, presence differences
 
+doctor history <report>... [--key K]
+    each change from one report to the next, oldest first: a key added or
+    removed, a value changed (by digest for a secret), a value from another
+    source, and a step nothing can compare; never the value itself
+
+doctor blame <key> <report>...
+    the report since which <key> has been as the last report has it, and what
+    changed there; "at least" when an earlier step cannot be compared
+
 configforge doctor lint <report> [--rules R] [--baseline B]
     rule catalogue against a single report
 
@@ -236,6 +245,7 @@ about a rule.
 | `cf_doctor_lint(d, cfg, profile, &err)` | lint a configuration in process: its full report is written in memory, read as `doctor lint` reads a file, and wiped |
 | `cf_doctor_lint_report`, `cf_doctor_lint_file` | lint a report held as text, or in a file |
 | `cf_doctor_diff`, `cf_doctor_diff_report`, `cf_doctor_diff_files` | `doctor diff`, on two configurations, two texts or two files |
+| `cf_doctor_history_files`, `cf_doctor_blame_files` | `doctor history` and `doctor blame` over report files in the caller's order, oldest first: every file is read before anything is recorded, and room for every finding is reserved first, so an unreadable report or a full heap adds nothing |
 | `cf_doctor_accept`, `cf_doctor_baseline` | a baseline entry, or a `--baseline` file |
 | `cf_doctor_severity`, `cf_doctor_severity_file` | a severity line, or a `--severity` file |
 | `cf_doctor_count`, `cf_doctor_finding`, `cf_doctor_count_at` | the findings, each with its rule, level, key, place and message |
@@ -262,8 +272,36 @@ for f in doctor.lint("app.json", baseline="doctor.baseline", fail_on="never"):
     print(f.rule, f.level, f.key, f.message, f.file, f.line)
 ```
 
-`lint`, `diff` and `version`; `DoctorError` for input Doctor cannot use.
-The standard library only. `doctor.python` holds it to the fixtures.
+`lint`, `diff`, `history`, `blame` and `version`; `DoctorError` for input
+Doctor cannot use. The standard library only. `doctor.python` holds it to
+the fixtures.
+
+### 7c. A sequence of reports
+
+`diff` compares two environments; `history` and `blame` follow one
+service through its deployments. The reports are given oldest first, and
+that order is the only one Doctor uses: a report's `generated` time says
+when it was written, which a re-run of an old build would get wrong.
+
+```text
+$ doctor history prod-0912.json prod-0919.json prod-0926.json
+HISTORY info    server.host   prod-0919.json: same value, now from 'user-file' rather than 'env'
+HISTORY info    db.password   prod-0926.json: value changed (by digest), still from 'env'
+HISTORY info    server.port   prod-0926.json: value changed, now from 'cli' rather than 'env'
+```
+
+Findings come step by step, and within a step in the later report's key
+order. Each names the later report of the step and is placed where that
+report says the value was set. Comparison is `diff`'s: shown values are
+compared as text, redacted ones by digest, and a step where one report
+has only a digest and the other none to match is reported as not
+comparable rather than as unchanged. No message carries a value or a
+digest, so a history can go into a ticket the reports themselves would
+not. A change is `info`; `--fail-on info` fails a run on any change.
+Every report is read before anything is recorded, so an unreadable one
+is exit 2 with no partial history, as is a `--key` or a `blame` key that
+none of the reports has. The fingerprint limits in section 5 apply: a
+digest match is evidence, not proof.
 
 ## 8. Rule Catalogue
 
@@ -289,6 +327,9 @@ Each rule has a stable identifier so it can be suppressed individually. Rules ma
 | CFD015 | **Array truncation hazard.** An element lies at or beyond the length the winning `<key>.count` gives its array - most often a longer list in a lower-precedence file under a shorter count from the command line - and was discarded. The finding names the count and where it came from. | warning | yes |
 | CFD016 | **Policy violation.** A source outside the key's per-parameter policy supplied it. The library rejected the candidate (D-33); this is where that becomes loud. | error | yes |
 
+`HISTORY` and `BLAME` are not rules of a configuration but records of a
+sequence (section 7c): each is `info`, and a severity file, a baseline or
+`--fail-on` treats them as it treats any identifier.
 **What one report can prove.** The first draft of CFD001 read "a key set in a source
 that can never win", and the natural implementation — every shadowed candidate — is
 wrong twice over. A file shadowed by an environment variable here may win in the next
@@ -577,6 +618,7 @@ D-Phase 1   report reader, dump, explain, diff, CFD001–CFD003
 D-Phase 2   full rule catalogue, baseline, severity configuration
 D-Phase 3   SARIF output, CI templates, emit hook in the library
 D-Phase 4   foreign adapters: .NET, Spring, git config, systemd (built)
+D-Phase 5   history and blame over a sequence of reports (built)
 ```
 
 Estimated size if the library already emits reports: 1500–2500 lines, three to four

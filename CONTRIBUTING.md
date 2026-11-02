@@ -103,7 +103,8 @@ commands.
    and commit only on "all green". Never decide from `grep` on the output;
    the exit code is the answer (Conventions.md says why).
 2. **Code and documents change together.** A behaviour change updates
-   the header comment (then `cmake -P scripts/apiref.cmake`, or
+   the header comment (then `cmake -P scripts/format.cmake`, which
+   writes `docs/API.md` after the layout that moves its line links, or
    `gate.apiref` fails; a new or removed `CF_API` function also goes in
    `cmake/configforge.symbols`, or `gate.abi` fails), the relevant
    `docs/` page, `CHANGELOG.md` and,

@@ -13,6 +13,8 @@
  *     doctor explain <report> <key>
  *     doctor lint    <report> [options]
  *     doctor diff    <a> <b>  [options]
+ *     doctor history <report>... [--key <key>] [options]
+ *     doctor blame   <key> <report>... [options]
  *
  *     --baseline <file>   findings already accepted, one per line
  *     --severity <file>   this project's severities, one per line
@@ -192,6 +194,8 @@ static int usage(void) {
           "  doctor explain <report> <key>\n"
           "  doctor lint    <report> [options]\n"
           "  doctor diff    <report-a> <report-b> [options]\n"
+          "  doctor history <report>... [--key <key>] [options]\n"
+          "  doctor blame   <key> <report>... [options]\n"
           "  doctor --version\n"
           "\n",
           stderr);
@@ -308,17 +312,37 @@ static int run(cf_doctor* D, int argc, char** argv) {
         doctor_release(&a);
         return rc;
     }
-    if (strcmp(argv[1], "lint") == 0 || strcmp(argv[1], "diff") == 0) {
-        cf_bool     is_diff = (strcmp(argv[1], "diff") == 0) ? CF_TRUE : CF_FALSE;
-        int         first   = is_diff ? 4 : 3;
-        const char* fail_on = "error";
-        const char* format  = "text";
+    if (strcmp(argv[1], "lint") == 0 || strcmp(argv[1], "diff") == 0 ||
+        strcmp(argv[1], "history") == 0 || strcmp(argv[1], "blame") == 0) {
+        cf_bool     is_diff    = (strcmp(argv[1], "diff") == 0) ? CF_TRUE : CF_FALSE;
+        cf_bool     is_history = (strcmp(argv[1], "history") == 0) ? CF_TRUE : CF_FALSE;
+        cf_bool     is_blame   = (strcmp(argv[1], "blame") == 0) ? CF_TRUE : CF_FALSE;
+        int         first      = is_diff ? 4 : 3;
+        int         pos        = 2; /* the first report */
+        const char* key        = NULL;
+        const char* fail_on    = "error";
+        const char* format     = "text";
         int         i;
         int         over = 0;
         int         threshold;
 
         if (is_diff && argc < 4) {
             return usage();
+        }
+        /* A sequence is every report up to the first option, oldest
+           first; blame names its key before them. */
+        if (is_history || is_blame) {
+            if (is_blame) {
+                key = argv[2];
+                pos = 3;
+            }
+            first = pos;
+            while (first < argc && strncmp(argv[first], "--", 2) != 0) {
+                ++first;
+            }
+            if (first == pos) {
+                return usage();
+            }
         }
         /* Options read before anything runs, so a finding is matched
            as it is produced rather than filtered afterwards. */
@@ -344,25 +368,42 @@ static int run(cf_doctor* D, int argc, char** argv) {
                 if (strcmp(format, "text") != 0 && strcmp(format, "sarif") != 0) {
                     return usage();
                 }
+            } else if (is_history && strcmp(argv[i], "--key") == 0) {
+                key = argv[++i];
             } else {
                 return usage();
             }
         }
         threshold = doctor_level_rank(fail_on);
 
-        if (!load(&a, D, argv[2]) || (is_diff && !load(&b, D, argv[3]))) {
-            doctor_release(&a);
-            doctor_release(&b);
-            return 2;
-        }
-        if (is_diff) {
-            doctor_diff_reports(&a, &b);
+        if (is_history || is_blame) {
+            cf_error err = CF_ERROR_INIT;
+            /* argv as the library takes it: C converts char** to
+               const char* const* only when told to. */
+            const char* const* seq = (const char* const*)(argv + pos);
+            size_t             n   = (size_t)(first - pos);
+            cf_bool ok = is_history ? cf_doctor_history_files(D, seq, n, key, &err)
+                                    : cf_doctor_blame_files(D, seq, n, key, &err);
+            if (!ok) {
+                fprintf(stderr, "doctor: %s\n", err.message);
+                return 2;
+            }
         } else {
-            doctor_lint_reports(&a);
+            if (!load(&a, D, argv[2]) || (is_diff && !load(&b, D, argv[3]))) {
+                doctor_release(&a);
+                doctor_release(&b);
+                return 2;
+            }
+            if (is_diff) {
+                doctor_diff_reports(&a, &b);
+            } else {
+                doctor_lint_reports(&a);
+            }
         }
 
         if (strcmp(format, "sarif") == 0) {
-            print_sarif(D, argv[2]);
+            /* A sequence's artifact is its latest report. */
+            print_sarif(D, argv[(is_history || is_blame) ? first - 1 : 2]);
         } else {
             int stale = 0;
             print_text(D);

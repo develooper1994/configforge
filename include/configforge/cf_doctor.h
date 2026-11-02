@@ -100,6 +100,25 @@ CF_DOCTOR_API cf_bool cf_doctor_diff_report(cf_doctor* d, const char* a, size_t 
 CF_DOCTOR_API cf_bool cf_doctor_diff_files(cf_doctor* d, const char* a, const char* b,
                                            cf_error* err);
 
+/* A sequence of reports, oldest first - one service's report from each
+   deployment - in the order given; a report's own date is not trusted
+   to order it. cf_doctor_history_files adds an info finding, rule
+   "HISTORY", for each change from one report to the next: a key added
+   or removed, now set or no longer set, a value that changed, a value
+   that came from another source, and a step that cannot be settled
+   because one report has only a digest the other cannot match. `key`
+   limits it to one key, NULL for every key. cf_doctor_blame_files adds
+   one, rule "BLAME": the report since which `key` has been as the last
+   report has it, and what changed there, placed where that report says
+   the value was set. Neither puts a value in a message.
+   False with `err` set, and nothing found, when a report cannot be
+   read, `key` is in none of them, or there is no memory to record the
+   result. */
+CF_DOCTOR_API cf_bool cf_doctor_history_files(cf_doctor* d, const char* const* paths,
+                                              size_t n, const char* key, cf_error* err);
+CF_DOCTOR_API cf_bool cf_doctor_blame_files(cf_doctor* d, const char* const* paths,
+                                            size_t n, const char* key, cf_error* err);
+
 /* The findings so far, in the order they were found. */
 CF_DOCTOR_API size_t            cf_doctor_count(const cf_doctor* d);
 CF_DOCTOR_API const cf_finding* cf_doctor_finding(cf_doctor* d, size_t i);

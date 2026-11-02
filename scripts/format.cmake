@@ -5,9 +5,10 @@
 #   cmake -DCHECK=ON -P scripts/format.cmake    report only; change nothing
 #
 # C goes through clang-format, CMake through cmake-format and then
-# cmake-lint, each only where it is installed. Prints what needs
-# attention and exits non-zero when anything does, so it can be chained
-# in front of `cmake -P scripts/verify.cmake`.
+# cmake-lint, each only where it is installed. When C changed, the API
+# reference is written afterwards, since its links carry line numbers.
+# Prints what needs attention and exits non-zero when anything does, so
+# it can be chained in front of `cmake -P scripts/verify.cmake`.
 #
 # It touches exactly the files the gates check (CF_C_SOURCES in
 # cmake/ConfigForgeFormat.cmake) and nothing else. The C++ wrapper and
@@ -102,6 +103,20 @@ if(c_files)
   else()
     execute_process(COMMAND "${CLANG_FORMAT_EXE}" -i ${c_files}
                     WORKING_DIRECTORY "${REPO}")
+  endif()
+  # docs/API.md links every function to its line, and layout moves
+  # lines: written after the formatting, never before it.
+  if(NOT CHECK)
+    execute_process(
+      COMMAND "${CMAKE_COMMAND}" -P "${REPO}/scripts/apiref.cmake"
+      WORKING_DIRECTORY "${REPO}"
+      RESULT_VARIABLE rc
+      OUTPUT_VARIABLE out
+      ERROR_VARIABLE out)
+    if(NOT rc EQUAL 0)
+      message("apiref:\n${out}")
+      set(bad 1)
+    endif()
   endif()
 endif()
 

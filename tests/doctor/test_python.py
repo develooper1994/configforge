@@ -60,5 +60,30 @@ except doctor.DoctorError as e:
 check("ConfigForge" in doctor.version(doctor=DOCTOR) or doctor.version(doctor=DOCTOR),
       "the version is Doctor's")
 
+# A sequence, oldest first: production, then staging. The port changed
+# value and source, the host only its source; no value is printed.
+seq = [fixture("cf_fx_prod.json"), fixture("cf_fx_staging.json")]
+hist = doctor.history(seq, doctor=DOCTOR)
+port = [f for f in hist if f.key == "server.port"]
+check(len(port) == 1 and port[0].rule == "HISTORY" and port[0].level == "info",
+      "a change from one report to the next is one HISTORY finding")
+check(port and "value changed, now from 'cli' rather than 'env'" in port[0].message,
+      "saying what changed and where it comes from now")
+check(not [f for f in hist if f.key == "log.level"], "an unchanged key has no history")
+check(not [f for f in hist if "9090" in f.message or "5000" in f.message
+           or "secret" in f.message], "and no value is in any message")
+check([f.key for f in doctor.history(seq, key="server.host", doctor=DOCTOR)]
+      == ["server.host"], "one key's history is that key's alone")
+
+blamed = doctor.blame("server.host", seq, doctor=DOCTOR)
+check(len(blamed) == 1 and blamed[0].rule == "BLAME"
+      and "since " + seq[1] in blamed[0].message,
+      "blame names the report a key's present state dates from")
+try:
+    doctor.blame("no.such.key", seq, doctor=DOCTOR)
+    check(False, "a key in none of the reports is refused")
+except doctor.DoctorError as e:
+    check("none of the reports" in str(e), "a key in none of the reports is refused")
+
 print("%d checks, %d failures" % (checks, failures))
 sys.exit(1 if failures else 0)

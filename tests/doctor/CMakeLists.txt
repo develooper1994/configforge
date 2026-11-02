@@ -56,6 +56,16 @@ doctor_case(lint_unset 1 lint|cf_fx_unset.json)
 doctor_case(explain_unset 0 explain|cf_fx_unset.json|license.code)
 doctor_case(lint_files_secret 0 lint|cf_fx_files.json|--fail-on|never)
 doctor_case(not_a_report 2 dump|cf_fx_staging.ini)
+# A sequence, oldest first: what changed from each report to the next,
+# and since which report a key has been what it is. A change is info, so
+# it fails only a run that asks for info; a report that cannot be read,
+# or a key none of them has, is unusable input.
+doctor_case(history 0 history|cf_fx_prod.json|cf_fx_staging.json)
+doctor_case(history_strict 1
+            history|cf_fx_prod.json|cf_fx_staging.json|--fail-on|info)
+doctor_case(history_unreadable 2 history|cf_fx_prod.json|cf_fx_none.json)
+doctor_case(blame 0 blame|server.port|cf_fx_prod.json|cf_fx_staging.json)
+doctor_case(blame_missing 2 blame|no.such.key|cf_fx_prod.json)
 
 # Doctor from Python (bindings/python): the same findings, read from the
 # program's SARIF output. Where there is a Python 3 to run it.
