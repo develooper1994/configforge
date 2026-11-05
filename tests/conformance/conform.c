@@ -19,6 +19,16 @@
 #include <stdio.h>
 #include <string.h>
 
+/* Windows writes a text stream's line feed as CR LF, which would end up
+   in every value; the output is bytes, so stdout is made binary there. */
+#ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
+#define CONFORM_BINARY_STDOUT() (void)_setmode(_fileno(stdout), _O_BINARY)
+#else
+#define CONFORM_BINARY_STDOUT() ((void)0)
+#endif
+
 /* The flat key the events have reached, and for each level open its
    length before it and, for an array, the next element's number. */
 #define CONFORM_DEPTH 256
@@ -52,11 +62,13 @@ static cf_bool conform_name(conform_sink* c, const char* name, size_t n) {
     } else if (name == NULL) {
         return CF_TRUE; /* the root */
     }
-    need = c->plen + (c->plen > 0 ? 1 : 0) + n;
+    /* Joined by a dot below the root, even after an empty name: TOML
+       allows "" as a key, and "a" and the "" table's "a" are two keys. */
+    need = c->plen + (c->depth >= 1 ? 1 : 0) + n;
     if (need >= sizeof c->path) {
         return CF_FALSE;
     }
-    if (c->plen > 0) {
+    if (c->depth >= 1) {
         c->path[c->plen++] = '.';
     }
     memcpy(c->path + c->plen, name, n);
@@ -77,6 +89,35 @@ static cf_bool conform_open(conform_sink* c, const char* name, size_t n, int is_
     return CF_TRUE;
 }
 
+/* Bytes with the line's own separators escaped - backslash, tab, line
+   feed, carriage return and NUL - so that a key or a value holding them
+   stays one line; scripts/conformance.py undoes it. */
+static void conform_escaped(const char* p, size_t n) {
+    size_t i;
+    for (i = 0; i < n; ++i) {
+        switch (p[i]) {
+        case '\\':
+            fputs("\\\\", stdout);
+            break;
+        case '\t':
+            fputs("\\t", stdout);
+            break;
+        case '\n':
+            fputs("\\n", stdout);
+            break;
+        case '\r':
+            fputs("\\r", stdout);
+            break;
+        case '\0':
+            fputs("\\0", stdout);
+            break;
+        default:
+            putchar(p[i]);
+            break;
+        }
+    }
+}
+
 static cf_bool any_table(void* ctx, const char* name, size_t n) {
     return conform_open((conform_sink*)ctx, name, n, 0);
 }
@@ -93,8 +134,18 @@ static cf_bool any_scalar(void* ctx, const char* name, size_t n, const cf_value*
         return CF_FALSE;
     }
     if (c->print) {
-        (void)cf_value_to_text(v, g_value, sizeof g_value);
-        printf("%s\t%s\t%s\n", c->path, cf_type_name(v->type), g_value);
+        const char* p = g_value;
+        size_t      k;
+        if (v->type == CF_TYPE_TEXT) {
+            p = v->u.t.p;
+            k = v->u.t.n;
+        } else {
+            k = cf_value_to_text(v, g_value, sizeof g_value);
+        }
+        conform_escaped(c->path, c->plen); /* a key may hold a NUL */
+        printf("\t%s\t", cf_type_name(v->type));
+        conform_escaped(p, k);
+        putchar('\n');
     }
     c->plen          = saved;
     c->path[c->plen] = '\0';
@@ -108,7 +159,8 @@ static cf_bool any_end(void* ctx) {
     }
     f = &c->stack[c->depth];
     if (f->is_array && c->print) {
-        printf("%s.count\tint\t%lu\n", c->path, f->index);
+        conform_escaped(c->path, c->plen);
+        printf(".count\tint\t%lu\n", f->index);
     }
     c->plen          = f->saved;
     c->path[c->plen] = '\0';
@@ -148,6 +200,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "usage: conform <format> <file> [--keys]\n");
         return 2;
     }
+    CONFORM_BINARY_STDOUT();
     codec = cf_codec_by_name(argv[1]);
     ar    = cf_arena_new(NULL, 0);
     if (codec == NULL || ar == NULL) {

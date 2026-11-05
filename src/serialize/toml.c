@@ -1,10 +1,10 @@
 /*
- * toml.c - the built-in TOML subset. C89.
+ * toml.c - the built-in TOML 1.0.0 reader and writer. C89.
  *
- * The subset D-23 described, written here rather than vendored for the
- * reason the INI codec is: streaming, allocation-free, and small enough
- * to read in one sitting. It covers what hand-written configuration
- * uses:
+ * Written here rather than vendored for the reason the INI codec is:
+ * streaming, allocation-free, and every value with its place (D-62 has
+ * why no TOML library was adopted). Begun as D-23's subset, it now reads
+ * all of TOML 1.0.0, which toml-test holds it to:
  *
  *     # comment
  *     [server]                 tables, dotted:   [server.tls]
@@ -17,10 +17,15 @@
  *     tls = { cert = "x" }     inline tables
  *     db.pool.size = 4         dotted keys
  *     [[upstream]]             arrays of tables, written as one block
+ *     text = """..."""         multi-line strings, basic and '''literal'''
+ *     when = 1979-05-27T07:32:00Z   dates and times, as their text
+ *     big = inf                inf and nan, as their text
  *
- * Refused, each with a message that names the construct and says what
- * to write instead: dates and times, multi-line strings, inf and nan,
- * and an array of tables reopened after another table came between.
+ * The library has no date type and holds no value that is not finite,
+ * so a date, a time, inf and nan are their text as written, for a
+ * definition to type. Refused, with a message that says what to write
+ * instead: an array of tables reopened after another table came between,
+ * which the event stream cannot express.
  *
  * What TOML forbids defining twice is refused, as the specification
  * says: a key set twice, a table with two [headers], an inline table or
@@ -284,26 +289,117 @@ static size_t toml_utf8(cf_u32 cp, char* out) {
     return 4;
 }
 
-/* Decode, or measure with a NULL destination, using the same grammar. */
-static size_t toml_string(toml_scan* s, char* dst, size_t cap) {
-    char   q = *s->p;
-    size_t n = 0;
+/* Append k bytes, keeping room for the NUL; false, with the error set,
+   when they do not fit. A NULL destination only counts. */
+static cf_bool toml_put(toml_scan* s, char* dst, size_t* n, size_t cap, const char* p,
+                        size_t k) {
+    if (*n + k + 1 > cap) {
+        return toml_fail(s, s->p, "the string is too long");
+    }
+    if (dst != NULL) {
+        memcpy(dst + *n, p, k);
+    }
+    *n += k;
+    return CF_TRUE;
+}
+
+/* A line break inside a multi-line string, LF or CRLF: counted as a
+   line, so what follows has its own line and column. */
+static size_t toml_newline(toml_scan* s) {
+    size_t k = (*s->p == '\n')                                            ? 1u
+               : (*s->p == '\r' && s->end - s->p >= 2 && s->p[1] == '\n') ? 2u
+                                                                          : 0u;
+    if (k > 0) {
+        s->p += k;
+        ++s->line;
+        s->line_start = s->p;
+    }
+    return k;
+}
+
+/* Decode, or measure with a NULL destination, using the same grammar.
+   `multi` allows the multi-line forms, """ and ''', which a key may not
+   be: their opening line break is dropped, line breaks are LF, and in
+   the basic form a backslash ending a line drops it and the space and
+   line breaks after it. */
+static size_t toml_string(toml_scan* s, char* dst, size_t cap, cf_bool multi) {
+    char    q  = *s->p;
+    size_t  n  = 0;
+    cf_bool ml = CF_FALSE;
 
     if (s->end - s->p >= 3 && s->p[1] == q && s->p[2] == q) {
-        toml_fail(s, s->p,
-                  "multi-line strings are not in the TOML subset this library "
-                  "reads; write the value on one line, with \\n for a newline");
-        return (size_t)-1;
+        if (!multi) {
+            toml_fail(s, s->p, "a key may not be a multi-line string");
+            return (size_t)-1;
+        }
+        ml = CF_TRUE;
+        s->p += 3;
+        (void)toml_newline(s);
+    } else {
+        ++s->p;
     }
-    ++s->p;
     while (s->p < s->end) {
         unsigned char c = (unsigned char)*s->p;
         if (c == (unsigned char)q) {
-            ++s->p;
+            size_t run = 1;
+            if (ml) {
+                while (s->p + run < s->end && s->p[run] == q) {
+                    ++run;
+                }
+                if (run < 3) {
+                    if (!toml_put(s, dst, &n, cap, s->p, run)) {
+                        return (size_t)-1;
+                    }
+                    s->p += run;
+                    continue;
+                }
+                if (run > 5) {
+                    toml_fail(s, s->p + 5,
+                              "more than two quotes before the closing three");
+                    return (size_t)-1;
+                }
+                /* """"" is two quotes in the string, then its end. */
+                if (!toml_put(s, dst, &n, cap, s->p, run - 3)) {
+                    return (size_t)-1;
+                }
+            }
+            s->p += run;
             if (dst != NULL) {
                 dst[n] = '\0';
             }
             return n;
+        }
+        if (ml && (c == '\n' || c == '\r')) {
+            if (toml_newline(s) == 0) {
+                toml_fail(s, s->p, "a string may not contain a control character");
+                return (size_t)-1;
+            }
+            if (!toml_put(s, dst, &n, cap, "\n", 1)) {
+                return (size_t)-1;
+            }
+            continue;
+        }
+        if (ml && c == '\\' && q == '"') {
+            /* A backslash, then only space to the end of the line. */
+            const char* t = s->p + 1;
+            while (t < s->end && (*t == ' ' || *t == '\t')) {
+                ++t;
+            }
+            if (t < s->end &&
+                (*t == '\n' || (*t == '\r' && s->end - t >= 2 && t[1] == '\n'))) {
+                s->p = t;
+                for (;;) {
+                    if (toml_newline(s) > 0) {
+                        continue;
+                    }
+                    if (s->p < s->end && (*s->p == ' ' || *s->p == '\t')) {
+                        ++s->p;
+                        continue;
+                    }
+                    break;
+                }
+                continue;
+            }
         }
         if (c == '\n') {
             toml_fail(s, s->p, "the string is not closed on its line");
@@ -437,7 +533,7 @@ static size_t toml_key_segment(toml_scan* s, char* dst, size_t cap) {
     size_t n = 0;
 
     if (s->p < s->end && (*s->p == '"' || *s->p == '\'')) {
-        return toml_string(s, dst, cap);
+        return toml_string(s, dst, cap, CF_FALSE);
     }
     while (s->p < s->end && toml_bare((unsigned char)*s->p)) {
         if (n + 1 >= cap) {
@@ -852,20 +948,133 @@ static cf_bool toml_digits(toml_scan* s, int base, char* buf, size_t cap, size_t
        exp       = ( "e" / "E" ) [ "+" / "-" ] zero-prefixable-int
    The toml-test suite found 01, 1., .5, 1__0 and +0x1 accepted. Dates
    are recognised in order to refuse them. */
-static cf_bool toml_number(toml_scan* s, cf_value* v) {
+/* n digits at p as a number, or -1 when any is not a digit. */
+static int toml_fixed(const char* p, const char* end, int n) {
+    int v = 0, i;
+    if (end - p < n) {
+        return -1;
+    }
+    for (i = 0; i < n; ++i) {
+        if (!cf_is_digit((unsigned char)p[i])) {
+            return -1;
+        }
+        v = v * 10 + (p[i] - '0');
+    }
+    return v;
+}
+
+/* HH:MM:SS[.fraction] at s->p, as TOML 1.0 writes a time: seconds are
+   required, and 60 is a leap second. */
+static cf_bool toml_time(toml_scan* s) {
+    int h = toml_fixed(s->p, s->end, 2), m, sec;
+    if (h < 0 || s->end - s->p < 8 || s->p[2] != ':' || s->p[5] != ':') {
+        return CF_FALSE;
+    }
+    m   = toml_fixed(s->p + 3, s->end, 2);
+    sec = toml_fixed(s->p + 6, s->end, 2);
+    if (h > 23 || m < 0 || m > 59 || sec < 0 || sec > 60) {
+        return CF_FALSE;
+    }
+    s->p += 8;
+    if (s->p < s->end && *s->p == '.') {
+        ++s->p;
+        if (s->p >= s->end || !cf_is_digit((unsigned char)*s->p)) {
+            return CF_FALSE;
+        }
+        while (s->p < s->end && cf_is_digit((unsigned char)*s->p)) {
+            ++s->p;
+        }
+    }
+    return CF_TRUE;
+}
+
+/* A date, a time, or both, with or without an offset: TOML's four kinds
+   of date-time (RFC 3339, the date checked against its month, leap years
+   included). The library has no date type, so the value is its text, as
+   written, for a definition to type: a key defined as text takes it as
+   it is, and nothing reads it as a number. Called only where the text
+   begins as a date or a time does. */
+static cf_bool toml_datetime(toml_scan* s, cf_value* v) {
+    static const int days[12] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    const char*      start    = s->p;
+
+    if (toml_fixed(s->p, s->end, 4) >= 0 && s->end - s->p >= 10 && s->p[4] == '-' &&
+        s->p[7] == '-') {
+        int y = toml_fixed(s->p, s->end, 4), mo = toml_fixed(s->p + 5, s->end, 2),
+            d    = toml_fixed(s->p + 8, s->end, 2);
+        int leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+        if (mo < 1 || mo > 12 || d < 1 || d > days[mo - 1] ||
+            (mo == 2 && d == 29 && !leap)) {
+            return toml_fail(s, start,
+                             "not a date: the month or the day is out of range");
+        }
+        s->p += 10;
+        /* A space is the delimiter only when a time follows it. */
+        if (s->p < s->end && (*s->p == 'T' || *s->p == 't' ||
+                              (*s->p == ' ' && toml_fixed(s->p + 1, s->end, 2) >= 0 &&
+                               s->end - s->p > 3 && s->p[3] == ':'))) {
+            ++s->p;
+            if (!toml_time(s)) {
+                return toml_fail(s, start, "not a date-time: the time is malformed");
+            }
+            if (s->p < s->end && (*s->p == 'Z' || *s->p == 'z')) {
+                ++s->p;
+            } else if (s->p < s->end && (*s->p == '+' || *s->p == '-')) {
+                int oh = toml_fixed(s->p + 1, s->end, 2), om;
+                if (oh < 0 || s->end - s->p < 6 || s->p[3] != ':') {
+                    return toml_fail(s, start,
+                                     "not a date-time: the offset is malformed");
+                }
+                om = toml_fixed(s->p + 4, s->end, 2);
+                if (oh > 23 || om < 0 || om > 59) {
+                    return toml_fail(s, start,
+                                     "not a date-time: the offset is out of range");
+                }
+                s->p += 6;
+            }
+        }
+    } else if (!toml_time(s)) {
+        return toml_fail(s, start, "not a time: HH:MM:SS, with seconds");
+    }
+    if (s->p < s->end && (cf_is_alnum((unsigned char)*s->p) || *s->p == '.' ||
+                          *s->p == ':' || *s->p == '-' || *s->p == '+')) {
+        return toml_fail(s, start, "malformed date or time");
+    }
+    cf_value_text(v, start, (size_t)(s->p - start));
+    return CF_TRUE;
+}
+
+static cf_bool toml_number(toml_scan* s, cf_value* v, cf_bool* textual) {
     const char* start = s->p;
     char        buf[CF_VALUE_TEXT_MAX + 8]; /* the digits of either kind */
     size_t      n       = 0;
     cf_bool     is_real = CF_FALSE;
     int         base    = 10;
 
+    *textual = CF_FALSE;
+    /* Four digits and '-', or two and ':', begin a date or a time. */
+    if ((toml_fixed(s->p, s->end, 4) >= 0 && s->end - s->p > 4 && s->p[4] == '-') ||
+        (toml_fixed(s->p, s->end, 2) >= 0 && s->end - s->p > 2 && s->p[2] == ':')) {
+        *textual = CF_TRUE;
+        return toml_datetime(s, v);
+    }
     if (s->p < s->end && (*s->p == '+' || *s->p == '-')) {
         buf[n++] = *s->p++;
     }
+    /* TOML's infinities and not-a-number. The library holds no value that
+       is not finite (a range check means nothing against NaN), so the
+       value is its text, as written: a key defined as real refuses it by
+       name, a key defined as text takes it. */
     if (s->end - s->p >= 3 &&
         (memcmp(s->p, "inf", 3) == 0 || memcmp(s->p, "nan", 3) == 0)) {
-        return toml_fail(s, start,
-                         "inf and nan are not in the TOML subset this library reads");
+        s->p += 3;
+        if (s->p < s->end &&
+            (cf_is_alnum((unsigned char)*s->p) || *s->p == '_' || *s->p == '.')) {
+            return toml_fail(s, start, "malformed number");
+        }
+        *textual = CF_TRUE;
+        cf_value_text(v, start, (size_t)(s->p - start));
+        return CF_TRUE;
     }
     if (s->end - s->p >= 2 && s->p[0] == '0' &&
         (s->p[1] == 'x' || s->p[1] == 'o' || s->p[1] == 'b')) {
@@ -884,11 +1093,9 @@ static cf_bool toml_number(toml_scan* s, cf_value* v) {
             return toml_fail(s, start,
                              (n == 0) ? "expected a value" : "malformed number");
         }
-        /* a date or a time: digits then '-' or ':' */
+        /* Digits then '-' or ':' that were not a date or a time above. */
         if (s->p < s->end && (*s->p == ':' || (*s->p == '-' && first == 0))) {
-            return toml_fail(s, start,
-                             "dates and times are not in the TOML subset this library "
-                             "reads; quote it as a string");
+            return toml_fail(s, start, "malformed date, time or number");
         }
         if (buf[first] == '0' && n - first > 1) {
             return toml_fail(s, start, "malformed number: a leading zero");
@@ -1116,7 +1323,8 @@ static cf_bool toml_inline_table(toml_scan* s, const char* name, size_t nlen,
 static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen, cf_u32 node) {
     cf_value    v;
     cf_loc      at;
-    const char* start = s->p;
+    const char* start   = s->p;
+    cf_bool     textual = CF_FALSE;
 
     if (s->p >= s->end) {
         return toml_fail(s, s->p, "expected a value");
@@ -1129,9 +1337,11 @@ static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen, cf_u32 no
         return toml_inline_table(s, name, nlen, node);
     case '"':
     case '\'': {
-        char   local[256];
-        char*  text = local;
-        size_t n    = toml_string(s, NULL, (size_t)-1);
+        char         local[256];
+        char*        text       = local;
+        unsigned int line       = s->line;
+        const char*  line_start = s->line_start;
+        size_t       n          = toml_string(s, NULL, (size_t)-1, CF_TRUE);
         if (n == (size_t)-1) {
             return CF_FALSE;
         }
@@ -1147,8 +1357,11 @@ static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen, cf_u32 no
                                     "no room to decode a TOML string");
             }
         }
-        s->p = start;
-        if (toml_string(s, text, n + 1) == (size_t)-1) {
+        /* The second pass reads the same lines again. */
+        s->p          = start;
+        s->line       = line;
+        s->line_start = line_start;
+        if (toml_string(s, text, n + 1, CF_TRUE) == (size_t)-1) {
             return CF_FALSE;
         }
         cf_value_text(&v, text, n);
@@ -1171,12 +1384,12 @@ static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen, cf_u32 no
         cf_value_bool(&v, CF_FALSE);
         break;
     default:
-        if (!toml_number(s, &v)) {
+        if (!toml_number(s, &v, &textual)) {
             return CF_FALSE;
         }
         break;
     }
-    return s->out->scalar(s->out->ctx, name, nlen, &v, CF_FALSE, &at)
+    return s->out->scalar(s->out->ctx, name, nlen, &v, textual, &at)
                ? CF_TRUE
                : toml_fail(s, start, "not a valid key");
 }

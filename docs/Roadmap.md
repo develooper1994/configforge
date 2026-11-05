@@ -158,9 +158,9 @@ verified commits, and a release is cut where the order says so. The
    Measured first: JSON valid 95/95 and invalid 188/188 after its number
    grammar was made RFC 8259's (it accepted 01, 2. and .5); TOML 1.0 valid
    161/208, invalid 394/509 - no multi-line strings, datetimes, inf or
-   nan, and lenient numbers, keys and table redefinitions. Now: invalid
-   509/509 (numbers, define-once, controls and UTF-8), valid 164/208;
-   next, the valid ones - multi-line strings, datetimes, inf and nan. tomlc17
+   nan, and lenient numbers, keys and table redefinitions. Now TOML is
+   valid 208/208, invalid 509/509, values 208/208, and JSON's values
+   95/95 against Python's json; what is left is YAML. tomlc17
    conforms fully but builds a tree without positions, and explain()
    needs file:line:col, so the built-in TOML reader is completed rather
    than replaced. Then YAML, and `verify -DEXTRA=conformance`. Record:

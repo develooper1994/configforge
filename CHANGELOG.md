@@ -65,6 +65,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   same step reads the project's own configuration files with the
   library's readers and compares each key with Python's reference
   readers (`conformance.py --self`).
+- All of TOML 1.0.0: multi-line strings, basic and literal; dates, times
+  and date-times with or without an offset, checked against the calendar
+  and read as their text; `inf` and `nan`, read as their text, since the
+  library keeps every real finite - a key defined as real refuses them by
+  name. toml-test: 208/208 valid documents read to the values it states,
+  509/509 invalid ones refused. JSON's 95 valid documents read to the
+  values Python's `json` reads.
 - `cf_doc_sink.reserve_work`: optional workspace a reader keeps
   bookkeeping in until decode returns (D-62); the loader lends it from
   the configuration's arena.

@@ -1894,14 +1894,15 @@ warning when it does not.
 
 ### TOML
 
-Built in, as the subset D-23 describes (`src/serialize/toml.c`). Native types map
-directly; arrays and arrays of tables become index keys; every value carries its line and
-column. TOML's dates and times have no ConfigForge equivalent and are **refused** rather
-than mapped: the error says to quote the value as a string, which keeps the choice of
-meaning with the person who wrote it. Multi-line strings and `inf`/`nan` are refused the
-same way. A key set twice follows this library's rule rather than TOML's - the later
-wins, and Doctor's CFD001 reports the earlier - which answers "why did my edit do
-nothing" better than refusing to start.
+Built in (`src/serialize/toml.c`), held to TOML 1.0.0 by toml-test (D-62,
+docs/Conformance.md): every valid document read to the values the suite states, every
+invalid one refused. Native types map directly; arrays and arrays of tables become index
+keys; every value carries its line and column. TOML's dates and times have no ConfigForge
+type, and `inf` and `nan` no finite value, so each is checked against its grammar and
+read as its text, as written and untyped: a definition decides what it is, and a key
+defined as real refuses `inf` by name. A key or a table defined twice is refused, as TOML
+says. One TOML document is refused that TOML allows: an array of tables reopened after
+another table came between, which the event stream cannot express.
 
 Written TOML puts a `[header]` on each top-level table and dotted keys below it, with
 arrays inline, so that no header is ever repeated - TOML forbids that, and the emitter's

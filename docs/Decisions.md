@@ -2593,6 +2593,16 @@ completed against the suite instead, and the dependency contract below
 stays the way to swap one in later should that change. For YAML, the
 measured comparison of libyaml (YAML 1.1) and libfyaml (1.2) is next.
 
+**Values without a type here.** TOML has dates, times, `inf` and `nan`;
+the library has no date type and keeps every real finite, since a range
+check means nothing against NaN. Refusing them refused valid TOML;
+adding a date type would be a 2.0 change to every binding. So each is
+checked against its grammar - a date against its month and leap years,
+a time with seconds, an offset in range - and read as its text, as
+written and untyped, the way an INI value is: a definition decides, and
+one that declares a real refuses `inf` by name. toml-test then reads all
+208 valid documents to the values it states.
+
 **The dependency contract.** A format is a `cf_codec`; a reader is an
 event producer into a `cf_doc_sink`, whatever implements it. A bundled
 library is behind its codec and nothing else sees it, so replacing one is

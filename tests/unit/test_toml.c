@@ -155,10 +155,17 @@ static void refused(const char* text, const char* needle, const char* what) {
 }
 
 static void test_refuses(void) {
-    refused("when = 1979-05-27\n", "dates and times", "a date is refused");
-    refused("text = \"\"\"\nlong\n\"\"\"\n", "multi-line strings",
-            "a multi-line string");
-    refused("x = inf\n", "inf and nan", "inf");
+    refused("when = 1979-02-29\n", "out of range", "a February 29th of no leap year");
+    refused("when = 1979-13-01\n", "out of range", "a thirteenth month");
+    refused("when = 07:32\n", "with seconds", "a time without seconds");
+    refused("when = 1979-05-27T25:00:00\n", "time is malformed", "a 25th hour");
+    refused("when = 1979-05-27T07:32:00+24:00\n", "out of range",
+            "an offset of 24 hours");
+    refused("\"\"\"k\"\"\" = 1\n", "a key may not be a multi-line string",
+            "a multi-line key");
+    refused("x = \"\"\"a\"\"\"\"\"\"\n", "more than two quotes", "six quotes to close");
+    refused("x = \"\"\"a\\ b\"\"\"\n", "unknown escape",
+            "a backslash and space not ending a line");
     refused("x = \"open\n", "not closed", "an unclosed string");
     refused("x = 1 2\n", "end of the line", "trailing text after a value");
     refused("[[a]]\nk = 1\n[b]\n[[a]]\nk = 2\n", "reopened",
@@ -184,6 +191,74 @@ static void test_refuses(void) {
     refused("x = \"\xc0\xaf\"\n", "not valid UTF-8", "an overlong form");
     refused("x = 1\ry = 2\n", "end of the line", "a carriage return alone");
 }
+
+/* TOML's values that have no type of their own here: dates and times,
+   and inf and nan, are their text, for a definition to type; multi-line
+   strings are strings, and the lines after them keep their numbers. */
+static void test_values(void) {
+    cf_error    err = CF_ERROR_INIT;
+    static char ex[1024];
+    cf_config*  c = load("odt = 1979-05-27T07:32:00.999-07:00\n"
+                         "ldt = 1979-05-27 07:32:00\n"
+                         "ld = 2000-02-29\n"
+                         "lt = 00:32:00.5\n"
+                         "big = -inf\n"
+                         "odd = nan\n"
+                         "poem = \"\"\"\nRoses\r\nare \"red\"\"\"\"\n"
+                         "trim = \"\"\"a \\\n     b\"\"\"\n"
+                         "raw = '''\nC:\\x\\'''\n"
+                         "after = 1\n",
+                         &err);
+
+    check(c != NULL, "dates, times, inf, nan and multi-line strings read");
+    if (c == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+    check(strcmp(cf_get_text(c, "odt", ""), "1979-05-27T07:32:00.999-07:00") == 0,
+          "an offset date-time, as written");
+    check(strcmp(cf_get_text(c, "ldt", ""), "1979-05-27 07:32:00") == 0,
+          "a local date-time with a space");
+    check(strcmp(cf_get_text(c, "ld", ""), "2000-02-29") == 0, "a leap day");
+    check(strcmp(cf_get_text(c, "lt", ""), "00:32:00.5") == 0, "a local time");
+    check(strcmp(cf_get_text(c, "big", ""), "-inf") == 0, "-inf, as its text");
+    check(strcmp(cf_get_text(c, "odd", ""), "nan") == 0, "nan, as its text");
+    check(strcmp(cf_get_text(c, "poem", ""), "Roses\nare \"red\"") == 0,
+          "the first line break dropped, CRLF as LF, quotes before the end kept");
+    check(strcmp(cf_get_text(c, "trim", ""), "a b") == 0,
+          "a backslash ending a line takes the space after it");
+    check(strcmp(cf_get_text(c, "raw", ""), "C:\\x\\") == 0,
+          "a literal multi-line string");
+    cf_explain(c, "after", ex, sizeof ex);
+    has(ex, "cf_toml.toml:14:", "and the line after them is counted right");
+    cf_config_free(c);
+}
+
+#if CF_WITH_REAL
+/* inf read as its text meets a definition that says real: the library
+   keeps reals finite, so the definition refuses it, by the key's name. */
+static void test_inf_against_real(void) {
+    cf_builder* b;
+    cf_config*  c;
+    cf_def      d;
+    cf_error    err = CF_ERROR_INIT;
+
+    if (!spill("cf_toml.toml", "ratio = inf\n")) {
+        return;
+    }
+    b = cf_build(NULL);
+    cf_def_init(&d, CF_TYPE_REAL, "ratio");
+    check(cf_builder_define(b, &d), "ratio is defined as real");
+    cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_toml.toml", NULL, 0);
+    c = cf_builder_create(b, &err);
+    check(c == NULL || cf_get_real(c, "ratio", 0.5) == 0.5,
+          "inf does not become a real");
+    if (c == NULL) {
+        has(err.message, "ratio", "and the refusal names the key");
+    }
+    cf_config_free(c);
+}
+#endif
 
 /* CRLF line endings, and UTF-8 that is well formed, read as they are. */
 static void test_line_endings(void) {
@@ -326,6 +401,10 @@ int main(void) {
     test_reads();
     test_floats();
     test_refuses();
+    test_values();
+#if CF_WITH_REAL
+    test_inf_against_real();
+#endif
     test_line_endings();
     test_defined_once();
     test_many_keys();

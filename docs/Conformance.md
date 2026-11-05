@@ -44,22 +44,28 @@ way. It is a tier 2 step, since it needs a network the first time.
 
 ## The scores
 
-| Format | Valid accepted | Invalid refused |
-| ------ | -------------- | --------------- |
-| JSON | 95 / 95 | 188 / 188 |
-| TOML | 164 / 208 | 509 / 509 |
+| Format | Valid accepted | Invalid refused | Valid read to the right values |
+| ------ | -------------- | --------------- | ------------------------------ |
+| JSON | 95 / 95 | 188 / 188 | 95 / 95, against Python's `json` |
+| TOML | 208 / 208 | 509 / 509 | 208 / 208, against toml-test's stated values |
+
+The last column is the stronger claim: a valid document read is compared
+key by key and value by value, every string's escapes and line breaks
+included, with what the suite says it holds (TOML) or with a reference
+reader (JSON, whose suite states no values).
 
 JSON's root may be any value, and a configuration is a table: `conform`
 reads a document whose root is not an object as the member of one,
 `{"v": ...}`, which keeps an invalid document invalid. The `i_` cases,
 which the standard leaves to the implementation, are not counted.
 
-Every invalid TOML document is refused: the number grammar, the
-define-once rules (D-62), control characters, bare carriage returns and
-malformed UTF-8. What is left is valid documents refused - multi-line
-strings, dates and times, `inf` and `nan` - which Roadmap item 6 closes
-next. The define-once rules need the workspace a sink lends
-(`cf_doc_sink.reserve_work`); the loader always lends it.
+TOML's dates and times, and `inf` and `nan`, are read as their text,
+checked against their grammar (D-62): the library has no date type and
+no value that is not finite, so a definition decides what they are. The
+value columns compare them as text, with toml-test's normalisation (`T`
+for the delimiter, `Z` for UTC, milliseconds). The define-once rules
+need the workspace a sink lends (`cf_doc_sink.reserve_work`); the loader
+always lends it.
 
 ## The project's own configuration
 

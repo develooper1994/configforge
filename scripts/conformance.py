@@ -42,6 +42,143 @@ def report(name, fmt, conform, valid, invalid, out):
                 wrong_valid, wrong_invalid))
 
 
+ESCAPES = {"\\": "\\", "t": "\t", "n": "\n", "r": "\r", "0": "\0"}
+
+
+def unescape(s):
+    """conform's escaping undone: \\\\, \\t, \\n, \\r and \\0."""
+    out, i = [], 0
+    while i < len(s):
+        if s[i] == "\\" and i + 1 < len(s) and s[i + 1] in ESCAPES:
+            out.append(ESCAPES[s[i + 1]])
+            i += 2
+        else:
+            out.append(s[i])
+            i += 1
+    return "".join(out)
+
+
+def keys_of(conform, fmt, path):
+    """What the reader made of a document, as {flat key: (type, text)};
+    None when it refused it."""
+    p = subprocess.run([conform, fmt, path, "--keys"], capture_output=True, timeout=20)
+    if p.returncode != 0:
+        return None
+    got = {}
+    # Split on the line feed alone: an escaped value holds none, and a
+    # carriage return in one is data.
+    for line in p.stdout.decode("utf-8", "replace").split("\n"):
+        parts = line.split("\t", 2)
+        if len(parts) == 3:
+            got[unescape(parts[0])] = (parts[1], unescape(parts[2]))
+    return got
+
+
+def join(prefix, name):
+    """A flat key as conform builds one: segments joined by dots, the
+    first without one - so an empty name still makes its own segment."""
+    return name if prefix is None else f"{prefix}.{name}"
+
+
+# toml-test's expected values: {"type": ..., "value": ...} at each leaf.
+# Dates and times, and inf and nan, are read here as their text (D-62),
+# so they are compared as text, normalised the way toml-test writes them.
+TOML_TYPES = {"string": "text", "integer": "int", "float": "real", "bool": "bool"}
+
+
+def toml_expected(doc, prefix, out):
+    if isinstance(doc, dict) and set(doc) == {"type", "value"} and \
+            isinstance(doc["type"], str):
+        t, v = doc["type"], doc["value"]
+        if t.startswith("date") or t.startswith("time"):
+            out[prefix] = ("datetime", v)
+        elif t == "float" and v.lstrip("+-") in ("inf", "nan"):
+            out[prefix] = ("nonfinite", v.lstrip("+") if "inf" in v else "nan")
+        else:
+            out[prefix] = (TOML_TYPES.get(t, t), v)
+    elif isinstance(doc, dict):
+        for k, v in doc.items():
+            toml_expected(v, join(prefix, k), out)
+    elif isinstance(doc, list):
+        for i, v in enumerate(doc):
+            toml_expected(v, join(prefix, str(i)), out)
+        out[f"{prefix}.count"] = ("int", str(len(doc)))
+
+
+def millis(t):
+    """A date-time's fraction of a second with its trailing zeros gone."""
+    import re
+    return re.sub(r"\.(\d*?)0*(?=[^\d]|$)", lambda m: "." + m.group(1) if m.group(1) else "", t)
+
+
+def toml_same(want, got):
+    wtype, wtext = want
+    gtype, gtext = got
+    if wtype == "datetime":
+        # toml-test writes the delimiter as T and the zone as Z.
+        g = gtext.replace("t", "T").replace("z", "Z")
+        if len(g) > 10 and g[10] == " ":
+            g = g[:10] + "T" + g[11:]
+        # and fractions of a second to milliseconds: .6 as .600.
+        return gtype == "text" and millis(g) == millis(wtext)
+    if wtype == "nonfinite":
+        g = gtext.lstrip("+")
+        return gtype == "text" and (g == wtext or (wtext == "nan" and g == "-nan"))
+    if wtype == "real":
+        try:
+            return gtype == "real" and float(gtext) == float(wtext)
+        except ValueError:
+            return False
+    if wtype == "int":
+        return gtype == "int" and int(gtext) == int(wtext)
+    return wtype == gtype and wtext == gtext
+
+
+def toml_values(conform, valid, wrong_out):
+    """How many valid documents were read to exactly toml-test's values."""
+    import json
+    good = 0
+    for path in valid:
+        expected = os.path.splitext(path)[0] + ".json"
+        got = keys_of(conform, "toml", path)
+        if got is None or not os.path.isfile(expected):
+            wrong_out.append(path)
+            continue
+        with open(expected, encoding="utf-8") as f:
+            want = {}
+            toml_expected(json.load(f), None, want)
+        if set(want) == set(got) and all(toml_same(want[k], got[k]) for k in want):
+            good += 1
+        else:
+            wrong_out.append(path)
+    return good
+
+
+def json_values(conform, valid, wrong_out):
+    """How many valid JSON documents were read to the values Python's json
+    reads, the non-object root measured as {"v": ...} as conform reads it."""
+    import json
+    good = 0
+    for path in valid:
+        got = keys_of(conform, "json", path)
+        unread = False  # a lone null is a document, so None cannot say this
+        try:
+            with open(path, encoding="utf-8") as f:
+                doc = json.load(f)
+        except (ValueError, UnicodeDecodeError):
+            unread = True
+        if got is None or unread:
+            wrong_out.append(path)
+            continue
+        want = {}
+        flat(doc if isinstance(doc, dict) else {"v": doc}, None, want)
+        if set(want) == set(got) and all(same(want[k], got[k]) for k in want):
+            good += 1
+        else:
+            wrong_out.append(path)
+    return good
+
+
 def json_suite(root):
     d = os.path.join(root, "JSONTestSuite", "test_parsing")
     files = sorted(os.listdir(d))
@@ -120,10 +257,10 @@ def flat(doc, prefix, out):
     """A document as the library's flat keys: a.b, a.0, a.count."""
     if isinstance(doc, dict):
         for k, v in doc.items():
-            flat(v, f"{prefix}.{k}" if prefix else str(k), out)
+            flat(v, join(prefix, str(k)), out)
     elif isinstance(doc, list):
         for i, v in enumerate(doc):
-            flat(v, f"{prefix}.{i}", out)
+            flat(v, join(prefix, str(i)), out)
         out[f"{prefix}.count"] = ("int", str(len(doc)))
     elif isinstance(doc, bool):
         out[prefix] = ("bool", "true" if doc else "false")
@@ -140,6 +277,8 @@ def flat(doc, prefix, out):
 def same(want, got):
     wtype, wtext = want
     gtype, gtext = got
+    if wtype == "null":
+        return gtype == "null"  # its text is the writer's spelling
     if wtype == "real":
         try:
             return gtype == "real" and float(gtext) == wtext
@@ -159,7 +298,7 @@ def differential(conform, repo):
         if doc is None:
             print(f"{name}: no reference reader for {fmt} here, skipped")
             continue
-        p = subprocess.run([conform, fmt, path, "--keys"], capture_output=True, timeout=20)
+        p = subprocess.run([conform, fmt, path], capture_output=True, timeout=20)
         if p.returncode == 2:
             print(f"{name}: this build has no {fmt} reader, skipped")
             continue
@@ -167,13 +306,9 @@ def differential(conform, repo):
             print(f"{name}: REFUSED - {p.stdout.decode('utf-8', 'replace').strip()}")
             failed = True
             continue
-        got = {}
-        for line in p.stdout.decode("utf-8", "replace").splitlines():
-            parts = line.split("\t", 2)
-            if len(parts) == 3:
-                got[parts[0]] = (parts[1], parts[2])
+        got = keys_of(conform, fmt, path)
         want = {}
-        flat(doc, "", want)
+        flat(doc, None, want)
         wrong = [k for k in sorted(set(want) | set(got))
                  if k not in want or k not in got or not same(want[k], got[k])]
         if wrong:
@@ -194,6 +329,8 @@ def floors(path):
             words = line.split("#", 1)[0].split()
             if len(words) == 3:
                 out[words[0]] = (int(words[1]), int(words[2]))
+            elif len(words) == 2:
+                out[words[0]] = (int(words[1]),)
     return out
 
 
@@ -212,8 +349,14 @@ def main():
     out = []
     v, i = json_suite(root)
     report("json", "json", conform, v, i, out)
+    json_wrong = []
+    json_good = json_values(conform, v, json_wrong)
+    json_all = len(v)
     v, i = toml_suite(root)
     report("toml", "toml", conform, v, i, out)
+    values_wrong = []
+    values_good = toml_values(conform, v, values_wrong)
+    values_all = len(v)
     v, i = yaml_suite(root)
     if v or i:
         report("yaml", "yaml", conform, v, i, out)
@@ -225,13 +368,30 @@ def main():
                 print(f"  refused a valid document: {os.path.basename(f)}")
             for f in wi:
                 print(f"  accepted an invalid one:  {os.path.basename(f)}")
-        if name in floor:
+        if name in floor and len(floor[name]) == 2:
             fv, fi = floor[name]
             if g < fv or b < fi:
                 print(f"  BELOW THE FLOOR {fv}/{fi}")
                 failed = True
             elif g > fv or b > fi:
                 print(f"  above the floor {fv}/{fi}: raise it in tests/conformance/floor.txt")
+    # The values: not only that a valid document was accepted, but that it
+    # was read as what it says - as the suite states it for TOML, and as
+    # Python's json reads it for JSON.
+    for name, good, total, wrong, how in (
+            ("json-values", json_good, json_all, json_wrong, "Python's json reads"),
+            ("toml-values", values_good, values_all, values_wrong, "toml-test states")):
+        print(f"{name}: read as {how} {good}/{total}")
+        if verbose:
+            for f in wrong:
+                print(f"  read differently: {os.path.relpath(f, root)}")
+        if name in floor:
+            fv = floor[name][0]
+            if good < fv:
+                print(f"  BELOW THE FLOOR {fv}")
+                failed = True
+            elif good > fv:
+                print(f"  above the floor {fv}: raise it in tests/conformance/floor.txt")
     return 1 if failed else 0
 
 

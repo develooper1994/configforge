@@ -3,4 +3,8 @@
 # falls below fails, and a run above it says so, and the floor is raised
 # in the same change that raised the score (docs/Conformance.md).
 json 95 188
-toml 164 509
+toml 208 509
+# "<name> <documents>": valid documents read to the expected values, by
+# Python's json for JSON and by toml-test's own expectations for TOML.
+json-values 95
+toml-values 208
