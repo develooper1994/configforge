@@ -960,7 +960,10 @@ mod read_tests {
         assert!(cfg.tracks_reads());
         cfg.explain("port");
         cfg.keys("");
-        assert!(!cfg.was_read("port"), "explaining and listing are not reads");
+        assert!(
+            !cfg.was_read("port"),
+            "explaining and listing are not reads"
+        );
         assert_eq!(cfg.int("port", 0), 8080);
         assert!(cfg.has("tls"));
         assert!(cfg.was_read("port") && cfg.was_read("tls"));
