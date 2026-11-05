@@ -7,6 +7,7 @@
 set(CMAKE_C_CLANG_TIDY "")
 
 add_subdirectory(unit)
+add_subdirectory(conformance)
 
 if(CF_BUILD_TOOLS
    AND CF_WITH_JSON

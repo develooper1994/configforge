@@ -164,7 +164,15 @@ static void test_refuses(void) {
     refused("[[a]]\nk = 1\n[b]\n[[a]]\nk = 2\n", "reopened",
             "an array of tables reopened after another table");
     refused("x = \"\\q\"\n", "unknown escape", "an unknown escape");
-    refused("x = 0x\n", "expected a value", "a prefix with no digits");
+    refused("x = 0x\n", "malformed integer", "a prefix with no digits");
+    /* The number grammar of TOML 1.0, which toml-test found loose. */
+    refused("x = 01\n", "leading zero", "a leading zero");
+    refused("x = 1.\n", "after the point", "a point with no digit after it");
+    refused("x = 1e\n", "exponent", "an exponent with no digit");
+    refused("x = 1__0\n", "malformed", "two underscores");
+    refused("x = 1_\n", "malformed", "a trailing underscore");
+    refused("x = +0x1\n", "no sign", "a sign on a hexadecimal integer");
+    refused("x = 1x\n", "malformed", "a letter after the digits");
 }
 
 /* A key set twice is not an error here: the later wins, and Doctor's

@@ -73,8 +73,8 @@ system, no generated header, no options.
 | musl, through `musl-gcc` (musl-tools) | MIT | `EXTRA=compilers`: the suite against a second C library |
 | tcc (the Tiny C Compiler) | LGPL-2.1-or-later | `EXTRA=compilers`: the suite under a compiler that shares nothing with GCC |
 | pcc (the Portable C Compiler) | BSD-2-Clause | `EXTRA=compilers`: the same, from the other end of C's history |
-| git (`find_package` of `Git`) | GPL-2.0-only | `scripts/verify.cmake -DSOURCE=index` and `scripts/format.cmake`, which ask it what is staged or changed; the build, which asks it for the commit `cf_build_id()` reports (`scripts/buildid.cmake`) - without it the id is empty |
-| Python 3 (`python3`, or `python` on Windows) | PSF-2.0 | `scripts/prestage.cmake` runs `scripts/check_text.py`; `scripts/amalgamate.py`, `scripts/check_formats.py`; `bindings/python` (the `configforge` package, ctypes, standard library only, and `configforge_doctor`) and their tests, `python.binding` (shared builds) and `doctor.python` |
+| git (`find_package` of `Git`) | GPL-2.0-only | `scripts/verify.cmake -DSOURCE=index` and `scripts/format.cmake`, which ask it what is staged or changed; `EXTRA=conformance`, which fetches the suites below at pinned commits; the build, which asks it for the commit `cf_build_id()` reports (`scripts/buildid.cmake`) - without it the id is empty |
+| Python 3 (`python3`, or `python` on Windows) | PSF-2.0 | `scripts/prestage.cmake` runs `scripts/check_text.py`; `scripts/amalgamate.py`, `scripts/check_formats.py`, `scripts/conformance.py`; `bindings/python` (the `configforge` package, ctypes, standard library only, and `configforge_doctor`) and their tests, `python.binding` (shared builds) and `doctor.python` |
 | scikit-build-core, build | MIT | Python wheel/source packaging only: the root `pyproject.toml` uses scikit-build-core to build the shared library with CMake; `python -m build` is the optional frontend. Neither is a runtime dependency or needed for a normal CMake build |
 | MkDocs, Pygments | BSD-2-Clause | Documentation site only, pinned in `scripts/docs-requirements.txt`; the built-in theme and search, with code highlighted at build time. No dependency of the library or language bindings |
 | Conan | MIT | the Conan recipe, `conanfile.py`, and its CI job |
@@ -89,6 +89,7 @@ system, no generated header, no options.
 | cppcheck | GPL-3.0-or-later | the `analyze` preset |
 | Rust: `rustc`, `cargo`, `clippy`, `rustfmt` (`setup.sh` installs 1.99.1 with rustup, checked against its published checksum) | MIT OR Apache-2.0 | `bindings/rust`, and `CF_RUST`: the Rust examples and `cargo test`; clippy and rustfmt check the crate. The crate has no dependencies, so cargo runs `--offline`; configforge-dev has them from Ubuntu's archive |
 | GNU binutils: `nm`, `objdump` | GPL-3.0-or-later | `gate.symbols`, `gate.abi` |
+| JSONTestSuite, toml-test (test data, fetched and never vendored) | MIT, MIT | `EXTRA=conformance` (tier 2): each reader against its standard's own suite (`docs/Conformance.md`); the documents are read, never run |
 
 Every tool in 2b is optional except CMake and a compiler: a gate whose
 tool is missing is not registered, and the build says which.

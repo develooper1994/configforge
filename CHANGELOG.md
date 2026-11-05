@@ -57,9 +57,21 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   under Fixed.
 - `scripts/prestage.cmake`: format, the API reference, the text check
   and the analyze build of a change, before it is staged.
+- Conformance, measured (D-62, `docs/Conformance.md`): each reader
+  against its standard's own suite - JSONTestSuite for JSON, toml-test
+  for TOML 1.0.0 - fetched at a pinned commit by `verify
+  -DEXTRA=conformance` (tier 2) and scored by `scripts/conformance.py`
+  against a floor that only rises, `tests/conformance/floor.txt`.
 
 ### Fixed
 
+- Numbers, as their standards write them. JSON accepted what RFC 8259
+  forbids - a leading zero, `1.` with no digit after the point, a sign
+  with no digits - and is 95/95 and 188/188 on JSONTestSuite now. TOML
+  accepted underscores not between two digits, a sign on a hexadecimal,
+  octal or binary integer, a leading zero, a point or an exponent with
+  no digits after it, and letters after a number; refused now, by the
+  TOML 1.0.0 grammar, with what was wrong named.
 - Defining keys was quadratic: each definition was checked against the
   others by a scan, and sealing the set was an insertion sort, on the
   stated ground that "definition counts are in the tens". Ten thousand

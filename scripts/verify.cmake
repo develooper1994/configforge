@@ -49,6 +49,10 @@
 #   coverage line coverage of src/ by the suite, failing below COVERAGE_MIN
 #            percent of lines (default 89) or COVERAGE_BRANCH_MIN of
 #            branches (default 80): ratchets, raised as tests are added
+#   conformance each reader against its standard's own suite, fetched at a
+#            pinned commit into SUITES (default WORK/suites, else
+#            build-suites/), failing below tests/conformance/floor.txt
+#            (docs/Conformance.md)
 #
 # WORK puts the staged copy somewhere other than build-verify/. Under
 # WSL, verifying a checkout on /mnt/c needs it: that filesystem has no
@@ -108,7 +112,8 @@ if(DEFINED TIER)
       kqueue
       tidy
       fuzz
-      coverage)
+      coverage
+      conformance)
   else()
     message(FATAL_ERROR "TIER is 1 or 2, not \"${TIER}\"")
   endif()
@@ -685,12 +690,108 @@ foreach(x ${EXTRA})
     else()
       step("tsan test" ${ctest} --preset tsan)
     endif()
+  elseif(x STREQUAL "conformance")
+    find_program(GIT_EXE git)
+    find_program(PYTHON3_EXE NAMES python3 python)
+    if(NOT GIT_EXE OR NOT PYTHON3_EXE)
+      message("conformance           skipped: needs git and Python 3")
+      continue()
+    endif()
+    # The suites, each at the commit docs/Conformance.md records, fetched
+    # once and kept outside the staged copy so a later run reuses them.
+    # Byte for byte: a checkout that rewrote line endings would change
+    # what the documents say.
+    if(NOT DEFINED SUITES)
+      if(DEFINED WORK)
+        set(SUITES "${WORK}/suites")
+      else()
+        set(SUITES "${REPO}/build-suites")
+      endif()
+    endif()
+    set(url_JSONTestSuite https://github.com/nst/JSONTestSuite)
+    set(commit_JSONTestSuite 1ef36fa01286573e846ac449e8683f8833c5b26a)
+    set(url_toml-test https://github.com/toml-lang/toml-test)
+    set(commit_toml-test 96fd088448ec0f4d9f061c730ed7854399c46faf)
+    foreach(sname JSONTestSuite toml-test)
+      set(surl "${url_${sname}}")
+      set(scommit "${commit_${sname}}")
+      set(dir "${SUITES}/${sname}")
+      execute_process(
+        COMMAND "${GIT_EXE}" -C "${dir}" rev-parse HEAD
+        OUTPUT_VARIABLE have
+        OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET
+        RESULT_VARIABLE rc)
+      if(NOT rc EQUAL 0 OR NOT have STREQUAL scommit)
+        file(REMOVE_RECURSE "${dir}")
+        file(MAKE_DIRECTORY "${dir}")
+        step(
+          "fetch ${sname}"
+          "${GIT_EXE}"
+          -C
+          "${dir}"
+          -c
+          init.defaultBranch=main
+          init
+          -q)
+        step(
+          "fetch ${sname}"
+          "${GIT_EXE}"
+          -C
+          "${dir}"
+          -c
+          core.autocrlf=false
+          fetch
+          -q
+          --depth
+          1
+          "${surl}"
+          ${scommit})
+        step(
+          "fetch ${sname}"
+          "${GIT_EXE}"
+          -C
+          "${dir}"
+          -c
+          core.autocrlf=false
+          checkout
+          -q
+          FETCH_HEAD)
+      endif()
+    endforeach()
+    step(
+      "conformance configure"
+      ${CMAKE_COMMAND}
+      -S
+      .
+      -B
+      build-conformance)
+    step(
+      "conformance build"
+      ${build}
+      build-conformance
+      --target
+      conform
+      ${debug})
+    if(EXISTS "${ROOT}/build-conformance/tests/conformance/Debug/conform.exe")
+      set(conform
+          "${ROOT}/build-conformance/tests/conformance/Debug/conform.exe")
+    else()
+      set(conform "${ROOT}/build-conformance/tests/conformance/conform")
+    endif()
+    step(
+      "conformance"
+      "${PYTHON3_EXE}"
+      scripts/conformance.py
+      "${conform}"
+      "${SUITES}"
+      --floor
+      tests/conformance/floor.txt)
   else()
     message(
       FATAL_ERROR
         "unknown EXTRA step '${x}': kqueue, tidy, clang, "
         "shared, valgrind, proofs, wasm, abi, tsan, yaml, compilers, "
-        "fuzz or coverage")
+        "fuzz, coverage or conformance")
   endif()
 endforeach()
 

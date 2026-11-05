@@ -149,6 +149,21 @@ verified commits, and a release is cut where the order says so. The
 5. **Doctor `--only-changed`** - done: `lint --base B --only-changed`,
    in the library, the action, the hook and Python; findings about a
    source are kept when a touched key came from it.
+6. **In progress (2026-11-06): each reader held to its format's own
+   standard** (the owner: "each format's own standard"; "start from the
+   world's best-known methods, then improve"). The method, for every
+   reader: the specification's grammar, its official test suite as the
+   bar (JSONTestSuite, toml-test, yaml-test-suite, pinned by commit),
+   a differential test against the reference implementation, fuzzing.
+   Measured first: JSON valid 95/95 and invalid 188/188 after its number
+   grammar was made RFC 8259's (it accepted 01, 2. and .5); TOML 1.0 valid
+   161/208, invalid 394/509 - no multi-line strings, datetimes, inf or
+   nan, and lenient numbers, keys and table redefinitions. tomlc17
+   conforms fully but builds a tree without positions, and explain()
+   needs file:line:col, so the built-in TOML reader is completed rather
+   than replaced. Then YAML, and `verify -DEXTRA=conformance`. Record:
+   D-62.
+   Below, the item as first written:
 6. **Dependencies behind one contract** (the owner's decision): every
    reader a library supplies - JSON, TOML, YAML, XML, SQLite - sits
    behind the `cf_codec` / `cf_doc_sink` contract, and a conformance

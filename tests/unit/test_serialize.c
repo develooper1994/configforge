@@ -334,6 +334,13 @@ static void test_json_errors(cf_arena* ar) {
     json_rejects(ar, "", "an empty document");
     json_rejects(ar, "[1,2]", "an array at the top level");
     json_rejects(ar, "{\"a\":1,}", "a trailing comma");
+    /* RFC 8259's number grammar, which the JSON Test Suite found loose */
+    json_rejects(ar, "{\"a\":01}", "a leading zero");
+    json_rejects(ar, "{\"a\":-01}", "a negative leading zero");
+    json_rejects(ar, "{\"a\":2.}", "a point with no digit after it");
+    json_rejects(ar, "{\"a\":.5}", "a point with no digit before it");
+    json_rejects(ar, "{\"a\":1e}", "an exponent with no digit");
+    json_rejects(ar, "{\"a\":-}", "a sign alone");
     json_rejects(ar, "{\"a\":1", "an unclosed object");
     json_rejects(ar, "{\"a\":[1,2}", "a mismatched bracket");
     json_rejects(ar, "{\"a\":\"\\q\"}", "an unknown escape");

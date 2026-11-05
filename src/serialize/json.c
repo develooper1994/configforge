@@ -272,15 +272,35 @@ static cf_bool js_number(js_scan* s, cf_value* v) {
     cf_bool     is_real = CF_FALSE;
     size_t      len;
 
+    /* RFC 8259, section 6, and nothing looser - the JSON Test Suite
+       found 01, 2. and .5 accepted:
+           number = [ "-" ] int [ frac ] [ exp ]
+           int    = "0" / digit1-9 *DIGIT
+           frac   = "." 1*DIGIT
+           exp    = ("e" / "E") [ "-" / "+" ] 1*DIGIT */
     if (s->p < s->end && *s->p == '-') {
         ++s->p;
     }
-    while (s->p < s->end && cf_is_digit((unsigned char)*s->p)) {
+    if (s->p >= s->end || !cf_is_digit((unsigned char)*s->p)) {
+        return js_fail(s, start,
+                       (s->p == start) ? "expected a value" : "malformed number");
+    }
+    if (*s->p == '0') {
         ++s->p;
+        if (s->p < s->end && cf_is_digit((unsigned char)*s->p)) {
+            return js_fail(s, start, "malformed number: a leading zero");
+        }
+    } else {
+        while (s->p < s->end && cf_is_digit((unsigned char)*s->p)) {
+            ++s->p;
+        }
     }
     if (s->p < s->end && *s->p == '.') {
         is_real = CF_TRUE;
         ++s->p;
+        if (s->p >= s->end || !cf_is_digit((unsigned char)*s->p)) {
+            return js_fail(s, start, "malformed number: no digit after the point");
+        }
         while (s->p < s->end && cf_is_digit((unsigned char)*s->p)) {
             ++s->p;
         }
@@ -291,14 +311,14 @@ static cf_bool js_number(js_scan* s, cf_value* v) {
         if (s->p < s->end && (*s->p == '+' || *s->p == '-')) {
             ++s->p;
         }
+        if (s->p >= s->end || !cf_is_digit((unsigned char)*s->p)) {
+            return js_fail(s, start, "malformed number: no digit in the exponent");
+        }
         while (s->p < s->end && cf_is_digit((unsigned char)*s->p)) {
             ++s->p;
         }
     }
     len = (size_t)(s->p - start);
-    if (len == 0) {
-        return js_fail(s, start, "expected a value");
-    }
 
     /* JSON has one numeric type; ConfigForge has two. The rule is
        mechanical rather than a guess: a fractional part or an exponent

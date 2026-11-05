@@ -373,8 +373,43 @@ static cf_bool toml_key(toml_scan* s, toml_dkey* k) {
     }
 }
 
-/* Integers and floats, underscores between digits allowed. Dates are
-   recognised in order to refuse them. */
+/* One run of digits in `base`, as the TOML 1.0 ABNF writes it: a digit,
+   then digits each optionally after one underscore - so an underscore
+   only ever stands between two digits. Appended to buf without the
+   underscores; false when there is no digit, or an underscore is not
+   between two. */
+static cf_bool toml_digits(toml_scan* s, int base, char* buf, size_t cap, size_t* n) {
+    cf_bool any = CF_FALSE;
+
+    for (;;) {
+        int d = (s->p < s->end) ? toml_hex((unsigned char)*s->p) : -1;
+        if (d >= 0 && d < base) {
+            if (*n + 1 >= cap) {
+                return CF_FALSE;
+            }
+            buf[(*n)++] = *s->p++;
+            any         = CF_TRUE;
+            continue;
+        }
+        if (any && s->p + 1 < s->end && *s->p == '_') {
+            int next = toml_hex((unsigned char)s->p[1]);
+            if (next >= 0 && next < base) {
+                ++s->p;
+                continue;
+            }
+        }
+        return any;
+    }
+}
+
+/* Integers and floats, by the TOML 1.0 grammar:
+       dec-int   = [ "+" / "-" ] ( "0" / digit1-9 *( DIGIT / "_" DIGIT ) )
+       hex-int   = "0x" HEXDIG *( HEXDIG / "_" HEXDIG )   (and 0o, 0b; unsigned)
+       float     = dec-int ( exp / frac [ exp ] )
+       frac      = "." zero-prefixable-int
+       exp       = ( "e" / "E" ) [ "+" / "-" ] zero-prefixable-int
+   The toml-test suite found 01, 1., .5, 1__0 and +0x1 accepted. Dates
+   are recognised in order to refuse them. */
 static cf_bool toml_number(toml_scan* s, cf_value* v) {
     const char* start = s->p;
     char        buf[CF_VALUE_TEXT_MAX + 8]; /* the digits of either kind */
@@ -392,39 +427,55 @@ static cf_bool toml_number(toml_scan* s, cf_value* v) {
     }
     if (s->end - s->p >= 2 && s->p[0] == '0' &&
         (s->p[1] == 'x' || s->p[1] == 'o' || s->p[1] == 'b')) {
+        if (n > 0) {
+            return toml_fail(s, start,
+                             "a hexadecimal, octal or binary integer has no sign");
+        }
         base = (s->p[1] == 'x') ? 16 : (s->p[1] == 'o') ? 8 : 2;
         s->p += 2;
-    }
-    while (s->p < s->end) {
-        char c = *s->p;
-        if (c == '_') {
-            ++s->p;
-            continue;
+        if (!toml_digits(s, base, buf, sizeof buf, &n)) {
+            return toml_fail(s, start, "malformed integer");
         }
-        /* A '-' inside a number is a date, unless it signs an exponent. */
-        if (base == 10 && n > 0 &&
-            (c == ':' || (c == '-' && buf[n - 1] != 'e' && buf[n - 1] != 'E'))) {
+    } else {
+        size_t first = n;
+        if (!toml_digits(s, 10, buf, sizeof buf, &n)) {
+            return toml_fail(s, start,
+                             (n == 0) ? "expected a value" : "malformed number");
+        }
+        /* a date or a time: digits then '-' or ':' */
+        if (s->p < s->end && (*s->p == ':' || (*s->p == '-' && first == 0))) {
             return toml_fail(s, start,
                              "dates and times are not in the TOML subset this library "
                              "reads; quote it as a string");
         }
-        if (base == 10 && (c == '.' || c == 'e' || c == 'E' ||
-                           ((c == '+' || c == '-') && n > 0 &&
-                            (buf[n - 1] == 'e' || buf[n - 1] == 'E')))) {
-            is_real = CF_TRUE;
-        } else if (!(toml_hex((unsigned char)c) >= 0 &&
-                     toml_hex((unsigned char)c) < base) &&
-                   !(base == 16 && toml_hex((unsigned char)c) >= 0)) {
-            break;
+        if (buf[first] == '0' && n - first > 1) {
+            return toml_fail(s, start, "malformed number: a leading zero");
         }
-        if (n + 1 >= sizeof buf) {
-            return toml_fail(s, start, "the number is too long");
+        if (s->p < s->end && *s->p == '.') {
+            is_real  = CF_TRUE;
+            buf[n++] = *s->p++;
+            if (!toml_digits(s, 10, buf, sizeof buf, &n)) {
+                return toml_fail(s, start,
+                                 "malformed number: no digit after the point");
+            }
         }
-        buf[n++] = c;
-        ++s->p;
+        if (s->p < s->end && (*s->p == 'e' || *s->p == 'E')) {
+            is_real  = CF_TRUE;
+            buf[n++] = *s->p++;
+            if (s->p < s->end && (*s->p == '+' || *s->p == '-') && n + 1 < sizeof buf) {
+                buf[n++] = *s->p++;
+            }
+            if (!toml_digits(s, 10, buf, sizeof buf, &n)) {
+                return toml_fail(s, start,
+                                 "malformed number: no digit in the exponent");
+            }
+        }
     }
-    if (n == 0 || (n == 1 && (buf[0] == '+' || buf[0] == '-'))) {
-        return toml_fail(s, start, "expected a value");
+    /* What follows a number ends it: a letter or another digit sign means
+       the text was not one (1x, 0x1.5, 1e5.0). */
+    if (s->p < s->end && (cf_is_alpha((unsigned char)*s->p) || *s->p == '_' ||
+                          *s->p == '.' || cf_is_digit((unsigned char)*s->p))) {
+        return toml_fail(s, start, "malformed number");
     }
     if (base != 10) {
         cf_u64 acc = 0;

@@ -55,6 +55,7 @@ nav:
       - Image format: docs/ImageFormat.md
       - Decisions: docs/Decisions.md
       - Safety: docs/Safety.md
+      - Conformance: docs/Conformance.md
   - Contributing:
       - Getting started: CONTRIBUTING.md
       - Maintenance: docs/Maintaining.md

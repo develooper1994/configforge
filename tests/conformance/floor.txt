@@ -1,0 +1,6 @@
+# The least each reader must score on its standard's suite, as
+# "<format> <valid accepted> <invalid refused>". A ratchet: a run that
+# falls below fails, and a run above it says so, and the floor is raised
+# in the same change that raised the score (docs/Conformance.md).
+json 95 188
+toml 161 433
