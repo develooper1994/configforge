@@ -148,29 +148,49 @@ endif()
 
 # A sequence names what changed and where it comes from now, and never
 # the value: production's port 9090, staging's 5000, and the secrets.
-if(cmd MATCHES "^(history|blame)$" AND out MATCHES "9090|5000|prodsecret|devsecret")
+if(cmd MATCHES "^(history|blame)$" AND out MATCHES
+                                       "9090|5000|prodsecret|devsecret")
   message(FATAL_ERROR "${cmd} printed a value")
 endif()
 if(cmd STREQUAL "history" AND EXPECT_FAIL LESS 2)
-  if(NOT out MATCHES
-     "HISTORY[^\n]*server.port[^\n]*value changed, now from 'cli' rather than 'env'")
+  # A step's line: HISTORY, the key, and what the step did to it.
+  set(on "[^\n]*")
+  set(port_did "value changed, now from 'cli' rather than 'env'")
+  set(secret_did "value changed \\(by digest\\), still from 'env'")
+  set(host_did "same value, now from 'user-file' rather than 'env'")
+  if(NOT out MATCHES "HISTORY${on}server.port${on}${port_did}")
     message(FATAL_ERROR "the port's change was not reported")
   endif()
-  if(NOT out MATCHES
-     "HISTORY[^\n]*db.password[^\n]*value changed \\(by digest\\), still from 'env'")
+  if(NOT out MATCHES "HISTORY${on}db.password${on}${secret_did}")
     message(FATAL_ERROR "the secret's change was not told by its digest")
   endif()
-  if(NOT out MATCHES
-     "HISTORY[^\n]*server.host[^\n]*same value, now from 'user-file' rather than 'env'")
+  if(NOT out MATCHES "HISTORY${on}server.host${on}${host_did}")
     message(FATAL_ERROR "the host that moved with its value was not reported")
   endif()
   if(out MATCHES "HISTORY[^\n]*log.level")
     message(FATAL_ERROR "a key that did not change has a history")
   endif()
 endif()
+# --only-changed: what the change did not touch is counted, not shown,
+# and a source the change went through keeps its findings.
+if(cmd STREQUAL "lint"
+   AND argv MATCHES "only-changed"
+   AND EXPECT_FAIL LESS 2)
+  if(NOT out MATCHES "on what the change did not touch")
+    message(FATAL_ERROR "the findings left out were not counted")
+  endif()
+  if(argv MATCHES "cf_fx_dead" AND NOT out MATCHES "CFD010")
+    message(
+      FATAL_ERROR "the dead source, which the change touched, was left out")
+  endif()
+  if(argv MATCHES "cf_fx_staging.json;--base;cf_fx_staging" AND out MATCHES
+                                                                "CFD008")
+    message(FATAL_ERROR "a finding on a key the change left alone was shown")
+  endif()
+endif()
 if(cmd STREQUAL "blame" AND EXPECT_FAIL EQUAL 0)
-  if(NOT out MATCHES
-     "BLAME[^\n]*server.port[^\n]*from 'cli' since cf_fx_staging.json: value changed")
+  set(since "from 'cli' since cf_fx_staging.json: value changed")
+  if(NOT out MATCHES "BLAME[^\n]*server.port[^\n]*${since}")
     message(FATAL_ERROR "blame did not name the report the port dates from")
   endif()
 endif()

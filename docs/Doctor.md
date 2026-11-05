@@ -205,6 +205,7 @@ doctor blame <key> <report>...
     changed there; "at least" when an earlier step cannot be compared
 
 configforge doctor lint <report> [--rules R] [--baseline B] [--format text|sarif|markdown]
+                         [--base <before> --only-changed]
     rule catalogue against a single report
 
 configforge doctor parity <reportA> <reportB> [--require-same-origin]
@@ -441,9 +442,16 @@ This is also what profiles are for, as D-12 decided them: a label on the report,
 concept in the library. A rule whose meaning depends on the environment says so in its
 catalogue entry, and the severity follows the label.
 
-**Progressive mode.** `--only-changed` restricts rules to keys touched by the change
-under review. Not built yet: it needs the change, which Doctor does not have, and the
-baseline covers the case that matters first - an existing repository.
+**Progressive mode.** `doctor lint <report> --base <before> --only-changed` restricts
+the rules to what the change under review touched: a key whose candidates - their
+sources, outcomes, values and digests, in order - are not the base's, or that only one
+side has. Where a value was set is not compared, since moving a line changes nothing.
+A finding about a source rather than a key is kept when a touched key came from it.
+The rest are counted - "3 on what the change did not touch" - so the run says what it
+left out. The change was the missing piece, and the base report is it: the action and
+the hook pass `only-changed: true` / `--only-changed` with their base, and the library
+has `cf_doctor_only_changed_file`. With a baseline, this is how a large configuration
+adopts Doctor one change at a time.
 
 ---
 

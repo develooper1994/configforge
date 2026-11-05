@@ -5,7 +5,10 @@
 #   cmake -DDOCTOR=<doctor> -DBASH=<bash> -DACTION=<actions/doctor>
 #         -DWORK=<dir with the fixtures> -P action.cmake
 
-function(fail what)
+# Stops the test with what went wrong, given in as many pieces as it
+# takes to keep a line short.
+function(fail)
+  string(JOIN "" what ${ARGV})
   message(FATAL_ERROR "doctor action: ${what}")
 endfunction()
 
@@ -48,11 +51,13 @@ if(NOT text MATCHES "CFD002")
   fail("the log does not show the diff's origin drift:\n${text}")
 endif()
 file(READ ${md} m)
+set(diff_heading "### ConfigForge Doctor: diff cf\\\\_fx\\\\_prod.json, ")
+string(APPEND diff_heading "cf\\\\_fx\\\\_staging.json")
 foreach(
   want
   "^<!-- configforge-doctor -->"
   "### ConfigForge Doctor: lint cf\\\\_fx\\\\_staging.json"
-  "### ConfigForge Doctor: diff cf\\\\_fx\\\\_prod.json, cf\\\\_fx\\\\_staging.json"
+  "${diff_heading}"
   "\\| CFD002 \\| warning \\| server.host \\|"
   "\\| CFD014 \\| info \\| db.password \\|"
   "this check fails")
@@ -109,6 +114,32 @@ if(NOT rc EQUAL 2)
   fail("an unknown --fail-on should be refused, got ${rc}")
 endif()
 
+# Only what the change touched, passed through to the lint; and asked for
+# without a base to measure from, refused.
+run_script(
+  rc
+  text
+  ${ACTION}/run.sh
+  CF_DOCTOR=${DOCTOR}
+  CF_REPORT=cf_fx_staging.json
+  CF_BASE=cf_fx_staging.json
+  CF_ONLY_CHANGED=true
+  CF_FAIL_ON=info)
+if(NOT rc EQUAL 0 OR NOT text MATCHES "on what the change did not touch")
+  fail("only-changed against itself: expected a pass, the rest counted, "
+       "got ${rc}:\n${text}")
+endif()
+run_script(
+  rc
+  text
+  ${ACTION}/run.sh
+  CF_DOCTOR=${DOCTOR}
+  CF_REPORT=cf_fx_staging.json
+  CF_ONLY_CHANGED=true)
+if(NOT rc EQUAL 2)
+  fail("only-changed without a base should be refused, got ${rc}")
+endif()
+
 # The pre-commit hook: each report, its options before them, the worst
 # exit code; nothing staged is nothing to say.
 run_script(rc text ${ACTION}/pre-commit.sh CONFIGFORGE_DOCTOR=${DOCTOR})
@@ -124,9 +155,8 @@ execute_process(
   OUTPUT_VARIABLE text
   ERROR_VARIABLE err)
 if(NOT rc EQUAL 1 OR NOT text MATCHES "CFD010")
-  fail(
-    "the hook should fail on the dead source's warning, got ${rc}:\n${text}${err}"
-  )
+  fail("the hook should fail on the dead source's warning, "
+       "got ${rc}:\n${text}${err}")
 endif()
 execute_process(
   COMMAND ${CMAKE_COMMAND} -E env CONFIGFORGE_DOCTOR=${DOCTOR} ${BASH}
@@ -135,9 +165,8 @@ execute_process(
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE text)
 if(NOT rc EQUAL 0 OR NOT text MATCHES "CFD002")
-  fail(
-    "the hook's --base should diff, and pass on errors only, got ${rc}:\n${text}"
-  )
+  fail("the hook's --base should diff, and pass on errors only, "
+       "got ${rc}:\n${text}")
 endif()
 execute_process(
   COMMAND ${CMAKE_COMMAND} -E env CONFIGFORGE_DOCTOR=${DOCTOR} ${BASH}
@@ -158,7 +187,8 @@ file(
   WRITE ${stub}/gh
   "#!/usr/bin/env bash\n"
   "echo \"$*\" >>\"$GH_LOG\"\n"
-  "if [ \"$3\" = repos/o/r/issues/7/comments ] && [ \"$1\" = api ] && [ \"$2\" = --paginate ]; then\n"
+  "if [ \"$3\" = repos/o/r/issues/7/comments ] && [ \"$1\" = api ] "
+  "&& [ \"$2\" = --paginate ]; then\n"
   "  [ -n \"$GH_EXISTING\" ] && echo \"$GH_EXISTING\"\n"
   "  exit 0\n"
   "fi\n"

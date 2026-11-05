@@ -105,9 +105,14 @@ def _options(baseline, severity, fail_on):
     return args
 
 
-def lint(report, baseline=None, severity=None, fail_on=None, doctor=None):
-    """Every finding in one report, as `doctor lint` makes them."""
-    return _findings(_run(["lint", report] + _options(baseline, severity, fail_on), doctor))
+def lint(report, baseline=None, severity=None, fail_on=None, doctor=None, base=None):
+    """Every finding in one report, as `doctor lint` makes them; given
+    ``base``, the report a change is measured from, only what the change
+    touched (`doctor lint --base B --only-changed`)."""
+    args = ["lint", report] + _options(baseline, severity, fail_on)
+    if base:
+        args += ["--base", base, "--only-changed"]
+    return _findings(_run(args, doctor))
 
 
 def diff(before, after, baseline=None, severity=None, fail_on=None, doctor=None):

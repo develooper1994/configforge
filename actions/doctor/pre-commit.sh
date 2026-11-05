@@ -2,7 +2,10 @@
 # The pre-commit hook (.pre-commit-hooks.yaml): lint each staged report,
 # and diff it against the report it replaces when --base names one.
 #
-#   pre-commit.sh [--base F] [--baseline F] [--severity F] [--fail-on L] <report>...
+#   pre-commit.sh [--base F [--only-changed]] [--baseline F] [--severity F]
+#                 [--fail-on L] <report>...
+#
+# --only-changed lints only what changed since --base.
 #
 # Doctor is $CONFIGFORGE_DOCTOR when that is set, else built once from
 # this checkout with CMake into a cache named after the commit it came
@@ -13,10 +16,11 @@
 set -u
 here="$(cd "$(dirname "$0")" && pwd)"
 
-base="" baseline="" severity="" fail_on="error"
+base="" baseline="" severity="" fail_on="error" only_changed="false"
 reports=()
 while [ $# -gt 0 ]; do
   case "$1" in
+    --only-changed) only_changed="true"; shift ;;
     --base | --baseline | --severity | --fail-on)
       if [ $# -lt 2 ]; then
         echo "doctor: $1 needs a value" >&2
@@ -60,7 +64,8 @@ fi
 worst=0
 for r in "${reports[@]}"; do
   CF_DOCTOR="$doctor" CF_REPORT="$r" CF_BASE="$base" CF_BASELINE="$baseline" \
-    CF_SEVERITY="$severity" CF_FAIL_ON="$fail_on" bash "$here/run.sh"
+    CF_SEVERITY="$severity" CF_FAIL_ON="$fail_on" CF_ONLY_CHANGED="$only_changed" \
+    bash "$here/run.sh"
   rc=$?
   if [ "$rc" -gt "$worst" ]; then worst="$rc"; fi
 done

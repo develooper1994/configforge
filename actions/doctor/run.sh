@@ -13,6 +13,9 @@
 #   CF_SARIF      optional: where to write the lint's SARIF
 #   CF_MARKDOWN   optional: where to write the findings as Markdown, for
 #                 a job summary or a pull-request comment
+#   CF_ONLY_CHANGED  true: the lint reports only what the change touched
+#                 against CF_BASE (doctor lint --only-changed), so a large
+#                 configuration can adopt Doctor one change at a time
 #
 # Exits as Doctor does: 0, 1 when a finding reaches CF_FAIL_ON in the
 # lint or the diff, 2 for input Doctor cannot use.
@@ -32,6 +35,14 @@ esac
 opts=()
 if [ -n "${CF_BASELINE:-}" ]; then opts+=(--baseline "$CF_BASELINE"); fi
 if [ -n "${CF_SEVERITY:-}" ]; then opts+=(--severity "$CF_SEVERITY"); fi
+lint=() # the lint's own options; the diff has a base already
+if [ "${CF_ONLY_CHANGED:-false}" = "true" ]; then
+  if [ -z "${CF_BASE:-}" ]; then
+    echo "doctor: only what changed needs the report it changed from (base)" >&2
+    exit 2
+  fi
+  lint+=(--base "$CF_BASE" --only-changed)
+fi
 
 worst=0
 note() { # the worst exit code so far: 2 over 1 over 0
@@ -40,12 +51,12 @@ note() { # the worst exit code so far: 2 over 1 over 0
 
 if [ -n "${CF_SARIF:-}" ]; then
   # Whatever it holds; unusable input fails here too, with exit code 2.
-  "$CF_DOCTOR" lint "$CF_REPORT" ${opts[@]+"${opts[@]}"} --format sarif --fail-on never >"$CF_SARIF"
+  "$CF_DOCTOR" lint "$CF_REPORT" ${opts[@]+"${opts[@]}"} ${lint[@]+"${lint[@]}"} --format sarif --fail-on never >"$CF_SARIF"
   rc=$?
   if [ "$rc" -ge 2 ]; then note "$rc"; fi
 fi
 
-"$CF_DOCTOR" lint "$CF_REPORT" ${opts[@]+"${opts[@]}"} --fail-on "$fail_on"
+"$CF_DOCTOR" lint "$CF_REPORT" ${opts[@]+"${opts[@]}"} ${lint[@]+"${lint[@]}"} --fail-on "$fail_on"
 note $?
 if [ -n "${CF_BASE:-}" ]; then
   echo
@@ -57,7 +68,7 @@ fi
 if [ -n "${CF_MARKDOWN:-}" ]; then
   {
     echo "<!-- configforge-doctor -->"
-    "$CF_DOCTOR" lint "$CF_REPORT" ${opts[@]+"${opts[@]}"} --format markdown --fail-on never
+    "$CF_DOCTOR" lint "$CF_REPORT" ${opts[@]+"${opts[@]}"} ${lint[@]+"${lint[@]}"} --format markdown --fail-on never
     if [ -n "${CF_BASE:-}" ]; then
       echo
       "$CF_DOCTOR" diff "$CF_BASE" "$CF_REPORT" ${opts[@]+"${opts[@]}"} --format markdown \

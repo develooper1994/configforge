@@ -778,6 +778,134 @@ static void found_release(cf_doctor* D) {
     D->nfound = D->capfound = 0;
 }
 
+/* ------------------------------------------------------------------ *
+ * --only-changed
+ *
+ * What a change touched: a key whose candidates - each one's source,
+ * outcome, value and digest, in order - are not the base's, or that only
+ * one side has. Where a value was set is not compared: moving a line
+ * changes no configuration. A finding about a source rather than a key
+ * is kept when a touched key came from that source, on either side.
+ * ------------------------------------------------------------------ */
+
+static cf_bool same_text(const char* a, const char* b) {
+    if (a == NULL || b == NULL) {
+        return (a == b) ? CF_TRUE : CF_FALSE;
+    }
+    return (strcmp(a, b) == 0) ? CF_TRUE : CF_FALSE;
+}
+
+static cf_bool same_candidates(const rkey* a, const rkey* b) {
+    size_t i;
+    if (a->nc != b->nc) {
+        return CF_FALSE;
+    }
+    for (i = 0; i < a->nc; ++i) {
+        if (!same_text(a->c[i].source, b->c[i].source) ||
+            !same_text(a->c[i].outcome, b->c[i].outcome) ||
+            !same_text(a->c[i].value, b->c[i].value) ||
+            !same_text(a->c[i].digest, b->c[i].digest)) {
+            return CF_FALSE;
+        }
+    }
+    return CF_TRUE;
+}
+
+static void source_note(cf_doctor* D, const char* name) {
+    size_t i;
+    if (name == NULL) {
+        return;
+    }
+    for (i = 0; i < D->nsources; ++i) {
+        if (strcmp(D->sources[i], name) == 0) {
+            return;
+        }
+    }
+    D->sources[D->nsources++] = name;
+}
+
+/* Marks what `r` touched against D->only_base; false without memory, and
+   then nothing is left out - a filter that could not be built does not
+   silently drop findings. */
+static cf_bool only_prepare(cf_doctor* D, const report* r) {
+    const cf_allocator* a   = cf_default_allocator();
+    size_t              cap = 0, i, j;
+
+    for (i = 0; i < r->nkeys; ++i) {
+        cap += r->keys[i].nc;
+    }
+    for (i = 0; i < D->only_base->nkeys; ++i) {
+        cap += D->only_base->keys[i].nc;
+    }
+    D->touched = (cf_bool*)a->alloc(a->ctx, (r->nkeys + 1) * sizeof *D->touched);
+    D->sources = (const char**)a->alloc(a->ctx, (cap + 1) * sizeof *D->sources);
+    if (D->touched == NULL || D->sources == NULL) {
+        if (D->touched != NULL) {
+            a->release(a->ctx, D->touched);
+        }
+        if (D->sources != NULL) {
+            a->release(a->ctx, (void*)D->sources);
+        }
+        D->touched = NULL;
+        D->sources = NULL;
+        return CF_FALSE;
+    }
+    D->nsources = 0;
+    for (i = 0; i < r->nkeys; ++i) {
+        const rkey* k    = &r->keys[i];
+        const rkey* base = doctor_find_key(D->only_base, k->key, k->keylen);
+        D->touched[i] =
+            (base == NULL || !same_candidates(base, k)) ? CF_TRUE : CF_FALSE;
+        for (j = 0; D->touched[i] && j < k->nc; ++j) {
+            source_note(D, k->c[j].source);
+        }
+        for (j = 0; D->touched[i] && base != NULL && j < base->nc; ++j) {
+            source_note(D, base->c[j].source);
+        }
+    }
+    /* a key the change removed leaves its sources touched too */
+    for (i = 0; i < D->only_base->nkeys; ++i) {
+        const rkey* k = &D->only_base->keys[i];
+        if (doctor_find_key(r, k->key, k->keylen) == NULL) {
+            for (j = 0; j < k->nc; ++j) {
+                source_note(D, k->c[j].source);
+            }
+        }
+    }
+    D->linting = r;
+    return CF_TRUE;
+}
+
+static void only_done(cf_doctor* D) {
+    const cf_allocator* a = cf_default_allocator();
+    if (D->touched != NULL) {
+        a->release(a->ctx, D->touched);
+    }
+    if (D->sources != NULL) {
+        a->release(a->ctx, (void*)D->sources);
+    }
+    D->touched  = NULL;
+    D->sources  = NULL;
+    D->nsources = 0;
+    D->linting  = NULL;
+}
+
+/* Whether a finding about `key` - a key of the report, or a source's
+   name - is within what the change touched. */
+static cf_bool only_touched(const cf_doctor* D, const char* key) {
+    const rkey* k = doctor_find_key(D->linting, key, strlen(key));
+    size_t      i;
+    if (k != NULL) {
+        return D->touched[k - D->linting->keys];
+    }
+    for (i = 0; i < D->nsources; ++i) {
+        if (strcmp(D->sources[i], key) == 0) {
+            return CF_TRUE;
+        }
+    }
+    return CF_FALSE;
+}
+
 static void vfinding(cf_doctor* D, const char* id, const char* sev, const char* key,
                      const char* at, const char* fmt, va_list ap) {
     const char* level = severity_of(D, id, sev);
@@ -785,6 +913,10 @@ static void vfinding(cf_doctor* D, const char* id, const char* sev, const char* 
 
     if (strcmp(level, "off") == 0) {
         return; /* a project said so, in a file somebody reviewed */
+    }
+    if (D->touched != NULL && !only_touched(D, key)) {
+        ++D->unchanged; /* --only-changed: a key the change left alone */
+        return;
     }
     if (D->base.loaded && baseline_accepts(D, id, key)) {
         /* Counted but not printed. A baselined finding that printed on
@@ -1551,9 +1683,13 @@ void doctor_lint_reports(const report* r) {
     /* A profile decides some severities; a diff spans two, so only lint
        has one to apply. */
     r->D->profile = r->profile;
+    if (r->D->only_base != NULL) {
+        (void)only_prepare(r->D, r);
+    }
     for (i = 0; i < sizeof g_lint_rules / sizeof g_lint_rules[0]; ++i) {
         g_lint_rules[i](r);
     }
+    only_done(r->D);
     r->D->profile = NULL;
 }
 
@@ -1765,7 +1901,41 @@ void cf_doctor_free(cf_doctor* d) {
         return;
     }
     found_release(d);
+    if (d->only_base != NULL) {
+        doctor_release(d->only_base);
+        a->release(a->ctx, d->only_base);
+    }
     a->release(a->ctx, d);
+}
+
+cf_bool cf_doctor_only_changed_file(cf_doctor* d, const char* path, cf_error* err) {
+    const cf_allocator* a = cf_default_allocator();
+    report*             r;
+
+    if (d == NULL || path == NULL) {
+        return cf_error_set(err, CF_E_SOURCE, NULL, path, "no base report");
+    }
+    r = (report*)a->alloc(a->ctx, sizeof *r);
+    if (r == NULL) {
+        return cf_error_set(err, CF_E_MEMORY, NULL, path,
+                            "no room for the base report");
+    }
+    memset(r, 0, sizeof *r);
+    if (!doctor_load(r, d, path, err)) {
+        doctor_release(r);
+        a->release(a->ctx, r);
+        return CF_FALSE;
+    }
+    if (d->only_base != NULL) {
+        doctor_release(d->only_base);
+        a->release(a->ctx, d->only_base);
+    }
+    d->only_base = r;
+    return CF_TRUE;
+}
+
+size_t cf_doctor_unchanged_count(const cf_doctor* d) {
+    return (d != NULL && d->unchanged > 0) ? (size_t)d->unchanged : 0;
 }
 
 cf_bool cf_doctor_accept(cf_doctor* d, const char* rule, const char* key) {

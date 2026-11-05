@@ -89,6 +89,16 @@ CF_DOCTOR_API cf_bool cf_doctor_lint_report(cf_doctor* d, const char* json, size
 CF_DOCTOR_API cf_bool cf_doctor_lint_file(cf_doctor* d, const char* path,
                                           cf_error* err);
 
+/* `doctor lint --base B --only-changed`: from now on a lint reports only
+   what a change touched - the keys whose candidates differ from the
+   report in `path`, or that only one of the two has, and the sources
+   those came from - so a large configuration can adopt Doctor one change
+   at a time. The rest are counted (cf_doctor_unchanged_count), not
+   recorded. A later call replaces the base. (1.2) */
+CF_DOCTOR_API cf_bool cf_doctor_only_changed_file(cf_doctor* d, const char* path,
+                                                  cf_error* err);
+CF_DOCTOR_API size_t  cf_doctor_unchanged_count(const cf_doctor* d);
+
 /* Compare two: what one has and the other lacks, values from sources
    of different kinds, overrides in one and not the other, and every
    value that differs - `doctor diff`. */

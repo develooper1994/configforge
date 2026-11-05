@@ -139,10 +139,16 @@ verified commits, and a release is cut where the order says so. The
    has any, are PHP's `name[] = v` and `name[i] = v`, and the second is
    C's element assignment, so both wishes hold. A brace list was built
    first and dropped: it was a syntax invented here.
-5. **Doctor `--only-changed`**: rules restricted to the keys a change
-   touches - the keys whose candidates differ between `--base` and the
-   report - so a large existing configuration can adopt Doctor one
-   change at a time. The action and the hook pass it through.
+   4b. **A declared list splits an INI value too** (owner's question,
+   2026-11-06: `ports=[80,443, 8443 ,22]`?). Not as syntax: no INI reader
+   knows brackets - it is TOML's, which this library reads - and old
+   files with such text would change meaning. But INI carries no types,
+   so the definition decides: a list declared with `list_separator`
+   splits `ports = 80,443,8443,22` from an INI file as it does from the
+   environment and `.env` today.
+5. **Doctor `--only-changed`** - done: `lint --base B --only-changed`,
+   in the library, the action, the hook and Python; findings about a
+   source are kept when a touched key came from it.
 6. **Dependencies behind one contract** (the owner's decision): every
    reader a library supplies - JSON, TOML, YAML, XML, SQLite - sits
    behind the `cf_codec` / `cf_doc_sink` contract, and a conformance
@@ -188,6 +194,23 @@ verified commits, and a release is cut where the order says so. The
 Every idea written here before 2026-11-05 is now in the plan above, in
 the order the owner and its use put it. New ones go here until they are
 accepted.
+
+### Considered, and decided against for now: TOON
+
+The owner asked (2026-11-06) whether to add TOON, Token-Oriented Object
+Notation (github.com/toon-format/toon, spec v4.4, MIT). Its own
+description answers it: an encoding of the JSON data model for LLM
+prompts - "use JSON programmatically, and encode it as TOON for LLM
+input" - suited to uniform arrays of objects and advised against for
+deeply nested data, which is what configuration is. The reference is
+TypeScript, there is no C implementation, and the spec calls itself an
+idea in progress. As a configuration source it would be a reader to
+keep for files nobody writes by hand; as a way to hand a report to a
+model, the TOON CLI converts the report's JSON already.
+
+Revisit if configuration files in TOON appear in the wild, or if handing
+Doctor's findings to a model becomes a feature and a measured token
+saving argues for writing TOON here.
 
 ### Considered, and decided against for now: a jq-like query language
 

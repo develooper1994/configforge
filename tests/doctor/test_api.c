@@ -653,6 +653,41 @@ static size_t count_rule(cf_doctor* d, const char* rule, const char* key) {
     return n;
 }
 
+/* --only-changed through the library: two keys present but empty
+   (CFD011), one of which the change emptied; only that one is a finding,
+   and the other is counted as left alone. A base that cannot be read is
+   an error, not a filter that drops nothing - or everything. */
+static void test_only_changed(void) {
+    cf_doctor* d   = cf_doctor_new();
+    cf_error   err = CF_ERROR_INIT;
+
+    check(seq_write("cf_only_base.json",
+                    SEQ_KEY("a", "user-file", "\"value\":\"\"") "," SEQ_KEY(
+                        "b", "user-file", "\"value\":\"x\"")) &&
+              seq_write("cf_only_head.json",
+                        SEQ_KEY("a", "user-file", "\"value\":\"\"") "," SEQ_KEY(
+                            "b", "user-file", "\"value\":\"\"")),
+          "only-changed: reports written");
+    check(cf_doctor_lint_file(d, "cf_only_head.json", &err) &&
+              count_rule(d, "CFD011", "a") == 1 && count_rule(d, "CFD011", "b") == 1,
+          "a plain lint finds both empty keys");
+    cf_doctor_free(d);
+
+    d = cf_doctor_new();
+    check(cf_doctor_only_changed_file(d, "cf_only_base.json", &err) &&
+              cf_doctor_lint_file(d, "cf_only_head.json", &err),
+          "a lint against a base");
+    check(count_rule(d, "CFD011", "b") == 1 && count_rule(d, "CFD011", "a") == 0 &&
+              cf_doctor_unchanged_count(d) == 1,
+          "finds only what the change emptied, and counts what it left alone");
+    check(!cf_doctor_only_changed_file(d, "cf_only_none.json", &err) &&
+              err.message[0] != '\0',
+          "a base that cannot be read is an error");
+    cf_doctor_free(d);
+    remove("cf_only_base.json");
+    remove("cf_only_head.json");
+}
+
 /* Four deployments of one service. The port moves from a file to the
    environment with its value, then changes value; the token, a secret,
    changes by digest and is then shown where it was digested, which
@@ -1067,6 +1102,7 @@ int main(void) {
     test_inputs();
     test_synthesized_list_count();
     test_history();
+    test_only_changed();
     test_default_drift();
     test_default_marks();
     test_unread();

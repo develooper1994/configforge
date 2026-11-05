@@ -66,6 +66,18 @@ doctor_case(history_strict 1
 doctor_case(history_unreadable 2 history|cf_fx_prod.json|cf_fx_none.json)
 doctor_case(blame 0 blame|server.port|cf_fx_prod.json|cf_fx_staging.json)
 doctor_case(blame_missing 2 blame|no.such.key|cf_fx_prod.json)
+# Only what a change touched: nothing, against itself, so the info that a
+# plain lint shows fails no run; a source the change went through keeps
+# its warning; and the flag without a base is unusable.
+set(only --only-changed)
+doctor_case(
+  only_changed_none 0
+  lint|cf_fx_staging.json|--base|cf_fx_staging.json|${only}|--fail-on|info)
+doctor_case(
+  only_changed_source 1
+  lint|cf_fx_dead.json|--base|cf_fx_prod.json|${only}|--fail-on|warning)
+doctor_case(only_changed_alone 2 lint|cf_fx_staging.json|--only-changed)
+doctor_case(base_alone 2 lint|cf_fx_staging.json|--base|cf_fx_prod.json)
 
 # The GitHub Action's scripts and the pre-commit hook (actions/doctor),
 # as a project's CI runs them. Bash on a Unix host only: on Windows the

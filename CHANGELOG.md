@@ -31,6 +31,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   `/OPT:REF`), on in the `minimal` preset: a third of a small program.
   `CF_LTO`: link-time optimisation where the toolchain has it, off by
   default; the stack budget says it is not measured under it.
+- `doctor lint --base B --only-changed`: only what a change touched -
+  the keys whose candidates differ from B's, or that one side lacks, and
+  the sources those came from - with the rest counted, so a large
+  configuration adopts Doctor one change at a time. The action's
+  `only-changed`, the hook's `--only-changed`, Python's `lint(base=)` and
+  `cf_doctor_only_changed_file` take it too.
 - Arrays in INI, as PHP's `parse_ini_file` has them (D-60): `ports[] = 80`
   appends an element, `ports[1] = 8443` sets one, and both are the flat
   `ports.0` and `ports.count` every other format's array is. An array of

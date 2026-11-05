@@ -123,6 +123,18 @@ struct cf_doctor {
     dfinding*     found;
     size_t        nfound, capfound;
     int           findings, errors, warnings, infos, baselined;
+
+    /* --only-changed (cf_doctor_only_changed_file): the report a change
+       is measured from. While a report is linted, `touched` says which of
+       its keys differ from the base, and `sources` names the sources of
+       those keys, so a finding about a source is kept when the change
+       went through it. `unchanged` counts the findings left out. */
+    report*       only_base;
+    const report* linting;
+    cf_bool*      touched;
+    const char**  sources;
+    size_t        nsources;
+    int           unchanged;
 };
 
 /* Reading reports. False with `err` set, worded for a person. */

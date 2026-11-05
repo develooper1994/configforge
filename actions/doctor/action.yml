@@ -37,6 +37,10 @@ inputs:
     description: The report it replaces - the base branch's - to diff against
     required: false
     default: ""
+  only-changed:
+    description: With base, lint only what the change touched - true or false
+    required: false
+    default: "false"
   baseline:
     description: Findings already accepted, one per line ("CFD001 server.port")
     required: false
@@ -93,6 +97,7 @@ runs:
         CF_BUILD: ${{ runner.temp }}/cf-doctor
         CF_REPORT: ${{ inputs.report }}
         CF_BASE: ${{ inputs.base }}
+        CF_ONLY_CHANGED: ${{ inputs.only-changed }}
         CF_BASELINE: ${{ inputs.baseline }}
         CF_SEVERITY: ${{ inputs.severity }}
         CF_FAIL_ON: ${{ inputs.fail-on }}

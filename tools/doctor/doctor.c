@@ -198,6 +198,9 @@ static void print_markdown(const cf_doctor* D, const char* command, char** repor
     if (D->baselined > 0) {
         printf("; %d accepted by the baseline", D->baselined);
     }
+    if (D->unchanged > 0) {
+        printf("; %d on what the change did not touch", D->unchanged);
+    }
     if (stale > 0) {
         printf("; %d baseline entry(s) no longer match", stale);
     }
@@ -290,6 +293,7 @@ static int usage(void) {
           "  doctor import-dotnet [--full]  < GetDebugView() text\n"
           "  doctor import-systemd [--full] < systemd-analyze cat-config\n"
           "\n"
+          "  --base <file> --only-changed   lint: only what changed since <file>\n"
           "  --baseline <file>  findings already accepted\n"
           "  --severity <file>  this project's severities\n"
           "  --fail-on <level>  error (default), warning, info, never\n"
@@ -408,6 +412,8 @@ static int run(cf_doctor* D, int argc, char** argv) {
         const char* key        = NULL;
         const char* fail_on    = "error";
         const char* format     = "text";
+        const char* base       = NULL; /* lint --base, with --only-changed */
+        cf_bool     only_changed = CF_FALSE;
         int         i;
         int         over = 0;
         int         threshold;
@@ -433,10 +439,18 @@ static int run(cf_doctor* D, int argc, char** argv) {
         /* Options read before anything runs, so a finding is matched
            as it is produced rather than filtered afterwards. */
         for (i = first; i < argc; ++i) {
+            if (strcmp(argv[i], "--only-changed") == 0 && !is_diff && !is_history &&
+                !is_blame) {
+                only_changed = CF_TRUE; /* a flag: it takes no value */
+                continue;
+            }
             if (i + 1 >= argc) {
                 return usage();
             }
-            if (strcmp(argv[i], "--baseline") == 0) {
+            if (strcmp(argv[i], "--base") == 0 && !is_diff && !is_history &&
+                !is_blame) {
+                base = argv[++i];
+            } else if (strcmp(argv[i], "--baseline") == 0) {
                 cf_doctor_baseline(D, argv[++i], NULL);
             } else if (strcmp(argv[i], "--severity") == 0) {
                 cf_error err = CF_ERROR_INIT;
@@ -462,6 +476,17 @@ static int run(cf_doctor* D, int argc, char** argv) {
             }
         }
         threshold = doctor_level_rank(fail_on);
+        /* The two go together: one without the other says nothing. */
+        if ((base != NULL) != only_changed) {
+            return usage();
+        }
+        if (only_changed) {
+            cf_error err = CF_ERROR_INIT;
+            if (!cf_doctor_only_changed_file(D, base, &err)) {
+                fprintf(stderr, "doctor: %s\n", err.message);
+                return 2;
+            }
+        }
 
         if (is_history || is_blame) {
             cf_error err = CF_ERROR_INIT;
@@ -505,6 +530,9 @@ static int run(cf_doctor* D, int argc, char** argv) {
                    D->errors, D->warnings, D->infos);
             if (D->baselined > 0) {
                 printf("; %d accepted by the baseline", D->baselined);
+            }
+            if (D->unchanged > 0) {
+                printf("; %d on what the change did not touch", D->unchanged);
             }
             if (stale > 0) {
                 printf("; %d baseline entry(s) no longer match", stale);

@@ -45,6 +45,11 @@ check(any(f.rule == "CFD008" and f.level == "info" for f in found), "a note is i
 dead = [f for f in doctor.lint(fixture("cf_fx_dead.json"), doctor=DOCTOR) if f.rule == "CFD010"]
 check(len(dead) == 1 and dead[0].level == "warning", "a dead source is a warning")
 
+# Only what a change touched: against itself, nothing.
+same = doctor.lint(fixture("cf_fx_staging.json"), fail_on="never", doctor=DOCTOR,
+                   base=fixture("cf_fx_staging.json"))
+check(same == [], "against itself, a change touched nothing")
+
 # A key set twice in one file: CFD001, at the file and the line.
 twice = [f for f in doctor.lint(fixture("cf_fx_twice.json"), fail_on="never", doctor=DOCTOR)
          if f.rule == "CFD001"]
