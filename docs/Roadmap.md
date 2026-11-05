@@ -158,11 +158,19 @@ verified commits, and a release is cut where the order says so. The
    Measured first: JSON valid 95/95 and invalid 188/188 after its number
    grammar was made RFC 8259's (it accepted 01, 2. and .5); TOML 1.0 valid
    161/208, invalid 394/509 - no multi-line strings, datetimes, inf or
-   nan, and lenient numbers, keys and table redefinitions. tomlc17
+   nan, and lenient numbers, keys and table redefinitions. Now: invalid
+   509/509 (numbers, define-once, controls and UTF-8), valid 164/208;
+   next, the valid ones - multi-line strings, datetimes, inf and nan. tomlc17
    conforms fully but builds a tree without positions, and explain()
    needs file:line:col, so the built-in TOML reader is completed rather
    than replaced. Then YAML, and `verify -DEXTRA=conformance`. Record:
-   D-62.
+   D-62. The differential test starts from the project's own
+   configuration (the owner: "the project configures itself - hence the
+   name"): `.clang-format`, `.clang-tidy`, `mkdocs.yml` and
+   `.pre-commit-hooks.yaml` (YAML), `CMakePresets.json` (JSON) and
+   `pyproject.toml` (TOML), each read by its reader and compared, key by
+   key and value by value, with the reference reader's (Python's json and
+   tomllib, PyYAML where installed).
    Below, the item as first written:
 6. **Dependencies behind one contract** (the owner's decision): every
    reader a library supplies - JSON, TOML, YAML, XML, SQLite - sits

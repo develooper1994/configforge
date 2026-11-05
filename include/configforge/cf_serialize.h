@@ -120,6 +120,15 @@ typedef struct cf_doc_sink {
        built-in JSON/TOML readers refuse strings over 255 bytes. The
        configuration loader supplies it from the caller's arena. */
     char* (*reserve_text)(void* ctx, size_t n);
+
+    /* Optional reader bookkeeping: n bytes, aligned for any scalar, that
+       stay valid until decode returns. Each call is new memory; a reader
+       that outgrows a block asks for a larger one and copies. NULL
+       reports exhaustion. The TOML reader keeps what the document has
+       defined in it, to refuse what TOML forbids defining twice; without
+       this callback it does not check, and a later key wins as in 1.1.
+       The configuration loader supplies it from the caller's arena. (1.2) */
+    void* (*reserve_work)(void* ctx, size_t n);
 } cf_doc_sink;
 
 /* ------------------------------------------------------------------ *

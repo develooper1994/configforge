@@ -2,6 +2,7 @@
 measured with the standard's own test suite rather than claimed.
 
     python3 scripts/conformance.py <conform> <suites-dir> [--floor F] [--list]
+    python3 scripts/conformance.py --self <conform> <repository>
 
 <conform> is the program tests/conformance/conform.c builds into;
 <suites-dir> holds the suites, each at the commit recorded in
@@ -79,6 +80,112 @@ def yaml_suite(root):
     return valid, invalid
 
 
+# The project's own configuration, read as a user's would be: each file
+# through its reader, and every key and value compared with what the
+# reference reader for its format makes of it.
+OWN = (
+    ("CMakePresets.json", "json"),
+    ("pyproject.toml", "toml"),
+    (".clang-format", "yaml"),
+    (".clang-tidy", "yaml"),
+    ("mkdocs.yml", "yaml"),
+    (".pre-commit-hooks.yaml", "yaml"),
+)
+
+
+def reference(fmt, path):
+    """The reference reader's document, or None where there is none."""
+    if fmt == "json":
+        import json
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    if fmt == "toml":
+        try:
+            import tomllib
+        except ImportError:
+            return None
+        with open(path, "rb") as f:
+            return tomllib.load(f)
+    if fmt == "yaml":
+        try:
+            import yaml
+        except ImportError:
+            return None
+        with open(path, encoding="utf-8") as f:
+            return yaml.safe_load(f)
+    return None
+
+
+def flat(doc, prefix, out):
+    """A document as the library's flat keys: a.b, a.0, a.count."""
+    if isinstance(doc, dict):
+        for k, v in doc.items():
+            flat(v, f"{prefix}.{k}" if prefix else str(k), out)
+    elif isinstance(doc, list):
+        for i, v in enumerate(doc):
+            flat(v, f"{prefix}.{i}", out)
+        out[f"{prefix}.count"] = ("int", str(len(doc)))
+    elif isinstance(doc, bool):
+        out[prefix] = ("bool", "true" if doc else "false")
+    elif isinstance(doc, int):
+        out[prefix] = ("int", str(doc))
+    elif isinstance(doc, float):
+        out[prefix] = ("real", doc)
+    elif doc is None:
+        out[prefix] = ("null", "")
+    else:
+        out[prefix] = ("text", str(doc))
+
+
+def same(want, got):
+    wtype, wtext = want
+    gtype, gtext = got
+    if wtype == "real":
+        try:
+            return gtype == "real" and float(gtext) == wtext
+        except ValueError:
+            return False
+    return wtype == gtype and wtext == gtext
+
+
+def differential(conform, repo):
+    """0 when every file the library and the reference both read agrees."""
+    failed = False
+    for name, fmt in OWN:
+        path = os.path.join(repo, name)
+        if not os.path.isfile(path):
+            continue
+        doc = reference(fmt, path)
+        if doc is None:
+            print(f"{name}: no reference reader for {fmt} here, skipped")
+            continue
+        p = subprocess.run([conform, fmt, path, "--keys"], capture_output=True, timeout=20)
+        if p.returncode == 2:
+            print(f"{name}: this build has no {fmt} reader, skipped")
+            continue
+        if p.returncode != 0:
+            print(f"{name}: REFUSED - {p.stdout.decode('utf-8', 'replace').strip()}")
+            failed = True
+            continue
+        got = {}
+        for line in p.stdout.decode("utf-8", "replace").splitlines():
+            parts = line.split("\t", 2)
+            if len(parts) == 3:
+                got[parts[0]] = (parts[1], parts[2])
+        want = {}
+        flat(doc, "", want)
+        wrong = [k for k in sorted(set(want) | set(got))
+                 if k not in want or k not in got or not same(want[k], got[k])]
+        if wrong:
+            failed = True
+            print(f"{name}: {len(wrong)} of {len(want)} keys differ")
+            for k in wrong[:10]:
+                print(f"  {k}: reference {want.get(k)}, library {got.get(k)}")
+        else:
+            print(f"{name}: {len(want)} keys, the same as the reference")
+    return 1 if failed else 0
+
+
 def floors(path):
     """The floor file: "<format> <valid> <invalid>" a line."""
     out = {}
@@ -99,6 +206,8 @@ def main():
         floor = floors(args[k + 1])
         del args[k:k + 2]
     args = [a for a in args if a != "--list"]
+    if args and args[0] == "--self":
+        return differential(args[1], args[2])
     conform, root = args[0], args[1]
     out = []
     v, i = json_suite(root)

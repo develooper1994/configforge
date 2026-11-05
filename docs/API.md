@@ -1620,13 +1620,13 @@ CF_API cf_bool cf_flatten_init(cf_flatten* f, cf_keyspace* ks, int rank);
 CF_API const cf_doc_sink* cf_flatten_sink(cf_flatten* f);
 ```
 
-Implementation: [`cf_flatten_init` (src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/flatten.c#L308), [`cf_flatten_sink` (src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/flatten.c#L327).
+Implementation: [`cf_flatten_init` (src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/flatten.c#L314), [`cf_flatten_sink` (src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/flatten.c#L334).
 
 ```c
 CF_API void cf_flatten_lists(cf_flatten* f, const struct cf_defset* ds);
 ```
 
-Implementation: [`cf_flatten_lists` (src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/flatten.c#L331).
+Implementation: [`cf_flatten_lists` (src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/flatten.c#L338).
 
 For a format that carries no types - INI, .properties - whose values
 the definitions decide: a declared list with a separator splits its
@@ -1636,7 +1636,7 @@ text value, `ports = 80,443` the elements 80 and 443. (1.2)
 CF_API cf_bool cf_doc_emit(const cf_keyspace* ks, const cf_doc_sink* out, cf_error* err);
 ```
 
-Implementation: [`cf_doc_emit` (src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/flatten.c#L744).
+Implementation: [`cf_doc_emit` (src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/flatten.c#L751).
 
 Walk a resolved key space, emitting the document it describes.
 Structure is reconstructed from the sorted keys with nothing built:
@@ -1659,7 +1659,7 @@ rather than written as two members with the same name.
 CF_API cf_bool cf_doc_emit_where(const cf_keyspace* ks, const cf_doc_sink* out, cf_emit_pred pred, const void* ctx, cf_error* err);
 ```
 
-Implementation: [`cf_doc_emit_where` (src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/flatten.c#L748).
+Implementation: [`cf_doc_emit_where` (src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/flatten.c#L755).
 
 ## cf_image.h
 

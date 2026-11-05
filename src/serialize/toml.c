@@ -22,12 +22,12 @@
  * to write instead: dates and times, multi-line strings, inf and nan,
  * and an array of tables reopened after another table came between.
  *
- * One departure from the TOML specification, stated rather than
- * hidden: a key set twice is not an error here. Within one source the
- * later occurrence wins, as it does in every format this library
- * reads, and Doctor reports the earlier one as unreachable (CFD001) -
- * which is a better answer to "why did my edit do nothing" than refusing
- * to start.
+ * What TOML forbids defining twice is refused, as the specification
+ * says: a key set twice, a table with two [headers], an inline table or
+ * a value added to afterwards, a dotted key adding to a table a [header]
+ * defined. The record of what is defined lives in the sink's workspace
+ * (reserve_work); a sink without one reads as 1.1 did, the later of two
+ * keys winning. docs/Conformance.md has the score against toml-test.
  *
  * Every value carries its line and column, so explain() names the place
  * in a TOML file exactly as it does in any other.
@@ -66,6 +66,32 @@ typedef struct toml_open {
     toml_kind      kind;
 } toml_open;
 
+/* What the document has defined, for TOML's rule that a key or a table is
+   defined once (toml.io/en/v1.0.0, "Keys", "Table", "Inline Table",
+   "Array of Tables"). A tree of names: a node is a table, a value, or an
+   element of an array, found by its parent and its name through a hash.
+   It lives in the sink's workspace (cf_doc_sink.reserve_work), so the
+   reader still owns no memory and a fixed arena bounds it. */
+typedef enum toml_def {
+    TOML_IMPLICIT, /* named on the way to a header: [a.b] makes a     */
+    TOML_HEADER,   /* defined by [header], or an element of [[array]] */
+    TOML_DOTTED,   /* made by a dotted key: a.b = 1 makes a           */
+    TOML_INLINE,   /* an inline table, while it is being read         */
+    TOML_SEALED,   /* an inline table, read: nothing may add to it    */
+    TOML_VALUE,    /* a value, a value array among them               */
+    TOML_TABLES    /* an array of tables                              */
+} toml_def;
+
+typedef struct toml_node {
+    cf_u32 parent;
+    cf_u32 chain; /* the next node in the same bucket; 0 ends it */
+    cf_u32 name;  /* the name's offset in the pool, or the element's number */
+    cf_u32 count; /* elements so far, for an array */
+    cf_u16 len;
+    cf_u8  kind; /* a toml_def */
+    cf_u8  elem; /* an element of an array, named by its number */
+} toml_node;
+
 typedef struct toml_scan {
     const char*        p;
     const char*        end;
@@ -80,6 +106,19 @@ typedef struct toml_scan {
     char               names[CF_KEY_MAX];
     size_t             nused;
     char               closed[CF_KEY_MAX]; /* last array of tables left */
+    cf_bool            closed_set;         /* and whether there was one */
+
+    /* The definitions, when the sink lends workspace; node 0 is the root,
+       and a bucket or a chain of 0 is empty, since the root is no one's
+       child. `body` is the table a key = value line defines into. */
+    cf_bool    track;
+    toml_node* nodes;
+    size_t     nnodes, cnodes;
+    cf_u32*    buckets;
+    size_t     nbuckets;
+    char*      pool;
+    size_t     npool, cpool;
+    cf_u32     body;
 } toml_scan;
 
 /* A dotted key, its segments in one buffer for the same reason. A key
@@ -110,25 +149,82 @@ static cf_bool toml_fail(toml_scan* s, const char* at, const char* what) {
                         l.line, l.col, what);
 }
 
-/* Space within a line. */
+/* Space within a line. A carriage return is space only as the first half
+   of a CRLF line ending: TOML has no bare CR. */
 static void toml_blank(toml_scan* s) {
-    while (s->p < s->end && (*s->p == ' ' || *s->p == '\t' || *s->p == '\r')) {
+    while (s->p < s->end &&
+           (*s->p == ' ' || *s->p == '\t' ||
+            (*s->p == '\r' && s->end - s->p >= 2 && s->p[1] == '\n'))) {
         ++s->p;
     }
 }
 
-static void toml_to_eol(toml_scan* s) {
-    while (s->p < s->end && *s->p != '\n') {
-        ++s->p;
+/* The length of the well-formed UTF-8 sequence at p (RFC 3629: no
+   overlong form, no surrogate, nothing above U+10FFFF), or 0. */
+static size_t toml_utf8_len(const char* p, const char* end) {
+    const unsigned char* u = (const unsigned char*)p;
+    size_t               n, i;
+    cf_u32               cp;
+
+    if (u[0] < 0x80u) {
+        return 1;
     }
+    if (u[0] >= 0xC2u && u[0] <= 0xDFu) {
+        n  = 2;
+        cp = u[0] & 0x1Fu;
+    } else if (u[0] >= 0xE0u && u[0] <= 0xEFu) {
+        n  = 3;
+        cp = u[0] & 0x0Fu;
+    } else if (u[0] >= 0xF0u && u[0] <= 0xF4u) {
+        n  = 4;
+        cp = u[0] & 0x07u;
+    } else {
+        return 0;
+    }
+    if ((size_t)(end - p) < n) {
+        return 0;
+    }
+    for (i = 1; i < n; ++i) {
+        if ((u[i] & 0xC0u) != 0x80u) {
+            return 0;
+        }
+        cp = (cp << 6) | (u[i] & 0x3Fu);
+    }
+    if ((n == 3 && cp < 0x800u) || (n == 4 && (cp < 0x10000u || cp > 0x10FFFFu)) ||
+        (cp >= 0xD800u && cp <= 0xDFFFu)) {
+        return 0;
+    }
+    return n;
+}
+
+/* A comment, to the end of its line: any character but the controls
+   TOML excludes (all below U+0020 but tab, and DEL), in UTF-8. */
+static cf_bool toml_comment(toml_scan* s) {
+    while (s->p < s->end && *s->p != '\n') {
+        unsigned char c = (unsigned char)*s->p;
+        size_t        n;
+        if (c == '\r' && s->end - s->p >= 2 && s->p[1] == '\n') {
+            ++s->p;
+            continue;
+        }
+        if ((c < 0x20u && c != '\t') || c == 0x7Fu) {
+            return toml_fail(s, s->p, "a comment may not contain a control character");
+        }
+        n = toml_utf8_len(s->p, s->end);
+        if (n == 0) {
+            return toml_fail(s, s->p, "a comment is not valid UTF-8");
+        }
+        s->p += n;
+    }
+    return CF_TRUE;
 }
 
 /* Space, newlines and comments: what may sit between array elements. */
-static void toml_space_lines(toml_scan* s) {
+static cf_bool toml_space_lines(toml_scan* s) {
     for (;;) {
         toml_blank(s);
-        if (s->p < s->end && *s->p == '#') {
-            toml_to_eol(s);
+        if (s->p < s->end && *s->p == '#' && !toml_comment(s)) {
+            return CF_FALSE;
         }
         if (s->p < s->end && *s->p == '\n') {
             ++s->p;
@@ -136,15 +232,15 @@ static void toml_space_lines(toml_scan* s) {
             s->line_start = s->p;
             continue;
         }
-        return;
+        return CF_TRUE;
     }
 }
 
 /* After a value or a header: only a comment may follow on the line. */
 static cf_bool toml_end_of_line(toml_scan* s) {
     toml_blank(s);
-    if (s->p < s->end && *s->p == '#') {
-        toml_to_eol(s);
+    if (s->p < s->end && *s->p == '#' && !toml_comment(s)) {
+        return CF_FALSE;
     }
     if (s->p < s->end && *s->p != '\n') {
         return toml_fail(s, s->p, "expected the end of the line");
@@ -213,9 +309,26 @@ static size_t toml_string(toml_scan* s, char* dst, size_t cap) {
             toml_fail(s, s->p, "the string is not closed on its line");
             return (size_t)-1;
         }
-        if (c < 0x20u && c != '\t') {
+        if ((c < 0x20u && c != '\t') || c == 0x7Fu) {
             toml_fail(s, s->p, "a string may not contain a control character");
             return (size_t)-1;
+        }
+        if (c >= 0x80u) {
+            size_t k = toml_utf8_len(s->p, s->end);
+            if (k == 0) {
+                toml_fail(s, s->p, "a string is not valid UTF-8");
+                return (size_t)-1;
+            }
+            if (n + k + 1 > cap) {
+                toml_fail(s, s->p, "the string is too long");
+                return (size_t)-1;
+            }
+            if (dst != NULL) {
+                memcpy(dst + n, s->p, k);
+            }
+            n += k;
+            s->p += k;
+            continue;
         }
         if (c == '\\' && q == '"') {
             cf_u32 cp     = 0;
@@ -373,6 +486,335 @@ static cf_bool toml_key(toml_scan* s, toml_dkey* k) {
     }
 }
 
+/* ------------------------------------------------------------------ *
+ * Definitions
+ *
+ * What TOML forbids defining twice, checked as the document is read: a
+ * key set twice, a table given two [headers], a [header] or a dotted key
+ * adding to an inline table or to a value, a dotted key adding to a
+ * table a [header] defined, and [[name]] on what is not an array of
+ * tables. Each costs a hash lookup, so a document of n keys costs O(n).
+ * ------------------------------------------------------------------ */
+
+static cf_bool toml_fail_named(toml_scan* s, const char* at, const char* name, size_t n,
+                               const char* what) {
+    /* cf_fmt has no precision for %s: the name is copied, cut short
+       where the message would not hold it. */
+    char   text[CF_MESSAGE_MAX];
+    size_t w = strlen(what), k = 0;
+
+    if (n + w + 4 > sizeof text) {
+        n = (w + 4 < sizeof text) ? sizeof text - w - 4 : 0;
+    }
+    text[k++] = '\'';
+    memcpy(text + k, name, n);
+    k += n;
+    text[k++] = '\'';
+    text[k++] = ' ';
+    memcpy(text + k, what, w < sizeof text - k - 1 ? w : sizeof text - k - 1);
+    k += w < sizeof text - k - 1 ? w : sizeof text - k - 1;
+    text[k] = '\0';
+    return toml_fail(s, at, text);
+}
+
+static cf_bool toml_no_room(toml_scan* s) {
+    return cf_error_set(s->err, CF_E_MEMORY, NULL, s->file,
+                        "no room to record the TOML document's definitions");
+}
+
+/* FNV-1a over the parent, and the name or the element's number. */
+static cf_u32 toml_hash(cf_u32 parent, cf_u8 elem, const char* p, size_t n,
+                        cf_u32 index) {
+    cf_u32 h = 2166136261u;
+    size_t i;
+    for (i = 0; i < 4; ++i) {
+        h = (h ^ ((parent >> (8 * i)) & 0xFFu)) * 16777619u;
+    }
+    if (elem) {
+        for (i = 0; i < 4; ++i) {
+            h = (h ^ ((index >> (8 * i)) & 0xFFu)) * 16777619u;
+        }
+        return (h ^ 0x5Au) * 16777619u;
+    }
+    for (i = 0; i < n; ++i) {
+        h = (h ^ (cf_u32)(unsigned char)p[i]) * 16777619u;
+    }
+    return h;
+}
+
+/* The child of `parent` named p[0..n), or element `index` of it; 0 when
+   there is none. */
+static cf_u32 toml_find(const toml_scan* s, cf_u32 parent, cf_u8 elem, const char* p,
+                        size_t n, cf_u32 index) {
+    cf_u32 i = s->buckets[toml_hash(parent, elem, p, n, index) & (s->nbuckets - 1)];
+    while (i != 0) {
+        const toml_node* x = &s->nodes[i];
+        if (x->parent == parent && x->elem == elem &&
+            (elem ? x->name == index
+                  : ((size_t)x->len == n && memcmp(s->pool + x->name, p, n) == 0))) {
+            return i;
+        }
+        i = x->chain;
+    }
+    return 0;
+}
+
+/* Room for one more node: a block twice the size, the nodes copied, and
+   a bucket array twice that, rehashed. What was outgrown stays where the
+   sink put it until the decode is over. */
+static cf_bool toml_room(toml_scan* s, size_t text) {
+    if (s->nnodes + 1 > s->cnodes) {
+        size_t     c = s->cnodes * 2, nb = c * 2, i;
+        toml_node* nodes;
+        cf_u32*    buckets;
+        if (c > (cf_u32)-1 / 4 || nb > (size_t)-1 / sizeof *buckets) {
+            return toml_no_room(s);
+        }
+        nodes   = (toml_node*)s->out->reserve_work(s->out->ctx, c * sizeof *nodes);
+        buckets = (cf_u32*)s->out->reserve_work(s->out->ctx, nb * sizeof *buckets);
+        if (nodes == NULL || buckets == NULL) {
+            return toml_no_room(s);
+        }
+        memcpy(nodes, s->nodes, s->nnodes * sizeof *nodes);
+        memset(buckets, 0, nb * sizeof *buckets);
+        for (i = 1; i < s->nnodes; ++i) {
+            toml_node* x = &nodes[i];
+            cf_u32 h = toml_hash(x->parent, x->elem, x->elem ? NULL : s->pool + x->name,
+                                 x->len, x->name) &
+                       (cf_u32)(nb - 1);
+            x->chain = buckets[h];
+            buckets[h] = (cf_u32)i;
+        }
+        s->nodes    = nodes;
+        s->cnodes   = c;
+        s->buckets  = buckets;
+        s->nbuckets = nb;
+    }
+    if (s->npool + text > s->cpool) {
+        size_t c = s->cpool * 2;
+        char*  pool;
+        while (c < s->npool + text) {
+            c *= 2;
+        }
+        if (c > (cf_u32)-1) {
+            return toml_no_room(s);
+        }
+        pool = (char*)s->out->reserve_work(s->out->ctx, c);
+        if (pool == NULL) {
+            return toml_no_room(s);
+        }
+        memcpy(pool, s->pool, s->npool);
+        s->pool  = pool;
+        s->cpool = c;
+    }
+    return CF_TRUE;
+}
+
+/* A new child of `parent`; 0, with the error set, when there is no room.
+   An element's name is its number, and an element is never looked up by
+   text, so its hash takes the number in place of a name. */
+static cf_u32 toml_add(toml_scan* s, cf_u32 parent, cf_u8 elem, const char* p, size_t n,
+                       cf_u32 index, toml_def kind) {
+    toml_node* x;
+    cf_u32     h, i;
+
+    if (!toml_room(s, elem ? 0 : n)) {
+        return 0;
+    }
+    i         = (cf_u32)s->nnodes++;
+    x         = &s->nodes[i];
+    x->parent = parent;
+    x->count  = 0;
+    x->kind   = (cf_u8)kind;
+    x->elem   = elem;
+    if (elem) {
+        x->name = index;
+        x->len  = 0;
+    } else {
+        memcpy(s->pool + s->npool, p, n);
+        x->name = (cf_u32)s->npool;
+        x->len  = (cf_u16)n;
+        s->npool += n;
+    }
+    h             = toml_hash(parent, elem, p, n, index) & (cf_u32)(s->nbuckets - 1);
+    x->chain      = s->buckets[h];
+    s->buckets[h] = i;
+    return i;
+}
+
+/* The workspace for the definitions, when the sink lends it: a sink too
+   old to have reserve_work, or one that leaves it NULL, reads as 1.1 did,
+   the later of two keys winning. */
+static cf_bool toml_track_init(toml_scan* s) {
+    const cf_doc_sink* o = s->out;
+
+    s->track   = CF_FALSE;
+    s->nodes   = NULL;
+    s->buckets = NULL;
+    s->pool    = NULL;
+    if (o->size < offsetof(cf_doc_sink, reserve_work) + sizeof o->reserve_work ||
+        o->reserve_work == NULL) {
+        return CF_TRUE;
+    }
+    s->cnodes   = 64;
+    s->nbuckets = 128;
+    s->cpool    = 512;
+    s->nodes    = (toml_node*)o->reserve_work(o->ctx, s->cnodes * sizeof *s->nodes);
+    s->buckets  = (cf_u32*)o->reserve_work(o->ctx, s->nbuckets * sizeof *s->buckets);
+    s->pool     = (char*)o->reserve_work(o->ctx, s->cpool);
+    if (s->nodes == NULL || s->buckets == NULL || s->pool == NULL) {
+        return toml_no_room(s);
+    }
+    memset(s->buckets, 0, s->nbuckets * sizeof *s->buckets);
+    memset(&s->nodes[0], 0, sizeof s->nodes[0]);
+    s->nodes[0].kind = (cf_u8)TOML_HEADER;
+    s->nnodes        = 1;
+    s->npool         = 0;
+    s->track         = CF_TRUE;
+    return CF_TRUE;
+}
+
+/* A key = value line's key: each leading segment a table the dotted key
+   makes or one it made before, and the last one new. Returns the node
+   the value defines, or 0 with the error set. */
+static cf_u32 toml_define_key(toml_scan* s, const toml_dkey* k, const char* at,
+                              toml_def kind) {
+    cf_u32 node = s->body, c;
+    int    i;
+
+    for (i = 0; i + 1 < k->n; ++i) {
+        c = toml_find(s, node, 0, TOML_SEG(k, i), k->len[i], 0);
+        if (c == 0) {
+            c = toml_add(s, node, 0, TOML_SEG(k, i), k->len[i], 0, TOML_DOTTED);
+            if (c == 0) {
+                return 0;
+            }
+        } else if (s->nodes[c].kind != (cf_u8)TOML_DOTTED) {
+            const char* why;
+            switch ((toml_def)s->nodes[c].kind) {
+            case TOML_VALUE:
+                why = "is a value, not a table";
+                break;
+            case TOML_SEALED:
+            case TOML_INLINE:
+                why = "is an inline table, which is complete as written";
+                break;
+            case TOML_TABLES:
+                why = "is an array of tables; a dotted key may not add to it";
+                break;
+            case TOML_IMPLICIT:
+            case TOML_HEADER:
+            case TOML_DOTTED:
+            default:
+                why = "is a table a [header] defines; a dotted key may not add to it";
+                break;
+            }
+            toml_fail_named(s, at, TOML_SEG(k, i), k->len[i], why);
+            return 0;
+        }
+        node = c;
+    }
+    if (toml_find(s, node, 0, TOML_SEG(k, i), k->len[i], 0) != 0) {
+        toml_fail_named(s, at, TOML_SEG(k, i), k->len[i],
+                        "is already defined; TOML defines a key once");
+        return 0;
+    }
+    return toml_add(s, node, 0, TOML_SEG(k, i), k->len[i], 0, kind);
+}
+
+/* A [header] or [[header]]: each leading segment a table, or the last
+   element of an array of tables, and the last one a table defined here
+   for the first time, or an array of tables given a new element. Sets
+   the body the lines after it define into. */
+static cf_bool toml_define_header(toml_scan* s, const toml_dkey* k, const char* at,
+                                  cf_bool is_array, cf_bool* existed) {
+    cf_u32 node = 0, c;
+    int    i;
+
+    *existed = CF_FALSE;
+    for (i = 0; i + 1 < k->n; ++i) {
+        c = toml_find(s, node, 0, TOML_SEG(k, i), k->len[i], 0);
+        if (c == 0) {
+            c = toml_add(s, node, 0, TOML_SEG(k, i), k->len[i], 0, TOML_IMPLICIT);
+            if (c == 0) {
+                return CF_FALSE;
+            }
+        } else {
+            switch ((toml_def)s->nodes[c].kind) {
+            case TOML_IMPLICIT:
+            case TOML_HEADER:
+            case TOML_DOTTED:
+                break;
+            case TOML_TABLES:
+                c = toml_find(s, c, 1, NULL, 0, s->nodes[c].count - 1u);
+                break;
+            case TOML_VALUE:
+                return toml_fail_named(s, at, TOML_SEG(k, i), k->len[i],
+                                       "is a value, not a table");
+            case TOML_INLINE:
+            case TOML_SEALED:
+            default:
+                return toml_fail_named(s, at, TOML_SEG(k, i), k->len[i],
+                                       "is an inline table, which is complete as "
+                                       "written");
+            }
+        }
+        node = c;
+    }
+    c = toml_find(s, node, 0, TOML_SEG(k, i), k->len[i], 0);
+    if (is_array) {
+        if (c == 0) {
+            c = toml_add(s, node, 0, TOML_SEG(k, i), k->len[i], 0, TOML_TABLES);
+            if (c == 0) {
+                return CF_FALSE;
+            }
+        } else if (s->nodes[c].kind != (cf_u8)TOML_TABLES) {
+            return toml_fail_named(s, at, TOML_SEG(k, i), k->len[i],
+                                   "is already defined, and not as an array of tables");
+        } else {
+            *existed = CF_TRUE;
+        }
+        node = toml_add(s, c, 1, NULL, 0, s->nodes[c].count, TOML_HEADER);
+        if (node == 0) {
+            return CF_FALSE;
+        }
+        ++s->nodes[c].count;
+    } else if (c == 0) {
+        node = toml_add(s, node, 0, TOML_SEG(k, i), k->len[i], 0, TOML_HEADER);
+        if (node == 0) {
+            return CF_FALSE;
+        }
+    } else if (s->nodes[c].kind == (cf_u8)TOML_IMPLICIT) {
+        s->nodes[c].kind = (cf_u8)TOML_HEADER;
+        node             = c;
+    } else {
+        const char* why;
+        switch ((toml_def)s->nodes[c].kind) {
+        case TOML_HEADER:
+            why = "is a table defined twice; TOML defines a table once";
+            break;
+        case TOML_DOTTED:
+            why = "was defined by dotted keys; a [header] may not define it again";
+            break;
+        case TOML_TABLES:
+            why = "is an array of tables; [[...]] adds an element to it";
+            break;
+        case TOML_VALUE:
+            why = "is a value, not a table";
+            break;
+        case TOML_IMPLICIT:
+        case TOML_INLINE:
+        case TOML_SEALED:
+        default:
+            why = "is an inline table, which is complete as written";
+            break;
+        }
+        return toml_fail_named(s, at, TOML_SEG(k, i), k->len[i], why);
+    }
+    s->body = node;
+    return CF_TRUE;
+}
+
 /* One run of digits in `base`, as the TOML 1.0 ABNF writes it: a digit,
    then digits each optionally after one underscore - so an underscore
    only ever stands between two digits. Appended to buf without the
@@ -517,14 +959,18 @@ static cf_bool toml_number(toml_scan* s, cf_value* v) {
 #endif
 }
 
-static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen);
+static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen, cf_u32 node);
 
 /* Open the leading segments of a dotted key as tables, run the value,
    close them again. "a.b.c = 1" is a table a, a table b, a scalar c. */
 static cf_bool toml_keyval(toml_scan* s) {
-    toml_dkey k;
-    int       n, i;
+    toml_dkey   k;
+    int         n, i;
+    const char* at;
+    cf_u32      node = 0;
 
+    toml_blank(s);
+    at = s->p;
     if (!toml_key(s, &k)) {
         return CF_FALSE;
     }
@@ -534,12 +980,19 @@ static cf_bool toml_keyval(toml_scan* s) {
     }
     ++s->p;
     toml_blank(s);
+    if (s->track) {
+        toml_def kind = (s->p < s->end && *s->p == '{') ? TOML_INLINE : TOML_VALUE;
+        node          = toml_define_key(s, &k, at, kind);
+        if (node == 0) {
+            return CF_FALSE;
+        }
+    }
     for (i = 0; i + 1 < n; ++i) {
         if (!s->out->begin_table(s->out->ctx, TOML_SEG(&k, i), k.len[i])) {
             return toml_fail(s, s->p, "not a valid key");
         }
     }
-    if (!toml_value(s, TOML_SEG(&k, n - 1), k.len[n - 1])) {
+    if (!toml_value(s, TOML_SEG(&k, n - 1), k.len[n - 1], node)) {
         return CF_FALSE;
     }
     for (i = 0; i + 1 < n; ++i) {
@@ -550,7 +1003,12 @@ static cf_bool toml_keyval(toml_scan* s) {
     return CF_TRUE;
 }
 
-static cf_bool toml_array(toml_scan* s, const char* name, size_t nlen) {
+/* `node`, when the definitions are kept, is the array's: an element that
+   is a table or an array is recorded under it by number, so that a key
+   twice in `[{a = 1, a = 2}]` is found as anywhere else. */
+static cf_bool toml_array(toml_scan* s, const char* name, size_t nlen, cf_u32 node) {
+    cf_u32 count = 0;
+
     if (++s->depth > TOML_MAX_DEPTH) {
         return toml_fail(s, s->p, "nesting is too deep");
     }
@@ -559,7 +1017,9 @@ static cf_bool toml_array(toml_scan* s, const char* name, size_t nlen) {
     }
     ++s->p; /* '[' */
     for (;;) {
-        toml_space_lines(s);
+        if (!toml_space_lines(s)) {
+            return CF_FALSE;
+        }
         if (s->p >= s->end) {
             return toml_fail(s, s->p, "the array is not closed");
         }
@@ -567,10 +1027,23 @@ static cf_bool toml_array(toml_scan* s, const char* name, size_t nlen) {
             ++s->p;
             break;
         }
-        if (!toml_value(s, NULL, 0)) {
+        {
+            cf_u32 elem = 0;
+            if (node != 0 && (*s->p == '{' || *s->p == '[')) {
+                elem = toml_add(s, node, 1, NULL, 0, count,
+                                (*s->p == '{') ? TOML_INLINE : TOML_VALUE);
+                if (elem == 0) {
+                    return CF_FALSE;
+                }
+            }
+            ++count;
+            if (!toml_value(s, NULL, 0, elem)) {
+                return CF_FALSE;
+            }
+        }
+        if (!toml_space_lines(s)) {
             return CF_FALSE;
         }
-        toml_space_lines(s);
         if (s->p < s->end && *s->p == ',') {
             ++s->p; /* a trailing comma is allowed */
             continue;
@@ -587,8 +1060,13 @@ static cf_bool toml_array(toml_scan* s, const char* name, size_t nlen) {
                : toml_fail(s, s->p, "the document could not be recorded");
 }
 
-static cf_bool toml_inline_table(toml_scan* s, const char* name, size_t nlen) {
+/* `node`, when the definitions are kept, is the table's: its keys are
+   defined into it, and once it is read it is sealed, since TOML has an
+   inline table complete as written. */
+static cf_bool toml_inline_table(toml_scan* s, const char* name, size_t nlen,
+                                 cf_u32 node) {
     cf_bool first = CF_TRUE;
+    cf_u32  body  = s->body;
 
     if (++s->depth > TOML_MAX_DEPTH) {
         return toml_fail(s, s->p, "nesting is too deep");
@@ -597,6 +1075,9 @@ static cf_bool toml_inline_table(toml_scan* s, const char* name, size_t nlen) {
         return toml_fail(s, s->p, "not a valid key");
     }
     ++s->p; /* '{' */
+    if (node != 0) {
+        s->body = node;
+    }
     for (;;) {
         toml_blank(s);
         if (s->p >= s->end || *s->p == '\n') {
@@ -612,11 +1093,19 @@ static cf_bool toml_inline_table(toml_scan* s, const char* name, size_t nlen) {
             }
             ++s->p;
             toml_blank(s);
+            if (s->p < s->end && *s->p == '}') {
+                return toml_fail(s, s->p,
+                                 "an inline table has no comma after its last key");
+            }
         }
         first = CF_FALSE;
         if (!toml_keyval(s)) {
             return CF_FALSE;
         }
+    }
+    if (node != 0) {
+        s->nodes[node].kind = (cf_u8)TOML_SEALED;
+        s->body             = body;
     }
     --s->depth;
     return s->out->end(s->out->ctx)
@@ -624,7 +1113,7 @@ static cf_bool toml_inline_table(toml_scan* s, const char* name, size_t nlen) {
                : toml_fail(s, s->p, "the document could not be recorded");
 }
 
-static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen) {
+static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen, cf_u32 node) {
     cf_value    v;
     cf_loc      at;
     const char* start = s->p;
@@ -635,9 +1124,9 @@ static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen) {
     toml_loc(s, start, &at);
     switch (*s->p) {
     case '[':
-        return toml_array(s, name, nlen);
+        return toml_array(s, name, nlen, node);
     case '{':
-        return toml_inline_table(s, name, nlen);
+        return toml_inline_table(s, name, nlen, node);
     case '"':
     case '\'': {
         char   local[256];
@@ -711,6 +1200,7 @@ static cf_bool toml_close_to(toml_scan* s, int keep) {
                to a closed one would restart its numbering. */
             memcpy(s->closed, s->names + o->at, o->n);
             s->closed[o->n] = '\0';
+            s->closed_set   = CF_TRUE;
         }
         if (!s->out->end(s->out->ctx)) {
             return toml_fail(s, s->p, "the document could not be recorded");
@@ -755,6 +1245,7 @@ static cf_bool toml_push(toml_scan* s, const char* name, size_t n, toml_kind kin
 static cf_bool toml_header(toml_scan* s) {
     toml_dkey   k;
     cf_bool     is_array = CF_FALSE;
+    cf_bool     existed  = CF_FALSE;
     const char* at       = s->p;
     int         n, i, o, keep;
 
@@ -772,6 +1263,9 @@ static cf_bool toml_header(toml_scan* s) {
         return toml_fail(s, s->p, is_array ? "expected ']]'" : "expected ']'");
     }
     s->p += is_array ? 2 : 1;
+    if (s->track && !toml_define_header(s, &k, at, is_array, &existed)) {
+        return CF_FALSE;
+    }
 
     /* How much of the open path this header agrees with. */
     keep = 0;
@@ -798,8 +1292,14 @@ static cf_bool toml_header(toml_scan* s) {
     if (!toml_close_to(s, keep)) {
         return CF_FALSE;
     }
-    if (is_array && strlen(s->closed) == (size_t)k.len[n - 1] &&
-        memcmp(s->closed, TOML_SEG(&k, n - 1), k.len[n - 1]) == 0) {
+    /* An array of tables seen before and not open now is being reopened.
+       With the definitions kept, that is known exactly - [[a.b]] in the
+       second element of [[a]] is a new array, not the first one's; a sink
+       without workspace falls back to the last array's name. */
+    if (is_array &&
+        (s->track ? existed
+                  : (s->closed_set && strlen(s->closed) == (size_t)k.len[n - 1] &&
+                     memcmp(s->closed, TOML_SEG(&k, n - 1), k.len[n - 1]) == 0))) {
         return toml_fail(s, at,
                          "an array of tables reopened after another table; keep its "
                          "[[blocks]] together");
@@ -830,12 +1330,19 @@ static cf_bool toml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     s.nopen      = 0;
     s.nused      = 0;
     s.closed[0]  = '\0';
+    s.closed_set = CF_FALSE;
+    s.body       = 0;
+    if (!toml_track_init(&s)) {
+        return CF_FALSE;
+    }
 
     if (!out->begin_table(out->ctx, NULL, 0)) {
         return cf_error_set(err, CF_E_SOURCE, NULL, s.file, "sink refused");
     }
     for (;;) {
-        toml_space_lines(&s);
+        if (!toml_space_lines(&s)) {
+            return CF_FALSE;
+        }
         if (s.p >= s.end) {
             break;
         }

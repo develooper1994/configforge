@@ -173,19 +173,108 @@ static void test_refuses(void) {
     refused("x = 1_\n", "malformed", "a trailing underscore");
     refused("x = +0x1\n", "no sign", "a sign on a hexadecimal integer");
     refused("x = 1x\n", "malformed", "a letter after the digits");
+    /* What TOML 1.0 says a document is made of. */
+    refused("x = 1 # a\x01"
+            "b\n",
+            "control character", "a control in a comment");
+    refused("x = 1 # \x7f\n", "control character", "DEL in a comment");
+    refused("x = \"a\x7f\"\n", "control character", "DEL in a string");
+    refused("x = 1 # \xc3\n", "not valid UTF-8", "a cut sequence in a comment");
+    refused("x = \"\xed\xa0\x80\"\n", "not valid UTF-8", "a surrogate in a string");
+    refused("x = \"\xc0\xaf\"\n", "not valid UTF-8", "an overlong form");
+    refused("x = 1\ry = 2\n", "end of the line", "a carriage return alone");
 }
 
-/* A key set twice is not an error here: the later wins, and Doctor's
-   CFD001 is where the earlier one is reported. Stated in toml.c. */
-static void test_later_wins(void) {
+/* CRLF line endings, and UTF-8 that is well formed, read as they are. */
+static void test_line_endings(void) {
     cf_error   err = CF_ERROR_INIT;
-    cf_config* c   = load("port = 1\nport = 2\n", &err);
+    cf_config* c   = load(
+        "# caf\xc3\xa9\r\n[s]\r\nname = \"\xe2\x82\xac\" # \xf0\x9f\x98\x80\r\n", &err);
 
-    check(c != NULL, "a key set twice builds");
-    if (c != NULL) {
-        check(cf_get_int(c, "port", 0) == 2, "and the later line wins");
-        cf_config_free(c);
+    check(c != NULL, "CRLF and UTF-8 read");
+    if (c == NULL) {
+        printf("  %s\n", err.message);
+        return;
     }
+    check(strcmp(cf_get_text(c, "s.name", ""), "\xe2\x82\xac") == 0,
+          "and the value is the bytes written");
+    cf_config_free(c);
+}
+
+/* TOML defines a key, and a table, once (toml.io/en/v1.0.0): each way of
+   defining one twice that toml-test found accepted, and the ways that
+   look alike and are allowed. */
+static void test_defined_once(void) {
+    cf_error   err = CF_ERROR_INIT;
+    cf_config* c;
+
+    refused("port = 1\nport = 2\n", "'port' is already defined", "a key set twice");
+    refused("a = 1\n\"a\" = 2\n", "already defined", "the same key, quoted");
+    refused("[a]\nb = 1\n[a]\nc = 2\n", "defined twice", "a table with two headers");
+    refused("[a]\nb = 1\n[a.b]\n", "is a value", "a header over a value");
+    refused("a = false\na.b = true\n", "is a value", "a dotted key through a value");
+    refused("a = {b = 1}\na.c = 2\n", "inline table", "a key added to an inline table");
+    refused("a = {}\n[a.b]\n", "inline table", "a header added to an inline table");
+    refused("a = {b = 1, b = 2}\n", "already defined",
+            "a key twice in an inline table");
+    refused("a = [{b = 1, b = 2}]\n", "already defined",
+            "a key twice in a table in an array");
+    refused("[fruit]\napple.color = 1\n[fruit.apple]\n", "dotted keys",
+            "a header over what dotted keys defined");
+    refused("[a.b.c]\nz = 9\n[a]\nb.c.t = 1\n", "a [header] defines",
+            "a dotted key adding to what a header defined");
+    refused("fruit = []\n[[fruit]]\n", "not as an array of tables",
+            "[[ ]] on a value array");
+    refused("[[t]]\n[t]\n", "array of tables", "a header over an array of tables");
+    refused("[t]\n[[t]]\n", "not as an array of tables", "[[ ]] over a table");
+    refused("a = [{b = 1}]\n[a.c]\n", "is a value", "a header into a value array");
+    refused("t = {a = 1,}\n", "no comma after its last key",
+            "a trailing comma in an inline table");
+
+    /* Allowed: a table named on the way to a header and defined after it;
+       sub-tables of what dotted keys defined; dotted keys sharing a table;
+       and a header under the last element of an array of tables. */
+    c = load("[a.b]\nx = 1\n[a]\ny = 2\n"
+             "[f]\napple.color = 1\napple.size = 2\n[f.apple.texture]\nsmooth = true\n"
+             "[[u]]\n[u.tls]\non = true\n[[u]]\n[u.tls]\non = false\n"
+             "[[al]]\n[[al.s]]\nn = 1\n[[al]]\n[[al.s]]\nn = 2\n",
+             &err);
+    check(c != NULL, "what TOML allows still builds");
+    if (c == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+    check(cf_get_int(c, "a.b.x", 0) == 1 && cf_get_int(c, "a.y", 0) == 2,
+          "a table defined after its sub-table");
+    check(cf_get_bool(c, "f.apple.texture.smooth", CF_FALSE),
+          "a sub-table of a table dotted keys defined");
+    check(cf_get_bool(c, "u.0.tls.on", CF_FALSE) && !cf_get_bool(c, "u.1.tls.on", 1),
+          "the same header under each element of an array of tables");
+    check(cf_get_int(c, "al.1.s.0.n", 0) == 2,
+          "an array of tables in each element of another is its own");
+    cf_config_free(c);
+}
+
+/* Many keys, one table: the definitions are a hash, not a list searched
+   from the start, so the record grows and rehashes without losing one. */
+static void test_many_keys(void) {
+    static char doc[64 * 1024];
+    cf_error    err = CF_ERROR_INIT;
+    cf_config*  c;
+    size_t      n = 0;
+    int         i;
+
+    for (i = 0; i < 2000; ++i) {
+        n += (size_t)sprintf(doc + n, "k%d = %d\n", i, i);
+    }
+    n += (size_t)sprintf(doc + n, "k1999 = 0\n");
+    (void)n;
+    refused(doc, "'k1999' is already defined", "a key twice among two thousand");
+    doc[strlen(doc) - strlen("k1999 = 0\n")] = '\0';
+    c                                        = load(doc, &err);
+    check(c != NULL && cf_get_int(c, "k1234", 0) == 1234,
+          "two thousand distinct keys build");
+    cf_config_free(c);
 }
 
 #if CF_WITH_EMIT
@@ -237,7 +326,9 @@ int main(void) {
     test_reads();
     test_floats();
     test_refuses();
-    test_later_wins();
+    test_line_endings();
+    test_defined_once();
+    test_many_keys();
 #if CF_WITH_EMIT
     test_round_trip();
 #endif

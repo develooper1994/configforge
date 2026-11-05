@@ -47,15 +47,27 @@ way. It is a tier 2 step, since it needs a network the first time.
 | Format | Valid accepted | Invalid refused |
 | ------ | -------------- | --------------- |
 | JSON | 95 / 95 | 188 / 188 |
-| TOML | 161 / 208 | 433 / 509 |
+| TOML | 164 / 208 | 509 / 509 |
 
 JSON's root may be any value, and a configuration is a table: `conform`
 reads a document whose root is not an object as the member of one,
 `{"v": ...}`, which keeps an invalid document invalid. The `i_` cases,
 which the standard leaves to the implementation, are not counted.
 
-TOML's gaps, in the order they are being closed (Roadmap, item 6):
-tables and keys defined twice, inline tables extended after the fact,
-control characters and encoding, which are accepted and should not be;
-multi-line strings, dates and times, and `inf` and `nan`, which are
-refused and should not be.
+Every invalid TOML document is refused: the number grammar, the
+define-once rules (D-62), control characters, bare carriage returns and
+malformed UTF-8. What is left is valid documents refused - multi-line
+strings, dates and times, `inf` and `nan` - which Roadmap item 6 closes
+next. The define-once rules need the workspace a sink lends
+(`cf_doc_sink.reserve_work`); the loader always lends it.
+
+## The project's own configuration
+
+`scripts/conformance.py --self <conform> <repository>`, the last part of
+the verify step, reads the files that configure this project - the
+build's presets, the Python package, the formatter and linter settings,
+the documentation site, the pre-commit hook - each with its own reader,
+and compares every key and value with the reference reader's: Python's
+`json` and `tomllib`, and PyYAML where it is installed. A file whose
+reader is not in the build, or whose reference is not installed, is
+named and skipped.

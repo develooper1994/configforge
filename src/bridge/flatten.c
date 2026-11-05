@@ -305,6 +305,12 @@ static char* fl_reserve_text(void* ctx, size_t n) {
     return f->text;
 }
 
+/* The reader's bookkeeping, from the arena the keys go to: a fixed arena
+   bounds it with everything else, and it is released with them. */
+static void* fl_reserve_work(void* ctx, size_t n) {
+    return cf_arena_alloc(((cf_flatten*)ctx)->ks->arena, n);
+}
+
 cf_bool cf_flatten_init(cf_flatten* f, cf_keyspace* ks, int rank) {
     if (f == NULL || ks == NULL) {
         return CF_FALSE;
@@ -321,6 +327,7 @@ cf_bool cf_flatten_init(cf_flatten* f, cf_keyspace* ks, int rank) {
     f->sink.end          = fl_end;
     f->sink.ctx          = f;
     f->sink.reserve_text = fl_reserve_text;
+    f->sink.reserve_work = fl_reserve_work;
     return CF_TRUE;
 }
 

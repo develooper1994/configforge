@@ -61,7 +61,28 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   against its standard's own suite - JSONTestSuite for JSON, toml-test
   for TOML 1.0.0 - fetched at a pinned commit by `verify
   -DEXTRA=conformance` (tier 2) and scored by `scripts/conformance.py`
-  against a floor that only rises, `tests/conformance/floor.txt`.
+  against a floor that only rises, `tests/conformance/floor.txt`. The
+  same step reads the project's own configuration files with the
+  library's readers and compares each key with Python's reference
+  readers (`conformance.py --self`).
+- `cf_doc_sink.reserve_work`: optional workspace a reader keeps
+  bookkeeping in until decode returns (D-62); the loader lends it from
+  the configuration's arena.
+
+### Changed - look at this before upgrading
+
+- TOML defines a key, and a table, once, as its standard says (D-62): a
+  key set twice, a table with two `[headers]`, a key or a `[header]`
+  added to an inline table or to a value, a dotted key adding to a table
+  a `[header]` defined, and `[[name]]` on what is not an array of tables
+  are refused with the name and the place. 1.1 read such a document,
+  the later key winning, as a stated departure from TOML; a file that
+  loaded under 1.1 can stop loading. A sink of its own without
+  `reserve_work` still reads as 1.1 did.
+- TOML refuses control characters in comments and DEL in strings, a
+  carriage return that does not end a line, and malformed UTF-8 in
+  comments and strings, and refuses a trailing comma in an inline
+  table. With these, toml-test's 509 invalid documents are all refused.
 
 ### Fixed
 
@@ -72,6 +93,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   octal or binary integer, a leading zero, a point or an exponent with
   no digits after it, and letters after a number; refused now, by the
   TOML 1.0.0 grammar, with what was wrong named.
+- TOML refused two valid documents as reopening an array of tables:
+  `[[a.b]]` in the second element of `[[a]]`, which is an array of its
+  own, and a second `[['']]`.
 - Defining keys was quadratic: each definition was checked against the
   others by a scan, and sealing the set was an insertion sort, on the
   stated ground that "definition counts are in the tens". Ten thousand

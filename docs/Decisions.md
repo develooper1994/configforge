@@ -77,6 +77,7 @@ gets reopened every six months.
 | D-44 | The Rust binding | bindings, build, safety | **Decided** |
 | D-45 | Build limits in the ABI | ABI, bindings, 1.0 | **Decided** |
 | D-60 | Arrays in INI are PHP's `name[]` and `name[i]` | formats, INI | **Decided** |
+| D-62 | Each reader held to its format's standard, by the standard's suite | formats, TOML, JSON, dependencies | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -2559,6 +2560,62 @@ text, as it always was.
 
 **Compatibility.** Additive: a key with `[` in it was refused before,
 and no file that read before reads differently.
+
+---
+
+## D-62 — Each reader held to its format's standard, by the standard's suite
+
+**Question.** The readers were written to subsets (D-23) and tested
+against cases written here. The owner asked that every format follow its
+own standard, starting from the best-known practice and improving from
+there. How is "follows the standard" decided, and is a reader written
+here still the right one?
+
+**Method.** The practice the mature implementations share: the
+specification's grammar is what a reader implements (RFC 8259, the TOML
+1.0.0 ABNF); the standard's own suite is the bar (JSONTestSuite,
+toml-test), every valid document accepted and every invalid one refused;
+a floor that only rises (`tests/conformance/floor.txt`, `verify
+-DEXTRA=conformance`, docs/Conformance.md); and differential tests and
+fuzzing for what a suite does not reach. Measured first, the JSON reader
+accepted numbers RFC 8259 forbids (`01`, `1.`, `-`); fixed, it scores
+95/95 and 188/188. TOML refused 47 valid documents and accepted 115
+invalid ones; the number grammar, the define-once rules below, and the
+rules for control characters and UTF-8 took the invalid ones accepted
+from 115 to none.
+
+**Keep the readers written here, or adopt one?** For TOML the candidate
+was tomlc17, which passes toml-test in full. It builds a tree with no
+positions in it, and a value whose file, line and column explain() cannot
+name is the one thing this library exists not to produce; it also
+allocates, which the fixed-arena profile forbids. So the reader here is
+completed against the suite instead, and the dependency contract below
+stays the way to swap one in later should that change. For YAML, the
+measured comparison of libyaml (YAML 1.1) and libfyaml (1.2) is next.
+
+**The dependency contract.** A format is a `cf_codec`; a reader is an
+event producer into a `cf_doc_sink`, whatever implements it. A bundled
+library is behind its codec and nothing else sees it, so replacing one is
+a change to one file and its CMake option, and the suite says whether the
+replacement is better.
+
+**Define-once, without the reader owning memory.** TOML forbids defining
+a key or a table twice, and an event reader cannot ask its sink what was
+defined. The reader keeps a record of definitions - a tree of names
+under a hash, O(1) a key - in memory the sink lends through a new,
+optional `cf_doc_sink.reserve_work` (D-51 sizing: a sink compiled before
+it never has it called). The loader lends it from the configuration's
+arena, so a fixed arena bounds it with everything else; a sink without
+it reads as 1.1 did, the later key winning, rather than refusing
+documents it used to accept.
+
+**Compatibility.** A TOML document that defines something twice was
+read before, the later key winning, and is refused now. TOML always
+called such a document invalid; this library documented reading it as a
+departure, in toml.c, and the departure is withdrawn. Of D-56's terms it
+is closest to a refusal of input documented as wrong, and since a file
+that loaded under 1.1 can stop loading, the changelog names it among the
+changes to look at before upgrading.
 
 ---
 

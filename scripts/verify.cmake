@@ -786,6 +786,13 @@ foreach(x ${EXTRA})
       "${SUITES}"
       --floor
       tests/conformance/floor.txt)
+    step(
+      "conformance self"
+      "${PYTHON3_EXE}"
+      scripts/conformance.py
+      --self
+      "${conform}"
+      .)
   else()
     message(
       FATAL_ERROR
