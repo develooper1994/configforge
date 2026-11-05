@@ -495,12 +495,17 @@ static cf_bool health(void* user, const cf_config* running, cf_error* err) {
     }
     return CF_TRUE;
 }
-static void remember(void* user, const cf_log_event* e) {
+static cf_u64 g_fp_previous, g_fp_now;
+static void   remember(void* user, const cf_log_event* e) {
     (void)user;
+    if (e->size >= sizeof *e) {
+        g_fp_previous = e->previous;
+        g_fp_now      = e->fingerprint;
+    }
     if (strncmp(e->event, "reload-", 7) == 0 && strcmp(e->event, "reload") != 0) {
+        const char* m = (e->message != NULL) ? e->message : "";
         strncpy(g_last_event, e->event, sizeof g_last_event - 1);
-        strncpy(g_last_message, e->message != NULL ? e->message : "",
-                sizeof g_last_message - 1);
+        strncpy(g_last_message, m, sizeof g_last_message - 1);
     }
 }
 
@@ -525,9 +530,11 @@ static cf_live_status status_of(cf_live* l) {
 }
 
 static void test_probation(void) {
-    cf_error err = CF_ERROR_INIT;
-    cf_live* l;
-    char     buf[64];
+    cf_error   err = CF_ERROR_INIT;
+    cf_live*   l;
+    char       buf[64];
+    cf_config* held;
+    cf_u64     fp_info, fp_debug;
 
     g_pairs   = g_info;
     g_healthy = 1;
@@ -541,11 +548,21 @@ static void test_probation(void) {
               err.code == CF_E_CAPABILITY,
           "the first snapshot is not on probation: nothing to roll back to");
 
+    held    = cf_live_get(l);
+    fp_info = cf_fingerprint(held);
+    cf_config_free(held);
     g_pairs = g_debug;
     check(cf_live_reload(l, &err) == CF_LIVE_SWAPPED && status_of(l).probation,
           "a swap starts a probation");
+    held     = cf_live_get(l);
+    fp_debug = cf_fingerprint(held);
+    cf_config_free(held);
+    check(fp_info != fp_debug && g_fp_previous == fp_info && g_fp_now == fp_debug,
+          "the reload's log event names the fingerprints before and after");
     check(cf_live_rollback(l, "the pool did not connect", &err) == CF_LIVE_ROLLED_BACK,
           "a rollback");
+    check(g_fp_previous == fp_debug && g_fp_now == fp_info,
+          "and a rollback's, the other way round");
     check(strcmp(level(l, buf, sizeof buf), "info") == 0 && cf_live_generation(l) == 3,
           "readers have the snapshot before, as a new generation");
     check(strcmp(g_last_event, "reload-rolled-back") == 0 &&
@@ -576,7 +593,8 @@ static void test_probation(void) {
 
     g_pairs   = g_trace;
     g_healthy = 0;
-    check(cf_live_reload(l, &err) == CF_LIVE_SWAPPED, "another swap");
+    check(cf_live_reload(l, &err) == CF_LIVE_SWAPPED && g_fp_previous == fp_debug,
+          "another swap, whose event names the one it replaced");
     check(cf_live_poll(l, &err) == CF_LIVE_ROLLED_BACK &&
               strcmp(level(l, buf, sizeof buf), "debug") == 0,
           "a health function that says no rolls it back at the next poll");
@@ -585,7 +603,8 @@ static void test_probation(void) {
     g_healthy = 1;
 
     g_pairs = g_info;
-    check(cf_live_reload(l, &err) == CF_LIVE_SWAPPED, "a swap on probation");
+    check(cf_live_reload(l, &err) == CF_LIVE_SWAPPED && g_fp_previous == fp_debug,
+          "a swap on probation, from the snapshot the health check kept");
     g_pairs = g_trace;
     check(cf_live_reload(l, &err) == CF_LIVE_SWAPPED, "and another within it");
     check(cf_live_rollback(l, NULL, &err) == CF_LIVE_ROLLED_BACK &&

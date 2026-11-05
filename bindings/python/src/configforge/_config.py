@@ -105,15 +105,21 @@ def log_sink(logger: Optional[logging.Logger] = None):
     the ``configforge`` logger): its level is the event's - the library's
     levels are Python's numbers - and the event's name, key, source and
     code travel as the record's ``cf_event``, ``cf_key``, ``cf_source``
-    and ``cf_code`` attributes."""
+    and ``cf_code`` attributes; a reload's fingerprints, before and after,
+    as ``cf_previous`` and ``cf_fingerprint``, where the library has them."""
     target = logger or logging.getLogger("configforge")
 
     def emit(_user, ev):
         e = ev.contents
         try:
+            extra = {"cf_event": n.decode(e.event), "cf_key": n.decode(e.key) or None,
+                     "cf_source": n.decode(e.source) or None, "cf_code": e.code}
+            # Past 1.0's members only where the library's struct reaches.
+            if e.size >= ctypes.sizeof(n.cf_log_event) and e.fingerprint:
+                extra["cf_previous"] = n.fingerprint_text(e.previous)
+                extra["cf_fingerprint"] = n.fingerprint_text(e.fingerprint)
             target.log(e.level, "%s: %s", n.decode(e.event), n.decode(e.message),
-                       extra={"cf_event": n.decode(e.event), "cf_key": n.decode(e.key) or None,
-                              "cf_source": n.decode(e.source) or None, "cf_code": e.code})
+                       extra=extra)
         except Exception:  # never across the C frame
             pass
 
@@ -520,6 +526,18 @@ class Config(collections.abc.Mapping):
     @property
     def digest(self) -> int:
         return n.lib.cf_digest(self._c)
+
+    @property
+    def fingerprint(self) -> str:
+        """What identifies this configuration in a log or a trace, as a
+        report's ``fingerprint`` field says it: "fnv1a:" and sixteen hex
+        digits. A secret counts only by the digest a blind report shows."""
+        if not n.HAVE_FINGERPRINT:
+            raise RuntimeError(
+                "configforge: the loaded library does not support fingerprints; "
+                "rebuild the library from sources containing this API"
+            )
+        return n.fingerprint_text(n.lib.cf_fingerprint(self._c))
 
     @property
     def changed(self) -> bool:

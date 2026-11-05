@@ -109,6 +109,14 @@ configuration stands in for the defaults it was built from. A report
 without the mark is older; Doctor then takes a candidate from a source of
 the kind `default`, or one named `default`, as the default.
 
+`fingerprint` ("fnv1a:" and sixteen hex digits) is the configuration's
+`cf_fingerprint`: what a reload's log events and a trace carry, so a
+report can be matched to them with one field. A secret enters it only as
+the digest a blind report shows, so it is the same in a full and a blind
+report of one configuration. Doctor shows it in `dump` and in Markdown,
+where a diff says whether it changed. An additive schema-1 field; a
+report without it is older.
+
 The report is produced in two ways:
 
 * **Predicted.** Doctor resolves offline from files and a declared environment. Used

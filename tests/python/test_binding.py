@@ -417,9 +417,31 @@ class Logging(unittest.TestCase):
         with cf.Live(cf.Mode.MANUAL, build, logger=self.logger, level=logging.DEBUG) as live:
             values["server.port"] = "9443"
             live.reload()
+            now = live.get().fingerprint
         events = [getattr(x, "cf_event", None) for x in self.cap.records]
         self.assertIn("reload", events)
         self.assertIn("restart-pending", events)
+        reload = [x for x in self.cap.records if getattr(x, "cf_event", None) == "reload"][-1]
+        self.assertEqual(reload.cf_fingerprint, now, "the reload names the new fingerprint")
+        # The port is RESTART: readers keep 8080, so what they see - and with
+        # it the fingerprint - is what it was.
+        self.assertEqual(reload.cf_previous, now, "a pinned change leaves it as it was")
+        self.assertRegex(now, r"^fnv1a:[0-9a-f]{16}$")
+
+    def test_fingerprint_counts_a_secret_by_digest(self):
+        def cfg(secret, port):
+            return (cf.Builder()
+                    .memory("m", rank.USER_FILE, {"db.password": secret, "port": port})
+                    .define_text("db.password", None, flag.SENSITIVE)
+                    .define_int("port", 1, 1, 65535)
+                    .create())
+
+        a = cfg("hunter2", "80")
+        self.assertEqual(a.fingerprint, cfg("hunter2", "80").fingerprint)
+        self.assertNotEqual(a.fingerprint, cfg("hunter3", "80").fingerprint)
+        self.assertNotEqual(a.fingerprint, cfg("hunter2", "81").fingerprint)
+        self.assertNotEqual(a.fingerprint, "fnv1a:%016x" % a.digest,
+                            "the digest hashes the secret itself; the fingerprint does not")
 
 
 class Library(unittest.TestCase):

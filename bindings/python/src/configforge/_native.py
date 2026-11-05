@@ -87,6 +87,9 @@ class cf_log_event(Structure):
         ("key", c_char_p),
         ("source", c_char_p),
         ("message", c_char_p),
+        # 1.1: read only where `size` reaches them
+        ("previous", c_uint64),
+        ("fingerprint", c_uint64),
     ]
 
 
@@ -240,8 +243,10 @@ _declare("cf_was_read", c_int, C, c_char_p, optional=True)
 _declare("cf_read_count", c_size_t, C, optional=True)
 _declare("cf_live_rollback", c_int, c_void_p, c_char_p, POINTER(cf_error), optional=True)
 _declare("cf_live_confirm", c_int, c_void_p, optional=True)
+_declare("cf_fingerprint", c_uint64, C, optional=True)
 HAVE_REAL = hasattr(lib, "cf_try_real") and lib.cf_has_feature(b"real") != 0
 HAVE_LIST = lib.cf_has_feature(b"lists") != 0
+HAVE_FINGERPRINT = hasattr(lib, "cf_fingerprint")
 HAVE_PROBATION = hasattr(lib, "cf_live_rollback") and hasattr(lib, "cf_live_confirm")
 HAVE_READ_TRACKING = all(
     hasattr(lib, name)
@@ -302,6 +307,11 @@ def new_error() -> cf_error:
     e = cf_error()
     e.size = ctypes.sizeof(cf_error)
     return e
+
+
+def fingerprint_text(fp: int) -> str:
+    """A fingerprint as reports and logs write it: cf_fingerprint_format."""
+    return "fnv1a:%016x" % fp
 
 
 def encode(s: Optional[str]) -> Optional[bytes]:

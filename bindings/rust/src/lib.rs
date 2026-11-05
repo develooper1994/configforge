@@ -677,6 +677,17 @@ impl Config {
         }
     }
 
+    /// What identifies this configuration in a log or a trace; a secret
+    /// counts only by the digest a value-blind report shows for it.
+    pub fn fingerprint(&self) -> u64 {
+        unsafe { sys::cf_fingerprint(self.c) }
+    }
+
+    /// [`Config::fingerprint`] as a report's `fingerprint` field says it.
+    pub fn fingerprint_text(&self) -> String {
+        fingerprint_text(self.fingerprint())
+    }
+
     pub fn has(&self, key: &str) -> bool {
         let k = c(key);
         unsafe { sys::cf_has(self.c, k.as_ptr()) != 0 }
@@ -813,18 +824,22 @@ impl Config {
     }
 }
 
-/// The keys and the digest, not the values: a value may be a secret, and a
-/// `{:?}` in a log line is where secrets leak.
+/// The keys and the fingerprint, not the values: a value may be a secret,
+/// and a `{:?}` in a log line is where secrets leak. Not the digest
+/// either, which hashes a secret's value itself.
 impl fmt::Debug for Config {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Config")
             .field("keys", &self.keys(""))
-            .field(
-                "digest",
-                &format_args!("{:016x}", unsafe { sys::cf_digest(self.c) }),
-            )
+            .field("fingerprint", &format_args!("{}", self.fingerprint_text()))
             .finish()
     }
+}
+
+/// A fingerprint as reports and logs write it: "fnv1a:" and sixteen hex
+/// digits (cf_fingerprint_format).
+pub fn fingerprint_text(fp: u64) -> String {
+    format!("fnv1a:{:016x}", fp)
 }
 
 impl Drop for Config {

@@ -18,6 +18,15 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   new result. Off by default; an options struct of 1.0's size is read
   as 1.0's. C++, Rust (`LiveOptions`) and Python have the same, and
   the live example a fourth scene.
+- The configuration's fingerprint where operators look:
+  `cf_fingerprint` and `cf_fingerprint_format` ("fnv1a:" and sixteen hex
+  digits), in the provenance report as `"fingerprint"`, in each
+  `cf_live` log event as `previous` and `fingerprint` (new members after
+  1.0's), in the reload's log line, and in Doctor's `dump` and Markdown.
+  A secret enters it only as its blind-report digest, so it may be
+  published wherever a blind report could. C++, Rust and Python have it;
+  the Guide has a recipe for a log field and an OpenTelemetry attribute.
+
 - Doctor on a pull request: the action takes the base branch's report
   as `base` and diffs the change against it, writes the findings to the
   job summary as Markdown and, with `comment: true`, to one comment
@@ -89,6 +98,8 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- Rust's `Debug` for `Config` printed `cf_digest`, which hashes secret
+  values themselves; it prints the fingerprint now.
 - `CF_SANITIZE` under MSVC copies AddressSanitizer's runtime DLL
   beside every program it builds. Without it on PATH, Windows stopped
   each test with a dialog that waited for someone to press OK.

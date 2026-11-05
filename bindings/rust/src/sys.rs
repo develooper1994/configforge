@@ -188,6 +188,8 @@ pub struct cf_log_event {
     pub key: *const c_char,
     pub source: *const c_char,
     pub message: *const c_char,
+    pub previous: u64,
+    pub fingerprint: u64,
 }
 
 pub type cf_log_fn = extern "C" fn(user: *mut std::ffi::c_void, e: *const cf_log_event);
@@ -315,6 +317,7 @@ extern "C" {
     pub fn cf_iter_next(it: *mut cf_iter) -> cf_bool;
     pub fn cf_config_free(c: *mut cf_config);
     pub fn cf_digest(c: *const cf_config) -> u64;
+    pub fn cf_fingerprint(c: *const cf_config) -> u64;
     pub fn cf_has(c: *const cf_config, key: *const c_char) -> cf_bool;
     pub fn cf_get_bool(c: *const cf_config, key: *const c_char, fallback: cf_bool) -> cf_bool;
     pub fn cf_get_int(c: *const cf_config, key: *const c_char, fallback: cf_i64) -> cf_i64;

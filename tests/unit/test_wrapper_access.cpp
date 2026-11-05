@@ -158,6 +158,9 @@ static void test_live() {
               "and rolls it back");
         check(!onp.confirm() && onp.reload() == CF_LIVE_SWAPPED && onp.confirm(),
               "confirm keeps the one readers have");
+        check(onp.get().fingerprint() == cf_fingerprint(onp.get().raw()) &&
+                  onp.get().fingerprintText().size() == 22,
+              "a Config's fingerprint, as a number and as text");
     }
 #if CF_CPP11
     g_live         = g_v1;

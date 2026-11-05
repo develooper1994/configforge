@@ -663,13 +663,15 @@ static void config_log(const cf_config* c, cf_log_level level, const char* event
     if (c->log == NULL || level < c->log_min) {
         return;
     }
-    e.size    = sizeof e;
-    e.level   = level;
-    e.event   = event;
-    e.code    = code;
-    e.key     = key;
-    e.source  = source;
-    e.message = message;
+    e.size        = sizeof e;
+    e.level       = level;
+    e.event       = event;
+    e.code        = code;
+    e.key         = key;
+    e.source      = source;
+    e.message     = message;
+    e.previous    = 0;
+    e.fingerprint = 0;
     c->log(c->log_user, &e);
 }
 
@@ -1903,6 +1905,15 @@ size_t cf_schema(const cf_config* c, const char* title, char* buf, size_t cap) {
 
 cf_u64 cf_digest(const cf_config* c) {
     return (c != NULL) ? cf_ks_digest(&c->keys) : 0;
+}
+
+cf_u64 cf_fingerprint(const cf_config* c) {
+    return cf_defset_fingerprint((c != NULL) ? &c->defs : NULL,
+                                 (c != NULL) ? &c->keys : NULL);
+}
+
+size_t cf_fingerprint_format(cf_u64 fp, char* buf, size_t cap) {
+    return cf_ks_digest_text(fp, buf, cap);
 }
 
 size_t cf_count(const cf_config* c) {

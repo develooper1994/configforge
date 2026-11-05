@@ -753,6 +753,34 @@ the same file again: unchanged
 `probation=` and `health=` (an exception's text is the reason), Rust
 `LiveOptions::new().probation(n).health(..)`.
 
+#### Which configuration was it?
+
+An incident starts at 14:02; was that the reload at 14:01? A diff of
+files cannot say, and a log of values must not. `cf_fingerprint(cfg)`
+identifies the configuration a program runs on - FNV-1a over every key,
+its type and its value, a secret counting only by the digest a
+value-blind report shows - and `cf_fingerprint_format` writes it as
+`fnv1a:` and sixteen hex digits. It is in every report as
+`"fingerprint"`, in `cf_live`'s log events as `previous` and
+`fingerprint` (the snapshot before and after; a reload's log line names
+it too), and anywhere else the program puts it:
+
+```c
+char fp[24];
+cf_fingerprint_format(cf_fingerprint(cfg), fp, sizeof fp);
+log_info("serving config=%s", fp);                       /* a log field     */
+otel_resource_set("configforge.fingerprint", fp);        /* a trace's resource */
+```
+
+With OpenTelemetry the attribute rides on every span the service
+exports, so a trace view answers "which configuration served this
+request" by itself; the library depends on no tracing SDK for it. It is
+not cryptographic: it tells configurations apart and proves nothing,
+and through it a guess at a secret can be checked no better than through
+a blind report. `cf_digest`, which quiet swaps use, hashes values
+themselves and is not for publishing. `fingerprint` in C++, Rust and
+Python; Python's log records carry `cf_previous` and `cf_fingerprint`.
+
 A health page asks `cf_live_status_get`, from any thread: the
 generation serving, how many rebuilds were tried and failed, what the
 last one did, whether a change waits for approval, and why the last

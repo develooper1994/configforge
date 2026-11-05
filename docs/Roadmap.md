@@ -93,17 +93,14 @@ Guide and API reference say what it does.
    shows them; secrets only by digest. `doctor.action` tests the
    scripts, the comment against a stub `gh`; the CI job runs the action
    when GitHub Actions does.
-3. **The configuration's fingerprint where operators look.**
-   `cf_digest` already identifies a resolved configuration - quiet
-   swaps use it - but nothing outside the process sees it. Put it in
-   each reload's `cf_log_event` (a new member after `size`, the old and
-   new digest), in the provenance report (an additive schema-1 field),
-   and in Doctor's output, so an incident can be matched to the
-   configuration change before it with one field. A sensitive value
-   enters the fingerprint only as its blind-report digest, so the
-   fingerprint never confirms a guessed secret. The Guide gets a recipe
-   for carrying it as a log field and an OpenTelemetry resource
-   attribute, with no dependency here.
+3. **The configuration's fingerprint where operators look** - done.
+   `cf_fingerprint` is separate from `cf_digest`, which hashes secrets
+   raw and stays internal to quiet swaps; a secret enters the
+   fingerprint as its blind-report digest (`cf_ks_value_digest`, which
+   the report now uses too). In the report, `cf_live`'s log events
+   (`previous`, `fingerprint`), Doctor's `dump` and Markdown, the
+   bindings, and the Guide's log-field and OpenTelemetry recipe.
+   Found on the way: Rust's `Debug` printed `cf_digest`.
 
 ## Ideas
 

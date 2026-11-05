@@ -307,6 +307,15 @@ CF_API cf_bool cf_ks_is_sorted(const cf_keyspace* ks);
    requirement made checkable. */
 CF_API cf_u64 cf_ks_digest(const cf_keyspace* ks);
 
+/* FNV-1a over one value's canonical text: what a value-blind report
+   says of a secret, so that "did it change" has an answer and "what is
+   it" has none. Not cryptographic, and not presented as one. */
+CF_API cf_u64 cf_ks_value_digest(const cf_value* v);
+
+/* A digest as a report writes it, "fnv1a:" and sixteen hex digits, in
+   `buf` as far as `cap` allows; the length it needs, 22. */
+CF_API size_t cf_ks_digest_text(cf_u64 h, char* buf, size_t cap);
+
 #ifdef __cplusplus
 }
 #endif

@@ -181,8 +181,9 @@ static cf_bool parse(report* r, const cf_blob* blob, cf_error* err) {
                                 path, (int)schema->u.i, CF_REPORT_SCHEMA);
         }
     }
-    r->mode    = text_at(&r->doc, "mode");
-    r->profile = text_at(&r->doc, "profile");
+    r->mode        = text_at(&r->doc, "mode");
+    r->profile     = text_at(&r->doc, "profile");
+    r->fingerprint = text_at(&r->doc, "fingerprint");
 
     /* The sources, so a rule can ask what kind a source is and where it
        ranks. Counted first, like everything else here, so there is no

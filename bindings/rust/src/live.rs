@@ -499,6 +499,31 @@ mod tests {
     }
 
     #[test]
+    fn reload_events_carry_fingerprints() {
+        let (which, build) = levels();
+        let seen = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let s = seen.clone();
+        let mut live = Live::open_logged(Mode::Manual, build, crate::Level::Debug, move |e| {
+            if e.event == "reload" {
+                s.lock().unwrap().push((e.previous, e.fingerprint));
+            }
+        })
+        .unwrap();
+        let before = live.get().fingerprint();
+        which.store(1, Ordering::SeqCst);
+        assert_eq!(live.reload().unwrap(), Reload::Swapped);
+        let after = live.get().fingerprint();
+        assert_ne!(before, after);
+        assert_eq!(
+            seen.lock().unwrap().last().copied(),
+            Some((Some(before), Some(after)))
+        );
+        assert!(live.get().fingerprint_text().starts_with("fnv1a:"));
+        assert_eq!(live.get().fingerprint_text().len(), 22);
+        assert!(!format!("{:?}", live.get()).contains("digest"));
+    }
+
+    #[test]
     fn probation_and_rollback() {
         use super::Options;
         use std::sync::atomic::AtomicBool;

@@ -789,6 +789,39 @@ static cf_u64 fnv1a(cf_u64 h, const char* p, size_t n) {
     return h;
 }
 
+cf_u64 cf_ks_value_digest(const cf_value* v) {
+    char        tmp[CF_VALUE_TEXT_MAX];
+    size_t      n;
+    const char* bytes;
+
+    if (v == NULL) {
+        return fnv1a(((cf_u64)3421674724U << 32) | (cf_u64)2216829733U, "", 0);
+    }
+    n     = (v->type == CF_TYPE_TEXT) ? v->u.t.n : cf_value_to_text(v, tmp, sizeof tmp);
+    bytes = (v->type == CF_TYPE_TEXT) ? v->u.t.p : tmp;
+    return fnv1a(((cf_u64)3421674724U << 32) | (cf_u64)2216829733U, bytes, n);
+}
+
+/* Sixteen hex digits written by hand: the library's formatter has no
+   width specifiers on purpose (report.c says how "%08x" once went). */
+size_t cf_ks_digest_text(cf_u64 h, char* buf, size_t cap) {
+    static const char hex[] = "0123456789abcdef";
+    char              t[22] = "fnv1a:"; /* the rest zero, then the digits */
+    int               k;
+    size_t            n;
+
+    for (k = 21; k >= 6; --k) {
+        t[k] = hex[(size_t)(h & (cf_u64)0xF)];
+        h >>= 4;
+    }
+    if (buf != NULL && cap > 0) {
+        n = (sizeof t < cap - 1) ? sizeof t : cap - 1;
+        memcpy(buf, t, n);
+        buf[n] = '\0';
+    }
+    return sizeof t;
+}
+
 cf_u64 cf_ks_digest(const cf_keyspace* ks) {
     /* 14695981039346656037 written as an expression: a 64-bit literal
        would need the LL suffix, which -std=c89 -pedantic rejects. */

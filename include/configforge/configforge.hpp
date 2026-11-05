@@ -562,6 +562,15 @@ class Config {
     cf_u64 digest() const {
         return cf_digest(c_);
     }
+    /* cf_fingerprint: for logs and traces; a secret only by its digest. */
+    cf_u64 fingerprint() const {
+        return cf_fingerprint(c_);
+    }
+    std::string fingerprintText() const {
+        char t[24];
+        cf_fingerprint_format(cf_fingerprint(c_), t, sizeof t);
+        return std::string(t);
+    }
     size_t count() const {
         return cf_count(c_);
     }

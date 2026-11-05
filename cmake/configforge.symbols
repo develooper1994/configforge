@@ -74,6 +74,7 @@ cf_defs_apply
 cf_defset_at
 cf_defset_count
 cf_defset_find
+cf_defset_fingerprint
 cf_defset_init
 cf_defset_is_open
 cf_defset_list
@@ -107,6 +108,8 @@ cf_explain_json
 cf_f64_to_text real
 cf_feature_at
 cf_feature_count
+cf_fingerprint
+cf_fingerprint_format
 cf_flatten_init
 cf_flatten_sink
 cf_fmt
@@ -154,6 +157,7 @@ cf_ks_at_mut
 cf_ks_candidate_count
 cf_ks_count
 cf_ks_digest
+cf_ks_digest_text
 cf_ks_explain
 cf_ks_explain_redacted
 cf_ks_find
@@ -171,6 +175,7 @@ cf_ks_rename_list
 cf_ks_replay
 cf_ks_reselect
 cf_ks_resolve
+cf_ks_value_digest
 cf_lex_cli
 cf_lex_dotenv
 cf_lex_env
@@ -190,8 +195,8 @@ cf_live_pending
 cf_live_poll
 cf_live_reject
 cf_live_reload
-cf_live_rollback
 cf_live_restarts
+cf_live_rollback
 cf_live_status_get
 cf_live_wait
 cf_loc_text

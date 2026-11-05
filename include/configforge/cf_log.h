@@ -54,6 +54,15 @@ typedef struct cf_log_event {
     const char* key;     /* the key it is about, or NULL              */
     const char* source;  /* the source, or where the value was set    */
     const char* message; /* one sentence for a person                 */
+
+    /* 1.1: cf_live's events carry the fingerprints (cf_fingerprint) of
+       the snapshot readers had before and the one they have now - the
+       same for an event that swapped nothing - so a log pipeline can
+       match a change to an incident with one field; a configuration's
+       own events carry 0 in both. Read only where `size` reaches them;
+       cf_fingerprint_format writes one as a report does. */
+    cf_u64 previous;
+    cf_u64 fingerprint;
 } cf_log_event;
 
 typedef void (*cf_log_fn)(void* user, const cf_log_event* e);

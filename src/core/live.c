@@ -47,6 +47,11 @@ struct cf_live {
        the polls until it is released. `rejected` is what a rollback came
        from, held so that a poll can tell the same values again from a
        real change, and released by one. */
+    /* The fingerprints of the snapshot readers have and of the one they
+       had before the last swap or rollback, for the log's events. */
+    cf_u64 fingerprint;
+    cf_u64 previous;
+
     cf_live_health_fn health;
     void*             health_user;
     unsigned          probation;
@@ -308,6 +313,10 @@ static void live_swap(cf_live* l, cf_config* next, char* list, size_t list_len,
         l->status.probation = CF_TRUE;
     }
     live_unlock(l);
+    if (!quiet) {
+        l->previous    = l->fingerprint;
+        l->fingerprint = cf_fingerprint(next);
+    }
     if (keep && l->kept == NULL) {
         l->kept              = old;
         l->kept_restarts     = old_list;
@@ -376,13 +385,15 @@ static void live_log(const cf_live* l, cf_log_level level, const char* event,
     if (l->log == NULL || level < l->log_min) {
         return;
     }
-    e.size    = sizeof e;
-    e.level   = level;
-    e.event   = event;
-    e.code    = code;
-    e.key     = key;
-    e.source  = NULL;
-    e.message = message;
+    e.size        = sizeof e;
+    e.level       = level;
+    e.event       = event;
+    e.code        = code;
+    e.key         = key;
+    e.source      = NULL;
+    e.message     = message;
+    e.previous    = l->previous;
+    e.fingerprint = l->fingerprint;
     l->log(l->log_user, &e);
 }
 
@@ -430,11 +441,14 @@ static cf_live_result live_record(cf_live* l, cf_live_result r, cf_bool rebuilt,
                  (l->scratch.key[0] != '\0') ? l->scratch.key : NULL,
                  l->scratch.message);
     } else if (l->log != NULL) {
-        char msg[64];
+        char msg[96];
         if (r == CF_LIVE_ROLLED_BACK) {
             /* logged by live_rollback, with its reason */
         } else if (r == CF_LIVE_SWAPPED) {
-            cf_fmt(msg, sizeof msg, "generation %U serving", l->status.generation);
+            char fp[24];
+            (void)cf_fingerprint_format(l->fingerprint, fp, sizeof fp);
+            cf_fmt(msg, sizeof msg, "generation %U serving, %s", l->status.generation,
+                   fp);
             live_log(l, CF_LOG_INFO, "reload", CF_OK, NULL, msg);
             live_log_restarts(l);
         } else if (r == CF_LIVE_PENDING) {
@@ -468,6 +482,8 @@ static cf_live_result live_rollback(cf_live* l, const char* reason, cf_error* er
     l->kept_restarts     = NULL;
     l->kept_restarts_len = 0;
     l->left              = 0;
+    l->previous          = l->fingerprint;
+    l->fingerprint       = cf_fingerprint(l->current);
     cf_config_free(l->rejected);
     l->rejected = from; /* a reader holding it keeps it */
     live_release(l, from_list);
@@ -613,6 +629,8 @@ cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err) {
         return NULL;
     }
     l->generation        = 1;
+    l->fingerprint       = cf_fingerprint(l->current);
+    l->previous          = l->fingerprint;
     l->status.size       = sizeof l->status;
     l->status.generation = 1;
     l->status.last       = CF_LIVE_SWAPPED;

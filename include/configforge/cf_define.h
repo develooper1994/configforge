@@ -212,6 +212,11 @@ CF_API const cf_def* cf_defset_find(const cf_defset* ds, const char* key,
    an unrelated, undefined setting. */
 CF_API const cf_def* cf_defset_list(const cf_defset* ds, const char* key,
                                     size_t keylen);
+/* The fingerprint of `ks` under these definitions (cf_fingerprint): as
+   cf_ks_digest, except that a key defined CF_SENSITIVE enters by its
+   cf_ks_value_digest text, as a value-blind report shows it, rather
+   than by its value. `ds` may be NULL: nothing is sensitive. */
+CF_API cf_u64        cf_defset_fingerprint(const cf_defset* ds, const cf_keyspace* ks);
 CF_API size_t        cf_defset_count(const cf_defset* ds);
 CF_API const cf_def* cf_defset_at(const cf_defset* ds, size_t i);
 

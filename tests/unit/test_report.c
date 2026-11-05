@@ -615,9 +615,87 @@ static void test_digest_text_bytes(void) {
     }
 }
 
+/* The fingerprint, worked out here from its definition: FNV-1a over
+   key, type and value of each key in order, a secret entering as the
+   digest a blind report shows - so this test, and not the code under
+   it, says what the number is. */
+static cf_u64 fnv(cf_u64 h, const char* p) {
+    for (; *p != '\0'; ++p) {
+        h ^= (cf_u64)(unsigned char)*p;
+        h *= ((cf_u64)256U << 32) | (cf_u64)435U;
+    }
+    return h;
+}
+static cf_u64 fnv_basis(void) {
+    return ((cf_u64)3421674724U << 32) | (cf_u64)2216829733U;
+}
+static cf_u64 entry(cf_u64 h, const char* key, const char* type, const char* value) {
+    h = fnv(fnv(h, key), "\037");
+    h = fnv(fnv(h, type), "\037");
+    return fnv(fnv(h, value), "\036");
+}
+
+static void test_fingerprint(void) {
+    cf_error    err = CF_ERROR_INIT;
+    cf_config*  c   = build(&err);
+    cf_u64      fp;
+    static char buf[8192]; /* off the stack: the suite keeps a budget */
+    char        secret[24], text[24], expect[64];
+    cf_u64      h;
+
+    check(c != NULL, "fingerprint: builds");
+    if (c == NULL) {
+        return;
+    }
+    fp = cf_fingerprint(c);
+    {
+        /* hunter2's digest, as the blind report writes it */
+        cf_value v;
+        v.type  = CF_TYPE_TEXT;
+        v.u.t.p = "hunter2";
+        v.u.t.n = 7;
+        (void)cf_fingerprint_format(cf_ks_value_digest(&v), secret, sizeof secret);
+    }
+    h = fnv_basis();
+    h = entry(h, "db.password", "text", secret);
+    h = entry(h, "server.host", "text", "0.0.0.0");
+    h = entry(h, "server.port", "int", "7000");
+    check(fp == h, "the fingerprint is the definition: a secret by its blind digest");
+    check(fp != cf_digest(c), "and is not cf_digest, which hashes the secret itself");
+
+    check(cf_fingerprint_format(fp, text, sizeof text) == 22 &&
+              strncmp(text, "fnv1a:", 6) == 0 && strlen(text) == 22,
+          "written as fnv1a: and sixteen hex digits");
+    check(cf_fingerprint_format(fp, buf, 5) == 22 && strcmp(buf, "fnv1") == 0,
+          "and as far as the buffer allows");
+    cf_fmt(expect, sizeof expect, "\"fingerprint\": \"%s\"", text);
+    (void)report(c, CF_REPORT_BLIND, buf, sizeof buf);
+    has(buf, expect, "a blind report carries it");
+    lacks(buf, "hunter2", "and still no secret");
+    (void)report(c, CF_REPORT_FULL, buf, sizeof buf);
+    has(buf, expect, "a full report carries the same one");
+    cf_config_free(c);
+
+    c = build(&err);
+    check(c != NULL && cf_fingerprint(c) == fp,
+          "the same configuration, the same fingerprint");
+    cf_config_free(c);
+    e0[19] = 'X'; /* MYAPP_DB__PASSWORD=Xunter2 */
+    c      = build(&err);
+    check(c != NULL && cf_fingerprint(c) != fp, "a changed secret changes it");
+    cf_config_free(c);
+    e0[19] = 'h';
+    a1[16] = '1'; /* --server.port=7010 */
+    c      = build(&err);
+    check(c != NULL && cf_fingerprint(c) != fp, "and so does any other value");
+    cf_config_free(c);
+    a1[16] = '0';
+}
+
 int main(void) {
     cf_arena* ar = cf_arena_new(NULL, 1 << 16);
 
+    test_fingerprint();
     test_blind_report();
     test_digest_distinguishes();
     test_digest_text_bytes();

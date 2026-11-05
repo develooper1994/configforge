@@ -754,3 +754,62 @@ const cf_def* cf_defset_nearest(const cf_defset* ds, const char* key, size_t key
     }
     return best;
 }
+
+/* ------------------------------------------------------------------ *
+ * Fingerprint
+ *
+ * cf_ks_digest's walk - key, type and canonical value text of every
+ * selected entry, in key order, FNV-1a - with one difference: a secret
+ * is hashed as the digest a value-blind report shows for it. The
+ * fingerprint is meant for logs and traces, which are kept and read
+ * more widely than a report; through it, a guess at a secret can be
+ * checked no better than through a blind report.
+ * ------------------------------------------------------------------ */
+
+static cf_u64 fp_mix(cf_u64 h, const char* p, size_t n) {
+    static const cf_u64 prime = ((cf_u64)256U << 32) | (cf_u64)435U;
+    size_t              i;
+    if (p == NULL) {
+        return h; /* an empty text value has no bytes to point at */
+    }
+    for (i = 0; i < n; ++i) {
+        h ^= (cf_u64)(unsigned char)p[i];
+        h *= prime;
+    }
+    return h;
+}
+
+cf_u64 cf_defset_fingerprint(const cf_defset* ds, const cf_keyspace* ks) {
+    cf_u64 h = ((cf_u64)3421674724U << 32) | (cf_u64)2216829733U;
+    size_t i;
+    char   buf[CF_VALUE_TEXT_MAX > 64 ? CF_VALUE_TEXT_MAX : 64];
+
+    for (i = 0; i < cf_ks_count(ks); ++i) {
+        const cf_entry* e = cf_ks_at(ks, i);
+        const cf_def*   d;
+        const char*     tn;
+        size_t          n;
+
+        if (e == NULL || e->selected == NULL) {
+            continue;
+        }
+        d  = (ds != NULL) ? cf_defset_find(ds, e->key, e->keylen) : NULL;
+        h  = fp_mix(h, e->key, e->keylen);
+        h  = fp_mix(h, "\037", 1);
+        tn = cf_type_name(e->selected->value.type);
+        h  = fp_mix(h, tn, strlen(tn));
+        h  = fp_mix(h, "\037", 1);
+        if (d != NULL && (d->flags & CF_SENSITIVE) != 0) {
+            n = cf_ks_digest_text(cf_ks_value_digest(&e->selected->value), buf,
+                                  sizeof buf);
+            h = fp_mix(h, buf, n);
+        } else if (e->selected->value.type == CF_TYPE_TEXT) {
+            h = fp_mix(h, e->selected->value.u.t.p, e->selected->value.u.t.n);
+        } else {
+            n = cf_value_to_text(&e->selected->value, buf, sizeof buf);
+            h = fp_mix(h, buf, n);
+        }
+        h = fp_mix(h, "\036", 1);
+    }
+    return h;
+}

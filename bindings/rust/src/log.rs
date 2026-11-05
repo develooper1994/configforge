@@ -59,6 +59,11 @@ pub struct LogEvent<'a> {
     pub key: Option<&'a str>,
     pub source: Option<&'a str>,
     pub message: &'a str,
+    /// A reload's fingerprints ([`crate::Config::fingerprint`]): the
+    /// snapshot readers had, and the one they have now. `None` for a
+    /// configuration's own events.
+    pub previous: Option<u64>,
+    pub fingerprint: Option<u64>,
 }
 
 type Sink = dyn Fn(&LogEvent<'_>) + Send + Sync;
@@ -106,6 +111,8 @@ pub(crate) extern "C" fn trampoline(user: *mut c_void, e: *const sys::cf_log_eve
         key: opt(raw.key),
         source: opt(raw.source),
         message: opt(raw.message).unwrap_or(""),
+        previous: (raw.fingerprint != 0).then_some(raw.previous),
+        fingerprint: (raw.fingerprint != 0).then_some(raw.fingerprint),
     };
     // A panic must not unwind into C; a log line that panicked is lost.
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| (logger.sink)(&ev)));

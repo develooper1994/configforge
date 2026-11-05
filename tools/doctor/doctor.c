@@ -147,7 +147,8 @@ static void md_cell(const char* t) {
    its reports, a table, and the count. Values are not in a finding's
    message, so they are not in the table either. */
 static void print_markdown(const cf_doctor* D, const char* command, char** reports,
-                           int nreports, int stale) {
+                           int nreports, int stale, const char* fp_a,
+                           const char* fp_b) {
     int k;
 
     printf("### ConfigForge Doctor: %s", command);
@@ -156,6 +157,25 @@ static void print_markdown(const cf_doctor* D, const char* command, char** repor
         md_cell(reports[k]);
     }
     printf("\n\n");
+    /* The fingerprints, to match a report to a log line or a trace;
+       text from a report, so a cell's escaping, and no code span, in
+       which an escape would show. */
+    if (fp_a != NULL && fp_b != NULL) {
+        if (strcmp(fp_a, fp_b) == 0) {
+            fputs("Fingerprint unchanged: ", stdout);
+            md_cell(fp_b);
+        } else {
+            fputs("Fingerprint: ", stdout);
+            md_cell(fp_a);
+            fputs(" &rarr; ", stdout);
+            md_cell(fp_b);
+        }
+        printf("\n\n");
+    } else if (fp_a != NULL && fp_b == NULL && strcmp(command, "lint") == 0) {
+        fputs("Fingerprint: ", stdout);
+        md_cell(fp_a);
+        printf("\n\n");
+    }
     if (D->nfound == 0) {
         printf("No new findings.\n");
     } else {
@@ -199,9 +219,10 @@ static void print_text(const cf_doctor* D) {
 static void cmd_dump(const report* r) {
     size_t i, j;
 
-    printf("%s  mode=%s profile=%s  %u keys\n\n", r->path,
+    printf("%s  mode=%s profile=%s  %u keys%s%s\n\n", r->path,
            (r->mode != NULL) ? r->mode : "?", (r->profile != NULL) ? r->profile : "-",
-           (unsigned)r->nkeys);
+           (unsigned)r->nkeys, (r->fingerprint != NULL) ? "  " : "",
+           (r->fingerprint != NULL) ? r->fingerprint : "");
 
     for (i = 0; i < r->nkeys; ++i) {
         const rkey* k = &r->keys[i];
@@ -472,7 +493,8 @@ static int run(cf_doctor* D, int argc, char** argv) {
             print_sarif(D, argv[(is_history || is_blame) ? first - 1 : 2]);
         } else if (strcmp(format, "markdown") == 0) {
             int stale = D->base.loaded ? (int)cf_doctor_stale_count(D) : 0;
-            print_markdown(D, argv[1], argv + pos, first - pos, stale);
+            print_markdown(D, argv[1], argv + pos, first - pos, stale, a.fingerprint,
+                           is_diff ? b.fingerprint : NULL);
         } else {
             int stale = 0;
             print_text(D);

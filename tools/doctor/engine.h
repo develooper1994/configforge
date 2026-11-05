@@ -64,6 +64,7 @@ typedef struct report {
     const char* path;
     const char* mode;
     const char* profile;
+    const char* fingerprint; /* cf_fingerprint's text, or NULL before 1.1 */
     rkey*       keys;
     size_t      nkeys;
     rsrc*       src;

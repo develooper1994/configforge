@@ -105,35 +105,13 @@ static void report_value(cf_sink* out, const cf_value* v) {
    change" without revealing what it changed to, in a report that is
    meant to be safe to keep. */
 static void report_digest(cf_sink* out, const cf_value* v) {
-    char   tmp[CF_VALUE_TEXT_MAX];
-    size_t n =
-        v->type == CF_TYPE_TEXT ? v->u.t.n : cf_value_to_text(v, tmp, sizeof tmp);
-    const char* bytes = v->type == CF_TYPE_TEXT ? v->u.t.p : tmp;
-    cf_u64      h     = ((cf_u64)3421674724U << 32) | (cf_u64)2216829733U;
-    size_t      i;
-
-    for (i = 0; i < n; ++i) {
-        h ^= (cf_u64)(unsigned char)bytes[i];
-        h *= ((cf_u64)256U << 32) | (cf_u64)435U; /* 1099511628211, see keyspace.c */
-    }
-    /* Sixteen hex digits written by hand. The library's formatter has
-       no width specifiers on purpose, and reaching for "%08x" produced
-       a digest that was the literal format string in every report -
-       which the first test did not catch, because it only asserted the
-       prefix was there. The digits are now built where their count
-       cannot depend on a formatter feature. */
-    {
-        static const char hex[] = "0123456789abcdef";
-        char              out16[16];
-        int               k;
-        for (k = 15; k >= 0; --k) {
-            out16[k] = hex[(size_t)(h & (cf_u64)0xF)];
-            h >>= 4;
-        }
-        cf_sink_puts(out, "\"fnv1a:");
-        cf_sink_write(out, out16, sizeof out16);
-        cf_sink_putc(out, '"');
-    }
+    char text[24];
+    /* cf_ks_value_digest, which the fingerprint also takes a secret
+       by: what this report shows of one is all the fingerprint does. */
+    size_t n = cf_ks_digest_text(cf_ks_value_digest(v), text, sizeof text);
+    cf_sink_putc(out, '"');
+    cf_sink_write(out, text, n);
+    cf_sink_putc(out, '"');
 }
 
 static const cf_source* source_of(const cf_source_view* sv, int rank) {
@@ -484,6 +462,16 @@ size_t cfi_report_reads(const cf_keyspace* ks, const cf_defset* ds,
     }
     cf_sink_puts(&out, "] },\n  \"generated\": ");
     report_quote_z(&out, (info != NULL) ? info->generated : NULL);
+    /* The configuration's fingerprint (cf_fingerprint): one field to match
+       a report to a log line or a trace. Added beside the others, which
+       no reader of schema 1 objects to. */
+    {
+        char fp[24];
+        cf_sink_puts(&out, ",\n  \"fingerprint\": \"");
+        cf_sink_write(&out, fp,
+                      cf_ks_digest_text(cf_defset_fingerprint(ds, ks), fp, sizeof fp));
+        cf_sink_puts(&out, "\"");
+    }
     cf_sink_puts(&out, ",\n");
 
     cf_sink_puts(&out, "  \"sources\": [");

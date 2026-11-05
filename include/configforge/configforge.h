@@ -391,6 +391,19 @@ CF_API size_t cf_diff_text(const cf_config* before, const cf_config* after, char
    every platform and in both portability modes. */
 CF_API cf_u64 cf_digest(const cf_config* c);
 
+/* What identifies this configuration where operators look - a log line,
+   a trace, a report's "fingerprint": as cf_digest, except that a secret
+   counts by the digest a value-blind report shows for it, never by its
+   value, so the fingerprint can be published wherever a blind report
+   could. Two configurations with the same values and secrets have the
+   same one, on every platform. Not cryptographic: it tells changes
+   apart, and proves nothing. (1.1) */
+CF_API cf_u64 cf_fingerprint(const cf_config* c);
+
+/* `fp` as reports and logs write it, "fnv1a:" and sixteen hex digits,
+   in `buf` as far as `cap` allows; the length it needs, 22. (1.1) */
+CF_API size_t cf_fingerprint_format(cf_u64 fp, char* buf, size_t cap);
+
 /* The provenance report: the whole key space with every candidate,
    serialised. Doctor compares two of them; the library can read one
    back with cf_builder_replay. Measure-or-write. `info` starts from
