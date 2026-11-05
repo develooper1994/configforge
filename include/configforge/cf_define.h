@@ -169,6 +169,13 @@ typedef struct cf_defset {
     size_t                     open_count;
     struct cf_list_projection* lists;
     cf_bool partial; /* write authorization checks only the supplied keys */
+
+    /* Until it is sealed, a hash of each definition's position (plus one;
+       0 is empty), so defining N keys checks each against the others in
+       constant time rather than N - which made 10,000 definitions take a
+       second (bench/). Sealing sorts the definitions and drops it. */
+    size_t* index;
+    size_t  index_cap;
 } cf_defset;
 
 CF_API cf_bool cf_defset_init(cf_defset* ds, cf_arena* arena, size_t hint);

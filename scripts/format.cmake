@@ -47,6 +47,7 @@ if(ALL)
     "${REPO}/tests/*.cpp"
     "${REPO}/tools/*.c"
     "${REPO}/examples/*.c"
+    "${REPO}/bench/*.c"
     "${REPO}/examples/*.cpp"
     "${REPO}/CMakeLists.txt"
     "${REPO}/cmake/*.cmake"
@@ -55,7 +56,8 @@ if(ALL)
     "${REPO}/tests/*CMakeLists.txt"
     "${REPO}/tests/*.cmake"
     "${REPO}/tools/*CMakeLists.txt"
-    "${REPO}/examples/*CMakeLists.txt")
+    "${REPO}/examples/*CMakeLists.txt"
+    "${REPO}/bench/CMakeLists.txt")
 else()
   if(NOT GIT_EXE)
     message(FATAL_ERROR "without git there is no 'changed'; use -DALL=ON")
@@ -77,7 +79,7 @@ foreach(f ${files})
   if(NOT EXISTS "${REPO}/${f}" OR f MATCHES "^build")
     continue()
   endif()
-  if(f MATCHES "^(src|tests|tools|examples)/.*\\.(c|cpp)$"
+  if(f MATCHES "^(src|tests|tools|examples|bench)/.*\\.(c|cpp)$"
      OR f MATCHES "^include/configforge/.*\\.(h|hpp)$")
     list(APPEND c_files "${f}")
   elseif(f MATCHES "(^|/)CMakeLists\\.txt$" OR f MATCHES "\\.cmake$")

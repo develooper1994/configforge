@@ -17,6 +17,7 @@ file(
   "${CMAKE_SOURCE_DIR}/tests/*.cpp"
   "${CMAKE_SOURCE_DIR}/tools/*.c"
   "${CMAKE_SOURCE_DIR}/examples/*.c"
+  "${CMAKE_SOURCE_DIR}/bench/*.c"
   "${CMAKE_SOURCE_DIR}/examples/*.cpp")
 
 # The build files are source code too, and they had drifted into three
@@ -35,7 +36,8 @@ file(
   "${CMAKE_SOURCE_DIR}/tools/CMakeLists.txt"
   "${CMAKE_SOURCE_DIR}/tools/*/CMakeLists.txt"
   "${CMAKE_SOURCE_DIR}/examples/CMakeLists.txt"
-  "${CMAKE_SOURCE_DIR}/examples/*/CMakeLists.txt")
+  "${CMAKE_SOURCE_DIR}/examples/*/CMakeLists.txt"
+  "${CMAKE_SOURCE_DIR}/bench/CMakeLists.txt")
 
 set(CF_FORMAT_COMMANDS)
 if(CLANG_FORMAT_EXE)

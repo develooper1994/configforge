@@ -136,6 +136,65 @@ static double time_resolve(size_t n, size_t* arena_kib) {
     return best;
 }
 
+/* Define `n` keys and seal the set, WORK / n times: the same work at
+   either size, as for resolution. Each definition is checked against
+   the others - for a duplicate, for a list that owns it - and that check
+   was a scan until the benchmark (bench/) showed ten thousand keys take
+   a second; the set is sorted when sealed, which was an insertion sort. */
+static double time_define(size_t n) {
+    double best = 0.0;
+    int    r;
+
+    for (r = 0; r < REPEATS; ++r) {
+        double t0 = now_ms();
+        double t1;
+        size_t k, i;
+
+        for (k = 0; k < WORK / n; ++k) {
+            cf_arena* ar = cf_arena_new(NULL, 0);
+            cf_defset ds;
+            cf_error  err = CF_ERROR_INIT;
+            if (ar == NULL || !cf_defset_init(&ds, ar, 8)) {
+                cf_arena_free(ar);
+                return -1.0;
+            }
+            for (i = 0; i < n; ++i) {
+                if (!cf_def_int(&ds, key_of(i), 0, 0, 0, 0, &err)) {
+                    cf_arena_free(ar);
+                    return -1.0;
+                }
+            }
+            cf_defset_seal(&ds);
+            cf_arena_free(ar);
+        }
+        t1 = now_ms();
+        if (r == 0 || t1 - t0 < best) {
+            best = t1 - t0;
+        }
+    }
+    return best;
+}
+
+static void test_defining_is_not_quadratic(void) {
+    double small = time_define(SMALL);
+    double large = time_define(LARGE);
+
+    check(small >= 0.0 && large >= 0.0, "both sizes define");
+    if (small < 0.0 || large < 0.0) {
+        return;
+    }
+    printf("  %d keys defined as %d x %d: %.1f ms, as %d x %d: %.1f ms\n", WORK,
+           WORK / SMALL, SMALL, small, WORK / LARGE, LARGE, large);
+    if (small < 2.0) {
+        printf("  (too fast to compare; ratio not checked)\n");
+        return;
+    }
+    /* As for resolution: about 1.2x for n log n, 4x for a scan per key. */
+    check(large < small * 2.5,
+          "four times the definitions per set cost far less than four times as "
+          "much per definition, so defining did not become quadratic");
+}
+
 /* Time a fixed number of lookups over a key space of `n` keys. Fixed,
    so the only thing that can change the result is the cost of one
    lookup. */
@@ -297,6 +356,7 @@ static void test_read_cost(void) {
 
 int main(void) {
     test_resolution_is_not_quadratic();
+    test_defining_is_not_quadratic();
     test_lookup_is_a_binary_search();
     test_read_cost();
 

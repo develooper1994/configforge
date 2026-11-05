@@ -130,10 +130,10 @@ verified commits, and a release is cut where the order says so. The
    `/OPT:REF`), the size before and after written down; `CF_LTO`, off by
    default, measured on the release build, the stack budget measured on
    its result.
-3. **A benchmark, not a gate**: building N keys, `cf_get`, a report,
-   `doctor diff` of two N-key reports. Then what it shows; the first
-   expected is Doctor's linear key lookup, quadratic in `diff` and
-   `history`.
+3. **A benchmark, not a gate** - done (`bench/`). It showed Doctor's
+   lookup, as expected, and one nobody expected: defining keys was
+   quadratic. Both are fixed and held by tests; the numbers are in
+   Maintaining.md, "Measured".
 4. **Arrays in INI, C style** (the owner's decision): `ports = {80, 443}`
    reads and writes an array; `ports[0] = 80` sets one element; both are
    the flat `ports.0` / `ports.count` underneath, so explain(), reports

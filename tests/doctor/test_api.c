@@ -7,7 +7,9 @@
 #include <configforge/cf_doctor.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 static int  g_fail = 0, g_run = 0;
 static void check(int c, const char* w) {
@@ -966,6 +968,90 @@ static void test_unread(void) {
     }
 }
 
+#if CF_WITH_REPORT && CF_WITH_JSON
+/* A blind report of `n` keys, "k<i>" = i + bump on even i, in `out`. */
+static char* sized_report(size_t n, int bump, size_t* len) {
+    static char    keys[16384][16], values[16384][16];
+    static cf_pair pairs[16384]; /* off the stack: the suite keeps a budget */
+    cf_builder*    b   = cf_build(NULL);
+    cf_error       err = CF_ERROR_INIT;
+    cf_config*     c;
+    char*          buf = NULL;
+    size_t         i, need;
+
+    for (i = 0; i < n && i < 16384; ++i) {
+        sprintf(keys[i], "k%lu", (unsigned long)i);
+        sprintf(values[i], "%lu",
+                (unsigned long)(i + (size_t)((i % 2 == 0) ? bump : 0)));
+        pairs[i].key   = keys[i];
+        pairs[i].value = values[i];
+        cf_builder_int(b, keys[i], 0, 0, 0, 0);
+    }
+    cf_builder_memory(b, "mem", CF_RANK_USER_FILE, pairs, n);
+    c = cf_builder_create(b, &err);
+    if (c == NULL) {
+        return NULL;
+    }
+    need = cf_report(c, NULL, NULL, 0);
+    buf  = (char*)malloc(need + 1);
+    if (buf != NULL) {
+        *len = cf_report(c, NULL, buf, need + 1);
+    }
+    cf_config_free(c);
+    return buf;
+}
+
+/* Milliseconds for the best of two diffs of two n-key reports. */
+static double time_diff(size_t n) {
+    size_t la = 0, lb = 0;
+    char*  a    = sized_report(n, 0, &la);
+    char*  b    = sized_report(n, 1, &lb);
+    double best = -1.0;
+    int    r;
+
+    for (r = 0; a != NULL && b != NULL && r < 2; ++r) {
+        cf_doctor* d   = cf_doctor_new();
+        cf_error   err = CF_ERROR_INIT;
+        clock_t    t0  = clock();
+        double     ms;
+        cf_bool    ok = cf_doctor_diff_report(d, a, la, "a", b, lb, "b", &err);
+        ms            = (double)(clock() - t0) * 1000.0 / (double)CLOCKS_PER_SEC;
+        cf_doctor_free(d);
+        if (!ok) {
+            best = -1.0;
+            break;
+        }
+        if (best < 0.0 || ms < best) {
+            best = ms;
+        }
+    }
+    free(a);
+    free(b);
+    return best;
+}
+
+/* diff and history look every key of one report up in the other; a
+   scan per look-up made them quadratic, and two 20,000-key reports took
+   seven seconds (bench/). Sixteen times the keys must cost about sixteen
+   times as long - 19 measured, the log of a lookup - and a scan made it
+   56, so the bound is twice linear, 32.
+   Four times was too small a step: below a few thousand keys the cost
+   of reading a report hides the scan, and the old code passed. */
+static void test_diff_scales(void) {
+    double small = time_diff(1000);
+    double large = time_diff(16000);
+
+    check(small >= 0.0 && large >= 0.0, "diffs of 1000 and 16000 keys");
+    printf("  doctor diff: 1000 keys %.1f ms, 16000 keys %.1f ms\n", small, large);
+    if (small < 5.0) {
+        printf("  (too fast to compare; ratio not checked)\n");
+        return;
+    }
+    check(large < small * 32.0,
+          "a diff of sixteen times the keys costs about sixteen times");
+}
+#endif
+
 int main(void) {
 #if CF_WITH_REPORT && CF_WITH_JSON
     test_lint();
@@ -984,6 +1070,7 @@ int main(void) {
     test_default_drift();
     test_default_marks();
     test_unread();
+    test_diff_scales();
 #else
     /* A configuration's report needs both; without them the library
        says so. */

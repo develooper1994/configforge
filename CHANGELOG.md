@@ -31,11 +31,25 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   `/OPT:REF`), on in the `minimal` preset: a third of a small program.
   `CF_LTO`: link-time optimisation where the toolchain has it, off by
   default; the stack budget says it is not measured under it.
+- `bench/` (`-DCF_BUILD_BENCH=ON`): what building, reading, reporting
+  and Doctor's diff cost at 100 to 20,000 keys - not a test, the numbers
+  an optimisation starts from. It found both of the quadratic costs
+  under Fixed.
 - `scripts/prestage.cmake`: format, the API reference, the text check
   and the analyze build of a change, before it is staged.
 
 ### Fixed
 
+- Defining keys was quadratic: each definition was checked against the
+  others by a scan, and sealing the set was an insertion sort, on the
+  stated ground that "definition counts are in the tens". Ten thousand
+  definitions took 1.15 s and now take 16 ms; twenty thousand, 3.96 s
+  and 38 ms (a hash of the unsealed set, `qsort` to seal it).
+  `test_complexity` holds it.
+- Doctor's `diff` and `history` were quadratic in report size, looking
+  each key up by a scan; two 20,000-key reports took 6.8 s and take
+  1.3 s. `doctor_api` holds it, at a step wide enough that the scan
+  cannot hide behind the cost of reading a report.
 - `example.policy` and `example.policy_cpp` write one Registry key, and
   under a parallel ctest one read what the other rewrote; they hold a
   resource lock now.

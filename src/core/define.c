@@ -4,6 +4,7 @@
 
 #include "configforge/cf_define.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 /* Do not read an extension from the tail padding of an older caller. */
@@ -63,6 +64,75 @@ static cf_bool defset_grow(cf_defset* ds) {
     ds->defs     = nd;
     ds->capacity = ncap;
     return CF_TRUE;
+}
+
+/* ------------------------------------------------------------------ *
+ * The index of an unsealed set
+ *
+ * Open addressing over FNV-1a of the key's bytes, which is the equality
+ * cf_key_cmp has. Positions in `defs` do not move until the set is
+ * sealed, so the index stores them; a set that outgrows half its index
+ * gets one twice the size, rehashed, from the arena. Without memory for
+ * it a set still works, by the linear search it used to do.
+ * ------------------------------------------------------------------ */
+
+static size_t index_hash(const char* key, size_t n) {
+    cf_u64 h = ((cf_u64)3421674724U << 32) | (cf_u64)2216829733U;
+    size_t i;
+    for (i = 0; i < n; ++i) {
+        h ^= (cf_u64)(unsigned char)key[i];
+        h *= ((cf_u64)256U << 32) | (cf_u64)435U;
+    }
+    return (size_t)(h ^ (h >> 32));
+}
+
+static void index_put(size_t* slots, size_t cap, const cf_def* defs, size_t pos) {
+    size_t mask = cap - 1;
+    size_t at   = index_hash(defs[pos].key, strlen(defs[pos].key)) & mask;
+    while (slots[at] != 0) {
+        at = (at + 1) & mask;
+    }
+    slots[at] = pos + 1;
+}
+
+/* Room for `need` definitions at under half full, or false. */
+static cf_bool index_reserve(cf_defset* ds, size_t need) {
+    size_t  cap = (ds->index_cap != 0) ? ds->index_cap : 16;
+    size_t* slots;
+    size_t  i;
+
+    if (ds->index != NULL && need * 2 <= ds->index_cap) {
+        return CF_TRUE;
+    }
+    while (need * 2 > cap) {
+        if (cap > (size_t)-1 / 4 / sizeof *slots) {
+            return CF_FALSE;
+        }
+        cap *= 2;
+    }
+    slots = (size_t*)cf_arena_calloc(ds->arena, cap * sizeof *slots);
+    if (slots == NULL) {
+        return CF_FALSE;
+    }
+    for (i = 0; i < ds->count; ++i) {
+        index_put(slots, cap, ds->defs, i);
+    }
+    ds->index     = slots;
+    ds->index_cap = cap;
+    return CF_TRUE;
+}
+
+static const cf_def* index_find(const cf_defset* ds, const char* key, size_t n) {
+    size_t mask = ds->index_cap - 1;
+    size_t at   = index_hash(key, n) & mask;
+    while (ds->index[at] != 0) {
+        const cf_def* d = &ds->defs[ds->index[at] - 1];
+        if (cf_key_cmp(d->key, strlen(d->key), key, n) == 0) {
+            return d;
+        }
+        at = (at + 1) & mask;
+    }
+    return NULL;
 }
 
 /* ------------------------------------------------------------------ *
@@ -344,18 +414,45 @@ cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err) {
     }
     klen = strlen(d->key);
 
-    for (i = 0; i < ds->count; ++i) {
-        size_t n = strlen(ds->defs[i].key);
-        if (cf_key_cmp(ds->defs[i].key, n, d->key, klen) == 0) {
+    if (index_reserve(ds, ds->count + 1)) {
+        /* The same three refusals as the scan below, each without one:
+           the key itself, a list above it - one look-up a segment - and,
+           only for a new list, a key already under it. */
+        const cf_def* above;
+        if (index_find(ds, d->key, klen) != NULL) {
             return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
                                 "'%s' is defined twice", d->key);
         }
-        if ((d->list_mode != CF_LIST_NONE &&
-             defset_under(ds->defs[i].key, n, d->key, klen)) ||
-            (ds->defs[i].list_mode != CF_LIST_NONE &&
-             defset_under(d->key, klen, ds->defs[i].key, n))) {
-            return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
-                                "a list owns its count and indexed member definitions");
+        for (i = 0; i < klen; ++i) {
+            if (d->key[i] == '.' && (above = index_find(ds, d->key, i)) != NULL &&
+                above->list_mode != CF_LIST_NONE) {
+                return cf_error_set(
+                    err, CF_E_DEFINITION, d->key, NULL,
+                    "a list owns its count and indexed member definitions");
+            }
+        }
+        for (i = 0; d->list_mode != CF_LIST_NONE && i < ds->count; ++i) {
+            if (defset_under(ds->defs[i].key, strlen(ds->defs[i].key), d->key, klen)) {
+                return cf_error_set(
+                    err, CF_E_DEFINITION, d->key, NULL,
+                    "a list owns its count and indexed member definitions");
+            }
+        }
+    } else {
+        for (i = 0; i < ds->count; ++i) {
+            size_t n = strlen(ds->defs[i].key);
+            if (cf_key_cmp(ds->defs[i].key, n, d->key, klen) == 0) {
+                return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
+                                    "'%s' is defined twice", d->key);
+            }
+            if ((d->list_mode != CF_LIST_NONE &&
+                 defset_under(ds->defs[i].key, n, d->key, klen)) ||
+                (ds->defs[i].list_mode != CF_LIST_NONE &&
+                 defset_under(d->key, klen, ds->defs[i].key, n))) {
+                return cf_error_set(
+                    err, CF_E_DEFINITION, d->key, NULL,
+                    "a list owns its count and indexed member definitions");
+            }
         }
     }
     if (ds->count == ds->capacity && !defset_grow(ds)) {
@@ -426,6 +523,9 @@ cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err) {
             return cf_error_set(err, CF_E_MEMORY, d->key, NULL,
                                 "no room to copy the list definition");
         }
+    }
+    if (ds->index != NULL) {
+        index_put(ds->index, ds->index_cap, ds->defs, ds->count);
     }
     ++ds->count;
     return CF_TRUE;
@@ -499,15 +599,6 @@ cf_bool cf_def_real(cf_defset* ds, const char* key, double dflt, double min, dou
  * Sealing and lookup
  * ------------------------------------------------------------------ */
 
-static void def_swap(cf_def* a, cf_def* b) {
-    cf_def t = *a;
-    *a       = *b;
-    *b       = t;
-}
-
-/* Definition counts are in the tens, and the set is built once and
-   never appended to afterwards, so insertion sort is both the fastest
-   and the least code here. Nothing larger would change that. */
 cf_bool cf_defset_open(cf_defset* ds, const char* prefix, cf_error* err) {
     if (ds == NULL || prefix == NULL || prefix[0] == '\0') {
         return cf_error_set(err, CF_E_DEFINITION, NULL, NULL,
@@ -548,22 +639,26 @@ cf_bool cf_defset_is_open(const cf_defset* ds, const char* key, size_t keylen) {
     return CF_FALSE;
 }
 
-void cf_defset_seal(cf_defset* ds) {
-    size_t i, j;
+static int def_order(const void* a, const void* b) {
+    const cf_def* x = (const cf_def*)a;
+    const cf_def* y = (const cf_def*)b;
+    return cf_key_cmp(x->key, strlen(x->key), y->key, strlen(y->key));
+}
 
+/* Sorted for the binary search lookups use from now on. qsort, not the
+   insertion sort this was: "definition counts are in the tens" was the
+   reason given for it, and the benchmark showed ten thousand. Keys are
+   unique - cf_define refuses a second - so an unstable sort is exact. */
+void cf_defset_seal(cf_defset* ds) {
     if (ds == NULL || ds->sealed) {
         return;
     }
-    for (i = 1; i < ds->count; ++i) {
-        for (j = i; j > 0; --j) {
-            if (cf_key_cmp(ds->defs[j - 1].key, strlen(ds->defs[j - 1].key),
-                           ds->defs[j].key, strlen(ds->defs[j].key)) <= 0) {
-                break;
-            }
-            def_swap(&ds->defs[j - 1], &ds->defs[j]);
-        }
+    if (ds->count > 1) {
+        qsort(ds->defs, ds->count, sizeof *ds->defs, def_order);
     }
-    ds->sealed = CF_TRUE;
+    ds->index     = NULL; /* positions moved; the arena keeps the memory */
+    ds->index_cap = 0;
+    ds->sealed    = CF_TRUE;
 }
 
 static const cf_def* defset_exact(const cf_defset* ds, const char* key, size_t keylen) {
@@ -571,6 +666,9 @@ static const cf_def* defset_exact(const cf_defset* ds, const char* key, size_t k
 
     if (ds == NULL || ds->count == 0 || key == NULL) {
         return NULL;
+    }
+    if (!ds->sealed && ds->index != NULL) {
+        return index_find(ds, key, keylen);
     }
     if (!ds->sealed) {
         size_t i;

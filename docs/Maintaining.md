@@ -88,6 +88,9 @@ default can be argued from a number.
 | Option | Where | Effect |
 | ------ | ----- | ------ |
 | `CF_GC_SECTIONS` | minimal preset, GCC 13, x86-64, 2026-11-05 | `tier0` text 105,689 -> 70,655 bytes (-33%); `embedded` 106,839 -> 72,133 (-32%); 107 of 107 tests pass. On in the minimal preset |
+| defining keys, hash and `qsort` | `bench/`, GCC 13 Release, 2026-11-06 | 10,000 definitions 1,148 -> 16 ms; 20,000: 3,960 -> 38 ms. Was a scan per definition and an insertion sort |
+| Doctor key index | the same | `doctor diff` of two 10,000-key reports 1,740 -> 553 ms; 20,000: 6,778 -> 1,335 ms. What is left, about 60 us a key, is reading the report: linear, and left until something needs it faster |
+| `cf_get_int`, a report | the same | 140 to 200 ns a read at 100 to 20,000 keys (a binary search); a report about 3 us a key. Nothing to do |
 | `CF_GC_SECTIONS` + `CF_LTO` | the same | `tier0` 60,656 (-43%); `embedded` 56,373 (-47%), its bss 22,592 -> 4,128; tests pass; MSVC Release with both: 140 of 140. Off by default: the stack budget cannot measure inlined frames. Speed: the benchmark (Roadmap, plan item 3) is the place to measure it |
 
 ## Working habits that paid

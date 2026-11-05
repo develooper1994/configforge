@@ -67,8 +67,13 @@ typedef struct report {
     const char* fingerprint; /* cf_fingerprint's text, or NULL before 1.1 */
     rkey*       keys;
     size_t      nkeys;
-    rsrc*       src;
-    size_t      nsrc;
+    /* The keys by name, for doctor_find_key's binary search; NULL when
+       there was no room, and the search is then the scan it was. diff
+       and history look each key of one report up in another, so a scan
+       made two 20,000-key reports take seven seconds (bench/). */
+    const rkey** byname;
+    rsrc*        src;
+    size_t       nsrc;
 } report;
 
 /* Findings already accepted, "CFD001 server.port" a line. */

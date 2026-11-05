@@ -14,6 +14,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* ------------------------------------------------------------------ *
@@ -148,6 +149,29 @@ static void defaults_by_source(report* r) {
    configuration key "server.port" appears as "keys.server.port.*".
    Recovering the original means stripping the prefix and the field
    suffix, which is what this does. */
+static int key_order(const void* a, const void* b) {
+    const rkey* x = *(const rkey* const*)a;
+    const rkey* y = *(const rkey* const*)b;
+    return cf_key_cmp(x->key, x->keylen, y->key, y->keylen);
+}
+
+/* The keys by name (report.byname); without room, none, and the scan. */
+static void index_keys(report* r) {
+    size_t i;
+    r->byname = NULL;
+    if (r->nkeys < 2 || r->nkeys > (size_t)-1 / sizeof *r->byname) {
+        return;
+    }
+    r->byname = (const rkey**)cf_arena_alloc(r->arena, r->nkeys * sizeof *r->byname);
+    if (r->byname == NULL) {
+        return;
+    }
+    for (i = 0; i < r->nkeys; ++i) {
+        r->byname[i] = &r->keys[i];
+    }
+    qsort((void*)r->byname, r->nkeys, sizeof *r->byname, key_order);
+}
+
 static cf_bool parse(report* r, const cf_blob* blob, cf_error* err) {
     const cf_codec* json = cf_codec_by_name("json");
     const char*     path = r->path;
@@ -343,6 +367,7 @@ static cf_bool parse(report* r, const cf_blob* blob, cf_error* err) {
     if (!marked) {
         defaults_by_source(r);
     }
+    index_keys(r);
     return CF_TRUE;
 }
 
@@ -392,6 +417,23 @@ void doctor_release(report* r) {
 
 const rkey* doctor_find_key(const report* r, const char* key, size_t n) {
     size_t i;
+    if (r->byname != NULL) {
+        size_t lo = 0, hi = r->nkeys;
+        while (lo < hi) {
+            size_t      mid = lo + (hi - lo) / 2;
+            const rkey* k   = r->byname[mid];
+            int         c   = cf_key_cmp(k->key, k->keylen, key, n);
+            if (c == 0) {
+                return k;
+            }
+            if (c < 0) {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        return NULL;
+    }
     for (i = 0; i < r->nkeys; ++i) {
         if (r->keys[i].keylen == n && memcmp(r->keys[i].key, key, n) == 0) {
             return &r->keys[i];

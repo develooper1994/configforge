@@ -103,6 +103,12 @@ if(CF_BUILD_EXAMPLES)
   add_subdirectory(examples)
 endif()
 
+# Timings to start an optimisation from (bench/): needs Doctor.
+option(CF_BUILD_BENCH "Build the benchmark" OFF)
+if(CF_BUILD_BENCH AND TARGET configforge_doctor)
+  add_subdirectory(bench)
+endif()
+
 configforge_add_gates(configforge)
 
 include(ConfigForgeInstall)

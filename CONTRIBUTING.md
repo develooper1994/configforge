@@ -33,6 +33,7 @@ If a change makes a value harder to explain, it is the wrong change.
 | `examples/c`, `examples/cpp`, `examples/rust` | programs the README and `docs/Guide.md` quote, one directory a language, run by the suite and checked for their output (`expect.cmake`) | `docs/Guide.md` |
 | `bindings/rust`, `bindings/python` | the Rust crate (`build.rs` builds the library) and the Python package (ctypes over a shared build), each with its own tests; the root `pyproject.toml` includes native sources in Python distributions | `docs/Guide.md`, section 13 |
 | `cmake/`, `cmake/gates/` | build modules, and the gates that enforce the design | `docs/Architecture.md` |
+| `bench/` | the benchmark, built with `-DCF_BUILD_BENCH=ON`: timings at 100 to 20,000 keys, the place an optimisation starts | `docs/Maintaining.md`, "Measured" |
 | `scripts/` | verify, format, stack, apiref, amalgamate, version, buildid, proofs, the text and format checks, the local release, `buildenv/` | `scripts/README.md` |
 | `conanfile.py`, `packaging/` | the Conan recipe and its test package; the vcpkg overlay port | README.md, "From a package manager" |
 
