@@ -18,6 +18,14 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- MSVC's analyzer (`/analyze`) under `CF_ANALYZER`, on every C target,
+  and in verify's Windows quick run (the analyze preset). Of its findings
+  in the library and Doctor, five were fixed in the code and five are
+  silenced at their line with the reason - `CF_ANALYZER_COUNTED` and
+  `CF_ANALYZER_FILLED` in `cf_port.h`, one warning number each, nothing
+  outside an analyzed build. The tests needed none: nine of them read
+  through a pointer a failed check had found NULL, and crashed rather
+  than reporting; each now reports and stops.
 - `scripts/prestage.cmake`: format, the API reference, the text check
   and the analyze build of a change, before it is staged.
 

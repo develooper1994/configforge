@@ -579,9 +579,9 @@ static cf_bool severity_load(cf_doctor* D, const char* path, cf_error* err) {
                             "cannot read severity file '%s'", path);
     }
     while (fgets(line, (int)sizeof line, f) != NULL) {
-        char  id[16], level[16], profile[64];
-        char* p = line;
-        int   field;
+        char        id[16], level[16], profile[64];
+        const char* p = line;
+        int         field;
 
         ++n;
         id[0] = level[0] = profile[0] = '\0';
@@ -591,6 +591,7 @@ static cf_bool severity_load(cf_doctor* D, const char* path, cf_error* err) {
                          : (field == 1) ? sizeof level
                                         : sizeof profile;
             size_t k   = 0;
+            CF_ANALYZER_FILLED; /* line is fgets's: filled and terminated */
             while (*p == ' ' || *p == '\t') {
                 ++p;
             }

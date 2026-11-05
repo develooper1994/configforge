@@ -94,12 +94,17 @@ static cf_write_item* edit_slot(cf_edit* e, const char* key) {
         e->items = grown;
         e->cap   = n;
     }
-    e->items[e->count].key = cf_arena_dup(e->arena, key, strlen(key));
-    if (e->items[e->count].key == NULL) {
-        (void)edit_refuse(e, CF_E_MEMORY, key, "no room for the change");
-        return NULL;
+    {
+        /* e->count < e->cap: the array grew above when they met */
+        cf_write_item* slot = e->items + e->count;
+        slot->key           = cf_arena_dup(e->arena, key, strlen(key));
+        if (slot->key == NULL) {
+            (void)edit_refuse(e, CF_E_MEMORY, key, "no room for the change");
+            return NULL;
+        }
+        ++e->count;
+        return slot;
     }
-    return &e->items[e->count++];
 }
 
 cf_bool cf_edit_set_text(cf_edit* e, const char* key, const char* value) {

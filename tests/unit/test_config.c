@@ -179,7 +179,7 @@ static void test_digest_and_report(void) {
 
     rep = cf_apply_stats(c1);
     check(rep != NULL && rep->converted == 1, "one conversion counted");
-    check(rep->unknown == 0, "nothing unknown");
+    check(rep != NULL && rep->unknown == 0, "nothing unknown");
 
     cf_config_free(c1);
     cf_config_free(c2);

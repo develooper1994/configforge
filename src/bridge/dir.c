@@ -54,7 +54,8 @@ static void dir_sort(dir_name* names, int n) {
     for (i = 1; i < n; ++i) {
         char tmp[CF_DIR_PATH_MAX];
         memcpy(tmp, names[i], CF_DIR_PATH_MAX);
-        j = i;
+        tmp[CF_DIR_PATH_MAX - 1] = '\0'; /* each name is; said for /analyze */
+        j                        = i;
         while (j > 0 &&
                cf_cmp_bytes(names[j - 1], strlen(names[j - 1]), tmp, strlen(tmp)) > 0) {
             memcpy(names[j], names[j - 1], CF_DIR_PATH_MAX);

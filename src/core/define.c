@@ -407,6 +407,7 @@ cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err) {
                 memcpy(values, d->list_defaults,
                        d->list_default_count * sizeof *values);
                 for (i = 0; i < d->list_default_count && copied; ++i) {
+                    CF_ANALYZER_COUNTED; /* values holds that many, i below it */
                     if (values[i].type == CF_TYPE_TEXT) {
                         values[i].u.t.p =
                             cf_arena_dup(ds->arena, values[i].u.t.p, values[i].u.t.n);

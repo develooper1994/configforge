@@ -242,8 +242,12 @@ static void test_limits(void) {
           "and a name it does not know is 0");
 }
 
+/* Both spellings are one flag: a fact of the build, so it fails the
+   build, not a run - a negative array size where they differ. */
+typedef char optional_spellings_agree[(CF_OPTIONAL == CF_FILE_OPTIONAL) ? 1 : -1];
+
 static void test_optional_spellings(void) {
-    check(CF_OPTIONAL == CF_FILE_OPTIONAL, "both spellings are one flag");
+    check(sizeof(optional_spellings_agree) == 1, "both spellings are one flag");
 }
 
 int main(void) {

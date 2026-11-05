@@ -340,9 +340,12 @@ static void test_defaults_are_ordinary_candidates(cf_arena* ar) {
     /* A default is a value from the lowest-precedence source, not a
        separate mechanism, which is why it shows up in the chain. */
     e = cf_ks_find(&ks, "server.port", 11);
-    check(e->chain != NULL && e->chain->next != NULL, "default is in the chain");
-    check(e->chain->next->outcome == CF_OUT_SHADOWED, "and is marked shadowed");
-    check(e->chain->next->value.u.i == 8080, "with its own value intact");
+    check(e != NULL && e->chain != NULL && e->chain->next != NULL,
+          "default is in the chain");
+    if (e != NULL && e->chain != NULL && e->chain->next != NULL) {
+        check(e->chain->next->outcome == CF_OUT_SHADOWED, "and is marked shadowed");
+        check(e->chain->next->value.u.i == 8080, "with its own value intact");
+    }
     check(rep.defaults_used == 1, "one default actually used");
 }
 

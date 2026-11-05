@@ -266,6 +266,22 @@ typedef int cf_bool;
 #define CF_UNLIKELY(x) (x)
 #endif
 
+/* The one finding of MSVC's analyzer (/analyze) the library silences,
+   on its own line before each statement it is wrong about, with the
+   reason beside it: C6385, a read past an array, where the array was
+   allocated with as many elements as the loop's bound and the analyzer
+   cannot follow the count from the allocation to the index. And its
+   companion: C28199, memory read as uninitialized when a library call
+   it does not follow (fgets) filled it. Nothing in a build that is not
+   being analyzed. */
+#if defined(_PREFAST_)
+#define CF_ANALYZER_COUNTED __pragma(warning(suppress : 6385))((void)0)
+#define CF_ANALYZER_FILLED __pragma(warning(suppress : 28199))((void)0)
+#else
+#define CF_ANALYZER_COUNTED ((void)0)
+#define CF_ANALYZER_FILLED ((void)0)
+#endif
+
 /* ------------------------------------------------------------------ *
  * Atomic reference counting
  *

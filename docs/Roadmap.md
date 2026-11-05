@@ -123,7 +123,8 @@ verified commits, and a release is cut where the order says so. The
    clang-formats agree. A pre-stage script: format, the API reference
    and the analyze build of what changed, in minutes, before a verify.
 2. **The compiler's help where it is missing.** MSVC's analyzer
-   (`/analyze`) on the library and Doctor; `minimal` with
+   (`/analyze`) - done, on every C target, tests included, in the
+   Windows quick run; then `minimal` with
    `-ffunction-sections -fdata-sections` and `--gc-sections` (`/Gy`,
    `/OPT:REF`), the size before and after written down; `CF_LTO`, off by
    default, measured on the release build, the stack budget measured on

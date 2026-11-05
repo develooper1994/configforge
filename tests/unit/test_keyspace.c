@@ -73,6 +73,9 @@ static void test_precedence(cf_arena* ar) {
 
     e = cf_ks_find(&ks, "server.port", 11);
     check(e != NULL, "entry found");
+    if (e == NULL) {
+        return;
+    }
     check(e->selected != NULL && e->selected->source == SRC_ENV,
           "selected is the env candidate");
 
@@ -83,18 +86,24 @@ static void test_precedence(cf_arena* ar) {
         const cf_candidate* c = e->chain;
         check(c != NULL && c->source == SRC_ENV && c->outcome == CF_OUT_SELECTED,
               "chain[0] env selected");
+        if (c == NULL) {
+            return;
+        }
         check(c->at != NULL && strcmp(c->at, "MYAPP_SERVER_PORT") == 0,
               "chain[0] keeps its location");
         c = c->next;
         check(c != NULL && c->source == SRC_USER && c->outcome == CF_OUT_SHADOWED,
               "chain[1] user shadowed");
+        if (c == NULL) {
+            return;
+        }
         check(c->at != NULL && strcmp(c->at, "app.toml:14:3") == 0,
               "chain[1] keeps file:line:col");
         check(c->value.u.i == 3000, "shadowed value still readable");
         c = c->next;
         check(c != NULL && c->source == SRC_DEFAULT && c->outcome == CF_OUT_SHADOWED,
               "chain[2] default shadowed");
-        check(c->next == NULL, "chain ends");
+        check(c != NULL && c->next == NULL, "chain ends");
     }
 
     check(cf_ks_count(&ks) == 2, "two distinct keys");
@@ -130,9 +139,10 @@ static void test_rejected_is_skipped(cf_arena* ar) {
    everywhere a source can repeat a key, and getting it backwards made a
    response file beat the arguments typed after it. */
 static void test_later_occurrence_wins(cf_arena* ar) {
-    cf_keyspace     ks;
-    const cf_value* v;
-    const cf_entry* e;
+    cf_keyspace         ks;
+    const cf_value*     v;
+    const cf_entry*     e;
+    const cf_candidate* c;
 
     cf_ks_init(&ks, ar, 4);
     add_int(&ks, "a.b", SRC_CLI, 1, "argv[1]");
@@ -147,16 +157,17 @@ static void test_later_occurrence_wins(cf_arena* ar) {
     /* And the earlier ones are shadowed rather than dropped, so
        explain() can still show that the option was given twice. */
     e = cf_ks_find(&ks, "a.b", 3);
-    check(e->chain->value.u.i == 3, "chain leads with the winner");
-    check(e->chain->next != NULL && e->chain->next->value.u.i == 2,
-          "then the one before it");
-    check(e->chain->next->next != NULL && e->chain->next->next->value.u.i == 1,
-          "then the first");
+    c = (e != NULL) ? e->chain : NULL;
+    check(c != NULL && c->value.u.i == 3, "chain leads with the winner");
+    c = (c != NULL) ? c->next : NULL;
+    check(c != NULL && c->value.u.i == 2, "then the one before it");
+    c = (c != NULL) ? c->next : NULL;
+    check(c != NULL && c->value.u.i == 1, "then the first");
 
     /* Rank still beats order: a later default does not overtake an
        earlier command line. */
-    check(e->chain->next->next->next != NULL &&
-              e->chain->next->next->next->value.u.i == 99,
+    c = (c != NULL) ? c->next : NULL;
+    check(c != NULL && c->value.u.i == 99,
           "and the lower-precedence source is last whenever it arrived");
 }
 

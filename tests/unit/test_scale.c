@@ -90,11 +90,12 @@ int main(void) {
         const cf_entry*     e   = cf_ks_find(&ks, key, n);
         int                 len = 0;
         const cf_candidate* c;
-        for (c = e->chain; c != NULL; c = c->next) {
+        for (c = (e != NULL) ? e->chain : NULL; c != NULL; c = c->next) {
             ++len;
         }
         check(len == 3, "all three candidates retained");
-        check(e->chain->source == 0, "chain ordered by precedence");
+        check(e != NULL && e->chain != NULL && e->chain->source == 0,
+              "chain ordered by precedence");
     }
 
     d1 = cf_ks_digest(&ks);

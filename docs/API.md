@@ -341,13 +341,13 @@ CF_API const char* cf_get_text(const cf_config* c, const char* key, const char* 
 CF_API double cf_get_real(const cf_config* c, const char* key, double fallback);
 ```
 
-Implementation: [`cf_get_bool` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1733), [`cf_get_int` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1738), [`cf_get_text` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1743), [`cf_get_real` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1765).
+Implementation: [`cf_get_bool` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1736), [`cf_get_int` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1741), [`cf_get_text` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1746), [`cf_get_real` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1768).
 
 ```c
 CF_API const char* cf_get_text_n(const cf_config* c, const char* key, size_t* len, const char* fallback);
 ```
 
-Implementation: [`cf_get_text_n` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1748).
+Implementation: [`cf_get_text_n` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1751).
 
 Pointer and length, for text that may contain anything. The stored
 value is NUL-terminated as well, so cf_get_text stays free.
@@ -359,7 +359,7 @@ CF_NODISCARD CF_API cf_code cf_try_text(const cf_config* c, const char* key, con
 CF_NODISCARD CF_API cf_code cf_try_real(const cf_config* c, const char* key, double* out);
 ```
 
-Implementation: [`cf_try_bool` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1785), [`cf_try_int` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1794), [`cf_try_text` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1803), [`cf_try_real` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1819).
+Implementation: [`cf_try_bool` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1788), [`cf_try_int` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1797), [`cf_try_text` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1806), [`cf_try_real` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1822).
 
 CF_OK, CF_E_KEY when absent, CF_E_CONVERT on a type mismatch.
 
@@ -368,7 +368,7 @@ CF_API cf_type cf_type_of(const cf_config* c, const char* key);
 CF_API cf_bool cf_has(const cf_config* c, const char* key);
 ```
 
-Implementation: [`cf_type_of` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1829), [`cf_has` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1834).
+Implementation: [`cf_type_of` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1832), [`cf_has` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1837).
 
 CF_TYPE_NULL when the key is absent.
 
@@ -378,7 +378,7 @@ CF_API cf_bool cf_was_read(const cf_config* c, const char* key);
 CF_API size_t cf_read_count(const cf_config* c);
 ```
 
-Implementation: [`cf_tracks_reads` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1838), [`cf_was_read` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1842), [`cf_read_count` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1853).
+Implementation: [`cf_tracks_reads` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1841), [`cf_was_read` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1845), [`cf_read_count` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1856).
 
 Read coverage (cf_builder_track_reads). CF_FALSE and 0 for a
 configuration that does not track. cf_read_count counts keys, not
@@ -397,14 +397,14 @@ set is the question, and it is not the secret.
 CF_API size_t cf_explain(const cf_config* c, const char* key, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_explain` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1871).
+Implementation: [`cf_explain` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1874).
 
 ```c
 CF_API size_t cf_explain_json(const cf_config* c, const char* key, cf_report_mode mode, char* buf, size_t cap);
 CF_API size_t cf_inspect(const cf_config* c, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_explain_json` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1935), [`cf_inspect` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1882).
+Implementation: [`cf_explain_json` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1938), [`cf_inspect` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1885).
 
 The same chain as JSON, for an administration endpoint or a tool:
 cf_report_key_write says what it holds. CF_REPORT_BLIND is what an
@@ -439,7 +439,7 @@ Measure-or-write, like every renderer here.
 CF_API cf_u64 cf_digest(const cf_config* c);
 ```
 
-Implementation: [`cf_digest` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1906).
+Implementation: [`cf_digest` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1909).
 
 Order-independent over the resolved configuration, identical on
 every platform and in both portability modes.
@@ -448,7 +448,7 @@ every platform and in both portability modes.
 CF_API cf_u64 cf_fingerprint(const cf_config* c);
 ```
 
-Implementation: [`cf_fingerprint` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1910).
+Implementation: [`cf_fingerprint` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1913).
 
 What identifies this configuration where operators look - a log line,
 a trace, a report's "fingerprint": as cf_digest, except that a secret
@@ -462,7 +462,7 @@ apart, and proves nothing. (1.1)
 CF_API size_t cf_fingerprint_format(cf_u64 fp, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_fingerprint_format` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1915).
+Implementation: [`cf_fingerprint_format` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1918).
 
 `fp` as reports and logs write it, "fnv1a:" and sixteen hex digits,
 in `buf` as far as `cap` allows; the length it needs, 22. (1.1)
@@ -471,7 +471,7 @@ in `buf` as far as `cap` allows; the length it needs, 22. (1.1)
 CF_API size_t cf_report(const cf_config* c, const cf_report_info* info, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_report` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1947).
+Implementation: [`cf_report` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1950).
 
 The provenance report: the whole key space with every candidate,
 serialised. Doctor compares two of them; the library can read one
@@ -489,7 +489,7 @@ a leak would want.
 CF_API size_t cf_schema(const cf_config* c, const char* title, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_schema` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1892).
+Implementation: [`cf_schema` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1895).
 
 The configuration's contract as a JSON Schema, closed when it rejects
 unknown keys (CF_UNKNOWN_REJECT). See cf_schema_write.
@@ -512,7 +512,7 @@ CF_API const cf_source_view* cf_sources(const cf_config* c);
 CF_API const cf_defset* cf_defs(const cf_config* c);
 ```
 
-Implementation: [`cf_count` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1919), [`cf_apply_stats` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1923), [`cf_keys` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1958), [`cf_sources` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1927), [`cf_defs` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1931).
+Implementation: [`cf_count` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1922), [`cf_apply_stats` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1926), [`cf_keys` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1961), [`cf_sources` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1930), [`cf_defs` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1934).
 
 How many keys the configuration knows. A key is known once anything
 supplied it, so one that has no value is counted too: every candidate
@@ -606,7 +606,7 @@ ordinary index keys. The source's write callback sees local keys.
 CF_NODISCARD CF_API cf_bool cf_write(const cf_config* c, const char* target, const cf_write_item* items, size_t count, const char* meta, cf_error* err);
 ```
 
-Implementation: [`cf_write` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1552).
+Implementation: [`cf_write` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1555).
 
 ### Change notification
 
@@ -635,7 +635,7 @@ CF_API size_t cf_watch_count(const cf_config* c);
 CF_API const char* cf_watch_path(const cf_config* c, size_t i);
 ```
 
-Implementation: [`cf_changed` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1629), [`cf_watch_count` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1618), [`cf_watch_path` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1622).
+Implementation: [`cf_changed` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1632), [`cf_watch_count` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1621), [`cf_watch_path` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1625).
 
 ### A handle an event loop can wait on
 
@@ -675,7 +675,7 @@ cf_changed works as before.
 CF_NODISCARD CF_API cf_watcher* cf_watcher_open(const cf_config* c, const cf_allocator* a, cf_error* err);
 ```
 
-Implementation: [`cf_watcher_open` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1652).
+Implementation: [`cf_watcher_open` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1655).
 
 `a` NULL means the default allocator. Fails when the configuration
 read no file, since there would be nothing to wake it.
@@ -686,14 +686,14 @@ CF_API void* cf_watcher_handle(const cf_watcher* w); /* NULL where it is not a H
 CF_API cf_bool cf_watcher_drain(cf_watcher* w);
 ```
 
-Implementation: [`cf_watcher_fd` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1671), [`cf_watcher_handle` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1675), [`cf_watcher_drain` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1679).
+Implementation: [`cf_watcher_fd` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1674), [`cf_watcher_handle` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1678), [`cf_watcher_drain` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1682).
 
 ```c
 CF_API int cf_watcher_wait(cf_watcher* w, long timeout_ms);
 CF_API void cf_watcher_close(cf_watcher* w);
 ```
 
-Implementation: [`cf_watcher_wait` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1683), [`cf_watcher_close` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1687).
+Implementation: [`cf_watcher_wait` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1686), [`cf_watcher_close` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1690).
 
 1 woken (and drained), 0 timed out, -1 failed. Negative: no limit.
 
@@ -702,7 +702,7 @@ CF_API void cf_config_ref(cf_config* c);
 CF_API void cf_config_free(cf_config* c);
 ```
 
-Implementation: [`cf_config_ref` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1691), [`cf_config_free` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1697).
+Implementation: [`cf_config_ref` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1694), [`cf_config_free` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1700).
 
 ## cf_alloc.h
 
@@ -853,13 +853,13 @@ CF_API cf_bool cf_def_text(cf_defset* ds, const char* key, const char* dflt, uns
 CF_API cf_bool cf_def_real(cf_defset* ds, const char* key, double dflt, double min, double max, unsigned flags, cf_error* err);
 ```
 
-Implementation: [`cf_def_bool` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L437), [`cf_def_int` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L449), [`cf_def_text` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L466), [`cf_def_real` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L479).
+Implementation: [`cf_def_bool` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L438), [`cf_def_int` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L450), [`cf_def_text` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L467), [`cf_def_real` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L480).
 
 ```c
 CF_API void cf_defset_seal(cf_defset* ds);
 ```
 
-Implementation: [`cf_defset_seal` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L550).
+Implementation: [`cf_defset_seal` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L551).
 
 Sorts for binary lookup; calling twice is harmless.
 
@@ -867,7 +867,7 @@ Sorts for binary lookup; calling twice is harmless.
 CF_API cf_bool cf_defset_open(cf_defset* ds, const char* prefix, cf_error* err);
 ```
 
-Implementation: [`cf_defset_open` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L510).
+Implementation: [`cf_defset_open` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L511).
 
 Exempt a prefix from unknown-key rejection.
 
@@ -875,7 +875,7 @@ Exempt a prefix from unknown-key rejection.
 CF_API cf_bool cf_defset_is_open(const cf_defset* ds, const char* key, size_t keylen);
 ```
 
-Implementation: [`cf_defset_is_open` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L531).
+Implementation: [`cf_defset_is_open` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L532).
 
 Is this key under an exempt prefix? Matches at a segment boundary
 only, so opening "plugins" does not open "pluginsomething".
@@ -884,7 +884,7 @@ only, so opening "plugins" does not open "pluginsomething".
 CF_API const cf_def* cf_defset_find(const cf_defset* ds, const char* key, size_t keylen);
 ```
 
-Implementation: [`cf_defset_find` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L616).
+Implementation: [`cf_defset_find` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L617).
 
 Authored descriptors are returned for exact keys. A declared list's
 count and canonical decimal indices return immutable scalar
@@ -895,7 +895,7 @@ still returns only authored descriptors.
 CF_API const cf_def* cf_defset_list(const cf_defset* ds, const char* key, size_t keylen);
 ```
 
-Implementation: [`cf_defset_list` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L645).
+Implementation: [`cf_defset_list` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L646).
 
 The declared list containing a key, including its root. Unlike find,
 this also finds a list whose caller supplied an invalid member name,
@@ -908,7 +908,7 @@ CF_API size_t cf_defset_count(const cf_defset* ds);
 CF_API const cf_def* cf_defset_at(const cf_defset* ds, size_t i);
 ```
 
-Implementation: [`cf_defset_fingerprint` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L782), [`cf_defset_count` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L650), [`cf_defset_at` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L654).
+Implementation: [`cf_defset_fingerprint` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L783), [`cf_defset_count` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L651), [`cf_defset_at` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L655).
 
 The fingerprint of `ks` under these definitions (cf_fingerprint): as
 cf_ks_digest, except that a key defined CF_SENSITIVE enters by its
@@ -919,7 +919,7 @@ than by its value. `ds` may be NULL: nothing is sensitive.
 CF_API const cf_def* cf_defset_nearest(const cf_defset* ds, const char* key, size_t keylen, size_t* distance);
 ```
 
-Implementation: [`cf_defset_nearest` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L723).
+Implementation: [`cf_defset_nearest` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L724).
 
 Nearest defined key by edit distance, or NULL when nothing is close.
 This is what turns "unknown key server.pot" into "did you mean
@@ -1028,7 +1028,7 @@ CF_DOCTOR_API cf_doctor* cf_doctor_new(void);
 CF_DOCTOR_API void cf_doctor_free(cf_doctor* d);
 ```
 
-Implementation: [`cf_doctor_new` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1708), [`cf_doctor_free` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1718).
+Implementation: [`cf_doctor_new` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1709), [`cf_doctor_free` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1719).
 
 A context, or NULL when there is no memory for one.
 
@@ -1037,7 +1037,7 @@ CF_DOCTOR_API cf_bool cf_doctor_accept(cf_doctor* d, const char* rule, const cha
 CF_DOCTOR_API cf_bool cf_doctor_baseline(cf_doctor* d, const char* path, cf_error* err);
 ```
 
-Implementation: [`cf_doctor_accept` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1728), [`cf_doctor_baseline` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1740).
+Implementation: [`cf_doctor_accept` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1729), [`cf_doctor_baseline` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1741).
 
 A finding already accepted - "CFD001", "server.port" - so it is
 counted and not reported. cf_doctor_baseline reads them from a file,
@@ -1049,7 +1049,7 @@ CF_DOCTOR_API cf_bool cf_doctor_severity(cf_doctor* d, const char* rule, const c
 CF_DOCTOR_API cf_bool cf_doctor_severity_file(cf_doctor* d, const char* path, cf_error* err);
 ```
 
-Implementation: [`cf_doctor_severity` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1748), [`cf_doctor_severity_file` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1771).
+Implementation: [`cf_doctor_severity` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1749), [`cf_doctor_severity_file` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1772).
 
 Where a project disagrees with a rule's default: `level` is "error",
 "warning", "info" or "off", for every profile or only `profile`.
@@ -1062,7 +1062,7 @@ CF_DOCTOR_API cf_bool cf_doctor_lint_report(cf_doctor* d, const char* json, size
 CF_DOCTOR_API cf_bool cf_doctor_lint_file(cf_doctor* d, const char* path, cf_error* err);
 ```
 
-Implementation: [`cf_doctor_lint` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1849), [`cf_doctor_lint_report` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1818), [`cf_doctor_lint_file` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1834).
+Implementation: [`cf_doctor_lint` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1850), [`cf_doctor_lint_report` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1819), [`cf_doctor_lint_file` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1835).
 
 Lint one configuration. A cf_config is reported in memory, with every
 value, so the type and range rules can run; `profile` is the one the
@@ -1077,7 +1077,7 @@ CF_DOCTOR_API cf_bool cf_doctor_diff_report(cf_doctor* d, const char* a, size_t 
 CF_DOCTOR_API cf_bool cf_doctor_diff_files(cf_doctor* d, const char* a, const char* b, cf_error* err);
 ```
 
-Implementation: [`cf_doctor_diff` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1903), [`cf_doctor_diff_report` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1865), [`cf_doctor_diff_files` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1885).
+Implementation: [`cf_doctor_diff` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1904), [`cf_doctor_diff_report` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1866), [`cf_doctor_diff_files` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1886).
 
 Compare two: what one has and the other lacks, values from sources
 of different kinds, overrides in one and not the other, and every
@@ -1088,7 +1088,7 @@ CF_DOCTOR_API cf_bool cf_doctor_history_files(cf_doctor* d, const char* const* p
 CF_DOCTOR_API cf_bool cf_doctor_blame_files(cf_doctor* d, const char* const* paths, size_t n, const char* key, cf_error* err);
 ```
 
-Implementation: [`cf_doctor_history_files` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1978), [`cf_doctor_blame_files` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1998).
+Implementation: [`cf_doctor_history_files` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1979), [`cf_doctor_blame_files` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1999).
 
 A sequence of reports, oldest first - one service's report from each
 deployment - in the order given; a report's own date is not trusted
@@ -1110,7 +1110,7 @@ CF_DOCTOR_API size_t cf_doctor_count(const cf_doctor* d);
 CF_DOCTOR_API const cf_finding* cf_doctor_finding(cf_doctor* d, size_t i);
 ```
 
-Implementation: [`cf_doctor_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2022), [`cf_doctor_finding` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2026).
+Implementation: [`cf_doctor_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2023), [`cf_doctor_finding` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2027).
 
 The findings so far, in the order they were found.
 
@@ -1118,7 +1118,7 @@ The findings so far, in the order they were found.
 CF_DOCTOR_API size_t cf_doctor_count_at(const cf_doctor* d, const char* level);
 ```
 
-Implementation: [`cf_doctor_count_at` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2041).
+Implementation: [`cf_doctor_count_at` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2042).
 
 How many at a level - "error", "warning", "info" - or "accepted", for
 the ones the baseline accepted.
@@ -1128,7 +1128,7 @@ CF_DOCTOR_API size_t cf_doctor_stale_count(const cf_doctor* d);
 CF_DOCTOR_API cf_bool cf_doctor_stale(const cf_doctor* d, size_t i, const char** rule, const char** key);
 ```
 
-Implementation: [`cf_doctor_stale_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2060), [`cf_doctor_stale` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2074).
+Implementation: [`cf_doctor_stale_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2061), [`cf_doctor_stale` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2075).
 
 Baseline entries that matched nothing: a fix worth noticing, or a
 rule that quietly stopped working.
@@ -1168,7 +1168,7 @@ CF_DOCTOR_API const char* cf_doctor_rule_id(size_t i);
 CF_DOCTOR_API const char* cf_doctor_rule_text(const char* id);
 ```
 
-Implementation: [`cf_doctor_rule_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2095), [`cf_doctor_rule_id` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2099), [`cf_doctor_rule_text` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2103).
+Implementation: [`cf_doctor_rule_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2096), [`cf_doctor_rule_id` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2100), [`cf_doctor_rule_text` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2104).
 
 The rule catalogue (Doctor.md): each rule's id and what it finds.
 
@@ -1216,7 +1216,7 @@ CF_API cf_bool cf_edit_set_bool(cf_edit* e, const char* key, cf_bool value);
 CF_API cf_bool cf_edit_set_real(cf_edit* e, const char* key, double value);
 ```
 
-Implementation: [`cf_edit_set_text` (src/core/edit.c)](https://github.com/develooper1994/configforge/blob/main/src/core/edit.c#L105), [`cf_edit_set_int` (src/core/edit.c)](https://github.com/develooper1994/configforge/blob/main/src/core/edit.c#L125), [`cf_edit_set_bool` (src/core/edit.c)](https://github.com/develooper1994/configforge/blob/main/src/core/edit.c#L135), [`cf_edit_set_real` (src/core/edit.c)](https://github.com/develooper1994/configforge/blob/main/src/core/edit.c#L146).
+Implementation: [`cf_edit_set_text` (src/core/edit.c)](https://github.com/develooper1994/configforge/blob/main/src/core/edit.c#L110), [`cf_edit_set_int` (src/core/edit.c)](https://github.com/develooper1994/configforge/blob/main/src/core/edit.c#L130), [`cf_edit_set_bool` (src/core/edit.c)](https://github.com/develooper1994/configforge/blob/main/src/core/edit.c#L140), [`cf_edit_set_real` (src/core/edit.c)](https://github.com/develooper1994/configforge/blob/main/src/core/edit.c#L151).
 
 Set a key: as text, which the contract types as it types a file's, or
 already typed. A key set twice keeps the second. False for no memory
@@ -1226,7 +1226,7 @@ or a key that is not one, which commit then reports.
 CF_API cf_bool cf_edit_unset(cf_edit* e, const char* key);
 ```
 
-Implementation: [`cf_edit_unset` (src/core/edit.c)](https://github.com/develooper1994/configforge/blob/main/src/core/edit.c#L157).
+Implementation: [`cf_edit_unset` (src/core/edit.c)](https://github.com/develooper1994/configforge/blob/main/src/core/edit.c#L162).
 
 Delete a key from the target, so that the next source down - a file,
 the defaults - supplies it again.
@@ -1235,7 +1235,7 @@ the defaults - supplies it again.
 CF_API size_t cf_edit_count(const cf_edit* e);
 ```
 
-Implementation: [`cf_edit_count` (src/core/edit.c)](https://github.com/develooper1994/configforge/blob/main/src/core/edit.c#L167).
+Implementation: [`cf_edit_count` (src/core/edit.c)](https://github.com/develooper1994/configforge/blob/main/src/core/edit.c#L172).
 
 How many keys the edit changes.
 
@@ -1243,7 +1243,7 @@ How many keys the edit changes.
 CF_NODISCARD CF_API cf_bool cf_edit_commit(cf_edit* e, const char* note, cf_error* err);
 ```
 
-Implementation: [`cf_edit_commit` (src/core/edit.c)](https://github.com/develooper1994/configforge/blob/main/src/core/edit.c#L179).
+Implementation: [`cf_edit_commit` (src/core/edit.c)](https://github.com/develooper1994/configforge/blob/main/src/core/edit.c#L184).
 
 Check and write the whole change, `note` (who, when, why) beside each
 value. Consumes the edit either way.
@@ -1252,7 +1252,7 @@ value. Consumes the edit either way.
 CF_API void cf_edit_abort(cf_edit* e);
 ```
 
-Implementation: [`cf_edit_abort` (src/core/edit.c)](https://github.com/develooper1994/configforge/blob/main/src/core/edit.c#L171).
+Implementation: [`cf_edit_abort` (src/core/edit.c)](https://github.com/develooper1994/configforge/blob/main/src/core/edit.c#L176).
 
 Drop the edit; nothing is written.
 
@@ -2840,7 +2840,7 @@ CF_API size_t cf_fmt_append(char* buf, size_t cap, size_t at, const char* fmt, .
 CF_API size_t cf_vfmt(char* buf, size_t cap, const char* fmt, va_list ap);
 ```
 
-Implementation: [`cf_fmt` (src/core/port.c)](https://github.com/develooper1994/configforge/blob/main/src/core/port.c#L259), [`cf_fmt_append` (src/core/port.c)](https://github.com/develooper1994/configforge/blob/main/src/core/port.c#L274), [`cf_vfmt` (src/core/port.c)](https://github.com/develooper1994/configforge/blob/main/src/core/port.c#L250).
+Implementation: [`cf_fmt` (src/core/port.c)](https://github.com/develooper1994/configforge/blob/main/src/core/port.c#L260), [`cf_fmt_append` (src/core/port.c)](https://github.com/develooper1994/configforge/blob/main/src/core/port.c#L275), [`cf_vfmt` (src/core/port.c)](https://github.com/develooper1994/configforge/blob/main/src/core/port.c#L251).
 
 ### Build description, reported in explain() and in the provenance
 
@@ -2850,7 +2850,7 @@ report so that a restricted build is distinguishable from a full one.
 CF_API const char* cf_port_description(void);
 ```
 
-Implementation: [`cf_port_description` (src/core/port.c)](https://github.com/develooper1994/configforge/blob/main/src/core/port.c#L302).
+Implementation: [`cf_port_description` (src/core/port.c)](https://github.com/develooper1994/configforge/blob/main/src/core/port.c#L303).
 
 ## cf_report.h
 
@@ -3267,19 +3267,19 @@ The file a source reads, or NULL.
 CF_API size_t cf_source_dir_state_size(void);
 ```
 
-Implementation: [`cf_source_dir_state_size` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L182).
+Implementation: [`cf_source_dir_state_size` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L183).
 
 ```c
 CF_API cf_bool cf_source_dir(cf_source* s, const char* name, int rank, const char* path, const char* format, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_dir` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L186).
+Implementation: [`cf_source_dir` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L187).
 
 ```c
 CF_API const cf_error* cf_source_dir_error(const cf_source* s);
 ```
 
-Implementation: [`cf_source_dir_error` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L208).
+Implementation: [`cf_source_dir_error` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L209).
 
 ### A directory of secrets (CF_WITH_DIR)
 

@@ -555,7 +555,7 @@ static void test_digest_distinguishes(void) {
         report(c3, CF_REPORT_BLIND, b3, sizeof b3);
         cf_config_free(c3);
         d3 = strstr(b3, "fnv1a:");
-        check(d3 != NULL && strncmp(d1, d3, 22) == 0,
+        check(d1 != NULL && d3 != NULL && strncmp(d1, d3, 22) == 0,
               "the same secret gives the same digest");
     }
 }

@@ -179,6 +179,7 @@ int doctor_import_systemd(int argc, char** argv) {
         memcpy(joined + jlen, line, len);
         jlen += len;
         joined[jlen] = '\0';
+        CF_ANALYZER_COUNTED; /* jlen bytes were just copied into joined */
         if (jlen > 0 && joined[jlen - 1] == '\\' && line[0] != '#' && line[0] != ';') {
             joined[jlen - 1] = ' ';
             continue;

@@ -146,15 +146,16 @@ static void cf_puts_n(cf_fmt_out* o, const char* s, size_t n) {
 
 static void cf_put_hex(cf_fmt_out* o, cf_u64 v) {
     static const char digits[] = "0123456789abcdef";
-    char              tmp[17];
-    size_t            n = 0;
+    char              tmp[16]; /* a 64-bit value is sixteen digits at most */
+    size_t            n = sizeof tmp;
 
+    /* From the end, so the bounds are the loop's own: n never passes 0. */
     do {
-        tmp[n++] = digits[(size_t)(v & (cf_u64)0xF)];
+        tmp[--n] = digits[(size_t)(v & (cf_u64)0xF)];
         v >>= 4;
-    } while (v != 0);
-    while (n > 0) {
-        cf_put(o, tmp[--n]);
+    } while (v != 0 && n > 0);
+    for (; n < sizeof tmp; ++n) {
+        cf_put(o, tmp[n]);
     }
 }
 

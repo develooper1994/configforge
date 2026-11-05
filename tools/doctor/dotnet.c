@@ -186,6 +186,7 @@ int doctor_import_dotnet(int argc, char** argv) {
            and may open a section as well. */
         eq = (const char*)memchr(p, '=', len);
         if (eq == NULL) {
+            CF_ANALYZER_FILLED; /* p is in fgets's line, len > 0 */
             if (p[len - 1] != ':') {
                 fprintf(stderr,
                         "doctor: stdin:%d: expected Key=Value (Provider) or Key:\n",

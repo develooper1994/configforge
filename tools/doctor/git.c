@@ -136,6 +136,7 @@ int doctor_import_git(int argc, char** argv) {
         cf_value    v;
 
         ++lineno;
+        CF_ANALYZER_FILLED; /* line is fgets's: filled and terminated */
         if (len > 0 && line[len - 1] != '\n' && !feof(stdin)) {
             fprintf(stderr, "doctor: stdin:%d: longer than %u bytes\n", lineno,
                     (unsigned)sizeof line);

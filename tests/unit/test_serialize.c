@@ -132,8 +132,10 @@ static void test_ini(cf_arena* ar) {
 
     /* The location is what a reader has to open to change it. */
     e = cf_ks_find(&ks, "server.port", 11);
-    check(e != NULL && e->chain->at != NULL, "location recorded");
-    eq(e->chain->at, "doc:6:1", "line and column are exact");
+    check(e != NULL && e->chain != NULL && e->chain->at != NULL, "location recorded");
+    if (e != NULL && e->chain != NULL) {
+        eq(e->chain->at, "doc:6:1", "line and column are exact");
+    }
 }
 
 static void ini_rejects(cf_arena* ar, const char* doc, const char* what) {

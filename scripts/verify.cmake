@@ -81,6 +81,13 @@ endif()
 # commit passes it: the five presets and the clang build here, the quick
 # run on Windows. Tier 2 is everything else, run before a release and
 # whenever a unit touches what it covers.
+# On Windows the quick run is tier 1, and the one place MSVC's analyzer
+# runs: the analyze preset, /analyze on the library and Doctor.
+# -DMSVC_ANALYZE_QUICK=OFF for the default preset alone.
+if(WIN32 AND NOT DEFINED MSVC_ANALYZE_QUICK)
+  set(MSVC_ANALYZE_QUICK ON)
+endif()
+
 if(DEFINED TIER)
   set(MODE "full")
   if(TIER STREQUAL "1")
@@ -128,7 +135,9 @@ if(NOT WIN32)
   endif()
 endif()
 
-if(MODE STREQUAL "quick")
+if(MODE STREQUAL "quick" AND MSVC_ANALYZE_QUICK)
+  set(PRESETS default analyze)
+elseif(MODE STREQUAL "quick")
   set(PRESETS default)
 else()
   set(PRESETS

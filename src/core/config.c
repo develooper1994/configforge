@@ -1540,10 +1540,13 @@ static cf_bool write_local_keys(const cf_config* c, const cf_source* s,
             memcpy(mapped, items, count * sizeof *mapped);
             *local = mapped;
         }
-        mapped[i].key = cf_arena_dup(*storage, physical, strlen(physical));
-        if (mapped[i].key == NULL) {
-            return cf_error_set(err, CF_E_MEMORY, key, s->name,
-                                "no room to map appended list indices");
+        {
+            cf_write_item* slot = mapped + i; /* mapped holds count, i < count */
+            slot->key           = cf_arena_dup(*storage, physical, strlen(physical));
+            if (slot->key == NULL) {
+                return cf_error_set(err, CF_E_MEMORY, key, s->name,
+                                    "no room to map appended list indices");
+            }
         }
     }
     return CF_TRUE;

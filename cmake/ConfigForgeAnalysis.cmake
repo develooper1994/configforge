@@ -75,6 +75,14 @@ function(configforge_apply_analysis tgt)
     # teach us to ignore the tool, so the tool is simply not pointed at
     # a language it does not claim to handle.
     target_compile_options(${tgt} PRIVATE $<$<COMPILE_LANGUAGE:C>:-fanalyzer>)
+  elseif(CF_ANALYZER AND MSVC)
+    # MSVC's own analyzer: the C6000 warnings - a NULL dereference, a
+    # buffer overrun, an unchecked result - from a different engine than
+    # GCC's, so it finds different things. Errors under /WX like any
+    # warning. C only, as above, and every target, the tests included: a
+    # test that went on to use what a failed check found NULL crashed
+    # instead of reporting, which the analyzer found in nine of them.
+    target_compile_options(${tgt} PRIVATE $<$<COMPILE_LANGUAGE:C>:/analyze>)
   endif()
 
   if(CF_SANITIZE)
