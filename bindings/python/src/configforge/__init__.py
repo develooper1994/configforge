@@ -37,7 +37,7 @@ __all__ = [
     "setting", "section", "define", "read", "version", "has_feature",
 ]
 
-__version__ = "1.0.1"
+__version__ = "1.1.0"
 
 
 def version() -> str:

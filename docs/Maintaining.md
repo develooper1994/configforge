@@ -67,6 +67,19 @@ The first round:
 | `cf_live`'s lock livelocked, and tcc builds had no atomics while claiming thread safety | a ticket lock; `cf_port.h` refuses a threaded build without atomics; `CONTRIBUTING.md`. and one step up, a per-test timeout in `verify` (`TEST_TIMEOUT`, 900 s), so the next hang fails in minutes, not hours |
 | a full Windows verify stopped every test of MSVC's sanitize preset at a dialog for a missing DLL | `ConfigForgeAnalysis.cmake` copies AddressSanitizer's runtime beside each program; the note on the Windows verify below |
 
+The round of 2026-11-05 (probation, Doctor on a pull request, the
+fingerprint):
+
+| Found | Made into |
+| ----- | --------- |
+| two mutations "survived" because the mutant did not compile (`-Werror` on a variable left unused) and the old binary ran | the habit below, made concrete: a mutation script stops with `NO BUILD` when the build fails, and the mutation uses a condition false at run time |
+| a mutation survived because the test checked a value at the one point where the broken code happened to produce it too | check a value at a step where a wrong implementation would give a different one: after a sequence, not at its start |
+| GCC's analyzer (`-fanalyzer`) found two things only in tier 1's analyze build, an hour into the round | build new C with `cmake --preset analyze` before staging it, not only the default preset |
+| `docs/API.md` links each function to its line, so every C edit after regenerating it failed `gate.apiref` | regenerate the reference last, after the final edit to any header or source, then stage |
+| clang-format 22 (Windows) and 18 (WSL) wrapped a call's arguments differently; `gate.format.c` failed on one system only | `gate.format` runs on both in tier 1; write such a line so neither wraps it (a local variable for the long argument) |
+| a patch script in Python turned `"\n"` in C source into a line break | patch scripts use raw strings (`r"""..."""`) for C, and the build is the check |
+| Rust's `Debug` for `Config` printed `cf_digest`, a hash of the secrets themselves, while its comment said it kept secrets out of logs | `cf_fingerprint`, and a test that `Debug` contains no digest |
+
 ## Working habits that paid
 
 * **Negative proofs on MSVC** must disable a check with a condition

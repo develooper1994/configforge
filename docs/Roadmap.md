@@ -35,10 +35,17 @@ work and its validation are complete.
 (D-56), a patch fixes, a minor version adds, and `verify -DEXTRA=abi`
 fails an incompatible change within 1.x.
 
-### Resume here (2026-11-02)
+### Resume here (2026-11-05)
 
-The agreed additions are implemented on `main`, which is 1.0.1,
-unreleased; the existing 1.0.0 archives are unchanged. Doctor
+`main` is 1.1.0, unreleased; the 1.0.0 archives are unchanged. The three
+items accepted on 2026-11-05 - reload probation (`a7e202c`), Doctor on a
+pull request (`c69d938`) and the fingerprint (`22fe94f`) - are built and
+pass tier 1 on Linux and Windows. Next is the 1.1.0 release: tier 2,
+`scripts/release-local.ps1` (MSVC Release) before the tag, the CHANGELOG
+heading dated, tag `v1.1.0`, the archives as `scripts/README.md`,
+"Releasing without CI", says; publishing waits for the maintainer's yes.
+
+Before that, on 2026-11-02: Doctor
 history/blame (`a183b3e`), the MSVC sanitizer runtime fix (`7d2530d`),
 default drift (CFD017, `5917bd5`), and read coverage in C (`fb383c4`)
 and the bindings plus Doctor CFD018 (`ec24578`) are built. Their full
@@ -62,9 +69,9 @@ Before anything: read `CONTRIBUTING.md`, then run
 `pwsh scripts/buildenv/dev-setup.ps1 -Check`) and, if a tool is missing,
 the same without the check.
 
-Accepted work: the three items under "Accepted follow-up" (2026-11-05).
-The ideas below them are not approved scope; if selected, each addition
-is a minor version.
+The three items under "Accepted follow-up" are done. The ideas below
+them are not approved scope; if selected, each addition is a minor
+version.
 
 ### Accepted follow-up
 
