@@ -203,6 +203,12 @@ function(configforge_stack_budget tgt)
     message(STATUS "stack: not measured under the sanitiser")
     return()
   endif()
+  # Inlined across files, the frames that run are not the ones each file
+  # reported (ConfigForgeSize.cmake).
+  if(CF_LTO AND CF_HAS_IPO)
+    message(STATUS "stack: not measured under CF_LTO")
+    return()
+  endif()
   # Asked of GCC and Clang only: the Tiny C Compiler accepts any flag it
   # does not know without a word, so the check passes there and nothing
   # is ever measured.

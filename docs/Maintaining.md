@@ -80,6 +80,16 @@ fingerprint):
 | a patch script in Python turned `"\n"` in C source into a line break | patch scripts use raw strings (`r"""..."""`) for C, and the build is the check |
 | Rust's `Debug` for `Config` printed `cf_digest`, a hash of the secrets themselves, while its comment said it kept secrets out of logs | `cf_fingerprint`, and a test that `Debug` contains no digest |
 
+## Measured
+
+What a build option costs or saves, measured rather than assumed, so a
+default can be argued from a number.
+
+| Option | Where | Effect |
+| ------ | ----- | ------ |
+| `CF_GC_SECTIONS` | minimal preset, GCC 13, x86-64, 2026-11-05 | `tier0` text 105,689 -> 70,655 bytes (-33%); `embedded` 106,839 -> 72,133 (-32%); 107 of 107 tests pass. On in the minimal preset |
+| `CF_GC_SECTIONS` + `CF_LTO` | the same | `tier0` 60,656 (-43%); `embedded` 56,373 (-47%), its bss 22,592 -> 4,128; tests pass; MSVC Release with both: 140 of 140. Off by default: the stack budget cannot measure inlined frames. Speed: the benchmark (Roadmap, plan item 3) is the place to measure it |
+
 ## Working habits that paid
 
 * **Negative proofs on MSVC** must disable a check with a condition

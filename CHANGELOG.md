@@ -26,11 +26,19 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   outside an analyzed build. The tests needed none: nine of them read
   through a pointer a failed check had found NULL, and crashed rather
   than reporting; each now reports and stops.
+- `CF_GC_SECTIONS`: each function and object in its own section, the
+  unused ones dropped at link (`--gc-sections`, `-dead_strip`, MSVC
+  `/OPT:REF`), on in the `minimal` preset: a third of a small program.
+  `CF_LTO`: link-time optimisation where the toolchain has it, off by
+  default; the stack budget says it is not measured under it.
 - `scripts/prestage.cmake`: format, the API reference, the text check
   and the analyze build of a change, before it is staged.
 
 ### Fixed
 
+- `example.policy` and `example.policy_cpp` write one Registry key, and
+  under a parallel ctest one read what the other rewrote; they hold a
+  resource lock now.
 - `verify -DEXTRA=abi` compares with the newest release that is not
   this version; with the release commit tagged first, it had compared
   1.1.0 with itself.

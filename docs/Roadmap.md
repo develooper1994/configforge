@@ -124,7 +124,8 @@ verified commits, and a release is cut where the order says so. The
    and the analyze build of what changed, in minutes, before a verify.
 2. **The compiler's help where it is missing.** MSVC's analyzer
    (`/analyze`) - done, on every C target, tests included, in the
-   Windows quick run; then `minimal` with
+   Windows quick run; `CF_GC_SECTIONS` - done, on in `minimal`, -33%;
+   `CF_LTO` - done, off by default, measured in Maintaining.md. Was: `minimal` with
    `-ffunction-sections -fdata-sections` and `--gc-sections` (`/Gy`,
    `/OPT:REF`), the size before and after written down; `CF_LTO`, off by
    default, measured on the release build, the stack budget measured on

@@ -137,6 +137,9 @@ if(WIN32)
     "font 12, theme dark, channel stable"
     "policy +12 +selected"
     "nightly.  +rejected: policy: 'updatechannel' may only be set from policy")
+  # The same Registry key as policy.c (examples/c/CMakeLists.txt).
+  set_tests_properties(example.policy_cpp
+                       PROPERTIES RESOURCE_LOCK registry-ConfigForgeExample)
 else()
   add_test(NAME example.policy_cpp COMMAND policy_cpp)
 endif()

@@ -68,10 +68,11 @@
     },
     {
       "name": "minimal",
-      "displayName": "Every optional part but the codecs off, short limits, a 1 KB stack budget, -Os",
+      "displayName": "Every optional part but the codecs off, short limits, a 1 KB stack budget, -Os, unused sections dropped",
       "binaryDir": "${sourceDir}/build-minimal",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "MinSizeRel",
+        "CF_GC_SECTIONS": "ON",
         "CF_WITH_REAL": "OFF",
         "CF_WITH_DIR": "OFF",
         "CF_WITH_DOTENV": "OFF",

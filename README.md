@@ -224,13 +224,13 @@ build does. `scripts/README.md` lists the options.
 | `coverage` | line coverage of the library, held above a floor (`EXTRA=coverage`) |
 | `minimal` | every optional part but the codecs off, short limits (64-byte keys) and a 1024-byte stack budget, for very small targets; built `-Os` |
 
-`portable` and `minimal` are optimised on purpose: inlining merges frames, so a stack
+`minimal` also drops every function and object no program reaches (`CF_GC_SECTIONS`): a third of a small program's size. `CF_LTO` is link-time optimisation, off by default, since the stack budget cannot measure its frames. `portable` and `minimal` are optimised on purpose: inlining merges frames, so a stack
 frame that fits in a Debug build can break the budget in a release one.
 
 Options: `CF_WITH_INI` `CF_WITH_JSON` `CF_WITH_TOML` `CF_WITH_PROPERTIES` `CF_WITH_XML` `CF_WITH_SQLITE`
 `CF_WITH_REAL` `CF_WITH_DIR` `CF_WITH_DOTENV` `CF_WITH_EMIT` `CF_WITH_IMAGE`
 `CF_WITH_REPORT` `CF_WITH_CXX` `CF_WITH_YAML` `CF_PLATFORM` `CF_FORCE_PORTABLE`
-`CF_SINGLE_THREADED` `CF_HARDEN` `CF_RUST` `CF_BUILD_TOOLS`, and the limits
+`CF_SINGLE_THREADED` `CF_HARDEN` `CF_RUST` `CF_BUILD_TOOLS` `CF_GC_SECTIONS` `CF_LTO`, and the limits
 below.
 
 ### Leaving parts out

@@ -205,6 +205,10 @@ if(WIN32)
     "font 12, theme dark, channel stable"
     "policy +12 +selected"
     "nightly.  +rejected: policy: 'updatechannel' may only be set from policy")
+  # It and policy_cpp write the same Registry key: one at a time, or a
+  # parallel ctest has one read what the other is rewriting.
+  set_tests_properties(example.policy PROPERTIES RESOURCE_LOCK
+                                                 registry-ConfigForgeExample)
 else()
   add_test(NAME example.policy COMMAND policy)
 endif()
