@@ -32,7 +32,7 @@ pub mod sys;
 mod typed;
 
 pub use edit::{Edit, EditValue};
-pub use live::{Live, LiveReader, Mode, Reload, Status};
+pub use live::{Live, LiveReader, Mode, Options as LiveOptions, Reload, Status};
 pub use log::{Level, LogEvent};
 pub use typed::{Field, Key, Value};
 

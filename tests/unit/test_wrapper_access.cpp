@@ -13,8 +13,7 @@
 #include <string>
 
 static int  g_fail = 0, g_run = 0;
-static void check(bool c, const char* what)
-{
+static void check(bool c, const char* what) {
     ++g_run;
     if (!c) {
         ++g_fail;
@@ -27,10 +26,9 @@ static const cf::Key<std::string> kHost("server.host", "0.0.0.0");
 static const cf::Key<bool>        kTls("tls.enabled", false);
 static const cf::Key<long>        kWorkers("server.workers", 4L, 1L, 64L);
 
-static void test_keys()
-{
+static void test_keys() {
     static const cf_pair pairs[] = {{"server.port", "9443"}, {"tls.enabled", "true"}};
-    cf::Config cfg = cf::Builder()
+    cf::Config           cfg     = cf::Builder()
                          .memory("file", CF_RANK_USER_FILE, pairs, 2)
                          .define(kPort)
                          .define(kHost)
@@ -44,16 +42,13 @@ static void test_keys()
     check(cfg[kWorkers] == 4L, "a long key");
 
     static const cf_pair bad[] = {{"server.port", "99999"}};
-    cf::Config refused = cf::Builder()
-                             .memory("file", CF_RANK_USER_FILE, bad, 1)
-                             .define(kPort)
-                             .create();
+    cf::Config           refused =
+        cf::Builder().memory("file", CF_RANK_USER_FILE, bad, 1).define(kPort).create();
     check(!refused && std::strstr(refused.error().message(), "65535") != 0,
           "and the key's range is the contract's");
 }
 
-static void test_settings()
-{
+static void test_settings() {
     static const cf_pair pairs[] = {
         {"server.port", "9443"}, {"server.host", "web1"}, {"tls.enabled", "true"}};
     cf::Config cfg = cf::Builder()
@@ -94,9 +89,8 @@ struct Settings {
     long   workers;
 };
 
-static void test_binding()
-{
-    static const cf_pair pairs[] = {{"server.port", "9443"}, {"tls.enabled", "true"}};
+static void test_binding() {
+    static const cf_pair  pairs[] = {{"server.port", "9443"}, {"tls.enabled", "true"}};
     cf::Binding<Settings> bind;
     bind.field("server.host", &Settings::server, &Server::host, "0.0.0.0")
         .field("server.port", &Settings::server, &Server::port, 8080, 1, 65535)
@@ -104,10 +98,8 @@ static void test_binding()
         .field("server.workers", &Settings::workers, 4L, 1L, 64L);
     check(bind.size() == 4, "four fields");
 
-    cf::Config cfg = cf::Builder()
-                         .memory("file", CF_RANK_USER_FILE, pairs, 2)
-                         .define(bind)
-                         .create();
+    cf::Config cfg =
+        cf::Builder().memory("file", CF_RANK_USER_FILE, pairs, 2).define(bind).create();
     check(cfg.valid(), "the binding is the contract");
     Settings settings = bind.read(cfg);
     check(settings.server.port == 9443, "settings.server.port");
@@ -116,19 +108,16 @@ static void test_binding()
     check(settings.workers == 4L, "a long field");
 
     static const cf_pair bad[] = {{"server.port", "0"}};
-    cf::Config refused = cf::Builder()
-                             .memory("file", CF_RANK_USER_FILE, bad, 1)
-                             .define(bind)
-                             .create();
+    cf::Config           refused =
+        cf::Builder().memory("file", CF_RANK_USER_FILE, bad, 1).define(bind).create();
     check(!refused, "a field's range refuses as a definition's does");
 }
 
-static const cf_pair  g_v1[]  = {{"server.port", "8080"}, {"log.level", "info"}};
-static const cf_pair  g_v2[]  = {{"server.port", "9443"}, {"log.level", "debug"}};
+static const cf_pair  g_v1[] = {{"server.port", "8080"}, {"log.level", "info"}};
+static const cf_pair  g_v2[] = {{"server.port", "9443"}, {"log.level", "debug"}};
 static const cf_pair* g_live = g_v1;
 
-static cf_builder* build_live(void*)
-{
+static cf_builder* build_live(void*) {
     return cf::Builder()
         .memory("mem", CF_RANK_USER_FILE, g_live, 2)
         .defineInt("server.port", 8080, 1, 65535, CF_RESTART)
@@ -136,38 +125,55 @@ static cf_builder* build_live(void*)
         .release();
 }
 
-static void test_live()
-{
+static void test_live() {
     g_live = g_v1;
     cf::Live live(CF_LIVE_APPROVE, build_live);
     check(live.valid() && live.generation() == 1, "a Live opens");
     g_live = g_v2;
-    check(live.reload() == CF_LIVE_PENDING && live.pending().text("log.level") == "debug",
+    check(live.reload() == CF_LIVE_PENDING &&
+              live.pending().text("log.level") == "debug",
           "a change waits, and can be looked at");
     check(live.get().text("log.level") == "info", "readers do not see it yet");
     check(live.approve() == CF_LIVE_SWAPPED && live.get().text("log.level") == "debug",
           "approved, they do");
-    check(live.get()["server.port"].as<int>() == 8080 && live.restarts() == "server.port\n",
+    check(live.get()["server.port"].as<int>() == 8080 &&
+              live.restarts() == "server.port\n",
           "the port waits for a restart");
     check(!live.pending().valid(), "nothing pending after");
     check(live.status().reloads == 1 && live.status().generation == 2 &&
               live.status().failures == 0,
           "and the status counts it");
     check(live.lastError().code() == CF_OK, "no failure, no error");
+    {
+        cf_live_options o = CF_LIVE_OPTIONS_INIT;
+        o.build           = build_live;
+        o.probation       = 2;
+        g_live            = g_v1;
+        cf::Live onp(o);
+        g_live = g_v2;
+        check(onp.valid() && onp.reload() == CF_LIVE_SWAPPED && onp.status().probation,
+              "a Live from options puts a swap on probation");
+        check(onp.rollback("a test") == CF_LIVE_ROLLED_BACK &&
+                  onp.get().text("log.level") == "info" && onp.status().rollbacks == 1,
+              "and rolls it back");
+        check(!onp.confirm() && onp.reload() == CF_LIVE_SWAPPED && onp.confirm(),
+              "confirm keeps the one readers have");
+    }
 #if CF_CPP11
-    g_live = g_v1;
+    g_live         = g_v1;
     int      built = 0;
-    cf::Live fn(CF_LIVE_MANUAL,
-                [&built]() {
-                    ++built;
-                    return std::move(cf::Builder().memory("mem", CF_RANK_USER_FILE, g_live, 2));
-                },
-                [](const cf_config*, const cf_config* next, cf_error* err) {
-                    if (cf_get_text(next, "log.level", "")[0] == 'd') {
-                        return cf_error_set(err, CF_E_POLICY, "log.level", 0, "no debug") != 0;
-                    }
-                    return true;
-                });
+    cf::Live fn(
+        CF_LIVE_MANUAL,
+        [&built]() {
+            ++built;
+            return std::move(cf::Builder().memory("mem", CF_RANK_USER_FILE, g_live, 2));
+        },
+        [](const cf_config*, const cf_config* next, cf_error* err) {
+            if (cf_get_text(next, "log.level", "")[0] == 'd') {
+                return cf_error_set(err, CF_E_POLICY, "log.level", 0, "no debug") != 0;
+            }
+            return true;
+        });
     g_live = g_v2;
     check(fn.valid() && fn.reload() == CF_LIVE_FAILED && built == 2 &&
               std::string(fn.error().message()).find("no debug") != std::string::npos,
@@ -175,19 +181,20 @@ static void test_live()
 
     /* A throw inside a build or a check must not unwind through C. */
     int      calls = 0;
-    cf::Live thrower(CF_LIVE_MANUAL,
-                     [&calls]() {
-                         if (++calls == 2) {
-                             throw std::runtime_error("no builder today");
-                         }
-                         return std::move(cf::Builder().memory("mem", CF_RANK_USER_FILE, g_live, 2));
-                     },
-                     [&calls](const cf_config*, const cf_config*, cf_error*) -> bool {
-                         if (calls > 2) {
-                             throw std::runtime_error("no check today");
-                         }
-                         return true;
-                     });
+    cf::Live thrower(
+        CF_LIVE_MANUAL,
+        [&calls]() {
+            if (++calls == 2) {
+                throw std::runtime_error("no builder today");
+            }
+            return std::move(cf::Builder().memory("mem", CF_RANK_USER_FILE, g_live, 2));
+        },
+        [&calls](const cf_config*, const cf_config*, cf_error*) -> bool {
+            if (calls > 2) {
+                throw std::runtime_error("no check today");
+            }
+            return true;
+        });
     check(thrower.valid() && thrower.reload() == CF_LIVE_FAILED,
           "a build that throws is a build that failed");
     check(thrower.reload() == CF_LIVE_FAILED &&
@@ -197,8 +204,7 @@ static void test_live()
 #endif
 }
 
-static void test_edit()
-{
+static void test_edit() {
     cf::Config cfg = cf::Builder().memory("mem", CF_RANK_USER_FILE, g_v1, 2).create();
     cf::Error  err;
     cf::Edit   e(cfg, "mem");
@@ -213,19 +219,18 @@ static void test_edit()
     } /* dropped without a commit: nothing written, nothing leaked */
 }
 
-static void test_lists()
-{
+static void test_lists() {
     static const cf_pair pairs[] = {{"tags.count", "1"}, {"tags.0", "source"}};
-    cf_def d;
-    cf_value value;
+    cf_def               d;
+    cf_value             value;
     cf_def_init(&d, CF_TYPE_TEXT, "tags");
-    d.list_mode = CF_LIST_APPEND;
+    d.list_mode   = CF_LIST_APPEND;
     d.has_default = CF_TRUE;
     cf_value_text(&value, "base", 4);
-    d.list_defaults = &value;
+    d.list_defaults      = &value;
     d.list_default_count = 1;
-    cf::Config cfg = cf::Builder().define(d)
-                         .memory("file", CF_RANK_USER_FILE, pairs, 2).create();
+    cf::Config cfg =
+        cf::Builder().define(d).memory("file", CF_RANK_USER_FILE, pairs, 2).create();
     check(cfg.valid(), "the full-definition C++ API accepts a list contract");
     check(cfg["tags.count"].as<int>() == 2 &&
               cfg["tags.0"].as<std::string>() == "base" &&
@@ -233,8 +238,7 @@ static void test_lists()
           "existing C++ typed reads access the appended elements");
 }
 
-int main()
-{
+int main() {
     test_keys();
     test_settings();
     test_binding();

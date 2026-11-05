@@ -11,8 +11,7 @@
 
 static const char* const kFile = "gateway.ini";
 
-static cf_builder* build(void*)
-{
+static cf_builder* build(void*) {
     return cf::Builder()
         .file("gateway.ini", CF_RANK_USER_FILE, kFile)
         .defineInt("server.port", 8080, 1, 65535, CF_RESTART)
@@ -21,8 +20,7 @@ static cf_builder* build(void*)
         .release();
 }
 
-static bool write_file(const char* text)
-{
+static bool write_file(const char* text) {
     std::FILE* f = std::fopen(kFile, "wb");
     if (f == 0) {
         return false;
@@ -32,16 +30,41 @@ static bool write_file(const char* text)
     return true;
 }
 
-static void serve(const cf::Live& live)
-{
+static void serve(const cf::Live& live) {
     cf::Config cfg = live.get(); /* one request, one snapshot */
     std::printf("serving on :%d, log %s, %d requests a minute\n",
                 cfg["server.port"].as<int>(), cfg.text("log.level").c_str(),
                 cfg["limit"]["per_minute"].as<int>());
 }
 
-int main()
-{
+/* 4. Probation: valid, and still wrong. */
+static int probation() {
+    write_file("[server]\nport = 8080\n");
+    cf_live_options o = CF_LIVE_OPTIONS_INIT;
+    o.mode            = CF_LIVE_AUTO;
+    o.build           = build;
+    o.probation       = 3; /* three polls of the loop */
+    cf::Live live(o);
+    if (!live.valid()) {
+        std::fprintf(stderr, "live: %s\n", live.error().message());
+        return 1;
+    }
+    write_file("[server]\nport = 8080\n[limit]\nper_minute = 6\n");
+    std::printf("4. reload on probation: %s\n",
+                live.wait(2000) == CF_LIVE_SWAPPED ? "swapped" : "not swapped");
+    serve(live);
+    std::printf("%s: errors doubled\n",
+                live.rollback("errors doubled after the change") == CF_LIVE_ROLLED_BACK
+                    ? "rolled back"
+                    : "kept");
+    serve(live);
+    std::printf("the same file again: %s\n",
+                live.poll() == CF_LIVE_UNCHANGED ? "unchanged" : "taken");
+    std::remove(kFile);
+    return 0;
+}
+
+int main() {
     if (!write_file("[server]\nport = 8080\n")) {
         return 1;
     }
@@ -81,12 +104,10 @@ int main()
 
     /* 3. A broken edit */
     write_file("[server]\nport = 8080\n[limit]\nper_minute = lots\n");
-    cf::Error err;
+    cf::Error      err;
     cf_live_result r = live.wait(2000, &err);
     std::printf("3. reload %s: %s\n", r == CF_LIVE_FAILED ? "refused" : "accepted?",
                 err.message());
     serve(live);
-
-    std::remove(kFile);
-    return 0;
+    return probation();
 }

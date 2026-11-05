@@ -7,6 +7,18 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- Probation for a reload: with `probation` set in `cf_live_options`, a
+  swap keeps the snapshot it replaced for that many polls.
+  `cf_live_rollback` returns readers to it, as does a `health` function
+  that answers false at one of those polls; `cf_live_confirm`, or the
+  last poll, ends it. A rollback is a new generation, a
+  `"reload-rolled-back"` event with its reason, and a count in
+  `cf_live_status` (`rollbacks`, `probation`), and the file it came from
+  is not swapped in again until it changes. `CF_LIVE_ROLLED_BACK` is a
+  new result. Off by default; an options struct of 1.0's size is read
+  as 1.0's. C++, Rust (`LiveOptions`) and Python have the same, and
+  the live example a fourth scene.
+
 - API reference entries link directly to their implementation lines,
   including platform variants. The reference gate checks the targets
   against source, keeping the Markdown usable without a site generator.

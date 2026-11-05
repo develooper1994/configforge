@@ -48,7 +48,8 @@ typedef struct cf_log_event {
     const char*  event;  /* stable: "unknown-key", "deprecated-key",
                             "fallback", "reload", "reload-pending",
                             "reload-failed", "restart-pending",
-                            "edit-refused"                            */
+                            "edit-refused", "reload-rolled-back",
+                            "reload-confirmed"                        */
     cf_code     code;    /* CF_OK, or the error a failure carried     */
     const char* key;     /* the key it is about, or NULL              */
     const char* source;  /* the source, or where the value was set    */

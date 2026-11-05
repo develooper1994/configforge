@@ -279,6 +279,38 @@ class Reloading(unittest.TestCase):
             self.assertIn("lots", st.last_error.message)
         self.assertEqual(cfg.server.port, 8080, "a snapshot outlives its Live")
 
+    def test_probation_and_rollback(self):
+        healthy = [True]
+
+        def health(cfg):
+            if not healthy[0]:
+                raise RuntimeError("upstream answered 503 with debug=%s" % cfg.app.debug)
+            return True
+
+        with cf.Live(cf.Mode.AUTO, self.build, probation=2, health=health) as live:
+            self.write("[app]\ndebug = true\n")
+            self.assertEqual(live.poll(), cf.Reload.SWAPPED)
+            self.assertTrue(live.status.probation)
+            self.assertEqual(live.rollback("errors doubled"), cf.Reload.ROLLED_BACK)
+            self.assertIs(live.get().app.debug, False, "back to the snapshot before")
+            self.assertEqual(live.poll(), cf.Reload.UNCHANGED,
+                             "the file it rolled back from does not come back")
+            self.assertIs(live.get().app.debug, False)
+            st = live.status
+            self.assertEqual((st.rollbacks, st.probation, st.last), (1, False, cf.Reload.ROLLED_BACK))
+            with self.assertRaises(cf.Error):
+                live.rollback()
+            self.assertEqual(live.reload(), cf.Reload.SWAPPED, "asked for, it is a retry")
+            healthy[0] = False
+            self.assertEqual(live.poll(), cf.Reload.ROLLED_BACK, "the health function says no")
+            self.assertIs(live.get().app.debug, False)
+            healthy[0] = True
+            self.write("[app]\nworkers = 3\n")
+            self.assertEqual(live.poll(), cf.Reload.SWAPPED)
+            self.assertTrue(live.confirm())
+            self.assertFalse(live.status.probation)
+            self.assertFalse(live.confirm(), "nothing left to confirm")
+
     def test_reloads_do_not_keep_every_builds_strings(self):
         with cf.Live(cf.Mode.MANUAL, self.build) as live:
             for _ in range(50):

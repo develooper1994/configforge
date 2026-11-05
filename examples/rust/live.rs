@@ -6,7 +6,7 @@
 //!
 //!     cargo run --example live
 
-use configforge::{flag, rank, Builder, Error, Live, Mode, Reload};
+use configforge::{flag, rank, Builder, Error, Live, LiveOptions, Mode, Reload};
 use std::fs;
 use std::time::Duration;
 
@@ -78,6 +78,42 @@ fn main() -> Result<(), Error> {
         Ok(r) => println!("3. reload accepted? {:?}", r),
     }
     serve(&live);
+    drop(live);
+
+    // 4. Probation: valid, and still wrong
+    fs::write(FILE, "[server]\nport = 8080\n").expect("write");
+    let options = LiveOptions::new().probation(3); // three polls of the loop
+    let mut live = Live::open_with(Mode::Auto, build, options)?;
+    fs::write(FILE, "[server]\nport = 8080\n[limit]\nper_minute = 6\n").expect("write");
+    let r = live.wait(Duration::from_secs(2))?;
+    println!(
+        "4. reload on probation: {}",
+        if r == Reload::Swapped {
+            "swapped"
+        } else {
+            "not swapped"
+        }
+    );
+    serve(&live);
+    let r = live.rollback(Some("errors doubled after the change"))?;
+    println!(
+        "{}: errors doubled",
+        if r == Reload::RolledBack {
+            "rolled back"
+        } else {
+            "kept"
+        }
+    );
+    serve(&live);
+    let r = live.poll()?;
+    println!(
+        "the same file again: {}",
+        if r == Reload::Unchanged {
+            "unchanged"
+        } else {
+            "taken"
+        }
+    );
 
     let _ = fs::remove_file(FILE);
     Ok(())

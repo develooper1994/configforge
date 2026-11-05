@@ -178,5 +178,10 @@ if(CF_WITH_INI)
     "limit.per_minute: 600 -> 60"
     "operator: approved"
     "serving on :8080, log info, 60 requests"
-    "3. reload refused: limit.per_minute: .lots. is not a valid int")
+    "3. reload refused: limit.per_minute: .lots. is not a valid int"
+    "4. reload on probation: swapped"
+    "serving on :8080, log info, 6 requests"
+    "rolled back: errors doubled"
+    "serving on :8080, log info, 600 requests"
+    "the same file again: unchanged")
 endif()

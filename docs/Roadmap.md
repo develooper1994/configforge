@@ -77,21 +77,14 @@ version, so main's unreleased "1.0.1" - which already adds features - is
 it, `verify` passes at tier 1 on Linux and Windows, and the CHANGELOG,
 Guide and API reference say what it does.
 
-1. **A reload on probation, rolled back by itself.** After a swap,
-   `cf_live` keeps the previous snapshot for a probation interval set
-   in `cf_live_options` (a new member, as D-51 allows). If the program
-   reports the new configuration unhealthy within it -
-   `cf_live_reject(l, reason, err)`, or a health callback in the
-   options - readers get the previous snapshot back, the status counts a
-   rollback, and the log has a `"reload-rolled-back"` event naming the
-   reason. A rollback is a reload like any other: it goes through no
-   build, and the restart-only keys it would change are reported as the
-   swap's were. After the interval the previous snapshot is released.
-   Design.md section 58 lists rollback as a future direction; this is
-   its smallest useful form, for one process, not cross-source
-   transactions. Tests: rejected in time, accepted by timeout, rejected
-   after timeout (refused), APPROVE mode, the Rust and Python bindings,
-   and `examples/c/live.c` showing it.
+1. **A reload on probation, rolled back by itself** - done. Probation is
+   counted in polls, not time: the library has no clock (C89), and the
+   program's poll interval is the unit. `cf_live_rollback` (the name
+   `cf_live_reject` was taken by APPROVE) and `cf_live_confirm`, a
+   `health` function and `probation` in `cf_live_options`,
+   `CF_LIVE_ROLLED_BACK`, `rollbacks` and `probation` in the status;
+   a poll does not swap back in the values a rollback came from. Guide
+   section 10, scene 4 of the live examples, `test_live`.
 2. **Doctor on a pull request.** A composite GitHub Action and a
    pre-commit hook, both in this repository, that build or download
    Doctor, run `doctor diff` (and `doctor lint` against the

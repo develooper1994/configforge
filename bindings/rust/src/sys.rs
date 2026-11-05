@@ -43,6 +43,8 @@ pub const CF_LIVE_FAILED: c_int = -1;
 pub const CF_LIVE_UNCHANGED: c_int = 0;
 pub const CF_LIVE_SWAPPED: c_int = 1;
 pub const CF_LIVE_PENDING: c_int = 2;
+pub const CF_LIVE_ROLLED_BACK: c_int = 3;
+pub const CF_E_POLICY: c_int = 8;
 
 pub const CF_UNKNOWN_IGNORE: c_int = 0;
 pub const CF_UNKNOWN_WARN: c_int = 1;
@@ -173,6 +175,8 @@ pub struct cf_live_status {
     pub failures: u64,
     pub last: c_int,
     pub pending: cf_bool,
+    pub rollbacks: u64,
+    pub probation: cf_bool,
 }
 
 #[repr(C)]
@@ -200,7 +204,16 @@ pub struct cf_live_options {
     pub log: Option<cf_log_fn>,
     pub log_user: *mut std::ffi::c_void,
     pub log_min: c_int,
+    pub health: Option<cf_live_health_fn>,
+    pub health_user: *mut std::ffi::c_void,
+    pub probation: std::os::raw::c_uint,
 }
+
+pub type cf_live_health_fn = extern "C" fn(
+    user: *mut std::ffi::c_void,
+    running: *const cf_config,
+    err: *mut cf_error,
+) -> cf_bool;
 
 pub type cf_live_build_fn = extern "C" fn(user: *mut std::ffi::c_void) -> *mut cf_builder;
 
@@ -391,6 +404,8 @@ extern "C" {
     pub fn cf_live_pending(l: *const cf_live) -> *const cf_config;
     pub fn cf_live_approve(l: *mut cf_live, err: *mut cf_error) -> c_int;
     pub fn cf_live_reject(l: *mut cf_live);
+    pub fn cf_live_rollback(l: *mut cf_live, reason: *const c_char, err: *mut cf_error) -> c_int;
+    pub fn cf_live_confirm(l: *mut cf_live) -> cf_bool;
     pub fn cf_live_generation(l: *mut cf_live) -> u64;
     pub fn cf_live_restarts(l: *const cf_live, buf: *mut c_char, cap: usize) -> usize;
     pub fn cf_live_status_get(l: *mut cf_live, out: *mut cf_live_status) -> cf_bool;

@@ -7,6 +7,7 @@
 #include "configforge/configforge.h"
 #include "configforge/cf_live.h"
 
+#include <stddef.h>
 #include <string.h>
 
 struct cf_live {
@@ -40,6 +41,20 @@ struct cf_live {
     char*       pending_restarts;
     size_t      pending_restarts_len;
     cf_watcher* watcher;
+
+    /* Probation, the driving thread's too. `kept` is the snapshot the
+       first swap of a probation replaced, with its restart list; `left`
+       the polls until it is released. `rejected` is what a rollback came
+       from, held so that a poll can tell the same values again from a
+       real change, and released by one. */
+    cf_live_health_fn health;
+    void*             health_user;
+    unsigned          probation;
+    cf_config*        kept;
+    char*             kept_restarts;
+    size_t            kept_restarts_len;
+    unsigned          left;
+    cf_config*        rejected;
 };
 
 /* A ticket lock, made of the atomics the port has: take the next
@@ -260,24 +275,50 @@ static void live_watch(cf_live* l) {
     l->watcher = cf_watcher_open(l->current, l->a, NULL);
 }
 
+static void live_drop_kept(cf_live* l) {
+    cf_config_free(l->kept);
+    live_release(l, l->kept_restarts);
+    l->kept              = NULL;
+    l->kept_restarts     = NULL;
+    l->kept_restarts_len = 0;
+    l->left              = 0;
+}
+
 /* Readers get `next` from now on; `quiet` says it is the same values
    (a neighbour woke the watcher, or a file was touched), so the stamps
-   move on and the generation does not. */
+   move on and the generation does not. A swap that is not quiet starts
+   a probation where one is set: the snapshot it replaces is kept,
+   unless one already is - that one was confirmed, this one never was. */
 static void live_swap(cf_live* l, cf_config* next, char* list, size_t list_len,
                       cf_bool quiet) {
     cf_config* old;
     char*      old_list;
+    size_t     old_len;
+    cf_bool    keep = (!quiet && l->probation > 0) ? CF_TRUE : CF_FALSE;
 
     live_lock(l);
     old             = l->current;
     old_list        = l->restarts;
+    old_len         = l->restarts_len;
     l->current      = next;
     l->restarts     = list;
     l->restarts_len = list_len;
     l->generation += quiet ? 0u : 1u;
+    if (keep) {
+        l->status.probation = CF_TRUE;
+    }
     live_unlock(l);
-    cf_config_free(old); /* a reader holding it keeps it */
-    live_release(l, old_list);
+    if (keep && l->kept == NULL) {
+        l->kept              = old;
+        l->kept_restarts     = old_list;
+        l->kept_restarts_len = old_len;
+    } else {
+        cf_config_free(old); /* a reader holding it keeps it */
+        live_release(l, old_list);
+    }
+    if (keep) {
+        l->left = l->probation;
+    }
     live_watch(l);
 }
 
@@ -296,6 +337,19 @@ static cf_live_result live_rebuild_once(cf_live* l, cf_error* err) {
 
     if (next == NULL) {
         return CF_LIVE_FAILED;
+    }
+    if (l->rejected != NULL) {
+        cf_bool again =
+            (cf_digest(next) == cf_digest(l->rejected)) ? CF_TRUE : CF_FALSE;
+        cf_config_free(l->rejected);
+        l->rejected = NULL;
+        if (again) {
+            /* The same values as were rolled back from: held, with the
+               files' new stamps, so the next poll waits for a change. */
+            l->rejected = next;
+            live_release(l, list);
+            return CF_LIVE_UNCHANGED;
+        }
     }
     if (cf_digest(next) == cf_digest(l->current) && list_len == l->restarts_len &&
         (list_len == 0 || memcmp(list, l->restarts, list_len) == 0)) {
@@ -377,7 +431,9 @@ static cf_live_result live_record(cf_live* l, cf_live_result r, cf_bool rebuilt,
                  l->scratch.message);
     } else if (l->log != NULL) {
         char msg[64];
-        if (r == CF_LIVE_SWAPPED) {
+        if (r == CF_LIVE_ROLLED_BACK) {
+            /* logged by live_rollback, with its reason */
+        } else if (r == CF_LIVE_SWAPPED) {
             cf_fmt(msg, sizeof msg, "generation %U serving", l->status.generation);
             live_log(l, CF_LOG_INFO, "reload", CF_OK, NULL, msg);
             live_log_restarts(l);
@@ -389,6 +445,71 @@ static cf_live_result live_record(cf_live* l, cf_live_result r, cf_bool rebuilt,
         }
     }
     return r;
+}
+
+/* Readers get the kept snapshot again. The one rolled back from is held
+   as `rejected`, its stamps the files' as they are now. */
+static cf_live_result live_rollback(cf_live* l, const char* reason, cf_error* err) {
+    cf_config* from;
+    char*      from_list;
+    char       msg[CF_MESSAGE_MAX];
+
+    live_lock(l);
+    from            = l->current;
+    from_list       = l->restarts;
+    l->current      = l->kept;
+    l->restarts     = l->kept_restarts;
+    l->restarts_len = l->kept_restarts_len;
+    l->generation += 1u;
+    l->status.probation = CF_FALSE;
+    ++l->status.rollbacks;
+    live_unlock(l);
+    l->kept              = NULL;
+    l->kept_restarts     = NULL;
+    l->kept_restarts_len = 0;
+    l->left              = 0;
+    cf_config_free(l->rejected);
+    l->rejected = from; /* a reader holding it keeps it */
+    live_release(l, from_list);
+    live_watch(l);
+    cf_fmt(msg, sizeof msg, "generation %U serving the snapshot before: %s",
+           l->generation,
+           (reason != NULL && reason[0] != '\0') ? reason : "rolled back");
+    live_log(l, CF_LOG_WARN, "reload-rolled-back", CF_OK, NULL, msg);
+    return live_record(l, CF_LIVE_ROLLED_BACK, CF_FALSE, err);
+}
+
+static void live_confirm(cf_live* l) {
+    live_drop_kept(l);
+    live_lock(l);
+    l->status.probation = CF_FALSE;
+    live_unlock(l);
+    live_log(l, CF_LOG_INFO, "reload-confirmed", CF_OK, NULL,
+             "probation over; the snapshot before is released");
+}
+
+/* One poll of a probation: ask the health function, then count. */
+static cf_live_result live_probation(cf_live* l, cf_error* err) {
+    if (l->kept == NULL) {
+        return CF_LIVE_UNCHANGED;
+    }
+    if (l->health != NULL) {
+        cf_config* c   = cf_live_get(l);
+        cf_error   why = CF_ERROR_INIT;
+        cf_bool    ok  = l->health(l->health_user, c, &why);
+        cf_config_free(c);
+        if (!ok) {
+            return live_rollback(l, why.message[0] != '\0' ? why.message : "unhealthy",
+                                 err);
+        }
+    }
+    if (l->left > 0) {
+        --l->left;
+    }
+    if (l->left == 0) {
+        live_confirm(l);
+    }
+    return CF_LIVE_UNCHANGED;
 }
 
 static cf_live_result live_rebuild(cf_live* l, cf_error* err) {
@@ -414,9 +535,25 @@ cf_live* cf_live_open(cf_live_mode mode, cf_live_build_fn build, cf_live_check_f
     return cf_live_open_with(&o, err);
 }
 
-/* cf_live_options as 1.0 has it; a later member is read only where
-   o->size reaches it. */
-#define LIVE_OPTIONS_SIZE_1_0 sizeof(cf_live_options)
+/* cf_live_options as 1.0 has it: the smallest a caller may pass, and
+   the end past which a member is read only where o->size reaches it.
+   1.1's first member is a pointer, so it starts past 1.0's padding. */
+typedef struct live_options_1_0 {
+    size_t              size;
+    cf_live_mode        mode;
+    cf_live_build_fn    build;
+    void*               build_user;
+    cf_live_check_fn    check;
+    void*               check_user;
+    const cf_allocator* allocator;
+    cf_log_fn           log;
+    void*               log_user;
+    cf_log_level        log_min;
+} live_options_1_0;
+#define LIVE_OPTIONS_SIZE_1_0 sizeof(live_options_1_0)
+#define LIVE_OPTIONS_HAS(o, m)                                                         \
+    (offsetof(cf_live_options, m) >= LIVE_OPTIONS_SIZE_1_0 &&                          \
+     (o)->size >= offsetof(cf_live_options, m) + sizeof((o)->m))
 
 cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err) {
     cf_live*            l;
@@ -463,6 +600,11 @@ cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err) {
     l->log        = o->log;
     l->log_user   = o->log_user;
     l->log_min    = o->log_min;
+    if (LIVE_OPTIONS_HAS(o, probation)) {
+        l->health      = o->health;
+        l->health_user = o->health_user;
+        l->probation   = o->probation;
+    }
     cf_ref_init(&l->ticket_next, 0);
     cf_ref_init(&l->ticket_serving, 0);
     l->current = live_build(l, NULL, &list, &list_len, err);
@@ -487,6 +629,8 @@ void cf_live_close(cf_live* l) {
         return;
     }
     live_drop_pending(l);
+    live_drop_kept(l);
+    cf_config_free(l->rejected);
     cf_watcher_close(l->watcher);
     cf_config_free(l->current);
     live_release(l, l->restarts);
@@ -513,12 +657,19 @@ cf_live_result cf_live_poll(cf_live* l, cf_error* err) {
         cf_error_set(err, CF_E_CAPABILITY, NULL, NULL, "no reloads to poll");
         return CF_LIVE_FAILED;
     }
+    /* Probation counts in every mode: a MANUAL program polls for it. */
+    if (live_probation(l, err) == CF_LIVE_ROLLED_BACK) {
+        return CF_LIVE_ROLLED_BACK;
+    }
     if (l->mode == CF_LIVE_MANUAL) {
         return CF_LIVE_UNCHANGED;
     }
     /* A change waiting for approval is the newest the program knows of,
-       so an edit after it replaces it rather than being lost behind it. */
-    watched = (l->pending != NULL) ? l->pending : l->current;
+       so an edit after it replaces it rather than being lost behind it;
+       after a rollback, the files as they were rolled back from. */
+    watched = (l->pending != NULL)    ? l->pending
+              : (l->rejected != NULL) ? l->rejected
+                                      : l->current;
     if (!cf_changed(watched)) {
         return CF_LIVE_UNCHANGED;
     }
@@ -530,6 +681,9 @@ cf_live_result cf_live_reload(cf_live* l, cf_error* err) {
         cf_error_set(err, CF_E_CAPABILITY, NULL, NULL, "no reloads to reload");
         return CF_LIVE_FAILED;
     }
+    /* Asked for, so a retry: values a rollback came from may come back. */
+    cf_config_free(l->rejected);
+    l->rejected = NULL;
     return live_rebuild(l, err);
 }
 
@@ -569,9 +723,27 @@ void cf_live_reject(cf_live* l) {
     }
 }
 
-/* cf_live_status as 1.0 has it: the smallest a caller may pass. When a
-   field is added, this stays the offset just past `pending`. */
-#define LIVE_STATUS_SIZE_1_0 sizeof(cf_live_status)
+cf_live_result cf_live_rollback(cf_live* l, const char* reason, cf_error* err) {
+    if (l == NULL || l->kept == NULL) {
+        cf_error_set(err, CF_E_CAPABILITY, NULL, NULL, "%s",
+                     (l == NULL) ? "no reloads to roll back"
+                                 : "no swap is on probation, so none to roll back");
+        return CF_LIVE_FAILED;
+    }
+    return live_rollback(l, reason, err);
+}
+
+cf_bool cf_live_confirm(cf_live* l) {
+    if (l == NULL || l->kept == NULL) {
+        return CF_FALSE;
+    }
+    live_confirm(l);
+    return CF_TRUE;
+}
+
+/* cf_live_status as 1.0 has it: the smallest a caller may pass, the
+   offset just past `pending`. */
+#define LIVE_STATUS_SIZE_1_0 offsetof(cf_live_status, rollbacks)
 
 cf_live_result cf_live_commit(cf_live* l, cf_edit* e, const char* note, cf_error* err) {
     if (l == NULL) {

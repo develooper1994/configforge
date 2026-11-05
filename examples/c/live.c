@@ -11,6 +11,10 @@
  *      what it changes and said yes.
  *   3. A broken edit. The reload fails and says why; the gateway keeps
  *      serving what it had.
+ *   4. Probation. An edit that is valid and still wrong - a limit far too
+ *      low - is swapped in on probation; the gateway sees its errors
+ *      double, rolls back, and the file that still says it is not taken
+ *      again.
  *
  * To run unattended, the program makes the edits itself.
  *
@@ -108,6 +112,32 @@ int main(void) {
     printf("3. reload %s: %s\n", r == CF_LIVE_FAILED ? "refused" : "accepted?",
            err.message);
     serve(live);
+
+    cf_live_close(live);
+
+    /* 4. Probation */
+    write_file("[server]\nport = 8080\n");
+    {
+        cf_live_options o = CF_LIVE_OPTIONS_INIT;
+        o.mode            = CF_LIVE_AUTO;
+        o.build           = build;
+        o.probation       = 3; /* three polls of the loop */
+        live              = cf_live_open_with(&o, &err);
+    }
+    if (live == NULL) {
+        fprintf(stderr, "live: %s\n", err.message);
+        return 1;
+    }
+    write_file("[server]\nport = 8080\n[limit]\nper_minute = 6\n");
+    r = cf_live_wait(live, 2000, &err);
+    printf("4. reload on probation: %s\n",
+           r == CF_LIVE_SWAPPED ? "swapped" : "not swapped");
+    serve(live);
+    r = cf_live_rollback(live, "errors doubled after the change", &err);
+    printf("%s: errors doubled\n", r == CF_LIVE_ROLLED_BACK ? "rolled back" : "kept");
+    serve(live);
+    r = cf_live_poll(live, &err);
+    printf("the same file again: %s\n", r == CF_LIVE_UNCHANGED ? "unchanged" : "taken");
 
     cf_live_close(live);
     remove(FILE_NAME);

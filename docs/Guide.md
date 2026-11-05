@@ -710,6 +710,49 @@ The gate is a struct the program fills, so it starts from its `_INIT`
 macro, which sets the `size` that lets 1.x add a member (D-51); one that
 did not is refused, by name.
 
+#### On probation, and back
+
+A check sees values; some mistakes only show in what the program does
+with them - a rate limit that is valid and far too low, a pool that is
+the right size for a database that is not there. With `probation` set
+in `cf_live_options`, each swap keeps the snapshot it replaced for that
+many polls. `cf_live_rollback` returns readers to it, as a new
+generation with a `"reload-rolled-back"` log event carrying the reason;
+a `health` function in the options, asked at each of those polls, does
+the same by answering false. `cf_live_confirm`, or the last poll, ends
+the probation. The unit is the program's own poll interval - the
+library has no clock - so ten polls a second apart is ten seconds.
+
+```c
+cf_live_options o = CF_LIVE_OPTIONS_INIT;
+o.mode      = CF_LIVE_AUTO;
+o.build     = build;
+o.probation = 3;
+live = cf_live_open_with(&o, &err);
+...
+if (errors_doubled())
+    cf_live_rollback(live, "errors doubled after the change", &err);
+```
+
+The file a rollback came from still says what it said, so a poll that
+rebuilds it finds the values it rolled back from and stays where it is
+until the file says something else; `cf_live_reload`, being asked for,
+is a retry. A second swap within a probation keeps the snapshot that
+was last confirmed, so a rollback never lands on one that never was.
+Scene 4 of `examples/c/live.c` - and its C++ and Rust twins - runs it:
+
+```text
+4. reload on probation: swapped
+serving on :8080, log info, 6 requests a minute
+rolled back: errors doubled
+serving on :8080, log info, 600 requests a minute
+the same file again: unchanged
+```
+
+`rollback()` and `confirm()` in C++, Rust and Python; Python takes
+`probation=` and `health=` (an exception's text is the reason), Rust
+`LiveOptions::new().probation(n).health(..)`.
+
 A health page asks `cf_live_status_get`, from any thread: the
 generation serving, how many rebuilds were tried and failed, what the
 last one did, whether a change waits for approval, and why the last

@@ -50,6 +50,22 @@
  * again. The held members remain pinned in derived views of that
  * snapshot; a fresh build after restart reads the new list normally.
  *
+ * Probation: a swap a program cannot vouch for until it has run on it -
+ * a pool that connects, a route that answers. With `probation` set in
+ * cf_live_options, the snapshot a swap replaced is kept, and for that
+ * many polls the new one is on probation: cf_live_rollback returns
+ * readers to the kept one, a `health` function asked at each of those
+ * polls does it by answering CF_FALSE, and cf_live_confirm, or the last
+ * of the polls, releases it. The library has no clock - C89 has none
+ * worth the name - so the program's own poll interval is the unit: ten
+ * polls a second apart is ten seconds. A swap during probation keeps the
+ * snapshot that was last confirmed, not the one under suspicion, and
+ * starts the count again. The files that were rolled back from still say
+ * what they said, so the values they build to are not swapped in again:
+ * a poll rebuilds them, finds the rejected values and stays where it is,
+ * until a file says something else. cf_live_reload is asked for, so it is
+ * a retry and may swap them in again.
+ *
  * cf_live_get may be called from any thread, at any time - in a build
  * with threads: a CF_SINGLE_THREADED build (cf_has_feature reports
  * "single-threaded") has one. The others belong to one thread at a
@@ -81,10 +97,12 @@ typedef enum cf_live_mode {
 
 /* What a poll, a reload or an approval did. */
 typedef enum cf_live_result {
-    CF_LIVE_FAILED    = -1, /* refused or failed; the running one stays */
-    CF_LIVE_UNCHANGED = 0,  /* nothing to do                           */
-    CF_LIVE_SWAPPED   = 1,  /* readers now get the new snapshot        */
-    CF_LIVE_PENDING   = 2   /* built, and waiting for cf_live_approve  */
+    CF_LIVE_FAILED      = -1, /* refused or failed; the running one stays */
+    CF_LIVE_UNCHANGED   = 0,  /* nothing to do                           */
+    CF_LIVE_SWAPPED     = 1,  /* readers now get the new snapshot        */
+    CF_LIVE_PENDING     = 2,  /* built, and waiting for cf_live_approve  */
+    CF_LIVE_ROLLED_BACK = 3   /* readers have the snapshot before the
+                                 last swap again (1.1)                   */
 } cf_live_result;
 
 /* A builder for the next snapshot: the same sources and contract each
@@ -97,6 +115,13 @@ typedef struct cf_builder* (*cf_live_build_fn)(void* user);
    program's, a log line. */
 typedef cf_bool (*cf_live_check_fn)(void* user, const struct cf_config* running,
                                     const struct cf_config* next, cf_error* err);
+
+/* Asked at each poll while a swap is on probation, about the snapshot
+   readers have; CF_FALSE, with `err` saying why, rolls it back, and the
+   reason is the log's. A test of what the program built on it, not of
+   the values: those were the check's. */
+typedef cf_bool (*cf_live_health_fn)(void* user, const struct cf_config* running,
+                                     cf_error* err);
 
 /* Everything cf_live_open_with takes, so 1.x can add a setting - a
    settle interval for a burst of writes, say - without another open
@@ -120,10 +145,17 @@ typedef struct cf_live_options {
     cf_log_fn    log;
     void*        log_user;
     cf_log_level log_min;
+
+    /* 1.1: probation, above. `health` may be NULL; `probation` 0, the
+       default, keeps no snapshot and changes nothing. Read only where
+       `size` reaches them. */
+    cf_live_health_fn health;
+    void*             health_user; /* given to health                  */
+    unsigned          probation;   /* polls a swap stays on probation  */
 } cf_live_options;
 
 /* clang-format off */
-#define CF_LIVE_OPTIONS_INIT {sizeof(cf_live_options), CF_LIVE_MANUAL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, CF_LOG_INFO}
+#define CF_LIVE_OPTIONS_INIT {sizeof(cf_live_options), CF_LIVE_MANUAL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, CF_LOG_INFO, NULL, NULL, 0}
 /* clang-format on */
 
 /* Builds and checks the first snapshot, and fails as that does. A size
@@ -178,6 +210,18 @@ CF_API const struct cf_config* cf_live_pending(const cf_live* l);
 CF_API cf_live_result          cf_live_approve(cf_live* l, cf_error* err);
 CF_API void                    cf_live_reject(cf_live* l);
 
+/* Readers get the snapshot the probationary swap replaced, and the
+   probation ends: CF_LIVE_ROLLED_BACK, the generation one more, a
+   "reload-rolled-back" event with `reason`. CF_LIVE_FAILED, with `err`
+   saying so and nothing else touched, when no swap is on probation.
+   `reason` may be NULL. (1.1) */
+CF_API cf_live_result cf_live_rollback(cf_live* l, const char* reason, cf_error* err);
+
+/* Ends the probation: the snapshot readers have is the one to keep, and
+   the one before it is released. False when none was on probation. A
+   "reload-confirmed" event. (1.1) */
+CF_API cf_bool cf_live_confirm(cf_live* l);
+
 /* How many snapshots readers have been given: 1 after open, one more a
    swap. A reader can tell that what it holds is no longer current. */
 CF_API cf_u64 cf_live_generation(cf_live* l);
@@ -200,6 +244,9 @@ typedef struct cf_live_status {
                                   rejection did; UNCHANGED after a
                                   rejection                              */
     cf_bool pending;           /* a change waits for cf_live_approve     */
+    /* 1.1 */
+    cf_u64  rollbacks; /* swaps undone, by cf_live_rollback or health   */
+    cf_bool probation; /* a swap is on probation now                    */
 } cf_live_status;
 
 /* Copies the status into `out`, whose `size` the caller sets, as far as

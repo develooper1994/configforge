@@ -57,7 +57,7 @@ Every error carries one of these codes, stable from 1.0;
 - [`cf_image.h`](#cf_imageh) - 10
 - [`cf_iterate.h`](#cf_iterateh) - 5
 - [`cf_keyspace.h`](#cf_keyspaceh) - 31
-- [`cf_live.h`](#cf_liveh) - 15
+- [`cf_live.h`](#cf_liveh) - 17
 - [`cf_log.h`](#cf_logh) - 1
 - [`cf_numeric.h`](#cf_numerich) - 7
 - [`cf_platform.h`](#cf_platformh) - 19
@@ -2110,6 +2110,22 @@ any member changes. Its resolved values are not appended or expanded
 again. The held members remain pinned in derived views of that
 snapshot; a fresh build after restart reads the new list normally.
 
+Probation: a swap a program cannot vouch for until it has run on it -
+a pool that connects, a route that answers. With `probation` set in
+cf_live_options, the snapshot a swap replaced is kept, and for that
+many polls the new one is on probation: cf_live_rollback returns
+readers to the kept one, a `health` function asked at each of those
+polls does it by answering CF_FALSE, and cf_live_confirm, or the last
+of the polls, releases it. The library has no clock - C89 has none
+worth the name - so the program's own poll interval is the unit: ten
+polls a second apart is ten seconds. A swap during probation keeps the
+snapshot that was last confirmed, not the one under suspicion, and
+starts the count again. The files that were rolled back from still say
+what they said, so the values they build to are not swapped in again:
+a poll rebuilds them, finds the rejected values and stays where it is,
+until a file says something else. cf_live_reload is asked for, so it is
+a retry and may swap them in again.
+
 cf_live_get may be called from any thread, at any time - in a build
 with threads: a CF_SINGLE_THREADED build (cf_has_feature reports
 "single-threaded") has one. The others belong to one thread at a
@@ -2119,7 +2135,7 @@ time, the one that drives the reloads.
 CF_NODISCARD CF_API cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err);
 ```
 
-Implementation: [`cf_live_open_with` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L421).
+Implementation: [`cf_live_open_with` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L558).
 
 Builds and checks the first snapshot, and fails as that does. A size
 below 1.0's is refused.
@@ -2129,7 +2145,7 @@ CF_NODISCARD CF_API cf_live* cf_live_open(cf_live_mode mode, cf_live_build_fn bu
 CF_API void cf_live_close(cf_live* l);
 ```
 
-Implementation: [`cf_live_open` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L404), [`cf_live_close` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L485).
+Implementation: [`cf_live_open` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L525), [`cf_live_close` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L627).
 
 The shorthand: one `user` for both functions. `check` may be NULL; `a`
 NULL is the default allocator.
@@ -2138,7 +2154,7 @@ NULL is the default allocator.
 CF_API struct cf_config* cf_live_get(cf_live* l);
 ```
 
-Implementation: [`cf_live_get` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L496).
+Implementation: [`cf_live_get` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L640).
 
 The current snapshot, with a reference the caller releases with
 cf_config_free. Any thread. A reader keeps the snapshot it got for as
@@ -2148,7 +2164,7 @@ long as it holds it, so one request sees one configuration.
 CF_API cf_live_result cf_live_poll(cf_live* l, cf_error* err);
 ```
 
-Implementation: [`cf_live_poll` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L509).
+Implementation: [`cf_live_poll` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L653).
 
 Under APPROVE and AUTO: if a file of the running snapshot (or of the
 one pending) has changed, rebuild. MANUAL: CF_LIVE_UNCHANGED.
@@ -2157,7 +2173,7 @@ one pending) has changed, rebuild. MANUAL: CF_LIVE_UNCHANGED.
 CF_API cf_live_result cf_live_reload(cf_live* l, cf_error* err);
 ```
 
-Implementation: [`cf_live_reload` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L528).
+Implementation: [`cf_live_reload` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L679).
 
 Rebuild now, in any mode, as if a file had changed: SWAPPED, PENDING
 under APPROVE, or UNCHANGED when the rebuild found the same values
@@ -2167,7 +2183,7 @@ under APPROVE, or UNCHANGED when the rebuild found the same values
 CF_API cf_live_result cf_live_wait(cf_live* l, long timeout_ms, cf_error* err);
 ```
 
-Implementation: [`cf_live_wait` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L536).
+Implementation: [`cf_live_wait` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L690).
 
 cf_live_poll after waiting up to `timeout_ms` for a file to change,
 on a watcher cf_live keeps open on the running snapshot's files. For
@@ -2181,7 +2197,7 @@ looping on it spins: use cf_live_reload there.
 CF_NODISCARD CF_API cf_live_result cf_live_commit(cf_live* l, struct cf_edit* e, const char* note, cf_error* err);
 ```
 
-Implementation: [`cf_live_commit` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L576).
+Implementation: [`cf_live_commit` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L748).
 
 Commit `e` (cf_edit.h) and reload, in one step: the change an
 administrator made reaches readers the way an edit to a file does,
@@ -2198,15 +2214,37 @@ CF_API cf_live_result cf_live_approve(cf_live* l, cf_error* err);
 CF_API void cf_live_reject(cf_live* l);
 ```
 
-Implementation: [`cf_live_pending` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L543), [`cf_live_approve` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L547), [`cf_live_reject` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L562).
+Implementation: [`cf_live_pending` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L697), [`cf_live_approve` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L701), [`cf_live_reject` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L716).
 
 The snapshot waiting for approval, or NULL; it stays the cf_live's.
+
+```c
+CF_API cf_live_result cf_live_rollback(cf_live* l, const char* reason, cf_error* err);
+```
+
+Implementation: [`cf_live_rollback` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L726).
+
+Readers get the snapshot the probationary swap replaced, and the
+probation ends: CF_LIVE_ROLLED_BACK, the generation one more, a
+"reload-rolled-back" event with `reason`. CF_LIVE_FAILED, with `err`
+saying so and nothing else touched, when no swap is on probation.
+`reason` may be NULL. (1.1)
+
+```c
+CF_API cf_bool cf_live_confirm(cf_live* l);
+```
+
+Implementation: [`cf_live_confirm` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L736).
+
+Ends the probation: the snapshot readers have is the one to keep, and
+the one before it is released. False when none was on probation. A
+"reload-confirmed" event. (1.1)
 
 ```c
 CF_API cf_u64 cf_live_generation(cf_live* l);
 ```
 
-Implementation: [`cf_live_generation` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L625).
+Implementation: [`cf_live_generation` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L797).
 
 How many snapshots readers have been given: 1 after open, one more a
 swap. A reader can tell that what it holds is no longer current.
@@ -2215,7 +2253,7 @@ swap. A reader can tell that what it holds is no longer current.
 CF_API size_t cf_live_restarts(const cf_live* l, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_live_restarts` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L637).
+Implementation: [`cf_live_restarts` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L809).
 
 The CF_RESTART keys whose new value waits for a restart, one a line,
 in `buf` as far as `cap` allows; the length it needs, 0 for none.
@@ -2224,7 +2262,7 @@ in `buf` as far as `cap` allows; the length it needs, 0 for none.
 CF_API cf_bool cf_live_status_get(cf_live* l, cf_live_status* out);
 ```
 
-Implementation: [`cf_live_status_get` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L592).
+Implementation: [`cf_live_status_get` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L764).
 
 Copies the status into `out`, whose `size` the caller sets, as far as
 it reaches (D-51): a caller built against a later, larger struct gets
@@ -2235,7 +2273,7 @@ asked for. False for a NULL, or a size smaller than 1.0's.
 CF_API cf_bool cf_live_last_error(cf_live* l, cf_error* err);
 ```
 
-Implementation: [`cf_live_last_error` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L607).
+Implementation: [`cf_live_last_error` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L779).
 
 The last failure's error, copied into `err` (cf_error_copy); false,
 and `err` cleared, when no reload has failed. Any thread.

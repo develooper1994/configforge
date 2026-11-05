@@ -17,6 +17,7 @@
 
 #include <configforge/configforge.h>
 
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -480,7 +481,212 @@ static void test_literal_pin(void) {
     cf_live_close(live);
 }
 
+/* Probation: what the program says about the snapshot it runs on. */
+static int     g_healthy = 1;
+static int     g_asked   = 0;
+static char    g_last_event[64];
+static char    g_last_message[CF_MESSAGE_MAX];
+static cf_bool health(void* user, const cf_config* running, cf_error* err) {
+    (void)user;
+    ++g_asked;
+    if (!g_healthy) {
+        return cf_error_set(err, CF_E_POLICY, NULL, NULL, "upstream answered 503 at %s",
+                            cf_get_text(running, "log.level", "?"));
+    }
+    return CF_TRUE;
+}
+static void remember(void* user, const cf_log_event* e) {
+    (void)user;
+    if (strncmp(e->event, "reload-", 7) == 0 && strcmp(e->event, "reload") != 0) {
+        strncpy(g_last_event, e->event, sizeof g_last_event - 1);
+        strncpy(g_last_message, e->message != NULL ? e->message : "",
+                sizeof g_last_message - 1);
+    }
+}
+
+static cf_live* open_probation(cf_live_mode mode, unsigned polls, cf_live_health_fn h) {
+    cf_error        err = CF_ERROR_INIT;
+    cf_live_options o   = CF_LIVE_OPTIONS_INIT;
+    o.mode              = mode;
+    o.build             = build;
+    o.log               = remember;
+    o.log_min           = CF_LOG_DEBUG;
+    o.health            = h;
+    o.probation         = polls;
+    return cf_live_open_with(&o, &err);
+}
+
+static cf_live_status status_of(cf_live* l) {
+    cf_live_status st;
+    memset(&st, 0, sizeof st);
+    st.size = sizeof st;
+    (void)cf_live_status_get(l, &st);
+    return st;
+}
+
+static void test_probation(void) {
+    cf_error err = CF_ERROR_INIT;
+    cf_live* l;
+    char     buf[64];
+
+    g_pairs   = g_info;
+    g_healthy = 1;
+    l         = open_probation(CF_LIVE_MANUAL, 3, health);
+    check(l != NULL, "probation: opens");
+    if (l == NULL) {
+        return;
+    }
+    check(!status_of(l).probation && !cf_live_confirm(l) &&
+              cf_live_rollback(l, NULL, &err) == CF_LIVE_FAILED &&
+              err.code == CF_E_CAPABILITY,
+          "the first snapshot is not on probation: nothing to roll back to");
+
+    g_pairs = g_debug;
+    check(cf_live_reload(l, &err) == CF_LIVE_SWAPPED && status_of(l).probation,
+          "a swap starts a probation");
+    check(cf_live_rollback(l, "the pool did not connect", &err) == CF_LIVE_ROLLED_BACK,
+          "a rollback");
+    check(strcmp(level(l, buf, sizeof buf), "info") == 0 && cf_live_generation(l) == 3,
+          "readers have the snapshot before, as a new generation");
+    check(strcmp(g_last_event, "reload-rolled-back") == 0 &&
+              strstr(g_last_message, "the pool did not connect") != NULL,
+          "logged, with the reason");
+    {
+        cf_live_status st = status_of(l);
+        check(st.rollbacks == 1 && !st.probation && st.last == CF_LIVE_ROLLED_BACK &&
+                  st.failures == 0,
+              "the status counts it, and it is no failure");
+    }
+    check(cf_live_rollback(l, NULL, &err) == CF_LIVE_FAILED &&
+              status_of(l).rollbacks == 1,
+          "a second rollback has nothing to go back to");
+
+    check(cf_live_reload(l, &err) == CF_LIVE_SWAPPED &&
+              strcmp(level(l, buf, sizeof buf), "debug") == 0,
+          "a reload asked for is a retry, and may swap the same values in again");
+    g_asked = 0;
+    check(cf_live_poll(l, &err) == CF_LIVE_UNCHANGED && status_of(l).probation &&
+              cf_live_poll(l, &err) == CF_LIVE_UNCHANGED && status_of(l).probation,
+          "healthy polls keep it on probation until the count is done");
+    check(cf_live_poll(l, &err) == CF_LIVE_UNCHANGED && !status_of(l).probation &&
+              g_asked == 3 && strcmp(g_last_event, "reload-confirmed") == 0,
+          "the last of them confirms it, a MANUAL program's polls too");
+    check(cf_live_rollback(l, NULL, &err) == CF_LIVE_FAILED,
+          "and a confirmed snapshot is not rolled back");
+
+    g_pairs   = g_trace;
+    g_healthy = 0;
+    check(cf_live_reload(l, &err) == CF_LIVE_SWAPPED, "another swap");
+    check(cf_live_poll(l, &err) == CF_LIVE_ROLLED_BACK &&
+              strcmp(level(l, buf, sizeof buf), "debug") == 0,
+          "a health function that says no rolls it back at the next poll");
+    check(strstr(g_last_message, "503 at trace") != NULL,
+          "with the health function's reason, about the snapshot it ran on");
+    g_healthy = 1;
+
+    g_pairs = g_info;
+    check(cf_live_reload(l, &err) == CF_LIVE_SWAPPED, "a swap on probation");
+    g_pairs = g_trace;
+    check(cf_live_reload(l, &err) == CF_LIVE_SWAPPED, "and another within it");
+    check(cf_live_rollback(l, NULL, &err) == CF_LIVE_ROLLED_BACK &&
+              strcmp(level(l, buf, sizeof buf), "debug") == 0,
+          "rolls back to the last confirmed, not the one in between");
+
+    g_pairs = g_info;
+    check(cf_live_reload(l, &err) == CF_LIVE_SWAPPED && cf_live_confirm(l) &&
+              !status_of(l).probation && strcmp(g_last_event, "reload-confirmed") == 0,
+          "cf_live_confirm ends it early");
+    cf_live_close(l);
+
+    /* Off unless asked for, and an options struct from 1.0 never is. */
+    g_pairs = g_info;
+    l       = open_probation(CF_LIVE_MANUAL, 0, health);
+    g_pairs = g_debug;
+    check(l != NULL && cf_live_reload(l, &err) == CF_LIVE_SWAPPED &&
+              !status_of(l).probation &&
+              cf_live_rollback(l, NULL, &err) == CF_LIVE_FAILED,
+          "probation 0 keeps nothing");
+    cf_live_close(l);
+    {
+        cf_live_options o = CF_LIVE_OPTIONS_INIT;
+        o.build           = build;
+        o.probation       = 5;
+        o.size            = offsetof(cf_live_options, health);
+        g_pairs           = g_info;
+        l                 = cf_live_open_with(&o, &err);
+        g_pairs           = g_debug;
+        check(l != NULL && cf_live_reload(l, &err) == CF_LIVE_SWAPPED &&
+                  !status_of(l).probation,
+              "options of 1.0's size: the members after them are not read");
+        cf_live_close(l);
+    }
+
+    /* APPROVE: the approval is the swap that goes on probation. */
+    g_pairs = g_info;
+    l       = open_probation(CF_LIVE_APPROVE, 1, NULL);
+    g_pairs = g_debug;
+    check(l != NULL && cf_live_reload(l, &err) == CF_LIVE_PENDING &&
+              !status_of(l).probation && cf_live_approve(l, &err) == CF_LIVE_SWAPPED &&
+              status_of(l).probation,
+          "approve: the approved swap is on probation");
+    check(cf_live_rollback(l, NULL, &err) == CF_LIVE_ROLLED_BACK &&
+              strcmp(level(l, buf, sizeof buf), "info") == 0,
+          "and can be rolled back");
+    {
+        static unsigned char short_st[sizeof(cf_live_status) + 8];
+        cf_live_status*      st = (cf_live_status*)(void*)short_st;
+        memset(short_st, 0xA5, sizeof short_st);
+        st->size = offsetof(cf_live_status, rollbacks);
+        check(cf_live_status_get(l, st) && st->generation == 3 &&
+                  short_st[offsetof(cf_live_status, rollbacks)] == 0xA5,
+              "a status of 1.0's size gets 1.0's members and nothing past them");
+    }
+    cf_live_close(l);
+}
+
+/* After a rollback the file still holds what was rolled back from: a
+   poll must not build it and swap it in again. */
+static void test_probation_file(void) {
+    cf_error err = CF_ERROR_INIT;
+    cf_live* l;
+    char     buf[64];
+
+    if (!cf_has_feature("ini")) {
+        return;
+    }
+    check(spill("cf_probation.ini", "[log]\nlevel = info\n"), "wrote the file");
+    g_file = "cf_probation.ini";
+    l      = open_probation(CF_LIVE_AUTO, 2, NULL);
+    check(l != NULL, "probation: auto opens on a file");
+    if (l == NULL) {
+        g_file = NULL;
+        return;
+    }
+    check(spill("cf_probation.ini", "[log]\nlevel = debug\n"), "changed the file");
+    check(cf_live_poll(l, &err) == CF_LIVE_SWAPPED, "a poll swaps");
+    check(cf_live_rollback(l, "errors doubled", &err) == CF_LIVE_ROLLED_BACK,
+          "rolled back");
+    check(cf_live_poll(l, &err) == CF_LIVE_UNCHANGED &&
+              strcmp(level(l, buf, sizeof buf), "info") == 0,
+          "the unchanged file does not bring it back");
+    check(spill("cf_probation.ini", "; touched\n[log]\nlevel = debug\n"),
+          "touched it, the same values");
+    check(cf_live_poll(l, &err) == CF_LIVE_UNCHANGED &&
+              strcmp(level(l, buf, sizeof buf), "info") == 0 &&
+              cf_live_generation(l) == 3,
+          "nor do the same values written again");
+    check(spill("cf_probation.ini", "[log]\nlevel = warn\n"), "a real change");
+    check(cf_live_poll(l, &err) == CF_LIVE_SWAPPED &&
+              strcmp(level(l, buf, sizeof buf), "warn") == 0,
+          "is swapped in, on probation again");
+    cf_live_close(l);
+    g_file = NULL;
+    remove("cf_probation.ini");
+}
+
 int main(void) {
+    test_probation();
+    test_probation_file();
     test_options();
     test_auto_and_manual();
     test_literal_pin();

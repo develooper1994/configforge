@@ -44,6 +44,8 @@ pub enum Reload {
     Unchanged,
     Swapped,
     Pending,
+    /// Readers have the snapshot before the last swap again.
+    RolledBack,
 }
 
 /// What a health page says about the reloads ([`Live::status`]).
@@ -62,6 +64,54 @@ pub struct Status {
     pub pending: bool,
     /// Why the last failure failed.
     pub last_error: Option<Error>,
+    /// Swaps undone, by [`Live::rollback`] or the health function.
+    pub rollbacks: u64,
+    /// A swap is on probation now.
+    pub probation: bool,
+}
+
+type Health = Box<dyn FnMut(&Config) -> Result<(), String> + Send>;
+
+/// How a [`Live`] is opened beyond its mode and build: the log, and
+/// probation (cf_live.h) - for `polls` polls after each swap the snapshot
+/// it replaced is kept, so that [`Live::rollback`] can return to it, and
+/// `health`, asked at each of those polls, rolls back by answering `Err`.
+#[derive(Default)]
+pub struct Options {
+    log: Option<(crate::Level, crate::log::SharedLogger)>,
+    probation: u32,
+    health: Option<Health>,
+}
+
+impl Options {
+    pub fn new() -> Options {
+        Options::default()
+    }
+
+    /// Each reload's result, and the events of every configuration built,
+    /// to `log` from `min` up.
+    pub fn log<L>(mut self, min: crate::Level, log: L) -> Options
+    where
+        L: Fn(&crate::LogEvent<'_>) + Send + Sync + 'static,
+    {
+        self.log = Some((min, crate::log::logger(log)));
+        self
+    }
+
+    /// Polls a swap stays on probation; 0, the default, is none.
+    pub fn probation(mut self, polls: u32) -> Options {
+        self.probation = polls;
+        self
+    }
+
+    /// Asked at each poll of a probation; `Err(reason)` rolls it back.
+    pub fn health<H>(mut self, health: H) -> Options
+    where
+        H: FnMut(&Config) -> Result<(), String> + Send + 'static,
+    {
+        self.health = Some(Box::new(health));
+        self
+    }
 }
 
 /// The strings every builder handed to the C side borrows, kept for as
@@ -71,6 +121,36 @@ type Kept = Arc<Mutex<Vec<Keep>>>;
 struct State {
     build: Box<dyn FnMut() -> Builder + Send>,
     kept: Kept,
+    health: Option<Health>,
+}
+
+/// Called by cf_live, on the thread that polls, during a probation.
+extern "C" fn health_trampoline(
+    user: *mut c_void,
+    running: *const sys::cf_config,
+    err: *mut sys::cf_error,
+) -> sys::cf_bool {
+    let state = unsafe { &mut *(user as *mut State) };
+    let Some(health) = state.health.as_mut() else {
+        return 1;
+    };
+    unsafe { sys::cf_config_ref(running as *mut sys::cf_config) };
+    let cfg = Config::shared(running as *mut sys::cf_config, state.kept.clone());
+    let said = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| health(&cfg)));
+    let reason = match said {
+        Ok(Ok(())) => return 1,
+        Ok(Err(reason)) => reason,
+        Err(_) => "the health function panicked".to_string(),
+    };
+    // 1.0's fields are always the caller's; cf_error_set is variadic.
+    let e = unsafe { &mut *err };
+    e.code = sys::CF_E_POLICY;
+    let n = reason.len().min(e.message.len() - 1);
+    for (d, s) in e.message.iter_mut().zip(reason.as_bytes()[..n].iter()) {
+        *d = *s as std::os::raw::c_char;
+    }
+    e.message[n] = 0;
+    0
 }
 
 /// Called by cf_live, on the thread that polls, for each rebuild.
@@ -147,6 +227,8 @@ impl Inner {
             failures: 0,
             last: 0,
             pending: 0,
+            rollbacks: 0,
+            probation: 0,
         };
         let mut e = new_error();
         unsafe { sys::cf_live_status_get(self.l, &mut s) };
@@ -158,6 +240,8 @@ impl Inner {
             last: result(s.last, &e).ok(),
             pending: s.pending != 0,
             last_error: failed.then(|| Error::from_raw(&e)),
+            rollbacks: s.rollbacks,
+            probation: s.probation != 0,
         }
     }
 }
@@ -190,6 +274,7 @@ fn result(r: std::os::raw::c_int, e: &sys::cf_error) -> Result<Reload, Error> {
         sys::CF_LIVE_SWAPPED => Ok(Reload::Swapped),
         sys::CF_LIVE_PENDING => Ok(Reload::Pending),
         sys::CF_LIVE_UNCHANGED => Ok(Reload::Unchanged),
+        sys::CF_LIVE_ROLLED_BACK => Ok(Reload::RolledBack),
         _ => Err(Error::from_raw(e)),
     }
 }
@@ -201,7 +286,7 @@ impl Live {
     where
         F: FnMut() -> Builder + Send + 'static,
     {
-        Live::open_inner(mode, build, None)
+        Live::open_with(mode, build, Options::new())
     }
 
     /// As [`Live::open`], with each reload's result - and the events of
@@ -211,21 +296,25 @@ impl Live {
         F: FnMut() -> Builder + Send + 'static,
         L: Fn(&crate::LogEvent<'_>) + Send + Sync + 'static,
     {
-        Live::open_inner(mode, build, Some((min, crate::log::logger(log))))
+        Live::open_with(mode, build, Options::new().log(min, log))
     }
 
-    fn open_inner<F>(
-        mode: Mode,
-        build: F,
-        log: Option<(crate::Level, crate::log::SharedLogger)>,
-    ) -> Result<Live, Error>
+    /// As [`Live::open`], with the log and probation `options` give.
+    pub fn open_with<F>(mode: Mode, build: F, options: Options) -> Result<Live, Error>
     where
         F: FnMut() -> Builder + Send + 'static,
     {
+        let Options {
+            log,
+            probation,
+            health,
+        } = options;
+        let has_health = health.is_some();
         let kept: Kept = Arc::new(Mutex::new(Vec::new()));
         let state = Box::into_raw(Box::new(State {
             build: Box::new(build),
             kept: kept.clone(),
+            health,
         }));
         let m = match mode {
             Mode::Manual => sys::CF_LIVE_MANUAL,
@@ -247,6 +336,9 @@ impl Live {
                 .as_ref()
                 .map_or(std::ptr::null_mut(), |(_, lg)| crate::log::Logger::user(lg)),
             log_min: log.as_ref().map_or(20, |(min, _)| min.raw()),
+            health: has_health.then_some(health_trampoline as sys::cf_live_health_fn),
+            health_user: state as *mut c_void,
+            probation,
         };
         let mut e = new_error();
         let l = unsafe { sys::cf_live_open_with(&o, &mut e) };
@@ -318,6 +410,27 @@ impl Live {
         unsafe { sys::cf_live_reject(self.inner.l) };
     }
 
+    /// Back to the snapshot before the swap on probation; `Err` when no
+    /// swap is on probation.
+    pub fn rollback(&mut self, reason: Option<&str>) -> Result<Reload, Error> {
+        let n = reason.map(crate::c);
+        let mut e = new_error();
+        let r = unsafe {
+            sys::cf_live_rollback(
+                self.inner.l,
+                n.as_ref().map_or(std::ptr::null(), |n| n.as_ptr()),
+                &mut e,
+            )
+        };
+        result(r, &e)
+    }
+
+    /// End the probation, keeping the snapshot readers have; false when
+    /// none was on probation.
+    pub fn confirm(&mut self) -> bool {
+        unsafe { sys::cf_live_confirm(self.inner.l) != 0 }
+    }
+
     /// Commit `edit` and reload, in one step; nothing is written when the
     /// commit is refused.
     pub fn commit(&mut self, edit: crate::Edit, note: Option<&str>) -> Result<Reload, Error> {
@@ -383,6 +496,46 @@ mod tests {
                 .define_text("log.level", Some("info"), 0)
         };
         (which, build)
+    }
+
+    #[test]
+    fn probation_and_rollback() {
+        use super::Options;
+        use std::sync::atomic::AtomicBool;
+        let (which, build) = levels();
+        let healthy = Arc::new(AtomicBool::new(true));
+        let h = healthy.clone();
+        let options = Options::new().probation(2).health(move |cfg| {
+            if h.load(Ordering::SeqCst) {
+                Ok(())
+            } else {
+                Err(format!(
+                    "503 at {}",
+                    cfg.text("log.level").unwrap_or_default()
+                ))
+            }
+        });
+        let mut live = Live::open_with(Mode::Manual, build, options).unwrap();
+        assert!(live.rollback(None).is_err(), "nothing on probation yet");
+        which.store(1, Ordering::SeqCst);
+        assert_eq!(live.reload().unwrap(), Reload::Swapped);
+        assert!(live.status().probation);
+        assert_eq!(
+            live.rollback(Some("pool did not connect")).unwrap(),
+            Reload::RolledBack
+        );
+        assert_eq!(live.get().text("log.level").as_deref(), Some("info"));
+        assert_eq!(live.status().rollbacks, 1);
+        assert_eq!(live.reload().unwrap(), Reload::Swapped, "a retry");
+        healthy.store(false, Ordering::SeqCst);
+        assert_eq!(live.poll().unwrap(), Reload::RolledBack, "health said no");
+        assert_eq!(live.get().text("log.level").as_deref(), Some("info"));
+        healthy.store(true, Ordering::SeqCst);
+        assert_eq!(live.reload().unwrap(), Reload::Swapped);
+        assert_eq!(live.poll().unwrap(), Reload::Unchanged);
+        assert_eq!(live.poll().unwrap(), Reload::Unchanged);
+        assert!(!live.status().probation, "two healthy polls confirm it");
+        assert!(!live.confirm());
     }
 
     #[test]

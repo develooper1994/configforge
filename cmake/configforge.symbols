@@ -180,6 +180,7 @@ cf_listsink_of
 cf_live_approve
 cf_live_close
 cf_live_commit
+cf_live_confirm
 cf_live_generation
 cf_live_get
 cf_live_last_error
@@ -189,6 +190,7 @@ cf_live_pending
 cf_live_poll
 cf_live_reject
 cf_live_reload
+cf_live_rollback
 cf_live_restarts
 cf_live_status_get
 cf_live_wait

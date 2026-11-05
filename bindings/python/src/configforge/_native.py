@@ -72,6 +72,9 @@ class cf_live_status(Structure):
         ("failures", c_uint64),
         ("last", c_int),
         ("pending", c_int),
+        # 1.1; an older library leaves them as they were, zero
+        ("rollbacks", c_uint64),
+        ("probation", c_int),
     ]
 
 
@@ -90,6 +93,7 @@ class cf_log_event(Structure):
 LOG_FN = CFUNCTYPE(None, c_void_p, POINTER(cf_log_event))
 BUILD_FN = CFUNCTYPE(c_void_p, c_void_p)
 CHECK_FN = CFUNCTYPE(c_int, c_void_p, c_void_p, c_void_p, c_void_p)
+HEALTH_FN = CFUNCTYPE(c_int, c_void_p, c_void_p, c_void_p)
 
 
 class cf_live_options(Structure):
@@ -104,11 +108,16 @@ class cf_live_options(Structure):
         ("log", LOG_FN),
         ("log_user", c_void_p),
         ("log_min", c_int),
+        # 1.1: read only by a library that has them
+        ("health", HEALTH_FN),
+        ("health_user", c_void_p),
+        ("probation", c_uint),
     ]
 
 TYPE_NULL, TYPE_BOOL, TYPE_INT, TYPE_REAL, TYPE_TEXT = range(5)
 LIST_REPLACE, LIST_APPEND = 1, 2
 OK = 0
+E_POLICY = 8  # cf_code.def's order: CF_OK is 0
 
 
 def _candidates() -> list:
@@ -229,8 +238,11 @@ _declare("cf_builder_track_reads", None, B, optional=True)
 _declare("cf_tracks_reads", c_int, C, optional=True)
 _declare("cf_was_read", c_int, C, c_char_p, optional=True)
 _declare("cf_read_count", c_size_t, C, optional=True)
+_declare("cf_live_rollback", c_int, c_void_p, c_char_p, POINTER(cf_error), optional=True)
+_declare("cf_live_confirm", c_int, c_void_p, optional=True)
 HAVE_REAL = hasattr(lib, "cf_try_real") and lib.cf_has_feature(b"real") != 0
 HAVE_LIST = lib.cf_has_feature(b"lists") != 0
+HAVE_PROBATION = hasattr(lib, "cf_live_rollback") and hasattr(lib, "cf_live_confirm")
 HAVE_READ_TRACKING = all(
     hasattr(lib, name)
     for name in ("cf_builder_track_reads", "cf_tracks_reads", "cf_was_read", "cf_read_count")
