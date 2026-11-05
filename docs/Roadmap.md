@@ -62,13 +62,56 @@ Before anything: read `CONTRIBUTING.md`, then run
 `pwsh scripts/buildenv/dev-setup.ps1 -Check`) and, if a tool is missing,
 the same without the check.
 
-No accepted implementation work remains. The ideas below are not
-approved scope; if selected, each addition is a minor version.
+Accepted work: the three items under "Accepted follow-up" (2026-11-05).
+The ideas below them are not approved scope; if selected, each addition
+is a minor version.
 
 ### Accepted follow-up
 
 The agreed additions and organization review are complete; no release
 is a substitute for the final review and verification.
+
+Chosen by the owner on 2026-11-05, in this order. Each is a minor
+version, so main's unreleased "1.0.1" - which already adds features - is
+1.1.0 when it is released. Each item is done when its tests fail without
+it, `verify` passes at tier 1 on Linux and Windows, and the CHANGELOG,
+Guide and API reference say what it does.
+
+1. **A reload on probation, rolled back by itself.** After a swap,
+   `cf_live` keeps the previous snapshot for a probation interval set
+   in `cf_live_options` (a new member, as D-51 allows). If the program
+   reports the new configuration unhealthy within it -
+   `cf_live_reject(l, reason, err)`, or a health callback in the
+   options - readers get the previous snapshot back, the status counts a
+   rollback, and the log has a `"reload-rolled-back"` event naming the
+   reason. A rollback is a reload like any other: it goes through no
+   build, and the restart-only keys it would change are reported as the
+   swap's were. After the interval the previous snapshot is released.
+   Design.md section 58 lists rollback as a future direction; this is
+   its smallest useful form, for one process, not cross-source
+   transactions. Tests: rejected in time, accepted by timeout, rejected
+   after timeout (refused), APPROVE mode, the Rust and Python bindings,
+   and `examples/c/live.c` showing it.
+2. **Doctor on a pull request.** A composite GitHub Action and a
+   pre-commit hook, both in this repository, that build or download
+   Doctor, run `doctor diff` (and `doctor lint` against the
+   definitions) between the base and the head, and write the findings
+   as a pull-request comment or a hook failure: which key changes, which
+   source would win in production, what a default drift (CFD017) or an
+   unread key (CFD018) means. No new library code; values stay out of
+   every message, as Doctor's already do. Tested by a workflow in this
+   repository against fixture reports, and documented in Doctor.md.
+3. **The configuration's fingerprint where operators look.**
+   `cf_digest` already identifies a resolved configuration - quiet
+   swaps use it - but nothing outside the process sees it. Put it in
+   each reload's `cf_log_event` (a new member after `size`, the old and
+   new digest), in the provenance report (an additive schema-1 field),
+   and in Doctor's output, so an incident can be matched to the
+   configuration change before it with one field. A sensitive value
+   enters the fingerprint only as its blind-report digest, so the
+   fingerprint never confirms a guessed secret. The Guide gets a recipe
+   for carrying it as a log field and an OpenTelemetry resource
+   attribute, with no dependency here.
 
 ## Ideas
 
