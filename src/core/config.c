@@ -883,6 +883,9 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
                 cf_source_cli_defs(&c->sources[i], &c->defs);
             } else if (strcmp(c->sources[i].vt->kind, "dotenv") == 0) {
                 cf_source_dotenv_defs(&c->sources[i], &c->defs);
+            } else if (strcmp(c->sources[i].vt->kind, "file") == 0 ||
+                       strcmp(c->sources[i].vt->kind, "dir") == 0) {
+                cf_source_file_defs(&c->sources[i], &c->defs);
             }
         }
     }

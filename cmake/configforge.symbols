@@ -111,6 +111,7 @@ cf_feature_count
 cf_fingerprint
 cf_fingerprint_format
 cf_flatten_init
+cf_flatten_lists
 cf_flatten_sink
 cf_fmt
 cf_fmt_append
@@ -256,6 +257,7 @@ cf_source_env
 cf_source_env_defs
 cf_source_file
 cf_source_file_codec
+cf_source_file_defs
 cf_source_file_error
 cf_source_file_state_size
 cf_source_image_error

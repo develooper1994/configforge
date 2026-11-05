@@ -55,10 +55,20 @@ typedef struct cf_flatten {
     cf_doc_sink sink;
     char*       text;
     size_t      text_cap;
+
+    /* The definitions a format without types defers to (cf_flatten_lists):
+       a text value of a key declared a list with a separator is split
+       into its elements, as the environment's is. NULL: none. */
+    const struct cf_defset* lists;
 } cf_flatten;
 
 CF_API cf_bool            cf_flatten_init(cf_flatten* f, cf_keyspace* ks, int rank);
 CF_API const cf_doc_sink* cf_flatten_sink(cf_flatten* f);
+
+/* For a format that carries no types - INI, .properties - whose values
+   the definitions decide: a declared list with a separator splits its
+   text value, `ports = 80,443` the elements 80 and 443. (1.2) */
+CF_API void cf_flatten_lists(cf_flatten* f, const struct cf_defset* ds);
 
 /* Walk a resolved key space, emitting the document it describes.
    Structure is reconstructed from the sorted keys with nothing built:

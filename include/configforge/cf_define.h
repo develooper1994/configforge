@@ -300,6 +300,11 @@ CF_API void cf_source_env_defs(struct cf_source* s, const cf_defset* ds);
 /* Give a .env file the same natural names and list separators. */
 CF_API void cf_source_dotenv_defs(struct cf_source* s, const cf_defset* ds);
 
+/* Give a file, or a directory of them, the list separators, for a format
+   that carries no types (cf_flatten_lists): a declared list splits an
+   INI value as it splits the environment's. (1.2) */
+CF_API void cf_source_file_defs(struct cf_source* s, const cf_defset* ds);
+
 /* Give the command-line source the key list, which is what unlocks
    --key value, --no-key and aliases. Without it only the = form carries
    a value, because nothing else can be parsed correctly. */

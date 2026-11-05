@@ -510,6 +510,54 @@ static void test_list_renames(void) {
     cf_config_free(c);
 }
 
+#if CF_WITH_INI
+/* INI carries no types, so the definition decides: a declared list with
+   a separator splits an INI value as it splits the environment's, and a
+   key that is not one keeps its text. */
+static void test_ini_value_lists(void) {
+    FILE*       f = fopen("cf_lists_fixture.ini", "wb");
+    cf_builder* b;
+    cf_config*  c;
+    cf_def      d;
+    cf_error    err = CF_ERROR_INIT;
+
+    check(f != NULL, "write the INI fixture");
+    if (f == NULL) {
+        return;
+    }
+    fputs("ports = 80,443,8443,22\nnames = a,b\nempty =\n", f);
+    fclose(f);
+    b = cf_build(NULL);
+    cf_def_init(&d, CF_TYPE_INT, "ports");
+    d.list_mode      = CF_LIST_REPLACE;
+    d.list_separator = ',';
+    check(cf_builder_define(b, &d), "a list of ports, separated by commas");
+    cf_def_init(&d, CF_TYPE_TEXT, "empty");
+    d.list_mode      = CF_LIST_REPLACE;
+    d.list_separator = ',';
+    check(cf_builder_define(b, &d), "and one left empty");
+    cf_builder_text(b, "names", NULL, 0);
+    check(cf_builder_file(b, "ini", CF_RANK_USER_FILE, "cf_lists_fixture.ini", NULL, 0),
+          "the INI file");
+    c = cf_builder_create(b, &err);
+    check(c != NULL, "builds");
+    if (c != NULL) {
+        check(
+            cf_get_int(c, "ports.count", 0) == 4 && cf_get_int(c, "ports.0", 0) == 80 &&
+                cf_get_int(c, "ports.2", 0) == 8443 &&
+                cf_get_int(c, "ports.3", 0) == 22,
+            "the INI value is split into the list's elements, typed by the definition");
+        check(strcmp(cf_get_text(c, "names", ""), "a,b") == 0,
+              "a key that is not a list keeps its text, commas and all");
+        check(cf_get_int(c, "empty.count", -1) == 0, "an empty value is an empty list");
+        cf_config_free(c);
+    } else {
+        printf("  %s\n", err.message);
+    }
+    remove("cf_lists_fixture.ini");
+}
+#endif
+
 #if CF_WITH_JSON && (CF_WITH_DOTENV || CF_WITH_REPORT)
 static cf_bool list_spill(const char* path, const char* text) {
     FILE*   f = fopen(path, "wb");
@@ -1144,6 +1192,9 @@ int main(void) {
 #endif
 #if CF_WITH_JSON && CF_WITH_DOTENV
         test_file_facade();
+#endif
+#if CF_WITH_INI
+        test_ini_value_lists();
 #endif
 #if CF_WITH_REPORT
         test_schema_and_privacy(ar);

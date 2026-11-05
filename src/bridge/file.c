@@ -10,6 +10,7 @@
  */
 
 #include "configforge/cf_flatten.h"
+#include "configforge/cf_define.h"
 #include "configforge/cf_source.h"
 
 #include <string.h>
@@ -83,6 +84,9 @@ static cf_bool file_load(const cf_source* s, cf_keyspace* ks) {
         return cf_error_set(&st->err, CF_E_MEMORY, NULL, st->path,
                             "cannot start reading '%s'", st->path);
     }
+    if ((codec->caps & CF_CODEC_TYPED) == 0 && s->ref != NULL) {
+        cf_flatten_lists(&fl, (const cf_defset*)s->ref); /* the definitions decide */
+    }
     if (!codec->decode(&blob, cf_flatten_sink(&fl), &st->err)) {
         st->failed = CF_TRUE;
         return CF_FALSE;
@@ -138,6 +142,15 @@ cf_bool cf_source_file_codec(cf_source* s, const char* name, int rank, const cha
     }
     ((file_state*)state)->codec = codec;
     return CF_TRUE;
+}
+
+/* Borrowed, as cf_source_env_defs's is: the definitions outlive the
+   source, both being the configuration's. A directory source keeps
+   them in the same place, so one setter serves both. */
+void cf_source_file_defs(cf_source* s, const cf_defset* ds) {
+    if (s != NULL) {
+        s->ref = ds;
+    }
 }
 
 size_t cf_source_file_state_size(void) {

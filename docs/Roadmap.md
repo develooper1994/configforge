@@ -139,7 +139,7 @@ verified commits, and a release is cut where the order says so. The
    has any, are PHP's `name[] = v` and `name[i] = v`, and the second is
    C's element assignment, so both wishes hold. A brace list was built
    first and dropped: it was a syntax invented here.
-   4b. **A declared list splits an INI value too** (owner's question,
+   4b. **A declared list splits an INI value too** - done (owner's question,
    2026-11-06: `ports=[80,443, 8443 ,22]`?). Not as syntax: no INI reader
    knows brackets - it is TOML's, which this library reads - and old
    files with such text would change meaning. But INI carries no types,

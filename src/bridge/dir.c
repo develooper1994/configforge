@@ -18,6 +18,7 @@
  */
 
 #include "configforge/cf_flatten.h"
+#include "configforge/cf_define.h"
 #include "configforge/cf_platform.h"
 #include "configforge/cf_serialize.h"
 #include "configforge/cf_source.h"
@@ -134,6 +135,9 @@ static cf_bool dir_load(const cf_source* s, cf_keyspace* ks) {
             st->failed = CF_TRUE;
             return cf_error_set(&st->err, CF_E_MEMORY, NULL, full,
                                 "no room to read '%s'", full);
+        }
+        if ((codec->caps & CF_CODEC_TYPED) == 0 && s->ref != NULL) {
+            cf_flatten_lists(&fl, (const cf_defset*)s->ref); /* as file.c does */
         }
         if (!codec->decode(&blob, cf_flatten_sink(&fl), &st->err)) {
             st->failed = CF_TRUE;

@@ -31,6 +31,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   `/OPT:REF`), on in the `minimal` preset: a third of a small program.
   `CF_LTO`: link-time optimisation where the toolchain has it, off by
   default; the stack budget says it is not measured under it.
+- A declared list with a separator splits a value from a file that
+  carries no types - INI, `.properties`, a `conf.d` directory of them -
+  as it splits the environment's: `ports = 80,443,8443,22` is four
+  elements, typed by the definition. A key that is not a declared list
+  keeps its text. Not a syntax: no INI reader has bracket lists, and
+  `[80,443]` is TOML's, which this library reads (`cf_flatten_lists`,
+  `cf_source_file_defs`).
 - `doctor lint --base B --only-changed`: only what a change touched -
   the keys whose candidates differ from B's, or that one side lacks, and
   the sources those came from - with the rest counted, so a large

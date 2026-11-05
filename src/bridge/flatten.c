@@ -14,6 +14,7 @@
  */
 
 #include "configforge/cf_flatten.h"
+#include "configforge/cf_define.h"
 
 #include <string.h>
 
@@ -155,6 +156,53 @@ static cf_bool fl_begin_array(void* ctx, const char* name, size_t n) {
     return CF_TRUE;
 }
 
+/* A declared list's text, split at its separator into the elements and
+   the count every array is: what fl_begin_array, fl_scalar and fl_end
+   write for one, and what the environment's reader writes for the same
+   text (entry.c). An empty value is an empty list, as it is there. */
+static cf_bool fl_split(cf_flatten* f, const cf_def* d, const cf_value* v,
+                        const char* at_text) {
+    size_t      base = f->plen, i, start = 0;
+    cf_u64      count = 0;
+    const char* p     = v->u.t.p;
+    size_t      n     = v->u.t.n;
+    cf_value    total;
+
+    for (i = 0; n != 0 && i <= n; ++i) {
+        size_t klen;
+        if (i != n && p[i] != d->list_separator) {
+            continue;
+        }
+        klen = cf_fmt(f->path + base, sizeof f->path - base, ".%U", count);
+        if (base + klen >= sizeof f->path) {
+            f->overflow = CF_TRUE;
+            f->plen     = base;
+            return CF_FALSE;
+        }
+        if (!cf_ks_add_text(f->ks, f->path, base + klen, f->rank, p + start, i - start,
+                            at_text)) {
+            f->failed = CF_TRUE;
+            f->plen   = base;
+            return CF_FALSE;
+        }
+        ++count;
+        start = i + 1;
+    }
+    if (base + 7 > sizeof f->path) {
+        f->overflow = CF_TRUE;
+        f->plen     = base;
+        return CF_FALSE;
+    }
+    memcpy(f->path + base, ".count", 7);
+    cf_value_int(&total, (cf_i64)count);
+    if (!cf_ks_add(f->ks, f->path, base + 6, f->rank, &total, NULL)) {
+        f->failed = CF_TRUE;
+    }
+    f->path[base] = '\0';
+    f->plen       = base;
+    return f->failed ? CF_FALSE : CF_TRUE;
+}
+
 static cf_bool fl_scalar(void* ctx, const char* name, size_t n, const cf_value* v,
                          cf_bool textual, const cf_loc* at) {
     cf_flatten* f = (cf_flatten*)ctx;
@@ -172,6 +220,16 @@ static cf_bool fl_scalar(void* ctx, const char* name, size_t n, const cf_value* 
     if (at != NULL && at->file != NULL) {
         cf_loc_text(at, where, sizeof where);
         at_text = where;
+    }
+    if (f->lists != NULL && textual && v->type == CF_TYPE_TEXT &&
+        !f->stack[f->depth].is_array) {
+        const cf_def* d = cf_defset_find(f->lists, f->path, f->plen);
+        if (d != NULL && d->list_mode != CF_LIST_NONE && d->list_separator != 0 &&
+            cf_key_cmp(d->key, strlen(d->key), f->path, f->plen) == 0) {
+            ok      = fl_split(f, d, v, at_text);
+            f->plen = saved;
+            return ok;
+        }
     }
     if (textual) {
         ok = cf_ks_add_text(f->ks, f->path, f->plen, f->rank, v->u.t.p, v->u.t.n,
@@ -268,6 +326,12 @@ cf_bool cf_flatten_init(cf_flatten* f, cf_keyspace* ks, int rank) {
 
 const cf_doc_sink* cf_flatten_sink(cf_flatten* f) {
     return (f != NULL) ? &f->sink : NULL;
+}
+
+void cf_flatten_lists(cf_flatten* f, const struct cf_defset* ds) {
+    if (f != NULL) {
+        f->lists = ds;
+    }
 }
 
 #if CF_WITH_EMIT

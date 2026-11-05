@@ -317,7 +317,10 @@ result with the existing `cf_array_count`, `cf_array_key` and getters;
 there is no separate array value type.
 
 `APP_TAGS=a,,b` supplies three elements, including the empty middle one,
-when the environment or dotenv source uses prefix `APP_`. An empty
+when the environment or dotenv source uses prefix `APP_`, and so does
+`tags = a,,b` in a file of a format that carries no types - INI,
+`.properties` - whose values the definitions decide. A typed format keeps
+its own arrays: a JSON string is a string. An empty
 assignment supplies an empty list. A zero separator disables splitting;
 there is no CSV quoting or trimming at the split step. Command-line
 `--tags=a --tags=b` supplies two elements; aliases share the same list,
