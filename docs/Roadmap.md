@@ -69,8 +69,9 @@ Before anything: read `CONTRIBUTING.md`, then run
 `pwsh scripts/buildenv/dev-setup.ps1 -Check`) and, if a tool is missing,
 the same without the check.
 
-The three items under "Accepted follow-up" are done. The ideas below
-them are not approved scope; if selected, each addition is a minor
+The three items under "Accepted follow-up" are done. Four more were
+accepted on 2026-11-05, after 1.1.0 (below them). The ideas further
+down are not approved scope; if selected, each addition is a minor
 version.
 
 ### Accepted follow-up
@@ -109,6 +110,25 @@ Guide and API reference say what it does.
    bindings, and the Guide's log-field and OpenTelemetry recipe.
    Found on the way: Rust's `Debug` printed `cf_digest`.
 
+Accepted on 2026-11-05 for after 1.1.0 - the compiler's own help where
+it is missing, and a measurement before any optimisation:
+
+4. **MSVC's analyzer** (`/analyze`) on the library and Doctor, as GCC's
+   `-fanalyzer` is in the analyze preset: findings fail the build, each
+   one fixed or suppressed at its line with the reason.
+5. **Dead code removed at link time for small targets**: the `minimal`
+   preset compiles with `-ffunction-sections -fdata-sections` and links
+   with `--gc-sections` (MSVC `/Gy` and `/OPT:REF`), and the size before
+   and after is written down.
+6. **Link-time optimisation as an option** (`CF_LTO`, off by default),
+   measured on the release build for size and speed before it is made
+   the default anywhere; the stack budget is measured on the result,
+   since inlining across files changes frames.
+7. **A benchmark, not a gate**: a separate target timing a build of N
+   keys, `cf_get`, a report and `doctor diff` of two N-key reports, so
+   an optimisation starts from a number. The first candidate it is
+   expected to show is Doctor's linear key lookup (`doctor_find_key`),
+   called per key by `diff` and `history`: quadratic in report size.
 ## Ideas
 
 Worth building, in the order they serve the library's purpose.
