@@ -118,15 +118,15 @@ enum { EXACT, UNTYPED, TEXT_ONLY };
 typedef struct format {
     const char* name;
     int         compare; /* how a read-back is judged       */
-    int         arrays;  /* it has syntax for an array      */
-    int         nulls;   /* for a null                      */
-    int         lines;   /* and for a line break in a value */
+    int         arrays; /* syntax for any array (1), or for arrays of values only (2) */
+    int         nulls;  /* for a null                      */
+    int         lines;  /* and for a line break in a value */
 } format;
 
 static const format g_formats[] = {{"json", EXACT, 1, 1, 1},
                                    {"toml", EXACT, 1, 0, 1},
                                    {"yaml", UNTYPED, 1, 1, 1},
-                                   {"ini", TEXT_ONLY, 0, 1, 0}};
+                                   {"ini", TEXT_ONLY, 2, 1, 0}};
 
 static const format* g_have[LEN(g_formats)]; /* the ones this build writes */
 static size_t        g_nhave;
@@ -719,7 +719,7 @@ static void test_invalid_utf8(void) {
 
 typedef struct shape {
     const char* doc; /* JSON                                       */
-    int         ini; /* and INI can hold it: no array is in it     */
+    int         ini; /* and INI can hold it: arrays of values only */
 } shape;
 
 /* An array is the indexes 0 to count - 1, each spelled as the readers
@@ -767,7 +767,7 @@ static const shape shapes[] = {
     {"{\"l\":[{\"t\":{\"count\":1,\"1\":\"b\"}}]}", 0},
     {"{\"l\":[]}", 0},
     {"{\"l\":[[]]}", 0},
-    {"{\"l\":[\"a\",\"b\"]}", 0},
+    {"{\"l\":[\"a\",\"b\"]}", 1}, /* INI's name[] lines (D-60) */
     {"{\"l\":[1,[2,[3,[4]]]]}", 0}};
 
 static void test_shapes(void) {
@@ -775,7 +775,7 @@ static void test_shapes(void) {
 
     for (i = 0; i < LEN(shapes); ++i) {
         for (f = 0; f < g_nhave; ++f) {
-            if (g_have[f]->arrays || shapes[i].ini) {
+            if (g_have[f]->arrays == 1 || shapes[i].ini) {
                 round_trip_doc(g_have[f], shapes[i].doc, shapes[i].doc);
             }
         }
@@ -1065,7 +1065,11 @@ static void put_array(gen* g, int depth) {
         if (i > 0) {
             put(g, ",");
         }
-        put_value(g, depth + 1);
+        if (g->arrays == 2) {
+            put_scalar(g); /* values only: INI's name[] lines */
+        } else {
+            put_value(g, depth + 1);
+        }
     }
     put(g, "]");
 }
@@ -1205,7 +1209,7 @@ static void test_depth(void) {
                 cf_error err = CF_ERROR_INIT;
                 int      got;
 
-                if (kind != 0 && !g_have[f]->arrays) {
+                if (kind != 0 && g_have[f]->arrays != 1) {
                     continue;
                 }
                 got = trip_doc(g_have[f], doc, &err);
@@ -1300,7 +1304,7 @@ static void test_long_array_key(void) {
         }
         check(read, "an array whose length key is the longest key is read");
         for (f = 0; f < g_nhave; ++f) {
-            if (g_have[f]->arrays) {
+            if (g_have[f]->arrays == 1) {
                 round_trip_doc(g_have[f], doc, "an array at the longest path");
             }
         }
@@ -1360,7 +1364,7 @@ static void test_long_arrays(void) {
             }
             put(&g, "]}");
             for (f = 0; f < g_nhave; ++f) {
-                if (g_have[f]->arrays) {
+                if (g_have[f]->arrays == 1 || (g_have[f]->arrays == 2 && !tables)) {
                     round_trip_doc(g_have[f], doc, doc);
                 }
             }
@@ -1380,7 +1384,9 @@ int main(void) {
 
         if (c != NULL && c->encoder != NULL) {
             g_have[g_nhave++] = &g_formats[i];
-            check(((c->caps & CF_CODEC_ARRAYS) != 0) == (g_formats[i].arrays != 0),
+            check(((c->caps & CF_CODEC_ARRAYS) != 0) == (g_formats[i].arrays == 1) &&
+                      ((c->caps & (CF_CODEC_ARRAYS | CF_CODEC_SCALAR_ARRAYS)) != 0) ==
+                          (g_formats[i].arrays != 0),
                   "the table says what the codec says about arrays");
         }
     }

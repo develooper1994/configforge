@@ -162,6 +162,53 @@ static void test_ini_errors(cf_arena* ar) {
     ini_rejects(ar, "[a..b]\nx=1\n", "an empty section segment");
     ini_rejects(ar, "[Server]\nx=1\n", "an uppercase section");
     ini_rejects(ar, "Key = 1\n", "an uppercase key");
+    ini_rejects(ar, "p[] = 1\nq = 2\np[] = 3\n",
+                "a second run of name[] lines, which would overwrite the first");
+    ini_rejects(ar, "p[01] = 1\n", "an index with a leading zero");
+    ini_rejects(ar, "p[x] = 1\n", "an index that is not a number");
+}
+
+/* Arrays as PHP's parse_ini_file writes them (D-60): name[] appends,
+   name[i] sets element i, and underneath both are the flat name.i and
+   name.count every other format's array is. */
+static void test_ini_arrays(cf_arena* ar) {
+    static const char* const doc = "ports[] = 80\n"
+                                   "ports[] = \"443\"\n"
+                                   "ports[1] = 8443\n"
+                                   "[server]\n"
+                                   "names[] = a\n"
+                                   "names[] = b c\n"
+                                   "json = {\"a\": 1}\n"
+                                   "list = {a, b}\n";
+    cf_keyspace              ks;
+    cf_error                 err = CF_ERROR_INIT;
+    const cf_value*          v;
+
+    cf_ks_init(&ks, ar, 16);
+    check(decode("ini", doc, &ks, ar, 10, &err), "ini arrays decode");
+    if (err.message[0] != '\0') {
+        printf("  %s\n", err.message);
+    }
+    cf_ks_resolve(&ks);
+    cf_ks_infer_untyped(&ks);
+
+    v = cf_ks_get(&ks, "ports.count", 11);
+    check(v != NULL && v->type == CF_TYPE_INT && v->u.i == 2,
+          "name[] lines make a count");
+    v = cf_ks_get(&ks, "ports.0", 7);
+    check(v != NULL && v->u.i == 80, "the first element");
+    v = cf_ks_get(&ks, "ports.1", 7);
+    check(v != NULL && v->u.i == 8443, "and name[i], later, sets the element at i");
+    v = cf_ks_get(&ks, "server.names.count", 18);
+    check(v != NULL && v->u.i == 2, "an array inside a section");
+    v = cf_ks_get(&ks, "server.names.1", 14);
+    check(v != NULL && v->type == CF_TYPE_TEXT && strcmp(v->u.t.p, "b c") == 0,
+          "an element with a blank in it");
+    v = cf_ks_get(&ks, "server.json", 11);
+    check(v != NULL && v->type == CF_TYPE_TEXT && strcmp(v->u.t.p, "{\"a\": 1}") == 0,
+          "a value in braces is text, as it always was: INI has no brace lists");
+    v = cf_ks_get(&ks, "server.list", 11);
+    check(v != NULL && v->type == CF_TYPE_TEXT, "not even one that looks like a list");
 }
 
 /* ---------------------------------------------------------------- */
@@ -679,7 +726,15 @@ static void test_writer_limit(void) {
 #endif
 
 static void test_ini_roundtrip(cf_arena* ar) {
-    static const char* const doc = "top = 1\n[server]\nhost = 0.0.0.0\nport = 8080\n";
+    /* Arrays too, with elements that need their quotes: a blank, a
+       comment character, a quote of the other kind. */
+    static const char* const doc = "top = 1\n"
+                                   "tags[] = a\n"
+                                   "tags[] = \"b c\"\n"
+                                   "tags[] = \"#d\"\n"
+                                   "tags[] = 'say \"hi\"'\n"
+                                   "[server]\nhost = 0.0.0.0\nport = 8080\n"
+                                   "ports[] = 80\nports[] = 443\n";
     cf_keyspace              ks, ks2;
     cf_error                 err = CF_ERROR_INIT;
     char                     buf[512];
@@ -699,6 +754,12 @@ static void test_ini_roundtrip(cf_arena* ar) {
     cf_ks_resolve(&ks2);
     cf_ks_infer_untyped(&ks2);
     check(cf_ks_digest(&ks) == cf_ks_digest(&ks2), "ini round trip");
+    if (cf_ks_digest(&ks) != cf_ks_digest(&ks2)) {
+        printf("  written:\n%s", buf);
+    }
+    check(strstr(buf, "tags[] = \"b c\"\n") != NULL &&
+              strstr(buf, "ports[] = 443\n") != NULL,
+          "arrays written as name[] lines");
 }
 #endif
 
@@ -898,6 +959,7 @@ int main(void) {
     test_registry();
     test_ini(ar);
     test_ini_errors(ar);
+    test_ini_arrays(ar);
     test_json(ar);
     test_json_strings(ar);
     test_json_errors(ar);

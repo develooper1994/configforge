@@ -134,10 +134,11 @@ verified commits, and a release is cut where the order says so. The
    lookup, as expected, and one nobody expected: defining keys was
    quadratic. Both are fixed and held by tests; the numbers are in
    Maintaining.md, "Measured".
-4. **Arrays in INI, C style** (the owner's decision): `ports = {80, 443}`
-   reads and writes an array; `ports[0] = 80` sets one element; both are
-   the flat `ports.0` / `ports.count` underneath, so explain(), reports
-   and every other format see the same thing. A decision record first.
+4. **Arrays in INI** - done (D-60). The owner first asked for C-style
+   arrays, then for each format's own standard; INI's arrays, where it
+   has any, are PHP's `name[] = v` and `name[i] = v`, and the second is
+   C's element assignment, so both wishes hold. A brace list was built
+   first and dropped: it was a syntax invented here.
 5. **Doctor `--only-changed`**: rules restricted to the keys a change
    touches - the keys whose candidates differ between `--base` and the
    report - so a large existing configuration can adopt Doctor one
@@ -161,7 +162,7 @@ verified commits, and a release is cut where the order says so. The
    and grow from the allocator up to a cap. Full-dynamic: no length or
    depth limit but memory, decoders iterating rather than recursing,
    with run-time caps still there for untrusted input. A decision record
-   (D-57) first: build option or run time, the default per profile, and
+   (D-61) first: build option or run time, the default per profile, and
    what `cf_error`'s fixed `key` and `message` do - truncate in 1.x,
    grow in 2.0. Then the buffers, one subsystem at a time, each under
    all three modes in the suite. The largest item here.

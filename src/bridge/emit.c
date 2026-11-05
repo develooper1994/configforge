@@ -66,42 +66,77 @@ static cf_bool keep(const void* ctx, const cf_entry* e) {
    array" means exactly "would write one". Looking for a key called
    `count` took a table with a retry count for an array, and an array
    that was not going to be written for one that was. */
+typedef struct emit_probe {
+    cf_bool array; /* an array would be written                       */
+    /* and one of them is more than a list of values - it holds a table
+       or an array, or nothing - which CF_CODEC_SCALAR_ARRAYS cannot
+       write: INI's name[] lines have no form for any of the three */
+    cf_bool       beyond_values;
+    int           depth;
+    int           arrays; /* arrays open around the current place */
+    unsigned char kind[CF_MAX_DEPTH + 2];
+    unsigned char items[CF_MAX_DEPTH + 2]; /* an array's elements so far, 0 or 1 */
+} emit_probe;
+
+static cf_bool probe_open(emit_probe* p, unsigned char kind) {
+    if (p->depth >= (int)sizeof p->kind) {
+        return CF_FALSE;
+    }
+    if (p->arrays > 0) {
+        p->beyond_values = CF_TRUE; /* a table or an array in an array */
+    }
+    p->items[p->depth]  = 0;
+    p->kind[p->depth++] = kind;
+    if (kind == 'a') {
+        p->array = CF_TRUE;
+        ++p->arrays;
+    }
+    return CF_TRUE;
+}
+
 static cf_bool probe_table(void* ctx, const char* name, size_t n) {
-    (void)ctx;
     (void)name;
     (void)n;
-    return CF_TRUE;
+    return probe_open((emit_probe*)ctx, 't');
 }
 
 static cf_bool probe_array(void* ctx, const char* name, size_t n) {
     (void)name;
     (void)n;
-    *(cf_bool*)ctx = CF_TRUE;
-    return CF_TRUE;
+    return probe_open((emit_probe*)ctx, 'a');
 }
 
 static cf_bool probe_scalar(void* ctx, const char* name, size_t n, const cf_value* v,
                             cf_bool textual, const cf_loc* at) {
-    (void)ctx;
+    emit_probe* p = (emit_probe*)ctx;
     (void)name;
     (void)n;
     (void)v;
     (void)textual;
     (void)at;
+    if (p->depth > 0) {
+        p->items[p->depth - 1] = 1;
+    }
     return CF_TRUE;
 }
 
 static cf_bool probe_end(void* ctx) {
-    (void)ctx;
+    emit_probe* p = (emit_probe*)ctx;
+    if (p->depth > 0 && p->kind[--p->depth] == 'a') {
+        --p->arrays;
+        if (p->items[p->depth] == 0) {
+            p->beyond_values = CF_TRUE; /* an empty array */
+        }
+    }
     return CF_TRUE;
 }
 
 /* CF_FALSE when the walk itself failed; `err` says why. */
-static cf_bool find_array(const cf_keyspace* ks, const emit_filter* f, cf_bool* found,
-                          cf_error* err) {
+static cf_bool find_array(const cf_keyspace* ks, const emit_filter* f,
+                          emit_probe* found, cf_error* err) {
     cf_doc_sink probe;
 
-    *found = CF_FALSE;
+    memset(found, 0, sizeof *found);
     memset(&probe, 0, sizeof probe);
     probe.size        = sizeof probe;
     probe.begin_table = probe_table;
@@ -249,18 +284,26 @@ size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int ra
     f.defs = cf_defs(c);
 
     if ((codec->caps & CF_CODEC_ARRAYS) == 0) {
-        cf_bool array;
+        emit_probe probe;
 
-        if (!find_array(ks, &f, &array, err)) {
+        if (!find_array(ks, &f, &probe, err)) {
             return 0;
         }
-        if (array) {
-            /* The promise the INI encoder makes: the caller checks before
-               encoding. Discovering it halfway through would leave a
-               truncated file that looks like a complete one. */
+        /* The promise the encoders make: the caller checks before
+           encoding. Discovering it halfway through would leave a
+           truncated file that looks like a complete one. */
+        if (probe.array && (codec->caps & CF_CODEC_SCALAR_ARRAYS) == 0) {
             cf_error_set(err, CF_E_CAPABILITY, NULL, format,
                          "this configuration has an array and '%s' has no syntax "
                          "for one; use a format that does",
+                         format);
+            return 0;
+        }
+        if (probe.beyond_values) {
+            cf_error_set(err, CF_E_CAPABILITY, NULL, format,
+                         "this configuration has an array of tables or of arrays, "
+                         "or an empty one, and '%s' writes arrays of values only; "
+                         "use a format that does",
                          format);
             return 0;
         }

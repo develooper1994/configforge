@@ -130,7 +130,10 @@ enum {
     CF_CODEC_READ   = 1u << 0,
     CF_CODEC_WRITE  = 1u << 1,
     CF_CODEC_TYPED  = 1u << 2, /* carries types; otherwise all text  */
-    CF_CODEC_ARRAYS = 1u << 3
+    CF_CODEC_ARRAYS = 1u << 3,
+    /* Arrays of values only - not of tables, not of arrays, not empty:
+       INI's name[] lines (D-60). Implied by CF_CODEC_ARRAYS. (1.2) */
+    CF_CODEC_SCALAR_ARRAYS = 1u << 4
 };
 
 /* `size` is sizeof(cf_codec) where the codec was compiled (D-51). */

@@ -31,6 +31,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   `/OPT:REF`), on in the `minimal` preset: a third of a small program.
   `CF_LTO`: link-time optimisation where the toolchain has it, off by
   default; the stack budget says it is not measured under it.
+- Arrays in INI, as PHP's `parse_ini_file` has them (D-60): `ports[] = 80`
+  appends an element, `ports[1] = 8443` sets one, and both are the flat
+  `ports.0` and `ports.count` every other format's array is. An array of
+  values is written that way; an array of tables, of arrays, or an empty
+  one is refused by name (`CF_CODEC_SCALAR_ARRAYS`). A second run of one
+  array's `name[]` lines is refused with both lines named. Additive: a
+  key with `[` was refused before.
 - `bench/` (`-DCF_BUILD_BENCH=ON`): what building, reading, reporting
   and Doctor's diff cost at 100 to 20,000 keys - not a test, the numbers
   an optimisation starts from. It found both of the quadratic costs

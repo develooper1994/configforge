@@ -141,19 +141,54 @@ static void test_arrays_are_all_or_nothing(cf_arena* ar) {
     has(buf, "\"x\"", "first element");
     has(buf, "\"y\"", "and the second, because an array is all or nothing");
 
-    /* INI has no array syntax, and inventing one would make every file
-       this library writes unreadable by every other INI reader. The
-       refusal happens before anything is written rather than halfway
-       through a file. */
+    /* INI writes an array of values as PHP's name[] lines (D-60), each
+       element once and in order. */
     {
         cf_error e2 = CF_ERROR_INIT;
-        check(cf_emit(c, "ini", CF_EMIT_ALL, 0, buf, sizeof buf, &e2) == 0,
-              "INI refuses an array");
-        check(e2.code == CF_E_CAPABILITY, "as a capability limit");
-        has(e2.message, "no syntax for one", "saying what is missing");
-        check(buf[0] == '\0', "and writes nothing at all");
+        check(cf_emit(c, "ini", CF_EMIT_ALL, 0, buf, sizeof buf, &e2) > 0,
+              "INI writes an array of values");
+        has(buf, "t[] = x\nt[] = y\n", "as name[] lines, in order");
     }
     cf_config_free(c);
+}
+
+/* What name[] lines cannot hold - an array of tables, of arrays, or an
+   empty one - is refused before anything is written, rather than
+   halfway through a file. */
+static void test_ini_refuses_what_it_cannot_hold(void) {
+    static char  t1[]     = "--s.0.host=a";
+    static char  t2[]     = "--s.count=1";
+    static char* tables[] = {a0, t1, t2, NULL};
+    static char  n1[]     = "--m.0.0=1";
+    static char  n2[]     = "--m.0.count=1";
+    static char  n3[]     = "--m.count=1";
+    static char* nested[] = {a0, n1, n2, n3, NULL};
+    static char  e1[]     = "--e.count=0";
+    static char* empty[]  = {a0, e1, NULL};
+    char* const* cases[3];
+    int          argc[3] = {3, 4, 2};
+    int          i;
+    static char  buf[4096];
+
+    cases[0] = tables;
+    cases[1] = nested;
+    cases[2] = empty;
+    for (i = 0; i < 3; ++i) {
+        cf_error    err = CF_ERROR_INIT;
+        cf_builder* b   = cf_build(NULL);
+        cf_config*  c;
+        cf_builder_cli(b, "cli", CF_RANK_CLI, argc[i], cases[i]);
+        c = cf_builder_create(b, &err);
+        if (c == NULL) {
+            check(0, "builds");
+            continue;
+        }
+        check(cf_emit(c, "ini", CF_EMIT_ALL, 0, buf, sizeof buf, &err) == 0 &&
+                  err.code == CF_E_CAPABILITY && buf[0] == '\0',
+              "INI refuses an array it has no form for, and writes nothing");
+        has(err.message, "arrays of values only", "saying what it can write");
+        cf_config_free(c);
+    }
 }
 
 /* A table with a member called `count` is a table. Taken for an array,
@@ -191,7 +226,8 @@ static void test_count_is_a_key(void) {
 /* INI is refused for an array that would be written, not for one the
    selection leaves out: the check asks what the encoder will be given. */
 static void test_refusal_follows_the_selection(void) {
-    static const cf_pair low[]  = {{"t.0", "x"}, {"t.1", "y"}, {"t.count", "2"}};
+    /* an array of tables, which INI has no form for */
+    static const cf_pair low[]  = {{"t.0.h", "x"}, {"t.1.h", "y"}, {"t.count", "2"}};
     static const cf_pair high[] = {{"server.port", "9000"}};
     cf_error             err    = CF_ERROR_INIT;
     cf_error             e2     = CF_ERROR_INIT;
@@ -645,6 +681,7 @@ int main(void) {
     test_configured_only();
     test_round_trip(ar);
     test_arrays_are_all_or_nothing(ar);
+    test_ini_refuses_what_it_cannot_hold();
     test_count_is_a_key();
     test_refusal_follows_the_selection();
 #if 2 * (CF_MAX_DEPTH + 1) + 8 <= CF_KEY_MAX

@@ -76,6 +76,7 @@ gets reopened every six months.
 | D-43 | A renamed key | definitions, provenance, Doctor | **Decided** |
 | D-44 | The Rust binding | bindings, build, safety | **Decided** |
 | D-45 | Build limits in the ABI | ABI, bindings, 1.0 | **Decided** |
+| D-60 | Arrays in INI are PHP's `name[]` and `name[i]` | formats, INI | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -2519,6 +2520,45 @@ refuses missing search data. Browser checks exercise actual search,
 its result links and narrow-screen navigation under the deployment
 path prefix. Documentation dependencies are tested in a clean
 environment, not one retaining an earlier theme's packages.
+
+## D-60 — Arrays in INI are the ones INI files already have
+
+**Question.** INI had no arrays here: a configuration with one could not
+be written as INI, and a file with `ports[] = 80` was refused. The owner
+asked first for C-style arrays, then that every format follow its own
+standard. What is INI's array?
+
+**Options.**
+
+1. None: refuse, as before.
+2. A brace list, `ports = {80, 443}` - C's initialiser.
+3. PHP's `parse_ini_file`: `ports[] = 80` appends, `ports[1] = 8443` sets
+   an element.
+4. Repeated keys, as systemd does.
+
+**Decision.** Option 3. INI has no formal standard; of the readers that
+have arrays, PHP's is the one most INI files with arrays are written
+for, and its `name[i]` is C's element assignment. Option 2 was built
+first and dropped: no INI reader knows it, so it would have been a
+syntax made up here - exactly what the owner's second instruction rules
+out. Option 4 cannot be told from a mistake: a key set twice is an
+error elsewhere in this library (CFD001 reports one).
+
+Underneath, both forms are the flat `name.i` and `name.count` every other
+format's array is, so explain(), reports and Doctor see no difference.
+The `name[]` lines of one array go together; a second run of them later
+in the section would restart the count and overwrite the first, so it is
+refused with both lines named. The reader stays allocation-free: it
+finds an earlier run by looking back at the bytes it already holds.
+
+**What INI cannot hold** - an array of tables, an array of arrays, an
+empty array - has no PHP form either, and `cf_emit` refuses it by name
+before writing anything (`CF_CODEC_SCALAR_ARRAYS`, beside
+`CF_CODEC_ARRAYS`). A table is a section, as before. A value in braces is
+text, as it always was.
+
+**Compatibility.** Additive: a key with `[` in it was refused before,
+and no file that read before reads differently.
 
 ---
 

@@ -10,11 +10,18 @@
  *     [section]          [section.sub]
  *     key = value        key=value
  *     key = "value"      quotes are stripped, not required
+ *     ports[] = 80       one element more of the array `ports`
+ *     ports[] = 443
+ *     ports[1] = 8443    the element at index 1
  *
- * Deliberately absent: arrays. INI has no agreed syntax for them, and
- * inventing one would mean every INI file this library writes is
- * unreadable by every other INI reader. A configuration that needs
- * arrays uses JSON or TOML, and the error says so.
+ * Arrays are written as INI writes them where it writes them at all -
+ * PHP's parse_ini_file, the reader with arrays that most INI files are
+ * written for (D-60) - not in a syntax made up here: `name[]` appends,
+ * `name[i]` sets element i. The `name[]` lines of one array are
+ * consecutive; a second run of them further down would restart the
+ * count and overwrite the first, so it is refused with both lines named.
+ * INI has no form for an array of tables, of arrays, or an empty one,
+ * and those are refused on writing by name; a table is a section.
  *
  * Values are emitted as text. INI carries no types, so the definition
  * decides, and Tier 0 inference decides when there is no definition.
@@ -111,15 +118,100 @@ static cf_bool ini_emit_path(const cf_doc_sink* out, const char* path, size_t n,
     return CF_TRUE;
 }
 
-static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* err) {
-    ini_scan s;
-    int      depth = 0;
+/* `name[]` (an element appended, *index 0) or `name[i]` (*index i+1):
+   the length of `name`, or 0 when `key` is neither. */
+static size_t ini_bracket(const char* key, size_t klen, size_t* index) {
+    size_t open = 0, i;
 
-    s.p          = in->p;
-    s.end        = in->p + in->n;
-    s.file       = (in->name != NULL) ? in->name : "<ini>";
-    s.line       = 1;
-    s.line_start = in->p;
+    if (klen < 3 || key[klen - 1] != ']') {
+        return 0;
+    }
+    while (open < klen && key[open] != '[') {
+        ++open;
+    }
+    if (open == 0 || open >= klen - 1) {
+        return 0;
+    }
+    if (open + 2 == klen) {
+        *index = 0;
+        return open; /* name[] */
+    }
+    for (i = open + 1; i < klen - 1; ++i) {
+        if (key[i] < '0' || key[i] > '9') {
+            return 0;
+        }
+    }
+    if (key[open + 1] == '0' && klen - open - 2 > 1) {
+        return 0; /* "01" is not an index */
+    }
+    *index = 1;
+    return open;
+}
+
+/* An open run of `name[]` lines: the array the sink has begun. */
+typedef struct ini_run {
+    char         name[CF_KEY_MAX];
+    size_t       n;
+    cf_bool      open;
+    unsigned int line; /* where it began */
+} ini_run;
+
+static cf_bool ini_run_close(ini_run* r, const cf_doc_sink* out) {
+    if (!r->open) {
+        return CF_TRUE;
+    }
+    r->open = CF_FALSE;
+    return out->end(out->ctx);
+}
+
+/* The line, before `upto` and after `from`, of an earlier `name[] =` in
+   the same section, or 0. The blob is in memory: looking back at it is
+   the reader's whole memory of what it has seen, so it allocates
+   nothing, and it only looks when a run of `name[]` begins. */
+static unsigned int ini_earlier_run(const char* from, const char* upto,
+                                    unsigned int first_line, const char* name,
+                                    size_t n) {
+    const char*  p    = from;
+    unsigned int line = first_line;
+
+    while (p < upto) {
+        const char* eol = p;
+        const char* k;
+        size_t      kl;
+        while (eol < upto && *eol != '\n') {
+            ++eol;
+        }
+        kl = ini_trim(p, (size_t)(eol - p), &k);
+        if (kl > n + 2 && memcmp(k, name, n) == 0 && k[n] == '[' && k[n + 1] == ']') {
+            const char* q = k + n + 2;
+            while (q < eol && (*q == ' ' || *q == '\t')) {
+                ++q;
+            }
+            if (q < eol && *q == '=') {
+                return line;
+            }
+        }
+        p = (eol < upto) ? eol + 1 : eol;
+        ++line;
+    }
+    return 0;
+}
+
+static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* err) {
+    ini_scan     s;
+    int          depth = 0;
+    ini_run      run;
+    const char*  section_start;
+    unsigned int section_line = 1;
+
+    run.open      = CF_FALSE;
+    run.n         = 0;
+    s.p           = in->p;
+    s.end         = in->p + in->n;
+    s.file        = (in->name != NULL) ? in->name : "<ini>";
+    s.line        = 1;
+    s.line_start  = in->p;
+    section_start = in->p;
 
     if (!out->begin_table(out->ctx, NULL, 0)) {
         return cf_error_set(err, CF_E_SOURCE, NULL, s.file, "sink refused");
@@ -145,6 +237,11 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
             const char* trimmed;
             size_t      n;
 
+            if (!ini_run_close(&run, out)) {
+                return cf_error_set(err, CF_E_SOURCE, NULL, s.file,
+                                    "%s:%u: the document could not be recorded", s.file,
+                                    s.line);
+            }
             ++s.p;
             start = s.p;
             while (s.p < s.end && *s.p != ']' && *s.p != '\n') {
@@ -172,6 +269,8 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
                                     s.file, s.line);
             }
             ini_skip_to_eol(&s);
+            section_start = s.p;
+            section_line  = s.line;
             continue;
         }
 
@@ -215,16 +314,82 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
             at.file = s.file;
             at.line = s.line;
             at.col  = col;
-
             cf_value_text(&v, val, vlen);
-            if (!out->scalar(out->ctx, key, klen, &v, CF_TRUE, &at)) {
-                return cf_error_set(err, CF_E_KEY, NULL, s.file,
-                                    "%s:%u: '%S' is not a valid key", s.file, s.line,
-                                    key, klen);
+
+            {
+                size_t index = 0;
+                size_t nlen  = ini_bracket(key, klen, &index);
+                char   flat[CF_KEY_MAX];
+
+                if (nlen > 0 && index == 0) {
+                    /* name[]: one more element of the run, or a new run */
+                    if (!run.open || run.n != nlen ||
+                        memcmp(run.name, key, nlen) != 0) {
+                        unsigned int earlier;
+                        if (!ini_run_close(&run, out)) {
+                            return cf_error_set(
+                                err, CF_E_SOURCE, NULL, s.file,
+                                "%s:%u: the document could not be recorded", s.file,
+                                s.line);
+                        }
+                        earlier = ini_earlier_run(section_start, kstart, section_line,
+                                                  key, nlen);
+                        if (earlier != 0) {
+                            return cf_error_set(
+                                err, CF_E_SOURCE, NULL, s.file,
+                                "%s:%u: '%S[]' again after line %u; an array's "
+                                "lines go together, or name each index",
+                                s.file, s.line, key, nlen, earlier);
+                        }
+                        if (nlen >= sizeof run.name ||
+                            !out->begin_array(out->ctx, key, nlen)) {
+                            return cf_error_set(err, CF_E_KEY, NULL, s.file,
+                                                "%s:%u: '%S' is not a valid key",
+                                                s.file, s.line, key, nlen);
+                        }
+                        memcpy(run.name, key, nlen);
+                        run.n    = nlen;
+                        run.open = CF_TRUE;
+                        run.line = s.line;
+                    }
+                    if (!out->scalar(out->ctx, NULL, 0, &v, CF_TRUE, &at)) {
+                        return cf_error_set(err, CF_E_KEY, NULL, s.file,
+                                            "%s:%u: '%S' could not be recorded", s.file,
+                                            s.line, key, klen);
+                    }
+                    continue;
+                }
+                if (!ini_run_close(&run, out)) {
+                    return cf_error_set(err, CF_E_SOURCE, NULL, s.file,
+                                        "%s:%u: the document could not be recorded",
+                                        s.file, s.line);
+                }
+                if (nlen > 0) {
+                    /* name[i]: the flat name.i every format's element is */
+                    if (klen + 1 > sizeof flat) {
+                        return cf_error_set(err, CF_E_KEY, NULL, s.file,
+                                            "%s:%u: '%S' is too long", s.file, s.line,
+                                            key, klen);
+                    }
+                    memcpy(flat, key, nlen);
+                    flat[nlen] = '.';
+                    memcpy(flat + nlen + 1, key + nlen + 1, klen - nlen - 2);
+                    key  = flat;
+                    klen = klen - 1;
+                }
+                if (!out->scalar(out->ctx, key, klen, &v, CF_TRUE, &at)) {
+                    return cf_error_set(err, CF_E_KEY, NULL, s.file,
+                                        "%s:%u: '%S' is not a valid key", s.file,
+                                        s.line, key, klen);
+                }
             }
         }
     }
 
+    if (!ini_run_close(&run, out)) {
+        return cf_error_set(err, CF_E_SOURCE, NULL, s.file,
+                            "%s: the document could not be recorded", s.file);
+    }
     while (depth > 0) {
         if (!out->end(out->ctx)) {
             return cf_error_set(err, CF_E_SOURCE, NULL, s.file,
@@ -255,8 +420,11 @@ typedef struct ini_enc {
     size_t   plen;
     cf_u16   stack[CF_MAX_DEPTH]; /* lengths within path */
     int      depth;
-    cf_bool  in_array;
     cf_bool  header_pending;
+    /* Inside an array: its name is path[arr_from, plen), written before
+       each element's "[] = ". */
+    cf_bool arrays;
+    size_t  arr_from;
 } ini_enc;
 
 /* cf_emit keeps this on its own frame, in CF_ENCODER_STATE_MAX bytes. */
@@ -281,18 +449,45 @@ static cf_bool ini_enc_push(ini_enc* e, const char* name, size_t n) {
     return CF_TRUE;
 }
 
-static cf_bool ini_enc_table(void* ctx, const char* name, size_t n) {
-    return ini_enc_push((ini_enc*)ctx, name, n);
+static void ini_enc_header(ini_enc* e) {
+    if (e->header_pending && e->plen > 0) {
+        cf_sink_puts(e->out, "\n[");
+        cf_sink_write(e->out, e->path, e->plen);
+        cf_sink_puts(e->out, "]\n");
+        e->header_pending = CF_FALSE;
+    }
 }
 
+/* A table inside an array, and an array inside one, have no INI form;
+   cf_emit asks first (CF_CODEC_SCALAR_ARRAYS), so these refusals are
+   the last line of defence, not the way it is found. */
+static cf_bool ini_enc_table(void* ctx, const char* name, size_t n) {
+    ini_enc* e = (ini_enc*)ctx;
+    if (e->arrays) {
+        return CF_FALSE;
+    }
+    return ini_enc_push(e, name, n);
+}
+
+/* The array's elements become "name[] = value" lines, PHP's form (D-60),
+   in the section of the table around it - whose header goes out first,
+   since the array itself is not a section. */
 static cf_bool ini_enc_array(void* ctx, const char* name, size_t n) {
     ini_enc* e = (ini_enc*)ctx;
-    /* INI has no array syntax, and inventing one would make every file
-       this library writes unreadable by every other INI reader. The
-       caller checks CF_CODEC_ARRAYS before encoding, so reaching here
-       means the check was skipped. */
-    e->in_array = CF_TRUE;
-    return ini_enc_push(e, name, n);
+    size_t   from;
+
+    if (e->arrays || name == NULL) {
+        return CF_FALSE;
+    }
+    ini_enc_header(e);
+    from = (e->plen > 0) ? e->plen + 1 : 0;
+    if (!ini_enc_push(e, name, n)) {
+        return CF_FALSE;
+    }
+    e->header_pending = CF_FALSE;
+    e->arrays         = CF_TRUE;
+    e->arr_from       = from;
+    return CF_TRUE;
 }
 
 /* How a text value goes into its line: 0 as it stands, 1 in quotes, and
@@ -331,22 +526,17 @@ static cf_bool ini_enc_scalar(void* ctx, const char* name, size_t n, const cf_va
 
     (void)textual;
     (void)at;
-    if (e->in_array) {
-        return CF_FALSE;
-    }
     if (v->type == CF_TYPE_TEXT) {
         form = ini_text_form(v->u.t.p, v->u.t.n);
         if (form < 0) {
             return CF_FALSE;
         }
     }
-    if (e->header_pending && e->plen > 0) {
-        cf_sink_puts(e->out, "\n[");
-        cf_sink_write(e->out, e->path, e->plen);
-        cf_sink_puts(e->out, "]\n");
-        e->header_pending = CF_FALSE;
-    }
-    if (name != NULL) {
+    ini_enc_header(e);
+    if (e->arrays) {
+        cf_sink_write(e->out, e->path + e->arr_from, e->plen - e->arr_from);
+        cf_sink_puts(e->out, "[]");
+    } else if (name != NULL) {
         cf_sink_write(e->out, name, n);
     }
     cf_sink_puts(e->out, " = ");
@@ -376,7 +566,7 @@ static cf_bool ini_enc_end(void* ctx) {
         return CF_FALSE;
     }
     e->plen           = e->stack[--e->depth];
-    e->in_array       = CF_FALSE;
+    e->arrays         = CF_FALSE;
     e->header_pending = CF_FALSE;
     return CF_TRUE;
 }
@@ -400,13 +590,20 @@ static cf_bool ini_encoder(cf_sink* out, void* state, cf_doc_sink* sink) {
 }
 
 const cf_codec cf_codec_ini = {
-    sizeof(cf_codec), "ini",       ".ini;.cfg;.conf", CF_CODEC_READ | CF_CODEC_WRITE,
-    ini_decode,       ini_encoder, sizeof(ini_enc)};
+    sizeof(cf_codec),  "ini",
+    ".ini;.cfg;.conf", CF_CODEC_READ | CF_CODEC_WRITE | CF_CODEC_SCALAR_ARRAYS,
+    ini_decode,        ini_encoder,
+    sizeof(ini_enc)};
 
 #else /* !CF_WITH_EMIT: read only */
 
-const cf_codec cf_codec_ini = {
-    sizeof(cf_codec), "ini", ".ini;.cfg;.conf", CF_CODEC_READ, ini_decode, NULL, 0};
+const cf_codec cf_codec_ini = {sizeof(cf_codec),
+                               "ini",
+                               ".ini;.cfg;.conf",
+                               CF_CODEC_READ | CF_CODEC_SCALAR_ARRAYS,
+                               ini_decode,
+                               NULL,
+                               0};
 
 #endif /* CF_WITH_EMIT */
 

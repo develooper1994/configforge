@@ -500,17 +500,29 @@ table: `pool.count` and `pool.size` are a table with a member called
 match them, written as the keys they are. The flat keys cannot tell two
 pairs of documents apart, and write each as the array: `{"count": 0}` and
 `[]`, and `{"0": "a", "count": 1}` and `["a"]`. An element at or past the
-count is not in the configuration at all, and is not written either. INI
-has no syntax for an array, so it refuses a configuration only when what
-is being written has one: an array that `CF_EMIT_CONFIGURED` or
-`CF_EMIT_FROM_RANK` leaves out does not count.
+count is not in the configuration at all, and is not written either.
+
+INI's arrays are the ones INI files already have - PHP's `parse_ini_file`
+(D-60), not a syntax of this library's:
+
+```ini
+ports[] = 80          ; one element more
+ports[] = 443
+ports[1] = 8443       ; the element at index 1, as C assigns one
+```
+
+The `name[]` lines of one array go together, and a second run of them
+further down the section is refused, since it would overwrite the
+first. An array of values is written that way; an array of tables, of
+arrays, or an empty one has no such form, and is refused by name before
+anything is written - but only when what is being written has one: an
+array that `CF_EMIT_CONFIGURED` or `CF_EMIT_FROM_RANK` leaves out does
+not count.
 
 What a format cannot hold is refused, never written as something else:
-TOML has no null; YAML takes only valid UTF-8; INI has no array and no
-line break inside a value, and a group whose only member is `count = 0`
-is an empty array, which it cannot write either. A value INI would read
-differently bare - empty, with a space at either end, or holding `"`, `#`
-or `;` - is written in quotes.
+TOML has no null; YAML takes only valid UTF-8; INI has no line break
+inside a value. A value INI would read differently bare - empty, with a
+space at either end, or holding `"`, `#` or `;` - is written in quotes.
 
 JSON and TOML string values are limited by the configuration's arena,
 not `CF_MESSAGE_MAX`. Their readers use a reusable workspace owned by
