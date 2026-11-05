@@ -225,9 +225,11 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y gcovr
       - run: cmake -DEXTRA=coverage -DMODE=quick -DJOBS=4 -P scripts/verify.cmake
 
-  # The Doctor action, used the way a project would use it, on a report
-  # the fixtures generator writes: a finding at info level passes when
-  # the step fails on warnings, and the SARIF exists afterwards.
+  # The Doctor action, used the way a project would use it, on reports
+  # the fixtures generator writes: the change diffed against the base, a
+  # finding at info level passing a step that fails on warnings, and the
+  # SARIF and the Markdown there afterwards. On a pull request it
+  # comments, which is how the comment is tried against a real forge.
   doctor-action:
     runs-on: ubuntu-latest
     steps:
@@ -241,7 +243,17 @@ jobs:
         with:
           report: build/tests/doctor/cf_fx_staging.json
           fail-on: warning
-      - run: test -s "${{ steps.doctor.outputs.sarif }}"
+      - id: doctor-diff
+        uses: ./actions/doctor
+        with:
+          report: build/tests/doctor/cf_fx_staging.json
+          base: build/tests/doctor/cf_fx_prod.json
+          fail-on: error
+          sarif: configforge-doctor-diff.sarif
+          comment: ${{ github.event_name == 'pull_request' }}
+      - run: |
+          test -s "${{ steps.doctor.outputs.sarif }}"
+          grep -q 'ConfigForge Doctor: diff' "${{ steps.doctor-diff.outputs.markdown }}"
 
   analyze:
     runs-on: ubuntu-latest

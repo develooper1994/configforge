@@ -1,0 +1,20 @@
+# ConfigForge Doctor as a pre-commit hook (https://pre-commit.com).
+# In a project's .pre-commit-config.yaml:
+#
+#   - repo: https://github.com/develooper1994/configforge
+#     rev: v1.1.0
+#     hooks:
+#       - id: configforge-doctor
+#         files: ^deploy/.*provenance.*\.json$
+#         args: [--baseline, .configforge-baseline, --fail-on, warning]
+#
+# Each staged report is linted; with --base, also diffed against the
+# report it replaces. docs/Doctor.md, section 11, has the rest.
+- id: configforge-doctor
+  name: ConfigForge Doctor
+  description: Find configuration mistakes in ConfigForge provenance reports
+  entry: actions/doctor/pre-commit.sh
+  language: script
+  files: (^|/)[^/]*provenance[^/]*\.json$
+  types: [json]
+  require_serial: true

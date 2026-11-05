@@ -18,6 +18,14 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   new result. Off by default; an options struct of 1.0's size is read
   as 1.0's. C++, Rust (`LiveOptions`) and Python have the same, and
   the live example a fourth scene.
+- Doctor on a pull request: the action takes the base branch's report
+  as `base` and diffs the change against it, writes the findings to the
+  job summary as Markdown and, with `comment: true`, to one comment
+  that each push updates; a fork's read-only token is a note, not a
+  failure. A pre-commit hook (`.pre-commit-hooks.yaml`) lints each
+  staged report the same way. `doctor --format markdown` is new for
+  every command that finds. The scripts behind both are tested by
+  `doctor.action`.
 
 - API reference entries link directly to their implementation lines,
   including platform variants. The reference gate checks the targets

@@ -196,7 +196,7 @@ doctor blame <key> <report>...
     the report since which <key> has been as the last report has it, and what
     changed there; "at least" when an earlier step cannot be compared
 
-configforge doctor lint <report> [--rules R] [--baseline B]
+configforge doctor lint <report> [--rules R] [--baseline B] [--format text|sarif|markdown]
     rule catalogue against a single report
 
 configforge doctor parity <reportA> <reportB> [--require-same-origin]
@@ -482,7 +482,55 @@ from source and writes SARIF for the code-scanning upload:
     sarif_file: configforge-doctor.sarif
 ```
 
-Output formats: human-readable text and SARIF 2.1.0 (`--format sarif`). SARIF matters
+**On a pull request** it does what a reviewer cannot do by reading the
+diff of a configuration file: given the base branch's report as `base`,
+it runs `doctor diff` between the two and says which key changes value,
+which source would win now, which default an upgrade moved (CFD017) and
+which setting the program never reads (CFD018). The findings go to the
+log, to the job summary as Markdown (`--format markdown`, which lint, diff,
+history and blame print too), and with `comment: true` to one comment on the
+pull request, updated on each push rather than added again:
+
+```yaml
+permissions:
+  pull-requests: write          # for the comment; the summary needs none
+steps:
+  - uses: develooper1994/configforge/actions/doctor@main
+    with:
+      report: head/provenance.json
+      base: base/provenance.json
+      comment: true
+```
+
+A pull request from a fork has a token that cannot write a comment; the
+step says so and passes, and the summary has everything. Secrets are
+compared by digest and never shown; values that are not secret are, as
+`doctor diff` shows them - take the reports `--blind` to show none. The
+step's exit code is the worst of the lint and the diff at `fail-on`.
+
+**Before a commit**, the same as a [pre-commit](https://pre-commit.com)
+hook, for a project that keeps its reports in the repository:
+
+```yaml
+- repo: https://github.com/develooper1994/configforge
+  rev: v1.1.0
+  hooks:
+    - id: configforge-doctor
+      files: ^deploy/.*provenance.*\.json$
+      args: [--base, deploy/prod-provenance.json, --fail-on, warning]
+```
+
+Each staged report is linted, and diffed against `--base` when one is
+given. Doctor is `$CONFIGFORGE_DOCTOR`, or is built once from the hook's
+checkout into `~/.cache/configforge-doctor/<commit>`; nothing is
+downloaded. Without pre-commit, `actions/doctor/pre-commit.sh` is a
+`.git/hooks/pre-commit` of its own. The scripts the action and the hook
+run - `run.sh`, `comment.sh`, `pre-commit.sh` - are tested by
+`doctor.action`, the comment against a stand-in for `gh`.
+
+Output formats: human-readable text, SARIF 2.1.0 (`--format sarif`) and
+Markdown (`--format markdown`), a table whose cells escape what would
+format, link or end a row. SARIF matters
 more than it looks: it makes findings appear inline on a pull request in most forges
 without any per-forge integration work. A finding that knows where its value was set
 carries the file and line; one that does not - a variable, a command-line argument -

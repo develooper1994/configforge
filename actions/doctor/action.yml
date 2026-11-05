@@ -3,29 +3,40 @@
 #   - uses: develooper1994/configforge/actions/doctor@main
 #     with:
 #       report: build/provenance.json
+#       base: base/provenance.json     # optional: the report it replaces
+#       comment: true                  # optional: on the pull request
 #   - uses: github/codeql-action/upload-sarif@v3
 #     if: always()
 #     with:
 #       sarif_file: configforge-doctor.sarif
 #
 # Builds Doctor from this repository's sources - nothing is downloaded but
-# what the checkout already fetched - lints the report, prints the
-# findings and writes them as SARIF, which upload-sarif turns into
-# annotations on the pull request. docs/Doctor.md has the rules.
+# what the checkout already fetched - lints the report and, given the
+# base branch's, diffs the two: which key changes, which source would win,
+# a default an upgrade moved (CFD017), a key set and never read (CFD018).
+# The findings go to the log, to SARIF for code scanning, to the job's
+# summary as Markdown, and, when asked, to one comment on the pull
+# request that each push updates. Secrets are compared by digest and never
+# shown. docs/Doctor.md has the rules.
 #
-# The inputs reach the shell through the environment, never by being
-# pasted into the script: a report path that came from a pull request is
-# text somebody else wrote.
+# The work is run.sh and comment.sh beside this file, which the test
+# suite runs too. The inputs reach them through the environment, never by
+# being pasted into a script: a report path that came from a pull request
+# is text somebody else wrote.
 name: ConfigForge Doctor
-description: Find configuration mistakes in a ConfigForge provenance report
+description: Find configuration mistakes in a ConfigForge provenance report, and what a change moves
 branding:
   icon: check-circle
   color: green
 
 inputs:
   report:
-    description: The provenance report to lint
+    description: The provenance report to lint - the change's
     required: true
+  base:
+    description: The report it replaces - the base branch's - to diff against
+    required: false
+    default: ""
   baseline:
     description: Findings already accepted, one per line ("CFD001 server.port")
     required: false
@@ -42,11 +53,26 @@ inputs:
     description: Where to write the SARIF file
     required: false
     default: configforge-doctor.sarif
+  summary:
+    description: Write the findings to the job summary - true or false
+    required: false
+    default: "true"
+  comment:
+    description: Post the findings as one pull-request comment, updated on each push - true or false
+    required: false
+    default: "false"
+  github-token:
+    description: The token for the comment; it needs pull-requests write
+    required: false
+    default: ${{ github.token }}
 
 outputs:
   sarif:
     description: The SARIF file written
     value: ${{ inputs.sarif }}
+  markdown:
+    description: The findings as Markdown
+    value: ${{ steps.doctor.outputs.markdown }}
 
 runs:
   using: composite
@@ -60,21 +86,38 @@ runs:
         cmake -S "$CF_SRC" -B "$CF_BUILD" -DCMAKE_BUILD_TYPE=Release \
           -DCF_BUILD_TESTING=OFF -DCF_BUILD_EXAMPLES=OFF -DCF_ENABLE_GATES=OFF
         cmake --build "$CF_BUILD" --target doctor --config Release --parallel
-    - name: Lint the report
+    - name: Lint and diff
+      id: doctor
       shell: bash
       env:
         CF_BUILD: ${{ runner.temp }}/cf-doctor
         CF_REPORT: ${{ inputs.report }}
+        CF_BASE: ${{ inputs.base }}
         CF_BASELINE: ${{ inputs.baseline }}
         CF_SEVERITY: ${{ inputs.severity }}
         CF_FAIL_ON: ${{ inputs.fail-on }}
         CF_SARIF: ${{ inputs.sarif }}
+        CF_MARKDOWN: ${{ runner.temp }}/configforge-doctor.md
+        CF_SUMMARY: ${{ inputs.summary }}
+        CF_ACTION: ${{ github.action_path }}
       run: |
-        doctor="$(find "$CF_BUILD" -type f \( -name doctor -o -name doctor.exe \) | head -n 1)"
-        args=(lint "$CF_REPORT")
-        if [ -n "$CF_BASELINE" ]; then args+=(--baseline "$CF_BASELINE"); fi
-        if [ -n "$CF_SEVERITY" ]; then args+=(--severity "$CF_SEVERITY"); fi
-        # SARIF whatever it holds - unusable input still fails here, with
-        # exit code 2 - and then the text, whose exit code is the verdict.
-        "$doctor" "${args[@]}" --format sarif --fail-on never > "$CF_SARIF"
-        "$doctor" "${args[@]}" --fail-on "$CF_FAIL_ON"
+        CF_DOCTOR="$(find "$CF_BUILD" -type f \( -name doctor -o -name doctor.exe \) | head -n 1)"
+        export CF_DOCTOR
+        echo "markdown=$CF_MARKDOWN" >>"$GITHUB_OUTPUT"
+        rc=0
+        bash "$CF_ACTION/run.sh" || rc=$?
+        if [ "$CF_SUMMARY" = "true" ] && [ -f "$CF_MARKDOWN" ]; then
+          cat "$CF_MARKDOWN" >>"$GITHUB_STEP_SUMMARY"
+        fi
+        exit "$rc"
+    - name: Comment on the pull request
+      if: always() && inputs.comment == 'true' && github.event.pull_request.number != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        CF_REPO: ${{ github.repository }}
+        CF_PR: ${{ github.event.pull_request.number }}
+        CF_MARKDOWN: ${{ runner.temp }}/configforge-doctor.md
+        CF_ACTION: ${{ github.action_path }}
+      run: |
+        if [ -f "$CF_MARKDOWN" ]; then bash "$CF_ACTION/comment.sh"; fi

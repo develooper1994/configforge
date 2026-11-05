@@ -65,6 +65,7 @@ system, no generated header, no options.
 | CBMC (`cbmc`) | BSD-4-Clause | the bounded proofs (`docs/Safety.md`); not linked |
 | libabigail (`abidiff`) | Apache-2.0 WITH LLVM-exception | `verify -DEXTRA=abi` (tier 2): the shared library against the last release's (D-56); not linked |
 | wasi-libc, lld (`wasm-ld`), Node.js (`node`) | Apache-2.0 WITH LLVM-exception, MIT | `verify -DEXTRA=wasm` (tier 2): the library and its unit tests for wasm32-wasi, run under Node's WASI (`scripts/wasi-run.js`); wasi-libc is linked into what is built for wasm32 |
+| GNU Bash (`bash`) | GPL-3.0-or-later | `doctor.action`: the GitHub Action's and the pre-commit hook's scripts (`actions/doctor`), on a Unix host; not linked, and not needed to build |
 | Ninja (`ninja`), `ccache` (optional) | Apache-2.0, GPL-3.0-or-later | `scripts/verify.cmake` uses them where installed (D-50): faster, not required; neither is linked |
 | a C89 compiler: GCC, Clang or MSVC | GPL-3.0-or-later with the GCC Runtime Library Exception; Apache-2.0 WITH LLVM-exception; proprietary | compiling. None of their code ends up in a program except each one's own runtime support, under its exception |
 | a C++98 compiler, the same three | as above | the C++03 wrapper's example and test |

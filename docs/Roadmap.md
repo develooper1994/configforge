@@ -85,15 +85,14 @@ Guide and API reference say what it does.
    `CF_LIVE_ROLLED_BACK`, `rollbacks` and `probation` in the status;
    a poll does not swap back in the values a rollback came from. Guide
    section 10, scene 4 of the live examples, `test_live`.
-2. **Doctor on a pull request.** A composite GitHub Action and a
-   pre-commit hook, both in this repository, that build or download
-   Doctor, run `doctor diff` (and `doctor lint` against the
-   definitions) between the base and the head, and write the findings
-   as a pull-request comment or a hook failure: which key changes, which
-   source would win in production, what a default drift (CFD017) or an
-   unread key (CFD018) means. No new library code; values stay out of
-   every message, as Doctor's already do. Tested by a workflow in this
-   repository against fixture reports, and documented in Doctor.md.
+2. **Doctor on a pull request** - done. The action takes `base` and
+   diffs, writes Markdown (`doctor --format markdown`) to the job
+   summary and, with `comment: true`, to one comment updated per push;
+   `.pre-commit-hooks.yaml` and `actions/doctor/pre-commit.sh` lint
+   staged reports. Non-secret values do show in a diff, as `doctor diff`
+   shows them; secrets only by digest. `doctor.action` tests the
+   scripts, the comment against a stub `gh`; the CI job runs the action
+   when GitHub Actions does.
 3. **The configuration's fingerprint where operators look.**
    `cf_digest` already identifies a resolved configuration - quiet
    swaps use it - but nothing outside the process sees it. Put it in

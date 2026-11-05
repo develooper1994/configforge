@@ -67,6 +67,24 @@ doctor_case(history_unreadable 2 history|cf_fx_prod.json|cf_fx_none.json)
 doctor_case(blame 0 blame|server.port|cf_fx_prod.json|cf_fx_staging.json)
 doctor_case(blame_missing 2 blame|no.such.key|cf_fx_prod.json)
 
+# The GitHub Action's scripts and the pre-commit hook (actions/doctor),
+# as a project's CI runs them. Bash on a Unix host only: on Windows the
+# bash on PATH may be WSL's, which would not see this build's paths.
+if(CMAKE_HOST_UNIX)
+  find_program(CF_BASH bash)
+  if(CF_BASH)
+    add_test(
+      NAME doctor.action
+      COMMAND
+        ${CMAKE_COMMAND} -DDOCTOR=$<TARGET_FILE:doctor> -DBASH=${CF_BASH}
+        -DACTION=${CMAKE_SOURCE_DIR}/actions/doctor
+        -DWORK=${CMAKE_CURRENT_BINARY_DIR} -P
+        ${CMAKE_CURRENT_SOURCE_DIR}/action.cmake)
+    set_tests_properties(doctor.action PROPERTIES FIXTURES_REQUIRED
+                                                  DOCTOR_REPORTS)
+  endif()
+endif()
+
 # Doctor from Python (bindings/python): the same findings, read from the
 # program's SARIF output. Where there is a Python 3 to run it.
 find_package(

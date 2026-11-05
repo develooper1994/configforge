@@ -19,7 +19,7 @@
  *     --baseline <file>   findings already accepted, one per line
  *     --severity <file>   this project's severities, one per line
  *     --fail-on <level>   error (default), warning, info or never
- *     --format <name>     text (default) or sarif
+ *     --format <name>     text (default), sarif or markdown
  *
  * The rules are the library's (engine.c, cf_doctor.h); this file reads
  * the command line and prints.
@@ -119,6 +119,71 @@ static void print_sarif(const cf_doctor* D, const char* report_path) {
     printf("\n    ]\n  }]\n}\n");
 }
 
+/* One table cell: a key, a place or a message is text somebody else
+   wrote, and a pull-request comment renders it. A '|' would end the
+   cell, '<' open a tag, '*', '_', '`' and '[' format or link; each is
+   escaped, and a line break, which would end the row, is a space. */
+static void md_cell(const char* t) {
+    for (; t != NULL && *t != '\0'; ++t) {
+        unsigned char ch = (unsigned char)*t;
+        if (ch == '<') {
+            fputs("&lt;", stdout);
+        } else if (ch == '>') {
+            fputs("&gt;", stdout);
+        } else if (ch == '&') {
+            fputs("&amp;", stdout);
+        } else if (ch == '\n' || ch == '\r' || ch == '\t') {
+            putchar(' ');
+        } else if (strchr("|\\*_`[]#~", (int)ch) != NULL) {
+            putchar('\\');
+            putchar((int)ch);
+        } else {
+            putchar((int)ch);
+        }
+    }
+}
+
+/* For a pull request or a job summary: a heading naming the command and
+   its reports, a table, and the count. Values are not in a finding's
+   message, so they are not in the table either. */
+static void print_markdown(const cf_doctor* D, const char* command, char** reports,
+                           int nreports, int stale) {
+    int k;
+
+    printf("### ConfigForge Doctor: %s", command);
+    for (k = 0; k < nreports; ++k) {
+        fputs(k == 0 ? " " : ", ", stdout);
+        md_cell(reports[k]);
+    }
+    printf("\n\n");
+    if (D->nfound == 0) {
+        printf("No new findings.\n");
+    } else {
+        size_t i;
+        printf("| Rule | Level | Key | Where | Finding |\n");
+        printf("| ---- | ----- | --- | ----- | ------- |\n");
+        for (i = 0; i < D->nfound; ++i) {
+            const dfinding* f = &D->found[i];
+            printf("| %s | %s | ", f->id, f->level);
+            md_cell(f->key);
+            fputs(" | ", stdout);
+            md_cell(f->at);
+            fputs(" | ", stdout);
+            md_cell(f->msg);
+            printf(" |\n");
+        }
+    }
+    printf("\n**%d new finding(s)**: %d error, %d warning, %d info", D->findings,
+           D->errors, D->warnings, D->infos);
+    if (D->baselined > 0) {
+        printf("; %d accepted by the baseline", D->baselined);
+    }
+    if (stale > 0) {
+        printf("; %d baseline entry(s) no longer match", stale);
+    }
+    printf("\n");
+}
+
 static void print_text(const cf_doctor* D) {
     size_t i;
     for (i = 0; i < D->nfound; ++i) {
@@ -207,7 +272,7 @@ static int usage(void) {
           "  --baseline <file>  findings already accepted\n"
           "  --severity <file>  this project's severities\n"
           "  --fail-on <level>  error (default), warning, info, never\n"
-          "  --format <name>    text (default) or sarif\n"
+          "  --format <name>    text (default), sarif or markdown\n"
           "\n",
           stderr);
     fputs("Reads provenance reports and never resolves configuration\n"
@@ -365,7 +430,8 @@ static int run(cf_doctor* D, int argc, char** argv) {
                 }
             } else if (strcmp(argv[i], "--format") == 0) {
                 format = argv[++i];
-                if (strcmp(format, "text") != 0 && strcmp(format, "sarif") != 0) {
+                if (strcmp(format, "text") != 0 && strcmp(format, "sarif") != 0 &&
+                    strcmp(format, "markdown") != 0) {
                     return usage();
                 }
             } else if (is_history && strcmp(argv[i], "--key") == 0) {
@@ -404,6 +470,9 @@ static int run(cf_doctor* D, int argc, char** argv) {
         if (strcmp(format, "sarif") == 0) {
             /* A sequence's artifact is its latest report. */
             print_sarif(D, argv[(is_history || is_blame) ? first - 1 : 2]);
+        } else if (strcmp(format, "markdown") == 0) {
+            int stale = D->base.loaded ? (int)cf_doctor_stale_count(D) : 0;
+            print_markdown(D, argv[1], argv + pos, first - pos, stale);
         } else {
             int stale = 0;
             print_text(D);
