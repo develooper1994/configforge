@@ -37,13 +37,11 @@ fails an incompatible change within 1.x.
 
 ### Resume here (2026-11-05)
 
-`main` is 1.1.0, unreleased; the 1.0.0 archives are unchanged. The three
-items accepted on 2026-11-05 - reload probation (`a7e202c`), Doctor on a
-pull request (`c69d938`) and the fingerprint (`22fe94f`) - are built and
-pass tier 1 on Linux and Windows. Next is the 1.1.0 release: tier 2,
-`scripts/release-local.ps1` (MSVC Release) before the tag, the CHANGELOG
-heading dated, tag `v1.1.0`, the archives as `scripts/README.md`,
-"Releasing without CI", says; publishing waits for the maintainer's yes.
+1.1.0 is released: the release workflow published it, with the macOS
+archive, when the tag was pushed - GitHub Actions runs again, so a
+pushed `v*` tag *is* a release; tier 2 and `release-local.ps1` come
+before it. The work from here is "The plan from 1.1.0" below, item 1
+first.
 
 Before that, on 2026-11-02: Doctor
 history/blame (`a183b3e`), the MSVC sanitizer runtime fix (`7d2530d`),
@@ -110,61 +108,83 @@ Guide and API reference say what it does.
    bindings, and the Guide's log-field and OpenTelemetry recipe.
    Found on the way: Rust's `Debug` printed `cf_digest`.
 
-Accepted on 2026-11-05 for after 1.1.0 - the compiler's own help where
-it is missing, and a measurement before any optimisation:
+## The plan from 1.1.0 (the owner, 2026-11-05)
 
-4. **MSVC's analyzer** (`/analyze`) on the library and Doctor, as GCC's
-   `-fanalyzer` is in the analyze preset: findings fail the build, each
-   one fixed or suppressed at its line with the reason.
-5. **Dead code removed at link time for small targets**: the `minimal`
-   preset compiles with `-ffunction-sections -fdata-sections` and links
-   with `--gc-sections` (MSVC `/Gy` and `/OPT:REF`), and the size before
-   and after is written down.
-6. **Link-time optimisation as an option** (`CF_LTO`, off by default),
-   measured on the release build for size and speed before it is made
-   the default anywhere; the stack budget is measured on the result,
-   since inlining across files changes frames.
-7. **A benchmark, not a gate**: a separate target timing a build of N
-   keys, `cf_get`, a report and `doctor diff` of two N-key reports, so
-   an optimisation starts from a number. The first candidate it is
-   expected to show is Doctor's linear key lookup (`doctor_find_key`),
-   called per key by `diff` and `history`: quadratic in report size.
+1.1.0 is released (the release workflow published it, macOS included).
+Everything below is accepted, in this order; each is one or more
+verified commits, and a release is cut where the order says so. The
+1.x items are additive: 1.2.0. What breaks source or ABI waits for 2.0.
+
+1. **Small fixes.** `verify -DEXTRA=abi` takes the last release before
+   HEAD, not a tag on HEAD itself (it compared 1.1.0 with itself before
+   the tag was pushed). `setup.sh` installs Rust with rustup, current
+   stable, since Ubuntu's 1.75 cannot read the tree's `Cargo.lock`
+   (version 4). `configforge.hpp` joins `gate.format`, written so both
+   clang-formats agree. A pre-stage script: format, the API reference
+   and the analyze build of what changed, in minutes, before a verify.
+2. **The compiler's help where it is missing.** MSVC's analyzer
+   (`/analyze`) on the library and Doctor; `minimal` with
+   `-ffunction-sections -fdata-sections` and `--gc-sections` (`/Gy`,
+   `/OPT:REF`), the size before and after written down; `CF_LTO`, off by
+   default, measured on the release build, the stack budget measured on
+   its result.
+3. **A benchmark, not a gate**: building N keys, `cf_get`, a report,
+   `doctor diff` of two N-key reports. Then what it shows; the first
+   expected is Doctor's linear key lookup, quadratic in `diff` and
+   `history`.
+4. **Arrays in INI, C style** (the owner's decision): `ports = {80, 443}`
+   reads and writes an array; `ports[0] = 80` sets one element; both are
+   the flat `ports.0` / `ports.count` underneath, so explain(), reports
+   and every other format see the same thing. A decision record first.
+5. **Doctor `--only-changed`**: rules restricted to the keys a change
+   touches - the keys whose candidates differ between `--base` and the
+   report - so a large existing configuration can adopt Doctor one
+   change at a time. The action and the hook pass it through.
+6. **Dependencies behind one contract** (the owner's decision): every
+   reader a library supplies - JSON, TOML, YAML, XML, SQLite - sits
+   behind the `cf_codec` / `cf_doc_sink` contract, and a conformance
+   suite every implementation must pass (the same documents, the same
+   events, the same refusals, the same limits), so a dependency can be
+   replaced without a caller noticing. Then the best maintained library
+   is chosen for each, by a written comparison (licence, maintenance,
+   conformance, size, speed, fuzzing history): yyjson and tomlc17 are
+   the candidates for JSON and TOML; libyaml, expat and SQLite are
+   re-examined. The built-in readers stay, behind the same contract.
+7. **JSON Schema import**: definitions from a schema, the reverse of
+   `cf_schema`; unsupported keywords refused by name. After 6, on the
+   chosen JSON reader.
+8. **Sizing modes** (the owner, 2026-11-05: full-dynamic, semi-dynamic,
+   manual): today every limit is a fixed buffer (`CF_KEY_MAX` and its
+   siblings, D-37) - manual. Semi-dynamic: buffers start on the stack
+   and grow from the allocator up to a cap. Full-dynamic: no length or
+   depth limit but memory, decoders iterating rather than recursing,
+   with run-time caps still there for untrusted input. A decision record
+   (D-57) first: build option or run time, the default per profile, and
+   what `cf_error`'s fixed `key` and `message` do - truncate in 1.x,
+   grow in 2.0. Then the buffers, one subsystem at a time, each under
+   all three modes in the suite. The largest item here.
+9. **Modern C++ only** (the owner's decision): the header deprecates
+   C++98 to C++14 in 1.x with a compile-time warning, and requires
+   C++17 from 2.0, where `std::optional`, `std::string_view` and
+   structured bindings simplify it. C++20 modules (`import configforge;`)
+   come with 2.0 where the compilers in the matrix build them.
+10. **The ideas, by use** - each its own commit, in this order:
+    * Doctor checks a report's fingerprint against its contents.
+    * `cf_diff_json` for log pipelines.
+    * a settle interval in `cf_live` for a burst of writes.
+    * limits and the build id in the report and the image header -
+      with item 8, since a sizing mode is a limit a reader must know.
+    * CFD012 against the contract rather than the key list.
+    * native OS sources (macOS defaults, gsettings) where the platform
+      is at hand to test.
+    * Go and .NET bindings over the C ABI.
+11. **2.0**: what 8 and 9 break, together, once.
+
 ## Ideas
 
-Worth building, in the order they serve the library's purpose.
-
-* **A reload diff as JSON** (`cf_diff_json`), for log pipelines that
-  index fields rather than lines: the key, old and new value (redacted
-  as the text diff is), and the source each came from.
-* **Settling a burst of writes**: an editor saving twice, or a
-  deployment writing three files, is three wake-ups. Quiet swaps
-  already make the repeats cheap; a settle interval in `cf_live` would
-  make them one reload, and one log line.
-* **More languages over the same C ABI**: Go (cgo) and .NET (P/Invoke)
-  are the next most asked-for, each a thin layer like Python's, checked
-  for the same example lines.
-* **C++20 modules** (`import configforge;`), once the minimum CMake and
-  the compilers the matrix covers all build them; until then the one
-  header is the interface.
-* **The build id in the image header**, as the report now carries it:
-  a change to the image format, so it waits for a reason to change it.
-* **JSON Schema import** - definitions *from* a schema - the other
-  direction of Design.md section 41, with unsupported keywords refused
-  by name.
-* **Limits in the report and the image header**, so a reader built with
-  shorter keys than the writer says so by name rather than as a key it
-  cannot add.
-* **Doctor `--only-changed`** and **CFD012 against the contract** rather
-  than the key list.
-* **Established readers behind options**: the owner (2026-11-01) would
-  rather a maintained library, behind a `CF_WITH_*` option, than one
-  written here - as libyaml, expat and SQLite already are. A JSON reader
-  (yyjson) and a TOML one (tomlc17), both MIT-licensed C, are the
-  candidates; each passes the conformance, fuzz and round-trip tests
-  the built-in reader passes, and the built-in readers stay the default,
-  so a build with no dependency keeps every format it has today.
-* **Native OS sources** (D-30): macOS defaults and gsettings, each when
-  there is the platform to test on. The Windows Registry is built.
+Every idea written here before 2026-11-05 is now in the plan above, in
+the order the owner and its use put it. New ones go here until they are
+accepted.
 
 ### Considered, and decided against for now: a jq-like query language
 
@@ -182,6 +202,5 @@ that needs the live configuration rather than its record.
 
 ## Decisions waiting for the owner
 
-* **Arrays in INI**: INI has none, so an array is refused there. Its
-  index keys and count, as plain keys, would round-trip through this
-  library alone.
+* **Arrays in INI** - decided by the owner (2026-11-05): C style; the
+  plan above, item 4.
