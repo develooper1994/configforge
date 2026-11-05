@@ -14,8 +14,7 @@
 
 #include <cstdio>
 
-static cf::Config load(int argc, char** argv, char** env)
-{
+static cf::Config load(int argc, char** argv, char** env) {
     cf_def password;
     cf_def_init(&password, CF_TYPE_TEXT, "db.password");
     password.flags = CF_SENSITIVE | CF_REQUIRED;
@@ -31,8 +30,7 @@ static cf::Config load(int argc, char** argv, char** env)
 }
 
 /* Doctor's rules as production judges them; true when it may serve. */
-static bool preflight(const cf::Config& cfg)
-{
+static bool preflight(const cf::Config& cfg) {
     cf_error   err = CF_ERROR_INIT;
     cf_doctor* doc = cf_doctor_new();
 
@@ -51,8 +49,7 @@ static bool preflight(const cf::Config& cfg)
     return clean;
 }
 
-static void start(const char* title, int argc, char** argv, char** env)
-{
+static void start(const char* title, int argc, char** argv, char** env) {
     cf::Config cfg = load(argc, argv, env);
 
     std::printf("%s\n", title);
@@ -66,8 +63,7 @@ static void start(const char* title, int argc, char** argv, char** env)
     }
 }
 
-int main()
-{
+int main() {
     static char  a0[]       = "shop";
     static char  a1[]       = "--db.password=hunter2";
     static char  a2[]       = "--server.port=9443";
@@ -85,8 +81,8 @@ int main()
     std::fclose(f);
 
     start("1. the password typed into the manifest as a flag", 3, typed, none);
-    start("2. the password from the environment, as the secret store sets it", 2, flagless,
-          secret);
+    start("2. the password from the environment, as the secret store sets it", 2,
+          flagless, secret);
     std::remove("service.ini");
     return 0;
 }

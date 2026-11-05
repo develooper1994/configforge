@@ -76,7 +76,7 @@ fingerprint):
 | a mutation survived because the test checked a value at the one point where the broken code happened to produce it too | check a value at a step where a wrong implementation would give a different one: after a sequence, not at its start |
 | GCC's analyzer (`-fanalyzer`) found two things only in tier 1's analyze build, an hour into the round | build new C with `cmake --preset analyze` before staging it, not only the default preset |
 | `docs/API.md` links each function to its line, so every C edit after regenerating it failed `gate.apiref` | regenerate the reference last, after the final edit to any header or source, then stage |
-| clang-format 22 (Windows) and 18 (WSL) wrapped a call's arguments differently; `gate.format.c` failed on one system only | `gate.format` runs on both in tier 1; write such a line so neither wraps it (a local variable for the long argument) |
+| clang-format 22 (Windows) and 18 (WSL) wrapped a call's arguments differently; `gate.format.c` failed on one system only | first a rule (write lines neither wraps); then, when `configforge.hpp` showed layouts no line satisfies both ways, promoted: one major version, 22, is the only one the gate or `format.cmake` uses (`ConfigForgeClangFormat.cmake`), pinned from PyPI by `setup.sh` and CI |
 | a patch script in Python turned `"\n"` in C source into a line break | patch scripts use raw strings (`r"""..."""`) for C, and the build is the check |
 | Rust's `Debug` for `Config` printed `cf_digest`, a hash of the secrets themselves, while its comment said it kept secrets out of logs | `cf_fingerprint`, and a test that `Debug` contains no digest |
 

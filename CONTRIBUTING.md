@@ -66,6 +66,7 @@ runs wherever the build does.
 
 ```sh
 cmake --preset default && cmake --build --preset default && ctest --preset default
+cmake -P scripts/prestage.cmake                     # before staging: format, API.md, text, analyze
 cmake -P scripts/format.cmake                       # format and lint what changed
 cmake -DSOURCE=index -DTIER=1 -DJOBS=2 -P scripts/verify.cmake   # every commit: GCC presets and Clang
 cmake -DSOURCE=index -DTIER=2 -DJOBS=2 -P scripts/verify.cmake   # before a release: every extra step

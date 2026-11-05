@@ -5,6 +5,7 @@ Developer scripts: things that build, generate or check.
 | Script | What it does |
 | ------ | ------------ |
 | `verify.cmake` | everything that has to be true before a commit; `-DTIER=1` (every commit) or `-DTIER=2` (a release) picks the steps (D-50), `-DSOURCE=index` checks only what is staged, `-DTEST_TIMEOUT=s` bounds a test (default 900), `-DEXTRA=kqueue;tidy;clang;shared;valgrind;proofs;wasm;abi;tsan;yaml;compilers;fuzz;coverage` adds builds, `-DJOBS=N` bounds parallelism, `-DWORK=dir` puts the staged copy in `dir` (under WSL, keep it off `/mnt/c`) |
+| `prestage.cmake` | before staging, in minutes: format what changed, regenerate `docs/API.md`, the text check and the analyze build (GCC's `-fanalyzer`, cppcheck) - what used to fail one verify at a time. `-DWORK=dir` for the build, `-DANALYZE=OFF` to skip it |
 | `format.cmake` | formats and lints what changed, then rewrites `docs/API.md` when C did (`-DALL=ON` everything, `-DCHECK=ON` report only) |
 | `stack.cmake` | every library frame against a budget, by feature; the build runs it after linking, and `-DOBJDIR=build/CMakeFiles/configforge.dir -DBUDGET=N` asks "what if" (D-37) |
 | `version.cmake` | prints the version, or changes it everywhere it is written: `-DTO=x.y.z` rewrites `cf_version.h`, the vcpkg manifest, the Rust crate's and the Python package's, and opens a CHANGELOG section (D-40) |

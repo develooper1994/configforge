@@ -1,7 +1,7 @@
 /*
  * test_wrapper_cxx17.cpp - what the wrapper says under C++11 (move, an
- * explicit bool, pairs in braces) and its C++17 part: find<T> as std::optional, value() as a variant,
- * items() for a structured binding, and Fields over member pointers.
+ * explicit bool, pairs in braces) and its C++17 part: find<T> as std::optional, value()
+ * as a variant, items() for a structured binding, and Fields over member pointers.
  */
 
 #include <configforge/configforge.hpp>
@@ -16,8 +16,7 @@
 #include <utility>
 
 static int  g_fail = 0, g_run = 0;
-static void check(bool c, const char* what)
-{
+static void check(bool c, const char* what) {
     ++g_run;
     if (!c) {
         ++g_fail;
@@ -25,8 +24,7 @@ static void check(bool c, const char* what)
     }
 }
 
-static cf::Config make()
-{
+static cf::Config make() {
     static const cf_pair pairs[] = {{"server.port", "9443"},
                                     {"server.host", "web1"},
                                     {"tls.enabled", "true"},
@@ -35,23 +33,22 @@ static cf::Config make()
     return cf::Builder().memory("file", CF_RANK_USER_FILE, pairs, 5).create();
 }
 
-static void test_cxx11()
-{
+static void test_cxx11() {
     cf::Config a = make();
     check(static_cast<bool>(a), "an explicit bool");
     cf::Config b = std::move(a);
     check(!a && b, "a move takes the handle and leaves none");
     cf::Config d = b.derive("admin", {{"server.port", "7000"}, {"log.level", "debug"}});
     check(d && d.get<int>("server.port", 0) == 7000, "pairs in braces");
-    check(b.get<int>("server.port", 0) == 9443, "and the snapshot derived from is unchanged");
+    check(b.get<int>("server.port", 0) == 9443,
+          "and the snapshot derived from is unchanged");
 
     cf::Builder bl;
     cf::Builder moved = std::move(bl);
     check(moved.defineInt("x", 1).create().get<int>("x", 0) == 1, "a builder moves");
 }
 
-static void test_find()
-{
+static void test_find() {
     cf::Config cfg = make();
     check(cf::find<int>(cfg, "server.port") == 9443, "a value that is there");
     check(!cf::find<int>(cfg, "server.nope"), "nullopt when it is not");
@@ -71,10 +68,10 @@ static void test_find()
     check(!cf::find<int>(cfg, huge), "and one longer than any key");
 }
 
-static void test_value_and_items()
-{
+static void test_value_and_items() {
     cf::Config cfg = make();
-    check(std::get<cf_i64>(cf::value(cfg, "server.port")) == 9443, "a variant of the type");
+    check(std::get<cf_i64>(cf::value(cfg, "server.port")) == 9443,
+          "a variant of the type");
     check(std::get<std::string_view>(cf::value(cfg, "server.host")) == "web1",
           "text in the variant");
     check(std::holds_alternative<std::monostate>(cf::value(cfg, "nope")),
@@ -113,8 +110,7 @@ inline const auto settings_fields = cf::fields(
     cf::field<&Settings::tls>("tls.enabled", false),
     cf::field<&Settings::workers>("server.workers", 4L, 1L, 64L));
 
-static void test_fields()
-{
+static void test_fields() {
     static const cf_pair pairs[] = {{"server.port", "9443"}, {"tls.enabled", "true"}};
     static_assert(decltype(settings_fields)::size() == 4, "four fields");
     cf::Config cfg = cf::Builder()
@@ -126,16 +122,15 @@ static void test_fields()
     check(s.server.port == 9443 && s.server.host == "0.0.0.0", "a path of members");
     check(s.tls && s.workers == 4L, "and one member");
 
-    static const cf_pair bad[] = {{"server.workers", "65"}};
-    cf::Config refused = cf::Builder()
-                             .memory("file", CF_RANK_USER_FILE, bad, 1)
-                             .define(settings_fields)
-                             .create();
+    static const cf_pair bad[]   = {{"server.workers", "65"}};
+    cf::Config           refused = cf::Builder()
+                                       .memory("file", CF_RANK_USER_FILE, bad, 1)
+                                       .define(settings_fields)
+                                       .create();
     check(!refused, "a field's range refuses");
 }
 
-int main()
-{
+int main() {
     test_cxx11();
     test_find();
     test_value_and_items();

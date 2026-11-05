@@ -16,8 +16,7 @@
 #define USER "HKCU\\Software\\ConfigForgeExample\\Editor"
 #define POLICY "HKCU\\Software\\ConfigForgeExample\\Policies\\Editor"
 
-static void reg(const char* args)
-{
+static void reg(const char* args) {
     char cmd[512];
     cf_fmt(cmd, sizeof cmd, "reg %s >NUL 2>&1", args);
     if (std::system(cmd) != 0) {
@@ -25,8 +24,7 @@ static void reg(const char* args)
     }
 }
 
-int main()
-{
+int main() {
     static const char* const policyOnly[] = {"policy", 0};
 
     if (!cf_platform_has_registry()) {

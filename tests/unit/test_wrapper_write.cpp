@@ -10,24 +10,21 @@
 #include <cstring>
 
 static int  g_fail = 0, g_run = 0;
-static void check(bool c, const char* w)
-{
+static void check(bool c, const char* w) {
     ++g_run;
     if (!c) {
         ++g_fail;
         std::printf("FAIL: %s\n", w);
     }
 }
-static void has(const char* hay, const char* needle, const char* w)
-{
+static void has(const char* hay, const char* needle, const char* w) {
     check(hay != 0 && std::strstr(hay, needle) != 0, w);
     if (hay != 0 && std::strstr(hay, needle) == 0) {
         std::printf("  missing \"%s\" in \"%s\"\n", needle, hay);
     }
 }
 
-int main()
-{
+int main() {
     static const char* const only_env[] = {"env", 0};
     static const cf_pair     pairs[]    = {{"server.port", "9000"}};
     static char*             no_env[]   = {0};
@@ -36,12 +33,13 @@ int main()
     cf_def_init(&locked, CF_TYPE_TEXT, "db.password");
     locked.policy = only_env;
 
-    cf::Config c = cf::Builder()
-                       .memory("mem", CF_RANK_USER_FILE, pairs, 1)
-                       .env("env", CF_RANK_ENV, "APP_", no_env) /* the policy's source */
-                       .defineInt("server.port", 8080, 1, 65535)
-                       .define(locked)
-                       .create();
+    cf::Config c =
+        cf::Builder()
+            .memory("mem", CF_RANK_USER_FILE, pairs, 1)
+            .env("env", CF_RANK_ENV, "APP_", no_env) /* the policy's source */
+            .defineInt("server.port", 8080, 1, 65535)
+            .define(locked)
+            .create();
     check(c.valid(), "memory() and define() build");
     if (!c) {
         std::printf("  %s\n", c.error().message());
@@ -52,7 +50,8 @@ int main()
     /* derive(): a new snapshot, the old one unchanged. */
     cf_pair    change[1] = {{"server.port", "9443"}};
     cf::Config d         = c.derive("admin", change, 1);
-    check(d.valid() && d.get<int>("server.port", 0) == 9443, "derive() applies the change");
+    check(d.valid() && d.get<int>("server.port", 0) == 9443,
+          "derive() applies the change");
     check(c.get<int>("server.port", 0) == 9000, "and leaves the original as it was");
 
     cf_pair    bad[1] = {{"server.port", "0"}};
@@ -64,10 +63,11 @@ int main()
        caller hears why. */
     cf_write_item one;
     one.key = "server.port";
-    one.op = CF_WRITE_SET;
+    one.op  = CF_WRITE_SET;
     cf_value_int(&one.value, 9443);
     cf::Error e;
-    check(!d.write("mem", &one, 1, "test", &e), "write() to a memory source is refused");
+    check(!d.write("mem", &one, 1, "test", &e),
+          "write() to a memory source is refused");
     check(e.code() == CF_E_CAPABILITY, "for its capability");
     has(e.message(), "cannot be written", "and says so");
     check(!d.write("nowhere", &one, 1), "and to no source, without an Error to fill");
@@ -78,7 +78,8 @@ int main()
     if (cf_has_feature("report")) {
         cf_report_info info = CF_REPORT_INFO_INIT;
         info.application    = "wrapper";
-        has(c.report(info).c_str(), "\"name\": \"wrapper\"", "report() names the application");
+        has(c.report(info).c_str(), "\"name\": \"wrapper\"",
+            "report() names the application");
         info.size = 0;
         check(c.report(info).empty(), "and is empty for an info that was never sized");
     }

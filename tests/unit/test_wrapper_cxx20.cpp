@@ -17,8 +17,7 @@
 #include <vector>
 
 static int  g_fail = 0, g_run = 0;
-static void check(bool c, const char* what)
-{
+static void check(bool c, const char* what) {
     ++g_run;
     if (!c) {
         ++g_fail;
@@ -26,12 +25,12 @@ static void check(bool c, const char* what)
     }
 }
 
-static_assert(cf::readable<int> && cf::readable<std::string_view> && cf::readable<bool>);
+static_assert(cf::readable<int> && cf::readable<std::string_view> &&
+              cf::readable<bool>);
 static_assert(!cf::readable<std::vector<int>> && !cf::readable<const char*>);
 static_assert(std::ranges::view<cf::Items> && std::ranges::input_range<cf::Items>);
 
-static cf::Config make()
-{
+static cf::Config make() {
     static const cf_pair pairs[] = {{"server.port", "9443"},
                                     {"server.host", "web1"},
                                     {"server.workers", "8"},
@@ -39,24 +38,28 @@ static cf::Config make()
     return cf::Builder().memory("file", CF_RANK_USER_FILE, pairs, 4).create();
 }
 
-int main()
-{
+int main() {
     cf::Config cfg = make();
     check(cf::get_or<int>(cfg, "server.port", 0) == 9443, "get_or, there");
     check(cf::get_or<int>(cfg, "server.nope", 7) == 7, "get_or, the fallback");
 
-    auto is_int = [](const cf::Item& i) { return std::holds_alternative<cf_i64>(i.value); };
-    int  ints   = 0;
+    auto is_int = [](const cf::Item& i) {
+        return std::holds_alternative<cf_i64>(i.value);
+    };
+    int ints = 0;
     for (auto [key, value] : cf::items(cfg, "server") | std::views::filter(is_int)) {
         ints += (int)std::get<cf_i64>(value) > 0 ? 1 : 0;
     }
     check(ints == 2, "the keys as a view, under an adaptor");
-    auto names = cf::items(cfg) | std::views::transform([](const cf::Item& i) { return i.key; }) |
+    auto names = cf::items(cfg) |
+                 std::views::transform([](const cf::Item& i) { return i.key; }) |
                  std::views::take(1);
     check(std::ranges::distance(names) == 1, "and under two");
 
-    check(std::format("port {}", cfg["server"]["port"]) == "port 9443", "format an int");
-    check(std::format("[{:>6}]", cfg["server.host"]) == "[  web1]", "format text, padded");
+    check(std::format("port {}", cfg["server"]["port"]) == "port 9443",
+          "format an int");
+    check(std::format("[{:>6}]", cfg["server.host"]) == "[  web1]",
+          "format text, padded");
     check(std::format("{}", cfg["tls.enabled"]) == "true", "format a bool");
     check(std::format("{}", cfg["nope"]).empty(), "an absent key formats as nothing");
 

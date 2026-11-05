@@ -13,16 +13,14 @@
 
 #include <cstdio>
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
     cf::Config cfg = cf::app("myapp", argc, argv);
 
     if (!cfg) {
         std::fputs(cfg.error().message(), stderr);
         return 1;
     }
-    std::printf("%s:%d tls=%s\n",
-                cfg.text("server.host", "0.0.0.0").c_str(),
+    std::printf("%s:%d tls=%s\n", cfg.text("server.host", "0.0.0.0").c_str(),
                 cfg.get<int>("server.port", 8080),
                 cfg.get<bool>("tls.enabled", false) ? "on" : "off");
     return 0; /* the handle frees the configuration */

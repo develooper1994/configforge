@@ -3,6 +3,30 @@
 Versions follow semantic versioning from 1.0. Before that, `0.x` promises
 nothing: the C interface is not frozen, and a minor bump may change it.
 
+## 1.2.0 — unreleased
+
+### Changed
+
+- The formatting gate takes one clang-format major version, 22
+  (`cmake/ConfigForgeClangFormat.cmake`): 18 and 22 lay out some code
+  differently, so a file clean under one failed under the other. Another
+  version is reported and not used. `setup.sh` and CI install 22.1.8
+  from PyPI; the C++ header, tests and examples are now formatted and
+  checked too.
+- `setup.sh` installs Rust 1.99.1 with rustup, checked against its
+  published checksum; Ubuntu's 1.75 could not read the tree's lock file.
+
+### Added
+
+- `scripts/prestage.cmake`: format, the API reference, the text check
+  and the analyze build of a change, before it is staged.
+
+### Fixed
+
+- `verify -DEXTRA=abi` compares with the newest release that is not
+  this version; with the release commit tagged first, it had compared
+  1.1.0 with itself.
+
 ## 1.1.0 — 2026-11-05
 
 ### Added

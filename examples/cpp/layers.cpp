@@ -15,8 +15,7 @@
 
 #include <cstdio>
 
-int main()
-{
+int main() {
     /* Fixed rather than the process's own, so the output is the same on
        every machine. */
     static char  e0[]   = "LAYERS_LOG__LEVEL=warn";
@@ -25,8 +24,12 @@ int main()
     static char  a1[]   = "--server.port=9443";
     static char* argv[] = {a0, a1, 0};
 
-    static const char* const keys[] = {"server.host", "server.port", "server.workers",
-                                       "db.url",      "log.level",   "cache.size",
+    static const char* const keys[] = {"server.host",
+                                       "server.port",
+                                       "server.workers",
+                                       "db.url",
+                                       "log.level",
+                                       "cache.size",
                                        0};
 
     /* The sources, highest rank number lowest precedence, and the

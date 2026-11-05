@@ -14,8 +14,7 @@
 
 static const char* const kFile = "app.ini";
 
-static bool writeFile(const char* text)
-{
+static bool writeFile(const char* text) {
     std::FILE* f = std::fopen(kFile, "wb");
     if (f == 0) {
         return false;
@@ -25,8 +24,7 @@ static bool writeFile(const char* text)
     return true;
 }
 
-static cf::Config load(int argc, char** argv)
-{
+static cf::Config load(int argc, char** argv) {
     return cf::Builder()
         .file("app.ini", CF_RANK_USER_FILE, kFile)
         .cli("cli", CF_RANK_CLI, argc, argv)
@@ -36,8 +34,7 @@ static cf::Config load(int argc, char** argv)
         .create();
 }
 
-int main()
-{
+int main() {
     static char  a0[]   = "references";
     static char  a1[]   = "--server.host=web2";
     static char* argv[] = {a0, a1, 0};
@@ -55,7 +52,8 @@ int main()
     std::fputs(cfg.explain("server.url").c_str(), stdout);
 
     cf::Config flagged = load(2, argv);
-    std::printf("\nwith --server.host=web2, url: %s\n", flagged.text("server.url").c_str());
+    std::printf("\nwith --server.host=web2, url: %s\n",
+                flagged.text("server.url").c_str());
 
     writeFile("[server]\nhost = ${server.url}\nurl = https://${server.host}/\n");
     cf::Config cycle = load(1, argv);

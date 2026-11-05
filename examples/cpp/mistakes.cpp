@@ -18,8 +18,7 @@
 
 static const char* const kFile = "mistakes.ini";
 
-static bool writeFile(const char* text)
-{
+static bool writeFile(const char* text) {
     std::FILE* f = std::fopen(kFile, "wb");
     if (f == 0) {
         return false;
@@ -31,8 +30,7 @@ static bool writeFile(const char* text)
 
 /* The contract. The library can say "did you mean server.port" only
    because the program said server.port exists. */
-static cf::Config build()
-{
+static cf::Config build() {
     static const char* const levels[] = {"debug", "info", "warn", "error", 0};
     cf_def                   level;
 
@@ -51,8 +49,7 @@ static cf::Config build()
         .create();
 }
 
-static void attempt(const char* title, const char* text)
-{
+static void attempt(const char* title, const char* text) {
     writeFile(text);
     cf::Config cfg = build();
 
@@ -67,8 +64,7 @@ static void attempt(const char* title, const char* text)
 
 /* A tuning knob may fall back to its default when it is nonsense - this
    key only - and explain() still shows the refusal. */
-static void forgiving()
-{
+static void forgiving() {
     cf_def size;
 
     writeFile("[cache]\nsize = lots\n");
@@ -89,11 +85,11 @@ static void forgiving()
     std::fputs(cfg.explain("cache.size").c_str(), stdout);
 }
 
-int main()
-{
+int main() {
     attempt("1. a configuration with nothing wrong",
             "[server]\nport = 9000\n[db]\nurl = postgres://db/app\n");
-    attempt("2. a key spelt wrong", "[server]\npot = 9000\n[db]\nurl = postgres://db/app\n");
+    attempt("2. a key spelt wrong",
+            "[server]\npot = 9000\n[db]\nurl = postgres://db/app\n");
     attempt("3. a number out of range",
             "[server]\nport = 99999\n[db]\nurl = postgres://db/app\n");
     attempt("4. a word the contract does not know",

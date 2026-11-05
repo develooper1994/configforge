@@ -17,8 +17,7 @@
 static const char* const kFile = "reload.toml";
 
 /* The recipe, once at startup and once per reload. */
-static cf::Config load()
-{
+static cf::Config load() {
     return cf::Builder()
         .file("file", CF_RANK_USER_FILE, kFile)
         .defineInt("server.port", 8080, 1, 65535)
@@ -27,8 +26,7 @@ static cf::Config load()
         .create();
 }
 
-static bool writeFile(const char* text)
-{
+static bool writeFile(const char* text) {
     std::FILE* f = std::fopen(kFile, "wb");
     if (f == 0) {
         return false;
@@ -38,8 +36,7 @@ static bool writeFile(const char* text)
     return true;
 }
 
-int main()
-{
+int main() {
     if (!writeFile("[server]\nport = 8080\n[db]\npassword = \"first\"\n")) {
         return 1;
     }

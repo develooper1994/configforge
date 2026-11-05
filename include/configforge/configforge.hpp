@@ -1072,13 +1072,13 @@ template <typename S> class Binding {
     }
 
     template <typename M>
-    Binding& field(const char* key, M S::*m, typename detail::same<M>::type dflt = M(),
+    Binding& field(const char* key, M S::* m, typename detail::same<M>::type dflt = M(),
                    unsigned flags = 0) {
         return add(new Direct<M>(Key<M>(key, dflt, flags), m));
     }
 
     template <typename M>
-    Binding& field(const char* key, M S::*m, typename detail::same<M>::type dflt,
+    Binding& field(const char* key, M S::* m, typename detail::same<M>::type dflt,
                    typename detail::same<M>::type lo, typename detail::same<M>::type hi,
                    unsigned flags = 0) {
         return add(new Direct<M>(Key<M>(key, dflt, lo, hi, flags), m));
@@ -1086,13 +1086,13 @@ template <typename S> class Binding {
 
     /* A field of a struct inside S: settings.server.port. */
     template <typename N, typename M>
-    Binding& field(const char* key, N S::*outer, M N::*inner,
+    Binding& field(const char* key, N S::* outer, M N::* inner,
                    typename detail::same<M>::type dflt = M(), unsigned flags = 0) {
         return add(new Nested<N, M>(Key<M>(key, dflt, flags), outer, inner));
     }
 
     template <typename N, typename M>
-    Binding& field(const char* key, N S::*outer, M N::*inner,
+    Binding& field(const char* key, N S::* outer, M N::* inner,
                    typename detail::same<M>::type dflt,
                    typename detail::same<M>::type lo, typename detail::same<M>::type hi,
                    unsigned flags = 0) {
@@ -1134,7 +1134,7 @@ template <typename S> class Binding {
         virtual void read(const Config& c, S& out) const = 0;
     };
     template <typename M> struct Direct : Field {
-        Direct(const Key<M>& k, M S::*m) : k_(k), m_(m) {
+        Direct(const Key<M>& k, M S::* m) : k_(k), m_(m) {
         }
         void define(cf_builder* b) const {
             detail::define_key(b, k_);
@@ -1143,10 +1143,10 @@ template <typename S> class Binding {
             out.*m_ = c.get(k_);
         }
         Key<M> k_;
-        M S::*m_;
+        M S::* m_;
     };
     template <typename N, typename M> struct Nested : Field {
-        Nested(const Key<M>& k, N S::*o, M N::*i) : k_(k), o_(o), i_(i) {
+        Nested(const Key<M>& k, N S::* o, M N::* i) : k_(k), o_(o), i_(i) {
         }
         void define(cf_builder* b) const {
             detail::define_key(b, k_);
@@ -1155,8 +1155,8 @@ template <typename S> class Binding {
             (out.*o_).*i_ = c.get(k_);
         }
         Key<M> k_;
-        N S::*o_;
-        M N::*i_;
+        N S::* o_;
+        M N::* i_;
     };
 
     Binding& add(Field* f) {
@@ -1706,7 +1706,7 @@ template <auto First, auto... Rest> class Field {
   public:
     using owner = typename detail::member_of<decltype(First)>::owner;
     using type  = typename detail::member_of<std::tuple_element_t<
-         sizeof...(Rest), std::tuple<decltype(First), decltype(Rest)...>>>::type;
+        sizeof...(Rest), std::tuple<decltype(First), decltype(Rest)...>>>::type;
 
     explicit Field(const Key<type>& k) : key_(k) {
     }

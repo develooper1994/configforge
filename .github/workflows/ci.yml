@@ -301,6 +301,12 @@ jobs:
           cmake -S . -B btidy -DCF_CLANG_TIDY=ON
           cmake --build btidy
       - name: clang-format
+        # The one major version the gate accepts (ConfigForgeClangFormat),
+        # pinned as setup.sh pins it; Ubuntu's 18 lays some code out
+        # differently and would only be skipped.
         run: |
+          python3 -m venv "$RUNNER_TEMP/cft"
+          "$RUNNER_TEMP/cft/bin/pip" install --quiet clang-format==22.1.8
+          export PATH="$RUNNER_TEMP/cft/bin:$PATH"
           cmake -S . -B bfmt
           ctest --test-dir bfmt -R gate.format --output-on-failure

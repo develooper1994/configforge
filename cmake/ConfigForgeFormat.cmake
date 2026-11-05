@@ -1,7 +1,8 @@
 # Formatting and static checking as build targets, so they are one
 # command rather than a paragraph in a contributing guide nobody reads.
 
-find_program(CLANG_FORMAT_EXE NAMES clang-format)
+include(${CMAKE_CURRENT_LIST_DIR}/ConfigForgeClangFormat.cmake)
+configforge_find_clang_format(CLANG_FORMAT_EXE)
 find_program(CLANG_TIDY_EXE NAMES clang-tidy)
 find_program(CMAKE_FORMAT_EXE NAMES cmake-format)
 find_program(CMAKE_LINT_EXE NAMES cmake-lint)
@@ -11,9 +12,12 @@ file(
   CF_C_SOURCES
   "${CMAKE_SOURCE_DIR}/src/*.c"
   "${CMAKE_SOURCE_DIR}/include/configforge/*.h"
+  "${CMAKE_SOURCE_DIR}/include/configforge/*.hpp"
   "${CMAKE_SOURCE_DIR}/tests/*.c"
+  "${CMAKE_SOURCE_DIR}/tests/*.cpp"
   "${CMAKE_SOURCE_DIR}/tools/*.c"
-  "${CMAKE_SOURCE_DIR}/examples/*.c")
+  "${CMAKE_SOURCE_DIR}/examples/*.c"
+  "${CMAKE_SOURCE_DIR}/examples/*.cpp")
 
 # The build files are source code too, and they had drifted into three
 # styles before anything checked them.

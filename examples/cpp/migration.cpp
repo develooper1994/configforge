@@ -13,8 +13,7 @@
 
 #include <cstdio>
 
-static cf::Config load()
-{
+static cf::Config load() {
     cf_def old;
     cf_def_init(&old, CF_TYPE_TEXT, "db.host");
     old.flags       = CF_DEPRECATED;
@@ -29,8 +28,7 @@ static cf::Config load()
         .create();
 }
 
-static void run(const char* title, const char* text)
-{
+static void run(const char* title, const char* text) {
     std::FILE* f = std::fopen("app.ini", "wb");
     if (f != 0) {
         std::fputs(text, f);
@@ -48,8 +46,7 @@ static void run(const char* title, const char* text)
     std::fputs("\n", stdout);
 }
 
-int main()
-{
+int main() {
     run("1. a file written for version 1", "[db]\nhost = db1.internal\n");
     run("2. a file half updated: the new spelling wins",
         "[database]\nhost = db2.internal\n[db]\nhost = db1.internal\n");

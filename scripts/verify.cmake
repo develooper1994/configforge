@@ -323,7 +323,9 @@ foreach(x ${EXTRA})
     # The shared library against the last release's, by abidiff (D-56):
     # within one major version from 1.0 on, an incompatible change fails;
     # across a major one it is reported. ABI_BASE names the release to
-    # compare with, by default the newest tag.
+    # compare with, by default the newest tag that is not this version:
+    # a release commit is tagged before it is verified, and the tag on
+    # it would compare the release with itself (1.1.0 did, once).
     find_program(ABIDIFF_EXE abidiff)
     find_program(GIT_EXE git)
     if(NOT ABIDIFF_EXE OR NOT GIT_EXE)
@@ -331,8 +333,11 @@ foreach(x ${EXTRA})
       continue()
     endif()
     if(NOT DEFINED ABI_BASE)
+      include("${ROOT}/cmake/ConfigForgeVersion.cmake")
+      configforge_read_version(this_version)
       execute_process(
-        COMMAND ${GIT_EXE} describe --tags --abbrev=0
+        COMMAND ${GIT_EXE} describe --tags --abbrev=0 --match "v*" --exclude
+                "v${this_version}"
         WORKING_DIRECTORY "${REPO}"
         OUTPUT_VARIABLE ABI_BASE
         OUTPUT_STRIP_TRAILING_WHITESPACE)

@@ -15,8 +15,7 @@
 #include <cstdio>
 #include <string>
 
-int main()
-{
+int main() {
     static char  kill[] = "SHOP_FEATURES__SEARCH_V2=false";
     static char* env[]  = {kill, 0};
 

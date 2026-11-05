@@ -30,7 +30,7 @@ extern "C" {
 #endif
 
 #define CF_VERSION_MAJOR 1
-#define CF_VERSION_MINOR 1
+#define CF_VERSION_MINOR 2
 #define CF_VERSION_PATCH 0
 
 #define CF_VERSION_STRINGIFY_(x) #x

@@ -17,8 +17,7 @@
 
 #include <cstdio>
 
-int main()
-{
+int main() {
     std::FILE* f = std::fopen("service.ini", "wb");
     if (f == 0) {
         return 1;
@@ -48,8 +47,10 @@ int main()
         std::fprintf(stderr, "runtime: %s\n", next.error().message());
         return 1;
     }
-    std::printf("\nthe request in flight still sees: %s\n", inFlight.text("log.level").c_str());
-    std::printf("a new request sees:               %s\n", next.text("log.level").c_str());
+    std::printf("\nthe request in flight still sees: %s\n",
+                inFlight.text("log.level").c_str());
+    std::printf("a new request sees:               %s\n",
+                next.text("log.level").c_str());
 
     std::printf("\nchanged:\n%s", next.changesSince(live).c_str());
     std::printf("\n%s", next.explain("log.level").c_str());

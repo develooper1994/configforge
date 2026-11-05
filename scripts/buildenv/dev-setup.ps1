@@ -41,6 +41,12 @@ function Show-State {
         if (-not $ok) { $missing++ }
         "  {0,-8} {1,-16} {2}" -f ($(if ($ok) { "ok" } else { "missing" })), $t[0], $t[2]
     }
+    # The formatting gate takes one major version (ConfigForgeClangFormat).
+    $cf = Get-Command clang-format -ErrorAction SilentlyContinue
+    if ($cf -and -not ((& $cf.Source --version) -match "version 22\.")) {
+        $missing++
+        "  {0,-8} {1,-16} {2}" -f "wrong", "clang-format", "the gate takes version 22 only (LLVM 22)"
+    }
     $ok = [bool](Test-Msvc)
     if (-not $ok) { $missing++ }
     "  {0,-8} {1,-16} {2}" -f ($(if ($ok) { "ok" } else { "missing" })), "MSVC", "the Windows build and tests"

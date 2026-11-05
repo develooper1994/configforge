@@ -15,13 +15,11 @@
 # the private headers are laid out by hand; formatting them would undo
 # that, and no gate would notice.
 #
-# One thing a formatter cannot settle on its own: CI installs
-# clang-format 18, and versions disagree about a handful of layouts.
-# This script uses whichever is installed. Where the two disagreed the
-# code was rewritten so that neither touches it (see cf_error.h and
-# src/bridge/dir.c), so a file this formats cleanly with any recent
-# version is a file the CI gate accepts - and gate.format.c is the check
-# that says so if not.
+# One thing a formatter cannot settle on its own: versions disagree
+# about layouts no code satisfies both ways. Only the major version
+# cmake/ConfigForgeClangFormat.cmake names is used, here and by the gate;
+# another is reported and left alone, so this never reformats the tree
+# into a layout the gate refuses.
 #
 # Written in CMake for the reason verify.cmake is: it runs wherever the
 # build does, with nothing else installed.
@@ -31,7 +29,8 @@ cmake_minimum_required(VERSION 3.10)
 get_filename_component(REPO "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 
 find_program(GIT_EXE git)
-find_program(CLANG_FORMAT_EXE clang-format)
+include(${REPO}/cmake/ConfigForgeClangFormat.cmake)
+configforge_find_clang_format(CLANG_FORMAT_EXE)
 find_program(CMAKE_FORMAT_EXE cmake-format)
 find_program(CMAKE_LINT_EXE cmake-lint)
 
@@ -43,9 +42,12 @@ if(ALL)
     RELATIVE "${REPO}"
     "${REPO}/src/*.c"
     "${REPO}/include/configforge/*.h"
+    "${REPO}/include/configforge/*.hpp"
     "${REPO}/tests/*.c"
+    "${REPO}/tests/*.cpp"
     "${REPO}/tools/*.c"
     "${REPO}/examples/*.c"
+    "${REPO}/examples/*.cpp"
     "${REPO}/CMakeLists.txt"
     "${REPO}/cmake/*.cmake"
     "${REPO}/scripts/*.cmake"
@@ -75,8 +77,8 @@ foreach(f ${files})
   if(NOT EXISTS "${REPO}/${f}" OR f MATCHES "^build")
     continue()
   endif()
-  if(f MATCHES "^(src|tests|tools|examples)/.*\\.c$"
-     OR f MATCHES "^include/configforge/.*\\.h$")
+  if(f MATCHES "^(src|tests|tools|examples)/.*\\.(c|cpp)$"
+     OR f MATCHES "^include/configforge/.*\\.(h|hpp)$")
     list(APPEND c_files "${f}")
   elseif(f MATCHES "(^|/)CMakeLists\\.txt$" OR f MATCHES "\\.cmake$")
     list(APPEND cmake_files "${f}")
