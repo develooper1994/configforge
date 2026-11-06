@@ -218,6 +218,32 @@ class Builder:
         n.lib.cf_builder_real(self._live(), self._keep.s(key), default, min, max, flags)
         return self
 
+    def define(self, key: str, default: Optional[Scalar] = None,
+               type: Optional[type] = None, *, min: float = 0, max: float = 0,
+               flags: int = 0) -> "Builder":
+        """One spelling for every scalar type (D-74): ``type`` names it,
+        or the default's Python type decides - ``define("port", 8080)``
+        is an int. A default that is not of the named type is refused,
+        and so is a key with neither. ``min == max`` means no range."""
+        kind = type
+        if kind is None:
+            if default is None:
+                raise TypeError("define(%r): give a default or a type" % key)
+            kind = default.__class__
+        if kind is not bool and kind is not int and kind is not float and kind is not str:
+            raise TypeError("define(%r): the type must be bool, int, float or str" % key)
+        if default is not None and (default.__class__ is not kind and
+                                    not (kind is float and default.__class__ is int)):
+            raise TypeError("define(%r): the default %r is not a %s"
+                            % (key, default, kind.__name__))
+        if kind is bool:
+            return self.define_bool(key, bool(default), flags)
+        if kind is int:
+            return self.define_int(key, int(default or 0), int(min), int(max), flags)
+        if kind is float:
+            return self.define_real(key, float(default or 0.0), float(min), float(max), flags)
+        return self.define_text(key, default, flags)
+
     def define_list(self, key: str, element_type: type,
                     default: Optional[Sequence[Scalar]] = None, *,
                     append: bool = False, separator: str = ",", flags: int = 0,

@@ -1101,7 +1101,8 @@ import configforge as cf
 
 cfg = (cf.Builder.app("myapp")
        .file("app.ini", cf.rank.USER_FILE, "app.ini", flags=cf.OPTIONAL)
-       .define_int("server.port", 8080, 1, 65535)
+       .define("server.port", 8080, min=1, max=65535)  # an int, from 8080
+       .define("tls.ca", type=str)    # no default: the type is named
        .create())
 cfg.server.port                 # attributes; a table is a node
 cfg["server.port"]              # KeyError when absent
@@ -1114,6 +1115,11 @@ class Settings:
 
 settings = cf.read(cf.define(cf.Builder.app("myapp"), Settings).create(), Settings)
 ```
+
+`define` is one spelling for every scalar type (D-74): the type is the
+default's, or the one named with `type=`. A default of another type is
+refused. `define_int`, `define_text`, `define_bool` and `define_real`
+stay and mean the same.
 
 A refusal raises `cf.Error` with the key, the source and the message;
 `cf.Live` reloads, and a build that raises is reported with its own

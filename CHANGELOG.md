@@ -60,6 +60,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   valid, 502/502 invalid, 218/218 values. A TOML 1.0 file reads as it
   did; a few that 1.0 refused, such as a trailing comma in an inline
   table, now read, as 1.1 says.
+- **One `define` in Python** (D-74): `Builder.define(key, default,
+  type=None)` takes the type from the default, or from `type=` when there
+  is no default; the typed `define_*` stay. The same for C, C++ and Rust
+  follows.
 - **A file's bytes are kept only while it is read** (D-61): a file, a
   `.env` file and a drop-in directory are read into an arena of their
   own, freed - zeroed first - once the reader is done, so a

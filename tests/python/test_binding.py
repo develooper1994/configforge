@@ -172,6 +172,30 @@ class Reading(unittest.TestCase):
         with self.assertRaises(cf.Error):
             cfg.derive("admin", {"server.port": 0})
 
+    def test_one_define_matches_the_typed_calls(self):
+        # D-74: the same contract, byte for byte, from either spelling.
+        typed = (cf.Builder()
+                 .define_int("server.port", 8080, 1, 65535)
+                 .define_text("server.host", "0.0.0.0")
+                 .define_bool("tls.enabled", False)
+                 .define_text("tls.ca", None)
+                 .create())
+        one = (cf.Builder()
+               .define("server.port", 8080, min=1, max=65535)
+               .define("server.host", "0.0.0.0")
+               .define("tls.enabled", False)
+               .define("tls.ca", type=str)
+               .create())
+        self.assertEqual(one.schema("t"), typed.schema("t"))
+        self.assertEqual(one.server.port, 8080)
+        self.assertIs(one.tls.enabled, False)
+        with self.assertRaises(TypeError):
+            cf.Builder().define("k")
+        with self.assertRaises(TypeError):
+            cf.Builder().define("k", "8080", type=int)
+        with self.assertRaises(TypeError):
+            cf.Builder().define("k", [1])
+
     def test_a_consumed_builder(self):
         b = cf.Builder()
         b.create()
