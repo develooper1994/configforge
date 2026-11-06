@@ -147,6 +147,9 @@ each push:
    Python's `configparser` and Java's `Properties`; signed release
    artifacts (GitHub attestations); native OS sources where the platform
    is at hand. Go and .NET bindings last, and only when someone asks.
+   Done: `cf_diff_json`, the settle interval, the limits and the build id
+   in the report (the image header keeps its layout until 2.0), signed
+   release artifacts.
 10. **11, 2.0**: what 8 and 9 break, together, once.
 11. **Then** new ideas while any is useful, and the clean-up of the
     development machine's scratch.

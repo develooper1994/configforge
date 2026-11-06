@@ -323,7 +323,10 @@ version can still be told apart.
 GitHub supplies the source zip and tar archives for each release tag.
 Uploaded archives carry the amalgamation and a built library with a
 Doctor binary for Linux, Windows and macOS; `SHA256SUMS` covers those
-uploaded archives, not GitHub's generated source downloads. The Linux
+uploaded archives, not GitHub's generated source downloads. From 1.3.0
+each uploaded file also has a signed provenance attestation - which
+workflow, commit and runner built it - that
+`gh attestation verify <file> -R develooper1994/configforge` checks. The Linux
 one is built against musl and linked statically:
 `bin/doctor` runs on any x86-64 Linux with nothing installed beside it,
 and the Windows `doctor.exe` needs no Visual C++ redistributable.

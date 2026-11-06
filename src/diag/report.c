@@ -399,7 +399,15 @@ size_t cfi_report_reads(const cf_keyspace* ks, const cf_defset* ds,
         }
         report_quote_z(&out, cf_codec_at(i)->name);
     }
-    cf_sink_puts(&out, "] },\n  \"generated\": ");
+    /* And its limits (D-37, D-61): a report from a build with longer keys
+       or deeper nesting says so, rather than leaving a reader to find a
+       key it cannot hold. Beside the others, so schema 1 still holds. */
+    cf_sink_fmt(&out,
+                "], \"limits\": { \"key\": %d, \"message\": %d, \"path\": %d, "
+                "\"depth\": %d }",
+                (int)CF_KEY_MAX, (int)CF_MESSAGE_MAX, (int)CF_PATH_MAX,
+                (int)CF_MAX_DEPTH);
+    cf_sink_puts(&out, " },\n  \"generated\": ");
     report_quote_z(&out, (info != NULL) ? info->generated : NULL);
     /* The configuration's fingerprint (cf_fingerprint): one field to match
        a report to a log line or a trace. Added beside the others, which

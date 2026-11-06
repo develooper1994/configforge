@@ -142,10 +142,21 @@ jobs:
   publish:
     needs: [amalgamation, linux-musl, windows, macos]
     runs-on: ubuntu-26.04
+    # The attestation below: a signed statement of which workflow, commit
+    # and runner built each file, which `gh attestation verify <file>
+    # -R develooper1994/configforge` checks.
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4
         with: { path: dist, merge-multiple: true }
+      - name: Provenance for every file published
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "dist/*"
       - name: Notes, checksums, release
         env:
           GH_TOKEN: ${{ github.token }}

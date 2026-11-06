@@ -42,6 +42,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   a sensitive key has `"sensitive": true` and no values, as in the text.
   `cf_sink_json_string` and `cf_sink_json_value` are the JSON writers the
   report, the encoder and the diff now share.
+- **Signed provenance for every released file**: the release workflow
+  attests each archive it publishes (GitHub's build provenance), and
+  `gh attestation verify <file> -R develooper1994/configforge` checks it.
+- **The build's limits in the report**: `"limits"` beside `"features"`
+  in the library block - key, message and path lengths and the nesting
+  depth - so a report from a build with other limits says so.
 - **A settle interval for reloads**: `cf_live_options.settle`, the polls
   a change waits after it is seen, so a burst of writes is read once, at
   its end. 0, the default, reads it at once, as before.

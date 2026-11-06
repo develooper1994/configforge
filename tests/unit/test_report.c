@@ -61,6 +61,14 @@ static void test_blind_report(void) {
     has(buf, "\"mode\": \"blind\"", "mode is structural, not inferred");
     has(buf, "\"profile\": \"production\"", "profile label");
     has(buf, "\"features\":", "compiled-in format set recorded");
+    {
+        char limits[128];
+        cf_fmt(
+            limits, sizeof limits,
+            "\"limits\": { \"key\": %d, \"message\": %d, \"path\": %d, \"depth\": %d }",
+            (int)CF_KEY_MAX, (int)CF_MESSAGE_MAX, (int)CF_PATH_MAX, (int)CF_MAX_DEPTH);
+        has(buf, limits, "and the build's limits");
+    }
 
     /* The chain is the artifact: a shadowed candidate is the whole
        reason the report is worth keeping. */

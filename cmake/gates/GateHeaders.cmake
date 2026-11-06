@@ -115,7 +115,9 @@ if(CXX AND EXISTS "${SRC}/include/configforge/configforge.hpp")
     RESULT_VARIABLE rc
     OUTPUT_VARIABLE out
     ERROR_VARIABLE out)
-  if(rc EQUAL 0 OR NOT out MATCHES "2.0 requires C")
+  # Said, as a warning or an error: clang keeps #pragma GCC warning a
+  # warning under -Werror, GCC makes it an error.
+  if(NOT out MATCHES "2.0 requires C")
     message("VIOLATION: C++11 without CF_CXX_LEGACY was not told of the "
             "deprecation")
     message("${out}")
