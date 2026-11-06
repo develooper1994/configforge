@@ -112,6 +112,11 @@ endif()
 # The documents test_codec_edges reads, where they are in the source tree.
 target_compile_definitions(
   test_codec_edges PRIVATE CF_EDGES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
+# And the inputs a YAML parser once hung on, which test_yaml reads: a hang
+# is this test's timeout.
+set(conform_data "${CMAKE_SOURCE_DIR}/tests/conformance/data")
+target_compile_definitions(test_yaml PRIVATE CF_CONFORM_DATA="${conform_data}")
+set_tests_properties(unit.test_yaml PROPERTIES TIMEOUT 60)
 
 # The same suite under a comma-decimal locale and a Turkish locale.
 # The Turkish case is the standard test for the tolower hazard.

@@ -80,6 +80,18 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   `!!map`, `!!seq` - type a value as YAML 1.2 says; another tag is still
   refused by name. The conformance run scores YAML on yaml-test-suite,
   counting what the configuration model refuses apart from the grammar.
+- YAML through libfyaml (D-62): `CF_YAML_BACKEND` is `auto`, `libfyaml`
+  or `libyaml`, and `auto` takes libfyaml 0.9.1 or later where it is
+  installed. Through it the reader reads all of yaml-test-suite as YAML
+  1.2 says - 122/122 valid, 94/94 invalid, 110/110 values - where
+  libyaml, which follows YAML 1.1, gives 100/133, 87/94 and 90/93.
+  libyaml stays the backend for MSVC and C89-only compilers. libfyaml
+  before 0.9.1, which Ubuntu 24.04 ships, hangs on malformed input
+  (libfyaml issue 101) and is refused by name, at every point it could
+  enter: by the build, from the `libfyaml.pc` beside the library; at run
+  time, by asking the loaded library its version, since 0.8 and 0.9
+  share a soname; and by `configforge.pc`'s `Requires.private`. `scripts/buildenv/libfyaml.sh` builds
+  0.9.6 from its checked release tarball; CI has a libfyaml job.
 - `cf_doc_sink.reserve_work`: optional workspace a reader keeps
   bookkeeping in until decode returns (D-62); the loader lends it from
   the configuration's arena.

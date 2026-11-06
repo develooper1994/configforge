@@ -12,7 +12,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y --no-install-recommends \
   ca-certificates curl git file xz-utils locales util-linux \
-  build-essential cmake ninja-build ccache pkg-config python3 python3-venv \
+  build-essential cmake ninja-build ccache pkg-config python3 python3-venv python3-yaml \
   clang clang-format clang-tidy libclang-rt-18-dev llvm \
   binutils cppcheck gcovr cmake-format valgrind cbmc \
   lld wasi-libc libclang-rt-18-dev-wasm32 nodejs abigail-tools \
@@ -55,6 +55,10 @@ if [ ! -x /opt/cf-tools/bin/clang-format ] ||
   /opt/cf-tools/bin/pip install --quiet "clang-format==$CLANG_FORMAT_VERSION"
 fi
 ln -sf /opt/cf-tools/bin/clang-format /usr/local/bin/clang-format
+
+# libfyaml 0.9.6 under /opt/cf-tools/libfyaml (D-62), so the default
+# build still finds Ubuntu's libyaml and verify's yaml step this one.
+sh "$(dirname "$0")/libfyaml.sh" /opt/cf-tools/libfyaml
 
 # ccache's cache, bounded: verify reuses it from one unit to the next.
 ccache --max-size=5G >/dev/null

@@ -80,6 +80,16 @@ fingerprint):
 | a patch script in Python turned `"\n"` in C source into a line break | patch scripts use raw strings (`r"""..."""`) for C, and the build is the check |
 | Rust's `Debug` for `Config` printed `cf_digest`, a hash of the secrets themselves, while its comment said it kept secrets out of logs | `cf_fingerprint`, and a test that `Debug` contains no digest |
 
+The round of 2026-11-06 (each reader against its standard's suite):
+
+| Found | Made into |
+| ----- | --------- |
+| readers were tested against cases written here, and JSON and TOML accepted what their standards forbid | `verify -DEXTRA=conformance`: each standard's own suite, values compared as well as verdicts, against floors that only rise (`tests/conformance/floor.txt`) |
+| a new YAML parser passed the whole suite, then hung on 149 random bytes | a dependency is fuzzed before it is trusted; the reproducer is kept (`tests/conformance/data/`) and read under a timeout by test_yaml |
+| a minimum version written only in documents does nothing: a program built against libfyaml 0.9.6 loads 0.8, which has the same soname | a version floor is enforced at every entry point from one value: the build, the run time (ask the loaded library), and the package file (`Requires.private`) |
+| `dev_verify.sh` piped verify into `tail`, so its exit status was always `tail`'s | it writes the log to a file and exits with verify's status; read "all green", never a pipe's status |
+| a defect found in a dependency | reproduced on its latest release and master, searched for in its tracker, then reported with the reproducer and the fix (libfyaml issues 101, known; 506, filed) |
+
 ## Measured
 
 What a build option costs or saves, measured rather than assumed, so a

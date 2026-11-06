@@ -1,11 +1,15 @@
 /*
- * yaml.c - YAML, read through libyaml and written by hand. C89.
+ * yaml.c - YAML, read through libfyaml or libyaml and written by hand.
+ * C89, but for the libfyaml half, whose header needs C11.
  *
- * Reading is libyaml's event parser mapped onto the document events,
- * one to one: a mapping is a table, a sequence an array, a scalar a
- * scalar. Writing is a few dozen lines of block style here, because
+ * Reading is a parser's events mapped onto the document events, one to
+ * one: a mapping is a table, a sequence an array, a scalar a scalar. Two
+ * parsers can supply them (D-62), and only the last part of the reader
+ * knows which: libfyaml, which reads all of yaml-test-suite as YAML 1.2
+ * says, and libyaml, which follows YAML 1.1 and builds everywhere, MSVC
+ * included. Writing is a few dozen lines of block style here, because
  * every value this library holds can be written in a handful of forms
- * and libyaml's emitter would bring an allocation and a second state
+ * and a parser's emitter would bring an allocation and a second state
  * machine for them.
  *
  * Anchors and aliases are read (D-63): an anchored node's events are
@@ -44,7 +48,16 @@
 
 #if CF_WITH_YAML
 
+/* Which parser reads (D-62): the build defines CF_YAML_LIBFYAML when it
+   chose libfyaml; libyaml otherwise. */
+#ifndef CF_YAML_LIBFYAML
+#define CF_YAML_LIBFYAML 0
+#endif
+#if CF_YAML_LIBFYAML
+#include <libfyaml.h>
+#else
 #include <yaml.h>
+#endif
 
 /* ================================================================== *
  * Decoding
@@ -126,10 +139,6 @@ static cf_bool yaml_fail_at(yaml_scan* s, unsigned line, unsigned col,
                             const char* what) {
     return cf_error_set(s->err, CF_E_SOURCE, NULL, s->file, "%s:%u:%u: %s", s->file,
                         line, col, what);
-}
-
-static cf_bool yaml_fail(yaml_scan* s, const yaml_mark_t* m, const char* what) {
-    return yaml_fail_at(s, (unsigned)m->line + 1u, (unsigned)m->column + 1u, what);
 }
 
 static cf_bool yaml_no_room(yaml_scan* s) {
@@ -233,18 +242,20 @@ static cf_u32 yaml_find(const yaml_scan* s, const char* p, size_t n) {
 }
 
 /* An anchor on the node about to open: from here its events are kept. */
-static cf_bool yaml_anchor_open(yaml_scan* s, const yaml_mark_t* m, const char* name) {
-    size_t       n = strlen(name), i;
+static cf_bool yaml_anchor_open(yaml_scan* s, unsigned line, unsigned col,
+                                const char* name, size_t n) {
+    size_t       i;
     yaml_anchor* a;
     cf_u32       h;
 
     if (!s->work) {
-        return yaml_fail(s, m,
-                         "an anchor needs reader workspace, which this sink does not "
-                         "lend (cf_doc_sink.reserve_work)");
+        return yaml_fail_at(
+            s, line, col,
+            "an anchor needs reader workspace, which this sink does not "
+            "lend (cf_doc_sink.reserve_work)");
     }
     if (s->nopen > CF_MAX_DEPTH) {
-        return yaml_fail(s, m, "nesting is too deep");
+        return yaml_fail_at(s, line, col, "nesting is too deep");
     }
     if (s->nanchors + 1 > s->canchors) {
         size_t       old     = s->canchors;
@@ -556,23 +567,23 @@ static cf_bool yaml_handle(yaml_scan* s, const yaml_ev* e) {
 /* An alias: its anchor's events again, where the alias stands. Each value
    keeps the place it was written at, which is the anchor's: explain()
    names the one line the value came from. */
-static cf_bool yaml_alias(yaml_scan* s, const yaml_event_t* ev) {
-    const char* name = (const char*)ev->data.alias.anchor;
-    cf_u32      i    = yaml_find(s, name, strlen(name)), k;
+static cf_bool yaml_alias(yaml_scan* s, const char* name, size_t n, unsigned line,
+                          unsigned col) {
+    cf_u32      i = yaml_find(s, name, n), k;
     yaml_anchor a;
 
+    ++s->read;
     if (i == 0) {
-        return yaml_fail(s, &ev->start_mark,
-                         "an alias of an anchor not defined before it");
+        return yaml_fail_at(s, line, col,
+                            "an alias of an anchor not defined before it");
     }
     a = s->anchors[i - 1u];
     if (!a.done) {
-        return yaml_fail(s, &ev->start_mark,
-                         "an alias inside the node its anchor names");
+        return yaml_fail_at(s, line, col, "an alias inside the node its anchor names");
     }
     if (s->replayed + a.count > s->read * YAML_ALIAS_FACTOR + YAML_ALIAS_FLOOR) {
-        return yaml_fail(s, &ev->start_mark,
-                         "aliases expand to far more than the document holds");
+        return yaml_fail_at(s, line, col,
+                            "aliases expand to far more than the document holds");
     }
     s->replayed += a.count;
     for (k = 0; k < a.count; ++k) {
@@ -611,10 +622,6 @@ static cf_bool yaml_alias(yaml_scan* s, const yaml_event_t* ev) {
             }
             memcpy(text, s->pool + r.text, r.n);
             e.text = text;
-            if (!yaml_handle(s, &e)) {
-                return CF_FALSE;
-            }
-            continue;
         }
         if (!yaml_handle(s, &e)) {
             return CF_FALSE;
@@ -623,22 +630,285 @@ static cf_bool yaml_alias(yaml_scan* s, const yaml_event_t* ev) {
     return CF_TRUE;
 }
 
-/* A libyaml node event as this reader's, the place 1-based. The tag is
-   the one written, or none: libyaml gives no tag to a node without one,
-   and marks a "!" as implicit, so its implicit flags are no guide. */
-static void yaml_from(yaml_ev* e, const yaml_event_t* ev, int kind,
-                      const yaml_char_t* tag) {
+/* A node event from the parser, with the anchor on it if any. */
+static cf_bool yaml_node(yaml_scan* s, const yaml_ev* e, const char* anchor, size_t n) {
+    ++s->read;
+    if (anchor != NULL && !yaml_anchor_open(s, e->line, e->col, anchor, n)) {
+        return CF_FALSE;
+    }
+    return yaml_handle(s, e);
+}
+
+static cf_bool yaml_document(yaml_scan* s, unsigned line, unsigned col) {
+    if (++s->documents > 1) {
+        return yaml_fail_at(s, line, col,
+                            "a second document: one file is one configuration");
+    }
+    return CF_TRUE;
+}
+
+/* The end of the stream. Nothing in the file is an empty configuration,
+   not an error, which is what an empty INI or TOML file is too. */
+static cf_bool yaml_stream_end(yaml_scan* s, unsigned line, unsigned col) {
+    if (s->depth < 0) {
+        return (s->out->begin_table(s->out->ctx, NULL, 0) && s->out->end(s->out->ctx))
+                   ? CF_TRUE
+                   : yaml_fail_at(s, line, col, "the document could not be recorded");
+    }
+    return CF_TRUE;
+}
+
+static void yaml_scan_init(yaml_scan* s, const cf_blob* in, const cf_doc_sink* out,
+                           cf_error* err) {
+    memset(s, 0, sizeof *s);
+    s->file  = (in->name != NULL) ? in->name : "<yaml>";
+    s->out   = out;
+    s->err   = err;
+    s->depth = -1;
+    s->work =
+        (out->size >= offsetof(cf_doc_sink, reserve_work) + sizeof out->reserve_work &&
+         out->reserve_work != NULL)
+            ? CF_TRUE
+            : CF_FALSE;
+}
+
+/* A node event's common fields: the tag as written, or none. */
+static void yaml_ev_init(yaml_ev* e, int kind, const char* tag, unsigned line,
+                         unsigned col) {
     e->kind  = kind;
     e->text  = NULL;
     e->n     = 0;
     e->plain = CF_FALSE;
-    e->tag   = (const char*)tag;
-    e->line  = (unsigned)ev->start_mark.line + 1u;
-    e->col   = (unsigned)ev->start_mark.column + 1u;
+    e->tag   = tag;
+    e->line  = line;
+    e->col   = col;
 }
 
-/* One event. Sets *done at the end of the stream. */
+#if CF_YAML_LIBFYAML
+
+/* ------------------------------------------------------------------ *
+ * Through libfyaml (YAML 1.2, complete on yaml-test-suite)
+ * ------------------------------------------------------------------ */
+
+/* A token's text, or "" for none (libfyaml gives an empty plain scalar
+   no token). */
+static const char* yaml_fy_text(struct fy_token* t, size_t* n) {
+    const char* p = (t != NULL) ? fy_token_get_text(t, n) : NULL;
+    if (p == NULL) {
+        *n = 0;
+        return "";
+    }
+    return p;
+}
+
+/* A tag token's tag, NUL-terminated into buf, or NULL for none. libfyaml
+   resolves the handle, so !!str arrives as tag:yaml.org,2002:str. */
+static const char* yaml_fy_tag(struct fy_token* t, char* buf, size_t cap) {
+    size_t      n;
+    const char* p = (t != NULL) ? fy_token_get_text(t, &n) : NULL;
+    if (p == NULL) {
+        return NULL;
+    }
+    if (n >= cap) {
+        n = cap - 1u;
+    }
+    memcpy(buf, p, n);
+    buf[n] = '\0';
+    return buf;
+}
+
+static cf_bool yaml_fy_event(yaml_scan* s, struct fy_event* ev, cf_bool* done) {
+    const struct fy_mark* m    = fy_event_start_mark(ev);
+    unsigned              line = (m != NULL) ? (unsigned)m->line + 1u : 1u;
+    unsigned              col  = (m != NULL) ? (unsigned)m->column + 1u : 1u;
+    yaml_ev               e;
+    char                  tag[256];
+    struct fy_token*      anchor = NULL;
+    const char*           a      = NULL;
+    size_t                an     = 0;
+
+    switch (ev->type) {
+    case FYET_NONE:
+    case FYET_STREAM_START:
+    case FYET_DOCUMENT_END:
+        return CF_TRUE;
+    case FYET_DOCUMENT_START:
+        return yaml_document(s, line, col);
+    case FYET_STREAM_END:
+        *done = CF_TRUE;
+        return yaml_stream_end(s, line, col);
+    case FYET_ALIAS: {
+        size_t      n;
+        const char* p = yaml_fy_text(ev->alias.anchor, &n);
+        return yaml_alias(s, p, n, line, col);
+    }
+    case FYET_SCALAR:
+        yaml_ev_init(&e, YAML_EV_SCALAR, yaml_fy_tag(ev->scalar.tag, tag, sizeof tag),
+                     line, col);
+        e.text  = yaml_fy_text(ev->scalar.value, &e.n);
+        e.plain = (ev->scalar.value == NULL ||
+                   fy_token_scalar_style(ev->scalar.value) == FYSS_PLAIN)
+                      ? CF_TRUE
+                      : CF_FALSE;
+        if (e.tag == NULL && !e.plain) {
+            e.tag = "!"; /* a quoted scalar's non-specific tag: text */
+        }
+        anchor = ev->scalar.anchor;
+        break;
+    case FYET_SEQUENCE_START:
+        yaml_ev_init(&e, YAML_EV_SEQ,
+                     yaml_fy_tag(ev->sequence_start.tag, tag, sizeof tag), line, col);
+        anchor = ev->sequence_start.anchor;
+        break;
+    case FYET_MAPPING_START:
+        yaml_ev_init(&e, YAML_EV_MAP,
+                     yaml_fy_tag(ev->mapping_start.tag, tag, sizeof tag), line, col);
+        anchor = ev->mapping_start.anchor;
+        break;
+    case FYET_SEQUENCE_END:
+    case FYET_MAPPING_END:
+        yaml_ev_init(&e, YAML_EV_END, NULL, line, col);
+        break;
+    default:
+        return CF_TRUE;
+    }
+    if (anchor != NULL) {
+        a = yaml_fy_text(anchor, &an);
+    }
+    return yaml_node(s, &e, a, an);
+}
+
+/* libfyaml's first collected error, as this library words a place. */
+static cf_bool yaml_fy_fail(yaml_scan* s, struct fy_diag* diag) {
+    void*                 iter = NULL;
+    struct fy_diag_error* d =
+        (diag != NULL) ? fy_diag_errors_iterate(diag, &iter) : NULL;
+    if (d == NULL) {
+        return yaml_fail_at(s, 1u, 1u, "not YAML");
+    }
+    return yaml_fail_at(s, (unsigned)d->line + 1u, (unsigned)d->column + 1u,
+                        (d->msg != NULL) ? d->msg : "not YAML");
+}
+
+/* The build's least libfyaml (src/serialize/CMakeLists.txt, D-62). */
+#ifndef CF_FYAML_MIN_MAJOR
+#define CF_FYAML_MIN_MAJOR 0
+#define CF_FYAML_MIN_MINOR 9
+#define CF_FYAML_MIN_PATCH 1
+#endif
+
+/* Whether the libfyaml this program runs against is at least the build's
+   least one. Asked of the library at run time, not of the header: 0.8 and
+   0.9 share the soname libfyaml.so.0, so a program built against 0.9.6
+   loads Ubuntu 24.04's 0.8 just as well - which hangs on malformed input
+   (libfyaml issue 101). A version that cannot be read is not taken. */
+static cf_bool yaml_fy_version_ok(const char** have) {
+    const char* p    = fy_library_version();
+    long        v[3] = {0, 0, 0};
+    int         i;
+
+    *have = (p != NULL) ? p : "unknown";
+    if (p == NULL) {
+        return CF_FALSE;
+    }
+    for (i = 0; i < 3; ++i) {
+        if (!cf_is_digit((unsigned char)*p)) {
+            return CF_FALSE;
+        }
+        while (cf_is_digit((unsigned char)*p) && v[i] < 100000L) {
+            v[i] = v[i] * 10 + (*p++ - '0');
+        }
+        if (i < 2 && *p++ != '.') {
+            return CF_FALSE;
+        }
+    }
+    if (v[0] != CF_FYAML_MIN_MAJOR) {
+        return (v[0] > CF_FYAML_MIN_MAJOR) ? CF_TRUE : CF_FALSE;
+    }
+    if (v[1] != CF_FYAML_MIN_MINOR) {
+        return (v[1] > CF_FYAML_MIN_MINOR) ? CF_TRUE : CF_FALSE;
+    }
+    return (v[2] >= CF_FYAML_MIN_PATCH) ? CF_TRUE : CF_FALSE;
+}
+
+static cf_bool yaml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* err) {
+    struct fy_parse_cfg cfg;
+    struct fy_diag_cfg  dcfg;
+    struct fy_diag*     diag;
+    struct fy_parser*   fyp;
+    struct fy_event*    ev;
+    yaml_scan           s;
+    cf_bool             ok   = CF_TRUE;
+    cf_bool             done = CF_FALSE;
+    const char*         have;
+
+    yaml_scan_init(&s, in, out, err);
+    if (!yaml_fy_version_ok(&have)) {
+        return cf_error_set(
+            err, CF_E_CAPABILITY, NULL, s.file,
+            "YAML is read through libfyaml %d.%d.%d or later, and the "
+            "one loaded is %s, which hangs on malformed input (libfyaml "
+            "issue 101): install a newer libfyaml",
+            CF_FYAML_MIN_MAJOR, CF_FYAML_MIN_MINOR, CF_FYAML_MIN_PATCH, have);
+    }
+    fy_diag_cfg_default(&dcfg);
+    dcfg.fp = NULL; /* nothing on stderr: the error is reported here */
+    diag    = fy_diag_create(&dcfg);
+    if (diag == NULL) {
+        return cf_error_set(err, CF_E_MEMORY, NULL, s.file,
+                            "no room for a YAML parser");
+    }
+    fy_diag_set_collect_errors(diag, true);
+    memset(&cfg, 0, sizeof cfg);
+    cfg.flags = (enum fy_parse_cfg_flags)(FYPCF_QUIET | FYPCF_COLLECT_DIAG);
+    cfg.diag  = diag;
+    fyp       = fy_parser_create(&cfg);
+    if (fyp == NULL || fy_parser_set_string(fyp, in->p, in->n) != 0) {
+        if (fyp != NULL) {
+            fy_parser_destroy(fyp);
+        }
+        fy_diag_destroy(diag);
+        return cf_error_set(err, CF_E_MEMORY, NULL, s.file,
+                            "no room for a YAML parser");
+    }
+    while (ok && !done) {
+        ev = fy_parser_parse(fyp);
+        if (ev == NULL) {
+            /* The end without a stream end is an error, collected. */
+            ok = fy_parser_get_stream_error(fyp) ? yaml_fy_fail(&s, diag)
+                                                 : yaml_stream_end(&s, 1u, 1u);
+            break;
+        }
+        ok = yaml_fy_event(&s, ev, &done);
+        fy_parser_event_free(fyp, ev);
+    }
+    if (ok && fy_parser_get_stream_error(fyp)) {
+        ok = yaml_fy_fail(&s, diag);
+    }
+    fy_parser_destroy(fyp);
+    fy_diag_destroy(diag);
+    return ok;
+}
+
+#else /* libyaml */
+
+/* ------------------------------------------------------------------ *
+ * Through libyaml (YAML 1.1; builds everywhere, MSVC included)
+ * ------------------------------------------------------------------ */
+
+static unsigned yaml_line(const yaml_mark_t* m) {
+    return (unsigned)m->line + 1u;
+}
+static unsigned yaml_col(const yaml_mark_t* m) {
+    return (unsigned)m->column + 1u;
+}
+
+/* One event. Sets *done at the end of the stream. The tag is the one
+   written, or none: libyaml gives no tag to a node without one, and
+   marks a "!" as implicit, so its implicit flags are no guide. */
 static cf_bool yaml_event(yaml_scan* s, const yaml_event_t* ev, cf_bool* done) {
+    unsigned           line = yaml_line(&ev->start_mark);
+    unsigned           col  = yaml_col(&ev->start_mark);
     yaml_ev            e;
     const yaml_char_t* anchor = NULL;
 
@@ -648,28 +918,16 @@ static cf_bool yaml_event(yaml_scan* s, const yaml_event_t* ev, cf_bool* done) {
     case YAML_DOCUMENT_END_EVENT:
         return CF_TRUE;
     case YAML_DOCUMENT_START_EVENT:
-        if (++s->documents > 1) {
-            return yaml_fail(s, &ev->start_mark,
-                             "a second document: one file is one configuration");
-        }
-        return CF_TRUE;
+        return yaml_document(s, line, col);
     case YAML_STREAM_END_EVENT:
         *done = CF_TRUE;
-        if (s->depth < 0) {
-            /* Nothing in the file: an empty configuration, not an
-               error, which is what an empty INI or TOML file is too. */
-            return (s->out->begin_table(s->out->ctx, NULL, 0) &&
-                    s->out->end(s->out->ctx))
-                       ? CF_TRUE
-                       : yaml_fail(s, &ev->start_mark,
-                                   "the document could not be recorded");
-        }
-        return CF_TRUE;
-    case YAML_ALIAS_EVENT:
-        ++s->read;
-        return yaml_alias(s, ev);
+        return yaml_stream_end(s, line, col);
+    case YAML_ALIAS_EVENT: {
+        const char* name = (const char*)ev->data.alias.anchor;
+        return yaml_alias(s, name, strlen(name), line, col);
+    }
     case YAML_SCALAR_EVENT:
-        yaml_from(&e, ev, YAML_EV_SCALAR, ev->data.scalar.tag);
+        yaml_ev_init(&e, YAML_EV_SCALAR, (const char*)ev->data.scalar.tag, line, col);
         e.text = (const char*)ev->data.scalar.value;
         e.n    = ev->data.scalar.length;
         e.plain =
@@ -680,25 +938,24 @@ static cf_bool yaml_event(yaml_scan* s, const yaml_event_t* ev, cf_bool* done) {
         anchor = ev->data.scalar.anchor;
         break;
     case YAML_SEQUENCE_START_EVENT:
-        yaml_from(&e, ev, YAML_EV_SEQ, ev->data.sequence_start.tag);
+        yaml_ev_init(&e, YAML_EV_SEQ, (const char*)ev->data.sequence_start.tag, line,
+                     col);
         anchor = ev->data.sequence_start.anchor;
         break;
     case YAML_MAPPING_START_EVENT:
-        yaml_from(&e, ev, YAML_EV_MAP, ev->data.mapping_start.tag);
+        yaml_ev_init(&e, YAML_EV_MAP, (const char*)ev->data.mapping_start.tag, line,
+                     col);
         anchor = ev->data.mapping_start.anchor;
         break;
     case YAML_SEQUENCE_END_EVENT:
     case YAML_MAPPING_END_EVENT:
-        yaml_from(&e, ev, YAML_EV_END, NULL);
+        yaml_ev_init(&e, YAML_EV_END, NULL, line, col);
         break;
     default:
         return CF_TRUE;
     }
-    ++s->read;
-    if (anchor != NULL && !yaml_anchor_open(s, &ev->start_mark, (const char*)anchor)) {
-        return CF_FALSE;
-    }
-    return yaml_handle(s, &e);
+    return yaml_node(s, &e, (const char*)anchor,
+                     (anchor != NULL) ? strlen((const char*)anchor) : 0u);
 }
 
 static cf_bool yaml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* err) {
@@ -708,17 +965,7 @@ static cf_bool yaml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     cf_bool       ok   = CF_TRUE;
     cf_bool       done = CF_FALSE;
 
-    memset(&s, 0, sizeof s);
-    s.file  = (in->name != NULL) ? in->name : "<yaml>";
-    s.out   = out;
-    s.err   = err;
-    s.depth = -1;
-    s.work =
-        (out->size >= offsetof(cf_doc_sink, reserve_work) + sizeof out->reserve_work &&
-         out->reserve_work != NULL)
-            ? CF_TRUE
-            : CF_FALSE;
-
+    yaml_scan_init(&s, in, out, err);
     if (!yaml_parser_initialize(&parser)) {
         return cf_error_set(err, CF_E_MEMORY, NULL, s.file,
                             "no room for a YAML parser");
@@ -727,8 +974,9 @@ static cf_bool yaml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     yaml_parser_set_encoding(&parser, YAML_UTF8_ENCODING);
     while (ok && !done) {
         if (!yaml_parser_parse(&parser, &ev)) {
-            ok = yaml_fail(&s, &parser.problem_mark,
-                           (parser.problem != NULL) ? parser.problem : "not YAML");
+            ok = yaml_fail_at(&s, yaml_line(&parser.problem_mark),
+                              yaml_col(&parser.problem_mark),
+                              (parser.problem != NULL) ? parser.problem : "not YAML");
             break;
         }
         ok = yaml_event(&s, &ev, &done);
@@ -737,6 +985,8 @@ static cf_bool yaml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     yaml_parser_delete(&parser);
     return ok;
 }
+
+#endif /* the YAML parser */
 
 /* ================================================================== *
  * Encoding

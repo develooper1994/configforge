@@ -7,6 +7,9 @@ toml 208 509
 # YAML through libyaml, where the build has it (CF_WITH_YAML)
 yaml 100 87
 yaml-values 90
+# and through libfyaml 0.9.1 or later (CF_YAML_BACKEND=libfyaml, D-62)
+yaml-libfyaml 122 94
+yaml-libfyaml-values 110
 # "<name> <documents>": valid documents read to the expected values, by
 # Python's json for JSON and by toml-test's own expectations for TOML.
 json-values 95

@@ -427,7 +427,7 @@ is worse than a program that refuses to start.
 | INI | `CF_WITH_INI` | sections and keys; typed by the contract |
 | JSON | `CF_WITH_JSON` | typed by the file |
 | TOML | `CF_WITH_TOML` | the subset in D-23: tables, arrays of tables, inline tables, every scalar but dates |
-| YAML | `CF_WITH_YAML`, off by default | through libyaml; typed by the contract (D-39) |
+| YAML | `CF_WITH_YAML`, off by default | through libfyaml 0.9.1+ where it is found, YAML 1.2 complete, or libyaml (`CF_YAML_BACKEND`, D-62); typed by the contract (D-39) |
 | XML | `CF_WITH_XML`, off by default | through expat, read only; typed by the contract, mapped as D-23 declares |
 | Java `.properties` | `CF_WITH_PROPERTIES` | read only; as java.util.Properties reads it, UTF-8; typed by the contract |
 

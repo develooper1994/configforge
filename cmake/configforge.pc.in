@@ -11,4 +11,5 @@ URL: https://github.com/develooper1994/configforge
 Version: @PROJECT_VERSION@
 Libs: -L${libdir} -lconfigforge
 Libs.private: @CF_PC_LIBS_PRIVATE@
+Requires.private: @CF_PC_REQUIRES_PRIVATE@
 Cflags: -I${includedir}

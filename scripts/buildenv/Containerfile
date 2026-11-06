@@ -7,6 +7,6 @@
 #
 # podman takes the same file and the same arguments.
 FROM ubuntu:24.04
-COPY setup.sh /tmp/setup.sh
-RUN sh /tmp/setup.sh && rm /tmp/setup.sh
+COPY setup.sh libfyaml.sh /tmp/
+RUN sh /tmp/setup.sh && rm /tmp/setup.sh /tmp/libfyaml.sh
 WORKDIR /src

@@ -1,10 +1,11 @@
 /*
- * test_yaml.c - YAML through libyaml (D-39): what it reads, what it
- * refuses by name, and that what it writes reads back as the same
- * configuration.
+ * test_yaml.c - YAML, through libyaml or libfyaml (D-39, D-62, D-63):
+ * what it reads, what it refuses by name, and that what it writes reads
+ * back as the same configuration.
  */
 
 #include <configforge/configforge.h>
+#include <configforge/cf_serialize.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -218,6 +219,23 @@ static void test_refuses(void) {
     refused("Bad Key: 1\n", "not a valid key", "a key the library cannot hold");
 }
 
+/* 149 bytes beginning with '%' and malformed UTF-8 in the directive,
+   which libfyaml 0.8 loops on forever (libfyaml issue 101): refused, by
+   either parser, rather than read or hung on. */
+static void test_hostile_directive(void) {
+    cf_error    err = CF_ERROR_INIT;
+    cf_builder* b   = cf_build(NULL);
+    cf_config*  c;
+
+    cf_builder_file_codec(b, "file", CF_RANK_USER_FILE,
+                          CF_CONFORM_DATA "/libfyaml-0.8-hang.yaml.bin",
+                          cf_codec_by_name("yaml"), 0);
+    c = cf_builder_create(b, &err);
+    check(c == NULL, "a malformed directive is refused, not hung on");
+    has(err.message, "libfyaml-0.8-hang.yaml.bin", "and the refusal names the file");
+    cf_config_free(c);
+}
+
 static void test_empty(void) {
     cf_error   err = CF_ERROR_INIT;
     cf_config* c   = load("# nothing but a comment\n", &err);
@@ -294,6 +312,7 @@ int main(void) {
     test_anchors();
     test_tags();
     test_refuses();
+    test_hostile_directive();
     test_empty();
 #if CF_WITH_EMIT
     test_round_trip();

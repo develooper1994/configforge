@@ -137,8 +137,22 @@ if(PKG_CONFIG_EXE)
   endif()
   list(GET pcs 0 pc)
   get_filename_component(pcdir "${pc}" DIRECTORY)
+  # A dependency configforge.pc requires by version (libfyaml >= 0.9.1,
+  # D-62) is looked for where the build found it, first: pkg-config would
+  # otherwise take the system's, which may be the older one it refuses.
+  set(pcpath "${pcdir}")
+  set(dep_rpath "")
+  if(DEFINED YAML_LIB AND NOT YAML_LIB STREQUAL "")
+    get_filename_component(yamldir "${YAML_LIB}" DIRECTORY)
+    if(EXISTS "${yamldir}/pkgconfig")
+      set(pcpath "${pcdir}:${yamldir}/pkgconfig")
+    endif()
+    if(YAML_LIB MATCHES "\\.(so|dylib)(\\.[0-9.]+)?$")
+      set(dep_rpath "-Wl,-rpath,${yamldir}")
+    endif()
+  endif()
   execute_process(
-    COMMAND ${CMAKE_COMMAND} -E env PKG_CONFIG_PATH=${pcdir} ${PKG_CONFIG_EXE}
+    COMMAND ${CMAKE_COMMAND} -E env PKG_CONFIG_PATH=${pcpath} ${PKG_CONFIG_EXE}
             --cflags --libs --static configforge
     RESULT_VARIABLE rc
     OUTPUT_VARIABLE flags
@@ -151,7 +165,7 @@ if(PKG_CONFIG_EXE)
   separate_arguments(flags UNIX_COMMAND "${flags}")
   execute_process(
     COMMAND ${CC} -std=c89 -pedantic ${werror} -o "${work}/consumer_pc"
-            "${SRC}/tests/consumer/consumer.c" ${flags}
+            "${SRC}/tests/consumer/consumer.c" ${flags} ${dep_rpath}
     RESULT_VARIABLE rc
     OUTPUT_VARIABLE out
     ERROR_VARIABLE out)

@@ -32,8 +32,13 @@ function(configforge_add_gates tgt)
     list(APPEND options "-DL_${lim}=${${lim}}")
   endforeach()
   if(CF_WITH_YAML)
-    list(APPEND options "-DYAML_INC=${CF_YAML_INCLUDE_DIR}"
-         "-DYAML_LIB=${CF_YAML_LIBRARY}")
+    list(
+      APPEND
+      options
+      "-DYAML_INC=${CF_YAML_INCLUDE_DIR}"
+      "-DYAML_LIB=${CF_YAML_LIBRARY}"
+      "-DYAML_FY=${_CF_YAML_LIBFYAML}"
+      "-DYAML_FY_MIN=${_CF_FYAML_MIN}")
   endif()
   if(CF_WITH_XML)
     list(APPEND options "-DXML_INC=${CF_EXPAT_INCLUDE_DIR}"

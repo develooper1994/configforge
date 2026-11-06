@@ -149,7 +149,7 @@ verified commits, and a release is cut where the order says so. The
 5. **Doctor `--only-changed`** - done: `lint --base B --only-changed`,
    in the library, the action, the hook and Python; findings about a
    source are kept when a touched key came from it.
-6. **In progress (2026-11-06): each reader held to its format's own
+6. **Done (2026-11-06): each reader held to its format's own
    standard** (the owner: "each format's own standard"; "start from the
    world's best-known methods, then improve"). The method, for every
    reader: the specification's grammar, its official test suite as the
@@ -160,10 +160,12 @@ verified commits, and a release is cut where the order says so. The
    161/208, invalid 394/509 - no multi-line strings, datetimes, inf or
    nan, and lenient numbers, keys and table redefinitions. Now TOML is
    valid 208/208, invalid 509/509, values 208/208, and JSON's values
-   95/95 against Python's json. YAML through libyaml: valid 100/133,
-   invalid 87/94, values 90/93, every miss libyaml's YAML 1.1 parser.
-   A libfyaml backend scored complete and then hung on a fuzz input
-   (libfyaml 0.8), so it waits for a fixed release (D-62). tomlc17
+   95/95 against Python's json. YAML through libfyaml 0.9.1 or later
+   (`CF_YAML_BACKEND`, D-62): valid 122/122, invalid 94/94, values
+   110/110; through libyaml, which stays for MSVC and C89-only builds,
+   100/133, 87/94 and 90/93. libfyaml 0.8 hangs on malformed input and is
+   refused by the build; two defects in libfyaml's pre-C11 header were
+   reported upstream (libfyaml issue 506). Done. tomlc17
    conforms fully but builds a tree without positions, and explain()
    needs file:line:col, so the built-in TOML reader is completed rather
    than replaced. Then YAML, and `verify -DEXTRA=conformance`. Record:
@@ -188,6 +190,18 @@ verified commits, and a release is cut where the order says so. The
 7. **JSON Schema import**: definitions from a schema, the reverse of
    `cf_schema`; unsupported keywords refused by name. After 6, on the
    chosen JSON reader.
+7b. **A built-in YAML reader** (the owner asked why YAML alone needs a
+   dependency, 2026-11-06). INI, JSON and TOML are read here, streaming,
+   allocation-free, every value with its place; YAML is read through
+   libfyaml or libyaml, so it is off by default, cannot run in a fixed
+   arena, and its positions come from someone else's events. The reader
+   for the YAML configuration is written in: block and flow mappings and
+   sequences, plain, quoted and block scalars with their chomping and
+   indentation indicators, anchors and aliases, the core schema's tags,
+   comments, directives. Held to yaml-test-suite with the same floors,
+   libfyaml the differential reference rather than the parser, fuzzed;
+   then on by default as TOML is, with libfyaml and libyaml kept behind
+   `CF_YAML_BACKEND` for whoever wants a dependency's reading.
 8. **Sizing modes** (the owner, 2026-11-05: full-dynamic, semi-dynamic,
    manual): today every limit is a fixed buffer (`CF_KEY_MAX` and its
    siblings, D-37) - manual. Semi-dynamic: buffers start on the stack
@@ -204,6 +218,13 @@ verified commits, and a release is cut where the order says so. The
    structured bindings simplify it. C++20 modules (`import configforge;`)
    come with 2.0 where the compilers in the matrix build them.
 10. **The ideas, by use** - each its own commit, in this order:
+    * A format of one's own, all the way (the owner, 2026-11-06): today
+      a caller's `cf_codec` is read through `cf_builder_file_codec` and
+      nothing else knows it. `cf_codec_register` puts it in the table,
+      so its extensions choose it, `cf_codec_by_name` finds it and
+      `cf_emit` writes it; and `conform` loads a codec from a shared
+      library, so its author scores it against its standard's suite
+      with the same floors.
     * Doctor checks a report's fingerprint against its contents.
     * `cf_diff_json` for log pipelines.
     * a settle interval in `cf_live` for a burst of writes.

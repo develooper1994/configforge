@@ -67,6 +67,15 @@ configforge_build_id(configforge)
 add_subdirectory(src)
 if(CF_WITH_YAML)
   target_link_libraries(configforge PRIVATE ${CF_YAML_LIBRARY})
+  # libfyaml's header needs C11 (0.9.x's pre-C11 fallback for atomics does
+  # not compile; fixed after 0.9.6): the one file that includes it is
+  # compiled as C11, after the C89 flag so that it wins, and the rest of
+  # the library stays C89. libfyaml builds with neither MSVC nor a C89-only
+  # compiler, and the libyaml backend is the one for those (D-62).
+  if(_CF_YAML_LIBFYAML AND NOT MSVC)
+    set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/serialize/yaml.c
+                                PROPERTIES COMPILE_OPTIONS "-std=c11")
+  endif()
 endif()
 if(CF_WITH_XML)
   target_link_libraries(configforge PRIVATE ${CF_EXPAT_LIBRARY})

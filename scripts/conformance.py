@@ -2,6 +2,7 @@
 measured with the standard's own test suite rather than claimed.
 
     python3 scripts/conformance.py <conform> <suites-dir> [--floor F] [--list]
+                                   [--yaml-name NAME]
     python3 scripts/conformance.py --self <conform> <repository>
 
 <conform> is the program tests/conformance/conform.c builds into;
@@ -422,6 +423,13 @@ def main():
         floor = floors(args[k + 1])
         del args[k:k + 2]
     args = [a for a in args if a != "--list"]
+    # The name YAML's scores go by, for a second parser behind the codec
+    # (D-62): verify scores libfyaml as yaml-libfyaml, against its floor.
+    yaml_name = "yaml"
+    if "--yaml-name" in args:
+        k = args.index("--yaml-name")
+        yaml_name = args[k + 1]
+        del args[k:k + 2]
     if args and args[0] == "--self":
         return differential(args[1], args[2])
     conform, root = args[0], args[1]
@@ -442,7 +450,7 @@ def main():
         print("yaml: this build has no YAML reader (CF_WITH_YAML), skipped")
         v, i = [], []
     if v or i:
-        report("yaml", "yaml", conform, v, i, out)
+        report(yaml_name, "yaml", conform, v, i, out)
         yaml_good, yaml_all = yaml_values(conform, v, yaml_wrong)
     failed = False
     for name, g, nv, b, ni, wv, wi, nm in out:
@@ -466,7 +474,7 @@ def main():
     for name, good, total, wrong, how in (
             ("json-values", json_good, json_all, json_wrong, "Python's json reads"),
             ("toml-values", values_good, values_all, values_wrong, "toml-test states"),
-            ("yaml-values", yaml_good, yaml_all, yaml_wrong, "yaml-test-suite states")):
+            (yaml_name + "-values", yaml_good, yaml_all, yaml_wrong, "yaml-test-suite states")):
         if total == 0:
             continue
         print(f"{name}: read as {how} {good}/{total}")

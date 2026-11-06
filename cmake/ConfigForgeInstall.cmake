@@ -97,10 +97,15 @@ foreach(dir LIBDIR INCLUDEDIR)
     set(CF_PC_${dir} "\${prefix}/${CMAKE_INSTALL_${dir}}")
   endif()
 endforeach()
-# What a static link needs besides the library: libyaml and expat, when
-# YAML and XML are in.
+# What a static link needs besides the library: the YAML parser and
+# expat, when YAML and XML are in. libfyaml is a pkg-config requirement,
+# with its least version, so that pkg-config refuses an older one rather
+# than link it (D-62); libyaml's packages agree on no .pc name.
 set(CF_PC_LIBS_PRIVATE "")
-if(CF_WITH_YAML)
+set(CF_PC_REQUIRES_PRIVATE "")
+if(CF_WITH_YAML AND _CF_YAML_LIBFYAML)
+  set(CF_PC_REQUIRES_PRIVATE "libfyaml >= ${_CF_FYAML_MIN}")
+elseif(CF_WITH_YAML)
   string(APPEND CF_PC_LIBS_PRIVATE " -lyaml")
 endif()
 if(CF_WITH_XML)

@@ -591,9 +591,31 @@ foreach(x ${EXTRA})
       .
       -B
       build-yaml
-      -DCF_WITH_YAML=ON)
+      -DCF_WITH_YAML=ON
+      -DCF_YAML_BACKEND=libyaml)
     step("yaml build" ${build} build-yaml ${debug})
     step("yaml test" ${test} build-yaml)
+    # And through libfyaml, where a release that passes the fuzzer is
+    # installed (setup.sh puts 0.9.6 under /opt/cf-tools/libfyaml; D-62).
+    if(NOT DEFINED FYAML_PREFIX)
+      set(FYAML_PREFIX /opt/cf-tools/libfyaml)
+    endif()
+    if(NOT EXISTS "${FYAML_PREFIX}/include/libfyaml.h")
+      message("yaml libfyaml         skipped: none at ${FYAML_PREFIX}")
+      continue()
+    endif()
+    step(
+      "yaml libfyaml config"
+      ${CMAKE_COMMAND}
+      -S
+      .
+      -B
+      build-yaml-fy
+      -DCF_WITH_YAML=ON
+      -DCF_YAML_BACKEND=libfyaml
+      -DCMAKE_PREFIX_PATH=${FYAML_PREFIX})
+    step("yaml libfyaml build" ${build} build-yaml-fy ${debug})
+    step("yaml libfyaml test" ${test} build-yaml-fy)
   elseif(x STREQUAL "fuzz")
     find_program(CLANG_EXE clang)
     if(NOT CLANG_EXE OR WIN32)
@@ -767,7 +789,7 @@ foreach(x ${EXTRA})
                     /opt/local/include)
     set(conform_yaml -DCF_WITH_YAML=OFF)
     if(CONFORM_YAML_H)
-      set(conform_yaml -DCF_WITH_YAML=ON)
+      set(conform_yaml -DCF_WITH_YAML=ON -DCF_YAML_BACKEND=libyaml)
     endif()
     step(
       "conformance configure"
@@ -805,6 +827,40 @@ foreach(x ${EXTRA})
       --self
       "${conform}"
       .)
+    # YAML through libfyaml too, scored against its own floor, where the
+    # yaml step would build it.
+    if(NOT DEFINED FYAML_PREFIX)
+      set(FYAML_PREFIX /opt/cf-tools/libfyaml)
+    endif()
+    if(EXISTS "${FYAML_PREFIX}/include/libfyaml.h")
+      step(
+        "conformance fy config"
+        ${CMAKE_COMMAND}
+        -S
+        .
+        -B
+        build-conformance-fy
+        -DCF_WITH_YAML=ON
+        -DCF_YAML_BACKEND=libfyaml
+        -DCMAKE_PREFIX_PATH=${FYAML_PREFIX})
+      step(
+        "conformance fy build"
+        ${build}
+        build-conformance-fy
+        --target
+        conform
+        ${debug})
+      step(
+        "conformance libfyaml"
+        "${PYTHON3_EXE}"
+        scripts/conformance.py
+        "${ROOT}/build-conformance-fy/tests/conformance/conform"
+        "${SUITES}"
+        --floor
+        tests/conformance/floor.txt
+        --yaml-name
+        yaml-libfyaml)
+    endif()
   else()
     message(
       FATAL_ERROR

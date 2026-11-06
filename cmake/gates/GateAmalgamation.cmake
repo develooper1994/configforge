@@ -121,6 +121,35 @@ foreach(dep YAML XML SQLITE)
     list(APPEND DEP_LIB "${${dep}_LIB}")
   endif()
 endforeach()
+# Which of the two YAML parsers, as the library was built (D-62). The
+# amalgamation is one translation unit, so libfyaml's C11 header makes it
+# C11; the library builds only yaml.c that way, and the comparison is of
+# what the two compute, which the language version does not change.
+set(amalg_std -std=c89)
+if(YAML_FY)
+  string(REPLACE "." ";" fy_min "${YAML_FY_MIN}")
+  list(GET fy_min 0 fy_major)
+  list(GET fy_min 1 fy_minor)
+  list(GET fy_min 2 fy_patch)
+  list(
+    APPEND
+    DEFS
+    "-DCF_YAML_LIBFYAML=1"
+    "-DCF_FYAML_MIN_MAJOR=${fy_major}"
+    "-DCF_FYAML_MIN_MINOR=${fy_minor}"
+    "-DCF_FYAML_MIN_PATCH=${fy_patch}")
+  set(amalg_std -std=c11)
+endif()
+# A dependency that is a shared library outside the loader's path (as
+# scripts/buildenv/libfyaml.sh installs one) is found by the programs
+# below only if they are told where.
+set(dep_rpath "")
+foreach(l ${DEP_LIB})
+  if(l MATCHES "\\.(so|dylib)(\\.[0-9.]+)?$")
+    get_filename_component(d "${l}" DIRECTORY)
+    list(APPEND dep_rpath "-Wl,-rpath,${d}")
+  endif()
+endforeach()
 
 # The two sides learn their options differently, on purpose. The library
 # side gets the generated cf_build_options.h on its include path, which
@@ -140,9 +169,9 @@ endforeach()
 # all three have happened here, and a smoke test survives all three.
 execute_process(
   COMMAND
-    ${CC} -std=c89 ${DEFS} ${DEP_INC} -I "${BIN}/amalgamation" -o
+    ${CC} ${amalg_std} ${DEFS} ${DEP_INC} -I "${BIN}/amalgamation" -o
     "${BIN}/amalgamation/digest_amalg" "${SRC}/tests/consumer/digest.c"
-    "${BIN}/amalgamation/configforge.c" ${DEP_LIB}
+    "${BIN}/amalgamation/configforge.c" ${DEP_LIB} ${dep_rpath}
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE out
   ERROR_VARIABLE out)
@@ -163,7 +192,7 @@ execute_process(
   COMMAND
     ${CC} -std=c89 -I "${BIN}/generated" -I "${SRC}/include" -o
     "${BIN}/amalgamation/digest_lib" "${SRC}/tests/consumer/digest.c" "${LIB}"
-    ${DEP_LIB} ${rpath}
+    ${DEP_LIB} ${rpath} ${dep_rpath}
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE out
   ERROR_VARIABLE out)

@@ -49,17 +49,22 @@ way. It is a tier 2 step, since it needs a network the first time.
 | ------ | -------------- | --------------- | ------------------------------ |
 | JSON | 95 / 95 | 188 / 188 | 95 / 95, against Python's `json` |
 | TOML | 208 / 208 | 509 / 509 | 208 / 208, against toml-test's stated values |
-| YAML, through libyaml | 100 / 133 | 87 / 94 | 90 / 93, against the suite's `in.json` |
+| YAML, through libfyaml 0.9.6 | 122 / 122 | 94 / 94 | 110 / 110, against the suite's `in.json` |
+| YAML, through libyaml 0.2.5 | 100 / 133 | 87 / 94 | 90 / 93, against the suite's `in.json` |
 
-YAML's valid count leaves out 175 documents the configuration model
+YAML's valid count leaves out the documents the configuration model
 refuses by name - a top level that is not a mapping, a second document,
 a key that is not a scalar, an empty key, a tag of the writing
-application's (D-39, D-63) - which the run reports beside the score. A
-plain scalar is untyped here, typed by its definition, and is compared
-as the text of the suite's value. Every miss left is libyaml's parser,
-which follows YAML 1.1. Through libfyaml 0.8 the same reader scored
-122/122, 94/94 and 110/110 - and hung on a fuzzer's input, so it is not
-a backend here until a release passes the fuzzer (D-62).
+application's (D-39, D-63) - 186 of them through libfyaml, 175 through
+libyaml, which refuses some of those for its parser's reasons first. The
+run reports them beside the score. A plain scalar is untyped here, typed
+by its definition, and is compared as the text of the suite's value.
+
+The two parsers sit behind one codec (`CF_YAML_BACKEND`, D-62). Through
+libfyaml, from 0.9.1, the reader is complete; every miss through libyaml
+is its parser's, which follows YAML 1.1, and libyaml is the backend
+where libfyaml does not build (MSVC, a C89-only compiler). libfyaml
+before 0.9.1 hangs on malformed input and is refused by the build.
 
 The last column is the stronger claim: a valid document read is compared
 key by key and value by value, every string's escapes and line breaks

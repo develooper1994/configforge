@@ -2624,8 +2624,9 @@ positions in it, and a value whose file, line and column explain() cannot
 name is the one thing this library exists not to produce; it also
 allocates, which the fixed-arena profile forbids. So the reader here is
 completed against the suite instead, and the dependency contract below
-stays the way to swap one in later should that change. For YAML, the
-measured comparison of libyaml (YAML 1.1) and libfyaml (1.2) is next.
+stays the way to swap one in later should that change. For YAML, whose
+parser was always a dependency, the measured comparison of libyaml (YAML
+1.1) and libfyaml (1.2) is below.
 
 **Values without a type here.** TOML has dates, times, `inf` and `nan`;
 the library has no date type and keeps every real finite, since a range
@@ -2662,21 +2663,50 @@ of libyaml's misses is its parser's - YAML 1.1, unmaintained for years:
 `?foo` as a plain scalar, a literal block's last line of spaces, a `:`
 in an anchor's name. libfyaml 0.8, on the same suite, accepts 308/308,
 refuses 94/94 and writes the suite's event stream exactly for 308/308.
-It is in Debian's and Ubuntu's archives and MIT-licensed, but has no
-MSVC support, where libyaml is everywhere.
+It is MIT-licensed, but has no MSVC support, where libyaml is
+everywhere.
 
 So a libfyaml backend was written behind the same codec - the event
 mapping shared, the parser's half of yaml.c the only difference - and
 through it the reader scored 122/122 valid, 94/94 invalid and 110/110
 values. Then the unit fuzzer hung: a 149-byte input of random bytes
 beginning with `%` sends libfyaml 0.8's `fy_parser_parse` into a loop it
-never leaves, and libfyaml's own `fy-testsuite` hangs on it too. A
-parser that hangs on hostile input is not one this library can ship,
-opt-in or not, so the backend is set aside, with the input kept to test
-the next release against (`tests/conformance/data/libfyaml-0.8-hang.yaml.bin`),
-and libyaml stays the only YAML parser. The
-contract held: the swap was one file's half and its build option.
-Revisit when a libfyaml release in the distributions passes the fuzzer.
+never leaves, and libfyaml's own `fy-testsuite` hangs on it too. It is a
+known bug - libfyaml issue 101, malformed UTF-8 in a directive, fixed by
+7f7be36 and first released in 0.9.1 (December 2025) - that Ubuntu 24.04
+still ships.
+
+**So libfyaml, from 0.9.1, is the YAML parser where it builds.** The
+backend is `CF_YAML_BACKEND`: `auto` takes libfyaml when one of 0.9.1 or
+later is installed and libyaml otherwise; `libfyaml` and `libyaml` name
+one. The least version, 0.9.1, is enforced rather than noted, in three
+places from one value in `src/serialize/CMakeLists.txt`: the build reads
+the version from the pkg-config file beside the library (the header
+carries none) and refuses an older libfyaml, or one whose version it
+cannot read, by name; `yaml.c` asks `fy_library_version()` before each
+document, because 0.8 and 0.9 share the soname `libfyaml.so.0` and a
+program built against 0.9.6 loads Ubuntu's 0.8 just as well - checked:
+that program, given 0.8, refuses with the version it found instead of
+hanging; and `configforge.pc` carries `Requires.private: libfyaml >=
+0.9.1`, so pkg-config refuses an older one to a static consumer. With 0.9.6 the reader scores
+122/122 valid, 94/94 invalid and 110/110 values, the reproducer is
+refused (`tests/conformance/data/libfyaml-0.8-hang.yaml.bin`, read by
+test_yaml under a timeout), and the fuzzer passes. libyaml stays the
+backend for MSVC and for a C89-only compiler: libfyaml's header needs
+C11, so yaml.c alone is compiled as C11 in a libfyaml build, its header
+included as a system one (this library's warnings are for its own code).
+`scripts/buildenv/libfyaml.sh` builds 0.9.6 from its release tarball,
+checked against the digest GitHub publishes, for setup.sh and CI's
+libfyaml job; verify scores both backends against their floors.
+
+Making the C99 build work found two defects in libfyaml's pre-C11
+fallback for atomics, still in 1.0.0-beta2 and master: the guard reads
+`__STDC__NO_ATOMICS__` for C11's `__STDC_NO_ATOMICS__`, so pcc includes
+a `<stdatomic.h>` it does not have, and `atomic_compare_exchange_strong`
+assigns `*__res` to a `bool`, which tcc refuses. Both reproduced with
+tcc and pcc, fixed by one line each, and reported upstream as libfyaml
+issue 506. The contract held throughout: the parser's half of yaml.c and
+its build option are the whole difference.
 
 **Compatibility.** A TOML document that defines something twice was
 read before, the later key winning, and is refused now. TOML always
