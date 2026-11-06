@@ -98,6 +98,7 @@ The round of 2026-11-06 (each reader against its standard's suite):
 | staging with `git add -A` took in an editor's local settings file, and the wording check passed it, since the file's words were clean | the wording check fails a tracked editor-settings path whatever it holds, and such directories are excluded locally (`.git/info/exclude`) |
 | a request read one way ("modern C++ only") was built as a deprecation before it was confirmed; it meant "modern C++ as well" (D-71, replaced by D-72 before a release) | a change that takes something away from users is stated back in one line before it is built, and kept unreleased until it is answered |
 | finished work was deleted from the Roadmap as it landed, so what was done could be seen only in the CHANGELOG, apart from what was not | every item keeps a mark (idea, chosen, under way, done, released) and the Roadmap opens with all of them in one table |
+| the release's Windows job built Doctor from a list of targets; `doctor.gen`, added in 1.3.0, was not on it, its test did not run, and the release failed on its tag - the tag could not move, so 1.3.0 was never published | the job builds the whole tree, and the release workflow runs as a dry run - every artifact built and tested, nothing published - on each push to main that changes what it builds |
 
 ## Measured
 

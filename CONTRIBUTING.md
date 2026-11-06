@@ -233,6 +233,9 @@ An issue with the smallest configuration that shows it and
 the output of `explain()` for the key is the most useful thing you can
 send.
 Security reports go privately, as [`SECURITY.md`](SECURITY.md) describes.
+A question, or an idea not yet a request, goes to
+[Discussions](https://github.com/develooper1994/configforge/discussions)
+(Q&A, Ideas); each release is announced there, under Announcements.
 
 ## Extending it
 

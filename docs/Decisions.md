@@ -2661,6 +2661,26 @@ that answers decides, and each says why it answered:
 The look only orders, and never decides: a wrong first guess costs one
 more reading, and the reading is what is trusted.
 
+**Every source of bytes, not only files.** Detection works on bytes
+(`cf_codec_detect` takes a `cf_blob` and an optional name to take the
+hint from), so it serves whatever delivers a document:
+
+* a file, a drop-in directory, and standard input or a pipe (whose name
+  is no hint, so the content decides);
+* **a document the program holds in memory** - fetched from a server,
+  embedded in the binary, read from a database - through a new source,
+  `cf_builder_document(b, name, rank, bytes, n, format, flags)`: the
+  format named, or NULL for the name's hint and then the content. Its
+  places in `explain()` are the document's name and line;
+* **a whole document in one environment variable or option** (`APP_CONFIG
+  ='{"server": {"port": 8080}}'`), opt-in per variable, read through the
+  same detection.
+
+Sources of key and value pairs - the environment, the command line, a
+program's pairs, the registry, a secrets directory, a store - carry no
+format: there is nothing to detect, and their text is typed by the
+definitions, as now.
+
 The choice is shown, not hidden: the source's error names the formats
 tried, `cf_source_file_format` says which was taken and how (named,
 extension, content), and Doctor's `explain` prints it beside the file.

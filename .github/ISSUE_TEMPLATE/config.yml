@@ -1,5 +1,11 @@
 blank_issues_enabled: false
 contact_links:
+  - name: A question
+    url: https://github.com/develooper1994/configforge/discussions/categories/q-a
+    about: How to do something, or why a value is what it is - asked in Discussions.
+  - name: An idea to talk over
+    url: https://github.com/develooper1994/configforge/discussions/categories/ideas
+    about: Before it is a feature request.
   - name: A security problem
     url: https://github.com/develooper1994/configforge/security/policy
     about: Reported privately, as SECURITY.md says - not as an issue.

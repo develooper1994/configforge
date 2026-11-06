@@ -45,7 +45,7 @@ beside what is not.
 | 🟩 | Python examples; a table of format versions | examples/python, Formats.md |
 | 🟦 | The format from the name, then the content, by several strategies | D-73 |
 | 🟩 | One `define`, the type given or inferred: C, C11, C++, Python, Rust | D-74 |
-| 🟦 | 1.3.0 released | CHANGELOG |
+| 🟨 | 1.3.1 released (1.3.0 tagged, not published) | CHANGELOG |
 | ⬜ | Doctor checks a report's fingerprint against its contents | plan item 9 |
 | ⬜ | Continuous fuzzing in CI (ClusterFuzzLite) | plan item 9 |
 | ⬜ | INI and `.properties` compared with `configparser` and `Properties` | plan item 9 |
@@ -170,7 +170,7 @@ names its cause. Each is a trade-off, measured before it is kept.
 
 1. 🟩 **CI**: the one red run was GitHub Pages refusing a deployment
    ("try again later"); run again.
-2. 🟨 **1.3.0** (ready at `ad5f1c2`, tier 2 green; the tag is left): the CHANGELOG's date, tier 2 on Linux and Windows, then
+2. 🟨 **1.3.1** (1.3.0 was tagged and its release failed on Windows; the tag cannot move): the CHANGELOG's date, tier 2 on Linux and Windows, then
    the tag, which publishes it (the tag is pushed by the maintainer).
 3. 🟩 **GitHub, all of it that fits**: CodeQL code scanning (C and C++,
    Python, Rust, the workflows); Dependabot for the crate as well as the
@@ -188,6 +188,9 @@ names its cause. Each is a trade-off, measured before it is kept.
    the first that reads it, without a loose rival reading it otherwise,
    is taken. A file whose name names a format that cannot read it is
    still refused - with the format its content looks like, as a hint.
+   Not only for files: for any source of bytes - standard input, a
+   document the program holds (`cf_builder_document`), a whole document
+   in one environment variable - by the same function over bytes.
 5. 🟦 **D-75, checked at compile time where it can be, at run time
    otherwise**: a key's name, its range and its default against the
    range, checked by the compiler - `constexpr` in C++14 and later,
