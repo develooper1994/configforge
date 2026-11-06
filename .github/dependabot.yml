@@ -1,9 +1,15 @@
-# The CI actions are the only third-party code this repository pulls in
-# on its own; keep them current. The library itself has no dependencies
-# for this to watch (docs/Dependencies.md).
+# The CI actions and the Rust crate's build dependency are the only
+# third-party code this repository pulls in on its own; keep them current.
+# The library itself has no dependencies to watch (docs/Dependencies.md).
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
+    schedule:
+      interval: monthly
+  # The Rust crate's one build dependency, the cc crate (D-70), and what
+  # Cargo.lock pins under it.
+  - package-ecosystem: cargo
+    directory: /bindings/rust
     schedule:
       interval: monthly

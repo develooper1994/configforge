@@ -43,7 +43,7 @@ beside what is not.
 | 🟩 | `cf_diff_json`, the settle interval, limits in the report | CHANGELOG 1.3.0 |
 | 🟩 | Signed release artifacts (attestations) | release.yml |
 | 🟩 | Python examples; a table of format versions | examples/python, Formats.md |
-| 🟦 | The format told from the content when the name says nothing | D-73 |
+| 🟦 | The format from the name, then the content, by several strategies | D-73 |
 | 🟩 | One `define`, the type given or inferred: C, C11, C++, Python, Rust | D-74 |
 | 🟦 | 1.3.0 released | CHANGELOG |
 | ⬜ | Doctor checks a report's fingerprint against its contents | plan item 9 |
@@ -56,7 +56,9 @@ beside what is not.
 | ⬜ | Converting between formats | assessment |
 | ⬜ | Code for each binding from a contract | assessment |
 | ⬜ | 2.0: what the sizing modes break, once | plan item 10 |
-| ⬜ | Sizes predicted, then checked: a file's buffer and the key space sized from the file | Ideas |
+| 🟦 | Sizes and work predicted, then checked | D-76, plan of the evening |
+| 🟦 | Checks at compile time where they can be, at run time always | D-75, plan of the evening |
+| 🟨 | GitHub used for all it offers that fits | plan of the evening |
 
 ## Release follow-up
 
@@ -157,6 +159,49 @@ Guide and API reference say what it does.
    (`previous`, `fingerprint`), Doctor's `dump` and Markdown, the
    bindings, and the Guide's log-field and OpenTelemetry recipe.
    Found on the way: Rust's `Debug` printed `cf_digest`.
+
+## The plan from the evening of 2026-11-06 (the order to follow)
+
+Asked for: CI fixed, 1.3.0 out, GitHub used for all it offers, and
+three principles over everything that follows - predict where a guess
+can be checked, decide at compile time what can be decided there, and
+use several strategies where each is simple enough that a failure still
+names its cause. Each is a trade-off, measured before it is kept.
+
+1. 🟩 **CI**: the one red run was GitHub Pages refusing a deployment
+   ("try again later"); run again.
+2. 🟦 **1.3.0**: the CHANGELOG's date, tier 2 on Linux and Windows, then
+   the tag, which publishes it (the tag is pushed by the maintainer).
+3. 🟨 **GitHub, all of it that fits**: CodeQL code scanning (C and C++,
+   Python, Rust, the workflows); Dependabot for the crate as well as the
+   actions; `CODEOWNERS`; issue forms instead of free-text templates;
+   then, as repository settings the maintainer approves: private
+   vulnerability reporting, Discussions, a ruleset on `main` requiring
+   CI, and release notes in the release from the CHANGELOG (done).
+4. 🟦 **D-73, the format from the name and the content, by several
+   strategies in turn**: the format the name gives is tried first,
+   whatever it is; a cheap look at the first bytes orders the rest
+   (`{` or `[` the JSON family, `<` XML, a `[section]` line INI or TOML,
+   `key:` YAML, `key =` TOML or INI); each is then read in that order and
+   the first that reads it, without a loose rival reading it otherwise,
+   is taken. A file whose name names a format that cannot read it is
+   still refused - with the format its content looks like, as a hint.
+5. 🟦 **D-75, checked at compile time where it can be, at run time
+   otherwise**: a key's name, its range and its default against the
+   range, checked by the compiler - `constexpr` in C++14 and later,
+   `_Static_assert` in C11 for constants, `const` evaluation in Rust,
+   and the code `doctor gen` writes - and by the library at run time
+   everywhere, as now, so the same mistake is caught in every build and
+   earlier in the ones that can.
+6. 🟦 **D-76, sizes and work predicted, then checked**: a file's buffer
+   from the size the system reports; the key space and the definitions'
+   index from the bytes (keys a line, about) or, on a reload, from the
+   generation before; an emitter's output (dump mode) sized from the key
+   space it walks, so one pass writes it; branch hints on the readers'
+   hot paths; sequential read advice to the system for a large file.
+   Each kept only where `bench/` shows it pays, and the numbers - the
+   ones that did not pay too - go in Maintaining.md's "Measured".
+7. Then the ideas in the table above, in its order.
 
 ## The plan from 2026-11-06 (accepted; the order to follow)
 

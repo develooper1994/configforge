@@ -89,7 +89,7 @@ gets reopened every six months.
 | D-70 | The Rust crate builds with cargo and the cc crate | Rust, build, dependencies | **Decided** |
 | D-71 | C++98 to C++14 deprecated; C++17 from 2.0 | C++, compatibility | Replaced by D-72 |
 | D-72 | Every C++ standard from C++98, cumulatively | C++, compatibility | **Decided** |
-| D-73 | The format told from the content when the name says nothing | formats, codecs | **Decided** |
+| D-73 | The format from the name, then the content, by several strategies | formats, codecs | **Decided** |
 | D-74 | One `define`, the type given or inferred | definitions, bindings | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
@@ -2626,7 +2626,7 @@ each refusal comes from the library as a definition error.
 
 ---
 
-## D-73 — The format told from the content when the name says nothing
+## D-73 — The format from the name, then the content, by several strategies
 
 **Question.** A file's format comes from its extension or is named;
 otherwise reading it fails. Can the library tell the format itself, and
@@ -2634,26 +2634,32 @@ how, without the guessing the codec registry has always refused - a
 format sniffed from a few bytes, which fails confusingly the first time
 a file is renamed?
 
-**Decision.** In this order, the first that answers deciding:
+**Decision.** Several strategies, each simple, tried in turn; the first
+that answers decides, and each says why it answered:
 
-1. the format named by the program;
-2. the extension: the builder's own codecs (D-68), then the built-in
-   ones, as now;
-3. the content, only when the name says nothing - no extension, or one
-   no format claims. That was an error before, so no file that was read
-   is read differently.
+1. the format the program names;
+2. the name: the format its extension gives - the builder's own codecs
+   (D-68), then the built-in ones - is tried first, whatever else
+   follows. If it reads the file, it is the format. If it does not, the
+   file is refused, as now, and the error adds the format the content
+   looks like, as a hint: a renamed file is the commonest cause;
+3. the content, when the name gives no format (no extension, or one no
+   format claims; that was an error before, so no file that was read is
+   read differently):
+   * **a look at the first bytes** orders the candidates, cheaply: `{`
+     or `[` puts the JSON family first, `<` XML, a `[section]` line INI
+     and TOML, a `key:` line YAML, a `key =` line TOML and INI;
+   * **reading** decides, in that order: each codec reads the bytes into
+     a sink that keeps only a hash of the events, and a codec that
+     accepts them and yields at least one keyed value is a candidate. A
+     strict format (the builder's own, JSON, JSON5, TOML, XML) is taken
+     at once; a loose one (YAML, INI) only when no other loose format
+     reads the file into different events - otherwise the file is
+     refused as ambiguous, naming both. `.properties`, whose grammar
+     accepts nearly any text, is never chosen from content.
 
-Content is told by reading, not by looking for marks: each readable
-codec reads the bytes into a sink that keeps nothing but a hash of the
-events, and a codec that accepts them and yields at least one keyed
-value is a candidate. They are tried from the strictest to the
-loosest - the builder's codecs, JSON, JSON5, TOML, XML, then YAML and
-INI - and the first candidate is taken when it is a strict format (one
-that rarely accepts another's text by accident). When it is a loose
-one, every later loose candidate must yield the same events, or the
-file is refused as ambiguous, naming both formats and asking for one.
-`.properties`, whose grammar accepts nearly any text, is never chosen
-from content.
+The look only orders, and never decides: a wrong first guess costs one
+more reading, and the reading is what is trusted.
 
 The choice is shown, not hidden: the source's error names the formats
 tried, `cf_source_file_format` says which was taken and how (named,
