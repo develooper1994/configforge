@@ -467,6 +467,128 @@ def differential(conform, repo):
     return 1 if failed else 0
 
 
+# INI has no standard, so its reader is compared with the most used one,
+# Python's configparser (RawConfigParser: interpolation off; strict off, so
+# that a repeated key or section is read, last one winning, as the library
+# reads it; keys keep their case, the library's reader does not fold it).
+# Each case is a small document, read by both and compared as text: the
+# same keys with the same text, or both refusing. A case the two differ on
+# by design says why, and is checked to still differ; any other
+# difference is a finding and counts against the score (docs/Formats.md).
+INI_CASES = (
+    # name, document, why they differ (None: they should agree)
+    ("plain", "[s]\na = 1\nb = two\n", None),
+    ("sections", "[a]\nx = 1\n[b]\nx = 2\n", None),
+    ("dotted-section", "[s.t.u]\ndeep = 1\n", None),
+    ("spaces-around", "[s]\n  spaced   =   value with spaces  \n", None),
+    ("no-spaces", "[s]\nk=v\n", None),
+    ("equals-in-value", "[s]\nk = a = b\n", None),
+    ("empty-value", "[s]\nk =\nj = \n", None),
+    ("full-line-hash", "# c\n[s]\n# c\nk = 1\n", None),
+    ("full-line-semicolon", "; c\n[s]\n; c\nk = 1\n", None),
+    ("indented-comment", "[s]\n   # c\nk = 1\n", None),
+    ("blank-lines", "\n\n[s]\n\nk = 1\n\n\nj = 2\n\n", None),
+    ("inline-hash", "[s]\nk = v # not a comment\n", None),
+    ("inline-semicolon", "[s]\nk = v ; not a comment\n", None),
+    ("hash-in-value", "[s]\nk = a#b\n", None),
+    ("case-of-keys", "[s]\nMixed = 1\nmixed2 = 2\n", None),
+    ("case-of-sections", "[Server]\nk = 1\n", None),
+    ("duplicate-key", "[s]\nk = 1\nk = 2\n", None),
+    ("duplicate-section", "[a]\nx = 1\n[a]\ny = 2\n", None),
+    ("crlf", "[s]\r\nk = 1\r\nj = 2\r\n", None),
+    ("last-line-no-newline", "[s]\nk = 1", None),
+    ("many-sections", "[a]\n[b]\nk = 1\n[c]\n", None),
+    ("percent", "[s]\nk = 100%\n", None),
+    ("interpolation-text", "[s]\na = 1\nk = %(a)s ${a}\n", None),
+    ("unicode", "[s]\nk = é中\n", None),
+    ("tab-around", "[s]\nk\t=\tv\t\n", None),
+    ("empty-document", "", None),
+    ("only-comments", "# a\n; b\n", None),
+    ("unterminated-section", "[unterminated\nk = 1\n", None),
+    ("empty-section-name", "[]\nk = 1\n", None),
+    ("line-without-equals", "[s]\nno equals here\n", None),
+    ("empty-key", "[s]\n= no key\n", None),
+    ("double-quote-stripped", '[s]\nk = "a quoted value"\n',
+     "quotes around a whole value are removed; configparser keeps them"),
+    ("single-quote-stripped", "[s]\nk = 'single'\n",
+     "quotes around a whole value are removed; configparser keeps them"),
+    ("quote-inside-kept", '[s]\nk = say "hi"\n', None),
+    ("quote-one-sided", '[s]\nk = "unterminated quote\n', None),
+    ("quoted-with-comment", '[s]\nk = "a # b"\n',
+     "quotes around a whole value are removed; configparser keeps them"),
+    ("key-before-section", "root = 1\n[s]\nk = 2\n",
+     "keys before any section are allowed (the root table); configparser refuses them"),
+    ("colon-delimiter", "[s]\nk: v\n",
+     "only '=' separates a key from its value; configparser also takes ':'"),
+    ("colon-in-key-value", "[s]\nurl = http://x:80\n", None),
+    ("continuation", "[s]\nk = a\n  b\n  c\n",
+     "no continuation lines: an indented line is a line of its own, and "
+     "this one is refused for having no '='; configparser joins them"),
+    ("continuation-blank", "[s]\nk = a\n\n  b\n",
+     "no continuation lines; configparser joins them"),
+    ("array-append", "[s]\nports[] = 80\nports[] = 443\n",
+     "name[] appends to an array (D-60); configparser takes it as a key"),
+    ("array-index", "[s]\nports[1] = 8443\n",
+     "name[i] is an element of an array (D-60); configparser takes it as a key"),
+    ("section-with-spaces", "[ a ]\nk = 1\n",
+     "a section's name is trimmed; configparser keeps the spaces"),
+    ("section-trailing-text", "[a] x\nk = 1\n",
+     "text after a section header is refused; configparser ignores it"),
+    ("section-comment", "[a] # c\nk = 1\n", None),
+    ("space-in-key", "[s]\nBad Key = 1\n", None),
+    ("default-section", "[DEFAULT]\nk = 1\n[s]\nj = 2\n",
+     "[DEFAULT] is an ordinary section here; configparser's values for every section"),
+)
+
+
+def ini_read_reference(text):
+    """configparser's document as {flat key: text}, or None where it refuses."""
+    import configparser
+    p = configparser.RawConfigParser(strict=False)
+    p.optionxform = str
+    try:
+        p.read_string(text)
+    except configparser.Error:
+        return None
+    out = {}
+    for sec in p.sections():
+        for k, v in p.items(sec, raw=True):
+            out[f"{sec}.{k}"] = v if v is not None else ""
+    return out
+
+
+def ini_read_library(conform, text, tmp):
+    """The library's reader's document as {flat key: text}, or None."""
+    path = os.path.join(tmp, "doc.ini")
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        f.write(text)
+    return keys_of(conform, "ini", path)
+
+
+def ini_configparser(conform, wrong_out, design_out):
+    """(agreed, compared): the cases with no reason to differ on which the
+    two read the same; the by-design ones that no longer differ, and the
+    ones that differ, go to design_out and wrong_out by name."""
+    import tempfile
+    good = total = 0
+    with tempfile.TemporaryDirectory() as tmp:
+        for name, text, why in INI_CASES:
+            want = ini_read_reference(text)
+            got = ini_read_library(conform, text, tmp)
+            if got is not None:
+                got = {k: v[1] for k, v in got.items()}
+            agree = want == got
+            if why is not None:
+                design_out.append((name, why, agree))
+                continue
+            total += 1
+            if agree:
+                good += 1
+            else:
+                wrong_out.append((name, want, got))
+    return good, total
+
+
 def floors(path):
     """The floor file: "<format> <valid> <invalid>" a line."""
     out = {}
@@ -532,6 +654,26 @@ def main():
         report(yaml_name, "yaml", conform, v, i, out)
         yaml_good, yaml_all = yaml_values(conform, v, yaml_wrong)
     failed = False
+    if only is None:
+        ini_wrong, ini_design = [], []
+        ini_good, ini_all = ini_configparser(conform, ini_wrong, ini_design)
+        print(f"ini-configparser: read as Python's configparser reads {ini_good}/{ini_all}"
+              f" ({len(ini_design)} more differ by design, listed in INI_CASES)")
+        for name, want, got in ini_wrong:
+            print(f"  read differently: {name}: configparser {want}, library {got}")
+        for name, why, agree in ini_design:
+            if agree:
+                print(f"  BY-DESIGN CASE NOW AGREES: {name} ({why}); take it off the table")
+                failed = True
+            elif verbose:
+                print(f"  by design: {name}: {why}")
+        if "ini-configparser" in floor:
+            fv = floor["ini-configparser"][0]
+            if ini_good < fv or ini_all < floor["ini-configparser"][1]:
+                print(f"  BELOW THE FLOOR {fv}/{floor['ini-configparser'][1]}")
+                failed = True
+            elif ini_good > fv:
+                print(f"  above the floor {fv}: raise it in tests/conformance/floor.txt")
     for name, g, nv, b, ni, wv, wi, nm in out:
         extra = f" ({nm} more refused by the configuration model, by name)" if nm else ""
         print(f"{name}: valid accepted {g}/{nv}, invalid refused {b}/{ni}{extra}")

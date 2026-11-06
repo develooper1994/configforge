@@ -19,5 +19,8 @@ yaml-libfyaml 122 94
 yaml-libfyaml-values 110
 # "<name> <documents>": valid documents read to the expected values, by
 # Python's json for JSON and by toml-test's own expectations for TOML.
+# INI against Python's configparser, with the differences by design listed
+# in the script: "<documents read the same> <documents compared>"
+ini-configparser 36 36
 json-values 95
 toml-values 218
