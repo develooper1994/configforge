@@ -3140,14 +3140,14 @@ CF_API void cf_sink_terminate(cf_sink* s);
 CF_API cf_bool cf_sink_overflowed(const cf_sink* s);
 ```
 
-Implementation: [`cf_sink_init` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L115), [`cf_sink_write` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L121), [`cf_sink_putc` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L134), [`cf_sink_puts` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L141), [`cf_sink_fmt` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L147), [`cf_sink_terminate` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L167), [`cf_sink_overflowed` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L173).
+Implementation: [`cf_sink_init` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L133), [`cf_sink_write` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L139), [`cf_sink_putc` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L152), [`cf_sink_puts` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L159), [`cf_sink_fmt` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L165), [`cf_sink_terminate` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L185), [`cf_sink_overflowed` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L191).
 
 ```c
 CF_API void cf_sink_json_string(cf_sink* out, const char* p, size_t n);
 CF_API void cf_sink_json_value(cf_sink* out, const cf_value* v);
 ```
 
-Implementation: [`cf_sink_json_string` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L177), [`cf_sink_json_value` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L218).
+Implementation: [`cf_sink_json_string` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L195), [`cf_sink_json_value` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L236).
 
 JSON, written by hand where a document is not the key space's (a
 report, a diff): text as a JSON string, escaped; a value as JSON.
@@ -3158,7 +3158,7 @@ report, a diff): text as a JSON string, escaped; a value as JSON.
 CF_API size_t cf_loc_text(const cf_loc* at, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_loc_text` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L242).
+Implementation: [`cf_loc_text` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L260).
 
 "app.toml:14:3", or just the file when there is no position.
 

@@ -3,6 +3,17 @@
 Versions follow semantic versioning from 1.0. Before that, `0.x` promises
 nothing: the C interface is not frozen, and a minor bump may change it.
 
+## 1.3.1 — unreleased
+
+### Changed
+
+- **A file is read into a buffer of the size the system reports**
+  (D-76): one allocation and no copy, where the buffer used to start at
+  4 KB and double, copying each time. The size is taken as a
+  prediction: a pipe, a device or a file that grows is still read whole,
+  in chunks, as before. Reading a 1 MB file is 3.4 times faster and its
+  peak in the transient arena a third (Maintaining.md, "Measured").
+
 ## 1.3.0 — 2026-11-06
 
 ### Added

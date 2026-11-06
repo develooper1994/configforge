@@ -51,12 +51,30 @@ cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err) 
         return cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot open '%s'", path);
     }
 
-    /* Read in chunks rather than seeking to the end. ftell on a file
-       that is not seekable - a pipe, a device - reports nonsense, and
-       a configuration file arriving on stdin is a normal thing to
-       want. */
+    /* The size the system reports is a prediction (D-76), not a fact:
+       a pipe or a device cannot seek, a /proc file says 0, a file can
+       grow as it is read. So it only chooses the first buffer - two
+       bytes over it, so that reading to the end needs no copy - and the
+       loop below reads in chunks and grows whatever it said. Wrong, it
+       costs what reading without it costs; right, one allocation and no
+       copy instead of one a doubling. */
     cap = 4096;
+    if (fseek(f, 0, SEEK_END) == 0) {
+        long n = ftell(f);
+        if (fseek(f, 0, SEEK_SET) != 0) {
+            (void)fclose(f);
+            return cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot read '%s'", path);
+        }
+        if (n > 0 && (unsigned long)n < (size_t)-1 / 2) {
+            cap = (size_t)n + 2;
+        }
+    }
+    clearerr(f);
     buf = (char*)cf_arena_alloc(ar, cap);
+    if (buf == NULL && cap != 4096) {
+        cap = 4096; /* the prediction did not fit; the loop still can */
+        buf = (char*)cf_arena_alloc(ar, cap);
+    }
     if (buf == NULL) {
         (void)fclose(f);
         return cf_error_set(err, CF_E_MEMORY, NULL, path, "no room to read '%s'", path);

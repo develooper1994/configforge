@@ -56,7 +56,7 @@ beside what is not.
 | ⬜ | Converting between formats | assessment |
 | ⬜ | Code for each binding from a contract | assessment |
 | ⬜ | 2.0: what the sizing modes break, once | plan item 10 |
-| 🟦 | Sizes and work predicted, then checked | D-76, plan of the evening |
+| 🟨 | Sizes and work predicted, then checked: a file's first buffer done | D-76, plan of the evening |
 | 🟦 | Checks at compile time where they can be, at run time always | D-75, plan of the evening |
 | 🟨 | GitHub used for all it offers that fits | plan of the evening |
 
@@ -170,7 +170,7 @@ names its cause. Each is a trade-off, measured before it is kept.
 
 1. 🟩 **CI**: the one red run was GitHub Pages refusing a deployment
    ("try again later"); run again.
-2. 🟨 **1.3.0**: the CHANGELOG's date, tier 2 on Linux and Windows, then
+2. 🟨 **1.3.0** (ready at `ad5f1c2`, tier 2 green; the tag is left): the CHANGELOG's date, tier 2 on Linux and Windows, then
    the tag, which publishes it (the tag is pushed by the maintainer).
 3. 🟨 **GitHub, all of it that fits**: CodeQL code scanning (C and C++,
    Python, Rust, the workflows); Dependabot for the crate as well as the
@@ -193,7 +193,7 @@ names its cause. Each is a trade-off, measured before it is kept.
    and the code `doctor gen` writes - and by the library at run time
    everywhere, as now, so the same mistake is caught in every build and
    earlier in the ones that can.
-6. 🟦 **D-76, sizes and work predicted, then checked**: a file's buffer
+6. 🟨 **D-76, sizes and work predicted, then checked** (the file buffer done): a file's buffer
    from the size the system reports; the key space and the definitions'
    index from the bytes (keys a line, about) or, on a reload, from the
    generation before; an emitter's output (dump mode) sized from the key

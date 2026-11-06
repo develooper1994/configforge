@@ -111,6 +111,7 @@ default can be argued from a number.
 | Doctor key index | the same | `doctor diff` of two 10,000-key reports 1,740 -> 553 ms; 20,000: 6,778 -> 1,335 ms. What is left, about 60 us a key, is reading the report: linear, and left until something needs it faster |
 | `cf_get_int`, a report | the same | 140 to 200 ns a read at 100 to 20,000 keys (a binary search); a report about 3 us a key. Nothing to do |
 | `CF_GC_SECTIONS` + `CF_LTO` | the same | `tier0` 60,656 (-43%); `embedded` 56,373 (-47%), its bss 22,592 -> 4,128; tests pass; MSVC Release with both: 140 of 140. Off by default: the stack budget cannot measure inlined frames. Speed: the benchmark (Roadmap, plan item 3) is the place to measure it |
+| a file's first buffer from the size `fseek`/`ftell` report, the chunked loop kept (D-76) | scratch harness, GCC 15 -O2, WSL, 2026-11-06, base64 files | 1.4 KB: 0.010 -> 0.005 ms, arena 4,096 -> 1,392; 138 KB: 1.03 -> 0.26 ms, 520,192 -> 138,336; 1.4 MB: 8.98 -> 2.65 ms, 4.19 -> 1.38 MB; 13.8 MB: 73.5 -> 27.9 ms, 33.6 -> 13.8 MB. A real pipe falls back to the chunks: 520,192, as before. Kept |
 
 ## Working habits that paid
 
