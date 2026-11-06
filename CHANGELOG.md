@@ -1310,8 +1310,8 @@ key that is both a value and a table (`docs/Guide.md`, section 10;
 - **`gate.formats`**, which checks every format string in the library
   against what `cf_fmt` actually supports. `cf_fmt` has no width,
   precision or flags, and an unsupported conversion is copied out
-  literally — which is how every provenance report carried `%08x` for a
-  whole session. Proved by putting that bug back.
+  literally — which is how every provenance report carried `%08x` for
+  many commits. Proved by putting that bug back.
 - **`test_complexity`**, which measures the claims that are shapes:
   resolution at one size and four times it, where `O(n log n)` and
   `O(n squared)` are 4.3x and 16x apart. A regression from a binary

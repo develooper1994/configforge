@@ -5,7 +5,7 @@ cf_fmt has no width, no precision and no flags.  That is deliberate, and
 the failure mode when somebody forgets is why this exists: an
 unsupported conversion is copied out literally, so "%08x" produces four
 characters rather than a number.  Every provenance report carried the
-literal format string that way for a whole session, and the test that
+literal format string that way for many commits, and the test that
 should have caught it only checked the prefix.
 
 The library uses no printf, so every format string under src/ belongs to

@@ -195,8 +195,8 @@ A check counts and goes on, so one run lists every failure. ctest runs
 each program and reads its status; a framework (Unity, greatest) would
 add a second runner and stop a test at its first failure, and give
 nothing the suite lacks. A helper only one program needs stays in that
-program; one a second program needs moves into `cf_test.h` (the owner,
-2026-11-06: no code repeated that need not be).
+program; one a second program needs moves into `cf_test.h`: no code
+is repeated that need not be.
 
 **What a good test here looks like:**
 
@@ -207,7 +207,7 @@ program; one a second program needs moves into `cf_test.h` (the owner,
 * A comment gives the reason when the reason is a decision. "Not
   booleans here. See D-24." earns its line; "check the port" does not.
 * **A weak assertion is worse than none.** Checking that a digest starts
-  with `fnv1a:` passed for a whole session while every digest was the
+  with `fnv1a:` passed for many commits while every digest was the
   literal `%08x%08x`. Assert the shape *and* that it distinguishes.
 * **[gate]** Buffers over a kilobyte are `static`. The stack budget
   applies to tests too, and it has caught three of them. In the library
@@ -328,7 +328,7 @@ its second of build time.
 had before the formatter touched it silently matches nothing. Two edits
 were lost that way. Assert that the patch target was found.
 
-**Commit each verified unit.** Not each file and not each session: each
+**Commit each verified unit.** Not each file and not each day: each
 thing that is true on its own. Stage it and run
 `cmake -DSOURCE=index -P scripts/verify.cmake` first, always: that
 verifies exactly what the commit will contain, not the working tree

@@ -28,17 +28,17 @@ says, as `docs/Roadmap.md` is.
   `scripts/release/release_local.sh` and `.ps1` remain the way to release when
   Actions cannot run.
 * **Commits and files carry their maintainers' names only.**
-* **"Authorization"** in the maintainer's words is the Policy section of
+* **"Authorization"** means the Policy section of
   the original idea document (outside the repository,
   `ProjectIdeas/ideas/library/ConfigForge.md`, sections 8, 22 and 46).
   The read side is D-33, the write side D-42 (`cf_write`). Still open:
   automatic propagation to several targets (sections 23-24) and a
   policy file (section 12).
 
-## Recursive self-improvement
+## Lessons made into checks
 
-The working principle (2026-10-30): the way the work is done
-improves itself, every round, not only the code. After each unit:
+Since 2026-10-30 the way the work is done is improved with the code,
+every round. After each verified commit:
 
 1. **Look back.** What failed, what was redone, what cost time or
    resources - a check that passed when it should not have, a mistake

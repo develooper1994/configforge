@@ -653,7 +653,7 @@ fixes the redacted representation in the report schema.
 **Closed in implementation.** `CF_SENSITIVE` redacts in `explain()`, `inspect()` and the
 value-blind report, which keeps presence, origin, length and a digest - everything an
 audit needs and nothing a leak would want. The digest distinguishes: there is a test that
-a different secret gives a different one, written after a session in which every digest
+a different secret gives a different one, written after many commits in which every digest
 was the literal format string and the test only checked the prefix.
 
 ---
@@ -1992,7 +1992,7 @@ values rather than inheriting them, so each value has one. The report records
 
 ## D-44 — The Rust binding
 
-**Question.** The owner values Rust as C and C++. How does a Rust program use this
+**Question.** Rust matters here as much as C and C++. How does a Rust program use this
 library without the binding becoming a second implementation, or the build a download?
 
 **Options.**
@@ -2056,7 +2056,7 @@ otherwise. `cf_error.size` stays what lets the struct grow at its end.
 ## D-46 — Reading a value without repeating its default
 
 **Question.** A defined key has a default, and `cfg.get<int>("server.port", 8080)`
-writes it a second time, where the two can drift. The owner asked for `cfg.server.port`:
+writes it a second time, where the two can drift. Wanted: `cfg.server.port`, where
 the program names a key and gets its value, whatever source set it. What can each
 language give?
 
@@ -2092,10 +2092,9 @@ where it is a type of its own, and a test builds the header as C++17 as well.
 ## D-47 — One C++ header, whatever the standard
 
 **Question.** C++03 has no move, no `optional`, no `string_view`, no concepts; C++20
-has all of them, ranges and `std::format`. The owner asked whether, since the
-standards differ so much, there should be more than one interface - and then, once
-there were three headers, whether one would be better: the compiler's standard
-decides, from C++98 to the newest.
+has all of them, ranges and `std::format`. Since the standards differ so much, should
+there be more than one interface - and once there were three headers, would one be
+better, the compiler's standard deciding, from C++98 to the newest?
 
 **Options.**
 
@@ -2107,7 +2106,7 @@ decides, from C++98 to the newest.
 3. **One header, its parts turned on by the standard the including program is
    compiled as.**
 
-**Decision: option 3**, at the owner's word, and the better one: a program includes
+**Decision: option 3**, the better one: a program includes
 `configforge.hpp` and gets everything its standard offers, and moving to a newer
 standard needs no change to an include. What made option 2 look safer is kept: under
 every standard `cf::Config`, `cf::Builder` and the rest are the same classes - C++11
@@ -2130,8 +2129,8 @@ configured one or absent, never a different number.
 
 **Question.** `cf_changed` and the watcher say that a file moved on. Every program then
 writes the same loop - rebuild, check, swap - and the swap is where it goes wrong: a
-reader on another thread takes the pointer as it is freed. The owner asked for
-automatic, semi-automatic and manual reloading. And some values cannot change while the
+reader on another thread takes the pointer as it is freed. Programs want automatic,
+semi-automatic and manual reloading. And some values cannot change while the
 program runs at all: a listening port, a pool's size.
 
 **Options.**
@@ -2190,11 +2189,11 @@ shared job.
 
 ## D-50 — Platforms in tiers, and a verify that is fast enough to run every time
 
-**Question.** A full verify with every extra step took hours on the owner's workstation
-and held everything else up: Linux and Windows could not run at once, every preset was
-rebuilt from nothing, and a hung test held the run until someone noticed. The owner
-asked for tiers - GCC, Clang and MSVC first, the rest after - and for the work to go
-faster without a larger disk.
+**Question.** A full verify with every extra step took hours on the development
+workstation and held everything else up: Linux and Windows could not run at once,
+every preset was rebuilt from nothing, and a hung test held the run until someone
+noticed. Wanted: tiers - GCC, Clang and MSVC first, the rest after - and faster work
+without a larger disk.
 
 **Options.**
 
@@ -2324,8 +2323,8 @@ key, though the reasons are written to carry no value anyway.
 
 ## D-53 — C89 inside, the program's own standard at the interface
 
-**Question.** C has versions too, and the owner asked that the library use what a later
-one offers where it is supported. The library is C89 so that it builds with every
+**Question.** C has versions too: should the library use what a later one offers where
+it is supported? The library is C89 so that it builds with every
 compiler in the matrix, pcc and TinyCC among them; a program compiled as C11 or C23
 should not be held to C89 by that.
 
@@ -2350,7 +2349,7 @@ compiler knows them.
 
 ## D-54 — Create, update, delete: one edit, one transaction
 
-**Question.** The owner asked for an accessor layer that makes CRUD easy. Reading was
+**Question.** What accessor layer makes CRUD easy? Reading was
 already easy; the rest was `cf_write` over an array of items built by hand, with no way
 to delete - a key written to a store stayed there, shadowing the file under it for good.
 
@@ -2375,8 +2374,8 @@ build, the check and the mode.
 
 ## D-55 — WebAssembly as a tier-2 target
 
-**Question.** The owner asked that WebAssembly be considered: a configuration library in
-an edge runtime, a plugin host, a browser. And what would it take?
+**Question.** Should WebAssembly be a target - a configuration library in an edge
+runtime, a plugin host, a browser - and what would it take?
 
 **Decision.** wasm32-wasi (WASI preview 1), through clang's own target and wasi-libc,
 as distributions ship them, with no SDK to download. Preview 1 has no threads, so the
@@ -2594,8 +2593,8 @@ definitions; a build without JSON gets `CF_E_CAPABILITY`.
 
 **Question.** D-39 refused anchors and aliases, because "a value used
 twice has no single origin to explain", and every tag, because "a
-value's type is its definition's to decide". The owner asked that each
-format follow its own standard. Do those reasons hold?
+value's type is its definition's to decide". Now each format follows its
+own standard. Do those reasons hold?
 
 **Anchors and aliases.** They do not. An aliased value is written once:
 its origin is the anchor's line, and explain() can name it exactly. What
@@ -2625,9 +2624,9 @@ empty key. The conformance run counts these apart from the grammar's.
 ## D-60 — Arrays in INI are the ones INI files already have
 
 **Question.** INI had no arrays here: a configuration with one could not
-be written as INI, and a file with `ports[] = 80` was refused. The owner
-asked first for C-style arrays, then that every format follow its own
-standard. What is INI's array?
+be written as INI, and a file with `ports[] = 80` was refused. C-style
+arrays were wanted, and every format follows its own standard. What is
+INI's array?
 
 **Options.**
 
@@ -2641,8 +2640,8 @@ standard. What is INI's array?
 have arrays, PHP's is the one most INI files with arrays are written
 for, and its `name[i]` is C's element assignment. Option 2 was built
 first and dropped: no INI reader knows it, so it would have been a
-syntax made up here - exactly what the owner's second instruction rules
-out. Option 4 cannot be told from a mistake: a key set twice is an
+syntax made up here - exactly what following each format's standard
+rules out. Option 4 cannot be told from a mistake: a key set twice is an
 error elsewhere in this library (CFD001 reports one).
 
 Underneath, both forms are the flat `name.i` and `name.count` every other
@@ -2666,8 +2665,8 @@ and no file that read before reads differently.
 ## D-62 — Each reader held to its format's standard, by the standard's suite
 
 **Question.** The readers were written to subsets (D-23) and tested
-against cases written here. The owner asked that every format follow its
-own standard, starting from the best-known practice and improving from
+against cases written here. Every format should follow its own
+standard, starting from the best-known practice and improving from
 there. How is "follows the standard" decided, and is a reader written
 here still the right one?
 

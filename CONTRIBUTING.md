@@ -223,7 +223,7 @@ commands.
   `cf_i64` `long`, and two explicit specializations became one.
 * **Every `wsl` call writes WSLg traces to C:** (`%TEMP%\DiagOutputDir`),
   gigabytes a day under load. Batch a unit's checks into one script.
-* **Watch the disk on a long session.** Each preset is a full build;
+* **Watch the disk on a long day of builds.** Each preset is a full build;
   `verify.cmake` removes its staged copy on success, and `build-*`
   directories are disposable and in `.gitignore`.
 

@@ -77,7 +77,7 @@ version.
 The agreed additions and organization review are complete; no release
 is a substitute for the final review and verification.
 
-Chosen by the owner on 2026-11-05, in this order. Each is a minor
+Chosen on 2026-11-05, in this order. Each is a minor
 version, so main's unreleased "1.0.1" - which already adds features - is
 1.1.0 when it is released. Each item is done when its tests fail without
 it, `verify` passes at tier 1 on Linux and Windows, and the CHANGELOG,
@@ -108,7 +108,7 @@ Guide and API reference say what it does.
    bindings, and the Guide's log-field and OpenTelemetry recipe.
    Found on the way: Rust's `Debug` printed `cf_digest`.
 
-## The plan from 2026-11-06 (the owner accepted it; the order to follow)
+## The plan from 2026-11-06 (accepted; the order to follow)
 
 Items 1 to 7, 7d and 6 of the plan below are done. What is left, in this
 order - each stage one or more verified commits, the CI run read after
@@ -121,8 +121,8 @@ each push:
    from apt there, 0.9.4, and the version floor stays); a new WSL
    distribution is made beside the old one and passes tier 2; CI's jobs
    name `ubuntu-26.04` (`ubuntu-latest` still means 24.04), and one
-   compatibility job stays on 24.04. The old distribution is removed only
-   once the new one is green and the owner says so.
+   compatibility job stays on 24.04. The old distribution is removed once
+   the new one is green. Done: 1.2.0 was built and tested there.
 2. **1.2.0**, after tier 2 on the new environment: the version, the
    CHANGELOG's date, the tag (which publishes it).
 3. **7c JSON5 and JSONC.**
@@ -146,10 +146,10 @@ each push:
    artifacts (GitHub attestations); native OS sources where the platform
    is at hand. Go and .NET bindings last, and only when someone asks.
 10. **11, 2.0**: what 8 and 9 break, together, once.
-11. **Then** new ideas while any is useful; the clean-up of the machine's
-    scratch; the sweep for traces of how the work was done; the report.
+11. **Then** new ideas while any is useful, and the clean-up of the
+    development machine's scratch.
 
-**Dump and stream** (the owner, 2026-11-06). Today a file is read whole
+**Dump and stream** (2026-11-06). Today a file is read whole
 into the configuration's own arena, and the key space copies every value
 it keeps, so the file's bytes stay as long as the configuration though
 nothing reads them again. Three modes: *dump* (today: file and values,
@@ -165,7 +165,7 @@ builder at run time, with a default per profile, as D-61 decides for
 the sizing modes; `bench/` measures the peak and the steady footprint
 before and after.
 
-## The plan from 1.1.0 (the owner, 2026-11-05)
+## The plan from 1.1.0 (2026-11-05)
 
 1.1.0 is released (the release workflow published it, macOS included).
 Everything below is accepted, in this order; each is one or more
@@ -191,13 +191,13 @@ verified commits, and a release is cut where the order says so. The
    lookup, as expected, and one nobody expected: defining keys was
    quadratic. Both are fixed and held by tests; the numbers are in
    Maintaining.md, "Measured".
-4. **Arrays in INI** - done (D-60). The owner first asked for C-style
-   arrays, then for each format's own standard; INI's arrays, where it
-   has any, are PHP's `name[] = v` and `name[i] = v`, and the second is
-   C's element assignment, so both wishes hold. A brace list was built
-   first and dropped: it was a syntax invented here.
-   4b. **A declared list splits an INI value too** - done (owner's question,
-   2026-11-06: `ports=[80,443, 8443 ,22]`?). Not as syntax: no INI reader
+4. **Arrays in INI** - done (D-60). C-style arrays were wanted first,
+   then each format's own standard; INI's arrays, where it has any, are
+   PHP's `name[] = v` and `name[i] = v`, and the second is C's element
+   assignment, so both hold. A brace list was built first and dropped:
+   it was a syntax invented here.
+   4b. **A declared list splits an INI value too** - done (2026-11-06:
+   should `ports=[80,443, 8443 ,22]` work?). Not as syntax: no INI reader
    knows brackets - it is TOML's, which this library reads - and old
    files with such text would change meaning. But INI carries no types,
    so the definition decides: a list declared with `list_separator`
@@ -207,8 +207,8 @@ verified commits, and a release is cut where the order says so. The
    in the library, the action, the hook and Python; findings about a
    source are kept when a touched key came from it.
 6. **Done (2026-11-06): each reader held to its format's own
-   standard** (the owner: "each format's own standard"; "start from the
-   world's best-known methods, then improve"). The method, for every
+   standard**, starting from the best-known methods and improving on
+   them. The method, for every
    reader: the specification's grammar, its official test suite as the
    bar (JSONTestSuite, toml-test, yaml-test-suite, pinned by commit),
    a differential test against the reference implementation, fuzzing.
@@ -227,14 +227,14 @@ verified commits, and a release is cut where the order says so. The
    needs file:line:col, so the built-in TOML reader is completed rather
    than replaced. Then YAML, and `verify -DEXTRA=conformance`. Record:
    D-62. The differential test starts from the project's own
-   configuration (the owner: "the project configures itself - hence the
-   name"): `.clang-format`, `.clang-tidy`, `mkdocs.yml` and
+   configuration - the project configures itself, hence the name:
+   `.clang-format`, `.clang-tidy`, `mkdocs.yml` and
    `.pre-commit-hooks.yaml` (YAML), `CMakePresets.json` (JSON) and
    `pyproject.toml` (TOML), each read by its reader and compared, key by
    key and value by value, with the reference reader's (Python's json and
    tomllib, PyYAML where installed).
    Below, the item as first written:
-6. **Dependencies behind one contract** (the owner's decision): every
+6. **Dependencies behind one contract**: every
    reader a library supplies - JSON, TOML, YAML, XML, SQLite - sits
    behind the `cf_codec` / `cf_doc_sink` contract, and a conformance
    suite every implementation must pass (the same documents, the same
@@ -247,8 +247,8 @@ verified commits, and a release is cut where the order says so. The
 7. **Done: JSON Schema import** (D-64): definitions from a schema, the reverse of
    `cf_schema`; unsupported keywords refused by name. After 6, on the
    chosen JSON reader.
-7b. **A built-in YAML reader** (the owner asked why YAML alone needs a
-   dependency, 2026-11-06). INI, JSON and TOML are read here, streaming,
+7b. **A built-in YAML reader** (2026-11-06: why should YAML alone need
+   a dependency?). INI, JSON and TOML are read here, streaming,
    allocation-free, every value with its place; YAML is read through
    libfyaml or libyaml, so it is off by default, cannot run in a fixed
    arena, and its positions come from someone else's events. The reader
@@ -259,8 +259,8 @@ verified commits, and a release is cut where the order says so. The
    libfyaml the differential reference rather than the parser, fuzzed;
    then on by default as TOML is, with libfyaml and libyaml kept behind
    `CF_YAML_BACKEND` for whoever wants a dependency's reading.
-7c. **JSON5, and with it JSONC** (the owner asked which other formats,
-   for configuration, without overdoing it, 2026-11-06). JSON with
+7c. **JSON5, and with it JSONC** (2026-11-06: which other formats are
+   worth reading for configuration, without overdoing it). JSON with
    comments and trailing commas is what `tsconfig.json`, VS Code's
    settings and Deno's configuration are written in, and a JSONC file is
    JSON5. JSON5 (json5.org) has a specification and an official suite
@@ -270,14 +270,13 @@ verified commits, and a release is cut where the order says so. The
    expressions), HOCON (the JVM's), plist (under native OS sources),
    KDL, RON, CUE, Dhall, Pkl (young or narrow). After 7c the format set
    is enough.
-7d. **Done: the tree in order** (the owner, 2026-11-06: the files look
+7d. **Done: the tree in order** (2026-11-06: the files looked
    scattered). `scripts/` keeps its entry points (`verify.cmake`,
    `prestage.cmake`, `format.cmake`) and puts the rest by purpose under
    `check/`, `generate/`, `release/` and `docs/`, one naming style;
    `cmake/` puts its templates under `templates/`; an in-source build,
    which left a `CMakeFiles/` at the root, is refused by the build.
-8. **Sizing modes** (the owner, 2026-11-05: full-dynamic, semi-dynamic,
-   manual): today every limit is a fixed buffer (`CF_KEY_MAX` and its
+8. **Sizing modes** (2026-11-05: full-dynamic, semi-dynamic, manual): today every limit is a fixed buffer (`CF_KEY_MAX` and its
    siblings, D-37) - manual. Semi-dynamic: buffers start on the stack
    and grow from the allocator up to a cap. Full-dynamic: no length or
    depth limit but memory, decoders iterating rather than recursing,
@@ -286,7 +285,7 @@ verified commits, and a release is cut where the order says so. The
    what `cf_error`'s fixed `key` and `message` do - truncate in 1.x,
    grow in 2.0. Then the buffers, one subsystem at a time, each under
    all three modes in the suite. The largest item here.
-   With it, dump and stream (the owner, 2026-11-06): today a file is
+   With it, dump and stream (2026-11-06): today a file is
    read whole (`cf_blob_file`) into the configuration's own arena, the
    readers stream events from those bytes, and the key space copies
    every value it keeps - so the file's bytes stay, unused, as long as
@@ -297,13 +296,13 @@ verified commits, and a release is cut where the order says so. The
    than a whole blob, so the peak does not grow with the file; the
    readers that look back (TOML measures a string and reads it again,
    INI looks back at an earlier array run) are reworked one at a time.
-9. **Modern C++ only** (the owner's decision): the header deprecates
+9. **Modern C++ only**: the header deprecates
    C++98 to C++14 in 1.x with a compile-time warning, and requires
    C++17 from 2.0, where `std::optional`, `std::string_view` and
    structured bindings simplify it. C++20 modules (`import configforge;`)
    come with 2.0 where the compilers in the matrix build them.
 10. **The ideas, by use** - each its own commit, in this order:
-    * A format of one's own, all the way (the owner, 2026-11-06): today
+    * A format of one's own, all the way (2026-11-06): today
       a caller's `cf_codec` is read through `cf_builder_file_codec` and
       nothing else knows it. `cf_codec_register` puts it in the table,
       so its extensions choose it, `cf_codec_by_name` finds it and
@@ -324,25 +323,22 @@ verified commits, and a release is cut where the order says so. The
 ## Ideas
 
 Every idea written here before 2026-11-05 is now in the plan above, in
-the order the owner and its use put it. New ones go here until they are
+the order of its use. New ones go here until they are
 accepted.
 
 ### Considered, and decided against for now: TOON
 
-The owner asked (2026-11-06) whether to add TOON, Token-Oriented Object
-Notation (github.com/toon-format/toon, spec v4.4, MIT). Its own
-description answers it: an encoding of the JSON data model for LLM
-prompts - "use JSON programmatically, and encode it as TOON for LLM
-input" - suited to uniform arrays of objects and advised against for
+TOON, Token-Oriented Object Notation (github.com/toon-format/toon, spec
+v4.4, MIT), was weighed on 2026-11-06. Its own description answers it:
+a compact encoding of the JSON data model, produced by programs from
+JSON, suited to uniform arrays of objects and advised against for
 deeply nested data, which is what configuration is. The reference is
 TypeScript, there is no C implementation, and the spec calls itself an
 idea in progress. As a configuration source it would be a reader to
-keep for files nobody writes by hand; as a way to hand a report to a
-model, the TOON CLI converts the report's JSON already.
+keep for files nobody writes by hand; anyone who wants a report in it
+can convert the report's JSON with the TOON CLI already.
 
-Revisit if configuration files in TOON appear in the wild, or if handing
-Doctor's findings to a model becomes a feature and a measured token
-saving argues for writing TOON here.
+Revisit if configuration files in TOON appear in the wild.
 
 ### Considered, and decided against for now: a jq-like query language
 
@@ -358,7 +354,7 @@ to read *two* documents to use one tool. Keys are flat dotted paths, so
 Revisit if there is a question jq cannot answer from a report - one
 that needs the live configuration rather than its record.
 
-## Decisions waiting for the owner
+## Open decisions
 
-* **Arrays in INI** - decided by the owner (2026-11-05): C style; the
-  plan above, item 4.
+None. The last one, arrays in INI, was decided on 2026-11-05: C style;
+the plan above, item 4.

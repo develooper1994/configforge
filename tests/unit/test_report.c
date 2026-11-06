@@ -77,7 +77,7 @@ static void test_blind_report(void) {
     has(buf, "\"length\": 7", "length survives");
     has(buf, "\"digest\": \"fnv1a:", "and a digest, so a change is visible");
     /* Asserting the prefix alone once let a broken digest through for
-       a whole session: the format string had a width specifier the
+       many commits: the format string had a width specifier the
        library's formatter does not support, so every report carried
        the literal "%08x%08x". The shape is checked now, and
        test_digest_distinguishes checks that it actually distinguishes. */

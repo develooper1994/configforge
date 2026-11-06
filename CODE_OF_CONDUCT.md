@@ -8,4 +8,4 @@ people, and remember that a review comment is read by somebody who wrote
 the code in good faith.
 
 To report behaviour that breaks it, contact the maintainer through the
-repository's owner on GitHub, privately. Reports are kept confidential.
+repository's maintainer on GitHub, privately. Reports are kept confidential.
