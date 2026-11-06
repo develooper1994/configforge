@@ -20,9 +20,11 @@
 #
 # SOURCE=index verifies the staged tree in a copy of its own, under
 # build-verify/, which is what a commit will contain - not the working
-# tree, which may hold the next change half written. The copy is removed
-# when everything passes and kept when something fails, so the failure
-# can be looked at where it happened.
+# tree, which may hold the next change half written. The copy and its
+# build directories are kept from run to run: only files whose bytes
+# changed are written into it, so a build recompiles what the change
+# touched and a configure finds its cache. FRESH=ON starts from nothing,
+# as every TIER=2 run (a release) does. Tests run JOBS at a time.
 #
 # TIER=1 or TIER=2 picks the tiers' steps (below, and D-50).
 #
@@ -79,6 +81,9 @@ endif()
 if(NOT DEFINED EXTRA)
   set(EXTRA "")
 endif()
+if(NOT DEFINED FRESH)
+  set(FRESH OFF)
+endif()
 
 # Tiers (D-50): what a unit needs, and what a release needs. Tier 1 is
 # the compilers most users build with - GCC, Clang and MSVC - and every
@@ -97,6 +102,9 @@ if(DEFINED TIER)
   if(TIER STREQUAL "1")
     list(APPEND EXTRA clang)
   elseif(TIER STREQUAL "2")
+    # A release is verified from nothing: no build directory kept from
+    # before can stand in for a clean one.
+    set(FRESH ON)
     list(
       APPEND
       EXTRA
@@ -203,8 +211,13 @@ if(SOURCE STREQUAL "index")
   else()
     set(ROOT "${REPO}/build-verify/staged")
   endif()
-  file(REMOVE_RECURSE "${ROOT}")
-  file(MAKE_DIRECTORY "${ROOT}")
+  # The staged tree is extracted beside the last one and only what changed
+  # is copied over it, so the build directories inside it are kept and a
+  # build compiles what the change touched - not every preset from nothing.
+  # FRESH=ON, and every TIER=2 run (a release), start from nothing.
+  set(incoming "${ROOT}/../staged.new")
+  file(REMOVE_RECURSE "${incoming}")
+  file(MAKE_DIRECTORY "${incoming}")
   # From a private copy of the index, so `git write-tree` takes no lock
   # on the real one: a Linux and a Windows run of this script can start
   # together, where the second used to fail on index.lock.
@@ -216,8 +229,8 @@ if(SOURCE STREQUAL "index")
   if(NOT IS_ABSOLUTE "${index}")
     set(index "${REPO}/${index}")
   endif()
-  configure_file("${index}" "${ROOT}/../index" COPYONLY)
-  set(ENV{GIT_INDEX_FILE} "${ROOT}/../index")
+  configure_file("${index}" "${incoming}/../index" COPYONLY)
+  set(ENV{GIT_INDEX_FILE} "${incoming}/../index")
   execute_process(
     COMMAND "${GIT_EXE}" write-tree
     WORKING_DIRECTORY "${REPO}"
@@ -228,17 +241,73 @@ if(SOURCE STREQUAL "index")
     message(FATAL_ERROR "git write-tree failed: is this a repository?")
   endif()
   execute_process(
-    COMMAND "${GIT_EXE}" archive --format=tar -o "${ROOT}/../staged.tar" ${tree}
+    COMMAND "${GIT_EXE}" archive --format=tar -o "${incoming}/../staged.tar"
+            ${tree}
     WORKING_DIRECTORY "${REPO}"
     RESULT_VARIABLE rc)
   if(NOT rc EQUAL 0)
     message(FATAL_ERROR "git archive failed")
   endif()
-  execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf "${ROOT}/../staged.tar"
-                  WORKING_DIRECTORY "${ROOT}")
-  file(REMOVE "${ROOT}/../staged.tar" "${ROOT}/../index")
+  execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf "${incoming}/../staged.tar"
+                  WORKING_DIRECTORY "${incoming}")
+  file(REMOVE "${incoming}/../staged.tar" "${incoming}/../index")
   unset(ENV{GIT_INDEX_FILE})
-  message("verifying the staged tree ${tree}")
+  if(FRESH OR NOT EXISTS "${ROOT}")
+    file(REMOVE_RECURSE "${ROOT}")
+    file(RENAME "${incoming}" "${ROOT}")
+    message("verifying the staged tree ${tree}, from nothing")
+  else()
+    # configure_file(COPYONLY) writes a file only when its bytes differ,
+    # so an unchanged source keeps its time and is not rebuilt.
+    file(
+      GLOB_RECURSE files
+      RELATIVE "${incoming}"
+      "${incoming}/*")
+    set(changed 0)
+    foreach(f ${files})
+      if(NOT EXISTS "${ROOT}/${f}")
+        math(EXPR changed "${changed} + 1")
+      else()
+        file(SHA256 "${incoming}/${f}" a)
+        file(SHA256 "${ROOT}/${f}" b)
+        if(NOT a STREQUAL b)
+          math(EXPR changed "${changed} + 1")
+        endif()
+      endif()
+      configure_file("${incoming}/${f}" "${ROOT}/${f}" COPYONLY)
+    endforeach()
+    # And what the index no longer has goes, but for the build directories.
+    file(
+      GLOB tops
+      RELATIVE "${ROOT}"
+      "${ROOT}/*")
+    foreach(t ${tops})
+      if(t MATCHES "^build(-|$)")
+        continue()
+      endif()
+      if(IS_DIRECTORY "${ROOT}/${t}")
+        file(
+          GLOB_RECURSE have
+          RELATIVE "${ROOT}"
+          "${ROOT}/${t}/*")
+      else()
+        set(have "${t}")
+      endif()
+      foreach(h ${have})
+        # Python's bytecode cache, which the binding's test writes beside
+        # the sources: it checks itself against them.
+        if(h MATCHES "/__pycache__/")
+          continue()
+        endif()
+        if(NOT EXISTS "${incoming}/${h}")
+          file(REMOVE "${ROOT}/${h}")
+          math(EXPR changed "${changed} + 1")
+        endif()
+      endforeach()
+    endforeach()
+    file(REMOVE_RECURSE "${incoming}")
+    message("verifying the staged tree ${tree}, ${changed} files changed")
+  endif()
 else()
   set(ROOT "${REPO}")
 endif()
@@ -250,6 +319,12 @@ if(NOT DEFINED TEST_TIMEOUT)
   set(TEST_TIMEOUT 900)
 endif()
 set(ctest ${CMAKE_CTEST_COMMAND} --timeout ${TEST_TIMEOUT})
+# Tests run JOBS at a time, as the builds do: they were run one by one,
+# and a preset's 150 took longer than building it. Tests that share
+# something hold a RESOURCE_LOCK, which ctest honours.
+if(DEFINED JOBS)
+  list(APPEND ctest --parallel ${JOBS})
+endif()
 
 foreach(p ${PRESETS})
   step("${p} configure" ${CMAKE_COMMAND} --preset ${p})
@@ -870,15 +945,9 @@ foreach(x ${EXTRA})
   endif()
 endforeach()
 
-# Only what this script made: WORK may name a directory that holds
-# other things too.
-if(SOURCE STREQUAL "index")
-  if(DEFINED WORK)
-    file(REMOVE_RECURSE "${ROOT}")
-  else()
-    file(REMOVE_RECURSE "${REPO}/build-verify")
-  endif()
-endif()
+# The staged copy and its build directories are kept for the next run,
+# which then builds only what changed; FRESH=ON removes them first.
+# Only what this script made is ever removed: WORK may hold other things.
 
 # The formatter rewrites and the gate reports, so this only checks:
 # `cmake -P scripts/format.cmake` is the fix. A verification that edited
