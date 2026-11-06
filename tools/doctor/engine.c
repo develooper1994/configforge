@@ -991,6 +991,7 @@ static const struct {
     {"CFD016", "Policy violation"},
     {"CFD017", "Default drift: the default a key falls back to differs"},
     {"CFD018", "Set but never read"},
+    {"CFD019", "Fingerprint does not match the report's keys"},
     {"VALUE", "Value differs between environments"},
     {"HISTORY", "Changed between one report of a sequence and the next"},
     {"BLAME", "The report a key's present state dates from"}};
@@ -1661,6 +1662,80 @@ static void rule_unread(const report* r) {
     }
 }
 
+/* CFD019. The fingerprint a report states is the one its own keys give.
+   cf_fingerprint takes each selected value in key order and a secret by
+   its digest, which a value-blind report carries, so the report holds all
+   it needs to be checked: one edited by hand, cut short, or written by a
+   build that got it wrong says one thing and shows another. A report
+   from before the field has none, and that is not a fault. The steps are
+   the library's (cf_fingerprint_step), not a copy of them.
+   Left unchecked, with no finding, when the report cannot be: a key
+   whose type or value it does not give. */
+static void rule_fingerprint(const report* r) {
+    cf_u64 h;
+    size_t i;
+    char   want[24];
+
+    if (r->fingerprint == NULL || (r->nkeys > 1 && r->byname == NULL)) {
+        return;
+    }
+    h = cf_fingerprint_seed();
+    for (i = 0; i < r->nkeys; ++i) {
+        const rkey*     k = (r->byname != NULL) ? r->byname[i].k : &r->keys[i];
+        const cand*     w = winner(k);
+        const cf_value* v;
+        char            at[CF_KEY_MAX];
+        char            buf[CF_VALUE_TEXT_MAX > 64 ? CF_VALUE_TEXT_MAX : 64];
+        const char*     type;
+        const char*     text;
+        size_t          n;
+
+        if (w == NULL) {
+            continue; /* nothing selected: the fingerprint skips it too */
+        }
+        n = cf_fmt(at, sizeof at, "keys.%S.candidates.%zu.value", k->key, k->keylen,
+                   (size_t)(w - k->c));
+        v = (n < sizeof at) ? cf_ks_get(&r->doc, at, n) : NULL;
+        if (k->sensitive) {
+            if (w->digest != NULL) {
+                /* Blind: the digest in place of the value, and the
+                   declared type, which a secret's value is held as. */
+                type = k->type;
+                text = w->digest;
+                n    = strlen(text);
+            } else if (v != NULL) {
+                type = cf_type_name(v->type);
+                n    = cf_ks_digest_text(cf_ks_value_digest(v), buf, sizeof buf);
+                text = buf;
+            } else {
+                return;
+            }
+        } else if (v != NULL) {
+            type = cf_type_name(v->type);
+            if (v->type == CF_TYPE_TEXT) {
+                text = v->u.t.p;
+                n    = v->u.t.n;
+            } else {
+                n    = cf_value_to_text(v, buf, sizeof buf);
+                text = buf;
+            }
+        } else {
+            return;
+        }
+        if (type == NULL || text == NULL) {
+            return;
+        }
+        h = cf_fingerprint_step(h, k->key, k->keylen, type, text, n);
+    }
+    (void)cf_ks_digest_text(h, want, sizeof want);
+    if (strcmp(want, r->fingerprint) != 0) {
+        finding(r->D, "CFD019", "error", "fingerprint",
+                "the report says %s and its keys give %s: edited, cut short, or "
+                "written by a build that got it wrong",
+                r->fingerprint, want);
+    }
+}
+
 /* The rules run from tables, through a pointer, rather than as a list of
    calls. Called directly, each is called once, so a compiler may inline
    every one into the same frame without sharing their buffers: Alpine's
@@ -1673,7 +1748,7 @@ static const lint_rule g_lint_rules[] = {
     rule_refused,     rule_policy,      rule_sensitive_source,
     rule_inversion,   rule_undefined,   rule_deprecated,
     rule_empty,       rule_truncated,   rule_default_only,
-    rule_unread};
+    rule_unread,      rule_fingerprint};
 
 static const diff_rule g_diff_rules[] = {rule_origin_drift, rule_shadow_divergence,
                                          rule_default_drift, rule_value_diff};

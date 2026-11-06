@@ -121,6 +121,8 @@ cf_feature_at
 cf_feature_count
 cf_fingerprint
 cf_fingerprint_format
+cf_fingerprint_seed
+cf_fingerprint_step
 cf_flatten_init
 cf_flatten_lists
 cf_flatten_sink
