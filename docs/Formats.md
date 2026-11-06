@@ -55,3 +55,28 @@ D-10, not to the reader).
 
 A format of one's own is a `cf_codec` (D-68), measured the same way:
 `conformance.py --codec`.
+
+## How the format is chosen (D-73)
+
+Strategies in turn, the first that answers deciding; each says why
+(`cf_source_file_format` reports it: named, extension or content).
+
+1. The format the program names.
+2. The name's extension, the builder's own codecs ahead of the built-in
+   ones. It is taken as it stands. If it cannot read the file, the file is
+   refused as before, and the error adds the format the content looks
+   like: `(the content looks like yaml)` for a renamed file.
+3. The content, when the name gives no format - no extension, or one no
+   format claims. The first bytes only order the candidates (`{` or `[`
+   JSON first, `<` XML, a `[section]` or `key =` line TOML and INI, a
+   `key:` line YAML); reading decides. Each codec reads the bytes into a
+   sink that keeps a hash of the events, and one that accepts them and
+   yields at least one keyed value is a candidate. A strict format - the
+   builder's own, JSON, JSON5, TOML, XML - is taken at once. A loose one -
+   YAML, INI - is taken only when no other loose format reads the bytes
+   into different events; otherwise the file is refused as ambiguous,
+   naming both. `.properties` is never chosen from content.
+
+An empty file, and text no format reads, is refused. `cf_codec_detect`
+does the same for bytes of a program's own, and `cf_builder_document`
+for a document held in memory.

@@ -33,6 +33,7 @@ cf_builder_codec
 cf_builder_create
 cf_builder_define
 cf_builder_dir
+cf_builder_document
 cf_builder_dotenv
 cf_builder_env
 cf_builder_file
@@ -66,6 +67,7 @@ cf_codec_at
 cf_codec_by_name
 cf_codec_by_path
 cf_codec_count
+cf_codec_detect
 cf_config_codec
 cf_config_free
 cf_config_ref
@@ -265,6 +267,7 @@ cf_source_dir
 cf_source_dir_codecs
 cf_source_dir_error
 cf_source_dir_state_size
+cf_source_document
 cf_source_dotenv
 cf_source_dotenv_defs
 cf_source_dotenv_error
@@ -273,8 +276,10 @@ cf_source_env
 cf_source_env_defs
 cf_source_file
 cf_source_file_codec
+cf_source_file_codecs
 cf_source_file_defs
 cf_source_file_error
+cf_source_file_format
 cf_source_file_state_size
 cf_source_image_error
 cf_source_image_file

@@ -293,6 +293,31 @@ static cf_source* builder_slot(cf_builder* b) {
     return &b->sources[b->nsources];
 }
 
+/* The codecs registered so far, copied into the arena: the builder goes
+   when it creates, and a file, a document or a directory is read again
+   on every reload. *out is the copy, or NULL when there are none; false,
+   the builder failed, when there is no room for it. */
+static cf_bool builder_codecs_copy(cf_builder* b, const char* what,
+                                   const cf_codec* const** out) {
+    const cf_codec** own;
+
+    *out = NULL;
+    if (b->ncodecs == 0) {
+        return CF_TRUE;
+    }
+    own = (const cf_codec**)cf_arena_alloc(b->arena, b->ncodecs * sizeof(cf_codec*));
+    if (own == NULL) {
+        cf_error e = CF_ERROR_INIT;
+        cf_error_set(&e, CF_E_MEMORY, NULL, what, "no room for the codecs of '%s'",
+                     what);
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    codecs_copy(own, b->codecs, b->ncodecs);
+    *out = own;
+    return CF_TRUE;
+}
+
 /* A slot for a source that takes flags, refusing a bit that is not a
    source flag: a definition flag passed here by mistake, or one from a
    later 1.x this library does not know. */
@@ -342,9 +367,10 @@ cf_bool cf_builder_cli(cf_builder* b, const char* name, int rank, int argc,
 
 cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const char* path,
                         const char* format, unsigned flags) {
-    cf_source*      s;
-    void*           st;
-    const cf_codec* own;
+    cf_source*             s;
+    void*                  st;
+    const cf_codec*        own;
+    const cf_codec* const* list;
 
     if (b == NULL) {
         return CF_FALSE;
@@ -373,6 +399,53 @@ cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const char* p
                         cf_source_file_state_size())) {
         return CF_FALSE;
     }
+    /* For a file the extension does not name: the content decides, the
+       program's own codecs first. */
+    if (!builder_codecs_copy(b, path, &list)) {
+        return CF_FALSE;
+    }
+    cf_source_file_codecs(s, list, b->ncodecs);
+    ++b->nsources;
+    return CF_TRUE;
+}
+
+cf_bool cf_builder_document(cf_builder* b, const char* name, int rank,
+                            const char* bytes, size_t n, const char* format,
+                            unsigned flags) {
+    cf_source*             s = builder_slot_flags(b, name, flags);
+    void*                  st;
+    char*                  copy;
+    const cf_codec* const* list;
+
+    if (s == NULL) {
+        return CF_FALSE;
+    }
+    if (name == NULL || (bytes == NULL && n > 0)) {
+        cf_error e = CF_ERROR_INIT;
+        cf_error_set(&e, CF_E_SOURCE, NULL, name,
+                     "a document needs a name, and bytes where it has a length");
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    /* Copied, like a name or a path: a buffer the program frees after the
+       call is never read, and the configuration reads the document again
+       on every reload. */
+    copy = (n > 0) ? cf_arena_dup(b->arena, bytes, n) : NULL;
+    st   = cf_arena_calloc(b->arena, cf_source_file_state_size());
+    if ((n > 0 && copy == NULL) || st == NULL) {
+        cf_error e = CF_ERROR_INIT;
+        cf_error_set(&e, CF_E_MEMORY, NULL, name, "no room for the document '%s'",
+                     name);
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    if (!cf_source_document(s, builder_dup(b, name), rank, (copy != NULL) ? copy : "",
+                            n, builder_dup(b, format), flags, st,
+                            cf_source_file_state_size()) ||
+        !builder_codecs_copy(b, name, &list)) {
+        return CF_FALSE;
+    }
+    cf_source_file_codecs(s, list, b->ncodecs);
     ++b->nsources;
     return CF_TRUE;
 }
@@ -508,8 +581,9 @@ cf_bool cf_builder_store(cf_builder* b, const char* name, int rank, const char* 
 
 cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank, const char* path,
                        const char* format, unsigned flags) {
-    cf_source* s = builder_slot_flags(b, name, flags);
-    void*      st;
+    cf_source*             s = builder_slot_flags(b, name, flags);
+    void*                  st;
+    const cf_codec* const* own = NULL;
 
     if (s == NULL) {
         return CF_FALSE;
@@ -525,19 +599,10 @@ cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank, const char* pa
                        builder_dup(b, format), flags, st, cf_source_dir_state_size())) {
         return CF_FALSE;
     }
-    /* The codecs registered so far, copied: the builder goes when it
-       creates, and the directory is read again on every reload. */
-    if (b->ncodecs > 0) {
-        const cf_codec** own =
-            (const cf_codec**)cf_arena_alloc(b->arena, b->ncodecs * sizeof(cf_codec*));
-        if (own == NULL) {
-            cf_error e = CF_ERROR_INIT;
-            cf_error_set(&e, CF_E_MEMORY, NULL, path,
-                         "no room for a directory's codecs");
-            builder_fail(b, &e);
-            return CF_FALSE;
-        }
-        codecs_copy(own, b->codecs, b->ncodecs);
+    if (!builder_codecs_copy(b, path, &own)) {
+        return CF_FALSE;
+    }
+    if (own != NULL) {
         cf_source_dir_codecs(s, own, b->ncodecs);
     }
     ++b->nsources;
@@ -1083,6 +1148,7 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
             } else if (strcmp(c->sources[i].vt->kind, "dotenv") == 0) {
                 cf_source_dotenv_defs(&c->sources[i], &c->defs);
             } else if (strcmp(c->sources[i].vt->kind, "file") == 0 ||
+                       strcmp(c->sources[i].vt->kind, "document") == 0 ||
                        strcmp(c->sources[i].vt->kind, "dir") == 0) {
                 cf_source_file_defs(&c->sources[i], &c->defs);
             }

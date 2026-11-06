@@ -203,6 +203,51 @@ CF_API const char* cf_format_option(const char* format);
 CF_API size_t          cf_codec_count(void);
 CF_API const cf_codec* cf_codec_at(size_t i);
 
+/* ------------------------------------------------------------------ *
+ * The format from the name, then the content (D-73)
+ *
+ * Several simple strategies in turn, the first that answers deciding, and
+ * each says why it did: the format a program names; the name's extension;
+ * and, when the name gives none, the content. The content is never taken
+ * on a guess at a few bytes: a look at the first bytes only orders the
+ * candidates, and the decision is by reading - each codec reads the bytes
+ * into a sink that keeps a hash of the events, and one that accepts them
+ * and yields at least one keyed value is a candidate. A strict format
+ * (the builder's own, JSON, JSON5, TOML, XML) is taken at once; a loose
+ * one (YAML, INI) only when no other loose format reads the bytes into
+ * different events, else the bytes are refused as ambiguous. Properties,
+ * whose grammar accepts nearly any text, is never chosen from content.
+ * ------------------------------------------------------------------ */
+
+typedef enum cf_detect_how {
+    CF_DETECT_NONE  = 0,     /* no format: empty, unreadable or ambiguous */
+    CF_DETECT_NAMED = 1,     /* the program named it (set by the callers  */
+                             /* that take a name; cf_codec_detect has none) */
+    CF_DETECT_EXTENSION = 2, /* the name's extension gave it              */
+    CF_DETECT_CONTENT   = 3  /* the content did                           */
+} cf_detect_how;
+
+/* What cf_codec_detect says besides the codec. When the bytes are refused
+   as ambiguous, `how` is CF_DETECT_NONE and `first` and `second` are the
+   two loose formats that read them differently; else both are NULL. */
+typedef struct cf_detect {
+    cf_detect_how   how;
+    const cf_codec* first;
+    const cf_codec* second;
+} cf_detect;
+
+/* The codec for `in`, or NULL. `own` (n of them) are a builder's own
+   codecs, looked at first, as for extensions; `name`, when not NULL, is a
+   file name to take the extension's format from - that format is returned
+   as it stands, without reading, so no document read before is read
+   differently; with no name, or none whose extension a codec claims, the
+   content decides. `ar` is the trial readers' work space, and is not
+   reset: pass one that can be thrown away (cf_blob_arena). `out`, when not
+   NULL, says how the answer was reached. */
+CF_API const cf_codec* cf_codec_detect(const cf_codec* const* own, size_t n,
+                                       const cf_blob* in, const char* name,
+                                       cf_arena* ar, cf_detect* out);
+
 #ifdef __cplusplus
 }
 #endif

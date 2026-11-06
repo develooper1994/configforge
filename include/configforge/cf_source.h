@@ -12,6 +12,7 @@
 #define CONFIGFORGE_CF_SOURCE_H
 
 #include "configforge/cf_keyspace.h"
+#include "configforge/cf_serialize.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -198,8 +199,9 @@ CF_API cf_bool cf_source_cli(cf_source* s, const char* name, int rank, int argc,
 /* ------------------------------------------------------------------ *
  * File source
  *
- * Reads bytes, picks a codec by extension unless a format is named,
- * and hands the events to the flattener. It parses nothing itself.
+ * Reads bytes, picks the codec - the format named, else the extension's,
+ * else the content's (D-73) - and hands the events to the flattener. It
+ * parses nothing itself.
  *
  * A format that is not compiled in fails loudly and names the option
  * to turn on. Silently skipping the file would be the one thing a
@@ -252,6 +254,28 @@ CF_API cf_bool cf_source_file_codec(cf_source* s, const char* name, int rank,
    return a plain boolean because most cannot fail in interesting ways;
    a file can fail in a dozen, and the caller needs the detail. */
 CF_API const cf_error* cf_source_file_error(const cf_source* s);
+
+/* A program's own codecs for a file or a document, looked at before the
+   built-in ones, for the extension and for the content (D-73). The list
+   is borrowed and must outlive the source. */
+CF_API void cf_source_file_codecs(cf_source* s, const struct cf_codec* const* codecs,
+                                  size_t n);
+
+/* A document the program holds in memory, as a source: the same reading
+   as a file's, from `bytes` (n of them) instead of a path. `name` is what
+   locations and explain() show; `format` is named, or NULL for the name's
+   extension and then the content (D-73). The bytes are borrowed here and
+   must outlive the source; cf_builder_document copies them. */
+CF_API cf_bool cf_source_document(cf_source* s, const char* name, int rank,
+                                  const char* bytes, size_t n, const char* format,
+                                  unsigned flags, void* state, size_t state_size);
+
+/* The format a file or document source read with at its last load, by
+   the codec's name, and how it was chosen (CF_DETECT_NAMED, _EXTENSION or
+   _CONTENT; `how` may be NULL). NULL before a load, for a source that is
+   neither, and when no format was chosen. A load that failed in the
+   chosen format still names it. */
+CF_API const char* cf_source_file_format(const cf_source* s, cf_detect_how* how);
 
 /* A .env file: the same key mapping as the environment, because a .env
    file is an environment written down. Unlike the environment it
