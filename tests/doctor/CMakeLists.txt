@@ -44,6 +44,9 @@ doctor_case(lint_dead 0 lint|cf_fx_dead.json)
 doctor_case(lint_dead_strict 1 lint|cf_fx_dead.json|--fail-on|warning)
 doctor_case(dump 0 dump|cf_fx_prod.json)
 doctor_case(explain 0 explain|cf_fx_prod.json|server.port)
+# A document says what it was read as and how it was chosen (D-73); a
+# report from a configuration with none says nothing of the kind.
+doctor_case(explain_document 0 explain|cf_fx_doc.json|server.port)
 doctor_case(explain_missing 2 explain|cf_fx_prod.json|no.such.key)
 doctor_case(diff 0 diff|cf_fx_prod.json|cf_fx_staging.json)
 doctor_case(lint_policy 1 lint|cf_fx_leak.json)

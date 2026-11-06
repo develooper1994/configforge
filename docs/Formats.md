@@ -77,6 +77,20 @@ Strategies in turn, the first that answers deciding; each says why
    into different events; otherwise the file is refused as ambiguous,
    naming both. `.properties` is never chosen from content.
 
+A drop-in directory chooses each file this way: a file whose name gives no
+format - a bare `10-base`, or `10-base.conf~` - is read by its content, and
+refused like any file when no format reads it. It was an error before, so no
+file that was read is read differently. Dotfiles - an editor's `.x.swp` - are
+still not listed at all; a backup that is not a dotfile (`x.toml~`) was refused
+before and is read by its content now, so keep none in a directory that is
+read. A whole document in one environment variable
+(`cf_builder_env_document`) is read the same way, the variable's name
+standing for the file's: no extension to give a format, so the content
+decides unless one is named. The provenance report records, for each source
+that read a document, the format it was read as and how it was chosen
+(`format`, `format_how`; Doctor.md section 4), and Doctor's `explain` prints
+it beside the source.
+
 An empty file, and text no format reads, is refused. `cf_codec_detect`
 does the same for bytes of a program's own, and `cf_builder_document`
 for a document held in memory.

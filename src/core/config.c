@@ -409,18 +409,29 @@ cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const char* p
     return CF_TRUE;
 }
 
-cf_bool cf_builder_document(cf_builder* b, const char* name, int rank,
-                            const char* bytes, size_t n, const char* format,
-                            unsigned flags) {
+/* A document as a source: the `n` bytes given, or - with `variable` - the
+   value of that environment variable at every load. One path for both, so
+   the format is chosen in one way. */
+static cf_bool builder_document(cf_builder* b, const char* name, int rank,
+                                const char* bytes, size_t n, const char* variable,
+                                const char* format, unsigned flags) {
     cf_source*             s = builder_slot_flags(b, name, flags);
     void*                  st;
     char*                  copy;
     const cf_codec* const* list;
+    cf_bool                ok;
 
     if (s == NULL) {
         return CF_FALSE;
     }
-    if (name == NULL || (bytes == NULL && n > 0)) {
+    if (variable != NULL && (variable[0] == '\0' || strchr(variable, '=') != NULL)) {
+        cf_error e = CF_ERROR_INIT;
+        cf_error_set(&e, CF_E_SOURCE, NULL, name,
+                     "'%s' is not the name of an environment variable", variable);
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    if ((variable == NULL && name == NULL) || (bytes == NULL && n > 0)) {
         cf_error e = CF_ERROR_INIT;
         cf_error_set(&e, CF_E_SOURCE, NULL, name,
                      "a document needs a name, and bytes where it has a length");
@@ -435,19 +446,38 @@ cf_bool cf_builder_document(cf_builder* b, const char* name, int rank,
     if ((n > 0 && copy == NULL) || st == NULL) {
         cf_error e = CF_ERROR_INIT;
         cf_error_set(&e, CF_E_MEMORY, NULL, name, "no room for the document '%s'",
-                     name);
+                     (name != NULL) ? name : variable);
         builder_fail(b, &e);
         return CF_FALSE;
     }
-    if (!cf_source_document(s, builder_dup(b, name), rank, (copy != NULL) ? copy : "",
-                            n, builder_dup(b, format), flags, st,
-                            cf_source_file_state_size()) ||
-        !builder_codecs_copy(b, name, &list)) {
+    if (variable != NULL) {
+        ok = cf_source_env_document(s, builder_dup(b, name), rank,
+                                    builder_dup(b, variable), builder_dup(b, format),
+                                    flags, st, cf_source_file_state_size());
+    } else {
+        ok = cf_source_document(s, builder_dup(b, name), rank,
+                                (copy != NULL) ? copy : "", n, builder_dup(b, format),
+                                flags, st, cf_source_file_state_size());
+    }
+    if (!ok || !builder_codecs_copy(b, (name != NULL) ? name : variable, &list)) {
         return CF_FALSE;
     }
     cf_source_file_codecs(s, list, b->ncodecs);
     ++b->nsources;
     return CF_TRUE;
+}
+
+cf_bool cf_builder_document(cf_builder* b, const char* name, int rank,
+                            const char* bytes, size_t n, const char* format,
+                            unsigned flags) {
+    return builder_document(b, name, rank, bytes, n, NULL, format, flags);
+}
+
+cf_bool cf_builder_env_document(cf_builder* b, const char* name, int rank,
+                                const char* variable, const char* format,
+                                unsigned flags) {
+    return builder_document(b, name, rank, NULL, 0, (variable != NULL) ? variable : "",
+                            format, flags);
 }
 
 cf_bool cf_builder_file_codec(cf_builder* b, const char* name, int rank,

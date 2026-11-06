@@ -225,10 +225,12 @@ static cf_bool parse(report* r, const cf_blob* blob, cf_error* err) {
             }
         }
         for (i = 0; i < count; ++i) {
-            const char* rank = text_at(&r->doc, "sources.%zu.rank", i);
-            r->src[i].name   = text_at(&r->doc, "sources.%zu.name", i);
-            r->src[i].kind   = text_at(&r->doc, "sources.%zu.kind", i);
-            r->src[i].rank   = 0;
+            const char* rank     = text_at(&r->doc, "sources.%zu.rank", i);
+            r->src[i].name       = text_at(&r->doc, "sources.%zu.name", i);
+            r->src[i].kind       = text_at(&r->doc, "sources.%zu.kind", i);
+            r->src[i].format     = text_at(&r->doc, "sources.%zu.format", i);
+            r->src[i].format_how = text_at(&r->doc, "sources.%zu.format_how", i);
+            r->src[i].rank       = 0;
             if (rank != NULL) {
                 cf_text_to_i64(rank, strlen(rank), &r->src[i].rank, NULL);
             }
@@ -446,7 +448,7 @@ const char* doctor_shown(const cand* c) {
     return (c->value != NULL) ? c->value : "<redacted>";
 }
 
-static const rsrc* find_source(const report* r, const char* name) {
+const rsrc* doctor_find_source(const report* r, const char* name) {
     size_t i;
     if (name == NULL) {
         return NULL;
@@ -1243,7 +1245,7 @@ static void rule_sensitive_source(const report* r) {
             continue;
         }
         for (j = 0; j < k->nc; ++j) {
-            const rsrc* s = find_source(r, k->c[j].source);
+            const rsrc* s = doctor_find_source(r, k->c[j].source);
             cf_bool cli = (s != NULL && s->kind != NULL && strcmp(s->kind, "cli") == 0)
                               ? CF_TRUE
                               : CF_FALSE;
@@ -1289,8 +1291,8 @@ static void rule_inversion(const report* r) {
             continue;
         }
         for (j = 0; k->policy[j] != NULL && k->policy[j + 1] != NULL; ++j) {
-            const rsrc* hi = find_source(r, k->policy[j]);
-            const rsrc* lo = find_source(r, k->policy[j + 1]);
+            const rsrc* hi = doctor_find_source(r, k->policy[j]);
+            const rsrc* lo = doctor_find_source(r, k->policy[j + 1]);
             if (hi == NULL || lo == NULL || hi->rank <= lo->rank) {
                 continue;
             }
@@ -1453,7 +1455,7 @@ static agreement values_agree(const cand* a, const cand* b) {
    own table of sources says; a source it does not list is told apart by
    its name alone. */
 static const char* origin_kind(const report* r, const rkey* k) {
-    const rsrc* s = find_source(r, k->selected);
+    const rsrc* s = doctor_find_source(r, k->selected);
 
     return (s != NULL && s->kind != NULL) ? s->kind : k->selected;
 }

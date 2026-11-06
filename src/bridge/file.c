@@ -16,6 +16,8 @@
 
 #include "configforge/cf_flatten.h"
 #include "configforge/cf_define.h"
+#include "configforge/cf_entry.h"
+#include "configforge/cf_platform.h"
 #include "configforge/cf_source.h"
 
 #include <string.h>
@@ -29,6 +31,7 @@ typedef struct file_state {
     const char*            bytes; /* a document's bytes */
     size_t                 nbytes;
     cf_bool                document;
+    const char*            envvar; /* a document held in this variable, or NULL */
     unsigned               flags;
     cf_error               err;
     cf_bool                failed;
@@ -99,31 +102,32 @@ static cf_bool file_named(file_state* st, const cf_codec** codec) {
 }
 
 /* The name gave no format: the content decides (D-73), or the load fails
-   saying what was tried. `scratch` is the trial readers' work space. */
-static const cf_codec* file_by_content(file_state* st, const cf_blob* blob,
-                                       cf_arena* scratch) {
+   saying what was tried. `scratch` is the trial readers' work space.
+   Shared with the drop-in directory (dir.c), whose files are chosen the
+   same way. */
+const cf_codec* cf_source_by_content(const cf_codec* const* own, size_t nown,
+                                     const cf_blob* blob, const char* path,
+                                     cf_arena* scratch, cf_error* err) {
     cf_detect       d;
-    const cf_codec* codec =
-        cf_codec_detect(st->codecs, st->ncodecs, blob, NULL, scratch, &d);
+    const cf_codec* codec = cf_codec_detect(own, nown, blob, NULL, scratch, &d);
 
     if (codec != NULL) {
-        st->how = CF_DETECT_CONTENT;
         return codec;
     }
     if (d.first != NULL) {
-        cf_error_set(&st->err, CF_E_CAPABILITY, NULL, st->path,
+        cf_error_set(err, CF_E_CAPABILITY, NULL, path,
                      "cannot tell the format of '%s': %s and %s both read it, and "
                      "differently; set one explicitly",
-                     st->path, d.first->name, d.second->name);
+                     path, d.first->name, d.second->name);
     } else if (blob->n == 0) {
-        cf_error_set(&st->err, CF_E_CAPABILITY, NULL, st->path,
+        cf_error_set(err, CF_E_CAPABILITY, NULL, path,
                      "cannot tell the format of '%s': it is empty; set one explicitly",
-                     st->path);
+                     path);
     } else {
-        cf_error_set(&st->err, CF_E_CAPABILITY, NULL, st->path,
+        cf_error_set(err, CF_E_CAPABILITY, NULL, path,
                      "cannot tell the format of '%s' from its name or its content; "
                      "set one explicitly",
-                     st->path);
+                     path);
     }
     return NULL;
 }
@@ -182,7 +186,23 @@ static cf_bool file_load(const cf_source* s, cf_keyspace* ks) {
         return cf_error_set(&st->err, CF_E_MEMORY, NULL, st->path,
                             "no room to read '%s'", st->path);
     }
-    if (st->document) {
+    if (st->envvar != NULL) {
+        /* Looked up at every load: a reload sees what the variable holds
+           now. The value is the process's own, and only read here. */
+        size_t      n     = 0;
+        const char* value = cf_env_value(cf_platform_environ(), st->envvar, &n);
+
+        if (value == NULL) {
+            cf_blob_arena_done(bytes, ar);
+            if ((st->flags & CF_OPTIONAL) != 0) {
+                st->failed = CF_FALSE; /* not set, and allowed not to be */
+                return CF_TRUE;
+            }
+            return cf_error_set(&st->err, CF_E_SOURCE, NULL, st->path,
+                                "the environment variable '%s' is not set", st->path);
+        }
+        cf_blob_mem(&blob, value, n, st->path);
+    } else if (st->document) {
         cf_blob_mem(&blob, st->bytes, st->nbytes, st->path);
     } else if (!cf_blob_file(&blob, bytes, st->path, &st->err)) {
         cf_blob_arena_done(bytes, ar);
@@ -197,11 +217,13 @@ static cf_bool file_load(const cf_source* s, cf_keyspace* ks) {
         return CF_FALSE;
     }
     if (codec == NULL) {
-        codec = file_by_content(st, &blob, bytes);
+        codec = cf_source_by_content(st->codecs, st->ncodecs, &blob, st->path, bytes,
+                                     &st->err);
         if (codec == NULL) {
             cf_blob_arena_done(bytes, ar);
             return CF_FALSE;
         }
+        st->how = CF_DETECT_CONTENT;
     }
     st->used = codec;
     ok       = cf_source_read_blob(s, ks, codec, &blob, st->path, &st->err);
@@ -285,6 +307,21 @@ cf_bool cf_source_document(cf_source* s, const char* name, int rank, const char*
     st->nbytes   = n;
     st->document = CF_TRUE;
     s->vt        = &cf_document_vt;
+    return CF_TRUE;
+}
+
+cf_bool cf_source_env_document(cf_source* s, const char* name, int rank,
+                               const char* variable, const char* format, unsigned flags,
+                               void* state, size_t state_size) {
+    if (variable == NULL || variable[0] == '\0' || strchr(variable, '=') != NULL ||
+        !cf_source_document(s, (name != NULL) ? name : variable, rank, "", 0, format,
+                            flags, state, state_size)) {
+        return CF_FALSE;
+    }
+    /* What explain() shows for the document is the variable: what a
+       reader would have to change. */
+    ((file_state*)state)->path   = variable;
+    ((file_state*)state)->envvar = variable;
     return CF_TRUE;
 }
 

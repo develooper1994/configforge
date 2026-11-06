@@ -36,6 +36,7 @@ cf_builder_dir
 cf_builder_document
 cf_builder_dotenv
 cf_builder_env
+cf_builder_env_document
 cf_builder_file
 cf_builder_file_codec
 cf_builder_int
@@ -112,6 +113,7 @@ cf_edit_set_text
 cf_edit_unset
 cf_emit
 cf_env_key
+cf_env_value
 cf_environ
 cf_error_clear
 cf_error_copy
@@ -259,6 +261,7 @@ cf_sink_putc
 cf_sink_puts
 cf_sink_terminate
 cf_sink_write
+cf_source_by_content
 cf_source_cli
 cf_source_cli_defs
 cf_source_defaults
@@ -274,6 +277,7 @@ cf_source_dotenv_error
 cf_source_dotenv_state_size
 cf_source_env
 cf_source_env_defs
+cf_source_env_document
 cf_source_file
 cf_source_file_codec
 cf_source_file_codecs

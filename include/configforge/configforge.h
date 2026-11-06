@@ -135,6 +135,18 @@ CF_API cf_bool cf_builder_document(cf_builder* b, const char* name, int rank,
                                    const char* bytes, size_t n, const char* format,
                                    unsigned flags);
 
+/* A whole document in one environment variable (`APP_CONFIG='{"server":
+   {"port": 8080}}'`), opt-in per variable, read as a document is: the
+   format named, or NULL for the content to decide (D-73). The variable
+   is looked up at every load, so a reload sees what it holds then. Its
+   places in explain() are the variable's name and the line; `name` is the
+   source's (NULL: the variable). A variable that is not set is an error,
+   and nothing with CF_OPTIONAL. The sources of pairs - cf_builder_env -
+   are another thing: there is no format in `APP_PORT=80`. */
+CF_API cf_bool cf_builder_env_document(cf_builder* b, const char* name, int rank,
+                                       const char* variable, const char* format,
+                                       unsigned flags);
+
 struct cf_codec;
 
 /* A file read by a codec the caller supplies, for a format this library

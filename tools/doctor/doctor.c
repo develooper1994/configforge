@@ -265,11 +265,18 @@ static int cmd_explain(const report* r, const char* key) {
     }
     printf("\n");
     for (j = 0; j < k->nc; ++j) {
-        printf("  %-12s %-22s %s%s%s%s%s\n", k->c[j].source, doctor_shown(&k->c[j]),
+        const rsrc* s = doctor_find_source(r, k->c[j].source);
+
+        printf("  %-12s %-22s %s%s%s", k->c[j].source, doctor_shown(&k->c[j]),
                (k->c[j].outcome != NULL) ? k->c[j].outcome : "selected",
                (k->c[j].at != NULL) ? "   " : "",
-               (k->c[j].at != NULL) ? k->c[j].at : "",
-               (k->c[j].reason != NULL) ? "   " : "",
+               (k->c[j].at != NULL) ? k->c[j].at : "");
+        /* The format a document was read as, and how it was chosen. */
+        if (s != NULL && s->format != NULL) {
+            printf("   [%s: %s]", s->format,
+                   (s->format_how != NULL) ? s->format_how : "?");
+        }
+        printf("%s%s\n", (k->c[j].reason != NULL) ? "   " : "",
                (k->c[j].reason != NULL) ? k->c[j].reason : "");
     }
     return 0;

@@ -207,7 +207,8 @@ source, a later assignment beats an earlier one.
 | `cf_builder_env` | `PREFIX_A__B`, and `PREFIX_A_B` too once a definition makes it unambiguous |
 | `cf_builder_file` | a file, its format named, by extension or by content (D-73); `CF_OPTIONAL` if it may be absent |
 | `cf_builder_document` | a document the program holds in memory (fetched, embedded), its format named, by name or by content |
-| `cf_builder_dir` | a drop-in directory: every file in byte order, at one rank |
+| `cf_builder_env_document` | a whole document in one environment variable (`APP_CONFIG='{"server": {"port": 8080}}'`), opt-in per variable, its format named or taken from the content; `CF_OPTIONAL` if it may be unset |
+| `cf_builder_dir` | a drop-in directory: every file in byte order, at one rank; a file whose name gives no format is read by its content, as a file is |
 | `cf_builder_dotenv` | a `.env` file, read as the environment is |
 | `cf_builder_secrets` | a directory of secrets, one file a key, as containers mount them |
 | `cf_builder_store` | a SQLite store (`CF_WITH_SQLITE`), the one source `cf_write` can keep a change in |
