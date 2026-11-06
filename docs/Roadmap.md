@@ -44,7 +44,7 @@ beside what is not.
 | 🟩 | Signed release artifacts (attestations) | release.yml |
 | 🟩 | Python examples; a table of format versions | examples/python, Formats.md |
 | 🟦 | The format told from the content when the name says nothing | D-73 |
-| 🟨 | One `define`, the type given or inferred: Python done; C, C++, Rust left | D-74 |
+| 🟩 | One `define`, the type given or inferred: C, C11, C++, Python, Rust | D-74 |
 | 🟦 | 1.3.0 released | CHANGELOG |
 | ⬜ | Doctor checks a report's fingerprint against its contents | plan item 9 |
 | ⬜ | Continuous fuzzing in CI (ClusterFuzzLite) | plan item 9 |

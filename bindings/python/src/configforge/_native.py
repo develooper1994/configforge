@@ -244,9 +244,12 @@ _declare("cf_read_count", c_size_t, C, optional=True)
 _declare("cf_live_rollback", c_int, c_void_p, c_char_p, POINTER(cf_error), optional=True)
 _declare("cf_live_confirm", c_int, c_void_p, optional=True)
 _declare("cf_fingerprint", c_uint64, C, optional=True)
+_declare("cf_builder_key", c_int, B, c_char_p, c_int, c_char_p, c_char_p, c_char_p,
+         c_uint, optional=True)
 HAVE_REAL = hasattr(lib, "cf_try_real") and lib.cf_has_feature(b"real") != 0
 HAVE_LIST = lib.cf_has_feature(b"lists") != 0
 HAVE_FINGERPRINT = hasattr(lib, "cf_fingerprint")
+HAVE_KEY = hasattr(lib, "cf_builder_key")
 HAVE_PROBATION = hasattr(lib, "cf_live_rollback") and hasattr(lib, "cf_live_confirm")
 HAVE_READ_TRACKING = all(
     hasattr(lib, name)

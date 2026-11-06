@@ -295,6 +295,15 @@ extern "C" {
         dflt: *const c_char,
         flags: u32,
     ) -> cf_bool;
+    pub fn cf_builder_key(
+        b: *mut cf_builder,
+        key: *const c_char,
+        type_: c_int,
+        dflt: *const c_char,
+        min: *const c_char,
+        max: *const c_char,
+        flags: u32,
+    ) -> cf_bool;
     pub fn cf_def_init_sized(d: *mut cf_def, size: usize, type_: c_int, key: *const c_char);
     pub fn cf_has_feature(name: *const c_char) -> cf_bool;
     pub fn cf_value_text(v: *mut cf_value, p: *const c_char, n: usize);

@@ -214,6 +214,56 @@ CF_API cf_bool cf_builder_real(cf_builder* b, const char* key, double dflt, doub
                                double max, unsigned flags);
 #endif
 
+/* One spelling for every scalar type (D-74), and the one every binding
+   passes through. The default and the bounds are text, read by the
+   rules a file's value is; `type` names the type, or is CF_TYPE_NULL
+   for "the default decides": "true" a bool, "8080" an int, "0.5" a
+   real, anything else text. `min` and `max` bound an int or a real and
+   are NULL for no range. A default or a bound that does not read as the
+   type is refused, a range on a bool or text is refused, and so is a
+   key with neither a type nor a default. (1.3) */
+CF_API cf_bool cf_builder_key(cf_builder* b, const char* key, cf_type type,
+                              const char* dflt, const char* min, const char* max,
+                              unsigned flags);
+
+/* C11 adds CF_DEFINE(b, key, dflt), the type the default's C type:
+   CF_DEFINE(b, "server.port", 8080), CF_DEFINE(b, "tls.enabled",
+   (_Bool)0), CF_DEFINE(b, "server.host", "0.0.0.0"). Not under C89. */
+#if CF_HAVE_C11 && !defined(__cplusplus)
+static inline cf_bool cf_define_b_(cf_builder* b, const char* k, _Bool d) {
+    return cf_builder_bool(b, k, d ? CF_TRUE : CF_FALSE, 0);
+}
+static inline cf_bool cf_define_i_(cf_builder* b, const char* k, cf_i64 d) {
+    return cf_builder_int(b, k, d, 0, 0, 0);
+}
+static inline cf_bool cf_define_t_(cf_builder* b, const char* k, const char* d) {
+    return cf_builder_text(b, k, d, 0);
+}
+#if CF_WITH_REAL
+static inline cf_bool cf_define_r_(cf_builder* b, const char* k, double d) {
+    return cf_builder_real(b, k, d, 0.0, 0.0, 0);
+}
+#define CF_DEFINE_REAL_ , float : cf_define_r_, double : cf_define_r_
+#else
+#define CF_DEFINE_REAL_
+#endif
+#define CF_DEFINE(b, key, dflt)                                                        \
+    _Generic((dflt),                                                                   \
+        _Bool: cf_define_b_,                                                           \
+        char: cf_define_i_,                                                            \
+        signed char: cf_define_i_,                                                     \
+        unsigned char: cf_define_i_,                                                   \
+        short: cf_define_i_,                                                           \
+        unsigned short: cf_define_i_,                                                  \
+        int: cf_define_i_,                                                             \
+        unsigned: cf_define_i_,                                                        \
+        long: cf_define_i_,                                                            \
+        unsigned long: cf_define_i_,                                                   \
+        long long: cf_define_i_,                                                       \
+        char*: cf_define_t_,                                                           \
+        const char*: cf_define_t_ CF_DEFINE_REAL_)((b), (key), (dflt))
+#endif
+
 CF_API void cf_builder_unknown(cf_builder* b, cf_unknown_policy policy);
 
 /* Where what deserves a log line and is not an error goes (cf_log.h):

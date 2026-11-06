@@ -100,6 +100,15 @@ def _text_of(v: Any) -> str:
     return str(v)
 
 
+def _as_text(key: str, v: Any) -> Optional[str]:
+    """A default or a bound for define: None stays None, a scalar its text."""
+    if v is None:
+        return None
+    if not isinstance(v, (bool, int, float, str)):
+        raise TypeError("define(%r): %r is not a bool, int, float or str" % (key, v))
+    return _text_of(v)
+
+
 def log_sink(logger: Optional[logging.Logger] = None):
     """A cf_log function that hands each event to ``logger`` (by default
     the ``configforge`` logger): its level is the event's - the library's
@@ -219,30 +228,25 @@ class Builder:
         return self
 
     def define(self, key: str, default: Optional[Scalar] = None,
-               type: Optional[type] = None, *, min: float = 0, max: float = 0,
-               flags: int = 0) -> "Builder":
-        """One spelling for every scalar type (D-74): ``type`` names it,
-        or the default's Python type decides - ``define("port", 8080)``
-        is an int. A default that is not of the named type is refused,
-        and so is a key with neither. ``min == max`` means no range."""
-        kind = type
-        if kind is None:
-            if default is None:
-                raise TypeError("define(%r): give a default or a type" % key)
-            kind = default.__class__
-        if kind is not bool and kind is not int and kind is not float and kind is not str:
+               type: Optional[type] = None, *, min: Optional[Scalar] = None,
+               max: Optional[Scalar] = None, flags: int = 0) -> "Builder":
+        """One spelling for every scalar type (D-74), through the library's
+        one call for it (cf_builder_key): ``type`` names the type, or the
+        default decides - ``define("port", 8080)`` is an int. The library
+        checks the rest, and ``create`` raises what it refuses: a default
+        or a bound not of the type, half a range, a key with neither a
+        type nor a default."""
+        if not n.HAVE_KEY:
+            raise RuntimeError("define needs libconfigforge 1.3 (cf_builder_key)")
+        kinds = {None: n.TYPE_NULL, bool: n.TYPE_BOOL, int: n.TYPE_INT,
+                 float: n.TYPE_REAL, str: n.TYPE_TEXT}
+        if type not in kinds:
             raise TypeError("define(%r): the type must be bool, int, float or str" % key)
-        if default is not None and (default.__class__ is not kind and
-                                    not (kind is float and default.__class__ is int)):
-            raise TypeError("define(%r): the default %r is not a %s"
-                            % (key, default, kind.__name__))
-        if kind is bool:
-            return self.define_bool(key, bool(default), flags)
-        if kind is int:
-            return self.define_int(key, int(default or 0), int(min), int(max), flags)
-        if kind is float:
-            return self.define_real(key, float(default or 0.0), float(min), float(max), flags)
-        return self.define_text(key, default, flags)
+        n.lib.cf_builder_key(self._live(), self._keep.s(key), kinds[type],
+                             self._keep.s(_as_text(key, default)),
+                             self._keep.s(_as_text(key, min)),
+                             self._keep.s(_as_text(key, max)), flags)
+        return self
 
     def define_list(self, key: str, element_type: type,
                     default: Optional[Sequence[Scalar]] = None, *,

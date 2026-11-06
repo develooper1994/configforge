@@ -42,6 +42,30 @@ static void test_keys() {
           "and the key's range is the contract's");
 }
 
+/* D-74: define(key, default), the type the default's, makes the same
+   contract as the typed calls, byte for byte. */
+static void test_one_define() {
+    cf::Builder typed;
+    typed.defineInt("server.port", 8080, 1, 65535)
+        .defineText("server.host", "0.0.0.0")
+        .defineBool("tls.enabled", false)
+        .defineInt("server.limit", (cf_i64)1 << 40);
+    cf::Builder one;
+    one.define("server.port", 8080, 1, 65535)
+        .define("server.host", std::string("0.0.0.0"))
+        .define("tls.enabled", false)
+        .define("server.limit", (cf_i64)1 << 40);
+#if CF_WITH_REAL
+    typed.defineReal("server.ratio", 0.5);
+    one.define("server.ratio", 0.5);
+#endif
+    cf::Config a = typed.create();
+    cf::Config b = one.create();
+    check(a.valid() && b.valid(), "both spellings build");
+    check(b.schema("t") == a.schema("t"), "and make the same contract");
+    check(b[kPort] == 8080, "an int, from 8080");
+}
+
 static void test_settings() {
     static const cf_pair pairs[] = {
         {"server.port", "9443"}, {"server.host", "web1"}, {"tls.enabled", "true"}};
@@ -256,6 +280,7 @@ static void test_codecs() {
 
 int main() {
     test_keys();
+    test_one_define();
     test_settings();
     test_binding();
     test_live();

@@ -140,6 +140,25 @@ $ ./tier1 --server.pot=1
 configuration error (key): unknown key 'server.pot'; did you mean 'server.port'?
 ```
 
+One call does for every type (D-74), beside the typed ones:
+`cf_builder_key` takes the type as a parameter, or `CF_TYPE_NULL` to let
+the default's text decide, and C11 adds `CF_DEFINE`, which goes by the
+default's C type. C11's `true` and `false` are the ints 1 and 0, so a
+bool default is written `(bool)false`, and a range wants
+`cf_builder_key` or the typed calls.
+
+```c
+cf_builder_key(b, "server.port", CF_TYPE_NULL, "8080", "1", "65535", 0); /* an int */
+cf_builder_key(b, "tls.ca", CF_TYPE_TEXT, NULL, NULL, NULL, 0);          /* no default */
+CF_DEFINE(b, "server.host", "0.0.0.0");                      /* C11: text */
+```
+
+C++ has `define("server.port", 8080, 1, 65535)`, Python
+`define("server.port", 8080, min=1, max=65535)` and Rust
+`def("server.port", 8080)`, each taking the type from the default; Python
+and Rust pass through `cf_builder_key`, so what it refuses is refused there
+too, at `create`.
+
 The flags on a definition: `CF_REQUIRED` (a source must supply it - a
 default does not count), `CF_SENSITIVE` (never shown, section 9),
 `CF_DEPRECATED`, and `CF_TRANSIENT` for a command such as `--explain`
@@ -1117,8 +1136,9 @@ settings = cf.read(cf.define(cf.Builder.app("myapp"), Settings).create(), Settin
 ```
 
 `define` is one spelling for every scalar type (D-74): the type is the
-default's, or the one named with `type=`. A default of another type is
-refused. `define_int`, `define_text`, `define_bool` and `define_real`
+default's, or the one named with `type=`, and the library checks the
+rest, through `cf_builder_key`: a default of another type is refused at
+`create`. `define_int`, `define_text`, `define_bool` and `define_real`
 stay and mean the same.
 
 A refusal raises `cf.Error` with the key, the source and the message;

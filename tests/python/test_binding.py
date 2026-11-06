@@ -189,10 +189,14 @@ class Reading(unittest.TestCase):
         self.assertEqual(one.schema("t"), typed.schema("t"))
         self.assertEqual(one.server.port, 8080)
         self.assertIs(one.tls.enabled, False)
-        with self.assertRaises(TypeError):
-            cf.Builder().define("k")
-        with self.assertRaises(TypeError):
-            cf.Builder().define("k", "8080", type=int)
+        # The library refuses, at create, through the one call.
+        for bad in (lambda b: b.define("k"),
+                    lambda b: b.define("k", "eighty", type=int),
+                    lambda b: b.define("k", True, min=0, max=1),
+                    lambda b: b.define("k", 5, min=1)):
+            with self.assertRaises(cf.Error) as e:
+                bad(cf.Builder()).create()
+            self.assertEqual(e.exception.name, "definition")
         with self.assertRaises(TypeError):
             cf.Builder().define("k", [1])
 

@@ -999,6 +999,33 @@ class Builder {
     }
 #endif
 
+    /* One spelling for every scalar type (D-74), the type the default's:
+       define("server.port", 8080, 1, 65535), define("tls.enabled", false),
+       define("server.host", "0.0.0.0"). C++98; the define* names stay. */
+    Builder& define(const char* key, bool dflt, unsigned flags = 0) {
+        return defineBool(key, dflt, flags);
+    }
+    Builder& define(const char* key, int dflt, cf_i64 lo = 0, cf_i64 hi = 0,
+                    unsigned flags = 0) {
+        return defineInt(key, dflt, lo, hi, flags);
+    }
+    Builder& define(const char* key, cf_i64 dflt, cf_i64 lo = 0, cf_i64 hi = 0,
+                    unsigned flags = 0) {
+        return defineInt(key, dflt, lo, hi, flags);
+    }
+    Builder& define(const char* key, const char* dflt, unsigned flags = 0) {
+        return defineText(key, dflt, flags);
+    }
+    Builder& define(const char* key, const std::string& dflt, unsigned flags = 0) {
+        return defineText(key, dflt.c_str(), flags);
+    }
+#if CF_WITH_REAL
+    Builder& define(const char* key, double dflt, double lo = 0.0, double hi = 0.0,
+                    unsigned flags = 0) {
+        return defineReal(key, dflt, lo, hi, flags);
+    }
+#endif
+
     /* A full definition - an enum, a policy, a fallback - for what the
        define* shorthands do not say (cf_def_init, then its fields). */
     Builder& define(const cf_def& d) {

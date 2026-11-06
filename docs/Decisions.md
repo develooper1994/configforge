@@ -2587,25 +2587,33 @@ secrets are kept out of it elsewhere (cf_arena_wipe).
 (`define_int`, `define_text`). Can one `define` do, with the type given
 as a parameter or understood from the default?
 
-**Decision.** One spelling per language, added beside the typed ones,
-which stay (D-56), and cumulative as D-72 is for C++:
+**Decision.** The work is done once, in C, and every binding passes
+through it: `cf_builder_key(b, key, type, dflt, min, max, flags)`. The
+default and the bounds are text, read by the rules a file's value is;
+the type is a parameter, or `CF_TYPE_NULL` for "the default's text
+decides" - `true`/`false` a bool, an integer an int, a decimal a real,
+anything else text. A default or bound not of the type, half a range,
+a range on a bool or text, and a key with neither a type nor a default
+are refused by the library, with the key, and `cf_builder_create`
+reports them. Each binding only turns its value into text and names the
+type, so the rules and their errors are the same everywhere. The typed
+calls stay (D-56). Cumulative, as D-72 is for C++:
 
-* **C89**: `cf_builder_key(b, key, type, dflt, flags)`, the default
-  written as text and read by the same rules a file's value is. The type
-  is a parameter; `CF_TYPE_NULL` means "the default's text decides":
-  `true`/`false` a bool, an integer an int, a decimal a real, anything
-  else text. A typed default that does not read as its type is refused
-  where it is written.
+* **C89**: `cf_builder_key` itself.
 * **C11**: `CF_DEFINE(b, key, dflt)`, a `_Generic` macro over the
-  default's C type, `_Bool`, the integer types, `double` and `char*`, to
-  the typed functions. Under C89 the macro is not defined.
-* **C++98**: `Builder::define(key, dflt)` overloaded on `bool`, `int`,
-  `cf_i64`, `double` and `const char*`/`std::string`; `Key<T>` stays for
-  a key read in more than one place.
-* **Python**: `Builder.define(key, default, type=None, ...)`, the type
-  from the default's Python type unless given; `define_*` stay.
-* **Rust**: `Builder::key(key, dflt)` generic over the types `typed.rs`
-  already maps.
+  default's C type to the typed calls. C11's `true` and `false` are ints,
+  so a bool default is written `(bool)false`. Not under C89.
+* **C++98**: `Builder::define(key, dflt)`, overloaded on `bool`, `int`,
+  `cf_i64`, `double` and `const char*`/`std::string`, with a range for
+  the numbers. The overload is chosen at compile time and calls the typed
+  function, so nothing is turned into text and back; `Key<T>` stays for
+  a key read in more than one place. A `long` default is written as
+  `cf_i64` or `int`, since `long` converts to both.
+* **Python**: `Builder.define(key, default, type=None, min=, max=,
+  flags=)`, through `cf_builder_key`; the library refuses, at `create`.
+* **Rust**: `Builder::def(key, dflt)` and `def_with(key, dflt, range,
+  flags)`, the range of the default's type, through `cf_builder_key`;
+  `key` was taken, by a declared `Key`.
 
 Inference only from a default the program wrote, never from a value a
 file supplies: a contract that changed type because a file did would
@@ -2613,7 +2621,8 @@ not be one.
 
 **Held to.** Each spelling's tests declare the same keys as the typed
 calls and compare the two configurations' `cf_schema` output, which
-must be byte for byte the same.
+must be byte for byte the same; the C, Python and Rust tests check that
+each refusal comes from the library as a definition error.
 
 ---
 

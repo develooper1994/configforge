@@ -738,6 +738,96 @@ cf_bool cf_builder_real(cf_builder* b, const char* key, double dflt, double min,
 }
 #endif
 
+/* The type the default's text reads as, tried from the narrowest:
+   "true" a bool, "8080" an int, "0.5" a real, anything else text. */
+static cf_type key_infer(const char* s, size_t n) {
+    cf_value v;
+    if (cf_value_from_text(CF_TYPE_BOOL, s, n, &v)) {
+        return CF_TYPE_BOOL;
+    }
+    if (cf_value_from_text(CF_TYPE_INT, s, n, &v)) {
+        return CF_TYPE_INT;
+    }
+#if CF_WITH_REAL
+    if (cf_value_from_text(CF_TYPE_REAL, s, n, &v)) {
+        return CF_TYPE_REAL;
+    }
+#endif
+    return CF_TYPE_TEXT;
+}
+
+/* A bound, read as the key's type, into the definition's range. */
+static cf_bool key_bound(cf_def* d, const char* s, cf_bool upper) {
+    cf_value v;
+    if (s == NULL) {
+        return CF_TRUE;
+    }
+    if (!cf_value_from_text(d->type, s, strlen(s), &v)) {
+        return CF_FALSE;
+    }
+    d->has_range = CF_TRUE;
+    if (d->type == CF_TYPE_INT) {
+        *(upper ? &d->imax : &d->imin) = v.u.i;
+        return CF_TRUE;
+    }
+#if CF_WITH_REAL
+    if (d->type == CF_TYPE_REAL) {
+        *(upper ? &d->rmax : &d->rmin) = v.u.r;
+        return CF_TRUE;
+    }
+#endif
+    return CF_FALSE;
+}
+
+cf_bool cf_builder_key(cf_builder* b, const char* key, cf_type type, const char* dflt,
+                       const char* min, const char* max, unsigned flags) {
+    cf_error e = CF_ERROR_INIT;
+    cf_def   d;
+    size_t   n;
+
+    if (b == NULL || b->failed) {
+        return CF_FALSE;
+    }
+    if (key == NULL) {
+        key = "";
+    }
+    n = (dflt != NULL) ? strlen(dflt) : 0;
+    if (type == CF_TYPE_NULL) {
+        if (dflt == NULL) {
+            cf_error_set(&e, CF_E_DEFINITION, key, NULL,
+                         "'%s' has neither a type nor a default", key);
+            builder_fail(b, &e);
+            return CF_FALSE;
+        }
+        type = key_infer(dflt, n);
+    }
+    cf_def_init(&d, type, key);
+    d.flags = flags;
+    if (dflt != NULL && (flags & CF_REQUIRED) == 0) {
+        if (!cf_value_from_text(type, dflt, n, &d.default_value)) {
+            cf_error_set(&e, CF_E_DEFINITION, key, NULL,
+                         "the default of '%s', '%s', is not a %s", key, dflt,
+                         cf_type_name(type));
+            builder_fail(b, &e);
+            return CF_FALSE;
+        }
+        d.has_default = CF_TRUE;
+    }
+    if ((min != NULL) != (max != NULL) || !key_bound(&d, min, CF_FALSE) ||
+        !key_bound(&d, max, CF_TRUE)) {
+        cf_error_set(&e, CF_E_DEFINITION, key, NULL,
+                     "the range of '%s' is not two bounds of its type, %s", key,
+                     cf_type_name(type));
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    if (!cf_define(&b->defs, &d, &e)) {
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    return CF_TRUE;
+}
+
 void cf_builder_unknown(cf_builder* b, cf_unknown_policy policy) {
     if (b != NULL) {
         b->unknown = policy;

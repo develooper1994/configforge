@@ -38,6 +38,7 @@ cf_builder_env
 cf_builder_file
 cf_builder_file_codec
 cf_builder_int
+cf_builder_key
 cf_builder_log
 cf_builder_memory
 cf_builder_open

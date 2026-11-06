@@ -5,7 +5,7 @@
 //! field list is also the contract.
 
 use crate::{c, flag, sys, Builder, Config};
-use std::os::raw::c_char;
+use std::os::raw::{c_char, c_int};
 use std::ptr;
 
 /// A type a key can be read as: `bool`, the integer types and `String`.
@@ -187,7 +187,83 @@ impl Builder {
     pub fn key<T: Field>(self, k: &Key<T>) -> Builder {
         T::define(self, k.name, &k.default, k.range, k.flags)
     }
+
+    /// One spelling for every scalar type (D-74), through the library's
+    /// one call for it (`cf_builder_key`): the type is the default's -
+    /// `def("server.port", 8080)`, `def("tls.enabled", false)`,
+    /// `def("server.host", "0.0.0.0")`. The typed `define_*` stay.
+    pub fn def<D: DefDefault>(self, key: &str, default: D) -> Builder {
+        self.def_with(key, default, None, 0)
+    }
+
+    /// [`def`](Builder::def) with a range, of the default's type, and
+    /// flags. The library refuses, at `create`, a range on a bool or text.
+    pub fn def_with<D: DefDefault>(
+        mut self,
+        key: &str,
+        default: D,
+        range: Option<(D, D)>,
+        flags: u32,
+    ) -> Builder {
+        let k = self.keep.s(key);
+        let d = self.keep.s(&default.text());
+        let (lo, hi) = match range {
+            Some((lo, hi)) => (self.keep.s(&lo.text()), self.keep.s(&hi.text())),
+            None => (ptr::null(), ptr::null()),
+        };
+        unsafe { sys::cf_builder_key(self.b, k, D::KIND, d, lo, hi, flags) };
+        self
+    }
 }
+
+/// A default [`Builder::def`] takes, which decides the key's type: its
+/// text is what the library reads, by the rules a file's value is read.
+pub trait DefDefault {
+    #[doc(hidden)]
+    const KIND: c_int;
+    #[doc(hidden)]
+    fn text(&self) -> String;
+}
+
+impl DefDefault for bool {
+    const KIND: c_int = sys::CF_TYPE_BOOL;
+    fn text(&self) -> String {
+        (if *self { "true" } else { "false" }).to_string()
+    }
+}
+
+impl DefDefault for &str {
+    const KIND: c_int = sys::CF_TYPE_TEXT;
+    fn text(&self) -> String {
+        self.to_string()
+    }
+}
+
+impl DefDefault for String {
+    const KIND: c_int = sys::CF_TYPE_TEXT;
+    fn text(&self) -> String {
+        self.clone()
+    }
+}
+
+impl DefDefault for f64 {
+    const KIND: c_int = sys::CF_TYPE_REAL;
+    fn text(&self) -> String {
+        format!("{self:?}")
+    }
+}
+
+macro_rules! integer_default {
+    ($($t:ty),*) => {$(
+        impl DefDefault for $t {
+            const KIND: c_int = sys::CF_TYPE_INT;
+            fn text(&self) -> String {
+                self.to_string()
+            }
+        }
+    )*};
+}
+integer_default!(i8, i16, i32, i64, u8, u16, u32);
 
 /// A struct of the program's own, whose fields are read from a
 /// configuration and whose field list is the contract:
@@ -313,6 +389,37 @@ mod tests {
             .key(&PORT)
             .create();
         assert!(refused.is_err(), "the key's range is the contract's");
+    }
+
+    #[test]
+    fn one_def_matches_the_typed_calls() {
+        // D-74: the type is the default's, and the contract is the same.
+        let typed = Builder::new()
+            .define_int("server.port", 8080, 1, 65535, 0)
+            .define_text("server.host", Some("0.0.0.0"), 0)
+            .define_bool("tls.enabled", false, 0)
+            .create()
+            .unwrap();
+        let one = Builder::new()
+            .def_with("server.port", 8080u16, Some((1, 65535)), 0)
+            .def("server.host", "0.0.0.0")
+            .def("tls.enabled", false)
+            .create()
+            .unwrap();
+        assert_eq!(one.fingerprint(), typed.fingerprint());
+        assert_eq!(one.get::<i64>("server.port"), Some(8080));
+        assert_eq!(one.get::<bool>("tls.enabled"), Some(false));
+        assert_eq!(one.get::<String>("server.host").as_deref(), Some("0.0.0.0"));
+        let refused = Builder::new()
+            .memory("m", rank::USER_FILE, &[("server.port", "0")])
+            .def_with("server.port", 8080, Some((1, 65535)), 0)
+            .create();
+        assert!(refused.is_err(), "the range is the contract's");
+        let e = Builder::new()
+            .def_with("tls.enabled", true, Some((false, true)), 0)
+            .create()
+            .expect_err("a range on a bool is refused, by the library");
+        assert_eq!(e.name, "definition", "{}", e.message);
     }
 
     #[test]
