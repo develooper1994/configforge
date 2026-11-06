@@ -1,5 +1,7 @@
 * text=auto eol=lf
 *.png binary
 *.zip binary
+# Inputs kept byte for byte, such as a parser's reproducer.
+*.bin binary
 # git archive writes the commit into it: the build id of a source tarball.
 cmake/build-id.txt export-subst

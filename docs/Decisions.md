@@ -2663,9 +2663,20 @@ of libyaml's misses is its parser's - YAML 1.1, unmaintained for years:
 in an anchor's name. libfyaml 0.8, on the same suite, accepts 308/308,
 refuses 94/94 and writes the suite's event stream exactly for 308/308.
 It is in Debian's and Ubuntu's archives and MIT-licensed, but has no
-MSVC support, where libyaml is everywhere. So the next step puts both
-behind the YAML codec, libfyaml where it builds, and the suite scores
-each (Roadmap, item 6).
+MSVC support, where libyaml is everywhere.
+
+So a libfyaml backend was written behind the same codec - the event
+mapping shared, the parser's half of yaml.c the only difference - and
+through it the reader scored 122/122 valid, 94/94 invalid and 110/110
+values. Then the unit fuzzer hung: a 149-byte input of random bytes
+beginning with `%` sends libfyaml 0.8's `fy_parser_parse` into a loop it
+never leaves, and libfyaml's own `fy-testsuite` hangs on it too. A
+parser that hangs on hostile input is not one this library can ship,
+opt-in or not, so the backend is set aside, with the input kept to test
+the next release against (`tests/conformance/data/libfyaml-0.8-hang.yaml.bin`),
+and libyaml stays the only YAML parser. The
+contract held: the swap was one file's half and its build option.
+Revisit when a libfyaml release in the distributions passes the fuzzer.
 
 **Compatibility.** A TOML document that defines something twice was
 read before, the later key winning, and is refused now. TOML always

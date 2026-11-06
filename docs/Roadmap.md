@@ -160,7 +160,10 @@ verified commits, and a release is cut where the order says so. The
    161/208, invalid 394/509 - no multi-line strings, datetimes, inf or
    nan, and lenient numbers, keys and table redefinitions. Now TOML is
    valid 208/208, invalid 509/509, values 208/208, and JSON's values
-   95/95 against Python's json; what is left is YAML. tomlc17
+   95/95 against Python's json. YAML through libyaml: valid 100/133,
+   invalid 87/94, values 90/93, every miss libyaml's YAML 1.1 parser.
+   A libfyaml backend scored complete and then hung on a fuzz input
+   (libfyaml 0.8), so it waits for a fixed release (D-62). tomlc17
    conforms fully but builds a tree without positions, and explain()
    needs file:line:col, so the built-in TOML reader is completed rather
    than replaced. Then YAML, and `verify -DEXTRA=conformance`. Record:
