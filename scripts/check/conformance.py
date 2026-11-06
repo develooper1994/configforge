@@ -1,9 +1,9 @@
 """How closely the library's readers follow each format's own standard,
 measured with the standard's own test suite rather than claimed.
 
-    python3 scripts/conformance.py <conform> <suites-dir> [--floor F] [--list]
+    python3 scripts/check/conformance.py <conform> <suites-dir> [--floor F] [--list]
                                    [--yaml-name NAME]
-    python3 scripts/conformance.py --self <conform> <repository>
+    python3 scripts/check/conformance.py --self <conform> <repository>
 
 <conform> is the program tests/conformance/conform.c builds into;
 <suites-dir> holds the suites, each at the commit recorded in

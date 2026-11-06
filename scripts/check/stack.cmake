@@ -1,7 +1,7 @@
 # What the library's stack frames cost, and whether they fit the budget.
 #
-#   cmake -DOBJDIR=build/CMakeFiles/configforge.dir -P scripts/stack.cmake
-#   cmake -DOBJDIR=... -DBUDGET=1024 -P scripts/stack.cmake     would it fit?
+#   cmake -DOBJDIR=build/CMakeFiles/configforge.dir -P scripts/check/stack.cmake
+#   cmake -DOBJDIR=... -DBUDGET=1024 -P scripts/check/stack.cmake   fit?
 #
 # The build runs this after the library links (CF_STACK_BUDGET), and it
 # can be run by hand on any build directory to ask "what if": the same
@@ -304,7 +304,7 @@ if(over)
       "The choices: raise CF_STACK_BUDGET, lower CF_KEY_MAX, CF_MESSAGE_MAX or "
       "CF_PATH_MAX, or turn off a feature named above. Another budget can be "
       "tried without building: "
-      "cmake -DOBJDIR=<dir> -DBUDGET=<n> -P scripts/stack.cmake")
+      "cmake -DOBJDIR=<dir> -DBUDGET=<n> -P scripts/check/stack.cmake")
 endif()
 
 list(GET table 0 first)

@@ -290,7 +290,7 @@ feature it belongs to - so the choice is between named options, not a
 guess. To ask "what if" without rebuilding:
 
 ```sh
-cmake -DOBJDIR=build/CMakeFiles/configforge.dir -DBUDGET=1024 -P scripts/stack.cmake
+cmake -DOBJDIR=build/CMakeFiles/configforge.dir -DBUDGET=1024 -P scripts/check/stack.cmake
 ```
 
 At the default limits the largest frame is the exact float formatter's
@@ -309,7 +309,7 @@ everything else reads it, and `gate.version` fails if a copy disagrees.
 A release is that version dated in `CHANGELOG.md` and tagged:
 
 ```sh
-cmake -DTO=x.y.z -P scripts/version.cmake     # header, vcpkg, Cargo and Python manifests, CHANGELOG section
+cmake -DTO=x.y.z -P scripts/release/version.cmake     # header, vcpkg, Cargo and Python manifests, CHANGELOG section
 git tag -a vx.y.z -m "ConfigForge x.y.z" && git push origin vx.y.z
 ```
 
@@ -345,7 +345,7 @@ gives `ConfigForge::configforge`.
 For Python, `python -m pip install .` from a virtual environment builds
 and installs a wheel with the native library inside. `python -m build`
 creates the source distribution and builds its wheel. For Rust,
-`cmake -DWORK=<new-directory> -P scripts/package-rust.cmake` makes a
+`cmake -DWORK=<new-directory> -P scripts/release/package_rust.cmake` makes a
 verified standalone crate containing its native sources. Both paths
 need CMake and a C compiler when building, and publish nothing.
 
@@ -360,7 +360,7 @@ cc app.c $(pkg-config --cflags --libs configforge)
 ### Without a build system
 
 ```sh
-python3 scripts/amalgamate.py . out
+python3 scripts/generate/amalgamate.py . out
 cc -std=c89 -Iout out/configforge.c myapp.c
 ```
 
@@ -388,7 +388,7 @@ a claim that decays.
 | formats | every format string against what `cf_fmt` supports |
 | version | `cf_version.h` against project(), the vcpkg, Cargo and Python manifests, and the CHANGELOG's newest section |
 | abi | the exports match `cmake/configforge.symbols` |
-| apiref | `docs/API.md` is what `scripts/apiref.cmake` makes from the headers |
+| apiref | `docs/API.md` is what `scripts/generate/apiref.cmake` makes from the headers |
 | text | no NUL and no CR in a tracked text file |
 | dependencies | CMake looks for nothing `docs/Dependencies.md` does not name |
 | sbom | the SPDX bill of materials is generated from the configured options |

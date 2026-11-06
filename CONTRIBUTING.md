@@ -119,7 +119,7 @@ commands.
    body says why, what was rejected, and what was found on the way.
    Read `git log` for the register.
 5. **Branches for risky work**, merged back to `main` when verified.
-6. **A release** is `cmake -DTO=x.y.z -P scripts/version.cmake` (the
+6. **A release** is `cmake -DTO=x.y.z -P scripts/release/version.cmake` (the
    version is written once, in `cf_version.h`), the CHANGELOG heading
    dated, and the tag `vX.Y.Z` pushed; the release workflow does the
    rest and refuses a tag that disagrees. Then bump to the next version
@@ -136,7 +136,7 @@ commands.
 * **MSVC's Release build sees what Debug does not.** It folds a
   constant `0.0` and refuses the division by it (C4723); a test that
   wants infinity divides by a `volatile` zero. The Windows verify is
-  Debug, so the release build (`release-local.ps1`) is where this shows:
+  Debug, so the release build (`scripts/release/release_local.ps1`) is where this shows:
   run it before pushing a tag.
 * **Multi-config generators** (Visual Studio) need `-C Debug` for ctest
   and `--config Debug` for builds; the presets name their configuration.
@@ -262,7 +262,7 @@ done since:
 Nothing that builds, tests or verifies uses the network: `verify`,
 `format`, the gates and the build download nothing. The exceptions are
 named and only run when asked for: the scripts in `scripts/buildenv`
-that make an environment, `scripts/release-local.sh` (the alpine image
+that make an environment, `scripts/release/release_local.sh` (the alpine image
 and musl's licence, as the release workflow takes them), which download from the
 projects that publish the thing and check what they download against
 its published checksum or signature, and CI's actions and package

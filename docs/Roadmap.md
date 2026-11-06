@@ -39,7 +39,7 @@ fails an incompatible change within 1.x.
 
 1.1.0 is released: the release workflow published it, with the macOS
 archive, when the tag was pushed - GitHub Actions runs again, so a
-pushed `v*` tag *is* a release; tier 2 and `release-local.ps1` come
+pushed `v*` tag *is* a release; tier 2 and `scripts/release/release_local.ps1` come
 before it. The work from here is "The plan from 1.1.0" below, item 1
 first.
 
@@ -213,7 +213,7 @@ verified commits, and a release is cut where the order says so. The
    expressions), HOCON (the JVM's), plist (under native OS sources),
    KDL, RON, CUE, Dhall, Pkl (young or narrow). After 7c the format set
    is enough.
-7d. **The tree in order** (the owner, 2026-11-06: the files look
+7d. **Done: the tree in order** (the owner, 2026-11-06: the files look
    scattered). `scripts/` keeps its entry points (`verify.cmake`,
    `prestage.cmake`, `format.cmake`) and puts the rest by purpose under
    `check/`, `generate/`, `release/` and `docs/`, one naming style;

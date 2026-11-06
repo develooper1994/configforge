@@ -1728,7 +1728,7 @@ rule as `CF_WITH_REAL`. `CF_STACK_BUDGET` is bytes per function, default 2048, 0
 measure without checking.
 
 **How it is checked.** With `-fstack-usage`, which writes each function's frame to a
-file, and `scripts/stack.cmake`, run after the library links. Not `-Wstack-usage`, which
+file, and `scripts/check/stack.cmake`, run after the library links. Not `-Wstack-usage`, which
 stops at the first function over and says nothing about what to do; the script reports
 all of them, attributes each to the `#if CF_WITH_*` it is compiled under, and lists the
 largest frame each feature brings - so "what fits in a kilobyte" has an answer made of
@@ -1853,7 +1853,7 @@ apart, and a provenance tool that cannot say where it came from is a poor advert
 
 **Decision: option 3.** `CF_VERSION_MAJOR`, `_MINOR`, `_PATCH` in `cf_version.h` are
 the only place the number is written by hand. CMake reads them before `project()`, the
-Conan recipe in `set_version()`. `cmake -DTO=x.y.z -P scripts/version.cmake` rewrites
+Conan recipe in `set_version()`. `cmake -DTO=x.y.z -P scripts/release/version.cmake` rewrites
 the header and the vcpkg manifest and opens a CHANGELOG section; `gate.version` fails
 when any copy disagrees. A tag is `vX.Y.Z` with nothing else in it, and the release
 workflow refuses one that is not the header's version.
@@ -2477,7 +2477,7 @@ SDK or Doctor executable. `CONFIGFORGE_LIB` remains an explicit override.
 
 Cargo cannot include sources or examples outside its package directory.
 Checking in a vendored copy would create another tree to keep current.
-Instead, `scripts/package-rust.cmake` stages the crate, native CMake
+Instead, `scripts/release/package_rust.cmake` stages the crate, native CMake
 sources, licence and examples together before `cargo package`.
 `build.rs` prefers those packaged sources and otherwise builds from the
 checkout. It refuses missing sources instead of linking a system
@@ -2517,7 +2517,7 @@ its homepage. Its workflow builds pull requests but only deploys
 `main`; publishing documentation does not publish a library release.
 
 **Checks.** A strict build checks links and anchors after the generated
-API gate. `scripts/check-docs.py` requires the rendered entry points and
+API gate. `scripts/check/check_docs.py` requires the rendered entry points and
 searchable API symbols; an empty-index negative proof confirms it
 refuses missing search data. Browser checks exercise actual search,
 its result links and narrow-screen navigation under the deployment

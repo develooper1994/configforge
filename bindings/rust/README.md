@@ -10,7 +10,7 @@ bindings/rust/Cargo.toml` uses the repository's C sources. To create a
 standalone crate, run from the repository root:
 
 ```sh
-cmake -DWORK=/tmp/configforge-crate -P scripts/package-rust.cmake
+cmake -DWORK=/tmp/configforge-crate -P scripts/release/package_rust.cmake
 ```
 
 `WORK` must not exist. The script stages the C sources, licence and

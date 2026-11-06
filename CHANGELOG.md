@@ -60,7 +60,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - Conformance, measured (D-62, `docs/Conformance.md`): each reader
   against its standard's own suite - JSONTestSuite for JSON, toml-test
   for TOML 1.0.0 - fetched at a pinned commit by `verify
-  -DEXTRA=conformance` (tier 2) and scored by `scripts/conformance.py`
+  -DEXTRA=conformance` (tier 2) and scored by `scripts/check/conformance.py`
   against a floor that only rises, `tests/conformance/floor.txt`. The
   same step reads the project's own configuration files with the
   library's readers and compares each key with Python's reference

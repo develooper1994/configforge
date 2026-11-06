@@ -3,7 +3,7 @@
 # bounds, pointers, signed overflow, every loop unwound far enough that
 # no execution is left out (an assertion says so, or the proof fails).
 #
-#   cmake -DSRC=<repo> [-DUNWIND=48] -P scripts/proofs.cmake
+#   cmake -DSRC=<repo> [-DUNWIND=48] -P scripts/check/proofs.cmake
 #
 # Each harness says which library sources it proves, on a line
 #   cbmc-sources: src/core/numeric.c src/core/port.c

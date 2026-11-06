@@ -1,5 +1,5 @@
 # Every format string in the library, checked against what cf_fmt
-# actually supports. See scripts/check_formats.py for the reasoning.
+# actually supports. See scripts/check/check_formats.py for the reasoning.
 #
 # In Python rather than CMake because the check needs to tell a comment
 # from code: the comments here discuss the unsupported conversions by
@@ -19,7 +19,8 @@ endif()
 file(GLOB_RECURSE sources "${SRC}/src/*.c" "${SRC}/include/configforge/*.h")
 
 execute_process(
-  COMMAND ${Python3_EXECUTABLE} "${SRC}/scripts/check_formats.py" ${sources}
+  COMMAND ${Python3_EXECUTABLE} "${SRC}/scripts/check/check_formats.py"
+          ${sources}
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE out
   ERROR_VARIABLE out)

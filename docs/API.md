@@ -1,6 +1,6 @@
 # API reference
 
-Generated from the public headers by `scripts/apiref.cmake`, and
+Generated from the public headers by `scripts/generate/apiref.cmake`, and
 checked against them by `gate.apiref`: edit the comment in the
 header, then run the script. Every function is listed with the
 comment written above it, under the section of the header it is
@@ -3498,7 +3498,7 @@ A version that lives in two places is a version that disagrees with
 itself. These three macros are the only place it is written by hand:
 CMake reads them before project(), the Conan recipe reads them, and
 the one copy that cannot read anything - the vcpkg manifest - is
-rewritten with this file by `cmake -DTO=x.y.z -P scripts/version.cmake`
+rewritten with this file by `cmake -DTO=x.y.z -P scripts/release/version.cmake`
 and checked against it by gate.version, as is the CHANGELOG's newest
 section. A release is the tag vX.Y.Z on a commit where these say
 X.Y.Z; the release workflow refuses any other.

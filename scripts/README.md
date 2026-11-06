@@ -1,21 +1,28 @@
 # scripts
 
-Developer scripts: things that build, generate or check.
+Developer scripts: things that build, generate or check. The three run
+day to day sit here; the rest by purpose - `check/` (what a gate or a
+verify step runs), `generate/` (what the build writes from the sources),
+`release/` (versions and packages), `docs/` (the documentation site),
+`buildenv/` (the development environment).
 
 | Script | What it does |
 | ------ | ------------ |
 | `verify.cmake` | everything that has to be true before a commit; `-DTIER=1` (every commit) or `-DTIER=2` (a release) picks the steps (D-50), `-DSOURCE=index` checks only what is staged, `-DTEST_TIMEOUT=s` bounds a test (default 900), `-DEXTRA=kqueue;tidy;clang;shared;valgrind;proofs;wasm;abi;tsan;yaml;compilers;fuzz;coverage` adds builds, `-DJOBS=N` bounds the parallelism of builds and tests, `-DWORK=dir` puts the staged copy in `dir` (under WSL, keep it off `/mnt/c`), and the copy with its build directories is kept from run to run, so a run rebuilds what changed; `-DFRESH=ON` (and every `-DTIER=2`) starts from nothing |
 | `prestage.cmake` | before staging, in minutes: format what changed, regenerate `docs/API.md`, the text check and the analyze build (GCC's `-fanalyzer`, cppcheck) - what used to fail one verify at a time. `-DWORK=dir` for the build, `-DANALYZE=OFF` to skip it |
 | `format.cmake` | formats and lints what changed, then rewrites `docs/API.md` when C did (`-DALL=ON` everything, `-DCHECK=ON` report only) |
-| `stack.cmake` | every library frame against a budget, by feature; the build runs it after linking, and `-DOBJDIR=build/CMakeFiles/configforge.dir -DBUDGET=N` asks "what if" (D-37) |
-| `version.cmake` | prints the version, or changes it everywhere it is written: `-DTO=x.y.z` rewrites `cf_version.h`, the vcpkg manifest, the Rust crate's and the Python package's, and opens a CHANGELOG section (D-40) |
-| `buildid.cmake` | writes the commit a build comes from into `cf_build_id.h`; the build runs it on every build |
-| `apiref.cmake` | regenerates `docs/API.md` from the public headers' comments; `gate.apiref` checks it is current |
-| `amalgamate.py` | generates the single-file distribution |
-| `check_formats.py` | every format string against what `cf_fmt` supports (run by `gate.formats`) |
-| `release-local.sh`, `release-local.ps1` | the release workflow's jobs run on this machine, from a tag: amalgamation and static musl Linux (podman), and Windows (MSVC) - for when Actions cannot run |
-| `package-rust.cmake` | `-DWORK=<new-directory>` stages the C sources and examples inside a standalone crate, runs `cargo package --offline` with verification, then tests the unpacked package; never publishes |
-| `docs_site.py`, `check-docs.py` | MkDocs reads the existing repository Markdown with its original relative paths; the check requires rendered pages and searchable API entries before Pages deployment |
+| `check/stack.cmake` | every library frame against a budget, by feature; the build runs it after linking, and `-DOBJDIR=build/CMakeFiles/configforge.dir -DBUDGET=N` asks "what if" (D-37) |
+| `release/version.cmake` | prints the version, or changes it everywhere it is written: `-DTO=x.y.z` rewrites `cf_version.h`, the vcpkg manifest, the Rust crate's and the Python package's, and opens a CHANGELOG section (D-40) |
+| `check/conformance.py` | each reader against its standard's suite, and the project's own configuration against reference readers (`EXTRA=conformance`, docs/Conformance.md) |
+| `check/proofs.cmake` | the bounded proofs of `tests/proofs` under CBMC (`EXTRA=proofs`, docs/Safety.md) |
+| `check/wasi_run.js` | runs a test built for wasm32-wasi under Node's WASI (`EXTRA=wasm`) |
+| `generate/buildid.cmake` | writes the commit a build comes from into `cf_build_id.h`; the build runs it on every build |
+| `generate/apiref.cmake` | regenerates `docs/API.md` from the public headers' comments; `gate.apiref` checks it is current |
+| `generate/amalgamate.py` | generates the single-file distribution |
+| `check/check_formats.py`, `check/check_text.py` | every format string against what `cf_fmt` supports (`gate.formats`); every tracked text file without a NUL byte or a carriage return (`gate.text`) |
+| `release/release_local.sh`, `release/release_local.ps1` | the release workflow's jobs run on this machine, from a tag: amalgamation and static musl Linux (podman), and Windows (MSVC) - for when Actions cannot run |
+| `release/package_rust.cmake` | `-DWORK=<new-directory>` stages the C sources and examples inside a standalone crate, runs `cargo package --offline` with verification, then tests the unpacked package; never publishes |
+| `docs/docs_site.py`, `check/check_docs.py` | MkDocs reads the existing repository Markdown with its original relative paths; the check requires rendered pages and searchable API entries before Pages deployment |
 
 The usual sequence before a commit:
 
@@ -32,8 +39,8 @@ is the same steps by hand. After `version.cmake -DTO=x.y.z`, the dated
 CHANGELOG heading and the tag pushed:
 
 ```sh
-sh scripts/release-local.sh x.y.z dist             # Linux, with podman
-pwsh scripts/release-local.ps1 -Version x.y.z -Dist dist   # Windows, with MSVC
+sh scripts/release/release_local.sh x.y.z dist             # Linux, with podman
+pwsh scripts/release/release_local.ps1 -Version x.y.z -Dist dist   # Windows, with MSVC
 cd dist && sha256sum * > SHA256SUMS
 awk -v v=x.y.z '$0 ~ "^## " v "( |$)" {on=1; next} on && /^## / {exit} on' ../CHANGELOG.md > ../notes.md
 gh release create vx.y.z * --title "ConfigForge x.y.z" --notes-file ../notes.md
@@ -59,7 +66,7 @@ The wheel carries the shared library; no separate library installation
 is needed. After installing the wheel, run
 `python -I tests/python/test_package.py`.
 
-For Rust, `cmake -DWORK=<new-directory> -P scripts/package-rust.cmake`
+For Rust, `cmake -DWORK=<new-directory> -P scripts/release/package_rust.cmake`
 copies the native sources into the crate only while packaging, rather
 than maintaining another copy. Cargo verifies the package and runs its
 tests offline. `WORK/target/package/` holds the resulting `.crate`.
@@ -76,9 +83,9 @@ optional and is not needed to build, use or maintain the library.
 From an activated Python virtual environment:
 
 ```sh
-python -m pip install -r scripts/docs-requirements.txt
+python -m pip install -r scripts/docs/requirements.txt
 python -m mkdocs build --strict
-python scripts/check-docs.py build/docs-site
+python scripts/check/check_docs.py build/docs-site
 python -m mkdocs serve
 ```
 

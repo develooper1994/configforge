@@ -25,7 +25,7 @@ says, as `docs/Roadmap.md` is.
   2026-10): the v1.0.0 tag was built and published by the release
   workflow, macOS included. Every job is still run locally before a
   push - `scripts/verify.cmake` by tier (D-50) - and
-  `scripts/release-local.sh` and `.ps1` remain the way to release when
+  `scripts/release/release_local.sh` and `.ps1` remain the way to release when
   Actions cannot run.
 * **Commits and files carry their maintainers' names only.**
 * **"Authorization"** in the maintainer's words is the Policy section of

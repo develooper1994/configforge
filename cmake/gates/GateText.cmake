@@ -1,5 +1,5 @@
 # Every tracked text file is text: no NUL byte, no carriage return. See
-# scripts/check_text.py for why this exists.
+# scripts/check/check_text.py for why this exists.
 find_package(
   Python3
   COMPONENTS Interpreter
@@ -10,7 +10,7 @@ if(NOT Python3_Interpreter_FOUND)
 endif()
 
 execute_process(
-  COMMAND ${Python3_EXECUTABLE} "${SRC}/scripts/check_text.py" "${SRC}"
+  COMMAND ${Python3_EXECUTABLE} "${SRC}/scripts/check/check_text.py" "${SRC}"
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE out
   ERROR_VARIABLE out)

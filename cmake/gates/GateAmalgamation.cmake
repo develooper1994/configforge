@@ -29,7 +29,7 @@ if(NOT Python3_Interpreter_FOUND)
 endif()
 
 execute_process(
-  COMMAND ${Python3_EXECUTABLE} "${SRC}/scripts/amalgamate.py" "${SRC}"
+  COMMAND ${Python3_EXECUTABLE} "${SRC}/scripts/generate/amalgamate.py" "${SRC}"
           "${BIN}/amalgamation"
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE out

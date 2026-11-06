@@ -1,8 +1,8 @@
 # Stage a standalone crate without keeping a second C source tree.
-# cmake -DWORK=<new-directory> -P scripts/package-rust.cmake
+# cmake -DWORK=<new-directory> -P scripts/release/package_rust.cmake
 cmake_minimum_required(VERSION 3.10)
 
-get_filename_component(root "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+get_filename_component(root "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 if(NOT DEFINED WORK OR WORK STREQUAL "")
   message(FATAL_ERROR "package-rust: WORK must name a new directory")
 endif()

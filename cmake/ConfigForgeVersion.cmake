@@ -55,7 +55,7 @@ function(configforge_build_id tgt)
       -DOUT=${out}
       "-DGIT=${GIT_EXECUTABLE}"
       -P
-      ${CMAKE_SOURCE_DIR}/scripts/buildid.cmake)
+      ${CMAKE_SOURCE_DIR}/scripts/generate/buildid.cmake)
   # Once now, so the header exists for the first compile and for an IDE.
   execute_process(COMMAND ${cmd})
   add_custom_target(

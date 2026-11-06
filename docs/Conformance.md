@@ -28,12 +28,12 @@ score is the standard's, and the reasons are listed under each format.
 
 ```
 cmake -DEXTRA=conformance -P scripts/verify.cmake
-python3 scripts/conformance.py <conform> <suites> --list
+python3 scripts/check/conformance.py <conform> <suites> --list
 ```
 
 The verify step fetches the suites at the commits below, builds
 `tests/conformance/conform` (one document through one reader: exit 0
-accepted, 1 refused, 2 not tried) and runs `scripts/conformance.py`
+accepted, 1 refused, 2 not tried) and runs `scripts/check/conformance.py`
 against the floor. `--list` names every document that went the wrong
 way. It is a tier 2 step, since it needs a network the first time.
 
@@ -86,7 +86,7 @@ always lends it.
 
 ## The project's own configuration
 
-`scripts/conformance.py --self <conform> <repository>`, the last part of
+`scripts/check/conformance.py --self <conform> <repository>`, the last part of
 the verify step, reads the files that configure this project - the
 build's presets, the Python package, the formatter and linter settings,
 the documentation site, the pre-commit hook - each with its own reader,

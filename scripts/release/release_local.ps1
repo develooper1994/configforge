@@ -2,7 +2,7 @@
 # GitHub Actions cannot run (.github/workflows/release.yml is the
 # reference; keep the two in step).
 #
-#   pwsh scripts/release-local.ps1 -Version 0.4.0 -Dist D:\dist [-Work D:\relwin]
+#   pwsh scripts/release/release_local.ps1 -Version 0.4.0 -Dist D:\dist [-Work D:\relwin]
 #
 # Builds from the commit the tag v<Version> names, with MSVC: the library
 # against the DLL runtime, Doctor again against the static one, so the
@@ -14,7 +14,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
-$repo = Split-Path -Parent $PSScriptRoot
+$repo = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $v = $Version
 
 git -C $repo rev-parse -q --verify "refs/tags/v$v" | Out-Null

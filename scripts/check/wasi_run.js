@@ -2,7 +2,7 @@
 // arguments, its environment, the working directory it was started in,
 // and its exit status as Node's.
 //
-//   node scripts/wasi-run.js program.wasm [args...]
+//   node scripts/check/wasi_run.js program.wasm [args...]
 //
 // The emulator the wasm32-wasi toolchain gives CTest
 // (cmake/toolchains/wasm32-wasi.cmake). Node's own WASI, so the runtime
@@ -18,7 +18,7 @@ async function main() {
     // wasi-libc resolves a relative path against "/", its working
     // directory, so "/" is the test's own; the repository is opened too,
     // at its own path, for the tests that read files from the source tree.
-    const repo = path.resolve(__dirname, "..");
+    const repo = path.resolve(__dirname, "..", "..");
     const wasi = new WASI({
         version: "preview1",
         args: [path.basename(program), ...process.argv.slice(3)],

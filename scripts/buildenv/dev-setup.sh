@@ -47,7 +47,7 @@ pcc EXTRA=compilers
 gcovr EXTRA=coverage
 cargo -DCF_RUST=ON
 qemu-system-x86_64 buildenv/freebsd.sh
-podman scripts/release-local.sh
+podman scripts/release/release_local.sh
 EOF
   if [ "$missing" -eq 0 ]; then
     echo "everything verify can use is here"

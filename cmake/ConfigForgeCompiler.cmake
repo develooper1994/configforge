@@ -186,7 +186,7 @@ function(configforge_apply_warnings tgt)
 endfunction()
 
 # Measure every frame of the library and check it against
-# CF_STACK_BUDGET once the library links, with scripts/stack.cmake.
+# CF_STACK_BUDGET once the library links, with scripts/check/stack.cmake.
 #
 # Measured after the build rather than refused during it (-Wstack-usage)
 # because the answer a builder needs is a table, not the first function
@@ -231,7 +231,8 @@ function(configforge_stack_budget tgt)
       -DOBJDIR=${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${tgt}.dir
       -DBUDGET=${CF_STACK_BUDGET}
       -DOUT=${CMAKE_BINARY_DIR}/configforge-stack.txt
-      -DLIB=$<TARGET_FILE:${tgt}> -P ${CMAKE_SOURCE_DIR}/scripts/stack.cmake
+      -DLIB=$<TARGET_FILE:${tgt}> -P
+      ${CMAKE_SOURCE_DIR}/scripts/check/stack.cmake
     VERBATIM)
 endfunction()
 

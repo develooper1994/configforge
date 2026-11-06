@@ -59,7 +59,7 @@ function(configforge_generate_sbom)
     }")
   endif()
 
-  configure_file("${CMAKE_SOURCE_DIR}/cmake/configforge.spdx.json.in"
+  configure_file("${CMAKE_SOURCE_DIR}/cmake/templates/configforge.spdx.json.in"
                  "${CMAKE_BINARY_DIR}/configforge.spdx.json" @ONLY)
   install(FILES "${CMAKE_BINARY_DIR}/configforge.spdx.json"
           DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/configforge)

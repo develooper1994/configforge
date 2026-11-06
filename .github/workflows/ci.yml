@@ -75,7 +75,7 @@ jobs:
           "$py" -m build --no-isolation --outdir "$RUNNER_TEMP/python-dist"
           "$py" -m pip install --no-index --no-deps "$RUNNER_TEMP"/python-dist/*.whl
           "$py" -I tests/python/test_package.py
-          cmake "-DWORK=$RUNNER_TEMP/rust-package" -P scripts/package-rust.cmake
+          cmake "-DWORK=$RUNNER_TEMP/rust-package" -P scripts/release/package_rust.cmake
 
   # The kqueue change handle, on a machine that is not a BSD: libkqueue
   # emulates kqueue on Linux, so the macOS and BSD path is compiled and

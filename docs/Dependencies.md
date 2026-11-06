@@ -65,7 +65,7 @@ system, no generated header, no options.
 | Valgrind (`valgrind`) | GPL-2.0-or-later | `verify -DEXTRA=valgrind` (tier 2): every unit test under memcheck; not linked |
 | CBMC (`cbmc`) | BSD-4-Clause | the bounded proofs (`docs/Safety.md`); not linked |
 | libabigail (`abidiff`) | Apache-2.0 WITH LLVM-exception | `verify -DEXTRA=abi` (tier 2): the shared library against the last release's (D-56); not linked |
-| wasi-libc, lld (`wasm-ld`), Node.js (`node`) | Apache-2.0 WITH LLVM-exception, MIT | `verify -DEXTRA=wasm` (tier 2): the library and its unit tests for wasm32-wasi, run under Node's WASI (`scripts/wasi-run.js`); wasi-libc is linked into what is built for wasm32 |
+| wasi-libc, lld (`wasm-ld`), Node.js (`node`) | Apache-2.0 WITH LLVM-exception, MIT | `verify -DEXTRA=wasm` (tier 2): the library and its unit tests for wasm32-wasi, run under Node's WASI (`scripts/check/wasi_run.js`); wasi-libc is linked into what is built for wasm32 |
 | GNU Bash (`bash`) | GPL-3.0-or-later | `doctor.action`: the GitHub Action's and the pre-commit hook's scripts (`actions/doctor`), on a Unix host; not linked, and not needed to build |
 | Ninja (`ninja`), `ccache` (optional) | Apache-2.0, GPL-3.0-or-later | `scripts/verify.cmake` uses them where installed (D-50): faster, not required; neither is linked |
 | a C89 compiler: GCC, Clang or MSVC | GPL-3.0-or-later with the GCC Runtime Library Exception; Apache-2.0 WITH LLVM-exception; proprietary | compiling. None of their code ends up in a program except each one's own runtime support, under its exception |
@@ -74,10 +74,10 @@ system, no generated header, no options.
 | musl, through `musl-gcc` (musl-tools) | MIT | `EXTRA=compilers`: the suite against a second C library |
 | tcc (the Tiny C Compiler) | LGPL-2.1-or-later | `EXTRA=compilers`: the suite under a compiler that shares nothing with GCC |
 | pcc (the Portable C Compiler) | BSD-2-Clause | `EXTRA=compilers`: the same, from the other end of C's history |
-| git (`find_package` of `Git`) | GPL-2.0-only | `scripts/verify.cmake -DSOURCE=index` and `scripts/format.cmake`, which ask it what is staged or changed; `EXTRA=conformance`, which fetches the suites below at pinned commits; the build, which asks it for the commit `cf_build_id()` reports (`scripts/buildid.cmake`) - without it the id is empty |
-| Python 3 (`python3`, or `python` on Windows) | PSF-2.0 | `scripts/prestage.cmake` runs `scripts/check_text.py`; `scripts/amalgamate.py`, `scripts/check_formats.py`, `scripts/conformance.py`; `bindings/python` (the `configforge` package, ctypes, standard library only, and `configforge_doctor`) and their tests, `python.binding` (shared builds) and `doctor.python` |
+| git (`find_package` of `Git`) | GPL-2.0-only | `scripts/verify.cmake -DSOURCE=index` and `scripts/format.cmake`, which ask it what is staged or changed; `EXTRA=conformance`, which fetches the suites below at pinned commits; the build, which asks it for the commit `cf_build_id()` reports (`scripts/generate/buildid.cmake`) - without it the id is empty |
+| Python 3 (`python3`, or `python` on Windows) | PSF-2.0 | `scripts/prestage.cmake` runs `scripts/check/check_text.py`; `scripts/generate/amalgamate.py`, `scripts/check/check_formats.py`, `scripts/check/conformance.py`; `bindings/python` (the `configforge` package, ctypes, standard library only, and `configforge_doctor`) and their tests, `python.binding` (shared builds) and `doctor.python` |
 | scikit-build-core, build | MIT | Python wheel/source packaging only: the root `pyproject.toml` uses scikit-build-core to build the shared library with CMake; `python -m build` is the optional frontend. Neither is a runtime dependency or needed for a normal CMake build |
-| MkDocs, Pygments | BSD-2-Clause | Documentation site only, pinned in `scripts/docs-requirements.txt`; the built-in theme and search, with code highlighted at build time. No dependency of the library or language bindings |
+| MkDocs, Pygments | BSD-2-Clause | Documentation site only, pinned in `scripts/docs/requirements.txt`; the built-in theme and search, with code highlighted at build time. No dependency of the library or language bindings |
 | Conan | MIT | the Conan recipe, `conanfile.py`, and its CI job |
 | vcpkg | MIT | the overlay port in `packaging/vcpkg`, and its CI job |
 | pkg-config | GPL-2.0-or-later | finding libkqueue; the install gate's pkg-config consumer |

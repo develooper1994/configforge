@@ -1,7 +1,7 @@
 # The version: print it, or change it everywhere at once.
 #
-#   cmake -P scripts/version.cmake                 prints x.y.z
-#   cmake -DTO=x.y.z -P scripts/version.cmake      changes it
+#   cmake -P scripts/release/version.cmake                 prints x.y.z
+#   cmake -DTO=x.y.z -P scripts/release/version.cmake      changes it
 #
 # cf_version.h is the one place the version is written; CMake and the
 # Conan recipe read it. Changing it here also rewrites the copy that
@@ -14,12 +14,13 @@
 
 cmake_minimum_required(VERSION 3.10)
 
-get_filename_component(root "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+get_filename_component(root "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 include("${root}/cmake/ConfigForgeVersion.cmake")
 configforge_read_version(current)
 
 if(NOT DEFINED TO)
-  # stdout, so a shell can take it: built=$(cmake -P scripts/version.cmake)
+  # stdout, so a shell can take it:
+  #   built=$(cmake -P scripts/release/version.cmake)
   execute_process(COMMAND ${CMAKE_COMMAND} -E echo "${current}")
   return()
 endif()

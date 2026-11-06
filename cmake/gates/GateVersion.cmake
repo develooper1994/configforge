@@ -5,7 +5,7 @@
 # CHANGELOG's newest section. A release that bumps
 # one and forgets another ships a package whose version and reported
 # version disagree, which is discovered by whoever files the bug rather
-# than by whoever made it. `cmake -DTO=x.y.z -P scripts/version.cmake`
+# than by whoever made it. `cmake -DTO=x.y.z -P scripts/release/version.cmake`
 # changes them all.
 cmake_minimum_required(VERSION 3.10)
 

@@ -13,7 +13,7 @@ include = ["src/**", "build.rs", "Cargo.toml", "README.md", "LICENSE", "native/*
 
 # No dependencies, on purpose: a build that downloads nothing, as every
 # other build of this project is (CONTRIBUTING.md, "Safety"). The library is
-# built by build.rs with CMake. scripts/package-rust.cmake stages the
+# built by build.rs with CMake. scripts/release/package_rust.cmake stages the
 # native sources and examples inside the crate before cargo packages it.
 [dependencies]
 

@@ -79,7 +79,7 @@ conan create . --build=missing -tf packaging/conan/test_package
 vcpkg install configforge --overlay-ports=packaging/vcpkg
 ```
 
-**No build system at all**: `scripts/amalgamate.py` writes
+**No build system at all**: `scripts/generate/amalgamate.py` writes
 `configforge/configforge.h` and `configforge.c`. Compile the one file
 with the rest of your program.
 
@@ -1029,7 +1029,7 @@ live.poll()?;                          // in the loop that drives reloads
 Seven of the examples are in `examples/rust`, the C programs saying the
 same lines; `-DCF_RUST=ON` has the suite run them and `cargo test`.
 
-`cmake -DWORK=<new-directory> -P scripts/package-rust.cmake` makes a
+`cmake -DWORK=<new-directory> -P scripts/release/package_rust.cmake` makes a
 standalone crate containing the native C sources and those examples,
 then verifies and tests the unpacked package offline. The `.crate` is
 under `WORK/target/package/`; nothing is published. Native copies are

@@ -7,6 +7,16 @@
 
 cmake_minimum_required(VERSION 3.10)
 
+# Not in the source tree: a build there writes CMakeFiles/ and a cache
+# among the sources, which is how one was found at the root. Refused
+# before project(), so that nothing is written.
+get_filename_component(cf_src "${CMAKE_SOURCE_DIR}" REALPATH)
+get_filename_component(cf_bin "${CMAKE_BINARY_DIR}" REALPATH)
+if(cf_src STREQUAL cf_bin)
+  message(FATAL_ERROR "ConfigForge is built outside its source tree: "
+                      "cmake -S . -B build (or cmake --preset default)")
+endif()
+
 # The version is written once, in include/configforge/cf_version.h.
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ConfigForgeVersion.cmake)
 configforge_read_version(CF_VERSION)

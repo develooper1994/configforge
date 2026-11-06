@@ -1,7 +1,7 @@
 # The API reference, generated from the public headers.
 #
-#   cmake -P scripts/apiref.cmake                 write docs/API.md
-#   cmake -DOUT=<file> -P scripts/apiref.cmake    write it somewhere else
+#   cmake -P scripts/generate/apiref.cmake               writes docs/API.md
+#   cmake -DOUT=<file> -P scripts/generate/apiref.cmake  or elsewhere
 #
 # The header comments are the API documentation (CONTRIBUTING.md says so), and
 # a reference kept by hand beside them is a second copy that drifts. So
@@ -16,7 +16,7 @@
 
 cmake_minimum_required(VERSION 3.10)
 
-get_filename_component(REPO "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+get_filename_component(REPO "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 if(NOT DEFINED OUT)
   set(OUT "${REPO}/docs/API.md")
 endif()
@@ -134,7 +134,7 @@ string(
   APPEND
   doc
   "# API reference\n\n"
-  "Generated from the public headers by `scripts/apiref.cmake`, and\n"
+  "Generated from the public headers by `scripts/generate/apiref.cmake`, and\n"
   "checked against them by `gate.apiref`: edit the comment in the\n"
   "header, then run the script. Every function is listed with the\n"
   "comment written above it, under the section of the header it is\n"

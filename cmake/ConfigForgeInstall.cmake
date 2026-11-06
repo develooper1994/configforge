@@ -67,7 +67,7 @@ write_basic_package_version_file(
   COMPATIBILITY SameMajorVersion)
 
 configure_package_config_file(
-  "${CMAKE_SOURCE_DIR}/cmake/ConfigForgeConfig.cmake.in"
+  "${CMAKE_SOURCE_DIR}/cmake/templates/ConfigForgeConfig.cmake.in"
   "${CMAKE_CURRENT_BINARY_DIR}/ConfigForgeConfig.cmake"
   INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ConfigForge)
 
@@ -115,7 +115,7 @@ if(CF_WITH_SQLITE)
   string(APPEND CF_PC_LIBS_PRIVATE " -lsqlite3")
 endif()
 string(STRIP "${CF_PC_LIBS_PRIVATE}" CF_PC_LIBS_PRIVATE)
-configure_file("${CMAKE_SOURCE_DIR}/cmake/configforge.pc.in"
+configure_file("${CMAKE_SOURCE_DIR}/cmake/templates/configforge.pc.in"
                "${CMAKE_CURRENT_BINARY_DIR}/configforge.pc" @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/configforge.pc"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)

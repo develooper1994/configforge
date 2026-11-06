@@ -3,18 +3,18 @@
 # machine - for when GitHub Actions cannot run (.github/workflows/release.yml
 # is the reference; keep the two in step).
 #
-#   sh scripts/release-local.sh <version> <dist-dir>
+#   sh scripts/release/release_local.sh <version> <dist-dir>
 #
 # Builds from the commit the tag v<version> names, never the working tree.
 # Needs git, cmake, python3 and podman (scripts/buildenv/setup.sh has all
 # four). Downloads, like the workflow: the alpine:3.20 image and musl's
 # licence text from musl's own repository. The Windows archive is
-# scripts/release-local.ps1; publish with scripts/README.md, "Releasing
+# scripts/release/release_local.ps1; publish with scripts/README.md, "Releasing
 # without CI".
 set -eu
 v=${1:?version, e.g. 0.4.0}
 dist=${2:?a directory for the artifacts}
-repo=$(cd "$(dirname "$0")/.." && pwd)
+repo=$(cd "$(dirname "$0")/../.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
@@ -26,14 +26,14 @@ git -C "$repo" archive --format=tar --prefix=src/ "v$v" | tar -xf - -C "$work"
 cd "$work/src"
 
 # check: the tag, the build and the CHANGELOG agree.
-built=$(cmake -P scripts/version.cmake)
+built=$(cmake -P scripts/release/version.cmake)
 [ "$built" = "$v" ] || { echo "tag $v, cf_version.h says $built"; exit 1; }
 head=$(grep -E "^## $v( |\$)" CHANGELOG.md || true)
 [ -n "$head" ] || { echo "CHANGELOG.md has no section for $v"; exit 1; }
 case "$head" in *unreleased*) echo "CHANGELOG.md still says: $head"; exit 1 ;; esac
 
 # amalgamation; GitHub supplies source archives for the tag.
-python3 scripts/amalgamate.py . "$work/amalgamation/configforge-$v"
+python3 scripts/generate/amalgamate.py . "$work/amalgamation/configforge-$v"
 cp LICENSE "$work/amalgamation/configforge-$v/"
 tar -C "$work/amalgamation" -czf "$dist/configforge-$v-amalgamation.tar.gz" "configforge-$v"
 

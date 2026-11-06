@@ -112,7 +112,7 @@ if(c_files)
   # lines: written after the formatting, never before it.
   if(NOT CHECK)
     execute_process(
-      COMMAND "${CMAKE_COMMAND}" -P "${REPO}/scripts/apiref.cmake"
+      COMMAND "${CMAKE_COMMAND}" -P "${REPO}/scripts/generate/apiref.cmake"
       WORKING_DIRECTORY "${REPO}"
       RESULT_VARIABLE rc
       OUTPUT_VARIABLE out

@@ -16,7 +16,7 @@ plugins:
   - search
 
 hooks:
-  - scripts/docs_site.py
+  - scripts/docs/docs_site.py
 
 extra_css:
   - docs/stylesheets/site.css

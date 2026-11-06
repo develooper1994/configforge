@@ -38,10 +38,11 @@ function(stage name)
 endfunction()
 
 stage("format" ${CMAKE_COMMAND} -P "${REPO}/scripts/format.cmake")
-stage("API reference" ${CMAKE_COMMAND} -P "${REPO}/scripts/apiref.cmake")
+stage("API reference" ${CMAKE_COMMAND} -P
+      "${REPO}/scripts/generate/apiref.cmake")
 find_program(PYTHON_EXE NAMES python3 python)
 if(PYTHON_EXE)
-  stage("text" ${PYTHON_EXE} "${REPO}/scripts/check_text.py" "${REPO}")
+  stage("text" ${PYTHON_EXE} "${REPO}/scripts/check/check_text.py" "${REPO}")
 endif()
 
 if(ANALYZE)

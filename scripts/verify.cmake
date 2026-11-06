@@ -563,7 +563,7 @@ foreach(x ${EXTRA})
       ${CMAKE_COMMAND}
       -DSRC=${ROOT}
       -P
-      ${ROOT}/scripts/proofs.cmake)
+      ${ROOT}/scripts/check/proofs.cmake)
   elseif(x STREQUAL "valgrind")
     # Every unit test under Valgrind's memcheck: what AddressSanitizer
     # cannot see - a read of memory that was allocated and never
@@ -890,7 +890,7 @@ foreach(x ${EXTRA})
     step(
       "conformance"
       "${PYTHON3_EXE}"
-      scripts/conformance.py
+      scripts/check/conformance.py
       "${conform}"
       "${SUITES}"
       --floor
@@ -898,7 +898,7 @@ foreach(x ${EXTRA})
     step(
       "conformance self"
       "${PYTHON3_EXE}"
-      scripts/conformance.py
+      scripts/check/conformance.py
       --self
       "${conform}"
       .)
@@ -928,7 +928,7 @@ foreach(x ${EXTRA})
       step(
         "conformance libfyaml"
         "${PYTHON3_EXE}"
-        scripts/conformance.py
+        scripts/check/conformance.py
         "${ROOT}/build-conformance-fy/tests/conformance/conform"
         "${SUITES}"
         --floor

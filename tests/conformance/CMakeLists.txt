@@ -1,4 +1,4 @@
-# The program the conformance run (scripts/conformance.py, verify's
+# The program the conformance run (scripts/check/conformance.py, verify's
 # EXTRA=conformance) puts each suite document through. Built with the
 # tests, so it compiles on every preset; it is run only by that step,
 # which needs the suites and a network to fetch them.

@@ -16,7 +16,7 @@ int cf_version_number(void) {
 }
 
 /* The CMake build writes cf_build_id.h on every build
-   (scripts/buildid.cmake) and says so with CF_HAVE_BUILD_ID_H; any
+   (scripts/generate/buildid.cmake) and says so with CF_HAVE_BUILD_ID_H; any
    other build either defines CF_BUILD_ID itself or has none. */
 #if defined(CF_HAVE_BUILD_ID_H) && !defined(CF_BUILD_ID)
 #include "cf_build_id.h"

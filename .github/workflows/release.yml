@@ -35,7 +35,7 @@ jobs:
       - name: The tag, the build and the CHANGELOG agree
         run: |
           v="${GITHUB_REF_NAME#v}"
-          built=$(cmake -P scripts/version.cmake)
+          built=$(cmake -P scripts/release/version.cmake)
           [ "$built" = "$v" ] || { echo "tag $v, cf_version.h says $built"; exit 1; }
           head=$(grep -E "^## $v( |$)" CHANGELOG.md || true)
           [ -n "$head" ] || { echo "CHANGELOG.md has no section for $v"; exit 1; }
@@ -50,7 +50,7 @@ jobs:
         run: |
           v="${GITHUB_REF_NAME#v}"
           mkdir -p dist
-          python3 scripts/amalgamate.py . "amalgamation/configforge-$v"
+          python3 scripts/generate/amalgamate.py . "amalgamation/configforge-$v"
           cp LICENSE "amalgamation/configforge-$v/"
           tar -C amalgamation -czf "dist/configforge-$v-amalgamation.tar.gz" "configforge-$v"
       - uses: actions/upload-artifact@v4

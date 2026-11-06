@@ -1,6 +1,6 @@
 /*
  * conform.c - one document through one of the library's readers, for
- * the conformance run (scripts/conformance.py): exit 0 when the reader
+ * the conformance run (scripts/check/conformance.py): exit 0 when the reader
  * accepts it, 1 when it refuses it, 2 when it could not be tried.
  *
  *     conform <format> <file> [--keys]
@@ -91,7 +91,7 @@ static cf_bool conform_open(conform_sink* c, const char* name, size_t n, int is_
 
 /* Bytes with the line's own separators escaped - backslash, tab, line
    feed, carriage return and NUL - so that a key or a value holding them
-   stays one line; scripts/conformance.py undoes it. */
+   stays one line; scripts/check/conformance.py undoes it. */
 static void conform_escaped(const char* p, size_t n) {
     size_t i;
     for (i = 0; i < n; ++i) {

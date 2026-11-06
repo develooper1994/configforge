@@ -7,7 +7,7 @@ from mkdocs.structure.files import File, Files
 
 
 def on_files(files: Files, config: MkDocsConfig) -> Files:
-    root = str(Path(__file__).resolve().parent.parent)
+    root = str(Path(__file__).resolve().parents[2])
     result = Files([])
     for source in files:
         if source.src_dir == config.docs_dir:

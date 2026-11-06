@@ -7,7 +7,7 @@ import sys
 
 def main() -> None:
     if len(sys.argv) != 2:
-        raise SystemExit("usage: check-docs.py <site-directory>")
+        raise SystemExit("usage: check_docs.py <site-directory>")
     site = Path(sys.argv[1])
     for name in (
         "index.html",

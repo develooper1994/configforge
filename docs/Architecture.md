@@ -129,7 +129,7 @@ implementation of `cf_entry_sink`; a test's implementation is an array.
    naming the option to turn on rather than "unknown format".
 3. Add the option to `cmake/ConfigForgeOptions.cmake` and to
    `cf_version.h`'s feature list.
-4. Add the source file to `scripts/amalgamate.py`.
+4. Add the source file to `scripts/generate/amalgamate.py`.
 5. Tests: a round trip through the key space digest, and one refusal per
    grammar mistake the format can make. `tests/unit/test_toml.c` is the
    model: it prints what was written and both configurations when the
@@ -292,7 +292,7 @@ exists because something in the design is otherwise only a sentence.
 | `gate.format.c`, `gate.format.cmake`, `gate.cmake.lint` | one style, checked not agreed |
 | conformance | `-std=c89 -pedantic -Werror` plus the D-32 warning set |
 | portability | the whole suite under `CF_FORCE_PORTABLE`, byte-identical |
-| stack budget | every library frame measured (`-fstack-usage`) against `CF_STACK_BUDGET` after the link, by `scripts/stack.cmake`; the builder sets the number (D-37), the build proves it |
+| stack budget | every library frame measured (`-fstack-usage`) against `CF_STACK_BUDGET` after the link, by `scripts/check/stack.cmake`; the builder sets the number (D-37), the build proves it |
 
 Every gate has been proved by breaking it on purpose at least once. A
 gate that has never failed is a gate nobody knows works.

@@ -7,7 +7,7 @@
 # clang, lld, wasi-libc and libclang-rt-18-dev-wasm32. Single-threaded
 # (WASI preview 1 has no threads) and without a change handle (it has no
 # file notification either): cf_changed still works, by polling. Tests
-# run under Node's WASI, through scripts/wasi-run.js.
+# run under Node's WASI, through scripts/check/wasi_run.js.
 set(CMAKE_SYSTEM_NAME WASI)
 set(CMAKE_SYSTEM_PROCESSOR wasm32)
 
@@ -54,5 +54,5 @@ set(CF_BUILD_EXAMPLES
 find_program(NODE_EXE node)
 if(NODE_EXE)
   set(CMAKE_CROSSCOMPILING_EMULATOR
-      "${NODE_EXE};${CMAKE_CURRENT_LIST_DIR}/../../scripts/wasi-run.js")
+      "${NODE_EXE};${CMAKE_CURRENT_LIST_DIR}/../../scripts/check/wasi_run.js")
 endif()

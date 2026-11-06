@@ -38,7 +38,7 @@ fn main() {
     };
     assert!(
         root.join("CMakeLists.txt").is_file(),
-        "native sources are missing; prepare the crate with scripts/package-rust.cmake"
+        "native sources are missing; prepare the crate with scripts/release/package_rust.cmake"
     );
     let out = PathBuf::from(env::var("OUT_DIR").unwrap());
     let build = out.join("cf-build");
