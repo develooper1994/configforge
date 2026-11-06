@@ -55,6 +55,11 @@ way. It is a tier 2 step, since it needs a network the first time.
 | YAML, through libfyaml 0.9.6 | 122 / 122 | 94 / 94 | 110 / 110, against the suite's `in.json` |
 | YAML, through libyaml 0.2.5 | 100 / 133 | 87 / 94 | 90 / 93, against the suite's `in.json` |
 
+INI has no standard and no suite. Its reader is compared with Python's
+`configparser` on 36 small documents, 36 of 36 read the same, and 12
+more differ on purpose, each in a table in `scripts/check/conformance.py`
+with its reason (docs/Formats.md names them).
+
 YAML's valid count leaves out the documents the configuration model
 refuses by name - a top level that is not a mapping, a second document,
 a key that is not a scalar, an empty key, a tag of the writing
