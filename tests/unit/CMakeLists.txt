@@ -55,6 +55,7 @@ set(CF_UNIT_TESTS
     test_lex_edges
     test_report_edges
     test_live
+    test_predict
     test_log
     test_edit
     test_lifetime

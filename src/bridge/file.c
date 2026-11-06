@@ -45,6 +45,7 @@ cf_bool cf_source_read_blob(const cf_source* s, cf_keyspace* ks, const cf_codec*
                             const cf_blob* blob, const char* path, cf_error* err) {
     cf_flatten fl;
 
+    cfi_ks_expect_lines(ks, blob->p, blob->n); /* sizes the key space once; a guess */
     if (!cf_flatten_init(&fl, ks, s->rank)) {
         return cf_error_set(err, CF_E_MEMORY, NULL, path, "cannot start reading '%s'",
                             path);

@@ -123,10 +123,10 @@ cf_arena* cf_ks_arena(const cf_keyspace* ks) {
     return (ks != NULL) ? ks->arena : NULL;
 }
 
-/* Doubling. The abandoned block stays in the arena, which costs at
-   most the same again and buys a single release for the whole space. */
-static cf_bool cf_ks_grow(cf_keyspace* ks) {
-    size_t       ncap = ks->ccand * 2;
+/* The array moved to room for `ncap`. The abandoned block stays in the
+   arena, which costs at most the same again and buys a single release
+   for the whole space. */
+static cf_bool cf_ks_resize(cf_keyspace* ks, size_t ncap) {
     cf_cand_rec* nc =
         (cf_cand_rec*)cf_arena_alloc(ks->arena, ncap * sizeof(cf_cand_rec));
     if (nc == NULL) {
@@ -136,6 +136,65 @@ static cf_bool cf_ks_grow(cf_keyspace* ks) {
     ks->cands = nc;
     ks->ccand = ncap;
     return CF_TRUE;
+}
+
+/* Doubling. */
+static cf_bool cf_ks_grow(cf_keyspace* ks) {
+    return cf_ks_resize(ks, ks->ccand * 2);
+}
+
+/* The most a guess may ask for at once: 2^20 candidates, a few tens of
+   megabytes. Beyond it, doubling. */
+#define CF_KS_EXPECT_MAX ((size_t)1 << 20)
+
+void cfi_ks_expect(cf_keyspace* ks, size_t more) {
+    size_t want;
+
+    if (ks == NULL || ks->cands == NULL || ks->resolved || ks->arena == NULL ||
+        cf_arena_is_fixed(ks->arena) || more == 0) {
+        return;
+    }
+    if (more > CF_KS_EXPECT_MAX) {
+        more = CF_KS_EXPECT_MAX;
+    }
+    want = ks->ncand + more;
+    if (want > CF_KS_EXPECT_MAX) {
+        want = CF_KS_EXPECT_MAX;
+    }
+    if (want <= ks->ccand) {
+        return;
+    }
+    (void)cf_ks_resize(ks, want); /* refused: the doubling still works */
+}
+
+/* About a key a line: the lines that start like a key - not blank, not
+   a comment (# ; ! /), not a section header or a brace or bracket on
+   its own - are the guess. A count of bytes divided by a typical line
+   (32) was tried first and was off by a factor of 5 either way for short
+   or long values; every line, comments too, reserved 350 KB for a
+   200 KB file holding one key. Minified text is one line and gets the
+   doubling it always had. */
+void cfi_ks_expect_lines(cf_keyspace* ks, const char* text, size_t n) {
+    size_t  keys = 0;
+    size_t  i;
+    cf_bool start = CF_TRUE;
+
+    if (ks == NULL || text == NULL || n == 0) {
+        return;
+    }
+    for (i = 0; i < n; ++i) {
+        char c = text[i];
+        if (c == '\n') {
+            start = CF_TRUE;
+        } else if (start && c != ' ' && c != '\t' && c != '\r') {
+            start = CF_FALSE;
+            if (c != '#' && c != ';' && c != '!' && c != '/' && c != '[' && c != ']' &&
+                c != '{' && c != '}') {
+                ++keys;
+            }
+        }
+    }
+    cfi_ks_expect(ks, keys);
 }
 
 static cf_bool cf_ks_push(cf_keyspace* ks, const char* key, size_t keylen, int source,

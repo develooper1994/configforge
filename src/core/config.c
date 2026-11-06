@@ -55,6 +55,10 @@ struct cf_builder {
        stamps carried over. NULL for an ordinary build. */
     const struct cf_config* inherit;
 
+    /* How many candidates to expect, when a reload knows (the generation
+       before held this many); 0 for no guess. Only a guess (D-76). */
+    size_t expect;
+
     /* The sources the program allows to be written, by name, checked
        against what each can do when the configuration is created. */
     const char* writable[CF_BUILDER_SOURCES];
@@ -943,6 +947,12 @@ void cf_builder_log(cf_builder* b, cf_log_fn fn, void* user, cf_log_level min) {
     }
 }
 
+void cfi_builder_expect_like(cf_builder* b, const cf_config* previous) {
+    if (b != NULL && previous != NULL) {
+        b->expect = cf_ks_candidate_count(&previous->keys);
+    }
+}
+
 static const char* config_name_of_rank(const void* ctx, int rank);
 
 /* One event to the configuration's log, if it has one and the level
@@ -1203,6 +1213,7 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
         cf_error_set(&e, CF_E_MEMORY, NULL, NULL, "no room for the key space");
         return create_failed(b, err, &e);
     }
+    cfi_ks_expect(&c->keys, b->expect); /* a reload's guess; zero for none */
 
     /* A derived configuration's inheritance: every candidate the
        original held, at the rank it had. Loaded before the sources, not

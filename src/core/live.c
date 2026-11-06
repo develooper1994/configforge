@@ -249,6 +249,7 @@ static cf_config* live_build(cf_live* l, const cf_config* running, char** list,
                      "the build function made no builder");
         return NULL;
     }
+    cfi_builder_expect_like(b, running);
     next = cf_builder_create(b, err);
     if (next == NULL) {
         return NULL;
