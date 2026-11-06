@@ -205,7 +205,8 @@ source, a later assignment beats an earlier one.
 | ---- | ------ |
 | `cf_builder_cli` | `--key=value`, `--key value`, `--no-key`, aliases, `@file` |
 | `cf_builder_env` | `PREFIX_A__B`, and `PREFIX_A_B` too once a definition makes it unambiguous |
-| `cf_builder_file` | a file, its format by extension; `CF_OPTIONAL` if it may be absent |
+| `cf_builder_file` | a file, its format named, by extension or by content (D-73); `CF_OPTIONAL` if it may be absent |
+| `cf_builder_document` | a document the program holds in memory (fetched, embedded), its format named, by name or by content |
 | `cf_builder_dir` | a drop-in directory: every file in byte order, at one rank |
 | `cf_builder_dotenv` | a `.env` file, read as the environment is |
 | `cf_builder_secrets` | a directory of secrets, one file a key, as containers mount them |
@@ -467,8 +468,14 @@ is worse than a program that refuses to start.
 | XML | `CF_WITH_XML`, off by default | through expat, read only; typed by the contract, mapped as D-23 declares |
 | Java `.properties` | `CF_WITH_PROPERTIES` | read only; as java.util.Properties reads it, UTF-8; typed by the contract |
 
-The format is taken from the extension, never guessed from the content.
-A file in a format the build left out is an error that names the option
+The format is the one you name, else the extension's, else - for a name
+that gives none - the one the content reads as, decided by reading it and
+never by a guess at its first bytes (D-73; `docs/Formats.md` has the
+rules). A `.json` file that holds YAML is refused, and the error says the
+content looks like yaml; a file with no extension is read as whichever
+format reads it, or refused when none does or two loose ones read it
+differently. `cf_source_file_format` says which was taken and how. A file
+in a format the build left out is an error that names the option
 to turn on - never a file quietly read as nothing. INI, JSON, TOML and
 YAML can also be written (section 10).
 

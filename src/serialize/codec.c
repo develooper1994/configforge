@@ -82,10 +82,11 @@ const cf_codec* cf_codec_by_name(const char* name) {
 /* ------------------------------------------------------------------ *
  * Extensions
  *
- * Detection is by extension, with an explicit override available per
- * source. Never by sniffing the content: sniffing is the kind of
- * implicit behaviour this library rejects, and it fails in the most
- * confusing possible way the first time a file is renamed.
+ * The extension is the first thing that names a format, with an explicit
+ * override available per source. The content decides only when the name
+ * gives none, and then by reading, never by a guess at a few bytes (D-73,
+ * detect.c): a guess fails in the most confusing possible way the first
+ * time a file is renamed.
  * ------------------------------------------------------------------ */
 
 static const char* path_ext(const char* path) {

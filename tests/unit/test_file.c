@@ -156,13 +156,16 @@ static void test_unknown_extension(void) {
     cf_builder* b   = cf_build(NULL);
     cf_config*  cfg;
 
-    check(spill("cf_t4.zzz", "port = 1\n"), "wrote an odd fixture");
+    /* The name gives no format, so the content decides (D-73); text that
+       no format reads is still an error. */
+    check(spill("cf_t4.zzz", "no format reads this\n"), "wrote an odd fixture");
     cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_t4.zzz", NULL, 0);
     cfg = cf_builder_create(b, &err);
-    check(cfg == NULL, "an unrecognised extension is an error");
+    check(cfg == NULL, "an unrecognised extension and unreadable content is an error");
     has(err.message, "set one explicitly", "and says what to do about it");
 
     /* Naming the format explicitly is the way out. */
+    check(spill("cf_t4.zzz", "port = 1\n"), "wrote a file in INI");
     b = cf_build(NULL);
     cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_t4.zzz", "ini", 0);
     cf_builder_int(b, "port", 0, 0, 0, 0);

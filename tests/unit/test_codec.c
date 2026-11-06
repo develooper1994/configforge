@@ -60,8 +60,10 @@ static void test_without_it(void) {
     cf_builder* b   = cf_build(NULL);
     cf_config*  c;
 
-    /* The same file by extension: the library does not know ".kv", and
-       says so rather than reading it as something else. */
+    /* The same file by extension: the library does not know ".kv", so the
+       content decides (D-73); a file no format reads is refused, and the
+       error says so rather than reading it as something else. */
+    check(spill("cf_codec.kv", "no format reads this\n"), "wrote text no format reads");
     cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_codec.kv", NULL, 0);
     c = cf_builder_create(b, &err);
     check(c == NULL, "without the codec the format is unknown");

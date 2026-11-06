@@ -114,12 +114,26 @@ CF_API cf_bool cf_builder_env(cf_builder* b, const char* name, int rank,
 CF_API cf_bool cf_builder_cli(cf_builder* b, const char* name, int rank, int argc,
                               char* const* argv);
 
-/* The format is taken from the extension unless one is named. A file
-   whose format this build left out is an error that says which option
-   to turn on; CF_OPTIONAL makes a *missing* file acceptable, and
-   never makes an unreadable one acceptable. */
+/* The format is the one named, else the extension's, else - when the name
+   gives none - the one the content turns out to be (D-73; cf_codec_detect
+   says how). A name's format that cannot read the file is an error that
+   adds the format the content looks like, as a hint. A file whose format
+   this build left out is an error that says which option to turn on;
+   CF_OPTIONAL makes a *missing* file acceptable, and never makes an
+   unreadable one acceptable. */
 CF_API cf_bool cf_builder_file(cf_builder* b, const char* name, int rank,
                                const char* path, const char* format, unsigned flags);
+
+/* A document the program holds in memory - fetched from a server,
+   embedded in the binary, read from a database - as a source (D-73).
+   `format` is named, or NULL for the name's extension and then the
+   content, as for a file. Its places in explain() are `name` and the
+   line. The `n` bytes are copied: the builder does not borrow them past
+   the call, so a buffer freed afterwards is never read, and the document
+   is read again on every reload. */
+CF_API cf_bool cf_builder_document(cf_builder* b, const char* name, int rank,
+                                   const char* bytes, size_t n, const char* format,
+                                   unsigned flags);
 
 struct cf_codec;
 

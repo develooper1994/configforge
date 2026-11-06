@@ -2,8 +2,11 @@
 # arenas - and may not touch the key space, the definitions or the
 # sources. The boundary is checked in CI so that extracting this layer
 # later stays a directory move and a build file.
-target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/blob.c
-                                   ${CMAKE_CURRENT_SOURCE_DIR}/codec.c)
+target_sources(
+  configforge
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/blob.c
+          ${CMAKE_CURRENT_SOURCE_DIR}/codec.c
+          ${CMAKE_CURRENT_SOURCE_DIR}/detect.c)
 
 if(CF_WITH_INI)
   target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/ini.c)

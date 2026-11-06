@@ -34,6 +34,7 @@ set(CF_UNIT_TESTS
     test_toml
     test_json5
     test_codec
+    test_detect
     test_features
     test_wipe
     test_secrets
