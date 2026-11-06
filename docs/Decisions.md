@@ -80,6 +80,7 @@ gets reopened every six months.
 | D-62 | Each reader held to its format's standard, by the standard's suite | formats, TOML, JSON, dependencies | **Decided** |
 | D-63 | YAML's anchors, aliases and core tags are read | formats, YAML, provenance | **Decided** |
 | D-64 | Definitions read from a JSON Schema, the reverse of `cf_schema` | definitions, schema | **Decided** |
+| D-65 | CI and the development environment on Ubuntu 26.04 LTS, together | build, CI, environment | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -2524,6 +2525,37 @@ refuses missing search data. Browser checks exercise actual search,
 its result links and narrow-screen navigation under the deployment
 path prefix. Documentation dependencies are tested in a clean
 environment, not one retaining an earlier theme's packages.
+
+## D-65 — CI and the development environment on Ubuntu 26.04 LTS, together
+
+**Question.** The environment (`setup.sh`, the Containerfile, the WSL
+distribution) and CI ran Ubuntu 24.04, whose libfyaml (0.8) hangs on
+malformed input. Move to 26.04, and how?
+
+**Decision.** Both at once - an environment that is not CI's is one where
+"it passed here" says nothing - after a survey of every package in an
+`ubuntu:26.04` container, and a tier 2 run, from nothing, on a new WSL
+distribution made beside the old one. CI names `ubuntu-26.04` in every
+job, because `ubuntu-latest` still means 24.04 and would move under the
+project on GitHub's schedule rather than its own.
+
+**What changed with it.** The compiler runtime follows clang's version
+(21 on 26.04). libfyaml is the archive's 0.9.4, so the script that built
+0.9.6 from a tarball is gone, and the floor of 0.9.1 the build enforces
+is the only place a version is written; verify asks the build rather
+than looking for a file. libkqueue left the archive in 26.04, so
+`EXTRA=kqueue` is skipped on it, and CI's kqueue job stays on 24.04 -
+which also keeps the previous LTS, and GCC 13, in the matrix. The
+release's Linux build is static musl in Alpine, so the runner's glibc
+never reaches a user.
+
+**What it found.** New compilers are new analysers: GCC 15's, cppcheck
+2.19 and clang-tidy 21 found six things the old ones did not, among them
+a write before a buffer in an example and an index that a negative count
+made overflow. Each was fixed in the code (the commit lists them); none
+was silenced.
+
+---
 
 ## D-64 — Definitions read from a JSON Schema, the reverse of `cf_schema`
 
