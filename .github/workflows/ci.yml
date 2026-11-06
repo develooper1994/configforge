@@ -209,7 +209,7 @@ jobs:
       - uses: actions/checkout@v7
       # What earlier runs learned: a new cache entry each run, restored
       # from the latest, so the corpus moves forward and never backward.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: build-fuzz/tests/fuzz/corpus_*
           key: fuzz-corpus-${{ github.run_id }}
