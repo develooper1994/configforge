@@ -3,6 +3,29 @@
 Versions follow semantic versioning from 1.0. Before that, `0.x` promises
 nothing: the C interface is not frozen, and a minor bump may change it.
 
+## 1.4.0 — unreleased
+
+### Added
+
+- **Doctor checks a report's fingerprint against its own keys**, CFD019
+  (error): a report whose `fingerprint` is not the one its keys give was
+  edited, cut short or written by a broken build. A report without the
+  field is not an error. Doctor computes it with the library's own steps,
+  now public as `cf_fingerprint_seed` and `cf_fingerprint_step`, for a
+  reader that holds keys as text.
+- **INI is compared with Python's `configparser`**, value by value, in
+  `-DEXTRA=conformance`: 36 of 36 documents read the same, with the floor
+  `ini-configparser`; twelve more differ by design, each with its reason
+  in the script and in Formats.md - quotes around a value, keys before a
+  section, `:` as a separator, continuation lines, `name[]` arrays,
+  trimmed section names, text after a header, `[DEFAULT]`.
+- **Rust keys checked at compile time** (D-75): a `const` `Key` whose name
+  the library would refuse, or whose range runs backwards, does not
+  compile; `key_is_valid` is the rule, held by a test to the library's.
+- **Continuous fuzzing with ClusterFuzzLite**: five minutes against each
+  pull request, half an hour every night on `main`, findings in the
+  Security tab.
+
 ## 1.3.1 — 2026-11-07
 
 What 1.3.0 was to carry - it was tagged, and not published - and one

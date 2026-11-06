@@ -46,9 +46,9 @@ beside what is not.
 | 🟦 | The format from the name, then the content, by several strategies | D-73 |
 | 🟩 | One `define`, the type given or inferred: C, C11, C++, Python, Rust | D-74 |
 | 🟨 | 1.3.1 released (1.3.0 tagged, not published) | CHANGELOG |
-| ⬜ | Doctor checks a report's fingerprint against its contents | plan item 9 |
+| 🟩 | Doctor checks a report's fingerprint against its contents (CFD019) | plan item 9 |
 | 🟨 | Continuous fuzzing in CI (ClusterFuzzLite): written, its first run to read | `.clusterfuzzlite/`, cflite.yml |
-| ⬜ | INI and `.properties` compared with `configparser` and `Properties` | plan item 9 |
+| 🟩 | INI compared with `configparser` (36 of 36; `.properties` needs a JVM, left to its tests) | plan item 9 |
 | ⬜ | Native OS sources | plan item 9 |
 | ⬜ | Go and .NET bindings, when asked | plan item 9 |
 | ⬜ | Binary configuration: a layout-driven TLV codec, BER-TLV, CBOR | assessment |
@@ -81,6 +81,41 @@ the release (it waits on a tag), 2.0 (it comes after all of these), and
 the later ideas - TLV and CBOR, every operation on a file's data,
 conversion, code for each binding - which wait until these are done. D
 and E are the next pair, as they are small and share nothing.
+
+### Every item to done (2026-11-07): the order, in waves
+
+Every open item above, in waves; the items of one wave share no files
+and run side by side, each in a branch of its own, written against a
+specification and its tests; the wave is reviewed, merged one branch at
+a time, verified (tier 1, the extra steps the change touches, Windows
+quick) and pushed before the next starts. A unit is merged whole or not
+at all, so wherever the work stops nothing is left half-done: a unit cut
+short keeps its branch, unmerged, and says so here.
+
+1. 🟩 **Wave 1**: D, Doctor's fingerprint check (CFD019); E, INI
+   against `configparser` (36 of 36, 12 differences by design listed);
+   ClusterFuzzLite; Rust's `const` keys (D-75).
+2. ⬜ **Wave 2**: A, D-73 and `cf_builder_document`; C, D-76's rest,
+   each prediction measured and kept only where it pays. **1.4.0.**
+3. ⬜ **Wave 3**: B, D-75 in C++, C11 and `doctor gen`; F, the native
+   sources: systemd's credentials (`$CREDENTIALS_DIRECTORY`) on Linux and
+   the user defaults (`CFPreferences`) on macOS, each tested on its own
+   system in CI - Windows has its registry source already.
+4. ⬜ **Wave 4**: a TLV codec driven by a layout (tag and length widths,
+   byte order, BER-TLV's classes and long lengths, an end tag, nesting),
+   with a key and type per tag and every value placed by its offset; and
+   CBOR (RFC 8949, held to its appendix's vectors). **1.5.0.**
+5. ⬜ **Wave 5**: converting between formats (`doctor convert`, through
+   `cf_emit`, naming what the target cannot hold); code for each binding
+   from a contract (`doctor gen --lang c|cpp|rust|python`).
+6. ⬜ **Wave 6**: every operation on a file's data through its codec -
+   read, add, change, remove, written back in its own format, keeping
+   the layout where the format can. **1.6.0.**
+7. ⬜ **Wave 7**: Go (cgo) and .NET (P/Invoke) bindings, each with its
+   tests, an example and a CI job. **1.7.0.**
+8. ⬜ **Wave 8, 2.0**: the stream reader and the dynamic sizing modes
+   (D-61), and what else waits for a major version (the image header's
+   layout), together, once. **2.0.0.**
 
 ## Release follow-up
 
