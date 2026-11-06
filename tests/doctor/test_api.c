@@ -996,6 +996,98 @@ static void test_unread(void) {
     }
 }
 
+/* CFD019. A report's fingerprint is recomputed from its keys, in either
+   mode: a good one passes, one value changed fails, a report without the
+   field - written before 1.1 - is not an error. */
+static size_t fingerprint_report(cf_report_mode mode, char* buf, size_t cap) {
+    static const cf_pair pairs[] = {{"server.port", "9000"}, {"server.host", "web1"},
+                                    {"tls", "true"},         {"ratio", "2.0"},
+                                    {"license", "alpha"},    {"pin", "4711"}};
+    cf_error             err     = CF_ERROR_INIT;
+    cf_builder*          b       = cf_build(NULL);
+    cf_def               d;
+    cf_config*           c;
+    cf_report_info       info = CF_REPORT_INFO_INIT;
+    size_t               n;
+
+    cf_builder_memory(b, "mem", CF_RANK_USER_FILE, pairs, sizeof pairs / sizeof *pairs);
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    cf_builder_text(b, "server.host", "localhost", 0);
+    cf_builder_bool(b, "tls", CF_FALSE, 0);
+#if CF_WITH_REAL
+    cf_builder_real(b, "ratio", 1.0, 0.0, 10.0, 0);
+#endif
+    cf_def_init(&d, CF_TYPE_TEXT, "license");
+    d.flags = CF_SENSITIVE;
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_INT, "pin"); /* a secret that is not text */
+    d.flags = CF_SENSITIVE;
+    cf_builder_define(b, &d);
+    c = cf_builder_create(b, &err);
+    if (c == NULL) {
+        return 0;
+    }
+    info.mode = mode;
+    n         = cf_report(c, &info, buf, cap);
+    cf_config_free(c);
+    return n < cap ? n : 0;
+}
+
+static void test_fingerprint(void) {
+    static char    text[16384];
+    cf_report_mode modes[2];
+    size_t         m;
+
+    modes[0] = CF_REPORT_BLIND;
+    modes[1] = CF_REPORT_FULL;
+    for (m = 0; m < 2; ++m) {
+        cf_error   err = CF_ERROR_INIT;
+        cf_doctor* d   = cf_doctor_new();
+        size_t     n   = fingerprint_report(modes[m], text, sizeof text);
+        char*      at;
+
+        check(n > 0 && d != NULL, "a report is written");
+        if (n == 0 || d == NULL) {
+            cf_doctor_free(d);
+            continue;
+        }
+        check(strstr(text, "\"fingerprint\"") != NULL, "and states its fingerprint");
+        check(cf_doctor_lint_report(d, text, n, "good.json", &err), err.message);
+        check(count_rule(d, "CFD019", NULL) == 0,
+              "the fingerprint of a good report is the one its keys give");
+        cf_doctor_free(d);
+
+        /* One value changed, the same length: web1 -> web2. */
+        at = strstr(text, "\"value\": \"web1\"");
+        check(at != NULL, "the value to change is there");
+        if (at != NULL) {
+            const cf_finding* f;
+            at[sizeof "\"value\": \"web" - 1] = '2';
+            d                                 = cf_doctor_new();
+            check(cf_doctor_lint_report(d, text, n, "edited.json", &err), err.message);
+            f = find(d, "CFD019", "fingerprint");
+            check(f != NULL && strcmp(f->level, "error") == 0,
+                  "a changed value is a finding, as an error");
+            check(f != NULL && strstr(f->message, "its keys give") != NULL,
+                  "and says what each side gave");
+            check(cf_doctor_count_at(d, "error") >= 1, "which fails the run");
+            cf_doctor_free(d);
+        }
+
+        /* The field removed, as an older report has it. */
+        at = strstr(text, "\"fingerprint\"");
+        check(at != NULL, "the field to remove is there");
+        if (at != NULL) {
+            memcpy(at, "\"fingerprinx\"", 13);
+            d = cf_doctor_new();
+            check(cf_doctor_lint_report(d, text, n, "old.json", &err), err.message);
+            check(count_rule(d, "CFD019", NULL) == 0,
+                  "a report without a fingerprint is not an error");
+            cf_doctor_free(d);
+        }
+    }
+}
+
 #if CF_WITH_REPORT && CF_WITH_JSON
 /* A blind report of `n` keys, "k<i>" = i + bump on even i, in `out`. */
 static char* sized_report(size_t n, int bump, size_t* len) {
@@ -1099,6 +1191,7 @@ int main(void) {
     test_default_drift();
     test_default_marks();
     test_unread();
+    test_fingerprint();
     test_diff_scales();
 #else
     /* A configuration's report needs both; without them the library

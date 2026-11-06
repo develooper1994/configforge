@@ -881,37 +881,50 @@ static cf_u64 fp_mix(cf_u64 h, const char* p, size_t n) {
     return h;
 }
 
+cf_u64 cf_fingerprint_seed(void) {
+    return ((cf_u64)3421674724U << 32) | (cf_u64)2216829733U;
+}
+
+/* One entry's step, which Doctor takes as well: it holds a report's
+   keys as text, and the algorithm stays here. */
+cf_u64 cf_fingerprint_step(cf_u64 h, const char* key, size_t keylen, const char* type,
+                           const char* text, size_t n) {
+    h = fp_mix(h, key, keylen);
+    h = fp_mix(h, "\037", 1);
+    h = fp_mix(h, type, strlen(type));
+    h = fp_mix(h, "\037", 1);
+    h = fp_mix(h, text, n);
+    return fp_mix(h, "\036", 1);
+}
+
 cf_u64 cf_defset_fingerprint(const cf_defset* ds, const cf_keyspace* ks) {
-    cf_u64 h = ((cf_u64)3421674724U << 32) | (cf_u64)2216829733U;
+    cf_u64 h = cf_fingerprint_seed();
     size_t i;
     char   buf[CF_VALUE_TEXT_MAX > 64 ? CF_VALUE_TEXT_MAX : 64];
 
     for (i = 0; i < cf_ks_count(ks); ++i) {
         const cf_entry* e = cf_ks_at(ks, i);
         const cf_def*   d;
-        const char*     tn;
+        const char*     text;
         size_t          n;
 
         if (e == NULL || e->selected == NULL) {
             continue;
         }
-        d  = (ds != NULL) ? cf_defset_find(ds, e->key, e->keylen) : NULL;
-        h  = fp_mix(h, e->key, e->keylen);
-        h  = fp_mix(h, "\037", 1);
-        tn = cf_type_name(e->selected->value.type);
-        h  = fp_mix(h, tn, strlen(tn));
-        h  = fp_mix(h, "\037", 1);
+        d = (ds != NULL) ? cf_defset_find(ds, e->key, e->keylen) : NULL;
         if (d != NULL && (d->flags & CF_SENSITIVE) != 0) {
-            n = cf_ks_digest_text(cf_ks_value_digest(&e->selected->value), buf,
-                                  sizeof buf);
-            h = fp_mix(h, buf, n);
+            n    = cf_ks_digest_text(cf_ks_value_digest(&e->selected->value), buf,
+                                     sizeof buf);
+            text = buf;
         } else if (e->selected->value.type == CF_TYPE_TEXT) {
-            h = fp_mix(h, e->selected->value.u.t.p, e->selected->value.u.t.n);
+            text = e->selected->value.u.t.p;
+            n    = e->selected->value.u.t.n;
         } else {
-            n = cf_value_to_text(&e->selected->value, buf, sizeof buf);
-            h = fp_mix(h, buf, n);
+            n    = cf_value_to_text(&e->selected->value, buf, sizeof buf);
+            text = buf;
         }
-        h = fp_mix(h, "\036", 1);
+        h = cf_fingerprint_step(h, e->key, e->keylen,
+                                cf_type_name(e->selected->value.type), text, n);
     }
     return h;
 }

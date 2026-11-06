@@ -238,7 +238,16 @@ CF_API const cf_def* cf_defset_list(const cf_defset* ds, const char* key,
    cf_ks_digest, except that a key defined CF_SENSITIVE enters by its
    cf_ks_value_digest text, as a value-blind report shows it, rather
    than by its value. `ds` may be NULL: nothing is sensitive. */
-CF_API cf_u64        cf_defset_fingerprint(const cf_defset* ds, const cf_keyspace* ks);
+CF_API cf_u64 cf_defset_fingerprint(const cf_defset* ds, const cf_keyspace* ks);
+/* The fingerprint a step at a time, for a reader that holds keys as text -
+   Doctor, recomputing a report's - and not as a key space: start from the
+   seed, then give each selected entry in key order its key, the type name
+   (cf_type_name) and the value's text, or for a secret the text of its
+   cf_ks_value_digest. cf_defset_fingerprint is these steps over a key
+   space, so the two cannot disagree. */
+CF_API cf_u64        cf_fingerprint_seed(void);
+CF_API cf_u64        cf_fingerprint_step(cf_u64 h, const char* key, size_t keylen,
+                                         const char* type, const char* text, size_t n);
 CF_API size_t        cf_defset_count(const cf_defset* ds);
 CF_API const cf_def* cf_defset_at(const cf_defset* ds, size_t i);
 
