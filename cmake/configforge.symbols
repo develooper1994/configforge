@@ -27,6 +27,7 @@ cf_build_limit
 cf_builder_abort
 cf_builder_bool
 cf_builder_cli
+cf_builder_codec
 cf_builder_create
 cf_builder_define
 cf_builder_dir
@@ -57,10 +58,12 @@ cf_cmp_ascii_ci
 cf_cmp_bytes
 cf_code_description
 cf_code_name
+cf_codec_among
 cf_codec_at
 cf_codec_by_name
 cf_codec_by_path
 cf_codec_count
+cf_config_codec
 cf_config_free
 cf_config_ref
 cf_count
@@ -251,6 +254,7 @@ cf_source_cli_defs
 cf_source_defaults
 cf_source_destroy
 cf_source_dir
+cf_source_dir_codecs
 cf_source_dir_error
 cf_source_dir_state_size
 cf_source_dotenv

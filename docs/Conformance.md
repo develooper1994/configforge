@@ -93,6 +93,17 @@ for the delimiter, `Z` for UTC, milliseconds). The define-once rules
 need the workspace a sink lends (`cf_doc_sink.reserve_work`); the loader
 always lends it.
 
+## A codec of one's own
+
+A codec written outside the library is measured the same way: built into
+a shared library that exports a pointer to it, it is loaded by
+`conform <format> <file> --codec <library> <symbol>` and scored by
+`conformance.py <conform> <suites> --codec <library> <symbol> <format>`
+on that format's suite alone, against that format's floors (D-68). In a
+shared build, `tests/conformance/codec_module.c` is the example the tests
+load: the unit tests' "key: value" codec, and one that reads through
+this library's JSON reader.
+
 ## The project's own configuration
 
 `scripts/check/conformance.py --self <conform> <repository>`, the last part of

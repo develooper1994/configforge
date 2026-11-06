@@ -83,6 +83,7 @@ gets reopened every six months.
 | D-65 | CI and the development environment on Ubuntu 26.04 LTS, together | build, CI, environment | **Decided** |
 | D-66 | JSON5, and with it JSONC, a mode of the JSON reader | formats, JSON | **Decided** |
 | D-67 | Doctor reads files against a schema, and writes the schema as C | Doctor, schema, definitions | **Decided** |
+| D-68 | A format of one's own, registered on the builder | formats, codecs, conformance | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -2526,6 +2527,36 @@ refuses missing search data. Browser checks exercise actual search,
 its result links and narrow-screen navigation under the deployment
 path prefix. Documentation dependencies are tested in a clean
 environment, not one retaining an earlier theme's packages.
+
+## D-68 — A format of one's own, registered on the builder
+
+**Question.** A caller's `cf_codec` reaches one file through
+`cf_builder_file_codec` and nothing else: its extension does not choose
+it, a named format does not find it, a drop-in directory does not read
+it, and `cf_emit` cannot write it. Should it go in the codec table, and
+how does its author know it reads its format correctly?
+
+**Decision.** Registered on the builder, `cf_builder_codec(b, codec)`,
+not in a table for the whole process. A process-wide table that code
+adds to at run time is global mutable state, which this library has
+none of, and two parts of one program registering one name would clash
+where nobody could see it; on the builder, the clash is refused when it
+is made. A registered codec comes ahead of the built-in ones, for the
+files and directories added after it, by extension or by the name of a
+format given; the configuration keeps the list, so `cf_emit` and
+`cf_config_codec` find it, and a derived configuration reads with the
+same codecs. Up to `CF_BUILDER_CODECS` (8).
+
+**Measured as the built-in ones are.** `conform --codec <library>
+<symbol>` reads the suite's documents through a codec a shared library
+exports, and `conformance.py --codec` scores it on its format's suite
+against that format's floors. A shared build's tests load a module of
+two codecs, one reading through the library's JSON reader. A static
+library is not built position-independent, so the module is built where
+the library is shared, which is also how a program and its plugin share
+one copy of it.
+
+---
 
 ## D-67 — Doctor reads files against a schema, and writes the schema as C
 

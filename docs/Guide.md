@@ -451,8 +451,27 @@ is worse than a program that refuses to start.
 The format is taken from the extension, never guessed from the content.
 A file in a format the build left out is an error that names the option
 to turn on - never a file quietly read as nothing. INI, JSON, TOML and
-YAML can also be written (section 10), and a format of your own is a `cf_codec` handed to
-`cf_builder_file_codec`; `tests/unit/test_codec.c` is a complete one.
+YAML can also be written (section 10).
+
+A format of your own is a `cf_codec` (`tests/unit/cf_kv_codec.h` is a
+complete one, reading and writing). Hand it to one file with
+`cf_builder_file_codec`, or register it on the builder (D-68):
+
+```c
+cf_builder_codec(b, &my_codec);                 /* before the files it reads */
+cf_builder_file(b, "file", CF_RANK_USER_FILE, "app.kv", NULL, 0);  /* by extension */
+cf_builder_dir(b, "conf.d", CF_RANK_USER_FILE, "conf.d", NULL, 0);  /* and in here */
+cf_emit(c, "kv", CF_EMIT_ALL, 0, buf, sizeof buf, &err);            /* by name */
+```
+
+Its extensions and its name come ahead of the built-in codecs, so a
+`.conf` file it names is read through it rather than as INI. It is
+registered on the builder and not for the whole process, and a second
+codec of the same name is refused. To measure it against its format's
+own suite, as the built-in readers are, build it into a shared library
+that exports a `const cf_codec* const` and run
+`scripts/check/conformance.py <conform> <suites> --codec <library> <symbol> <format>`
+(docs/Conformance.md).
 
 On YAML in particular: a plain value is text until a definition types
 it, and the library has one spelling of a boolean, `true` and `false`,

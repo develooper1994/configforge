@@ -130,6 +130,24 @@ CF_API cf_bool cf_builder_file_codec(cf_builder* b, const char* name, int rank,
                                      const char* path, const struct cf_codec* codec,
                                      unsigned flags);
 
+/* A format of one's own for the whole builder (D-68): its extensions
+   choose it for the files and directories added after this call, its
+   name finds it when a format is named, and cf_emit writes it from the
+   configuration built - each ahead of the built-in codecs, so a
+   program's choice is the one that holds. Registered on the builder,
+   not in a table for the whole process: that would be global mutable
+   state, and two parts of one program registering one name would be a
+   conflict nobody could see. Here a second codec of the same name is
+   refused. Borrowed: the codec must outlive the configuration. Up to
+   CF_BUILDER_CODECS; false, the reason held for create, past that or
+   for a codec without a size, a name or a way to read or write. */
+#define CF_BUILDER_CODECS 8
+CF_API cf_bool cf_builder_codec(cf_builder* b, const struct cf_codec* codec);
+
+/* The codec a configuration reads and writes `format` with: one its
+   builder was given, else the built-in one, else NULL. */
+CF_API const struct cf_codec* cf_config_codec(const cf_config* c, const char* format);
+
 /* A .env file, read with the environment's key mapping: a .env file is
    an environment written down, so the escape and the natural spelling
    behave identically in both. */

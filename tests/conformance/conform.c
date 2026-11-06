@@ -3,7 +3,13 @@
  * the conformance run (scripts/check/conformance.py): exit 0 when the reader
  * accepts it, 1 when it refuses it, 2 when it could not be tried.
  *
- *     conform <format> <file> [--keys]
+ *     conform <format> <file> [--keys] [--codec <library> <symbol>]
+ *
+ * With --codec, the document is read by a codec from a shared library -
+ * <symbol> a `const cf_codec* const` it exports - rather than by this
+ * library's reader for <format>, which still says how the suite's
+ * documents are measured: a format of one's own scored against its
+ * standard's suite with the same floors (D-68).
  *
  * With --keys, what it read, one value a line, as
  * "key<TAB>type<TAB>text", with an array's length as "key.count" - the
@@ -24,10 +30,56 @@
 #ifdef _WIN32
 #include <fcntl.h>
 #include <io.h>
+#include <windows.h>
 #define CONFORM_BINARY_STDOUT() (void)_setmode(_fileno(stdout), _O_BINARY)
 #else
 #define CONFORM_BINARY_STDOUT() ((void)0)
 #endif
+#if defined(CONFORM_DLOPEN)
+#include <dlfcn.h>
+#endif
+
+/* A codec a shared library exports, or NULL with the reason printed.
+   The library stays loaded until the program ends. */
+static const cf_codec* conform_load(const char* lib, const char* symbol) {
+#if defined(_WIN32)
+    HMODULE                m = LoadLibraryA(lib);
+    FARPROC                f;
+    const cf_codec* const* p;
+
+    if (m == NULL) {
+        fprintf(stderr, "conform: cannot load %s\n", lib);
+        return NULL;
+    }
+    f = GetProcAddress(m, symbol);
+    if (f == NULL) {
+        fprintf(stderr, "conform: %s has no %s\n", lib, symbol);
+        return NULL;
+    }
+    /* The address of data, returned as a function's: the same bytes. */
+    memcpy(&p, &f, sizeof p);
+    return *p;
+#elif defined(CONFORM_DLOPEN)
+    void*       m = dlopen(lib, RTLD_NOW | RTLD_LOCAL);
+    const void* sym;
+
+    if (m == NULL) {
+        fprintf(stderr, "conform: %s\n", dlerror());
+        return NULL;
+    }
+    sym = dlsym(m, symbol);
+    if (sym == NULL) {
+        fprintf(stderr, "conform: %s has no %s\n", lib, symbol);
+        return NULL;
+    }
+    return *(const cf_codec* const*)sym;
+#else
+    (void)lib;
+    (void)symbol;
+    fprintf(stderr, "conform: this platform loads no shared library\n");
+    return NULL;
+#endif
+}
 
 /* The flat key the events have reached, and for each level open its
    length before it and, for an array, the next element's number. */
@@ -198,14 +250,31 @@ int main(int argc, char** argv) {
     cf_blob         blob;
     cf_error        err = CF_ERROR_INIT;
     cf_doc_sink     any;
+    cf_bool         keys = CF_FALSE;
+    int             i;
 
     if (argc < 3) {
-        fprintf(stderr, "usage: conform <format> <file> [--keys]\n");
+        fprintf(stderr, "usage: conform <format> <file> [--keys] "
+                        "[--codec <library> <symbol>]\n");
         return 2;
     }
     CONFORM_BINARY_STDOUT();
     codec = cf_codec_by_name(argv[1]);
-    ar    = cf_arena_new(NULL, 0);
+    for (i = 3; i < argc; ++i) {
+        if (strcmp(argv[i], "--keys") == 0) {
+            keys = CF_TRUE;
+        } else if (strcmp(argv[i], "--codec") == 0 && i + 2 < argc) {
+            codec = conform_load(argv[i + 1], argv[i + 2]);
+            if (codec == NULL) {
+                return 2;
+            }
+            i += 2;
+        } else {
+            fprintf(stderr, "conform: unknown argument %s\n", argv[i]);
+            return 2;
+        }
+    }
+    ar = cf_arena_new(NULL, 0);
     if (codec == NULL || ar == NULL) {
         fprintf(stderr, "conform: no reader for '%s'\n", argv[1]);
         cf_arena_free(ar);
@@ -250,7 +319,7 @@ int main(int argc, char** argv) {
             cf_blob_mem(&blob, wrapped, blob.n + 6, argv[2]);
         }
     }
-    g_sink.print = (argc > 3 && strcmp(argv[3], "--keys") == 0) ? CF_TRUE : CF_FALSE;
+    g_sink.print = keys;
     g_sink.depth = -1;
     memset(&any, 0, sizeof any);
     any.size         = sizeof any;

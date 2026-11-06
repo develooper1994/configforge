@@ -27,6 +27,15 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   function of `cf_def` and `cf_builder_define` calls, so a build without
   the JSON reader has the same contract from the same schema. It reads
   back through `cf_schema` as the schema it came from.
+- **A format of one's own, registered on the builder** (D-68):
+  `cf_builder_codec(b, codec)` - its extensions choose it for the files
+  and directories added after it, a named format finds it, ahead of the
+  built-in codecs; `cf_emit` writes it and `cf_config_codec` returns it,
+  and a derived configuration keeps it. A second codec of one name is
+  refused. `conform --codec <library> <symbol>` and `conformance.py
+  --codec` score a codec from a shared library on its format's suite
+  and floors. New: `cf_builder_codec`, `cf_config_codec`,
+  `cf_codec_among`, `cf_source_dir_codecs`.
 
 ### Changed
 

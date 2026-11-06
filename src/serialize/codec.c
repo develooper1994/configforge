@@ -138,6 +138,25 @@ const cf_codec* cf_codec_by_path(const char* path) {
     return NULL;
 }
 
+const cf_codec* cf_codec_among(const cf_codec* const* list, size_t n, const char* name,
+                               const char* path) {
+    const char* ext = (name == NULL) ? path_ext(path) : NULL;
+    size_t      i;
+
+    for (i = 0; list != NULL && i < n; ++i) {
+        const cf_codec* c = list[i];
+        if (name != NULL) {
+            if (cf_cmp_ascii_ci(name, strlen(name), c->name, strlen(c->name)) == 0) {
+                return c;
+            }
+        } else if (ext != NULL && c->extensions != NULL &&
+                   ext_matches(c->extensions, ext)) {
+            return c;
+        }
+    }
+    return NULL;
+}
+
 /* ------------------------------------------------------------------ *
  * Formats this library knows about, compiled in or not
  *

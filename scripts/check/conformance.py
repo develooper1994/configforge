@@ -3,7 +3,12 @@ measured with the standard's own test suite rather than claimed.
 
     python3 scripts/check/conformance.py <conform> <suites-dir> [--floor F] [--list]
                                    [--yaml-name NAME]
+                                   [--codec <library> <symbol> <format>]
     python3 scripts/check/conformance.py --self <conform> <repository>
+
+With --codec, a codec from a shared library is scored instead of this
+library's reader, on <format>'s suite alone and against its floors: a
+format of one's own measured as the built-in ones are (D-68).
 
 <conform> is the program tests/conformance/conform.c builds into;
 <suites-dir> holds the suites, each at the commit recorded in
@@ -27,10 +32,15 @@ import subprocess
 import sys
 
 
+# conform's arguments after the document: ["--codec", library, symbol]
+# when a codec from a shared library is scored (--codec, D-68).
+EXTRA = []
+
+
 def run(conform, fmt, path):
     """The exit status, and what conform printed."""
     try:
-        p = subprocess.run([conform, fmt, path], capture_output=True, timeout=20)
+        p = subprocess.run([conform, fmt, path] + EXTRA, capture_output=True, timeout=20)
     except subprocess.TimeoutExpired:
         return 3, ""  # a hang is a failure of its own
     return p.returncode, p.stdout.decode("utf-8", "replace")
@@ -83,7 +93,8 @@ def unescape(s):
 def keys_of(conform, fmt, path):
     """What the reader made of a document, as {flat key: (type, text)};
     None when it refused it."""
-    p = subprocess.run([conform, fmt, path, "--keys"], capture_output=True, timeout=20)
+    p = subprocess.run([conform, fmt, path, "--keys"] + EXTRA, capture_output=True,
+                       timeout=20)
     if p.returncode != 0:
         return None
     got = {}
@@ -481,27 +492,35 @@ def main():
         k = args.index("--yaml-name")
         yaml_name = args[k + 1]
         del args[k:k + 2]
+    # A codec from a shared library, scored on its format's suite alone and
+    # against that format's floors: --codec <library> <symbol> <format>.
+    only = None
+    if "--codec" in args:
+        k = args.index("--codec")
+        EXTRA[:] = ["--codec", args[k + 1], args[k + 2]]
+        only = args[k + 3]
+        del args[k:k + 4]
     if args and args[0] == "--self":
         return differential(args[1], args[2])
     conform, root = args[0], args[1]
     out = []
-    v, i = json_suite(root)
-    report("json", "json", conform, v, i, out)
-    json_wrong = []
-    json_good = json_values(conform, v, json_wrong)
-    json_all = len(v)
-    v, i = json5_suite(root)
+    json_wrong, json_good, json_all = [], 0, 0
     json5_wrong, json5_good, json5_all = [], 0, 0
+    values_wrong, values_good, values_all = [], 0, 0
+    yaml_wrong, yaml_good, yaml_all = [], 0, 0
+    v, i = json_suite(root) if only in (None, "json") else ([], [])
+    if v or i:
+        report("json", "json", conform, v, i, out)
+        json_good, json_all = json_values(conform, v, json_wrong), len(v)
+    v, i = json5_suite(root) if only in (None, "json5") else ([], [])
     if v or i:
         report("json5", "json5", conform, v, i, out)
         json5_good, json5_all = json5_values(conform, v, json5_wrong)
-    v, i = toml_suite(root)
-    report("toml", "toml", conform, v, i, out)
-    values_wrong = []
-    values_good = toml_values(conform, v, values_wrong)
-    values_all = len(v)
-    v, i = yaml_suite(root)
-    yaml_wrong, yaml_good, yaml_all = [], 0, 0
+    v, i = toml_suite(root) if only in (None, "toml") else ([], [])
+    if v or i:
+        report("toml", "toml", conform, v, i, out)
+        values_good, values_all = toml_values(conform, v, values_wrong), len(v)
+    v, i = yaml_suite(root) if only in (None, "yaml") else ([], [])
     if v and run(conform, "yaml", v[0])[0] == 2:
         print("yaml: this build has no YAML reader (CF_WITH_YAML), skipped")
         v, i = [], []

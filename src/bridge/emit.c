@@ -264,7 +264,7 @@ size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int ra
     }
     ks = cf_keys(c);
 
-    codec = cf_codec_by_name(format);
+    codec = cf_config_codec(c, format);
     if (codec == NULL) {
         const char* option = cf_format_option(format);
         if (option != NULL) {

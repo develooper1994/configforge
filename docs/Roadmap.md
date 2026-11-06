@@ -131,7 +131,8 @@ each push:
    pre-commit hook - and **`doctor gen --schema`**, the `cf_builder_*`
    calls generated from a schema, so a build without the JSON reader
    (embedded) has the same contract from the one source.
-5. **A format of one's own, all the way**: `cf_codec_register`, and
+5. Done (D-68), registered on the builder rather than in a table for
+   the whole process: **A format of one's own, all the way**: `cf_codec_register`, and
    `conform` loading a codec from a shared library to score it.
 6. **7b, the built-in YAML reader.**
 7. **8, sizing modes, with dump and stream** (below): D-61 written and
@@ -148,6 +149,23 @@ each push:
 10. **11, 2.0**: what 8 and 9 break, together, once.
 11. **Then** new ideas while any is useful, and the clean-up of the
     development machine's scratch.
+
+**After the plan, an assessment** (2026-11-06), once item 11 is reached:
+
+* The project and how it is worked on, held to the standards each part
+  has (the languages', the build's, the packaging's, the forge's).
+* Every format read to its latest standard where that is possible, and
+  a table of which version each reader follows, what it does not support
+  and how it says so.
+* The Rust crate and cargo: the open problem with them settled.
+* The examples brought up to date, and new ones where a feature has
+  none; each binding with an example of its own, Python's included.
+* Optimisations recorded, the ones that paid and the ones that did not,
+  with their numbers, in Maintaining.md's "Measured", so the next one
+  starts from them.
+* Weighed: binary configuration files (`.cfg` in a TLV or similar
+  layout, as some devices keep them) - whether such a format is worth a
+  reader, against the library's own image (`cf_image.h`).
 
 **Dump and stream** (2026-11-06). Today a file is read whole
 into the configuration's own arena, and the key space copies every value

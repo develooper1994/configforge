@@ -173,7 +173,7 @@ it before every release, are D-56.
 | a handle an event loop can wait on (`cf_watcher`): inotify, kqueue, Windows | done |
 | Doctor: SARIF, `--fail-on`, per-project and per-profile severity | done |
 | TOML, as the D-23 subset: tables, arrays of tables, inline tables, every scalar but dates | done |
-| a codec defined in the program, not the library (`cf_builder_file_codec`) | done |
+| a codec defined in the program, not the library (`cf_builder_file_codec`), or registered on the builder so its extension, its name and `cf_emit` know it (D-68) | done |
 | what a reload changed, and where each new value came from (`cf_diff`) | done |
 | the definitions as a JSON Schema for editors (`cf_schema`) | done |
 | limits and the stack budget as build options, measured per feature (D-37) | done |

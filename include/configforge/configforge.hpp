@@ -854,6 +854,15 @@ class Builder {
         return *this;
     }
 
+    /* A codec for the files and directories added after it, and for
+       emit (cf_builder_codec, D-68). */
+    Builder& codec(const struct cf_codec* c) {
+        if (b_) {
+            cf_builder_codec(b_, c);
+        }
+        return *this;
+    }
+
     Builder& dotenv(const char* name, int rank, const char* path, const char* prefix,
                     unsigned flags = 0) {
         if (b_) {

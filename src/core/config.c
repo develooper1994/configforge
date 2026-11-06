@@ -64,6 +64,10 @@ struct cf_builder {
     cf_log_fn    log;
     void*        log_user;
     cf_log_level log_min;
+
+    /* The program's own codecs (cf_builder_codec, D-68), borrowed. */
+    const cf_codec* codecs[CF_BUILDER_CODECS];
+    size_t          ncodecs;
 };
 
 struct cf_config {
@@ -109,6 +113,11 @@ struct cf_config {
     cf_log_fn    log;
     void*        log_user;
     cf_log_level log_min;
+
+    /* The builder's codecs, for cf_emit and cf_config_codec, and for a
+       derived configuration to read with the same ones. */
+    const cf_codec* codecs[CF_BUILDER_CODECS];
+    size_t          ncodecs;
 };
 
 /* ------------------------------------------------------------------ *
@@ -133,6 +142,14 @@ static const char* config_ghost_path(const cf_source* s) {
 
 static cf_bool config_is_ghost(const cf_source* s) {
     return (s->vt != NULL && s->vt->load == config_ghost_load) ? CF_TRUE : CF_FALSE;
+}
+
+/* A list of borrowed codecs, element by element. */
+static void codecs_copy(const cf_codec** to, const cf_codec* const* from, size_t n) {
+    size_t i;
+    for (i = 0; i < n; ++i) {
+        to[i] = from[i];
+    }
 }
 
 static void builder_fail(cf_builder* b, const cf_error* e) {
@@ -325,9 +342,17 @@ cf_bool cf_builder_cli(cf_builder* b, const char* name, int rank, int argc,
 
 cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const char* path,
                         const char* format, unsigned flags) {
-    cf_source* s = builder_slot_flags(b, name, flags);
-    void*      st;
+    cf_source*      s;
+    void*           st;
+    const cf_codec* own =
+        (b != NULL) ? cf_codec_among(b->codecs, b->ncodecs, format, path) : NULL;
 
+    /* The program's own codec, by the name given or the file's: ahead
+       of the built-in one, which is what registering it asks for. */
+    if (own != NULL) {
+        return cf_builder_file_codec(b, name, rank, path, own, flags);
+    }
+    s = builder_slot_flags(b, name, flags);
     if (s == NULL) {
         return CF_FALSE;
     }
@@ -497,8 +522,61 @@ cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank, const char* pa
                        builder_dup(b, format), flags, st, cf_source_dir_state_size())) {
         return CF_FALSE;
     }
+    /* The codecs registered so far, copied: the builder goes when it
+       creates, and the directory is read again on every reload. */
+    if (b->ncodecs > 0) {
+        const cf_codec** own =
+            (const cf_codec**)cf_arena_alloc(b->arena, b->ncodecs * sizeof(cf_codec*));
+        if (own == NULL) {
+            cf_error e = CF_ERROR_INIT;
+            cf_error_set(&e, CF_E_MEMORY, NULL, path,
+                         "no room for a directory's codecs");
+            builder_fail(b, &e);
+            return CF_FALSE;
+        }
+        codecs_copy(own, b->codecs, b->ncodecs);
+        cf_source_dir_codecs(s, own, b->ncodecs);
+    }
     ++b->nsources;
     return CF_TRUE;
+}
+
+cf_bool cf_builder_codec(cf_builder* b, const struct cf_codec* codec) {
+    cf_error e = CF_ERROR_INIT;
+
+    if (b == NULL || b->failed) {
+        return CF_FALSE;
+    }
+    if (codec == NULL || codec->size < sizeof(cf_codec) || codec->name == NULL ||
+        codec->name[0] == '\0' ||
+        (codec->caps & (CF_CODEC_READ | CF_CODEC_WRITE)) == 0 ||
+        ((codec->caps & CF_CODEC_READ) != 0 && codec->decode == NULL) ||
+        ((codec->caps & CF_CODEC_WRITE) != 0 && codec->encoder == NULL)) {
+        cf_error_set(&e, CF_E_SOURCE, NULL, NULL,
+                     "a codec needs its size, a name, and a way to read or to write "
+                     "(D-68)");
+    } else if (cf_codec_among(b->codecs, b->ncodecs, codec->name, NULL) != NULL) {
+        cf_error_set(&e, CF_E_SOURCE, NULL, codec->name,
+                     "this builder already has a codec called '%s'", codec->name);
+    } else if (b->ncodecs >= CF_BUILDER_CODECS) {
+        cf_error_set(&e, CF_E_CAPABILITY, NULL, codec->name,
+                     "a builder takes %d codecs of its own", CF_BUILDER_CODECS);
+    } else {
+        b->codecs[b->ncodecs++] = codec;
+        return CF_TRUE;
+    }
+    builder_fail(b, &e);
+    return CF_FALSE;
+}
+
+const struct cf_codec* cf_config_codec(const cf_config* c, const char* format) {
+    const cf_codec* own;
+
+    if (format == NULL) {
+        return NULL;
+    }
+    own = (c != NULL) ? cf_codec_among(c->codecs, c->ncodecs, format, NULL) : NULL;
+    return (own != NULL) ? own : cf_codec_by_name(format);
 }
 
 cf_bool cf_builder_replay(cf_builder* b, const char* name, int rank, const char* path,
@@ -840,6 +918,8 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
         c->log        = b->log;
         c->log_user   = b->log_user;
         c->log_min    = b->log_min;
+        codecs_copy(c->codecs, b->codecs, b->ncodecs);
+        c->ncodecs = b->ncodecs;
         /* One slot per source; the ones that read no file stay unused,
            which costs a pointer each and saves a second pass. */
         c->watch_paths =
@@ -1249,6 +1329,8 @@ static cf_config* derive_onto(const cf_config* base, cf_arena* ar, cf_bool owns,
     }
     cf_builder_unknown(b, base->unknown);
     cf_builder_log(b, base->log, base->log_user, base->log_min);
+    codecs_copy(b->codecs, base->codecs, base->ncodecs);
+    b->ncodecs = base->ncodecs;
     /* Tracking travels, the reads do not: each snapshot records what
        was read through it. */
     b->track_reads = (base->reads != NULL) ? CF_TRUE : CF_FALSE;

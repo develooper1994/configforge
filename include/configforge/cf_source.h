@@ -297,6 +297,12 @@ CF_API cf_bool cf_source_dir(cf_source* s, const char* name, int rank, const cha
 
 CF_API const cf_error* cf_source_dir_error(const cf_source* s);
 
+/* A program's own codecs for the directory's files, looked at before the
+   built-in ones (cf_builder_codec, D-68). The list is borrowed and must
+   outlive the source. */
+CF_API void cf_source_dir_codecs(cf_source* s, const struct cf_codec* const* codecs,
+                                 size_t n);
+
 /* ------------------------------------------------------------------ *
  * A directory of secrets (CF_WITH_DIR)
  *

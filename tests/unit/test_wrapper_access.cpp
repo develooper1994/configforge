@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "cf_kv_codec.h"
 #include "cf_test.h"
 
 static const cf::Key<int>         kPort("server.port", 8080, 1, 65535);
@@ -234,6 +235,25 @@ static void test_lists() {
           "existing C++ typed reads access the appended elements");
 }
 
+/* A codec of one's own, handed to a file and registered on the builder
+   (cf_kv_codec.h, compiled as C++ here). */
+static void test_codecs() {
+    check(spill("cf_wrapper.kv", "server.port: 9443\n"), "a file in a foreign format");
+    cf::Config one =
+        cf::Builder()
+            .fileWith("file", CF_RANK_USER_FILE, "cf_wrapper.kv", &kv_codec)
+            .define(kPort)
+            .create();
+    check(one.valid() && one[kPort] == 9443, "fileWith reads one file through it");
+    cf::Config all = cf::Builder()
+                         .codec(&kv_codec)
+                         .file("file", CF_RANK_USER_FILE, "cf_wrapper.kv")
+                         .define(kPort)
+                         .create();
+    check(all.valid() && all[kPort] == 9443, "codec() makes its extension choose it");
+    std::remove("cf_wrapper.kv");
+}
+
 int main() {
     test_keys();
     test_settings();
@@ -241,5 +261,6 @@ int main() {
     test_live();
     test_edit();
     test_lists();
+    test_codecs();
     return cf_test_done();
 }

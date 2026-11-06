@@ -176,6 +176,12 @@ typedef struct cf_codec {
 CF_API const cf_codec* cf_codec_by_name(const char* name);
 CF_API const cf_codec* cf_codec_by_path(const char* path);
 
+/* Among a caller's codecs (cf_builder_codec): the one called `name`
+   when it is not NULL, else the one whose extensions match `path`;
+   NULL for none. The built-in codecs are not looked at. */
+CF_API const cf_codec* cf_codec_among(const cf_codec* const* list, size_t n,
+                                      const char* name, const char* path);
+
 /* Names a format this library knows about whether or not it was
    compiled in, so the error can say which option to turn on. */
 CF_API const char* cf_format_of_path(const char* path);

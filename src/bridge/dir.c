@@ -29,11 +29,13 @@
 #define CF_DIR_PATH_MAX CF_PLATFORM_NAME_MAX
 
 typedef struct dir_state {
-    const char* path;
-    const char* format; /* explicit override, or NULL for by-extension */
-    unsigned    flags;
-    cf_error    err;
-    cf_bool     failed;
+    const char*            path;
+    const char*            format; /* explicit override, or NULL for by-extension */
+    unsigned               flags;
+    cf_error               err;
+    cf_bool                failed;
+    const cf_codec* const* codecs; /* the program's own, looked at first */
+    size_t                 ncodecs;
 } dir_state;
 
 #if CF_WITH_DIR
@@ -106,8 +108,11 @@ static cf_bool dir_load(const cf_source* s, cf_keyspace* ks) {
         if (cf_fmt(full, sizeof full, "%s/%s", st->path, names[i]) >= sizeof full) {
             continue;
         }
-        codec = (st->format != NULL) ? cf_codec_by_name(st->format)
-                                     : cf_codec_by_path(full);
+        codec = cf_codec_among(st->codecs, st->ncodecs, st->format, full);
+        if (codec == NULL) {
+            codec = (st->format != NULL) ? cf_codec_by_name(st->format)
+                                         : cf_codec_by_path(full);
+        }
         if (codec == NULL) {
             /* A file the build cannot read is named, not skipped: a
                directory that silently ignores half its contents is the
@@ -218,4 +223,16 @@ const cf_error* cf_source_dir_error(const cf_source* s) {
     }
     st = (const dir_state*)s->ext;
     return st->failed ? &st->err : NULL;
+}
+
+void cf_source_dir_codecs(cf_source* s, const struct cf_codec* const* codecs,
+                          size_t n) {
+    dir_state* st;
+
+    if (s == NULL || s->vt != &cf_dir_vt || s->ext == NULL) {
+        return;
+    }
+    st          = (dir_state*)s->ext;
+    st->codecs  = codecs;
+    st->ncodecs = (codecs != NULL) ? n : 0;
 }

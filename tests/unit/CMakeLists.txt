@@ -63,6 +63,8 @@ set(CF_UNIT_TESTS
 # The directories test_starve's every-source run reads. C89 has no mkdir.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_starve.d
      ${CMAKE_CURRENT_BINARY_DIR}/cf_starve_secrets)
+# And test_codec's drop-in directory of a codec's own files.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_codec.d)
 
 # WebAssembly (WASI preview 1) has no file notification, so nothing for
 # test_watch to watch with; and no shell, so test_file's drop-in
