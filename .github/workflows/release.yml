@@ -154,7 +154,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with: { path: dist, merge-multiple: true }
       - name: Provenance for every file published
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: "dist/*"
       - name: Notes, checksums, release
