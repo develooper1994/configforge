@@ -344,11 +344,14 @@ cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const char* p
                         const char* format, unsigned flags) {
     cf_source*      s;
     void*           st;
-    const cf_codec* own =
-        (b != NULL) ? cf_codec_among(b->codecs, b->ncodecs, format, path) : NULL;
+    const cf_codec* own;
 
+    if (b == NULL) {
+        return CF_FALSE;
+    }
     /* The program's own codec, by the name given or the file's: ahead
        of the built-in one, which is what registering it asks for. */
+    own = cf_codec_among(b->codecs, b->ncodecs, format, path);
     if (own != NULL) {
         return cf_builder_file_codec(b, name, rank, path, own, flags);
     }

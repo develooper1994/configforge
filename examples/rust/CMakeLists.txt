@@ -1,7 +1,7 @@
 # The Rust examples: the C ones through the binding in bindings/rust,
 # run with cargo and checked for the same lines as their C twins. Cargo
-# builds the library again, from this checkout, with no dependency to
-# download (--offline), into a target directory inside this build.
+# compiles the library again, from this checkout, with the versions
+# Cargo.lock pins (--locked), into a target directory inside this build.
 find_program(CARGO_EXE cargo)
 if(NOT CARGO_EXE)
   message(STATUS "CF_RUST: cargo not found; the Rust examples are not run")
@@ -19,7 +19,7 @@ set(target ${CMAKE_CURRENT_BINARY_DIR}/target)
 function(rust_expect name dir)
   string(REPLACE ";" "|||" wanted "${ARGN}")
   set(args
-      "-E|||env|||CARGO_TARGET_DIR=${target}|||${CARGO_EXE}|||run|||--offline"
+      "-E|||env|||CARGO_TARGET_DIR=${target}|||${CARGO_EXE}|||run|||--locked"
       "|||--quiet|||--manifest-path|||${manifest}|||--example|||${name}")
   string(REPLACE ";" "" args "${args}")
   add_test(NAME example.${name}_rust
@@ -94,8 +94,7 @@ rust_expect(
   "the same file again: unchanged")
 
 # The binding's own tests and its documentation's examples, under cargo.
-add_test(
-  NAME rust.cargo_test
-  COMMAND ${CMAKE_COMMAND} -E env CARGO_TARGET_DIR=${target} ${CARGO_EXE} test
-          --offline --quiet --manifest-path ${manifest})
+add_test(NAME rust.cargo_test
+         COMMAND ${CMAKE_COMMAND} -E env CARGO_TARGET_DIR=${target}
+                 ${CARGO_EXE} test --locked --quiet --manifest-path ${manifest})
 set_tests_properties(rust.cargo_test PROPERTIES RUN_SERIAL TRUE)

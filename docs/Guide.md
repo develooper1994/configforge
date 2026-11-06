@@ -1030,9 +1030,10 @@ every standard the compiler knows.
 
 ### Rust
 
-`bindings/rust` is a crate over the same library, with no dependencies:
-its `build.rs` builds libconfigforge from the checkout with CMake and
-links it, so `cargo build --offline` downloads nothing. A `Builder` that
+`bindings/rust` is a crate over the same library, built by cargo alone:
+its `build.rs` compiles libconfigforge's C sources with the `cc` crate
+and links them (D-70), so `cargo build` needs a C compiler and no
+CMake. A `Builder` that
 consumes itself into a `Result<Config, Error>`, reads that cannot fail,
 `explain()`, `derive()`, and `Def` for a full definition. A `Config` is
 `Send + Sync` - an immutable snapshot (section 14) - so a request can

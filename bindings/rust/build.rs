@@ -1,107 +1,68 @@
-//! Builds libconfigforge from the package or checkout with CMake - the one tool
-//! every build of the project needs - and links it statically. Nothing is
-//! downloaded. Release, so that on Windows it uses the same C runtime as
-//! Rust does (/MD, not /MDd).
+//! Builds libconfigforge with cargo, as a Rust crate builds its C: the
+//! library's sources compiled by the `cc` crate and linked statically. No
+//! CMake and no other build system: cargo and a C compiler are all it takes.
+//!
+//! Every source file guards itself - a reader by its CF_WITH_* option, a
+//! platform by the platform - so all of them are compiled, as the
+//! amalgamation compiles them in one unit, and the defaults are
+//! include/configforge/cf_build_options.h's.
 
 use std::env;
+use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
-fn run(cmd: &mut Command) {
-    let status = cmd
-        .status()
-        .unwrap_or_else(|e| panic!("cannot run {:?}: {}", cmd, e));
-    if !status.success() {
-        panic!("{:?} failed: {}", cmd, status);
-    }
-}
-
-/// A path as CMake and Windows can both spell it: forward slashes, no
-/// verbatim prefix, and on Windows no case.
-fn same_path(p: &Path) -> String {
-    let s = p.to_string_lossy().replace('\\', "/");
-    let s = s.strip_prefix("//?/").unwrap_or(&s).to_string();
-    if cfg!(windows) {
-        s.to_lowercase()
-    } else {
-        s
+/// Every `.c` file under `dir`, sorted, so a build is the same build.
+fn sources(dir: &Path, out: &mut Vec<PathBuf>) {
+    let mut entries: Vec<PathBuf> = fs::read_dir(dir)
+        .unwrap_or_else(|e| panic!("cannot read {}: {}", dir.display(), e))
+        .map(|e| e.expect("a directory entry").path())
+        .collect();
+    entries.sort();
+    for path in entries {
+        if path.is_dir() {
+            sources(&path, out);
+        } else if path.extension().is_some_and(|x| x == "c") {
+            out.push(path);
+        }
     }
 }
 
 fn main() {
     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    // A packaged crate carries the sources in native/; a checkout has them
+    // two directories up.
     let native = manifest.join("native");
-    let root = if native.join("CMakeLists.txt").is_file() {
+    let root = if native.join("src").is_dir() {
         native
     } else {
         manifest.join("..").join("..")
     };
+    let include = root.join("include");
+    let src = root.join("src");
     assert!(
-        root.join("CMakeLists.txt").is_file(),
-        "native sources are missing; prepare the crate with scripts/release/package_rust.cmake"
+        include.join("configforge").join("configforge.h").is_file() && src.is_dir(),
+        "the C sources are missing; stage the crate with scripts/release/package_rust.cmake"
     );
-    let out = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let build = out.join("cf-build");
-    let prefix = out.join("cf-install");
 
-    // A cache made from another checkout - the same crate moved, or a
-    // second copy sharing a CARGO_TARGET_DIR - names its own source, and
-    // CMake refuses to reuse it. Start that build over.
-    let cache = build.join("CMakeCache.txt");
-    if let Ok(text) = std::fs::read_to_string(cache) {
-        let ours = same_path(&root.canonicalize().unwrap_or_else(|_| root.clone()));
-        let same = text
-            .lines()
-            .find_map(|l| l.strip_prefix("CMAKE_HOME_DIRECTORY:INTERNAL="))
-            .map(|theirs| same_path(Path::new(theirs)) == ours);
-        if same != Some(true) {
-            let _ = std::fs::remove_dir_all(&build);
-        }
+    let mut files = Vec::new();
+    sources(&src, &mut files);
+    let mut build = cc::Build::new();
+    build
+        .include(&include)
+        .files(&files)
+        // The library's own warnings are its build's business; this one
+        // only compiles it.
+        .warnings(false);
+    if env::var("CARGO_CFG_TARGET_ENV").as_deref() != Ok("msvc") {
+        build.flag_if_supported("-std=c99");
     }
+    build.compile("configforge");
 
-    run(Command::new("cmake")
-        .arg("-S")
-        .arg(&root)
-        .arg("-B")
-        .arg(&build)
-        .arg("-DCMAKE_BUILD_TYPE=Release")
-        .arg("-DBUILD_SHARED_LIBS=OFF")
-        .arg(format!("-DCMAKE_INSTALL_PREFIX={}", prefix.display()))
-        .arg("-DCMAKE_INSTALL_LIBDIR=lib")
-        .arg("-DCMAKE_POSITION_INDEPENDENT_CODE=ON")
-        .arg("-DCF_BUILD_TESTING=OFF")
-        .arg("-DCF_BUILD_EXAMPLES=OFF")
-        .arg("-DCF_BUILD_TOOLS=OFF")
-        .arg("-DCF_ENABLE_GATES=OFF")
-        .arg("-DCF_WITH_CXX=OFF"));
-    run(Command::new("cmake")
-        .arg("--build")
-        .arg(&build)
-        .arg("--config")
-        .arg("Release")
-        .arg("--target")
-        .arg("configforge"));
-    run(Command::new("cmake")
-        .arg("--install")
-        .arg(&build)
-        .arg("--config")
-        .arg("Release"));
-
-    println!(
-        "cargo:rustc-link-search=native={}",
-        prefix.join("lib").display()
-    );
-    println!("cargo:rustc-link-lib=static=configforge");
     if env::var("CARGO_CFG_WINDOWS").is_ok() {
         // The Registry and the wide command line.
         println!("cargo:rustc-link-lib=advapi32");
         println!("cargo:rustc-link-lib=shell32");
     }
-    for dir in ["src", "include", "cmake"] {
-        println!("cargo:rerun-if-changed={}", root.join(dir).display());
-    }
-    println!(
-        "cargo:rerun-if-changed={}",
-        root.join("CMakeLists.txt").display()
-    );
+    println!("cargo:rerun-if-changed={}", src.display());
+    println!("cargo:rerun-if-changed={}", include.display());
 }

@@ -1,6 +1,6 @@
 //! The C interface, declared by hand from include/configforge - the part
-//! the safe API uses. Written out rather than generated: bindgen would be
-//! a dependency, and the build downloads nothing.
+//! the safe API uses. Written out rather than generated: bindgen would
+//! need libclang wherever the crate is built, for a few dozen functions.
 //!
 //! The struct layouts follow the build's limits, which build.rs leaves at
 //! their defaults (cf_build_options.h): CF_KEY_MAX 256, CF_MESSAGE_MAX

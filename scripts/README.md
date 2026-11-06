@@ -21,7 +21,7 @@ verify step runs), `generate/` (what the build writes from the sources),
 | `generate/amalgamate.py` | generates the single-file distribution |
 | `check/check_formats.py`, `check/check_text.py` | every format string against what `cf_fmt` supports (`gate.formats`); every tracked text file without a NUL byte or a carriage return (`gate.text`) |
 | `release/release_local.sh`, `release/release_local.ps1` | the release workflow's jobs run on this machine, from a tag: amalgamation and static musl Linux (podman), and Windows (MSVC) - for when Actions cannot run |
-| `release/package_rust.cmake` | `-DWORK=<new-directory>` stages the C sources and examples inside a standalone crate, runs `cargo package --offline` with verification, then tests the unpacked package; never publishes |
+| `release/package_rust.cmake` | `-DWORK=<new-directory>` stages the C sources and examples inside a standalone crate, runs `cargo package --locked` with verification, then tests the unpacked package; never publishes |
 | `docs/docs_site.py`, `check/check_docs.py` | MkDocs reads the existing repository Markdown with its original relative paths; the check requires rendered pages and searchable API entries before Pages deployment |
 
 The usual sequence before a commit:

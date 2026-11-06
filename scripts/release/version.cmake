@@ -70,6 +70,11 @@ rewrite(packaging/vcpkg/configforge/vcpkg.json "\"version\": \"[^\"]*\""
 rewrite(bindings/rust/Cargo.toml "
 version = \"[^\"]*\"" "
 version = \"${TO}\"")
+# Cargo.lock names the crate's own version too; --locked refuses a lock
+# that disagrees with the manifest.
+rewrite(bindings/rust/Cargo.lock "name = \"configforge\"
+version = \"[^\"]*\"" "name = \"configforge\"
+version = \"${TO}\"")
 rewrite(pyproject.toml "
 version = \"[^\"]*\"" "
 version = \"${TO}\"")

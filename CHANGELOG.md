@@ -39,6 +39,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Changed
 
+- **The Rust crate builds with cargo alone** (D-70): `build.rs` compiles
+  the library's C sources with the `cc` crate instead of running CMake,
+  so a C compiler is all a Rust build needs. `cc` is the one build
+  dependency, pinned with its checksum in `Cargo.lock`; cargo runs with
+  `--locked`. The packaged crate carries only the headers and sources.
 - `setup.sh`'s Python environment (`/opt/cf-tools`) sees the system's
   packages and adds json5 0.17.3, the reference for JSON5's values; verify
   runs the conformance step with it.

@@ -20,13 +20,20 @@ configforge_read_version(version)
 set(stage "${work}/package")
 set(native "${stage}/native")
 file(MAKE_DIRECTORY "${native}")
-foreach(dir include src cmake scripts)
+# What build.rs compiles (D-70): the headers and the C sources.
+foreach(dir include src)
   file(COPY "${root}/${dir}" DESTINATION "${native}")
 endforeach()
-foreach(name CMakeLists.txt LICENSE README.md CHANGELOG.md)
+foreach(name LICENSE README.md CHANGELOG.md)
   file(COPY "${root}/${name}" DESTINATION "${native}")
 endforeach()
-foreach(name Cargo.toml build.rs README.md src)
+foreach(
+  name
+  Cargo.toml
+  Cargo.lock
+  build.rs
+  README.md
+  src)
   file(COPY "${root}/bindings/rust/${name}" DESTINATION "${stage}")
 endforeach()
 file(COPY "${root}/LICENSE" DESTINATION "${stage}")
@@ -37,14 +44,14 @@ string(REPLACE "../../examples/rust/" "examples/" manifest "${manifest}")
 configforge_write_lf("${stage}/Cargo.toml" "${manifest}")
 
 execute_process(
-  COMMAND "${CARGO_EXE}" package --offline --manifest-path "${stage}/Cargo.toml"
+  COMMAND "${CARGO_EXE}" package --locked --manifest-path "${stage}/Cargo.toml"
           --target-dir "${work}/target" RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "package-rust: cargo package failed (${rc})")
 endif()
 set(unpacked "${work}/target/package/configforge-${version}")
 execute_process(
-  COMMAND "${CARGO_EXE}" test --offline --manifest-path "${unpacked}/Cargo.toml"
+  COMMAND "${CARGO_EXE}" test --locked --manifest-path "${unpacked}/Cargo.toml"
           --target-dir "${work}/target" RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "package-rust: unpacked crate tests failed (${rc})")

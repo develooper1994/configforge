@@ -273,7 +273,10 @@ Python source-package builds are explicit packaging operations, not
 part of the normal CMake build: pip/build may fetch their declared
 build tools from PyPI. Install those tools first and use
 `python -m build --no-isolation` for an offline package check.
-Rust packaging uses `cargo --offline` and fetches nothing.
+The Rust crate builds with cargo alone (D-70); its one build
+dependency, `cc`, comes from crates.io pinned with its checksum in
+`Cargo.lock`, so cargo runs with `--locked`, and `--offline` once it is
+in cargo's cache.
 The optional documentation environment installs its declared tools from
 PyPI too; `mkdocs build` itself works offline.
 

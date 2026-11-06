@@ -9,13 +9,17 @@ links = "configforge"
 build = "build.rs"
 repository = "https://github.com/develooper1994/configforge"
 readme = "README.md"
-include = ["src/**", "build.rs", "Cargo.toml", "README.md", "LICENSE", "native/**", "examples/**"]
+include = ["src/**", "build.rs", "Cargo.toml", "Cargo.lock", "README.md", "LICENSE", "native/**", "examples/**"]
 
-# No dependencies, on purpose: a build that downloads nothing, as every
-# other build of this project is (CONTRIBUTING.md, "Safety"). The library is
-# built by build.rs with CMake. scripts/release/package_rust.cmake stages the
-# native sources and examples inside the crate before cargo packages it.
+# No dependencies. One build dependency, cc, which compiles the library's
+# C sources (build.rs): cargo builds the crate as any Rust crate with C in
+# it is built, and Cargo.lock pins cc and its checksum. Build with --locked.
+# scripts/release/package_rust.cmake stages the C sources and the examples
+# inside the crate before cargo packages it.
 [dependencies]
+
+[build-dependencies]
+cc = "1.2"
 
 [lib]
 path = "src/lib.rs"

@@ -2,19 +2,27 @@
 
 Configuration whose every value can explain which source won, which
 lost, and where it was set. The crate wraps the same C library as the
-other interfaces and builds it with CMake and a C compiler. There are
-no Cargo dependencies; a normal build does not download anything.
+other interfaces, and cargo builds it as any Rust crate with C in it is
+built: `build.rs` compiles the library's C sources with the `cc` crate
+and links them statically (D-70). Cargo and a C compiler are all it
+needs - no CMake. `cc` is the one build dependency, pinned with its
+checksum in `Cargo.lock`; the crate has no other dependency.
 
-From a checkout, `cargo test --offline --manifest-path
-bindings/rust/Cargo.toml` uses the repository's C sources. To create a
-standalone crate, run from the repository root:
+From a checkout:
+
+```sh
+cargo test --locked --manifest-path bindings/rust/Cargo.toml
+```
+
+uses the repository's C sources. To create a standalone crate, run from
+the repository root:
 
 ```sh
 cmake -DWORK=/tmp/configforge-crate -P scripts/release/package_rust.cmake
 ```
 
 `WORK` must not exist. The script stages the C sources, licence and
-examples inside the crate, then runs `cargo package --offline` with
+examples inside the crate, then runs `cargo package --locked` with
 verification enabled and tests the unpacked package. The `.crate` is
 in `WORK/target/package/`. Nothing is published.
 

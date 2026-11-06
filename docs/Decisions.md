@@ -84,6 +84,7 @@ gets reopened every six months.
 | D-66 | JSON5, and with it JSONC, a mode of the JSON reader | formats, JSON | **Decided** |
 | D-67 | Doctor reads files against a schema, and writes the schema as C | Doctor, schema, definitions | **Decided** |
 | D-68 | A format of one's own, registered on the builder | formats, codecs, conformance | **Decided** |
+| D-70 | The Rust crate builds with cargo and the cc crate | Rust, build, dependencies | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -2012,6 +2013,7 @@ library without the binding becoming a second implementation, or the build a dow
 builds the library from the checkout with CMake - the one tool every build already
 needs - in Release, so Windows links the same C runtime Rust does, and links it
 statically. The crate has no dependencies, so `cargo build --offline` works.
+Superseded for the build by D-70: cargo with the `cc` crate, not CMake.
 
 **Three things the FFI must get right, and how each is held.** The C side borrows
 strings - a source's name and path, a definition's lists - so every string passed in is
@@ -2527,6 +2529,29 @@ refuses missing search data. Browser checks exercise actual search,
 its result links and narrow-screen navigation under the deployment
 path prefix. Documentation dependencies are tested in a clean
 environment, not one retaining an earlier theme's packages.
+
+## D-70 — The Rust crate builds with cargo and the cc crate
+
+**Question.** D-44 had the crate's `build.rs` run CMake, so that the
+build downloaded nothing. But a Rust crate that needs CMake is not built
+the way Rust users build crates: cargo should be enough. Does the
+no-download rule outweigh that?
+
+**Decision.** No. `build.rs` compiles the library's C sources with the
+`cc` crate - Rust's own way to build C, which finds the C compiler, MSVC
+included, and picks the C runtime Rust links - and links them
+statically. Every source file guards itself, by its option and its
+platform, so all of them are compiled, as the amalgamation does, with
+`cf_build_options.h`'s defaults, which `sys.rs`'s struct layouts follow.
+CMake is no longer needed to build the crate.
+
+**What it costs.** One build dependency, `cc`, with its own two
+(`find-msvc-tools`, `shlex`), from crates.io, pinned with their
+checksums in `Cargo.lock`: cargo runs with `--locked`, and offline once
+they are in its cache. Nothing is added to what a program using the
+crate links.
+
+---
 
 ## D-68 — A format of one's own, registered on the builder
 
