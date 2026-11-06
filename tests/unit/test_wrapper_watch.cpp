@@ -12,24 +12,7 @@
 #include <cstdio>
 #include <cstring>
 
-static int  g_fail = 0, g_run = 0;
-static void check(bool c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        std::printf("FAIL: %s\n", w);
-    }
-}
-
-static bool spill(const char* path, const char* text) {
-    std::FILE* f = std::fopen(path, "wb");
-    if (f == 0) {
-        return false;
-    }
-    std::fputs(text, f);
-    std::fclose(f);
-    return true;
-}
+#include "cf_test.h"
 
 /* With a drop-in directory where the build has one: a watcher over a
    file and a directory is the case worth testing, and one over a file
@@ -83,6 +66,5 @@ int main() {
     }
 
     std::remove("cf_cxx.ini");
-    std::printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

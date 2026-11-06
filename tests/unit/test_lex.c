@@ -11,14 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static int  g_fail = 0, g_run = 0;
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
+#include "cf_test.h"
 
 /* ---------------------------------------------------------------- *
  * A sink that records into an array
@@ -438,16 +431,6 @@ static void test_dotenv(void) {
 }
 #endif
 
-static cf_bool spill(const char* path, const char* text) {
-    FILE* f = fopen(path, "wb");
-    if (f == NULL) {
-        return CF_FALSE;
-    }
-    fputs(text, f);
-    fclose(f);
-    return CF_TRUE;
-}
-
 static void test_response_file(void) {
     static char  a0[]   = "prog";
     static char  a1[]   = "@cf_args.txt";
@@ -551,8 +534,7 @@ static void test_cli_args(int argc, char** argv) {
 int main(int argc, char** argv) {
     test_cli_args(argc, argv);
     if (argc >= 2 && strcmp(argv[1], "--utf8") == 0) {
-        printf("%d checks, %d failures\n", g_run, g_fail);
-        return g_fail == 0 ? 0 : 1;
+        return cf_test_done();
     }
     test_keymap();
     test_lex_env();
@@ -565,6 +547,5 @@ int main(int argc, char** argv) {
     test_response_file();
     test_sink_refusal_is_reported();
 
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

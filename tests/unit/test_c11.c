@@ -11,18 +11,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "cf_test.h"
+
 #if !CF_HAVE_C11
 #error "built as C11, and configforge.h does not see it"
 #endif
-
-static int  g_fail = 0, g_run = 0;
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
 
 int main(void) {
     static const cf_pair pairs[] = {{"server.port", "8080"},
@@ -60,6 +53,5 @@ int main(void) {
     }
 #endif
     cf_config_free(c);
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

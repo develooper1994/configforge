@@ -13,17 +13,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-static char a0[] = "app";
+#include "../unit/cf_fixture.h"
 
-static cf_bool spill(const char* path, const char* text) {
-    FILE* f = fopen(path, "wb");
-    if (f == NULL) {
-        return CF_FALSE;
-    }
-    fputs(text, f);
-    fclose(f);
-    return CF_TRUE;
-}
+static char a0[] = "app";
 
 static int emit(const char* out, const char* profile, int argc, char* const* argv,
                 char* const* env, const char* file) {

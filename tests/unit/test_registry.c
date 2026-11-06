@@ -12,21 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static int  g_fail = 0, g_run = 0;
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
-static void has(const char* hay, const char* needle, const char* w) {
-    ++g_run;
-    if (hay == NULL || strstr(hay, needle) == NULL) {
-        ++g_fail;
-        printf("FAIL: %s  missing \"%s\" in \"%s\"\n", w, needle, hay ? hay : "(null)");
-    }
-}
+#include "cf_test.h"
 
 #define ROOT "HKCU\\Software\\ConfigForgeTest"
 
@@ -142,6 +128,5 @@ int main(void) {
     } else {
         test_elsewhere();
     }
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static int g_fail = 0, g_run = 0;
+#include "cf_test.h"
 
 /* The expected text is an array of lines rather than one literal: C90
    guarantees only 509 characters in a string literal, and -pedantic
@@ -124,15 +124,10 @@ int main(void) {
        that leaked in from run to run. */
     cfg = build(&err);
     d2  = cf_digest(cfg);
-    ++g_run;
-    if (d1 != d2) {
-        ++g_fail;
-        printf("FAIL: digest is not stable across builds\n");
-    }
+    check(d1 == d2, "the digest is stable across builds");
     printf("digest %08lx%08lx\n", (unsigned long)(d1 >> 32),
            (unsigned long)(d1 & (cf_u64)0xFFFFFFFF));
     cf_config_free(cfg);
 
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

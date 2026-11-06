@@ -10,14 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static int  g_fail = 0, g_run = 0;
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
+#include "cf_test.h"
 
 #define DB "cf_edit.db"
 
@@ -168,6 +161,5 @@ int main(void) {
     test_crud();
     test_live();
 #endif
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

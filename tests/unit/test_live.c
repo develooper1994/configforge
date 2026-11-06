@@ -21,14 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static int  g_fail = 0, g_run = 0;
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
+#include "cf_test.h"
 
 /* What the next build reads. Memory sources keep a pointer to their
    pairs, so each set is static and the build is pointed at one. */
@@ -235,16 +228,6 @@ static void test_approve(void) {
               err.message[0] != '\0',
           "a check that refuses without a reason still gives one");
     cf_live_close(l);
-}
-
-static cf_bool spill(const char* path, const char* text) {
-    FILE* f = fopen(path, "wb");
-    if (f == NULL) {
-        return CF_FALSE;
-    }
-    fputs(text, f);
-    fclose(f);
-    return CF_TRUE;
 }
 
 /* A poll notices a file that changed; each write has a new length, so
@@ -718,6 +701,5 @@ int main(void) {
 #if defined(CF_TEST_PTHREADS) && !defined(CF_SINGLE_THREADED)
     test_threads();
 #endif
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

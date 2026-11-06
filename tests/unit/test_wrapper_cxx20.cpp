@@ -7,6 +7,8 @@
 
 #include <configforge/configforge.hpp>
 
+#include "cf_test.h"
+
 #if !CF_CPP20
 #error "built as C++20, and the wrapper's C++20 part is off"
 #endif
@@ -15,15 +17,6 @@
 #include <ranges>
 #include <string>
 #include <vector>
-
-static int  g_fail = 0, g_run = 0;
-static void check(bool c, const char* what) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        std::printf("FAIL: %s\n", what);
-    }
-}
 
 static_assert(cf::readable<int> && cf::readable<std::string_view> &&
               cf::readable<bool>);
@@ -77,6 +70,5 @@ int main() {
               std::string(wrong.error().message()).find("text") != std::string::npos,
           "and that it is another type");
 #endif
-    std::printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

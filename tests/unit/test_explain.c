@@ -3,21 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static int  g_fail = 0, g_run = 0;
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
-static void has(const char* hay, const char* needle, const char* w) {
-    ++g_run;
-    if (strstr(hay, needle) == NULL) {
-        ++g_fail;
-        printf("FAIL: %s  missing \"%s\" in:\n%s\n", w, needle, hay);
-    }
-}
+#include "cf_test.h"
 
 int main(void) {
     static cf_pair defaults[] = {{"server.port", "8080"}, {"server.host", "0.0.0.0"}};
@@ -143,6 +129,5 @@ int main(void) {
     }
 
     cf_arena_free(ar);
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

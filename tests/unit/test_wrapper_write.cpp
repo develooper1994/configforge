@@ -9,20 +9,7 @@
 #include <cstdio>
 #include <cstring>
 
-static int  g_fail = 0, g_run = 0;
-static void check(bool c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        std::printf("FAIL: %s\n", w);
-    }
-}
-static void has(const char* hay, const char* needle, const char* w) {
-    check(hay != 0 && std::strstr(hay, needle) != 0, w);
-    if (hay != 0 && std::strstr(hay, needle) == 0) {
-        std::printf("  missing \"%s\" in \"%s\"\n", needle, hay);
-    }
-}
+#include "cf_test.h"
 
 int main() {
     static const char* const only_env[] = {"env", 0};
@@ -99,6 +86,5 @@ int main() {
     check(t.wasRead("server.port") && t.wasRead("tls.enabled"), "both recorded");
     check(t.readCount() == 2, "readCount() counts keys");
 
-    std::printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

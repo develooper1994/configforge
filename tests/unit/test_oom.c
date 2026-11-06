@@ -29,14 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static int  g_fail = 0, g_run = 0;
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
+#include "cf_test.h"
 
 /* ---------------------------------------------------------------- *
  * An allocator that gives up on cue
@@ -496,6 +489,5 @@ int main(void) {
     test_list_reload_sweep();
     test_list_write_sweep();
 
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

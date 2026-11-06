@@ -6,6 +6,8 @@
 
 #include <configforge/configforge.hpp>
 
+#include "cf_test.h"
+
 #if !CF_CPP17
 #error "built as C++17, and the wrapper's C++17 part is off"
 #endif
@@ -14,15 +16,6 @@
 #include <cstdio>
 #include <string>
 #include <utility>
-
-static int  g_fail = 0, g_run = 0;
-static void check(bool c, const char* what) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        std::printf("FAIL: %s\n", what);
-    }
-}
 
 static cf::Config make() {
     static const cf_pair pairs[] = {{"server.port", "9443"},
@@ -135,6 +128,5 @@ int main() {
     test_find();
     test_value_and_items();
     test_fields();
-    std::printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

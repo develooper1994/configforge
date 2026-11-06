@@ -12,16 +12,9 @@
 #include <string.h>
 #include <time.h>
 
-#define N 10000
+#include "cf_test.h"
 
-static int  g_fail = 0, g_run = 0;
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
+#define N 10000
 
 int main(void) {
     cf_arena*   ar = cf_arena_new(NULL, 1 << 20);
@@ -131,6 +124,5 @@ int main(void) {
            (unsigned long)(cf_arena_used(ar) / 1024));
 
     cf_arena_free(ar);
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

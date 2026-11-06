@@ -14,28 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static int  g_fail = 0, g_run = 0;
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
-static void has(const char* hay, const char* needle, const char* w) {
-    ++g_run;
-    if (hay == NULL || strstr(hay, needle) == NULL) {
-        ++g_fail;
-        printf("FAIL: %s  missing \"%s\" in:\n%s\n", w, needle, hay ? hay : "");
-    }
-}
-static void lacks(const char* hay, const char* needle, const char* w) {
-    ++g_run;
-    if (hay != NULL && strstr(hay, needle) != NULL) {
-        ++g_fail;
-        printf("FAIL: %s  found \"%s\" in:\n%s\n", w, needle, hay);
-    }
-}
+#include "cf_test.h"
 
 /* Two sources, the second the higher: the elements come from one and the
    length from the other, which is how an array gets shortened. */
@@ -455,17 +434,6 @@ static void test_a_derived_configuration_recomputes(void) {
 }
 
 #if CF_WITH_REPORT && CF_WITH_JSON
-static cf_bool spill(const char* path, const char* text) {
-    FILE* f = fopen(path, "wb");
-
-    if (f == NULL) {
-        return CF_FALSE;
-    }
-    fputs(text, f);
-    fclose(f);
-    return CF_TRUE;
-}
-
 /* A report replays to the configuration it was written from, and does
    not bring back what the length had cut. */
 static void test_replay(void) {
@@ -755,6 +723,5 @@ int main(void) {
     test_every_source_of_a_cut_element_is_cut();
     test_a_neighbour_that_starts_the_same_is_another_array();
 
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

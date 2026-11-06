@@ -14,24 +14,7 @@
 #include <string.h>
 #include <locale.h>
 
-static int g_fail = 0;
-static int g_run  = 0;
-
-static void check(int cond, const char* what) {
-    ++g_run;
-    if (!cond) {
-        ++g_fail;
-        printf("FAIL: %s\n", what);
-    }
-}
-
-static void check_text(const char* got, const char* want, const char* what) {
-    ++g_run;
-    if (strcmp(got, want) != 0) {
-        ++g_fail;
-        printf("FAIL: %s  got=\"%s\" want=\"%s\"\n", what, got, want);
-    }
-}
+#include "cf_test.h"
 
 /* ---------------------------------------------------------------- */
 
@@ -277,6 +260,5 @@ int main(int argc, char** argv) {
     test_f64_rejects_nonfinite();
 #endif
 
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

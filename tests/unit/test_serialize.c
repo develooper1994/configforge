@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "cf_test.h"
+
 /* A format the library knows and this build left out, for the checks of
    what that does - XML unless it is in, then YAML; none when every one
    is in, and then those checks have nothing to say. */
@@ -17,16 +19,6 @@
 #define ABSENT "yaml"
 #define ABSENT_OPTION "CF_WITH_YAML"
 #endif
-
-static int g_fail = 0, g_run = 0;
-
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
 
 #if !CF_WITH_REAL
 static void has_msg(const cf_error* e, const char* needle, const char* w) {
@@ -986,6 +978,5 @@ int main(void) {
     test_deep_nesting(ar);
 
     cf_arena_free(ar);
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

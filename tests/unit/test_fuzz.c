@@ -27,14 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static int  g_fail = 0, g_run = 0;
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
+#include "cf_test.h"
 
 /* xorshift64*, written out rather than taken from the C library: the
    sequence has to be the same on every platform for a failing seed to
@@ -559,7 +552,7 @@ int main(void) {
 #else
     write_seed("seed_image", "", 0);
 #endif
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }
 
 #elif !defined(CF_LIBFUZZER)
@@ -590,8 +583,7 @@ int main(int argc, char** argv) {
     fuzz_from_nothing();
     fuzz_files(g_report);
 
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }
 
 #endif /* CF_FUZZ_SEEDS, CF_LIBFUZZER */

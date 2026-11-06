@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "cf_test.h"
+
 /* A format the library knows and this build left out, for the checks of
    what that does - XML unless it is in, then YAML; none when every one
    is in, and then those checks have nothing to say. */
@@ -19,29 +21,6 @@
 #endif
 
 #if CF_WITH_EMIT
-
-static int  g_fail = 0, g_run = 0;
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
-static void has(const char* hay, const char* needle, const char* w) {
-    ++g_run;
-    if (hay == NULL || strstr(hay, needle) == NULL) {
-        ++g_fail;
-        printf("FAIL: %s  missing \"%s\" in:\n%s\n", w, needle, hay ? hay : "");
-    }
-}
-static void lacks(const char* hay, const char* needle, const char* w) {
-    ++g_run;
-    if (hay != NULL && strstr(hay, needle) != NULL) {
-        ++g_fail;
-        printf("FAIL: %s  found \"%s\" in:\n%s\n", w, needle, hay);
-    }
-}
 
 static char a0[] = "prog";
 
@@ -696,15 +675,14 @@ int main(void) {
     test_literal_references(CF_TRUE);
 
     cf_arena_free(ar);
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }
 
 #else /* !CF_WITH_EMIT */
 
 int main(void) {
     printf("skipped: this build has no emitter (CF_WITH_EMIT=OFF)\n");
-    return 0;
+    return cf_test_done();
 }
 
 #endif /* CF_WITH_EMIT */

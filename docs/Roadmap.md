@@ -202,6 +202,23 @@ verified commits, and a release is cut where the order says so. The
    libfyaml the differential reference rather than the parser, fuzzed;
    then on by default as TOML is, with libfyaml and libyaml kept behind
    `CF_YAML_BACKEND` for whoever wants a dependency's reading.
+7c. **JSON5, and with it JSONC** (the owner asked which other formats,
+   for configuration, without overdoing it, 2026-11-06). JSON with
+   comments and trailing commas is what `tsconfig.json`, VS Code's
+   settings and Deno's configuration are written in, and a JSONC file is
+   JSON5. JSON5 (json5.org) has a specification and an official suite
+   (`json5-tests`), so it is held to it like the others; it is a mode of
+   the JSON reader, the grammar shared, not a second reader. `.json5`
+   and `.jsonc` choose it. Weighed and not taken: HCL (a language, with
+   expressions), HOCON (the JVM's), plist (under native OS sources),
+   KDL, RON, CUE, Dhall, Pkl (young or narrow). After 7c the format set
+   is enough.
+7d. **The tree in order** (the owner, 2026-11-06: the files look
+   scattered). `scripts/` keeps its entry points (`verify.cmake`,
+   `prestage.cmake`, `format.cmake`) and puts the rest by purpose under
+   `check/`, `generate/`, `release/` and `docs/`, one naming style;
+   `cmake/` puts its templates under `templates/`; an in-source build,
+   which left a `CMakeFiles/` at the root, is refused by the build.
 8. **Sizing modes** (the owner, 2026-11-05: full-dynamic, semi-dynamic,
    manual): today every limit is a fixed buffer (`CF_KEY_MAX` and its
    siblings, D-37) - manual. Semi-dynamic: buffers start on the stack

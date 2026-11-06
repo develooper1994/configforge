@@ -33,7 +33,9 @@
 
 #define LEN(a) (sizeof(a) / sizeof((a)[0]))
 
-static int g_fail = 0, g_run = 0, g_shown = 0;
+#include "cf_test.h"
+
+static int g_shown = 0;
 
 /* `n` bytes of `s` as they can be read in a log: a control byte or a
    byte above ASCII is \xHH, and what does not fit is "...". */
@@ -68,14 +70,6 @@ static void esc(char* out, size_t cap, const char* s, size_t n) {
         out[o++] = '.';
     }
     out[o] = '\0';
-}
-
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
 }
 
 static void eq(const char* got, const char* want, const char* w) {
@@ -1408,8 +1402,7 @@ int main(void) {
     test_long_arrays();
     test_trees();
 
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }
 
 #else /* !CF_WITH_EMIT */

@@ -19,31 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static int  g_fail = 0, g_run = 0;
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
-static void has(const char* hay, const char* needle, const char* w) {
-    ++g_run;
-    if (hay == NULL || strstr(hay, needle) == NULL) {
-        ++g_fail;
-        printf("FAIL: %s  missing \"%s\" in \"%s\"\n", w, needle, hay ? hay : "(null)");
-    }
-}
-
-static cf_bool spill(const char* path, const char* text) {
-    FILE* f = fopen(path, "wb");
-    if (f == NULL) {
-        return CF_FALSE;
-    }
-    fputs(text, f);
-    fclose(f);
-    return CF_TRUE;
-}
+#include "cf_test.h"
 
 /* A configuration to write out, from memory: no feature needed. */
 static cf_config* small(cf_error* err) {
@@ -260,6 +236,5 @@ int main(void) {
     test_emit();
     test_image();
     test_report();
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

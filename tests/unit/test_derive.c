@@ -7,21 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static int  g_fail = 0, g_run = 0;
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
-static void has(const char* hay, const char* needle, const char* w) {
-    ++g_run;
-    if (hay == NULL || strstr(hay, needle) == NULL) {
-        ++g_fail;
-        printf("FAIL: %s  missing \"%s\"\n", w, needle);
-    }
-}
+#include "cf_test.h"
 
 static char  a0[]     = "prog";
 static char  a1[]     = "--server.port=8080";
@@ -300,6 +286,5 @@ int main(void) {
     test_derive_chain();
     test_fixed_arena();
 
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

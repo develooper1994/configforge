@@ -176,16 +176,27 @@ compiler or standard macro outside `cf_port.h` and `port.c`
 
 ## Tests
 
-No framework. A test is a C89 program returning non-zero on failure,
-with two helpers:
+No framework. A test is a C89 (or C++) program returning non-zero on
+failure, with the helpers of `tests/unit/cf_test.h`, written once and
+included by every test program - never redefined in one:
 
 ```c
-static void check(int cond, const char* what);
-static void has(const char* hay, const char* needle, const char* what);
+#include "cf_test.h"   /* tests/doctor: "../unit/cf_test.h" */
+
+check(cond, "what was expected");
+check_text(got, "want", "what");
+has(text, "needle", "what");     lacks(text, "secret", "what");
+spill("file.toml", "a = 1\n");   /* write a fixture */
+...
+return cf_test_done();           /* the summary, and the exit status */
 ```
 
-A framework would be the library's first external dependency and the
-tests are not complicated enough to need one.
+A check counts and goes on, so one run lists every failure. ctest runs
+each program and reads its status; a framework (Unity, greatest) would
+add a second runner and stop a test at its first failure, and give
+nothing the suite lacks. A helper only one program needs stays in that
+program; one a second program needs moves into `cf_test.h` (the owner,
+2026-11-06: no code repeated that need not be).
 
 **What a good test here looks like:**
 

@@ -7,30 +7,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#if CF_WITH_REPORT
+#include "cf_test.h"
 
-static int  g_fail = 0, g_run = 0;
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
-static void has(const char* hay, const char* needle, const char* w) {
-    ++g_run;
-    if (hay == NULL || strstr(hay, needle) == NULL) {
-        ++g_fail;
-        printf("FAIL: %s  missing \"%s\"\n", w, needle);
-    }
-}
-static void lacks(const char* hay, const char* needle, const char* w) {
-    ++g_run;
-    if (hay != NULL && strstr(hay, needle) != NULL) {
-        ++g_fail;
-        printf("FAIL: %s  found \"%s\" when it must not be there\n", w, needle);
-    }
-}
+#if CF_WITH_REPORT
 
 static char  a0[]   = "prog";
 static char  a1[]   = "--server.port=7000";
@@ -390,16 +369,6 @@ static void test_report_is_valid_json(cf_arena* ar) {
     }
 }
 
-static cf_bool spill(const char* path, const char* text) {
-    FILE* f = fopen(path, "wb");
-    if (f == NULL) {
-        return CF_FALSE;
-    }
-    fputs(text, f);
-    fclose(f);
-    return CF_TRUE;
-}
-
 static void test_replay(void) {
     cf_error     err = CF_ERROR_INIT;
     cf_config*   cfg = build(&err);
@@ -711,15 +680,14 @@ int main(void) {
     test_replay_rejects_other_json();
 
     cf_arena_free(ar);
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }
 
 #else /* !CF_WITH_REPORT */
 
 int main(void) {
     printf("skipped: this build has no provenance report (CF_WITH_REPORT=OFF)\n");
-    return 0;
+    return cf_test_done();
 }
 
 #endif /* CF_WITH_REPORT */

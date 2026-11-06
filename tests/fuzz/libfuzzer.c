@@ -50,5 +50,11 @@ int LLVMFuzzerTestOneInput(const unsigned char* data, size_t size) {
 #else
 #error "CF_FUZZ_TARGET names no reader"
 #endif
+    /* A check the readers' invariants failed is a finding: libFuzzer keeps
+       the input of a crash, and nothing of a count. */
+    if (g_fail != 0) {
+        (void)cf_test_done();
+        abort();
+    }
     return 0;
 }

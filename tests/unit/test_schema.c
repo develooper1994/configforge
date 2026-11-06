@@ -14,23 +14,9 @@
 #include <stdio.h>
 #include <string.h>
 
-static int  g_fail = 0, g_run = 0;
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
-#if CF_WITH_REPORT && CF_WITH_JSON
+#include "cf_test.h"
 
-static void has(const char* hay, const char* needle, const char* w) {
-    ++g_run;
-    if (hay == NULL || strstr(hay, needle) == NULL) {
-        ++g_fail;
-        printf("FAIL: %s  missing \"%s\" in \"%s\"\n", w, needle, hay ? hay : "(null)");
-    }
-}
+#if CF_WITH_REPORT && CF_WITH_JSON
 
 static cf_config* contract(cf_unknown_policy unknown) {
     static const char* const levels[]   = {"debug", "info", "warn", NULL};
@@ -245,6 +231,5 @@ int main(void) {
     printf("skipped: this build has no JSON Schema (CF_WITH_REPORT or CF_WITH_JSON "
            "off)\n");
 #endif
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

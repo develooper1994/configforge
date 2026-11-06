@@ -7,23 +7,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#if CF_WITH_IMAGE
+#include "cf_test.h"
 
-static int  g_fail = 0, g_run = 0;
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
-static void has(const char* hay, const char* needle, const char* w) {
-    ++g_run;
-    if (hay == NULL || strstr(hay, needle) == NULL) {
-        ++g_fail;
-        printf("FAIL: %s  missing \"%s\" in \"%s\"\n", w, needle, hay ? hay : "(null)");
-    }
-}
+#if CF_WITH_IMAGE
 
 /* The image is dereferenced in place, so the buffer has to be aligned
    the way a linker would align a const array. A char array on the
@@ -357,15 +343,14 @@ int main(void) {
     test_corrupt_index_is_refused();
     test_provenance_travels();
 
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }
 
 #else /* !CF_WITH_IMAGE */
 
 int main(void) {
     printf("skipped: this build has no snapshot image (CF_WITH_IMAGE=OFF)\n");
-    return 0;
+    return cf_test_done();
 }
 
 #endif /* CF_WITH_IMAGE */

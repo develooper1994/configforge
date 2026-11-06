@@ -11,14 +11,7 @@
 #include <string.h>
 #include <time.h>
 
-static int  g_fail = 0, g_run = 0;
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
+#include "../unit/cf_test.h"
 
 /* A configuration with two things wrong: a password on the command line
    (CFD007) and a key nobody defined (CFD005). */
@@ -1120,6 +1113,5 @@ int main(void) {
         cf_config_free(c);
     }
 #endif
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

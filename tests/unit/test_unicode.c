@@ -17,6 +17,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "cf_test.h"
+
 #ifdef _WIN32
 #include <direct.h>
 #include <wchar.h>
@@ -24,22 +26,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #endif
-
-static int  g_fail = 0, g_run = 0;
-static void check(int c, const char* w) {
-    ++g_run;
-    if (!c) {
-        ++g_fail;
-        printf("FAIL: %s\n", w);
-    }
-}
-static void has(const char* hay, const char* needle, const char* w) {
-    ++g_run;
-    if (hay == NULL || strstr(hay, needle) == NULL) {
-        ++g_fail;
-        printf("FAIL: %s  missing \"%s\" in \"%s\"\n", w, needle, hay ? hay : "(null)");
-    }
-}
 
 /* "cf_" + c-cedilla and Greek alpha: a directory, and in it "ayar" with
    a dotless i, ".ini". The same names in UTF-8 and in UTF-16.
@@ -144,6 +130,5 @@ int main(void) {
 #endif
     drop_tree();
 
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }

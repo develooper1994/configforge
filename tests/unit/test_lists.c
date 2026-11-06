@@ -11,15 +11,7 @@
 #include <limits.h>
 #include <string.h>
 
-static int g_run = 0, g_fail = 0;
-
-static void check(int condition, const char* message) {
-    ++g_run;
-    if (!condition) {
-        ++g_fail;
-        printf("FAIL: %s\n", message);
-    }
-}
+#include "cf_test.h"
 
 static void text_is(const cf_keyspace* ks, const char* key, const char* text) {
     const cf_value* v = cf_ks_get(ks, key, strlen(key));
@@ -1201,6 +1193,5 @@ int main(void) {
 #endif
         cf_arena_free(ar);
     }
-    printf("%d checks, %d failures\n", g_run, g_fail);
-    return g_fail == 0 ? 0 : 1;
+    return cf_test_done();
 }
