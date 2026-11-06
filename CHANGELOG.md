@@ -27,6 +27,14 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   fetched, embedded, read from a database - as a source, its format
   named, from its name, or from its content; its bytes are copied, and
   its places in `explain()` are its name and line.
+- **The rest of D-73**: a drop-in directory reads a file with no
+  extension by its content (one with an extension no format claims, such
+  as a backup's `x.toml~`, is still refused); `cf_builder_env_document`
+  reads a whole document from one environment variable, opt-in per
+  variable; the report gives each document source its format and how it
+  was chosen (`format`, `format_how`, optional), and Doctor's `explain`
+  prints it; the conformance run asks each suite's valid documents, with
+  no name, which format they are (`detect-<format>` floors).
 - **Doctor checks a report's fingerprint against its own keys**, CFD019
   (error): a report whose `fingerprint` is not the one its keys give was
   edited, cut short or written by a broken build. A report without the

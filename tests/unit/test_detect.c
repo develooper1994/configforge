@@ -363,9 +363,18 @@ static void test_dir(void) {
     check(port_of(b, &err) == -1, "a format the build does not have is refused");
     has(err.message, "not compiled", "saying so");
 
+    /* A backup's copy is not read by its content: an extension no format
+       claims still refuses the directory, as it did before D-73. */
+    remove("cf_detect.d/60-junk");
+    check(spill("cf_detect.d/50-site.toml~", "[server]\nport = 1\n"), "wrote a backup");
+    b = cf_build(NULL);
+    cf_builder_dir(b, "conf.d", CF_RANK_USER_FILE, "cf_detect.d", NULL, 0);
+    check(port_of(b, &err) == -1, "a backup's copy refuses the directory");
+    has(err.message, "50-site.toml~", "naming it");
+
     remove("cf_detect.d/10-base");
     remove("cf_detect.d/50-site");
-    remove("cf_detect.d/60-junk");
+    remove("cf_detect.d/50-site.toml~");
 }
 #endif
 

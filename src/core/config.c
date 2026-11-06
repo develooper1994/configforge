@@ -420,19 +420,20 @@ static cf_bool builder_document(cf_builder* b, const char* name, int rank,
     char*                  copy;
     const cf_codec* const* list;
     cf_bool                ok;
+    /* One error for every refusal below: a cf_error a block would put
+       three on the frame, past the stack budget. */
+    cf_error e = CF_ERROR_INIT;
 
     if (s == NULL) {
         return CF_FALSE;
     }
     if (variable != NULL && (variable[0] == '\0' || strchr(variable, '=') != NULL)) {
-        cf_error e = CF_ERROR_INIT;
         cf_error_set(&e, CF_E_SOURCE, NULL, name,
                      "'%s' is not the name of an environment variable", variable);
         builder_fail(b, &e);
         return CF_FALSE;
     }
     if ((variable == NULL && name == NULL) || (bytes == NULL && n > 0)) {
-        cf_error e = CF_ERROR_INIT;
         cf_error_set(&e, CF_E_SOURCE, NULL, name,
                      "a document needs a name, and bytes where it has a length");
         builder_fail(b, &e);
@@ -444,7 +445,6 @@ static cf_bool builder_document(cf_builder* b, const char* name, int rank,
     copy = (n > 0) ? cf_arena_dup(b->arena, bytes, n) : NULL;
     st   = cf_arena_calloc(b->arena, cf_source_file_state_size());
     if ((n > 0 && copy == NULL) || st == NULL) {
-        cf_error e = CF_ERROR_INIT;
         cf_error_set(&e, CF_E_MEMORY, NULL, name, "no room for the document '%s'",
                      (name != NULL) ? name : variable);
         builder_fail(b, &e);

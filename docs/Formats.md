@@ -77,13 +77,13 @@ Strategies in turn, the first that answers deciding; each says why
    into different events; otherwise the file is refused as ambiguous,
    naming both. `.properties` is never chosen from content.
 
-A drop-in directory chooses each file this way: a file whose name gives no
-format - a bare `10-base`, or `10-base.conf~` - is read by its content, and
-refused like any file when no format reads it. It was an error before, so no
-file that was read is read differently. Dotfiles - an editor's `.x.swp` - are
-still not listed at all; a backup that is not a dotfile (`x.toml~`) was refused
-before and is read by its content now, so keep none in a directory that is
-read. A whole document in one environment variable
+A drop-in directory chooses each file this way, with one difference: only a
+name with no extension at all - a bare `10-base` - is read by its content, and
+refused like any file when no format reads it. A name with an extension no
+format claims - an editor's `x.toml~`, a package manager's `x.conf.dpkg-old` -
+is refused, as before: read by its content, a backup would win over the file
+it was copied from. Dotfiles - an editor's `.x.swp` - are still not listed at
+all. A whole document in one environment variable
 (`cf_builder_env_document`) is read the same way, the variable's name
 standing for the file's: no extension to give a format, so the content
 decides unless one is named. The provenance report records, for each source

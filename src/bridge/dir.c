@@ -126,13 +126,23 @@ static cf_bool dir_read(dir_state* st, const cf_source* s, cf_keyspace* ks,
                                     "format '%s' is not compiled into this build",
                                     st->format);
             }
+            /* In a directory only a name with no extension at all is for
+               the content to decide. An extension no format claims is
+               refused, as before: `app.toml~` or `app.toml.bak` is an
+               editor's or a package manager's copy, and read by its
+               content it would win over the file it was copied from. */
+            if (strchr(names[i] + 1, '.') != NULL) {
+                return cf_error_set(&st->err, CF_E_CAPABILITY, NULL, full,
+                                    "cannot tell the format of '%s' from its "
+                                    "name; set one for the whole directory",
+                                    full);
+            }
         }
         if (!cf_blob_file(&blob, scratch, full, &st->err)) {
             return CF_FALSE;
         }
-        /* A name that gives no format - no extension, or one no format
-           claims - is for the content to decide (D-73), as for a file;
-           it was an error before. Every file shares the source's rank,
+        /* A name with no extension is for the content to decide (D-73),
+           as for a file; it was an error before. Every file shares the source's rank,
            so the later one wins by the same rule that makes --port=2
            beat --port=1. */
         if (codec == NULL) {
