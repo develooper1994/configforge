@@ -38,6 +38,18 @@
 #else
 #define CF_CPLUSPLUS __cplusplus
 #endif
+/* C++98 to C++14 are deprecated (D-71): they keep working in 1.x, and 2.0
+   requires C++17. Said once, at compile time, unless the program says it
+   knows by defining CF_CXX_LEGACY. */
+#if CF_CPLUSPLUS < 201703L && !defined(CF_CXX_LEGACY)
+#if defined(_MSC_VER)
+#pragma message(                                                                       \
+    "configforge.hpp: C++98 to C++14 are deprecated and 2.0 requires C++17; define CF_CXX_LEGACY to build as before")
+#elif defined(__GNUC__)
+#pragma GCC warning                                                                    \
+    "configforge.hpp: C++98 to C++14 are deprecated and 2.0 requires C++17; define CF_CXX_LEGACY to build as before"
+#endif
+#endif
 #if CF_CPLUSPLUS >= 201103L
 #define CF_CPP11 1
 #include <exception>

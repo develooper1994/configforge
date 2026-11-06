@@ -21,6 +21,19 @@ void cf_blob_mem(cf_blob* b, const char* p, size_t n, const char* name) {
     b->name = (name != NULL) ? name : "<memory>";
 }
 
+cf_arena* cf_blob_arena(cf_arena* ar) {
+    if (ar == NULL || cf_arena_is_fixed(ar)) {
+        return ar;
+    }
+    return cf_arena_new(cf_arena_allocator(ar), 0);
+}
+
+void cf_blob_arena_done(cf_arena* bytes, cf_arena* ar) {
+    if (bytes != NULL && bytes != ar) {
+        cf_arena_free(bytes); /* which zeroes first: a file may hold a secret */
+    }
+}
+
 #ifndef CF_NO_STDIO
 
 cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err) {
@@ -159,6 +172,67 @@ void cf_sink_terminate(cf_sink* s) {
 
 cf_bool cf_sink_overflowed(const cf_sink* s) {
     return (s->buf != NULL && s->len + 1 > s->cap) ? CF_TRUE : CF_FALSE;
+}
+
+void cf_sink_json_string(cf_sink* out, const char* p, size_t n) {
+    size_t i;
+
+    cf_sink_putc(out, '"');
+    for (i = 0; i < n; ++i) {
+        unsigned char c = (unsigned char)p[i];
+        switch (c) {
+        case '"':
+            cf_sink_puts(out, "\\\"");
+            break;
+        case '\\':
+            cf_sink_puts(out, "\\\\");
+            break;
+        case '\b':
+            cf_sink_puts(out, "\\b");
+            break;
+        case '\f':
+            cf_sink_puts(out, "\\f");
+            break;
+        case '\n':
+            cf_sink_puts(out, "\\n");
+            break;
+        case '\r':
+            cf_sink_puts(out, "\\r");
+            break;
+        case '\t':
+            cf_sink_puts(out, "\\t");
+            break;
+        default:
+            if (c < 0x20u) {
+                cf_sink_fmt(out, "\\u00%c%c", "0123456789abcdef"[(c >> 4) & 0xF],
+                            "0123456789abcdef"[c & 0xF]);
+            } else {
+                cf_sink_putc(out, (char)c);
+            }
+            break;
+        }
+    }
+    cf_sink_putc(out, '"');
+}
+
+void cf_sink_json_value(cf_sink* out, const cf_value* v) {
+    char tmp[CF_VALUE_TEXT_MAX];
+
+    switch (v->type) {
+    case CF_TYPE_TEXT:
+        cf_sink_json_string(out, v->u.t.p, v->u.t.n);
+        break;
+    case CF_TYPE_NULL:
+        cf_sink_puts(out, "null");
+        break;
+    case CF_TYPE_BOOL:
+        cf_sink_puts(out, v->u.b ? "true" : "false");
+        break;
+    case CF_TYPE_INT:
+    case CF_TYPE_REAL:
+        cf_sink_write(out, tmp, cf_value_to_text(v, tmp, sizeof tmp));
+        break;
+    }
 }
 
 /* ------------------------------------------------------------------ *

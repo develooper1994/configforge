@@ -152,10 +152,16 @@ typedef struct cf_live_options {
     cf_live_health_fn health;
     void*             health_user; /* given to health                  */
     unsigned          probation;   /* polls a swap stays on probation  */
+
+    /* 1.3: polls a change waits after it is seen before it is read, so
+       that a burst of writes - an editor's save, a deploy copying files
+       one by one - is read once, when it is done, rather than half-way.
+       0, the default, reads a change at the poll that sees it. */
+    unsigned settle;
 } cf_live_options;
 
 /* clang-format off */
-#define CF_LIVE_OPTIONS_INIT {sizeof(cf_live_options), CF_LIVE_MANUAL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, CF_LOG_INFO, NULL, NULL, 0}
+#define CF_LIVE_OPTIONS_INIT {sizeof(cf_live_options), CF_LIVE_MANUAL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, CF_LOG_INFO, NULL, NULL, 0, 0}
 /* clang-format on */
 
 /* Builds and checks the first snapshot, and fails as that does. A size

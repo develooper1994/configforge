@@ -22,16 +22,19 @@ typedef struct dotenv_state {
 
 #if CF_WITH_DOTENV
 
-static cf_bool dotenv_load(const cf_source* s, cf_keyspace* ks) {
-    dotenv_state* st = (dotenv_state*)s->ext;
-    cf_listsink   out;
-    cf_keymap     map;
-    cf_blob       blob;
+/* The file, its bytes in `bytes`, through the environment's mapping. */
+static cf_bool dotenv_read(dotenv_state* st, const cf_source* s, cf_keyspace* ks,
+                           cf_arena* bytes) {
+    cf_listsink out;
+    cf_keymap   map;
+    cf_blob     blob;
 
-    st->failed = CF_FALSE;
-    cf_error_clear(&st->err);
-
-    if (!cf_blob_file(&blob, cf_ks_arena(ks), st->path, &st->err)) {
+    if (bytes == NULL) {
+        st->failed = CF_TRUE;
+        return cf_error_set(&st->err, CF_E_MEMORY, NULL, st->path,
+                            "no room to read '%s'", st->path);
+    }
+    if (!cf_blob_file(&blob, bytes, st->path, &st->err)) {
         if ((st->flags & CF_OPTIONAL) != 0) {
             /* A missing optional file is not an error, and it is also
                not silence: it shows up in explain() as a source that
@@ -68,6 +71,20 @@ static cf_bool dotenv_load(const cf_source* s, cf_keyspace* ks) {
                             "no room to record lists from '%s'", st->path);
     }
     return CF_TRUE;
+}
+
+static cf_bool dotenv_load(const cf_source* s, cf_keyspace* ks) {
+    dotenv_state* st = (dotenv_state*)s->ext;
+    cf_arena*     ar = cf_ks_arena(ks);
+    /* The file's bytes only while it is read (D-61). */
+    cf_arena* bytes = cf_blob_arena(ar);
+    cf_bool   ok;
+
+    st->failed = CF_FALSE;
+    cf_error_clear(&st->err);
+    ok = dotenv_read(st, s, ks, bytes);
+    cf_blob_arena_done(bytes, ar);
+    return ok;
 }
 
 #else /* !CF_WITH_DOTENV */

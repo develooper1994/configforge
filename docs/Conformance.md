@@ -40,7 +40,7 @@ way. It is a tier 2 step, since it needs a network the first time.
 | Suite | Standard | Commit |
 | ----- | -------- | ------ |
 | [JSONTestSuite](https://github.com/nst/JSONTestSuite) | RFC 8259 | `1ef36fa01286573e846ac449e8683f8833c5b26a` |
-| [toml-test](https://github.com/toml-lang/toml-test) | TOML 1.0.0 (`tests/files-toml-1.0.0`) | `96fd088448ec0f4d9f061c730ed7854399c46faf` |
+| [toml-test](https://github.com/toml-lang/toml-test) | TOML 1.1.0 (`tests/files-toml-1.1.0`), which takes in 1.0.0 | `96fd088448ec0f4d9f061c730ed7854399c46faf` |
 | [yaml-test-suite](https://github.com/yaml/yaml-test-suite), its `data` branch | YAML 1.2 | `6ad3d2c62885d82fc349026c136ef560838fdf3d` |
 | [json5-tests](https://github.com/json5/json5-tests) | JSON5 1.0.0 | `ceb24d4080137d70833f86c25659c1331b80a387` |
 
@@ -50,7 +50,7 @@ way. It is a tier 2 step, since it needs a network the first time.
 | ------ | -------------- | --------------- | ------------------------------ |
 | JSON | 95 / 95 | 188 / 188 | 95 / 95, against Python's `json` |
 | JSON5 and JSONC | 83 / 83 | 31 / 31 | 83 / 83, against the `json5` package 0.17.3 |
-| TOML | 208 / 208 | 509 / 509 | 208 / 208, against toml-test's stated values |
+| TOML 1.1.0 | 218 / 218 | 502 / 502 | 218 / 218, against toml-test's stated values |
 | YAML, the built-in parser (D-69) | 122 / 122 | 94 / 94 | 110 / 110, against the suite's `in.json` |
 | YAML, through libfyaml 0.9.6 | 122 / 122 | 94 / 94 | 110 / 110, against the suite's `in.json` |
 | YAML, through libyaml 0.2.5 | 100 / 133 | 87 / 94 | 90 / 93, against the suite's `in.json` |

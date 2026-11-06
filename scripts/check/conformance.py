@@ -15,7 +15,7 @@ format of one's own measured as the built-in ones are (D-68).
 docs/Conformance.md:
 
     JSONTestSuite    github.com/nst/JSONTestSuite         (RFC 8259)
-    toml-test        github.com/toml-lang/toml-test       (TOML 1.0.0)
+    toml-test        github.com/toml-lang/toml-test       (TOML 1.1.0)
     yaml-test-suite  github.com/yaml/yaml-test-suite      (YAML 1.2)
     json5-tests      github.com/json5/json5-tests         (JSON5 1.0.0)
 
@@ -152,6 +152,10 @@ def toml_same(want, got):
         g = gtext.replace("t", "T").replace("z", "Z")
         if len(g) > 10 and g[10] == " ":
             g = g[:10] + "T" + g[11:]
+        # TOML 1.1 lets the seconds go; toml-test writes them as :00.
+        import re
+        g = re.sub(r"(^|T)(\d\d:\d\d)(?=$|[Z+-])",
+                   lambda m: m.group(1) + m.group(2) + ":00", g)
         # and fractions of a second to milliseconds: .6 as .600.
         return gtype == "untyped" and millis(g) == millis(wtext)
     if wtype == "nonfinite":
@@ -301,7 +305,7 @@ def json_suite(root):
 
 def toml_suite(root):
     base = os.path.join(root, "toml-test", "tests")
-    listing = os.path.join(base, "files-toml-1.0.0")
+    listing = os.path.join(base, "files-toml-1.1.0")  # the latest, a superset of 1.0
     valid, invalid = [], []
     with open(listing, encoding="utf-8") as f:
         for line in f:

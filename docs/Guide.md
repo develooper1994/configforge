@@ -443,7 +443,7 @@ is worse than a program that refuses to start.
 | INI | `CF_WITH_INI` | sections and keys; typed by the contract |
 | JSON | `CF_WITH_JSON` | typed by the file |
 | JSON5 and JSONC (`.json5`, `.jsonc`) | `CF_WITH_JSON` | JSON with comments, trailing commas, unquoted names, single quotes, hexadecimal, Infinity and NaN (D-66); typed by the file, Infinity and NaN by the contract; written as JSON |
-| TOML | `CF_WITH_TOML` | the subset in D-23: tables, arrays of tables, inline tables, every scalar but dates |
+| TOML | `CF_WITH_TOML` | TOML 1.1.0, all of toml-test; dates and times, inf and nan read as their text, typed by the contract (D-62) |
 | YAML | `CF_WITH_YAML` | YAML 1.2, all of yaml-test-suite, through the built-in parser (D-69); libfyaml 0.9.1+ or libyaml by `CF_YAML_BACKEND` (D-62); typed by the contract (D-39) |
 | XML | `CF_WITH_XML`, off by default | through expat, read only; typed by the contract, mapped as D-23 declares |
 | Java `.properties` | `CF_WITH_PROPERTIES` | read only; as java.util.Properties reads it, UTF-8; typed by the contract |
@@ -606,6 +606,7 @@ same recipe, logs what changed, and swaps. `examples/c/reload.c`:
 next = load(&err);
 if (next != NULL) {
     cf_diff_text(cfg, next, changes, sizeof changes);   /* the log line */
+    /* or cf_diff_json: one JSON object a change, for a log pipeline */
     cf_config_free(cfg);
     cfg = next;
 }
@@ -804,6 +805,14 @@ serving on :8080, log info, 600 requests a minute
 the same file again: unchanged
 ```
 
+#### Letting a change settle
+
+An editor's save and a deploy copying files one by one are several
+writes, and a poll between two of them would read the configuration
+half-way. `o.settle = 2;` reads a change two polls after it is first
+seen, whatever else is written meanwhile, so the burst is read once, as
+it was left. 0, the default, reads a change at the poll that sees it.
+
 `rollback()` and `confirm()` in C++, Rust and Python; Python takes
 `probation=` and `health=` (an exception's text is the reason), Rust
 `LiveOptions::new().probation(n).health(..)`.
@@ -997,7 +1006,9 @@ allows it.
 
 `configforge.hpp` is the whole C++ interface, from C++98 to the newest
 standard. The compiler's standard decides what it offers (D-47); a
-program includes the one header and never says which:
+program includes the one header and never says which. C++98 to C++14
+are deprecated, and 2.0 requires C++17 (D-71): below C++17 the header
+says so once at compile time, and `CF_CXX_LEGACY` silences it.
 
 | Standard | Adds |
 | -------- | ---- |

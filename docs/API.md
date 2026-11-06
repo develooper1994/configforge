@@ -44,7 +44,7 @@ Every error carries one of these codes, stable from 1.0;
 | `CF_E_POLICY` | `policy` | policy conflict |
 | `CF_E_MEMORY` | `memory` | allocation refused or arena full |
 
-- [`configforge.h`](#configforgeh) - 75
+- [`configforge.h`](#configforgeh) - 76
 - [`cf_alloc.h`](#cf_alloch) - 12
 - [`cf_define.h`](#cf_defineh) - 25
 - [`cf_doctor.h`](#cf_doctorh) - 25
@@ -53,7 +53,7 @@ Every error carries one of these codes, stable from 1.0;
 - [`cf_entry.h`](#cf_entryh) - 13
 - [`cf_error.h`](#cf_errorh) - 5
 - [`cf_explain.h`](#cf_explainh) - 4
-- [`cf_flatten.h`](#cf_flattenh) - 5
+- [`cf_flatten.h`](#cf_flattenh) - 6
 - [`cf_image.h`](#cf_imageh) - 10
 - [`cf_iterate.h`](#cf_iterateh) - 5
 - [`cf_keyspace.h`](#cf_keyspaceh) - 33
@@ -63,7 +63,7 @@ Every error carries one of these codes, stable from 1.0;
 - [`cf_platform.h`](#cf_platformh) - 19
 - [`cf_port.h`](#cf_porth) - 10
 - [`cf_report.h`](#cf_reporth) - 6
-- [`cf_serialize.h`](#cf_serializeh) - 17
+- [`cf_serialize.h`](#cf_serializeh) - 21
 - [`cf_source.h`](#cf_sourceh) - 30
 - [`cf_value.h`](#cf_valueh) - 12
 - [`cf_version.h`](#cf_versionh) - 7
@@ -442,7 +442,7 @@ key, never its value.
 CF_API size_t cf_diff(const cf_config* before, const cf_config* after, cf_diff_fn fn, void* ctx);
 ```
 
-Implementation: [`cf_diff` (src/diag/diff.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/diff.c#L30).
+Implementation: [`cf_diff` (src/diag/diff.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/diff.c#L31).
 
 The number of changed keys; `fn` may be NULL to only count them.
 
@@ -450,7 +450,7 @@ The number of changed keys; `fn` may be NULL to only count them.
 CF_API size_t cf_diff_text(const cf_config* before, const cf_config* after, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_diff_text` (src/diag/diff.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/diff.c#L203).
+Implementation: [`cf_diff_text` (src/diag/diff.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/diff.c#L272).
 
 One line per change, with where each new value came from, and the
 values of CF_SENSITIVE keys redacted as explain() redacts them:
@@ -461,6 +461,21 @@ values of CF_SENSITIVE keys redacted as explain() redacts them:
   db.password: changed, &lt;sensitive> (env)
 
 Measure-or-write, like every renderer here.
+
+```c
+CF_API size_t cf_diff_json(const cf_config* before, const cf_config* after, char* buf, size_t cap);
+```
+
+Implementation: [`cf_diff_json` (src/diag/diff.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/diff.c#L260).
+
+The same changes as JSON Lines, one object a line, for a log pipeline:
+
+  {"key": "server.port", "change": "value", "before": 8080,
+   "after": 9443, "from": {"source": "file", "at": "app.ini:2:8"}}
+
+"change" is added, removed, value or origin; "from" is where the
+new value is, "was_from" where the old one was when that differs. A
+CF_SENSITIVE key has "sensitive": true and no values. Measure-or-write.
 
 ```c
 CF_API cf_u64 cf_digest(const cf_config* c);
@@ -1032,7 +1047,7 @@ with one, both work and nobody has to type the escape.
 CF_API void cf_source_dotenv_defs(struct cf_source* s, const cf_defset* ds);
 ```
 
-Implementation: [`cf_source_dotenv_defs` (src/bridge/dotenv.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dotenv.c#L137).
+Implementation: [`cf_source_dotenv_defs` (src/bridge/dotenv.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dotenv.c#L154).
 
 Give a .env file the same natural names and list separators.
 
@@ -1040,7 +1055,7 @@ Give a .env file the same natural names and list separators.
 CF_API void cf_source_file_defs(struct cf_source* s, const cf_defset* ds);
 ```
 
-Implementation: [`cf_source_file_defs` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L150).
+Implementation: [`cf_source_file_defs` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L169).
 
 Give a file, or a directory of them, the list separators, for a format
 that carries no types (cf_flatten_lists): a declared list splits an
@@ -1685,6 +1700,17 @@ the definitions decide: a declared list with a separator splits its
 text value, `ports = 80,443` the elements 80 and 443. (1.2)
 
 ```c
+CF_API cf_bool cf_source_read_blob(const struct cf_source* s, cf_keyspace* ks, const cf_codec* codec, const cf_blob* blob, const char* path, cf_error* err);
+```
+
+Implementation: [`cf_source_read_blob` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L29).
+
+A document's bytes through a codec into the key space, at the source's
+rank, the source's definitions deciding lists for a format without
+types: what the file and directory sources do with each file, for a
+source of one's own that has bytes to read. False with `err` set.
+
+```c
 CF_API cf_bool cf_doc_emit(const cf_keyspace* ks, const cf_doc_sink* out, cf_error* err);
 ```
 
@@ -2274,7 +2300,7 @@ time, the one that drives the reloads.
 CF_NODISCARD CF_API cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err);
 ```
 
-Implementation: [`cf_live_open_with` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L574).
+Implementation: [`cf_live_open_with` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L578).
 
 Builds and checks the first snapshot, and fails as that does. A size
 below 1.0's is refused.
@@ -2284,7 +2310,7 @@ CF_NODISCARD CF_API cf_live* cf_live_open(cf_live_mode mode, cf_live_build_fn bu
 CF_API void cf_live_close(cf_live* l);
 ```
 
-Implementation: [`cf_live_open` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L541), [`cf_live_close` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L645).
+Implementation: [`cf_live_open` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L545), [`cf_live_close` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L652).
 
 The shorthand: one `user` for both functions. `check` may be NULL; `a`
 NULL is the default allocator.
@@ -2293,7 +2319,7 @@ NULL is the default allocator.
 CF_API struct cf_config* cf_live_get(cf_live* l);
 ```
 
-Implementation: [`cf_live_get` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L658).
+Implementation: [`cf_live_get` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L665).
 
 The current snapshot, with a reference the caller releases with
 cf_config_free. Any thread. A reader keeps the snapshot it got for as
@@ -2303,7 +2329,7 @@ long as it holds it, so one request sees one configuration.
 CF_API cf_live_result cf_live_poll(cf_live* l, cf_error* err);
 ```
 
-Implementation: [`cf_live_poll` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L671).
+Implementation: [`cf_live_poll` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L678).
 
 Under APPROVE and AUTO: if a file of the running snapshot (or of the
 one pending) has changed, rebuild. MANUAL: CF_LIVE_UNCHANGED.
@@ -2312,7 +2338,7 @@ one pending) has changed, rebuild. MANUAL: CF_LIVE_UNCHANGED.
 CF_API cf_live_result cf_live_reload(cf_live* l, cf_error* err);
 ```
 
-Implementation: [`cf_live_reload` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L697).
+Implementation: [`cf_live_reload` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L717).
 
 Rebuild now, in any mode, as if a file had changed: SWAPPED, PENDING
 under APPROVE, or UNCHANGED when the rebuild found the same values
@@ -2322,7 +2348,7 @@ under APPROVE, or UNCHANGED when the rebuild found the same values
 CF_API cf_live_result cf_live_wait(cf_live* l, long timeout_ms, cf_error* err);
 ```
 
-Implementation: [`cf_live_wait` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L708).
+Implementation: [`cf_live_wait` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L728).
 
 cf_live_poll after waiting up to `timeout_ms` for a file to change,
 on a watcher cf_live keeps open on the running snapshot's files. For
@@ -2336,7 +2362,7 @@ looping on it spins: use cf_live_reload there.
 CF_NODISCARD CF_API cf_live_result cf_live_commit(cf_live* l, struct cf_edit* e, const char* note, cf_error* err);
 ```
 
-Implementation: [`cf_live_commit` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L766).
+Implementation: [`cf_live_commit` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L786).
 
 Commit `e` (cf_edit.h) and reload, in one step: the change an
 administrator made reaches readers the way an edit to a file does,
@@ -2353,7 +2379,7 @@ CF_API cf_live_result cf_live_approve(cf_live* l, cf_error* err);
 CF_API void cf_live_reject(cf_live* l);
 ```
 
-Implementation: [`cf_live_pending` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L715), [`cf_live_approve` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L719), [`cf_live_reject` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L734).
+Implementation: [`cf_live_pending` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L735), [`cf_live_approve` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L739), [`cf_live_reject` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L754).
 
 The snapshot waiting for approval, or NULL; it stays the cf_live's.
 
@@ -2361,7 +2387,7 @@ The snapshot waiting for approval, or NULL; it stays the cf_live's.
 CF_API cf_live_result cf_live_rollback(cf_live* l, const char* reason, cf_error* err);
 ```
 
-Implementation: [`cf_live_rollback` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L744).
+Implementation: [`cf_live_rollback` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L764).
 
 Readers get the snapshot the probationary swap replaced, and the
 probation ends: CF_LIVE_ROLLED_BACK, the generation one more, a
@@ -2373,7 +2399,7 @@ saying so and nothing else touched, when no swap is on probation.
 CF_API cf_bool cf_live_confirm(cf_live* l);
 ```
 
-Implementation: [`cf_live_confirm` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L754).
+Implementation: [`cf_live_confirm` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L774).
 
 Ends the probation: the snapshot readers have is the one to keep, and
 the one before it is released. False when none was on probation. A
@@ -2383,7 +2409,7 @@ the one before it is released. False when none was on probation. A
 CF_API cf_u64 cf_live_generation(cf_live* l);
 ```
 
-Implementation: [`cf_live_generation` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L815).
+Implementation: [`cf_live_generation` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L835).
 
 How many snapshots readers have been given: 1 after open, one more a
 swap. A reader can tell that what it holds is no longer current.
@@ -2392,7 +2418,7 @@ swap. A reader can tell that what it holds is no longer current.
 CF_API size_t cf_live_restarts(const cf_live* l, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_live_restarts` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L827).
+Implementation: [`cf_live_restarts` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L847).
 
 The CF_RESTART keys whose new value waits for a restart, one a line,
 in `buf` as far as `cap` allows; the length it needs, 0 for none.
@@ -2401,7 +2427,7 @@ in `buf` as far as `cap` allows; the length it needs, 0 for none.
 CF_API cf_bool cf_live_status_get(cf_live* l, cf_live_status* out);
 ```
 
-Implementation: [`cf_live_status_get` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L782).
+Implementation: [`cf_live_status_get` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L802).
 
 Copies the status into `out`, whose `size` the caller sets, as far as
 it reaches (D-51): a caller built against a later, larger struct gets
@@ -2412,7 +2438,7 @@ asked for. False for a NULL, or a size smaller than 1.0's.
 CF_API cf_bool cf_live_last_error(cf_live* l, cf_error* err);
 ```
 
-Implementation: [`cf_live_last_error` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L797).
+Implementation: [`cf_live_last_error` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L817).
 
 The last failure's error, copied into `err` (cf_error_copy); false,
 and `err` cleared, when no reload has failed. Any thread.
@@ -2953,7 +2979,7 @@ distinguishable at the top rather than by inspection.
 CF_API size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds, const cf_source_view* sv, const cf_report_info* info, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_report_write` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L413).
+Implementation: [`cf_report_write` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L352).
 
 Render the report. Measure-or-write: with a NULL buffer nothing is
 stored and the length still accumulates. `info` may be NULL, for a
@@ -2967,7 +2993,7 @@ nothing.
 CF_API size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds, const cf_source_view* sv, const char* key, size_t keylen, cf_report_mode mode, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_report_key_write` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L377).
+Implementation: [`cf_report_key_write` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L316).
 
 One key as the report writes it, alone - explain() for a machine:
 
@@ -2984,7 +3010,7 @@ Measure-or-write; 0 without CF_WITH_REPORT.
 CF_API size_t cf_schema_write(const cf_defset* ds, const char* title, cf_bool closed, char* buf, size_t cap, cf_error* err);
 ```
 
-Implementation: [`cf_schema_write` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L767).
+Implementation: [`cf_schema_write` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L706).
 
 The definitions as a JSON Schema (draft 2020-12), for editors: a file
 that names it gets completion, documentation and validation as it is
@@ -3013,19 +3039,19 @@ refused rather than half-applied.
 CF_API size_t cf_source_replay_state_size(void);
 ```
 
-Implementation: [`cf_source_replay_state_size` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L1023).
+Implementation: [`cf_source_replay_state_size` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L962).
 
 ```c
 CF_API cf_bool cf_source_replay(cf_source* s, const char* name, int rank, const char* path, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_replay` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L1027).
+Implementation: [`cf_source_replay` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L966).
 
 ```c
 CF_API const cf_error* cf_source_replay_error(const cf_source* s);
 ```
 
-Implementation: [`cf_source_replay_error` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L1047).
+Implementation: [`cf_source_replay_error` (src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/report.c#L986).
 
 ## cf_serialize.h
 
@@ -3065,10 +3091,23 @@ Implementation: [`cf_blob_mem` (src/serialize/blob.c)](https://github.com/develo
 CF_API cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err);
 ```
 
-Implementation: [`cf_blob_file` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L26).
+Implementation: [`cf_blob_file` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L39).
 
 Reads a whole file into the arena. CF_E_SOURCE when it cannot be
 opened or read; the caller decides whether that is fatal.
+
+```c
+CF_API cf_arena* cf_blob_arena(cf_arena* ar);
+CF_API void cf_blob_arena_done(cf_arena* bytes, cf_arena* ar);
+```
+
+Implementation: [`cf_blob_arena` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L24), [`cf_blob_arena_done` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L31).
+
+Where a file's bytes go for one reading (D-61): an arena of their own,
+from `ar`'s allocator, so that they are gone once the reader is done -
+the key space keeps copies of the values - or `ar` itself when it is
+fixed and has none to lend. NULL when there is no room for one.
+cf_blob_arena_done frees it, zeroed, when it was its own.
 
 ### Bytes out
 
@@ -3086,7 +3125,17 @@ CF_API void cf_sink_terminate(cf_sink* s);
 CF_API cf_bool cf_sink_overflowed(const cf_sink* s);
 ```
 
-Implementation: [`cf_sink_init` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L102), [`cf_sink_write` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L108), [`cf_sink_putc` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L121), [`cf_sink_puts` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L128), [`cf_sink_fmt` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L134), [`cf_sink_terminate` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L154), [`cf_sink_overflowed` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L160).
+Implementation: [`cf_sink_init` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L115), [`cf_sink_write` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L121), [`cf_sink_putc` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L134), [`cf_sink_puts` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L141), [`cf_sink_fmt` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L147), [`cf_sink_terminate` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L167), [`cf_sink_overflowed` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L173).
+
+```c
+CF_API void cf_sink_json_string(cf_sink* out, const char* p, size_t n);
+CF_API void cf_sink_json_value(cf_sink* out, const cf_value* v);
+```
+
+Implementation: [`cf_sink_json_string` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L177), [`cf_sink_json_value` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L218).
+
+JSON, written by hand where a document is not the key space's (a
+report, a diff): text as a JSON string, escaped; a value as JSON.
 
 ### Locations
 
@@ -3094,7 +3143,7 @@ Implementation: [`cf_sink_init` (src/serialize/blob.c)](https://github.com/devel
 CF_API size_t cf_loc_text(const cf_loc* at, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_loc_text` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L168).
+Implementation: [`cf_loc_text` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L242).
 
 "app.toml:14:3", or just the file when there is no position.
 
@@ -3272,19 +3321,19 @@ library about provenance must never do.
 CF_API size_t cf_source_file_state_size(void);
 ```
 
-Implementation: [`cf_source_file_state_size` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L156).
+Implementation: [`cf_source_file_state_size` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L175).
 
 ```c
 CF_API cf_bool cf_source_file(cf_source* s, const char* name, int rank, const char* path, const char* format, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_file` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L114).
+Implementation: [`cf_source_file` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L133).
 
 ```c
 CF_API cf_bool cf_source_file_codec(cf_source* s, const char* name, int rank, const char* path, const struct cf_codec* codec, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_file_codec` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L136).
+Implementation: [`cf_source_file_codec` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L155).
 
 The same, with the codec handed over rather than looked up: a format
 this library does not have, written against cf_doc_sink - over
@@ -3300,7 +3349,7 @@ name would be a conflict nobody could see.
 CF_API const cf_error* cf_source_file_error(const cf_source* s);
 ```
 
-Implementation: [`cf_source_file_error` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L160).
+Implementation: [`cf_source_file_error` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L179).
 
 The reason a file source failed, or NULL when it did not. Sources
 return a plain boolean because most cannot fail in interesting ways;
@@ -3310,7 +3359,7 @@ a file can fail in a dozen, and the caller needs the detail.
 CF_API size_t cf_source_dotenv_state_size(void);
 ```
 
-Implementation: [`cf_source_dotenv_state_size` (src/bridge/dotenv.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dotenv.c#L101).
+Implementation: [`cf_source_dotenv_state_size` (src/bridge/dotenv.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dotenv.c#L118).
 
 A .env file: the same key mapping as the environment, because a .env
 file is an environment written down. Unlike the environment it
@@ -3321,13 +3370,13 @@ rather than another program's variable.
 CF_API cf_bool cf_source_dotenv(cf_source* s, const char* name, int rank, const char* path, const char* prefix, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_dotenv` (src/bridge/dotenv.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dotenv.c#L105).
+Implementation: [`cf_source_dotenv` (src/bridge/dotenv.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dotenv.c#L122).
 
 ```c
 CF_API const cf_error* cf_source_dotenv_error(const cf_source* s);
 ```
 
-Implementation: [`cf_source_dotenv_error` (src/bridge/dotenv.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dotenv.c#L127).
+Implementation: [`cf_source_dotenv_error` (src/bridge/dotenv.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dotenv.c#L144).
 
 ### A drop-in directory
 
@@ -3364,25 +3413,25 @@ The file a source reads, or NULL.
 CF_API size_t cf_source_dir_state_size(void);
 ```
 
-Implementation: [`cf_source_dir_state_size` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L192).
+Implementation: [`cf_source_dir_state_size` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L188).
 
 ```c
 CF_API cf_bool cf_source_dir(cf_source* s, const char* name, int rank, const char* path, const char* format, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_dir` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L196).
+Implementation: [`cf_source_dir` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L192).
 
 ```c
 CF_API const cf_error* cf_source_dir_error(const cf_source* s);
 ```
 
-Implementation: [`cf_source_dir_error` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L218).
+Implementation: [`cf_source_dir_error` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L214).
 
 ```c
 CF_API void cf_source_dir_codecs(cf_source* s, const struct cf_codec* const* codecs, size_t n);
 ```
 
-Implementation: [`cf_source_dir_codecs` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L228).
+Implementation: [`cf_source_dir_codecs` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L224).
 
 A program's own codecs for the directory's files, looked at before the
 built-in ones (cf_builder_codec, D-68). The list is borrowed and must

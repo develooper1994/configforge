@@ -135,9 +135,10 @@ each push:
    the whole process: **A format of one's own, all the way**: `cf_codec_register`, and
    `conform` loading a codec from a shared library to score it.
 6. **7b, the built-in YAML reader** - done (D-69).
-7. **8, sizing modes, with dump and stream** (below): D-61 written and
+7. **8, sizing modes, with dump and stream** - D-61 decided, the
+   transient dump done; the stream and the dynamic modes are 2.0's. (below): D-61 written and
    discussed first; then the transient dump; then the stream.
-8. **9, modern C++.**
+8. **9, modern C++** - 1.x's part done (D-71): deprecated below C++17.
 9. **10, the ideas left**, in this order: Doctor checks a report's
    fingerprint against its contents; limits and the build id in the
    report and the image header; CFD012 against the contract; `cf_diff_json`;

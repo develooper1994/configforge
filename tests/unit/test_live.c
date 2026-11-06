@@ -686,7 +686,45 @@ static void test_probation_file(void) {
     remove("cf_probation.ini");
 }
 
+/* A change settles before it is read (settle, 1.3): two polls after it
+   is seen, and the second write of a burst is the one read. */
+static void test_settle(void) {
+    cf_error        err = CF_ERROR_INIT;
+    cf_live_options o   = CF_LIVE_OPTIONS_INIT;
+    cf_live*        l;
+    char            buf[64];
+
+    if (!cf_has_feature("ini")) {
+        return;
+    }
+    check(spill("cf_settle.ini", "[log]\nlevel = info\n"), "wrote the file");
+    g_file   = "cf_settle.ini";
+    o.mode   = CF_LIVE_AUTO;
+    o.build  = build;
+    o.settle = 2;
+    l        = cf_live_open_with(&o, &err);
+    check(l != NULL, "settle: opens on a file");
+    if (l == NULL) {
+        g_file = NULL;
+        return;
+    }
+    check(spill("cf_settle.ini", "[log]\nlevel = debug\n"),
+          "the first write of a burst");
+    check(cf_live_poll(l, &err) == CF_LIVE_UNCHANGED,
+          "a change seen is left to settle");
+    check(spill("cf_settle.ini", "[log]\nlevel = warn  \n"), "the second");
+    check(cf_live_poll(l, &err) == CF_LIVE_UNCHANGED, "still settling");
+    check(cf_live_poll(l, &err) == CF_LIVE_SWAPPED, "then read, once");
+    check(strcmp(level(l, buf, sizeof buf), "warn") == 0,
+          "as the burst left it, not half-way");
+    check(cf_live_poll(l, &err) == CF_LIVE_UNCHANGED, "and not read again");
+    cf_live_close(l);
+    g_file = NULL;
+    remove("cf_settle.ini");
+}
+
 int main(void) {
+    test_settle();
     test_probation();
     test_probation_file();
     test_options();

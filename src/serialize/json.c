@@ -972,53 +972,9 @@ static void js_sep(js_enc* e) {
     }
 }
 
-static void js_quote(cf_sink* out, const char* p, size_t n) {
-    size_t i;
-
-    cf_sink_putc(out, '"');
-    for (i = 0; i < n; ++i) {
-        unsigned char c = (unsigned char)p[i];
-        switch (c) {
-        case '"':
-            cf_sink_puts(out, "\\\"");
-            break;
-        case '\\':
-            cf_sink_puts(out, "\\\\");
-            break;
-        case '\b':
-            cf_sink_puts(out, "\\b");
-            break;
-        case '\f':
-            cf_sink_puts(out, "\\f");
-            break;
-        case '\n':
-            cf_sink_puts(out, "\\n");
-            break;
-        case '\r':
-            cf_sink_puts(out, "\\r");
-            break;
-        case '\t':
-            cf_sink_puts(out, "\\t");
-            break;
-        default:
-            if (c < 0x20u) {
-                /* Control characters must be escaped; everything above
-                   is passed through, because the value is already
-                   UTF-8 and re-encoding it would only lose that. */
-                cf_sink_fmt(out, "\\u00%c%c", "0123456789abcdef"[(c >> 4) & 0xF],
-                            "0123456789abcdef"[c & 0xF]);
-            } else {
-                cf_sink_putc(out, (char)c);
-            }
-            break;
-        }
-    }
-    cf_sink_putc(out, '"');
-}
-
 static void js_name(js_enc* e, const char* name, size_t n) {
     if (name != NULL) {
-        js_quote(e->out, name, n);
+        cf_sink_json_string(e->out, name, n);
         cf_sink_puts(e->out, ": ");
     }
 }
@@ -1073,7 +1029,7 @@ static cf_bool js_enc_scalar(void* ctx, const char* name, size_t n, const cf_val
 
     switch (v->type) {
     case CF_TYPE_TEXT:
-        js_quote(e->out, v->u.t.p, v->u.t.n);
+        cf_sink_json_string(e->out, v->u.t.p, v->u.t.n);
         break;
     case CF_TYPE_NULL:
         cf_sink_puts(e->out, "null");

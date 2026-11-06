@@ -413,6 +413,17 @@ CF_API size_t cf_diff(const cf_config* before, const cf_config* after, cf_diff_f
 CF_API size_t cf_diff_text(const cf_config* before, const cf_config* after, char* buf,
                            size_t cap);
 
+/* The same changes as JSON Lines, one object a line, for a log pipeline:
+
+     {"key": "server.port", "change": "value", "before": 8080,
+      "after": 9443, "from": {"source": "file", "at": "app.ini:2:8"}}
+
+   "change" is added, removed, value or origin; "from" is where the
+   new value is, "was_from" where the old one was when that differs. A
+   CF_SENSITIVE key has "sensitive": true and no values. Measure-or-write. */
+CF_API size_t cf_diff_json(const cf_config* before, const cf_config* after, char* buf,
+                           size_t cap);
+
 /* Order-independent over the resolved configuration, identical on
    every platform and in both portability modes. */
 CF_API cf_u64 cf_digest(const cf_config* c);

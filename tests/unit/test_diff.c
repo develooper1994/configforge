@@ -115,6 +115,22 @@ static void test_a_reload(void) {
     /* Measure, then write: the same length. */
     check(cf_diff_text(before, after, NULL, 0) == strlen(text), "measuring agrees");
 
+    /* As JSON Lines: one object a change, the secret's values left out. */
+    cf_diff_json(before, after, text, sizeof text);
+    has(text,
+        "{\"key\": \"server.port\", \"change\": \"value\", \"before\": 8080, "
+        "\"after\": 9443, \"from\": {\"source\": \"file\", \"at\": \"cf_diff.ini:2:",
+        "a moved value as JSON");
+    has(text, "{\"key\": \"log.level\", \"change\": \"added\", \"after\": \"debug\"",
+        "an added key");
+    has(text, "\"change\": \"origin\"", "a new origin");
+    has(text, "\"was_from\": {\"source\": \"default\"}", "and the one before");
+    has(text, "{\"key\": \"db.password\", \"change\": \"value\", \"sensitive\": true",
+        "a secret, marked");
+    check(strstr(text, "first-secret") == NULL && strstr(text, "second-secret") == NULL,
+          "and neither of its values");
+    check(cf_diff_json(before, after, NULL, 0) == strlen(text), "measuring agrees too");
+
     /* Stopping early. */
     memset(&t, 0, sizeof t);
     t.stop_after = 2;

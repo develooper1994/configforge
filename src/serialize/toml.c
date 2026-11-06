@@ -1,10 +1,10 @@
 /*
- * toml.c - the built-in TOML 1.0.0 reader and writer. C89.
+ * toml.c - the built-in TOML 1.1.0 reader and writer. C89.
  *
  * Written here rather than vendored for the reason the INI codec is:
  * streaming, allocation-free, and every value with its place (D-62 has
  * why no TOML library was adopted). Begun as D-23's subset, it now reads
- * all of TOML 1.0.0, which toml-test holds it to:
+ * all of TOML 1.1.0 (and so 1.0.0), which toml-test holds it to:
  *
  *     # comment
  *     [server]                 tables, dotted:   [server.tls]
@@ -54,7 +54,8 @@
    by u as the start of a universal character name, and stops. */
 #define TOML_UNICODE_DIGITS                                                            \
     "\\"                                                                               \
-    "u needs four hex digits and \\"                                                   \
+    "x needs two hex digits, \\"                                                       \
+    "u four and \\"                                                                    \
     "U eight"
 
 /* What the open path is made of. A table segment is one header segment;
@@ -456,6 +457,12 @@ static size_t toml_string(toml_scan* s, char* dst, size_t cap, cf_bool multi) {
                 break;
             case 'r':
                 one = '\r';
+                break;
+            case 'e': /* TOML 1.1 */
+                one = 27;
+                break;
+            case 'x': /* TOML 1.1: two hexadecimal digits, U+0000 to U+00FF */
+                digits = 2;
                 break;
             case 'u':
                 digits = 4;
@@ -963,16 +970,23 @@ static int toml_fixed(const char* p, const char* end, int n) {
     return v;
 }
 
-/* HH:MM:SS[.fraction] at s->p, as TOML 1.0 writes a time: seconds are
-   required, and 60 is a leap second. */
+/* HH:MM[:SS[.fraction]] at s->p, as TOML 1.1 writes a time: seconds
+   are optional, a fraction only after them, and 60 is a leap second. */
 static cf_bool toml_time(toml_scan* s) {
     int h = toml_fixed(s->p, s->end, 2), m, sec;
-    if (h < 0 || s->end - s->p < 8 || s->p[2] != ':' || s->p[5] != ':') {
+    if (h < 0 || s->end - s->p < 5 || s->p[2] != ':') {
         return CF_FALSE;
     }
-    m   = toml_fixed(s->p + 3, s->end, 2);
-    sec = toml_fixed(s->p + 6, s->end, 2);
-    if (h > 23 || m < 0 || m > 59 || sec < 0 || sec > 60) {
+    m = toml_fixed(s->p + 3, s->end, 2);
+    if (h > 23 || m < 0 || m > 59) {
+        return CF_FALSE;
+    }
+    if (s->end - s->p < 6 || s->p[5] != ':') {
+        s->p += 5;
+        return CF_TRUE; /* no seconds */
+    }
+    sec = (s->end - s->p >= 8) ? toml_fixed(s->p + 6, s->end, 2) : -1;
+    if (sec < 0 || sec > 60) {
         return CF_FALSE;
     }
     s->p += 8;
@@ -1034,7 +1048,7 @@ static cf_bool toml_datetime(toml_scan* s, cf_value* v) {
             }
         }
     } else if (!toml_time(s)) {
-        return toml_fail(s, start, "not a time: HH:MM:SS, with seconds");
+        return toml_fail(s, start, "not a time: HH:MM or HH:MM:SS");
     }
     if (s->p < s->end && (cf_is_alnum((unsigned char)*s->p) || *s->p == '.' ||
                           *s->p == ':' || *s->p == '-' || *s->p == '+')) {
@@ -1285,10 +1299,14 @@ static cf_bool toml_inline_table(toml_scan* s, const char* name, size_t nlen,
     if (node != 0) {
         s->body = node;
     }
+    /* TOML 1.1: over several lines, with comments, and a comma after the
+       last key. */
     for (;;) {
-        toml_blank(s);
-        if (s->p >= s->end || *s->p == '\n') {
-            return toml_fail(s, s->p, "an inline table is closed on its own line");
+        if (!toml_space_lines(s)) {
+            return CF_FALSE;
+        }
+        if (s->p >= s->end) {
+            return toml_fail(s, s->p, "the inline table is not closed");
         }
         if (*s->p == '}') {
             ++s->p;
@@ -1299,10 +1317,12 @@ static cf_bool toml_inline_table(toml_scan* s, const char* name, size_t nlen,
                 return toml_fail(s, s->p, "expected ',' or '}'");
             }
             ++s->p;
-            toml_blank(s);
+            if (!toml_space_lines(s)) {
+                return CF_FALSE;
+            }
             if (s->p < s->end && *s->p == '}') {
-                return toml_fail(s, s->p,
-                                 "an inline table has no comma after its last key");
+                ++s->p;
+                break;
             }
         }
         first = CF_FALSE;

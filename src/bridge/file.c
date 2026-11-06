@@ -24,12 +24,36 @@ typedef struct file_state {
     cf_bool         failed;
 } file_state;
 
+/* A document's bytes through its codec into the key space, at the
+   source's rank. Shared with the drop-in directory (dir.c). */
+cf_bool cf_source_read_blob(const cf_source* s, cf_keyspace* ks, const cf_codec* codec,
+                            const cf_blob* blob, const char* path, cf_error* err) {
+    cf_flatten fl;
+
+    if (!cf_flatten_init(&fl, ks, s->rank)) {
+        return cf_error_set(err, CF_E_MEMORY, NULL, path, "cannot start reading '%s'",
+                            path);
+    }
+    if ((codec->caps & CF_CODEC_TYPED) == 0 && s->ref != NULL) {
+        cf_flatten_lists(&fl, (const cf_defset*)s->ref); /* the definitions decide */
+    }
+    if (!codec->decode(blob, cf_flatten_sink(&fl), err)) {
+        return CF_FALSE;
+    }
+    if (fl.failed || fl.overflow) {
+        return cf_error_set(err, CF_E_KEY, NULL, path,
+                            "'%s' contains a key this build cannot hold", path);
+    }
+    return CF_TRUE;
+}
+
 static cf_bool file_load(const cf_source* s, cf_keyspace* ks) {
     file_state*     st = (file_state*)s->ext;
     const cf_codec* codec;
     cf_blob         blob;
-    cf_flatten      fl;
     cf_arena*       ar = cf_ks_arena(ks);
+    cf_arena*       bytes;
+    cf_bool         ok;
 
     st->failed = CF_FALSE;
     cf_error_clear(&st->err);
@@ -67,7 +91,15 @@ static cf_bool file_load(const cf_source* s, cf_keyspace* ks) {
                             "format '%s' can be written but not read", codec->name);
     }
 
-    if (!cf_blob_file(&blob, ar, st->path, &st->err)) {
+    /* The file's bytes only while it is read (D-61). */
+    bytes = cf_blob_arena(ar);
+    if (bytes == NULL) {
+        st->failed = CF_TRUE;
+        return cf_error_set(&st->err, CF_E_MEMORY, NULL, st->path,
+                            "no room to read '%s'", st->path);
+    }
+    if (!cf_blob_file(&blob, bytes, st->path, &st->err)) {
+        cf_blob_arena_done(bytes, ar);
         if ((st->flags & CF_OPTIONAL) != 0) {
             /* A missing optional file is not an error, and it is also
                not silence: it shows up in explain() as a source that
@@ -78,25 +110,12 @@ static cf_bool file_load(const cf_source* s, cf_keyspace* ks) {
         st->failed = CF_TRUE;
         return CF_FALSE;
     }
-
-    if (!cf_flatten_init(&fl, ks, s->rank)) {
+    ok = cf_source_read_blob(s, ks, codec, &blob, st->path, &st->err);
+    cf_blob_arena_done(bytes, ar);
+    if (!ok) {
         st->failed = CF_TRUE;
-        return cf_error_set(&st->err, CF_E_MEMORY, NULL, st->path,
-                            "cannot start reading '%s'", st->path);
     }
-    if ((codec->caps & CF_CODEC_TYPED) == 0 && s->ref != NULL) {
-        cf_flatten_lists(&fl, (const cf_defset*)s->ref); /* the definitions decide */
-    }
-    if (!codec->decode(&blob, cf_flatten_sink(&fl), &st->err)) {
-        st->failed = CF_TRUE;
-        return CF_FALSE;
-    }
-    if (fl.failed || fl.overflow) {
-        st->failed = CF_TRUE;
-        return cf_error_set(&st->err, CF_E_KEY, NULL, st->path,
-                            "'%s' contains a key this build cannot hold", st->path);
-    }
-    return CF_TRUE;
+    return ok;
 }
 
 static void file_destroy(cf_source* s) {

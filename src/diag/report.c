@@ -31,72 +31,11 @@
  * then keeping two things in step forever.
  * ------------------------------------------------------------------ */
 
-static void report_quote(cf_sink* out, const char* p, size_t n) {
-    size_t i;
-
-    cf_sink_putc(out, '"');
-    for (i = 0; i < n; ++i) {
-        unsigned char c = (unsigned char)p[i];
-        switch (c) {
-        case '"':
-            cf_sink_puts(out, "\\\"");
-            break;
-        case '\\':
-            cf_sink_puts(out, "\\\\");
-            break;
-        case '\b':
-            cf_sink_puts(out, "\\b");
-            break;
-        case '\f':
-            cf_sink_puts(out, "\\f");
-            break;
-        case '\n':
-            cf_sink_puts(out, "\\n");
-            break;
-        case '\r':
-            cf_sink_puts(out, "\\r");
-            break;
-        case '\t':
-            cf_sink_puts(out, "\\t");
-            break;
-        default:
-            if (c < 0x20u) {
-                cf_sink_fmt(out, "\\u00%c%c", "0123456789abcdef"[(c >> 4) & 0xF],
-                            "0123456789abcdef"[c & 0xF]);
-            } else {
-                cf_sink_putc(out, (char)c);
-            }
-            break;
-        }
-    }
-    cf_sink_putc(out, '"');
-}
-
 static void report_quote_z(cf_sink* out, const char* z) {
     if (z == NULL) {
         cf_sink_puts(out, "null");
     } else {
-        report_quote(out, z, strlen(z));
-    }
-}
-
-static void report_value(cf_sink* out, const cf_value* v) {
-    char tmp[CF_VALUE_TEXT_MAX];
-
-    switch (v->type) {
-    case CF_TYPE_TEXT:
-        report_quote(out, v->u.t.p, v->u.t.n);
-        break;
-    case CF_TYPE_NULL:
-        cf_sink_puts(out, "null");
-        break;
-    case CF_TYPE_BOOL:
-        cf_sink_puts(out, v->u.b ? "true" : "false");
-        break;
-    case CF_TYPE_INT:
-    case CF_TYPE_REAL:
-        cf_sink_write(out, tmp, cf_value_to_text(v, tmp, sizeof tmp));
-        break;
+        cf_sink_json_string(out, z, strlen(z));
     }
 }
 
@@ -131,7 +70,7 @@ static const cf_source* source_of(const cf_source_view* sv, int rank) {
 static void report_default(cf_sink* out, const cf_def* d) {
     size_t i;
     if (d->list_mode == CF_LIST_NONE) {
-        report_value(out, &d->default_value);
+        cf_sink_json_value(out, &d->default_value);
         return;
     }
     cf_sink_putc(out, '[');
@@ -139,7 +78,7 @@ static void report_default(cf_sink* out, const cf_def* d) {
         if (i != 0) {
             cf_sink_puts(out, ", ");
         }
-        report_value(out, &d->list_defaults[i]);
+        cf_sink_json_value(out, &d->list_defaults[i]);
     }
     cf_sink_putc(out, ']');
 }
@@ -276,7 +215,7 @@ static void report_candidate(cf_sink* out, const cf_candidate* c,
         report_digest(out, &c->value);
     } else {
         cf_sink_puts(out, ", \"value\": ");
-        report_value(out, &c->value);
+        cf_sink_json_value(out, &c->value);
     }
     if (c->at != NULL) {
         cf_sink_puts(out, ", \"at\": ");
@@ -396,7 +335,7 @@ size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds,
     }
     cf_sink_puts(&out, "{ \"configforge_key\": ");
     cf_sink_fmt(&out, "%d, \"key\": ", CF_REPORT_SCHEMA);
-    report_quote(&out, key, keylen);
+    cf_sink_json_string(&out, key, keylen);
     cf_sink_puts(&out, ", \"value\": ");
     report_key(&out, ks, e, (ds != NULL) ? cf_defset_find(ds, key, keylen) : NULL, ds,
                sv, mode, "", -1);
@@ -500,7 +439,7 @@ size_t cfi_report_reads(const cf_keyspace* ks, const cf_defset* ds,
             cf_sink_putc(&out, ',');
         }
         cf_sink_puts(&out, "\n    ");
-        report_quote(&out, e->key, e->keylen);
+        cf_sink_json_string(&out, e->key, e->keylen);
         cf_sink_puts(&out, ": ");
         report_key(&out, ks, e, d, ds, sv, mode, "    ",
                    (reads == NULL) ? -1 : (cf_ref_get(&reads[i]) != 0));
@@ -732,7 +671,7 @@ static void schema_object(schema_ctx* s, const char* p, size_t plen, cf_bool ope
 
         cf_sink_puts(out, first ? "\n" : ",\n");
         schema_indent(out, depth + 2);
-        report_quote(out, best, bestn);
+        cf_sink_json_string(out, best, bestn);
         cf_sink_puts(out, ": ");
         if (leaf != NULL && !below && !opened) {
             schema_leaf(s, leaf);

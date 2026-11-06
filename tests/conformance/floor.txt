@@ -7,7 +7,7 @@ json 95 188
 # it is installed (setup.sh)
 json5 83 31
 json5-values 83
-toml 208 509
+toml 218 502
 # YAML through the built-in parser (D-69)
 yaml 122 94
 yaml-values 110
@@ -20,4 +20,4 @@ yaml-libfyaml-values 110
 # "<name> <documents>": valid documents read to the expected values, by
 # Python's json for JSON and by toml-test's own expectations for TOML.
 json-values 95
-toml-values 208
+toml-values 218

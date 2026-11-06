@@ -32,3 +32,7 @@ endif()
 if(CF_RUST)
   add_subdirectory(rust)
 endif()
+# Python through bindings/python, which loads the shared library.
+if(BUILD_SHARED_LIBS)
+  add_subdirectory(python)
+endif()

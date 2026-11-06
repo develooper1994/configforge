@@ -422,8 +422,41 @@ static void test_drop_in_directory(void) {
 }
 #endif
 
+/* A file's bytes are gone once it is read (D-61): a file of 200 KB that
+   holds one key leaves its key, not its size, in the configuration. */
+static void test_bytes_are_transient(void) {
+    static char text[200 * 1024];
+    cf_error    err = CF_ERROR_INIT;
+    cf_builder* b;
+    cf_config*  c;
+    size_t      i;
+
+    /* "port = 9443", then comment lines of 64 bytes, each ';' first. */
+    memcpy(text, "port = 9443\n", 12);
+    for (i = 12; i + 1 < sizeof text; ++i) {
+        size_t at = (i - 12) % 64;
+        text[i]   = (at == 0) ? ';' : (at == 63) ? '\n' : 'x';
+    }
+    text[sizeof text - 1] = '\0';
+    check(spill("cf_transient.ini", text), "wrote a large file");
+    b = cf_build(NULL);
+    cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_transient.ini", NULL, 0);
+    c = cf_builder_create(b, &err);
+    check(c != NULL && cf_get_int(c, "port", 0) == 9443, "the one key is read");
+    if (c != NULL) {
+        size_t used = cf_arena_used(cf_ks_arena(cf_keys(c)));
+        check(used < sizeof text / 2, "and the file's bytes are not kept");
+        if (used >= sizeof text / 2) {
+            printf("  the configuration holds %lu bytes\n", (unsigned long)used);
+        }
+    }
+    cf_config_free(c);
+    remove("cf_transient.ini");
+}
+
 int main(void) {
     (void)argv0;
+    test_bytes_are_transient();
     test_ini_file();
     test_cli_tier1_end_to_end();
 #if CF_WITH_DOTENV

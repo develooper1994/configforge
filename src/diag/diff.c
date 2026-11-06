@@ -14,6 +14,7 @@
  */
 
 #include "configforge/configforge.h"
+#include "configforge/cf_serialize.h"
 
 #include <string.h>
 
@@ -198,6 +199,74 @@ static cf_bool diff_line(void* ctx, const char* key, size_t klen, cf_change kind
     }
     t->at = cf_fmt_append(t->buf, t->cap, t->at, "\n");
     return CF_TRUE;
+}
+
+/* ------------------------------------------------------------------ *
+ * As JSON Lines
+ * ------------------------------------------------------------------ */
+
+typedef struct diff_json {
+    cf_sink          out;
+    const cf_config* a;
+    const cf_config* b;
+} diff_json;
+
+static void diff_json_origin(cf_sink* out, const char* name, const cf_config* c,
+                             const cf_candidate* k) {
+    cf_sink_fmt(out, ", \"%s\": {\"source\": ", name);
+    cf_sink_json_string(out, diff_source_name(c, k->source),
+                        strlen(diff_source_name(c, k->source)));
+    if (k->at != NULL) {
+        cf_sink_puts(out, ", \"at\": ");
+        cf_sink_json_string(out, k->at, strlen(k->at));
+    }
+    cf_sink_putc(out, '}');
+}
+
+static cf_bool diff_json_line(void* ctx, const char* key, size_t klen, cf_change kind,
+                              const cf_candidate* before, const cf_candidate* after) {
+    static const char* const kinds[] = {"added", "removed", "value", "origin"};
+    diff_json*               j       = (diff_json*)ctx;
+    const cf_def*            d =
+        cf_defset_find(cf_defs(kind == CF_CHANGE_REMOVED ? j->a : j->b), key, klen);
+    cf_bool secret = (d != NULL && (d->flags & CF_SENSITIVE) != 0) ? CF_TRUE : CF_FALSE;
+
+    cf_sink_puts(&j->out, "{\"key\": ");
+    cf_sink_json_string(&j->out, key, klen);
+    cf_sink_fmt(&j->out, ", \"change\": \"%s\"", kinds[kind]);
+    if (secret) {
+        /* As the text says it: changed, and nothing about to what. */
+        cf_sink_puts(&j->out, ", \"sensitive\": true");
+    } else {
+        if (before != NULL) {
+            cf_sink_puts(&j->out, ", \"before\": ");
+            cf_sink_json_value(&j->out, &before->value);
+        }
+        if (after != NULL) {
+            cf_sink_puts(&j->out, ", \"after\": ");
+            cf_sink_json_value(&j->out, &after->value);
+        }
+    }
+    if (after != NULL) {
+        diff_json_origin(&j->out, "from", j->b, after);
+    }
+    if (before != NULL && kind != CF_CHANGE_VALUE) {
+        diff_json_origin(&j->out, "was_from", j->a, before);
+    }
+    cf_sink_puts(&j->out, "}\n");
+    return CF_TRUE;
+}
+
+size_t cf_diff_json(const cf_config* before, const cf_config* after, char* buf,
+                    size_t cap) {
+    diff_json j;
+
+    cf_sink_init(&j.out, buf, (buf == NULL) ? 0 : cap);
+    j.a = before;
+    j.b = after;
+    (void)cf_diff(before, after, diff_json_line, &j);
+    cf_sink_terminate(&j.out);
+    return j.out.len;
 }
 
 size_t cf_diff_text(const cf_config* before, const cf_config* after, char* buf,

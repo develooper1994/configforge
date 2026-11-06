@@ -70,6 +70,16 @@ CF_API const cf_doc_sink* cf_flatten_sink(cf_flatten* f);
    text value, `ports = 80,443` the elements 80 and 443. (1.2) */
 CF_API void cf_flatten_lists(cf_flatten* f, const struct cf_defset* ds);
 
+struct cf_source;
+
+/* A document's bytes through a codec into the key space, at the source's
+   rank, the source's definitions deciding lists for a format without
+   types: what the file and directory sources do with each file, for a
+   source of one's own that has bytes to read. False with `err` set. */
+CF_API cf_bool cf_source_read_blob(const struct cf_source* s, cf_keyspace* ks,
+                                   const cf_codec* codec, const cf_blob* blob,
+                                   const char* path, cf_error* err);
+
 /* Walk a resolved key space, emitting the document it describes.
    Structure is reconstructed from the sorted keys with nothing built:
    the keys under one prefix are a contiguous run, so the sort is

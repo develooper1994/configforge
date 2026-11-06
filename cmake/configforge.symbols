@@ -18,6 +18,8 @@ cf_arena_used
 cf_arena_wipe
 cf_array_count
 cf_array_key
+cf_blob_arena
+cf_blob_arena_done
 cf_blob_file
 cf_blob_mem
 cf_build
@@ -91,6 +93,7 @@ cf_defset_seal
 cf_derive
 cf_derive_in
 cf_diff
+cf_diff_json
 cf_diff_text
 cf_digest
 cf_doc_emit
@@ -244,6 +247,8 @@ cf_schema
 cf_schema_write
 cf_sink_fmt
 cf_sink_init
+cf_sink_json_string
+cf_sink_json_value
 cf_sink_overflowed
 cf_sink_putc
 cf_sink_puts
@@ -275,6 +280,7 @@ cf_source_image_state_size
 cf_source_load
 cf_source_memory
 cf_source_path
+cf_source_read_blob
 cf_source_registry
 cf_source_registry_error
 cf_source_registry_state_size

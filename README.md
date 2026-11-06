@@ -493,6 +493,7 @@ is an optional presentation of the same files.
 * [`docs/API.md`](docs/API.md) — every function, its header comment and implementation links; generated, and checked against headers and source by `gate.apiref`
 * [`docs/Design.md`](docs/Design.md) — the full specification
 * [`docs/Doctor.md`](docs/Doctor.md) — the pre-deployment analysis tool
+* [`docs/Formats.md`](docs/Formats.md) — which standard and version each format is read to, and what each does not do
 * [`docs/Conformance.md`](docs/Conformance.md) — each reader scored against its standard's own test suite, and the floors that keep the scores
 * [`docs/Roadmap.md`](docs/Roadmap.md) — what is next, what is known to be wrong, and the ideas not yet built
 * [`docs/Dependencies.md`](docs/Dependencies.md) — every dependency and its licence; the build generates an SPDX SBOM to match

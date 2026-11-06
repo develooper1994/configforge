@@ -51,6 +51,14 @@ CF_API void cf_blob_mem(cf_blob* b, const char* p, size_t n, const char* name);
    opened or read; the caller decides whether that is fatal. */
 CF_API cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err);
 
+/* Where a file's bytes go for one reading (D-61): an arena of their own,
+   from `ar`'s allocator, so that they are gone once the reader is done -
+   the key space keeps copies of the values - or `ar` itself when it is
+   fixed and has none to lend. NULL when there is no room for one.
+   cf_blob_arena_done frees it, zeroed, when it was its own. */
+CF_API cf_arena* cf_blob_arena(cf_arena* ar);
+CF_API void      cf_blob_arena_done(cf_arena* bytes, cf_arena* ar);
+
 /* ------------------------------------------------------------------ *
  * Bytes out
  *
@@ -72,6 +80,11 @@ CF_API void    cf_sink_puts(cf_sink* s, const char* z);
 CF_API void    cf_sink_fmt(cf_sink* s, const char* fmt, ...);
 CF_API void    cf_sink_terminate(cf_sink* s);
 CF_API cf_bool cf_sink_overflowed(const cf_sink* s);
+
+/* JSON, written by hand where a document is not the key space's (a
+   report, a diff): text as a JSON string, escaped; a value as JSON. */
+CF_API void cf_sink_json_string(cf_sink* out, const char* p, size_t n);
+CF_API void cf_sink_json_value(cf_sink* out, const cf_value* v);
 
 /* ------------------------------------------------------------------ *
  * Locations

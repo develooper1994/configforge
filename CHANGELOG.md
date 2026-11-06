@@ -36,9 +36,36 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   --codec` score a codec from a shared library on its format's suite
   and floors. New: `cf_builder_codec`, `cf_config_codec`,
   `cf_codec_among`, `cf_source_dir_codecs`.
+- **`cf_diff_json`**: the changes between two configurations as JSON
+  Lines, one object a key - its change, the values before and after,
+  where the new value is from and the old one was - for a log pipeline;
+  a sensitive key has `"sensitive": true` and no values, as in the text.
+  `cf_sink_json_string` and `cf_sink_json_value` are the JSON writers the
+  report, the encoder and the diff now share.
+- **A settle interval for reloads**: `cf_live_options.settle`, the polls
+  a change waits after it is seen, so a burst of writes is read once, at
+  its end. 0, the default, reads it at once, as before.
 
 ### Changed
 
+- **TOML 1.1.0**: times without seconds (`13:37`), `\e` and `\xHH`
+  escapes, and inline tables over several lines, with comments and a
+  comma after the last key. Held to toml-test's 1.1.0 files: 218/218
+  valid, 502/502 invalid, 218/218 values. A TOML 1.0 file reads as it
+  did; a few that 1.0 refused, such as a trailing comma in an inline
+  table, now read, as 1.1 says.
+- **A file's bytes are kept only while it is read** (D-61): a file, a
+  `.env` file and a drop-in directory are read into an arena of their
+  own, freed - zeroed first - once the reader is done, so a
+  configuration holds its values and no longer the text of every file it
+  came from; a 200 KB file of one key leaves the key. A fixed arena
+  keeps the bytes in it, as before. `cf_blob_arena` and
+  `cf_blob_arena_done` give a source of one's own the same, and
+  `cf_source_read_blob` reads a document's bytes through a codec as the
+  file sources do.
+- **C++98 to C++14 are deprecated** (D-71): below C++17 the header says
+  so at compile time, and 2.0 will require C++17; `CF_CXX_LEGACY`
+  silences it. The C++ examples are C++17.
 - **YAML is read by a parser of the library's own, and is on by
   default** (D-69): YAML 1.2 by recursive descent, allocating nothing,
   every value with its place; all of yaml-test-suite - 308 of 308 valid

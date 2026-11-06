@@ -20,6 +20,8 @@ if(CF_CONSUMER_CXX)
   enable_language(CXX)
   add_executable(consumer_cpp consumer.cpp)
   target_link_libraries(consumer_cpp PRIVATE ConfigForge::configforge)
+  # C++98 still builds, by saying so (D-71).
+  target_compile_definitions(consumer_cpp PRIVATE CF_CXX_LEGACY=1)
   set_target_properties(consumer_cpp PROPERTIES CXX_STANDARD 98
                                                 CXX_STANDARD_REQUIRED ON)
 endif()

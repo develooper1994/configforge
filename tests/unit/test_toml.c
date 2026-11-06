@@ -133,7 +133,7 @@ static void refused(const char* text, const char* needle, const char* what) {
 static void test_refuses(void) {
     refused("when = 1979-02-29\n", "out of range", "a February 29th of no leap year");
     refused("when = 1979-13-01\n", "out of range", "a thirteenth month");
-    refused("when = 07:32\n", "with seconds", "a time without seconds");
+    refused("when = 07:3\n", "HH:MM or HH:MM:SS", "a time cut short");
     refused("when = 1979-05-27T25:00:00\n", "time is malformed", "a 25th hour");
     refused("when = 1979-05-27T07:32:00+24:00\n", "out of range",
             "an offset of 24 hours");
@@ -210,6 +210,35 @@ static void test_values(void) {
     cf_config_free(c);
 }
 
+/* What TOML 1.1 adds: a time without seconds, \e and \xHH, and an inline
+   table over lines, with comments and a comma after its last key. */
+static void test_toml_1_1(void) {
+    cf_error    err = CF_ERROR_INIT;
+    static char ex[1024];
+    cf_config*  c = load("lt = 13:37\n"
+                         "ldt = 1979-05-27T07:32Z\n"
+                         "esc = \"\\e[0m \\xE9\"\n"
+                         "t = {   # a comment\n"
+                         "  a = 1,\n"
+                         "  b = 2, # another\n"
+                         "}\n"
+                         "after = 1\n",
+                         &err);
+
+    check(c != NULL, "TOML 1.1 reads");
+    if (c == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+    check_text(cf_get_text(c, "lt", ""), "13:37", "a time without seconds, as written");
+    check_text(cf_get_text(c, "ldt", ""), "1979-05-27T07:32Z", "and a date-time");
+    check_text(cf_get_text(c, "esc", ""), "\x1b[0m \xc3\xa9", "\\e and \\xHH");
+    check(cf_get_int(c, "t.b", 0) == 2, "an inline table over lines");
+    cf_explain(c, "after", ex, sizeof ex);
+    has(ex, "cf_toml.toml:8:", "with its lines counted");
+    cf_config_free(c);
+}
+
 #if CF_WITH_REAL
 /* inf read as its text meets a definition that says real: the library
    keeps reals finite, so the definition refuses it, by the key's name. */
@@ -279,8 +308,7 @@ static void test_defined_once(void) {
     refused("[[t]]\n[t]\n", "array of tables", "a header over an array of tables");
     refused("[t]\n[[t]]\n", "not as an array of tables", "[[ ]] over a table");
     refused("a = [{b = 1}]\n[a.c]\n", "is a value", "a header into a value array");
-    refused("t = {a = 1,}\n", "no comma after its last key",
-            "a trailing comma in an inline table");
+    refused("t = {a = 1,,}\n", "key", "two commas in an inline table");
 
     /* Allowed: a table named on the way to a header and defined after it;
        sub-tables of what dotted keys defined; dotted keys sharing a table;
@@ -378,6 +406,7 @@ int main(void) {
     test_floats();
     test_refuses();
     test_values();
+    test_toml_1_1();
 #if CF_WITH_REAL
     test_inf_against_real();
 #endif

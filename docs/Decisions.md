@@ -77,6 +77,7 @@ gets reopened every six months.
 | D-44 | The Rust binding | bindings, build, safety | **Decided** |
 | D-45 | Build limits in the ABI | ABI, bindings, 1.0 | **Decided** |
 | D-60 | Arrays in INI are PHP's `name[]` and `name[i]` | formats, INI | **Decided** |
+| D-61 | Sizing: limits by build, a file's bytes transient, a stream for 2.0 | memory, readers, embedded | **Decided** |
 | D-62 | Each reader held to its format's standard, by the standard's suite | formats, TOML, JSON, dependencies | **Decided** |
 | D-63 | YAML's anchors, aliases and core tags are read | formats, YAML, provenance | **Decided** |
 | D-64 | Definitions read from a JSON Schema, the reverse of `cf_schema` | definitions, schema | **Decided** |
@@ -86,6 +87,7 @@ gets reopened every six months.
 | D-68 | A format of one's own, registered on the builder | formats, codecs, conformance | **Decided** |
 | D-69 | A YAML parser of the library's own, on by default | formats, YAML, dependencies | **Decided** |
 | D-70 | The Rust crate builds with cargo and the cc crate | Rust, build, dependencies | **Decided** |
+| D-71 | C++98 to C++14 deprecated; C++17 from 2.0 | C++, compatibility | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -2530,6 +2532,69 @@ refuses missing search data. Browser checks exercise actual search,
 its result links and narrow-screen navigation under the deployment
 path prefix. Documentation dependencies are tested in a clean
 environment, not one retaining an earlier theme's packages.
+
+## D-61 — Sizing: limits by build, a file's bytes transient, a stream for 2.0
+
+**Question.** Every limit is a fixed buffer today (`CF_KEY_MAX` and its
+siblings, D-37): a key, a message, a path, a depth. Three modes were
+asked for - full-dynamic (no limit but memory), semi-dynamic (buffers on
+the stack that grow from the allocator up to a cap) and manual (fixed) -
+and, with them, how much of a file is held: the whole file (dump), the
+file only while it is read (transient dump), or a few kilobytes at a
+time (stream). Which, and when?
+
+**Decision.** Three parts, each where it can be done honestly.
+
+1. **Manual sizing is the mode, by build.** The limits are build options
+   already, each measured (D-37, Maintaining.md "Measured"), and a
+   profile sets them: `minimal` runs with 64-byte keys and a 1 KB stack
+   budget. A semi- or full-dynamic key or message cannot reach the
+   interface in 1.x: `cf_error` holds its `key` and `message` as arrays,
+   and every program that declares one has their size compiled in.
+   Growing them is a 2.0 change, with the dynamic modes, decided there
+   and not in a 1.x release.
+2. **A file's bytes are transient, now.** A file was read whole into the
+   configuration's own arena and stayed as long as the configuration did,
+   though the key space copies every value it keeps and nothing reads the
+   bytes again. They are read into an arena of their own, from the same
+   allocator, and wiped and freed once the reader is done; the steady
+   footprint loses the file. A fixed arena - a program that gave the
+   library its whole memory - keeps the bytes in it, as before, since
+   there is nowhere else to put them.
+3. **A stream is 2.0's.** Feeding a reader in chunks would bound the peak
+   rather than the steady footprint: what a device without room for the
+   whole file needs. It changes `cf_codec`'s `decode` from a blob to a
+   source of chunks, an interface change, and every reader that looks
+   back - TOML measures a string and reads it again, INI looks back at an
+   earlier array run, YAML's implicit keys look ahead along a line - is
+   reworked. It is the first item of 2.0, with the sizing modes.
+
+**Held to.** Tier 1's sanitised builds read every file through the
+transient arena, so a value left pointing into the freed bytes is an
+error there, not a guess; the bytes are wiped before they are freed, so
+a secret in a file does not outlive its reading in freed memory, as
+secrets are kept out of it elsewhere (cf_arena_wipe).
+
+---
+
+## D-71 — C++98 to C++14 deprecated; C++17 from 2.0
+
+**Question.** One header serves every standard from C++98 (D-47), and
+modern C++ only was asked for. Can 1.x drop the old standards?
+
+**Decision.** Not in 1.x, where a program that builds must go on
+building (D-56); deprecated, said, and dropped in 2.0. Below C++17 the
+header says at compile time that C++98 to C++14 are deprecated and 2.0
+requires C++17, once per translation unit, as a warning (GCC, Clang) or
+a message (MSVC); a program that knows defines `CF_CXX_LEGACY`. The
+examples are C++17 now, as new code should be; the C++98 tests and the
+C++98 consumer stay until 2.0, saying `CF_CXX_LEGACY`, and the header
+gate checks both that every standard compiles and that C++11 without
+the macro is told. In 2.0 the C++03 core goes, and `std::optional`,
+`std::string_view` and structured bindings simplify what is left; C++20
+modules come where the compilers in the matrix build them.
+
+---
 
 ## D-69 — A YAML parser of the library's own, on by default
 

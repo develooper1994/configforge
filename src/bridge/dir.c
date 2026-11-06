@@ -72,30 +72,28 @@ static void dir_sort(dir_name* names, int n) {
  * Loading
  * ------------------------------------------------------------------ */
 
-static cf_bool dir_load(const cf_source* s, cf_keyspace* ks) {
-    dir_state* st = (dir_state*)s->ext;
-    cf_arena*  ar = cf_ks_arena(ks);
-    dir_name*  names;
-    char       full[CF_DIR_PATH_MAX];
-    int        n, i;
+/* Every file of the directory, in order, its bytes and the listing in
+   `scratch`. */
+static cf_bool dir_read(dir_state* st, const cf_source* s, cf_keyspace* ks,
+                        cf_arena* scratch) {
+    dir_name* names;
+    char      full[CF_DIR_PATH_MAX];
+    int       n, i;
 
-    st->failed = CF_FALSE;
     cf_error_clear(&st->err);
-
-    names = (dir_name*)cf_arena_alloc(ar, (size_t)CF_DIR_MAX_FILES * CF_DIR_PATH_MAX);
+    names = (scratch != NULL) ? (dir_name*)cf_arena_alloc(
+                                    scratch, (size_t)CF_DIR_MAX_FILES * CF_DIR_PATH_MAX)
+                              : NULL;
     if (names == NULL) {
-        st->failed = CF_TRUE;
         return cf_error_set(&st->err, CF_E_MEMORY, NULL, st->path,
                             "no room to list '%s'", st->path);
     }
-
     n = cf_platform_dir_list(st->path, names, CF_DIR_MAX_FILES, &st->err);
     if (n < 0) {
         if ((st->flags & CF_OPTIONAL) != 0) {
             cf_error_clear(&st->err);
             return CF_TRUE;
         }
-        st->failed = CF_TRUE;
         return CF_FALSE;
     }
     dir_sort(names, n);
@@ -103,7 +101,6 @@ static cf_bool dir_load(const cf_source* s, cf_keyspace* ks) {
     for (i = 0; i < n; ++i) {
         const cf_codec* codec;
         cf_blob         blob;
-        cf_flatten      fl;
 
         if (cf_fmt(full, sizeof full, "%s/%s", st->path, names[i]) >= sizeof full) {
             continue;
@@ -118,7 +115,6 @@ static cf_bool dir_load(const cf_source* s, cf_keyspace* ks) {
                directory that silently ignores half its contents is the
                worst possible place for a build option to hide. */
             const char* fmt = cf_format_of_path(full);
-            st->failed      = CF_TRUE;
             if (fmt != NULL) {
                 return cf_error_set(&st->err, CF_E_CAPABILITY, NULL, full,
                                     "'%s' requires %s support; this build "
@@ -130,31 +126,31 @@ static cf_bool dir_load(const cf_source* s, cf_keyspace* ks) {
                                 "name; set one for the whole directory",
                                 full);
         }
-        if (!cf_blob_file(&blob, ar, full, &st->err)) {
-            st->failed = CF_TRUE;
-            return CF_FALSE;
-        }
         /* Every file shares the source's rank, so the later one wins by
            the same rule that makes --port=2 beat --port=1. */
-        if (!cf_flatten_init(&fl, ks, s->rank)) {
-            st->failed = CF_TRUE;
-            return cf_error_set(&st->err, CF_E_MEMORY, NULL, full,
-                                "no room to read '%s'", full);
-        }
-        if ((codec->caps & CF_CODEC_TYPED) == 0 && s->ref != NULL) {
-            cf_flatten_lists(&fl, (const cf_defset*)s->ref); /* as file.c does */
-        }
-        if (!codec->decode(&blob, cf_flatten_sink(&fl), &st->err)) {
-            st->failed = CF_TRUE;
+        if (!cf_blob_file(&blob, scratch, full, &st->err) ||
+            !cf_source_read_blob(s, ks, codec, &blob, full, &st->err)) {
             return CF_FALSE;
-        }
-        if (fl.failed || fl.overflow) {
-            st->failed = CF_TRUE;
-            return cf_error_set(&st->err, CF_E_KEY, NULL, full,
-                                "'%s' contains a key this build cannot hold", full);
         }
     }
     return CF_TRUE;
+}
+
+static cf_bool dir_load(const cf_source* s, cf_keyspace* ks) {
+    dir_state* st = (dir_state*)s->ext;
+    cf_arena*  ar = cf_ks_arena(ks);
+    /* The listing and each file's bytes only while the directory is read
+       (D-61): the key space keeps copies of the values. */
+    cf_arena* scratch = cf_blob_arena(ar);
+    cf_bool   ok;
+
+    st->failed = CF_FALSE;
+    ok         = dir_read(st, s, ks, scratch);
+    cf_blob_arena_done(scratch, ar);
+    if (!ok) {
+        st->failed = CF_TRUE;
+    }
+    return ok;
 }
 
 #else /* !CF_WITH_DIR */

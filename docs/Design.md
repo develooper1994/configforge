@@ -1894,7 +1894,7 @@ warning when it does not.
 
 ### TOML
 
-Built in (`src/serialize/toml.c`), held to TOML 1.0.0 by toml-test (D-62,
+Built in (`src/serialize/toml.c`), held to TOML 1.1.0 by toml-test (D-62,
 docs/Conformance.md): every valid document read to the values the suite states, every
 invalid one refused. Native types map directly; arrays and arrays of tables become index
 keys; every value carries its line and column. TOML's dates and times have no ConfigForge

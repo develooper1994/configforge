@@ -60,6 +60,10 @@ struct cf_live {
     size_t            kept_restarts_len;
     unsigned          left;
     cf_config*        rejected;
+
+    /* Settling: polls a seen change waits, and how many are left. */
+    unsigned settle;
+    unsigned settling;
 };
 
 /* A ticket lock, made of the atomics the port has: take the next
@@ -621,6 +625,9 @@ cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err) {
         l->health_user = o->health_user;
         l->probation   = o->probation;
     }
+    if (LIVE_OPTIONS_HAS(o, settle)) {
+        l->settle = o->settle;
+    }
     cf_ref_init(&l->ticket_next, 0);
     cf_ref_init(&l->ticket_serving, 0);
     l->current = live_build(l, NULL, &list, &list_len, err);
@@ -690,6 +697,19 @@ cf_live_result cf_live_poll(cf_live* l, cf_error* err) {
                                       : l->current;
     if (!cf_changed(watched)) {
         return CF_LIVE_UNCHANGED;
+    }
+    /* A change seen is read `settle` polls later, whatever else is
+       written meanwhile: a burst is read once, at its end. */
+    if (l->settle > 0) {
+        if (l->settling == 0) {
+            l->settling = l->settle;
+            live_log(l, CF_LOG_DEBUG, "reload", CF_OK, NULL,
+                     "a change is seen and left to settle");
+            return CF_LIVE_UNCHANGED;
+        }
+        if (--l->settling > 0) {
+            return CF_LIVE_UNCHANGED;
+        }
     }
     return live_rebuild(l, err);
 }

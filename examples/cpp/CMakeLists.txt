@@ -18,7 +18,7 @@ foreach(
   target_link_libraries(${ex}_cpp PRIVATE configforge)
   set_target_properties(
     ${ex}_cpp
-    PROPERTIES CXX_STANDARD 98
+    PROPERTIES CXX_STANDARD 17
                CXX_STANDARD_REQUIRED ON
                CXX_EXTENSIONS OFF)
   if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
@@ -98,7 +98,7 @@ if(TARGET configforge_doctor)
   target_link_libraries(preflight_cpp PRIVATE configforge_doctor)
   set_target_properties(
     preflight_cpp
-    PROPERTIES CXX_STANDARD 98
+    PROPERTIES CXX_STANDARD 17
                CXX_STANDARD_REQUIRED ON
                CXX_EXTENSIONS OFF)
   if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
@@ -123,7 +123,7 @@ add_executable(policy_cpp policy.cpp)
 target_link_libraries(policy_cpp PRIVATE configforge)
 set_target_properties(
   policy_cpp
-  PROPERTIES CXX_STANDARD 98
+  PROPERTIES CXX_STANDARD 17
              CXX_STANDARD_REQUIRED ON
              CXX_EXTENSIONS OFF)
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")

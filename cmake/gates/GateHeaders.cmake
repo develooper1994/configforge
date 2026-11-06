@@ -72,9 +72,15 @@ function(probe_cxx header std prereq)
   endif()
   file(WRITE "${base}.cpp"
        "#include <configforge/${header}>\nint main(){return 0;}\n")
+  # Below C++17 the header says it is deprecated (D-71); the gate builds
+  # those as a program that knows does.
+  set(legacy "")
+  if(std STREQUAL "98" OR std LESS 17)
+    set(legacy -DCF_CXX_LEGACY)
+  endif()
   execute_process(
     COMMAND ${CXX} -std=c++${std} -pedantic -Werror -Wall -Wextra ${gen_inc}
-            -I${SRC}/include -c -o "${base}.o" "${base}.cpp"
+            ${legacy} -I${SRC}/include -c -o "${base}.o" "${base}.cpp"
     RESULT_VARIABLE rc
     OUTPUT_VARIABLE out
     ERROR_VARIABLE out)
@@ -99,6 +105,22 @@ if(CXX AND EXISTS "${SRC}/include/configforge/configforge.hpp")
     23)
     probe_cxx(configforge.hpp ${std} "")
   endforeach()
+  # And without CF_CXX_LEGACY, below C++17, the deprecation is said.
+  set(base "${BIN}/probe_legacy")
+  file(WRITE "${base}.cpp"
+       "#include <configforge/configforge.hpp>\nint main(){return 0;}\n")
+  execute_process(
+    COMMAND ${CXX} -std=c++11 -Werror ${gen_inc} -I${SRC}/include -c -o
+            "${base}.o" "${base}.cpp"
+    RESULT_VARIABLE rc
+    OUTPUT_VARIABLE out
+    ERROR_VARIABLE out)
+  if(rc EQUAL 0 OR NOT out MATCHES "2.0 requires C")
+    message("VIOLATION: C++11 without CF_CXX_LEGACY was not told of the "
+            "deprecation")
+    message("${out}")
+    set(cxx_bad 1)
+  endif()
   if(cxx_bad)
     message(FATAL_ERROR "header gate failed")
   endif()
