@@ -5,8 +5,28 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ## 1.4.0 — unreleased
 
+### Changed
+
+- A file whose extension no format claims was an error and is now read
+  by its content, when one format reads it (D-73).
+
 ### Added
 
+- **The format of a file is chosen from its name, then its content**
+  (D-73). A file with no extension, or one no format claims, is read as
+  the format its content turns out to be, decided by reading it with
+  each codec - the builder's own first, then the strict formats, then
+  YAML and INI, which must not read it differently; `.properties` is
+  never chosen from content. An empty file, text no format reads and an
+  ambiguous file are refused, naming what was tried. A name's format is
+  still taken as it stands, and when it cannot read the file the error
+  adds the format the content looks like. `cf_codec_detect` does the same
+  for bytes of a program's own; `cf_source_file_format` says which format
+  a file was read as, and how.
+- **`cf_builder_document`**: a document the program holds in memory -
+  fetched, embedded, read from a database - as a source, its format
+  named, from its name, or from its content; its bytes are copied, and
+  its places in `explain()` are its name and line.
 - **Doctor checks a report's fingerprint against its own keys**, CFD019
   (error): a report whose `fingerprint` is not the one its keys give was
   edited, cut short or written by a broken build. A report without the

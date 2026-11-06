@@ -3,7 +3,8 @@
 # way (CF_FUZZ: libFuzzer, with the address and undefined-behaviour
 # sanitisers) with ClusterFuzzLite's compiler and flags, and copied to
 # $OUT with the deterministic fuzzer's corpora as their seeds.
-cmake -S "$SRC/configforge" -B build -DCMAKE_BUILD_TYPE=Debug -DCF_FUZZ=ON \
+# CF_FUZZ_SANITIZE empty: $CFLAGS carries the one sanitiser of this build.
+cmake -S "$SRC/configforge" -B build -DCMAKE_BUILD_TYPE=Debug -DCF_FUZZ=ON -DCF_FUZZ_SANITIZE= \
   -DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \
   -DCMAKE_C_FLAGS="$CFLAGS" -DCMAKE_CXX_FLAGS="$CXXFLAGS" -DCF_WITH_CXX=OFF
 cmake --build build --parallel "$(nproc)" --target fuzz_seeds

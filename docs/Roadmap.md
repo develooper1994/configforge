@@ -43,7 +43,7 @@ beside what is not.
 | 🟩 | `cf_diff_json`, the settle interval, limits in the report | CHANGELOG 1.3.0 |
 | 🟩 | Signed release artifacts (attestations) | release.yml |
 | 🟩 | Python examples; a table of format versions | examples/python, Formats.md |
-| 🟦 | The format from the name, then the content, by several strategies | D-73 |
+| 🟨 | The format from the name, then the content, by several strategies: files and `cf_builder_document` done; a document in one environment variable, drop-in directories, the format in reports, the suites renamed left | D-73 |
 | 🟩 | One `define`, the type given or inferred: C, C11, C++, Python, Rust | D-74 |
 | 🟨 | 1.3.1 released (1.3.0 tagged, not published) | CHANGELOG |
 | 🟩 | Doctor checks a report's fingerprint against its contents (CFD019) | plan item 9 |

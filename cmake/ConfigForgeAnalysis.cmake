@@ -16,6 +16,9 @@ option(CF_COVERAGE "Coverage instrumentation (gcov)" OFF)
 # built with the address and undefined-behaviour sanitisers, and the
 # harnesses in tests/fuzz. Clang only.
 option(CF_FUZZ "libFuzzer harnesses (clang)" OFF)
+set(CF_FUZZ_SANITIZE
+    "address,undefined"
+    CACHE STRING "The sanitisers CF_FUZZ adds; empty for the flags' own")
 if(CF_FUZZ AND NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
   message(FATAL_ERROR "CF_FUZZ needs clang: libFuzzer is part of it")
 endif()
@@ -100,10 +103,15 @@ function(configforge_apply_analysis tgt)
     endif()
   endif()
   if(CF_FUZZ)
-    target_compile_options(
-      ${tgt} PRIVATE -fsanitize=fuzzer-no-link,address,undefined
-                     -fno-omit-frame-pointer -g)
-    target_link_options(${tgt} PRIVATE -fsanitize=address,undefined)
+    target_compile_options(${tgt} PRIVATE -fsanitize=fuzzer-no-link
+                                          -fno-omit-frame-pointer -g)
+    # Empty when the environment's flags choose the sanitisers, as
+    # ClusterFuzzLite's do: one sanitiser a build, and a build with
+    # another added is refused as a bad build.
+    if(CF_FUZZ_SANITIZE)
+      target_compile_options(${tgt} PRIVATE -fsanitize=${CF_FUZZ_SANITIZE})
+      target_link_options(${tgt} PRIVATE -fsanitize=${CF_FUZZ_SANITIZE})
+    endif()
   endif()
   if(CF_COVERAGE)
     target_compile_options(${tgt} PRIVATE --coverage)
