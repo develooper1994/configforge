@@ -56,6 +56,7 @@ beside what is not.
 | ⬜ | Converting between formats | assessment |
 | ⬜ | Code for each binding from a contract | assessment |
 | ⬜ | 2.0: what the sizing modes break, once | plan item 10 |
+| ⬜ | Sizes predicted, then checked: a file's buffer and the key space sized from the file | Ideas |
 
 ## Release follow-up
 
@@ -415,6 +416,23 @@ verified commits, and a release is cut where the order says so. The
 Every idea written here before 2026-11-05 is now in the plan above, in
 the order of its use. New ones go here until they are
 accepted.
+
+### ⬜ Sizes predicted, then checked (2026-11-06)
+
+Reading a file starts with a 4 KB buffer and doubles it, copying each
+time: a 1 MB file is copied about nine times and peaks near twice its
+size, in the transient arena (D-61). The operating system knows the
+size already (`fstat`, `GetFileSizeEx`), so the first buffer can be the
+size it says. It is a prediction, not a fact - a pipe, a file growing as
+it is read, a `/proc` file that says 0 - so the reading loop stays as it
+is and only its first capacity changes: a wrong guess costs what today
+costs, a right one a single allocation and no copy. The same holds one
+step on: the number of keys guessed from the bytes (a line a key, about)
+to size the key space and the definitions' index once rather than as
+they grow. Done when `bench/` shows the peak and the time for 1 KB to
+10 MB files before and after, on Linux and Windows, the numbers go in
+Maintaining.md's "Measured" whichever way they come out, and a file
+whose size changes while it is read is still read whole.
 
 ### Considered, and decided against for now: TOON
 
