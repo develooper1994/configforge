@@ -58,7 +58,7 @@ beside what is not.
 | ⬜ | 2.0: what the sizing modes break, once | plan item 10 |
 | 🟨 | Sizes and work predicted, then checked: a file's first buffer done | D-76, plan of the evening |
 | 🟦 | Checks at compile time where they can be, at run time always | D-75, plan of the evening |
-| 🟨 | GitHub used for all it offers that fits | plan of the evening |
+| 🟩 | GitHub used for all it offers that fits | plan of the evening |
 
 ## Release follow-up
 
@@ -172,12 +172,14 @@ names its cause. Each is a trade-off, measured before it is kept.
    ("try again later"); run again.
 2. 🟨 **1.3.0** (ready at `ad5f1c2`, tier 2 green; the tag is left): the CHANGELOG's date, tier 2 on Linux and Windows, then
    the tag, which publishes it (the tag is pushed by the maintainer).
-3. 🟨 **GitHub, all of it that fits**: CodeQL code scanning (C and C++,
+3. 🟩 **GitHub, all of it that fits**: CodeQL code scanning (C and C++,
    Python, Rust, the workflows); Dependabot for the crate as well as the
    actions; `CODEOWNERS`; issue forms instead of free-text templates (done);
-   then, as repository settings the maintainer approves: private
-   vulnerability reporting, Discussions, a ruleset on `main` requiring
-   CI, and release notes in the release from the CHANGELOG (done).
+   private vulnerability reporting, Discussions, and a ruleset on
+   `main` (all done, approved 2026-11-07): no deletion, no force push,
+   and CI's gates, the three-system matrix, the sanitisers and clang
+   required, with a bypass for the repository's administrators; release
+   notes come from the CHANGELOG (done).
 4. 🟦 **D-73, the format from the name and the content, by several
    strategies in turn**: the format the name gives is tried first,
    whatever it is; a cheap look at the first bytes orders the rest
