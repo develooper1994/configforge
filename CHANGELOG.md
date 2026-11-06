@@ -39,6 +39,16 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Changed
 
+- **YAML is read by a parser of the library's own, and is on by
+  default** (D-69): YAML 1.2 by recursive descent, allocating nothing,
+  every value with its place; all of yaml-test-suite - 308 of 308 valid
+  cases event for event against the suite's own streams, 94 of 94
+  invalid refused, and through the library 122/122, 94/94 and 110/110
+  values, as libfyaml. `CF_WITH_YAML` defaults to ON and
+  `CF_YAML_BACKEND=auto` takes the built-in parser; `libfyaml` and
+  `libyaml` remain by name, and the vcpkg and Conan packages no longer
+  need libyaml for YAML. A build that named neither and has libfyaml
+  installed reads through the built-in parser now.
 - **The Rust crate builds with cargo alone** (D-70): `build.rs` compiles
   the library's C sources with the `cc` crate instead of running CMake,
   so a C compiler is all a Rust build needs. `cc` is the one build

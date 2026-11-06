@@ -8,8 +8,8 @@
 # Doctor, the tests and the examples are the project's, not a consumer's.
 #
 # Every CF_WITH_* option is a recipe option with the build's default, and
-# with_yaml brings libyaml from ConanCenter, the one dependency any build
-# of this library can have (docs/Dependencies.md).
+# with_xml and with_sqlite bring expat and sqlite3 from ConanCenter
+# (docs/Dependencies.md); YAML is read by the built-in parser.
 
 import os
 import re
@@ -23,7 +23,7 @@ FEATURES = {
     "json": True,
     "toml": True,
     "properties": True,
-    "yaml": False,
+    "yaml": True,
     "xml": False,
     "sqlite": False,
     "real": True,
@@ -74,8 +74,6 @@ class ConfigForgeConan(ConanFile):
         self.settings.rm_safe("compiler.cppstd")
 
     def requirements(self):
-        if self.options.with_yaml:
-            self.requires("libyaml/0.2.5")
         if self.options.with_xml:
             self.requires("expat/[>=2.6 <3]")
         if self.options.with_sqlite:

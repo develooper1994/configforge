@@ -48,10 +48,10 @@
 #ifndef CF_WITH_XML
 #define CF_WITH_XML 0
 #endif
-/* Off by default: it links libyaml, and a default build has no
-   third-party dependency. */
+/* On by default: read by the built-in parser, which needs nothing
+   (D-69); libfyaml or libyaml only when the build asks for one. */
 #ifndef CF_WITH_YAML
-#define CF_WITH_YAML 0
+#define CF_WITH_YAML 1
 #endif
 #ifndef CF_WITH_SQLITE
 #define CF_WITH_SQLITE 0

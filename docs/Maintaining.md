@@ -92,6 +92,7 @@ The round of 2026-11-06 (each reader against its standard's suite):
 | a defect found in a dependency | reproduced on its latest release and master, searched for in its tracker, then reported with the reproducer and the fix (libfyaml issues 101, known; 506, filed) |
 | a `b != NULL ?` test in a new branch made MSVC's analyzer (C6011) read the rest of the function as dereferencing a NULL builder, and CI's Windows job failed after a green Linux tier 1 | a commit with C runs the Windows quick verify too before it is pushed; a guard returns early rather than testing inside an expression |
 | a file written into the tree while the stage-and-verify script ran was staged half-formatted, twice | nothing is written into the tree from the staging to the end of the copy; new work goes to a scratch directory meanwhile |
+| YAML went on by default, and incremental verify runs kept their CMake caches, which kept `CF_WITH_YAML=OFF`: tier 1 passed without building the new default, and a stack-use-after-scope in the alias replay (`yaml.c`) waited for a sanitised build made by hand | `verify.cmake` starts from nothing when the options, the presets or `cf_build_options.h` change |
 | a new parser was developed against the suite's own event streams (`test.event`) with a scratch harness, apart from the library: 256 of 308 at the first run, 308 of 308 and 94 of 94 after nine fixes, in an hour | a reader is first held to the suite's events, where a difference names the construct, then to the values through the library |
 
 ## Measured

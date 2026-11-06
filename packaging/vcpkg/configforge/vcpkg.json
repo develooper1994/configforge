@@ -9,10 +9,10 @@
     { "name": "vcpkg-cmake", "host": true },
     { "name": "vcpkg-cmake-config", "host": true }
   ],
+  "default-features": ["yaml"],
   "features": {
     "yaml": {
-      "description": "The YAML codec, through libyaml (CF_WITH_YAML)",
-      "dependencies": ["libyaml"]
+      "description": "The YAML codec, through the built-in parser (CF_WITH_YAML)"
     },
     "xml": {
       "description": "The XML reader, through expat (CF_WITH_XML)",

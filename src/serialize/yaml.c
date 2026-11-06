@@ -1,13 +1,15 @@
 /*
- * yaml.c - YAML, read through libfyaml or libyaml and written by hand.
- * C89, but for the libfyaml half, whose header needs C11.
+ * yaml.c - YAML, read through the built-in parser, libfyaml or libyaml,
+ * and written by hand. C89, but for the libfyaml half, whose header needs
+ * C11.
  *
  * Reading is a parser's events mapped onto the document events, one to
- * one: a mapping is a table, a sequence an array, a scalar a scalar. Two
- * parsers can supply them (D-62), and only the last part of the reader
- * knows which: libfyaml, which reads all of yaml-test-suite as YAML 1.2
- * says, and libyaml, which follows YAML 1.1 and builds everywhere, MSVC
- * included. Writing is a few dozen lines of block style here, because
+ * one: a mapping is a table, a sequence an array, a scalar a scalar.
+ * Three parsers can supply them (D-62, D-69), and only the last part of
+ * the reader knows which: the built-in one (yamlparse.c), which reads all
+ * of yaml-test-suite as YAML 1.2 says and needs nothing; libfyaml, which
+ * does too; and libyaml, which follows YAML 1.1. Writing is a few dozen
+ * lines of block style here, because
  * every value this library holds can be written in a handful of forms
  * and a parser's emitter would bring an allocation and a second state
  * machine for them.
@@ -44,18 +46,18 @@
 
 #include "configforge/cf_serialize.h"
 
+/* Which parser: CF_YAML_LIBFYAML, CF_YAML_LIBYAML, or the built-in one. */
+#include "configforge/cf_yamlparse.h"
+
 #include <string.h>
 
 #if CF_WITH_YAML
 
-/* Which parser reads (D-62): the build defines CF_YAML_LIBFYAML when it
-   chose libfyaml; libyaml otherwise. */
-#ifndef CF_YAML_LIBFYAML
-#define CF_YAML_LIBFYAML 0
-#endif
+/* Which parser reads (D-62, D-69): libfyaml or libyaml when the build
+   chose one, the built-in one otherwise. */
 #if CF_YAML_LIBFYAML
 #include <libfyaml.h>
-#else
+#elif CF_YAML_LIBYAML
 #include <yaml.h>
 #endif
 
@@ -177,7 +179,7 @@ static cf_bool yaml_keep(yaml_scan* s, const char* p, size_t n, cf_u32* at) {
         }
         s->pool = pool;
     }
-    if (n > 0) {
+    if (n > 0 && p != NULL) {
         memcpy(s->pool + s->npool, p, n);
     }
     *at = (cf_u32)s->npool;
@@ -592,6 +594,8 @@ static cf_bool yaml_alias(yaml_scan* s, const char* name, size_t n, unsigned lin
         yaml_rec r = s->recs[a.first + k];
         yaml_ev  e;
         char     tag[256];
+        /* The copy below, alive until the event is handled. */
+        char local[256];
         e.kind  = r.kind;
         e.n     = r.n;
         e.plain = r.plain ? CF_TRUE : CF_FALSE;
@@ -608,7 +612,6 @@ static cf_bool yaml_alias(yaml_scan* s, const char* name, size_t n, unsigned lin
         if (e.kind == YAML_EV_SCALAR && s->nopen > 0) {
             /* Recording this scalar again copies its text into the pool,
                which may move as it grows: read it from a copy. */
-            char  local[256];
             char* text = local;
             if (r.n >= sizeof local) {
                 text = s->out->reserve_text != NULL &&
@@ -890,7 +893,7 @@ static cf_bool yaml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     return ok;
 }
 
-#else /* libyaml */
+#elif CF_YAML_LIBYAML
 
 /* ------------------------------------------------------------------ *
  * Through libyaml (YAML 1.1; builds everywhere, MSVC included)
@@ -984,6 +987,64 @@ static cf_bool yaml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     }
     yaml_parser_delete(&parser);
     return ok;
+}
+
+#else /* the built-in parser */
+
+/* ------------------------------------------------------------------ *
+ * Through the built-in parser (yamlparse.c, D-69): YAML 1.2, all of
+ * yaml-test-suite, no dependency
+ * ------------------------------------------------------------------ */
+
+static cf_bool yaml_b_document(void* ctx, unsigned line, unsigned col) {
+    return yaml_document((yaml_scan*)ctx, line, col);
+}
+
+static cf_bool yaml_b_stream_end(void* ctx, unsigned line, unsigned col) {
+    return yaml_stream_end((yaml_scan*)ctx, line, col);
+}
+
+static cf_bool yaml_b_alias(void* ctx, const char* name, size_t n, unsigned line,
+                            unsigned col) {
+    return yaml_alias((yaml_scan*)ctx, name, n, line, col);
+}
+
+static cf_bool yaml_b_node(void* ctx, const cf_yp_node* nd) {
+    yaml_ev e;
+    int     kind = (nd->kind == CF_YP_MAP)      ? YAML_EV_MAP
+                   : (nd->kind == CF_YP_SEQ)    ? YAML_EV_SEQ
+                   : (nd->kind == CF_YP_SCALAR) ? YAML_EV_SCALAR
+                                                : YAML_EV_END;
+
+    yaml_ev_init(&e, kind, nd->tag, nd->line, nd->col);
+    e.text  = nd->text;
+    e.n     = nd->n;
+    e.plain = nd->plain;
+    if (kind == YAML_EV_SCALAR && e.tag == NULL && !e.plain) {
+        e.tag = "!"; /* a quoted or block scalar's non-specific tag: text */
+    }
+    return yaml_node((yaml_scan*)ctx, &e, nd->anchor, nd->alen);
+}
+
+/* The parser decodes each scalar into room the sink lends, as the
+   anchors' recordings do. */
+static void* yaml_b_work(void* ctx, size_t n) {
+    yaml_scan* s = (yaml_scan*)ctx;
+    return s->work ? s->out->reserve_work(s->out->ctx, n) : NULL;
+}
+
+static cf_bool yaml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* err) {
+    yaml_scan    s;
+    cf_yp_events ev;
+
+    yaml_scan_init(&s, in, out, err);
+    ev.ctx        = &s;
+    ev.document   = yaml_b_document;
+    ev.node       = yaml_b_node;
+    ev.alias      = yaml_b_alias;
+    ev.stream_end = yaml_b_stream_end;
+    ev.work       = yaml_b_work;
+    return cf_yaml_parse(in, s.file, &ev, err);
 }
 
 #endif /* the YAML parser */

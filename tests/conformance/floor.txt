@@ -8,9 +8,12 @@ json 95 188
 json5 83 31
 json5-values 83
 toml 208 509
-# YAML through libyaml, where the build has it (CF_WITH_YAML)
-yaml 100 87
-yaml-values 90
+# YAML through the built-in parser (D-69)
+yaml 122 94
+yaml-values 110
+# through libyaml, where it is installed (CF_YAML_BACKEND=libyaml)
+yaml-libyaml 100 87
+yaml-libyaml-values 90
 # and through libfyaml 0.9.1 or later (CF_YAML_BACKEND=libfyaml, D-62)
 yaml-libfyaml 122 94
 yaml-libfyaml-values 110

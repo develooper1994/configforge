@@ -84,6 +84,7 @@ gets reopened every six months.
 | D-66 | JSON5, and with it JSONC, a mode of the JSON reader | formats, JSON | **Decided** |
 | D-67 | Doctor reads files against a schema, and writes the schema as C | Doctor, schema, definitions | **Decided** |
 | D-68 | A format of one's own, registered on the builder | formats, codecs, conformance | **Decided** |
+| D-69 | A YAML parser of the library's own, on by default | formats, YAML, dependencies | **Decided** |
 | D-70 | The Rust crate builds with cargo and the cc crate | Rust, build, dependencies | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
@@ -2529,6 +2530,37 @@ refuses missing search data. Browser checks exercise actual search,
 its result links and narrow-screen navigation under the deployment
 path prefix. Documentation dependencies are tested in a clean
 environment, not one retaining an earlier theme's packages.
+
+## D-69 — A YAML parser of the library's own, on by default
+
+**Question.** INI, JSON, TOML and JSON5 are read here, streaming,
+allocation-free, every value with its place; YAML alone needed a
+dependency, so it was off by default, could not run in a fixed arena,
+and its places came from someone else's events. Can YAML be read here
+too, to the same standard?
+
+**Decision.** A YAML 1.2 parser in `src/serialize/yamlparse.c`, by
+recursive descent as the specification is written: block structure by
+indentation, flow structure by brackets, a node taken as a key when
+": " follows it on its line. It hands its events to the same mapping
+the libfyaml and libyaml fronts feed (`yaml.c`), so anchors, the core
+schema's tags and the refusals of what a configuration has no place for
+are one implementation, whichever parser reads. It allocates nothing of
+its own: a scalar is decoded into one buffer the length of the document,
+which the sink lends, and its recursion is bounded by the nesting limit.
+
+**Held to.** yaml-test-suite twice over. Apart from the library, its
+events against the suite's own (`test.event`): all 308 valid cases event
+for event, all 94 invalid ones refused. Through the library, the same
+floors as libfyaml: 122 of 122 valid documents read, 94 of 94 invalid
+refused, 110 of 110 read to the suite's values. Fuzzed with the others.
+
+**What changes.** `CF_WITH_YAML` is on by default and `CF_YAML_BACKEND`
+is `auto`, which takes the built-in parser; `libfyaml` and `libyaml`
+remain for a build that wants a dependency's reading, and `builtin`
+names this one. A default build still links nothing but the C library.
+
+---
 
 ## D-70 — The Rust crate builds with cargo and the cc crate
 

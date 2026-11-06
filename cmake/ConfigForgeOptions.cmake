@@ -13,7 +13,8 @@ option(CF_WITH_TOML "TOML subset codec (built in, no dependency)" ON)
 option(CF_WITH_PROPERTIES "Java .properties reader (built in, no dependency)"
        ON)
 option(CF_WITH_XML "XML codec (requires expat)" OFF)
-option(CF_WITH_YAML "YAML codec (requires libyaml)" OFF)
+option(CF_WITH_YAML
+       "YAML codec (built in; libfyaml or libyaml by CF_YAML_BACKEND)" ON)
 option(CF_WITH_SQLITE "SQLite store source (requires sqlite3)" OFF)
 option(CF_WITH_DIR "Drop-in directory source (conf.d)" ON)
 option(CF_WITH_DOTENV ".env file source" ON)

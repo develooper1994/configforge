@@ -121,7 +121,7 @@ foreach(dep YAML XML SQLITE)
     list(APPEND DEP_LIB "${${dep}_LIB}")
   endif()
 endforeach()
-# Which of the two YAML parsers, as the library was built (D-62). The
+# Which of the YAML parsers, as the library was built (D-62, D-69). The
 # amalgamation is one translation unit, so libfyaml's C11 header makes it
 # C11; the library builds only yaml.c that way, and the comparison is of
 # what the two compute, which the language version does not change.
@@ -139,6 +139,8 @@ if(YAML_FY)
     "-DCF_FYAML_MIN_MINOR=${fy_minor}"
     "-DCF_FYAML_MIN_PATCH=${fy_patch}")
   set(amalg_std -std=c11)
+elseif(YAML_LY)
+  list(APPEND DEFS "-DCF_YAML_LIBYAML=1")
 endif()
 # A dependency that is a shared library outside the loader's path (one
 # under a prefix of its own, CMAKE_PREFIX_PATH) is found by the programs

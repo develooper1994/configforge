@@ -38,6 +38,7 @@ function(configforge_add_gates tgt)
       "-DYAML_INC=${CF_YAML_INCLUDE_DIR}"
       "-DYAML_LIB=${CF_YAML_LIBRARY}"
       "-DYAML_FY=${_CF_YAML_LIBFYAML}"
+      "-DYAML_LY=${_CF_YAML_LIBYAML}"
       "-DYAML_FY_MIN=${_CF_FYAML_MIN}")
   endif()
   if(CF_WITH_XML)

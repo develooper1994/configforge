@@ -1,5 +1,6 @@
 /*
- * test_yaml.c - YAML, through libyaml or libfyaml (D-39, D-62, D-63):
+ * test_yaml.c - YAML, through the built-in parser, libfyaml or libyaml
+ * (D-39, D-62, D-63, D-69):
  * what it reads, what it refuses by name, and that what it writes reads
  * back as the same configuration.
  */

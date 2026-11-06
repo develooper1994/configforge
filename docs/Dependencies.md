@@ -37,8 +37,8 @@ not, and has to be asked for:
 
 | Library | Licence | When | Notes |
 | ------- | ------- | ---- | ----- |
-| libfyaml 0.9.1 or later | MIT | `CF_WITH_YAML=ON` with `CF_YAML_BACKEND` `auto` (where it is found) or `libfyaml` | reading YAML as YAML 1.2 says, all of yaml-test-suite (D-62). Found as `libfyaml.h` and a library named `fyaml`; its version from the `libfyaml.pc` beside the library, and one before 0.9.1, which hangs on malformed input, is refused. Its header needs C11, so `yaml.c` is compiled as C11 in such a build; not on MSVC. Ubuntu 26.04's `libfyaml-dev` is 0.9.4 |
-| libyaml | MIT | `CF_WITH_YAML=ON`, off by default; the backend where libfyaml is not (`CF_YAML_BACKEND=libyaml` names it) | reading YAML 1.1, everywhere, MSVC included; writing YAML is done here, by hand, for either. Found as `yaml.h` and a library named `yaml`, which every packager agrees on |
+| libfyaml 0.9.1 or later | MIT | `CF_YAML_BACKEND=libfyaml`; YAML is read by the built-in parser otherwise (D-69) | reading YAML as YAML 1.2 says, all of yaml-test-suite (D-62). Found as `libfyaml.h` and a library named `fyaml`; its version from the `libfyaml.pc` beside the library, and one before 0.9.1, which hangs on malformed input, is refused. Its header needs C11, so `yaml.c` is compiled as C11 in such a build; not on MSVC. Ubuntu 26.04's `libfyaml-dev` is 0.9.4 |
+| libyaml | MIT | `CF_YAML_BACKEND=libyaml` | reading YAML 1.1, everywhere, MSVC included; writing YAML is done here, by hand, for either. Found as `yaml.h` and a library named `yaml`, which every packager agrees on |
 | sqlite3 | public domain | `CF_WITH_SQLITE=ON`, off by default | the store: a source that reads typed values with their writer's note, and `cf_store_set`, which writes them in one transaction. Found as `sqlite3.h` and a library named `sqlite3` |
 | expat | MIT | `CF_WITH_XML=ON`, off by default | reading XML, which is read only (D-23). Found as `expat.h` and a library named `expat`; its memory is expat's own, so the library still allocates nothing outside its arenas |
 

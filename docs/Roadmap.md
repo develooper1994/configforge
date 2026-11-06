@@ -134,7 +134,7 @@ each push:
 5. Done (D-68), registered on the builder rather than in a table for
    the whole process: **A format of one's own, all the way**: `cf_codec_register`, and
    `conform` loading a codec from a shared library to score it.
-6. **7b, the built-in YAML reader.**
+6. **7b, the built-in YAML reader** - done (D-69).
 7. **8, sizing modes, with dump and stream** (below): D-61 written and
    discussed first; then the transient dump; then the stream.
 8. **9, modern C++.**
@@ -163,9 +163,27 @@ each push:
 * Optimisations recorded, the ones that paid and the ones that did not,
   with their numbers, in Maintaining.md's "Measured", so the next one
   starts from them.
-* Weighed: binary configuration files (`.cfg` in a TLV or similar
-  layout, as some devices keep them) - whether such a format is worth a
-  reader, against the library's own image (`cf_image.h`).
+* Binary configuration (2026-11-06). TLV has no one standard: BER-TLV
+  (ASN.1 BER, ISO/IEC 7816-4, EMV) has one, with its tag classes and
+  long lengths; the rest are layouts, as a device's `.cfg` seen here -
+  a two-byte little-endian tag and length, values that are text, numbers
+  or fixed records, and an `FF FF` end. So: a `tlv` codec driven by a
+  layout (tag and length widths, byte order, BER, an end tag, which tags
+  nest) and a map from tag to key and type, every value placed by its
+  byte offset for explain(); and CBOR (RFC 8949, with its test vectors),
+  the JSON model in binary. MessagePack only if asked; BSON and protobuf
+  not (a database's, and schema-bound).
+* Every operation on a file's data, through its codec: read, add,
+  change and remove keys in a document and write it back in its own
+  format (cf_edit and cf_write do it for a configuration and its stores
+  today), keeping what can be kept of the document's layout.
+* Converting between formats: read a file through its codec, write it
+  through another's (`cf_emit`), saying what the target cannot hold
+  (comments, nulls, arrays in INI) rather than dropping it quietly.
+* Code for each binding from a contract: `doctor gen --schema` writes C
+  now; C++ (`Key`s and a `Binding`), Rust (`Def`s and a struct) and
+  Python (a dataclass) from the same schema, and a schema drafted from a
+  sample file for whoever has no schema yet.
 
 **Dump and stream** (2026-11-06). Today a file is read whole
 into the configuration's own arena, and the key space copies every value
@@ -265,7 +283,7 @@ verified commits, and a release is cut where the order says so. The
 7. **Done: JSON Schema import** (D-64): definitions from a schema, the reverse of
    `cf_schema`; unsupported keywords refused by name. After 6, on the
    chosen JSON reader.
-7b. **A built-in YAML reader** (2026-11-06: why should YAML alone need
+7b. **Done (D-69): a built-in YAML reader** (2026-11-06: why should YAML alone need
    a dependency?). INI, JSON and TOML are read here, streaming,
    allocation-free, every value with its place; YAML is read through
    libfyaml or libyaml, so it is off by default, cannot run in a fixed

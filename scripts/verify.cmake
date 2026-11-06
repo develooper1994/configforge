@@ -294,6 +294,21 @@ if(SOURCE STREQUAL "index")
                   WORKING_DIRECTORY "${incoming}")
   file(REMOVE "${work_dir}/staged.tar" "${work_dir}/index")
   unset(ENV{GIT_INDEX_FILE})
+  # A kept build directory keeps its cache, and a cache keeps an option's
+  # old value when its default changes: YAML went on by default and the
+  # kept builds went on without it. A change to the options or the presets
+  # starts from nothing.
+  foreach(f cmake/ConfigForgeOptions.cmake CMakePresets.json
+            include/configforge/cf_build_options.h)
+    if(NOT FRESH AND EXISTS "${ROOT}/${f}")
+      file(SHA256 "${ROOT}/${f}" was)
+      file(SHA256 "${incoming}/${f}" now)
+      if(NOT was STREQUAL now)
+        message("${f} changed: verifying from nothing")
+        set(FRESH ON)
+      endif()
+    endif()
+  endforeach()
   if(FRESH OR NOT EXISTS "${ROOT}")
     file(REMOVE_RECURSE "${ROOT}")
     file(RENAME "${incoming}" "${ROOT}")
@@ -893,14 +908,8 @@ foreach(x ${EXTRA})
           FETCH_HEAD)
       endif()
     endforeach()
-    # YAML where libyaml is, as the yaml step decides it.
-    find_path(CONFORM_YAML_H yaml.h
-              PATHS /usr/include /usr/local/include /opt/homebrew/include
-                    /opt/local/include)
-    set(conform_yaml -DCF_WITH_YAML=OFF)
-    if(CONFORM_YAML_H)
-      set(conform_yaml -DCF_WITH_YAML=ON -DCF_YAML_BACKEND=libyaml)
-    endif()
+    # YAML through the built-in parser here (D-69), and through libyaml and
+    # libfyaml below, each against floors of its own.
     step(
       "conformance configure"
       ${CMAKE_COMMAND}
@@ -908,7 +917,8 @@ foreach(x ${EXTRA})
       .
       -B
       build-conformance
-      ${conform_yaml})
+      -DCF_WITH_YAML=ON
+      -DCF_YAML_BACKEND=builtin)
     step(
       "conformance build"
       ${build}
@@ -937,6 +947,45 @@ foreach(x ${EXTRA})
       --self
       "${conform}"
       .)
+    # libyaml, where it is installed, as the yaml step decides it.
+    find_path(CONFORM_YAML_H yaml.h
+              PATHS /usr/include /usr/local/include /opt/homebrew/include
+                    /opt/local/include)
+    if(CONFORM_YAML_H)
+      step(
+        "conformance ly config"
+        ${CMAKE_COMMAND}
+        -S
+        .
+        -B
+        build-conformance-ly
+        -DCF_WITH_YAML=ON
+        -DCF_YAML_BACKEND=libyaml)
+      step(
+        "conformance ly build"
+        ${build}
+        build-conformance-ly
+        --target
+        conform
+        ${debug})
+      if(EXISTS
+         "${ROOT}/build-conformance-ly/tests/conformance/Debug/conform.exe")
+        set(conform_ly
+            "${ROOT}/build-conformance-ly/tests/conformance/Debug/conform.exe")
+      else()
+        set(conform_ly "${ROOT}/build-conformance-ly/tests/conformance/conform")
+      endif()
+      step(
+        "conformance libyaml"
+        "${PYTHON3_EXE}"
+        scripts/check/conformance.py
+        "${conform_ly}"
+        "${SUITES}"
+        --floor
+        tests/conformance/floor.txt
+        --yaml-name
+        yaml-libyaml)
+    endif()
     # YAML through libfyaml too, scored against its own floor, where the
     # yaml step would build it.
     fyaml_configure(build-conformance-fy "conformance fy")
