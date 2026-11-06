@@ -53,7 +53,7 @@ jobs:
           python3 scripts/generate/amalgamate.py . "amalgamation/configforge-$v"
           cp LICENSE "amalgamation/configforge-$v/"
           tar -C amalgamation -czf "dist/configforge-$v-amalgamation.tar.gz" "configforge-$v"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: amalgamation, path: dist/* }
 
   linux-musl:
@@ -84,7 +84,7 @@ jobs:
           grep -q "MIT license" "$d/musl-COPYRIGHT"
           mkdir -p dist
           tar -C stage -czf "dist/configforge-$v-linux-x86_64-musl.tar.gz" "configforge-$v"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: linux-musl, path: dist/* }
 
   windows:
@@ -116,7 +116,7 @@ jobs:
           Copy-Item build-doctor/tools/doctor/Release/doctor.exe "stage/configforge-$v/bin/"
           New-Item -ItemType Directory -Force dist | Out-Null
           Compress-Archive -Path "stage/configforge-$v" -DestinationPath "dist/configforge-$v-windows-x64.zip"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: windows, path: dist/* }
 
   macos:
@@ -136,7 +136,7 @@ jobs:
           install -s -m 755 build/tools/doctor/doctor "stage/configforge-$v/bin/doctor"
           mkdir -p dist
           tar -C stage -czf "dist/configforge-$v-macos-arm64.tar.gz" "configforge-$v"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: macos, path: dist/* }
 
   publish:

@@ -227,7 +227,7 @@ jobs:
             mkdir -p "min_$r"
             ./"fuzz_$r" -merge=1 "min_$r" "$c" > /dev/null 2>&1 && rm -rf "$c" && mv "min_$r" "$c"
           done
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: fuzz-findings
