@@ -712,7 +712,10 @@ foreach(x ${EXTRA})
     set(commit_JSONTestSuite 1ef36fa01286573e846ac449e8683f8833c5b26a)
     set(url_toml-test https://github.com/toml-lang/toml-test)
     set(commit_toml-test 96fd088448ec0f4d9f061c730ed7854399c46faf)
-    foreach(sname JSONTestSuite toml-test)
+    # The YAML suite's data branch: its cases as files, in.yaml and all.
+    set(url_yaml-test-suite-data https://github.com/yaml/yaml-test-suite)
+    set(commit_yaml-test-suite-data 6ad3d2c62885d82fc349026c136ef560838fdf3d)
+    foreach(sname JSONTestSuite toml-test yaml-test-suite-data)
       set(surl "${url_${sname}}")
       set(scommit "${commit_${sname}}")
       set(dir "${SUITES}/${sname}")
@@ -758,13 +761,22 @@ foreach(x ${EXTRA})
           FETCH_HEAD)
       endif()
     endforeach()
+    # YAML where libyaml is, as the yaml step decides it.
+    find_path(CONFORM_YAML_H yaml.h
+              PATHS /usr/include /usr/local/include /opt/homebrew/include
+                    /opt/local/include)
+    set(conform_yaml -DCF_WITH_YAML=OFF)
+    if(CONFORM_YAML_H)
+      set(conform_yaml -DCF_WITH_YAML=ON)
+    endif()
     step(
       "conformance configure"
       ${CMAKE_COMMAND}
       -S
       .
       -B
-      build-conformance)
+      build-conformance
+      ${conform_yaml})
     step(
       "conformance build"
       ${build}

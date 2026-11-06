@@ -128,7 +128,6 @@ static cf_bool any_scalar(void* ctx, const char* name, size_t n, const cf_value*
                           cf_bool textual, const cf_loc* at) {
     conform_sink* c     = (conform_sink*)ctx;
     size_t        saved = c->plen;
-    (void)textual;
     (void)at;
     if (!conform_name(c, name, n)) {
         return CF_FALSE;
@@ -143,7 +142,11 @@ static cf_bool any_scalar(void* ctx, const char* name, size_t n, const cf_value*
             k = cf_value_to_text(v, g_value, sizeof g_value);
         }
         conform_escaped(c->path, c->plen); /* a key may hold a NUL */
-        printf("\t%s\t", cf_type_name(v->type));
+        /* Text whose type a definition decides - YAML's plain scalars,
+           TOML's dates - is "untyped": the comparison reads it as the
+           reference's value would be written. */
+        printf("\t%s\t", (textual && v->type == CF_TYPE_TEXT) ? "untyped"
+                                                              : cf_type_name(v->type));
         conform_escaped(p, k);
         putchar('\n');
     }

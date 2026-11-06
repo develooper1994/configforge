@@ -138,10 +138,78 @@ static void refused(const char* text, const char* needle, const char* what) {
     cf_config_free(c);
 }
 
+/* Anchors and aliases (D-63): the alias is the anchored node again, and
+   each value it holds explains itself at the place it was written. */
+static void test_anchors(void) {
+    cf_error    err = CF_ERROR_INIT;
+    static char ex[1024];
+    cf_config*  c = load("base: &b\n"
+                         "  host: a\n"
+                         "  ports: [1, 2]\n"
+                         "other: *b\n"
+                         "name: &n plain\n"
+                         "again: *n\n"
+                         "list: [*n, *n]\n",
+                         &err);
+
+    check(c != NULL, "anchors and aliases read");
+    if (c == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+    check(strcmp(cf_get_text(c, "other.host", ""), "a") == 0, "an aliased mapping");
+    check(cf_array_count(c, "other.ports") == 2 &&
+              cf_get_int(c, "other.ports.1", 0) == 2,
+          "with its sequence");
+    check(strcmp(cf_get_text(c, "again", ""), "plain") == 0, "an aliased scalar");
+    check(cf_array_count(c, "list") == 2, "aliases as elements");
+    cf_explain(c, "other.host", ex, sizeof ex);
+    has(ex,
+        "cf_yaml.yaml:2:", "and an aliased value is explained where it was written");
+    cf_config_free(c);
+}
+
+/* The core schema's tags type a value as YAML 1.2 says. */
+static void test_tags(void) {
+    cf_error   err = CF_ERROR_INIT;
+    cf_config* c   = load("port: !!int \"80\"\n"
+                          "zip: !!str 01234\n"
+                          "on: !!bool true\n"
+                          "none: !!null ~\n"
+                          "t: !!map {a: 1}\n"
+                          "plain: ! 12\n",
+                          &err);
+
+    check(c != NULL, "core tags read");
+    if (c == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+    check(cf_type_of(c, "port") == CF_TYPE_INT && cf_get_int(c, "port", 0) == 80,
+          "!!int on a quoted scalar is an int");
+    check(cf_type_of(c, "zip") == CF_TYPE_TEXT &&
+              strcmp(cf_get_text(c, "zip", ""), "01234") == 0,
+          "!!str keeps the zero");
+    check(cf_get_bool(c, "on", CF_FALSE), "!!bool");
+    check(cf_type_of(c, "none") == CF_TYPE_NULL, "!!null");
+    check(cf_get_int(c, "t.a", 0) == 1, "!!map");
+    check(cf_type_of(c, "plain") == CF_TYPE_TEXT, "the non-specific ! is text");
+    cf_config_free(c);
+}
+
 static void test_refuses(void) {
-    refused("base: &b {x: 1}\nother: *b\n", "anchors and aliases",
-            "an anchor is refused, with the reason");
-    refused("port: !!int 80\n", "tags are not", "a tag is refused");
+    refused("other: *b\n", "not defined before it", "an alias of no anchor");
+    refused("a: &a [1, *a]\n", "inside the node", "an alias inside its own anchor");
+    refused("a: &a [x, x, x, x, x, x, x, x]\n"
+            "b: &b [*a, *a, *a, *a, *a, *a, *a, *a]\n"
+            "c: &c [*b, *b, *b, *b, *b, *b, *b, *b]\n"
+            "d: &d [*c, *c, *c, *c, *c, *c, *c, *c]\n"
+            "e: &e [*d, *d, *d, *d, *d, *d, *d, *d]\n"
+            "f: &f [*e, *e, *e, *e, *e, *e, *e, *e]\n",
+            "far more than the document", "a billion laughs, refused in linear time");
+    refused("port: !!int eighty\n", "not a !!int", "a core tag on the wrong value");
+    refused("port: !custom 80\n", "not one this library resolves",
+            "a tag of the writing application's");
     refused("a: 1\n---\nb: 2\n", "a second document", "a second document is refused");
     refused("- a\n- b\n", "a mapping at the top", "a top-level sequence is refused");
     refused("just text\n", "a mapping at the top", "a top-level scalar is refused");
@@ -223,6 +291,8 @@ int main(void) {
 #if CF_WITH_YAML
     test_reads();
     test_types();
+    test_anchors();
+    test_tags();
     test_refuses();
     test_empty();
 #if CF_WITH_EMIT

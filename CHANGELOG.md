@@ -72,6 +72,14 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   name. toml-test: 208/208 valid documents read to the values it states,
   509/509 invalid ones refused. JSON's 95 valid documents read to the
   values Python's `json` reads.
+- YAML anchors and aliases (D-63): an alias is its anchored node again,
+  and an aliased value is explained at the line it was written. An alias
+  inside its own anchor is refused, and so is expansion past 64 events
+  per event read, so a "billion laughs" fails fast, by name. The core
+  schema's tags - `!!str`, `!!int`, `!!float`, `!!bool`, `!!null`,
+  `!!map`, `!!seq` - type a value as YAML 1.2 says; another tag is still
+  refused by name. The conformance run scores YAML on yaml-test-suite,
+  counting what the configuration model refuses apart from the grammar.
 - `cf_doc_sink.reserve_work`: optional workspace a reader keeps
   bookkeeping in until decode returns (D-62); the loader lends it from
   the configuration's arena.

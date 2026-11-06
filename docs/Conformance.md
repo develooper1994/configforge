@@ -41,6 +41,7 @@ way. It is a tier 2 step, since it needs a network the first time.
 | ----- | -------- | ------ |
 | [JSONTestSuite](https://github.com/nst/JSONTestSuite) | RFC 8259 | `1ef36fa01286573e846ac449e8683f8833c5b26a` |
 | [toml-test](https://github.com/toml-lang/toml-test) | TOML 1.0.0 (`tests/files-toml-1.0.0`) | `96fd088448ec0f4d9f061c730ed7854399c46faf` |
+| [yaml-test-suite](https://github.com/yaml/yaml-test-suite), its `data` branch | YAML 1.2 | `6ad3d2c62885d82fc349026c136ef560838fdf3d` |
 
 ## The scores
 
@@ -48,6 +49,16 @@ way. It is a tier 2 step, since it needs a network the first time.
 | ------ | -------------- | --------------- | ------------------------------ |
 | JSON | 95 / 95 | 188 / 188 | 95 / 95, against Python's `json` |
 | TOML | 208 / 208 | 509 / 509 | 208 / 208, against toml-test's stated values |
+| YAML, through libyaml | 100 / 133 | 87 / 94 | 90 / 93, against the suite's `in.json` |
+
+YAML's valid count leaves out 175 documents the configuration model
+refuses by name - a top level that is not a mapping, a second document,
+a key that is not a scalar, an empty key, a tag of the writing
+application's (D-39, D-63) - which the run reports beside the score. A
+plain scalar is untyped here, typed by its definition, and is compared
+as the text of the suite's value. Every miss left is libyaml's parser,
+which follows YAML 1.1; libfyaml, measured on the same suite, misses
+none (D-62), and is the next backend.
 
 The last column is the stronger claim: a valid document read is compared
 key by key and value by value, every string's escapes and line breaks

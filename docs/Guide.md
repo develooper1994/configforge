@@ -440,7 +440,11 @@ YAML can also be written (section 10), and a format of your own is a `cf_codec` 
 On YAML in particular: a plain value is text until a definition types
 it, and the library has one spelling of a boolean, `true` and `false`,
 so `country: no` stays the text "no" whichever YAML version a reader
-follows. Anchors, aliases and tags are refused by name.
+follows. Anchors and aliases are read, and an aliased value explains
+itself at the line it was written (D-63); the core schema's tags -
+`!!str`, `!!int`, `!!float`, `!!bool`, `!!null` - type a value as YAML
+says. A tag of the writing application's, a second document and a key
+that is not a scalar are refused by name.
 
 ## 9. Secrets
 

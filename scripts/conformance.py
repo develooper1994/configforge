@@ -26,20 +26,40 @@ import sys
 
 
 def run(conform, fmt, path):
+    """The exit status, and what conform printed."""
     try:
         p = subprocess.run([conform, fmt, path], capture_output=True, timeout=20)
     except subprocess.TimeoutExpired:
-        return 3  # a hang is a failure of its own
-    return p.returncode
+        return 3, ""  # a hang is a failure of its own
+    return p.returncode, p.stdout.decode("utf-8", "replace")
+
+
+# What a configuration has no place for, which the YAML reader refuses by
+# name though the document is YAML (D-39, D-63): counted apart, so the
+# grammar's score is the grammar's. JSON's lone values are measured
+# wrapped instead (conform.c), and TOML has none.
+MODEL = (
+    "a configuration is a mapping at the top",
+    "a second document",
+    "a key has to be a scalar",
+    "an empty key",
+    "not one this library resolves",
+)
 
 
 def report(name, fmt, conform, valid, invalid, out):
-    good = [f for f in valid if run(conform, fmt, f) == 0]
-    bad = [f for f in invalid if run(conform, fmt, f) == 1]
-    wrong_valid = sorted(set(valid) - set(good))
+    good, model = [], []
+    for f in valid:
+        rc, text = run(conform, fmt, f)
+        if rc == 0:
+            good.append(f)
+        elif rc == 1 and any(m in text for m in MODEL):
+            model.append(f)
+    bad = [f for f in invalid if run(conform, fmt, f)[0] == 1]
+    wrong_valid = sorted(set(valid) - set(good) - set(model))
     wrong_invalid = sorted(set(invalid) - set(bad))
-    out.append((name, len(good), len(valid), len(bad), len(invalid),
-                wrong_valid, wrong_invalid))
+    out.append((name, len(good), len(valid) - len(model), len(bad), len(invalid),
+                wrong_valid, wrong_invalid, len(model)))
 
 
 ESCAPES = {"\\": "\\", "t": "\t", "n": "\n", "r": "\r", "0": "\0"}
@@ -120,10 +140,10 @@ def toml_same(want, got):
         if len(g) > 10 and g[10] == " ":
             g = g[:10] + "T" + g[11:]
         # and fractions of a second to milliseconds: .6 as .600.
-        return gtype == "text" and millis(g) == millis(wtext)
+        return gtype == "untyped" and millis(g) == millis(wtext)
     if wtype == "nonfinite":
         g = gtext.lstrip("+")
-        return gtype == "text" and (g == wtext or (wtext == "nan" and g == "-nan"))
+        return gtype == "untyped" and (g == wtext or (wtext == "nan" and g == "-nan"))
     if wtype == "real":
         try:
             return gtype == "real" and float(gtext) == float(wtext)
@@ -179,6 +199,36 @@ def json_values(conform, valid, wrong_out):
     return good
 
 
+def yaml_values(conform, valid, wrong_out):
+    """Of the valid YAML documents read whose in.json the suite gives, how
+    many were read to its values: (good, compared). A plain scalar is
+    untyped here and compared as the text of the suite's value."""
+    import json
+    good = compared = 0
+    for path in valid:
+        expected = os.path.join(os.path.dirname(path), "in.json")
+        if not os.path.isfile(expected):
+            continue
+        got = keys_of(conform, "yaml", path)
+        if got is None:
+            continue  # refused: counted by report()
+        try:
+            with open(expected, encoding="utf-8") as f:
+                doc = json.load(f)
+        except ValueError:
+            continue  # several documents: a model refusal
+        if not isinstance(doc, dict):
+            continue
+        compared += 1
+        want = {}
+        flat(doc, None, want)
+        if set(want) == set(got) and all(same(want[k], got[k]) for k in want):
+            good += 1
+        else:
+            wrong_out.append(path)
+    return good, compared
+
+
 def json_suite(root):
     d = os.path.join(root, "JSONTestSuite", "test_parsing")
     files = sorted(os.listdir(d))
@@ -201,19 +251,19 @@ def toml_suite(root):
 
 
 def yaml_suite(root):
-    d = os.path.join(root, "yaml-test-suite", "src")
+    """The suite's data branch, the cases as files: a directory a case
+    (or one a sub-case) holding in.yaml, and `error` where it is invalid."""
+    data = os.path.join(root, "yaml-test-suite-data")
     valid, invalid = [], []
-    # The suite's source is one YAML file a case; its in.yaml and its
-    # error flag are extracted by the suite's own tooling, which is not
-    # run here. Cases are counted only where that extraction exists.
-    data = os.path.join(root, "yaml-test-suite", "data")
     if not os.path.isdir(data):
         return valid, invalid
-    for case in sorted(os.listdir(data)):
-        p = os.path.join(data, case)
-        doc = os.path.join(p, "in.yaml")
-        if os.path.isfile(doc):
-            (invalid if os.path.exists(os.path.join(p, "error")) else valid).append(doc)
+    for top, dirs, files in os.walk(data):
+        dirs.sort()
+        if ".git" in dirs:
+            dirs.remove(".git")
+        if "in.yaml" in files:
+            doc = os.path.join(top, "in.yaml")
+            (invalid if "error" in files else valid).append(doc)
     return valid, invalid
 
 
@@ -274,9 +324,33 @@ def flat(doc, prefix, out):
         out[prefix] = ("text", str(doc))
 
 
+NULLS = ("", "~", "null", "Null", "NULL")
+BOOLS = {"true": "true", "True": "true", "TRUE": "true",
+         "false": "false", "False": "false", "FALSE": "false"}
+
+
+def untyped_same(wtype, wtext, gtext):
+    """Untyped text - a YAML plain scalar, typed by its definition - against
+    a reference value: the same when the text says that value."""
+    try:
+        if wtype == "int":
+            return int(gtext.replace("_", ""), 0) == int(wtext)
+        if wtype == "real":
+            return float(gtext) == wtext
+    except ValueError:
+        return False
+    if wtype == "bool":
+        return BOOLS.get(gtext) == wtext
+    if wtype == "null":
+        return gtext in NULLS
+    return gtext == wtext
+
+
 def same(want, got):
     wtype, wtext = want
     gtype, gtext = got
+    if gtype == "untyped":
+        return untyped_same(wtype, wtext, gtext)
     if wtype == "null":
         return gtype == "null"  # its text is the writer's spelling
     if wtype == "real":
@@ -297,6 +371,11 @@ def differential(conform, repo):
         doc = reference(fmt, path)
         if doc is None:
             print(f"{name}: no reference reader for {fmt} here, skipped")
+            continue
+        if not isinstance(doc, dict):
+            # A hook list, say: a file, not a configuration (D-39).
+            print(f"{name}: its root is a {type(doc).__name__}, and a configuration "
+                  "is a mapping; skipped")
             continue
         p = subprocess.run([conform, fmt, path], capture_output=True, timeout=20)
         if p.returncode == 2:
@@ -358,11 +437,17 @@ def main():
     values_good = toml_values(conform, v, values_wrong)
     values_all = len(v)
     v, i = yaml_suite(root)
+    yaml_wrong, yaml_good, yaml_all = [], 0, 0
+    if v and run(conform, "yaml", v[0])[0] == 2:
+        print("yaml: this build has no YAML reader (CF_WITH_YAML), skipped")
+        v, i = [], []
     if v or i:
         report("yaml", "yaml", conform, v, i, out)
+        yaml_good, yaml_all = yaml_values(conform, v, yaml_wrong)
     failed = False
-    for name, g, nv, b, ni, wv, wi in out:
-        print(f"{name}: valid accepted {g}/{nv}, invalid refused {b}/{ni}")
+    for name, g, nv, b, ni, wv, wi, nm in out:
+        extra = f" ({nm} more refused by the configuration model, by name)" if nm else ""
+        print(f"{name}: valid accepted {g}/{nv}, invalid refused {b}/{ni}{extra}")
         if verbose:
             for f in wv:
                 print(f"  refused a valid document: {os.path.basename(f)}")
@@ -380,7 +465,10 @@ def main():
     # Python's json reads it for JSON.
     for name, good, total, wrong, how in (
             ("json-values", json_good, json_all, json_wrong, "Python's json reads"),
-            ("toml-values", values_good, values_all, values_wrong, "toml-test states")):
+            ("toml-values", values_good, values_all, values_wrong, "toml-test states"),
+            ("yaml-values", yaml_good, yaml_all, yaml_wrong, "yaml-test-suite states")):
+        if total == 0:
+            continue
         print(f"{name}: read as {how} {good}/{total}")
         if verbose:
             for f in wrong:

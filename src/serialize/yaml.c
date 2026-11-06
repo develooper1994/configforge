@@ -8,16 +8,20 @@
  * and libyaml's emitter would bring an allocation and a second state
  * machine for them.
  *
- * What it reads is YAML as configuration is written, and the rest is
- * refused by name, as TOML's dates are:
+ * Anchors and aliases are read (D-63): an anchored node's events are
+ * recorded in the sink's workspace and an alias replays them, each value
+ * keeping the place it was written, so explain() names the one line it
+ * came from; an alias expands to a bounded multiple of the document, so
+ * a "billion laughs" is refused in linear time. The core schema's tags
+ * (!!str, !!int, !!float, !!bool, !!null, !!map, !!seq) are honoured.
+ * What a configuration has no place for is refused by name:
  *
- *   anchors and aliases   a value written once and used twice is a
- *                         value whose origin explain() cannot name
- *                         once; repeat it
- *   tags (!!str, !custom) a type is the definition's to decide
- *   several documents     one file is one document
+ *   another tag (!custom) a type of the writing application's
+ *   several documents     one file is one configuration
  *   a key that is not a   a configuration key is text
  *   scalar
+ *   a top level that is   a configuration is a mapping
+ *   not a mapping
  *
  * The decision that matters is about types (D-39). A plain scalar is
  * handed over as text, to be typed by its definition, exactly as an INI
@@ -46,10 +50,50 @@
  * Decoding
  * ================================================================== */
 
+/* The node a mapping, a sequence or a scalar is, and how many levels are
+   open around it. */
 typedef struct yaml_level {
     unsigned char is_map;   /* a mapping, or else a sequence           */
     unsigned char want_key; /* in a mapping: the next scalar is a key  */
 } yaml_level;
+
+/* One event as this reader needs it, from libyaml or from a recording
+   being replayed for an alias. Text points at libyaml's buffer or at the
+   recording's pool, and lives until the event is handled. */
+enum { YAML_EV_MAP, YAML_EV_SEQ, YAML_EV_SCALAR, YAML_EV_END };
+
+typedef struct yaml_ev {
+    int         kind;
+    const char* text; /* a scalar's value */
+    size_t      n;
+    const char* tag; /* resolved: NULL, "!" or a full tag */
+    cf_bool     plain;
+    unsigned    line, col; /* 1-based */
+} yaml_ev;
+
+/* A recorded event: what an alias replays. */
+typedef struct yaml_rec {
+    cf_u32 text, n;   /* in the pool */
+    cf_u32 tag, ntag; /* in the pool; ntag 0: none */
+    cf_u32 line, col;
+    cf_u8  kind;
+    cf_u8  plain;
+} yaml_rec;
+
+/* An anchor: its name in the pool, and the events its node recorded. */
+typedef struct yaml_anchor {
+    cf_u32 name, nlen;
+    cf_u32 first, count;
+    cf_u32 chain; /* the next anchor in the same bucket, + 1 */
+    int    depth; /* the depth its node opened at */
+    cf_u8  done;
+} yaml_anchor;
+
+/* An alias expands to at most this many events per event read, with a
+   floor, so a document of aliases of aliases ("a billion laughs") is
+   refused in linear time rather than read in exponential. */
+#define YAML_ALIAS_FACTOR 64u
+#define YAML_ALIAS_FLOOR 4096u
 
 typedef struct yaml_scan {
     const char*        file;
@@ -60,35 +104,210 @@ typedef struct yaml_scan {
     char               key[CF_KEY_MAX];
     size_t             klen;
     int                documents;
+
+    /* Anchors, when the sink lends workspace (cf_doc_sink.reserve_work):
+       events are recorded while an anchored node is open, and an alias
+       replays its anchor's. */
+    cf_bool       work;
+    yaml_rec*     recs;
+    size_t        nrecs, crecs;
+    char*         pool;
+    size_t        npool, cpool;
+    yaml_anchor*  anchors;
+    size_t        nanchors, canchors;
+    cf_u32*       buckets;
+    size_t        nbuckets;
+    int           open[CF_MAX_DEPTH + 1]; /* anchors whose node is open */
+    int           nopen;
+    unsigned long read, replayed;
 } yaml_scan;
 
-static cf_bool yaml_fail(yaml_scan* s, const yaml_mark_t* m, const char* what) {
+static cf_bool yaml_fail_at(yaml_scan* s, unsigned line, unsigned col,
+                            const char* what) {
     return cf_error_set(s->err, CF_E_SOURCE, NULL, s->file, "%s:%u:%u: %s", s->file,
-                        (unsigned int)m->line + 1u, (unsigned int)m->column + 1u, what);
+                        line, col, what);
 }
 
-/* An anchor or a tag on a node, refused with what to write instead. */
-static cf_bool yaml_plain_node(yaml_scan* s, const yaml_event_t* ev,
-                               const yaml_char_t* anchor, const yaml_char_t* tag) {
-    if (anchor != NULL) {
-        return yaml_fail(
-            s, &ev->start_mark,
-            "anchors and aliases are not in the YAML this library reads: "
-            "a value used twice has no single origin to explain; repeat it");
+static cf_bool yaml_fail(yaml_scan* s, const yaml_mark_t* m, const char* what) {
+    return yaml_fail_at(s, (unsigned)m->line + 1u, (unsigned)m->column + 1u, what);
+}
+
+static cf_bool yaml_no_room(yaml_scan* s) {
+    return cf_error_set(s->err, CF_E_MEMORY, NULL, s->file,
+                        "no room to record what a YAML anchor names");
+}
+
+/* A larger block for one of the recording's arrays, the old one copied.
+   What was outgrown stays where the sink put it until decode returns. */
+static void* yaml_grow(yaml_scan* s, void* old, size_t used, size_t* cap, size_t size,
+                       size_t need) {
+    size_t c = (*cap == 0) ? 64u : *cap;
+    void*  p;
+    while (c < need) {
+        if (c > ((size_t)-1 / size) / 2u) {
+            return NULL;
+        }
+        c *= 2u;
     }
-    if (tag != NULL) {
-        return yaml_fail(
-            s, &ev->start_mark,
-            "tags are not in the YAML this library reads: a value's type is "
-            "its definition's to decide");
+    p = s->out->reserve_work(s->out->ctx, c * size);
+    if (p != NULL && used > 0) {
+        memcpy(p, old, used * size);
     }
+    if (p != NULL) {
+        *cap = c;
+    }
+    return p;
+}
+
+static cf_bool yaml_keep(yaml_scan* s, const char* p, size_t n, cf_u32* at) {
+    char* pool;
+    if (s->npool + n > s->cpool) {
+        pool = (char*)yaml_grow(s, s->pool, s->npool, &s->cpool, 1, s->npool + n);
+        if (pool == NULL || s->npool + n > (cf_u32)-1) {
+            return yaml_no_room(s);
+        }
+        s->pool = pool;
+    }
+    if (n > 0) {
+        memcpy(s->pool + s->npool, p, n);
+    }
+    *at = (cf_u32)s->npool;
+    s->npool += n;
     return CF_TRUE;
+}
+
+/* The event, recorded while an anchored node is open. */
+static cf_bool yaml_record(yaml_scan* s, const yaml_ev* e) {
+    yaml_rec* r;
+    if (s->nopen == 0) {
+        return CF_TRUE;
+    }
+    if (s->nrecs + 1 > s->crecs) {
+        yaml_rec* recs = (yaml_rec*)yaml_grow(s, s->recs, s->nrecs, &s->crecs,
+                                              sizeof *recs, s->nrecs + 1);
+        if (recs == NULL || s->nrecs + 1 > (cf_u32)-1) {
+            return yaml_no_room(s);
+        }
+        s->recs = recs;
+    }
+    r        = &s->recs[s->nrecs];
+    r->kind  = (cf_u8)e->kind;
+    r->plain = (cf_u8)(e->plain ? 1 : 0);
+    r->line  = e->line;
+    r->col   = e->col;
+    r->n     = (cf_u32)e->n;
+    r->ntag  = (e->tag != NULL) ? (cf_u32)strlen(e->tag) : 0u;
+    if (!yaml_keep(s, e->text, e->n, &r->text) ||
+        !yaml_keep(s, e->tag, r->ntag, &r->tag)) {
+        return CF_FALSE;
+    }
+    ++s->nrecs;
+    return CF_TRUE;
+}
+
+static cf_u32 yaml_hash(const char* p, size_t n) {
+    cf_u32 h = 2166136261u;
+    size_t i;
+    for (i = 0; i < n; ++i) {
+        h = (h ^ (cf_u32)(unsigned char)p[i]) * 16777619u;
+    }
+    return h;
+}
+
+/* The latest anchor of that name, + 1; 0 when there is none. YAML lets a
+   name be anchored again, and an alias means the one before it. */
+static cf_u32 yaml_find(const yaml_scan* s, const char* p, size_t n) {
+    cf_u32 i;
+    if (s->nbuckets == 0) {
+        return 0;
+    }
+    i = s->buckets[yaml_hash(p, n) & (s->nbuckets - 1u)];
+    while (i != 0) {
+        const yaml_anchor* a = &s->anchors[i - 1u];
+        if ((size_t)a->nlen == n && memcmp(s->pool + a->name, p, n) == 0) {
+            return i;
+        }
+        i = a->chain;
+    }
+    return 0;
+}
+
+/* An anchor on the node about to open: from here its events are kept. */
+static cf_bool yaml_anchor_open(yaml_scan* s, const yaml_mark_t* m, const char* name) {
+    size_t       n = strlen(name), i;
+    yaml_anchor* a;
+    cf_u32       h;
+
+    if (!s->work) {
+        return yaml_fail(s, m,
+                         "an anchor needs reader workspace, which this sink does not "
+                         "lend (cf_doc_sink.reserve_work)");
+    }
+    if (s->nopen > CF_MAX_DEPTH) {
+        return yaml_fail(s, m, "nesting is too deep");
+    }
+    if (s->nanchors + 1 > s->canchors) {
+        size_t       old     = s->canchors;
+        yaml_anchor* anchors = (yaml_anchor*)yaml_grow(
+            s, s->anchors, s->nanchors, &s->canchors, sizeof *anchors, s->nanchors + 1);
+        cf_u32* buckets;
+        if (anchors == NULL) {
+            return yaml_no_room(s);
+        }
+        s->anchors = anchors;
+        if (s->canchors != old) {
+            /* Rehashed into twice as many buckets as anchors, newest first
+               in each chain, so a name anchored again is found first. */
+            size_t nb = s->canchors * 2u;
+            buckets = (cf_u32*)s->out->reserve_work(s->out->ctx, nb * sizeof *buckets);
+            if (buckets == NULL) {
+                return yaml_no_room(s);
+            }
+            memset(buckets, 0, nb * sizeof *buckets);
+            for (i = 0; i < s->nanchors; ++i) {
+                yaml_anchor* x = &s->anchors[i];
+                cf_u32 b   = yaml_hash(s->pool + x->name, x->nlen) & (cf_u32)(nb - 1u);
+                x->chain   = buckets[b];
+                buckets[b] = (cf_u32)(i + 1u);
+            }
+            s->buckets  = buckets;
+            s->nbuckets = nb;
+        }
+    }
+    a = &s->anchors[s->nanchors];
+    if (!yaml_keep(s, name, n, &a->name)) {
+        return CF_FALSE;
+    }
+    a->nlen           = (cf_u32)n;
+    a->first          = (cf_u32)s->nrecs;
+    a->count          = 0;
+    a->done           = 0;
+    a->depth          = s->depth + 1;
+    h                 = yaml_hash(name, n) & (cf_u32)(s->nbuckets - 1u);
+    a->chain          = s->buckets[h];
+    s->buckets[h]     = (cf_u32)(s->nanchors + 1u);
+    s->open[s->nopen] = (int)s->nanchors;
+    ++s->nopen;
+    ++s->nanchors;
+    return CF_TRUE;
+}
+
+/* After an event: each anchored node that just ended has all its events. */
+static void yaml_anchor_close(yaml_scan* s) {
+    while (s->nopen > 0) {
+        yaml_anchor* a = &s->anchors[s->open[s->nopen - 1]];
+        if (s->depth >= a->depth) {
+            return;
+        }
+        a->count = (cf_u32)(s->nrecs - a->first);
+        a->done  = 1;
+        --s->nopen;
+    }
 }
 
 /* The name a node at the current position goes by: the pending key in
    a mapping, nothing in a sequence. */
-static cf_bool yaml_name(yaml_scan* s, const yaml_event_t* ev, const char** name,
-                         size_t* n) {
+static cf_bool yaml_name(yaml_scan* s, const yaml_ev* e, const char** name, size_t* n) {
     yaml_level* l = &s->level[s->depth];
 
     if (!l->is_map) {
@@ -97,9 +316,10 @@ static cf_bool yaml_name(yaml_scan* s, const yaml_event_t* ev, const char** name
         return CF_TRUE;
     }
     if (l->want_key) {
-        return yaml_fail(s, &ev->start_mark,
-                         "a key has to be a scalar: a mapping or a sequence cannot be "
-                         "a configuration key");
+        return yaml_fail_at(
+            s, e->line, e->col,
+            "a key has to be a scalar: a mapping or a sequence cannot be "
+            "a configuration key");
     }
     *name       = s->key;
     *n          = s->klen;
@@ -107,29 +327,60 @@ static cf_bool yaml_name(yaml_scan* s, const yaml_event_t* ev, const char** name
     return CF_TRUE;
 }
 
-static cf_bool yaml_open(yaml_scan* s, const yaml_event_t* ev, cf_bool is_map) {
-    const char* name = NULL;
-    size_t      n    = 0;
+#define YAML_CORE "tag:yaml.org,2002:"
+
+/* A tag this reader resolves: none, the non-specific "!", or one of the
+   core schema's (YAML 1.2, 10.3). Any other names a type of the writing
+   application's, which a configuration has no way to honour. */
+static cf_bool yaml_known_tag(yaml_scan* s, const yaml_ev* e, const char* want) {
+    char what[160];
+    if (e->tag == NULL || strcmp(e->tag, "!") == 0) {
+        return CF_TRUE;
+    }
+    if (strncmp(e->tag, YAML_CORE, sizeof YAML_CORE - 1) == 0 && want != NULL) {
+        const char* t = e->tag + sizeof YAML_CORE - 1;
+        if (strcmp(t, want) == 0 ||
+            (want[0] == '\0' && (strcmp(t, "str") == 0 || strcmp(t, "int") == 0 ||
+                                 strcmp(t, "float") == 0 || strcmp(t, "bool") == 0 ||
+                                 strcmp(t, "null") == 0))) {
+            return CF_TRUE;
+        }
+    }
+    cf_fmt(what, sizeof what,
+           "the tag %s is not one this library resolves: the core schema's !!str, "
+           "!!int, !!float, !!bool, !!null, !!map and !!seq are",
+           e->tag);
+    return yaml_fail_at(s, e->line, e->col, what);
+}
+
+static cf_bool yaml_open(yaml_scan* s, const yaml_ev* e) {
+    cf_bool     is_map = (e->kind == YAML_EV_MAP) ? CF_TRUE : CF_FALSE;
+    const char* name   = NULL;
+    size_t      n      = 0;
     cf_bool     ok;
 
+    if (!yaml_known_tag(s, e, is_map ? "map" : "seq")) {
+        return CF_FALSE;
+    }
     if (s->depth < 0) {
         if (!is_map) {
-            return yaml_fail(s, &ev->start_mark,
-                             "a configuration is a mapping at the top, not a sequence");
+            return yaml_fail_at(
+                s, e->line, e->col,
+                "a configuration is a mapping at the top, not a sequence");
         }
         ok = s->out->begin_table(s->out->ctx, NULL, 0);
     } else {
-        if (!yaml_name(s, ev, &name, &n)) {
+        if (!yaml_name(s, e, &name, &n)) {
             return CF_FALSE;
         }
         if (s->depth + 1 >= CF_MAX_DEPTH) {
-            return yaml_fail(s, &ev->start_mark, "nesting is too deep");
+            return yaml_fail_at(s, e->line, e->col, "nesting is too deep");
         }
         ok = is_map ? s->out->begin_table(s->out->ctx, name, n)
                     : s->out->begin_array(s->out->ctx, name, n);
     }
     if (!ok) {
-        return yaml_fail(s, &ev->start_mark, "not a valid key");
+        return yaml_fail_at(s, e->line, e->col, "not a valid key");
     }
     ++s->depth;
     s->level[s->depth].is_map   = (unsigned char)(is_map ? 1 : 0);
@@ -146,58 +397,251 @@ static cf_bool yaml_is_null(const char* p, size_t n) {
                : CF_FALSE;
 }
 
-static cf_bool yaml_scalar(yaml_scan* s, const yaml_event_t* ev) {
-    const char* p = (const char*)ev->data.scalar.value;
-    size_t      n = ev->data.scalar.length;
-    cf_bool     plain =
-        (ev->data.scalar.style == YAML_PLAIN_SCALAR_STYLE) ? CF_TRUE : CF_FALSE;
+/* A scalar tagged with a core type is that type, as YAML 1.2's core
+   schema spells it; a value that is not one is refused, by name. */
+static cf_bool yaml_tagged(yaml_scan* s, const yaml_ev* e, cf_value* v,
+                           cf_bool* plain) {
+    const char* t = e->tag + sizeof YAML_CORE - 1;
+    *plain        = CF_FALSE;
+    if (strcmp(t, "str") == 0) {
+        cf_value_text(v, e->text, e->n);
+        return CF_TRUE;
+    }
+    if (strcmp(t, "null") == 0 && yaml_is_null(e->text, e->n)) {
+        cf_value_null(v);
+        return CF_TRUE;
+    }
+    if (strcmp(t, "bool") == 0) {
+        static const char* const yes[] = {"true", "True", "TRUE"};
+        static const char* const no[]  = {"false", "False", "FALSE"};
+        int                      i;
+        for (i = 0; i < 3; ++i) {
+            if (e->n == strlen(yes[i]) && memcmp(e->text, yes[i], e->n) == 0) {
+                cf_value_bool(v, CF_TRUE);
+                return CF_TRUE;
+            }
+            if (e->n == strlen(no[i]) && memcmp(e->text, no[i], e->n) == 0) {
+                cf_value_bool(v, CF_FALSE);
+                return CF_TRUE;
+            }
+        }
+    }
+    if (strcmp(t, "int") == 0) {
+        cf_i64 i;
+        if (cf_text_to_i64(e->text, e->n, &i, NULL)) {
+            cf_value_int(v, i);
+            return CF_TRUE;
+        }
+    }
+    if (strcmp(t, "float") == 0) {
+#if CF_WITH_REAL
+        double d;
+        if (cf_text_to_f64(e->text, e->n, &d, NULL)) {
+            cf_value_real(v, d);
+            return CF_TRUE;
+        }
+#endif
+        /* .inf and .nan: the library keeps reals finite, so the text, for
+           a definition to refuse or keep (as TOML's inf is, D-62). */
+        {
+            static const char* const odd[] = {".inf", ".Inf", ".INF",
+                                              ".nan", ".NaN", ".NAN"};
+            size_t k = (e->n > 0 && (e->text[0] == '+' || e->text[0] == '-')) ? 1u : 0u;
+            int    i;
+            for (i = 0; i < 6; ++i) {
+                if (e->n - k == 4 && memcmp(e->text + k, odd[i], 4) == 0 &&
+                    (k == 0 || i < 3)) {
+                    cf_value_text(v, e->text, e->n);
+                    *plain = CF_TRUE;
+                    return CF_TRUE;
+                }
+            }
+        }
+    }
+    {
+        char what[160];
+        cf_fmt(what, sizeof what, "the value is not a !!%s", t);
+        return yaml_fail_at(s, e->line, e->col, what);
+    }
+}
+
+static cf_bool yaml_scalar(yaml_scan* s, const yaml_ev* e) {
+    cf_bool     plain = e->plain;
     yaml_level* l;
     const char* name;
     size_t      nlen;
     cf_value    v;
     cf_loc      at;
 
+    if (!yaml_known_tag(s, e, "")) {
+        return CF_FALSE;
+    }
     if (s->depth < 0) {
         /* A document that is one scalar - or empty, which libyaml reads
            as a single empty one. */
-        if (plain && n == 0) {
+        if (plain && e->n == 0 && e->tag == NULL) {
             return CF_TRUE;
         }
-        return yaml_fail(s, &ev->start_mark,
-                         "a configuration is a mapping at the top, not a single value");
+        return yaml_fail_at(
+            s, e->line, e->col,
+            "a configuration is a mapping at the top, not a single value");
     }
     l = &s->level[s->depth];
     if (l->is_map && l->want_key) {
-        if (n == 0 || n >= sizeof s->key) {
-            return yaml_fail(s, &ev->start_mark,
-                             (n == 0) ? "an empty key" : "the key is too long");
+        if (e->n == 0 || e->n >= sizeof s->key) {
+            return yaml_fail_at(s, e->line, e->col,
+                                (e->n == 0) ? "an empty key" : "the key is too long");
         }
-        memcpy(s->key, p, n);
-        s->key[n]   = '\0';
-        s->klen     = n;
-        l->want_key = 0;
+        memcpy(s->key, e->text, e->n);
+        s->key[e->n] = '\0';
+        s->klen      = e->n;
+        l->want_key  = 0;
         return CF_TRUE;
     }
-    if (!yaml_name(s, ev, &name, &nlen)) {
+    if (!yaml_name(s, e, &name, &nlen)) {
         return CF_FALSE;
     }
-    if (plain && yaml_is_null(p, n)) {
+    if (e->tag != NULL && strcmp(e->tag, "!") != 0) {
+        if (!yaml_tagged(s, e, &v, &plain)) {
+            return CF_FALSE;
+        }
+    } else if (plain && e->tag == NULL && yaml_is_null(e->text, e->n)) {
         cf_value_null(&v);
         plain = CF_FALSE;
     } else {
-        cf_value_text(&v, p, n);
+        /* "!" is the non-specific tag of a quoted scalar: text, typed. */
+        cf_value_text(&v, e->text, e->n);
+        if (e->tag != NULL) {
+            plain = CF_FALSE;
+        }
     }
     at.file = s->file;
-    at.line = (unsigned int)ev->start_mark.line + 1u;
-    at.col  = (unsigned int)ev->start_mark.column + 1u;
+    at.line = e->line;
+    at.col  = e->col;
     if (!s->out->scalar(s->out->ctx, name, nlen, &v, plain, &at)) {
-        return yaml_fail(s, &ev->start_mark, "not a valid key");
+        return yaml_fail_at(s, e->line, e->col, "not a valid key");
     }
     return CF_TRUE;
 }
 
+/* One node event, read or replayed: recorded for any open anchor, then
+   handed to the document. */
+static cf_bool yaml_handle(yaml_scan* s, const yaml_ev* e) {
+    cf_bool ok;
+    if (!yaml_record(s, e)) {
+        return CF_FALSE;
+    }
+    switch (e->kind) {
+    case YAML_EV_MAP:
+    case YAML_EV_SEQ:
+        ok = yaml_open(s, e);
+        break;
+    case YAML_EV_SCALAR:
+        ok = yaml_scalar(s, e);
+        break;
+    default:
+        --s->depth;
+        ok = s->out->end(s->out->ctx)
+                 ? CF_TRUE
+                 : yaml_fail_at(s, e->line, e->col,
+                                "the document could not be recorded");
+        break;
+    }
+    if (ok) {
+        yaml_anchor_close(s);
+    }
+    return ok;
+}
+
+/* An alias: its anchor's events again, where the alias stands. Each value
+   keeps the place it was written at, which is the anchor's: explain()
+   names the one line the value came from. */
+static cf_bool yaml_alias(yaml_scan* s, const yaml_event_t* ev) {
+    const char* name = (const char*)ev->data.alias.anchor;
+    cf_u32      i    = yaml_find(s, name, strlen(name)), k;
+    yaml_anchor a;
+
+    if (i == 0) {
+        return yaml_fail(s, &ev->start_mark,
+                         "an alias of an anchor not defined before it");
+    }
+    a = s->anchors[i - 1u];
+    if (!a.done) {
+        return yaml_fail(s, &ev->start_mark,
+                         "an alias inside the node its anchor names");
+    }
+    if (s->replayed + a.count > s->read * YAML_ALIAS_FACTOR + YAML_ALIAS_FLOOR) {
+        return yaml_fail(s, &ev->start_mark,
+                         "aliases expand to far more than the document holds");
+    }
+    s->replayed += a.count;
+    for (k = 0; k < a.count; ++k) {
+        /* Copied out: replaying records into the same array, which may
+           move it. */
+        yaml_rec r = s->recs[a.first + k];
+        yaml_ev  e;
+        char     tag[256];
+        e.kind  = r.kind;
+        e.n     = r.n;
+        e.plain = r.plain ? CF_TRUE : CF_FALSE;
+        e.line  = r.line;
+        e.col   = r.col;
+        e.tag   = NULL;
+        if (r.ntag > 0) {
+            size_t t = (r.ntag < sizeof tag) ? r.ntag : sizeof tag - 1u;
+            memcpy(tag, s->pool + r.tag, t);
+            tag[t] = '\0';
+            e.tag  = tag;
+        }
+        e.text = s->pool + r.text;
+        if (e.kind == YAML_EV_SCALAR && s->nopen > 0) {
+            /* Recording this scalar again copies its text into the pool,
+               which may move as it grows: read it from a copy. */
+            char  local[256];
+            char* text = local;
+            if (r.n >= sizeof local) {
+                text = s->out->reserve_text != NULL &&
+                               s->out->size >= offsetof(cf_doc_sink, reserve_text) +
+                                                   sizeof s->out->reserve_text
+                           ? s->out->reserve_text(s->out->ctx, r.n + 1u)
+                           : NULL;
+                if (text == NULL) {
+                    return yaml_no_room(s);
+                }
+            }
+            memcpy(text, s->pool + r.text, r.n);
+            e.text = text;
+            if (!yaml_handle(s, &e)) {
+                return CF_FALSE;
+            }
+            continue;
+        }
+        if (!yaml_handle(s, &e)) {
+            return CF_FALSE;
+        }
+    }
+    return CF_TRUE;
+}
+
+/* A libyaml node event as this reader's, the place 1-based. The tag is
+   the one written, or none: libyaml gives no tag to a node without one,
+   and marks a "!" as implicit, so its implicit flags are no guide. */
+static void yaml_from(yaml_ev* e, const yaml_event_t* ev, int kind,
+                      const yaml_char_t* tag) {
+    e->kind  = kind;
+    e->text  = NULL;
+    e->n     = 0;
+    e->plain = CF_FALSE;
+    e->tag   = (const char*)tag;
+    e->line  = (unsigned)ev->start_mark.line + 1u;
+    e->col   = (unsigned)ev->start_mark.column + 1u;
+}
+
 /* One event. Sets *done at the end of the stream. */
 static cf_bool yaml_event(yaml_scan* s, const yaml_event_t* ev, cf_bool* done) {
+    yaml_ev            e;
+    const yaml_char_t* anchor = NULL;
+
     switch (ev->type) {
     case YAML_NO_EVENT:
     case YAML_STREAM_START_EVENT:
@@ -222,35 +666,39 @@ static cf_bool yaml_event(yaml_scan* s, const yaml_event_t* ev, cf_bool* done) {
         }
         return CF_TRUE;
     case YAML_ALIAS_EVENT:
-        return yaml_plain_node(s, ev, ev->data.alias.anchor, NULL);
+        ++s->read;
+        return yaml_alias(s, ev);
     case YAML_SCALAR_EVENT:
-        return yaml_plain_node(s, ev, ev->data.scalar.anchor,
-                               ev->data.scalar.plain_implicit ||
-                                       ev->data.scalar.quoted_implicit
-                                   ? NULL
-                                   : ev->data.scalar.tag) &&
-               yaml_scalar(s, ev);
+        yaml_from(&e, ev, YAML_EV_SCALAR, ev->data.scalar.tag);
+        e.text = (const char*)ev->data.scalar.value;
+        e.n    = ev->data.scalar.length;
+        e.plain =
+            (ev->data.scalar.style == YAML_PLAIN_SCALAR_STYLE) ? CF_TRUE : CF_FALSE;
+        if (e.tag == NULL && !e.plain) {
+            e.tag = "!"; /* a quoted scalar's non-specific tag: text */
+        }
+        anchor = ev->data.scalar.anchor;
+        break;
     case YAML_SEQUENCE_START_EVENT:
-        return yaml_plain_node(s, ev, ev->data.sequence_start.anchor,
-                               ev->data.sequence_start.implicit
-                                   ? NULL
-                                   : ev->data.sequence_start.tag) &&
-               yaml_open(s, ev, CF_FALSE);
+        yaml_from(&e, ev, YAML_EV_SEQ, ev->data.sequence_start.tag);
+        anchor = ev->data.sequence_start.anchor;
+        break;
     case YAML_MAPPING_START_EVENT:
-        return yaml_plain_node(s, ev, ev->data.mapping_start.anchor,
-                               ev->data.mapping_start.implicit
-                                   ? NULL
-                                   : ev->data.mapping_start.tag) &&
-               yaml_open(s, ev, CF_TRUE);
+        yaml_from(&e, ev, YAML_EV_MAP, ev->data.mapping_start.tag);
+        anchor = ev->data.mapping_start.anchor;
+        break;
     case YAML_SEQUENCE_END_EVENT:
     case YAML_MAPPING_END_EVENT:
-        --s->depth;
-        return s->out->end(s->out->ctx)
-                   ? CF_TRUE
-                   : yaml_fail(s, &ev->start_mark,
-                               "the document could not be recorded");
+        yaml_from(&e, ev, YAML_EV_END, NULL);
+        break;
+    default:
+        return CF_TRUE;
     }
-    return CF_TRUE;
+    ++s->read;
+    if (anchor != NULL && !yaml_anchor_open(s, &ev->start_mark, (const char*)anchor)) {
+        return CF_FALSE;
+    }
+    return yaml_handle(s, &e);
 }
 
 static cf_bool yaml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* err) {
@@ -265,6 +713,11 @@ static cf_bool yaml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     s.out   = out;
     s.err   = err;
     s.depth = -1;
+    s.work =
+        (out->size >= offsetof(cf_doc_sink, reserve_work) + sizeof out->reserve_work &&
+         out->reserve_work != NULL)
+            ? CF_TRUE
+            : CF_FALSE;
 
     if (!yaml_parser_initialize(&parser)) {
         return cf_error_set(err, CF_E_MEMORY, NULL, s.file,

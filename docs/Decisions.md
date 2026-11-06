@@ -78,6 +78,7 @@ gets reopened every six months.
 | D-45 | Build limits in the ABI | ABI, bindings, 1.0 | **Decided** |
 | D-60 | Arrays in INI are PHP's `name[]` and `name[i]` | formats, INI | **Decided** |
 | D-62 | Each reader held to its format's standard, by the standard's suite | formats, TOML, JSON, dependencies | **Decided** |
+| D-63 | YAML's anchors, aliases and core tags are read | formats, YAML, provenance | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -1818,7 +1819,8 @@ a boolean (D-24, `true` and `false` only), so `no` is the text "no" under either
 version and under a definition too. Null - `~`, `null`, or nothing - is the one plain
 scalar typed by the file, because it is a value here as JSON's null is. Anchors, aliases,
 tags, a second document, a key that is not a scalar and a top level that is not a mapping
-are refused by name with what to write instead. Written YAML quotes every string, so it
+are refused by name with what to write instead (anchors, aliases and the core schema's
+tags are read since D-63). Written YAML quotes every string, so it
 reads back the same under 1.1 and 1.2, and quotes any key a reader could take for a
 value.
 
@@ -2522,6 +2524,38 @@ its result links and narrow-screen navigation under the deployment
 path prefix. Documentation dependencies are tested in a clean
 environment, not one retaining an earlier theme's packages.
 
+## D-63 — YAML's anchors, aliases and core tags are read
+
+**Question.** D-39 refused anchors and aliases, because "a value used
+twice has no single origin to explain", and every tag, because "a
+value's type is its definition's to decide". The owner asked that each
+format follow its own standard. Do those reasons hold?
+
+**Anchors and aliases.** They do not. An aliased value is written once:
+its origin is the anchor's line, and explain() can name it exactly. What
+D-39 feared is a value under two keys, which a configuration has anyway
+whenever two keys are set to the same thing. So the reader records an
+anchored node's events in the sink's workspace (`reserve_work`, D-62)
+and an alias replays them, every value with the place it was written.
+An alias of an alias is expanded once; an alias inside its own anchor is
+refused; and expansion is bounded at 64 events per event read (with a
+floor), so a "billion laughs" is refused in linear time, by name. A sink
+that lends no workspace refuses an anchor, saying so.
+
+**Tags.** The core schema's - `!!str`, `!!int`, `!!float`, `!!bool`,
+`!!null`, `!!map`, `!!seq` - say what YAML 1.2 says the value is, and
+honouring them is reading YAML; a tagged value that is not its type is
+refused. `!!str` is quoted text, exactly as `"..."` is, so a definition
+still decides as D-39 has it. The non-specific `!` is text. Any other tag
+names a type of the writing application's, which a configuration cannot
+honour, and is refused by name.
+
+**Still refused, as the configuration model has it:** a top level that
+is not a mapping, a second document, a key that is not a scalar, an
+empty key. The conformance run counts these apart from the grammar's.
+
+---
+
 ## D-60 — Arrays in INI are the ones INI files already have
 
 **Question.** INI had no arrays here: a configuration with one could not
@@ -2618,6 +2652,20 @@ it never has it called). The loader lends it from the configuration's
 arena, so a fixed arena bounds it with everything else; a sink without
 it reads as 1.1 did, the later key winning, rather than refusing
 documents it used to accept.
+
+**YAML, measured.** On yaml-test-suite (its data branch, pinned), the
+libyaml reader accepted 100 of the 133 valid documents a configuration
+can hold, refused 87 of 94 invalid ones, and read 90 of 93 to the values
+the suite states; 175 more valid documents are refused by the
+configuration model, by name (D-39, D-63), and counted apart. Every one
+of libyaml's misses is its parser's - YAML 1.1, unmaintained for years:
+`?foo` as a plain scalar, a literal block's last line of spaces, a `:`
+in an anchor's name. libfyaml 0.8, on the same suite, accepts 308/308,
+refuses 94/94 and writes the suite's event stream exactly for 308/308.
+It is in Debian's and Ubuntu's archives and MIT-licensed, but has no
+MSVC support, where libyaml is everywhere. So the next step puts both
+behind the YAML codec, libfyaml where it builds, and the suite scores
+each (Roadmap, item 6).
 
 **Compatibility.** A TOML document that defines something twice was
 read before, the later key winning, and is refused now. TOML always

@@ -4,6 +4,9 @@
 # in the same change that raised the score (docs/Conformance.md).
 json 95 188
 toml 208 509
+# YAML through libyaml, where the build has it (CF_WITH_YAML)
+yaml 100 87
+yaml-values 90
 # "<name> <documents>": valid documents read to the expected values, by
 # Python's json for JSON and by toml-test's own expectations for TOML.
 json-values 95
