@@ -56,7 +56,7 @@ beside what is not.
 | ⬜ | Converting between formats | assessment |
 | ⬜ | Code for each binding from a contract | assessment |
 | ⬜ | 2.0: what the sizing modes break, once | plan item 10 |
-| 🟨 | Sizes and work predicted, then checked: a file's first buffer done | D-76, plan of the evening |
+| 🟩 | Sizes and work predicted, then checked: the file buffer and the key space kept, three more measured and left | D-76, plan of the evening |
 | 🟨 | Checks at compile time where they can be, at run time always: Rust's `const` keys done | D-75, plan of the evening |
 | 🟩 | GitHub used for all it offers that fits | plan of the evening |
 
@@ -95,7 +95,7 @@ short keeps its branch, unmerged, and says so here.
 1. 🟩 **Wave 1**: D, Doctor's fingerprint check (CFD019); E, INI
    against `configparser` (36 of 36, 12 differences by design listed);
    ClusterFuzzLite; Rust's `const` keys (D-75).
-2. ⬜ **Wave 2**: A, D-73 and `cf_builder_document`; C, D-76's rest,
+2. 🟩 **Wave 2**: A, D-73 and `cf_builder_document`; C, D-76's rest,
    each prediction measured and kept only where it pays. **1.4.0.**
 3. ⬜ **Wave 3**: B, D-75 in C++, C11 and `doctor gen`; F, the native
    sources: systemd's credentials (`$CREDENTIALS_DIRECTORY`) on Linux and

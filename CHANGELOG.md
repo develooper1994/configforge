@@ -9,6 +9,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 - A file whose extension no format claims was an error and is now read
   by its content, when one format reads it (D-73).
+- **The key space is sized before it is filled** (D-76): from the lines
+  of a document that start like a key, and on a reload from the
+  generation before, in a heap arena; a wrong guess leaves the doubling
+  as before. Loading 1,000 keys is 14% faster and asks the allocator for
+  28% less; a reload of 10,000 is 14% faster. The definitions' index,
+  the emitter's output and branch hints were measured and left as they
+  are, as they did not pay (Maintaining.md, "Measured").
 
 ### Added
 
