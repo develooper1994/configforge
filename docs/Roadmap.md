@@ -170,7 +170,7 @@ names its cause. Each is a trade-off, measured before it is kept.
 
 1. 🟩 **CI**: the one red run was GitHub Pages refusing a deployment
    ("try again later"); run again.
-2. 🟦 **1.3.0**: the CHANGELOG's date, tier 2 on Linux and Windows, then
+2. 🟨 **1.3.0**: the CHANGELOG's date, tier 2 on Linux and Windows, then
    the tag, which publishes it (the tag is pushed by the maintainer).
 3. 🟨 **GitHub, all of it that fits**: CodeQL code scanning (C and C++,
    Python, Rust, the workflows); Dependabot for the crate as well as the
