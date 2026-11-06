@@ -1,0 +1,25 @@
+name: Feature request
+description: Something the library or Doctor should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem, in your words
+      description: What were you trying to find out or prevent?
+    validations:
+      required: true
+  - type: textarea
+    id: wanted
+    attributes:
+      label: What you would like to happen
+    validations:
+      required: true
+  - type: textarea
+    id: explain
+    attributes:
+      label: What it does to explain()
+      description: >-
+        This library's promise is that every value can say why it is what
+        it is. How would the feature keep that promise - or which decision
+        in docs/Decisions.md would it change?

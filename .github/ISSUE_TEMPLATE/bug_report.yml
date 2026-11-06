@@ -1,0 +1,35 @@
+name: Bug report
+description: A value that is wrong, or explained wrongly
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: smallest
+    attributes:
+      label: The smallest configuration that shows it
+      description: Sources, their contents, and the definitions if any.
+    validations:
+      required: true
+  - type: textarea
+    id: explain
+    attributes:
+      label: explain() for the key
+      description: Or `--cf.explain=<key>`, or `doctor explain`.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: ConfigForge version
+      description: What `cf_version()` returns.
+    validations:
+      required: true
+  - type: textarea
+    id: build
+    attributes:
+      label: Build
+      description: Compiler, operating system, and any `CF_*` options that are not the default.

@@ -174,7 +174,7 @@ names its cause. Each is a trade-off, measured before it is kept.
    the tag, which publishes it (the tag is pushed by the maintainer).
 3. 🟨 **GitHub, all of it that fits**: CodeQL code scanning (C and C++,
    Python, Rust, the workflows); Dependabot for the crate as well as the
-   actions; `CODEOWNERS`; issue forms instead of free-text templates;
+   actions; `CODEOWNERS`; issue forms instead of free-text templates (done);
    then, as repository settings the maintainer approves: private
    vulnerability reporting, Discussions, a ruleset on `main` requiring
    CI, and release notes in the release from the CHANGELOG (done).
