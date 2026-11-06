@@ -289,6 +289,40 @@ int main(void) {
         }
     }
 
+    /* Two documents, one whose format its content gave and one named,
+       under a variable that wins: the report says what each was read as
+       and how (D-73), and explain shows it beside the source. */
+    {
+        static char    e0[]   = "MYAPP_SERVER__PORT=9090";
+        static char*   denv[] = {e0, NULL};
+        const char*    first  = "{\"server\": {\"port\": 9443}}\n";
+        const char*    second = "{\"server\": {\"port\": 9000}}\n";
+        cf_error       err    = CF_ERROR_INIT;
+        cf_builder*    b      = cf_build(NULL);
+        cf_config*     c;
+        cf_report_info info = CF_REPORT_INFO_INIT;
+        static char    buf[65536];
+
+        cf_builder_env(b, "env", CF_RANK_ENV, "MYAPP_", denv);
+        cf_builder_document(b, "remote", CF_RANK_USER_FILE, first, strlen(first), NULL,
+                            0);
+        cf_builder_document(b, "embedded", CF_RANK_SYS_FILE, second, strlen(second),
+                            "json", 0);
+        cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+        c = cf_builder_create(b, &err);
+        if (c == NULL) {
+            fprintf(stderr, "fixtures: documents: %s\n", err.message);
+            return 1;
+        }
+        info.mode    = CF_REPORT_BLIND;
+        info.profile = "production";
+        cf_report(c, &info, buf, sizeof buf);
+        cf_config_free(c);
+        if (!spill("cf_fx_doc.json", buf)) {
+            return 1;
+        }
+    }
+
     /* Configuration files, not reports, for `doctor check` against
        contract.schema.json: one that holds to it, a misspelt key, and a
        port out of range. */

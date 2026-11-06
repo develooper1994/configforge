@@ -80,6 +80,16 @@ CF_API cf_bool cf_source_read_blob(const struct cf_source* s, cf_keyspace* ks,
                                    const cf_codec* codec, const cf_blob* blob,
                                    const char* path, cf_error* err);
 
+/* The codec the content of `blob` says (D-73; cf_codec_detect), `own`
+   (n of them) a program's codecs looked at first; NULL with `err` set,
+   naming `path`, when the bytes are empty, read by no format, or read
+   differently by two loose ones. `scratch` is the trial readers' work
+   space (cf_blob_arena). What the file and directory sources do for a
+   file whose name gives no format. */
+CF_API const cf_codec* cf_source_by_content(const cf_codec* const* own, size_t n,
+                                            const cf_blob* blob, const char* path,
+                                            cf_arena* scratch, cf_error* err);
+
 /* Walk a resolved key space, emitting the document it describes.
    Structure is reconstructed from the sorted keys with nothing built:
    the keys under one prefix are a contiguous run, so the sort is

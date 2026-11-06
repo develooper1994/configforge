@@ -61,6 +61,11 @@ typedef struct rsrc {
     const char* name;
     const char* kind;
     cf_i64      rank;
+    /* For a source that read a document: the format it was read as and
+       how that was chosen ("named", "extension", "content"). NULL in a
+       report from before the library said so. */
+    const char* format;
+    const char* format_how;
 } rsrc;
 
 typedef struct report {
@@ -77,9 +82,9 @@ typedef struct report {
        there was no room, and the search is then the scan it was. diff
        and history look each key of one report up in another, so a scan
        made two 20,000-key reports take seven seconds (bench/). */
-    rkey_ref*    byname;
-    rsrc*        src;
-    size_t       nsrc;
+    rkey_ref* byname;
+    rsrc*     src;
+    size_t    nsrc;
 } report;
 
 /* Findings already accepted, "CFD001 server.port" a line. */
@@ -151,6 +156,8 @@ void    doctor_release(report* r);
 
 const rkey* doctor_find_key(const report* r, const char* key, size_t n);
 const char* doctor_shown(const cand* c);
+/* The report's entry for the source called `name`, or NULL. */
+const rsrc* doctor_find_source(const report* r, const char* name);
 cf_bool     doctor_place_of(const char* at, size_t* len, long* pos);
 void        doctor_key_name(const rkey* k, char* buf, size_t cap);
 

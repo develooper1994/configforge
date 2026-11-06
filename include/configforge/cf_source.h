@@ -270,6 +270,18 @@ CF_API cf_bool cf_source_document(cf_source* s, const char* name, int rank,
                                   const char* bytes, size_t n, const char* format,
                                   unsigned flags, void* state, size_t state_size);
 
+/* A whole document in one environment variable, as a source (D-73),
+   opt-in per variable: its value is read as a document, `format` named,
+   or NULL for the content to decide, as for cf_source_document. Looked up
+   in the platform's environment at every load, so a reload sees what the
+   variable holds then. `name` is the source's (NULL: the variable); what
+   explain() and locations show is the variable. The variable is borrowed
+   and must outlive the source; cf_builder_env_document copies it. A
+   variable that is not set is an error, or nothing with CF_OPTIONAL. */
+CF_API cf_bool cf_source_env_document(cf_source* s, const char* name, int rank,
+                                      const char* variable, const char* format,
+                                      unsigned flags, void* state, size_t state_size);
+
 /* The format a file or document source read with at its last load, by
    the codec's name, and how it was chosen (CF_DETECT_NAMED, _EXTENSION or
    _CONTENT; `how` may be NULL). NULL before a load, for a source that is

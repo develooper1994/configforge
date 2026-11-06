@@ -171,6 +171,23 @@ static cf_bool report_file_of(const char* at, char* out, size_t cap) {
     return CF_TRUE;
 }
 
+/* For a source that read a document: the format it was read as and how
+   that was chosen (D-73) - "named", "extension" or "content". Added to the
+   source's entry: schema 1 readers ignore it, and a report without it is
+   older. Nothing for any other source, and for a file not yet read. */
+static void report_format(cf_sink* out, const cf_source* s) {
+    static const char* const how_names[] = {"none", "named", "extension", "content"};
+    cf_detect_how            how         = CF_DETECT_NONE;
+    const char*              format      = cf_source_file_format(s, &how);
+
+    if (format == NULL || (int)how < 1 || (int)how > 3) {
+        return;
+    }
+    cf_sink_puts(out, ", \"format\": ");
+    report_quote_z(out, format);
+    cf_sink_fmt(out, ", \"format_how\": \"%s\"", how_names[(int)how]);
+}
+
 static void report_candidate(cf_sink* out, const cf_candidate* c,
                              const cf_source_view* sv, const cf_def* d,
                              cf_report_mode mode, const cf_keyspace* ks) {
@@ -432,9 +449,11 @@ size_t cfi_report_reads(const cf_keyspace* ks, const cf_defset* ds,
             }
             cf_sink_puts(&out, "{ \"name\": ");
             report_quote_z(&out, sv->items[i]->name);
-            cf_sink_fmt(&out, ", \"kind\": \"%s\", \"rank\": %d }",
+            cf_sink_fmt(&out, ", \"kind\": \"%s\", \"rank\": %d",
                         (sv->items[i]->vt != NULL) ? sv->items[i]->vt->kind : "?",
                         sv->items[i]->rank);
+            report_format(&out, sv->items[i]);
+            cf_sink_puts(&out, " }");
         }
     }
     cf_sink_puts(&out, "],\n  \"keys\": {");

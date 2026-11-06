@@ -5,10 +5,15 @@
  * in memory, and the builder's own codec taken from content first.
  */
 
+#ifndef _WIN32
+#define _POSIX_C_SOURCE 200112L /* setenv */
+#endif
+
 #include <configforge/configforge.h>
 #include <configforge/cf_source.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "cf_kv_codec.h"
@@ -79,12 +84,19 @@ static void one(const char* what, const char* text, const char* format) {
 }
 
 static void test_each_format(void) {
+#if CF_WITH_TOML
+    cf_detect arrays;
+#endif
 #if CF_WITH_JSON
     one("json", "{\"server\": {\"port\": 9443}}\n", "json");
     one("json5", "{server: {port: 9443,},}\n", "json5");
 #endif
 #if CF_WITH_TOML
     one("toml", "[server]\nport = 9443\n", "toml");
+    /* A document of arrays only: INI reads `ports = [80, 443]` as text,
+       and only TOML says it is a list. */
+    check_text(detected("ports = [80, 443]\n", NULL, NULL, 0, &arrays), "toml",
+               "a document of one array is TOML's");
 #endif
 #if CF_WITH_YAML
     one("yaml", "server:\n  port: 9443\n", "yaml");
@@ -304,7 +316,178 @@ static void test_own_codec(void) {
     remove("cf_detect_kv");
 }
 
+#if CF_WITH_DIR && CF_WITH_JSON && CF_WITH_TOML
+/* A drop-in directory reads a file whose name gives no format by its
+   content, as a file is, and refuses one no format reads. */
+static void test_dir(void) {
+    cf_error    err = CF_ERROR_INIT;
+    cf_builder* b   = cf_build(NULL);
+    cf_config*  c;
+    char        ex[512];
+
+    check(spill("cf_detect.d/10-base", "[server]\nport = 1000\n") &&
+              spill("cf_detect.d/50-site", "{\"server\": {\"port\": 9443}}\n"),
+          "wrote two files with no extension");
+    cf_builder_dir(b, "conf.d", CF_RANK_USER_FILE, "cf_detect.d", NULL, 0);
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    c = cf_builder_create(b, &err);
+    check(c != NULL, "a directory of files with no extension is read");
+    if (c == NULL) {
+        printf("  %s\n", err.message);
+    } else {
+        check(cf_get_int(c, "server.port", 0) == 9443,
+              "each by its content, the later one winning");
+        cf_explain(c, "server.port", ex, sizeof ex);
+        has(ex, "cf_detect.d/10-base", "and the file it beat is named");
+        cf_config_free(c);
+    }
+
+    /* A file no format reads is still named, not skipped. */
+    check(spill("cf_detect.d/60-junk", "no format reads this\n"), "wrote a junk file");
+    b = cf_build(NULL);
+    cf_builder_dir(b, "conf.d", CF_RANK_USER_FILE, "cf_detect.d", NULL, 0);
+    check(port_of(b, &err) == -1, "a file no format reads refuses the directory");
+    has(err.message, "cf_detect.d/60-junk", "naming the file");
+    has(err.message, "cannot tell the format", "and why");
+
+    check(spill("cf_detect.d/60-junk", ""), "emptied it");
+    b = cf_build(NULL);
+    cf_builder_dir(b, "conf.d", CF_RANK_USER_FILE, "cf_detect.d", NULL, 0);
+    check(port_of(b, &err) == -1, "and an empty one does too");
+    has(err.message, "empty", "as empty");
+
+    /* A format named for the directory is not a guess, even for a file
+       that reads as something else. */
+    b = cf_build(NULL);
+    cf_builder_dir(b, "conf.d", CF_RANK_USER_FILE, "cf_detect.d", "nonsense", 0);
+    check(port_of(b, &err) == -1, "a format the build does not have is refused");
+    has(err.message, "not compiled", "saying so");
+
+    remove("cf_detect.d/10-base");
+    remove("cf_detect.d/50-site");
+    remove("cf_detect.d/60-junk");
+}
+#endif
+
+/* A variable's value, by the environment's own lookup. */
+static void set_var(const char* name, const char* value) {
+#if defined(_WIN32)
+    _putenv_s(name, value);
+#else
+    setenv(name, value, 1);
+#endif
+}
+
+/* A whole document in one environment variable. */
+static void test_env_document(void) {
+    cf_error    err = CF_ERROR_INIT;
+    cf_builder* b;
+    cf_config*  c;
+    char        ex[512];
+
+    set_var("CF_DETECT_DOC", "[server]\nport = 9443\n");
+    b = cf_build(NULL);
+    check(cf_builder_env_document(b, "app-doc", CF_RANK_ENV, "CF_DETECT_DOC", NULL, 0),
+          "a variable is added as a document");
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    c = cf_builder_create(b, &err);
+    check(c != NULL, "and read from its content");
+    if (c == NULL) {
+        printf("  %s\n", err.message);
+    } else {
+        check(cf_get_int(c, "server.port", 0) == 9443, "the value is the document's");
+        cf_explain(c, "server.port", ex, sizeof ex);
+        has(ex, "CF_DETECT_DOC:2", "and explain() names the variable and the line");
+        has(ex, "app-doc", "under the source's name");
+        cf_config_free(c);
+    }
+
+#if CF_WITH_YAML
+    set_var("CF_DETECT_DOC", "server:\n  port: 9443\n");
+    b = cf_build(NULL);
+    cf_builder_env_document(b, NULL, CF_RANK_ENV, "CF_DETECT_DOC", "yaml", 0);
+    check(port_of(b, &err) == 9443, "with its format named");
+#endif
+
+    /* Unset: an error, unless it may be. */
+    b = cf_build(NULL);
+    cf_builder_env_document(b, "app-doc", CF_RANK_ENV, "CF_DETECT_UNSET_VAR", NULL, 0);
+    check(port_of(b, &err) == -1, "a variable that is not set is an error");
+    has(err.message, "CF_DETECT_UNSET_VAR", "naming the variable");
+    b = cf_build(NULL);
+    cf_builder_env_document(b, "app-doc", CF_RANK_ENV, "CF_DETECT_UNSET_VAR", NULL,
+                            CF_OPTIONAL);
+    check(port_of(b, &err) == 8080, "and none with CF_OPTIONAL");
+
+    /* Set and empty: nothing to read. */
+    set_var("CF_DETECT_DOC", "");
+    b = cf_build(NULL);
+    cf_builder_env_document(b, "app-doc", CF_RANK_ENV, "CF_DETECT_DOC", NULL, 0);
+#if !defined(_WIN32) /* _putenv_s with "" removes the variable */
+    check(port_of(b, &err) == -1, "an empty value is refused as an empty document");
+    has(err.message, "empty", "as that");
+#endif
+
+    b = cf_build(NULL);
+    check(!cf_builder_env_document(b, "x", CF_RANK_ENV, "A=B", NULL, 0),
+          "a name with = is not a variable");
+    cf_builder_abort(b);
+    b = cf_build(NULL);
+    check(!cf_builder_env_document(b, "x", CF_RANK_ENV, NULL, NULL, 0),
+          "and neither is none");
+    cf_builder_abort(b);
+}
+
+#if CF_WITH_REPORT && CF_WITH_TOML
+/* The report says what format a document was read as, and how. */
+static void test_report(void) {
+    cf_error       err = CF_ERROR_INIT;
+    cf_builder*    b   = cf_build(NULL);
+    cf_config*     c;
+    cf_report_info info = CF_REPORT_INFO_INIT;
+    static char    buf[8192];
+    const char*    doc = "[server]\nport = 9443\n";
+
+    cf_builder_document(b, "by-content", CF_RANK_USER_FILE, doc, strlen(doc), NULL, 0);
+    cf_builder_document(b, "by-name", CF_RANK_SYS_FILE, doc, strlen(doc), "toml", 0);
+    cf_builder_document(b, "by-extension.toml", CF_RANK_CLI, doc, strlen(doc), NULL, 0);
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    c = cf_builder_create(b, &err);
+    check(c != NULL, "a configuration of three documents");
+    if (c == NULL) {
+        return;
+    }
+    info.generated = "2026-11-07T00:00:00Z";
+    check(cf_report(c, &info, buf, sizeof buf) > 0, "its report");
+    has(buf,
+        "\"name\": \"by-content\", \"kind\": \"document\", \"rank\": 20, \"format\": "
+        "\"toml\", \"format_how\": \"content\"",
+        "says content for a document read by it");
+    has(buf, "\"format\": \"toml\", \"format_how\": \"named\"", "named for one named");
+    has(buf, "\"format\": \"toml\", \"format_how\": \"extension\"",
+        "extension for one by its name");
+    cf_config_free(c);
+
+    /* A source of pairs reads no document: no format field. */
+    b = cf_build(NULL);
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    c = cf_builder_create(b, &err);
+    if (c != NULL) {
+        cf_report(c, &info, buf, sizeof buf);
+        lacks(buf, "format_how", "a configuration with no document has none");
+        cf_config_free(c);
+    }
+}
+#endif
+
 int main(void) {
+#if CF_WITH_DIR && CF_WITH_JSON && CF_WITH_TOML
+    test_dir();
+#endif
+    test_env_document();
+#if CF_WITH_REPORT && CF_WITH_TOML
+    test_report();
+#endif
     test_each_format();
     test_source_says();
 #if CF_WITH_JSON && CF_WITH_YAML

@@ -4,6 +4,11 @@
  * accepts it, 1 when it refuses it, 2 when it could not be tried.
  *
  *     conform <format> <file> [--keys] [--codec <library> <symbol>]
+ *     conform --detect <file>
+ *
+ * With --detect, the file is not read as a format but asked which one
+ * its content is (cf_codec_detect, no name): the format's name on a
+ * line and exit 0, or exit 1 when none is chosen.
  *
  * With --codec, the document is read by a codec from a shared library -
  * <symbol> a `const cf_codec* const` it exports - rather than by this
@@ -244,6 +249,33 @@ static void*  any_work(void* ctx, size_t n) {
     return p;
 }
 
+/* The format the content of a file says, with no name to go by (D-73):
+   its name on a line, exit 0; exit 1 when no format is chosen, and 2
+   when the file could not be tried. */
+static int conform_detect(const char* path) {
+    cf_arena*       ar = cf_arena_new(NULL, 0);
+    cf_arena*       trial;
+    cf_blob         blob;
+    cf_error        err = CF_ERROR_INIT;
+    const cf_codec* codec;
+    int             rc;
+
+    if (ar == NULL || !cf_blob_file(&blob, ar, path, &err)) {
+        fprintf(stderr, "conform: cannot read %s\n", path);
+        cf_arena_free(ar);
+        return 2;
+    }
+    trial = cf_blob_arena(ar);
+    codec = cf_codec_detect(NULL, 0, &blob, NULL, trial, NULL);
+    if (codec != NULL) {
+        printf("%s\n", codec->name);
+    }
+    rc = (codec != NULL) ? 0 : 1;
+    cf_blob_arena_done(trial, ar);
+    cf_arena_free(ar);
+    return rc;
+}
+
 int main(int argc, char** argv) {
     const cf_codec* codec;
     cf_arena*       ar;
@@ -253,9 +285,13 @@ int main(int argc, char** argv) {
     cf_bool         keys = CF_FALSE;
     int             i;
 
+    if (argc == 3 && strcmp(argv[1], "--detect") == 0) {
+        return conform_detect(argv[2]);
+    }
     if (argc < 3) {
         fprintf(stderr, "usage: conform <format> <file> [--keys] "
-                        "[--codec <library> <symbol>]\n");
+                        "[--codec <library> <symbol>]\n"
+                        "       conform --detect <file>\n");
         return 2;
     }
     CONFORM_BINARY_STDOUT();

@@ -37,6 +37,25 @@ static cf_bool cf_env_load(const cf_source* s, cf_keyspace* ks) {
            cf_listsink_finish(&out);
 }
 
+const char* cf_env_value(char* const* environment, const char* name, size_t* n) {
+    size_t       namelen;
+    char* const* e;
+
+    if (environment == NULL || name == NULL || name[0] == '\0') {
+        return NULL;
+    }
+    namelen = strlen(name);
+    for (e = environment; *e != NULL; ++e) {
+        if (strncmp(*e, name, namelen) == 0 && (*e)[namelen] == '=') {
+            if (n != NULL) {
+                *n = strlen(*e + namelen + 1);
+            }
+            return *e + namelen + 1;
+        }
+    }
+    return NULL;
+}
+
 static void cf_env_destroy(cf_source* s) {
     (void)s;
 }

@@ -26,7 +26,7 @@
 typedef struct trial {
     unsigned long h1;
     unsigned long h2;
-    size_t        keyed; /* scalars with a name of their own */
+    size_t        keyed; /* scalars and arrays with a name of their own */
     cf_arena*     ar;
     char*         text;
     size_t        text_cap;
@@ -56,7 +56,14 @@ static cf_bool trial_table(void* ctx, const char* name, size_t n) {
 }
 
 static cf_bool trial_array(void* ctx, const char* name, size_t n) {
-    trial_event((trial*)ctx, 'A', name, n);
+    trial* t = (trial*)ctx;
+
+    trial_event(t, 'A', name, n);
+    if (name != NULL) {
+        /* `ports = [80, 443]` is a keyed value, though its elements are
+           not named. */
+        ++t->keyed;
+    }
     return CF_TRUE;
 }
 

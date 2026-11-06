@@ -59,7 +59,7 @@ MODEL = (
 )
 
 
-def report(name, fmt, conform, valid, invalid, out):
+def report(name, fmt, conform, valid, invalid, out, accepted=None):
     good, model = [], []
     for f in valid:
         rc, text = run(conform, fmt, f)
@@ -68,10 +68,31 @@ def report(name, fmt, conform, valid, invalid, out):
         elif rc == 1 and any(m in text for m in MODEL):
             model.append(f)
     bad = [f for f in invalid if run(conform, fmt, f)[0] == 1]
+    if accepted is not None:
+        accepted[name] = (fmt, good)
     wrong_valid = sorted(set(valid) - set(good) - set(model))
     wrong_invalid = sorted(set(invalid) - set(bad))
     out.append((name, len(good), len(valid) - len(model), len(bad), len(invalid),
                 wrong_valid, wrong_invalid, len(model)))
+
+
+def detected(conform, path):
+    """The format conform's content detection (D-73) says a file is, from
+    its bytes alone - no name, so as if renamed without an extension - or
+    None when it chooses none."""
+    try:
+        p = subprocess.run([conform, "--detect", path], capture_output=True, timeout=20)
+    except subprocess.TimeoutExpired:
+        return None
+    return p.stdout.decode("utf-8", "replace").strip() if p.returncode == 0 else None
+
+
+def detect_score(conform, fmt, good):
+    """(detected as its own format, tried, the ones that were not): of the
+    valid documents the reader accepts, how many content detection says are
+    `fmt`'s."""
+    missed = [f for f in good if detected(conform, f) != fmt]
+    return len(good) - len(missed), len(good), missed
 
 
 ESCAPES = {"\\": "\\", "t": "\t", "n": "\n", "r": "\r", "0": "\0"}
@@ -634,26 +655,47 @@ def main():
     json5_wrong, json5_good, json5_all = [], 0, 0
     values_wrong, values_good, values_all = [], 0, 0
     yaml_wrong, yaml_good, yaml_all = [], 0, 0
+    accepted = {}  # by report name: the format, and the valid documents it read
     v, i = json_suite(root) if only in (None, "json") else ([], [])
     if v or i:
-        report("json", "json", conform, v, i, out)
+        report("json", "json", conform, v, i, out, accepted)
         json_good, json_all = json_values(conform, v, json_wrong), len(v)
     v, i = json5_suite(root) if only in (None, "json5") else ([], [])
     if v or i:
-        report("json5", "json5", conform, v, i, out)
+        report("json5", "json5", conform, v, i, out, accepted)
         json5_good, json5_all = json5_values(conform, v, json5_wrong)
     v, i = toml_suite(root) if only in (None, "toml") else ([], [])
     if v or i:
-        report("toml", "toml", conform, v, i, out)
+        report("toml", "toml", conform, v, i, out, accepted)
         values_good, values_all = toml_values(conform, v, values_wrong), len(v)
     v, i = yaml_suite(root) if only in (None, "yaml") else ([], [])
     if v and run(conform, "yaml", v[0])[0] == 2:
         print("yaml: this build has no YAML reader (CF_WITH_YAML), skipped")
         v, i = [], []
     if v or i:
-        report(yaml_name, "yaml", conform, v, i, out)
+        report(yaml_name, "yaml", conform, v, i, out, accepted)
         yaml_good, yaml_all = yaml_values(conform, v, yaml_wrong)
     failed = False
+    # Content detection: each valid document, read with no name, is asked
+    # which format it is, and counted when that is its own. A document the
+    # strict formats share - valid JSON is valid JSON5 - is taken by the
+    # first of them, and a lone value or a list is no configuration, so
+    # these are not all 100%: the score is the floor's to keep (D-73).
+    if not EXTRA:
+        for name, (fmt, good) in accepted.items():
+            n, total, missed = detect_score(conform, fmt, good)
+            print(f"detect-{name}: read as its own format from content alone {n}/{total}")
+            if verbose:
+                for f in missed:
+                    print(f"  not detected: {os.path.relpath(f, root)}")
+            fl = floor.get("detect-" + name)
+            if fl is not None and len(fl) == 2:
+                if n < fl[0] or total < fl[1]:
+                    print(f"  BELOW THE FLOOR {fl[0]}/{fl[1]}")
+                    failed = True
+                elif n > fl[0] or total > fl[1]:
+                    print(f"  above the floor {fl[0]}/{fl[1]}: raise it in "
+                          "tests/conformance/floor.txt")
     if only is None:
         ini_wrong, ini_design = [], []
         ini_good, ini_all = ini_configparser(conform, ini_wrong, ini_design)

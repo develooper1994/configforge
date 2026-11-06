@@ -117,6 +117,14 @@ report of one configuration. Doctor shows it in `dump` and in Markdown,
 where a diff says whether it changed. An additive schema-1 field; a
 report without it is older.
 
+A source that read a document - a file, a document in memory, a document in
+an environment variable - carries `format` (the codec's name) and
+`format_how` (`named`, `extension` or `content`, D-73) in its entry of
+`sources`: what it was read as, and why. Other sources have neither. Additive
+schema-1 fields; a report without them is older, and Doctor then prints
+nothing of the kind. `doctor explain` prints them beside each candidate's
+place: `[toml: content]`.
+
 The report is produced in two ways:
 
 * **Predicted.** Doctor resolves offline from files and a declared environment. Used

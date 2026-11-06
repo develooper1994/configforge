@@ -143,6 +143,11 @@ CF_API cf_bool              cf_listsink_finish(cf_listsink* out);
 CF_API cf_bool cf_lex_env(char* const* environment, const cf_keymap* map,
                           const cf_entry_sink* out, cf_error* err);
 
+/* One variable's value, borrowed from the environment, and its length in
+   `n` (which may be NULL); NULL when it is not set - an empty value is
+   "" and set. The first of two with one name, as getenv takes it. */
+CF_API const char* cf_env_value(char* const* environment, const char* name, size_t* n);
+
 /* ------------------------------------------------------------------ *
  * Command line
  *

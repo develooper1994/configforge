@@ -24,3 +24,11 @@ yaml-libfyaml-values 110
 ini-configparser 36 36
 json-values 95
 toml-values 218
+# Content detection (D-73): "detect-<format> <read as its own format from
+# the content alone> <valid documents the reader accepts>". Low for JSON
+# and JSON5 because their suites are mostly lone values and lists, which
+# are no configuration, and a JSON5 file that is also JSON is taken as JSON.
+detect-json 11 95
+detect-json5 12 83
+detect-toml 199 218
+detect-yaml 109 122

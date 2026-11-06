@@ -37,6 +37,14 @@ accepted, 1 refused, 2 not tried) and runs `scripts/check/conformance.py`
 against the floor. `--list` names every document that went the wrong
 way. It is a tier 2 step, since it needs a network the first time.
 
+Each valid document the reader accepts is also asked which format its
+content is, with no name to go by - as if renamed without an extension
+(`conform --detect`, D-73) - and counted when the answer is its own format:
+`detect-<format> <n> <total>` in the floor file. Lone values and lists, which
+are no configuration, are not detected, and a JSON5 file that is also JSON
+is taken as JSON, so JSON and JSON5 score low by design; TOML and YAML are
+high, and the documents they miss are named by `--list`.
+
 | Suite | Standard | Commit |
 | ----- | -------- | ------ |
 | [JSONTestSuite](https://github.com/nst/JSONTestSuite) | RFC 8259 | `1ef36fa01286573e846ac449e8683f8833c5b26a` |
