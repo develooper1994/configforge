@@ -265,6 +265,10 @@ CF_API cf_bool cf_live_status_get(cf_live* l, cf_live_status* out);
    and `err` cleared, when no reload has failed. Any thread. */
 CF_API cf_bool cf_live_last_error(cf_live* l, cf_error* err);
 
+/* Internal: the generation being replaced, as the guess for how many
+   candidates the next one's key space will hold (D-76). */
+void cfi_builder_expect_like(struct cf_builder* b, const struct cf_config* previous);
+
 /* Internal typed overlay used by reload; not a public derivation API. */
 struct cf_config* cfi_config_keep_values(const struct cf_config* base,
                                          const struct cf_config* running,

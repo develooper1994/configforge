@@ -100,7 +100,7 @@ CF_RANK_USER_FILE or CF_RANK_SYS_FILE. Both expand response files
 CF_NODISCARD CF_API cf_config* cf_app(const char* name, int argc, char* const* argv, cf_error* err);
 ```
 
-Implementation: [`cf_app` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1287).
+Implementation: [`cf_app` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1298).
 
 ### Tier 1 and 2
 
@@ -118,13 +118,13 @@ ceremony this design exists to remove.
 CF_API cf_builder* cf_build(const cf_allocator* alloc);
 ```
 
-Implementation: [`cf_build` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L191).
+Implementation: [`cf_build` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L195).
 
 ```c
 CF_API cf_builder* cf_build_in(cf_arena* arena);
 ```
 
-Implementation: [`cf_build_in` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L195).
+Implementation: [`cf_build_in` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L199).
 
 Build inside a buffer the caller owns.
 
@@ -143,7 +143,7 @@ for is a static array, and outlives everything.
 CF_API cf_builder* cf_app_builder(const char* name, int argc, char* const* argv);
 ```
 
-Implementation: [`cf_app_builder` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L231).
+Implementation: [`cf_app_builder` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L235).
 
 cf_app's builder, before create: the command line (CF_RANK_CLI) and
 the NAME_ environment (CF_RANK_ENV), for adding files and definitions
@@ -153,7 +153,7 @@ to.
 CF_API void cf_builder_abort(cf_builder* b);
 ```
 
-Implementation: [`cf_builder_abort` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L202).
+Implementation: [`cf_builder_abort` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L206).
 
 Frees a builder that will not be created; a cf_build_in arena is the
 caller's and is left alone.
@@ -164,7 +164,7 @@ CF_API cf_bool cf_builder_env(cf_builder* b, const char* name, int rank, const c
 CF_API cf_bool cf_builder_cli(cf_builder* b, const char* name, int rank, int argc, char* const* argv);
 ```
 
-Implementation: [`cf_builder_memory` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L312), [`cf_builder_env` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L322), [`cf_builder_cli` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L333).
+Implementation: [`cf_builder_memory` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L316), [`cf_builder_env` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L326), [`cf_builder_cli` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L337).
 
 The pairs, the environment and the command line are borrowed: the
 builder keeps the pointer, not a copy, and reads it when
@@ -177,7 +177,7 @@ three has to outlive it. The name and the prefix are copied at once.
 CF_API cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const char* path, const char* format, unsigned flags);
 ```
 
-Implementation: [`cf_builder_file` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L343).
+Implementation: [`cf_builder_file` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L347).
 
 The format is taken from the extension unless one is named. A file
 whose format this build left out is an error that says which option
@@ -188,7 +188,7 @@ never makes an unreadable one acceptable.
 CF_API cf_bool cf_builder_file_codec(cf_builder* b, const char* name, int rank, const char* path, const struct cf_codec* codec, unsigned flags);
 ```
 
-Implementation: [`cf_builder_file_codec` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L380).
+Implementation: [`cf_builder_file_codec` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L384).
 
 A file read by a codec the caller supplies, for a format this library
 does not have; see cf_source_file_codec. The codec must outlive the
@@ -198,13 +198,13 @@ configuration.
 CF_API cf_bool cf_builder_codec(cf_builder* b, const struct cf_codec* codec);
 ```
 
-Implementation: [`cf_builder_codec` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L547).
+Implementation: [`cf_builder_codec` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L551).
 
 ```c
 CF_API const struct cf_codec* cf_config_codec(const cf_config* c, const char* format);
 ```
 
-Implementation: [`cf_config_codec` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L575).
+Implementation: [`cf_config_codec` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L579).
 
 The codec a configuration reads and writes `format` with: one its
 builder was given, else the built-in one, else NULL.
@@ -213,7 +213,7 @@ builder was given, else the built-in one, else NULL.
 CF_API cf_bool cf_builder_dotenv(cf_builder* b, const char* name, int rank, const char* path, const char* prefix, unsigned flags);
 ```
 
-Implementation: [`cf_builder_dotenv` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L415).
+Implementation: [`cf_builder_dotenv` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L419).
 
 A .env file, read with the environment's key mapping: a .env file is
 an environment written down, so the escape and the natural spelling
@@ -223,7 +223,7 @@ behave identically in both.
 CF_API cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank, const char* path, const char* format, unsigned flags);
 ```
 
-Implementation: [`cf_builder_dir` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L509).
+Implementation: [`cf_builder_dir` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L513).
 
 A drop-in directory: every file in byte order, all at one rank, so
 10-base losing to 90-site is precedence rather than a merge rule and
@@ -233,7 +233,7 @@ explain() names the file that won.
 CF_API cf_bool cf_builder_secrets(cf_builder* b, const char* name, int rank, const char* path, const char* prefix, unsigned flags);
 ```
 
-Implementation: [`cf_builder_secrets` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L439).
+Implementation: [`cf_builder_secrets` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L443).
 
 A directory of secrets, one file a key, as containers mount them and
 systemd passes credentials (cf_source_secrets says how names map).
@@ -242,7 +242,7 @@ systemd passes credentials (cf_source_secrets says how names map).
 CF_API cf_bool cf_builder_registry(cf_builder* b, const char* name, int rank, const char* root, unsigned flags);
 ```
 
-Implementation: [`cf_builder_registry` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L463).
+Implementation: [`cf_builder_registry` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L467).
 
 A key of the Windows Registry and its subkeys (cf_source_registry
 says how names and types map). Windows only; elsewhere it fails by
@@ -252,7 +252,7 @@ name, CF_OPTIONAL or not.
 CF_API cf_bool cf_builder_store(cf_builder* b, const char* name, int rank, const char* path, unsigned flags);
 ```
 
-Implementation: [`cf_builder_store` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L486).
+Implementation: [`cf_builder_store` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L490).
 
 A SQLite store (CF_WITH_SQLITE): typed values, each with what its
 writer said about it. cf_write writes one, when it is granted.
@@ -261,7 +261,7 @@ writer said about it. cf_write writes one, when it is granted.
 CF_API cf_bool cf_builder_writable(cf_builder* b, const char* source_name);
 ```
 
-Implementation: [`cf_builder_writable` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L935).
+Implementation: [`cf_builder_writable` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L945).
 
 Allow cf_write to write the source of this name - the program's
 permission, as against the source's capability. Every source is read
@@ -274,7 +274,7 @@ from.
 CF_API cf_bool cf_builder_source(cf_builder* b, const cf_source* s);
 ```
 
-Implementation: [`cf_builder_source` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L608).
+Implementation: [`cf_builder_source` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L612).
 
 Register a source the caller built itself. The source object is
 copied, so the caller's may be on the stack; any state it points at
@@ -284,14 +284,14 @@ must outlive the configuration.
 CF_API cf_bool cf_builder_define(cf_builder* b, const cf_def* d);
 ```
 
-Implementation: [`cf_builder_define` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L675).
+Implementation: [`cf_builder_define` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L679).
 
 ```c
 CF_API cf_bool cf_builder_schema(cf_builder* b, const char* text, size_t n, const char* name);
 CF_API cf_bool cf_builder_schema_file(cf_builder* b, const char* path);
 ```
 
-Implementation: [`cf_builder_schema` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L649), [`cf_builder_schema_file` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L662).
+Implementation: [`cf_builder_schema` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L653), [`cf_builder_schema_file` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L666).
 
 The contract from a JSON Schema - the text, or a file - as
 cf_defset_schema reads one: the definitions cf_schema would write
@@ -306,7 +306,7 @@ CF_API cf_bool cf_builder_text(cf_builder* b, const char* key, const char* dflt,
 CF_API cf_bool cf_builder_real(cf_builder* b, const char* key, double dflt, double min, double max, unsigned flags);
 ```
 
-Implementation: [`cf_builder_open` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L636), [`cf_builder_bool` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L688), [`cf_builder_int` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L700), [`cf_builder_text` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L713), [`cf_builder_real` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L727).
+Implementation: [`cf_builder_open` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L640), [`cf_builder_bool` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L692), [`cf_builder_int` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L704), [`cf_builder_text` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L717), [`cf_builder_real` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L731).
 
 Exempt a prefix from unknown-key rejection, for a key space the
 program cannot know in advance: a plugin's settings are not in the
@@ -316,7 +316,7 @@ contract because the plugin is not either.
 CF_API cf_bool cf_builder_key(cf_builder* b, const char* key, cf_type type, const char* dflt, const char* min, const char* max, unsigned flags);
 ```
 
-Implementation: [`cf_builder_key` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L782).
+Implementation: [`cf_builder_key` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L786).
 
 One spelling for every scalar type (D-74), and the one every binding
 passes through. The default and the bounds are text, read by the
@@ -331,13 +331,13 @@ key with neither a type nor a default. (1.3)
 CF_API void cf_builder_unknown(cf_builder* b, cf_unknown_policy policy);
 ```
 
-Implementation: [`cf_builder_unknown` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L831).
+Implementation: [`cf_builder_unknown` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L835).
 
 ```c
 CF_API void cf_builder_log(cf_builder* b, cf_log_fn fn, void* user, cf_log_level min);
 ```
 
-Implementation: [`cf_builder_log` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L843).
+Implementation: [`cf_builder_log` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L847).
 
 Where what deserves a log line and is not an error goes (cf_log.h):
 unknown keys under CF_UNKNOWN_WARN, deprecated keys in use, values
@@ -348,7 +348,7 @@ configuration derived from this one logs to the same place.
 CF_API void cf_builder_track_reads(cf_builder* b);
 ```
 
-Implementation: [`cf_builder_track_reads` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L837).
+Implementation: [`cf_builder_track_reads` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L841).
 
 Record which keys the program reads, for finding configuration
 nothing uses. Off by default, and nothing changes for a read when it
@@ -364,7 +364,7 @@ still carries no value.
 CF_NODISCARD CF_API cf_config* cf_builder_create(cf_builder* b, cf_error* err);
 ```
 
-Implementation: [`cf_builder_create` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L985).
+Implementation: [`cf_builder_create` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L995).
 
 ### Reading
 
@@ -383,13 +383,13 @@ CF_API const char* cf_get_text(const cf_config* c, const char* key, const char* 
 CF_API double cf_get_real(const cf_config* c, const char* key, double fallback);
 ```
 
-Implementation: [`cf_get_bool` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1940), [`cf_get_int` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1945), [`cf_get_text` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1950), [`cf_get_real` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1972).
+Implementation: [`cf_get_bool` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1951), [`cf_get_int` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1956), [`cf_get_text` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1961), [`cf_get_real` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1983).
 
 ```c
 CF_API const char* cf_get_text_n(const cf_config* c, const char* key, size_t* len, const char* fallback);
 ```
 
-Implementation: [`cf_get_text_n` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1955).
+Implementation: [`cf_get_text_n` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1966).
 
 Pointer and length, for text that may contain anything. The stored
 value is NUL-terminated as well, so cf_get_text stays free.
@@ -401,7 +401,7 @@ CF_NODISCARD CF_API cf_code cf_try_text(const cf_config* c, const char* key, con
 CF_NODISCARD CF_API cf_code cf_try_real(const cf_config* c, const char* key, double* out);
 ```
 
-Implementation: [`cf_try_bool` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1992), [`cf_try_int` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2001), [`cf_try_text` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2010), [`cf_try_real` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2026).
+Implementation: [`cf_try_bool` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2003), [`cf_try_int` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2012), [`cf_try_text` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2021), [`cf_try_real` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2037).
 
 CF_OK, CF_E_KEY when absent, CF_E_CONVERT on a type mismatch.
 
@@ -410,7 +410,7 @@ CF_API cf_type cf_type_of(const cf_config* c, const char* key);
 CF_API cf_bool cf_has(const cf_config* c, const char* key);
 ```
 
-Implementation: [`cf_type_of` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2036), [`cf_has` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2041).
+Implementation: [`cf_type_of` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2047), [`cf_has` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2052).
 
 CF_TYPE_NULL when the key is absent.
 
@@ -420,7 +420,7 @@ CF_API cf_bool cf_was_read(const cf_config* c, const char* key);
 CF_API size_t cf_read_count(const cf_config* c);
 ```
 
-Implementation: [`cf_tracks_reads` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2045), [`cf_was_read` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2049), [`cf_read_count` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2060).
+Implementation: [`cf_tracks_reads` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2056), [`cf_was_read` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2060), [`cf_read_count` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2071).
 
 Read coverage (cf_builder_track_reads). CF_FALSE and 0 for a
 configuration that does not track. cf_read_count counts keys, not
@@ -439,14 +439,14 @@ set is the question, and it is not the secret.
 CF_API size_t cf_explain(const cf_config* c, const char* key, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_explain` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2078).
+Implementation: [`cf_explain` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2089).
 
 ```c
 CF_API size_t cf_explain_json(const cf_config* c, const char* key, cf_report_mode mode, char* buf, size_t cap);
 CF_API size_t cf_inspect(const cf_config* c, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_explain_json` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2142), [`cf_inspect` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2089).
+Implementation: [`cf_explain_json` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2153), [`cf_inspect` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2100).
 
 The same chain as JSON, for an administration endpoint or a tool:
 cf_report_key_write says what it holds. CF_REPORT_BLIND is what an
@@ -496,7 +496,7 @@ CF_SENSITIVE key has "sensitive": true and no values. Measure-or-write.
 CF_API cf_u64 cf_digest(const cf_config* c);
 ```
 
-Implementation: [`cf_digest` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2113).
+Implementation: [`cf_digest` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2124).
 
 Order-independent over the resolved configuration, identical on
 every platform and in both portability modes.
@@ -505,7 +505,7 @@ every platform and in both portability modes.
 CF_API cf_u64 cf_fingerprint(const cf_config* c);
 ```
 
-Implementation: [`cf_fingerprint` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2117).
+Implementation: [`cf_fingerprint` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2128).
 
 What identifies this configuration where operators look - a log line,
 a trace, a report's "fingerprint": as cf_digest, except that a secret
@@ -519,7 +519,7 @@ apart, and proves nothing. (1.1)
 CF_API size_t cf_fingerprint_format(cf_u64 fp, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_fingerprint_format` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2122).
+Implementation: [`cf_fingerprint_format` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2133).
 
 `fp` as reports and logs write it, "fnv1a:" and sixteen hex digits,
 in `buf` as far as `cap` allows; the length it needs, 22. (1.1)
@@ -528,7 +528,7 @@ in `buf` as far as `cap` allows; the length it needs, 22. (1.1)
 CF_API size_t cf_report(const cf_config* c, const cf_report_info* info, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_report` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2154).
+Implementation: [`cf_report` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2165).
 
 The provenance report: the whole key space with every candidate,
 serialised. Doctor compares two of them; the library can read one
@@ -546,7 +546,7 @@ a leak would want.
 CF_API size_t cf_schema(const cf_config* c, const char* title, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_schema` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2099).
+Implementation: [`cf_schema` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2110).
 
 The configuration's contract as a JSON Schema, closed when it rejects
 unknown keys (CF_UNKNOWN_REJECT). See cf_schema_write.
@@ -555,7 +555,7 @@ unknown keys (CF_UNKNOWN_REJECT). See cf_schema_write.
 CF_API cf_bool cf_builder_replay(cf_builder* b, const char* name, int rank, const char* path, unsigned flags);
 ```
 
-Implementation: [`cf_builder_replay` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L585).
+Implementation: [`cf_builder_replay` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L589).
 
 Load a full report as a source. Reproduces exactly the configuration
 a process was running, rather than a reconstruction from files that
@@ -569,7 +569,7 @@ CF_API const cf_source_view* cf_sources(const cf_config* c);
 CF_API const cf_defset* cf_defs(const cf_config* c);
 ```
 
-Implementation: [`cf_count` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2126), [`cf_apply_stats` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2130), [`cf_keys` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2165), [`cf_sources` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2134), [`cf_defs` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2138).
+Implementation: [`cf_count` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2137), [`cf_apply_stats` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2141), [`cf_keys` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2176), [`cf_sources` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2145), [`cf_defs` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L2149).
 
 How many keys the configuration knows. A key is known once anything
 supplied it, so one that has no value is counted too: every candidate
@@ -617,13 +617,13 @@ is the question people actually ask after changing a setting.
 CF_NODISCARD CF_API cf_config* cf_derive(const cf_config* base, const char* source_name, const cf_pair* pairs, size_t count, cf_error* err);
 ```
 
-Implementation: [`cf_derive` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1434).
+Implementation: [`cf_derive` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1445).
 
 ```c
 CF_NODISCARD CF_API cf_config* cf_derive_in(const cf_config* base, cf_arena* arena, const char*    source_name, const cf_pair* pairs, size_t count, cf_error* err);
 ```
 
-Implementation: [`cf_derive_in` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1456).
+Implementation: [`cf_derive_in` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1467).
 
 The same, inside an arena the caller owns. A configuration built with
 cf_build_in has no allocator to borrow, so it must use this one.
@@ -663,7 +663,7 @@ ordinary index keys. The source's write callback sees local keys.
 CF_NODISCARD CF_API cf_bool cf_write(const cf_config* c, const char* target, const cf_write_item* items, size_t count, const char* meta, cf_error* err);
 ```
 
-Implementation: [`cf_write` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1759).
+Implementation: [`cf_write` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1770).
 
 ### Change notification
 
@@ -692,7 +692,7 @@ CF_API size_t cf_watch_count(const cf_config* c);
 CF_API const char* cf_watch_path(const cf_config* c, size_t i);
 ```
 
-Implementation: [`cf_changed` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1836), [`cf_watch_count` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1825), [`cf_watch_path` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1829).
+Implementation: [`cf_changed` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1847), [`cf_watch_count` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1836), [`cf_watch_path` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1840).
 
 ### A handle an event loop can wait on
 
@@ -732,7 +732,7 @@ cf_changed works as before.
 CF_NODISCARD CF_API cf_watcher* cf_watcher_open(const cf_config* c, const cf_allocator* a, cf_error* err);
 ```
 
-Implementation: [`cf_watcher_open` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1859).
+Implementation: [`cf_watcher_open` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1870).
 
 `a` NULL means the default allocator. Fails when the configuration
 read no file, since there would be nothing to wake it.
@@ -743,14 +743,14 @@ CF_API void* cf_watcher_handle(const cf_watcher* w); /* NULL where it is not a H
 CF_API cf_bool cf_watcher_drain(cf_watcher* w);
 ```
 
-Implementation: [`cf_watcher_fd` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1878), [`cf_watcher_handle` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1882), [`cf_watcher_drain` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1886).
+Implementation: [`cf_watcher_fd` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1889), [`cf_watcher_handle` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1893), [`cf_watcher_drain` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1897).
 
 ```c
 CF_API int cf_watcher_wait(cf_watcher* w, long timeout_ms);
 CF_API void cf_watcher_close(cf_watcher* w);
 ```
 
-Implementation: [`cf_watcher_wait` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1890), [`cf_watcher_close` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1894).
+Implementation: [`cf_watcher_wait` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1901), [`cf_watcher_close` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1905).
 
 1 woken (and drained), 0 timed out, -1 failed. Negative: no limit.
 
@@ -759,7 +759,7 @@ CF_API void cf_config_ref(cf_config* c);
 CF_API void cf_config_free(cf_config* c);
 ```
 
-Implementation: [`cf_config_ref` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1898), [`cf_config_free` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1904).
+Implementation: [`cf_config_ref` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1909), [`cf_config_free` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L1915).
 
 ## cf_alloc.h
 
@@ -1070,7 +1070,7 @@ Give a .env file the same natural names and list separators.
 CF_API void cf_source_file_defs(struct cf_source* s, const cf_defset* ds);
 ```
 
-Implementation: [`cf_source_file_defs` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L169).
+Implementation: [`cf_source_file_defs` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L170).
 
 Give a file, or a directory of them, the list separators, for a format
 that carries no types (cf_flatten_lists): a declared list splits an
@@ -2011,7 +2011,7 @@ one arena and one release.
 CF_API cf_bool cf_ks_add(cf_keyspace* ks, const char* key, size_t keylen, int source, const cf_value* value, const char* at);
 ```
 
-Implementation: [`cf_ks_add` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L196).
+Implementation: [`cf_ks_add` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L255).
 
 Record a candidate. Keys and text are copied into the arena, so the
 caller's buffers need not outlive the call. Candidates may arrive in
@@ -2021,7 +2021,7 @@ any order; the chain is kept ordered by precedence.
 CF_API cf_bool cf_ks_add_text(cf_keyspace* ks, const char* key, size_t keylen, int source, const char* text, size_t textlen, const char* at);
 ```
 
-Implementation: [`cf_ks_add_text` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L201).
+Implementation: [`cf_ks_add_text` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L260).
 
 Record a candidate as written, leaving its type to be decided.
 
@@ -2029,7 +2029,7 @@ Record a candidate as written, leaving its type to be decided.
 CF_API cf_bool cf_ks_add_authored(cf_keyspace* ks, const char* key, size_t keylen, int source, const cf_value* value, const char* at);
 ```
 
-Implementation: [`cf_ks_add_authored` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L213).
+Implementation: [`cf_ks_add_authored` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L272).
 
 Record a typed candidate that somebody wrote - a JSON string, say -
 so the reserved syntax applies to it as it does to raw text.
@@ -2038,13 +2038,13 @@ so the reserved syntax applies to it as it does to raw text.
 CF_API cf_bool cf_ks_add_resolved(cf_keyspace* ks, const char* key, size_t keylen, int source, const cf_value* value, const char* at);
 ```
 
-Implementation: [`cf_ks_add_resolved` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L328).
+Implementation: [`cf_ks_add_resolved` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L387).
 
 ```c
 CF_API cf_bool cf_ks_add_default(cf_keyspace* ks, const char* key, size_t keylen, int source, const cf_value* value);
 ```
 
-Implementation: [`cf_ks_add_default` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L219).
+Implementation: [`cf_ks_add_default` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L278).
 
 Record a definition's default (CF_CAND_DEFAULT).
 
@@ -2053,7 +2053,7 @@ CF_API cf_bool cf_ks_rename(cf_keyspace* ks, const char* from, size_t fromlen, c
 CF_API cf_bool cf_ks_rename_list(cf_keyspace* ks, const char* from, size_t fromlen, const char* to, size_t tolen);
 ```
 
-Implementation: [`cf_ks_rename` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L297), [`cf_ks_rename_list` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L302).
+Implementation: [`cf_ks_rename` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L356), [`cf_ks_rename_list` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L361).
 
 Before resolution: every candidate of `from` offered to `to` as well,
 CF_CAND_RENAMED. The old key keeps its own, for code that still reads
@@ -2063,7 +2063,7 @@ it. False when there is no room.
 CF_API cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key, size_t keylen, const cf_candidate* c);
 ```
 
-Implementation: [`cf_ks_add_candidate` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L307).
+Implementation: [`cf_ks_add_candidate` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L366).
 
 Record a copy of another key space's candidate, at its rank, with what
 it was - textual, a default, the template it was made from - and not
@@ -2073,7 +2073,7 @@ what it was waiting for: it is not read for references again.
 CF_API cf_bool cf_ks_replay(cf_keyspace* ks, const cf_keyspace* base);
 ```
 
-Implementation: [`cf_ks_replay` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L368).
+Implementation: [`cf_ks_replay` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L427).
 
 Internal snapshot replay, in original insertion order and at the
 source-local keys of appended lists. Derived counts are not replayed.
@@ -2082,7 +2082,7 @@ source-local keys of appended lists. Derived counts are not replayed.
 CF_API cf_bool cf_ks_append_list(cf_keyspace* ks, const char* key, size_t keylen, const cf_list_part* parts, size_t count, const cf_candidate* result, cf_error* err);
 ```
 
-Implementation: [`cf_ks_append_list` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L392).
+Implementation: [`cf_ks_append_list` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L451).
 
 Internal: plans are collected before this changes the key index.
 Resolve once after applying all plans.
@@ -2091,7 +2091,7 @@ Resolve once after applying all plans.
 CF_API const char* cf_ks_original_key(const cf_keyspace* ks, const cf_candidate* c);
 ```
 
-Implementation: [`cf_ks_original_key` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L340).
+Implementation: [`cf_ks_original_key` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L399).
 
 The source-local key before remapping, or NULL if it never moved.
 c must be an owned candidate of this space, not a copied descriptor.
@@ -2100,7 +2100,7 @@ c must be an owned candidate of this space, not a copied descriptor.
 CF_API cf_bool cf_ks_reject(cf_keyspace* ks, const char* key, size_t keylen, int source, const cf_value* value, const char* at, const char* reason);
 ```
 
-Implementation: [`cf_ks_reject` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L465).
+Implementation: [`cf_ks_reject` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L524).
 
 Record a candidate that failed conversion or validation. It never
 wins, and it is never erased: explain() has to be able to say that
@@ -2110,7 +2110,7 @@ the environment did supply a value and why it was refused.
 CF_API cf_bool cf_ks_resolve(cf_keyspace* ks);
 ```
 
-Implementation: [`cf_ks_resolve` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L569).
+Implementation: [`cf_ks_resolve` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L628).
 
 Sorts and groups the candidates. Returns false when there was no room
 to do it, which is not the same as an empty configuration: the caller
@@ -2121,7 +2121,7 @@ keys and nothing to say why.
 CF_API size_t cf_ks_candidate_count(const cf_keyspace* ks);
 ```
 
-Implementation: [`cf_ks_candidate_count` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L565).
+Implementation: [`cf_ks_candidate_count` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L624).
 
 Candidates appended so far, which is what an out-of-room message
 should name: the caller sized a buffer, not a key count.
@@ -2130,7 +2130,7 @@ should name: the caller sized a buffer, not a key count.
 CF_API void cf_ks_infer_untyped(cf_keyspace* ks);
 ```
 
-Implementation: [`cf_ks_infer_untyped` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L654).
+Implementation: [`cf_ks_infer_untyped` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L713).
 
 Tier 0 typing. Every textual candidate that no definition claimed
 gets a type by inference, which is deliberately timid: see D-24.
@@ -2145,7 +2145,7 @@ declared type ends up losing to a guess.
 CF_API cf_entry* cf_ks_at_mut(cf_keyspace* ks, size_t i);
 ```
 
-Implementation: [`cf_ks_at_mut` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L675).
+Implementation: [`cf_ks_at_mut` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L734).
 
 Mutable access, for the passes that legitimately change outcomes:
 applying definitions marks candidates rejected. Casting away const
@@ -2156,7 +2156,7 @@ so the write path is named instead.
 CF_API void cf_ks_reselect(cf_keyspace* ks);
 ```
 
-Implementation: [`cf_ks_reselect` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L682).
+Implementation: [`cf_ks_reselect` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L741).
 
 Recompute the selected candidate of every entry. Needed after
 anything that changes an outcome, which in practice means after the
@@ -2166,7 +2166,7 @@ definitions have been applied and some winners have been refused.
 CF_API const cf_entry* cf_ks_find(const cf_keyspace* ks, const char* key, size_t keylen);
 ```
 
-Implementation: [`cf_ks_find` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L743).
+Implementation: [`cf_ks_find` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L802).
 
 Binary search over the resolved entries. NULL when absent, and NULL
 before cf_ks_resolve: a half-built space has no answer to give, and
@@ -2176,7 +2176,7 @@ returning a provisional one would be worse than returning none.
 CF_API size_t cf_ks_lower_bound(const cf_keyspace* ks, const char* key, size_t keylen);
 ```
 
-Implementation: [`cf_ks_lower_bound` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L723).
+Implementation: [`cf_ks_lower_bound` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L782).
 
 Index of the first key that is not less than `key`, which is where a
 prefix scan starts. Returns cf_ks_count when every key sorts before
@@ -2187,7 +2187,7 @@ costs O(log n) plus the matches rather than a walk.
 CF_API const cf_value* cf_ks_get(const cf_keyspace* ks, const char* key, size_t keylen);
 ```
 
-Implementation: [`cf_ks_get` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L766).
+Implementation: [`cf_ks_get` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L825).
 
 The selected value, or NULL when the key is absent or every
 candidate was rejected.
@@ -2197,13 +2197,13 @@ CF_API size_t cf_ks_count(const cf_keyspace* ks);
 CF_API const cf_entry* cf_ks_at(const cf_keyspace* ks, size_t i);
 ```
 
-Implementation: [`cf_ks_count` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L774), [`cf_ks_at` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L778).
+Implementation: [`cf_ks_count` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L833), [`cf_ks_at` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L837).
 
 ```c
 CF_API cf_bool cf_ks_is_sorted(const cf_keyspace* ks);
 ```
 
-Implementation: [`cf_ks_is_sorted` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L708).
+Implementation: [`cf_ks_is_sorted` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L767).
 
 Verifies the ordering invariant the design depends on.
 
@@ -2211,7 +2211,7 @@ Verifies the ordering invariant the design depends on.
 CF_API cf_u64 cf_ks_digest(const cf_keyspace* ks);
 ```
 
-Implementation: [`cf_ks_digest` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L841).
+Implementation: [`cf_ks_digest` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L900).
 
 Order-independent digest over the resolved space. Two runs that
 produce the same configuration produce the same digest, on every
@@ -2222,7 +2222,7 @@ requirement made checkable.
 CF_API cf_u64 cf_ks_value_digest(const cf_value* v);
 ```
 
-Implementation: [`cf_ks_value_digest` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L808).
+Implementation: [`cf_ks_value_digest` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L867).
 
 FNV-1a over one value's canonical text: what a value-blind report
 says of a secret, so that "did it change" has an answer and "what is
@@ -2232,7 +2232,7 @@ it" has none. Not cryptographic, and not presented as one.
 CF_API size_t cf_ks_digest_text(cf_u64 h, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_ks_digest_text` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L823).
+Implementation: [`cf_ks_digest_text` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L882).
 
 A digest as a report writes it, "fnv1a:" and sixteen hex digits, in
 `buf` as far as `cap` allows; the length it needs, 22.
@@ -2315,7 +2315,7 @@ time, the one that drives the reloads.
 CF_NODISCARD CF_API cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err);
 ```
 
-Implementation: [`cf_live_open_with` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L578).
+Implementation: [`cf_live_open_with` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L579).
 
 Builds and checks the first snapshot, and fails as that does. A size
 below 1.0's is refused.
@@ -2325,7 +2325,7 @@ CF_NODISCARD CF_API cf_live* cf_live_open(cf_live_mode mode, cf_live_build_fn bu
 CF_API void cf_live_close(cf_live* l);
 ```
 
-Implementation: [`cf_live_open` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L545), [`cf_live_close` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L652).
+Implementation: [`cf_live_open` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L546), [`cf_live_close` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L653).
 
 The shorthand: one `user` for both functions. `check` may be NULL; `a`
 NULL is the default allocator.
@@ -2334,7 +2334,7 @@ NULL is the default allocator.
 CF_API struct cf_config* cf_live_get(cf_live* l);
 ```
 
-Implementation: [`cf_live_get` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L665).
+Implementation: [`cf_live_get` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L666).
 
 The current snapshot, with a reference the caller releases with
 cf_config_free. Any thread. A reader keeps the snapshot it got for as
@@ -2344,7 +2344,7 @@ long as it holds it, so one request sees one configuration.
 CF_API cf_live_result cf_live_poll(cf_live* l, cf_error* err);
 ```
 
-Implementation: [`cf_live_poll` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L678).
+Implementation: [`cf_live_poll` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L679).
 
 Under APPROVE and AUTO: if a file of the running snapshot (or of the
 one pending) has changed, rebuild. MANUAL: CF_LIVE_UNCHANGED.
@@ -2353,7 +2353,7 @@ one pending) has changed, rebuild. MANUAL: CF_LIVE_UNCHANGED.
 CF_API cf_live_result cf_live_reload(cf_live* l, cf_error* err);
 ```
 
-Implementation: [`cf_live_reload` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L717).
+Implementation: [`cf_live_reload` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L718).
 
 Rebuild now, in any mode, as if a file had changed: SWAPPED, PENDING
 under APPROVE, or UNCHANGED when the rebuild found the same values
@@ -2363,7 +2363,7 @@ under APPROVE, or UNCHANGED when the rebuild found the same values
 CF_API cf_live_result cf_live_wait(cf_live* l, long timeout_ms, cf_error* err);
 ```
 
-Implementation: [`cf_live_wait` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L728).
+Implementation: [`cf_live_wait` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L729).
 
 cf_live_poll after waiting up to `timeout_ms` for a file to change,
 on a watcher cf_live keeps open on the running snapshot's files. For
@@ -2377,7 +2377,7 @@ looping on it spins: use cf_live_reload there.
 CF_NODISCARD CF_API cf_live_result cf_live_commit(cf_live* l, struct cf_edit* e, const char* note, cf_error* err);
 ```
 
-Implementation: [`cf_live_commit` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L786).
+Implementation: [`cf_live_commit` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L787).
 
 Commit `e` (cf_edit.h) and reload, in one step: the change an
 administrator made reaches readers the way an edit to a file does,
@@ -2394,7 +2394,7 @@ CF_API cf_live_result cf_live_approve(cf_live* l, cf_error* err);
 CF_API void cf_live_reject(cf_live* l);
 ```
 
-Implementation: [`cf_live_pending` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L735), [`cf_live_approve` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L739), [`cf_live_reject` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L754).
+Implementation: [`cf_live_pending` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L736), [`cf_live_approve` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L740), [`cf_live_reject` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L755).
 
 The snapshot waiting for approval, or NULL; it stays the cf_live's.
 
@@ -2402,7 +2402,7 @@ The snapshot waiting for approval, or NULL; it stays the cf_live's.
 CF_API cf_live_result cf_live_rollback(cf_live* l, const char* reason, cf_error* err);
 ```
 
-Implementation: [`cf_live_rollback` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L764).
+Implementation: [`cf_live_rollback` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L765).
 
 Readers get the snapshot the probationary swap replaced, and the
 probation ends: CF_LIVE_ROLLED_BACK, the generation one more, a
@@ -2414,7 +2414,7 @@ saying so and nothing else touched, when no swap is on probation.
 CF_API cf_bool cf_live_confirm(cf_live* l);
 ```
 
-Implementation: [`cf_live_confirm` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L774).
+Implementation: [`cf_live_confirm` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L775).
 
 Ends the probation: the snapshot readers have is the one to keep, and
 the one before it is released. False when none was on probation. A
@@ -2424,7 +2424,7 @@ the one before it is released. False when none was on probation. A
 CF_API cf_u64 cf_live_generation(cf_live* l);
 ```
 
-Implementation: [`cf_live_generation` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L835).
+Implementation: [`cf_live_generation` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L836).
 
 How many snapshots readers have been given: 1 after open, one more a
 swap. A reader can tell that what it holds is no longer current.
@@ -2433,7 +2433,7 @@ swap. A reader can tell that what it holds is no longer current.
 CF_API size_t cf_live_restarts(const cf_live* l, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_live_restarts` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L847).
+Implementation: [`cf_live_restarts` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L848).
 
 The CF_RESTART keys whose new value waits for a restart, one a line,
 in `buf` as far as `cap` allows; the length it needs, 0 for none.
@@ -2442,7 +2442,7 @@ in `buf` as far as `cap` allows; the length it needs, 0 for none.
 CF_API cf_bool cf_live_status_get(cf_live* l, cf_live_status* out);
 ```
 
-Implementation: [`cf_live_status_get` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L802).
+Implementation: [`cf_live_status_get` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L803).
 
 Copies the status into `out`, whose `size` the caller sets, as far as
 it reaches (D-51): a caller built against a later, larger struct gets
@@ -2453,7 +2453,7 @@ asked for. False for a NULL, or a size smaller than 1.0's.
 CF_API cf_bool cf_live_last_error(cf_live* l, cf_error* err);
 ```
 
-Implementation: [`cf_live_last_error` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L817).
+Implementation: [`cf_live_last_error` (src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/src/core/live.c#L818).
 
 The last failure's error, copied into `err` (cf_error_copy); false,
 and `err` cleared, when no reload has failed. Any thread.
@@ -3336,19 +3336,19 @@ library about provenance must never do.
 CF_API size_t cf_source_file_state_size(void);
 ```
 
-Implementation: [`cf_source_file_state_size` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L175).
+Implementation: [`cf_source_file_state_size` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L176).
 
 ```c
 CF_API cf_bool cf_source_file(cf_source* s, const char* name, int rank, const char* path, const char* format, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_file` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L133).
+Implementation: [`cf_source_file` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L134).
 
 ```c
 CF_API cf_bool cf_source_file_codec(cf_source* s, const char* name, int rank, const char* path, const struct cf_codec* codec, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_file_codec` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L155).
+Implementation: [`cf_source_file_codec` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L156).
 
 The same, with the codec handed over rather than looked up: a format
 this library does not have, written against cf_doc_sink - over
@@ -3364,7 +3364,7 @@ name would be a conflict nobody could see.
 CF_API const cf_error* cf_source_file_error(const cf_source* s);
 ```
 
-Implementation: [`cf_source_file_error` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L179).
+Implementation: [`cf_source_file_error` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L180).
 
 The reason a file source failed, or NULL when it did not. Sources
 return a plain boolean because most cannot fail in interesting ways;

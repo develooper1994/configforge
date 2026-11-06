@@ -113,6 +113,11 @@ default can be argued from a number.
 | `cf_get_int`, a report | the same | 140 to 200 ns a read at 100 to 20,000 keys (a binary search); a report about 3 us a key. Nothing to do |
 | `CF_GC_SECTIONS` + `CF_LTO` | the same | `tier0` 60,656 (-43%); `embedded` 56,373 (-47%), its bss 22,592 -> 4,128; tests pass; MSVC Release with both: 140 of 140. Off by default: the stack budget cannot measure inlined frames. Speed: the benchmark (Roadmap, plan item 3) is the place to measure it |
 | a file's first buffer from the size `fseek`/`ftell` report, the chunked loop kept (D-76) | scratch harness, GCC 15 -O2, WSL, 2026-11-06, base64 files | 1.4 KB: 0.010 -> 0.005 ms, arena 4,096 -> 1,392; 138 KB: 1.03 -> 0.26 ms, 520,192 -> 138,336; 1.4 MB: 8.98 -> 2.65 ms, 4.19 -> 1.38 MB; 13.8 MB: 73.5 -> 27.9 ms, 33.6 -> 13.8 MB. A real pipe falls back to the chunks: 520,192, as before. Kept |
+| the key space sized from the document: the lines that start like a key (not blank, not `# ; ! /`, not `[ ] { }`) counted, the array sized once (D-76) | `bench/` (`cf_bench files`), GCC 15 -O2, WSL, 2026-11-07, INI, median of 9 runs, three rounds, bytes asked of the allocator for one load | 1,000 keys (18 KB): 0.42 -> 0.36 ms (-14%), 331 -> 239 KB asked (-28%); 10,000 (200 KB): 4.6 -> 3.9 ms (-15%), 4.56 -> 2.37 MB (-48%); 100,000 (2.2 MB): 59 -> 54 ms (-9%), 39.5 -> 23.9 MB (-39%); 100,000 with 107-byte lines (10.7 MB): 81 -> 84 ms (+4%: the count of 10 MB costs what the growth saved), 56.2 -> 40.6 MB (-28%); 100 keys flat. Tried first and dropped: bytes / 32 (-14% memory on the 2.2 MB file, +12% on the 10.7 MB one) and every line counted (350 KB asked for a 200 KB file of one key, `test_bytes_are_transient`). A heap arena only, 2^20 candidates at most, a minified document gets the doubling as before. Kept, for the memory more than the time |
+| the key space sized, on a reload, from the generation before (D-76) | the same (`cf_bench reload`), INI and 1-line JSON | 1,000 keys: 0.50 -> 0.48 ms, 1-line 0.57 -> 0.48 (-16%); 10,000: 5.05 -> 4.35 (-14%), 1-line 5.10 -> 4.35 (-15%); 100,000: 60.3 -> 55.5 (-8%), 1-line 58.4 -> 53.2 (-9%). Alone it does as well as with the line count (the count is skipped work once the size is known, and still runs). Kept: the only guess that is exact |
+| the definitions' table and index sized once (D-76) | the same (`cf_bench define`), the table at 131,072 and the index at 524,288 from the start, an upper bound on what a hint could give | 1,000 definitions 1.3-1.5 -> 7.4-9.1 ms (a 4 MB zeroed index); 10,000: 18.4-19.8 -> 17.9-23.0 (flat); 100,000: 198-236 -> 180-212 (-9%, inside the run to run spread of 15%). The doubling and rehash are not where the time goes (copying a definition, checking it, the seal's `qsort` are). Not kept: nothing to hand the caller that pays |
+| the emitter's output sized from the key space, one pass (D-76) | the same (`cf_bench emit`), INI | measuring call / writing call: 100 keys 0.034 / 0.040 ms; 1,000: 0.59 / 0.58; 10,000: 9.2 / 9.4; 100,000: 94 / 96. `cf_emit` writes into the caller's buffer and allocates nothing, so there is no pass in the library to drop: the two are the caller's, measure then write, and each costs the same (the filter's definition look-up per entry and the encoder, not the sizing). A caller with the last size (a reload, a save) writes once into a buffer a fifth larger and the return value says when it was too small. Not kept: a predictor would walk the same entries with the same filter for little under a pass, and would be a new function on the C, C++ and Rust surfaces |
+| branch hints (`CF_LIKELY` / `CF_UNLIKELY`, already in `cf_port.h`, empty where the compiler has none) on the key space's push and `cf_key_valid`, and the flattener's scalar | the same (`cf_bench files`), hints on against off | 1,000 keys 0.345 -> 0.341 ms; 10,000: 3.92 -> 3.89; 100,000: 54.0 -> 53.3 (-0.3% to -1.3%, with 3% between runs of one binary). GCC already takes an early `return CF_FALSE` for the cold side. Not kept, and not added to the readers |
 
 ## Working habits that paid
 
@@ -133,6 +138,13 @@ default can be argued from a number.
   included header; `pcc -E` proved the corruption, and an equivalent
   `if` in response-file argument growth avoids it. Inspect preprocessed
   output before treating a reported header line as the faulty source.
+* **A guess is tried on the worst document, not the typical one.** Bytes
+  divided by a typical line looked right on one file and was off by a
+  factor of 5 on the next; every line counted reserved more than the
+  file held for a file of comments. `cf_bench` writes both kinds, and a
+  guess that wastes memory fails a test (`test_bytes_are_transient`)
+  before it is measured at all. On a shared machine the median of a run
+  moves 30%; read the minimum and the bytes asked of the allocator.
 * **Batch the checks of a unit into one script per shell call** - fewer
   calls, and on Windows each `wsl` call costs disk (below).
 * **Write source through a file, not a heredoc**: heredocs lost

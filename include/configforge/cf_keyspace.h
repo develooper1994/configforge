@@ -205,6 +205,17 @@ CF_API cf_bool cf_ks_add_resolved(cf_keyspace* ks, const char* key, size_t keyle
 cf_bool cfi_ks_add_pinned(cf_keyspace* ks, const char* key, size_t keylen, int source,
                           const cf_value* value);
 
+/* A guess at how many candidates are coming - from the bytes of a
+   document about to be read (about a line a key), or from the last
+   generation's count - so the array is sized once rather than doubled
+   its way there (D-76). Only a guess: a heap arena only (a fixed one has
+   a budget the caller chose, and is not spent on a guess), never more
+   than a cap, and a refusal or a wrong guess - too small, too large,
+   zero - leaves everything as it was; the doubling stays the fallback.
+   Candidates already held are counted: `more` is what is still to come. */
+void cfi_ks_expect(cf_keyspace* ks, size_t more);
+void cfi_ks_expect_lines(cf_keyspace* ks, const char* text, size_t n);
+
 /* Record a definition's default (CF_CAND_DEFAULT). */
 CF_API cf_bool cf_ks_add_default(cf_keyspace* ks, const char* key, size_t keylen,
                                  int source, const cf_value* value);
