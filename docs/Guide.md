@@ -158,6 +158,22 @@ CFD009 names it too. `examples/c/migration.c`, and its C++ twin.
 A prefix you cannot know in advance - a plugin's settings - is exempted
 from unknown-key rejection with `cf_builder_open(b, "plugins")`.
 
+A contract that already exists as a JSON Schema - the one an editor
+reads, or a service validates the same file against - is read as
+definitions instead of written again (D-64):
+
+```c
+cf_builder_schema_file(b, "myapp.schema.json");   /* or cf_builder_schema(b, text, n, name) */
+```
+
+Each property is a key; its type, range, length, `enum`, `default`,
+`deprecated` and `writeOnly` (sensitive) are its definition; `required`
+makes it `CF_REQUIRED`, an array of scalars is a list, and
+`"additionalProperties": true` opens a prefix. It is the reverse of
+`cf_schema` (section 10), and what `cf_schema` writes reads back as the
+same contract. A keyword the library cannot enforce - `$ref`, `allOf`,
+`pattern` and the rest - is refused by name and place, never dropped.
+
 ## 4. Sources and precedence
 
 Every source has a rank, and the lowest rank wins. The library's own

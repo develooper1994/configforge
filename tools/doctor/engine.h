@@ -49,6 +49,12 @@ typedef struct rkey {
     int read;
 } rkey;
 
+/* A key by reference, for the index sorted by name: a struct rather
+   than a bare pointer, so the array is sized by what it holds. */
+typedef struct rkey_ref {
+    const rkey* k;
+} rkey_ref;
+
 /* One entry of the report's "sources" list. Rank is the library's own:
    lower wins. */
 typedef struct rsrc {
@@ -71,7 +77,7 @@ typedef struct report {
        there was no room, and the search is then the scan it was. diff
        and history look each key of one report up in another, so a scan
        made two 20,000-key reports take seven seconds (bench/). */
-    const rkey** byname;
+    rkey_ref*    byname;
     rsrc*        src;
     size_t       nsrc;
 } report;

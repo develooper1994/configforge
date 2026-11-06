@@ -91,9 +91,10 @@ CF_API size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds,
    that names it gets completion, documentation and validation as it is
    typed, from the contract the program declared. Design.md, section 41.
 
-   `closed` puts "additionalProperties": false on every object except
-   under a prefix opened with cf_defset_open, so an editor flags a
-   misspelt key the way CF_UNKNOWN_REJECT does. "required" is never
+   `closed` puts "additionalProperties": false on every object, and true
+   on a prefix opened with cf_defset_open, so an editor flags a misspelt
+   key the way CF_UNKNOWN_REJECT does and cf_defset_schema reads the
+   schema back as the same definitions. "required" is never
    written - a required key may come from the environment, so a file
    without it is not wrong - and neither is a sensitive key's default.
    Measure-or-write; 0 with `err` set when the keys nest deeper than

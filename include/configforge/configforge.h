@@ -173,6 +173,14 @@ CF_API cf_bool cf_builder_source(cf_builder* b, const cf_source* s);
 
 CF_API cf_bool cf_builder_define(cf_builder* b, const cf_def* d);
 
+/* The contract from a JSON Schema - the text, or a file - as
+   cf_defset_schema reads one: the definitions cf_schema would write
+   back. A keyword it does not read is refused by name and place, and
+   cf_builder_create reports it. (1.2) */
+CF_API cf_bool cf_builder_schema(cf_builder* b, const char* text, size_t n,
+                                 const char* name);
+CF_API cf_bool cf_builder_schema_file(cf_builder* b, const char* path);
+
 /* Exempt a prefix from unknown-key rejection, for a key space the
    program cannot know in advance: a plugin's settings are not in the
    contract because the plugin is not either. */

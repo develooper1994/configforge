@@ -753,10 +753,14 @@ static void schema_object(schema_ctx* s, const char* p, size_t plen, cf_bool ope
         schema_indent(out, depth + 1);
     }
     cf_sink_puts(out, "}");
-    if (s->closed && !open) {
+    /* In a closed schema an opened prefix says so - true is JSON Schema's
+       default, but written it survives a round trip through
+       cf_defset_schema, which opens what says true. */
+    if (s->closed) {
         cf_sink_puts(out, ",\n");
         schema_indent(out, depth + 1);
-        cf_sink_puts(out, "\"additionalProperties\": false");
+        cf_sink_puts(out, open ? "\"additionalProperties\": true"
+                               : "\"additionalProperties\": false");
     }
 }
 

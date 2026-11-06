@@ -203,6 +203,21 @@ CF_API void cf_defset_seal(cf_defset* ds);
 /* Exempt a prefix from unknown-key rejection. */
 CF_API cf_bool cf_defset_open(cf_defset* ds, const char* prefix, cf_error* err);
 
+/* Definitions from a JSON Schema (draft 2020-12 or 2019-09), the reverse
+   of cf_schema_write: an object's properties are keys, a leaf's type,
+   range, length, enum, default, deprecated and writeOnly (sensitive) its
+   definition, "required" CF_REQUIRED, an array of scalars a list, and
+   additionalProperties true an open prefix. A keyword this library does
+   not read - $ref, allOf, pattern and the rest - is refused by name and
+   place rather than dropped: a constraint the program believes in and
+   the library does not enforce is worse than an error. Read by the JSON
+   reader, so CF_E_CAPABILITY in a build without CF_WITH_JSON. `name`
+   is what errors call the text. (1.2) */
+CF_API cf_bool cf_defset_schema(cf_defset* ds, const char* text, size_t n,
+                                const char* name, cf_error* err);
+/* The same, from a file. (1.2) */
+CF_API cf_bool cf_defset_schema_file(cf_defset* ds, const char* path, cf_error* err);
+
 /* Is this key under an exempt prefix? Matches at a segment boundary
    only, so opening "plugins" does not open "pluginsomething". */
 CF_API cf_bool cf_defset_is_open(const cf_defset* ds, const char* key, size_t keylen);

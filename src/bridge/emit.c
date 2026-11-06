@@ -122,7 +122,11 @@ static cf_bool probe_scalar(void* ctx, const char* name, size_t n, const cf_valu
 
 static cf_bool probe_end(void* ctx) {
     emit_probe* p = (emit_probe*)ctx;
-    if (p->depth > 0 && p->kind[--p->depth] == 'a') {
+    if (p->depth <= 0) {
+        return CF_TRUE;
+    }
+    --p->depth;
+    if (p->kind[p->depth] == 'a') {
         --p->arrays;
         if (p->items[p->depth] == 0) {
             p->beyond_values = CF_TRUE; /* an empty array */

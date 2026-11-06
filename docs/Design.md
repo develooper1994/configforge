@@ -2071,8 +2071,9 @@ followed. `required` is not written: a key the program requires may come from th
 environment or the command line, so a file without it is not wrong, and a schema that
 said so would make an editor flag correct files. And a sensitive key's default is
 omitted, as a blind report omits its value. Objects are closed with
-`additionalProperties: false` when the configuration rejects unknown keys, except under
-a prefix opened with `cf_defset_open`.
+`additionalProperties: false` when the configuration rejects unknown keys, and a prefix
+opened with `cf_defset_open` says `true`, so that the schema reads back
+(`cf_defset_schema`) as the definitions it was written from.
 
 ---
 

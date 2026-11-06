@@ -565,6 +565,32 @@ cf_bool cf_builder_open(cf_builder* b, const char* prefix) {
     return CF_TRUE;
 }
 
+cf_bool cf_builder_schema(cf_builder* b, const char* text, size_t n, const char* name) {
+    cf_error e = CF_ERROR_INIT;
+
+    if (b == NULL || b->failed) {
+        return CF_FALSE;
+    }
+    if (!cf_defset_schema(&b->defs, text, n, name, &e)) {
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    return CF_TRUE;
+}
+
+cf_bool cf_builder_schema_file(cf_builder* b, const char* path) {
+    cf_error e = CF_ERROR_INIT;
+
+    if (b == NULL || b->failed) {
+        return CF_FALSE;
+    }
+    if (!cf_defset_schema_file(&b->defs, path, &e)) {
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    return CF_TRUE;
+}
+
 cf_bool cf_builder_define(cf_builder* b, const cf_def* d) {
     cf_error e = CF_ERROR_INIT;
 

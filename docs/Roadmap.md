@@ -187,7 +187,7 @@ verified commits, and a release is cut where the order says so. The
    conformance, size, speed, fuzzing history): yyjson and tomlc17 are
    the candidates for JSON and TOML; libyaml, expat and SQLite are
    re-examined. The built-in readers stay, behind the same contract.
-7. **JSON Schema import**: definitions from a schema, the reverse of
+7. **Done: JSON Schema import** (D-64): definitions from a schema, the reverse of
    `cf_schema`; unsupported keywords refused by name. After 6, on the
    chosen JSON reader.
 7b. **A built-in YAML reader** (the owner asked why YAML alone needs a
@@ -229,6 +229,17 @@ verified commits, and a release is cut where the order says so. The
    what `cf_error`'s fixed `key` and `message` do - truncate in 1.x,
    grow in 2.0. Then the buffers, one subsystem at a time, each under
    all three modes in the suite. The largest item here.
+   With it, dump and stream (the owner, 2026-11-06): today a file is
+   read whole (`cf_blob_file`) into the configuration's own arena, the
+   readers stream events from those bytes, and the key space copies
+   every value it keeps - so the file's bytes stay, unused, as long as
+   the configuration does. First, a transient dump: the bytes in an
+   arena of their own, freed when the reader is done (a fixed arena
+   keeps today's way), which takes the file off the steady footprint.
+   Then a stream: readers fed in chunks through an input callback rather
+   than a whole blob, so the peak does not grow with the file; the
+   readers that look back (TOML measures a string and reads it again,
+   INI looks back at an earlier array run) are reworked one at a time.
 9. **Modern C++ only** (the owner's decision): the header deprecates
    C++98 to C++14 in 1.x with a compile-time warning, and requires
    C++17 from 2.0, where `std::optional`, `std::string_view` and

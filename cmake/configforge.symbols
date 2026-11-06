@@ -41,6 +41,8 @@ cf_builder_open
 cf_builder_real real
 cf_builder_registry
 cf_builder_replay
+cf_builder_schema
+cf_builder_schema_file
 cf_builder_secrets
 cf_builder_source
 cf_builder_store
@@ -80,6 +82,8 @@ cf_defset_is_open
 cf_defset_list
 cf_defset_nearest
 cf_defset_open
+cf_defset_schema
+cf_defset_schema_file
 cf_defset_seal
 cf_derive
 cf_derive_in

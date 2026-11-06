@@ -156,8 +156,9 @@ static cf_bool walk_scalar(void* ctx, const char* name, size_t n, const cf_value
     } else if (strcmp(w->path, "properties.server.additionalProperties") == 0 &&
                v->type == CF_TYPE_BOOL) {
         w->server_closed = v->u.b ? 2 : 1;
-    } else if (strcmp(w->path, "properties.plugins.additionalProperties") == 0) {
-        w->plugins_closed = 1;
+    } else if (strcmp(w->path, "properties.plugins.additionalProperties") == 0 &&
+               v->type == CF_TYPE_BOOL) {
+        w->plugins_closed = v->u.b ? 2 : 1;
     } else if (strcmp(w->path, "type") == 0 && v->type == CF_TYPE_TEXT &&
                v->u.t.n == 6 && memcmp(v->u.t.p, "object", 6) == 0) {
         w->root_object = CF_TRUE;
@@ -214,7 +215,126 @@ static void test_structure(void) {
     check(w.port_max == 65535, "server.port is nested where an editor looks for it");
     check(w.enum_items == 3, "the enumeration is an array of three");
     check(w.server_closed == 1, "a defined object is closed");
-    check(w.plugins_closed == 0, "and an opened one is not");
+    check(w.plugins_closed == 2, "and an opened one says it is open");
+}
+
+/* Reading a schema back (cf_defset_schema): the contract written out and
+   read in is the same contract, written out again byte for byte. */
+static void test_read_round_trip(void) {
+    static char one[8192], two[8192];
+    cf_config*  c = contract(CF_UNKNOWN_REJECT);
+    cf_config*  back;
+    cf_builder* b;
+    cf_error    err = CF_ERROR_INIT;
+    size_t      n;
+
+    if (c == NULL) {
+        check(0, "round trip: the contract builds");
+        return;
+    }
+    n = cf_schema(c, "myapp", one, sizeof one);
+    cf_config_free(c);
+    b = cf_build(NULL);
+    check(cf_builder_schema(b, one, n, "myapp.schema.json"), "the schema is read");
+    cf_builder_unknown(b, CF_UNKNOWN_REJECT);
+    back = cf_builder_create(b, &err);
+    check(back != NULL, "and the contract it describes builds");
+    if (back == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+    cf_schema(back, "myapp", two, sizeof two);
+    check(strcmp(one, two) == 0, "and writes the same schema back");
+    if (strcmp(one, two) != 0) {
+        printf("--- written:\n%s\n--- read and written again:\n%s\n", one, two);
+    }
+    check(strcmp(cf_get_text(back, "server.host", ""), "0.0.0.0") == 0,
+          "a default, read");
+    cf_config_free(back);
+}
+
+static const cf_def* schema_def(cf_defset* ds, cf_arena* ar, const char* text,
+                                const char* key) {
+    cf_error err = CF_ERROR_INIT;
+    if (!cf_defset_init(ds, ar, 8) ||
+        !cf_defset_schema(ds, text, strlen(text), "s.json", &err)) {
+        printf("  %s\n", err.message);
+        return NULL;
+    }
+    return cf_defset_find(ds, key, strlen(key));
+}
+
+/* What JSON Schema says beyond what the writer writes. */
+static void test_read_keywords(void) {
+    cf_arena*     ar = cf_arena_new(NULL, 0);
+    cf_defset     ds;
+    const cf_def* d;
+
+    d = schema_def(&ds, ar,
+                   "{\"properties\": {\"n\": {\"type\": \"integer\", "
+                   "\"exclusiveMinimum\": 0, \"exclusiveMaximum\": 10}}}",
+                   "n");
+    check(d != NULL && d->has_range && d->imin == 1 && d->imax == 9,
+          "an integer's exclusive bounds are its inclusive ones, one in");
+    d = schema_def(
+        &ds, ar,
+        "{\"required\": [\"k\"], \"properties\": {\"k\": {\"type\": \"string\", "
+        "\"title\": \"The key\", \"writeOnly\": true}}}",
+        "k");
+    check(d != NULL && (d->flags & CF_REQUIRED) && (d->flags & CF_SENSITIVE),
+          "required and writeOnly are the flags");
+    check(d != NULL && d->description != NULL && strcmp(d->description, "The key") == 0,
+          "and a title is the description when there is none");
+    d = schema_def(&ds, ar,
+                   "{\"properties\": {\"ports\": {\"type\": \"array\", \"items\": "
+                   "{\"type\": \"integer\", \"minimum\": 1}, \"default\": [80, 443]}}}",
+                   "ports");
+    check(d != NULL && d->list_mode == CF_LIST_REPLACE && d->type == CF_TYPE_INT &&
+              d->has_default && d->list_default_count == 2,
+          "an array of integers is a list, its default the list's");
+    cf_arena_free(ar);
+}
+
+static void schema_refused(const char* text, const char* needle, const char* what) {
+    cf_arena* ar  = cf_arena_new(NULL, 0);
+    cf_error  err = CF_ERROR_INIT;
+    cf_defset ds;
+    check(cf_defset_init(&ds, ar, 8) &&
+              !cf_defset_schema(&ds, text, strlen(text), "s.json", &err),
+          what);
+    has(err.message, needle, what);
+    has(err.message, "s.json", "and the refusal names the schema");
+    cf_arena_free(ar);
+}
+
+/* A constraint the library cannot enforce is refused, never dropped. */
+static void test_read_refusals(void) {
+    schema_refused("{\"properties\": {\"a\": {\"$ref\": \"#/$defs/a\"}}}",
+                   "'$ref' is a JSON Schema keyword this library does not read",
+                   "a $ref");
+    schema_refused("{\"allOf\": [{}]}", "'allOf'", "a combinator");
+    schema_refused(
+        "{\"properties\": {\"a\": {\"type\": \"string\", \"pattern\": \"x\"}}}",
+        "'pattern'", "a pattern");
+    schema_refused("{\"properties\": {\"a\": {\"type\": [\"string\", \"null\"]}}}",
+                   "not a type this library reads", "a type that is a list");
+    schema_refused("{\"required\": [\"b\"], \"properties\": {\"a\": {\"type\": "
+                   "\"string\"}}}",
+                   "'b' is required and is not a property",
+                   "a required name not there");
+    schema_refused("{\"properties\": {\"a\": {\"type\": \"string\", \"enum\": [1]}}}",
+                   "enum of a string holds strings", "an enum of numbers for a string");
+    schema_refused("{\"$schema\": \"http://json-schema.org/draft-07/schema#\"}",
+                   "draft this library does not read", "an older draft");
+    schema_refused(
+        "{\"properties\": {\"a\": {\"type\": \"integer\", \"default\": \"x\"}}}",
+        "the default is not a value of its type", "a default of another type");
+    schema_refused("{\"properties\": {\"a\": {\"type\": \"integer\", \"minimum\": 5, "
+                   "\"default\": 1}}}",
+                   "s.json:1:", "a default outside its range, with the place");
+    schema_refused("{\"properties\": {\"a\": {}}}", "has no type",
+                   "a property with no type");
+    schema_refused("{\"properties\": ", "s.json", "JSON that does not close");
 }
 
 #endif /* CF_WITH_REPORT && CF_WITH_JSON */
@@ -223,6 +343,9 @@ int main(void) {
 #if CF_WITH_REPORT && CF_WITH_JSON
     test_keywords();
     test_structure();
+    test_read_round_trip();
+    test_read_keywords();
+    test_read_refusals();
 #else
     static char out[64];
     cf_config*  none = NULL;

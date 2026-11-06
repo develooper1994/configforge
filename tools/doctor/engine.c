@@ -150,8 +150,8 @@ static void defaults_by_source(report* r) {
    Recovering the original means stripping the prefix and the field
    suffix, which is what this does. */
 static int key_order(const void* a, const void* b) {
-    const rkey* x = *(const rkey* const*)a;
-    const rkey* y = *(const rkey* const*)b;
+    const rkey* x = ((const rkey_ref*)a)->k;
+    const rkey* y = ((const rkey_ref*)b)->k;
     return cf_key_cmp(x->key, x->keylen, y->key, y->keylen);
 }
 
@@ -162,14 +162,14 @@ static void index_keys(report* r) {
     if (r->nkeys < 2 || r->nkeys > (size_t)-1 / sizeof *r->byname) {
         return;
     }
-    r->byname = (const rkey**)cf_arena_alloc(r->arena, r->nkeys * sizeof *r->byname);
+    r->byname = (rkey_ref*)cf_arena_alloc(r->arena, r->nkeys * sizeof *r->byname);
     if (r->byname == NULL) {
         return;
     }
     for (i = 0; i < r->nkeys; ++i) {
-        r->byname[i] = &r->keys[i];
+        r->byname[i].k = &r->keys[i];
     }
-    qsort((void*)r->byname, r->nkeys, sizeof *r->byname, key_order);
+    qsort(r->byname, r->nkeys, sizeof *r->byname, key_order);
 }
 
 static cf_bool parse(report* r, const cf_blob* blob, cf_error* err) {
@@ -421,7 +421,7 @@ const rkey* doctor_find_key(const report* r, const char* key, size_t n) {
         size_t lo = 0, hi = r->nkeys;
         while (lo < hi) {
             size_t      mid = lo + (hi - lo) / 2;
-            const rkey* k   = r->byname[mid];
+            const rkey* k   = r->byname[mid].k;
             int         c   = cf_key_cmp(k->key, k->keylen, key, n);
             if (c == 0) {
                 return k;

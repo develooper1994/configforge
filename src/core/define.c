@@ -424,8 +424,11 @@ cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err) {
                                 "'%s' is defined twice", d->key);
         }
         for (i = 0; i < klen; ++i) {
-            if (d->key[i] == '.' && (above = index_find(ds, d->key, i)) != NULL &&
-                above->list_mode != CF_LIST_NONE) {
+            if (d->key[i] != '.') {
+                continue;
+            }
+            above = index_find(ds, d->key, i);
+            if (above != NULL && above->list_mode != CF_LIST_NONE) {
                 return cf_error_set(
                     err, CF_E_DEFINITION, d->key, NULL,
                     "a list owns its count and indexed member definitions");

@@ -79,6 +79,7 @@ gets reopened every six months.
 | D-60 | Arrays in INI are PHP's `name[]` and `name[i]` | formats, INI | **Decided** |
 | D-62 | Each reader held to its format's standard, by the standard's suite | formats, TOML, JSON, dependencies | **Decided** |
 | D-63 | YAML's anchors, aliases and core tags are read | formats, YAML, provenance | **Decided** |
+| D-64 | Definitions read from a JSON Schema, the reverse of `cf_schema` | definitions, schema | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -2523,6 +2524,39 @@ refuses missing search data. Browser checks exercise actual search,
 its result links and narrow-screen navigation under the deployment
 path prefix. Documentation dependencies are tested in a clean
 environment, not one retaining an earlier theme's packages.
+
+## D-64 — Definitions read from a JSON Schema, the reverse of `cf_schema`
+
+**Question.** A program whose contract already exists as a JSON Schema
+(for an editor, or a service that validates the same file) writes it a
+second time as `cf_builder_*` calls, and the two drift. Read the schema?
+
+**Decision.** `cf_defset_schema` and `cf_builder_schema(_file)` read a
+JSON Schema (draft 2020-12 or 2019-09) as definitions, the inverse of
+`cf_schema_write`: what that writes reads back as the same definitions,
+and writes out again byte for byte (test_schema's round trip). The
+keywords that map are the ones the writer writes, and a few with an
+exact meaning here: `required` (`CF_REQUIRED`), an integer's
+`exclusiveMinimum`/`exclusiveMaximum` (one in), `title` (a description
+when there is none). Annotations - `$comment`, `examples`, `format`,
+`readOnly` - are read and change nothing, as a schema reader would
+treat them.
+
+**Everything else is refused by name and place**, never dropped:
+`$ref` and `$defs`, the combinators, `pattern`, `const`, a type that is
+a list, a number's exclusive bounds, a list of lists or of tables, an
+older draft. A constraint the program believes it declared and the
+library silently does not enforce is the worst outcome a contract can
+have. The writer was changed to match: in a closed schema an opened
+prefix now says `"additionalProperties": true` (JSON Schema's default,
+so the meaning is the same), which is what the reader opens.
+
+**How.** The schema is read by this library's own JSON reader (held to
+RFC 8259, D-62) into a small tree in the definitions' arena, then
+walked. In the bridge layer, since it joins a reader and the
+definitions; a build without JSON gets `CF_E_CAPABILITY`.
+
+---
 
 ## D-63 — YAML's anchors, aliases and core tags are read
 

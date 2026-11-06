@@ -92,6 +92,14 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   time, by asking the loaded library its version, since 0.8 and 0.9
   share a soname; and by `configforge.pc`'s `Requires.private`. `scripts/buildenv/libfyaml.sh` builds
   0.9.6 from its checked release tarball; CI has a libfyaml job.
+- Definitions from a JSON Schema (D-64): `cf_builder_schema`,
+  `cf_builder_schema_file`, `cf_defset_schema` and
+  `cf_defset_schema_file`, and C++'s `Builder::schema`/`schemaFile`. The
+  reverse of `cf_schema`, and what it writes reads back as the same
+  contract; a keyword the library cannot enforce (`$ref`, `allOf`,
+  `pattern`, ...) is refused by name and place, never dropped. In a
+  closed schema, `cf_schema` now writes `"additionalProperties": true`
+  on an opened prefix, which is JSON Schema's default made explicit.
 - `cf_doc_sink.reserve_work`: optional workspace a reader keeps
   bookkeeping in until decode returns (D-62); the loader lends it from
   the configuration's arena.

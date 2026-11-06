@@ -88,6 +88,7 @@ The round of 2026-11-06 (each reader against its standard's suite):
 | a new YAML parser passed the whole suite, then hung on 149 random bytes | a dependency is fuzzed before it is trusted; the reproducer is kept (`tests/conformance/data/`) and read under a timeout by test_yaml |
 | a minimum version written only in documents does nothing: a program built against libfyaml 0.9.6 loads 0.8, which has the same soname | a version floor is enforced at every entry point from one value: the build, the run time (ask the loaded library), and the package file (`Requires.private`) |
 | `dev_verify.sh` piped verify into `tail`, so its exit status was always `tail`'s | it writes the log to a file and exits with verify's status; read "all green", never a pipe's status |
+| CI's clang-tidy job failed for four commits, on an assignment in an `if` that tier 1 does not lint, and nobody read the result | after a push, the CI run is read before the next unit starts (`gh run list`); a unit that adds C runs `EXTRA=tidy` with tier 1 |
 | a defect found in a dependency | reproduced on its latest release and master, searched for in its tracker, then reported with the reproducer and the fix (libfyaml issues 101, known; 506, filed) |
 
 ## Measured

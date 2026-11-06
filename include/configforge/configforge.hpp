@@ -920,6 +920,20 @@ class Builder {
         return *this;
     }
 
+    /* The contract from a JSON Schema, as cf_builder_schema reads it. */
+    Builder& schema(const char* text, size_t n, const char* name = "<schema>") {
+        if (b_) {
+            cf_builder_schema(b_, text, n, name);
+        }
+        return *this;
+    }
+    Builder& schemaFile(const char* path) {
+        if (b_) {
+            cf_builder_schema_file(b_, path);
+        }
+        return *this;
+    }
+
     Builder& defineBool(const char* key, bool dflt, unsigned flags = 0) {
         if (b_) {
             cf_builder_bool(b_, key, dflt ? CF_TRUE : CF_FALSE, flags);
