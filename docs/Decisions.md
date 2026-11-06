@@ -87,7 +87,8 @@ gets reopened every six months.
 | D-68 | A format of one's own, registered on the builder | formats, codecs, conformance | **Decided** |
 | D-69 | A YAML parser of the library's own, on by default | formats, YAML, dependencies | **Decided** |
 | D-70 | The Rust crate builds with cargo and the cc crate | Rust, build, dependencies | **Decided** |
-| D-71 | C++98 to C++14 deprecated; C++17 from 2.0 | C++, compatibility | **Decided** |
+| D-71 | C++98 to C++14 deprecated; C++17 from 2.0 | C++, compatibility | Replaced by D-72 |
+| D-72 | Every C++ standard from C++98, cumulatively | C++, compatibility | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -2577,7 +2578,36 @@ secrets are kept out of it elsewhere (cf_arena_wipe).
 
 ---
 
+## D-72 — Every C++ standard from C++98, cumulatively
+
+**Question.** D-71 deprecated C++98 to C++14 and planned C++17 for 2.0.
+The request it answered was read as "modern C++ only"; it was
+"modern C++ as well". Which is it to be?
+
+**Decision.** Cumulative, for good. C++98 is the floor and is never
+dropped, in 1.x or 2.0; each later standard adds to what the one before
+has and changes none of it, so a program that moves from C++03 to C++23
+keeps every line it wrote and gains the newer spellings beside them.
+The header says which layer the including program has as
+`CF_CXX_LEVEL` (98, 11, 17, 20 or 23), by what the library offers and
+not only by what the compiler claims (D-47). D-71's warning and
+`CF_CXX_LEGACY` are gone; the examples are C++98 again, since an example
+that builds at the floor builds everywhere above it. A new facility goes
+into the lowest layer that can say it, and a layer above adds only what
+that layer's language makes possible: `std::optional` returns at 17,
+concepts at 20, `std::expected` at 23, and the C++98 spelling of each
+stays beside it.
+
+**Held to.** The header gate compiles the header standalone with
+`-pedantic -Werror` as C++98, 11, 14, 17, 20 and 23, and fails a level
+that reports itself above the standard it was compiled as. The C++98
+consumer and wrapper tests are C++98 on purpose.
+
+---
+
 ## D-71 — C++98 to C++14 deprecated; C++17 from 2.0
+
+**Replaced by D-72** before any release carried it.
 
 **Question.** One header serves every standard from C++98 (D-47), and
 modern C++ only was asked for. Can 1.x drop the old standards?

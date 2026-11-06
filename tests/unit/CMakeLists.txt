@@ -160,8 +160,7 @@ endif()
 if(CF_WITH_CXX)
   add_executable(test_wrapper_watch test_wrapper_watch.cpp)
   target_link_libraries(test_wrapper_watch PRIVATE configforge)
-  # C++98 on purpose, until 2.0 requires C++17 (D-71).
-  target_compile_definitions(test_wrapper_watch PRIVATE CF_CXX_LEGACY=1)
+  # C++98 on purpose: the floor, kept for good (D-72).
   set_target_properties(
     test_wrapper_watch
     PROPERTIES CXX_STANDARD 98
@@ -186,7 +185,6 @@ if(CF_WITH_CXX)
   foreach(t test_wrapper_write test_wrapper_access)
     add_executable(${t} ${t}.cpp)
     target_link_libraries(${t} PRIVATE configforge)
-    target_compile_definitions(${t} PRIVATE CF_CXX_LEGACY=1)
     set_target_properties(
       ${t}
       PROPERTIES CXX_STANDARD 98

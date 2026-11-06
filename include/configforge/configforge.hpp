@@ -38,18 +38,19 @@
 #else
 #define CF_CPLUSPLUS __cplusplus
 #endif
-/* C++98 to C++14 are deprecated (D-71): they keep working in 1.x, and 2.0
-   requires C++17. Said once, at compile time, unless the program says it
-   knows by defining CF_CXX_LEGACY. */
-#if CF_CPLUSPLUS < 201703L && !defined(CF_CXX_LEGACY)
-#if defined(_MSC_VER)
-#pragma message(                                                                       \
-    "configforge.hpp: C++98 to C++14 are deprecated and 2.0 requires C++17; define CF_CXX_LEGACY to build as before")
-#elif defined(__GNUC__)
-#pragma GCC warning                                                                    \
-    "configforge.hpp: C++98 to C++14 are deprecated and 2.0 requires C++17; define CF_CXX_LEGACY to build as before"
-#endif
-#endif
+/* Every standard from C++98 is supported, and support is cumulative
+   (D-72, which replaces D-71): C++98 is the floor and is never dropped,
+   and each later standard adds to what the one before has, without
+   changing it. A program moving from C++03 to C++23 keeps every line
+   it wrote and gains the newer spellings beside them:
+
+     98  Config, Builder, Key<T>, Binding, Error, iteration
+     11  move, explicit bool, braces, std::function callbacks
+     17  std::optional, std::string_view, std::variant
+     20  concepts, ranges, std::format, std::span
+     23  std::expected
+
+   CF_CXX_LEVEL says which of these the including program has. */
 #if CF_CPLUSPLUS >= 201103L
 #define CF_CPP11 1
 #include <exception>
@@ -81,6 +82,17 @@
 #define CF_CPP20 1
 #else
 #define CF_CPP20 0
+#endif
+#if CF_CPP20 && defined(__cpp_lib_expected) && __cpp_lib_expected >= 202202L
+#define CF_CXX_LEVEL 23
+#elif CF_CPP20
+#define CF_CXX_LEVEL 20
+#elif CF_CPP17
+#define CF_CXX_LEVEL 17
+#elif CF_CPP11
+#define CF_CXX_LEVEL 11
+#else
+#define CF_CXX_LEVEL 98
 #endif
 
 namespace configforge {

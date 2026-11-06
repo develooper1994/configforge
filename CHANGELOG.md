@@ -69,9 +69,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   `cf_blob_arena_done` give a source of one's own the same, and
   `cf_source_read_blob` reads a document's bytes through a codec as the
   file sources do.
-- **C++98 to C++14 are deprecated** (D-71): below C++17 the header says
-  so at compile time, and 2.0 will require C++17; `CF_CXX_LEGACY`
-  silences it. The C++ examples are C++17.
+- **Every C++ standard from C++98, cumulatively** (D-72): C++98 is the
+  floor and stays, and each later standard adds to the one before
+  without changing it. `CF_CXX_LEVEL` says which layer a program has (98,
+  11, 17, 20 or 23), and the header gate checks it at every standard.
 - **YAML is read by a parser of the library's own, and is on by
   default** (D-69): YAML 1.2 by recursive descent, allocating nothing,
   every value with its place; all of yaml-test-suite - 308 of 308 valid

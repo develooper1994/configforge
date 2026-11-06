@@ -1006,13 +1006,14 @@ allows it.
 
 `configforge.hpp` is the whole C++ interface, from C++98 to the newest
 standard. The compiler's standard decides what it offers (D-47); a
-program includes the one header and never says which. C++98 to C++14
-are deprecated, and 2.0 requires C++17 (D-71): below C++17 the header
-says so once at compile time, and `CF_CXX_LEGACY` silences it.
+program includes the one header and never says which. Support is
+cumulative (D-72): C++98 is the floor and stays, and each standard adds
+to the one before without changing it. `CF_CXX_LEVEL` says which layer
+the program has: 98, 11, 17, 20 or 23.
 
 | Standard | Adds |
 | -------- | ---- |
-| C++03 | everything above |
+| C++98 | everything above |
 | C++11 | move, `explicit operator bool`, `derive("admin", {{"k", "v"}})`, `cf::Live` with lambdas |
 | C++17 | `cf::find<T>` as `std::optional`, `cf::value` as a `std::variant`, `cf::items` for structured bindings, `cf::fields` over member pointers |
 | C++20 | the `cf::readable` concept, `cf::Items` as a view, `std::format` of a `cf::Setting`, a `std::span` of pairs |

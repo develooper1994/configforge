@@ -138,7 +138,8 @@ each push:
 7. **8, sizing modes, with dump and stream** - D-61 decided, the
    transient dump done; the stream and the dynamic modes are 2.0's. (below): D-61 written and
    discussed first; then the transient dump; then the stream.
-8. **9, modern C++** - 1.x's part done (D-71): deprecated below C++17.
+8. **9, modern C++** - done (D-72, replacing D-71): every standard from
+   C++98, cumulatively, with `CF_CXX_LEVEL`.
 9. **10, the ideas left**, in this order: Doctor checks a report's
    fingerprint against its contents; limits and the build id in the
    report and the image header; CFD012 against the contract; `cf_diff_json`;
