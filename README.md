@@ -184,6 +184,7 @@ it before every release, are D-56.
 | a SQLite store - typed, written in one transaction, each value with its writer's note - behind `CF_WITH_SQLITE` | done |
 | a directory of secrets, one file a key, as containers and systemd hand them over | done |
 | Java `.properties`, read as java.util.Properties reads it, behind `CF_WITH_PROPERTIES` | done |
+| JSON5 and JSONC (`tsconfig.json`'s dialect), a mode of the JSON reader, held to json5-tests (D-66) | done |
 | the Windows Registry as a source, a subkey a section (D-30) | done |
 | references between values, `${key}`, after precedence and explained (D-10) | done |
 | keeping a change: `cf_write`, asking capability, permission and the contract (D-42) | done |

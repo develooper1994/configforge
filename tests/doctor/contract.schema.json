@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "server": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "default": 8080,
+          "description": "Where the server listens: a \"port\", 1 to 65535?"
+        },
+        "host": {"type": "string", "default": "0.0.0.0", "minLength": 1, "maxLength": 253},
+        "mode": {"type": "string", "enum": ["dev", "prod"], "default": "dev"},
+        "tls": {"type": "boolean", "default": false},
+        "token": {"type": "string", "writeOnly": true},
+        "big": {"type": "integer", "minimum": -9007199254740993, "maximum": 9223372036854775807}
+      },
+      "required": ["token"]
+    },
+    "ratio": {"type": "number", "minimum": 0, "maximum": 1, "default": 0.25},
+    "tags": {"type": "array", "items": {"type": "string"}, "default": ["a", "bé"]},
+    "old": {"type": "integer", "deprecated": true},
+    "plugins": {"type": "object", "additionalProperties": true}
+  }
+}

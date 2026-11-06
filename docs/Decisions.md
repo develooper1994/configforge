@@ -81,6 +81,8 @@ gets reopened every six months.
 | D-63 | YAML's anchors, aliases and core tags are read | formats, YAML, provenance | **Decided** |
 | D-64 | Definitions read from a JSON Schema, the reverse of `cf_schema` | definitions, schema | **Decided** |
 | D-65 | CI and the development environment on Ubuntu 26.04 LTS, together | build, CI, environment | **Decided** |
+| D-66 | JSON5, and with it JSONC, a mode of the JSON reader | formats, JSON | **Decided** |
+| D-67 | Doctor reads files against a schema, and writes the schema as C | Doctor, schema, definitions | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -2524,6 +2526,73 @@ refuses missing search data. Browser checks exercise actual search,
 its result links and narrow-screen navigation under the deployment
 path prefix. Documentation dependencies are tested in a clean
 environment, not one retaining an earlier theme's packages.
+
+## D-67 — Doctor reads files against a schema, and writes the schema as C
+
+**Question.** Since D-64 a JSON Schema can be the contract a program
+reads. Can a file be checked against it without the program - in CI,
+in a pre-commit hook - and can a build without the JSON reader have the
+same contract without writing it a second time?
+
+**Decision.** Two Doctor commands, both from the library's own reading
+of the schema, so neither has rules of its own. `doctor check --schema S
+F...` builds a configuration from the files as a program would, unknown
+keys refused outside a prefix the schema opens, and reports the first
+refusal (exit 1) or `ok` (exit 0); a schema it cannot read is exit 2.
+`doctor gen --schema S` writes one C89 function that defines every key
+with `cf_def` and `cf_builder_define` and opens the schema's prefixes,
+so an embedded build has the contract from the same file. A hook,
+`configforge-check`, runs the first on each staged file.
+
+**Held to.** The generated function and the schema write the same JSON
+Schema back through `cf_schema`, and refuse the same files; the test
+compiles the function with the project's warnings, and fails when the
+generator drops a description. The checks name the key and the reason.
+
+**Two choices.** A required key is required of the files checked: a
+required key may come from the environment, and a check of files alone
+cannot know it will, so the files to check are the ones that together
+make a configuration. And only the first refusal is reported, as the
+builder reports it, rather than a second engine collecting all of them.
+
+---
+
+## D-66 — JSON5, and with it JSONC, a mode of the JSON reader
+
+**Question.** Which other formats are worth reading for configuration,
+without overdoing it? JSON with comments and trailing commas is what
+`tsconfig.json`, VS Code's settings and Deno's configuration are
+written in. Is it a format of its own, and how is it read?
+
+**Decision.** JSON5 (json5.org, 1.0.0), a format with a specification
+and an official suite, read as a mode of the JSON reader rather than by
+a second one: one scanner, a flag, the grammar's additions where JSON's
+would refuse - comments, trailing commas, identifier and single-quoted
+names and strings, `\v`, `\0`, `\xHH`, any other character escaping
+itself, line continuations, hexadecimal and signed numbers, a leading
+or trailing point, Infinity and NaN, and ECMAScript's white space and
+line terminators past ASCII. A JSONC file is JSON5, so `.json5` and
+`.jsonc` both choose it; `.json` stays JSON, and nothing JSON refused
+before is read now. Written, a configuration is JSON, which every JSON5
+reader reads.
+
+**What it is held to.** json5-tests, pinned by commit, with the same
+floors as the others: 83 of 83 valid documents read, 31 of 31 invalid
+refused, and every valid one read to the values the `json5` package
+(PyPI, pinned in `setup.sh`) reads. Fuzzed with the other readers.
+
+**Two choices.** Infinity and NaN are their text, typed by the
+definition, as TOML's inf and nan are (D-62): the library holds no value
+that is not finite, so a key defined as real refuses one by name. And a
+name's characters past ASCII are ECMAScript's identifier characters
+taken as "not white space", since its letter and mark categories would
+need Unicode's tables in the library; ASCII is exact.
+
+**Weighed and not taken.** HCL (a language, with expressions), HOCON
+(the JVM's), plist (with native OS sources), KDL, RON, CUE, Dhall and
+Pkl (young or narrow). With JSON5 the format set is enough.
+
+---
 
 ## D-65 — CI and the development environment on Ubuntu 26.04 LTS, together
 

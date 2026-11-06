@@ -15,6 +15,7 @@ extern const cf_codec cf_codec_ini;
 #endif
 #if CF_WITH_JSON
 extern const cf_codec cf_codec_json;
+extern const cf_codec cf_codec_json5;
 #endif
 #if CF_WITH_TOML
 extern const cf_codec cf_codec_toml;
@@ -35,6 +36,7 @@ static const cf_codec* const cf_codecs[] = {
 #endif
 #if CF_WITH_JSON
     &cf_codec_json,
+    &cf_codec_json5,
 #endif
 #if CF_WITH_TOML
     &cf_codec_toml,
@@ -153,6 +155,7 @@ typedef struct cf_format_info {
 static const cf_format_info cf_formats[] = {
     {"ini", ".ini;.cfg;.conf", "CF_WITH_INI"},
     {"json", ".json;.jsn", "CF_WITH_JSON"},
+    {"json5", ".json5;.jsonc", "CF_WITH_JSON"},
     {"toml", ".toml", "CF_WITH_TOML"},
     {"xml", ".xml", "CF_WITH_XML"},
     {"yaml", ".yaml;.yml", "CF_WITH_YAML"},

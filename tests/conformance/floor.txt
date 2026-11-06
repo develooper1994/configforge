@@ -3,6 +3,10 @@
 # falls below fails, and a run above it says so, and the floor is raised
 # in the same change that raised the score (docs/Conformance.md).
 json 95 188
+# JSON5 and JSONC (D-66), with its values against the json5 package where
+# it is installed (setup.sh)
+json5 83 31
+json5-values 83
 toml 208 509
 # YAML through libyaml, where the build has it (CF_WITH_YAML)
 yaml 100 87

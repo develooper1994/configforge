@@ -125,8 +125,8 @@ each push:
    the new one is green. Done: 1.2.0 was built and tested there.
 2. **1.2.0**, after tier 2 on the new environment: the version, the
    CHANGELOG's date, the tag (which publishes it).
-3. **7c JSON5 and JSONC.**
-4. **`doctor check --schema app.schema.json app.toml`** - a file checked
+3. **7c JSON5 and JSONC** - done (D-66).
+4. Done (D-67): **`doctor check --schema app.schema.json app.toml`** - a file checked
    against a JSON Schema contract without writing C, in CI and in the
    pre-commit hook - and **`doctor gen --schema`**, the `cf_builder_*`
    calls generated from a schema, so a build without the JSON reader
@@ -259,7 +259,7 @@ verified commits, and a release is cut where the order says so. The
    libfyaml the differential reference rather than the parser, fuzzed;
    then on by default as TOML is, with libfyaml and libyaml kept behind
    `CF_YAML_BACKEND` for whoever wants a dependency's reading.
-7c. **JSON5, and with it JSONC** (2026-11-06: which other formats are
+7c. **Done (D-66): JSON5, and with it JSONC** (2026-11-06: which other formats are
    worth reading for configuration, without overdoing it). JSON with
    comments and trailing commas is what `tsconfig.json`, VS Code's
    settings and Deno's configuration are written in, and a JSONC file is

@@ -21,6 +21,7 @@ configforge_apply_analysis(configforge_doctor)
 add_executable(
   doctor
   doctor.c
+  contract.c
   git.c
   spring.c
   dotnet.c

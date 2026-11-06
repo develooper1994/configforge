@@ -311,6 +311,17 @@ static const char* const g_json =
     "{\"server\":{\"port\":8080,\"host\":\"0.0.0.0\",\"tags\":[\"a\",\"b\"],"
     "\"tls\":{\"enabled\":true,\"ratio\":0.5}},\"n\":null,\"big\":-9007199254740993}";
 
+/* Each thing JSON5 adds: comments, unquoted and single-quoted names,
+   trailing commas, the escapes and a continuation, every number form,
+   and white space past ASCII. */
+static const char* const g_json5 =
+    "// a comment\n"
+    "{ server: { port: 0x1F90, host: '0.0.0.0', tags: ['a', \"b\",], },\n"
+    "  /* block\n comment */ $id_1: +.5e1, n: null, inf: -Infinity, nan: NaN,\n"
+    "  s: 'it\\'s \\x41\\u00e9\\v\\0 \\\n"
+    "line', \xC2\xA0 big: 5., \\u0061b: 1,\n"
+    "}\n";
+
 static const char* const g_ini = "# a comment\n"
                                  "top = 1\n"
                                  "[server]\n"
@@ -438,6 +449,7 @@ static void fuzz_from_nothing(void) {
             v.b[j] = (char)(next() & 0xFF);
         }
         feed_codec("json", &v);
+        feed_codec("json5", &v);
         feed_codec("ini", &v);
         feed_codec("toml", &v); /* skipped in a build without it */
         feed_codec("yaml", &v); /* and this one too */
@@ -535,6 +547,7 @@ int main(void) {
     static const char argv_seed[] = "--server.port=8080 --no-tls -p 1 @none";
 
     write_seed("seed_json", g_json, strlen(g_json));
+    write_seed("seed_json5", g_json5, strlen(g_json5));
     write_seed("seed_ini", g_ini, strlen(g_ini));
     write_seed("seed_toml", g_toml, strlen(g_toml));
     write_seed("seed_yaml", g_yaml, strlen(g_yaml));
@@ -571,6 +584,7 @@ int main(int argc, char** argv) {
     printf("seed %u\n", (unsigned)s);
 
     fuzz_text("json", g_json, 0);
+    fuzz_text("json5", g_json5, 0);
     fuzz_text("ini", g_ini, 1);
     fuzz_text("toml", g_toml, 0);
     fuzz_text("yaml", g_yaml, 0);

@@ -194,3 +194,18 @@ if(cmd STREQUAL "blame" AND EXPECT_FAIL EQUAL 0)
     message(FATAL_ERROR "blame did not name the report the port dates from")
   endif()
 endif()
+
+# A contract check names what is wrong, not only that something is: the
+# misspelt key with the one it was meant to be, the value with its range.
+if(cmd STREQUAL "check")
+  if(argv MATCHES "contract_typo" AND NOT out MATCHES
+                                      "server.prot.*did you mean 'server.port'")
+    message(FATAL_ERROR "the misspelt key and its suggestion were not named")
+  endif()
+  if(argv MATCHES "contract_range" AND NOT out MATCHES "server.port.*70000")
+    message(FATAL_ERROR "the value out of range was not named")
+  endif()
+  if(EXPECT_FAIL EQUAL 0 AND NOT out MATCHES "^ok: ")
+    message(FATAL_ERROR "a file that holds to its contract was not said to")
+  endif()
+endif()

@@ -24,6 +24,7 @@ set_tests_properties(fuzz.seeds PROPERTIES FIXTURES_SETUP FUZZ_SEEDS LABELS
 # build that has it.
 set(readers
     json
+    json5
     ini
     toml
     dotenv
@@ -52,7 +53,8 @@ set(all_readers
     argv
     yaml
     xml
-    properties)
+    properties
+    json5)
 foreach(reader ${readers})
   list(FIND all_readers ${reader} target)
   math(EXPR target "${target} + 1")

@@ -178,6 +178,33 @@ if(NOT rc EQUAL 2)
   fail("an unknown option should be refused, got ${rc}")
 endif()
 
+# The contract hook: each file on its own, the worst exit code, the
+# refusal named; without --schema the hook is unusable.
+set(contract ${CMAKE_CURRENT_LIST_DIR}/contract.schema.json)
+execute_process(
+  COMMAND
+    ${CMAKE_COMMAND} -E env CONFIGFORGE_DOCTOR=${DOCTOR} ${BASH}
+    ${ACTION}/check.sh --schema ${contract} cf_fx_contract_ok.json
+    cf_fx_contract_typo.json
+  WORKING_DIRECTORY ${WORK}
+  RESULT_VARIABLE rc
+  OUTPUT_VARIABLE text)
+if(NOT rc EQUAL 1
+   OR NOT text MATCHES "cf_fx_contract_ok.json: ok"
+   OR NOT text MATCHES "cf_fx_contract_typo.json: unknown key 'server.prot'")
+  fail("the contract hook should pass one file and refuse the other, "
+       "got ${rc}:\n${text}")
+endif()
+execute_process(
+  COMMAND ${CMAKE_COMMAND} -E env CONFIGFORGE_DOCTOR=${DOCTOR} ${BASH}
+          ${ACTION}/check.sh cf_fx_contract_ok.json
+  WORKING_DIRECTORY ${WORK}
+  RESULT_VARIABLE rc
+  OUTPUT_QUIET ERROR_QUIET)
+if(NOT rc EQUAL 2)
+  fail("the contract hook without --schema should be refused, got ${rc}")
+endif()
+
 # comment.sh against a stub gh: the first push posts, a later one finds
 # the marked comment and updates it, and a token that cannot write is a
 # note, not a failed job.

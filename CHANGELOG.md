@@ -3,6 +3,37 @@
 Versions follow semantic versioning from 1.0. Before that, `0.x` promises
 nothing: the C interface is not frozen, and a minor bump may change it.
 
+## 1.3.0 — unreleased
+
+### Added
+
+- **JSON5, and with it JSONC** (D-66): `.json5` and `.jsonc` files are
+  read by the JSON reader in its JSON5 mode - comments, trailing commas,
+  unquoted and single-quoted names, single-quoted strings, `\v`, `\0`,
+  `\xHH` and line continuations, hexadecimal and signed numbers, `.5`
+  and `5.`, Infinity and NaN, and Unicode white space - with every value's
+  place exact for `explain()`. The codec is `json5`, the feature name
+  `json5`; written, a configuration is JSON. Infinity and NaN are their
+  text, as TOML's inf and nan are, so a key defined as real refuses one.
+  Held to json5-tests: 83/83 valid, 31/31 invalid, 83/83 values against
+  the `json5` package; fuzzed, a libFuzzer target of its own. A `.json`
+  file is read exactly as before.
+- **`doctor check --schema app.schema.json app.toml`** (D-67): files read
+  against a JSON Schema contract as the program would, without it -
+  unknown keys, types, ranges, spellings, required keys - the first
+  refusal named, exit 1; and the `configforge-check` pre-commit hook,
+  which checks each staged file.
+- **`doctor gen --schema app.schema.json`**: the contract as one C89
+  function of `cf_def` and `cf_builder_define` calls, so a build without
+  the JSON reader has the same contract from the same schema. It reads
+  back through `cf_schema` as the schema it came from.
+
+### Changed
+
+- `setup.sh`'s Python environment (`/opt/cf-tools`) sees the system's
+  packages and adds json5 0.17.3, the reference for JSON5's values; verify
+  runs the conformance step with it.
+
 ## 1.2.0 — 2026-11-06
 
 ### Changed

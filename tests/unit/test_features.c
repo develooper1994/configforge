@@ -43,6 +43,8 @@ static void test_listed(void) {
     check(cf_has_feature("lists"), "list contracts are available in every profile");
     check(cf_has_feature("properties") == (CF_WITH_PROPERTIES ? CF_TRUE : CF_FALSE),
           "the .properties reader, as the build says");
+    check(cf_has_feature("json5") == (CF_WITH_JSON ? CF_TRUE : CF_FALSE),
+          "JSON5 and JSONC, with JSON");
     check(cf_has_feature("xml") == (CF_WITH_XML ? CF_TRUE : CF_FALSE),
           "XML, which once said yes with nothing behind it");
     check(cf_has_feature("sqlite") == (CF_WITH_SQLITE ? CF_TRUE : CF_FALSE),

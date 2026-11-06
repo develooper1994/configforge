@@ -51,13 +51,25 @@ fi
 
 # clang-format pinned, from PyPI: the gate accepts one major version
 # (cmake/ConfigForgeClangFormat.cmake), because two versions disagree on
-# layouts no code can satisfy both ways. Ubuntu's clang-format 18 stays
+# layouts no code can satisfy both ways. Ubuntu's own clang-format stays
 # for clang-tidy's use; this one comes first on PATH.
+# json5, pinned, is the reference reader JSON5's values are compared
+# with (verify -DEXTRA=conformance); Ubuntu packages none. The
+# environment sees the system's packages too (PyYAML, for the same
+# step), and verify runs that step with this interpreter.
 CLANG_FORMAT_VERSION=22.1.8
-if [ ! -x /opt/cf-tools/bin/clang-format ] ||
-  ! /opt/cf-tools/bin/clang-format --version | grep -q " $CLANG_FORMAT_VERSION"; then
-  python3 -m venv /opt/cf-tools
+JSON5_VERSION=0.17.3
+if ! /opt/cf-tools/bin/python3 -c "import yaml" 2>/dev/null; then
+  rm -rf /opt/cf-tools
+  python3 -m venv --system-site-packages /opt/cf-tools
+fi
+if ! /opt/cf-tools/bin/clang-format --version 2>/dev/null |
+  grep -q " $CLANG_FORMAT_VERSION"; then
   /opt/cf-tools/bin/pip install --quiet "clang-format==$CLANG_FORMAT_VERSION"
+fi
+if ! /opt/cf-tools/bin/python3 -c \
+  "import json5, sys; sys.exit(json5.__version__ != '$JSON5_VERSION')" 2>/dev/null; then
+  /opt/cf-tools/bin/pip install --quiet "json5==$JSON5_VERSION"
 fi
 ln -sf /opt/cf-tools/bin/clang-format /usr/local/bin/clang-format
 

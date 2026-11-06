@@ -37,6 +37,7 @@ static const char* const cf_features[] = {"lists",
 #endif
 #if CF_WITH_JSON
                                           "json",
+                                          "json5",
 #endif
 #if CF_WITH_TOML
                                           "toml",

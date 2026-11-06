@@ -42,12 +42,14 @@ way. It is a tier 2 step, since it needs a network the first time.
 | [JSONTestSuite](https://github.com/nst/JSONTestSuite) | RFC 8259 | `1ef36fa01286573e846ac449e8683f8833c5b26a` |
 | [toml-test](https://github.com/toml-lang/toml-test) | TOML 1.0.0 (`tests/files-toml-1.0.0`) | `96fd088448ec0f4d9f061c730ed7854399c46faf` |
 | [yaml-test-suite](https://github.com/yaml/yaml-test-suite), its `data` branch | YAML 1.2 | `6ad3d2c62885d82fc349026c136ef560838fdf3d` |
+| [json5-tests](https://github.com/json5/json5-tests) | JSON5 1.0.0 | `ceb24d4080137d70833f86c25659c1331b80a387` |
 
 ## The scores
 
 | Format | Valid accepted | Invalid refused | Valid read to the right values |
 | ------ | -------------- | --------------- | ------------------------------ |
 | JSON | 95 / 95 | 188 / 188 | 95 / 95, against Python's `json` |
+| JSON5 and JSONC | 83 / 83 | 31 / 31 | 83 / 83, against the `json5` package 0.17.3 |
 | TOML | 208 / 208 | 509 / 509 | 208 / 208, against toml-test's stated values |
 | YAML, through libfyaml 0.9.6 | 122 / 122 | 94 / 94 | 110 / 110, against the suite's `in.json` |
 | YAML, through libyaml 0.2.5 | 100 / 133 | 87 / 94 | 90 / 93, against the suite's `in.json` |
@@ -75,6 +77,13 @@ JSON's root may be any value, and a configuration is a table: `conform`
 reads a document whose root is not an object as the member of one,
 `{"v": ...}`, which keeps an invalid document invalid. The `i_` cases,
 which the standard leaves to the implementation, are not counted.
+JSON5's root is wrapped the same way, always, with the closing brace on
+a line of its own, since a comment may come before the root or end the
+last line. json5-tests calls its `.json` and `.json5` files valid, its
+`.js` files (ECMAScript, not JSON5) and `.txt` files invalid; it states
+no values, so the `json5` package is the reference, where it is
+installed (`setup.sh` pins it). JSON5's Infinity and NaN are their text,
+as TOML's `inf` and `nan` are (D-66).
 
 TOML's dates and times, and `inf` and `nan`, are read as their text,
 checked against their grammar (D-62): the library has no date type and

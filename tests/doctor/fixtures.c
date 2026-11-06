@@ -288,5 +288,17 @@ int main(void) {
             return 1;
         }
     }
+
+    /* Configuration files, not reports, for `doctor check` against
+       contract.schema.json: one that holds to it, a misspelt key, and a
+       port out of range. */
+    if (!spill("cf_fx_contract_ok.json", "{\"server\": {\"port\": 9000, \"token\": "
+                                         "\"t\"}, \"plugins\": {\"x\": 1}}\n") ||
+        !spill("cf_fx_contract_typo.json",
+               "{\"server\": {\"prot\": 9000, \"token\": \"t\"}}\n") ||
+        !spill("cf_fx_contract_range.json",
+               "{\"server\": {\"port\": 70000, \"token\": \"t\"}}\n")) {
+        return 1;
+    }
     return 0;
 }

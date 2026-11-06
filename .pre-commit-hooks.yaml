@@ -10,6 +10,20 @@
 #
 # Each staged report is linted; with --base, also diffed against the
 # report it replaces. docs/Doctor.md, section 11, has the rest.
+#
+# And configuration files against a JSON Schema contract, each on its
+# own (docs/Doctor.md, section 7d):
+#
+#       - id: configforge-check
+#         files: ^config/.*\.(json|json5|toml|ini)$
+#         args: [--schema, config/app.schema.json]
+- id: configforge-check
+  name: ConfigForge contract
+  description: Check configuration files against a JSON Schema contract
+  entry: actions/doctor/check.sh
+  language: script
+  files: \.(json|json5|jsonc|toml|ini|properties|ya?ml)$
+  require_serial: true
 - id: configforge-doctor
   name: ConfigForge Doctor
   description: Find configuration mistakes in ConfigForge provenance reports

@@ -3103,7 +3103,7 @@ CF_API const cf_codec* cf_codec_by_name(const char* name);
 CF_API const cf_codec* cf_codec_by_path(const char* path);
 ```
 
-Implementation: [`cf_codec_by_name` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L65), [`cf_codec_by_path` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L124).
+Implementation: [`cf_codec_by_name` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L67), [`cf_codec_by_path` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L126).
 
 Compiled-in codecs only. NULL when the format exists but this build
 left it out, which the caller must report rather than ignore: a
@@ -3115,7 +3115,7 @@ CF_API const char* cf_format_of_path(const char* path);
 CF_API const char* cf_format_option(const char* format);
 ```
 
-Implementation: [`cf_format_of_path` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L162), [`cf_format_option` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L177).
+Implementation: [`cf_format_of_path` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L165), [`cf_format_option` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L180).
 
 Names a format this library knows about whether or not it was
 compiled in, so the error can say which option to turn on.
@@ -3125,7 +3125,7 @@ CF_API size_t cf_codec_count(void);
 CF_API const cf_codec* cf_codec_at(size_t i);
 ```
 
-Implementation: [`cf_codec_count` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L53), [`cf_codec_at` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L61).
+Implementation: [`cf_codec_count` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L55), [`cf_codec_at` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L63).
 
 ## cf_source.h
 
@@ -3583,7 +3583,7 @@ CF_API const char* cf_feature_at(size_t i);
 CF_API cf_bool cf_has_feature(const char* name);
 ```
 
-Implementation: [`cf_feature_count` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L96), [`cf_feature_at` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L100), [`cf_has_feature` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L127).
+Implementation: [`cf_feature_count` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L97), [`cf_feature_at` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L101), [`cf_has_feature` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L128).
 
 What this build can do, as a NUL-terminated list: "ini", "json",
 "real", and so on. Recorded in the provenance report as well, so a
@@ -3596,7 +3596,7 @@ that implements them, including a minimal build.
 CF_API size_t cf_build_limit(const char* name);
 ```
 
-Implementation: [`cf_build_limit` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L108).
+Implementation: [`cf_build_limit` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L109).
 
 A build limit, by name: "key" (CF_KEY_MAX), "source" (CF_SOURCE_MAX),
 "message" (CF_MESSAGE_MAX), "path" (CF_PATH_MAX) and "depth"

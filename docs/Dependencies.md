@@ -90,7 +90,8 @@ system, no generated header, no options.
 | cppcheck | GPL-3.0-or-later | the `analyze` preset |
 | Rust: `rustc`, `cargo`, `clippy`, `rustfmt` (`setup.sh` installs 1.99.1 with rustup, checked against its published checksum) | MIT OR Apache-2.0 | `bindings/rust`, and `CF_RUST`: the Rust examples and `cargo test`; clippy and rustfmt check the crate. The crate has no dependencies, so cargo runs `--offline`; configforge-dev has them from Ubuntu's archive |
 | GNU binutils: `nm`, `objdump` | GPL-3.0-or-later | `gate.symbols`, `gate.abi` |
-| JSONTestSuite, toml-test, yaml-test-suite (test data, fetched and never vendored) | MIT, MIT, MIT | `EXTRA=conformance` (tier 2): each reader against its standard's own suite (`docs/Conformance.md`); the documents are read, never run |
+| JSONTestSuite, toml-test, yaml-test-suite, json5-tests (test data, fetched and never vendored) | MIT, MIT, MIT, MIT | `EXTRA=conformance` (tier 2): each reader against its standard's own suite (`docs/Conformance.md`); the documents are read, never run |
+| json5 0.17.3 (PyPI, pinned by `setup.sh` in its Python environment, `/opt/cf-tools`) | Apache-2.0 | `EXTRA=conformance`: the reference reader JSON5's values are compared with; without it that column is skipped |
 
 Every tool in 2b is optional except CMake and a compiler: a gate whose
 tool is missing is not registered, and the build says which.

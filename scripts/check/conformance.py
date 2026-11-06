@@ -12,6 +12,7 @@ docs/Conformance.md:
     JSONTestSuite    github.com/nst/JSONTestSuite         (RFC 8259)
     toml-test        github.com/toml-lang/toml-test       (TOML 1.0.0)
     yaml-test-suite  github.com/yaml/yaml-test-suite      (YAML 1.2)
+    json5-tests      github.com/json5/json5-tests         (JSON5 1.0.0)
 
 For each: how many documents the standard calls valid were accepted,
 and how many it calls invalid were refused; with --list, the ones that
@@ -230,6 +231,55 @@ def yaml_values(conform, valid, wrong_out):
     return good, compared
 
 
+def json5_values(conform, valid, wrong_out):
+    """How many valid JSON5 documents were read to the values the json5
+    package reads, the root measured as {"v": ...} as conform reads it;
+    (good, compared), compared 0 where the package is not installed."""
+    try:
+        import json5
+    except ImportError:
+        return 0, 0
+    good = 0
+    for path in valid:
+        got = keys_of(conform, "json5", path)
+        try:
+            with open(path, encoding="utf-8") as f:
+                doc = json5.load(f)
+        except (ValueError, UnicodeDecodeError):
+            wrong_out.append(path)
+            continue
+        if got is None:
+            wrong_out.append(path)
+            continue
+        want = {}
+        flat({"v": doc}, None, want)
+        if set(want) == set(got) and all(same(want[k], got[k]) for k in want):
+            good += 1
+        else:
+            wrong_out.append(path)
+    return good, len(valid)
+
+
+def json5_suite(root):
+    """json5-tests: .json and .json5 files are valid JSON5; .js files are
+    valid ECMAScript and not JSON5, and .txt files neither."""
+    base = os.path.join(root, "json5-tests")
+    valid, invalid = [], []
+    if not os.path.isdir(base):
+        return valid, invalid
+    for top, dirs, files in os.walk(base):
+        dirs.sort()
+        if ".git" in dirs:
+            dirs.remove(".git")
+        for f in sorted(files):
+            ext = os.path.splitext(f)[1]
+            if ext in (".json", ".json5"):
+                valid.append(os.path.join(top, f))
+            elif ext in (".js", ".txt"):
+                invalid.append(os.path.join(top, f))
+    return valid, invalid
+
+
 def json_suite(root):
     d = os.path.join(root, "JSONTestSuite", "test_parsing")
     files = sorted(os.listdir(d))
@@ -337,7 +387,8 @@ def untyped_same(wtype, wtext, gtext):
         if wtype == "int":
             return int(gtext.replace("_", ""), 0) == int(wtext)
         if wtype == "real":
-            return float(gtext) == wtext
+            g = float(gtext)  # JSON5's Infinity and NaN are their text
+            return g == wtext or (g != g and wtext != wtext)
     except ValueError:
         return False
     if wtype == "bool":
@@ -439,6 +490,11 @@ def main():
     json_wrong = []
     json_good = json_values(conform, v, json_wrong)
     json_all = len(v)
+    v, i = json5_suite(root)
+    json5_wrong, json5_good, json5_all = [], 0, 0
+    if v or i:
+        report("json5", "json5", conform, v, i, out)
+        json5_good, json5_all = json5_values(conform, v, json5_wrong)
     v, i = toml_suite(root)
     report("toml", "toml", conform, v, i, out)
     values_wrong = []
@@ -473,6 +529,7 @@ def main():
     # Python's json reads it for JSON.
     for name, good, total, wrong, how in (
             ("json-values", json_good, json_all, json_wrong, "Python's json reads"),
+            ("json5-values", json5_good, json5_all, json5_wrong, "the json5 package reads"),
             ("toml-values", values_good, values_all, values_wrong, "toml-test states"),
             (yaml_name + "-values", yaml_good, yaml_all, yaml_wrong, "yaml-test-suite states")):
         if total == 0:

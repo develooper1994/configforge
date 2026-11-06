@@ -15,6 +15,8 @@
  *     doctor diff    <a> <b>  [options]
  *     doctor history <report>... [--key <key>] [options]
  *     doctor blame   <key> <report>... [options]
+ *     doctor check   --schema <schema> <file>...
+ *     doctor gen     --schema <schema> [--name <function>] [--out <file>]
  *
  *     --baseline <file>   findings already accepted, one per line
  *     --severity <file>   this project's severities, one per line
@@ -292,8 +294,14 @@ static int usage(void) {
           "  doctor import-spring           < /actuator/env JSON\n"
           "  doctor import-dotnet [--full]  < GetDebugView() text\n"
           "  doctor import-systemd [--full] < systemd-analyze cat-config\n"
-          "\n"
-          "  --base <file> --only-changed   lint: only what changed since <file>\n"
+          "\n",
+          stderr);
+    fputs("  doctor check --schema <schema> <file>...   files against a contract\n"
+          "  doctor gen --schema <schema> [--name <fn>] [--out <file>]\n"
+          "                                 the contract as C calls\n"
+          "\n",
+          stderr);
+    fputs("  --base <file> --only-changed   lint: only what changed since <file>\n"
           "  --baseline <file>  findings already accepted\n"
           "  --severity <file>  this project's severities\n"
           "  --fail-on <level>  error (default), warning, info, never\n"
@@ -352,6 +360,12 @@ int main(int argc, char** argv) {
     }
     if (argc >= 2 && strcmp(argv[1], "import-systemd") == 0) {
         return doctor_import_systemd(argc - 2, argv + 2);
+    }
+    if (argc >= 2 && strcmp(argv[1], "check") == 0) {
+        return doctor_check_schema(argc - 2, argv + 2);
+    }
+    if (argc >= 2 && strcmp(argv[1], "gen") == 0) {
+        return doctor_gen_schema(argc - 2, argv + 2);
     }
     /* The version, and the commit it was built from when the build knew
        it: two Doctors of one version can still differ. */

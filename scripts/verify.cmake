@@ -817,7 +817,12 @@ foreach(x ${EXTRA})
     endif()
   elseif(x STREQUAL "conformance")
     find_program(GIT_EXE git)
-    find_program(PYTHON3_EXE NAMES python3 python)
+    # setup.sh's environment first: it has json5, the reference reader
+    # for JSON5's values, beside the system's packages.
+    find_program(
+      PYTHON3_EXE
+      NAMES python3 python
+      HINTS /opt/cf-tools/bin)
     if(NOT GIT_EXE OR NOT PYTHON3_EXE)
       message("conformance           skipped: needs git and Python 3")
       continue()
@@ -840,7 +845,9 @@ foreach(x ${EXTRA})
     # The YAML suite's data branch: its cases as files, in.yaml and all.
     set(url_yaml-test-suite-data https://github.com/yaml/yaml-test-suite)
     set(commit_yaml-test-suite-data 6ad3d2c62885d82fc349026c136ef560838fdf3d)
-    foreach(sname JSONTestSuite toml-test yaml-test-suite-data)
+    set(url_json5-tests https://github.com/json5/json5-tests)
+    set(commit_json5-tests ceb24d4080137d70833f86c25659c1331b80a387)
+    foreach(sname JSONTestSuite toml-test yaml-test-suite-data json5-tests)
       set(surl "${url_${sname}}")
       set(scommit "${commit_${sname}}")
       set(dir "${SUITES}/${sname}")

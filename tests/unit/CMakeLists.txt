@@ -32,6 +32,7 @@ set(CF_UNIT_TESTS
     test_unicode
     test_usage
     test_toml
+    test_json5
     test_codec
     test_features
     test_wipe

@@ -23,4 +23,9 @@ int doctor_import_dotnet(int argc, char** argv);
    stdout. */
 int doctor_import_systemd(int argc, char** argv);
 
+/* Files read against a JSON Schema contract, and the contract written as
+   C calls (contract.c). Neither reads a report either. */
+int doctor_check_schema(int argc, char** argv);
+int doctor_gen_schema(int argc, char** argv);
+
 #endif /* CONFIGFORGE_DOCTOR_ADAPTERS_H */
