@@ -108,6 +108,63 @@ Guide and API reference say what it does.
    bindings, and the Guide's log-field and OpenTelemetry recipe.
    Found on the way: Rust's `Debug` printed `cf_digest`.
 
+## The plan from 2026-11-06 (the owner accepted it; the order to follow)
+
+Items 1 to 7, 7d and 6 of the plan below are done. What is left, in this
+order - each stage one or more verified commits, the CI run read after
+each push:
+
+1. **CI and the development environment on Ubuntu 26.04 LTS, together.**
+   First a survey: every package `setup.sh` installs, looked for in an
+   `ubuntu:26.04` container, before anything changes. Then `setup.sh`,
+   the Containerfile and `wsl-distro.ps1` move to 26.04 (libfyaml comes
+   from apt there, 0.9.4, and the version floor stays); a new WSL
+   distribution is made beside the old one and passes tier 2; CI's jobs
+   name `ubuntu-26.04` (`ubuntu-latest` still means 24.04), and one
+   compatibility job stays on 24.04. The old distribution is removed only
+   once the new one is green and the owner says so.
+2. **1.2.0**, after tier 2 on the new environment: the version, the
+   CHANGELOG's date, the tag (which publishes it).
+3. **7c JSON5 and JSONC.**
+4. **`doctor check --schema app.schema.json app.toml`** - a file checked
+   against a JSON Schema contract without writing C, in CI and in the
+   pre-commit hook - and **`doctor gen --schema`**, the `cf_builder_*`
+   calls generated from a schema, so a build without the JSON reader
+   (embedded) has the same contract from the one source.
+5. **A format of one's own, all the way**: `cf_codec_register`, and
+   `conform` loading a codec from a shared library to score it.
+6. **7b, the built-in YAML reader.**
+7. **8, sizing modes, with dump and stream** (below): D-61 written and
+   discussed first; then the transient dump; then the stream.
+8. **9, modern C++.**
+9. **10, the ideas left**, in this order: Doctor checks a report's
+   fingerprint against its contents; limits and the build id in the
+   report and the image header; CFD012 against the contract; `cf_diff_json`;
+   a settle interval in `cf_live`; continuous fuzzing in CI
+   (ClusterFuzzLite); INI and `.properties` compared value by value with
+   Python's `configparser` and Java's `Properties`; signed release
+   artifacts (GitHub attestations); native OS sources where the platform
+   is at hand. Go and .NET bindings last, and only when someone asks.
+10. **11, 2.0**: what 8 and 9 break, together, once.
+11. **Then** new ideas while any is useful; the clean-up of the machine's
+    scratch; the sweep for traces of how the work was done; the report.
+
+**Dump and stream** (the owner, 2026-11-06). Today a file is read whole
+into the configuration's own arena, and the key space copies every value
+it keeps, so the file's bytes stay as long as the configuration though
+nothing reads them again. Three modes: *dump* (today: file and values,
+at the peak and after); *transient dump* (the file in an arena of its
+own, freed when the reader is done: the steady footprint loses the file;
+the default wherever there is a heap); *stream* (the reader fed in
+chunks of a few kilobytes through an input callback, with a look-back
+window: the peak no longer grows with the file - what a device without
+room for the whole file needs). INI, `.properties`, `.env` and JSON read
+in one pass already; TOML measures a string and reads it again, and
+changes most. Places in `explain()` stay exact in every mode. Chosen per
+builder at run time, with a default per profile, as D-61 decides for
+the sizing modes; `bench/` measures the peak and the steady footprint
+before and after.
+
 ## The plan from 1.1.0 (the owner, 2026-11-05)
 
 1.1.0 is released (the release workflow published it, macOS included).
