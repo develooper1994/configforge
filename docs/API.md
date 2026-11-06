@@ -2017,7 +2017,7 @@ what it was waiting for: it is not read for references again.
 CF_API cf_bool cf_ks_replay(cf_keyspace* ks, const cf_keyspace* base);
 ```
 
-Implementation: [`cf_ks_replay` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L352).
+Implementation: [`cf_ks_replay` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L368).
 
 Internal snapshot replay, in original insertion order and at the
 source-local keys of appended lists. Derived counts are not replayed.
@@ -2026,7 +2026,7 @@ source-local keys of appended lists. Derived counts are not replayed.
 CF_API cf_bool cf_ks_append_list(cf_keyspace* ks, const char* key, size_t keylen, const cf_list_part* parts, size_t count, const cf_candidate* result, cf_error* err);
 ```
 
-Implementation: [`cf_ks_append_list` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L376).
+Implementation: [`cf_ks_append_list` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L392).
 
 Internal: plans are collected before this changes the key index.
 Resolve once after applying all plans.
@@ -2044,7 +2044,7 @@ c must be an owned candidate of this space, not a copied descriptor.
 CF_API cf_bool cf_ks_reject(cf_keyspace* ks, const char* key, size_t keylen, int source, const cf_value* value, const char* at, const char* reason);
 ```
 
-Implementation: [`cf_ks_reject` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L449).
+Implementation: [`cf_ks_reject` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L465).
 
 Record a candidate that failed conversion or validation. It never
 wins, and it is never erased: explain() has to be able to say that
@@ -2054,7 +2054,7 @@ the environment did supply a value and why it was refused.
 CF_API cf_bool cf_ks_resolve(cf_keyspace* ks);
 ```
 
-Implementation: [`cf_ks_resolve` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L553).
+Implementation: [`cf_ks_resolve` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L569).
 
 Sorts and groups the candidates. Returns false when there was no room
 to do it, which is not the same as an empty configuration: the caller
@@ -2065,7 +2065,7 @@ keys and nothing to say why.
 CF_API size_t cf_ks_candidate_count(const cf_keyspace* ks);
 ```
 
-Implementation: [`cf_ks_candidate_count` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L549).
+Implementation: [`cf_ks_candidate_count` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L565).
 
 Candidates appended so far, which is what an out-of-room message
 should name: the caller sized a buffer, not a key count.
@@ -2074,7 +2074,7 @@ should name: the caller sized a buffer, not a key count.
 CF_API void cf_ks_infer_untyped(cf_keyspace* ks);
 ```
 
-Implementation: [`cf_ks_infer_untyped` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L638).
+Implementation: [`cf_ks_infer_untyped` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L654).
 
 Tier 0 typing. Every textual candidate that no definition claimed
 gets a type by inference, which is deliberately timid: see D-24.
@@ -2089,7 +2089,7 @@ declared type ends up losing to a guess.
 CF_API cf_entry* cf_ks_at_mut(cf_keyspace* ks, size_t i);
 ```
 
-Implementation: [`cf_ks_at_mut` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L659).
+Implementation: [`cf_ks_at_mut` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L675).
 
 Mutable access, for the passes that legitimately change outcomes:
 applying definitions marks candidates rejected. Casting away const
@@ -2100,7 +2100,7 @@ so the write path is named instead.
 CF_API void cf_ks_reselect(cf_keyspace* ks);
 ```
 
-Implementation: [`cf_ks_reselect` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L666).
+Implementation: [`cf_ks_reselect` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L682).
 
 Recompute the selected candidate of every entry. Needed after
 anything that changes an outcome, which in practice means after the
@@ -2110,7 +2110,7 @@ definitions have been applied and some winners have been refused.
 CF_API const cf_entry* cf_ks_find(const cf_keyspace* ks, const char* key, size_t keylen);
 ```
 
-Implementation: [`cf_ks_find` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L727).
+Implementation: [`cf_ks_find` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L743).
 
 Binary search over the resolved entries. NULL when absent, and NULL
 before cf_ks_resolve: a half-built space has no answer to give, and
@@ -2120,7 +2120,7 @@ returning a provisional one would be worse than returning none.
 CF_API size_t cf_ks_lower_bound(const cf_keyspace* ks, const char* key, size_t keylen);
 ```
 
-Implementation: [`cf_ks_lower_bound` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L707).
+Implementation: [`cf_ks_lower_bound` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L723).
 
 Index of the first key that is not less than `key`, which is where a
 prefix scan starts. Returns cf_ks_count when every key sorts before
@@ -2131,7 +2131,7 @@ costs O(log n) plus the matches rather than a walk.
 CF_API const cf_value* cf_ks_get(const cf_keyspace* ks, const char* key, size_t keylen);
 ```
 
-Implementation: [`cf_ks_get` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L750).
+Implementation: [`cf_ks_get` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L766).
 
 The selected value, or NULL when the key is absent or every
 candidate was rejected.
@@ -2141,13 +2141,13 @@ CF_API size_t cf_ks_count(const cf_keyspace* ks);
 CF_API const cf_entry* cf_ks_at(const cf_keyspace* ks, size_t i);
 ```
 
-Implementation: [`cf_ks_count` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L758), [`cf_ks_at` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L762).
+Implementation: [`cf_ks_count` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L774), [`cf_ks_at` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L778).
 
 ```c
 CF_API cf_bool cf_ks_is_sorted(const cf_keyspace* ks);
 ```
 
-Implementation: [`cf_ks_is_sorted` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L692).
+Implementation: [`cf_ks_is_sorted` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L708).
 
 Verifies the ordering invariant the design depends on.
 
@@ -2155,7 +2155,7 @@ Verifies the ordering invariant the design depends on.
 CF_API cf_u64 cf_ks_digest(const cf_keyspace* ks);
 ```
 
-Implementation: [`cf_ks_digest` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L825).
+Implementation: [`cf_ks_digest` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L841).
 
 Order-independent digest over the resolved space. Two runs that
 produce the same configuration produce the same digest, on every
@@ -2166,7 +2166,7 @@ requirement made checkable.
 CF_API cf_u64 cf_ks_value_digest(const cf_value* v);
 ```
 
-Implementation: [`cf_ks_value_digest` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L792).
+Implementation: [`cf_ks_value_digest` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L808).
 
 FNV-1a over one value's canonical text: what a value-blind report
 says of a secret, so that "did it change" has an answer and "what is
@@ -2176,7 +2176,7 @@ it" has none. Not cryptographic, and not presented as one.
 CF_API size_t cf_ks_digest_text(cf_u64 h, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_ks_digest_text` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L807).
+Implementation: [`cf_ks_digest_text` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L823).
 
 A digest as a report writes it, "fnv1a:" and sixteen hex digits, in
 `buf` as far as `cap` allows; the length it needs, 22.
@@ -2485,7 +2485,7 @@ only part of the library that a very small target might refuse.
 CF_API size_t cf_f64_to_text(double v, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_f64_to_text` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L549).
+Implementation: [`cf_f64_to_text` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L553).
 
 Write the shortest decimal string that reads back as exactly v.
 Output is identical on every platform. Returns the length written,
@@ -2499,7 +2499,7 @@ from having to invent a spelling.
 CF_API cf_bool cf_text_to_f64(const char* s, size_t len, double* out, size_t* end);
 ```
 
-Implementation: [`cf_text_to_f64` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L728).
+Implementation: [`cf_text_to_f64` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L732).
 
 Parse a C-locale floating point number. The decimal separator is
 always '.', never the locale's. Accepts the forms produced by
@@ -2514,7 +2514,7 @@ Type Inference section of the specification and decision D-24.
 CF_API cf_scalar_kind cf_infer_scalar(const char* s, size_t len);
 ```
 
-Implementation: [`cf_infer_scalar` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L925).
+Implementation: [`cf_infer_scalar` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L929).
 
 ## cf_platform.h
 

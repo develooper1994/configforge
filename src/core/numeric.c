@@ -230,7 +230,11 @@ static int big_cmp(const cf_big* a, const cf_big* b) {
     if (a->n != b->n) {
         return (a->n < b->n) ? -1 : 1;
     }
-    for (i = a->n - 1; i >= 0; --i) {
+    /* The limbs read are bounded by the array at both ends, as big_clamp
+       bounds the ones written: "cannot exceed it" made "does not" - a
+       negative count would make n - 1 overflow to the far end. */
+    i = (a->n <= 0) ? 0 : (a->n < CF_BIG_LIMBS) ? a->n : CF_BIG_LIMBS;
+    for (--i; i >= 0; --i) {
         if (a->d[i] != b->d[i]) {
             return (a->d[i] < b->d[i]) ? -1 : 1;
         }

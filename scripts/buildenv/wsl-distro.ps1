@@ -5,7 +5,7 @@
 #   pwsh scripts/buildenv/wsl-distro.ps1 -Dir D:\cf-wsl
 #   wsl -d configforge-dev -- cmake -DSOURCE=index -DWORK=/root/cfv -P scripts/verify.cmake
 #
-# It is made from Canonical's Ubuntu 24.04 base image, checked against
+# It is made from Canonical's Ubuntu 26.04 base image, checked against
 # the published SHA256SUMS, and provisioned by setup.sh, the same script
 # the Containerfile runs. Its disk lives in -Dir, so the builds inside it
 # grow that drive and nothing else. You are root inside it; it shares
@@ -15,11 +15,11 @@
 param(
     [Parameter(Mandatory = $true)][string]$Dir,
     [string]$Name = "configforge-dev",
-    [string]$Release = "24.04.5"
+    [string]$Release = "26.04.1"
 )
 $ErrorActionPreference = "Stop"
 
-$base    = "https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release"
+$base    = "https://cdimage.ubuntu.com/ubuntu-base/releases/26.04/release"
 $tarball = Join-Path $Dir "ubuntu-base.tar.gz"
 $sums    = Join-Path $Dir "SHA256SUMS"
 New-Item -ItemType Directory -Force $Dir | Out-Null

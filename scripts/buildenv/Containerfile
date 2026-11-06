@@ -1,4 +1,4 @@
-# The development environment as a container image: Ubuntu 24.04, as CI
+# The development environment as a container image: Ubuntu 26.04, as CI
 # runs, with everything setup.sh installs.
 #
 #   docker build -t configforge-dev -f scripts/buildenv/Containerfile scripts/buildenv
@@ -6,7 +6,7 @@
 #     cmake -DSOURCE=tree -DWORK=/tmp/cfv -P scripts/verify.cmake
 #
 # podman takes the same file and the same arguments.
-FROM ubuntu:24.04
-COPY setup.sh libfyaml.sh /tmp/
-RUN sh /tmp/setup.sh && rm /tmp/setup.sh /tmp/libfyaml.sh
+FROM ubuntu:26.04
+COPY setup.sh /tmp/setup.sh
+RUN sh /tmp/setup.sh && rm /tmp/setup.sh
 WORKDIR /src

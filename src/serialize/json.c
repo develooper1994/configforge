@@ -653,19 +653,24 @@ static void js_name(js_enc* e, const char* name, size_t n) {
 }
 
 static cf_bool js_enc_open(js_enc* e, const char* name, size_t n, char brace) {
+    int level;
     /* The document and JS_MAX_DEPTH - 1 levels inside it: what the
-       decoder takes, so that nothing written is refused when read. */
-    if (e->depth + 1 >= JS_MAX_DEPTH) {
+       decoder takes, so that nothing written is refused when read.
+       Compared without adding to it, so no depth overflows its type, and
+       a depth below the document's own (-1) is refused, not indexed; the
+       new level is fixed before anything else is written. */
+    if (e->depth < -1 || e->depth >= JS_MAX_DEPTH - 1) {
         return CF_FALSE;
     }
+    level = e->depth + 1;
     if (e->depth >= 0) {
         js_sep(e);
     }
     js_name(e, name, n);
     cf_sink_putc(e->out, brace);
-    ++e->depth;
-    e->need_comma[e->depth] = 0;
-    e->brace[e->depth]      = brace;
+    e->depth             = level;
+    e->need_comma[level] = 0;
+    e->brace[level]      = brace;
     return CF_TRUE;
 }
 

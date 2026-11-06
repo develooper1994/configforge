@@ -57,17 +57,19 @@ static int git_scope(const char* s, size_t n) {
 /* "file:/home/u/.gitconfig" is the file; "command line:" is the command
    line; a quoted path loses its quotes. Anything else is kept as git
    wrote it, because it is still the best name for the place. */
-static void git_origin(const char* s, size_t n, char* out, size_t cap) {
-    if (n >= 5 && memcmp(s, "file:", 5) == 0) {
+/* The field is [s, end): both ends are moved, never an index taken. */
+static void git_origin(const char* s, const char* end, char* out, size_t cap) {
+    size_t n;
+    if (end - s >= 5 && memcmp(s, "file:", 5) == 0) {
         s += 5;
-        n -= 5;
-    } else if (n > 0 && s[n - 1] == ':') {
-        --n;
+    } else if (end > s && *(end - 1) == ':') {
+        --end;
     }
-    if (n >= 2 && s[0] == '"' && s[n - 1] == '"') {
+    if (end - s >= 2 && *s == '"' && *(end - 1) == '"') {
         ++s;
-        n -= 2;
+        --end;
     }
+    n = (size_t)(end - s);
     if (n + 1 > cap) {
         n = cap - 1;
     }
@@ -169,7 +171,7 @@ int doctor_import_git(int argc, char** argv) {
             cf_arena_free(ar);
             return 2;
         }
-        git_origin(tab1 + 1, (size_t)(tab2 - tab1 - 1), where, sizeof where);
+        git_origin(tab1 + 1, tab2, where, sizeof where);
         p  = tab2 + 1;
         eq = strchr(p, '=');
         if (eq != NULL) {

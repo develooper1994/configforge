@@ -2729,9 +2729,11 @@ test_yaml under a timeout), and the fuzzer passes. libyaml stays the
 backend for MSVC and for a C89-only compiler: libfyaml's header needs
 C11, so yaml.c alone is compiled as C11 in a libfyaml build, its header
 included as a system one (this library's warnings are for its own code).
-`scripts/buildenv/libfyaml.sh` builds 0.9.6 from its release tarball,
-checked against the digest GitHub publishes, for setup.sh and CI's
-libfyaml job; verify scores both backends against their floors.
+Ubuntu 26.04 ships 0.9.4, which setup.sh and CI's libfyaml job install
+since the move to 26.04 (before it, a script built 0.9.6 from its
+checked release tarball); verify scores both backends against their
+floors, and skips libfyaml with the build's own reason where it refuses
+the one installed.
 
 Making the C99 build work found two defects in libfyaml's pre-C11
 fallback for atomics, still in 1.0.0-beta2 and master: the guard reads

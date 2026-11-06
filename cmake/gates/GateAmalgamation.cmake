@@ -140,8 +140,8 @@ if(YAML_FY)
     "-DCF_FYAML_MIN_PATCH=${fy_patch}")
   set(amalg_std -std=c11)
 endif()
-# A dependency that is a shared library outside the loader's path (as
-# scripts/buildenv/libfyaml.sh installs one) is found by the programs
+# A dependency that is a shared library outside the loader's path (one
+# under a prefix of its own, CMAKE_PREFIX_PATH) is found by the programs
 # below only if they are told where.
 set(dep_rpath "")
 foreach(l ${DEP_LIB})

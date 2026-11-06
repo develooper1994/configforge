@@ -1,9 +1,14 @@
 #!/bin/sh
 # The development environment, as one list: every tool the build, the
-# gates and every EXTRA step of verify.cmake use, on Ubuntu 24.04 - the
-# image CI runs on. Run as root. The Containerfile beside this runs it,
-# and so does wsl-distro.ps1, so a container and a WSL distribution made
-# from it hold exactly the same tools.
+# gates and every EXTRA step of verify.cmake use, on Ubuntu 26.04 - the
+# image CI runs on (`ubuntu-26.04`). Run as root. The Containerfile beside
+# this runs it, and so does wsl-distro.ps1, so a container and a WSL
+# distribution made from it hold exactly the same tools.
+#
+# The compiler runtime is clang's own version's (21 on 26.04): the
+# sanitizers and libFuzzer of another version do not link. libkqueue left
+# the archive in 26.04, so EXTRA=kqueue is skipped here and CI's kqueue
+# job runs on 24.04; macOS and FreeBSD (freebsd.sh) run the real kqueue.
 #
 # docs/Dependencies.md says what each one is for and under which licence.
 set -eu
@@ -13,11 +18,11 @@ apt-get update
 apt-get install -y --no-install-recommends \
   ca-certificates curl git file xz-utils locales util-linux \
   build-essential cmake ninja-build ccache pkg-config python3 python3-venv python3-yaml \
-  clang clang-format clang-tidy libclang-rt-18-dev llvm \
+  clang clang-format clang-tidy libclang-rt-21-dev llvm \
   binutils cppcheck gcovr cmake-format valgrind cbmc \
-  lld wasi-libc libclang-rt-18-dev-wasm32 nodejs abigail-tools \
+  lld wasi-libc libclang-rt-21-dev-wasm32 nodejs abigail-tools \
   musl-tools tcc pcc \
-  libyaml-dev libexpat1-dev libsqlite3-dev libkqueue-dev \
+  libyaml-dev libfyaml-dev libexpat1-dev libsqlite3-dev \
   qemu-system-x86 qemu-utils openssh-client \
   podman uidmap fuse-overlayfs
 
@@ -55,10 +60,6 @@ if [ ! -x /opt/cf-tools/bin/clang-format ] ||
   /opt/cf-tools/bin/pip install --quiet "clang-format==$CLANG_FORMAT_VERSION"
 fi
 ln -sf /opt/cf-tools/bin/clang-format /usr/local/bin/clang-format
-
-# libfyaml 0.9.6 under /opt/cf-tools/libfyaml (D-62), so the default
-# build still finds Ubuntu's libyaml and verify's yaml step this one.
-sh "$(dirname "$0")/libfyaml.sh" /opt/cf-tools/libfyaml
 
 # ccache's cache, bounded: verify reuses it from one unit to the next.
 ccache --max-size=5G >/dev/null

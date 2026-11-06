@@ -338,14 +338,30 @@ cf_bool cfi_ks_add_pinned(cf_keyspace* ks, const char* key, size_t keylen, int s
 }
 
 const char* cf_ks_original_key(const cf_keyspace* ks, const cf_candidate* c) {
+    const char*        first;
+    const char*        at;
+    size_t             off;
     const cf_cand_rec* r;
-    const void*        at;
-    if (ks == NULL || c == NULL || ks->original_keys == NULL) {
+    if (ks == NULL || c == NULL || ks->original_keys == NULL || ks->cands == NULL ||
+        ks->ncand == 0) {
         return NULL;
     }
-    /* c is an embedded member of this space's arena-aligned record. */
-    at = (const char*)c - offsetof(cf_cand_rec, cand);
-    r  = (const cf_cand_rec*)at;
+    /* c is the member of one of this space's records: found as an
+       element of the array - its distance from the first record's member
+       a whole number of records, and inside the array - rather than
+       computed back from the member, so a candidate of another space is
+       refused instead of read through. In constant time: report.c asks
+       for every candidate. */
+    first = (const char*)&ks->cands[0].cand;
+    at    = (const char*)c;
+    if (at < first) {
+        return NULL;
+    }
+    off = (size_t)(at - first);
+    if (off % sizeof(cf_cand_rec) != 0 || off / sizeof(cf_cand_rec) >= ks->ncand) {
+        return NULL;
+    }
+    r = &ks->cands[off / sizeof(cf_cand_rec)];
     return r->seq < ks->original_capacity ? ks->original_keys[r->seq] : NULL;
 }
 

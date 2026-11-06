@@ -198,6 +198,45 @@ function(step label)
   endif()
 endfunction()
 
+# A build with YAML read through libfyaml (D-62), where the build accepts
+# the one installed: the system's, or the one under FYAML_PREFIX. The
+# least version is the build's to enforce (src/serialize/CMakeLists.txt),
+# so it is tried rather than looked for, and a libfyaml the build refuses
+# skips the step with the build's own reason. Sets fyaml_ok.
+function(fyaml_configure dir label)
+  set(args "")
+  if(DEFINED FYAML_PREFIX)
+    set(args -DCMAKE_PREFIX_PATH=${FYAML_PREFIX})
+  endif()
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -S . -B ${dir} -DCF_WITH_YAML=ON
+            -DCF_YAML_BACKEND=libfyaml ${args}
+    WORKING_DIRECTORY "${ROOT}"
+    RESULT_VARIABLE rc
+    OUTPUT_VARIABLE out
+    ERROR_VARIABLE out)
+  set(padded "${label} config")
+  string(LENGTH "${padded}" len)
+  while(len LESS 22)
+    string(APPEND padded " ")
+    math(EXPR len "${len} + 1")
+  endwhile()
+  if(rc EQUAL 0)
+    message("${padded}ok")
+    set(fyaml_ok
+        TRUE
+        PARENT_SCOPE)
+  else()
+    # CMake wraps a FATAL_ERROR's text over indented lines: joined.
+    string(REGEX MATCH "needs libfyaml[^\n]*(\n  [^\n]+)*" why "${out}")
+    string(REGEX REPLACE "\n  " " " why "${why}")
+    message("${padded}skipped: ${why}")
+    set(fyaml_ok
+        FALSE
+        PARENT_SCOPE)
+  endif()
+endfunction()
+
 # Where the verification runs: the working tree, or a fresh copy of the
 # staged tree. git archive of `git write-tree` is exactly what a commit
 # would record, untracked and unstaged files excluded.
@@ -215,7 +254,10 @@ if(SOURCE STREQUAL "index")
   # is copied over it, so the build directories inside it are kept and a
   # build compiles what the change touched - not every preset from nothing.
   # FRESH=ON, and every TIER=2 run (a release), start from nothing.
-  set(incoming "${ROOT}/../staged.new")
+  # Beside ROOT, named from its parent: "${ROOT}/.." does not resolve
+  # while ROOT does not exist yet, as on a machine's first run.
+  get_filename_component(work_dir "${ROOT}" DIRECTORY)
+  set(incoming "${work_dir}/staged.new")
   file(REMOVE_RECURSE "${incoming}")
   file(MAKE_DIRECTORY "${incoming}")
   # From a private copy of the index, so `git write-tree` takes no lock
@@ -229,8 +271,8 @@ if(SOURCE STREQUAL "index")
   if(NOT IS_ABSOLUTE "${index}")
     set(index "${REPO}/${index}")
   endif()
-  configure_file("${index}" "${incoming}/../index" COPYONLY)
-  set(ENV{GIT_INDEX_FILE} "${incoming}/../index")
+  configure_file("${index}" "${work_dir}/index" COPYONLY)
+  set(ENV{GIT_INDEX_FILE} "${work_dir}/index")
   execute_process(
     COMMAND "${GIT_EXE}" write-tree
     WORKING_DIRECTORY "${REPO}"
@@ -241,16 +283,16 @@ if(SOURCE STREQUAL "index")
     message(FATAL_ERROR "git write-tree failed: is this a repository?")
   endif()
   execute_process(
-    COMMAND "${GIT_EXE}" archive --format=tar -o "${incoming}/../staged.tar"
+    COMMAND "${GIT_EXE}" archive --format=tar -o "${work_dir}/staged.tar"
             ${tree}
     WORKING_DIRECTORY "${REPO}"
     RESULT_VARIABLE rc)
   if(NOT rc EQUAL 0)
     message(FATAL_ERROR "git archive failed")
   endif()
-  execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf "${incoming}/../staged.tar"
+  execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf "${work_dir}/staged.tar"
                   WORKING_DIRECTORY "${incoming}")
-  file(REMOVE "${incoming}/../staged.tar" "${incoming}/../index")
+  file(REMOVE "${work_dir}/staged.tar" "${work_dir}/index")
   unset(ENV{GIT_INDEX_FILE})
   if(FRESH OR NOT EXISTS "${ROOT}")
     file(REMOVE_RECURSE "${ROOT}")
@@ -670,25 +712,11 @@ foreach(x ${EXTRA})
       -DCF_YAML_BACKEND=libyaml)
     step("yaml build" ${build} build-yaml ${debug})
     step("yaml test" ${test} build-yaml)
-    # And through libfyaml, where a release that passes the fuzzer is
-    # installed (setup.sh puts 0.9.6 under /opt/cf-tools/libfyaml; D-62).
-    if(NOT DEFINED FYAML_PREFIX)
-      set(FYAML_PREFIX /opt/cf-tools/libfyaml)
-    endif()
-    if(NOT EXISTS "${FYAML_PREFIX}/include/libfyaml.h")
-      message("yaml libfyaml         skipped: none at ${FYAML_PREFIX}")
+    # And through libfyaml, where one the build accepts is installed.
+    fyaml_configure(build-yaml-fy "yaml libfyaml")
+    if(NOT fyaml_ok)
       continue()
     endif()
-    step(
-      "yaml libfyaml config"
-      ${CMAKE_COMMAND}
-      -S
-      .
-      -B
-      build-yaml-fy
-      -DCF_WITH_YAML=ON
-      -DCF_YAML_BACKEND=libfyaml
-      -DCMAKE_PREFIX_PATH=${FYAML_PREFIX})
     step("yaml libfyaml build" ${build} build-yaml-fy ${debug})
     step("yaml libfyaml test" ${test} build-yaml-fy)
   elseif(x STREQUAL "fuzz")
@@ -904,20 +932,8 @@ foreach(x ${EXTRA})
       .)
     # YAML through libfyaml too, scored against its own floor, where the
     # yaml step would build it.
-    if(NOT DEFINED FYAML_PREFIX)
-      set(FYAML_PREFIX /opt/cf-tools/libfyaml)
-    endif()
-    if(EXISTS "${FYAML_PREFIX}/include/libfyaml.h")
-      step(
-        "conformance fy config"
-        ${CMAKE_COMMAND}
-        -S
-        .
-        -B
-        build-conformance-fy
-        -DCF_WITH_YAML=ON
-        -DCF_YAML_BACKEND=libfyaml
-        -DCMAKE_PREFIX_PATH=${FYAML_PREFIX})
+    fyaml_configure(build-conformance-fy "conformance fy")
+    if(fyaml_ok)
       step(
         "conformance fy build"
         ${build}

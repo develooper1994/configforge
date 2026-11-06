@@ -29,7 +29,7 @@ jobs:
   # built: the version cf_version.h says, and a CHANGELOG section for it
   # that no longer says "unreleased".
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
       - name: The tag, the build and the CHANGELOG agree
@@ -43,7 +43,7 @@ jobs:
 
   amalgamation:
     needs: check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
       - name: Amalgamation
@@ -58,7 +58,7 @@ jobs:
 
   linux-musl:
     needs: check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     container: alpine:3.20
     steps:
       - run: apk add --no-cache build-base cmake ninja git python3 tar
@@ -141,7 +141,7 @@ jobs:
 
   publish:
     needs: [amalgamation, linux-musl, windows, macos]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4

@@ -170,7 +170,7 @@ static cf_bool spring_scalar(void* ctx, const char* name, size_t n, const cf_val
             s->has_value = CF_TRUE;
             if (v->type == CF_TYPE_TEXT) {
                 /* Copied: the codec's text does not outlive the event. */
-                char* p = cf_arena_dup(s->ar, v->u.t.p, v->u.t.n);
+                const char* p = cf_arena_dup(s->ar, v->u.t.p, v->u.t.n);
                 if (p == NULL) {
                     s->failed = CF_TRUE;
                     return CF_FALSE;

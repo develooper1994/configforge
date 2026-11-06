@@ -120,7 +120,12 @@ int main(void) {
            key with an index per element, and its recorded length - not
            the number of index keys, which a shorter list in a later
            source would leave behind. */
+        /* "plugins.<name>." without its dot; empty when the name does
+           not fit, and then there is nothing to trim or list. */
         key_of(prefix, sizeof prefix, plugin.name, plugin.namelen, "");
+        if (prefix[0] == '\0') {
+            continue;
+        }
         prefix[strlen(prefix) - 1] = '\0';
         cf_iter_children(&setting, cfg, prefix);
         while (cf_iter_next(&setting)) {

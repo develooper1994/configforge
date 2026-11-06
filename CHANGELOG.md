@@ -15,6 +15,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   checked too.
 - `setup.sh` installs Rust 1.99.1 with rustup, checked against its
   published checksum; Ubuntu's 1.75 could not read the tree's lock file.
+- CI and the development environment (`setup.sh`, the Containerfile,
+  `wsl-distro.ps1`) are on Ubuntu 26.04 LTS: GCC 15, clang 21, CMake 4.2,
+  Python 3.14, libfyaml 0.9.4. CI's jobs name `ubuntu-26.04`, since
+  `ubuntu-latest` still means 24.04; the kqueue job stays on 24.04, where
+  libkqueue still is, and keeps the previous LTS in the matrix.
 
 ### Added
 
@@ -90,8 +95,8 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   (libfyaml issue 101) and is refused by name, at every point it could
   enter: by the build, from the `libfyaml.pc` beside the library; at run
   time, by asking the loaded library its version, since 0.8 and 0.9
-  share a soname; and by `configforge.pc`'s `Requires.private`. `scripts/buildenv/libfyaml.sh` builds
-  0.9.6 from its checked release tarball; CI has a libfyaml job.
+  share a soname; and by `configforge.pc`'s `Requires.private`. CI has
+  a libfyaml job, on Ubuntu 26.04's 0.9.4.
 - Definitions from a JSON Schema (D-64): `cf_builder_schema`,
   `cf_builder_schema_file`, `cf_defset_schema` and
   `cf_defset_schema_file`, and C++'s `Builder::schema`/`schemaFile`. The

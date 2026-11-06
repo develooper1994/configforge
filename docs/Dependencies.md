@@ -37,7 +37,7 @@ not, and has to be asked for:
 
 | Library | Licence | When | Notes |
 | ------- | ------- | ---- | ----- |
-| libfyaml 0.9.1 or later | MIT | `CF_WITH_YAML=ON` with `CF_YAML_BACKEND` `auto` (where it is found) or `libfyaml` | reading YAML as YAML 1.2 says, all of yaml-test-suite (D-62). Found as `libfyaml.h` and a library named `fyaml`; its version from the `libfyaml.pc` beside the library, and one before 0.9.1, which hangs on malformed input, is refused. Its header needs C11, so `yaml.c` is compiled as C11 in such a build; not on MSVC. `scripts/buildenv/libfyaml.sh` builds 0.9.6 from its checked release tarball |
+| libfyaml 0.9.1 or later | MIT | `CF_WITH_YAML=ON` with `CF_YAML_BACKEND` `auto` (where it is found) or `libfyaml` | reading YAML as YAML 1.2 says, all of yaml-test-suite (D-62). Found as `libfyaml.h` and a library named `fyaml`; its version from the `libfyaml.pc` beside the library, and one before 0.9.1, which hangs on malformed input, is refused. Its header needs C11, so `yaml.c` is compiled as C11 in such a build; not on MSVC. Ubuntu 26.04's `libfyaml-dev` is 0.9.4 |
 | libyaml | MIT | `CF_WITH_YAML=ON`, off by default; the backend where libfyaml is not (`CF_YAML_BACKEND=libyaml` names it) | reading YAML 1.1, everywhere, MSVC included; writing YAML is done here, by hand, for either. Found as `yaml.h` and a library named `yaml`, which every packager agrees on |
 | sqlite3 | public domain | `CF_WITH_SQLITE=ON`, off by default | the store: a source that reads typed values with their writer's note, and `cf_store_set`, which writes them in one transaction. Found as `sqlite3.h` and a library named `sqlite3` |
 | expat | MIT | `CF_WITH_XML=ON`, off by default | reading XML, which is read only (D-23). Found as `expat.h` and a library named `expat`; its memory is expat's own, so the library still allocates nothing outside its arenas |
@@ -54,7 +54,7 @@ system, no generated header, no options.
 
 | Library | Licence | Used for |
 | ------- | ------- | -------- |
-| libkqueue (`pkg-config: libkqueue`) | BSD-2-Clause | `CF_WAKE_KQUEUE=ON` on Linux: building and testing the macOS and BSD wait handle on a machine that is neither |
+| libkqueue (`pkg-config: libkqueue`) | BSD-2-Clause | `CF_WAKE_KQUEUE=ON` on Linux: building and testing the macOS and BSD wait handle on a machine that is neither. Ubuntu 24.04 only (it left the archive in 26.04): CI's kqueue job runs there, and `EXTRA=kqueue` is skipped on 26.04 |
 | Threads (pthreads, through CMake's `Threads`) | the platform's | `test_threads`, the threading contract (D-14) under real threads |
 
 ### 2b. Binary tools, run and never linked
@@ -106,7 +106,7 @@ build or test on a machine that already has the tools.
 
 | Component | Licence | Used for |
 | --------- | ------- | -------- |
-| Ubuntu 24.04 (the `ubuntu:24.04` image; the `ubuntu-base` tarball) | each package its own; Canonical's image terms | the base of the container and of the WSL distribution, checked against `SHA256SUMS` |
+| Ubuntu 26.04 (the `ubuntu:26.04` image; the `ubuntu-base` tarball) | each package its own; Canonical's image terms | the base of the container and of the WSL distribution, checked against `SHA256SUMS` |
 | Podman, or Docker | Apache-2.0 | building and running `Containerfile`; the release's Alpine build, run locally |
 | WSL | proprietary (Microsoft) | `wsl-distro.ps1`: the environment on a drive of your choosing |
 | QEMU (`qemu-system-x86`, `qemu-utils`) | GPL-2.0-only | `freebsd.sh`: the virtual machine |
