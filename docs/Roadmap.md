@@ -4,9 +4,58 @@ The state of the work, kept true in the same commit as the work - so that
 whoever picks this up next, on whichever machine, knows what is next,
 what is known to be wrong, and what has been thought of and not built.
 
-Each item says **why** it matters and **what done looks like**. When an
-item lands, move it to the CHANGELOG and delete it here; a roadmap that
-lists finished work stops being read.
+Each item says **why** it matters and **what done looks like**, and
+carries a mark for how far it has come. "At a glance" is the whole list
+in one table; the sections after it are the detail.
+
+## Status
+
+### Marks
+
+Every item carries one mark, which moves one way as the work does:
+
+| Mark | Stage | Means |
+| :--: | ----- | ----- |
+| ⬜ | idea | thought of; not chosen yet |
+| 🟦 | chosen | accepted as work, or decided (a D-number), nothing built |
+| 🟨 | under way | partly in the tree; the item says what is left |
+| 🟩 | done | on `main`, verified at tier 1, CI green |
+| ✅ | released | in a published version (the CHANGELOG names it) |
+
+An item marked ✅ moves to the CHANGELOG at the next release and leaves
+this page; until then it stays here, marked, so what is finished is seen
+beside what is not.
+
+### At a glance
+
+| Mark | Item | Where |
+| :--: | ---- | ----- |
+| ✅ | Ubuntu 26.04 for CI and the development machine | D-65, 1.2.0 |
+| ✅ | 1.2.0 released | CHANGELOG |
+| 🟩 | JSON5 and JSONC | D-66 |
+| 🟩 | `doctor check --schema`, `doctor gen --schema` | D-67 |
+| 🟩 | A format of one's own, on the builder | D-68 |
+| 🟩 | The built-in YAML reader, on by default | D-69 |
+| 🟩 | TOML 1.1.0 | Formats.md |
+| 🟨 | Sizing: transient file bytes done; stream and dynamic modes for 2.0 | D-61 |
+| 🟩 | Every C++ standard from C++98, cumulatively | D-72 |
+| 🟩 | The Rust crate built by cargo and the `cc` crate | D-70 |
+| 🟩 | `cf_diff_json`, the settle interval, limits in the report | CHANGELOG 1.3.0 |
+| 🟩 | Signed release artifacts (attestations) | release.yml |
+| 🟩 | Python examples; a table of format versions | examples/python, Formats.md |
+| 🟦 | The format told from the content when the name says nothing | D-73 |
+| 🟦 | One `define`, the type given or inferred | D-74 |
+| 🟦 | 1.3.0 released | CHANGELOG |
+| ⬜ | Doctor checks a report's fingerprint against its contents | plan item 9 |
+| ⬜ | Continuous fuzzing in CI (ClusterFuzzLite) | plan item 9 |
+| ⬜ | INI and `.properties` compared with `configparser` and `Properties` | plan item 9 |
+| ⬜ | Native OS sources | plan item 9 |
+| ⬜ | Go and .NET bindings, when asked | plan item 9 |
+| ⬜ | Binary configuration: a layout-driven TLV codec, BER-TLV, CBOR | assessment |
+| ⬜ | Every operation on a file's data, written back in its format | assessment |
+| ⬜ | Converting between formats | assessment |
+| ⬜ | Code for each binding from a contract | assessment |
+| ⬜ | 2.0: what the sizing modes break, once | plan item 10 |
 
 ## Release follow-up
 
@@ -114,7 +163,7 @@ Items 1 to 7, 7d and 6 of the plan below are done. What is left, in this
 order - each stage one or more verified commits, the CI run read after
 each push:
 
-1. **CI and the development environment on Ubuntu 26.04 LTS, together.**
+1. ✅ **CI and the development environment on Ubuntu 26.04 LTS, together.**
    First a survey: every package `setup.sh` installs, looked for in an
    `ubuntu:26.04` container, before anything changes. Then `setup.sh`,
    the Containerfile and `wsl-distro.ps1` move to 26.04 (libfyaml comes
@@ -123,24 +172,24 @@ each push:
    name `ubuntu-26.04` (`ubuntu-latest` still means 24.04), and one
    compatibility job stays on 24.04. The old distribution is removed once
    the new one is green. Done: 1.2.0 was built and tested there.
-2. **1.2.0**, after tier 2 on the new environment: the version, the
+2. ✅ **1.2.0**, after tier 2 on the new environment: the version, the
    CHANGELOG's date, the tag (which publishes it).
-3. **7c JSON5 and JSONC** - done (D-66).
-4. Done (D-67): **`doctor check --schema app.schema.json app.toml`** - a file checked
+3. 🟩 **7c JSON5 and JSONC** - done (D-66).
+4. 🟩 Done (D-67): **`doctor check --schema app.schema.json app.toml`** - a file checked
    against a JSON Schema contract without writing C, in CI and in the
    pre-commit hook - and **`doctor gen --schema`**, the `cf_builder_*`
    calls generated from a schema, so a build without the JSON reader
    (embedded) has the same contract from the one source.
-5. Done (D-68), registered on the builder rather than in a table for
+5. 🟩 Done (D-68), registered on the builder rather than in a table for
    the whole process: **A format of one's own, all the way**: `cf_codec_register`, and
    `conform` loading a codec from a shared library to score it.
-6. **7b, the built-in YAML reader** - done (D-69).
-7. **8, sizing modes, with dump and stream** - D-61 decided, the
+6. 🟩 **7b, the built-in YAML reader** - done (D-69).
+7. 🟨 **8, sizing modes, with dump and stream** - D-61 decided, the
    transient dump done; the stream and the dynamic modes are 2.0's. (below): D-61 written and
    discussed first; then the transient dump; then the stream.
-8. **9, modern C++** - done (D-72, replacing D-71): every standard from
+8. 🟩 **9, modern C++** - done (D-72, replacing D-71): every standard from
    C++98, cumulatively, with `CF_CXX_LEVEL`.
-9. **10, the ideas left**, in this order: Doctor checks a report's
+9. 🟨 **10, the ideas left**, in this order: Doctor checks a report's
    fingerprint against its contents; limits and the build id in the
    report and the image header; CFD012 against the contract; `cf_diff_json`;
    a settle interval in `cf_live`; continuous fuzzing in CI
@@ -151,8 +200,8 @@ each push:
    Done: `cf_diff_json`, the settle interval, the limits and the build id
    in the report (the image header keeps its layout until 2.0), signed
    release artifacts.
-10. **11, 2.0**: what 8 and 9 break, together, once.
-11. **Then** new ideas while any is useful, and the clean-up of the
+10. ⬜ **11, 2.0**: what 8 and 9 break, together, once.
+11. 🟨 **Then** new ideas while any is useful, and the clean-up of the
     development machine's scratch.
 
 **After the plan, an assessment** (2026-11-06), once item 11 is reached:

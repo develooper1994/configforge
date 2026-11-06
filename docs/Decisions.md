@@ -89,6 +89,8 @@ gets reopened every six months.
 | D-70 | The Rust crate builds with cargo and the cc crate | Rust, build, dependencies | **Decided** |
 | D-71 | C++98 to C++14 deprecated; C++17 from 2.0 | C++, compatibility | Replaced by D-72 |
 | D-72 | Every C++ standard from C++98, cumulatively | C++, compatibility | **Decided** |
+| D-73 | The format told from the content when the name says nothing | formats, codecs | **Decided** |
+| D-74 | One `define`, the type given or inferred | definitions, bindings | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -2575,6 +2577,84 @@ transient arena, so a value left pointing into the freed bytes is an
 error there, not a guess; the bytes are wiped before they are freed, so
 a secret in a file does not outlive its reading in freed memory, as
 secrets are kept out of it elsewhere (cf_arena_wipe).
+
+---
+
+## D-74 — One `define`, the type given or inferred
+
+**Question.** A program declares a key with `cf_builder_int`,
+`cf_builder_text` and their siblings, and the bindings mirror them
+(`define_int`, `define_text`). Can one `define` do, with the type given
+as a parameter or understood from the default?
+
+**Decision.** One spelling per language, added beside the typed ones,
+which stay (D-56), and cumulative as D-72 is for C++:
+
+* **C89**: `cf_builder_key(b, key, type, dflt, flags)`, the default
+  written as text and read by the same rules a file's value is. The type
+  is a parameter; `CF_TYPE_NULL` means "the default's text decides":
+  `true`/`false` a bool, an integer an int, a decimal a real, anything
+  else text. A typed default that does not read as its type is refused
+  where it is written.
+* **C11**: `CF_DEFINE(b, key, dflt)`, a `_Generic` macro over the
+  default's C type, `_Bool`, the integer types, `double` and `char*`, to
+  the typed functions. Under C89 the macro is not defined.
+* **C++98**: `Builder::define(key, dflt)` overloaded on `bool`, `int`,
+  `cf_i64`, `double` and `const char*`/`std::string`; `Key<T>` stays for
+  a key read in more than one place.
+* **Python**: `Builder.define(key, default, type=None, ...)`, the type
+  from the default's Python type unless given; `define_*` stay.
+* **Rust**: `Builder::key(key, dflt)` generic over the types `typed.rs`
+  already maps.
+
+Inference only from a default the program wrote, never from a value a
+file supplies: a contract that changed type because a file did would
+not be one.
+
+**Held to.** Each spelling's tests declare the same keys as the typed
+calls and compare the two configurations' `cf_schema` output, which
+must be byte for byte the same.
+
+---
+
+## D-73 — The format told from the content when the name says nothing
+
+**Question.** A file's format comes from its extension or is named;
+otherwise reading it fails. Can the library tell the format itself, and
+how, without the guessing the codec registry has always refused - a
+format sniffed from a few bytes, which fails confusingly the first time
+a file is renamed?
+
+**Decision.** In this order, the first that answers deciding:
+
+1. the format named by the program;
+2. the extension: the builder's own codecs (D-68), then the built-in
+   ones, as now;
+3. the content, only when the name says nothing - no extension, or one
+   no format claims. That was an error before, so no file that was read
+   is read differently.
+
+Content is told by reading, not by looking for marks: each readable
+codec reads the bytes into a sink that keeps nothing but a hash of the
+events, and a codec that accepts them and yields at least one keyed
+value is a candidate. They are tried from the strictest to the
+loosest - the builder's codecs, JSON, JSON5, TOML, XML, then YAML and
+INI - and the first candidate is taken when it is a strict format (one
+that rarely accepts another's text by accident). When it is a loose
+one, every later loose candidate must yield the same events, or the
+file is refused as ambiguous, naming both formats and asking for one.
+`.properties`, whose grammar accepts nearly any text, is never chosen
+from content.
+
+The choice is shown, not hidden: the source's error names the formats
+tried, `cf_source_file_format` says which was taken and how (named,
+extension, content), and Doctor's `explain` prints it beside the file.
+`cf_codec_detect` is public, for a program that reads bytes of its own.
+
+**Held to.** Tests per format with the extension removed; a file that
+two loose formats read differently, refused; an empty file, refused;
+and the conformance suites' valid files, renamed without extension, each
+read as their own format.
 
 ---
 

@@ -95,6 +95,9 @@ The round of 2026-11-06 (each reader against its standard's suite):
 | YAML went on by default, and incremental verify runs kept their CMake caches, which kept `CF_WITH_YAML=OFF`: tier 1 passed without building the new default, and a stack-use-after-scope in the alias replay (`yaml.c`) waited for a sanitised build made by hand | `verify.cmake` starts from nothing when the options, the presets or `cf_build_options.h` change |
 | the header gate's new check expected `#pragma GCC warning` to fail a `-Werror` compile, which GCC does and clang does not; tier 1 ran it with GCC only, and CI's clang and macOS jobs failed | a gate that reads a compiler's output looks for the message, not the exit status; a change to a gate runs `EXTRA=clang` too |
 | a new parser was developed against the suite's own event streams (`test.event`) with a scratch harness, apart from the library: 256 of 308 at the first run, 308 of 308 and 94 of 94 after nine fixes, in an hour | a reader is first held to the suite's events, where a difference names the construct, then to the values through the library |
+| staging with `git add -A` took in an editor's local settings file, and the wording check passed it, since the file's words were clean | the wording check fails a tracked editor-settings path whatever it holds, and such directories are excluded locally (`.git/info/exclude`) |
+| a request read one way ("modern C++ only") was built as a deprecation before it was confirmed; it meant "modern C++ as well" (D-71, replaced by D-72 before a release) | a change that takes something away from users is stated back in one line before it is built, and kept unreleased until it is answered |
+| finished work was deleted from the Roadmap as it landed, so what was done could be seen only in the CHANGELOG, apart from what was not | every item keeps a mark (idea, chosen, under way, done, released) and the Roadmap opens with all of them in one table |
 
 ## Measured
 
