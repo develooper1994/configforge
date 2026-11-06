@@ -47,7 +47,7 @@ beside what is not.
 | 🟩 | One `define`, the type given or inferred: C, C11, C++, Python, Rust | D-74 |
 | 🟨 | 1.3.1 released (1.3.0 tagged, not published) | CHANGELOG |
 | ⬜ | Doctor checks a report's fingerprint against its contents | plan item 9 |
-| ⬜ | Continuous fuzzing in CI (ClusterFuzzLite) | plan item 9 |
+| 🟨 | Continuous fuzzing in CI (ClusterFuzzLite): written, its first run to read | `.clusterfuzzlite/`, cflite.yml |
 | ⬜ | INI and `.properties` compared with `configparser` and `Properties` | plan item 9 |
 | ⬜ | Native OS sources | plan item 9 |
 | ⬜ | Go and .NET bindings, when asked | plan item 9 |
@@ -57,8 +57,30 @@ beside what is not.
 | ⬜ | Code for each binding from a contract | assessment |
 | ⬜ | 2.0: what the sizing modes break, once | plan item 10 |
 | 🟨 | Sizes and work predicted, then checked: a file's first buffer done | D-76, plan of the evening |
-| 🟦 | Checks at compile time where they can be, at run time always | D-75, plan of the evening |
+| 🟨 | Checks at compile time where they can be, at run time always: Rust's `const` keys done | D-75, plan of the evening |
 | 🟩 | GitHub used for all it offers that fits | plan of the evening |
+
+### What can run at once
+
+The open items grouped by the files they change: items in different
+groups can be worked on side by side, each in its own branch, and
+merged in any order; items in one group go one after another.
+
+| Group | Items | Changes | Size |
+| ----- | ----- | ------- | ---- |
+| A | D-73, the format from the name and the content; `cf_builder_document` | `src/serialize/codec.c`, `src/bridge/file.c`, a new source, `cf_serialize.h` | large |
+| B | D-75 in C++ (`constexpr` keys and ranges), C11 and `doctor gen`'s output; Rust's part is done | `configforge.hpp`, `configforge.h`'s macros, `tools/doctor/contract.c` | medium |
+| C | D-76's rest: the key space and the index sized from the bytes or the last generation; the emitter's output sized in dump mode | `src/core/keyspace.c`, `src/core/define.c`, `src/bridge/emit.c`, `bench/` | medium |
+| D | Doctor checks a report's fingerprint against its contents | `tools/doctor/` | small |
+| E | INI compared value by value with Python's `configparser` (Java's `Properties` needs a JVM the machines here do not have, so `.properties` is left to its own tests) | `scripts/check/conformance.py`, `tests/conformance/` | small |
+| F | Native OS sources | `src/platform/`, a source each | large, and each system tested on itself |
+
+Only A and B touch one file in common (a declaration each in
+`configforge.h`), which merges by hand in a minute. Not in any group:
+the release (it waits on a tag), 2.0 (it comes after all of these), and
+the later ideas - TLV and CBOR, every operation on a file's data,
+conversion, code for each binding - which wait until these are done. D
+and E are the next pair, as they are small and share nothing.
 
 ## Release follow-up
 

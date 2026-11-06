@@ -1,0 +1,41 @@
+# Continuous fuzzing with ClusterFuzzLite, beside ci.yml's minute per
+# reader: on a pull request, the harnesses run against the change for a
+# few minutes and a crash fails the check; every day, a longer batch run
+# on main grows the corpus, kept as an artifact, that the next run starts
+# from. Findings are SARIF in the Security tab.
+name: cflite
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "41 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      security-events: write
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Build the harnesses
+        uses: google/clusterfuzzlite/actions/build_fuzzers@v1
+        with:
+          language: c
+          sanitizer: address
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run them
+        uses: google/clusterfuzzlite/actions/run_fuzzers@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          mode: ${{ github.event_name == 'pull_request' && 'code-change' || 'batch' }}
+          fuzz-seconds: ${{ github.event_name == 'pull_request' && 300 || 1800 }}
+          sanitizer: address
+          output-sarif: true

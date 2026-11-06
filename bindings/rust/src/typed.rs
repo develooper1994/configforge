@@ -154,8 +154,49 @@ pub struct Key<T: Field> {
     flags: u32,
 }
 
+/// The library's rule for a canonical key (`cf_key_valid`), as a `const`
+/// function so that a `const` [`Key`] with a bad name does not compile
+/// (D-75): non-empty, dotted segments none of them empty, each of `a-z`,
+/// `0-9`, `_` and `-`. The library checks it again at run time, with the
+/// length its build allows, so a key made at run time is held to it too.
+pub const fn key_is_valid(key: &str) -> bool {
+    let b = key.as_bytes();
+    if b.is_empty() || b[0] == b'.' || b[b.len() - 1] == b'.' {
+        return false;
+    }
+    let mut i = 0;
+    while i < b.len() {
+        let c = b[i];
+        if c == b'.' {
+            if b[i - 1] == b'.' {
+                return false;
+            }
+        } else if !(c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'_' || c == b'-') {
+            return false;
+        }
+        i += 1;
+    }
+    true
+}
+
 impl<T: Field> Key<T> {
+    /// In a `const`, a name the library would refuse is a compile error
+    /// (D-75); made at run time, it panics here rather than failing later.
+    ///
+    /// ```compile_fail
+    /// const PORT: configforge::Key<u16> = configforge::Key::new("Server.Port", 8080);
+    /// let _ = PORT;
+    /// ```
+    ///
+    /// ```compile_fail
+    /// const PORT: configforge::Key<u16> = configforge::Key::new("server.port", 8080).range(9, 1);
+    /// let _ = PORT;
+    /// ```
     pub const fn new(name: &'static str, default: T::Default) -> Key<T> {
+        assert!(
+            key_is_valid(name),
+            "not a canonical key: dotted lowercase ASCII"
+        );
         Key {
             name,
             default,
@@ -164,7 +205,9 @@ impl<T: Field> Key<T> {
         }
     }
     /// The permitted range, for an integer key.
+    /// `lo` above `hi` is a compile error in a `const` (D-75).
     pub const fn range(mut self, lo: i64, hi: i64) -> Key<T> {
+        assert!(lo <= hi, "a range whose low end is above its high end");
         self.range = Some((lo, hi));
         self
     }
@@ -389,6 +432,26 @@ mod tests {
             .key(&PORT)
             .create();
         assert!(refused.is_err(), "the key's range is the contract's");
+    }
+
+    #[test]
+    fn the_const_key_rule_is_the_library_s() {
+        // D-75: what refuses at compile time is what the library refuses.
+        for k in [
+            "server.port",
+            "a",
+            "a-b_c.d9",
+            "",
+            ".a",
+            "a.",
+            "a..b",
+            "A.b",
+            "a b",
+            "a/b",
+        ] {
+            let lib = Builder::new().define_text(k, None, 0).create().is_ok();
+            assert_eq!(super::key_is_valid(k), lib, "{k:?}");
+        }
     }
 
     #[test]

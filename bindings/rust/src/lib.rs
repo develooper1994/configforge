@@ -34,7 +34,7 @@ mod typed;
 pub use edit::{Edit, EditValue};
 pub use live::{Live, LiveReader, Mode, Options as LiveOptions, Reload, Status};
 pub use log::{Level, LogEvent};
-pub use typed::{DefDefault, Field, Key, Value};
+pub use typed::{key_is_valid, DefDefault, Field, Key, Value};
 
 use std::ffi::{CStr, CString};
 use std::fmt;
