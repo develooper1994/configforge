@@ -1571,11 +1571,8 @@ cf_bool cf_yaml_parse(const cf_blob* in, const char* file, const cf_yp_events* e
                             "workspace (cf_doc_sink.reserve_work)",
                             file);
     }
-    if (in->n >= 3 && (unsigned char)y.p[0] == 0xEF && (unsigned char)y.p[1] == 0xBB &&
-        (unsigned char)y.p[2] == 0xBF) {
-        y.p += 3;
-        y.ls = y.p;
-    }
+    y.p += cf_blob_skip_bom(in);
+    y.ls = y.p;
     for (;;) {
         int seen_yaml  = 0;
         int directives = 0;

@@ -22,6 +22,7 @@ cf_blob_arena
 cf_blob_arena_done
 cf_blob_file
 cf_blob_mem
+cf_blob_skip_bom
 cf_build
 cf_build_id
 cf_build_in

@@ -60,7 +60,8 @@ set(CF_UNIT_TESTS
     test_edit
     test_lifetime
     test_truncate
-    test_roundtrip)
+    test_roundtrip
+    test_bom)
 
 # The directories test_starve's every-source run reads. C89 has no mkdir.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_starve.d
