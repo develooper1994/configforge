@@ -63,7 +63,7 @@ Every error carries one of these codes, stable from 1.0;
 - [`cf_platform.h`](#cf_platformh) - 19
 - [`cf_port.h`](#cf_porth) - 10
 - [`cf_report.h`](#cf_reporth) - 6
-- [`cf_serialize.h`](#cf_serializeh) - 22
+- [`cf_serialize.h`](#cf_serializeh) - 23
 - [`cf_source.h`](#cf_sourceh) - 34
 - [`cf_value.h`](#cf_valueh) - 12
 - [`cf_version.h`](#cf_versionh) - 7
@@ -3172,10 +3172,20 @@ CF_API void cf_blob_mem(cf_blob* b, const char* p, size_t n, const char* name);
 Implementation: [`cf_blob_mem` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L15).
 
 ```c
+CF_API size_t cf_blob_skip_bom(const cf_blob* b);
+```
+
+Implementation: [`cf_blob_skip_bom` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L24).
+
+How many bytes a reader skips at the start of a document: 3 when it
+begins with a UTF-8 byte order mark (EF BB BF), else 0. A mark is not
+part of the text, and only the first bytes are one.
+
+```c
 CF_API cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err);
 ```
 
-Implementation: [`cf_blob_file` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L39).
+Implementation: [`cf_blob_file` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L47).
 
 Reads a whole file into the arena. CF_E_SOURCE when it cannot be
 opened or read; the caller decides whether that is fatal.
@@ -3185,7 +3195,7 @@ CF_API cf_arena* cf_blob_arena(cf_arena* ar);
 CF_API void cf_blob_arena_done(cf_arena* bytes, cf_arena* ar);
 ```
 
-Implementation: [`cf_blob_arena` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L24), [`cf_blob_arena_done` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L31).
+Implementation: [`cf_blob_arena` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L32), [`cf_blob_arena_done` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L39).
 
 Where a file's bytes go for one reading (D-61): an arena of their own,
 from `ar`'s allocator, so that they are gone once the reader is done -
@@ -3209,14 +3219,14 @@ CF_API void cf_sink_terminate(cf_sink* s);
 CF_API cf_bool cf_sink_overflowed(const cf_sink* s);
 ```
 
-Implementation: [`cf_sink_init` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L133), [`cf_sink_write` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L139), [`cf_sink_putc` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L152), [`cf_sink_puts` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L159), [`cf_sink_fmt` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L165), [`cf_sink_terminate` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L185), [`cf_sink_overflowed` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L191).
+Implementation: [`cf_sink_init` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L141), [`cf_sink_write` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L147), [`cf_sink_putc` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L160), [`cf_sink_puts` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L167), [`cf_sink_fmt` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L173), [`cf_sink_terminate` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L193), [`cf_sink_overflowed` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L199).
 
 ```c
 CF_API void cf_sink_json_string(cf_sink* out, const char* p, size_t n);
 CF_API void cf_sink_json_value(cf_sink* out, const cf_value* v);
 ```
 
-Implementation: [`cf_sink_json_string` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L195), [`cf_sink_json_value` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L236).
+Implementation: [`cf_sink_json_string` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L203), [`cf_sink_json_value` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L244).
 
 JSON, written by hand where a document is not the key space's (a
 report, a diff): text as a JSON string, escaped; a value as JSON.
@@ -3227,7 +3237,7 @@ report, a diff): text as a JSON string, escaped; a value as JSON.
 CF_API size_t cf_loc_text(const cf_loc* at, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_loc_text` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L260).
+Implementation: [`cf_loc_text` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L268).
 
 "app.toml:14:3", or just the file when there is no position.
 

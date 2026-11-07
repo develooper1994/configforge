@@ -229,17 +229,14 @@ static cf_bool prop_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
        value is refused as too long, by name. */
     char val[CF_PATH_MAX * 2];
 
-    s.p          = in->p;
+    /* A byte order mark is not part of the first key. */
+    s.p          = in->p + cf_blob_skip_bom(in);
     s.end        = in->p + in->n;
     s.file       = (in->name != NULL) ? in->name : "<properties>";
     s.line       = 1;
-    s.line_start = in->p;
+    s.line_start = s.p;
     s.err        = err;
 
-    /* A byte order mark is not part of the first key. */
-    if (in->n >= 3 && memcmp(in->p, "\xEF\xBB\xBF", 3) == 0) {
-        s.p += 3;
-    }
     if (!out->begin_table(out->ctx, NULL, 0)) {
         return cf_error_set(err, CF_E_SOURCE, NULL, s.file, "sink refused");
     }

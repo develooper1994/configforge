@@ -19,6 +19,10 @@ by `verify -DEXTRA=conformance` against floors that only rise.
 | the image | the library's own (`cf_image.h`) | built in | yes | the unit tests, fuzzed | - |
 | the provenance report | the library's own, its JSON Schema published | yes (Report Replay) | yes | the report's schema | - |
 
+A document that starts with a UTF-8 byte order mark has it skipped, by
+the JSON, JSON5, TOML, INI, YAML and `.properties` readers alike, at the
+start only and with every line and column as if it were not there.
+
 INI has no standard, so its reader is compared with the one most INI is
 written for, Python's `configparser` (`RawConfigParser`: interpolation
 off, keys keeping their case, a repeated key or section read with the

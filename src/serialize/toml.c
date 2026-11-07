@@ -1552,10 +1552,10 @@ static cf_bool toml_header(toml_scan* s) {
 static cf_bool toml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* err) {
     toml_scan s;
 
-    s.p          = in->p;
+    s.p          = in->p + cf_blob_skip_bom(in);
     s.end        = in->p + in->n;
     s.file       = (in->name != NULL) ? in->name : "<toml>";
-    s.line_start = in->p;
+    s.line_start = s.p;
     s.line       = 1;
     s.out        = out;
     s.err        = err;

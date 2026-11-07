@@ -894,10 +894,10 @@ static cf_bool js_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* er
                          cf_bool json5) {
     js_scan s;
 
-    s.p          = in->p;
+    s.p          = in->p + cf_blob_skip_bom(in);
     s.end        = in->p + in->n;
     s.file       = (in->name != NULL) ? in->name : json5 ? "<json5>" : "<json>";
-    s.line_start = in->p;
+    s.line_start = s.p;
     s.line       = 1;
     s.out        = out;
     s.err        = err;

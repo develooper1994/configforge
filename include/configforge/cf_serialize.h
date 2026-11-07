@@ -47,6 +47,11 @@ typedef struct cf_blob {
 
 CF_API void cf_blob_mem(cf_blob* b, const char* p, size_t n, const char* name);
 
+/* How many bytes a reader skips at the start of a document: 3 when it
+   begins with a UTF-8 byte order mark (EF BB BF), else 0. A mark is not
+   part of the text, and only the first bytes are one. */
+CF_API size_t cf_blob_skip_bom(const cf_blob* b);
+
 /* Reads a whole file into the arena. CF_E_SOURCE when it cannot be
    opened or read; the caller decides whether that is fatal. */
 CF_API cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err);

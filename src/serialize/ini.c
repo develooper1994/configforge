@@ -206,12 +206,12 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
 
     run.open      = CF_FALSE;
     run.n         = 0;
-    s.p           = in->p;
+    s.p           = in->p + cf_blob_skip_bom(in);
     s.end         = in->p + in->n;
     s.file        = (in->name != NULL) ? in->name : "<ini>";
     s.line        = 1;
-    s.line_start  = in->p;
-    section_start = in->p;
+    s.line_start  = s.p;
+    section_start = s.p;
 
     if (!out->begin_table(out->ctx, NULL, 0)) {
         return cf_error_set(err, CF_E_SOURCE, NULL, s.file, "sink refused");

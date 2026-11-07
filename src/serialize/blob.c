@@ -21,6 +21,14 @@ void cf_blob_mem(cf_blob* b, const char* p, size_t n, const char* name) {
     b->name = (name != NULL) ? name : "<memory>";
 }
 
+size_t cf_blob_skip_bom(const cf_blob* b) {
+    if (b != NULL && b->n >= 3 && (unsigned char)b->p[0] == 0xEFu &&
+        (unsigned char)b->p[1] == 0xBBu && (unsigned char)b->p[2] == 0xBFu) {
+        return 3;
+    }
+    return 0;
+}
+
 cf_arena* cf_blob_arena(cf_arena* ar) {
     if (ar == NULL || cf_arena_is_fixed(ar)) {
         return ar;
