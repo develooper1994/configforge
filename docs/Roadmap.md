@@ -57,7 +57,7 @@ beside what is not.
 | ⬜ | Code for each binding from a contract | assessment |
 | ⬜ | 2.0: what the sizing modes break, once | plan item 10 |
 | 🟩 | Sizes and work predicted, then checked: the file buffer and the key space kept, three more measured and left | D-76, plan of the evening |
-| ⬜ | A UTF-8 byte order mark read past by every text reader: `.properties` and YAML do, TOML, INI and JSON refuse a file that starts with one (found 2026-11-07) | wave 3 |
+| 🟩 | A UTF-8 byte order mark read past by every text reader (`cf_blob_skip_bom`) | 1.4.1 |
 | 🟨 | Checks at compile time where they can be, at run time always: Rust's `const` keys done | D-75, plan of the evening |
 | 🟩 | GitHub used for all it offers that fits | plan of the evening |
 

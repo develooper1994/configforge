@@ -3,6 +3,16 @@
 Versions follow semantic versioning from 1.0. Before that, `0.x` promises
 nothing: the C interface is not frozen, and a minor bump may change it.
 
+## 1.4.1 — unreleased
+
+### Fixed
+
+- **A document that starts with a UTF-8 byte order mark** - as Windows
+  editors write one - is read by the TOML, INI, JSON and JSON5 readers,
+  which refused it, as the `.properties` and YAML readers already did.
+  The mark is skipped at the start only, and positions in `explain()`
+  are as without it; `cf_blob_skip_bom` is the one check all of them use.
+
 ## 1.4.0 — 2026-11-07
 
 ### Changed
