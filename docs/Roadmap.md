@@ -57,6 +57,7 @@ beside what is not.
 | ⬜ | Code for each binding from a contract | assessment |
 | ⬜ | 2.0: what the sizing modes break, once | plan item 10 |
 | 🟩 | Sizes and work predicted, then checked: the file buffer and the key space kept, three more measured and left | D-76, plan of the evening |
+| ⬜ | A UTF-8 byte order mark read past by every text reader: `.properties` and YAML do, TOML, INI and JSON refuse a file that starts with one (found 2026-11-07) | wave 3 |
 | 🟨 | Checks at compile time where they can be, at run time always: Rust's `const` keys done | D-75, plan of the evening |
 | 🟩 | GitHub used for all it offers that fits | plan of the evening |
 
@@ -96,7 +97,7 @@ short keeps its branch, unmerged, and says so here.
    against `configparser` (36 of 36, 12 differences by design listed);
    ClusterFuzzLite; Rust's `const` keys (D-75).
 2. 🟩 **Wave 2**: A, D-73 and `cf_builder_document`; C, D-76's rest,
-   each prediction measured and kept only where it pays. **1.4.0.**
+   each prediction measured and kept only where it pays. **1.4.0** (ready; its tag is left).
 3. ⬜ **Wave 3**: B, D-75 in C++, C11 and `doctor gen`; F, the native
    sources: systemd's credentials (`$CREDENTIALS_DIRECTORY`) on Linux and
    the user defaults (`CFPreferences`) on macOS, each tested on its own

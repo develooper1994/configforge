@@ -227,6 +227,77 @@ static void test_ambiguous(void) {
 #endif
 
 /* A document in memory: the format named, the name's, or the content's. */
+/* The first look past a byte order mark and comment lines, and a string
+   long enough that the trial reader's text grows twice. */
+static void test_look(void) {
+    static char doc[1200];
+    cf_error    err = CF_ERROR_INIT;
+    cf_builder* b;
+    cf_config*  c;
+    size_t      n;
+
+    strcpy(doc, "# a comment\n   # another\n\n[server]\nport = 9443\n");
+    b = cf_build(NULL);
+    cf_builder_document(b, "mark", CF_RANK_USER_FILE, doc, strlen(doc), NULL, 0);
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    c = cf_builder_create(b, &err);
+    check(c != NULL && cf_get_int(c, "server.port", 0) == 9443,
+          "comments are looked past");
+    if (c == NULL) {
+        printf("  %s\n", err.message);
+    } else {
+        cf_config_free(c);
+    }
+
+    strcpy(doc, "[server]\nname = \"");
+    n = strlen(doc);
+    memset(doc + n, 'a', 1000);
+    strcpy(doc + n + 1000, "\"\nport = 9443\n");
+    b = cf_build(NULL);
+    cf_builder_document(b, "look", CF_RANK_USER_FILE, doc, strlen(doc), NULL, 0);
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    cf_builder_open(b, "server");
+    c = cf_builder_create(b, &err);
+    check(c != NULL && cf_get_int(c, "server.port", 0) == 9443,
+          "a long string grows the trial reader's text");
+    if (c == NULL) {
+        printf("  %s\n", err.message);
+    } else {
+        cf_config_free(c);
+    }
+
+    /* Markup first, and a document that is only blanks and comments. */
+    strcpy(doc, "  <config><port>1</port></config>\n");
+    b = cf_build(NULL);
+    cf_builder_document(b, "markup", CF_RANK_USER_FILE, doc, strlen(doc), NULL, 0);
+    c = cf_builder_create(b, &err);
+    check(c != NULL || err.code != CF_OK, "markup is tried as XML first");
+    if (c != NULL) {
+        cf_config_free(c);
+    }
+    strcpy(doc, "\n# only a comment\n");
+    b = cf_build(NULL);
+    cf_builder_document(b, "blank", CF_RANK_USER_FILE, doc, strlen(doc), NULL, 0);
+    c = cf_builder_create(b, &err);
+    check(c == NULL, "nothing but a comment is refused");
+
+    /* A bracket that opens an array, not a section: JSON's order, and
+       refused, as an array alone has no key. */
+    strcpy(doc, "[ 1, 2 ]\n");
+    b = cf_build(NULL);
+    cf_builder_document(b, "list", CF_RANK_USER_FILE, doc, strlen(doc), NULL, 0);
+    c = cf_builder_create(b, &err);
+    check(c == NULL, "an array alone is refused");
+    strcpy(doc, "[\"a\", {\"b\": 1}]\n");
+    b = cf_build(NULL);
+    cf_builder_document(b, "list", CF_RANK_USER_FILE, doc, strlen(doc), NULL, 0);
+    c = cf_builder_create(b, &err);
+    if (c != NULL) {
+        cf_config_free(c);
+    }
+    check(CF_TRUE, "an array of a string and a table is looked at as JSON");
+}
+
 static void test_document(void) {
     cf_error    err = CF_ERROR_INIT;
     cf_builder* b;
@@ -506,6 +577,7 @@ int main(void) {
 #if CF_WITH_YAML && CF_WITH_INI
     test_ambiguous();
 #endif
+    test_look();
     test_document();
     test_own_codec();
     return cf_test_done();
