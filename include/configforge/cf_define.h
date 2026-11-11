@@ -72,7 +72,12 @@ typedef struct cf_def {
     unsigned      flags;
     cf_on_invalid on_invalid;
     const char*   description;
-    const char*   replaced_by; /* when CF_DEPRECATED              */
+    /* When CF_DEPRECATED: the key that replaced this one. A value written
+       under the old name is offered to it, and the old name takes the
+       new key's CF_SENSITIVE when the set is sealed, scalar or list, so
+       a secret written under the old name is not shown by explain(), a
+       report, a diff or a reference that reads the old entry. */
+    const char* replaced_by;
 
     cf_bool  has_default;
     cf_value default_value;
@@ -146,6 +151,26 @@ struct cf_source;
 struct cf_list_projection;
 
 #define CF_MAX_OPEN_PREFIXES 8
+
+/* The most bytes a value's references may expand to (D-10). A reference
+   can name a key that names another twice, so a few lines of
+   configuration can double their way to any size: k1 = ${k0}${k0} and
+   two dozen more like it is gigabytes. Past this the key is refused, by
+   name, before the memory is asked for. A megabyte is far more than a
+   setting needs and far less than a program misses. It is not a build
+   option like the limits in cf_build_options.h, because it sizes no
+   buffer and no frame: nothing outside the library depends on it. */
+#define CF_EXPAND_MAX 1048576ul
+
+/* The most bytes all the references in one configuration may expand to
+   together. CF_EXPAND_MAX bounds a key, not a file: a value just under
+   it, named by ten thousand short lines, is gigabytes with no key over
+   the limit. Sixteen of the largest value is room for any configuration
+   that means it and a bound on one that does not; it is a multiple of
+   the per-key limit rather than of a document's size because references
+   draw on every source, so there is no one document to measure. Past it
+   the key at which the total was passed is refused, by name. */
+#define CF_EXPAND_TOTAL_MAX (16ul * CF_EXPAND_MAX)
 
 /* INTERNAL (D-51): the definition set the builder keeps. Its members and
    the cf_defset_ and cf_def_ functions over it are exported for

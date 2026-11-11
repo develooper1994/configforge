@@ -64,7 +64,9 @@ static cf_bool secrets_load(const cf_source* s, cf_keyspace* ks) {
     }
     n = cf_platform_dir_list(st->path, names, CF_SECRETS_MAX_FILES, &st->err);
     if (n < 0) {
-        if ((st->flags & CF_OPTIONAL) != 0) {
+        /* Only -1, a directory that is not there: -2 is one missing a
+           secret, which optional does not cover (cf_platform.h). */
+        if (n == -1 && (st->flags & CF_OPTIONAL) != 0) {
             cf_error_clear(&st->err);
             return CF_TRUE;
         }

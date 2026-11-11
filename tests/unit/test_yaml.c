@@ -122,12 +122,12 @@ static void test_anchors(void) {
     cf_error    err = CF_ERROR_INIT;
     static char ex[1024];
     cf_config*  c = load("base: &b\n"
-                         "  host: a\n"
-                         "  ports: [1, 2]\n"
-                         "other: *b\n"
-                         "name: &n plain\n"
-                         "again: *n\n"
-                         "list: [*n, *n]\n",
+                          "  host: a\n"
+                          "  ports: [1, 2]\n"
+                          "other: *b\n"
+                          "name: &n plain\n"
+                          "again: *n\n"
+                          "list: [*n, *n]\n",
                          &err);
 
     check(c != NULL, "anchors and aliases read");
@@ -151,11 +151,11 @@ static void test_anchors(void) {
 static void test_tags(void) {
     cf_error   err = CF_ERROR_INIT;
     cf_config* c   = load("port: !!int \"80\"\n"
-                          "zip: !!str 01234\n"
-                          "on: !!bool true\n"
-                          "none: !!null ~\n"
-                          "t: !!map {a: 1}\n"
-                          "plain: ! 12\n",
+                            "zip: !!str 01234\n"
+                            "on: !!bool true\n"
+                            "none: !!null ~\n"
+                            "t: !!map {a: 1}\n"
+                            "plain: ! 12\n",
                           &err);
 
     check(c != NULL, "core tags read");
@@ -194,6 +194,174 @@ static void test_refuses(void) {
     refused("? [a, b]\n: 1\n", "a key has to be a scalar", "a complex key is refused");
     refused("a: [1, 2\n", "cf_yaml.yaml:", "a syntax error names the place");
     refused("Bad Key: 1\n", "not a valid key", "a key the library cannot hold");
+}
+
+/* "base: &b" and a quoted scalar of `len` A's, then `uses` aliases of it
+   in one flow sequence. */
+static const char* big_anchor(size_t len, unsigned uses) {
+    static char doc[96 * 1024];
+    size_t      n = 0;
+    unsigned    i;
+
+    if (len + uses * 4u + 64u > sizeof doc) {
+        return "";
+    }
+    memcpy(doc, "base: &b \"", 10);
+    n = 10;
+    memset(doc + n, 'A', len);
+    n += len;
+    memcpy(doc + n, "\"\nuse: [", 8);
+    n += 8;
+    for (i = 0; i < uses; ++i) {
+        memcpy(doc + n, (i > 0) ? ", *b" : "*b", (i > 0) ? 4u : 2u);
+        n += (i > 0) ? 4u : 2u;
+    }
+    memcpy(doc + n, "]\n", 3);
+    return doc;
+}
+
+/* The bound on aliases counts bytes as well as events: one large scalar
+   aliased many times is a few events and a great deal of memory, since
+   each replay copies the text into the configuration. Shared defaults of
+   a few kilobytes reused dozens of times are what anchors are for, and
+   still load. */
+static void test_alias_bytes(void) {
+    cf_error   err = CF_ERROR_INIT;
+    cf_config* c   = load(big_anchor(4096, 48), &err);
+
+    check(c != NULL, "a 4 KiB anchor aliased 48 times loads");
+    if (c == NULL) {
+        printf("  %s\n", err.message);
+    }
+    check(c != NULL && cf_array_count(c, "use") == 48 &&
+              strlen(cf_get_text(c, "use.47", "")) == 4096,
+          "and every alias holds the whole text");
+    cf_config_free(c);
+
+    c = load(big_anchor(64u * 1024u, 40), &err);
+    check(c != NULL, "a 64 KiB anchor aliased 40 times loads");
+    if (c == NULL) {
+        printf("  %s\n", err.message);
+    }
+    check(c != NULL && strlen(cf_get_text(c, "use.39", "")) == 64u * 1024u,
+          "with the text whole");
+    cf_config_free(c);
+
+    refused(big_anchor(64u * 1024u, 200), "far more than the document",
+            "a 64 KiB anchor aliased 200 times is refused by its bytes");
+}
+
+/* A name anchored again: an alias means the latest definition, the inner
+   one when an anchor is anchored again inside its own node. */
+static void test_reanchor(void) {
+    cf_error   err = CF_ERROR_INIT;
+    cf_config* c   = load("a: &x one\n"
+                            "b: *x\n"
+                            "c: &x two\n"
+                            "d: *x\n"
+                            "e: &x [&x in, *x]\n"
+                            "f: *x\n"
+                            "g: &x three\n"
+                            "h: *x\n",
+                          &err);
+
+    check(c != NULL, "a name anchored again reads");
+    if (c == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+    check_text(cf_get_text(c, "b", ""), "one", "an alias of the first definition");
+    check_text(cf_get_text(c, "d", ""), "two", "and of the second, after it");
+    check_text(cf_get_text(c, "e.1", ""), "in",
+               "inside an anchored node, the inner one");
+    check_text(cf_get_text(c, "f", ""), "in", "which stays the latest after the node");
+    check_text(cf_get_text(c, "h", ""), "three", "and a third definition replaces it");
+    cf_config_free(c);
+}
+
+/* A sink that accepts every event and counts the workspace asked of it. */
+static char   g_ws[1024 * 1024];
+static size_t g_ws_used;
+
+static cf_bool ws_open(void* ctx, const char* name, size_t n) {
+    (void)ctx;
+    (void)name;
+    (void)n;
+    return CF_TRUE;
+}
+static cf_bool ws_scalar(void* ctx, const char* name, size_t n, const cf_value* v,
+                         cf_bool textual, const cf_loc* at) {
+    (void)ctx;
+    (void)name;
+    (void)n;
+    (void)v;
+    (void)textual;
+    (void)at;
+    return CF_TRUE;
+}
+static cf_bool ws_end(void* ctx) {
+    (void)ctx;
+    return CF_TRUE;
+}
+static void* ws_work(void* ctx, size_t n) {
+    char* p;
+    (void)ctx;
+    n = (n + 15u) & ~(size_t)15u;
+    if (n > sizeof g_ws - g_ws_used) {
+        return NULL;
+    }
+    p = g_ws + g_ws_used;
+    g_ws_used += n;
+    return p;
+}
+
+/* The workspace a document's anchors take: 1000 definitions of one name,
+   or of 1000 names. */
+static size_t ws_of(cf_bool one_name) {
+    static char     doc[32 * 1024];
+    size_t          n = 0;
+    unsigned        i;
+    cf_doc_sink     out;
+    cf_blob         in;
+    cf_error        err  = CF_ERROR_INIT;
+    const cf_codec* yaml = cf_codec_by_name("yaml");
+
+    for (i = 0; i < 1000; ++i) {
+        n +=
+            (size_t)sprintf(doc + n, one_name ? "k%u: &x %u\n" : "k%u: &x%u 1\n", i, i);
+    }
+    memset(&out, 0, sizeof out);
+    out.size         = sizeof out;
+    out.begin_table  = ws_open;
+    out.begin_array  = ws_open;
+    out.scalar       = ws_scalar;
+    out.end          = ws_end;
+    out.reserve_work = ws_work;
+    memset(&in, 0, sizeof in);
+    in.p      = doc;
+    in.n      = n;
+    in.name   = "ws.yaml";
+    g_ws_used = 0;
+    if (yaml == NULL || !yaml->decode(&in, &out, &err)) {
+        printf("  %s\n", err.message);
+        return 0;
+    }
+    return g_ws_used;
+}
+
+/* A name anchored again replaces its entry rather than adding one, so a
+   lookup's chain stays as long as the names are many, not the
+   definitions. Seen from outside as workspace: an entry per definition
+   costs as much again as the recordings themselves. */
+static void test_reanchor_entries(void) {
+    size_t one  = ws_of(CF_TRUE);
+    size_t many = ws_of(CF_FALSE);
+    check(one > 0 && many > 0, "both documents decode");
+    check(one * 4u < many * 3u, "one name anchored 1000 times keeps one entry");
+    if (!(one * 4u < many * 3u)) {
+        printf("  workspace: one name %lu, many names %lu\n", (unsigned long)one,
+               (unsigned long)many);
+    }
 }
 
 /* 149 bytes beginning with '%' and malformed UTF-8 in the directive,
@@ -289,6 +457,9 @@ int main(void) {
     test_anchors();
     test_tags();
     test_refuses();
+    test_alias_bytes();
+    test_reanchor();
+    test_reanchor_entries();
     test_hostile_directive();
     test_empty();
 #if CF_WITH_EMIT

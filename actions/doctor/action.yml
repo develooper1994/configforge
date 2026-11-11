@@ -69,6 +69,10 @@ inputs:
     description: The token for the comment; it needs pull-requests write
     required: false
     default: ${{ github.token }}
+  comment-author:
+    description: The login github-token comments as - only a comment by this account is taken for Doctor's and updated. Empty asks the token, and the workflow's own token is github-actions[bot]
+    required: false
+    default: ""
 
 outputs:
   sarif:
@@ -123,6 +127,7 @@ runs:
         CF_REPO: ${{ github.repository }}
         CF_PR: ${{ github.event.pull_request.number }}
         CF_MARKDOWN: ${{ runner.temp }}/configforge-doctor.md
+        CF_COMMENT_AUTHOR: ${{ inputs.comment-author }}
         CF_ACTION: ${{ github.action_path }}
       run: |
         if [ -f "$CF_MARKDOWN" ]; then bash "$CF_ACTION/comment.sh"; fi

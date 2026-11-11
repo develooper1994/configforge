@@ -60,6 +60,21 @@ beside what is not.
 | 🟩 | A UTF-8 byte order mark read past by every text reader (`cf_blob_skip_bom`) | 1.4.1 |
 | 🟨 | Checks at compile time where they can be, at run time always: Rust's `const` keys done | D-75, plan of the evening |
 | 🟩 | GitHub used for all it offers that fits | plan of the evening |
+| 🟩 | A security pass: secrets in reasons, renames and Doctor's diff; bounds on references and YAML aliases; directories read whole or refused | 1.4.1 |
+
+### Left from the security pass
+
+Known to be wrong, and not fixed by it:
+
+* The XML reader takes quadratic time in distinct sibling names
+  (`xml_find` in `xml.c`).
+* The key space's guess from a document's line count is not capped
+  relative to the input's size (`cfi_ks_expect` in `keyspace.c`).
+* `cf_codec_detect` with a NULL arena makes TOML always fail.
+* A new SQLite store is created with the default permissions
+  (`store.c`).
+* Rust: `Keep::refusal` echoes a value with a NUL, and `Edit::set` writes
+  a NUL as U+0001 instead of refusing it.
 
 ### What can run at once
 
@@ -542,6 +557,48 @@ they grow. Done when `bench/` shows the peak and the time for 1 KB to
 Maintaining.md's "Measured" whichever way they come out, and a file
 whose size changes while it is read is still read whole.
 
+### From the security pass of 2026-11-11
+
+* ⬜ **A marker-secret gate.** One test drives a marker secret through
+  every refusal path and every output - error, `explain()`, blind report,
+  diff, log, each of Doctor's formats - and fails if the marker appears.
+  Done when the gate is registered and has been shown to fail on each of
+  this pass's leaks; four of them would each have failed it.
+* ⬜ **A per-decode output budget**, in bytes and keys, enforced in the
+  flattener so that every codec inherits one bound instead of each
+  reader keeping its own. Done when a hostile document of each format
+  hits the same named limit.
+* ⬜ **A fuzz check comparing arena bytes with input size**, so that a
+  document which costs a multiple of its size fails the fuzzer and does
+  not wait to be found by hand.
+* ⬜ **Keying the secret digest.** The digest is an unsalted FNV-1a, and
+  over a PIN it can be brute-forced offline from a blind report or a
+  fingerprint. Done when a digest cannot be tested against guesses
+  without a key, and the report schema and `doctor diff` still compare.
+* ⬜ **A trusted-directory check**, like sudo's, for drop-in and secrets
+  directories: refuse one a user other than the owner or root can write
+  to. Done when it is on by default for secrets and opt-in for drop-ins,
+  with the decision in Decisions.md.
+* ⬜ **Doctor `--redact-all`**, on by default in the action, so that a
+  report's values are shown to no pull request unless asked for. Done
+  when the action's default shows no value and a flag restores it.
+* ⬜ **Seeding TOML's and YAML's name hashes per decode**, so that a
+  document cannot be built to collide them. Done when the seed differs
+  between decodes and a collision test no longer slows either reader.
+* ⬜ **The readers proved, not only tested.** The aim is the safety a
+  language such as Rust or Go gives by construction, shown here by
+  evidence: sanitizers, fuzzing and three analyzers find what an input
+  happens to reach, and a bounded model checker (CBMC) shows that no
+  input of a bounded size can read or write out of bounds or overflow a
+  signed integer. Done when the blob, the BOM skip and one text reader
+  (INI first, the smallest) each have a harness that CI proves, and
+  Safety.md says what is proved and to what bound.
+* ⬜ **`.properties` held to Java's `Properties`**, value by value, as
+  INI is to `configparser`. It was left for want of a JVM; the
+  development machine's WSL has OpenJDK 21 now. Done when
+  `scripts/check/conformance.py` runs both and lists the differences
+  kept by design.
+
 ### Considered, and decided against for now: TOON
 
 TOON, Token-Oriented Object Notation (github.com/toon-format/toon, spec
@@ -572,5 +629,12 @@ that needs the live configuration rather than its record.
 
 ## Open decisions
 
-None. The last one, arrays in INI, was decided on 2026-11-05: C style;
-the plan above, item 4.
+* **Response files.** `@file` arguments are expanded by default in
+  `cf_app`, so an untrusted positional argument can inject configuration
+  and probe for files. Should they be opt-in? It is an interface change,
+  so it is decided before it is made.
+* **Repository settings.** Dependabot alerts and secret scanning are
+  off. Turn them on, or decide why not.
+
+The last decision before these, arrays in INI, was made on 2026-11-05:
+C style; the plan above, item 4.

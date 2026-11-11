@@ -99,6 +99,121 @@ static void test_reals(void) {
     (void)cf_infer_scalar("-1E-5", 5);
     check(1, "inference of the odd forms answers");
 }
+
+/* n copies of c after head, then tail, into a static buffer: the long
+   numbers below are past C90's 509-character literal. */
+static const char* lex_edges_long(const char* head, char c, size_t n, const char* tail,
+                                  size_t* len) {
+    static char buf[8192];
+    size_t      h = strlen(head), t = strlen(tail);
+
+    if (h + n + t >= sizeof buf) {
+        *len = 0;
+        return "";
+    }
+    memcpy(buf, head, h);
+    memset(buf + h, c, n);
+    memcpy(buf + h + n, tail, t + 1);
+    *len = h + n + t;
+    return buf;
+}
+
+/* Past the largest finite double the parse refuses, rather than handing
+   the key space an infinity it promises never to hold; and a number with
+   more digits than the big integer can carry still reads as what it
+   says, not as what is left after the carry fell off the top. */
+static void test_real_ranges(void) {
+    double      r = 0.0;
+    size_t      n = 0;
+    const char* s;
+
+    check(!cf_text_to_f64("1e309", 5, &r, NULL), "1e309 is past the range");
+    check(!cf_text_to_f64("1e400", 5, &r, NULL), "1e400 is past the range");
+    check(!cf_text_to_f64("-1e309", 6, &r, NULL), "and so is -1e309");
+    check(!cf_text_to_f64("1.7976931348623159e308", 22, &r, NULL),
+          "a value that rounds up to infinity");
+    s = lex_edges_long("1", '0', 309, "", &n);
+    check(!cf_text_to_f64(s, n, &r, NULL), "a 310-digit integer");
+    s = lex_edges_long("", '9', 400, "", &n);
+    check(!cf_text_to_f64(s, n, &r, NULL), "a 400-digit integer");
+    check(cf_text_to_f64("1.7976931348623157e308", 22, &r, NULL) && r == DBL_MAX,
+          "the largest finite still reads exactly");
+    check(cf_text_to_f64("1e-400", 6, &r, NULL) && r == 0.0,
+          "far below the smallest reads as zero, as before");
+    check(cf_text_to_f64("0e999", 5, &r, NULL) && r == 0.0,
+          "zero is zero at any scale");
+
+    s = lex_edges_long("0.", '3', 700, "", &n);
+    check(cf_text_to_f64(s, n, &r, NULL) && r == 1.0 / 3.0,
+          "seven hundred threes are one third");
+    s = lex_edges_long("1", '0', 700, "e-700", &n);
+    check(cf_text_to_f64(s, n, &r, NULL) && r == 1.0,
+          "a one and 700 zeros, scaled, is one");
+    s = lex_edges_long("1", '0', 300, "e-650", &n);
+    check(cf_text_to_f64(s, n, &r, NULL) && r == 0.0,
+          "a denominator past the big integer underflows to zero");
+    /* 2^53 + 1 is halfway between two doubles: exactly half rounds to the
+       even one, and a one four hundred places later, among the digits the
+       parser drops, has to tip it up. */
+    s = lex_edges_long("9007199254740993.", '0', 400, "", &n);
+    check(cf_text_to_f64(s, n, &r, NULL) && r == 9007199254740992.0,
+          "exactly half rounds to even");
+    s = lex_edges_long("9007199254740993.", '0', 400, "1", &n);
+    check(cf_text_to_f64(s, n, &r, NULL) && r == 9007199254740994.0,
+          "a dropped non-zero digit tips a half up");
+}
+
+/* The digit count and the power of ten stop counting at a bound far
+   past where the answer is decided, so that more digits than an int
+   holds cannot overflow them. Thousands of digits on either side of the
+   ones that matter read exactly as before. */
+static void test_real_long_runs(void) {
+    double      r = 0.0;
+    size_t      n = 0;
+    const char* s;
+
+    s = lex_edges_long("", '0', 4000, "1.5", &n);
+    check(cf_text_to_f64(s, n, &r, NULL) && r == 1.5, "four thousand leading zeros");
+    s = lex_edges_long("0.", '0', 4000, "15e4001", &n);
+    check(cf_text_to_f64(s, n, &r, NULL) && r == 1.5,
+          "four thousand zeros after the point, scaled back");
+    s = lex_edges_long("0.", '0', 4000, "15", &n);
+    check(!cf_text_to_f64(s, n, &r, NULL),
+          "and unscaled, far below any number meant, refused");
+    s = lex_edges_long("1.5", '0', 4000, "", &n);
+    check(cf_text_to_f64(s, n, &r, NULL) && r == 1.5, "four thousand trailing zeros");
+    s = lex_edges_long("1", '0', 4000, "e-4000", &n);
+    check(cf_text_to_f64(s, n, &r, NULL) && r == 1.0,
+          "a one and four thousand zeros, scaled, is one");
+    s = lex_edges_long("1", '0', 4000, "", &n);
+    check(!cf_text_to_f64(s, n, &r, NULL), "and unscaled is past the range");
+    s = lex_edges_long("1.", '7', 4000, "", &n);
+    check(cf_text_to_f64(s, n, &r, NULL) && r == 16.0 / 9.0,
+          "four thousand sevens after the point");
+}
+
+#if CF_WITH_JSON
+/* The end to end case: a JSON number past the range is an error naming
+   where it is, not a value that writes back as `"a": ` with nothing. */
+static void test_json_range(void) {
+    cf_error    err = CF_ERROR_INIT;
+    cf_builder* b;
+    cf_config*  c;
+
+    if (!spill("cf_lexedges.json", "{\n  \"a\": 1e309\n}\n")) {
+        check(0, "write the JSON fixture");
+        return;
+    }
+    b = cf_build(NULL);
+    cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_lexedges.json", NULL, 0);
+    c = cf_builder_create(b, &err);
+    check(c == NULL, "a JSON number past the range is refused");
+    check(c != NULL || strstr(err.message, "cf_lexedges.json:2:") != NULL,
+          "and the error says which line");
+    cf_config_free(c);
+    remove("cf_lexedges.json");
+}
+#endif
 #endif
 
 static void test_keymaps(void) {
@@ -198,6 +313,11 @@ int main(void) {
     test_integers();
 #if CF_WITH_REAL
     test_reals();
+    test_real_ranges();
+    test_real_long_runs();
+#if CF_WITH_JSON
+    test_json_range();
+#endif
 #endif
     test_keymaps();
     test_cli();

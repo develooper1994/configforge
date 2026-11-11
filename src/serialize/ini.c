@@ -153,7 +153,8 @@ typedef struct ini_run {
     char         name[CF_KEY_MAX];
     size_t       n;
     cf_bool      open;
-    unsigned int line; /* where it began */
+    cf_bool      noted; /* its name is in the section's table */
+    unsigned int line;  /* where it began */
 } ini_run;
 
 static cf_bool ini_run_close(ini_run* r, const cf_doc_sink* out) {
@@ -165,9 +166,9 @@ static cf_bool ini_run_close(ini_run* r, const cf_doc_sink* out) {
 }
 
 /* The line, before `upto` and after `from`, of an earlier `name[] =` in
-   the same section, or 0. The blob is in memory: looking back at it is
-   the reader's whole memory of what it has seen, so it allocates
-   nothing, and it only looks when a run of `name[]` begins. */
+   the same section, or 0. The blob is in memory, so looking back at it
+   needs no memory of its own; it is what the reader does when the sink
+   lends no workspace for the names below, and what they must agree with. */
 static unsigned int ini_earlier_run(const char* from, const char* upto,
                                     unsigned int first_line, const char* name,
                                     size_t n) {
@@ -197,15 +198,150 @@ static unsigned int ini_earlier_run(const char* from, const char* upto,
     return 0;
 }
 
+/* The array names a section has had, so that a run's start asks a hash
+   and not every line above it: the look back costs the whole section
+   each time, and a section of distinct names made reading quadratic.
+   A name is where it lies in the blob, so nothing is copied. The table
+   lives in the sink's workspace (cf_doc_sink.reserve_work); a sink that
+   lends none, or runs out, sends the reader back to the look back, which
+   answers the same. A slot belongs to the section numbered `gen`, so a
+   header forgets the names by counting, not by clearing the table. */
+typedef struct ini_name {
+    size_t       at; /* the name's offset in the blob */
+    size_t       gen;
+    unsigned int line; /* its first line, as the look back finds it */
+    unsigned int n;
+} ini_name;
+
+typedef struct ini_names {
+    const cf_doc_sink* out;
+    const char*        base;
+    ini_name*          slot;
+    size_t             cap;  /* a power of two; 0 until the first name */
+    size_t             used; /* in this section */
+    size_t             gen;
+    cf_bool            off;
+} ini_names;
+
+static void ini_names_init(ini_names* t, const cf_doc_sink* out, const char* base) {
+    t->out  = out;
+    t->base = base;
+    t->slot = NULL;
+    t->cap  = 0;
+    t->used = 0;
+    t->gen  = 1;
+    t->off  = (cf_bool)(out->size < offsetof(cf_doc_sink, reserve_work) +
+                                       sizeof out->reserve_work ||
+                       out->reserve_work == NULL);
+}
+
+static size_t ini_names_hash(const char* p, size_t n) {
+    size_t h = 2166136261u, i;
+    for (i = 0; i < n; ++i) {
+        h = (h ^ (size_t)(unsigned char)p[i]) * 16777619u;
+    }
+    return h;
+}
+
+/* The slot holding `name` in this section, or the free one where it
+   would go. Nothing leaves a section's table, so a probe ends at the
+   first slot that is not this section's. */
+static ini_name* ini_names_slot(const ini_names* t, const char* name, size_t n) {
+    size_t i = ini_names_hash(name, n) & (t->cap - 1);
+
+    for (;;) {
+        ini_name* x = &t->slot[i];
+        if (x->gen != t->gen ||
+            ((size_t)x->n == n && memcmp(t->base + x->at, name, n) == 0)) {
+            return x;
+        }
+        i = (i + 1) & (t->cap - 1);
+    }
+}
+
+/* The line where `name[]` first came in this section, or 0. */
+static unsigned int ini_names_line(const ini_names* t, const char* name, size_t n) {
+    const ini_name* x;
+
+    if (t->cap == 0) {
+        return 0;
+    }
+    x = ini_names_slot(t, name, n);
+    return (x->gen == t->gen) ? x->line : 0;
+}
+
+/* Twice the room, this section's names moved over. What was outgrown
+   stays where the sink put it until the decode is over. */
+static cf_bool ini_names_grow(ini_names* t) {
+    size_t    c      = (t->cap == 0) ? 16 : t->cap * 2, i;
+    ini_name* old    = t->slot;
+    size_t    oldcap = t->cap;
+    ini_name* slot;
+
+    if (c > (size_t)-1 / sizeof *slot) {
+        return CF_FALSE;
+    }
+    slot = (ini_name*)t->out->reserve_work(t->out->ctx, c * sizeof *slot);
+    if (slot == NULL) {
+        return CF_FALSE;
+    }
+    memset(slot, 0, c * sizeof *slot);
+    t->slot = slot;
+    t->cap  = c;
+    for (i = 0; i < oldcap; ++i) {
+        if (old[i].gen == t->gen) {
+            *ini_names_slot(t, t->base + old[i].at, old[i].n) = old[i];
+        }
+    }
+    return CF_TRUE;
+}
+
+static void ini_names_add(ini_names* t, const char* name, size_t n, unsigned int line) {
+    ini_name* x;
+
+    if (t->off) {
+        return;
+    }
+    if ((t->used + 1) * 2 > t->cap && !ini_names_grow(t)) {
+        t->off = CF_TRUE;
+        return;
+    }
+    x = ini_names_slot(t, name, n);
+    if (x->gen != t->gen) {
+        x->at   = (size_t)(name - t->base);
+        x->gen  = t->gen;
+        x->line = line;
+        x->n    = (unsigned int)n;
+        ++t->used;
+    }
+}
+
+/* Whether the look back would see this line: it takes `name[]` followed
+   by spaces or tabs and the '=', and the key's trim also passes over a
+   carriage return there, so a line written `p[]<CR>=` is a run it does
+   not find. The table remembers only what the look back would see. */
+static cf_bool ini_names_seen(const char* after, const char* eq) {
+    while (after < eq) {
+        if (*after != ' ' && *after != '\t') {
+            return CF_FALSE;
+        }
+        ++after;
+    }
+    return CF_TRUE;
+}
+
 static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* err) {
     ini_scan     s;
     int          depth = 0;
     ini_run      run;
+    ini_names    names;
     const char*  section_start;
     unsigned int section_line = 1;
 
-    run.open      = CF_FALSE;
-    run.n         = 0;
+    run.open  = CF_FALSE;
+    run.noted = CF_FALSE;
+    run.n     = 0;
+    ini_names_init(&names, out, in->p);
     s.p           = in->p + cf_blob_skip_bom(in);
     s.end         = in->p + in->n;
     s.file        = (in->name != NULL) ? in->name : "<ini>";
@@ -271,11 +407,14 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
             ini_skip_to_eol(&s);
             section_start = s.p;
             section_line  = s.line;
+            ++names.gen;
+            names.used = 0;
             continue;
         }
 
         {
             const char*  kstart = s.p;
+            const char*  eq;
             const char*  key;
             const char*  val;
             size_t       klen, vlen;
@@ -291,6 +430,7 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
                                     "%s:%u: expected 'key = value'", s.file, s.line);
             }
             klen = ini_trim(kstart, (size_t)(s.p - kstart), &key);
+            eq   = s.p;
             ++s.p;
 
             {
@@ -332,8 +472,9 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
                                 "%s:%u: the document could not be recorded", s.file,
                                 s.line);
                         }
-                        earlier = ini_earlier_run(section_start, kstart, section_line,
-                                                  key, nlen);
+                        earlier = names.off ? ini_earlier_run(section_start, kstart,
+                                                              section_line, key, nlen)
+                                            : ini_names_line(&names, key, nlen);
                         if (earlier != 0) {
                             return cf_error_set(
                                 err, CF_E_SOURCE, NULL, s.file,
@@ -348,9 +489,14 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
                                                 s.file, s.line, key, nlen);
                         }
                         memcpy(run.name, key, nlen);
-                        run.n    = nlen;
-                        run.open = CF_TRUE;
-                        run.line = s.line;
+                        run.n     = nlen;
+                        run.open  = CF_TRUE;
+                        run.noted = CF_FALSE;
+                        run.line  = s.line;
+                    }
+                    if (!run.noted && ini_names_seen(key + klen, eq)) {
+                        ini_names_add(&names, key, nlen, s.line);
+                        run.noted = CF_TRUE;
                     }
                     if (!out->scalar(out->ctx, NULL, 0, &v, CF_TRUE, &at)) {
                         return cf_error_set(err, CF_E_KEY, NULL, s.file,

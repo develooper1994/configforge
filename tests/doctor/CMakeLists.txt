@@ -195,6 +195,17 @@ add_test(NAME doctor.severity
 set_tests_properties(doctor.severity PROPERTIES FIXTURES_REQUIRED
                                                 DOCTOR_REPORTS)
 
+# No secret in any output, from a full report as from a blind one; and
+# text from a report kept from becoming a workflow command in a CI log,
+# or a mention or a link in a pull-request comment.
+foreach(script secrets escape)
+  add_test(NAME doctor.${script}
+           COMMAND ${CMAKE_COMMAND} -DDOCTOR=$<TARGET_FILE:doctor> -P
+                   ${CMAKE_SOURCE_DIR}/tests/doctor/${script}.cmake)
+  set_tests_properties(doctor.${script} PROPERTIES FIXTURES_REQUIRED
+                                                   DOCTOR_REPORTS)
+endforeach()
+
 # Doctor as a library (cf_doctor.h): a program linting itself, in
 # process, with no report on disk.
 add_executable(doctor_api test_api.c)

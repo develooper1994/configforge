@@ -68,7 +68,14 @@ CF_API size_t cf_f64_to_text(double v, char* buf, size_t cap);
 
 /* Parse a C-locale floating point number. The decimal separator is
    always '.', never the locale's. Accepts the forms produced by
-   cf_f64_to_text and the usual hand-written ones. */
+   cf_f64_to_text and the usual hand-written ones.
+
+   Range: a number from 10^309 up, or one that would round to infinity,
+   is refused. Below the smallest subnormal the result is zero. At most
+   290 significant digits decide the value; later digits move only the
+   exponent and the rounding, so a literal of hundreds of digits is read
+   as what it is, and one lying exactly on a halfway point may be one
+   unit in the last place off. */
 CF_API cf_bool cf_text_to_f64(const char* s, size_t len, double* out, size_t* end);
 
 #endif /* CF_WITH_REAL */

@@ -122,8 +122,75 @@ static void test_refusals(void) {
     cf_config_free(c);
 }
 
+/* A secret written under a key's old name. The old name is CF_DEPRECATED
+   with replaced_by naming the sensitive one, and is not itself marked
+   sensitive - nobody thinks to - so it takes that from what replaced it.
+   Its entry stays in the key space beside the new one, and everything
+   that reads the old entry has to see the secret as a secret. */
+static cf_config* secrets_renamed(const char* value, const char* leak, cf_error* err) {
+    cf_pair     pairs[2];
+    cf_builder* b = cf_build(NULL);
+    cf_def      d;
+
+    pairs[0].key   = "db.pass";
+    pairs[0].value = value;
+    pairs[1].key   = "db.leak";
+    pairs[1].value = leak;
+    cf_builder_memory(b, "memory", CF_RANK_USER_FILE, pairs, (leak != NULL) ? 2 : 1);
+    cf_builder_text(b, "db.password", NULL, CF_SENSITIVE);
+    cf_builder_text(b, "db.leak", NULL, 0);
+    cf_def_init(&d, CF_TYPE_TEXT, "db.pass");
+    d.flags       = CF_DEPRECATED;
+    d.replaced_by = "db.password";
+    cf_builder_define(b, &d);
+    return cf_builder_create(b, err);
+}
+
+static void test_old_name(void) {
+    static char buf[16384];
+    cf_error    err    = CF_ERROR_INIT;
+    cf_config*  before = secrets_renamed("M4RK3R-first", NULL, &err);
+    cf_config*  after  = secrets_renamed("M4RK3R-second", NULL, &err);
+    cf_config*  c;
+
+    check(before != NULL && after != NULL, "a secret under the old name builds");
+    if (before == NULL || after == NULL) {
+        printf("  %s\n", err.message);
+        cf_config_free(before);
+        cf_config_free(after);
+        return;
+    }
+    check(strcmp(cf_get_text(before, "db.password", ""), "M4RK3R-first") == 0,
+          "and configures the new name");
+
+    cf_explain(before, "db.pass", buf, sizeof buf);
+    lacks(buf, "M4RK3R", "explain() of the old name does not show it");
+    cf_explain(before, "db.password", buf, sizeof buf);
+    lacks(buf, "M4RK3R", "nor of the new one");
+    if (cf_has_feature("report")) {
+        cf_report_info info = CF_REPORT_INFO_INIT;
+        info.mode           = CF_REPORT_BLIND;
+        cf_report(before, &info, buf, sizeof buf);
+        lacks(buf, "M4RK3R", "a blind report does not show it");
+    }
+    cf_diff_text(before, after, buf, sizeof buf);
+    lacks(buf, "M4RK3R", "nor does a diff");
+    cf_diff_json(before, after, buf, sizeof buf);
+    lacks(buf, "M4RK3R", "in either form");
+    cf_config_free(before);
+    cf_config_free(after);
+
+    /* A plain key may not show it through the old name either. */
+    c = secrets_renamed("M4RK3R-first", "pw=${db.pass}", &err);
+    check(c == NULL, "a plain key referring to the old name is refused");
+    has(err.message, "would show the secret", "as it is for the new name");
+    lacks(err.message, "M4RK3R", "and the error does not show it");
+    cf_config_free(c);
+}
+
 int main(void) {
     test_explain_and_inspect();
     test_refusals();
+    test_old_name();
     return cf_test_done();
 }

@@ -153,9 +153,10 @@ static char* unescape(cf_arena* ar, const char* p, size_t n, size_t* out_n) {
 
 /* Whether a value somebody wrote has references, and whether they are
    well formed. One with none is unescaped now; one with some waits, as
-   written, for the keys it names. */
-static const char* reference_syntax(cf_arena* ar, cf_candidate* c, char* reason,
-                                    size_t rcap) {
+   written, for the keys it names. The refusal of a `secret` one quotes
+   none of it: what follows a stray "${" in a password is the password. */
+static const char* reference_syntax(cf_arena* ar, cf_candidate* c, cf_bool secret,
+                                    char* reason, size_t rcap) {
     const char* p;
     const char* name = NULL;
     size_t      n, i = 0, nlen = 0, refs = 0;
@@ -171,10 +172,16 @@ static const char* reference_syntax(cf_arena* ar, cf_candidate* c, char* reason,
         ++refs;
     }
     if (r < 0) {
-        cf_fmt(reason, rcap,
-               "'${%S' refers to no key: a reference is ${key}, the key as the "
-               "program names it; write '$${' for a literal '${'",
-               name, (nlen > 40) ? (size_t)40 : nlen);
+        if (secret) {
+            cf_fmt(reason, rcap,
+                   "the value has a '${' that names no key: a reference is ${key}, "
+                   "the key as the program names it; write '$${' for a literal '${'");
+        } else {
+            cf_fmt(reason, rcap,
+                   "'${%S' refers to no key: a reference is ${key}, the key as the "
+                   "program names it; write '$${' for a literal '${'",
+                   name, (nlen > 40) ? (size_t)40 : nlen);
+        }
         return reason;
     }
     if (refs > 0) {
@@ -261,7 +268,9 @@ static cf_bool apply_entry(cf_keyspace* ks, const cf_def* d, cf_entry* e,
         if (!cf_outcome_can_win(c->outcome)) {
             continue;
         }
-        why = reference_syntax(ks->arena, c, reason, sizeof reason);
+        why = reference_syntax(ks->arena, c,
+                               ((d->flags & CF_SENSITIVE) != 0) ? CF_TRUE : CF_FALSE,
+                               reason, sizeof reason);
         if (why == NULL) {
             why = apply_candidate(d, c, rep, reason, sizeof reason);
         }
@@ -296,9 +305,22 @@ static size_t ref_text(const cf_entry* t, char* tmp, size_t cap, const char** ou
     return cf_value_to_text(v, tmp, cap);
 }
 
+/* Whether `add` more bytes keep an expansion of `j` bytes within `cap`.
+   Asked before adding, in a form that cannot wrap: a chain of doublings
+   passes any size_t, and on a 32-bit one a sum that wrapped would
+   measure small, allocate small and then copy the lot. */
+static cf_bool expand_fits(size_t j, size_t add, size_t cap) {
+    return (add <= cap && j <= cap - add) ? CF_TRUE : CF_FALSE;
+}
+
+enum { VALIDATE_EXPAND_OK, VALIDATE_EXPAND_NO_ROOM, VALIDATE_EXPAND_TOO_LARGE };
+
 /* The template with each reference replaced, measured and then written,
-   into the arena. Every key it names is finished by now. */
-static cf_bool expand_build(cf_keyspace* ks, cf_candidate* c) {
+   into the arena. Every key it names is finished by now. The measuring
+   pass refuses a result past `cap` - CF_EXPAND_MAX, or what is left of
+   CF_EXPAND_TOTAL_MAX if that is less - so nothing is allocated for
+   one. */
+static int expand_build(cf_keyspace* ks, cf_candidate* c, size_t cap) {
     const char* p   = c->written;
     size_t      n   = strlen(p);
     char*       out = NULL;
@@ -309,6 +331,9 @@ static cf_bool expand_build(cf_keyspace* ks, cf_candidate* c) {
         size_t i = 0, j = 0;
         while (i < n) {
             if (p[i] == '$' && i + 2 < n && p[i + 1] == '$' && p[i + 2] == '{') {
+                if (!expand_fits(j, 2, cap)) {
+                    return VALIDATE_EXPAND_TOO_LARGE;
+                }
                 if (out != NULL) {
                     out[j]     = '$';
                     out[j + 1] = '{';
@@ -325,12 +350,18 @@ static cf_bool expand_build(cf_keyspace* ks, cf_candidate* c) {
 
                 t  = cf_ks_find(ks, name, (size_t)(close - name));
                 sn = ref_text(t, tmp, sizeof tmp, &s);
+                if (!expand_fits(j, sn, cap)) {
+                    return VALIDATE_EXPAND_TOO_LARGE;
+                }
                 if (out != NULL) {
                     memcpy(out + j, s, sn);
                 }
                 j += sn;
                 i = (size_t)(close - p) + 1;
             } else {
+                if (!expand_fits(j, 1, cap)) {
+                    return VALIDATE_EXPAND_TOO_LARGE;
+                }
                 if (out != NULL) {
                     out[j] = p[i];
                 }
@@ -342,7 +373,7 @@ static cf_bool expand_build(cf_keyspace* ks, cf_candidate* c) {
             len = j;
             out = (char*)cf_arena_alloc(ks->arena, len + 1);
             if (out == NULL) {
-                return CF_FALSE;
+                return VALIDATE_EXPAND_NO_ROOM;
             }
         } else {
             out[len] = '\0';
@@ -350,7 +381,7 @@ static cf_bool expand_build(cf_keyspace* ks, cf_candidate* c) {
     }
     cf_value_text(&c->value, out, len);
     c->flags = (c->flags & ~(unsigned)CF_CAND_TEMPLATE) | CF_CAND_TEXTUAL;
-    return CF_TRUE;
+    return VALIDATE_EXPAND_OK;
 }
 
 typedef struct expand_ctx {
@@ -358,8 +389,22 @@ typedef struct expand_ctx {
     const cf_defset* ds;
     cf_apply_report* rep;
     cf_error*        err;
+    size_t           total;                  /* bytes every expansion so far has made */
     char             reason[CF_MESSAGE_MAX]; /* one, not one a level */
 } expand_ctx;
+
+/* A reference in `c`, the winner of `e`, names a key with no value. The
+   name is part of what was written, so for a sensitive key it is not
+   quoted: "${mark}" in a password is eight bytes of the password. */
+static cf_bool expand_no_value(expand_ctx* x, const cf_entry* e, const cf_def* d,
+                               const cf_candidate* c, const char* name, size_t nlen) {
+    if (d != NULL && (d->flags & CF_SENSITIVE) != 0) {
+        return cf_error_set(x->err, CF_E_VALIDATE, e->key, (c->at != NULL) ? c->at : "",
+                            "%s: a reference names a key with no value", e->key);
+    }
+    return cf_error_set(x->err, CF_E_VALIDATE, e->key, (c->at != NULL) ? c->at : "",
+                        "%s: ${%S} names a key with no value", e->key, name, nlen);
+}
 
 /* Finish `e`: its winner's references replaced, each key they name
    finished first, and the result typed and validated. A result the
@@ -372,8 +417,9 @@ static cf_bool expand_entry(expand_ctx* x, cf_entry* e, int depth) {
         cf_candidate* c = e->selected;
         const char*   name;
         const char*   why;
-        size_t        i = 0, nlen = 0;
+        size_t        i = 0, nlen = 0, left, cap;
         cf_candidate* k;
+        int           built;
 
         if (c == NULL || (c->flags & CF_CAND_TEMPLATE) == 0) {
             return CF_TRUE;
@@ -395,9 +441,7 @@ static cf_bool expand_entry(expand_ctx* x, cf_entry* e, int depth) {
                 (t != NULL) ? cf_defset_find(x->ds, t->key, t->keylen) : NULL;
 
             if (t == NULL || t->selected == NULL) {
-                return cf_error_set(
-                    x->err, CF_E_VALIDATE, e->key, (c->at != NULL) ? c->at : "",
-                    "%s: ${%S} names a key with no value", e->key, name, nlen);
+                return expand_no_value(x, e, d, c, name, nlen);
             }
             if (td != NULL && (td->flags & CF_SENSITIVE) != 0 &&
                 (d == NULL || (d->flags & CF_SENSITIVE) == 0)) {
@@ -410,13 +454,44 @@ static cf_bool expand_entry(expand_ctx* x, cf_entry* e, int depth) {
             if (!expand_entry(x, t, depth + 1)) {
                 return CF_FALSE;
             }
+            /* Finishing it can leave it with nothing: its own result
+               refused under fallback, and no candidate below to take
+               over. That is a key with no value as much as one never
+               set, and reading it would read through NULL. */
+            if (t->selected == NULL) {
+                return expand_no_value(x, e, d, c, name, nlen);
+            }
         }
         c->flags &= ~(unsigned)CF_CAND_EXPANDING;
 
-        if (!expand_build(x->ks, c)) {
+        /* Each key is held to CF_EXPAND_MAX and all of them together to
+           CF_EXPAND_TOTAL_MAX: one value just under the first, named by
+           ten thousand short lines, is gigabytes with no key over it.
+           Whichever is nearer is the limit for this one. */
+        left  = (size_t)CF_EXPAND_TOTAL_MAX - x->total;
+        cap   = (left < (size_t)CF_EXPAND_MAX) ? left : (size_t)CF_EXPAND_MAX;
+        built = expand_build(x->ks, c, cap);
+        if (built == VALIDATE_EXPAND_TOO_LARGE && cap < (size_t)CF_EXPAND_MAX) {
+            return cf_error_set(
+                x->err, CF_E_VALIDATE, e->key, (c->at != NULL) ? c->at : "",
+                "%s: its references and those before it expand to more than %U "
+                "bytes in all",
+                e->key, (cf_u64)CF_EXPAND_TOTAL_MAX);
+        }
+        if (built == VALIDATE_EXPAND_TOO_LARGE) {
+            return cf_error_set(x->err, CF_E_VALIDATE, e->key,
+                                (c->at != NULL) ? c->at : "",
+                                "%s: its references expand to more than %U bytes",
+                                e->key, (cf_u64)CF_EXPAND_MAX);
+        }
+        if (built != VALIDATE_EXPAND_OK) {
             return cf_error_set(x->err, CF_E_MEMORY, e->key, NULL,
                                 "no room to replace the references in '%s'", e->key);
         }
+        /* Within `left`, so the total never passes the bound. A result
+           the contract then refuses still took its memory, so it
+           counts. */
+        x->total += c->value.u.t.n;
         if (d == NULL) {
             /* No contract: Tier 0 inference, as for any text. */
             cf_value v;
@@ -943,6 +1018,13 @@ static cf_bool validate_list_shape(const cf_keyspace* ks, const cf_def* d,
        truncated already. Equality proves density without iterating an
        attacker-supplied count up to INT64_MAX. */
     if (present && (cf_u64)members != (cf_u64)count->selected->value.u.i) {
+        /* The length of a sensitive list is its own value, and is not
+           quoted, as cut_reason does not quote it. */
+        if ((d->flags & CF_SENSITIVE) != 0) {
+            return cf_error_set(err, CF_E_VALIDATE, d->key, count->selected->at,
+                                "'%s': list count is not its %zu selected elements",
+                                d->key, members);
+        }
         return cf_error_set(err, CF_E_VALIDATE, d->key, count->selected->at,
                             "'%s': list count %I has only %zu selected elements",
                             d->key, count->selected->value.u.i, members);
@@ -1011,7 +1093,8 @@ cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names*
                    reserved syntax fails construction, as any invalid
                    value does by default (D-05). */
                 if (cf_outcome_can_win(c->outcome) &&
-                    reference_syntax(cf_ks_arena(ks), c, why, sizeof why) != NULL) {
+                    reference_syntax(cf_ks_arena(ks), c, CF_FALSE, why, sizeof why) !=
+                        NULL) {
                     return cf_error_set(err, CF_E_VALIDATE, e->key,
                                         (c->at != NULL) ? c->at : "", "%s: %s", e->key,
                                         why);

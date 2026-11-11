@@ -566,6 +566,88 @@ static void test_gate(void) {
     }
 }
 
+/* Two secrets from the environment: a password, and a PIN whose contract
+   allows four characters. */
+static cf_config* secret_build(const char* pass, const char* pin) {
+    char        e0[64], e1[64];
+    char*       env[3];
+    cf_error    err = CF_ERROR_INIT;
+    cf_builder* b   = cf_build(NULL);
+    cf_def      d;
+
+    cf_fmt(e0, sizeof e0, "APP_DB__PASSWORD=%s", pass);
+    cf_fmt(e1, sizeof e1, "APP_API__PIN=%s", pin);
+    env[0] = e0;
+    env[1] = e1;
+    env[2] = NULL;
+    cf_builder_env(b, "env", CF_RANK_ENV, "APP_", env);
+    cf_def_init(&d, CF_TYPE_TEXT, "db.password");
+    d.flags = CF_SENSITIVE;
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_TEXT, "api.pin");
+    d.flags      = CF_SENSITIVE;
+    d.max_len    = 4;
+    d.on_invalid = CF_INVALID_FALLBACK;
+    cf_builder_define(b, &d);
+    return cf_builder_create(b, &err);
+}
+
+/* Whether any finding carries a marker. */
+static cf_bool secret_shown(cf_doctor* d) {
+    size_t i;
+    for (i = 0; i < cf_doctor_count(d); ++i) {
+        const cf_finding* f = cf_doctor_finding(d, i);
+        if (strstr(f->message, "MARKER") != NULL ||
+            (f->at != NULL && strstr(f->at, "MARKER") != NULL)) {
+            return CF_TRUE;
+        }
+    }
+    return CF_FALSE;
+}
+
+/* In process, Doctor reads a full report - cf_doctor_lint and
+   cf_doctor_diff write one with every value - and a secret in it is
+   still compared by its digest and never shown: not in a finding, and
+   not in the error the live-reload gate hands cf_live to log. */
+static void test_secret_unshown(void) {
+    cf_error          err = CF_ERROR_INIT;
+    cf_config*        a   = secret_build("MARKER-ALPHA-7731", "MARKER-CHARLIE-7731");
+    cf_config*        b   = secret_build("MARKER-BRAVO-7731", "1234");
+    cf_doctor*        d   = cf_doctor_new();
+    cf_doctor_gate    g   = CF_DOCTOR_GATE_INIT;
+    const cf_finding* f;
+
+    check(a != NULL && b != NULL && d != NULL, "two configurations with secrets");
+    if (a == NULL || b == NULL || d == NULL) {
+        cf_config_free(a);
+        cf_config_free(b);
+        cf_doctor_free(d);
+        return;
+    }
+    check(cf_doctor_diff(d, a, b, &err), "are compared in-process");
+    f = find(d, "CFD014", "db.password");
+    check(f != NULL && strstr(f->message, "by digest") != NULL,
+          "the passwords differ, by digest");
+    check(find(d, "VALUE", "db.password") == NULL, "and not as a value diff");
+    check(!secret_shown(d), "and no finding of the diff shows a secret");
+    cf_doctor_free(d);
+
+    d = cf_doctor_new();
+    check(d != NULL && cf_doctor_lint(d, a, "production", &err), "one is linted");
+    f = (d != NULL) ? find(d, "CFD006", "api.pin") : NULL;
+    check(f != NULL, "the PIN its contract refused is found");
+    check(d != NULL && !secret_shown(d), "and no finding of the lint shows it");
+    cf_doctor_free(d);
+
+    g.profile = "production";
+    check(!cf_doctor_live_check(&g, NULL, a, &err), "the gate refuses it");
+    check(strstr(err.message, "CFD006") != NULL &&
+              strstr(err.message, "MARKER") == NULL,
+          "naming the rule, and not the secret");
+    cf_config_free(a);
+    cf_config_free(b);
+}
+
 static void test_synthesized_list_count(void) {
     static char  a0[] = "app", a1[] = "--tokens=list-canary";
     static char* argv[] = {a0, a1};
@@ -1176,6 +1258,7 @@ int main(void) {
 #if CF_WITH_REPORT && CF_WITH_JSON
     test_lint();
     test_gate();
+    test_secret_unshown();
     test_baseline_and_severity();
     test_diff();
     test_origin_drift();
