@@ -159,8 +159,9 @@ of one program could register different codecs under one name.
 
 What a configuration library needs that C89 has no answer for lives
 behind `cf_platform.h`: the environment, UTF-8 arguments, a directory
-listing, file stamps, and a handle to wait on for changes. The last was
-added this way, and the recipe held:
+listing, file stamps, creating a file only its owner can read (a new
+store), and a handle to wait on for changes. The last was added this
+way, and the recipe held:
 
 1. Declare the neutral function and a `cf_platform_has_*` query in
    `cf_platform.h`. The query matters: a caller has to be able to say

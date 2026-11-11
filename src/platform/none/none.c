@@ -78,6 +78,16 @@ int cf_platform_world_readable(const char* path) {
     return -1;
 }
 
+cf_bool cf_platform_has_private_create(void) {
+    return CF_FALSE;
+}
+
+int cf_platform_create_private(const char* path, cf_error* err) {
+    cf_error_set(err, CF_E_CAPABILITY, NULL, path,
+                 "this build cannot create a file only its owner can read");
+    return -1;
+}
+
 /* There is no registry here, and a source that read none would look
    like an empty one. */
 cf_bool cf_platform_has_registry(void) {
