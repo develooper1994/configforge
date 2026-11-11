@@ -43,7 +43,7 @@ jobs:
   # built: the version cf_version.h says, and a CHANGELOG section for it
   # that no longer says "unreleased".
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: The tag, the build and the CHANGELOG agree
@@ -58,7 +58,7 @@ jobs:
 
   amalgamation:
     needs: check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Amalgamation
@@ -73,7 +73,7 @@ jobs:
 
   linux-musl:
     needs: check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     container: alpine:3.20
     steps:
       - run: apk add --no-cache build-base cmake ninja git python3 tar
@@ -159,7 +159,7 @@ jobs:
   publish:
     needs: [amalgamation, linux-musl, windows, macos]
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # The attestation below: a signed statement of which workflow, commit
     # and runner built each file, which `gh attestation verify <file>
     # -R develooper1994/configforge` checks.
