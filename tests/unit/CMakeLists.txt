@@ -225,8 +225,8 @@ if(CF_WITH_CXX)
     configforge_apply_analysis(${t})
     add_test(NAME unit.${t} COMMAND ${t})
   endforeach()
-  add_test(NAME unit.test_wrapper_write.rsp
-           COMMAND test_wrapper_write --rsp @cf_wrsp_args.txt)
+  add_test(NAME unit.test_wrapper_write.rsp COMMAND test_wrapper_write --rsp
+                                                    @cf_wrsp_args.txt)
   add_test(NAME unit.test_wrapper_write.rsp_absent
            COMMAND test_wrapper_write --rsp @cf_wrsp_absent.txt)
 
@@ -308,8 +308,8 @@ add_test(NAME unit.test_lex.utf8 COMMAND test_lex --utf8 "çğı")
 # real ones, as above, so each case is its own run: a file that is there,
 # and one that is not.
 add_test(NAME unit.test_lex.rsp COMMAND test_lex --rsp @cf_rsp_args.txt)
-add_test(NAME unit.test_lex.rsp_absent
-         COMMAND test_lex --rsp @cf_rsp_absent.txt)
+add_test(NAME unit.test_lex.rsp_absent COMMAND test_lex --rsp
+                                               @cf_rsp_absent.txt)
 
 # A ConfigMap is updated through symbolic links, which only POSIX has.
 if(UNIX)
