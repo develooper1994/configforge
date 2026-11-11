@@ -624,12 +624,16 @@ that needs the live configuration rather than its record.
 
 ## Open decisions
 
-* **Response files.** `@file` arguments are expanded by default in
-  `cf_app`, so an untrusted positional argument can inject configuration
-  and probe for files. Should they be opt-in? It is an interface change,
-  so it is decided before it is made.
-* **Repository settings.** Dependabot alerts and secret scanning are
-  off. Turn them on, or decide why not.
+None. Two were decided by the owner on 2026-11-11:
+
+* **Response files become opt-in.** `@file` arguments are expanded by
+  default in `cf_app`, so an untrusted positional argument can inject
+  configuration and probe for files. Decided: a program asks for them.
+  Chosen, not built: it is an interface change, so it takes a
+  D-number, a CHANGELOG entry that says what a program relying on the
+  default must now do, and the Guide's page on the command line.
+* **Repository settings.** Dependabot alerts, secret scanning and its
+  push protection are on, since 2026-11-11.
 
 The last decision before these, arrays in INI, was made on 2026-11-05:
 C style; the plan above, item 4.
