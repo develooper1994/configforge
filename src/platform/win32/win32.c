@@ -197,6 +197,26 @@ int cf_platform_world_readable(const char* path) {
     return -1; /* see cf_platform.h */
 }
 
+/* A name in `dir` that does not convert to a slot, named by as much of
+   its start as an error message has room for: 60 UTF-16 units are at
+   most 180 bytes of UTF-8, and a pair is never cut in half. */
+static void win32_name_error(const char* dir, const wchar_t* name, cf_error* err) {
+    char head[192];
+    int  take = (int)wcslen(name);
+
+    if (take > 60) {
+        take = 60;
+        if (name[take - 1] >= 0xD800 && name[take - 1] <= 0xDBFF) {
+            --take;
+        }
+    }
+    take = WideCharToMultiByte(CP_UTF8, 0, name, take, head, (int)sizeof head - 1, NULL,
+                               NULL);
+    head[(take > 0) ? take : 0] = '\0';
+    cf_error_set(err, CF_E_SOURCE, NULL, dir, "a name in '%s' is too long: '%s...'",
+                 dir, head);
+}
+
 int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], int max,
                          cf_error* err) {
     wchar_t          pattern[CF_PLATFORM_NAME_MAX];
@@ -226,13 +246,20 @@ int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], 
             continue;
         }
         if (n >= max) {
+            cf_error_set(err, CF_E_SOURCE, NULL, path,
+                         "'%s' holds more than %d files, the most a directory may",
+                         path, max);
+            n = -2;
             break;
         }
         /* Back to UTF-8, which is what every name is above this layer.
-           A name that does not fit is skipped, as on POSIX. */
+           NTFS allows a name whose UTF-8 does not fit a slot - 171 CJK
+           characters - and that is an error naming it, not a skip. */
         if (WideCharToMultiByte(CP_UTF8, 0, fd.cFileName, -1, names[n],
                                 CF_PLATFORM_NAME_MAX, NULL, NULL) <= 0) {
-            continue;
+            win32_name_error(path, fd.cFileName, err);
+            n = -2;
+            break;
         }
         ++n;
     } while (FindNextFileW(h, &fd) != 0);
@@ -279,10 +306,13 @@ static cf_bool win32_is_sep(char c) {
     return (c == '\\' || c == '/') ? CF_TRUE : CF_FALSE;
 }
 
-/* One level up, in place. False at the top: ".", "C:\" and "\" have
-   nowhere to go. */
+/* One level up, in place. False at the top: ".", "C:\", "\" and "C:"
+   have nowhere to go. "C:" is the end of a drive-relative path, and
+   was taken for a step up that left it as it was: on a drive that is
+   not there, the walk up tried it again for ever. */
 static cf_bool win32_up(char* dir) {
     size_t len = strlen(dir);
+    size_t top;
 
     while (len > 1 && win32_is_sep(dir[len - 1]) && dir[len - 2] != ':') {
         dir[--len] = '\0';
@@ -291,12 +321,16 @@ static cf_bool win32_up(char* dir) {
         (len == 3 && dir[1] == ':' && win32_is_sep(dir[2]))) {
         return CF_FALSE;
     }
+    top = len;
     while (len > 0 && !win32_is_sep(dir[len - 1]) && dir[len - 1] != ':') {
         --len;
     }
     if (len == 0) {
         memcpy(dir, ".", 2);
     } else if (dir[len - 1] == ':' || len == 1 || dir[len - 2] == ':') {
+        if (len == top) {
+            return CF_FALSE; /* "C:" itself: nothing was taken off */
+        }
         dir[len] = '\0'; /* keep "C:", "C:\" and "\" whole */
     } else {
         dir[len - 1] = '\0';

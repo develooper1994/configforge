@@ -5,8 +5,88 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ## 1.4.1 — unreleased
 
+### Security
+
+- **Doctor printed a sensitive key's value from a full report.** With
+  full (not blind) reports, `doctor diff` wrote a sensitive key's two
+  values in text, in SARIF and in the Markdown the GitHub Action posts
+  as a pull-request comment; CFD017, CFD006, `dump` and `explain` did
+  too, and a CFD006 refusal in the live-reload gate, which always lints
+  a full report, put the value into the error `cf_live` logs. The
+  documents promised digests only, and that held only for blind reports.
+  Every finding and listing now goes by the key's sensitive flag.
+  **Published versions up to 1.4.0 are affected**: a full report's diff
+  posted to a pull request by one of them should be treated as having
+  shown the secret.
+- **A `CF_SENSITIVE` value is no longer quoted in a reason.** A value
+  with a stray `${`, or one naming a key with no value, was refused with
+  up to 40 bytes of it in the reason, which reached `cf_error`,
+  `explain()` and a blind report's `reason`; the reason now quotes
+  nothing. A sensitive list's length was printed in a shape error, and
+  no longer is.
+- **A deprecated name takes `CF_SENSITIVE` from the key that replaced
+  it**, through chains of renames. Before, a secret written under the old
+  name showed in clear in `explain()`, in a blind report and in a diff,
+  and `${old.name}` from a plain key was accepted.
+- **Doctor's text output escapes control characters**, so a value in a
+  report cannot start a GitHub workflow command in the Actions log, and
+  its Markdown no longer forms @mentions or links from values. `dump`
+  and `explain` escape every field they print, and a secret's refusal
+  reason is shown as "invalid", since a report from 1.4.0 or before can
+  quote the value in it.
+- **The action takes for Doctor's only a comment written by its own
+  account** (`github-actions[bot]`, or the new `comment-author` input).
+  The marker alone let anyone's comment be taken for it, so Doctor's
+  findings were never posted. The CI workflow's token is read-only,
+  which closes the 20 CodeQL "missing workflow permissions" alerts, and
+  the release workflow's build jobs no longer hold `contents: write`.
+  Every action the workflows use is pinned to a commit, with its tag in
+  a comment for Dependabot to move: a tag can be pointed elsewhere, and
+  two of them run with a token that writes.
+- A `${}` expansion is bounded by `CF_EXPAND_MAX` (1 MiB, `cf_define.h`,
+  D-77): two dozen doubling lines could make gigabytes, and on a 32-bit
+  `size_t` the measured size could wrap and the copy overrun the heap.
+  All the expansions of one configuration together are bounded by
+  `CF_EXPAND_TOTAL_MAX`, 16 MiB: one value just under the per-key limit,
+  named by ten thousand short lines, made gigabytes with no key over it.
+- A YAML alias is bounded in bytes as well as events, 64 times the
+  document plus 1 MiB (D-63): one large scalar aliased thousands of
+  times made a megabyte of input copy gigabytes.
+- A drop-in or secrets directory no longer loses files without a word
+  (D-78), below.
+- A SENSITIVE `setting()` in the Python binding is left out of its
+  dataclass's `repr`.
+
 ### Fixed
 
+- **A reference to a key whose own expansion was refused**, with nothing
+  to fall back to, is refused instead of read through NULL, which was a
+  crash.
+- **A name anchored again in YAML takes over its entry** instead of
+  lengthening the lookup chain.
+- **A real past the largest double is refused**: `1e309` in JSON or
+  TOML, or an integer of 310 digits, entered the key space as infinity
+  and was written back as `"a": ` with nothing after it.
+- **A literal of hundreds of digits no longer becomes a wrong value**
+  when its digits overflow the parser's 2048-bit integer: digits past the
+  290th move the exponent and set the rounding. Known limit: a literal
+  of more than 290 digits lying exactly on a halfway point may be one
+  unit in the last place off. `0e999` now reads as 0.
+- **A section of many distinct `name[]` arrays in INI no longer takes
+  quadratic time**: 60,000 lines took a minute and take seconds. The
+  reader remembers the section's names in the sink's work space, and
+  rescans as before only when none is lent.
+- **A drop-in or secrets directory no longer loses files without a
+  word** (D-78). Past 256 files the listing stopped at whatever the disk
+  handed over first, so a `99-override.ini` could vanish; it is now an
+  error naming the directory and the limit, which `CF_OPTIONAL` does not
+  excuse. A name too long to carry, and an entry that is not a file (a
+  FIFO, a socket, a link to nothing), are errors that name it; a FIFO no
+  longer hangs `cf_create`, a reload or the kqueue watcher. Links are
+  still followed, so Kubernetes mounts work as before; subdirectories are
+  skipped on every platform. On Windows a watch on a drive-relative path
+  to a missing drive (`Q:app.ini`) returns an error instead of looping
+  for ever.
 - **A document that starts with a UTF-8 byte order mark** - as Windows
   editors write one - is read by the TOML, INI, JSON and JSON5 readers,
   which refused it, as the `.properties` and YAML readers already did.

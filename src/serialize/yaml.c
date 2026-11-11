@@ -17,8 +17,9 @@
  * Anchors and aliases are read (D-63): an anchored node's events are
  * recorded in the sink's workspace and an alias replays them, each value
  * keeping the place it was written, so explain() names the one line it
- * came from; an alias expands to a bounded multiple of the document, so
- * a "billion laughs" is refused in linear time. The core schema's tags
+ * came from; an alias expands to a bounded multiple of the document, in
+ * events and in bytes of text, so a "billion laughs" is refused in linear
+ * time and memory. The core schema's tags
  * (!!str, !!int, !!float, !!bool, !!null, !!map, !!seq) are honoured.
  * What a configuration has no place for is refused by name:
  *
@@ -110,6 +111,18 @@ typedef struct yaml_anchor {
 #define YAML_ALIAS_FACTOR 64u
 #define YAML_ALIAS_FLOOR 4096u
 
+/* And to at most this many bytes of scalar text per byte of the document,
+   with a floor. Counting events alone lets one large scalar aliased a few
+   thousand times copy gigabytes into the configuration from a megabyte of
+   input; every replayed scalar is copied, so its bytes are what memory
+   follows. 64 times matches the event rule and leaves room for what
+   anchors are for: an anchor of a few kilobytes of shared defaults
+   reused dozens of times stays well under it, and the 1 MiB floor lets a
+   small document reuse a block freely. A megabyte of input can then
+   become at most about 65 MiB of text, not 4 GiB. */
+#define YAML_ALIAS_BYTES_FACTOR 64u
+#define YAML_ALIAS_BYTES_FLOOR ((size_t)1024u * 1024u)
+
 typedef struct yaml_scan {
     const char*        file;
     const cf_doc_sink* out;
@@ -135,6 +148,7 @@ typedef struct yaml_scan {
     int           open[CF_MAX_DEPTH + 1]; /* anchors whose node is open */
     int           nopen;
     unsigned long read, replayed;
+    size_t        bytes, max_bytes; /* scalar text replayed, and its bound */
 } yaml_scan;
 
 static cf_bool yaml_fail_at(yaml_scan* s, unsigned line, unsigned col,
@@ -258,6 +272,23 @@ static cf_bool yaml_anchor_open(yaml_scan* s, unsigned line, unsigned col,
     }
     if (s->nopen > CF_MAX_DEPTH) {
         return yaml_fail_at(s, line, col, "nesting is too deep");
+    }
+    /* A name anchored again takes over its entry: an alias means the
+       latest definition, so the older one can never be found again, and
+       an entry per definition would make every lookup in that bucket walk
+       them all. An entry whose node is still open is kept - its recording
+       is not finished - and the new one goes in front of it; there are no
+       more of those than levels of nesting. */
+    i = yaml_find(s, name, n);
+    if (i != 0 && s->anchors[i - 1u].done) {
+        a                 = &s->anchors[i - 1u];
+        a->first          = (cf_u32)s->nrecs;
+        a->count          = 0;
+        a->done           = 0;
+        a->depth          = s->depth + 1;
+        s->open[s->nopen] = (int)(i - 1u);
+        ++s->nopen;
+        return CF_TRUE;
     }
     if (s->nanchors + 1 > s->canchors) {
         size_t       old     = s->canchors;
@@ -573,6 +604,7 @@ static cf_bool yaml_alias(yaml_scan* s, const char* name, size_t n, unsigned lin
                           unsigned col) {
     cf_u32      i = yaml_find(s, name, n), k;
     yaml_anchor a;
+    size_t      bytes = 0;
 
     ++s->read;
     if (i == 0) {
@@ -587,6 +619,17 @@ static cf_bool yaml_alias(yaml_scan* s, const char* name, size_t n, unsigned lin
         return yaml_fail_at(s, line, col,
                             "aliases expand to far more than the document holds");
     }
+    /* The text the replay copies, keys included, counted before any of it
+       is: an anchor's recordings sit in a pool of at most 4 GiB, so the
+       sum does not wrap, and the comparison is written not to. */
+    for (k = 0; k < a.count; ++k) {
+        bytes += s->recs[a.first + k].n;
+    }
+    if (bytes > s->max_bytes - s->bytes) {
+        return yaml_fail_at(s, line, col,
+                            "aliases expand to far more than the document holds");
+    }
+    s->bytes += bytes;
     s->replayed += a.count;
     for (k = 0; k < a.count; ++k) {
         /* Copied out: replaying records into the same array, which may
@@ -668,6 +711,11 @@ static void yaml_scan_init(yaml_scan* s, const cf_blob* in, const cf_doc_sink* o
     s->out   = out;
     s->err   = err;
     s->depth = -1;
+    /* Saturated rather than wrapped, for a document near SIZE_MAX. */
+    s->max_bytes =
+        (in->n > ((size_t)-1 - YAML_ALIAS_BYTES_FLOOR) / YAML_ALIAS_BYTES_FACTOR)
+            ? (size_t)-1
+            : in->n * YAML_ALIAS_BYTES_FACTOR + YAML_ALIAS_BYTES_FLOOR;
     s->work =
         (out->size >= offsetof(cf_doc_sink, reserve_work) + sizeof out->reserve_work &&
          out->reserve_work != NULL)

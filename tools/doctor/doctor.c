@@ -33,15 +33,50 @@
 #include <stdio.h>
 #include <string.h>
 
+/* One field of a line of text output, padded to `width` as printf's
+   "%-*s" would be. Text from a report goes to a terminal and a CI log,
+   where a line that begins "::" is a GitHub Actions workflow command;
+   a control character is written as a visible escape, so nothing a
+   report says can start a line of its own. */
+static void text_field(const char* t, int width) {
+    int n = 0;
+
+    for (; t != NULL && *t != '\0'; ++t) {
+        unsigned char ch = (unsigned char)*t;
+        if (ch == '\n') {
+            fputs("\\n", stdout);
+            n += 2;
+        } else if (ch == '\r') {
+            fputs("\\r", stdout);
+            n += 2;
+        } else if (ch == '\t') {
+            fputs("\\t", stdout);
+            n += 2;
+        } else if (ch < 0x20 || ch == 0x7f) {
+            printf("\\x%02x", (unsigned)ch);
+            n += 4;
+        } else {
+            putchar((int)ch);
+            ++n;
+        }
+    }
+    for (; n < width; ++n) {
+        putchar(' ');
+    }
+}
+
 static int baseline_stale(const cf_doctor* D) {
     size_t      i;
     const char* rule;
     const char* key;
 
     for (i = 0; cf_doctor_stale(D, i, &rule, &key); ++i) {
-        printf("%-7s %-7s %-28s %s\n", rule, "stale", key,
-               "in the baseline and no longer found: either it was fixed "
-               "or the rule stopped working");
+        text_field(rule, 7);
+        printf(" %-7s ", "stale");
+        text_field(key, 28);
+        fputs(" in the baseline and no longer found: either it was fixed or the "
+              "rule stopped working\n",
+              stdout);
     }
     return (int)i;
 }
@@ -124,11 +159,21 @@ static void print_sarif(const cf_doctor* D, const char* report_path) {
 /* One table cell: a key, a place or a message is text somebody else
    wrote, and a pull-request comment renders it. A '|' would end the
    cell, '<' open a tag, '*', '_', '`' and '[' format or link; each is
-   escaped, and a line break, which would end the row, is a space. */
+   escaped, and a line break, which would end the row, is a space.
+   On a forge a comment does more than render: "@org/team" notifies a
+   team and a bare URL becomes a link. The '@' is written as an entity
+   followed by a zero-width space, and "://" with one after its colon,
+   which is how a mention and an autolink are kept from forming; a
+   reader sees the same text. */
 static void md_cell(const char* t) {
     for (; t != NULL && *t != '\0'; ++t) {
         unsigned char ch = (unsigned char)*t;
-        if (ch == '<') {
+        if (ch == '@') {
+            fputs("&#64;&#8203;", stdout);
+        } else if (ch == ':' && t[1] == '/' && t[2] == '/') {
+            fputs(":&#8203;&#47;&#47;", stdout);
+            t += 2;
+        } else if (ch == '<') {
             fputs("&lt;", stdout);
         } else if (ch == '>') {
             fputs("&gt;", stdout);
@@ -212,8 +257,11 @@ static void print_markdown(const cf_doctor* D, const char* command, char** repor
 static void print_text(const cf_doctor* D) {
     size_t i;
     for (i = 0; i < D->nfound; ++i) {
-        printf("%-7s %-7s %-28s %s\n", D->found[i].id, D->found[i].level,
-               D->found[i].key, D->found[i].msg);
+        printf("%-7s %-7s ", D->found[i].id, D->found[i].level);
+        text_field(D->found[i].key, 28);
+        putchar(' ');
+        text_field(D->found[i].msg, 0);
+        putchar('\n');
     }
 }
 
@@ -221,32 +269,62 @@ static void print_text(const cf_doctor* D) {
  * Commands
  * ------------------------------------------------------------------ */
 
+/* One candidate as dump and explain list it: source, value - never a
+   secret's, which a full report holds - outcome, and place. */
+static void cand_line(const rkey* k, const cand* c) {
+    fputs("  ", stdout);
+    text_field(c->source, 12);
+    putchar(' ');
+    text_field(doctor_shown(k, c), 22);
+    putchar(' ');
+    text_field((c->outcome != NULL) ? c->outcome : "selected", 0);
+    if (c->at != NULL) {
+        fputs("   ", stdout);
+        text_field(c->at, 0);
+    }
+}
+
+/* A key's type after its name, as dump and explain show it. The type is
+   a report's word, so it goes through text_field like the rest. */
+static void type_field(const rkey* k) {
+    if (k->type != NULL) {
+        fputs("  (", stdout);
+        text_field(k->type, 0);
+        putchar(')');
+    }
+}
+
 static void cmd_dump(const report* r) {
     size_t i, j;
 
-    printf("%s  mode=%s profile=%s  %u keys%s%s\n\n", r->path,
-           (r->mode != NULL) ? r->mode : "?", (r->profile != NULL) ? r->profile : "-",
-           (unsigned)r->nkeys, (r->fingerprint != NULL) ? "  " : "",
-           (r->fingerprint != NULL) ? r->fingerprint : "");
+    /* Every field here but the count is text from the report, or a path
+       a workflow may have taken from one. */
+    text_field(r->path, 0);
+    fputs("  mode=", stdout);
+    text_field((r->mode != NULL) ? r->mode : "?", 0);
+    fputs(" profile=", stdout);
+    text_field((r->profile != NULL) ? r->profile : "-", 0);
+    printf("  %u keys", (unsigned)r->nkeys);
+    if (r->fingerprint != NULL) {
+        fputs("  ", stdout);
+        text_field(r->fingerprint, 0);
+    }
+    fputs("\n\n", stdout);
 
     for (i = 0; i < r->nkeys; ++i) {
         const rkey* k = &r->keys[i];
         char        name[CF_KEY_MAX];
         doctor_key_name(k, name, sizeof name);
 
-        printf("%s", name);
-        if (k->type != NULL) {
-            printf("  (%s)", k->type);
-        }
+        text_field(name, 0);
+        type_field(k);
         if (k->sensitive) {
             printf("  [sensitive]");
         }
         printf("\n");
         for (j = 0; j < k->nc; ++j) {
-            printf("  %-12s %-22s %s%s%s\n", k->c[j].source, doctor_shown(&k->c[j]),
-                   (k->c[j].outcome != NULL) ? k->c[j].outcome : "selected",
-                   (k->c[j].at != NULL) ? "   " : "",
-                   (k->c[j].at != NULL) ? k->c[j].at : "");
+            cand_line(k, &k->c[j]);
+            printf("\n");
         }
     }
 }
@@ -259,25 +337,26 @@ static int cmd_explain(const report* r, const char* key) {
         fprintf(stderr, "doctor: '%s' is not in %s\n", key, r->path);
         return 2;
     }
-    printf("%s", key);
-    if (k->type != NULL) {
-        printf("  (%s)", k->type);
-    }
+    text_field(key, 0);
+    type_field(k);
     printf("\n");
     for (j = 0; j < k->nc; ++j) {
         const rsrc* s = doctor_find_source(r, k->c[j].source);
 
-        printf("  %-12s %-22s %s%s%s", k->c[j].source, doctor_shown(&k->c[j]),
-               (k->c[j].outcome != NULL) ? k->c[j].outcome : "selected",
-               (k->c[j].at != NULL) ? "   " : "",
-               (k->c[j].at != NULL) ? k->c[j].at : "");
+        cand_line(k, &k->c[j]);
         /* The format a document was read as, and how it was chosen. */
         if (s != NULL && s->format != NULL) {
-            printf("   [%s: %s]", s->format,
-                   (s->format_how != NULL) ? s->format_how : "?");
+            fputs("   [", stdout);
+            text_field(s->format, 0);
+            fputs(": ", stdout);
+            text_field((s->format_how != NULL) ? s->format_how : "?", 0);
+            putchar(']');
         }
-        printf("%s%s\n", (k->c[j].reason != NULL) ? "   " : "",
-               (k->c[j].reason != NULL) ? k->c[j].reason : "");
+        if (k->c[j].reason != NULL) {
+            fputs("   ", stdout);
+            text_field(doctor_reason(k, &k->c[j]), 0);
+        }
+        printf("\n");
     }
     return 0;
 }

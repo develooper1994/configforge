@@ -106,7 +106,17 @@ CF_API char* const* cf_platform_args(int argc, char* const* argv, cf_arena* aren
 /* Names only, no path, no order, dotfiles already skipped. Returns the
    count, or -1 with `err` set. The caller sorts, because the order
    decides which file wins and that is the caller's rule, not the
-   platform's. */
+   platform's.
+
+   Only files are listed, and links are followed to see what they
+   name, because a Kubernetes mount is links to files. A subdirectory
+   is skipped. Anything else - a FIFO, a socket, a device, a link to
+   nothing - is -2 with `err` naming it: opened as a file, a FIFO waits
+   for a writer for ever. -2 is also more than `max` files, or a name
+   too long for a slot. -1 is a directory that cannot be read at all,
+   which an optional source may accept; -2 is one that was read and
+   cannot be handed over whole, which nothing should, because the file
+   left out could be the one that decides a value. */
 CF_API int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX],
                                 int max, cf_error* err);
 

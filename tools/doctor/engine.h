@@ -155,7 +155,13 @@ cf_bool doctor_load_text(report* r, cf_doctor* D, const char* text, size_t n,
 void    doctor_release(report* r);
 
 const rkey* doctor_find_key(const report* r, const char* key, size_t n);
-const char* doctor_shown(const cand* c);
+/* A candidate's value as a finding or a listing may show it:
+   "<redacted>" for a sensitive key, or a value the report left out. */
+const char* doctor_shown(const rkey* k, const cand* c);
+/* What may be said of why `c` was refused: its reason, or for a
+   sensitive key a fixed word, since a report from an older library can
+   quote the value in it. "invalid" when there is none. */
+const char* doctor_reason(const rkey* k, const cand* c);
 /* The report's entry for the source called `name`, or NULL. */
 const rsrc* doctor_find_source(const report* r, const char* name);
 cf_bool     doctor_place_of(const char* at, size_t* len, long* pos);

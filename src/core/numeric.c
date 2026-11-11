@@ -151,9 +151,10 @@ cf_bool cf_text_to_i64(const char* s, size_t len, cf_i64* out, size_t* end) {
 /* ------------------------------------------------------------------ *
  * Fixed-capacity big integer.
  *
- * The widest quantity reached is about 2^1075 for subnormal inputs,
- * which is 34 limbs. 64 limbs leaves generous margin and keeps each
- * value at 260 bytes.
+ * The digit generator reaches about 2^1075 for subnormal inputs, which
+ * is 34 limbs. The parser reaches further, to a 10^613 denominator of
+ * 2037 bits, and CF_PARSE_DIGITS is chosen so that it stops there; 64
+ * limbs keeps each value at 260 bytes.
  * ------------------------------------------------------------------ */
 
 #define CF_BIG_LIMBS 64
@@ -168,10 +169,10 @@ static void big_zero(cf_big* b) {
 }
 
 /* The limb count is bounded by the format, not by luck: 2^1075 is the
-   widest quantity the algorithm reaches, which is 34 limbs of the 64
-   allocated. Enforcing it anyway costs one comparison per growth and
-   turns "cannot happen" into "does not happen" - the difference the
-   static analyser was pointing at when it could not prove the bound
+   widest quantity the digit generator reaches, and the parser's bound is
+   CF_PARSE_DIGITS, both inside the 64 limbs allocated. Enforcing it anyway costs one
+   comparison per growth and turns "cannot happen" into "does not happen" - the
+   difference the static analyser was pointing at when it could not prove the bound
    through big_add and big_shl. */
 static void big_clamp(cf_big* b) {
     if (b->n > CF_BIG_LIMBS) {
@@ -652,7 +653,20 @@ static const double cf_pow10_exact[23] = {
     1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10, 1e11,
     1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22};
 
-static double cf_slow_path(const cf_big* digits, int exp10, int neg) {
+/* At most this many significant digits go into the big integer; the rest
+   only move the exponent and, when any is not zero, set a sticky flag.
+   The bound is the big integer's width, not the 767 digits a double's
+   halfway points can need: a value cf_text_to_f64 lets through is at
+   least 10^-324, so its denominator is at most 10^(digits + 323), and
+   that has to fit in 2048 bits with one to spare for the long
+   division's shift: 10^613 is 2037 bits. Truncation with the sticky
+   flag rounds every input of up to 290 digits correctly, and a longer
+   one correctly unless its first 290 digits are those of a halfway
+   point between two doubles and the rest are not - an input built for
+   the purpose, and still within one unit in the last place. */
+#define CF_PARSE_DIGITS 290
+
+static double cf_slow_path(const cf_big* digits, int exp10, int neg, int lost) {
     cf_big N, D;
     cf_u64 q = 0;
     int    i, bn, bd, shiftN, shiftD, sticky;
@@ -701,7 +715,9 @@ static double cf_slow_path(const cf_big* digits, int exp10, int neg) {
         }
         big_shl(&N, 1);
     }
-    sticky = !big_is_zero(&N);
+    /* A non-zero digit the parser dropped puts the true value above
+       N/D, which matters only when N/D is exactly halfway. */
+    sticky = !big_is_zero(&N) || lost;
 
     /* q holds 55 bits; round to 53, half to even. */
     {
@@ -729,12 +745,25 @@ static double cf_slow_path(const cf_big* digits, int exp10, int neg) {
     return neg ? -r : r;
 }
 
+/* Where the digit count and the power of ten stop counting. Each moves
+   by one a digit, and text of more than 2^31 digits would overflow an
+   int. Past these the answer is already decided: a digit count beyond
+   CF_PARSE_DIGITS and 19 is read only as "more than both", and a power
+   of ten beyond ten million stays beyond the 309 and -400 the range
+   checks test even after the exponent part, which is read to no more
+   than 999999, moves it, so it is refused as it was. A count that
+   stops changes no comparison made of it, and every result is as
+   before. */
+#define NUMERIC_NDIG_CLAMP (CF_PARSE_DIGITS + 20)
+#define NUMERIC_EXP10_CLAMP 10000000
+
 cf_bool cf_text_to_f64(const char* s, size_t len, double* out, size_t* end) {
     cf_big digits;
     cf_u64 fast = 0;
     size_t i    = 0;
-    int    neg = 0, any = 0, fast_ok = 1, ndig = 0;
+    int    neg = 0, any = 0, fast_ok = 1, ndig = 0, dropped = 0;
     int    exp10   = 0;
+    int    mag     = 0;
     long   exppart = 0;
 
     if (s == NULL || out == NULL || len == 0) {
@@ -750,18 +779,26 @@ cf_bool cf_text_to_f64(const char* s, size_t len, double* out, size_t* end) {
     while (i < len && cf_is_digit((unsigned char)s[i])) {
         cf_u32 dv = (cf_u32)(s[i] - '0');
         any       = 1;
-        big_mul_u32(&digits, 10);
-        if (dv != 0) {
-            cf_big dd;
-            big_set_u64(&dd, (cf_u64)dv);
-            big_add(&digits, &dd);
+        if (ndig >= CF_PARSE_DIGITS) {
+            /* Past the digits kept: it still counts ten times over. */
+            if (exp10 < NUMERIC_EXP10_CLAMP) {
+                ++exp10;
+            }
+            dropped |= (dv != 0);
+        } else {
+            big_mul_u32(&digits, 10);
+            if (dv != 0) {
+                cf_big dd;
+                big_set_u64(&dd, (cf_u64)dv);
+                big_add(&digits, &dd);
+            }
         }
         if (ndig < 19) {
             fast = fast * (cf_u64)10 + (cf_u64)dv;
         } else {
             fast_ok = 0;
         }
-        if (ndig > 0 || dv != 0) {
+        if ((ndig > 0 || dv != 0) && ndig < NUMERIC_NDIG_CLAMP) {
             ++ndig;
         }
         ++i;
@@ -773,6 +810,12 @@ cf_bool cf_text_to_f64(const char* s, size_t len, double* out, size_t* end) {
             cf_u32 dv = (cf_u32)(s[i] - '0');
             cf_big dd;
             any = 1;
+            if (ndig >= CF_PARSE_DIGITS) {
+                /* Past the digits kept: below them, so only sticky. */
+                dropped |= (dv != 0);
+                ++i;
+                continue;
+            }
             big_mul_u32(&digits, 10);
             if (dv != 0) {
                 big_set_u64(&dd, (cf_u64)dv);
@@ -786,7 +829,9 @@ cf_bool cf_text_to_f64(const char* s, size_t len, double* out, size_t* end) {
             if (ndig > 0 || dv != 0) {
                 ++ndig;
             }
-            --exp10;
+            if (exp10 > -NUMERIC_EXP10_CLAMP) {
+                --exp10;
+            }
             ++i;
         }
     }
@@ -840,13 +885,36 @@ cf_bool cf_text_to_f64(const char* s, size_t len, double* out, size_t* end) {
         }
     }
 
-    if (exp10 > 400 || exp10 < -400 - ndig) {
-        /* Far outside the representable range; reject rather than
-           silently producing inf or zero. */
-        return CF_FALSE;
+    if (big_is_zero(&digits)) {
+        /* Zero is zero at any scale, and 10^exp10 need not be built. */
+        *out = neg ? -0.0 : 0.0;
+        return CF_TRUE;
     }
 
-    *out = cf_slow_path(&digits, exp10, neg);
+    /* The value is in [10^(mag-1), 10^mag). From 10^309 up it is past
+       the largest double. Below 10^-324 it is under half the smallest
+       subnormal and rounds to zero, which is the answer down to 10^-400
+       (the bound this function has always had); further down the text
+       is refused as no number anyone meant. */
+    mag = exp10 + ((ndig < CF_PARSE_DIGITS) ? ndig : CF_PARSE_DIGITS);
+    if (mag > 309 || mag < -400) {
+        return CF_FALSE;
+    }
+    if (mag < -323) {
+        *out = neg ? -0.0 : 0.0;
+        return CF_TRUE;
+    }
+
+    /* Between DBL_MAX and 10^309 the rounding can still reach 2^1024,
+       which is infinity: refuse it rather than put a non-finite real
+       into the key space, where nothing could write it back. */
+    {
+        double r = cf_slow_path(&digits, exp10, neg, dropped);
+        if (!(r <= DBL_MAX && r >= -DBL_MAX)) {
+            return CF_FALSE;
+        }
+        *out = r;
+    }
     return CF_TRUE;
 }
 

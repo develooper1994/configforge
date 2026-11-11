@@ -261,6 +261,20 @@ class Dataclasses(unittest.TestCase):
             cf.define(bad, Settings).create()
         self.assertEqual(e.exception.key, "app.workers")
 
+    def test_a_secret_is_not_in_the_repr(self):
+        # A settings object is printed and logged; a field the contract
+        # calls sensitive is left out of what printing it shows.
+        @dataclasses.dataclass
+        class Db:
+            host: str = setting("db.host", "localhost")
+            password: str = setting("db.password", "MARKER-ALPHA-7731", flags=flag.SENSITIVE)
+
+        db = Db()
+        self.assertIn("localhost", repr(db))
+        self.assertNotIn("MARKER", repr(db))
+        self.assertNotIn("MARKER", str(db))
+        self.assertEqual(db.password, "MARKER-ALPHA-7731", "the value itself is kept")
+
     def test_a_field_without_a_key(self):
         @dataclasses.dataclass
         class Bad:

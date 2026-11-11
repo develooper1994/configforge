@@ -354,7 +354,8 @@ order. Each names the later report of the step and is placed where that
 report says the value was set. Comparison is `diff`'s: shown values are
 compared as text, redacted ones by digest, and a step where one report
 has only a digest and the other none to match is reported as not
-comparable rather than as unchanged. No message carries a value or a
+comparable rather than as unchanged. A secret's change says "(by
+digest)" whether the reports are blind or full. No message carries a value or a
 digest, so a history can go into a ticket the reports themselves would
 not. A change is `info`; `--fail-on info` fails a run on any change.
 Every report is read before anything is recorded, so an unreadable one
@@ -562,10 +563,23 @@ steps:
 ```
 
 A pull request from a fork has a token that cannot write a comment; the
-step says so and passes, and the summary has everything. Secrets are
+step says so and passes, and the summary has everything. Only a comment
+written by the action's own account is taken for Doctor's and updated:
+the login the `comment-author` input names, else the one the token says
+it is (a personal token can), else `github-actions[bot]`, which is what
+the workflow's own token comments as. The marker alone is not enough,
+since anyone can write it. Secrets are
 compared by digest and never shown; values that are not secret are, as
-`doctor diff` shows them - take the reports `--blind` to show none. The
-step's exit code is the worst of the lint and the diff at `fail-on`.
+`doctor diff` shows them - take the reports `--blind` to show none. A
+secret is a key its definition marks sensitive, on either side of a
+diff, and that holds for a full report as for a blind one: a full
+report carries the value, and Doctor compares by it, but no finding,
+`dump`, `explain`, history or blame line, and no error the live-reload
+gate gives `cf_live`, ever says it - a changed secret is "sensitive value
+differs (by digest)", a refused one `<redacted>`. Until 1.4.1 a full
+report's secrets were printed by `diff` (VALUE, CFD017), by CFD006, and
+by `dump` and `explain`. The step's exit code is the worst of the lint
+and the diff at `fail-on`.
 
 **Before a commit**, the same as a [pre-commit](https://pre-commit.com)
 hook, for a project that keeps its reports in the repository:
@@ -589,7 +603,13 @@ run - `run.sh`, `comment.sh`, `pre-commit.sh` - are tested by
 
 Output formats: human-readable text, SARIF 2.1.0 (`--format sarif`) and
 Markdown (`--format markdown`), a table whose cells escape what would
-format, link or end a row. SARIF matters
+format, link or end a row. What a report says is text somebody else
+wrote, so each format keeps it from doing more than read: in text a
+control character - a line break above all, after which `::error` would
+be a GitHub Actions workflow command - is written as an escape (`\n`,
+`\r`, `\t`, `\xNN`), and in Markdown an `@` cannot form a mention nor a
+`://` an autolink (each is written as entities with a zero-width space).
+SARIF matters
 more than it looks: it makes findings appear inline on a pull request in most forges
 without any per-forge integration work. A finding that knows where its value was set
 carries the file and line; one that does not - a variable, a command-line argument -

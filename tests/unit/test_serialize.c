@@ -5,6 +5,7 @@
 #include <configforge/configforge.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "cf_test.h"
@@ -201,6 +202,163 @@ static void test_ini_arrays(cf_arena* ar) {
           "a value in braces is text, as it always was: INI has no brace lists");
     v = cf_ks_get(&ks, "server.list", 11);
     check(v != NULL && v->type == CF_TYPE_TEXT, "not even one that looks like a list");
+}
+
+/* How the reader is lent workspace for remembering the array names a
+   section has had: not at all, by a sink that runs out after a number of
+   blocks, or without limit. Each answer must be the same, since running
+   out only sends the reader back to looking over the section's lines. */
+#define INI_WORK_NONE (-1)
+#define INI_WORK_ALL 1000
+static cf_arena* g_ini_work_ar;
+static int       g_ini_work_left;
+
+static void* ini_work_starved(void* ctx, size_t n) {
+    (void)ctx;
+    if (g_ini_work_left <= 0) {
+        return NULL;
+    }
+    --g_ini_work_left;
+    return cf_arena_alloc(g_ini_work_ar, n);
+}
+
+static cf_bool ini_decode_lent(const char* text, cf_keyspace* ks, cf_arena* ar,
+                               int work, cf_error* err) {
+    const cf_codec* c = cf_codec_by_name("ini");
+    cf_flatten      fl;
+    cf_doc_sink     sink;
+    cf_blob         b;
+
+    if (c == NULL) {
+        return CF_FALSE;
+    }
+    cf_blob_mem(&b, text, strlen(text), "doc");
+    cf_flatten_init(&fl, ks, 10);
+    sink = *cf_flatten_sink(&fl);
+    if (work == INI_WORK_NONE) {
+        sink.reserve_work = NULL;
+    } else if (work != INI_WORK_ALL) {
+        g_ini_work_ar     = ar;
+        g_ini_work_left   = work;
+        sink.reserve_work = ini_work_starved;
+    }
+    return c->decode(&b, &sink, err);
+}
+
+/* One document read every way workspace can be lent: refused with
+   `needle` in the message, or read with `key` holding `count`. */
+static void ini_runs(cf_arena* ar, const char* doc, const char* needle, const char* key,
+                     long count, const char* what) {
+    static const int lent[] = {INI_WORK_ALL, INI_WORK_NONE, 0, 1, 2};
+    size_t           i;
+
+    for (i = 0; i < sizeof lent / sizeof lent[0]; ++i) {
+        cf_keyspace     ks;
+        cf_error        err = CF_ERROR_INIT;
+        cf_bool         ok;
+        const cf_value* v;
+
+        cf_ks_init(&ks, ar, 8);
+        ok = ini_decode_lent(doc, &ks, ar, lent[i], &err);
+        ++g_run;
+        if (needle != NULL) {
+            if (ok || strstr(err.message, needle) == NULL) {
+                ++g_fail;
+                printf("FAIL: %s (workspace %d)\n  want \"%s\" in \"%s\"\n", what,
+                       lent[i], needle, ok ? "(accepted)" : err.message);
+            }
+            continue;
+        }
+        if (!ok) {
+            ++g_fail;
+            printf("FAIL: %s (workspace %d)\n  %s\n", what, lent[i], err.message);
+            continue;
+        }
+        cf_ks_resolve(&ks);
+        cf_ks_infer_untyped(&ks);
+        v = cf_ks_get(&ks, key, strlen(key));
+        if (v == NULL || v->type != CF_TYPE_INT || v->u.i != count) {
+            ++g_fail;
+            printf("FAIL: %s (workspace %d)\n  %s is not %ld\n", what, lent[i], key,
+                   count);
+        }
+    }
+}
+
+/* What decides whether a name[] line starts a second run of an array
+   (refused) or carries one on. The reader remembers the names it has
+   seen in a section, so these pin what it remembers and when it forgets. */
+static void test_ini_array_runs(cf_arena* ar) {
+    static char many[512];
+    size_t      n = 0;
+    int         i;
+
+    ini_runs(ar, "x = 1\n\np[] = 1\np[] = 2\nq = 2\np[] = 3\n",
+             "'p[]' again after line 3", NULL, 0,
+             "a second run, named by the first line of the first");
+    ini_runs(ar, "[s]\np[] = 1\nq = 2\nr[] = 1\np[] = 3\n", "'p[]' again after line 2",
+             NULL, 0, "a second run in a section, with another array between");
+    ini_runs(ar, "p[] = 1\r\nq = 2\r\np[] = 3\r\n", "'p[]' again after line 1", NULL, 0,
+             "a second run in a file with CRLF line ends");
+    ini_runs(ar, "p[] = 1\n# a comment\n\np[] = 2\n", NULL, "p.count", 2,
+             "a comment or a blank line does not end a run");
+    ini_runs(ar, "[a]\np[] = 1\n[b]\np[] = 1\np[] = 2\n", NULL, "b.p.count", 2,
+             "the same name in another section is another array");
+    ini_runs(ar, "p[] = 1\nq = 1\n[s]\np[] = 1\n", NULL, "s.p.count", 1,
+             "a section forgets the names before its header");
+    ini_runs(ar, "p[] = 1\nq = 2\nP[] = 3\n", "'P' is not a valid key", NULL, 0,
+             "a name in other case is another name, refused as a key");
+    ini_runs(ar, "p[] = 1\nq = 2\npp[] = 3\nq2 = 1\np[1] = 9\n", NULL, "pp.count", 1,
+             "a name that begins with another is another name");
+    /* What the reader has always done with a carriage return between the
+       brackets and the '=': the run is taken, and not remembered. Pinned
+       so that remembering names does not change it unnoticed. */
+    ini_runs(ar, "p[]\r= 1\nq = 2\np[] = 3\n", NULL, "p.count", 1,
+             "a run written p[]<CR>= is not looked for again");
+
+    /* Enough names that the remembered ones outgrow their first block,
+       so a sink that runs out does so part-way through a section. */
+    for (i = 0; i < 40; ++i) {
+        n += (size_t)sprintf(many + n, "n%d[] = 1\n", i);
+    }
+    n += (size_t)sprintf(many + n, "n3[] = 2\n");
+    ini_runs(ar, many, "'n3[]' again after line 4", NULL, 0,
+             "a second run after the names outgrew their first block");
+}
+
+/* A section of many distinct name[] arrays. Looking for an earlier run of
+   each over every line before it was quadratic: 60,000 lines took tens of
+   seconds. There is no clock here; this is for the suite's timeout to
+   catch that coming back. */
+static void test_ini_many_runs(void) {
+    enum { LINES = 60000 };
+    cf_arena*       ar  = cf_arena_new(NULL, 1 << 16);
+    char*           doc = (char*)malloc((size_t)LINES * 16 + 1);
+    cf_keyspace     ks;
+    cf_error        err = CF_ERROR_INIT;
+    const cf_value* v;
+    size_t          n = 0;
+    int             i;
+
+    if (ar == NULL || doc == NULL) {
+        check(0, "memory for the many-arrays document");
+        free(doc);
+        cf_arena_free(ar);
+        return;
+    }
+    for (i = 0; i < LINES; ++i) {
+        n += (size_t)sprintf(doc + n, "a%d[]=1\n", i);
+    }
+    cf_ks_init(&ks, ar, 16);
+    check(decode("ini", doc, &ks, ar, 10, &err), "a section of many arrays decodes");
+    if (err.message[0] != '\0') {
+        printf("  %s\n", err.message);
+    }
+    cf_ks_resolve(&ks);
+    v = cf_ks_get(&ks, "a59999.count", 12);
+    check(v != NULL, "and the last of them is there");
+    free(doc);
+    cf_arena_free(ar);
 }
 
 /* ---------------------------------------------------------------- */
@@ -959,6 +1117,8 @@ int main(void) {
     test_ini(ar);
     test_ini_errors(ar);
     test_ini_arrays(ar);
+    test_ini_array_runs(ar);
+    test_ini_many_runs();
     test_json(ar);
     test_json_strings(ar);
     test_json_errors(ar);

@@ -90,7 +90,10 @@ static cf_bool dir_read(dir_state* st, const cf_source* s, cf_keyspace* ks,
     }
     n = cf_platform_dir_list(st->path, names, CF_DIR_MAX_FILES, &st->err);
     if (n < 0) {
-        if ((st->flags & CF_OPTIONAL) != 0) {
+        /* -2 is a directory read but not whole: more files than fit, or
+           one that cannot be read as a file. Optional is for a directory
+           that is not there, never for one missing a file. */
+        if (n == -1 && (st->flags & CF_OPTIONAL) != 0) {
             cf_error_clear(&st->err);
             return CF_TRUE;
         }
@@ -103,7 +106,10 @@ static cf_bool dir_read(dir_state* st, const cf_source* s, cf_keyspace* ks,
         cf_blob         blob;
 
         if (cf_fmt(full, sizeof full, "%s/%s", st->path, names[i]) >= sizeof full) {
-            continue;
+            /* Named, not skipped, by the rule below: the file left out
+               could be the one that decides a value. */
+            return cf_error_set(&st->err, CF_E_SOURCE, NULL, st->path,
+                                "a path in '%s' is too long: '%s'", st->path, names[i]);
         }
         codec = cf_codec_among(st->codecs, st->ncodecs, st->format, full);
         if (codec == NULL) {

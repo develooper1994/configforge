@@ -252,6 +252,12 @@ foreach(case post update refused)
                                 "-X PATCH repos/o/r/issues/comments/4242")
     fail("comment: a later push should update the marked comment:\n${calls}")
   endif()
+  # Only a comment the action's own account wrote is its own: the marker
+  # alone would let anyone's comment be taken for Doctor's.
+  if(NOT calls MATCHES "user[.]login == \"github-actions[[]bot[]]\"")
+    fail("comment, ${case}: the search should be for the action's own "
+         "comments:\n${calls}")
+  endif()
   if(case STREQUAL "refused" AND NOT text MATCHES "could not write the comment")
     fail("comment: a token that cannot write should say so:\n${text}")
   endif()

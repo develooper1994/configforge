@@ -648,6 +648,9 @@ static int def_order(const void* a, const void* b) {
     return cf_key_cmp(x->key, strlen(x->key), y->key, strlen(y->key));
 }
 
+static const cf_def* defset_exact(const cf_defset* ds, const char* key, size_t keylen);
+static void          defset_inherit_sensitive(cf_defset* ds);
+
 /* Sorted for the binary search lookups use from now on. qsort, not the
    insertion sort this was: "definition counts are in the tens" was the
    reason given for it, and the benchmark showed ten thousand. Keys are
@@ -662,6 +665,48 @@ void cf_defset_seal(cf_defset* ds) {
     ds->index     = NULL; /* positions moved; the arena keeps the memory */
     ds->index_cap = 0;
     ds->sealed    = CF_TRUE;
+    defset_inherit_sensitive(ds);
+}
+
+/* A deprecated name is as sensitive as the key that replaced it. Its
+   value is the new key's value written under the old name - the rename
+   offers it to the new key - and the old entry stays in the key space,
+   where explain(), the report, a diff and a reference read it by its own
+   definition. Nobody marks the old name CF_SENSITIVE: it was declared to
+   say "use the other one", so it takes that from the other one here,
+   once, and every reader sees it without each being taught. Through a
+   chain of renames too, so it is repeated until nothing changes; each
+   round marks one more or stops, so it ends. */
+static void defset_inherit_sensitive(cf_defset* ds) {
+    struct cf_list_projection* p;
+    cf_bool                    changed = CF_TRUE;
+    size_t                     i;
+
+    while (changed) {
+        changed = CF_FALSE;
+        for (i = 0; i < ds->count; ++i) {
+            cf_def*       d = &ds->defs[i];
+            const cf_def* r;
+            if ((d->flags & CF_SENSITIVE) != 0 || (d->flags & CF_DEPRECATED) == 0 ||
+                d->replaced_by == NULL) {
+                continue;
+            }
+            r = defset_exact(ds, d->replaced_by, strlen(d->replaced_by));
+            if (r != NULL && (r->flags & CF_SENSITIVE) != 0) {
+                d->flags |= CF_SENSITIVE;
+                changed = CF_TRUE;
+            }
+        }
+    }
+    /* A list's elements and length are read by their projections, which
+       copied the flags when the list was defined. */
+    for (p = ds->lists; p != NULL; p = p->next) {
+        const cf_def* d = defset_exact(ds, p->item.key, p->keylen);
+        if (d != NULL && (d->flags & CF_SENSITIVE) != 0) {
+            p->item.flags |= CF_SENSITIVE;
+            p->count.flags |= CF_SENSITIVE;
+        }
+    }
 }
 
 static const cf_def* defset_exact(const cf_defset* ds, const char* key, size_t keylen) {

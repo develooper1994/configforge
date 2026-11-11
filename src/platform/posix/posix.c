@@ -181,6 +181,8 @@ int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], 
                          cf_error* err) {
     DIR*           d;
     struct dirent* e;
+    char           full[CF_PLATFORM_NAME_MAX];
+    struct stat    st;
     int            n = 0;
 
     if (path == NULL || names == NULL) {
@@ -200,12 +202,39 @@ int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], 
                drop-in directory and neither is configuration. */
             continue;
         }
-        if (n >= max) {
+        len = strlen(e->d_name);
+        if (len + 1 > CF_PLATFORM_NAME_MAX ||
+            cf_fmt(full, sizeof full, "%s/%s", path, e->d_name) >= sizeof full) {
+            cf_error_set(err, CF_E_SOURCE, NULL, path,
+                         "a path in '%s' is too long: '%s'", path, e->d_name);
+            n = -2;
             break;
         }
-        len = strlen(e->d_name);
-        if (len + 1 > CF_PLATFORM_NAME_MAX) {
-            continue;
+        /* stat, not lstat: a Kubernetes mount is links to files, and
+           what counts is what a link names. Asked before anything opens
+           it, because opening a FIFO waits for a writer. */
+        if (stat(full, &st) != 0) {
+            cf_error_set(err, CF_E_SOURCE, NULL, full, "cannot read '%s'", full);
+            n = -2;
+            break;
+        }
+        if (S_ISDIR(st.st_mode)) {
+            continue; /* as on Windows: a subdirectory is not a file of it */
+        }
+        if (!S_ISREG(st.st_mode)) {
+            cf_error_set(err, CF_E_SOURCE, NULL, full,
+                         "'%s' is not a file, and everything in the directory is read "
+                         "as one",
+                         full);
+            n = -2;
+            break;
+        }
+        if (n >= max) {
+            cf_error_set(err, CF_E_SOURCE, NULL, path,
+                         "'%s' holds more than %d files, the most a directory may",
+                         path, max);
+            n = -2;
+            break;
         }
         memcpy(names[n], e->d_name, len + 1);
         ++n;
@@ -544,6 +573,11 @@ static int kq_add(cf_platform_wake* w, const char* path, cf_error* err) {
 #ifdef O_CLOEXEC
     flags |= O_CLOEXEC;
 #endif
+    /* Without O_NONBLOCK, opening a FIFO in conf.d waits for a writer,
+       and the watch with it. It changes nothing for a file or a
+       directory. No O_NOFOLLOW: a Kubernetes mount is links, and the
+       watch is on what they name. */
+    flags |= O_NONBLOCK;
     fd = open(path, flags);
     if (fd < 0) {
         int e = errno;
@@ -553,6 +587,16 @@ static int kq_add(cf_platform_wake* w, const char* path, cf_error* err) {
         cf_error_set(err, CF_E_CAPABILITY, NULL, path, "cannot watch '%s': %s", path,
                      kq_why(e));
         return -1;
+    }
+    {
+        /* Only files and directories are watched. Anything else is left
+           as if absent: the listing refuses it by name when the
+           directory is read, which is where it is reported. */
+        struct stat st;
+        if (fstat(fd, &st) != 0 || (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode))) {
+            close(fd);
+            return 0;
+        }
     }
     if (w->nvfd == w->capvfd) {
         size_t ncap = (w->capvfd < 8) ? 8 : w->capvfd * 2;

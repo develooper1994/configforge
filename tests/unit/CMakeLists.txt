@@ -61,7 +61,8 @@ set(CF_UNIT_TESTS
     test_lifetime
     test_truncate
     test_roundtrip
-    test_bom)
+    test_bom
+    test_dirlimits)
 
 # The directories test_starve's every-source run reads. C89 has no mkdir.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_starve.d
@@ -125,6 +126,10 @@ target_compile_definitions(
 set(conform_data "${CMAKE_SOURCE_DIR}/tests/conformance/data")
 target_compile_definitions(test_yaml PRIVATE CF_CONFORM_DATA="${conform_data}")
 set_tests_properties(unit.test_yaml PROPERTIES TIMEOUT 60)
+# test_serialize reads an INI section of 60,000 distinct arrays, which
+# took a minute when each rescanned the lines above it and takes seconds
+# now: the timeout is what fails if that comes back.
+set_tests_properties(unit.test_serialize PROPERTIES TIMEOUT 30)
 
 # The same suite under a comma-decimal locale and a Turkish locale.
 # The Turkish case is the standard test for the tolower hazard.
@@ -153,6 +158,23 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/watch)
 # way to make one.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_secrets
      ${CMAKE_CURRENT_BINARY_DIR}/cf_secrets_bad)
+# And test_dirlimits's, in a working directory of its own: it fills a
+# directory with 257 files and makes FIFOs, which nothing else should
+# list. The timeout is the test of the cases that used to hang.
+set(cf_dirlimits ${CMAKE_CURRENT_BINARY_DIR}/dirlimits)
+file(
+  MAKE_DIRECTORY
+  ${cf_dirlimits}/cf_many.d
+  ${cf_dirlimits}/cf_many_secrets
+  ${cf_dirlimits}/cf_l
+  ${cf_dirlimits}/cf_fifo.d
+  ${cf_dirlimits}/cf_fifo_secrets)
+set_tests_properties(unit.test_dirlimits PROPERTIES WORKING_DIRECTORY
+                                                    ${cf_dirlimits} TIMEOUT 60)
+# FIFOs and symbolic links are POSIX's.
+if(UNIX AND NOT CMAKE_SYSTEM_NAME STREQUAL "WASI")
+  target_compile_definitions(test_dirlimits PRIVATE CF_TEST_FIFO=1)
+endif()
 if(TARGET test_watch)
   set_tests_properties(
     unit.test_watch PROPERTIES WORKING_DIRECTORY

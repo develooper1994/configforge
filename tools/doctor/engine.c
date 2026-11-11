@@ -444,8 +444,28 @@ const rkey* doctor_find_key(const report* r, const char* key, size_t n) {
     return NULL;
 }
 
-const char* doctor_shown(const cand* c) {
-    return (c->value != NULL) ? c->value : "<redacted>";
+/* A sensitive key's value is never shown, whatever the report holds: a
+   full report carries it, and cf_doctor_lint writes a full one, but a
+   finding goes to a terminal, a CI log, a pull-request comment and the
+   error a live-reload gate logs. */
+const char* doctor_shown(const rkey* k, const cand* c) {
+    return (c->value != NULL && !k->sensitive) ? c->value : "<redacted>";
+}
+
+/* A reason can quote the value: a library of 1.4.0 or before wrote the
+   start of a malformed reference into it, and fixing the library does
+   not rewrite the reports already written. For a secret it is the word
+   the library's own log line uses (config.c). A policy reason is kept:
+   the library writes it from the key's and the sources' names alone,
+   and it is what CFD016 is about. */
+const char* doctor_reason(const rkey* k, const cand* c) {
+    if (c->reason == NULL) {
+        return "invalid";
+    }
+    if (k->sensitive && strncmp(c->reason, "policy:", 7) != 0) {
+        return "invalid";
+    }
+    return c->reason;
 }
 
 const rsrc* doctor_find_source(const report* r, const char* name) {
@@ -1337,8 +1357,8 @@ static void rule_refused(const report* r) {
             }
             if (k->c[j].outcome != NULL && strcmp(k->c[j].outcome, "rejected") == 0) {
                 finding_at(r->D, "CFD006", "error", name, k->c[j].at,
-                           "%s refused %s: %s", k->c[j].source, doctor_shown(&k->c[j]),
-                           (k->c[j].reason != NULL) ? k->c[j].reason : "invalid");
+                           "%s refused %s: %s", k->c[j].source,
+                           doctor_shown(k, &k->c[j]), doctor_reason(k, &k->c[j]));
             }
         }
     }
@@ -1449,6 +1469,17 @@ static agreement values_agree(const cand* a, const cand* b) {
         return AGREE_UNKNOWN;
     }
     return (strcmp(x, y) == 0) ? AGREE_YES : AGREE_NO;
+}
+
+/* Whether a comparison of two candidates is told by digest: either side
+   sensitive, or either value left out of its report. A full report has
+   the value, so the comparison may use it; what is said about it may
+   not, and a key sensitive on one side only is a secret on that side. */
+static cf_bool told_by_digest(const rkey* ka, const cand* ca, const rkey* kb,
+                              const cand* cb) {
+    return (ka->sensitive || kb->sensitive || ca->value == NULL || cb->value == NULL)
+               ? CF_TRUE
+               : CF_FALSE;
 }
 
 /* What kind of source supplied a key: "env", "file", "cli". The report's
@@ -1563,7 +1594,7 @@ static void rule_value_diff(const report* a, const report* b) {
         }
 
         doctor_key_name(ka, name, sizeof name);
-        if (ca->value == NULL || cb->value == NULL) {
+        if (told_by_digest(ka, ca, kb, cb)) {
             finding(a->D, "CFD014", "info", name,
                     "sensitive value differs (by digest)");
         } else {
@@ -1620,7 +1651,7 @@ static void rule_default_drift(const report* a, const report* b) {
                     here ? "there" : "here");
         } else if (values_agree(da, db) != AGREE_NO) {
             continue;
-        } else if (da->value == NULL || db->value == NULL) {
+        } else if (told_by_digest(ka, da, kb, db)) {
             finding(a->D, "CFD017", "warning", name,
                     "takes its default %s; the defaults differ (by digest)", side);
         } else if (here && there) {
@@ -1843,8 +1874,7 @@ static step_result key_step(const rkey* was, const rkey* now, char* what, size_t
         cf_fmt(what, cap, "same value, now from '%s' rather than '%s'", now->selected,
                was->selected);
     } else if (agree == AGREE_NO) {
-        const char* how =
-            (wa->value == NULL || wb->value == NULL) ? " (by digest)" : "";
+        const char* how = told_by_digest(was, wa, now, wb) ? " (by digest)" : "";
         if (moved) {
             cf_fmt(what, cap, "value changed%s, now from '%s' rather than '%s'", how,
                    now->selected, was->selected);

@@ -91,6 +91,8 @@ gets reopened every six months.
 | D-72 | Every C++ standard from C++98, cumulatively | C++, compatibility | **Decided** |
 | D-73 | The format from the name, then the content, by several strategies | formats, codecs | **Decided** |
 | D-74 | One `define`, the type given or inferred | definitions, bindings | **Decided** |
+| D-77 | A reference's expansion is bounded, by a constant and not a build limit | interpolation, resolver | **Decided** |
+| D-78 | A directory that cannot be read whole is an error, optional or not | drop-in, secrets, platform | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -2974,6 +2976,13 @@ refused; and expansion is bounded at 64 events per event read (with a
 floor), so a "billion laughs" is refused in linear time, by name. A sink
 that lends no workspace refuses an anchor, saying so.
 
+Events alone were not enough, and 1.4.1 adds the second bound: the bytes
+an expansion copies are held to 64 times the document plus 1 MiB, with
+the same error. One large scalar aliased thousands of times is few
+events and gigabytes of copy, so a megabyte of input could still be made
+to cost more memory than any limit on events would show. A name anchored
+again takes over its entry rather than lengthening the lookup chain.
+
 **Tags.** The core schema's - `!!str`, `!!int`, `!!float`, `!!bool`,
 `!!null`, `!!map`, `!!seq` - say what YAML 1.2 says the value is, and
 honouring them is reading YAML; a tagged value that is not its type is
@@ -2985,6 +2994,82 @@ honour, and is refused by name.
 **Still refused, as the configuration model has it:** a top level that
 is not a mapping, a second document, a key that is not a scalar, an
 empty key. The conformance run counts these apart from the grammar's.
+
+---
+
+## D-77 — A reference's expansion is bounded, by a constant and not a build limit
+
+**Question.** `${}` expansion (D-10) had no bound: two dozen lines, each
+naming the one before it twice, make gigabytes, and on a 32-bit `size_t`
+the measured size could wrap, so the copy overran the heap. What bounds
+it, and where is the bound written?
+
+**Options.**
+
+1. No bound: the defect.
+2. A multiple of the document's size, as YAML's aliases have (D-63).
+3. An entry in `cf_build_limit` (D-45).
+4. A fixed constant beside the other limits.
+
+**Decision.** Option 4: `CF_EXPAND_MAX`, 1 MiB, in `cf_define.h`. A value
+that expands past it is refused by name. Option 2 was rejected because
+references draw on every source, so there is no single document to take a
+multiple of. Option 3 was rejected because those limits size stack
+buffers and are checked by the gates and the bindings; this one sizes no
+buffer, and a build option would put a number into the ABI that nothing
+needs to know. 1 MiB is far above any value a configuration holds, and a
+program that needs more has a value that is not configuration.
+
+All the expansions of one configuration together are bounded too, by
+`CF_EXPAND_TOTAL_MAX`, 16 times `CF_EXPAND_MAX`, and the key at which the
+total is passed is refused by name. A bound on each key alone was not
+enough: twenty doubling lines make a value just under 1 MiB, and ten
+thousand short lines each naming it make 10 GiB with no key over the
+limit; the total is a multiple of the per-key bound, not of a document,
+for the reason option 2 was rejected.
+
+**Found on the way.** A reference to a key whose own expansion was
+refused, with nothing to fall back to, was read through NULL, a crash. It
+is refused instead, with the same error.
+
+**Compatibility.** A configuration with a value that expanded to more than
+1 MiB, or with expansions adding up to more than 16 MiB, is now refused.
+None is known.
+
+---
+
+## D-78 — A directory that cannot be read whole is an error, optional or not
+
+**Question.** A drop-in or secrets directory was listed up to 256 files;
+past that the listing stopped at whatever the disk handed over first, so
+a `99-override.ini` could vanish with no word. A FIFO in it hung
+`cf_create`, a reload and the kqueue watcher. What does a directory that
+cannot be read whole do?
+
+**Options.**
+
+1. Read what fits and carry on, as it was.
+2. Read what fits and log the rest (D-52).
+3. An error, and `CF_OPTIONAL` excuses it as it excuses a missing
+   directory.
+4. An error that `CF_OPTIONAL` does not excuse.
+
+**Decision.** Option 4. `cf_platform_dir_list` returns -2 for more files
+than the limit, a name too long to carry, or an entry that is not a file,
+and the error names the directory and the limit, or the entry. Options 1
+and 2 give a configuration that differs from the files on disk, in the
+one case, the override, where the difference matters most. Option 3 was
+rejected because `CF_OPTIONAL` means "the directory may be absent", not
+"it may be half read".
+
+Subdirectories are skipped on every platform, as Windows already did.
+Anything else that is not a file - a FIFO, a socket, a link to nothing -
+fails by name. Links are followed, because a Kubernetes mount is made of
+links, and refusing them would break the commonest place these
+directories are used.
+
+**Compatibility.** A directory with more than 256 files, which read
+partly before, is an error. That is the change, and the reason for it.
 
 ---
 

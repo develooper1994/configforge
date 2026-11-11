@@ -948,7 +948,7 @@ Implementation: [`cf_def_bool` (src/core/define.c)](https://github.com/develoope
 CF_API void cf_defset_seal(cf_defset* ds);
 ```
 
-Implementation: [`cf_defset_seal` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L655).
+Implementation: [`cf_defset_seal` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L658).
 
 Sorts for binary lookup; calling twice is harmless.
 
@@ -998,7 +998,7 @@ only, so opening "plugins" does not open "pluginsomething".
 CF_API const cf_def* cf_defset_find(const cf_defset* ds, const char* key, size_t keylen);
 ```
 
-Implementation: [`cf_defset_find` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L718).
+Implementation: [`cf_defset_find` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L763).
 
 Authored descriptors are returned for exact keys. A declared list's
 count and canonical decimal indices return immutable scalar
@@ -1009,7 +1009,7 @@ still returns only authored descriptors.
 CF_API const cf_def* cf_defset_list(const cf_defset* ds, const char* key, size_t keylen);
 ```
 
-Implementation: [`cf_defset_list` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L747).
+Implementation: [`cf_defset_list` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L792).
 
 The declared list containing a key, including its root. Unlike find,
 this also finds a list whose caller supplied an invalid member name,
@@ -1020,7 +1020,7 @@ an unrelated, undefined setting.
 CF_API cf_u64 cf_defset_fingerprint(const cf_defset* ds, const cf_keyspace* ks);
 ```
 
-Implementation: [`cf_defset_fingerprint` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L900).
+Implementation: [`cf_defset_fingerprint` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L945).
 
 The fingerprint of `ks` under these definitions (cf_fingerprint): as
 cf_ks_digest, except that a key defined CF_SENSITIVE enters by its
@@ -1034,7 +1034,7 @@ CF_API size_t cf_defset_count(const cf_defset* ds);
 CF_API const cf_def* cf_defset_at(const cf_defset* ds, size_t i);
 ```
 
-Implementation: [`cf_fingerprint_seed` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L884), [`cf_fingerprint_step` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L890), [`cf_defset_count` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L752), [`cf_defset_at` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L756).
+Implementation: [`cf_fingerprint_seed` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L929), [`cf_fingerprint_step` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L935), [`cf_defset_count` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L797), [`cf_defset_at` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L801).
 
 The fingerprint a step at a time, for a reader that holds keys as text -
 Doctor, recomputing a report's - and not as a key space: start from the
@@ -1047,7 +1047,7 @@ space, so the two cannot disagree.
 CF_API const cf_def* cf_defset_nearest(const cf_defset* ds, const char* key, size_t keylen, size_t* distance);
 ```
 
-Implementation: [`cf_defset_nearest` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L825).
+Implementation: [`cf_defset_nearest` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L870).
 
 Nearest defined key by edit distance, or NULL when nothing is close.
 This is what turns "unknown key server.pot" into "did you mean
@@ -1066,7 +1066,7 @@ down the chain only when that is what the definition asked for.
 CF_API void cf_policy_text(const char* const* policy, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_policy_text` (src/core/validate.c)](https://github.com/develooper1994/configforge/blob/main/src/core/validate.c#L511).
+Implementation: [`cf_policy_text` (src/core/validate.c)](https://github.com/develooper1994/configforge/blob/main/src/core/validate.c#L586).
 
 Renders a policy list as the specification writes it: "env > local".
 Shared because both the rejection message and the coherence check
@@ -1076,7 +1076,7 @@ below want the same spelling, and two renderings of one thing drift.
 CF_API cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names* names, cf_unknown_policy unknown, cf_apply_report* report, cf_error* err);
 ```
 
-Implementation: [`cf_defs_apply` (src/core/validate.c)](https://github.com/develooper1994/configforge/blob/main/src/core/validate.c#L953).
+Implementation: [`cf_defs_apply` (src/core/validate.c)](https://github.com/develooper1994/configforge/blob/main/src/core/validate.c#L1035).
 
 ```c
 CF_API cf_bool cf_source_defaults(struct cf_source* s, const char* name, int rank, const cf_defset* ds);
@@ -1166,7 +1166,7 @@ CF_DOCTOR_API cf_doctor* cf_doctor_new(void);
 CF_DOCTOR_API void cf_doctor_free(cf_doctor* d);
 ```
 
-Implementation: [`cf_doctor_new` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1964), [`cf_doctor_free` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1974).
+Implementation: [`cf_doctor_new` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1994), [`cf_doctor_free` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2004).
 
 A context, or NULL when there is no memory for one.
 
@@ -1175,7 +1175,7 @@ CF_DOCTOR_API cf_bool cf_doctor_accept(cf_doctor* d, const char* rule, const cha
 CF_DOCTOR_API cf_bool cf_doctor_baseline(cf_doctor* d, const char* path, cf_error* err);
 ```
 
-Implementation: [`cf_doctor_accept` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2018), [`cf_doctor_baseline` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2030).
+Implementation: [`cf_doctor_accept` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2048), [`cf_doctor_baseline` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2060).
 
 A finding already accepted - "CFD001", "server.port" - so it is
 counted and not reported. cf_doctor_baseline reads them from a file,
@@ -1187,7 +1187,7 @@ CF_DOCTOR_API cf_bool cf_doctor_severity(cf_doctor* d, const char* rule, const c
 CF_DOCTOR_API cf_bool cf_doctor_severity_file(cf_doctor* d, const char* path, cf_error* err);
 ```
 
-Implementation: [`cf_doctor_severity` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2038), [`cf_doctor_severity_file` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2061).
+Implementation: [`cf_doctor_severity` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2068), [`cf_doctor_severity_file` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2091).
 
 Where a project disagrees with a rule's default: `level` is "error",
 "warning", "info" or "off", for every profile or only `profile`.
@@ -1200,7 +1200,7 @@ CF_DOCTOR_API cf_bool cf_doctor_lint_report(cf_doctor* d, const char* json, size
 CF_DOCTOR_API cf_bool cf_doctor_lint_file(cf_doctor* d, const char* path, cf_error* err);
 ```
 
-Implementation: [`cf_doctor_lint` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2139), [`cf_doctor_lint_report` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2108), [`cf_doctor_lint_file` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2124).
+Implementation: [`cf_doctor_lint` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2169), [`cf_doctor_lint_report` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2138), [`cf_doctor_lint_file` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2154).
 
 Lint one configuration. A cf_config is reported in memory, with every
 value, so the type and range rules can run; `profile` is the one the
@@ -1214,7 +1214,7 @@ CF_DOCTOR_API cf_bool cf_doctor_only_changed_file(cf_doctor* d, const char* path
 CF_DOCTOR_API size_t cf_doctor_unchanged_count(const cf_doctor* d);
 ```
 
-Implementation: [`cf_doctor_only_changed_file` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L1988), [`cf_doctor_unchanged_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2014).
+Implementation: [`cf_doctor_only_changed_file` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2018), [`cf_doctor_unchanged_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2044).
 
 `doctor lint --base B --only-changed`: from now on a lint reports only
 what a change touched - the keys whose candidates differ from the
@@ -1229,7 +1229,7 @@ CF_DOCTOR_API cf_bool cf_doctor_diff_report(cf_doctor* d, const char* a, size_t 
 CF_DOCTOR_API cf_bool cf_doctor_diff_files(cf_doctor* d, const char* a, const char* b, cf_error* err);
 ```
 
-Implementation: [`cf_doctor_diff` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2193), [`cf_doctor_diff_report` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2155), [`cf_doctor_diff_files` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2175).
+Implementation: [`cf_doctor_diff` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2223), [`cf_doctor_diff_report` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2185), [`cf_doctor_diff_files` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2205).
 
 Compare two: what one has and the other lacks, values from sources
 of different kinds, overrides in one and not the other, and every
@@ -1240,7 +1240,7 @@ CF_DOCTOR_API cf_bool cf_doctor_history_files(cf_doctor* d, const char* const* p
 CF_DOCTOR_API cf_bool cf_doctor_blame_files(cf_doctor* d, const char* const* paths, size_t n, const char* key, cf_error* err);
 ```
 
-Implementation: [`cf_doctor_history_files` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2268), [`cf_doctor_blame_files` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2288).
+Implementation: [`cf_doctor_history_files` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2298), [`cf_doctor_blame_files` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2318).
 
 A sequence of reports, oldest first - one service's report from each
 deployment - in the order given; a report's own date is not trusted
@@ -1262,7 +1262,7 @@ CF_DOCTOR_API size_t cf_doctor_count(const cf_doctor* d);
 CF_DOCTOR_API const cf_finding* cf_doctor_finding(cf_doctor* d, size_t i);
 ```
 
-Implementation: [`cf_doctor_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2312), [`cf_doctor_finding` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2316).
+Implementation: [`cf_doctor_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2342), [`cf_doctor_finding` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2346).
 
 The findings so far, in the order they were found.
 
@@ -1270,7 +1270,7 @@ The findings so far, in the order they were found.
 CF_DOCTOR_API size_t cf_doctor_count_at(const cf_doctor* d, const char* level);
 ```
 
-Implementation: [`cf_doctor_count_at` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2331).
+Implementation: [`cf_doctor_count_at` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2361).
 
 How many at a level - "error", "warning", "info" - or "accepted", for
 the ones the baseline accepted.
@@ -1280,7 +1280,7 @@ CF_DOCTOR_API size_t cf_doctor_stale_count(const cf_doctor* d);
 CF_DOCTOR_API cf_bool cf_doctor_stale(const cf_doctor* d, size_t i, const char** rule, const char** key);
 ```
 
-Implementation: [`cf_doctor_stale_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2350), [`cf_doctor_stale` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2364).
+Implementation: [`cf_doctor_stale_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2380), [`cf_doctor_stale` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2394).
 
 Baseline entries that matched nothing: a fix worth noticing, or a
 rule that quietly stopped working.
@@ -1320,7 +1320,7 @@ CF_DOCTOR_API const char* cf_doctor_rule_id(size_t i);
 CF_DOCTOR_API const char* cf_doctor_rule_text(const char* id);
 ```
 
-Implementation: [`cf_doctor_rule_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2385), [`cf_doctor_rule_id` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2389), [`cf_doctor_rule_text` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2393).
+Implementation: [`cf_doctor_rule_count` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2415), [`cf_doctor_rule_id` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2419), [`cf_doctor_rule_text` (tools/doctor/engine.c)](https://github.com/develooper1994/configforge/blob/main/tools/doctor/engine.c#L2423).
 
 The rule catalogue (Doctor.md): each rule's id and what it finds.
 
@@ -2610,7 +2610,7 @@ only part of the library that a very small target might refuse.
 CF_API size_t cf_f64_to_text(double v, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_f64_to_text` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L553).
+Implementation: [`cf_f64_to_text` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L554).
 
 Write the shortest decimal string that reads back as exactly v.
 Output is identical on every platform. Returns the length written,
@@ -2624,11 +2624,18 @@ from having to invent a spelling.
 CF_API cf_bool cf_text_to_f64(const char* s, size_t len, double* out, size_t* end);
 ```
 
-Implementation: [`cf_text_to_f64` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L732).
+Implementation: [`cf_text_to_f64` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L760).
 
 Parse a C-locale floating point number. The decimal separator is
 always '.', never the locale's. Accepts the forms produced by
 cf_f64_to_text and the usual hand-written ones.
+
+Range: a number from 10^309 up, or one that would round to infinity,
+is refused. Below the smallest subnormal the result is zero. At most
+290 significant digits decide the value; later digits move only the
+exponent and the rounding, so a literal of hundreds of digits is read
+as what it is, and one lying exactly on a halfway point may be one
+unit in the last place off.
 
 ### Tier 0 type inference
 
@@ -2639,7 +2646,7 @@ Type Inference section of the specification and decision D-24.
 CF_API cf_scalar_kind cf_infer_scalar(const char* s, size_t len);
 ```
 
-Implementation: [`cf_infer_scalar` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L929).
+Implementation: [`cf_infer_scalar` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L997).
 
 ## cf_platform.h
 
@@ -2726,12 +2733,22 @@ Implementation: [`cf_platform_args` (src/platform/none/none.c)](https://github.c
 CF_API int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], int max, cf_error* err);
 ```
 
-Implementation: [`cf_platform_dir_list` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L55), [`cf_platform_dir_list` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L180), [`cf_platform_dir_list` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L200).
+Implementation: [`cf_platform_dir_list` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L55), [`cf_platform_dir_list` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L180), [`cf_platform_dir_list` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L220).
 
 Names only, no path, no order, dotfiles already skipped. Returns the
 count, or -1 with `err` set. The caller sorts, because the order
 decides which file wins and that is the caller's rule, not the
 platform's.
+
+Only files are listed, and links are followed to see what they
+name, because a Kubernetes mount is links to files. A subdirectory
+is skipped. Anything else - a FIFO, a socket, a device, a link to
+nothing - is -2 with `err` naming it: opened as a file, a FIFO waits
+for a writer for ever. -2 is also more than `max` files, or a name
+too long for a slot. -1 is a directory that cannot be read at all,
+which an optional source may accept; -2 is one that was read and
+cannot be handed over whole, which nothing should, because the file
+left out could be the one that decides a value.
 
 ### The Windows Registry
 
@@ -2744,13 +2761,13 @@ look exactly like an empty one.
 CF_API cf_bool cf_platform_has_registry(void);
 ```
 
-Implementation: [`cf_platform_has_registry` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L83), [`cf_platform_has_registry` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L156), [`cf_platform_has_registry` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L544).
+Implementation: [`cf_platform_has_registry` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L83), [`cf_platform_has_registry` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L156), [`cf_platform_has_registry` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L578).
 
 ```c
 CF_API int cf_platform_registry_walk(const char* root, cf_arena* arena, cf_platform_reg_fn fn, void* ctx, cf_error* err);
 ```
 
-Implementation: [`cf_platform_registry_walk` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L87), [`cf_platform_registry_walk` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L160), [`cf_platform_registry_walk` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L728).
+Implementation: [`cf_platform_registry_walk` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L87), [`cf_platform_registry_walk` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L160), [`cf_platform_registry_walk` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L762).
 
 Every value under `root` - "HKCU\\Software\\MyApp", HKCU, HKLM, HKCR,
 HKU or HKCC first - and every subkey's, to CF_MAX_DEPTH. Buffers come
@@ -2840,13 +2857,13 @@ still wakes the caller when it arrives.
 CF_API cf_bool cf_platform_has_wake(void);
 ```
 
-Implementation: [`cf_platform_has_wake` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L98), [`cf_platform_has_wake` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L333), [`cf_platform_has_wake` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L406).
+Implementation: [`cf_platform_has_wake` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L98), [`cf_platform_has_wake` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L362), [`cf_platform_has_wake` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L440).
 
 ```c
 CF_API cf_platform_wake* cf_platform_wake_open(const char* const* paths, size_t n, const cf_allocator* a, cf_error* err);
 ```
 
-Implementation: [`cf_platform_wake_open` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L102), [`cf_platform_wake_open` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L337), [`cf_platform_wake_open` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L410).
+Implementation: [`cf_platform_wake_open` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L102), [`cf_platform_wake_open` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L366), [`cf_platform_wake_open` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L444).
 
 NULL with `err` set, naming the path and the reason. The paths are
 copied; nothing passed here need outlive the call.
@@ -2855,7 +2872,7 @@ copied; nothing passed here need outlive the call.
 CF_API int cf_platform_wake_fd(const cf_platform_wake* w);
 ```
 
-Implementation: [`cf_platform_wake_fd` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L111), [`cf_platform_wake_fd` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L386), [`cf_platform_wake_fd` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L459).
+Implementation: [`cf_platform_wake_fd` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L111), [`cf_platform_wake_fd` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L415), [`cf_platform_wake_fd` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L493).
 
 A descriptor that becomes readable, or -1 where the handle is not a
 descriptor.
@@ -2864,7 +2881,7 @@ descriptor.
 CF_API void* cf_platform_wake_handle(const cf_platform_wake* w);
 ```
 
-Implementation: [`cf_platform_wake_handle` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L116), [`cf_platform_wake_handle` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L390), [`cf_platform_wake_handle` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L464).
+Implementation: [`cf_platform_wake_handle` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L116), [`cf_platform_wake_handle` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L419), [`cf_platform_wake_handle` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L498).
 
 A HANDLE that becomes signalled, or NULL where the handle is not one.
 
@@ -2872,7 +2889,7 @@ A HANDLE that becomes signalled, or NULL where the handle is not one.
 CF_API cf_bool cf_platform_wake_drain(cf_platform_wake* w);
 ```
 
-Implementation: [`cf_platform_wake_drain` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L121), [`cf_platform_wake_drain` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L400), [`cf_platform_wake_drain` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L468).
+Implementation: [`cf_platform_wake_drain` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L121), [`cf_platform_wake_drain` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L429), [`cf_platform_wake_drain` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L502).
 
 Consume what woke the handle and re-arm anything that needs it. False
 when some path can no longer wake it; polling cf_changed still works.
@@ -2881,7 +2898,7 @@ when some path can no longer wake it; polling cf_changed still works.
 CF_API int cf_platform_wake_wait(cf_platform_wake* w, long timeout_ms);
 ```
 
-Implementation: [`cf_platform_wake_wait` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L126), [`cf_platform_wake_wait` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L448), [`cf_platform_wake_wait` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L500).
+Implementation: [`cf_platform_wake_wait` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L126), [`cf_platform_wake_wait` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L477), [`cf_platform_wake_wait` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L534).
 
 Wait up to `timeout_ms` (negative: without limit). 1 when woken, and
 then already drained; 0 on timeout; -1 when waiting failed.
@@ -2890,7 +2907,7 @@ then already drained; 0 on timeout; -1 when waiting failed.
 CF_API void cf_platform_wake_close(cf_platform_wake* w);
 ```
 
-Implementation: [`cf_platform_wake_close` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L132), [`cf_platform_wake_close` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L473), [`cf_platform_wake_close` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L520).
+Implementation: [`cf_platform_wake_close` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L132), [`cf_platform_wake_close` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L502), [`cf_platform_wake_close` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L554).
 
 ## cf_port.h
 
@@ -3586,25 +3603,25 @@ The file a source reads, or NULL.
 CF_API size_t cf_source_dir_state_size(void);
 ```
 
-Implementation: [`cf_source_dir_state_size` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L209).
+Implementation: [`cf_source_dir_state_size` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L215).
 
 ```c
 CF_API cf_bool cf_source_dir(cf_source* s, const char* name, int rank, const char* path, const char* format, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_dir` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L213).
+Implementation: [`cf_source_dir` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L219).
 
 ```c
 CF_API const cf_error* cf_source_dir_error(const cf_source* s);
 ```
 
-Implementation: [`cf_source_dir_error` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L235).
+Implementation: [`cf_source_dir_error` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L241).
 
 ```c
 CF_API void cf_source_dir_codecs(cf_source* s, const struct cf_codec* const* codecs, size_t n);
 ```
 
-Implementation: [`cf_source_dir_codecs` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L245).
+Implementation: [`cf_source_dir_codecs` (src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/dir.c#L251).
 
 A program's own codecs for the directory's files, looked at before the
 built-in ones (cf_builder_codec, D-68). The list is borrowed and must
@@ -3625,19 +3642,19 @@ what Kubernetes' own ..data entries are.
 CF_API size_t cf_source_secrets_state_size(void);
 ```
 
-Implementation: [`cf_source_secrets_state_size` (src/bridge/secrets.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/secrets.c#L152).
+Implementation: [`cf_source_secrets_state_size` (src/bridge/secrets.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/secrets.c#L154).
 
 ```c
 CF_API cf_bool cf_source_secrets(cf_source* s, const char* name, int rank, const char* path, const char* prefix, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_secrets` (src/bridge/secrets.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/secrets.c#L156).
+Implementation: [`cf_source_secrets` (src/bridge/secrets.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/secrets.c#L158).
 
 ```c
 CF_API const cf_error* cf_source_secrets_error(const cf_source* s);
 ```
 
-Implementation: [`cf_source_secrets_error` (src/bridge/secrets.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/secrets.c#L178).
+Implementation: [`cf_source_secrets_error` (src/bridge/secrets.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/secrets.c#L180).
 
 ### A key of the Windows Registry
 

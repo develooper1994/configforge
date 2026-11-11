@@ -60,6 +60,100 @@ static int emit(const char* out, const char* profile, int argc, char* const* arg
     return spill(out, buf) ? 0 : 1;
 }
 
+/* Replaces the first `from` in the report `buf` with `to`. Zero when it
+   is not there or there is no room. */
+static int swap(char* buf, size_t cap, const char* from, const char* to) {
+    char*  at = strstr(buf, from);
+    size_t fn = strlen(from), tn = strlen(to);
+
+    if (at == NULL || strlen(buf) - fn + tn >= cap) {
+        return 0;
+    }
+    memmove(at + tn, at + fn, strlen(at + fn) + 1);
+    memcpy(at, to, tn);
+    return 1;
+}
+
+/* One side of a pair of full reports - every value written, secrets
+   included - with four secrets, each a marker no output may carry: a
+   password the two sides set differently (CFD014), a PIN its own
+   contract refuses (CFD006), a salt both sides default to differently
+   and a seed one side defaults to and the other sets (CFD017). Doctor
+   reads full reports too, and its documentation promises it shows no
+   secret from any of them. The PIN's refusal is given the reason a
+   library of 1.4.0 or before wrote for a malformed reference, which
+   quoted the start of the value: fixing the library does not rewrite
+   the reports already written. */
+static int emit_secret(const char* out, char* const* env, const char* salt,
+                       const char* seed) {
+    cf_error       err = CF_ERROR_INIT;
+    cf_builder*    b   = cf_build(NULL);
+    cf_config*     c;
+    cf_report_info info = CF_REPORT_INFO_INIT;
+    static char    buf[65536];
+    cf_def         d;
+
+    cf_builder_env(b, "env", CF_RANK_ENV, "MYAPP_", env);
+    cf_def_init(&d, CF_TYPE_TEXT, "db.password");
+    d.flags = CF_SENSITIVE;
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_TEXT, "api.pin");
+    d.flags      = CF_SENSITIVE;
+    d.max_len    = 4;
+    d.on_invalid = CF_INVALID_FALLBACK;
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_TEXT, "api.salt");
+    d.flags       = CF_SENSITIVE;
+    d.has_default = CF_TRUE;
+    cf_value_text(&d.default_value, salt, strlen(salt));
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_TEXT, "api.seed");
+    d.flags       = CF_SENSITIVE;
+    d.has_default = CF_TRUE;
+    cf_value_text(&d.default_value, seed, strlen(seed));
+    cf_builder_define(b, &d);
+
+    c = cf_builder_create(b, &err);
+    if (c == NULL) {
+        fprintf(stderr, "fixtures: %s: %s\n", out, err.message);
+        return 1;
+    }
+    info.mode        = CF_REPORT_FULL;
+    info.profile     = "production";
+    info.application = "myapp";
+    info.generated   = "2026-09-12T00:00:00Z";
+    cf_report(c, &info, buf, sizeof buf);
+    cf_config_free(c);
+    if (!swap(buf, sizeof buf, "\"reason\": \"longer than 4 characters\"",
+              "\"reason\": \"'${MARKER-GOLF-7731' refers to no key\"")) {
+        fprintf(stderr, "fixtures: %s: no refusal to give a reason\n", out);
+        return 1;
+    }
+    return spill(out, buf) ? 0 : 1;
+}
+
+/* Ends the first string that follows `field` in the report `buf` with a
+   line break and a GitHub workflow command, as a report written by
+   hand, or by a library with a bug, could. Zero when the field is not
+   there or there is no room. */
+static int taint(char* buf, size_t cap, const char* field) {
+    static const char add[] = "\\n::add-mask::injected";
+    char*             at    = strstr(buf, field);
+    size_t            n     = sizeof add - 1;
+    size_t            len   = strlen(buf);
+
+    if (at == NULL || len + n >= cap) {
+        return 0;
+    }
+    at = strchr(at + strlen(field), '"');
+    if (at == NULL) {
+        return 0;
+    }
+    memmove(at + n, at, strlen(at) + 1);
+    memcpy(at, add, n);
+    return 1;
+}
+
 int main(void) {
     static char  pe0[]    = "MYAPP_SERVER__PORT=9090";
     static char  pe1[]    = "MYAPP_DB__PASSWORD=prodsecret";
@@ -302,6 +396,7 @@ int main(void) {
         cf_config*     c;
         cf_report_info info = CF_REPORT_INFO_INIT;
         static char    buf[65536];
+        int            ok;
 
         cf_builder_env(b, "env", CF_RANK_ENV, "MYAPP_", denv);
         cf_builder_document(b, "remote", CF_RANK_USER_FILE, first, strlen(first), NULL,
@@ -319,6 +414,73 @@ int main(void) {
         cf_report(c, &info, buf, sizeof buf);
         cf_config_free(c);
         if (!spill("cf_fx_doc.json", buf)) {
+            return 1;
+        }
+        /* The same report with every field dump and explain print
+           beside the candidates carrying a workflow command. */
+        ok = taint(buf, sizeof buf, "\"mode\": \"");
+        ok = ok && taint(buf, sizeof buf, "\"profile\": \"");
+        ok = ok && taint(buf, sizeof buf, "\"fingerprint\": \"");
+        ok = ok && taint(buf, sizeof buf, "\"format\": \"");
+        ok = ok && taint(buf, sizeof buf, "\"format_how\": \"");
+        ok = ok && taint(buf, sizeof buf, "\"type\": \"");
+        if (!ok) {
+            fprintf(stderr, "fixtures: fields: a field to taint is missing\n");
+            return 1;
+        }
+        if (!spill("cf_fx_fields.json", buf)) {
+            return 1;
+        }
+    }
+
+    /* The full pair (emit_secret). */
+    {
+        static char  ka0[]   = "MYAPP_DB__PASSWORD=MARKER-ALPHA-7731";
+        static char  ka1[]   = "MYAPP_API__PIN=MARKER-CHARLIE-7731";
+        static char* kaenv[] = {ka0, ka1, NULL};
+        static char  kb0[]   = "MYAPP_DB__PASSWORD=MARKER-BRAVO-7731";
+        static char  kb1[]   = "MYAPP_API__PIN=MARKER-CHARLIE-7731";
+        static char  kb2[]   = "MYAPP_API__SEED=MARKER-FOXTROT-7731";
+        static char* kbenv[] = {kb0, kb1, kb2, NULL};
+
+        if (emit_secret("cf_fx_secret_a.json", kaenv, "MARKER-DELTA-7731",
+                        "MARKER-DELTA-7731") ||
+            emit_secret("cf_fx_secret_b.json", kbenv, "MARKER-ECHO-7731",
+                        "MARKER-ECHO-7731")) {
+            return 1;
+        }
+    }
+
+    /* Text from a report reaches a CI log and a pull-request comment.
+       The permitted spelling here holds a line break and a GitHub
+       workflow command, which the refusal's reason quotes; the value
+       refused holds a team mention and a link. */
+    {
+        static const char* const modes[] = {"safe\n::error::injected", NULL};
+        static char              ia1[]   = "--app.mode=@org/team https://x.example";
+        static char*             iargv[] = {a0, ia1, NULL};
+        cf_error                 err     = CF_ERROR_INIT;
+        cf_builder*              b       = cf_build(NULL);
+        cf_config*               c;
+        cf_report_info           info = CF_REPORT_INFO_INIT;
+        static char              buf[65536];
+        cf_def                   d;
+
+        cf_builder_cli(b, "cli", CF_RANK_CLI, 2, iargv);
+        cf_def_init(&d, CF_TYPE_TEXT, "app.mode");
+        d.allowed    = modes;
+        d.on_invalid = CF_INVALID_FALLBACK;
+        cf_builder_define(b, &d);
+        c = cf_builder_create(b, &err);
+        if (c == NULL) {
+            fprintf(stderr, "fixtures: inject: %s\n", err.message);
+            return 1;
+        }
+        info.mode    = CF_REPORT_BLIND;
+        info.profile = "staging";
+        cf_report(c, &info, buf, sizeof buf);
+        cf_config_free(c);
+        if (!spill("cf_fx_inject.json", buf)) {
             return 1;
         }
     }

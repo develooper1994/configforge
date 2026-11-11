@@ -25,7 +25,7 @@ import dataclasses
 import typing
 from typing import Any, Optional, Tuple, Type, TypeVar
 
-from ._config import Builder, Config
+from ._config import Builder, Config, flag
 
 T = TypeVar("T")
 
@@ -43,8 +43,10 @@ class _Spec:
 def setting(key: str, default: Any, *, range: Optional[Tuple[float, float]] = None,
             flags: int = 0, doc: Optional[str] = None) -> Any:
     """A dataclass field read from ``key``, with its default and, for a
-    number, its permitted ``range`` (inclusive)."""
-    return dataclasses.field(default=default,
+    number, its permitted ``range`` (inclusive). A ``flag.SENSITIVE``
+    field is left out of the dataclass's repr, so printing or logging a
+    settings object does not show the secret."""
+    return dataclasses.field(default=default, repr=not (flags & flag.SENSITIVE),
                              metadata={_META: _Spec(key, range, flags, doc)})
 
 
