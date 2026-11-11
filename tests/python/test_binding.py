@@ -9,6 +9,7 @@ import dataclasses
 import json
 import logging
 import os
+import subprocess
 import sys
 import tempfile
 import threading
@@ -491,6 +492,52 @@ class Library(unittest.TestCase):
         self.assertTrue(cf.version().startswith(cf.__version__))
         self.assertTrue(cf.has_feature("ini"))
         self.assertFalse(cf.has_feature("no-such-thing"))
+
+
+RSP_CHILD = (
+    "import os, sys\n"
+    "sys.path.insert(0, os.environ['RSP_SRC'])\n"
+    "import configforge as cf\n"
+    "b = cf.Builder.app('rsp')\n"
+    "if os.environ['RSP_ON'] == '1':\n"
+    "    b.response_files()\n"
+    "try:\n"
+    "    print('ok', b.create().get('rsp.key'))\n"
+    "except cf.Error as e:\n"
+    "    print('err', e)\n"
+)
+
+
+@unittest.skipUnless(native.HAVE_RESPONSE_FILES, "library with response_files")
+class ResponseFiles(unittest.TestCase):
+    """Response files are opt-in. Run in a child process because on Windows
+    the library reads the process's real command line, not a list made up
+    here."""
+
+    def child(self, on, path):
+        env = dict(os.environ, RSP_SRC=sys.path[0], RSP_ON="1" if on else "0")
+        out = subprocess.run([sys.executable, "-c", RSP_CHILD, "@" + path], env=env,
+                             capture_output=True, text=True, check=True)
+        return out.stdout.strip()
+
+    def test_off_by_default_and_on_when_asked(self):
+        path = os.path.join(WORK, "rsp_args.txt")
+        with open(path, "w") as f:
+            f.write("--rsp.key=from-file\n")
+        absent = os.path.join(WORK, "rsp_absent.txt")
+        self.assertEqual(self.child(False, path), "ok None", "the file is not read")
+        self.assertEqual(self.child(False, absent), "ok None", "and a missing one is fine")
+        self.assertEqual(self.child(True, path), "ok from-file")
+        refused = self.child(True, absent)
+        self.assertTrue(refused.startswith("err ") and "rsp_absent" in refused, refused)
+
+    def test_a_builder_with_no_command_line_takes_it_harmlessly(self):
+        cf.Builder().response_files().response_files().create()
+
+    def test_a_library_without_the_switch(self):
+        with mock.patch("configforge._native.HAVE_RESPONSE_FILES", False):
+            with self.assertRaisesRegex(RuntimeError, "no response-file switch"):
+                cf.Builder().response_files()
 
 
 if __name__ == "__main__":

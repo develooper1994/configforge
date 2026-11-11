@@ -11,12 +11,47 @@
 
 #include "cf_test.h"
 
-int main() {
+/* Response files are opt-in (D-79): off for the builder the wrapper makes
+   from a command line, on with responseFiles(). The arguments are the
+   process's real ones - on Windows the library reads those whatever it is
+   handed - so the suite runs this twice: @cf_wrsp_args.txt, a file this
+   writes, and @cf_wrsp_absent.txt, which is not there. */
+static int response_files(int argc, char** argv) {
+    bool have = (std::strcmp(argv[2], "@cf_wrsp_args.txt") == 0);
+
+    check(!have || spill("cf_wrsp_args.txt", "--rsp.key=1\n"), "wrote a response file");
+
+    cf::Config off = cf::Builder("rsp", argc, argv).create();
+    check(off.valid() && !off.has("rsp.key"),
+          "by default the @argument is not expanded");
+
+    cf::Config on = cf::Builder("rsp", argc, argv).responseFiles().create();
+    if (have) {
+        check(on.valid() && on.get<int>("rsp.key", 0) == 1,
+              "responseFiles() reads the file");
+    } else {
+        check(!on.valid(), "responseFiles() makes a missing file an error");
+        has(on.error().message(), "cf_wrsp_absent", "naming it");
+    }
+
+    cf::Config none = cf::Builder().responseFiles().create();
+    check(none.valid(), "a builder with no command line takes it harmlessly");
+
+    if (have) {
+        std::remove("cf_wrsp_args.txt");
+    }
+    return cf_test_done();
+}
+
+int main(int argc, char** argv) {
     static const char* const only_env[] = {"env", 0};
     static const cf_pair     pairs[]    = {{"server.port", "9000"}};
     static char*             no_env[]   = {0};
     cf_def                   locked;
 
+    if (argc >= 3 && std::strcmp(argv[1], "--rsp") == 0) {
+        return response_files(argc, argv);
+    }
     cf_def_init(&locked, CF_TYPE_TEXT, "db.password");
     locked.policy = only_env;
 

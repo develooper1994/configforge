@@ -48,6 +48,7 @@ cf_builder_open
 cf_builder_real real
 cf_builder_registry
 cf_builder_replay
+cf_builder_response_files
 cf_builder_schema
 cf_builder_schema_file
 cf_builder_secrets

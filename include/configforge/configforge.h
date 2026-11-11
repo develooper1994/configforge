@@ -55,8 +55,11 @@ typedef struct cf_config  cf_config;
  *
  * cf_app reads no file. For files, start from cf_app_builder, which
  * holds the same two sources, and add cf_builder_file at
- * CF_RANK_USER_FILE or CF_RANK_SYS_FILE. Both expand response files
- * (@file) and take the command line as UTF-8.
+ * CF_RANK_USER_FILE or CF_RANK_SYS_FILE. Both take the command line as
+ * UTF-8. Neither expands response files (@file): an argument that starts
+ * with @ is an ordinary argument, so an untrusted one cannot inject
+ * options or tell which files exist. Expansion is opt-in, on a builder:
+ * cf_builder_response_files.
  * ------------------------------------------------------------------ */
 
 CF_NODISCARD CF_API cf_config* cf_app(const char* name, int argc, char* const* argv,
@@ -96,6 +99,22 @@ CF_API cf_builder* cf_build_in(cf_arena* arena);
    the NAME_ environment (CF_RANK_ENV), for adding files and definitions
    to. */
 CF_API cf_builder* cf_app_builder(const char* name, int argc, char* const* argv);
+
+/* Turns response files on for a builder made by cf_app_builder (1.4.1):
+ * an argument `@path` past argv[0] (and before a `--`) is replaced by the
+ * lines of that file, one argument per line (cf_cli_expand). Off by
+ * default, because the command line may carry arguments the program does
+ * not trust.
+ *
+ * Call it before cf_builder_create. A response file that cannot be read
+ * fails the builder, and cf_builder_create reports it; the call itself
+ * returns CF_FALSE then, and for a builder with no command line (one from
+ * cf_build). Calling it twice is harmless.
+ *
+ * A program that relied on the old default - cf_app expanding @file -
+ * starts from cf_app_builder, calls this, and then cf_builder_create.
+ * cf_app itself never expands. */
+CF_API cf_bool cf_builder_response_files(cf_builder* b);
 
 /* Frees a builder that will not be created; a cf_build_in arena is the
    caller's and is left alone. */
