@@ -26,6 +26,7 @@
 
 #include "configforge/cf_keyspace.h"
 #include "configforge/cf_numeric.h"
+#include "configforge/cf_platform.h"
 #include "configforge/cf_source.h"
 
 #include <string.h>
@@ -212,6 +213,12 @@ cf_bool cf_store_set(const char* path, const cf_write_item* items, size_t count,
                                 "'%s': %u is not a write operation", items[i].key,
                                 items[i].op);
         }
+    }
+    /* A new store may hold a secret, so it is made before SQLite can make
+       it with the default mode; one that is already there is left as it
+       is. Where the platform cannot do this, SQLite creates it as before. */
+    if (cf_platform_has_private_create() && cf_platform_create_private(path, err) < 0) {
+        return CF_FALSE;
     }
     if (sqlite3_open_v2(path, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL) !=
             SQLITE_OK ||

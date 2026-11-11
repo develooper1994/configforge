@@ -219,6 +219,35 @@ CF_API void* cf_platform_fopen(const char* path, const char* mode);
 CF_API int cf_platform_world_readable(const char* path);
 
 /* ------------------------------------------------------------------ *
+ * Creating a file only its owner can read
+ *
+ * For a file that may hold a secret and does not exist yet, such as a
+ * new store. cf_platform_has_private_create says whether this platform
+ * can do it; a caller that gets false creates the file its own way
+ * rather than failing, because the default mode is what it had before.
+ *
+ * cf_platform_create_private returns 1 when it created an empty file
+ * that only its owner can read and write, 0 when the path already
+ * exists (it is left exactly as it was, mode and contents; "exists" is
+ * an answer, not an error), and -1 with `err` set, naming the path and
+ * the reason, when it cannot be created - a directory that is not
+ * there, no permission. It never replaces or truncates anything.
+ *
+ * POSIX creates it with mode 0600 in the same call that creates it
+ * (O_CREAT | O_EXCL), not by changing the mode afterwards, so there is
+ * no moment at which another user could open it; the umask can only
+ * remove bits from 0600, never add them. Windows creates it
+ * (CREATE_NEW) with a protected access control list that grants full
+ * access to the file's owner alone and inherits nothing from the
+ * directory. What that does not do: an administrator can still take
+ * ownership, and backup software still reads it. A build with no
+ * operating system has no answer and reports it.
+ * ------------------------------------------------------------------ */
+
+CF_API cf_bool cf_platform_has_private_create(void);
+CF_API int     cf_platform_create_private(const char* path, cf_error* err);
+
+/* ------------------------------------------------------------------ *
  * A handle to wait on (D-35, option 3)
  *
  * Something an event loop can wait on beside its own descriptors: an
