@@ -22,6 +22,7 @@ typedef struct cand {
     const char* at;
     const char* outcome; /* NULL means selected           */
     const char* reason;
+    const char* reason_kind; /* NULL from a library before 1.4.1; see doctor_reason */
     const char* digest;
     cf_i64      length;
     cf_bool     world_readable; /* a file every user can read; see CFD007 */
@@ -160,7 +161,9 @@ const rkey* doctor_find_key(const report* r, const char* key, size_t n);
 const char* doctor_shown(const rkey* k, const cand* c);
 /* What may be said of why `c` was refused: its reason, or for a
    sensitive key a fixed word, since a report from an older library can
-   quote the value in it. "invalid" when there is none. */
+   quote the value in it, unless the report names the reason's kind
+   (reason_kind), which says the library wrote it. "invalid" when there
+   is none. */
 const char* doctor_reason(const rkey* k, const cand* c);
 /* The report's entry for the source called `name`, or NULL. */
 const rsrc* doctor_find_source(const report* r, const char* name);

@@ -82,7 +82,8 @@ static int swap(char* buf, size_t cap, const char* from, const char* to) {
    reads full reports too, and its documentation promises it shows no
    secret from any of them. The PIN's refusal is given the reason a
    library of 1.4.0 or before wrote for a malformed reference, which
-   quoted the start of the value: fixing the library does not rewrite
+   quoted the start of the value, and none of the kind that a library
+   since writes beside a reason: fixing the library does not rewrite
    the reports already written. */
 static int emit_secret(const char* out, char* const* env, const char* salt,
                        const char* seed) {
@@ -124,11 +125,80 @@ static int emit_secret(const char* out, char* const* env, const char* salt,
     info.generated   = "2026-09-12T00:00:00Z";
     cf_report(c, &info, buf, sizeof buf);
     cf_config_free(c);
-    if (!swap(buf, sizeof buf, "\"reason\": \"longer than 4 characters\"",
+    if (!swap(buf, sizeof buf,
+              "\"reason\": \"too long\", \"reason_kind\": \"too-long\"",
               "\"reason\": \"'${MARKER-GOLF-7731' refers to no key\"")) {
         fprintf(stderr, "fixtures: %s: no refusal to give a reason\n", out);
         return 1;
     }
+    return spill(out, buf) ? 0 : 1;
+}
+
+/* A full report of this library with six sensitive keys, each refused for
+   a different kind (cf_refusal), the value a marker none of the output
+   may carry: not an integer, outside its range, not among the permitted
+   values, under its least length, over its greatest, and with a "${" that
+   names no key. A seventh kind, a reference to a key with no value, fails
+   the whole construction, so it has no report: test_secrets.c has it. */
+static int emit_kinds(const char* out) {
+    static char              e0[]        = "MYAPP_K__TYPE=MARKER-s3cr3t-type";
+    static char              e1[]        = "MYAPP_K__RANGE=987654321";
+    static char              e2[]        = "MYAPP_K__ALLOWED=MARKER-s3cr3t-allowed";
+    static char              e3[]        = "MYAPP_K__SHORT=MARKER-s3cr3t-short";
+    static char              e4[]        = "MYAPP_K__LONG=MARKER-s3cr3t-long";
+    static char              e5[]        = "MYAPP_K__REF=MARKER-s3cr3t-${";
+    static char*             env[]       = {e0, e1, e2, e3, e4, e5, NULL};
+    static const char* const permitted[] = {"alpha", "beta", NULL};
+    cf_error                 err         = CF_ERROR_INIT;
+    cf_builder*              b           = cf_build(NULL);
+    cf_config*               c;
+    cf_report_info           info = CF_REPORT_INFO_INIT;
+    static char              buf[65536];
+    cf_def                   d;
+
+    cf_builder_env(b, "env", CF_RANK_ENV, "MYAPP_", env);
+    cf_def_init(&d, CF_TYPE_INT, "k.type");
+    d.flags      = CF_SENSITIVE;
+    d.on_invalid = CF_INVALID_FALLBACK;
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_INT, "k.range");
+    d.flags      = CF_SENSITIVE;
+    d.on_invalid = CF_INVALID_FALLBACK;
+    d.has_range  = CF_TRUE;
+    d.imin       = 0;
+    d.imax       = 9;
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_TEXT, "k.allowed");
+    d.flags      = CF_SENSITIVE;
+    d.on_invalid = CF_INVALID_FALLBACK;
+    d.allowed    = permitted;
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_TEXT, "k.short");
+    d.flags      = CF_SENSITIVE;
+    d.on_invalid = CF_INVALID_FALLBACK;
+    d.min_len    = 64;
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_TEXT, "k.long");
+    d.flags      = CF_SENSITIVE;
+    d.on_invalid = CF_INVALID_FALLBACK;
+    d.max_len    = 4;
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_TEXT, "k.ref");
+    d.flags      = CF_SENSITIVE;
+    d.on_invalid = CF_INVALID_FALLBACK;
+    cf_builder_define(b, &d);
+
+    c = cf_builder_create(b, &err);
+    if (c == NULL) {
+        fprintf(stderr, "fixtures: %s: %s\n", out, err.message);
+        return 1;
+    }
+    info.mode        = CF_REPORT_FULL;
+    info.profile     = "production";
+    info.application = "myapp";
+    info.generated   = "2026-09-12T00:00:00Z";
+    cf_report(c, &info, buf, sizeof buf);
+    cf_config_free(c);
     return spill(out, buf) ? 0 : 1;
 }
 
@@ -449,6 +519,10 @@ int main(void) {
                         "MARKER-ECHO-7731")) {
             return 1;
         }
+    }
+
+    if (emit_kinds("cf_fx_kinds.json")) {
+        return 1;
     }
 
     /* Text from a report reaches a CI log and a pull-request comment.
