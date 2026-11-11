@@ -209,6 +209,10 @@ CF_API cf_bool cf_lex_cli(int argc, char* const* argv, const cf_keymap* map,
  * because the Windows command-line length limit is real and this is the
  * universal way around it.
  *
+ * Nothing runs this on its own: cf_app and cf_app_builder leave an
+ * argument that starts with @ alone, and a program turns expansion on
+ * with cf_builder_response_files (D-79).
+ *
  * Expansion is a separate pass rather than something the lexer does, so
  * the lexer keeps needing nothing but its arguments. Nesting is
  * refused: a response file that includes another is a command line

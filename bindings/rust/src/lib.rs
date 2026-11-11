@@ -438,6 +438,16 @@ impl Builder {
         }
     }
 
+    /// Expand `@file` arguments on the command line of a builder made by
+    /// [`Builder::app`] (off by default: an argument that starts with `@`
+    /// is an ordinary argument, so an untrusted one cannot inject options
+    /// or tell which files exist). A file that cannot be read is an error
+    /// from [`Builder::create`]. Needs libconfigforge 1.4.1.
+    pub fn response_files(self) -> Builder {
+        unsafe { sys::cf_builder_response_files(self.b) };
+        self
+    }
+
     /// Arguments as a program would see them after its own name.
     pub fn cli(mut self, name: &str, rank: i32, args: &[&str]) -> Builder {
         let mut all = vec!["program".to_string()];
@@ -1013,5 +1023,71 @@ mod read_tests {
         let derived = cfg.derive("admin", &[]).unwrap();
         assert!(derived.tracks_reads());
         assert_eq!(derived.read_count(), 0, "a derived snapshot starts afresh");
+    }
+}
+
+/// `Builder::app` reads the process's real command line, so the test runs
+/// this binary again with an `@file` argument (a test filter that matches
+/// nothing, to the harness) and reads what the child says.
+#[cfg(test)]
+mod response_file_tests {
+    use super::Builder;
+    use std::process::Command;
+
+    #[test]
+    fn response_files_child() {
+        if std::env::var("RSP_CHILD").is_err() {
+            return;
+        }
+        let mut b = Builder::app("rsp");
+        if std::env::var("RSP_ON").as_deref() == Ok("1") {
+            b = b.response_files();
+        }
+        match b.create() {
+            Ok(c) => println!("RSP:ok {:?}", c.text("rsp.key")),
+            Err(e) => println!("RSP:err {}", e.message),
+        }
+    }
+
+    fn ask(on: bool, arg: &str) -> String {
+        let out = Command::new(std::env::current_exe().unwrap())
+            .args(["response_files_child", "--nocapture"])
+            .arg(arg)
+            .env("RSP_CHILD", "1")
+            .env("RSP_ON", if on { "1" } else { "0" })
+            .output()
+            .unwrap();
+        String::from_utf8_lossy(&out.stdout)
+            .lines()
+            .find_map(|l| l.strip_prefix("RSP:").map(str::to_string))
+            .unwrap_or_else(|| "child said nothing".to_string())
+    }
+
+    #[test]
+    fn response_files_are_opt_in() {
+        let dir = std::env::temp_dir();
+        let file = dir.join(format!("cf_rsp_args_{}.txt", std::process::id()));
+        std::fs::write(&file, "--rsp.key=from-file\n").unwrap();
+        let there = format!("@{}", file.display());
+        let absent = format!("@{}", dir.join("cf_rsp_absent.txt").display());
+
+        assert_eq!(ask(false, &there), "ok None", "off: the file is not read");
+        assert_eq!(ask(false, &absent), "ok None", "off: a missing one is fine");
+        assert_eq!(ask(true, &there), "ok Some(\"from-file\")");
+        let refused = ask(true, &absent);
+        assert!(
+            refused.starts_with("err ") && refused.contains("cf_rsp_absent"),
+            "{refused}"
+        );
+        std::fs::remove_file(&file).unwrap();
+    }
+
+    #[test]
+    fn a_builder_with_no_command_line_takes_it_harmlessly() {
+        assert!(Builder::new()
+            .response_files()
+            .response_files()
+            .create()
+            .is_ok());
     }
 }

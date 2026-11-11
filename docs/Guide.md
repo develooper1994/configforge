@@ -203,7 +203,7 @@ source, a later assignment beats an earlier one.
 
 | Call | Source |
 | ---- | ------ |
-| `cf_builder_cli` | `--key=value`, `--key value`, `--no-key`, aliases, `@file` |
+| `cf_builder_cli` | `--key=value`, `--key value`, `--no-key`, aliases; `@file` only through `cf_builder_response_files` (below) |
 | `cf_builder_env` | `PREFIX_A__B`, and `PREFIX_A_B` too once a definition makes it unambiguous |
 | `cf_builder_file` | a file, its format named, by extension or by content (D-73); `CF_OPTIONAL` if it may be absent |
 | `cf_builder_document` | a document the program holds in memory (fetched, embedded), its format named, by name or by content |
@@ -216,6 +216,25 @@ source, a later assignment beats an earlier one.
 | `cf_builder_memory` | pairs from the program itself |
 | `cf_builder_replay` | a provenance report, reproducing another process's configuration |
 | `cf_builder_source` | a source you wrote; `cf_builder_file_codec` for a format you parse |
+
+**Response files are opt-in** (1.4.1, D-79). `myapp @args.txt --port=8080`
+replaces `@args.txt` by the lines of that file, one argument per line, `#`
+comments and blank lines skipped, no nesting - the way round the Windows
+command-line length limit. It is off: `cf_app` and `cf_app_builder` treat
+`@x` as the ordinary argument it is (a positional, which the command-line
+source leaves alone), so an argument the program does not trust cannot
+inject options or tell, by an error, which files exist. A program that
+wants the feature says so, on the builder `cf_app_builder` made:
+
+```c
+cf_builder* b = cf_app_builder("myapp", argc, argv);
+cf_builder_response_files(b);               /* before create */
+cfg = cf_builder_create(b, &err);           /* a file it cannot read is reported here */
+```
+
+C++ has `responseFiles()`, Python `response_files()` and Rust
+`response_files()`. `cf_app` never expands; a program that relied on it
+before 1.4.1 moves to the three lines above.
 
 `examples/c/layers.c` uses all of the usual ones at once - a shipped
 `app.toml`, a `conf.d/`, a `.env`, the environment and the command line -

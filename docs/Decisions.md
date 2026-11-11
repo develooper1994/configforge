@@ -93,6 +93,7 @@ gets reopened every six months.
 | D-74 | One `define`, the type given or inferred | definitions, bindings | **Decided** |
 | D-77 | A reference's expansion is bounded, by a constant and not a build limit | interpolation, resolver | **Decided** |
 | D-78 | A directory that cannot be read whole is an error, optional or not | drop-in, secrets, platform | **Decided** |
+| D-79 | Response files (`@file`) are opt-in | command line, security | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -3070,6 +3071,56 @@ directories are used.
 
 **Compatibility.** A directory with more than 256 files, which read
 partly before, is an error. That is the change, and the reason for it.
+
+---
+
+## D-79 — Response files (`@file`) are opt-in
+
+**Question.** `cf_app` and `cf_app_builder` passed the command line through
+`cf_cli_expand`, so any argument beginning with `@` was opened as a file of
+options. A program that takes a positional argument from outside - a name,
+a path, a user's text - therefore let that argument inject configuration
+and, by whether an error came back, tell which files exist. Should
+expansion be on by default?
+
+**Options.**
+
+1. Keep the default. Rejected: an untrusted argument injects configuration
+   and tells which files exist, in a library whose point is that the
+   command line is the highest-ranked source.
+2. Remove the feature. Rejected: programs use it, and the Windows
+   command-line length limit it works around is real.
+3. Opt-in, one call on the builder.
+
+**Decision.** Option 3. `cf_app` and `cf_app_builder` leave an argument
+that starts with `@` alone: the command-line source treats it as any
+positional - it skips it, and no file is opened. `cf_builder_response_files`
+(1.4.1) turns expansion on for a builder made by `cf_app_builder`. The
+builder keeps the command line it was given, after the UTF-8 step, and which
+of its sources reads it; the call runs `cf_cli_expand` over it and gives that
+source the expanded vector. A response file that cannot be read fails the
+builder, as it did, and `cf_builder_create` reports it. Calling it twice
+changes nothing; on a builder with no command line (from `cf_build`) it
+returns false and fails nothing. `cf_app` itself never expands: a program
+that wants the feature starts from `cf_app_builder`. C++ has `responseFiles()`,
+Python `response_files()` and Rust `response_files()`. Nothing existing
+changes signature, and the symbol list only gains a line.
+
+**Compatibility.** A change of default inside 1.x, made on purpose: a
+program that relied on `@file` through `cf_app` or `cf_app_builder` now gets
+the argument as a positional, and its options are not read. It must use
+`cf_app_builder`, call `cf_builder_response_files`, and then
+`cf_builder_create`. Nothing in the repository's examples or in Doctor
+relied on it.
+
+**Held to.** `test_lex` runs twice with a real `@` argument (the library
+reads the process's own command line on Windows, so an invented argv would
+be ignored there): with the file present, the default leaves its key unset
+and the opt-in sets it; with the file absent, the default fails nothing and
+the opt-in fails the builder with an error naming it. The same two runs in
+`test_wrapper_write` (C++98), a child process in the Python and Rust tests,
+and a builder with no command line returns false and fails nothing in all
+four.
 
 ---
 
