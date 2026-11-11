@@ -75,7 +75,7 @@ static void test_refusals(void) {
     c = cf_builder_create(b, &err);
     check(c == NULL, "a malformed sensitive value is refused");
     lacks(err.message, "12a4", "and the error does not quote it");
-    has(err.message, "not a valid int", "but says what was wrong with it");
+    has(err.message, "wrong type", "but says what was wrong with it");
     cf_config_free(c);
 
     b = cf_build(NULL);
@@ -84,7 +84,8 @@ static void test_refusals(void) {
     c = cf_builder_create(b, &err);
     check(c == NULL, "an out-of-range sensitive value is refused");
     lacks(err.message, "987654", "and the error does not quote it");
-    has(err.message, "outside 0..9999", "but names the range");
+    has(err.message, "out of range", "but says it was out of range");
+    lacks(err.message, "9999", "without the bounds, which a secret keeps to itself");
     cf_config_free(c);
 
     /* The same refusal, kept on the chain instead of raised, is what
@@ -108,7 +109,7 @@ static void test_refusals(void) {
     if (c != NULL) {
         cf_explain(c, "device.pin", buf, sizeof buf);
         lacks(buf, "987654", "and explain() shows the refusal without the value");
-        has(buf, "outside 0..9999", "with its reason");
+        has(buf, "out of range", "with its kind");
         cf_config_free(c);
     }
 
@@ -120,6 +121,105 @@ static void test_refusals(void) {
     c = cf_builder_create(b, &err);
     has(err.message, "987654", "an ordinary value is quoted in its refusal");
     cf_config_free(c);
+}
+
+/* The kind of a sensitive key's refusal, each of the seven: a marker for
+   a value, refused that way, and the reason says the kind and nothing of
+   the marker - not in the error a strict definition raises, not in
+   explain(), not in a blind report, not in inspect(). The values are the
+   marker, and for the range the digits it is, since a number cannot spell
+   one. The last kind, a reference to a key with no value, fails the whole
+   construction whatever the definition says, so it is only an error. */
+#define KINDS 7
+
+static const char* const kind_values[KINDS] = {
+    "MARKER-s3cr3t", "987654321",        "MARKER-s3cr3t",         "MARKER-s3cr3t",
+    "MARKER-s3cr3t", "MARKER-s3cr3t-${", "MARKER-s3cr3t-${nokey}"};
+
+static const char* const kind_words[KINDS] = {"wrong type",
+                                              "out of range",
+                                              "not one of the permitted values",
+                                              "too short",
+                                              "too long",
+                                              "a malformed reference",
+                                              "a reference names a key with no value"};
+
+static const char* const kind_names[KINDS] = {
+    "type", "range", "allowed", "too-short", "too-long", "reference", "no-value"};
+
+static cf_config* kind_build(int which, cf_bool lenient, cf_error* err) {
+    static const char* const permitted[] = {"alpha", "beta", NULL};
+    cf_pair                  pair;
+    cf_builder*              b = cf_build(NULL);
+    cf_def                   d;
+
+    pair.key   = "k.v";
+    pair.value = kind_values[which];
+    cf_builder_memory(b, "memory", CF_RANK_USER_FILE, &pair, 1);
+    cf_def_init(&d, (which <= 1) ? CF_TYPE_INT : CF_TYPE_TEXT, "k.v");
+    d.flags      = CF_SENSITIVE;
+    d.on_invalid = lenient ? CF_INVALID_FALLBACK : CF_INVALID_STRICT;
+    if (which == 1) {
+        d.has_range = CF_TRUE;
+        d.imin      = 0;
+        d.imax      = 9;
+    } else if (which == 2) {
+        d.allowed = permitted;
+    } else if (which == 3) {
+        d.min_len = 64;
+    } else if (which == 4) {
+        d.max_len = 4;
+    }
+    cf_builder_define(b, &d);
+    return cf_builder_create(b, err);
+}
+
+/* None of what a marker is made of, or of the reference it names. */
+static void no_marker(const char* text, const char* what) {
+    lacks(text, "MARKER", what);
+    lacks(text, "s3cr3t", what);
+    lacks(text, "987654321", what);
+    lacks(text, "nokey", what);
+}
+
+static void test_kinds(void) {
+    static char buf[16384];
+    int         which;
+
+    for (which = 0; which < KINDS; ++which) {
+        cf_error   err = CF_ERROR_INIT;
+        cf_config* c   = kind_build(which, CF_FALSE, &err);
+
+        check(c == NULL, "a sensitive value refused for its kind is refused");
+        has(err.message, kind_words[which], "the error names the kind");
+        no_marker(err.message, "and nothing of the value");
+        cf_config_free(c);
+        if (which == KINDS - 1) {
+            break; /* no definition makes this one a candidate's refusal */
+        }
+
+        c = kind_build(which, CF_TRUE, &err);
+        check(c != NULL, "and under fallback it builds");
+        if (c == NULL) {
+            continue;
+        }
+        cf_explain(c, "k.v", buf, sizeof buf);
+        has(buf, kind_words[which], "explain() names the kind");
+        no_marker(buf, "and nothing of the value");
+        cf_inspect(c, buf, sizeof buf);
+        no_marker(buf, "inspect() shows nothing of it");
+        if (cf_has_feature("report")) {
+            cf_report_info info = CF_REPORT_INFO_INIT;
+            char           field[64];
+            info.mode = CF_REPORT_BLIND;
+            cf_report(c, &info, buf, sizeof buf);
+            has(buf, kind_words[which], "a blind report names the kind");
+            sprintf(field, "\"reason_kind\": \"%s\"", kind_names[which]);
+            has(buf, field, "and writes its short name for a reader");
+            no_marker(buf, "and nothing of the value");
+        }
+        cf_config_free(c);
+    }
 }
 
 /* A secret written under a key's old name. The old name is CF_DEPRECATED
@@ -191,6 +291,7 @@ static void test_old_name(void) {
 int main(void) {
     test_explain_and_inspect();
     test_refusals();
+    test_kinds();
     test_old_name();
     return cf_test_done();
 }

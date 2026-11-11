@@ -1203,7 +1203,15 @@ static char* sized_report(size_t n, int bump, size_t* len) {
     return buf;
 }
 
-/* Milliseconds for the best of two diffs of two n-key reports. */
+/* Milliseconds for the best of DIFF_RUNS diffs of two n-key reports.
+   Doctor keeps no count of the work it does, and one is not worth
+   adding to the engine for a test, so the clock is read - but only as
+   the minimum of several runs. A busy machine slows a run by whatever
+   it takes from it; it cannot make a run faster than the work needs,
+   so the minimum of enough runs is the work's own cost, and the ratio
+   of two such minimums still tells linear from quadratic. */
+#define DIFF_RUNS 7
+
 static double time_diff(size_t n) {
     size_t la = 0, lb = 0;
     char*  a    = sized_report(n, 0, &la);
@@ -1211,7 +1219,7 @@ static double time_diff(size_t n) {
     double best = -1.0;
     int    r;
 
-    for (r = 0; a != NULL && b != NULL && r < 2; ++r) {
+    for (r = 0; a != NULL && b != NULL && r < DIFF_RUNS; ++r) {
         cf_doctor* d   = cf_doctor_new();
         cf_error   err = CF_ERROR_INIT;
         clock_t    t0  = clock();
@@ -1237,6 +1245,8 @@ static double time_diff(size_t n) {
    seven seconds (bench/). Sixteen times the keys must cost about sixteen
    times as long - 19 measured, the log of a lookup - and a scan made it
    56, so the bound is twice linear, 32.
+   What is compared is the fastest of DIFF_RUNS runs at each size (see
+   time_diff), not one reading, so load on the machine does not move it.
    Four times was too small a step: below a few thousand keys the cost
    of reading a report hides the scan, and the old code passed. */
 static void test_diff_scales(void) {

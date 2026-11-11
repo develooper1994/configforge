@@ -262,6 +262,15 @@ static void report_candidate(cf_sink* out, const cf_candidate* c,
     if (c->reason != NULL) {
         cf_sink_puts(out, ", \"reason\": ");
         report_quote_z(out, c->reason);
+        /* The kind, where the library decided one. A reader that sees it
+           knows the reason is the library's own for that kind - for a
+           sensitive key a fixed wording that quotes nothing - which a
+           reason from a 1.4.0 library, or earlier, cannot promise. An
+           added field: schema 1 readers ignore it. */
+        if (CF_CAND_REFUSAL(c) != CF_REFUSAL_NONE) {
+            cf_sink_puts(out, ", \"reason_kind\": ");
+            report_quote_z(out, cf_refusal_name(CF_CAND_REFUSAL(c)));
+        }
     }
     /* What a value with references was written as (D-10), redacted with
        the value it made. An added field: schema 1 readers ignore it. */

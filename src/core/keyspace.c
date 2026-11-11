@@ -72,6 +72,32 @@ const char* cf_outcome_name(cf_outcome o) {
     return "?";
 }
 
+/* One row per kind, in the enum's order: the name the report writes and
+   the wording a sensitive key's reason takes. */
+static const struct {
+    const char* name;
+    const char* text;
+} refusal_rows[] = {{"", ""},
+                    {"type", "wrong type"},
+                    {"range", "out of range"},
+                    {"allowed", "not one of the permitted values"},
+                    {"too-short", "too short"},
+                    {"too-long", "too long"},
+                    {"reference", "a malformed reference"},
+                    {"no-value", "a reference names a key with no value"}};
+
+const char* cf_refusal_name(cf_refusal k) {
+    return ((unsigned)k < sizeof refusal_rows / sizeof refusal_rows[0])
+               ? refusal_rows[k].name
+               : "";
+}
+
+const char* cf_refusal_text(cf_refusal k) {
+    return ((unsigned)k < sizeof refusal_rows / sizeof refusal_rows[0])
+               ? refusal_rows[k].text
+               : "";
+}
+
 cf_bool cf_outcome_can_win(cf_outcome o) {
     switch (o) {
 #define CF_OUTCOME_X(sym, name, wins)                                                  \

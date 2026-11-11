@@ -16,20 +16,30 @@
  * Validation of one value against one definition
  * ------------------------------------------------------------------ */
 
-/* A reason never quotes a sensitive value: it is stored on the candidate,
-   shown by explain() and carried in the error a strict definition
-   raises, and an out-of-range PIN is still a PIN. */
+/* The reason of a refusal of `kind`, for a sensitive key: the kind's
+   fixed wording and nothing else. A reason is stored on the candidate,
+   shown by explain(), written to the report and carried in the error a
+   strict definition raises, and an out-of-range PIN is still a PIN - so
+   not the value, not its length, not a byte of it, and not the bounds or
+   the permitted values either, which a sensitive key keeps to itself. The
+   kind is decided by the code that refuses, before any message is
+   formatted, and passed on in *kind; no message is read back. */
+static const char* sealed(cf_refusal kind, char* reason, size_t rcap) {
+    cf_fmt(reason, rcap, "%s", cf_refusal_text(kind));
+    return reason;
+}
+
 static const char* validate_value(const cf_def* d, const cf_value* v, char* reason,
-                                  size_t rcap) {
+                                  size_t rcap, cf_refusal* kind) {
     cf_bool secret = ((d->flags & CF_SENSITIVE) != 0) ? CF_TRUE : CF_FALSE;
 
     if (d->has_range && d->type == CF_TYPE_INT) {
         if (v->u.i < d->imin || v->u.i > d->imax) {
+            *kind = CF_REFUSAL_RANGE;
             if (secret) {
-                cf_fmt(reason, rcap, "the value is outside %I..%I", d->imin, d->imax);
-            } else {
-                cf_fmt(reason, rcap, "%I is outside %I..%I", v->u.i, d->imin, d->imax);
+                return sealed(*kind, reason, rcap);
             }
+            cf_fmt(reason, rcap, "%I is outside %I..%I", v->u.i, d->imin, d->imax);
             return reason;
         }
     }
@@ -37,21 +47,32 @@ static const char* validate_value(const cf_def* d, const cf_value* v, char* reas
     if (d->has_range && d->type == CF_TYPE_REAL) {
         if (v->u.r < d->rmin || v->u.r > d->rmax) {
             char lo[CF_F64_DIGITS], hi[CF_F64_DIGITS], got[CF_F64_DIGITS];
+            *kind = CF_REFUSAL_RANGE;
+            if (secret) {
+                return sealed(*kind, reason, rcap);
+            }
             cf_f64_to_text(v->u.r, got, sizeof got);
             cf_f64_to_text(d->rmin, lo, sizeof lo);
             cf_f64_to_text(d->rmax, hi, sizeof hi);
-            cf_fmt(reason, rcap, "%s is outside %s..%s", secret ? "the value" : got, lo,
-                   hi);
+            cf_fmt(reason, rcap, "%s is outside %s..%s", got, lo, hi);
             return reason;
         }
     }
 #endif
     if (d->type == CF_TYPE_TEXT) {
         if (d->min_len != 0 && v->u.t.n < d->min_len) {
+            *kind = CF_REFUSAL_TOO_SHORT;
+            if (secret) {
+                return sealed(*kind, reason, rcap);
+            }
             cf_fmt(reason, rcap, "shorter than %zu characters", d->min_len);
             return reason;
         }
         if (d->max_len != 0 && v->u.t.n > d->max_len) {
+            *kind = CF_REFUSAL_TOO_LONG;
+            if (secret) {
+                return sealed(*kind, reason, rcap);
+            }
             cf_fmt(reason, rcap, "longer than %zu characters", d->max_len);
             return reason;
         }
@@ -62,6 +83,10 @@ static const char* validate_value(const cf_def* d, const cf_value* v, char* reas
                                  strlen(d->allowed[i])) == 0) {
                     return NULL;
                 }
+            }
+            *kind = CF_REFUSAL_ALLOWED;
+            if (secret) {
+                return sealed(*kind, reason, rcap);
             }
             /* Naming what was permitted matters more than naming what
                was given: the reader already knows what they wrote. */
@@ -156,7 +181,7 @@ static char* unescape(cf_arena* ar, const char* p, size_t n, size_t* out_n) {
    written, for the keys it names. The refusal of a `secret` one quotes
    none of it: what follows a stray "${" in a password is the password. */
 static const char* reference_syntax(cf_arena* ar, cf_candidate* c, cf_bool secret,
-                                    char* reason, size_t rcap) {
+                                    char* reason, size_t rcap, cf_refusal* kind) {
     const char* p;
     const char* name = NULL;
     size_t      n, i = 0, nlen = 0, refs = 0;
@@ -172,16 +197,14 @@ static const char* reference_syntax(cf_arena* ar, cf_candidate* c, cf_bool secre
         ++refs;
     }
     if (r < 0) {
+        *kind = CF_REFUSAL_REFERENCE;
         if (secret) {
-            cf_fmt(reason, rcap,
-                   "the value has a '${' that names no key: a reference is ${key}, "
-                   "the key as the program names it; write '$${' for a literal '${'");
-        } else {
-            cf_fmt(reason, rcap,
-                   "'${%S' refers to no key: a reference is ${key}, the key as the "
-                   "program names it; write '$${' for a literal '${'",
-                   name, (nlen > 40) ? (size_t)40 : nlen);
+            return sealed(*kind, reason, rcap);
         }
+        cf_fmt(reason, rcap,
+               "'${%S' refers to no key: a reference is ${key}, the key as the "
+               "program names it; write '$${' for a literal '${'",
+               name, (nlen > 40) ? (size_t)40 : nlen);
         return reason;
     }
     if (refs > 0) {
@@ -209,20 +232,20 @@ static const char* reference_syntax(cf_arena* ar, cf_candidate* c, cf_bool secre
 /* One candidate against its definition: converted, type-checked and
    validated. NULL when it passes; a template passes until it is one. */
 static const char* apply_candidate(const cf_def* d, cf_candidate* c,
-                                   cf_apply_report* rep, char* reason, size_t rcap) {
+                                   cf_apply_report* rep, char* reason, size_t rcap,
+                                   cf_refusal* kind) {
     if ((c->flags & CF_CAND_TEMPLATE) != 0) {
         return NULL;
     }
     if ((c->flags & CF_CAND_TEXTUAL) != 0) {
         cf_value converted;
         if (!cf_value_from_text(d->type, c->value.u.t.p, c->value.u.t.n, &converted)) {
+            *kind = CF_REFUSAL_TYPE;
             if ((d->flags & CF_SENSITIVE) != 0) {
-                cf_fmt(reason, rcap, "the value is not a valid %s",
-                       cf_type_name(d->type));
-            } else {
-                cf_fmt(reason, rcap, "\"%s\" is not a valid %s", c->value.u.t.p,
-                       cf_type_name(d->type));
+                return sealed(*kind, reason, rcap);
             }
+            cf_fmt(reason, rcap, "\"%s\" is not a valid %s", c->value.u.t.p,
+                   cf_type_name(d->type));
             return reason;
         }
         /* The converted text is already in the arena when the type is
@@ -234,20 +257,27 @@ static const char* apply_candidate(const cf_def* d, cf_candidate* c,
         /* A typed source said something different from the declaration.
            Coercing here would undo the only reason to have a typed
            source at all. */
+        *kind = CF_REFUSAL_TYPE;
+        if ((d->flags & CF_SENSITIVE) != 0) {
+            return sealed(*kind, reason, rcap);
+        }
         cf_fmt(reason, rcap, "source supplied %s where %s was declared",
                cf_type_name(c->value.type), cf_type_name(d->type));
         return reason;
     }
-    return validate_value(d, &c->value, reason, rcap);
+    return validate_value(d, &c->value, reason, rcap, kind);
 }
 
-/* Refuse a candidate: rejected, with its reason, and the whole
-   construction failed when the definition is strict. */
+/* Refuse a candidate: rejected, with its reason and its kind, and the
+   whole construction failed when the definition is strict. */
 static cf_bool reject(cf_keyspace* ks, const cf_def* d, cf_candidate* c,
-                      const char* why, cf_apply_report* rep, cf_error* err) {
+                      const char* why, cf_refusal kind, cf_apply_report* rep,
+                      cf_error* err) {
     char* stored = cf_arena_dup(ks->arena, why, strlen(why));
     c->outcome   = CF_OUT_REJECTED;
-    c->reason    = (stored != NULL) ? stored : "invalid";
+    c->flags =
+        (c->flags & ~CF_CAND_REFUSAL_MASK) | ((unsigned)kind << CF_CAND_REFUSAL_SHIFT);
+    c->reason = (stored != NULL) ? stored : "invalid";
     ++rep->rejected;
     if (d == NULL || d->on_invalid == CF_INVALID_STRICT) {
         return cf_error_set(err, CF_E_VALIDATE, (d != NULL) ? d->key : NULL,
@@ -264,17 +294,18 @@ static cf_bool apply_entry(cf_keyspace* ks, const cf_def* d, cf_entry* e,
 
     for (c = e->chain; c != NULL; c = c->next) {
         const char* why;
+        cf_refusal  kind = CF_REFUSAL_NONE;
 
         if (!cf_outcome_can_win(c->outcome)) {
             continue;
         }
         why = reference_syntax(ks->arena, c,
                                ((d->flags & CF_SENSITIVE) != 0) ? CF_TRUE : CF_FALSE,
-                               reason, sizeof reason);
+                               reason, sizeof reason, &kind);
         if (why == NULL) {
-            why = apply_candidate(d, c, rep, reason, sizeof reason);
+            why = apply_candidate(d, c, rep, reason, sizeof reason, &kind);
         }
-        if (why != NULL && !reject(ks, d, c, why, rep, err)) {
+        if (why != NULL && !reject(ks, d, c, why, kind, rep, err)) {
             return CF_FALSE;
         }
     }
@@ -400,7 +431,7 @@ static cf_bool expand_no_value(expand_ctx* x, const cf_entry* e, const cf_def* d
                                const cf_candidate* c, const char* name, size_t nlen) {
     if (d != NULL && (d->flags & CF_SENSITIVE) != 0) {
         return cf_error_set(x->err, CF_E_VALIDATE, e->key, (c->at != NULL) ? c->at : "",
-                            "%s: a reference names a key with no value", e->key);
+                            "%s: %s", e->key, cf_refusal_text(CF_REFUSAL_NO_VALUE));
     }
     return cf_error_set(x->err, CF_E_VALIDATE, e->key, (c->at != NULL) ? c->at : "",
                         "%s: ${%S} names a key with no value", e->key, name, nlen);
@@ -417,6 +448,7 @@ static cf_bool expand_entry(expand_ctx* x, cf_entry* e, int depth) {
         cf_candidate* c = e->selected;
         const char*   name;
         const char*   why;
+        cf_refusal    kind = CF_REFUSAL_NONE;
         size_t        i = 0, nlen = 0, left, cap;
         cf_candidate* k;
         int           built;
@@ -501,11 +533,11 @@ static cf_bool expand_entry(expand_ctx* x, cf_entry* e, int depth) {
             c->flags &= ~(unsigned)CF_CAND_TEXTUAL;
             return CF_TRUE;
         }
-        why = apply_candidate(d, c, x->rep, x->reason, sizeof x->reason);
+        why = apply_candidate(d, c, x->rep, x->reason, sizeof x->reason, &kind);
         if (why == NULL) {
             return CF_TRUE;
         }
-        if (!reject(x->ks, d, c, why, x->rep, x->err)) {
+        if (!reject(x->ks, d, c, why, kind, x->rep, x->err)) {
             return CF_FALSE;
         }
         /* Fallback: the next candidate down that may still win. */
@@ -1087,14 +1119,15 @@ cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names*
                rather than in the source is what lets a declared type
                win over a guess. */
             for (c = e->chain; c != NULL; c = c->next) {
-                cf_value v;
-                char     why[CF_MESSAGE_MAX];
+                cf_value   v;
+                char       why[CF_MESSAGE_MAX];
+                cf_refusal kind = CF_REFUSAL_NONE; /* no candidate to carry it */
                 /* No definition, so no fallback to ask for: the
                    reserved syntax fails construction, as any invalid
                    value does by default (D-05). */
                 if (cf_outcome_can_win(c->outcome) &&
-                    reference_syntax(cf_ks_arena(ks), c, CF_FALSE, why, sizeof why) !=
-                        NULL) {
+                    reference_syntax(cf_ks_arena(ks), c, CF_FALSE, why, sizeof why,
+                                     &kind) != NULL) {
                     return cf_error_set(err, CF_E_VALIDATE, e->key,
                                         (c->at != NULL) ? c->at : "", "%s: %s", e->key,
                                         why);

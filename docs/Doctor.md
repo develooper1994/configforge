@@ -78,6 +78,7 @@ policy summary                    effective precedence, per-parameter overrides
 per key (the key space is flat; see the value model)
     definition    type, required, default, sensitive, deprecated, array mode
     candidates    per source: present, value or redacted form, rejection reason
+                  and its kind (`reason_kind`; for a secret, a fixed wording)
     selected      source and reason
     warnings      unknown keys, coercions, deprecated usage
 ```
@@ -578,8 +579,32 @@ report carries the value, and Doctor compares by it, but no finding,
 gate gives `cf_live`, ever says it - a changed secret is "sensitive value
 differs (by digest)", a refused one `<redacted>`. Until 1.4.1 a full
 report's secrets were printed by `diff` (VALUE, CFD017), by CFD006, and
-by `dump` and `explain`. The step's exit code is the worst of the lint
-and the diff at `fail-on`.
+by `dump` and `explain`.
+
+**The reason a secret is refused** says the kind and nothing more. The
+library decides the kind where it refuses the value, and for a sensitive
+key gives the reason the fixed wording of that kind - never the value,
+its length, a byte of it, the bounds, or the permitted values:
+
+| Kind (`reason_kind`) | The reason says |
+| --- | --- |
+| `type` | wrong type |
+| `range` | out of range |
+| `allowed` | not one of the permitted values |
+| `too-short` | too short |
+| `too-long` | too long |
+| `reference` | a malformed reference |
+| `no-value` | a reference names a key with no value |
+
+The same wording is in `cf_error`, `explain()`, the log line of a
+fallback, a report's `reason`, and Doctor's text, Markdown and SARIF. The
+report writes the kind's short name beside it as `reason_kind`; Doctor
+shows a secret's reason only when that field is there, since a report
+from 1.4.0 or before can quote the value in its reason, and shows the
+word "invalid" for one without it. A reference to a key with no value
+fails the whole construction, so it is the error and not a refusal on
+the chain. The step's exit code is the worst of the lint and the diff at
+`fail-on`.
 
 **Before a commit**, the same as a [pre-commit](https://pre-commit.com)
 hook, for a project that keeps its reports in the repository:
