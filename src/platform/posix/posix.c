@@ -26,9 +26,13 @@
 #if CF_PLATFORM_POSIX
 
 #include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <string.h>
+#include <unistd.h>
 
 /* The wait handle: inotify on Linux, kqueue on macOS and the BSDs, and
    on any other POSIX system a plain statement that there is none, where
@@ -175,6 +179,32 @@ int cf_platform_world_readable(const char* path) {
         return -1;
     }
     return ((st.st_mode & S_IROTH) != 0) ? 1 : 0;
+}
+
+cf_bool cf_platform_has_private_create(void) {
+    return CF_TRUE;
+}
+
+int cf_platform_create_private(const char* path, cf_error* err) {
+    int fd;
+
+    if (path == NULL) {
+        cf_error_set(err, CF_E_SOURCE, NULL, NULL, "no file to create");
+        return -1;
+    }
+    /* The mode goes in with the creation: a chmod afterwards leaves a
+       window in which the file has the umask's mode. */
+    fd = open(path, O_WRONLY | O_CREAT | O_EXCL, 0600);
+    if (fd < 0) {
+        if (errno == EEXIST) {
+            return 0;
+        }
+        cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot create '%s': %s", path,
+                     strerror(errno));
+        return -1;
+    }
+    close(fd);
+    return 1;
 }
 
 int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], int max,

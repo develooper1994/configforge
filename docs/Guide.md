@@ -677,6 +677,11 @@ refused, and so is any key whose policy says it may only come from the
 environment. `cf_store_set` writes a store without asking, for
 provisioning one before the program runs.
 
+A store that does not exist yet is created readable and writable by its
+owner alone (mode 0600 on POSIX, a protected owner-only access control
+list on Windows), whatever the umask says, because it may hold secrets.
+A store that already exists keeps the mode it has.
+
 For an APPEND list, `cf_write` and `cf_edit` address the final list:
 updating `tags.2` may write `tags.0` in its contributing store. A store
 without a count can instead set or delete final-index patches. Count
