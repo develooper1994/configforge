@@ -269,6 +269,21 @@ const cf_codec* cf_codec_detect(const cf_codec* const* own, size_t nown,
     if (in->p == NULL || in->n == 0) {
         return NULL;
     }
+    if (ar == NULL) {
+        /* No work space lent: the trial readers get one of their own. A
+           reader cannot tell a sink that lends nothing from one out of
+           memory, so without it TOML, which borrows for every document,
+           and JSON, for a string of 256 bytes or more, were never
+           detected. Only a build with no allocator goes on without. */
+        cf_arena*       mine = cf_arena_new(NULL, 0);
+        const cf_codec* c;
+
+        if (mine != NULL) {
+            c = cf_codec_detect(own, nown, in, NULL, mine, d);
+            cf_arena_free(mine);
+            return c;
+        }
+    }
     for (i = 0; own != NULL && i < nown; ++i) {
         if (can_read(own[i])) {
             order[n++] = own[i];

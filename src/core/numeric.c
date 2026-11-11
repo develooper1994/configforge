@@ -213,17 +213,23 @@ static void big_trim(cf_big* b) {
 static int big_bitlen(const cf_big* b) {
     cf_u32 top;
     int    bits;
+    int    n = b->n;
 
-    if (b->n == 0) {
+    /* Every writer keeps n within the limbs; holding it there here too
+       is what lets a reader of this function alone see the index fits. */
+    if (n <= 0) {
         return 0;
     }
-    top  = b->d[b->n - 1];
+    if (n > CF_BIG_LIMBS) {
+        n = CF_BIG_LIMBS;
+    }
+    top  = b->d[n - 1];
     bits = 0;
     while (top != 0) {
         top >>= 1;
         ++bits;
     }
-    return (b->n - 1) * 32 + bits;
+    return (n - 1) * 32 + bits;
 }
 
 static int big_cmp(const cf_big* a, const cf_big* b) {

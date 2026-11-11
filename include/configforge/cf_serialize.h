@@ -247,8 +247,9 @@ typedef struct cf_detect {
    as it stands, without reading, so no document read before is read
    differently; with no name, or none whose extension a codec claims, the
    content decides. `ar` is the trial readers' work space, and is not
-   reset: pass one that can be thrown away (cf_blob_arena). `out`, when not
-   NULL, says how the answer was reached. */
+   reset: pass one that can be thrown away (cf_blob_arena), or NULL for one
+   made and released inside the call. `out`, when not NULL, says how the
+   answer was reached. */
 CF_API const cf_codec* cf_codec_detect(const cf_codec* const* own, size_t n,
                                        const cf_blob* in, const char* name,
                                        cf_arena* ar, cf_detect* out);

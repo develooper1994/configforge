@@ -72,6 +72,20 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   290th move the exponent and set the rounding. Known limit: a literal
   of more than 290 digits lying exactly on a halfway point may be one
   unit in the last place off. `0e999` now reads as 0.
+- **A level of distinct sibling names no longer makes the XML reader
+  quadratic**: each child's name asks a hash in the sink's work space,
+  not every earlier name, and 40,000 siblings read in under a second
+  where they took forty.
+- **A multi-line string no longer reserves a key-space record a line**:
+  the guess from a document's lines is capped at one record for four
+  bytes of input, so two megabytes of one string reserve nothing like
+  the ninety they did, on each reload.
+- **`cf_codec_detect` with no arena detects TOML, and JSON with long
+  strings**: it makes its own work space for the call, where TOML took
+  the lack of one for running out of memory.
+- **The Rust binding no longer quotes a string with a NUL in its
+  error**, which could be a secret, and `Edit::set` refuses one at
+  commit instead of writing a different value.
 - **A section of many distinct `name[]` arrays in INI no longer takes
   quadratic time**: 60,000 lines took a minute and take seconds. The
   reader remembers the section's names in the sink's work space, and

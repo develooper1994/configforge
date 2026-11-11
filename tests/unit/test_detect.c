@@ -298,6 +298,38 @@ static void test_look(void) {
     check(CF_TRUE, "an array of a string and a table is looked at as JSON");
 }
 
+/* No arena lent: TOML borrows work space for every document and JSON
+   for a string of 256 bytes or more, and a refusal to lend is not the
+   document's fault - both are still detected. */
+static void test_no_arena(void) {
+    static char     doc[400];
+    cf_blob         blob;
+    cf_detect       d;
+    const cf_codec* c = NULL;
+    size_t          n = 0;
+
+    memset(&blob, 0, sizeof blob);
+    memset(&d, 0, sizeof d);
+#if CF_WITH_TOML
+    strcpy(doc, "[server]\nport = 9443\n");
+    cf_blob_mem(&blob, doc, strlen(doc), "bytes");
+    c = cf_codec_detect(NULL, 0, &blob, NULL, NULL, &d);
+    check(c != NULL && strcmp(c->name, "toml") == 0, "TOML is detected with no arena");
+#endif
+#if CF_WITH_JSON
+    strcpy(doc, "{\"server\": {\"name\": \"");
+    n = strlen(doc);
+    memset(doc + n, 'a', 300);
+    strcpy(doc + n + 300, "\"}}\n");
+    cf_blob_mem(&blob, doc, strlen(doc), "bytes");
+    c = cf_codec_detect(NULL, 0, &blob, NULL, NULL, &d);
+    check(c != NULL && strcmp(c->name, "json") == 0,
+          "and so is JSON with a 300-byte string");
+#endif
+    (void)c;
+    (void)n;
+}
+
 static void test_document(void) {
     cf_error    err = CF_ERROR_INIT;
     cf_builder* b;
@@ -578,6 +610,7 @@ int main(void) {
     test_ambiguous();
 #endif
     test_look();
+    test_no_arena();
     test_document();
     test_own_codec();
     return cf_test_done();

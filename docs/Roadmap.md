@@ -66,15 +66,10 @@ beside what is not.
 
 Known to be wrong, and not fixed by it:
 
-* The XML reader takes quadratic time in distinct sibling names
-  (`xml_find` in `xml.c`).
-* The key space's guess from a document's line count is not capped
-  relative to the input's size (`cfi_ks_expect` in `keyspace.c`).
-* `cf_codec_detect` with a NULL arena makes TOML always fail.
 * A new SQLite store is created with the default permissions
-  (`store.c`).
-* Rust: `Keep::refusal` echoes a value with a NUL, and `Edit::set` writes
-  a NUL as U+0001 instead of refusing it.
+  (`store.c`). The fix is a platform capability - make a file that only
+  its owner may read - which is a new function in `cf_platform.h` and
+  so in the public symbols, with an implementation a platform.
 
 ### What can run at once
 
