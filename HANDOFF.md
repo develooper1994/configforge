@@ -7,10 +7,20 @@ the owner; do not guess.
 
 ## START HERE
 
+Step 0 - before anything else, see what changed elsewhere. The owner
+works on this repository from more than one computer:
+  `git fetch && git status -sb && git log --oneline HEAD..origin/main`
+  If `origin/main` has commits you do not have, `git pull --ff-only`
+  and read them (`git log -p`) before continuing: a step below may
+  already be done, or done differently. If the pull is refused because
+  the histories diverged, STOP and tell the owner; do not reset, rebase
+  or force anything. If the working tree has changes you did not make,
+  ask before touching them.
+
 State: `main` holds the finished security pass (commits `4af2b33`,
 `4c1ae97`, `ea60e72`, `6c528fa`; CI was green on `6c528fa`). The commit
-after them changes CI's runner label and adds this file; its CI run has
-NOT been read.
+after them changes CI's runner label and adds this file. Step 1 says
+how to read its CI run. Step 2 is done: the open CodeQL alerts are 0.
 
 Step 1 - read CI for the newest commit on `main`:
   `gh run list --branch main --limit 3`
@@ -52,12 +62,37 @@ Step 4 - the small things left (each is one commit; rules below):
      range, malformed reference) without the value. This serves the
      project's purpose: every value can say why it is what it is.
 
-Step 5 - ask the owner two questions (do not decide them yourself):
-  * `@file` arguments are read as response files by default in
-    `cf_app`. An untrusted argument can inject configuration. Make it
-    opt-in? (It changes the interface.)
-  * Dependabot alerts and secret scanning are off in the repository
-    settings. Turn them on?
+Step 5 - DECIDED by the owner on 2026-11-11, to build: response files
+  become opt-in. Today any argument beginning with `@` is read as a
+  file of options (`src/sources/entry.c` ~558, switched on by default
+  in `cf_app_builder`, `src/core/config.c` ~251). Wanted:
+  * by default an `@file` argument is NOT expanded; it is treated as
+    any other argument is;
+  * a program turns expansion on explicitly. Look at how `cf_app` and
+    the builder take their other options and add this one the same
+    way (a flag in the options struct if there is one, otherwise a
+    builder call). Prefer adding a field or a function to changing an
+    existing signature, so 1.x stays ABI-compatible (`gate.abi`,
+    `cmake/configforge.symbols`);
+  * tests in the command-line unit test: with the default, `@x` is not
+    opened (prove it: point it at a file that sets a key and check the
+    key is NOT set); with the option on, it is. On Windows a test that
+    invents an argv must build with `cf_builder_cli`;
+  * the C++ wrapper, the Rust and Python bindings and the examples: grep
+    for uses of response files and keep them working by turning the
+    option on where an example relies on it;
+  * documents in the same commit: a new D-number in `docs/Decisions.md`
+    (options weighed: keep the default - rejected, an untrusted
+    argument injects configuration; remove the feature - rejected,
+    programs use it; opt-in - chosen), `CHANGELOG.md` saying what a
+    program that relied on the default must now do, the Guide's
+    command-line section, the header comment and the apiref; then move
+    the item out of the Roadmap's "Open decisions".
+  This changes default behaviour inside 1.x: say so plainly in the
+  CHANGELOG under a "Changed" heading, and ask the owner whether it
+  ships as 1.4.1 or waits for 1.5.0 before releasing.
+  Also decided and already DONE: Dependabot alerts, secret scanning and
+  push protection are switched on in the repository settings.
 
 Step 6 - then the Roadmap: `docs/Roadmap.md`, "Ideas", the subsection
   "From the security pass of 2026-11-11" (start with the marker-secret
