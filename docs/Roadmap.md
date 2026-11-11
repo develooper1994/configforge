@@ -69,7 +69,33 @@ Known to be wrong, and not fixed by it:
 * A new SQLite store is created with the default permissions
   (`store.c`). The fix is a platform capability - make a file that only
   its owner may read - which is a new function in `cf_platform.h` and
-  so in the public symbols, with an implementation a platform.
+  so in the public symbols, with an implementation a platform. Done
+  when, after `cf_store_set` on a new path, the file's mode is 0600 on
+  POSIX, and an existing file keeps the mode it had.
+* `doctor.api`'s check that a diff of sixteen times the keys costs about
+  sixteen times measures time, and fails on a busy machine. Done when it
+  passes five times in a row while another build runs (the best of
+  several runs, or a count of work in place of the clock).
+* Doctor shows a sensitive key's refusal only as "invalid". It should
+  say the kind - wrong type, out of range, a malformed reference -
+  without the value, as every value is to say why it is what it is.
+* TOML's table of what a document has defined hashes without a seed, so
+  chosen keys make it quadratic. Low; a seed a decode or a bound on the
+  chain, and an entry in Decisions.md for whichever.
+* Response files opt-in, decided and not built ("Open decisions").
+* Dependabot's pull request 5 (`attest-build-provenance` 2 to 4): the
+  actions are pinned to commits now, so it is read against the pin, and
+  merged or closed.
+
+Then the ideas under "From the security pass of 2026-11-11", the
+marker-secret gate first, and wave 3.
+
+What the pass taught about the machines: a change is pushed as a branch
+and its CI read before `main` moves, since CI has clang-format 22,
+clang-tidy 21 and MSVC's analyzer where a machine may have none of
+them; and CI's jobs name `ubuntu-26.04`, as `ubuntu-latest` is 24.04,
+whose libfyaml (0.8) is under the floor and whose clang-tidy (18) is
+not the one the code is held to.
 
 ### What can run at once
 
@@ -571,7 +597,7 @@ whose size changes while it is read is still read whole.
   fingerprint. Done when a digest cannot be tested against guesses
   without a key, and the report schema and `doctor diff` still compare.
 * ⬜ **A trusted-directory check**, like sudo's, for drop-in and secrets
-  directories: refuse one a user other than the owner or root can write
+  directories: refuse one a user other than its owner or root can write
   to. Done when it is on by default for secrets and opt-in for drop-ins,
   with the decision in Decisions.md.
 * ⬜ **Doctor `--redact-all`**, on by default in the action, so that a
@@ -624,7 +650,7 @@ that needs the live configuration rather than its record.
 
 ## Open decisions
 
-None. Two were decided by the owner on 2026-11-11:
+None. Two were decided on 2026-11-11:
 
 * **Response files become opt-in.** `@file` arguments are expanded by
   default in `cf_app`, so an untrusted positional argument can inject
