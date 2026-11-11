@@ -343,6 +343,8 @@ static cf_bool parse(report* r, const cf_blob* blob, cf_error* err) {
                                        rk->key, rk->keylen, j);
             rk->c[j].reason = text_at(&r->doc, "keys.%S.candidates.%zu.reason", rk->key,
                                       rk->keylen, j);
+            rk->c[j].reason_kind = text_at(
+                &r->doc, "keys.%S.candidates.%zu.reason_kind", rk->key, rk->keylen, j);
             rk->c[j].digest = text_at(&r->doc, "keys.%S.candidates.%zu.digest", rk->key,
                                       rk->keylen, j);
             {
@@ -454,15 +456,20 @@ const char* doctor_shown(const rkey* k, const cand* c) {
 
 /* A reason can quote the value: a library of 1.4.0 or before wrote the
    start of a malformed reference into it, and fixing the library does
-   not rewrite the reports already written. For a secret it is the word
-   the library's own log line uses (config.c). A policy reason is kept:
-   the library writes it from the key's and the sources' names alone,
-   and it is what CFD016 is about. */
+   not rewrite the reports already written. So the reason of a secret is
+   shown only when the report says it is the library's own for a kind:
+   "reason_kind" is written by a library that, for a sensitive key, then
+   puts the fixed wording of that kind in the reason and nothing else.
+   Without it - an older report - it is the word "invalid", as the
+   library's log line used to say. A policy reason is kept: the library
+   writes it from the key's and the sources' names alone, and it is what
+   CFD016 is about. */
 const char* doctor_reason(const rkey* k, const cand* c) {
     if (c->reason == NULL) {
         return "invalid";
     }
-    if (k->sensitive && strncmp(c->reason, "policy:", 7) != 0) {
+    if (k->sensitive && c->reason_kind == NULL &&
+        strncmp(c->reason, "policy:", 7) != 0) {
         return "invalid";
     }
     return c->reason;

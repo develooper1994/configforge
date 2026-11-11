@@ -251,6 +251,8 @@ cf_ref_dec
 cf_ref_get
 cf_ref_inc
 cf_ref_init
+cf_refusal_name
+cf_refusal_text
 cf_report
 cf_report_key_write
 cf_report_write

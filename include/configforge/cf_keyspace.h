@@ -104,6 +104,13 @@ CF_API cf_bool cf_outcome_can_win(cf_outcome o);
 /* An aggregate count, not another assignment by its named source. */
 #define CF_CAND_LIST_RESULT 64u
 
+/* The kind of refusal is kept in the flag bits from CF_CAND_REFUSAL_SHIFT
+   up, as a cf_refusal; read it with CF_CAND_REFUSAL. */
+#define CF_CAND_REFUSAL_SHIFT 16
+#define CF_CAND_REFUSAL_MASK (15u << CF_CAND_REFUSAL_SHIFT)
+#define CF_CAND_REFUSAL(c)                                                             \
+    ((cf_refusal)(((c)->flags & CF_CAND_REFUSAL_MASK) >> CF_CAND_REFUSAL_SHIFT))
+
 /* A resolved snapshot is an append base, not another raw contribution
    to which the program's defaults should be added a second time. */
 #define CF_CAND_RESOLVED 128u
@@ -121,6 +128,30 @@ typedef struct cf_candidate {
     const char*          written; /* with references: as written      */
     struct cf_candidate* next;    /* next lower precedence            */
 } cf_candidate;
+
+/* Why the contract refused a value, decided where it is refused and
+   carried on the candidate, so nothing needs to read it back out of the
+   message. For a key marked CF_SENSITIVE the reason is the fixed wording
+   of its kind, cf_refusal_text, and nothing else: no value, no length, no
+   byte of it. A candidate refused for no kind the contract names, or
+   not refused, has CF_REFUSAL_NONE. The report writes the kind's name as
+   "reason_kind" beside the reason. */
+typedef enum cf_refusal {
+    CF_REFUSAL_NONE = 0,
+    CF_REFUSAL_TYPE,      /* the value is not of the declared type    */
+    CF_REFUSAL_RANGE,     /* a number outside its declared bounds     */
+    CF_REFUSAL_ALLOWED,   /* text not among the permitted values      */
+    CF_REFUSAL_TOO_SHORT, /* text under its declared minimum length   */
+    CF_REFUSAL_TOO_LONG,  /* text over its declared maximum length    */
+    CF_REFUSAL_REFERENCE, /* a ${...} that is not a well-formed key   */
+    CF_REFUSAL_NO_VALUE   /* a reference to a key that has no value   */
+} cf_refusal;
+
+/* The kind's short name ("range"), as the report writes it, and the fixed
+   wording a sensitive key's reason takes ("out of range"). "" and "" for
+   CF_REFUSAL_NONE. */
+CF_API const char* cf_refusal_name(cf_refusal k);
+CF_API const char* cf_refusal_text(cf_refusal k);
 
 /* Candidates are ordered by precedence rank, and within one rank the
    later occurrence comes first: a source that can repeat a key means
