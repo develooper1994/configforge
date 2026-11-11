@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   gates:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Generate the locales the suite needs
@@ -23,7 +23,7 @@ jobs:
         run: ctest --test-dir build --output-on-failure
 
   portable:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Build both ways and compare output
@@ -37,7 +37,7 @@ jobs:
   matrix:
     strategy:
       matrix:
-        os: [ubuntu-26.04, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -57,7 +57,7 @@ jobs:
   shared:
     strategy:
       matrix:
-        os: [ubuntu-26.04, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -100,14 +100,14 @@ jobs:
       - run: ctest --test-dir bk -R "^unit\." --output-on-failure
 
   minimal:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: cmake --preset minimal && cmake --build --preset minimal
       - run: ctest --preset minimal
 
   sanitize:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: cmake --preset sanitize && cmake --build --preset sanitize
@@ -116,7 +116,7 @@ jobs:
   # The packages, built by their package managers from this checkout
   # and used by a project that knows only the package.
   conan:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: pipx install conan
@@ -127,7 +127,7 @@ jobs:
           -tf packaging/conan/test_package
 
   vcpkg:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: |
@@ -147,7 +147,7 @@ jobs:
   # one of either: musl through musl-gcc, the Tiny C Compiler and the
   # Portable C Compiler, besides GCC, Clang and MSVC above.
   compilers:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: sudo apt-get update && sudo apt-get install -y musl-tools tcc pcc
@@ -159,7 +159,7 @@ jobs:
   # inlines differently from Ubuntu's: Doctor's main once grew past the
   # stack budget there and nowhere else.
   alpine:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     container: alpine:3.20
     steps:
       - run: apk add --no-cache build-base cmake ninja git python3
@@ -171,7 +171,7 @@ jobs:
   # and sqlite3, and YAML reads through libyaml only when asked (D-69);
   # this is the build that has them, the whole suite included.
   yaml:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: >-
@@ -187,7 +187,7 @@ jobs:
   # above the floor of 0.9.1 that the build enforces (24.04's 0.8 hangs
   # on malformed input, and is refused).
   libfyaml:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: sudo apt-get update && sudo apt-get install -y libfyaml-dev
@@ -200,7 +200,7 @@ jobs:
   # kernel randomises mmap with more bits than the thread sanitiser's
   # shadow layout allows, so the tests run with randomisation off.
   tsan:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: cmake --preset tsan && cmake --build --preset tsan
@@ -209,7 +209,7 @@ jobs:
   # Coverage-guided fuzzing of every reader of untrusted bytes, a minute
   # each. A finding leaves its input as crash-<hash>, kept as an artifact.
   libfuzzer:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       # What earlier runs learned: a new cache entry each run, restored
@@ -241,7 +241,7 @@ jobs:
   # Which lines no test reaches, and a floor under the number: a ratchet
   # in verify.cmake (COVERAGE_MIN), raised as tests are added.
   coverage:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: sudo apt-get update && sudo apt-get install -y gcovr
@@ -253,7 +253,7 @@ jobs:
   # SARIF and the Markdown there afterwards. On a pull request it
   # comments, which is how the comment is tried against a real forge.
   doctor-action:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
@@ -281,7 +281,7 @@ jobs:
           grep -q 'ConfigForge Doctor: diff' "${{ steps.doctor-diff.outputs.markdown }}"
 
   analyze:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: sudo apt-get update && sudo apt-get install -y cppcheck
@@ -289,7 +289,7 @@ jobs:
       - run: ctest --preset analyze
 
   fuzz:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Generate locales
@@ -309,7 +309,7 @@ jobs:
           done
 
   clang:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: sudo apt-get update && sudo apt-get install -y clang clang-tidy clang-format
