@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   analyze:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       security-events: write
