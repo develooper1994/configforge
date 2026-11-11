@@ -4,10 +4,18 @@
  * said; and, without CF_WITH_SQLITE, refused by name.
  */
 
+#ifndef _WIN32
+#define _POSIX_C_SOURCE 200112L /* umask, chmod, stat */
+#endif
+
 #include <configforge/configforge.h>
 
 #include <stdio.h>
 #include <string.h>
+#ifndef _WIN32
+#include <sys/stat.h>
+#include <sys/types.h>
+#endif
 
 #include "cf_test.h"
 
@@ -162,6 +170,75 @@ static void test_write_granted(void) {
     }
 }
 
+#ifndef _WIN32
+
+/* The permission bits of `path`, or -1 when it cannot be stat-ed. */
+static int mode_of(const char* path) {
+    struct stat st;
+
+    return (stat(path, &st) == 0) ? (int)(st.st_mode & 0777) : -1;
+}
+
+/* A new store is readable and writable by its owner alone, whatever the
+   umask says. */
+static void test_new_store_private(void) {
+    cf_write_item one;
+    cf_error      err = CF_ERROR_INIT;
+    mode_t        old = umask(022);
+    int           pass;
+
+    one.key = "token";
+    one.op  = CF_WRITE_SET;
+    cf_value_text(&one.value, "s3cret", 6);
+    for (pass = 0; pass < 2; ++pass) {
+        remove(DB);
+        umask(pass == 0 ? 022 : 000);
+        check(cf_store_set(DB, &one, 1, NULL, &err), "a new store is written");
+        if (pass == 0) {
+            check(mode_of(DB) == 0600, "and is 0600 under umask 022");
+        } else {
+            check(mode_of(DB) == 0600, "and is 0600 under umask 000");
+        }
+    }
+    umask(old);
+}
+
+/* An existing file keeps the mode it has, and what it holds. */
+static void test_existing_keeps_mode(void) {
+    cf_write_item one;
+    cf_error      err = CF_ERROR_INIT;
+    cf_config*    c;
+
+    one.key = "token";
+    one.op  = CF_WRITE_SET;
+    cf_value_text(&one.value, "kept", 4);
+    remove(DB);
+    check(cf_store_set(DB, &one, 1, NULL, &err), "a store to start from");
+    check(chmod(DB, 0644) == 0, "made 0644");
+    one.key = "other";
+    check(cf_store_set(DB, &one, 1, NULL, &err), "written again");
+    check(mode_of(DB) == 0644, "an existing store keeps its mode");
+    c = load(0, &err);
+    check(c != NULL && strcmp(cf_get_text(c, "token", ""), "kept") == 0 &&
+              strcmp(cf_get_text(c, "other", ""), "kept") == 0,
+          "and its contents");
+    cf_config_free(c);
+}
+
+static void test_no_directory(void) {
+    cf_write_item one;
+    cf_error      err = CF_ERROR_INIT;
+
+    one.key = "token";
+    one.op  = CF_WRITE_SET;
+    cf_value_int(&one.value, 1);
+    check(!cf_store_set("cf_no_such_dir/cf_store.db", &one, 1, NULL, &err),
+          "a store in a directory that is not there is refused");
+    has(err.message, "cf_no_such_dir/cf_store.db", "and the error names the path");
+}
+
+#endif /* !_WIN32 */
+
 static void test_not_a_store(void) {
     cf_error   err = CF_ERROR_INIT;
     cf_config* c;
@@ -220,6 +297,13 @@ int main(void) {
     test_atomic();
     test_contract();
     test_write_granted();
+#ifndef _WIN32
+    test_new_store_private();
+    test_existing_keeps_mode();
+    test_no_directory();
+#else
+    printf("  skipped: file modes are checked on POSIX only\n");
+#endif
     test_not_a_store();
     test_missing();
 #else

@@ -25,6 +25,7 @@
 #include <string.h>
 #include <wchar.h>
 #include <windows.h>
+#include <sddl.h>
 
 /* _environ is MSVC's spelling, and it has to come from <stdlib.h>: the
    CRT defines it as a macro over __p__environ(), so declaring it by
@@ -195,6 +196,53 @@ cf_bool cf_platform_stamp(const char* path, cf_stamp* out) {
 int cf_platform_world_readable(const char* path) {
     (void)path;
     return -1; /* see cf_platform.h */
+}
+
+cf_bool cf_platform_has_private_create(void) {
+    return CF_TRUE;
+}
+
+int cf_platform_create_private(const char* path, cf_error* err) {
+    wchar_t             wpath[CF_PLATFORM_NAME_MAX];
+    SECURITY_ATTRIBUTES sa;
+    HANDLE              h;
+    DWORD               code;
+
+    if (path == NULL) {
+        cf_error_set(err, CF_E_SOURCE, NULL, NULL, "no file to create");
+        return -1;
+    }
+    if (!win32_wide(path, wpath, CF_PLATFORM_NAME_MAX)) {
+        cf_error_set(err, CF_E_SOURCE, NULL, path,
+                     "cannot create '%s': not a valid path", path);
+        return -1;
+    }
+    /* Protected (P): nothing is inherited from the directory. One
+       access-allowed entry, full access (FA) for OW, whoever owns the file. */
+    sa.nLength              = (DWORD)sizeof sa;
+    sa.bInheritHandle       = FALSE;
+    sa.lpSecurityDescriptor = NULL;
+    if (!ConvertStringSecurityDescriptorToSecurityDescriptorW(
+            L"D:P(A;;FA;;;OW)", SDDL_REVISION_1, &sa.lpSecurityDescriptor, NULL)) {
+        cf_error_set(err, CF_E_SOURCE, NULL, path,
+                     "cannot create '%s': no access control list (error %u)", path,
+                     (unsigned)GetLastError());
+        return -1;
+    }
+    h    = CreateFileW(wpath, GENERIC_WRITE, 0, &sa, CREATE_NEW, FILE_ATTRIBUTE_NORMAL,
+                       NULL);
+    code = GetLastError();
+    LocalFree(sa.lpSecurityDescriptor);
+    if (h == INVALID_HANDLE_VALUE) {
+        if (code == ERROR_FILE_EXISTS) {
+            return 0;
+        }
+        cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot create '%s': error %u", path,
+                     (unsigned)code);
+        return -1;
+    }
+    CloseHandle(h);
+    return 1;
 }
 
 /* A name in `dir` that does not convert to a slot, named by as much of
