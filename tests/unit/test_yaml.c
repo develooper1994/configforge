@@ -122,12 +122,12 @@ static void test_anchors(void) {
     cf_error    err = CF_ERROR_INIT;
     static char ex[1024];
     cf_config*  c = load("base: &b\n"
-                          "  host: a\n"
-                          "  ports: [1, 2]\n"
-                          "other: *b\n"
-                          "name: &n plain\n"
-                          "again: *n\n"
-                          "list: [*n, *n]\n",
+                         "  host: a\n"
+                         "  ports: [1, 2]\n"
+                         "other: *b\n"
+                         "name: &n plain\n"
+                         "again: *n\n"
+                         "list: [*n, *n]\n",
                          &err);
 
     check(c != NULL, "anchors and aliases read");
@@ -151,11 +151,11 @@ static void test_anchors(void) {
 static void test_tags(void) {
     cf_error   err = CF_ERROR_INIT;
     cf_config* c   = load("port: !!int \"80\"\n"
-                            "zip: !!str 01234\n"
-                            "on: !!bool true\n"
-                            "none: !!null ~\n"
-                            "t: !!map {a: 1}\n"
-                            "plain: ! 12\n",
+                          "zip: !!str 01234\n"
+                          "on: !!bool true\n"
+                          "none: !!null ~\n"
+                          "t: !!map {a: 1}\n"
+                          "plain: ! 12\n",
                           &err);
 
     check(c != NULL, "core tags read");
@@ -256,13 +256,13 @@ static void test_alias_bytes(void) {
 static void test_reanchor(void) {
     cf_error   err = CF_ERROR_INIT;
     cf_config* c   = load("a: &x one\n"
-                            "b: *x\n"
-                            "c: &x two\n"
-                            "d: *x\n"
-                            "e: &x [&x in, *x]\n"
-                            "f: *x\n"
-                            "g: &x three\n"
-                            "h: *x\n",
+                          "b: *x\n"
+                          "c: &x two\n"
+                          "d: *x\n"
+                          "e: &x [&x in, *x]\n"
+                          "f: *x\n"
+                          "g: &x three\n"
+                          "h: *x\n",
                           &err);
 
     check(c != NULL, "a name anchored again reads");

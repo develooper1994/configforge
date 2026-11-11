@@ -224,15 +224,21 @@ typedef struct ini_names {
 } ini_names;
 
 static void ini_names_init(ini_names* t, const cf_doc_sink* out, const char* base) {
+    /* How large a sink is that has reserve_work at all. */
+    size_t need = offsetof(cf_doc_sink, reserve_work);
+
+    need += sizeof out->reserve_work;
+
     t->out  = out;
     t->base = base;
     t->slot = NULL;
     t->cap  = 0;
     t->used = 0;
     t->gen  = 1;
-    t->off  = (cf_bool)(out->size < offsetof(cf_doc_sink, reserve_work) +
-                                       sizeof out->reserve_work ||
-                       out->reserve_work == NULL);
+    t->off  = CF_TRUE;
+    if (out->size >= need && out->reserve_work != NULL) {
+        t->off = CF_FALSE;
+    }
 }
 
 static size_t ini_names_hash(const char* p, size_t n) {
