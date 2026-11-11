@@ -195,13 +195,15 @@ static void test_guess_bounded_by_the_bytes(void) {
         check(0, "allocated the long string");
         return;
     }
-    n += (size_t)sprintf(t + n, "%s", "s = \"\"\"\n");
+    /* copied by its known size, so that what is written is seen to fit */
+    memcpy(t, "s = \"\"\"\n", 8);
+    n = 8;
     for (i = 0; i < lines; ++i) {
         t[n++] = 'a';
         t[n++] = '\n';
     }
-    n += (size_t)sprintf(t + n, "%s", "\"\"\"\n");
-    t[n] = '\0';
+    memcpy(t + n, "\"\"\"\n", 5);
+    n += 4;
     check(spill("cf_predict.toml", t), "wrote one string of many lines");
     free(t);
     cap = reserved_for("cf_predict.toml", "toml", &keys);
