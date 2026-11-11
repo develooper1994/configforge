@@ -164,6 +164,20 @@ class Builder:
                              self._keep.argv(args))
         return self
 
+    def response_files(self) -> "Builder":
+        """Expand ``@file`` arguments on the command line of a builder made
+        by :meth:`app` (off by default: an argument that starts with ``@``
+        is an ordinary argument, so an untrusted one cannot inject options
+        or tell which files exist). A file that cannot be read is an error
+        from :meth:`create`."""
+        if not n.HAVE_RESPONSE_FILES:
+            raise RuntimeError(
+                "configforge: the loaded library has no response-file switch (1.4.1); "
+                "rebuild the library from sources containing this API"
+            )
+        n.lib.cf_builder_response_files(self._live())
+        return self
+
     def env(self, name: str, rank: int, prefix: str,
             environ: Optional[Mapping[str, str]] = None) -> "Builder":
         """Variables with ``prefix``: the process's own, or ``environ``."""

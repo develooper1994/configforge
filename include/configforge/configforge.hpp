@@ -851,6 +851,17 @@ class Builder {
         return *this;
     }
 
+    /* Response files (@file) on, for a builder made with the
+       (appName, argc, argv) constructor (cf_builder_response_files,
+       1.4.1); off by default. A file that cannot be read is held and
+       reported by create(). */
+    Builder& responseFiles() {
+        if (b_) {
+            cf_builder_response_files(b_);
+        }
+        return *this;
+    }
+
     Builder& env(const char* name, int rank, const char* prefix,
                  char* const* environment) {
         if (b_) {

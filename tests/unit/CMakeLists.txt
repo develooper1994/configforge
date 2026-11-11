@@ -225,6 +225,10 @@ if(CF_WITH_CXX)
     configforge_apply_analysis(${t})
     add_test(NAME unit.${t} COMMAND ${t})
   endforeach()
+  add_test(NAME unit.test_wrapper_write.rsp
+           COMMAND test_wrapper_write --rsp @cf_wrsp_args.txt)
+  add_test(NAME unit.test_wrapper_write.rsp_absent
+           COMMAND test_wrapper_write --rsp @cf_wrsp_absent.txt)
 
   # The same reads under C++17. The header is C++03 but is included by
   # programs on every later standard, and there cf_i64 can be long: the
@@ -299,6 +303,13 @@ endif()
 # argument in UTF-16, the CRT's argv holds the active code page's
 # approximation of it, and cf_cli_args has to recover the original.
 add_test(NAME unit.test_lex.utf8 COMMAND test_lex --utf8 "çğı")
+
+# Response files are opt-in (D-79). The arguments have to be the process's
+# real ones, as above, so each case is its own run: a file that is there,
+# and one that is not.
+add_test(NAME unit.test_lex.rsp COMMAND test_lex --rsp @cf_rsp_args.txt)
+add_test(NAME unit.test_lex.rsp_absent
+         COMMAND test_lex --rsp @cf_rsp_absent.txt)
 
 # A ConfigMap is updated through symbolic links, which only POSIX has.
 if(UNIX)
