@@ -1024,11 +1024,9 @@ static void config_log_events(const cf_config* c) {
                 const char* by = config_name_of_rank(&c->sv, k->source);
                 cf_fmt(msg, sizeof msg, "%s: %s from %s refused (%s); %s used instead",
                        e->key, (by != NULL) ? by : "?", (k->at != NULL) ? k->at : "-",
-                       /* A reason can quote the value; a secret's never
-                          reaches a log line. */
-                       ((d->flags & CF_SENSITIVE) != 0 || k->reason == NULL)
-                           ? "invalid"
-                           : k->reason,
+                       /* A secret's reason is the fixed wording of its kind
+                          (cf_refusal_text), never the value. */
+                       (k->reason == NULL) ? "invalid" : k->reason,
                        (from != NULL) ? from : "?");
                 config_log(c, CF_LOG_WARN, "fallback", CF_E_VALIDATE, e->key,
                            (k->at != NULL) ? k->at : by, msg);

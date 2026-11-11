@@ -256,13 +256,13 @@ static void test_secret_reasons(void) {
         return;
     }
     cf_explain(c, "db.password", buf, sizeof buf);
-    has(buf, "names no key", "explain() gives the reason");
+    has(buf, "a malformed reference", "explain() gives the kind of the refusal");
     lacks(buf, "MARK", "without quoting the value");
     if (cf_has_feature("report")) {
         cf_report_info info = CF_REPORT_INFO_INIT;
         info.mode           = CF_REPORT_BLIND;
         cf_report(c, &info, buf, sizeof buf);
-        has(buf, "names no key", "a blind report gives it too");
+        has(buf, "a malformed reference", "a blind report gives it too");
         lacks(buf, "MARK", "and does not quote the value either");
         lacks(buf, "S3CR3T", "any of it");
     }
