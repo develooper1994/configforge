@@ -182,6 +182,14 @@ static void big_clamp(cf_big* b) {
     }
 }
 
+/* The count of one that is only read, held to the limbs the same way. */
+static int big_count(const cf_big* b) {
+    if (b->n > CF_BIG_LIMBS) {
+        return CF_BIG_LIMBS;
+    }
+    return (b->n < 0) ? 0 : b->n;
+}
+
 static void big_set_u64(cf_big* b, cf_u64 v) {
     big_zero(b);
     if (v == 0) {
@@ -193,9 +201,11 @@ static void big_set_u64(cf_big* b, cf_u64 v) {
 }
 
 static void big_copy(cf_big* dst, const cf_big* src) {
+    int n = big_count(src);
     int i;
-    dst->n = src->n;
-    for (i = 0; i < src->n; ++i) {
+
+    dst->n = n;
+    for (i = 0; i < n; ++i) {
         dst->d[i] = src->d[i];
     }
 }
@@ -205,6 +215,7 @@ static int big_is_zero(const cf_big* b) {
 }
 
 static void big_trim(cf_big* b) {
+    big_clamp(b);
     while (b->n > 0 && b->d[b->n - 1] == 0) {
         b->n--;
     }
@@ -252,19 +263,22 @@ static int big_cmp(const cf_big* a, const cf_big* b) {
 /* a += b */
 static void big_add(cf_big* a, const cf_big* b) {
     cf_u64 carry = 0;
-    int    n     = (a->n > b->n) ? a->n : b->n;
+    int    bn    = big_count(b);
+    int    n;
     int    i;
 
+    big_clamp(a);
+    n = (a->n > bn) ? a->n : bn;
     for (i = 0; i < n || carry != 0; ++i) {
         cf_u64 sum = carry;
+        if (i >= CF_BIG_LIMBS) {
+            break;
+        }
         if (i < a->n) {
             sum += (cf_u64)a->d[i];
         }
-        if (i < b->n) {
+        if (i < bn) {
             sum += (cf_u64)b->d[i];
-        }
-        if (i >= CF_BIG_LIMBS) {
-            break;
         }
         a->d[i] = (cf_u32)(sum & (cf_u64)0xFFFFFFFF);
         carry   = sum >> 32;
@@ -282,11 +296,13 @@ static void big_add(cf_big* a, const cf_big* b) {
 /* a -= b, requires a >= b */
 static void big_sub(cf_big* a, const cf_big* b) {
     cf_i64 borrow = 0;
+    int    bn     = big_count(b);
     int    i;
 
+    big_clamp(a);
     for (i = 0; i < a->n; ++i) {
         cf_i64 diff = (cf_i64)a->d[i] - borrow;
-        if (i < b->n) {
+        if (i < bn) {
             diff -= (cf_i64)b->d[i];
         }
         if (diff < 0) {
@@ -305,6 +321,7 @@ static void big_mul_u32(cf_big* a, cf_u32 m) {
     cf_u64 carry = 0;
     int    i;
 
+    big_clamp(a);
     if (m == 1 || a->n == 0) {
         if (m == 0) {
             big_zero(a);
@@ -330,6 +347,7 @@ static void big_shl(cf_big* a, int bits) {
     int rem   = bits % 32;
     int i;
 
+    big_clamp(a);
     if (a->n == 0 || bits == 0) {
         return;
     }

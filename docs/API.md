@@ -2610,7 +2610,7 @@ only part of the library that a very small target might refuse.
 CF_API size_t cf_f64_to_text(double v, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_f64_to_text` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L560).
+Implementation: [`cf_f64_to_text` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L578).
 
 Write the shortest decimal string that reads back as exactly v.
 Output is identical on every platform. Returns the length written,
@@ -2624,7 +2624,7 @@ from having to invent a spelling.
 CF_API cf_bool cf_text_to_f64(const char* s, size_t len, double* out, size_t* end);
 ```
 
-Implementation: [`cf_text_to_f64` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L766).
+Implementation: [`cf_text_to_f64` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L784).
 
 Parse a C-locale floating point number. The decimal separator is
 always '.', never the locale's. Accepts the forms produced by
@@ -2646,7 +2646,7 @@ Type Inference section of the specification and decision D-24.
 CF_API cf_scalar_kind cf_infer_scalar(const char* s, size_t len);
 ```
 
-Implementation: [`cf_infer_scalar` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L1003).
+Implementation: [`cf_infer_scalar` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L1021).
 
 ## cf_platform.h
 
