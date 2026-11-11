@@ -66,23 +66,9 @@ beside what is not.
 
 Known to be wrong, and not fixed by it:
 
-* A new SQLite store is created with the default permissions
-  (`store.c`). The fix is a platform capability - make a file that only
-  its owner may read - which is a new function in `cf_platform.h` and
-  so in the public symbols, with an implementation a platform. Done
-  when, after `cf_store_set` on a new path, the file's mode is 0600 on
-  POSIX, and an existing file keeps the mode it had.
-* `doctor.api`'s check that a diff of sixteen times the keys costs about
-  sixteen times measures time, and fails on a busy machine. Done when it
-  passes five times in a row while another build runs (the best of
-  several runs, or a count of work in place of the clock).
-* Doctor shows a sensitive key's refusal only as "invalid". It should
-  say the kind - wrong type, out of range, a malformed reference -
-  without the value, as every value is to say why it is what it is.
 * TOML's table of what a document has defined hashes without a seed, so
   chosen keys make it quadratic. Low; a seed a decode or a bound on the
   chain, and an entry in Decisions.md for whichever.
-* Response files opt-in, decided and not built ("Open decisions").
 * Dependabot's pull request 5 (`attest-build-provenance` 2 to 4): the
   actions are pinned to commits now, so it is read against the pin, and
   merged or closed.
@@ -655,9 +641,7 @@ None. Two were decided on 2026-11-11:
 * **Response files become opt-in.** `@file` arguments are expanded by
   default in `cf_app`, so an untrusted positional argument can inject
   configuration and probe for files. Decided: a program asks for them.
-  Chosen, not built: it is an interface change, so it takes a
-  D-number, a CHANGELOG entry that says what a program relying on the
-  default must now do, and the Guide's page on the command line.
+  Built in 1.4.1 (D-79): `cf_builder_response_files`.
 * **Repository settings.** Dependabot alerts, secret scanning and its
   push protection are on, since 2026-11-11.
 

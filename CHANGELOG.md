@@ -7,6 +7,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Security
 
+- **A new SQLite store file is its owner's alone**: mode 0600 on POSIX
+  whatever the umask, an access control list for its owner only on
+  Windows, where it was created with the default permissions though it
+  may hold sensitive values. An existing store keeps the mode it has.
+  `cf_platform_create_private` is the capability, and
+  `cf_platform_has_private_create` says whether a platform has it.
 - **Doctor printed a sensitive key's value from a full report.** With
   full (not blind) reports, `doctor diff` wrote a sensitive key's two
   values in text, in SARIF and in the Markdown the GitHub Action posts
@@ -31,9 +37,16 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - **Doctor's text output escapes control characters**, so a value in a
   report cannot start a GitHub workflow command in the Actions log, and
   its Markdown no longer forms @mentions or links from values. `dump`
-  and `explain` escape every field they print, and a secret's refusal
-  reason is shown as "invalid", since a report from 1.4.0 or before can
-  quote the value in it.
+  and `explain` escape every field they print.
+- **A secret's refusal says its kind, and nothing of the value**: wrong
+  type, out of range, not one of the permitted values, too short, too
+  long, a malformed reference, a reference to a key with no value - a
+  fixed wording, without the value, its length or its bounds, in
+  `cf_error`, `explain()`, the log, a report's `reason` and Doctor's
+  output. A report names the kind as `reason_kind` (an added field);
+  Doctor shows a secret's reason only where it is there, and "invalid"
+  for a report from 1.4.0 or before, which can quote the value in it.
+  `cf_refusal`, `cf_refusal_name` and `cf_refusal_text` are new.
 - **The action takes for Doctor's only a comment written by its own
   account** (`github-actions[bot]`, or the new `comment-author` input).
   The marker alone let anyone's comment be taken for it, so Doctor's
@@ -110,6 +123,16 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 ## 1.4.0 — 2026-11-07
 
 ### Changed
+
+- **Response files are opt-in** (D-79). This changes a default inside
+  1.x, on purpose. `cf_app` and `cf_app_builder` no longer expand an
+  argument that starts with `@`: it is an ordinary positional argument,
+  which the command line skips, so an untrusted one cannot inject
+  options or tell which files exist. A program that relied on `@file`
+  starts from `cf_app_builder`, calls the new
+  `cf_builder_response_files` (C++ `responseFiles()`, Python and Rust
+  `response_files()`), then `cf_builder_create`; `cf_app` itself never
+  expands. A response file that cannot be read still fails the builder.
 
 - A file whose extension no format claims was an error and is now read
   by its content, when one format reads it (D-73).
