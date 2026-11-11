@@ -226,6 +226,7 @@ extern "C" {
         argc: c_int,
         argv: *const *mut c_char,
     ) -> *mut cf_builder;
+    pub fn cf_builder_response_files(b: *mut cf_builder) -> cf_bool;
     pub fn cf_builder_abort(b: *mut cf_builder);
     pub fn cf_builder_create(b: *mut cf_builder, err: *mut cf_error) -> *mut cf_config;
 

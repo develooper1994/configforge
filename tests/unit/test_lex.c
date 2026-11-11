@@ -531,11 +531,71 @@ static void test_cli_args(int argc, char** argv) {
     cf_arena_free(ar);
 }
 
+/* Response files are opt-in (D-79). The arguments are this process's
+   real ones, for the reason test_cli_args gives: on Windows cf_app_builder
+   reads the real command line, so an invented argv would be ignored.
+   The suite runs it twice: with @cf_rsp_args.txt, a file this writes, and
+   with @cf_rsp_absent.txt, one that does not exist. */
+static void test_response_files_opt_in(int argc, char** argv) {
+    static const char file[] = "cf_rsp_args.txt";
+    cf_bool     have = (strcmp(argv[2], "@cf_rsp_args.txt") == 0) ? CF_TRUE : CF_FALSE;
+    cf_error    err  = CF_ERROR_INIT;
+    cf_builder* b;
+    cf_config*  c;
+
+    /* Only the run that wants the file writes it: the two share a
+       directory and may run at once. */
+    check(!have || spill(file, "--rsp.key=1\n"), "wrote a response file");
+
+    /* By default the argument is an ordinary one: no file is opened, so
+       neither a present file's option is set nor an absent one refused. */
+    b = cf_app_builder("rsp", argc, argv);
+    c = cf_builder_create(b, &err);
+    check(c != NULL, "an @argument alone fails nothing by default");
+    check(c == NULL || !cf_has(c, "rsp.key"), "and the file is not read");
+    cf_config_free(c);
+
+    b = cf_app_builder("rsp", argc, argv);
+    check(cf_builder_response_files(b) == have,
+          "turning expansion on says whether it held");
+    check(cf_builder_response_files(b) == have, "turning it on twice is harmless");
+    c = cf_builder_create(b, &err);
+    if (have) {
+        check(c != NULL && cf_get_int(c, "rsp.key", 0) == 1,
+              "with it on, the file's option is set");
+    } else {
+        check(c == NULL && strstr(err.message, "cf_rsp_absent") != NULL,
+              "with it on, a missing file is an error naming it");
+    }
+    cf_config_free(c);
+    if (have) {
+        remove(file);
+    }
+}
+
+/* A builder with no command line has nothing to expand. */
+static void test_response_files_no_cli(void) {
+    cf_error    err = CF_ERROR_INIT;
+    cf_builder* b   = cf_build(NULL);
+    cf_config*  c;
+
+    check(!cf_builder_response_files(b), "no command line: false");
+    c = cf_builder_create(b, &err);
+    check(c != NULL, "and nothing is failed by asking");
+    cf_config_free(c);
+    check(!cf_builder_response_files(NULL), "no builder: false");
+}
+
 int main(int argc, char** argv) {
     test_cli_args(argc, argv);
     if (argc >= 2 && strcmp(argv[1], "--utf8") == 0) {
         return cf_test_done();
     }
+    if (argc >= 3 && strcmp(argv[1], "--rsp") == 0) {
+        test_response_files_opt_in(argc, argv);
+        return cf_test_done();
+    }
+    test_response_files_no_cli();
     test_keymap();
     test_lex_env();
     test_lex_cli();

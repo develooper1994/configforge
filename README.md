@@ -155,7 +155,7 @@ it before every release, are D-56.
 | `explain()` and `inspect()` | done |
 | serialization layer: blob, sink, codecs, document events | done |
 | INI and JSON codecs; file, `.env` and drop-in directory sources | done |
-| command line: `--key=value`, `--key value`, `--no-key`, aliases, `@file` | done |
+| command line: `--key=value`, `--key value`, `--no-key`, aliases, `@file` (opt-in) | done |
 | environment with both spellings; UTF-8 arguments on Windows | done |
 | provenance report, schema v1, and Report Replay | done |
 | binary snapshot image, optionally carrying provenance | done |

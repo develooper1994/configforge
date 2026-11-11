@@ -72,6 +72,15 @@ struct cf_builder {
     /* The program's own codecs (cf_builder_codec, D-68), borrowed. */
     const cf_codec* codecs[CF_BUILDER_CODECS];
     size_t          ncodecs;
+
+    /* The command line cf_app_builder was given (after the UTF-8 step)
+       and the source that reads it, kept so cf_builder_response_files
+       can hand that source the expanded vector. NULL for a builder
+       with no command line. */
+    int          cli_argc;
+    char* const* cli_argv;
+    cf_source*   cli_src;
+    cf_bool      cli_expanded;
 };
 
 struct cf_config {
@@ -233,32 +242,53 @@ static void derive_prefix(const char* name, char* out, size_t cap) {
 }
 
 cf_builder* cf_app_builder(const char* name, int argc, char* const* argv) {
-    cf_builder* b        = cf_build(NULL);
-    cf_error    e        = CF_ERROR_INIT;
-    int         n        = argc;
-    char**      expanded = NULL;
+    cf_builder* b = cf_build(NULL);
+    int         n = argc;
 
     if (b == NULL) {
         return NULL;
     }
     derive_prefix(name, b->prefix, sizeof b->prefix);
 
-    /* UTF-8 first, then response files: the file's name may itself
-       contain a character the code page dropped. Both are identity on
-       platforms that need neither, so the conventional path pays
-       nothing for them. */
+    /* UTF-8 first: a response file's name (cf_builder_response_files)
+       may itself contain a character the code page dropped. Identity on
+       platforms that need nothing, so the conventional path pays
+       nothing for it. An argument that starts with @ is an ordinary
+       argument here: expanding it is opt-in (D-79), because an
+       untrusted positional would otherwise inject options and tell
+       which files exist. */
     argv = cf_cli_args(argc, argv, b->arena, &n);
-    if (cf_cli_expand(n, argv, b->arena, &n, &expanded, &e)) {
-        argv = expanded;
-    } else {
+    if (cf_builder_cli(b, "cli", CF_RANK_CLI, n, argv)) {
+        b->cli_argc = n;
+        b->cli_argv = argv;
+        b->cli_src  = &b->sources[b->nsources - 1];
+    }
+    cf_builder_env(b, "env", CF_RANK_ENV, b->prefix, cf_environ());
+    return b;
+}
+
+cf_bool cf_builder_response_files(cf_builder* b) {
+    cf_error e        = CF_ERROR_INIT;
+    int      n        = 0;
+    char**   expanded = NULL;
+
+    if (b == NULL || b->cli_src == NULL) {
+        return CF_FALSE;
+    }
+    if (b->cli_expanded || b->cli_argv == NULL) {
+        return b->failed ? CF_FALSE : CF_TRUE;
+    }
+    b->cli_expanded = CF_TRUE;
+    if (!cf_cli_expand(b->cli_argc, b->cli_argv, b->arena, &n, &expanded, &e)) {
         /* A response file that cannot be read is a command line the
            user meant and did not get, so it is held and reported by
            create() rather than quietly ignored. */
         builder_fail(b, &e);
+        return CF_FALSE;
     }
-    cf_builder_cli(b, "cli", CF_RANK_CLI, n, argv);
-    cf_builder_env(b, "env", CF_RANK_ENV, b->prefix, cf_environ());
-    return b;
+    b->cli_src->u.cli.argc = n;
+    b->cli_src->u.cli.argv = expanded;
+    return CF_TRUE;
 }
 
 /* A copy of a string the caller handed over, in the builder's arena: no
