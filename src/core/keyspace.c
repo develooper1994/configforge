@@ -173,7 +173,14 @@ void cfi_ks_expect(cf_keyspace* ks, size_t more) {
    (32) was tried first and was off by a factor of 5 either way for short
    or long values; every line, comments too, reserved 350 KB for a
    200 KB file holding one key. Minified text is one line and gets the
-   doubling it always had. */
+   doubling it always had. A line count alone is fooled by one multi-line
+   string, whose every line starts like a key: a million short lines in
+   2 MB reserved 2^20 records, some 90 MB, for one key. No record comes
+   from fewer bytes than `k=v` and its line break, so the guess is held
+   to one record per CF_KS_MIN_KEY_BYTES of input; a file denser than
+   that only doubles a little at the end. */
+#define CF_KS_MIN_KEY_BYTES 4
+
 void cfi_ks_expect_lines(cf_keyspace* ks, const char* text, size_t n) {
     size_t  keys = 0;
     size_t  i;
@@ -193,6 +200,9 @@ void cfi_ks_expect_lines(cf_keyspace* ks, const char* text, size_t n) {
                 ++keys;
             }
         }
+    }
+    if (keys > n / CF_KS_MIN_KEY_BYTES) {
+        keys = n / CF_KS_MIN_KEY_BYTES;
     }
     cfi_ks_expect(ks, keys);
 }

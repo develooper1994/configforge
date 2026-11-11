@@ -9,7 +9,7 @@
 //!
 //! An edit not committed is dropped, and nothing is written.
 
-use crate::{c, new_error, sys, Config, Error};
+use crate::{c, new_error, nul_refusal, sys, Config, Error};
 
 /// A value an edit sets: the contract types text as it types a file's.
 #[derive(Clone, Debug, PartialEq)]
@@ -56,6 +56,10 @@ impl From<String> for EditValue {
 /// A change to one writable source, gathered before anything is written.
 pub struct Edit {
     e: *mut sys::cf_edit,
+    /// The first key or text value set that held a NUL: not handed to the
+    /// library, and the whole edit refused at commit, as a builder is at
+    /// create - a value with a NUL is never written as a different one.
+    nul: Option<Error>,
 }
 
 impl Edit {
@@ -68,14 +72,28 @@ impl Edit {
         if raw.is_null() {
             return Err(Error::from_raw(&e));
         }
-        Ok(Edit { e: raw })
+        Ok(Edit { e: raw, nul: None })
     }
 
-    /// Set `key`. A key set twice keeps the second.
+    /// Set `key`. A key set twice keeps the second. A key or a text value
+    /// holding a NUL is not set, and the commit is refused with the error
+    /// a builder gives for one.
     pub fn set<V: Into<EditValue>>(&mut self, key: &str, value: V) -> &mut Edit {
+        let value = value.into();
+        let refused = match (key.find('\0'), &value) {
+            (Some(at), _) => Some(nul_refusal("a key", at)),
+            (None, EditValue::Text(t)) => t.find('\0').map(|at| nul_refusal("a value", at)),
+            (None, _) => None,
+        };
+        if let Some(err) = refused {
+            if self.nul.is_none() {
+                self.nul = Some(err);
+            }
+            return self;
+        }
         let k = c(key);
         unsafe {
-            match value.into() {
+            match value {
                 EditValue::Bool(b) => sys::cf_edit_set_bool(self.e, k.as_ptr(), b as sys::cf_bool),
                 EditValue::Int(i) => sys::cf_edit_set_int(self.e, k.as_ptr(), i),
                 EditValue::Real(r) => sys::cf_edit_set_real(self.e, k.as_ptr(), r),
@@ -107,6 +125,9 @@ impl Edit {
     /// Check and write the whole change, `note` beside each value; or
     /// nothing, and the reason.
     pub fn commit(mut self, note: Option<&str>) -> Result<(), Error> {
+        if let Some(refused) = self.nul.take() {
+            return Err(refused); /* Drop aborts the edit */
+        }
         let raw = std::mem::replace(&mut self.e, std::ptr::null_mut());
         let n = note.map(c);
         let mut e = new_error();
@@ -123,9 +144,13 @@ impl Edit {
         Ok(())
     }
 
-    /// The handle, given up to a call that consumes it.
-    pub(crate) fn into_raw(mut self) -> *mut sys::cf_edit {
-        std::mem::replace(&mut self.e, std::ptr::null_mut())
+    /// The handle, given up to a call that consumes it; or the refusal of
+    /// a key or value with a NUL, the edit then aborted by Drop.
+    pub(crate) fn into_raw(mut self) -> Result<*mut sys::cf_edit, Error> {
+        if let Some(refused) = self.nul.take() {
+            return Err(refused);
+        }
+        Ok(std::mem::replace(&mut self.e, std::ptr::null_mut()))
     }
 }
 
@@ -159,5 +184,26 @@ mod tests {
         let mut dropped = Edit::begin(&cfg, "mem").unwrap();
         dropped.set("a.b", 3);
         drop(dropped); // nothing written, nothing leaked
+    }
+
+    #[test]
+    fn a_value_with_a_nul_is_refused_not_changed() {
+        let cfg = Builder::new()
+            .memory("mem", rank::USER_FILE, &[("a.b", "1")])
+            .create()
+            .unwrap();
+        let mut e = Edit::begin(&cfg, "mem").unwrap();
+        e.set("a.b", "hunter\0two").set("c.d", "x");
+        assert_eq!(e.len(), 1, "the value with a NUL was not handed over");
+        let err = e.commit(None).unwrap_err();
+        assert_eq!(err.code, crate::sys::CF_E_CONVERT);
+        assert!(err.message.contains("a value"), "{}", err.message);
+        assert!(err.message.contains("byte 6"), "{}", err.message);
+        assert!(!err.message.contains("hunter"), "{}", err.message);
+
+        let mut k = Edit::begin(&cfg, "mem").unwrap();
+        k.set("a\0b", 1);
+        let err = k.commit(None).unwrap_err();
+        assert!(err.message.contains("a key"), "{}", err.message);
     }
 }

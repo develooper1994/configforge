@@ -166,7 +166,7 @@ fn new_error() -> sys::cf_error {
 /// Rust string with one never panics here: each NUL becomes U+0001,
 /// which no key may contain, so a read of such a key finds nothing and a
 /// definition of one is refused by the library. A *value* with a NUL is
-/// refused before it reaches the library (Keep::s).
+/// refused before it reaches the library (Keep::s, Edit::set).
 fn c(s: &str) -> CString {
     CString::new(s).unwrap_or_else(|_| {
         CString::new(s.replace('\0', "\u{1}")).expect("no NUL is left to refuse")
@@ -181,9 +181,10 @@ struct Keep {
     pairs: Vec<Vec<sys::cf_pair>>,
     lists: Vec<Vec<*const c_char>>,
     argv: Vec<Vec<*mut c_char>>,
-    /// The first string handed over that held a NUL: refused at create
-    /// or derive, rather than silently changed.
-    nul: Option<String>,
+    /// Where the first string handed over that held a NUL had it (the
+    /// byte offset): refused at create or derive, rather than silently
+    /// changed. Only the offset is kept - the string may be a secret.
+    nul: Option<usize>,
     /// The log this builder's configurations call, kept with each of
     /// them - and with every one derived - so it outlives the calls.
     logger: Option<log::SharedLogger>,
@@ -192,16 +193,22 @@ struct Keep {
 impl Keep {
     /// The error for a string with a NUL, if one was handed over.
     fn refusal(&self) -> Option<Error> {
-        self.nul.as_ref().map(|v| Error {
-            code: sys::CF_E_CONVERT,
-            name: text_of(unsafe { sys::cf_code_name(sys::CF_E_CONVERT) }),
-            key: String::new(),
-            source: String::new(),
-            message: format!(
-                "{:?} holds a NUL byte, which no configuration string can",
-                v
-            ),
-        })
+        self.nul.map(|at| nul_refusal("a string", at))
+    }
+}
+
+/// The error for a string with a NUL at byte `at`, naming only what kind
+/// of string it was: the string itself may be a password or a token, and
+/// an error message is what ends up in a log.
+pub(crate) fn nul_refusal(what: &str, at: usize) -> Error {
+    Error {
+        code: sys::CF_E_CONVERT,
+        name: text_of(unsafe { sys::cf_code_name(sys::CF_E_CONVERT) }),
+        key: String::new(),
+        source: String::new(),
+        message: format!(
+            "{what} holds a NUL byte (at byte {at}), which no configuration string can"
+        ),
     }
 }
 
@@ -212,8 +219,8 @@ unsafe impl Send for Keep {}
 
 impl Keep {
     fn s(&mut self, v: &str) -> *const c_char {
-        if v.contains('\0') && self.nul.is_none() {
-            self.nul = Some(v.to_string());
+        if self.nul.is_none() {
+            self.nul = v.find('\0');
         }
         let cs = c(v);
         let p = cs.as_ptr();
@@ -951,6 +958,25 @@ mod list_tests {
             .unwrap();
         assert_eq!(cfg.int("tags.count", -1), 2);
         assert_eq!(cfg.text("tags.1").as_deref(), Some("a,b"));
+    }
+}
+
+#[cfg(test)]
+mod nul_tests {
+    use super::{rank, Builder};
+
+    #[test]
+    fn a_string_with_a_nul_is_refused_without_being_quoted() {
+        let refused = Builder::new()
+            .memory("mem", rank::USER_FILE, &[("db.password", "hunter\0two")])
+            .create();
+        let err = match refused {
+            Ok(_) => panic!("a value with a NUL was accepted"),
+            Err(err) => err,
+        };
+        assert_eq!(err.code, super::sys::CF_E_CONVERT);
+        assert!(err.message.contains("byte 6"), "{}", err.message);
+        assert!(!err.message.contains("hunter"), "{}", err.message);
     }
 }
 

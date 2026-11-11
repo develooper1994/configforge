@@ -8,6 +8,7 @@
  */
 
 #include <configforge/configforge.h>
+#include <configforge/cf_source.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -154,6 +155,70 @@ static void test_fixed_arena(void) {
     remove("cf_predict.ini");
 }
 
+/* The capacity a file's guess gives a fresh key space: the source loaded
+   into one directly, so nothing else has added to it. 0 when it failed. */
+static size_t reserved_for(const char* path, const char* format, size_t* keys) {
+    cf_arena*   ar = cf_arena_new(NULL, 0);
+    cf_keyspace ks;
+    cf_source   s;
+    void*       st;
+    size_t      cap = 0;
+
+    *keys = 0;
+    if (ar == NULL) {
+        return 0;
+    }
+    st = cf_arena_calloc(ar, cf_source_file_state_size());
+    if (st != NULL &&
+        cf_source_file(&s, "f", 0, path, format, 0, st, cf_source_file_state_size()) &&
+        cf_ks_init(&ks, ar, 16) && cf_source_load(&s, &ks)) {
+        cap   = ks.ccand;
+        *keys = ks.ncand;
+    }
+    cf_arena_free(ar);
+    return cap;
+}
+
+static void test_guess_bounded_by_the_bytes(void) {
+    const size_t lines = 200000;
+    size_t       n     = 0;
+    char*        t     = (char*)malloc(lines * 2 + 64);
+    size_t       keys;
+    size_t       cap;
+    size_t       i;
+
+    /* one key whose value is a string of 200,000 one-character lines:
+       every line starts like a key, but a record cannot come from fewer
+       than four bytes (k=v and a line break), so the reservation is held
+       to a record per four bytes of input, not a record per line */
+    if (t == NULL) {
+        check(0, "allocated the long string");
+        return;
+    }
+    n += (size_t)sprintf(t + n, "%s", "s = \"\"\"\n");
+    for (i = 0; i < lines; ++i) {
+        t[n++] = 'a';
+        t[n++] = '\n';
+    }
+    n += (size_t)sprintf(t + n, "%s", "\"\"\"\n");
+    t[n] = '\0';
+    check(spill("cf_predict.toml", t), "wrote one string of many lines");
+    free(t);
+    cap = reserved_for("cf_predict.toml", "toml", &keys);
+    check(keys == 1, "the string is one key");
+    check(cap > 0 && cap <= n / 4,
+          "the reservation is at most a record per four bytes of input");
+    remove("cf_predict.toml");
+
+    /* an ordinary file of 1,000 keys still gets its capacity up front:
+       exactly 1000, where doubling from 16 would have stopped at 1024 */
+    check(put("cf_predict.ini", 0, 1000, 0, 0), "wrote 1000 keys");
+    cap = reserved_for("cf_predict.ini", "ini", &keys);
+    check(keys == 1000, "1000 keys read");
+    check(cap == 1000, "and 1000 records reserved before the first");
+    remove("cf_predict.ini");
+}
+
 /* ---------------------------------------------------------------- */
 
 static const char* g_path = "cf_predict_live.ini";
@@ -207,6 +272,7 @@ int main(void) {
     test_guess_too_small();
     test_guess_too_large();
     test_fixed_arena();
+    test_guess_bounded_by_the_bytes();
     test_reload_after_a_different_size();
     return cf_test_done();
 }

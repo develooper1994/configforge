@@ -434,7 +434,7 @@ impl Live {
     /// Commit `edit` and reload, in one step; nothing is written when the
     /// commit is refused.
     pub fn commit(&mut self, edit: crate::Edit, note: Option<&str>) -> Result<Reload, Error> {
-        let raw = edit.into_raw();
+        let raw = edit.into_raw()?;
         let n = note.map(crate::c);
         let mut e = new_error();
         let r = unsafe {

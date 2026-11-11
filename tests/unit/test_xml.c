@@ -7,6 +7,7 @@
 #include <configforge/configforge.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "cf_test.h"
@@ -164,6 +165,85 @@ static void test_typed_by_contract(void) {
     cf_config_free(c);
 }
 
+/* Which earlier name a child element's name meets decides whether it
+   continues a list, collides with an attribute, or is refused as a list
+   apart; only names at the same level, under the same element, count. */
+static void test_names_by_level(void) {
+    cf_error   err = CF_ERROR_INIT;
+    cf_config* c;
+
+    c = load("<c><n>1</n><n>2</n></c>", &err);
+    check(c != NULL && cf_array_count(c, "n") == 2,
+          "one name twice at one level, side by side, is a list");
+    cf_config_free(c);
+
+    c = load("<c><x><n>1</n></x><n>2</n></c>", &err);
+    check(c != NULL && cf_get_int(c, "x.n", 0) == 1 && cf_get_int(c, "n", 0) == 2,
+          "one name at two levels is two keys, not a list");
+    check(c != NULL && cf_array_count(c, "n") == 0, "and neither is a list");
+    cf_config_free(c);
+
+    c = load("<c><n><n>1</n></n></c>", &err);
+    check(c != NULL && cf_get_int(c, "n.n", 0) == 1, "a name inside itself");
+    cf_config_free(c);
+
+    c = load("<c><p><n>1</n></p><q><n>2</n></q></c>", &err);
+    check(c != NULL && cf_get_int(c, "p.n", 0) == 1 && cf_get_int(c, "q.n", 0) == 2,
+          "one name under two parents is two keys");
+    cf_config_free(c);
+
+    c = load("<c><p><n>1</n></p><p><n>2</n></p></c>", &err);
+    check(c != NULL && cf_array_count(c, "p") == 2 && cf_get_int(c, "p.1.n", 0) == 2,
+          "a name under each member of a list is no list of its own");
+    cf_config_free(c);
+
+    c = load("<c a=\"1\"><b><a>2</a></b></c>", &err);
+    check(c != NULL && cf_get_int(c, "a", 0) == 1 && cf_get_int(c, "b.a", 0) == 2,
+          "an attribute and a child of one name at different levels");
+    cf_config_free(c);
+
+    refused("<c><a/><b><a/><x/></b><a/></c>", "must be next to each other",
+            "a name met again after a subtree that used it is still apart");
+    c = load("<c><b a=\"1\"/><b><a>2</a></b></c>", &err);
+    check(c != NULL && cf_get_int(c, "b.1.a", 0) == 2,
+          "each member of a list is its own level");
+    cf_config_free(c);
+}
+
+/* Each child's name asks only its own level's names, and asks them in
+   constant time: 40,000 distinct siblings once took a scan of every
+   earlier one each. */
+static void test_many_names(void) {
+    const unsigned long count = 40000ul;
+    size_t              room = 64 + (size_t)count * 12, at = 0;
+    char*               text = (char*)malloc(room);
+    cf_error            err  = CF_ERROR_INIT;
+    cf_config*          c;
+    unsigned long       i;
+
+    check(text != NULL, "room for the document");
+    if (text == NULL) {
+        return;
+    }
+    memcpy(text, "<r>", 3);
+    at = 3;
+    for (i = 0; i < count; ++i) {
+        sprintf(text + at, "<a%06lu/>", i);
+        at += 10;
+    }
+    memcpy(text + at, "</r>", 5);
+    c = load(text, &err);
+    free(text);
+    check(c != NULL, "40,000 distinct sibling names build");
+    if (c == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+    check(cf_count(c) == (size_t)count, "every one of them a key");
+    check(cf_has(c, "a000000") && cf_has(c, "a039999"), "the first and the last");
+    cf_config_free(c);
+}
+
 #else
 
 /* Without it, an .xml file is not read as nothing: the build says which
@@ -192,6 +272,8 @@ int main(void) {
     test_refuses();
     test_empty_root();
     test_typed_by_contract();
+    test_names_by_level();
+    test_many_names();
 #else
     test_disabled();
 #endif

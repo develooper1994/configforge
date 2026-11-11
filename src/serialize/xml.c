@@ -36,6 +36,7 @@
 
 #include "configforge/cf_serialize.h"
 
+#include <stddef.h>
 #include <string.h>
 
 #if CF_WITH_XML
@@ -62,6 +63,20 @@ typedef struct xml_name {
     unsigned char is_attr;
 } xml_name;
 
+/* A slot of the index over the names, so that a child's name asks a hash
+   and not every name before it at its level: the scan cost each child
+   the whole level, and a level of distinct names made reading quadratic.
+   A slot holds a table entry and the level it was made at; the level's
+   element, plus one, says whether that level is still open, so a closed
+   level's slots fall free without being cleared. A probe passes only
+   slots of its own level or one open above it, which close after it
+   does, so it never finds a gap a closed level left. */
+typedef struct xml_slot {
+    size_t        entry; /* in the table */
+    unsigned long owner; /* the level's element plus one; 0 is free */
+    int           depth;
+} xml_slot;
+
 typedef struct xml_level {
     size_t        names; /* first entry of this level's table   */
     size_t        chars; /* names buffer offset at this level   */
@@ -87,6 +102,12 @@ typedef struct xml_scan {
     char*     names;
     size_t    nnames, capnames;
     xml_level level[CF_MAX_DEPTH + 1];
+    /* The index, in the sink's workspace (cf_doc_sink.reserve_work); a
+       sink that lends none, or runs out, leaves the scan of the table,
+       which answers the same. */
+    xml_slot* index;
+    size_t    capindex; /* a power of two; 0 until the first name */
+    cf_bool   noindex;
 
     /* Second pass only. */
     unsigned long next; /* the next element's number    */
@@ -150,9 +171,87 @@ static cf_bool xml_plain_name(xml_scan* s, const XML_Char* name) {
  * The first pass: the record
  * ================================================================== */
 
+static size_t xml_hash(const char* p, size_t n) {
+    size_t h = 2166136261u, i;
+    for (i = 0; i < n; ++i) {
+        h = (h ^ (size_t)(unsigned char)p[i]) * 16777619u;
+    }
+    return h;
+}
+
+/* The slot holding `name` at the level `owner` names, or the free one
+   where it would go. */
+static xml_slot* xml_slot_of(const xml_scan* s, const char* name, size_t n,
+                             unsigned long owner) {
+    size_t i = xml_hash(name, n) & (s->capindex - 1);
+
+    for (;;) {
+        xml_slot* x = &s->index[i];
+        if (x->owner == 0 || x->depth > s->depth ||
+            s->level[x->depth].element + 1 != x->owner) {
+            return x;
+        }
+        if (x->owner == owner && s->table[x->entry].n == n &&
+            memcmp(s->names + s->table[x->entry].at, name, n) == 0) {
+            return x;
+        }
+        i = (i + 1) & (s->capindex - 1);
+    }
+}
+
+static void xml_slot_put(xml_scan* s, size_t entry, int depth) {
+    const xml_name* e     = &s->table[entry];
+    unsigned long   owner = s->level[depth].element + 1;
+    xml_slot*       x     = xml_slot_of(s, s->names + e->at, e->n, owner);
+
+    x->entry = entry;
+    x->owner = owner;
+    x->depth = depth;
+}
+
+/* Room in the index for the table as it is: twice the room when it is
+   half full, the open levels' names moved over in the order they came.
+   What was outgrown stays where the sink put it until the decode is
+   over. */
+static cf_bool xml_index_room(xml_scan* s) {
+    size_t    c = (s->capindex == 0) ? 64 : s->capindex;
+    xml_slot* slot;
+    size_t    i;
+    int       d;
+
+    if (s->ntable * 2 <= s->capindex) {
+        return CF_TRUE;
+    }
+    while (c < s->ntable * 2) {
+        c *= 2;
+    }
+    if (c > (size_t)-1 / sizeof *slot) {
+        return CF_FALSE;
+    }
+    slot = (xml_slot*)s->out->reserve_work(s->out->ctx, c * sizeof *slot);
+    if (slot == NULL) {
+        return CF_FALSE;
+    }
+    memset(slot, 0, c * sizeof *slot);
+    s->index    = slot;
+    s->capindex = c;
+    for (d = 1; d <= s->depth; ++d) {
+        size_t end = (d < s->depth) ? s->level[d + 1].names : s->ntable;
+        for (i = s->level[d].names; i < end; ++i) {
+            xml_slot_put(s, i, d);
+        }
+    }
+    return CF_TRUE;
+}
+
 /* A name at the open level, or -1. */
 static long xml_find(const xml_scan* s, const char* name, size_t n) {
     size_t i = s->level[s->depth].names;
+
+    if (!s->noindex && s->capindex != 0) {
+        const xml_slot* x = xml_slot_of(s, name, n, s->level[s->depth].element + 1);
+        return (x->owner == s->level[s->depth].element + 1) ? (long)x->entry : -1;
+    }
     for (; i < s->ntable; ++i) {
         const xml_name* e = &s->table[i];
         if (e->n == n && memcmp(s->names + e->at, name, n) == 0) {
@@ -184,6 +283,13 @@ static cf_bool xml_remember(xml_scan* s, const char* name, size_t n, cf_bool is_
     e->element = element;
     e->is_attr = (unsigned char)(is_attr ? 1 : 0);
     s->nnames += n;
+    if (!s->noindex) {
+        if (xml_index_room(s)) {
+            xml_slot_put(s, s->ntable - 1, s->depth);
+        } else {
+            s->noindex = CF_TRUE;
+        }
+    }
     return CF_TRUE;
 }
 
@@ -489,6 +595,12 @@ static cf_bool xml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
     s.file = (in->name != NULL) ? in->name : "<xml>";
     s.out  = out;
     s.err  = err;
+    /* Whether the sink is large enough to have reserve_work at all. */
+    s.noindex = CF_TRUE;
+    if (out->size >= offsetof(cf_doc_sink, reserve_work) + sizeof out->reserve_work &&
+        out->reserve_work != NULL) {
+        s.noindex = CF_FALSE;
+    }
 
     /* The first pass, whose parser also owns the record. */
     first = XML_ParserCreate("UTF-8");
