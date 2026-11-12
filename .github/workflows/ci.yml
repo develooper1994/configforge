@@ -335,3 +335,33 @@ jobs:
           export PATH="$RUNNER_TEMP/cft/bin:$PATH"
           cmake -S . -B bfmt
           ctest --test-dir bfmt -R gate.format --output-on-failure
+
+  # What the format gate wants, as a patch. The gate reports and does not
+  # rewrite, and the one version it accepts is not on every machine: a
+  # tree formatted with another fails here and nowhere else. This job
+  # fails with the gate and leaves the difference to be applied -
+  #   gh run download <run> -n format-patch && git apply format.patch
+  # - so a disagreement costs one push, not one for each line.
+  format-patch:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Format with the pinned clang-format, and keep the difference
+        run: |
+          python3 -m venv "$RUNNER_TEMP/cft"
+          "$RUNNER_TEMP/cft/bin/pip" install --quiet clang-format==22.1.8
+          git ls-files -z 'src/*.c' 'include/configforge/*.h' \
+            'include/configforge/*.hpp' 'tests/*.c' 'tests/*.cpp' 'tools/*.c' \
+            'examples/*.c' 'examples/*.cpp' 'bench/*.c' |
+            xargs -0 "$RUNNER_TEMP/cft/bin/clang-format" -i
+          git diff > format.patch
+          if [ -s format.patch ]; then
+            git diff --stat
+            echo "::error::the tree is not as clang-format 22.1.8 leaves it; the artifact format-patch is the difference"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: failure()
+        with:
+          name: format-patch
+          path: format.patch
