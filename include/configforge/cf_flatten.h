@@ -30,6 +30,19 @@ extern "C" {
 #define CF_FLATTEN_MAX_DEPTH CF_MAX_DEPTH
 #define CF_EMIT_MAX_DEPTH CF_MAX_DEPTH
 
+/* What one document may make of the key space (D-82): at most
+   CF_DECODE_FACTOR times its own size, and CF_DECODE_FLOOR more, of
+   keys and values, each key charged CF_DECODE_KEY_COST for the
+   records that hold it. Past it the document is refused by name,
+   whatever its format - a program's own codec too. 64 is YAML's
+   rule for its aliases (D-63), made everyone's; the floor lets a
+   small document reuse a block freely; a key's entry and candidate
+   take about 100 bytes on a 64-bit build, so 64 is a bound, not a
+   measure. Not a build option: it sizes no buffer and no frame. */
+#define CF_DECODE_FACTOR 64u
+#define CF_DECODE_FLOOR ((size_t)1024u * 1024u)
+#define CF_DECODE_KEY_COST 64u
+
 /* Eight bytes a level rather than twenty-four: a length within a key
    fits sixteen bits (CF_KEY_MAX is at most 65535), and no configuration
    array has four billion elements. CF_MAX_DEPTH levels of this sit in
@@ -60,6 +73,12 @@ typedef struct cf_flatten {
        a text value of a key declared a list with a separator is split
        into its elements, as the environment's is. NULL: none. */
     const struct cf_defset* lists;
+
+    /* What this document may still make (cf_flatten_budget): 0 is no
+       bound, as for a source with no document, the Registry's. */
+    size_t  budget;
+    size_t  spent;
+    cf_bool over_budget; /* a key refused for it; sticky */
 } cf_flatten;
 
 CF_API cf_bool            cf_flatten_init(cf_flatten* f, cf_keyspace* ks, int rank);
@@ -69,6 +88,22 @@ CF_API const cf_doc_sink* cf_flatten_sink(cf_flatten* f);
    the definitions decide: a declared list with a separator splits its
    text value, `ports = 80,443` the elements 80 and 443. (1.2) */
 CF_API void cf_flatten_lists(cf_flatten* f, const struct cf_defset* ds);
+
+/* CF_DECODE_FACTOR times n, and CF_DECODE_FLOOR more, saturated at
+   SIZE_MAX rather than wrapped. */
+CF_API size_t cf_decode_budget(size_t n);
+
+/* Bound what the flattener adds from now on to `bytes`, counted as
+   D-82 counts them; 0 is no bound. */
+CF_API void cf_flatten_budget(cf_flatten* f, size_t bytes);
+
+/* `blob` through `codec` into the flattener's key space, bounded by
+   cf_decode_budget(blob->n) unless a budget is set already. False
+   with `err` set: the codec's reason, or, when the budget refused a
+   key, the budget's, naming `path` - whatever the codec said, since
+   a refusal from the sink reads to it as a key it could not add. */
+CF_API cf_bool cf_flatten_decode(cf_flatten* f, const cf_codec* codec,
+                                 const cf_blob* blob, const char* path, cf_error* err);
 
 struct cf_source;
 

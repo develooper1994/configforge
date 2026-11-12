@@ -97,6 +97,7 @@ gets reopened every six months.
 | D-79 | Response files (`@file`) are opt-in | command line, security | **Decided** |
 | D-80 | systemd's credentials, a builder of their own | sources, secrets | **Decided** |
 | D-81 | A reader's name table is seeded a decode | formats, security | **Decided** |
+| D-82 | What one document may make is bounded, in the flattener | formats, security | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -3277,6 +3278,53 @@ arenas at different addresses and compares keys, values, places and order;
 a TOML document of 20,000 keys builds. With the seed helper returning a
 constant the readers' tests pass; with it returning a different value each
 call they fail, so every call site uses the stored seed.
+
+---
+
+## D-82 — What one document may make is bounded, in the flattener
+
+**Question.** A document can cost a multiple of itself: aliases that
+replay a block, separators that split into elements, empty arrays that
+each leave a key. YAML bounded its aliases (D-63); nothing else bounded
+anything, so a small JSON, TOML, INI, XML or `.properties` document, and
+every program's own codec, could make far more than its size of keys and
+values. Where is the bound?
+
+**Options.**
+
+1. A bound in each reader. Rejected: every new reader would need its own,
+   and a program's codec would have none.
+2. A bound on the arena's bytes. Rejected: the key space's arena holds
+   other sources' keys and the reader's work space, so the count would
+   depend on what was read before.
+3. One bound in the flattener, where every document passes.
+4. None.
+
+**Decision.** Option 3. As the flattener adds each key it counts the key's
+length, its text's length and 64 bytes for the entry and candidate that
+hold it; a document may make 64 times its own size and 1 MiB more
+(`CF_DECODE_FACTOR`, `CF_DECODE_FLOOR`, `CF_DECODE_KEY_COST`), and past it
+the document is refused as `CF_E_SOURCE`, by a message that names the
+limit, whatever its format. 64 is YAML's rule for its aliases, made
+everyone's; the floor lets a small document reuse a block freely; the key
+cost makes the one count bound keys as well as bytes, since a key cannot
+cost less than it. These are constants and not build options: they size no
+buffer and no frame. YAML's own limits stay: they count events, which bound
+time where no key is made, and they name the line and column of the alias;
+the flattener's bound is the floor under every reader, YAML included, and
+where YAML's trips first that is the right message. The environment, the
+command line, a `.env` file and the Registry are not under it: none nests
+or repeats, so none can make more than a few times its size.
+
+**Compatibility.** A document making more than 64 times its size and 1 MiB
+is refused; none is known. `cf_flatten` is internal (D-51) and gains three
+fields, and three functions are added: `cf_decode_budget`,
+`cf_flatten_budget` and `cf_flatten_decode`.
+
+**Held to.** `test_budget` reads a small document of each format under a
+small budget and sees it refused by name, and a YAML document of thirty
+aliases of a 2000-key block refused; `test_yaml` takes either byte bound
+for the large anchor.
 
 ---
 

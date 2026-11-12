@@ -185,7 +185,7 @@ static cf_bool parse(report* r, const cf_blob* blob, cf_error* err) {
     }
     cf_ks_init(&r->doc, r->arena, 1024);
     cf_flatten_init(&fl, &r->doc, 0);
-    if (!json->decode(blob, cf_flatten_sink(&fl), err)) {
+    if (!cf_flatten_decode(&fl, json, blob, path, err)) {
         return CF_FALSE;
     }
     cf_ks_resolve(&r->doc);

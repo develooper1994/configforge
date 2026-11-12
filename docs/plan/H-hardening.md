@@ -710,6 +710,15 @@ plans D-82 too, so whichever is committed second takes the next.
   🟩 with "D-82: in the flattener, 64 times the document and 1 MiB;
   every format's hostile document hits it by name (`test_budget`)".
 * **notes**:
+  * 2026-11-13: `test_yaml`'s "a 64 KiB anchor aliased 200 times" was
+    refused by the budget ("makes more than", 5,295,232 bytes from a
+    66,354-byte document, at about the 81st alias) before YAML's own
+    message, since the flattener also counts the first copy and each
+    key. Decided: the flattener's budget is the bound every codec
+    inherits, and YAML's alias limit stays as the earlier, cheaper guard
+    where it trips first; whichever trips first is right. The check now
+    accepts either message; the factor, the key cost and YAML's limit are
+    unchanged.
 
 ---
 

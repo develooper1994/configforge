@@ -156,6 +156,21 @@ static cf_bool fl_begin_array(void* ctx, const char* name, size_t n) {
     return CF_TRUE;
 }
 
+/* D-82: whether this document may still add a key of `keylen` bytes
+   holding `textlen` bytes of text. Once refused, every later key is. */
+static cf_bool fl_charge(cf_flatten* f, size_t keylen, size_t textlen) {
+    size_t cost = keylen + textlen + CF_DECODE_KEY_COST;
+    if (f->budget == 0) {
+        return CF_TRUE;
+    }
+    if (f->over_budget || cost < keylen || cost > f->budget - f->spent) {
+        f->over_budget = CF_TRUE;
+        return CF_FALSE;
+    }
+    f->spent += cost;
+    return CF_TRUE;
+}
+
 /* A declared list's text, split at its separator into the elements and
    the count every array is: what fl_begin_array, fl_scalar and fl_end
    write for one, and what the environment's reader writes for the same
@@ -179,6 +194,10 @@ static cf_bool fl_split(cf_flatten* f, const cf_def* d, const cf_value* v,
             f->plen     = base;
             return CF_FALSE;
         }
+        if (!fl_charge(f, base + klen, i - start)) {
+            f->plen = base;
+            return CF_FALSE;
+        }
         if (!cf_ks_add_text(f->ks, f->path, base + klen, f->rank, p + start, i - start,
                             at_text)) {
             f->failed = CF_TRUE;
@@ -195,6 +214,11 @@ static cf_bool fl_split(cf_flatten* f, const cf_def* d, const cf_value* v,
     }
     memcpy(f->path + base, ".count", 7);
     cf_value_int(&total, (cf_i64)count);
+    if (!fl_charge(f, base + 6, 0)) {
+        f->path[base] = '\0';
+        f->plen       = base;
+        return CF_FALSE;
+    }
     if (!cf_ks_add(f->ks, f->path, base + 6, f->rank, &total, NULL)) {
         f->failed = CF_TRUE;
     }
@@ -230,6 +254,10 @@ static cf_bool fl_scalar(void* ctx, const char* name, size_t n, const cf_value* 
             f->plen = saved;
             return ok;
         }
+    }
+    if (!fl_charge(f, f->plen, (textual || v->type == CF_TYPE_TEXT) ? v->u.t.n : 0)) {
+        f->plen = saved;
+        return CF_FALSE;
     }
     if (textual) {
         ok = cf_ks_add_text(f->ks, f->path, f->plen, f->rank, v->u.t.p, v->u.t.n,
@@ -269,6 +297,9 @@ static cf_bool fl_end(void* ctx) {
             memcpy(idx, f->path, plen);
             memcpy(idx + plen, ".count", 7); /* with its terminator: room was checked */
             cf_value_int(&count, (cf_i64)fr->index);
+            if (!fl_charge(f, plen + 6, 0)) {
+                return CF_FALSE;
+            }
             if (!cf_ks_add(f->ks, idx, plen + 6, f->rank, &count, NULL)) {
                 f->failed = CF_TRUE;
             }
@@ -339,6 +370,40 @@ void cf_flatten_lists(cf_flatten* f, const struct cf_defset* ds) {
     if (f != NULL) {
         f->lists = ds;
     }
+}
+
+size_t cf_decode_budget(size_t n) {
+    if (n > ((size_t)-1 - CF_DECODE_FLOOR) / CF_DECODE_FACTOR) {
+        return (size_t)-1;
+    }
+    return n * CF_DECODE_FACTOR + CF_DECODE_FLOOR;
+}
+
+void cf_flatten_budget(cf_flatten* f, size_t bytes) {
+    if (f != NULL) {
+        f->budget = bytes;
+        f->spent  = 0;
+    }
+}
+
+static const char fl_over_budget[] =
+    "'%s' makes more than %U bytes of keys and values from %U bytes of its "
+    "own: a document may make %u times its size and 1 MiB more";
+
+cf_bool cf_flatten_decode(cf_flatten* f, const cf_codec* codec, const cf_blob* blob,
+                          const char* path, cf_error* err) {
+    cf_bool ok;
+
+    if (f->budget == 0) {
+        cf_flatten_budget(f, cf_decode_budget(blob->n));
+    }
+    ok = codec->decode(blob, cf_flatten_sink(f), err);
+    if (f->over_budget) {
+        return cf_error_set(err, CF_E_SOURCE, NULL, path, fl_over_budget, path,
+                            (cf_u64)f->budget, (cf_u64)blob->n,
+                            (unsigned)CF_DECODE_FACTOR);
+    }
+    return ok;
 }
 
 #if CF_WITH_EMIT
