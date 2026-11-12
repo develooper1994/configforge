@@ -48,6 +48,15 @@ extern "C" {
 #endif
 #endif
 
+/* MSVC warns of the unnamed struct CF_C11_CHECKED_ measures (C4116, an
+   error in this build); the pragma lets it pass for that one expression
+   and changes no setting. Other compilers need nothing. */
+#if defined(_MSC_VER)
+#define CF_C11_WARN_OFF_ __pragma(warning(suppress : 4116))
+#else
+#define CF_C11_WARN_OFF_
+#endif
+
 /* ------------------------------------------------------------------ *
  * Build features
  *

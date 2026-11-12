@@ -47,7 +47,7 @@ static void test_one_define(void) {
     schema_of(b, keyed, sizeof keyed);
 
     b = cf_build(NULL);
-    cf_builder_int(b, "server.port", 8080, 1, 65535, 0); /* a range: typed */
+    CF_DEFINE_INT(b, "server.port", 8080, 1, 65535, 0);
     CF_DEFINE(b, "server.host", "0.0.0.0");
     CF_DEFINE(b, "tls.enabled", (bool)false); /* C11's false is the int 0 */
     schema_of(b, generic, sizeof generic);
@@ -83,6 +83,38 @@ static void test_one_define(void) {
     check(strcmp(generic, typed) == 0, "CF_DEFINE of an int: the same");
 }
 
+/* D-75 in C11: CF_DEFINE_TEXT writes the schema a hand-filled cf_def
+   writes, and the run time still refuses what the compiler cannot see. */
+static void test_bounded_text(void) {
+    static char by_def[4096], by_macro[4096];
+    cf_builder* b   = cf_build(NULL);
+    cf_error    err = CF_ERROR_INIT;
+    cf_def      def;
+
+    cf_def_init(&def, CF_TYPE_TEXT, "server.host");
+    def.min_len     = 1;
+    def.max_len     = 253;
+    def.has_default = CF_TRUE;
+    cf_value_text(&def.default_value, "0.0.0.0", 7);
+    cf_builder_define(b, &def);
+    schema_of(b, by_def, sizeof by_def);
+
+    b = cf_build(NULL);
+    CF_DEFINE_TEXT(b, "server.host", "0.0.0.0", 1, 253, 0);
+    schema_of(b, by_macro, sizeof by_macro);
+    check(strcmp(by_macro, by_def) == 0, "CF_DEFINE_TEXT: the same");
+
+    b = cf_build(NULL);
+    cf_def_init(&def, CF_TYPE_TEXT, "server.mode");
+    def.max_len     = 4;
+    def.has_default = CF_TRUE;
+    cf_value_text(&def.default_value, "production", 10);
+    cf_builder_define(b, &def);
+    check(cf_builder_create(b, &err) == NULL && err.code == CF_E_VALIDATE &&
+              strstr(err.message, "longer than 4 characters") != NULL,
+          "and at run time, as it was");
+}
+
 int main(void) {
     static const cf_pair pairs[] = {{"server.port", "8080"},
                                     {"big", "5000000000"},
@@ -98,6 +130,7 @@ int main(void) {
     const char*          host = NULL;
 
     test_one_define();
+    test_bounded_text();
     cf_builder_memory(b, "file", CF_RANK_USER_FILE, pairs, 5);
 #if CF_WITH_REAL
     cf_builder_real(b, "ratio", 0.0, 0.0, 1.0, 0); /* a real needs its definition */
@@ -122,3 +155,24 @@ int main(void) {
     cf_config_free(c);
     return cf_test_done();
 }
+
+#if defined(CF_TEST_REFUSED)
+void cf_test_refused(cf_builder* b);
+void cf_test_refused(cf_builder* b) {
+#if CF_TEST_REFUSED == 1
+    (void)CF_DEFINE_INT(b, "server.port", 0, 1, 65535, 0);
+#elif CF_TEST_REFUSED == 2
+    (void)CF_DEFINE_INT(b, "server.port", 5, 9, 1, 0);
+#elif CF_TEST_REFUSED == 3
+    (void)CF_DEFINE_TEXT(b, "server.mode", "production", 1, 4, 0);
+#elif CF_TEST_REFUSED == 4
+    (void)CF_DEFINE_TEXT(b, "server.mode", "", 1, 4, 0);
+#elif CF_TEST_REFUSED == 5
+    (void)CF_DEFINE_TEXT(b, "server.mode", "dev", 5, 4, 0);
+#elif CF_TEST_REFUSED == 6
+    (void)CF_DEFINE_INT(b, "", 1, 0, 0, 0);
+#elif CF_TEST_REFUSED == 7
+    (void)CF_DEFINE_INT(b, "server.port", 8080, 1, 65535, CF_REQUIRED);
+#endif
+}
+#endif

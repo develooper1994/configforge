@@ -322,6 +322,69 @@ static inline cf_bool cf_define_r_(cf_builder* b, const char* k, double d) {
         long long: cf_define_i_,                                                       \
         char*: cf_define_t_,                                                           \
         const char*: cf_define_t_ CF_DEFINE_REAL_)((b), (key), (dflt))
+
+/* C11 also checks a definition whose key, default and bounds are
+   constants, as the library would at create, and refuses it at compile
+   time (D-75): CF_DEFINE_INT(b, "server.port", 8080, 1, 65535, 0),
+   CF_DEFINE_TEXT(b, "server.mode", "dev", 1, 8, 0). The key and a text
+   default are string literals and the rest constant expressions; for a
+   value known only at run time, cf_builder_int or a cf_def. A real's
+   range is not a C11 constant expression and is checked at create. */
+static inline cf_bool cf_define_tl_(cf_builder* b, const char* k, const char* d,
+                                    size_t n, size_t lo, size_t hi, unsigned flags) {
+    cf_def def;
+    cf_def_init(&def, CF_TYPE_TEXT, k);
+    def.flags       = flags;
+    def.min_len     = lo;
+    def.max_len     = hi;
+    def.has_default = CF_TRUE;
+    cf_value_text(&def.default_value, d, n);
+    return cf_builder_define(b, &def);
+}
+
+/* D-75 in C11: what the compiler can check of a definition whose
+   key, default and bounds are constants, refused in the library's
+   words. Each is a declaration, for a struct or a block;
+   CF_C11_CHECKED_ makes a list of them an expression, so that a
+   macro can check and still return what the call returns. The code
+   doctor gen writes uses them too. Not for programs to call. */
+/* NOLINTBEGIN(bugprone-macro-parentheses) */
+#define CF_C11_KEY_(k)                                                                 \
+    _Static_assert(sizeof("" k) > 1 && sizeof("" k) <= CF_KEY_MAX,                     \
+                   "configforge: a key empty or longer than CF_KEY_MAX")
+#define CF_C11_RANGE_(d, lo, hi)                                                       \
+    _Static_assert((cf_i64)(lo) <= (cf_i64)(hi),                                       \
+                   "configforge: a range whose low end is above its high end");        \
+    _Static_assert((cf_i64)(lo) == (cf_i64)(hi) ||                                     \
+                       ((cf_i64)(lo) <= (cf_i64)(d) && (cf_i64)(d) <= (cf_i64)(hi)),   \
+                   "configforge: a default outside its own range")
+#define CF_C11_LEN_(t, lo, hi)                                                         \
+    _Static_assert((hi) == 0 || (lo) <= (hi),                                          \
+                   "configforge: a length range whose low end is above its high end"); \
+    _Static_assert(sizeof("" t) > (size_t)(lo),                                        \
+                   "configforge: a text default shorter than its min_len");            \
+    _Static_assert((hi) == 0 || sizeof("" t) <= (size_t)(hi) + 1u,                     \
+                   "configforge: a text default longer than its max_len")
+#define CF_C11_DEFAULTED_(flags)                                                       \
+    _Static_assert(((flags) & CF_REQUIRED) == 0,                                       \
+                   "configforge: required and defaulted at once")
+#define CF_C11_CHECKED_(decls)                                                         \
+    ((void)CF_C11_WARN_OFF_ sizeof(struct {                                            \
+        decls;                                                                         \
+        int cf_checked_;                                                               \
+    }))
+/* NOLINTEND(bugprone-macro-parentheses) */
+
+#define CF_DEFINE_INT(b, key, dflt, min, max, flags)                                   \
+    (CF_C11_CHECKED_(CF_C11_KEY_(key); CF_C11_RANGE_(dflt, min, max);                  \
+                     CF_C11_DEFAULTED_(flags)),                                        \
+     cf_builder_int((b), "" key, (cf_i64)(dflt), (cf_i64)(min), (cf_i64)(max),         \
+                    (unsigned)(flags)))
+#define CF_DEFINE_TEXT(b, key, dflt, min_len, max_len, flags)                          \
+    (CF_C11_CHECKED_(CF_C11_KEY_(key); CF_C11_LEN_(dflt, min_len, max_len);            \
+                     CF_C11_DEFAULTED_(flags)),                                        \
+     cf_define_tl_((b), "" key, "" dflt, sizeof("" dflt) - 1u, (size_t)(min_len),      \
+                   (size_t)(max_len), (unsigned)(flags)))
 #endif
 
 CF_API void cf_builder_unknown(cf_builder* b, cf_unknown_policy policy);

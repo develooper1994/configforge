@@ -2619,6 +2619,13 @@ ends are equal, as in `cf_builder_int`).
   list of number and bool keys can be a constant, checked the same way.
 * **C++20**: `constinit` asks for the check on a Key the program may
   still assign.
+* **C11**: `CF_DEFINE_INT` and `CF_DEFINE_TEXT` take a literal key and
+  constant bounds, and `_Static_assert` refuses an empty or overlong key, a
+  range upside down, a default outside its range, a text default outside
+  its length bounds and a key both required and defaulted, each by the
+  library's words. A key's characters and a real's range are not C11
+  constant expressions and are checked at create; `CF_DEFINE` is as it
+  was.
 
 A Key that is neither `constexpr` nor `constinit`, a name known only at
 run time, a `Key<std::string>` (std::string is no constant before
@@ -2628,14 +2635,13 @@ program's choice: a check that turned every `static const` Key into a
 compile error would change what a C++11 program that builds already
 says (D-72).
 
-**Not yet.** C11's `_Static_assert` for a ranged and a bounded define
-macro, and the checks `doctor gen` would write into a generated
-contract, are left (Roadmap, wave 3).
+**Not yet.** The checks `doctor gen` would write into a generated
+contract are left (Roadmap, wave 3).
 
 **Held to.** `test_wrapper_access` compares `cf::key_is_valid` with
 `cf_key_valid` key by key, and is compiled as C++98, 11, 14 and 17; the
 C++17 and C++20 tests declare constant field lists and a `constinit`
-key. Each mistake is a program that must not compile
+key, and C11's seven. Each mistake is a program that must not compile
 (`cmake/ConfigForgeMustNotCompile.cmake`), under every standard from
 C++11 the compiler has; its test passes only when the build fails with
 the check's name in the output, so a source that fails for another
