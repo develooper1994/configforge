@@ -882,7 +882,7 @@ static cf_bool replay_load(const cf_source* s, cf_keyspace* ks) {
         return cf_error_set(&st->err, CF_E_MEMORY, NULL, st->path,
                             "no room to read '%s'", st->path);
     }
-    if (!json->decode(&blob, cf_flatten_sink(&fl), &st->err)) {
+    if (!cf_flatten_decode(&fl, json, &blob, st->path, &st->err)) {
         st->failed = CF_TRUE;
         return CF_FALSE;
     }

@@ -63,6 +63,7 @@ set(CF_UNIT_TESTS
     test_truncate
     test_roundtrip
     test_bom
+    test_budget
     test_dirlimits
     test_credentials)
 

@@ -53,7 +53,7 @@ cf_bool cf_source_read_blob(const cf_source* s, cf_keyspace* ks, const cf_codec*
     if ((codec->caps & CF_CODEC_TYPED) == 0 && s->ref != NULL) {
         cf_flatten_lists(&fl, (const cf_defset*)s->ref); /* the definitions decide */
     }
-    if (!codec->decode(blob, cf_flatten_sink(&fl), err)) {
+    if (!cf_flatten_decode(&fl, codec, blob, path, err)) {
         return CF_FALSE;
     }
     if (fl.failed || fl.overflow) {

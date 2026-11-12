@@ -248,8 +248,20 @@ static void test_alias_bytes(void) {
           "with the text whole");
     cf_config_free(c);
 
-    refused(big_anchor(64u * 1024u, 200), "far more than the document",
-            "a 64 KiB anchor aliased 200 times is refused by its bytes");
+    /* Two bounds on the same bytes, and whichever trips first is right:
+       YAML's own (it counts only the replayed text) and the flattener's
+       (D-82, which also counts the first copy and each key, so for a
+       large scalar it can come a few aliases sooner). */
+    {
+        cf_error   e2 = CF_ERROR_INIT;
+        cf_config* c2 = load(big_anchor(64u * 1024u, 200), &e2);
+
+        check(c2 == NULL, "a 64 KiB anchor aliased 200 times is refused by its bytes");
+        check(strstr(e2.message, "far more than the document") != NULL ||
+                  strstr(e2.message, "makes more than") != NULL,
+              "by one of the two byte bounds, YAML's or the flattener's");
+        cf_config_free(c2);
+    }
 }
 
 /* A name anchored again: an alias means the latest definition, the inner

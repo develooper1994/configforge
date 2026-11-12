@@ -76,6 +76,7 @@ cf_config_codec
 cf_config_free
 cf_config_ref
 cf_count
+cf_decode_budget
 cf_def_bool
 cf_def_init_sized
 cf_def_int
@@ -130,6 +131,8 @@ cf_fingerprint
 cf_fingerprint_format
 cf_fingerprint_seed
 cf_fingerprint_step
+cf_flatten_budget
+cf_flatten_decode
 cf_flatten_init
 cf_flatten_lists
 cf_flatten_sink
