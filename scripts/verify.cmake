@@ -862,7 +862,12 @@ foreach(x ${EXTRA})
     set(commit_yaml-test-suite-data 6ad3d2c62885d82fc349026c136ef560838fdf3d)
     set(url_json5-tests https://github.com/json5/json5-tests)
     set(commit_json5-tests ceb24d4080137d70833f86c25659c1331b80a387)
-    foreach(sname JSONTestSuite toml-test yaml-test-suite-data json5-tests)
+    # RFC 8949 Appendix A as data (appendix_a.json); the malformed items of
+    # Appendix F.1 are in scripts/check/conformance.py.
+    set(url_cbor-test-vectors https://github.com/cbor/test-vectors)
+    set(commit_cbor-test-vectors aba89b653e484bc8573c22f3ff35641d79dfd8c1)
+    foreach(sname JSONTestSuite toml-test yaml-test-suite-data json5-tests
+                  cbor-test-vectors)
       set(surl "${url_${sname}}")
       set(scommit "${commit_${sname}}")
       set(dir "${SUITES}/${sname}")
