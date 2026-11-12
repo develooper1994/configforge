@@ -56,23 +56,6 @@ static void put_u16(char* p, cf_u32 v) {
     p[1] = (char)((v >> 8) & 0xFFu);
 }
 
-/* A double travels as its bit pattern. memcpy rather than a union or a
-   cast: it is the one spelling that is defined on every compiler and
-   optimises to the same instruction on all of them. */
-#if CF_WITH_REAL
-static cf_u64 f64_bits(double d) {
-    cf_u64 v = 0;
-    memcpy(&v, &d, (sizeof d < sizeof v) ? sizeof d : sizeof v);
-    return v;
-}
-
-static double bits_f64(cf_u64 v) {
-    double d = 0.0;
-    memcpy(&d, &v, (sizeof d < sizeof v) ? sizeof d : sizeof v);
-    return d;
-}
-#endif
-
 static size_t align8(size_t n) {
     size_t r = n % 8u;
     return (r == 0) ? n : n + (8u - r);
@@ -281,7 +264,7 @@ size_t cf_image_write(const cf_keyspace* ks, const cf_source_view* sv, unsigned 
                 break;
             case CF_TYPE_REAL:
 #if CF_WITH_REAL
-                w_u64(&w, val + 8, f64_bits(v->u.r));
+                w_u64(&w, val + 8, cf_f64_bits(v->u.r));
 #endif
                 break;
             case CF_TYPE_NULL:
@@ -313,7 +296,7 @@ size_t cf_image_write(const cf_keyspace* ks, const cf_source_view* sv, unsigned 
                 }
 #if CF_WITH_REAL
                 else if (c->value.type == CF_TYPE_REAL) {
-                    w_u64(&w, ch + 16, f64_bits(c->value.u.r));
+                    w_u64(&w, ch + 16, cf_f64_bits(c->value.u.r));
                 }
 #endif
                 if (c->at != NULL) {
@@ -464,7 +447,7 @@ static cf_bool read_value(const cf_image* img, const char* rec, cf_value* v) {
         return CF_TRUE;
     case CF_TYPE_REAL:
 #if CF_WITH_REAL
-        cf_value_real(v, bits_f64(get_u64(rec + 8)));
+        cf_value_real(v, cf_f64_from_bits(get_u64(rec + 8)));
         return CF_TRUE;
 #else
         return CF_FALSE;

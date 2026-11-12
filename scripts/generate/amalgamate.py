@@ -61,7 +61,7 @@ SOURCES = [
     "core/value.c", "core/keyspace.c", "core/define.c", "core/validate.c",
     "core/config.c", "core/iterate.c", "core/live.c", "core/edit.c",
     "serialize/blob.c", "serialize/codec.c", "serialize/detect.c", "serialize/ini.c",
-    "serialize/json.c", "serialize/toml.c", "serialize/yamlparse.c", "serialize/yaml.c", "serialize/xml.c", "serialize/properties.c",
+    "serialize/json.c", "serialize/toml.c", "serialize/yamlparse.c", "serialize/yaml.c", "serialize/xml.c", "serialize/properties.c", "serialize/cbor.c",
     "sources/entry.c", "sources/memory.c", "sources/defaults.c", "sources/env.c",
     "sources/cli.c", "sources/compat.c", "sources/snapshot.c",
     "bridge/flatten.c", "bridge/file.c", "bridge/dotenv.c", "bridge/dir.c", "bridge/emit.c", "bridge/image.c", "bridge/store.c", "bridge/secrets.c", "bridge/registry.c", "bridge/schema.c",

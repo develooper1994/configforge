@@ -52,6 +52,11 @@ CF_API void cf_blob_mem(cf_blob* b, const char* p, size_t n, const char* name);
    part of the text, and only the first bytes are one. */
 CF_API size_t cf_blob_skip_bom(const cf_blob* b);
 
+/* Whether n bytes are UTF-8 as RFC 3629 has it: no overlong form, no
+   surrogate (U+D800 to U+DFFF), nothing past U+10FFFF, no sequence cut
+   short. A NUL is a character like any other. (1.5) */
+CF_API cf_bool cf_text_is_utf8(const char* p, size_t n);
+
 /* Reads a whole file into the arena. CF_E_SOURCE when it cannot be
    opened or read; the caller decides whether that is fatal. */
 CF_API cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err);

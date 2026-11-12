@@ -12,6 +12,7 @@ option(CF_WITH_JSON "JSON codec (built in; Report Replay and Doctor read it)"
 option(CF_WITH_TOML "TOML subset codec (built in, no dependency)" ON)
 option(CF_WITH_PROPERTIES "Java .properties reader (built in, no dependency)"
        ON)
+option(CF_WITH_CBOR "CBOR codec, RFC 8949 (built in, no dependency)" ON)
 option(CF_WITH_XML "XML codec (requires expat)" OFF)
 option(CF_WITH_YAML
        "YAML codec (built in; libfyaml or libyaml by CF_YAML_BACKEND)" ON)
@@ -105,6 +106,7 @@ set(CF_FEATURES
     JSON
     TOML
     PROPERTIES
+    CBOR
     XML
     YAML
     SQLITE

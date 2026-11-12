@@ -29,6 +29,9 @@ extern const cf_codec cf_codec_xml;
 #if CF_WITH_PROPERTIES
 extern const cf_codec cf_codec_properties;
 #endif
+#if CF_WITH_CBOR
+extern const cf_codec cf_codec_cbor;
+#endif
 
 static const cf_codec* const cf_codecs[] = {
 #if CF_WITH_INI
@@ -49,6 +52,9 @@ static const cf_codec* const cf_codecs[] = {
 #endif
 #if CF_WITH_PROPERTIES
     &cf_codec_properties,
+#endif
+#if CF_WITH_CBOR
+    &cf_codec_cbor,
 #endif
     NULL};
 
@@ -180,6 +186,7 @@ static const cf_format_info cf_formats[] = {
     {"xml", ".xml", "CF_WITH_XML"},
     {"yaml", ".yaml;.yml", "CF_WITH_YAML"},
     {"properties", ".properties", "CF_WITH_PROPERTIES"},
+    {"cbor", ".cbor", "CF_WITH_CBOR"},
     {NULL, NULL, NULL}};
 
 const char* cf_format_of_path(const char* path) {

@@ -20,6 +20,9 @@ endif()
 if(CF_WITH_PROPERTIES)
   target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/properties.c)
 endif()
+if(CF_WITH_CBOR)
+  target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cbor.c)
+endif()
 
 # YAML, read by one of three parsers behind the one codec (D-62, D-69):
 # the built-in one (yamlparse.c), which reads all of yaml-test-suite and

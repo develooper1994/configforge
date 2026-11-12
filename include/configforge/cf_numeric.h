@@ -78,6 +78,15 @@ CF_API size_t cf_f64_to_text(double v, char* buf, size_t cap);
    unit in the last place off. */
 CF_API cf_bool cf_text_to_f64(const char* s, size_t len, double* out, size_t* end);
 
+/* A double as its IEEE 754 bit pattern, and back, by memcpy. (1.5) */
+CF_API cf_u64 cf_f64_bits(double d);
+CF_API double cf_f64_from_bits(cf_u64 bits);
+
+/* A half- and a single-precision pattern (in the low 16 and 32 bits) as
+   a double, exactly, the non-finite ones included. (1.5) */
+CF_API double cf_f64_from_f16_bits(cf_u32 bits);
+CF_API double cf_f64_from_f32_bits(cf_u32 bits);
+
 #endif /* CF_WITH_REAL */
 
 /* ------------------------------------------------------------------ *

@@ -41,6 +41,8 @@ static cf_config* built(cf_builder* b, cf_error* err) {
 
 static void test_listed(void) {
     check(cf_has_feature("lists"), "list contracts are available in every profile");
+    check(cf_has_feature("cbor") == (CF_WITH_CBOR ? CF_TRUE : CF_FALSE),
+          "cbor as built");
     check(cf_has_feature("properties") == (CF_WITH_PROPERTIES ? CF_TRUE : CF_FALSE),
           "the .properties reader, as the build says");
     check(cf_has_feature("json5") == (CF_WITH_JSON ? CF_TRUE : CF_FALSE),
