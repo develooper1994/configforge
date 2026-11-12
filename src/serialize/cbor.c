@@ -221,8 +221,8 @@ static cf_bool cbor_chunks(cbor_scan* s, size_t* total, char* into) {
 
     for (;;) {
         cbor_head   c;
-        const char* p;
-        size_t      n;
+        const char* p = NULL; /* set by the read below: -Os cannot see it */
+        size_t      n = 0;
 
         if (!cbor_head_read(s, &c)) {
             return CF_FALSE;

@@ -94,6 +94,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **CBOR** (RFC 8949), read (D-91): `.cbor` files and documents named
+  `cbor`; maps of text keys, arrays, integers, floats of every width,
+  text, booleans and null, each value placed in `explain()` by the byte
+  it starts at. Byte strings, tags other than 0, 1, 32 and 55799,
+  undefined and a key that is not text are refused by name.
+  `CF_WITH_CBOR`, on by default.
+
 - **Keys checked at compile time in C11** (D-75): `CF_DEFINE_INT` and
   `CF_DEFINE_TEXT` refuse, when compiled, a definition the library would
   refuse at `create` - a default outside its range, a range upside down,
