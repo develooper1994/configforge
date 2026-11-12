@@ -125,6 +125,7 @@ typedef struct toml_scan {
     char*      pool;
     size_t     npool, cpool;
     cf_u32     body;
+    cf_u32     seed; /* what every hash of a name starts from */
 } toml_scan;
 
 /* A dotted key, its segments in one buffer for the same reason. A key
@@ -625,10 +626,35 @@ static cf_bool toml_no_room(toml_scan* s) {
                         "no room to record the TOML document's definitions");
 }
 
-/* FNV-1a over the parent, and the name or the element's number. */
-static cf_u32 toml_hash(cf_u32 parent, cf_u8 elem, const char* p, size_t n,
+/* The seed every hash of a name in this decode starts from, so that a
+   document's author cannot choose names that all land in one bucket: the
+   hash was FNV-1a from its fixed offset basis, which anyone can compute
+   against. The library has no clock and no random source, so the seed is
+   made of two addresses, the scan's and a local's, which differ from run to
+   run where the system randomises addresses and which a document cannot
+   know. Where it does not (no address randomisation), the seed is the
+   same every run: no worse than the unseeded hash was, and no better.
+   Nothing observable may depend on it: no table is walked in bucket
+   order. The high bits of an address are the random ones and a bucket
+   index is the low bits of a hash, so they are folded down first. The
+   two addresses are often both on the stack, sharing their random high
+   bits, so the second is multiplied before the XOR lest they cancel. */
+static size_t toml_seed(const void* where) {
+    char   here;
+    size_t x = (size_t)where ^ ((size_t)(const void*)&here * 2654435761u);
+
+    x ^= x >> 12;
+    x ^= x >> 24;
+    x *= 16777619u;
+    x = (size_t)(cf_u32)(x ^ (x >> 16 >> 16));
+    return (x == 0) ? (size_t)2166136261u : x;
+}
+
+/* FNV-1a from the decode's seed, over the parent, and the name or the
+   element's number. */
+static cf_u32 toml_hash(cf_u32 seed, cf_u32 parent, cf_u8 elem, const char* p, size_t n,
                         cf_u32 index) {
-    cf_u32 h = 2166136261u;
+    cf_u32 h = seed;
     size_t i;
     for (i = 0; i < 4; ++i) {
         h = (h ^ ((parent >> (8 * i)) & 0xFFu)) * 16777619u;
@@ -649,7 +675,8 @@ static cf_u32 toml_hash(cf_u32 parent, cf_u8 elem, const char* p, size_t n,
    there is none. */
 static cf_u32 toml_find(const toml_scan* s, cf_u32 parent, cf_u8 elem, const char* p,
                         size_t n, cf_u32 index) {
-    cf_u32 i = s->buckets[toml_hash(parent, elem, p, n, index) & (s->nbuckets - 1)];
+    cf_u32 i =
+        s->buckets[toml_hash(s->seed, parent, elem, p, n, index) & (s->nbuckets - 1)];
     while (i != 0) {
         const toml_node* x = &s->nodes[i];
         if (x->parent == parent && x->elem == elem &&
@@ -682,10 +709,10 @@ static cf_bool toml_room(toml_scan* s, size_t text) {
         memset(buckets, 0, nb * sizeof *buckets);
         for (i = 1; i < s->nnodes; ++i) {
             toml_node* x = &nodes[i];
-            cf_u32 h = toml_hash(x->parent, x->elem, x->elem ? NULL : s->pool + x->name,
-                                 x->len, x->name) &
+            cf_u32     h = toml_hash(s->seed, x->parent, x->elem,
+                                 x->elem ? NULL : s->pool + x->name, x->len, x->name) &
                        (cf_u32)(nb - 1);
-            x->chain = buckets[h];
+            x->chain   = buckets[h];
             buckets[h] = (cf_u32)i;
         }
         s->nodes    = nodes;
@@ -739,7 +766,7 @@ static cf_u32 toml_add(toml_scan* s, cf_u32 parent, cf_u8 elem, const char* p, s
         x->len  = (cf_u16)n;
         s->npool += n;
     }
-    h             = toml_hash(parent, elem, p, n, index) & (cf_u32)(s->nbuckets - 1);
+    h = toml_hash(s->seed, parent, elem, p, n, index) & (cf_u32)(s->nbuckets - 1);
     x->chain      = s->buckets[h];
     s->buckets[h] = i;
     return i;
@@ -755,6 +782,7 @@ static cf_bool toml_track_init(toml_scan* s) {
     s->nodes   = NULL;
     s->buckets = NULL;
     s->pool    = NULL;
+    s->seed    = (cf_u32)toml_seed(s);
     if (o->size < offsetof(cf_doc_sink, reserve_work) + sizeof o->reserve_work ||
         o->reserve_work == NULL) {
         return CF_TRUE;

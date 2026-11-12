@@ -563,6 +563,34 @@ into the next allocation or a core dump; for a buffer you own,
 `cf_arena_wipe` does the same. Doctor reports a secret passed on the
 command line, where `ps` shows it to everyone (CFD007).
 
+### systemd's credentials
+
+A service given `LoadCredential=`, `SetCredential=` or
+`ImportCredential=` finds each credential as a file in the directory
+`$CREDENTIALS_DIRECTORY` names. `cf_builder_credentials` is the secrets
+directory pointed there: the variable is looked up at every load, the
+names map and the newline is dropped as above, and every value says it
+came from systemd - `systemd credential db.password
+(/run/credentials/app.service/db.password)` in explain() and in a report -
+so it is never mistaken for a file somebody put in a directory. With
+`CF_OPTIONAL` a program started outside systemd, where the variable is not
+set, reads nothing from it; without, that is an error naming the
+variable. A variable that is set must name a directory, optional or not
+(D-80).
+
+```ini
+[Service]
+ExecStart=/usr/bin/app
+DynamicUser=yes
+LoadCredential=db.password:/etc/app/db.password
+SetCredential=api.region:eu-west-1
+Restart=on-failure
+```
+
+```c
+cf_builder_credentials(b, NULL, CF_RANK_ENV, "MYAPP_", CF_OPTIONAL);
+```
+
 ## 10. Changing, saving, reloading
 
 A configuration never changes once built. Changing a value derives a new

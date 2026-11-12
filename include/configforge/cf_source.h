@@ -360,6 +360,15 @@ CF_API cf_bool cf_source_secrets(cf_source* s, const char* name, int rank,
 
 CF_API const cf_error* cf_source_secrets_error(const cf_source* s);
 
+/* systemd's credentials: the same reading, of the directory
+   $CREDENTIALS_DIRECTORY names at each load, each value placed as
+   "systemd credential <id> (<file>)" (cf_builder_credentials, D-80). The
+   state is a secrets source's, and cf_source_secrets_error reports it.
+   Internal: the builder function is the interface. */
+cf_bool cfi_source_credentials(cf_source* s, const char* name, int rank,
+                               const char* prefix, unsigned flags, void* state,
+                               size_t state_size);
+
 /* ------------------------------------------------------------------ *
  * A key of the Windows Registry
  *

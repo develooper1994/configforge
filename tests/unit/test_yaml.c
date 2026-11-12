@@ -9,6 +9,7 @@
 #include <configforge/cf_serialize.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "cf_test.h"
@@ -431,6 +432,77 @@ static void test_round_trip(void) {
 }
 #endif
 
+/* A reader seeds its name tables a decode (D-81). Nothing a caller can see
+   may depend on the seed, so the same document read twice, through two
+   arenas that lie at different addresses, gives the same keys in the same
+   order, with the same values and places. */
+static cf_bool seeded_read(const char* fmt, const char* text, cf_arena* ar,
+                           char** dump) {
+    const cf_codec* c = cf_codec_by_name(fmt);
+    cf_keyspace     ks;
+    cf_flatten      fl;
+    cf_blob         b;
+    cf_error        err = CF_ERROR_INIT;
+    size_t          i, n = 0;
+    char*           out;
+
+    if (c == NULL) {
+        return CF_FALSE;
+    }
+    cf_ks_init(&ks, ar, 16);
+    cf_blob_mem(&b, text, strlen(text), "doc");
+    cf_flatten_init(&fl, &ks, 10);
+    if (!c->decode(&b, cf_flatten_sink(&fl), &err)) {
+        return CF_FALSE;
+    }
+    cf_ks_resolve(&ks);
+    cf_ks_infer_untyped(&ks);
+    out = (char*)malloc(cf_ks_count(&ks) * 200 + 64);
+    if (out == NULL) {
+        return CF_FALSE;
+    }
+    for (i = 0; i < cf_ks_count(&ks); ++i) {
+        const cf_entry* e = cf_ks_at(&ks, i);
+        n += (size_t)sprintf(out + n, "%.*s|%lu|%.100s\n", (int)e->keylen, e->key,
+                             (unsigned long)cf_ks_value_digest(&e->chain->value),
+                             e->chain->at);
+    }
+    out[n] = '\0';
+    *dump  = out;
+    return CF_TRUE;
+}
+
+static void seeded_same(const char* fmt, const char* text, const char* what) {
+    cf_arena* a1  = cf_arena_new(NULL, 1 << 12);
+    cf_arena* a2  = cf_arena_new(NULL, 1 << 16);
+    char*     d1  = NULL;
+    char*     d2  = NULL;
+    cf_bool   ok1 = seeded_read(fmt, text, a1, &d1);
+    cf_bool   ok2 = seeded_read(fmt, text, a2, &d2);
+
+    check(ok1 && ok2, "the document reads twice");
+    if (ok1 && ok2) {
+        check(strcmp(d1, d2) == 0, what);
+    }
+    free(d1);
+    free(d2);
+    cf_arena_free(a1);
+    cf_arena_free(a2);
+}
+
+static const char g_seeded_doc[] = "base: &b\n  host: a\n  ports: [1, 2]\n"
+                                   "other: *b\n"
+                                   "name: &n plain\n"
+                                   "name2: &m plain\n"
+                                   "again: *n\n"
+                                   "more: *m\n"
+                                   "name3: &n again\n"
+                                   "list: [*n, *n]\n";
+
+static void test_seeded(void) {
+    seeded_same("yaml", g_seeded_doc, "YAML read twice is the same");
+}
+
 #else /* !CF_WITH_YAML */
 
 /* Without it, a .yaml file is not read as nothing: the build says which
@@ -462,6 +534,7 @@ int main(void) {
     test_reanchor_entries();
     test_hostile_directive();
     test_empty();
+    test_seeded();
 #if CF_WITH_EMIT
     test_round_trip();
 #endif

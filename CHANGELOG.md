@@ -69,6 +69,33 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   (D-78), below.
 - A SENSITIVE `setting()` in the Python binding is left out of its
   dataclass's `repr`.
+- **A reader's name tables are seeded a decode** (D-81). The TOML, YAML,
+  INI and XML readers hashed names from a fixed start, so a document
+  could choose names that all land in one bucket and make reading
+  quadratic. Each decode starts from a seed made of the addresses of
+  its table and of a local, which a document's author cannot know where
+  the system randomises addresses; where it does not, nothing is worse
+  than it was. Nothing a caller sees changes.
+- **A test holds the library to it**: `test_marker` drives a marker
+  value through every way a sensitive key is accepted or refused - each
+  refusal reason, strict and with fallback, from memory, files, the
+  environment, the command line and a loser's place - and fails if the
+  marker, or its first six characters, is in any text the library
+  writes: errors, `explain()`, the blind report, diffs, the fingerprint,
+  the schema, log events, `cf_live`'s reloads and a store's edits. Both
+  refusal leaks found by hand fail it when put back.
+
+### Added
+
+- **systemd's credentials are a source**: `cf_builder_credentials` reads
+  the directory `$CREDENTIALS_DIRECTORY` names, as the secrets directory
+  reads one, and every value says "systemd credential <id> (<file>)" in
+  `explain()` and in a report, so it is told from a plain secret file.
+  Outside systemd `CF_OPTIONAL` reads nothing; without it the error
+  names the variable (D-80). In C; the bindings do not offer it yet.
+- `docs/Agents.md`: how the work is divided between an organising
+  session and the subagents it briefs, and how a session stops without
+  losing it.
 
 ### Fixed
 

@@ -210,6 +210,21 @@ CF_API cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank,
 CF_API cf_bool cf_builder_secrets(cf_builder* b, const char* name, int rank,
                                   const char* path, const char* prefix, unsigned flags);
 
+/* systemd's credentials (LoadCredential=, SetCredential=,
+   ImportCredential=): the directory $CREDENTIALS_DIRECTORY names, looked
+   up at every load, read as cf_builder_secrets reads one - a credential's
+   id is its key, or is mapped as an environment variable's name with
+   `prefix`; the one trailing newline is dropped; CF_SENSITIVE is the
+   contract's to give. Every value's place in explain() and in a report is
+   "systemd credential <id> (<file>)"; `name` is the source's (NULL:
+   "credentials"). The variable unset or empty is an error that names it,
+   and nothing with CF_OPTIONAL; set, it must name a directory that can be
+   read whole, optional or not (D-78, D-80). Not Linux only: the variable
+   is read wherever it is set. Under CF_WITH_DIR, as the secrets
+   directory is. */
+CF_API cf_bool cf_builder_credentials(cf_builder* b, const char* name, int rank,
+                                      const char* prefix, unsigned flags);
+
 /* A key of the Windows Registry and its subkeys (cf_source_registry
    says how names and types map). Windows only; elsewhere it fails by
    name, CF_OPTIONAL or not. */

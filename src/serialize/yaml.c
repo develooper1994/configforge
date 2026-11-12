@@ -145,6 +145,7 @@ typedef struct yaml_scan {
     size_t        nanchors, canchors;
     cf_u32*       buckets;
     size_t        nbuckets;
+    cf_u32        seed; /* what every hash of an anchor name starts from */
     int           open[CF_MAX_DEPTH + 1]; /* anchors whose node is open */
     int           nopen;
     unsigned long read, replayed;
@@ -230,8 +231,32 @@ static cf_bool yaml_record(yaml_scan* s, const yaml_ev* e) {
     return CF_TRUE;
 }
 
-static cf_u32 yaml_hash(const char* p, size_t n) {
-    cf_u32 h = 2166136261u;
+/* The seed every hash of a name in this decode starts from, so that a
+   document's author cannot choose names that all land in one bucket: the
+   hash was FNV-1a from its fixed offset basis, which anyone can compute
+   against. The library has no clock and no random source, so the seed is
+   made of two addresses, the scan's and a local's, which differ from run to
+   run where the system randomises addresses and which a document cannot
+   know. Where it does not (no address randomisation), the seed is the
+   same every run: no worse than the unseeded hash was, and no better.
+   Nothing observable may depend on it: no table is walked in bucket
+   order. The high bits of an address are the random ones and a bucket
+   index is the low bits of a hash, so they are folded down first. The
+   two addresses are often both on the stack, sharing their random high
+   bits, so the second is multiplied before the XOR lest they cancel. */
+static size_t yaml_seed(const void* where) {
+    char   here;
+    size_t x = (size_t)where ^ ((size_t)(const void*)&here * 2654435761u);
+
+    x ^= x >> 12;
+    x ^= x >> 24;
+    x *= 16777619u;
+    x = (size_t)(cf_u32)(x ^ (x >> 16 >> 16));
+    return (x == 0) ? (size_t)2166136261u : x;
+}
+
+static cf_u32 yaml_hash(cf_u32 seed, const char* p, size_t n) {
+    cf_u32 h = seed;
     size_t i;
     for (i = 0; i < n; ++i) {
         h = (h ^ (cf_u32)(unsigned char)p[i]) * 16777619u;
@@ -246,7 +271,7 @@ static cf_u32 yaml_find(const yaml_scan* s, const char* p, size_t n) {
     if (s->nbuckets == 0) {
         return 0;
     }
-    i = s->buckets[yaml_hash(p, n) & (s->nbuckets - 1u)];
+    i = s->buckets[yaml_hash(s->seed, p, n) & (s->nbuckets - 1u)];
     while (i != 0) {
         const yaml_anchor* a = &s->anchors[i - 1u];
         if ((size_t)a->nlen == n && memcmp(s->pool + a->name, p, n) == 0) {
@@ -310,7 +335,8 @@ static cf_bool yaml_anchor_open(yaml_scan* s, unsigned line, unsigned col,
             memset(buckets, 0, nb * sizeof *buckets);
             for (i = 0; i < s->nanchors; ++i) {
                 yaml_anchor* x = &s->anchors[i];
-                cf_u32 b   = yaml_hash(s->pool + x->name, x->nlen) & (cf_u32)(nb - 1u);
+                cf_u32       b =
+                    yaml_hash(s->seed, s->pool + x->name, x->nlen) & (cf_u32)(nb - 1u);
                 x->chain   = buckets[b];
                 buckets[b] = (cf_u32)(i + 1u);
             }
@@ -327,7 +353,7 @@ static cf_bool yaml_anchor_open(yaml_scan* s, unsigned line, unsigned col,
     a->count          = 0;
     a->done           = 0;
     a->depth          = s->depth + 1;
-    h                 = yaml_hash(name, n) & (cf_u32)(s->nbuckets - 1u);
+    h                 = yaml_hash(s->seed, name, n) & (cf_u32)(s->nbuckets - 1u);
     a->chain          = s->buckets[h];
     s->buckets[h]     = (cf_u32)(s->nanchors + 1u);
     s->open[s->nopen] = (int)s->nanchors;
@@ -707,6 +733,7 @@ static cf_bool yaml_stream_end(yaml_scan* s, unsigned line, unsigned col) {
 static void yaml_scan_init(yaml_scan* s, const cf_blob* in, const cf_doc_sink* out,
                            cf_error* err) {
     memset(s, 0, sizeof *s);
+    s->seed  = (cf_u32)yaml_seed(s);
     s->file  = (in->name != NULL) ? in->name : "<yaml>";
     s->out   = out;
     s->err   = err;

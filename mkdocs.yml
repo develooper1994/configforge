@@ -61,6 +61,7 @@ nav:
       - Getting started: CONTRIBUTING.md
       - Maintenance: docs/Maintaining.md
       - Conventions: docs/Conventions.md
+      - Working with agents: docs/Agents.md
       - Dependencies: docs/Dependencies.md
       - Roadmap: docs/Roadmap.md
       - Changelog: CHANGELOG.md

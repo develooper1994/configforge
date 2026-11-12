@@ -38,6 +38,7 @@ set(CF_UNIT_TESTS
     test_features
     test_wipe
     test_secrets
+    test_marker
     test_diff
     test_schema
     test_yaml
@@ -62,7 +63,8 @@ set(CF_UNIT_TESTS
     test_truncate
     test_roundtrip
     test_bom
-    test_dirlimits)
+    test_dirlimits
+    test_credentials)
 
 # The directories test_starve's every-source run reads. C89 has no mkdir.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_starve.d
@@ -175,6 +177,12 @@ set_tests_properties(unit.test_dirlimits PROPERTIES WORKING_DIRECTORY
 if(UNIX AND NOT CMAKE_SYSTEM_NAME STREQUAL "WASI")
   target_compile_definitions(test_dirlimits PRIVATE CF_TEST_FIFO=1)
 endif()
+# And test_credentials's: it sets $CREDENTIALS_DIRECTORY to a relative
+# path, which is only the test's own in a working directory of its own.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/credentials/cf_creds)
+set_tests_properties(
+  unit.test_credentials PROPERTIES WORKING_DIRECTORY
+                                   ${CMAKE_CURRENT_BINARY_DIR}/credentials)
 if(TARGET test_watch)
   set_tests_properties(
     unit.test_watch PROPERTIES WORKING_DIRECTORY

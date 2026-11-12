@@ -32,6 +32,7 @@ cf_builder_bool
 cf_builder_cli
 cf_builder_codec
 cf_builder_create
+cf_builder_credentials
 cf_builder_define
 cf_builder_dir
 cf_builder_document

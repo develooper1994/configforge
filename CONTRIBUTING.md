@@ -55,6 +55,9 @@ The documents, and what each is for:
 * `docs/Maintaining.md` - what the code does not say: how the work is
   done here, where it stands, and what each machine needs. Read it
   second.
+* `docs/Agents.md` - how work is divided between an organising session
+  and the subagents it briefs, which model does what, and how a session
+  stops without losing the work. Read it before delegating anything.
 * `docs/Roadmap.md` - **the state of the work**: what is next, what is
   known to be wrong, and the ideas not yet built. Update it in the same
   commit as the work.

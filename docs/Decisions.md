@@ -94,6 +94,8 @@ gets reopened every six months.
 | D-77 | A reference's expansion is bounded, by a constant and not a build limit | interpolation, resolver | **Decided** |
 | D-78 | A directory that cannot be read whole is an error, optional or not | drop-in, secrets, platform | **Decided** |
 | D-79 | Response files (`@file`) are opt-in | command line, security | **Decided** |
+| D-80 | systemd's credentials, a builder of their own | sources, secrets | **Decided** |
+| D-81 | A reader's name table is seeded a decode | formats, security | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -3121,6 +3123,103 @@ the opt-in fails the builder with an error naming it. The same two runs in
 `test_wrapper_write` (C++98), a child process in the Python and Rust tests,
 and a builder with no command line returns false and fails nothing in all
 four.
+
+---
+
+## D-80 — systemd's credentials, a builder of their own
+
+**Question.** systemd hands a service its credentials (`LoadCredential=`,
+`SetCredential=`, `ImportCredential=`) as files in the directory
+`$CREDENTIALS_DIRECTORY` names, one file a credential, which is exactly
+what the secrets directory reads. A program could pass `getenv`'s answer
+to `cf_builder_secrets` already. Is a source of its own worth an entry in
+the interface, and what does it do where the variable is not set?
+
+**Options.**
+
+1. Nothing new: the program reads the variable and names the directory.
+2. A flag on `cf_builder_secrets` that makes `path` a variable's name.
+3. A builder of its own, `cf_builder_credentials(b, name, rank, prefix,
+   flags)`, over the secrets directory's reading.
+
+**Decision.** Option 3. With option 1 every value says it came from
+`/run/credentials/app.service/db.password` and nothing says systemd put
+it there; a report read on another machine cannot tell a credential from
+a file somebody dropped into a directory, and saying where a value came
+from is this library's one promise. Option 2 makes one argument mean a
+path or a variable by a bit beside it, and still needs the provenance to
+change with the bit. So the reading is the secrets directory's - one code
+path in `secrets.c`, names, the trailing newline, D-78's limits and
+CF_SENSITIVE left to the contract all unchanged - under a vtable of its
+own, kind `credentials`, with each value placed as `systemd credential
+<id> (<file>)`. The variable is looked up at every load, as
+`cf_builder_env_document` looks up its own, so a reload sees what it
+holds then.
+
+**Unset.** An unset or empty variable is an error that names it; with
+`CF_OPTIONAL` the source reads nothing, as a missing optional file does,
+so one program runs under systemd and from a shell alike. A variable that
+is set must name a directory that can be read whole, `CF_OPTIONAL` or
+not: systemd creates the directory before it starts the service, so one
+that is not there is a mistake, and optional means "maybe not run with
+credentials", not "credentials maybe lost".
+
+**No `#if` for the operating system.** The variable is the protocol, and
+it can be set anywhere - by a test, by a container's entry point, by a
+supervisor that copies systemd's convention. Reading it through the
+platform's environment (`cf_platform_environ`) works on every platform,
+and gating the source to Linux would make one program's configuration
+depend on where it was compiled for no gain. The one option that does
+apply is the secrets directory's own: under `CF_WITH_DIR`, refused by
+name without it (D-38).
+
+**Compatibility.** Additive: one function, one line in the symbol list.
+
+---
+
+## D-81 — A reader's name table is seeded a decode
+
+**Question.** The TOML, YAML, INI and XML readers keep small hash tables
+of names taken from the document being read (what TOML has defined, YAML's
+anchors, the arrays an INI section has had, the names at one XML level).
+They hashed with FNV-1a from its fixed offset basis, which anyone can
+compute against, so whoever writes the document can choose names that all
+land in one bucket and make reading take quadratic time. How is the hash
+to differ from one decode to the next?
+
+**Options.**
+
+1. No seed. Rejected: it is the defect; chosen names collide.
+2. A bound on the chain length that falls back to a scan. Rejected: a
+   lookup is still linear in the worst case, and a document can reach it.
+3. A random source from the platform layer. Rejected: a reader of bytes
+   would then need the operating system, and the core has none.
+4. The address of the table and of a local variable, mixed.
+
+**Decision.** Option 4. A seed is computed once when a decode's table is
+set up and stored in it; every hash of a name in that decode starts from it
+in place of the offset basis, so inserts and lookups agree and behaviour
+is unchanged. It is the two addresses with the second multiplied (both are
+often on the stack and would cancel), folded so the random high bits reach
+the low bits a bucket index uses, multiplied by the FNV prime and folded to
+the hash's width; 0 becomes the offset basis. It is free, differs from run
+to run where the system randomises addresses, and where it does not (no
+address randomisation) it is the same every run - no worse than before,
+and the comment says so. It is a defence in depth against a chosen
+document, not a guarantee: an attacker who learns the addresses learns the
+seed.
+
+Nothing observable depends on the seed: none of the four tables is walked
+in bucket order; each is only asked for a name, and keys, errors, which
+duplicate is reported and the order of output come from the document.
+
+**Compatibility.** None; no signature, output or message changes.
+
+**Held to.** Each reader's test reads one document twice through two
+arenas at different addresses and compares keys, values, places and order;
+a TOML document of 20,000 keys builds. With the seed helper returning a
+constant the readers' tests pass; with it returning a different value each
+call they fail, so every call site uses the stored seed.
 
 ---
 

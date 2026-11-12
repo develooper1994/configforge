@@ -49,7 +49,7 @@ beside what is not.
 | 🟩 | Doctor checks a report's fingerprint against its contents (CFD019) | plan item 9 |
 | 🟨 | Continuous fuzzing in CI (ClusterFuzzLite): written, its first run to read | `.clusterfuzzlite/`, cflite.yml |
 | 🟩 | INI compared with `configparser` (36 of 36; `.properties` needs a JVM, left to its tests) | plan item 9 |
-| ⬜ | Native OS sources | plan item 9 |
+| 🟨 | Native OS sources: systemd's credentials done (D-80); macOS's user defaults left | plan item 9 |
 | ⬜ | Go and .NET bindings, when asked | plan item 9 |
 | ⬜ | Binary configuration: a layout-driven TLV codec, BER-TLV, CBOR | assessment |
 | ⬜ | Every operation on a file's data, written back in its format | assessment |
@@ -64,17 +64,14 @@ beside what is not.
 
 ### Left from the security pass
 
-Known to be wrong, and not fixed by it:
+Nothing. The last of it went on 2026-11-12: the readers' name tables
+are seeded a decode (D-81), and Dependabot's pull request 5 was merged
+against the pin.
 
-* TOML's table of what a document has defined hashes without a seed, so
-  chosen keys make it quadratic. Low; a seed a decode or a bound on the
-  chain, and an entry in Decisions.md for whichever.
-* Dependabot's pull request 5 (`attest-build-provenance` 2 to 4): the
-  actions are pinned to commits now, so it is read against the pin, and
-  merged or closed.
-
-Then the ideas under "From the security pass of 2026-11-11", the
-marker-secret gate first, and wave 3.
+The marker-secret gate, the first of the ideas "From the security pass
+of 2026-11-11", is built for the library's outputs; Doctor's formats
+are its second half, below. Wave 3's Linux source is built; what is
+left of wave 3 is under "Every item to done".
 
 What the pass taught about the machines: a change is pushed as a branch
 and its CI read before `main` moves, since CI has clang-format 22,
@@ -120,10 +117,13 @@ short keeps its branch, unmerged, and says so here.
    ClusterFuzzLite; Rust's `const` keys (D-75).
 2. 🟩 **Wave 2**: A, D-73 and `cf_builder_document`; C, D-76's rest,
    each prediction measured and kept only where it pays. **1.4.0** (ready; its tag is left).
-3. ⬜ **Wave 3**: B, D-75 in C++, C11 and `doctor gen`; F, the native
-   sources: systemd's credentials (`$CREDENTIALS_DIRECTORY`) on Linux and
-   the user defaults (`CFPreferences`) on macOS, each tested on its own
-   system in CI - Windows has its registry source already.
+3. 🟨 **Wave 3**: B, D-75 in C++, C11 and `doctor gen` - not begun; F,
+   the native sources: systemd's credentials (`$CREDENTIALS_DIRECTORY`)
+   are done, `cf_builder_credentials` (D-80), tested on Linux and
+   Windows, in C only - the C++ wrapper and the Rust and Python bindings
+   do not offer it yet; the user defaults (`CFPreferences`) on macOS are
+   left, to be tested on its own system in CI - Windows has its registry
+   source already.
 4. ⬜ **Wave 4**: a TLV codec driven by a layout (tag and length widths,
    byte order, BER-TLV's classes and long lengths, an end tag, nesting),
    with a key and type per tag and every value placed by its offset; and
@@ -566,11 +566,18 @@ whose size changes while it is read is still read whole.
 
 ### From the security pass of 2026-11-11
 
-* ⬜ **A marker-secret gate.** One test drives a marker secret through
-  every refusal path and every output - error, `explain()`, blind report,
-  diff, log, each of Doctor's formats - and fails if the marker appears.
-  Done when the gate is registered and has been shown to fail on each of
-  this pass's leaks; four of them would each have failed it.
+* 🟨 **A marker-secret gate.** One test drives a marker secret through
+  every refusal path and every output and fails if the marker appears.
+  Built for the library: `test_marker`, 46 scenarios, strict and with
+  fallback, from eight kinds of source, over the error, `explain()`,
+  the blind report, the schema, diffs, the fingerprint, log events,
+  `cf_live` and store edits; both refusal leaks of the pass fail it
+  when put back. What it taught: the marker must sit inside the
+  reference (`${MARK`), not before it, or the wording that leaks is
+  never reached. Left: the same marker through each of Doctor's
+  commands and formats, from reports the scenarios write; and an
+  undefined key that holds a secret (a mistyped name), which nothing
+  can know is one - decide what a report shows for it.
 * ⬜ **A per-decode output budget**, in bytes and keys, enforced in the
   flattener so that every codec inherits one bound instead of each
   reader keeping its own. Done when a hostile document of each format
@@ -589,9 +596,6 @@ whose size changes while it is read is still read whole.
 * ⬜ **Doctor `--redact-all`**, on by default in the action, so that a
   report's values are shown to no pull request unless asked for. Done
   when the action's default shows no value and a flag restores it.
-* ⬜ **Seeding TOML's and YAML's name hashes per decode**, so that a
-  document cannot be built to collide them. Done when the seed differs
-  between decodes and a collision test no longer slows either reader.
 * ⬜ **The readers proved, not only tested.** The aim is the safety a
   language such as Rust or Go gives by construction, shown here by
   evidence: sanitizers, fuzzing and three analyzers find what an input

@@ -597,6 +597,29 @@ cf_bool cf_builder_secrets(cf_builder* b, const char* name, int rank, const char
     return CF_TRUE;
 }
 
+cf_bool cf_builder_credentials(cf_builder* b, const char* name, int rank,
+                               const char* prefix, unsigned flags) {
+    cf_source* s = builder_slot_flags(b, name, flags);
+    void*      st;
+
+    if (s == NULL) {
+        return CF_FALSE;
+    }
+    st = cf_arena_calloc(b->arena, cf_source_secrets_state_size());
+    if (st == NULL) {
+        cf_error e = CF_ERROR_INIT;
+        cf_error_set(&e, CF_E_MEMORY, NULL, name, "no room for a credentials source");
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    if (!cfi_source_credentials(s, builder_dup(b, name), rank, builder_dup(b, prefix),
+                                flags, st, cf_source_secrets_state_size())) {
+        return CF_FALSE;
+    }
+    ++b->nsources;
+    return CF_TRUE;
+}
+
 cf_bool cf_builder_registry(cf_builder* b, const char* name, int rank, const char* root,
                             unsigned flags) {
     cf_source* s = builder_slot_flags(b, name, flags);
