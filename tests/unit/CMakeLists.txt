@@ -285,6 +285,11 @@ if(CF_WITH_CXX)
   configforge_apply_analysis(test_wrapper_access_cxx17)
   add_test(NAME unit.test_wrapper_access_cxx17
            COMMAND test_wrapper_access_cxx17)
+  # The same source as test_wrapper_access, so the same files in the same
+  # directory: run side by side, one removed the file the other had just
+  # written, and "fileWith reads one file through it" failed now and then.
+  set_tests_properties(unit.test_wrapper_access unit.test_wrapper_access_cxx17
+                       PROPERTIES RESOURCE_LOCK wrapper_access_files)
 
   # The wrapper's C++17 and C++20 parts, each where the header itself
   # turns it on: a test of the C++20 part built where the library has no

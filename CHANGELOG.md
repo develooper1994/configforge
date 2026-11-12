@@ -7,6 +7,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Security
 
+- **What a document may make is bounded**, for every reader at once
+  (D-82): at most 64 times its size and 1 MiB of keys and values, or it
+  is refused by name. A YAML document's aliases were bounded; a JSON,
+  TOML, INI, XML or `.properties` document, and a program's own codec,
+  were not.
+
 - **A new SQLite store file is its owner's alone**: mode 0600 on POSIX
   whatever the umask, an access control list for its owner only on
   Windows, where it was created with the default permissions though it
@@ -86,6 +92,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   refusal leaks found by hand fail it when put back.
 
 ### Added
+
+- **Keys checked at compile time in C11** (D-75): `CF_DEFINE_INT` and
+  `CF_DEFINE_TEXT` refuse, when compiled, a definition the library would
+  refuse at `create` - a default outside its range, a range upside down,
+  a text default outside its length bounds, an empty or overlong key, a
+  key required and defaulted. A C89 program sees nothing new.
 
 - **systemd's credentials are a source**: `cf_builder_credentials` reads
   the directory `$CREDENTIALS_DIRECTORY` names, as the secrets directory

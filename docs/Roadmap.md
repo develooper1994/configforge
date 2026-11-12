@@ -58,7 +58,7 @@ beside what is not.
 | ⬜ | 2.0: what the sizing modes break, once | plan item 10 |
 | 🟩 | Sizes and work predicted, then checked: the file buffer and the key space kept, three more measured and left | D-76, plan of the evening |
 | 🟩 | A UTF-8 byte order mark read past by every text reader (`cf_blob_skip_bom`) | 1.4.1 |
-| 🟨 | Checks at compile time where they can be, at run time always: Rust's `const` keys and C++'s `constexpr` Keys done; C11 and `doctor gen` left | D-75, `docs/plan/` |
+| 🟨 | Checks at compile time where they can be, at run time always: Rust's `const` keys, C++'s `constexpr` Keys and C11's define macros done; `doctor gen` left | D-75, `docs/plan/` |
 | 🟩 | GitHub used for all it offers that fits | plan of the evening |
 | 🟩 | A security pass: secrets in reasons, renames and Doctor's diff; bounds on references and YAML aliases; directories read whole or refused | 1.4.1 |
 
@@ -581,7 +581,7 @@ whose size changes while it is read is still read whole.
   marker in each state. Left: an undefined key that holds a secret (a
   mistyped name), which nothing can know is one - decide what a report
   shows for it (`docs/plan/`, the hardening cards).
-* ⬜ **A per-decode output budget**, in bytes and keys, enforced in the
+* 🟩 **A per-decode output budget** (D-82, `test_budget`), in bytes and keys, enforced in the
   flattener so that every codec inherits one bound instead of each
   reader keeping its own. Done when a hostile document of each format
   hits the same named limit.
