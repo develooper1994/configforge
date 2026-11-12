@@ -57,6 +57,19 @@ static size_t pick(size_t n) {
 
 #define MAX_INPUT 8192
 
+/* What a reader may spend on an input (H-4, D-82): four times what the
+   library promises it makes of the key space, since the key space spends
+   about 100 bytes on a key where the budget charges 64, and doubles its
+   arrays as they grow; plus the floor, and the cost of an empty input. A
+   reader over it makes a multiple of its input, and that is a finding
+   whether or not the reader stopped in time.
+
+   FUZZ_COST_EMPTY: the largest was 5376 bytes, TOML's, on 2026-11-13 (gcc
+   Debug, Linux); rounded up to a power of two and doubled. */
+#define FUZZ_COST_EMPTY 16384u
+#define FUZZ_COST_FACTOR (4u * CF_DECODE_FACTOR)
+#define FUZZ_COST_FLOOR (CF_DECODE_FLOOR + FUZZ_COST_EMPTY)
+
 typedef struct blob {
     char   b[MAX_INPUT];
     size_t n;
@@ -124,6 +137,12 @@ static void load(blob* v, const char* text) {
 
 static char g_arena[1 << 16];
 
+/* feed_codec's own arena, large enough that a costly input is measured
+   rather than cut off: with inputs of at most MAX_INPUT bytes the largest
+   cost allowed below is under 4 MiB, so an input over it either fits and
+   is measured or exhausts the arena, and is then over it too. */
+static char g_codec_arena[(size_t)1 << 22];
+
 static void feed_codec(const char* format, const blob* v) {
     const cf_codec* codec = cf_codec_by_name(format);
     cf_arena*       ar;
@@ -131,11 +150,12 @@ static void feed_codec(const char* format, const blob* v) {
     cf_flatten      fl;
     cf_blob         b;
     cf_error        err = CF_ERROR_INIT;
+    size_t          used;
 
     if (codec == NULL) {
         return;
     }
-    ar = cf_arena_fixed(g_arena, sizeof g_arena);
+    ar = cf_arena_fixed(g_codec_arena, sizeof g_codec_arena);
     if (ar == NULL || !cf_ks_init(&ks, ar, 32)) {
         return;
     }
@@ -155,6 +175,12 @@ static void feed_codec(const char* format, const blob* v) {
         (void)cf_ks_digest(&ks);
     } else {
         check(err.message[0] != '\0', "a refusal always says why");
+    }
+    used = cf_arena_used(ar);
+    if (used > (size_t)FUZZ_COST_FACTOR * v->n + (size_t)FUZZ_COST_FLOOR) {
+        printf("  %s: %lu bytes of input cost %lu bytes\n", format, (unsigned long)v->n,
+               (unsigned long)used);
+        check(0, "no reader spends a multiple of its input");
     }
 }
 
@@ -442,6 +468,19 @@ static void fuzz_from_nothing(void) {
     static blob v;
     int         i;
 
+    /* The cost of nothing, and of one byte, in every format below: what
+       FUZZ_COST_EMPTY is measured from. */
+    for (i = 0; i < 2; ++i) {
+        v.n    = (size_t)i;
+        v.b[0] = 'a';
+        feed_codec("json", &v);
+        feed_codec("json5", &v);
+        feed_codec("ini", &v);
+        feed_codec("toml", &v);
+        feed_codec("yaml", &v);
+        feed_codec("xml", &v);
+        feed_codec("properties", &v);
+    }
     for (i = 0; i < ROUNDS; ++i) {
         size_t j;
         v.n = pick(200) + 1;
