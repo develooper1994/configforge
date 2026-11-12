@@ -17,6 +17,9 @@ yaml-libyaml-values 90
 # and through libfyaml 0.9.1 or later (CF_YAML_BACKEND=libfyaml, D-62)
 yaml-libfyaml 122 94
 yaml-libfyaml-values 110
+# CBOR (D-91): RFC 8949 Appendix A's vectors, read or refused by name for the model; Appendix F.1's malformed items, refused
+cbor 68 94
+cbor-values 55
 # "<name> <documents>": valid documents read to the expected values, by
 # Python's json for JSON and by toml-test's own expectations for TOML.
 # INI against Python's configparser, with the differences by design listed

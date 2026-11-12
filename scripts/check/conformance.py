@@ -18,6 +18,7 @@ docs/Conformance.md:
     toml-test        github.com/toml-lang/toml-test       (TOML 1.1.0)
     yaml-test-suite  github.com/yaml/yaml-test-suite      (YAML 1.2)
     json5-tests      github.com/json5/json5-tests         (JSON5 1.0.0)
+    cbor-test-vectors github.com/cbor/test-vectors        (RFC 8949 Appendix A)
 
 For each: how many documents the standard calls valid were accepted,
 and how many it calls invalid were refused; with --list, the ones that
@@ -28,8 +29,10 @@ never run.
 """
 
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 
 
 # conform's arguments after the document: ["--codec", library, symbol]
@@ -56,6 +59,11 @@ MODEL = (
     "a key has to be a scalar",
     "an empty key",
     "not one this library resolves",
+    # CBOR's items a configuration has no place for (D-91): a byte string,
+    # undefined, a simple value, an integer past 64 bits, a key that is no
+    # text, and a tag the reader does not read.
+    "which a configuration does not hold",
+    "which this reader does not read",
 )
 
 
@@ -354,6 +362,93 @@ def yaml_suite(root):
     return valid, invalid
 
 
+# RFC 8949 Appendix F.1's malformed items, as (group, hex): the group is
+# F.1's heading for it. Hex strings are facts, not the RFC's text. The
+# valid vectors are fetched (cbor-test-vectors); these are in the RFC only.
+INVALID_CBOR = tuple(
+    (group, h)
+    for group, items in (
+        ("end of input in a head",
+         "18 19 1a 1b 1901 1a0102 1b01020304050607 38 58 78 98 9a01ff00 b8 d8 f8 "
+         "f900 fa0000 fb000000"),
+        ("definite-length strings with short data",
+         "41 61 5affffffff00 5bffffffffffffffff010203 7affffffff00 "
+         "7b7fffffffffffffff010203"),
+        ("definite-length maps and arrays not closed with enough items",
+         "81 818181818181818181 8200 a1 a20102 a100 a2000000"),
+        ("tag number not followed by tag content", "c0"),
+        ("indefinite-length strings not closed by a break", "5f4100 7f6100"),
+        ("indefinite-length maps and arrays not closed by a break",
+         "9f 9f0102 bf bf01020102 819f 9f8000 9f9f9f9f9fffffffff 9f819f819f9fffffff"),
+        ("reserved additional information values",
+         "1c 1d 1e 3c 3d 3e 5c 5d 5e 7c 7d 7e 9c 9d 9e bc bd be dc dd de fc fd fe"),
+        ("reserved two-byte encodings of simple values", "f800 f801 f818 f81f"),
+        ("indefinite-length string chunks not of the correct type",
+         "5f00ff 5f21ff 5f6100ff 5f80ff 5fa0ff 5fc000ff 5fe0ff 7f4100ff"),
+        ("indefinite-length string chunks not definite length",
+         "5f5f4100ffff 7f7f6100ffff"),
+        ("a break on its own", "ff"),
+        ("a break in a definite-length array, map or tag",
+         "81ff 8200ff a1ff a1ff00 a100ff a20000ff 9f81ff 9f829f819f9fffffffff"),
+        ("a break in a map's value position", "bf00ff bf000000ff"),
+        ("major type 0, 1 or 6 with additional information 31", "1f 3f df"),
+    )
+    for h in items.split()
+)
+
+
+def cbor_suite(root, tmp):
+    """cbor-test-vectors' Appendix A as files of bytes, and F.1's malformed
+    items likewise, in `tmp`: (valid, invalid, {path: vector})."""
+    import base64
+    import json
+    valid, invalid, vectors = [], [], {}
+    path = os.path.join(root, "cbor-test-vectors", "appendix_a.json")
+    if not os.path.isfile(path):
+        return valid, invalid, vectors
+    malformed = {h for _group, h in INVALID_CBOR}
+    with open(path, encoding="utf-8") as f:
+        for n, v in enumerate(json.load(f)):
+            # The repository follows RFC 7049's Appendix A, which lists
+            # simple(24), f818; RFC 8949 calls that encoding malformed
+            # (F.1), and the later RFC wins: the item is scored there.
+            if v["hex"].lower() in malformed:
+                continue
+            p = os.path.join(tmp, f"a{n:03d}.cbor")
+            with open(p, "wb") as out:
+                out.write(base64.b64decode(v["cbor"]))
+            valid.append(p)
+            vectors[p] = v
+    for n, (_group, h) in enumerate(INVALID_CBOR):
+        p = os.path.join(tmp, f"f{n:03d}.cbor")
+        with open(p, "wb") as out:
+            out.write(bytes.fromhex(h))
+        invalid.append(p)
+    return valid, invalid, vectors
+
+
+def cbor_values(conform, valid, vectors, wrong_out):
+    """Of the vectors with a `decoded` value that were read, how many were
+    read to it: (good, compared). A vector with only a diagnostic notation
+    has no JSON form to compare with."""
+    good = compared = 0
+    for path in valid:
+        v = vectors[path]
+        if "decoded" not in v:
+            continue
+        got = keys_of(conform, "cbor", path)
+        if got is None:
+            continue  # refused: counted by report()
+        compared += 1
+        want = {}
+        flat({"v": v["decoded"]}, None, want)
+        if set(want) == set(got) and all(same(want[k], got[k]) for k in want):
+            good += 1
+        else:
+            wrong_out.append(path)
+    return good, compared
+
+
 # The project's own configuration, read as a user's would be: each file
 # through its reader, and every key and value compared with what the
 # reference reader for its format makes of it.
@@ -624,6 +719,16 @@ def floors(path):
 
 
 def main():
+    # The CBOR vectors are written as files of bytes; the detection score
+    # reads them after the report, so they go when the run is over.
+    tmp = tempfile.mkdtemp()
+    try:
+        return score(tmp)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def score(tmp):
     args = sys.argv[1:]
     floor = {}
     verbose = "--list" in args
@@ -655,6 +760,7 @@ def main():
     json5_wrong, json5_good, json5_all = [], 0, 0
     values_wrong, values_good, values_all = [], 0, 0
     yaml_wrong, yaml_good, yaml_all = [], 0, 0
+    cbor_wrong, cbor_good, cbor_all = [], 0, 0
     accepted = {}  # by report name: the format, and the valid documents it read
     v, i = json_suite(root) if only in (None, "json") else ([], [])
     if v or i:
@@ -675,6 +781,13 @@ def main():
     if v or i:
         report(yaml_name, "yaml", conform, v, i, out, accepted)
         yaml_good, yaml_all = yaml_values(conform, v, yaml_wrong)
+    v, i, vectors = cbor_suite(root, tmp) if only in (None, "cbor") else ([], [], {})
+    if v and run(conform, "cbor", v[0])[0] == 2:
+        print("cbor: this build has no CBOR reader (CF_WITH_CBOR), skipped")
+        v, i = [], []
+    if v or i:
+        report("cbor", "cbor", conform, v, i, out)  # detect-cbor is W4-C4's
+        cbor_good, cbor_all = cbor_values(conform, v, vectors, cbor_wrong)
     failed = False
     # Content detection: each valid document, read with no name, is asked
     # which format it is, and counted when that is its own. A document the
@@ -738,7 +851,8 @@ def main():
             ("json-values", json_good, json_all, json_wrong, "Python's json reads"),
             ("json5-values", json5_good, json5_all, json5_wrong, "the json5 package reads"),
             ("toml-values", values_good, values_all, values_wrong, "toml-test states"),
-            (yaml_name + "-values", yaml_good, yaml_all, yaml_wrong, "yaml-test-suite states")):
+            (yaml_name + "-values", yaml_good, yaml_all, yaml_wrong, "yaml-test-suite states"),
+            ("cbor-values", cbor_good, cbor_all, cbor_wrong, "RFC 8949 Appendix A states")):
         if total == 0:
             continue
         print(f"{name}: read as {how} {good}/{total}")

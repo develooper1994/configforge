@@ -3411,8 +3411,14 @@ copies of the first two are gone.
 
 **Held to.** The reader's own test, `test_cbor`, covers each decision and
 each refusal above, with the documents written as hex, and the option off.
-RFC 8949's Appendix A vectors and Appendix F.1's malformed items are the
-conformance run's (W4-C2).
+RFC 8949's Appendix A, through the vectors of `cbor/test-vectors` at the
+pinned commit, each read as the member of a map: 68 of 68 read, the 13
+others refused by name for the model (byte strings, tags 2, 3, 23 and 24,
+integers past 64 bits, an integer key, `undefined`, simple values); Appendix F.1's 94 malformed
+items, all refused; and 55 of 55 read to the values the vectors state.
+The repository follows RFC 7049's Appendix A, which lists `simple(24)`,
+`f8 18`; RFC 8949 calls it malformed (F.1, and Appendix G.1 says why the
+example was removed), so the run scores it among the malformed items.
 
 ---
 
