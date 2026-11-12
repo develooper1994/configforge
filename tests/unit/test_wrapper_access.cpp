@@ -64,12 +64,12 @@ static void test_key_rule() {
 static void test_keys() {
     static const cf_pair pairs[] = {{"server.port", "9443"}, {"tls.enabled", "true"}};
     cf::Config           cfg     = cf::Builder()
-                         .memory("file", CF_RANK_USER_FILE, pairs, 2)
-                         .define(kPort)
-                         .define(kHost)
-                         .define(kTls)
-                         .define(kWorkers)
-                         .create();
+                                       .memory("file", CF_RANK_USER_FILE, pairs, 2)
+                                       .define(kPort)
+                                       .define(kHost)
+                                       .define(kTls)
+                                       .define(kWorkers)
+                                       .create();
     check(cfg.valid(), "a contract made of keys builds");
     check(cfg[kPort] == 9443, "a set key reads as its type");
     check(cfg[kHost] == "0.0.0.0", "an unset key reads as its default");

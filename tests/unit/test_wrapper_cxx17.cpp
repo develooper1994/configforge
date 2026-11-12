@@ -127,9 +127,9 @@ static void test_fields() {
 
     static const cf_pair bad[]   = {{"server.workers", "65"}};
     cf::Config           refused = cf::Builder()
-                             .memory("file", CF_RANK_USER_FILE, bad, 1)
-                             .define(settings_fields)
-                             .create();
+                                       .memory("file", CF_RANK_USER_FILE, bad, 1)
+                                       .define(settings_fields)
+                                       .create();
     check(!refused, "a field's range refuses");
 }
 

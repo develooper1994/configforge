@@ -1165,7 +1165,10 @@ mod credentials_tests {
         std::fs::write(dir.join("db.password"), "hunter2\n").unwrap();
         std::fs::write(dir.join("token"), "abc").unwrap();
         let said = ask(Some(dir.to_str().unwrap()), false);
-        assert!(said.starts_with("ok Some(\"hunter2\") Some(\"abc\")"), "{said}");
+        assert!(
+            said.starts_with("ok Some(\"hunter2\") Some(\"abc\")"),
+            "{said}"
+        );
         assert!(said.contains("systemd credential"), "{said}");
         std::fs::remove_dir_all(&dir).unwrap();
     }
