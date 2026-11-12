@@ -260,7 +260,7 @@ static void ini_names_init(ini_names* t, const cf_doc_sink* out, const char* bas
    bits, so the second is multiplied before the XOR lest they cancel. */
 static size_t ini_seed(const void* where) {
     char   here;
-    size_t x = (size_t)where ^ ((size_t)(const void*)&here * 2654435761u);
+    size_t x = (size_t)where ^ ((size_t)&here * 2654435761u);
 
     x ^= x >> 12;
     x ^= x >> 24;

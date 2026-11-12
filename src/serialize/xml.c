@@ -187,7 +187,7 @@ static cf_bool xml_plain_name(xml_scan* s, const XML_Char* name) {
    bits, so the second is multiplied before the XOR lest they cancel. */
 static size_t xml_seed(const void* where) {
     char   here;
-    size_t x = (size_t)where ^ ((size_t)(const void*)&here * 2654435761u);
+    size_t x = (size_t)where ^ ((size_t)&here * 2654435761u);
 
     x ^= x >> 12;
     x ^= x >> 24;

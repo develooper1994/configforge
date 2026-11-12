@@ -641,7 +641,7 @@ static cf_bool toml_no_room(toml_scan* s) {
    bits, so the second is multiplied before the XOR lest they cancel. */
 static size_t toml_seed(const void* where) {
     char   here;
-    size_t x = (size_t)where ^ ((size_t)(const void*)&here * 2654435761u);
+    size_t x = (size_t)where ^ ((size_t)&here * 2654435761u);
 
     x ^= x >> 12;
     x ^= x >> 24;

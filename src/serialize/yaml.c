@@ -246,7 +246,7 @@ static cf_bool yaml_record(yaml_scan* s, const yaml_ev* e) {
    bits, so the second is multiplied before the XOR lest they cancel. */
 static size_t yaml_seed(const void* where) {
     char   here;
-    size_t x = (size_t)where ^ ((size_t)(const void*)&here * 2654435761u);
+    size_t x = (size_t)where ^ ((size_t)&here * 2654435761u);
 
     x ^= x >> 12;
     x ^= x >> 24;
