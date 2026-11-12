@@ -866,8 +866,13 @@ foreach(x ${EXTRA})
     # Appendix F.1 are in scripts/check/conformance.py.
     set(url_cbor-test-vectors https://github.com/cbor/test-vectors)
     set(commit_cbor-test-vectors aba89b653e484bc8573c22f3ff35641d79dfd8c1)
-    foreach(sname JSONTestSuite toml-test yaml-test-suite-data json5-tests
-                  cbor-test-vectors)
+    foreach(
+      sname
+      JSONTestSuite
+      toml-test
+      yaml-test-suite-data
+      json5-tests
+      cbor-test-vectors)
       set(surl "${url_${sname}}")
       set(scommit "${commit_${sname}}")
       set(dir "${SUITES}/${sname}")

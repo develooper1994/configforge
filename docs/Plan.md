@@ -143,7 +143,7 @@ In the order to be done. A card is `open`, `done` (with its commit), or
 | 2 | H-3 What one document may make, bounded in the flattener | sonnet | - | done (fbb833c) |
 | 3 | H-4 The fuzzers fail a document that costs a multiple of its size | sonnet | H-3 | done (febac60) |
 | 4 | W4-C1 The CBOR reader | sonnet | - | done (85608b9) |
-| 5 | W4-C2 CBOR held to RFC 8949's vectors | sonnet | W4-C1 | open |
+| 5 | W4-C2 CBOR held to RFC 8949's vectors | sonnet | W4-C1 | done (e3dd16e) |
 | 6 | W4-C3 Writing CBOR | opus | W4-C1 | open |
 | 7 | W4-C4 CBOR from content, fuzzed and documented | sonnet | W4-C2, W4-C3 | open |
 | 8 | W4-T1 A codec that carries its own data | opus | - | open |
