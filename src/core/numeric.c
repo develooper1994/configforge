@@ -942,6 +942,58 @@ cf_bool cf_text_to_f64(const char* s, size_t len, double* out, size_t* end) {
     return CF_TRUE;
 }
 
+/* A double travels as its bit pattern. memcpy rather than a union or a
+   cast: it is the one spelling that is defined on every compiler and
+   optimises to the same instruction on all of them. */
+cf_u64 cf_f64_bits(double d) {
+    cf_u64 v = 0;
+    memcpy(&v, &d, (sizeof d < sizeof v) ? sizeof d : sizeof v);
+    return v;
+}
+
+double cf_f64_from_bits(cf_u64 bits) {
+    double d = 0.0;
+    memcpy(&d, &bits, (sizeof d < sizeof bits) ? sizeof d : sizeof bits);
+    return d;
+}
+
+/* Half and single precision as RFC 8949 Appendix D reads them: the
+   exponent 0 is subnormal, the all-ones one infinity or NaN. The sign
+   is applied last, so -0 and -infinity come out as themselves. */
+double cf_f64_from_f16_bits(cf_u32 bits) {
+    cf_u32 exp  = (bits >> 10) & 0x1Fu;
+    cf_u32 mant = bits & 0x3FFu;
+    double val;
+
+    if (exp == 0) {
+        val = ldexp((double)mant, -24);
+    } else if (exp != 31) {
+        val = ldexp((double)(mant + 1024u), (int)exp - 25);
+    } else if (mant == 0) {
+        val = HUGE_VAL;
+    } else {
+        val = cf_f64_from_bits((cf_u64)0x7FF80000u << 32);
+    }
+    return ((bits & 0x8000u) != 0) ? -val : val;
+}
+
+double cf_f64_from_f32_bits(cf_u32 bits) {
+    cf_u32 exp  = (bits >> 23) & 0xFFu;
+    cf_u32 mant = bits & 0x7FFFFFu;
+    double val;
+
+    if (exp == 0) {
+        val = ldexp((double)mant, -149);
+    } else if (exp != 255) {
+        val = ldexp((double)(mant | 0x800000u), (int)exp - 150);
+    } else if (mant == 0) {
+        val = HUGE_VAL;
+    } else {
+        val = cf_f64_from_bits((cf_u64)0x7FF80000u << 32);
+    }
+    return ((bits & 0x80000000u) != 0) ? -val : val;
+}
+
 #endif /* CF_WITH_REAL */
 
 /* ================================================================== *

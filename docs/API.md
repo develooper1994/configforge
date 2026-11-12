@@ -59,11 +59,11 @@ Every error carries one of these codes, stable from 1.0;
 - [`cf_keyspace.h`](#cf_keyspaceh) - 35
 - [`cf_live.h`](#cf_liveh) - 17
 - [`cf_log.h`](#cf_logh) - 1
-- [`cf_numeric.h`](#cf_numerich) - 7
+- [`cf_numeric.h`](#cf_numerich) - 11
 - [`cf_platform.h`](#cf_platformh) - 21
 - [`cf_port.h`](#cf_porth) - 10
 - [`cf_report.h`](#cf_reporth) - 6
-- [`cf_serialize.h`](#cf_serializeh) - 23
+- [`cf_serialize.h`](#cf_serializeh) - 24
 - [`cf_source.h`](#cf_sourceh) - 34
 - [`cf_value.h`](#cf_valueh) - 12
 - [`cf_version.h`](#cf_versionh) - 7
@@ -1927,7 +1927,7 @@ with no filesystem can still answer why a value is what it is.
 CF_API size_t cf_image_write(const cf_keyspace* ks, const cf_source_view* sv, unsigned flags, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_image_write` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L203).
+Implementation: [`cf_image_write` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L186).
 
 Write the image. Measure-or-write, like everything else that renders:
 with a NULL buffer nothing is stored and the length still
@@ -1943,7 +1943,7 @@ a target where the buffer is a `const char[]` in flash.
 CF_NODISCARD CF_API cf_bool cf_image_open(cf_image* img, const char* buf, size_t n, cf_error* err);
 ```
 
-Implementation: [`cf_image_open` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L364).
+Implementation: [`cf_image_open` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L347).
 
 Validates the header, the bounds and the digest. Refuses rather than
 guesses: a truncated image and a corrupt one look the same from
@@ -1955,13 +1955,13 @@ CF_API cf_bool cf_image_at(const cf_image* img, size_t i, const char** key, size
 CF_API cf_bool cf_image_get(const cf_image* img, const char* key, size_t klen, cf_value* v);
 ```
 
-Implementation: [`cf_image_count` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L448), [`cf_image_at` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L488), [`cf_image_get` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L523).
+Implementation: [`cf_image_count` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L431), [`cf_image_at` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L471), [`cf_image_get` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L506).
 
 ```c
 CF_API cf_bool cf_image_load(const cf_image* img, cf_keyspace* ks, int rank, cf_error* err);
 ```
 
-Implementation: [`cf_image_load` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L598).
+Implementation: [`cf_image_load` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L581).
 
 Load an image into a key space at a rank, which is what a source
 does. Text values point into the image, so it must outlive the
@@ -1973,13 +1973,13 @@ configuration.
 CF_API size_t cf_source_image_state_size(void);
 ```
 
-Implementation: [`cf_source_image_state_size` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L724).
+Implementation: [`cf_source_image_state_size` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L707).
 
 ```c
 CF_API cf_bool cf_source_image_mem(cf_source* s, const char* name, int rank, const char* buf, size_t n, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_image_mem` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L744).
+Implementation: [`cf_source_image_mem` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L727).
 
 From memory: a build-time image linked into the program. No file, no
 parser, no allocation - the freestanding path.
@@ -1988,7 +1988,7 @@ parser, no allocation - the freestanding path.
 CF_API cf_bool cf_source_image_file(cf_source* s, const char* name, int rank, const char* path, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_image_file` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L757).
+Implementation: [`cf_source_image_file` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L740).
 
 From a file, for hosted targets.
 
@@ -1996,7 +1996,7 @@ From a file, for hosted targets.
 CF_API const cf_error* cf_source_image_error(const cf_source* s);
 ```
 
-Implementation: [`cf_source_image_error` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L766).
+Implementation: [`cf_source_image_error` (src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/image.c#L749).
 
 ## cf_iterate.h
 
@@ -2725,6 +2725,25 @@ exponent and the rounding, so a literal of hundreds of digits is read
 as what it is, and one lying exactly on a halfway point may be one
 unit in the last place off.
 
+```c
+CF_API cf_u64 cf_f64_bits(double d);
+CF_API double cf_f64_from_bits(cf_u64 bits);
+```
+
+Implementation: [`cf_f64_bits` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L948), [`cf_f64_from_bits` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L954).
+
+A double as its IEEE 754 bit pattern, and back, by memcpy. (1.5)
+
+```c
+CF_API double cf_f64_from_f16_bits(cf_u32 bits);
+CF_API double cf_f64_from_f32_bits(cf_u32 bits);
+```
+
+Implementation: [`cf_f64_from_f16_bits` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L963), [`cf_f64_from_f32_bits` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L980).
+
+A half- and a single-precision pattern (in the low 16 and 32 bits) as
+a double, exactly, the non-finite ones included. (1.5)
+
 ### Tier 0 type inference
 
 Used only when no definition exists. Deliberately timid: see the
@@ -2734,7 +2753,7 @@ Type Inference section of the specification and decision D-24.
 CF_API cf_scalar_kind cf_infer_scalar(const char* s, size_t len);
 ```
 
-Implementation: [`cf_infer_scalar` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L1021).
+Implementation: [`cf_infer_scalar` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L1073).
 
 ## cf_platform.h
 
@@ -3318,10 +3337,20 @@ begins with a UTF-8 byte order mark (EF BB BF), else 0. A mark is not
 part of the text, and only the first bytes are one.
 
 ```c
+CF_API cf_bool cf_text_is_utf8(const char* p, size_t n);
+```
+
+Implementation: [`cf_text_is_utf8` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L32).
+
+Whether n bytes are UTF-8 as RFC 3629 has it: no overlong form, no
+surrogate (U+D800 to U+DFFF), nothing past U+10FFFF, no sequence cut
+short. A NUL is a character like any other. (1.5)
+
+```c
 CF_API cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err);
 ```
 
-Implementation: [`cf_blob_file` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L47).
+Implementation: [`cf_blob_file` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L95).
 
 Reads a whole file into the arena. CF_E_SOURCE when it cannot be
 opened or read; the caller decides whether that is fatal.
@@ -3331,7 +3360,7 @@ CF_API cf_arena* cf_blob_arena(cf_arena* ar);
 CF_API void cf_blob_arena_done(cf_arena* bytes, cf_arena* ar);
 ```
 
-Implementation: [`cf_blob_arena` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L32), [`cf_blob_arena_done` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L39).
+Implementation: [`cf_blob_arena` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L80), [`cf_blob_arena_done` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L87).
 
 Where a file's bytes go for one reading (D-61): an arena of their own,
 from `ar`'s allocator, so that they are gone once the reader is done -
@@ -3355,14 +3384,14 @@ CF_API void cf_sink_terminate(cf_sink* s);
 CF_API cf_bool cf_sink_overflowed(const cf_sink* s);
 ```
 
-Implementation: [`cf_sink_init` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L141), [`cf_sink_write` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L147), [`cf_sink_putc` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L160), [`cf_sink_puts` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L167), [`cf_sink_fmt` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L173), [`cf_sink_terminate` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L193), [`cf_sink_overflowed` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L199).
+Implementation: [`cf_sink_init` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L189), [`cf_sink_write` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L195), [`cf_sink_putc` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L208), [`cf_sink_puts` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L215), [`cf_sink_fmt` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L221), [`cf_sink_terminate` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L241), [`cf_sink_overflowed` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L247).
 
 ```c
 CF_API void cf_sink_json_string(cf_sink* out, const char* p, size_t n);
 CF_API void cf_sink_json_value(cf_sink* out, const cf_value* v);
 ```
 
-Implementation: [`cf_sink_json_string` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L203), [`cf_sink_json_value` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L244).
+Implementation: [`cf_sink_json_string` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L251), [`cf_sink_json_value` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L292).
 
 JSON, written by hand where a document is not the key space's (a
 report, a diff): text as a JSON string, escaped; a value as JSON.
@@ -3373,7 +3402,7 @@ report, a diff): text as a JSON string, escaped; a value as JSON.
 CF_API size_t cf_loc_text(const cf_loc* at, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_loc_text` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L268).
+Implementation: [`cf_loc_text` (src/serialize/blob.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/blob.c#L316).
 
 "app.toml:14:3", or just the file when there is no position.
 
@@ -3397,7 +3426,7 @@ CF_API const cf_codec* cf_codec_by_name(const char* name);
 CF_API const cf_codec* cf_codec_by_path(const char* path);
 ```
 
-Implementation: [`cf_codec_by_name` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L67), [`cf_codec_by_path` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L127).
+Implementation: [`cf_codec_by_name` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L73), [`cf_codec_by_path` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L133).
 
 Compiled-in codecs only. NULL when the format exists but this build
 left it out, which the caller must report rather than ignore: a
@@ -3408,7 +3437,7 @@ from must not have a build option that makes a file invisible.
 CF_API const cf_codec* cf_codec_among(const cf_codec* const* list, size_t n, const char* name, const char* path);
 ```
 
-Implementation: [`cf_codec_among` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L142).
+Implementation: [`cf_codec_among` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L148).
 
 Among a caller's codecs (cf_builder_codec): the one called `name`
 when it is not NULL, else the one whose extensions match `path`;
@@ -3419,7 +3448,7 @@ CF_API const char* cf_format_of_path(const char* path);
 CF_API const char* cf_format_option(const char* format);
 ```
 
-Implementation: [`cf_format_of_path` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L185), [`cf_format_option` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L200).
+Implementation: [`cf_format_of_path` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L192), [`cf_format_option` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L207).
 
 Names a format this library knows about whether or not it was
 compiled in, so the error can say which option to turn on.
@@ -3429,7 +3458,7 @@ CF_API size_t cf_codec_count(void);
 CF_API const cf_codec* cf_codec_at(size_t i);
 ```
 
-Implementation: [`cf_codec_count` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L55), [`cf_codec_at` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L63).
+Implementation: [`cf_codec_count` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L61), [`cf_codec_at` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L69).
 
 ### The format from the name, then the content (D-73)
 
@@ -3977,7 +4006,7 @@ CF_API const char* cf_feature_at(size_t i);
 CF_API cf_bool cf_has_feature(const char* name);
 ```
 
-Implementation: [`cf_feature_count` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L97), [`cf_feature_at` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L101), [`cf_has_feature` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L128).
+Implementation: [`cf_feature_count` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L100), [`cf_feature_at` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L104), [`cf_has_feature` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L131).
 
 What this build can do, as a NUL-terminated list: "ini", "json",
 "real", and so on. Recorded in the provenance report as well, so a
@@ -3990,7 +4019,7 @@ that implements them, including a minimal build.
 CF_API size_t cf_build_limit(const char* name);
 ```
 
-Implementation: [`cf_build_limit` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L109).
+Implementation: [`cf_build_limit` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L112).
 
 A build limit, by name: "key" (CF_KEY_MAX), "source" (CF_SOURCE_MAX),
 "message" (CF_MESSAGE_MAX), "path" (CF_PATH_MAX) and "depth"

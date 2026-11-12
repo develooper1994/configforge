@@ -98,6 +98,7 @@ gets reopened every six months.
 | D-80 | systemd's credentials, a builder of their own | sources, secrets | **Decided** |
 | D-81 | A reader's name table is seeded a decode | formats, security | **Decided** |
 | D-82 | What one document may make is bounded, in the flattener | formats, security | **Decided** |
+| D-91 | CBOR, the JSON model in binary | formats | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -3331,6 +3332,87 @@ fields, and three functions are added: `cf_decode_budget`,
 small budget and sees it refused by name, and a YAML document of thirty
 aliases of a 2000-key block refused; `test_yaml` takes either byte bound
 for the large anchor.
+
+---
+
+## D-91 — CBOR, the JSON model in binary
+
+**Question.** A device or a service that keeps its settings in CBOR (RFC
+8949) has them copied into JSON to be read, and the copy is what explain()
+then names. Can the library read the CBOR itself, and what of CBOR does a
+configuration hold?
+
+**Options.**
+
+1. No CBOR. Rejected: the copy is exactly what explain() should not name.
+2. CBOR through a codec the program supplies (D-68). Rejected for the
+   common case: every program that wants it would write the same page of
+   grammar, and the well-formedness rules are the part that is easy to get
+   wrong.
+3. A built-in reader.
+
+**Decision.** Option 3, `CF_WITH_CBOR`, on by default as JSON is: no
+dependency, a few hundred lines, in every preset (the minimal one, with
+`CF_WITH_REAL` off, refuses floats by name). The data model is JSON's: a
+map with text keys at the top; maps, arrays, integers, floats of half,
+single and double precision, text strings, `false`, `true` and `null`
+inside. Infinity and NaN are the text `inf`, `-inf` and `nan` with
+`textual` set, typed by the contract, as TOML's are (D-62). Where CBOR
+holds more than a configuration does:
+
+* **Byte strings** are refused, as a value and as a key. A configuration
+  has no type for bytes, and reading them as hex or base64 would be
+  choosing an encoding nobody asked for.
+* **Tags**: 55799 (self-described CBOR) is read past wherever it is; 0 (a
+  date and time), 1 (seconds since the epoch) and 32 (a URI) are read as
+  their content, checked against the tag; every other tag is refused by its
+  number before its content is read, because read past, tag 4 would be an
+  array where a number was written and tag 2's bignums would change
+  meaning silently.
+* **Indefinite lengths** are read, for maps, arrays, text strings and map
+  keys: streaming encoders write nothing else, and Appendix A has them. A
+  string's chunks are joined; each must be a definite-length text string
+  and UTF-8 by itself (section 3.2.3).
+* **Map keys that are not text** are refused, naming what the key is.
+* **Duplicate keys** are read, the later winning and both kept as
+  candidates, exactly as the JSON and INI readers do: explain() shows both
+  places and Doctor's CFD001 names the earlier one. Refusing them, which
+  section 5.6 permits, would make CBOR the one reader that refuses what
+  JSON accepts, and needs a table of names per map for a check the library
+  already makes, visibly, one level up.
+* **`undefined` and the simple values other than false, true and null**
+  are refused.
+* **Integers outside the 64-bit signed range** are refused; `-1 - n` with
+  `n` the greatest is the least int64 and is read.
+* **The top** is a map after any number of 55799 tags, and nothing may
+  follow it: a CBOR sequence (RFC 8742) is another format. No byte order
+  mark is skipped: `EF` is a CBOR simple value.
+
+Everything RFC 8949 makes not well-formed is refused: reserved additional
+information, a two-byte simple value below 32, an indefinite length on
+major type 0, 1 or 6, a break outside an indefinite-length item, a chunk of
+the wrong type, an odd map before its break, an item cut short. A head
+longer than it needs to be is well-formed and read. A length, an array's
+item count and a map's pair count are checked against the bytes left
+before the item is read, so a count of four billion costs nothing, and
+nesting is bounded by `CF_MAX_DEPTH` with a loop for tags, so no document
+costs more than that many frames.
+
+Places are `<file>, byte <n>`, the offset counted from 0 of the first byte
+of the item (the first of its tags), as `dd skip=` and `cmp` count: the
+place a hex dump of the real file shows it, so `server.port` says
+`settings.cbor, byte 14`.
+
+**Compatibility.** Additive: an option on by default, and three public
+functions that serve it and the readers after it - `cf_text_is_utf8`
+(RFC 3629) and, under `CF_WITH_REAL`, `cf_f64_bits`, `cf_f64_from_bits`,
+`cf_f64_from_f16_bits` and `cf_f64_from_f32_bits`. The image reader's own
+copies of the first two are gone.
+
+**Held to.** The reader's own test, `test_cbor`, covers each decision and
+each refusal above, with the documents written as hex, and the option off.
+RFC 8949's Appendix A vectors and Appendix F.1's malformed items are the
+conformance run's (W4-C2).
 
 ---
 

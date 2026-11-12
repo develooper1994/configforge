@@ -124,6 +124,10 @@ cf_error_copy
 cf_error_set
 cf_explain
 cf_explain_json
+cf_f64_bits real
+cf_f64_from_bits real
+cf_f64_from_f16_bits real
+cf_f64_from_f32_bits real
 cf_f64_to_text real
 cf_feature_at
 cf_feature_count
@@ -318,6 +322,7 @@ cf_source_store_error
 cf_source_store_state_size
 cf_sources
 cf_store_set
+cf_text_is_utf8
 cf_text_to_f64 real
 cf_text_to_i64
 cf_text_to_u64
