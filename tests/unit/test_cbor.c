@@ -1,8 +1,8 @@
 /*
  * test_cbor.c - CBOR (RFC 8949), read: the data model, the places the
  * values are explained by, the refusals by name, and the build that left
- * it out. Documents are written as hex, the way the RFC's appendices
- * write them.
+ * it out; and written: the exact bytes, and a literal ${ kept literal.
+ * Documents are written as hex, the way the RFC's appendices write them.
  */
 
 #include <configforge/cf_numeric.h>
@@ -392,6 +392,156 @@ static void test_extension(void) {
     remove(FILE_NAME);
 }
 
+#if CF_WITH_EMIT
+
+/* `n` bytes as "BF 61 ...", for a message. */
+static void tohex(char* out, size_t cap, const unsigned char* p, size_t n) {
+    static const char digits[] = "0123456789ABCDEF";
+    size_t            i, o = 0;
+
+    for (i = 0; i < n && o + 4 < cap; ++i) {
+        out[o++] = digits[p[i] >> 4];
+        out[o++] = digits[p[i] & 15u];
+        out[o++] = ' ';
+    }
+    out[o] = '\0';
+}
+
+/* Whether `got` (n bytes) is the hex `want`, saying what it is when not. */
+static void same_bytes(const unsigned char* got, size_t n, const char* want,
+                       const char* what) {
+    static unsigned char expect[512];
+    static char          shown[1600];
+    size_t               m = unhex(want, expect, sizeof expect);
+
+    check(n == m && memcmp(got, expect, m) == 0, what);
+    if (n != m || memcmp(got, expect, m) != 0) {
+        tohex(shown, sizeof shown, got, n);
+        printf("  got  %s\n  want %s\n", shown, want);
+    }
+}
+
+/* A JSON document through the flattener into a key space, resolved, and
+   written by the CBOR encoder as cf_doc_emit walks it, as
+   test_roundtrip.c's encode() does: the bytes, compared with `want`. */
+static void written(const char* json, const char* want, const char* what) {
+    static union {
+        cf_i64 align;
+        char   b[CF_ENCODER_STATE_MAX];
+    } state;
+    static unsigned char got[512];
+    const cf_codec*      cbor = cf_codec_by_name("cbor");
+    const cf_codec*      js   = cf_codec_by_name("json");
+    cf_arena*            ar;
+    cf_error             err = CF_ERROR_INIT;
+    cf_keyspace          ks;
+    cf_flatten           fl;
+    cf_blob              b;
+    cf_doc_sink          sink;
+    cf_sink              out;
+    cf_bool              ok;
+
+    if (js == NULL) {
+        return; /* the document is JSON */
+    }
+    check(cbor != NULL && cbor->encoder != NULL, "the CBOR codec writes");
+    if (cbor == NULL || cbor->encoder == NULL) {
+        return;
+    }
+    ar = cf_arena_new(NULL, 1 << 14);
+    if (ar == NULL) {
+        check(0, "an arena");
+        return;
+    }
+    cf_ks_init(&ks, ar, 32);
+    cf_sink_init(&out, (char*)got, sizeof got);
+    cf_blob_mem(&b, json, strlen(json), "json");
+    cf_flatten_init(&fl, &ks, 10);
+    ok = (js->decode(&b, cf_flatten_sink(&fl), &err) && !fl.failed && !fl.overflow)
+             ? CF_TRUE
+             : CF_FALSE;
+    if (ok) {
+        cf_ks_resolve(&ks);
+        ok = (cbor->encoder(&out, state.b, &sink) && cf_doc_emit(&ks, &sink, &err))
+                 ? CF_TRUE
+                 : CF_FALSE;
+    }
+    check(ok, what);
+    if (ok) {
+        same_bytes(got, out.len, want, what);
+    } else {
+        printf("  %s\n", err.message);
+    }
+    cf_arena_free(ar);
+}
+
+static const char g_ints[] =
+    "{\"b\":{\"yes\":true},\"n\":{\"zero\":0,\"small\":23,\"byte\":24,"
+    "\"k\":1000,\"neg\":-1000,\"big\":1000000000000},\"t\":{\"s\":\"IETF\"}}";
+
+static const char g_ints_cbor[] =
+    "BF 61 62 BF 63 79 65 73 F5 FF 61 6E BF 63 62 69 67 1B 00 00 00 E8 D4 A5 "
+    "10 00 64 62 79 74 65 18 18 61 6B 19 03 E8 63 6E 65 67 39 03 E7 65 73 6D "
+    "61 6C 6C 17 64 7A 65 72 6F 00 FF 61 74 BF 61 73 64 49 45 54 46 FF FF";
+
+#if CF_WITH_REAL
+
+static const char g_reals[] =
+    "{\"r\":{\"half\":1.5,\"single\":100000.0,\"double\":1.1}}";
+
+static const char g_reals_cbor[] =
+    "BF 61 72 BF 66 64 6F 75 62 6C 65 FB 3F F1 99 99 99 99 99 9A 64 68 61 6C "
+    "66 F9 3E 00 66 73 69 6E 67 6C 65 FA 47 C3 50 00 FF FF";
+
+#endif
+
+static void test_write_bytes(void) {
+    written(g_ints, g_ints_cbor,
+            "integers, a boolean and text, each in its shortest head");
+#if CF_WITH_REAL
+    written(g_reals, g_reals_cbor, "a real in the fewest bytes that hold it");
+#endif
+}
+
+/* cf_emit has the encoder double a ${ itself: the length is written before
+   the text, so nothing can be doubled after it. */
+static void test_write_refs(void) {
+    static const cf_pair pairs[] = {{"t", "a$${b}"}};
+    static char          buf[64];
+    cf_error             err = CF_ERROR_INIT;
+    cf_builder*          b   = cf_build(NULL);
+    cf_config*           c;
+    cf_config*           back;
+    size_t               n;
+
+    cf_builder_memory(b, "m", CF_RANK_USER_FILE, pairs, 1);
+    c = cf_builder_create(b, &err);
+    check(c != NULL, "a literal ${ builds");
+    if (c == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+    check_text(cf_get_text(c, "t", ""), "a${b}", "the value is the literal a${b}");
+    n = cf_emit(c, "cbor", CF_EMIT_CONFIGURED, 0, buf, sizeof buf, &err);
+    check(n == 11, "cf_emit writes 11 bytes");
+    if (n == 0) {
+        printf("  %s\n", err.message);
+    }
+    same_bytes((const unsigned char*)buf, n, "BF 61 74 66 61 24 24 7B 62 7D FF",
+               "the ${ is doubled, and the length counts it");
+    check(cf_emit(c, "cbor", CF_EMIT_CONFIGURED, 0, NULL, 0, &err) == 11,
+          "measured without a buffer, the same length");
+    back = read_bytes((const unsigned char*)buf, n, &err);
+    check(back != NULL, "what was written reads");
+    if (back != NULL) {
+        check_text(cf_get_text(back, "t", ""), "a${b}", "and reads back as a${b}");
+    }
+    cf_config_free(back);
+    cf_config_free(c);
+}
+
+#endif /* CF_WITH_EMIT */
+
 #else /* !CF_WITH_CBOR */
 
 static void test_off(void) {
@@ -435,6 +585,10 @@ int main(void) {
     test_depth();
     test_utf8();
     test_extension();
+#if CF_WITH_EMIT
+    test_write_bytes();
+    test_write_refs();
+#endif
 #else
     test_off();
 #endif

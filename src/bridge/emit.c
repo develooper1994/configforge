@@ -154,6 +154,9 @@ static cf_bool find_array(const cf_keyspace* ks, const emit_filter* f,
 typedef struct emit_literals {
     cf_doc_sink* encoded;
     cf_sink*     out;
+    /* A binary encoder (CF_CODEC_BINARY) doubles each ${ itself, as it
+       writes the text's length: nothing is done after it. */
+    cf_bool binary;
 } emit_literals;
 
 static cf_bool literal_table(void* ctx, const char* name, size_t n) {
@@ -218,6 +221,9 @@ static cf_bool literal_scalar(void* ctx, const char* name, size_t n, const cf_va
 
     if (!encoded->scalar(encoded->ctx, name, n, v, textual, at)) {
         return CF_FALSE;
+    }
+    if (literals->binary) {
+        return CF_TRUE;
     }
     if (v->type == CF_TYPE_TEXT) {
         for (i = 0; i + 1 < v->u.t.n; ++i) {
@@ -322,6 +328,10 @@ size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int ra
     if (!codec->encoder(&out, state.b, &sink)) {
         cf_error_set(err, CF_E_MEMORY, NULL, format, "encoder refused");
         return 0;
+    }
+    literals.binary = ((codec->caps & CF_CODEC_BINARY) != 0) ? CF_TRUE : CF_FALSE;
+    if (literals.binary) {
+        ((cf_encoder_head*)(void*)state.b)->flags |= CF_ENCODE_ESCAPE_REFS;
     }
     literals.encoded = &sink;
     literals.out     = &out;

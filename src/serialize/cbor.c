@@ -1,5 +1,5 @@
 /*
- * cbor.c - CBOR (RFC 8949), read. C89.
+ * cbor.c - CBOR (RFC 8949), read and written. C89.
  *
  * The JSON data model in binary. A configuration is a map with text keys
  * at the top; inside it maps, arrays, integers, floats of every width,
@@ -25,6 +25,7 @@
 #include "configforge/cf_numeric.h"
 #include "configforge/cf_serialize.h"
 
+#include <float.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -649,8 +650,271 @@ static cf_bool cbor_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     return CF_TRUE;
 }
 
+#if CF_WITH_EMIT
+
+/* ================================================================== *
+ * Writing
+ *
+ * Maps and arrays have an indefinite length (BF ... FF, 9F ... FF): the
+ * events do not say how many members a container has until its end, and
+ * the sink measures or writes in one pass, so a count cannot be written
+ * before the members without a second walk. Text strings and numbers
+ * are definite and in RFC 8949's preferred serialization (section 4.1).
+ * The keys are in the walk's order, not deterministic encoding's.
+ * ================================================================== */
+
+typedef struct cbor_enc {
+    cf_encoder_head head; /* first: cf_emit sets CF_ENCODE_ESCAPE_REFS */
+    cf_sink*        out;
+    int             depth;
+} cbor_enc;
+
+/* cf_emit keeps this on its own frame, in CF_ENCODER_STATE_MAX bytes. */
+typedef char cbor_enc_fits[(sizeof(cbor_enc) <= CF_ENCODER_STATE_MAX) ? 1 : -1];
+
+/* An initial byte and the n bytes of `arg` after it, big-endian. */
+static void cbor_put(cf_sink* out, unsigned first, cf_u64 arg, size_t n) {
+    unsigned char b[9];
+    size_t        i;
+
+    b[0] = (unsigned char)first;
+    for (i = 0; i < n; ++i) {
+        b[1 + i] = (unsigned char)((arg >> (8u * (unsigned)(n - 1 - i))) & 0xFFu);
+    }
+    cf_sink_write(out, (const char*)b, n + 1);
+}
+
+/* A head in its shortest form: the argument in the initial byte below
+   24, else in the fewest of 1, 2, 4 or 8 bytes after it. */
+static void cbor_put_head(cf_sink* out, unsigned major, cf_u64 arg) {
+    unsigned m = major << 5;
+
+    if (arg < 24u) {
+        cbor_put(out, m | (unsigned)arg, 0, 0);
+    } else if (arg <= 0xFFu) {
+        cbor_put(out, m | 24u, arg, 1);
+    } else if (arg <= 0xFFFFu) {
+        cbor_put(out, m | 25u, arg, 2);
+    } else if (arg <= 0xFFFFFFFFu) {
+        cbor_put(out, m | 26u, arg, 4);
+    } else {
+        cbor_put(out, m | 27u, arg, 8);
+    }
+}
+
+/* A text string; with `escape`, each ${ as $${, which the length counts. */
+static void cbor_put_text(cf_sink* out, const char* p, size_t n, cf_bool escape) {
+    size_t i, from = 0, extra = 0;
+
+    if (escape) {
+        for (i = 0; i + 1 < n; ++i) {
+            if (p[i] == '$' && p[i + 1] == '{') {
+                ++extra;
+            }
+        }
+    }
+    cbor_put_head(out, 3, (cf_u64)n + (cf_u64)extra);
+    if (extra != 0) {
+        for (i = 0; i + 1 < n; ++i) {
+            if (p[i] == '$' && p[i + 1] == '{') {
+                cf_sink_write(out, p + from, i + 1 - from);
+                cf_sink_putc(out, '$');
+                from = i + 1;
+            }
+        }
+    }
+    cf_sink_write(out, p + from, n - from);
+}
+
+static void cbor_put_int(cf_sink* out, cf_i64 i) {
+    if (i >= 0) {
+        cbor_put_head(out, 0, (cf_u64)i);
+    } else {
+        cbor_put_head(out, 1, (cf_u64)(-(i + 1))); /* -1 - i, never overflowing */
+    }
+}
+
+#if CF_WITH_REAL
+
+/* A float's bits are taken by memcpy into a cf_u32. */
+typedef char cbor_float_is_32[(sizeof(float) == 4) ? 1 : -1];
+
+/* The half-precision bits that hold the single whose bits are `s`
+   exactly, if any: zero; a normal half; or a subnormal one, when the
+   bits shifted out are zero. */
+static cf_bool cbor_half(cf_u32 s, cf_u32* half) {
+    cf_u32 sign = (s >> 31) << 15;
+    cf_u32 e    = (s >> 23) & 0xFFu;
+    cf_u32 m    = s & 0x7FFFFFu;
+    long   x    = (long)e - 127;
+
+    if (e == 0 && m == 0) {
+        *half = sign;
+        return CF_TRUE;
+    }
+    if (e == 0) {
+        return CF_FALSE; /* a subnormal single is below every half */
+    }
+    if (x >= -14 && x <= 15 && (m & 0x1FFFu) == 0) {
+        *half = sign | ((cf_u32)(x + 15) << 10) | (m >> 13);
+        return CF_TRUE;
+    }
+    if (x >= -24 && x <= -15) {
+        cf_u32   full  = 0x800000u | m;
+        unsigned shift = (unsigned)(-(x + 1));
+
+        if ((full & (((cf_u32)1 << shift) - 1u)) == 0) {
+            *half = sign | (full >> shift);
+            return CF_TRUE;
+        }
+    }
+    return CF_FALSE;
+}
+
+/* A real as the shortest of half, single and double precision that holds
+   it exactly; NaN and the infinities as halves. */
+static void cbor_put_real(cf_sink* out, double d) {
+    cf_u64 bits = cf_f64_bits(d);
+    cf_u32 single, half;
+    float  f;
+
+    if (((bits >> 52) & 0x7FFu) == 0x7FFu) {
+        if ((bits & (((cf_u64)1 << 52) - 1u)) != 0) {
+            half = 0x7E00u;
+        } else {
+            half = ((bits >> 63) != 0) ? 0xFC00u : 0x7C00u;
+        }
+        cbor_put(out, 0xF9u, half, 2);
+        return;
+    }
+    /* A double past FLT_MAX is not converted: that is undefined. The
+       single is judged by its stored bits, so that no excess precision
+       of a register can make it look exact. */
+    if (d <= (double)FLT_MAX && d >= -(double)FLT_MAX) {
+        f = (float)d;
+        memcpy(&single, &f, sizeof single);
+        if (cf_f64_from_f32_bits(single) == d) {
+            if (cbor_half(single, &half)) {
+                cbor_put(out, 0xF9u, half, 2);
+            } else {
+                cbor_put(out, 0xFAu, single, 4);
+            }
+            return;
+        }
+    }
+    cbor_put(out, 0xFBu, bits, 8);
+}
+
+#endif /* CF_WITH_REAL */
+
+static void cbor_put_byte(cf_sink* out, unsigned b) {
+    cbor_put(out, b, 0, 0);
+}
+
+/* A map or an array: the document's own map has no name. Refused at the
+   depth json.c refuses, CF_MAX_DEPTH levels with the document's: the
+   walk refuses first, and this is the last line of defence. */
+static cf_bool cbor_enc_open(cbor_enc* e, const char* name, size_t n, unsigned opener) {
+    if (e->depth < -1 || e->depth >= CF_MAX_DEPTH - 1) {
+        return CF_FALSE;
+    }
+    if (e->depth >= 0 && name != NULL) {
+        cbor_put_text(e->out, name, n, CF_FALSE);
+    }
+    cbor_put_byte(e->out, opener);
+    ++e->depth;
+    return CF_TRUE;
+}
+
+static cf_bool cbor_enc_table(void* ctx, const char* name, size_t n) {
+    return cbor_enc_open((cbor_enc*)ctx, name, n, 0xBFu);
+}
+
+static cf_bool cbor_enc_array(void* ctx, const char* name, size_t n) {
+    return cbor_enc_open((cbor_enc*)ctx, name, n, 0x9Fu);
+}
+
+static cf_bool cbor_enc_scalar(void* ctx, const char* name, size_t n, const cf_value* v,
+                               cf_bool textual, const cf_loc* at) {
+    cbor_enc* e = (cbor_enc*)ctx;
+
+    (void)textual;
+    (void)at;
+    if (name != NULL) {
+        /* A key holds no $, so there is nothing in it to double. */
+        cbor_put_text(e->out, name, n, CF_FALSE);
+    }
+    switch (v->type) {
+    case CF_TYPE_TEXT:
+        cbor_put_text(e->out, v->u.t.p, v->u.t.n,
+                      ((e->head.flags & CF_ENCODE_ESCAPE_REFS) != 0) ? CF_TRUE
+                                                                     : CF_FALSE);
+        break;
+    case CF_TYPE_NULL:
+        cbor_put_byte(e->out, 0xF6u);
+        break;
+    case CF_TYPE_BOOL:
+        cbor_put_byte(e->out, v->u.b ? 0xF5u : 0xF4u);
+        break;
+    case CF_TYPE_INT:
+        cbor_put_int(e->out, v->u.i);
+        break;
+    case CF_TYPE_REAL:
+#if CF_WITH_REAL
+        cbor_put_real(e->out, v->u.r);
+        break;
+#else
+        return CF_FALSE;
+#endif
+    }
+    return CF_TRUE;
+}
+
+static cf_bool cbor_enc_end(void* ctx) {
+    cbor_enc* e = (cbor_enc*)ctx;
+
+    if (e->depth < 0) {
+        return CF_FALSE;
+    }
+    --e->depth;
+    cbor_put_byte(e->out, 0xFFu);
+    return CF_TRUE;
+}
+
+static cf_bool cbor_encoder(cf_sink* out, void* state, cf_doc_sink* sink) {
+    cbor_enc* e = (cbor_enc*)state;
+
+    if (e == NULL || sink == NULL) {
+        return CF_FALSE;
+    }
+    memset(e, 0, sizeof *e);
+    e->out   = out;
+    e->depth = -1;
+
+    sink->size        = offsetof(cf_doc_sink, reserve_text);
+    sink->begin_table = cbor_enc_table;
+    sink->begin_array = cbor_enc_array;
+    sink->scalar      = cbor_enc_scalar;
+    sink->end         = cbor_enc_end;
+    sink->ctx         = e;
+    return CF_TRUE;
+}
+
+const cf_codec cf_codec_cbor = {sizeof(cf_codec),
+                                "cbor",
+                                ".cbor",
+                                CF_CODEC_READ | CF_CODEC_WRITE | CF_CODEC_TYPED |
+                                    CF_CODEC_ARRAYS | CF_CODEC_BINARY,
+                                cbor_decode,
+                                cbor_encoder,
+                                sizeof(cbor_enc)};
+
+#else /* !CF_WITH_EMIT: read only */
+
 const cf_codec cf_codec_cbor = {
     sizeof(cf_codec), "cbor", ".cbor", CF_CODEC_READ | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
     cbor_decode,      NULL,   0};
+
+#endif /* CF_WITH_EMIT */
 
 #endif /* CF_WITH_CBOR */

@@ -3403,11 +3403,42 @@ of the item (the first of its tags), as `dd skip=` and `cmp` count: the
 place a hex dump of the real file shows it, so `server.port` says
 `settings.cbor, byte 14`.
 
+**Writing.** `cf_emit(c, "cbor", ...)` writes what the reader reads back
+to the same keys, types and values, through the same event interface as
+every encoder. Maps and arrays have an **indefinite length** (`BF ... FF`,
+`9F ... FF`): the events do not say how many members a container has
+until its end, and the sink measures or writes in one pass, so a count
+cannot be written before the members without a second walk or moving
+bytes already written; indefinite length is well-formed CBOR that every
+decoder reads. Rejected: a second walk to count each container, which
+doubles the work for what no reader needs. Text strings and numbers are
+definite and in **preferred serialization** (section 4.1): an integer in
+its shortest head; a real as the shortest of half, single and double
+precision that holds it exactly; NaN as `F9 7E 00` and the infinities as
+`F9 7C 00` and `F9 FC 00`. It is **not deterministic encoding** (section
+4.2.1): the walk writes a table's values before its tables, not keys in
+byte order, and sorting them would be a second order for no reader here.
+
+A literal `${` stays literal, as the text formats keep it. `cf_emit`
+doubles each `${` in a text value after a text encoder has written it,
+which is wrong for CBOR: a text string's length comes before its bytes,
+and the doubled text would no longer match it. So a codec that writes
+bytes says so, `CF_CODEC_BINARY`, and its state begins with a
+`cf_encoder_head` whose `CF_ENCODE_ESCAPE_REFS` flag `cf_emit` sets after
+the encoder function has zeroed it; the encoder doubles each `${` itself,
+the length counting it, and `cf_emit` does nothing after it. `cf_doc_emit`
+alone sets no flag and escapes nothing, which is what a conversion needs:
+a reader's text is the text as written. Rejected: an escaped copy made by
+`cf_emit` before the encoder sees the value (no memory to make it in, and
+a bound on it would be a new refusal); an encoder that always escapes (a
+conversion would then double what the source wrote once).
+
 **Compatibility.** Additive: an option on by default, and three public
 functions that serve it and the readers after it - `cf_text_is_utf8`
 (RFC 3629) and, under `CF_WITH_REAL`, `cf_f64_bits`, `cf_f64_from_bits`,
 `cf_f64_from_f16_bits` and `cf_f64_from_f32_bits`. The image reader's own
-copies of the first two are gone.
+copies of the first two are gone. Writing adds `CF_CODEC_BINARY` and
+`cf_encoder_head`, which a codec of one's own may use or ignore.
 
 **Held to.** The reader's own test, `test_cbor`, covers each decision and
 each refusal above, with the documents written as hex, and the option off.
