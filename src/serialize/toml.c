@@ -708,10 +708,13 @@ static cf_bool toml_room(toml_scan* s, size_t text) {
         memcpy(nodes, s->nodes, s->nnodes * sizeof *nodes);
         memset(buckets, 0, nb * sizeof *buckets);
         for (i = 1; i < s->nnodes; ++i) {
-            toml_node* x = &nodes[i];
-            cf_u32     h = toml_hash(s->seed, x->parent, x->elem,
-                                 x->elem ? NULL : s->pool + x->name, x->len, x->name) &
-                       (cf_u32)(nb - 1);
+            toml_node*  x  = &nodes[i];
+            const char* nm = x->elem ? NULL : s->pool + x->name;
+            cf_u32      h;
+
+            h = toml_hash(s->seed, x->parent, x->elem, nm, x->len, x->name);
+            h &= (cf_u32)(nb - 1);
+
             x->chain   = buckets[h];
             buckets[h] = (cf_u32)i;
         }
