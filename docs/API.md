@@ -1468,7 +1468,7 @@ what git config, systemd drop-ins and sudoers.d all are.
 CF_API size_t cf_emit(const struct cf_config* c, const char* format, cf_emit_what what, int rank, char* buf, size_t cap, cf_error* err);
 ```
 
-Implementation: [`cf_emit` (src/bridge/emit.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/emit.c#L239).
+Implementation: [`cf_emit` (src/bridge/emit.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/emit.c#L245).
 
 Measure-or-write, like everything else that renders: with a NULL
 buffer nothing is stored and the length still accumulates.

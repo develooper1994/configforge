@@ -94,6 +94,13 @@ int main(int argc, char** argv) {
     has(e.message(), "cannot be written", "and says so");
     check(!d.write("nowhere", &one, 1), "and to no source, without an Error to fill");
 
+    /* emit(): a binary format's bytes come back whole, in a string of the
+       length cf_emit gives. */
+#if CF_WITH_CBOR && CF_WITH_EMIT
+    std::string bytes = c.emit("cbor", CF_EMIT_ALL);
+    check(!bytes.empty() && bytes[0] == '\xBF', "emit() writes CBOR, a map first");
+#endif
+
     /* report(): an info that starts from CF_REPORT_INFO_INIT names what
        it is given; one that never had its size set is refused, and the
        string is empty (D-51). */

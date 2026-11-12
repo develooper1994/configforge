@@ -118,6 +118,7 @@ typedef struct format {
 } format;
 
 static const format g_formats[] = {{"json", EXACT, 1, 1, 1},
+                                   {"cbor", EXACT, 1, 1, 1},
                                    {"toml", EXACT, 1, 0, 1},
                                    {"yaml", UNTYPED, 1, 1, 1},
                                    {"ini", TEXT_ONLY, 2, 1, 0}};

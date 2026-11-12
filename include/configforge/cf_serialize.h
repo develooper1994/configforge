@@ -165,7 +165,11 @@ enum {
     CF_CODEC_ARRAYS = 1u << 3,
     /* Arrays of values only - not of tables, not of arrays, not empty:
        INI's name[] lines (D-60). Implied by CF_CODEC_ARRAYS. (1.2) */
-    CF_CODEC_SCALAR_ARRAYS = 1u << 4
+    CF_CODEC_SCALAR_ARRAYS = 1u << 4,
+    /* Writes bytes, each text with its length before it: cf_emit cannot
+       double a ${ in what it has written, and asks the encoder to
+       (cf_encoder_head). (1.5) */
+    CF_CODEC_BINARY = 1u << 5
 };
 
 /* `size` is sizeof(cf_codec) where the codec was compiled (D-51). */
@@ -191,6 +195,16 @@ typedef struct cf_codec {
    bytes for each level of nesting - and every built-in encoder asserts
    at compile time that it fits, so the bound cannot drift from them. */
 #define CF_ENCODER_STATE_MAX (CF_KEY_MAX + (CF_MAX_DEPTH + 2) * 8 + 64)
+
+/* The first member of a binary encoder's state (CF_CODEC_BINARY):
+   the encoder function zeroes it, and the caller may then set
+   CF_ENCODE_ESCAPE_REFS, which has every ${ in a text value written
+   as $${, as cf_emit does for the text formats after writing.
+   (1.5, D-91) */
+typedef struct cf_encoder_head {
+    unsigned flags;
+} cf_encoder_head;
+enum { CF_ENCODE_ESCAPE_REFS = 1u << 0 };
 
 /* Compiled-in codecs only. NULL when the format exists but this build
    left it out, which the caller must report rather than ignore: a
