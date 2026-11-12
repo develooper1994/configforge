@@ -34,6 +34,10 @@ claim is never larger than the evidence.
 | GCC `-fanalyzer`, cppcheck, clang-tidy | paths a test never takes | the `analyze` preset (tier 1), `EXTRA=tidy` |
 | The compilers' full warning set, as errors | conversions that lose bits, shadowing, missing prototypes | every build |
 
+The fuzzers fail a reader that spends more than four times D-82's bound
+on an input, so a document that costs a multiple of itself is found as a
+crash is (H-4).
+
 ## Hardening: what the build adds to what ships
 
 The library and Doctor are built with `-fstack-protector-strong`,
