@@ -118,6 +118,34 @@ if("c_std_11" IN_LIST CMAKE_C_COMPILE_FEATURES AND NOT CF_FORCE_PORTABLE)
     set_target_properties(test_c11 PROPERTIES C_CPPCHECK "${c11_cppcheck}")
   endif()
   add_test(NAME unit.test_c11 COMMAND test_c11)
+  # D-75 in C11: each definition that must not compile, refused by
+  # the words of the check that refused it.
+  include(ConfigForgeMustNotCompile)
+  set(cf_c11_refused
+      "1:a default outside its own range"
+      "2:a range whose low end is above its high end"
+      "3:a text default longer than its max_len"
+      "4:a text default shorter than its min_len"
+      "5:a length range whose low end is above its high end"
+      "6:a key empty or longer than CF_KEY_MAX"
+      "7:required and defaulted at once")
+  foreach(entry ${cf_c11_refused})
+    string(REPLACE ":" ";" parts "${entry}")
+    list(GET parts 0 n)
+    list(GET parts 1 why)
+    cf_must_not_compile(
+      unit.refused.define${n}.c11
+      SOURCE
+      test_c11.c
+      LANG
+      C
+      STD
+      11
+      DEFINE
+      CF_TEST_REFUSED=${n}
+      EXPECT
+      "${why}")
+  endforeach()
 endif()
 
 # The documents test_codec_edges reads, where they are in the source tree.

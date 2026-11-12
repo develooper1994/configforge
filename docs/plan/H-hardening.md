@@ -320,6 +320,13 @@ plans D-82 too, so whichever is committed second takes the next.
   gen` writes is left"; group B's row in "What can run at once" drops
   "C11".
 * **notes**:
+  * 2026-11-13: MSVC warned C4116 (unnamed type in parentheses, an error
+    here) on the struct inside `sizeof`. Taken: option 1, under `_MSC_VER`
+    `CF_C11_CHECKED_` puts `CF_C11_WARN_OFF_` (cf_port.h, where `_MSC_VER` may be tested: `__pragma(warning(suppress : 4116))`) before
+    the `sizeof`; MSVC accepts it mid-expression, the macros stay
+    expressions, and no flag or global setting changed. GCC and Clang
+    expand the same macro without it. MSVC's `unit.test_c11` and the
+    seven refused tests pass.
 
 ---
 

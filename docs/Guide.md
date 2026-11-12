@@ -144,13 +144,15 @@ One call does for every type (D-74), beside the typed ones:
 `cf_builder_key` takes the type as a parameter, or `CF_TYPE_NULL` to let
 the default's text decide, and C11 adds `CF_DEFINE`, which goes by the
 default's C type. C11's `true` and `false` are the ints 1 and 0, so a
-bool default is written `(bool)false`, and a range wants
-`cf_builder_key` or the typed calls.
+bool default is written `(bool)false`, and C11's `CF_DEFINE_INT` and
+`CF_DEFINE_TEXT` take a range or length bounds, which the compiler checks
+when they are constants (D-75).
 
 ```c
 cf_builder_key(b, "server.port", CF_TYPE_NULL, "8080", "1", "65535", 0); /* an int */
 cf_builder_key(b, "tls.ca", CF_TYPE_TEXT, NULL, NULL, NULL, 0);          /* no default */
 CF_DEFINE(b, "server.host", "0.0.0.0");                      /* C11: text */
+CF_DEFINE_INT(b, "server.port", 8080, 1, 65535, 0);  /* C11: checked */
 ```
 
 C++ has `define("server.port", 8080, 1, 65535)`, Python
