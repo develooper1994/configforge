@@ -28,7 +28,13 @@ function(cf_must_not_compile name)
     PROPERTIES ${MNC_LANG}_STANDARD ${MNC_STD}
                ${MNC_LANG}_STANDARD_REQUIRED ON
                ${MNC_LANG}_EXTENSIONS OFF
-               EXCLUDE_FROM_DEFAULT_BUILD ON)
+               EXCLUDE_FROM_DEFAULT_BUILD ON
+               # The compiler is what must refuse the case. An analyser
+               # run before it stops at something of its own first -
+               # cppcheck, told C89 for the whole tree, at a C11 source's
+               # own check of its standard - and the message never comes.
+               ${MNC_LANG}_CPPCHECK ""
+               ${MNC_LANG}_CLANG_TIDY "")
   # The library's headers and definitions, without depending on the
   # library: building the case must not build anything else.
   target_include_directories(

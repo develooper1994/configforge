@@ -585,7 +585,7 @@ whose size changes while it is read is still read whole.
   flattener so that every codec inherits one bound instead of each
   reader keeping its own. Done when a hostile document of each format
   hits the same named limit.
-* ⬜ **A fuzz check comparing arena bytes with input size**, so that a
+* 🟩 **A fuzz check comparing arena bytes with input size** (in every libFuzzer harness and `test_fuzz`: four times D-82's bound), so that a
   document which costs a multiple of its size fails the fuzzer and does
   not wait to be found by hand.
 * ⬜ **Keying the secret digest.** The digest is an unsalted FNV-1a, and
