@@ -117,11 +117,58 @@ faithfully is the dearest mistake this plan can make.
 
 Things only the owner can do or decide. Each unblocks the cards named.
 
-<!-- owner-list: filled when the cards are written -->
+* **Answered, 2026-11-12, for every card written so far**: where a card
+  says ASK THE OWNER, the answer is the card's own recommendation. That
+  covers H-5 (a group may write a secrets directory only when it is its
+  owner's private group), H-7 (an undefined key within "did you mean"
+  distance of a sensitive key is kept as that secret), H-8a (the digest
+  key comes only from the program; FNV-1a stays the default), W3-F2b
+  (the scope it recommends) and W5-G2 (as it recommends). A card whose
+  question is new, or whose recommendation cannot be built, still waits.
+* **The order**, 2026-11-12: the library's own code first - what reads,
+  bounds and explains a value - and the bindings after it, since a
+  binding follows once the C is settled. One problem at a time, carried
+  to done before the next is opened.
+* 1.4.1 holds a changed default (response files are opt-in, D-79): it
+  is released as 1.5.0 or as 1.4.1 - not decided.
 
 ## The index
 
 In the order to be done. A card is `open`, `done` (with its commit), or
 `waits` (with what it waits for).
 
-<!-- index: filled when the cards are written -->
+| Order | Card | Model | Needs | Status |
+| ----: | ---- | ----- | ----- | ------ |
+| 1 | H-1 C11's define macros, checked by the compiler | sonnet | - | open |
+| 2 | H-3 What one document may make, bounded in the flattener | sonnet | - | open |
+| 3 | H-4 The fuzzers fail a document that costs a multiple of its size | sonnet | H-3 | open |
+| 4 | W4-C1 The CBOR reader | sonnet | - | open |
+| 5 | W4-C2 CBOR held to RFC 8949's vectors | sonnet | W4-C1 | open |
+| 6 | W4-C3 Writing CBOR | opus | W4-C1 | open |
+| 7 | W4-C4 CBOR from content, fuzzed and documented | sonnet | W4-C2, W4-C3 | open |
+| 8 | W4-T1 A codec that carries its own data | opus | - | open |
+| 9 | W4-T2 A TLV layout, and reading a flat one | opus | W4-T1 | open |
+| 10 | W4-T3 Nesting, lists and unknown tags | sonnet | W4-T2 | open |
+| 11 | W4-T4 BER-TLV | sonnet | W4-T3 | open |
+| 12 | W4-T5 TLV fuzzed and documented | sonnet | W4-T4, W4-C4 | open |
+| 13 | H-5 A directory others can write to is not read as secrets | opus | - | open |
+| 14 | H-7 An undefined key named like a secret is kept as one | opus | - | open |
+| 15 | H-8a A secret's digest that cannot be tested without a key | opus | - | open |
+| 16 | W5-V1 `doctor convert` | opus | W4-C3 | open |
+| 17 | W5-S1 `doctor schema --from` | sonnet | W5-V1 | open |
+| 18 | H-2 The contract `doctor gen` writes, checked by the compiler | sonnet | H-1 | open |
+| 19 | H-6 Doctor's `--redact-all`, on in the action unless asked | sonnet | - | open |
+| 20 | H-8b Doctor tells digests of different keys apart | sonnet | H-8a | open |
+| 21 | W3-F2a The platform capability for macOS's user defaults | sonnet | - | open |
+| 22 | W3-F2b `cf_builder_preferences`: the source, off macOS | sonnet | W3-F2a | open |
+| 23 | W3-F2c Reading CFPreferences on macOS (CI-only) | opus | W3-F2b | open |
+| 24 | W3-F3 `cf_builder_credentials` in every language, the Guide, an example | sonnet | - | open: the bindings have it (470cb8d); the card's rest is to check |
+| 25 | W3-F2d User defaults in C++, Rust, Python and the Guide | sonnet | W3-F2c | open |
+| 26 | W5-G1 `doctor gen --lang cpp` | opus | W5-S1 | open |
+| 27 | W5-G2 `doctor gen --lang rust` | opus | W5-G1 | open |
+| 28 | W5-G3 `doctor gen --lang python` | sonnet | W5-G2 | open |
+
+Not yet cards: wave 6 (every operation on a file's data, written back
+in its format), wave 7 (Go and .NET), wave 8 (2.0: the stream reader
+and the dynamic sizing modes), proofs with CBMC, `.properties` against
+Java's own reader.
