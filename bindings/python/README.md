@@ -60,6 +60,16 @@ element. `separator=""` disables splitting. `min`, `max`, `allowed`,
 contract. A custom older library without `has_feature("lists")` is
 refused when this method is used rather than silently defining a scalar.
 
+systemd's credentials, the directory `$CREDENTIALS_DIRECTORY` names, are a
+source of their own; `explain()` says "systemd credential <id> (<file>)":
+
+```python
+cfg = (cf.Builder()
+       .credentials(None, cf.rank.ENV, flags=cf.OPTIONAL)
+       .define("db.password", type=str, flags=cf.flag.SENSITIVE)
+       .create())
+```
+
 For an existing custom shared build, `CONFIGFORGE_LIB` still overrides
 the bundled library; the library's limits must match the binding.
 `configforge_doctor` drives a separately installed Doctor program from

@@ -83,6 +83,15 @@
 #else
 #define CF_CPP20 0
 #endif
+/* What can be a constant from C++11 is one (D-75): a Key, and through it
+   the name, range and default the compiler checks. Nothing in C++98,
+   where the same code runs at run time and the library checks as it
+   always has. */
+#if CF_CPP11
+#define CF_CXX_CONSTEXPR constexpr
+#else
+#define CF_CXX_CONSTEXPR
+#endif
 #if CF_CPP20 && defined(__cpp_lib_expected) && __cpp_lib_expected >= 202202L
 #define CF_CXX_LEVEL 23
 #elif CF_CPP20
@@ -155,30 +164,142 @@ class Error {
  * other is refused at compile time, by Builder::define having no
  * overload for it. A key without a range has lo == hi, as in
  * cf_builder_int.
+ *
+ * From C++11 a Key of a number or a bool can be a constant, and then the
+ * compiler checks it by the library's rule (D-75): a name the library
+ * would refuse, a range whose low end is above its high end, or a default
+ * outside its own range is a compile error, and the error names which -
+ *
+ *     constexpr cf::Key<int> port("Server.Port", 8080);
+ *     // error: call to non-constexpr function
+ *     //        'configforge::detail::not_a_canonical_key_dotted_lowercase_ascii'
+ *
+ * `constexpr` or C++20's `constinit` asks for the check; a Key that is
+ * neither is checked when the configuration is created, as in C++98 and
+ * as one made from a name known only at run time always is. The library
+ * checks every key at create whatever the standard. A Key<std::string>
+ * cannot be a constant before std::string can, and is checked there.
  * ------------------------------------------------------------------ */
+
+namespace detail {
+/* One character of a canonical key, and the rest of one from `i`, `seg`
+   being the length of the segment so far: cf_key_valid's rule, a step a
+   function, as C++11's constexpr wants one expression each. A key at
+   CF_KEY_MAX bytes is refused before the recursion goes deeper. */
+inline CF_CXX_CONSTEXPR bool key_char(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' || c == '-';
+}
+inline CF_CXX_CONSTEXPR bool key_from(const char* k, size_t i, size_t seg);
+inline CF_CXX_CONSTEXPR bool key_char_from(const char* k, size_t i, size_t seg) {
+    return key_char(k[i]) && key_from(k, i + 1, seg + 1);
+}
+inline CF_CXX_CONSTEXPR bool key_dot_from(const char* k, size_t i, size_t seg) {
+    return (k[i] == '.') ? (seg > 0 && key_from(k, i + 1, 0))
+                         : key_char_from(k, i, seg);
+}
+inline CF_CXX_CONSTEXPR bool key_end_from(const char* k, size_t i, size_t seg) {
+    return (k[i] == '\0') ? (seg > 0) : key_dot_from(k, i, seg);
+}
+inline CF_CXX_CONSTEXPR bool key_from(const char* k, size_t i, size_t seg) {
+    return (i < (size_t)CF_KEY_MAX) && key_end_from(k, i, seg);
+}
+
+/* Each is called only where a check has failed, and none is constexpr:
+   in a constant expression the call is the compile error, and its name
+   the message. At run time each hands its argument back unchanged, and
+   the library refuses the definition at create, as it always has. */
+inline const char* not_a_canonical_key_dotted_lowercase_ascii(const char* k) {
+    return k;
+}
+template <typename T> inline T a_range_whose_low_end_is_above_its_high_end(T d) {
+    return d;
+}
+template <typename T> inline T a_default_outside_its_own_range(T d) {
+    return d;
+}
+
+/* The default, checked against its range as cf_define checks it: no
+   range when lo == hi. Text has no range for the library to check. */
+template <typename T> inline CF_CXX_CONSTEXPR T in_range(T d, T lo, T hi) {
+    return (d < lo || hi < d) ? a_default_outside_its_own_range(d) : d;
+}
+template <typename T> inline CF_CXX_CONSTEXPR T in_ordered_range(T d, T lo, T hi) {
+    return (hi < lo) ? a_range_whose_low_end_is_above_its_high_end(d)
+                     : in_range(d, lo, hi);
+}
+template <typename T> inline CF_CXX_CONSTEXPR T in_own_range(T d, T lo, T hi) {
+    return (lo == hi) ? d : in_ordered_range(d, lo, hi);
+}
+inline std::string in_own_range(const std::string& d, const std::string&,
+                                const std::string&) {
+    return d;
+}
+} /* namespace detail */
+
+/* The library's rule for a canonical key (cf_key_valid), with the length
+   this build allows: non-empty, dotted, no segment empty, each of a-z,
+   0-9, '_' and '-'. A constant expression from C++11, so that
+   static_assert(cf::key_is_valid("server.port")) holds at compile time;
+   a loop where C++14's relaxed constexpr allows one, and in C++98, so
+   the recursion and its depth are C++11's alone. */
+#if !CF_CPP11 || (defined(__cpp_constexpr) && __cpp_constexpr >= 201304L)
+inline CF_CXX_CONSTEXPR bool key_is_valid(const char* key) {
+    size_t i = 0, seg = 0;
+    if (key == 0) {
+        return false;
+    }
+    for (; key[i] != '\0'; ++i) {
+        if (i + 1 >= (size_t)CF_KEY_MAX) {
+            return false;
+        }
+        if (key[i] == '.') {
+            if (seg == 0) {
+                return false;
+            }
+            seg = 0;
+        } else if (!detail::key_char(key[i])) {
+            return false;
+        } else {
+            ++seg;
+        }
+    }
+    return seg > 0;
+}
+#else
+inline CF_CXX_CONSTEXPR bool key_is_valid(const char* key) {
+    return key != 0 && detail::key_from(key, 0, 0);
+}
+#endif
+
+namespace detail {
+inline CF_CXX_CONSTEXPR const char* canonical(const char* k) {
+    return key_is_valid(k) ? k : not_a_canonical_key_dotted_lowercase_ascii(k);
+}
+} /* namespace detail */
 
 template <typename T> class Key {
   public:
-    explicit Key(const char* name, T dflt = T(), unsigned flags = 0)
-        : name_(name), dflt_(dflt), lo_(), hi_(), flags_(flags) {
+    explicit CF_CXX_CONSTEXPR Key(const char* name, T dflt = T(), unsigned flags = 0)
+        : name_(detail::canonical(name)), dflt_(dflt), lo_(), hi_(), flags_(flags) {
     }
-    Key(const char* name, T dflt, T lo, T hi, unsigned flags = 0)
-        : name_(name), dflt_(dflt), lo_(lo), hi_(hi), flags_(flags) {
+    CF_CXX_CONSTEXPR Key(const char* name, T dflt, T lo, T hi, unsigned flags = 0)
+        : name_(detail::canonical(name)), dflt_(detail::in_own_range(dflt, lo, hi)),
+          lo_(lo), hi_(hi), flags_(flags) {
     }
 
-    const char* name() const {
+    CF_CXX_CONSTEXPR const char* name() const {
         return name_;
     }
-    const T& fallback() const {
+    CF_CXX_CONSTEXPR const T& fallback() const {
         return dflt_;
     }
-    const T& lo() const {
+    CF_CXX_CONSTEXPR const T& lo() const {
         return lo_;
     }
-    const T& hi() const {
+    CF_CXX_CONSTEXPR const T& hi() const {
         return hi_;
     }
-    unsigned flags() const {
+    CF_CXX_CONSTEXPR unsigned flags() const {
         return flags_;
     }
 
@@ -924,6 +1045,17 @@ class Builder {
         return *this;
     }
 
+    /* systemd's credentials: the directory $CREDENTIALS_DIRECTORY names,
+       read as secrets() reads one (cf_builder_credentials, D-80). A null
+       name is "credentials". */
+    Builder& credentials(const char* name, int rank, const char* prefix = 0,
+                         unsigned flags = 0) {
+        if (b_) {
+            cf_builder_credentials(b_, name, rank, prefix, flags);
+        }
+        return *this;
+    }
+
     /* A key of the Windows Registry (cf_builder_registry). */
     Builder& registry(const char* name, int rank, const char* root,
                       unsigned flags = 0) {
@@ -1157,13 +1289,13 @@ template <typename S> class Binding {
     }
 
     template <typename M>
-    Binding& field(const char* key, M S::* m, typename detail::same<M>::type dflt = M(),
+    Binding& field(const char* key, M S::*m, typename detail::same<M>::type dflt = M(),
                    unsigned flags = 0) {
         return add(new Direct<M>(Key<M>(key, dflt, flags), m));
     }
 
     template <typename M>
-    Binding& field(const char* key, M S::* m, typename detail::same<M>::type dflt,
+    Binding& field(const char* key, M S::*m, typename detail::same<M>::type dflt,
                    typename detail::same<M>::type lo, typename detail::same<M>::type hi,
                    unsigned flags = 0) {
         return add(new Direct<M>(Key<M>(key, dflt, lo, hi, flags), m));
@@ -1171,13 +1303,13 @@ template <typename S> class Binding {
 
     /* A field of a struct inside S: settings.server.port. */
     template <typename N, typename M>
-    Binding& field(const char* key, N S::* outer, M N::* inner,
+    Binding& field(const char* key, N S::*outer, M N::*inner,
                    typename detail::same<M>::type dflt = M(), unsigned flags = 0) {
         return add(new Nested<N, M>(Key<M>(key, dflt, flags), outer, inner));
     }
 
     template <typename N, typename M>
-    Binding& field(const char* key, N S::* outer, M N::* inner,
+    Binding& field(const char* key, N S::*outer, M N::*inner,
                    typename detail::same<M>::type dflt,
                    typename detail::same<M>::type lo, typename detail::same<M>::type hi,
                    unsigned flags = 0) {
@@ -1219,7 +1351,7 @@ template <typename S> class Binding {
         virtual void read(const Config& c, S& out) const = 0;
     };
     template <typename M> struct Direct : Field {
-        Direct(const Key<M>& k, M S::* m) : k_(k), m_(m) {
+        Direct(const Key<M>& k, M S::*m) : k_(k), m_(m) {
         }
         void define(cf_builder* b) const {
             detail::define_key(b, k_);
@@ -1228,10 +1360,10 @@ template <typename S> class Binding {
             out.*m_ = c.get(k_);
         }
         Key<M> k_;
-        M S::* m_;
+        M S::*m_;
     };
     template <typename N, typename M> struct Nested : Field {
-        Nested(const Key<M>& k, N S::* o, M N::* i) : k_(k), o_(o), i_(i) {
+        Nested(const Key<M>& k, N S::*o, M N::*i) : k_(k), o_(o), i_(i) {
         }
         void define(cf_builder* b) const {
             detail::define_key(b, k_);
@@ -1240,8 +1372,8 @@ template <typename S> class Binding {
             (out.*o_).*i_ = c.get(k_);
         }
         Key<M> k_;
-        N S::* o_;
-        M N::* i_;
+        N S::*o_;
+        M N::*i_;
     };
 
     Binding& add(Field* f) {
@@ -1791,12 +1923,12 @@ template <auto First, auto... Rest> class Field {
   public:
     using owner = typename detail::member_of<decltype(First)>::owner;
     using type  = typename detail::member_of<std::tuple_element_t<
-        sizeof...(Rest), std::tuple<decltype(First), decltype(Rest)...>>>::type;
+         sizeof...(Rest), std::tuple<decltype(First), decltype(Rest)...>>>::type;
 
-    explicit Field(const Key<type>& k) : key_(k) {
+    constexpr explicit Field(const Key<type>& k) : key_(k) {
     }
 
-    const Key<type>& key() const {
+    constexpr const Key<type>& key() const {
         return key_;
     }
     void defineInto(cf_builder* b) const {
@@ -1810,26 +1942,30 @@ template <auto First, auto... Rest> class Field {
     Key<type> key_;
 };
 
+/* constexpr, so that a list of keys that can be constants is one, and
+   the compiler checks each as Key does (D-75):
+   `constexpr auto f = cf::fields(cf::field<&S::port>("server.port", 8080, 1, 65535));`
+ */
 template <auto First, auto... Rest>
-Field<First, Rest...> field(const char*                          key,
-                            typename Field<First, Rest...>::type dflt  = {},
-                            unsigned                             flags = 0) {
+constexpr Field<First, Rest...> field(const char*                          key,
+                                      typename Field<First, Rest...>::type dflt  = {},
+                                      unsigned                             flags = 0) {
     return Field<First, Rest...>(
         Key<typename Field<First, Rest...>::type>(key, dflt, flags));
 }
 
 template <auto First, auto... Rest>
-Field<First, Rest...> field(const char* key, typename Field<First, Rest...>::type dflt,
-                            typename Field<First, Rest...>::type lo,
-                            typename Field<First, Rest...>::type hi,
-                            unsigned                             flags = 0) {
+constexpr Field<First, Rest...>
+field(const char* key, typename Field<First, Rest...>::type dflt,
+      typename Field<First, Rest...>::type lo, typename Field<First, Rest...>::type hi,
+      unsigned flags = 0) {
     return Field<First, Rest...>(
         Key<typename Field<First, Rest...>::type>(key, dflt, lo, hi, flags));
 }
 
 template <typename... F> class Fields {
   public:
-    explicit Fields(F... f) : f_(std::move(f)...) {
+    constexpr explicit Fields(F... f) : f_(std::move(f)...) {
     }
 
     void defineInto(cf_builder* b) const {
@@ -1853,7 +1989,7 @@ template <typename... F> class Fields {
     std::tuple<F...> f_;
 };
 
-template <typename... F> Fields<F...> fields(F... f) {
+template <typename... F> constexpr Fields<F...> fields(F... f) {
     return Fields<F...>(std::move(f)...);
 }
 

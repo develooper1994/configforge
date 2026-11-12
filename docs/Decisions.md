@@ -91,6 +91,7 @@ gets reopened every six months.
 | D-72 | Every C++ standard from C++98, cumulatively | C++, compatibility | **Decided** |
 | D-73 | The format from the name, then the content, by several strategies | formats, codecs | **Decided** |
 | D-74 | One `define`, the type given or inferred | definitions, bindings | **Decided** |
+| D-75 | Checked at compile time where the language can, at run time always | definitions, C++, Rust | **Decided** |
 | D-77 | A reference's expansion is bounded, by a constant and not a build limit | interpolation, resolver | **Decided** |
 | D-78 | A directory that cannot be read whole is an error, optional or not | drop-in, secrets, platform | **Decided** |
 | D-79 | Response files (`@file`) are opt-in | command line, security | **Decided** |
@@ -2582,6 +2583,62 @@ transient arena, so a value left pointing into the freed bytes is an
 error there, not a guess; the bytes are wiped before they are freed, so
 a secret in a file does not outlive its reading in freed memory, as
 secrets are kept out of it elsewhere (cf_arena_wipe).
+
+---
+
+## D-75 — Checked at compile time where the language can, at run time always
+
+**Question.** A key's name, its range and its default against the range
+are refused by the library at `cf_builder_create`: a mistake waits for
+the program to run. Most keys are written as constants. Can the
+compiler refuse them instead, without a second rule that drifts from
+the library's?
+
+**Decision.** The same mistake is caught in every build, and earlier in
+the ones that can. The library's check at create stays, in every
+language and standard; the compiler's is added where the language has a
+constant evaluation, by the library's own rule (`cf_key_valid`, with the
+build's `CF_KEY_MAX`): a canonical name, a range whose low end is not
+above its high end, a default within its range (no range when the two
+ends are equal, as in `cf_builder_int`).
+
+* **Rust**: `Key::new` and `range` are `const fn`; a `const` `Key` that
+  breaks the rule does not compile.
+* **C++98**: nothing new; `cf::key_is_valid` exists as an ordinary
+  function, the same rule.
+* **C++11**: `cf::key_is_valid` and `Key<T>`'s constructors are
+  `constexpr` (a recursion; a loop from C++14's relaxed `constexpr`). A
+  `constexpr` Key that breaks the rule is a compile error, and the error
+  names which: the failed check calls a function that is not
+  `constexpr` - `not_a_canonical_key_dotted_lowercase_ascii`,
+  `a_range_whose_low_end_is_above_its_high_end`,
+  `a_default_outside_its_own_range` - and at run time that function
+  returns its argument, leaving the refusal to the library.
+* **C++17**: `cf::field` and `cf::fields` are `constexpr`, so a field
+  list of number and bool keys can be a constant, checked the same way.
+* **C++20**: `constinit` asks for the check on a Key the program may
+  still assign.
+
+A Key that is neither `constexpr` nor `constinit`, a name known only at
+run time, a `Key<std::string>` (std::string is no constant before
+C++20), a `Setting` - a name put together at run time - and `Binding`'s
+fields are checked at create, as before. Asking for the check is the
+program's choice: a check that turned every `static const` Key into a
+compile error would change what a C++11 program that builds already
+says (D-72).
+
+**Not yet.** C11's `_Static_assert` for a ranged and a bounded define
+macro, and the checks `doctor gen` would write into a generated
+contract, are left (Roadmap, wave 3).
+
+**Held to.** `test_wrapper_access` compares `cf::key_is_valid` with
+`cf_key_valid` key by key, and is compiled as C++98, 11, 14 and 17; the
+C++17 and C++20 tests declare constant field lists and a `constinit`
+key. Each mistake is a program that must not compile
+(`cmake/ConfigForgeMustNotCompile.cmake`), under every standard from
+C++11 the compiler has; its test passes only when the build fails with
+the check's name in the output, so a source that fails for another
+reason does not pass.
 
 ---
 

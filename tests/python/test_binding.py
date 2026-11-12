@@ -540,5 +540,59 @@ class ResponseFiles(unittest.TestCase):
                 cf.Builder().response_files()
 
 
+CRED_CHILD = (
+    "import os, sys\n"
+    "sys.path.insert(0, os.environ['CRED_SRC'])\n"
+    "import configforge as cf\n"
+    "b = cf.Builder().credentials(None, cf.rank.ENV, flags=int(os.environ['CRED_FLAGS']))\n"
+    "try:\n"
+    "    cfg = b.create()\n"
+    "    print('ok', cfg.get('db.password'), cfg.get('token'))\n"
+    "    print(cfg.explain('db.password'))\n"
+    "except cf.Error as e:\n"
+    "    print('err', e)\n"
+)
+
+
+@unittest.skipUnless(native.HAVE_CREDENTIALS, "library with credentials")
+class Credentials(unittest.TestCase):
+    """systemd's credentials. Run in a child process because the library
+    reads the variable through the C runtime, which an os.environ change in
+    this process does not always reach on Windows."""
+
+    def child(self, directory, flags=0):
+        env = dict(os.environ, CRED_SRC=sys.path[0], CRED_FLAGS=str(flags))
+        env.pop("CREDENTIALS_DIRECTORY", None)
+        if directory is not None:
+            env["CREDENTIALS_DIRECTORY"] = directory
+        out = subprocess.run([sys.executable, "-c", CRED_CHILD], env=env,
+                             capture_output=True, text=True, check=True)
+        return out.stdout.strip()
+
+    def test_a_directory_of_credentials_loads_and_says_where_from(self):
+        directory = os.path.join(WORK, "py_credentials")
+        os.makedirs(directory, exist_ok=True)
+        for name, text in (("db.password", "hunter2\n"), ("token", "abc")):
+            with open(os.path.join(directory, name), "w") as f:
+                f.write(text)
+        out = self.child(directory)
+        self.assertTrue(out.startswith("ok hunter2 abc"), out)
+        self.assertIn("systemd credential", out)
+
+    def test_unset_is_nothing_when_optional(self):
+        out = self.child(None, cf.OPTIONAL)
+        self.assertTrue(out.startswith("ok None None"), out)
+
+    def test_unset_names_the_variable(self):
+        out = self.child(None)
+        self.assertTrue(out.startswith("err "), out)
+        self.assertIn("CREDENTIALS_DIRECTORY", out)
+
+    def test_a_library_without_the_source(self):
+        with mock.patch("configforge._native.HAVE_CREDENTIALS", False):
+            with self.assertRaisesRegex(RuntimeError, "no credentials source"):
+                cf.Builder().credentials(None, rank.ENV)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

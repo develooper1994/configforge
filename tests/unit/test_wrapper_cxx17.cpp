@@ -103,9 +103,19 @@ inline const auto settings_fields = cf::fields(
     cf::field<&Settings::tls>("tls.enabled", false),
     cf::field<&Settings::workers>("server.workers", 4L, 1L, 64L));
 
+/* D-75: a field list of keys that can be constants is one, and the
+   compiler checks each key as the library would (CF_TEST_REFUSED below). */
+constexpr auto checked_fields = cf::fields(
+    cf::field<&Settings::server, &Server::port>("server.port", 8080, 1, 65535),
+    cf::field<&Settings::workers>("server.workers", 4L, 1L, 64L));
+
 static void test_fields() {
     static const cf_pair pairs[] = {{"server.port", "9443"}, {"tls.enabled", "true"}};
     static_assert(decltype(settings_fields)::size() == 4, "four fields");
+    static_assert(decltype(checked_fields)::size() == 2, "a constant list");
+    cf::Config constant = cf::Builder().define(checked_fields).create();
+    check(constant.get<int>("server.port", 0) == 8080,
+          "a constant field list is a contract too");
     cf::Config cfg = cf::Builder()
                          .memory("file", CF_RANK_USER_FILE, pairs, 2)
                          .define(settings_fields)
@@ -117,9 +127,9 @@ static void test_fields() {
 
     static const cf_pair bad[]   = {{"server.workers", "65"}};
     cf::Config           refused = cf::Builder()
-                                       .memory("file", CF_RANK_USER_FILE, bad, 1)
-                                       .define(settings_fields)
-                                       .create();
+                             .memory("file", CF_RANK_USER_FILE, bad, 1)
+                             .define(settings_fields)
+                             .create();
     check(!refused, "a field's range refuses");
 }
 
@@ -130,3 +140,10 @@ int main() {
     test_fields();
     return cf_test_done();
 }
+
+/* What must not compile (D-75): a constant field list with a key the
+   library would refuse. */
+#if defined(CF_TEST_REFUSED) && CF_TEST_REFUSED == 1
+constexpr auto refused_fields =
+    cf::fields(cf::field<&Settings::workers>("Server.Workers", 4L, 1L, 64L));
+#endif

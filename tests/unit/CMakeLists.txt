@@ -209,7 +209,8 @@ if(CF_WITH_CXX)
     configforge_apply_warnings(test_wrapper_watch)
   endif()
   configforge_apply_analysis(test_wrapper_watch)
-  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/watch_cxx)
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/watch_cxx
+       ${CMAKE_CURRENT_BINARY_DIR}/cf_wcreds) # test_wrapper_access's
   add_test(NAME unit.test_wrapper_watch COMMAND test_wrapper_watch)
   set_tests_properties(
     unit.test_wrapper_watch PROPERTIES WORKING_DIRECTORY
@@ -304,6 +305,79 @@ if(CF_WITH_CXX)
     configforge_apply_analysis(${t})
     add_test(NAME unit.${t} COMMAND ${t})
   endforeach()
+
+  # D-75: what the compiler checks of a key. test_wrapper_access compiled
+  # as C++11 and C++14 as well, since the check is written for each (a
+  # recursion, then a loop); and each case that must not compile, under
+  # every standard from C++11 the compiler has, refused by name.
+  include(ConfigForgeMustNotCompile)
+  set(cf_refused "1:not_a_canonical_key" "2:a_default_outside_its_own_range"
+                 "3:a_range_whose_low_end_is_above_its_high_end")
+  foreach(std 11 14 17 20)
+    if("cxx_std_${std}" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+      if(std LESS 17)
+        add_library(test_wrapper_access_cxx${std} OBJECT
+                    test_wrapper_access.cpp)
+        target_link_libraries(test_wrapper_access_cxx${std} PRIVATE configforge)
+        set_target_properties(
+          test_wrapper_access_cxx${std}
+          PROPERTIES CXX_STANDARD ${std}
+                     CXX_STANDARD_REQUIRED ON
+                     CXX_EXTENSIONS OFF)
+        if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+          target_compile_options(test_wrapper_access_cxx${std}
+                                 PRIVATE -pedantic -Werror -Wall -Wextra)
+        elseif(MSVC)
+          configforge_apply_warnings(test_wrapper_access_cxx${std})
+        endif()
+      endif()
+      foreach(entry ${cf_refused})
+        string(REPLACE ":" ";" parts "${entry}")
+        list(GET parts 0 n)
+        list(GET parts 1 why)
+        cf_must_not_compile(
+          unit.refused.key${n}.cxx${std}
+          SOURCE
+          test_wrapper_access.cpp
+          LANG
+          CXX
+          STD
+          ${std}
+          DEFINE
+          CF_TEST_REFUSED=${n}
+          EXPECT
+          ${why})
+      endforeach()
+    endif()
+  endforeach()
+  if(TARGET test_wrapper_cxx17)
+    cf_must_not_compile(
+      unit.refused.fields.cxx17
+      SOURCE
+      test_wrapper_cxx17.cpp
+      LANG
+      CXX
+      STD
+      17
+      DEFINE
+      CF_TEST_REFUSED=1
+      EXPECT
+      not_a_canonical_key)
+  endif()
+  if(TARGET test_wrapper_cxx20)
+    cf_must_not_compile(
+      unit.refused.constinit.cxx20
+      SOURCE
+      test_wrapper_cxx20.cpp
+      LANG
+      CXX
+      STD
+      20
+      DEFINE
+      CF_TEST_REFUSED=1
+      EXPECT
+      a_default_outside_its_own_range)
+  endif()
 endif()
 
 # A non-ASCII argument, round-tripped. On Windows this is the only test

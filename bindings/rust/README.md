@@ -53,5 +53,9 @@ an empty slice is an empty default. Range, allowed values and policy
 remain element constraints. A runtime without the `lists` capability
 is refused, not treated as a scalar-only implementation.
 
+systemd's credentials, the directory `$CREDENTIALS_DIRECTORY` names, are a
+source of their own: `Builder::new().credentials(None, rank::ENV, None,
+OPTIONAL)`; `explain` says "systemd credential <id> (<file>)".
+
 See the repository's `docs/Guide.md`, section 13, for typed settings,
 editing, reloads and the examples shared with the C interface.

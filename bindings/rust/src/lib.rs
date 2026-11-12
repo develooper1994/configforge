@@ -502,6 +502,24 @@ impl Builder {
         self
     }
 
+    /// systemd's credentials: the directory `$CREDENTIALS_DIRECTORY` names,
+    /// one file a key, read as a directory of secrets is. Every value's
+    /// place in [`Config::explain`] is "systemd credential <id> (<file>)".
+    /// With the variable unset, [`Builder::create`] fails naming it, and
+    /// with [`OPTIONAL`] the source contributes nothing. `name` of `None` is
+    /// "credentials".
+    pub fn credentials(
+        mut self,
+        name: Option<&str>,
+        rank: i32,
+        prefix: Option<&str>,
+        flags: u32,
+    ) -> Builder {
+        let (n, x) = (self.keep.opt(name), self.keep.opt(prefix));
+        unsafe { sys::cf_builder_credentials(self.b, n, rank, x, flags) };
+        self
+    }
+
     /// Pairs from the program itself.
     pub fn memory(mut self, name: &str, rank: i32, pairs: &[(&str, &str)]) -> Builder {
         let n = self.keep.s(name);
@@ -1089,5 +1107,76 @@ mod response_file_tests {
             .response_files()
             .create()
             .is_ok());
+    }
+}
+
+/// The library reads `$CREDENTIALS_DIRECTORY` through the C runtime, so the
+/// test runs this binary again with the variable set (or not) for the
+/// child, as the response-file test does, and `set_var` stays out of it.
+#[cfg(test)]
+mod credentials_tests {
+    use super::{rank, Builder, OPTIONAL};
+    use std::process::Command;
+
+    #[test]
+    fn credentials_child() {
+        if std::env::var("CRED_CHILD").is_err() {
+            return;
+        }
+        let flags = if std::env::var("CRED_OPTIONAL").as_deref() == Ok("1") {
+            OPTIONAL
+        } else {
+            0
+        };
+        match Builder::new()
+            .credentials(None, rank::ENV, None, flags)
+            .create()
+        {
+            Ok(c) => println!(
+                "CRED:ok {:?} {:?} {}",
+                c.text("db.password"),
+                c.text("token"),
+                c.explain("db.password").replace('\n', " ")
+            ),
+            Err(e) => println!("CRED:err {}", e.message),
+        }
+    }
+
+    fn ask(directory: Option<&str>, optional: bool) -> String {
+        let mut cmd = Command::new(std::env::current_exe().unwrap());
+        cmd.args(["credentials_child", "--nocapture"])
+            .env("CRED_CHILD", "1")
+            .env("CRED_OPTIONAL", if optional { "1" } else { "0" })
+            .env_remove("CREDENTIALS_DIRECTORY");
+        if let Some(d) = directory {
+            cmd.env("CREDENTIALS_DIRECTORY", d);
+        }
+        let out = cmd.output().unwrap();
+        String::from_utf8_lossy(&out.stdout)
+            .lines()
+            .find_map(|l| l.strip_prefix("CRED:").map(str::to_string))
+            .unwrap_or_else(|| "child said nothing".to_string())
+    }
+
+    #[test]
+    fn a_directory_of_credentials_loads_and_says_where_from() {
+        let dir = std::env::temp_dir().join(format!("cf_credentials_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("db.password"), "hunter2\n").unwrap();
+        std::fs::write(dir.join("token"), "abc").unwrap();
+        let said = ask(Some(dir.to_str().unwrap()), false);
+        assert!(said.starts_with("ok Some(\"hunter2\") Some(\"abc\")"), "{said}");
+        assert!(said.contains("systemd credential"), "{said}");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn unset_is_nothing_when_optional_and_names_the_variable_otherwise() {
+        assert!(ask(None, true).starts_with("ok None None"));
+        let refused = ask(None, false);
+        assert!(
+            refused.starts_with("err ") && refused.contains("CREDENTIALS_DIRECTORY"),
+            "{refused}"
+        );
     }
 }

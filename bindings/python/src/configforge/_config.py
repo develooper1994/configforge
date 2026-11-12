@@ -213,6 +213,23 @@ class Builder:
                                  self._keep.s(prefix), flags)
         return self
 
+    def credentials(self, name: Optional[str], rank: int, prefix: Optional[str] = None,
+                    flags: int = 0) -> "Builder":
+        """systemd's credentials: the directory ``$CREDENTIALS_DIRECTORY``
+        names, one file a key, read as :meth:`secrets` reads one. Every
+        value's place in :meth:`Config.explain` is ``systemd credential
+        <id> (<file>)``. Unset, it is an error that names the variable from
+        :meth:`create`, and nothing with ``OPTIONAL``. ``name`` None is
+        ``credentials``."""
+        if not n.HAVE_CREDENTIALS:
+            raise RuntimeError(
+                "configforge: the loaded library has no credentials source (1.4.1); "
+                "rebuild the library from sources containing this API"
+            )
+        n.lib.cf_builder_credentials(self._live(), self._keep.s(name), rank,
+                                     self._keep.s(prefix), flags)
+        return self
+
     def memory(self, name: str, rank: int, values: Mapping[str, Any]) -> "Builder":
         """Values given by the program, as text the contract types."""
         arr, count = self._keep.pairs(values)

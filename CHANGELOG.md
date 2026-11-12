@@ -92,7 +92,26 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   reads one, and every value says "systemd credential <id> (<file>)" in
   `explain()` and in a report, so it is told from a plain secret file.
   Outside systemd `CF_OPTIONAL` reads nothing; without it the error
-  names the variable (D-80). In C; the bindings do not offer it yet.
+  names the variable (D-80). C++ has it as `Builder::credentials()`,
+  Rust as `Builder::credentials`, Python as `Builder.credentials`; a
+  Python binding on an older library refuses the call by name.
+- **Keys checked at compile time in C++** (D-75): from C++11 a
+  `constexpr` `cf::Key` with a name the library would refuse, a range
+  upside down or a default outside its range does not compile, and the
+  error names which. C++17 adds constant field lists and C++20
+  `constinit`; C++98 is as it was. `cf::key_is_valid` is the library's
+  rule in every standard, and the check at `create` stays in all of
+  them. Tests that must not compile are a kind of test now
+  (`cmake/ConfigForgeMustNotCompile.cmake`).
+- **Doctor is held to the marker too**: `doctor.marker` puts a marker
+  secret into every state one configuration can hold - accepted,
+  refused five ways, shadowed, under an old name, in a list, a number -
+  and runs every Doctor command in every format on the reports. None
+  prints the marker, its first six characters or its digits; with the
+  redaction switched off, `dump` is the first to fail it.
+- `docs/Plan.md` and `docs/plan/`: the work left, a card a unit, each
+  with its design decided, its test and what done is - written so that
+  a small model can carry a card out without designing anything.
 - `docs/Agents.md`: how the work is divided between an organising
   session and the subagents it briefs, and how a session stops without
   losing it.

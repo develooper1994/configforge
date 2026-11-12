@@ -58,7 +58,7 @@ beside what is not.
 | ⬜ | 2.0: what the sizing modes break, once | plan item 10 |
 | 🟩 | Sizes and work predicted, then checked: the file buffer and the key space kept, three more measured and left | D-76, plan of the evening |
 | 🟩 | A UTF-8 byte order mark read past by every text reader (`cf_blob_skip_bom`) | 1.4.1 |
-| 🟨 | Checks at compile time where they can be, at run time always: Rust's `const` keys done | D-75, plan of the evening |
+| 🟨 | Checks at compile time where they can be, at run time always: Rust's `const` keys and C++'s `constexpr` Keys done; C11 and `doctor gen` left | D-75, `docs/plan/` |
 | 🟩 | GitHub used for all it offers that fits | plan of the evening |
 | 🟩 | A security pass: secrets in reasons, renames and Doctor's diff; bounds on references and YAML aliases; directories read whole or refused | 1.4.1 |
 
@@ -117,11 +117,13 @@ short keeps its branch, unmerged, and says so here.
    ClusterFuzzLite; Rust's `const` keys (D-75).
 2. 🟩 **Wave 2**: A, D-73 and `cf_builder_document`; C, D-76's rest,
    each prediction measured and kept only where it pays. **1.4.0** (ready; its tag is left).
-3. 🟨 **Wave 3**: B, D-75 in C++, C11 and `doctor gen` - not begun; F,
+3. 🟨 **Wave 3**: B, D-75: C++ is done (a `constexpr` Key's name, range
+   and default are checked by the compiler from C++11), C11's
+   `_Static_assert` in the define macros and the code `doctor gen`
+   writes are left; F,
    the native sources: systemd's credentials (`$CREDENTIALS_DIRECTORY`)
    are done, `cf_builder_credentials` (D-80), tested on Linux and
-   Windows, in C only - the C++ wrapper and the Rust and Python bindings
-   do not offer it yet; the user defaults (`CFPreferences`) on macOS are
+   Windows, in C, C++, Rust and Python; the user defaults (`CFPreferences`) on macOS are
    left, to be tested on its own system in CI - Windows has its registry
    source already.
 4. ⬜ **Wave 4**: a TLV codec driven by a layout (tag and length widths,
@@ -574,10 +576,11 @@ whose size changes while it is read is still read whole.
   `cf_live` and store edits; both refusal leaks of the pass fail it
   when put back. What it taught: the marker must sit inside the
   reference (`${MARK`), not before it, or the wording that leaks is
-  never reached. Left: the same marker through each of Doctor's
-  commands and formats, from reports the scenarios write; and an
-  undefined key that holds a secret (a mistyped name), which nothing
-  can know is one - decide what a report shows for it.
+  never reached. Doctor is held to it by `doctor.marker`: every
+  command in every format over a pair of full reports that hold the
+  marker in each state. Left: an undefined key that holds a secret (a
+  mistyped name), which nothing can know is one - decide what a report
+  shows for it (`docs/plan/`, the hardening cards).
 * ⬜ **A per-decode output budget**, in bytes and keys, enforced in the
   flattener so that every codec inherits one bound instead of each
   reader keeping its own. Done when a hostile document of each format

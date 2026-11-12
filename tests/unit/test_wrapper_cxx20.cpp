@@ -23,6 +23,11 @@ static_assert(cf::readable<int> && cf::readable<std::string_view> &&
 static_assert(!cf::readable<std::vector<int>> && !cf::readable<const char*>);
 static_assert(std::ranges::view<cf::Items> && std::ranges::input_range<cf::Items>);
 
+/* D-75: constinit asks for what constexpr does - a key checked by the
+   compiler - and leaves the object one the program may assign. */
+constinit cf::Key<int> kWorkers("server.workers", 4, 1, 64);
+static_assert(cf::key_is_valid("server.workers"));
+
 static cf::Config make() {
     static const cf_pair pairs[] = {{"server.port", "9443"},
                                     {"server.host", "web1"},
@@ -49,6 +54,8 @@ int main() {
                  std::views::take(1);
     check(std::ranges::distance(names) == 1, "and under two");
 
+    check(cfg[kWorkers] == 8, "a constinit key reads as any other");
+
     check(std::format("port {}", cfg["server"]["port"]) == "port 9443",
           "format an int");
     check(std::format("[{:>6}]", cfg["server.host"]) == "[  web1]",
@@ -72,3 +79,9 @@ int main() {
 #endif
     return cf_test_done();
 }
+
+/* What must not compile (D-75): constinit with a default outside its own
+   range. */
+#if defined(CF_TEST_REFUSED) && CF_TEST_REFUSED == 1
+constinit cf::Key<int> kRefused("server.workers", 65, 1, 64);
+#endif

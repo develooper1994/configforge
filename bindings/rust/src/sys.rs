@@ -268,6 +268,13 @@ extern "C" {
         prefix: *const c_char,
         flags: u32,
     ) -> cf_bool;
+    pub fn cf_builder_credentials(
+        b: *mut cf_builder,
+        name: *const c_char,
+        rank: c_int,
+        prefix: *const c_char,
+        flags: u32,
+    ) -> cf_bool;
     pub fn cf_builder_memory(
         b: *mut cf_builder,
         name: *const c_char,

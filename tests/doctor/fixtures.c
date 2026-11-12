@@ -134,6 +134,124 @@ static int emit_secret(const char* out, char* const* env, const char* salt,
     return spill(out, buf) ? 0 : 1;
 }
 
+/* The marker gate's report (marker.cmake; test_marker.c is the library's
+   half): one configuration holding a secret in as many states as it can at
+   once, each its own sensitive key, a full report so that every value is
+   in the file and Doctor alone keeps it out of what it prints. The text
+   is the marker mk, the number the digits num. The environment is the
+   winner and a memory source loses, both bearing the marker. */
+static int emit_marker(const char* out, const char* mk, const char* num) {
+    static const char* const permitted[] = {"alpha", "beta", NULL};
+    static char              ev[8][160];
+    static char*             env[9];
+    static char              lose_v[96];
+    static char              l0[96];
+    static char              l1[96];
+    cf_pair                  lose[2];
+    cf_pair                  list[4];
+    cf_error                 err = CF_ERROR_INIT;
+    cf_builder*              b   = cf_build(NULL);
+    cf_config*               c;
+    cf_report_info           info = CF_REPORT_INFO_INIT;
+    static char              buf[65536];
+    cf_def                   d;
+    int                      i;
+
+    sprintf(ev[0], "MYAPP_MK__OK=%s", mk);
+    sprintf(ev[1], "MYAPP_MK__REF=${%s", mk);
+    sprintf(ev[2], "MYAPP_MK__ALLOWED=%s", mk);
+    sprintf(ev[3], "MYAPP_MK__MAXLEN=%s", mk);
+    sprintf(ev[4], "MYAPP_MK__LOSE=%s-win", mk);
+    sprintf(ev[5], "MYAPP_DB__PASS=%s", mk);
+    sprintf(ev[6], "MYAPP_MK__NUM=%s", num);
+    sprintf(ev[7], "MYAPP_MK__BIG=%s", num);
+    for (i = 0; i < 8; ++i) {
+        env[i] = ev[i];
+    }
+    env[8] = NULL;
+    sprintf(lose_v, "%s-lose", mk);
+    sprintf(l0, "%s-0", mk);
+    sprintf(l1, "%s-1", mk);
+    lose[0].key   = "mk.lose";
+    lose[0].value = lose_v;
+    lose[1].key   = NULL;
+    lose[1].value = NULL;
+    list[0].key   = "mk.list.count";
+    list[0].value = "2";
+    list[1].key   = "mk.list.0";
+    list[1].value = l0;
+    list[2].key   = "mk.list.1";
+    list[2].value = l1;
+    list[3].key   = NULL;
+    list[3].value = NULL;
+
+    cf_builder_env(b, "env", CF_RANK_ENV, "MYAPP_", env);
+    cf_builder_memory(b, "mem", CF_RANK_USER_FILE, lose, 1);
+    cf_builder_memory(b, "list", CF_RANK_USER_FILE, list, 3);
+
+    cf_def_init(&d, CF_TYPE_TEXT, "mk.ok");
+    d.flags = CF_SENSITIVE;
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_TEXT, "mk.ref");
+    d.flags      = CF_SENSITIVE;
+    d.on_invalid = CF_INVALID_FALLBACK;
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_TEXT, "mk.allowed");
+    d.flags       = CF_SENSITIVE;
+    d.allowed     = permitted;
+    d.on_invalid  = CF_INVALID_FALLBACK;
+    d.has_default = CF_TRUE;
+    cf_value_text(&d.default_value, "alpha", 5);
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_TEXT, "mk.maxlen");
+    d.flags       = CF_SENSITIVE;
+    d.max_len     = 4;
+    d.on_invalid  = CF_INVALID_FALLBACK;
+    d.has_default = CF_TRUE;
+    cf_value_text(&d.default_value, "ok", 2);
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_TEXT, "mk.lose");
+    d.flags = CF_SENSITIVE;
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_TEXT, "db.password");
+    d.flags = CF_SENSITIVE;
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_TEXT, "db.pass");
+    d.flags       = CF_DEPRECATED;
+    d.replaced_by = "db.password";
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_TEXT, "mk.list");
+    d.flags          = CF_SENSITIVE;
+    d.list_mode      = CF_LIST_REPLACE;
+    d.list_separator = ',';
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_INT, "mk.num");
+    d.flags = CF_SENSITIVE;
+    cf_builder_define(b, &d);
+    cf_def_init(&d, CF_TYPE_INT, "mk.big");
+    d.flags       = CF_SENSITIVE;
+    d.has_range   = CF_TRUE;
+    d.imin        = 0;
+    d.imax        = 9;
+    d.on_invalid  = CF_INVALID_FALLBACK;
+    d.has_default = CF_TRUE;
+    cf_value_int(&d.default_value, 1);
+    cf_builder_define(b, &d);
+
+    c = cf_builder_create(b, &err);
+    if (c == NULL) {
+        fprintf(stderr, "fixtures: %s: %s\n", out, err.message);
+        return 1;
+    }
+    info.mode        = CF_REPORT_FULL;
+    info.profile     = "production";
+    info.application = "myapp";
+    info.generated   = "2026-09-12T00:00:00Z";
+    cf_report(c, &info, buf, sizeof buf);
+    cf_config_free(c);
+    return spill(out, buf) ? 0 : 1;
+}
+
 /* A full report of this library with six sensitive keys, each refused for
    a different kind (cf_refusal), the value a marker none of the output
    may carry: not an integer, outside its range, not among the permitted
@@ -519,6 +637,11 @@ int main(void) {
                         "MARKER-ECHO-7731")) {
             return 1;
         }
+    }
+
+    if (emit_marker("cf_fx_marker_a.json", "MRKA7731XQ", "77317731") ||
+        emit_marker("cf_fx_marker_b.json", "MRKB7731XQ", "77327732")) {
+        return 1;
     }
 
     if (emit_kinds("cf_fx_kinds.json")) {

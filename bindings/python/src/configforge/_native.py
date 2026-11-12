@@ -247,7 +247,9 @@ _declare("cf_fingerprint", c_uint64, C, optional=True)
 _declare("cf_builder_key", c_int, B, c_char_p, c_int, c_char_p, c_char_p, c_char_p,
          c_uint, optional=True)
 _declare("cf_builder_response_files", c_int, B, optional=True)
+_declare("cf_builder_credentials", c_int, B, c_char_p, c_int, c_char_p, c_uint, optional=True)
 HAVE_RESPONSE_FILES = hasattr(lib, "cf_builder_response_files")
+HAVE_CREDENTIALS = hasattr(lib, "cf_builder_credentials")
 HAVE_REAL = hasattr(lib, "cf_try_real") and lib.cf_has_feature(b"real") != 0
 HAVE_LIST = lib.cf_has_feature(b"lists") != 0
 HAVE_FINGERPRINT = hasattr(lib, "cf_fingerprint")

@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
+#include <stdlib.h> /* setenv, unsetenv, _putenv_s */
 #include <string>
 
 #include "cf_kv_codec.h"
@@ -20,15 +21,55 @@ static const cf::Key<std::string> kHost("server.host", "0.0.0.0");
 static const cf::Key<bool>        kTls("tls.enabled", false);
 static const cf::Key<long>        kWorkers("server.workers", 4L, 1L, 64L);
 
+#if CF_CPP11
+/* D-75: from C++11 a Key can be a constant, and as one it is checked by
+   the compiler with the library's rule - a name the library would refuse,
+   a range upside down or a default outside its own range does not compile
+   (the CF_TEST_REFUSED cases at the end, which tests/unit/CMakeLists.txt
+   builds expecting each to fail by name). */
+constexpr cf::Key<int> kLimit("server.limit", 100, 1, 1000);
+static_assert(kLimit.fallback() == 100, "a Key read at compile time");
+static_assert(kLimit.lo() == 1 && kLimit.hi() == 1000, "its range too");
+static_assert(cf::key_is_valid("server.port"), "the library's rule, at compile time");
+static_assert(!cf::key_is_valid("Server.Port"), "refusing what the library does");
+#endif
+
+/* The wrapper's rule is the library's (cf_key_valid), in every standard:
+   what refuses at compile time is what the library refuses at run time. */
+static void test_key_rule() {
+    static const char* const keys[] = {"server.port", "a",    "a-b_c.d9", "",    ".a",
+                                       "a.",          "a..b", "A.b",      "a b", "a/b"};
+    static char              longest[CF_KEY_MAX + 1];
+    for (size_t i = 0; i < sizeof keys / sizeof keys[0]; ++i) {
+        bool lib = cf_key_valid(keys[i], std::strlen(keys[i])) != CF_FALSE;
+        check(cf::key_is_valid(keys[i]) == lib, keys[i]);
+    }
+    std::memset(longest, 'k', CF_KEY_MAX - 1);
+    check(cf::key_is_valid(longest), "the longest key the build allows is a key");
+    longest[CF_KEY_MAX - 1] = 'k';
+    check(!cf::key_is_valid(longest), "and one byte more is not");
+    check(!cf::key_is_valid(0), "nor is no key at all");
+
+    /* Made at run time, a Key the compiler cannot check is the library's
+       to refuse, at create, as it always was. */
+    const char*      name = keys[7];
+    cf::Key<int>     bad(name, 8080);
+    const cf::Config c = cf::Builder().define(bad).create();
+    check(!c && c.error().code() == CF_E_DEFINITION, "the run-time check remains");
+    cf::Key<int>     outside("server.port", 0, 1, 65535);
+    const cf::Config d = cf::Builder().define(outside).create();
+    check(!d && d.error().code() == CF_E_DEFINITION, "for a range as for a name");
+}
+
 static void test_keys() {
     static const cf_pair pairs[] = {{"server.port", "9443"}, {"tls.enabled", "true"}};
     cf::Config           cfg     = cf::Builder()
-                                       .memory("file", CF_RANK_USER_FILE, pairs, 2)
-                                       .define(kPort)
-                                       .define(kHost)
-                                       .define(kTls)
-                                       .define(kWorkers)
-                                       .create();
+                         .memory("file", CF_RANK_USER_FILE, pairs, 2)
+                         .define(kPort)
+                         .define(kHost)
+                         .define(kTls)
+                         .define(kWorkers)
+                         .create();
     check(cfg.valid(), "a contract made of keys builds");
     check(cfg[kPort] == 9443, "a set key reads as its type");
     check(cfg[kHost] == "0.0.0.0", "an unset key reads as its default");
@@ -278,7 +319,59 @@ static void test_codecs() {
     std::remove("cf_wrapper.kv");
 }
 
+#if CF_WITH_DIR
+/* NULL unsets it. Windows' _putenv_s removes a variable set to "". */
+static void creds_set(const char* value) {
+#if defined(_WIN32)
+    _putenv_s("CREDENTIALS_DIRECTORY", (value != 0) ? value : "");
+#else
+    if (value == 0) {
+        unsetenv("CREDENTIALS_DIRECTORY");
+    } else {
+        setenv("CREDENTIALS_DIRECTORY", value, 1);
+    }
+#endif
+}
+#endif /* CF_WITH_DIR */
+
+#define CF_T_TEXT2(x) #x
+#define CF_T_TEXT(x) CF_T_TEXT2(x)
+
+/* A directory of secrets and systemd's credentials, which are read the
+   same way (D-80). The builds of this test for each standard run side by
+   side in one directory, so each has a file, and a key, of its own, and
+   none removes it: another may be reading the directory. */
+static void test_directories() {
+#if CF_WITH_DIR
+    const std::string key  = "db.password-" CF_T_TEXT(CF_CXX_LEVEL);
+    const std::string path = "cf_wcreds/" + key;
+    check(spill(path.c_str(), "s3cret\n"), "a credential");
+
+    cf::Config secrets = cf::Builder().secrets("s", CF_RANK_ENV, "cf_wcreds").create();
+    const bool from_secrets = secrets.text(key.c_str()) == "s3cret";
+    check(from_secrets, "secrets() reads a directory of them");
+
+    creds_set("cf_wcreds");
+    cf::Config        creds    = cf::Builder().credentials(0, CF_RANK_ENV).create();
+    const bool        from_dir = creds.text(key.c_str()) == "s3cret";
+    const std::string why      = creds.explain(key.c_str());
+    check(from_dir, "credentials() reads the one $CREDENTIALS_DIRECTORY names");
+    check(why.find("systemd credential " + key) != std::string::npos,
+          "and explain() says so");
+
+    creds_set(0);
+    cf::Config optional =
+        cf::Builder().credentials("c", CF_RANK_ENV, 0, CF_OPTIONAL).create();
+    check(optional.valid(), "not run with credentials, and optional: it builds");
+    cf::Config  refused = cf::Builder().credentials("c", CF_RANK_ENV).create();
+    const char* named = std::strstr(refused.error().message(), "CREDENTIALS_DIRECTORY");
+    check(!refused && named != 0, "not optional: an error that names the variable");
+#endif
+}
+
 int main() {
+    test_key_rule();
+    test_directories();
     test_keys();
     test_one_define();
     test_settings();
@@ -289,3 +382,15 @@ int main() {
     test_codecs();
     return cf_test_done();
 }
+
+/* What must not compile (D-75), one case a build; each is expected to
+   stop the compiler with the name of what is wrong in it. */
+#if defined(CF_TEST_REFUSED)
+#if CF_TEST_REFUSED == 1
+constexpr cf::Key<int> kRefused("Server.Port", 8080);
+#elif CF_TEST_REFUSED == 2
+constexpr cf::Key<int> kRefused("server.port", 0, 1, 65535);
+#elif CF_TEST_REFUSED == 3
+constexpr cf::Key<int> kRefused("server.port", 5, 9, 1);
+#endif
+#endif

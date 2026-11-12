@@ -1051,6 +1051,22 @@ cf::Config cfg = cf::Builder("myapp", argc, argv).define(port).create();
 int p = cfg[port];
 ```
 
+From C++11 a Key of a number or a bool can be a constant, and then the
+compiler checks it by the library's rule (D-75): a name the library
+would refuse, a range upside down or a default outside its range does
+not compile, and the error names which. C++20's `constinit` asks the
+same; `cf::key_is_valid` is the rule itself, in every standard:
+
+```cpp
+constexpr cf::Key<int> port("Server.Port", 8080, 1, 65535);
+// error: call to non-'constexpr' function '... configforge::detail::
+//        not_a_canonical_key_dotted_lowercase_ascii(const char*)'
+static_assert(cf::key_is_valid("server.port"), "a canonical key");
+```
+
+A Key that is not a constant, a `Setting` and a `Binding` are checked
+at `create`, as every key is in every standard.
+
 A key by name, a part at a time, typed where it is converted; a
 defined key has its default, so there is no fallback to pass, and
 `exists()` tells a missing key from a zero:
@@ -1156,6 +1172,8 @@ live.poll()?;                          // in the loop that drives reloads
 `Live`; a build that panics is a failed build, not an unwound C frame.
 Seven of the examples are in `examples/rust`, the C programs saying the
 same lines; `-DCF_RUST=ON` has the suite run them and `cargo test`.
+systemd's credentials are `Builder::credentials(None, rank::ENV, None,
+OPTIONAL)`: the directory `$CREDENTIALS_DIRECTORY` names, as above.
 
 `cmake -DWORK=<new-directory> -P scripts/release/package_rust.cmake` makes a
 standalone crate containing the native C sources and those examples,
@@ -1200,6 +1218,11 @@ default's, or the one named with `type=`, and the library checks the
 rest, through `cf_builder_key`: a default of another type is refused at
 `create`. `define_int`, `define_text`, `define_bool` and `define_real`
 stay and mean the same.
+
+systemd's credentials are `Builder.credentials(None, cf.rank.ENV,
+flags=cf.OPTIONAL)`: the directory `$CREDENTIALS_DIRECTORY` names, one
+file a key (section 9). A library older than this source refuses the
+call by name, as `response_files` does.
 
 A refusal raises `cf.Error` with the key, the source and the message;
 `cf.Live` reloads, and a build that raises is reported with its own
