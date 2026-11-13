@@ -51,7 +51,7 @@ beside what is not.
 | 🟩 | INI compared with `configparser` (36 of 36; `.properties` needs a JVM, left to its tests) | plan item 9 |
 | 🟨 | Native OS sources: systemd's credentials done (D-80); macOS's user defaults left | plan item 9 |
 | ⬜ | Go and .NET bindings, when asked | plan item 9 |
-| 🟨 | Binary configuration: a layout-driven TLV codec, BER-TLV, CBOR: CBOR is read, written and held to RFC 8949's vectors (D-91) | `docs/plan/W4-binary-formats.md` |
+| 🟨 | Binary configuration: a layout-driven TLV codec, BER-TLV, CBOR: CBOR done (D-91) - read, written, held to RFC 8949's vectors, chosen from content and fuzzed | `docs/plan/W4-binary-formats.md` |
 | ⬜ | Every operation on a file's data, written back in its format | assessment |
 | ⬜ | Converting between formats | assessment |
 | ⬜ | Code for each binding from a contract | assessment |
@@ -126,10 +126,11 @@ short keeps its branch, unmerged, and says so here.
    Windows, in C, C++, Rust and Python; the user defaults (`CFPreferences`) on macOS are
    left, to be tested on its own system in CI - Windows has its registry
    source already.
-4. ⬜ **Wave 4**: a TLV codec driven by a layout (tag and length widths,
+4. 🟨 **Wave 4**: a TLV codec driven by a layout (tag and length widths,
    byte order, BER-TLV's classes and long lengths, an end tag, nesting),
    with a key and type per tag and every value placed by its offset; and
-   CBOR (RFC 8949, held to its appendix's vectors). **1.5.0.**
+   CBOR (RFC 8949, held to its appendix's vectors): CBOR done (D-91).
+   **1.5.0.**
 5. ⬜ **Wave 5**: converting between formats (`doctor convert`, through
    `cf_emit`, naming what the target cannot hold); code for each binding
    from a contract (`doctor gen --lang c|cpp|rust|python`).

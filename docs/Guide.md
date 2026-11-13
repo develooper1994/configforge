@@ -489,6 +489,7 @@ is worse than a program that refuses to start.
 | YAML | `CF_WITH_YAML` | YAML 1.2, all of yaml-test-suite, through the built-in parser (D-69); libfyaml 0.9.1+ or libyaml by `CF_YAML_BACKEND` (D-62); typed by the contract (D-39) |
 | XML | `CF_WITH_XML`, off by default | through expat, read only; typed by the contract, mapped as D-23 declares |
 | Java `.properties` | `CF_WITH_PROPERTIES` | read only; as java.util.Properties reads it, UTF-8; typed by the contract |
+| CBOR | `CF_WITH_CBOR` | RFC 8949: maps, arrays, numbers, text, booleans and null, typed by the file; each value placed by its byte; byte strings and most tags refused by name (D-91) |
 
 The format is the one you name, else the extension's, else - for a name
 that gives none - the one the content reads as, decided by reading it and
@@ -498,8 +499,8 @@ content looks like yaml; a file with no extension is read as whichever
 format reads it, or refused when none does or two loose ones read it
 differently. `cf_source_file_format` says which was taken and how. A file
 in a format the build left out is an error that names the option
-to turn on - never a file quietly read as nothing. INI, JSON, TOML and
-YAML can also be written (section 10).
+to turn on - never a file quietly read as nothing. INI, JSON, TOML, YAML
+and CBOR can also be written (section 10).
 
 A format of your own is a `cf_codec` (`tests/unit/cf_kv_codec.h` is a
 complete one, reading and writing). Hand it to one file with

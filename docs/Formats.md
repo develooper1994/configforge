@@ -12,6 +12,7 @@ by `verify -DEXTRA=conformance` against floors that only rise.
 | TOML | TOML 1.1.0, which takes in 1.0.0 | built in | yes | toml-test 1.1.0: 218/218, 502/502, 218/218 values | dates and times, inf and nan are their text, typed by the contract (D-62) |
 | YAML | YAML 1.2.2 | built in (D-69); libfyaml 0.9.1+ or libyaml by choice | yes, block style | yaml-test-suite: 308/308 events, 122/122, 94/94, 110/110 values | several documents, a top level that is not a mapping, a key that is not a scalar, an empty key, an application's tag - each refused by name (D-39, D-63); YAML 1.1's booleans (yes/no) are text |
 | INI | none: PHP's `parse_ini_file` for arrays (D-60) | built in | yes | the unit tests, and Python's `configparser`: 36/36 documents read the same, 12 more differing by design (below) | interpolation, multi-line values, escapes; a value with a line break is not written, by name |
+| CBOR | RFC 8949 | built in (`CF_WITH_CBOR`, D-91) | yes: indefinite-length maps and arrays, numbers in preferred serialization | RFC 8949 Appendix A: 68/68 read and the rest refused by name; Appendix F.1: 94/94 refused; 55/55 values | byte strings, tags other than 0, 1, 32 and 55799, undefined and the other simple values, a key that is not text, an integer past 64 bits - each refused by name; Infinity and NaN are their text |
 | Java `.properties` | what `java.util.Properties.load` reads, as UTF-8 | built in | no | the unit tests | writing (no quoting, so text would read back as a number) |
 | XML | XML 1.0, through expat | `CF_WITH_XML` | no | the unit tests | DOCTYPE and entities, namespaces, mixed content, an attribute and a child of one name - refused by name (D-23) |
 | `.env` | none: the common dotenv convention | built in | no | the unit tests | variable expansion: `${...}` is the library's own references (D-10) |
@@ -71,12 +72,17 @@ Strategies in turn, the first that answers deciding; each says why
    refused as before, and the error adds the format the content looks
    like: `(the content looks like yaml)` for a renamed file.
 3. The content, when the name gives no format - no extension, or one no
-   format claims. The first bytes only order the candidates (`{` or `[`
-   JSON first, `<` XML, a `[section]` or `key =` line TOML and INI, a
-   `key:` line YAML); reading decides. Each codec reads the bytes into a
+   format claims. The first bytes only order the candidates (a CBOR map's
+   first byte or the self-describe tag CBOR first, `{` or `[` JSON first,
+   `<` XML, a `[section]` or `key =` line TOML and INI, a `key:` line
+   YAML); reading decides. A CBOR map begins with a byte from `A0` to `BB`
+   or `BF`, a UTF-8 continuation byte, or with the tag `D9 D9 F7`, and no
+   UTF-8 text begins so: the look cannot send a text document to CBOR, and
+   a binary file that is not CBOR is still refused, since the reading
+   decides. Each codec reads the bytes into a
    sink that keeps a hash of the events, and one that accepts them and
    yields at least one keyed value is a candidate. A strict format - the
-   builder's own, JSON, JSON5, TOML, XML - is taken at once. A loose one -
+   builder's own, CBOR, JSON, JSON5, TOML, XML - is taken at once. A loose one -
    YAML, INI - is taken only when no other loose format reads the bytes
    into different events; otherwise the file is refused as ambiguous,
    naming both. `.properties` is never chosen from content.

@@ -3433,6 +3433,17 @@ a reader's text is the text as written. Rejected: an escaped copy made by
 a bound on it would be a new refusal); an encoder that always escapes (a
 conversion would then double what the source wrote once).
 
+**From content.** A document with no name to give its format - fetched
+from a server, held in an environment variable, a drop-in file with no
+extension - is read as CBOR when its bytes are (D-73). The top is a map,
+so the first byte is a map's head, `A0` to `BB` or `BF`, or the
+self-describe tag `D9 D9 F7`. `A0` to `BF` are UTF-8 continuation bytes,
+which begin no character, and `D9` is never followed by `D9` in UTF-8, so
+no text that a text format here reads begins so: the first look sends
+these bytes to CBOR first and sends no text there. The reading decides,
+not the look, so a binary file that is not CBOR is still refused; and CBOR
+is strict, taken at once when it reads.
+
 **Compatibility.** Additive: an option on by default, and three public
 functions that serve it and the readers after it - `cf_text_is_utf8`
 (RFC 3629) and, under `CF_WITH_REAL`, `cf_f64_bits`, `cf_f64_from_bits`,
@@ -3450,6 +3461,10 @@ items, all refused; and 55 of 55 read to the values the vectors state.
 The repository follows RFC 7049's Appendix A, which lists `simple(24)`,
 `f8 18`; RFC 8949 calls it malformed (F.1, and Appendix G.1 says why the
 example was removed), so the run scores it among the malformed items.
+Detection from content scores 4 of the 68 (`detect-cbor`): the others
+are lone values, which are no configuration, as most of JSON's suite is. The reader is fuzzed with the others - `test_fuzz` from a corpus
+that holds each kind of item it takes, and the libFuzzer harness
+`fuzz.cbor` - and held to the same bound on what an input may cost (D-82).
 
 ---
 

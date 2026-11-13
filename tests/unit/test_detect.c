@@ -481,6 +481,57 @@ static void test_dir(void) {
 }
 #endif
 
+#if CF_WITH_CBOR
+/* A CBOR map's first byte, or the self-describe tag before it, begins no
+   UTF-8 text, so the content says CBOR with no doubt at all (D-91): in
+   memory, behind the tag, and as a file with no extension in a
+   directory. The bytes are test_cbor.c's places document, which holds
+   no zero byte, so it is written as text. */
+static const char g_detect_cbor[] =
+    "\xA1\x66server\xA2\x64port\x19\x1F\x90\x65hosts\x82\x61"
+    "a\x61"
+    "b";
+static const char g_detect_cbor_tagged[] =
+    "\xD9\xD9\xF7\xA1\x66server\xA2\x64port\x19\x1F\x90\x65hosts\x82\x61"
+    "a\x61"
+    "b";
+
+static void test_cbor(void) {
+    cf_detect d;
+
+    check_text(detected(g_detect_cbor, NULL, NULL, 0, &d), "cbor",
+               "a CBOR map is chosen from content");
+    check(d.how == CF_DETECT_CONTENT, "as content");
+    check_text(detected(g_detect_cbor_tagged, NULL, NULL, 0, &d), "cbor",
+               "and so is one behind the self-describe tag");
+    check(d.how == CF_DETECT_CONTENT, "as content too");
+
+#if CF_WITH_DIR
+    {
+        cf_error    err = CF_ERROR_INIT;
+        cf_builder* b   = cf_build(NULL);
+        cf_config*  c;
+        char        ex[512];
+
+        check(spill("cf_detect.d/cbor_doc", g_detect_cbor), "wrote a CBOR file");
+        cf_builder_dir(b, "conf.d", CF_RANK_USER_FILE, "cf_detect.d", NULL, 0);
+        cf_builder_int(b, "server.port", 1, 1, 65535, 0);
+        c = cf_builder_create(b, &err);
+        check(c != NULL, "a directory reads a CBOR file by its content");
+        if (c == NULL) {
+            printf("  %s\n", err.message);
+        } else {
+            check(cf_get_int(c, "server.port", 0) == 8080, "its value");
+            cf_explain(c, "server.port", ex, sizeof ex);
+            has(ex, "cf_detect.d/cbor_doc", "from the file");
+            cf_config_free(c);
+        }
+        remove("cf_detect.d/cbor_doc");
+    }
+#endif
+}
+#endif
+
 /* A variable's value, by the environment's own lookup. */
 static void set_var(const char* name, const char* value) {
 #if defined(_WIN32)
@@ -595,6 +646,9 @@ static void test_report(void) {
 int main(void) {
 #if CF_WITH_DIR && CF_WITH_JSON && CF_WITH_TOML
     test_dir();
+#endif
+#if CF_WITH_CBOR
+    test_cbor();
 #endif
     test_env_document();
 #if CF_WITH_REPORT && CF_WITH_TOML

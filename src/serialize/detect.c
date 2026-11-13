@@ -157,13 +157,16 @@ static cf_bool trial_read(const cf_codec* c, const cf_blob* in, cf_arena* ar,
 
 /* The built-in formats, in the order a first look puts them. The strict
    ones come before the loose ones in each, so a strict format that reads
-   the bytes is taken before a loose one is tried. */
-static const char* const look_orders[4][6] = {
-    {"json", "json5", "toml", "xml", "yaml", "ini"}, /* { or [ of JSON */
-    {"xml", "json", "json5", "toml", "yaml", "ini"}, /* <              */
-    {"toml", "json", "json5", "xml", "ini", "yaml"}, /* [section], key = */
-    {"json", "json5", "toml", "xml", "yaml", "ini"}  /* key: or anything else */
-};
+   the bytes is taken before a loose one is tried. A NULL is no format and
+   is passed over. */
+#define LOOK_FORMATS 7
+static const char* const look_orders[5][LOOK_FORMATS] = {
+    {"json", "json5", "toml", "xml", "yaml", "ini", NULL}, /* { or [ of JSON */
+    {"xml", "json", "json5", "toml", "yaml", "ini", NULL}, /* <              */
+    {"toml", "json", "json5", "xml", "ini", "yaml", NULL}, /* [section], key = */
+    {"json", "json5", "toml", "xml", "yaml", "ini", NULL}, /* key: or anything else */
+    /* a CBOR map's head or the self-describe tag */
+    {"cbor", "json", "json5", "toml", "xml", "yaml", "ini"}};
 
 static cf_bool is_space(char c) {
     return (c == ' ' || c == '\t' || c == '\r' || c == '\n') ? CF_TRUE : CF_FALSE;
@@ -173,6 +176,19 @@ static cf_bool is_space(char c) {
 static int look_at(const char* p, size_t n) {
     size_t i = 0;
 
+    /* A CBOR map's first byte, A0 to BB or BF, is a UTF-8 continuation
+       byte, and D9 is never followed by D9, so no text begins so (D-91);
+       asked before the byte order mark and the blanks, which are text's. */
+    if (n >= 1) {
+        unsigned char b = (unsigned char)p[0];
+        if ((b >= 0xA0 && b <= 0xBB) || b == 0xBF) {
+            return 4;
+        }
+    }
+    if (n >= 3 && (unsigned char)p[0] == 0xD9 && (unsigned char)p[1] == 0xD9 &&
+        (unsigned char)p[2] == 0xF7) {
+        return 4;
+    }
     if (n >= 3 && (unsigned char)p[0] == 0xEF && (unsigned char)p[1] == 0xBB &&
         (unsigned char)p[2] == 0xBF) {
         i = 3;
@@ -291,7 +307,7 @@ const cf_codec* cf_codec_detect(const cf_codec* const* own, size_t nown,
     }
     nown = n;
     look = look_at(in->p, in->n);
-    for (i = 0; i < 6; ++i) {
+    for (i = 0; i < LOOK_FORMATS; ++i) {
         const cf_codec* c = cf_codec_by_name(look_orders[look][i]);
         if (can_read(c)) {
             order[n++] = c;

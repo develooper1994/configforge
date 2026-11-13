@@ -184,6 +184,7 @@ it before every release, are D-56.
 | a SQLite store - typed, written in one transaction, each value with its writer's note - behind `CF_WITH_SQLITE` | done |
 | a directory of secrets, one file a key, as containers and systemd hand them over | done |
 | Java `.properties`, read as java.util.Properties reads it, behind `CF_WITH_PROPERTIES` | done |
+| CBOR (RFC 8949), read with each value placed by its byte, written, and chosen from content, behind `CF_WITH_CBOR` (D-91) | done |
 | JSON5 and JSONC (`tsconfig.json`'s dialect), a mode of the JSON reader, held to json5-tests (D-66) | done |
 | the Windows Registry as a source, a subkey a section (D-30) | done |
 | references between values, `${key}`, after precedence and explained (D-10) | done |
@@ -228,7 +229,7 @@ build does. `scripts/README.md` lists the options.
 `minimal` also drops every function and object no program reaches (`CF_GC_SECTIONS`): a third of a small program's size. `CF_LTO` is link-time optimisation, off by default, since the stack budget cannot measure its frames. `portable` and `minimal` are optimised on purpose: inlining merges frames, so a stack
 frame that fits in a Debug build can break the budget in a release one.
 
-Options: `CF_WITH_INI` `CF_WITH_JSON` `CF_WITH_TOML` `CF_WITH_PROPERTIES` `CF_WITH_XML` `CF_WITH_SQLITE`
+Options: `CF_WITH_INI` `CF_WITH_JSON` `CF_WITH_TOML` `CF_WITH_PROPERTIES` `CF_WITH_CBOR` `CF_WITH_XML` `CF_WITH_SQLITE`
 `CF_WITH_REAL` `CF_WITH_DIR` `CF_WITH_DOTENV` `CF_WITH_EMIT` `CF_WITH_IMAGE`
 `CF_WITH_REPORT` `CF_WITH_CXX` `CF_WITH_YAML` `CF_PLATFORM` `CF_FORCE_PORTABLE`
 `CF_SINGLE_THREADED` `CF_HARDEN` `CF_RUST` `CF_BUILD_TOOLS` `CF_GC_SECTIONS` `CF_LTO`, and the limits

@@ -237,7 +237,7 @@ CF_API const cf_codec* cf_codec_at(size_t i);
  * candidates, and the decision is by reading - each codec reads the bytes
  * into a sink that keeps a hash of the events, and one that accepts them
  * and yields at least one keyed value is a candidate. A strict format
- * (the builder's own, JSON, JSON5, TOML, XML) is taken at once; a loose
+ * (the builder's own, CBOR, JSON, JSON5, TOML, XML) is taken at once; a loose
  * one (YAML, INI) only when no other loose format reads the bytes into
  * different events, else the bytes are refused as ambiguous. Properties,
  * whose grammar accepts nearly any text, is never chosen from content.

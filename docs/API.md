@@ -3469,7 +3469,7 @@ on a guess at a few bytes: a look at the first bytes only orders the
 candidates, and the decision is by reading - each codec reads the bytes
 into a sink that keeps a hash of the events, and one that accepts them
 and yields at least one keyed value is a candidate. A strict format
-(the builder's own, JSON, JSON5, TOML, XML) is taken at once; a loose
+(the builder's own, CBOR, JSON, JSON5, TOML, XML) is taken at once; a loose
 one (YAML, INI) only when no other loose format reads the bytes into
 different events, else the bytes are refused as ambiguous. Properties,
 whose grammar accepts nearly any text, is never chosen from content.
@@ -3478,7 +3478,7 @@ whose grammar accepts nearly any text, is never chosen from content.
 CF_API const cf_codec* cf_codec_detect(const cf_codec* const* own, size_t n, const cf_blob* in, const char* name, cf_arena* ar, cf_detect* out);
 ```
 
-Implementation: [`cf_codec_detect` (src/serialize/detect.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/detect.c#L236).
+Implementation: [`cf_codec_detect` (src/serialize/detect.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/detect.c#L252).
 
 The codec for `in`, or NULL. `own` (n of them) are a builder's own
 codecs, looked at first, as for extensions; `name`, when not NULL, is a

@@ -31,7 +31,9 @@ toml-values 218
 # the content alone> <valid documents the reader accepts>". Low for JSON
 # and JSON5 because their suites are mostly lone values and lists, which
 # are no configuration, and a JSON5 file that is also JSON is taken as JSON.
+# CBOR's are nearly all lone values; its maps are taken (D-91).
 detect-json 11 95
 detect-json5 12 83
 detect-toml 199 218
 detect-yaml 109 122
+detect-cbor 4 68

@@ -120,7 +120,8 @@ its vectors, `simple(24)` as `f8 18`, is malformed in RFC 8949 (F.1; G.1
 records the example's removal): it is scored among the malformed items,
 not the valid ones. The values column compares the 55 vectors that have
 a `decoded` value and were read with that value. Detection by content
-(`detect-cbor`) is not scored here yet.
+(`detect-cbor`) takes 4 of the 68, every vector that is a map with a
+member: the rest are lone values and lists, which are no configuration.
 
 TOML's dates and times, and `inf` and `nan`, are read as their text,
 checked against their grammar (D-62): the library has no date type and

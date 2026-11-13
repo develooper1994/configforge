@@ -49,6 +49,8 @@ int LLVMFuzzerTestOneInput(const unsigned char* data, size_t size) {
     feed_codec("properties", &v);
 #elif CF_FUZZ_TARGET == 11
     feed_codec("json5", &v);
+#elif CF_FUZZ_TARGET == 12
+    feed_codec("cbor", &v);
 #else
 #error "CF_FUZZ_TARGET names no reader"
 #endif

@@ -786,7 +786,7 @@ def score(tmp):
         print("cbor: this build has no CBOR reader (CF_WITH_CBOR), skipped")
         v, i = [], []
     if v or i:
-        report("cbor", "cbor", conform, v, i, out)  # detect-cbor is W4-C4's
+        report("cbor", "cbor", conform, v, i, out, accepted)
         cbor_good, cbor_all = cbor_values(conform, v, vectors, cbor_wrong)
     failed = False
     # Content detection: each valid document, read with no name, is asked

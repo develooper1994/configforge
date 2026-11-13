@@ -127,6 +127,12 @@ static void load(blob* v, const char* text) {
     memcpy(v->b, text, v->n);
 }
 
+/* A corpus of bytes, which may hold a zero: a binary format's. */
+static void load_bytes(blob* v, const unsigned char* p, size_t n) {
+    v->n = (n > MAX_INPUT) ? MAX_INPUT : n;
+    memcpy(v->b, p, v->n);
+}
+
 /* ---------------------------------------------------------------- *
  * Targets
  *
@@ -431,6 +437,33 @@ static const char* const g_properties = "# comment\n"
                                         "bad=\\"
                                         "u12\n";
 
+/* CBOR: one indefinite-length map holding a member of each kind the
+   reader takes - nested definite maps and arrays, a text in chunks, an
+   indefinite array, a tag, every width of float - so that every branch
+   of the reader has a seed to start from. */
+static const unsigned char g_cbor[] = {
+    0xBF, /* a map of indefinite length */
+    /* "server": {"port": 8080, "hosts": ["a", "b"]} */
+    0x66, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0xA2, 0x64, 0x70, 0x6F, 0x72, 0x74, 0x19,
+    0x1F, 0x90, 0x65, 0x68, 0x6F, 0x73, 0x74, 0x73, 0x82, 0x61, 0x61, 0x61, 0x62,
+    /* "a": "streaming", a text in two chunks */
+    0x61, 0x61, 0x7F, 0x65, 0x73, 0x74, 0x72, 0x65, 0x61, 0x64, 0x6D, 0x69, 0x6E, 0x67,
+    0xFF,
+    /* "b": [1, 2], an array of indefinite length */
+    0x61, 0x62, 0x9F, 0x01, 0x02, 0xFF,
+    /* "t": tag 0, a date and time */
+    0x61, 0x74, 0xC0, 0x74, 0x32, 0x30, 0x31, 0x33, 0x2D, 0x30, 0x33, 0x2D, 0x32, 0x31,
+    0x54, 0x32, 0x30, 0x3A, 0x30, 0x34, 0x3A, 0x30, 0x30, 0x5A,
+    /* "h": 1.5, half precision */
+    0x61, 0x68, 0xF9, 0x3E, 0x00,
+    /* "i": 100000.0, single precision */
+    0x61, 0x69, 0xFA, 0x47, 0xC3, 0x50, 0x00,
+    /* "j": 1.1, double precision */
+    0x61, 0x6A, 0xFB, 0x3F, 0xF1, 0x99, 0x99, 0x99, 0x99, 0x99, 0x9A,
+    /* "k": the smallest half-precision subnormal */
+    0x61, 0x6B, 0xF9, 0x00, 0x01, 0xFF /* the map's end */
+};
+
 static const char* const g_env = "# comment\n"
                                  "export SERVER__PORT=8080\n"
                                  "SERVER__HOST=\"0.0.0.0\"\n"
@@ -460,6 +493,21 @@ static void fuzz_text(const char* name, const char* corpus, int is_ini) {
     }
 }
 
+/* fuzz_text for a binary format, whose corpus is bytes. */
+static void fuzz_bytes(const char* name, const unsigned char* corpus, size_t n) {
+    static blob v;
+    int         i;
+
+    for (i = 0; i < ROUNDS; ++i) {
+        int m;
+        load_bytes(&v, corpus, n);
+        for (m = (int)pick(4) + 1; m > 0; --m) {
+            mutate(&v);
+        }
+        feed_codec(name, &v);
+    }
+}
+
 /* Bytes that were never a document. A mutation fuzzer starts from
    something valid and reaches this only by accident; a parser's first
    few branches are exactly where it is most likely to trust its
@@ -480,6 +528,7 @@ static void fuzz_from_nothing(void) {
         feed_codec("yaml", &v);
         feed_codec("xml", &v);
         feed_codec("properties", &v);
+        feed_codec("cbor", &v);
     }
     for (i = 0; i < ROUNDS; ++i) {
         size_t j;
@@ -494,6 +543,7 @@ static void fuzz_from_nothing(void) {
         feed_codec("yaml", &v); /* and this one too */
         feed_codec("xml", &v);  /* and this */
         feed_codec("properties", &v);
+        feed_codec("cbor", &v);
         feed_dotenv(&v);
         feed_argv(&v);
         feed_image(&v);
@@ -592,6 +642,7 @@ int main(void) {
     write_seed("seed_yaml", g_yaml, strlen(g_yaml));
     write_seed("seed_xml", g_xml, strlen(g_xml));
     write_seed("seed_properties", g_properties, strlen(g_properties));
+    write_seed("seed_cbor", (const char*)g_cbor, sizeof g_cbor);
     write_seed("seed_dotenv", g_env, strlen(g_env));
     write_seed("seed_replay", g_report, strlen(g_report));
     write_seed("seed_argv", argv_seed, sizeof argv_seed - 1);
@@ -629,6 +680,7 @@ int main(int argc, char** argv) {
     fuzz_text("yaml", g_yaml, 0);
     fuzz_text("xml", g_xml, 0);
     fuzz_text("properties", g_properties, 0);
+    fuzz_bytes("cbor", g_cbor, sizeof g_cbor);
     fuzz_text(NULL, g_env, -1);
 #if CF_WITH_IMAGE
     fuzz_image();
