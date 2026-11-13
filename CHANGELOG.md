@@ -94,7 +94,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
-- **What kind of format a codec is**, told to the program (D-94):
+- **What kind of format a codec is**, told to the program (D-97):
   `CF_CODEC_SCHEMA` (cannot be read without a schema or layout the
   program gives; a TLV codec has it), `cf_codec_select` to find the
   built-in codecs by their capability bits, `cf_codec_kind` to say a

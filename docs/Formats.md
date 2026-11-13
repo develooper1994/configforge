@@ -24,7 +24,7 @@ by `verify -DEXTRA=conformance` against floors that only rise.
 What kind of format each built-in codec is - text or binary, self-describing
 or bound to a schema, typed or not, with arrays or without, read, written or
 both - is its capability flags (`cf_codec.caps`), which a program asks with
-`cf_codec_kind` and searches with `cf_codec_select` (D-94). This table is
+`cf_codec_kind` and searches with `cf_codec_select` (D-97). This table is
 generated from them by `doctor formats --format markdown`, and a test fails
 when the page and the codecs differ:
 

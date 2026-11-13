@@ -1,7 +1,7 @@
 /*
  * test_kinds.c - what kind of format a codec is, told to the program:
  * cf_codec_select finds codecs by their capability bits, cf_codec_kind
- * says them in words (D-94).
+ * says them in words (D-97).
  */
 
 #include <configforge/configforge.h>
@@ -10,6 +10,13 @@
 #include <string.h>
 
 #include "cf_test.h"
+
+/* A build without cf_emit has no encoders: every codec only reads. */
+#if CF_WITH_EMIT
+#define RW "read and written"
+#else
+#define RW "read"
+#endif
 
 static int has_name(const cf_codec* const* list, size_t n, const char* name) {
     size_t i;
@@ -65,7 +72,7 @@ static void test_select(void) {
 static void test_kind(void) {
     char        buf[160];
     char        tiny[8];
-    const char* json_kind = "text, self-describing, typed, arrays, read and written";
+    const char* json_kind = "text, self-describing, typed, arrays, " RW;
     size_t      n;
 
 #if CF_WITH_JSON
@@ -85,14 +92,12 @@ static void test_kind(void) {
 #endif
 #if CF_WITH_INI
     cf_codec_kind(cf_codec_by_name("ini"), buf, sizeof buf);
-    check_text(buf,
-               "text, self-describing, untyped, arrays of values, read and written",
+    check_text(buf, "text, self-describing, untyped, arrays of values, " RW,
                "INI's kind");
 #endif
 #if CF_WITH_CBOR
     cf_codec_kind(cf_codec_by_name("cbor"), buf, sizeof buf);
-    check_text(buf, "binary, self-describing, typed, arrays, read and written",
-               "CBOR's kind");
+    check_text(buf, "binary, self-describing, typed, arrays, " RW, "CBOR's kind");
 #endif
 #if CF_WITH_PROPERTIES
     cf_codec_kind(cf_codec_by_name("properties"), buf, sizeof buf);

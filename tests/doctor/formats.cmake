@@ -37,6 +37,12 @@ if(rc EQUAL 0)
   message(FATAL_ERROR "doctor formats took a format it does not print")
 endif()
 
+# Without cf_emit no codec writes, and each says "read" where the page,
+# made from a full build, says "read and written".
+if(NOT EMIT)
+  return()
+endif()
+
 file(READ ${PAGE} page)
 string(FIND "${page}" "<!-- formats:begin -->\n" from)
 string(FIND "${page}" "<!-- formats:end -->" to)

@@ -99,7 +99,7 @@ gets reopened every six months.
 | D-81 | A reader's name table is seeded a decode | formats, security | **Decided** |
 | D-82 | What one document may make is bounded, in the flattener | formats, security | **Decided** |
 | D-91 | CBOR, the JSON model in binary | formats | **Decided** |
-| D-94 | What kind of format a codec is, told to the program | formats | **Decided** |
+| D-97 | What kind of format a codec is, told to the program | formats | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -3636,7 +3636,7 @@ under the bound on what an input may cost (D-82); and
 **Compatibility.** Additive: one function, one option on by default
 (`CF_WITH_TLV`; without it the function refuses by name, D-38).
 
-## D-94 — What kind of format a codec is, told to the program
+## D-97 — What kind of format a codec is, told to the program
 
 **Question.** Formats now differ in ways a program cares about - text or
 binary, readable on their own or only with a layout, typed or all text -

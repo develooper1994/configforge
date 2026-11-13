@@ -200,7 +200,7 @@ add_test(
   NAME doctor.formats
   COMMAND
     ${CMAKE_COMMAND} -DDOCTOR=$<TARGET_FILE:doctor>
-    -DPAGE=${CMAKE_SOURCE_DIR}/docs/Formats.md -P
+    -DPAGE=${CMAKE_SOURCE_DIR}/docs/Formats.md -DEMIT=${CF_WITH_EMIT} -P
     ${CMAKE_SOURCE_DIR}/tests/doctor/formats.cmake)
 
 # No secret in any output, from a full report as from a blind one; and
