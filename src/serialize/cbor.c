@@ -551,6 +551,9 @@ static cf_bool cbor_item(cbor_scan* s, const char* name, size_t nlen) {
     cf_u64    tag    = 0;
     cf_bool   tagged = CF_FALSE;
 
+    /* cbor_head_read fills it whenever it returns true; an analyser
+       that does not follow that far is given a head of nothing. */
+    memset(&h, 0, sizeof h);
     for (;;) {
         if (!cbor_head_read(s, &h)) {
             return CF_FALSE;
