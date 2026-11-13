@@ -99,6 +99,7 @@ gets reopened every six months.
 | D-81 | A reader's name table is seeded a decode | formats, security | **Decided** |
 | D-82 | What one document may make is bounded, in the flattener | formats, security | **Decided** |
 | D-91 | CBOR, the JSON model in binary | formats | **Decided** |
+| D-94 | What kind of format a codec is, told to the program | formats | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -3634,6 +3635,47 @@ under the bound on what an input may cost (D-82); and
 
 **Compatibility.** Additive: one function, one option on by default
 (`CF_WITH_TLV`; without it the function refuses by name, D-38).
+
+## D-94 — What kind of format a codec is, told to the program
+
+**Question.** Formats now differ in ways a program cares about - text or
+binary, readable on their own or only with a layout, typed or all text -
+and the page that lists them (Formats.md) is written by hand. How does a
+program learn what kind a format is, and how does the page stay true?
+
+**Options.**
+
+1. A separate registry of descriptions, one record a format.
+2. The flags the codec already has (`cf_codec.caps`), one more for "needs
+   a schema", and two functions over them.
+
+**Decision.** Option 2. The flags are where `cf_emit` and the loader
+already ask what a codec can do, so they are true or the library
+misbehaves; a second table of descriptions is a second place to be wrong
+and would differ from the codecs the first time one changed.
+
+* `CF_CODEC_SCHEMA`: the bytes cannot be read without a schema or layout
+  the program gives. Text is the absence of `CF_CODEC_BINARY`;
+  self-describing is the absence of `CF_CODEC_SCHEMA`. A TLV codec made
+  from a layout is `CF_CODEC_READ | TYPED | ARRAYS | BINARY | SCHEMA |
+  NAMED_ONLY`; no built-in codec has SCHEMA.
+* `cf_codec_select(all_of, none_of, out, cap)`: the built-in codecs with
+  every bit of `all_of` and none of `none_of`, in registry order, at most
+  `cap` written and the full count returned, as `cf_report` does.
+* `cf_codec_kind(c, buf, cap)`: the kind as text in a fixed order and
+  wording ("binary, self-describing, typed, arrays, read and written"),
+  the length needed returned as snprintf does. It works for a codec of
+  the program's own and for a layout's.
+* The table in Formats.md is `doctor formats --format markdown`, between
+  markers, and a test holds the page to it. A build without some formats
+  prints fewer rows, each of which the page must hold.
+
+Rejected: a registry of descriptions, above.
+
+**Compatibility.** Additive: one flag bit, two functions, one Doctor
+command. A program's own codec that sets no SCHEMA is self-describing,
+which is what it was assumed to be. The C++, Rust and Python bindings
+come later.
 
 ---
 

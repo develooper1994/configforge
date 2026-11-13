@@ -94,6 +94,15 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **What kind of format a codec is**, told to the program (D-94):
+  `CF_CODEC_SCHEMA` (cannot be read without a schema or layout the
+  program gives; a TLV codec has it), `cf_codec_select` to find the
+  built-in codecs by their capability bits, `cf_codec_kind` to say a
+  codec's kind in words ("binary, self-describing, typed, arrays, read
+  and written"), and `doctor formats [--format text|markdown]`. The
+  table of kinds in `docs/Formats.md` is generated from them and a test
+  holds the page to it. A TLV codec now says it is typed, has arrays and
+  is binary, which it was. C++, Rust and Python bindings follow.
 - **CBOR** (RFC 8949), read and written (D-91): `.cbor` files and
   documents named `cbor`, chosen from content when a name gives no
   format, and `cf_emit(c, "cbor", ...)` with numbers in

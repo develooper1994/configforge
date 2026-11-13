@@ -19,7 +19,7 @@
 #
 # What is not run: --baseline and --severity only choose which findings
 # print, and the import-* adapters and check/gen read other documents,
-# not reports.
+# not reports; formats reads nothing.
 
 cmake_minimum_required(VERSION 3.10)
 

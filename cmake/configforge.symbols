@@ -74,6 +74,8 @@ cf_codec_can_read
 cf_codec_count
 cf_codec_decode
 cf_codec_detect
+cf_codec_kind
+cf_codec_select
 cf_config_codec
 cf_config_free
 cf_config_ref

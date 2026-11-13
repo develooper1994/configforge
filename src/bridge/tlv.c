@@ -1054,10 +1054,11 @@ cf_bool cf_tlv_codec_sized(cf_codec* out, size_t out_size, const cf_tlv_layout* 
     if (!tlv_check(layout, err)) {
         return CF_FALSE;
     }
-    out->size        = (out_size < sizeof *out) ? out_size : sizeof *out;
-    out->name        = layout->name;
-    out->extensions  = layout->extensions;
-    out->caps        = CF_CODEC_READ | CF_CODEC_NAMED_ONLY;
+    out->size       = (out_size < sizeof *out) ? out_size : sizeof *out;
+    out->name       = layout->name;
+    out->extensions = layout->extensions;
+    out->caps = CF_CODEC_READ | CF_CODEC_TYPED | CF_CODEC_ARRAYS | CF_CODEC_BINARY |
+                CF_CODEC_SCHEMA | CF_CODEC_NAMED_ONLY;
     out->decode_self = tlv_decode;
     out->data        = layout;
     return CF_TRUE;

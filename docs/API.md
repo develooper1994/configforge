@@ -63,7 +63,7 @@ Every error carries one of these codes, stable from 1.0;
 - [`cf_platform.h`](#cf_platformh) - 21
 - [`cf_port.h`](#cf_porth) - 10
 - [`cf_report.h`](#cf_reporth) - 6
-- [`cf_serialize.h`](#cf_serializeh) - 27
+- [`cf_serialize.h`](#cf_serializeh) - 29
 - [`cf_source.h`](#cf_sourceh) - 34
 - [`cf_value.h`](#cf_valueh) - 12
 - [`cf_version.h`](#cf_versionh) - 7
@@ -3426,7 +3426,7 @@ CF_API const cf_codec* cf_codec_by_name(const char* name);
 CF_API const cf_codec* cf_codec_by_path(const char* path);
 ```
 
-Implementation: [`cf_codec_by_name` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L74), [`cf_codec_by_path` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L134).
+Implementation: [`cf_codec_by_name` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L143), [`cf_codec_by_path` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L203).
 
 Compiled-in codecs only. NULL when the format exists but this build
 left it out, which the caller must report rather than ignore: a
@@ -3437,7 +3437,7 @@ from must not have a build option that makes a file invisible.
 CF_API const cf_codec* cf_codec_among(const cf_codec* const* list, size_t n, const char* name, const char* path);
 ```
 
-Implementation: [`cf_codec_among` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L149).
+Implementation: [`cf_codec_among` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L218).
 
 Among a caller's codecs (cf_builder_codec): the one called `name`
 when it is not NULL, else the one whose extensions match `path`;
@@ -3447,7 +3447,7 @@ NULL for none. The built-in codecs are not looked at.
 CF_API cf_bool cf_codec_decode(const cf_codec* c, const cf_blob* in, const cf_doc_sink* out, cf_error* err);
 ```
 
-Implementation: [`cf_codec_decode` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L191).
+Implementation: [`cf_codec_decode` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L260).
 
 Reads `in` through `c`: its decode_self when its size reaches that
 member and it is set, else its decode. False with `err` set when it
@@ -3457,7 +3457,7 @@ refuses the bytes, or has neither. (1.5)
 CF_API cf_bool cf_codec_can_read(const cf_codec* c);
 ```
 
-Implementation: [`cf_codec_can_read` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L184).
+Implementation: [`cf_codec_can_read` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L253).
 
 Whether `c` reads: CF_CODEC_READ and a decoder of either kind. (1.5)
 
@@ -3466,7 +3466,7 @@ CF_API const char* cf_format_of_path(const char* path);
 CF_API const char* cf_format_option(const char* format);
 ```
 
-Implementation: [`cf_format_of_path` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L231), [`cf_format_option` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L246).
+Implementation: [`cf_format_of_path` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L300), [`cf_format_option` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L315).
 
 Names a format this library knows about whether or not it was
 compiled in, so the error can say which option to turn on.
@@ -3477,6 +3477,30 @@ CF_API const cf_codec* cf_codec_at(size_t i);
 ```
 
 Implementation: [`cf_codec_count` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L62), [`cf_codec_at` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L70).
+
+```c
+CF_API size_t cf_codec_select(unsigned all_of, unsigned none_of, const cf_codec** out, size_t cap);
+```
+
+Implementation: [`cf_codec_select` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L74).
+
+The built-in codecs whose caps hold every bit of `all_of` and none of
+`none_of`, in registry order: at most `cap` of them are written to
+`out` (NULL when `cap` is 0), and the number that match in all is
+returned, as the size cf_report needs is. (1.5)
+
+```c
+CF_API size_t cf_codec_kind(const cf_codec* c, char* buf, size_t cap);
+```
+
+Implementation: [`cf_codec_kind` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L104).
+
+What kind of format `c` is, as text for a person, comma-separated in
+this order: "text" or "binary"; "self-describing" or "schema-bound";
+"typed" or "untyped"; "arrays", "arrays of values" or "no arrays";
+"read and written", "read" or "written" ("neither read nor written"
+for a codec that does neither). Returns the length needed, as
+snprintf does; a NULL codec gives 0 and an empty string. (1.5)
 
 ### Tag, length, value, by a layout the program gives (D-93)
 

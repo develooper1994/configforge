@@ -21,6 +21,26 @@ by `verify -DEXTRA=conformance` against floors that only rise.
 | the image | the library's own (`cf_image.h`) | built in | yes | the unit tests, fuzzed | - |
 | the provenance report | the library's own, its JSON Schema published | yes (Report Replay) | yes | the report's schema | - |
 
+What kind of format each built-in codec is - text or binary, self-describing
+or bound to a schema, typed or not, with arrays or without, read, written or
+both - is its capability flags (`cf_codec.caps`), which a program asks with
+`cf_codec_kind` and searches with `cf_codec_select` (D-94). This table is
+generated from them by `doctor formats --format markdown`, and a test fails
+when the page and the codecs differ:
+
+<!-- formats:begin -->
+| Format | Extensions | Kind |
+| ------ | ---------- | ---- |
+| ini | .ini, .cfg, .conf | text, self-describing, untyped, arrays of values, read and written |
+| json | .json, .jsn | text, self-describing, typed, arrays, read and written |
+| json5 | .json5, .jsonc | text, self-describing, typed, arrays, read and written |
+| toml | .toml | text, self-describing, typed, arrays, read and written |
+| yaml | .yaml, .yml | text, self-describing, untyped, arrays, read and written |
+| xml | .xml | text, self-describing, untyped, arrays, read |
+| properties | .properties | text, self-describing, untyped, no arrays, read |
+| cbor | .cbor | binary, self-describing, typed, arrays, read and written |
+<!-- formats:end -->
+
 A document that starts with a UTF-8 byte order mark has it skipped, by
 the JSON, JSON5, TOML, INI, YAML and `.properties` readers alike, at the
 start only and with every line and column as if it were not there.

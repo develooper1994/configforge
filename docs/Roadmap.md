@@ -145,7 +145,8 @@ short keeps its branch, unmerged, and says so here.
 After wave 4's CBOR and TLV. To be written as cards in
 `docs/plan/W6-more-formats.md`, the library's own code first:
 
-* ⬜ **What a format is, told to the program.** Each codec says, as
+* 🟩 **What a format is, told to the program** (D-94; the bindings
+  left). Each codec says, as
   flags a program can read and ask by ("the binary ones that need no
   schema"): text or binary, self-describing or bound to a schema, typed
   or not, readable as a stream or only whole, written or only read. The

@@ -28,4 +28,8 @@ int doctor_import_systemd(int argc, char** argv);
 int doctor_check_schema(int argc, char** argv);
 int doctor_gen_schema(int argc, char** argv);
 
+/* Every built-in codec with its extensions and kind, as text or as the
+   markdown table docs/Formats.md holds (formats.c). Reads no report. */
+int doctor_formats(int argc, char** argv);
+
 #endif /* CONFIGFORGE_DOCTOR_ADAPTERS_H */

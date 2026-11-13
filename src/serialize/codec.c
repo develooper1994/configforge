@@ -71,6 +71,75 @@ const cf_codec* cf_codec_at(size_t i) {
     return (i < cf_codec_count()) ? cf_codecs[i] : NULL;
 }
 
+size_t cf_codec_select(unsigned all_of, unsigned none_of, const cf_codec** out,
+                       size_t cap) {
+    size_t i;
+    size_t n = 0;
+
+    for (i = 0; cf_codecs[i] != NULL; ++i) {
+        unsigned caps = cf_codecs[i]->caps;
+        if ((caps & all_of) != all_of || (caps & none_of) != 0) {
+            continue;
+        }
+        if (out != NULL && n < cap) {
+            out[n] = cf_codecs[i];
+        }
+        ++n;
+    }
+    return n;
+}
+
+/* Appends `t` to buf[*len..cap) as far as it fits, and counts all of it
+   in *len, which is the length snprintf would report. */
+static void kind_add(char* buf, size_t cap, size_t* len, const char* t) {
+    size_t n = strlen(t);
+
+    if (buf != NULL && *len < cap) {
+        size_t room = cap - *len;
+        memcpy(buf + *len, t, (n < room) ? n : room);
+    }
+    *len += n;
+}
+
+size_t cf_codec_kind(const cf_codec* c, char* buf, size_t cap) {
+    const char* arrays;
+    const char* io;
+    size_t      len = 0;
+
+    if (c == NULL) {
+        if (buf != NULL && cap > 0) {
+            buf[0] = '\0';
+        }
+        return 0;
+    }
+    if ((c->caps & CF_CODEC_ARRAYS) != 0) {
+        arrays = "arrays";
+    } else if ((c->caps & CF_CODEC_SCALAR_ARRAYS) != 0) {
+        arrays = "arrays of values";
+    } else {
+        arrays = "no arrays";
+    }
+    if ((c->caps & CF_CODEC_READ) != 0) {
+        io = ((c->caps & CF_CODEC_WRITE) != 0) ? "read and written" : "read";
+    } else {
+        io = ((c->caps & CF_CODEC_WRITE) != 0) ? "written" : "neither read nor written";
+    }
+    kind_add(buf, cap, &len, ((c->caps & CF_CODEC_BINARY) != 0) ? "binary" : "text");
+    kind_add(buf, cap, &len,
+             ((c->caps & CF_CODEC_SCHEMA) != 0) ? ", schema-bound"
+                                                : ", self-describing");
+    kind_add(buf, cap, &len,
+             ((c->caps & CF_CODEC_TYPED) != 0) ? ", typed" : ", untyped");
+    kind_add(buf, cap, &len, ", ");
+    kind_add(buf, cap, &len, arrays);
+    kind_add(buf, cap, &len, ", ");
+    kind_add(buf, cap, &len, io);
+    if (buf != NULL && cap > 0) {
+        buf[(len < cap) ? len : cap - 1] = '\0';
+    }
+    return len;
+}
+
 const cf_codec* cf_codec_by_name(const char* name) {
     size_t i;
 

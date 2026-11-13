@@ -195,6 +195,14 @@ add_test(NAME doctor.severity
 set_tests_properties(doctor.severity PROPERTIES FIXTURES_REQUIRED
                                                 DOCTOR_REPORTS)
 
+# `doctor formats`, and docs/Formats.md's generated table held to it.
+add_test(
+  NAME doctor.formats
+  COMMAND
+    ${CMAKE_COMMAND} -DDOCTOR=$<TARGET_FILE:doctor>
+    -DPAGE=${CMAKE_SOURCE_DIR}/docs/Formats.md -P
+    ${CMAKE_SOURCE_DIR}/tests/doctor/formats.cmake)
+
 # No secret in any output, from a full report as from a blind one; and
 # text from a report kept from becoming a workflow command in a CI log,
 # or a mention or a link in a pull-request comment. "marker" is the gate:

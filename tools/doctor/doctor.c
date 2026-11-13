@@ -17,6 +17,7 @@
  *     doctor blame   <key> <report>... [options]
  *     doctor check   --schema <schema> <file>...
  *     doctor gen     --schema <schema> [--name <function>] [--out <file>]
+ *     doctor formats [--format text|markdown]
  *
  *     --baseline <file>   findings already accepted, one per line
  *     --severity <file>   this project's severities, one per line
@@ -385,6 +386,8 @@ static int usage(void) {
     fputs("  doctor check --schema <schema> <file>...   files against a contract\n"
           "  doctor gen --schema <schema> [--name <fn>] [--out <file>]\n"
           "                                 the contract as C calls\n"
+          "  doctor formats [--format text|markdown]   the built-in codecs and their "
+          "kind\n"
           "\n",
           stderr);
     fputs("  --base <file> --only-changed   lint: only what changed since <file>\n"
@@ -452,6 +455,9 @@ int main(int argc, char** argv) {
     }
     if (argc >= 2 && strcmp(argv[1], "gen") == 0) {
         return doctor_gen_schema(argc - 2, argv + 2);
+    }
+    if (argc >= 2 && strcmp(argv[1], "formats") == 0) {
+        return doctor_formats(argc - 2, argv + 2);
     }
     /* The version, and the commit it was built from when the build knew
        it: two Doctors of one version can still differ. */

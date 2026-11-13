@@ -67,7 +67,8 @@ set(CF_UNIT_TESTS
     test_dirlimits
     test_credentials
     test_cbor
-    test_tlv)
+    test_tlv
+    test_kinds)
 
 # The directories test_starve's every-source run reads. C89 has no mkdir.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_starve.d

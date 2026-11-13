@@ -22,6 +22,7 @@ add_executable(
   doctor
   doctor.c
   contract.c
+  formats.c
   git.c
   spring.c
   dotnet.c

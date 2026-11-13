@@ -503,6 +503,21 @@ in a format the build left out is an error that names the option
 to turn on - never a file quietly read as nothing. INI, JSON, TOML, YAML
 and CBOR can also be written (section 10).
 
+What kind of format a codec is, a program can ask. Its `caps` say text or
+binary (`CF_CODEC_BINARY`), self-describing or bound to a schema
+(`CF_CODEC_SCHEMA`: the bytes cannot be read without a layout the program
+gives, as a TLV codec's), typed, with arrays, read, written. `cf_codec_kind`
+says them in words, and `cf_codec_select` finds the built-in codecs by them
+(D-94); `doctor formats` prints the table:
+
+```c
+const cf_codec* bin[8];
+size_t n = cf_codec_select(CF_CODEC_BINARY, CF_CODEC_SCHEMA, bin, 8); /* cbor */
+char kind[160];
+cf_codec_kind(bin[0], kind, sizeof kind);
+/* "binary, self-describing, typed, arrays, read and written" */
+```
+
 A format of your own is a `cf_codec` (`tests/unit/cf_kv_codec.h` is a
 complete one, reading and writing). Hand it to one file with
 `cf_builder_file_codec`, or register it on the builder (D-68):

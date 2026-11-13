@@ -168,12 +168,18 @@ enum {
     CF_CODEC_SCALAR_ARRAYS = 1u << 4,
     /* Writes bytes, each text with its length before it: cf_emit cannot
        double a ${ in what it has written, and asks the encoder to
-       (cf_encoder_head). (1.5) */
+       (cf_encoder_head). Also what a reader of such bytes says it is: the
+       absence of this flag is "text". (1.5) */
     CF_CODEC_BINARY = 1u << 5,
     /* Chosen by its name or its extensions, never from content: a layout
        reads bytes no other format would refuse, so a guess at them would
        be taken (D-73, D-92). (1.5) */
-    CF_CODEC_NAMED_ONLY = 1u << 6
+    CF_CODEC_NAMED_ONLY = 1u << 6,
+    /* Cannot be read without a schema or layout the program gives: the
+       bytes do not say what they are (a TLV layout, D-93). A format that
+       describes itself lacks it; one that is text lacks CF_CODEC_BINARY.
+       (1.5) */
+    CF_CODEC_SCHEMA = 1u << 7
 };
 
 /* `size` is sizeof(cf_codec) where the codec was compiled (D-51). */
@@ -248,6 +254,21 @@ CF_API const char* cf_format_option(const char* format);
 
 CF_API size_t          cf_codec_count(void);
 CF_API const cf_codec* cf_codec_at(size_t i);
+
+/* The built-in codecs whose caps hold every bit of `all_of` and none of
+   `none_of`, in registry order: at most `cap` of them are written to
+   `out` (NULL when `cap` is 0), and the number that match in all is
+   returned, as the size cf_report needs is. (1.5) */
+CF_API size_t cf_codec_select(unsigned all_of, unsigned none_of, const cf_codec** out,
+                              size_t cap);
+
+/* What kind of format `c` is, as text for a person, comma-separated in
+   this order: "text" or "binary"; "self-describing" or "schema-bound";
+   "typed" or "untyped"; "arrays", "arrays of values" or "no arrays";
+   "read and written", "read" or "written" ("neither read nor written"
+   for a codec that does neither). Returns the length needed, as
+   snprintf does; a NULL codec gives 0 and an empty string. (1.5) */
+CF_API size_t cf_codec_kind(const cf_codec* c, char* buf, size_t cap);
 
 /* ------------------------------------------------------------------ *
  * Tag, length, value, by a layout the program gives (D-93)

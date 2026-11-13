@@ -574,6 +574,12 @@ int main(void) {
     if (err->message[0] != '\0') {
         printf("  %s\n", err->message);
     }
+    {
+        char kind[160];
+        cf_codec_kind(&g_devcfg, kind, sizeof kind);
+        check_text(kind, "binary, schema-bound, typed, arrays, read",
+                   "a layout's codec is a binary one that needs the layout");
+    }
     test_flat();
     test_file();
     test_read_refusals();

@@ -231,6 +231,12 @@ doctor check --schema <schema> <file>...
 doctor gen --schema <schema> [--name <function>] [--out <file>]
     the contract as C calls, for a build without the JSON reader (section 7d)
 
+doctor formats [--format text|markdown]
+    every built-in codec: its name, its extensions and what kind of format it is
+    (text or binary, self-describing or schema-bound, typed, arrays, read and
+    written); the markdown table is the one in docs/Formats.md, which a test holds
+    it to. Reads no report.
+
 configforge doctor --version
     the version, and the commit Doctor was built from: "ConfigForge Doctor 0.3.0 (20d0f4b)"
 ```
