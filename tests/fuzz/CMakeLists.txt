@@ -43,6 +43,9 @@ endif()
 if(CF_WITH_CBOR)
   list(APPEND readers cbor)
 endif()
+if(CF_WITH_TLV)
+  list(APPEND readers tlv ber)
+endif()
 # Each reader's number is its place in the whole list, not in the list
 # this build has: with YAML out and XML in, counting would have given
 # XML the number libfuzzer.c reads as YAML's.
@@ -58,7 +61,9 @@ set(all_readers
     xml
     properties
     json5
-    cbor)
+    cbor
+    tlv
+    ber)
 foreach(reader ${readers})
   list(FIND all_readers ${reader} target)
   math(EXPR target "${target} + 1")

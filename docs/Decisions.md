@@ -3623,6 +3623,15 @@ places.
 Writing is wave 6's: what a layout skips must be kept to write the file
 back.
 
+**Held to.** `test_tlv`'s three layouts - a device's fixed one, a
+network one with nests, a list, BCD and hex, and an EMV record in
+BER-TLV - with every document written by the test from its layout and
+every refusal above by its words; the fuzzers' two, one of fixed widths
+with a tag of each type and unknown tags kept, one BER-TLV with padding,
+in `test_fuzz` and as the libFuzzer harnesses `fuzz.tlv` and `fuzz.ber`,
+under the bound on what an input may cost (D-82); and
+`examples/c/tlv.c`, which the suite runs.
+
 **Compatibility.** Additive: one function, one option on by default
 (`CF_WITH_TLV`; without it the function refuses by name, D-38).
 

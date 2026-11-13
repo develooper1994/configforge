@@ -185,6 +185,7 @@ it before every release, are D-56.
 | a directory of secrets, one file a key, as containers and systemd hand them over | done |
 | Java `.properties`, read as java.util.Properties reads it, behind `CF_WITH_PROPERTIES` | done |
 | CBOR (RFC 8949), read with each value placed by its byte, written, and chosen from content, behind `CF_WITH_CBOR` (D-91) | done |
+| TLV by a layout the program gives - fixed widths or BER-TLV, nests, lists - each value placed by its tag's byte, behind `CF_WITH_TLV` (D-93) | done |
 | JSON5 and JSONC (`tsconfig.json`'s dialect), a mode of the JSON reader, held to json5-tests (D-66) | done |
 | the Windows Registry as a source, a subkey a section (D-30) | done |
 | references between values, `${key}`, after precedence and explained (D-10) | done |

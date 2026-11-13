@@ -490,6 +490,7 @@ is worse than a program that refuses to start.
 | XML | `CF_WITH_XML`, off by default | through expat, read only; typed by the contract, mapped as D-23 declares |
 | Java `.properties` | `CF_WITH_PROPERTIES` | read only; as java.util.Properties reads it, UTF-8; typed by the contract |
 | CBOR | `CF_WITH_CBOR` | RFC 8949: maps, arrays, numbers, text, booleans and null, typed by the file; each value placed by its byte; byte strings and most tags refused by name (D-91) |
+| TLV, by a layout | `CF_WITH_TLV` | read only; tag and length widths, byte order, an end tag, BER-TLV; each tag's key and type from the program's table (D-93) |
 
 The format is the one you name, else the extension's, else - for a name
 that gives none - the one the content reads as, decided by reading it and
@@ -521,6 +522,43 @@ own suite, as the built-in readers are, build it into a shared library
 that exports a `const cf_codec* const` and run
 `scripts/check/conformance.py <conform> <suites> --codec <library> <symbol> <format>`
 (docs/Conformance.md).
+
+### A TLV layout
+
+A device that keeps its settings as tag, length, value follows no
+standard but its maker's, so you describe its layout and the library
+makes the codec (D-93; `examples/c/tlv.c` runs this one):
+
+```c
+static const cf_tlv_tag dev_tags[] = {              /* ascending by tag */
+    {0x0001, "name",     CF_TLV_TEXT, 0, 0, 0, NULL, 0, NULL},
+    {0x0002, "net.port", CF_TLV_UINT, 2, 0, 0, NULL, 0, NULL},
+    {0x0003, "net.dhcp", CF_TLV_BOOL, 1, 0, 0, NULL, 0, NULL},
+    {0x0010, NULL, CF_TLV_RECORD, 12, 0, CF_TLV_SKIP, NULL, 0, NULL}};
+static cf_tlv_layout dev = CF_TLV_LAYOUT_INIT;
+static cf_codec      devcfg;
+
+dev.name = "devcfg";                  dev.order = CF_TLV_LITTLE;
+dev.tag_width = 2;                    dev.length_width = 2;
+dev.flags = CF_TLV_END;               dev.end_tag = 0xFFFF;
+dev.tags = dev_tags;                  dev.ntags = 4;
+cf_tlv_codec(&devcfg, &dev, &err);    /* the layout checked whole */
+cf_builder_codec(b, &devcfg);
+cf_builder_file(b, "device", CF_RANK_USER_FILE, "dev.cfg", "devcfg", 0);
+```
+
+`explain("net.port")` then says `dev.cfg, byte 12`: the byte its tag
+starts at, which is what you look for in a hex dump. Each table lists its
+tags in ascending order, each once, and the codec refuses a layout that
+does not. A tag the layout does not name is refused by default - a
+layout out of date says so the first time the file outgrows it; with
+`CF_TLV_UNKNOWN_SKIP` it is passed over; with `CF_TLV_UNKNOWN_KEEP` it is
+kept under `tag-` and its digits, as hex. A nest is a table, a tag
+flagged `CF_TLV_LIST` an array, and `CF_TLV_BER` reads BER-TLV as ISO/IEC
+7816-4 and EMV write it. The layout, its tables and the codec are yours
+and must outlive the configurations read with them; `static` is the usual
+way. A TLV codec is chosen by its name or its extensions, never from
+content.
 
 On YAML in particular: a plain value is text until a definition types
 it, and the library has one spelling of a boolean, `true` and `false`,

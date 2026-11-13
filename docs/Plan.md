@@ -150,7 +150,7 @@ In the order to be done. A card is `open`, `done` (with its commit), or
 | 9 | W4-T2 A TLV layout, and reading a flat one | opus | W4-T1 | done |
 | 10 | W4-T3 Nesting, lists and unknown tags | sonnet | W4-T2 | done |
 | 11 | W4-T4 BER-TLV | sonnet | W4-T3 | done |
-| 12 | W4-T5 TLV fuzzed and documented | sonnet | W4-T4, W4-C4 | open |
+| 12 | W4-T5 TLV fuzzed and documented | sonnet | W4-T4, W4-C4 | done |
 | 13 | H-5 A directory others can write to is not read as secrets | opus | - | open |
 | 14 | H-7 An undefined key named like a secret is kept as one | opus | - | open |
 | 15 | H-8a A secret's digest that cannot be tested without a key | opus | - | open |

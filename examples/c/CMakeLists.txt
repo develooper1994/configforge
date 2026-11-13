@@ -56,7 +56,8 @@ foreach(
   references
   migration
   flags
-  live)
+  live
+  tlv)
   add_executable(${ex} ${ex}.c)
   target_link_libraries(${ex} PRIVATE configforge)
   set_target_properties(
@@ -222,6 +223,13 @@ if(CF_WITH_INI)
     "connecting to db1.internal:5432"
     "app.ini:2:1 .as db.host."
     "connecting to db2.internal:5432")
+endif()
+
+# A device's binary settings, read through a TLV layout the program gives
+# (D-93): each value explained by the byte its tag starts at.
+if(CF_WITH_TLV)
+  example_expect(tlv ${CMAKE_CURRENT_BINARY_DIR}/tlv-run "net.port = 400"
+                 "dev.cfg, byte 12")
 endif()
 
 # Feature flags: shipped off, a canary drop-in, an environment kill

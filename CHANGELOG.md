@@ -116,8 +116,8 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   the byte its tag starts at (D-93): nested tags as tables, repeated ones
   as lists, BCD and hex values, and an unknown tag refused, skipped or
   kept as `tag-<hex>`, as the layout says; and BER-TLV (ISO/IEC 7816-4,
-  EMV): multi-byte tags, long-form lengths, padding. `CF_WITH_TLV`, on by
-  default.
+  EMV): multi-byte tags, long-form lengths, padding. Fuzzed, and shown in
+  the Guide and `examples/c/tlv.c`. `CF_WITH_TLV`, on by default.
 
 - **Keys checked at compile time in C11** (D-75): `CF_DEFINE_INT` and
   `CF_DEFINE_TEXT` refuse, when compiled, a definition the library would

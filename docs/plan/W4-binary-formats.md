@@ -1485,3 +1485,10 @@ test from a layout.
   `D-91, D-93`; wave 4 🟩 with its text "CBOR (D-91) and TLV by a layout,
   BER-TLV included (D-92, D-93). **1.5.0.**"
 * **notes**:
+  * 2026-11-13: `fz_tlv`'s corpus is W4-T2's device document with BCD,
+    hex and a list of two nests added before its end tag, so that a
+    mutation starts inside each of them; `fz_ber`'s is W4-T4's record as
+    the test reads it. `feed_codec` now reads through `cf_codec_decode`,
+    by a `feed_through(codec, v)` that `feed_codec` and `feed_tlv` share,
+    and `fuzz_bytes` takes the codec. The example prints explain()'s
+    whole answer, whose row ends `dev.cfg, byte 12`.

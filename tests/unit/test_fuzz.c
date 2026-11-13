@@ -149,14 +149,15 @@ static char g_arena[1 << 16];
    is measured or exhausts the arena, and is then over it too. */
 static char g_codec_arena[(size_t)1 << 22];
 
-static void feed_codec(const char* format, const blob* v) {
-    const cf_codec* codec = cf_codec_by_name(format);
-    cf_arena*       ar;
-    cf_keyspace     ks;
-    cf_flatten      fl;
-    cf_blob         b;
-    cf_error        err = CF_ERROR_INIT;
-    size_t          used;
+/* The bytes read through `codec`, by cf_codec_decode: a built-in one, or
+   one made from a layout (feed_tlv). */
+static void feed_through(const cf_codec* codec, const blob* v) {
+    cf_arena*   ar;
+    cf_keyspace ks;
+    cf_flatten  fl;
+    cf_blob     b;
+    cf_error    err = CF_ERROR_INIT;
+    size_t      used;
 
     if (codec == NULL) {
         return;
@@ -172,7 +173,7 @@ static void feed_codec(const char* format, const blob* v) {
        a parser that refuses a corrupted document is doing its job, and
        one that accepts it has produced a configuration from garbage,
        which is also legal - the garbage was a valid document. */
-    if (codec->decode(&b, cf_flatten_sink(&fl), &err)) {
+    if (cf_codec_decode(codec, &b, cf_flatten_sink(&fl), &err)) {
         cf_ks_resolve(&ks);
         cf_ks_infer_untyped(&ks);
         /* Reading what it produced is part of the target: a key space
@@ -184,10 +185,103 @@ static void feed_codec(const char* format, const blob* v) {
     }
     used = cf_arena_used(ar);
     if (used > (size_t)FUZZ_COST_FACTOR * v->n + (size_t)FUZZ_COST_FLOOR) {
-        printf("  %s: %lu bytes of input cost %lu bytes\n", format, (unsigned long)v->n,
-               (unsigned long)used);
+        printf("  %s: %lu bytes of input cost %lu bytes\n", codec->name,
+               (unsigned long)v->n, (unsigned long)used);
         check(0, "no reader spends a multiple of its input");
     }
+}
+
+static void feed_codec(const char* format, const blob* v) {
+    feed_through(cf_codec_by_name(format), v);
+}
+
+#if CF_WITH_TLV
+/* Two layouts of the fuzzer's own (D-93), each made into a codec once:
+   one of fixed widths with a tag of each type, a list of nests among
+   them, and unknown tags kept, so that every path of the reader has a
+   way in; and a BER-TLV one with padding, a nest and BCD. */
+static const cf_tlv_tag fz_server_tags[] = {
+    {0x0001, "addr", CF_TLV_TEXT, 0, 0, 0, NULL, 0, NULL},
+    {0x0002, "port", CF_TLV_UINT, 2, 0, 0, NULL, 0, NULL}};
+
+static const cf_tlv_tag fz_tlv_tags[] = {
+    {0x0001, "name", CF_TLV_TEXT, 0, 0, 0, NULL, 0, NULL},
+    {0x0002, "net.port", CF_TLV_UINT, 2, 0, 0, NULL, 0, NULL},
+    {0x0003, "net.dhcp", CF_TLV_BOOL, 1, 0, 0, NULL, 0, NULL},
+    {0x0004, "offset", CF_TLV_INT, 4, CF_TLV_BIG, 0, NULL, 0, NULL},
+#if CF_WITH_REAL
+    {0x0005, "gain", CF_TLV_REAL, 4, 0, 0, NULL, 0, NULL},
+#endif
+    {0x0006, "amount", CF_TLV_BCD, 0, 0, 0, NULL, 0, NULL},
+    {0x0007, "mac", CF_TLV_HEX, 0, 0, 0, NULL, 0, NULL},
+    {0x0008, "servers", CF_TLV_NEST, 0, 0, CF_TLV_LIST, fz_server_tags, 2, NULL},
+    {0x0010, NULL, CF_TLV_RECORD, 12, 0, CF_TLV_SKIP, NULL, 0, NULL},
+    {0x0011, NULL, CF_TLV_RECORD, 8, 0, 0, NULL, 0, NULL}};
+
+static const cf_tlv_tag fz_issuer_tags[] = {
+    {0x50, "label", CF_TLV_TEXT, 0, 0, 0, NULL, 0, NULL}};
+
+static const cf_tlv_tag fz_record_tags[] = {
+    {0x5A, "pan", CF_TLV_BCD, 0, 0, 0, NULL, 0, NULL},
+    {0x5F24, "expiry", CF_TLV_BCD, 3, 0, 0, NULL, 0, NULL},
+    {0x9F02, "amount", CF_TLV_BCD, 6, 0, 0, NULL, 0, NULL},
+    {0xBF0C, "issuer", CF_TLV_NEST, 0, 0, 0, fz_issuer_tags, 1, NULL}};
+
+static const cf_tlv_tag fz_ber_tags[] = {
+    {0x70, "record", CF_TLV_NEST, 0, 0, 0, fz_record_tags, 4, NULL}};
+
+static const cf_codec* fz_tlv(void) {
+    static cf_tlv_layout l = CF_TLV_LAYOUT_INIT;
+    static cf_codec      c;
+    static int           made = 0;
+
+    if (!made) {
+        cf_error err   = CF_ERROR_INIT;
+        l.name         = "fz-tlv";
+        l.tag_width    = 2;
+        l.length_width = 2;
+        l.order        = CF_TLV_LITTLE;
+        l.flags        = CF_TLV_END;
+        l.end_tag      = 0xFFFFu;
+        l.unknown      = CF_TLV_UNKNOWN_KEEP;
+        l.tags         = fz_tlv_tags;
+        l.ntags        = sizeof fz_tlv_tags / sizeof fz_tlv_tags[0];
+        made           = cf_tlv_codec(&c, &l, &err) ? 1 : -1;
+        check(made == 1, "the fuzzer's TLV layout makes a codec");
+    }
+    return (made == 1) ? &c : NULL;
+}
+
+static const cf_codec* fz_ber(void) {
+    static cf_tlv_layout l = CF_TLV_LAYOUT_INIT;
+    static cf_codec      c;
+    static int           made = 0;
+
+    if (!made) {
+        cf_error err = CF_ERROR_INIT;
+        l.name       = "fz-ber";
+        l.kind       = CF_TLV_BER;
+        l.flags      = CF_TLV_PADDING;
+        l.tags       = fz_ber_tags;
+        l.ntags      = 1;
+        made         = cf_tlv_codec(&c, &l, &err) ? 1 : -1;
+        check(made == 1, "the fuzzer's BER-TLV layout makes a codec");
+    }
+    return (made == 1) ? &c : NULL;
+}
+#else
+static const cf_codec* fz_tlv(void) {
+    return NULL;
+}
+
+static const cf_codec* fz_ber(void) {
+    return NULL;
+}
+#endif
+
+/* The bytes through a codec made from a layout. */
+static void feed_tlv(const cf_codec* c, const blob* v) {
+    feed_through(c, v);
 }
 
 static void feed_dotenv(const blob* v) {
@@ -464,6 +558,33 @@ static const unsigned char g_cbor[] = {
     0x61, 0x6B, 0xF9, 0x00, 0x01, 0xFF /* the map's end */
 };
 
+/* TLV under fz_tlv's layout: W4-T2's device document, then BCD, hex and
+   a list of two nests, then the end tag. */
+static const unsigned char g_tlv[] = {
+    0x01, 0x00, 0x08, 0x00, 'u',  'n',  'i',  't',  '-',  '7',  0x00, 0x00, /* name   */
+    0x02, 0x00, 0x02, 0x00, 0x90, 0x01,                                     /* port   */
+    0x03, 0x00, 0x01, 0x00, 0x01,                                           /* dhcp   */
+    0x04, 0x00, 0x04, 0x00, 0xFF, 0xFF, 0xFF, 0xFE,                         /* offset */
+    0x05, 0x00, 0x04, 0x00, 0x00, 0x00, 0xC0, 0x3F,                         /* gain   */
+    0x10, 0x00, 0x0C, 0x00, 1,    2,    3,    4,    5,    6,    7,    8,
+    9,    10,   11,   12,                                       /* skipped */
+    0x06, 0x00, 0x03, 0x00, 0x01, 0x23, 0x45,                   /* amount */
+    0x07, 0x00, 0x06, 0x00, 0x00, 0x1A, 0x2B, 0x3C, 0x4D, 0x5E, /* mac    */
+    0x08, 0x00, 0x12, 0x00, 0x01, 0x00, 0x08, 0x00, '1',  '0',  '.',  '0',
+    '.',  '0',  '.',  '1',  0x02, 0x00, 0x02, 0x00, 0x90, 0x1F, /* server */
+    0x08, 0x00, 0x12, 0x00, 0x01, 0x00, 0x08, 0x00, '1',  '0',  '.',  '0',
+    '.',  '0',  '.',  '2',  0x02, 0x00, 0x02, 0x00, 0x91, 0x23, /* server */
+    0xFF, 0xFF};                                                /* end    */
+
+/* BER-TLV under fz_ber's layout: W4-T4's record, padding around it. */
+static const unsigned char g_ber[] = {
+    0x00, 0x00, 0x70, 0x81, 0x22,                               /* padding, record */
+    0x5A, 0x08, 0x47, 0x61, 0x73, 0x90, 0x01, 0x01, 0x00, 0x10, /* pan             */
+    0x5F, 0x24, 0x03, 0x25, 0x12, 0x31,                         /* expiry          */
+    0x9F, 0x02, 0x06, 0x00, 0x00, 0x00, 0x01, 0x23, 0x45,       /* amount          */
+    0xBF, 0x0C, 0x06, 0x50, 0x04, 'T',  'E',  'S',  'T',        /* issuer          */
+    0xFF};                                                      /* padding         */
+
 static const char* const g_env = "# comment\n"
                                  "export SERVER__PORT=8080\n"
                                  "SERVER__HOST=\"0.0.0.0\"\n"
@@ -493,8 +614,9 @@ static void fuzz_text(const char* name, const char* corpus, int is_ini) {
     }
 }
 
-/* fuzz_text for a binary format, whose corpus is bytes. */
-static void fuzz_bytes(const char* name, const unsigned char* corpus, size_t n) {
+/* fuzz_text for a binary format, whose corpus is bytes, read through
+   `codec` (skipped when the build has none). */
+static void fuzz_bytes(const cf_codec* codec, const unsigned char* corpus, size_t n) {
     static blob v;
     int         i;
 
@@ -504,7 +626,7 @@ static void fuzz_bytes(const char* name, const unsigned char* corpus, size_t n) 
         for (m = (int)pick(4) + 1; m > 0; --m) {
             mutate(&v);
         }
-        feed_codec(name, &v);
+        feed_through(codec, &v);
     }
 }
 
@@ -529,6 +651,8 @@ static void fuzz_from_nothing(void) {
         feed_codec("xml", &v);
         feed_codec("properties", &v);
         feed_codec("cbor", &v);
+        feed_tlv(fz_tlv(), &v);
+        feed_tlv(fz_ber(), &v);
     }
     for (i = 0; i < ROUNDS; ++i) {
         size_t j;
@@ -544,6 +668,8 @@ static void fuzz_from_nothing(void) {
         feed_codec("xml", &v);  /* and this */
         feed_codec("properties", &v);
         feed_codec("cbor", &v);
+        feed_tlv(fz_tlv(), &v);
+        feed_tlv(fz_ber(), &v);
         feed_dotenv(&v);
         feed_argv(&v);
         feed_image(&v);
@@ -643,6 +769,8 @@ int main(void) {
     write_seed("seed_xml", g_xml, strlen(g_xml));
     write_seed("seed_properties", g_properties, strlen(g_properties));
     write_seed("seed_cbor", (const char*)g_cbor, sizeof g_cbor);
+    write_seed("seed_tlv", (const char*)g_tlv, sizeof g_tlv);
+    write_seed("seed_ber", (const char*)g_ber, sizeof g_ber);
     write_seed("seed_dotenv", g_env, strlen(g_env));
     write_seed("seed_replay", g_report, strlen(g_report));
     write_seed("seed_argv", argv_seed, sizeof argv_seed - 1);
@@ -680,7 +808,9 @@ int main(int argc, char** argv) {
     fuzz_text("yaml", g_yaml, 0);
     fuzz_text("xml", g_xml, 0);
     fuzz_text("properties", g_properties, 0);
-    fuzz_bytes("cbor", g_cbor, sizeof g_cbor);
+    fuzz_bytes(cf_codec_by_name("cbor"), g_cbor, sizeof g_cbor);
+    fuzz_bytes(fz_tlv(), g_tlv, sizeof g_tlv);
+    fuzz_bytes(fz_ber(), g_ber, sizeof g_ber);
     fuzz_text(NULL, g_env, -1);
 #if CF_WITH_IMAGE
     fuzz_image();

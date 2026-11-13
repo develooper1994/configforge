@@ -13,6 +13,7 @@ by `verify -DEXTRA=conformance` against floors that only rise.
 | YAML | YAML 1.2.2 | built in (D-69); libfyaml 0.9.1+ or libyaml by choice | yes, block style | yaml-test-suite: 308/308 events, 122/122, 94/94, 110/110 values | several documents, a top level that is not a mapping, a key that is not a scalar, an empty key, an application's tag - each refused by name (D-39, D-63); YAML 1.1's booleans (yes/no) are text |
 | INI | none: PHP's `parse_ini_file` for arrays (D-60) | built in | yes | the unit tests, and Python's `configparser`: 36/36 documents read the same, 12 more differing by design (below) | interpolation, multi-line values, escapes; a value with a line break is not written, by name |
 | CBOR | RFC 8949 | built in (`CF_WITH_CBOR`, D-91) | yes: indefinite-length maps and arrays, numbers in preferred serialization | RFC 8949 Appendix A: 68/68 read and the rest refused by name; Appendix F.1: 94/94 refused; 55/55 values | byte strings, tags other than 0, 1, 32 and 55799, undefined and the other simple values, a key that is not text, an integer past 64 bits - each refused by name; Infinity and NaN are their text |
+| TLV | a layout the program gives; BER-TLV as X.690 section 8.1 and ISO/IEC 7816-4 | `CF_WITH_TLV`, by `cf_tlv_codec` (D-93) | no (wave 6) | the unit tests, fuzzed | indefinite BER lengths, a tag past 4 bytes, an unknown tag unless the layout skips or keeps it - each refused by name |
 | Java `.properties` | what `java.util.Properties.load` reads, as UTF-8 | built in | no | the unit tests | writing (no quoting, so text would read back as a number) |
 | XML | XML 1.0, through expat | `CF_WITH_XML` | no | the unit tests | DOCTYPE and entities, namespaces, mixed content, an attribute and a child of one name - refused by name (D-23) |
 | `.env` | none: the common dotenv convention | built in | no | the unit tests | variable expansion: `${...}` is the library's own references (D-10) |
@@ -85,7 +86,10 @@ Strategies in turn, the first that answers deciding; each says why
    builder's own, CBOR, JSON, JSON5, TOML, XML - is taken at once. A loose one -
    YAML, INI - is taken only when no other loose format reads the bytes
    into different events; otherwise the file is refused as ambiguous,
-   naming both. `.properties` is never chosen from content.
+   naming both. `.properties` is never chosen from content. A TLV codec
+   is never chosen from content (`CF_CODEC_NAMED_ONLY`): a layout reads
+   bytes no other format would refuse, so its name or its extensions
+   choose it.
 
 A drop-in directory chooses each file this way, with one difference: only a
 name with no extension at all - a bare `10-base` - is read by its content, and
