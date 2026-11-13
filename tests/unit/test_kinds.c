@@ -21,7 +21,7 @@
 static int has_name(const cf_codec* const* list, size_t n, const char* name) {
     size_t i;
     for (i = 0; i < n; ++i) {
-        if (strcmp(list[i]->name, name) == 0) {
+        if (list[i] != NULL && strcmp(list[i]->name, name) == 0) {
             return 1;
         }
     }
@@ -44,7 +44,8 @@ static void test_select(void) {
 #endif
     check(!has_name(got, n, "json"), "binary: not JSON");
     for (i = 0; i < n; ++i) {
-        check((got[i]->caps & CF_CODEC_BINARY) != 0, "each one chosen is binary");
+        check(got[i] != NULL && (got[i]->caps & CF_CODEC_BINARY) != 0,
+              "each one chosen is binary");
     }
 
     n = cf_codec_select(0, CF_CODEC_BINARY, got, 32);
