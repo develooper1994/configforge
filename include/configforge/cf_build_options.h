@@ -48,6 +48,9 @@
 #ifndef CF_WITH_CBOR
 #define CF_WITH_CBOR 1
 #endif
+#ifndef CF_WITH_TLV
+#define CF_WITH_TLV 1
+#endif
 #ifndef CF_WITH_XML
 #define CF_WITH_XML 0
 #endif

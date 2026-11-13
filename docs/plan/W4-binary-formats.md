@@ -1219,6 +1219,16 @@ test from a layout.
   its tag starts at (D-93). `CF_WITH_TLV`, on by default." Roadmap: wave 4's
   text gains "a TLV codec from a layout, flat (W4-T2)".
 * **notes**:
+  * 2026-11-13: the file is `src/bridge/tlv.c`, not `src/serialize/tlv.c`:
+    the layering gate keeps `cf_keyspace.h`, and so `cf_key_valid`, out of
+    the serialization layer, and the bridge may use both (D-93 says so).
+    `amalgamate.py` lists it after `bridge/schema.c`. The checks the card
+    gives no words for have these: `"tag 0x%s is wider than a tag"`,
+    `"CF_TLV_END_LENGTH is for an end tag: set CF_TLV_END"`,
+    `"CF_TLV_PADDING is BER-TLV's"`, `"tag 0x%s has type %d, not a CF_TLV_
+    type"`, `"... is %U bytes, and an integer is 1 to 8"` and `"... is %U
+    bytes, and a bool is one"`. The type's word carries its article, so
+    the width message reads "an int of 3 bytes", as the test asks.
 
 ---
 

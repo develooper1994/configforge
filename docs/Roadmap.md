@@ -130,7 +130,8 @@ short keeps its branch, unmerged, and says so here.
    byte order, BER-TLV's classes and long lengths, an end tag, nesting),
    with a key and type per tag and every value placed by its offset; and
    CBOR (RFC 8949, held to its appendix's vectors): CBOR done (D-91); a
-   codec carries its own data (D-92). **1.5.0.**
+   codec carries its own data (D-92); a TLV codec from a layout, flat
+   (W4-T2, D-93). **1.5.0.**
 5. ⬜ **Wave 5**: converting between formats (`doctor convert`, through
    `cf_emit`, naming what the target cannot hold); code for each binding
    from a contract (`doctor gen --lang c|cpp|rust|python`).

@@ -63,7 +63,7 @@ Every error carries one of these codes, stable from 1.0;
 - [`cf_platform.h`](#cf_platformh) - 21
 - [`cf_port.h`](#cf_porth) - 10
 - [`cf_report.h`](#cf_reporth) - 6
-- [`cf_serialize.h`](#cf_serializeh) - 26
+- [`cf_serialize.h`](#cf_serializeh) - 27
 - [`cf_source.h`](#cf_sourceh) - 34
 - [`cf_value.h`](#cf_valueh) - 12
 - [`cf_version.h`](#cf_versionh) - 7
@@ -3478,6 +3478,34 @@ CF_API const cf_codec* cf_codec_at(size_t i);
 
 Implementation: [`cf_codec_count` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L62), [`cf_codec_at` (src/serialize/codec.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/codec.c#L70).
 
+### Tag, length, value, by a layout the program gives (D-93)
+
+TLV has no one standard, so it is a codec the program makes: the
+layout says how wide a tag and a length are and in which byte
+order, how the document ends, and what each tag is - its key, its
+type, and for a nested one the tags inside it. Each value is placed
+in explain() as "&lt;file>, byte &lt;n>", n the offset of its tag. A tag
+the layout does not name is refused unless the layout says to skip
+or keep it. Read only: writing back keeps what a layout skips, and
+is wave 6's.
+
+```c
+CF_API cf_bool cf_tlv_codec_sized(cf_codec* out, size_t out_size, const cf_tlv_layout* layout, cf_error* err);
+```
+
+Implementation: [`cf_tlv_codec_sized` (src/bridge/tlv.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/tlv.c#L620).
+
+A codec that reads `layout`, made in `out`: the program owns `out`,
+the layout, and every table and key it points to, and each must
+outlive every configuration that reads with the codec - as any codec
+given to cf_builder_codec must; a `static` one is the usual way.
+The layout is checked whole here, and false with `err` set
+(CF_E_DEFINITION, the layout's name as source) names the first
+mistake; `out` then reads nothing. The codec is named the layout's
+name, takes its extensions, reads only, and is never chosen from
+content (CF_CODEC_NAMED_ONLY). Off in a build without CF_WITH_TLV,
+and says so. (1.5)
+
 ### The format from the name, then the content (D-73)
 
 Several simple strategies in turn, the first that answers deciding, and
@@ -4024,7 +4052,7 @@ CF_API const char* cf_feature_at(size_t i);
 CF_API cf_bool cf_has_feature(const char* name);
 ```
 
-Implementation: [`cf_feature_count` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L100), [`cf_feature_at` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L104), [`cf_has_feature` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L131).
+Implementation: [`cf_feature_count` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L103), [`cf_feature_at` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L107), [`cf_has_feature` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L134).
 
 What this build can do, as a NUL-terminated list: "ini", "json",
 "real", and so on. Recorded in the provenance report as well, so a
@@ -4037,7 +4065,7 @@ that implements them, including a minimal build.
 CF_API size_t cf_build_limit(const char* name);
 ```
 
-Implementation: [`cf_build_limit` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L112).
+Implementation: [`cf_build_limit` (src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/src/core/version.c#L115).
 
 A build limit, by name: "key" (CF_KEY_MAX), "source" (CF_SOURCE_MAX),
 "message" (CF_MESSAGE_MAX), "path" (CF_PATH_MAX) and "depth"

@@ -250,6 +250,103 @@ CF_API size_t          cf_codec_count(void);
 CF_API const cf_codec* cf_codec_at(size_t i);
 
 /* ------------------------------------------------------------------ *
+ * Tag, length, value, by a layout the program gives (D-93)
+ *
+ * TLV has no one standard, so it is a codec the program makes: the
+ * layout says how wide a tag and a length are and in which byte
+ * order, how the document ends, and what each tag is - its key, its
+ * type, and for a nested one the tags inside it. Each value is placed
+ * in explain() as "<file>, byte <n>", n the offset of its tag. A tag
+ * the layout does not name is refused unless the layout says to skip
+ * or keep it. Read only: writing back keeps what a layout skips, and
+ * is wave 6's.
+ * ------------------------------------------------------------------ */
+
+enum { CF_TLV_FIXED = 0, CF_TLV_BER = 1 }; /* the layout's kind */
+enum {
+    CF_TLV_BIG    = 1,
+    CF_TLV_LITTLE = 2
+}; /* byte order; 0 in a
+      tag is the layout's */
+enum {
+    CF_TLV_TEXT   = 1, /* UTF-8; trailing NUL bytes dropped              */
+    CF_TLV_INT    = 2, /* signed, two's complement, `width` bytes        */
+    CF_TLV_UINT   = 3, /* unsigned, `width` bytes                        */
+    CF_TLV_BOOL   = 4, /* one byte, 0 or 1                               */
+    CF_TLV_REAL   = 5, /* IEEE 754, 4 or 8 bytes                         */
+    CF_TLV_BCD    = 6, /* packed decimal digits, high nibble first      */
+    CF_TLV_HEX    = 7, /* any bytes, as lowercase hexadecimal text       */
+    CF_TLV_RECORD = 8, /* a fixed record: skipped or refused             */
+    CF_TLV_NEST   = 9  /* more TLV inside: a table                       */
+};
+enum { CF_TLV_SKIP = 1u << 0, CF_TLV_LIST = 1u << 1 }; /* a tag's flags */
+enum {
+    CF_TLV_END        = 1u << 0,
+    CF_TLV_END_LENGTH = 1u << 1,
+    CF_TLV_PADDING    = 1u << 2
+}; /* a layout's */
+enum { CF_TLV_UNKNOWN_REFUSE = 0, CF_TLV_UNKNOWN_SKIP = 1, CF_TLV_UNKNOWN_KEEP = 2 };
+
+/* One tag of a layout. Fixed for 1.x, as cf_pair is: it is an array's
+   element, and an array cannot grow. `more` is NULL; a later 1.x may
+   point it at a sized struct of more, and an earlier library refuses a
+   tag whose `more` is set rather than ignore it (D-51). */
+typedef struct cf_tlv_tag {
+    cf_u32 tag;                     /* CF_TLV_FIXED: its value read in the
+                                       layout's order; CF_TLV_BER: its
+                                       identifier bytes as one big-endian
+                                       number, as EMV writes it: 0x9F02 */
+    const char* key;                /* "port", or dotted, "net.port";
+                                       NULL for a skipped or refused one */
+    int      type;                  /* CF_TLV_TEXT ...                   */
+    unsigned width;                 /* bytes: 0 any (TEXT, HEX, BCD, RECORD;
+                                       INT and UINT: 1 to 8, the value's
+                                       own); else exactly this many      */
+    int                      order; /* INT, UINT, REAL: 0 the layout's   */
+    unsigned                 flags; /* CF_TLV_SKIP, CF_TLV_LIST          */
+    const struct cf_tlv_tag* inner; /* CF_TLV_NEST: the tags inside      */
+    size_t                   ninner;
+    const void*              more; /* NULL                              */
+} cf_tlv_tag;
+
+/* A layout; start from CF_TLV_LAYOUT_INIT. Each table of tags is in
+   ascending order of `tag`, which is how it is searched and how a tag
+   listed twice is found. */
+typedef struct cf_tlv_layout {
+    size_t            size;         /* sizeof(cf_tlv_layout)          */
+    const char*       name;         /* the format's name: "devcfg"    */
+    const char*       extensions;   /* ".dcfg", or NULL: by name only */
+    int               kind;         /* CF_TLV_FIXED or CF_TLV_BER     */
+    unsigned          tag_width;    /* CF_TLV_FIXED: 1, 2 or 4        */
+    unsigned          length_width; /* CF_TLV_FIXED: 1, 2 or 4        */
+    int               order;        /* CF_TLV_FIXED: BIG or LITTLE    */
+    unsigned          flags;        /* CF_TLV_END, _END_LENGTH, _PADDING */
+    cf_u32            end_tag;      /* with CF_TLV_END                */
+    int               unknown;      /* CF_TLV_UNKNOWN_REFUSE ...      */
+    const cf_tlv_tag* tags;         /* the top level's                */
+    size_t            ntags;
+} cf_tlv_layout;
+
+#define CF_TLV_LAYOUT_INIT                                                             \
+    {sizeof(cf_tlv_layout), NULL, NULL, CF_TLV_FIXED, 0, 0, 0, 0, 0,                   \
+     CF_TLV_UNKNOWN_REFUSE, NULL, 0}
+
+/* A codec that reads `layout`, made in `out`: the program owns `out`,
+   the layout, and every table and key it points to, and each must
+   outlive every configuration that reads with the codec - as any codec
+   given to cf_builder_codec must; a `static` one is the usual way.
+   The layout is checked whole here, and false with `err` set
+   (CF_E_DEFINITION, the layout's name as source) names the first
+   mistake; `out` then reads nothing. The codec is named the layout's
+   name, takes its extensions, reads only, and is never chosen from
+   content (CF_CODEC_NAMED_ONLY). Off in a build without CF_WITH_TLV,
+   and says so. (1.5) */
+CF_API cf_bool cf_tlv_codec_sized(cf_codec* out, size_t out_size,
+                                  const cf_tlv_layout* layout, cf_error* err);
+#define cf_tlv_codec(out, layout, err)                                                 \
+    cf_tlv_codec_sized((out), sizeof(cf_codec), (layout), (err))
+
+/* ------------------------------------------------------------------ *
  * The format from the name, then the content (D-73)
  *
  * Several simple strategies in turn, the first that answers deciding, and

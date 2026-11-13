@@ -15,7 +15,8 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/store.c
           ${CMAKE_CURRENT_SOURCE_DIR}/secrets.c
           ${CMAKE_CURRENT_SOURCE_DIR}/registry.c
-          ${CMAKE_CURRENT_SOURCE_DIR}/schema.c)
+          ${CMAKE_CURRENT_SOURCE_DIR}/schema.c
+          ${CMAKE_CURRENT_SOURCE_DIR}/tlv.c)
 
 # The store through sqlite3, found as a header and a library like the
 # other dependencies. Without it the source still exists and refuses

@@ -3520,6 +3520,74 @@ only when it has no `decode`, since 1.4 asks for one.
 
 ---
 
+## D-93 — TLV, a codec from a layout
+
+**Question.** Tag, length, value has a standard only as ASN.1's BER; a
+device's own `.cfg` of two-byte tags and lengths follows no document but
+its maker's. Such a file is configuration, and today it reaches a program
+through code nobody else can read and no value of which can say where it
+came from. How does this library read it?
+
+**Options.**
+
+1. Nothing: each program writes a codec for its device.
+2. One TLV codec, for BER only.
+3. A layout the program gives - the widths, the byte order, the end, and
+   each tag's key and type - and a codec the library makes of it.
+
+**Decision.** Option 3. Option 1 is what programs do now, and each such
+codec is a page of offsets that explains nothing. Option 2 leaves out
+every device that is not BER. A layout is one table, the whole of what
+the program writes, and the library does the reading, the bounds and the
+places.
+
+* **The layout.** `cf_tlv_layout` carries its size and starts from
+  `CF_TLV_LAYOUT_INIT`, so a later 1.x can add to it (D-51). `cf_tlv_tag`
+  is an array's element and cannot grow, so it is fixed for 1.x, as
+  `cf_pair` is; its `more` is NULL, and a library that finds it set
+  refuses the tag rather than ignore what it does not know.
+  `cf_tlv_codec_sized` carries the size of the `cf_codec` it fills, as
+  `cf_def_init` carries its own, and refuses one from before 1.5.
+* **Ownership.** The program owns the layout, its tables and its keys;
+  the codec keeps the layout's pointer in `data` (D-92) and copies
+  nothing, as `cf_builder_codec` copies no codec. One codec may serve many
+  builders. A layout gone before its configuration is read is the
+  program's mistake, as a codec on the stack is.
+* **Checked whole.** The name is a format's (one key segment); the kind,
+  the widths, the byte order, the flags and the unknown policy are known
+  values; every table is in ascending order of tag with none twice - the
+  order binary search needs and the way a duplicate is found - and each
+  tag fits the width, is not the end tag, has a valid key unless it is
+  skipped or a record, and a width its type can have. The first mistake
+  is named, `CF_E_DEFINITION`, before any document is read.
+* **The types.** Text (trailing NULs dropped, as a C string in a fixed
+  field ends; a NUL left inside refused; UTF-8 checked); signed and
+  unsigned integers of 1 to 8 bytes in the layout's order or the tag's
+  own, built byte by byte so no host order matters, an unsigned one past
+  the largest `cf_i64` refused; a bool of one byte, 0 or 1; a real of 4 or
+  8 bytes, Infinity and NaN their text as CBOR's are; a record, skipped or
+  refused. A tag with `CF_TLV_SKIP` is passed over: the layout knows it
+  and chose not to read it.
+* **The end.** With `CF_TLV_END`, the end tag ends the top level - with
+  no length, or a length of 0 under `CF_TLV_END_LENGTH` - and nothing may
+  follow it. Without it, the document ends with its last byte, which must
+  end an element.
+* **Places and limits.** Each value is `<file>, byte <n>`, n the offset
+  of its tag, which is what a person looks for in a hex dump. A length is
+  checked against what is left before its value is read.
+* **In the bridge.** `src/bridge/tlv.c`, not beside the other readers: a
+  layout's keys are checked by `cf_key_valid`, which the serialization
+  layer may not reach (the layering gate).
+
+Not read yet, and refused by name until they are: a nest, a list, BCD and
+hex values, an unknown tag skipped or kept, and BER-TLV. Writing is wave
+6's: what a layout skips must be kept to write the file back.
+
+**Compatibility.** Additive: one function, one option on by default
+(`CF_WITH_TLV`; without it the function refuses by name, D-38).
+
+---
+
 ## D-60 — Arrays in INI are the ones INI files already have
 
 **Question.** INI had no arrays here: a configuration with one could not

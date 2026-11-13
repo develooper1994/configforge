@@ -328,6 +328,7 @@ cf_text_is_utf8
 cf_text_to_f64 real
 cf_text_to_i64
 cf_text_to_u64
+cf_tlv_codec_sized
 cf_tracks_reads
 cf_try_bool
 cf_try_int

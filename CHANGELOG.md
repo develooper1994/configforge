@@ -110,6 +110,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   `cf_codec_decode`), and say it is never chosen from content
   (`CF_CODEC_NAMED_ONLY`): what a codec made from a description needs
   (D-92).
+- **TLV by a layout** (`cf_tlv_layout`, `cf_tlv_codec`): a program
+  describes its tags - widths, byte order, an end tag, each tag's key and
+  type - and the library makes a codec that reads it, each value placed by
+  the byte its tag starts at (D-93). `CF_WITH_TLV`, on by default.
 
 - **Keys checked at compile time in C11** (D-75): `CF_DEFINE_INT` and
   `CF_DEFINE_TEXT` refuse, when compiled, a definition the library would

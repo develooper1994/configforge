@@ -64,7 +64,7 @@ SOURCES = [
     "serialize/json.c", "serialize/toml.c", "serialize/yamlparse.c", "serialize/yaml.c", "serialize/xml.c", "serialize/properties.c", "serialize/cbor.c",
     "sources/entry.c", "sources/memory.c", "sources/defaults.c", "sources/env.c",
     "sources/cli.c", "sources/compat.c", "sources/snapshot.c",
-    "bridge/flatten.c", "bridge/file.c", "bridge/dotenv.c", "bridge/dir.c", "bridge/emit.c", "bridge/image.c", "bridge/store.c", "bridge/secrets.c", "bridge/registry.c", "bridge/schema.c",
+    "bridge/flatten.c", "bridge/file.c", "bridge/dotenv.c", "bridge/dir.c", "bridge/emit.c", "bridge/image.c", "bridge/store.c", "bridge/secrets.c", "bridge/registry.c", "bridge/schema.c", "bridge/tlv.c",
     "diag/explain.c", "diag/report.c", "diag/diff.c",
 ]
 

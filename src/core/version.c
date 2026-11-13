@@ -48,6 +48,9 @@ static const char* const cf_features[] = {"lists",
 #if CF_WITH_CBOR
                                           "cbor",
 #endif
+#if CF_WITH_TLV
+                                          "tlv",
+#endif
 #if CF_WITH_XML
                                           "xml",
 #endif
