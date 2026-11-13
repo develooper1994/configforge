@@ -3605,8 +3605,23 @@ places.
   as `unknown.`, which would move the key when the layout later names the
   tag, where `tag-0099` already says what it is.
 
-Not read yet, and refused by name until it is: BER-TLV. Writing is wave
-6's: what a layout skips must be kept to write the file back.
+* **BER-TLV** (`CF_TLV_BER`), as ISO/IEC 7816-4 and EMV use ASN.1's
+  BER. A tag is its identifier bytes as one big-endian number - `5A`,
+  `9F02`, `BF0C` - the way EMV writes it, so its class and constructed bit
+  are part of it and need no field of their own; at most 4 bytes. A
+  length is X.690's: the short form under `80`, `81` to `84` bytes
+  following, longer than needed or not, as BER allows. The indefinite
+  length, `80`, is refused: ISO/IEC 7816-4 and EMV do not use it, and its
+  end would be found only by reading. A constructed tag's value is more
+  TLV, so its entry is a nest, and a nest's tag is constructed: both are
+  checked when the codec is made. An unknown constructed tag kept is a
+  table of unknowns. With `CF_TLV_PADDING`, a `00` or `FF` where a tag
+  would begin is passed over, before and between elements, as ISO/IEC
+  7816-4 allows. The widths and the byte order are not read: the kind
+  decides.
+
+Writing is wave 6's: what a layout skips must be kept to write the file
+back.
 
 **Compatibility.** Additive: one function, one option on by default
 (`CF_WITH_TLV`; without it the function refuses by name, D-38).

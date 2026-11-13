@@ -1408,6 +1408,13 @@ test from a layout.
   long-form lengths, padding". Roadmap: wave 4's text "TLV and BER-TLV by
   a layout (W4-T4)".
 * **notes**:
+  * 2026-11-13: the test asks `cf_tlv_codec` to refuse `70` given as a
+    primitive entry, by its constructed bit, so the codec checks both
+    directions: `"tag 0x%s has its constructed bit set, and its entry is
+    not a nest"` beside the nest's own check. Every entry is then known to
+    agree with its bit, and the reading's own check of it would never
+    fire, so there is none. A tag cut short or a length cut short says
+    how many bytes were left, as FIXED's do.
 
 ---
 

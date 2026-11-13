@@ -3493,7 +3493,7 @@ is wave 6's.
 CF_API cf_bool cf_tlv_codec_sized(cf_codec* out, size_t out_size, const cf_tlv_layout* layout, cf_error* err);
 ```
 
-Implementation: [`cf_tlv_codec_sized` (src/bridge/tlv.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/tlv.c#L869).
+Implementation: [`cf_tlv_codec_sized` (src/bridge/tlv.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/tlv.c#L1037).
 
 A codec that reads `layout`, made in `out`: the program owns `out`,
 the layout, and every table and key it points to, and each must

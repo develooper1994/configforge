@@ -64,10 +64,56 @@ static cf_bool tlv_bad(cf_error* err, const cf_tlv_layout* l, const char* what) 
                         tlv_name(l), what);
 }
 
-/* The digits of a tag in its layout: the tag width's for FIXED. */
+/* The bytes of a tag in its layout: the tag width for FIXED; for BER, its
+   identifier's, which are the number's bytes (EMV's 9F02 is two). */
+static unsigned tlv_ber_bytes(cf_u32 tag) {
+    unsigned n = 1;
+
+    while (n < 4u && (tag >> (8u * n)) != 0) {
+        ++n;
+    }
+    return n;
+}
+
 static unsigned tlv_tag_bytes(const cf_tlv_layout* l, cf_u32 tag) {
-    (void)tag;
-    return l->tag_width;
+    return (l->kind == CF_TLV_BER) ? tlv_ber_bytes(tag) : l->tag_width;
+}
+
+/* A BER tag's first identifier byte: its class, its constructed bit and
+   its number, or 1F when the number follows (X.690 section 8.1.2). */
+static unsigned tlv_ber_first(cf_u32 tag) {
+    return (unsigned)((tag >> (8u * (tlv_ber_bytes(tag) - 1u))) & 0xFFu);
+}
+
+static cf_bool tlv_ber_constructed(cf_u32 tag) {
+    return ((tlv_ber_first(tag) & 0x20u) != 0) ? CF_TRUE : CF_FALSE;
+}
+
+/* Whether `tag` is one BER identifier: one byte whose number is under
+   31, or 1F and then bytes whose top bit says another follows, the last
+   with it clear. */
+static cf_bool tlv_ber_ident(cf_u32 tag) {
+    unsigned n = tlv_ber_bytes(tag), i;
+
+    if ((tlv_ber_first(tag) & 0x1Fu) != 0x1Fu) {
+        return (n == 1u) ? CF_TRUE : CF_FALSE;
+    }
+    if (n < 2u) {
+        return CF_FALSE;
+    }
+    /* The bytes after the first, the last of them at the bottom. */
+    for (i = 0; i + 1u < n; ++i) {
+        unsigned b = (unsigned)((tag >> (8u * i)) & 0xFFu);
+
+        if (i == 0) {
+            if ((b & 0x80u) != 0) {
+                return CF_FALSE; /* the last says another follows */
+            }
+        } else if ((b & 0x80u) == 0) {
+            return CF_FALSE; /* one before the last says none does */
+        }
+    }
+    return CF_TRUE;
 }
 
 /* Whether `tag` fits a FIXED layout's tag width. */
@@ -101,6 +147,34 @@ static cf_bool tlv_width_ok(int type, unsigned w) {
     default:
         return CF_TRUE;
     }
+}
+
+/* A BER entry: one identifier, and a nest exactly when constructed - a
+   constructed tag's value is more TLV, and a primitive one's is not. */
+static cf_bool tlv_check_ber(const cf_tlv_layout* l, const cf_tlv_tag* t,
+                             const char* hex, cf_error* err) {
+    if (!tlv_ber_ident(t->tag)) {
+        return cf_error_set(err, CF_E_DEFINITION, NULL, l->name,
+                            "layout '%s': tag 0x%s is not one BER identifier",
+                            tlv_name(l), hex);
+    }
+    if (t->type == CF_TLV_NEST && !tlv_ber_constructed(t->tag)) {
+        return cf_error_set(
+            err, CF_E_DEFINITION, NULL, l->name,
+            "layout '%s': tag 0x%s is a nest and its constructed bit is not "
+            "set",
+            tlv_name(l), hex);
+    }
+    if (t->type != CF_TLV_NEST && (t->flags & CF_TLV_SKIP) == 0) {
+        if (tlv_ber_constructed(t->tag)) {
+            return cf_error_set(
+                err, CF_E_DEFINITION, NULL, l->name,
+                "layout '%s': tag 0x%s has its constructed bit set, and its "
+                "entry is not a nest",
+                tlv_name(l), hex);
+        }
+    }
+    return CF_TRUE;
 }
 
 /* One entry of a table; `prev` is the one before it, or NULL. */
@@ -146,6 +220,9 @@ static cf_bool tlv_check_tag(const cf_tlv_layout* l, const cf_tlv_tag* t,
         return cf_error_set(err, CF_E_DEFINITION, NULL, l->name,
                             "layout '%s': tag 0x%s has type %d, not a CF_TLV_ type",
                             tlv_name(l), hex, t->type);
+    }
+    if (l->kind == CF_TLV_BER && !tlv_check_ber(l, t, hex, err)) {
+        return CF_FALSE;
     }
     if (t->key == NULL) {
         if (t->type != CF_TLV_RECORD && (t->flags & CF_TLV_SKIP) == 0) {
@@ -292,13 +369,7 @@ static cf_bool tlv_check(const cf_tlv_layout* l, cf_error* err) {
     if ((l->tags == NULL) != (l->ntags == 0)) {
         return tlv_bad(err, l, "the tags and their count disagree");
     }
-    if (!tlv_check_table(l, l->tags, l->ntags, path, 0, err)) {
-        return CF_FALSE;
-    }
-    if (l->kind == CF_TLV_BER) {
-        return tlv_bad(err, l, "BER-TLV is not read yet");
-    }
-    return CF_TRUE;
+    return tlv_check_table(l, l->tags, l->ntags, path, 0, err);
 }
 
 /* ------------------------------------------------------------------ *
@@ -334,10 +405,92 @@ static cf_u64 tlv_number(const unsigned char* p, size_t n, int order) {
     return v;
 }
 
+/* A BER identifier at `*at`: the first byte, and when its number is 1F
+   the bytes that follow while their top bit is set, four at most. */
+static cf_bool tlv_ber_tag(tlv_scan* s, size_t* at, size_t end, cf_u32* tag) {
+    size_t   start = *at;
+    unsigned b;
+
+    if (*at >= end) {
+        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                            "%s, byte %zu: a tag cut short: 0 bytes are left", s->name,
+                            *at);
+    }
+    b    = s->base[(*at)++];
+    *tag = b;
+    if ((b & 0x1Fu) != 0x1Fu) {
+        return CF_TRUE;
+    }
+    do {
+        if (*at >= end) {
+            return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                                "%s, byte %zu: a tag cut short: %zu bytes are left",
+                                s->name, start, end - start);
+        }
+        if (*at - start >= 4u) {
+            return tlv_fail(s, start, "a tag longer than 4 bytes");
+        }
+        b    = s->base[(*at)++];
+        *tag = (*tag << 8) | b;
+    } while ((b & 0x80u) != 0);
+    return CF_TRUE;
+}
+
+/* A BER length (X.690 section 8.1.3): under 80 the short form; 81 to 84
+   that many bytes follow, big-endian, longer than needed or not. */
+static cf_bool tlv_ber_len(tlv_scan* s, size_t start, size_t* at, size_t end,
+                           cf_u64* len) {
+    unsigned b;
+    size_t   k;
+
+    if (*at >= end) {
+        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                            "%s, byte %zu: a length cut short: 0 bytes are left",
+                            s->name, start);
+    }
+    b = s->base[(*at)++];
+    if (b < 0x80u) {
+        *len = b;
+        return CF_TRUE;
+    }
+    if (b == 0x80u) {
+        return tlv_fail(
+            s, start, "an indefinite length, which ISO/IEC 7816-4 and EMV do not use");
+    }
+    k = b & 0x7Fu;
+    if (k > 4u) {
+        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                            "%s, byte %zu: a length of %u bytes", s->name, start,
+                            (unsigned)k);
+    }
+    if (end - *at < k) {
+        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                            "%s, byte %zu: a length cut short: %zu bytes are left",
+                            s->name, start, end - *at);
+    }
+    *len = tlv_number(s->base + *at, k, CF_TLV_BIG);
+    *at += k;
+    return CF_TRUE;
+}
+
+/* Padding passed over: with CF_TLV_PADDING, a 00 or FF byte where a tag
+   would begin (ISO/IEC 7816-4 section 5.2.2.1). */
+static void tlv_pad(const tlv_scan* s, size_t* at, size_t end) {
+    if ((s->l->flags & CF_TLV_PADDING) == 0) {
+        return;
+    }
+    while (*at < end && (s->base[*at] == 0x00 || s->base[*at] == 0xFF)) {
+        ++*at;
+    }
+}
+
 /* The tag at `*at`, advancing past it. */
 static cf_bool tlv_tag_read(tlv_scan* s, size_t* at, size_t end, cf_u32* tag) {
     size_t w = s->l->tag_width;
 
+    if (s->l->kind == CF_TLV_BER) {
+        return tlv_ber_tag(s, at, end, tag);
+    }
     if (end - *at < w) {
         return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                             "%s, byte %zu: a tag cut short: %zu bytes are left",
@@ -353,6 +506,9 @@ static cf_bool tlv_len_read(tlv_scan* s, size_t start, size_t* at, size_t end,
                             cf_u64* len) {
     size_t w = s->l->length_width;
 
+    if (s->l->kind == CF_TLV_BER) {
+        return tlv_ber_len(s, start, at, end, len);
+    }
     if (end - *at < w) {
         return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                             "%s, byte %zu: a length cut short: %zu bytes are left",
@@ -593,9 +749,10 @@ static cf_bool tlv_nest(tlv_scan* s, const char* key, const cf_tlv_tag* tags,
 }
 
 /* A tag the layout does not name, by its policy: refused, skipped, or kept
-   under "tag-" and its digits, as hex. */
+   under "tag-" and its digits, as hex - or, a BER constructed one, as a
+   table whose members are unknown too. */
 static cf_bool tlv_unknown(tlv_scan* s, cf_u32 tag, const char* hex, size_t start,
-                           const unsigned char* p, size_t n) {
+                           size_t at, size_t n) {
     size_t i;
 
     if (s->l->unknown == CF_TLV_UNKNOWN_SKIP) {
@@ -611,8 +768,10 @@ static cf_bool tlv_unknown(tlv_scan* s, cf_u32 tag, const char* hex, size_t star
         s->ukey[4u + i] = (char)cf_to_lower((unsigned char)hex[i]);
     }
     s->ukey[4u + i] = '\0';
-    (void)tag;
-    return tlv_hexval(s, s->ukey, hex, start, p, n);
+    if (s->l->kind == CF_TLV_BER && tlv_ber_constructed(tag)) {
+        return tlv_nest(s, s->ukey, NULL, 0, start, at, n);
+    }
+    return tlv_hexval(s, s->ukey, hex, start, s->base + at, n);
 }
 
 /* One element whose entry is `e`, under `key` (NULL: a list's element):
@@ -625,7 +784,7 @@ static cf_bool tlv_element(tlv_scan* s, const cf_tlv_tag* e, const char* key,
 
     tlv_hex(hex, tag, tlv_tag_bytes(s->l, tag));
     if (e == NULL) {
-        return tlv_unknown(s, tag, hex, start, p, n);
+        return tlv_unknown(s, tag, hex, start, at, n);
     }
     if ((e->flags & CF_TLV_SKIP) != 0) {
         return CF_TRUE; /* the layout knows it, and chose not to read it */
@@ -681,10 +840,14 @@ static cf_bool tlv_element(tlv_scan* s, const cf_tlv_tag* e, const char* key,
 static size_t tlv_ran_before(tlv_scan* s, size_t from, size_t upto, cf_u32 tag) {
     size_t ended = 0;
 
-    while (from < upto) {
+    for (;;) {
         cf_u32 t   = 0;
         cf_u64 len = 0;
 
+        tlv_pad(s, &from, upto);
+        if (from >= upto) {
+            break;
+        }
         if (!tlv_tag_read(s, &from, upto, &t)) {
             break;
         }
@@ -755,13 +918,18 @@ static cf_bool tlv_seq(tlv_scan* s, size_t at, size_t end, const cf_tlv_tag* tag
     size_t               level = at;
     char                 hex[9];
 
-    while (at < end) {
-        size_t            start = at;
-        cf_u32            tag   = 0;
-        cf_u64            len   = 0;
+    for (;;) {
+        size_t            start;
+        cf_u32            tag = 0;
+        cf_u64            len = 0;
         const cf_tlv_tag* e;
         const char*       key;
 
+        tlv_pad(s, &at, end);
+        if (at >= end) {
+            break;
+        }
+        start = at;
         if (!tlv_tag_read(s, &at, end, &tag)) {
             return CF_FALSE;
         }
@@ -820,7 +988,7 @@ static cf_bool tlv_seq(tlv_scan* s, size_t at, size_t end, const cf_tlv_tag* tag
         return CF_FALSE;
     }
     if (top && (l->flags & CF_TLV_END) != 0) {
-        tlv_hex(hex, l->end_tag, l->tag_width);
+        tlv_hex(hex, l->end_tag, tlv_tag_bytes(l, l->end_tag));
         return cf_error_set(
             s->err, CF_E_SOURCE, NULL, s->name,
             "%s: the document ends at byte %zu without the end tag 0x%s", s->name, end,

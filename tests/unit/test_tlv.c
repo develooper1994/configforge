@@ -16,6 +16,17 @@
 
 #define FILE_NAME "cf_tlv_test.bin"
 
+/* One cf_error for the whole test, made fresh for each use: kept off the
+   frames, which -O3 inlines into main past the stack budget, as the
+   documents are kept static. */
+static cf_error* fresh_error(void) {
+    static const cf_error fresh = CF_ERROR_INIT;
+    static cf_error       err;
+
+    err = fresh;
+    return &err;
+}
+
 #if CF_WITH_TLV
 
 /* A device's layout: two-byte tags and lengths, little-endian, ending at
@@ -118,25 +129,25 @@ static void check_dev(cf_config* c, const char* what) {
 }
 
 static void test_flat(void) {
-    cf_error      err = CF_ERROR_INIT;
-    unsigned char doc[128];
-    size_t        n = dev_document(doc);
-    cf_config*    c = read_doc(doc, n, &err);
+    cf_error*            err = fresh_error();
+    static unsigned char doc[128];
+    size_t               n = dev_document(doc);
+    cf_config*           c = read_doc(doc, n, err);
 
     if (c == NULL) {
-        printf("  %s\n", err.message);
+        printf("  %s\n", err->message);
     }
     check_dev(c, "a flat document reads");
     cf_config_free(c);
 }
 
 static void test_file(void) {
-    cf_error      err = CF_ERROR_INIT;
-    unsigned char doc[128];
-    size_t        n = dev_document(doc);
-    FILE*         f = fopen(FILE_NAME, "wb");
-    cf_builder*   b;
-    cf_config*    c;
+    cf_error*            err = fresh_error();
+    static unsigned char doc[128];
+    size_t               n = dev_document(doc);
+    FILE*                f = fopen(FILE_NAME, "wb");
+    cf_builder*          b;
+    cf_config*           c;
 
     check(f != NULL, "the file opens");
     if (f == NULL) {
@@ -147,9 +158,9 @@ static void test_file(void) {
     b = cf_build(NULL);
     cf_builder_codec(b, &g_devcfg);
     cf_builder_file(b, "file", CF_RANK_USER_FILE, FILE_NAME, "devcfg", 0);
-    c = cf_builder_create(b, &err);
+    c = cf_builder_create(b, err);
     if (c == NULL) {
-        printf("  %s\n", err.message);
+        printf("  %s\n", err->message);
     } else {
         check(cf_get_int(c, "net.port", 0) == 400, "a file named for the layout reads");
     }
@@ -160,11 +171,11 @@ static void test_file(void) {
 /* One document refused, and the words its message holds. */
 static void refused(const unsigned char* doc, size_t n, const char* words,
                     const char* what) {
-    cf_error   err = CF_ERROR_INIT;
-    cf_config* c   = read_doc(doc, n, &err);
+    cf_error*  err = fresh_error();
+    cf_config* c   = read_doc(doc, n, err);
 
     check(c == NULL, what);
-    has(err.message, words, what);
+    has(err->message, words, what);
     cf_config_free(c);
 }
 
@@ -174,7 +185,7 @@ static void test_read_refusals(void) {
     static const unsigned char two[]   = {2};
     static const unsigned char bad[]   = {0xC3, 0x28};
     static const unsigned char nul[]   = {0x61, 0x00, 0x62};
-    unsigned char              doc[64];
+    static unsigned char       doc[64];
     size_t                     n;
 
     n = 0;
@@ -231,18 +242,18 @@ static void test_read_refusals(void) {
 
 /* One layout refused, and the words its message holds. */
 static void bad_layout(const cf_tlv_layout* l, const char* words, const char* what) {
-    cf_error err = CF_ERROR_INIT;
-    cf_codec c;
+    cf_error* err = fresh_error();
+    cf_codec  c;
 
-    check(!cf_tlv_codec(&c, l, &err), what);
-    has(err.message, words, what);
+    check(!cf_tlv_codec(&c, l, err), what);
+    has(err->message, words, what);
 }
 
 static void test_layout_refusals(void) {
     cf_tlv_layout l;
     cf_tlv_tag    t[2];
     cf_codec      old;
-    cf_error      err = CF_ERROR_INIT;
+    cf_error*     err = fresh_error();
 
     l           = dev_layout();
     l.tag_width = 3;
@@ -278,9 +289,9 @@ static void test_layout_refusals(void) {
     bad_layout(&l, "CF_TLV_LAYOUT_INIT", "a layout without its size");
 
     l = dev_layout();
-    check(!cf_tlv_codec_sized(&old, offsetof(cf_codec, decode_self), &l, &err),
+    check(!cf_tlv_codec_sized(&old, offsetof(cf_codec, decode_self), &l, err),
           "a codec from before 1.5");
-    has(err.message, "from before 1.5", "has no room for a layout");
+    has(err->message, "from before 1.5", "has no room for a layout");
 }
 
 /* ------------------------------------------------------------------ *
@@ -324,9 +335,9 @@ static void put1(unsigned char* doc, size_t* n, unsigned tag, const void* value,
 
 /* A server's nest: its address and its port. */
 static void put_server(unsigned char* doc, size_t* n, const char* addr, unsigned port) {
-    unsigned char inner[32];
-    unsigned char p[2];
-    size_t        k = 0;
+    static unsigned char inner[32];
+    unsigned char        p[2];
+    size_t               k = 0;
 
     p[0] = (unsigned char)(port >> 8);
     p[1] = (unsigned char)(port & 0xFFu);
@@ -367,16 +378,16 @@ static cf_config* read_with(const cf_tlv_layout* l, const unsigned char* doc, si
 }
 
 static void test_nested(void) {
-    cf_tlv_layout l   = net_layout(CF_TLV_UNKNOWN_REFUSE);
-    cf_error      err = CF_ERROR_INIT;
-    unsigned char doc[128];
-    size_t        n = net_document(doc, CF_FALSE);
-    cf_config*    c = read_with(&l, doc, n, &err);
-    static char   ex[512];
+    cf_tlv_layout        l   = net_layout(CF_TLV_UNKNOWN_REFUSE);
+    cf_error*            err = fresh_error();
+    static unsigned char doc[128];
+    size_t               n = net_document(doc, CF_FALSE);
+    cf_config*           c = read_with(&l, doc, n, err);
+    static char          ex[512];
 
     check(c != NULL, "nests, a list, BCD and hex read");
     if (c == NULL) {
-        printf("  %s\n", err.message);
+        printf("  %s\n", err->message);
         return;
     }
     check_text(cf_get_text(c, "host", ""), "web", "text beside them");
@@ -392,11 +403,11 @@ static void test_nested(void) {
 
 static void net_refused(const cf_tlv_layout* l, const unsigned char* doc, size_t n,
                         const char* words, const char* what) {
-    cf_error   err = CF_ERROR_INIT;
-    cf_config* c   = read_with(l, doc, n, &err);
+    cf_error*  err = fresh_error();
+    cf_config* c   = read_with(l, doc, n, err);
 
     check(c == NULL, what);
-    has(err.message, words, what);
+    has(err->message, words, what);
     cf_config_free(c);
 }
 
@@ -408,8 +419,8 @@ static void test_nested_refusals(void) {
     static const unsigned char nibble[] = {0x0A};
     static const unsigned char two[]    = {0x01, 0x02};
     cf_tlv_layout              l        = net_layout(CF_TLV_UNKNOWN_REFUSE);
-    cf_error                   err      = CF_ERROR_INIT;
-    unsigned char              doc[128];
+    cf_error*                  err      = fresh_error();
+    static unsigned char       doc[128];
     size_t                     n = net_document(doc, CF_TRUE);
     cf_config*                 c;
     int                        i;
@@ -426,11 +437,11 @@ static void test_nested_refusals(void) {
     net_refused(&l, doc, n, "tag 0x09 is not in the layout 'net'",
                 "an unknown tag refused");
     l = net_layout(CF_TLV_UNKNOWN_SKIP);
-    c = read_with(&l, doc, n, &err);
+    c = read_with(&l, doc, n, err);
     check(c != NULL && !cf_has(c, "tag-09"), "skipped");
     cf_config_free(c);
     l = net_layout(CF_TLV_UNKNOWN_KEEP);
-    c = read_with(&l, doc, n, &err);
+    c = read_with(&l, doc, n, err);
     check(c != NULL, "or kept");
     if (c != NULL) {
         check_text(cf_get_text(c, "tag-09", ""), "0102", "under tag-<hex>, as hex");
@@ -449,13 +460,119 @@ static void test_nested_refusals(void) {
     net_refused(&l, doc, n, "nests deeper than", "nests past the depth");
 }
 
+/* ------------------------------------------------------------------ *
+ * BER-TLV, as a payment card's record has it. The numbers are made up
+ * for the test: a PAN no card has.
+ * ------------------------------------------------------------------ */
+
+static const cf_tlv_tag emv_issuer[] = {
+    {0x50, "label", CF_TLV_TEXT, 0, 0, 0, NULL, 0, NULL}};
+
+static const cf_tlv_tag emv_record[] = {
+    {0x5A, "pan", CF_TLV_BCD, 0, 0, 0, NULL, 0, NULL},
+    {0x5F24, "expiry", CF_TLV_BCD, 3, 0, 0, NULL, 0, NULL},
+    {0x9F02, "amount", CF_TLV_BCD, 6, 0, 0, NULL, 0, NULL},
+    {0xBF0C, "issuer", CF_TLV_NEST, 0, 0, 0, emv_issuer, 1, NULL}};
+
+static const cf_tlv_tag emv_tags[] = {
+    {0x70, "record", CF_TLV_NEST, 0, 0, 0, emv_record, 4, NULL}};
+
+static cf_tlv_layout emv_layout(void) {
+    cf_tlv_layout l = CF_TLV_LAYOUT_INIT;
+
+    l.name  = "emv";
+    l.kind  = CF_TLV_BER;
+    l.flags = CF_TLV_PADDING;
+    l.tags  = emv_tags;
+    l.ntags = 1;
+    return l;
+}
+
+static size_t emv_document(unsigned char* doc) {
+    static const unsigned char record[] = {
+        0x5A, 0x08, 0x47, 0x61, 0x73, 0x90, 0x01, 0x01, 0x00, 0x10, /* pan    */
+        0x5F, 0x24, 0x03, 0x25, 0x12, 0x31,                         /* expiry */
+        0x9F, 0x02, 0x06, 0x00, 0x00, 0x00, 0x01, 0x23, 0x45,       /* amount */
+        0xBF, 0x0C, 0x06, 0x50, 0x04, 'T',  'E',  'S',  'T'};       /* issuer */
+    size_t n = 0;
+
+    doc[n++] = 0x00; /* padding */
+    doc[n++] = 0x00;
+    doc[n++] = 0x70;
+    doc[n++] = 0x81; /* a long-form length, on purpose */
+    doc[n++] = (unsigned char)sizeof record;
+    memcpy(doc + n, record, sizeof record);
+    n += sizeof record;
+    doc[n++] = 0xFF; /* padding */
+    return n;
+}
+
+static void test_ber(void) {
+    cf_tlv_layout        l   = emv_layout();
+    cf_error*            err = fresh_error();
+    static unsigned char doc[64];
+    size_t               n = emv_document(doc);
+    cf_config*           c = read_with(&l, doc, n, err);
+    static char          ex[512];
+
+    check(c != NULL, "a BER-TLV record reads");
+    if (c == NULL) {
+        printf("  %s\n", err->message);
+        return;
+    }
+    /* 4761739001010010, as an expression: C89 has no long long literal */
+    check(cf_get_int(c, "record.pan", 0) == (cf_i64)47617390 * 100000000 + 1010010,
+          "a BCD PAN");
+    check(cf_get_int(c, "record.expiry", 0) == 251231, "a two-byte tag");
+    check(cf_get_int(c, "record.amount", 0) == 12345, "EMV's amount");
+    check_text(cf_get_text(c, "record.issuer.label", ""), "TEST",
+               "a constructed tag inside");
+    cf_explain(c, "record.amount", ex, sizeof ex);
+    has(ex, "net.bin, byte 21", "a value placed at its tag's first byte");
+    cf_config_free(c);
+}
+
+static void test_ber_refusals(void) {
+    static const unsigned char long_tag[] = {0x9F, 0x82, 0x80, 0x80, 0x80, 0x01};
+    static const unsigned char indef[]    = {0x70, 0x80, 0x00, 0x00};
+    static const unsigned char wide[]     = {0x5A, 0x85, 0x00, 0x00,
+                                             0x00, 0x00, 0x01, 0x00};
+    cf_tlv_layout              l          = emv_layout();
+    cf_tlv_tag                 prim[1];
+    cf_codec                   codec;
+    cf_error*                  err = fresh_error();
+    static unsigned char       doc[64];
+    size_t                     n;
+
+    net_refused(&l, long_tag, sizeof long_tag, "a tag longer than 4 bytes",
+                "a long tag");
+    net_refused(&l, indef, sizeof indef, "an indefinite length",
+                "an indefinite length");
+    net_refused(&l, wide, sizeof wide, "a length of 5 bytes",
+                "a length past four bytes");
+
+    prim[0]        = emv_tags[0];
+    prim[0].type   = CF_TLV_TEXT;
+    prim[0].inner  = NULL;
+    prim[0].ninner = 0;
+    l.tags         = prim;
+    check(!cf_tlv_codec(&codec, &l, err), "a constructed tag that is not a nest");
+    has(err->message, "constructed bit", "is refused by its constructed bit");
+
+    l       = emv_layout();
+    l.flags = 0;
+    n       = emv_document(doc);
+    net_refused(&l, doc, n, "tag 0x00 is not in the layout",
+                "padding without the flag");
+}
+
 int main(void) {
-    cf_error err = CF_ERROR_INIT;
+    cf_error* err = fresh_error();
 
     g_dev = dev_layout();
-    check(cf_tlv_codec(&g_devcfg, &g_dev, &err), "the layout makes a codec");
-    if (err.message[0] != '\0') {
-        printf("  %s\n", err.message);
+    check(cf_tlv_codec(&g_devcfg, &g_dev, err), "the layout makes a codec");
+    if (err->message[0] != '\0') {
+        printf("  %s\n", err->message);
     }
     test_flat();
     test_file();
@@ -463,6 +580,8 @@ int main(void) {
     test_layout_refusals();
     test_nested();
     test_nested_refusals();
+    test_ber();
+    test_ber_refusals();
     return cf_test_done();
 }
 
@@ -470,12 +589,12 @@ int main(void) {
 
 static void test_off(void) {
     cf_tlv_layout l   = CF_TLV_LAYOUT_INIT;
-    cf_error      err = CF_ERROR_INIT;
+    cf_error*     err = fresh_error();
     cf_codec      c;
 
     l.name = "devcfg";
-    check(!cf_tlv_codec(&c, &l, &err), "a build without TLV makes no codec");
-    has(err.message, "CF_WITH_TLV", "and names the option");
+    check(!cf_tlv_codec(&c, &l, err), "a build without TLV makes no codec");
+    has(err->message, "CF_WITH_TLV", "and names the option");
 }
 
 int main(void) {
