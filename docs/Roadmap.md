@@ -140,6 +140,50 @@ short keeps its branch, unmerged, and says so here.
    (D-61), and what else waits for a major version (the image header's
    layout), together, once. **2.0.0.**
 
+### More formats, and what a format is (asked 2026-11-13; not yet cards)
+
+After wave 4's CBOR and TLV. To be written as cards in
+`docs/plan/W6-more-formats.md`, the library's own code first:
+
+* ⬜ **What a format is, told to the program.** Each codec says, as
+  flags a program can read and ask by ("the binary ones that need no
+  schema"): text or binary, self-describing or bound to a schema, typed
+  or not, readable as a stream or only whole, written or only read. The
+  table in Formats.md is generated from the same flags, so the page and
+  the code cannot differ.
+* ⬜ **Binary formats that describe themselves**, each a reader, a
+  writer, its standard's vectors and a fuzz target, as CBOR has:
+  MessagePack first, then BSON, UBJSON, Smile, Amazon Ion, Bencode.
+* ⬜ **Formats a configuration is really kept in**: Apple property
+  lists (binary and XML), HCL, HOCON, KDL.
+* ⬜ **Formats bound to a schema**: Avro (a container file carries its
+  schema as JSON), Protobuf through a descriptor set rather than a
+  `.proto` parser, Thrift (binary and compact), then FlatBuffers by its
+  binary schema and Cap'n Proto.
+* ⬜ **TLV as it is met, not only as the standards have it.** The
+  standards as presets of the layout - BER and DER, ISO 7816's
+  SIMPLE-TLV, EMV, SMPTE's KLV - and the layout itself free to say what
+  embedded devices do to save a byte: the order of the three fields
+  (TLV, LTV, TVL), each field's width down to one byte and its byte
+  order, a tag whose length is fixed and so not written, a tag and a
+  length packed into one byte.
+* ⬜ **Fast, and without copying where it can be.** A benchmark first,
+  megabytes a second for each codec; a reader hands the sink text where
+  it lies in the document when the format stores it whole. Kept where
+  measured, as D-76 was.
+* ⬜ **Whole or as a stream, in every format that can.** One interface
+  for reading in pieces, designed once (D-61 left it for 2.0), the
+  length-prefixed binary formats first.
+
+Rules for these: a format may start on a dependency where one is truly
+needed and lose it later; one that cannot be written in C89 may leave
+C89, noted where it does - every format is an option of the build. The
+reference libraries are used in tests: one document, written in each
+format by that format's own library, must read to the same keys.
+
+Last of all, when everything else here is done: the serialization
+layer becomes a project of its own.
+
 ## Release follow-up
 
 1.0.0 was published with three known round-trip defects, before the
