@@ -255,10 +255,13 @@ size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int ra
        follows the limits as the encoders' state does, and which each
        built-in encoder is asserted at compile time to fit. The check
        below is for a codec that does not. Aligned through the union
-       because a char array is not aligned for a struct. */
+       because a char array is not aligned for a struct; a binary
+       encoder's state begins with the head, which is named here so that
+       its flags are set without a cast. */
     union {
-        cf_i64 align;
-        char   b[CF_ENCODER_STATE_MAX];
+        cf_i64          align;
+        cf_encoder_head head;
+        char            b[CF_ENCODER_STATE_MAX];
     } state;
 
     if (buf != NULL && cap > 0) {
@@ -331,7 +334,7 @@ size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int ra
     }
     literals.binary = ((codec->caps & CF_CODEC_BINARY) != 0) ? CF_TRUE : CF_FALSE;
     if (literals.binary) {
-        ((cf_encoder_head*)(void*)state.b)->flags |= CF_ENCODE_ESCAPE_REFS;
+        state.head.flags |= CF_ENCODE_ESCAPE_REFS;
     }
     literals.encoded = &sink;
     literals.out     = &out;
