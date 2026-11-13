@@ -8,6 +8,7 @@
 
 #include "configforge/cf_serialize.h"
 
+#include <stddef.h>
 #include <string.h>
 
 #if CF_WITH_INI
@@ -162,6 +163,44 @@ const cf_codec* cf_codec_among(const cf_codec* const* list, size_t n, const char
         }
     }
     return NULL;
+}
+
+/* ------------------------------------------------------------------ *
+ * Reading through a codec (D-92)
+ * ------------------------------------------------------------------ */
+
+#define CODEC_SIZE_1_0                                                                 \
+    offsetof(cf_codec, decode_self) /* where 1.0's cf_codec ended (D-51) */
+
+/* Whether the codec has decode_self: compiled with it, and set. A codec
+   from before 1.5 is not read past its own size. */
+static cf_bool codec_has_self(const cf_codec* c) {
+    if (c->size < offsetof(cf_codec, data) + sizeof(c->data)) {
+        return CF_FALSE;
+    }
+    return (c->decode_self != NULL) ? CF_TRUE : CF_FALSE;
+}
+
+cf_bool cf_codec_can_read(const cf_codec* c) {
+    if (c == NULL || c->size < CODEC_SIZE_1_0 || (c->caps & CF_CODEC_READ) == 0) {
+        return CF_FALSE;
+    }
+    return (c->decode != NULL || codec_has_self(c)) ? CF_TRUE : CF_FALSE;
+}
+
+cf_bool cf_codec_decode(const cf_codec* c, const cf_blob* in, const cf_doc_sink* out,
+                        cf_error* err) {
+    if (c != NULL && c->size >= CODEC_SIZE_1_0) {
+        if (codec_has_self(c)) {
+            return c->decode_self(c, in, out, err);
+        }
+        if (c->decode != NULL) {
+            return c->decode(in, out, err);
+        }
+    }
+    return cf_error_set(err, CF_E_CAPABILITY, NULL, (c != NULL) ? c->name : NULL,
+                        "format '%s' can be written but not read",
+                        (c != NULL && c->name != NULL) ? c->name : "");
 }
 
 /* ------------------------------------------------------------------ *

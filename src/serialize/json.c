@@ -1085,18 +1085,28 @@ static cf_bool json_encoder(cf_sink* out, void* state, cf_doc_sink* sink) {
     return CF_TRUE;
 }
 
-const cf_codec cf_codec_json = {
-    sizeof(cf_codec), "json",
-    ".json;.jsn",     CF_CODEC_READ | CF_CODEC_WRITE | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
-    json_decode,      json_encoder,
-    sizeof(js_enc)};
+const cf_codec cf_codec_json = {sizeof(cf_codec),
+                                "json",
+                                ".json;.jsn",
+                                CF_CODEC_READ | CF_CODEC_WRITE | CF_CODEC_TYPED |
+                                    CF_CODEC_ARRAYS,
+                                json_decode,
+                                json_encoder,
+                                sizeof(js_enc),
+                                NULL,
+                                NULL};
 
 /* Written as JSON, which every JSON5 reader reads. */
-const cf_codec cf_codec_json5 = {
-    sizeof(cf_codec), "json5",
-    ".json5;.jsonc",  CF_CODEC_READ | CF_CODEC_WRITE | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
-    json5_decode,     json_encoder,
-    sizeof(js_enc)};
+const cf_codec cf_codec_json5 = {sizeof(cf_codec),
+                                 "json5",
+                                 ".json5;.jsonc",
+                                 CF_CODEC_READ | CF_CODEC_WRITE | CF_CODEC_TYPED |
+                                     CF_CODEC_ARRAYS,
+                                 json5_decode,
+                                 json_encoder,
+                                 sizeof(js_enc),
+                                 NULL,
+                                 NULL};
 
 #else /* !CF_WITH_EMIT: read only */
 
@@ -1106,7 +1116,9 @@ const cf_codec cf_codec_json = {sizeof(cf_codec),
                                 CF_CODEC_READ | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
                                 json_decode,
                                 NULL,
-                                0};
+                                0,
+                                NULL,
+                                NULL};
 
 const cf_codec cf_codec_json5 = {sizeof(cf_codec),
                                  "json5",
@@ -1114,7 +1126,9 @@ const cf_codec cf_codec_json5 = {sizeof(cf_codec),
                                  CF_CODEC_READ | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
                                  json5_decode,
                                  NULL,
-                                 0};
+                                 0,
+                                 NULL,
+                                 NULL};
 
 #endif /* CF_WITH_EMIT */
 

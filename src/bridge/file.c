@@ -287,8 +287,10 @@ cf_bool cf_source_file(cf_source* s, const char* name, int rank, const char* pat
 cf_bool cf_source_file_codec(cf_source* s, const char* name, int rank, const char* path,
                              const cf_codec* codec, unsigned flags, void* state,
                              size_t state_size) {
-    if (codec == NULL || codec->decode == NULL ||
-        !cf_source_file(s, name, rank, path, NULL, flags, state, state_size)) {
+    if (!cf_codec_can_read(codec)) {
+        return CF_FALSE;
+    }
+    if (!cf_source_file(s, name, rank, path, NULL, flags, state, state_size)) {
         return CF_FALSE;
     }
     ((file_state*)state)->codec = codec;

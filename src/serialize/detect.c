@@ -143,7 +143,7 @@ static cf_bool trial_read(const cf_codec* c, const cf_blob* in, cf_arena* ar,
     sink.ctx          = &t;
     sink.reserve_text = trial_reserve_text;
     sink.reserve_work = trial_reserve_work;
-    if (!c->decode(in, &sink, &err) || t.keyed == 0) {
+    if (!cf_codec_decode(c, in, &sink, &err) || t.keyed == 0) {
         return CF_FALSE;
     }
     *h1 = t.h1;
@@ -243,12 +243,6 @@ static cf_bool is_loose(const cf_codec* c) {
                                                                            : CF_FALSE;
 }
 
-static cf_bool can_read(const cf_codec* c) {
-    return (c != NULL && (c->caps & CF_CODEC_READ) != 0 && c->decode != NULL)
-               ? CF_TRUE
-               : CF_FALSE;
-}
-
 const cf_codec* cf_codec_detect(const cf_codec* const* own, size_t nown,
                                 const cf_blob* in, const char* name, cf_arena* ar,
                                 cf_detect* out) {
@@ -274,7 +268,7 @@ const cf_codec* cf_codec_detect(const cf_codec* const* own, size_t nown,
         if (c == NULL) {
             c = cf_codec_by_path(name);
         }
-        if (can_read(c)) {
+        if (cf_codec_can_read(c)) {
             d->how = CF_DETECT_EXTENSION;
             return c;
         }
@@ -300,8 +294,10 @@ const cf_codec* cf_codec_detect(const cf_codec* const* own, size_t nown,
             return c;
         }
     }
+    /* A codec of the builder's own that is named only (D-92) is not
+       guessed at: a layout reads bytes nothing else would refuse. */
     for (i = 0; own != NULL && i < nown; ++i) {
-        if (can_read(own[i])) {
+        if (cf_codec_can_read(own[i]) && (own[i]->caps & CF_CODEC_NAMED_ONLY) == 0) {
             order[n++] = own[i];
         }
     }
@@ -309,7 +305,7 @@ const cf_codec* cf_codec_detect(const cf_codec* const* own, size_t nown,
     look = look_at(in->p, in->n);
     for (i = 0; i < LOOK_FORMATS; ++i) {
         const cf_codec* c = cf_codec_by_name(look_orders[look][i]);
-        if (can_read(c)) {
+        if (cf_codec_can_read(c)) {
             order[n++] = c;
         }
     }

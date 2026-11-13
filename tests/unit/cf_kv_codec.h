@@ -25,10 +25,13 @@
 #include <stddef.h>
 #include <string.h>
 
-static cf_bool kv_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* err) {
+/* The lines, each key behind `prefix` and a dot when it is not NULL. */
+static cf_bool kv_lines(const cf_blob* in, const cf_doc_sink* out, cf_error* err,
+                        const char* prefix) {
     const char*  p    = in->p;
     const char*  end  = in->p + in->n;
     unsigned int line = 1;
+    char         key[CF_KEY_MAX];
 
     if (!out->begin_table(out->ctx, NULL, 0)) {
         return cf_error_set(err, CF_E_SOURCE, NULL, in->name, "sink refused");
@@ -66,7 +69,21 @@ static cf_bool kv_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* er
             at.line = line;
             at.col  = (unsigned int)(val - p) + 1u;
             cf_value_text(&v, val, vlen);
-            if (!out->scalar(out->ctx, p, klen, &v, CF_TRUE, &at)) {
+            if (prefix != NULL) {
+                size_t plen = strlen(prefix);
+                if (plen + 1 + klen > sizeof key) {
+                    return cf_error_set(err, CF_E_KEY, NULL, in->name,
+                                        "%s:%u: the key is too long", in->name, line);
+                }
+                memcpy(key, prefix, plen);
+                key[plen] = '.';
+                memcpy(key + plen + 1, p, klen);
+                klen += plen + 1;
+            } else {
+                memcpy(key, p, (klen < sizeof key) ? klen : sizeof key);
+            }
+            if (klen > sizeof key ||
+                !out->scalar(out->ctx, key, klen, &v, CF_TRUE, &at)) {
                 return cf_error_set(err, CF_E_KEY, NULL, in->name,
                                     "%s:%u: not a valid key", in->name, line);
             }
@@ -75,6 +92,17 @@ static cf_bool kv_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* er
         ++line;
     }
     return out->end(out->ctx);
+}
+
+static cf_bool kv_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* err) {
+    return kv_lines(in, out, err, NULL);
+}
+
+/* The same lines through decode_self, each key behind the text the codec's
+   data points to (D-92). */
+static cf_bool kv_self_decode(const cf_codec* self, const cf_blob* in,
+                              const cf_doc_sink* out, cf_error* err) {
+    return kv_lines(in, out, err, (const char*)self->data);
 }
 
 /* Writing: the path of open tables, and each scalar as a line. */
@@ -173,8 +201,27 @@ static cf_bool kv_encoder(cf_sink* out, void* state, cf_doc_sink* sink) {
     return CF_TRUE;
 }
 
-static const cf_codec kv_codec = {sizeof(cf_codec), "kv",       ".kv",
+static const cf_codec kv_codec = {sizeof(cf_codec),
+                                  "kv",
+                                  ".kv",
                                   CF_CODEC_READ | CF_CODEC_WRITE,
-                                  kv_decode,        kv_encoder, sizeof(kv_enc)};
+                                  kv_decode,
+                                  kv_encoder,
+                                  sizeof(kv_enc),
+                                  NULL,
+                                  NULL};
+
+/* A codec that reads only through decode_self, with data of its own: what
+   a codec made from a description is (D-92). Never chosen from content. */
+static const char     kv_prefix[]      = "self";
+static const cf_codec cf_kv_self_codec = {sizeof(cf_codec),
+                                          "kvs",
+                                          ".kvs",
+                                          CF_CODEC_READ | CF_CODEC_NAMED_ONLY,
+                                          NULL,
+                                          NULL,
+                                          0,
+                                          kv_self_decode,
+                                          kv_prefix};
 
 #endif /* CONFIGFORGE_TESTS_CF_KV_CODEC_H */

@@ -1855,17 +1855,28 @@ static cf_bool toml_encoder(cf_sink* out, void* state, cf_doc_sink* sink) {
     return CF_TRUE;
 }
 
-const cf_codec cf_codec_toml = {
-    sizeof(cf_codec), "toml",
-    ".toml",          CF_CODEC_READ | CF_CODEC_WRITE | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
-    toml_decode,      toml_encoder,
-    sizeof(toml_enc)};
+const cf_codec cf_codec_toml = {sizeof(cf_codec),
+                                "toml",
+                                ".toml",
+                                CF_CODEC_READ | CF_CODEC_WRITE | CF_CODEC_TYPED |
+                                    CF_CODEC_ARRAYS,
+                                toml_decode,
+                                toml_encoder,
+                                sizeof(toml_enc),
+                                NULL,
+                                NULL};
 
 #else /* !CF_WITH_EMIT: read only */
 
-const cf_codec cf_codec_toml = {
-    sizeof(cf_codec), "toml", ".toml", CF_CODEC_READ | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
-    toml_decode,      NULL,   0};
+const cf_codec cf_codec_toml = {sizeof(cf_codec),
+                                "toml",
+                                ".toml",
+                                CF_CODEC_READ | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
+                                toml_decode,
+                                NULL,
+                                0,
+                                NULL,
+                                NULL};
 
 #endif /* CF_WITH_EMIT */
 

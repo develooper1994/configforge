@@ -1368,11 +1368,15 @@ static cf_bool yaml_encoder(cf_sink* out, void* state, cf_doc_sink* sink) {
     return CF_TRUE;
 }
 
-const cf_codec cf_codec_yaml = {
-    sizeof(cf_codec), "yaml",
-    ".yaml;.yml",     CF_CODEC_READ | CF_CODEC_WRITE | CF_CODEC_ARRAYS,
-    yaml_decode,      yaml_encoder,
-    sizeof(yaml_enc)};
+const cf_codec cf_codec_yaml = {sizeof(cf_codec),
+                                "yaml",
+                                ".yaml;.yml",
+                                CF_CODEC_READ | CF_CODEC_WRITE | CF_CODEC_ARRAYS,
+                                yaml_decode,
+                                yaml_encoder,
+                                sizeof(yaml_enc),
+                                NULL,
+                                NULL};
 
 #else /* !CF_WITH_EMIT: read only */
 
@@ -1382,7 +1386,9 @@ const cf_codec cf_codec_yaml = {sizeof(cf_codec),
                                 CF_CODEC_READ | CF_CODEC_ARRAYS,
                                 yaml_decode,
                                 NULL,
-                                0};
+                                0,
+                                NULL,
+                                NULL};
 
 #endif /* CF_WITH_EMIT */
 

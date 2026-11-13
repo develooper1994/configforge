@@ -29,6 +29,8 @@ CF_STATIC_ASSERT(sizeof(cf_i64) == 8 && sizeof(cf_u64) == 8, i64_is_64_bits);
 CF_STATIC_ASSERT(sizeof(cf_i32) == 4 && sizeof(cf_u32) == 4, i32_is_32_bits);
 
 #define CF_BUILDER_SOURCES 16
+#define CODEC_SIZE_1_0                                                                 \
+    offsetof(cf_codec, decode_self) /* where 1.0's cf_codec ended (D-51) */
 
 struct cf_builder {
     cf_arena*         arena;
@@ -523,7 +525,7 @@ cf_bool cf_builder_file_codec(cf_builder* b, const char* name, int rank,
     if (s == NULL) {
         return CF_FALSE;
     }
-    if (codec == NULL || codec->size < sizeof(cf_codec)) {
+    if (codec == NULL || codec->size < CODEC_SIZE_1_0) {
         cf_error e = CF_ERROR_INIT;
         cf_error_set(&e, CF_E_SOURCE, NULL, path,
                      (codec == NULL)
@@ -696,17 +698,34 @@ cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank, const char* pa
     return CF_TRUE;
 }
 
+/* A codec a builder can take: 1.0's size at least, a name, and reading
+   or writing, each with what it needs. */
+static cf_bool builder_codec_ok(const cf_codec* codec) {
+    if (codec == NULL || codec->size < CODEC_SIZE_1_0) {
+        return CF_FALSE;
+    }
+    if (codec->name == NULL || codec->name[0] == '\0') {
+        return CF_FALSE;
+    }
+    if ((codec->caps & (CF_CODEC_READ | CF_CODEC_WRITE)) == 0) {
+        return CF_FALSE;
+    }
+    if ((codec->caps & CF_CODEC_READ) != 0 && !cf_codec_can_read(codec)) {
+        return CF_FALSE;
+    }
+    if ((codec->caps & CF_CODEC_WRITE) != 0 && codec->encoder == NULL) {
+        return CF_FALSE;
+    }
+    return CF_TRUE;
+}
+
 cf_bool cf_builder_codec(cf_builder* b, const struct cf_codec* codec) {
     cf_error e = CF_ERROR_INIT;
 
     if (b == NULL || b->failed) {
         return CF_FALSE;
     }
-    if (codec == NULL || codec->size < sizeof(cf_codec) || codec->name == NULL ||
-        codec->name[0] == '\0' ||
-        (codec->caps & (CF_CODEC_READ | CF_CODEC_WRITE)) == 0 ||
-        ((codec->caps & CF_CODEC_READ) != 0 && codec->decode == NULL) ||
-        ((codec->caps & CF_CODEC_WRITE) != 0 && codec->encoder == NULL)) {
+    if (!builder_codec_ok(codec)) {
         cf_error_set(&e, CF_E_SOURCE, NULL, NULL,
                      "a codec needs its size, a name, and a way to read or to write "
                      "(D-68)");

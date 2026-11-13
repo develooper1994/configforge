@@ -397,7 +397,7 @@ cf_bool cf_flatten_decode(cf_flatten* f, const cf_codec* codec, const cf_blob* b
     if (f->budget == 0) {
         cf_flatten_budget(f, cf_decode_budget(blob->n));
     }
-    ok = codec->decode(blob, cf_flatten_sink(f), err);
+    ok = cf_codec_decode(codec, blob, cf_flatten_sink(f), err);
     if (f->over_budget) {
         return cf_error_set(err, CF_E_SOURCE, NULL, path, fl_over_budget, path,
                             (cf_u64)f->budget, (cf_u64)blob->n,

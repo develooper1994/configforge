@@ -673,8 +673,14 @@ static cf_bool xml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
     return ok;
 }
 
-const cf_codec cf_codec_xml = {
-    sizeof(cf_codec), "xml", ".xml", CF_CODEC_READ | CF_CODEC_ARRAYS,
-    xml_decode,       NULL,  0};
+const cf_codec cf_codec_xml = {sizeof(cf_codec),
+                               "xml",
+                               ".xml",
+                               CF_CODEC_READ | CF_CODEC_ARRAYS,
+                               xml_decode,
+                               NULL,
+                               0,
+                               NULL,
+                               NULL};
 
 #endif /* CF_WITH_XML */

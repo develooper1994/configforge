@@ -769,11 +769,15 @@ static cf_bool ini_encoder(cf_sink* out, void* state, cf_doc_sink* sink) {
     return CF_TRUE;
 }
 
-const cf_codec cf_codec_ini = {
-    sizeof(cf_codec),  "ini",
-    ".ini;.cfg;.conf", CF_CODEC_READ | CF_CODEC_WRITE | CF_CODEC_SCALAR_ARRAYS,
-    ini_decode,        ini_encoder,
-    sizeof(ini_enc)};
+const cf_codec cf_codec_ini = {sizeof(cf_codec),
+                               "ini",
+                               ".ini;.cfg;.conf",
+                               CF_CODEC_READ | CF_CODEC_WRITE | CF_CODEC_SCALAR_ARRAYS,
+                               ini_decode,
+                               ini_encoder,
+                               sizeof(ini_enc),
+                               NULL,
+                               NULL};
 
 #else /* !CF_WITH_EMIT: read only */
 
@@ -783,7 +787,9 @@ const cf_codec cf_codec_ini = {sizeof(cf_codec),
                                CF_CODEC_READ | CF_CODEC_SCALAR_ARRAYS,
                                ini_decode,
                                NULL,
-                               0};
+                               0,
+                               NULL,
+                               NULL};
 
 #endif /* CF_WITH_EMIT */
 

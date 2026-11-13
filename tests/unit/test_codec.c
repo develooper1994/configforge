@@ -6,6 +6,7 @@
 
 #include <configforge/configforge.h>
 
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -131,12 +132,13 @@ static void test_registered(void) {
 
 /* The conflicts a registry for the whole process could not show. */
 static void test_registered_refusals(void) {
-    static const cf_codec nameless = {sizeof(cf_codec), "",   ".x", CF_CODEC_READ,
-                                      kv_decode,        NULL, 0};
-    static const cf_codec mute     = {sizeof(cf_codec), "mute", ".m", 0, NULL, NULL, 0};
-    cf_error              err      = CF_ERROR_INIT;
-    cf_builder*           b        = cf_build(NULL);
-    cf_config*            c;
+    static const cf_codec nameless = {
+        sizeof(cf_codec), "", ".x", CF_CODEC_READ, kv_decode, NULL, 0, NULL, NULL};
+    static const cf_codec mute = {
+        sizeof(cf_codec), "mute", ".m", 0, NULL, NULL, 0, NULL, NULL};
+    cf_error    err = CF_ERROR_INIT;
+    cf_builder* b   = cf_build(NULL);
+    cf_config*  c;
 
     check(cf_builder_codec(b, &kv_codec), "the first codec called kv");
     check(!cf_builder_codec(b, &kv_codec), "a second one by that name is refused");
@@ -179,6 +181,108 @@ static void test_registered_dir(void) {
 }
 #endif
 
+/* ------------------------------------------------------------------ *
+ * A codec that carries its own data (D-92): cf_kv_self_codec reads
+ * through decode_self and puts its data, "self", before every key.
+ * ------------------------------------------------------------------ */
+
+/* The text of `key`, defined as text, in a configuration built from `b`;
+   "" when it was refused or none was read. The configuration is freed. */
+static const char* self_text(cf_builder* b, const char* key) {
+    static char out[64];
+    cf_error    err = CF_ERROR_INIT;
+    cf_config*  c;
+
+    cf_builder_text(b, key, "", 0);
+    c      = cf_builder_create(b, &err);
+    out[0] = '\0';
+    if (c == NULL) {
+        printf("  %s\n", err.message);
+        return out;
+    }
+    strncpy(out, cf_get_text(c, key, ""), sizeof out - 1);
+    out[sizeof out - 1] = '\0';
+    cf_config_free(c);
+    return out;
+}
+
+static void test_self_file(void) {
+    cf_builder* b = cf_build(NULL);
+
+    check(spill("cf_self.kvs", "port: 9443\n"), "wrote a .kvs file");
+    check(cf_builder_codec(b, &cf_kv_self_codec),
+          "a codec with only decode_self registers");
+    cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_self.kvs", NULL, 0);
+    check_text(self_text(b, "self.port"), "9443", "a file is read through decode_self");
+    remove("cf_self.kvs");
+}
+
+static void test_self_document(void) {
+    cf_builder* b = cf_build(NULL);
+
+    cf_builder_codec(b, &cf_kv_self_codec);
+    cf_builder_document(b, "doc", CF_RANK_USER_FILE, "port: 1\n", 8, "kvs", 0);
+    check_text(self_text(b, "self.port"), "1", "and so is a document named for it");
+}
+
+#if CF_WITH_DIR
+static void test_self_dir(void) {
+    cf_builder* b = cf_build(NULL);
+
+    check(spill("cf_codec.d/a.kvs", "x: 1\n"), "a .kvs file in a drop-in directory");
+    cf_builder_codec(b, &cf_kv_self_codec);
+    cf_builder_dir(b, "conf.d", CF_RANK_USER_FILE, "cf_codec.d", NULL, 0);
+    check_text(self_text(b, "self.x"), "1", "and a directory's file");
+    remove("cf_codec.d/a.kvs");
+}
+#endif
+
+/* Named only: never taken from content, where a copy without the flag,
+   a builder's own codec, is taken first (D-73). */
+static void test_named_only(void) {
+    cf_codec    plain = cf_kv_self_codec;
+    cf_builder* b     = cf_build(NULL);
+
+    check(spill("cf_self_plain", "port: 9443\n"), "wrote a file with no extension");
+    cf_builder_codec(b, &cf_kv_self_codec);
+    cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_self_plain", NULL, CF_OPTIONAL);
+    check_text(self_text(b, "self.port"), "",
+               "a named-only codec is not chosen from content");
+
+    plain.name       = "kvs2";
+    plain.extensions = ".kvs2";
+    plain.caps       = CF_CODEC_READ;
+    b                = cf_build(NULL);
+    cf_builder_codec(b, &plain);
+    cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_self_plain", NULL, CF_OPTIONAL);
+    check_text(self_text(b, "self.port"), "9443", "and the same codec without it is");
+    remove("cf_self_plain");
+}
+
+/* A codec compiled against 1.4, before decode_self: 1.0's size is still
+   taken, and it reads through decode. */
+static void test_old_size(void) {
+    cf_codec    old = kv_codec;
+    cf_builder* b   = cf_build(NULL);
+
+    old.size = offsetof(cf_codec, decode_self);
+    check(cf_builder_codec(b, &old), "a codec of 1.0's size is accepted");
+    cf_builder_document(b, "doc", CF_RANK_USER_FILE, "server.port: 2\n", 15, "kv", 0);
+    check_text(self_text(b, "server.port"), "2", "and reads through decode");
+}
+
+static void test_no_reader(void) {
+    cf_codec none = kv_codec;
+    cf_error err  = CF_ERROR_INIT;
+    cf_blob  in;
+
+    none.decode = NULL;
+    cf_blob_mem(&in, "a: 1\n", 5, "bytes");
+    check(!cf_codec_can_read(&none), "a codec with neither decoder does not read");
+    check(!cf_codec_decode(&none, &in, NULL, &err), "and refuses to");
+    has(err.message, "can be written but not read", "saying so");
+}
+
 int main(void) {
     test_reads_through_it();
     test_the_contract_still_applies();
@@ -188,6 +292,14 @@ int main(void) {
 #if CF_WITH_DIR
     test_registered_dir();
 #endif
+    test_self_file();
+    test_self_document();
+#if CF_WITH_DIR
+    test_self_dir();
+#endif
+    test_named_only();
+    test_old_size();
+    test_no_reader();
     remove("cf_codec.kv");
     return cf_test_done();
 }

@@ -3468,6 +3468,58 @@ that holds each kind of item it takes, and the libFuzzer harness
 
 ---
 
+## D-92 — A codec carries its own data
+
+**Question.** A codec made at run time from a description - a TLV layout
+(D-93), or a binding's codec written in Rust or Python - has to reach that
+description when it reads. `decode(in, out, err)` has no argument to reach
+it by, and this library has no global to keep it in. How does a codec
+carry data of its own?
+
+**Options.**
+
+1. A context argument added to `decode`.
+2. A table of layouts for the whole process, looked up by the codec's
+   name.
+3. No codec for TLV: a source of its own, `cf_builder_tlv`, that holds
+   the layout.
+4. Two members at the end of `cf_codec` - a decoder that is handed the
+   codec, and a pointer the library never reads - and one function that
+   every reading goes through.
+
+**Decision.** Option 4. Option 1 breaks every codec in and out of the
+library. Option 2 is global mutable state, which D-68 kept out by giving
+each builder its own codecs. Option 3 reads files only: a layout would
+reach no drop-in directory, no document in memory, no conformance run's
+`--codec`, and no writer later. So `cf_codec` gains, after
+`encoder_state_size`, `decode_self(self, in, out, err)` and `const void*
+data`; `cf_codec_decode` is the one way the library reads through a codec
+it did not choose by name - a file, a document, a directory's file, the
+trial reads of detection, the conformance reader - and takes
+`decode_self` when the codec's size reaches it and it is set, else
+`decode`. `cf_codec_can_read` says whether a codec reads: `CF_CODEC_READ`
+and a decoder of either kind. The places that call the built-in JSON
+reader by name keep `json->decode`: JSON has one.
+
+**1.0's size is the floor** (D-51). A codec compiled against 1.4 is
+smaller and goes on working: `cf_builder_codec` and
+`cf_builder_file_codec` take any size from `offsetof(cf_codec,
+decode_self)` up, and nothing past a codec's own size is read.
+
+**Named only.** `CF_CODEC_NAMED_ONLY` keeps a codec from being chosen
+from content (D-73): its name and its extensions still choose it. A
+layout reads bytes no other format would refuse - a run of tags and
+lengths is nearly any binary - so a guess at them would be taken, and a
+codec of the builder's own is tried first and taken at once when it
+reads. No built-in codec has the flag; `.properties` stays out of
+detection by not being listed.
+
+**Compatibility.** Additive: two members at the end, two functions, one
+flag. A 1.4 codec is read as before. A 1.5 codec passed to 1.4 is refused
+only when it has no `decode`, since 1.4 asks for one.
+
+---
+
 ## D-60 — Arrays in INI are the ones INI files already have
 
 **Question.** INI had no arrays here: a configuration with one could not

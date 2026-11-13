@@ -30,7 +30,9 @@ static const cf_codec json_codec = {sizeof(cf_codec),
                                     CF_CODEC_READ | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
                                     via_json,
                                     NULL,
-                                    0};
+                                    0,
+                                    NULL,
+                                    NULL};
 
 CONFORM_EXPORT extern const cf_codec* const conform_json;
 CONFORM_EXPORT const cf_codec* const        conform_json = &json_codec;

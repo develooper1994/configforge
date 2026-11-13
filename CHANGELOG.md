@@ -106,6 +106,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   readers. `CF_WITH_CBOR`, on by default.
 - **`CF_CODEC_BINARY` and `cf_encoder_head`**: a codec of one's own that
   writes bytes can keep `${` literal as the built-in ones do.
+- A codec can carry data of its own (`decode_self`, `data`,
+  `cf_codec_decode`), and say it is never chosen from content
+  (`CF_CODEC_NAMED_ONLY`): what a codec made from a description needs
+  (D-92).
 
 - **Keys checked at compile time in C11** (D-75): `CF_DEFINE_INT` and
   `CF_DEFINE_TEXT` refuse, when compiled, a definition the library would

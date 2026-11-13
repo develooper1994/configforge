@@ -883,6 +883,14 @@ test from a layout.
   (`CF_CODEC_NAMED_ONLY`): what a codec made from a description needs
   (D-92)." Roadmap: wave 4's text gains "a codec carries its own data (D-92)".
 * **notes**:
+  * 2026-11-13: built as decided, with three small changes. cf_kv_codec.h's
+    format is `key: value`, not `key=value`, so the tests' documents are
+    `port: 9443` and the like; the contrast in `test_named_only` is then
+    read by YAML, not INI, which changes nothing it shows. An undefined key
+    is not read back by `cf_get_text`, so the tests define the key they
+    read as text. Every `cf_codec` initialiser in the library and the tests
+    gained `NULL, NULL` for the two members: `-Wextra`'s
+    missing-field-initializers refuses a partial one.
 
 ---
 

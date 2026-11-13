@@ -169,7 +169,11 @@ enum {
     /* Writes bytes, each text with its length before it: cf_emit cannot
        double a ${ in what it has written, and asks the encoder to
        (cf_encoder_head). (1.5) */
-    CF_CODEC_BINARY = 1u << 5
+    CF_CODEC_BINARY = 1u << 5,
+    /* Chosen by its name or its extensions, never from content: a layout
+       reads bytes no other format would refuse, so a guess at them would
+       be taken (D-73, D-92). (1.5) */
+    CF_CODEC_NAMED_ONLY = 1u << 6
 };
 
 /* `size` is sizeof(cf_codec) where the codec was compiled (D-51). */
@@ -188,6 +192,15 @@ typedef struct cf_codec {
        shorter and would have been global mutable state. */
     cf_bool (*encoder)(cf_sink* out, void* state, cf_doc_sink* sink);
     size_t encoder_state_size;
+
+    /* (1.5, D-92) Reading for a codec made at run time from a
+       description - a TLV layout (cf_tlv_codec) - which reaches it
+       through `self`: taken in place of `decode` when `size` reaches it
+       and it is not NULL. `data` is the description; the library never
+       reads it, frees it or copies it. */
+    cf_bool (*decode_self)(const struct cf_codec* self, const cf_blob* in,
+                           const cf_doc_sink* out, cf_error* err);
+    const void* data;
 } cf_codec;
 
 /* The most encoder state cf_emit can hold, on its own frame. It follows
@@ -218,6 +231,15 @@ CF_API const cf_codec* cf_codec_by_path(const char* path);
    NULL for none. The built-in codecs are not looked at. */
 CF_API const cf_codec* cf_codec_among(const cf_codec* const* list, size_t n,
                                       const char* name, const char* path);
+
+/* Reads `in` through `c`: its decode_self when its size reaches that
+   member and it is set, else its decode. False with `err` set when it
+   refuses the bytes, or has neither. (1.5) */
+CF_API cf_bool cf_codec_decode(const cf_codec* c, const cf_blob* in,
+                               const cf_doc_sink* out, cf_error* err);
+
+/* Whether `c` reads: CF_CODEC_READ and a decoder of either kind. (1.5) */
+CF_API cf_bool cf_codec_can_read(const cf_codec* c);
 
 /* Names a format this library knows about whether or not it was
    compiled in, so the error can say which option to turn on. */

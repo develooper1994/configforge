@@ -70,7 +70,9 @@ cf_codec_among
 cf_codec_at
 cf_codec_by_name
 cf_codec_by_path
+cf_codec_can_read
 cf_codec_count
+cf_codec_decode
 cf_codec_detect
 cf_config_codec
 cf_config_free

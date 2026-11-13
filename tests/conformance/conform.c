@@ -379,7 +379,7 @@ int main(int argc, char** argv) {
     any.ctx          = &g_sink;
     any.reserve_text = any_reserve;
     any.reserve_work = any_work;
-    if (!codec->decode(&blob, &any, &err)) {
+    if (!cf_codec_decode(codec, &blob, &any, &err)) {
         printf("refused: %s\n", err.message);
         cf_arena_free(ar);
         return 1;

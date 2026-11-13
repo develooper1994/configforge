@@ -910,13 +910,21 @@ const cf_codec cf_codec_cbor = {sizeof(cf_codec),
                                     CF_CODEC_ARRAYS | CF_CODEC_BINARY,
                                 cbor_decode,
                                 cbor_encoder,
-                                sizeof(cbor_enc)};
+                                sizeof(cbor_enc),
+                                NULL,
+                                NULL};
 
 #else /* !CF_WITH_EMIT: read only */
 
-const cf_codec cf_codec_cbor = {
-    sizeof(cf_codec), "cbor", ".cbor", CF_CODEC_READ | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
-    cbor_decode,      NULL,   0};
+const cf_codec cf_codec_cbor = {sizeof(cf_codec),
+                                "cbor",
+                                ".cbor",
+                                CF_CODEC_READ | CF_CODEC_TYPED | CF_CODEC_ARRAYS,
+                                cbor_decode,
+                                NULL,
+                                0,
+                                NULL,
+                                NULL};
 
 #endif /* CF_WITH_EMIT */
 
