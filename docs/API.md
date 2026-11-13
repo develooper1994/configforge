@@ -158,7 +158,7 @@ CF_API cf_bool cf_builder_response_files(cf_builder* b);
 
 Implementation: [`cf_builder_response_files` (src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/src/core/config.c#L272).
 
-Turns response files on for a builder made by cf_app_builder (1.4.1):
+Turns response files on for a builder made by cf_app_builder (1.5):
 an argument `@path` past argv[0] (and before a `--`) is replaced by the
 lines of that file, one argument per line (cf_cli_expand). Off by
 default, because the command line may carry arguments the program does

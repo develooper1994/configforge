@@ -583,7 +583,7 @@ diff, and that holds for a full report as for a blind one: a full
 report carries the value, and Doctor compares by it, but no finding,
 `dump`, `explain`, history or blame line, and no error the live-reload
 gate gives `cf_live`, ever says it - a changed secret is "sensitive value
-differs (by digest)", a refused one `<redacted>`. Until 1.4.1 a full
+differs (by digest)", a refused one `<redacted>`. Until 1.5.0 a full
 report's secrets were printed by `diff` (VALUE, CFD017), by CFD006, and
 by `dump` and `explain`.
 

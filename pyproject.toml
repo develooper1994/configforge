@@ -6,7 +6,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "configforge"
-version = "1.4.1"
+version = "1.5.0"
 description = "Configuration whose every value can say why it is what it is"
 readme = "bindings/python/README.md"
 license = { text = "Zlib" }

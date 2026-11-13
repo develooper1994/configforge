@@ -3045,7 +3045,7 @@ refused; and expansion is bounded at 64 events per event read (with a
 floor), so a "billion laughs" is refused in linear time, by name. A sink
 that lends no workspace refuses an anchor, saying so.
 
-Events alone were not enough, and 1.4.1 adds the second bound: the bytes
+Events alone were not enough, and 1.5.0 adds the second bound: the bytes
 an expansion copies are held to 64 times the document plus 1 MiB, with
 the same error. One large scalar aliased thousands of times is few
 events and gigabytes of copy, so a megabyte of input could still be made
@@ -3163,7 +3163,7 @@ expansion be on by default?
 **Decision.** Option 3. `cf_app` and `cf_app_builder` leave an argument
 that starts with `@` alone: the command-line source treats it as any
 positional - it skips it, and no file is opened. `cf_builder_response_files`
-(1.4.1) turns expansion on for a builder made by `cf_app_builder`. The
+(1.5) turns expansion on for a builder made by `cf_app_builder`. The
 builder keeps the command line it was given, after the UTF-8 step, and which
 of its sources reads it; the call runs `cf_cli_expand` over it and gives that
 source the expanded vector. A response file that cannot be read fails the

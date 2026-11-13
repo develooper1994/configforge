@@ -57,10 +57,10 @@ beside what is not.
 | ⬜ | Code for each binding from a contract | assessment |
 | ⬜ | 2.0: what the sizing modes break, once | plan item 10 |
 | 🟩 | Sizes and work predicted, then checked: the file buffer and the key space kept, three more measured and left | D-76, plan of the evening |
-| 🟩 | A UTF-8 byte order mark read past by every text reader (`cf_blob_skip_bom`) | 1.4.1 |
-| 🟨 | Checks at compile time where they can be, at run time always: Rust's `const` keys, C++'s `constexpr` Keys and C11's define macros done; `doctor gen` left | D-75, `docs/plan/` |
+| 🟩 | A UTF-8 byte order mark read past by every text reader (`cf_blob_skip_bom`) | 1.5.0 |
+| 🟨 | Checks at compile time where they can be, at run time always: Rust's `const` keys, C++'s `constexpr` Keys and C11's define macros done; `doctor gen` left | D-75 |
 | 🟩 | GitHub used for all it offers that fits | plan of the evening |
-| 🟩 | A security pass: secrets in reasons, renames and Doctor's diff; bounds on references and YAML aliases; directories read whole or refused | 1.4.1 |
+| 🟩 | A security pass: secrets in reasons, renames and Doctor's diff; bounds on references and YAML aliases; directories read whole or refused | 1.5.0 |
 
 ### Left from the security pass
 
@@ -143,7 +143,7 @@ short keeps its branch, unmerged, and says so here.
 ### More formats, and what a format is (asked 2026-11-13; not yet cards)
 
 After wave 4's CBOR and TLV. To be written as cards in
-`docs/plan/W6-more-formats.md`, the library's own code first:
+the plan, the library's own code first:
 
 * 🟩 **What a format is, told to the program** (D-97; the bindings
   left). Each codec says, as
@@ -623,7 +623,7 @@ whose size changes while it is read is still read whole.
   command in every format over a pair of full reports that hold the
   marker in each state. Left: an undefined key that holds a secret (a
   mistyped name), which nothing can know is one - decide what a report
-  shows for it (`docs/plan/`, the hardening cards).
+  shows for it (the plan, the hardening cards).
 * 🟩 **A per-decode output budget** (D-82, `test_budget`), in bytes and keys, enforced in the
   flattener so that every codec inherits one bound instead of each
   reader keeping its own. Done when a hostile document of each format
@@ -691,7 +691,7 @@ None. Two were decided on 2026-11-11:
 * **Response files become opt-in.** `@file` arguments are expanded by
   default in `cf_app`, so an untrusted positional argument can inject
   configuration and probe for files. Decided: a program asks for them.
-  Built in 1.4.1 (D-79): `cf_builder_response_files`.
+  Built in 1.5.0 (D-79): `cf_builder_response_files`.
 * **Repository settings.** Dependabot alerts, secret scanning and its
   push protection are on, since 2026-11-11.
 

@@ -264,13 +264,13 @@ int main(void) {
 #if defined(_WIN32)
     test_long_name(169, "a path too long for dir.c is an error");
     test_long_name(171, "a name too long for the listing is an error");
+    /* Defined with the rest, under CF_WITH_DIR: the minimal build has no
+       directory source, and MSVC refused the call to an undeclared name. */
+    test_missing_drive();
 #endif
 #if defined(CF_TEST_FIFO)
     test_not_a_file();
 #endif
-#endif
-#if defined(_WIN32)
-    test_missing_drive();
 #endif
     return cf_test_done();
 }

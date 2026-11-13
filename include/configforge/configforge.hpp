@@ -974,7 +974,7 @@ class Builder {
 
     /* Response files (@file) on, for a builder made with the
        (appName, argc, argv) constructor (cf_builder_response_files,
-       1.4.1); off by default. A file that cannot be read is held and
+       1.5.0); off by default. A file that cannot be read is held and
        reported by create(). */
     Builder& responseFiles() {
         if (b_) {

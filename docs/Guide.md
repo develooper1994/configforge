@@ -219,7 +219,7 @@ source, a later assignment beats an earlier one.
 | `cf_builder_replay` | a provenance report, reproducing another process's configuration |
 | `cf_builder_source` | a source you wrote; `cf_builder_file_codec` for a format you parse |
 
-**Response files are opt-in** (1.4.1, D-79). `myapp @args.txt --port=8080`
+**Response files are opt-in** (1.5.0, D-79). `myapp @args.txt --port=8080`
 replaces `@args.txt` by the lines of that file, one argument per line, `#`
 comments and blank lines skipped, no nesting - the way round the Windows
 command-line length limit. It is off: `cf_app` and `cf_app_builder` treat
@@ -236,7 +236,7 @@ cfg = cf_builder_create(b, &err);           /* a file it cannot read is reported
 
 C++ has `responseFiles()`, Python `response_files()` and Rust
 `response_files()`. `cf_app` never expands; a program that relied on it
-before 1.4.1 moves to the three lines above.
+before 1.5.0 moves to the three lines above.
 
 `examples/c/layers.c` uses all of the usual ones at once - a shipped
 `app.toml`, a `conf.d/`, a `.env`, the environment and the command line -

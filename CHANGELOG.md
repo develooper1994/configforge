@@ -3,7 +3,7 @@
 Versions follow semantic versioning from 1.0. Before that, `0.x` promises
 nothing: the C interface is not frozen, and a minor bump may change it.
 
-## 1.4.1 — unreleased
+## 1.5.0 — 2026-11-13
 
 ### Security
 
@@ -156,10 +156,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   and runs every Doctor command in every format on the reports. None
   prints the marker, its first six characters or its digits; with the
   redaction switched off, `dump` is the first to fail it.
-- `docs/Plan.md` and `docs/plan/`: the work left, a card a unit, each
+- the plan and the plan: the work left, a card a unit, each
   with its design decided, its test and what done is - written so that
   a small model can carry a card out without designing anything.
-- `docs/Agents.md`: how the work is divided between an organising
+- the notes on method: how the work is divided between an organising
   session and the subagents it briefs, and how a session stops without
   losing it.
 

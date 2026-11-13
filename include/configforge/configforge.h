@@ -100,7 +100,7 @@ CF_API cf_builder* cf_build_in(cf_arena* arena);
    to. */
 CF_API cf_builder* cf_app_builder(const char* name, int argc, char* const* argv);
 
-/* Turns response files on for a builder made by cf_app_builder (1.4.1):
+/* Turns response files on for a builder made by cf_app_builder (1.5):
  * an argument `@path` past argv[0] (and before a `--`) is replaced by the
  * lines of that file, one argument per line (cf_cli_expand). Off by
  * default, because the command line may carry arguments the program does
