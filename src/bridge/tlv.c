@@ -188,37 +188,46 @@ static cf_bool tlv_check_tag(const cf_tlv_layout* l, const cf_tlv_tag* t,
                             tlv_name(l), hex);
     }
 #endif
-    if (t->type == CF_TLV_NEST || t->type == CF_TLV_BCD || t->type == CF_TLV_HEX) {
-        return cf_error_set(err, CF_E_DEFINITION, NULL, l->name,
-                            "layout '%s': tag 0x%s: %s is not read yet", tlv_name(l),
-                            hex, tlv_type_word(t->type));
-    }
-    if ((t->flags & CF_TLV_LIST) != 0) {
-        return cf_error_set(err, CF_E_DEFINITION, NULL, l->name,
-                            "layout '%s': tag 0x%s: a list is not read yet",
-                            tlv_name(l), hex);
-    }
     return CF_TRUE;
 }
 
-/* A table and every table inside it, to CF_MAX_DEPTH levels. */
+/* Whether `tags` is one of the tables being checked around it: a nest
+   that holds its own table, or one around it, is a recursive layout, read
+   as deep as the document goes and no deeper than CF_MAX_DEPTH. */
+static cf_bool tlv_on_path(const cf_tlv_tag* const* path, int depth,
+                           const cf_tlv_tag* tags) {
+    int i;
+
+    for (i = 0; i < depth; ++i) {
+        if (path[i] == tags) {
+            return CF_TRUE;
+        }
+    }
+    return CF_FALSE;
+}
+
+/* A table and every table inside it, to CF_MAX_DEPTH levels; `path`
+   holds the tables around it, `depth` of them. */
 static cf_bool tlv_check_table(const cf_tlv_layout* l, const cf_tlv_tag* tags, size_t n,
-                               int depth, cf_error* err) {
+                               const cf_tlv_tag** path, int depth, cf_error* err) {
     size_t i;
 
-    if (depth > CF_MAX_DEPTH) {
+    if (depth >= CF_MAX_DEPTH) {
         return cf_error_set(err, CF_E_DEFINITION, NULL, l->name,
                             "layout '%s': tables nest deeper than %d levels",
                             tlv_name(l), (int)CF_MAX_DEPTH);
     }
+    path[depth] = tags;
     for (i = 0; i < n; ++i) {
         if (!tlv_check_tag(l, &tags[i], (i > 0) ? &tags[i - 1] : NULL, err)) {
             return CF_FALSE;
         }
-        if (tags[i].type == CF_TLV_NEST) {
-            if (!tlv_check_table(l, tags[i].inner, tags[i].ninner, depth + 1, err)) {
-                return CF_FALSE;
-            }
+        if (tags[i].type != CF_TLV_NEST ||
+            tlv_on_path(path, depth + 1, tags[i].inner)) {
+            continue;
+        }
+        if (!tlv_check_table(l, tags[i].inner, tags[i].ninner, path, depth + 1, err)) {
+            return CF_FALSE;
         }
     }
     return CF_TRUE;
@@ -226,8 +235,9 @@ static cf_bool tlv_check_table(const cf_tlv_layout* l, const cf_tlv_tag* tags, s
 
 /* The layout's own fields, then its tables. */
 static cf_bool tlv_check(const cf_tlv_layout* l, cf_error* err) {
-    unsigned known = CF_TLV_END | CF_TLV_END_LENGTH | CF_TLV_PADDING;
-    char     hex[9];
+    unsigned          known = CF_TLV_END | CF_TLV_END_LENGTH | CF_TLV_PADDING;
+    char              hex[9];
+    const cf_tlv_tag* path[CF_MAX_DEPTH];
 
     if (!tlv_name_ok(l->name)) {
         return cf_error_set(
@@ -282,14 +292,11 @@ static cf_bool tlv_check(const cf_tlv_layout* l, cf_error* err) {
     if ((l->tags == NULL) != (l->ntags == 0)) {
         return tlv_bad(err, l, "the tags and their count disagree");
     }
-    if (!tlv_check_table(l, l->tags, l->ntags, 1, err)) {
+    if (!tlv_check_table(l, l->tags, l->ntags, path, 0, err)) {
         return CF_FALSE;
     }
     if (l->kind == CF_TLV_BER) {
         return tlv_bad(err, l, "BER-TLV is not read yet");
-    }
-    if (l->unknown != CF_TLV_UNKNOWN_REFUSE) {
-        return tlv_bad(err, l, "an unknown tag skipped or kept is not read yet");
     }
     return CF_TRUE;
 }
@@ -304,7 +311,10 @@ typedef struct tlv_scan {
     const char*          name;
     const cf_doc_sink*   out;
     cf_error*            err;
+    int                  depth; /* the document is 1, each nest and list one more */
     char                 where[CF_PATH_MAX + 32];
+    char                 text[256]; /* hex text, without the sink's storage */
+    char                 ukey[16];  /* "tag-" and an unknown tag's digits   */
 } tlv_scan;
 
 /* "<name>, byte <n>: <what>" */
@@ -371,24 +381,100 @@ static const cf_tlv_tag* tlv_find(const cf_tlv_tag* tags, size_t n, cf_u32 tag) 
     return NULL;
 }
 
-/* One scalar, placed at its tag. */
+/* The sink refused something named `key`, or an element with no name. */
+static cf_bool tlv_refused(tlv_scan* s, size_t start, const char* key) {
+    if (key == NULL) {
+        return tlv_fail(s, start, "the value could not be recorded");
+    }
+    return cf_error_set(s->err, CF_E_KEY, NULL, s->name,
+                        "%s, byte %zu: '%s' is not a valid key", s->name, start, key);
+}
+
+/* One scalar under `key` - NULL for a list's element - placed at its tag. */
 static cf_bool tlv_emit(tlv_scan* s, size_t start, const char* key, const cf_value* v,
                         cf_bool textual) {
     cf_loc at;
+    size_t klen = (key != NULL) ? strlen(key) : 0;
 
     cf_fmt(s->where, sizeof s->where, "%s, byte %zu", s->name, start);
     at.file = s->where;
     at.line = 0;
     at.col  = 0;
-    if (!s->out->scalar(s->out->ctx, key, strlen(key), v, textual, &at)) {
-        return cf_error_set(s->err, CF_E_KEY, NULL, s->name,
-                            "%s, byte %zu: '%s' is not a valid key", s->name, start,
-                            key);
+    if (!s->out->scalar(s->out->ctx, key, klen, v, textual, &at)) {
+        return tlv_refused(s, start, key);
     }
     return CF_TRUE;
 }
 
-static cf_bool tlv_text(tlv_scan* s, const cf_tlv_tag* e, const char* hex, size_t start,
+/* Whether the sink is new enough to lend text storage, and does. */
+static cf_bool tlv_has_text(const cf_doc_sink* o) {
+    if (o->size < offsetof(cf_doc_sink, reserve_text) + sizeof o->reserve_text) {
+        return CF_FALSE;
+    }
+    return (o->reserve_text != NULL) ? CF_TRUE : CF_FALSE;
+}
+
+/* Packed decimal: two digits a byte, the high nibble first. */
+static cf_bool tlv_bcd(tlv_scan* s, const char* key, const char* hex, size_t start,
+                       const unsigned char* p, size_t n) {
+    cf_u64   u = 0;
+    cf_value v;
+    size_t   i;
+
+    if (n > 9u) {
+        return cf_error_set(
+            s->err, CF_E_SOURCE, NULL, s->name,
+            "%s, byte %zu: tag 0x%s has %U digits, more than an integer "
+            "holds",
+            s->name, start, hex, (cf_u64)n * 2u);
+    }
+    for (i = 0; i < n; ++i) {
+        unsigned hi = (unsigned)(p[i] >> 4), lo = (unsigned)(p[i] & 0xFu);
+
+        if (hi > 9u || lo > 9u) {
+            return cf_error_set(
+                s->err, CF_E_SOURCE, NULL, s->name,
+                "%s, byte %zu: tag 0x%s holds a nibble that is not a digit", s->name,
+                start, hex);
+        }
+        u = u * 100u + (cf_u64)hi * 10u + lo;
+    }
+    cf_value_int(&v, (cf_i64)u);
+    return tlv_emit(s, start, key, &v, CF_FALSE);
+}
+
+/* Any bytes, as lowercase hexadecimal text: in the sink's text storage,
+   or for a short value in the scanner's own. */
+static cf_bool tlv_hexval(tlv_scan* s, const char* key, const char* hex, size_t start,
+                          const unsigned char* p, size_t n) {
+    static const char digits[] = "0123456789abcdef";
+    char*             t;
+    cf_value          v;
+    size_t            i;
+
+    if (tlv_has_text(s->out)) {
+        t = s->out->reserve_text(s->out->ctx, 2u * n + 1u);
+        if (t == NULL) {
+            return cf_error_set(s->err, CF_E_MEMORY, NULL, s->name,
+                                "no room to write a TLV value as text");
+        }
+    } else if (n <= 127u) {
+        t = s->text;
+    } else {
+        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                            "%s, byte %zu: tag 0x%s needs sink text storage", s->name,
+                            start, hex);
+    }
+    for (i = 0; i < n; ++i) {
+        t[2u * i]      = digits[p[i] >> 4];
+        t[2u * i + 1u] = digits[p[i] & 0xFu];
+    }
+    t[2u * n] = '\0';
+    cf_value_text(&v, t, 2u * n);
+    return tlv_emit(s, start, key, &v, CF_FALSE);
+}
+
+static cf_bool tlv_text(tlv_scan* s, const char* key, const char* hex, size_t start,
                         const unsigned char* p, size_t n) {
     cf_value v;
 
@@ -406,11 +492,12 @@ static cf_bool tlv_text(tlv_scan* s, const cf_tlv_tag* e, const char* hex, size_
                             start, hex);
     }
     cf_value_text(&v, (const char*)p, n);
-    return tlv_emit(s, start, e->key, &v, CF_FALSE);
+    return tlv_emit(s, start, key, &v, CF_FALSE);
 }
 
-static cf_bool tlv_integer(tlv_scan* s, const cf_tlv_tag* e, const char* hex,
-                           size_t start, const unsigned char* p, size_t n) {
+static cf_bool tlv_integer(tlv_scan* s, const cf_tlv_tag* e, const char* key,
+                           const char* hex, size_t start, const unsigned char* p,
+                           size_t n) {
     int      order = (e->order != 0) ? e->order : s->l->order;
     cf_u64   u;
     cf_value v;
@@ -437,13 +524,13 @@ static cf_bool tlv_integer(tlv_scan* s, const cf_tlv_tag* e, const char* hex,
         }
         cf_value_int(&v, (cf_i64)u);
     }
-    return tlv_emit(s, start, e->key, &v, CF_FALSE);
+    return tlv_emit(s, start, key, &v, CF_FALSE);
 }
 
 #if CF_WITH_REAL
 /* A single or a double by its bit pattern; Infinity and NaN are text, as
    CBOR's are. */
-static cf_bool tlv_real(tlv_scan* s, const cf_tlv_tag* e, size_t start,
+static cf_bool tlv_real(tlv_scan* s, const cf_tlv_tag* e, const char* key, size_t start,
                         const unsigned char* p, size_t n) {
     int    order = (e->order != 0) ? e->order : s->l->order;
     cf_u64 bits  = tlv_number(p, n, order);
@@ -458,24 +545,87 @@ static cf_bool tlv_real(tlv_scan* s, const cf_tlv_tag* e, size_t start,
             t = ((bits >> 63) != 0) ? "-inf" : "inf";
         }
         cf_value_text(&v, t, strlen(t));
-        return tlv_emit(s, start, e->key, &v, CF_TRUE);
+        return tlv_emit(s, start, key, &v, CF_TRUE);
     }
     cf_value_real(&v, d);
-    return tlv_emit(s, start, e->key, &v, CF_FALSE);
+    return tlv_emit(s, start, key, &v, CF_FALSE);
 }
 #endif
 
-/* One element whose entry is `e`: its value is `n` bytes at `p`. */
-static cf_bool tlv_element(tlv_scan* s, const cf_tlv_tag* e, cf_u32 tag, size_t start,
-                           const unsigned char* p, size_t n) {
-    char     hex[9];
-    cf_value v;
+static cf_bool tlv_seq(tlv_scan* s, size_t at, size_t end, const cf_tlv_tag* tags,
+                       size_t n, cf_bool top);
 
-    tlv_hex(hex, tag, tlv_tag_bytes(s->l, tag));
-    if (e == NULL) {
+/* One level deeper - a nest, or a list's array - as the flattener and
+   every other reader count them. */
+static cf_bool tlv_enter(tlv_scan* s, size_t start) {
+    if (s->depth + 1 > CF_MAX_DEPTH) {
+        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                            "%s, byte %zu: nests deeper than %d levels", s->name, start,
+                            (int)CF_MAX_DEPTH);
+    }
+    ++s->depth;
+    return CF_TRUE;
+}
+
+static cf_bool tlv_leave(tlv_scan* s) {
+    --s->depth;
+    if (!s->out->end(s->out->ctx)) {
+        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                            "%s: the document could not be recorded", s->name);
+    }
+    return CF_TRUE;
+}
+
+/* A nest: a table under `key` (NULL: a list's element) whose members are
+   the `n` bytes at `at`, read with `tags`. */
+static cf_bool tlv_nest(tlv_scan* s, const char* key, const cf_tlv_tag* tags,
+                        size_t ntags, size_t start, size_t at, size_t n) {
+    if (!tlv_enter(s, start)) {
+        return CF_FALSE;
+    }
+    if (!s->out->begin_table(s->out->ctx, key, (key != NULL) ? strlen(key) : 0)) {
+        return tlv_refused(s, start, key);
+    }
+    if (!tlv_seq(s, at, at + n, tags, ntags, CF_FALSE)) {
+        return CF_FALSE;
+    }
+    return tlv_leave(s);
+}
+
+/* A tag the layout does not name, by its policy: refused, skipped, or kept
+   under "tag-" and its digits, as hex. */
+static cf_bool tlv_unknown(tlv_scan* s, cf_u32 tag, const char* hex, size_t start,
+                           const unsigned char* p, size_t n) {
+    size_t i;
+
+    if (s->l->unknown == CF_TLV_UNKNOWN_SKIP) {
+        return CF_TRUE;
+    }
+    if (s->l->unknown != CF_TLV_UNKNOWN_KEEP) {
         return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                             "%s, byte %zu: tag 0x%s is not in the layout '%s'", s->name,
                             start, hex, tlv_name(s->l));
+    }
+    memcpy(s->ukey, "tag-", 4);
+    for (i = 0; hex[i] != '\0'; ++i) {
+        s->ukey[4u + i] = (char)cf_to_lower((unsigned char)hex[i]);
+    }
+    s->ukey[4u + i] = '\0';
+    (void)tag;
+    return tlv_hexval(s, s->ukey, hex, start, p, n);
+}
+
+/* One element whose entry is `e`, under `key` (NULL: a list's element):
+   its value is `n` bytes at `at`. */
+static cf_bool tlv_element(tlv_scan* s, const cf_tlv_tag* e, const char* key,
+                           cf_u32 tag, size_t start, size_t at, size_t n) {
+    const unsigned char* p = s->base + at;
+    char                 hex[9];
+    cf_value             v;
+
+    tlv_hex(hex, tag, tlv_tag_bytes(s->l, tag));
+    if (e == NULL) {
+        return tlv_unknown(s, tag, hex, start, p, n);
     }
     if ((e->flags & CF_TLV_SKIP) != 0) {
         return CF_TRUE; /* the layout knows it, and chose not to read it */
@@ -493,10 +643,16 @@ static cf_bool tlv_element(tlv_scan* s, const cf_tlv_tag* e, cf_u32 tag, size_t 
     }
     switch (e->type) {
     case CF_TLV_TEXT:
-        return tlv_text(s, e, hex, start, p, n);
+        return tlv_text(s, key, hex, start, p, n);
     case CF_TLV_INT:
     case CF_TLV_UINT:
-        return tlv_integer(s, e, hex, start, p, n);
+        return tlv_integer(s, e, key, hex, start, p, n);
+    case CF_TLV_BCD:
+        return tlv_bcd(s, key, hex, start, p, n);
+    case CF_TLV_HEX:
+        return tlv_hexval(s, key, hex, start, p, n);
+    case CF_TLV_NEST:
+        return tlv_nest(s, key, e->inner, e->ninner, start, at, n);
     case CF_TLV_BOOL:
         if (n != 1u) {
             return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
@@ -509,10 +665,10 @@ static cf_bool tlv_element(tlv_scan* s, const cf_tlv_tag* e, cf_u32 tag, size_t 
                                 s->name, start, hex, (unsigned)p[0]);
         }
         cf_value_bool(&v, (p[0] != 0) ? CF_TRUE : CF_FALSE);
-        return tlv_emit(s, start, e->key, &v, CF_FALSE);
+        return tlv_emit(s, start, key, &v, CF_FALSE);
 #if CF_WITH_REAL
     case CF_TLV_REAL:
-        return tlv_real(s, e, start, p, n);
+        return tlv_real(s, e, key, start, p, n);
 #endif
     default:
         break;
@@ -520,22 +676,99 @@ static cf_bool tlv_element(tlv_scan* s, const cf_tlv_tag* e, cf_u32 tag, size_t 
     return tlv_fail(s, start, "a type this reader does not read");
 }
 
+/* Where an earlier run of `tag` in this level, from `from` to `upto`,
+   ended; 0 when there was none. The elements were read once already. */
+static size_t tlv_ran_before(tlv_scan* s, size_t from, size_t upto, cf_u32 tag) {
+    size_t ended = 0;
+
+    while (from < upto) {
+        cf_u32 t   = 0;
+        cf_u64 len = 0;
+
+        if (!tlv_tag_read(s, &from, upto, &t)) {
+            break;
+        }
+        if (!tlv_len_read(s, from, &from, upto, &len)) {
+            break;
+        }
+        from += (size_t)len;
+        if (t == tag) {
+            ended = from;
+        }
+    }
+    return ended;
+}
+
+/* The element of a list tag `e`, at `start`: the array opens at its first
+   element, and a second run of it is refused, as INI's name[] lines are
+   (D-60) - it would restart the count. `*open` is the list open here. */
+static cf_bool tlv_list(tlv_scan* s, const cf_tlv_tag* e, const cf_tlv_tag** open,
+                        size_t level, size_t start) {
+    size_t ended;
+    char   hex[9];
+
+    if (*open == e) {
+        return CF_TRUE;
+    }
+    ended = tlv_ran_before(s, level, start, e->tag);
+    if (ended != 0) {
+        tlv_hex(hex, e->tag, tlv_tag_bytes(s->l, e->tag));
+        return cf_error_set(
+            s->err, CF_E_SOURCE, NULL, s->name,
+            "%s, byte %zu: tag 0x%s continues a list that ended at byte "
+            "%zu",
+            s->name, start, hex, ended);
+    }
+    if (!tlv_enter(s, start)) {
+        return CF_FALSE;
+    }
+    if (!s->out->begin_array(s->out->ctx, e->key, strlen(e->key))) {
+        return tlv_refused(s, start, e->key);
+    }
+    *open = e;
+    return CF_TRUE;
+}
+
+/* Whether `e` is read as a list: flagged so, and not skipped. */
+static cf_bool tlv_is_list(const cf_tlv_tag* e) {
+    if (e == NULL || (e->flags & CF_TLV_LIST) == 0) {
+        return CF_FALSE;
+    }
+    return ((e->flags & CF_TLV_SKIP) == 0) ? CF_TRUE : CF_FALSE;
+}
+
+/* The list open in this level, if any, closed. */
+static cf_bool tlv_close(tlv_scan* s, const cf_tlv_tag** open) {
+    if (*open == NULL) {
+        return CF_TRUE;
+    }
+    *open = NULL;
+    return tlv_leave(s);
+}
+
 /* The elements from `at` to `end` of one table; the top level ends at the
    end tag when the layout has one. */
 static cf_bool tlv_seq(tlv_scan* s, size_t at, size_t end, const cf_tlv_tag* tags,
                        size_t n, cf_bool top) {
-    const cf_tlv_layout* l = s->l;
+    const cf_tlv_layout* l     = s->l;
+    const cf_tlv_tag*    open  = NULL;
+    size_t               level = at;
     char                 hex[9];
 
     while (at < end) {
-        size_t start = at;
-        cf_u32 tag   = 0;
-        cf_u64 len   = 0;
+        size_t            start = at;
+        cf_u32            tag   = 0;
+        cf_u64            len   = 0;
+        const cf_tlv_tag* e;
+        const char*       key;
 
         if (!tlv_tag_read(s, &at, end, &tag)) {
             return CF_FALSE;
         }
         if (top && (l->flags & CF_TLV_END) != 0 && tag == l->end_tag) {
+            if (!tlv_close(s, &open)) {
+                return CF_FALSE;
+            }
             if ((l->flags & CF_TLV_END_LENGTH) != 0) {
                 if (!tlv_len_read(s, start, &at, end, &len)) {
                     return CF_FALSE;
@@ -565,11 +798,26 @@ static cf_bool tlv_seq(tlv_scan* s, size_t at, size_t end, const cf_tlv_tag* tag
                 "%s, byte %zu: tag 0x%s says %U bytes, and %zu are left", s->name,
                 start, hex, len, end - at);
         }
-        if (!tlv_element(s, tlv_find(tags, n, tag), tag, start, s->base + at,
-                         (size_t)len)) {
+        e = tlv_find(tags, n, tag);
+        if (open != NULL && e != open) {
+            if (!tlv_close(s, &open)) {
+                return CF_FALSE;
+            }
+        }
+        key = (e != NULL) ? e->key : NULL;
+        if (tlv_is_list(e)) {
+            if (!tlv_list(s, e, &open, level, start)) {
+                return CF_FALSE;
+            }
+            key = NULL; /* an element of the list's array */
+        }
+        if (!tlv_element(s, e, key, tag, start, at, (size_t)len)) {
             return CF_FALSE;
         }
         at += (size_t)len;
+    }
+    if (!tlv_close(s, &open)) {
+        return CF_FALSE;
     }
     if (top && (l->flags & CF_TLV_END) != 0) {
         tlv_hex(hex, l->end_tag, l->tag_width);
@@ -586,11 +834,12 @@ static cf_bool tlv_decode(const cf_codec* self, const cf_blob* in,
     tlv_scan s;
     size_t   n = (in->p != NULL) ? in->n : 0;
 
-    s.base = (const unsigned char*)in->p;
-    s.l    = (const cf_tlv_layout*)self->data;
-    s.name = (in->name != NULL) ? in->name : "<tlv>";
-    s.out  = out;
-    s.err  = err;
+    s.base  = (const unsigned char*)in->p;
+    s.l     = (const cf_tlv_layout*)self->data;
+    s.name  = (in->name != NULL) ? in->name : "<tlv>";
+    s.out   = out;
+    s.err   = err;
+    s.depth = 1;
     if (n == 0) {
         return cf_error_set(err, CF_E_SOURCE, NULL, s.name, "%s: the document is empty",
                             s.name);

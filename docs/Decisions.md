@@ -3579,8 +3579,33 @@ places.
   layout's keys are checked by `cf_key_valid`, which the serialization
   layer may not reach (the layering gate).
 
-Not read yet, and refused by name until they are: a nest, a list, BCD and
-hex values, an unknown tag skipped or kept, and BER-TLV. Writing is wave
+* **Nests.** A nest's value is a TLV sequence of the same kind, read with
+  its entry's tags as a table under its key; the end tag is not looked
+  for inside, where the length bounds it. The document is level 1 and each
+  nest one more, to `CF_MAX_DEPTH`. A nest whose tags are its own table,
+  or one around it, is a recursive layout: checked once, read as deep as
+  the document goes and no deeper. A nest with no tags reads every member
+  as unknown.
+* **Lists.** A tag flagged `CF_TLV_LIST` is an array under its key, an
+  element for each occurrence. The occurrences must be one run: a later
+  run is refused, naming the byte where the list ended, as INI's `name[]`
+  lines are (D-60) - a second run would restart the count. Without the
+  flag a repeated tag is two values for one key, the later winning and
+  both kept as candidates, as two lines of an INI file are.
+* **BCD and hex.** BCD is two digits a byte, the high nibble first, an
+  integer of at most 18 digits; leading zeros are digits, as EMV's amounts
+  have them. Hex is any bytes as lowercase hexadecimal text, written into
+  the sink's text storage, or for a value under 128 bytes into the
+  reader's own.
+* **An unknown tag**, by the layout's `unknown`: refused, the default - a
+  value nobody mapped is one nobody can explain, and a layout out of date
+  should say so the first time the device's file outgrows it; skipped,
+  which the layout's author chose; or kept under `tag-` and the tag's
+  digits in lowercase (`tag-0099`), as hex. Rejected: a fixed prefix such
+  as `unknown.`, which would move the key when the layout later names the
+  tag, where `tag-0099` already says what it is.
+
+Not read yet, and refused by name until it is: BER-TLV. Writing is wave
 6's: what a layout skips must be kept to write the file back.
 
 **Compatibility.** Additive: one function, one option on by default

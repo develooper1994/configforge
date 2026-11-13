@@ -283,6 +283,172 @@ static void test_layout_refusals(void) {
     has(err.message, "from before 1.5", "has no room for a layout");
 }
 
+/* ------------------------------------------------------------------ *
+ * Nesting, lists and unknown tags: a network layout of one-byte tags
+ * and lengths, big-endian, with no end tag.
+ * ------------------------------------------------------------------ */
+
+static const cf_tlv_tag servers_tags[] = {
+    {0x01, "addr", CF_TLV_TEXT, 0, 0, 0, NULL, 0, NULL},
+    {0x02, "port", CF_TLV_UINT, 2, 0, 0, NULL, 0, NULL}};
+
+static const cf_tlv_tag net_tags[] = {
+    {0x01, "host", CF_TLV_TEXT, 0, 0, 0, NULL, 0, NULL},
+    {0x02, "servers", CF_TLV_NEST, 0, 0, CF_TLV_LIST, servers_tags, 2, NULL},
+    {0x03, "amount", CF_TLV_BCD, 0, 0, 0, NULL, 0, NULL},
+    {0x04, "mac", CF_TLV_HEX, 6, 0, 0, NULL, 0, NULL}};
+
+static cf_tlv_layout net_layout(int unknown) {
+    cf_tlv_layout l = CF_TLV_LAYOUT_INIT;
+
+    l.name         = "net";
+    l.tag_width    = 1;
+    l.length_width = 1;
+    l.order        = CF_TLV_BIG;
+    l.unknown      = unknown;
+    l.tags         = net_tags;
+    l.ntags        = sizeof net_tags / sizeof net_tags[0];
+    return l;
+}
+
+/* One element of one-byte tag and length. */
+static void put1(unsigned char* doc, size_t* n, unsigned tag, const void* value,
+                 size_t len) {
+    doc[(*n)++] = (unsigned char)tag;
+    doc[(*n)++] = (unsigned char)len;
+    if (len > 0) {
+        memcpy(doc + *n, value, len);
+    }
+    *n += len;
+}
+
+/* A server's nest: its address and its port. */
+static void put_server(unsigned char* doc, size_t* n, const char* addr, unsigned port) {
+    unsigned char inner[32];
+    unsigned char p[2];
+    size_t        k = 0;
+
+    p[0] = (unsigned char)(port >> 8);
+    p[1] = (unsigned char)(port & 0xFFu);
+    put1(inner, &k, 0x01, addr, strlen(addr));
+    put1(inner, &k, 0x02, p, 2);
+    put1(doc, n, 0x02, inner, k);
+}
+
+static size_t net_document(unsigned char* doc, cf_bool apart) {
+    static const unsigned char amount[] = {0x00, 0x00, 0x00, 0x01, 0x23, 0x45};
+    static const unsigned char mac[]    = {0x00, 0x1A, 0x2B, 0x3C, 0x4D, 0x5E};
+    size_t                     n        = 0;
+
+    put1(doc, &n, 0x01, "web", 3);
+    put_server(doc, &n, "10.0.0.1", 8080);
+    if (apart) {
+        put1(doc, &n, 0x03, amount, sizeof amount);
+    }
+    put_server(doc, &n, "10.0.0.2", 9104);
+    put1(doc, &n, 0x03, amount, sizeof amount);
+    put1(doc, &n, 0x04, mac, sizeof mac);
+    return n;
+}
+
+static cf_config* read_with(const cf_tlv_layout* l, const unsigned char* doc, size_t n,
+                            cf_error* err) {
+    static cf_codec codec;
+    cf_builder*     b = cf_build(NULL);
+
+    if (!cf_tlv_codec(&codec, l, err)) {
+        cf_builder_abort(b);
+        return NULL;
+    }
+    cf_builder_codec(b, &codec);
+    cf_builder_document(b, "net.bin", CF_RANK_USER_FILE, (const char*)doc, n, l->name,
+                        0);
+    return cf_builder_create(b, err);
+}
+
+static void test_nested(void) {
+    cf_tlv_layout l   = net_layout(CF_TLV_UNKNOWN_REFUSE);
+    cf_error      err = CF_ERROR_INIT;
+    unsigned char doc[128];
+    size_t        n = net_document(doc, CF_FALSE);
+    cf_config*    c = read_with(&l, doc, n, &err);
+    static char   ex[512];
+
+    check(c != NULL, "nests, a list, BCD and hex read");
+    if (c == NULL) {
+        printf("  %s\n", err.message);
+        return;
+    }
+    check_text(cf_get_text(c, "host", ""), "web", "text beside them");
+    check(cf_get_int(c, "servers.count", 0) == 2, "a list of nests is an array");
+    check(cf_get_int(c, "servers.1.port", 0) == 9104, "each a table");
+    check_text(cf_get_text(c, "servers.0.addr", ""), "10.0.0.1", "with its members");
+    check(cf_get_int(c, "amount", 0) == 12345, "BCD, its leading zeros digits");
+    check_text(cf_get_text(c, "mac", ""), "001a2b3c4d5e", "hex, lowercase");
+    cf_explain(c, "servers.0.addr", ex, sizeof ex);
+    has(ex, "net.bin, byte 7", "a member is placed in the document, not in its nest");
+    cf_config_free(c);
+}
+
+static void net_refused(const cf_tlv_layout* l, const unsigned char* doc, size_t n,
+                        const char* words, const char* what) {
+    cf_error   err = CF_ERROR_INIT;
+    cf_config* c   = read_with(l, doc, n, &err);
+
+    check(c == NULL, what);
+    has(err.message, words, what);
+    cf_config_free(c);
+}
+
+/* A nest whose tags are its own table: as deep as the document makes it. */
+static const cf_tlv_tag deep_tags[1] = {
+    {0x01, "d", CF_TLV_NEST, 0, 0, 0, deep_tags, 1, NULL}};
+
+static void test_nested_refusals(void) {
+    static const unsigned char nibble[] = {0x0A};
+    static const unsigned char two[]    = {0x01, 0x02};
+    cf_tlv_layout              l        = net_layout(CF_TLV_UNKNOWN_REFUSE);
+    cf_error                   err      = CF_ERROR_INIT;
+    unsigned char              doc[128];
+    size_t                     n = net_document(doc, CF_TRUE);
+    cf_config*                 c;
+    int                        i;
+
+    net_refused(&l, doc, n, "continues a list that ended at byte",
+                "a list in two runs");
+
+    n = 0;
+    put1(doc, &n, 0x03, nibble, 1);
+    net_refused(&l, doc, n, "a nibble that is not a digit", "BCD that is not decimal");
+
+    n = 0;
+    put1(doc, &n, 0x09, two, 2);
+    net_refused(&l, doc, n, "tag 0x09 is not in the layout 'net'",
+                "an unknown tag refused");
+    l = net_layout(CF_TLV_UNKNOWN_SKIP);
+    c = read_with(&l, doc, n, &err);
+    check(c != NULL && !cf_has(c, "tag-09"), "skipped");
+    cf_config_free(c);
+    l = net_layout(CF_TLV_UNKNOWN_KEEP);
+    c = read_with(&l, doc, n, &err);
+    check(c != NULL, "or kept");
+    if (c != NULL) {
+        check_text(cf_get_text(c, "tag-09", ""), "0102", "under tag-<hex>, as hex");
+    }
+    cf_config_free(c);
+
+    /* 33 nests, each the only member of the one around it. */
+    l.unknown = CF_TLV_UNKNOWN_REFUSE;
+    l.tags    = deep_tags;
+    l.ntags   = 1;
+    n         = 0;
+    for (i = 0; i < 33; ++i) {
+        doc[n++] = 0x01;
+        doc[n++] = (unsigned char)(2 * (32 - i));
+    }
+    net_refused(&l, doc, n, "nests deeper than", "nests past the depth");
+}
+
 int main(void) {
     cf_error err = CF_ERROR_INIT;
 
@@ -295,6 +461,8 @@ int main(void) {
     test_file();
     test_read_refusals();
     test_layout_refusals();
+    test_nested();
+    test_nested_refusals();
     return cf_test_done();
 }
 

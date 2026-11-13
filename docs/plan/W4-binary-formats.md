@@ -1322,6 +1322,14 @@ test from a layout.
   `tag-<hex>`, as the layout says". Roadmap: wave 4's text "a TLV codec from
   a layout, nested (W4-T3)".
 * **notes**:
+  * 2026-11-13: W4-T2's check of every table, recursively to
+    `CF_MAX_DEPTH`, would have refused this card's own test layout, a nest
+    whose tags are its own table. The check now keeps the tables on its
+    path and does not go into one it is already in: a recursive layout is
+    checked once, and the document's depth bounds the reading. A list's
+    array is a level as a nest is, as the flattener counts them. The
+    earlier run of a list is found by reading the level again from its
+    start, which happens once for each list tag that opens.
 
 ---
 

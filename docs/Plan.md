@@ -148,7 +148,7 @@ In the order to be done. A card is `open`, `done` (with its commit), or
 | 7 | W4-C4 CBOR from content, fuzzed and documented | sonnet | W4-C2, W4-C3 | done |
 | 8 | W4-T1 A codec that carries its own data | opus | - | done |
 | 9 | W4-T2 A TLV layout, and reading a flat one | opus | W4-T1 | done |
-| 10 | W4-T3 Nesting, lists and unknown tags | sonnet | W4-T2 | open |
+| 10 | W4-T3 Nesting, lists and unknown tags | sonnet | W4-T2 | done |
 | 11 | W4-T4 BER-TLV | sonnet | W4-T3 | open |
 | 12 | W4-T5 TLV fuzzed and documented | sonnet | W4-T4, W4-C4 | open |
 | 13 | H-5 A directory others can write to is not read as secrets | opus | - | open |

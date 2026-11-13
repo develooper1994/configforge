@@ -113,7 +113,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - **TLV by a layout** (`cf_tlv_layout`, `cf_tlv_codec`): a program
   describes its tags - widths, byte order, an end tag, each tag's key and
   type - and the library makes a codec that reads it, each value placed by
-  the byte its tag starts at (D-93). `CF_WITH_TLV`, on by default.
+  the byte its tag starts at (D-93): nested tags as tables, repeated ones
+  as lists, BCD and hex values, and an unknown tag refused, skipped or
+  kept as `tag-<hex>`, as the layout says. `CF_WITH_TLV`, on by default.
 
 - **Keys checked at compile time in C11** (D-75): `CF_DEFINE_INT` and
   `CF_DEFINE_TEXT` refuse, when compiled, a definition the library would
