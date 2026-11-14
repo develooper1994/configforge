@@ -313,8 +313,12 @@ and the conventional precedence for a named application:
 command line  >  environment (MYAPP_)  >  user file  >  system file  >  built-in default
 ```
 
-File locations follow platform convention: XDG on Linux, `%APPDATA%` and
-`%PROGRAMDATA%` on Windows, `~/Library/Application Support` on macOS.
+As built (D-09), `cf_app` reads the command line and the environment and
+no file; a program adds its files on `cf_app_builder`. Reading them
+from the platform's places - XDG on Linux, `%APPDATA%` and
+`%PROGRAMDATA%` on Windows, `~/Library/Application Support` on macOS -
+is planned as an opt-in (Roadmap, "A program's files where its platform
+keeps them").
 
 The error is a caller-supplied struct rather than a thread-local last-error, because
 global error state contradicts a stated principle and breaks under the fixed-capacity

@@ -171,4 +171,10 @@ Java's own reader. From the Roadmap's "From a review of the whole,
 `examples/c/settings.c` moved onto it), an override file the library
 owns (after it), a reload that names the keys it changed, the
 comparison with other libraries (with the formats' benchmark), and one
-program not written for the library moved onto it.
+program not written for the library moved onto it. From "From reading
+the project as a newcomer, 2026-11-14", in this order and ahead of the
+new formats: publishing to the registries (needs their tokens), a
+smaller 1.x promise (internals fenced, an experimental tier), the
+platform's file locations with profiles, misreads noticed, help and
+completions from the contract, durations and sizes, big-endian, 32-bit
+and bare-metal CI, value migrations, outside trust checks.

@@ -728,6 +728,94 @@ written back in its format, and a value policy per profile ("no debug
 log in production") is a jq expression over a full report today
 (Doctor.md, 7a).
 
+### From reading the project as a newcomer, 2026-11-14
+
+Measured on that day: no package registry carries the library
+(crates.io, PyPI, vcpkg and ConanCenter all answer "not found", though
+`packaging/` holds the recipes), each 1.5.0 archive was downloaded
+once, and 345 functions are exported under the 1.x promise, five minor
+releases in nine days. Nothing below is a format; most of it is what a
+first user meets. In the order proposed:
+
+* ⬜ **Published where programs get their libraries.** The crate on
+  crates.io, the wheel (with its shared library) on PyPI, the vcpkg and
+  ConanCenter recipes submitted upstream, a Homebrew tap; each from the
+  release workflow, after the GitHub release. Needs the registries'
+  tokens as repository secrets. Done when `cargo add configforge`,
+  `pip install configforge` and `vcpkg install configforge` work on a
+  clean machine, and CI installs each in a job of its own. Go and .NET
+  (wave 7) wait for this.
+* ⬜ **What the 1.x promise covers, made smaller.** Functions marked
+  INTERNAL sit in eight installed headers (`cf_ks_*` among them),
+  exported for Doctor and the tests; a program can call them and will
+  break in a minor release. Move them behind a macro a program does not
+  define (`CF_INTERNAL_API`, set by Doctor's and the tests' builds) or
+  into headers that are not installed; and add an experimental tier,
+  `CF_EXPERIMENTAL`, for a new function's first release, outside the
+  promise and marked so in `docs/API.md` and `gate.abi`. Done when
+  `gate.abi` holds only the promised symbols and a consumer test that
+  calls an internal one fails to compile.
+* ⬜ **A program's files where its platform keeps them.** Design.md
+  promised that `cf_app` would read the user's and the system's files
+  from the platform's places; D-09 closed `cf_app` without them, so every
+  program writes the XDG, `%APPDATA%` and `~/Library/Application
+  Support` code itself - the repeated code this library exists to
+  remove. `cf_builder_app_files(b, "myapp", "toml")`: the system file
+  and its `conf.d` at `CF_RANK_SYS_FILE` (`$XDG_CONFIG_DIRS` or
+  `/etc`, `%PROGRAMDATA%`, `/Library/Application Support`), the user's
+  at `CF_RANK_USER_FILE` (`$XDG_CONFIG_HOME`, `%APPDATA%`,
+  `~/Library/Application Support`); a missing file is no error, and
+  `explain()` names each path it looked at. Opt-in: `cf_app` stays as
+  D-09 has it. Done when the three platforms' paths are tested with a
+  fixed environment and `layers.c` uses it.
+* ⬜ **Profiles.** `--profile`, or `NAME_PROFILE`, adds
+  `config.<profile>.<ext>` above the base file at each of the places
+  above, as .NET's `appsettings.Production.json` and Spring's profiles
+  do; the report's `profile` is then the library's, not only Doctor's.
+  With the item above.
+* ⬜ **A read of a key the contract does not have, noticed.**
+  `cf_get_int(cfg, "server.prot", 8080)` returns 8080 without a word,
+  and so does reading a text key as an int, contract or not; C++ and
+  Rust catch both with typed keys, C does not. Opt-in, beside
+  `cf_builder_track_reads`: a read that finds no definition, or the
+  wrong type, is recorded - not logged, since a read takes no lock and
+  may be on any thread - and `cf_misreads()` and the report list them,
+  and Doctor's CFD021 reports them (CFD020 is H-8b's). Done when both mistakes in a test
+  program reach `doctor lint`.
+* ⬜ **Help, completions and a sample file from the contract.** A
+  definition has its description, aliases, permitted spellings, range,
+  default and environment name: enough for `--help`, completions for
+  bash, zsh, fish and PowerShell, a man page, and a sample file in a
+  chosen format with each key's description as a comment. In the
+  library for `--help` (`cf_usage`), in `doctor gen` for the rest. Done
+  when tier1's `--help` is generated and a test holds it.
+* ⬜ **Durations and sizes.** `"30s"`, `"1h30m"`, `"512MiB"` are the
+  commonest values a configuration holds and here are text or a bare
+  int. A unit on an int definition, not a new `cf_type` (the enum is in
+  the ABI): the value is kept as milliseconds or bytes, the range is
+  given in the unit, the provenance keeps the text as written, and
+  `explain()` shows both. TOML's dates and YAML's timestamps after it,
+  as text with a checked form, if asked for. Done when a duration and a
+  size go through every reader, `cf_emit` and the report.
+* ⬜ **Byte order, word size and a bare-metal target in CI.** CI runs
+  x86-64 and arm64, both little endian: the swaps in CBOR, TLV and the
+  image (always little endian, ImageFormat.md) never run on a host that
+  needs them, and nothing 32-bit runs. Jobs under qemu-user for s390x
+  (big endian) and i386 or armv7 (32 bit), running the suite; and an
+  `arm-none-eabi` build of the `minimal` preset for a Cortex-M, with
+  the size of each `CF_WITH_*` part from that build in the README's
+  table. Done when the three jobs are green and required.
+* ⬜ **Values migrated, not only renamed.** `replaced_by` moves a value
+  to a new name; nothing converts it (`timeout_s` to `timeout_ms`) or
+  splits one key into two. A function on the definition, run on the old
+  key's winning value, its result offered at the same rank, the
+  provenance saying "from timeout_s, converted". Done when
+  `migration.c` shows a unit change and `explain()` names the old key.
+* ⬜ **Trust that can be checked from outside.** The OpenSSF Scorecard
+  workflow, the OpenSSF Best Practices badge, and a job that builds a
+  release twice and compares the bytes. Done when the badges are in the
+  README and the comparison is a release step.
+
 ### Considered, and decided against for now: TOON
 
 TOON, Token-Oriented Object Notation (github.com/toon-format/toon, spec
