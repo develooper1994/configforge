@@ -120,8 +120,8 @@ Things only the maintainer can do or decide. Each unblocks the cards named.
 
 * **Answered, 2026-11-12, for every card written so far**: where a card
   says TO DECIDE, the answer is the card's own recommendation. That
-  covers H-5 (a group may write a secrets directory only when it is its
-  owner's private group), H-7 (an undefined key within "did you mean"
+  covers H-5 (a group may write a secrets directory only when it is the
+  private group of the user the directory belongs to), H-7 (an undefined key within "did you mean"
   distance of a sensitive key is kept as that secret), H-8a (the digest
   key comes only from the program; FNV-1a stays the default), W3-F2b
   (the scope it recommends) and W5-G2 (as it recommends). A card whose
@@ -166,4 +166,9 @@ Protobuf, TLV as embedded devices write it, a benchmark, a stream);
 the cumulative C99 and C23 layers; wave 6 (every operation on a file's data, written back
 in its format), wave 7 (Go and .NET), wave 8 (2.0: the stream reader
 and the dynamic sizing modes), proofs with CBMC, `.properties` against
-Java's own reader.
+Java's own reader. From the Roadmap's "From a review of the whole,
+2026-11-14": a file written whole or not at all (first of wave 6, and
+`examples/c/settings.c` moved onto it), an override file the library
+owns (after it), a reload that names the keys it changed, the
+comparison with other libraries (with the formats' benchmark), and one
+program not written for the library moved onto it.

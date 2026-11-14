@@ -656,6 +656,78 @@ whose size changes while it is read is still read whole.
   `scripts/check/conformance.py` runs both and lists the differences
   kept by design.
 
+### From a review of the whole, 2026-11-14
+
+Read against the code: the secret digest, `--redact-all`, a mistyped
+secret and a writable secrets directory are cards already (H-8a, H-6,
+H-7, H-5); generated code from one contract is wave 5; editing a file
+in its own format is wave 6; the reload events already carry the
+generation and both fingerprints (`cf_log_event`, 1.1). SipHash-2-4
+under a key, as H-8a has it, is a keyed pseudorandom function, which is
+what a digest that cannot be tested against guesses needs; an HMAC over
+SHA-256 would add a hash to the library for no gain here. What was new:
+
+* ⬜ **A file written whole or not at all.** The library writes no file
+  today, but wave 6 will, and `examples/c/settings.c` already writes its
+  settings with `fopen(..., "wb")` over the old ones: a crash or a full
+  disk halfway leaves a file that is neither, and the next start reads
+  it. One function in the platform layer: a temporary file in the same
+  directory, written, flushed to the device (`fsync`,
+  `FlushFileBuffers`), put in place by one rename (`rename`,
+  `MoveFileExW` with `MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH`),
+  the directory synced where POSIX needs it, the temporary removed on
+  every failure, the original's mode kept. Done when wave 6 and every
+  example that saves use it, and a test that fails the write at each
+  step finds the old file intact.
+* ⬜ **An override file the library owns.** Between the store (SQLite,
+  transactional, D-42) and wave 6 (a user's file changed in place, its
+  layout kept) there is the common case `settings.c` shows by hand: a
+  program keeps what its user changed in a file of its own, read last,
+  written whole by `cf_emit` with `CF_EMIT_CONFIGURED`. As a writable
+  source, `cf_write` would commit to it through the function above, and
+  the provenance would name it like any other file. Done when
+  `settings.c` is that source's example and no longer writes a file
+  itself.
+* ⬜ **A reload names the keys it changed.** A swap's `"reload"` event
+  says the generation and the fingerprints, not which keys moved; a
+  program gets those today only by keeping the old snapshot and calling
+  `cf_diff`. One `"key-changed"` event a key at debug level, with the
+  key and the winning source and never the value, from the diff the swap
+  can make, so that a log pipeline can tell what a reload did. Done when
+  `test_marker` holds a secret through it and the events are in
+  `cf_log.h`'s list.
+* ⬜ **Measured against the libraries a program would otherwise use.**
+  `bench/` measures this library against itself. The same documents read
+  by inih, libconfig, cJSON, toml++ (or tomlc99), libyaml, and this
+  library - time to parse, time to look up, peak memory, the stripped
+  size each adds to a program - with the numbers in Maintaining.md's
+  "Measured" whichever way they come out. The "Fast, and without
+  copying" benchmark of the formats above uses the same harness. Done
+  when CI runs it on Linux and the table is generated, not written.
+* ⬜ **Used by a program not written for it.** Every example here was
+  written for the library. One small open-source daemon whose
+  configuration code is replaced by this library, in a fork, shows what
+  the guide does not: what is awkward, what is missing, how much code
+  goes. Done when the change is published with what it found, and each
+  finding is a fix or an idea here.
+* ⬜ **The references drawn.** A key's value may come from others
+  (`${...}`), and a renamed key from its old name; `doctor graph` would
+  write those edges, and each key's sources, as Graphviz or Mermaid from
+  a report, so that a cycle or a long chain is seen rather than read.
+  After wave 5, and only if a report's JSON through jq proves not to be
+  enough (as with the query language below).
+* A format is added for what it brings: each card in "More formats"
+  says which of the categories (D-97) it fills that no codec here fills
+  yet, or which programs keep their configuration in it, and what it
+  costs - its lines, its fuzz target, its suite. The order inside each
+  group follows from that.
+
+Weighed and left: automatic migration of old files beyond what
+`replaced_by` already does on read is wave 6's work once a file can be
+written back in its format, and a value policy per profile ("no debug
+log in production") is a jq expression over a full report today
+(Doctor.md, 7a).
+
 ### Considered, and decided against for now: TOON
 
 TOON, Token-Oriented Object Notation (github.com/toon-format/toon, spec
