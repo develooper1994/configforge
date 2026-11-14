@@ -130,7 +130,11 @@ short keeps its branch, unmerged, and says so here.
    (D-92, D-93). **1.5.0.**
 5. ⬜ **Wave 5**: converting between formats (`doctor convert`, through
    `cf_emit`, naming what the target cannot hold); code for each binding
-   from a contract (`doctor gen --lang c|cpp|rust|python`).
+   from a contract (`doctor gen --lang c|cpp|rust|python`). Revised
+   2026-11-14: neither stays in Doctor - converting a document goes to
+   the serialization library's own tool, exporting a configuration and
+   generating code to tools of their own ("Tools, distribution and
+   digests" below); the cards wait for that split.
 6. ⬜ **Wave 6**: every operation on a file's data through its codec -
    read, add, change, remove, written back in its own format, keeping
    the layout where the format can. **1.6.0.**
@@ -837,6 +841,87 @@ first user meets. In the order proposed:
   workflow, the OpenSSF Best Practices badge, and a job that builds a
   release twice and compares the bytes. Done when the badges are in the
   README and the comparison is a release step.
+
+### Tools, distribution and digests, 2026-11-14
+
+* ⬜ **Doctor does one job; the other two get tools of their own.**
+  Doctor gathers three kinds of command, and wave 5 would add more:
+  reading reports (explain, dump, diff, history, blame, lint, parity,
+  emit), which is what it is for; the contract and generated code
+  (`check --schema`, `gen`, and the planned `schema --from`,
+  `gen --lang`); and formats (`formats`, the planned `convert`). Three
+  programs, each beside the library it serves, behind one front door
+  as git has it: `configforge <command>` runs `configforge-<command>`,
+  so `configforge doctor explain` (as Doctor.md already writes it),
+  `configforge gen`, `configforge convert`. Done when Doctor holds only
+  the report commands, the others answer under their own names, and the
+  GitHub Action and the docs use the new names; the old Doctor commands
+  stay one minor release as aliases that say where they went.
+* ⬜ **The serialization library's own tool.** Once that library is a
+  target of its own: convert a document from one format to another as
+  a stream of the codecs' events - nesting and arrays kept, no key space
+  and no contract on the way - and say what the target cannot hold;
+  pretty-print, check that a file is well formed, tell the format from
+  the bytes, and dump a binary one (CBOR, TLV, the image) with each
+  value's byte offset. Distinct from exporting a configuration (its
+  layers merged, typed by its contract, written by `cf_emit`), which
+  stays with ConfigForge. Done when every built-in codec converts to
+  every other that can hold the document, held by the conformance
+  suites' documents round-tripped through each.
+* ⬜ **Distribution, as infrastructure.** Publishing from the release
+  workflow by trusted publishing (OIDC: PyPI and crates.io accept it,
+  so no token is kept in the repository), wheels for each platform;
+  recipes submitted to vcpkg, ConanCenter, Meson's WrapDB, the Bazel
+  Central Registry and conda-forge, a Homebrew tap; for embedded
+  targets the ESP-IDF Component Registry, PlatformIO's registry and a
+  Zephyr module; the GitHub Action in a repository of its own with
+  `action.yml` at its root, as the Marketplace requires. Discussions
+  open; downloads, traffic and issues counted once a month into
+  Maintaining.md. Done when each channel installs a release on a clean
+  machine in CI.
+* ⬜ **Being found.** A playground on the documentation site: the
+  library built to WebAssembly, a few files and a contract pasted in,
+  `explain()` and the provenance shown, nothing installed. An honest
+  comparison page (libconfig, inih, toml++, figment, .NET's
+  `GetDebugView`); a short terminal recording; two articles - "why is
+  the production value what it is" and a C89 YAML reader that passes
+  all of yaml-test-suite; then the C, C++, Rust and embedded
+  communities and the curated lists. Written in the project's voice, as
+  every document here. Done when the playground is live and the
+  articles are published.
+* ⬜ **One digest a purpose, and a door for the program's own.** A
+  digest does one of four jobs, and each wants its own kind: telling a
+  change (the fingerprint: FNV-1a, fast and stable), hiding a secret
+  that is compared (keyed SipHash-2-4, H-8a), deciding something - a
+  fingerprint used to approve a configuration or allow it through a
+  gate, where FNV-1a's collisions can be made on purpose (SHA-256, as an
+  option of the fingerprint, `sha256:`), and a rule or a device that
+  names its own (FIPS asks for HMAC-SHA-256; many microcontrollers hash
+  in hardware): a function the program gives, with the name the report
+  writes before its digests. Not a menu of algorithms: one default for
+  each job, and the prefix every digest already carries (`fnv1a:`,
+  `sip24:`) keeps old reports readable. One algorithm for the
+  fingerprint within a report, so that a diff compares; H-8b's "cannot
+  be compared" covers two reports that differ. Done when a gate built on
+  a SHA-256 fingerprint is in the Guide, and a test gives a digest
+  function of its own and reads its name back from the report.
+* ⬜ **A running program asked for its report.** Spring Boot's
+  `/actuator/env`, kept within the library's rule that it owns no
+  thread: a function that answers one request on a descriptor the
+  program's own loop accepted, with the value-blind report, and
+  `configforge doctor pull unix:/run/myapp.sock`. Done when an example
+  serves it from `cf_watcher`'s kind of loop and Doctor reads it.
+* ⬜ **Recipes, not code**, in the Guide: the fingerprint as an
+  OpenTelemetry resource attribute and the reload events as its log
+  records; a report as input to OPA (Rego) or CUE for rules about
+  values per profile.
+* ⬜ **"Start here", one page a language.** Design.md, Decisions.md and
+  API.md are 11,000 lines between them; a newcomer needs one page that
+  goes from the build to `explain()` in C, C++, Rust and Python, and
+  links on from there.
+* Later, and large: a language server driven by the contract - a key's
+  description, default and range on hover, and, from a report, what
+  overrides it in production.
 
 ### Considered, and decided against for now: TOON
 

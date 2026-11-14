@@ -143,8 +143,8 @@ In the order to be done. A card is `open`, `done` (with its commit), or
 | 13 | H-5 A directory others can write to is not read as secrets | large | - | open |
 | 14 | H-7 An undefined key named like a secret is kept as one | large | - | open |
 | 15 | H-8a A secret's digest that cannot be tested without a key | large | - | open |
-| 16 | W5-V1 `doctor convert` | large | W4-C3 | open |
-| 17 | W5-S1 `doctor schema --from` | medium | W5-V1 | open |
+| 16 | W5-V1 `doctor convert` | large | W4-C3 | waits: the tools split (Roadmap, "Tools, distribution and digests") |
+| 17 | W5-S1 `doctor schema --from` | medium | W5-V1 | waits: the tools split (Roadmap, "Tools, distribution and digests") |
 | 18 | H-2 The contract `doctor gen` writes, checked by the compiler | medium | H-1 | open |
 | 19 | H-6 Doctor's `--redact-all`, on in the action unless asked | medium | - | open |
 | 20 | H-8b Doctor tells digests of different keys apart | medium | H-8a | open |
@@ -153,9 +153,9 @@ In the order to be done. A card is `open`, `done` (with its commit), or
 | 23 | W3-F2c Reading CFPreferences on macOS (CI-only) | large | W3-F2b | open |
 | 24 | W3-F3 `cf_builder_credentials` in every language, the Guide, an example | medium | - | open: the bindings have it (470cb8d); the card's rest is to check |
 | 25 | W3-F2d User defaults in C++, Rust, Python and the Guide | medium | W3-F2c | open |
-| 26 | W5-G1 `doctor gen --lang cpp` | large | W5-S1 | open |
-| 27 | W5-G2 `doctor gen --lang rust` | large | W5-G1 | open |
-| 28 | W5-G3 `doctor gen --lang python` | medium | W5-G2 | open |
+| 26 | W5-G1 `doctor gen --lang cpp` | large | W5-S1 | waits: the tools split (Roadmap, "Tools, distribution and digests") |
+| 27 | W5-G2 `doctor gen --lang rust` | large | W5-G1 | waits: the tools split (Roadmap, "Tools, distribution and digests") |
+| 28 | W5-G3 `doctor gen --lang python` | medium | W5-G2 | waits: the tools split (Roadmap, "Tools, distribution and digests") |
 
 Done and released in 1.5.0, their cards removed: H-1, H-3, H-4 and the
 whole of wave 4 (CBOR; TLV by a layout and BER-TLV).
@@ -173,10 +173,19 @@ owns (after it), a reload that names the keys it changed, the
 comparison with other libraries (with the formats' benchmark), and one
 program not written for the library moved onto it. From "From reading
 the project as a newcomer, 2026-11-14", in this order and ahead of the
-new formats: publishing to the registries (needs their tokens), a
+new formats: publishing to the registries (by trusted publishing,
+set up once on each registry; see "Distribution, as infrastructure"), a
 smaller 1.x promise (internals fenced, an experimental tier) together
 with the serialization layer as a library target of its own (Roadmap,
 "More formats": before the first new format), the
 platform's file locations with profiles, misreads noticed, help and
 completions from the contract, durations and sizes, big-endian, 32-bit
-and bare-metal CI, value migrations, outside trust checks.
+and bare-metal CI, value migrations, outside trust checks. From "Tools,
+distribution and digests, 2026-11-14": Doctor kept to reports, with
+`configforge gen` and the serialization library's own tool beside it
+behind one `configforge` front door (wave 5's cards are rewritten for
+it, and wait until then); distribution and being found (the WebAssembly
+playground first); one digest a purpose, SHA-256 for a fingerprint that
+decides, and a digest the program gives; a report asked of a running
+program; the OpenTelemetry and OPA recipes; a "Start here" page a
+language.
