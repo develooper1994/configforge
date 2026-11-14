@@ -182,8 +182,30 @@ C89, noted where it does - every format is an option of the build. The
 reference libraries are used in tests: one document, written in each
 format by that format's own library, must read to the same keys.
 
-Last of all, when everything else here is done: the serialization
-layer becomes a project of its own.
+The serialization layer becomes a library of its own in two steps
+(revised 2026-11-14; until then it was to be split last of all):
+
+1. **Before the first new format: a library target in this
+   repository.** `src/serialize` is the largest part of the code (about
+   9,900 lines of 29,000 on 2026-11-14) and has value without the rest:
+   a C89 reader of YAML 1.2 that passes all of yaml-test-suite, JSON5,
+   TOML, CBOR, TLV, with no dependency. `gate.layering` already holds it
+   apart from the core. It gets its own CMake target and installed
+   headers, its own symbol list in `gate.abi`, and its own version
+   macros; `libconfigforge` keeps carrying it inside (linked
+   statically), so no 1.x program loses a symbol. Every format added
+   after this lands in that library and its promise, not ConfigForge's.
+   With "What the 1.x promise covers, made smaller", which asks the same
+   question: which functions stay public. Done when a consumer test
+   builds a program against the serialization library alone, and one
+   against ConfigForge alone, and `gate.abi` holds both lists.
+2. **A repository of its own** once that library has users of its own,
+   or at 2.0, whichever is first.
+
+Doctor stays here as a package of its own (it already ships as its own
+binary and depends only on the report's schema), and so do the Rust and
+Python bindings, tested with the C they wrap. The platform layer, the
+sources and diag are not split: without the core they mean nothing.
 
 ## Release follow-up
 
