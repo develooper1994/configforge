@@ -130,6 +130,11 @@ Things only the maintainer can do or decide. Each unblocks the cards named.
   bounds and explains a value - and the bindings after it, since a
   binding follows once the C is settled. One problem at a time, carried
   to done before the next is opened.
+* **Asked, 2026-11-16**: three questions in the 1.7.0 cards, each with
+  its options and a recommendation - S-1 (whether `cf_fmt`, the
+  platform's name and its `_has_` queries, which the examples call,
+  join the 1.x promise), S-4 (the serialization library's name) and
+  T-3 (its program's name). Each waits for its answer.
 * 1.4.1 holds a changed default (response files are opt-in, D-79): it
   is released as 1.5.0 or as 1.4.1 - not decided.
 
@@ -137,27 +142,38 @@ Things only the maintainer can do or decide. Each unblocks the cards named.
 
 In the order to be done. A card is `open`, `done` (with its commit), or
 `waits` (with what it waits for). The H-* and W3-* cards belong to
-the 1.6.0 milestone and the W5-* cards to 1.7.0
-(`docs/Maintaining.md`, "Versions").
+the 1.6.0 milestone; the S-*, T-* and W5-* cards to 1.7.0, but T-5 to
+1.8.0 (`docs/Maintaining.md`, "Versions"; the S and T cards are in
+`docs/plan/T-tools-and-serialization.md`).
 
 | Order | Card | Size | Needs | Status |
 | ----: | ---- | ----- | ----- | ------ |
 | 13 | H-5 A directory others can write to is not read as secrets | large | - | done (f37813d, 4f42242, 88c8071) |
 | 14 | H-7 An undefined key named like a secret is kept as one | large | - | done (5dca003, 84bd14a) |
 | 15 | H-8a A secret's digest that cannot be tested without a key | large | - | open |
-| 16 | W5-V1 `doctor convert` | large | W4-C3 | waits: the tools split (Roadmap, "Tools, distribution and digests") |
-| 17 | W5-S1 `doctor schema --from` | medium | W5-V1 | waits: the tools split (Roadmap, "Tools, distribution and digests") |
-| 18 | H-2 The contract `doctor gen` writes, checked by the compiler | medium | H-1 | open |
-| 19 | H-6 Doctor's `--redact-all`, on in the action unless asked | medium | - | open |
-| 20 | H-8b Doctor tells digests of different keys apart | medium | H-8a | open |
-| 21 | W3-F2a The platform capability for macOS's user defaults | medium | - | open |
-| 22 | W3-F2b `cf_builder_preferences`: the source, off macOS | medium | W3-F2a | open |
-| 23 | W3-F2c Reading CFPreferences on macOS (CI-only) | large | W3-F2b | open |
-| 24 | W3-F3 `cf_builder_credentials` in every language, the Guide, an example | medium | - | open: the bindings have it (470cb8d); the card's rest is to check |
-| 25 | W3-F2d User defaults in C++, Rust, Python and the Guide | medium | W3-F2c | open |
-| 26 | W5-G1 `doctor gen --lang cpp` | large | W5-S1 | waits: the tools split (Roadmap, "Tools, distribution and digests") |
-| 27 | W5-G2 `doctor gen --lang rust` | large | W5-G1 | waits: the tools split (Roadmap, "Tools, distribution and digests") |
-| 28 | W5-G3 `doctor gen --lang python` | medium | W5-G2 | waits: the tools split (Roadmap, "Tools, distribution and digests") |
+| 16 | H-2 The contract `doctor gen` writes, checked by the compiler | medium | H-1 | open |
+| 17 | H-6 Doctor's `--redact-all`, on in the action unless asked | medium | - | open |
+| 18 | H-8b Doctor tells digests of different keys apart | medium | H-8a | open |
+| 19 | W3-F2a The platform capability for macOS's user defaults | medium | - | open |
+| 20 | W3-F2b `cf_builder_preferences`: the source, off macOS | medium | W3-F2a | open |
+| 21 | W3-F2c Reading CFPreferences on macOS (CI-only) | large | W3-F2b | open |
+| 22 | W3-F3 `cf_builder_credentials` in every language, the Guide, an example | medium | - | open: the bindings have it (470cb8d); the card's rest is to check |
+| 23 | W3-F2d User defaults in C++, Rust, Python and the Guide | medium | W3-F2c | open |
+| 24 | S-1 The internal tier fenced: a program cannot call what 1.x does not promise | large | 1.6.0 released | waits: 1.6.0 released; the answer in the card (TO DECIDE) |
+| 25 | S-2 An experimental tier, and the promise written in one place | medium | S-1 | waits: S-1 |
+| 26 | S-3 The serialization layer's last ties cut, and held by the gate | medium | S-1 | waits: S-1 |
+| 27 | S-4 The serialization library, a target of its own | large | S-2, S-3 | waits: S-2, S-3; the answer in the card (TO DECIDE) |
+| 28 | S-5 The serialization library installed, found and packaged | medium | S-4 | waits: S-4 |
+| 29 | T-1 `configforge <command>`, and Doctor's own name | large | S-1, H-6, H-8b | waits: S-1, H-6, H-8b |
+| 30 | T-2 `configforge gen`: the contract's own program | medium | T-1, H-2 | waits: T-1, H-2 |
+| 31 | T-3 `configforge codec`: the serialization library's own program | medium | T-2, S-5 | waits: T-2, S-5; the answer in the card (TO DECIDE) |
+| 32 | T-4 `configforge codec dump`: every value with its place | medium | T-3 | waits: T-3 |
+| 33 | W5-V1 `configforge codec convert` and `format` | large | T-3 | waits: T-3 |
+| 34 | W5-S1 `configforge gen schema --from` | medium | T-2 | waits: T-2 |
+| 35 | W5-G1 `configforge gen --lang cpp` | large | W5-S1 | waits: W5-S1 |
+| 36 | W5-G2 `configforge gen --lang rust` | large | W5-G1 | waits: W5-G1 |
+| 37 | W5-G3 `configforge gen --lang python` | medium | W5-G2 | waits: W5-G2 |
+| 38 | T-5 Doctor's aliases, and the name `doctor`, removed | small | 1.7.0 released, W5-G3 | waits: 1.7.0 released (it belongs to 1.8.0) |
 
 Done and released in 1.5.0, their cards removed: H-1, H-3, H-4 and the
 whole of wave 4 (CBOR; TLV by a layout and BER-TLV).
@@ -176,17 +192,11 @@ comparison with other libraries (with the formats' benchmark), and one
 program not written for the library moved onto it. From "From reading
 the project as a newcomer, 2026-11-14", in this order and ahead of the
 new formats: publishing to the registries (by trusted publishing,
-set up once on each registry; see "Distribution, as infrastructure"), a
-smaller 1.x promise (internals fenced, an experimental tier) together
-with the serialization layer as a library target of its own (Roadmap,
-"More formats": before the first new format), the
+set up once on each registry; see "Distribution, as infrastructure"), the
 platform's file locations with profiles, misreads noticed, help and
 completions from the contract, durations and sizes, big-endian, 32-bit
 and bare-metal CI, value migrations, outside trust checks. From "Tools,
-distribution and digests, 2026-11-14": Doctor kept to reports, with
-`configforge gen` and the serialization library's own tool beside it
-behind one `configforge` front door (wave 5's cards are rewritten for
-it, and wait until then); distribution and being found (the WebAssembly
+distribution and digests, 2026-11-14": distribution and being found (the WebAssembly
 playground first); one digest a purpose, SHA-256 for a fingerprint that
 decides, and a digest the program gives; a report asked of a running
 program; the OpenTelemetry and OPA recipes; a "Start here" page a

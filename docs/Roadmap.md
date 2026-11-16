@@ -134,7 +134,9 @@ short keeps its branch, unmerged, and says so here.
    2026-11-14: neither stays in Doctor - converting a document goes to
    the serialization library's own tool, exporting a configuration and
    generating code to tools of their own ("Tools, distribution and
-   digests" below); the cards wait for that split.
+   digests" below); the cards wait for that split, which is carded
+   (T-1 to T-3, docs/plan/T-tools-and-serialization.md), and are
+   rewritten for it.
 6. ⬜ **Wave 6**: every operation on a file's data through its codec -
    read, add, change, remove, written back in its own format, keeping
    the layout where the format can. **1.9.0.**
@@ -192,8 +194,8 @@ format by that format's own library, must read to the same keys.
 The serialization layer becomes a library of its own in two steps
 (revised 2026-11-14; until then it was to be split last of all):
 
-1. **Before the first new format: a library target in this
-   repository.** `src/serialize` is the largest part of the code (about
+1. 🟦 **Before the first new format: a library target in this
+   repository** (cards S-3, S-4, S-5). `src/serialize` is the largest part of the code (about
    9,900 lines of 29,000 on 2026-11-14) and has value without the rest:
    a C89 reader of YAML 1.2 that passes all of yaml-test-suite, JSON5,
    TOML, CBOR, TLV, with no dependency. `gate.layering` already holds it
@@ -774,7 +776,7 @@ first user meets. In the order proposed:
   `pip install configforge` and `vcpkg install configforge` work on a
   clean machine, and CI installs each in a job of its own. Go and .NET
   (wave 7) wait for this.
-* ⬜ **What the 1.x promise covers, made smaller.** Functions marked
+* 🟦 **What the 1.x promise covers, made smaller** (cards S-1, S-2). Functions marked
   INTERNAL sit in eight installed headers (`cf_ks_*` among them),
   exported for Doctor and the tests; a program can call them and will
   break in a minor release. Move them behind a macro a program does not
@@ -847,7 +849,8 @@ first user meets. In the order proposed:
 
 ### Tools, distribution and digests, 2026-11-14
 
-* ⬜ **Doctor does one job; the other two get tools of their own.**
+* 🟦 **Doctor does one job; the other two get tools of their own**
+  (cards T-1, T-2, T-3; T-5 drops the aliases in 1.8.0).
   Doctor gathers three kinds of command, and wave 5 would add more:
   reading reports (explain, dump, diff, history, blame, lint, parity,
   emit), which is what it is for; the contract and generated code
@@ -860,7 +863,8 @@ first user meets. In the order proposed:
   the report commands, the others answer under their own names, and the
   GitHub Action and the docs use the new names; the old Doctor commands
   stay one minor release as aliases that say where they went.
-* ⬜ **The serialization library's own tool.** Once that library is a
+* 🟦 **The serialization library's own tool** (cards T-3, T-4,
+  W5-V1). Once that library is a
   target of its own: convert a document from one format to another as
   a stream of the codecs' events - nesting and arrays kept, no key space
   and no contract on the way - and say what the target cannot hold;
