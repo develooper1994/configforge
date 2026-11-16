@@ -36,6 +36,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - `CF_WITH_PREFERENCES` (off): the build option for macOS's user
   defaults, which W3-F2c reads.
 
+- systemd's credentials shown by an example the suite runs,
+  `examples/c/credentials.c`; the Guide's table of sources lists
+  `cf_builder_credentials`.
+
 ### Changed
 
 - A secrets or credentials directory others can write to, or holding a
