@@ -5,6 +5,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ## 1.7.0 — unreleased
 
+### Added
+
+- An experimental tier, `CF_EXPERIMENTAL(major, minor)`: a function
+  outside the 1.x promise for the minor release it comes in, promoted or
+  removed by the next (D-89); `docs/API.md` begins with what 1.x
+  promises.
+
 ### Changed
 
 - **The internal tier is fenced** (D-88): the functions D-51 left

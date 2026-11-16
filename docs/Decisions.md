@@ -104,6 +104,7 @@ gets reopened every six months.
 | D-86 | Doctor's action shows no value unless asked | doctor, security, reports | **Decided** |
 | D-87 | macOS's user defaults, an optional source over the flattener | sources, platform | **Decided** |
 | D-88 | What 1.x promises, made smaller: the internal tier fenced | api, abi | **Decided** |
+| D-89 | The experimental tier | api, abi | **Decided** |
 | D-91 | CBOR, the JSON model in binary | formats | **Decided** |
 | D-97 | What kind of format a codec is, told to the program | formats | **Decided** |
 
@@ -3692,6 +3693,36 @@ against the installed headers.
 compiles; it links and runs as before, since nothing exported changed.
 It may define `CF_INTERNAL_API` to 1 and keep those calls, outside the
 1.x promise.
+
+## D-89 — The experimental tier
+
+**Question.** With the internal tier fenced (D-88), every exported
+function a program can call is promised for the rest of 1.x from the
+release it appears in. A new function's shape is often only right after
+its first users; how can one come in without being promised at once?
+
+**Options.**
+
+1. No tier: a function is promised from its first release.
+2. A header of its own for experimental functions. A function would
+   move between headers when it is promoted.
+3. A tier with no version in it. Nothing could say when a function is
+   due to be promoted or removed.
+4. A marker carrying the release the function came in.
+
+**Decision.** Option 4. `CF_EXPERIMENTAL(major, minor)`, defined in
+`cf_port.h` as `CF_API`, marks a function outside the 1.x promise for
+the minor release it comes in only. `gate.abi` keeps
+`cmake/configforge.experimental.symbols` ("name major.minor", and
+" real" under `CF_WITH_REAL`) and fails once the version has moved past
+a name: the card that opens the next minor makes it `CF_API` or removes
+it. A name in two lists fails too. The bindings expose no experimental
+function: they follow the C once it is settled. `docs/API.md` begins
+with what 1.x promises (`## What 1.x promises`), and an experimental
+function is marked there with the release it came in. A declaration is
+read on one line, as `CF_API`'s are.
+
+**Compatibility.** Additive; no function is experimental yet.
 
 ## D-91 — CBOR, the JSON model in binary
 

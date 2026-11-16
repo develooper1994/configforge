@@ -777,7 +777,7 @@ first user meets. In the order proposed:
   `pip install configforge` and `vcpkg install configforge` work on a
   clean machine, and CI installs each in a job of its own. Go and .NET
   (wave 7) wait for this.
-* 🟨 **What the 1.x promise covers, made smaller** (cards S-1, S-2): internals fenced (D-88); the experimental tier left (S-2). Functions marked
+* 🟩 **What the 1.x promise covers, made smaller** (cards S-1, S-2): internals fenced and an experimental tier (D-88, D-89). Functions marked
   INTERNAL sit in eight installed headers (`cf_ks_*` among them),
   exported for Doctor and the tests; a program can call them and will
   break in a minor release. Move them behind a macro a program does not
