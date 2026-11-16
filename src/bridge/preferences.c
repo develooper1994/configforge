@@ -212,8 +212,7 @@ cf_bool cfi_source_preferences(cf_source* s, const char* name, int rank,
                                size_t state_size) {
     prefs_state* st = (prefs_state*)state;
 
-    if (s == NULL || domain == NULL || st == NULL ||
-        state_size < sizeof(prefs_state)) {
+    if (s == NULL || domain == NULL || st == NULL || state_size < sizeof(prefs_state)) {
         return CF_FALSE;
     }
     memset(st, 0, sizeof *st);
