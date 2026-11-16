@@ -154,6 +154,17 @@ The round of 2026-11-06 (each reader against its standard's suite):
 | finished work was deleted from the Roadmap as it landed, so what was done could be seen only in the CHANGELOG, apart from what was not | every item keeps a mark (idea, chosen, under way, done, released) and the Roadmap opens with all of them in one table |
 | the release's Windows job built Doctor from a list of targets; `doctor.gen`, added in 1.3.0, was not on it, its test did not run, and the release failed on its tag - the tag could not move, so 1.3.0 was never published | the job builds the whole tree, and the release workflow runs as a dry run - every artifact built and tested, nothing published - on each push to main that changes what it builds |
 
+The round of 2026-11-16 (H-5, the first card carried out from the plan):
+
+| Found | Made into |
+| ----- | --------- |
+| a card gave a helper a 1024-byte buffer, and the `minimal` preset's stack check (1024 bytes a frame) refused it an hour in, at the fourth preset of the full verify | a card that puts a buffer in a frame says the frame's size; a unit with a new local array runs `cmake --preset minimal` and its build before the full verify |
+| the single file put `posix.c`'s feature-test macro after every header, and only CI's newest gcc, where an implicit declaration is an error, said so | `amalgamate.py` writes the macro before the first header; a function a file calls is declared by a header that file includes, checked by reading where no local compiler refuses it |
+| the card named no answer for wasm32-wasi, which has no users and no `pwd.h` | a card that touches `src/platform/` says what each platform does: POSIX, Windows, none and WASI |
+| the CHANGELOG had no unreleased section and `gate.version` wanted one, so the card's commit had to open a version and change files the card did not list | a version is opened once a milestone ("Versions"); a card's "files" names the CHANGELOG section it writes under |
+| the card's first rule refused a Kubernetes secret mounted under a pod's `fsGroup`, found by reading the finished diff against the mounts the card named | a rule about files others own is checked, before it is built, against each real layout the card claims to read: its owner, group and mode written out |
+| two branches were worked at once in one checkout's copies, and the formatter's regenerated `docs/API.md` stayed behind in the copy | a second piece of work gets a worktree of its own (`git worktree add`); after the last verify the copy is compared with the checkout and what differs is brought back before the commit |
+
 ## Measured
 
 What a build option costs or saves, measured rather than assumed, so a
@@ -253,3 +264,13 @@ Nothing above is needed to continue. Clone, then run
 gates and the `EXTRA` steps use, the Rust toolchain included
 (`-DCF_RUST=ON` turns its checks on), and `--check` says what is there.
 Then follow `CONTRIBUTING.md`.
+
+Where the work stands is on `origin`, never on a machine: `main` holds
+every finished unit; a unit under way is its branch, `work/<card id>`,
+pushed, with a `HANDOFF.md` at its root when it was left between two
+steps; planning under way is a branch `plan/<name>`. So, on any
+machine: `git fetch --prune`, `git branch -r`, then `docs/Plan.md`,
+"The loop", from its first step - it says what to do with a
+`HANDOFF.md` and which card is next. Before leaving a machine: commit,
+push the branch, and leave nothing that matters in a scratch directory
+or a second worktree.
