@@ -375,7 +375,7 @@ endif()
 if(NOT DEFINED TEST_TIMEOUT)
   set(TEST_TIMEOUT 900)
 endif()
-set(ctest ${CMAKE_CTEST_COMMAND} --timeout ${TEST_TIMEOUT})
+set(ctest ${CMAKE_CTEST_COMMAND} --timeout ${TEST_TIMEOUT} --output-on-failure)
 # Tests run JOBS at a time, as the builds do: they were run one by one,
 # and a preset's 150 took longer than building it. Tests that share
 # something hold a RESOURCE_LOCK, which ctest honours.
