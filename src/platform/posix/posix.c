@@ -209,10 +209,10 @@ static int mac_prefs_room(const mac_prefs* w) {
 
 /* A CFString as UTF-8 in the arena; NULL when there is no room. */
 static char* mac_prefs_utf8(cf_arena* arena, CFStringRef s, size_t* out_len) {
-    CFIndex cap = CFStringGetMaximumSizeForEncoding(CFStringGetLength(s),
-                                                    kCFStringEncodingUTF8) +
-                  1;
-    char*   out = (cap > 0) ? (char*)cf_arena_alloc(arena, (size_t)cap) : NULL;
+    CFIndex cap =
+        CFStringGetMaximumSizeForEncoding(CFStringGetLength(s), kCFStringEncodingUTF8) +
+        1;
+    char* out = (cap > 0) ? (char*)cf_arena_alloc(arena, (size_t)cap) : NULL;
 
     if (out == NULL || !CFStringGetCString(s, out, cap, kCFStringEncodingUTF8)) {
         return NULL;
@@ -248,7 +248,8 @@ static int mac_prefs_value(const mac_prefs* w, CFTypeRef v, const char* name,
                            size_t namelen, const char* path, int depth);
 
 /* An array's members in order, each named in its path by its index. */
-static int mac_prefs_array(const mac_prefs* w, CFArrayRef a, const char* path, int depth) {
+static int mac_prefs_array(const mac_prefs* w, CFArrayRef a, const char* path,
+                           int depth) {
     CFIndex n = CFArrayGetCount(a), i;
 
     for (i = 0; i < n; ++i) {
@@ -345,8 +346,9 @@ static int mac_prefs_value(const mac_prefs* w, CFTypeRef v, const char* name,
                          CF_MAX_DEPTH);
             return -1;
         }
-        e.kind = (t == CFDictionaryGetTypeID()) ? CF_PREF_BEGIN_DICT : CF_PREF_BEGIN_ARRAY;
-        r      = mac_prefs_emit(w, &e);
+        e.kind =
+            (t == CFDictionaryGetTypeID()) ? CF_PREF_BEGIN_DICT : CF_PREF_BEGIN_ARRAY;
+        r = mac_prefs_emit(w, &e);
         if (r == 0 && e.kind == CF_PREF_BEGIN_DICT) {
             r = mac_prefs_dict(w, (CFDictionaryRef)v, path, depth + 1);
         } else if (r == 0) {
@@ -413,7 +415,8 @@ int cf_platform_preferences_walk(const char* domain, cf_arena* arena,
     /* So that values another process wrote, `defaults` among them, are
        seen and not this process's cached copy. */
     (void)CFPreferencesAppSynchronize(app);
-    keys = CFPreferencesCopyKeyList(app, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
+    keys =
+        CFPreferencesCopyKeyList(app, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
     if (keys == NULL || CFArrayGetCount(keys) == 0) {
         if (keys != NULL) {
             CFRelease(keys);
