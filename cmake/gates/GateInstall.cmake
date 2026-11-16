@@ -75,6 +75,18 @@ if(NOT rc EQUAL 0)
 endif()
 message("${out}")
 
+# The serialization library alone: linked without libconfigforge.
+execute_process(
+  COMMAND "${work}/consumer_serialize"
+  RESULT_VARIABLE rc
+  OUTPUT_VARIABLE out
+  ERROR_VARIABLE out)
+if(NOT rc EQUAL 0 OR NOT out MATCHES "^serialize ok: ")
+  message("${out}")
+  message(FATAL_ERROR "a program cannot use the serialization library alone")
+endif()
+message("${out}")
+
 if(WITH_CXX AND EXISTS "${work}/consumer_cpp")
   execute_process(
     COMMAND "${work}/consumer_cpp"
@@ -201,6 +213,48 @@ if(PKG_CONFIG_EXE)
   if(NOT rc EQUAL 0)
     message("${out}")
     message(FATAL_ERROR "the pkg-config consumer builds but does not run")
+  endif()
+  # The serialization library's own file, the same program built from
+  # it: no SQLite in its list, and not libconfigforge.
+  file(GLOB_RECURSE spcs "${prefix}/*/configforge_serialize.pc")
+  if(NOT spcs)
+    message(FATAL_ERROR "no configforge_serialize.pc was installed")
+  endif()
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E env PKG_CONFIG_PATH=${pcpath} ${PKG_CONFIG_EXE}
+            --cflags --libs --static configforge_serialize
+    RESULT_VARIABLE rc
+    OUTPUT_VARIABLE sflags
+    ERROR_VARIABLE err
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(NOT rc EQUAL 0)
+    message("${err}")
+    message(
+      FATAL_ERROR "pkg-config does not understand configforge_serialize.pc")
+  endif()
+  if(sflags MATCHES "sqlite3|-lconfigforge( |$)")
+    message(FATAL_ERROR "configforge_serialize.pc says: ${sflags}")
+  endif()
+  separate_arguments(sflags UNIX_COMMAND "${sflags}")
+  execute_process(
+    COMMAND ${CC} -std=c89 -pedantic ${werror} -o "${work}/serialize_pc"
+            "${SRC}/tests/consumer/serialize.c" ${sflags} ${dep_rpath}
+    RESULT_VARIABLE rc
+    OUTPUT_VARIABLE out
+    ERROR_VARIABLE out)
+  if(NOT rc EQUAL 0)
+    message("${out}")
+    message(FATAL_ERROR "serialize.c does not build from what pkg-config says")
+  endif()
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E env LD_LIBRARY_PATH=${libdir}
+            DYLD_LIBRARY_PATH=${libdir} "${work}/serialize_pc"
+    RESULT_VARIABLE rc
+    OUTPUT_VARIABLE out
+    ERROR_VARIABLE out)
+  if(NOT rc EQUAL 0 OR NOT out MATCHES "^serialize ok: ")
+    message("${out}")
+    message(FATAL_ERROR "the pkg-config serialization program does not run")
   endif()
   message("install gate: pkg-config works")
 endif()

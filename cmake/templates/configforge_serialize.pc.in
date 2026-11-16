@@ -1,0 +1,15 @@
+# Relocatable: the prefix is found from where this file is, so an
+# install moved with `cmake --install --prefix` still describes itself.
+prefix=@CF_PC_PREFIX@
+exec_prefix=${prefix}
+libdir=@CF_PC_LIBDIR@
+includedir=@CF_PC_INCLUDEDIR@
+
+Name: ConfigForge serialization
+Description: The readers and writers of ConfigForge as a library of their own: JSON, JSON5, TOML, YAML, INI, CBOR, TLV
+URL: https://github.com/develooper1994/configforge
+Version: @PROJECT_VERSION@
+Libs: -L${libdir} -lconfigforge_serialize
+Libs.private: @CF_PC_SERIALIZE_LIBS_PRIVATE@
+Requires.private: @CF_PC_REQUIRES_PRIVATE@
+Cflags: -I${includedir}

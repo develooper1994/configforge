@@ -103,9 +103,23 @@ class ConfigForgeConan(ConanFile):
         CMake(self).install()
 
     def package_info(self):
-        self.cpp_info.libs = ["configforge"]
         self.cpp_info.set_property("cmake_file_name", "ConfigForge")
-        self.cpp_info.set_property("cmake_target_name", "ConfigForge::configforge")
         self.cpp_info.set_property("pkg_config_name", "configforge")
+        # Two libraries, each a component: libconfigforge holds every
+        # function of the serialization library too, so a program takes
+        # one of them, never both.
+        lib = self.cpp_info.components["configforge"]
+        lib.libs = ["configforge"]
+        lib.set_property("cmake_target_name", "ConfigForge::configforge")
+        lib.set_property("pkg_config_name", "configforge")
+        ser = self.cpp_info.components["serialize"]
+        ser.libs = ["configforge_serialize"]
+        ser.set_property("cmake_target_name", "ConfigForge::configforge_serialize")
+        ser.set_property("pkg_config_name", "configforge_serialize")
+        if self.options.with_xml:
+            lib.requires.append("expat::expat")
+            ser.requires.append("expat::expat")
+        if self.options.with_sqlite:
+            lib.requires.append("sqlite3::sqlite3")
         # No defines: the installed cf_build_options.h states this build's
         # options, CF_SHARED among them, so a consumer cannot disagree.

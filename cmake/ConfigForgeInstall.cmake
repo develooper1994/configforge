@@ -21,7 +21,7 @@ if(SKBUILD)
 endif()
 
 install(
-  TARGETS configforge
+  TARGETS configforge configforge_serialize
   EXPORT ConfigForgeTargets
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -111,14 +111,23 @@ endif()
 if(CF_WITH_XML)
   string(APPEND CF_PC_LIBS_PRIVATE " -lexpat")
 endif()
+# The serialization library's list is that one less SQLite: the store is
+# not in it.
+set(CF_PC_SERIALIZE_LIBS_PRIVATE "${CF_PC_LIBS_PRIVATE}")
 if(CF_WITH_SQLITE)
   string(APPEND CF_PC_LIBS_PRIVATE " -lsqlite3")
 endif()
 if(CF_WITH_PREFERENCES AND APPLE)
   string(APPEND CF_PC_LIBS_PRIVATE " -framework CoreFoundation")
+  string(APPEND CF_PC_SERIALIZE_LIBS_PRIVATE " -framework CoreFoundation")
 endif()
 string(STRIP "${CF_PC_LIBS_PRIVATE}" CF_PC_LIBS_PRIVATE)
+string(STRIP "${CF_PC_SERIALIZE_LIBS_PRIVATE}" CF_PC_SERIALIZE_LIBS_PRIVATE)
 configure_file("${CMAKE_SOURCE_DIR}/cmake/templates/configforge.pc.in"
                "${CMAKE_CURRENT_BINARY_DIR}/configforge.pc" @ONLY)
+configure_file(
+  "${CMAKE_SOURCE_DIR}/cmake/templates/configforge_serialize.pc.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/configforge_serialize.pc" @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/configforge.pc"
+              "${CMAKE_CURRENT_BINARY_DIR}/configforge_serialize.pc"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)

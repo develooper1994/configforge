@@ -6,12 +6,23 @@
 cmake_minimum_required(VERSION 3.10)
 project(cf_consumer LANGUAGES C)
 
-find_package(ConfigForge REQUIRED)
+find_package(ConfigForge REQUIRED COMPONENTS serialize)
 
 add_executable(consumer consumer.c)
 target_link_libraries(consumer PRIVATE ConfigForge::configforge)
 set_target_properties(
   consumer
+  PROPERTIES C_STANDARD 90
+             C_STANDARD_REQUIRED ON
+             C_EXTENSIONS OFF)
+
+# The serialization library alone: no ConfigForge::configforge here, so
+# the export set must not make one depend on the other.
+add_executable(consumer_serialize serialize.c)
+target_link_libraries(consumer_serialize
+                      PRIVATE ConfigForge::configforge_serialize)
+set_target_properties(
+  consumer_serialize
   PROPERTIES C_STANDARD 90
              C_STANDARD_REQUIRED ON
              C_EXTENSIONS OFF)
