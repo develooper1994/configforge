@@ -1474,18 +1474,60 @@ static const cand* winner(const rkey* k) {
 
 typedef enum { AGREE_UNKNOWN, AGREE_YES, AGREE_NO } agreement;
 
+/* Where a digest's kind ends: at its last ':'. A digest with none has
+   no kind - the empty one, which only another such digest shares. */
+static const char* digest_kind_end(const char* d) {
+    const char* colon = strrchr(d, ':');
+
+    return (colon != NULL) ? colon : d;
+}
+
+/* Whether two digests were made the same way (D-85): their text up to
+   the last ':' is the same - "fnv1a", or "sip24:" and the key's id. Two
+   that were not cannot say whether a value changed. */
+static cf_bool digests_comparable(const char* x, const char* y) {
+    size_t nx = (size_t)(digest_kind_end(x) - x);
+    size_t ny = (size_t)(digest_kind_end(y) - y);
+
+    return (nx == ny && memcmp(x, y, nx) == 0) ? CF_TRUE : CF_FALSE;
+}
+
+/* Whether a pair is compared by digest (either value left out of its
+   report) and the two digests, both there, were not made the same way. */
+static cf_bool digests_apart(const cand* a, const cand* b) {
+    if (a->value != NULL && b->value != NULL) {
+        return CF_FALSE;
+    }
+    if (a->digest == NULL || b->digest == NULL) {
+        return CF_FALSE;
+    }
+    return digests_comparable(a->digest, b->digest) ? CF_FALSE : CF_TRUE;
+}
+
+/* The sentence of CFD020: the two kinds, which are no secret. */
+static void apart_text(const cand* a, const cand* b, char* out, size_t cap) {
+    cf_fmt(out, cap,
+           "compared by digest, but the digests were made under different keys "
+           "(%S here, %S there): whether it changed cannot be told", a->digest,
+           (size_t)(digest_kind_end(a->digest) - a->digest), b->digest,
+           (size_t)(digest_kind_end(b->digest) - b->digest));
+}
+
 /* Whether two winners hold the same value. A redacted one has a digest
    and no value, so a pair with either side redacted is compared by
    digest, which is how a production report can be audited without the
    secret being in it at all. What the two reports cannot compare - a
-   digest on one side and the value on the other - is neither agreement
-   nor a difference. */
+   digest on one side and the value on the other, or two digests made
+   under different keys - is neither agreement nor a difference. */
 static agreement values_agree(const cand* a, const cand* b) {
     const char *x = a->value, *y = b->value;
 
     if (x == NULL || y == NULL) {
         x = a->digest;
         y = b->digest;
+        if (x != NULL && y != NULL && !digests_comparable(x, y)) {
+            return AGREE_UNKNOWN;
+        }
     }
     if (x == NULL || y == NULL) {
         return AGREE_UNKNOWN;
@@ -1608,11 +1650,22 @@ static void rule_value_diff(const report* a, const report* b) {
         }
         ca = winner(ka);
         cb = winner(kb);
-        if (ca == NULL || cb == NULL || values_agree(ca, cb) != AGREE_NO) {
+        if (ca == NULL || cb == NULL) {
             continue;
         }
         if (ca->is_default && cb->is_default) {
             continue; /* CFD017's: two defaults, not two configurations */
+        }
+        if (digests_apart(ca, cb)) {
+            char why[256];
+
+            apart_text(ca, cb, why, sizeof why);
+            doctor_key_name(ka, name, sizeof name);
+            finding(a->D, "CFD020", "info", name, "%s", why);
+            continue;
+        }
+        if (values_agree(ca, cb) != AGREE_NO) {
+            continue;
         }
 
         doctor_key_name(ka, name, sizeof name);
@@ -1673,6 +1726,11 @@ static void rule_default_drift(const report* a, const report* b) {
             finding(a->D, "CFD017", "warning", name,
                     "takes its default %s; %s it has none", side,
                     here ? "there" : "here");
+        } else if (digests_apart(da, db)) {
+            char why[256];
+
+            apart_text(da, db, why, sizeof why);
+            finding(a->D, "CFD020", "info", name, "%s", why);
         } else if (values_agree(da, db) != AGREE_NO) {
             continue;
         } else if (told_by_digest(ka, da, kb, db)) {
@@ -1853,7 +1911,7 @@ void doctor_diff_reports(const report* a, const report* b) {
  * and sources, and compares digests without showing them.
  * ------------------------------------------------------------------ */
 
-typedef enum { STEP_SAME, STEP_CHANGED, STEP_UNKNOWN } step_result;
+typedef enum { STEP_SAME, STEP_CHANGED, STEP_UNKNOWN, STEP_APART } step_result;
 
 static const cand* chosen(const rkey* k) {
     return (k != NULL && k->selected != NULL) ? winner(k) : NULL;
@@ -1863,7 +1921,8 @@ static const cand* chosen(const rkey* k) {
    entry in the earlier, `now` in the later, NULL where a report lacks
    it. A step the two cannot settle - one shows the value and the other
    only its digest - is STEP_UNKNOWN, neither same nor changed, as
-   values_agree has it. */
+   values_agree has it. Two digests made under different keys are
+   STEP_APART, and `what` is CFD020's sentence. */
 static step_result key_step(const rkey* was, const rkey* now, char* what, size_t cap) {
     const cand* wa = chosen(was);
     const cand* wb = chosen(now);
@@ -1894,8 +1953,12 @@ static step_result key_step(const rkey* was, const rkey* now, char* what, size_t
         }
         return STEP_CHANGED;
     }
+    if (digests_apart(wa, wb)) {
+        apart_text(wa, wb, what, cap);
+        return STEP_APART;
+    }
     agree = values_agree(wa, wb);
-    moved = (strcmp(was->selected, now->selected) != 0) ? CF_TRUE : CF_FALSE;
+    moved =(strcmp(was->selected, now->selected) != 0) ? CF_TRUE : CF_FALSE;
     if (agree == AGREE_YES) {
         if (!moved) {
             return STEP_SAME;
@@ -1927,9 +1990,10 @@ static step_result key_step(const rkey* was, const rkey* now, char* what, size_t
 /* One step's finding, recorded or only counted. */
 static size_t history_step(const report* later, const rkey* was, const rkey* now,
                            cf_bool record) {
-    char what[256];
+    char        what[256];
+    step_result step = key_step(was, now, what, sizeof what);
 
-    if (key_step(was, now, what, sizeof what) == STEP_SAME) {
+    if (step == STEP_SAME) {
         return 0;
     }
     if (record) {
@@ -1937,8 +2001,8 @@ static size_t history_step(const report* later, const rkey* was, const rkey* now
         const cand* w = chosen(now);
 
         doctor_key_name((now != NULL) ? now : was, name, sizeof name);
-        finding_at(later->D, "HISTORY", "info", name, (w != NULL) ? w->at : NULL,
-                   "%s: %s", later->path, what);
+        finding_at(later->D, (step == STEP_APART) ? "CFD020" : "HISTORY", "info", name,
+                   (w != NULL) ? w->at : NULL, "%s: %s", later->path, what);
     }
     return 1;
 }
@@ -2011,8 +2075,9 @@ static void blame_key(const report* rs, size_t n, const char* key) {
         finding_at(rs[0].D, "BLAME", "info", key, (w != NULL) ? w->at : NULL,
                    "%s since %s: %s", state, rs[k].path, what);
     } else {
-        finding_at(rs[0].D, "BLAME", "info", key, (w != NULL) ? w->at : NULL,
-                   "%s since %s at least; before it, %s", state, rs[k].path, what);
+        finding_at(rs[0].D, (step == STEP_APART) ? "CFD020" : "BLAME", "info", key,
+                   (w != NULL) ? w->at : NULL, "%s since %s at least; before it, %s",
+                   state, rs[k].path, what);
     }
 }
 

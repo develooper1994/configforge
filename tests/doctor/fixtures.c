@@ -252,6 +252,44 @@ static int emit_marker(const char* out, const char* mk, const char* num) {
     return spill(out, buf) ? 0 : 1;
 }
 
+/* A blind report of one contract - db.password, sensitive - whose digest
+   is made under the key given, or under none when the key is NULL. The
+   report holds the digest and no value (H-8b: two digests made under
+   different keys cannot say whether a value changed). */
+static int emit_keyed(const char* out, const unsigned char* key, const char* value) {
+    cf_error       err = CF_ERROR_INIT;
+    cf_builder*    b   = cf_build(NULL);
+    cf_config*     c;
+    cf_report_info info = CF_REPORT_INFO_INIT;
+    static char    buf[65536];
+    static char    ev[96];
+    static char*   env[2];
+    cf_def         d;
+
+    sprintf(ev, "MYAPP_DB__PASSWORD=%s", value);
+    env[0] = ev;
+    env[1] = NULL;
+    cf_builder_env(b, "env", CF_RANK_ENV, "MYAPP_", env);
+    if (key != NULL) {
+        cf_builder_digest_key(b, key, 16);
+    }
+    cf_def_init(&d, CF_TYPE_TEXT, "db.password");
+    d.flags = CF_SENSITIVE;
+    cf_builder_define(b, &d);
+    c = cf_builder_create(b, &err);
+    if (c == NULL) {
+        fprintf(stderr, "fixtures: %s: %s\n", out, err.message);
+        return 1;
+    }
+    info.mode        = CF_REPORT_BLIND;
+    info.profile     = "production";
+    info.application = "myapp";
+    info.generated   = "2026-09-12T00:00:00Z";
+    cf_report(c, &info, buf, sizeof buf);
+    cf_config_free(c);
+    return spill(out, buf) ? 0 : 1;
+}
+
 /* A full report of this library with six sensitive keys, each refused for
    a different kind (cf_refusal), the value a marker none of the output
    may carry: not an integer, outside its range, not among the permitted
@@ -668,6 +706,24 @@ int main(void) {
                         "MARKER-DELTA-7731") ||
             emit_secret("cf_fx_secret_b.json", kbenv, "MARKER-ECHO-7731",
                         "MARKER-ECHO-7731")) {
+            return 1;
+        }
+    }
+
+    /* One contract, digested under key A, under key A with another
+       value, under key B, and under none. */
+    {
+        unsigned char ka[16], kb[16];
+        int           i;
+
+        for (i = 0; i < 16; ++i) {
+            ka[i] = (unsigned char)i;
+            kb[i] = (unsigned char)(16 + i);
+        }
+        if (emit_keyed("cf_fx_keyed_a.json", ka, "one") ||
+            emit_keyed("cf_fx_keyed_a2.json", ka, "two") ||
+            emit_keyed("cf_fx_keyed_b.json", kb, "one") ||
+            emit_keyed("cf_fx_keyed_n.json", NULL, "one")) {
             return 1;
         }
     }

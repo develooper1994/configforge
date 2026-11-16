@@ -293,7 +293,8 @@ foreach(
   marker
   refusals
   escape
-  redact)
+  redact
+  keyed)
   add_test(NAME doctor.${script}
            COMMAND ${CMAKE_COMMAND} -DDOCTOR=$<TARGET_FILE:doctor> -P
                    ${CMAKE_SOURCE_DIR}/tests/doctor/${script}.cmake)
