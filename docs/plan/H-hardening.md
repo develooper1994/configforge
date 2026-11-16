@@ -463,9 +463,13 @@ plans D-82 too, so whichever is committed second takes the next.
     rule 2 with `lstat(full, &lst)` when the directory is shared, and rule
     3 on the `st` the loop already has, after its `S_ISREG` test. Helpers:
     `static cf_bool posix_own_group(uid_t uid, gid_t gid)` - `getpwuid_r`
-    with a `char buf[1024]` in its own frame (the listing's frame already
-    holds a path), true when found and `pw.pw_gid == gid`, false when not
-    found (a user with no entry has no group of their own); and
+    with a `char buf[512]` in its own frame (the listing's frame already
+    holds a path; 1024 put the frame at 1104 bytes, over the `minimal`
+    preset's budget of 1024), true when found and `pw.pw_gid == gid`,
+    false when not found (a user with no entry has no group of their
+    own) and false on any error, `ERANGE` included: an entry too long
+    for the buffer is not known to be the user's own group, so the
+    directory is refused, and `CF_ANY_WRITER` reads it; D-83 says so; and
     `#ifndef S_ISVTX` / `#define S_ISVTX 01000` / `#endif` near the
     includes, since `_POSIX_C_SOURCE` alone does not show it (XSI does)
     and the bit is 01000 on every system that has it.
@@ -568,6 +572,26 @@ plans D-82 too, so whichever is committed second takes the next.
     add `TRUSTED_DIR` (1 << 17) and `ANY_WRITER` (1 << 18) beside it,
     spelled as that list spells `OPTIONAL`; a binding with no such list
     gets nothing.
+  * Redesigned, 2026-11-16, after the first attempt (see notes):
+    * `posix.c` defines `_POSIX_C_SOURCE 200112L` before any header on
+      every Linux build, not only for kqueue (glibc hides `lstat` and
+      `getpwuid_r` in strict C89; the condition keeps `defined(__linux__)
+      && !defined(_POSIX_C_SOURCE)` and loses the kqueue test; the comment
+      above it says both reasons).
+    * wasm32-wasi has no users and no `pwd.h`: in `posix.c`, under
+      `#if defined(__wasi__)`, `<pwd.h>` is not included,
+      `cf_platform_has_trusted_dir` returns `CF_FALSE` and
+      `cf_platform_dir_list_trusted` is `posix_dir_list(..., CF_FALSE, ...)`
+      - as Windows. No helper or message may be left defined and unused
+      there. `test_trusted.c` gets `CF_TEST_POSIX` only off WASI already,
+      so it asserts the capability is false there as on Windows; its
+      `CF_TRUSTED_DIR` case then expects "cannot say who may write".
+    * The entry opens the next version: `cmake -DTO=1.6.0 -P
+      scripts/release/version.cmake` (two symbols and two flags added: a
+      minor), and the CHANGELOG's newest heading becomes
+      `1.6.0 — unreleased`, spelled as 1.4.1's was when it was opened
+      (`git show 02e3590`). The files that script changes belong to the
+      card's commit.
   * Rejected: a second listing for the check (a file changed between the
     two would be read unchecked). Rejected: checking ownership as sudo
     does, owner root or the program's user: Docker Compose bind-mounts a
