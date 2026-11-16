@@ -724,8 +724,9 @@ plans D-82 too, so whichever is committed second takes the next.
        any sensitive key. Safe without guessing; a typo of a plain key
        loses its value from every report, which is where a person looks
        to see what was mistyped.
-    Recommended: **2**. The answer goes here; until it is written, step 1
-    of the loop stops at this card. The rest is written for 2; for 1 the
+    Recommended: **2**. **Answered, 2026-11-12 (docs/Plan.md, "For the
+    maintainer"): 2** - such a key is kept as that secret. The rest is
+    written for 2; for 1 the
     card is only its Safety.md sentence; for 3, stop: the card needs
     redesign.
   * The mark, decided once, when the contract is applied: in
