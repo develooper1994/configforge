@@ -159,11 +159,11 @@ the 1.6.0 milestone; the S-*, T-* and W5-* cards to 1.7.0, but T-5 to
 | 21 | W3-F2c Reading CFPreferences on macOS (CI-only) | large | W3-F2b | done (a751ba0..529d84d) |
 | 22 | W3-F3 `cf_builder_credentials` in every language, the Guide, an example | medium | - | done (470cb8d, 059cdd9, 035ce3a, 71142a0) |
 | 23 | W3-F2d User defaults in C++, Rust, Python and the Guide | medium | W3-F2c | done (1ddb2ce, 146c605, e4435f0) |
-| 24 | S-1 The internal tier fenced: a program cannot call what 1.x does not promise | large | 1.6.0 released | open |
-| 25 | S-2 An experimental tier, and the promise written in one place | medium | S-1 | waits: S-1 |
-| 26 | S-3 The serialization layer's last ties cut, and held by the gate | medium | S-1 | waits: S-1 |
-| 27 | S-4 The serialization library, a target of its own | large | S-2, S-3 | waits: S-2, S-3; the answer in the card (TO DECIDE) |
-| 28 | S-5 The serialization library installed, found and packaged | medium | S-4 | waits: S-4 |
+| 24 | S-1 The internal tier fenced: a program cannot call what 1.x does not promise | large | 1.6.0 released | done (ee3d976, d60a0a7, e4abee8, d13fdd8) |
+| 25 | S-2 An experimental tier, and the promise written in one place | medium | S-1 | done (8479c91, b096cc3, 2acb279) |
+| 26 | S-3 The serialization layer's last ties cut, and held by the gate | medium | S-1 | done (dc54a27, f02e087, 3540ffd, bae204a) |
+| 27 | S-4 The serialization library, a target of its own | large | S-2, S-3 | done (bbd2a88, 203cffa, 84df09d, 1de8975) |
+| 28 | S-5 The serialization library installed, found and packaged | medium | S-4 | open |
 | 29 | T-1 `configforge <command>`, and Doctor's own name | large | S-1, H-6, H-8b | waits: S-1, H-6, H-8b |
 | 30 | T-2 `configforge gen`: the contract's own program | medium | T-1, H-2 | waits: T-1, H-2 |
 | 31 | T-3 `configforge codec`: the serialization library's own program | medium | T-2, S-5 | waits: T-2, S-5; the answer in the card (TO DECIDE) |
