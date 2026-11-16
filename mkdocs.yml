@@ -49,6 +49,7 @@ nav:
   - Guide: docs/Guide.md
   - API: docs/API.md
   - Doctor: docs/Doctor.md
+  - Tools: docs/Tools.md
   - Design:
       - Architecture: docs/Architecture.md
       - Specification: docs/Design.md

@@ -15,7 +15,7 @@ fi
 src="$here/../.."
 rev="$(git -C "$src" rev-parse --short HEAD 2>/dev/null || echo local)"
 cache="${XDG_CACHE_HOME:-$HOME/.cache}/configforge-doctor/$rev"
-doctor="$(find "$cache" -type f \( -name doctor -o -name doctor.exe \) 2>/dev/null | head -n 1)"
+doctor="$(find "$cache" -type f \( -name configforge-doctor -o -name configforge-doctor.exe \) 2>/dev/null | head -n 1)"
 if [ -z "$doctor" ]; then
   echo "doctor: building Doctor ($rev) once, into $cache" >&2
   cmake -S "$src" -B "$cache" -DCMAKE_BUILD_TYPE=Release -DCF_BUILD_TESTING=OFF \
@@ -24,6 +24,6 @@ if [ -z "$doctor" ]; then
     echo "doctor: could not build Doctor; set CONFIGFORGE_DOCTOR to one" >&2
     exit 2
   }
-  doctor="$(find "$cache" -type f \( -name doctor -o -name doctor.exe \) | head -n 1)"
+  doctor="$(find "$cache" -type f \( -name configforge-doctor -o -name configforge-doctor.exe \) | head -n 1)"
 fi
 printf '%s\n' "$doctor"

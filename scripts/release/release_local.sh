@@ -49,7 +49,7 @@ cmake --build build >/dev/null
 ctest --test-dir build --output-on-failure | tail -3
 cmake --install build >/dev/null
 mkdir -p "stage/configforge-$v/bin"
-install -s -m 755 build/tools/doctor/doctor "stage/configforge-$v/bin/doctor"
+for p in configforge configforge-doctor doctor; do install -s -m 755 "build/tools/bin/$p" "stage/configforge-$v/bin/$p"; done
 m=$(apk info musl | sed -n '1s/^musl-\([0-9.]*\)-r.*/\1/p')
 d="stage/configforge-$v/share/doc/configforge/third-party"
 mkdir -p "$d"

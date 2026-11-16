@@ -198,6 +198,15 @@ the baseline mechanism in section 9 handles.
 
 ## 7. Commands
 
+The program is `configforge-doctor`; `configforge doctor` runs it
+(docs/Tools.md). Until 1.8.0 it is also installed as `doctor`.
+
+Two commands an earlier draft of this section listed are not in the
+program. `parity` is part of `diff`: which keys exist in one environment's
+contract and not in the other's is CFD012. `emit` is not a command: a
+report is written by the library's `cf_report`, in the program that
+resolved the configuration (section 6).
+
 ```text
 configforge doctor explain <key> [--report R]
     single key, full candidate chain, selection reason
@@ -209,12 +218,12 @@ configforge doctor diff <reportA> <reportB>
     value differences, origin differences, shadow differences, presence
     differences, and defaults that differ where a key takes one
 
-doctor history <report>... [--key K]
+configforge doctor history <report>... [--key K]
     each change from one report to the next, oldest first: a key added or
     removed, a value changed (by digest for a secret), a value from another
     source, and a step nothing can compare; never the value itself
 
-doctor blame <key> <report>...
+configforge doctor blame <key> <report>...
     the report since which <key> has been as the last report has it, and what
     changed there; "at least" when an earlier step cannot be compared
 
@@ -228,21 +237,14 @@ configforge doctor lint <report> [--rules R] [--baseline B] [--format text|sarif
                          [--base <before> --only-changed]
     rule catalogue against a single report
 
-configforge doctor parity <reportA> <reportB> [--require-same-origin]
-    contract-level comparison: which keys exist, which are required, which are
-    satisfied by the same kind of source
-
-configforge doctor emit [--blind] [--out F]
-    produce a report from the current environment
-
-doctor check --schema <schema> <file>...
+configforge doctor check --schema <schema> <file>...
     configuration files against a JSON Schema contract, as a program built from it
     would read them: no program needed (section 7d)
 
-doctor gen --schema <schema> [--name <function>] [--out <file>]
+configforge doctor gen --schema <schema> [--name <function>] [--out <file>]
     the contract as C calls, for a build without the JSON reader (section 7d)
 
-doctor formats [--format text|markdown]
+configforge doctor formats [--format text|markdown]
     every built-in codec: its name, its extensions and what kind of format it is
     (text or binary, self-describing or schema-bound, typed, arrays, read and
     written); the markdown table is the one in docs/Formats.md, which a test holds
@@ -261,7 +263,7 @@ A JSON Schema can be the contract itself (`cf_builder_schema_file`, D-64): the k
 their types, ranges, defaults and spellings, written once and read by the program, by
 an editor and by Doctor. Two commands use it without the program (D-67).
 
-`doctor check --schema app.schema.json app.toml [local.toml ...]` reads the files as
+`configforge doctor check --schema app.schema.json app.toml [local.toml ...]` reads the files as
 the program would - in that order, each overriding the ones before - against the
 contract, unknown keys refused outside a prefix the schema opens. It prints `ok` and
 exits 0, or prints the first refusal, with the key and the reason, and exits 1; a
@@ -270,11 +272,11 @@ files: check the files that together make a complete configuration. In CI or a
 pre-commit hook it catches a misspelt key or a port out of range before a deploy does:
 
 ```text
-$ doctor check --schema app.schema.json app.json
+$ configforge doctor check --schema app.schema.json app.json
 unknown key 'server.prot'; did you mean 'server.port'?
 ```
 
-`doctor gen --schema app.schema.json --name app_contract --out app_contract.c` writes
+`configforge doctor gen --schema app.schema.json --name app_contract --out app_contract.c` writes
 one C89 function, `cf_bool app_contract(cf_builder* b)`, that defines every key with
 `cf_def` and `cf_builder_define` and opens what the schema opens. A build without the
 JSON reader - an embedded one, `CF_WITH_JSON=OFF` - then has the same contract from the
@@ -367,7 +369,7 @@ that order is the only one Doctor uses: a report's `generated` time says
 when it was written, which a re-run of an old build would get wrong.
 
 ```text
-$ doctor history prod-0912.json prod-0919.json prod-0926.json
+$ configforge doctor history prod-0912.json prod-0919.json prod-0926.json
 HISTORY info    server.host   prod-0919.json: same value, now from 'user-file' rather than 'env'
 HISTORY info    db.password   prod-0926.json: value changed (by digest), still from 'env'
 HISTORY info    server.port   prod-0926.json: value changed, now from 'cli' rather than 'env'
@@ -410,7 +412,7 @@ Each rule has a stable identifier so it can be suppressed individually. Rules ma
 | CFD014 | **Digest change on a sensitive key** without a corresponding change entry. | info | yes |
 | CFD015 | **Array truncation hazard.** An element lies at or beyond the length the winning `<key>.count` gives its array - most often a longer list in a lower-precedence file under a shorter count from the command line - and was discarded. The finding names the count and where it came from. | warning | yes |
 | CFD016 | **Policy violation.** A source outside the key's per-parameter policy supplied it. The library rejected the candidate (D-33); this is where that becomes loud. | error | yes |
-| CFD017 | **Default drift.** In a diff, a key takes its declared default on one side or both, and the two defaults differ, or one side has none. A program's new default reaches every deployment that never set the key, and no configuration file shows it: `doctor diff deployed.json upgrade.json` names those keys before the upgrade does. Where both sides take their defaults, this is the finding and the value difference is not repeated. | warning | yes |
+| CFD017 | **Default drift.** In a diff, a key takes its declared default on one side or both, and the two defaults differ, or one side has none. A program's new default reaches every deployment that never set the key, and no configuration file shows it: `configforge doctor diff deployed.json upgrade.json` names those keys before the upgrade does. Where both sides take their defaults, this is the finding and the value difference is not repeated. | warning | yes |
 | CFD018 | **Set but never read.** A source set the key and the program never read it: a setting that changes nothing, most often one the program has stopped reading. Only a report from a program that tracks its reads (`cf_builder_track_reads`) carries the evidence, and only for reads before the report was taken, so take it once the program has done its work. A key whose default won is not a setting and is not reported. | info | yes |
 | CFD019 | **Fingerprint mismatch.** The `fingerprint` a report states is not the one its own keys give. Doctor recomputes it as `cf_fingerprint` does - each selected value in key order, with its type, a secret by the digest a value-blind report carries - using the library's own steps (`cf_fingerprint_step`), so a report edited by hand, cut short, or written by a build that got it wrong says one thing and shows another. A report without the field (written before 1.1) is not an error, and neither is one it cannot check, such as a secret whose type it does not give. | error | yes |
 | CFD020 | **Digests not comparable.** Two reports carry a secret's digest made under different keys, or one under none (D-85), so whether the secret changed cannot be said. Give both programs the same digest key, or compare reports from one. | info | yes |
@@ -484,7 +486,7 @@ The most common way a lint tool dies is producing two hundred findings on first 
 an existing repository. Three mechanisms prevent that, and all three are required from
 the first release rather than added after the first complaint.
 
-**Baseline.** `doctor lint <report> --baseline .configforge-baseline` records existing
+**Baseline.** `configforge doctor lint <report> --baseline .configforge-baseline` records existing
 findings as accepted. Only new findings fail the build, and the tool reports entries
 that no longer match anything without failing on them.
 
@@ -502,7 +504,7 @@ CFD008 error production     this rule, in reports with this profile
 CFD011 off                  not this rule at all
 ```
 
-`doctor lint <report> --severity .configforge-severity`. A profile line wins over a plain
+`configforge doctor lint <report> --severity .configforge-severity`. A profile line wins over a plain
 one, a plain one over the profile defaults the catalogue states, and those over the
 rule's default. An unknown severity is unusable input (exit 2) rather than a line
 skipped: a file half understood leaves the other half silently at its default.
@@ -511,7 +513,7 @@ This is also what profiles are for, as D-12 decided them: a label on the report,
 concept in the library. A rule whose meaning depends on the environment says so in its
 catalogue entry, and the severity follows the label.
 
-**Progressive mode.** `doctor lint <report> --base <before> --only-changed` restricts
+**Progressive mode.** `configforge doctor lint <report> --base <before> --only-changed` restricts
 the rules to what the change under review touched: a key whose candidates - their
 sources, outcomes, values and digests, in order - are not the base's, or that only one
 side has. Where a value was set is not compared, since moving a line changes nothing.
@@ -545,7 +547,7 @@ rather than silently skipping rules.
 ## 11. CI Integration
 
 ```text
-- run: configforge doctor emit --blind --out predicted.json
+# predicted.json is a report the program wrote with cf_report (section 6)
 - run: configforge doctor diff observed-prod.json predicted.json --fail-on error
 - run: configforge doctor diff observed-prod.json upgrade.json --fail-on warning
             # an upgrade's changed defaults (CFD017), before it is deployed
@@ -569,7 +571,7 @@ from source and writes SARIF for the code-scanning upload:
 
 **On a pull request** it does what a reviewer cannot do by reading the
 diff of a configuration file: given the base branch's report as `base`,
-it runs `doctor diff` between the two and says which key changes value,
+it runs `configforge doctor diff` between the two and says which key changes value,
 which source would win now, which default an upgrade moved (CFD017) and
 which setting the program never reads (CFD018). The findings go to the
 log, to the job summary as Markdown (`--format markdown`, which lint, diff,
@@ -598,7 +600,7 @@ compared by digest and never shown, and the action passes `--redact-all`
 unless its `show-values` input is `true` (default `false`), so no other
 value reaches the log, the job summary or the comment either: a value that
 differs is "differs (not shown: --redact-all)" (D-86). With `show-values:
-true` the values that are not secret are shown, as `doctor diff` shows
+true` the values that are not secret are shown, as `configforge doctor diff` shows
 them - take the reports `--blind` to show none. A
 secret is a key its definition marks sensitive, on either side of a
 diff, and that holds for a full report as for a blind one: a full
@@ -684,10 +686,10 @@ logic.** Each ecosystem supplies its own origin data and a thin adapter converts
 | Ecosystem | Native origin source | Adapter effort |
 | --------- | -------------------- | -------------- |
 | ConfigForge | native report | none |
-| .NET | `ConfigurationRoot.GetDebugView()` | built: `doctor import-dotnet`; winners only |
-| Spring Boot | `/actuator/env`, origin-tracked | built: `doctor import-spring` |
-| Git config | `git config --list --show-origin --show-scope` | built: `doctor import-git` |
-| systemd | `systemd-analyze cat-config`, `systemctl cat` | built: `doctor import-systemd` |
+| .NET | `ConfigurationRoot.GetDebugView()` | built: `configforge doctor import-dotnet`; winners only |
+| Spring Boot | `/actuator/env`, origin-tracked | built: `configforge doctor import-spring` |
+| Git config | `git config --list --show-origin --show-scope` | built: `configforge doctor import-git` |
+| systemd | `systemd-analyze cat-config`, `systemctl cat` | built: `configforge doctor import-systemd` |
 | Go / viper | none available | requires a helper in the host application |
 | dotenv | file parse only, no precedence | partial; presence and origin only |
 
@@ -697,8 +699,8 @@ which rules it is unable to run rather than reporting a clean result.
 **The git adapter, as built.**
 
 ```text
-git config --list --show-origin --show-scope | doctor import-git > git.json
-doctor lint git.json
+git config --list --show-origin --show-scope | configforge doctor import-git > git.json
+configforge doctor lint git.json
 ```
 
 Git publishes everything this needs, so the adapter decides only how to write it down,
@@ -720,7 +722,7 @@ schema. Four decisions, each written where it is made:
 **The Spring Boot adapter, as built.**
 
 ```text
-curl -s localhost:8080/actuator/env | doctor import-spring > app.json
+curl -s localhost:8080/actuator/env | configforge doctor import-spring > app.json
 ```
 
 Spring publishes the sources in the order it consults them, and an origin for most
@@ -741,7 +743,7 @@ profile as the report's, and `class path resource [application.properties] - 3:1
 
 ```text
 Console.Write(((IConfigurationRoot)config).GetDebugView());   // in the program
-... | doctor import-dotnet > app.json
+... | configforge doctor import-dotnet > app.json
 ```
 
 `GetDebugView()` prints each key with the provider that won it, and nothing about the
@@ -752,13 +754,13 @@ ends the line, counted from the right, because `(Optional)` is part of one. Each
 provider's kind is its own type - `commandline`, `environment`, `json` - rather than
 Doctor's `cli`: the report is value-blind unless `--full`, every key in it sensitive,
 and CFD007 would otherwise call every command-line key a secret. What a blind .NET
-report is for is `doctor diff` of two environments, by digest.
+report is for is `configforge doctor diff` of two environments, by digest.
 
 **The systemd adapter, as built.**
 
 ```text
-systemd-analyze cat-config systemd/journald.conf | doctor import-systemd > journald.json
-systemctl cat nginx.service | doctor import-systemd > nginx.json
+systemd-analyze cat-config systemd/journald.conf | configforge doctor import-systemd > journald.json
+systemctl cat nginx.service | configforge doctor import-systemd > nginx.json
 ```
 
 Both commands print every file systemd reads, the main one and then each drop-in, in

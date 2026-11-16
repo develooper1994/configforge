@@ -317,21 +317,23 @@ git tag -a vx.y.z -m "ConfigForge x.y.z" && git push origin vx.y.z
 ```
 
 `cf_version()` is the version and `cf_build_id()` the commit it was
-built from (`doctor --version` prints both), so two builds of one
+built from (`configforge doctor --version` prints both), so two builds of one
 version can still be told apart.
 
 ### From a release
 
 GitHub supplies the source zip and tar archives for each release tag.
 Uploaded archives carry the amalgamation and a built library with a
-Doctor binary for Linux, Windows and macOS; `SHA256SUMS` covers those
+front door and Doctor for Linux, Windows and macOS; `SHA256SUMS` covers those
 uploaded archives, not GitHub's generated source downloads. From 1.3.0
 each uploaded file also has a signed provenance attestation - which
 workflow, commit and runner built it - that
 `gh attestation verify <file> -R develooper1994/configforge` checks. The Linux
 one is built against musl and linked statically:
-`bin/doctor` runs on any x86-64 Linux with nothing installed beside it,
-and the Windows `doctor.exe` needs no Visual C++ redistributable.
+`bin/configforge` and `bin/configforge-doctor` run on any x86-64 Linux
+with nothing installed beside them, and the Windows `configforge.exe` and
+`configforge-doctor.exe` need no Visual C++ redistributable. (`bin/doctor`,
+Doctor's old name, is there for 1.7.x.)
 Every archive is made by the suite's own build after the suite has
 passed on that platform (`.github/workflows/release.yml`).
 
@@ -426,7 +428,7 @@ configuration.
 ## Doctor
 
 ```sh
-$ doctor lint staging.json
+$ configforge doctor lint staging.json
 CFD001  error   server.port  app.ini:2:1 always loses to app.ini:9:1, set later
                              by the same source; editing it has no effect
 CFD010  warning user-file    supplies 2 value(s) and wins none; everything it
@@ -434,22 +436,22 @@ CFD010  warning user-file    supplies 2 value(s) and wins none; everything it
 CFD007  error   api.token    sensitive, and supplied on the command line at
                              argv[1], which every user of the machine can read
 
-$ doctor diff prod.json staging.json
+$ configforge doctor diff prod.json staging.json
 CFD002  warning server.host  same value, from 'env' here and 'user-file' there
 CFD014  info    db.password  sensitive value differs (by digest)
 
-$ doctor blame server.port prod.json staging.json   # oldest first
+$ configforge doctor blame server.port prod.json staging.json   # oldest first
 BLAME   info    server.port  from 'cli' since staging.json: value changed, now
                              from 'cli' rather than 'env'
 ```
 
 ```sh
-$ doctor lint prod.json --baseline .configforge-baseline --fail-on warning
+$ configforge doctor lint prod.json --baseline .configforge-baseline --fail-on warning
 CFD008  warning log.level    no source configured this; the default applies
 
 1 new finding(s): 0 error, 1 warning, 0 info; 1 accepted by the baseline
 
-$ doctor lint prod.json --format sarif > doctor.sarif   # for the pull request
+$ configforge doctor lint prod.json --format sarif > doctor.sarif   # for the pull request
 ```
 
 The same rules are a library, `cf_doctor.h`, for a program that lints
@@ -471,12 +473,12 @@ Severity is the project's to choose, in a file of the same shape:
 profile. That last form is what profiles are here - a label on the
 report that a rule's severity can follow, not a concept in the library.
 
-Reports do not have to come from this library. `doctor import-git` turns
+Reports do not have to come from this library. `configforge doctor import-git` turns
 `git config --list --show-origin --show-scope` into one, and every
 command above runs on it unchanged - a scope that wins nothing is
-CFD010 there too. `doctor import-spring` does the same for Spring Boot's
-`/actuator/env`, `doctor import-dotnet` for .NET's `GetDebugView()`,
-and `doctor import-systemd` for `systemd-analyze cat-config`; none
+CFD010 there too. `configforge doctor import-spring` does the same for Spring Boot's
+`/actuator/env`, `configforge doctor import-dotnet` for .NET's `GetDebugView()`,
+and `configforge doctor import-systemd` for `systemd-analyze cat-config`; none
 re-implements its ecosystem's precedence, and each writes down only
 what the ecosystem itself published.
 

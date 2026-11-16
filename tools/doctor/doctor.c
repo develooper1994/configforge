@@ -9,15 +9,15 @@
  * That is the line that keeps it from becoming a reimplementation of
  * every other ecosystem's precedence rules.
  *
- *     doctor dump    <report>
- *     doctor explain <report> <key>
- *     doctor lint    <report> [options]
- *     doctor diff    <a> <b>  [options]
- *     doctor history <report>... [--key <key>] [options]
- *     doctor blame   <key> <report>... [options]
- *     doctor check   --schema <schema> <file>...
- *     doctor gen     --schema <schema> [--name <function>] [--out <file>]
- *     doctor formats [--format text|markdown]
+ *     configforge doctor dump    <report>
+ *     configforge doctor explain <report> <key>
+ *     configforge doctor lint    <report> [options]
+ *     configforge doctor diff    <a> <b>  [options]
+ *     configforge doctor history <report>... [--key <key>] [options]
+ *     configforge doctor blame   <key> <report>... [options]
+ *     configforge doctor check   --schema <schema> <file>...
+ *     configforge doctor gen     --schema <schema> [--name <function>] [--out <file>]
+ *     configforge doctor formats [--format text|markdown]
  *
  *     --baseline <file>   findings already accepted, one per line
  *     --severity <file>   this project's severities, one per line
@@ -368,25 +368,25 @@ static int usage(void) {
        of limit that is invisible until a toolchain enforces it. */
     fputs("ConfigForge Doctor\n"
           "\n"
-          "  doctor dump    <report>\n"
-          "  doctor explain <report> <key>\n"
-          "  doctor lint    <report> [options]\n"
-          "  doctor diff    <report-a> <report-b> [options]\n"
-          "  doctor history <report>... [--key <key>] [options]\n"
-          "  doctor blame   <key> <report>... [options]\n"
-          "  doctor --version\n"
+          "  configforge doctor dump    <report>\n"
+          "  configforge doctor explain <report> <key>\n"
+          "  configforge doctor lint    <report> [options]\n"
+          "  configforge doctor diff    <report-a> <report-b> [options]\n"
+          "  configforge doctor history <report>... [--key <key>] [options]\n"
+          "  configforge doctor blame   <key> <report>... [options]\n"
+          "  configforge doctor --version\n"
           "\n",
           stderr);
-    fputs("  doctor import-git [--full]     < git config output\n"
-          "  doctor import-spring           < /actuator/env JSON\n"
-          "  doctor import-dotnet [--full]  < GetDebugView() text\n"
-          "  doctor import-systemd [--full] < systemd-analyze cat-config\n"
+    fputs("  configforge doctor import-git [--full]     < git config output\n"
+          "  configforge doctor import-spring           < /actuator/env JSON\n"
+          "  configforge doctor import-dotnet [--full]  < GetDebugView() text\n"
+          "  configforge doctor import-systemd [--full] < systemd-analyze cat-config\n"
           "\n",
           stderr);
-    fputs("  doctor check --schema <schema> <file>...   files against a contract\n"
-          "  doctor gen --schema <schema> [--name <fn>] [--out <file>]\n"
+    fputs("  configforge doctor check --schema <schema> <file>...   files against a contract\n"
+          "  configforge doctor gen --schema <schema> [--name <fn>] [--out <file>]\n"
           "                                 the contract as C calls\n"
-          "  doctor formats [--format text|markdown]   the built-in codecs and their "
+          "  configforge doctor formats [--format text|markdown]   the built-in codecs and their "
           "kind\n"
           "\n",
           stderr);
@@ -433,9 +433,42 @@ static cf_bool load(report* r, cf_doctor* D, const char* path) {
 
 static int run(cf_doctor* D, int argc, char** argv);
 
+/* Whether the program was started under its old name, `doctor` or
+   `doctor.exe`: the base name of argv[0] after the last `/` or `\`,
+   compared without regard to ASCII case. */
+static cf_bool old_name(const char* arg0) {
+    const char* base = arg0;
+    const char* p;
+    char        lower[12];
+    size_t      n;
+    size_t      i;
+
+    for (p = arg0; *p != '\0'; p++) {
+        if (*p == '/' || *p == '\\') {
+            base = p + 1;
+        }
+    }
+    n = strlen(base);
+    if (n != 6 && n != 10) {
+        return CF_FALSE;
+    }
+    for (i = 0; i < n; i++) {
+        char c   = base[i];
+        lower[i] = (c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c;
+    }
+    lower[n] = '\0';
+    return (strcmp(lower, "doctor") == 0 || strcmp(lower, "doctor.exe") == 0) ? CF_TRUE : CF_FALSE;
+}
+
 int main(int argc, char** argv) {
     cf_doctor* D;
     int        rc;
+
+    /* The name goes in 1.8.0; until then the program says so and goes
+       on as it would. */
+    if (argc >= 1 && old_name(argv[0])) {
+        fputs("doctor: this program is configforge-doctor now (configforge doctor); the name doctor goes in 1.8.0\n", stderr);
+    }
 
     /* An adapter writes a report rather than reading one, so it takes no
        report argument and is dispatched before anything expects one. */

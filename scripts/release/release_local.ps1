@@ -6,7 +6,7 @@
 #
 # Builds from the commit the tag v<Version> names, with MSVC: the library
 # against the DLL runtime, Doctor again against the static one, so the
-# shipped doctor.exe needs nothing beside it. Each build is tested first.
+# shipped tools need nothing beside them. Each build is tested first.
 param(
     [Parameter(Mandatory)][string]$Version,
     [Parameter(Mandatory)][string]$Dist,
@@ -31,9 +31,9 @@ ctest --test-dir build -C Release --output-on-failure | Select-Object -Last 3
 cmake --install build --config Release | Out-Null
 cmake -S . -B build-doctor -DCMAKE_POLICY_DEFAULT_CMP0091=NEW `
     -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded | Out-Null
-cmake --build build-doctor --config Release --target doctor doctor_fixtures doctor_api -- /m:4 /v:quiet /nologo | Out-Null
-ctest --test-dir build-doctor -C Release -R "^doctor\." --output-on-failure | Select-Object -Last 3
+cmake --build build-doctor --config Release --target configforge_front doctor doctor_fixtures doctor_api -- /m:4 /v:quiet /nologo | Out-Null
+ctest --test-dir build-doctor -C Release -R "^(doctor|front)\." --output-on-failure | Select-Object -Last 3
 New-Item -ItemType Directory -Force "stage/configforge-$v/bin" | Out-Null
-Copy-Item build-doctor/tools/doctor/Release/doctor.exe "stage/configforge-$v/bin/"
+Copy-Item build-doctor/tools/bin/Release/*.exe "stage/configforge-$v/bin/"
 Compress-Archive -Force -Path "stage/configforge-$v" -DestinationPath "$Dist/configforge-$v-windows-x64.zip"
 Get-Item "$Dist/configforge-$v-windows-x64.zip" | ForEach-Object { "{0}: {1} bytes" -f $_.Name, $_.Length }

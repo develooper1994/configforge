@@ -16,6 +16,11 @@ if(CF_BUILD_TOOLS
   add_subdirectory(doctor)
 endif()
 
+# The front door, `configforge <command>`, and the programs it runs.
+if(CF_BUILD_TOOLS AND TARGET configforge_front)
+  add_subdirectory(front)
+endif()
+
 if(CF_FUZZ)
   add_subdirectory(fuzz)
 endif()

@@ -115,7 +115,7 @@ runs:
         CF_SHOW_VALUES: ${{ inputs.show-values }}
         CF_ACTION: ${{ github.action_path }}
       run: |
-        CF_DOCTOR="$(find "$CF_BUILD" -type f \( -name doctor -o -name doctor.exe \) | head -n 1)"
+        CF_DOCTOR="$(find "$CF_BUILD" -type f \( -name configforge-doctor -o -name configforge-doctor.exe \) | head -n 1)"
         export CF_DOCTOR
         echo "markdown=$CF_MARKDOWN" >>"$GITHUB_OUTPUT"
         rc=0

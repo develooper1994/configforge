@@ -6,7 +6,7 @@
 # is packaged, and published with a SHA256SUMS beside it:
 #
 #   configforge-<v>-amalgamation.tar.gz    two files and the licence: no build system
-#   configforge-<v>-linux-x86_64-musl.tar.gz  a static Doctor, the library, headers, SBOM
+#   configforge-<v>-linux-x86_64-musl.tar.gz  the tools, the library, headers, SBOM
 #   configforge-<v>-windows-x64.zip        the same, built with MSVC
 #   configforge-<v>-macos-arm64.tar.gz     the same, built with Apple's clang
 #
@@ -29,8 +29,9 @@ on:
       - .github/workflows/release.yml
       - CMakeLists.txt
       - cmake/**
-      - tools/doctor/**
+      - tools/**
       - tests/doctor/**
+      - tests/front/**
   workflow_dispatch:
 
 # The build jobs read the repository; only `publish` writes, and asks for
@@ -88,8 +89,10 @@ jobs:
           ctest --test-dir build --output-on-failure
           cmake --install build
           mkdir -p "stage/configforge-$v/bin"
-          install -s -m 755 build/tools/doctor/doctor "stage/configforge-$v/bin/doctor"
-          # Linked statically, Doctor carries musl, whose MIT licence asks
+          for p in configforge configforge-doctor doctor; do
+            install -s -m 755 "build/tools/bin/$p" "stage/configforge-$v/bin/$p"
+          done
+          # Linked statically, the tools carry musl, whose MIT licence asks
           # for its notice in every copy; Alpine does not ship the text,
           # so it comes from musl's own repository, at the version used.
           m=$(apk info musl | sed -n '1s/^musl-\([0-9.]*\)-r.*/\1/p')
@@ -128,9 +131,9 @@ jobs:
           # The whole tree, not a list of targets: a list missed doctor_gen
           # when its test was added, and the release failed on its tag.
           cmake --build build-doctor --config Release
-          ctest --test-dir build-doctor -C Release -R "^doctor\." --output-on-failure
+          ctest --test-dir build-doctor -C Release -R "^(doctor|front)\." --output-on-failure
           New-Item -ItemType Directory -Force "stage/configforge-$v/bin" | Out-Null
-          Copy-Item build-doctor/tools/doctor/Release/doctor.exe "stage/configforge-$v/bin/"
+          Copy-Item build-doctor/tools/bin/Release/*.exe "stage/configforge-$v/bin/"
           New-Item -ItemType Directory -Force dist | Out-Null
           Compress-Archive -Path "stage/configforge-$v" -DestinationPath "dist/configforge-$v-windows-x64.zip"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -150,7 +153,9 @@ jobs:
           ctest --test-dir build --output-on-failure
           cmake --install build
           mkdir -p "stage/configforge-$v/bin"
-          install -s -m 755 build/tools/doctor/doctor "stage/configforge-$v/bin/doctor"
+          for p in configforge configforge-doctor doctor; do
+            install -s -m 755 "build/tools/bin/$p" "stage/configforge-$v/bin/$p"
+          done
           mkdir -p dist
           tar -C stage -czf "dist/configforge-$v-macos-arm64.tar.gz" "configforge-$v"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

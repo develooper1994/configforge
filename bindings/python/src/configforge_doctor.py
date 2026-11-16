@@ -12,8 +12,8 @@ implementation of either to drift. No dependencies beyond the standard
 library, and no ABI: Doctor's library is static (D-41), and a program
 is the one interface Python can rely on everywhere.
 
-The program is found as $CONFIGFORGE_DOCTOR, or `doctor` on PATH, or
-passed as `doctor=`.
+The program is found as $CONFIGFORGE_DOCTOR, or `configforge-doctor`
+(or an older `doctor`) on PATH, or passed as `doctor=`.
 """
 
 import json
@@ -54,9 +54,14 @@ _LEVELS = {"error": "error", "warning": "warning", "note": "info"}
 
 def find_doctor(doctor=None):
     """The doctor program to run, or DoctorError naming where it looked."""
-    path = doctor or os.environ.get("CONFIGFORGE_DOCTOR") or shutil.which("doctor")
+    path = (
+        doctor
+        or os.environ.get("CONFIGFORGE_DOCTOR")
+        or shutil.which("configforge-doctor")
+        or shutil.which("doctor")
+    )
     if not path:
-        raise DoctorError("no doctor program: set CONFIGFORGE_DOCTOR or put doctor on PATH")
+        raise DoctorError("no doctor program: set CONFIGFORGE_DOCTOR or put configforge-doctor on PATH")
     return path
 
 

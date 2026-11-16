@@ -236,6 +236,16 @@ if(Python3_Interpreter_FOUND)
                                                 DOCTOR_REPORTS)
 endif()
 
+# The copy that keeps the old name says its new one on stderr (D-99).
+add_test(
+  NAME doctor.old_name
+  COMMAND
+    ${CMAKE_COMMAND}
+    -DDOCTOR=$<TARGET_FILE_DIR:doctor>/doctor${CMAKE_EXECUTABLE_SUFFIX}
+    -DARGS=--version -DEXPECT_FAIL=0
+    "-DEXPECT_ERR=this program is configforge-doctor now" -P
+    ${CMAKE_SOURCE_DIR}/tests/doctor/run.cmake)
+
 # The version Doctor reports is the one cf_version.h says, with the
 # commit after it when the build knew one.
 add_test(NAME doctor.version COMMAND doctor --version)

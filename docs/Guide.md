@@ -407,7 +407,7 @@ range below their count; nested members and scalar root assignments
 are refused. Undeclared arrays retain the earlier, looser rules.
 Reports keep original assignments and locations, add `written_key` for
 moved candidates, and mark aggregate counts `synthesized`. A declared
-default's candidate says `declared_default`, which is how `doctor diff`
+default's candidate says `declared_default`, which is how `configforge doctor diff`
 finds a default an upgrade changed (CFD017). Images and
 full Report Replay are resolved bases, so reloading one does not append
 the program's defaults again.
@@ -517,7 +517,7 @@ binary (`CF_CODEC_BINARY`), self-describing or bound to a schema
 (`CF_CODEC_SCHEMA`: the bytes cannot be read without a layout the program
 gives, as a TLV codec's), typed, with arrays, read, written. `cf_codec_kind`
 says them in words, and `cf_codec_select` finds the built-in codecs by them
-(D-97); `doctor formats` prints the table:
+(D-97); `configforge doctor formats` prints the table:
 
 ```c
 const cf_codec* bin[8];
@@ -946,7 +946,7 @@ restart accepts the newly configured list.
 The check (`preflight` above) sees every snapshot before readers can,
 the first included: a rule of the program's, or Doctor itself -
 `cf_doctor_live_check` with a `cf_doctor_gate` lints each snapshot as
-`doctor lint` would and refuses it on a finding at the gate's level, so
+`configforge doctor lint` would and refuses it on a finding at the gate's level, so
 a password moved to the command line by an edit an hour after startup
 is refused as it would have been at startup:
 
@@ -1077,13 +1077,13 @@ what a production process was running.
 **Doctor** (`tools/doctor`) reads reports and finds the mistakes no
 single process can see: a value set twice in one file, a source that
 never wins, a secret on the command line, two environments that drifted
-apart. `doctor lint`, `doctor diff`, `doctor explain`; SARIF for code
+apart. `configforge doctor lint`, `configforge doctor diff`, `configforge doctor explain`; SARIF for code
 scanning; a severity file and a baseline so a project can adopt it
 without fixing everything on day one; and a GitHub Action. See
 [`Doctor.md`](Doctor.md).
 
 **As a library.** The rules are `libconfigforge_doctor` (`cf_doctor.h`,
-`ConfigForge::configforge_doctor`), of which `doctor` is the command
+`ConfigForge::configforge_doctor`), of which `configforge doctor` is the command
 line. A service can lint its own configuration before it serves - and
 refuse to start in production with a password that came from the
 command line - and a test can assert there are no findings, in process

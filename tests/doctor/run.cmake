@@ -12,6 +12,12 @@ if(NOT rc EQUAL EXPECT_FAIL)
   message(FATAL_ERROR "expected exit ${EXPECT_FAIL}, got ${rc}")
 endif()
 
+# A case may also say what the error output must hold. The exit code is
+# still checked above, which a test's PASS_REGULAR_EXPRESSION would not.
+if(DEFINED EXPECT_ERR AND NOT errout MATCHES "${EXPECT_ERR}")
+  message(FATAL_ERROR "stderr does not match '${EXPECT_ERR}'")
+endif()
+
 list(GET argv 0 cmd)
 
 # Each lint case asserts the rule it exists for. A case that only
