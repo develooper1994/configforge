@@ -183,20 +183,256 @@ int cf_platform_registry_walk(const char* root, cf_arena* arena, cf_platform_reg
 
 #if defined(__APPLE__) && CF_WITH_PREFERENCES
 
-/* macOS's user defaults: not written yet. */
+/* macOS's user defaults, through CoreFoundation: the current user's
+   values on any host, the ones `defaults read <domain>` shows (D-87).
+   Apple's headers are not C89, so with this option on macOS the build
+   compiles this file as C99 and links the framework (CMakeLists.txt). */
+#include <CoreFoundation/CoreFoundation.h>
+
 cf_bool cf_platform_has_preferences(void) {
     return CF_TRUE;
 }
 
+typedef struct mac_prefs {
+    cf_arena*           arena;
+    cf_platform_pref_fn fn;
+    void*               ctx;
+    cf_error*           err;
+    const char*         domain;
+} mac_prefs;
+
+static int mac_prefs_room(const mac_prefs* w) {
+    cf_error_set(w->err, CF_E_MEMORY, NULL, w->domain, "no room to read '%s'",
+                 w->domain);
+    return -1;
+}
+
+/* A CFString as UTF-8 in the arena; NULL when there is no room. */
+static char* mac_prefs_utf8(cf_arena* arena, CFStringRef s, size_t* out_len) {
+    CFIndex cap = CFStringGetMaximumSizeForEncoding(CFStringGetLength(s),
+                                                    kCFStringEncodingUTF8) +
+                  1;
+    char*   out = (cap > 0) ? (char*)cf_arena_alloc(arena, (size_t)cap) : NULL;
+
+    if (out == NULL || !CFStringGetCString(s, out, cap, kCFStringEncodingUTF8)) {
+        return NULL;
+    }
+    *out_len = strlen(out);
+    return out;
+}
+
+/* `parent` and `leaf` joined by '/' in the arena; `leaf` alone under the
+   domain. Paths live here and not in the recursion's frames. */
+static const char* mac_prefs_path(cf_arena* arena, const char* parent, const char* leaf,
+                                  size_t leaflen) {
+    size_t pn  = strlen(parent);
+    char*  out = (char*)cf_arena_alloc(arena, pn + leaflen + 2);
+
+    if (out == NULL) {
+        return NULL;
+    }
+    memcpy(out, parent, pn);
+    if (pn > 0) {
+        out[pn++] = '/';
+    }
+    memcpy(out + pn, leaf, leaflen);
+    out[pn + leaflen] = '\0';
+    return out;
+}
+
+static int mac_prefs_emit(const mac_prefs* w, const cf_platform_pref_event* e) {
+    return w->fn(w->ctx, e) ? 0 : -1;
+}
+
+static int mac_prefs_value(const mac_prefs* w, CFTypeRef v, const char* name,
+                           size_t namelen, const char* path, int depth);
+
+/* An array's members in order, each named in its path by its index. */
+static int mac_prefs_array(const mac_prefs* w, CFArrayRef a, const char* path, int depth) {
+    CFIndex n = CFArrayGetCount(a), i;
+
+    for (i = 0; i < n; ++i) {
+        char        idx[24];
+        size_t      k  = cf_fmt(idx, sizeof idx, "%U", (cf_u64)i);
+        const char* at = mac_prefs_path(w->arena, path, idx, k);
+
+        if (at == NULL) {
+            return mac_prefs_room(w);
+        }
+        if (mac_prefs_value(w, CFArrayGetValueAtIndex(a, i), NULL, 0, at, depth) != 0) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+/* A dictionary's members by name, in byte order: the events, and the
+   keys a test sees, do not depend on CFDictionary's order. An insertion
+   sort over the arena's copies; a dictionary in configuration is small. */
+static int mac_prefs_dict(const mac_prefs* w, CFDictionaryRef d, const char* path,
+                          int depth) {
+    CFIndex      n = CFDictionaryGetCount(d), i, j;
+    const void** keys;
+    const void** vals;
+    const char** names;
+    size_t*      lens;
+
+    if (n <= 0) {
+        return 0;
+    }
+    keys  = (const void**)cf_arena_alloc(w->arena, (size_t)n * sizeof *keys);
+    vals  = (const void**)cf_arena_alloc(w->arena, (size_t)n * sizeof *vals);
+    names = (const char**)cf_arena_alloc(w->arena, (size_t)n * sizeof *names);
+    lens  = (size_t*)cf_arena_alloc(w->arena, (size_t)n * sizeof *lens);
+    if (keys == NULL || vals == NULL || names == NULL || lens == NULL) {
+        return mac_prefs_room(w);
+    }
+    CFDictionaryGetKeysAndValues(d, keys, vals);
+    for (i = 0; i < n; ++i) {
+        if (CFGetTypeID(keys[i]) != CFStringGetTypeID()) {
+            cf_error_set(w->err, CF_E_KEY, NULL, w->domain,
+                         "defaults %s %s: a key that is not a string", w->domain, path);
+            return -1;
+        }
+        names[i] = mac_prefs_utf8(w->arena, (CFStringRef)keys[i], &lens[i]);
+        if (names[i] == NULL) {
+            return mac_prefs_room(w);
+        }
+    }
+    for (i = 1; i < n; ++i) {
+        const char* nm = names[i];
+        size_t      ln = lens[i];
+        const void* vv = vals[i];
+
+        for (j = i; j > 0 && strcmp(names[j - 1], nm) > 0; --j) {
+            names[j] = names[j - 1];
+            lens[j]  = lens[j - 1];
+            vals[j]  = vals[j - 1];
+        }
+        names[j] = nm;
+        lens[j]  = ln;
+        vals[j]  = vv;
+    }
+    for (i = 0; i < n; ++i) {
+        const char* at = mac_prefs_path(w->arena, path, names[i], lens[i]);
+
+        if (at == NULL) {
+            return mac_prefs_room(w);
+        }
+        if (mac_prefs_value(w, vals[i], names[i], lens[i], at, depth) != 0) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+/* One value as an event; a dictionary or an array as its begin, its
+   members one level down, and its end. */
+static int mac_prefs_value(const mac_prefs* w, CFTypeRef v, const char* name,
+                           size_t namelen, const char* path, int depth) {
+    cf_platform_pref_event e;
+    CFTypeID               t = CFGetTypeID(v);
+    int                    r;
+
+    memset(&e, 0, sizeof e);
+    e.name    = name;
+    e.namelen = namelen;
+    e.path    = path;
+    if (t == CFDictionaryGetTypeID() || t == CFArrayGetTypeID()) {
+        if (depth >= CF_MAX_DEPTH) {
+            cf_error_set(w->err, CF_E_SOURCE, NULL, w->domain,
+                         "defaults %s: nests deeper than %d levels", w->domain,
+                         CF_MAX_DEPTH);
+            return -1;
+        }
+        e.kind = (t == CFDictionaryGetTypeID()) ? CF_PREF_BEGIN_DICT : CF_PREF_BEGIN_ARRAY;
+        r      = mac_prefs_emit(w, &e);
+        if (r == 0 && e.kind == CF_PREF_BEGIN_DICT) {
+            r = mac_prefs_dict(w, (CFDictionaryRef)v, path, depth + 1);
+        } else if (r == 0) {
+            r = mac_prefs_array(w, (CFArrayRef)v, path, depth + 1);
+        }
+        if (r != 0) {
+            return r;
+        }
+        memset(&e, 0, sizeof e);
+        e.kind = CF_PREF_END;
+        e.path = path;
+        return mac_prefs_emit(w, &e);
+    }
+    if (t == CFStringGetTypeID()) {
+        e.kind = CF_PREF_TEXT;
+        e.text = mac_prefs_utf8(w->arena, (CFStringRef)v, &e.textlen);
+        if (e.text == NULL) {
+            return mac_prefs_room(w);
+        }
+    } else if (t == CFNumberGetTypeID() && CFNumberIsFloatType((CFNumberRef)v)) {
+        e.kind = CF_PREF_REAL;
+        (void)CFNumberGetValue((CFNumberRef)v, kCFNumberDoubleType, &e.r);
+    } else if (t == CFNumberGetTypeID()) {
+        e.kind = CF_PREF_INT;
+        (void)CFNumberGetValue((CFNumberRef)v, kCFNumberSInt64Type, &e.i);
+    } else if (t == CFBooleanGetTypeID()) {
+        e.kind = CF_PREF_BOOL;
+        e.b    = CFBooleanGetValue((CFBooleanRef)v) ? CF_TRUE : CF_FALSE;
+    } else {
+        e.kind = CF_PREF_OTHER;
+        if (t == CFDateGetTypeID()) {
+            e.text = "a date";
+        } else if (t == CFDataGetTypeID()) {
+            e.text = "data";
+        } else {
+            e.text = "of another type";
+        }
+        e.textlen = strlen(e.text);
+    }
+    return mac_prefs_emit(w, &e);
+}
+
 int cf_platform_preferences_walk(const char* domain, cf_arena* arena,
                                  cf_platform_pref_fn fn, void* ctx, cf_error* err) {
-    (void)arena;
-    (void)fn;
-    (void)ctx;
-    cf_error_set(err, CF_E_CAPABILITY, NULL, domain,
-                 "'%s': reading macOS's user defaults is not written yet",
-                 (domain != NULL) ? domain : "");
-    return -1;
+    CFStringRef     app;
+    CFArrayRef      keys;
+    CFDictionaryRef all;
+    mac_prefs       w;
+    int             r;
+
+    w.arena  = arena;
+    w.fn     = fn;
+    w.ctx    = ctx;
+    w.err    = err;
+    w.domain = (domain != NULL) ? domain : "";
+    app      = (domain != NULL) ? CFStringCreateWithCString(kCFAllocatorDefault, domain,
+                                                            kCFStringEncodingUTF8)
+                                : NULL;
+    if (app == NULL) {
+        cf_error_set(err, CF_E_SOURCE, NULL, w.domain,
+                     "'%s' is not a domain: it is not UTF-8", w.domain);
+        return -1;
+    }
+    /* So that values another process wrote, `defaults` among them, are
+       seen and not this process's cached copy. */
+    (void)CFPreferencesAppSynchronize(app);
+    keys = CFPreferencesCopyKeyList(app, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
+    if (keys == NULL || CFArrayGetCount(keys) == 0) {
+        if (keys != NULL) {
+            CFRelease(keys);
+        }
+        CFRelease(app);
+        return 1;
+    }
+    all = CFPreferencesCopyMultiple(keys, app, kCFPreferencesCurrentUser,
+                                    kCFPreferencesAnyHost);
+    CFRelease(keys);
+    CFRelease(app);
+    if (all == NULL) {
+        cf_error_set(err, CF_E_SOURCE, NULL, w.domain,
+                     "defaults %s: its values could not be read", w.domain);
+        return -1;
+    }
+    r = mac_prefs_value(&w, all, NULL, 0, "", 0);
+    CFRelease(all);
+    return r;
 }
 
 #else

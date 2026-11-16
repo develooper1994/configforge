@@ -41,11 +41,10 @@ static void forget(const char* domain) {
 
 /* `domain` holding exactly the plist dictionary `body` then `more`. */
 static void write_domain(const char* domain, const char* body, const char* more) {
-    static const char head[] =
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-        "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" "
-        "\"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n"
-        "<plist version=\"1.0\"><dict>\n";
+    static const char head[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                               "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" "
+                               "\"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n"
+                               "<plist version=\"1.0\"><dict>\n";
     static const char tail[] = "</dict></plist>\n";
     char              args[256];
     FILE*             f;
@@ -126,7 +125,8 @@ static void test_on_macos(void) {
               "a dictionary is a section, an integer an int");
         check(cf_get_int(c, "server.workers", 0) == 12,
               "a string is text the contract types");
-        has(cf_get_text(c, "server.host", ""), "web1", "and text where none is declared");
+        has(cf_get_text(c, "server.host", ""), "web1",
+            "and text where none is declared");
         check(cf_get_int(c, "hosts.count", 0) == 2, "an array is a list");
         has(cf_get_text(c, "hosts.1", ""), "b", "in order");
         check(cf_get_bool(c, "enabled", CF_FALSE) == CF_TRUE, "a boolean is a bool");
