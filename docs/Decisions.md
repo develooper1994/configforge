@@ -3533,6 +3533,15 @@ A full report holds a `"digest"` where it held none, which also lets
 Doctor compare a secret in a full report with the same secret in a blind
 one.
 
+**Held to.** Doctor compares two digests only when their kinds - the text
+up to the last `:`, `fnv1a` or `sip24:<id>` - are equal; otherwise `diff`,
+`history` and `blame` report CFD020, "whether it changed cannot be
+told", naming the two kinds and neither digest. `doctor.keyed` builds
+blind reports of one secret under key A (two values), key B and no key,
+and checks that A against A is CFD014, that A against B and either
+against the unkeyed one is CFD020 and never CFD014, and that a keyed
+report's lint raises no CFD019.
+
 **Held to.** `test_digestkey` (the reference vectors, the form, one key
 and another, no key, the fingerprint, a derived configuration, a full
 report, the refusal), and a second pass of `test_marker` with a key given.

@@ -660,8 +660,8 @@ whose size changes while it is read is still read whole.
 * 🟩 **A fuzz check comparing arena bytes with input size** (in every libFuzzer harness and `test_fuzz`: four times D-82's bound), so that a
   document which costs a multiple of its size fails the fuzzer and does
   not wait to be found by hand.
-* 🟨 **Keying the secret digest.** The library keys it (D-85); Doctor is to tell
-  digests of different keys apart (H-8b). The digest was an unsalted FNV-1a, and
+* 🟩 **Keying the secret digest.** The library keys it (D-85); Doctor tells
+  digests of different keys apart (CFD020). The digest was an unsalted FNV-1a, and
   over a PIN it can be brute-forced offline from a blind report or a
   fingerprint. Done when a digest cannot be tested against guesses
   without a key, and the report schema and `doctor diff` still compare.
