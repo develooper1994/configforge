@@ -349,8 +349,9 @@ CoreFoundation and the `defaults` tool.
        `"anyUser:com.example.app"`, `"managed:..."`), each scope its own
        source at its own rank, so precedence between them is the
        program's and explain() shows it.
-    Recommended: **3** (option 1 built now). The answer goes here; until
-    it is written, step 1 of the loop stops at this card.
+    Recommended: **3** (option 1 built now).
+    **Answer (the maintainer, 2026-11-16): 3** - the current user on any
+    host is read now; the scope prefixes are a later card.
     The rest of this card is written for options 1 and 3. If the answer is
     2, the card needs redesign: stop.
   * Signature, in `include/configforge/configforge.h` after
