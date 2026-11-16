@@ -9,6 +9,10 @@
 #    not: a header the layer reaches for is a line in that file, and one
 #    that is not there is a violation. The build reads the same lists.
 
+# A script run with -P starts with every policy unset; IN_LIST needs
+# CMP0057, as GateAbi.cmake's own line gives it.
+cmake_minimum_required(VERSION 3.10)
+
 set(bad 0)
 
 file(GLOB_RECURSE core_files "${SRC}/core/*.c" "${SRC}/core/*.h")
