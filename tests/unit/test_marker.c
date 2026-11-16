@@ -89,7 +89,8 @@ typedef enum mk_shape {
     SH_OLD,
     SH_OLD_MAXLEN,
     SH_POLICY,
-    SH_POLICY_SHADOW
+    SH_POLICY_SHADOW,
+    SH_LIKE /* written under sec.vx, a typo of the defined secret sec.v (D-84) */
 } mk_shape;
 
 /* The kinds of source a secret can come in. SRC_ALL runs a scenario
@@ -215,7 +216,12 @@ static const mk_scn mk_table[] = {
     {"public key names another secret", SH_TEXT, SRC_MEM, MK_V, NULL, mk_x_pub_sec, 0, 0, 0, NULL, NULL, NULL},
     /* policy: a refused source, and a shadowed one */
     {"policy refuses the source", SH_POLICY, SRC_ALL, MK_V, NULL, NULL, 1, 1, 0, NULL, NULL, NULL},
-    {"policy puts another first", SH_POLICY_SHADOW, SRC_ALL, MK_V "-win", MK_V "-lose", NULL, 1, 1, 0, NULL, NULL, NULL}
+    {"policy puts another first", SH_POLICY_SHADOW, SRC_ALL, MK_V "-win", MK_V "-lose", NULL, 1, 1, 0, NULL, NULL, NULL},
+    /* j. an undefined key a typo from the secret (D-84) */
+    {"undefined key named like the secret, mem", SH_LIKE, SRC_MEM, MK_V, NULL, NULL, 1, 1, 0, NULL, NULL, NULL},
+    {"undefined key named like the secret, ini", SH_LIKE, SRC_INI, MK_V, NULL, NULL, 1, 1, 0, NULL, NULL, NULL},
+    {"undefined key named like the secret, env", SH_LIKE, SRC_ENV, MK_V, NULL, NULL, 1, 1, 0, NULL, NULL, NULL},
+    {"undefined key named like the secret, malformed reference", SH_LIKE, SRC_MEM, MK_V "${", NULL, NULL, 0, 0, 0, NULL, NULL, NULL}
 };
 /* clang-format on */
 
@@ -339,6 +345,9 @@ static const char* mk_secret_key(mk_shape shape) {
     if (shape == SH_OLD || shape == SH_OLD_MAXLEN) {
         return "db.pass";
     }
+    if (shape == SH_LIKE) {
+        return "sec.vx";
+    }
     return "sec.v";
 }
 
@@ -377,6 +386,11 @@ static void mk_define(cf_builder* b, const mk_scn* s, cf_bool lenient) {
         return;
     }
 
+    if (s->shape == SH_LIKE) {
+        /* The secret is sec.v; the marker is written under sec.vx. */
+        cf_builder_text(b, "sec.v", NULL, CF_SENSITIVE);
+        return;
+    }
     cf_def_init(&d, CF_TYPE_TEXT, mk_secret_key(s->shape));
     d.flags      = CF_SENSITIVE;
     d.on_invalid = lenient ? CF_INVALID_FALLBACK : CF_INVALID_STRICT;

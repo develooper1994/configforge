@@ -99,6 +99,7 @@ gets reopened every six months.
 | D-81 | A reader's name table is seeded a decode | formats, security | **Decided** |
 | D-82 | What one document may make is bounded, in the flattener | formats, security | **Decided** |
 | D-83 | A directory others can write to is not read as secrets | secrets, drop-in, platform, security | **Decided** |
+| D-84 | An undefined key named like a secret is kept as one | secrets, security, reports | **Decided** |
 | D-91 | CBOR, the JSON model in binary | formats | **Decided** |
 | D-97 | What kind of format a codec is, told to the program | formats | **Decided** |
 
@@ -3425,6 +3426,51 @@ the program's own file, a 0666 file, 0775 of the owner's own group - a
 root, a stranger's file in a sticky directory; on Windows, a drop-in
 directory asking `CF_TRUSTED_DIR` is refused for what the platform
 cannot say. The whole suite passes under umask 002.
+
+---
+
+## D-84 — An undefined key named like a secret is kept as one
+
+**Question.** Nothing can know that `db.pasword` is a secret: nobody
+defined it. It is the commonest way a secret is written where nothing
+knows it is one, and every output then shows it in clear - the blind
+report, `explain()`, a diff, a malformed reference's reason. What should
+a report show of an undefined key that may be a secret?
+
+**Options.**
+
+1. Nothing changes; the gap is written in Safety.md as the one place a
+   secret is shown.
+2. A key with no definition whose nearest defined key, at the distance
+   "did you mean" uses (`cf_defset_nearest`: a third of the key, 1 to 4
+   edits), is `CF_SENSITIVE` is treated as that secret. A plain key one
+   edit from a secret's name is hidden too.
+3. Every undefined key's value is hidden whenever the contract has any
+   sensitive key. Rejected: a typo of a plain key loses its value from
+   every report, which is where a person looks to see what was mistyped.
+
+**Decision.** Option 2 (the maintainer's answer, 2026-11-12). Its value
+is not shown in a blind report, `explain()`, a diff, a refusal's reason
+or Doctor's output, and the fingerprint takes its digest. `cf_defs_apply`
+decides once, in its branch for an entry with no definition, and marks
+every candidate `CF_CAND_SECRET_LIKE`; a key under an open prefix is a
+plugin's, not a typo, and is never marked. `cfi_defset_nearest_secret`
+compares only the secrets, so an undefined key costs as many comparisons
+as there are secrets. `cfi_entry_secret` is the one predicate `explain`,
+`diff`, the fingerprint and the report read. A report writes
+`"like": "<the secret's key>"` beside `"definition": null` - a key name,
+not a value; schema 1 holds, as an added field. Doctor reads it: such a
+key is sensitive there, so its output hides the value and compares by
+digest. An unknown key's refusal under `CF_UNKNOWN_REJECT` names keys
+only and is unchanged.
+
+**Compatibility.** A blind report, an explanation and a diff of such a
+key show a digest or nothing where they showed its value; a fingerprint
+of a configuration holding one changes once.
+
+**Held to.** `test_secretlike` (report, explanation, diff, fingerprint,
+a malformed reference, an open prefix), a scenario row in `test_marker`,
+and `doctor.secrets` on a blind report of the same.
 
 ---
 

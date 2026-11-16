@@ -95,6 +95,11 @@ entries. Their definition metadata adds a `list` object with `key`,
 default follows its actual default candidate, not its final appended
 index. Sensitive defaults are absent from blind reports.
 
+A key nobody defined whose name is a typo of a sensitive key's (D-84) is
+kept as that secret: its entry has `like`, the name of the secret it
+looks like, beside `"definition": null`, its blind candidates carry a
+digest and no value, and Doctor treats it as sensitive.
+
 Candidates moved by append merging carry `written_key`, their original
 source-local key. Aggregate counts have `synthesized: true`: they are not
 another assignment or a duplicate exposure by that source. A running

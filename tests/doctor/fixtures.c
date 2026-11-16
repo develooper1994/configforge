@@ -320,6 +320,39 @@ static int emit_kinds(const char* out) {
     return spill(out, buf) ? 0 : 1;
 }
 
+/* A blind report of a contract with db.password (CF_SENSITIVE) and
+   db.host, whose source writes db.pasword, a typo of the secret, holding a
+   marker (D-84): the library keeps it as that secret, and Doctor must too. */
+static int emit_like(const char* out) {
+    static cf_pair raw[2];
+    cf_error       err = CF_ERROR_INIT;
+    cf_builder*    b   = cf_build(NULL);
+    cf_config*     c;
+    cf_report_info info = CF_REPORT_INFO_INIT;
+    static char    buf[65536];
+
+    raw[0].key   = "db.pasword";
+    raw[0].value = "MARKER-LIKE-7731";
+    raw[1].key   = "db.hots";
+    raw[1].value = "plain-host-value";
+    cf_builder_memory(b, "mem", CF_RANK_USER_FILE, raw, 2);
+    cf_builder_text(b, "db.password", NULL, CF_SENSITIVE);
+    cf_builder_text(b, "db.host", NULL, 0);
+    cf_builder_unknown(b, CF_UNKNOWN_IGNORE);
+    c = cf_builder_create(b, &err);
+    if (c == NULL) {
+        fprintf(stderr, "fixtures: %s: %s\n", out, err.message);
+        return 1;
+    }
+    info.mode        = CF_REPORT_BLIND;
+    info.profile     = "production";
+    info.application = "myapp";
+    info.generated   = "2026-09-12T00:00:00Z";
+    cf_report(c, &info, buf, sizeof buf);
+    cf_config_free(c);
+    return spill(out, buf) ? 0 : 1;
+}
+
 /* Ends the first string that follows `field` in the report `buf` with a
    line break and a GitHub workflow command, as a report written by
    hand, or by a library with a bug, could. Zero when the field is not
@@ -641,6 +674,10 @@ int main(void) {
 
     if (emit_marker("cf_fx_marker_a.json", "MRKA7731XQ", "77317731") ||
         emit_marker("cf_fx_marker_b.json", "MRKB7731XQ", "77327732")) {
+        return 1;
+    }
+
+    if (emit_like("cf_fx_like.json")) {
         return 1;
     }
 

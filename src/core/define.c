@@ -867,6 +867,61 @@ static size_t edit_distance(const char* a, size_t alen, const char* b, size_t bl
     return prev[blen];
 }
 
+/* A third of the key, capped. Suggesting something four edits away
+   is not a suggestion, it is noise. */
+static size_t nearest_cutoff(size_t keylen) {
+    size_t cutoff = keylen / 3;
+    if (cutoff < 1) {
+        cutoff = 1;
+    }
+    if (cutoff > 4) {
+        cutoff = 4;
+    }
+    return cutoff;
+}
+
+const cf_def* cfi_defset_nearest_secret(const cf_defset* ds, const char* key,
+                                        size_t keylen) {
+    const cf_def* best   = NULL;
+    size_t        cutoff;
+    size_t        best_d;
+    size_t        i;
+
+    if (ds == NULL || key == NULL || keylen == 0 || cf_defset_is_open(ds, key, keylen)) {
+        return NULL;
+    }
+    cutoff = nearest_cutoff(keylen);
+    best_d = cutoff + 1;
+    for (i = 0; i < ds->count; ++i) {
+        const char* k = ds->defs[i].key;
+        size_t      d;
+        if ((ds->defs[i].flags & CF_SENSITIVE) == 0) {
+            continue;
+        }
+        d = edit_distance(key, keylen, k, strlen(k), cutoff);
+        if (d < best_d) {
+            best_d = d;
+            best   = &ds->defs[i];
+        }
+    }
+    return best;
+}
+
+cf_bool cfi_entry_secret(const cf_defset* ds, const cf_entry* e) {
+    const cf_def* d;
+
+    if (ds == NULL || e == NULL) {
+        return CF_FALSE;
+    }
+    d = cf_defset_find(ds, e->key, e->keylen);
+    if (d != NULL) {
+        return ((d->flags & CF_SENSITIVE) != 0) ? CF_TRUE : CF_FALSE;
+    }
+    return (e->chain != NULL && (e->chain->flags & CF_CAND_SECRET_LIKE) != 0)
+               ? CF_TRUE
+               : CF_FALSE;
+}
+
 const cf_def* cf_defset_nearest(const cf_defset* ds, const char* key, size_t keylen,
                                 size_t* distance) {
     const cf_def* best   = NULL;
@@ -877,15 +932,7 @@ const cf_def* cf_defset_nearest(const cf_defset* ds, const char* key, size_t key
     if (ds == NULL || key == NULL || keylen == 0) {
         return NULL;
     }
-    /* A third of the key, capped. Suggesting something four edits away
-       is not a suggestion, it is noise. */
-    cutoff = keylen / 3;
-    if (cutoff < 1) {
-        cutoff = 1;
-    }
-    if (cutoff > 4) {
-        cutoff = 4;
-    }
+    cutoff = nearest_cutoff(keylen);
     best_d = cutoff + 1;
 
     for (i = 0; i < ds->count; ++i) {
@@ -949,15 +996,13 @@ cf_u64 cf_defset_fingerprint(const cf_defset* ds, const cf_keyspace* ks) {
 
     for (i = 0; i < cf_ks_count(ks); ++i) {
         const cf_entry* e = cf_ks_at(ks, i);
-        const cf_def*   d;
         const char*     text;
         size_t          n;
 
         if (e == NULL || e->selected == NULL) {
             continue;
         }
-        d = (ds != NULL) ? cf_defset_find(ds, e->key, e->keylen) : NULL;
-        if (d != NULL && (d->flags & CF_SENSITIVE) != 0) {
+        if (cfi_entry_secret(ds, e)) {
             n    = cf_ks_digest_text(cf_ks_value_digest(&e->selected->value), buf,
                                      sizeof buf);
             text = buf;

@@ -1115,6 +1115,12 @@ cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names*
         if (d == NULL) {
             cf_candidate* c;
             ++report->unknown;
+            /* A typo of a secret's name is kept as that secret (D-84). */
+            if (cfi_defset_nearest_secret(ds, e->key, e->keylen) != NULL) {
+                for (c = e->chain; c != NULL; c = c->next) {
+                    c->flags |= CF_CAND_SECRET_LIKE;
+                }
+            }
             /* No contract, so Tier 0 inference decides. Doing it here
                rather than in the source is what lets a declared type
                win over a guess. */
@@ -1122,11 +1128,12 @@ cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names*
                 cf_value   v;
                 char       why[CF_MESSAGE_MAX];
                 cf_refusal kind = CF_REFUSAL_NONE; /* no candidate to carry it */
+                cf_bool    like = ((c->flags & CF_CAND_SECRET_LIKE) != 0);
                 /* No definition, so no fallback to ask for: the
                    reserved syntax fails construction, as any invalid
                    value does by default (D-05). */
                 if (cf_outcome_can_win(c->outcome) &&
-                    reference_syntax(cf_ks_arena(ks), c, CF_FALSE, why, sizeof why,
+                    reference_syntax(cf_ks_arena(ks), c, like, why, sizeof why,
                                      &kind) != NULL) {
                     return cf_error_set(err, CF_E_VALIDATE, e->key,
                                         (c->at != NULL) ? c->at : "", "%s: %s", e->key,

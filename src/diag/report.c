@@ -193,8 +193,10 @@ static void report_candidate(cf_sink* out, const cf_candidate* c,
                              cf_report_mode mode, const cf_keyspace* ks) {
     const cf_source* s        = source_of(sv, c->source);
     const char*      original = cf_ks_original_key(ks, c);
-    cf_bool          redact =
-        (mode == CF_REPORT_BLIND) && d != NULL && (d->flags & CF_SENSITIVE) != 0;
+    cf_bool          defined = (d != NULL && (d->flags & CF_SENSITIVE) != 0);
+    cf_bool          like    = (d == NULL && (c->flags & CF_CAND_SECRET_LIKE) != 0);
+    cf_bool          secret  = (defined || like);
+    cf_bool          redact  = (mode == CF_REPORT_BLIND) && (secret);
 
     cf_sink_puts(out, "{ \"source\": ");
     report_quote_z(out, (s != NULL) ? s->name : "?");
@@ -308,6 +310,18 @@ static void report_key(cf_sink* out, const cf_keyspace* ks, const cf_entry* e,
     }
     cf_sink_fmt(out, "{\n%s  \"definition\": ", indent);
     report_definition(out, d, list, mode);
+    /* A key nobody defined, kept as the secret its name is a typo of
+       (D-84): which one, a key name and not a value. An added field. */
+    if (d == NULL && e != NULL && e->chain != NULL &&
+        (e->chain->flags & CF_CAND_SECRET_LIKE) != 0) {
+        const cf_def* like = cfi_defset_nearest_secret(ds, e->key, e->keylen);
+        if (like != NULL) {
+            cf_sink_puts(out, ",\n");
+            cf_sink_puts(out, indent);
+            cf_sink_puts(out, "  \"like\": ");
+            report_quote_z(out, like->key);
+        }
+    }
     cf_sink_fmt(out, ",\n%s  \"candidates\": [", indent);
 
     /* Nothing is dropped from the chain: a shadowed or refused

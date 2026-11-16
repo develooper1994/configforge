@@ -61,8 +61,7 @@ static size_t explain_value(char* buf, size_t cap, size_t at, const cf_value* v,
 }
 
 static cf_bool is_secret(const cf_defset* ds, const cf_entry* e) {
-    const cf_def* d = (ds != NULL) ? cf_defset_find(ds, e->key, e->keylen) : NULL;
-    return (d != NULL && (d->flags & CF_SENSITIVE) != 0) ? CF_TRUE : CF_FALSE;
+    return cfi_entry_secret(ds, e);
 }
 
 static size_t explain_entry(const cf_keyspace* ks, const cf_entry* e,

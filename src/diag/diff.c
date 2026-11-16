@@ -98,6 +98,13 @@ size_t cf_diff(const cf_config* before, const cf_config* after, cf_diff_fn fn,
     return changes;
 }
 
+/* Whether the key is a secret in `c`: the entry the key is of, by the
+   predicate every output uses (D-84). The walk above passes the key, not
+   the entry, so it is found again here in the keyspace it came from. */
+static cf_bool diff_secret(const cf_config* c, const char* key, size_t klen) {
+    return cfi_entry_secret(cf_defs(c), cf_ks_find(cf_keys(c), key, klen));
+}
+
 /* ------------------------------------------------------------------ *
  * As text
  * ------------------------------------------------------------------ */
@@ -154,10 +161,8 @@ static void diff_put_origin(diff_text* t, const cf_config* c, const cf_candidate
 
 static cf_bool diff_line(void* ctx, const char* key, size_t klen, cf_change kind,
                          const cf_candidate* before, const cf_candidate* after) {
-    diff_text*    t = (diff_text*)ctx;
-    const cf_def* d =
-        cf_defset_find(cf_defs(kind == CF_CHANGE_REMOVED ? t->a : t->b), key, klen);
-    cf_bool secret = (d != NULL && (d->flags & CF_SENSITIVE) != 0) ? CF_TRUE : CF_FALSE;
+    diff_text* t = (diff_text*)ctx;
+    cf_bool    secret = diff_secret(kind == CF_CHANGE_REMOVED ? t->a : t->b, key, klen);
 
     t->at = cf_fmt_append(t->buf, t->cap, t->at, "%S: ", key, klen);
     switch (kind) {
@@ -227,9 +232,7 @@ static cf_bool diff_json_line(void* ctx, const char* key, size_t klen, cf_change
                               const cf_candidate* before, const cf_candidate* after) {
     static const char* const kinds[] = {"added", "removed", "value", "origin"};
     diff_json*               j       = (diff_json*)ctx;
-    const cf_def*            d =
-        cf_defset_find(cf_defs(kind == CF_CHANGE_REMOVED ? j->a : j->b), key, klen);
-    cf_bool secret = (d != NULL && (d->flags & CF_SENSITIVE) != 0) ? CF_TRUE : CF_FALSE;
+    cf_bool secret = diff_secret(kind == CF_CHANGE_REMOVED ? j->a : j->b, key, klen);
 
     cf_sink_puts(&j->out, "{\"key\": ");
     cf_sink_json_string(&j->out, key, klen);

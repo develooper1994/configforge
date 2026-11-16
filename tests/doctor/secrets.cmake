@@ -60,7 +60,10 @@ set(runs
     "dump|${a}"
     "explain|${a}|db.password"
     "explain|${a}|api.pin"
-    "explain|${b}|api.seed")
+    "explain|${b}|api.seed"
+    "lint|cf_fx_like.json|--fail-on|never"
+    "dump|cf_fx_like.json"
+    "explain|cf_fx_like.json|db.pasword")
 foreach(run IN LISTS runs)
   string(REPLACE "|" ";" argv "${run}")
   doctor_run(${argv})
@@ -96,6 +99,11 @@ foreach(run IN LISTS runs)
     if(NOT all MATCHES "rejected[^\n]*invalid")
       fail("doctor ${run} did not give the refusal's reason as a fixed word")
     endif()
+  endif()
+  # A blind report's fingerprint is recomputed by the digest the report
+  # carries for a key kept as a secret (D-84): never a mismatch.
+  if(run MATCHES "^lint\\|cf_fx_like" AND all MATCHES "CFD019")
+    fail("doctor ${run} reported CFD019")
   endif()
   if(run MATCHES "^history" AND NOT all MATCHES
                                 "HISTORY[^\n]*db.password[^\n]*\\(by digest\\)")

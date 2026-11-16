@@ -640,7 +640,7 @@ whose size changes while it is read is still read whole.
 
 ### From the security pass of 2026-11-11
 
-* 🟨 **A marker-secret gate.** One test drives a marker secret through
+* 🟩 **A marker-secret gate.** One test drives a marker secret through
   every refusal path and every output and fails if the marker appears.
   Built for the library: `test_marker`, 46 scenarios, strict and with
   fallback, from eight kinds of source, over the error, `explain()`,
@@ -650,9 +650,8 @@ whose size changes while it is read is still read whole.
   reference (`${MARK`), not before it, or the wording that leaks is
   never reached. Doctor is held to it by `doctor.marker`: every
   command in every format over a pair of full reports that hold the
-  marker in each state. Left: an undefined key that holds a secret (a
-  mistyped name), which nothing can know is one - decide what a report
-  shows for it (the plan, the hardening cards).
+  marker in each state. An undefined key named like a secret is kept
+  as one (D-84).
 * 🟩 **A per-decode output budget** (D-82, `test_budget`), in bytes and keys, enforced in the
   flattener so that every codec inherits one bound instead of each
   reader keeping its own. Done when a hostile document of each format

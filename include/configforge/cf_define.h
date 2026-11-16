@@ -283,6 +283,17 @@ CF_API const cf_def* cf_defset_at(const cf_defset* ds, size_t i);
 CF_API const cf_def* cf_defset_nearest(const cf_defset* ds, const char* key,
                                        size_t keylen, size_t* distance);
 
+/* The CF_SENSITIVE definition nearest `key` within the cutoff
+   cf_defset_nearest uses, or NULL. Only the secrets are compared, so
+   an undefined key costs as many comparisons as there are secrets,
+   not keys. Internal (D-84). */
+const cf_def* cfi_defset_nearest_secret(const cf_defset* ds, const char* key,
+                                        size_t keylen);
+
+/* Whether `e` is shown as a secret: its definition is CF_SENSITIVE,
+   or it has none and is marked CF_CAND_SECRET_LIKE. Internal. */
+cf_bool cfi_entry_secret(const cf_defset* ds, const cf_entry* e);
+
 /* ------------------------------------------------------------------ *
  * Applying the contract
  *

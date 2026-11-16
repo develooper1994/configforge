@@ -7,6 +7,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Security
 
+- **A mistyped secret is kept as a secret**: a key nobody defined, a
+  typo's distance from a key defined `CF_SENSITIVE` (`db.pasword` beside
+  `db.password`), is shown, explained, diffed and fingerprinted as that
+  secret is, and a report names the secret it looks like (D-84).
+
 - **A secrets directory others can write to is refused** (D-83): a
   directory, or a file in it, that a user other than its owner and root
   can change is an error naming it; Kubernetes' and Docker's mounts and

@@ -118,6 +118,11 @@ CF_API cf_bool cf_outcome_can_win(cf_outcome o);
 /* A running restart-only list, held as one resolved snapshot. */
 #define CF_CAND_PINNED 256u
 
+/* A candidate of a key nobody defined, whose name is a typo's distance
+   from a key defined CF_SENSITIVE (D-84): shown, reasoned about and
+   fingerprinted as that secret is. Set by cf_defs_apply. */
+#define CF_CAND_SECRET_LIKE 512u
+
 typedef struct cf_candidate {
     int                  source; /* precedence rank; lower wins      */
     unsigned             flags;
