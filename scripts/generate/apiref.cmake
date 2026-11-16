@@ -110,6 +110,7 @@ function(
   declarations
   comment
   internal
+  since
   out)
   string(REPLACE ";" "\n" g "${declarations}")
   restore("${g}" g)
@@ -121,6 +122,13 @@ function(
       "Internal (`CF_INTERNAL_API`): exported for the "
       "library's own layers, Doctor and the tests, outside the 1.x "
       "promise; a program does not see it.\n\n")
+  endif()
+  if(NOT since STREQUAL "")
+    string(
+      APPEND
+      rendered
+      "Experimental since ${since}: outside the 1.x promise until the next "
+      "minor release makes it promised or removes it.\n\n")
   endif()
   set(links "")
   foreach(declaration IN LISTS declarations)
@@ -153,12 +161,17 @@ string(
   "comment written above it, under the section of the header it is\n"
   "in; the types are in the headers themselves. Implementation links\n"
   "open the source on `main`, with platform variants listed together.\n\n"
-  "Semantic versioning covers every function not marked Internal\n"
-  "(D-56). The internal tier (D-51, D-88) is declared only where\n"
-  "`CF_INTERNAL_API` is 1 - the library's own build, Doctor's and the\n"
-  "tests' - so a program does not compile against it. The flags a\n"
-  "definition takes are bits 0-15 and a source's bits 16 and up; an\n"
-  "unknown bit is refused by name.\n\n"
+  "## What 1.x promises\n\n"
+  "Three tiers. **Promised**: every function not marked otherwise\n"
+  "below; semantic versioning holds it (D-56) - within 1.x a program\n"
+  "built against an earlier release links and runs against a later\n"
+  "one. **Experimental**: marked so, with the release it came in;\n"
+  "exported, and outside the promise until the next minor release,\n"
+  "which makes it promised or removes it (D-89). **Internal**: marked\n"
+  "so; declared only where `CF_INTERNAL_API` is 1, the library's own\n"
+  "build, Doctor's and the tests' (D-51, D-88); free to change in any\n"
+  "release. The flags a definition takes are bits 0-15 and a source's\n"
+  "bits 16 and up; an unknown bit is refused by name.\n\n"
   "A struct the caller fills and the library reads - `cf_error`,\n"
   "`cf_def`, `cf_live_options`, `cf_live_status`, `cf_log_event`,\n"
   "`cf_report_info` and Doctor's `cf_doctor_gate` - begins with\n"
@@ -210,6 +223,7 @@ foreach(h ${names})
   set(group "")
   set(group_comment "")
   set(group_internal FALSE)
+  set(group_since "")
   set(fence_stack "")
   set(body "")
   set(count 0)
@@ -254,7 +268,8 @@ foreach(h ${names})
     if(l MATCHES "^[ \t]*/\\*")
       # A new comment ends any group the previous one introduced.
       if(group)
-        render_group("${group}" "${group_comment}" "${group_internal}" rendered)
+        render_group("${group}" "${group_comment}" "${group_internal}"
+                     "${group_since}" rendered)
         string(APPEND body "${rendered}")
         set(group "")
       endif()
@@ -267,15 +282,24 @@ foreach(h ${names})
       endif()
       continue()
     endif()
-    if(l MATCHES "^(CF_NODISCARD[ \t]+)?CF_(DOCTOR_)?API[ \t]")
+    if(l MATCHES
+       "^(CF_NODISCARD[ \t]+)?(CF_(DOCTOR_)?API[ \t]|CF_EXPERIMENTAL\\([0-9]+, *[0-9]+\\)[ \t])"
+    )
+      # The release an experimental declaration came in, or nothing.
+      set(here_since "")
+      if(l MATCHES "CF_EXPERIMENTAL\\(([0-9]+), *([0-9]+)\\)")
+        set(here_since "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}")
+      endif()
       # Inside the fence or not, as the open conditionals say now; a group
       # does not straddle the fence's edge.
       set(here_internal FALSE)
       if("internal" IN_LIST fence_stack)
         set(here_internal TRUE)
       endif()
-      if(group AND NOT here_internal STREQUAL group_internal)
-        render_group("${group}" "${group_comment}" "${group_internal}" rendered)
+      if(group AND (NOT here_internal STREQUAL group_internal
+                    OR NOT here_since STREQUAL group_since))
+        render_group("${group}" "${group_comment}" "${group_internal}"
+                     "${group_since}" rendered)
         string(APPEND body "${rendered}")
         set(group "")
         set(comment "")
@@ -283,6 +307,7 @@ foreach(h ${names})
       if(NOT group)
         set(group_comment "${comment}")
         set(group_internal "${here_internal}")
+        set(group_since "${here_since}")
         set(comment "")
       endif()
       math(EXPR count "${count} + 1")
@@ -315,7 +340,8 @@ foreach(h ${names})
       continue() # a declaration under a feature test still belongs
     endif()
     if(group)
-      render_group("${group}" "${group_comment}" "${group_internal}" rendered)
+      render_group("${group}" "${group_comment}" "${group_internal}"
+                     "${group_since}" rendered)
       string(APPEND body "${rendered}")
       set(group "")
     endif()

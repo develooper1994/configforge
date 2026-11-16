@@ -253,6 +253,12 @@ typedef int cf_bool;
 #define CF_INTERNAL_API 0
 #endif
 
+/* A function in its first minor release (D-89): exported as CF_API is,
+   and outside the 1.x promise until the next minor release, which makes
+   it CF_API or removes it. `major` and `minor` are the release it came
+   in; gate.abi fails once the version has moved past it. */
+#define CF_EXPERIMENTAL(major, minor) CF_API
+
 /* ------------------------------------------------------------------ *
  * Compile-time assertion
  *

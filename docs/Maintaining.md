@@ -67,6 +67,9 @@ carries no version of its own.
   "### Changed" with its D-number.
 * **Major**: 2.0.0, once, when everything in the plan is done. What
   breaks the 1.x promise waits for it and is done together.
+* **Experimental** (`CF_EXPERIMENTAL`): a function may come in outside
+  the promise for its first minor; the card that opens the next minor
+  makes it `CF_API` or removes it - `gate.abi` fails until one is done.
 * A new item of work joins the milestone it belongs to; it does not
   make a new version number. Only the maintainer adds or moves a
   milestone.
