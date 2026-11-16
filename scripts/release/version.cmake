@@ -64,6 +64,14 @@ rewrite(
   "#define CF_VERSION_MINOR ${minor}"
   "#define CF_VERSION_PATCH [0-9]+"
   "#define CF_VERSION_PATCH ${patch}")
+rewrite(
+  include/configforge/cf_serialize_version.h
+  "#define CF_SERIALIZE_VERSION_MAJOR [0-9]+"
+  "#define CF_SERIALIZE_VERSION_MAJOR ${major}"
+  "#define CF_SERIALIZE_VERSION_MINOR [0-9]+"
+  "#define CF_SERIALIZE_VERSION_MINOR ${minor}"
+  "#define CF_SERIALIZE_VERSION_PATCH [0-9]+"
+  "#define CF_SERIALIZE_VERSION_PATCH ${patch}")
 rewrite(packaging/vcpkg/configforge/vcpkg.json "\"version\": \"[^\"]*\""
         "\"version\": \"${TO}\"")
 # The bindings' packages, whose tools read only their own manifests.

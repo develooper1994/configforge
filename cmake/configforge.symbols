@@ -197,6 +197,8 @@ cf_report_key_write
 cf_report_write
 cf_schema
 cf_schema_write
+cf_serialize_version
+cf_serialize_version_number
 cf_sink_fmt
 cf_sink_init
 cf_sink_json_string

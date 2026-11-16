@@ -2,6 +2,8 @@
 #
 #   cmake -DSRC=<repo> [-DLIB=<library>] [-DWITH_REAL=ON] -P GateAbi.cmake
 #   cmake -DSRC=<repo> -DWRITE=ON -P GateAbi.cmake      rewrite the lists
+#   cmake -DSRC=<repo> -DPART=serialize [-DLIB=<library>] -P GateAbi.cmake
+#                                  the serialization library (D-90), below
 #
 # cmake/configforge.symbols names every promised CF_API function, one a
 # line, and "name real" for one that exists only with CF_WITH_REAL. The
@@ -47,10 +49,39 @@ set(internal_file "${SRC}/cmake/configforge.internal.symbols")
 set(experimental_file "${SRC}/cmake/configforge.experimental.symbols")
 include("${SRC}/cmake/ConfigForgeVersion.cmake")
 
+# The serialization library, libconfigforge_serialize (D-90), is checked on
+# its own with -DPART=serialize: the headers it is made of
+# (cmake/ConfigForgeSerialize.cmake), its own list of the promised functions
+# (cmake/configforge_serialize.symbols), and its own file as -DLIB. It has
+# no internal or experimental list of its own: the names of those lists that
+# its headers declare are allowed in what it exports. Every name it
+# promises is in configforge.symbols too, since libconfigforge carries all
+# of it.
+if(NOT DEFINED PART)
+  set(PART "")
+endif()
+set(list_name "cmake/configforge.symbols")
+if(PART STREQUAL "serialize")
+  include("${SRC}/cmake/ConfigForgeSerialize.cmake")
+  set(list_file "${SRC}/cmake/configforge_serialize.symbols")
+  set(list_name "cmake/configforge_serialize.symbols")
+elseif(NOT PART STREQUAL "")
+  message(FATAL_ERROR "gate.abi: PART is serialize or empty, not \"${PART}\"")
+endif()
+
 # Every CF_API name in the headers, "name" or "name real": the promised
 # ones in `declared`, the ones inside #if CF_INTERNAL_API in
 # `declared_internal`.
-file(GLOB headers "${SRC}/include/configforge/*.h")
+if(PART STREQUAL "serialize")
+  set(headers "")
+  foreach(h ${CF_SERIALIZE_HEADERS})
+    if(EXISTS "${SRC}/include/configforge/${h}")
+      list(APPEND headers "${SRC}/include/configforge/${h}")
+    endif()
+  endforeach()
+else()
+  file(GLOB headers "${SRC}/include/configforge/*.h")
+endif()
 list(SORT headers)
 set(declared "")
 set(declared_internal "")
@@ -106,6 +137,24 @@ endforeach()
 list(SORT declared)
 list(SORT declared_internal)
 list(SORT declared_experimental)
+
+if(WRITE AND PART STREQUAL "serialize")
+  string(REPLACE ";" "\n" body "${declared}")
+  set(text "# The public interface of libconfigforge_serialize: every CF_API ")
+  string(APPEND text "function of its headers.\n")
+  string(APPEND text
+         "# Checked by gate.abi.serialize against the headers and the built "
+         "library;\n")
+  string(APPEND text "# rewrite with cmake -DSRC=. -DPART=serialize -DWRITE=ON "
+         "-P cmake/gates/GateAbi.cmake.\n")
+  string(APPEND text "# Every name is in configforge.symbols too; its internal "
+         "and experimental names are in those lists (D-90).\n")
+  string(APPEND text "${body}\n")
+  configforge_write_lf("${list_file}" "${text}")
+  list(LENGTH declared n)
+  message("abi: ${n} symbols written to ${list_file}")
+  return()
+endif()
 
 if(WRITE)
 
@@ -163,18 +212,35 @@ set(bad 0)
 foreach(d ${declared})
   if(NOT d IN_LIST listed)
     message("VIOLATION: '${d}' is declared CF_API and not in "
-            "cmake/configforge.symbols: add it, as a new public symbol")
+            "${list_name}: add it, as a new public symbol")
     set(bad 1)
   endif()
 endforeach()
 foreach(s ${listed})
   if(NOT s IN_LIST declared)
-    message("VIOLATION: '${s}' is in cmake/configforge.symbols and not "
+    message("VIOLATION: '${s}' is in ${list_name} and not "
             "declared as a promised function: removing a public function "
             "breaks every program built against it")
     set(bad 1)
   endif()
 endforeach()
+# The serialization library's names are all libconfigforge's too, and its
+# internal and experimental names are in the lists of those tiers: there are
+# no lists of its own for them, so only these directions are read.
+if(PART STREQUAL "serialize")
+  file(STRINGS "${SRC}/cmake/configforge.symbols" all_listed REGEX "^[a-z_]")
+  foreach(s ${listed})
+    if(NOT s IN_LIST all_listed)
+      message("VIOLATION: '${s}' is in the serialization library and not in "
+              "libconfigforge (cmake/configforge.symbols): libconfigforge "
+              "carries all of it")
+      set(bad 1)
+    endif()
+  endforeach()
+  set(internal_to_scan "")
+else()
+  set(internal_to_scan ${listed_internal})
+endif()
 foreach(d ${declared_internal})
   if(NOT d IN_LIST listed_internal)
     message("VIOLATION: '${d}' is declared CF_API under CF_INTERNAL_API and "
@@ -182,7 +248,7 @@ foreach(d ${declared_internal})
     set(bad 1)
   endif()
 endforeach()
-foreach(s ${listed_internal})
+foreach(s ${internal_to_scan})
   if(NOT s IN_LIST declared_internal)
     message("VIOLATION: '${s}' is in cmake/configforge.internal.symbols and "
             "not declared under CF_INTERNAL_API")
@@ -212,7 +278,12 @@ foreach(d ${declared_experimental})
     set(bad 1)
   endif()
 endforeach()
-foreach(s ${listed_experimental})
+if(PART STREQUAL "serialize")
+  set(experimental_to_scan "")
+else()
+  set(experimental_to_scan ${listed_experimental})
+endif()
+foreach(s ${experimental_to_scan})
   if(NOT s MATCHES "^([a-z_][a-z0-9_]*) ([0-9]+)\\.([0-9]+)( real)?$")
     message("VIOLATION: '${s}' in cmake/configforge.experimental.symbols is "
             "not \"name major.minor\"")
@@ -241,6 +312,20 @@ foreach(s ${listed_experimental})
   endif()
 endforeach()
 
+# What the library has to define besides the promised names: the internal and
+# experimental names its headers declare, which for the serialization library
+# are read from the headers (the lists are libconfigforge's).
+if(PART STREQUAL "serialize")
+  set(library_internal ${declared_internal})
+  foreach(d ${declared_experimental})
+    string(REGEX REPLACE "^([a-z_][a-z0-9_]*) [0-9]+\\.[0-9]+( real)?$" "\\1\\2"
+                         plain "${d}")
+    list(APPEND listed_experimental_plain "${plain}")
+  endforeach()
+else()
+  set(library_internal ${listed_internal})
+endif()
+
 # The library, where there is an nm to read it with.
 find_program(NM_EXE nm)
 if(LIB AND NM_EXE)
@@ -256,7 +341,7 @@ if(LIB AND NM_EXE)
     endif()
   endforeach()
   set(names "")
-  foreach(s ${listed} ${listed_internal} ${listed_experimental_plain})
+  foreach(s ${listed} ${library_internal} ${listed_experimental_plain})
     string(REGEX REPLACE " real$" "" name "${s}")
     if(s MATCHES " real$" AND NOT WITH_REAL)
       continue()

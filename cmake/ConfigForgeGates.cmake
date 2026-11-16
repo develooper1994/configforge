@@ -104,6 +104,15 @@ function(configforge_add_gates tgt)
       ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR}
       -DLIB=$<TARGET_LINKER_FILE:${tgt}> -DWITH_REAL=${CF_WITH_REAL} -P
       ${CMAKE_SOURCE_DIR}/cmake/gates/GateAbi.cmake)
+  # The serialization library's own list (D-90): its promised functions,
+  # every one of them libconfigforge's too, and what its library defines.
+  add_test(
+    NAME gate.abi.serialize
+    COMMAND
+      ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DPART=serialize
+      -DLIB=$<TARGET_LINKER_FILE:configforge_serialize>
+      -DWITH_REAL=${CF_WITH_REAL} -P
+      ${CMAKE_SOURCE_DIR}/cmake/gates/GateAbi.cmake)
   add_test(
     NAME gate.sbom
     COMMAND

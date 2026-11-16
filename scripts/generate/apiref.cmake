@@ -181,7 +181,13 @@ string(
   "In C11 and later `configforge.h` also has `cf_get(cfg, key, &out)`,\n"
   "a macro typed by `out` - `int`, `long`, `long long`, `_Bool`,\n"
   "`const char*`, and `double` where `CF_WITH_REAL` is on - that calls\n"
-  "the matching `cf_get_*` below; C++ has `get<T>` instead.\n\n")
+  "the matching `cf_get_*` below; C++ has `get<T>` instead.\n\n"
+  "**The serialization library**, `configforge_serialize`, is made of\n"
+  "the headers `cf_port.h`, `cf_error.h`, `cf_numeric.h`, `cf_value.h`,\n"
+  "`cf_alloc.h`, `cf_platform_file.h`, `cf_serialize.h` and\n"
+  "`cf_serialize_version.h`, and holds their functions to the same three\n"
+  "tiers; `libconfigforge` carries every one of them, so a program links\n"
+  "one library or the other, never both.\n\n")
 
 # The error codes, from the one list every other place takes them from,
 # so the table cannot name a code the library does not have.
