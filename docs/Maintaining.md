@@ -19,8 +19,10 @@ says, as `docs/Roadmap.md` is.
 * **Complete the agreed work before publishing.** 1.0.0 was released
   on 2026-11-01 with known defects and unfinished work; that was not
   completion. Deferred work stays open, and the next release waits for
-  the agreed scope and its checks. A fix is a patch and an addition a
-  minor version; the plan is `docs/Roadmap.md`, "Next: 1.x".
+  the agreed scope and its checks. A fix to a released
+  version is a patch and an addition joins its milestone, a minor
+  version once the milestone is done ("Versions", below); the plan is
+  `docs/Roadmap.md`, "Next: 1.x".
 * **GitHub Actions runs again** (2026-11-01; billing blocked it through
   2026-10): the v1.0.0 tag was built and published by the release
   workflow, macOS included. Every job is still run locally before a
@@ -34,6 +36,58 @@ says, as `docs/Roadmap.md` is.
   The read side is D-33, the write side D-42 (`cf_write`). Still open:
   automatic propagation to several targets (sections 23-24) and a
   policy file (section 12).
+
+## Versions
+
+**How one is written.** `MAJOR.MINOR.PATCH`, semantic versioning. The
+number is written by hand in one place, `include/configforge/cf_version.h`
+(`CF_VERSION_MAJOR`, `_MINOR`, `_PATCH`); CMake and the Conan recipe read
+it. `cmake -DTO=x.y.z -P scripts/release/version.cmake` rewrites it, and
+the copies that cannot read it: `packaging/vcpkg/configforge/vcpkg.json`,
+`bindings/rust/Cargo.toml` and its `Cargo.lock`, `pyproject.toml` and
+`bindings/python/src/configforge/__init__.py`. Minor and patch stay below
+100 (`CF_VERSION_NUMBER` packs them in two digits each). The tag of a
+release is `vX.Y.Z`; the release workflow refuses a tag that disagrees
+with `cf_version.h`. In `CHANGELOG.md` the work not yet released is under
+`## X.Y.Z — unreleased` (the script opens it), and a release is the same
+heading with its date, `## X.Y.Z — YYYY-MM-DD`. `gate.version` fails
+unless the header, the project version, the vcpkg manifest, the Rust and
+Python manifests and the CHANGELOG's newest heading name one version
+(the heading may be dated or "unreleased"), and unless the Conan recipe
+carries no version of its own.
+
+**What moves which number.**
+
+* **Patch**: only a fix to a version already released, made because the
+  defect cannot wait for the milestone. Nothing new.
+* **Minor**: a milestone of the table below, released when every card
+  of it is done and CI is green - not a feature at a time. Work on
+  `main` gathers under the one unreleased heading until then. A changed
+  default, or an input refused that was accepted, goes in that minor's
+  "### Changed" with its D-number.
+* **Major**: 2.0.0, once, when everything in the plan is done. What
+  breaks the 1.x promise waits for it and is done together.
+* A new item of work joins the milestone it belongs to; it does not
+  make a new version number. Only the maintainer adds or moves a
+  milestone.
+* The version is opened once per milestone - the first card that needs
+  a CHANGELOG entry runs `version.cmake`, as 1.6.0 was opened on
+  2026-11-16 - and is not touched again until the release.
+
+**The milestones** (decided 2026-11-16). Each item of the Roadmap is in
+one row.
+
+| Version | Theme | Holds | Released when |
+| ------- | ----- | ----- | ------------- |
+| 1.6.0 | hardened, and native | every hardening card: H-2 the contract `doctor gen` writes, checked by the compiler; H-5 a directory others can write to (done); H-6 `--redact-all`; H-7 an undefined key named like a secret; H-8a a digest that cannot be tested without a key; H-8b Doctor tells digests of different keys apart. Wave 3's rest: the native sources - W3-F2a the platform capability for macOS's user defaults, W3-F2b `cf_builder_preferences`, W3-F2c reading CFPreferences on macOS, W3-F2d user defaults in C++, Rust, Python and the Guide, W3-F3 `cf_builder_credentials` in every language | every card above is done, CI green, the macOS job included |
+| 1.7.0 | tools and a smaller promise | Doctor kept to reports, the `configforge` front door, `configforge gen`, the serialization library's own tool; wave 5: W5-V1 `convert`, W5-S1 `schema --from`, W5-G1, W5-G2 and W5-G3 code generation in C++, Rust and Python; the smaller 1.x promise (internals fenced, an experimental tier) with the serialization layer as a library target of its own, before the first new format; one digest a purpose, SHA-256 for a fingerprint that decides, a digest the program gives; publishing to the registries by trusted publishing; `doctor graph`, if asked for | each item is done and a consumer test builds against the serialization library alone and against ConfigForge alone |
+| 1.8.0 | formats and platforms | "More formats, and what a format is": MessagePack first, then BSON, UBJSON, Smile, Ion, Bencode, property lists, HCL, HOCON, KDL, Avro, Protobuf, Thrift, FlatBuffers, Cap'n Proto, TLV as embedded devices write it, the benchmark, a stream; the comparison with other libraries; the platform's file locations with profiles; misreads noticed; help and completions from the contract; durations and sizes; value migrations; big-endian, 32-bit and bare-metal CI; outside trust checks; `.properties` against Java's own reader; the cumulative C99 and C23 layers | each format has its reader, writer, vectors and fuzz target, and the three CI jobs are green |
+| 1.9.0 | files written back, and more languages | wave 6: every operation on a file's data written back in its format; a file written whole or not at all, with `examples/c/settings.c` moved onto it; an override file the library owns; a reload that names the keys it changed. Wave 7: Go and .NET. A report asked of a running program; the OpenTelemetry and OPA recipes; a "Start here" page a language; distribution and being found, the WebAssembly playground first; one program not written for the library moved onto it; the language server | each item is done; Go and .NET each have tests, an example and a CI job |
+| 2.0.0 | everything, and what breaks once | wave 8: the stream reader, the dynamic sizing modes, the image header's layout; proofs with CBMC; and whatever of the rows above is still open | 2.0.0 is not tagged while any item on the Roadmap is short of done |
+
+1.0.0 to 1.5.0 came in two weeks, a feature a version. From 1.6.0 a
+version is a milestone, so that 2.0.0 is the end of the plan and not a
+number reached on the way.
 
 ## Lessons made into checks
 

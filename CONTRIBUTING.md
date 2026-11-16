@@ -125,8 +125,9 @@ commands.
 6. **A release** is `cmake -DTO=x.y.z -P scripts/release/version.cmake` (the
    version is written once, in `cf_version.h`), the CHANGELOG heading
    dated, and the tag `vX.Y.Z` pushed; the release workflow does the
-   rest and refuses a tag that disagrees. Then bump to the next version
-   so new entries have a section.
+   rest and refuses a tag that disagrees. The next version is opened
+   once per milestone, by the first card that needs a CHANGELOG entry,
+   not after each release (`docs/Maintaining.md`, "Versions").
 
 ## Things that have bitten, so they need not again
 

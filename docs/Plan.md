@@ -136,7 +136,9 @@ Things only the maintainer can do or decide. Each unblocks the cards named.
 ## The index
 
 In the order to be done. A card is `open`, `done` (with its commit), or
-`waits` (with what it waits for).
+`waits` (with what it waits for). The H-* and W3-* cards belong to
+the 1.6.0 milestone and the W5-* cards to 1.7.0
+(`docs/Maintaining.md`, "Versions").
 
 | Order | Card | Size | Needs | Status |
 | ----: | ---- | ----- | ----- | ------ |
@@ -189,3 +191,6 @@ playground first); one digest a purpose, SHA-256 for a fingerprint that
 decides, and a digest the program gives; a report asked of a running
 program; the OpenTelemetry and OPA recipes; a "Start here" page a
 language.
+
+Each group's version is in the table in `docs/Maintaining.md`,
+"Versions".

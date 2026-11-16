@@ -137,12 +137,15 @@ short keeps its branch, unmerged, and says so here.
    digests" below); the cards wait for that split.
 6. ⬜ **Wave 6**: every operation on a file's data through its codec -
    read, add, change, remove, written back in its own format, keeping
-   the layout where the format can. **1.6.0.**
+   the layout where the format can. **1.9.0.**
 7. ⬜ **Wave 7**: Go (cgo) and .NET (P/Invoke) bindings, each with its
-   tests, an example and a CI job. **1.7.0.**
+   tests, an example and a CI job. **1.9.0.**
 8. ⬜ **Wave 8, 2.0**: the stream reader and the dynamic sizing modes
    (D-61), and what else waits for a major version (the image header's
    layout), together, once. **2.0.0.**
+
+Which version each item makes is in `docs/Maintaining.md`, "Versions";
+the numbers above are those of the table there.
 
 ### More formats, and what a format is (asked 2026-11-13; not yet cards)
 

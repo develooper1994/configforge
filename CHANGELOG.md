@@ -21,6 +21,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   as before. A drop-in directory is unchanged unless `CF_TRUSTED_DIR`
   (D-83). `cf_platform_has_trusted_dir` and
   `cf_platform_dir_list_trusted` are new.
+- Versions from 1.6.0 are milestones, not a feature each: a minor
+  version is released when every card of its milestone is done
+  (`docs/Maintaining.md`, "Versions").
 
 ## 1.5.0 — 2026-11-13
 
