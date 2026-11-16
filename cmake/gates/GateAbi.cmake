@@ -55,14 +55,17 @@ list(SORT headers)
 set(declared "")
 set(declared_internal "")
 set(declared_experimental "")
+# A declaration's start: optional CF_NODISCARD, then CF_API or
+# CF_EXPERIMENTAL(major, minor) with the release in groups 2 and 3.
+string(CONCAT exp_decl "^(CF_NODISCARD[ \t]+)?"
+              "CF_EXPERIMENTAL\\(([0-9]+), *([0-9]+)\\)"
+              "[ \t].*[ \t*]([a-z_][a-z0-9_]*)\\(")
+string(CONCAT token_re "^(#[ \t]*(if|ifdef|ifndef|endif)|"
+              "(CF_NODISCARD[ \t]+)?(CF_API[ \t]|CF_EXPERIMENTAL\\())")
 foreach(h ${headers})
   # Comments can contain unmatched brackets, which join CMake list
   # elements. Only declarations and the relevant directives are tokens.
-  file(
-    STRINGS "${h}" lines
-    REGEX
-      "^(#[ \t]*(if|ifdef|ifndef|endif)|(CF_NODISCARD[ \t]+)?(CF_API[ \t]|CF_EXPERIMENTAL\\())"
-  )
+  file(STRINGS "${h}" lines REGEX "${token_re}")
   # What the open conditionals are: "real" for #if CF_WITH_REAL,
   # "internal" for #if CF_INTERNAL_API, "other" for any other. #else and
   # #elif are not read: a fenced block holds neither.
@@ -80,10 +83,7 @@ foreach(h ${headers})
       list(APPEND stack "internal")
     elseif(l MATCHES "^#[ \t]*if")
       list(APPEND stack "other")
-    elseif(
-      l MATCHES
-      "^(CF_NODISCARD[ \t]+)?CF_EXPERIMENTAL\\(([0-9]+), *([0-9]+)\\)[ \t].*[ \t*]([a-z_][a-z0-9_]*)\\("
-    )
+    elseif(l MATCHES "${exp_decl}")
       set(name "${CMAKE_MATCH_4} ${CMAKE_MATCH_2}.${CMAKE_MATCH_3}")
       if("real" IN_LIST stack)
         set(name "${name} real")
@@ -232,8 +232,8 @@ foreach(s ${listed_experimental})
     message("VIOLATION: '${name}' is experimental and in another list")
     set(bad 1)
   endif()
-  if(since_major LESS current_major
-     OR (since_major EQUAL current_major AND since_minor LESS current_minor))
+  if(since_major LESS current_major OR (since_major EQUAL current_major
+                                        AND since_minor LESS current_minor))
     message("VIOLATION: '${name}' has been experimental since "
             "${since_major}.${since_minor}: make it CF_API or remove it "
             "(D-89)")
@@ -271,8 +271,7 @@ if(LIB AND NM_EXE)
     foreach(d ${defined})
       if(NOT d IN_LIST names)
         message("VIOLATION: '${d}' is exported by the shared library and is "
-                "in no list: give it CF_API and list it, or keep it "
-                "hidden")
+                "in no list: give it CF_API and list it, or keep it " "hidden")
         set(bad 1)
       endif()
     endforeach()

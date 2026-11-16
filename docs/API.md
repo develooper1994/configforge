@@ -7,12 +7,18 @@ comment written above it, under the section of the header it is
 in; the types are in the headers themselves. Implementation links
 open the source on `main`, with platform variants listed together.
 
-Semantic versioning covers every function not marked Internal
-(D-56). The internal tier (D-51, D-88) is declared only where
-`CF_INTERNAL_API` is 1 - the library's own build, Doctor's and the
-tests' - so a program does not compile against it. The flags a
-definition takes are bits 0-15 and a source's bits 16 and up; an
-unknown bit is refused by name.
+## What 1.x promises
+
+Three tiers. **Promised**: every function not marked otherwise
+below; semantic versioning holds it (D-56) - within 1.x a program
+built against an earlier release links and runs against a later
+one. **Experimental**: marked so, with the release it came in;
+exported, and outside the promise until the next minor release,
+which makes it promised or removes it (D-89). **Internal**: marked
+so; declared only where `CF_INTERNAL_API` is 1, the library's own
+build, Doctor's and the tests' (D-51, D-88); free to change in any
+release. The flags a definition takes are bits 0-15 and a source's
+bits 16 and up; an unknown bit is refused by name.
 
 A struct the caller fills and the library reads - `cf_error`,
 `cf_def`, `cf_live_options`, `cf_live_status`, `cf_log_event`,

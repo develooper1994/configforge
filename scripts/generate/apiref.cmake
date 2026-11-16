@@ -125,8 +125,7 @@ function(
   endif()
   if(NOT since STREQUAL "")
     string(
-      APPEND
-      rendered
+      APPEND rendered
       "Experimental since ${since}: outside the 1.x promise until the next "
       "minor release makes it promised or removes it.\n\n")
   endif()
@@ -206,6 +205,9 @@ set(toc "")
 set(sections "")
 
 set(total 0)
+# A declaration: CF_API, CF_DOCTOR_API or CF_EXPERIMENTAL(major, minor).
+string(CONCAT decl_re "^(CF_NODISCARD[ \t]+)?(CF_(DOCTOR_)?API[ \t]|"
+              "CF_EXPERIMENTAL\\([0-9]+, *[0-9]+\\)[ \t])")
 foreach(h ${names})
   file(READ "${REPO}/include/configforge/${h}" text)
   string(REPLACE ";" "<SEMI>" text "${text}")
@@ -268,8 +270,12 @@ foreach(h ${names})
     if(l MATCHES "^[ \t]*/\\*")
       # A new comment ends any group the previous one introduced.
       if(group)
-        render_group("${group}" "${group_comment}" "${group_internal}"
-                     "${group_since}" rendered)
+        render_group(
+          "${group}"
+          "${group_comment}"
+          "${group_internal}"
+          "${group_since}"
+          rendered)
         string(APPEND body "${rendered}")
         set(group "")
       endif()
@@ -282,9 +288,7 @@ foreach(h ${names})
       endif()
       continue()
     endif()
-    if(l MATCHES
-       "^(CF_NODISCARD[ \t]+)?(CF_(DOCTOR_)?API[ \t]|CF_EXPERIMENTAL\\([0-9]+, *[0-9]+\\)[ \t])"
-    )
+    if(l MATCHES "${decl_re}")
       # The release an experimental declaration came in, or nothing.
       set(here_since "")
       if(l MATCHES "CF_EXPERIMENTAL\\(([0-9]+), *([0-9]+)\\)")
@@ -298,8 +302,12 @@ foreach(h ${names})
       endif()
       if(group AND (NOT here_internal STREQUAL group_internal
                     OR NOT here_since STREQUAL group_since))
-        render_group("${group}" "${group_comment}" "${group_internal}"
-                     "${group_since}" rendered)
+        render_group(
+          "${group}"
+          "${group_comment}"
+          "${group_internal}"
+          "${group_since}"
+          rendered)
         string(APPEND body "${rendered}")
         set(group "")
         set(comment "")
@@ -340,8 +348,12 @@ foreach(h ${names})
       continue() # a declaration under a feature test still belongs
     endif()
     if(group)
-      render_group("${group}" "${group_comment}" "${group_internal}"
-                     "${group_since}" rendered)
+      render_group(
+        "${group}"
+        "${group_comment}"
+        "${group_internal}"
+        "${group_since}"
+        rendered)
       string(APPEND body "${rendered}")
       set(group "")
     endif()
