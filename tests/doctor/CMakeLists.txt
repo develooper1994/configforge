@@ -287,7 +287,13 @@ add_test(
 # text from a report kept from becoming a workflow command in a CI log,
 # or a mention or a link in a pull-request comment. "marker" is the gate:
 # a marker secret in every state, through every command and format.
-foreach(script secrets marker refusals escape redact)
+foreach(
+  script
+  secrets
+  marker
+  refusals
+  escape
+  redact)
   add_test(NAME doctor.${script}
            COMMAND ${CMAKE_COMMAND} -DDOCTOR=$<TARGET_FILE:doctor> -P
                    ${CMAKE_SOURCE_DIR}/tests/doctor/${script}.cmake)

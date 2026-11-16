@@ -287,7 +287,7 @@ static cf_bool parse(report* r, const cf_blob* blob, cf_error* err) {
         }
         /* What is shown goes by `hidden`; what is compared and
            recomputed (digests, CFD019, CFD007) goes by `sensitive`. */
-        rk->hidden = (rk->sensitive || r->D->redact_all) ? CF_TRUE : CF_FALSE;
+        rk->hidden     = (rk->sensitive || r->D->redact_all) ? CF_TRUE : CF_FALSE;
         rk->deprecated = flag_at(&r->doc, rk->key, rk->keylen, "deprecated");
         rk->replaced_by =
             text_at(&r->doc, "keys.%S.definition.replaced_by", rk->key, rk->keylen);
@@ -1620,8 +1620,7 @@ static void rule_value_diff(const report* a, const report* b) {
             finding(a->D, "CFD014", "info", name,
                     "sensitive value differs (by digest)");
         } else if (ka->hidden || kb->hidden) {
-            finding(a->D, "VALUE", "info", name,
-                    "differs (not shown: --redact-all)");
+            finding(a->D, "VALUE", "info", name, "differs (not shown: --redact-all)");
         } else {
             finding(a->D, "VALUE", "info", name, "%s here, %s there", ca->value,
                     cb->value);
