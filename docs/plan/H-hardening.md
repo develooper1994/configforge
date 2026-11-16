@@ -897,8 +897,9 @@ plans D-82 too, so whichever is committed second takes the next.
        it; but the key then sits in the environment the library's own
        documents tell programs to keep secrets out of.
     Recommended: **1** for 1.x, with 2 considered for 2.0, when
-    fingerprints may change once. The answer goes here; until it is
-    written, step 1 of the loop stops at this card. The rest is written
+    fingerprints may change once. **Answered, 2026-11-12 (docs/Plan.md,
+    "For the maintainer"): 1** - the key comes only from the program;
+    FNV-1a stays the default. The rest is written
     for 1; for 3 add only the variable's read in `cf_builder_create`
     (decided: `cf_env_value(cf_platform_environ(), "CF_DIGEST_KEY", &n)`,
     32 hex digits or an error naming the variable); for 2, stop.
