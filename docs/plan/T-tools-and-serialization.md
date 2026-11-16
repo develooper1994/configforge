@@ -1267,7 +1267,8 @@ Lessons from the hardening cards, which every card below is held to:
     `build-doctor/tools/bin/Release/*.exe` into the stage's `bin/` in
     place of `doctor.exe` alone (the /MT build: the /MD tools that
     `cmake --install build` put there are overwritten). The header
-    comment's three archive lines say "the tools" for "a static Doctor".
+    comment's Linux archive line says "the tools" for "a static Doctor"
+    (the other two say "the same" and stay).
   * The action and the hook: `actions/doctor/action.yml`'s find and
     `actions/doctor/doctor-bin.sh`'s two finds look for
     `-name configforge-doctor -o -name configforge-doctor.exe`; the build
