@@ -56,6 +56,8 @@ static void test_listed(void) {
           "the feature list says whether there is a directory source");
     check(cf_has_feature("dotenv") == (CF_WITH_DOTENV ? CF_TRUE : CF_FALSE),
           "a .env source");
+    check(cf_has_feature("preferences") == (CF_WITH_PREFERENCES ? CF_TRUE : CF_FALSE),
+          "macOS's user defaults");
     check(cf_has_feature("emit") == (CF_WITH_EMIT ? CF_TRUE : CF_FALSE), "an emitter");
     check(cf_has_feature("image") == (CF_WITH_IMAGE ? CF_TRUE : CF_FALSE), "an image");
     check(cf_has_feature("report") == (CF_WITH_REPORT ? CF_TRUE : CF_FALSE),

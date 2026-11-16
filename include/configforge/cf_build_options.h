@@ -71,6 +71,9 @@
 #ifndef CF_WITH_DOTENV
 #define CF_WITH_DOTENV 1
 #endif
+#ifndef CF_WITH_PREFERENCES
+#define CF_WITH_PREFERENCES 0
+#endif
 #ifndef CF_WITH_EMIT
 #define CF_WITH_EMIT 1
 #endif

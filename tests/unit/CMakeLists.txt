@@ -50,6 +50,7 @@ set(CF_UNIT_TESTS
     test_properties
     test_write
     test_registry
+    test_preferences
     test_interpolate
     test_rename
     test_null

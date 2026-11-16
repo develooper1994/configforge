@@ -18,6 +18,8 @@ option(CF_WITH_XML "XML codec (requires expat)" OFF)
 option(CF_WITH_YAML
        "YAML codec (built in; libfyaml or libyaml by CF_YAML_BACKEND)" ON)
 option(CF_WITH_SQLITE "SQLite store source (requires sqlite3)" OFF)
+option(CF_WITH_PREFERENCES
+       "macOS user defaults source (links CoreFoundation)" OFF)
 option(CF_WITH_DIR "Drop-in directory source (conf.d)" ON)
 option(CF_WITH_DOTENV ".env file source" ON)
 option(CF_WITH_EMIT "Writing a configuration out (cf_emit, the encoders)" ON)
@@ -117,7 +119,8 @@ set(CF_FEATURES
     DOTENV
     EMIT
     IMAGE
-    REPORT)
+    REPORT
+    PREFERENCES)
 
 option(CF_BUILD_TESTING "Build the test suite" ON)
 option(CF_BUILD_EXAMPLES "Build the examples" ON)

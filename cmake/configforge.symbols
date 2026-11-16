@@ -245,12 +245,14 @@ cf_platform_environ
 cf_platform_fopen
 cf_platform_has_dir_list
 cf_platform_has_environ
+cf_platform_has_preferences
 cf_platform_has_private_create
 cf_platform_has_registry
 cf_platform_has_trusted_dir
 cf_platform_has_wake
 cf_platform_has_wide_args
 cf_platform_name
+cf_platform_preferences_walk
 cf_platform_registry_walk
 cf_platform_stamp
 cf_platform_wake_close

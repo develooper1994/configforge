@@ -181,6 +181,28 @@ int cf_platform_registry_walk(const char* root, cf_arena* arena, cf_platform_reg
     return -1;
 }
 
+/* No user defaults are read here, and a source that read none would
+   look like an empty domain. */
+cf_bool cf_platform_has_preferences(void) {
+    return CF_FALSE;
+}
+
+int cf_platform_preferences_walk(const char* domain, cf_arena* arena,
+                                 cf_platform_pref_fn fn, void* ctx, cf_error* err) {
+#if CF_WITH_PREFERENCES
+    static const char says[] =
+        "'%s' is in macOS's user defaults, which exist only on macOS";
+#else
+    static const char says[] = "'%s' is in macOS's user defaults, and this build was compiled without CF_WITH_PREFERENCES";
+#endif
+    (void)arena;
+    (void)fn;
+    (void)ctx;
+    cf_error_set(err, CF_E_CAPABILITY, NULL, domain, says,
+                 (domain != NULL) ? domain : "");
+    return -1;
+}
+
 int cf_platform_world_readable(const char* path) {
     struct stat st;
 

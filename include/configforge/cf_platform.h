@@ -178,6 +178,55 @@ CF_API int cf_platform_registry_walk(const char* root, cf_arena* arena,
                                      cf_platform_reg_fn fn, void* ctx, cf_error* err);
 
 /* ------------------------------------------------------------------ *
+ * macOS's user defaults
+ *
+ * One domain's values as a document - dictionaries, arrays and values
+ * in order - with each value's path for explain(). macOS only, under
+ * CF_WITH_PREFERENCES; everywhere else the walk fails and says so,
+ * because a source that read nothing would look exactly like an empty
+ * domain.
+ * ------------------------------------------------------------------ */
+
+enum {
+    CF_PREF_BEGIN_DICT  = 1, /* the domain itself first, name NULL  */
+    CF_PREF_BEGIN_ARRAY = 2,
+    CF_PREF_END         = 3, /* closes the last dict or array begun */
+    CF_PREF_TEXT        = 4, /* a CFString, UTF-8                   */
+    CF_PREF_INT         = 5, /* a CFNumber that is not a float type */
+    CF_PREF_REAL        = 6, /* a CFNumber of a float type          */
+    CF_PREF_BOOL        = 7, /* a CFBoolean                         */
+    CF_PREF_OTHER       = 8  /* a CFDate or CFData: `text` says which */
+};
+
+typedef struct cf_platform_pref_event {
+    int         kind;
+    const char* name; /* the member's name, its case kept; NULL in an
+                         array and for the domain                  */
+    size_t      namelen;
+    const char* path; /* names from the domain down joined by '/', an
+                         array's member by its index: "Server/Port",
+                         "Hosts/1"; "" for the domain              */
+    const char* text; /* CF_PREF_TEXT; CF_PREF_OTHER: "a date", "data" */
+    size_t      textlen;
+    cf_i64      i; /* CF_PREF_INT                               */
+    double      r; /* CF_PREF_REAL                              */
+    cf_bool     b; /* CF_PREF_BOOL                              */
+} cf_platform_pref_event;
+
+/* Return false to stop the walk; the walk then returns -1, and the
+   callback is expected to have said why. */
+typedef cf_bool (*cf_platform_pref_fn)(void* ctx, const cf_platform_pref_event* e);
+
+CF_API cf_bool cf_platform_has_preferences(void);
+
+/* Every value of `domain` ("com.example.app") in the scope W3-F2b's
+   answer names. Buffers come from `arena`. 0 when walked, 1 when the
+   domain has no values, -1 with `err` set. */
+CF_API int cf_platform_preferences_walk(const char* domain, cf_arena* arena,
+                                        cf_platform_pref_fn fn, void* ctx,
+                                        cf_error* err);
+
+/* ------------------------------------------------------------------ *
  * File stamps
  *
  * Modification time and size, which is what a change check compares.

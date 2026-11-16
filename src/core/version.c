@@ -75,6 +75,9 @@ static const char* const cf_features[] = {"lists",
 #if CF_WITH_DOTENV
                                           "dotenv",
 #endif
+#if CF_WITH_PREFERENCES
+                                          "preferences",
+#endif
 #if CF_WITH_EMIT
                                           "emit",
 #endif
