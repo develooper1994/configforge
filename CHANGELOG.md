@@ -34,7 +34,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 ### Added
 
 - `CF_WITH_PREFERENCES` (off): the build option for macOS's user
-  defaults, which W3-F2c reads.
+  defaults, which W3-F2c reads. `cf_builder_preferences` reads a domain
+  as a source, macOS only, with `CF_WITH_PREFERENCES`; elsewhere it fails
+  by name (D-87).
 
 - systemd's credentials shown by an example the suite runs,
   `examples/c/credentials.c`; the Guide's table of sources lists

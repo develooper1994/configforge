@@ -102,6 +102,7 @@ gets reopened every six months.
 | D-84 | An undefined key named like a secret is kept as one | secrets, security, reports | **Decided** |
 | D-85 | A secret's digest, keyed | secrets, security, reports | **Decided** |
 | D-86 | Doctor's action shows no value unless asked | doctor, security, reports | **Decided** |
+| D-87 | macOS's user defaults, an optional source over the flattener | sources, platform | **Decided** |
 | D-91 | CBOR, the JSON model in binary | formats | **Decided** |
 | D-97 | What kind of format a codec is, told to the program | formats | **Decided** |
 
@@ -3581,6 +3582,57 @@ developer's own machine and posts nothing.
 lose their plain values on upgrade; `show-values: true` brings them
 back. Doctor on the command line and the library behave as before
 unless asked.
+
+## D-87 — macOS's user defaults, an optional source over the flattener
+
+**Question.** A macOS program keeps its settings in the user defaults
+(CFPreferences), written by `defaults write <domain>`, and a person
+looking for where a value came from looks at `defaults <domain> <key>`.
+How does ConfigForge read them so that explain() names that place, and
+which of CFPreferences' scopes does it read?
+
+**Options.**
+
+1. No source: the program copies the values into a file or the
+   environment. The origin is lost.
+2. The Registry's shape without the flattener: a source that adds each
+   key itself, repeating the dictionary and array handling every codec
+   shares, and in time disagreeing with it.
+3. The platform walk delivers document events (dictionary, array, value,
+   end) and the shared flattener makes the keys, as for a JSON file.
+4. Reading the plist files under `~/Library/Preferences`. `cfprefsd`
+   caches and writes them late, they are often binary, and managed
+   profiles live elsewhere: the file is not the setting.
+
+CFPreferences keeps a domain's values in up to four scopes: the current
+user on any host, the current user on this host, any user, and a managed
+profile. Read (a) the first only; (b) the merged view
+`CFPreferencesCopyAppValue` gives, whose precedence is CFPreferences' and
+not the program's ranks, and which still misses keys only a managed
+profile sets; or (c) (a) now, and later a scope prefix in `domain`
+(`"currentHost:..."`, `"anyUser:..."`, `"managed:..."`), each scope its
+own source at its own rank.
+
+**Decision.** Option 3, over the platform walk of W3-F2a, built only
+under `CF_WITH_PREFERENCES`, off by default everywhere, macOS included:
+on, every static consumer on macOS must link `-framework
+CoreFoundation`, which a 1.x upgrade must not impose. Scope (c), the
+maintainer's answer of 2026-11-16: the current user on any host is read
+now, what `defaults read <domain>` shows; the prefixes are a later card,
+so precedence between scopes stays the program's and explain() shows it.
+Names are lowered, and a name that is still not a key is an error naming
+it. A dictionary is a section and an array a list; a string is text the
+contract types (`defaults write` writes strings unless told `-int`), a
+number an int or a real, a boolean a bool, and a date or data is refused
+by name. The place is "defaults <domain> <path>", names joined by '/'
+and an array's member by its index. A domain with no values is an error,
+and nothing with `CF_OPTIONAL`; off macOS, or without the option, it
+fails by name even when optional, since reading nothing would look like
+an empty domain. Not watched: `cf_changed` does not see a change, as for
+the Registry.
+
+**Compatibility.** Additive: one symbol, `cf_builder_preferences`.
+Nothing changes unless the option is on.
 
 ## D-91 — CBOR, the JSON model in binary
 
