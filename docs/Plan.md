@@ -156,9 +156,9 @@ the 1.6.0 milestone; the S-*, T-* and W5-* cards to 1.7.0, but T-5 to
 | 18 | H-8b Doctor tells digests of different keys apart | medium | H-8a | done (ed37f5f, 23018f7, cbe0050) |
 | 19 | W3-F2a The platform capability for macOS's user defaults | medium | - | done (d3cbbf8, 5bb5967, 221b6ca) |
 | 20 | W3-F2b `cf_builder_preferences`: the source, off macOS | medium | W3-F2a | done (9ac9540, 6aa4566, 928f71c) |
-| 21 | W3-F2c Reading CFPreferences on macOS (CI-only) | large | W3-F2b | open |
+| 21 | W3-F2c Reading CFPreferences on macOS (CI-only) | large | W3-F2b | done (a751ba0..529d84d) |
 | 22 | W3-F3 `cf_builder_credentials` in every language, the Guide, an example | medium | - | done (470cb8d, 059cdd9, 035ce3a, 71142a0) |
-| 23 | W3-F2d User defaults in C++, Rust, Python and the Guide | medium | W3-F2c | open |
+| 23 | W3-F2d User defaults in C++, Rust, Python and the Guide | medium | W3-F2c | done (1ddb2ce, 146c605, e4435f0) |
 | 24 | S-1 The internal tier fenced: a program cannot call what 1.x does not promise | large | 1.6.0 released | waits: 1.6.0 released; the answer in the card (TO DECIDE) |
 | 25 | S-2 An experimental tier, and the promise written in one place | medium | S-1 | waits: S-1 |
 | 26 | S-3 The serialization layer's last ties cut, and held by the gate | medium | S-1 | waits: S-1 |
