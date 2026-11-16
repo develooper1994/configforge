@@ -1508,8 +1508,8 @@ static cf_bool digests_apart(const cand* a, const cand* b) {
 static void apart_text(const cand* a, const cand* b, char* out, size_t cap) {
     cf_fmt(out, cap,
            "compared by digest, but the digests were made under different keys "
-           "(%S here, %S there): whether it changed cannot be told", a->digest,
-           (size_t)(digest_kind_end(a->digest) - a->digest), b->digest,
+           "(%S here, %S there): whether it changed cannot be told",
+           a->digest, (size_t)(digest_kind_end(a->digest) - a->digest), b->digest,
            (size_t)(digest_kind_end(b->digest) - b->digest));
 }
 
@@ -1958,7 +1958,7 @@ static step_result key_step(const rkey* was, const rkey* now, char* what, size_t
         return STEP_APART;
     }
     agree = values_agree(wa, wb);
-    moved =(strcmp(was->selected, now->selected) != 0) ? CF_TRUE : CF_FALSE;
+    moved = (strcmp(was->selected, now->selected) != 0) ? CF_TRUE : CF_FALSE;
     if (agree == AGREE_YES) {
         if (!moved) {
             return STEP_SAME;

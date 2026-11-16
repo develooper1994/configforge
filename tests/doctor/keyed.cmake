@@ -60,7 +60,12 @@ function(run_ok)
 endfunction()
 
 # Under one key, a different value is a change.
-run_ok(diff ${a} ${a2} --fail-on never)
+run_ok(
+  diff
+  ${a}
+  ${a2}
+  --fail-on
+  never)
 if(NOT all MATCHES "CFD014[^\n]*db.password")
   fail("diff a a2 did not report CFD014")
 endif()
@@ -82,7 +87,12 @@ endforeach()
 
 # The kinds are named, a key by its id and no key as fnv1a, and no digest
 # is shown.
-run_ok(diff ${a} ${n} --fail-on never)
+run_ok(
+  diff
+  ${a}
+  ${n}
+  --fail-on
+  never)
 if(NOT all MATCHES "CFD020[^\n]*sip24:[^ ]* here, fnv1a there")
   fail("diff a n did not name the two kinds")
 endif()
@@ -91,14 +101,25 @@ if(all MATCHES "[0-9a-f]{16}")
 endif()
 
 # A history and a blame meet the same pair.
-run_ok(history ${a} ${b} --fail-on never)
+run_ok(
+  history
+  ${a}
+  ${b}
+  --fail-on
+  never)
 if(NOT all MATCHES "CFD020[^\n]*db.password")
   fail("history a b did not report CFD020")
 endif()
 if(all MATCHES "value changed")
   fail("history a b said the value changed")
 endif()
-run_ok(blame db.password ${a} ${b} --fail-on never)
+run_ok(
+  blame
+  db.password
+  ${a}
+  ${b}
+  --fail-on
+  never)
 if(NOT all MATCHES "CFD020")
   fail("blame a b did not report CFD020")
 endif()
