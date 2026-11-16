@@ -630,6 +630,33 @@ plans D-82 too, so whichever is committed second takes the next.
   security pass": "A trusted-directory check" goes 🟩, "on for secrets and
   credentials, `CF_TRUSTED_DIR` for drop-ins (D-83)".
 * **notes**:
+  * 2026-11-16, stopped at ACCEPT-LINUX's `minimal build` (a "stop if":
+    a frame of the listing over the stack budget). Built as decided,
+    `posix_own_group`'s frame is 1104 bytes - the `char buf[1024]` the
+    card gives it, and `struct passwd` - and the `minimal` preset's
+    `CF_STACK_BUDGET` is 1024 (`scripts/check/stack.cmake`: "1 function(s)
+    over the budget of 1024 bytes: 1104 bytes posix_own_group
+    (posix.c:232)"); `posix_dir_list` itself is 704. Everything else
+    held: the test failed first on case 2 as step 4 says ("FAIL: a
+    secrets directory others can write to is refused"), then passed;
+    the whole suite passed under umask 002 (the build's directories
+    0775, their group the user's own); `default`, `sanitize` and
+    `portable` were green. To decide before it is tried again: the
+    buffer's size, or where it lives, within 1024 bytes a frame (a
+    smaller buffer refuses, by ERANGE, an entry longer than it). Found
+    on the way, for whoever carries it next: (1) glibc hides `lstat`
+    and `getpwuid_r` in strict C89, so posix.c's `_POSIX_C_SOURCE
+    200112L`, defined before any header only for kqueue on Linux, has
+    to be defined on every Linux build (it only adds declarations
+    there; macOS and the BSDs declare both without it). (2) The
+    CHANGELOG has no unreleased section since 1.5.0, and gate.version
+    wants its newest heading to be cf_version.h's version, so the
+    card's CHANGELOG entry opens 1.6.0 (two symbols added) with
+    `cmake -DTO=1.6.0 -P scripts/release/version.cmake`, which changes
+    cf_version.h, the vcpkg, Cargo and Python manifests and Cargo.lock:
+    files the card does not list. (3) wasm32-wasi (`verify -DEXTRA=wasm`,
+    tier 2) has no `pwd.h`; posix.c needs an answer for it there. (4) D-83
+    is free and is the number to use.
 
 ---
 
