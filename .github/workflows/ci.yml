@@ -82,6 +82,17 @@ jobs:
           "$py" -I tests/python/test_package.py
           cmake "-DWORK=$RUNNER_TEMP/rust-package" -P scripts/release/package_rust.cmake
 
+  # macOS's user defaults (W3-F2c): the one source only a Mac can read,
+  # built with its option and tested against values `defaults import`
+  # writes.
+  macos-preferences:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: cmake -S . -B bp -DCF_WITH_PREFERENCES=ON
+      - run: cmake --build bp
+      - run: ctest --test-dir bp --output-on-failure
+
   # The kqueue change handle, on a machine that is not a BSD: libkqueue
   # emulates kqueue on Linux, so the macOS and BSD path is compiled and
   # run on every commit rather than only where a Mac is in the matrix.
