@@ -181,6 +181,26 @@ int cf_platform_registry_walk(const char* root, cf_arena* arena, cf_platform_reg
     return -1;
 }
 
+#if defined(__APPLE__) && CF_WITH_PREFERENCES
+
+/* macOS's user defaults: not written yet. */
+cf_bool cf_platform_has_preferences(void) {
+    return CF_TRUE;
+}
+
+int cf_platform_preferences_walk(const char* domain, cf_arena* arena,
+                                 cf_platform_pref_fn fn, void* ctx, cf_error* err) {
+    (void)arena;
+    (void)fn;
+    (void)ctx;
+    cf_error_set(err, CF_E_CAPABILITY, NULL, domain,
+                 "'%s': reading macOS's user defaults is not written yet",
+                 (domain != NULL) ? domain : "");
+    return -1;
+}
+
+#else
+
 /* No user defaults are read here, and a source that read none would
    look like an empty domain. */
 cf_bool cf_platform_has_preferences(void) {
@@ -203,6 +223,8 @@ int cf_platform_preferences_walk(const char* domain, cf_arena* arena,
                  (domain != NULL) ? domain : "");
     return -1;
 }
+
+#endif /* user defaults */
 
 int cf_platform_world_readable(const char* path) {
     struct stat st;
