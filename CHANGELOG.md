@@ -180,10 +180,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   redaction switched off, `dump` is the first to fail it.
 - the plan and the plan: the work left, a card a unit, each
   with its design decided, its test and what done is - written so that
-  a small model can carry a card out without designing anything.
-- the notes on method: how the work is divided between an organising
-  session and the subagents it briefs, and how a session stops without
-  losing it.
+  whoever carries a card out has nothing to design.
+- how the work is divided between whoever organises it and whoever
+  carries out a card, and how work stops without being lost.
 
 ### Fixed
 

@@ -100,7 +100,7 @@ these fields and no others:
 | **needs** | The ids that must be done first, or "nothing". |
 | **size** | The smallest that can do it: small (mechanical), medium (a specified change with its tests) or
 large (a design, an interface, anything subtle). A larger one may always take it. |
-| **decided** | Every design choice already made: names, signatures, error wordings, limits, what was rejected and why. This is the part a small model cannot supply. |
+| **decided** | Every design choice already made: names, signatures, error wordings, limits, what was rejected and why. This is the part whoever carries the card out must not have to supply. |
 | **files** | The files to create or change, and the shared ones to touch last. |
 | **steps** | Numbered. Each is one action with its command. The test comes before the code, and "see it fail" is its own step. |
 | **accept** | Which ACCEPT applies, plus any check particular to the card. |
