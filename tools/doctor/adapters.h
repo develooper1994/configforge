@@ -23,11 +23,6 @@ int doctor_import_dotnet(int argc, char** argv);
    stdout. */
 int doctor_import_systemd(int argc, char** argv);
 
-/* Files read against a JSON Schema contract, and the contract written as
-   C calls (contract.c). Neither reads a report either. */
-int doctor_check_schema(int argc, char** argv);
-int doctor_gen_schema(int argc, char** argv);
-
 /* Every built-in codec with its extensions and kind, as text or as the
    markdown table docs/Formats.md holds (formats.c). Reads no report. */
 int doctor_formats(int argc, char** argv);

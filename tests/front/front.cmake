@@ -3,7 +3,8 @@
 # rule that keeps it from running a path, and that the programs it
 # runs get their arguments whole and their exit code passed back.
 #
-#   -DFRONT=<the program>  -DHAVE_DOCTOR=<ON|OFF>  -DUNIX_HOST=<0|1>
+#   -DFRONT=<the program>  -DHAVE_DOCTOR=<ON|OFF>  -DHAVE_GEN=<ON|OFF>
+#   -DUNIX_HOST=<0|1>
 #   -DWORK=<a directory of its own>
 #
 # Run from where Doctor's fixtures are written.
@@ -104,6 +105,16 @@ if(HAVE_DOCTOR)
     explain
     cf_fx_prod.json
     "a\"b\\")
+endif()
+
+# 8b. The contract's program.
+if(HAVE_GEN)
+  front_case(
+    0
+    "^ConfigForge gen"
+    -
+    gen
+    --version)
 endif()
 
 # 9. A program on the PATH and not beside the front door.

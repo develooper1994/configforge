@@ -237,13 +237,6 @@ configforge doctor lint <report> [--rules R] [--baseline B] [--format text|sarif
                          [--base <before> --only-changed]
     rule catalogue against a single report
 
-configforge doctor check --schema <schema> <file>...
-    configuration files against a JSON Schema contract, as a program built from it
-    would read them: no program needed (section 7d)
-
-configforge doctor gen --schema <schema> [--name <function>] [--out <file>]
-    the contract as C calls, for a build without the JSON reader (section 7d)
-
 configforge doctor formats [--format text|markdown]
     every built-in codec: its name, its extensions and what kind of format it is
     (text or binary, self-describing or schema-bound, typed, arrays, read and
@@ -254,41 +247,17 @@ configforge doctor --version
     the version, and the commit Doctor was built from: "ConfigForge Doctor 0.3.0 (20d0f4b)"
 ```
 
+`check` and `gen` are `configforge gen check` and `configforge gen` since 1.7.0
+(7d). Doctor still runs both in 1.7.x, with the arguments they had, and says so
+on stderr - `doctor: 'check' is 'configforge gen check' since 1.7.0; this name goes
+in 1.8.0` - and drops them in 1.8.0. The exit code is the command's.
+
 `explain` and `dump` are convenience wrappers over the library's own capability, made
 available without adding a flag to the host application.
 
 ### 7d. A contract without the program
 
-A JSON Schema can be the contract itself (`cf_builder_schema_file`, D-64): the keys,
-their types, ranges, defaults and spellings, written once and read by the program, by
-an editor and by Doctor. Two commands use it without the program (D-67).
-
-`configforge doctor check --schema app.schema.json app.toml [local.toml ...]` reads the files as
-the program would - in that order, each overriding the ones before - against the
-contract, unknown keys refused outside a prefix the schema opens. It prints `ok` and
-exits 0, or prints the first refusal, with the key and the reason, and exits 1; a
-schema it cannot read is unusable input, exit 2. A required key is required of the
-files: check the files that together make a complete configuration. In CI or a
-pre-commit hook it catches a misspelt key or a port out of range before a deploy does:
-
-```text
-$ configforge doctor check --schema app.schema.json app.json
-unknown key 'server.prot'; did you mean 'server.port'?
-```
-
-`configforge doctor gen --schema app.schema.json --name app_contract --out app_contract.c` writes
-one C89 function, `cf_bool app_contract(cf_builder* b)`, that defines every key with
-`cf_def` and `cf_builder_define` and opens what the schema opens. A build without the
-JSON reader - an embedded one, `CF_WITH_JSON=OFF` - then has the same contract from the
-same file, and the schema stays the one place it is written. Generate it in the build
-rather than checking it in; the function reads back through `cf_schema` as the schema
-it came from, which `tests/doctor/test_gen.c` holds it to.
-
-The generated file checks itself where the compiler can (D-75): compiled as C++11 or
-later each key is checked by `cf::key_is_valid`, as C11 a key's length and every int
-default and text default against its bounds, so a build with a smaller `CF_KEY_MAX`, or
-a schema whose default its own bounds refuse, does not compile. As C89 it is plain
-calls, checked by `cf_builder_create`.
+Moved to docs/Tools.md, `configforge gen`.
 
 ### 7a. Querying a report with jq
 

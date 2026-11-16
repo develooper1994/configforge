@@ -1,8 +1,8 @@
 /*
- * contract.c - Doctor and a JSON Schema contract (D-64, D-67).
+ * contract.c - a JSON Schema contract, checked against and written (D-64, D-67).
  *
- *     doctor check --schema <schema> <file>...
- *     doctor gen   --schema <schema> [--name <function>] [--out <file>]
+ *     configforge gen check --schema <schema> <file>...
+ *     configforge gen       --schema <schema> [--name <function>] [--out <file>]
  *
  * `check` reads configuration files against the contract as a program
  * built from it would - every key defined, every value of its type and
@@ -15,10 +15,10 @@
  * schema opens. A build without the JSON reader - an embedded one - then
  * has the same contract from the same source, and the schema stays the
  * one place it is written. The function reads back through cf_schema as
- * the schema it came from (tests/doctor/test_gen.c).
+ * the schema it came from (tests/gen/test_gen.c).
  */
 
-#include "adapters.h"
+#include "gen.h"
 
 #include <configforge/configforge.h>
 
@@ -26,8 +26,8 @@
 #include <string.h>
 
 static int contract_usage(void) {
-    fputs("  doctor check --schema <schema> <file>...\n"
-          "  doctor gen   --schema <schema> [--name <function>] [--out <file>]\n",
+    fputs("  configforge gen --schema <schema> [--name <function>] [--out <file>]\n"
+          "  configforge gen check --schema <schema> <file>...\n",
           stderr);
     return 2;
 }
@@ -36,7 +36,7 @@ static int contract_usage(void) {
  * check
  * ------------------------------------------------------------------ */
 
-int doctor_check_schema(int argc, char** argv) {
+int gen_check(int argc, char** argv) {
     const char* schema = NULL;
     cf_builder* b;
     cf_config*  c;
@@ -58,14 +58,14 @@ int doctor_check_schema(int argc, char** argv) {
     }
     b = cf_build(NULL);
     if (b == NULL) {
-        fprintf(stderr, "doctor: cannot start\n");
+        fprintf(stderr, "gen: cannot start\n");
         return 2;
     }
     /* A schema that cannot be read is unusable input, not a finding
        about the files. */
     if (!cf_builder_schema_file(b, schema)) {
         (void)cf_builder_create(b, &err);
-        fprintf(stderr, "doctor: %s\n", err.message);
+        fprintf(stderr, "gen: %s\n", err.message);
         return 2;
     }
     cf_builder_unknown(b, CF_UNKNOWN_REJECT);
@@ -437,7 +437,7 @@ static int gen_write(FILE* out, const cf_defset* ds, const char* schema,
     }
     fputs("/* The contract of ", out);
     c_comment_name(out, schema);
-    fputs(", as calls: written by `doctor gen --schema`.\n"
+    fputs(", as calls: written by `configforge gen --schema`.\n"
           "   Regenerate it from the schema rather than editing it. */\n\n"
           "#include <configforge/configforge.h>\n\n",
           out);
@@ -468,7 +468,7 @@ static int gen_write(FILE* out, const cf_defset* ds, const char* schema,
     for (i = 0; i < n; ++i) {
         const cf_def* d = cf_defset_at(ds, i);
         if (c_type(d->type) == NULL || !c_define(out, i, d)) {
-            fprintf(stderr, "doctor: '%s' has a value this generator cannot write\n",
+            fprintf(stderr, "gen: '%s' has a value this generator cannot write\n",
                     d->key);
             return 2;
         }
@@ -489,7 +489,7 @@ static int gen_write(FILE* out, const cf_defset* ds, const char* schema,
     return 0;
 }
 
-int doctor_gen_schema(int argc, char** argv) {
+int gen_code(int argc, char** argv) {
     const char* schema = NULL;
     const char* name   = "cf_contract";
     const char* path   = NULL;
@@ -517,14 +517,14 @@ int doctor_gen_schema(int argc, char** argv) {
     ar = cf_arena_new(NULL, 0);
     if (ar == NULL || !cf_defset_init(&ds, ar, 0) ||
         !cf_defset_schema_file(&ds, schema, &err)) {
-        fprintf(stderr, "doctor: %s\n", (ar == NULL) ? "cannot start" : err.message);
+        fprintf(stderr, "gen: %s\n", (ar == NULL) ? "cannot start" : err.message);
         cf_arena_free(ar);
         return 2;
     }
     if (path != NULL) {
         out = fopen(path, "w");
         if (out == NULL) {
-            fprintf(stderr, "doctor: cannot write %s\n", path);
+            fprintf(stderr, "gen: cannot write %s\n", path);
             cf_arena_free(ar);
             return 2;
         }

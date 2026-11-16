@@ -1,11 +1,11 @@
 /*
- * test_gen.c - `doctor gen --schema` writes the same contract the schema
+ * test_gen.c - `configforge gen --schema` writes the same contract the schema
  * is: a builder given the generated function and one given the schema
  * itself write the same JSON Schema back (cf_schema), refuse the same
  * file, and need the same required key.
  *
  * The build generates gen_contract.c from tests/doctor/contract.schema.json
- * with the Doctor it built, and compiles it into this program with every
+ * with the gen program it built, and compiles it into this program with every
  * warning the project's own code gets.
  */
 

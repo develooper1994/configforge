@@ -15,9 +15,12 @@
  *     configforge doctor diff    <a> <b>  [options]
  *     configforge doctor history <report>... [--key <key>] [options]
  *     configforge doctor blame   <key> <report>... [options]
- *     configforge doctor check   --schema <schema> <file>...
- *     configforge doctor gen     --schema <schema> [--name <function>] [--out <file>]
  *     configforge doctor formats [--format text|markdown]
+ *
+ * Moved in 1.7.0, run here until 1.8.0 with a note on stderr:
+ *
+ *     doctor check --schema <schema> <file>...  is configforge gen check
+ *     doctor gen --schema <schema> ...          is configforge gen
  *
  *     --baseline <file>   findings already accepted, one per line
  *     --severity <file>   this project's severities, one per line
@@ -28,6 +31,7 @@
  * the command line and prints.
  */
 
+#include "../gen/gen.h"
 #include "adapters.h"
 #include "engine.h"
 
@@ -383,11 +387,7 @@ static int usage(void) {
           "  configforge doctor import-systemd [--full] < systemd-analyze cat-config\n"
           "\n",
           stderr);
-    fputs("  configforge doctor check --schema <schema> <file>...   files against a "
-          "contract\n"
-          "  configforge doctor gen --schema <schema> [--name <fn>] [--out <file>]\n"
-          "                                 the contract as C calls\n"
-          "  configforge doctor formats [--format text|markdown]   the built-in codecs "
+    fputs("  configforge doctor formats [--format text|markdown]   the built-in codecs "
           "and their "
           "kind\n"
           "\n",
@@ -467,6 +467,13 @@ static cf_bool old_name(const char* arg0) {
                : CF_FALSE;
 }
 
+/* `check` and `gen` went to configforge-gen in 1.7.0; Doctor runs them
+   for one more minor release and says where they went. */
+static void doctor_moved(const char* was, const char* now) {
+    fprintf(stderr, "doctor: '%s' is '%s' since 1.7.0; this name goes in 1.8.0\n",
+            was, now);
+}
+
 int main(int argc, char** argv) {
     cf_doctor* D;
     int        rc;
@@ -494,10 +501,12 @@ int main(int argc, char** argv) {
         return doctor_import_systemd(argc - 2, argv + 2);
     }
     if (argc >= 2 && strcmp(argv[1], "check") == 0) {
-        return doctor_check_schema(argc - 2, argv + 2);
+        doctor_moved("check", "configforge gen check");
+        return gen_check(argc - 2, argv + 2);
     }
     if (argc >= 2 && strcmp(argv[1], "gen") == 0) {
-        return doctor_gen_schema(argc - 2, argv + 2);
+        doctor_moved("gen", "configforge gen");
+        return gen_code(argc - 2, argv + 2);
     }
     if (argc >= 2 && strcmp(argv[1], "formats") == 0) {
         return doctor_formats(argc - 2, argv + 2);

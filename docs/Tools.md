@@ -55,9 +55,65 @@ the program's exit code.
 
 | Program | What it does | Page |
 | --- | --- | --- |
-| `configforge-doctor` | Reads provenance reports: `explain`, `dump`, `lint`, `diff`, `history`, `blame`, `check`, `gen`, `formats`, `import-*`. Until 1.8.0 it is also installed as `doctor`, which says its new name on stderr. | [Doctor](Doctor.md) |
+| `configforge-doctor` | Reads provenance reports: `explain`, `dump`, `lint`, `diff`, `history`, `blame`, `formats`, `import-*`. Until 1.8.0 it is also installed as `doctor`, which says its new name on stderr, and still runs `check` and `gen`. | [Doctor](Doctor.md) |
+| `configforge-gen` | The contract's own program: `configforge gen --schema` writes a JSON Schema contract as C, `configforge gen check` holds files to it. | [below](#configforge-gen) |
 
-`configforge gen` (the contract's own program) and `configforge codec`
-(the serialization library's) are listed in the help from the start and
-arrive with their own cards; until then they are "not a configforge
-command", like any other name with no program.
+`configforge codec` (the serialization library's own program) is listed in
+the help from the start and arrives with its own card; until then it is
+"not a configforge command", like any other name with no program.
+
+## configforge gen
+
+The contract's program (`configforge-gen`). A JSON Schema can be the
+contract itself (`cf_builder_schema_file`, D-64): the keys, their types,
+ranges, defaults and spellings, written once and read by the program, by an
+editor and by these two commands, which use it without the program (D-67).
+It is built wherever Doctor is, and not where tools are off (WASI,
+`CF_PLATFORM=none`).
+
+```text
+configforge gen --schema <schema> [--name <function>] [--out <file>]
+                               the contract as C calls
+configforge gen check --schema <schema> <file>...
+                               files against the contract
+configforge gen --version
+```
+
+Exit codes: 0 done, and for `check` every file holds to the contract; 1 a
+file does not; 2 unusable input. `doctor check` and `doctor gen` of earlier
+releases are these two commands: Doctor runs them in 1.7.x, says where they
+went on stderr, and drops them in 1.8.0 (Doctor.md, section 7).
+
+`configforge gen check --schema app.schema.json app.toml [local.toml ...]`
+reads the files as the program would - in that order, each overriding the
+ones before - against the contract, unknown keys refused outside a prefix
+the schema opens. It prints `ok` and exits 0, or prints the first refusal,
+with the key and the reason, and exits 1; a schema it cannot read is
+unusable input, exit 2. A required key is required of the files: check the
+files that together make a complete configuration. In CI or a pre-commit
+hook it catches a misspelt key or a port out of range before a deploy does:
+
+```text
+$ configforge gen check --schema app.schema.json app.json
+unknown key 'server.prot'; did you mean 'server.port'?
+```
+
+`configforge gen --schema app.schema.json --name app_contract --out
+app_contract.c` writes one C89 function, `cf_bool app_contract(cf_builder*
+b)`, that defines every key with `cf_def` and `cf_builder_define` and opens
+what the schema opens. A build without the JSON reader - an embedded one,
+`CF_WITH_JSON=OFF` - then has the same contract from the same file, and the
+schema stays the one place it is written. Generate it in the build rather
+than checking it in; the function reads back through `cf_schema` as the
+schema it came from, which `tests/gen/test_gen.c` holds it to. A generated
+file says in its first comment that `configforge gen --schema` wrote it.
+
+The generated file checks itself where the compiler can (D-75): compiled as
+C++11 or later each key is checked by `cf::key_is_valid`, as C11 a key's
+length and every int default and text default against its bounds, so a build
+with a smaller `CF_KEY_MAX`, or a schema whose default its own bounds refuse,
+does not compile. As C89 it is plain calls, checked by `cf_builder_create`.
+
+The pre-commit hook `configforge-check` (`actions/doctor/check.sh`) runs
+`configforge gen check` on each staged file. It uses the `configforge-gen`
+that `CONFIGFORGE_GEN` names, else one it builds once from the checkout.

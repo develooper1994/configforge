@@ -14,6 +14,7 @@ if(CF_BUILD_TOOLS
    AND CF_WITH_JSON
    AND CF_WITH_REPORT)
   add_subdirectory(doctor)
+  add_subdirectory(gen)
 endif()
 
 # The front door, `configforge <command>`, and the programs it runs.

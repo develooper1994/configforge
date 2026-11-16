@@ -2,8 +2,9 @@
 # CI would run them, on the fixture reports. comment.sh talks to a stub
 # gh that records what it was asked, so no forge is needed.
 #
-#   cmake -DDOCTOR=<doctor> -DBASH=<bash> -DACTION=<actions/doctor>
-#         -DWORK=<dir with the fixtures> -P action.cmake
+#   cmake -DDOCTOR=<doctor> -DGEN=<gen> -DBASH=<bash>
+#         -DACTION=<actions/doctor> -DWORK=<dir with the fixtures>
+#         -P action.cmake
 
 # Stops the test with what went wrong, given in as many pieces as it
 # takes to keep a line short.
@@ -207,7 +208,7 @@ endif()
 set(contract ${CMAKE_CURRENT_LIST_DIR}/contract.schema.json)
 execute_process(
   COMMAND
-    ${CMAKE_COMMAND} -E env CONFIGFORGE_DOCTOR=${DOCTOR} ${BASH}
+    ${CMAKE_COMMAND} -E env CONFIGFORGE_GEN=${GEN} ${BASH}
     ${ACTION}/check.sh --schema ${contract} cf_fx_contract_ok.json
     cf_fx_contract_typo.json
   WORKING_DIRECTORY ${WORK}
@@ -220,7 +221,7 @@ if(NOT rc EQUAL 1
        "got ${rc}:\n${text}")
 endif()
 execute_process(
-  COMMAND ${CMAKE_COMMAND} -E env CONFIGFORGE_DOCTOR=${DOCTOR} ${BASH}
+  COMMAND ${CMAKE_COMMAND} -E env CONFIGFORGE_GEN=${GEN} ${BASH}
           ${ACTION}/check.sh cf_fx_contract_ok.json
   WORKING_DIRECTORY ${WORK}
   RESULT_VARIABLE rc
