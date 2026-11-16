@@ -14,7 +14,7 @@
  */
 
 /* Before any header: glibc hides execv and access in strict C89. */
-#define _POSIX_C_SOURCE 200112L
+#define _POSIX_C_SOURCE 200112L /* NOLINT(bugprone-reserved-identifier) */
 
 #include "configforge/cf_platform.h"
 
@@ -45,23 +45,29 @@ static int runnable(const char* path) {
     return S_ISDIR(st.st_mode) ? 0 : 1;
 }
 
-/* `<dir>/<program>` in `path`, which is big enough, for the `n` bytes
-   of `dir`. */
-static void join(char* path, const char* dir, size_t n, const char* program,
-                 size_t plen) {
+/* `<dir>/<program>` in `path`, which holds `cap` bytes, for the `n` bytes
+   of `dir`: 1 when it fits, which it does by the size the caller gave it. */
+static int join(char* path, size_t cap, const char* dir, size_t n, const char* program,
+                size_t plen) {
+    if (n >= cap || cap - n < plen + 2) {
+        return 0;
+    }
     memcpy(path, dir, n);
     path[n] = '/';
     memcpy(path + n + 1, program, plen + 1);
+    return 1;
 }
 
 int front_run(const char* program, int argc, char** argv) {
     size_t      plen = strlen(program);
     const char* env  = getenv("PATH");
     const char* slash;
-    const char* p;
+    size_t      elen;
+    size_t      pos;
     char**      args;
     char*       name;
     char*       path;
+    size_t      cap;
     int         failed = 0;
     int         i;
 
@@ -72,9 +78,10 @@ int front_run(const char* program, int argc, char** argv) {
         env = "/usr/bin:/bin";
     }
     /* Room for the longest directory the PATH or argv[0] can name. */
-    path = (char*)malloc(strlen(env) + strlen(argv[0]) + plen + 3);
+    cap  = strlen(env) + strlen(argv[0]) + plen + 3;
+    path = (char*)malloc(cap);
     if (args == NULL || name == NULL || path == NULL) {
-        free(args);
+        free((void*)args);
         free(name);
         free(path);
         return out_of_memory();
@@ -88,26 +95,31 @@ int front_run(const char* program, int argc, char** argv) {
 
     slash = strrchr(argv[0], '/');
     if (slash != NULL) {
-        join(path, argv[0], (size_t)(slash - argv[0]), program, plen);
-        if (runnable(path)) {
-            execv(path, args);
+        if (join(path, cap, argv[0], (size_t)(slash - argv[0]), program, plen) &&
+            runnable(path)) {
+            /* The name was checked against D-99's rule; the directory is
+               the program's own location, as git does. */
+            execv(path, args); /* NOLINT(clang-analyzer-optin.taint.GenericTaint) */
             failed = 1;
         }
     }
-    for (p = env; *p != '\0';) {
+    elen = strlen(env);
+    for (pos = 0; pos < elen;) {
+        const char* p   = env + pos;
         const char* end = strchr(p, ':');
         size_t      n   = (end != NULL) ? (size_t)(end - p) : strlen(p);
         if (n > 0) {
-            join(path, p, n, program, plen);
-            if (runnable(path)) {
-                execv(path, args);
+            if (join(path, cap, p, n, program, plen) && runnable(path)) {
+                /* The name was checked against D-99's rule; the directory
+                   comes from the PATH, as in git and every shell. */
+                execv(path, args); /* NOLINT(clang-analyzer-optin.taint.GenericTaint) */
                 failed = 1;
             }
         }
-        p += n;
-        if (*p == ':') {
-            p++;
+        if (end == NULL) {
+            break;
         }
+        pos = (size_t)(end - env) + 1;
     }
 
     /* Here only when nothing was run. */
@@ -119,7 +131,7 @@ int front_run(const char* program, int argc, char** argv) {
         fprintf(stderr, "(no %s beside this program or on the PATH); ", program);
         fputs("configforge help lists them\n", stderr);
     }
-    free(args);
+    free((void*)args);
     free(name);
     free(path);
     return 2;

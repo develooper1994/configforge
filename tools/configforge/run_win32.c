@@ -158,6 +158,7 @@ static int find_program(const wchar_t* program, wchar_t** path) {
     wchar_t* dir = own_dir();
     wchar_t* env;
     wchar_t* p;
+    wchar_t* limit;
     DWORD    n;
     int      r;
 
@@ -182,16 +183,19 @@ static int find_program(const wchar_t* program, wchar_t** path) {
         free(env);
         return 0;
     }
-    for (p = env; *p != L'\0';) {
+    limit     = env + n;
+    limit[-1] = L'\0';
+    for (p = env; p < limit && *p != L'\0';) {
         wchar_t* end   = wcschr(p, L';');
         size_t   len   = (end != NULL) ? (size_t)(end - p) : wcslen(p);
         wchar_t* entry = p;
         p += len;
-        if (*p == L';') {
+        if (p < limit && *p == L';') {
             p++;
         }
         /* A pair of quotes around an entry is not part of it. */
-        if (len >= 2 && entry[0] == L'"' && entry[len - 1] == L'"') {
+        if (len >= 2 && (size_t)(limit - entry) > len && entry[0] == L'"' &&
+            entry[len - 1] == L'"') {
             entry++;
             len -= 2;
         }
