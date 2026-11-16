@@ -597,14 +597,16 @@ static void test_layout_key_rule(void) {
 
     layout_key_rule("a", "a one-letter key is judged as the key space judges it");
     layout_key_rule("a.b", "a dotted key is judged as the key space judges it");
-    layout_key_rule("a-b_c.9", "dash, underscore and digit are judged as the key space does");
+    layout_key_rule("a-b_c.9",
+                    "dash, underscore and digit are judged as the key space does");
     layout_key_rule("A", "an uppercase key is judged as the key space judges it");
     layout_key_rule("a..b", "an empty segment is judged as the key space judges it");
     layout_key_rule(".a", "a leading dot is judged as the key space judges it");
     layout_key_rule("a.", "a trailing dot is judged as the key space judges it");
     layout_key_rule("a b", "a space is judged as the key space judges it");
     layout_key_rule(longest, "the longest key is judged as the key space judges it");
-    layout_key_rule(too_long, "one byte past the longest is judged as the key space does");
+    layout_key_rule(too_long,
+                    "one byte past the longest is judged as the key space does");
 }
 
 int main(void) {

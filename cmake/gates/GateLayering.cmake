@@ -51,9 +51,8 @@ foreach(f ${ser_files} ${ser_leaf_files} ${ser_header_files})
   foreach(line IN LISTS lines)
     string(REGEX REPLACE "${ser_inc}.*" "\\1" inc "${line}")
     if(NOT inc IN_LIST CF_SERIALIZE_HEADERS AND NOT inc MATCHES "\\.def$")
-      message(
-        "VIOLATION: ${f} (the serialization library) includes configforge/${inc}"
-      )
+      message("VIOLATION: ${f} (the serialization library) "
+              "includes configforge/${inc}")
       set(bad 1)
     endif()
   endforeach()
