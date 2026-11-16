@@ -3,6 +3,18 @@
 Versions follow semantic versioning from 1.0. Before that, `0.x` promises
 nothing: the C interface is not frozen, and a minor bump may change it.
 
+## 1.7.0 — unreleased
+
+### Changed
+
+- **The internal tier is fenced** (D-88): the functions D-51 left
+  outside the 1.x promise - the key space's, the flattener's, the
+  definition set's, numeric conversion, most of the platform layer - are
+  declared only where `CF_INTERNAL_API` is 1, so a program that calls one
+  no longer compiles; nothing exported changed. `cf_fmt`, `cf_vfmt`,
+  `cf_fmt_append`, `cf_platform_name` and the `cf_platform_has_` queries
+  are promised.
+
 ## 1.6.0 — 2026-11-16
 
 ### Security

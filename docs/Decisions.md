@@ -103,6 +103,7 @@ gets reopened every six months.
 | D-85 | A secret's digest, keyed | secrets, security, reports | **Decided** |
 | D-86 | Doctor's action shows no value unless asked | doctor, security, reports | **Decided** |
 | D-87 | macOS's user defaults, an optional source over the flattener | sources, platform | **Decided** |
+| D-88 | What 1.x promises, made smaller: the internal tier fenced | api, abi | **Decided** |
 | D-91 | CBOR, the JSON model in binary | formats | **Decided** |
 | D-97 | What kind of format a codec is, told to the program | formats | **Decided** |
 
@@ -3647,6 +3648,50 @@ runs the same test's other half: the source fails by name, optional or
 not. On macOS `posix.c` alone is compiled as C99 when the option is on,
 since CoreFoundation's headers are not C89, and the framework is linked
 publicly and named in pkg-config.
+
+## D-88 — What 1.x promises, made smaller: the internal tier fenced
+
+**Question.** D-51's internal tier was a sentence in each header: 87 of
+the 369 exported functions are not promised, yet a program that called
+one (`cf_ks_resolve`, say) compiled, linked, and would break in a later
+minor release. How is the edge of the promise made something a compiler
+sees?
+
+**Options.**
+
+1. Leave it as it was.
+2. Headers that are not installed. Doctor is built against the
+   installed package, the internal functions share headers with promised
+   ones, and the amalgamation is one header.
+3. A macro a program does not define, `CF_INTERNAL_API`.
+4. Hide the symbols. Doctor links the shared library, and renaming them
+   (`cfi_`) is a removal.
+
+**Decision.** Option 3. `cf_port.h` defines `CF_INTERNAL_API` to 0 after
+`CF_API`, so `#if CF_INTERNAL_API` passes `-Wundef`; only functions are
+fenced, never types or macros, so each header still compiles alone. It
+is 1 for the library, Doctor, the tests, the benchmark, the CBMC proofs,
+the amalgamation's build and the Rust crate; not for the examples,
+`tests/consumer` or a program. Fenced: the key space's `cf_ks_*` but
+`cf_ks_arena` and `cf_ks_add*`; `cf_flatten.h`; `cf_numeric.h`;
+`cf_platform.h` but `cf_platform_name` and the `cf_platform_has_*`
+queries; the definition set's `cf_defset_*` and `cf_def_*`;
+`cf_ks_explain`, `cf_ks_inspect` and their redacted forms; `cf_ref_*`,
+`cf_cmp_*` and `cf_siphash24`. The maintainer's answer (2026-11-16):
+`cf_fmt`, `cf_vfmt`, `cf_fmt_append`, `cf_platform_name` and the eight
+`cf_platform_has_*` queries, twelve functions the examples call, join the
+promise.
+`gate.abi` keeps two lists, the promised one and
+`cmake/configforge.internal.symbols` ("no version at all"), and fails a
+name in both; `gate.headers` compiles each header again with the fence
+open. Held to by `unit.internal_fenced` (`tests/unit/fenced.c` must not
+compile, naming `cf_ks_count`) and the same check in `gate.install`
+against the installed headers.
+
+**Compatibility.** A program that called an internal function no longer
+compiles; it links and runs as before, since nothing exported changed.
+It may define `CF_INTERNAL_API` to 1 and keep those calls, outside the
+1.x promise.
 
 ## D-91 — CBOR, the JSON model in binary
 

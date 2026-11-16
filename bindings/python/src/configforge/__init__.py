@@ -40,7 +40,7 @@ __all__ = [
     "setting", "section", "define", "read", "version", "has_feature",
 ]
 
-__version__ = "1.6.0"
+__version__ = "1.7.0"
 
 
 def version() -> str:
