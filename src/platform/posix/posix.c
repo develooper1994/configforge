@@ -10,12 +10,12 @@
  */
 
 /* Before any header, because it decides what the headers declare.
-   kqueue's timeout is a struct timespec, which glibc hides in strict
-   C89, and on Linux kqueue exists only as libkqueue - which is how the
-   BSD path is built and tested without a BSD. Real BSDs and macOS
-   declare it unconditionally and never take this branch. */
-#if defined(CF_WAKE_KQUEUE) && CF_WAKE_KQUEUE && defined(__linux__) &&                 \
-    !defined(_POSIX_C_SOURCE)
+   lstat and getpwuid_r (D-83), and kqueue's timeout, a struct timespec,
+   are what glibc hides in strict C89; on Linux kqueue exists only as
+   libkqueue - which is how the BSD path is built and tested without a
+   BSD. Real BSDs and macOS declare all three unconditionally and never
+   take this branch. */
+#if defined(__linux__) && !defined(_POSIX_C_SOURCE)
 /* A feature-test macro is the one reserved name a program is meant to
    define, which bugprone-reserved-identifier cannot know. */
 #define _POSIX_C_SOURCE 200112L /* NOLINT(bugprone-reserved-identifier) */
@@ -28,11 +28,20 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#if !defined(__wasi__)
+#include <pwd.h>
+#endif
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <string.h>
 #include <unistd.h>
+
+/* The sticky bit: XSI's name, which _POSIX_C_SOURCE alone does not
+   show, and 01000 on every system that has it. */
+#ifndef S_ISVTX
+#define S_ISVTX 01000
+#endif
 
 /* The wait handle: inotify on Linux, kqueue on macOS and the BSDs, and
    on any other POSIX system a plain statement that there is none, where
@@ -207,18 +216,97 @@ int cf_platform_create_private(const char* path, cf_error* err) {
     return 1;
 }
 
-int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], int max,
-                         cf_error* err) {
+#if !defined(__wasi__)
+/* Who may change what a directory hands over (D-83). A mode is printed
+   by its three octal digits, since cf_fmt has no %o. */
+static const char posix_writable[] =
+    "'%s' can be written by users other than its owner and root (mode "
+    "0%u%u%u); a %s read as configuration must not be, or CF_ANY_WRITER "
+    "must say it may";
+static const char posix_stranger[] =
+    "'%s' belongs to user %U, in a directory others can write to; only "
+    "root, the directory's owner and this program's user (%U) may put a "
+    "file there, or CF_ANY_WRITER must say anyone may";
+
+/* Whether `gid` is the private group of user `uid`: the group of that
+   user's entry in the password database. A user with no entry has no
+   group of their own, and neither has one whose entry is too long for
+   the buffer (ERANGE): it is not known to be the user's own. The buffer
+   is in this frame, not the listing's, which already holds a path. */
+static cf_bool posix_own_group(uid_t uid, gid_t gid) {
+    struct passwd  pw;
+    struct passwd* found = NULL;
+    char           buf[512];
+
+    if (getpwuid_r(uid, &pw, buf, sizeof buf, &found) != 0 || found == NULL) {
+        return CF_FALSE;
+    }
+    return (found->pw_gid == gid) ? CF_TRUE : CF_FALSE;
+}
+
+/* Whether a group that is not its owner's own may write to it. */
+static cf_bool posix_group_writes(const struct stat* st) {
+    if ((st->st_mode & S_IWGRP) == 0) {
+        return CF_FALSE;
+    }
+    return posix_own_group(st->st_uid, st->st_gid) ? CF_FALSE : CF_TRUE;
+}
+
+/* The refusal of a directory or a file others may write to: -2. */
+static int posix_refuse(const char* path, const struct stat* st, const char* what,
+                        cf_error* err) {
+    unsigned mode = (unsigned)st->st_mode;
+
+    cf_error_set(err, CF_E_SOURCE, NULL, path, posix_writable, path, (mode >> 6) & 7u,
+                 (mode >> 3) & 7u, mode & 7u, what);
+    return -2;
+}
+#endif /* !__wasi__ */
+
+/* The listing, and with `trusted` the check of D-83 in the same pass,
+   so that nothing is listed once and checked again:
+   1. the directory is refused when others may write to it and it is not
+      sticky, or when a group that is not its owner's own may;
+   2. in a sticky directory others may write to, each entry as lstat
+      sees it (the link, for a link) must belong to root, to the
+      directory's owner or to the program's user: there nobody can
+      replace another's entry;
+   3. each file as stat sees it - what a link names - is refused when
+      others may write to it, or a group that is not its owner's own.
+   The directories on the way to a link's target are not checked. */
+static int posix_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX],
+                          int max, cf_bool trusted, cf_error* err) {
     DIR*           d;
     struct dirent* e;
     char           full[CF_PLATFORM_NAME_MAX];
     struct stat    st;
-    int            n = 0;
+#if !defined(__wasi__)
+    struct stat lst;
+    uid_t       owner  = 0;
+    cf_bool     shared = CF_FALSE;
+#endif
+    int n = 0;
 
     if (path == NULL || names == NULL) {
         cf_error_set(err, CF_E_SOURCE, NULL, path, "no directory given");
         return -1;
     }
+#if defined(__wasi__)
+    /* No users, no pwd.h: nothing to check, as on Windows. */
+    (void)trusted;
+#else
+    if (trusted) {
+        if (stat(path, &st) != 0) {
+            cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot read '%s'", path);
+            return -1;
+        }
+        shared = ((st.st_mode & S_IWOTH) != 0) ? CF_TRUE : CF_FALSE;
+        if ((shared && (st.st_mode & S_ISVTX) == 0) || posix_group_writes(&st)) {
+            return posix_refuse(path, &st, "directory", err);
+        }
+        owner = st.st_uid;
+    }
+#endif
     d = opendir(path);
     if (d == NULL) {
         cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot read '%s'", path);
@@ -240,6 +328,23 @@ int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], 
             n = -2;
             break;
         }
+#if !defined(__wasi__)
+        /* Rule 2: the entry itself, the link and not what it names. */
+        if (shared) {
+            uid_t me = geteuid();
+            if (lstat(full, &lst) != 0) {
+                cf_error_set(err, CF_E_SOURCE, NULL, full, "cannot read '%s'", full);
+                n = -2;
+                break;
+            }
+            if (lst.st_uid != 0 && lst.st_uid != owner && lst.st_uid != me) {
+                cf_error_set(err, CF_E_SOURCE, NULL, full, posix_stranger, full,
+                             (cf_u64)lst.st_uid, (cf_u64)me);
+                n = -2;
+                break;
+            }
+        }
+#endif
         /* stat, not lstat: a Kubernetes mount is links to files, and
            what counts is what a link names. Asked before anything opens
            it, because opening a FIFO waits for a writer. */
@@ -259,6 +364,13 @@ int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], 
             n = -2;
             break;
         }
+#if !defined(__wasi__)
+        /* Rule 3: the file, as what a link names. */
+        if (trusted && ((st.st_mode & S_IWOTH) != 0 || posix_group_writes(&st))) {
+            n = posix_refuse(full, &st, "file", err);
+            break;
+        }
+#endif
         if (n >= max) {
             cf_error_set(err, CF_E_SOURCE, NULL, path,
                          "'%s' holds more than %d files, the most a directory may",
@@ -271,6 +383,28 @@ int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], 
     }
     closedir(d);
     return n;
+}
+
+int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], int max,
+                         cf_error* err) {
+    return posix_dir_list(path, names, max, CF_FALSE, err);
+}
+
+cf_bool cf_platform_has_trusted_dir(void) {
+#if defined(__wasi__)
+    return CF_FALSE;
+#else
+    return CF_TRUE;
+#endif
+}
+
+int cf_platform_dir_list_trusted(const char* path, char (*names)[CF_PLATFORM_NAME_MAX],
+                                 int max, cf_error* err) {
+#if defined(__wasi__)
+    return posix_dir_list(path, names, max, CF_FALSE, err);
+#else
+    return posix_dir_list(path, names, max, CF_TRUE, err);
+#endif
 }
 
 /* ------------------------------------------------------------------ *

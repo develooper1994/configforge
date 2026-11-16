@@ -124,7 +124,15 @@ static cf_bool secrets_load(const cf_source* s, cf_keyspace* ks) {
         return cf_error_set(&st->err, CF_E_MEMORY, NULL, st->path,
                             "no room to list '%s'", st->path);
     }
-    n = cf_platform_dir_list(st->path, names, CF_SECRETS_MAX_FILES, &st->err);
+    /* Held to D-83 unless the program says anyone may write here: a
+       value explains itself as this directory's file, and must not be
+       one somebody else could have put there. */
+    if ((st->flags & CF_ANY_WRITER) != 0) {
+        n = cf_platform_dir_list(st->path, names, CF_SECRETS_MAX_FILES, &st->err);
+    } else {
+        n = cf_platform_dir_list_trusted(st->path, names, CF_SECRETS_MAX_FILES,
+                                         &st->err);
+    }
     if (n < 0) {
         /* Only -1, a directory that is not there: -2 is one missing a
            secret, which optional does not cover (cf_platform.h). Nor

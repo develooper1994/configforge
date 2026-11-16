@@ -16,7 +16,9 @@ refuse and explain identically. Standard library only.
 """
 
 from ._config import (
+    ANY_WRITER,
     OPTIONAL,
+    TRUSTED_DIR,
     UNKNOWN_IGNORE,
     UNKNOWN_REJECT,
     UNKNOWN_WARN,
@@ -33,11 +35,12 @@ from ._settings import define, read, section, setting
 
 __all__ = [
     "Builder", "Config", "Edit", "Error", "Live", "Mode", "Reload", "Status", "edit",
-    "rank", "flag", "OPTIONAL", "UNKNOWN_IGNORE", "UNKNOWN_WARN", "UNKNOWN_REJECT",
+    "rank", "flag", "OPTIONAL", "TRUSTED_DIR", "ANY_WRITER", "UNKNOWN_IGNORE",
+    "UNKNOWN_WARN", "UNKNOWN_REJECT",
     "setting", "section", "define", "read", "version", "has_feature",
 ]
 
-__version__ = "1.5.0"
+__version__ = "1.6.0"
 
 
 def version() -> str:

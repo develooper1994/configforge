@@ -25,6 +25,8 @@ pub const CF_RANK_SYS_FILE: c_int = 30;
 pub const CF_RANK_DEFAULT: c_int = 40;
 
 pub const CF_OPTIONAL: u32 = 1 << 16;
+pub const CF_TRUSTED_DIR: u32 = 1 << 17;
+pub const CF_ANY_WRITER: u32 = 1 << 18;
 
 pub const CF_REQUIRED: u32 = 1 << 0;
 pub const CF_SENSITIVE: u32 = 1 << 1;

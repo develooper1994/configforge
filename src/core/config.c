@@ -356,18 +356,24 @@ static cf_bool builder_codecs_copy(cf_builder* b, const char* what,
 
 /* A slot for a source that takes flags, refusing a bit that is not a
    source flag: a definition flag passed here by mistake, or one from a
-   later 1.x this library does not know. */
-static cf_source* builder_slot_flags(cf_builder* b, const char* name, unsigned flags) {
-    if (b != NULL && !b->failed && (flags & ~(unsigned)CF_SOURCE_FLAGS) != 0) {
+   later 1.x this library does not know. `allowed` is what this kind of
+   source knows: a directory knows more than the others (D-83). */
+static cf_source* builder_slot_mask(cf_builder* b, const char* name, unsigned flags,
+                                    unsigned allowed) {
+    if (b != NULL && !b->failed && (flags & ~allowed) != 0) {
         cf_error e = CF_ERROR_INIT;
         cf_error_set(&e, CF_E_POLICY, NULL, name,
                      "flags 0x%x are not source flags this library knows (CF_OPTIONAL "
                      "is); a definition flag such as CF_REQUIRED belongs on the key",
-                     flags & ~(unsigned)CF_SOURCE_FLAGS);
+                     flags & ~allowed);
         builder_fail(b, &e);
         return NULL;
     }
     return builder_slot(b);
+}
+
+static cf_source* builder_slot_flags(cf_builder* b, const char* name, unsigned flags) {
+    return builder_slot_mask(b, name, flags, (unsigned)CF_SOURCE_FLAGS);
 }
 
 cf_bool cf_builder_memory(cf_builder* b, const char* name, int rank,
@@ -577,7 +583,7 @@ cf_bool cf_builder_dotenv(cf_builder* b, const char* name, int rank, const char*
 
 cf_bool cf_builder_secrets(cf_builder* b, const char* name, int rank, const char* path,
                            const char* prefix, unsigned flags) {
-    cf_source* s = builder_slot_flags(b, name, flags);
+    cf_source* s = builder_slot_mask(b, name, flags, (unsigned)CF_DIR_SOURCE_FLAGS);
     void*      st;
 
     if (s == NULL) {
@@ -601,7 +607,7 @@ cf_bool cf_builder_secrets(cf_builder* b, const char* name, int rank, const char
 
 cf_bool cf_builder_credentials(cf_builder* b, const char* name, int rank,
                                const char* prefix, unsigned flags) {
-    cf_source* s = builder_slot_flags(b, name, flags);
+    cf_source* s = builder_slot_mask(b, name, flags, (unsigned)CF_DIR_SOURCE_FLAGS);
     void*      st;
 
     if (s == NULL) {
@@ -670,11 +676,22 @@ cf_bool cf_builder_store(cf_builder* b, const char* name, int rank, const char* 
 
 cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank, const char* path,
                        const char* format, unsigned flags) {
-    cf_source*             s = builder_slot_flags(b, name, flags);
+    static const char dir_contradict[] =
+        "'%s': CF_TRUSTED_DIR and CF_ANY_WRITER contradict each other";
+    const unsigned         both = (unsigned)CF_TRUSTED_DIR | (unsigned)CF_ANY_WRITER;
+    cf_source*             s;
     void*                  st;
     const cf_codec* const* own = NULL;
 
+    s = builder_slot_mask(b, name, flags, (unsigned)CF_DIR_SOURCE_FLAGS);
     if (s == NULL) {
+        return CF_FALSE;
+    }
+    if ((flags & both) == both) {
+        cf_error e = CF_ERROR_INIT;
+        cf_error_set(&e, CF_E_POLICY, NULL, name, dir_contradict,
+                     (name != NULL) ? name : "");
+        builder_fail(b, &e);
         return CF_FALSE;
     }
     st = cf_arena_calloc(b->arena, cf_source_dir_state_size());

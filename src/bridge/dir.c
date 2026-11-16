@@ -76,11 +76,20 @@ static void dir_sort(dir_name* names, int n) {
    `scratch`. */
 static cf_bool dir_read(dir_state* st, const cf_source* s, cf_keyspace* ks,
                         cf_arena* scratch) {
+    static const char dir_untrusted[] =
+        "'%s': this platform cannot say who may write to a directory, which "
+        "CF_TRUSTED_DIR asks";
     dir_name* names;
     char      full[CF_DIR_PATH_MAX];
     int       n, i;
 
     cf_error_clear(&st->err);
+    /* Asked for a check the platform cannot make: an error, not a
+       directory read as if it had passed (D-83). */
+    if ((st->flags & CF_TRUSTED_DIR) != 0 && !cf_platform_has_trusted_dir()) {
+        return cf_error_set(&st->err, CF_E_CAPABILITY, NULL, st->path, dir_untrusted,
+                            st->path);
+    }
     names = (scratch != NULL) ? (dir_name*)cf_arena_alloc(
                                     scratch, (size_t)CF_DIR_MAX_FILES * CF_DIR_PATH_MAX)
                               : NULL;
@@ -88,7 +97,11 @@ static cf_bool dir_read(dir_state* st, const cf_source* s, cf_keyspace* ks,
         return cf_error_set(&st->err, CF_E_MEMORY, NULL, st->path,
                             "no room to list '%s'", st->path);
     }
-    n = cf_platform_dir_list(st->path, names, CF_DIR_MAX_FILES, &st->err);
+    if ((st->flags & CF_TRUSTED_DIR) != 0) {
+        n = cf_platform_dir_list_trusted(st->path, names, CF_DIR_MAX_FILES, &st->err);
+    } else {
+        n = cf_platform_dir_list(st->path, names, CF_DIR_MAX_FILES, &st->err);
+    }
     if (n < 0) {
         /* -2 is a directory read but not whole: more files than fit, or
            one that cannot be read as a file. Optional is for a directory

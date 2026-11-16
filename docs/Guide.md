@@ -613,6 +613,22 @@ prefix `MYAPP_`) maps as the environment's does; the trailing newline
 cf_builder_secrets(b, "secrets", CF_RANK_ENV, "/run/secrets", "MYAPP_", CF_OPTIONAL);
 ```
 
+A value explains itself as the file it came from, so the file must be
+one nobody else could have put there (D-83). A secrets or credentials
+directory that a user other than its owner and root can write to, or
+that holds a file they can, is an error naming it; a group may write only
+when it is the owner's own private group, as a umask of 002 makes it. A
+sticky directory everybody can write to - a Kubernetes mount - is read
+when each entry belongs to root, to the directory's owner or to the
+program's user. Docker's `/run/secrets`, Kubernetes' mounts and systemd's
+credentials pass as they are. `CF_ANY_WRITER` reads such a directory all
+the same, when the program knows who can write to it and accepts that;
+`CF_TRUSTED_DIR` holds a drop-in directory (`cf_builder_dir`) to the same
+rule, which it is not by default. Windows cannot say who may write in
+modes, so there a secrets directory is read unchecked and a drop-in
+directory asking `CF_TRUSTED_DIR` is refused for it
+(`cf_platform_has_trusted_dir`).
+
 The memory a
 configuration releases is zeroed first, so a password does not survive
 into the next allocation or a core dump; for a buffer you own,

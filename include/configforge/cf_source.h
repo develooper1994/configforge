@@ -225,7 +225,20 @@ enum {
        same flag, kept so that nothing written against it changes. */
     CF_FILE_OPTIONAL = CF_OPTIONAL,
 
-    /* Every source flag this library knows. */
+    /* A drop-in directory held to D-83: nobody but its owner and root
+       may be able to change what it hands over. A secrets or
+       credentials directory is held to it without asking. */
+    CF_TRUSTED_DIR = 1u << 17,
+
+    /* A secrets or credentials directory that others may write to,
+       read all the same: the program says who may write to it is
+       known and accepted (D-83). */
+    CF_ANY_WRITER = 1u << 18,
+
+    /* Every flag a directory source knows. */
+    CF_DIR_SOURCE_FLAGS = CF_OPTIONAL | CF_TRUSTED_DIR | CF_ANY_WRITER,
+
+    /* Every flag a source that is not a directory knows. */
     CF_SOURCE_FLAGS = CF_OPTIONAL
 };
 

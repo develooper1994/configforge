@@ -61,6 +61,16 @@ int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], 
     return -1;
 }
 
+/* No operating system, so nobody to ask who may write (D-83). */
+cf_bool cf_platform_has_trusted_dir(void) {
+    return CF_FALSE;
+}
+
+int cf_platform_dir_list_trusted(const char* path, char (*names)[CF_PLATFORM_NAME_MAX],
+                                 int max, cf_error* err) {
+    return cf_platform_dir_list(path, names, max, err);
+}
+
 void* cf_platform_fopen(const char* path, const char* mode) {
 #ifndef CF_NO_STDIO
     /* No operating system, but there may still be a C library with

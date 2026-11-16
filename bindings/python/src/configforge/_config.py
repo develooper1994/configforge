@@ -61,6 +61,12 @@ class flag:
 OPTIONAL = 1 << 16
 """A file or directory that may be absent."""
 
+TRUSTED_DIR = 1 << 17
+"""A drop-in directory held to the check a secrets directory is (D-83)."""
+
+ANY_WRITER = 1 << 18
+"""A secrets or credentials directory others may write to, read all the same (D-83)."""
+
 UNKNOWN_IGNORE, UNKNOWN_WARN, UNKNOWN_REJECT = 0, 1, 2
 
 

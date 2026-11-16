@@ -64,6 +64,14 @@ pub mod flag {
 /// A file or directory that may be absent.
 pub const OPTIONAL: u32 = sys::CF_OPTIONAL;
 
+/// A drop-in directory held to the check a secrets directory is: nobody but
+/// its owner and root may be able to change what it hands over (D-83).
+pub const TRUSTED_DIR: u32 = sys::CF_TRUSTED_DIR;
+
+/// A secrets or credentials directory others may write to, read all the
+/// same (D-83).
+pub const ANY_WRITER: u32 = sys::CF_ANY_WRITER;
+
 /// What to do with a key nobody defined.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[non_exhaustive]

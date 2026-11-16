@@ -238,12 +238,14 @@ cf_outcome_name
 cf_platform_args
 cf_platform_create_private
 cf_platform_dir_list
+cf_platform_dir_list_trusted
 cf_platform_environ
 cf_platform_fopen
 cf_platform_has_dir_list
 cf_platform_has_environ
 cf_platform_has_private_create
 cf_platform_has_registry
+cf_platform_has_trusted_dir
 cf_platform_has_wake
 cf_platform_has_wide_args
 cf_platform_name

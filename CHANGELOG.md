@@ -3,6 +3,25 @@
 Versions follow semantic versioning from 1.0. Before that, `0.x` promises
 nothing: the C interface is not frozen, and a minor bump may change it.
 
+## 1.6.0 — unreleased
+
+### Security
+
+- **A secrets directory others can write to is refused** (D-83): a
+  directory, or a file in it, that a user other than its owner and root
+  can change is an error naming it; Kubernetes' and Docker's mounts and
+  systemd's credentials read as before. `CF_ANY_WRITER` accepts one;
+  `CF_TRUSTED_DIR` holds a drop-in directory to the same rule. Not
+  checked on Windows.
+
+### Changed
+
+- A secrets or credentials directory others can write to, or holding a
+  file they can, is refused where it was read; `CF_ANY_WRITER` reads it
+  as before. A drop-in directory is unchanged unless `CF_TRUSTED_DIR`
+  (D-83). `cf_platform_has_trusted_dir` and
+  `cf_platform_dir_list_trusted` are new.
+
 ## 1.5.0 — 2026-11-13
 
 ### Security

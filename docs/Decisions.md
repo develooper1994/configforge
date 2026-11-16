@@ -98,6 +98,7 @@ gets reopened every six months.
 | D-80 | systemd's credentials, a builder of their own | sources, secrets | **Decided** |
 | D-81 | A reader's name table is seeded a decode | formats, security | **Decided** |
 | D-82 | What one document may make is bounded, in the flattener | formats, security | **Decided** |
+| D-83 | A directory others can write to is not read as secrets | secrets, drop-in, platform, security | **Decided** |
 | D-91 | CBOR, the JSON model in binary | formats | **Decided** |
 | D-97 | What kind of format a codec is, told to the program | formats | **Decided** |
 
@@ -3333,6 +3334,93 @@ fields, and three functions are added: `cf_decode_budget`,
 small budget and sees it refused by name, and a YAML document of thirty
 aliases of a 2000-key block refused; `test_yaml` takes either byte bound
 for the large anchor.
+
+---
+
+## D-83 — A directory others can write to is not read as secrets
+
+**Question.** A value from `/run/secrets/db.password` explains itself as
+that file. If a user other than the directory's owner and root could
+have put the file there, or changed it, the explanation names the wrong
+author: the configuration says "the secrets directory" and means
+"whoever could write to it". Should a secrets directory be checked for
+who may write to it, how strictly, and what of a drop-in directory?
+
+**Options.**
+
+1. Nothing: a directory is read whoever can write to it, as before.
+   Rejected: it is the defect.
+2. sudo's rule: refuse a directory, or a file in it, that its group or
+   others can write, and an owner other than root or the program's user.
+   Rejected: on Ubuntu and most Linux systems a user's umask is 002 and
+   each user has a group of their own, so every directory a developer
+   makes would be refused; and Docker Compose bind-mounts a developer's
+   file into a container that runs as root, which an owner rule would
+   refuse for an owner nobody else can impersonate.
+3. The rule decided below, checked in the listing's own pass.
+4. The same rule checked by a second pass after the listing. Rejected: a
+   file changed between the two would be read unchecked.
+
+**Decision.** Option 3. `cf_platform_dir_list_trusted` lists the
+directory and, in the same pass that already stats every entry, holds it
+to three rules:
+
+1. The directory is refused when others may write to it and it is not
+   sticky, or when its group may and that group is not the private group
+   of the user who owns it - the group of that user's entry in the
+   password database (`getpwuid_r`).
+2. In a sticky directory others may write to - the one kind rule 1 lets
+   through - each entry as `lstat` sees it (the link, for a link) must
+   belong to root, to the directory's owner or to the user the program
+   runs as: there nobody can replace another's entry, so an entry of one
+   of those is theirs.
+3. Each file as `stat` sees it - what a link names - is refused when
+   others may write to it, or its group may and the group is not its
+   owner's own.
+
+The answer on groups is the maintainer's (2026-11-12): a group may
+write only when it is the private group of the user the directory
+belongs to, so what umask 002 makes is read, and a directory a team's
+group shares is not. Links are followed, as D-78 decided, and the
+directories on the way to a link's target are not checked. Kubernetes
+mounts a secret as a sticky, world-writable directory of root's (mode
+1777) holding root's links to root's files (0644): rule 2 lets it
+through and a file another user drops in is caught. Docker's
+`/run/secrets` (0755, files 0444) and systemd's credentials directory
+(the service user's, 0500) pass as they are. A password-database entry
+too long for the buffer (512 bytes) is treated as not the user's own
+group: the directory is refused, and `CF_ANY_WRITER` reads it. A refusal is `CF_E_SOURCE`,
+names the directory or the file, its mode or its owner, and is not
+excused by `CF_OPTIONAL`, which is for a directory that is not there.
+
+`cf_builder_secrets` and `cf_builder_credentials` hold to the rule by
+default; `CF_ANY_WRITER` reads such a directory all the same, the
+program saying who may write to it is known and accepted. A drop-in
+directory (`cf_builder_dir`) is held to it only with `CF_TRUSTED_DIR`,
+and the two flags together fail the builder. Every other source refuses
+both flags as it refuses any flag it does not know.
+
+**Windows.** Who may write there is an access control list, not a mode,
+and an answer read from one by a rule written for modes would be wrong
+both ways, so the platform does not say: `cf_platform_has_trusted_dir`
+is false there and in a build with no operating system, and the trusted
+listing is the plain one. A secrets directory is read unchecked, as
+before - asked for nothing, it is not refused for what the platform
+cannot say - and a drop-in directory that asks `CF_TRUSTED_DIR` is
+refused as `CF_E_CAPABILITY`.
+
+**Compatibility.** A secrets or credentials directory others can write
+to, or holding a file they can, is refused where it was read;
+`CF_ANY_WRITER` reads it as before. A drop-in directory is unchanged
+unless `CF_TRUSTED_DIR`. Two functions and two flags are added.
+
+**Held to.** `test_trusted` reads a secrets directory of each shape -
+0755 with a 0644 file, 0777 with and without `CF_ANY_WRITER`, 01777 of
+the program's own file, a 0666 file, 0775 of the owner's own group - a
+0777 drop-in directory with and without `CF_TRUSTED_DIR`, and, run as
+root, a stranger's file in a sticky directory; on Windows, a drop-in
+directory asking `CF_TRUSTED_DIR` is refused for what the platform
+cannot say. The whole suite passes under umask 002.
 
 ---
 

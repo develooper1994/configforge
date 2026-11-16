@@ -140,7 +140,7 @@ In the order to be done. A card is `open`, `done` (with its commit), or
 
 | Order | Card | Size | Needs | Status |
 | ----: | ---- | ----- | ----- | ------ |
-| 13 | H-5 A directory others can write to is not read as secrets | large | - | open |
+| 13 | H-5 A directory others can write to is not read as secrets | large | - | done |
 | 14 | H-7 An undefined key named like a secret is kept as one | large | - | open |
 | 15 | H-8a A secret's digest that cannot be tested without a key | large | - | open |
 | 16 | W5-V1 `doctor convert` | large | W4-C3 | waits: the tools split (Roadmap, "Tools, distribution and digests") |

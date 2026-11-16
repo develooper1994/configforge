@@ -315,6 +315,18 @@ int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], 
     return n;
 }
 
+/* Who may write here is an access control list, not a mode, and an
+   answer read from one by a rule written for modes would be wrong both
+   ways; so this platform does not say (D-83). */
+cf_bool cf_platform_has_trusted_dir(void) {
+    return CF_FALSE;
+}
+
+int cf_platform_dir_list_trusted(const char* path, char (*names)[CF_PLATFORM_NAME_MAX],
+                                 int max, cf_error* err) {
+    return cf_platform_dir_list(path, names, max, err);
+}
+
 /* ------------------------------------------------------------------ *
  * The wait handle
  *

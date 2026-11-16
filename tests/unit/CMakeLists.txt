@@ -65,6 +65,7 @@ set(CF_UNIT_TESTS
     test_bom
     test_budget
     test_dirlimits
+    test_trusted
     test_credentials
     test_cbor
     test_tlv
@@ -208,6 +209,16 @@ set_tests_properties(unit.test_dirlimits PROPERTIES WORKING_DIRECTORY
 # FIFOs and symbolic links are POSIX's.
 if(UNIX AND NOT CMAKE_SYSTEM_NAME STREQUAL "WASI")
   target_compile_definitions(test_dirlimits PRIVATE CF_TEST_FIFO=1)
+endif()
+# And test_trusted's: it makes directories, sets their modes and owners,
+# and lists them as secrets, which nothing else should see (D-83).
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/trusted)
+set_tests_properties(
+  unit.test_trusted PROPERTIES WORKING_DIRECTORY
+                               ${CMAKE_CURRENT_BINARY_DIR}/trusted)
+# Modes, owners and groups are POSIX's.
+if(UNIX AND NOT CMAKE_SYSTEM_NAME STREQUAL "WASI")
+  target_compile_definitions(test_trusted PRIVATE CF_TEST_POSIX=1)
 endif()
 # And test_credentials's: it sets $CREDENTIALS_DIRECTORY to a relative
 # path, which is only the test's own in a working directory of its own.

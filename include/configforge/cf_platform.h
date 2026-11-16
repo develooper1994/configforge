@@ -120,6 +120,24 @@ CF_API char* const* cf_platform_args(int argc, char* const* argv, cf_arena* aren
 CF_API int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX],
                                 int max, cf_error* err);
 
+/* Whether this platform can say who may write to a directory and its
+   files (POSIX: yes; Windows and a build with no operating system:
+   no - an access control list is not a mode, and an answer that
+   guessed would be wrong both ways). */
+CF_API cf_bool cf_platform_has_trusted_dir(void);
+
+/* cf_platform_dir_list, and in the same pass the check of D-83: the
+   directory, every entry and every file an entry names must be ones
+   nobody but their owner and root can change, and a sticky
+   directory's entries must belong to root, to the directory's owner
+   or to the program's user. -2 with
+   `err` naming the first that is not, as for any entry that cannot be
+   handed over (CF_OPTIONAL does not excuse it). Where
+   cf_platform_has_trusted_dir is false it is cf_platform_dir_list. */
+CF_API int cf_platform_dir_list_trusted(const char* path,
+                                        char (*names)[CF_PLATFORM_NAME_MAX], int max,
+                                        cf_error* err);
+
 /* ------------------------------------------------------------------ *
  * The Windows Registry
  *

@@ -661,10 +661,11 @@ whose size changes while it is read is still read whole.
   over a PIN it can be brute-forced offline from a blind report or a
   fingerprint. Done when a digest cannot be tested against guesses
   without a key, and the report schema and `doctor diff` still compare.
-* ⬜ **A trusted-directory check**, like sudo's, for drop-in and secrets
+* 🟩 **A trusted-directory check**, like sudo's, for drop-in and secrets
   directories: refuse one a user other than its owner or root can write
   to. Done when it is on by default for secrets and opt-in for drop-ins,
-  with the decision in Decisions.md.
+  with the decision in Decisions.md: on for secrets and credentials,
+  `CF_TRUSTED_DIR` for drop-ins (D-83).
 * ⬜ **Doctor `--redact-all`**, on by default in the action, so that a
   report's values are shown to no pull request unless asked for. Done
   when the action's default shows no value and a flag restores it.
