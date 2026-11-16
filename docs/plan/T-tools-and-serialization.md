@@ -716,6 +716,10 @@ Lessons from the hardening cards, which every card below is held to:
     3. **`configforge_codec`**, matching the tool if T-3's answer is
        `configforge-codec`: shorter, and "codec" is what the library
        calls each format, not the library.
+    **Answer (2026-11-16): 1, `configforge_serialize`** - chosen while
+    the maintainer was away, under the standing instruction to decide;
+    the name is public only from 1.7.0's release, so it can still be
+    changed before then.
     Recommended: **1**. The rest of this card, S-5 and T-3 are written
     for 1. Another answer is a name replaced in those three cards before
     any is started; nothing else changes.

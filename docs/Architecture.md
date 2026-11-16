@@ -57,6 +57,10 @@ both, and hiding them in one side or the other would have made the
 boundary a lie. `gate.layering` holds the serialization library to a list
 of what it may include (`cmake/ConfigForgeSerialize.cmake`).
 
+`src/serialize` and the leaves it uses are also a library of their own,
+`configforge_serialize` (D-90); every function of it is in
+`libconfigforge` too.
+
 ## Data flow
 
 Reading:

@@ -7,6 +7,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **The serialization library, `configforge_serialize`**: the readers
+  and writers - JSON, JSON5, TOML, YAML, INI, `.properties`, XML, CBOR,
+  TLV - as a library of their own, which a program that wants documents
+  and not a configuration links alone; `libconfigforge` still carries all
+  of it. `cf_serialize_version()` (D-90).
 - An experimental tier, `CF_EXPERIMENTAL(major, minor)`: a function
   outside the 1.x promise for the minor release it comes in, promoted or
   removed by the next (D-89); `docs/API.md` begins with what 1.x

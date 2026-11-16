@@ -105,6 +105,7 @@ gets reopened every six months.
 | D-87 | macOS's user defaults, an optional source over the flattener | sources, platform | **Decided** |
 | D-88 | What 1.x promises, made smaller: the internal tier fenced | api, abi | **Decided** |
 | D-89 | The experimental tier | api, abi | **Decided** |
+| D-90 | The serialization library, a target of its own | serialize, build, abi | **Decided** |
 | D-91 | CBOR, the JSON model in binary | formats | **Decided** |
 | D-97 | What kind of format a codec is, told to the program | formats | **Decided** |
 
@@ -3723,6 +3724,42 @@ function is marked there with the release it came in. A declaration is
 read on one line, as `CF_API`'s are.
 
 **Compatibility.** Additive; no function is experimental yet.
+
+## D-90 — The serialization library, a target of its own
+
+**Question.** D-27 kept the serialization layer inside ConfigForge
+"until needed". The readers and writers - a C89 YAML 1.2 reader that
+passes yaml-test-suite, JSON5, TOML, CBOR, TLV - have value without a
+configuration, and every format the Roadmap adds next would otherwise
+enter ConfigForge's 1.x promise. When does the layer become a library?
+
+**Options.**
+
+1. As it was: one library.
+2. A target of its own in this repository, before the first new format.
+3. A repository of its own now, before it has users of its own.
+
+**Decision.** Option 2. `configforge_serialize` is a CMake target
+(exported `ConfigForge::configforge_serialize`), built from
+`src/serialize` and the leaves it calls - the platform's file opener
+(`cf_platform_file.h`) among them, S-3's three cuts having left it no
+other tie - with the headers `cmake/ConfigForgeSerialize.cmake` lists;
+`gate.layering` holds it to that list. Its sources are compiled twice,
+into it and into `libconfigforge`, rather than shared as objects, so
+each library keeps its own export flags; `libconfigforge` carries all of
+it, so a program links one or the other, never both. Its version is
+ConfigForge's, a checked copy (`cf_serialize_version.h`,
+`cf_serialize_version()`; `gate.version` and `version.cmake` cover it).
+`gate.abi.serialize` keeps its symbol list
+(`cmake/configforge_serialize.symbols`). There is one amalgamation.
+The name was chosen on 2026-11-16 while the maintainer was away, under
+the standing instruction to decide: `configforge_serialize` (the family
+`configforge_doctor` began), public from 1.7.0's release and changeable
+until then. Held to by `unit.serialize_alone`, a program linked against
+the serialization library alone, and `gate.abi.serialize`.
+
+**Compatibility.** Nothing a 1.6 program sees changes; two functions
+are added. Installing it and its packages is S-5.
 
 ## D-91 — CBOR, the JSON model in binary
 
