@@ -49,7 +49,7 @@ beside what is not.
 | 🟩 | Doctor checks a report's fingerprint against its contents (CFD019) | plan item 9 |
 | 🟨 | Continuous fuzzing in CI (ClusterFuzzLite): written, its first run to read | `.clusterfuzzlite/`, cflite.yml |
 | 🟩 | INI compared with `configparser` (36 of 36; `.properties` needs a JVM, left to its tests) | plan item 9 |
-| 🟨 | Native OS sources: systemd's credentials done (D-80); macOS's user defaults left | plan item 9 |
+| 🟨 | Native OS sources: systemd's credentials done (D-80); macOS's user defaults: the option and the platform stubs; the source to come | plan item 9 |
 | ⬜ | Go and .NET bindings, when asked | plan item 9 |
 | 🟩 | Binary configuration: a layout-driven TLV codec, BER-TLV, CBOR | D-91, D-93 |
 | ⬜ | Every operation on a file's data, written back in its format | assessment |

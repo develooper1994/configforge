@@ -31,6 +31,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   `CF_TRUSTED_DIR` holds a drop-in directory to the same rule. Not
   checked on Windows.
 
+### Added
+
+- `CF_WITH_PREFERENCES` (off): the build option for macOS's user
+  defaults, which W3-F2c reads.
+
 ### Changed
 
 - A secrets or credentials directory others can write to, or holding a
