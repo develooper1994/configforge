@@ -3634,6 +3634,20 @@ the Registry.
 **Compatibility.** Additive: one symbol, `cf_builder_preferences`.
 Nothing changes unless the option is on.
 
+**Held to.** CI's `macos-preferences` job builds with
+`CF_WITH_PREFERENCES=ON` on macOS and runs the whole suite. Its
+`test_preferences` imports a plist into a test domain with `defaults
+import`, reads it back through `cf_builder_preferences` and deletes it:
+a dictionary member is a section's key (`Server/Port` is `server.port`,
+9443), an array a list, a boolean a bool, an integer past 32 bits an
+int, a real a real, and explain() names `defaults <domain> Server/Port`.
+A date is refused, a name no key can carry is refused with `CF_E_KEY`, a
+domain with no values is an error unless `CF_OPTIONAL`. Every other job
+runs the same test's other half: the source fails by name, optional or
+not. On macOS `posix.c` alone is compiled as C99 when the option is on,
+since CoreFoundation's headers are not C89, and the framework is linked
+publicly and named in pkg-config.
+
 ## D-91 — CBOR, the JSON model in binary
 
 **Question.** A device or a service that keeps its settings in CBOR (RFC
