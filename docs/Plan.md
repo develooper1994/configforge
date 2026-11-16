@@ -153,7 +153,7 @@ the 1.6.0 milestone; the S-*, T-* and W5-* cards to 1.7.0, but T-5 to
 | 15 | H-8a A secret's digest that cannot be tested without a key | large | - | done (0b082bf, d3094ff) |
 | 16 | H-2 The contract `doctor gen` writes, checked by the compiler | medium | H-1 | done (b9383d1, aa9436d, 490ee4f, 38c5a58) |
 | 17 | H-6 Doctor's `--redact-all`, on in the action unless asked | medium | - | done (9f3394b, 0b85a24, 9de9ef3) |
-| 18 | H-8b Doctor tells digests of different keys apart | medium | H-8a | open |
+| 18 | H-8b Doctor tells digests of different keys apart | medium | H-8a | done (ed37f5f, 23018f7, cbe0050) |
 | 19 | W3-F2a The platform capability for macOS's user defaults | medium | - | open |
 | 20 | W3-F2b `cf_builder_preferences`: the source, off macOS | medium | W3-F2a | open |
 | 21 | W3-F2c Reading CFPreferences on macOS (CI-only) | large | W3-F2b | open |
