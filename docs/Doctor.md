@@ -276,6 +276,12 @@ same file, and the schema stays the one place it is written. Generate it in the 
 rather than checking it in; the function reads back through `cf_schema` as the schema
 it came from, which `tests/doctor/test_gen.c` holds it to.
 
+The generated file checks itself where the compiler can (D-75): compiled as C++11 or
+later each key is checked by `cf::key_is_valid`, as C11 a key's length and every int
+default and text default against its bounds, so a build with a smaller `CF_KEY_MAX`, or
+a schema whose default its own bounds refuse, does not compile. As C89 it is plain
+calls, checked by `cf_builder_create`.
+
 ### 7a. Querying a report with jq
 
 A report is JSON with a published schema, so a question the commands do not ask is a jq

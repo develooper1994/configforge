@@ -222,12 +222,87 @@ static void c_list_decl(FILE* out, const char* what, size_t i,
     fputs("NULL};\n", out);
 }
 
+/* What the generated file defines to check each definition at compile
+   time, by the language it is compiled as (D-75), one line each. */
+static const char* const gen_checks[] = {
+    "/* Each definition is checked by the compiler where the language can",
+    "   (D-75): its key by the library's rule from C++11; from C11 its",
+    "   key's length, an int default against its range and a text default",
+    "   against its length. cf_builder_create checks all of it, in every",
+    "   language. */",
+    "#ifdef __cplusplus",
+    "#include <configforge/configforge.hpp>",
+    "#endif",
+    "#if defined(__cplusplus) && CF_CPP11",
+    "#define CF_GEN_KEY(k) static_assert(cf::key_is_valid(k), \"configforge: not a canonical key\")",
+    "#define CF_GEN_INT(d, lo, hi) static_assert((lo) <= (d) && (d) <= (hi), \"configforge: a default outside its own range\")",
+    "#define CF_GEN_REAL(d, lo, hi) static_assert((lo) <= (d) && (d) <= (hi), \"configforge: a default outside its own range\")",
+    "#define CF_GEN_LEN(t, lo, hi) static_assert(sizeof(t) > (lo) && ((hi) == 0 || sizeof(t) <= (hi) + 1), \"configforge: a text default longer than its max_len, or shorter than its min_len\")",
+    "#elif CF_HAVE_C11 && !defined(__cplusplus)",
+    "#define CF_GEN_KEY(k) CF_C11_KEY_(k)",
+    "#define CF_GEN_INT(d, lo, hi) CF_C11_RANGE_(d, lo, hi)",
+    "#define CF_GEN_REAL(d, lo, hi) ((void)0)",
+    "#define CF_GEN_LEN(t, lo, hi) CF_C11_LEN_(t, lo, hi)",
+    "#else",
+    "#define CF_GEN_KEY(k) ((void)0)",
+    "#define CF_GEN_INT(d, lo, hi) ((void)0)",
+    "#define CF_GEN_REAL(d, lo, hi) ((void)0)",
+    "#define CF_GEN_LEN(t, lo, hi) ((void)0)",
+    "#endif",
+    "",
+    NULL};
+
+static const char* const gen_undefs[] = {"#undef CF_GEN_KEY", "#undef CF_GEN_INT",
+                                         "#undef CF_GEN_REAL", "#undef CF_GEN_LEN",
+                                         NULL};
+
+static void c_lines(FILE* out, const char* const* lines) {
+    for (; *lines != NULL; ++lines) {
+        fputs(*lines, out);
+        fputc('\n', out);
+    }
+}
+
+/* The checks the compiler can make of one definition (D-75): an int or
+   real default against its range, a text default against its length
+   bounds. A list's defaults are checked by cf_define, as each is made. */
+static void c_checks(FILE* out, const cf_def* d) {
+    const cf_value* v = &d->default_value;
+
+    if (!d->has_default || d->list_mode != CF_LIST_NONE) {
+        return;
+    }
+    if (d->type == CF_TYPE_INT && d->has_range) {
+        fputs("    CF_GEN_INT(", out);
+        c_i64(out, v->u.i);
+        fputs(", ", out);
+        c_i64(out, d->imin);
+        fputs(", ", out);
+        c_i64(out, d->imax);
+        fputs(");\n", out);
+    }
+#if CF_WITH_REAL
+    if (d->type == CF_TYPE_REAL && d->has_range) {
+        fprintf(out, "    CF_GEN_REAL(%.17g, %.17g, %.17g);\n", v->u.r, d->rmin,
+                d->rmax);
+    }
+#endif
+    if (d->type == CF_TYPE_TEXT && (d->min_len != 0 || d->max_len != 0)) {
+        fputs("    CF_GEN_LEN(", out);
+        c_string(out, v->u.t.p, v->u.t.n);
+        fprintf(out, ", (size_t)%luu, (size_t)%luu);\n", (unsigned long)d->min_len,
+                (unsigned long)d->max_len);
+    }
+}
+
 /* What one definition says, past cf_def_init's zeros. */
 static cf_bool c_define(FILE* out, size_t i, const cf_def* d) {
     char   target[64];
     size_t k;
 
     fprintf(out, "\n    cf_def_init(&d, %s, ", c_type(d->type));
+    c_text(out, d->key);
+    fputs(");\n    CF_GEN_KEY(", out);
     c_text(out, d->key);
     fputs(");\n", out);
     if (d->flags != 0) {
@@ -304,6 +379,7 @@ static cf_bool c_define(FILE* out, size_t i, const cf_def* d) {
                     (unsigned long)d->list_default_count);
         }
     }
+    c_checks(out, d);
     fputs("    ok = ok && cf_builder_define(b, &d);\n", out);
     return CF_TRUE;
 }
@@ -356,6 +432,7 @@ static int gen_write(FILE* out, const cf_defset* ds, const char* schema,
           "   Regenerate it from the schema rather than editing it. */\n\n"
           "#include <configforge/configforge.h>\n\n",
           out);
+    c_lines(out, gen_checks);
     if (reals) {
         fputs("#if !CF_WITH_REAL\n"
               "#error \"the contract has real keys: build with CF_WITH_REAL\"\n"
@@ -399,6 +476,7 @@ static int gen_write(FILE* out, const cf_defset* ds, const char* schema,
         fputs("    (void)b;\n", out);
     }
     fputs("    return ok;\n}\n", out);
+    c_lines(out, gen_undefs);
     return 0;
 }
 

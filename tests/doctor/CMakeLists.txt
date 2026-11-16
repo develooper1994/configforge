@@ -119,6 +119,86 @@ if(NOT CMAKE_CROSSCOMPILING)
   configforge_apply_warnings(doctor_gen)
   configforge_apply_analysis(doctor_gen)
   add_test(NAME doctor.gen COMMAND doctor_gen)
+
+  # The same contract as C++, and the contract of a schema the library reads
+  # and refuses only at create (a text default longer than its maxLength),
+  # each by the build's Doctor. The generated file checks itself where the
+  # language can (D-75): the good one must compile with its checks, the
+  # refused one must not.
+  set(gen_cpp ${CMAKE_CURRENT_BINARY_DIR}/gen_contract.cpp)
+  add_custom_command(
+    OUTPUT ${gen_cpp}
+    COMMAND doctor gen --schema ${contract} --name gen_contract --out ${gen_cpp}
+    DEPENDS doctor ${contract}
+    VERBATIM)
+  set(refused ${CMAKE_CURRENT_SOURCE_DIR}/contract_refused.schema.json)
+  set(gen_refused_c ${CMAKE_CURRENT_BINARY_DIR}/gen_refused.c)
+  set(gen_refused_cpp ${CMAKE_CURRENT_BINARY_DIR}/gen_refused.cpp)
+  add_custom_command(
+    OUTPUT ${gen_refused_c}
+    COMMAND doctor gen --schema ${refused} --name gen_refused --out
+            ${gen_refused_c}
+    DEPENDS doctor ${refused}
+    VERBATIM)
+  add_custom_command(
+    OUTPUT ${gen_refused_cpp}
+    COMMAND doctor gen --schema ${refused} --name gen_refused --out
+            ${gen_refused_cpp}
+    DEPENDS doctor ${refused}
+    VERBATIM)
+  include(ConfigForgeMustNotCompile)
+  set(gen_refusal "a text default longer than its max_len")
+
+  if("c_std_11" IN_LIST CMAKE_C_COMPILE_FEATURES AND NOT CF_FORCE_PORTABLE)
+    add_library(doctor_gen_c11 OBJECT ${gen_c})
+    set_target_properties(
+      doctor_gen_c11
+      PROPERTIES C_STANDARD 11
+                 C_STANDARD_REQUIRED ON
+                 C_EXTENSIONS OFF)
+    target_link_libraries(doctor_gen_c11 PRIVATE configforge)
+    configforge_apply_warnings(doctor_gen_c11)
+    cf_must_not_compile(
+      doctor.refused.gen.c11
+      SOURCE
+      ${gen_refused_c}
+      LANG
+      C
+      STD
+      11
+      DEFINE
+      CF_GEN_REFUSED=1
+      EXPECT
+      "${gen_refusal}")
+  endif()
+
+  if(CF_WITH_CXX AND "cxx_std_11" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+    add_library(doctor_gen_cxx11 OBJECT ${gen_cpp})
+    set_target_properties(
+      doctor_gen_cxx11
+      PROPERTIES CXX_STANDARD 11
+                 CXX_STANDARD_REQUIRED ON
+                 CXX_EXTENSIONS OFF)
+    target_link_libraries(doctor_gen_cxx11 PRIVATE configforge)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+      target_compile_options(doctor_gen_cxx11 PRIVATE -pedantic -Werror -Wall
+                                                      -Wextra)
+    elseif(MSVC)
+      configforge_apply_warnings(doctor_gen_cxx11)
+    endif()
+    cf_must_not_compile(
+      doctor.refused.gen.cxx11
+      SOURCE
+      ${gen_refused_cpp}
+      LANG
+      CXX
+      STD
+      11
+      DEFINE
+      CF_GEN_REFUSED=1
+      EXPECT
+      "${gen_refusal}")
+  endif()
 endif()
 
 # The GitHub Action's scripts and the pre-commit hook (actions/doctor),

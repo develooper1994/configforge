@@ -58,7 +58,7 @@ beside what is not.
 | ⬜ | 2.0: what the sizing modes break, once | plan item 10 |
 | 🟩 | Sizes and work predicted, then checked: the file buffer and the key space kept, three more measured and left | D-76, plan of the evening |
 | 🟩 | A UTF-8 byte order mark read past by every text reader (`cf_blob_skip_bom`) | 1.5.0 |
-| 🟨 | Checks at compile time where they can be, at run time always: Rust's `const` keys, C++'s `constexpr` Keys and C11's define macros done; `doctor gen` left | D-75 |
+| 🟩 | Checks at compile time where they can be, at run time always: Rust, C++, C11 and `doctor gen`'s output | D-75 |
 | 🟩 | GitHub used for all it offers that fits | plan of the evening |
 | 🟩 | A security pass: secrets in reasons, renames and Doctor's diff; bounds on references and YAML aliases; directories read whole or refused | 1.5.0 |
 
@@ -89,7 +89,6 @@ merged in any order; items in one group go one after another.
 | Group | Items | Changes | Size |
 | ----- | ----- | ------- | ---- |
 | A | D-73, the format from the name and the content; `cf_builder_document` | `src/serialize/codec.c`, `src/bridge/file.c`, a new source, `cf_serialize.h` | large |
-| B | D-75 in C++ (`constexpr` keys and ranges), C11 and `doctor gen`'s output; Rust's part is done | `configforge.hpp`, `configforge.h`'s macros, `tools/doctor/contract.c` | medium |
 | C | D-76's rest: the key space and the index sized from the bytes or the last generation; the emitter's output sized in dump mode | `src/core/keyspace.c`, `src/core/define.c`, `src/bridge/emit.c`, `bench/` | medium |
 | D | Doctor checks a report's fingerprint against its contents | `tools/doctor/` | small |
 | E | INI compared value by value with Python's `configparser` (Java's `Properties` needs a JVM the machines here do not have, so `.properties` is left to its own tests) | `scripts/check/conformance.py`, `tests/conformance/` | small |
@@ -117,10 +116,10 @@ short keeps its branch, unmerged, and says so here.
    ClusterFuzzLite; Rust's `const` keys (D-75).
 2. 🟩 **Wave 2**: A, D-73 and `cf_builder_document`; C, D-76's rest,
    each prediction measured and kept only where it pays. **1.4.0** (ready; its tag is left).
-3. 🟨 **Wave 3**: B, D-75: C++ is done (a `constexpr` Key's name, range
-   and default are checked by the compiler from C++11), C11's
+3. 🟨 **Wave 3**: B, D-75: done (a `constexpr` Key's name, range
+   and default are checked by the compiler from C++11, C11's
    `_Static_assert` in the define macros and the code `doctor gen`
-   writes are left; F,
+   writes); F,
    the native sources: systemd's credentials (`$CREDENTIALS_DIRECTORY`)
    are done, `cf_builder_credentials` (D-80), tested on Linux and
    Windows, in C, C++, Rust and Python; the user defaults (`CFPreferences`) on macOS are

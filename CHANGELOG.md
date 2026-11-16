@@ -164,7 +164,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   `CF_DEFINE_TEXT` refuse, when compiled, a definition the library would
   refuse at `create` - a default outside its range, a range upside down,
   a text default outside its length bounds, an empty or overlong key, a
-  key required and defaulted. A C89 program sees nothing new.
+  key required and defaulted. A C89 program sees nothing new. The C that
+  `doctor gen --schema` writes is checked the same way, as C11 and as
+  C++11.
 
 - **systemd's credentials are a source**: `cf_builder_credentials` reads
   the directory `$CREDENTIALS_DIRECTORY` names, as the secrets directory
