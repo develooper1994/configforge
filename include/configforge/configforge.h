@@ -406,6 +406,18 @@ CF_API void cf_builder_log(cf_builder* b, cf_log_fn fn, void* user, cf_log_level
    still carries no value. */
 CF_API void cf_builder_track_reads(cf_builder* b);
 
+/* Digest every sensitive value under this key (D-85): SipHash-2-4,
+   written "sip24:<id>:<16 hex digits>", in place of the unkeyed
+   FNV-1a digest, wherever a value-blind report, a full one or the
+   fingerprint stands a digest for a secret. Without a key a digest
+   can be tested against guesses - a PIN in a moment; with one it
+   cannot, and reports made under one key still compare. `id` is the
+   key's own digest, so two keys are told apart without either being
+   shown. `n` must be 16; the bytes are copied and wiped with the
+   configuration, and a derived configuration keeps them. */
+CF_API cf_bool cf_builder_digest_key(cf_builder* b, const unsigned char* key,
+                                     size_t n);
+
 CF_NODISCARD CF_API cf_config* cf_builder_create(cf_builder* b, cf_error* err);
 
 /* ------------------------------------------------------------------ *

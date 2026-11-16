@@ -201,6 +201,8 @@ typedef struct cf_defset {
        second (bench/). Sealing sorts the definitions and drops it. */
     size_t* index;
     size_t  index_cap;
+
+    const unsigned char* digest_key; /* 16 bytes in the arena, or NULL: FNV-1a (D-85) */
 } cf_defset;
 
 CF_API cf_bool cf_defset_init(cf_defset* ds, cf_arena* arena, size_t hint);

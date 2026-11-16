@@ -39,6 +39,7 @@ set(CF_UNIT_TESTS
     test_wipe
     test_secrets
     test_marker
+    test_digestkey
     test_secretlike
     test_diff
     test_schema

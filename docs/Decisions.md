@@ -100,6 +100,7 @@ gets reopened every six months.
 | D-82 | What one document may make is bounded, in the flattener | formats, security | **Decided** |
 | D-83 | A directory others can write to is not read as secrets | secrets, drop-in, platform, security | **Decided** |
 | D-84 | An undefined key named like a secret is kept as one | secrets, security, reports | **Decided** |
+| D-85 | A secret's digest, keyed | secrets, security, reports | **Decided** |
 | D-91 | CBOR, the JSON model in binary | formats | **Decided** |
 | D-97 | What kind of format a codec is, told to the program | formats | **Decided** |
 
@@ -3471,6 +3472,66 @@ of a configuration holding one changes once.
 **Held to.** `test_secretlike` (report, explanation, diff, fingerprint,
 a malformed reference, an open prefix), a scenario row in `test_marker`,
 and `doctor.secrets` on a blind report of the same.
+
+---
+
+## D-85 — A secret's digest, keyed
+
+**Question.** A blind report, a full one and the fingerprint say "this
+secret changed" with a digest, and the digest is an unsalted FNV-1a. Over
+a four-digit PIN it is a lookup: all ten thousand guesses are tried in a
+millisecond against a digest read from a report or a log line. Can a
+digest still tell that a secret changed without being testable against
+guesses?
+
+**Options.**
+
+1. A key the program gives its builder (`cf_builder_digest_key`); without
+   one, FNV-1a as before. Nothing changes for a program that does
+   nothing; reports made under one key still compare; the gap stays open
+   for a program that gives none, and the Guide says so.
+2. A key made on first use and kept in a file per host. Every digest and
+   fingerprint changes on upgrade, two hosts' reports no longer compare,
+   and the library would write a file it never wrote. Left for 2.0, when
+   fingerprints may change once.
+3. A key from an environment variable. No code change for a deployment
+   that sets it, but the key then sits in the environment the library's
+   own documents tell programs to keep secrets out of.
+4. A slow unkeyed hash. Rejected: a PIN is still ten thousand tries.
+
+**Decision.** Option 1 (the maintainer's answer, 2026-11-12): the key comes
+only from the program, and FNV-1a stays the default. The function is
+SipHash-2-4 (Aumasson and Bernstein, 2012): a keyed function made for
+short inputs, 64 bits as the digest was, and a few dozen lines of C89 in
+`keyspace.c` beside `fnv1a`. A keyed digest is written
+`sip24:<id>:<16 hex digits>`, 31 characters, where the id is the top 32
+bits of SipHash-2-4 of `configforge digest key id` under the key, in
+eight hex digits: it tells two keys apart and, being the output of a
+keyed function, says nothing that helps find the key. `n` must be 16;
+anything else fails the builder with `CF_E_POLICY`. The key is copied
+into the configuration's arena, so it is wiped with it, kept in
+`cf_defset`, and a derived configuration keeps it. One function,
+`cf_ks_secret_digest_text`, makes a secret's digest text for every
+caller: a report (`"digest"` stays a string) and the fingerprint
+(`cf_defset_fingerprint`). A full report now carries a secret's `"digest"`
+beside its `"value"`, an added field, so that Doctor never has to make a
+digest it has no key for. The fingerprint keeps its form, `fnv1a:` and 16
+hex digits, over the selected values with a secret entering by its
+digest's text: keyed, it differs from an unkeyed one and is the same for
+every configuration of one deployment under one key.
+
+**Compatibility.** Without a key nothing changes. With one, a secret's
+digest and the fingerprint change once, report schema stays 1, and a
+Doctor from before reads a keyed digest as an opaque string: two keyed
+alike compare correctly, a keyed and an unkeyed one read as "changed",
+the cautious answer (H-8b teaches Doctor to say "cannot be compared").
+A full report holds a `"digest"` where it held none, which also lets
+Doctor compare a secret in a full report with the same secret in a blind
+one.
+
+**Held to.** `test_digestkey` (the reference vectors, the form, one key
+and another, no key, the fingerprint, a derived configuration, a full
+report, the refusal), and a second pass of `test_marker` with a key given.
 
 ---
 

@@ -39,15 +39,17 @@ static void report_quote_z(cf_sink* out, const char* z) {
     }
 }
 
-/* FNV-1a over the value's canonical text. Not a cryptographic digest
-   and not presented as one: its job is to answer "did this secret
-   change" without revealing what it changed to, in a report that is
-   meant to be safe to keep. */
-static void report_digest(cf_sink* out, const cf_value* v) {
-    char text[24];
-    /* cf_ks_value_digest, which the fingerprint also takes a secret
-       by: what this report shows of one is all the fingerprint does. */
-    size_t n = cf_ks_digest_text(cf_ks_value_digest(v), text, sizeof text);
+/* FNV-1a over the value's canonical text, or SipHash-2-4 of it under
+   the program's digest key (D-85). Its job is to answer "did this
+   secret change" without revealing what it changed to, in a report
+   that is meant to be safe to keep; only the keyed one resists being
+   tested against guesses. */
+static void report_digest(cf_sink* out, const cf_value* v, const cf_defset* ds) {
+    char text[32];
+    /* The function the fingerprint also takes a secret by: what this
+       report shows of one is all the fingerprint does. */
+    size_t n = cf_ks_secret_digest_text(v, (ds != NULL) ? ds->digest_key : NULL, text,
+                                        sizeof text);
     cf_sink_putc(out, '"');
     cf_sink_write(out, text, n);
     cf_sink_putc(out, '"');
@@ -190,7 +192,8 @@ static void report_format(cf_sink* out, const cf_source* s) {
 
 static void report_candidate(cf_sink* out, const cf_candidate* c,
                              const cf_source_view* sv, const cf_def* d,
-                             cf_report_mode mode, const cf_keyspace* ks) {
+                             cf_report_mode mode, const cf_keyspace* ks,
+                             const cf_defset* ds) {
     const cf_source* s        = source_of(sv, c->source);
     const char*      original = cf_ks_original_key(ks, c);
     cf_bool          defined  = (d != NULL && (d->flags & CF_SENSITIVE) != 0);
@@ -231,10 +234,16 @@ static void report_candidate(cf_sink* out, const cf_candidate* c,
         cf_sink_puts(out, ", \"redacted\": true");
         cf_sink_fmt(out, ", \"length\": %zu", n);
         cf_sink_puts(out, ", \"digest\": ");
-        report_digest(out, &c->value);
+        report_digest(out, &c->value, ds);
     } else {
         cf_sink_puts(out, ", \"value\": ");
         cf_sink_json_value(out, &c->value);
+        if (secret) {
+            /* A full report carries the digest too, so that Doctor never
+               has to make one it has no key for. */
+            cf_sink_puts(out, ", \"digest\": ");
+            report_digest(out, &c->value, ds);
+        }
     }
     if (c->at != NULL) {
         cf_sink_puts(out, ", \"at\": ");
@@ -331,7 +340,7 @@ static void report_key(cf_sink* out, const cf_keyspace* ks, const cf_entry* e,
             cf_sink_putc(out, ',');
         }
         cf_sink_fmt(out, "\n%s    ", indent);
-        report_candidate(out, c, sv, d, mode, ks);
+        report_candidate(out, c, sv, d, mode, ks, ds);
         first = CF_FALSE;
     }
     cf_sink_fmt(out, "\n%s  ],\n%s  \"selected\": ", indent, indent);

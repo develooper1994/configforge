@@ -7,6 +7,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Security
 
+- **A secret's digest can be keyed**: `cf_builder_digest_key` makes every
+  secret's digest in a report and in the fingerprint SipHash-2-4 under a
+  16-byte key, which cannot be tested against guesses without it; without
+  one, digests are FNV-1a as before (D-85).
+
 - **A mistyped secret is kept as a secret**: a key nobody defined, a
   typo's distance from a key defined `CF_SENSITIVE` (`db.pasword` beside
   `db.password`), is shown, explained, diffed and fingerprinted as that

@@ -630,6 +630,19 @@ modes, so there a secrets directory is read unchecked and a drop-in
 directory asking `CF_TRUSTED_DIR` is refused for it
 (`cf_platform_has_trusted_dir`).
 
+A secret's digest - what a value-blind report, a full report and the
+fingerprint say of it, so that "it changed" has an answer - is an unkeyed
+FNV-1a unless the program gives a key, and over a PIN that can be tested
+against every guess in a moment. `cf_builder_digest_key(b, key, 16)` makes
+it SipHash-2-4 under a 16-byte key, written `sip24:<key id>:<16 hex
+digits>`, which cannot be tested without the key; reports made under one
+key still compare, and the key's id tells two keys apart without showing
+either (D-85). The key is the program's to keep, as it keeps any secret:
+read it from a secrets directory or a credential store (the same
+`cf_builder_secrets` and its files), not from a file in the source or the
+environment, and give every instance of one deployment the same one. The
+bytes are copied, wiped with the configuration and kept by a derived one.
+
 The memory a
 configuration releases is zeroed first, so a password does not survive
 into the next allocation or a core dump; for a buffer you own,

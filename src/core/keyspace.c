@@ -900,16 +900,22 @@ static cf_u64 fnv1a(cf_u64 h, const char* p, size_t n) {
     return h;
 }
 
+/* The canonical bytes of a value, as every digest of it takes them: a
+   text as it is, anything else as its canonical text in `tmp`. */
+static const char* ks_value_bytes(const cf_value* v, char* tmp, size_t cap, size_t* n) {
+    if (v == NULL) {
+        *n = 0;
+        return "";
+    }
+    *n = (v->type == CF_TYPE_TEXT) ? v->u.t.n : cf_value_to_text(v, tmp, cap);
+    return (v->type == CF_TYPE_TEXT) ? v->u.t.p : tmp;
+}
+
 cf_u64 cf_ks_value_digest(const cf_value* v) {
     char        tmp[CF_VALUE_TEXT_MAX];
     size_t      n;
-    const char* bytes;
+    const char* bytes = ks_value_bytes(v, tmp, sizeof tmp, &n);
 
-    if (v == NULL) {
-        return fnv1a(((cf_u64)3421674724U << 32) | (cf_u64)2216829733U, "", 0);
-    }
-    n     = (v->type == CF_TYPE_TEXT) ? v->u.t.n : cf_value_to_text(v, tmp, sizeof tmp);
-    bytes = (v->type == CF_TYPE_TEXT) ? v->u.t.p : tmp;
     return fnv1a(((cf_u64)3421674724U << 32) | (cf_u64)2216829733U, bytes, n);
 }
 
@@ -929,6 +935,120 @@ size_t cf_ks_digest_text(cf_u64 h, char* buf, size_t cap) {
         n = (sizeof t < cap - 1) ? sizeof t : cap - 1;
         memcpy(buf, t, n);
         buf[n] = '\0';
+    }
+    return sizeof t;
+}
+
+/* SipHash-2-4 (Aumasson and Bernstein, 2012), written from the paper:
+   the key as two little-endian 64-bit words, the state initialised
+   from "somepseudorandomlygeneratedbytes", two rounds a message word,
+   the last word carrying the length in its top byte, then four rounds.
+   Every 64-bit constant is two 32-bit halves, as fnv1a's are. */
+#define SIP_ROTL(x, b) (((x) << (b)) | ((x) >> (64 - (b))))
+
+typedef struct sip_state {
+    cf_u64 v0, v1, v2, v3;
+} sip_state;
+
+static void sip_round(sip_state* s) {
+    s->v0 += s->v1;
+    s->v1 = SIP_ROTL(s->v1, 13);
+    s->v1 ^= s->v0;
+    s->v0 = SIP_ROTL(s->v0, 32);
+    s->v2 += s->v3;
+    s->v3 = SIP_ROTL(s->v3, 16);
+    s->v3 ^= s->v2;
+    s->v0 += s->v3;
+    s->v3 = SIP_ROTL(s->v3, 21);
+    s->v3 ^= s->v0;
+    s->v2 += s->v1;
+    s->v1 = SIP_ROTL(s->v1, 17);
+    s->v1 ^= s->v2;
+    s->v2 = SIP_ROTL(s->v2, 32);
+}
+
+/* Eight bytes, little-endian, from `p` (at most `n` of them are read;
+   the rest of the word is zero). */
+static cf_u64 sip_word(const unsigned char* p, size_t n) {
+    cf_u64 w = 0;
+    size_t i;
+
+    if (n > 8) {
+        n = 8;
+    }
+    for (i = 0; i < n; ++i) {
+        w |= (cf_u64)p[i] << (8 * i);
+    }
+    return w;
+}
+
+cf_u64 cf_siphash24(const unsigned char* key, const void* p, size_t n) {
+    const unsigned char* in = (const unsigned char*)p;
+    sip_state            s;
+    cf_u64               k0 = sip_word(key, 8);
+    cf_u64               k1 = sip_word(key + 8, 8);
+    cf_u64               m;
+    size_t               left = n;
+
+    s.v0 = k0 ^ (((cf_u64)0x736f6d65UL << 32) | (cf_u64)0x70736575UL);
+    s.v1 = k1 ^ (((cf_u64)0x646f7261UL << 32) | (cf_u64)0x6e646f6dUL);
+    s.v2 = k0 ^ (((cf_u64)0x6c796765UL << 32) | (cf_u64)0x6e657261UL);
+    s.v3 = k1 ^ (((cf_u64)0x74656462UL << 32) | (cf_u64)0x79746573UL);
+
+    while (left >= 8) {
+        m = sip_word(in, 8);
+        s.v3 ^= m;
+        sip_round(&s);
+        sip_round(&s);
+        s.v0 ^= m;
+        in += 8;
+        left -= 8;
+    }
+    m = sip_word(in, left) | ((cf_u64)(n & 0xffU) << 56);
+    s.v3 ^= m;
+    sip_round(&s);
+    sip_round(&s);
+    s.v0 ^= m;
+
+    s.v2 ^= (cf_u64)0xffU;
+    sip_round(&s);
+    sip_round(&s);
+    sip_round(&s);
+    sip_round(&s);
+    return s.v0 ^ s.v1 ^ s.v2 ^ s.v3;
+}
+
+/* `digits` hex digits of `h`, the last of them from the low nibble, into
+   `out`; the cursor is the caller's. */
+static void ks_hex_digits(char* out, int digits, cf_u64 h) {
+    static const char hex[] = "0123456789abcdef";
+    int               k;
+
+    for (k = digits - 1; k >= 0; --k) {
+        out[k] = hex[(size_t)(h & (cf_u64)0xF)];
+        h >>= 4;
+    }
+}
+
+size_t cf_ks_secret_digest_text(const cf_value* v, const unsigned char* key, char* buf,
+                                size_t cap) {
+    static const char id_text[] = "configforge digest key id"; /* 25 bytes */
+    char              t[31]     = "sip24:";
+    char              tmp[CF_VALUE_TEXT_MAX];
+    const char*       bytes;
+    size_t            n, len;
+
+    if (key == NULL) {
+        return cf_ks_digest_text(cf_ks_value_digest(v), buf, cap);
+    }
+    bytes = ks_value_bytes(v, tmp, sizeof tmp, &n);
+    ks_hex_digits(t + 6, 8, cf_siphash24(key, id_text, sizeof id_text - 1) >> 32);
+    t[14] = ':';
+    ks_hex_digits(t + 15, 16, cf_siphash24(key, bytes, n));
+    if (buf != NULL && cap > 0) {
+        len = (sizeof t < cap - 1) ? sizeof t : cap - 1;
+        memcpy(buf, t, len);
+        buf[len] = '\0';
     }
     return sizeof t;
 }

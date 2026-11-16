@@ -241,11 +241,11 @@ static void test_origin_drift(void) {
     d = drift_compare(&cli, &env_all);
     check(find(d, "CFD002", "level") != NULL,
           "an ordinary value is compared whichever way its report was written");
-    check(find(d, "CFD002", "license") == NULL &&
+    check(find(d, "CFD002", "license") != NULL &&
               find(d, "CFD014", "license") == NULL &&
               find(d, "VALUE", "license") == NULL,
-          "a secret one report digests and the other shows is not compared: it "
-          "neither agrees nor differs");
+          "a secret one report digests and the other shows is compared by the "
+          "digest a full report carries too (D-85): the same, and origin drift");
     cf_doctor_free(d);
 }
 

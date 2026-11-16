@@ -363,6 +363,17 @@ CF_API cf_u64 cf_ks_value_digest(const cf_value* v);
    `buf` as far as `cap` allows; the length it needs, 22. */
 CF_API size_t cf_ks_digest_text(cf_u64 h, char* buf, size_t cap);
 
+/* SipHash-2-4 of `n` bytes under the 16-byte `key` (D-85). INTERNAL:
+   exported for the tests' vectors. */
+CF_API cf_u64 cf_siphash24(const unsigned char* key, const void* p, size_t n);
+
+/* The digest a report and the fingerprint stand for a secret's value:
+   cf_ks_digest_text(cf_ks_value_digest(v)) when `key` is NULL, else
+   "sip24:<id>:<16 hex digits>" (D-85). Into `buf` as far as `cap`
+   allows; the length it needs, at most 31. */
+CF_API size_t cf_ks_secret_digest_text(const cf_value* v, const unsigned char* key,
+                                       char* buf, size_t cap);
+
 #ifdef __cplusplus
 }
 #endif

@@ -150,7 +150,7 @@ the 1.6.0 milestone; the S-*, T-* and W5-* cards to 1.7.0, but T-5 to
 | ----: | ---- | ----- | ----- | ------ |
 | 13 | H-5 A directory others can write to is not read as secrets | large | - | done (f37813d, 4f42242, 88c8071) |
 | 14 | H-7 An undefined key named like a secret is kept as one | large | - | done (5dca003, 84bd14a) |
-| 15 | H-8a A secret's digest that cannot be tested without a key | large | - | open |
+| 15 | H-8a A secret's digest that cannot be tested without a key | large | - | done |
 | 16 | H-2 The contract `doctor gen` writes, checked by the compiler | medium | H-1 | open |
 | 17 | H-6 Doctor's `--redact-all`, on in the action unless asked | medium | - | open |
 | 18 | H-8b Doctor tells digests of different keys apart | medium | H-8a | open |

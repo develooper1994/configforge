@@ -231,6 +231,10 @@ static const mk_scn mk_table[] = {
 static const mk_scn* mk_s;
 static mk_src        mk_kind;
 static int           mk_lenient;
+static int           mk_keyed; /* the second pass: every builder gives a digest key */
+static const unsigned char mk_digest_key[16] = {0x4d, 0x52, 0x4b, 0x37, 0x31, 0x01,
+                                                0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                                                0x08, 0x09, 0x0a, 0x0b};
 static int  mk_variant; /* 0 as written, 1 changed, 2 empty, 3 empty with a store */
 static char mk_where[200];
 static char mk_tag[96];
@@ -595,6 +599,9 @@ static cf_builder* mk_builder(const mk_scn* s, int variant, cf_bool lenient,
 
     if (with_log) {
         cf_builder_log(b, mk_sink, NULL, CF_LOG_DEBUG);
+    }
+    if (mk_keyed) {
+        cf_builder_digest_key(b, mk_digest_key, sizeof mk_digest_key);
     }
     if (variant >= 2 && is_policy) {
         /* A policy naming a source the build lacks is refused, so the
@@ -962,6 +969,12 @@ static void mk_scenarios(void) {
 }
 
 int main(void) {
+    /* Once as written, once with a digest key given (D-85): a keyed
+       digest is as blind as the unkeyed one, and the marker is in
+       neither. */
+    mk_keyed = 0;
+    mk_scenarios();
+    mk_keyed = 1;
     mk_scenarios();
     remove(MK_INI);
     remove(MK_JSON);

@@ -1028,6 +1028,32 @@ void cf_builder_track_reads(cf_builder* b) {
     }
 }
 
+cf_bool cf_builder_digest_key(cf_builder* b, const unsigned char* key, size_t n) {
+    cf_error       e = CF_ERROR_INIT;
+    unsigned char* copy;
+
+    if (b == NULL || b->failed) {
+        return CF_FALSE;
+    }
+    if (key == NULL || n != 16) {
+        cf_error_set(&e, CF_E_POLICY, NULL, NULL, "a digest key is 16 bytes, not %zu",
+                     (key == NULL) ? (size_t)0 : n);
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    /* In the arena the configuration is built in, so cf_arena_free wipes
+       the key with everything else. */
+    copy = (unsigned char*)cf_arena_alloc(b->arena, 16);
+    if (copy == NULL) {
+        cf_error_set(&e, CF_E_MEMORY, NULL, NULL, "no room for the digest key");
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    memcpy(copy, key, 16);
+    b->defs.digest_key = copy;
+    return CF_TRUE;
+}
+
 void cf_builder_log(cf_builder* b, cf_log_fn fn, void* user, cf_log_level min) {
     if (b != NULL) {
         b->log      = fn;
@@ -1621,6 +1647,11 @@ static cf_config* derive_onto(const cf_config* base, cf_arena* ar, cf_bool owns,
     /* Tracking travels, the reads do not: each snapshot records what
        was read through it. */
     b->track_reads = (base->reads != NULL) ? CF_TRUE : CF_FALSE;
+    /* So does the digest key (D-85): a derived configuration's secrets
+       are digested as the original's were. */
+    if (base->defs.digest_key != NULL) {
+        cf_builder_digest_key(b, base->defs.digest_key, 16);
+    }
 
     return cf_builder_create(b, err);
 }

@@ -34,6 +34,7 @@ cf_builder_codec
 cf_builder_create
 cf_builder_credentials
 cf_builder_define
+cf_builder_digest_key
 cf_builder_dir
 cf_builder_document
 cf_builder_dotenv
@@ -207,6 +208,7 @@ cf_ks_rename_list
 cf_ks_replay
 cf_ks_reselect
 cf_ks_resolve
+cf_ks_secret_digest_text
 cf_ks_value_digest
 cf_lex_cli
 cf_lex_dotenv
@@ -281,6 +283,7 @@ cf_sink_putc
 cf_sink_puts
 cf_sink_terminate
 cf_sink_write
+cf_siphash24
 cf_source_by_content
 cf_source_cli
 cf_source_cli_defs
