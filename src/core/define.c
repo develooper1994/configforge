@@ -1005,8 +1005,8 @@ cf_u64 cf_defset_fingerprint(const cf_defset* ds, const cf_keyspace* ks) {
         }
         if (cfi_entry_secret(ds, e)) {
             n    = cf_ks_secret_digest_text(&e->selected->value,
-                                                (ds != NULL) ? ds->digest_key : NULL, buf,
-                                                sizeof buf);
+                                            (ds != NULL) ? ds->digest_key : NULL, buf,
+                                            sizeof buf);
             text = buf;
         } else if (e->selected->value.type == CF_TYPE_TEXT) {
             text = e->selected->value.u.t.p;

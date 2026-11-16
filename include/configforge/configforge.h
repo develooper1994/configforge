@@ -415,8 +415,7 @@ CF_API void cf_builder_track_reads(cf_builder* b);
    key's own digest, so two keys are told apart without either being
    shown. `n` must be 16; the bytes are copied and wiped with the
    configuration, and a derived configuration keeps them. */
-CF_API cf_bool cf_builder_digest_key(cf_builder* b, const unsigned char* key,
-                                     size_t n);
+CF_API cf_bool cf_builder_digest_key(cf_builder* b, const unsigned char* key, size_t n);
 
 CF_NODISCARD CF_API cf_config* cf_builder_create(cf_builder* b, cf_error* err);
 
