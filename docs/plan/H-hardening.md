@@ -407,9 +407,10 @@ plans D-82 too, so whichever is committed second takes the next.
        of the user who owns it - the gid of that user's entry in the
        password database (`getpwuid_r`) - and others' write is refused
        always.
-    Recommended: **3**. The answer goes here; until it is written, step 1
-    of the loop stops at this card. The rest of the card is written for
-    3. If the answer is 2, leave out every group check below and nothing
+    Recommended: **3**. **Answered, 2026-11-12 (docs/Plan.md, "For the
+    maintainer"): 3** - a group may write only when it is the private
+    group of the user the directory belongs to. The rest of the card is
+    written for 3. If the answer is 2, leave out every group check below and nothing
     else changes. If it is 1: stop, the card needs its list of tests.
   * The rule, D-83, checked by the listing in the same pass that already
     stats every entry (`cf_platform_dir_list`), so that nothing is listed
