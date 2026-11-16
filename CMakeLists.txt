@@ -93,6 +93,16 @@ endif()
 if(CF_WITH_SQLITE)
   target_link_libraries(configforge PRIVATE ${CF_SQLITE_LIBRARY})
 endif()
+# macOS's user defaults are read through CoreFoundation, whose headers
+# are not C89 (SInt64 is a long long): posix.c, the one file that
+# includes them, is compiled as C99 there, after the C89 flag so that it
+# wins, as yaml.c is for libfyaml. PUBLIC: a static library's consumer
+# links the framework too. Elsewhere nothing changes.
+if(CF_WITH_PREFERENCES AND APPLE)
+  set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/platform/posix/posix.c
+                              PROPERTIES COMPILE_OPTIONS "-std=c99")
+  target_link_libraries(configforge PUBLIC "-framework CoreFoundation")
+endif()
 
 # Only what CF_API marks is visible from a shared library, and the
 # library's own sources are the ones that export rather than import.
