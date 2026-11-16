@@ -129,6 +129,30 @@ static void test_diff(void) {
     cf_config_free(b);
 }
 
+/* With cf_doctor_redact_all, a value that differs is said to differ and
+   not what it is: the report holds both, and neither is in the finding. */
+static void test_redact_all(void) {
+    cf_error          err = CF_ERROR_INIT;
+    cf_config*        a   = build("--server.port=8080");
+    cf_config*        b   = build("--server.port=9090");
+    cf_doctor*        d   = cf_doctor_new();
+    const cf_finding* f;
+
+    check(a != NULL && b != NULL && d != NULL, "two configurations, redacted");
+    if (a != NULL && b != NULL && d != NULL) {
+        cf_doctor_redact_all(d, CF_TRUE);
+        check(cf_doctor_diff(d, a, b, &err), "are compared in-process");
+        f = find(d, "VALUE", "server.port");
+        check(f != NULL, "and the port that differs is still found");
+        check(f != NULL && strstr(f->message, "8080") == NULL &&
+                  strstr(f->message, "9090") == NULL,
+              "without either value in the finding");
+    }
+    cf_doctor_free(d);
+    cf_config_free(a);
+    cf_config_free(b);
+}
+
 /* One side of a comparison: where two keys came from - "level", and
    "license", which is sensitive - and how its report was written. */
 typedef struct drift_side {
@@ -1271,6 +1295,7 @@ int main(void) {
     test_secret_unshown();
     test_baseline_and_severity();
     test_diff();
+    test_redact_all();
     test_origin_drift();
     test_unselected_key();
     test_required();

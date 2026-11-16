@@ -99,6 +99,14 @@ CF_DOCTOR_API cf_bool cf_doctor_only_changed_file(cf_doctor* d, const char* path
                                                   cf_error* err);
 CF_DOCTOR_API size_t  cf_doctor_unchanged_count(const cf_doctor* d);
 
+/* From now on, nothing this context reports shows the value of any
+   key, as if each were sensitive: a finding says that a value
+   changed, was refused or came from somewhere, not what it is.
+   Comparisons still use the values a full report carries. For
+   output that goes where the configuration should not, such as a
+   pull-request comment. */
+CF_DOCTOR_API void cf_doctor_redact_all(cf_doctor* d, cf_bool on);
+
 /* Compare two: what one has and the other lacks, values from sources
    of different kinds, overrides in one and not the other, and every
    value that differs - `doctor diff`. */

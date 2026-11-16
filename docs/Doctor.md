@@ -218,6 +218,12 @@ doctor blame <key> <report>...
     the report since which <key> has been as the last report has it, and what
     changed there; "at least" when an earlier step cannot be compared
 
+--redact-all    (dump, explain, lint, diff, history, blame)
+    show no value of any key, as if each were a secret: a finding says that a
+    value changed, was refused or came from somewhere, not what it is. A flag
+    that takes no value. Comparisons still use the values a full report
+    carries, and CFD007 and CFD019 say what they said (D-86)
+
 configforge doctor lint <report> [--rules R] [--baseline B] [--format text|sarif|markdown]
                          [--base <before> --only-changed]
     rule catalogue against a single report
@@ -587,8 +593,12 @@ the login the `comment-author` input names, else the one the token says
 it is (a personal token can), else `github-actions[bot]`, which is what
 the workflow's own token comments as. The marker alone is not enough,
 since anyone can write it. Secrets are
-compared by digest and never shown; values that are not secret are, as
-`doctor diff` shows them - take the reports `--blind` to show none. A
+compared by digest and never shown, and the action passes `--redact-all`
+unless its `show-values` input is `true` (default `false`), so no other
+value reaches the log, the job summary or the comment either: a value that
+differs is "differs (not shown: --redact-all)" (D-86). With `show-values:
+true` the values that are not secret are shown, as `doctor diff` shows
+them - take the reports `--blind` to show none. A
 secret is a key its definition marks sensitive, on either side of a
 diff, and that holds for a full report as for a blind one: a full
 report carries the value, and Doctor compares by it, but no finding,

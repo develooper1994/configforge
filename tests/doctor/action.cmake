@@ -77,6 +77,30 @@ if(NOT s MATCHES "\"version\": \"2.1.0\"")
   fail("no SARIF was written")
 endif()
 
+# With show-values unset the action passes --redact-all: no plain value
+# reaches the Markdown or the log (D-86). CF_SHOW_VALUES=true brings the
+# values back.
+foreach(needle 9090 127.0.0.1 "127\\.0\\.0\\.1")
+  string(FIND "${m}${text}" "${needle}" at)
+  if(NOT at EQUAL -1)
+    fail("a value reached the output with show-values unset: ${needle}")
+  endif()
+endforeach()
+run_script(
+  rc
+  text
+  ${ACTION}/run.sh
+  CF_DOCTOR=${DOCTOR}
+  CF_REPORT=cf_fx_staging.json
+  CF_BASE=cf_fx_prod.json
+  CF_FAIL_ON=never
+  CF_SHOW_VALUES=true
+  CF_MARKDOWN=${md})
+file(READ ${md} m)
+if(NOT m MATCHES "9090")
+  fail("show-values true did not show the values:\n${m}")
+endif()
+
 # The same change passes a run that fails only on errors.
 run_script(
   rc

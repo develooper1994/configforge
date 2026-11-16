@@ -38,6 +38,7 @@ typedef struct rkey {
     const char* selected; /* winning source name           */
     cf_bool     required;
     cf_bool     sensitive;
+    cf_bool     hidden; /* sensitive, or --redact-all: no value of it is shown */
     cf_bool     deprecated;
     const char* replaced_by; /* the new name, when it was renamed */
     cf_bool     defined;
@@ -147,6 +148,9 @@ struct cf_doctor {
     const char**  sources;
     size_t        nsources;
     int           unchanged;
+
+    /* cf_doctor_redact_all: no value of any key is shown. */
+    cf_bool redact_all;
 };
 
 /* Reading reports. False with `err` set, worded for a person. */

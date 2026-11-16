@@ -73,6 +73,10 @@ inputs:
     description: The login github-token comments as - only a comment by this account is taken for Doctor's and updated. Empty asks the token, and the workflow's own token is github-actions[bot]
     required: false
     default: ""
+  show-values:
+    description: Show the reports' values in the log, the summary and the comment - true or false; a secret's is never shown
+    required: false
+    default: "false"
 
 outputs:
   sarif:
@@ -108,6 +112,7 @@ runs:
         CF_SARIF: ${{ inputs.sarif }}
         CF_MARKDOWN: ${{ runner.temp }}/configforge-doctor.md
         CF_SUMMARY: ${{ inputs.summary }}
+        CF_SHOW_VALUES: ${{ inputs.show-values }}
         CF_ACTION: ${{ github.action_path }}
       run: |
         CF_DOCTOR="$(find "$CF_BUILD" -type f \( -name doctor -o -name doctor.exe \) | head -n 1)"

@@ -16,6 +16,8 @@
 #   CF_ONLY_CHANGED  true: the lint reports only what the change touched
 #                 against CF_BASE (doctor lint --only-changed), so a large
 #                 configuration can adopt Doctor one change at a time
+#   CF_SHOW_VALUES  true: show values (doctor without --redact-all);
+#                 anything else hides them
 #
 # Exits as Doctor does: 0, 1 when a finding reaches CF_FAIL_ON in the
 # lint or the diff, 2 for input Doctor cannot use.
@@ -35,6 +37,7 @@ esac
 opts=()
 if [ -n "${CF_BASELINE:-}" ]; then opts+=(--baseline "$CF_BASELINE"); fi
 if [ -n "${CF_SEVERITY:-}" ]; then opts+=(--severity "$CF_SEVERITY"); fi
+if [ "${CF_SHOW_VALUES:-false}" != "true" ]; then opts+=(--redact-all); fi
 lint=() # the lint's own options; the diff has a base already
 if [ "${CF_ONLY_CHANGED:-false}" = "true" ]; then
   if [ -z "${CF_BASE:-}" ]; then
@@ -74,8 +77,14 @@ if [ -n "${CF_MARKDOWN:-}" ]; then
       "$CF_DOCTOR" diff "$CF_BASE" "$CF_REPORT" ${opts[@]+"${opts[@]}"} --format markdown \
         --fail-on never
       echo
-      echo "In the diff, *here* is the base and *there* the change. Secrets are"
-      echo "compared by digest and never shown; a blind report shows no value."
+      echo "In the diff, *here* is the base and *there* the change."
+      if [ "${CF_SHOW_VALUES:-false}" != "true" ]; then
+        echo "Secrets are compared by digest and never shown, and no other value"
+        echo "is shown either (the action's \`show-values\`)."
+      else
+        echo "Secrets are compared by digest and never shown; a blind report"
+        echo "shows no value."
+      fi
     fi
     echo
     case "$worst" in

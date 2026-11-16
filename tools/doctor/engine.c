@@ -285,6 +285,9 @@ static cf_bool parse(report* r, const cf_blob* blob, cf_error* err) {
             text_at(&r->doc, "keys.%S.like", rk->key, rk->keylen) != NULL) {
             rk->sensitive = CF_TRUE;
         }
+        /* What is shown goes by `hidden`; what is compared and
+           recomputed (digests, CFD019, CFD007) goes by `sensitive`. */
+        rk->hidden = (rk->sensitive || r->D->redact_all) ? CF_TRUE : CF_FALSE;
         rk->deprecated = flag_at(&r->doc, rk->key, rk->keylen, "deprecated");
         rk->replaced_by =
             text_at(&r->doc, "keys.%S.definition.replaced_by", rk->key, rk->keylen);
@@ -457,7 +460,7 @@ const rkey* doctor_find_key(const report* r, const char* key, size_t n) {
    finding goes to a terminal, a CI log, a pull-request comment and the
    error a live-reload gate logs. */
 const char* doctor_shown(const rkey* k, const cand* c) {
-    return (c->value != NULL && !k->sensitive) ? c->value : "<redacted>";
+    return (c->value != NULL && !k->hidden) ? c->value : "<redacted>";
 }
 
 /* A reason can quote the value: a library of 1.4.0 or before wrote the
@@ -477,6 +480,12 @@ const char* doctor_reason(const rkey* k, const cand* c) {
     if (k->sensitive && c->reason_kind == NULL &&
         strncmp(c->reason, "policy:", 7) != 0) {
         return "invalid";
+    }
+    /* Hidden by --redact-all and not sensitive: a plain key's reason
+       can quote its value ("99999 is outside 1..65535"), so the kind
+       the library gave it stands for the reason. */
+    if (k->hidden && !k->sensitive && strncmp(c->reason, "policy:", 7) != 0) {
+        return (c->reason_kind != NULL) ? c->reason_kind : "invalid";
     }
     return c->reason;
 }
@@ -1610,6 +1619,9 @@ static void rule_value_diff(const report* a, const report* b) {
         if (told_by_digest(ka, ca, kb, cb)) {
             finding(a->D, "CFD014", "info", name,
                     "sensitive value differs (by digest)");
+        } else if (ka->hidden || kb->hidden) {
+            finding(a->D, "VALUE", "info", name,
+                    "differs (not shown: --redact-all)");
         } else {
             finding(a->D, "VALUE", "info", name, "%s here, %s there", ca->value,
                     cb->value);
@@ -1667,6 +1679,11 @@ static void rule_default_drift(const report* a, const report* b) {
         } else if (told_by_digest(ka, da, kb, db)) {
             finding(a->D, "CFD017", "warning", name,
                     "takes its default %s; the defaults differ (by digest)", side);
+        } else if (ka->hidden || kb->hidden) {
+            finding(a->D, "CFD017", "warning", name,
+                    "takes its default %s; the defaults differ (not shown: "
+                    "--redact-all)",
+                    side);
         } else if (here && there) {
             finding(a->D, "CFD017", "warning", name,
                     "takes its default in both, '%s' here and '%s' there", da->value,
@@ -2056,6 +2073,12 @@ cf_bool cf_doctor_only_changed_file(cf_doctor* d, const char* path, cf_error* er
 
 size_t cf_doctor_unchanged_count(const cf_doctor* d) {
     return (d != NULL && d->unchanged > 0) ? (size_t)d->unchanged : 0;
+}
+
+void cf_doctor_redact_all(cf_doctor* d, cf_bool on) {
+    if (d != NULL) {
+        d->redact_all = on ? CF_TRUE : CF_FALSE;
+    }
 }
 
 cf_bool cf_doctor_accept(cf_doctor* d, const char* rule, const char* key) {

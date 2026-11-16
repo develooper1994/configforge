@@ -395,6 +395,7 @@ static int usage(void) {
           "  --severity <file>  this project's severities\n"
           "  --fail-on <level>  error (default), warning, info, never\n"
           "  --format <name>    text (default), sarif or markdown\n"
+          "  --redact-all       show no value of any key, as for a secret\n"
           "\n",
           stderr);
     fputs("Reads provenance reports and never resolves configuration\n"
@@ -487,6 +488,10 @@ static int run(cf_doctor* D, int argc, char** argv) {
     memset(&b, 0, sizeof b);
 
     if (strcmp(argv[1], "dump") == 0) {
+        if (argc > 4 || (argc == 4 && strcmp(argv[3], "--redact-all") != 0)) {
+            return usage();
+        }
+        D->redact_all = (argc == 4) ? CF_TRUE : CF_FALSE;
         if (!load(&a, D, argv[2])) {
             doctor_release(&a);
             return 2;
@@ -497,9 +502,11 @@ static int run(cf_doctor* D, int argc, char** argv) {
     }
     if (strcmp(argv[1], "explain") == 0) {
         int rc;
-        if (argc < 4) {
+        if (argc < 4 || argc > 5 ||
+            (argc == 5 && strcmp(argv[4], "--redact-all") != 0)) {
             return usage();
         }
+        D->redact_all = (argc == 5) ? CF_TRUE : CF_FALSE;
         if (!load(&a, D, argv[2])) {
             doctor_release(&a);
             return 2;
@@ -548,6 +555,10 @@ static int run(cf_doctor* D, int argc, char** argv) {
             if (strcmp(argv[i], "--only-changed") == 0 && !is_diff && !is_history &&
                 !is_blame) {
                 only_changed = CF_TRUE; /* a flag: it takes no value */
+                continue;
+            }
+            if (strcmp(argv[i], "--redact-all") == 0) {
+                D->redact_all = CF_TRUE; /* so is this one */
                 continue;
             }
             if (i + 1 >= argc) {
