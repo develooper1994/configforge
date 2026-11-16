@@ -175,7 +175,7 @@ function(configforge_apply_warnings tgt)
   #
   # AddressSanitizer inflates every frame with redzones, so no budget
   # means anything under the sanitiser.
-  if(tgt STREQUAL "configforge")
+  if(tgt STREQUAL "configforge" OR tgt STREQUAL "configforge_serialize")
     configforge_stack_budget(${tgt})
   elseif(NOT CF_INSTRUMENTED AND CF_DEFAULT_LIMITS)
     check_c_compiler_flag("-Wstack-usage=2048" CF_HAS_STACK_USAGE)
@@ -230,7 +230,7 @@ function(configforge_stack_budget tgt)
       ${CMAKE_COMMAND}
       -DOBJDIR=${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${tgt}.dir
       -DBUDGET=${CF_STACK_BUDGET}
-      -DOUT=${CMAKE_BINARY_DIR}/configforge-stack.txt
+      -DOUT=${CMAKE_BINARY_DIR}/${tgt}-stack.txt
       -DLIB=$<TARGET_FILE:${tgt}> -P
       ${CMAKE_SOURCE_DIR}/scripts/check/stack.cmake
     VERBATIM)

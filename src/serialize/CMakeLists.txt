@@ -2,28 +2,36 @@
 # cmake/ConfigForgeSerialize.cmake and no others, and calls only itself and
 # the leaf files listed there. gate.layering checks it, so that this
 # layer can be a library of its own.
-target_sources(
-  configforge
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/blob.c
-          ${CMAKE_CURRENT_SOURCE_DIR}/codec.c
-          ${CMAKE_CURRENT_SOURCE_DIR}/detect.c
-          ${CMAKE_CURRENT_SOURCE_DIR}/tlv.c)
+#
+# It is: configforge_serialize (D-90). Both libraries compile these files,
+# so libconfigforge carries every function of the serialization library.
+set(cf_serialize_targets configforge configforge_serialize)
 
-if(CF_WITH_INI)
-  target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/ini.c)
-endif()
-if(CF_WITH_JSON)
-  target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/json.c)
-endif()
-if(CF_WITH_TOML)
-  target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/toml.c)
-endif()
-if(CF_WITH_PROPERTIES)
-  target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/properties.c)
-endif()
-if(CF_WITH_CBOR)
-  target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cbor.c)
-endif()
+foreach(t ${cf_serialize_targets})
+  target_sources(
+    ${t}
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/blob.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/codec.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/detect.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/tlv.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/version.c)
+
+  if(CF_WITH_INI)
+    target_sources(${t} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/ini.c)
+  endif()
+  if(CF_WITH_JSON)
+    target_sources(${t} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/json.c)
+  endif()
+  if(CF_WITH_TOML)
+    target_sources(${t} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/toml.c)
+  endif()
+  if(CF_WITH_PROPERTIES)
+    target_sources(${t} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/properties.c)
+  endif()
+  if(CF_WITH_CBOR)
+    target_sources(${t} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cbor.c)
+  endif()
+endforeach()
 
 # YAML, read by one of three parsers behind the one codec (D-62, D-69):
 # the built-in one (yamlparse.c), which reads all of yaml-test-suite and
@@ -108,11 +116,13 @@ if(CF_WITH_YAML)
     list(GET fyaml_parts 0 fyaml_major)
     list(GET fyaml_parts 1 fyaml_minor)
     list(GET fyaml_parts 2 fyaml_patch)
-    target_compile_definitions(
-      configforge
-      PRIVATE CF_YAML_LIBFYAML=1 CF_FYAML_MIN_MAJOR=${fyaml_major}
-              CF_FYAML_MIN_MINOR=${fyaml_minor}
-              CF_FYAML_MIN_PATCH=${fyaml_patch})
+    foreach(t ${cf_serialize_targets})
+      target_compile_definitions(
+        ${t}
+        PRIVATE CF_YAML_LIBFYAML=1 CF_FYAML_MIN_MAJOR=${fyaml_major}
+                CF_FYAML_MIN_MINOR=${fyaml_minor}
+                CF_FYAML_MIN_PATCH=${fyaml_patch})
+    endforeach()
     set(include "${CF_FYAML_INCLUDE_DIR}")
     set(library "${CF_FYAML_LIBRARY}")
     message(STATUS "YAML: libfyaml ${fyaml_version} (${library})")
@@ -129,7 +139,9 @@ if(CF_WITH_YAML)
     set(_CF_YAML_LIBYAML
         ON
         CACHE INTERNAL "The YAML codec reads through libyaml")
-    target_compile_definitions(configforge PRIVATE CF_YAML_LIBYAML=1)
+    foreach(t ${cf_serialize_targets})
+      target_compile_definitions(${t} PRIVATE CF_YAML_LIBYAML=1)
+    endforeach()
     set(include "${CF_LIBYAML_INCLUDE_DIR}")
     set(library "${CF_LIBYAML_LIBRARY}")
     message(STATUS "YAML: libyaml (${library})")
@@ -144,18 +156,19 @@ if(CF_WITH_YAML)
   set(CF_YAML_LIBRARY
       "${library}"
       CACHE FILEPATH "The YAML parser's library" FORCE)
-  target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/yaml.c
-                                     ${CMAKE_CURRENT_SOURCE_DIR}/yamlparse.c)
-  if(_CF_YAML_LIBFYAML)
-    # libfyaml's header is a system one: this library's warnings are for
-    # its own code, and yaml.c still gets every one of them. It needs C11,
-    # so yaml.c is compiled as C11 (the top-level CMakeLists.txt, where the
-    # target is made).
-    target_include_directories(configforge SYSTEM
-                               PRIVATE ${CF_YAML_INCLUDE_DIR})
-  elseif(_CF_YAML_LIBYAML)
-    target_include_directories(configforge PRIVATE ${CF_YAML_INCLUDE_DIR})
-  endif()
+  foreach(t ${cf_serialize_targets})
+    target_sources(${t} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/yaml.c
+                                ${CMAKE_CURRENT_SOURCE_DIR}/yamlparse.c)
+    if(_CF_YAML_LIBFYAML)
+      # libfyaml's header is a system one: this library's warnings are for
+      # its own code, and yaml.c still gets every one of them. It needs C11,
+      # so yaml.c is compiled as C11 (the top-level CMakeLists.txt, where the
+      # target is made).
+      target_include_directories(${t} SYSTEM PRIVATE ${CF_YAML_INCLUDE_DIR})
+    elseif(_CF_YAML_LIBYAML)
+      target_include_directories(${t} PRIVATE ${CF_YAML_INCLUDE_DIR})
+    endif()
+  endforeach()
   # Linked in the top-level CMakeLists.txt, where the target is made:
   # under the policies of CMake 3.10 a subdirectory may not link it.
 endif()
@@ -171,6 +184,8 @@ if(CF_WITH_XML)
         "CF_WITH_XML needs expat: install it (libexpat1-dev, brew install "
         "expat, vcpkg install expat) or point CMAKE_PREFIX_PATH at it")
   endif()
-  target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/xml.c)
-  target_include_directories(configforge PRIVATE ${CF_EXPAT_INCLUDE_DIR})
+  foreach(t ${cf_serialize_targets})
+    target_sources(${t} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/xml.c)
+    target_include_directories(${t} PRIVATE ${CF_EXPAT_INCLUDE_DIR})
+  endforeach()
 endif()

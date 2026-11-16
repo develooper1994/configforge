@@ -74,9 +74,28 @@ configforge_apply_options(configforge)
 configforge_apply_analysis(configforge)
 configforge_build_id(configforge)
 
+# The serialization library (D-27, D-90): the readers and writers and what
+# they need, a library of its own. libconfigforge compiles the same sources,
+# so it carries every function of it.
+include(ConfigForgeSerialize)
+add_library(configforge_serialize)
+add_library(ConfigForge::configforge_serialize ALIAS configforge_serialize)
+target_include_directories(
+  configforge_serialize
+  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+         $<INSTALL_INTERFACE:include>)
+configforge_apply_warnings(configforge_serialize)
+configforge_apply_hardening(configforge_serialize)
+configforge_generate_options(configforge_serialize)
+configforge_apply_options(configforge_serialize)
+configforge_apply_analysis(configforge_serialize)
+target_compile_definitions(configforge_serialize
+                           PRIVATE CF_BUILDING_LIBRARY=1 CF_INTERNAL_API=1)
+
 add_subdirectory(src)
 if(CF_WITH_YAML)
   target_link_libraries(configforge PRIVATE ${CF_YAML_LIBRARY})
+  target_link_libraries(configforge_serialize PRIVATE ${CF_YAML_LIBRARY})
   # libfyaml's header needs C11 (0.9.x's pre-C11 fallback for atomics does
   # not compile; fixed after 0.9.6): the one file that includes it is
   # compiled as C11, after the C89 flag so that it wins, and the rest of
@@ -89,6 +108,7 @@ if(CF_WITH_YAML)
 endif()
 if(CF_WITH_XML)
   target_link_libraries(configforge PRIVATE ${CF_EXPAT_LIBRARY})
+  target_link_libraries(configforge_serialize PRIVATE ${CF_EXPAT_LIBRARY})
 endif()
 if(CF_WITH_SQLITE)
   target_link_libraries(configforge PRIVATE ${CF_SQLITE_LIBRARY})
@@ -111,7 +131,7 @@ target_compile_definitions(configforge PRIVATE CF_BUILDING_LIBRARY=1
                                                CF_INTERNAL_API=1)
 
 set_target_properties(
-  configforge
+  configforge configforge_serialize
   PROPERTIES VERSION ${PROJECT_VERSION}
              SOVERSION ${PROJECT_VERSION_MAJOR}
              C_VISIBILITY_PRESET hidden

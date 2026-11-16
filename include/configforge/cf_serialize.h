@@ -23,6 +23,7 @@
 #include "configforge/cf_value.h"
 #include "configforge/cf_alloc.h"
 #include "configforge/cf_error.h"
+#include "configforge/cf_serialize_version.h"
 
 #ifdef __cplusplus
 extern "C" {
