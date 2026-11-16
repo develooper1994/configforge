@@ -155,7 +155,7 @@ the 1.6.0 milestone; the S-*, T-* and W5-* cards to 1.7.0, but T-5 to
 | 17 | H-6 Doctor's `--redact-all`, on in the action unless asked | medium | - | done (9f3394b, 0b85a24, 9de9ef3) |
 | 18 | H-8b Doctor tells digests of different keys apart | medium | H-8a | done (ed37f5f, 23018f7, cbe0050) |
 | 19 | W3-F2a The platform capability for macOS's user defaults | medium | - | done (d3cbbf8, 5bb5967, 221b6ca) |
-| 20 | W3-F2b `cf_builder_preferences`: the source, off macOS | medium | W3-F2a | open |
+| 20 | W3-F2b `cf_builder_preferences`: the source, off macOS | medium | W3-F2a | done (9ac9540, 6aa4566, 928f71c) |
 | 21 | W3-F2c Reading CFPreferences on macOS (CI-only) | large | W3-F2b | open |
 | 22 | W3-F3 `cf_builder_credentials` in every language, the Guide, an example | medium | - | done (470cb8d, 059cdd9, 035ce3a, 71142a0) |
 | 23 | W3-F2d User defaults in C++, Rust, Python and the Guide | medium | W3-F2c | open |
