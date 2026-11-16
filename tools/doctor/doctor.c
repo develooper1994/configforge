@@ -470,8 +470,8 @@ static cf_bool old_name(const char* arg0) {
 /* `check` and `gen` went to configforge-gen in 1.7.0; Doctor runs them
    for one more minor release and says where they went. */
 static void doctor_moved(const char* was, const char* now) {
-    fprintf(stderr, "doctor: '%s' is '%s' since 1.7.0; this name goes in 1.8.0\n",
-            was, now);
+    fprintf(stderr, "doctor: '%s' is '%s' since 1.7.0; this name goes in 1.8.0\n", was,
+            now);
 }
 
 int main(int argc, char** argv) {

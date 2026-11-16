@@ -99,9 +99,8 @@ function(doctor_case_err name expect_fail err_re)
                                                  DOCTOR_REPORTS)
 endfunction()
 
-doctor_case_err(
-  check_alias 0 "'check' is 'configforge gen check' since 1.7.0"
-  check|--schema|${contract}|cf_fx_contract_ok.json)
+doctor_case_err(check_alias 0 "'check' is 'configforge gen check' since 1.7.0"
+                check|--schema|${contract}|cf_fx_contract_ok.json)
 doctor_case_err(
   gen_alias 0 "'gen' is 'configforge gen' since 1.7.0"
   gen|--schema|${contract}|--out|${CMAKE_CURRENT_BINARY_DIR}/alias.c)

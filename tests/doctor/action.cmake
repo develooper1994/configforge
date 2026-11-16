@@ -208,9 +208,8 @@ endif()
 set(contract ${CMAKE_CURRENT_LIST_DIR}/contract.schema.json)
 execute_process(
   COMMAND
-    ${CMAKE_COMMAND} -E env CONFIGFORGE_GEN=${GEN} ${BASH}
-    ${ACTION}/check.sh --schema ${contract} cf_fx_contract_ok.json
-    cf_fx_contract_typo.json
+    ${CMAKE_COMMAND} -E env CONFIGFORGE_GEN=${GEN} ${BASH} ${ACTION}/check.sh
+    --schema ${contract} cf_fx_contract_ok.json cf_fx_contract_typo.json
   WORKING_DIRECTORY ${WORK}
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE text)

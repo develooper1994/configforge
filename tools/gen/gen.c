@@ -38,8 +38,8 @@ int main(int argc, char** argv) {
        it, as Doctor prints them. */
     if (argc == 2 && strcmp(argv[1], "--version") == 0) {
         const char* id = cf_build_id();
-        printf("ConfigForge gen %s%s%s%s\n", cf_version(),
-               (id[0] != '\0') ? " (" : "", id, (id[0] != '\0') ? ")" : "");
+        printf("ConfigForge gen %s%s%s%s\n", cf_version(), (id[0] != '\0') ? " (" : "",
+               id, (id[0] != '\0') ? ")" : "");
         return 0;
     }
     if (argc >= 2 && strncmp(argv[1], "--", 2) == 0) {
