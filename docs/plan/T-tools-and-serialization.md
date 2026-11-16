@@ -27,7 +27,7 @@ Order: S-1, S-2, S-3, S-4, S-5, T-1, T-2, T-3, T-4; then wave 5
 (W5-V1, W5-S1, W5-G1, W5-G2, W5-G3); then T-5, after 1.7.0 is
 released. S-1 to S-5 go one after another (each changes `gate.abi` or
 the CMake of the library). T-1 needs S-1 only and could run beside
-S-2 to S-5, but shares `tools/CMakeLists.txt` with S-1 and
+S-2 to S-5, but shares `tools/doctor/CMakeLists.txt` with S-1 and
 `CMakeLists.txt` with S-4: kept in order. T-3 needs S-5, since its
 program links the serialization library alone.
 
@@ -364,7 +364,7 @@ Lessons from the hardening cards, which every card below is held to:
   `#else` to compile.
 * **docs**: add this card's D-number, "What 1.x promises, made
   smaller: the internal tier fenced": the question (D-51's internal
-  tier was a sentence; 345 exported functions, 84 of them not
+  tier was a sentence; 363 exported functions, 84 of them not
   promised and callable); options (as it was; headers not installed;
   a macro a program does not define; hiding the symbols); the decision
   (the macro, where it is defined and why there, the list and its
