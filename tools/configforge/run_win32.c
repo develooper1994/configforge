@@ -157,8 +157,8 @@ static int try_dir(const wchar_t* dir, size_t n, const wchar_t* program,
 static int find_program(const wchar_t* program, wchar_t** path) {
     wchar_t* dir = own_dir();
     wchar_t* env;
-    wchar_t* p;
-    wchar_t* limit;
+    size_t   pos;
+    size_t   total;
     DWORD    n;
     int      r;
 
@@ -183,26 +183,29 @@ static int find_program(const wchar_t* program, wchar_t** path) {
         free(env);
         return 0;
     }
-    limit     = env + n;
-    limit[-1] = L'\0';
-    for (p = env; p < limit && *p != L'\0';) {
-        wchar_t* end   = wcschr(p, L';');
-        size_t   len   = (end != NULL) ? (size_t)(end - p) : wcslen(p);
-        wchar_t* entry = p;
-        p += len;
-        if (p < limit && *p == L';') {
-            p++;
+    /* `total` characters before the NUL; every index below is < total. */
+    total      = (size_t)n - 1;
+    env[total] = L'\0';
+    for (pos = 0; pos < total && env[pos] != L'\0';) {
+        size_t start = pos;
+        size_t len   = 0;
+        while (start + len < total && env[start + len] != L'\0' &&
+               env[start + len] != L';') {
+            len++;
+        }
+        pos = start + len;
+        if (pos < total && env[pos] == L';') {
+            pos++;
         }
         /* A pair of quotes around an entry is not part of it. */
-        if (len >= 2 && (size_t)(limit - entry) > len && entry[0] == L'"' &&
-            entry[len - 1] == L'"') {
-            entry++;
+        if (len >= 2 && env[start] == L'"' && env[start + len - 1] == L'"') {
+            start++;
             len -= 2;
         }
         if (len == 0) {
             continue;
         }
-        r = try_dir(entry, len, program, path);
+        r = try_dir(env + start, len, program, path);
         if (r != 0) {
             free(env);
             return r;

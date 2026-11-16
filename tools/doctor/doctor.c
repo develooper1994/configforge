@@ -455,8 +455,11 @@ static cf_bool old_name(const char* arg0) {
         return CF_FALSE;
     }
     for (i = 0; i < n; i++) {
-        char c   = base[i];
-        lower[i] = (c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c;
+        char c = base[i];
+        if (c >= 'A' && c <= 'Z') {
+            c = (char)(c - 'A' + 'a');
+        }
+        lower[i] = c;
     }
     lower[n] = '\0';
     return (strcmp(lower, "doctor") == 0 || strcmp(lower, "doctor.exe") == 0)
