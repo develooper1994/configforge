@@ -237,6 +237,14 @@ def main():
         " * Compile this one file and include <configforge/configforge.h>.\n" " * No build\n"
         " * system, no options, no dependencies beyond the C library.\n"
         " */\n\n"
+        # Before any header, where src/platform/posix/posix.c has it for
+        # the library built file by file: here that file comes after
+        # every header has been read, which is too late (D-83).
+        "/* What glibc hides in strict C89 and the POSIX platform asks\n"
+        "   for: lstat, getpwuid_r, struct timespec. */\n"
+        "#if defined(__linux__) && !defined(_POSIX_C_SOURCE)\n"
+        "#define _POSIX_C_SOURCE 200112L\n"
+        "#endif\n\n"
         '#include <configforge/configforge.h>\n'
     ]
     for s in SOURCES:
