@@ -125,9 +125,8 @@ string(STRIP "${CF_PC_LIBS_PRIVATE}" CF_PC_LIBS_PRIVATE)
 string(STRIP "${CF_PC_SERIALIZE_LIBS_PRIVATE}" CF_PC_SERIALIZE_LIBS_PRIVATE)
 configure_file("${CMAKE_SOURCE_DIR}/cmake/templates/configforge.pc.in"
                "${CMAKE_CURRENT_BINARY_DIR}/configforge.pc" @ONLY)
-configure_file(
-  "${CMAKE_SOURCE_DIR}/cmake/templates/configforge_serialize.pc.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/configforge_serialize.pc" @ONLY)
+configure_file("${CMAKE_SOURCE_DIR}/cmake/templates/configforge_serialize.pc.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/configforge_serialize.pc" @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/configforge.pc"
               "${CMAKE_CURRENT_BINARY_DIR}/configforge_serialize.pc"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)

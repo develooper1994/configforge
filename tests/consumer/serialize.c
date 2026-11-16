@@ -18,9 +18,8 @@ static cf_bool on_open(void* ctx, const char* name, size_t n) {
     return 1;
 }
 
-static cf_bool on_scalar(void* ctx, const char* name, size_t n,
-                         const cf_value* v, cf_bool textual,
-                         const cf_loc* at) {
+static cf_bool on_scalar(void* ctx, const char* name, size_t n, const cf_value* v,
+                         cf_bool textual, const cf_loc* at) {
     (void)name;
     (void)n;
     (void)v;
