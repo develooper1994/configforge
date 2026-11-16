@@ -231,6 +231,24 @@ CF_API cf_bool cf_builder_credentials(cf_builder* b, const char* name, int rank,
 CF_API cf_bool cf_builder_registry(cf_builder* b, const char* name, int rank,
                                    const char* root, unsigned flags);
 
+/* macOS's user defaults (CFPreferences) for one domain, as `defaults
+   read <domain>` shows them: the current user's, on any host. A
+   dictionary is a section and an array a list, as in a JSON file:
+   Server = { Port = 9443; } is server.port. Names are lowered and a
+   name no key can carry is an error naming it; a string is text the
+   contract types (`defaults write` writes strings unless told -int),
+   a number is an int or a real, a boolean a bool, and a date or data
+   is refused by name. Each value's place in explain() and a report is
+   "defaults <domain> <path>", Server/Port. `name` is the source's
+   (NULL: the domain). A domain with no values is an error, and nothing
+   with CF_OPTIONAL. macOS only, under CF_WITH_PREFERENCES (off by
+   default: it links CoreFoundation); elsewhere it fails by name,
+   CF_OPTIONAL or not. Not watched: cf_changed does not see a change to
+   it, as it does not for the Registry. The other scopes (this host
+   only, any user, managed) are not read (D-87). */
+CF_API cf_bool cf_builder_preferences(cf_builder* b, const char* name, int rank,
+                                      const char* domain, unsigned flags);
+
 /* A SQLite store (CF_WITH_SQLITE): typed values, each with what its
    writer said about it. cf_write writes one, when it is granted. */
 CF_API cf_bool cf_builder_store(cf_builder* b, const char* name, int rank,

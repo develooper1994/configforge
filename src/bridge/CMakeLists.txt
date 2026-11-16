@@ -15,6 +15,7 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/store.c
           ${CMAKE_CURRENT_SOURCE_DIR}/secrets.c
           ${CMAKE_CURRENT_SOURCE_DIR}/registry.c
+          ${CMAKE_CURRENT_SOURCE_DIR}/preferences.c
           ${CMAKE_CURRENT_SOURCE_DIR}/schema.c
           ${CMAKE_CURRENT_SOURCE_DIR}/tlv.c)
 

@@ -47,6 +47,7 @@ cf_builder_key
 cf_builder_log
 cf_builder_memory
 cf_builder_open
+cf_builder_preferences
 cf_builder_real real
 cf_builder_registry
 cf_builder_replay

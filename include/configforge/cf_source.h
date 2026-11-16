@@ -403,6 +403,14 @@ CF_API cf_bool cf_source_registry(cf_source* s, const char* name, int rank,
 
 CF_API const cf_error* cf_source_registry_error(const cf_source* s);
 
+/* macOS's user defaults (cf_builder_preferences). Internal: the builder
+   function is the interface. */
+size_t          cfi_source_preferences_state_size(void);
+cf_bool         cfi_source_preferences(cf_source* s, const char* name, int rank,
+                                       const char* domain, unsigned flags, void* state,
+                                       size_t state_size);
+const cf_error* cfi_source_preferences_error(const cf_source* s);
+
 /* ------------------------------------------------------------------ *
  * A SQLite store (CF_WITH_SQLITE)
  *
