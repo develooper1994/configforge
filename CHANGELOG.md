@@ -21,6 +21,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   no longer compiles; nothing exported changed. `cf_fmt`, `cf_vfmt`,
   `cf_fmt_append`, `cf_platform_name` and the `cf_platform_has_` queries
   are promised.
+- `cf_platform_fopen` is declared in `cf_platform_file.h`, which
+  `cf_platform.h` includes; the TLV codec is with the other readers in
+  the serialization layer, which no longer reaches the platform layer or
+  the log. Nothing a program sees changes.
 
 ## 1.6.0 — 2026-11-16
 
