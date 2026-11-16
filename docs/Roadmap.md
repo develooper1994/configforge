@@ -931,6 +931,40 @@ first user meets. In the order proposed:
   description, default and range on hover, and, from a report, what
   overrides it in production.
 
+### Critical-system standards, and large files (asked 2026-11-16; not yet cards)
+
+* ⬜ **Critical-system standards, checked by machine.** MISRA C first,
+  then SEI CERT C's rules no tool sees, a CWE table, and MISRA C++:2023
+  for the wrapper; each rule's status in a matrix, each deviation in a
+  record, and a gate (`gate.misra`, cppcheck's MISRA addon on a `misra`
+  profile build) that fails a violation with no record. Standards
+  disagree (MISRA's no-heap and single-exit rules against CERT's
+  practice; MISRA's no-stdio against reading files), so each conflict is
+  decided once, and the standards left out are named with why
+  (`docs/Compliance.md`). Nothing is called "certified" until a
+  qualified tool has run. Done when the gate is in CI and the
+  compliance report is attached to a release. Belongs with 1.8.0's
+  "outside trust checks".
+* ⬜ **Large files, and SIMD as an option.** Configuration is small, but
+  a format library is also handed documents of megabytes (data in CBOR,
+  MessagePack, JSON exports). First measure: 1.8.0's benchmark gains
+  documents of 1, 16 and 256 MiB and says where time goes. Then, if the
+  scanning (UTF-8 validation, whitespace and escape search) is where it
+  goes: a portable word-at-a-time (SWAR) path in C89, for every target;
+  and after it, SIMD behind a build option (`CF_WITH_SIMD`, off by
+  default), for the targets that have it (SSE2/AVX2, NEON) and not
+  required of the rest. The scalar path stays the reference: every
+  vector path is tested against it on the same inputs, and the fuzzers
+  run both. Not before the measurement says so.
+
+### Considered, and decided against for now: a GitHub wiki
+
+The documents live in `docs/`, are reviewed with the code, checked by
+the gates (`gate.apiref`, the wording check) and published by the docs
+workflow to GitHub Pages. A wiki is a second repository outside all of
+that, and would drift from the code it describes. Questions go to
+Discussions (Q&A).
+
 ### Considered, and decided against for now: TOON
 
 TOON, Token-Oriented Object Notation (github.com/toon-format/toon, spec
