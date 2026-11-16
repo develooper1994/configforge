@@ -2417,3 +2417,17 @@ size_t cf_report(const cf_config* c, const cf_report_info* info, char* buf,
 const cf_keyspace* cf_keys(const cf_config* c) {
     return (c != NULL) ? &c->keys : NULL;
 }
+
+const char* cf_log_level_name(cf_log_level level) {
+    switch (level) {
+    case CF_LOG_DEBUG:
+        return "debug";
+    case CF_LOG_INFO:
+        return "info";
+    case CF_LOG_WARN:
+        return "warn";
+    case CF_LOG_ERROR:
+        return "error";
+    }
+    return "?";
+}

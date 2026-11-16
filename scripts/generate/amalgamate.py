@@ -27,6 +27,7 @@ HEADERS = [
     "cf_numeric.h",
     "cf_value.h",
     "cf_alloc.h",
+    "cf_platform_file.h",
     "cf_platform.h",
     "cf_keyspace.h",
     "cf_entry.h",
@@ -55,16 +56,17 @@ NOT_AMALGAMATED = {"cf_doctor.h"}
 SOURCES = [
     # Every platform, each guarded internally: the amalgamation is one
     # translation unit and has no build to choose for it.
-    "platform/posix/posix.c", "platform/win32/win32.c",
-    "platform/none/none.c",
+    "platform/posix/posix.c", "platform/posix/file.c",
+    "platform/win32/win32.c", "platform/win32/file.c",
+    "platform/none/none.c", "platform/none/file.c",
     "core/version.c", "core/port.c", "core/error.c", "core/numeric.c", "core/alloc.c",
     "core/value.c", "core/keyspace.c", "core/define.c", "core/validate.c",
     "core/config.c", "core/iterate.c", "core/live.c", "core/edit.c",
     "serialize/blob.c", "serialize/codec.c", "serialize/detect.c", "serialize/ini.c",
-    "serialize/json.c", "serialize/toml.c", "serialize/yamlparse.c", "serialize/yaml.c", "serialize/xml.c", "serialize/properties.c", "serialize/cbor.c",
+    "serialize/json.c", "serialize/toml.c", "serialize/yamlparse.c", "serialize/yaml.c", "serialize/xml.c", "serialize/properties.c", "serialize/cbor.c", "serialize/tlv.c",
     "sources/entry.c", "sources/memory.c", "sources/defaults.c", "sources/env.c",
     "sources/cli.c", "sources/compat.c", "sources/snapshot.c",
-    "bridge/flatten.c", "bridge/file.c", "bridge/dotenv.c", "bridge/dir.c", "bridge/emit.c", "bridge/image.c", "bridge/store.c", "bridge/secrets.c", "bridge/registry.c", "bridge/preferences.c","bridge/schema.c", "bridge/tlv.c",
+    "bridge/flatten.c", "bridge/file.c", "bridge/dotenv.c", "bridge/dir.c", "bridge/emit.c", "bridge/image.c", "bridge/store.c", "bridge/secrets.c", "bridge/registry.c", "bridge/preferences.c","bridge/schema.c",
     "diag/explain.c", "diag/report.c", "diag/diff.c",
 ]
 

@@ -11,10 +11,6 @@
 
 #if CF_PLATFORM_NONE
 
-#ifndef CF_NO_STDIO
-#include <stdio.h>
-#endif
-
 const char* cf_platform_name(void) {
     return "none";
 }
@@ -69,18 +65,6 @@ cf_bool cf_platform_has_trusted_dir(void) {
 int cf_platform_dir_list_trusted(const char* path, char (*names)[CF_PLATFORM_NAME_MAX],
                                  int max, cf_error* err) {
     return cf_platform_dir_list(path, names, max, err);
-}
-
-void* cf_platform_fopen(const char* path, const char* mode) {
-#ifndef CF_NO_STDIO
-    /* No operating system, but there may still be a C library with
-       stdio; a target without one builds with CF_NO_STDIO. */
-    return (path != NULL && mode != NULL) ? fopen(path, mode) : NULL;
-#else
-    (void)path;
-    (void)mode;
-    return NULL;
-#endif
 }
 
 int cf_platform_world_readable(const char* path) {

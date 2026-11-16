@@ -11,10 +11,13 @@ set(bad 0)
 foreach(f ${files})
   get_filename_component(basename "${f}" NAME)
   # cf_port.h decides which compiler; cf_platform.h decides which
-  # platform. Both are the door, so both are allowed to look outside it.
+  # platform. Both are the door, so both are allowed to look outside it;
+  # cf_platform_file.h holds the platform's choice, which cf_platform.h
+  # includes (the serialization library's files need it without the rest).
   if(NOT basename STREQUAL "cf_port.h"
      AND NOT basename STREQUAL "port.c"
-     AND NOT basename STREQUAL "cf_platform.h")
+     AND NOT basename STREQUAL "cf_platform.h"
+     AND NOT basename STREQUAL "cf_platform_file.h")
     file(READ "${f}" text)
 
     # Compiler and standard detection belongs to the portability layer.

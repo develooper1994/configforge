@@ -2,7 +2,7 @@
  * blob.c - whole-document input and measure-or-write output. C89.
  */
 
-#include "configforge/cf_platform.h"
+#include "configforge/cf_platform_file.h"
 #include "configforge/cf_serialize.h"
 
 #include <stdarg.h>

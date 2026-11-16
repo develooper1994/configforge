@@ -44,7 +44,7 @@ the Microsoft platform with a Clang front end.
 | ----- | ---- | ------- | ----------- |
 | `src/platform` | the environment, UTF-8 arguments, directory listing, file stamps, the change handle | portability | anything above it |
 | `src/core` | value model, key space, definitions, validation, `cf_config` | portability, platform | anything above it |
-| `src/serialize` | readers, writers, codecs, document events | portability, `cf_value`, `cf_error`, `cf_alloc` | the key space, definitions, sources |
+| `src/serialize` | readers, writers, codecs, document events | portability, `cf_value`, `cf_error`, `cf_alloc`, `cf_numeric`, the platform's file opener | the key space, definitions, sources |
 | `src/sources` | flat lexers, key mappings, the sources with no bytes to read | core | serialize, bridge |
 | `src/bridge` | flattener, file source, binary image | core **and** serialize | diag |
 | `src/diag` | `explain`, `inspect`, the report, replay | everything below | — |
@@ -54,7 +54,8 @@ intended. The serialize boundary exists so that extracting that layer
 into its own library later stays a directory move and a build file
 (decision D-27); the bridge exists because some components are honestly
 both, and hiding them in one side or the other would have made the
-boundary a lie.
+boundary a lie. `gate.layering` holds the serialization library to a list
+of what it may include (`cmake/ConfigForgeSerialize.cmake`).
 
 ## Data flow
 

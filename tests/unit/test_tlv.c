@@ -566,6 +566,47 @@ static void test_ber_refusals(void) {
                 "padding without the flag");
 }
 
+/* A layout names its keys by a copy of the key space's rule, which the
+   serialization library may not call (tlv.c, tlv_key_valid): the two
+   have to say the same about every key, and this is what holds them to
+   it. Kept off the frame: a key is up to CF_KEY_MAX bytes. */
+static void layout_key_rule(const char* key, const char* what) {
+    cf_tlv_layout l = dev_layout();
+    cf_tlv_tag    t;
+    cf_codec      c;
+    cf_error*     err = fresh_error();
+    cf_bool       accepted;
+
+    t       = dev_tags[0];
+    t.key   = key;
+    l.tags  = &t;
+    l.ntags = 1;
+
+    accepted = cf_tlv_codec(&c, &l, err) ? CF_TRUE : CF_FALSE;
+    check(accepted == (cf_key_valid(key, strlen(key)) ? CF_TRUE : CF_FALSE), what);
+}
+
+static void test_layout_key_rule(void) {
+    static char longest[CF_KEY_MAX];
+    static char too_long[CF_KEY_MAX + 1];
+
+    memset(longest, 'k', CF_KEY_MAX - 1);
+    longest[CF_KEY_MAX - 1] = '\0';
+    memset(too_long, 'k', CF_KEY_MAX);
+    too_long[CF_KEY_MAX] = '\0';
+
+    layout_key_rule("a", "a one-letter key is judged as the key space judges it");
+    layout_key_rule("a.b", "a dotted key is judged as the key space judges it");
+    layout_key_rule("a-b_c.9", "dash, underscore and digit are judged as the key space does");
+    layout_key_rule("A", "an uppercase key is judged as the key space judges it");
+    layout_key_rule("a..b", "an empty segment is judged as the key space judges it");
+    layout_key_rule(".a", "a leading dot is judged as the key space judges it");
+    layout_key_rule("a.", "a trailing dot is judged as the key space judges it");
+    layout_key_rule("a b", "a space is judged as the key space judges it");
+    layout_key_rule(longest, "the longest key is judged as the key space judges it");
+    layout_key_rule(too_long, "one byte past the longest is judged as the key space does");
+}
+
 int main(void) {
     cf_error* err = fresh_error();
 
@@ -588,6 +629,7 @@ int main(void) {
     test_nested_refusals();
     test_ber();
     test_ber_refusals();
+    test_layout_key_rule();
     return cf_test_done();
 }
 

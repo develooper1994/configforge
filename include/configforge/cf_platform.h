@@ -30,6 +30,7 @@
 
 #include "configforge/cf_alloc.h"
 #include "configforge/cf_error.h"
+#include "configforge/cf_platform_file.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,28 +39,11 @@ extern "C" {
 /* ------------------------------------------------------------------ *
  * Which platform
  *
- * Decided here and nowhere else. CF_PLATFORM_NONE can be set by hand
- * for a target that has none of this, and then every capability below
- * reports that it is absent rather than pretending.
+ * Decided in cf_platform_file.h, included above, and nowhere else:
+ * CF_PLATFORM_WIN32, CF_PLATFORM_POSIX and CF_PLATFORM_NONE. NONE can be
+ * set by hand for a target that has none of this, and then every
+ * capability below reports that it is absent rather than pretending.
  * ------------------------------------------------------------------ */
-
-#if defined(CF_PLATFORM_NONE)
-/* chosen by the caller */
-#elif defined(_WIN32) || defined(_WIN64)
-#define CF_PLATFORM_WIN32 1
-#else
-#define CF_PLATFORM_POSIX 1
-#endif
-
-#ifndef CF_PLATFORM_WIN32
-#define CF_PLATFORM_WIN32 0
-#endif
-#ifndef CF_PLATFORM_POSIX
-#define CF_PLATFORM_POSIX 0
-#endif
-#ifndef CF_PLATFORM_NONE
-#define CF_PLATFORM_NONE 0
-#endif
 
 /* The name this build was compiled for, for explain() and the report. */
 CF_API const char* cf_platform_name(void);
@@ -271,25 +255,8 @@ typedef struct cf_stamp {
 CF_API cf_bool cf_platform_stamp(const char* path, cf_stamp* out);
 #endif /* CF_INTERNAL_API */
 
-/* ------------------------------------------------------------------ *
- * Opening a file by a UTF-8 path
- *
- * fopen, with the path in UTF-8 everywhere (D-15). On Windows fopen
- * takes the active code page, which cannot spell most of the world's
- * names - a home directory under a Turkish or Greek user name cannot
- * be opened through it on a Western code page - so the Windows
- * implementation converts to UTF-16 and calls _wfopen. Identity
- * elsewhere.
- *
- * Returns a FILE* as void*, so that this header does not include
- * <stdio.h> for everyone who includes the library: gate.interface
- * holds the public headers to the system headers they need. NULL when
- * the file cannot be opened, or on a build with no stdio.
- * ------------------------------------------------------------------ */
-
-#if CF_INTERNAL_API
-CF_API void* cf_platform_fopen(const char* path, const char* mode);
-#endif /* CF_INTERNAL_API */
+/* cf_platform_fopen, opening a file by a UTF-8 path, is declared in
+   cf_platform_file.h, which this header includes. */
 
 /* ------------------------------------------------------------------ *
  * Who can read a file

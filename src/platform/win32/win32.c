@@ -121,16 +121,6 @@ static cf_bool win32_pattern(const char* dir, wchar_t* out, int cap) {
     return CF_TRUE;
 }
 
-void* cf_platform_fopen(const char* path, const char* mode) {
-    wchar_t wpath[CF_PLATFORM_NAME_MAX];
-    wchar_t wmode[8];
-
-    if (!win32_wide(path, wpath, CF_PLATFORM_NAME_MAX) || !win32_wide(mode, wmode, 8)) {
-        return NULL;
-    }
-    return _wfopen(wpath, wmode);
-}
-
 /* Two 32-bit halves, joined. A function rather than an expression at
    each site because one shift-and-or spread over two lines is laid out
    differently by every version of clang-format. */

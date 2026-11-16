@@ -2,10 +2,12 @@
 # until something checks them.
 #
 # 1. src/core must not reach into sources, serialize or platform.
-# 2. src/serialize may use the leaf types - value, error, alloc, port -
-#    and may not touch the key space, the definitions or the sources.
-#    That is what keeps extracting the serialization layer later a
-#    directory move and a build file rather than a rewrite.
+# 2. The serialization library - every file of src/serialize, the leaf
+#    files it calls and its headers - may include, of configforge/, only
+#    the headers in cmake/ConfigForgeSerialize.cmake and the two
+#    definition lists. A list of what is allowed rather than of what is
+#    not: a header the layer reaches for is a line in that file, and one
+#    that is not there is a violation. The build reads the same lists.
 
 set(bad 0)
 
@@ -23,18 +25,38 @@ foreach(f ${core_files})
   endif()
 endforeach()
 
+include("${SRC}/../cmake/ConfigForgeSerialize.cmake")
+
 file(GLOB_RECURSE ser_files "${SRC}/serialize/*.c" "${SRC}/serialize/*.h")
-foreach(f ${ser_files})
-  file(READ "${f}" text)
-  if(text MATCHES
-     "configforge/(cf_keyspace|cf_define|cf_source|cf_flatten|cf_explain)\\.h")
-    message("VIOLATION: ${f} (serialize) reaches into the configuration model")
+set(ser_leaf_files "")
+foreach(leaf ${CF_SERIALIZE_LEAVES})
+  if(EXISTS "${SRC}/${leaf}")
+    list(APPEND ser_leaf_files "${SRC}/${leaf}")
+  else()
+    message("VIOLATION: ${SRC}/${leaf} (a leaf of the serialization library) "
+            "does not exist")
     set(bad 1)
   endif()
-  if(text MATCHES "configforge/configforge\\.h")
-    message("VIOLATION: ${f} (serialize) includes the public umbrella header")
-    set(bad 1)
+endforeach()
+set(ser_header_files "")
+foreach(h ${CF_SERIALIZE_HEADERS})
+  # cf_build_options.h is generated and is not in the source tree.
+  if(EXISTS "${SRC}/../include/configforge/${h}")
+    list(APPEND ser_header_files "${SRC}/../include/configforge/${h}")
   endif()
+endforeach()
+set(ser_inc "^[ \t]*#[ \t]*include[ \t]*[<\"]configforge/([A-Za-z0-9_.]+)[>\"]")
+foreach(f ${ser_files} ${ser_leaf_files} ${ser_header_files})
+  file(STRINGS "${f}" lines REGEX "${ser_inc}")
+  foreach(line IN LISTS lines)
+    string(REGEX REPLACE "${ser_inc}.*" "\\1" inc "${line}")
+    if(NOT inc IN_LIST CF_SERIALIZE_HEADERS AND NOT inc MATCHES "\\.def$")
+      message(
+        "VIOLATION: ${f} (the serialization library) includes configforge/${inc}"
+      )
+      set(bad 1)
+    endif()
+  endforeach()
 endforeach()
 
 file(

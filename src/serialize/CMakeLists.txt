@@ -1,12 +1,13 @@
-# The serialization layer. It may use the leaf types - values, errors,
-# arenas - and may not touch the key space, the definitions or the
-# sources. The boundary is checked in CI so that extracting this layer
-# later stays a directory move and a build file.
+# The serialization layer. It may include the headers listed in
+# cmake/ConfigForgeSerialize.cmake and no others, and calls only itself and
+# the leaf files listed there. gate.layering checks it, so that this
+# layer can be a library of its own.
 target_sources(
   configforge
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/blob.c
           ${CMAKE_CURRENT_SOURCE_DIR}/codec.c
-          ${CMAKE_CURRENT_SOURCE_DIR}/detect.c)
+          ${CMAKE_CURRENT_SOURCE_DIR}/detect.c
+          ${CMAKE_CURRENT_SOURCE_DIR}/tlv.c)
 
 if(CF_WITH_INI)
   target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/ini.c)

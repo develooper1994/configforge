@@ -5,12 +5,15 @@
 # guarded internally, so the amalgamation - one translation unit with no
 # build to choose for it - can carry all of them.
 if(CF_PLATFORM STREQUAL "none")
-  target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/none/none.c)
+  target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/none/none.c
+                                     ${CMAKE_CURRENT_SOURCE_DIR}/none/file.c)
   target_compile_definitions(configforge PUBLIC CF_PLATFORM_NONE=1)
 elseif(WIN32)
-  target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/win32.c)
+  target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/win32.c
+                                     ${CMAKE_CURRENT_SOURCE_DIR}/win32/file.c)
 else()
-  target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/posix/posix.c)
+  target_sources(configforge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/posix/posix.c
+                                     ${CMAKE_CURRENT_SOURCE_DIR}/posix/file.c)
 endif()
 
 # kqueue is in the C library on macOS and the BSDs. Anywhere else it is
