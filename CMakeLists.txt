@@ -99,8 +99,9 @@ endif()
 # wins, as yaml.c is for libfyaml. PUBLIC: a static library's consumer
 # links the framework too. Elsewhere nothing changes.
 if(CF_WITH_PREFERENCES AND APPLE)
-  set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/platform/posix/posix.c
-                              PROPERTIES COMPILE_OPTIONS "-std=c99")
+  set_source_files_properties(
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/posix/posix.c
+    PROPERTIES COMPILE_OPTIONS "-std=c99")
   target_link_libraries(configforge PUBLIC "-framework CoreFoundation")
 endif()
 

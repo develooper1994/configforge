@@ -155,7 +155,9 @@ foreach(dep YAML XML SQLITE)
   endif()
 endforeach()
 # macOS's user defaults: CoreFoundation, linked on both sides.
-if(O_PREFERENCES AND DEFINED PREFS_LIB AND NOT PREFS_LIB STREQUAL "")
+if(O_PREFERENCES
+   AND DEFINED PREFS_LIB
+   AND NOT PREFS_LIB STREQUAL "")
   list(APPEND DEP_LIB ${PREFS_LIB})
 endif()
 # Which of the YAML parsers, as the library was built (D-62, D-69). The
