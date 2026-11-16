@@ -66,6 +66,39 @@ execute_process(
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE out
   ERROR_VARIABLE out)
+
+# pcc 1.2's preprocessor, re-reading a header its guard skips, writes a
+# stray character into its output when the #include stands at some byte
+# offsets of the file: every edit to the library moved them, and the gate
+# failed or passed by where a line happened to fall. The amalgamation
+# includes each system header once where it can (amalgamate.py), which
+# leaves the few under an #if; for those the file is moved a comment at
+# a time until pcc's preprocessor reads it whole. A real error fails at
+# every offset, and is reported from the first.
+if(NOT rc EQUAL 0 AND CC MATCHES "pcc")
+  set(first "${out}")
+  set(moved 0)
+  while(NOT rc EQUAL 0 AND moved LESS 12)
+    math(EXPR moved "${moved} + 1")
+    file(READ "${BIN}/amalgamation/configforge.c" body)
+    file(WRITE "${BIN}/amalgamation/configforge.c"
+         "/* moved for pcc's preprocessor (GateAmalgamation.cmake) */\n${body}")
+    execute_process(
+      COMMAND
+        ${CC} -std=c89 -pedantic ${werror} -Wall -Wextra -Wshadow ${THREAD_DEFS}
+        -I "${BIN}/amalgamation" -o "${BIN}/amalgamation/smoke"
+        "${BIN}/amalgamation/smoke.c" "${BIN}/amalgamation/configforge.c"
+      RESULT_VARIABLE rc
+      OUTPUT_VARIABLE out
+      ERROR_VARIABLE out)
+  endwhile()
+  if(rc EQUAL 0)
+    message("amalgamation gate: pcc's preprocessor read the file after "
+            "${moved} line(s) were put before it")
+  else()
+    set(out "${first}")
+  endif()
+endif()
 if(NOT rc EQUAL 0)
   message("${out}")
   message(FATAL_ERROR "the amalgamation does not compile as C89")

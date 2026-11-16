@@ -126,9 +126,32 @@ def strip_header(text, incdir):
     return "\n".join(out).rstrip() + "\n"
 
 
-def strip_source(text, incdir):
+SYSTEM_INCLUDE = re.compile(r'^\s*#\s*include\s*<([^>]+)>\s*$')
+
+
+def strip_source(text, incdir, seen):
+    """Drop local includes, and a system header a source before this one
+    already included outside any #if.
+
+    One file a source, each included <string.h>; here that was thirty
+    includes of it in one file. They cost nothing where a guard works,
+    but pcc's preprocessor, re-reading a guarded header at some byte
+    offsets, writes a stray character into its output, and whether it
+    does moved with every edit to the library. An include under an #if
+    is kept wherever it stands: what it depends on is not known here.
+    """
     out = []
+    depth = 0
     for line in text.splitlines():
+        if re.match(r'^\s*#\s*if', line):
+            depth += 1
+        elif re.match(r'^\s*#\s*endif', line):
+            depth -= 1
+        m = SYSTEM_INCLUDE.match(line)
+        if m is not None and depth == 0:
+            if m.group(1) in seen:
+                continue
+            seen.add(m.group(1))
         out.extend(resolve(line, incdir))
     return "\n".join(out).rstrip() + "\n"
 
@@ -247,11 +270,12 @@ def main():
         "#endif\n\n"
         '#include <configforge/configforge.h>\n'
     ]
+    seen = set()
     for s in SOURCES:
         p = os.path.join(src, "src", s)
         with open(p, encoding="utf-8") as f:
             body.append(banner(s))
-            body.append(strip_source(f.read(), incdir))
+            body.append(strip_source(f.read(), incdir, seen))
 
     # Into a configforge/ subdirectory, so that <configforge/configforge.h>
     # is the only spelling anywhere: the same source compiles against the
