@@ -19,8 +19,8 @@ else()
   set(cf_serialize_platform posix)
 endif()
 foreach(leaf ${CF_SERIALIZE_LEAVES})
-  if(NOT leaf MATCHES "^platform/" OR leaf STREQUAL
-                                     "platform/${cf_serialize_platform}/file.c")
+  if(NOT leaf MATCHES "^platform/"
+     OR leaf STREQUAL "platform/${cf_serialize_platform}/file.c")
     target_sources(configforge_serialize
                    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/${leaf})
   endif()

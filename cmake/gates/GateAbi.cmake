@@ -145,9 +145,11 @@ if(WRITE AND PART STREQUAL "serialize")
   string(APPEND text
          "# Checked by gate.abi.serialize against the headers and the built "
          "library;\n")
-  string(APPEND text "# rewrite with cmake -DSRC=. -DPART=serialize -DWRITE=ON "
+  string(APPEND text
+         "# rewrite with cmake -DSRC=. -DPART=serialize -DWRITE=ON "
          "-P cmake/gates/GateAbi.cmake.\n")
-  string(APPEND text "# Every name is in configforge.symbols too; its internal "
+  string(APPEND text
+         "# Every name is in configforge.symbols too; its internal "
          "and experimental names are in those lists (D-90).\n")
   string(APPEND text "${body}\n")
   configforge_write_lf("${list_file}" "${text}")
@@ -318,8 +320,8 @@ endforeach()
 if(PART STREQUAL "serialize")
   set(library_internal ${declared_internal})
   foreach(d ${declared_experimental})
-    string(REGEX REPLACE "^([a-z_][a-z0-9_]*) [0-9]+\\.[0-9]+( real)?$" "\\1\\2"
-                         plain "${d}")
+    string(REGEX REPLACE "^([a-z_][a-z0-9_]*) [0-9]+\\.[0-9]+( real)?$"
+                         "\\1\\2" plain "${d}")
     list(APPEND listed_experimental_plain "${plain}")
   endforeach()
 else()

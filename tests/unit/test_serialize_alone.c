@@ -73,12 +73,13 @@ static cf_bool on_end(void* ctx) {
 }
 
 static void test_reads(void) {
-    static const char doc[] = "{\"server\": {\"port\": 8080}, \"tags\": [\"a\", \"b\"]}";
-    const cf_codec*   json  = cf_codec_by_name("json");
-    cf_blob           in;
-    cf_doc_sink       sink;
-    counts            c;
-    cf_error          err = CF_ERROR_INIT;
+    static const char doc[] =
+        "{\"server\": {\"port\": 8080}, \"tags\": [\"a\", \"b\"]}";
+    const cf_codec* json = cf_codec_by_name("json");
+    cf_blob         in;
+    cf_doc_sink     sink;
+    counts          c;
+    cf_error        err = CF_ERROR_INIT;
 
     check(json != NULL, "the json codec is registered");
     if (json == NULL) {

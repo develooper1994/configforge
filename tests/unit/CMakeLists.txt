@@ -113,13 +113,15 @@ if(CF_WITH_JSON)
   add_executable(test_serialize_alone test_serialize_alone.c)
   target_link_libraries(test_serialize_alone PRIVATE configforge_serialize)
   set_target_properties(
-    test_serialize_alone PROPERTIES C_STANDARD 90 C_STANDARD_REQUIRED ON
-                                    C_EXTENSIONS OFF)
+    test_serialize_alone
+    PROPERTIES C_STANDARD 90
+               C_STANDARD_REQUIRED ON
+               C_EXTENSIONS OFF)
   configforge_apply_warnings(test_serialize_alone)
   configforge_apply_analysis(test_serialize_alone)
   if(CF_CPPCHECK_TESTS)
-    set_target_properties(
-      test_serialize_alone PROPERTIES C_CPPCHECK "${CF_CPPCHECK_TESTS}")
+    set_target_properties(test_serialize_alone
+                          PROPERTIES C_CPPCHECK "${CF_CPPCHECK_TESTS}")
   endif()
   add_test(NAME unit.serialize_alone COMMAND test_serialize_alone)
 endif()

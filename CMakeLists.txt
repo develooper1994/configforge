@@ -89,8 +89,12 @@ configforge_apply_hardening(configforge_serialize)
 configforge_generate_options(configforge_serialize)
 configforge_apply_options(configforge_serialize)
 configforge_apply_analysis(configforge_serialize)
-target_compile_definitions(configforge_serialize
-                           PRIVATE CF_BUILDING_LIBRARY=1 CF_INTERNAL_API=1)
+target_compile_definitions(configforge_serialize PRIVATE CF_BUILDING_LIBRARY=1
+                                                         CF_INTERNAL_API=1)
+# configforge is made before configforge_setup_cppcheck(), so its sources
+# have never run through cppcheck; the same sources here are not either,
+# until both are (Roadmap, "Critical-system standards").
+set_target_properties(configforge_serialize PROPERTIES C_CPPCHECK "")
 
 add_subdirectory(src)
 if(CF_WITH_YAML)

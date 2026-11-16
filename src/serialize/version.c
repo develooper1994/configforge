@@ -13,8 +13,8 @@
 #define SV_STR(x) SV_STR_(x)
 
 const char* cf_serialize_version(void) {
-    return SV_STR(CF_SERIALIZE_VERSION_MAJOR) "." SV_STR(CF_SERIALIZE_VERSION_MINOR)
-        "." SV_STR(CF_SERIALIZE_VERSION_PATCH);
+    return SV_STR(CF_SERIALIZE_VERSION_MAJOR) "." SV_STR(
+        CF_SERIALIZE_VERSION_MINOR) "." SV_STR(CF_SERIALIZE_VERSION_PATCH);
 }
 
 int cf_serialize_version_number(void) {

@@ -945,7 +945,12 @@ first user meets. In the order proposed:
   (`docs/Compliance.md`). Nothing is called "certified" until a
   qualified tool has run. Done when the gate is in CI and the
   compliance report is attached to a release. Belongs with 1.8.0's
-  "outside trust checks".
+  "outside trust checks". Found on 2026-11-16: the library's own
+  sources have never run through cppcheck (the `configforge` target is
+  made before `configforge_setup_cppcheck()`; only tests and tools are
+  checked), and a first run on the serialization sources reports
+  `uninitvar` and `variableScope`; turning it on for both libraries, and
+  answering what it finds, is this item's first step.
 * ⬜ **Large files, and SIMD as an option.** Configuration is small, but
   a format library is also handed documents of megabytes (data in CBOR,
   MessagePack, JSON exports). First measure: 1.8.0's benchmark gains

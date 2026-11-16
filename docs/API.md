@@ -33,6 +33,13 @@ a macro typed by `out` - `int`, `long`, `long long`, `_Bool`,
 `const char*`, and `double` where `CF_WITH_REAL` is on - that calls
 the matching `cf_get_*` below; C++ has `get<T>` instead.
 
+**The serialization library**, `configforge_serialize`, is made of
+the headers `cf_port.h`, `cf_error.h`, `cf_numeric.h`, `cf_value.h`,
+`cf_alloc.h`, `cf_platform_file.h`, `cf_serialize.h` and
+`cf_serialize_version.h`, and holds their functions to the same three
+tiers; `libconfigforge` carries every one of them, so a program links
+one library or the other, never both.
+
 Every error carries one of these codes, stable from 1.0;
 `cf_code_name` and `cf_code_description` give the last two columns.
 
@@ -70,6 +77,7 @@ Every error carries one of these codes, stable from 1.0;
 - [`cf_port.h`](#cf_porth) - 10
 - [`cf_report.h`](#cf_reporth) - 6
 - [`cf_serialize.h`](#cf_serializeh) - 29
+- [`cf_serialize_version.h`](#cf_serialize_versionh) - 2
 - [`cf_source.h`](#cf_sourceh) - 34
 - [`cf_value.h`](#cf_valueh) - 12
 - [`cf_version.h`](#cf_versionh) - 7
@@ -3869,6 +3877,25 @@ content decides. `ar` is the trial readers' work space, and is not
 reset: pass one that can be thrown away (cf_blob_arena), or NULL for one
 made and released inside the call. `out`, when not NULL, says how the
 answer was reached.
+
+## cf_serialize_version.h
+
+cf_serialize_version.h - the serialization library's version (D-90).
+
+configforge_serialize is made of the headers cf_port.h, cf_error.h,
+cf_numeric.h, cf_value.h, cf_alloc.h, cf_platform_file.h, cf_serialize.h
+and this one. It does not include cf_version.h, which declares what this
+library does not define.
+
+```c
+CF_API const char* cf_serialize_version(void);
+CF_API int cf_serialize_version_number(void);
+```
+
+Implementation: [`cf_serialize_version` (src/serialize/version.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/version.c#L15), [`cf_serialize_version_number` (src/serialize/version.c)](https://github.com/develooper1994/configforge/blob/main/src/serialize/version.c#L20).
+
+The version the serialization library was compiled as: "1.7.0", and the
+same as one number. (1.7)
 
 ## cf_source.h
 
