@@ -592,6 +592,15 @@ plans D-82 too, so whichever is committed second takes the next.
       `1.6.0 — unreleased`, spelled as 1.4.1's was when it was opened
       (`git show 02e3590`). The files that script changes belong to the
       card's commit.
+    * Found in review, 2026-11-16: rule 1 as first written refused a
+      sticky directory whose group may write and is not its owner's own
+      - a Kubernetes secret mounted under a pod's `fsGroup` (root's,
+      the pod's group, mode 3777). In a sticky directory a group's write
+      is no more than others' is, so `shared` is "others may write, or
+      a group that is not the owner's own may", rule 1 refuses a shared
+      directory that is not sticky, and rule 2 judges the entries of
+      one that is. No test: making a directory of a group that is not
+      the user's own needs a second group or root.
   * Rejected: a second listing for the check (a file changed between the
     two would be read unchecked). Rejected: checking ownership as sudo
     does, owner root or the program's user: Docker Compose bind-mounts a

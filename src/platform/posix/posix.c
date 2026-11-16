@@ -265,9 +265,9 @@ static int posix_refuse(const char* path, const struct stat* st, const char* wha
 
 /* The listing, and with `trusted` the check of D-83 in the same pass,
    so that nothing is listed once and checked again:
-   1. the directory is refused when others may write to it and it is not
-      sticky, or when a group that is not its owner's own may;
-   2. in a sticky directory others may write to, each entry as lstat
+   1. the directory is refused when others, or a group that is not its
+      owner's own, may write to it and it is not sticky;
+   2. in a sticky directory they may write to, each entry as lstat
       sees it (the link, for a link) must belong to root, to the
       directory's owner or to the program's user: there nobody can
       replace another's entry;
@@ -300,8 +300,10 @@ static int posix_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX],
             cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot read '%s'", path);
             return -1;
         }
-        shared = ((st.st_mode & S_IWOTH) != 0) ? CF_TRUE : CF_FALSE;
-        if ((shared && (st.st_mode & S_ISVTX) == 0) || posix_group_writes(&st)) {
+        /* Shared: others, or a group that is not its owner's own, may
+           write here. Sticky, that is rule 2's to judge by each entry. */
+        shared = ((st.st_mode & S_IWOTH) != 0) ? CF_TRUE : posix_group_writes(&st);
+        if (shared && (st.st_mode & S_ISVTX) == 0) {
             return posix_refuse(path, &st, "directory", err);
         }
         owner = st.st_uid;

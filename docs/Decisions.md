@@ -3365,11 +3365,11 @@ who may write to it, how strictly, and what of a drop-in directory?
 directory and, in the same pass that already stats every entry, holds it
 to three rules:
 
-1. The directory is refused when others may write to it and it is not
-   sticky, or when its group may and that group is not the private group
-   of the user who owns it - the group of that user's entry in the
-   password database (`getpwuid_r`).
-2. In a sticky directory others may write to - the one kind rule 1 lets
+1. The directory is refused when it is not sticky and others may write
+   to it, or its group may and that group is not the private group of
+   the user who owns it - the group of that user's entry in the password
+   database (`getpwuid_r`).
+2. In a sticky directory they may write to - the one kind rule 1 lets
    through - each entry as `lstat` sees it (the link, for a link) must
    belong to root, to the directory's owner or to the user the program
    runs as: there nobody can replace another's entry, so an entry of one
@@ -3385,7 +3385,11 @@ group shares is not. Links are followed, as D-78 decided, and the
 directories on the way to a link's target are not checked. Kubernetes
 mounts a secret as a sticky, world-writable directory of root's (mode
 1777) holding root's links to root's files (0644): rule 2 lets it
-through and a file another user drops in is caught. Docker's
+through and a file another user drops in is caught. With a pod's
+`fsGroup` the same directory belongs to that group and the group may
+write (mode 3777): in a sticky directory a group's write is no more
+than others' already is, so it too is rule 2's to judge and not rule
+1's to refuse. Docker's
 `/run/secrets` (0755, files 0444) and systemd's credentials directory
 (the service user's, 0500) pass as they are. A password-database entry
 too long for the buffer (512 bytes) is treated as not the user's own

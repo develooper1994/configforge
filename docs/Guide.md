@@ -618,7 +618,8 @@ one nobody else could have put there (D-83). A secrets or credentials
 directory that a user other than its owner and root can write to, or
 that holds a file they can, is an error naming it; a group may write only
 when it is the owner's own private group, as a umask of 002 makes it. A
-sticky directory everybody can write to - a Kubernetes mount - is read
+sticky directory everybody can write to - a Kubernetes mount, with or
+without a pod's `fsGroup` - is read
 when each entry belongs to root, to the directory's owner or to the
 program's user. Docker's `/run/secrets`, Kubernetes' mounts and systemd's
 credentials pass as they are. `CF_ANY_WRITER` reads such a directory all
