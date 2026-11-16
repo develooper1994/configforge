@@ -163,7 +163,7 @@ the 1.6.0 milestone; the S-*, T-* and W5-* cards to 1.7.0, but T-5 to
 | 25 | S-2 An experimental tier, and the promise written in one place | medium | S-1 | done (8479c91, b096cc3, 2acb279) |
 | 26 | S-3 The serialization layer's last ties cut, and held by the gate | medium | S-1 | done (dc54a27, f02e087, 3540ffd, bae204a) |
 | 27 | S-4 The serialization library, a target of its own | large | S-2, S-3 | done (bbd2a88, 203cffa, 84df09d, 1de8975) |
-| 28 | S-5 The serialization library installed, found and packaged | medium | S-4 | open |
+| 28 | S-5 The serialization library installed, found and packaged | medium | S-4 | done (22772d8, 563517c, ac8023e) |
 | 29 | T-1 `configforge <command>`, and Doctor's own name | large | S-1, H-6, H-8b | waits: S-1, H-6, H-8b |
 | 30 | T-2 `configforge gen`: the contract's own program | medium | T-1, H-2 | waits: T-1, H-2 |
 | 31 | T-3 `configforge codec`: the serialization library's own program | medium | T-2, S-5 | waits: T-2, S-5; the answer in the card (TO DECIDE) |

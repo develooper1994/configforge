@@ -108,6 +108,7 @@ gets reopened every six months.
 | D-90 | The serialization library, a target of its own | serialize, build, abi | **Decided** |
 | D-91 | CBOR, the JSON model in binary | formats | **Decided** |
 | D-97 | What kind of format a codec is, told to the program | formats | **Decided** |
+| D-99 | Three programs behind one front door | tools | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -4109,6 +4110,35 @@ which is what it was assumed to be. The C++, Rust and Python bindings
 come later.
 
 ---
+
+## D-99 — Three programs behind one front door
+
+**Question.** Doctor had gathered three kinds of command: reading
+reports, generating code from a contract, and converting documents.
+Each has its own users and its own promise. How are they offered
+without one program carrying all three?
+
+**Options.**
+
+1. Doctor keeps all three.
+2. Three programs, each found by its own name.
+3. Three programs behind one front door, as git has it.
+
+**Decision.** Option 3. `configforge <name>` runs `configforge-<name>`,
+found beside the front door itself, then on the `PATH`, never in the
+current directory; a name is 1 to 64 bytes of `a-z`, `0-9` and `-`, not
+starting with `-`. The front door exits with the program's own status,
+or 2 when it refuses a name, finds nothing or cannot start one (126 and
+127 are not used). It is not built where there are no processes (WASI,
+`CF_PLATFORM=none`). Doctor's program is renamed `configforge-doctor`;
+every tool is built into `tools/bin` and installed into `bin/`. Rejected:
+a process-starting function in the library (the library starts no
+program), `_wspawnv` on Windows, a table of known commands, and dropping
+the name `doctor` at once.
+
+**Compatibility.** `doctor` is `configforge-doctor`. In 1.7.x the name
+`doctor` still runs it and says so on stderr, and the release archives
+carry both; it goes in 1.8.0 (T-5).
 
 ## D-60 — Arrays in INI are the ones INI files already have
 
