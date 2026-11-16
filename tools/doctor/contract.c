@@ -234,18 +234,17 @@ static const char* const gen_checks[] = {
     "#include <configforge/configforge.hpp>",
     "#endif",
     "#if defined(__cplusplus) && CF_CPP11",
-    "#define CF_GEN_KEY(k) \\",
-    "    static_assert(cf::key_is_valid(k), \"configforge: not a canonical key\")",
-    "#define CF_GEN_INT(d, lo, hi) \\",
-    "    static_assert((lo) <= (d) && (d) <= (hi), \\",
-    "                  \"configforge: a default outside its own range\")",
-    "#define CF_GEN_REAL(d, lo, hi) \\",
-    "    static_assert((lo) <= (d) && (d) <= (hi), \\",
-    "                  \"configforge: a default outside its own range\")",
-    "#define CF_GEN_LEN(t, lo, hi) \\",
-    "    static_assert(sizeof(t) > (lo) && ((hi) == 0 || sizeof(t) <= (hi) + 1), \\",
-    "                  \"configforge: a text default longer than its max_len, \" \\",
-    "                  \"or shorter than its min_len\")",
+    "#define CF_GEN_BAD_ \"configforge: not a canonical key\"",
+    "#define CF_GEN_OUT_ \"configforge: a default outside its own range\"",
+    "#define CF_GEN_TXT1_ \"configforge: a text default longer than its max_len, \"",
+    "#define CF_GEN_TXT_ CF_GEN_TXT1_ \"or shorter than its min_len\"",
+    "#define CF_GEN_IN_(d, lo, hi) ((lo) <= (d) && (d) <= (hi))",
+    "#define CF_GEN_MAX_(t, hi) ((hi) == 0 || sizeof(t) <= (hi) + 1)",
+    "#define CF_GEN_FIT_(t, lo, hi) (sizeof(t) > (lo) && CF_GEN_MAX_(t, hi))",
+    "#define CF_GEN_KEY(k) static_assert(cf::key_is_valid(k), CF_GEN_BAD_)",
+    "#define CF_GEN_INT(d, lo, hi) static_assert(CF_GEN_IN_(d, lo, hi), CF_GEN_OUT_)",
+    "#define CF_GEN_REAL(d, lo, hi) static_assert(CF_GEN_IN_(d, lo, hi), CF_GEN_OUT_)",
+    "#define CF_GEN_LEN(t, l, h) static_assert(CF_GEN_FIT_(t, l, h), CF_GEN_TXT_)",
     "#elif CF_HAVE_C11 && !defined(__cplusplus)",
     "#define CF_GEN_KEY(k) CF_C11_KEY_(k)",
     "#define CF_GEN_INT(d, lo, hi) CF_C11_RANGE_(d, lo, hi)",
@@ -260,9 +259,11 @@ static const char* const gen_checks[] = {
     "",
     NULL};
 
-static const char* const gen_undefs[] = {"#undef CF_GEN_KEY", "#undef CF_GEN_INT",
-                                         "#undef CF_GEN_REAL", "#undef CF_GEN_LEN",
-                                         NULL};
+static const char* const gen_undefs[] = {
+    "#undef CF_GEN_KEY",  "#undef CF_GEN_INT",   "#undef CF_GEN_REAL",
+    "#undef CF_GEN_LEN",  "#undef CF_GEN_BAD_",  "#undef CF_GEN_OUT_",
+    "#undef CF_GEN_TXT_", "#undef CF_GEN_TXT1_", "#undef CF_GEN_IN_",
+    "#undef CF_GEN_MAX_", "#undef CF_GEN_FIT_",  NULL};
 
 static void c_lines(FILE* out, const char* const* lines) {
     for (; *lines != NULL; ++lines) {
