@@ -37,7 +37,8 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   defaults, which W3-F2c reads. `cf_builder_preferences` reads a domain
   as a source, macOS only, with `CF_WITH_PREFERENCES`; elsewhere it fails
   by name (D-87). It is read on macOS through CoreFoundation and tested
-  there in CI.
+  there in CI. The user defaults from C++, Rust and Python
+  (`preferences`), and the Guide's subsection on reading a domain.
 
 - systemd's credentials shown by an example the suite runs,
   `examples/c/credentials.c`; the Guide's table of sources lists

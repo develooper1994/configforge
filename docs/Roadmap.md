@@ -49,7 +49,7 @@ beside what is not.
 | 🟩 | Doctor checks a report's fingerprint against its contents (CFD019) | plan item 9 |
 | 🟨 | Continuous fuzzing in CI (ClusterFuzzLite): written, its first run to read | `.clusterfuzzlite/`, cflite.yml |
 | 🟩 | INI compared with `configparser` (36 of 36; `.properties` needs a JVM, left to its tests) | plan item 9 |
-| 🟨 | Native OS sources: systemd's credentials done (D-80); macOS's user defaults (D-87): read on macOS; the wrappers left | plan item 9 |
+| 🟩 | Native OS sources: systemd's credentials (D-80) and macOS's user defaults (D-87), in C, C++, Rust and Python | plan item 9 |
 | ⬜ | Go and .NET bindings, when asked | plan item 9 |
 | 🟩 | Binary configuration: a layout-driven TLV codec, BER-TLV, CBOR | D-91, D-93 |
 | ⬜ | Every operation on a file's data, written back in its format | assessment |
@@ -122,9 +122,9 @@ short keeps its branch, unmerged, and says so here.
    writes); F,
    the native sources: systemd's credentials (`$CREDENTIALS_DIRECTORY`)
    are done, `cf_builder_credentials` (D-80), tested on Linux and
-   Windows, in C, C++, Rust and Python; the user defaults (`CFPreferences`) on macOS are
-   left, to be tested on its own system in CI - Windows has its registry
-   source already.
+   Windows, in C, C++, Rust and Python; the user defaults (`CFPreferences`) on macOS
+   are done too, `cf_builder_preferences` (D-87), read on macOS in CI and
+   offered in every language - Windows has its registry source already.
 4. 🟩 **Wave 4**: CBOR (D-91) and TLV by a layout, BER-TLV included
    (D-92, D-93). **1.5.0.**
 5. ⬜ **Wave 5**: converting between formats (`doctor convert`, through
@@ -611,8 +611,8 @@ verified commits, and a release is cut where the order says so. The
     * limits and the build id in the report and the image header -
       with item 8, since a sizing mode is a limit a reader must know.
     * CFD012 against the contract rather than the key list.
-    * native OS sources (macOS defaults, gsettings) where the platform
-      is at hand to test.
+    * native OS sources: gsettings, where the platform is at hand to
+      test (macOS's user defaults are done, D-87).
     * Go and .NET bindings over the C ABI.
 11. **2.0**: what 8 and 9 break, together, once.
 
