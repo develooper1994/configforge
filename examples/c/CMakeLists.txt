@@ -151,8 +151,11 @@ if(CF_WITH_DIR)
   file(WRITE ${CF_CREDS_DIR}/db.user "reporting\n")
   file(WRITE ${CF_CREDS_DIR}/MYAPP_DB__PASSWORD "s3cret-horse\n")
   example_expect(
-    credentials ${CMAKE_CURRENT_BINARY_DIR}/credentials-run "db.user = reporting"
-    "a password of 12 characters" "systemd credential db.user")
+    credentials
+    ${CMAKE_CURRENT_BINARY_DIR}/credentials-run
+    "db.user = reporting"
+    "a password of 12 characters"
+    "systemd credential db.user")
   set_tests_properties(
     example.credentials
     PROPERTIES
