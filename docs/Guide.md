@@ -213,6 +213,7 @@ source, a later assignment beats an earlier one.
 | `cf_builder_dir` | a drop-in directory: every file in byte order, at one rank; a name with no extension is read by its content, one with an extension no format claims refused |
 | `cf_builder_dotenv` | a `.env` file, read as the environment is |
 | `cf_builder_secrets` | a directory of secrets, one file a key, as containers mount them |
+| `cf_builder_credentials` | systemd's credentials, the directory `$CREDENTIALS_DIRECTORY` names; each value says "systemd credential <id>" |
 | `cf_builder_store` | a SQLite store (`CF_WITH_SQLITE`), the one source `cf_write` can keep a change in |
 | `cf_builder_registry` | a key of the Windows Registry, a subkey a section: `Server\Port` is `server.port` |
 | `cf_builder_memory` | pairs from the program itself |

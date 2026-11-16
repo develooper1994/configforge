@@ -51,6 +51,7 @@ foreach(
   schema
   mistakes
   secrets
+  credentials
   plugins
   runtime
   references
@@ -141,6 +142,22 @@ if(CF_WITH_INI AND CF_WITH_REPORT)
     "the password is not in it"
     "after free: still there"
     "after wipe: gone")
+endif()
+# systemd's credentials: the build makes the directory the variable names,
+# since C89 cannot, and the suite sets the variable.
+if(CF_WITH_DIR)
+  set(CF_CREDS_DIR ${CMAKE_CURRENT_BINARY_DIR}/credentials-run/creds)
+  file(MAKE_DIRECTORY ${CF_CREDS_DIR})
+  file(WRITE ${CF_CREDS_DIR}/db.user "reporting\n")
+  file(WRITE ${CF_CREDS_DIR}/MYAPP_DB__PASSWORD "s3cret-horse\n")
+  example_expect(
+    credentials ${CMAKE_CURRENT_BINARY_DIR}/credentials-run "db.user = reporting"
+    "a password of 12 characters" "systemd credential db.user")
+  set_tests_properties(
+    example.credentials
+    PROPERTIES
+      ENVIRONMENT
+      "CREDENTIALS_DIRECTORY=${CMAKE_CURRENT_BINARY_DIR}/credentials-run/creds")
 endif()
 if(CF_WITH_TOML)
   example_expect(
