@@ -193,10 +193,10 @@ static void report_candidate(cf_sink* out, const cf_candidate* c,
                              cf_report_mode mode, const cf_keyspace* ks) {
     const cf_source* s        = source_of(sv, c->source);
     const char*      original = cf_ks_original_key(ks, c);
-    cf_bool          defined = (d != NULL && (d->flags & CF_SENSITIVE) != 0);
-    cf_bool          like    = (d == NULL && (c->flags & CF_CAND_SECRET_LIKE) != 0);
-    cf_bool          secret  = (defined || like);
-    cf_bool          redact  = (mode == CF_REPORT_BLIND) && (secret);
+    cf_bool          defined  = (d != NULL && (d->flags & CF_SENSITIVE) != 0);
+    cf_bool          like     = (d == NULL && (c->flags & CF_CAND_SECRET_LIKE) != 0);
+    cf_bool          secret   = (defined || like);
+    cf_bool          redact   = (mode == CF_REPORT_BLIND) && (secret);
 
     cf_sink_puts(out, "{ \"source\": ");
     report_quote_z(out, (s != NULL) ? s->name : "?");

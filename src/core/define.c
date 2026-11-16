@@ -882,12 +882,13 @@ static size_t nearest_cutoff(size_t keylen) {
 
 const cf_def* cfi_defset_nearest_secret(const cf_defset* ds, const char* key,
                                         size_t keylen) {
-    const cf_def* best   = NULL;
+    const cf_def* best = NULL;
     size_t        cutoff;
     size_t        best_d;
     size_t        i;
 
-    if (ds == NULL || key == NULL || keylen == 0 || cf_defset_is_open(ds, key, keylen)) {
+    if (ds == NULL || key == NULL || keylen == 0 ||
+        cf_defset_is_open(ds, key, keylen)) {
         return NULL;
     }
     cutoff = nearest_cutoff(keylen);

@@ -19,7 +19,7 @@
 static char sl_buf[65536];
 
 static cf_builder* sl_builder(const char* secret_value, const char* prefix) {
-    cf_builder* b = cf_build(NULL);
+    cf_builder*    b = cf_build(NULL);
     static cf_pair pairs[3];
 
     pairs[0].key   = "db.pasword";
@@ -39,14 +39,14 @@ static cf_builder* sl_builder(const char* secret_value, const char* prefix) {
 }
 
 static cf_config* sl_make(const char* value) {
-    cf_error err = CF_ERROR_INIT;
-    cf_config* c = cf_builder_create(sl_builder(value, NULL), &err);
+    cf_error   err = CF_ERROR_INIT;
+    cf_config* c   = cf_builder_create(sl_builder(value, NULL), &err);
     check(c != NULL, "the configuration builds");
     return c;
 }
 
 static void sl_report(void) {
-    cf_config*     c = sl_make("MARK-LIKE-4417");
+    cf_config*     c    = sl_make("MARK-LIKE-4417");
     cf_report_info info = CF_REPORT_INFO_INIT;
 
     if (c == NULL) {
@@ -108,9 +108,9 @@ static void sl_reference(void) {
 }
 
 static void sl_open(void) {
-    cf_error   err = CF_ERROR_INIT;
-    cf_builder* b  = cf_build(NULL);
-    cf_config* c;
+    cf_error       err = CF_ERROR_INIT;
+    cf_builder*    b   = cf_build(NULL);
+    cf_config*     c;
     static cf_pair pairs[2];
 
     pairs[0].key   = "plugins.db.pasword";

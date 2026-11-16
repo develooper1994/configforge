@@ -161,7 +161,7 @@ static void diff_put_origin(diff_text* t, const cf_config* c, const cf_candidate
 
 static cf_bool diff_line(void* ctx, const char* key, size_t klen, cf_change kind,
                          const cf_candidate* before, const cf_candidate* after) {
-    diff_text* t = (diff_text*)ctx;
+    diff_text* t      = (diff_text*)ctx;
     cf_bool    secret = diff_secret(kind == CF_CHANGE_REMOVED ? t->a : t->b, key, klen);
 
     t->at = cf_fmt_append(t->buf, t->cap, t->at, "%S: ", key, klen);

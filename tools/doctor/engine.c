@@ -278,7 +278,7 @@ static cf_bool parse(report* r, const cf_blob* blob, cf_error* err) {
 
         rk->type     = text_at(&r->doc, "keys.%S.definition.type", rk->key, rk->keylen);
         rk->required = flag_at(&r->doc, rk->key, rk->keylen, "required");
-        rk->sensitive  = flag_at(&r->doc, rk->key, rk->keylen, "sensitive");
+        rk->sensitive = flag_at(&r->doc, rk->key, rk->keylen, "sensitive");
         /* A key nobody defined, kept by the library as the secret its
            name is a typo of (D-84): the report says which. */
         if (!rk->sensitive &&
