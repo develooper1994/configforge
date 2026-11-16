@@ -1,9 +1,12 @@
 /*
  * cf_platform.h - what the platform provides, behind one door.
  *
- * INTERNAL (D-51): exported for ConfigForge Doctor, the bindings and the
- * tests, and outside the 1.x promise - a minor release may change it.
- * A program uses the configforge.h functions instead.
+ * INTERNAL (D-51): exported for ConfigForge Doctor and the tests, and
+ * outside the 1.x promise - a minor release may change it. Its functions
+ * are declared only under CF_INTERNAL_API (D-51, D-88), but
+ * cf_platform_name and the cf_platform_has_ queries, which are promised:
+ * a program may ask what the build can do. A program uses the
+ * configforge.h functions instead.
  *
  * Three things a configuration library needs that C89 has no answer
  * for: the process environment, the command line as UTF-8, and a
@@ -80,7 +83,9 @@ CF_API cf_bool cf_platform_has_wide_args(void);
 
 /* NULL where none is reachable, which is not an error: a program with
    no environment is a normal thing on a small target. */
+#if CF_INTERNAL_API
 CF_API char* const* cf_platform_environ(void);
+#endif /* CF_INTERNAL_API */
 
 /* ------------------------------------------------------------------ *
  * The command line in UTF-8
@@ -93,8 +98,10 @@ CF_API char* const* cf_platform_environ(void);
  * writes the same two lines on every platform.
  * ------------------------------------------------------------------ */
 
+#if CF_INTERNAL_API
 CF_API char* const* cf_platform_args(int argc, char* const* argv, cf_arena* arena,
                                      int* out_argc);
+#endif /* CF_INTERNAL_API */
 
 /* ------------------------------------------------------------------ *
  * Directory listing
@@ -117,8 +124,10 @@ CF_API char* const* cf_platform_args(int argc, char* const* argv, cf_arena* aren
    which an optional source may accept; -2 is one that was read and
    cannot be handed over whole, which nothing should, because the file
    left out could be the one that decides a value. */
+#if CF_INTERNAL_API
 CF_API int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX],
                                 int max, cf_error* err);
+#endif /* CF_INTERNAL_API */
 
 /* Whether this platform can say who may write to a directory and its
    files (POSIX: yes; Windows and a build with no operating system:
@@ -134,9 +143,11 @@ CF_API cf_bool cf_platform_has_trusted_dir(void);
    `err` naming the first that is not, as for any entry that cannot be
    handed over (CF_OPTIONAL does not excuse it). Where
    cf_platform_has_trusted_dir is false it is cf_platform_dir_list. */
+#if CF_INTERNAL_API
 CF_API int cf_platform_dir_list_trusted(const char* path,
                                         char (*names)[CF_PLATFORM_NAME_MAX], int max,
                                         cf_error* err);
+#endif /* CF_INTERNAL_API */
 
 /* ------------------------------------------------------------------ *
  * The Windows Registry
@@ -174,8 +185,10 @@ CF_API cf_bool cf_platform_has_registry(void);
    HKU or HKCC first - and every subkey's, to CF_MAX_DEPTH. Buffers come
    from `arena`. 0 when walked, 1 when `root` does not exist, -1 with
    `err` set. */
+#if CF_INTERNAL_API
 CF_API int cf_platform_registry_walk(const char* root, cf_arena* arena,
                                      cf_platform_reg_fn fn, void* ctx, cf_error* err);
+#endif /* CF_INTERNAL_API */
 
 /* ------------------------------------------------------------------ *
  * macOS's user defaults
@@ -222,9 +235,11 @@ CF_API cf_bool cf_platform_has_preferences(void);
 /* Every value of `domain` ("com.example.app") in the scope W3-F2b's
    answer names. Buffers come from `arena`. 0 when walked, 1 when the
    domain has no values, -1 with `err` set. */
+#if CF_INTERNAL_API
 CF_API int cf_platform_preferences_walk(const char* domain, cf_arena* arena,
                                         cf_platform_pref_fn fn, void* ctx,
                                         cf_error* err);
+#endif /* CF_INTERNAL_API */
 
 /* ------------------------------------------------------------------ *
  * File stamps
@@ -252,7 +267,9 @@ typedef struct cf_stamp {
 /* False when the path cannot be stamped, which is not an error: a file
    that is not there yet has a stamp saying so, and its arrival is a
    change like any other. */
+#if CF_INTERNAL_API
 CF_API cf_bool cf_platform_stamp(const char* path, cf_stamp* out);
+#endif /* CF_INTERNAL_API */
 
 /* ------------------------------------------------------------------ *
  * Opening a file by a UTF-8 path
@@ -270,7 +287,9 @@ CF_API cf_bool cf_platform_stamp(const char* path, cf_stamp* out);
  * the file cannot be opened, or on a build with no stdio.
  * ------------------------------------------------------------------ */
 
+#if CF_INTERNAL_API
 CF_API void* cf_platform_fopen(const char* path, const char* mode);
+#endif /* CF_INTERNAL_API */
 
 /* ------------------------------------------------------------------ *
  * Who can read a file
@@ -283,7 +302,9 @@ CF_API void* cf_platform_fopen(const char* path, const char* mode);
  * "is this secret exposed", is worse than no answer.
  * ------------------------------------------------------------------ */
 
+#if CF_INTERNAL_API
 CF_API int cf_platform_world_readable(const char* path);
+#endif /* CF_INTERNAL_API */
 
 /* ------------------------------------------------------------------ *
  * Creating a file only its owner can read
@@ -312,7 +333,9 @@ CF_API int cf_platform_world_readable(const char* path);
  * ------------------------------------------------------------------ */
 
 CF_API cf_bool cf_platform_has_private_create(void);
+#if CF_INTERNAL_API
 CF_API int     cf_platform_create_private(const char* path, cf_error* err);
+#endif /* CF_INTERNAL_API */
 
 /* ------------------------------------------------------------------ *
  * A handle to wait on (D-35, option 3)
@@ -339,6 +362,7 @@ typedef struct cf_platform_wake cf_platform_wake;
 
 CF_API cf_bool cf_platform_has_wake(void);
 
+#if CF_INTERNAL_API
 /* NULL with `err` set, naming the path and the reason. The paths are
    copied; nothing passed here need outlive the call. */
 CF_API cf_platform_wake* cf_platform_wake_open(const char* const* paths, size_t n,
@@ -360,6 +384,7 @@ CF_API cf_bool cf_platform_wake_drain(cf_platform_wake* w);
 CF_API int cf_platform_wake_wait(cf_platform_wake* w, long timeout_ms);
 
 CF_API void cf_platform_wake_close(cf_platform_wake* w);
+#endif /* CF_INTERNAL_API */
 
 #ifdef __cplusplus
 }

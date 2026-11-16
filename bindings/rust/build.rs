@@ -49,6 +49,7 @@ fn main() {
     let mut build = cc::Build::new();
     build
         .include(&include)
+        .define("CF_INTERNAL_API", Some("1"))
         .files(&files)
         // The library's own warnings are its build's business; this one
         // only compiles it.

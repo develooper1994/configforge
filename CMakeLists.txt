@@ -107,7 +107,8 @@ endif()
 
 # Only what CF_API marks is visible from a shared library, and the
 # library's own sources are the ones that export rather than import.
-target_compile_definitions(configforge PRIVATE CF_BUILDING_LIBRARY=1)
+target_compile_definitions(configforge PRIVATE CF_BUILDING_LIBRARY=1
+                                               CF_INTERNAL_API=1)
 
 set_target_properties(
   configforge

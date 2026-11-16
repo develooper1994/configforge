@@ -117,6 +117,20 @@ if(NOT rc EQUAL 0)
     FATAL_ERROR "the installed headers disagree with the installed library")
 endif()
 
+# A program does not see the internal tier of the installed headers
+# (D-88): the same source the unit test compiles must fail here, naming
+# the function.
+execute_process(
+  COMMAND ${CC} -std=c89 -c -o "${work}/fenced.o"
+          "${SRC}/tests/unit/fenced.c" -I "${prefix}/include"
+  RESULT_VARIABLE rc
+  OUTPUT_VARIABLE out
+  ERROR_VARIABLE out)
+if(rc EQUAL 0 OR NOT out MATCHES "cf_ks_count")
+  message("${out}")
+  message(FATAL_ERROR "a program sees the internal tier of the installed headers")
+endif()
+
 execute_process(
   COMMAND "${work}/options"
   RESULT_VARIABLE rc

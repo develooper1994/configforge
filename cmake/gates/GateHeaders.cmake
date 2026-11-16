@@ -29,23 +29,33 @@ foreach(std c11 c2x)
     message("header gate: C headers as ${std} skipped, not supported here")
   endif()
 endforeach()
+# Each twice: as a program sees it, and with CF_INTERNAL_API=1 (D-88), so
+# that a fenced declaration is compiled somewhere outside the library too.
 foreach(std ${c_stds})
-  foreach(h ${headers})
-    get_filename_component(basename "${h}" NAME)
-    set(probe "${BIN}/probe_${std}_${basename}.c")
-    file(WRITE "${probe}"
-         "#include <configforge/${basename}>\nint main(void){return 0;}\n")
-    execute_process(
-      COMMAND ${CC} -std=${std} -pedantic -Werror ${gen_inc} -I${SRC}/include -c
-              -o "${BIN}/probe_${std}_${basename}.o" "${probe}"
-      RESULT_VARIABLE rc
-      OUTPUT_VARIABLE out
-      ERROR_VARIABLE out)
-    if(NOT rc EQUAL 0)
-      message("VIOLATION: ${basename} does not compile standalone as ${std}")
-      message("${out}")
-      set(bad 1)
+  foreach(tier "" "_internal")
+    set(tier_flag "")
+    if(tier STREQUAL "_internal")
+      set(tier_flag "-DCF_INTERNAL_API=1")
     endif()
+    foreach(h ${headers})
+      get_filename_component(basename "${h}" NAME)
+      set(probe "${BIN}/probe_${std}${tier}_${basename}.c")
+      file(WRITE "${probe}"
+           "#include <configforge/${basename}>\nint main(void){return 0;}\n")
+      execute_process(
+        COMMAND ${CC} -std=${std} -pedantic -Werror ${tier_flag} ${gen_inc}
+                -I${SRC}/include -c -o "${BIN}/probe_${std}${tier}_${basename}.o"
+                "${probe}"
+        RESULT_VARIABLE rc
+        OUTPUT_VARIABLE out
+        ERROR_VARIABLE out)
+      if(NOT rc EQUAL 0)
+        message(
+          "VIOLATION: ${basename} does not compile standalone as ${std}${tier}")
+        message("${out}")
+        set(bad 1)
+      endif()
+    endforeach()
   endforeach()
 endforeach()
 if(bad)

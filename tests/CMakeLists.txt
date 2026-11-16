@@ -4,6 +4,7 @@
 # checked, forty of them, and a check whose advice nobody will take
 # teaches people to run it with the output ignored. The tests still get
 # the compiler's warnings, cppcheck, -fanalyzer and the sanitisers.
+add_definitions(-DCF_INTERNAL_API=1)
 set(CMAKE_C_CLANG_TIDY "")
 
 add_subdirectory(unit)

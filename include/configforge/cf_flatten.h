@@ -1,9 +1,10 @@
 /*
  * cf_flatten.h - document events to and from the flat key space.
  *
- * INTERNAL (D-51): exported for ConfigForge Doctor, the bindings and the
- * tests, and outside the 1.x promise - a minor release may change it.
- * A program uses the configforge.h functions instead.
+ * INTERNAL (D-51): exported for ConfigForge Doctor and the tests, and
+ * outside the 1.x promise - a minor release may change it. Its functions
+ * are declared only under CF_INTERNAL_API (D-51, D-88). A program uses
+ * the configforge.h functions instead.
  *
  * The bridge between the serialization layer and the configuration
  * model. It lives on this side of the boundary on purpose: the
@@ -81,6 +82,7 @@ typedef struct cf_flatten {
     cf_bool over_budget; /* a key refused for it; sticky */
 } cf_flatten;
 
+#if CF_INTERNAL_API
 CF_API cf_bool            cf_flatten_init(cf_flatten* f, cf_keyspace* ks, int rank);
 CF_API const cf_doc_sink* cf_flatten_sink(cf_flatten* f);
 
@@ -104,8 +106,11 @@ CF_API void cf_flatten_budget(cf_flatten* f, size_t bytes);
    a refusal from the sink reads to it as a key it could not add. */
 CF_API cf_bool cf_flatten_decode(cf_flatten* f, const cf_codec* codec,
                                  const cf_blob* blob, const char* path, cf_error* err);
+#endif /* CF_INTERNAL_API */
 
 struct cf_source;
+
+#if CF_INTERNAL_API
 
 /* A document's bytes through a codec into the key space, at the source's
    rank, the source's definitions deciding lists for a format without
@@ -124,6 +129,7 @@ CF_API cf_bool cf_source_read_blob(const struct cf_source* s, cf_keyspace* ks,
 CF_API const cf_codec* cf_source_by_content(const cf_codec* const* own, size_t n,
                                             const cf_blob* blob, const char* path,
                                             cf_arena* scratch, cf_error* err);
+#endif /* CF_INTERNAL_API */
 
 /* Walk a resolved key space, emitting the document it describes.
    Structure is reconstructed from the sorted keys with nothing built:
@@ -141,8 +147,10 @@ CF_API const cf_codec* cf_source_by_content(const cf_codec* const* own, size_t n
    header cannot go back to its parent. A selected key that is both a
    scalar and a container prefix is refused as CF_E_KEY, naming the key,
    rather than written as two members with the same name. */
+#if CF_INTERNAL_API
 CF_API cf_bool cf_doc_emit(const cf_keyspace* ks, const cf_doc_sink* out,
                            cf_error* err);
+#endif /* CF_INTERNAL_API */
 
 /* The same walk, with a say in what is included.
  *
@@ -152,8 +160,10 @@ CF_API cf_bool cf_doc_emit(const cf_keyspace* ks, const cf_doc_sink* out,
  * any surviving member keeps all of them. */
 typedef cf_bool (*cf_emit_pred)(const void* ctx, const cf_entry* e);
 
+#if CF_INTERNAL_API
 CF_API cf_bool cf_doc_emit_where(const cf_keyspace* ks, const cf_doc_sink* out,
                                  cf_emit_pred pred, const void* ctx, cf_error* err);
+#endif /* CF_INTERNAL_API */
 
 #ifdef __cplusplus
 }

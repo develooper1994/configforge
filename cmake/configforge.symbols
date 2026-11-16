@@ -1,7 +1,7 @@
 # The public interface of libconfigforge: every CF_API function.
 # Checked by gate.abi against the headers and the built library;
 # rewrite with cmake -DSRC=. -DWRITE=ON -P cmake/gates/GateAbi.cmake.
-# A line added is a minor version, a line removed a major one.
+# A line added is a minor version, a line removed a major one; a name moved to configforge.internal.symbols is neither (D-51).
 cf_app
 cf_app_builder
 cf_apply_stats
@@ -64,8 +64,6 @@ cf_builder_writable
 cf_changed
 cf_cli_args
 cf_cli_expand
-cf_cmp_ascii_ci
-cf_cmp_bytes
 cf_code_description
 cf_code_name
 cf_codec_among
@@ -82,36 +80,16 @@ cf_config_codec
 cf_config_free
 cf_config_ref
 cf_count
-cf_decode_budget
-cf_def_bool
 cf_def_init_sized
-cf_def_int
-cf_def_real real
-cf_def_text
 cf_default_allocator
-cf_define
 cf_defs
 cf_defs_apply
-cf_defset_at
-cf_defset_count
-cf_defset_find
-cf_defset_fingerprint
-cf_defset_init
-cf_defset_is_open
-cf_defset_list
-cf_defset_nearest
-cf_defset_open
-cf_defset_schema
-cf_defset_schema_file
-cf_defset_seal
 cf_derive
 cf_derive_in
 cf_diff
 cf_diff_json
 cf_diff_text
 cf_digest
-cf_doc_emit
-cf_doc_emit_where
 cf_edit_abort
 cf_edit_begin
 cf_edit_commit
@@ -130,22 +108,12 @@ cf_error_copy
 cf_error_set
 cf_explain
 cf_explain_json
-cf_f64_bits real
-cf_f64_from_bits real
-cf_f64_from_f16_bits real
-cf_f64_from_f32_bits real
-cf_f64_to_text real
 cf_feature_at
 cf_feature_count
 cf_fingerprint
 cf_fingerprint_format
 cf_fingerprint_seed
 cf_fingerprint_step
-cf_flatten_budget
-cf_flatten_decode
-cf_flatten_init
-cf_flatten_lists
-cf_flatten_sink
 cf_fmt
 cf_fmt_append
 cf_format_of_path
@@ -157,14 +125,12 @@ cf_get_text
 cf_get_text_n
 cf_has
 cf_has_feature
-cf_i64_to_text
 cf_image_at
 cf_image_count
 cf_image_get
 cf_image_load
 cf_image_open
 cf_image_write
-cf_infer_scalar
 cf_inspect
 cf_iter_children
 cf_iter_keys
@@ -184,33 +150,7 @@ cf_ks_add_candidate
 cf_ks_add_default
 cf_ks_add_resolved
 cf_ks_add_text
-cf_ks_append_list
 cf_ks_arena
-cf_ks_at
-cf_ks_at_mut
-cf_ks_candidate_count
-cf_ks_count
-cf_ks_digest
-cf_ks_digest_text
-cf_ks_explain
-cf_ks_explain_redacted
-cf_ks_find
-cf_ks_get
-cf_ks_infer_untyped
-cf_ks_init
-cf_ks_inspect
-cf_ks_inspect_redacted
-cf_ks_is_sorted
-cf_ks_lower_bound
-cf_ks_original_key
-cf_ks_reject
-cf_ks_rename
-cf_ks_rename_list
-cf_ks_replay
-cf_ks_reselect
-cf_ks_resolve
-cf_ks_secret_digest_text
-cf_ks_value_digest
 cf_lex_cli
 cf_lex_dotenv
 cf_lex_env
@@ -238,12 +178,6 @@ cf_loc_text
 cf_log_level_name
 cf_outcome_can_win
 cf_outcome_name
-cf_platform_args
-cf_platform_create_private
-cf_platform_dir_list
-cf_platform_dir_list_trusted
-cf_platform_environ
-cf_platform_fopen
 cf_platform_has_dir_list
 cf_platform_has_environ
 cf_platform_has_preferences
@@ -253,23 +187,9 @@ cf_platform_has_trusted_dir
 cf_platform_has_wake
 cf_platform_has_wide_args
 cf_platform_name
-cf_platform_preferences_walk
-cf_platform_registry_walk
-cf_platform_stamp
-cf_platform_wake_close
-cf_platform_wake_drain
-cf_platform_wake_fd
-cf_platform_wake_handle
-cf_platform_wake_open
-cf_platform_wake_wait
-cf_platform_world_readable
 cf_policy_text
 cf_port_description
 cf_read_count
-cf_ref_dec
-cf_ref_get
-cf_ref_inc
-cf_ref_init
 cf_refusal_name
 cf_refusal_text
 cf_report
@@ -286,8 +206,6 @@ cf_sink_putc
 cf_sink_puts
 cf_sink_terminate
 cf_sink_write
-cf_siphash24
-cf_source_by_content
 cf_source_cli
 cf_source_cli_defs
 cf_source_defaults
@@ -318,7 +236,6 @@ cf_source_image_state_size
 cf_source_load
 cf_source_memory
 cf_source_path
-cf_source_read_blob
 cf_source_registry
 cf_source_registry_error
 cf_source_registry_state_size
@@ -335,9 +252,6 @@ cf_source_store_state_size
 cf_sources
 cf_store_set
 cf_text_is_utf8
-cf_text_to_f64 real
-cf_text_to_i64
-cf_text_to_u64
 cf_tlv_codec_sized
 cf_tracks_reads
 cf_try_bool
@@ -347,7 +261,6 @@ cf_try_text
 cf_type_json_name
 cf_type_name
 cf_type_of
-cf_u64_to_text
 cf_value_bool
 cf_value_cmp
 cf_value_equal

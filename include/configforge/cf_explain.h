@@ -31,13 +31,17 @@ extern "C" {
 /* The low-level renderers. The public API in configforge.h wraps
    these; these take a key space and a source list directly, which is
    what the tests and the Doctor tool need. */
+#if CF_INTERNAL_API
 CF_API size_t cf_ks_explain(const cf_keyspace* ks, const cf_source_view* sv,
                             const char* key, size_t keylen, char* buf, size_t cap);
+#endif /* CF_INTERNAL_API */
 
 /* Render every key. Sources that never win appear in the trailing
    summary, which is what makes a dead source visible. */
+#if CF_INTERNAL_API
 CF_API size_t cf_ks_inspect(const cf_keyspace* ks, const cf_source_view* sv, char* buf,
                             size_t cap);
+#endif /* CF_INTERNAL_API */
 
 /* The same two, with every value of a key that `ds` marks CF_SENSITIVE
    shown as "<sensitive>", and as "<sensitive, N bytes>" when it is text:
@@ -49,11 +53,13 @@ CF_API size_t cf_ks_inspect(const cf_keyspace* ks, const cf_source_view* sv, cha
    diagnostic is where a secret is most often pasted: into a ticket, a
    chat, a log somebody else reads. The two above are the raw renderers
    for a key space with no definitions. */
+#if CF_INTERNAL_API
 CF_API size_t cf_ks_explain_redacted(const cf_keyspace* ks, const cf_source_view* sv,
                                      const cf_defset* ds, const char* key,
                                      size_t keylen, char* buf, size_t cap);
 CF_API size_t cf_ks_inspect_redacted(const cf_keyspace* ks, const cf_source_view* sv,
                                      const cf_defset* ds, char* buf, size_t cap);
+#endif /* CF_INTERNAL_API */
 
 #ifdef __cplusplus
 }

@@ -4,6 +4,7 @@
 #   cmake --build build-bench --target cf_bench && build-bench/bench/cf_bench
 #
 # Release, or the numbers are the debug build's.
+add_definitions(-DCF_INTERNAL_API=1)
 add_executable(cf_bench bench.c)
 target_link_libraries(cf_bench PRIVATE configforge configforge_doctor)
 set_target_properties(

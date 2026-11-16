@@ -268,6 +268,8 @@ def main():
         "#if defined(__linux__) && !defined(_POSIX_C_SOURCE)\n"
         "#define _POSIX_C_SOURCE 200112L\n"
         "#endif\n\n"
+        "/* The library's own code sees its internal tier (D-51). */\n"
+        "#define CF_INTERNAL_API 1\n\n"
         '#include <configforge/configforge.h>\n'
     ]
     seen = set()

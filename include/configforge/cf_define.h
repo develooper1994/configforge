@@ -174,9 +174,9 @@ struct cf_list_projection;
 
 /* INTERNAL (D-51): the definition set the builder keeps. Its members and
    the cf_defset_ and cf_def_ functions over it are exported for
-   ConfigForge Doctor and the tests, and outside the 1.x promise; a
-   program defines keys through cf_builder_define and the cf_builder_
-   shorthands. */
+   ConfigForge Doctor and the tests, and outside the 1.x promise, and
+   declared only under CF_INTERNAL_API (D-51, D-88); a program defines
+   keys through cf_builder_define and the cf_builder_ shorthands. */
 typedef struct cf_defset {
     cf_arena* arena;
     cf_def*   defs;
@@ -205,6 +205,7 @@ typedef struct cf_defset {
     const unsigned char* digest_key; /* 16 bytes in the arena, or NULL: FNV-1a (D-85) */
 } cf_defset;
 
+#if CF_INTERNAL_API
 CF_API cf_bool cf_defset_init(cf_defset* ds, cf_arena* arena, size_t hint);
 
 /* Copies the descriptor. Rejects a definition that contradicts itself:
@@ -266,6 +267,7 @@ CF_API const cf_def* cf_defset_list(const cf_defset* ds, const char* key,
    cf_ks_value_digest text, as a value-blind report shows it, rather
    than by its value. `ds` may be NULL: nothing is sensitive. */
 CF_API cf_u64 cf_defset_fingerprint(const cf_defset* ds, const cf_keyspace* ks);
+#endif /* CF_INTERNAL_API */
 /* The fingerprint a step at a time, for a reader that holds keys as text -
    Doctor, recomputing a report's - and not as a key space: start from the
    seed, then give each selected entry in key order its key, the type name
@@ -275,6 +277,7 @@ CF_API cf_u64 cf_defset_fingerprint(const cf_defset* ds, const cf_keyspace* ks);
 CF_API cf_u64        cf_fingerprint_seed(void);
 CF_API cf_u64        cf_fingerprint_step(cf_u64 h, const char* key, size_t keylen,
                                          const char* type, const char* text, size_t n);
+#if CF_INTERNAL_API
 CF_API size_t        cf_defset_count(const cf_defset* ds);
 CF_API const cf_def* cf_defset_at(const cf_defset* ds, size_t i);
 
@@ -284,6 +287,7 @@ CF_API const cf_def* cf_defset_at(const cf_defset* ds, size_t i);
    a contract rather than documentation. */
 CF_API const cf_def* cf_defset_nearest(const cf_defset* ds, const char* key,
                                        size_t keylen, size_t* distance);
+#endif /* CF_INTERNAL_API */
 
 /* The CF_SENSITIVE definition nearest `key` within the cutoff
    cf_defset_nearest uses, or NULL. Only the secrets are compared, so

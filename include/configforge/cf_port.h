@@ -243,6 +243,16 @@ typedef int cf_bool;
 #define CF_API
 #endif
 
+/* The internal tier (D-51, D-88): functions the library's own layers,
+   ConfigForge Doctor and the tests call, exported from the library and
+   outside the 1.x promise. They are declared only where CF_INTERNAL_API
+   is 1 - the library's build, Doctor's and the tests' - so a program
+   that calls one does not compile rather than break in a later minor
+   release. */
+#ifndef CF_INTERNAL_API
+#define CF_INTERNAL_API 0
+#endif
+
 /* ------------------------------------------------------------------ *
  * Compile-time assertion
  *
@@ -337,10 +347,12 @@ typedef struct cf_refcount {
 /* Sets the initial count. Not a plain assignment at the call site:
    the member is volatile on some builds and its spelling is this
    layer's business, not the caller's. */
+#if CF_INTERNAL_API
 CF_API void   cf_ref_init(cf_refcount* rc, cf_i32 n);
 CF_API cf_i32 cf_ref_inc(cf_refcount* rc);
 CF_API cf_i32 cf_ref_dec(cf_refcount* rc);
 CF_API cf_i32 cf_ref_get(const cf_refcount* rc);
+#endif /* CF_INTERNAL_API */
 
 /* ------------------------------------------------------------------ *
  * ASCII-only character handling
@@ -377,8 +389,10 @@ CF_INLINE int cf_to_upper(int c) {
 }
 
 /* Byte-wise comparison. Never strcoll: ordering must be reproducible. */
+#if CF_INTERNAL_API
 CF_API int cf_cmp_bytes(const char* a, size_t alen, const char* b, size_t blen);
 CF_API int cf_cmp_ascii_ci(const char* a, size_t alen, const char* b, size_t blen);
+#endif /* CF_INTERNAL_API */
 
 /* ------------------------------------------------------------------ *
  * Bounded formatting

@@ -1,9 +1,10 @@
 /*
  * cf_numeric.h - locale-independent numeric conversion.
  *
- * INTERNAL (D-51): exported for ConfigForge Doctor, the bindings and the
- * tests, and outside the 1.x promise - a minor release may change it.
- * A program uses the configforge.h functions instead.
+ * INTERNAL (D-51): exported for ConfigForge Doctor and the tests, and
+ * outside the 1.x promise - a minor release may change it. Its functions
+ * are declared only under CF_INTERNAL_API (D-51, D-88). A program uses
+ * the configforge.h functions instead.
  *
  * strtod, atoi and printf("%f") all follow the active locale's decimal
  * separator, so a configuration file written on one machine would not
@@ -33,15 +34,19 @@ extern "C" {
 
 /* Write the decimal form of v. Returns the length written, or 0 when
    cap is too small. Always terminates when cap > 0. */
+#if CF_INTERNAL_API
 CF_API size_t cf_i64_to_text(cf_i64 v, char* buf, size_t cap);
 CF_API size_t cf_u64_to_text(cf_u64 v, char* buf, size_t cap);
+#endif /* CF_INTERNAL_API */
 
 /* Parse an optionally signed decimal integer. Returns CF_TRUE on
    success. Rejects overflow, empty input, and surrounding space;
    callers trim deliberately. When end is NULL the whole input must be
    consumed; otherwise *end receives the number of bytes consumed. */
+#if CF_INTERNAL_API
 CF_API cf_bool cf_text_to_i64(const char* s, size_t len, cf_i64* out, size_t* end);
 CF_API cf_bool cf_text_to_u64(const char* s, size_t len, cf_u64* out, size_t* end);
+#endif /* CF_INTERNAL_API */
 
 /* ------------------------------------------------------------------ *
  * Floating point
@@ -64,7 +69,9 @@ CF_API cf_bool cf_text_to_u64(const char* s, size_t len, cf_u64* out, size_t* en
    NaN and infinity are deliberately not representable: a configuration
    value cannot be either, and rejecting them here keeps every codec
    from having to invent a spelling. */
+#if CF_INTERNAL_API
 CF_API size_t cf_f64_to_text(double v, char* buf, size_t cap);
+#endif /* CF_INTERNAL_API */
 
 /* Parse a C-locale floating point number. The decimal separator is
    always '.', never the locale's. Accepts the forms produced by
@@ -76,16 +83,22 @@ CF_API size_t cf_f64_to_text(double v, char* buf, size_t cap);
    exponent and the rounding, so a literal of hundreds of digits is read
    as what it is, and one lying exactly on a halfway point may be one
    unit in the last place off. */
+#if CF_INTERNAL_API
 CF_API cf_bool cf_text_to_f64(const char* s, size_t len, double* out, size_t* end);
+#endif /* CF_INTERNAL_API */
 
 /* A double as its IEEE 754 bit pattern, and back, by memcpy. (1.5) */
+#if CF_INTERNAL_API
 CF_API cf_u64 cf_f64_bits(double d);
 CF_API double cf_f64_from_bits(cf_u64 bits);
+#endif /* CF_INTERNAL_API */
 
 /* A half- and a single-precision pattern (in the low 16 and 32 bits) as
    a double, exactly, the non-finite ones included. (1.5) */
+#if CF_INTERNAL_API
 CF_API double cf_f64_from_f16_bits(cf_u32 bits);
 CF_API double cf_f64_from_f32_bits(cf_u32 bits);
+#endif /* CF_INTERNAL_API */
 
 #endif /* CF_WITH_REAL */
 
@@ -103,7 +116,9 @@ typedef enum cf_scalar_kind {
     CF_SCALAR_REAL
 } cf_scalar_kind;
 
+#if CF_INTERNAL_API
 CF_API cf_scalar_kind cf_infer_scalar(const char* s, size_t len);
+#endif /* CF_INTERNAL_API */
 
 #ifdef __cplusplus
 }

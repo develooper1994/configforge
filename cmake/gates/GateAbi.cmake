@@ -1,18 +1,26 @@
-# The symbol list: the library's public interface, written down.
+# The symbol lists: the library's exported interface, written down.
 #
 #   cmake -DSRC=<repo> [-DLIB=<library>] [-DWITH_REAL=ON] -P GateAbi.cmake
-#   cmake -DSRC=<repo> -DWRITE=ON -P GateAbi.cmake      rewrite the list
+#   cmake -DSRC=<repo> -DWRITE=ON -P GateAbi.cmake      rewrite the lists
 #
-# cmake/configforge.symbols names every CF_API function, one a line, and
-# "name real" for one that exists only with CF_WITH_REAL. The list is
-# what a program built against this library may call, so a change to it
-# is a change to the ABI, and it shows in a diff as one - which a header
-# edit does not. Three checks:
+# cmake/configforge.symbols names every promised CF_API function, one a
+# line, and "name real" for one that exists only with CF_WITH_REAL. The
+# list is what a program built against this library may call, so a change
+# to it is a change to the ABI, and it shows in a diff as one - which a
+# header edit does not. cmake/configforge.internal.symbols, in the same
+# format, names the internal tier (D-51, D-88): functions exported from
+# the library and declared only under CF_INTERNAL_API, outside the 1.x
+# promise. A line added or removed there is no version at all. Three
+# checks:
 #
-#   headers   every CF_API declaration is listed, and every listed name
-#             is declared: adding one is a minor version, removing one a
-#             major version, and neither happens by accident.
-#   library   every listed name is defined in the built library.
+#   headers   every CF_API declaration is listed in the list its place in
+#             the header says - promised, or inside #if CF_INTERNAL_API,
+#             internal - and every listed name is declared: adding a
+#             promised one is a minor version, removing one a major
+#             version, and neither happens by accident. A name in both
+#             lists is a violation.
+#   library   every listed name, of both lists, is defined in the built
+#             library.
 #   shared    a shared library exports nothing else: -fvisibility=hidden
 #             is what keeps the internals internal, and this checks it.
 #
@@ -29,53 +37,90 @@ if(NOT DEFINED SRC OR NOT EXISTS "${SRC}/include/configforge/configforge.h")
 endif()
 
 set(list_file "${SRC}/cmake/configforge.symbols")
+set(internal_file "${SRC}/cmake/configforge.internal.symbols")
 
-# Every CF_API name in the headers, "name" or "name real".
+# Every CF_API name in the headers, "name" or "name real": the promised
+# ones in `declared`, the ones inside #if CF_INTERNAL_API in
+# `declared_internal`.
 file(GLOB headers "${SRC}/include/configforge/*.h")
 list(SORT headers)
 set(declared "")
+set(declared_internal "")
 foreach(h ${headers})
   # Comments can contain unmatched brackets, which join CMake list
   # elements. Only declarations and the relevant directives are tokens.
   file(STRINGS "${h}" lines
-       REGEX "^(#if CF_WITH_REAL|#endif|(CF_NODISCARD[ \t]+)?CF_API[ \t])")
-  set(real FALSE)
+       REGEX
+       "^(#[ \t]*(if|ifdef|ifndef|endif)|(CF_NODISCARD[ \t]+)?CF_API[ \t])")
+  # What the open conditionals are: "real" for #if CF_WITH_REAL,
+  # "internal" for #if CF_INTERNAL_API, "other" for any other. #else and
+  # #elif are not read: a fenced block holds neither.
+  set(stack "")
   foreach(l IN LISTS lines)
-    if(l MATCHES "^#if CF_WITH_REAL")
-      set(real TRUE)
-    elseif(l MATCHES "^#endif")
-      set(real FALSE)
+    if(l MATCHES "^#[ \t]*endif")
+      list(LENGTH stack depth)
+      if(depth GREATER 0)
+        math(EXPR last "${depth} - 1")
+        list(REMOVE_AT stack ${last})
+      endif()
+    elseif(l MATCHES "^#[ \t]*if[ \t]+CF_WITH_REAL([^A-Za-z0-9_]|$)")
+      list(APPEND stack "real")
+    elseif(l MATCHES "^#[ \t]*if[ \t]+CF_INTERNAL_API([^A-Za-z0-9_]|$)")
+      list(APPEND stack "internal")
+    elseif(l MATCHES "^#[ \t]*if")
+      list(APPEND stack "other")
     elseif(l MATCHES
            "^(CF_NODISCARD[ \t]+)?CF_API[ \t].*[ \t*]([a-z_][a-z0-9_]*)\\(")
-      if(real)
-        list(APPEND declared "${CMAKE_MATCH_2} real")
+      set(name "${CMAKE_MATCH_2}")
+      if("real" IN_LIST stack)
+        set(name "${name} real")
+      endif()
+      if("internal" IN_LIST stack)
+        list(APPEND declared_internal "${name}")
       else()
-        list(APPEND declared "${CMAKE_MATCH_2}")
+        list(APPEND declared "${name}")
       endif()
     endif()
   endforeach()
 endforeach()
 list(SORT declared)
+list(SORT declared_internal)
 
 if(WRITE)
+  include("${SRC}/cmake/ConfigForgeVersion.cmake")
+
   string(REPLACE ";" "\n" body "${declared}")
   set(text "# The public interface of libconfigforge: every CF_API function.\n")
   string(APPEND text
          "# Checked by gate.abi against the headers and the built library;\n")
   string(APPEND text "# rewrite with cmake -DSRC=. -DWRITE=ON -P "
          "cmake/gates/GateAbi.cmake.\n")
-  string(APPEND text
-         "# A line added is a minor version, a line removed a major one.\n")
+  string(APPEND text "# A line added is a minor version, a line removed a major "
+         "one; a name moved to configforge.internal.symbols is neither "
+         "(D-51).\n")
   string(APPEND text "${body}\n")
   # LF on every system: file(WRITE) writes CRLF on Windows.
-  include("${SRC}/cmake/ConfigForgeVersion.cmake")
   configforge_write_lf("${list_file}" "${text}")
   list(LENGTH declared n)
   message("abi: ${n} symbols written to ${list_file}")
+
+  string(REPLACE ";" "\n" body "${declared_internal}")
+  set(text "# The internal tier of libconfigforge: exported, outside the 1.x ")
+  string(APPEND text "promise (D-51).\n")
+  string(APPEND text
+         "# Checked by gate.abi against the headers and the built library;\n")
+  string(APPEND text "# rewrite with cmake -DSRC=. -DWRITE=ON -P "
+         "cmake/gates/GateAbi.cmake.\n")
+  string(APPEND text "# A line added or removed here is no version at all.\n")
+  string(APPEND text "${body}\n")
+  configforge_write_lf("${internal_file}" "${text}")
+  list(LENGTH declared_internal n)
+  message("abi: ${n} internal symbols written to ${internal_file}")
   return()
 endif()
 
 file(STRINGS "${list_file}" listed REGEX "^[a-z_]")
+file(STRINGS "${internal_file}" listed_internal REGEX "^[a-z_]")
 set(bad 0)
 foreach(d ${declared})
   if(NOT d IN_LIST listed)
@@ -86,9 +131,29 @@ foreach(d ${declared})
 endforeach()
 foreach(s ${listed})
   if(NOT s IN_LIST declared)
-    message("VIOLATION: '${s}' is in cmake/configforge.symbols and declared "
-            "nowhere: removing a public function breaks every program "
-            "built against it")
+    message("VIOLATION: '${s}' is in cmake/configforge.symbols and not "
+            "declared as a promised function: removing a public function "
+            "breaks every program built against it")
+    set(bad 1)
+  endif()
+endforeach()
+foreach(d ${declared_internal})
+  if(NOT d IN_LIST listed_internal)
+    message("VIOLATION: '${d}' is declared CF_API under CF_INTERNAL_API and "
+            "not in cmake/configforge.internal.symbols: add it")
+    set(bad 1)
+  endif()
+endforeach()
+foreach(s ${listed_internal})
+  if(NOT s IN_LIST declared_internal)
+    message("VIOLATION: '${s}' is in cmake/configforge.internal.symbols and "
+            "not declared under CF_INTERNAL_API")
+    set(bad 1)
+  endif()
+endforeach()
+foreach(s ${listed})
+  if(s IN_LIST listed_internal)
+    message("VIOLATION: '${s}' is in both lists")
     set(bad 1)
   endif()
 endforeach()
@@ -108,14 +173,14 @@ if(LIB AND NM_EXE)
     endif()
   endforeach()
   set(names "")
-  foreach(s ${listed})
+  foreach(s ${listed} ${listed_internal})
     string(REGEX REPLACE " real$" "" name "${s}")
     if(s MATCHES " real$" AND NOT WITH_REAL)
       continue()
     endif()
     list(APPEND names "${name}")
     if(NOT name IN_LIST defined)
-      message("VIOLATION: '${name}' is public and not defined in ${LIB}")
+      message("VIOLATION: '${name}' is listed and not defined in ${LIB}")
       set(bad 1)
     endif()
   endforeach()
@@ -123,7 +188,8 @@ if(LIB AND NM_EXE)
     foreach(d ${defined})
       if(NOT d IN_LIST names)
         message("VIOLATION: '${d}' is exported by the shared library and is "
-                "not public: give it CF_API and list it, or keep it hidden")
+                "in neither list: give it CF_API and list it, or keep it "
+                "hidden")
         set(bad 1)
       endif()
     endforeach()
@@ -131,5 +197,5 @@ if(LIB AND NM_EXE)
 endif()
 
 if(bad)
-  message(FATAL_ERROR "the symbol list and the interface disagree")
+  message(FATAL_ERROR "the symbol lists and the interface disagree")
 endif()

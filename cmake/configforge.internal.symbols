@@ -1,0 +1,91 @@
+# The internal tier of libconfigforge: exported, outside the 1.x promise (D-51).
+# Checked by gate.abi against the headers and the built library;
+# rewrite with cmake -DSRC=. -DWRITE=ON -P cmake/gates/GateAbi.cmake.
+# A line added or removed here is no version at all.
+cf_cmp_ascii_ci
+cf_cmp_bytes
+cf_decode_budget
+cf_def_bool
+cf_def_int
+cf_def_real real
+cf_def_text
+cf_define
+cf_defset_at
+cf_defset_count
+cf_defset_find
+cf_defset_fingerprint
+cf_defset_init
+cf_defset_is_open
+cf_defset_list
+cf_defset_nearest
+cf_defset_open
+cf_defset_schema
+cf_defset_schema_file
+cf_defset_seal
+cf_doc_emit
+cf_doc_emit_where
+cf_f64_bits real
+cf_f64_from_bits real
+cf_f64_from_f16_bits real
+cf_f64_from_f32_bits real
+cf_f64_to_text real
+cf_flatten_budget
+cf_flatten_decode
+cf_flatten_init
+cf_flatten_lists
+cf_flatten_sink
+cf_i64_to_text
+cf_infer_scalar
+cf_ks_append_list
+cf_ks_at
+cf_ks_at_mut
+cf_ks_candidate_count
+cf_ks_count
+cf_ks_digest
+cf_ks_digest_text
+cf_ks_explain
+cf_ks_explain_redacted
+cf_ks_find
+cf_ks_get
+cf_ks_infer_untyped
+cf_ks_init
+cf_ks_inspect
+cf_ks_inspect_redacted
+cf_ks_is_sorted
+cf_ks_lower_bound
+cf_ks_original_key
+cf_ks_reject
+cf_ks_rename
+cf_ks_rename_list
+cf_ks_replay
+cf_ks_reselect
+cf_ks_resolve
+cf_ks_secret_digest_text
+cf_ks_value_digest
+cf_platform_args
+cf_platform_create_private
+cf_platform_dir_list
+cf_platform_dir_list_trusted
+cf_platform_environ
+cf_platform_fopen
+cf_platform_preferences_walk
+cf_platform_registry_walk
+cf_platform_stamp
+cf_platform_wake_close
+cf_platform_wake_drain
+cf_platform_wake_fd
+cf_platform_wake_handle
+cf_platform_wake_open
+cf_platform_wake_wait
+cf_platform_world_readable
+cf_ref_dec
+cf_ref_get
+cf_ref_inc
+cf_ref_init
+cf_siphash24
+cf_source_by_content
+cf_source_read_blob
+cf_text_to_f64 real
+cf_text_to_i64
+cf_text_to_u64
+cf_u64_to_text

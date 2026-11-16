@@ -156,6 +156,22 @@ if("c_std_11" IN_LIST CMAKE_C_COMPILE_FEATURES AND NOT CF_FORCE_PORTABLE)
   endforeach()
 endif()
 
+# The internal tier is not declared to a program (D-51, D-88): the
+# source is a program's, and the compiler's message names the function.
+include(ConfigForgeMustNotCompile)
+cf_must_not_compile(
+  unit.internal_fenced
+  SOURCE
+  ${CMAKE_CURRENT_SOURCE_DIR}/fenced.c
+  LANG
+  C
+  STD
+  90
+  DEFINE
+  CF_FENCED=1
+  EXPECT
+  "cf_ks_count")
+
 # The documents test_codec_edges reads, where they are in the source tree.
 target_compile_definitions(
   test_codec_edges PRIVATE CF_EDGES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
