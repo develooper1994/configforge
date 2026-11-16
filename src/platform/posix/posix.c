@@ -193,7 +193,8 @@ int cf_platform_preferences_walk(const char* domain, cf_arena* arena,
     static const char says[] =
         "'%s' is in macOS's user defaults, which exist only on macOS";
 #else
-    static const char says[] = "'%s' is in macOS's user defaults, and this build was compiled without CF_WITH_PREFERENCES";
+    static const char says[] = "'%s' is in macOS's user defaults, and this build was "
+                               "compiled without CF_WITH_PREFERENCES";
 #endif
     (void)arena;
     (void)fn;
