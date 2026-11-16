@@ -143,7 +143,7 @@ the 1.6.0 milestone and the W5-* cards to 1.7.0
 | Order | Card | Size | Needs | Status |
 | ----: | ---- | ----- | ----- | ------ |
 | 13 | H-5 A directory others can write to is not read as secrets | large | - | done (f37813d, 4f42242, 88c8071) |
-| 14 | H-7 An undefined key named like a secret is kept as one | large | - | done |
+| 14 | H-7 An undefined key named like a secret is kept as one | large | - | done (5dca003, 84bd14a) |
 | 15 | H-8a A secret's digest that cannot be tested without a key | large | - | open |
 | 16 | W5-V1 `doctor convert` | large | W4-C3 | waits: the tools split (Roadmap, "Tools, distribution and digests") |
 | 17 | W5-S1 `doctor schema --from` | medium | W5-V1 | waits: the tools split (Roadmap, "Tools, distribution and digests") |

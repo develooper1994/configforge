@@ -164,6 +164,9 @@ The round of 2026-11-16 (H-5, the first card carried out from the plan):
 | the CHANGELOG had no unreleased section and `gate.version` wanted one, so the card's commit had to open a version and change files the card did not list | a version is opened once a milestone ("Versions"); a card's "files" names the CHANGELOG section it writes under |
 | the card's first rule refused a Kubernetes secret mounted under a pod's `fsGroup`, found by reading the finished diff against the mounts the card named | a rule about files others own is checked, before it is built, against each real layout the card claims to read: its owner, group and mode written out |
 | two branches were worked at once in one checkout's copies, and the formatter's regenerated `docs/API.md` stayed behind in the copy | a second piece of work gets a worktree of its own (`git worktree add`); after the last verify the copy is compared with the checkout and what differs is brought back before the commit |
+| `gate.format.c` failed in CI on a unit formatted with clang-format 18, the only one on that machine | CI's `format-patch` job keeps the difference: `gh run download <run> -n format-patch`, `git apply format.patch`, then the API reference regenerated; a machine without 22.1.8 costs one push, not a guess a line |
+| `gate.amalgamation` failed under pcc alone, and verify printed only "FAILED" | verify runs ctest with `--output-on-failure`, so a job's log holds what the test said |
+| the failure was pcc 1.2's preprocessor: re-reading a guarded header at some byte offsets it writes a stray character, so the gate passed or failed by where an edit moved a line | the amalgamation includes each system header once outside an `#if`; under pcc the gate puts a comment before the file and tries again, and a real error is reported from the first try. tcc and pcc are installed on the workstation's WSL, so `EXTRA=compilers` runs before a push |
 
 ## Measured
 
