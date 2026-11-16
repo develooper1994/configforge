@@ -346,7 +346,8 @@ Both build from this checkout and are tested against it in CI: Conan
 with every `CF_WITH_*` as a recipe option (`with_yaml` brings libyaml
 from ConanCenter), vcpkg with a `yaml` feature. Either way the package
 carries the library and its headers, and `find_package(ConfigForge)`
-gives `ConfigForge::configforge`.
+gives `ConfigForge::configforge`; its `serialize` component gives the
+readers and writers alone, `ConfigForge::configforge_serialize`.
 
 For Python, `python -m pip install .` from a virtual environment builds
 and installs a wheel with the native library inside. `python -m build`

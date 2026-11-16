@@ -73,6 +73,12 @@ target.
 cc app.c $(pkg-config --cflags --libs configforge)
 ```
 
+A program that reads and writes documents and has no configuration links
+the serialization library alone: `find_package(ConfigForge REQUIRED
+COMPONENTS serialize)` and `ConfigForge::configforge_serialize`, or
+`pkg-config configforge_serialize`. Never both libraries:
+`ConfigForge::configforge` holds every function of the other.
+
 **A package manager**:
 
 ```sh

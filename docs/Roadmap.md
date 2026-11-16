@@ -193,9 +193,9 @@ format by that format's own library, must read to the same keys.
 The serialization layer becomes a library of its own in two steps
 (revised 2026-11-14; until then it was to be split last of all):
 
-1. 🟨 **Before the first new format: a library target in this
-   repository** (cards S-3, S-4, S-5): the target and its symbol list
-   done (D-90); its install and packages left (S-5). `src/serialize` is the largest part of the code (about
+1. 🟩 **Before the first new format: a library target in this
+   repository** (cards S-3, S-4, S-5): the target, its symbol list, its
+   install, pkg-config file and Conan component (D-90). `src/serialize` is the largest part of the code (about
    9,900 lines of 29,000 on 2026-11-14) and has value without the rest:
    a C89 reader of YAML 1.2 that passes all of yaml-test-suite, JSON5,
    TOML, CBOR, TLV, with no dependency. `gate.layering` already holds it

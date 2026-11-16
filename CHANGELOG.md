@@ -11,7 +11,8 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   and writers - JSON, JSON5, TOML, YAML, INI, `.properties`, XML, CBOR,
   TLV - as a library of their own, which a program that wants documents
   and not a configuration links alone; `libconfigforge` still carries all
-  of it. `cf_serialize_version()` (D-90).
+  of it. `cf_serialize_version()` (D-90). Installed as the CMake
+  component `serialize` and `configforge_serialize.pc`.
 - An experimental tier, `CF_EXPERIMENTAL(major, minor)`: a function
   outside the 1.x promise for the minor release it comes in, promoted or
   removed by the next (D-89); `docs/API.md` begins with what 1.x

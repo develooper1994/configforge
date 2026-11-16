@@ -3758,8 +3758,14 @@ the standing instruction to decide: `configforge_serialize` (the family
 until then. Held to by `unit.serialize_alone`, a program linked against
 the serialization library alone, and `gate.abi.serialize`.
 
+It is installed as the CMake component `serialize` of the package
+`ConfigForge` and as `configforge_serialize.pc`, whose static link line
+carries neither SQLite nor `libconfigforge`; Conan's recipe has the two
+components. `gate.install` builds a consumer of it from the CMake
+package and from pkg-config.
+
 **Compatibility.** Nothing a 1.6 program sees changes; two functions
-are added. Installing it and its packages is S-5.
+are added.
 
 ## D-91 — CBOR, the JSON model in binary
 
