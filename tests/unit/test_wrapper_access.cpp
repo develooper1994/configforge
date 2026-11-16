@@ -373,11 +373,15 @@ static void test_directories() {
    fails by name, optional or not. */
 static void test_preferences() {
 #if CF_WITH_DIR && !defined(__APPLE__)
-    cf::Config  refused = cf::Builder().preferences("p", CF_RANK_ENV, "com.example.app").create();
-    const char* named   = std::strstr(refused.error().message(), "macOS's user defaults");
-    check(!refused && named != 0, "preferences() off macOS: an error that names the source");
+    cf::Config refused =
+        cf::Builder().preferences("p", CF_RANK_ENV, "com.example.app").create();
+    const char* named = std::strstr(refused.error().message(), "macOS's user defaults");
+    check(!refused && named != 0,
+          "preferences() off macOS: an error that names the source");
     cf::Config optional =
-        cf::Builder().preferences("p", CF_RANK_ENV, "com.example.app", CF_OPTIONAL).create();
+        cf::Builder()
+            .preferences("p", CF_RANK_ENV, "com.example.app", CF_OPTIONAL)
+            .create();
     check(!optional, "and optional does not make it read nothing");
 #endif
 }

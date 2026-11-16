@@ -536,7 +536,13 @@ impl Builder {
     /// links CoreFoundation, so here [`Builder::create`] fails naming
     /// macOS's user defaults, [`OPTIONAL`] or not. `name` of `None` is the
     /// domain.
-    pub fn preferences(mut self, name: Option<&str>, rank: i32, domain: &str, flags: u32) -> Builder {
+    pub fn preferences(
+        mut self,
+        name: Option<&str>,
+        rank: i32,
+        domain: &str,
+        flags: u32,
+    ) -> Builder {
         let (n, d) = (self.keep.opt(name), self.keep.s(domain));
         unsafe { sys::cf_builder_preferences(self.b, n, rank, d, flags) };
         self
