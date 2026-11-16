@@ -105,14 +105,22 @@ foreach(source IN LISTS implementations)
 endforeach()
 
 # Render a declaration group with its comments and implementation links.
-function(render_group declarations comment internal out)
+function(
+  render_group
+  declarations
+  comment
+  internal
+  out)
   string(REPLACE ";" "\n" g "${declarations}")
   restore("${g}" g)
   set(rendered "```c\n${g}\n```\n\n")
   if(internal)
-    string(APPEND rendered "Internal (`CF_INTERNAL_API`): exported for the "
-           "library's own layers, Doctor and the tests, outside the 1.x "
-           "promise; a program does not see it.\n\n")
+    string(
+      APPEND
+      rendered
+      "Internal (`CF_INTERNAL_API`): exported for the "
+      "library's own layers, Doctor and the tests, outside the 1.x "
+      "promise; a program does not see it.\n\n")
   endif()
   set(links "")
   foreach(declaration IN LISTS declarations)

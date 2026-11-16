@@ -35,8 +35,7 @@ foreach(h ${harnesses})
   execute_process(
     COMMAND
       ${CBMC_EXE} "${h}" ${sources} -I "${SRC}/include" -DCF_INTERNAL_API=1
-      --bounds-check
-      --pointer-check --signed-overflow-check --div-by-zero-check
+      --bounds-check --pointer-check --signed-overflow-check --div-by-zero-check
       --undefined-shift-check --unwind ${UNWIND} --unwinding-assertions
     RESULT_VARIABLE rc
     OUTPUT_VARIABLE out

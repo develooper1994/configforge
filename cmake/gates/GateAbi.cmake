@@ -49,9 +49,9 @@ set(declared_internal "")
 foreach(h ${headers})
   # Comments can contain unmatched brackets, which join CMake list
   # elements. Only declarations and the relevant directives are tokens.
-  file(STRINGS "${h}" lines
-       REGEX
-       "^(#[ \t]*(if|ifdef|ifndef|endif)|(CF_NODISCARD[ \t]+)?CF_API[ \t])")
+  file(
+    STRINGS "${h}" lines
+    REGEX "^(#[ \t]*(if|ifdef|ifndef|endif)|(CF_NODISCARD[ \t]+)?CF_API[ \t])")
   # What the open conditionals are: "real" for #if CF_WITH_REAL,
   # "internal" for #if CF_INTERNAL_API, "other" for any other. #else and
   # #elif are not read: a fenced block holds neither.
@@ -95,9 +95,12 @@ if(WRITE)
          "# Checked by gate.abi against the headers and the built library;\n")
   string(APPEND text "# rewrite with cmake -DSRC=. -DWRITE=ON -P "
          "cmake/gates/GateAbi.cmake.\n")
-  string(APPEND text "# A line added is a minor version, a line removed a major "
-         "one; a name moved to configforge.internal.symbols is neither "
-         "(D-51).\n")
+  string(
+    APPEND
+    text
+    "# A line added is a minor version, a line removed a major "
+    "one; a name moved to configforge.internal.symbols is neither "
+    "(D-51).\n")
   string(APPEND text "${body}\n")
   # LF on every system: file(WRITE) writes CRLF on Windows.
   configforge_write_lf("${list_file}" "${text}")

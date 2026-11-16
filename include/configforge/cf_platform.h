@@ -334,7 +334,7 @@ CF_API int cf_platform_world_readable(const char* path);
 
 CF_API cf_bool cf_platform_has_private_create(void);
 #if CF_INTERNAL_API
-CF_API int     cf_platform_create_private(const char* path, cf_error* err);
+CF_API int cf_platform_create_private(const char* path, cf_error* err);
 #endif /* CF_INTERNAL_API */
 
 /* ------------------------------------------------------------------ *

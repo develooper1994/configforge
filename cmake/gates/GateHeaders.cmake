@@ -43,9 +43,10 @@ foreach(std ${c_stds})
       file(WRITE "${probe}"
            "#include <configforge/${basename}>\nint main(void){return 0;}\n")
       execute_process(
-        COMMAND ${CC} -std=${std} -pedantic -Werror ${tier_flag} ${gen_inc}
-                -I${SRC}/include -c -o "${BIN}/probe_${std}${tier}_${basename}.o"
-                "${probe}"
+        COMMAND
+          ${CC} -std=${std} -pedantic -Werror ${tier_flag} ${gen_inc}
+          -I${SRC}/include -c -o "${BIN}/probe_${std}${tier}_${basename}.o"
+          "${probe}"
         RESULT_VARIABLE rc
         OUTPUT_VARIABLE out
         ERROR_VARIABLE out)

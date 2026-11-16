@@ -274,9 +274,9 @@ CF_API cf_u64 cf_defset_fingerprint(const cf_defset* ds, const cf_keyspace* ks);
    (cf_type_name) and the value's text, or for a secret the text of its
    cf_ks_value_digest. cf_defset_fingerprint is these steps over a key
    space, so the two cannot disagree. */
-CF_API cf_u64        cf_fingerprint_seed(void);
-CF_API cf_u64        cf_fingerprint_step(cf_u64 h, const char* key, size_t keylen,
-                                         const char* type, const char* text, size_t n);
+CF_API cf_u64 cf_fingerprint_seed(void);
+CF_API cf_u64 cf_fingerprint_step(cf_u64 h, const char* key, size_t keylen,
+                                  const char* type, const char* text, size_t n);
 #if CF_INTERNAL_API
 CF_API size_t        cf_defset_count(const cf_defset* ds);
 CF_API const cf_def* cf_defset_at(const cf_defset* ds, size_t i);
