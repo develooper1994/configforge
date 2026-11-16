@@ -4138,7 +4138,9 @@ the name `doctor` at once.
 
 **Compatibility.** `doctor` is `configforge-doctor`. In 1.7.x the name
 `doctor` still runs it and says so on stderr, and the release archives
-carry both; it goes in 1.8.0 (T-5).
+carry both; it goes in 1.8.0 (T-5). `configforge gen` took Doctor's
+`check` and its C writer (`gen --schema`); `doctor check` and
+`doctor gen` still run them in 1.7.x and say so on stderr.
 
 ## D-60 — Arrays in INI are the ones INI files already have
 

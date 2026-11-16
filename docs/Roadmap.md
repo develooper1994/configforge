@@ -851,7 +851,7 @@ first user meets. In the order proposed:
 
 ### Tools, distribution and digests, 2026-11-14
 
-* 🟨 **Doctor does one job; the other two get tools of their own** (the front door and Doctor's name done, D-99; `configforge gen` and the codec tool left, T-2, T-3)
+* 🟨 **Doctor does one job; the other two get tools of their own** (the front door, Doctor's name and `configforge gen` done, D-99; the codec tool left, T-3)
   (cards T-1, T-2, T-3; T-5 drops the aliases in 1.8.0).
   Doctor gathers three kinds of command, and wave 5 would add more:
   reading reports (explain, dump, diff, history, blame, lint, parity,

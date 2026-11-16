@@ -10,6 +10,8 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - **`configforge <command>`**: one front door for the tools, as git has
   it - `configforge doctor lint` runs `configforge-doctor` (D-99).
   `cmake --install` installs the tools.
+- **`configforge gen`**: the contract's program - `configforge gen
+  --schema` writes it as C, `configforge gen check` holds files to it.
 - **The serialization library, `configforge_serialize`**: the readers
   and writers - JSON, JSON5, TOML, YAML, INI, `.properties`, XML, CBOR,
   TLV - as a library of their own, which a program that wants documents
@@ -25,6 +27,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 - Doctor's program is `configforge-doctor`; the name `doctor` still runs
   it in 1.7.x, says so on stderr, and goes in 1.8.0 (D-99).
+- `doctor check` and `doctor gen` are `configforge gen check` and
+  `configforge gen`; Doctor still runs them in 1.7.x, says so on stderr,
+  and drops them in 1.8.0.
 - **The internal tier is fenced** (D-88): the functions D-51 left
   outside the 1.x promise - the key space's, the flattener's, the
   definition set's, numeric conversion, most of the platform layer - are
