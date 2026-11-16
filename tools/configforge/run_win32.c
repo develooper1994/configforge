@@ -138,7 +138,8 @@ static int is_file(const wchar_t* path) {
 
 /* Tries `<dir>\<program>`: 1 found (and *path set), 0 not there, -1
    out of memory. */
-static int try_dir(const wchar_t* dir, size_t n, const wchar_t* program, wchar_t** path) {
+static int try_dir(const wchar_t* dir, size_t n, const wchar_t* program,
+                   wchar_t** path) {
     wchar_t* candidate = join(dir, n, program);
     if (candidate == NULL) {
         return -1;
@@ -182,8 +183,8 @@ static int find_program(const wchar_t* program, wchar_t** path) {
         return 0;
     }
     for (p = env; *p != L'\0';) {
-        wchar_t* end = wcschr(p, L';');
-        size_t   len = (end != NULL) ? (size_t)(end - p) : wcslen(p);
+        wchar_t* end   = wcschr(p, L';');
+        size_t   len   = (end != NULL) ? (size_t)(end - p) : wcslen(p);
         wchar_t* entry = p;
         p += len;
         if (*p == L';') {
@@ -214,10 +215,10 @@ static int find_program(const wchar_t* program, wchar_t** path) {
    run of n backslashes before a quote is 2n+1 backslashes and the
    quote, a run at the end 2n backslashes, and any other run as it is. */
 static size_t put_arg(wchar_t* out, const wchar_t* a) {
-    size_t        len = 0;
-    size_t        slashes;
+    size_t         len = 0;
+    size_t         slashes;
     const wchar_t* p;
-    int           plain = (a[0] != L'\0') ? 1 : 0;
+    int            plain = (a[0] != L'\0') ? 1 : 0;
 
     for (p = a; *p != L'\0'; p++) {
         if (*p == L' ' || *p == L'\t' || *p == L'\n' || *p == L'\v' || *p == L'"') {

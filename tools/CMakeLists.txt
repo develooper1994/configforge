@@ -18,10 +18,8 @@ endif()
 # it runs, in one directory (D-99).
 foreach(t configforge_front doctor)
   if(TARGET ${t})
-    install(
-      TARGETS ${t}
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-      COMPONENT tools)
+    install(TARGETS ${t} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+                                 COMPONENT tools)
   endif()
 endforeach()
 if(TARGET doctor)

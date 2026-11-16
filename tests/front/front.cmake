@@ -15,11 +15,27 @@ function(front_case expect_rc out_re err_re)
     RESULT_VARIABLE rc
     OUTPUT_VARIABLE out
     ERROR_VARIABLE err)
-  front_check("${expect_rc}" "${out_re}" "${err_re}" "${rc}" "${out}" "${err}"
-              "${ARGN}")
+  front_check(
+    "${expect_rc}"
+    "${out_re}"
+    "${err_re}"
+    "${rc}"
+    "${out}"
+    "${err}"
+    "${ARGN}")
 endfunction()
 
-function(front_check expect_rc out_re err_re rc out err what)
+# front_check(<exit> <stdout regex> <stderr regex> <rc> <out> <err> <args>)
+# fails the run when what front_case saw differs from what it expected.
+function(
+  front_check
+  expect_rc
+  out_re
+  err_re
+  rc
+  out
+  err
+  what)
   set(shown "configforge ${what}\nexit ${rc}\nstdout:\n${out}\nstderr:\n${err}")
   if(NOT rc EQUAL expect_rc)
     message(FATAL_ERROR "expected exit ${expect_rc}\n${shown}")
@@ -53,18 +69,41 @@ front_case(2 - "is not a command name" -x)
 
 if(HAVE_DOCTOR)
   # 5. A program it runs.
-  front_case(0 "^ConfigForge Doctor" - doctor --version)
+  front_case(
+    0
+    "^ConfigForge Doctor"
+    -
+    doctor
+    --version)
 
   # 6. Its exit code passes through.
-  front_case(1 - - doctor lint cf_fx_leak.json)
+  front_case(
+    1
+    -
+    -
+    doctor
+    lint
+    cf_fx_leak.json)
 
   # 7. An argument with spaces arrives whole.
-  front_case(2 - "'no such key' is not in" doctor explain cf_fx_prod.json
-             "no such key")
+  front_case(
+    2
+    -
+    "'no such key' is not in"
+    doctor
+    explain
+    cf_fx_prod.json
+    "no such key")
 
   # 8. A quote and a trailing backslash arrive as written.
-  front_case(2 - "'a\"b\\\\' is not in" doctor explain cf_fx_prod.json
-             "a\"b\\")
+  front_case(
+    2
+    -
+    "'a\"b\\\\' is not in"
+    doctor
+    explain
+    cf_fx_prod.json
+    "a\"b\\")
 endif()
 
 # 9. A program on the PATH and not beside the front door.
@@ -72,13 +111,22 @@ if(UNIX_HOST)
   file(REMOVE_RECURSE ${WORK})
   file(WRITE ${WORK}/src/configforge-hello
        "#!/bin/sh\necho \"hello $*\"\nexit 3\n")
-  file(COPY ${WORK}/src/configforge-hello DESTINATION ${WORK}/path
-       FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+  file(
+    COPY ${WORK}/src/configforge-hello
+    DESTINATION ${WORK}/path
+    FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
   execute_process(
     COMMAND ${CMAKE_COMMAND} -E env "PATH=${WORK}/path:$ENV{PATH}" ${FRONT}
             hello a b
     RESULT_VARIABLE rc
     OUTPUT_VARIABLE out
     ERROR_VARIABLE err)
-  front_check(3 "hello a b" - "${rc}" "${out}" "${err}" "hello a b")
+  front_check(
+    3
+    "hello a b"
+    -
+    "${rc}"
+    "${out}"
+    "${err}"
+    "hello a b")
 endif()

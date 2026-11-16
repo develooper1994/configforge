@@ -383,10 +383,12 @@ static int usage(void) {
           "  configforge doctor import-systemd [--full] < systemd-analyze cat-config\n"
           "\n",
           stderr);
-    fputs("  configforge doctor check --schema <schema> <file>...   files against a contract\n"
+    fputs("  configforge doctor check --schema <schema> <file>...   files against a "
+          "contract\n"
           "  configforge doctor gen --schema <schema> [--name <fn>] [--out <file>]\n"
           "                                 the contract as C calls\n"
-          "  configforge doctor formats [--format text|markdown]   the built-in codecs and their "
+          "  configforge doctor formats [--format text|markdown]   the built-in codecs "
+          "and their "
           "kind\n"
           "\n",
           stderr);
@@ -457,7 +459,9 @@ static cf_bool old_name(const char* arg0) {
         lower[i] = (c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c;
     }
     lower[n] = '\0';
-    return (strcmp(lower, "doctor") == 0 || strcmp(lower, "doctor.exe") == 0) ? CF_TRUE : CF_FALSE;
+    return (strcmp(lower, "doctor") == 0 || strcmp(lower, "doctor.exe") == 0)
+               ? CF_TRUE
+               : CF_FALSE;
 }
 
 int main(int argc, char** argv) {
@@ -467,7 +471,9 @@ int main(int argc, char** argv) {
     /* The name goes in 1.8.0; until then the program says so and goes
        on as it would. */
     if (argc >= 1 && old_name(argv[0])) {
-        fputs("doctor: this program is configforge-doctor now (configforge doctor); the name doctor goes in 1.8.0\n", stderr);
+        fputs("doctor: this program is configforge-doctor now (configforge doctor); "
+              "the name doctor goes in 1.8.0\n",
+              stderr);
     }
 
     /* An adapter writes a report rather than reading one, so it takes no

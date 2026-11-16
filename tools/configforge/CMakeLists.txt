@@ -38,7 +38,6 @@ configforge_apply_analysis(configforge_front)
 # The same clang-tidy as Doctor's, less cert-err33-c: a diagnostic that
 # could not be printed has nowhere better to be reported.
 if(CMAKE_C_CLANG_TIDY)
-  set_target_properties(
-    configforge_front
-    PROPERTIES C_CLANG_TIDY "${CMAKE_C_CLANG_TIDY};--checks=-cert-err33-c")
+  set(front_tidy "${CMAKE_C_CLANG_TIDY};--checks=-cert-err33-c")
+  set_property(TARGET configforge_front PROPERTY C_CLANG_TIDY "${front_tidy}")
 endif()

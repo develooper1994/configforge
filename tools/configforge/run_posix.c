@@ -47,7 +47,8 @@ static int runnable(const char* path) {
 
 /* `<dir>/<program>` in `path`, which is big enough, for the `n` bytes
    of `dir`. */
-static void join(char* path, const char* dir, size_t n, const char* program, size_t plen) {
+static void join(char* path, const char* dir, size_t n, const char* program,
+                 size_t plen) {
     memcpy(path, dir, n);
     path[n] = '/';
     memcpy(path + n + 1, program, plen + 1);
@@ -113,7 +114,8 @@ int front_run(const char* program, int argc, char** argv) {
     if (failed) {
         fprintf(stderr, "configforge: cannot run %s\n", program);
     } else {
-        fprintf(stderr, "configforge: '%s' is not a configforge command ", program + 12);
+        fprintf(stderr, "configforge: '%s' is not a configforge command ",
+                program + 12);
         fprintf(stderr, "(no %s beside this program or on the PATH); ", program);
         fputs("configforge help lists them\n", stderr);
     }
