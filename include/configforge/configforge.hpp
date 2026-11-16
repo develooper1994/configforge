@@ -1065,6 +1065,16 @@ class Builder {
         return *this;
     }
 
+    /* macOS's user defaults (cf_builder_preferences): macOS only, with
+       CF_WITH_PREFERENCES. */
+    Builder& preferences(const char* name, int rank, const char* domain,
+                         unsigned flags = 0) {
+        if (b_) {
+            cf_builder_preferences(b_, name, rank, domain, flags);
+        }
+        return *this;
+    }
+
     /* A SQLite store (CF_WITH_SQLITE); cf_write writes one, granted. */
     Builder& store(const char* name, int rank, const char* path, unsigned flags = 0) {
         if (b_) {

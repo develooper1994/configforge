@@ -594,5 +594,20 @@ class Credentials(unittest.TestCase):
                 cf.Builder().credentials(None, rank.ENV)
 
 
+@unittest.skipUnless(native.HAVE_PREFERENCES, "library with the user defaults source")
+@unittest.skipIf(sys.platform == "darwin", "macOS reads the defaults")
+class Preferences(unittest.TestCase):
+    """macOS's user defaults, which fail by name everywhere else."""
+
+    def test_off_macos_building_with_the_source_fails_by_name(self):
+        with self.assertRaisesRegex(cf.Error, "macOS's user defaults"):
+            cf.Builder().preferences(None, rank.ENV, "com.example.app").create()
+
+    def test_a_library_without_the_source(self):
+        with mock.patch("configforge._native.HAVE_PREFERENCES", False):
+            with self.assertRaisesRegex(RuntimeError, "no user defaults source"):
+                cf.Builder().preferences(None, rank.ENV, "com.example.app")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

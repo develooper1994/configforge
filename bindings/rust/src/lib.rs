@@ -528,6 +528,20 @@ impl Builder {
         self
     }
 
+    /// macOS's user defaults for a domain, what `defaults read <domain>`
+    /// shows: the current user's, on any host. `Server/Port` is
+    /// `server.port`, and each value's place in [`Config::explain`] is
+    /// "defaults <domain> <path>". The crate compiles with the defaults of
+    /// `cf_build_options.h`, where `CF_WITH_PREFERENCES` is off and nothing
+    /// links CoreFoundation, so here [`Builder::create`] fails naming
+    /// macOS's user defaults, [`OPTIONAL`] or not. `name` of `None` is the
+    /// domain.
+    pub fn preferences(mut self, name: Option<&str>, rank: i32, domain: &str, flags: u32) -> Builder {
+        let (n, d) = (self.keep.opt(name), self.keep.s(domain));
+        unsafe { sys::cf_builder_preferences(self.b, n, rank, d, flags) };
+        self
+    }
+
     /// Pairs from the program itself.
     pub fn memory(mut self, name: &str, rank: i32, pairs: &[(&str, &str)]) -> Builder {
         let n = self.keep.s(name);
@@ -1189,5 +1203,25 @@ mod credentials_tests {
             refused.starts_with("err ") && refused.contains("CREDENTIALS_DIRECTORY"),
             "{refused}"
         );
+    }
+}
+
+/// Off macOS the user defaults source fails by name: the crate is built with
+/// the defaults of `cf_build_options.h`, where `CF_WITH_PREFERENCES` is off.
+#[cfg(all(test, not(target_os = "macos")))]
+mod preferences_tests {
+    use super::{rank, Builder, OPTIONAL};
+
+    #[test]
+    fn user_defaults_fail_by_name_off_macos() {
+        let refused = Builder::new()
+            .preferences(None, rank::ENV, "com.example.app", 0)
+            .create();
+        let said = refused.err().map(|e| e.message).unwrap_or_default();
+        assert!(said.contains("macOS's user defaults"), "{said}");
+        let optional = Builder::new()
+            .preferences(None, rank::ENV, "com.example.app", OPTIONAL)
+            .create();
+        assert!(optional.is_err());
     }
 }

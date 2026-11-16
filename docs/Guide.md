@@ -216,6 +216,7 @@ source, a later assignment beats an earlier one.
 | `cf_builder_credentials` | systemd's credentials, the directory `$CREDENTIALS_DIRECTORY` names; each value says "systemd credential <id>" |
 | `cf_builder_store` | a SQLite store (`CF_WITH_SQLITE`), the one source `cf_write` can keep a change in |
 | `cf_builder_registry` | a key of the Windows Registry, a subkey a section: `Server\Port` is `server.port` |
+| `cf_builder_preferences` | macOS's user defaults for a domain (`CF_WITH_PREFERENCES`): `Server/Port` is `server.port` |
 | `cf_builder_memory` | pairs from the program itself |
 | `cf_builder_replay` | a provenance report, reproducing another process's configuration |
 | `cf_builder_source` | a source you wrote; `cf_builder_file_codec` for a format you parse |
@@ -676,6 +677,29 @@ Restart=on-failure
 
 ```c
 cf_builder_credentials(b, NULL, CF_RANK_ENV, "MYAPP_", CF_OPTIONAL);
+```
+
+### macOS's user defaults
+
+A macOS program keeps its settings in the user defaults, a domain named
+like the application (`com.example.app`) that `defaults write
+com.example.app Server -dict Port -int 9443` fills. `cf_builder_preferences`
+reads a domain as a document: a dictionary is a section and an array a
+list, so `Server/Port` is `server.port`, and every value says where it
+came from - `defaults com.example.app Server/Port` in explain() and in a
+report - so it is the place a person looks with `defaults read`. The scope
+read is the current user's, on any host, what `defaults read <domain>`
+shows; the other scopes (this host only, any user, a managed profile) are
+not read, so precedence between them stays the program's ranks. A string
+is text the contract types (`defaults write` writes strings unless told
+`-int`); a date or data value is refused by name. A domain with no values
+is an error, and nothing with `CF_OPTIONAL`. It is built only with
+`CF_WITH_PREFERENCES`, off by default because it links CoreFoundation;
+without the option, or off macOS, it fails by name, `CF_OPTIONAL` or not
+(D-87).
+
+```c
+cf_builder_preferences(b, NULL, CF_RANK_USER_FILE, "com.example.app", 0);
 ```
 
 ## 10. Changing, saving, reloading

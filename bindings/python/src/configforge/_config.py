@@ -236,6 +236,24 @@ class Builder:
                                      self._keep.s(prefix), flags)
         return self
 
+    def preferences(self, name: Optional[str], rank: int, domain: str,
+                    flags: int = 0) -> "Builder":
+        """macOS's user defaults for a domain, what ``defaults read
+        <domain>`` shows: the current user's, on any host. ``Server/Port``
+        is ``server.port``, and each value's place in :meth:`Config.explain`
+        is ``defaults <domain> <path>``. Off macOS, or in a library built
+        without ``CF_WITH_PREFERENCES`` (the default), :meth:`create` fails
+        naming macOS's user defaults, ``OPTIONAL`` or not. ``name`` None is
+        the domain."""
+        if not n.HAVE_PREFERENCES:
+            raise RuntimeError(
+                "configforge: the loaded library has no user defaults source; "
+                "rebuild the library from sources containing this API"
+            )
+        n.lib.cf_builder_preferences(self._live(), self._keep.s(name), rank,
+                                     self._keep.s(domain), flags)
+        return self
+
     def memory(self, name: str, rank: int, values: Mapping[str, Any]) -> "Builder":
         """Values given by the program, as text the contract types."""
         arr, count = self._keep.pairs(values)
