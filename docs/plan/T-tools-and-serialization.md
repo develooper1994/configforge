@@ -110,7 +110,9 @@ Lessons from the hardening cards, which every card below is held to:
        rewritten without them (`cf_fmt` replaced by C89 `sprintf` into
        sized buffers, the platform name dropped from two lines of
        output). The promise stays as small as D-51 drew it.
-    Recommended: **1**. The rest of the card is written for 1. If the
+    Recommended: **1**.
+    **Answer (the maintainer, 2026-11-16): 1** - the eleven join the
+    promise. The rest of the card is written for 1. If the
     answer is 2: the eleven go into the fenced list below, the five
     files are rewritten in step 6, and nothing else changes.
   * The fence, in `include/configforge/cf_port.h`, right after the
