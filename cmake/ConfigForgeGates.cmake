@@ -49,6 +49,14 @@ function(configforge_add_gates tgt)
     list(APPEND options "-DSQLITE_INC=${CF_SQLITE_INCLUDE_DIR}"
          "-DSQLITE_LIB=${CF_SQLITE_LIBRARY}")
   endif()
+  # macOS's user defaults link CoreFoundation. One argument, the linker's
+  # own spelling: "-framework CoreFoundation" is two, and a list passed
+  # through a -D of its own arrives split.
+  set(prefs_lib "")
+  if(APPLE AND CF_WITH_PREFERENCES)
+    set(prefs_lib "-Wl,-framework,CoreFoundation")
+    list(APPEND options "-DPREFS_LIB=${prefs_lib}")
+  endif()
 
   # 1. The header version and the project version agree.
   add_test(
@@ -143,7 +151,7 @@ function(configforge_add_gates tgt)
         -DSANITIZE=${CF_INSTRUMENTED} -DEXPECT_REAL=$<BOOL:${CF_WITH_REAL}>
         -DEXPECT_JSON=$<BOOL:${CF_WITH_JSON}> -DYAML_LIB=${CF_YAML_LIBRARY}
         -DXML_LIB=${CF_EXPAT_LIBRARY} -DSQLITE_LIB=${CF_SQLITE_LIBRARY}
-        -DWERROR=$<BOOL:${CF_WERROR}> -P
+        -DPREFS_LIB=${prefs_lib} -DWERROR=$<BOOL:${CF_WERROR}> -P
         ${CMAKE_SOURCE_DIR}/cmake/gates/GateInstall.cmake)
 
     add_test(NAME gate.formats

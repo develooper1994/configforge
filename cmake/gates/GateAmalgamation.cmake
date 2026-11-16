@@ -154,6 +154,10 @@ foreach(dep YAML XML SQLITE)
     list(APPEND DEP_LIB "${${dep}_LIB}")
   endif()
 endforeach()
+# macOS's user defaults: CoreFoundation, linked on both sides.
+if(O_PREFERENCES AND DEFINED PREFS_LIB AND NOT PREFS_LIB STREQUAL "")
+  list(APPEND DEP_LIB ${PREFS_LIB})
+endif()
 # Which of the YAML parsers, as the library was built (D-62, D-69). The
 # amalgamation is one translation unit, so libfyaml's C11 header makes it
 # C11; the library builds only yaml.c that way, and the comparison is of
@@ -174,6 +178,14 @@ if(YAML_FY)
   set(amalg_std -std=c11)
 elseif(YAML_LY)
   list(APPEND DEFS "-DCF_YAML_LIBYAML=1")
+endif()
+# CoreFoundation's headers are not C89 either: with user defaults read,
+# C99, unless libfyaml already made it C11.
+if(O_PREFERENCES
+   AND DEFINED PREFS_LIB
+   AND NOT PREFS_LIB STREQUAL ""
+   AND NOT amalg_std STREQUAL "-std=c11")
+  set(amalg_std -std=c99)
 endif()
 # A dependency that is a shared library outside the loader's path (one
 # under a prefix of its own, CMAKE_PREFIX_PATH) is found by the programs
