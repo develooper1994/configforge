@@ -393,7 +393,7 @@ a claim that decays.
 | install | a separate project finds the package, compiles against it and runs |
 | formats | every format string against what `cf_fmt` supports |
 | version | `cf_version.h` against project(), the vcpkg, Cargo and Python manifests, and the CHANGELOG's newest section |
-| abi | the exports match `cmake/configforge.symbols` |
+| abi | the exports match `cmake/configforge.symbols` and `cmake/configforge.internal.symbols` |
 | apiref | `docs/API.md` is what `scripts/generate/apiref.cmake` makes from the headers |
 | text | no NUL and no CR in a tracked text file |
 | dependencies | CMake looks for nothing `docs/Dependencies.md` does not name |

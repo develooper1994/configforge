@@ -7,11 +7,10 @@ comment written above it, under the section of the header it is
 in; the types are in the headers themselves. Implementation links
 open the source on `main`, with platform variants listed together.
 
-Semantic versioning covers all of it (D-56) except the internal
-tier, which the library's own layers use and 1.x may change:
-`cf_flatten.h`, `cf_keyspace.h`, `cf_numeric.h`, `cf_platform.h`,
-the definition set's `cf_defset_*` and `cf_def_*` in `cf_define.h`,
-and `cf_port.h`'s `cf_ref_*`, `cf_fmt*` and `cf_cmp_*`. The flags a
+Semantic versioning covers every function not marked Internal
+(D-56). The internal tier (D-51, D-88) is declared only where
+`CF_INTERNAL_API` is 1 - the library's own build, Doctor's and the
+tests' - so a program does not compile against it. The flags a
 definition takes are bits 0-15 and a source's bits 16 and up; an
 unknown bit is refused by name.
 
@@ -1003,11 +1002,15 @@ cf_def itself.
 CF_API cf_bool cf_defset_init(cf_defset* ds, cf_arena* arena, size_t hint);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_defset_init` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L36).
 
 ```c
 CF_API cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_define` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L383).
 
@@ -1023,11 +1026,15 @@ CF_API cf_bool cf_def_text(cf_defset* ds, const char* key, const char* dflt, uns
 CF_API cf_bool cf_def_real(cf_defset* ds, const char* key, double dflt, double min, double max, unsigned flags, cf_error* err);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_def_bool` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L541), [`cf_def_int` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L553), [`cf_def_text` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L570), [`cf_def_real` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L583).
 
 ```c
 CF_API void cf_defset_seal(cf_defset* ds);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_defset_seal` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L658).
 
@@ -1037,6 +1044,8 @@ Sorts for binary lookup; calling twice is harmless.
 CF_API cf_bool cf_defset_open(cf_defset* ds, const char* prefix, cf_error* err);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_defset_open` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L605).
 
 Exempt a prefix from unknown-key rejection.
@@ -1044,6 +1053,8 @@ Exempt a prefix from unknown-key rejection.
 ```c
 CF_API cf_bool cf_defset_schema(cf_defset* ds, const char* text, size_t n, const char* name, cf_error* err);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_defset_schema` (src/bridge/schema.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/schema.c#L714).
 
@@ -1062,6 +1073,8 @@ is what errors call the text. (1.2)
 CF_API cf_bool cf_defset_schema_file(cf_defset* ds, const char* path, cf_error* err);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_defset_schema_file` (src/bridge/schema.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/schema.c#L763).
 
 The same, from a file. (1.2)
@@ -1069,6 +1082,8 @@ The same, from a file. (1.2)
 ```c
 CF_API cf_bool cf_defset_is_open(const cf_defset* ds, const char* key, size_t keylen);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_defset_is_open` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L626).
 
@@ -1078,6 +1093,8 @@ only, so opening "plugins" does not open "pluginsomething".
 ```c
 CF_API const cf_def* cf_defset_find(const cf_defset* ds, const char* key, size_t keylen);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_defset_find` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L763).
 
@@ -1090,6 +1107,8 @@ still returns only authored descriptors.
 CF_API const cf_def* cf_defset_list(const cf_defset* ds, const char* key, size_t keylen);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_defset_list` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L792).
 
 The declared list containing a key, including its root. Unlike find,
@@ -1101,6 +1120,8 @@ an unrelated, undefined setting.
 CF_API cf_u64 cf_defset_fingerprint(const cf_defset* ds, const cf_keyspace* ks);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_defset_fingerprint` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L993).
 
 The fingerprint of `ks` under these definitions (cf_fingerprint): as
@@ -1111,11 +1132,9 @@ than by its value. `ds` may be NULL: nothing is sensitive.
 ```c
 CF_API cf_u64 cf_fingerprint_seed(void);
 CF_API cf_u64 cf_fingerprint_step(cf_u64 h, const char* key, size_t keylen, const char* type, const char* text, size_t n);
-CF_API size_t cf_defset_count(const cf_defset* ds);
-CF_API const cf_def* cf_defset_at(const cf_defset* ds, size_t i);
 ```
 
-Implementation: [`cf_fingerprint_seed` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L977), [`cf_fingerprint_step` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L983), [`cf_defset_count` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L797), [`cf_defset_at` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L801).
+Implementation: [`cf_fingerprint_seed` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L977), [`cf_fingerprint_step` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L983).
 
 The fingerprint a step at a time, for a reader that holds keys as text -
 Doctor, recomputing a report's - and not as a key space: start from the
@@ -1125,8 +1144,19 @@ cf_ks_value_digest. cf_defset_fingerprint is these steps over a key
 space, so the two cannot disagree.
 
 ```c
+CF_API size_t cf_defset_count(const cf_defset* ds);
+CF_API const cf_def* cf_defset_at(const cf_defset* ds, size_t i);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_defset_count` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L797), [`cf_defset_at` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L801).
+
+```c
 CF_API const cf_def* cf_defset_nearest(const cf_defset* ds, const char* key, size_t keylen, size_t* distance);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_defset_nearest` (src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/src/core/define.c#L926).
 
@@ -1805,6 +1835,8 @@ and retrofitting the chain would mean rewriting the resolver.
 CF_API size_t cf_ks_explain(const cf_keyspace* ks, const cf_source_view* sv, const char* key, size_t keylen, char* buf, size_t cap);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_ks_explain` (src/diag/explain.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/explain.c#L147).
 
 The low-level renderers. The public API in configforge.h wraps
@@ -1815,6 +1847,8 @@ what the tests and the Doctor tool need.
 CF_API size_t cf_ks_inspect(const cf_keyspace* ks, const cf_source_view* sv, char* buf, size_t cap);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_ks_inspect` (src/diag/explain.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/explain.c#L152).
 
 Render every key. Sources that never win appear in the trailing
@@ -1824,6 +1858,8 @@ summary, which is what makes a dead source visible.
 CF_API size_t cf_ks_explain_redacted(const cf_keyspace* ks, const cf_source_view* sv, const cf_defset* ds, const char* key, size_t keylen, char* buf, size_t cap);
 CF_API size_t cf_ks_inspect_redacted(const cf_keyspace* ks, const cf_source_view* sv, const cf_defset* ds, char* buf, size_t cap);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_ks_explain_redacted` (src/diag/explain.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/explain.c#L157), [`cf_ks_inspect_redacted` (src/diag/explain.c)](https://github.com/develooper1994/configforge/blob/main/src/diag/explain.c#L180).
 
@@ -1842,9 +1878,10 @@ for a key space with no definitions.
 
 cf_flatten.h - document events to and from the flat key space.
 
-INTERNAL (D-51): exported for ConfigForge Doctor, the bindings and the
-tests, and outside the 1.x promise - a minor release may change it.
-A program uses the configforge.h functions instead.
+INTERNAL (D-51): exported for ConfigForge Doctor and the tests, and
+outside the 1.x promise - a minor release may change it. Its functions
+are declared only under CF_INTERNAL_API (D-51, D-88). A program uses
+the configforge.h functions instead.
 
 The bridge between the serialization layer and the configuration
 model. It lives on this side of the boundary on purpose: the
@@ -1856,11 +1893,15 @@ CF_API cf_bool cf_flatten_init(cf_flatten* f, cf_keyspace* ks, int rank);
 CF_API const cf_doc_sink* cf_flatten_sink(cf_flatten* f);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_flatten_init` (src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/flatten.c#L345), [`cf_flatten_sink` (src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/flatten.c#L365).
 
 ```c
 CF_API void cf_flatten_lists(cf_flatten* f, const struct cf_defset* ds);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_flatten_lists` (src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/flatten.c#L369).
 
@@ -1872,6 +1913,8 @@ text value, `ports = 80,443` the elements 80 and 443. (1.2)
 CF_API size_t cf_decode_budget(size_t n);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_decode_budget` (src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/flatten.c#L375).
 
 CF_DECODE_FACTOR times n, and CF_DECODE_FLOOR more, saturated at
@@ -1881,6 +1924,8 @@ SIZE_MAX rather than wrapped.
 CF_API void cf_flatten_budget(cf_flatten* f, size_t bytes);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_flatten_budget` (src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/flatten.c#L382).
 
 Bound what the flattener adds from now on to `bytes`, counted as
@@ -1889,6 +1934,8 @@ D-82 counts them; 0 is no bound.
 ```c
 CF_API cf_bool cf_flatten_decode(cf_flatten* f, const cf_codec* codec, const cf_blob* blob, const char* path, cf_error* err);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_flatten_decode` (src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/flatten.c#L393).
 
@@ -1902,6 +1949,8 @@ a refusal from the sink reads to it as a key it could not add.
 CF_API cf_bool cf_source_read_blob(const struct cf_source* s, cf_keyspace* ks, const cf_codec* codec, const cf_blob* blob, const char* path, cf_error* err);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_source_read_blob` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L44).
 
 A document's bytes through a codec into the key space, at the source's
@@ -1912,6 +1961,8 @@ source of one's own that has bytes to read. False with `err` set.
 ```c
 CF_API const cf_codec* cf_source_by_content(const cf_codec* const* own, size_t n, const cf_blob* blob, const char* path, cf_arena* scratch, cf_error* err);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_source_by_content` (src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/file.c#L109).
 
@@ -1925,6 +1976,8 @@ file whose name gives no format.
 ```c
 CF_API cf_bool cf_doc_emit(const cf_keyspace* ks, const cf_doc_sink* out, cf_error* err);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_doc_emit` (src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/flatten.c#L816).
 
@@ -1948,6 +2001,8 @@ rather than written as two members with the same name.
 ```c
 CF_API cf_bool cf_doc_emit_where(const cf_keyspace* ks, const cf_doc_sink* out, cf_emit_pred pred, const void* ctx, cf_error* err);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_doc_emit_where` (src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/src/bridge/flatten.c#L820).
 
@@ -2129,7 +2184,8 @@ The 1.x promise (D-51) covers what a source written by a program uses:
 cf_key_valid, cf_ks_arena and the cf_ks_add* functions, called from a
 source's load. The cf_keyspace struct's members, and every other
 cf_ks_ function, are INTERNAL - exported for ConfigForge Doctor and the
-tests, and free to change in a minor release.
+tests, and free to change in a minor release. Those functions are
+declared only under CF_INTERNAL_API (D-51, D-88).
 
 This is the core data structure, and the ordering of the design
 depends on it: the chain is not a diagnostic that was added later,
@@ -2203,6 +2259,8 @@ CF_REFUSAL_NONE.
 CF_API cf_bool cf_ks_init(cf_keyspace* ks, cf_arena* arena, size_t hint);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_ks_init` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L123).
 
 ```c
@@ -2261,6 +2319,8 @@ CF_API cf_bool cf_ks_rename(cf_keyspace* ks, const char* from, size_t fromlen, c
 CF_API cf_bool cf_ks_rename_list(cf_keyspace* ks, const char* from, size_t fromlen, const char* to, size_t tolen);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_ks_rename` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L392), [`cf_ks_rename_list` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L397).
 
 Before resolution: every candidate of `from` offered to `to` as well,
@@ -2281,6 +2341,8 @@ what it was waiting for: it is not read for references again.
 CF_API cf_bool cf_ks_replay(cf_keyspace* ks, const cf_keyspace* base);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_ks_replay` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L463).
 
 Internal snapshot replay, in original insertion order and at the
@@ -2289,6 +2351,8 @@ source-local keys of appended lists. Derived counts are not replayed.
 ```c
 CF_API cf_bool cf_ks_append_list(cf_keyspace* ks, const char* key, size_t keylen, const cf_list_part* parts, size_t count, const cf_candidate* result, cf_error* err);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_ks_append_list` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L487).
 
@@ -2299,6 +2363,8 @@ Resolve once after applying all plans.
 CF_API const char* cf_ks_original_key(const cf_keyspace* ks, const cf_candidate* c);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_ks_original_key` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L435).
 
 The source-local key before remapping, or NULL if it never moved.
@@ -2307,6 +2373,8 @@ c must be an owned candidate of this space, not a copied descriptor.
 ```c
 CF_API cf_bool cf_ks_reject(cf_keyspace* ks, const char* key, size_t keylen, int source, const cf_value* value, const char* at, const char* reason);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_ks_reject` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L560).
 
@@ -2317,6 +2385,8 @@ the environment did supply a value and why it was refused.
 ```c
 CF_API cf_bool cf_ks_resolve(cf_keyspace* ks);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_ks_resolve` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L664).
 
@@ -2329,6 +2399,8 @@ keys and nothing to say why.
 CF_API size_t cf_ks_candidate_count(const cf_keyspace* ks);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_ks_candidate_count` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L660).
 
 Candidates appended so far, which is what an out-of-room message
@@ -2337,6 +2409,8 @@ should name: the caller sized a buffer, not a key count.
 ```c
 CF_API void cf_ks_infer_untyped(cf_keyspace* ks);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_ks_infer_untyped` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L749).
 
@@ -2353,6 +2427,8 @@ declared type ends up losing to a guess.
 CF_API cf_entry* cf_ks_at_mut(cf_keyspace* ks, size_t i);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_ks_at_mut` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L770).
 
 Mutable access, for the passes that legitimately change outcomes:
@@ -2364,6 +2440,8 @@ so the write path is named instead.
 CF_API void cf_ks_reselect(cf_keyspace* ks);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_ks_reselect` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L777).
 
 Recompute the selected candidate of every entry. Needed after
@@ -2374,6 +2452,8 @@ definitions have been applied and some winners have been refused.
 CF_API const cf_entry* cf_ks_find(const cf_keyspace* ks, const char* key, size_t keylen);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_ks_find` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L838).
 
 Binary search over the resolved entries. NULL when absent, and NULL
@@ -2383,6 +2463,8 @@ returning a provisional one would be worse than returning none.
 ```c
 CF_API size_t cf_ks_lower_bound(const cf_keyspace* ks, const char* key, size_t keylen);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_ks_lower_bound` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L818).
 
@@ -2395,6 +2477,8 @@ costs O(log n) plus the matches rather than a walk.
 CF_API const cf_value* cf_ks_get(const cf_keyspace* ks, const char* key, size_t keylen);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_ks_get` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L861).
 
 The selected value, or NULL when the key is absent or every
@@ -2405,11 +2489,15 @@ CF_API size_t cf_ks_count(const cf_keyspace* ks);
 CF_API const cf_entry* cf_ks_at(const cf_keyspace* ks, size_t i);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_ks_count` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L869), [`cf_ks_at` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L873).
 
 ```c
 CF_API cf_bool cf_ks_is_sorted(const cf_keyspace* ks);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_ks_is_sorted` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L803).
 
@@ -2418,6 +2506,8 @@ Verifies the ordering invariant the design depends on.
 ```c
 CF_API cf_u64 cf_ks_digest(const cf_keyspace* ks);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_ks_digest` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L1056).
 
@@ -2430,6 +2520,8 @@ requirement made checkable.
 CF_API cf_u64 cf_ks_value_digest(const cf_value* v);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_ks_value_digest` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L914).
 
 FNV-1a over one value's canonical text: what a value-blind report
@@ -2440,6 +2532,8 @@ it" has none. Not cryptographic, and not presented as one.
 CF_API size_t cf_ks_digest_text(cf_u64 h, char* buf, size_t cap);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_ks_digest_text` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L924).
 
 A digest as a report writes it, "fnv1a:" and sixteen hex digits, in
@@ -2449,6 +2543,8 @@ A digest as a report writes it, "fnv1a:" and sixteen hex digits, in
 CF_API cf_u64 cf_siphash24(const unsigned char* key, const void* p, size_t n);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_siphash24` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L985).
 
 SipHash-2-4 of `n` bytes under the 16-byte `key` (D-85). INTERNAL:
@@ -2457,6 +2553,8 @@ exported for the tests' vectors.
 ```c
 CF_API size_t cf_ks_secret_digest_text(const cf_value* v, const unsigned char* key, char* buf, size_t cap);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_ks_secret_digest_text` (src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/src/core/keyspace.c#L1033).
 
@@ -2722,9 +2820,10 @@ The name of a level: "debug", "info", "warn", "error".
 
 cf_numeric.h - locale-independent numeric conversion.
 
-INTERNAL (D-51): exported for ConfigForge Doctor, the bindings and the
-tests, and outside the 1.x promise - a minor release may change it.
-A program uses the configforge.h functions instead.
+INTERNAL (D-51): exported for ConfigForge Doctor and the tests, and
+outside the 1.x promise - a minor release may change it. Its functions
+are declared only under CF_INTERNAL_API (D-51, D-88). A program uses
+the configforge.h functions instead.
 
 strtod, atoi and printf("%f") all follow the active locale's decimal
 separator, so a configuration file written on one machine would not
@@ -2742,6 +2841,8 @@ CF_API size_t cf_i64_to_text(cf_i64 v, char* buf, size_t cap);
 CF_API size_t cf_u64_to_text(cf_u64 v, char* buf, size_t cap);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_i64_to_text` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L50), [`cf_u64_to_text` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L26).
 
 Write the decimal form of v. Returns the length written, or 0 when
@@ -2751,6 +2852,8 @@ cap is too small. Always terminates when cap > 0.
 CF_API cf_bool cf_text_to_i64(const char* s, size_t len, cf_i64* out, size_t* end);
 CF_API cf_bool cf_text_to_u64(const char* s, size_t len, cf_u64* out, size_t* end);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_text_to_i64` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L102), [`cf_text_to_u64` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L75).
 
@@ -2769,6 +2872,8 @@ only part of the library that a very small target might refuse.
 CF_API size_t cf_f64_to_text(double v, char* buf, size_t cap);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_f64_to_text` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L578).
 
 Write the shortest decimal string that reads back as exactly v.
@@ -2782,6 +2887,8 @@ from having to invent a spelling.
 ```c
 CF_API cf_bool cf_text_to_f64(const char* s, size_t len, double* out, size_t* end);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_text_to_f64` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L784).
 
@@ -2801,6 +2908,8 @@ CF_API cf_u64 cf_f64_bits(double d);
 CF_API double cf_f64_from_bits(cf_u64 bits);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_f64_bits` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L948), [`cf_f64_from_bits` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L954).
 
 A double as its IEEE 754 bit pattern, and back, by memcpy. (1.5)
@@ -2809,6 +2918,8 @@ A double as its IEEE 754 bit pattern, and back, by memcpy. (1.5)
 CF_API double cf_f64_from_f16_bits(cf_u32 bits);
 CF_API double cf_f64_from_f32_bits(cf_u32 bits);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_f64_from_f16_bits` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L963), [`cf_f64_from_f32_bits` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L980).
 
@@ -2824,15 +2935,20 @@ Type Inference section of the specification and decision D-24.
 CF_API cf_scalar_kind cf_infer_scalar(const char* s, size_t len);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_infer_scalar` (src/core/numeric.c)](https://github.com/develooper1994/configforge/blob/main/src/core/numeric.c#L1073).
 
 ## cf_platform.h
 
 cf_platform.h - what the platform provides, behind one door.
 
-INTERNAL (D-51): exported for ConfigForge Doctor, the bindings and the
-tests, and outside the 1.x promise - a minor release may change it.
-A program uses the configforge.h functions instead.
+INTERNAL (D-51): exported for ConfigForge Doctor and the tests, and
+outside the 1.x promise - a minor release may change it. Its functions
+are declared only under CF_INTERNAL_API (D-51, D-88), but
+cf_platform_name and the cf_platform_has_ queries, which are promised:
+a program may ask what the build can do. A program uses the
+configforge.h functions instead.
 
 Three things a configuration library needs that C89 has no answer
 for: the process environment, the command line as UTF-8, and a
@@ -2885,6 +3001,8 @@ Implementation: [`cf_platform_has_environ` (src/platform/none/none.c)](https://g
 CF_API char* const* cf_platform_environ(void);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_platform_environ` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L34), [`cf_platform_environ` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L102), [`cf_platform_environ` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L50).
 
 NULL where none is reachable, which is not an error: a program with
@@ -2903,6 +3021,8 @@ writes the same two lines on every platform.
 CF_API char* const* cf_platform_args(int argc, char* const* argv, cf_arena* arena, int* out_argc);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_platform_args` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L38), [`cf_platform_args` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L106), [`cf_platform_args` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L54).
 
 ### Directory listing
@@ -2910,6 +3030,8 @@ Implementation: [`cf_platform_args` (src/platform/none/none.c)](https://github.c
 ```c
 CF_API int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], int max, cf_error* err);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_platform_dir_list` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L55), [`cf_platform_dir_list` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L674), [`cf_platform_dir_list` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L268).
 
@@ -2943,6 +3065,8 @@ guessed would be wrong both ways).
 CF_API int cf_platform_dir_list_trusted(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], int max, cf_error* err);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_platform_dir_list_trusted` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L69), [`cf_platform_dir_list_trusted` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L687), [`cf_platform_dir_list_trusted` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L325).
 
 cf_platform_dir_list, and in the same pass the check of D-83: the
@@ -2971,6 +3095,8 @@ Implementation: [`cf_platform_has_registry` (src/platform/none/none.c)](https://
 CF_API int cf_platform_registry_walk(const char* root, cf_arena* arena, cf_platform_reg_fn fn, void* ctx, cf_error* err);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_platform_registry_walk` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L107), [`cf_platform_registry_walk` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L173), [`cf_platform_registry_walk` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L822).
 
 Every value under `root` - "HKCU\\Software\\MyApp", HKCU, HKLM, HKCR,
@@ -2995,6 +3121,8 @@ Implementation: [`cf_platform_has_preferences` (src/platform/none/none.c)](https
 ```c
 CF_API int cf_platform_preferences_walk(const char* domain, cf_arena* arena, cf_platform_pref_fn fn, void* ctx, cf_error* err);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_platform_preferences_walk` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L124), [`cf_platform_preferences_walk` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L394), [`cf_platform_preferences_walk` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L877).
 
@@ -3021,6 +3149,8 @@ a drop-in directory there is.
 CF_API cf_bool cf_platform_stamp(const char* path, cf_stamp* out);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_platform_stamp` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L45), [`cf_platform_stamp` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L140), [`cf_platform_stamp` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L171).
 
 False when the path cannot be stamped, which is not an error: a file
@@ -3045,6 +3175,8 @@ the file cannot be opened, or on a build with no stdio.
 CF_API void* cf_platform_fopen(const char* path, const char* mode);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_platform_fopen` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L74), [`cf_platform_fopen` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L162), [`cf_platform_fopen` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L124).
 
 ### Who can read a file
@@ -3059,6 +3191,8 @@ both directions - which, for the one question this exists to answer,
 ```c
 CF_API int cf_platform_world_readable(const char* path);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_platform_world_readable` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L86), [`cf_platform_world_readable` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L468), [`cf_platform_world_readable` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L196).
 
@@ -3088,10 +3222,17 @@ operating system has no answer and reports it.
 
 ```c
 CF_API cf_bool cf_platform_has_private_create(void);
+```
+
+Implementation: [`cf_platform_has_private_create` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L91), [`cf_platform_has_private_create` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L477), [`cf_platform_has_private_create` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L201).
+
+```c
 CF_API int cf_platform_create_private(const char* path, cf_error* err);
 ```
 
-Implementation: [`cf_platform_has_private_create` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L91), [`cf_platform_has_private_create` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L477), [`cf_platform_has_private_create` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L201), [`cf_platform_create_private` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L95), [`cf_platform_create_private` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L481), [`cf_platform_create_private` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L205).
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_platform_create_private` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L95), [`cf_platform_create_private` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L481), [`cf_platform_create_private` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L205).
 
 ### A handle to wait on (D-35, option 3)
 
@@ -3122,6 +3263,8 @@ Implementation: [`cf_platform_has_wake` (src/platform/none/none.c)](https://gith
 CF_API cf_platform_wake* cf_platform_wake_open(const char* const* paths, size_t n, const cf_allocator* a, cf_error* err);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_platform_wake_open` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L145), [`cf_platform_wake_open` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L816), [`cf_platform_wake_open` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L504).
 
 NULL with `err` set, naming the path and the reason. The paths are
@@ -3130,6 +3273,8 @@ copied; nothing passed here need outlive the call.
 ```c
 CF_API int cf_platform_wake_fd(const cf_platform_wake* w);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_platform_wake_fd` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L154), [`cf_platform_wake_fd` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L865), [`cf_platform_wake_fd` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L553).
 
@@ -3140,6 +3285,8 @@ descriptor.
 CF_API void* cf_platform_wake_handle(const cf_platform_wake* w);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_platform_wake_handle` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L159), [`cf_platform_wake_handle` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L869), [`cf_platform_wake_handle` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L558).
 
 A HANDLE that becomes signalled, or NULL where the handle is not one.
@@ -3147,6 +3294,8 @@ A HANDLE that becomes signalled, or NULL where the handle is not one.
 ```c
 CF_API cf_bool cf_platform_wake_drain(cf_platform_wake* w);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_platform_wake_drain` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L164), [`cf_platform_wake_drain` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L879), [`cf_platform_wake_drain` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L562).
 
@@ -3157,6 +3306,8 @@ when some path can no longer wake it; polling cf_changed still works.
 CF_API int cf_platform_wake_wait(cf_platform_wake* w, long timeout_ms);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_platform_wake_wait` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L169), [`cf_platform_wake_wait` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L927), [`cf_platform_wake_wait` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L594).
 
 Wait up to `timeout_ms` (negative: without limit). 1 when woken, and
@@ -3165,6 +3316,8 @@ then already drained; 0 on timeout; -1 when waiting failed.
 ```c
 CF_API void cf_platform_wake_close(cf_platform_wake* w);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_platform_wake_close` (src/platform/none/none.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/none/none.c#L175), [`cf_platform_wake_close` (src/platform/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/posix/posix.c#L952), [`cf_platform_wake_close` (src/platform/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/src/platform/win32/win32.c#L614).
 
@@ -3267,6 +3420,8 @@ CF_API cf_i32 cf_ref_dec(cf_refcount* rc);
 CF_API cf_i32 cf_ref_get(const cf_refcount* rc);
 ```
 
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
 Implementation: [`cf_ref_init` (src/core/port.c)](https://github.com/develooper1994/configforge/blob/main/src/core/port.c#L24), [`cf_ref_inc` (src/core/port.c)](https://github.com/develooper1994/configforge/blob/main/src/core/port.c#L28), [`cf_ref_dec` (src/core/port.c)](https://github.com/develooper1994/configforge/blob/main/src/core/port.c#L44), [`cf_ref_get` (src/core/port.c)](https://github.com/develooper1994/configforge/blob/main/src/core/port.c#L62).
 
 Sets the initial count. Not a plain assignment at the call site:
@@ -3284,6 +3439,8 @@ resolves different keys on a Turkish system than on an English one.
 CF_API int cf_cmp_bytes(const char* a, size_t alen, const char* b, size_t blen);
 CF_API int cf_cmp_ascii_ci(const char* a, size_t alen, const char* b, size_t blen);
 ```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_cmp_bytes` (src/core/port.c)](https://github.com/develooper1994/configforge/blob/main/src/core/port.c#L86), [`cf_cmp_ascii_ci` (src/core/port.c)](https://github.com/develooper1994/configforge/blob/main/src/core/port.c#L103).
 

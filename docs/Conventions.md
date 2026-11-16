@@ -48,6 +48,7 @@ detection, no `snprintf`.
 ```text
 cf_        public functions and types
 CF_        public macros and enumerators
+CF_INTERNAL_API   the fence: a declaration only the library's own build, Doctor and the tests see
 cfi_       internal symbols with external linkage
 static     everything else
 ```

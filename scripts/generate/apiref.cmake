@@ -105,10 +105,15 @@ foreach(source IN LISTS implementations)
 endforeach()
 
 # Render a declaration group with its comments and implementation links.
-function(render_group declarations comment out)
+function(render_group declarations comment internal out)
   string(REPLACE ";" "\n" g "${declarations}")
   restore("${g}" g)
   set(rendered "```c\n${g}\n```\n\n")
+  if(internal)
+    string(APPEND rendered "Internal (`CF_INTERNAL_API`): exported for the "
+           "library's own layers, Doctor and the tests, outside the 1.x "
+           "promise; a program does not see it.\n\n")
+  endif()
   set(links "")
   foreach(declaration IN LISTS declarations)
     string(REGEX MATCH "(cf_[A-Za-z0-9_]+)[ \t]*\\(" match "${declaration}")
@@ -140,11 +145,10 @@ string(
   "comment written above it, under the section of the header it is\n"
   "in; the types are in the headers themselves. Implementation links\n"
   "open the source on `main`, with platform variants listed together.\n\n"
-  "Semantic versioning covers all of it (D-56) except the internal\n"
-  "tier, which the library's own layers use and 1.x may change:\n"
-  "`cf_flatten.h`, `cf_keyspace.h`, `cf_numeric.h`, `cf_platform.h`,\n"
-  "the definition set's `cf_defset_*` and `cf_def_*` in `cf_define.h`,\n"
-  "and `cf_port.h`'s `cf_ref_*`, `cf_fmt*` and `cf_cmp_*`. The flags a\n"
+  "Semantic versioning covers every function not marked Internal\n"
+  "(D-56). The internal tier (D-51, D-88) is declared only where\n"
+  "`CF_INTERNAL_API` is 1 - the library's own build, Doctor's and the\n"
+  "tests' - so a program does not compile against it. The flags a\n"
   "definition takes are bits 0-15 and a source's bits 16 and up; an\n"
   "unknown bit is refused by name.\n\n"
   "A struct the caller fills and the library reads - `cf_error`,\n"
@@ -197,6 +201,8 @@ foreach(h ${names})
   set(in_decl FALSE)
   set(group "")
   set(group_comment "")
+  set(group_internal FALSE)
+  set(fence_stack "")
   set(body "")
   set(count 0)
 
@@ -240,7 +246,7 @@ foreach(h ${names})
     if(l MATCHES "^[ \t]*/\\*")
       # A new comment ends any group the previous one introduced.
       if(group)
-        render_group("${group}" "${group_comment}" rendered)
+        render_group("${group}" "${group_comment}" "${group_internal}" rendered)
         string(APPEND body "${rendered}")
         set(group "")
       endif()
@@ -254,8 +260,21 @@ foreach(h ${names})
       continue()
     endif()
     if(l MATCHES "^(CF_NODISCARD[ \t]+)?CF_(DOCTOR_)?API[ \t]")
+      # Inside the fence or not, as the open conditionals say now; a group
+      # does not straddle the fence's edge.
+      set(here_internal FALSE)
+      if("internal" IN_LIST fence_stack)
+        set(here_internal TRUE)
+      endif()
+      if(group AND NOT here_internal STREQUAL group_internal)
+        render_group("${group}" "${group_comment}" "${group_internal}" rendered)
+        string(APPEND body "${rendered}")
+        set(group "")
+        set(comment "")
+      endif()
       if(NOT group)
         set(group_comment "${comment}")
+        set(group_internal "${here_internal}")
         set(comment "")
       endif()
       math(EXPR count "${count} + 1")
@@ -271,11 +290,24 @@ foreach(h ${names})
     # comment that was not followed by a declaration belongs to nothing
     # listed here.
     string(STRIP "${l}" s)
-    if(s MATCHES "^#if|^#endif|^#else")
+    if(s MATCHES "^#[ \t]*(if|endif|else|elif)")
+      # What is open, as gate.abi reads it: #if CF_INTERNAL_API is the
+      # fence, any other #if is something else, #endif closes the last.
+      if(s MATCHES "^#[ \t]*endif")
+        list(LENGTH fence_stack depth)
+        if(depth GREATER 0)
+          math(EXPR last "${depth} - 1")
+          list(REMOVE_AT fence_stack ${last})
+        endif()
+      elseif(s MATCHES "^#[ \t]*if[ \t]+CF_INTERNAL_API([^A-Za-z0-9_]|$)")
+        list(APPEND fence_stack "internal")
+      elseif(s MATCHES "^#[ \t]*if")
+        list(APPEND fence_stack "other")
+      endif()
       continue() # a declaration under a feature test still belongs
     endif()
     if(group)
-      render_group("${group}" "${group_comment}" rendered)
+      render_group("${group}" "${group_comment}" "${group_internal}" rendered)
       string(APPEND body "${rendered}")
       set(group "")
     endif()

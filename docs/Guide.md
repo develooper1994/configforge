@@ -5,7 +5,8 @@ no heap. Every program it quotes is in `examples/` - C in `examples/c`, C++ in
 `examples/cpp`, Rust in `examples/rust` - and is built and run
 by the test suite, so what you read here is what the library does today.
 The reference for each function is [`API.md`](API.md); the reasons are in
-[`Decisions.md`](Decisions.md).
+[`Decisions.md`](Decisions.md). Every function in `docs/API.md` not marked
+Internal is promised for 1.x.
 
 1. [Getting it into a build](#1-getting-it-into-a-build)
 2. [The first program](#2-the-first-program)

@@ -108,7 +108,8 @@ commands.
    the header comment (then `cmake -P scripts/format.cmake`, which
    writes `docs/API.md` after the layout that moves its line links, or
    `gate.apiref` fails; a new or removed `CF_API` function also goes in
-   `cmake/configforge.symbols`, or `gate.abi` fails), the relevant
+   `cmake/configforge.symbols`, or one declared under `CF_INTERNAL_API` in
+   `cmake/configforge.internal.symbols`, or `gate.abi` fails), the relevant
    `docs/` page, `CHANGELOG.md` and,
    where it is a decision, `docs/Decisions.md` - in the same commit.
    Where a claim can be checked, add a gate rather than a sentence.
