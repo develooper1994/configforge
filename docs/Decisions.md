@@ -101,6 +101,7 @@ gets reopened every six months.
 | D-83 | A directory others can write to is not read as secrets | secrets, drop-in, platform, security | **Decided** |
 | D-84 | An undefined key named like a secret is kept as one | secrets, security, reports | **Decided** |
 | D-85 | A secret's digest, keyed | secrets, security, reports | **Decided** |
+| D-86 | Doctor's action shows no value unless asked | doctor, security, reports | **Decided** |
 | D-91 | CBOR, the JSON model in binary | formats | **Decided** |
 | D-97 | What kind of format a codec is, told to the program | formats | **Decided** |
 
@@ -3537,6 +3538,40 @@ and another, no key, the fingerprint, a derived configuration, a full
 report, the refusal), and a second pass of `test_marker` with a key given.
 
 ---
+
+## D-86 — Doctor's action shows no value unless asked
+
+**Question.** A full report holds the value of every key, and the GitHub
+Action posts what Doctor says to a pull request, its job summary and its
+log. Anyone who can read the pull request then reads the values: a URL
+with a token in it, an internal host name. A secret's was never shown;
+should a plain key's be?
+
+**Options.**
+
+1. As it was: plain values are shown everywhere.
+2. Redact every value always. A developer on their own machine loses the
+   one thing that makes `explain` and `diff` quick to read.
+3. A flag, `--redact-all`, and the action passes it unless asked not to.
+4. A flag, off everywhere, the action included. Safe only for a workflow
+   that knows to set it.
+
+**Decision.** Option 3. `dump`, `explain`, `lint`, `diff`, `history` and
+`blame` take `--redact-all`, and `cf_doctor_redact_all` is the library's
+side: no value of any key is shown, as if each were a secret. A finding
+still says that a value changed, was refused or came from where; a plain
+key's reason is replaced by its kind ("range", "type"), since the
+library's reason can quote the value. Comparisons still use the values a
+full report carries: a key is not made sensitive by the flag, so CFD019
+and CFD007 say what they said, and secrets are still compared by digest.
+The action's new input `show-values` (default `false`) decides whether
+it passes the flag. The pre-commit hook is not changed: it runs on the
+developer's own machine and posts nothing.
+
+**Compatibility.** An existing workflow's comments, summaries and logs
+lose their plain values on upgrade; `show-values: true` brings them
+back. Doctor on the command line and the library behave as before
+unless asked.
 
 ## D-91 — CBOR, the JSON model in binary
 

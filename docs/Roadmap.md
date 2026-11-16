@@ -670,9 +670,10 @@ whose size changes while it is read is still read whole.
   to. Done when it is on by default for secrets and opt-in for drop-ins,
   with the decision in Decisions.md: on for secrets and credentials,
   `CF_TRUSTED_DIR` for drop-ins (D-83).
-* ⬜ **Doctor `--redact-all`**, on by default in the action, so that a
+* 🟩 **Doctor `--redact-all`**, on by default in the action, so that a
   report's values are shown to no pull request unless asked for. Done
-  when the action's default shows no value and a flag restores it.
+  when the action's default shows no value and a flag restores it: on in
+  the action; `show-values` restores the values (D-86).
 * ⬜ **The readers proved, not only tested.** The aim is the safety a
   language such as Rust or Go gives by construction, shown here by
   evidence: sanitizers, fuzzing and three analyzers find what an input

@@ -7,6 +7,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Security
 
+- **The Doctor action shows no value unless asked**: a full report's
+  values no longer reach the log, the job summary or the pull-request
+  comment; `show-values: true` restores them, and `doctor --redact-all`
+  is the flag behind it (D-86). A secret's was never shown.
+
 - **A secret's digest can be keyed**: `cf_builder_digest_key` makes every
   secret's digest in a report and in the fingerprint SipHash-2-4 under a
   16-byte key, which cannot be tested against guesses without it; without
