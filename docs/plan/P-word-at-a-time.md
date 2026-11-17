@@ -22,6 +22,17 @@ The rules every card here keeps:
   done by the byte loop; a word read never crosses `end`.
 * **Nothing is changed without a number.** P-3 touches only the scans
   P-1 shows to cost, and keeps a change only if the benchmark moves.
+* **The compiler and the C library come first.** The baseline is the
+  byte loop as the release build compiles it (`-O2`, the generic
+  target, as the packages ship), and a scan is first tried in two
+  cheaper forms: written so the compiler can vectorize it (checked with
+  `-fopt-info-vec` / `-Rpass=loop-vectorize`, not assumed: early-exit
+  searches mostly are not), and as a call to the C library's own search
+  (`memchr`, `strcspn`), which glibc, musl and the MSVC CRT already
+  vectorize. SWAR is kept only where it beats the best of those by the
+  margin P-3 sets; SIMD later is held to the same rule against SWAR.
+  `-O3` and `-march=native` are measured for the record, never relied
+  on: a shipped library cannot assume them.
 
 ---
 
@@ -44,7 +55,10 @@ The rules every card here keeps:
     non-ASCII UTF-8 in a share of the strings. Each format is read with
     the public codec API (`cf_codec_*`), the way a program would.
   * Output: one line per format and size, `format size MiB/s`, medians
-    as the bench already takes them. The 256 MiB case runs only with
+    as the bench already takes them. The baseline is taken at `-O2`
+    with GCC and Clang (and MSVC from CI), and once at `-O3` for the
+    record; the compiler's vectorization report for the top scans is
+    kept with the profile. The 256 MiB case runs only with
     `--large`, so CI's bench run stays short.
   * The profile: `perf record` on Linux (WSL here), its top functions
     for each format written into the card's notes; the numbers before
@@ -143,9 +157,16 @@ The rules every card here keeps:
     whitespace skips of the JSON, YAML and TOML lexers, `ini.c` and
     `properties.c`'s blank skips (`while (... == ' ' || ... == '\t')`),
     and `detect.c`'s.
-  * One scan a commit, each with its before and after numbers from the
-    bench in the commit message; a change under 5% on its format's
-    large-document line is reverted, since it costs reading.
+  * For each candidate, three forms are measured on its format's
+    large-document line, at `-O2` with GCC and Clang, and with MSVC in
+    CI: (a) the byte loop reshaped for the compiler, (b) the C library
+    call, (c) P-2's primitive. The simplest form within 5% of the
+    fastest is kept, in that order: compiler, then C library, then
+    SWAR. A form that wins on one compiler and loses on another is not
+    kept.
+  * One scan a commit, each with its numbers for the three forms in the
+    commit message; a change under 5% against the unchanged loop is
+    reverted, since it costs reading.
   * The conformance suites (yaml-test-suite, JSONTestSuite, toml-test)
     and the fuzzers run after each, in both `CF_WITH_SWAR` builds.
 * **files**: whichever of the candidates P-1 names; last:
