@@ -717,9 +717,8 @@ Lessons from the hardening cards, which every card below is held to:
        `configforge-codec`: shorter, and "codec" is what the library
        calls each format, not the library.
     **Answer (2026-11-16): 1, `configforge_serialize`** - chosen while
-    the maintainer was away, under the standing instruction to decide;
-    the name is public only from 1.7.0's release, so it can still be
-    changed before then.
+    the maintainer was away, and confirmed by the maintainer on
+    2026-11-17.
     Recommended: **1**. The rest of this card, S-5 and T-3 are written
     for 1. Another answer is a name replaced in those three cards before
     any is started; nothing else changes.
@@ -1627,6 +1626,7 @@ Lessons from the hardening cards, which every card below is held to:
        `configforge convert` reads: five programs on the PATH, and
        `configforge check` would be this tool's while
        `configforge gen check` is the contract's.
+    **Answer (the maintainer, 2026-11-17): 1, `configforge-codec`.**
     Recommended: **1**. The rest of this card, T-4 and W5-V1 are
     written for 1. If 2: the name is replaced in those three cards and
     T-1's help line before any is started. If 3: stop; T-4 and W5-V1

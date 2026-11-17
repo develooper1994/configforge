@@ -166,7 +166,7 @@ the 1.6.0 milestone; the S-*, T-* and W5-* cards to 1.7.0, but T-5 to
 | 28 | S-5 The serialization library installed, found and packaged | medium | S-4 | done (22772d8, 563517c, ac8023e) |
 | 29 | T-1 `configforge <command>`, and Doctor's own name | large | S-1, H-6, H-8b | done (94ab557, b7cbb7c, 297130f, 10929ab, f87885d) |
 | 30 | T-2 `configforge gen`: the contract's own program | medium | T-1, H-2 | done (9ad95d2, 01738ac, 555b855, 9ee1c41) |
-| 31 | T-3 `configforge codec`: the serialization library's own program | medium | T-2, S-5 | open: its TO DECIDE (the tool's name) is not answered |
+| 31 | T-3 `configforge codec`: the serialization library's own program | medium | T-2, S-5 | open |
 | 32 | T-4 `configforge codec dump`: every value with its place | medium | T-3 | waits: T-3 |
 | 33 | W5-V1 `configforge codec convert` and `format` | large | T-3 | waits: T-3 |
 | 34 | W5-S1 `configforge gen schema --from` | medium | T-2 | waits: T-2 |

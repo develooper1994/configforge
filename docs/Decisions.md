@@ -3753,10 +3753,9 @@ ConfigForge's, a checked copy (`cf_serialize_version.h`,
 `cf_serialize_version()`; `gate.version` and `version.cmake` cover it).
 `gate.abi.serialize` keeps its symbol list
 (`cmake/configforge_serialize.symbols`). There is one amalgamation.
-The name was chosen on 2026-11-16 while the maintainer was away, under
-the standing instruction to decide: `configforge_serialize` (the family
-`configforge_doctor` began), public from 1.7.0's release and changeable
-until then. Held to by `unit.serialize_alone`, a program linked against
+The name, `configforge_serialize` (the family `configforge_doctor`
+began), was chosen on 2026-11-16 while the maintainer was away and
+confirmed by the maintainer on 2026-11-17. Held to by `unit.serialize_alone`, a program linked against
 the serialization library alone, and `gate.abi.serialize`.
 
 It is installed as the CMake component `serialize` of the package
