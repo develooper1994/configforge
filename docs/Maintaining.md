@@ -179,7 +179,7 @@ begun):
 | clang-tidy read a string literal continued over two lines, inside an array of lines, as a missing comma | no literal is continued over lines inside an initializer array; the generated checks are one line each |
 | a `#define` continued with a backslash in generated code stopped pcc's preprocessor | each generated definition fits on one line, its messages and conditions short macros of their own |
 | a gate script using `IN_LIST` failed only on alpine: `cmake -P` starts with every policy unset | every gate script begins with `cmake_minimum_required`, as `GateAbi.cmake` did |
-| `gen.version`'s `\(` was written `\(`'s half, a plain `(`, and passed locally only because verify's copy has no commit id | the pattern escapes as `doctor.version`'s does; verify's copy without an id is a blind spot the Roadmap names |
+| `gen.version`'s pattern wrote `\(`, which a quoted CMake argument reads as a plain `(` (`\\(` is the escape), and passed locally only because verify's copy has no commit id | the pattern escapes as `doctor.version`'s does; verify's copy without an id is a blind spot the Roadmap names |
 | the `configforge` target is made before `configforge_setup_cppcheck()`, so the library's own sources never ran through cppcheck | the first step of the Roadmap's critical-system item; the serialization library is treated alike until both are checked |
 | a branch rebased onto `main` could not be force-pushed | a rebased branch is pushed under a new name, `work/<card>-r`, and the old one deleted |
 
