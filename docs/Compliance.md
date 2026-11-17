@@ -64,6 +64,8 @@ each review.
 | **Fixed-width types** | MISRA Dir 4.6: use sized typedefs | C89 has no `<stdint.h>` | Followed through the library's own `cf_i64`, `cf_u64` and friends, sized by `CF_STATIC_ASSERT`. |
 | **C version** | MISRA C:2012 targets C90 and C99; MISRA C:2023 adds C11 | the project's floor is C89 (D-72) | Compatible: C89/C90 is MISRA's first language. Code that needs C99 or later is optional (`CF_WITH_PREFERENCES` on macOS compiles `posix.c` as C99 for CoreFoundation's headers) and is outside the MISRA profile. |
 | **Floating point** | MISRA rules on float comparison and conversion | configuration values can be reals | Real values are optional (`CF_WITH_REAL`); the MISRA profile can leave them out. Where they are in, the parser and printer are listed in Safety.md's "Not yet proven". |
+| **The environment** | MISRA C keeps to the standard language and library (Rule 1.2, advisory, on extensions; Rule 8.5 on where an external object is declared; the numbers are to be confirmed against the edition the matrix names) | a configuration library reads environment variables, and the platform layer reads them through POSIX's `environ` (`src/platform/posix/posix.c`), not `getenv` | To decide with the matrix: a deviation confined to the platform layer, or the environment source left out of the MISRA profile. A program that reads only from memory calls none of it. |
+| **Reading a word at a time** | MISRA C Rule 21.15 (required; to be confirmed as above): `memcpy`'s pointers are to compatible types; the Rule 11 group forbids the cast that would replace it | the word-at-a-time scans (`docs/plan/P-word-at-a-time.md`) read an `unsigned long` from bytes with `memcpy` | No deviation: the MISRA profile builds with `CF_WITH_SWAR=0` and without `CF_WITH_SIMD`, so it compiles the byte loops, which stay the reference. |
 
 ## The MISRA profile
 
@@ -72,9 +74,24 @@ named build configuration (a CMake preset, `misra`, built from the
 existing `minimal` one) made of what such a user takes: the core, memory
 and document sources, a fixed arena, no directories (`CF_WITH_DIR=OFF`),
 no threads (`CF_SINGLE_THREADED`), no reals unless asked
-(`CF_WITH_REAL=OFF`). The matrix
+(`CF_WITH_REAL=OFF`), and the byte loops rather than the word-at-a-time
+or SIMD scans (`CF_WITH_SWAR=0`, no `CF_WITH_SIMD`). The matrix
 and the gate are checked against this profile first; the full library is
 reported against too, with its extra deviations listed separately.
+
+**The public headers come first, and take no deviation.** A user's own
+checker reads `include/` inside every file of theirs that includes it,
+so a violation there is a finding in their project, and a deviation
+there is one they must adopt. The `.c` files they can set aside as
+adopted code, with this page's records; the headers they cannot. The
+gate's first target is therefore `include/` with no violation and no
+record, before the sources are counted.
+
+**Rules about a whole program.** Some rules can be judged only where
+the program is whole: unused macros, types and tags (the Rule 2 group),
+an object with external linkage used in one file only (Rule 8.7). A
+library's public names are unused from its own side. The matrix marks
+these "for the integrator to check", not "followed".
 
 ## Deviation records
 
@@ -90,6 +107,19 @@ in the form MISRA Compliance:2020 asks for:
 
 A suppression in the checker's configuration points at its record; a
 suppression with no record fails the gate.
+
+The records are one of three documents MISRA Compliance:2020 asks for,
+and a user who takes the library as adopted code needs all three:
+
+* the **guideline enforcement plan**: for each rule, which tool or
+  review checks it (the Automation table below, one row per rule);
+* the **deviation records**, above;
+* the **guideline compliance summary**: for each rule, followed,
+  deviated (with its record), or not applicable. The compliance report
+  attached to a release is this summary.
+
+MISRA's rule texts are under copyright. The matrix, the records and the
+report name rules by number only; no rule text is committed.
 
 ## Automation
 
@@ -122,7 +152,16 @@ standard asks for can be prepared once here and reused by every user:
   each D-number to its tests is planned.
 * **Structural coverage**: statement and branch coverage are measured by
   the `coverage` build; MC/DC, which DO-178C level A and ISO 26262 ASIL D
-  ask for, is not measured yet.
+  ask for, is not measured yet. Free compilers can measure it (GCC 14's
+  `-fcondition-coverage`, Clang 18's `-fcoverage-mcdc`); a `coverage`
+  build that reports it is planned.
+* **A safety manual** (planned, `docs/compliance/safety-manual.md`):
+  what a user must hold for the evidence here to apply to their
+  program. The build it was shown for (the `misra` preset, the version
+  and commit id), and the assumptions of use: memory from a fixed
+  arena, every returned status checked, the sources left out of the
+  profile not linked. This is the document ISO 26262 asks of a
+  component developed out of context.
 * **Static analysis and proofs**: the tables above and Safety.md's CBMC
   proofs.
 * **Known limits**: Safety.md's "Not yet proven", and the deviation
@@ -134,11 +173,30 @@ standard asks for can be prepared once here and reused by every user:
 
 1. The MISRA profile preset, and cppcheck's addon run against it to
    count what there is.
-2. The deviation records for the conflicts above, and `gate.misra`.
-3. The CERT matrix of rules clang-tidy does not see.
-4. The CWE table and `gate.cwe`.
-5. The compliance report as a release artifact.
-6. MISRA C++:2023 for the wrapper.
-7. A qualified tool's run, when one can be had.
+2. The public headers with no violation, and the gate on them.
+3. The deviation records for the conflicts above, and `gate.misra` on
+   the sources.
+4. The CERT matrix of rules clang-tidy does not see.
+5. The CWE table and `gate.cwe`.
+6. The compliance report as a release artifact, and the safety manual.
+7. MISRA C++:2023 for the wrapper.
+8. A qualified tool's run, when one can be had.
+
+This work comes before the optimization cards
+(`docs/plan/P-word-at-a-time.md`), since it touches most source files;
+only their measurement (P-1) may come earlier.
+
+## What may be said, and when
+
+| When | The README and a release may say |
+| ---- | -------------------------------- |
+| Today | CERT C checks are errors on every commit; the readers are fuzzed, run under sanitizers and pass the formats' conformance suites; the bounds named in Safety.md are proven with CBMC. |
+| `gate.misra` is in CI | "Checked against MISRA C:2012 on every commit with cppcheck; every deviation is recorded; the compliance summary is attached to each release." |
+| A qualified tool has run | "MISRA C:2012 compliant", with the tool, its version and the summary. |
+| Never, without an assessor | "Certified" to ISO 26262, IEC 61508 or any process standard. |
+
+A badge that can be had without a licence: the OpenSSF Best Practices
+badge (a public self-assessment with a passing level), planned beside
+the report.
 
 These are planned in `docs/Roadmap.md`, "Critical-system standards".

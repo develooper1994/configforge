@@ -7,7 +7,12 @@ two steps; SIMD is a card of its own, written after P-3 says what SWAR
 left on the table. Each card is the loop's unit (`docs/Plan.md`, "The
 loop"). **They come after everything else in the plan**: optimization
 starts only when every other card is done (the maintainer, 2026-11-17),
-so it measures the code as it will stay.
+so it measures the code as it will stay. **P-1 alone may come
+earlier**: it changes only `bench/`, and its instruction-count baseline
+then shows what the MISRA work (`docs/Compliance.md`) costs or saves as
+it rewrites the sources. P-2 and after wait for that work to end, or
+the tuned loops are written twice. A scan whose cost grows faster than
+its input is not optimization but a fault, and is fixed when found.
 
 **In waves, each opened by a profile.** Optimization goes in waves,
 and every wave starts by profiling again, since the last one moved
@@ -36,7 +41,10 @@ The rules every card here keeps:
 
 * **The scalar loop stays, and is the reference.** A SWAR routine is
   never the only implementation of a scan: the byte loop it replaces is
-  kept beside it, under `CF_WITH_SWAR=0`, and the tests run both.
+  kept beside it, under `CF_WITH_SWAR=0`, and the tests run both. The
+  MISRA profile builds with `CF_WITH_SWAR=0`: the `memcpy` word read is
+  a finding there (`docs/Compliance.md`, "Where the standards
+  disagree"), and a second path is a second thing to show right.
 * **C89 only.** Words are `unsigned long` (at least 32 bits; 64 where it
   is), read with `memcpy` from a byte pointer, never through a cast
   pointer: no alignment or strict-aliasing assumption, no
