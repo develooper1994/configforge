@@ -9,6 +9,29 @@ loop"). **They come after everything else in the plan**: optimization
 starts only when every other card is done (the maintainer, 2026-11-17),
 so it measures the code as it will stay.
 
+**In waves, each opened by a profile.** Optimization goes in waves,
+and every wave starts by profiling again, since the last one moved
+where the time is:
+
+1. **Profile every part** (P-1): time per function (`perf` on Linux,
+   the Visual Studio profiler or WPA on Windows, `callgrind` for exact
+   counts), memory and allocations (`massif` or `heaptrack`), and cache
+   misses (`perf stat`), per format and per stage - reading the bytes,
+   the lexer, the parser's events, the flattener, the key space, the
+   report. What each part does inside is written down before anything
+   changes.
+2. **Make the code optimizable** (P-3's first step, above).
+3. **The compiler, the C library and build options** (P-3's forms a
+   and b; LTO and PGO).
+4. **Algorithm**: tables, fewer copies and allocations.
+5. **Word at a time** (P-2, P-3's form c).
+6. **SIMD**, behind `CF_WITH_SIMD`.
+7. **Threads**, for documents that can be split.
+
+A wave that finds nothing worth keeping ends with its profile written
+down, and the next wave starts from it. Cards for waves 4, 6 and 7 are
+written when the wave before them ends.
+
 The rules every card here keeps:
 
 * **The scalar loop stays, and is the reference.** A SWAR routine is
