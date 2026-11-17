@@ -184,3 +184,40 @@ The rules every card here keeps:
 * **docs**: Roadmap: "Large files" stays 🟨, "SWAR done (P-1..P-3);
   SIMD next, behind `CF_WITH_SIMD`".
 * **notes**:
+
+---
+
+## After P-3: what else is weighed, by the same rule
+
+Every item below is measured against the same baseline (P-1, `-O2`)
+and kept only for a number, simplest form first. P-1's profile decides
+the order; none is a card until it says where the time goes.
+
+* **Build options, not code.** Auto-vectorization is on at `-O2` from
+  GCC 12 with the "very cheap" cost model and in full at `-O3` or
+  `-ftree-vectorize`; LTO and PGO. Measured and documented as options a
+  packager can turn on (`CF_LTO`, a PGO recipe); the code relies on none
+  of them, since a shipped library is built `-O2` for a generic target.
+* **Algorithm before instructions.** A 256-entry character-class table
+  per lexer (portable C89, one load and one test a byte, often worth
+  more than SWAR); fewer copies (a string that needs no unescaping
+  pointed to in the input, not copied); fewer allocations (arena sizes
+  from the input's length, D-76's rest); for a document of many MiB,
+  splitting the work across threads where the format allows it (JSON
+  Lines, CBOR sequences), behind `CF_SINGLE_THREADED`'s rule.
+* **SIMD, behind `CF_WITH_SIMD` (off).** Intrinsics differ between
+  compilers as well as processors (MSVC against GCC and Clang, and what
+  each accepts without `-m` flags), so a portable layer is chosen
+  rather than written per compiler: SIMDe (C, MIT, header-only; needs
+  C99, which D-72 allows for an opt-in layer) is the first candidate,
+  a small intrinsics layer in `src/platform/` of our own the second.
+  The instruction set is chosen at run time (CPUID on x86, the
+  auxiliary vector on Arm), never assumed from the build machine.
+  simdjson and Highway are C++ and not usable in the C core; the C++
+  wrapper could use them, if a C++ user's numbers ask for it.
+* **GPU: a research note, not a card.** Configuration files are KB to
+  a few MiB and their parsing branches on every byte; moving them to a
+  GPU costs more than it saves. GPU JSON readers exist (RAPIDS cuDF)
+  and pay at GiB-sized batches of uniform records. Revisited only if a
+  user brings such a load, with the threshold measured: the size at
+  which transfer plus GPU parse beats the CPU path.
