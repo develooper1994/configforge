@@ -1009,31 +1009,91 @@ first user meets. In the order proposed:
   Before MISRA (`docs/Compliance.md`) and before the P cards: moving the
   code after they have touched it is moving it twice. First step: a
   table of the duplicated helpers across the readers, with line counts.
-* ⬜ **Where optimization learns from.** Read before the P cards' forms
-  are chosen, and cited in each card's notes: *Hacker's Delight*
-  (Warren) for the word tricks - has-zero-byte, has-less-than, counting
-  and finding the first set bit portably; simdjson's design (Langdale
-  and Lemire, "Parsing Gigabytes of JSON per Second", 2019) for the
-  stage-1 structural scan and its number parsing
-  (`include/simdjson/generic/numberparsing.h`: eight digits at a time
-  with SWAR, and the Eisel-Lemire fast path for reals); and Google
-  Highway for how one source serves many instruction sets with run-time
-  dispatch. simdjson and Highway are C++: their ideas are taken, not
-  their code. Number parsing joins the P-3 candidates beside the scans.
-* ⬜ **A C89/C99 SWAR and SIMD layer, possibly a library of its own.**
-  There seems to be a gap: Highway and xsimd are C++, SIMDe needs C99
-  and maps one instruction set onto another rather than giving one
-  portable vocabulary, and no small C library offers SWAR and SIMD
-  behind one API with a scalar reference and run-time dispatch. The
-  idea: one header set where each operation (find a byte of a set, a
-  run below a value, a byte-class mask, eight digits to a number) has a
-  scalar form, a SWAR form in C89 and SIMD forms (SSE2/AVX2, NEON) in
-  C99, chosen at build or run time, all tested against the scalar one.
+* ⬜ **Infrastructure behind abstractions.** Every capability the
+  readers lean on - the byte scans, number parsing, memory, the
+  processor's features - is reached through an internal interface with
+  a scalar reference behind it, never called directly from a format.
+  A format asks "find the next of these bytes" or "parse this number";
+  which implementation answers is the layer's business. This is what
+  lets one optimization serve every format, a backend be swapped or
+  turned off at build time, and the MISRA profile keep only the scalar
+  forms. It is the shape the items below build on, and the sources'
+  new layout (above) is where it starts.
+* ⬜ **Where optimization learns from: the fastest libraries, all of
+  their good parts.** Read before the P cards' forms are chosen, and
+  cited in each card's notes. What each is known for, to confirm by
+  reading its code:
+  * **yyjson** (C89, MIT): a single pass with no separate tokenizer, an
+    immutable document in one contiguous allocation, a mutable one
+    beside it, its own fast number reading and writing, and a pool
+    allocator. The closest in language and aim to ConfigForge, so the
+    first to read.
+  * **simdjson** (C++17): a two-stage design (Langdale and Lemire,
+    "Parsing Gigabytes of JSON per Second", 2019) - stage 1 finds every
+    structural character with SIMD into an index, stage 2 walks the
+    index; on-demand parsing that reads only what is asked; run-time
+    dispatch between kernels; number parsing
+    (`include/simdjson/generic/numberparsing.h`: eight digits at a time
+    with SWAR, the Eisel-Lemire fast path for reals).
+  * **RapidJSON** (C++): in-situ parsing (strings decoded in the
+    input's own buffer), SAX and DOM over one reader, SSE2/SSE4.2/NEON
+    whitespace skips, Grisu2 for printing reals.
+  * *Hacker's Delight* (Warren) for the word tricks.
+  Their ideas are taken, not their code (C++, and licences differ).
+  **Not only JSON**: each idea is restated as an operation of the
+  shared layer (a structural index, in-situ strings, number parsing,
+  a byte-class scan), so YAML, TOML, INI, XML, CBOR and the rest gain
+  from it too; a JSON-only trick is the exception, and named as one.
+* ⬜ **The aim: beat the others at everything, and say where it does.**
+  The benchmark (P-1, and 1.8.0's comparison) runs the same documents
+  through yyjson, simdjson and RapidJSON for JSON, and through each
+  format's best-known C or C++ reader for the others (to be listed:
+  libyaml and rapidyaml, toml++ and tomlc99, tinycbor and libcbor,
+  inih, expat and pugixml). Each measure is its own line - parse speed,
+  print speed, memory, code size - per format and size. Winning every
+  line may not be possible; the README leads with the lines it wins,
+  and the page shows all of them, losses included, with the machine and
+  compiler.
+* ⬜ **A SWAR and SIMD backend, in C89/C99, possibly a library of its
+  own.** There seems to be a gap, to be checked before starting: Highway
+  and xsimd are C++, qlibs/swar is C++ too, and SIMDe (C99) maps one
+  instruction set onto another rather than giving one portable
+  vocabulary; no small C library seems to offer SWAR and SIMD behind
+  one API with a scalar reference and run-time dispatch. Its shape:
+  * **Operations, not instructions.** Each operation (find a byte of a
+    set, a run below a value, a byte-class mask, eight digits to a
+    number, compare, count) has a scalar form (the reference), a SWAR
+    form in C89 (32- and 64-bit words) and SIMD forms in C99.
+  * **Lanes.** A register is a vector of lanes whose width the caller
+    picks: a 512-bit register as 64 bytes, 32 16-bit, 16 32-bit or 8
+    64-bit integers; SWAR does the same within a word. The operations
+    are written per lane width, so a number parser and a byte scanner
+    share one vocabulary.
+  * **Detection, at build time and at run time.** The build knows the
+    architecture (x86, x86-64, Arm, AArch64), the endianness and what
+    the compiler can emit; the run finds what the processor has (CPUID
+    and XGETBV on x86, the auxiliary vector or the system's query on
+    Arm). Endianness matters only where a mask is turned back into a
+    byte's index; that step has a form per byte order, tested on a
+    big-endian target (s390x or PowerPC under QEMU in CI).
+  * **Choice in two stages.** First manual: the program names the
+    backend (the build option, or a call at start-up), on the
+    assumption that the programmer knows the target. Then automatic:
+    the best the processor has, falling back in order - AVX-512, AVX2,
+    SSE4.2, SSE2 on x86; SVE, NEON on Arm - then SWAR, then scalar.
+  * **Every part on or off at build time.** `CF_WITH_SIMD`,
+    `CF_WITH_SWAR`, and one option per instruction set and per lane
+    width, so an embedded build carries only what its target runs, and
+    the MISRA profile carries the scalar forms alone.
+  * **Tested against the scalar form**, every operation, every backend
+    the CI machine has, with the fuzzers comparing them.
+  * **Inspiration**: SIMDe (portable intrinsics in C), xsimd and
+    Highway (one source for many instruction sets; Highway's run-time
+    dispatch), qlibs/swar (the SWAR vocabulary).
   It grows out of P-2's `swar.h` rather than ahead of it: built inside
   ConfigForge first, split into its own repository only if a second
   project wants it (the shared-tools rule: upstream only what is
-  repeated). Before starting, a search for an existing C library that
-  already does this; the gap is a belief, not checked.
+  repeated).
 
 ### Considered, and decided against for now: a GitHub wiki
 
