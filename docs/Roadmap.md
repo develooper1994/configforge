@@ -1094,6 +1094,72 @@ first user meets. In the order proposed:
   ConfigForge first, split into its own repository only if a second
   project wants it (the shared-tools rule: upstream only what is
   repeated).
+* ⬜ **`configforge gen --lang <lang>`, open to more languages.** Today
+  `gen` writes one contract, in C (`tools/gen/contract.c`). Each
+  language becomes a generator behind one interface (its name, its file
+  extension, and a function from the contract's model to text), held in
+  a table. The languages shipped with the project (C first; C++, Rust
+  and Python next, as the bindings have them) are entries of that same
+  table, not a special path, so adding one is adding an entry and its
+  test. A generator outside the tree is found the same way: a program
+  named `configforge-gen-<lang>` on the PATH, handed the model as JSON
+  on its input, the way `git` and `cargo` find their subcommands. A
+  `--lang` with no built-in entry and no program fails with the list of
+  what is there; `--lang` absent keeps today's C.
+* ⬜ **A live optimization and benchmark page.** `docs/Performance.md`
+  (P-1 opens it) becomes a page CI keeps current: every push to main
+  runs the benchmark, appends its numbers to a history kept on a branch
+  of its own or in the Pages site, and the page draws each format's
+  line over time against the other libraries, with the commit of each
+  point and the machine. A change that moves a line shows on it the day
+  it lands; the instruction-count gate (P cards, "What keeps a gain")
+  stays what fails a build, the page is what shows the trend. Each
+  optimization tried, kept or reverted, is listed on it with its
+  numbers, so the page is also the log of what was learned.
+* ⬜ **Tests that convert between every pair of formats.** For each
+  document of the conformance suites and the fuzz corpora: read it in
+  format A, write it in B, read it back, write it in A, and require the
+  model to be the same, or the refusal to name what B cannot hold (a
+  NaN in JSON, a mixed-type array in TOML, a key order XML keeps and
+  INI loses). Every ordered pair, not only a few; a fuzz target that
+  takes a random document through a random chain of formats; the
+  values at their edges (the largest integers, reals that do not
+  round-trip in fewer digits, empty keys, deep nesting, every Unicode
+  plane, a NUL inside a string). What one format loses is written down
+  per pair, in a table the test checks.
+* ⬜ **Benchmarks fair, and without mercy.** Fair: every library is
+  built with the same compiler and flags, at its own recommended
+  settings, from a named version; each is asked for the same work (a
+  library that validates is not set against one that does not, or both
+  are run both ways); the documents, the scripts and the raw numbers
+  are published so anyone can run them; the machine and its state
+  (frequency scaling off, pinned cores) are recorded. Without mercy:
+  the documents are chosen to hurt - all-escape strings, numbers at
+  every edge, nesting to the limit, one huge array, many tiny files,
+  invalid input that fails late, 256 MiB and beyond, a cold cache and
+  a warm one, one thread and every thread; memory and code size are
+  counted, not only speed; and a case ConfigForge loses is kept on the
+  page, not dropped.
+* ⬜ **The other libraries' CVEs and bug reports, as tests here.** The
+  readers this project is compared with have public histories: CVEs and
+  issue trackers of libyaml, PyYAML, SnakeYAML, yaml-cpp, rapidyaml,
+  RapidJSON, cJSON, json-c, Jansson, yyjson, simdjson, expat, libxml2,
+  tinyxml2, inih, toml++, tinycbor, libcbor and others. Each known
+  weakness becomes a regression test or a fuzz seed here, named after
+  its CVE or issue, with the rule that holds it: billion-laughs and
+  other alias or entity expansion, stack exhaustion from deep nesting,
+  integer overflow in a length or a count, quadratic time on crafted
+  input (hash collisions, repeated keys, long escapes), a read past the
+  end on a truncated document, NUL inside a string, invalid UTF-8 and
+  overlong forms, numbers that overflow or lose precision silently,
+  duplicate keys resolved differently than another reader would (a
+  confusion attack), and the type tags that let a YAML reader build
+  objects (not applicable here, said so in the table). The table,
+  `docs/compliance/known-weaknesses.md`, goes beside the CWE table
+  (`docs/Compliance.md`), each row naming the source, the test and its
+  state, and `gate.cwe` checks that each named test exists. First
+  step: the NVD and each project's tracker searched, and the list
+  counted.
 
 ### Considered, and decided against for now: a GitHub wiki
 
