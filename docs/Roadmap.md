@@ -1160,6 +1160,63 @@ first user meets. In the order proposed:
   state, and `gate.cwe` checks that each named test exists. First
   step: the NVD and each project's tracker searched, and the list
   counted.
+* ⬜ **A page of the project's limits.** `docs/Limits.md`: what the
+  library does not do and what it will not take, in one place, so a
+  user learns it before they depend on it. The build limits
+  (`CF_KEY_MAX`, `CF_PATH_MAX` and the rest, today in the README's
+  "Limits and the stack budget"), the decode budget (D-82) and depth
+  limit, the largest document each format reads and why, what each
+  format cannot hold and what a conversion loses (the pair table
+  above), the platforms tested and those only built, the C versions,
+  thread rules, what is not proven (Safety.md), what is not claimed
+  (Compliance.md), and the features not offered (a schema language, a
+  network source, writing comments back) with the D-number that
+  decided each. Each number on the page is read from the build options
+  or a test, and a test checks the page against them, so it cannot
+  drift.
+* ⬜ **Ways to read: DOM, SAX, lazy, in-situ.** The readers today build
+  the model. Four modes, each an option of the reader, sharing one
+  lexer:
+  * **DOM** (today's): the whole document as a tree, read once,
+    walked many times.
+  * **SAX / events**: a callback per value, no tree kept; for a
+    document larger than memory, and the base the others are built on
+    (the serialization library's events already exist; made public as
+    a stable API).
+  * **Lazy / on-demand** (simdjson's): a structural index first, values
+    parsed only when asked for; for reading three keys of a large
+    document.
+  * **In-situ** (RapidJSON's): strings unescaped in the caller's own
+    buffer, which the caller gives up for the document's life; no copy,
+    no allocation for strings.
+  Each mode is measured on the benchmark page, and each is a
+  `CF_WITH_*` option, so a small build keeps only the one it uses.
+  Which formats support which mode is a table; a binary format (CBOR,
+  TLV) is in-situ by nature.
+* ⬜ **Arm supported well, added as devices can be reached.** Today CI
+  runs arm64 (the GitHub runner) and the entry above adds armv7 and a
+  Cortex-M build under qemu. The aim: AArch64 and 32-bit Arm (Cortex-A
+  and Cortex-M) as first-class targets - NEON in the SIMD backend, SVE
+  where present, unaligned access and alignment faults handled (the
+  `memcpy` rule), big-endian Arm considered, and the `minimal` build's
+  size per Cortex-M class in the README. Because not every device or a
+  working qemu is always at hand, the support is listed per target with
+  how it was shown: **tested on hardware** (named board, date),
+  **tested under qemu**, **built only**, **not tried**. A target moves
+  up the list as a device or an emulator run becomes available, and a
+  test run on hardware is recorded with the commit it ran. Built-only
+  targets are still built in CI so they do not rot.
+* ⬜ **Small embedded systems: everything optional, a minimal build
+  that stays minimal.** The library will gain many features (the modes
+  above, SWAR and SIMD, gen's languages, every format); each one is a
+  `CF_WITH_*` option, and none is required by the core. The `minimal`
+  preset (today: codecs only, short limits, a 1 KiB stack budget,
+  unreached code dropped) stays the floor, and CI holds it to numbers:
+  its `.text` and largest stack frame on a Cortex-M build are gated,
+  so a new feature that leaks into it fails. Beyond `minimal`, presets
+  by need (`embedded-json`, `embedded-cbor`: one format, DOM or SAX,
+  fixed arena, no heap, no stdio), and the README's table gives each
+  part's size, so a user adds up their build before making it.
 
 ### Considered, and decided against for now: a GitHub wiki
 
