@@ -964,6 +964,27 @@ first user meets. In the order proposed:
   vector path is tested against it on the same inputs, and the fuzzers
   run both. Not before the measurement says so.
 
+### Suggestions of 2026-11-17 (not yet cards)
+
+* ⬜ **verify sees the version CI sees.** The staged copy verify builds
+  has no git directory, so a version string carries no commit id there
+  and a test of it passes locally while failing in CI (`gen.version`,
+  2026-11-17). The copy is given the commit id of what was staged, the
+  way the build reads it in a checkout.
+* ⬜ **Tests that are known to catch.** Coverage says a line ran, not
+  that a wrong line would fail a test. Mutation testing (mull, for C
+  through LLVM) on the core and the readers, its score reported beside
+  coverage; evidence `docs/Compliance.md` can cite.
+* ⬜ **The release built twice, compared byte for byte.** Provenance
+  attestations say where an archive came from; a reproducible build
+  says it is what the source makes. The release workflow builds the
+  Linux archive twice in clean trees and fails if they differ.
+* ⬜ **Documents kept short.** `docs/Decisions.md` is over 4,300 lines:
+  its index stays where it is, and each decision's text moves to
+  `docs/decisions/D-NN.md`, linked from the index, so a reader opens
+  one decision rather than scrolls past ninety. The Roadmap's finished
+  items move to a page of their own, the Roadmap keeping what is left.
+
 ### Considered, and decided against for now: a GitHub wiki
 
 The documents live in `docs/`, are reviewed with the code, checked by

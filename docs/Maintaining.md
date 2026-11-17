@@ -171,6 +171,18 @@ The round of 2026-11-16 (H-5, the first card carried out from the plan):
 | `gate.amalgamation` failed under pcc alone, and verify printed only "FAILED" | verify runs ctest with `--output-on-failure`, so a job's log holds what the test said |
 | the failure was pcc 1.2's preprocessor: re-reading a guarded header at some byte offsets it writes a stray character, so the gate passed or failed by where an edit moved a line | the amalgamation includes each system header once outside an `#if`; under pcc the gate puts a comment before the file and tries again, and a real error is reported from the first try. tcc and pcc are installed on the workstation's WSL, so `EXTRA=compilers` runs before a push |
 
+The round of 2026-11-16 to 17 (H-2 to T-2, 1.6.0 released, 1.7.0
+begun):
+
+| Found | Made into |
+| ----- | --------- |
+| clang-tidy read a string literal continued over two lines, inside an array of lines, as a missing comma | no literal is continued over lines inside an initializer array; the generated checks are one line each |
+| a `#define` continued with a backslash in generated code stopped pcc's preprocessor | each generated definition fits on one line, its messages and conditions short macros of their own |
+| a gate script using `IN_LIST` failed only on alpine: `cmake -P` starts with every policy unset | every gate script begins with `cmake_minimum_required`, as `GateAbi.cmake` did |
+| `gen.version`'s `\(` was written `\(`'s half, a plain `(`, and passed locally only because verify's copy has no commit id | the pattern escapes as `doctor.version`'s does; verify's copy without an id is a blind spot the Roadmap names |
+| the `configforge` target is made before `configforge_setup_cppcheck()`, so the library's own sources never ran through cppcheck | the first step of the Roadmap's critical-system item; the serialization library is treated alike until both are checked |
+| a branch rebased onto `main` could not be force-pushed | a rebased branch is pushed under a new name, `work/<card>-r`, and the old one deleted |
+
 ## Measured
 
 What a build option costs or saves, measured rather than assumed, so a
