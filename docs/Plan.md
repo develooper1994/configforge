@@ -145,7 +145,8 @@ In the order to be done. A card is `open`, `done` (with its commit), or
 the 1.6.0 milestone; the S-*, T-* and W5-* cards to 1.7.0, but T-5 to
 1.8.0 (`docs/Maintaining.md`, "Versions"; the S and T cards are in
 `docs/plan/T-tools-and-serialization.md`). The P-* cards, word-at-a-time
-scanning before SIMD, belong to 1.8.0 (`docs/plan/P-word-at-a-time.md`).
+scanning before SIMD (`docs/plan/P-word-at-a-time.md`), are last: they
+wait until every other card is done.
 
 | Order | Card | Size | Needs | Status |
 | ----: | ---- | ----- | ----- | ------ |
@@ -175,7 +176,7 @@ scanning before SIMD, belong to 1.8.0 (`docs/plan/P-word-at-a-time.md`).
 | 36 | W5-G2 `configforge gen --lang rust` | large | W5-G1 | waits: W5-G1 |
 | 37 | W5-G3 `configforge gen --lang python` | medium | W5-G2 | waits: W5-G2 |
 | 38 | T-5 Doctor's aliases, and the name `doctor`, removed | small | 1.7.0 released, W5-G3 | waits: 1.7.0 released (it belongs to 1.8.0) |
-| 39 | P-1 The benchmark measures large documents, and says where time goes | medium | - | open (1.8.0) |
+| 39 | P-1 The benchmark measures large documents, and says where time goes | medium | every card above | waits: every card above |
 | 40 | P-2 Word-at-a-time scans in C89, with the byte loop as reference | medium | P-1 | waits: P-1 |
 | 41 | P-3 The scans P-1 found, a word at a time, kept only where they win | medium | P-2 | waits: P-2 |
 

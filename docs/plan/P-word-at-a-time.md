@@ -5,7 +5,9 @@ measure, then a portable word-at-a-time (SWAR) path in C89 for every
 target, then SIMD behind `CF_WITH_SIMD`. These three cards are the first
 two steps; SIMD is a card of its own, written after P-3 says what SWAR
 left on the table. Each card is the loop's unit (`docs/Plan.md`, "The
-loop"); they belong to the 1.8.0 milestone.
+loop"). **They come after everything else in the plan**: optimization
+starts only when every other card is done (the maintainer, 2026-11-17),
+so it measures the code as it will stay.
 
 The rules every card here keeps:
 
@@ -22,6 +24,15 @@ The rules every card here keeps:
   done by the byte loop; a word read never crosses `end`.
 * **Nothing is changed without a number.** P-3 touches only the scans
   P-1 shows to cost, and keeps a change only if the benchmark moves.
+* **A slow result is not a verdict until the code could be fast.** A
+  scan written as a chain of dependent branches cannot be vectorized
+  by the compiler, by SWAR or by SIMD, and measuring it that way only
+  shows its shape. Before a form is judged, the loop is restated so an
+  optimizer can work on it: data and control separated (classify bytes
+  first, act on the classes after), no early exit buried in the body,
+  the hot state in locals, and the input read as a contiguous span.
+  That restatement is a change of its own, measured on its own, and
+  kept if it does not slow the scalar build.
 * **The compiler and the C library come first.** The baseline is the
   byte loop as the release build compiles it (`-O2`, the generic
   target, as the packages ship), and a scan is first tried in two
