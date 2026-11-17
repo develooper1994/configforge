@@ -1217,6 +1217,59 @@ first user meets. In the order proposed:
   by need (`embedded-json`, `embedded-cbor`: one format, DOM or SAX,
   fixed arena, no heap, no stdio), and the README's table gives each
   part's size, so a user adds up their build before making it.
+* ⬜ **Profiles: features turned on and off by name.** The options
+  grow (`CF_WITH_*` for each format, mode, backend and source), and a
+  user should not have to learn forty switches to get a sensible build.
+  A profile is a named set of options, chosen with one setting
+  (`-DCF_PROFILE=embedded-json`, or a CMake preset of the same name):
+  `full` (everything that builds on the host), `default`, `minimal`,
+  `embedded-json`, `embedded-cbor`, `misra` (Compliance.md),
+  `server` (every format, SIMD with run-time dispatch, threads). A
+  profile is a file in `cmake/profiles/`, one option a line, so a user
+  can copy one and keep their own beside their project
+  (`-DCF_PROFILE_FILE=...`). Any option set by hand after the profile
+  wins over it, and the configure step prints the profile, every option
+  that differs from it, and the resulting size estimate from the
+  README's table. The chosen profile is written into
+  `cf_build_options.h` and the build id, so a report says which build
+  produced it. Each shipped profile is built in CI.
+* ⬜ **The C version raised only where it must be, and said so.** C89
+  stays the floor for the core: code already written in C89 is not
+  rewritten for a newer standard unless it has to be. Where a part
+  needs more - a dependency's header (libfyaml needs C11 today, the
+  macOS user defaults C99), SIMD intrinsics and run-time dispatch (C99
+  at least), `_Atomic` or threads - that part alone is compiled at the
+  higher version, through one CMake helper
+  (`cf_source_needs_c(<file> 99 REASON "...")`), never by raising the
+  whole target. The helper prints a configure-time warning naming the
+  file, the version and the reason (dependency, optimization,
+  platform), records it in the build id, and adds it to a list a gate
+  checks: a source compiled above C89 that is not on the list, or a
+  list entry whose reason is empty, fails. A profile that must stay C89
+  (`minimal`, `misra`) refuses any part on the list, by name, at
+  configure time. `docs/Limits.md` shows the list.
+* ⬜ **Formats registered, not wired.** As `gen`'s languages become a
+  table, so do the formats: each reader and writer registers its name,
+  extensions, detection test and capabilities (the modes it supports,
+  what it cannot hold) in one table the codec API, `detect.c`, Doctor
+  and the conversion tests all read. Adding a format is then one file
+  and one table entry, a profile leaves one out by removing its entry,
+  and the pair-conversion table and `docs/Limits.md` are generated from
+  the capabilities rather than kept by hand.
+* ⬜ **One diagnostic model across formats.** Each reader reports a
+  refusal its own way today, as far as the formats differ; a single
+  diagnostic record (code, severity, byte offset, line and column, the
+  format's own detail, and the CWE or known-weakness id when the
+  refusal is a defence) used by every reader, the report and Doctor,
+  so a test of "the same bad input refused the same way in every
+  format" can be written, and a user filters by code rather than by
+  message text. To check first how far the readers already share one.
+* ⬜ **A feature matrix generated from the build.** The README's
+  tables of options, sizes, profiles and per-target status (Arm entry
+  above) are produced by a script from the CMake options, the profile
+  files and CI's results, and a gate fails when the committed tables
+  differ from what the script makes, so the documentation of what can
+  be turned off never falls behind the options themselves.
 
 ### Considered, and decided against for now: a GitHub wiki
 
