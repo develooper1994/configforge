@@ -984,6 +984,56 @@ first user meets. In the order proposed:
   `docs/decisions/D-NN.md`, linked from the index, so a reader opens
   one decision rather than scrolls past ninety. The Roadmap's finished
   items move to a page of their own, the Roadmap keeping what is left.
+* ⬜ **The serialization sources, laid out by what they share.** Today
+  `src/serialize/` is one file per format (about 10,900 lines; `toml.c`,
+  `yamlparse.c`, `yaml.c`, `json.c` and `tlv.c` over 1,100 each). To
+  weigh, each split or merge kept only if it removes duplicated code or
+  lets a build leave a part out:
+  * **Split by stage**: each large format as its lexer, its parser and
+    its printer (`toml_lex.c`, `toml_parse.c`, `toml_emit.c`), so a
+    read-only build links no printer, a review reads one stage, and the
+    MISRA matrix and coverage count per stage.
+  * **Merge what repeats**: UTF-8 validation, escape decoding, number
+    text to value (integer and real), whitespace and comment skips, and
+    the line/column count are likely written once per format; one
+    internal `scan.c`/`text.c` holds each once, tested once, and is the
+    one place P-3's word-at-a-time scans go.
+  * **Group by family**: the text formats (JSON, YAML, TOML, INI,
+    properties, XML) and the binary ones (CBOR, TLV, blob) as two
+    groups a build can take apart (`CF_WITH_TEXT_FORMATS`,
+    `CF_WITH_BINARY_FORMATS`, beside the per-format options).
+  * **A single-file build**: a generated amalgamation
+    (`configforge_serialize.c`, as SQLite ships), for embedded users who
+    drop one file into their build; produced by a script and checked to
+    compile alone, never edited.
+  Before MISRA (`docs/Compliance.md`) and before the P cards: moving the
+  code after they have touched it is moving it twice. First step: a
+  table of the duplicated helpers across the readers, with line counts.
+* ⬜ **Where optimization learns from.** Read before the P cards' forms
+  are chosen, and cited in each card's notes: *Hacker's Delight*
+  (Warren) for the word tricks - has-zero-byte, has-less-than, counting
+  and finding the first set bit portably; simdjson's design (Langdale
+  and Lemire, "Parsing Gigabytes of JSON per Second", 2019) for the
+  stage-1 structural scan and its number parsing
+  (`include/simdjson/generic/numberparsing.h`: eight digits at a time
+  with SWAR, and the Eisel-Lemire fast path for reals); and Google
+  Highway for how one source serves many instruction sets with run-time
+  dispatch. simdjson and Highway are C++: their ideas are taken, not
+  their code. Number parsing joins the P-3 candidates beside the scans.
+* ⬜ **A C89/C99 SWAR and SIMD layer, possibly a library of its own.**
+  There seems to be a gap: Highway and xsimd are C++, SIMDe needs C99
+  and maps one instruction set onto another rather than giving one
+  portable vocabulary, and no small C library offers SWAR and SIMD
+  behind one API with a scalar reference and run-time dispatch. The
+  idea: one header set where each operation (find a byte of a set, a
+  run below a value, a byte-class mask, eight digits to a number) has a
+  scalar form, a SWAR form in C89 and SIMD forms (SSE2/AVX2, NEON) in
+  C99, chosen at build or run time, all tested against the scalar one.
+  It grows out of P-2's `swar.h` rather than ahead of it: built inside
+  ConfigForge first, split into its own repository only if a second
+  project wants it (the shared-tools rule: upstream only what is
+  repeated). Before starting, a search for an existing C library that
+  already does this; the gap is a belief, not checked.
 
 ### Considered, and decided against for now: a GitHub wiki
 
