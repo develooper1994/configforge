@@ -255,3 +255,22 @@ the order; none is a card until it says where the time goes.
   and pay at GiB-sized batches of uniform records. Revisited only if a
   user brings such a load, with the threshold measured: the size at
   which transfer plus GPU parse beats the CPU path.
+
+---
+
+## What keeps a gain
+
+* **A regression gate.** Once P-1 has a baseline, CI fails a change
+  that makes a format's large-document run more than 10% slower.
+  Wall time on a shared runner is noise, so the gate counts
+  instructions (`callgrind`, or `perf stat -e instructions`), and the
+  wall-time numbers stay a report.
+* **Speed is not the only number.** Every wave also reports code size
+  (`.text` of the library, in the default and the `minimal` builds) and
+  peak memory per MiB of input. Tables, unrolled loops and SIMD grow
+  the code; on the embedded targets 1.8.0 adds to CI, growth of the
+  `minimal` build is a cost, weighed against the gain, not ignored.
+* **A reference point.** P-1's benchmark also runs the same documents
+  through the other libraries of the Roadmap's comparison (1.8.0), so
+  "faster" means faster than something a user would otherwise pick,
+  not only faster than before.
