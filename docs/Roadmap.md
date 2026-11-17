@@ -951,7 +951,8 @@ first user meets. In the order proposed:
   checked), and a first run on the serialization sources reports
   `uninitvar` and `variableScope`; turning it on for both libraries, and
   answering what it finds, is this item's first step.
-* ⬜ **Large files, and SIMD as an option.** Configuration is small, but
+* ⬜ **Large files, and SIMD as an option** (cards P-1, P-2, P-3 for the
+  measurement and SWAR; SIMD a card after them). Configuration is small, but
   a format library is also handed documents of megabytes (data in CBOR,
   MessagePack, JSON exports). First measure: 1.8.0's benchmark gains
   documents of 1, 16 and 256 MiB and says where time goes. Then, if the

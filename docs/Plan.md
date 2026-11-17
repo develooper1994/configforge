@@ -144,7 +144,8 @@ In the order to be done. A card is `open`, `done` (with its commit), or
 `waits` (with what it waits for). The H-* and W3-* cards belong to
 the 1.6.0 milestone; the S-*, T-* and W5-* cards to 1.7.0, but T-5 to
 1.8.0 (`docs/Maintaining.md`, "Versions"; the S and T cards are in
-`docs/plan/T-tools-and-serialization.md`).
+`docs/plan/T-tools-and-serialization.md`). The P-* cards, word-at-a-time
+scanning before SIMD, belong to 1.8.0 (`docs/plan/P-word-at-a-time.md`).
 
 | Order | Card | Size | Needs | Status |
 | ----: | ---- | ----- | ----- | ------ |
@@ -174,6 +175,9 @@ the 1.6.0 milestone; the S-*, T-* and W5-* cards to 1.7.0, but T-5 to
 | 36 | W5-G2 `configforge gen --lang rust` | large | W5-G1 | waits: W5-G1 |
 | 37 | W5-G3 `configforge gen --lang python` | medium | W5-G2 | waits: W5-G2 |
 | 38 | T-5 Doctor's aliases, and the name `doctor`, removed | small | 1.7.0 released, W5-G3 | waits: 1.7.0 released (it belongs to 1.8.0) |
+| 39 | P-1 The benchmark measures large documents, and says where time goes | medium | - | open (1.8.0) |
+| 40 | P-2 Word-at-a-time scans in C89, with the byte loop as reference | medium | P-1 | waits: P-1 |
+| 41 | P-3 The scans P-1 found, a word at a time, kept only where they win | medium | P-2 | waits: P-2 |
 
 Done and released in 1.5.0, their cards removed: H-1, H-3, H-4 and the
 whole of wave 4 (CBOR; TLV by a layout and BER-TLV).
