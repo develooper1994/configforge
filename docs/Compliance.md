@@ -65,7 +65,7 @@ each review.
 | **C version** | MISRA C:2012 targets C90 and C99; MISRA C:2023 adds C11 | the project's floor is C89 (D-72) | Compatible: C89/C90 is MISRA's first language. Code that needs C99 or later is optional (`CF_WITH_PREFERENCES` on macOS compiles `posix.c` as C99 for CoreFoundation's headers) and is outside the MISRA profile. |
 | **Floating point** | MISRA rules on float comparison and conversion | configuration values can be reals | Real values are optional (`CF_WITH_REAL`); the MISRA profile can leave them out. Where they are in, the parser and printer are listed in Safety.md's "Not yet proven". |
 | **The environment** | MISRA C keeps to the standard language and library (Rule 1.2, advisory, on extensions; Rule 8.5 on where an external object is declared; the numbers are to be confirmed against the edition the matrix names) | a configuration library reads environment variables, and the platform layer reads them through POSIX's `environ` (`src/platform/posix/posix.c`), not `getenv` | To decide with the matrix: a deviation confined to the platform layer, or the environment source left out of the MISRA profile. A program that reads only from memory calls none of it. |
-| **Reading a word at a time** | MISRA C Rule 21.15 (required; to be confirmed as above): `memcpy`'s pointers are to compatible types; the Rule 11 group forbids the cast that would replace it | the word-at-a-time scans (`docs/plan/P-word-at-a-time.md`) read an `unsigned long` from bytes with `memcpy` | No deviation: the MISRA profile builds with `CF_WITH_SWAR=0` and without `CF_WITH_SIMD`, so it compiles the byte loops, which stay the reference. |
+| **Reading a word at a time** | MISRA C Rule 21.15 (required; to be confirmed as above): `memcpy`'s pointers are to compatible types; the Rule 11 group forbids the cast that would replace it | the word-at-a-time scans (`docs/plan/P-word-at-a-time.md`) read an `unsigned long` from bytes with `memcpy` | No deviation: the MISRA profile builds the vector library's scalar reference alone (`CF_LANES_BACKENDS=scalar`, D-101), the byte loops. |
 
 ## The MISRA profile
 
@@ -75,7 +75,7 @@ existing `minimal` one) made of what such a user takes: the core, memory
 and document sources, a fixed arena, no directories (`CF_WITH_DIR=OFF`),
 no threads (`CF_SINGLE_THREADED`), no reals unless asked
 (`CF_WITH_REAL=OFF`), and the byte loops rather than the word-at-a-time
-or SIMD scans (`CF_WITH_SWAR=0`, no `CF_WITH_SIMD`). The matrix
+or SIMD scans (`CF_LANES_BACKENDS=scalar`). The matrix
 and the gate are checked against this profile first; the full library is
 reported against too, with its extra deviations listed separately.
 

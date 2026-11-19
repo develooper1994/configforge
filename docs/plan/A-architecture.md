@@ -161,6 +161,12 @@ what this one is.
   Windows, NEON assumed on AArch64. Byte order matters only where a
   SWAR mask becomes an index; that step has a form per byte order,
   checked once by `lanes_by_isa` against a known word.
+* **The build option** `CF_LANES_BACKENDS` chooses what is compiled:
+  `scalar` (the reference alone), `c89` (scalar and SWAR, nothing that
+  needs C99), or `all` (every backend the compiler can build, the
+  default). The `misra` profile builds `scalar` (no word read through
+  `memcpy`, MISRA C Rule 21.15); `minimal` and the embedded profiles
+  build `c89`. Until 2.4.0 adds the others, every value builds `scalar`.
 * **Every backend is tested against `scalar`**: every operation, every
   length from 0 to four vectors plus a tail, every starting offset,
   poison bytes after the end that must never be read (sanitizers), and
@@ -445,7 +451,13 @@ Differences the cards must keep or decide, not lose:
 
 ## The cards of 1.8.0
 
-Order: A-1, A-1b, A-2, A-3, A-4, A-5, A-6, then A-7 to A-13 in their order. A-1 moves every
+Order: A-1, A-1b, A-2, A-3, A-4, A-5, A-6, then A-7 to A-13 in their order.
+Line and column go to a message as `%u` of an `unsigned`, as the
+readers pass them today (cast a `cf_u32` place where needed). **Unit
+tests from A-1b on**: a card below that names `tests/unit/<test>.c`
+means the component's own `lib/<c>/tests/<test>.c`, by A-1b's rule
+(the lowest component that holds every header it includes), and its
+entry goes in that component's test list. A-1 moves every
 file, so nothing else of 1.8.0 runs beside it; A-2 touches only
 `lib/lanes/` and could run beside A-3, but A-3 needs it. Every card is
 accepted on Linux and Windows and in CI. The CHANGELOG: under
@@ -833,6 +845,10 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     exactly eight bytes, returns 1 and stores their value when all are
     `'0'`-`'9'`, else returns 0 and leaves `*value` alone. A pointer may
     be NULL when `n` is 0. No function reads at or past `p + n`.
+  * The option `CF_LANES_BACKENDS` (D-101) is declared in lanes' own
+    CMake file (a cache STRING, default `all`, refused unless `scalar`,
+    `c89` or `all`); ConfigForge's options read the same variable, so a
+    profile sets it. In this card every value builds `scalar` alone.
   * In this card only `scalar` is built: `lanes_built()` is
     `LANES_ISA_SCALAR`; `lanes_by_isa` returns the scalar table for
     `LANES_ISA_SCALAR` and NULL for every other bit; `lanes_best()`
@@ -1114,8 +1130,8 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     be 0xFE or 0xFF; TLV is named only), so steps 3 and 4 cannot misread
     one.
   * **A byte with no character** is refused in the readers' form,
-    `%s:%lu:%lu: byte 0x%02X has no character in %s` (origin, line,
-    column, byte, the encoding's name); for UTF-16 `%s:%lu:%lu: an
+    `%s:%u:%u: byte 0x%02X has no character in %s` (origin, line,
+    column, byte, the encoding's name); for UTF-16 `%s:%u:%u: an
     unpaired UTF-16 surrogate 0x%04X` and `%s: ends in half a UTF-16
     code unit`. Code `CF_E_SOURCE`. Lines and columns are counted in the
     original's units: bytes for the single-byte encodings, two-byte code
