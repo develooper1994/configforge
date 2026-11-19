@@ -1226,7 +1226,7 @@ first user meets. In the order proposed:
   Which formats support which mode is a table; a binary format (CBOR,
   TLV) is in-situ by nature.
 * ⬜ **Arm supported well, added as devices can be reached.** Today CI
-  runs arm64 (the GitHub runner) and the entry above adds armv7 and a
+  runs arm64 only as macOS (`macos-latest`), no Linux arm64 job and the entry above adds armv7 and a
   Cortex-M build under qemu. The aim: AArch64 and 32-bit Arm (Cortex-A
   and Cortex-M) as first-class targets - NEON in the SIMD backend, SVE
   where present, unaligned access and alignment faults handled (the

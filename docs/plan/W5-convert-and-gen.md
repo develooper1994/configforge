@@ -29,11 +29,11 @@ Order: W5-V1, W5-S1, W5-G1, W5-G2, W5-G3, after T-3. W5-V1 is
 Linux and Windows; W5-G2's Rust part runs where cargo is (CI's cargo
 job, and `CF_RUST=ON` locally).
 
-Two cards to write after these (`docs/Plan.md`, "After 1.7.0"): W5-V2,
-a test that takes every document of the conformance suites through
-every ordered pair of formats and checks what each pair loses against a
-table; and W5-G4, generators outside the tree, found as
-`configforge-gen-<lang>` on the PATH.
+Two cards of 1.8.0 follow these, at the end of this file: W5-V2, what
+each format can hold and every ordered pair of formats tested against
+it (D-109); and W5-G4, generators outside the tree, found as
+`configforge-gen-<lang>` on the PATH (D-110). They run after A-1b, so
+they name files by the layout of docs/plan/A-architecture.md.
 
 Rewritten 2026-11-16 for the tools split: each card says in its notes
 what moved. Where the programs, files and tests are named below, they
@@ -41,7 +41,8 @@ are T-1, T-2 and T-3's (`configforge-gen` in `tools/gen/`, tested in
 `tests/gen/`; `configforge-codec` in `tools/codec/`, tested in
 `tests/codec/`; the documents in `docs/Tools.md`).
 
-D-numbers: this file uses **D-94, D-95 and D-96** (the wave 4 cards used
+D-numbers: this file uses **D-94, D-95 and D-96**, and W5-V2 and W5-G4
+**D-109 and D-110** (the wave 4 cards used
 D-91 to D-93; the cards of T-tools-and-serialization.md skip these
 three). Check with `git grep -n "^## D-9[4-6]" docs/Decisions.md` before
 writing one; if a number is taken, take the next free one and change it
@@ -1020,3 +1021,971 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
     out: `doctor gen` is `configforge gen` (T-2), the code in `tools/gen/`,
     the tests in `tests/gen/` and named `gen.*`, the document the gen
     section of `docs/Tools.md`. The design is unchanged.
+
+---
+
+## W5-V2 - Every pair of formats, and what each can hold
+
+* **id**: W5-V2
+* **goal**: `cf_format_holds` says, for each built-in format with a
+  writer, what it can hold; `configforge codec convert` names what a
+  target cannot hold from that one table; a test takes every document of
+  the conformance suites, the project's own fixtures and a list of
+  edge documents through every ordered pair of the six writing formats
+  and requires the result to be what the table predicts; a fuzz target
+  does the same for a random chain; and the table of what each pair
+  loses is generated into `docs/Formats.md` and held to the program.
+* **why**: a file converted from one format to another is trusted
+  because the new file says what the old one said. Today what a format
+  cannot hold is written in three places that do not know each other
+  (`g_formats` in `lib/config/tests/test_roundtrip.c`, today `tests/unit/test_roundtrip.c`, W5-V1's three passes,
+  and each encoder's refusals), and two losses fall between them: an
+  empty table is written as nothing by TOML and INI, and a null is
+  counted as text for YAML, which writes and reads it as a null. One
+  table, tested on every pair, closes both.
+* **needs**: W5-V1, A-1
+* **size**: large
+* **decided**:
+  * **The capabilities are a second word of bits, public and
+    experimental (D-109).** Rejected: more `CF_CODEC_*` caps (caps say
+    what a codec does with the pipeline - read, write, typed, arrays;
+    these say what the format's syntax can carry, and a codec a program
+    registers has no such word); a member added to `cf_codec` (a codec
+    of the program's own would have to fill it, and `cf_codec_has_self`'s
+    size guard would grow another case); a table kept inside the tools
+    (convert and the test would then each keep a copy, which is the
+    fault this card ends). The table is `cf_formats[]` in
+    `lib/serialize/src/codec.c` (today `src/serialize/codec.c:289`):
+    `cf_format_info` gains a last member `unsigned holds`, so it is
+    beside each format's name, extensions and option, and is known
+    for a format a build left out. In `lib/serialize/include/configforge/cf_serialize.h`
+    (today `include/configforge/cf_serialize.h`, after the `CF_CODEC_*`
+    enum, :184), exactly:
+
+    ```c
+    /* What a format's syntax can carry, the words `holds` of
+       cf_format_holds is made of. A format that lacks a bit does not
+       fail to write: a type it lacks is written as the value's text
+       (the reader gives text back), and anything else it lacks is left
+       out by the converter, which names it (D-109). Experimental in 1.8. */
+    enum {
+        CF_HOLDS_INT           = 1u << 0,  /* integers as integers         */
+        CF_HOLDS_REAL          = 1u << 1,
+        CF_HOLDS_BOOL          = 1u << 2,
+        CF_HOLDS_NULL          = 1u << 3,
+        CF_HOLDS_ARRAYS        = 1u << 4,  /* arrays of values             */
+        CF_HOLDS_EMPTY_ARRAY   = 1u << 5,
+        CF_HOLDS_TABLE_ARRAYS  = 1u << 6,  /* a table inside an array      */
+        CF_HOLDS_NESTED_ARRAYS = 1u << 7,  /* an array inside an array     */
+        CF_HOLDS_EMPTY_TABLE   = 1u << 8,  /* a table with nothing in it,
+                                              as a member of a table       */
+        CF_HOLDS_ANY_NAME      = 1u << 9,  /* not only A-Z a-z 0-9 _ and - */
+        CF_HOLDS_EMPTY_NAME    = 1u << 10,
+        CF_HOLDS_LONG_PATHS    = 1u << 11, /* tables nested so that their
+                                              names, joined by dots, pass
+                                              CF_KEY_MAX - 2 bytes         */
+        CF_HOLDS_LINE_BREAK    = 1u << 12, /* a line feed in a text        */
+        CF_HOLDS_NUL           = 1u << 13, /* a NUL byte in a text         */
+        CF_HOLDS_ALL           = (1u << 14) - 1u,
+        /* Set when a format that lacks CF_HOLDS_NULL refuses a null
+           outright (TOML); without it a null is written as the text
+           `null` (INI). */
+        CF_REFUSES_NULL        = 1u << 16
+    };
+
+    /* CF_TRUE and *holds the bits of the format called `format`, whether
+       or not this build has its codec; CF_FALSE, *holds untouched, for a
+       format this library has no writer for (xml, properties) and for a
+       name it does not know. (1.8, experimental) */
+    CF_EXPERIMENTAL(1, 8) cf_bool cf_format_holds(const char* format, unsigned* holds);
+    ```
+
+    `cf_format_holds` finds the entry as `cf_format_option` does
+    (`strcmp`, today :322) and returns CF_FALSE for an entry whose
+    `holds` is 0. It goes in `cmake/configforge.experimental.symbols` as
+    `cf_format_holds 1.8` (gate.abi with `-DWRITE=ON`); it is in
+    `CF_SERIALIZE_HEADERS`' header, so the serialization library has it,
+    and `docs/API.md` is regenerated. No binding takes it (S-2's rule).
+  * **The values**, one line a format, from the encoders and readers
+    as they are today (each cell with the line that makes it so; the
+    rule for a cell the test contradicts is under "Cells the test
+    contradicts"):
+
+    | bit | ini | json, json5 | toml | yaml | cbor |
+    | --- | --- | --- | --- | --- | --- |
+    | INT, REAL, BOOL | no | yes | yes | no | yes |
+    | NULL | no (text) | yes | no (refused) | yes | yes |
+    | ARRAYS | yes | yes | yes | yes | yes |
+    | EMPTY_ARRAY, TABLE_ARRAYS, NESTED_ARRAYS | no | yes | yes | yes | yes |
+    | EMPTY_TABLE | no | yes | no | yes | yes |
+    | ANY_NAME | no | yes | no | yes | yes |
+    | EMPTY_NAME | no | yes | no | no | yes |
+    | LONG_PATHS | no | yes | no | yes | yes |
+    | LINE_BREAK | no | yes | yes | yes | yes |
+    | NUL | yes | yes | yes | yes | yes |
+
+    The reasons: INI's and YAML's readers hand over untyped text
+    (`ini.c:535`, `:560` pass `textual` true; `yaml.c:591` passes the
+    plain-scalar flag), so what is not text comes back as text, and
+    `CF_CODEC_TYPED` is absent from both (`ini.c:775`, `yaml.c:1374`),
+    but YAML writes a null as `null` (`yaml.c:1319`) and reads a plain
+    `null` as one (`yaml.c:578`), so YAML holds NULL and INI does not;
+    TOML's encoder refuses a null (`toml.c:1787`), so TOML has
+    `CF_REFUSES_NULL`; INI has syntax for arrays of values only
+    (`ini.c:641`, `CF_CODEC_SCALAR_ARRAYS`); TOML and INI write a
+    table's header only at its first leaf (`toml.c:1769`,
+    `ini.c:632` with `header_pending`), so a table with nothing in it,
+    or holding only such tables, is written as nothing; INI and TOML
+    write a name as it is and a table's path in a `char path[CF_KEY_MAX]`
+    (`toml.c:1757`, `ini.c:619`: a path of `CF_KEY_MAX - 2` bytes or
+    more is refused), JSON and CBOR write a name as a string and YAML
+    quotes what is not a bare word (`yaml.c`, `yaml_key`), so YAML
+    holds any name; YAML's reader refuses an empty key (`yaml.c:563`);
+    INI's encoder refuses a line feed (`ini.c:687`). `CF_HOLDS_NUL` is
+    set for all six on the same reading (INI's reader and writer carry
+    pointers and lengths, not C strings) and is the cell most likely to
+    be contradicted.
+  * **Considered, and not bits.** NaN and the infinities: the library
+    holds no real that is not finite (`numeric.c:586`; JSON5's
+    `Infinity` and `NaN`, TOML's `inf` and `nan` and CBOR's float
+    infinities are read as the text `inf`, `nan`; `json.c:614`,
+    `cbor.c:13`), so a pair cannot lose one; the edge document
+    `non_finite` shows it is text in every format. A mixed-type array:
+    all six hold it. Key order: the converter writes a table's values,
+    then its arrays, then its tables (W5-V1), so no pair keeps the order
+    of keys and the comparison below ignores it; the order of an
+    array's members is kept and compared. A key that is not text:
+    no reader gives one (CBOR's integer key and YAML's non-scalar key
+    are refused by name, docs/Conformance.md). Nesting depth: every
+    reader and writer allows the document and `CF_MAX_DEPTH - 1` levels
+    inside it (`json.c:984` and `cbor.c:818` say so; `toml.c:152`
+    and the YAML encoder's `yaml_enc_open` are the same count), so a
+    table nested 31 deep passes every pair and one nested 32 deep is
+    read by none; the `limits` check below holds all six to it.
+  * **The converter reads the table** (`tools/codec/convert.c`, W5-V1;
+    after this card its tree, passes, replay and writing are in
+    `tools/codec/convert_core.c`, below). For a target `cf_format_holds`
+    knows, W5-V1's passes 1 and 2 are written from the bits, and pass 3
+    keeps the encoder trial as the net under them; for any other target
+    (a codec a program registered cannot be a `--to` of this program, but
+    the core takes any `cf_codec`) passes 1 and 2 stay as W5-V1 wrote
+    them. The findings, each a line
+    `codec convert: <path>: <what>, which <format> cannot hold; left out`,
+    with `<what>` from the bit that is missing:
+
+    | bit missing | `<what>` |
+    | --- | --- |
+    | ANY_NAME | `a name it would write unquoted ('<name>')` (W5-V1's) |
+    | EMPTY_NAME | `an empty name` |
+    | ARRAYS | `an array` |
+    | EMPTY_ARRAY | `an empty array` |
+    | TABLE_ARRAYS | `an array of tables` |
+    | NESTED_ARRAYS | `an array of arrays` |
+    | EMPTY_TABLE | `an empty table` |
+    | LONG_PATHS | `a table path longer than <CF_KEY_MAX - 2> bytes` |
+    | LINE_BREAK | `text with a line break` (W5-V1's) |
+    | NUL | `text with a NUL byte` |
+    | NULL, with CF_REFUSES_NULL | `a null` (W5-V1's) |
+
+    Judged on what the document held before anything was left out: an
+    array that holds a table is "an array of tables" even if a name pass
+    left that table out, so the findings do not depend on the order of
+    the passes (W5-V1's text says its passes mark nodes; this card
+    makes pass 2 read the original children, and the test checks it).
+    An empty table is one with no child in the tree as read; a table
+    that is empty only because its members were left out is not a second
+    finding. The count of values written as text (W5-V1's third
+    sentence, `<format> carries no types: <n> value(s) that were ...`)
+    is n = every integer, real or boolean when the bit is missing, and
+    every null when NULL is missing and CF_REFUSES_NULL is not set: for
+    YAML that is no null (W5-V1's rule, "the target lacks CF_CODEC_TYPED",
+    counted them), for INI every one. The sentence names the kinds
+    counted: `... : <n> value(s) that were numbers, booleans or nulls ...`
+    stays word for word; only the count changes.
+  * **The core, `tools/codec/convert_core.c` and `convert_core.h`**, C89,
+    in `tools/codec/CMakeLists.txt`'s list. W5-V1's tree (`cv_` statics),
+    its three passes, the replay and the measured-then-written encoding
+    move here, behind one function, so the test and the fuzz target run
+    the converter without a process and without parsing its messages:
+
+    ```c
+    typedef enum cv_kind {
+        CV_NAME = 1, CV_EMPTY_NAME, CV_ARRAY, CV_EMPTY_ARRAY,
+        CV_TABLE_ARRAY, CV_NESTED_ARRAY, CV_EMPTY_TABLE, CV_LONG_PATH,
+        CV_NULL, CV_LINE_BREAK, CV_NUL, CV_OTHER /* a refusal the table
+                                                    did not predict */
+    } cv_kind;
+    typedef struct cv_finding {
+        cv_kind     kind;
+        const char* path; /* as the message prints it, in the arena */
+    } cv_finding;
+    typedef struct cv_result {
+        const cv_finding* findings;
+        size_t            nfindings;
+        size_t            as_text; /* values written as their text */
+        cf_blob           out;     /* the target's bytes, in the arena */
+    } cv_result;
+
+    /* `in` read through `from`, written through `to`: the tree, the
+       passes, the replay. 0 when written, with *res set; else the exit
+       code convert would give (2 for a bound, 3 for a refusal the
+       passes let through) with `err` set. Nothing is printed. */
+    int cv_convert(cf_arena* ar, const cf_blob* in, const cf_codec* from,
+                   const cf_codec* to, cv_result* res, cf_error* err);
+    ```
+
+    `convert.c` keeps the command line, `codec_read`, the notes, the
+    printing of a finding (a table from `cv_kind` to the `<what>` above)
+    and the exit codes; what it prints does not change, and step 1 proves
+    it with W5-V1's own `codec.convert`, unchanged. `CV_OTHER` is a
+    finding W5-V1's pass 3 made with `a value of this kind`; the test
+    treats it as a failure (the table did not predict it).
+  * **The test runs through the core, not the program.** The program
+    would be one process per document and pair (some 560 documents, 36
+    pairs, three hops: 60,000 starts, an hour on Windows); the core is
+    the same code, which `codec.convert` already runs through the
+    program; and a harness that holds the contents can compare them,
+    which text on a pipe cannot. `tests/codec/pairs.c` (new), target
+    `codec_pairs`, sources `pairs.c` and
+    `${CMAKE_SOURCE_DIR}/tools/codec/convert_core.c`, linked to
+    `configforge_serialize`, C 90, the warnings and analysis helpers;
+    registered in `tests/codec/CMakeLists.txt` under
+    `if(TARGET configforge_codec)`, and run only when the build has
+    `CF_WITH_EMIT`, `CF_WITH_REAL` and ini, json, toml, yaml and cbor
+    (else the test is not registered, as `codec.formats` is guarded by
+    `EMIT`). It includes `tests/codec/chain.h` (new, below) and sees
+    the public headers only, though `tests/CMakeLists.txt` defines
+    `CF_INTERNAL_API=1` for everything under it.
+  * **The contents, and what is compared: `tests/codec/chain.h`**, C89,
+    static functions, shared by `pairs.c` and `tests/fuzz/chain.c`:
+    * `ch_tree* ch_read(cf_arena*, const cf_blob*, const cf_codec*,
+      cf_error*)`: the codec's events into a tree of nodes (table, array,
+      scalar with `cf_value` and its text copied, the member's name or
+      none), the sink lending `reserve_text` and `reserve_work` from
+      the arena as `check` does (T-3).
+    * `const char* const* ch_lines(cf_arena*, const ch_tree*, size_t*)`:
+      one line for each scalar, `<path>\t<type>\t<text>`, and one
+      `<path>\ttable` or `<path>\tarray` for each container with nothing
+      in it (`<path>` empty for the document), sorted with `strcmp`, so
+      the order of keys does not matter and the order of an array's
+      members does (its index is in the path). A path is `.` and the
+      name for a table member, `[` and the index and `]` for an array
+      member; in a name, `\`, `.`, `[`, `]`, and every byte below 0x20
+      or equal to 0x7F, are written `\xNN`, so no two trees have one
+      list. Types are `cf_type_name`'s; a text is the bytes with `\n`,
+      `\r`, `\t`, `\\` and the other bytes below 0x20 and 0x7F written
+      `\n`, `\r`, `\t`, `\\` and `\xNN`; a real is `cf_value_to_text`'s,
+      so `-0.0` and `0.0` are one, which is how the library names them.
+    * `ch_tree* ch_lower(cf_arena*, const ch_tree*, unsigned holds)`:
+      what the table says a format with `holds` writes of a tree, as a
+      new tree, written from the bits and from nothing else, bottom up:
+      1. a table member whose name is not `[A-Za-z0-9_-]+` and `holds`
+         lacks ANY_NAME, or is empty and lacks EMPTY_NAME, is dropped
+         with everything under it;
+      2. a table member whose joined path of table names from the
+         document is over `CF_KEY_MAX - 2` bytes (arrays end the count)
+         and `holds` lacks LONG_PATHS is dropped with everything under
+         it;
+      3. a scalar: an int, real or bool whose bit is missing becomes the
+         text `cf_value_to_text` gives; a null whose bit is missing is
+         dropped when `CF_REFUSES_NULL` is set, else becomes the text
+         `null`; a text with `\n` is dropped when LINE_BREAK is missing,
+         one with a NUL when NUL is missing;
+      4. an array: dropped, with everything under it, when ARRAYS is
+         missing; or when its children as read (before 1 to 3) hold a
+         table and TABLE_ARRAYS is missing, hold an array and
+         NESTED_ARRAYS is missing, or are none and EMPTY_ARRAY is
+         missing; its members that 1 to 3 dropped leave it, and the
+         indexes close up;
+      5. a table member that is empty - as read, or with all its members
+         dropped by 1 to 4 - and `holds` lacks EMPTY_TABLE is dropped.
+         The document itself is never dropped.
+    * `cf_bool ch_same(const ch_tree*, const ch_tree*)`: equal `ch_lines`.
+  * **What is checked**, in `pairs.c`, for each document `D` read through
+    its own format `F` (a document the reader refuses is counted and
+    skipped), for each ordered pair (A, B) of the writers `ini json json5
+    toml yaml cbor` - all 36, A = B included:
+    1. **hop 0**, `D` into A: `x1 = cv_convert(D, F -> A)`.
+    2. **hop 1**, `x1` into B: `x2`; **hop 2**, `x2` into A: `x3`.
+    3. For each hop, with `m` the tree read from the hop's input bytes by
+       the hop's source codec, `r` the tree read from its output bytes by
+       the target codec: `ch_same(r, ch_lower(m, holds(target)))`, else
+       `FAIL <doc> <A> -> <B> hop <n>: <first differing line>`. And if
+       `ch_same(m, r)` is false, the hop reported a finding or counted a
+       value written as text (`nfindings + as_text > 0`): a loss is never
+       quiet. A finding of kind `CV_OTHER`, and a hop for which the
+       target's reader refuses what its writer wrote, are failures
+       (a writer must be read by its own reader).
+    4. For the pair: if `holds(B)`, without `CF_REFUSES_NULL`, has every
+       bit `holds(A)` has, `ch_same(read(x3, A), read(x1, A))` - a pair
+       the table says loses nothing loses nothing - and, when A = B,
+       `x3` and `x1` are the same bytes (writing is stable).
+    A run prints, last, `pairs: <n> documents (<m> not read), 36 pairs,
+    <k> checks, <f> failures` and exits 1 when `f` is not 0, printing
+    the first 20 failures only.
+  * **The documents.** Three sources, one list, `--docs <manifest>`:
+    a manifest line is `<format>\t<path>\t<mode>`, mode `-` (the file as
+    it is), `wrap` (the suites' own wrapping, below) or `split` (the file
+    holds documents separated by a line of five dashes, as
+    `tests/support/data/edges.*` do, today `tests/unit/data/`).
+    1. **Edge documents**, built in `pairs.c` from JSON text (JSON holds
+       every type) and read through `json`, so the default run needs no
+       file and no network:
+       * `types`: `{"i": 1, "f": 0.5, "b": true, "n": null, "s": "x"}`;
+       * `ints`: `-9223372036854775808`, `9223372036854775807`, `0`, `-1`;
+       * `reals`: `5e-324`, `1.7976931348623157e308`,
+         `0.30000000000000004`, `0.1`, `1e22`, `1e-7`, `-0.0`, `1e16`,
+         `123456789012345.6`;
+       * `non_finite`: the texts `nan`, `inf`, `-inf`, `Infinity`;
+       * `texts`: the empty text; one with leading and trailing spaces;
+         `"`, `\`, `'q'`, `#`, `;`, `=`, `[x]`; `${x}` and `$${y}`
+         (nothing here expands them); a tab; U+00E9, U+20AC, U+1F600,
+         U+10FFFF, U+FFFE, U+007F, U+0085, U+2028;
+       * `breaks`: `"a\nb"`, `"a\r\nb"`, `"a\rb"`, and a plain `"k": "v"`;
+       * `nul`: `"x\u0000y"` and `"\u0000"`;
+       * `names`, at the root and again inside a table `"t"`:
+         `Mixed_Case`, `with space`, `dot.ted`, `quote"d`, a tab,
+         `é`, the empty name, `a-b_c9`;
+       * `arrays`: `[1,2,3]`, `[1,"a",true,null,0.5]`, `["a","b"]`, `[7]`;
+       * `arrays_hard`: `[]`, `[{"a":1},{"b":2}]`, `[[1,2],[3]]`,
+         `[[[1]]]`, `[{"a":[1,2]}]`;
+       * `empty_tables`: `{"e": {}, "n": {"e": {}}, "k": 1,
+         "t": {"only": {"x": 1}}, "o": {"p": {}}}`;
+       * `order`: `{"z": 1, "a": 2, "m": {"b": 1, "a": 2}}`;
+       * `deep31`: the document and 31 nested tables named `a`, a leaf in
+         the last; and `ok_path`: four nested tables with names of 60
+         bytes and a leaf; `long_path`: six with names of 50 bytes and a
+         leaf (a path of 305 bytes);
+       * `big`: an array of 2,000 integers and a text of 70,000 bytes;
+       * `looks`: the texts `true`, `123`, `null`, `0x1F`, `1e3`, `~`,
+         `yes`, beside the integer `5`.
+       * and the check `limits`, which is not a pair: a document of 32
+         nested tables is refused by every one of the eight readers the
+         build has, each by its own message.
+    2. **The project's own fixtures**, in the default run: the manifest
+       `tests/codec/pairs.manifest` (new) lists, with paths from the
+       source root that `pairs.cmake` expands: `tests/support/data/edges.json` (today `tests/unit/data/`),
+       `edges.toml` and `edges.ini` (mode `split`: the readers refuse
+       most of them, which is what they are for; those that read are
+       used), `examples/c/layers/app.toml`,
+       `examples/c/layers/conf.d/10-site.ini`, `90-local.ini`,
+       `examples/c/flags/features.ini`,
+       `examples/c/flags/conf.d/50-canary.ini`,
+       `tests/conformance/data/module.json`.
+    3. **The conformance suites' valid documents**, only under
+       `EXTRA=conformance` (they are fetched with git, which needs the
+       network the first time; the default run never touches them):
+       `scripts/check/pairs.py <codec_pairs> <suites-dir>` imports
+       `scripts/check/conformance.py` (its `json_suite`, `json5_suite`,
+       `toml_suite`, `yaml_suite`, `cbor_suite`, which list the valid
+       documents; the `y_` cases of JSONTestSuite are `json_suite`'s),
+       writes the manifest to a temporary directory and runs the
+       program; the CBOR vectors are written as files there, as
+       `cbor_suite` does. The suites' lone values and lists are
+       configurations only as the member `v` of a table: conform.c's
+       wrapping (`json` when the root is not an object, `json5` and
+       `cbor` always, today `tests/conformance/conform.c:330-370`) moves
+       to `tests/conformance/wrap.h` as one static function
+       `cf_bool conform_wrap(const char* format, cf_blob* blob)`,
+       included by `conform.c` and by `pairs.c` for mode `wrap`;
+       `conform.c`'s behaviour is unchanged and the floors in
+       `tests/conformance/floor.txt` prove it. YAML documents the configuration
+       refuses by name (docs/Conformance.md) are the "not read" count.
+  * **Cells the test contradicts.** The first run of `codec_pairs` with
+    the table above prints every difference between the table and the
+    codecs. For a cell where the codec holds less than the table says and
+    its writer or the converter gave a finding or refused (a visible
+    loss), the table's bit is cleared and the cell in the table above is
+    edited in the same commit. For a cell where a document went through
+    a writer and its reader gave something else with no refusal and no
+    finding (a silent loss, `m` and `r` differ and `nfindings + as_text`
+    is 0 and the table has no such bit to clear), it is a bug in that
+    reader or writer: stop (see "stop if"). A cell where the codec holds
+    more than the table says is made true by setting the bit. Every
+    cell changed is listed in the commit message with the document that
+    showed it.
+  * **The fuzz target, `tests/fuzz/chain.c`** (new): a libFuzzer entry
+    point, `LLVMFuzzerTestOneInput`, built as `fuzz_chain` beside the
+    readers' (`tests/fuzz/CMakeLists.txt`, after the `foreach`, with
+    `convert_core.c` among its sources and `configforge_serialize` for
+    link; not in `all_readers`: it has no reader number). The input: byte
+    0 picks the source format, `ini json json5 toml yaml cbor xml
+    properties` by its value modulo 8 (a format the build lacks ends the
+    run); byte 1 the number of hops, 1 to 4 (modulo 4, plus 1); then one
+    byte a hop picking the writer from `ini json json5 toml yaml cbor`
+    (modulo 6); the rest is the document. The source's reader must accept
+    it, else the run ends. Each hop is checked as step 3 above does
+    (`ch_lower` and the quiet-loss rule) and a failure `abort()`s, so
+    libFuzzer keeps the input; a hop whose conversion is refused by the
+    core (the bound, D-82's) ends the run. Registered as `fuzz.chain`
+    with the readers' `-max_total_time=${CF_FUZZ_SECONDS}`, `-max_len=8192`
+    and `-seed_inputs=` three files written by CMake at configure time
+    with `file(WRITE)`, bytes all from `0` to `5` so no NUL is needed:
+    `00` `1` `0` then `{"a": 1, "b": [true, null]}`; `31` `2` `1` `4`
+    then `[s]\nk = v\n` ... (the card's carrier writes the three as
+    these three: JSON through toml and back; INI through json; TOML
+    through cbor through yaml), each file `<source byte><hop count
+    byte><writer bytes><document>`. Where `CF_FUZZ` is off nothing is
+    built; `-DEXTRA=fuzz` runs it.
+  * **The generated table.** `tools/codec/pairs.c` (new, statics `pr_`),
+    `int codec_pairs(int argc, char** argv);` in `codec.h`, dispatched
+    by `codec.c` as `pairs`; the usage gains
+    `"  configforge codec pairs [--format text|markdown]\n"`
+    `"                                 what each format can hold, and what each\n"`
+    `"                                 pair of formats loses\n"`.
+    It reads `cf_format_holds` only, for the names `ini json json5 toml
+    yaml cbor`, so its output is the same in every build; a name
+    `cf_format_holds` does not know ends the run, exit 2, `codec: no
+    table for '<name>'` (that is how a writer added later is found: see
+    `test_holds`). Two tables; the first has a row for each bit and a
+    column for each format, a cell `yes`, `as text` (a type bit that is
+    missing, and NULL when CF_REFUSES_NULL is not set) or `left out`
+    (any other missing bit, and NULL with CF_REFUSES_NULL); the second a
+    row for each ordered pair of different formats, in the column order,
+    listing the bits A has and B lacks, each as `<row label> (<as text or
+    left out, B's cell>)`, joined by `, `, or `nothing`. The row labels,
+    in bit order: `integers`, `reals`, `booleans`, `null`, `arrays of
+    values`, `empty arrays`, `arrays of tables`, `arrays of arrays`,
+    `empty tables`, `names beyond letters, digits, _ and -`, `an empty
+    name`, `a long table path`, `line breaks in text`, `NUL bytes in
+    text`. The markdown form starts
+    `| What | ini | json | json5 | toml | yaml | cbor |` and
+    `| ---- | --- | ---- | ----- | ---- | ---- | ---- |` and, after a
+    blank line, `| From | To | Lost |` and `| ---- | -- | ---- |`; the
+    text form is the same rows with tabs. `docs/Formats.md` gains a
+    section "What each format holds, and what a conversion loses":
+    a paragraph (what the bits are, that a type a format lacks is
+    written as text and anything else is left out and named, that no
+    pair keeps the order of keys, that NaN and infinity are text, and
+    that a long table path is one over `CF_KEY_MAX` less two bytes, 254
+    by default), then `<!-- pairs:begin -->`, the markdown, and
+    `<!-- pairs:end -->`. The page is held by `tests/codec/pairs_page.cmake`,
+    `codec.pairs_page`, a copy of `formats.cmake`'s comparison
+    (without its `EMIT` guard: the table is the same in every build)
+    with the regeneration message
+    `regenerate it with configforge codec pairs --format markdown, and put the output between the markers`;
+    it also asserts `pairs --format sarif` exits 2 and `pairs --format
+    text` has 30 lines in its second table. It is not a `gate.*` script
+    because it needs the built program, as `codec.formats` does.
+  * **The one table in the unit tests.** `lib/serialize/tests/test_holds.c`
+    (new, A-1b's place for a test that includes only `cf_serialize.h`;
+    its name goes in that component's test list, as A-1b made it)
+    holds the table to the codecs: for each of the six, if
+    `cf_codec_by_name` finds it, `cf_format_holds` is CF_TRUE; for `xml`,
+    `properties` and `nosuch` CF_FALSE with `*holds` untouched;
+    `(caps & (CF_CODEC_ARRAYS | CF_CODEC_SCALAR_ARRAYS)) != 0` is
+    `holds & CF_HOLDS_ARRAYS`; `caps & CF_CODEC_ARRAYS` is all of
+    EMPTY_ARRAY, TABLE_ARRAYS and NESTED_ARRAYS and its absence none;
+    `caps & CF_CODEC_TYPED` is all of INT, REAL and BOOL and its absence
+    none; `CF_REFUSES_NULL` only without `CF_HOLDS_NULL`; and every codec
+    in `cf_codec_at(i)` with an encoder is one of the six (a writer
+    added without a table row fails here). `lib/config/tests/test_roundtrip.c`
+    (today :107-124) loses `arrays`, `nulls` and `lines` from its
+    `format` struct and `g_formats`, keeps `compare`, and reads the rest
+    from `cf_format_holds` (`arrays` is 1 with `CF_CODEC_ARRAYS`, 2 with
+    `CF_CODEC_SCALAR_ARRAYS` only; `nulls` is `CF_HOLDS_NULL`; `lines`
+    `CF_HOLDS_LINE_BREAK`); its self-check at :1382 is test_holds'.
+  * **The edits to W5-V1's cases** (`tests/codec/convert.cmake`), added:
+    `empty_toml`: `{"e": {}, "k": 1}` `--to toml`: 0, stderr `e: an empty
+    table, which toml cannot hold; left out`; `--strict`: 1.
+    `yaml_null`: `{"a": null, "b": 1}` `--to yaml`: 0, stderr has no
+    `carries no types` line about the null (`b` is counted: `1 value(s)`).
+    `long_path`: a table nested six deep with names of 50 bytes, `--to ini`:
+    stderr has `a table path longer than 254 bytes`.
+* **files**: `lib/serialize/include/configforge/cf_serialize.h`,
+  `lib/serialize/src/codec.c`, `cmake/configforge.experimental.symbols`,
+  `tools/codec/convert_core.c` (new), `tools/codec/convert_core.h` (new),
+  `tools/codec/convert.c`, `tools/codec/pairs.c` (new),
+  `tools/codec/codec.h`, `tools/codec/codec.c`,
+  `tools/codec/CMakeLists.txt`, `tests/codec/chain.h` (new),
+  `tests/codec/pairs.c` (new), `tests/codec/pairs.manifest` (new),
+  `tests/codec/pairs_page.cmake` (new), `tests/codec/convert.cmake`,
+  `tests/codec/CMakeLists.txt`, `tests/conformance/wrap.h` (new),
+  `tests/conformance/conform.c`, `tests/fuzz/chain.c` (new),
+  `tests/fuzz/CMakeLists.txt`, `lib/serialize/tests/test_holds.c` (new),
+  `lib/serialize/tests/CMakeLists.txt` (its test list),
+  `lib/config/tests/test_roundtrip.c`, `scripts/check/pairs.py` (new),
+  `scripts/verify.cmake` (the conformance step: build target
+  `codec_pairs`, run `pairs.py`); last: `docs/Formats.md`,
+  `docs/Tools.md`, `docs/API.md` (regenerated), `docs/Decisions.md`,
+  `CHANGELOG.md`, `docs/Roadmap.md`.
+* **steps**:
+  1. A change that moves code and nothing else: the tree, passes, replay
+     and writing of `convert.c` into `convert_core.c` behind
+     `cv_convert`, `convert.c` printing from `cv_result`.
+     `cmake --build --preset default && ctest --preset default -R codec.convert`
+     passes as it did before the move (the same cases, unchanged).
+  2. `lib/serialize/tests/test_holds.c` and its line in that test list. See it
+     fail: the build stops (`cf_format_holds`, `CF_HOLDS_INT` undeclared).
+  3. The enum, `cf_format_info.holds`, `cf_format_holds`, the table of
+     values above. `ctest --preset default -R test_holds` passes.
+     `cmake -DSRC=. -DWRITE=ON -P cmake/gates/GateAbi.cmake` (POSIX
+     shell), `cmake -P scripts/generate/apiref.cmake`;
+     `ctest --preset default -R "gate\\.(abi|apiref)"` passes.
+  4. `chain.h`, `pairs.c`, `pairs.manifest`, their registration as
+     `codec.pairs`, the converter still on W5-V1's own passes. See it
+     fail: `ctest --preset default -R codec.pairs` prints `FAIL
+     empty_tables json -> toml hop 1` (the table says TOML writes no
+     empty table, and no finding was given: a quiet loss) and `FAIL
+     types json -> yaml hop 1 ... as_text` (the null counted as text),
+     and the run exits 1. The first run's other differences are settled by
+     "Cells the test contradicts" before step 5.
+  5. The passes of `convert_core.c` from the bits, the three new
+     `convert.cmake` cases. `ctest --preset default -R "codec\\.(convert|pairs)"`
+     passes.
+  6. `tools/codec/pairs.c`, `pairs_page.cmake`, `docs/Formats.md`'s
+     section. See it fail first: `ctest -R codec.pairs_page` fails with
+     `has no <!-- pairs:begin --> and <!-- pairs:end --> markers`; put
+     the output of `configforge codec pairs --format markdown` between
+     them; it passes.
+  7. `test_roundtrip.c` reads the table; `ctest -R "test_(roundtrip|holds)"`.
+  8. `wrap.h` and `conform.c` using it, `pairs.py`, the verify step.
+     `cmake -DSOURCE=index -DJOBS=3 -DWORK=$HOME/cfv -DEXTRA=conformance -DMODE=quick -P scripts/verify.cmake`
+     prints the floors unchanged and `pairs: ... 0 failures`; read the
+     "not read" count and write it in the commit message.
+  9. `tests/fuzz/chain.c` and its registration; `-DEXTRA=fuzz` where
+     clang has libFuzzer: `fuzz.chain` runs its seconds clean.
+  10. The documents. ACCEPT-LINUX, ACCEPT-WINDOWS.
+* **accept**: ACCEPT-LINUX with `-DEXTRA="abi;conformance;fuzz"` (the new
+  experimental name, the suites through every pair, the new target),
+  ACCEPT-WINDOWS (`codec.pairs`, `codec.pairs_page`, `test_holds`
+  on MSVC; conformance and fuzz are not run there), ACCEPT-CI. Also
+  `gate.apiref` and `gate.abi` pass.
+* **stop if**: a document goes through a writer and its own reader
+  gives something else with no refusal and no finding (a silent loss
+  the table has no bit for): stop, write the document, the pair and the
+  hop in the notes, and hand back - it is a reader or writer bug,
+  and the card is accepted only when it is fixed or the maintainer
+  decides to make it a bit. Or: W5-V1's converter is not built as its
+  card says (no tree, or its passes mark nodes in a way that cannot
+  read the original children): follow what is there, make
+  `cv_convert` out of it, say so in the notes, and stop only if the
+  findings cannot be made independent of the order of the passes. Or: a
+  writer's output is refused by its own reader for depth, size or a
+  limit that `limits` and the edge documents do not already state (a
+  new limit: name it). Or: `CF_EXPERIMENTAL(1, 8) cf_bool cf_format_holds(...)`
+  is moved by clang-format 22 so that gate.abi's regex does not find it
+  (S-2's own stop-if).
+* **docs**: add **D-109**, "What a format can hold, and every pair
+  tested", in D-80's shape: the question (what a conversion loses, said
+  once and tested); the options (more caps bits; a member of
+  `cf_codec`; a table inside the tools; a second word of bits kept
+  with the formats); the decision (the fourth; the fourteen bits and
+  `CF_REFUSES_NULL`, with what was considered and is not a bit; the
+  converter and the test read the one table; the test runs through the
+  core and why; the oracle written from the bits alone; the three kinds
+  of document and why the suites are an `EXTRA`; the table generated and
+  held; experimental in 1.8); compatibility (a new experimental
+  function and enum values; convert names more findings than W5-V1
+  said and counts a YAML null no longer as text). `docs/Tools.md`, the
+  codec section: `pairs`, and in "Converting between formats" the list
+  of what is named, now from the table, with `empty_toml`'s line as the
+  example. CHANGELOG, `### Added`: "`cf_format_holds` (experimental):
+  what each format that has a writer can hold. `configforge codec
+  pairs`: what each format holds and what each pair of formats loses,
+  generated into docs/Formats.md. Every document of the conformance
+  suites and the project's fixtures is tested through every ordered pair
+  of the six writing formats, and a fuzz target takes a random document
+  through a random chain (D-109)." `### Changed`: "`configforge codec
+  convert` names an empty table, a table path over `CF_KEY_MAX` less two
+  bytes, a name that is empty and a text with a NUL byte where the
+  target cannot hold them, from one table, and no longer counts a YAML
+  null as written as text (D-109)." Roadmap: the row "Tests that
+  convert between every pair of formats" goes 🟩, `D-109`; the row
+  "Formats registered, with what each can do" goes 🟨, "what each
+  writer can hold, as one table the converter, the tests and the page
+  read, done (D-109); the ways to read it, and `docs/Limits.md`
+  generated from it, left (A-11)".
+* **notes**:
+
+---
+
+## W5-G4 - Generators outside the tree
+
+* **id**: W5-G4
+* **goal**: `configforge gen --schema S --lang X`, when X is no entry of
+  `gen_langs[]`, runs the program `configforge-gen-X` found beside
+  `configforge-gen` or on the PATH, hands it the contract as JSON on its
+  standard input and the command line's other options on its own, and
+  returns its exit code; `--lang contract-json` writes that JSON itself,
+  for whoever writes a generator.
+* **why**: a team that wants the contract in Go, Zig or a schema of its
+  own should not have to change this project: the contract is written
+  once, and each language is a program that reads it, as git finds its
+  subcommands. The JSON is also the contract in a form any language
+  reads without the library.
+* **needs**: W5-G3
+* **size**: large
+* **decided**:
+  * **The order of a `--lang`** (in `tools/gen/gen.c`, W5-G1's table
+    lookup, which this card extends and does not move):
+    1. a name that is an entry of `gen_langs[]`: the table's writer, and
+       nothing outside the tree is looked at - a program called
+       `configforge-gen-c` on the PATH never replaces C;
+    2. else, a name that is not 1 to 64 bytes of `a-z`, `0-9` and `-`,
+       not starting with `-` (T-1's rule for a command name, so `../x`
+       and `Fake` are never run): `gen: '<name>' is not a language name`,
+       exit 2;
+    3. else the program `configforge-gen-<name>` (on Windows
+       `configforge-gen-<name>.exe`) is looked for: in the directory of
+       this program first, then in each directory of the PATH, never the
+       current directory and never an empty PATH entry; the first that
+       is a regular file that may be executed (Windows: that exists and
+       is not a directory) is the one. Not found, exit 2, W5-G1's text
+       extended to say where it looked:
+       `gen: no language '<name>'; there are: <the table's names, in its order>; no configforge-gen-<name> in <dir> or on the PATH`
+       (`<dir>` is this program's directory, and when it is not known -
+       POSIX, `argv[0]` without a `/`, found through the PATH itself - the
+       text is `...; no configforge-gen-<name> on the PATH`);
+    4. else the schema is read as for any language (a schema that cannot
+       be read is `gen: <message>` and exit 2, and **nothing is
+       started**); then the program is run.
+    The table's names are the ones W5-G1 to W5-G3 and this card's one
+    entry gave it, in its order: `c, cpp, rust, python, contract-json`.
+  * **Built in: `contract-json`.** A last entry of `gen_langs[]`, name
+    `contract-json`, extension `.json`, no identifier check, no reserved
+    words, whose writer writes the JSON below. It is how an author sees
+    what a generator is given (`configforge gen --schema S --lang contract-json`),
+    it is what is piped to a generator, and it is the golden file's
+    source, so there is one writer. Adapt the writer to the table's
+    entry as W5-G1 left it (read `gen_lang` in `tools/gen/gen.c`): the
+    function below is the work, the entry's writer calls it and writes the
+    bytes to the entry's output.
+  * **The JSON**, in `tools/gen/contract.c`, declared in `gen.h`:
+
+    ```c
+    /* The contract as the JSON every generator outside the tree is
+       given: version 1 of "configforge-contract". `schema` is the schema
+       file's name without its directories, `name` the --name given or
+       NULL, `text` the schema file's bytes. Written into `out`, measured
+       or written as every sink is. 0, or 2 with `gen: '%s' has a value
+       the contract JSON cannot hold` on stderr for a definition with a
+       flag no name is known for (a bit above CF_RESTART), or a value of
+       a type a definition cannot have. */
+    int gen_contract_json(const cf_defset* ds, const char* schema,
+                          const char* name, const char* text, size_t n,
+                          cf_sink* out);
+    ```
+
+    Layout: two spaces of indent, one member or array element a line,
+    except an array of scalars, which is on one line (`["a", "b"]`, `[]`
+    when empty); a newline at the end; strings through
+    `cf_sink_json_string` (UTF-8 as it is, control bytes `\u00xx`),
+    integers and reals through `cf_value_to_text` (a real always has a
+    `.` or an exponent, so it is never taken for an integer; an integer is
+    its exact decimal digits, 64 bits, which a reader in a language of
+    doubles must read as it can - `tests/doctor/contract.schema.json`'s
+    `-9007199254740993` is in the golden file). Members, in this order,
+    all always present - an absent value is `null`, so a generator never
+    tests for a missing key:
+
+    ```json
+    {
+      "format": "configforge-contract",
+      "version": 1,
+      "schema": "contract.schema.json",
+      "name": null,
+      "schema_text": "<the schema file, escaped>",
+      "open": ["plugins."],
+      "definitions": [
+        {
+          "key": "server.port",
+          "type": "int",
+          "description": "Where the server listens: ...",
+          "flags": [],
+          "on_invalid": "strict",
+          "replaced_by": null,
+          "default": 8080,
+          "min": 1,
+          "max": 65535,
+          "min_length": null,
+          "max_length": null,
+          "allowed": null,
+          "aliases": null,
+          "policy": null,
+          "list": null
+        }
+      ]
+    }
+    ```
+
+    The members of a definition, each from `cf_def`
+    (`include/configforge/cf_define.h:68`, `lib/config/include/configforge/cf_define.h`
+    after A-1): `key`; `type`, one of `"bool"`, `"int"`, `"real"`,
+    `"text"`; `description`, a string or `null` (as `d->description`,
+    where the schema gives none); `flags`, an array of names in this
+    order of those set, `"required"`, `"sensitive"`, `"deprecated"`,
+    `"transient"`, `"restart"` (`CF_REQUIRED` to `CF_RESTART`, as
+    `c_flags` names them); `on_invalid`, `"strict"` or `"fallback"`;
+    `replaced_by`; `default`, `null` without `has_default`, else the
+    value (`true`, a number, a string) and, for a list, the array of its
+    default values (`[]` for a default that is empty); `min` and `max`,
+    the range of an int or a real when `has_range`, else `null`;
+    `min_length` and `max_length`, the text bounds, `null` for 0 (0 is
+    "no bound" for both); `allowed`, the permitted spellings or `null`;
+    `aliases`; `policy`; `list`, `null` for a scalar, else
+    `{"mode": "replace"|"append", "separator": null|","}` (the separator as
+    a one-byte string, `null` for 0). The definitions are in the order
+    `cf_defset_at` gives them. `open` is `ds->open_prefixes`, in order.
+    `schema_text` is the file as read (a function that reads the schema
+    whole - W5-G2 added one for the Rust file; use it if `contract.c`
+    has it, else `cf_blob_file`). Not in it: the schema's closedness
+    (the C writer does not write it either), the compile-time checks
+    `gen_checks` makes (a language's own), and the version of the
+    library (a golden file would change with every release).
+    Rejected: the library's own `cf_schema_write` as the hand-over (a
+    generator would have to walk JSON Schema's nesting, `type` unions
+    and `$defs` to find a key, which is the work this JSON ends); the
+    definitions as C structs in a binary form (no language but C reads
+    it); omitting a member that is absent (every generator then tests
+    for it).
+  * **What the program is given.** On its standard input, the JSON,
+    whole, written by `gen_contract_json` into a buffer first (the
+    schema's size is a few kilobytes, a contract of 3,000 keys 600
+    KiB), then to the pipe; the pipe is closed when it is written. On its
+    command line: every argument `configforge gen` was given but `--lang
+    <lang>` and `--schema <schema>` and their values, in order and
+    unchanged - that is, `--name <name>` and `--out <file>` when they
+    were given, and nothing when not. Their meaning, which the docs state
+    for authors: `--name N` is what the generated thing is called in the
+    generator's own language (it is for the generator to check it and to
+    have a default); `--out F` is where the generated file goes, without
+    it standard output. `gen` checks neither (W5-G1's identifier checks
+    are the built-in languages'). The program writes its own output: its
+    standard output and standard error are this program's (inherited),
+    and `gen` writes nothing to either, so a generator's messages reach
+    the user as they were written. A file `--out` names is the
+    generator's; `gen` does not create, truncate or remove it (a built-in
+    language removes its file when it fails; a program outside the tree
+    owns its own).
+  * **The exit code.** The generator's own code passes through unchanged
+    (0 done; `gen` itself uses 0, 1 for a `check` failure that no
+    generator can have, and 2). If the program cannot be started:
+    `gen: cannot run <path>`, exit 2. If it is stopped by a signal
+    (POSIX) or ends with a code above 255 (Windows, a crash):
+    `gen: <path> was stopped (signal <n>)` or `gen: <path> stopped with
+    code 0x<8 hex digits>`, exit 2. A generator that does not read its
+    input and exits is not a failure of `gen`: a write that finds the pipe
+    closed is dropped, and the generator's exit code is returned.
+  * **Starting it, in `tools/gen/spawn.h`**, with `spawn_posix.c`,
+    `spawn_win32.c` and `spawn_none.c`, each guarded whole by
+    `CF_PLATFORM_POSIX`, `CF_PLATFORM_WIN32` and neither (the platform
+    decided where the library decides it, `configforge/cf_platform.h`,
+    as T-1's run files do); CMake builds the one the platform has, by
+    the test `tools/configforge/CMakeLists.txt` uses. C89, no internal
+    tier needed:
+
+    ```c
+    /* Finds configforge-gen-<lang>: beside this program (the directory
+       of argv[0] when it has a / or \, on Windows always the module's),
+       then on the PATH. A malloc'd path, or NULL with *dir set to this
+       program's directory (malloc'd; NULL when not known). */
+    char* spawn_find(const char* argv0, const char* lang, char** dir);
+
+    /* Runs `path` with the arguments argv[1..argc-1] but each name in
+       `drop` (NULL-terminated; "--lang", "--schema") and the argument after
+       it, `input` (n bytes) on its standard input, its other two handles
+       this program's; waits for it. 0 when it ran to its end, *code its
+       exit code (0 to 255); 1 when it could not be started; 2 when it was
+       stopped, the signal or the code in *code. */
+    int spawn_run(const char* path, int argc, char** argv, const char* const* drop,
+                  const char* input, size_t n, int* code);
+    ```
+
+    POSIX (`#define _POSIX_C_SOURCE 200112L` first, before any header,
+    as T-1's `run_posix.c`; `<spawn.h>`, `<signal.h>`, `<sys/stat.h>`,
+    `<sys/wait.h>`, `<unistd.h>`, `<errno.h>`): `spawn_find` tries
+    `<dir>/<program>` when `argv[0]` holds a `/`, then each `:`-separated
+    PATH entry that is not empty, each with `stat` (regular file) and
+    `access(path, X_OK)`. `spawn_run` builds the new `argv` with `malloc`
+    (path, then the kept arguments), makes a `pipe`, and starts the
+    program with `posix_spawn` and the file actions `adddup2(rd, 0)`,
+    `addclose(rd)`, `addclose(wr)` - a failure of the `exec` is then
+    the call's own error, so no exit code is mistaken for one, which a
+    `fork` and `_exit(127)` would do. `extern char** environ` is declared
+    in the file. `SIGPIPE` is set to ignored (`signal(SIGPIPE, SIG_IGN)`)
+    before the write and restored after the wait; the write loops
+    over `EINTR` and short writes and drops `EPIPE`; the write end is closed;
+    `waitpid` loops over `EINTR`; `WIFEXITED` gives the code,
+    otherwise `WTERMSIG`. Windows (`<windows.h>`, `<shellapi.h>`):
+    `spawn_find` takes the module's directory from `GetModuleFileNameW`
+    (doubled from 260 `wchar_t` to at most 32768) and tries
+    `<dir>\configforge-gen-<lang>.exe`, then each entry of `PATH` split at
+    `;`, an empty entry skipped, a pair of `"` removed, with
+    `GetFileAttributesW` (exists, not a directory); only `.exe` - not
+    `PATHEXT` and no `.cmd` or `.bat`, which `CreateProcessW` runs only
+    through `cmd.exe` and its quoting (the 2024 batch-file argument
+    injections), a generator written as a script needs an `.exe` to start
+    it. `spawn_run` takes the arguments from
+    `CommandLineToArgvW(GetCommandLineW())`, the same indexes as the
+    narrow `argv` (T-1 relies on it and says to stop if the counts
+    differ), drops the same indexes, and quotes each by T-1's rule;
+    `CreatePipe` with an inheritable read end, `SetHandleInformation(wr,
+    HANDLE_FLAG_INHERIT, 0)`, `STARTUPINFOW` with `STARTF_USESTDHANDLES`
+    and this program's own output and error handles, `CreateProcessW`
+    with `bInheritHandles` true and `SetConsoleCtrlHandler(NULL, TRUE)`
+    before it (Ctrl+C is the child's to answer, as T-1); `WriteFile`
+    in a loop, `ERROR_BROKEN_PIPE` and `ERROR_NO_DATA` dropped; the write
+    handle closed; `WaitForSingleObject`, `GetExitCodeProcess`, every
+    handle closed. Each failure returns early rather than testing inside
+    an expression (MSVC's `/analyze`). `spawn_none.c`: `spawn_find`
+    returns NULL; `gen.c` then writes `gen: no language '<name>'; there
+    are: ...; this platform cannot run another program` (the table, and
+    that sentence in place of "no configforge-gen-... in ..."), exit 2,
+    and `spawn_run` is not reached.
+  * **The test**, no Python and no shell script: `tests/gen/fake_gen.c`
+    (new), C89, built as the target `gen_fake`, `OUTPUT_NAME
+    configforge-gen-fake`, in `${CMAKE_CURRENT_BINARY_DIR}/ext`
+    (`RUNTIME_OUTPUT_DIRECTORY`), linked to nothing; standard input and
+    output in binary mode under `#ifdef _WIN32` (`_setmode` with
+    `_O_BINARY`). It prints its arguments to standard error as
+    `fake: args=<each argument after argv[0], joined by |>`, then acts on
+    the value of `--name`: `exit7` - exits 7 after printing `fake: exit 7
+    asked for` to standard error; `noread` - exits 3 without reading its
+    input; `ran` - creates the file `ran.marker` beside its `--out`'s
+    directory, reads nothing, exits 0; anything else, or no `--name` -
+    reads its standard input whole and writes it to the `--out` file
+    (`"wb"`) or to standard output, exit 0. Three more programs in
+    `ext/`, copies made by `POST_BUILD` with `cmake -E copy`: a copy of
+    `gen_fake` named `configforge-gen-c${CMAKE_EXECUTABLE_SUFFIX}` (a
+    program that must never be run for `--lang c`) and a copy of
+    `configforge-gen` itself named `configforge-gen` (with the library's
+    DLL beside it on a Windows shared build), for the beside-itself case.
+    `tests/gen/external.cmake`, run as
+    `${CMAKE_COMMAND} -DGEN=$<TARGET_FILE:configforge_gen> -DEXT=<ext dir>
+    -DEXE=${CMAKE_EXECUTABLE_SUFFIX} -DSCHEMA=<contract.schema.json> -DGOLDEN=<golden>
+    -DWORK=<dir> -P external.cmake`, registered as `gen.external` (and
+    its part `gen.contract_json` below). It sets `ENV{PATH}` to `EXT` and
+    the old PATH with `;` on a Windows host and `:` elsewhere
+    (`CMAKE_HOST_WIN32`), writes into `WORK`, and uses
+    `execute_process` with `OUTPUT_FILE` for the bytes, so no
+    byte is read back through a variable. Cases:
+    1. `contract_json`: `--schema SCHEMA --lang contract-json --out m.json`
+       exit 0; `m.json` and `tests/gen/golden_contract.json` (new, written
+       by that command and read whole before it is staged) are the same
+       bytes (`cmake -E compare_files`); on a difference the failure
+       says `the contract JSON differs from tests/gen/golden_contract.json:
+       regenerate it with configforge gen --schema tests/doctor/contract.schema.json --lang contract-json --out tests/gen/golden_contract.json, and read the diff`.
+       The golden file has the schema's text, a `null` `name`, the
+       `plugins.` prefix, the list default `["a", "bé"]`, the real range
+       `0` to `1`, a `"sensitive"` and a `"required"` flag, the
+       deprecated key and the integers `-9007199254740993` and
+       `9223372036854775807`.
+    2. `stdout`: `--schema SCHEMA --lang fake` with no `--out`: exit 0,
+       standard output is the golden file's bytes (the generator was
+       handed the same bytes the built-in writes), stderr is exactly
+       `fake: args=` and a newline (no argument reached it).
+    3. `args`: `--lang fake --name Thing --schema SCHEMA --out o.txt`: exit
+       0, `o.txt` is the golden file but for the `name` line, which says
+       `"name": "Thing",`; stderr `fake: args=--name|Thing|--out|o.txt`
+       (`--lang`, `--schema` and their values did not reach it, the
+       others in order, the path as written).
+    4. `exit`: `--name exit7`: exit 7, stderr has `fake: exit 7 asked for`.
+    5. `missing`: `--lang nosuch`: exit 2, stderr matches
+       `gen: no language 'nosuch'; there are: c, cpp, rust, python, contract-json; no configforge-gen-nosuch in .+ or on the PATH`
+       (the directory is `GEN`'s). With `GEN` run by a bare name and no
+       directory it is `... on the PATH`; that second form is not
+       tested (the test cannot make the shell find the program).
+    6. `name_rule`: each of `../x`, `Fake`, `-x` and `a/b` as the
+       language: exit 2, stderr `is not a language name`.
+    7. `builtin_wins`: `--lang c --out w.c`: exit 0 and `w.c` holds
+       `cf_builder_define` (the C writer ran, not the `configforge-gen-c`
+       in `ext/`, whose marker file does not exist).
+    8. `bad_schema`: `--schema missing.json --lang fake --name ran --out w/o.txt`:
+       exit 2, stderr `gen: `, and `w/ran.marker` does not exist (nothing
+       was started).
+    9. `closed_input`: a schema of 3,000 definitions (`"k0"` to `"k2999"`,
+       each `{"type": "integer"}`, written by the script with `file(WRITE)`
+       in a loop) `--name noread`: exit 3, stderr has no crash and no
+       `gen: ` line (the JSON is far past a pipe's buffer; the generator
+       left; the code is the generator's).
+    10. `beside`: the copy of `configforge-gen` in `ext/`, run by its full
+        path, with `ENV{PATH}` set to the old PATH alone (no `ext/`): `--lang
+        fake` finds `configforge-gen-fake` beside itself: exit 0.
+    11. `not_a_directory` (POSIX hosts only): a directory named
+        `configforge-gen-dirlang` in `ext/`, `--lang dirlang`: exit 2,
+        the `no language` text (a directory is not a program).
+    And `tests/gen/CMakeLists.txt` registers `gen.external` under
+    `if(NOT CMAKE_CROSSCOMPILING AND TARGET gen_fake)`, after the schema
+    fixtures (it needs none of Doctor's: `external.cmake` reads the
+    schema from the source tree, so it has no `FIXTURES_REQUIRED`).
+  * **The documents for authors**, `docs/Tools.md`, the gen section: a
+    subsection "A generator of your own": the order of a `--lang` (the
+    four steps), the name rule, where the program is looked for and that
+    the current directory never is, Windows' `.exe`, what is on standard
+    input with the JSON's layout as a table of its members, the command
+    line, that `--name` and `--out` are the generator's to check, the exit
+    codes, that the program's output is its own, and `--lang contract-json`
+    to see an input; and that `tests/gen/fake_gen.c` is the tested reference
+    for a program that reads the input. No example in another language is
+    written in the docs (it would not be tested).
+  * Rejected: handing over the schema file's path instead of its contents
+    (the generator would read JSON Schema itself); a temporary file as the
+    input (a name, a race and a file left behind); `fork` and `_exit(127)`
+    (an exec that fails and a generator that returns 127 look alike);
+    capturing the generator's output and writing `--out` here (a
+    generator that writes more than one file, or a binary one, would be
+    shut out, and a large output would sit in memory); `PATHEXT` on
+    Windows (above); searching the current directory (a file somebody left
+    there would run, as `configforge`'s front door never allows).
+* **files**: `tools/gen/gen.c`, `tools/gen/gen.h`, `tools/gen/contract.c`,
+  `tools/gen/spawn.h` (new), `tools/gen/spawn_posix.c` (new),
+  `tools/gen/spawn_win32.c` (new), `tools/gen/spawn_none.c` (new),
+  `tools/gen/CMakeLists.txt`, `tests/gen/fake_gen.c` (new),
+  `tests/gen/external.cmake` (new), `tests/gen/golden_contract.json` (new,
+  generated), `tests/gen/CMakeLists.txt`; last: `docs/Tools.md`,
+  `docs/Decisions.md`, `CHANGELOG.md`, `docs/Roadmap.md`.
+* **steps**:
+  1. `fake_gen.c`, `external.cmake` with its cases and the registration, and
+     an `external.cmake` golden that is only `{}` and a newline. See it
+     fail: `cmake --build --preset default && ctest --preset default -R gen.external`
+     fails on `contract_json` (`--lang contract-json` is `no language`).
+  2. `gen_contract_json` and the `contract-json` entry; write the golden file
+     with the command the failure gives and read it whole. `contract_json`
+     passes; the other cases fail (`no language 'fake'` without a
+     directory).
+  3. `spawn_find`, `spawn_run` (POSIX first), the order of a `--lang` in
+     `gen.c`, the `no language` text. `ctest --preset default -R gen\\.`
+     passes on Linux.
+  4. `spawn_win32.c` and `spawn_none.c`; ACCEPT-WINDOWS: every case but
+     `not_a_directory`, then `cmake --build` with the analyzer's flags if
+     the machine has them (CI's MSVC `/analyze` otherwise).
+  5. `docs/Tools.md`, then ACCEPT-LINUX with `-DEXTRA="tidy;shared"`,
+     ACCEPT-WINDOWS.
+* **accept**: ACCEPT-LINUX with `-DEXTRA="tidy;shared"` (clang-tidy reads
+  the new tool files; the installed tool finds its library by its run
+  path as before), ACCEPT-WINDOWS, ACCEPT-CI (MSVC `/analyze`, macOS and
+  FreeBSD build `spawn_posix.c`). `gen.external`, `gen.c` and the other
+  `gen.*` pass; `-DEXTRA=wasm` still builds nothing of the tools.
+* **stop if**: W5-G1's table has no entry type a writer can be added
+  to in the way above (read `gen_lang` first: if the writer cannot be
+  handed the schema's text and the `--name` as given, the entry's shape
+  needs a change W5-G1 should have made: hand back with what the entry
+  holds); `CommandLineToArgvW` counts a different number of arguments than
+  the narrow `argv` for a command line the tests use (T-1's stop-if,
+  here as well: name the line); `posix_spawn` or `environ` is not found
+  by a compiler of the matrix (macOS needs `_NSGetEnviron()` in a
+  library, not in a program: if CI's macOS job says otherwise, use it
+  there and say so in the notes); or the golden file differs between
+  Linux and Windows (a schema checked out with other line ends -
+  `.gitattributes`' `* text=auto eol=lf` should prevent it: name the
+  file).
+* **docs**: add **D-110**, "Generators outside the tree", in D-80's
+  shape: the question (a language the project does not ship); the
+  options (a plug-in loaded into the program; a program found by name,
+  as git does; a configuration file naming generators; the library's
+  schema as the hand-over); the decision (the program by name, the order
+  of the lookup and that a built-in always wins, the name rule, the
+  JSON and each of its members and why every member is always present,
+  the arguments passed through, the exit codes, `--lang contract-json`,
+  `.exe` only on Windows and why, the pipe and why not a file or a
+  captured output); compatibility (a new behaviour of a `--lang` that
+  was an error; `--lang` absent still writes C, a name that is in the
+  table still its writer). CHANGELOG, `### Added`: "`configforge gen
+  --lang <name>` runs `configforge-gen-<name>`, found beside
+  `configforge-gen` or on the PATH, with the contract as JSON on its
+  standard input - a generator in any language, outside the project
+  (D-110); `--lang contract-json` writes that JSON." Roadmap: the row
+  "`configforge gen --lang <lang>`, open to more languages" goes 🟩,
+  `D-95, D-110`.
+* **notes**:

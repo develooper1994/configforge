@@ -180,18 +180,24 @@ waves ("After 1.7.0: the order of the waves", below).
 | 38 | T-5 Doctor's aliases, and the name `doctor`, removed | small | 1.7.0 released, W5-G3 | waits: 1.7.0 released (it belongs to 1.8.0) |
 | 39 | P-1 The benchmark measures large documents, and says where time goes | medium | 1.7.0 released | waits: 1.7.0 released |
 | 40 | A-1 One directory per component: the files moved, nothing else changed | large | 1.7.0 released | waits: 1.7.0 released |
-| 41 | A-2 The vector library, its interface and its scalar reference | medium | A-1 | waits: A-1 |
-| 42 | A-3 One UTF-8, one hex digit, one table hash | medium | A-2 | waits: A-2 |
-| 43 | A-4 Another encoding, read only by name | medium | A-3 | waits: A-3 |
-| 44 | A-5 Bytes that are not UTF-8 are refused, with their place and a hint | medium | A-4 | waits: A-4 |
-| 45 | A-6 `configforge codec recode`: a file converted once, for review | small | A-5, T-3 | waits: A-5 |
-| 46 | A-7 The escapes in families | medium | A-6 | waits: A-6; card to complete |
-| 47 | A-8 Whitespace, comments, newlines and the place of a refusal | medium | A-7 | waits: A-7; card to complete |
-| 48 | A-9 Composed codecs, for what is almost a format | medium | A-3 | waits: A-3; card to complete |
-| 49 | A-10 A refusal's place and reason | medium | A-8 | waits: A-8; card to complete |
-| 50 | A-11 Build profiles and the C version per file | medium | A-1 | waits: A-1; card to complete |
-| 51 | P-2 Word-at-a-time scans in C89, with the byte loop as reference | medium | P-1, A-3 | waits: 2.4.0; to be rewritten on D-101 |
-| 52 | P-3 The scans P-1 found, a word at a time, kept only where they win | medium | P-2 | waits: P-2 |
+| 41 | A-1b Each component a project: its declaration, its tests, its README, built alone | large | A-1 | waits: A-1 |
+| 42 | A-2 The vector library, its interface and its scalar reference | medium | A-1b | waits: A-1b |
+| 43 | A-3 One UTF-8, one hex digit, one table hash | medium | A-2 | waits: A-2 |
+| 44 | A-4 Another encoding, read only by name | medium | A-3 | waits: A-3 |
+| 45 | A-5 Bytes that are not UTF-8 are refused, with their place and a hint | medium | A-4 | waits: A-4 |
+| 46 | A-6 `configforge codec recode`: a file converted once, for review | small | A-5, T-3 | waits: A-5 |
+| 47 | A-7 The escapes in families | large | A-6 | waits: A-6 |
+| 48 | A-8 Whitespace, comments, newlines and the place of a refusal | large | A-7 | waits: A-7 |
+| 49 | A-9 Composed codecs, for what is almost a format | large | A-5 | waits: A-8 (the order) |
+| 50 | A-10 A refusal's place and reason | large | A-8 | waits: A-9 (the order) |
+| 51 | A-11 Build profiles and the C version per file | large | A-1b | waits: A-10 (the order) |
+| 52 | A-12 The feature matrix made from the build | medium | A-11 | waits: A-11 |
+| 53 | W5-V2 Every pair of formats, and what each can hold | large | A-1b, W5-V1 | waits: A-12 (the order) |
+| 54 | W5-G4 Generators outside the tree | medium | A-1b, W5-G3 | waits: W5-V2 (the order) |
+| 55 | P-1b The other libraries beside ours, and a page CI keeps | large | P-1, A-1b | waits: W5-G4 (the order) |
+| 56 | A-13 A page of the project's limits | medium | A-12, W5-V2, P-1 | waits: P-1b (the order) |
+| 57 | P-2 Word-at-a-time scans in C89, with the byte loop as reference | medium | P-1, A-3 | waits: 2.4.0; to be rewritten on D-101 |
+| 58 | P-3 The scans P-1 found, a word at a time, kept only where they win | medium | P-2 | waits: P-2 |
 
 Done and released in 1.5.0, their cards removed: H-1, H-3, H-4 and the
 whole of wave 4 (CBOR; TLV by a layout and BER-TLV).
