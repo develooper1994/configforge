@@ -4372,7 +4372,10 @@ the name `doctor` at once.
 carry both; it goes in 1.8.0 (T-5). `configforge gen` took Doctor's
 `check` and its C writer (`gen --schema`), and `configforge codec` took
 `formats`; `doctor check`, `doctor gen` and `doctor formats` still run
-them in 1.7.x and say so on stderr.
+them in 1.7.x and say so on stderr. The aliases and the old name went in
+1.8.0: Doctor answers `check`, `gen` and `formats` as it answers any
+command it does not know (usage, exit 2), no program is built, installed
+or shipped as `doctor`, and the Python module no longer looks for one.
 
 ## D-60 — Arrays in INI are the ones INI files already have
 

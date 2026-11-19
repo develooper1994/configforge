@@ -5,6 +5,14 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ## 1.8.0 — unreleased
 
+### Changed
+
+- Doctor no longer answers `check`, `gen` or `formats`, and the program
+  `doctor` is gone: `configforge gen check`, `configforge gen`,
+  `configforge codec formats` and `configforge-doctor` (D-99). The release
+  archives carry `configforge-doctor` alone, and the Python module looks
+  for no other name.
+
 ## 1.7.0 — 2026-11-20
 
 ### Added

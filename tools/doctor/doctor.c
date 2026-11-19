@@ -16,12 +16,6 @@
  *     configforge doctor history <report>... [--key <key>] [options]
  *     configforge doctor blame   <key> <report>... [options]
  *
- * Moved in 1.7.0, run here until 1.8.0 with a note on stderr:
- *
- *     doctor check --schema <schema> <file>...  is configforge gen check
- *     doctor gen --schema <schema> ...          is configforge gen
- *     doctor formats [--format text|markdown]   is configforge codec formats
- *
  *     --baseline <file>   findings already accepted, one per line
  *     --severity <file>   this project's severities, one per line
  *     --fail-on <level>   error (default), warning, info or never
@@ -31,8 +25,6 @@
  * the command line and prints.
  */
 
-#include "../codec/codec.h"
-#include "../gen/gen.h"
 #include "adapters.h"
 #include "engine.h"
 
@@ -431,56 +423,9 @@ static cf_bool load(report* r, cf_doctor* D, const char* path) {
 
 static int run(cf_doctor* D, int argc, char** argv);
 
-/* Whether the program was started under its old name, `doctor` or
-   `doctor.exe`: the base name of argv[0] after the last `/` or `\`,
-   compared without regard to ASCII case. */
-static cf_bool old_name(const char* arg0) {
-    const char* base = arg0;
-    const char* p;
-    char        lower[12];
-    size_t      n;
-    size_t      i;
-
-    for (p = arg0; *p != '\0'; p++) {
-        if (*p == '/' || *p == '\\') {
-            base = p + 1;
-        }
-    }
-    n = strlen(base);
-    if (n != 6 && n != 10) {
-        return CF_FALSE;
-    }
-    for (i = 0; i < n; i++) {
-        char c = base[i];
-        if (c >= 'A' && c <= 'Z') {
-            c = (char)(c - 'A' + 'a');
-        }
-        lower[i] = c;
-    }
-    lower[n] = '\0';
-    return (strcmp(lower, "doctor") == 0 || strcmp(lower, "doctor.exe") == 0)
-               ? CF_TRUE
-               : CF_FALSE;
-}
-
-/* `check` and `gen` went to configforge-gen in 1.7.0; Doctor runs them
-   for one more minor release and says where they went. */
-static void doctor_moved(const char* was, const char* now) {
-    fprintf(stderr, "doctor: '%s' is '%s' since 1.7.0; this name goes in 1.8.0\n", was,
-            now);
-}
-
 int main(int argc, char** argv) {
     cf_doctor* D;
     int        rc;
-
-    /* The name goes in 1.8.0; until then the program says so and goes
-       on as it would. */
-    if (argc >= 1 && old_name(argv[0])) {
-        fputs("doctor: this program is configforge-doctor now (configforge doctor); "
-              "the name doctor goes in 1.8.0\n",
-              stderr);
-    }
 
     /* An adapter writes a report rather than reading one, so it takes no
        report argument and is dispatched before anything expects one. */
@@ -495,18 +440,6 @@ int main(int argc, char** argv) {
     }
     if (argc >= 2 && strcmp(argv[1], "import-systemd") == 0) {
         return doctor_import_systemd(argc - 2, argv + 2);
-    }
-    if (argc >= 2 && strcmp(argv[1], "check") == 0) {
-        doctor_moved("check", "configforge gen check");
-        return gen_check(argc - 2, argv + 2);
-    }
-    if (argc >= 2 && strcmp(argv[1], "gen") == 0) {
-        doctor_moved("gen", "configforge gen");
-        return gen_code(argc - 2, argv + 2);
-    }
-    if (argc >= 2 && strcmp(argv[1], "formats") == 0) {
-        doctor_moved("formats", "configforge codec formats");
-        return codec_formats(argc - 2, argv + 2);
     }
     /* The version, and the commit it was built from when the build knew
        it: two Doctors of one version can still differ. */

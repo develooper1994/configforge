@@ -55,7 +55,7 @@ the program's exit code.
 
 | Program | What it does | Page |
 | --- | --- | --- |
-| `configforge-doctor` | Reads provenance reports: `explain`, `dump`, `lint`, `diff`, `history`, `blame`, `import-*`. Until 1.8.0 it is also installed as `doctor`, which says its new name on stderr, and still runs `check`, `gen` and `formats`. | [Doctor](Doctor.md) |
+| `configforge-doctor` | Reads provenance reports: `explain`, `dump`, `lint`, `diff`, `history`, `blame`, `import-*`. | [Doctor](Doctor.md) |
 | `configforge-codec` | The serialization library's own program: `formats`, `detect`, `check`, `dump`, `convert` and `format`, on documents and never on a configuration. | [below](#configforge-codec) |
 | `configforge-gen` | The contract's own program: `configforge gen --schema` writes a JSON Schema contract as C, `configforge gen check` holds files to it, `configforge gen schema --from` drafts one from a sample file. | [below](#configforge-gen) |
 
@@ -92,8 +92,8 @@ on stderr, exit 2.
 **formats.** Every built-in codec: its name, its extensions and what kind
 of format it is (text or binary, self-describing or schema-bound, typed,
 arrays, read and written). `--format markdown` is the table in
-docs/Formats.md, which a test holds the page to. It was `doctor formats`;
-Doctor runs it in 1.7.x and says where it went.
+docs/Formats.md, which a test holds the page to. It was `doctor formats`
+until 1.7.x.
 
 **detect.** `<name> (<how>)` and a newline, `how` being `extension` when
 the file's name told the format and `content` when its bytes did
@@ -191,8 +191,8 @@ configforge gen --version
 
 Exit codes: 0 done, and for `check` every file holds to the contract; 1 a
 file does not; 2 unusable input. `doctor check` and `doctor gen` of earlier
-releases are these two commands: Doctor runs them in 1.7.x, says where they
-went on stderr, and drops them in 1.8.0 (Doctor.md, section 7).
+releases are these two commands; Doctor stopped answering them in 1.8.0
+(Doctor.md, section 7).
 
 `configforge gen check --schema app.schema.json app.toml [local.toml ...]`
 reads the files as the program would - in that order, each overriding the

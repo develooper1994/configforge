@@ -13,7 +13,7 @@ library, and no ABI: Doctor's library is static (D-41), and a program
 is the one interface Python can rely on everywhere.
 
 The program is found as $CONFIGFORGE_DOCTOR, or `configforge-doctor`
-(or an older `doctor`) on PATH, or passed as `doctor=`.
+on PATH, or passed as `doctor=`.
 """
 
 import json
@@ -58,7 +58,6 @@ def find_doctor(doctor=None):
         doctor
         or os.environ.get("CONFIGFORGE_DOCTOR")
         or shutil.which("configforge-doctor")
-        or shutil.which("doctor")
     )
     if not path:
         raise DoctorError("no doctor program: set CONFIGFORGE_DOCTOR or put configforge-doctor on PATH")

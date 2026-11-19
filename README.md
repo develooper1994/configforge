@@ -332,8 +332,7 @@ workflow, commit and runner built it - that
 one is built against musl and linked statically:
 `bin/configforge` and `bin/configforge-doctor` run on any x86-64 Linux
 with nothing installed beside them, and the Windows `configforge.exe` and
-`configforge-doctor.exe` need no Visual C++ redistributable. (`bin/doctor`,
-Doctor's old name, is there for 1.7.x.)
+`configforge-doctor.exe` need no Visual C++ redistributable.
 Every archive is made by the suite's own build after the suite has
 passed on that platform (`.github/workflows/release.yml`).
 

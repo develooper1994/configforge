@@ -32,9 +32,3 @@ foreach(t configforge_front doctor configforge_gen configforge_codec)
                                  COMPONENT tools)
   endif()
 endforeach()
-if(TARGET doctor)
-  install(
-    PROGRAMS $<TARGET_FILE_DIR:doctor>/doctor${CMAKE_EXECUTABLE_SUFFIX}
-    DESTINATION ${CMAKE_INSTALL_BINDIR}
-    COMPONENT tools)
-endif()

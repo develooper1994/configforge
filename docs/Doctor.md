@@ -199,7 +199,8 @@ the baseline mechanism in section 9 handles.
 ## 7. Commands
 
 The program is `configforge-doctor`; `configforge doctor` runs it
-(docs/Tools.md). Until 1.8.0 it is also installed as `doctor`.
+(docs/Tools.md). It was also installed as `doctor` in 1.7.x; that name went
+in 1.8.0.
 
 Two commands an earlier draft of this section listed are not in the
 program. `parity` is part of `diff`: which keys exist in one environment's
@@ -242,10 +243,9 @@ configforge doctor --version
 ```
 
 `check` and `gen` are `configforge gen check` and `configforge gen` since 1.7.0
-(7d), and `formats` is `configforge codec formats` (docs/Tools.md). Doctor still
-runs all three in 1.7.x, with the arguments they had, and says so on stderr -
-`doctor: 'check' is 'configforge gen check' since 1.7.0; this name goes in
-1.8.0` - and drops them in 1.8.0. The exit code is the command's.
+(7d), and `formats` is `configforge codec formats` (docs/Tools.md). Doctor ran
+all three in 1.7.x; since 1.8.0 it does not know them, and answers them with
+the usage and exit 2, as it answers any command it does not know.
 
 `explain` and `dump` are convenience wrappers over the library's own capability, made
 available without adding a flag to the host application.
@@ -309,7 +309,7 @@ configuration library at all, which is how the line in section 2 holds:
 a program that reads configuration does not carry the rules that audit
 it unless it asks for them.
 
-**From Python**, `bindings/python/src/configforge_doctor.py` runs the `doctor`
+**From Python**, `bindings/python/src/configforge_doctor.py` runs the `configforge-doctor`
 program and reads its SARIF output - so a script sees exactly what a CI
 job sees, from the same rules and severities, and there is no ABI to
 keep, the library being static:

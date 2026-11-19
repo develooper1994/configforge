@@ -89,7 +89,7 @@ jobs:
           ctest --test-dir build --output-on-failure
           cmake --install build
           mkdir -p "stage/configforge-$v/bin"
-          for p in configforge configforge-doctor doctor; do
+          for p in configforge configforge-doctor; do
             install -s -m 755 "build/tools/bin/$p" "stage/configforge-$v/bin/$p"
           done
           # Linked statically, the tools carry musl, whose MIT licence asks
@@ -153,7 +153,7 @@ jobs:
           ctest --test-dir build --output-on-failure
           cmake --install build
           mkdir -p "stage/configforge-$v/bin"
-          for p in configforge configforge-doctor doctor; do
+          for p in configforge configforge-doctor; do
             install -s -m 755 "build/tools/bin/$p" "stage/configforge-$v/bin/$p"
           done
           mkdir -p dist

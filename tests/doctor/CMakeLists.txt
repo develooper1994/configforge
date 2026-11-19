@@ -82,31 +82,11 @@ doctor_case(
 doctor_case(only_changed_alone 2 lint|cf_fx_staging.json|--only-changed)
 doctor_case(base_alone 2 lint|cf_fx_staging.json|--base|cf_fx_prod.json)
 
-# `check` and `gen` went to configforge-gen (tests/gen); Doctor still runs
-# them in 1.7.x and says so on stderr.
+# `check`, `gen` and `formats` went to configforge-gen and configforge-codec
+# in 1.7.0 (tests/gen, tests/codec); here they are a command Doctor does not
+# know, as any other.
 set(contract ${CMAKE_CURRENT_SOURCE_DIR}/contract.schema.json)
-
-# doctor_case_err(<name> <expected-exit-code> <stderr regex> <arg>...)
-# is doctor_case that also holds what Doctor says on stderr.
-function(doctor_case_err name expect_fail err_re)
-  add_test(
-    NAME doctor.${name}
-    COMMAND
-      ${CMAKE_COMMAND} -DDOCTOR=$<TARGET_FILE:doctor> -DARGS=${ARGN}
-      -DEXPECT_FAIL=${expect_fail} "-DEXPECT_ERR=${err_re}" -P
-      ${CMAKE_SOURCE_DIR}/tests/doctor/run.cmake)
-  set_tests_properties(doctor.${name} PROPERTIES FIXTURES_REQUIRED
-                                                 DOCTOR_REPORTS)
-endfunction()
-
-doctor_case_err(check_alias 0 "'check' is 'configforge gen check' since 1.7.0"
-                check|--schema|${contract}|cf_fx_contract_ok.json)
-doctor_case_err(
-  gen_alias 0 "'gen' is 'configforge gen' since 1.7.0"
-  gen|--schema|${contract}|--out|${CMAKE_CURRENT_BINARY_DIR}/alias.c)
-# `formats` went to configforge-codec (tests/codec).
-doctor_case_err(formats_alias 0
-                "'formats' is 'configforge codec formats' since 1.7.0" formats)
+doctor_case(moved_check 2 check|--schema|${contract}|cf_fx_contract_ok.json)
 
 # The GitHub Action's scripts and the pre-commit hook (actions/doctor),
 # as a project's CI runs them. Bash on a Unix host only: on Windows the
@@ -143,16 +123,6 @@ if(Python3_Interpreter_FOUND)
   set_tests_properties(doctor.python PROPERTIES FIXTURES_REQUIRED
                                                 DOCTOR_REPORTS)
 endif()
-
-# The copy that keeps the old name says its new one on stderr (D-99).
-add_test(
-  NAME doctor.old_name
-  COMMAND
-    ${CMAKE_COMMAND}
-    -DDOCTOR=$<TARGET_FILE_DIR:doctor>/doctor${CMAKE_EXECUTABLE_SUFFIX}
-    -DARGS=--version -DEXPECT_FAIL=0
-    "-DEXPECT_ERR=this program is configforge-doctor now" -P
-    ${CMAKE_SOURCE_DIR}/tests/doctor/run.cmake)
 
 # The version Doctor reports is the one cf_version.h says, with the
 # commit after it when the build knew one.

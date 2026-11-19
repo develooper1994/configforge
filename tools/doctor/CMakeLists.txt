@@ -24,8 +24,6 @@ configforge_apply_analysis(configforge_doctor)
 add_executable(
   doctor
   doctor.c
-  ../gen/contract.c
-  ../codec/formats.c
   git.c
   spring.c
   dotnet.c
@@ -42,14 +40,6 @@ configforge_apply_warnings(doctor)
 configforge_apply_hardening(doctor)
 configforge_apply_analysis(doctor)
 
-# The program is configforge-doctor (D-99). A copy named doctor stays
-# beside it for 1.7.x, and says its new name when it is run.
-add_custom_command(
-  TARGET doctor
-  POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:doctor>
-          $<TARGET_FILE_DIR:doctor>/doctor${CMAKE_EXECUTABLE_SUFFIX}
-  VERBATIM)
 # In a Windows shared build the tests' programs stay in bin/ beside the
 # DLL; a tool that links the library gets it copied beside it.
 if(WIN32 AND BUILD_SHARED_LIBS)
