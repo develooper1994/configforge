@@ -4311,7 +4311,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     buffer is the fixed `char local[256]` (json.c:797) and a longer
     string is read through the sink's `reserve_text`: the row loses
     the sentence and the section after the table gains "The rest of
-    the limits, and the fixed ones, are on [Limits](docs/Limits.md)."
+    the limits, and the fixed ones, are on `[Limits](docs/Limits.md)`."
   * **What is generated and what is tested, and by what.**
     * `scripts/generate/limits.cmake` (new; `-DOUT=<file>` writes the
       page's generated blocks, `-DWRITE=<page>` replaces them in
