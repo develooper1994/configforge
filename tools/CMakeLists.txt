@@ -7,6 +7,10 @@ include(GNUInstallDirs)
 # `configforge <command>` runs `configforge-<command>`.
 add_subdirectory(configforge)
 
+# The serialization library's program needs neither the JSON option nor
+# the report: it reads whatever formats the build has.
+add_subdirectory(codec)
+
 # Doctor reads reports (JSON) and its adapters write them.
 if(CF_WITH_JSON AND CF_WITH_REPORT)
   add_subdirectory(doctor)
@@ -22,7 +26,7 @@ endif()
 
 # The programs, for `cmake --install`: the front door and every tool
 # it runs, in one directory (D-99).
-foreach(t configforge_front doctor configforge_gen)
+foreach(t configforge_front doctor configforge_gen configforge_codec)
   if(TARGET ${t})
     install(TARGETS ${t} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
                                  COMPONENT tools)

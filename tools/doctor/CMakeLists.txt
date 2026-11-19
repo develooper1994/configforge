@@ -25,7 +25,7 @@ add_executable(
   doctor
   doctor.c
   ../gen/contract.c
-  formats.c
+  ../codec/formats.c
   git.c
   spring.c
   dotnet.c

@@ -1,13 +1,13 @@
 /*
- * formats.c - `doctor formats`: every built-in codec, with its
+ * formats.c - `configforge codec formats`: every built-in codec, with its
  * extensions and what kind of format it is (cf_codec_kind). The
  * markdown form is the table in docs/Formats.md between its markers,
  * and a test holds the page to it. C89.
  */
 
-#include "adapters.h"
+#include "codec.h"
 
-#include "configforge/configforge.h"
+#include "configforge/cf_serialize.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -27,7 +27,7 @@ static void ext_list(const char* ext, char* out, size_t cap) {
     out[n] = '\0';
 }
 
-int doctor_formats(int argc, char** argv) {
+int codec_formats(int argc, char** argv) {
     cf_bool markdown = CF_FALSE;
     size_t  i;
     int     a;
@@ -38,12 +38,12 @@ int doctor_formats(int argc, char** argv) {
             if (strcmp(argv[a], "markdown") == 0) {
                 markdown = CF_TRUE;
             } else if (strcmp(argv[a], "text") != 0) {
-                fprintf(stderr, "doctor: formats prints text or markdown, not '%s'\n",
+                fprintf(stderr, "codec: formats prints text or markdown, not '%s'\n",
                         argv[a]);
                 return 2;
             }
         } else {
-            fprintf(stderr, "doctor: formats [--format text|markdown]\n");
+            fprintf(stderr, "codec: formats [--format text|markdown]\n");
             return 2;
         }
     }

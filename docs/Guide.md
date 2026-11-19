@@ -517,7 +517,7 @@ binary (`CF_CODEC_BINARY`), self-describing or bound to a schema
 (`CF_CODEC_SCHEMA`: the bytes cannot be read without a layout the program
 gives, as a TLV codec's), typed, with arrays, read, written. `cf_codec_kind`
 says them in words, and `cf_codec_select` finds the built-in codecs by them
-(D-97); `configforge doctor formats` prints the table:
+(D-97); `configforge codec formats` prints the table:
 
 ```c
 const cf_codec* bin[8];

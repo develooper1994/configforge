@@ -55,12 +55,53 @@ the program's exit code.
 
 | Program | What it does | Page |
 | --- | --- | --- |
-| `configforge-doctor` | Reads provenance reports: `explain`, `dump`, `lint`, `diff`, `history`, `blame`, `formats`, `import-*`. Until 1.8.0 it is also installed as `doctor`, which says its new name on stderr, and still runs `check` and `gen`. | [Doctor](Doctor.md) |
+| `configforge-doctor` | Reads provenance reports: `explain`, `dump`, `lint`, `diff`, `history`, `blame`, `import-*`. Until 1.8.0 it is also installed as `doctor`, which says its new name on stderr, and still runs `check`, `gen` and `formats`. | [Doctor](Doctor.md) |
+| `configforge-codec` | The serialization library's own program: `formats`, `detect` and `check`, on documents and never on a configuration. | [below](#configforge-codec) |
 | `configforge-gen` | The contract's own program: `configforge gen --schema` writes a JSON Schema contract as C, `configforge gen check` holds files to it. | [below](#configforge-gen) |
 
-`configforge codec` (the serialization library's own program) is listed in
-the help from the start and arrives with its own card; until then it is
-"not a configforge command", like any other name with no program.
+## configforge codec
+
+The serialization library's own program (`configforge-codec`), linked to
+`configforge_serialize` and to nothing else: it reads documents, in every
+format the build has, and never a configuration - no contract, no key
+space, no layers. A document read wrong is a value explained wrong; which
+format a file is, and whether it is one at all, are questions about bytes,
+and this program answers them with the reader's own answer. It is built
+wherever tools are, with no option of its own.
+
+```text
+configforge codec formats [--format text|markdown]
+                               the built-in codecs and their kind
+configforge codec detect <file>
+                               the format of a file, and how it was told
+configforge codec check <file>... [--as <format>]
+                               whether each file is well formed
+configforge codec --version
+```
+
+Exit codes: 0 done (`check`: every file is well formed), 1 a file is not,
+or its format cannot be told; 2 unusable input. Anything else is the usage
+on stderr, exit 2.
+
+**formats.** Every built-in codec: its name, its extensions and what kind
+of format it is (text or binary, self-describing or schema-bound, typed,
+arrays, read and written). `--format markdown` is the table in
+docs/Formats.md, which a test holds the page to. It was `doctor formats`;
+Doctor runs it in 1.7.x and says where it went.
+
+**detect.** `<name> (<how>)` and a newline, `how` being `extension` when
+the file's name told the format and `content` when its bytes did
+(`cf_codec_detect`, D-73). A file whose bytes no format reads, or that two
+loose formats read differently, is exit 1 (`cannot tell the format of
+<file>; name it with --as`): the bytes are the answer, not the command
+line.
+
+**check.** Each file is read by its format and decoded into a sink that
+keeps nothing. It prints `<file>: ok`, or `<file>: ` and the reader's
+message, one line each; the exit code is the worst. `--as <format>` names
+the format for every file instead of detecting it; a format this build
+left out says which option to turn on, and one no codec is called is exit
+2. `-` is standard input. A TLV codec is not reachable: it needs a layout.
 
 ## configforge gen
 

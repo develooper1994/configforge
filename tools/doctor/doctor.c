@@ -15,12 +15,12 @@
  *     configforge doctor diff    <a> <b>  [options]
  *     configforge doctor history <report>... [--key <key>] [options]
  *     configforge doctor blame   <key> <report>... [options]
- *     configforge doctor formats [--format text|markdown]
  *
  * Moved in 1.7.0, run here until 1.8.0 with a note on stderr:
  *
  *     doctor check --schema <schema> <file>...  is configforge gen check
  *     doctor gen --schema <schema> ...          is configforge gen
+ *     doctor formats [--format text|markdown]   is configforge codec formats
  *
  *     --baseline <file>   findings already accepted, one per line
  *     --severity <file>   this project's severities, one per line
@@ -31,6 +31,7 @@
  * the command line and prints.
  */
 
+#include "../codec/codec.h"
 #include "../gen/gen.h"
 #include "adapters.h"
 #include "engine.h"
@@ -387,11 +388,6 @@ static int usage(void) {
           "  configforge doctor import-systemd [--full] < systemd-analyze cat-config\n"
           "\n",
           stderr);
-    fputs("  configforge doctor formats [--format text|markdown]   the built-in codecs "
-          "and their "
-          "kind\n"
-          "\n",
-          stderr);
     fputs("  --base <file> --only-changed   lint: only what changed since <file>\n"
           "  --baseline <file>  findings already accepted\n"
           "  --severity <file>  this project's severities\n"
@@ -509,7 +505,8 @@ int main(int argc, char** argv) {
         return gen_code(argc - 2, argv + 2);
     }
     if (argc >= 2 && strcmp(argv[1], "formats") == 0) {
-        return doctor_formats(argc - 2, argv + 2);
+        doctor_moved("formats", "configforge codec formats");
+        return codec_formats(argc - 2, argv + 2);
     }
     /* The version, and the commit it was built from when the build knew
        it: two Doctors of one version can still differ. */

@@ -3,7 +3,11 @@
 # finds. front.cmake holds the cases.
 set(have_doctor OFF)
 set(have_gen OFF)
+set(have_codec OFF)
 set(front_cwd ${CMAKE_CURRENT_BINARY_DIR})
+if(TARGET configforge_codec)
+  set(have_codec ON)
+endif()
 if(TARGET doctor)
   set(have_doctor ON)
   set(have_gen ON)
@@ -14,7 +18,7 @@ add_test(
   NAME front.run
   COMMAND
     ${CMAKE_COMMAND} -DFRONT=$<TARGET_FILE:configforge_front>
-    -DHAVE_DOCTOR=${have_doctor} -DHAVE_GEN=${have_gen}
+    -DHAVE_DOCTOR=${have_doctor} -DHAVE_GEN=${have_gen} -DHAVE_CODEC=${have_codec}
     -DUNIX_HOST=${CMAKE_HOST_UNIX} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/work -P
     ${CMAKE_CURRENT_SOURCE_DIR}/front.cmake
   WORKING_DIRECTORY ${front_cwd})

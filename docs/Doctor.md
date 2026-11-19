@@ -237,20 +237,15 @@ configforge doctor lint <report> [--rules R] [--baseline B] [--format text|sarif
                          [--base <before> --only-changed]
     rule catalogue against a single report
 
-configforge doctor formats [--format text|markdown]
-    every built-in codec: its name, its extensions and what kind of format it is
-    (text or binary, self-describing or schema-bound, typed, arrays, read and
-    written); the markdown table is the one in docs/Formats.md, which a test holds
-    it to. Reads no report.
-
 configforge doctor --version
     the version, and the commit Doctor was built from: "ConfigForge Doctor 0.3.0 (20d0f4b)"
 ```
 
 `check` and `gen` are `configforge gen check` and `configforge gen` since 1.7.0
-(7d). Doctor still runs both in 1.7.x, with the arguments they had, and says so
-on stderr - `doctor: 'check' is 'configforge gen check' since 1.7.0; this name goes
-in 1.8.0` - and drops them in 1.8.0. The exit code is the command's.
+(7d), and `formats` is `configforge codec formats` (docs/Tools.md). Doctor still
+runs all three in 1.7.x, with the arguments they had, and says so on stderr -
+`doctor: 'check' is 'configforge gen check' since 1.7.0; this name goes in
+1.8.0` - and drops them in 1.8.0. The exit code is the command's.
 
 `explain` and `dump` are convenience wrappers over the library's own capability, made
 available without adding a flag to the host application.

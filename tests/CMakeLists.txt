@@ -17,6 +17,12 @@ if(CF_BUILD_TOOLS
   add_subdirectory(gen)
 endif()
 
+# The serialization library's program: it needs neither the report nor
+# the JSON option.
+if(CF_BUILD_TOOLS AND TARGET configforge_codec)
+  add_subdirectory(codec)
+endif()
+
 # The front door, `configforge <command>`, and the programs it runs.
 if(CF_BUILD_TOOLS AND TARGET configforge_front)
   add_subdirectory(front)

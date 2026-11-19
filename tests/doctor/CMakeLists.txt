@@ -104,6 +104,9 @@ doctor_case_err(check_alias 0 "'check' is 'configforge gen check' since 1.7.0"
 doctor_case_err(
   gen_alias 0 "'gen' is 'configforge gen' since 1.7.0"
   gen|--schema|${contract}|--out|${CMAKE_CURRENT_BINARY_DIR}/alias.c)
+# `formats` went to configforge-codec (tests/codec).
+doctor_case_err(formats_alias 0
+                "'formats' is 'configforge codec formats' since 1.7.0" formats)
 
 # The GitHub Action's scripts and the pre-commit hook (actions/doctor),
 # as a project's CI runs them. Bash on a Unix host only: on Windows the
@@ -189,14 +192,6 @@ add_test(NAME doctor.severity
                  ${CMAKE_SOURCE_DIR}/tests/doctor/severity.cmake)
 set_tests_properties(doctor.severity PROPERTIES FIXTURES_REQUIRED
                                                 DOCTOR_REPORTS)
-
-# `doctor formats`, and docs/Formats.md's generated table held to it.
-add_test(
-  NAME doctor.formats
-  COMMAND
-    ${CMAKE_COMMAND} -DDOCTOR=$<TARGET_FILE:doctor>
-    -DPAGE=${CMAKE_SOURCE_DIR}/docs/Formats.md -DEMIT=${CF_WITH_EMIT} -P
-    ${CMAKE_SOURCE_DIR}/tests/doctor/formats.cmake)
 
 # No secret in any output, from a full report as from a blind one; and
 # text from a report kept from becoming a workflow command in a CI log,

@@ -4,6 +4,7 @@
 # runs get their arguments whole and their exit code passed back.
 #
 #   -DFRONT=<the program>  -DHAVE_DOCTOR=<ON|OFF>  -DHAVE_GEN=<ON|OFF>
+#   -DHAVE_CODEC=<ON|OFF>
 #   -DUNIX_HOST=<0|1>
 #   -DWORK=<a directory of its own>
 #
@@ -115,6 +116,16 @@ if(HAVE_GEN)
     -
     gen
     --version)
+endif()
+
+# 8c. The serialization library's program.
+if(HAVE_CODEC)
+  front_case(
+    0
+    "json"
+    -
+    codec
+    formats)
 endif()
 
 # 9. A program on the PATH and not beside the front door.
