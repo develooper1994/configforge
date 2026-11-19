@@ -48,8 +48,10 @@ three). Check with `git grep -n "^## D-9[4-6]" docs/Decisions.md` before
 writing one; if a number is taken, take the next free one and change it
 in every card of this file in the same commit.
 
-The CHANGELOG: each card adds to `## 1.7.0 — unreleased` (opened by the
-first card of T-tools-and-serialization.md), under `### Added`.
+The CHANGELOG: W5-V1 to W5-G3 add to `## 1.7.0 — unreleased`, W5-V2 and
+W5-G4 to `## 1.8.0 — unreleased` (1.7.0 opened by the first card of
+T-tools-and-serialization.md, 1.8.0 by the first card of 1.8.0 that
+writes to it), under `### Added`.
 
 For the maintainer: one question, in W5-G2 (what the generated Rust and
 Python define the contract with), answered 2026-11-12 with its
@@ -1043,7 +1045,8 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
   empty table is written as nothing by TOML and INI, and a null is
   counted as text for YAML, which writes and reads it as a null. One
   table, tested on every pair, closes both.
-* **needs**: W5-V1, A-1
+* **needs**: A-1b, W5-V1 (this card's tests live in `lib/serialize/tests/`
+  and `lib/config/tests/`, which A-1b makes)
 * **size**: large
 * **decided**:
   * **The capabilities are a second word of bits, public and
@@ -1081,8 +1084,8 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
                                               as a member of a table       */
         CF_HOLDS_ANY_NAME      = 1u << 9,  /* not only A-Z a-z 0-9 _ and - */
         CF_HOLDS_EMPTY_NAME    = 1u << 10,
-        CF_HOLDS_LONG_PATHS    = 1u << 11, /* tables nested so that their
-                                              names, joined by dots, pass
+        CF_HOLDS_LONG_PATHS    = 1u << 11, /* a table whose parent's path
+                                              and own name together pass
                                               CF_KEY_MAX - 2 bytes         */
         CF_HOLDS_LINE_BREAK    = 1u << 12, /* a line feed in a text        */
         CF_HOLDS_NUL           = 1u << 13, /* a NUL byte in a text         */
@@ -1137,8 +1140,15 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
     `ini.c:632` with `header_pending`), so a table with nothing in it,
     or holding only such tables, is written as nothing; INI and TOML
     write a name as it is and a table's path in a `char path[CF_KEY_MAX]`
-    (`toml.c:1757`, `ini.c:619`: a path of `CF_KEY_MAX - 2` bytes or
-    more is refused), JSON and CBOR write a name as a string and YAML
+    (`toml.c`'s `toml_enc_table` and `ini.c`'s `ini_enc_push` refuse a
+    table when `plen + n + 2 > sizeof path`, where `plen` is the length
+    of the path above it, dots included, and `n` its own name's: the
+    test leaves the new dot out, so it is exact in terms of `plen + n`,
+    not of the whole path. A table is refused when `plen + n` is more
+    than `CF_KEY_MAX - 2`: at the default 256, a top-level name of 254
+    bytes is written and one of 255 refused; under a parent `a`
+    (`plen` 1) a name of 253 is written, for a path of 255, and one of
+    254 refused), JSON and CBOR write a name as a string and YAML
     quotes what is not a bare word (`yaml.c`, `yaml_key`), so YAML
     holds any name; YAML's reader refuses an empty key (`yaml.c:563`);
     INI's encoder refuses a line feed (`ini.c:687`). `CF_HOLDS_NUL` is
@@ -1182,10 +1192,15 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
     | TABLE_ARRAYS | `an array of tables` |
     | NESTED_ARRAYS | `an array of arrays` |
     | EMPTY_TABLE | `an empty table` |
-    | LONG_PATHS | `a table path longer than <CF_KEY_MAX - 2> bytes` |
+    | LONG_PATHS | `a table path too long (the path above it and its name pass <CF_KEY_MAX - 2> bytes)` |
     | LINE_BREAK | `text with a line break` (W5-V1's) |
     | NUL | `text with a NUL byte` |
     | NULL, with CF_REFUSES_NULL | `a null` (W5-V1's) |
+
+    An empty name is judged first: when EMPTY_NAME is missing its finding
+    is `an empty name`, whatever ANY_NAME says (TOML and INI lack both),
+    and ANY_NAME's finding is for a name that is not empty. `CV_NAME` is
+    only the second kind, `CV_EMPTY_NAME` the first.
 
     Judged on what the document held before anything was left out: an
     array that holds a table is "an array of tables" even if a name pass
@@ -1279,13 +1294,16 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
     * `ch_tree* ch_lower(cf_arena*, const ch_tree*, unsigned holds)`:
       what the table says a format with `holds` writes of a tree, as a
       new tree, written from the bits and from nothing else, bottom up:
-      1. a table member whose name is not `[A-Za-z0-9_-]+` and `holds`
-         lacks ANY_NAME, or is empty and lacks EMPTY_NAME, is dropped
-         with everything under it;
-      2. a table member whose joined path of table names from the
-         document is over `CF_KEY_MAX - 2` bytes (arrays end the count)
+      1. a table member whose name is empty and `holds` lacks
+         EMPTY_NAME, or is not empty and not `[A-Za-z0-9_-]+` and
+         `holds` lacks ANY_NAME, is dropped with everything under it;
+      2. a table member for which `plen + n` is more than `CF_KEY_MAX - 2`
          and `holds` lacks LONG_PATHS is dropped with everything under
-         it;
+         it, where `n` is its name's length and `plen` the length of its
+         parent's joined path of table names, dots included, 0 for a
+         member of the document (a table inside an array is written
+         inline, with no path, and is not subject to this, nor is
+         anything below it);
       3. a scalar: an int, real or bool whose bit is missing becomes the
          text `cf_value_to_text` gives; a null whose bit is missing is
          dropped when `CF_REFUSES_NULL` is set, else becomes the text
@@ -1355,7 +1373,13 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
        * `deep31`: the document and 31 nested tables named `a`, a leaf in
          the last; and `ok_path`: four nested tables with names of 60
          bytes and a leaf; `long_path`: six with names of 50 bytes and a
-         leaf (a path of 305 bytes);
+         leaf (a path of 305 bytes); and the boundary of the rule above,
+         at the default `CF_KEY_MAX` of 256 (the document names are
+         built from `CF_KEY_MAX` in `pairs.c`): `path_1_ok`, one table
+         with a name of 254 bytes and a leaf; `path_1_long`, a name of
+         255; `path_2_ok`, a table `a` holding a table with a name of 253
+         bytes (a path of 255) and a leaf; `path_2_long`, the inner name
+         254;
        * `big`: an array of 2,000 integers and a text of 70,000 bytes;
        * `looks`: the texts `true`, `123`, `null`, `0x1F`, `1e3`, `~`,
          `yes`, beside the integer `5`.
@@ -1380,14 +1404,21 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
        `toml_suite`, `yaml_suite`, `cbor_suite`, which list the valid
        documents; the `y_` cases of JSONTestSuite are `json_suite`'s),
        writes the manifest to a temporary directory and runs the
-       program; the CBOR vectors are written as files there, as
+       program, in the conformance build with the built-in YAML parser
+       only (`build-conformance`; the libyaml and libfyaml builds run
+       `conform` and its floors as before, not this); the CBOR vectors are written as files there, as
        `cbor_suite` does. The suites' lone values and lists are
        configurations only as the member `v` of a table: conform.c's
        wrapping (`json` when the root is not an object, `json5` and
-       `cbor` always, today `tests/conformance/conform.c:330-370`) moves
+       `cbor` always, today `tests/conformance/conform.c`, the block
+       that begins "JSON's grammar allows any value at the root") moves
        to `tests/conformance/wrap.h` as one static function
-       `cf_bool conform_wrap(const char* format, cf_blob* blob)`,
-       included by `conform.c` and by `pairs.c` for mode `wrap`;
+       `cf_bool conform_wrap(const char* format, const char* name,
+       cf_blob* blob)`, `name` the source name the wrapped blob is given
+       (`conform.c` passes `argv[2]`; the function keeps the original's
+       static 1 MiB buffers and its refusal of a blob that does not
+       fit, which is `false`), included by `conform.c` and by `pairs.c`
+       for mode `wrap`;
        `conform.c`'s behaviour is unchanged and the floors in
        `tests/conformance/floor.txt` prove it. YAML documents the configuration
        refuses by name (docs/Conformance.md) are the "not read" count.
@@ -1399,8 +1430,14 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
     edited in the same commit. For a cell where a document went through
     a writer and its reader gave something else with no refusal and no
     finding (a silent loss, `m` and `r` differ and `nfindings + as_text`
-    is 0 and the table has no such bit to clear), it is a bug in that
-    reader or writer: stop (see "stop if"). A cell where the codec holds
+    is 0), this card does not stop: the writer of that format is made to
+    refuse the value (its encoder returns false for it, as INI's does
+    for a line feed), which the converter then reports as a finding of
+    that kind; the table's bit is cleared (and `CF_REFUSES_NULL` is not
+    involved unless it is a null) and the cell edited; a test of that
+    refusal goes in the format's own unit test, written first and seen
+    to fail; and the notes list the document, the pair, the hop and the
+    writer changed. A cell where the codec holds
     more than the table says is made true by setting the bit. Every
     cell changed is listed in the commit message with the document that
     showed it.
@@ -1418,15 +1455,26 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
     (`ch_lower` and the quiet-loss rule) and a failure `abort()`s, so
     libFuzzer keeps the input; a hop whose conversion is refused by the
     core (the bound, D-82's) ends the run. Registered as `fuzz.chain`
-    with the readers' `-max_total_time=${CF_FUZZ_SECONDS}`, `-max_len=8192`
-    and `-seed_inputs=` three files written by CMake at configure time
-    with `file(WRITE)`, bytes all from `0` to `5` so no NUL is needed:
-    `00` `1` `0` then `{"a": 1, "b": [true, null]}`; `31` `2` `1` `4`
-    then `[s]\nk = v\n` ... (the card's carrier writes the three as
-    these three: JSON through toml and back; INI through json; TOML
-    through cbor through yaml), each file `<source byte><hop count
-    byte><writer bytes><document>`. Where `CF_FUZZ` is off nothing is
-    built; `-DEXTRA=fuzz` runs it.
+    with the readers' `-max_total_time=${CF_FUZZ_SECONDS}`, `-max_len=8192`,
+    `LABELS fuzz` (the `fuzz` test preset runs only that label) and
+    `TIMEOUT` of `CF_FUZZ_SECONDS * 3 + 60`, as theirs, and
+    `-seed_inputs=` three files written by CMake at configure time
+    with `file(WRITE)`. The bytes are the ASCII digits `0` to `5`
+    (0x30 to 0x35), which modulo 8, 4 and 6 are 0 to 5, so no NUL is
+    needed and a digit is its own number: the source `ini` is `0`,
+    `json` `1`, `toml` `3`; the writers `ini` `0`, `json` `1`, `toml`
+    `3`, `yaml` `4`, `cbor` `5`; the hop-count byte is the count less
+    one (`0` is one hop, `1` two). Each file is `<source byte><hop count
+    byte><one writer byte a hop><document>`, so, exactly:
+    * `fuzz_chain_seed1`, JSON through toml and back (two hops, writers
+      `toml` then `json`): `1` `1` `3` `1` followed by
+      `{"a": 1, "b": [true, null]}` (the bytes `1131{"a": 1, ...`);
+    * `fuzz_chain_seed2`, INI through json (one hop, writer `json`):
+      `0` `0` `1` followed by `[s]`, a line feed, `k = v`, a line feed;
+    * `fuzz_chain_seed3`, TOML through cbor through yaml (two hops,
+      writers `cbor` then `yaml`): `3` `1` `5` `4` followed by `[s]`, a
+      line feed, `k = 1`, a line feed.
+    Where `CF_FUZZ` is off nothing is built; `-DEXTRA=fuzz` runs it.
   * **The generated table.** `tools/codec/pairs.c` (new, statics `pr_`),
     `int codec_pairs(int argc, char** argv);` in `codec.h`, dispatched
     by `codec.c` as `pairs`; the usage gains
@@ -1457,8 +1505,9 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
     a paragraph (what the bits are, that a type a format lacks is
     written as text and anything else is left out and named, that no
     pair keeps the order of keys, that NaN and infinity are text, and
-    that a long table path is one over `CF_KEY_MAX` less two bytes, 254
-    by default), then `<!-- pairs:begin -->`, the markdown, and
+    that a table is left out of a TOML or INI file when its parent's
+    path and its name together pass `CF_KEY_MAX` less two bytes, 254 by
+    default), then `<!-- pairs:begin -->`, the markdown, and
     `<!-- pairs:end -->`. The page is held by `tests/codec/pairs_page.cmake`,
     `codec.pairs_page`, a copy of `formats.cmake`'s comparison
     (without its `EMIT` guard: the table is the same in every build)
@@ -1480,18 +1529,27 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
     none; `CF_REFUSES_NULL` only without `CF_HOLDS_NULL`; and every codec
     in `cf_codec_at(i)` with an encoder is one of the six (a writer
     added without a table row fails here). `lib/config/tests/test_roundtrip.c`
-    (today :107-124) loses `arrays`, `nulls` and `lines` from its
-    `format` struct and `g_formats`, keeps `compare`, and reads the rest
-    from `cf_format_holds` (`arrays` is 1 with `CF_CODEC_ARRAYS`, 2 with
-    `CF_CODEC_SCALAR_ARRAYS` only; `nulls` is `CF_HOLDS_NULL`; `lines`
-    `CF_HOLDS_LINE_BREAK`); its self-check at :1382 is test_holds'.
+    (today `tests/unit/test_roundtrip.c`, the `format` struct and
+    `g_formats`) loses `arrays`, `nulls` and `lines` from them, keeps
+    `compare`, and reads the rest from `cf_format_holds` (`arrays` is 1
+    with `CF_CODEC_ARRAYS`, 2 with `CF_CODEC_SCALAR_ARRAYS` only; `lines`
+    is `CF_HOLDS_LINE_BREAK`; **`nulls` is true when `CF_HOLDS_NULL` is
+    set or `CF_REFUSES_NULL` is not**: today INI has `nulls` 1, since it
+    writes a null as the text `null` and `test_nulls` expects
+    `TRIP_SAME` for it, while only TOML expects `TRIP_REFUSED`); the
+    self-check in `main` ("the table says what the codec says about
+    arrays") is test_holds'.
   * **The edits to W5-V1's cases** (`tests/codec/convert.cmake`), added:
     `empty_toml`: `{"e": {}, "k": 1}` `--to toml`: 0, stderr `e: an empty
     table, which toml cannot hold; left out`; `--strict`: 1.
     `yaml_null`: `{"a": null, "b": 1}` `--to yaml`: 0, stderr has no
     `carries no types` line about the null (`b` is counted: `1 value(s)`).
     `long_path`: a table nested six deep with names of 50 bytes, `--to ini`:
-    stderr has `a table path longer than 254 bytes`.
+    stderr has `a table path too long` (and the case `path_2_long`'s
+    document, the inner name of 254 under `a`, gives the same, while
+    `path_2_ok`'s, 253, gives none). `empty_name`: `{"": 1, "k": 2}`
+    `--to toml`: stderr `an empty name, which toml cannot hold` and not
+    `a name it would write unquoted`.
 * **files**: `lib/serialize/include/configforge/cf_serialize.h`,
   `lib/serialize/src/codec.c`, `cmake/configforge.experimental.symbols`,
   `tools/codec/convert_core.c` (new), `tools/codec/convert_core.h` (new),
@@ -1510,6 +1568,10 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
   `docs/Tools.md`, `docs/API.md` (regenerated), `docs/Decisions.md`,
   `CHANGELOG.md`, `docs/Roadmap.md`.
 * **steps**:
+  0. If `## 1.8.0 — unreleased` is not open in `CHANGELOG.md`, A-1 opened
+     it; check, and if it is not there open it:
+     `cmake -DTO=1.8.0 -P scripts/release/version.cmake`, committed
+     alone. Everything this card adds to the CHANGELOG goes under it.
   1. A change that moves code and nothing else: the tree, passes, replay
      and writing of `convert.c` into `convert_core.c` behind
      `cv_convert`, `convert.c` printing from `cv_result`.
@@ -1546,17 +1608,14 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
   9. `tests/fuzz/chain.c` and its registration; `-DEXTRA=fuzz` where
      clang has libFuzzer: `fuzz.chain` runs its seconds clean.
   10. The documents. ACCEPT-LINUX, ACCEPT-WINDOWS.
-* **accept**: ACCEPT-LINUX with `-DEXTRA="abi;conformance;fuzz"` (the new
-  experimental name, the suites through every pair, the new target),
+* **accept**: ACCEPT-LINUX with `-DEXTRA="abi;conformance;fuzz;components"` (the new
+  experimental name, the suites through every pair, the new target, and
+  A-1b's build of `lib/serialize` and `lib/config` alone, which now
+  hold `test_holds` and the changed `test_roundtrip`),
   ACCEPT-WINDOWS (`codec.pairs`, `codec.pairs_page`, `test_holds`
   on MSVC; conformance and fuzz are not run there), ACCEPT-CI. Also
   `gate.apiref` and `gate.abi` pass.
-* **stop if**: a document goes through a writer and its own reader
-  gives something else with no refusal and no finding (a silent loss
-  the table has no bit for): stop, write the document, the pair and the
-  hop in the notes, and hand back - it is a reader or writer bug,
-  and the card is accepted only when it is fixed or the maintainer
-  decides to make it a bit. Or: W5-V1's converter is not built as its
+* **stop if**: W5-V1's converter is not built as its
   card says (no tree, or its passes mark nodes in a way that cannot
   read the original children): follow what is there, make
   `cv_convert` out of it, say so in the notes, and stop only if the
@@ -1565,7 +1624,9 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
   limit that `limits` and the edge documents do not already state (a
   new limit: name it). Or: `CF_EXPERIMENTAL(1, 8) cf_bool cf_format_holds(...)`
   is moved by clang-format 22 so that gate.abi's regex does not find it
-  (S-2's own stop-if).
+  (S-2's own stop-if). A document that comes back different from a
+  writer and its own reader with no refusal and no finding is not a stop:
+  "Cells the test contradicts" says what to do, and the notes list it.
 * **docs**: add **D-109**, "What a format can hold, and every pair
   tested", in D-80's shape: the question (what a conversion loses, said
   once and tested); the options (more caps bits; a member of
@@ -1580,22 +1641,23 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
   said and counts a YAML null no longer as text). `docs/Tools.md`, the
   codec section: `pairs`, and in "Converting between formats" the list
   of what is named, now from the table, with `empty_toml`'s line as the
-  example. CHANGELOG, `### Added`: "`cf_format_holds` (experimental):
+  example. CHANGELOG, under `## 1.8.0 — unreleased` (not 1.7.0's, which
+  the header of this file names for the cards before it), `### Added`: "`cf_format_holds` (experimental):
   what each format that has a writer can hold. `configforge codec
   pairs`: what each format holds and what each pair of formats loses,
   generated into docs/Formats.md. Every document of the conformance
   suites and the project's fixtures is tested through every ordered pair
   of the six writing formats, and a fuzz target takes a random document
   through a random chain (D-109)." `### Changed`: "`configforge codec
-  convert` names an empty table, a table path over `CF_KEY_MAX` less two
-  bytes, a name that is empty and a text with a NUL byte where the
+  convert` names an empty table, a table path too long for TOML and INI
+  (the path above it and its name pass `CF_KEY_MAX` less two bytes), a name that is empty and a text with a NUL byte where the
   target cannot hold them, from one table, and no longer counts a YAML
   null as written as text (D-109)." Roadmap: the row "Tests that
   convert between every pair of formats" goes 🟩, `D-109`; the row
   "Formats registered, with what each can do" goes 🟨, "what each
   writer can hold, as one table the converter, the tests and the page
   read, done (D-109); the ways to read it, and `docs/Limits.md`
-  generated from it, left (A-11)".
+  generated from it, left (A-13)".
 * **notes**:
 
 ---
@@ -1614,7 +1676,7 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
   once, and each language is a program that reads it, as git finds its
   subcommands. The JSON is also the contract in a form any language
   reads without the library.
-* **needs**: W5-G3
+* **needs**: A-1b, W5-G3 (the paths below are the ones after A-1's map)
 * **size**: large
 * **decided**:
   * **The order of a `--lang`** (in `tools/gen/gen.c`, W5-G1's table
@@ -1906,9 +1968,14 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
         `configforge-gen-dirlang` in `ext/`, `--lang dirlang`: exit 2,
         the `no language` text (a directory is not a program).
     And `tests/gen/CMakeLists.txt` registers `gen.external` under
-    `if(NOT CMAKE_CROSSCOMPILING AND TARGET gen_fake)`, after the schema
-    fixtures (it needs none of Doctor's: `external.cmake` reads the
-    schema from the source tree, so it has no `FIXTURES_REQUIRED`).
+    `if(NOT CMAKE_CROSSCOMPILING AND CF_WITH_REAL AND TARGET gen_fake)`,
+    after the schema fixtures (it needs none of Doctor's:
+    `external.cmake` reads the schema from the source tree, so it has no
+    `FIXTURES_REQUIRED`). `CF_WITH_REAL` guards it because the golden
+    file has a real (`ratio`, and the real range), which a build
+    without reals cannot read from the schema, as `test_gen.c`'s own
+    `#if CF_WITH_REAL` is there for; a build with REPORT and without
+    reals still builds `gen_fake` and the rest of the tools.
   * **The documents for authors**, `docs/Tools.md`, the gen section: a
     subsection "A generator of your own": the order of a `--lang` (the
     four steps), the name rule, where the program is looked for and that
@@ -1936,6 +2003,12 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
   generated), `tests/gen/CMakeLists.txt`; last: `docs/Tools.md`,
   `docs/Decisions.md`, `CHANGELOG.md`, `docs/Roadmap.md`.
 * **steps**:
+  0. If `## 1.8.0 — unreleased` is not open in `CHANGELOG.md`, A-1 opened
+     it; check, and if it is not there open it:
+     `cmake -DTO=1.8.0 -P scripts/release/version.cmake`, committed
+     alone. Everything this card adds to the CHANGELOG goes under it,
+     not under 1.7.0 (which the header of this file names for the cards
+     before it).
   1. `fake_gen.c`, `external.cmake` with its cases and the registration, and
      an `external.cmake` golden that is only `{}` and a newline. See it
      fail: `cmake --build --preset default && ctest --preset default -R gen.external`
@@ -1952,9 +2025,10 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
      the machine has them (CI's MSVC `/analyze` otherwise).
   5. `docs/Tools.md`, then ACCEPT-LINUX with `-DEXTRA="tidy;shared"`,
      ACCEPT-WINDOWS.
-* **accept**: ACCEPT-LINUX with `-DEXTRA="tidy;shared"` (clang-tidy reads
+* **accept**: ACCEPT-LINUX with `-DEXTRA="tidy;shared;compilers"` (clang-tidy reads
   the new tool files; the installed tool finds its library by its run
-  path as before), ACCEPT-WINDOWS, ACCEPT-CI (MSVC `/analyze`, macOS and
+  path as before; `compilers` builds `spawn_posix.c` against musl, tcc
+  and pcc, where `posix_spawn` and `environ` may differ), ACCEPT-WINDOWS, ACCEPT-CI (MSVC `/analyze`, macOS and
   FreeBSD build `spawn_posix.c`). `gen.external`, `gen.c` and the other
   `gen.*` pass; `-DEXTRA=wasm` still builds nothing of the tools.
 * **stop if**: W5-G1's table has no entry type a writer can be added
@@ -1981,7 +2055,8 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
   `.exe` only on Windows and why, the pipe and why not a file or a
   captured output); compatibility (a new behaviour of a `--lang` that
   was an error; `--lang` absent still writes C, a name that is in the
-  table still its writer). CHANGELOG, `### Added`: "`configforge gen
+  table still its writer). CHANGELOG, under `## 1.8.0 — unreleased`,
+  `### Added`: "`configforge gen
   --lang <name>` runs `configforge-gen-<name>`, found beside
   `configforge-gen` or on the PATH, with the contract as JSON on its
   standard input - a generator in any language, outside the project

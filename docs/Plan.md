@@ -188,8 +188,8 @@ waves ("After 1.7.0: the order of the waves", below).
 | 46 | A-6 `configforge codec recode`: a file converted once, for review | small | A-5, T-3 | waits: A-5 |
 | 47 | A-7 The escapes in families | large | A-6 | waits: A-6 |
 | 48 | A-8 Whitespace, comments, newlines and the place of a refusal | large | A-7 | waits: A-7 |
-| 49 | A-9 Composed codecs, for what is almost a format | large | A-5 | waits: A-8 (the order) |
-| 50 | A-10 A refusal's place and reason | large | A-8 | waits: A-9 (the order) |
+| 49 | A-9 Composed codecs, for what is almost a format | medium | A-5 | waits: A-8 (the order) |
+| 50 | A-10 A refusal's place and reason | medium | A-8, A-9 | waits: A-9 |
 | 51 | A-11 Build profiles and the C version per file | large | A-1b | waits: A-10 (the order) |
 | 52 | A-12 The feature matrix made from the build | medium | A-11 | waits: A-11 |
 | 53 | W5-V2 Every pair of formats, and what each can hold | large | A-1b, W5-V1 | waits: A-12 (the order) |

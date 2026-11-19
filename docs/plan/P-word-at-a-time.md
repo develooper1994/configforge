@@ -152,11 +152,10 @@ The rules every card here keeps:
   faster than what a user would otherwise pick is. P-2, P-3 and the
   SWAR and SIMD backend (2.4.0) are held to the numbers this card
   produces ("What keeps a gain", below).
-* **needs**: P-1 (the documents and the 16 and 256 MiB runs are P-1's;
-  this card adds to them, it does not redo them). It may run before or
-  after A-1: `bench/`, `scripts/` and `.github/` do not move, and the
-  one library path it names is `lib/serialize/src/codec.c` (today
-  `src/serialize/codec.c`).
+* **needs**: P-1, A-1b (the documents and the 16 and 256 MiB runs are
+  P-1's; this card adds to them, it does not redo them). `bench/`,
+  `scripts/` and `.github/` do not move with A-1, but the paths below
+  that name `lib/` and the profile files are the ones after A-1b and A-11.
 * **size**: large
 * **decided**:
   * **Two programs, not one.** `bench/bench.c` stays C89 and is
@@ -164,7 +163,7 @@ The rules every card here keeps:
     `-DCF_INTERNAL_API=1`). The comparison is C++17 (simdjson, toml++
     and rapidyaml need it) and is its own CMake project,
     `bench/compare/`, which the top-level `CMakeLists.txt` never adds:
-    `CF_BUILD_BENCH` (CMakeLists.txt:162-164) is untouched. Nothing in
+    `CF_BUILD_BENCH` (the `option(CF_BUILD_BENCH ...)` block of CMakeLists.txt) is untouched. Nothing in
     the default build, the gates' build or `scripts/verify.cmake` can
     reach a library fetched for the comparison.
   * **One more mode in `cf_bench`: the documents as files.**
@@ -274,14 +273,32 @@ The rules every card here keeps:
     flag of its own, no `-O`, no `-march`), and makes a static library
     `lib_<name>` of them. So every library is built by this project's
     compiler with this project's flags, and by nothing else.
-    ConfigForge is `add_subdirectory(<root> configforge
-    EXCLUDE_FROM_ALL)` with `-DCF_BUILD_TESTING=OFF
+    ConfigForge is **not** `add_subdirectory`'d: the root project uses
+    `CMAKE_SOURCE_DIR` for its templates, scripts and install files
+    (cmake/ConfigForgeOptions.cmake, ConfigForgeInstall.cmake,
+    ConfigForgeSbom.cmake, ConfigForgeCompiler.cmake), which inside
+    another project is that project's directory, so the configure would
+    stop. It is configured on its own, by `bench/compare/CMakeLists.txt`
+    through `execute_process` at configure time (or by the driver
+    before it): `cmake -S <root> -B <bench build>/configforge
+    -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS_RELEASE=
+    -DCMAKE_C_FLAGS=<CF_BENCH_FLAGS> -DCF_BUILD_TESTING=OFF
     -DCF_BUILD_EXAMPLES=OFF -DCF_BUILD_TOOLS=OFF -DCF_ENABLE_GATES=OFF
     -DCF_WITH_XML=ON -DCF_YAML_BACKEND=builtin` (its own YAML reader,
-    D-69, is the one a default build ships) and the target
-    `configforge_serialize` (D-90: the readers, without the
-    configuration library). The flag sets, `CF_BENCH_FLAGS`, one
-    variable applied to every `lib_*` and every adapter:
+    D-69, is the one a default build ships), built with `--target
+    configforge_serialize` (D-90: the readers, without the
+    configuration library); the adapter links that build's
+    `libconfigforge_serialize.a` and includes its
+    `staged/include` (A-1's staged headers). The size rows' `minimal` is
+    `-DCF_PROFILE=minimal` on the same command (the profile, A-11, in
+    place of the preset's old list of options). **`-O2` is what every
+    library gets**: CMake's Release adds `-O3 -DNDEBUG` after
+    `CMAKE_C_FLAGS`, so `bench/compare/CMakeLists.txt` empties
+    `CMAKE_C_FLAGS_RELEASE` and `CMAKE_CXX_FLAGS_RELEASE` and applies
+    `CF_BENCH_FLAGS` to every `lib_*` and every adapter as
+    `target_compile_options`; ConfigForge's own configure gets the same
+    through the two `-D`s above. The flag sets, `CF_BENCH_FLAGS`, one
+    variable:
 
     | Name | Flags, for every library alike |
     | ---- | ------------------------------ |
@@ -387,8 +404,9 @@ The rules every card here keeps:
       -fdata-sections -Wl,--gc-sections`, stripped, linked dynamically
       to the system's C and C++ libraries; the result is its file size
       less that of the same program with an empty adapter. ConfigForge
-      is two rows, the default build and `-DCF_GC_SECTIONS=ON` with the
-      `minimal` preset's options (CMakePresets.json:70-86).
+      is two rows, the default build and `-DCF_PROFILE=minimal` (the
+      profile of A-11, which carries `CF_GC_SECTIONS` and the other
+      options the `minimal` preset used to list).
     * **machine**: `uname -sr`, the CPU's name from `/proc/cpuinfo`, the
       logical CPU count, the compiler's first `--version` line, the C
       library's, the runner image (`ImageOS`, `ImageVersion`), and the
@@ -440,7 +458,16 @@ The rules every card here keeps:
     the code (docs/Plan.md, "ACCEPT"). A baseline is raised only in a
     commit whose message says what made the code cost more, and lowered
     in the commit that made it cheaper. Wall time never gates: a shared
-    runner varies by tens of percent.
+    runner varies by tens of percent. **A baseline that is not there yet
+    is not a failure**: `gate.py` with no file at
+    `bench/baseline/instructions.json` prints `bench gate: no baseline
+    yet; the results are the artifact bench-quick: run
+    scripts/bench/gate.py --write on it and commit the file` and exits 0,
+    so the first push of the branch (step 9) is green and gives the
+    artifact the baseline is taken from. The `bench-gate` job runs
+    `python3 -m unittest scripts/bench/test_gate.py` first (the same
+    tests as `bench.gate`, which exists only under `-DCF_BUILD_BENCH=ON`
+    and so is not in the default ctest).
   * **The history, on the branch `bench-history`.** Chosen over the docs
     site's data file for four reasons. Every deploy of the site
     (`.github/workflows/docs.yml`: `actions/deploy-pages`, with
@@ -463,9 +490,14 @@ The rules every card here keeps:
     * `.github/workflows/ci.yml`, job `bench-gate` (push and pull
       request; `contents: read`; the top-level `permissions` already say
       so): `apt-get install valgrind libexpat1-dev`, configure and
-      build `bench/compare` with `-DCMAKE_BUILD_TYPE=Release` and no
-      `CF_BENCH_LIBS` (ConfigForge alone: nothing fetched), `cf_bench
-      --emit-docs` for 1 and 16 MiB, `scripts/bench/run.py --scope
+      build the root project with `-DCMAKE_BUILD_TYPE=Release
+      -DCF_BUILD_BENCH=ON` into `build-bench` and build `cf_bench` (it
+      needs Doctor, so the tools stay on), run `python3 -m unittest
+      scripts/bench/test_gate.py`, configure and build `bench/compare`
+      with `-DCMAKE_BUILD_TYPE=Release` and no
+      `CF_BENCH_LIBS` (ConfigForge alone: nothing fetched; it configures
+      and builds its own copy of ConfigForge as above), `build-bench`'s
+      `cf_bench --emit-docs` for 1 and 16 MiB, `scripts/bench/run.py --scope
       quick`, `scripts/bench/gate.py`, and `actions/upload-artifact`
       of the results as `bench-quick` (name and 14 days; the action
       pinned by commit like the others). Budget `timeout-minutes: 15`;
@@ -594,15 +626,15 @@ The rules every card here keeps:
   `scripts/bench/page.py`, `scripts/bench/changed.py`,
   `cmake/gates/GatePerfpage.cmake`, `cmake/ConfigForgeGates.cmake`
   (register `gate.perfpage`), `cmake/gates/GateDependencies.cmake`
-  (its glob, lines 11-22, gains `bench/CMakeLists.txt`,
+  (its `file(GLOB_RECURSE build_files ...)`, which gains `bench/CMakeLists.txt`,
   `bench/compare/CMakeLists.txt` and `bench/compare/libs/*.cmake`;
-  A-1 has changed lines 16-17 of it by then, add after them),
+  A-1 has changed its `src/` entries by then, add after them),
   `.github/workflows/ci.yml` (the trigger; `bench-gate`,
-  `bench-smoke`; the clang-format step at lines 364-366 gains
+  `bench-smoke`; the clang-format step of the `format-patch` job gains
   `bench/compare`), `.github/workflows/bench.yml` (new),
   `.github/workflows/docs.yml`, `.gitignore`, `scripts/format.cmake`
-  (lines 50 and 82's globs) and `cmake/ConfigForgeFormat.cmake` (line
-  20), both gaining `bench/compare/*.cpp`, `bench/compare/*.h` and
+  (its two globs for `bench/*.c`) and `cmake/ConfigForgeFormat.cmake` (its `bench/*.c`
+  glob), both gaining `bench/compare/*.cpp`, `bench/compare/*.h` and
   `bench/compare/adapters/*.cpp`; last: `docs/Performance.md`,
   `docs/Dependencies.md`, `mkdocs.yml`, `scripts/README.md`,
   `docs/Decisions.md`, `docs/Plan.md`, `docs/Roadmap.md`,
@@ -628,7 +660,9 @@ The rules every card here keeps:
      --size 1` and compares its lines to the file. Break one generator
      constant, see `bench.docs` fail, put it back. Run it with GCC and
      with Clang: the files are equal.
-  3. `bench/compare/CMakeLists.txt`, `main.cpp`, `touch.h` and the
+  3. `bench/compare/CMakeLists.txt` (with ConfigForge configured on its
+     own, as "The same flags" says, not added as a subdirectory),
+     `main.cpp`, `touch.h` and the
      ConfigForge adapter alone; `cfb_compare --lib configforge --doc
      <file> --mode speed --reps 3` prints a cell for each of the five
      formats' `mixed` at 1 MiB (XML too, with `CF_WITH_XML=ON`).
@@ -653,11 +687,14 @@ The rules every card here keeps:
      `scripts/bench/test_gate.py` (standard `unittest`, run by ctest as
      `bench.gate`): a results file at 111% of its baseline fails with
      the exact message; at 109% passes; at 94% passes with the warning;
-     a different compiler line exits 3. See each fail before the script
+     a different compiler line exits 3; no baseline file exits 0 with
+     its message. See each fail before the script
      is written, then pass.
   9. Take the baseline from the artifact of the first push of this
-     branch, commit `bench/baseline/instructions.json`, push; the next
-     CI run of `bench-gate` passes. Write the job's time in the notes.
+     branch (that push is green: no baseline yet is exit 0), commit
+     `bench/baseline/instructions.json`, push; the next
+     CI run of `bench-gate` compares against it and passes. Write the
+     job's time in the notes.
   10. `scripts/bench/page.py`, its `--check` and `--validate`, and
       `gate.perfpage`. Break the committed static block by one
       character, see the gate fail with its message, restore. Run
@@ -683,10 +720,17 @@ The rules every card here keeps:
       `bench-history` has two `full` files (gcc, clang). Write both in
       the notes.
 * **accept**: ACCEPT-LINUX (no `-DEXTRA`: none of its steps reads
-  `bench/` or `scripts/bench/`), with `cmake -S bench/compare -B
+  `bench/` or `scripts/bench/`), and two more builds, each with its
+  own tests. In the root project, `cmake -S . -B $HOME/cfb-root
+  -DCMAKE_BUILD_TYPE=Release -DCF_BUILD_BENCH=ON` built, with `ctest
+  --test-dir $HOME/cfb-root --output-on-failure -R
+  "bench\.docs|bench\.gate|gate\.perfpage|gate\.dependencies|gate\.text"`
+  passing (`bench.docs`, `bench.gate` and the gates are registered
+  there). In the comparison project, `cmake -S bench/compare -B
   $HOME/cfb -DCF_BENCH_LIBS=$HOME/cfb-libs -DCMAKE_BUILD_TYPE=Release`
-  built and `ctest --test-dir build --output-on-failure -R
-  "bench\.|gate\.perfpage|gate\.dependencies|gate\.text"` passing;
+  built, with `ctest --test-dir $HOME/cfb --output-on-failure -R
+  "bench\.(touch|probes)"` passing (the adapters' tests are registered
+  there, and need the fetched libraries);
   ACCEPT-WINDOWS (`gate.perfpage` and `gate.dependencies` run there; the
   comparison is Linux only and is not built); ACCEPT-CI, with the
   jobs `bench-gate` and `bench-smoke` green on the branch. CI-only
@@ -725,10 +769,9 @@ The rules every card here keeps:
   the gate counts instructions and never wall time; the page shows
   losses first. Consequence: a library enters the round by an adapter,
   a `libs/<name>.cmake`, a settings entry and probe lines, and leaves
-  by removing them. "Built: P-1b." `docs/Plan.md`: the index row
-  `| 39b | P-1b The other libraries beside ours, and a page CI keeps |
-  large | P-1 | waits: P-1 |`, after P-1's; and the fourth failure that is not
-  the code, under "ACCEPT": "`bench gate` exit 3: the runner's compiler
+  by removing them. "Built: P-1b." `docs/Plan.md`: the index row of P-1b
+  `done` with its commits (it is there already); and the fourth failure
+  that is not the code, under "ACCEPT": "`bench gate` exit 3: the runner's compiler
   or C library is not the baseline's; regenerate the baseline with
   `scripts/bench/gate.py --write` from the CI artifact." `docs/Roadmap.md`:
   "The aim: beat the others...", "Benchmarks fair, and without mercy"
