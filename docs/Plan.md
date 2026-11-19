@@ -195,7 +195,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 30 | T-2 `configforge gen`: the contract's own program | medium | T-1, H-2 | done (9ad95d2, 01738ac, 555b855, 9ee1c41) |
 | 31 | T-3 `configforge codec`: the serialization library's own program | medium | T-2, S-5 | done (d8d06c1, da16549, 57f897f) |
 | 32 | T-4 `configforge codec dump`: every value with its place | medium | T-3 | done (0074c04) |
-| 33 | W5-V1 `configforge codec convert` and `format` | large | T-3 | open |
+| 33 | W5-V1 `configforge codec convert` and `format` | large | T-3 | done (26ab6bd) |
 | 34 | W5-S1 `configforge gen schema --from` | medium | T-2 | done (0a8de0f) |
 | 35 | W5-G1 `configforge gen --lang cpp` | large | W5-S1 | done (071ed40) |
 | 36 | W5-G2 `configforge gen --lang rust` | large | W5-G1 | open |
