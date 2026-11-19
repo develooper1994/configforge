@@ -199,7 +199,7 @@ whole of wave 4 (CBOR; TLV by a layout and BER-TLV).
 Not yet cards: the Roadmap's "More formats, and what a format is"
 (MessagePack first, then BSON, UBJSON, property lists, HCL, Avro,
 Protobuf, TLV as embedded devices write it, a benchmark, a stream);
-the cumulative C99 and C23 layers; wave 6 (every operation on a file's data, written back
+the cumulative C99 and C23 layers (now D-104's layer for C and D-106, docs/plan/A-architecture.md); wave 6 (every operation on a file's data, written back
 in its format), wave 7 (Go and .NET), wave 8 (2.0: the stream reader
 and the dynamic sizing modes), proofs with CBMC, `.properties` against
 Java's own reader. From the Roadmap's "From a review of the whole,
@@ -271,6 +271,14 @@ code. The order, and why each comes where it does:
 
 Speed never at the cost of the `misra` and `minimal` profiles: the
 benchmark measures those profiles against the other libraries too.
+
+**Read again after the layout changes.** After A-1 and A-1b, and
+again after the last A card, every open card and every open Roadmap
+item that names a path or a function is read against the tree by
+someone who did not write it, and corrected in one commit before the
+next card opens. The first such reading, on 2026-11-19, found 39
+problems in six cards; the tree's layout changing under the cards is
+the surest way to make more.
 
 Each wave's milestone is in `docs/Maintaining.md`, "Versions", laid
 out again on 2026-11-19: versions go on after 2.0.0, which marks what

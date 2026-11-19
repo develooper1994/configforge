@@ -74,8 +74,33 @@ lib/cxx/         configforge.hpp and the compile-time layer (D-104)
 * Tools that need every public header in one directory (abidiff, the
   CBMC proofs, `check_include_file` tests) read a staged copy the
   configure step makes, `${CMAKE_BINARY_DIR}/staged/include/`.
-* Unit tests stay in `tests/` as they are; only `lib/lanes/tests/`
-  lives inside its component, since it travels with that library.
+* Unit tests move into their component (below, "Each component is
+  laid out as a project of its own").
+* **Each component is laid out as a project of its own** (the
+  maintainer, 2026-11-19: so that taking one out later is a copy, not
+  a rewrite). `lib/<c>/` holds `CMakeLists.txt`, `include/`, `src/`,
+  `tests/` and `README.md`:
+  * the build file declares the component with one call,
+    `cf_component(<name> DEPENDS <components> SOURCES <files>)`
+    (`cmake/ConfigForgeComponent.cmake`); the DEPENDS lists are the
+    layering table above, written once, where the component is, and
+    `gate.layering` reads them;
+  * `cmake -S lib/<c>` builds that component alone, with what it
+    depends on, as a static library `cf_<c>`, and runs its tests;
+    `gate.components` does that for every component, which proves at
+    every change that each one can be taken out. Inside the whole
+    project the sources still go into the two libraries, since CMake
+    3.10 (the project's floor) cannot link object libraries, and the
+    symbol lists stay as they are;
+  * its unit tests live in its `tests/`; the tests that cross
+    components (consumer, conformance, fuzz, doctor, gen, codec,
+    proofs, front) stay in the top-level `tests/`, and the shared test
+    helpers (`cf_test.h`, `cf_fixture.h`, `cf_kv_codec.h`, the data)
+    move to `tests/support/`;
+  * its `README.md` says what it is, what it depends on, its public
+    headers, and its version: `lanes` and `serialize` have their own,
+    the rest follow ConfigForge's.
+  A-1 moves the files; A-1b makes each component a project.
 * Rejected: top-level directories per component (they mix with `docs/`,
   `tools/` and `tests/`); moving the installed headers into
   `configforge/<component>/` (a break for every program, for no gain to
@@ -420,7 +445,7 @@ Differences the cards must keep or decide, not lose:
 
 ## The cards of 1.8.0
 
-Order: A-1, A-2, A-3, A-4, A-5, A-6, then A-7 to A-11 in their order. A-1 moves every
+Order: A-1, A-1b, A-2, A-3, A-4, A-5, A-6, then A-7 to A-13 in their order. A-1 moves every
 file, so nothing else of 1.8.0 runs beside it; A-2 touches only
 `lib/lanes/` and could run beside A-3, but A-3 needs it. Every card is
 accepted on Linux and Windows and in CI. The CHANGELOG: under
@@ -613,6 +638,129 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   it adds its commit there. CHANGELOG `### Changed`: "The source tree: one
   directory per component under `lib/` (D-100); the installed headers
   and libraries are unchanged."
+* **notes**:
+
+---
+
+## A-1b - Each component a project: its declaration, its tests, its README, built alone
+
+* **id**: A-1b
+* **goal**: every `lib/<c>/` is declared by `cf_component()`, holds its
+  own unit tests and a README, and builds alone with `cmake -S
+  lib/<c>`; `gate.layering` reads the declarations instead of a table
+  of its own; `gate.components` builds each component alone. The two
+  libraries, their symbols, the installed files and every test's
+  result are what they were.
+* **why**: D-100, "Each component is laid out as a project of its own":
+  a component that already builds alone is taken out by a copy.
+* **needs**: A-1
+* **size**: large
+* **decided**:
+  * **`cmake/ConfigForgeComponent.cmake`** (new) defines
+    `cf_component(<name> DEPENDS <c>... SOURCES <file>... [SERIALIZE])`:
+    * inside the whole project (`CF_WHOLE_PROJECT`, set by the top-level
+      CMakeLists.txt before `add_subdirectory(lib)`): it adds the
+      sources to `configforge`, and to `configforge_serialize` too when
+      `SERIALIZE` is given (port, numeric, base, text, lanes, the
+      platform's file opener, serialize), adds `include/` as a PUBLIC
+      include directory of the same targets, and records
+      `CF_COMPONENT_<name>_DEPENDS` in a global property for the gate;
+    * alone (`CF_WHOLE_PROJECT` not set): it adds each component of
+      DEPENDS once, from `${CMAKE_CURRENT_LIST_DIR}/../<dep>`, into
+      `${CMAKE_BINARY_DIR}/<dep>`, builds a static library `cf_<name>`
+      from its sources linked to `cf_<dep>` of each dependency, and adds
+      its `tests/` when `BUILD_TESTING` is on.
+  * Each `lib/<c>/CMakeLists.txt` begins, for the alone case,
+    `cmake_minimum_required(VERSION 3.10)` and, when it is the top
+    project, `project(cf_<c> C)` and
+    `include(${CMAKE_CURRENT_LIST_DIR}/../../cmake/ConfigForgeOptions.cmake)`
+    (the options and `cf_build_options.h`), then calls `cf_component`.
+    `lanes` keeps its own build file from A-2 (it must not read
+    ConfigForge's options) and is declared to ConfigForge by
+    `lib/lanes/lanes_sources.cmake` as A-3 wrote.
+  * **The DEPENDS** are exactly D-100's table: port: none; numeric:
+    port lanes; base: port numeric; text: port numeric base lanes;
+    platform: port numeric base; serialize: port numeric base text
+    lanes platform (its include of `cf_platform_file.h` only, which the
+    gate checks as A-1's `<component>:<header>` entry); config: all
+    above; cxx: config. `cmake/ConfigForgeLayers.cmake` (A-1) is
+    removed; `gate.layering` reads the global property (it runs with
+    `-P`, so the top-level build writes the property's content into
+    `${CMAKE_BINARY_DIR}/layers.cmake` at configure time and the gate
+    includes that file; its `-DLAYERS=` argument names it).
+  * **Unit tests move** from `tests/unit/` to `lib/<c>/tests/` by one
+    rule: a test belongs to the lowest component, in the order port,
+    lanes, numeric, base, text, platform, serialize, config, cxx, that
+    holds every `configforge/` header it includes (through its own
+    `#include` lines, not what those headers include); a `.cpp` test
+    belongs to cxx; `test_serialize_alone.c` to serialize (it links
+    `configforge_serialize` only); `test_fuzz.c` moves to
+    `tests/fuzz/` (it is the seed program `tests/fuzz/CMakeLists.txt:15`
+    builds). Write the resulting map in the notes before moving.
+    `cf_test.h`, `cf_fixture.h`, `cf_kv_codec.h` and `tests/unit/data/`
+    move to `tests/support/` (and `tests/support/data/`); every
+    `#include "cf_test.h"` keeps its spelling, with `tests/support` on
+    the include path, and the four cross-directory includes
+    (`tests/conformance/codec_module.c:13`, `tests/doctor/fixtures.c:16`,
+    `tests/doctor/test_api.c:14`, `tests/gen/test_gen.c:17`) change to
+    it. However the tests find their data today (read
+    `tests/unit/CMakeLists.txt`: a compile definition or a working
+    directory), the new path follows.
+  * **Each component's `tests/CMakeLists.txt`** carries its tests'
+    lines from `tests/unit/CMakeLists.txt` unchanged in substance:
+    `CF_UNIT_TESTS` becomes one list per component; the special blocks
+    move with their test (`test_serialize_alone` :113-114, `test_c11`
+    :133, the C++ tests :278-406, `unit.internal_fenced` :181-190, the
+    platform exclusion of `test_watch` :89, `CMAKE_REQUIRED_INCLUDES`
+    :357 already on the staged headers). The ctest names stay exactly
+    as they are (`unit.<name>`), so CI filters and docs that name them
+    do not change. `tests/unit/` is removed.
+  * **`gate.components`**: a new step `components` in
+    `scripts/verify.cmake`'s EXTRA list (and in its "unknown EXTRA
+    step" message), and a CI job, which for each component configures
+    `cmake -S lib/<c> -B <work>/<c> -DBUILD_TESTING=ON`, builds and runs
+    `ctest`. Not a ctest gate: nine configures are too slow for every
+    build.
+  * **READMEs**: `lib/<c>/README.md`, at most 30 lines each: what the
+    component is (one paragraph, from docs/Architecture.md), DEPENDS,
+    its public headers, its version line, and how to build it alone.
+    `lanes`' README from A-2 stays.
+  * docs: `docs/Architecture.md`'s "Where things live" describes the
+    component layout and `cmake -S lib/<c>`; `CONTRIBUTING.md`'s table
+    says where a new unit test goes (the rule above).
+* **files**: `cmake/ConfigForgeComponent.cmake` (new), every
+  `lib/<c>/CMakeLists.txt`, `lib/<c>/tests/` (new, from `tests/unit/`),
+  `lib/<c>/README.md` (new), `tests/support/` (new),
+  `tests/fuzz/CMakeLists.txt`, the four cross-directory includes,
+  `cmake/gates/GateLayering.cmake`, `cmake/ConfigForgeGates.cmake`,
+  `CMakeLists.txt`, `scripts/verify.cmake`, `.github/workflows/ci.yml`
+  (the job; and any path to `tests/unit/` in it), the format globs
+  (`scripts/format.cmake`, `cmake/ConfigForgeFormat.cmake`); last:
+  `docs/Architecture.md`, `CONTRIBUTING.md`, `CHANGELOG.md`.
+* **steps**:
+  1. Record `ctest --preset default -N` (every test's name) to a file
+     outside the tree.
+  2. `cf_component` and the components' build files, inside the whole
+     project only; the build and `ctest` pass.
+  3. The map of tests (in the notes), then the moves, `tests/support/`,
+     the components' test files; `ctest --preset default -N` lists
+     exactly step 1's names; `ctest` passes.
+  4. `gate.layering` on the declarations: break it on purpose (a
+     DEPENDS entry removed), see it fail, put it back.
+  5. The alone case; `cmake -S lib/serialize -B /tmp/s` builds and its
+     tests pass; then every component; the `components` step and the
+     CI job.
+  6. READMEs, documents; ACCEPT.
+* **accept**: ACCEPT-LINUX with
+  `-DEXTRA="components;abi;coverage;shared"`, ACCEPT-WINDOWS, ACCEPT-CI;
+  step 3's list of test names unchanged.
+* **stop if**: a component cannot build alone without one that its
+  DEPENDS does not name: the table is right and the code is not; stop,
+  write the include in the notes, report (do not widen DEPENDS).
+* **docs**: D-100's entry gets "Built: A-1, A-1b". CHANGELOG
+  `### Changed`: "Each component under `lib/` is a project of its own:
+  its declaration, its tests and README, and a build of it alone that
+  CI runs (D-100)."
 * **notes**:
 
 ---
