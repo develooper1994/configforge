@@ -11,13 +11,13 @@ add_test(
     -DPAGE=${CMAKE_SOURCE_DIR}/docs/Formats.md -DEMIT=${CF_WITH_EMIT} -P
     ${CMAKE_CURRENT_SOURCE_DIR}/formats.cmake)
 
-# `detect` and `check`.
-foreach(script detect check)
+# `detect`, `check` and `dump`.
+foreach(script detect check dump)
   add_test(
     NAME codec.${script}
     COMMAND
       ${CMAKE_COMMAND} -DCODEC=$<TARGET_FILE:configforge_codec>
-      -DWORK=${CMAKE_CURRENT_BINARY_DIR}/${script} -P
+      -DWORK=${CMAKE_CURRENT_BINARY_DIR}/${script} -DCBOR=${CF_WITH_CBOR} -P
       ${CMAKE_CURRENT_SOURCE_DIR}/${script}.cmake)
 endforeach()
 

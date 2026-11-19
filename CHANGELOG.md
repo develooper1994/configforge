@@ -15,6 +15,8 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - **`configforge codec`**: the serialization library's own program -
   `formats`, `detect` (a file's format and how it was told) and `check`
   (whether each file is well formed), linked to that library alone.
+- **`configforge codec dump`**: every value of a document, with its type
+  and its place - a line and column, or a byte offset for CBOR.
 - **`configforge gen schema --from <file>`**: a first JSON Schema
   contract drafted from a configuration file you already have - a key
   for every value, typed from it, every one optional, descriptions left

@@ -56,7 +56,7 @@ the program's exit code.
 | Program | What it does | Page |
 | --- | --- | --- |
 | `configforge-doctor` | Reads provenance reports: `explain`, `dump`, `lint`, `diff`, `history`, `blame`, `import-*`. Until 1.8.0 it is also installed as `doctor`, which says its new name on stderr, and still runs `check`, `gen` and `formats`. | [Doctor](Doctor.md) |
-| `configforge-codec` | The serialization library's own program: `formats`, `detect` and `check`, on documents and never on a configuration. | [below](#configforge-codec) |
+| `configforge-codec` | The serialization library's own program: `formats`, `detect`, `check` and `dump`, on documents and never on a configuration. | [below](#configforge-codec) |
 | `configforge-gen` | The contract's own program: `configforge gen --schema` writes a JSON Schema contract as C, `configforge gen check` holds files to it, `configforge gen schema --from` drafts one from a sample file. | [below](#configforge-gen) |
 
 ## configforge codec
@@ -76,6 +76,8 @@ configforge codec detect <file>
                                the format of a file, and how it was told
 configforge codec check <file>... [--as <format>]
                                whether each file is well formed
+configforge codec dump <file> [--as <format>]
+                               every value and table, with its place
 configforge codec --version
 ```
 
@@ -102,6 +104,34 @@ message, one line each; the exit code is the worst. `--as <format>` names
 the format for every file instead of detecting it; a format this build
 left out says which option to turn on, and one no codec is called is exit
 2. `-` is standard input. A TLV codec is not reachable: it needs a layout.
+
+**dump.** One line for each event of the document, fields separated by a
+tab, printed as the reader gives them - nothing is kept, so a large
+document costs its own bytes and the path. A table or array opened is `-`,
+its path (`.` for the document itself) and `table` or `array`. A value is
+its place, its path, its type and its text, and ` (textual)` after the
+text when the reader said the value was untyped text. The place is the one
+`explain()` would name - `app.toml:3:5` for text, `app.cbor, byte 12` for
+CBOR - so what the dump shows is what a report will say; a reader that
+gives none is `-`. The path is the names joined by `.`, an array's members
+by their index from 0; one too long for its buffer ends in `...`. A text
+is quoted, with `\`, `"` and every byte below 0x20 or 0x7f written as
+`\\`, `\"`, `\n`, `\r`, `\t` or `\xNN`, so nothing a file holds starts a
+line of its own in a CI log. Exit 0 dumped; 1 the format cannot be told,
+or the reader refused the bytes (its message on stderr, after what was
+printed); 2 unusable input. A TLV codec is not reachable (no layout), and
+the image (`cf_image`) is ConfigForge's own format, read by
+`libconfigforge` and not by this program.
+
+```text
+$ configforge codec dump app.json
+-       .       table
+-       s       table
+app.json:1:13   s.p     int     8080
+-       t       array
+app.json:1:26   t.0     text    "x"
+app.json:1:43   u       null    null
+```
 
 ## configforge gen
 

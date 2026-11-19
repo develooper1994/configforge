@@ -18,6 +18,8 @@ int codec_formats(int argc, char** argv);
 int codec_detect(int argc, char** argv);
 /* Whether each file is well formed in its format (detect.c). */
 int codec_check(int argc, char** argv);
+/* Every value and table of a file, with its place (dump.c). */
+int codec_dump(int argc, char** argv);
 
 /* `path` read whole ("-" is standard input, binary) into `ar`, and
    its codec: `as` by name when not NULL, else from its name and then

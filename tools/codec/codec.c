@@ -4,6 +4,7 @@
  *     configforge codec formats [--format text|markdown]
  *     configforge codec detect <file>
  *     configforge codec check <file>... [--as <format>]
+ *     configforge codec dump <file> [--as <format>]
  *     configforge codec --version
  *
  * It reads documents, in every format the library reads, and never a
@@ -48,6 +49,9 @@ int main(int argc, char** argv) {
     }
     if (argc >= 2 && strcmp(argv[1], "check") == 0) {
         return codec_check(argc - 2, argv + 2);
+    }
+    if (argc >= 2 && strcmp(argv[1], "dump") == 0) {
+        return codec_dump(argc - 2, argv + 2);
     }
     if (argc == 2 && strcmp(argv[1], "--version") == 0) {
         printf("ConfigForge codec %s\n", cf_serialize_version());
