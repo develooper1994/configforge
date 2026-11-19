@@ -1,5 +1,13 @@
 # Word at a time before SIMD
 
+**Superseded in part, 2026-11-19.** The word-at-a-time and SIMD code is
+now a library of its own, `lanes` (docs/plan/A-architecture.md, D-101),
+whose interface and scalar reference come in 1.8.0 (A-2). P-2 and P-3
+are rewritten on it before they open (2.4.0): P-2's primitives become
+the library's `swar32` and `swar64` backends rather than
+`src/serialize/swar.h`, and P-3's scans are the few functions of
+`lib/text/` (D-102). P-1 and the rules below stand.
+
 The Roadmap's "Large files, and SIMD as an option" orders the work:
 measure, then a portable word-at-a-time (SWAR) path in C89 for every
 target, then SIMD behind `CF_WITH_SIMD`. These three cards are the first

@@ -179,8 +179,16 @@ waves ("After 1.7.0: the order of the waves", below).
 | 37 | W5-G3 `configforge gen --lang python` | medium | W5-G2 | waits: W5-G2 |
 | 38 | T-5 Doctor's aliases, and the name `doctor`, removed | small | 1.7.0 released, W5-G3 | waits: 1.7.0 released (it belongs to 1.8.0) |
 | 39 | P-1 The benchmark measures large documents, and says where time goes | medium | 1.7.0 released | waits: 1.7.0 released |
-| 40 | P-2 Word-at-a-time scans in C89, with the byte loop as reference | medium | P-1 | waits: P-1 |
-| 41 | P-3 The scans P-1 found, a word at a time, kept only where they win | medium | P-2 | waits: P-2 |
+| 40 | A-1 One directory per component: the files moved, nothing else changed | large | 1.7.0 released | waits: 1.7.0 released |
+| 41 | A-2 The vector library, its interface and its scalar reference | medium | A-1, its name | waits: A-1; TO DECIDE: the name |
+| 42 | A-3 One UTF-8, one hex digit, one table hash | medium | A-2 | waits: A-2 |
+| 43 | A-4 Invalid UTF-8 refused alike, and the escapes in families | medium | A-3 | waits: A-3; card to complete; TO DECIDE: invalid UTF-8 |
+| 44 | A-5 Whitespace, comments, newlines and the place of a refusal | medium | A-4 | waits: A-4; card to complete |
+| 45 | A-6 Composed codecs, for what is almost a format | medium | A-3 | waits: A-3; card to complete |
+| 46 | A-7 A refusal's place and reason | medium | A-5 | waits: A-5; card to complete |
+| 47 | A-8 Build profiles and the C version per file | medium | A-1 | waits: A-1; card to complete |
+| 48 | P-2 Word-at-a-time scans in C89, with the byte loop as reference | medium | P-1, A-3 | waits: 2.4.0; to be rewritten on D-101 |
+| 49 | P-3 The scans P-1 found, a word at a time, kept only where they win | medium | P-2 | waits: P-2 |
 
 Done and released in 1.5.0, their cards removed: H-1, H-3, H-4 and the
 whole of wave 4 (CBOR; TLV by a layout and BER-TLV).
@@ -229,7 +237,8 @@ code. The order, and why each comes where it does:
 2. **P-1, the measurement** (1.8.0). It changes only `bench/`. Its baseline,
    instruction counts included, shows what each wave below costs or
    saves.
-3. **Architecture** (1.8.0). First a table of the helpers each reader writes
+3. **Architecture** (1.8.0; the design and the cards are
+   `docs/plan/A-architecture.md`, D-100 to D-107). First a table of the helpers each reader writes
    again (UTF-8, escapes, numbers, whitespace, line and column), with
    line counts. Then those helpers as one internal layer behind an
    interface, with a scalar reference. Then the serialization sources'
