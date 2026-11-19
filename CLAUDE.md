@@ -58,8 +58,9 @@ You carry out one card of docs/Plan.md, alone.
    marked TO DECIDE without an answer: stop.
 3. Steps in order. "See it fail" is a real step: run the test before the fix.
 4. Commit messages in the project's style (git log -20 --oneline).
-   Branches as the loop says: work/<card id>, CI green, then main
-   fast-forwarded and the branch deleted. Push only when the brief says so.
+   Branches as the loop says: work/<card id>, CI green, then the card
+   squashed onto main as one commit (step 10) and the branch deleted.
+   Push only when the brief says so.
 5. Three failures on the same thing: stop, restore, write what failed under
    the card's "notes", report.
 6. Report: files changed, ACCEPT results with exit codes, anything the card

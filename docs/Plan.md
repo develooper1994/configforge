@@ -30,13 +30,27 @@ nothing else:
       on the same failure -> STOP: revert the unit (git restore, git
       clean of your new files), write what failed into the card under
       "Notes", commit that, report.
- 8. Commit: the card's files, CHANGELOG.md, docs/Roadmap.md, and this
-      index with the card's status set to "done" and the commit named.
+ 8. Commit on the branch, as often as the work needs: the card's files,
+      CHANGELOG.md and docs/Roadmap.md.
  9. git push -u origin work/<card id>; wait for CI (ACCEPT-CI).
       red -> read the failing job's log, fix, commit, push, go to 9.
-10. Green: git push origin work/<card id>:main; delete the branch here
-      and on the remote. Go to 1.
+      main moved meanwhile -> git merge origin/main on the branch, go to 9.
+10. Only when the card is done - every step, ACCEPT, and ACCEPT-CI green
+      on the branch's last commit - squash it onto main as one commit:
+        git switch main; git merge --squash work/<card id>
+        git commit    # subject "<card id>: <its goal>", body: the
+                      # branch's commit subjects, in order
+        test "$(git rev-parse HEAD^{tree})" = "$(git rev-parse work/<card id>^{tree})"
+        git push origin main
+      Delete the branch here and on the remote. The next commit to main
+      sets the card's status in this index to "done (<that commit>)".
+      Go to 1.
 ```
+
+A card is one commit on main, the same tree CI passed. Work that is not
+done is never squashed: a branch that stops or is handed back keeps its
+commits. The cards on main before this rule (T-3 and earlier) keep
+their commits: main's history is never rewritten.
 
 Work that must stop between 5 and 10 writes `HANDOFF.md` - the state in
 three lines, then numbered steps, each with its files, its test and what
@@ -170,11 +184,11 @@ waves ("After 1.7.0: the order of the waves", below).
 | 28 | S-5 The serialization library installed, found and packaged | medium | S-4 | done (22772d8, 563517c, ac8023e) |
 | 29 | T-1 `configforge <command>`, and Doctor's own name | large | S-1, H-6, H-8b | done (94ab557, b7cbb7c, 297130f, 10929ab, f87885d) |
 | 30 | T-2 `configforge gen`: the contract's own program | medium | T-1, H-2 | done (9ad95d2, 01738ac, 555b855, 9ee1c41) |
-| 31 | T-3 `configforge codec`: the serialization library's own program | medium | T-2, S-5 | open |
-| 32 | T-4 `configforge codec dump`: every value with its place | medium | T-3 | waits: T-3 |
-| 33 | W5-V1 `configforge codec convert` and `format` | large | T-3 | waits: T-3 |
-| 34 | W5-S1 `configforge gen schema --from` | medium | T-2 | open |
-| 35 | W5-G1 `configforge gen --lang cpp` | large | W5-S1 | waits: W5-S1 |
+| 31 | T-3 `configforge codec`: the serialization library's own program | medium | T-2, S-5 | done (d8d06c1, da16549, 57f897f) |
+| 32 | T-4 `configforge codec dump`: every value with its place | medium | T-3 | open |
+| 33 | W5-V1 `configforge codec convert` and `format` | large | T-3 | open |
+| 34 | W5-S1 `configforge gen schema --from` | medium | T-2 | done (0a8de0f) |
+| 35 | W5-G1 `configforge gen --lang cpp` | large | W5-S1 | open |
 | 36 | W5-G2 `configforge gen --lang rust` | large | W5-G1 | waits: W5-G1 |
 | 37 | W5-G3 `configforge gen --lang python` | medium | W5-G2 | waits: W5-G2 |
 | 38 | T-5 Doctor's aliases, and the name `doctor`, removed | small | 1.7.0 released, W5-G3 | waits: 1.7.0 released (it belongs to 1.8.0) |
