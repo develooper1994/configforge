@@ -64,6 +64,7 @@ nav:
       - Conventions: docs/Conventions.md
       - Dependencies: docs/Dependencies.md
       - Roadmap: docs/Roadmap.md
+      - Market: docs/Market.md
       - Changelog: CHANGELOG.md
       - Security: SECURITY.md
       - Code of conduct: CODE_OF_CONDUCT.md

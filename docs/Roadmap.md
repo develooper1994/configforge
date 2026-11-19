@@ -1023,21 +1023,29 @@ first user meets. In the order proposed:
   their good parts.** Read before the P cards' forms are chosen, and
   cited in each card's notes. What each is known for, to confirm by
   reading its code:
-  * **yyjson** (C89, MIT): a single pass with no separate tokenizer, an
-    immutable document in one contiguous allocation, a mutable one
-    beside it, its own fast number reading and writing, and a pool
-    allocator. The closest in language and aim to ConfigForge, so the
-    first to read.
-  * **simdjson** (C++17): a two-stage design (Langdale and Lemire,
-    "Parsing Gigabytes of JSON per Second", 2019) - stage 1 finds every
-    structural character with SIMD into an index, stage 2 walks the
-    index; on-demand parsing that reads only what is asked; run-time
-    dispatch between kernels; number parsing
-    (`include/simdjson/generic/numberparsing.h`: eight digits at a time
-    with SWAR, the Eisel-Lemire fast path for reals).
-  * **RapidJSON** (C++): in-situ parsing (strings decoded in the
-    input's own buffer), SAX and DOM over one reader, SSE2/SSE4.2/NEON
-    whitespace skips, Grisu2 for printing reals.
+  * **yyjson** (ANSI C89, MIT): an immutable document held in two
+    contiguous areas, one for values and one for strings, with a
+    mutable document beside it; exact reading and writing of int64,
+    uint64 and double; a caller's allocator. The closest in language
+    and aim to ConfigForge, so the first to read. Not confirmed from
+    its pages (2026-11-19): that it reads in a single pass with no
+    separate tokenizer, and how its numbers and its pool are done -
+    read in its source before citing.
+  * **simdjson** (C++, Apache-2.0 or MIT): a two-stage design
+    (Langdale and Lemire, "Parsing Gigabytes of JSON per Second", VLDB
+    Journal 28(6), 2019) - stage 1 finds every structural character
+    with SIMD into an index, stage 2 walks the index; On-Demand parsing
+    that reads only what is asked; a parser for the processor chosen at
+    run time; number parsing
+    (`include/simdjson/generic/numberparsing.h`: eight digits checked
+    and read at a time with SWAR, `is_made_of_eight_digits_fast` and
+    `parse_eight_digits_unrolled`; reals by a 128-bit multiply against
+    a table of powers of five, after Mushtak and Lemire, "Fast Number
+    Parsing Without Fallback", the Eisel-Lemire line).
+  * **RapidJSON** (C++, MIT): SAX and DOM over one reader, SSE2 and
+    SSE4.2 whitespace skips; in-situ parsing (strings decoded in the
+    input's own buffer), NEON and Grisu2 for printing reals are
+    remembered but not confirmed from its pages (2026-11-19).
   * *Hacker's Delight* (Warren) for the word tricks.
   Their ideas are taken, not their code (C++, and licences differ).
   **Not only JSON**: each idea is restated as an operation of the
@@ -1048,18 +1056,31 @@ first user meets. In the order proposed:
   The benchmark (P-1, and 1.8.0's comparison) runs the same documents
   through yyjson, simdjson and RapidJSON for JSON, and through each
   format's best-known C or C++ reader for the others (to be listed:
-  libyaml and rapidyaml, toml++ and tomlc99, tinycbor and libcbor,
+  libyaml and rapidyaml, toml++ and tomlc17 (tomlc99's successor;
+  tomlc99 calls itself obsolete), tinycbor and libcbor,
   inih, expat and pugixml). Each measure is its own line - parse speed,
   print speed, memory, code size - per format and size. Winning every
   line may not be possible; the README leads with the lines it wins,
   and the page shows all of them, losses included, with the machine and
   compiler.
 * ⬜ **A SWAR and SIMD backend, in C89/C99, possibly a library of its
-  own.** There seems to be a gap, to be checked before starting: Highway
-  and xsimd are C++, qlibs/swar is C++ too, and SIMDe (C99) maps one
-  instruction set onto another rather than giving one portable
-  vocabulary; no small C library seems to offer SWAR and SIMD behind
-  one API with a scalar reference and run-time dispatch. Its shape:
+  own.** The gap, as checked on 2026-11-19 against the libraries'
+  own pages: every piece exists somewhere, the whole does not.
+  Highway (C++17), xsimd (C++17), EVE (C++20), libsimdpp (C++14) and
+  qlibs/swar (C++20, SWAR only) are C++. SIMDe (C99) maps one
+  instruction set's intrinsics onto another and chooses at build time.
+  nsimd (MIT) comes closest: C89 where it can, C99 otherwise, one
+  portable vocabulary over SSE2 to AVX-512, NEON and SVE, and a scalar
+  target - but its extension is chosen when it is built, and it has no
+  SWAR tier. VOLK (LGPL-3.0) and Simd Library (MIT, a C API over C++)
+  dispatch at run time over scalar bases, for radio and image kernels.
+  simdutf has a C11 API for text only; cpu_features (C99) only
+  detects. Among those checked, none combines a C89 SWAR tier, a
+  scalar reference per operation, C99 SIMD tiers and automatic
+  run-time dispatch behind one C API for byte-oriented operations
+  (find any of a set, run length, eight digits to a number). "Among
+  those checked": the search was not exhaustive, and nsimd's activity
+  is unconfirmed. Its shape:
   * **Operations, not instructions.** Each operation (find a byte of a
     set, a run below a value, a byte-class mask, eight digits to a
     number, compare, count) has a scalar form (the reference), a SWAR
@@ -1175,15 +1196,19 @@ first user meets. In the order proposed:
   decided each. Each number on the page is read from the build options
   or a test, and a test checks the page against them, so it cannot
   drift.
-* ⬜ **Ways to read: DOM, SAX, lazy, in-situ.** The readers today build
-  the model. Four modes, each an option of the reader, sharing one
-  lexer:
-  * **DOM** (today's): the whole document as a tree, read once,
-    walked many times.
-  * **SAX / events**: a callback per value, no tree kept; for a
-    document larger than memory, and the base the others are built on
-    (the serialization library's events already exist; made public as
-    a stable API).
+* ⬜ **Ways to read: DOM, SAX, lazy, in-situ.** Corrected on
+  2026-11-19 against the code: the readers today give **events**, and
+  that interface is already public (`cf_doc_sink` in `cf_serialize.h`,
+  a callback per table, array and value); the configuration library
+  flattens them into its key space, which is deliberately not a tree
+  (`docs/Architecture.md`, "What is deliberately not here"). So the
+  modes are, all on the same lexers:
+  * **Events (SAX)**: done; the base the others are built on.
+  * **A document tree (DOM)** for the serialization library alone:
+    W5-V1 builds one inside `configforge codec convert`; made a public
+    type of the serialization library, read once and walked many
+    times, for programs that want a document rather than a
+    configuration.
   * **Lazy / on-demand** (simdjson's): a structural index first, values
     parsed only when asked for; for reading three keys of a large
     document.
@@ -1339,8 +1364,14 @@ from parts that exist:
   files at once (one a host), grouped by value, saying which hosts
   differ from the rest and on which keys - the question "is this set
   the same on a hundred servers".
-* ⬜ **Market research before the next step.** Who already sells what
-  to these people, and where nobody does: configuration languages (Cue,
+* 🟨 **Market research before the next step.** Done on 2026-11-19 in
+  [Market.md](Market.md): fields 1 (a diff that knows the contract) with
+  3 (pull requests) and 5 (embedded configuration checked at build time)
+  look open; structural diff and Kubernetes policy are crowded, so the
+  project adds the contract and provenance to dyff, conftest and gitleaks
+  rather than competing with them. Left: confdiff's real features and
+  licence, and the rows marked unconfirmed. The question, as asked:
+  who already sells what to these people, and where nobody does: configuration languages (Cue,
   KCL, Pkl), policy (OPA and conftest), diff tools (dyff, graphtage,
   difftastic), stores (Consul, AppConfig), and GitOps (Argo, Flux).
   Candidates for a field with no rival, to test against that list:
