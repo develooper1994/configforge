@@ -2,7 +2,8 @@
  * contract.c - a JSON Schema contract, checked against and written (D-64, D-67).
  *
  *     configforge gen check --schema <schema> <file>...
- *     configforge gen       --schema <schema> [--name <function>] [--out <file>]
+ *     configforge gen       --schema <schema> [--lang c|cpp] [--name <name>] [--out
+ * <file>]
  *
  * `check` reads configuration files against the contract as a program
  * built from it would - every key defined, every value of its type and
@@ -32,7 +33,9 @@
 #endif
 
 static int contract_usage(void) {
-    fputs("  configforge gen --schema <schema> [--name <function>] [--out <file>]\n"
+    fputs("  configforge gen --schema <schema> [--lang c|cpp|rust|python] [--name "
+          "<name>] "
+          "[--out <file>]\n"
           "  configforge gen check --schema <schema> <file>...\n",
           stderr);
     return 2;
@@ -430,32 +433,14 @@ static void c_comment_name(FILE* out, const char* path) {
     }
 }
 
-static int gen_write(FILE* out, const cf_defset* ds, const char* schema,
-                     const char* name) {
-    size_t  n = cf_defset_count(ds);
-    size_t  i;
-    cf_bool reals = CF_FALSE;
+/* The definitions, as the calls that make them: what a function of the
+   generated file holds from its declarations to its `return`. C++ compiles
+   every line of it and ends it as a bool (`cxx`), the one line that
+   differs. */
+static int gen_c_body(FILE* out, const cf_defset* ds, cf_bool cxx) {
+    size_t n = cf_defset_count(ds);
+    size_t i;
 
-    for (i = 0; i < n; ++i) {
-        if (cf_defset_at(ds, i)->type == CF_TYPE_REAL) {
-            reals = CF_TRUE;
-        }
-    }
-    fputs("/* The contract of ", out);
-    c_comment_name(out, schema);
-    fputs(", as calls: written by `configforge gen --schema`.\n"
-          "   Regenerate it from the schema rather than editing it. */\n\n"
-          "#include <configforge/configforge.h>\n\n",
-          out);
-    c_lines(out, gen_checks);
-    if (reals) {
-        fputs("#if !CF_WITH_REAL\n"
-              "#error \"the contract has real keys: build with CF_WITH_REAL\"\n"
-              "#endif\n\n",
-              out);
-    }
-    fprintf(out, "cf_bool %s(cf_builder* b);\n\ncf_bool %s(cf_builder* b) {\n", name,
-            name);
     for (i = 0; i < n; ++i) {
         const cf_def* d = cf_defset_at(ds, i);
         c_list_decl(out, "allowed", i, d->allowed);
@@ -490,25 +475,667 @@ static int gen_write(FILE* out, const cf_defset* ds, const char* schema,
     if (n == 0 && ds->open_count == 0) {
         fputs("    (void)b;\n", out);
     }
-    fputs("    return ok;\n}\n", out);
+    fputs(cxx ? "    return ok != CF_FALSE;\n" : "    return ok;\n", out);
+    return 0;
+}
+
+/* Whether any key is a real, which a build without reals cannot read. */
+static cf_bool gen_has_reals(const cf_defset* ds) {
+    size_t i;
+
+    for (i = 0; i < cf_defset_count(ds); ++i) {
+        if (cf_defset_at(ds, i)->type == CF_TYPE_REAL) {
+            return CF_TRUE;
+        }
+    }
+    return CF_FALSE;
+}
+
+static void gen_need_reals(FILE* out) {
+    fputs("#if !CF_WITH_REAL\n"
+          "#error \"the contract has real keys: build with CF_WITH_REAL\"\n"
+          "#endif\n\n",
+          out);
+}
+
+/* ------------------------------------------------------------------ *
+ * The languages (D-95)
+ *
+ * What `--lang` finds, and nothing else names a language: its name, the
+ * extension of its file, the check of the name `--name` gives it, the
+ * words it reserves (sorted, against the names the writer makes) and the
+ * writer, handed the definitions, the schema's path, `--name` and its own
+ * entry.
+ * ------------------------------------------------------------------ */
+
+typedef struct gen_lang gen_lang;
+
+struct gen_lang {
+    const char* name;
+    /* The extension of its file: named by the table for the tools that name
+       the output (W5-G4); nothing in this program reads it yet. */
+    /* cppcheck-suppress unusedStructMember */
+    const char* extension;
+    cf_bool (*identifier)(const char* name);
+    const char* const* reserved;
+    size_t             reserved_count;
+    int (*write)(FILE* out, const cf_defset* ds, const char* schema, const char* name,
+                 const gen_lang* self);
+};
+
+/* The contract as C: one function. */
+static int gen_c_file(FILE* out, const cf_defset* ds, const char* schema,
+                      const char* name, const gen_lang* self) {
+    int rc;
+
+    (void)self;
+    fputs("/* The contract of ", out);
+    c_comment_name(out, schema);
+    fputs(", as calls: written by `configforge gen --schema`.\n"
+          "   Regenerate it from the schema rather than editing it. */\n\n"
+          "#include <configforge/configforge.h>\n\n",
+          out);
+    c_lines(out, gen_checks);
+    if (gen_has_reals(ds)) {
+        gen_need_reals(out);
+    }
+    fprintf(out, "cf_bool %s(cf_builder* b);\n\ncf_bool %s(cf_builder* b) {\n", name,
+            name);
+    rc = gen_c_body(out, ds, CF_FALSE);
+    if (rc != 0) {
+        return rc;
+    }
+    fputs("}\n", out);
     c_lines(out, gen_undefs);
     return 0;
 }
 
+/* ------------------------------------------------------------------ *
+ * C++: one header
+ *
+ * The C body, whole, in a function of the namespace; a Key for each key,
+ * to read; and a struct filled through a cf::Binding. The names are made
+ * here, from the keys (docs/Tools.md).
+ * ------------------------------------------------------------------ */
+
+/* C++'s reserved words, and the names the header makes itself; sorted. */
+static const char* const gen_cxx_reserved[] = {"Contract",
+                                               "alignas",
+                                               "alignof",
+                                               "and",
+                                               "and_eq",
+                                               "asm",
+                                               "auto",
+                                               "bind",
+                                               "bitand",
+                                               "bitor",
+                                               "bool",
+                                               "break",
+                                               "case",
+                                               "catch",
+                                               "cf",
+                                               "char",
+                                               "char16_t",
+                                               "char32_t",
+                                               "char8_t",
+                                               "class",
+                                               "co_await",
+                                               "co_return",
+                                               "co_yield",
+                                               "compl",
+                                               "concept",
+                                               "const",
+                                               "const_cast",
+                                               "consteval",
+                                               "constexpr",
+                                               "constinit",
+                                               "continue",
+                                               "decltype",
+                                               "default",
+                                               "define",
+                                               "delete",
+                                               "do",
+                                               "double",
+                                               "dynamic_cast",
+                                               "else",
+                                               "enum",
+                                               "explicit",
+                                               "export",
+                                               "extern",
+                                               "false",
+                                               "float",
+                                               "for",
+                                               "friend",
+                                               "goto",
+                                               "if",
+                                               "inline",
+                                               "int",
+                                               "keys",
+                                               "long",
+                                               "mutable",
+                                               "namespace",
+                                               "new",
+                                               "noexcept",
+                                               "not",
+                                               "not_eq",
+                                               "nullptr",
+                                               "operator",
+                                               "or",
+                                               "or_eq",
+                                               "private",
+                                               "protected",
+                                               "public",
+                                               "register",
+                                               "reinterpret_cast",
+                                               "requires",
+                                               "return",
+                                               "short",
+                                               "signed",
+                                               "sizeof",
+                                               "static",
+                                               "static_assert",
+                                               "static_cast",
+                                               "struct",
+                                               "switch",
+                                               "template",
+                                               "this",
+                                               "thread_local",
+                                               "throw",
+                                               "true",
+                                               "try",
+                                               "typedef",
+                                               "typeid",
+                                               "typename",
+                                               "union",
+                                               "unsigned",
+                                               "using",
+                                               "virtual",
+                                               "void",
+                                               "volatile",
+                                               "wchar_t",
+                                               "while",
+                                               "xor",
+                                               "xor_eq"};
+
+/* The room a name made from a key takes: the key, a `k_` or a `K` before
+   it, `Table` or `_` after. */
+#define GEN_NAME_MAX (CF_KEY_MAX + 8)
+
+static int gen_word_cmp(const void* word, const void* entry) {
+    return strcmp((const char*)word, *(const char* const*)entry);
+}
+
+static cf_bool gen_reserved(const gen_lang* lang, const char* word) {
+    return lang->reserved_count > 0 &&
+           bsearch(word, (const void*)lang->reserved, lang->reserved_count,
+                   sizeof *lang->reserved, gen_word_cmp) != NULL;
+}
+
+/* A key's identifier: its text with '.' and '-' as '_'; `k_` before a
+   digit; `_` after a word the language reserves. */
+static void gen_ident(char* dst, const char* s, size_t n, const gen_lang* lang) {
+    size_t i;
+    size_t o = 0;
+
+    if (n > 0 && cf_is_digit((unsigned char)s[0])) {
+        dst[o++] = 'k';
+        dst[o++] = '_';
+    }
+    for (i = 0; i < n; ++i) {
+        dst[o] = s[i];
+        if (s[i] == '.' || s[i] == '-') {
+            dst[o] = '_';
+        }
+        ++o;
+    }
+    dst[o] = '\0';
+    if (gen_reserved(lang, dst)) {
+        dst[o++] = '_';
+        dst[o]   = '\0';
+    }
+}
+
+static void gen_append(char* dst, const char* tail) {
+    memcpy(dst + strlen(dst), tail, strlen(tail) + 1);
+}
+
+/* A struct's name: a key's top segment in CamelCase, '-' and '_' taken as
+   breaks; `K` before what is empty or starts with a digit, `Table` after
+   one equal to the top struct's name (`top`), `_` after a reserved word. */
+static void gen_struct_name(char* dst, const char* s, size_t n, const char* top,
+                            const gen_lang* lang) {
+    size_t  i;
+    size_t  o  = 0;
+    cf_bool up = CF_TRUE;
+
+    for (i = 0; i < n; ++i) {
+        if (s[i] == '-' || s[i] == '_') {
+            up = CF_TRUE;
+        } else {
+            dst[o] = s[i];
+            if (up && s[i] >= 'a' && s[i] <= 'z') {
+                dst[o] = (char)(s[i] - 32);
+            }
+            ++o;
+            up = CF_FALSE;
+        }
+    }
+    dst[o] = '\0';
+    if (o == 0 || cf_is_digit((unsigned char)dst[0])) {
+        memmove(dst + 1, dst, o + 1);
+        dst[0] = 'K';
+    }
+    if (strcmp(dst, top) == 0) {
+        gen_append(dst, "Table");
+    } else if (gen_reserved(lang, dst)) {
+        gen_append(dst, "_");
+    }
+}
+
+/* What the writer knows of each struct below the top, and of each key. */
+typedef struct cx_table {
+    const char* top; /* the segment, in the first key's text */
+    size_t      top_n;
+    const char* first_key; /* the first key under it, for what is said */
+    size_t      first;     /* and its place among the keys */
+    char        member[GEN_NAME_MAX];
+    char        type[GEN_NAME_MAX];
+} cx_table;
+
+#define CX_TOP ((size_t)-1)
+
+typedef struct cx_key {
+    const cf_def* def;
+    const char*   rest;  /* the key past its top segment: the field's text */
+    size_t        table; /* the struct it is in, or CX_TOP */
+    int           skip;  /* 0 a field, 1 a list, 2 a type C++ does not read */
+    char          full[GEN_NAME_MAX];
+    char          field[GEN_NAME_MAX];
+} cx_key;
+
+typedef struct cx_model {
+    const gen_lang* lang;
+    cx_key*         keys;
+    cx_table*       tables;
+    size_t          n;
+    size_t          tables_n;
+} cx_model;
+
+static const char* cx_type(cf_type t) {
+    switch (t) {
+    case CF_TYPE_BOOL:
+        return "bool";
+    case CF_TYPE_INT:
+        return "cf_i64";
+    case CF_TYPE_REAL:
+        return "double";
+    case CF_TYPE_TEXT:
+        return "std::string";
+    case CF_TYPE_NULL:
+    default:
+        return NULL;
+    }
+}
+
+/* The struct under a key's top segment, made at its first key. */
+static size_t cx_table_of(cx_model* m, const char* key, size_t top_n, size_t index) {
+    size_t    t;
+    cx_table* tb;
+
+    for (t = 0; t < m->tables_n; ++t) {
+        if (m->tables[t].top_n == top_n && memcmp(m->tables[t].top, key, top_n) == 0) {
+            return t;
+        }
+    }
+    t             = m->tables_n++;
+    tb            = &m->tables[t];
+    tb->top       = key;
+    tb->top_n     = top_n;
+    tb->first_key = key;
+    tb->first     = index;
+    gen_ident(tb->member, key, top_n, m->lang);
+    gen_struct_name(tb->type, key, top_n, "Settings", m->lang);
+    return t;
+}
+
+/* The shape: a key of one segment is a field of the top struct, of two
+   or more a field of its top segment's struct (two levels, as far as a
+   Binding reaches), in the order the keys come. */
+static void cx_shape(cx_model* m, const cf_defset* ds) {
+    size_t i;
+
+    for (i = 0; i < m->n; ++i) {
+        cx_key*     k = &m->keys[i];
+        const char* key;
+        const char* dot;
+
+        k->def   = cf_defset_at(ds, i);
+        key      = k->def->key;
+        dot      = strchr(key, '.');
+        k->table = (dot != NULL) ? cx_table_of(m, key, (size_t)(dot - key), i) : CX_TOP;
+        k->rest  = (dot != NULL) ? dot + 1 : key;
+        gen_ident(k->full, key, strlen(key), m->lang);
+        gen_ident(k->field, k->rest, strlen(k->rest), m->lang);
+        k->skip = (k->def->list_mode != CF_LIST_NONE) ? 1 : 0;
+        if (k->skip == 0 && cx_type(k->def->type) == NULL) {
+            k->skip = 2;
+        }
+    }
+}
+
+static int cx_clash(const cx_model* m, const char* a, const char* b, const char* name) {
+    fprintf(stderr, "gen: '%s' and '%s' are both '%s' in %s; rename one\n", a, b, name,
+            m->lang->name);
+    return 2;
+}
+
+/* The structs' names and members, against each other and against the
+   top struct's fields. */
+static int cx_distinct_tables(const cx_model* m) {
+    size_t i;
+    size_t j;
+
+    for (i = 0; i < m->tables_n; ++i) {
+        const cx_table* a = &m->tables[i];
+        for (j = i + 1; j < m->tables_n; ++j) {
+            const cx_table* b = &m->tables[j];
+            if (strcmp(a->member, b->member) == 0) {
+                return cx_clash(m, a->first_key, b->first_key, a->member);
+            }
+            if (strcmp(a->type, b->type) == 0) {
+                return cx_clash(m, a->first_key, b->first_key, a->type);
+            }
+        }
+        for (j = 0; j < m->n; ++j) {
+            const cx_key* k = &m->keys[j];
+            if (k->table == CX_TOP && k->skip == 0 &&
+                strcmp(k->field, a->member) == 0) {
+                return cx_clash(m, k->def->key, a->first_key, a->member);
+            }
+        }
+    }
+    return 0;
+}
+
+/* Two keys of one identifier are refused, whole or as fields of one
+   struct. */
+static int cx_distinct(const cx_model* m) {
+    size_t i;
+    size_t j;
+
+    for (i = 0; i < m->n; ++i) {
+        const cx_key* a = &m->keys[i];
+        for (j = i + 1; j < m->n && a->skip == 0; ++j) {
+            const cx_key* b = &m->keys[j];
+            if (b->skip != 0) {
+                continue;
+            }
+            if (strcmp(a->full, b->full) == 0) {
+                return cx_clash(m, a->def->key, b->def->key, a->full);
+            }
+            if (a->table == b->table && strcmp(a->field, b->field) == 0) {
+                return cx_clash(m, a->def->key, b->def->key, a->field);
+            }
+        }
+    }
+    return cx_distinct_tables(m);
+}
+
+/* A key's default, or its type's zero, as a C++ expression. */
+static void cx_default(FILE* out, const cf_def* d) {
+    const cf_value* v = &d->default_value;
+
+    switch (d->type) {
+    case CF_TYPE_BOOL:
+        fputs((d->has_default && v->u.b) ? "true" : "false", out);
+        break;
+    case CF_TYPE_INT:
+        if (d->has_default) {
+            c_i64(out, v->u.i);
+        } else {
+            fputs("(cf_i64)0", out);
+        }
+        break;
+    case CF_TYPE_TEXT:
+        if (d->has_default) {
+            c_string(out, v->u.t.p, v->u.t.n);
+        } else {
+            fputs("std::string()", out);
+        }
+        break;
+    case CF_TYPE_REAL:
+#if CF_WITH_REAL
+        if (d->has_default) {
+            fprintf(out, "%.17g", v->u.r);
+            break;
+        }
+#endif
+        fputs("0.0", out);
+        break;
+    case CF_TYPE_NULL:
+    default:
+        break;
+    }
+}
+
+static void cx_upper(FILE* out, const char* name) {
+    for (; *name != '\0'; ++name) {
+        fputc((*name >= 'a' && *name <= 'z') ? (*name - 'a' + 'A') : *name, out);
+    }
+}
+
+/* A key's line in its struct, or what it says where its field would be. */
+static void cx_member(FILE* out, const cx_key* k) {
+    if (k->skip == 1) {
+        const char* key = k->def->key;
+        fprintf(out,
+                "    /* %s: a list; its elements are %s.0, %s.1, ... and %s.count */\n",
+                k->rest, key, key, key);
+    } else if (k->skip == 2) {
+        fprintf(out, "    /* %s: a type C++ does not read */\n", k->rest);
+    } else {
+        fprintf(out, "    %s %s;\n", cx_type(k->def->type), k->field);
+    }
+}
+
+static void cx_keys(FILE* out, const cx_model* m) {
+    size_t i;
+
+    fputs("/* Each key, to read with cf::Config::get; its default is the one a\n"
+          "   configuration without the key reads as. */\n"
+          "namespace keys {\n",
+          out);
+    for (i = 0; i < m->n; ++i) {
+        const cx_key* k = &m->keys[i];
+        if (k->skip == 0) {
+            fprintf(out, "const cf::Key<%s> %s(", cx_type(k->def->type), k->full);
+            c_text(out, k->def->key);
+            fputs(", ", out);
+            cx_default(out, k->def);
+            fputs(");\n", out);
+        }
+    }
+    fputs("} /* namespace keys */\n\n", out);
+}
+
+static void cx_structs(FILE* out, const cx_model* m) {
+    size_t t;
+    size_t i;
+
+    for (t = 0; t < m->tables_n; ++t) {
+        fprintf(out, "struct %s {\n", m->tables[t].type);
+        for (i = 0; i < m->n; ++i) {
+            if (m->keys[i].table == t) {
+                cx_member(out, &m->keys[i]);
+            }
+        }
+        fputs("};\n\n", out);
+    }
+    fputs("struct Settings {\n", out);
+    for (i = 0; i < m->n; ++i) {
+        const cx_key* k = &m->keys[i];
+        if (k->table == CX_TOP) {
+            cx_member(out, k);
+        } else if (m->tables[k->table].first == i) {
+            fprintf(out, "    %s %s;\n", m->tables[k->table].type,
+                    m->tables[k->table].member);
+        }
+    }
+    fputs("};\n\n", out);
+}
+
+static void cx_bind(FILE* out, const cx_model* m) {
+    size_t  i;
+    cf_bool any = CF_FALSE;
+
+    fputs("/* The fields of Settings, each from its key:\n"
+          "       cf::Binding<N::Settings> b;\n"
+          "       N::bind(b);\n"
+          "       N::Settings s = b.read(cfg); */\n"
+          "inline void bind(cf::Binding<Settings>& b) {\n",
+          out);
+    for (i = 0; i < m->n; ++i) {
+        const cx_key* k = &m->keys[i];
+        if (k->skip != 0) {
+            continue;
+        }
+        any = CF_TRUE;
+        fputs("    b.field(", out);
+        c_text(out, k->def->key);
+        if (k->table == CX_TOP) {
+            fprintf(out, ", &Settings::%s, ", k->field);
+        } else {
+            fprintf(out, ", &Settings::%s, &%s::%s, ", m->tables[k->table].member,
+                    m->tables[k->table].type, k->field);
+        }
+        cx_default(out, k->def);
+        fputs(");\n", out);
+    }
+    if (!any) {
+        fputs("    (void)b;\n", out);
+    }
+    fputs("}\n\n", out);
+}
+
+static int cx_emit(FILE* out, const cx_model* m, const cf_defset* ds,
+                   const char* schema, const char* name) {
+    int rc;
+
+    fputs("/* The contract of ", out);
+    c_comment_name(out, schema);
+    fputs(", in C++: written by `configforge\n"
+          "   gen --schema --lang cpp`. Regenerate it from the schema rather than\n"
+          "   editing it. */\n\n#ifndef CF_GEN_",
+          out);
+    cx_upper(out, name);
+    fputs("_HPP\n#define CF_GEN_", out);
+    cx_upper(out, name);
+    fputs("_HPP\n\n#include <configforge/configforge.hpp>\n\n#include <string>\n\n",
+          out);
+    c_lines(out, gen_checks);
+    if (gen_has_reals(ds)) {
+        gen_need_reals(out);
+    }
+    fprintf(out,
+            "namespace %s {\n\n"
+            "/* Every definition the schema makes, descriptions, enumerations and\n"
+            "   lengths with the rest, through the library's own calls. */\n"
+            "inline bool define(cf_builder* b) {\n",
+            name);
+    rc = gen_c_body(out, ds, CF_TRUE);
+    if (rc != 0) {
+        return rc;
+    }
+    fputs("}\n\n"
+          "/* cf::Builder().define(N::Contract()): a refusal is the builder's,\n"
+          "   and create() reports it. */\n"
+          "struct Contract {\n"
+          "    void defineInto(cf_builder* b) const {\n"
+          "        (void)define(b);\n"
+          "    }\n"
+          "};\n\n",
+          out);
+    cx_keys(out, m);
+    cx_structs(out, m);
+    cx_bind(out, m);
+    fprintf(out, "} /* namespace %s */\n\n", name);
+    c_lines(out, gen_undefs);
+    fputs("\n#endif\n", out);
+    return 0;
+}
+
+/* The contract as a C++ header. */
+static int gen_cxx_file(FILE* out, const cf_defset* ds, const char* schema,
+                        const char* name, const gen_lang* self) {
+    cx_model m;
+    size_t   room;
+    int      rc;
+
+    m.lang     = self;
+    m.n        = cf_defset_count(ds);
+    m.tables_n = 0;
+    room       = (m.n > 0) ? m.n : 1;
+    m.keys     = (cx_key*)calloc(room, sizeof(cx_key));
+    m.tables   = (cx_table*)calloc(room, sizeof(cx_table));
+    if (m.keys == NULL || m.tables == NULL) {
+        free(m.keys);
+        free(m.tables);
+        fputs("gen: cannot start\n", stderr);
+        return 2;
+    }
+    cx_shape(&m, ds);
+    rc = cx_distinct(&m);
+    if (rc == 0) {
+        rc = cx_emit(out, &m, ds, schema, name);
+    }
+    free(m.keys);
+    free(m.tables);
+    return rc;
+}
+
+static const gen_lang gen_langs[] = {
+    {"c", ".c", c_identifier, NULL, 0, gen_c_file},
+    {"cpp", ".hpp", c_identifier, gen_cxx_reserved,
+     sizeof gen_cxx_reserved / sizeof gen_cxx_reserved[0], gen_cxx_file},
+};
+
+#define GEN_LANGS (sizeof gen_langs / sizeof gen_langs[0])
+
+/* The language `--lang` names; NULL, and what there is said, when none. */
+static const gen_lang* gen_find(const char* name) {
+    size_t i;
+
+    for (i = 0; i < GEN_LANGS; ++i) {
+        if (strcmp(gen_langs[i].name, name) == 0) {
+            return &gen_langs[i];
+        }
+    }
+    fprintf(stderr, "gen: no language '%s'; there are: ", name);
+    for (i = 0; i < GEN_LANGS; ++i) {
+        fprintf(stderr, "%s%s", (i > 0) ? ", " : "", gen_langs[i].name);
+    }
+    fputc('\n', stderr);
+    return NULL;
+}
+
 int gen_code(int argc, char** argv) {
-    const char* schema = NULL;
-    const char* name   = "cf_contract";
-    const char* path   = NULL;
-    cf_arena*   ar;
-    cf_defset   ds;
-    cf_error    err = CF_ERROR_INIT;
-    FILE*       out = stdout;
-    int         rc;
-    int         i;
+    const char*     schema = NULL;
+    const char*     name   = "cf_contract";
+    const char*     path   = NULL;
+    const char*     lang   = "c";
+    const gen_lang* gl;
+    cf_arena*       ar;
+    cf_defset       ds;
+    cf_error        err = CF_ERROR_INIT;
+    FILE*           out = stdout;
+    int             rc;
+    int             i;
 
     for (i = 0; i + 1 < argc; i += 2) {
         if (strcmp(argv[i], "--schema") == 0) {
             schema = argv[i + 1];
+        } else if (strcmp(argv[i], "--lang") == 0) {
+            lang = argv[i + 1];
         } else if (strcmp(argv[i], "--name") == 0) {
             name = argv[i + 1];
         } else if (strcmp(argv[i], "--out") == 0) {
@@ -517,7 +1144,14 @@ int gen_code(int argc, char** argv) {
             return contract_usage();
         }
     }
-    if (i != argc || schema == NULL || !c_identifier(name)) {
+    if (i != argc || schema == NULL) {
+        return contract_usage();
+    }
+    gl = gen_find(lang);
+    if (gl == NULL) {
+        return 2;
+    }
+    if (!gl->identifier(name)) {
         return contract_usage();
     }
     ar = cf_arena_new(NULL, 0);
@@ -535,7 +1169,7 @@ int gen_code(int argc, char** argv) {
             return 2;
         }
     }
-    rc = gen_write(out, &ds, schema, name);
+    rc = gl->write(out, &ds, schema, name, gl);
     if (path != NULL && (fclose(out) != 0 || rc != 0)) {
         (void)remove(path);
         rc = (rc != 0) ? rc : 2;

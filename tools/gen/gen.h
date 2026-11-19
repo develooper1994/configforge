@@ -23,8 +23,9 @@ int gen_read_keys(const char* path, const char* as, cf_arena* ar, cf_keyspace* k
    it would read them (contract.c). argv is what follows `check`. */
 int gen_check(int argc, char** argv);
 
-/* The contract as C calls (contract.c). argv is what follows the
-   program's name: --schema, --name, --out. */
+/* The contract as code (contract.c), in the language `--lang` names, C
+   by default. argv is what follows the program's name: --schema, --lang,
+   --name, --out. */
 int gen_code(int argc, char** argv);
 
 /* A JSON Schema contract drafted from a sample configuration file

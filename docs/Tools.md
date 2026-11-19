@@ -143,8 +143,8 @@ It is built wherever Doctor is, and not where tools are off (WASI,
 `CF_PLATFORM=none`).
 
 ```text
-configforge gen --schema <schema> [--name <function>] [--out <file>]
-                               the contract as C calls
+configforge gen --schema <schema> [--lang c|cpp|rust|python] [--name <name>] [--out <file>]
+                               the contract as code, C by default
 configforge gen check --schema <schema> <file>...
                                files against the contract
 configforge gen schema --from <file> [--as <format>] [--title <t>] [--out <file>]
@@ -186,6 +186,50 @@ C++11 or later each key is checked by `cf::key_is_valid`, as C11 a key's
 length and every int default and text default against its bounds, so a build
 with a smaller `CF_KEY_MAX`, or a schema whose default its own bounds refuse,
 does not compile. As C89 it is plain calls, checked by `cf_builder_create`.
+
+`--lang` names the language: `c` (the default, what is described above) and
+`cpp`; the program's table of languages holds them, and a name it does not
+hold is refused with the names it does (`gen: no language 'x'; there are: c,
+cpp`, exit 2). `--name` is what the language calls the generated thing - for C
+the function, for C++ the namespace (both `cf_contract` unless named) - and
+must be an identifier of the language.
+
+`--lang cpp` writes one header. It holds the same calls as the C file, whole
+- descriptions, enumerations, lengths, lists, aliases, policies and the
+opened prefixes, which a `cf::Key` has no place for - in `inline bool
+define(cf_builder*)`, so it needs no JSON reader either; and, where a program
+reads, two things that cannot drift from them. `keys` has a `cf::Key` for each
+key, named by its text with `.` and `-` as `_` (`server.max-conn` is
+`server_max_conn`; a leading digit gets `k_`, a reserved word `_` after it),
+its default the schema's. A struct is made of the keys' shape: a key of one
+segment is a field of `Settings`, one of two or more a field of its top
+segment's struct (`server.tls.cert` is `Server::tls_cert`), in the order the
+keys come, and `bind` fills them through a `cf::Binding`. A list has no
+field, and says so in a comment where its field would be; two keys that come
+to one name are refused (`gen: 'a.b' and 'a_b' are both 'a_b' in cpp; rename
+one`). A `Binding` reaches a field through two levels at most, which is why
+the shape stops there. The struct is `Settings` whatever `--name` is.
+
+```cpp
+#include "app_contract.hpp"   /* configforge gen --schema app.schema.json
+                                 --lang cpp --name app --out app_contract.hpp */
+
+cf::Config cfg = cf::Builder()
+                     .define(app::Contract())
+                     .file("app", CF_RANK_USER_FILE, "app.json")
+                     .create();
+long port = (long)cfg.get(app::keys::server_port);
+
+cf::Binding<app::Settings> b;
+app::bind(b);
+app::Settings s = b.read(cfg);          /* s.server.port, s.server.host ... */
+```
+
+A key's range and flags are the definition's, not the `Key`'s: a `Key` here
+only names a key and reads it. The header compiles as C++98 and later; from
+C++11 it is checked at compile time as the C file is (D-75), and
+`tests/gen/test_gen_cpp.cpp` builds it from the test contract and holds it
+to the schema.
 
 `configforge gen schema --from app.toml --out app.schema.json` drafts a
 contract from a file you already have, for a program with configuration and

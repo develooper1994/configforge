@@ -2,7 +2,7 @@
  * gen.c - configforge-gen, the contract's program: a JSON Schema
  * contract written as C calls, and files held to it.
  *
- *     configforge gen --schema <schema> [--name <function>] [--out <file>]
+ *     configforge gen --schema <schema> [--lang <lang>] [--name <name>] [--out <file>]
  *     configforge gen check --schema <schema> <file>...
  *     configforge gen schema --from <file> [--as <format>] [--title <t>] [--out <file>]
  *     configforge gen --version
@@ -19,9 +19,12 @@
 
 static int usage(void) {
     fputs("ConfigForge gen: the contract, and code from it\n\n", stderr);
-    fputs("  configforge gen --schema <schema> [--name <function>] [--out <file>]\n",
+    fputs("  configforge gen --schema <schema> [--lang c|cpp|rust|python] [--name "
+          "<name>] "
+          "[--out <file>]\n",
           stderr);
-    fputs("                                 the contract as C calls\n", stderr);
+    fputs("                                 the contract as code, C by default\n",
+          stderr);
     fputs("  configforge gen check --schema <schema> <file>...\n", stderr);
     fputs("                                 files against the contract\n", stderr);
     fputs("  configforge gen schema --from <file> [--as <format>] [--title <t>] "

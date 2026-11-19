@@ -107,6 +107,7 @@ gets reopened every six months.
 | D-89 | The experimental tier | api, abi | **Decided** |
 | D-90 | The serialization library, a target of its own | serialize, build, abi | **Decided** |
 | D-91 | CBOR, the JSON model in binary | formats | **Decided** |
+| D-95 | Code for each binding from a contract | tools, contract, C++ | **Decided** |
 | D-96 | A contract drafted from a sample | tools, contract | **Decided** |
 | D-97 | What kind of format a codec is, told to the program | formats | **Decided** |
 | D-99 | Three programs behind one front door | tools | **Decided** |
@@ -4067,6 +4068,64 @@ under the bound on what an input may cost (D-82); and
 
 **Compatibility.** Additive: one function, one option on by default
 (`CF_WITH_TLV`; without it the function refuses by name, D-38).
+
+## D-95 — Code for each binding from a contract
+
+**Question.** The contract is written once, in a schema. A C++ program
+that reads `cfg.get("server.port", 8080)` writes the key and its default
+out a second time by hand, which is the repetition a contract exists to
+end. How is the contract read in each language with its own types, and
+how are the languages added without the tool knowing each by name?
+
+**Options.**
+
+1. Each binding's own defining calls: `cf::Builder::define(Key)` for C++,
+   which carry a type, a default and a range, and lose descriptions,
+   enumerations, lengths, lists, aliases, policies, deprecations and the
+   opened prefixes.
+2. The library's C calls, written whole (what `--lang c` writes), and for
+   each language what reads: names for the keys and a struct filled from
+   them.
+3. The schema itself, read at run time by a JSON reader the program links.
+
+**Decision.** Option 2, for C and C++. The C++ header holds the C body -
+every line of it compiles as C++ - in `inline bool define(cf_builder*)`,
+so the contract is the schema's, whole, in C++ as in C, and no JSON
+reader is in the build. The Keys and the Binding only read: a `cf::Key`
+names a key and carries its default (the schema's, or the type's zero),
+no range and no flags, so that nothing is defined twice and nothing is
+defined by a Key. `Contract::defineInto` lets
+`cf::Builder().define(N::Contract())` take it. Rejected: option 1, which
+loses most of what a schema says; and `constexpr` Keys under C++11, how
+the generated file is checked at compile time being D-75's.
+
+The languages are a table in `tools/gen/contract.c` - a name, the
+extension of its file, the check of the name `--name` gives it, the words
+it reserves and a writer - and `--lang` finds its entry there; nothing
+else names a language, and a name not in it is refused with the names that
+are. Rust and Python each add an entry and change nothing around it. A
+generator outside the tree is a later decision.
+
+The names are made from the keys, by one rule for the languages that need
+them. A key's identifier is its text with `.` and `-` as `_`, `k_` before
+a digit and `_` after a word the language reserves; two keys of one
+identifier are refused, by name, rather than written as code that does not
+compile. A struct is named from its top segment in CamelCase, and is
+`Table` after one equal to the top struct's name. The shape is two levels:
+a key of one segment is a field of the top struct, a key of two or more a
+field of its top segment's struct, named by the rest of the key - because
+`cf::Binding` reaches a field through at most two member pointers, and a
+third level would be a struct the Binding could not fill. The order is the
+definition set's, a struct where its first key comes. What has no field -
+a list, whose elements are keys of their own, and a key of a type the
+language does not read - is a comment where its field would be, never
+dropped quietly.
+
+**Compatibility.** Additive. `--lang c` is the default and writes, byte
+for byte, what `configforge gen` wrote; `--name` is, for C, the function
+as it was. W5-G2 and W5-G3 add Rust's and Python's entries.
+
+---
 
 ## D-96 — A contract drafted from a sample
 

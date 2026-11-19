@@ -44,6 +44,22 @@ add_test(
 # An option it does not know is the usage.
 gen_case(usage 2 --nonsense)
 
+# `--lang` finds its language in the table (D-95): C and C++ are there, a
+# name that is not is unusable input, and a name the language cannot hold
+# is the usage.
+gen_case(lang_c 0 --schema|${contract}|--lang|c)
+gen_case(lang_cpp 0 --schema|${contract}|--lang|cpp)
+add_test(
+  NAME gen.lang_none
+  COMMAND
+    ${CMAKE_COMMAND} -DDOCTOR=$<TARGET_FILE:configforge_gen>
+    -DARGS=--schema|${contract}|--lang|nope -DEXPECT_FAIL=2
+    "-DEXPECT_ERR=gen: no language 'nope'; there are: c, cpp" -P
+    ${CMAKE_SOURCE_DIR}/tests/doctor/run.cmake
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/tests/doctor)
+set_tests_properties(gen.lang_none PROPERTIES FIXTURES_REQUIRED DOCTOR_REPORTS)
+gen_case(lang_name 2 --schema|${contract}|--lang|cpp|--name|1x)
+
 # The version it reports is the one cf_version.h says, with the commit
 # after it when the build knew one.
 add_test(NAME gen.version COMMAND configforge_gen --version)
@@ -75,6 +91,37 @@ if(NOT CMAKE_CROSSCOMPILING)
   configforge_apply_warnings(gen_c)
   configforge_apply_analysis(gen_c)
   add_test(NAME gen.c COMMAND gen_c)
+
+  # The contract as a C++ header (`--lang cpp`, D-95): its definitions, a
+  # Key for each key and a struct read through a Binding, compiled as C++98
+  # like every wrapper consumer.
+  if(CF_WITH_CXX)
+    set(gen_hpp ${CMAKE_CURRENT_BINARY_DIR}/gen_contract.hpp)
+    add_custom_command(
+      OUTPUT ${gen_hpp}
+      COMMAND configforge_gen --schema ${contract} --lang cpp --out ${gen_hpp}
+              --name gen_contract
+      DEPENDS configforge_gen ${contract}
+      VERBATIM)
+    add_executable(gen_hpp_test test_gen_cpp.cpp ${gen_hpp})
+    target_include_directories(gen_hpp_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    target_compile_definitions(gen_hpp_test
+                               PRIVATE CF_CONTRACT_SCHEMA="${contract}")
+    target_link_libraries(gen_hpp_test PRIVATE configforge)
+    set_target_properties(
+      gen_hpp_test
+      PROPERTIES CXX_STANDARD 98
+                 CXX_STANDARD_REQUIRED ON
+                 CXX_EXTENSIONS OFF)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+      target_compile_options(gen_hpp_test PRIVATE -pedantic -Werror -Wall
+                                                  -Wextra)
+    elseif(MSVC)
+      configforge_apply_warnings(gen_hpp_test)
+    endif()
+    configforge_apply_analysis(gen_hpp_test)
+    add_test(NAME gen.cpp COMMAND gen_hpp_test)
+  endif()
 
   # The same contract as C++, and the contract of a schema the library reads
   # and refuses only at create (a text default longer than its maxLength),

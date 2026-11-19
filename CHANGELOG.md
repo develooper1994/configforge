@@ -21,6 +21,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   contract drafted from a configuration file you already have - a key
   for every value, typed from it, every one optional, descriptions left
   to fill in (D-96).
+- **`configforge gen --lang cpp`**: the contract as one C++ header - its
+  definitions, a `cf::Key` for each key and a `Settings` struct read
+  through `cf::Binding` (D-95).
 - **The serialization library, `configforge_serialize`**: the readers
   and writers - JSON, JSON5, TOML, YAML, INI, `.properties`, XML, CBOR,
   TLV - as a library of their own, which a program that wants documents
