@@ -74,5 +74,10 @@ You carry out one card of docs/Plan.md, alone.
   documents; code goes through the loop's branch and CI first.
 - Formatting is clang-format 22 (CI's). A machine without it formats
   with what it has and lets CI judge.
+- Tokens: no tool call that a notification, a chained command or the
+  brief already covers. Wait for background work instead of peeking;
+  chain dependent steps into one command, each step only if the one
+  before succeeded; read the card and the failing lines, not whole
+  files or logs; answer a repeated report once.
 - The design is decided in `docs/plan/A-architecture.md`; a card does
   not reopen it. A real reason to change a decision goes to the user.
