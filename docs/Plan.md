@@ -173,7 +173,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 31 | T-3 `configforge codec`: the serialization library's own program | medium | T-2, S-5 | open |
 | 32 | T-4 `configforge codec dump`: every value with its place | medium | T-3 | waits: T-3 |
 | 33 | W5-V1 `configforge codec convert` and `format` | large | T-3 | waits: T-3 |
-| 34 | W5-S1 `configforge gen schema --from` | medium | T-2 | waits: T-2 |
+| 34 | W5-S1 `configforge gen schema --from` | medium | T-2 | open |
 | 35 | W5-G1 `configforge gen --lang cpp` | large | W5-S1 | waits: W5-S1 |
 | 36 | W5-G2 `configforge gen --lang rust` | large | W5-G1 | waits: W5-G1 |
 | 37 | W5-G3 `configforge gen --lang python` | medium | W5-G2 | waits: W5-G2 |
