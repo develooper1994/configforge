@@ -172,7 +172,8 @@ In the order to be done. A card is `open`, `done` (with its commit), or
 `waits` (with what it waits for). The H-* and W3-* cards belong to
 the 1.6.0 milestone; the S-*, T-* and W5-* cards to 1.7.0, but T-5 to
 1.8.0 (`docs/Maintaining.md`, "Versions"; the S and T cards are in
-`docs/plan/T-tools-and-serialization.md`). The P-* cards, word-at-a-time
+`docs/plan/T-tools-and-serialization.md`). The L-* cards, the tools by
+group (`docs/plan/L-tools.md`), come right after 1.7.0's release. The P-* cards, word-at-a-time
 scanning before SIMD (`docs/plan/P-word-at-a-time.md`), are last,
 except P-1: it only measures, and comes once 1.7.0 is released, so the
 waves after it are measured from the start; P-2 and P-3 wait for those
@@ -206,6 +207,10 @@ waves ("After 1.7.0: the order of the waves", below).
 | 36 | W5-G2 `configforge gen --lang rust` | large | W5-G1 | done (54f39fb) |
 | 37 | W5-G3 `configforge gen --lang python` | medium | W5-G2 | done (950a099) |
 | 38 | T-5 Doctor's aliases, and the name `doctor`, removed | small | 1.7.0 released, W5-G3 | waits: 1.7.0 released (it belongs to 1.8.0) |
+| 38b | L-1 shellcheck, ruff, actionlint and codespell, as gates | medium | 1.7.0 released | waits: 1.7.0 released |
+| 38c | L-2 Valgrind, AFL++, gitleaks, osv-scanner and Scorecard in CI | medium | L-1 | waits: L-1 (outline; written out when L-1 is done) |
+| 38d | L-4 include-what-you-use and a link check | small | L-1 | waits: L-1 (outline) |
+| 38e | L-3 Infer and semgrep; IKOS or Frama-C with 1.9.0 | large | L-2 | waits: L-2 (outline) |
 | 39 | P-1 The benchmark measures large documents, and says where time goes | medium | 1.7.0 released | waits: 1.7.0 released |
 | 40 | A-1 One directory per component: the files moved, nothing else changed | large | 1.7.0 released | waits: 1.7.0 released |
 | 41 | A-1b Each component a project: its declaration, its tests, its README, built alone | large | A-1 | waits: A-1 |
