@@ -107,6 +107,7 @@ gets reopened every six months.
 | D-89 | The experimental tier | api, abi | **Decided** |
 | D-90 | The serialization library, a target of its own | serialize, build, abi | **Decided** |
 | D-91 | CBOR, the JSON model in binary | formats | **Decided** |
+| D-96 | A contract drafted from a sample | tools, contract | **Decided** |
 | D-97 | What kind of format a codec is, told to the program | formats | **Decided** |
 | D-99 | Three programs behind one front door | tools | **Decided** |
 
@@ -4066,6 +4067,61 @@ under the bound on what an input may cost (D-82); and
 
 **Compatibility.** Additive: one function, one option on by default
 (`CF_WITH_TLV`; without it the function refuses by name, D-38).
+
+## D-96 — A contract drafted from a sample
+
+**Question.** A contract is what lets a value be refused with its key and
+its reason instead of read wrong, and a program with years of
+configuration files and no contract has none to start from. Writing one by
+hand from a file it already has is the part nobody does. Can the tool
+draft it, and what may it claim to know?
+
+**Options.**
+
+1. Types only: a key for every value the file holds, its type from the
+   value, every key optional, no default, no range, an empty description.
+2. Types and the sample's values as defaults.
+3. A contract inferred from several files: a key optional where some
+   file lacks it, a range from the values seen.
+
+**Decision.** Option 1. `configforge gen schema --from <file>` reads the
+file as a configuration (`--as` names its format, else the name and then
+the content decide, D-73) and writes the JSON Schema through the
+library's own writer, so the draft reads back as the definitions it was
+made of. No default: a sample's value is one deployment's choice, not
+the program's, and written as a default every other deployment would
+inherit it without a word. No range and no `required`, for the same
+reason - one file shows what a value was, not what it may be - and
+every key is optional, which is what `cf_schema_write` writes anyway.
+The description is written empty, to be filled in. The schema is closed,
+so `configforge gen check` refuses a misspelt key against it.
+
+Text a format has no types for - INI, YAML's plain scalars,
+`.properties` - is typed by the library's Tier 0 inference (D-24), the
+rule that reads it when no definition exists, so INI's `port = 8080` is
+an integer: the draft says what the library would have read.
+
+What a contract has no type for is left out, and said on stderr with its
+key, never dropped quietly: a null (the sample does not show its type),
+an array of tables, an array of arrays, an array of mixed types, an
+empty array (its element type is not shown), and an array of nulls. The
+exit code is still 0: the lines are findings about the sample, not
+failures of the command. Rejected: guessing a type for them (a wrong one
+refuses a good file), and making the command fail (a first draft from a
+real file would be refused for a null in it).
+
+Option 2 is rejected above. Option 3 is a different command: it needs
+several files and a rule for which values are a range and which are an
+accident, and a first draft from one file is the case with no such
+answer. A later card may add it; this one does not close the way.
+
+The draft ends with a line on stderr saying it is a draft: what it has
+and has not, and that it is to be reviewed before it is the contract.
+
+**Compatibility.** Additive: a new command of `configforge-gen`; Doctor
+never had it, so there is no alias.
+
+---
 
 ## D-97 — What kind of format a codec is, told to the program
 

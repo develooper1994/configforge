@@ -31,6 +31,16 @@ gen_case(check_no_schema 2
          check|--schema|cf_fx_none.json|cf_fx_contract_ok.json)
 gen_case(check_alone 2 check|cf_fx_contract_ok.json)
 
+# A contract drafted from a sample file (`gen schema --from`, D-96), each
+# case in the script's own directory; a format this build left out skips
+# the cases that read it.
+add_test(
+  NAME gen.schema
+  COMMAND
+    ${CMAKE_COMMAND} -DGEN=$<TARGET_FILE:configforge_gen>
+    -DWORK=${CMAKE_CURRENT_BINARY_DIR}/schema_work -DTOML=${CF_WITH_TOML}
+    -DINI=${CF_WITH_INI} -P ${CMAKE_CURRENT_SOURCE_DIR}/schema.cmake)
+
 # An option it does not know is the usage.
 gen_case(usage 2 --nonsense)
 

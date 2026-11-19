@@ -57,7 +57,7 @@ the program's exit code.
 | --- | --- | --- |
 | `configforge-doctor` | Reads provenance reports: `explain`, `dump`, `lint`, `diff`, `history`, `blame`, `import-*`. Until 1.8.0 it is also installed as `doctor`, which says its new name on stderr, and still runs `check`, `gen` and `formats`. | [Doctor](Doctor.md) |
 | `configforge-codec` | The serialization library's own program: `formats`, `detect` and `check`, on documents and never on a configuration. | [below](#configforge-codec) |
-| `configforge-gen` | The contract's own program: `configforge gen --schema` writes a JSON Schema contract as C, `configforge gen check` holds files to it. | [below](#configforge-gen) |
+| `configforge-gen` | The contract's own program: `configforge gen --schema` writes a JSON Schema contract as C, `configforge gen check` holds files to it, `configforge gen schema --from` drafts one from a sample file. | [below](#configforge-gen) |
 
 ## configforge codec
 
@@ -117,6 +117,8 @@ configforge gen --schema <schema> [--name <function>] [--out <file>]
                                the contract as C calls
 configforge gen check --schema <schema> <file>...
                                files against the contract
+configforge gen schema --from <file> [--as <format>] [--title <t>] [--out <file>]
+                               a draft contract from a sample file
 configforge gen --version
 ```
 
@@ -154,6 +156,25 @@ C++11 or later each key is checked by `cf::key_is_valid`, as C11 a key's
 length and every int default and text default against its bounds, so a build
 with a smaller `CF_KEY_MAX`, or a schema whose default its own bounds refuse,
 does not compile. As C89 it is plain calls, checked by `cf_builder_create`.
+
+`configforge gen schema --from app.toml --out app.schema.json` drafts a
+contract from a file you already have, for a program with configuration and
+no contract yet. Every value the file holds is a key, its type the value's:
+an integer, a real, a boolean or text; text a format has no types for (INI,
+YAML's plain scalars, `.properties`) is typed by the library's own Tier 0
+inference (D-24), so INI's `port = 8080` is an integer. An array of values of
+one type is a list of that type. What a contract has no type for is left out
+and named on stderr with its key - a null, an array of tables, of arrays or of
+mixed types, an empty array - and the exit code stays 0. `--as` names the
+file's format (`-` reads standard input, whose format it must be told or find
+in the content), `--title` the schema's title (else the file's name without
+its extension), `--out` the file written (else standard output). The draft has
+no defaults, ranges or `required`: one file shows what a value was, not what
+it may be, and a value written as a default would be inherited by every
+deployment without a word (D-96). Every key is optional and every description
+empty, and the schema is closed, so `configforge gen check` against it refuses
+a misspelt key. It is a draft: review it, fill in the descriptions and add the
+ranges before it is the contract.
 
 The pre-commit hook `configforge-check` (`actions/doctor/check.sh`) runs
 `configforge gen check` on each staged file. It uses the `configforge-gen`

@@ -23,7 +23,13 @@
 #include <configforge/configforge.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+#ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
+#endif
 
 static int contract_usage(void) {
     fputs("  configforge gen --schema <schema> [--name <function>] [--out <file>]\n"
@@ -533,6 +539,511 @@ int gen_code(int argc, char** argv) {
     if (path != NULL && (fclose(out) != 0 || rc != 0)) {
         (void)remove(path);
         rc = (rc != 0) ? rc : 2;
+    }
+    cf_arena_free(ar);
+    return rc;
+}
+
+/* ------------------------------------------------------------------ *
+ * schema --from
+ * ------------------------------------------------------------------ */
+
+/* The bytes of standard input, in memory the caller frees; NULL when
+   there is no room. On Windows a text stream would turn CR LF into LF,
+   so the stream is made binary. */
+static char* sd_stdin(size_t* n) {
+    size_t cap = 4096;
+    size_t len = 0;
+    char*  buf = (char*)malloc(cap);
+
+#ifdef _WIN32
+    (void)_setmode(_fileno(stdin), _O_BINARY);
+#endif
+    while (buf != NULL) {
+        size_t got;
+
+        if (len == cap) {
+            char* grown;
+
+            cap *= 2u;
+            grown = (char*)realloc(buf, cap);
+            if (grown == NULL) {
+                free(buf);
+                return NULL;
+            }
+            buf = grown;
+        }
+        got = fread(buf + len, 1, cap - len, stdin);
+        if (got == 0) {
+            break;
+        }
+        len += got;
+    }
+    *n = len;
+    return buf;
+}
+
+static void sd_not_compiled(const char* format) {
+    fprintf(stderr, "gen: format '%s' is not compiled into this build; turn on %s\n",
+            format, cf_format_option(format));
+}
+
+/* The codec `as` names, or the one the path's name and then the bytes
+   say (D-73); NULL with the reason on stderr. */
+static const cf_codec* sd_codec(const char* path, const char* as, const cf_blob* blob,
+                                cf_arena* trial, cf_bool is_stdin) {
+    const cf_codec* c;
+    cf_detect       d;
+
+    if (as != NULL) {
+        c = cf_codec_by_name(as);
+        if (c == NULL && cf_format_option(as) != NULL) {
+            sd_not_compiled(as);
+        } else if (c == NULL) {
+            fprintf(stderr, "gen: no format called '%s'\n", as);
+        }
+        return c;
+    }
+    c = cf_codec_detect(NULL, 0, blob, is_stdin ? NULL : path, trial, &d);
+    if (c != NULL) {
+        return c;
+    }
+    if (d.first != NULL) {
+        fprintf(stderr,
+                "gen: %s reads as %s and as %s, differently; name its format with "
+                "--as\n",
+                path, d.first->name, d.second->name);
+    } else if (!is_stdin && cf_format_of_path(path) != NULL) {
+        sd_not_compiled(cf_format_of_path(path));
+    } else {
+        fprintf(stderr, "gen: cannot tell the format of %s; name it with --as\n", path);
+    }
+    return NULL;
+}
+
+int gen_read_keys(const char* path, const char* as, cf_arena* ar, cf_keyspace* ks,
+                  const cf_codec** used) {
+    cf_blob         blob;
+    cf_error        err      = CF_ERROR_INIT;
+    cf_bool         is_stdin = (strcmp(path, "-") == 0) ? CF_TRUE : CF_FALSE;
+    cf_arena*       bytes    = cf_blob_arena(ar);
+    char*           held     = NULL;
+    const cf_codec* codec;
+    cf_flatten      fl;
+    int             rc = 2;
+
+    if (bytes == NULL) {
+        fprintf(stderr, "gen: cannot start\n");
+        return 2;
+    }
+    if (is_stdin) {
+        size_t n = 0;
+
+        held = sd_stdin(&n);
+        if (held == NULL) {
+            fprintf(stderr, "gen: cannot read %s\n", path);
+            cf_blob_arena_done(bytes, ar);
+            return 2;
+        }
+        cf_blob_mem(&blob, held, n, "stdin");
+    } else if (!cf_blob_file(&blob, bytes, path, &err)) {
+        fprintf(stderr, "gen: cannot read %s\n", path);
+        cf_blob_arena_done(bytes, ar);
+        return 2;
+    }
+    codec = sd_codec(path, as, &blob, bytes, is_stdin);
+    if (codec != NULL && (codec->caps & CF_CODEC_READ) == 0) {
+        fprintf(stderr, "gen: format '%s' can be written but not read\n", codec->name);
+        codec = NULL;
+    }
+    if (codec != NULL) {
+        if (used != NULL) {
+            *used = codec;
+        }
+        if (!cf_ks_init(ks, ar, 64) || !cf_flatten_init(&fl, ks, 0)) {
+            fprintf(stderr, "gen: cannot start\n");
+        } else {
+            cf_bool decoded = cf_codec_decode(codec, &blob, cf_flatten_sink(&fl), &err);
+            /* A key the flattener refused reads to the codec as a sink
+               that refused it: the flattener says which, whether the
+               decoding failed for it or went on. */
+            if (fl.failed || fl.overflow) {
+                fprintf(stderr, "gen: '%s' holds a key this build cannot hold\n", path);
+            } else if (!decoded) {
+                fprintf(stderr, "gen: %s\n", err.message);
+            } else if (!cf_ks_resolve(ks)) {
+                fprintf(stderr, "gen: cannot start\n");
+            } else {
+                rc = 0;
+            }
+        }
+    }
+    free(held);
+    cf_blob_arena_done(bytes, ar);
+    return rc;
+}
+
+/* The walk: the document's events, with the path of each, into the
+   definitions. A value is a definition at its path; an array of one
+   scalar type is a list; what a contract has no type for is named on
+   stderr and left out. */
+enum { SD_TABLE, SD_ARRAY, SD_SKIPPED };
+
+typedef struct sd_frame {
+    size_t saved; /* the path's length outside this container */
+    int    kind;  /* SD_SKIPPED: inside an array, which it has left out */
+} sd_frame;
+
+typedef struct sd_walk {
+    const cf_keyspace* ks;
+    cf_defset*         ds;
+    cf_error           err;
+    char               path[CF_KEY_MAX];
+    size_t             plen;
+    sd_frame           stack[CF_MAX_DEPTH + 4];
+    int                depth; /* containers open; the root is the first */
+
+    /* The array being read, when one is: how many scalars it has held,
+       their type, and what else. */
+    size_t  index;
+    cf_type etype;
+    cf_bool etable;
+    cf_bool earray;
+    cf_bool emixed;
+} sd_walk;
+
+/* The key of the next member, joined by a dot below the root. */
+static cf_bool sd_name(sd_walk* w, const char* name, size_t n) {
+    size_t need = w->plen + ((w->plen > 0) ? 1u : 0u) + n;
+
+    if (need >= sizeof w->path) {
+        return CF_FALSE;
+    }
+    if (w->plen > 0) {
+        w->path[w->plen++] = '.';
+    }
+    memcpy(w->path + w->plen, name, n);
+    w->plen          = need;
+    w->path[w->plen] = '\0';
+    return CF_TRUE;
+}
+
+/* The type a scalar's definition has: the value's, except that text a
+   format has no types for is what Tier 0 inference says (D-24). A null
+   is CF_TYPE_NULL. */
+static cf_type sd_type(const sd_walk* w, const cf_value* v) {
+    const cf_entry* e;
+
+    if (v->type != CF_TYPE_TEXT) {
+        return v->type;
+    }
+    e = cf_ks_find(w->ks, w->path, w->plen);
+    if (e != NULL && e->selected != NULL &&
+        (e->selected->flags & CF_CAND_TEXTUAL) != 0) {
+        switch (cf_infer_scalar(v->u.t.p, v->u.t.n)) {
+        case CF_SCALAR_BOOL:
+            return CF_TYPE_BOOL;
+        case CF_SCALAR_INT:
+            return CF_TYPE_INT;
+        case CF_SCALAR_REAL:
+            return CF_TYPE_REAL;
+        case CF_SCALAR_TEXT:
+        default:
+            break;
+        }
+    }
+    return CF_TYPE_TEXT;
+}
+
+static void sd_left_out(const sd_walk* w, const char* why) {
+    fprintf(stderr, "gen schema: %s: %s; left out\n", w->path, why);
+}
+
+/* The key at the path, defined as `type`, a list when `list`: no
+   default, no range, an empty description to fill in. */
+static cf_bool sd_define(sd_walk* w, cf_type type, cf_bool list) {
+    cf_def d;
+
+    cf_def_init(&d, type, w->path);
+    d.description = "";
+    if (list) {
+        d.list_mode = CF_LIST_REPLACE;
+    }
+    return cf_define(w->ds, &d, &w->err);
+}
+
+static cf_bool sd_begin(void* ctx, const char* name, size_t n, int kind) {
+    sd_walk* w     = (sd_walk*)ctx;
+    int      under = (w->depth > 0) ? w->stack[w->depth - 1].kind : SD_TABLE;
+    size_t   saved = w->plen;
+
+    if (w->depth >= (int)(sizeof w->stack / sizeof w->stack[0])) {
+        return CF_FALSE;
+    }
+    if (under == SD_ARRAY || under == SD_SKIPPED) {
+        if (under == SD_ARRAY) {
+            if (kind == SD_ARRAY) {
+                w->earray = CF_TRUE;
+            } else {
+                w->etable = CF_TRUE;
+            }
+        }
+        kind = SD_SKIPPED;
+    } else {
+        if (name != NULL && !sd_name(w, name, n)) {
+            return CF_FALSE;
+        }
+        if (kind == SD_ARRAY) {
+            w->index  = 0;
+            w->etype  = CF_TYPE_NULL;
+            w->etable = CF_FALSE;
+            w->earray = CF_FALSE;
+            w->emixed = CF_FALSE;
+        }
+    }
+    w->stack[w->depth].saved = saved;
+    w->stack[w->depth].kind  = kind;
+    ++w->depth;
+    return CF_TRUE;
+}
+
+static cf_bool sd_begin_table(void* ctx, const char* name, size_t n) {
+    return sd_begin(ctx, name, n, SD_TABLE);
+}
+
+static cf_bool sd_begin_array(void* ctx, const char* name, size_t n) {
+    return sd_begin(ctx, name, n, SD_ARRAY);
+}
+
+static cf_bool sd_scalar(void* ctx, const char* name, size_t n, const cf_value* v,
+                         cf_bool textual, const cf_loc* at) {
+    sd_walk* w     = (sd_walk*)ctx;
+    int      under = (w->depth > 0) ? w->stack[w->depth - 1].kind : SD_TABLE;
+    size_t   saved = w->plen;
+    cf_type  type;
+    cf_bool  ok;
+
+    (void)textual; /* cf_doc_emit says none: the key space does (sd_type) */
+    (void)at;
+    if (under == SD_SKIPPED) {
+        return CF_TRUE;
+    }
+    if (under == SD_ARRAY) {
+        char num[32];
+
+        sprintf(num, "%lu", (unsigned long)w->index);
+        ok = sd_name(w, num, strlen(num));
+    } else {
+        ok = sd_name(w, name, n);
+    }
+    if (!ok) {
+        return CF_FALSE;
+    }
+    type = sd_type(w, v);
+    if (under == SD_ARRAY) {
+        if (w->index == 0) {
+            w->etype = type;
+        } else if (w->etype != type) {
+            w->emixed = CF_TRUE;
+        }
+        ++w->index;
+        ok = CF_TRUE;
+    } else if (type == CF_TYPE_NULL) {
+        sd_left_out(w, "a null, whose type the sample does not show");
+        ok = CF_TRUE;
+    } else {
+        ok = sd_define(w, type, CF_FALSE);
+    }
+    w->plen          = saved;
+    w->path[w->plen] = '\0';
+    return ok;
+}
+
+static cf_bool sd_end(void* ctx) {
+    sd_walk* w = (sd_walk*)ctx;
+    sd_frame f;
+    cf_bool  ok = CF_TRUE;
+
+    if (w->depth == 0) {
+        return CF_FALSE;
+    }
+    f = w->stack[--w->depth];
+    if (f.kind == SD_ARRAY) {
+        if (w->etable) {
+            sd_left_out(w, "an array of tables, which a contract has no type for");
+        } else if (w->earray) {
+            sd_left_out(w, "an array of arrays, which a contract has no type for");
+        } else if (w->emixed) {
+            sd_left_out(w, "an array of mixed types, which a contract has no type for");
+        } else if (w->index == 0) {
+            sd_left_out(w,
+                        "an empty array, whose element type the sample does not show");
+        } else if (w->etype == CF_TYPE_NULL) {
+            sd_left_out(w, "an array of nulls, whose type the sample does not show");
+        } else {
+            ok = sd_define(w, w->etype, CF_TRUE);
+        }
+    }
+    w->plen          = f.saved;
+    w->path[w->plen] = '\0';
+    return ok;
+}
+
+/* A file's base name without its extension: the contract's title. */
+static const char* sd_title(cf_arena* ar, const char* path) {
+    const char* base = path;
+    const char* p;
+    size_t      n;
+    char*       t;
+
+    if (strcmp(path, "-") == 0) {
+        return "stdin";
+    }
+    for (p = path; *p != '\0'; ++p) {
+        if (*p == '/' || *p == '\\') {
+            base = p + 1;
+        }
+    }
+    n = strlen(base);
+    for (p = base + n; p > base + 1; --p) {
+        if (p[-1] == '.') {
+            n = (size_t)(p - 1 - base);
+            break;
+        }
+    }
+    t = (char*)cf_arena_alloc(ar, n + 1u);
+    if (t != NULL) {
+        memcpy(t, base, n);
+        t[n] = '\0';
+    }
+    return t;
+}
+
+static int schema_usage(void) {
+    fputs("  configforge gen schema --from <file> [--as <format>] [--title <t>] "
+          "[--out <file>]\n",
+          stderr);
+    return 2;
+}
+
+/* The draft, measured and then written, to `path` or standard output. */
+static int sd_write(const cf_defset* ds, const char* title, const char* path,
+                    cf_arena* ar, cf_error* err) {
+    size_t need = cf_schema_write(ds, title, CF_TRUE, NULL, 0, err);
+    char*  buf;
+    FILE*  out = stdout;
+    int    rc  = 0;
+
+    if (need == 0) {
+        fprintf(stderr, "gen: %s\n", err->message);
+        return 2;
+    }
+    buf = (char*)cf_arena_alloc(ar, need + 1u);
+    if (buf == NULL ||
+        cf_schema_write(ds, title, CF_TRUE, buf, need + 1u, err) != need) {
+        fprintf(stderr, "gen: %s\n", (buf == NULL) ? "cannot start" : err->message);
+        return 2;
+    }
+    if (path != NULL) {
+        out = fopen(path, "w");
+        if (out == NULL) {
+            fprintf(stderr, "gen: cannot write %s\n", path);
+            return 2;
+        }
+    }
+    if (fwrite(buf, 1, need, out) != need) {
+        rc = 2;
+    }
+    if (path != NULL && (fclose(out) != 0 || rc != 0)) {
+        (void)remove(path);
+        rc = 2;
+    }
+    if (rc != 0) {
+        fprintf(stderr, "gen: cannot write %s\n",
+                (path != NULL) ? path : "standard output");
+    }
+    return rc;
+}
+
+int gen_schema(int argc, char** argv) {
+    const char* from  = NULL;
+    const char* as    = NULL;
+    const char* title = NULL;
+    const char* out   = NULL;
+    cf_arena*   ar;
+    cf_keyspace ks;
+    cf_defset   ds;
+    sd_walk*    w;
+    cf_doc_sink sink;
+    cf_error    err = CF_ERROR_INIT;
+    int         rc;
+    int         i;
+
+    for (i = 0; i + 1 < argc; i += 2) {
+        if (strcmp(argv[i], "--from") == 0) {
+            from = argv[i + 1];
+        } else if (strcmp(argv[i], "--as") == 0) {
+            as = argv[i + 1];
+        } else if (strcmp(argv[i], "--title") == 0) {
+            title = argv[i + 1];
+        } else if (strcmp(argv[i], "--out") == 0) {
+            out = argv[i + 1];
+        } else {
+            return schema_usage();
+        }
+    }
+    if (i != argc || from == NULL) {
+        return schema_usage();
+    }
+    ar = cf_arena_new(NULL, 0);
+    if (ar == NULL) {
+        fprintf(stderr, "gen: cannot start\n");
+        return 2;
+    }
+    rc = gen_read_keys(from, as, ar, &ks, NULL);
+    if (rc != 0) {
+        cf_arena_free(ar);
+        return rc;
+    }
+    if (!cf_defset_init(&ds, ar, 0)) {
+        fprintf(stderr, "gen: cannot start\n");
+        cf_arena_free(ar);
+        return 2;
+    }
+    w = (sd_walk*)cf_arena_calloc(ar, sizeof *w);
+    if (w == NULL) {
+        fprintf(stderr, "gen: cannot start\n");
+        cf_arena_free(ar);
+        return 2;
+    }
+    w->ks  = &ks;
+    w->ds  = &ds;
+    w->err = err;
+    memset(&sink, 0, sizeof sink);
+    sink.size        = sizeof sink;
+    sink.begin_table = sd_begin_table;
+    sink.begin_array = sd_begin_array;
+    sink.scalar      = sd_scalar;
+    sink.end         = sd_end;
+    sink.ctx         = w;
+    if (!cf_doc_emit(&ks, &sink, &err)) {
+        /* The definition's own refusal says why, when it was one. */
+        fprintf(stderr, "gen: %s\n",
+                (w->err.message[0] != '\0') ? w->err.message : err.message);
+        cf_arena_free(ar);
+        return 2;
+    }
+    cf_defset_seal(&ds);
+    if (title == NULL) {
+        title = sd_title(ar, from);
+    }
+    rc = sd_write(&ds, title, out, ar, &err);
+    if (rc == 0) {
+        fprintf(stderr,
+                "gen schema: a draft from %s: %lu key(s), every one optional, with no "
+                "defaults, ranges or descriptions; review it before it is the "
+                "contract\n",
+                from, (unsigned long)cf_defset_count(&ds));
     }
     cf_arena_free(ar);
     return rc;

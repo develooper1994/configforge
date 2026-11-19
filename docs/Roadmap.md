@@ -54,7 +54,7 @@ beside what is not.
 | 🟩 | Binary configuration: a layout-driven TLV codec, BER-TLV, CBOR | D-91, D-93 |
 | ⬜ | Every operation on a file's data, written back in its format | assessment |
 | ⬜ | Converting between formats | assessment |
-| ⬜ | Code for each binding from a contract | assessment |
+| 🟨 | Code for each binding from a contract (a schema drafted from a sample done, D-96; C++, Rust and Python left) | assessment |
 | ⬜ | 2.0: what the sizing modes break, once | plan item 10 |
 | 🟩 | Sizes and work predicted, then checked: the file buffer and the key space kept, three more measured and left | D-76, plan of the evening |
 | 🟩 | A UTF-8 byte order mark read past by every text reader (`cf_blob_skip_bom`) | 1.5.0 |

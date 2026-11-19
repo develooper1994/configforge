@@ -4,6 +4,7 @@
  *
  *     configforge gen --schema <schema> [--name <function>] [--out <file>]
  *     configforge gen check --schema <schema> <file>...
+ *     configforge gen schema --from <file> [--as <format>] [--title <t>] [--out <file>]
  *     configforge gen --version
  *
  * The work is contract.c's; this file reads the first argument.
@@ -23,6 +24,11 @@ static int usage(void) {
     fputs("                                 the contract as C calls\n", stderr);
     fputs("  configforge gen check --schema <schema> <file>...\n", stderr);
     fputs("                                 files against the contract\n", stderr);
+    fputs("  configforge gen schema --from <file> [--as <format>] [--title <t>] "
+          "[--out <file>]\n",
+          stderr);
+    fputs("                                 a draft contract from a sample file\n",
+          stderr);
     fputs("  configforge gen --version\n\n", stderr);
     fputs("Exit codes: 0 done, and for check every file holds to the contract;\n",
           stderr);
@@ -33,6 +39,9 @@ static int usage(void) {
 int main(int argc, char** argv) {
     if (argc >= 2 && strcmp(argv[1], "check") == 0) {
         return gen_check(argc - 2, argv + 2);
+    }
+    if (argc >= 2 && strcmp(argv[1], "schema") == 0) {
+        return gen_schema(argc - 2, argv + 2);
     }
     /* The version, and the commit it was built from when the build knew
        it, as Doctor prints them. */
