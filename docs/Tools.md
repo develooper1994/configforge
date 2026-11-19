@@ -56,7 +56,7 @@ the program's exit code.
 | Program | What it does | Page |
 | --- | --- | --- |
 | `configforge-doctor` | Reads provenance reports: `explain`, `dump`, `lint`, `diff`, `history`, `blame`, `import-*`. Until 1.8.0 it is also installed as `doctor`, which says its new name on stderr, and still runs `check`, `gen` and `formats`. | [Doctor](Doctor.md) |
-| `configforge-codec` | The serialization library's own program: `formats`, `detect`, `check` and `dump`, on documents and never on a configuration. | [below](#configforge-codec) |
+| `configforge-codec` | The serialization library's own program: `formats`, `detect`, `check`, `dump`, `convert` and `format`, on documents and never on a configuration. | [below](#configforge-codec) |
 | `configforge-gen` | The contract's own program: `configforge gen --schema` writes a JSON Schema contract as C, `configforge gen check` holds files to it, `configforge gen schema --from` drafts one from a sample file. | [below](#configforge-gen) |
 
 ## configforge codec
@@ -78,6 +78,10 @@ configforge codec check <file>... [--as <format>]
                                whether each file is well formed
 configforge codec dump <file> [--as <format>]
                                every value and table, with its place
+configforge codec convert <file> --to <format> [--as <format>] [--out <file>] [--strict]
+                               the document in another format, and what it cannot hold
+configforge codec format <file> [--as <format>] [--out <file>] [--strict]
+                               the document rewritten in its own format
 configforge codec --version
 ```
 
@@ -132,6 +136,39 @@ app.json:1:13   s.p     int     8080
 app.json:1:26   t.0     text    "x"
 app.json:1:43   u       null    null
 ```
+
+### Converting between formats
+
+`configforge codec convert app.ini --to toml --out app.toml` reads a
+document through its codec and writes it through another's encoder, as the
+codecs' events: nesting and arrays kept, no key space and no contract on
+the way (D-94). `--as` names the input's format, as for `dump`; without
+`--out` the output is standard output, binary on Windows too, so a CBOR
+file piped on is its bytes. `format` is `convert` into the document's own
+format.
+
+What the target cannot hold is a finding on stderr, with its path, and is
+left out; nothing is dropped quietly. `--strict` makes any finding exit 1
+and writes nothing:
+
+```text
+$ configforge codec convert n.json --to toml
+codec convert: a: a null, which toml cannot hold; left out
+```
+
+Two notes are said once and are not findings, since they are about the
+formats and not the file, and a `--strict` that failed on them would fail
+every conversion out of TOML: that the source's format can hold comments,
+which no reader keeps, and that an untyped source's values are written to
+a typed target as text (INI's `port = 8080` is the JSON string `"8080"`).
+A target with no types written values that were numbers, booleans or
+nulls as their text is a finding, since a type was lost. A `${` is
+written as it was read, neither expanded nor doubled: a document is
+converted, not a configuration. A name met again in a table is the same
+member: a table reopened is one table, and anything else is replaced by
+the later one. Comments are lost. Exit 0 converted; 1 `--strict` and a
+finding, or a format that cannot be told; 2 unusable input; 3 an encoder
+refused what the check let through (a bug).
 
 ## configforge gen
 

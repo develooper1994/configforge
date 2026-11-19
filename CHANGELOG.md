@@ -17,6 +17,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   (whether each file is well formed), linked to that library alone.
 - **`configforge codec dump`**: every value of a document, with its type
   and its place - a line and column, or a byte offset for CBOR.
+- **`configforge codec convert <file> --to <format>`**: a document in
+  another format - INI, JSON, TOML, YAML, CBOR - and every value, array,
+  name or type the target cannot hold named on stderr and left out;
+  `--strict` fails rather than write a lossy file; `configforge codec
+  format` rewrites a document in its own format (D-94).
 - **`configforge gen schema --from <file>`**: a first JSON Schema
   contract drafted from a configuration file you already have - a key
   for every value, typed from it, every one optional, descriptions left

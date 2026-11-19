@@ -53,7 +53,7 @@ beside what is not.
 | ⬜ | Go and .NET bindings, when asked | plan item 9 |
 | 🟩 | Binary configuration: a layout-driven TLV codec, BER-TLV, CBOR | D-91, D-93 |
 | ⬜ | Every operation on a file's data, written back in its format | assessment |
-| ⬜ | Converting between formats | assessment |
+| 🟩 | Converting between formats | D-94 |
 | 🟨 | Code for each binding from a contract (C++, D-95, and a schema from a sample, D-96, done; Rust and Python left) | assessment |
 | ⬜ | 2.0: what the sizing modes break, once | plan item 10 |
 | 🟩 | Sizes and work predicted, then checked: the file buffer and the key space kept, three more measured and left | D-76, plan of the evening |
@@ -127,8 +127,9 @@ short keeps its branch, unmerged, and says so here.
    offered in every language - Windows has its registry source already.
 4. 🟩 **Wave 4**: CBOR (D-91) and TLV by a layout, BER-TLV included
    (D-92, D-93). **1.5.0.**
-5. ⬜ **Wave 5**: converting between formats (`doctor convert`, through
-   `cf_emit`, naming what the target cannot hold); code for each binding
+5. ⬜ **Wave 5**: converting between formats (`configforge codec convert`,
+   the codecs' events recorded and replayed into the target's encoder,
+   D-94); code for each binding
    from a contract (`doctor gen --lang c|cpp|rust|python`). Revised
    2026-11-14: neither stays in Doctor - converting a document goes to
    the serialization library's own tool, exporting a configuration and
@@ -865,7 +866,7 @@ first user meets. In the order proposed:
   the report commands, the others answer under their own names, and the
   GitHub Action and the docs use the new names; the old Doctor commands
   stay one minor release as aliases that say where they went.
-* 🟨 **The serialization library's own tool** (formats, detect, check and dump done; convert (W5-V1) left; cards T-3, T-4,
+* 🟩 **The serialization library's own tool** (formats, detect, check, dump and convert, D-94; cards T-3, T-4,
   W5-V1). Once that library is a
   target of its own: convert a document from one format to another as
   a stream of the codecs' events - nesting and arrays kept, no key space

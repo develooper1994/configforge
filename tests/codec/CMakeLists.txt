@@ -11,8 +11,13 @@ add_test(
     -DPAGE=${CMAKE_SOURCE_DIR}/docs/Formats.md -DEMIT=${CF_WITH_EMIT} -P
     ${CMAKE_CURRENT_SOURCE_DIR}/formats.cmake)
 
-# `detect`, `check` and `dump`.
-foreach(script detect check dump)
+# `detect`, `check`, `dump` and `convert`; `convert` writes, so it needs
+# the encoders (CF_WITH_EMIT, off in the minimal preset).
+set(cf_codec_scripts detect check dump)
+if(CF_WITH_EMIT)
+  list(APPEND cf_codec_scripts convert)
+endif()
+foreach(script ${cf_codec_scripts})
   add_test(
     NAME codec.${script}
     COMMAND

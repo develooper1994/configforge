@@ -4069,6 +4069,65 @@ under the bound on what an input may cost (D-82); and
 **Compatibility.** Additive: one function, one option on by default
 (`CF_WITH_TLV`; without it the function refuses by name, D-38).
 
+## D-94 — Converting between formats
+
+**Question.** A configuration moved from INI to TOML by hand, or by a
+script that drops what it does not understand, arrives with values
+missing and nothing to say so. Can a document be written in another
+format, and what is said about what the target cannot hold?
+
+**Options.**
+
+1. Through `cf_emit`: read the file into a configuration, write it out.
+2. The decoder's events straight into the target's encoder.
+3. Through the key space and the encoder (`cf_doc_emit_where`).
+4. The events recorded in a tree, and replayed into the encoder.
+
+**Decision.** Option 4, in `configforge codec convert <file> --to
+<format>`, and `configforge codec format <file>`, which is the same with
+the document's own format as the target. Option 1 resolves a `${` and
+doubles it: a document is converted, not a configuration. Option 2 breaks
+INI and TOML: a JSON document's later root key lands inside an INI
+section, and a TOML array after a sub-table lands inside that sub-table,
+the two faults `src/bridge/flatten.c` records. Option 3 is not in the
+serialization library, which the program links alone, and refuses every
+name that is not a lowercase key.
+
+The tree is built in an arena from the decoder's events. A table that
+meets an earlier table of its name is that table reopened (INI's repeated
+sections); anything else replaces the earlier member, which is left out -
+the later one wins, as the file means it. Members are found by a hash of
+the parent and the name, so a table of many costs no more per member than
+one of few. The tree is bounded by D-82's rule, written in the tool: a
+node costs its name, its text and 64 bytes, and a document may cost 64
+times its size and 1 MiB more; past it the run is refused, exit 2. The
+replay writes a table's values, then its arrays, then its tables, and an
+array's members in order.
+
+What the target cannot hold is found before anything is written, in three
+passes, and each is a line on stderr naming its path and left out with
+everything under it: a name an encoder that writes names as they are
+would write unquoted (not for JSON, JSON5, CBOR, whose encoders write a
+name as a string, nor YAML, whose encoder quotes one); an array the
+target's caps cannot write (`cf_emit`'s rule); and a value the encoder
+itself refuses (TOML's null, INI's line break), found by replaying into
+an encoder that writes nowhere. Two notes are said once and are not
+findings, since they are about the formats and would fail `--strict` for
+every file out of TOML: a format that can hold comments, which no reader
+keeps; and an untyped source written to a typed target as text. A target
+with no types written values that were numbers, booleans or nulls as
+their text, and that is a finding. `--strict` fails (exit 1) on any
+finding and writes nothing, an `--out` file that existed being left
+alone. Exit codes: 0 converted; 1 `--strict` and a finding, or a format
+that cannot be told; 2 unusable input or options; 3 the encoder refused
+what the check let through, a bug.
+
+`${` is written as it was read, neither expanded nor doubled, in binary
+encoders too. Comments are said once and lost: no reader keeps them.
+
+**Compatibility.** Additive: new commands of `configforge-codec`;
+nothing else changes.
+
 ## D-95 — Code for each binding from a contract
 
 **Question.** The contract is written once, in a schema. A C++ program

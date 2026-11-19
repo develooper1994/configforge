@@ -55,6 +55,25 @@ static cf_bool read_stdin(cf_arena* ar, cf_blob* out) {
     return CF_TRUE;
 }
 
+int codec_named(const char* name, const cf_codec** out) {
+    const cf_codec* c = cf_codec_by_name(name);
+
+    if (c == NULL) {
+        const char* option = cf_format_option(name);
+
+        if (option != NULL) {
+            fprintf(stderr, "codec: format '%s' is not compiled into this build; ",
+                    name);
+            fprintf(stderr, "turn on %s\n", option);
+        } else {
+            fprintf(stderr, "codec: no format called '%s'\n", name);
+        }
+        return 2;
+    }
+    *out = c;
+    return 0;
+}
+
 int codec_read(const char* path, const char* as, cf_arena* ar, cf_blob* out,
                const cf_codec** codec, cf_detect* how) {
     const cf_codec* c;
@@ -76,18 +95,10 @@ int codec_read(const char* path, const char* as, cf_arena* ar, cf_blob* out,
     }
 
     if (as != NULL) {
-        c = cf_codec_by_name(as);
-        if (c == NULL) {
-            const char* option = cf_format_option(as);
+        int rc = codec_named(as, &c);
 
-            if (option != NULL) {
-                fprintf(stderr, "codec: format '%s' is not compiled into this build; ",
-                        as);
-                fprintf(stderr, "turn on %s\n", option);
-            } else {
-                fprintf(stderr, "codec: no format called '%s'\n", as);
-            }
-            return 2;
+        if (rc != 0) {
+            return rc;
         }
         how->how = CF_DETECT_NAMED;
     } else {

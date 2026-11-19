@@ -4,7 +4,13 @@
 # nothing else of the library, and is compiled without the internal tier
 # (D-51, D-88; Doctor's and gen's directories define it, this one does
 # not): it is the proof that the serialization library is enough.
-add_executable(configforge_codec codec.c detect.c dump.c formats.c)
+add_executable(
+  configforge_codec
+  codec.c
+  convert.c
+  detect.c
+  dump.c
+  formats.c)
 target_link_libraries(configforge_codec PRIVATE configforge_serialize)
 set_target_properties(
   configforge_codec

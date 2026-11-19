@@ -21,6 +21,15 @@ int codec_check(int argc, char** argv);
 /* Every value and table of a file, with its place (dump.c). */
 int codec_dump(int argc, char** argv);
 
+/* A document written in another format (convert.c): `convert` with
+   same_format false, `format` with it true, the target then being the
+   document's own format. */
+int codec_convert(int argc, char** argv, cf_bool same_format);
+
+/* The built-in codec called `name`: 0 with *out set, else 2 with the
+   reason on stderr (no such format, or one this build left out). */
+int codec_named(const char* name, const cf_codec** out);
+
 /* `path` read whole ("-" is standard input, binary) into `ar`, and
    its codec: `as` by name when not NULL, else from its name and then
    its content (cf_codec_detect, D-73). 0 when read, with *out and

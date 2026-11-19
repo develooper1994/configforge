@@ -5,6 +5,8 @@
  *     configforge codec detect <file>
  *     configforge codec check <file>... [--as <format>]
  *     configforge codec dump <file> [--as <format>]
+ *     configforge codec convert <file> --to <format> [--as F] [--out F] [--strict]
+ *     configforge codec format <file> [--as <format>] [--out F] [--strict]
  *     configforge codec --version
  *
  * It reads documents, in every format the library reads, and never a
@@ -28,6 +30,12 @@ static int usage(void) {
         "                                 the format of a file, and how it was told\n",
         "  configforge codec check <file>... [--as <format>]\n",
         "                                 whether each file is well formed\n",
+        "  configforge codec convert <file> --to <format> [--as <format>]\n",
+        "                                 [--out <file>] [--strict]\n",
+        "                                 the document in another format, and\n",
+        "                                 what it cannot hold\n",
+        "  configforge codec format <file> [--as <format>] [--out <file>] [--strict]\n",
+        "                                 the document rewritten in its own format\n",
         "  configforge codec --version\n",
         "\n",
         "Exit codes: 0 done (check: every file is well formed), 1 a file is\n",
@@ -52,6 +60,12 @@ int main(int argc, char** argv) {
     }
     if (argc >= 2 && strcmp(argv[1], "dump") == 0) {
         return codec_dump(argc - 2, argv + 2);
+    }
+    if (argc >= 2 && strcmp(argv[1], "convert") == 0) {
+        return codec_convert(argc - 2, argv + 2, CF_FALSE);
+    }
+    if (argc >= 2 && strcmp(argv[1], "format") == 0) {
+        return codec_convert(argc - 2, argv + 2, CF_TRUE);
     }
     if (argc == 2 && strcmp(argv[1], "--version") == 0) {
         printf("ConfigForge codec %s\n", cf_serialize_version());
