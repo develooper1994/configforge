@@ -107,7 +107,7 @@ gets reopened every six months.
 | D-89 | The experimental tier | api, abi | **Decided** |
 | D-90 | The serialization library, a target of its own | serialize, build, abi | **Decided** |
 | D-91 | CBOR, the JSON model in binary | formats | **Decided** |
-| D-95 | Code for each binding from a contract | tools, contract, C++ | **Decided** |
+| D-95 | Code for each binding from a contract | tools, contract, C++, Rust | **Decided** |
 | D-96 | A contract drafted from a sample | tools, contract | **Decided** |
 | D-97 | What kind of format a codec is, told to the program | formats | **Decided** |
 | D-99 | Three programs behind one front door | tools | **Decided** |
@@ -4147,7 +4147,8 @@ how are the languages added without the tool knowing each by name?
    them.
 3. The schema itself, read at run time by a JSON reader the program links.
 
-**Decision.** Option 2, for C and C++. The C++ header holds the C body -
+**Decision.** Option 2, for C and C++; Rust takes option 3's schema
+without a reader of its own (below). The C++ header holds the C body -
 every line of it compiles as C++ - in `inline bool define(cf_builder*)`,
 so the contract is the schema's, whole, in C++ as in C, and no JSON
 reader is in the build. The Keys and the Binding only read: a `cf::Key`
@@ -4180,9 +4181,35 @@ a list, whose elements are keys of their own, and a key of a type the
 language does not read - is a comment where its field would be, never
 dropped quietly.
 
+**Rust.** C and C++ define the contract with the library's C calls, which
+Rust cannot make without the crate's hidden `sys`; the crate's own
+defining calls (`settings!`'s `define`) carry a type, a default, a range
+and flags and drop descriptions, enumerations, lengths, lists, open
+prefixes and, with no `f64` `Field`, reals. So the generated module
+embeds the schema as a string and gives it to a new `Builder::schema`
+(`cf_builder_schema`, 1.2's), which the library reads as the schema file:
+the whole contract, by the library's one rule set (D-67), and the `Key`
+constants and the `settings!` struct only read. Rejected: the binding's
+defining calls, which lose most of what a schema says, named on stderr as
+the file is written; and the same calls after teaching the crate
+everything a `cf_def` holds, a feature of the crate larger than a
+generator. The schema is one string, its lines kept as lines, `\` and
+`"` escaped and the other control bytes `\u{..}`; the file has plain
+comments and no inner attribute, because `include!` refuses one (`//!`
+included), and the generated `contract` and `SCHEMA` are reserved with
+the language's words. The struct is flat, a field for each key by its
+whole identifier, `settings!` having no nesting; a real and a list are a
+comment where the constant would be, until the crate reads reals. The
+module's test is two halves, each where its tools are: a golden file,
+`tests/gen/contract.rs`, which `gen.rust` holds the program's output to
+byte for byte (and `--out` writes in binary, so Windows writes the same
+bytes), and the Rust crate's own integration test, which `include!`s that
+file and runs it under cargo. A golden file shows a change of the writer
+as a diff; the cargo test shows that the file is Rust that works.
+
 **Compatibility.** Additive. `--lang c` is the default and writes, byte
 for byte, what `configforge gen` wrote; `--name` is, for C, the function
-as it was. W5-G2 and W5-G3 add Rust's and Python's entries.
+as it was, and for Rust, `Settings`. W5-G3 adds Python's entry.
 
 ---
 

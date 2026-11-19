@@ -321,6 +321,13 @@ extern "C" {
         max: *const c_char,
         flags: u32,
     ) -> cf_bool;
+    pub fn cf_builder_schema(
+        b: *mut cf_builder,
+        text: *const c_char,
+        n: usize,
+        name: *const c_char,
+    ) -> cf_bool;
+    pub fn cf_builder_schema_file(b: *mut cf_builder, path: *const c_char) -> cf_bool;
     pub fn cf_def_init_sized(d: *mut cf_def, size: usize, type_: c_int, key: *const c_char);
     pub fn cf_has_feature(name: *const c_char) -> cf_bool;
     pub fn cf_value_text(v: *mut cf_value, p: *const c_char, n: usize);

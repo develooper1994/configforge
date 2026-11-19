@@ -57,5 +57,10 @@ systemd's credentials, the directory `$CREDENTIALS_DIRECTORY` names, are a
 source of their own: `Builder::new().credentials(None, rank::ENV, None,
 OPTIONAL)`; `explain` says "systemd credential <id> (<file>)".
 
+`Builder::schema(text, name)` and `Builder::schema_file(path)` take the
+contract from a JSON Schema, as the library reads one; `configforge gen
+--lang rust` writes a module that embeds the schema, with a `Key` constant
+for each key and a `settings!` struct.
+
 See the repository's `docs/Guide.md`, section 13, for typed settings,
 editing, reloads and the examples shared with the C interface.

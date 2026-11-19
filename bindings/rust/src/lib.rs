@@ -636,6 +636,23 @@ impl Builder {
         self
     }
 
+    /// The contract from a JSON Schema's text, as the library reads one
+    /// (`cf_builder_schema`): every key it defines, with its type, range,
+    /// default, description and spellings. A keyword the library does not
+    /// read is refused, by name and place, at [`Builder::create`].
+    pub fn schema(mut self, text: &str, name: &str) -> Builder {
+        let (t, n) = (self.keep.s(text), self.keep.s(name));
+        unsafe { sys::cf_builder_schema(self.b, t, text.len(), n) };
+        self
+    }
+
+    /// [`Builder::schema`] from a file.
+    pub fn schema_file(mut self, path: &str) -> Builder {
+        let p = self.keep.s(path);
+        unsafe { sys::cf_builder_schema_file(self.b, p) };
+        self
+    }
+
     /// A prefix whose keys the program cannot know in advance.
     pub fn open(mut self, prefix: &str) -> Builder {
         let p = self.keep.s(prefix);
@@ -1229,5 +1246,49 @@ mod preferences_tests {
             .preferences(None, rank::ENV, "com.example.app", OPTIONAL)
             .create();
         assert!(optional.is_err());
+    }
+}
+
+#[cfg(test)]
+mod schema_tests {
+    use super::{rank, Builder};
+
+    const SCHEMA: &str = r#"{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "server": {
+      "type": "object",
+      "properties": {
+        "port": {"type": "integer", "minimum": 1, "maximum": 65535, "default": 8080}
+      }
+    }
+  }
+}"#;
+
+    #[test]
+    fn a_schema_defines_the_contract() {
+        let cfg = Builder::new().schema(SCHEMA, "s.json").create().unwrap();
+        assert_eq!(cfg.int("server.port", 0), 8080);
+    }
+
+    #[test]
+    fn a_value_outside_the_schema_is_refused_at_create() {
+        let refused = Builder::new()
+            .schema(SCHEMA, "s.json")
+            .memory("m", rank::USER_FILE, &[("server.port", "70000")])
+            .create();
+        match refused {
+            Ok(_) => panic!("a port of 70000 was accepted"),
+            Err(err) => assert!(err.message.contains("server.port"), "{}", err.message),
+        }
+    }
+
+    #[test]
+    fn a_schema_file_that_is_not_there_is_refused_at_create() {
+        let refused = Builder::new()
+            .schema_file("no-such-dir/no-such.schema.json")
+            .create();
+        assert!(refused.is_err());
     }
 }

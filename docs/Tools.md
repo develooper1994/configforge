@@ -224,12 +224,13 @@ length and every int default and text default against its bounds, so a build
 with a smaller `CF_KEY_MAX`, or a schema whose default its own bounds refuse,
 does not compile. As C89 it is plain calls, checked by `cf_builder_create`.
 
-`--lang` names the language: `c` (the default, what is described above) and
-`cpp`; the program's table of languages holds them, and a name it does not
-hold is refused with the names it does (`gen: no language 'x'; there are: c,
-cpp`, exit 2). `--name` is what the language calls the generated thing - for C
-the function, for C++ the namespace (both `cf_contract` unless named) - and
-must be an identifier of the language.
+`--lang` names the language: `c` (the default, what is described above),
+`cpp` and `rust`; the program's table of languages holds them, and a name it
+does not hold is refused with the names it does (`gen: no language 'x'; there
+are: c, cpp, rust`, exit 2). `--name` is what the language calls the generated
+thing - for C the function, for C++ the namespace (both `cf_contract` unless
+named), for Rust the struct (`Settings` unless named) - and must be an
+identifier of the language.
 
 `--lang cpp` writes one header. It holds the same calls as the C file, whole
 - descriptions, enumerations, lengths, lists, aliases, policies and the
@@ -267,6 +268,36 @@ only names a key and reads it. The header compiles as C++98 and later; from
 C++11 it is checked at compile time as the C file is (D-75), and
 `tests/gen/test_gen_cpp.cpp` builds it from the test contract and holds it
 to the schema.
+
+`--lang rust` writes one module, and defines the contract with the schema
+itself: the schema's text is in the file as a string (`SCHEMA`), and
+`contract(Builder) -> Builder` gives it to `Builder::schema`, which the
+library reads as it would read the schema file - descriptions, enumerations,
+lengths, lists, reals, deprecations and opened prefixes, by the library's one
+rule set (D-67). The Rust crate's own defining calls carry a type, a default,
+a range and flags and nothing else, so a contract written through them would
+lose the rest. What the file adds is read only: a `Key` constant for each key
+(`SERVER_PORT: Key<i64>`, named by the key's identifier in uppercase, its
+default the schema's or the type's zero) and one flat `settings!` struct,
+`Settings`, a field for each key (`server_port`), because `settings!` does
+not nest. A bool is `bool`, an int `i64`, a text `String`; a real, which the
+binding has no `Field` for yet, and a list say so in a comment where their
+constant would be. The identifier rule is the C++ one, with Rust's reserved
+words. The file has no inner attribute or doc comment, so it can be a module
+or be `include!`d.
+
+```rust
+mod app_contract { include!("app_contract.rs"); }   // configforge gen --schema
+                                                    // app.schema.json --lang rust
+let cfg = app_contract::contract(Builder::app("app")).create()?;
+let port = cfg.read(&app_contract::SERVER_PORT);
+let s = app_contract::Settings::read(&cfg);          // s.server_port ...
+```
+
+`tests/gen/contract.rs` is the module the test contract gives, checked in:
+`gen.rust` holds the program's output to it byte for byte, so a change to the
+writer shows as a diff of that file, and the Rust crate compiles and runs it
+(`bindings/rust/tests/gen_contract.rs`, under cargo).
 
 `configforge gen schema --from app.toml --out app.schema.json` drafts a
 contract from a file you already have, for a program with configuration and

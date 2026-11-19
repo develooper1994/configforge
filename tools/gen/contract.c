@@ -2,8 +2,8 @@
  * contract.c - a JSON Schema contract, checked against and written (D-64, D-67).
  *
  *     configforge gen check --schema <schema> <file>...
- *     configforge gen       --schema <schema> [--lang c|cpp] [--name <name>] [--out
- * <file>]
+ *     configforge gen       --schema <schema> [--lang c|cpp|rust] [--name <name>]
+ * [--out <file>]
  *
  * `check` reads configuration files against the contract as a program
  * built from it would - every key defined, every value of its type and
@@ -516,6 +516,8 @@ struct gen_lang {
        the output (W5-G4); nothing in this program reads it yet. */
     /* cppcheck-suppress unusedStructMember */
     const char* extension;
+    /* What `--name` is when it is not given. */
+    const char* default_name;
     cf_bool (*identifier)(const char* name);
     const char* const* reserved;
     size_t             reserved_count;
@@ -1093,10 +1095,343 @@ static int gen_cxx_file(FILE* out, const cf_defset* ds, const char* schema,
     return rc;
 }
 
+/* ------------------------------------------------------------------ *
+ * Rust: one module
+ *
+ * The schema itself, embedded: the library reads it as it would read the
+ * file, so every rule the schema holds is the library's (D-95). What the
+ * file adds is read only: a Key for each key, and a settings! struct.
+ * ------------------------------------------------------------------ */
+
+/* Rust's reserved words, and the names the module makes itself; sorted. */
+static const char* const gen_rs_reserved[] = {
+    "SCHEMA", "Self",    "abstract", "as",       "async",    "await",    "become",
+    "box",    "break",   "const",    "continue", "contract", "crate",    "do",
+    "dyn",    "else",    "enum",     "extern",   "false",    "final",    "fn",
+    "for",    "gen",     "if",       "impl",     "in",       "let",      "loop",
+    "macro",  "match",   "mod",      "move",     "mut",      "override", "priv",
+    "pub",    "ref",     "return",   "self",     "static",   "struct",   "super",
+    "trait",  "true",    "try",      "type",     "typeof",   "unsafe",   "unsized",
+    "use",    "virtual", "where",    "while",    "yield"};
+
+/* A Rust type name, as `--name` must be: an ASCII letter first, then
+   letters, digits and '_', and not a word the language reserves or the
+   module makes. */
+static cf_bool rs_identifier(const char* s) {
+    size_t i;
+
+    if (!cf_is_alpha((unsigned char)s[0])) {
+        return CF_FALSE;
+    }
+    for (i = 0; s[i] != '\0'; ++i) {
+        if (!cf_is_alnum((unsigned char)s[i]) && s[i] != '_') {
+            return CF_FALSE;
+        }
+    }
+    return bsearch(s, (const void*)gen_rs_reserved,
+                   sizeof gen_rs_reserved / sizeof gen_rs_reserved[0],
+                   sizeof gen_rs_reserved[0], gen_word_cmp) == NULL;
+}
+
+/* Text as a Rust string literal: its bytes as they are, UTF-8 included,
+   but '\\' and '"' escaped and any other control byte as \u{..}. `lines`
+   keeps a schema's lines as lines (CR LF is LF; a lone CR is \r), which a
+   literal may span; without it a line break is \n, for a value that stays
+   on its line. */
+static void rs_string(FILE* out, const char* p, size_t n, cf_bool lines) {
+    size_t i;
+
+    fputc('"', out);
+    for (i = 0; i < n; ++i) {
+        unsigned char ch = (unsigned char)p[i];
+        if (ch == '\\' || ch == '"') {
+            fputc('\\', out);
+            fputc((int)ch, out);
+        } else if (lines && ch == '\r' && i + 1 < n && p[i + 1] == '\n') {
+            continue;
+        } else if (ch == '\r') {
+            fputs("\\r", out);
+        } else if (ch == '\n') {
+            fputs(lines ? "\n" : "\\n", out);
+        } else if (ch < 0x20u && ch != '\t') {
+            fputc('\\', out); /* "\\u{" read as a character name by old compilers */
+            fprintf(out, "u{%X}", (unsigned)ch);
+        } else {
+            fputc((int)ch, out);
+        }
+    }
+    fputc('"', out);
+}
+
+/* A cf_i64 as a Rust i64 expression. */
+static void rs_i64(FILE* out, cf_i64 v) {
+    char   digits[24];
+    size_t n = 0;
+    cf_u64 mag;
+
+    if (v == CF_I64_MIN) {
+        fputs("i64::MIN", out);
+        return;
+    }
+    if (v == CF_I64_MAX) {
+        fputs("i64::MAX", out);
+        return;
+    }
+    mag = (v < 0) ? (cf_u64)(-v) : (cf_u64)v;
+    do {
+        digits[n] = (char)('0' + (int)(mag % 10u));
+        ++n;
+        mag /= 10u;
+    } while (mag > 0u && n < sizeof digits);
+    if (v < 0) {
+        fputc('-', out);
+    }
+    for (; n > 0u; --n) {
+        fputc(digits[n - 1u], out);
+    }
+}
+
+static const char* rs_type(cf_type t) {
+    switch (t) {
+    case CF_TYPE_BOOL:
+        return "bool";
+    case CF_TYPE_INT:
+        return "i64";
+    case CF_TYPE_TEXT:
+        return "String";
+    case CF_TYPE_REAL:
+    case CF_TYPE_NULL:
+    default:
+        return NULL;
+    }
+}
+
+/* A key's default, or its type's zero, as a Rust expression. */
+static void rs_default(FILE* out, const cf_def* d) {
+    const cf_value* v = &d->default_value;
+
+    switch (d->type) {
+    case CF_TYPE_BOOL:
+        fputs((d->has_default && v->u.b) ? "true" : "false", out);
+        break;
+    case CF_TYPE_INT:
+        if (d->has_default) {
+            rs_i64(out, v->u.i);
+        } else {
+            fputc('0', out);
+        }
+        break;
+    case CF_TYPE_TEXT:
+        if (d->has_default) {
+            rs_string(out, v->u.t.p, v->u.t.n, CF_FALSE);
+        } else {
+            fputs("\"\"", out);
+        }
+        break;
+    case CF_TYPE_REAL:
+    case CF_TYPE_NULL:
+    default:
+        break;
+    }
+}
+
+/* What the writer knows of each key: a field of the struct and a constant
+   (skip 0), a list (1), or a type Rust does not read (2). */
+typedef struct rs_key {
+    const cf_def* def;
+    int           skip;
+    char          field[GEN_NAME_MAX];
+    char          constant[GEN_NAME_MAX];
+} rs_key;
+
+static void rs_shape(rs_key* keys, size_t n, const cf_defset* ds,
+                     const gen_lang* lang) {
+    size_t i;
+    size_t j;
+
+    for (i = 0; i < n; ++i) {
+        rs_key* k = &keys[i];
+
+        k->def = cf_defset_at(ds, i);
+        if (k->def->list_mode != CF_LIST_NONE) {
+            k->skip = 1;
+        } else {
+            k->skip = (rs_type(k->def->type) == NULL) ? 2 : 0;
+        }
+        gen_ident(k->field, k->def->key, strlen(k->def->key), lang);
+        for (j = 0; k->field[j] != '\0'; ++j) {
+            char ch = k->field[j];
+            k->constant[j] =
+                (ch >= 'a' && ch <= 'z') ? "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[ch - 'a'] : ch;
+        }
+        k->constant[j] = '\0';
+        if (gen_reserved(lang, k->constant)) {
+            gen_append(k->constant, "_");
+        }
+    }
+}
+
+/* Two keys of one identifier are refused: a field and a constant are each
+   one thing. */
+static int rs_distinct(const rs_key* keys, size_t n, const gen_lang* lang) {
+    size_t i;
+    size_t j;
+
+    for (i = 0; i < n; ++i) {
+        for (j = i + 1; j < n && keys[i].skip == 0; ++j) {
+            if (keys[j].skip == 0 &&
+                (strcmp(keys[i].field, keys[j].field) == 0 ||
+                 strcmp(keys[i].constant, keys[j].constant) == 0)) {
+                fprintf(stderr, "gen: '%s' and '%s' are both '%s' in %s; rename one\n",
+                        keys[i].def->key, keys[j].def->key, keys[i].field, lang->name);
+                return 2;
+            }
+        }
+    }
+    return 0;
+}
+
+/* The schema's bytes, in memory the caller frees; NULL when they cannot
+   be read. */
+static char* rs_slurp(const char* path, size_t* n) {
+    FILE*  f = fopen(path, "rb");
+    char*  buf;
+    size_t cap = 4096;
+    size_t len = 0;
+
+    if (f == NULL) {
+        return NULL;
+    }
+    buf = (char*)malloc(cap);
+    while (buf != NULL) {
+        char* more;
+
+        len += fread(buf + len, 1, cap - len, f);
+        if (len < cap) {
+            break;
+        }
+        cap *= 2;
+        more = (char*)realloc(buf, cap);
+        if (more == NULL) {
+            free(buf);
+        }
+        buf = more;
+    }
+    (void)fclose(f);
+    *n = len;
+    return buf;
+}
+
+/* The schema's file name, without the directories, which are the
+   machine's. */
+static const char* rs_base(const char* path) {
+    const char* base = path;
+    const char* p;
+
+    for (p = path; *p != '\0'; ++p) {
+        if (*p == '/' || *p == '\\') {
+            base = p + 1;
+        }
+    }
+    return base;
+}
+
+static void rs_keys(FILE* out, const rs_key* keys, size_t n) {
+    size_t i;
+
+    for (i = 0; i < n; ++i) {
+        const rs_key* k = &keys[i];
+        if (k->skip == 1) {
+            fprintf(out,
+                    "// %s: a list; its elements are %s.0, %s.1, ... and %s.count\n",
+                    k->def->key, k->def->key, k->def->key, k->def->key);
+        } else if (k->skip == 2) {
+            fprintf(out, "// %s: %s\n", k->def->key,
+                    (k->def->type == CF_TYPE_REAL)
+                        ? "a real, which the Rust binding does not read yet"
+                        : "a type Rust does not read");
+        } else {
+            fprintf(out, "pub const %s: Key<%s> = Key::new(", k->constant,
+                    rs_type(k->def->type));
+            c_text(out, k->def->key);
+            fputs(", ", out);
+            rs_default(out, k->def);
+            fputs(");\n", out);
+        }
+    }
+}
+
+static void rs_struct(FILE* out, const rs_key* keys, size_t n, const char* name) {
+    size_t i;
+
+    fprintf(out, "configforge::settings! {\n    pub struct %s {\n", name);
+    for (i = 0; i < n; ++i) {
+        const rs_key* k = &keys[i];
+        if (k->skip == 0) {
+            fprintf(out, "        pub %s: %s = ", k->field, rs_type(k->def->type));
+            c_text(out, k->def->key);
+            fputs(" => ", out);
+            rs_default(out, k->def);
+            fputs(",\n", out);
+        }
+    }
+    fputs("    }\n}\n", out);
+}
+
+static void rs_emit(FILE* out, const rs_key* keys, size_t n, const char* schema,
+                    const char* name, const char* text, size_t text_n) {
+    /* Plain comments: `//!` is an inner attribute, which include! refuses. */
+    fputs("// The contract of ", out);
+    c_comment_name(out, schema);
+    fputs(", in Rust: written by `configforge\n"
+          "// gen --schema --lang rust`. Regenerate it from the schema rather\n"
+          "// than editing it.\n\n"
+          "use configforge::{Builder, Key};\n\n"
+          "/// The schema, the contract's one source: [`contract`] gives it to a\n"
+          "/// builder, which reads it as it would read the file.\n"
+          "pub const SCHEMA: &str = ",
+          out);
+    rs_string(out, text, text_n, CF_TRUE);
+    fputs(";\n\n/// Every definition the schema makes, on `b`.\n"
+          "pub fn contract(b: Builder) -> Builder {\n    b.schema(SCHEMA, ",
+          out);
+    rs_string(out, rs_base(schema), strlen(rs_base(schema)), CF_FALSE);
+    fputs(")\n}\n\n", out);
+    rs_keys(out, keys, n);
+    fputc('\n', out);
+    rs_struct(out, keys, n, name);
+}
+
+/* The contract as a Rust module. */
+static int gen_rs_file(FILE* out, const cf_defset* ds, const char* schema,
+                       const char* name, const gen_lang* self) {
+    size_t  n      = cf_defset_count(ds);
+    size_t  text_n = 0;
+    rs_key* keys   = (rs_key*)calloc((n > 0) ? n : 1, sizeof(rs_key));
+    char*   text   = rs_slurp(schema, &text_n);
+    int     rc     = 2;
+
+    if (keys == NULL || text == NULL) {
+        fprintf(stderr, "gen: %s\n",
+                (keys == NULL) ? "cannot start" : "cannot read the schema");
+    } else {
+        rs_shape(keys, n, ds, self);
+        rc = rs_distinct(keys, n, self);
+        if (rc == 0) {
+            rs_emit(out, keys, n, schema, name, text, text_n);
+        }
+    }
+    free(keys);
+    free(text);
+    return rc;
+}
+
 static const gen_lang gen_langs[] = {
-    {"c", ".c", c_identifier, NULL, 0, gen_c_file},
-    {"cpp", ".hpp", c_identifier, gen_cxx_reserved,
+    {"c", ".c", "cf_contract", c_identifier, NULL, 0, gen_c_file},
+    {"cpp", ".hpp", "cf_contract", c_identifier, gen_cxx_reserved,
      sizeof gen_cxx_reserved / sizeof gen_cxx_reserved[0], gen_cxx_file},
+    {"rust", ".rs", "Settings", rs_identifier, gen_rs_reserved,
+     sizeof gen_rs_reserved / sizeof gen_rs_reserved[0], gen_rs_file},
 };
 
 #define GEN_LANGS (sizeof gen_langs / sizeof gen_langs[0])
@@ -1120,7 +1455,7 @@ static const gen_lang* gen_find(const char* name) {
 
 int gen_code(int argc, char** argv) {
     const char*     schema = NULL;
-    const char*     name   = "cf_contract";
+    const char*     name   = NULL;
     const char*     path   = NULL;
     const char*     lang   = "c";
     const gen_lang* gl;
@@ -1151,6 +1486,9 @@ int gen_code(int argc, char** argv) {
     if (gl == NULL) {
         return 2;
     }
+    if (name == NULL) {
+        name = gl->default_name;
+    }
     if (!gl->identifier(name)) {
         return contract_usage();
     }
@@ -1162,7 +1500,7 @@ int gen_code(int argc, char** argv) {
         return 2;
     }
     if (path != NULL) {
-        out = fopen(path, "w");
+        out = fopen(path, "wb");
         if (out == NULL) {
             fprintf(stderr, "gen: cannot write %s\n", path);
             cf_arena_free(ar);

@@ -1286,6 +1286,12 @@ let gateway = Gateway::read(&reader.get());
 live.poll()?;                          // in the loop that drives reloads
 ```
 
+A contract that is already a JSON Schema is read by `Builder::schema(text,
+name)` or `Builder::schema_file(path)` - every key it defines, as the schema
+file would be read - and `configforge gen --schema app.schema.json --lang rust`
+writes a module that embeds the schema, with a `Key` constant for each key and
+a `settings!` struct (D-95, `docs/Tools.md`).
+
 `Live` is `cf_live`: a reader keeps the snapshot it took, even past the
 `Live`; a build that panics is a failed build, not an unwound C frame.
 Seven of the examples are in `examples/rust`, the C programs saying the

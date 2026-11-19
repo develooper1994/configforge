@@ -29,6 +29,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - **`configforge gen --lang cpp`**: the contract as one C++ header - its
   definitions, a `cf::Key` for each key and a `Settings` struct read
   through `cf::Binding` (D-95).
+- **`configforge gen --lang rust`**: the contract as a Rust module - the
+  schema it is read from, a `Key` constant for each key and a `settings!`
+  struct (D-95); and `Builder::schema` and `schema_file` in the Rust crate.
 - **The serialization library, `configforge_serialize`**: the readers
   and writers - JSON, JSON5, TOML, YAML, INI, `.properties`, XML, CBOR,
   TLV - as a library of their own, which a program that wants documents
