@@ -1343,6 +1343,13 @@ rest, through `cf_builder_key`: a default of another type is refused at
 `create`. `define_int`, `define_text`, `define_bool` and `define_real`
 stay and mean the same.
 
+A contract that is already a JSON Schema is read by `Builder.schema(text,
+name)` or `Builder.schema_file(path)` - every key it defines, as the schema
+file would be read - and `configforge gen --schema app.schema.json --lang
+python` writes a module that embeds the schema, with a dataclass of
+`cf.setting` fields to read it through: `cf.read(cfg, app_contract.Settings)`,
+without `cf.define` (D-95, `docs/Tools.md`).
+
 systemd's credentials are `Builder.credentials(None, cf.rank.ENV,
 flags=cf.OPTIONAL)`: the directory `$CREDENTIALS_DIRECTORY` names, one
 file a key (section 9). A library older than this source refuses the

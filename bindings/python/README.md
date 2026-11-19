@@ -60,6 +60,11 @@ element. `separator=""` disables splitting. `min`, `max`, `allowed`,
 contract. A custom older library without `has_feature("lists")` is
 refused when this method is used rather than silently defining a scalar.
 
+`Builder.schema(text, name)` and `Builder.schema_file(path)` take the
+contract from a JSON Schema, as the library reads one; `configforge gen
+--lang python` writes a module that embeds the schema, with a dataclass of
+`cf.setting` fields to read it through (`cf.read(cfg, Settings)`).
+
 systemd's credentials, the directory `$CREDENTIALS_DIRECTORY` names, are a
 source of their own; `explain()` says "systemd credential <id> (<file>)":
 

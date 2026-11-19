@@ -225,12 +225,12 @@ with a smaller `CF_KEY_MAX`, or a schema whose default its own bounds refuse,
 does not compile. As C89 it is plain calls, checked by `cf_builder_create`.
 
 `--lang` names the language: `c` (the default, what is described above),
-`cpp` and `rust`; the program's table of languages holds them, and a name it
-does not hold is refused with the names it does (`gen: no language 'x'; there
-are: c, cpp, rust`, exit 2). `--name` is what the language calls the generated
-thing - for C the function, for C++ the namespace (both `cf_contract` unless
-named), for Rust the struct (`Settings` unless named) - and must be an
-identifier of the language.
+`cpp`, `rust` and `python`; the program's table of languages holds them, and a
+name it does not hold is refused with the names it does (`gen: no language 'x';
+there are: c, cpp, rust, python`, exit 2). `--name` is what the language calls
+the generated thing - for C the function, for C++ the namespace (both
+`cf_contract` unless named), for Rust and Python the struct (`Settings` unless
+named) - and must be an identifier of the language.
 
 `--lang cpp` writes one header. It holds the same calls as the C file, whole
 - descriptions, enumerations, lengths, lists, aliases, policies and the
@@ -298,6 +298,33 @@ let s = app_contract::Settings::read(&cfg);          // s.server_port ...
 `gen.rust` holds the program's output to it byte for byte, so a change to the
 writer shows as a diff of that file, and the Rust crate compiles and runs it
 (`bindings/rust/tests/gen_contract.rs`, under cargo).
+
+`--lang python` writes one module, as Rust's does: the schema's text is in the
+file as `SCHEMA`, one literal a line, and `contract(b)` gives it to
+`Builder.schema`, so the library reads every rule the schema holds. What the
+file adds only reads: a dataclass for each top segment of the keys and one,
+`Settings`, for the module - deeper keys are flattened into their class by
+their identifier, a list or a type Python does not read is a comment where its
+field would be, and a class comes before the one that uses it. Each field is a
+`cf.setting(key, default, ...)` of its type (`bool`, `int`, `float`, `str`),
+with `range` the schema's, `doc` its description and `flags` the definition's
+(`cf.flag.REQUIRED`, `SENSITIVE`, `DEPRECATED`, `TRANSIENT`, `RESTART`);
+nothing reads those when the contract is the schema, but a `SENSITIVE` field
+stays out of the dataclass's `repr`. The program reads with `cf.read(cfg,
+Settings)` and does not also call `cf.define`: the keys are defined already.
+The identifier rule is Python's, with its reserved words, the module's own
+names and `bool`, `float`, `int` and `str`; the file is UTF-8.
+
+```python
+import app_contract                      # configforge gen --schema app.schema.json
+                                         #   --lang python --out app_contract.py
+cfg = app_contract.contract(cf.Builder.app("app")).create()
+s = cf.read(cfg, app_contract.Settings)   # s.server.port ...
+```
+
+`tests/gen/test_gen_python.py` imports the module the test contract gives, by
+its path, and reads a configuration through it (`gen.python`, in a shared
+build with a Python).
 
 `configforge gen schema --from app.toml --out app.schema.json` drafts a
 contract from a file you already have, for a program with configuration and

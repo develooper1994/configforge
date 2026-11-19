@@ -609,5 +609,43 @@ class Preferences(unittest.TestCase):
                 cf.Builder().preferences(None, rank.ENV, "com.example.app")
 
 
+@unittest.skipUnless(native.HAVE_SCHEMA, "library with cf_builder_schema")
+class Schema(unittest.TestCase):
+    """The contract from a JSON Schema (Builder.schema, schema_file)."""
+
+    TEXT = json.dumps({
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {"server": {"type": "object", "properties": {
+            "port": {"type": "integer", "minimum": 1, "maximum": 65535, "default": 8080}}}},
+    })
+
+    def test_a_schema_defines_the_contract(self):
+        cfg = cf.Builder().schema(self.TEXT, "s.json").create()
+        self.assertEqual(cfg.get("server.port", 0, type=int), 8080)
+
+    def test_a_value_outside_the_schema_is_refused_at_create(self):
+        b = (cf.Builder().schema(self.TEXT, "s.json")
+             .memory("m", rank.USER_FILE, {"server.port": 70000}))
+        with self.assertRaisesRegex(cf.Error, "server.port"):
+            b.create()
+
+    def test_a_schema_file(self):
+        path = os.path.join(WORK, "s.schema.json")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(self.TEXT)
+        cfg = cf.Builder().schema_file(path).create()
+        self.assertEqual(cfg.get("server.port", 0, type=int), 8080)
+        with self.assertRaises(cf.Error):
+            cf.Builder().schema_file(os.path.join(WORK, "no-such.schema.json")).create()
+
+    def test_a_library_without_the_calls(self):
+        with mock.patch("configforge._native.HAVE_SCHEMA", False):
+            with self.assertRaisesRegex(RuntimeError, "cf_builder_schema"):
+                cf.Builder().schema(self.TEXT)
+            with self.assertRaisesRegex(RuntimeError, "cf_builder_schema"):
+                cf.Builder().schema_file("s.json")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

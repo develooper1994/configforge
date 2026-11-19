@@ -2,8 +2,8 @@
  * contract.c - a JSON Schema contract, checked against and written (D-64, D-67).
  *
  *     configforge gen check --schema <schema> <file>...
- *     configforge gen       --schema <schema> [--lang c|cpp|rust] [--name <name>]
- * [--out <file>]
+ *     configforge gen       --schema <schema> [--lang c|cpp|rust|python] [--name
+ * <name>] [--out <file>]
  *
  * `check` reads configuration files against the contract as a program
  * built from it would - every key defined, every value of its type and
@@ -757,6 +757,7 @@ typedef struct cx_key {
 
 typedef struct cx_model {
     const gen_lang* lang;
+    const char*     top; /* the top struct's name, which no other struct takes */
     cx_key*         keys;
     cx_table*       tables;
     size_t          n;
@@ -796,7 +797,7 @@ static size_t cx_table_of(cx_model* m, const char* key, size_t top_n, size_t ind
     tb->first_key = key;
     tb->first     = index;
     gen_ident(tb->member, key, top_n, m->lang);
-    gen_struct_name(tb->type, key, top_n, "Settings", m->lang);
+    gen_struct_name(tb->type, key, top_n, m->top, m->lang);
     return t;
 }
 
@@ -1066,32 +1067,43 @@ static int cx_emit(FILE* out, const cx_model* m, const cf_defset* ds,
     return 0;
 }
 
+/* The model of a contract's keys and the structs they make, `top` being the
+   top struct's name; 2 when it cannot be made or two keys make one name.
+   cx_finish frees it either way. */
+static int cx_start(cx_model* m, const cf_defset* ds, const gen_lang* lang,
+                    const char* top) {
+    size_t room;
+
+    m->lang     = lang;
+    m->top      = top;
+    m->n        = cf_defset_count(ds);
+    m->tables_n = 0;
+    room        = (m->n > 0) ? m->n : 1;
+    m->keys     = (cx_key*)calloc(room, sizeof(cx_key));
+    m->tables   = (cx_table*)calloc(room, sizeof(cx_table));
+    if (m->keys == NULL || m->tables == NULL) {
+        fputs("gen: cannot start\n", stderr);
+        return 2;
+    }
+    cx_shape(m, ds);
+    return cx_distinct(m);
+}
+
+static void cx_finish(cx_model* m) {
+    free(m->keys);
+    free(m->tables);
+}
+
 /* The contract as a C++ header. */
 static int gen_cxx_file(FILE* out, const cf_defset* ds, const char* schema,
                         const char* name, const gen_lang* self) {
     cx_model m;
-    size_t   room;
-    int      rc;
+    int      rc = cx_start(&m, ds, self, "Settings");
 
-    m.lang     = self;
-    m.n        = cf_defset_count(ds);
-    m.tables_n = 0;
-    room       = (m.n > 0) ? m.n : 1;
-    m.keys     = (cx_key*)calloc(room, sizeof(cx_key));
-    m.tables   = (cx_table*)calloc(room, sizeof(cx_table));
-    if (m.keys == NULL || m.tables == NULL) {
-        free(m.keys);
-        free(m.tables);
-        fputs("gen: cannot start\n", stderr);
-        return 2;
-    }
-    cx_shape(&m, ds);
-    rc = cx_distinct(&m);
     if (rc == 0) {
         rc = cx_emit(out, &m, ds, schema, name);
     }
-    free(m.keys);
-    free(m.tables);
+    cx_finish(&m);
     return rc;
 }
 
@@ -1163,21 +1175,14 @@ static void rs_string(FILE* out, const char* p, size_t n, cf_bool lines) {
     fputc('"', out);
 }
 
-/* A cf_i64 as a Rust i64 expression. */
-static void rs_i64(FILE* out, cf_i64 v) {
+/* A cf_i64 in decimal, for a language whose integers are wide enough
+   (Rust's `i64` writes its extremes as names, in rs_i64). */
+static void gen_decimal(FILE* out, cf_i64 v) {
     char   digits[24];
     size_t n = 0;
     cf_u64 mag;
 
-    if (v == CF_I64_MIN) {
-        fputs("i64::MIN", out);
-        return;
-    }
-    if (v == CF_I64_MAX) {
-        fputs("i64::MAX", out);
-        return;
-    }
-    mag = (v < 0) ? (cf_u64)(-v) : (cf_u64)v;
+    mag = (v < 0) ? (cf_u64)0 - (cf_u64)v : (cf_u64)v;
     do {
         digits[n] = (char)('0' + (int)(mag % 10u));
         ++n;
@@ -1188,6 +1193,17 @@ static void rs_i64(FILE* out, cf_i64 v) {
     }
     for (; n > 0u; --n) {
         fputc(digits[n - 1u], out);
+    }
+}
+
+/* A cf_i64 as a Rust i64 expression. */
+static void rs_i64(FILE* out, cf_i64 v) {
+    if (v == CF_I64_MIN) {
+        fputs("i64::MIN", out);
+    } else if (v == CF_I64_MAX) {
+        fputs("i64::MAX", out);
+    } else {
+        gen_decimal(out, v);
     }
 }
 
@@ -1293,7 +1309,7 @@ static int rs_distinct(const rs_key* keys, size_t n, const gen_lang* lang) {
 
 /* The schema's bytes, in memory the caller frees; NULL when they cannot
    be read. */
-static char* rs_slurp(const char* path, size_t* n) {
+static char* gen_slurp(const char* path, size_t* n) {
     FILE*  f = fopen(path, "rb");
     char*  buf;
     size_t cap = 4096;
@@ -1324,7 +1340,7 @@ static char* rs_slurp(const char* path, size_t* n) {
 
 /* The schema's file name, without the directories, which are the
    machine's. */
-static const char* rs_base(const char* path) {
+static const char* gen_base(const char* path) {
     const char* base = path;
     const char* p;
 
@@ -1395,7 +1411,7 @@ static void rs_emit(FILE* out, const rs_key* keys, size_t n, const char* schema,
     fputs(";\n\n/// Every definition the schema makes, on `b`.\n"
           "pub fn contract(b: Builder) -> Builder {\n    b.schema(SCHEMA, ",
           out);
-    rs_string(out, rs_base(schema), strlen(rs_base(schema)), CF_FALSE);
+    rs_string(out, gen_base(schema), strlen(gen_base(schema)), CF_FALSE);
     fputs(")\n}\n\n", out);
     rs_keys(out, keys, n);
     fputc('\n', out);
@@ -1408,7 +1424,7 @@ static int gen_rs_file(FILE* out, const cf_defset* ds, const char* schema,
     size_t  n      = cf_defset_count(ds);
     size_t  text_n = 0;
     rs_key* keys   = (rs_key*)calloc((n > 0) ? n : 1, sizeof(rs_key));
-    char*   text   = rs_slurp(schema, &text_n);
+    char*   text   = gen_slurp(schema, &text_n);
     int     rc     = 2;
 
     if (keys == NULL || text == NULL) {
@@ -1426,12 +1442,343 @@ static int gen_rs_file(FILE* out, const cf_defset* ds, const char* schema,
     return rc;
 }
 
+/* ------------------------------------------------------------------ *
+ * Python: one module
+ *
+ * The schema itself, embedded, as Rust's: the library reads it. The module
+ * adds dataclasses of cf.setting fields, which only read; the shape is the
+ * C++ header's (a class for each top segment, deeper keys flattened).
+ * ------------------------------------------------------------------ */
+
+/* Python's reserved words, the names the module makes itself and the type
+   names its annotations read (a field of one of those names would be that
+   name in the class's own scope); sorted. */
+static const char* const gen_py_reserved[] = {
+    "False",    "None",      "SCHEMA", "True",   "and",      "as",    "assert",
+    "async",    "await",     "bool",   "break",  "cf",       "class", "continue",
+    "contract", "dataclass", "def",    "del",    "elif",     "else",  "except",
+    "finally",  "float",     "for",    "from",   "global",   "if",    "import",
+    "in",       "int",       "is",     "lambda", "nonlocal", "not",   "or",
+    "pass",     "raise",     "return", "str",    "try",      "while", "with",
+    "yield"};
+
+/* A Python identifier, as `--name` must be: a letter or '_' first, then
+   letters, digits and '_', ASCII, and not a word the language reserves or
+   the module makes. */
+static cf_bool py_identifier(const char* s) {
+    size_t i;
+
+    if (!cf_is_alpha((unsigned char)s[0]) && s[0] != '_') {
+        return CF_FALSE;
+    }
+    for (i = 0; s[i] != '\0'; ++i) {
+        if (!cf_is_alnum((unsigned char)s[i]) && s[i] != '_') {
+            return CF_FALSE;
+        }
+    }
+    return bsearch(s, (const void*)gen_py_reserved,
+                   sizeof gen_py_reserved / sizeof gen_py_reserved[0],
+                   sizeof gen_py_reserved[0], gen_word_cmp) == NULL;
+}
+
+/* Text as the inside of a Python string literal: its bytes as they are, UTF-8
+   included (a module's source is UTF-8), but '\\' and '"' escaped, a line
+   break, a tab and a carriage return as \n, \t and \r and any other control
+   byte as \xNN. */
+static void py_escape(FILE* out, const char* p, size_t n) {
+    size_t i;
+
+    for (i = 0; i < n; ++i) {
+        unsigned char ch = (unsigned char)p[i];
+        if (ch == '\\' || ch == '"') {
+            fputc('\\', out);
+            fputc((int)ch, out);
+        } else if (ch == '\n') {
+            fputs("\\n", out);
+        } else if (ch == '\r') {
+            fputs("\\r", out);
+        } else if (ch == '\t') {
+            fputs("\\t", out);
+        } else if (ch < 0x20u || ch == 0x7Fu) {
+            fputc('\\', out);
+            fprintf(out, "x%02X", (unsigned)ch);
+        } else {
+            fputc((int)ch, out);
+        }
+    }
+}
+
+static void py_string(FILE* out, const char* p, size_t n) {
+    fputc('"', out);
+    py_escape(out, p, n);
+    fputc('"', out);
+}
+
+/* The schema as one literal a line, joined by the parentheses; its line
+   feeds stay in the literals, so the text is the file's bytes. */
+static void py_schema(FILE* out, const char* text, size_t n) {
+    size_t start = 0;
+    size_t i;
+
+    if (n == 0u) {
+        fputs("SCHEMA = \"\"\n", out);
+        return;
+    }
+    fputs("SCHEMA = (\n", out);
+    for (i = 0; i < n; ++i) {
+        if (text[i] == '\n' || i + 1u == n) {
+            fputs("    ", out);
+            py_string(out, text + start, i + 1u - start);
+            fputc('\n', out);
+            start = i + 1u;
+        }
+    }
+    fputs(")\n", out);
+}
+
+static const char* py_type(cf_type t) {
+    switch (t) {
+    case CF_TYPE_BOOL:
+        return "bool";
+    case CF_TYPE_INT:
+        return "int";
+    case CF_TYPE_REAL:
+        return "float";
+    case CF_TYPE_TEXT:
+        return "str";
+    case CF_TYPE_NULL:
+    default:
+        return "object"; /* never written: such a key is a comment */
+    }
+}
+
+#if CF_WITH_REAL
+/* A real as a Python float literal: always with a '.' or an exponent. */
+static void py_real(FILE* out, double v) {
+    char buf[48];
+
+    sprintf(buf, "%.17g", v);
+    fputs(buf, out);
+    if (strpbrk(buf, ".en") == NULL) {
+        fputs(".0", out);
+    }
+}
+#endif
+
+/* A key's default, or its type's zero, as a Python expression. */
+static void py_default(FILE* out, const cf_def* d) {
+    const cf_value* v = &d->default_value;
+
+    switch (d->type) {
+    case CF_TYPE_BOOL:
+        fputs((d->has_default && v->u.b) ? "True" : "False", out);
+        break;
+    case CF_TYPE_INT:
+        if (d->has_default) {
+            gen_decimal(out, v->u.i);
+        } else {
+            fputc('0', out);
+        }
+        break;
+    case CF_TYPE_TEXT:
+        if (d->has_default) {
+            py_string(out, v->u.t.p, v->u.t.n);
+        } else {
+            fputs("\"\"", out);
+        }
+        break;
+    case CF_TYPE_REAL:
+#if CF_WITH_REAL
+        if (d->has_default) {
+            py_real(out, v->u.r);
+            break;
+        }
+#endif
+        fputs("0.0", out);
+        break;
+    case CF_TYPE_NULL:
+    default:
+        break;
+    }
+}
+
+/* The `range=(lo, hi)` argument of a number that has one. */
+static void py_range(FILE* out, const cf_def* d) {
+    fputs("range=(", out);
+    if (d->type == CF_TYPE_INT) {
+        gen_decimal(out, d->imin);
+        fputs(", ", out);
+        gen_decimal(out, d->imax);
+#if CF_WITH_REAL
+    } else {
+        fprintf(out, "%.17g, %.17g", d->rmin, d->rmax);
+#endif
+    }
+    fputc(')', out);
+}
+
+/* The `flags=` argument: the definition's flags, joined by ` | `. */
+static void py_flags(FILE* out, unsigned flags) {
+    static const struct {
+        unsigned    bit;
+        const char* name;
+    } names[] = {{CF_REQUIRED, "REQUIRED"},
+                 {CF_SENSITIVE, "SENSITIVE"},
+                 {CF_DEPRECATED, "DEPRECATED"},
+                 {CF_TRANSIENT, "TRANSIENT"},
+                 {CF_RESTART, "RESTART"}};
+    size_t   i;
+    unsigned rest = flags;
+    cf_bool  any  = CF_FALSE;
+
+    fputs("flags=", out);
+    for (i = 0; i < sizeof names / sizeof names[0]; ++i) {
+        if ((flags & names[i].bit) != 0) {
+            fprintf(out, "%scf.flag.%s", any ? " | " : "", names[i].name);
+            rest &= ~names[i].bit;
+            any = CF_TRUE;
+        }
+    }
+    if (rest != 0) {
+        fprintf(out, "%s%u", any ? " | " : "", rest);
+    }
+}
+
+/* The next argument of a cf.setting call: the first follows the default on
+   its line, the others each get a line, under the first argument. */
+static void py_arg(FILE* out, cf_bool* first, size_t col) {
+    size_t i;
+
+    if (*first) {
+        fputs(", ", out);
+        *first = CF_FALSE;
+        return;
+    }
+    fputs(",\n", out);
+    for (i = 0; i < col; ++i) {
+        fputc(' ', out);
+    }
+}
+
+/* A key's line in its class, or what it says where its field would be. */
+static void py_member(FILE* out, const cx_key* k) {
+    const cf_def* d     = k->def;
+    cf_bool       first = CF_TRUE;
+    size_t        col;
+
+    if (k->skip == 1) {
+        fprintf(out,
+                "    # %s: a list; its elements are %s.0, %s.1, ... and %s.count\n",
+                k->rest, d->key, d->key, d->key);
+        return;
+    }
+    if (k->skip == 2) {
+        fprintf(out, "    # %s: a type Python does not read\n", k->rest);
+        return;
+    }
+    fprintf(out, "    %s: %s = cf.setting(", k->field, py_type(d->type));
+    col = 4u + strlen(k->field) + 2u + strlen(py_type(d->type)) + 3u + 11u;
+    py_string(out, d->key, strlen(d->key));
+    fputs(", ", out);
+    py_default(out, d);
+    if (d->has_range && (d->type == CF_TYPE_INT || d->type == CF_TYPE_REAL)) {
+        py_arg(out, &first, col);
+        py_range(out, d);
+    }
+    if (d->flags != 0) {
+        py_arg(out, &first, col);
+        py_flags(out, d->flags);
+    }
+    if (d->description != NULL) {
+        py_arg(out, &first, col);
+        fputs("doc=", out);
+        py_string(out, d->description, strlen(d->description));
+    }
+    fputs(")\n", out);
+}
+
+/* One dataclass: the table `t`, or the top class (CX_TOP), whose sections
+   come where their first key does. */
+static void py_class(FILE* out, const cx_model* m, size_t t, const char* name) {
+    size_t  i;
+    cf_bool any = CF_FALSE;
+
+    fprintf(out, "\n\n@dataclass\nclass %s:\n", name);
+    for (i = 0; i < m->n; ++i) {
+        const cx_key* k = &m->keys[i];
+        if (k->table == t) {
+            py_member(out, k);
+            if (k->skip == 0) {
+                any = CF_TRUE;
+            }
+        } else if (t == CX_TOP && m->tables[k->table].first == i) {
+            fprintf(out, "    %s: %s = cf.section(%s)\n", m->tables[k->table].member,
+                    m->tables[k->table].type, m->tables[k->table].type);
+            any = CF_TRUE;
+        }
+    }
+    if (!any) {
+        fputs("    pass\n", out);
+    }
+}
+
+static void py_emit(FILE* out, const cx_model* m, const char* schema, const char* name,
+                    const char* text, size_t text_n) {
+    const char* base = gen_base(schema);
+    size_t      t;
+
+    fputs("\"\"\"The contract of ", out);
+    py_escape(out, base, strlen(base));
+    fprintf(out,
+            ", in Python: written by `configforge\n"
+            "gen --schema --lang python`. Regenerate it from the schema rather than\n"
+            "editing it. Read it with ``cf.read(cfg, %s)``: ``contract`` defines the\n"
+            "keys already, so the program must not also call ``cf.define``.\"\"\"\n\n"
+            "from __future__ import annotations\n\n"
+            "from dataclasses import dataclass\n\n"
+            "import configforge as cf\n\n",
+            name);
+    py_schema(out, text, text_n);
+    fputs("\n\ndef contract(b: cf.Builder) -> cf.Builder:\n"
+          "    \"\"\"Every definition the schema makes, on ``b``.\"\"\"\n"
+          "    return b.schema(SCHEMA, ",
+          out);
+    py_string(out, base, strlen(base));
+    fputs(")\n", out);
+    for (t = 0; t < m->tables_n; ++t) {
+        py_class(out, m, t, m->tables[t].type);
+    }
+    py_class(out, m, CX_TOP, name);
+}
+
+/* The contract as a Python module. */
+static int gen_py_file(FILE* out, const cf_defset* ds, const char* schema,
+                       const char* name, const gen_lang* self) {
+    cx_model m;
+    size_t   text_n = 0;
+    char*    text   = gen_slurp(schema, &text_n);
+    int      rc     = (text == NULL) ? 2 : cx_start(&m, ds, self, name);
+
+    if (text == NULL) {
+        fputs("gen: cannot read the schema\n", stderr);
+        return 2;
+    }
+    if (rc == 0) {
+        py_emit(out, &m, schema, name, text, text_n);
+    }
+    cx_finish(&m);
+    free(text);
+    return rc;
+}
+
 static const gen_lang gen_langs[] = {
     {"c", ".c", "cf_contract", c_identifier, NULL, 0, gen_c_file},
     {"cpp", ".hpp", "cf_contract", c_identifier, gen_cxx_reserved,
      sizeof gen_cxx_reserved / sizeof gen_cxx_reserved[0], gen_cxx_file},
     {"rust", ".rs", "Settings", rs_identifier, gen_rs_reserved,
      sizeof gen_rs_reserved / sizeof gen_rs_reserved[0], gen_rs_file},
+    {"python", ".py", "Settings", py_identifier, gen_py_reserved,
+     sizeof gen_py_reserved / sizeof gen_py_reserved[0], gen_py_file},
 };
 
 #define GEN_LANGS (sizeof gen_langs / sizeof gen_langs[0])

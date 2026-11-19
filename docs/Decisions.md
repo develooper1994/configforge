@@ -107,7 +107,7 @@ gets reopened every six months.
 | D-89 | The experimental tier | api, abi | **Decided** |
 | D-90 | The serialization library, a target of its own | serialize, build, abi | **Decided** |
 | D-91 | CBOR, the JSON model in binary | formats | **Decided** |
-| D-95 | Code for each binding from a contract | tools, contract, C++, Rust | **Decided** |
+| D-95 | Code for each binding from a contract | tools, contract, C++, Rust, Python | **Decided** |
 | D-96 | A contract drafted from a sample | tools, contract | **Decided** |
 | D-97 | What kind of format a codec is, told to the program | formats | **Decided** |
 | D-99 | Three programs behind one front door | tools | **Decided** |
@@ -4147,8 +4147,8 @@ how are the languages added without the tool knowing each by name?
    them.
 3. The schema itself, read at run time by a JSON reader the program links.
 
-**Decision.** Option 2, for C and C++; Rust takes option 3's schema
-without a reader of its own (below). The C++ header holds the C body -
+**Decision.** Option 2, for C and C++; Rust and Python take option 3's
+schema without a reader of their own (below). The C++ header holds the C body -
 every line of it compiles as C++ - in `inline bool define(cf_builder*)`,
 so the contract is the schema's, whole, in C++ as in C, and no JSON
 reader is in the build. The Keys and the Binding only read: a `cf::Key`
@@ -4207,9 +4207,31 @@ bytes), and the Rust crate's own integration test, which `include!`s that
 file and runs it under cargo. A golden file shows a change of the writer
 as a diff; the cargo test shows that the file is Rust that works.
 
+**Python.** The same answer as Rust's: the module embeds the schema as one
+literal a line, and `contract(b)` gives it to `Builder.schema`
+(`cf_builder_schema`, new in the package), so the contract is the schema's,
+whole, by the library's one rule set; the dataclasses only read. They are the
+shape of the C++ header's - a class for each top segment, defined before the
+class that uses it, deeper keys flattened into it, a list or a type Python
+does not read a comment - and each field is a `cf.setting` or `cf.section`,
+so `cf.read(cfg, Settings)` fills it, and the program does not also call
+`cf.define`, which would define each key a second time. What `setting` takes
+beyond the key and the default is for whoever reads the file: `range` the
+schema's, `doc` its description, `flags` the definition's, of which
+`SENSITIVE` keeps the field out of the dataclass's repr. A real is a `float`,
+unlike Rust's, because `cf_get_real` is in the package. The text is a
+Python literal with `"`, `\` and the control bytes escaped, the file UTF-8,
+which a module's source is. `--name` is the top class (`Settings`), checked as
+an identifier and not a word the language reserves, nor `contract`, `cf`,
+`dataclass`, `SCHEMA` or the type names `bool`, `float`, `int` and `str`, which
+a field of the same name would shadow in its class's annotations. The module's
+test imports the generated file by its path and reads a configuration through
+it; `typing.get_type_hints` finds the classes in the module's own globals, as
+`from __future__ import annotations` needs.
+
 **Compatibility.** Additive. `--lang c` is the default and writes, byte
 for byte, what `configforge gen` wrote; `--name` is, for C, the function
-as it was, and for Rust, `Settings`. W5-G3 adds Python's entry.
+as it was, for Rust and Python, `Settings`.
 
 ---
 

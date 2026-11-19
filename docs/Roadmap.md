@@ -54,7 +54,7 @@ beside what is not.
 | 🟩 | Binary configuration: a layout-driven TLV codec, BER-TLV, CBOR | D-91, D-93 |
 | ⬜ | Every operation on a file's data, written back in its format | assessment |
 | 🟩 | Converting between formats | D-94 |
-| 🟨 | Code for each binding from a contract (C++ and Rust, D-95, and a schema from a sample, D-96, done; Python left) | assessment |
+| 🟩 | Code for each binding from a contract | D-95, D-96 |
 | ⬜ | 2.0: what the sizing modes break, once | plan item 10 |
 | 🟩 | Sizes and work predicted, then checked: the file buffer and the key space kept, three more measured and left | D-76, plan of the evening |
 | 🟩 | A UTF-8 byte order mark read past by every text reader (`cf_blob_skip_bom`) | 1.5.0 |
@@ -127,16 +127,10 @@ short keeps its branch, unmerged, and says so here.
    offered in every language - Windows has its registry source already.
 4. 🟩 **Wave 4**: CBOR (D-91) and TLV by a layout, BER-TLV included
    (D-92, D-93). **1.5.0.**
-5. ⬜ **Wave 5**: converting between formats (`configforge codec convert`,
-   the codecs' events recorded and replayed into the target's encoder,
-   D-94); code for each binding
-   from a contract (`doctor gen --lang c|cpp|rust|python`). Revised
-   2026-11-14: neither stays in Doctor - converting a document goes to
-   the serialization library's own tool, exporting a configuration and
-   generating code to tools of their own ("Tools, distribution and
-   digests" below); the cards wait for that split, which is carded
-   (T-1 to T-3, docs/plan/T-tools-and-serialization.md), and are
-   rewritten for it.
+5. 🟩 **Wave 5**: converting between formats (`configforge codec convert`,
+   D-94); code for each binding from a contract (`configforge gen --lang
+   c|cpp|rust|python`, D-95) and a contract drafted from a sample
+   (`configforge gen schema --from`, D-96).
 6. ⬜ **Wave 6**: every operation on a file's data through its codec -
    read, add, change, remove, written back in its own format, keeping
    the layout where the format can. **2.2.0.**

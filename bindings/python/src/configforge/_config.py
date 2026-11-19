@@ -85,6 +85,10 @@ class _Keep:
             self.items.append(b)
         return b
 
+    def b(self, data: bytes) -> bytes:
+        self.items.append(data)
+        return data
+
     def argv(self, items: Sequence[str]):
         arr = (ctypes.c_char_p * (len(items) + 1))(*[self.s(i) for i in items], None)
         self.items.append(arr)
@@ -376,6 +380,25 @@ class Builder:
             d.list_defaults = values
             d.list_default_count = len(default)
         n.lib.cf_builder_define(raw, ctypes.byref(d))
+        return self
+
+    def schema(self, text: str, name: str = "<schema>") -> "Builder":
+        """The contract from a JSON Schema's text, as the library reads one
+        (cf_builder_schema); a keyword it does not read is refused, by name
+        and place, at create()."""
+        if not n.HAVE_SCHEMA:
+            raise RuntimeError("schema needs libconfigforge 1.2 (cf_builder_schema)")
+        data = text.encode("utf-8")
+        n.lib.cf_builder_schema(self._live(), self._keep.b(data), len(data),
+                                self._keep.s(name))
+        return self
+
+    def schema_file(self, path: str) -> "Builder":
+        """:meth:`schema` from a file; one that cannot be read is refused
+        at create()."""
+        if not n.HAVE_SCHEMA:
+            raise RuntimeError("schema needs libconfigforge 1.2 (cf_builder_schema)")
+        n.lib.cf_builder_schema_file(self._live(), self._keep.s(path))
         return self
 
     def open(self, prefix: str) -> "Builder":
