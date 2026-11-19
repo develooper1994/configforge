@@ -3,6 +3,8 @@
 #   cmake -B build-bench -DCMAKE_BUILD_TYPE=Release -DCF_BUILD_BENCH=ON
 #   cmake --build build-bench --target cf_bench && build-bench/bench/cf_bench
 #
+#   build-bench/bench/cf_bench docs [--large]     large documents (P-1)
+#
 # Release, or the numbers are the debug build's.
 add_definitions(-DCF_INTERNAL_API=1)
 add_executable(cf_bench bench.c)

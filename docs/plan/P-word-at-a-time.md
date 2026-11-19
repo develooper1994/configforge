@@ -130,6 +130,19 @@ The rules every card here keeps:
 * **docs**: the baseline page; Roadmap: "Large files" goes 🟨, "measured
   (P-1)".
 * **notes**:
+  * 2026-11-20: built as `cf_bench docs [--large] [format ...]`; the
+    baseline (MSVC Release, this machine) is in `docs/Performance.md`.
+    All five formats read 256 MiB: the documents go through
+    `cf_codec_decode` alone, where D-82's bound (the flattener's) is not
+    in the way, and no reader refused one.
+  * Not done here, for want of Linux tools: the `perf` profile, the
+    GCC and Clang baselines at `-O2` and `-O3`, and the vectorization
+    reports. The commands are in `docs/Performance.md`; its table of top
+    functions waits for them. P-3 must not start before it is filled.
+  * The card says CI builds `bench/`; it does not (`CF_BUILD_BENCH` is
+    off in every preset and no workflow turns it on). The CI step that
+    builds and runs `cf_bench docs` (without `--large`) is the file
+    `.github/workflows/ci.yml`, left to P-1b.
 
 ---
 

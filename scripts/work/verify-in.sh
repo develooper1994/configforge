@@ -6,6 +6,9 @@
 # nothing is formatted and clang-tidy runs as CI's job does.
 id=$1; mode=$2; tar=$3; base=${CF_LINUX_WORK:-$HOME}; src=$base/src-$id
 export PATH=/opt/cf-tools/bin:"$PATH"
+# Out of the caller's directory: a Windows worktree's .git names a path
+# Linux git cannot read.
+cd / || exit 1
 git config --global --get-all safe.directory | grep -qx '\*' ||
   git config --global --add safe.directory '*'
 rm -rf "$src" && mkdir -p "$src" && tar -xf "$tar" -C "$src" || exit 1

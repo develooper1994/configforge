@@ -946,7 +946,7 @@ first user meets. In the order proposed:
   checked), and a first run on the serialization sources reports
   `uninitvar` and `variableScope`; turning it on for both libraries, and
   answering what it finds, is this item's first step.
-* ⬜ **Large files, and SIMD as an option** (cards P-1, P-2, P-3 for the
+* 🟨 **Large files, and SIMD as an option** (cards P-1, P-2, P-3 for the
   measurement and SWAR; SIMD a card after them). Configuration is small, but
   a format library is also handed documents of megabytes (data in CBOR,
   MessagePack, JSON exports). First measure: 1.8.0's benchmark gains
@@ -957,7 +957,10 @@ first user meets. In the order proposed:
   default), for the targets that have it (SSE2/AVX2, NEON) and not
   required of the rest. The scalar path stays the reference: every
   vector path is tested against it on the same inputs, and the fuzzers
-  run both. Not before the measurement says so.
+  run both. Not before the measurement says so. Measured (P-1): the
+  benchmark reads documents of 1, 16 and 256 MiB and `docs/Performance.md`
+  has the baseline; the profile, which says where the time goes, is still to
+  be taken on Linux.
 
 ### Suggestions of 2026-11-17 (not yet cards)
 

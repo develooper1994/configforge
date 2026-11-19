@@ -58,6 +58,7 @@ nav:
       - Safety: docs/Safety.md
       - Formats: docs/Formats.md
       - Conformance: docs/Conformance.md
+      - Performance: docs/Performance.md
   - Contributing:
       - Getting started: CONTRIBUTING.md
       - Maintenance: docs/Maintaining.md

@@ -7,6 +7,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **`cf_bench docs`**: the benchmark reads JSON, YAML, TOML, CBOR and INI
+  documents of 1 and 16 MiB (256 MiB with `--large`) through the codec API
+  and prints MiB/s per format and size. The documents are made by the
+  benchmark, the same bytes every run. The first baseline is in
+  `docs/Performance.md`.
 - **Four more gates**: `gate.shellcheck` (every tracked shell script),
   `gate.ruff` (the Python binding, the scripts, the examples and the
   tests), `gate.actionlint` (the workflows) and `gate.codespell` (the

@@ -319,6 +319,19 @@ jobs:
             ./build-sanitize/tests/unit/test_fuzz "$seed" || exit 1
           done
 
+  # The benchmark is built and run, so it keeps working between the times
+  # its numbers are taken (docs/Performance.md); CI's timings are not
+  # compared, a shared runner's are not a measurement.
+  bench:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Build and run the benchmark
+        run: |
+          cmake -S . -B bbench -DCMAKE_BUILD_TYPE=Release -DCF_BUILD_BENCH=ON
+          cmake --build bbench --target cf_bench
+          bbench/bench/cf_bench docs
+
   clang:
     runs-on: ubuntu-26.04
     steps:
