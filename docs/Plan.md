@@ -52,6 +52,15 @@ done is never squashed: a branch that stops or is handed back keeps its
 commits. The cards on main before this rule (T-3 and earlier) keep
 their commits: main's history is never rewritten.
 
+**Code first, style at the group's end.** A card's ACCEPT and ACCEPT-CI
+ask for everything but the style checks: clang-format (`gate.format.c`,
+CI's clang-format step and format-patch job) and clang-tidy (CI's
+clang-tidy step). A card may land with those red. When the group of
+cards ends - the cards of one milestone, before its release - one unit,
+`style/<milestone>`, formats the whole tree with the pinned clang-format,
+fixes what clang-tidy finds, and lands with CI wholly green. No release
+is tagged before it.
+
 Work that must stop between 5 and 10 writes `HANDOFF.md` - the state in
 three lines, then numbered steps, each with its files, its test and what
 done looks like -, commits it on the work branch and
