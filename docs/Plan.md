@@ -209,7 +209,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 36 | W5-G2 `configforge gen --lang rust` | large | W5-G1 | done (54f39fb) |
 | 37 | W5-G3 `configforge gen --lang python` | medium | W5-G2 | done (950a099) |
 | 38 | T-5 Doctor's aliases, and the name `doctor`, removed | small | 1.7.0 released, W5-G3 | done (fa6295a) |
-| 38b | L-1 shellcheck, ruff, actionlint and codespell, as gates | medium | 1.7.0 released | open |
+| 38b | L-1 shellcheck, ruff, actionlint and codespell, as gates | medium | 1.7.0 released | done (7bec7d8) |
 | 38c | L-2 Valgrind, AFL++, gitleaks, osv-scanner and Scorecard in CI | medium | L-1 | waits: L-1 (outline; written out when L-1 is done) |
 | 38d | L-4 include-what-you-use and a link check | small | L-1 | waits: L-1 (outline) |
 | 38e | L-3 Infer and semgrep; IKOS or Frama-C with 1.9.0 | large | L-2 | waits: L-2 (outline) |
