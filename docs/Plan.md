@@ -57,7 +57,7 @@ ask for everything but the style checks: clang-format (`gate.format.c`,
 CI's clang-format step and format-patch job) and clang-tidy (CI's
 clang-tidy step). A card may land with those red. When the group of
 cards ends - the cards of one milestone, before its release - one unit,
-`style/<milestone>`, formats the whole tree with the pinned clang-format,
+`style-<milestone>` (branch `work/style-<milestone>`), formats the whole tree with the pinned clang-format,
 fixes what clang-tidy finds, and lands with CI wholly green. No release
 is tagged before it.
 
