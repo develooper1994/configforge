@@ -488,9 +488,22 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
 * **needs**: 1.7.0 released
 * **size**: large
 * **decided**:
-  * **First, one include.** `src/core/port.c:8` includes `cf_numeric.h`
-    and uses nothing of it: take it out before the move, so port uses
-    nothing, as the table says.
+  * **First, the integer writers go down to port** (corrected
+    2026-11-20; the first version said port used nothing of
+    `cf_numeric.h`, and the run that followed it failed: `cf_vformat`
+    writes `%d %i %u %zu %I %U` with `cf_i64_to_text` and
+    `cf_u64_to_text`). Before the move, in one commit: the two
+    definitions move from `src/core/numeric.c` to `src/core/port.c`
+    unchanged; their declarations and comments move from
+    `include/configforge/cf_numeric.h` to `include/configforge/cf_port.h`
+    unchanged; `cf_numeric.h` includes `cf_port.h` (if it does not
+    already), so every caller of `cf_numeric.h` still sees them; port.c
+    drops its include of `cf_numeric.h`. The exported symbols are the
+    same (gate.abi), `docs/API.md` is regenerated (`cmake -P
+    scripts/generate/apiref.cmake`). Then port uses nothing, as the table
+    says, and numeric keeps the readers and floating point. Rejected:
+    moving the formatter up into numeric, which every component below
+    numeric's level would then need for its messages.
   * **The map.** `git mv`, file by file, so history follows:
 
     | From | To |
