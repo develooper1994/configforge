@@ -29,7 +29,10 @@ says, as `docs/Roadmap.md` is.
   push - `scripts/verify.cmake` by tier (D-50) - and
   `scripts/release/release_local.sh` and `.ps1` remain the way to release when
   Actions cannot run.
-* **Commits and files carry their maintainers' names only.**
+* **Commits and files carry their maintainers' names only.** Suspended
+  by the maintainer on 2026-11-19, while the work moves between two
+  machines: the working notes are in `CLAUDE.md` at the root, and
+  commits may carry a co-author line.
 * **"Authorization"** means the Policy section of
   the original idea document (outside the repository,
   `ProjectIdeas/ideas/library/ConfigForge.md`, sections 8, 22 and 46).
