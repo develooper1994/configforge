@@ -158,13 +158,8 @@ Things only the maintainer can do or decide. Each unblocks the cards named.
   platform's name and its `_has_` queries, which the examples call,
   join the 1.x promise), S-4 (the serialization library's name) and
   T-3 (its program's name). Each waits for its answer.
-* **Waiting for the maintainer, 2026-11-20: tag 1.7.0.** Every 1.7.0
-  card and style-1.7.0 are done; the release commit is `dace0a5`
-  ("1.7.0", the CHANGELOG dated). Publishing it was not this machine's
-  to do: `git tag -a v1.7.0 dace0a5 -m 1.7.0 && git push origin v1.7.0`
-  starts the release workflow, which builds that commit whatever is on
-  main after it. The cards that waited for "1.7.0 released" were opened
-  on that commit; T-5 removes nothing the 1.7.0 commit holds.
+* **1.7.0 released, 2026-11-20**: tagged by the maintainer on `dace0a5`;
+  the release workflow published it with its five assets.
 * **Decided without the maintainer, 2026-11-20, to be confirmed**: the
   three 1.7.0 items that had no card (one digest a purpose, trusted
   publishing, `doctor graph`) moved to 1.10.0 (`docs/Maintaining.md`,
