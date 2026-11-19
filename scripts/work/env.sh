@@ -13,7 +13,7 @@ mkdir -p "$CF_WORK"
 # cf_linux <command...>: runs a command on Linux - here, or in the distro.
 cf_linux() {
   if [ "$cf_win" = 1 ]; then
-    MSYS_NO_PATHCONV=1 wsl.exe -d "$CF_DISTRO" -- "$@"
+    MSYS_NO_PATHCONV=1 wsl.exe -d "$CF_DISTRO" -e "$@"
   else
     "$@"
   fi

@@ -158,6 +158,11 @@ Things only the maintainer can do or decide. Each unblocks the cards named.
   platform's name and its `_has_` queries, which the examples call,
   join the 1.x promise), S-4 (the serialization library's name) and
   T-3 (its program's name). Each waits for its answer.
+* **Decided without the maintainer, 2026-11-20, to be confirmed**: the
+  three 1.7.0 items that had no card (one digest a purpose, trusted
+  publishing, `doctor graph`) moved to 1.10.0 (`docs/Maintaining.md`,
+  "Versions"), so that 1.7.0 is released with the tools its cards built.
+  Trusted publishing needs each registry set up once by the maintainer.
 * 1.4.1 holds a changed default (response files are opt-in, D-79): it
   is released as 1.5.0 or as 1.4.1 - not decided.
 
