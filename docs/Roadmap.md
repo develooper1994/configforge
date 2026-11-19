@@ -1011,9 +1011,10 @@ first user meets. In the order proposed:
   table of the duplicated helpers across the readers, with line counts.
 * 🟨 **Infrastructure behind abstractions.** Decided on 2026-11-19,
   every layer at once, in `docs/plan/A-architecture.md` (D-100 to
-  D-107: the components under `lib/`, the vector library, one copy of
+  D-108: the components under `lib/`, the vector library, one copy of
   each text helper, composed codecs, the build-time layers, profiles,
-  the C version per file, one refusal model); built from 1.8.0. As first
+  the C version per file, one refusal model, every text UTF-8 inside);
+  built from 1.8.0. As first
   written: Every capability the
   readers lean on - the byte scans, number parsing, memory, the
   processor's features - is reached through an internal interface with

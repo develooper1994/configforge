@@ -9,8 +9,8 @@ The second part is the cards of the 1.8.0 milestone that start it
 written when the milestone before them ends; they follow this design
 and do not reopen it.
 
-D-numbers: this file uses **D-100 to D-107**. Check with
-`git grep -n "^## D-10[0-7]" docs/Decisions.md` before writing one; if
+D-numbers: this file uses **D-100 to D-108**. Check with
+`git grep -n "^## D-10[0-8]" docs/Decisions.md` before writing one; if
 a number is taken, take the next free one and change it in every place
 of this file in the same commit.
 
@@ -303,6 +303,70 @@ form a program can test rather than read:
 * Additive in 1.x. A reader that today puts the place only in the
   message keeps the message as it is and fills `where` too.
 
+### D-108 - Every text is UTF-8 inside; another encoding only by name
+
+Decided by the maintainer on 2026-11-19, after weighing what others do.
+
+**What others do.** Refuse: Rust (`str::from_utf8`, serde_json),
+simdjson, yyjson by default, Jackson, libyaml, Python's files
+(`errors='strict'` by default), PostgreSQL. Replace with U+FFFD:
+browsers (the WHATWG Encoding standard), Go's `encoding/json` v1,
+Java's `new String(bytes, UTF_8)`. Pass through: RapidJSON by default.
+Escape without loss: Python's `surrogateescape` (PEP 383), Rust's WTF-8
+for Windows paths. Go's `json/v2` moved from replacing to refusing by
+default. JSONTestSuite leaves invalid UTF-8 to the implementation (its
+`i_` cases), so refusing costs no conformance.
+
+**Today** TOML, CBOR and TLV refuse invalid UTF-8; JSON, JSON5, the
+built-in YAML reader, INI, `.properties` and dotenv pass the bytes on
+("The helpers today").
+
+**The rule.**
+
+1. Inside the library every text is valid UTF-8.
+2. A reader refuses bytes that are not, with the line and column of the
+   first one. Nothing is replaced and nothing is guessed.
+3. Another encoding is read only when the program names it: a
+   `CF_ENCODING_*` value in the source's flags, or its name in the
+   tools. The bytes are recoded to UTF-8 as they are read, and the
+   source says so ("read as windows-1254").
+4. A byte-order mark is a declaration, not a guess: UTF-8's is skipped,
+   as today; UTF-16's, in either byte order, makes the file UTF-16,
+   recoded; UTF-32's is refused by name.
+5. A guess is allowed in one place only: a refusal's message may say
+   which encoding the bytes look like and how to read them so. It
+   never changes a value.
+6. A file is converted for good, once, by `configforge codec recode`:
+   its bytes recoded and nothing else changed, for a person to review
+   as a diff.
+
+**Exceptions, each for a reason.** XML declares its own encoding in the
+document (`<?xml ... encoding="..."?>`) and expat reads by that
+declaration: a declaration, so kept (`CF_CODEC_SELF_ENCODED`). CBOR's
+and TLV's text strings are already checked. The contents of secrets
+and credentials directories are opaque bytes the library neither parses
+nor prints, so they are not checked; a value type for bytes, which
+would hold them properly, is weighed for 2.0.0.
+
+**Why not guess.** Windows-1252 and Windows-1254 differ only at 0xD0,
+0xDD, 0xDE, 0xF0, 0xFD and 0xFE, which are exactly Ğ, İ, Ş, ğ, ı and ş.
+A short value cannot tell them apart, and a wrong guess gives a wrong
+value that looks right (`Þükrü`).
+
+**Why not U+FFFD.** Different bytes become one text: two keys or two
+secrets collide, a digest no longer matches the file, a file written
+back has changed. Two readers of one file disagree, which is an attack
+(Bishop Fox, "An Exploration of JSON Interoperability Vulnerabilities",
+2021). Lenient decoding has been exploited before: the overlong `/` of
+MS00-078.
+
+**When.** All of it in 1.8.0 (A-4 to A-6), under "### Changed" with
+this number: an input refused that was accepted, which
+docs/Maintaining.md allows in a minor. One step, not a warning first:
+the refusal names the one setting that reads the file again, so a
+warning period would only keep an inconsistent and attackable
+behaviour longer, while the users who would be broken are still few.
+
 ---
 
 ## The helpers today
@@ -339,12 +403,8 @@ Differences the cards must keep or decide, not lose:
 * **Invalid UTF-8.** TOML, CBOR and TLV refuse it; JSON, JSON5, the
   built-in YAML reader, INI, `.properties` and dotenv pass it through
   (`js_string` copies raw bytes; `yp_printable` takes every byte from
-  0x80). A configuration value is handed on as UTF-8 text, and two
-  readers disagreeing on one document is an attack (D-103). **TO
-  DECIDE** (A-4): recommended, every text reader refuses invalid UTF-8,
-  as JSON's and YAML's standards already require; a Latin-1
-  `.properties` mode only if a user asks. A refusal that was not one is
-  a "### Changed" entry with its D-number.
+  0x80). Decided by D-108: every text reader refuses it (A-5), another
+  encoding is read only by name (A-4).
 * **Newlines.** JSON counts LF only; JSON5 also a lone CR and U+2028/9;
   TOML takes CR only before LF; INI treats CR as a blank; YAML and
   `.properties` take CR, LF and CR LF. Each stays its format's rule, as
@@ -360,7 +420,7 @@ Differences the cards must keep or decide, not lose:
 
 ## The cards of 1.8.0
 
-Order: A-1, A-2, A-3, then A-4 to A-8 in their order. A-1 moves every
+Order: A-1, A-2, A-3, A-4, A-5, A-6, then A-7 to A-11 in their order. A-1 moves every
 file, so nothing else of 1.8.0 runs beside it; A-2 touches only
 `lib/lanes/` and could run beside A-3, but A-3 needs it. Every card is
 accepted on Linux and Windows and in CI. The CHANGELOG: under
@@ -719,29 +779,317 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
 
 ---
 
-## A-4 to A-8, written in full when A-3 is done
+## A-4 - Another encoding, read only by name
+
+* **id**: A-4
+* **goal**: a file, document, directory or dotenv source given a
+  `CF_ENCODING_*` value in its flags is read in that encoding and
+  recoded to UTF-8 before anything else looks at it; a UTF-16 file is
+  read by its byte-order mark; the source and the report say which
+  encoding was read. Nothing is refused yet that was accepted.
+* **why**: D-108, rules 3 and 4. The way to read a legacy file comes
+  before the refusal (A-5), so the refusal can name it.
+* **needs**: A-3
+* **size**: medium
+* **decided**:
+  * **The flags**, in `lib/config/include/configforge/cf_source.h`,
+    beside `CF_OPTIONAL` and the rest: a four-bit field.
+
+    ```c
+    #define CF_ENCODING_SHIFT 24
+    #define CF_ENCODING_MASK  (15u << CF_ENCODING_SHIFT)
+    enum {
+        CF_ENCODING_UTF8         = 0u,               /* the default */
+        CF_ENCODING_ISO_8859_1   = 1u << CF_ENCODING_SHIFT,
+        CF_ENCODING_WINDOWS_1252 = 2u << CF_ENCODING_SHIFT,
+        CF_ENCODING_WINDOWS_1254 = 3u << CF_ENCODING_SHIFT,
+        CF_ENCODING_ISO_8859_9   = 4u << CF_ENCODING_SHIFT
+    };
+    ```
+
+    First check that bits 24-27 are free in every flags set the file,
+    document, environment-document, directory, dotenv, secrets and
+    credentials sources accept; if one is taken, use the first four free
+    bits above 18 and write which in the notes. `CF_ENCODING_MASK` joins
+    `CF_SOURCE_FLAGS` and `CF_DIR_SOURCE_FLAGS`
+    (`builder_slot_mask`, `lib/config/src/core/config.c:376, 586, 610,
+    710`, refuses bits outside them). A value 5 to 15 in the field is
+    refused as an unknown flag is today.
+  * **Names, for the tools and the bindings**, two functions declared
+    `CF_EXPERIMENTAL(1, 8)` (D-89) in `cf_source.h`:
+
+    ```c
+    /* CF_TRUE and *flags the encoding's value for one of: "utf-8",
+       "iso-8859-1" or "latin1", "windows-1252" or "cp1252",
+       "windows-1254" or "cp1254", "iso-8859-9" or "latin5"; ASCII
+       case is ignored. CF_FALSE for any other name. */
+    CF_EXPERIMENTAL(1, 8) cf_bool cf_encoding_by_name(const char* name, unsigned* flags);
+    /* The canonical name ("windows-1254") of the encoding in `flags`. */
+    CF_EXPERIMENTAL(1, 8) const char* cf_encoding_name(unsigned flags);
+    ```
+
+  * **The recoding**, internal, in `lib/text/src/recode.c`, declared in
+    `cf_text.h` inside `CF_INTERNAL_API`:
+
+    ```c
+    /* Recodes n bytes of `from` (a CF_ENCODING_* value other than UTF-8,
+       or CF_TEXT_UTF16LE / CF_TEXT_UTF16BE) into UTF-8 at out, which
+       holds cap bytes. Returns the bytes written, or (size_t)-1 with
+       *bad the offset of the first byte that has no character in that
+       encoding (Windows-1252's 0x81, 0x8D, 0x8F, 0x90, 0x9D;
+       Windows-1254's those and 0x8E, 0x9E; an unpaired UTF-16
+       surrogate; an odd UTF-16 length). cap >= 2 * n is always enough
+       for the single-byte encodings, 3 * n / 2 + 3 for UTF-16. */
+    CF_API size_t cf_text_recode(unsigned from, const char* in, size_t n,
+                                 char* out, size_t cap, size_t* bad);
+    ```
+
+    `CF_TEXT_UTF16LE` and `CF_TEXT_UTF16BE` are two internal values in
+    `cf_text.h` (`14u << 24`, `15u << 24`), never accepted from a
+    program. The single-byte encodings are four tables of 128 entries
+    (0x80 to 0xFF to a code point, 0 for "no character"), written from
+    the Unicode Consortium's mapping files (`MAPPINGS/ISO8859/8859-1.TXT`,
+    `8859-9.TXT`, `MAPPINGS/VENDORS/MICSFT/WINDOWS/CP1252.TXT`,
+    `CP1254.TXT`); ISO-8859-1's is the identity and need not be stored.
+  * **Where it happens**: right after a source's bytes are in hand and
+    before format detection, so detection and the codec see UTF-8 only.
+    In `lib/config/src/bridge/file.c`, after `cf_blob_file` (today
+    :208) and for a document's bytes; in `dir.c`, for each file it
+    reads; in the dotenv source before `cf_lex_dotenv`. The UTF-8 copy
+    is allocated from the same `bytes` arena (`cf_blob_arena`, file.c
+    :185), so `cf_blob_arena_done` frees it with the file's bytes. Then:
+    * flags name an encoding: recode with it;
+    * else the bytes start with `FF FE` or `FE FF`: recode as UTF-16
+      little or big endian, the mark dropped;
+    * else they start with `FF FE 00 00` or `00 00 FE FF`: refuse,
+      `'%s' is UTF-32, which this library does not read; convert it to
+      UTF-8` (checked before the UTF-16 marks, which are its prefix);
+    * else nothing is done: UTF-8, as today, its mark skipped by the
+      readers as today.
+    A byte with no character in the named encoding is refused:
+    `'%s' line %u, column %u: byte 0x%02X has no character in %s`,
+    code `CF_E_SOURCE`, the line and column counted in the original
+    bytes.
+  * **What says so**: `cf_source_file_encoding(const cf_source* s)`,
+    `CF_EXPERIMENTAL(1, 8)`, beside `cf_source_file_format`: the
+    canonical name of what the last load read, `"utf-8"`, `"utf-16le"`,
+    `"utf-16be"` or a named one; NULL before a load. The report writes
+    it as an `"encoding"` member of the source where it writes the
+    format (`lib/config/src/diag/report.c`, at `cf_source_file_format`,
+    today :183), only when it is not `"utf-8"`, so reports of UTF-8
+    files do not change. A location's column counts bytes of the UTF-8
+    text, as every column does; the line is the file's.
+  * **The bindings** take the name: the C++ wrapper's file source and
+    the Rust and Python builders gain an optional `encoding` argument
+    that goes through `cf_encoding_by_name`; an unknown name is their
+    usual error. One test each.
+* **files**: `cf_source.h`, `lib/config/src/core/config.c`,
+  `lib/config/src/bridge/{file,dir}.c`, the dotenv source,
+  `lib/config/src/diag/report.c`, `lib/text/src/recode.c` (new),
+  `cf_text.h`, `lib/cxx/include/configforge/configforge.hpp`,
+  `bindings/rust/src/`, `bindings/python/src/configforge/`, the symbol
+  lists (gate.abi `-DWRITE=ON`, the two new names in the experimental
+  list), `scripts/generate/amalgamate.py`; tests: `tests/unit/test_recode.c`
+  (new), `tests/unit/test_encoding.c` (new, through `cf_builder_file`);
+  last: `docs/Guide.md` (a section "Files in another encoding"),
+  `CHANGELOG.md`.
+* **steps**:
+  1. `test_recode.c`: every table checked at every position where it
+     differs from ISO-8859-1, and at every position with no character;
+     UTF-16 both orders, a pair, an unpaired surrogate, an odd length.
+     See it fail.
+  2. `recode.c`; the test passes.
+  3. `test_encoding.c`: a Windows-1254 INI with `ad=Şükrü` read with
+     `CF_ENCODING_WINDOWS_1254` gives the UTF-8 text `Şükrü` and the
+     source's encoding `"windows-1254"`; the same file read without the
+     flag gives what it gives today; a UTF-16LE JSON with its mark is
+     read; a UTF-32 mark is refused by name; a byte with no character
+     is refused with its place. See it fail.
+  4. The flags, the hook in file.c, dir.c and dotenv, the names, the
+     report; the test passes.
+  5. The bindings and their tests; ACCEPT.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI (cargo included).
+* **stop if**: a source reads its bytes somewhere this card does not
+  name: add the hook there too and name it in the notes.
+* **docs**: add **D-108** from the design above, whole (it covers A-4
+  to A-6). The Guide's section: the five names, the flag, the mark,
+  what the report says. CHANGELOG `### Added`: "A file in another
+  encoding is read when its source names it (`CF_ENCODING_*`, or the
+  name in the tools and bindings), and a UTF-16 file by its byte-order
+  mark, recoded to UTF-8 as it is read (D-108)."
+* **notes**:
+
+---
+
+## A-5 - Bytes that are not UTF-8 are refused, with their place and a hint
+
+* **id**: A-5
+* **goal**: every text format, dotenv, the response files and the
+  environment and argument sources refuse bytes that are not UTF-8,
+  with the line and column of the first and, when the bytes look like
+  one, the encoding to name; XML keeps reading by its own declaration.
+* **why**: D-108, rules 1, 2 and 5.
+* **needs**: A-4
+* **size**: medium
+* **decided**:
+  * **One check, in one place for the codecs**: `cf_codec_decode`
+    (`lib/serialize/src/codec.c`) checks the blob with
+    `cf_text_utf8_valid` before calling the codec, for every codec whose
+    `caps` has neither `CF_CODEC_BINARY` nor the new
+    `CF_CODEC_SELF_ENCODED = 1u << 8` (in `cf_serialize.h`, its comment:
+    "Reads by an encoding the document itself declares, as XML does:
+    not checked for UTF-8 before it is read. (1.8, D-108)"). XML's codec
+    gets the new bit. A program's own text codec is checked too: inside
+    the library every text is UTF-8.
+  * The two readers that call a codec's `decode` directly go through
+    `cf_codec_decode` instead: `lib/config/src/bridge/schema.c` (today
+    :738) and `tools/doctor/spring.c` (today :314).
+  * Outside the codecs, the same check and message: `cf_lex_dotenv`
+    (`lib/config/src/sources/entry.c`), the response-file reader in the
+    same file, the environment source (`env.c`; the refusal names the
+    variable, never its value) and the argument source (`cli.c`; it
+    names the argument's position). Not checked: secrets and credentials
+    directories (D-108's exception), and the platform's own stores,
+    which hand over UTF-8 they made from UTF-16 or CFString.
+  * **The message**, one function in `lib/text/src/utf8.c`,
+    `cf_text_utf8_refuse(cf_error* err, const char* origin, const char*
+    p, size_t n, size_t bad)`, which counts the line and column of
+    `bad` (lines by LF, columns in bytes from 1, as every reader) and
+    sets `CF_E_SOURCE` with:
+    `'%s' line %u, column %u: byte 0x%02X is not UTF-8%s` where the
+    last part is the hint, or empty.
+  * **The hint**, deterministic, from the bytes of the whole document
+    that are not part of a valid UTF-8 sequence:
+    * if some of them are valid UTF-8 sequences elsewhere in the same
+      document (it mixes encodings): no hint;
+    * else if any is 0xD0, 0xDD, 0xDE, 0xF0, 0xFD or 0xFE:
+      `; it may be windows-1254 (Turkish): read it with
+      CF_ENCODING_WINDOWS_1254, or encoding windows-1254 in the tools`;
+    * else if any is 0x80 to 0x9F: the same for `windows-1252`;
+    * else (all 0xA0 to 0xFF): the same for `iso-8859-1`.
+    The hint never changes a value.
+  * **Conformance**: JSONTestSuite's invalid-UTF-8 `i_` cases change
+    from accepted to refused, and so may yaml-test-suite's; wherever the
+    conformance runner records an expectation for a case, the record is
+    changed, each case listed in the notes. Every `n_` case must stay
+    refused, every `y_` case accepted.
+  * **Fuzzing**: the seeds gain a document with invalid UTF-8 for each
+    text format, so the refusal path is fuzzed.
+* **files**: `lib/serialize/include/configforge/cf_serialize.h`,
+  `lib/serialize/src/{codec,xml}.c`, `lib/config/src/bridge/schema.c`,
+  `tools/doctor/spring.c`, `lib/config/src/sources/{entry,env,cli}.c`,
+  `lib/text/src/utf8.c`, `cf_text.h`, the conformance records,
+  `tests/fuzz/` seeds; tests: `tests/unit/test_utf8_refused.c` (new);
+  last: `docs/Guide.md` (the section from A-4, its refusal),
+  `docs/Formats.md` (each format: UTF-8 required, XML by its
+  declaration), `CHANGELOG.md`.
+* **steps**:
+  1. `test_utf8_refused.c`: for each text format, one document valid
+     but for one byte, refused with that byte's line and column; the
+     three hints and the "no hint" case; XML in ISO-8859-1 by its
+     declaration still read; a variable with an invalid byte refused by
+     name. See it fail.
+  2. The caps bit, the check in `cf_codec_decode`, the two direct
+     callers; the codec cases pass.
+  3. dotenv, response files, environment, arguments; the test passes.
+  4. Conformance (tier 2) and its records; the seeds; ACCEPT.
+* **accept**: ACCEPT-LINUX (tier 2: conformance included),
+  ACCEPT-WINDOWS, ACCEPT-CI.
+* **stop if**: a `y_` case of a suite is refused, or an `n_` case
+  accepted: stop, write the case in the notes, report.
+* **docs**: CHANGELOG `### Changed`: "Bytes that are not UTF-8 are
+  refused by every text reader, dotenv, response files, the environment
+  and the arguments, with their place and, when they look like one, the
+  encoding to name; XML still reads by its own declaration. Before,
+  JSON, JSON5, YAML, INI, `.properties` and dotenv passed them on
+  (D-108)."
+* **notes**:
+
+---
+
+## A-6 - `configforge codec recode`: a file converted once, for review
+
+* **id**: A-6
+* **goal**: `configforge codec recode <file> --from <encoding> [--out
+  <file>]` writes the file's bytes recoded to UTF-8 and nothing else
+  changed; `configforge codec recode <file> --check` says whether a file
+  is UTF-8 and, when it is not, prints the refusal A-5 would give, hint
+  included.
+* **why**: D-108, rule 6. A file is fixed for good by a person who sees
+  the diff, after which no reader needs to be lenient.
+* **needs**: A-5; T-3 (`configforge codec`)
+* **size**: small
+* **decided**:
+  * In `tools/codec/` beside T-3's commands, `tools/codec/recode.c`
+    (statics `rc_`); the usage gains, in a call of its own:
+    `"  configforge codec recode <file> --from <encoding> [--out <file>]\n"`
+    `"                                 the file's bytes in UTF-8, nothing else changed\n"`
+    `"  configforge codec recode <file> --check\n"`
+    `"                                 whether the file is UTF-8, and if not what it may be\n"`.
+  * `--from` takes the names of `cf_encoding_by_name` and also
+    `utf-16le` and `utf-16be`; an unknown name: `codec: no encoding
+    '%s'; there are: utf-8, iso-8859-1, windows-1252, windows-1254,
+    iso-8859-9, utf-16le, utf-16be`, exit 2. A file that already starts
+    with a UTF-16 mark needs no `--from`.
+  * The bytes are recoded whole with `cf_text_recode`; line endings,
+    comments and layout are bytes like any other and come out as they
+    went in; a UTF-8 mark is not added. Without `--out` the result goes
+    to standard output; `--out` names a file, and `--out` equal to the
+    input path is refused (`codec: write to a new file and review the
+    difference`), exit 2: the person compares before replacing.
+  * `--check`: exit 0 and `'<file>' is UTF-8` when it is; exit 1 and
+    A-5's message when it is not; exit 2 when it cannot be read.
+    `--check` with `--from` or `--out` is the usage, exit 2.
+  * A byte with no character in the named encoding: A-4's message, exit
+    1, nothing written.
+* **files**: `tools/codec/recode.c` (new), `tools/codec/CMakeLists.txt`,
+  `tools/codec/codec.c` (the dispatch and usage); tests:
+  `tests/codec/recode.cmake` (new) and its line in
+  `tests/codec/CMakeLists.txt`, with fixtures a Windows-1254 INI, a
+  UTF-16LE JSON and a UTF-8 TOML under `tests/codec/data/` (binary,
+  with a `.gitattributes` entry `-text` for each); last: `docs/Tools.md`
+  (the command), `docs/Guide.md` (the section from A-4: "Converting a
+  file for good"), `CHANGELOG.md`.
+* **steps**:
+  1. `recode.cmake`: the Windows-1254 INI recoded equals a checked-in
+     UTF-8 file byte for byte; `--check` on each fixture with its exit
+     code and message; the refusals of `--out` onto the input and of an
+     unknown name. See it fail.
+  2. `recode.c`; the test passes.
+  3. The documents; ACCEPT.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI.
+* **stop if**: `tools/codec/`'s layout differs from what T-3 left
+  (read T-3's notes first): follow T-3's layout and say so in the notes.
+* **docs**: CHANGELOG `### Added`: "`configforge codec recode`: a file
+  converted to UTF-8 once, its bytes recoded and nothing else changed,
+  and `--check` to find the files that are not UTF-8 (D-108)."
+* **notes**:
+
+---
+
+## A-7 to A-11, written in full when A-6 is done
 
 Each follows the design above. Its "decided" is written before it
 opens, by the same rule as every milestone's cards (docs/Plan.md,
 "After 1.7.0"); the design already answers what it builds.
 
-* **A-4 - Invalid UTF-8 refused alike, and the escapes in families.**
-  The maintainer's answer to "Invalid UTF-8" (TO DECIDE above); one
-  escape decoder per family (`\u`: JSON, JSON5, TOML; YAML's; the
-  backslashes of `.properties`) and one writer-side escaper taking the
-  set to escape as a parameter; the three `${` copies made one.
-* **A-5 - Whitespace, comments, newlines and the place of a refusal.**
+* **A-7 - The escapes in families.** One escape decoder per family
+  (`\u`: JSON, JSON5, TOML; YAML's; the backslashes of `.properties`)
+  and one writer-side escaper taking the set to escape as a parameter;
+  the three `${` copies made one.
+* **A-8 - Whitespace, comments, newlines and the place of a refusal.**
   One skip per syntax with the newline rule as a parameter; one line
   and column tracker; one failure formatter; `ini_trim` and
   `dotenv_trim` one function; `tlv_key_valid` replaced by
   `cf_key_valid` moved to `lib/base`.
-* **A-6 - Composed codecs** (D-103): `cf_codec_compose`, its repair and
+* **A-9 - Composed codecs** (D-103): `cf_codec_compose`, its repair and
   filter, the provenance that names it, the Guide's section, and a test
   reading `{{a:1}}` and `{a:{2}}`.
-* **A-7 - A refusal's place and reason** (D-107): `cf_error.where`,
-  `cf_reason.def`, every reader filling both, and the test that one bad
-  input is refused with the same reason in every format.
-* **A-8 - Build profiles and the C version per file** (D-105, D-106):
+* **A-10 - A refusal's place and reason** (D-107): `cf_error.where`,
+  `cf_reason.def` (with `CF_REASON_UTF8` for A-5's refusal), every
+  reader filling both, and the test that one bad input is refused with
+  the same reason in every format.
+* **A-11 - Build profiles and the C version per file** (D-105, D-106):
   `cmake/profiles/`, `CF_PROFILE`, `cf_source_needs_c`, `gate.cversion`,
   and the two files that need more than C89 today (`yaml.c`, `posix.c`)
   moved onto the helper.
