@@ -69,6 +69,10 @@ You carry out one card of docs/Plan.md, alone.
 
 ## Habits
 
+- The checks and the landing are `scripts/work/` (`scripts/README.md`):
+  a card's subagent runs `win.cmd` and `verify.sh`; the organiser lands
+  it with `land.sh`. They work on any machine; nothing is kept outside
+  the repository.
 - Documentation-only changes go straight to `main`. Pushing to `main`
   bypasses the required CI checks with the maintainer's rights: fine for
   documents; code goes through the loop's branch and CI first.

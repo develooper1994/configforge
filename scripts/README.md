@@ -102,6 +102,22 @@ Pages. Pull requests build and validate but cannot deploy. Pages must
 be configured to use GitHub Actions in the repository settings. This
 publishes development documentation, not a library release.
 
+## work: a card from its worktree to main
+
+The loop's steps 7 to 10 (docs/Plan.md), each one only if the one before
+succeeded, on any machine: on Linux directly, on Windows in the WSL
+distribution `buildenv/wsl-distro.ps1` makes. `CF_WORK` (a directory with
+room; `D:\cf-work` when D: exists) and `CF_DISTRO` (`configforge-dev`)
+change where.
+
+| Script | Does |
+| ------ | ---- |
+| `work/verify.sh <id> [full\|quick]` | the staged tree, copied, formatted with the pinned clang-format, built with clang as CI's clang job, then `verify.cmake` with the old compilers (`EXTRA=compilers`) in a full run; one run at a time on the machine. `STYLE=1` formats nothing and runs clang-tidy first: a milestone's end |
+| `work/format.sh` | the files changed against `origin/main`, formatted: C and C++ with the pinned clang-format, CMake with cmake-format |
+| `work/ship.sh <id>` | `verify.sh`, and only if it passes the push and CI; a failed style step does not fail it, any other step does |
+| `work/land.sh <id> "<subject>"` | from the main checkout: main merged into the branch, `format.sh`, `ship.sh`, the branch squashed onto main with its tree checked, the index updated (the card done, the cards that waited only on it open), pushed, the worktree and branches removed |
+| `work/win.cmd <worktree> <id> [regex]` | the MSVC build and tests, found with vswhere, built under `CF_WORK` |
+
 ## buildenv: the environment, as a file
 
 Every tool the build, the gates and the `EXTRA` steps use, written down

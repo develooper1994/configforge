@@ -291,9 +291,8 @@ default can be argued from a number.
   300 GB of virtual size). Moving it to D:
   (`wsl --manage Ubuntu --move D:\wsl\Ubuntu`, WSL 2.3 or later) frees
   C: without losing anything in it.
-* `D:\cf-tools` holds this machine's helper scripts (one-call unit
-  checks, negative proofs). They name this machine's paths and are not
-  needed elsewhere: `scripts/verify.cmake` is the interface.
+* The loop's checks run from `scripts/work/` (see `scripts/README.md`),
+  the same on every machine; `D:\cf-work` holds their copies and builds.
 
 ### Another machine
 
