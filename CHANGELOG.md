@@ -12,6 +12,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   `cmake --install` installs the tools.
 - **`configforge gen`**: the contract's program - `configforge gen
   --schema` writes it as C, `configforge gen check` holds files to it.
+- **`configforge codec`**: the serialization library's own program -
+  `formats`, `detect` (a file's format and how it was told) and `check`
+  (whether each file is well formed), linked to that library alone.
 - **The serialization library, `configforge_serialize`**: the readers
   and writers - JSON, JSON5, TOML, YAML, INI, `.properties`, XML, CBOR,
   TLV - as a library of their own, which a program that wants documents
@@ -27,6 +30,8 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 - Doctor's program is `configforge-doctor`; the name `doctor` still runs
   it in 1.7.x, says so on stderr, and goes in 1.8.0 (D-99).
+- `doctor formats` is `configforge codec formats`; Doctor keeps it in
+  1.7.x.
 - `doctor check` and `doctor gen` are `configforge gen check` and
   `configforge gen`; Doctor still runs them in 1.7.x, says so on stderr,
   and drops them in 1.8.0.

@@ -4130,7 +4130,16 @@ starting with `-`. The front door exits with the program's own status,
 or 2 when it refuses a name, finds nothing or cannot start one (126 and
 127 are not used). It is not built where there are no processes (WASI,
 `CF_PLATFORM=none`). Doctor's program is renamed `configforge-doctor`;
-every tool is built into `tools/bin` and installed into `bin/`. Rejected:
+every tool is built into `tools/bin` and installed into `bin/`.
+`configforge codec` is the serialization library's program, linked to
+`configforge_serialize` alone, with `formats` moved from Doctor, `detect`
+(a file's format and how it was told) and `check` (whether each file is
+well formed). Its name was the one open question: `configforge-codec`
+run as `configforge codec <command>`, over `configforge-serialize`
+(longer to type on every command line) and one program per command
+(five programs on the `PATH`, and `configforge check` would be this
+tool's while `configforge gen check` is the contract's); the maintainer
+chose it on 2026-11-17. Rejected:
 a process-starting function in the library (the library starts no
 program), `_wspawnv` on Windows, a table of known commands, and dropping
 the name `doctor` at once.
@@ -4138,8 +4147,9 @@ the name `doctor` at once.
 **Compatibility.** `doctor` is `configforge-doctor`. In 1.7.x the name
 `doctor` still runs it and says so on stderr, and the release archives
 carry both; it goes in 1.8.0 (T-5). `configforge gen` took Doctor's
-`check` and its C writer (`gen --schema`); `doctor check` and
-`doctor gen` still run them in 1.7.x and say so on stderr.
+`check` and its C writer (`gen --schema`), and `configforge codec` took
+`formats`; `doctor check`, `doctor gen` and `doctor formats` still run
+them in 1.7.x and say so on stderr.
 
 ## D-60 — Arrays in INI are the ones INI files already have
 

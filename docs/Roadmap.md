@@ -851,7 +851,7 @@ first user meets. In the order proposed:
 
 ### Tools, distribution and digests, 2026-11-14
 
-* 🟨 **Doctor does one job; the other two get tools of their own** (the front door, Doctor's name and `configforge gen` done, D-99; the codec tool left, T-3)
+* 🟩 **Doctor does one job; the other two get tools of their own** (three programs behind `configforge`; Doctor's aliases go in 1.8.0 (T-5))
   (cards T-1, T-2, T-3; T-5 drops the aliases in 1.8.0).
   Doctor gathers three kinds of command, and wave 5 would add more:
   reading reports (explain, dump, diff, history, blame, lint, parity,
@@ -865,7 +865,7 @@ first user meets. In the order proposed:
   the report commands, the others answer under their own names, and the
   GitHub Action and the docs use the new names; the old Doctor commands
   stay one minor release as aliases that say where they went.
-* 🟦 **The serialization library's own tool** (cards T-3, T-4,
+* 🟨 **The serialization library's own tool** (formats, detect and check done; dump (T-4) and convert (W5-V1) left; cards T-3, T-4,
   W5-V1). Once that library is a
   target of its own: convert a document from one format to another as
   a stream of the codecs' events - nesting and arrays kept, no key space
