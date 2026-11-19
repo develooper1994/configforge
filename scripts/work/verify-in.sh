@@ -14,7 +14,7 @@ git config --global --get-all safe.directory | grep -qx '\*' ||
 rm -rf "$src" && mkdir -p "$src" && tar -xf "$tar" -C "$src" || exit 1
 cd "$src" || exit 1
 if [ "$STYLE" != 1 ]; then
-  find src include tools tests bench examples \( -name '*.[ch]' -o -name '*.[ch]pp' \) -print0 2>/dev/null |
+  find src include lib tools tests bench examples \( -name '*.[ch]' -o -name '*.[ch]pp' \) -print0 2>/dev/null |
     xargs -0 -r clang-format -i
   find . -name CMakeLists.txt -o -name '*.cmake' | grep -v '^./build' | xargs -r cmake-format -i 2>/dev/null
 fi
@@ -35,7 +35,8 @@ git init -q && git add -A || exit 1
     grep -E "error:|\(Failed\)" "$base/clang-$id".log | head -20; echo "clang FAILED"; exit 1
   fi
   echo "clang ok"
-  EXTRA=-DEXTRA=; [ "$mode" = full ] && EXTRA=-DEXTRA=compilers
+  # CF_EXTRA names more verify EXTRA steps (a card's ACCEPT may ask).
+  EXTRA=-DEXTRA=; [ "$mode" = full ] && EXTRA="-DEXTRA=compilers${CF_EXTRA:+;$CF_EXTRA}"
   cmake -DSOURCE=index -DMODE="$mode" "$EXTRA" -DJOBS=3 \
     -DWORK="$base/cfv-$id" -P scripts/verify.cmake > "$base/verify-$id".log 2>&1
   rc=$?

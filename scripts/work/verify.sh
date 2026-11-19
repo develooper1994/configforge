@@ -9,5 +9,5 @@
 id=${1:?usage: verify.sh <id> [full|quick]}; mode=${2:-full}
 tree=$(git write-tree) || exit 1
 git -c core.autocrlf=false archive --format=tar -o "$CF_WORK/src-$id.tar" "$tree" || exit 1
-cf_linux env STYLE="${STYLE:-0}" sh "$(cf_lpath "$here")/verify-in.sh" "$id" "$mode" \
+cf_linux env STYLE="${STYLE:-0}" CF_EXTRA="${CF_EXTRA:-}" sh "$(cf_lpath "$here")/verify-in.sh" "$id" "$mode" \
   "$(cf_lpath "$CF_WORK")/src-$id.tar"
