@@ -1296,6 +1296,58 @@ first user meets. In the order proposed:
   Built by the release workflow from what the gates already produce
   (`docs/Compliance.md`).
 
+### For the people who change configuration (side discussion, 2026-11-19; not yet cards)
+
+Most of the people a configuration library touches do not write code:
+they change configuration, and the incidents they live with start
+there. ConfigForge is to be a **lens over the stores they already use**
+(git, files, Consul, etcd), not a store of its own: a configuration
+server would turn a C library into a service to run, against the
+critical-system aim, and the field of stores is crowded (Consul, etcd,
+AWS AppConfig, Spring Cloud Config; the name "Vault" is HashiCorp's).
+The lens is meaning: a diff of values rather than of text, provenance,
+the contract's checks, secrets kept out. Four first steps, each mostly
+from parts that exist:
+
+* ⬜ **`configforge diff a.yaml b.json`: two files, any formats, compared
+  by value.** What exists: `configforge doctor diff` compares two
+  *reports* (a program's resolved configuration, `cf_report`), and
+  `cf_doctor_diff_files` the library call on two files; `--redact-all`
+  keeps every value out. What is left: a command on two plain files
+  with no program run and no report, any pair of formats (the codec
+  tree W5-V1 builds), the order of keys and the format's own spelling
+  never shown as a change, secrets by digest. Later, with a contract,
+  units compared as values (`30s` is `30000ms`, with 1.10.0's durations
+  and sizes), which plain semantic diffs (dyff, graphtage) do not do.
+* ⬜ **Git shows configuration changes by value.** A `textconv` driver
+  (`configforge codec dump` written for it, T-4) and a `difftool`
+  entry, set up by one `.gitattributes` line, so `git diff` and
+  `git log -p` on a configuration file show values that changed rather
+  than lines; the history of a configuration is then git's own, and no
+  store is needed.
+* ⬜ **A pull request that changes configuration, reviewed without a
+  report.** What exists: `actions/doctor` with `base` and
+  `comment: true` diffs the base branch's report against the head's and
+  keeps one comment on the pull request up to date. What is left: the
+  same when the pull request changes only configuration files and no
+  program writes a report - the changed files' base and head versions
+  diffed by the command above, checked against the contract when one is
+  in the repository, and the comment saying which keys changed, which
+  are out of range and which touch a secret.
+* ⬜ **Drift across many hosts.** What exists: `doctor diff` compares
+  two environments, origin drift is CFD002. What is left: N reports or
+  files at once (one a host), grouped by value, saying which hosts
+  differ from the rest and on which keys - the question "is this set
+  the same on a hundred servers".
+* ⬜ **Market research before the next step.** Who already sells what
+  to these people, and where nobody does: configuration languages (Cue,
+  KCL, Pkl), policy (OPA and conftest), diff tools (dyff, graphtage,
+  difftastic), stores (Consul, AppConfig), and GitOps (Argo, Flux).
+  Candidates for a field with no rival, to test against that list:
+  a diff that knows the contract (units, ranges, secrets) and says why
+  a value is what it is; and configuration for embedded firmware,
+  checked at build time with its provenance.
+
 ### Considered, and decided against for now: a GitHub wiki
 
 The documents live in `docs/`, are reviewed with the code, checked by
