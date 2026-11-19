@@ -158,6 +158,13 @@ Things only the maintainer can do or decide. Each unblocks the cards named.
   platform's name and its `_has_` queries, which the examples call,
   join the 1.x promise), S-4 (the serialization library's name) and
   T-3 (its program's name). Each waits for its answer.
+* **Waiting for the maintainer, 2026-11-20: tag 1.7.0.** Every 1.7.0
+  card and style-1.7.0 are done; the release commit is `dace0a5`
+  ("1.7.0", the CHANGELOG dated). Publishing it was not this machine's
+  to do: `git tag -a v1.7.0 dace0a5 -m 1.7.0 && git push origin v1.7.0`
+  starts the release workflow, which builds that commit whatever is on
+  main after it. The cards that waited for "1.7.0 released" were opened
+  on that commit; T-5 removes nothing the 1.7.0 commit holds.
 * **Decided without the maintainer, 2026-11-20, to be confirmed**: the
   three 1.7.0 items that had no card (one digest a purpose, trusted
   publishing, `doctor graph`) moved to 1.10.0 (`docs/Maintaining.md`,
@@ -206,13 +213,13 @@ waves ("After 1.7.0: the order of the waves", below).
 | 35 | W5-G1 `configforge gen --lang cpp` | large | W5-S1 | done (071ed40) |
 | 36 | W5-G2 `configforge gen --lang rust` | large | W5-G1 | done (54f39fb) |
 | 37 | W5-G3 `configforge gen --lang python` | medium | W5-G2 | done (950a099) |
-| 38 | T-5 Doctor's aliases, and the name `doctor`, removed | small | 1.7.0 released, W5-G3 | waits: 1.7.0 released (it belongs to 1.8.0) |
-| 38b | L-1 shellcheck, ruff, actionlint and codespell, as gates | medium | 1.7.0 released | waits: 1.7.0 released |
+| 38 | T-5 Doctor's aliases, and the name `doctor`, removed | small | 1.7.0 released, W5-G3 | open |
+| 38b | L-1 shellcheck, ruff, actionlint and codespell, as gates | medium | 1.7.0 released | open |
 | 38c | L-2 Valgrind, AFL++, gitleaks, osv-scanner and Scorecard in CI | medium | L-1 | waits: L-1 (outline; written out when L-1 is done) |
 | 38d | L-4 include-what-you-use and a link check | small | L-1 | waits: L-1 (outline) |
 | 38e | L-3 Infer and semgrep; IKOS or Frama-C with 1.9.0 | large | L-2 | waits: L-2 (outline) |
-| 39 | P-1 The benchmark measures large documents, and says where time goes | medium | 1.7.0 released | waits: 1.7.0 released |
-| 40 | A-1 One directory per component: the files moved, nothing else changed | large | 1.7.0 released | waits: 1.7.0 released |
+| 39 | P-1 The benchmark measures large documents, and says where time goes | medium | 1.7.0 released | open |
+| 40 | A-1 One directory per component: the files moved, nothing else changed | large | 1.7.0 released | open |
 | 41 | A-1b Each component a project: its declaration, its tests, its README, built alone | large | A-1 | waits: A-1 |
 | 42 | A-2 The vector library, its interface and its scalar reference | medium | A-1b | waits: A-1b |
 | 43 | A-3 One UTF-8, one hex digit, one table hash | medium | A-2 | waits: A-2 |

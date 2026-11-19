@@ -21,7 +21,7 @@ extern "C" {
    scripts/release/version.cmake rewrites with them and gate.version holds
    to them. */
 #define CF_SERIALIZE_VERSION_MAJOR 1
-#define CF_SERIALIZE_VERSION_MINOR 7
+#define CF_SERIALIZE_VERSION_MINOR 8
 #define CF_SERIALIZE_VERSION_PATCH 0
 
 #define CF_SERIALIZE_VERSION_NUMBER                                                    \
