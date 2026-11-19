@@ -5,6 +5,19 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ## 1.8.0 — unreleased
 
+### Added
+
+- **Four more gates**: `gate.shellcheck` (every tracked shell script),
+  `gate.ruff` (the Python binding, the scripts, the examples and the
+  tests), `gate.actionlint` (the workflows) and `gate.codespell` (the
+  docs, the Markdown files and the sources). Each is skipped with a
+  message where its tool is absent, as the format gates are; `setup.sh`
+  and CI (job `lint`) install them at pinned versions, and `dev-setup`
+  lists them. The first pass fixed what they found in the scripts and the
+  Python, and `.shellcheckrc`, `.codespellrc`, `.github/actionlint.yaml`
+  and `[tool.ruff]` in `pyproject.toml` record the few exceptions, each
+  with its reason.
+
 ### Changed
 
 - Doctor no longer answers `check`, `gen` or `formats`, and the program

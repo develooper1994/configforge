@@ -15,7 +15,7 @@ or milestone names it), `new` (a card below).
 | Group | What it finds | Today | Added |
 | ----- | ------------- | ----- | ----- |
 | 1. Formatting | layout that differs from the rule | clang-format 22.1.8 (CI, verify, `scripts/work/format.sh`), cmake-format (verify) | - |
-| 2. Linters, per language | mistakes a language's own checker knows | C: cppcheck, clang-tidy (CI, verify); Rust: clippy (CI); CMake: cmake-lint (verify) | shell: shellcheck; Python: ruff; workflows: actionlint; text: codespell (L-1) |
+| 2. Linters, per language | mistakes a language's own checker knows | C: cppcheck, clang-tidy (CI, verify); Rust: clippy (CI); CMake: cmake-lint (verify); shell: shellcheck, Python: ruff, workflows: actionlint (verify, CI `lint`; L-1) | - |
 | 3. Static analysis, path-sensitive | a fault on one path through the code | clang-tidy's `clang-analyzer-*`, GCC `-fanalyzer` (analyze preset), MSVC `/analyze` (CI), CodeQL (CI) | Infer (planned in cmake, made a CI job: L-3) |
 | 4. Static analysis, sound | the proof that a class of fault cannot happen | CBMC (verify `EXTRA`, planned for 1.9.0) | IKOS, Frama-C EVA (L-3, 1.9.0) |
 | 5. Rules and standards | a rule a safety standard writes | - | cppcheck's MISRA addon (1.9.0), CERT and CWE tables (1.9.0), semgrep for the project's own rules (L-3) |
@@ -25,7 +25,7 @@ or milestone names it), `new` (a card below).
 | 9. Coverage and mutation | tests that run code without checking it | gcov (CI `coverage`) | mutation testing with Mull (planned for 1.9.0) |
 | 10. Interface | a release that breaks callers | abidiff (verify `EXTRA`) | include-what-you-use (L-4) |
 | 11. Supply chain and security | a leaked secret, a weak dependency, an untraceable build | Dependabot, an SBOM with the release, reproducible-build check (CI), REUSE (verify) | gitleaks, osv-scanner, OpenSSF Scorecard (L-2) |
-| 12. Documentation | a dead link, a misspelling | mkdocs build (CI `docs`) | lychee link check (L-4); codespell (L-1) |
+| 12. Documentation | a dead link, a misspelling | mkdocs build (CI `docs`); codespell (verify, CI `lint`; L-1) | lychee link check (L-4) |
 
 Wished for, paid (open-source projects may get them free; to be asked for
 only by the maintainer): Coverity Scan, PVS-Studio, Polyspace, LDRA,

@@ -26,7 +26,7 @@ TEXT = (
 
 
 def tracked(root):
-    out = subprocess.run(["git", "-C", root, "ls-files", "-z"], capture_output=True)
+    out = subprocess.run(["git", "-C", root, "ls-files", "-z"], check=False, capture_output=True)
     if out.returncode != 0:
         return None
     return [p for p in out.stdout.decode("utf-8", "replace").split("\0") if p]
@@ -43,19 +43,20 @@ def main(root):
             continue
         path = os.path.join(root, rel)
         try:
-            data = open(path, "rb").read()
+            with open(path, "rb") as f:
+                data = f.read()
         except OSError:
             continue  # deleted in the working tree, not yet in the index
         if b"\0" in data:
             line = data[: data.index(b"\0")].count(b"\n") + 1
-            print("VIOLATION: %s:%d holds a NUL byte" % (rel, line))
+            print(f"VIOLATION: {rel}:{line} holds a NUL byte")
             bad += 1
         if b"\r" in data:
             line = data[: data.index(b"\r")].count(b"\n") + 1
-            print("VIOLATION: %s:%d holds a carriage return" % (rel, line))
+            print(f"VIOLATION: {rel}:{line} holds a carriage return")
             bad += 1
     if bad == 0:
-        print("text gate: %d files, each one text" % len(files))
+        print(f"text gate: {len(files)} files, each one text")
     return 1 if bad else 0
 
 

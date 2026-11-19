@@ -95,3 +95,55 @@ if(CLANG_TIDY_EXE AND CF_CLANG_TIDY)
                          "--extra-arg=-Wno-unknown-warning-option")
   message(STATUS "clang-tidy: ${CLANG_TIDY_EXE}")
 endif()
+
+# The other languages' checkers. Each is a gate test like the ones above,
+# skipped with a message when its tool is absent, so a machine without it
+# still builds and the CI job that has it still fails.
+find_program(SHELLCHECK_EXE NAMES shellcheck)
+find_program(RUFF_EXE NAMES ruff)
+find_program(ACTIONLINT_EXE NAMES actionlint)
+find_program(CODESPELL_EXE NAMES codespell)
+
+file(
+  GLOB_RECURSE
+  CF_SH_SOURCES
+  "${CMAKE_SOURCE_DIR}/.clusterfuzzlite/*.sh"
+  "${CMAKE_SOURCE_DIR}/actions/*.sh"
+  "${CMAKE_SOURCE_DIR}/bindings/*.sh"
+  "${CMAKE_SOURCE_DIR}/examples/*.sh"
+  "${CMAKE_SOURCE_DIR}/packaging/*.sh"
+  "${CMAKE_SOURCE_DIR}/scripts/*.sh"
+  "${CMAKE_SOURCE_DIR}/tests/*.sh"
+  "${CMAKE_SOURCE_DIR}/tools/*.sh")
+file(GLOB CF_WORKFLOWS "${CMAKE_SOURCE_DIR}/.github/workflows/*.yml")
+
+if(SHELLCHECK_EXE)
+  add_test(NAME gate.shellcheck COMMAND ${SHELLCHECK_EXE} ${CF_SH_SOURCES})
+else()
+  message(STATUS "shellcheck not found: gate.shellcheck skipped")
+endif()
+if(RUFF_EXE)
+  add_test(
+    NAME gate.ruff
+    COMMAND ${RUFF_EXE} check --no-cache bindings conanfile.py examples scripts
+            tests
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+else()
+  message(STATUS "ruff not found: gate.ruff skipped")
+endif()
+if(ACTIONLINT_EXE)
+  add_test(NAME gate.actionlint
+           COMMAND ${ACTIONLINT_EXE} -config-file
+                   ${CMAKE_SOURCE_DIR}/.github/actionlint.yaml ${CF_WORKFLOWS})
+else()
+  message(STATUS "actionlint not found: gate.actionlint skipped")
+endif()
+if(CODESPELL_EXE)
+  add_test(
+    NAME gate.codespell
+    COMMAND ${CODESPELL_EXE} docs src include tools README.md CHANGELOG.md
+            CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+else()
+  message(STATUS "codespell not found: gate.codespell skipped")
+endif()

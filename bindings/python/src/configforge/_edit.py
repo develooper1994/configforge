@@ -14,7 +14,7 @@ and writes nothing; an exception inside the block drops it. Or by hand:
 from __future__ import annotations
 
 import ctypes
-from typing import Any, Optional
+from typing import Any
 
 from . import _native as n
 from ._config import Config, Error
@@ -23,7 +23,7 @@ from ._config import Config, Error
 class Edit:
     """A change gathered before anything is written. Commit once."""
 
-    def __init__(self, cfg: Config, target: str, note: Optional[str] = None):
+    def __init__(self, cfg: Config, target: str, note: str | None = None):
         e = n.new_error()
         self._e = n.lib.cf_edit_begin(cfg._c, target.encode("utf-8"), ctypes.byref(e))
         if not self._e:
@@ -35,7 +35,7 @@ class Edit:
             raise RuntimeError("this edit was already committed or dropped")
         return self._e
 
-    def set(self, key: str, value: Any) -> "Edit":
+    def set(self, key: str, value: Any) -> Edit:
         """Set ``key``: a bool, int, float or str - text is typed by the
         contract as a file's is."""
         k = key.encode("utf-8")
@@ -50,10 +50,10 @@ class Edit:
         elif isinstance(value, str):
             n.lib.cf_edit_set_text(self._live(), k, value.encode("utf-8"))
         else:
-            raise TypeError("a setting is bool, int, float or str, not %r" % type(value))
+            raise TypeError(f"a setting is bool, int, float or str, not {type(value)!r}")
         return self
 
-    def unset(self, key: str) -> "Edit":
+    def unset(self, key: str) -> Edit:
         """Delete ``key`` from the target, so the next source down supplies it."""
         n.lib.cf_edit_unset(self._live(), key.encode("utf-8"))
         return self
@@ -66,7 +66,7 @@ class Edit:
     def __len__(self) -> int:
         return n.lib.cf_edit_count(self._e) if self._e else 0
 
-    def commit(self, note: Optional[str] = None) -> None:
+    def commit(self, note: str | None = None) -> None:
         """Check and write the whole change, or raise :class:`Error`,
         writing nothing. Spends the edit."""
         e = n.new_error()
@@ -81,7 +81,7 @@ class Edit:
             n.lib.cf_edit_abort(self._e)
             self._e = None
 
-    def __enter__(self) -> "Edit":
+    def __enter__(self) -> Edit:  # noqa: PYI034 - typing.Self is 3.11
         return self
 
     def __exit__(self, kind, value, tb) -> None:
@@ -94,6 +94,6 @@ class Edit:
         self.abort()
 
 
-def edit(cfg: Config, target: str, note: Optional[str] = None) -> Edit:
+def edit(cfg: Config, target: str, note: str | None = None) -> Edit:
     """An :class:`Edit` of ``target``, a writable source of ``cfg``."""
     return Edit(cfg, target, note)

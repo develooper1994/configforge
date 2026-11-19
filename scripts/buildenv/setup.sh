@@ -73,6 +73,26 @@ if ! /opt/cf-tools/bin/python3 -c \
 fi
 ln -sf /opt/cf-tools/bin/clang-format /usr/local/bin/clang-format
 
+# The other languages' checkers, pinned, from PyPI (shellcheck and
+# actionlint as the wheels that carry their binaries): gate.shellcheck,
+# gate.ruff, gate.actionlint and gate.codespell. A release of any of
+# them can find something new, so a version changes here, in CI
+# (.github/workflows/ci.yml) and in the tree's fixes together.
+SHELLCHECK_PY_VERSION=0.11.0.1
+RUFF_VERSION=0.17.6
+ACTIONLINT_PY_VERSION=1.7.12.25
+CODESPELL_VERSION=2.4.3
+if [ "$(/opt/cf-tools/bin/pip list --format=freeze 2>/dev/null |
+  grep -cxF -e "shellcheck-py==$SHELLCHECK_PY_VERSION" -e "ruff==$RUFF_VERSION" \
+    -e "actionlint-py==$ACTIONLINT_PY_VERSION" -e "codespell==$CODESPELL_VERSION")" -ne 4 ]; then
+  /opt/cf-tools/bin/pip install --quiet "shellcheck-py==$SHELLCHECK_PY_VERSION" \
+    "ruff==$RUFF_VERSION" "actionlint-py==$ACTIONLINT_PY_VERSION" \
+    "codespell==$CODESPELL_VERSION"
+fi
+for t in shellcheck ruff actionlint codespell; do
+  ln -sf "/opt/cf-tools/bin/$t" "/usr/local/bin/$t"
+done
+
 # ccache's cache, bounded: verify reuses it from one unit to the next.
 ccache --max-size=5G >/dev/null
 

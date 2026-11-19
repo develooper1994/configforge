@@ -4,6 +4,7 @@
 # first, so Linux never reads a Windows worktree's .git.
 # usage, from the worktree: sh scripts/work/verify.sh <id> [full|quick]
 # STYLE=1 (a milestone's end) also runs clang-tidy and the format gates.
+# shellcheck source=env.sh
 . "$(dirname "$0")/env.sh"
 id=${1:?usage: verify.sh <id> [full|quick]}; mode=${2:-full}
 tree=$(git write-tree) || exit 1

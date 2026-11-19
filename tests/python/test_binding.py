@@ -19,9 +19,9 @@ from unittest import mock
 sys.path.insert(0, sys.argv.pop(1))
 WORK = sys.argv.pop(1) if len(sys.argv) > 1 else tempfile.mkdtemp()
 
-import configforge as cf  # noqa: E402
-from configforge import _native as native  # noqa: E402
-from configforge import flag, rank, section, setting  # noqa: E402
+import configforge as cf
+from configforge import _native as native
+from configforge import flag, rank, section, setting
 
 
 def server_cfg(values=None):
@@ -36,7 +36,7 @@ def server_cfg(values=None):
 class Lists(unittest.TestCase):
     @staticmethod
     def values(cfg, key):
-        return [cfg["%s.%d" % (key, i)] for i in range(cfg[key + ".count"])]
+        return [cfg[f"{key}.{i}"] for i in range(cfg[key + ".count"])]
 
     def test_append_defaults_aliases_and_derivation(self):
         defaults = ["base"]
@@ -103,9 +103,8 @@ class Lists(unittest.TestCase):
             with self.assertRaises(ValueError):
                 cf.Builder().define_list("tags", str, separator=separator)
         from configforge import _native
-        with mock.patch.object(_native, "HAVE_LIST", False):
-            with self.assertRaisesRegex(RuntimeError, "list contracts"):
-                cf.Builder().define_list("tags", str)
+        with mock.patch.object(_native, "HAVE_LIST", False),                 self.assertRaisesRegex(RuntimeError, "list contracts"):
+            cf.Builder().define_list("tags", str)
 
     def test_secret_defaults_and_live_reload(self):
         state = {"tags": "$${literal}", "level": "info"}
@@ -142,9 +141,9 @@ class Reading(unittest.TestCase):
         self.assertIsNone(cfg.get("tls.enabled", type=int), "a bool is not an int here")
         self.assertEqual(cfg.get("server.port"), 9443)
         with self.assertRaises(KeyError):
-            cfg["server.nope"]
+            _ = cfg["server.nope"]
         with self.assertRaises(AttributeError):
-            cfg.server.nope
+            _ = cfg.server.nope
         self.assertEqual(sorted(cfg.server), ["host", "port"])
         self.assertEqual(cfg.to_dict()["server"], {"host": "web1", "port": 9443})
         import collections.abc
@@ -246,7 +245,7 @@ class Server:
 
 @dataclasses.dataclass
 class Settings:
-    server: Server = section(Server)
+    server: Server = section(Server)  # noqa: RUF009 - the descriptor is the default
     debug: bool = setting("app.debug", False)
     workers: int = setting("app.workers", 4, range=(1, 64))
 
@@ -327,7 +326,7 @@ class Reloading(unittest.TestCase):
 
         def health(cfg):
             if not healthy[0]:
-                raise RuntimeError("upstream answered 503 with debug=%s" % cfg.app.debug)
+                raise RuntimeError(f"upstream answered 503 with debug={cfg.app.debug}")
             return True
 
         with cf.Live(cf.Mode.AUTO, self.build, probation=2, health=health) as live:
@@ -387,7 +386,7 @@ class Reloading(unittest.TestCase):
             for t in threads:
                 t.start()
             for i in range(50):
-                self.write("[app]\ndebug = %s\n%s" % ("true" if i % 2 else "false", "#" * i))
+                self.write("[app]\ndebug = {}\n{}".format("true" if i % 2 else "false", "#" * i))
                 live.reload()
             for t in threads:
                 t.join()
@@ -410,10 +409,9 @@ class Editing(unittest.TestCase):
 
     def test_a_block_that_raises_writes_nothing(self):
         cfg = server_cfg()
-        with self.assertRaises(KeyError):
-            with cf.edit(cfg, "file") as e:
-                e.set("server.port", 1)
-                raise KeyError("stop")
+        with self.assertRaises(KeyError), cf.edit(cfg, "file") as e:
+            e.set("server.port", 1)
+            raise KeyError("stop")
         with self.assertRaises(TypeError):
             cf.edit(cfg, "file").set("server.port", [1])
 
@@ -483,7 +481,7 @@ class Logging(unittest.TestCase):
         self.assertEqual(a.fingerprint, cfg("hunter2", "80").fingerprint)
         self.assertNotEqual(a.fingerprint, cfg("hunter3", "80").fingerprint)
         self.assertNotEqual(a.fingerprint, cfg("hunter2", "81").fingerprint)
-        self.assertNotEqual(a.fingerprint, "fnv1a:%016x" % a.digest,
+        self.assertNotEqual(a.fingerprint, f"fnv1a:{a.digest:016x}",
                             "the digest hashes the secret itself; the fingerprint does not")
 
 
@@ -535,9 +533,8 @@ class ResponseFiles(unittest.TestCase):
         cf.Builder().response_files().response_files().create()
 
     def test_a_library_without_the_switch(self):
-        with mock.patch("configforge._native.HAVE_RESPONSE_FILES", False):
-            with self.assertRaisesRegex(RuntimeError, "no response-file switch"):
-                cf.Builder().response_files()
+        with mock.patch("configforge._native.HAVE_RESPONSE_FILES", False),                 self.assertRaisesRegex(RuntimeError, "no response-file switch"):
+            cf.Builder().response_files()
 
 
 CRED_CHILD = (
@@ -589,9 +586,8 @@ class Credentials(unittest.TestCase):
         self.assertIn("CREDENTIALS_DIRECTORY", out)
 
     def test_a_library_without_the_source(self):
-        with mock.patch("configforge._native.HAVE_CREDENTIALS", False):
-            with self.assertRaisesRegex(RuntimeError, "no credentials source"):
-                cf.Builder().credentials(None, rank.ENV)
+        with mock.patch("configforge._native.HAVE_CREDENTIALS", False),                 self.assertRaisesRegex(RuntimeError, "no credentials source"):
+            cf.Builder().credentials(None, rank.ENV)
 
 
 @unittest.skipUnless(native.HAVE_PREFERENCES, "library with the user defaults source")
@@ -604,9 +600,8 @@ class Preferences(unittest.TestCase):
             cf.Builder().preferences(None, rank.ENV, "com.example.app").create()
 
     def test_a_library_without_the_source(self):
-        with mock.patch("configforge._native.HAVE_PREFERENCES", False):
-            with self.assertRaisesRegex(RuntimeError, "no user defaults source"):
-                cf.Builder().preferences(None, rank.ENV, "com.example.app")
+        with mock.patch("configforge._native.HAVE_PREFERENCES", False),                 self.assertRaisesRegex(RuntimeError, "no user defaults source"):
+            cf.Builder().preferences(None, rank.ENV, "com.example.app")
 
 
 @unittest.skipUnless(native.HAVE_SCHEMA, "library with cf_builder_schema")

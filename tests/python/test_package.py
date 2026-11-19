@@ -5,15 +5,15 @@
 
 import importlib.metadata
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 os.environ.pop("CONFIGFORGE_LIB", None)
 
-import configforge as cf  # noqa: E402
-import configforge_doctor  # noqa: E402,F401
+import configforge as cf
+import configforge_doctor
 
 
 def main() -> None:

@@ -17,9 +17,8 @@ def main() -> int:
     except cf.Error as e:
         print(e, file=sys.stderr)
         return 1
-    print("%s:%d tls=%s" % (cfg.get("server.host", "0.0.0.0"),
-                            cfg.get("server.port", 8080),
-                            "on" if cfg.get("tls.enabled", False) else "off"))
+    tls = "on" if cfg.get("tls.enabled", False) else "off"
+    print(f"{cfg.get('server.host', '0.0.0.0')}:{cfg.get('server.port', 8080)} tls={tls}")
     return 0
 
 

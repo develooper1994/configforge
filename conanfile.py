@@ -58,7 +58,7 @@ class ConfigForgeConan(ConanFile):
         # cf_version.h is the one place the version is written.
         header = load(self, os.path.join(self.recipe_folder, "include", "configforge",
                                          "cf_version.h"))
-        parts = [re.search(r"#define CF_VERSION_%s\s+(\d+)" % p, header).group(1)
+        parts = [re.search(rf"#define CF_VERSION_{p}\s+(\d+)", header).group(1)
                  for p in ("MAJOR", "MINOR", "PATCH")]
         self.version = ".".join(parts)
 

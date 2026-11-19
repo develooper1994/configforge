@@ -94,7 +94,7 @@ def resolve(line, incdir):
         return []
     with open(os.path.join(incdir, name), encoding="utf-8") as f:
         body = f.read().splitlines()
-    return (["/* inlined: configforge/%s */" % name] + body)
+    return ([f"/* inlined: configforge/{name} */"] + body)
 
 
 def strip_header(text, incdir):
@@ -231,7 +231,7 @@ def main():
     problems = check_complete(src)
     if problems:
         for p in problems:
-            sys.stderr.write("amalgamate: %s\n" % p)
+            sys.stderr.write(f"amalgamate: {p}\n")
         sys.stderr.write("amalgamate: the file list and the tree disagree\n")
         return 1
     incdir = os.path.join(src, "include", "configforge")
@@ -294,10 +294,11 @@ def main():
     with open(os.path.join(out, "configforge.c"), "w", encoding="utf-8") as f:
         f.write("".join(body))
 
-    hn = sum(1 for _ in open(hpath, encoding="utf-8"))
-    cn = sum(1 for _ in open(os.path.join(out, "configforge.c"), encoding="utf-8"))
-    print("amalgamation: configforge.h %d lines, configforge.c %d lines"
-          % (hn, cn))
+    with open(hpath, encoding="utf-8") as f:
+        hn = sum(1 for _ in f)
+    with open(os.path.join(out, "configforge.c"), encoding="utf-8") as f:
+        cn = sum(1 for _ in f)
+    print(f"amalgamation: configforge.h {hn} lines, configforge.c {cn} lines")
     return 0
 
 

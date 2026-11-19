@@ -28,12 +28,12 @@ suite's documents are data: they are read by the reader under test and
 never run.
 """
 
+import math
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
-
 
 # conform's arguments after the document: ["--codec", library, symbol]
 # when a codec from a shared library is scored (--codec, D-68).
@@ -43,7 +43,7 @@ EXTRA = []
 def run(conform, fmt, path):
     """The exit status, and what conform printed."""
     try:
-        p = subprocess.run([conform, fmt, path] + EXTRA, capture_output=True, timeout=20)
+        p = subprocess.run([conform, fmt, path] + EXTRA, check=False, capture_output=True, timeout=20)
     except subprocess.TimeoutExpired:
         return 3, ""  # a hang is a failure of its own
     return p.returncode, p.stdout.decode("utf-8", "replace")
@@ -89,7 +89,7 @@ def detected(conform, path):
     its bytes alone - no name, so as if renamed without an extension - or
     None when it chooses none."""
     try:
-        p = subprocess.run([conform, "--detect", path], capture_output=True, timeout=20)
+        p = subprocess.run([conform, "--detect", path], check=False, capture_output=True, timeout=20)
     except subprocess.TimeoutExpired:
         return None
     return p.stdout.decode("utf-8", "replace").strip() if p.returncode == 0 else None
@@ -122,7 +122,7 @@ def unescape(s):
 def keys_of(conform, fmt, path):
     """What the reader made of a document, as {flat key: (type, text)};
     None when it refused it."""
-    p = subprocess.run([conform, fmt, path, "--keys"] + EXTRA, capture_output=True,
+    p = subprocess.run([conform, fmt, path, "--keys"] + EXTRA, check=False, capture_output=True,
                        timeout=20)
     if p.returncode != 0:
         return None
@@ -152,7 +152,7 @@ def toml_expected(doc, prefix, out):
     if isinstance(doc, dict) and set(doc) == {"type", "value"} and \
             isinstance(doc["type"], str):
         t, v = doc["type"], doc["value"]
-        if t.startswith("date") or t.startswith("time"):
+        if t.startswith(("date", "time")):
             out[prefix] = ("datetime", v)
         elif t == "float" and v.lstrip("+-") in ("inf", "nan"):
             out[prefix] = ("nonfinite", v.lstrip("+") if "inf" in v else "nan")
@@ -369,11 +369,11 @@ INVALID_CBOR = tuple(
     (group, h)
     for group, items in (
         ("end of input in a head",
-         "18 19 1a 1b 1901 1a0102 1b01020304050607 38 58 78 98 9a01ff00 b8 d8 f8 "
-         "f900 fa0000 fb000000"),
+         ("18 19 1a 1b 1901 1a0102 1b01020304050607 38 58 78 98 9a01ff00 b8 d8 f8 "
+         "f900 fa0000 fb000000")),
         ("definite-length strings with short data",
-         "41 61 5affffffff00 5bffffffffffffffff010203 7affffffff00 "
-         "7b7fffffffffffffff010203"),
+         ("41 61 5affffffff00 5bffffffffffffffff010203 7affffffff00 "
+         "7b7fffffffffffffff010203")),
         ("definite-length maps and arrays not closed with enough items",
          "81 818181818181818181 8200 a1 a20102 a100 a2000000"),
         ("tag number not followed by tag content", "c0"),
@@ -519,7 +519,7 @@ def untyped_same(wtype, wtext, gtext):
             return int(gtext.replace("_", ""), 0) == int(wtext)
         if wtype == "real":
             g = float(gtext)  # JSON5's Infinity and NaN are their text
-            return g == wtext or (g != g and wtext != wtext)
+            return g == wtext or (math.isnan(g) and isinstance(wtext, float) and math.isnan(wtext))
     except ValueError:
         return False
     if wtype == "bool":
@@ -560,7 +560,7 @@ def differential(conform, repo):
             print(f"{name}: its root is a {type(doc).__name__}, and a configuration "
                   "is a mapping; skipped")
             continue
-        p = subprocess.run([conform, fmt, path], capture_output=True, timeout=20)
+        p = subprocess.run([conform, fmt, path], check=False, capture_output=True, timeout=20)
         if p.returncode == 2:
             print(f"{name}: this build has no {fmt} reader, skipped")
             continue
@@ -638,8 +638,8 @@ INI_CASES = (
      "only '=' separates a key from its value; configparser also takes ':'"),
     ("colon-in-key-value", "[s]\nurl = http://x:80\n", None),
     ("continuation", "[s]\nk = a\n  b\n  c\n",
-     "no continuation lines: an indented line is a line of its own, and "
-     "this one is refused for having no '='; configparser joins them"),
+     ("no continuation lines: an indented line is a line of its own, and "
+     "this one is refused for having no '='; configparser joins them")),
     ("continuation-blank", "[s]\nk = a\n\n  b\n",
      "no continuation lines; configparser joins them"),
     ("array-append", "[s]\nports[] = 80\nports[] = 443\n",

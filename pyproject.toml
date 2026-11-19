@@ -39,3 +39,10 @@ CF_BUILD_EXAMPLES = "OFF"
 CF_BUILD_TOOLS = "OFF"
 CF_ENABLE_GATES = "OFF"
 CF_WITH_CXX = "OFF"
+
+# ruff, at its own defaults (the version is pinned in scripts/buildenv/setup.sh
+# and CI), with one exception.
+[tool.ruff.lint.per-file-ignores]
+# Conan reads these as class attributes; a ClassVar annotation would change
+# what the recipe means.
+"conanfile.py" = ["RUF012"]

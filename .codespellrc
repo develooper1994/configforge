@@ -1,0 +1,9 @@
+# Words that are not misspellings here, each kept on its own line.
+[codespell]
+ignore-words-list = pasword,statics,ser,caf,nd,nown,tolen,clen,captable
+# pasword  the typo the sensitive-key distance check is shown with (db.pasword)
+# statics  C file-scope statics
+# ser      a variable in packaging/conan, and the way a field is shown in a plan
+# caf      the first letters of "café" cut at its two-byte character
+# nd, nown, tolen, clen, captable  identifiers: new definitions, own count,
+#          length of `to`, a key's length, the capacity of a table

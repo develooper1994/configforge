@@ -28,12 +28,12 @@ cache="${XDG_CACHE_HOME:-$HOME/.cache}/configforge-doctor/$rev"
 bin="$(find "$cache" -type f \( -name "$prog" -o -name "$prog.exe" \) 2>/dev/null | head -n 1)"
 if [ -z "$bin" ]; then
   echo "doctor: building $prog ($rev) once, into $cache" >&2
-  cmake -S "$src" -B "$cache" -DCMAKE_BUILD_TYPE=Release -DCF_BUILD_TESTING=OFF \
+  if ! { cmake -S "$src" -B "$cache" -DCMAKE_BUILD_TYPE=Release -DCF_BUILD_TESTING=OFF \
     -DCF_BUILD_EXAMPLES=OFF -DCF_ENABLE_GATES=OFF >/dev/null &&
-    cmake --build "$cache" --target "$target" --config Release --parallel >/dev/null || {
+    cmake --build "$cache" --target "$target" --config Release --parallel >/dev/null; }; then
     echo "doctor: could not build $prog; set $var to one" >&2
     exit 2
-  }
+  fi
   bin="$(find "$cache" -type f \( -name "$prog" -o -name "$prog.exe" \) | head -n 1)"
 fi
 printf '%s\n' "$bin"

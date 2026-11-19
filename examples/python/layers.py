@@ -29,7 +29,7 @@ def main() -> int:
                .unknown(cf.UNKNOWN_REJECT)
                .create())
     except cf.Error as e:
-        print("layers: %s" % e, file=sys.stderr)
+        print(f"layers: {e}", file=sys.stderr)
         return 1
     # db.url is sensitive: explain() says where it was set, never what.
     for key in ("server.host", "server.port", "server.workers", "db.url",

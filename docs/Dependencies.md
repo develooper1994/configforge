@@ -88,6 +88,10 @@ system, no generated header, no options.
 | clang-tidy | Apache-2.0 WITH LLVM-exception | `CF_CLANG_TIDY=ON` |
 | cmake-format, cmake-lint (cmakelang) | GPL-3.0 | `gate.format.cmake`, `gate.cmake.lint` |
 | cppcheck | GPL-3.0-or-later | the `analyze` preset |
+| shellcheck (`shellcheck-py`, 0.11.0.1) | GPL-3.0-or-later | `gate.shellcheck`; pinned from PyPI by `setup.sh` and CI |
+| ruff 0.17.6 | MIT | `gate.ruff`; pinned as above |
+| actionlint (`actionlint-py`, 1.7.12.25) | MIT | `gate.actionlint`; pinned as above |
+| codespell 2.4.3 | GPL-2.0-only | `gate.codespell`; pinned as above |
 | Rust: `rustc`, `cargo`, `clippy`, `rustfmt` (`setup.sh` installs 1.99.1 with rustup, checked against its published checksum) | MIT OR Apache-2.0 | `bindings/rust`, and `CF_RUST`: the Rust examples and `cargo test`; clippy and rustfmt check the crate |
 | cc 1.11.1, with find-msvc-tools 0.1.15 and shlex 2.0.1 (crates.io, pinned with their checksums in `bindings/rust/Cargo.lock`) | MIT OR Apache-2.0 | the Rust crate's build only (D-70): `build.rs` compiles the C sources with it; cargo runs `--locked` |
 | GNU binutils: `nm`, `objdump` | GPL-3.0-or-later | `gate.symbols`, `gate.abi` |

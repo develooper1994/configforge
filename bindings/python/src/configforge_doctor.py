@@ -21,8 +21,16 @@ import os
 import shutil
 import subprocess
 
-__all__ = ["Finding", "DoctorError", "lint", "diff", "history", "blame", "version",
-           "find_doctor"]
+__all__ = [
+    "DoctorError",
+    "Finding",
+    "blame",
+    "diff",
+    "find_doctor",
+    "history",
+    "lint",
+    "version",
+]
 
 
 class DoctorError(Exception):
@@ -33,7 +41,7 @@ class Finding:
     """One finding: a rule, its level, the key, what is wrong, and where -
     a file and a line when the value came from one."""
 
-    __slots__ = ("rule", "level", "key", "message", "file", "line")
+    __slots__ = ("file", "key", "level", "line", "message", "rule")
 
     def __init__(self, rule, level, key, message, file=None, line=None):
         self.rule = rule
@@ -44,8 +52,8 @@ class Finding:
         self.line = line
 
     def __repr__(self):
-        where = " at %s:%s" % (self.file, self.line) if self.line else ""
-        return "Finding(%s %s %s%s: %s)" % (self.rule, self.level, self.key, where, self.message)
+        where = f" at {self.file}:{self.line}" if self.line else ""
+        return f"Finding({self.rule} {self.level} {self.key}{where}: {self.message})"
 
 
 # SARIF says "note" where Doctor says "info".
@@ -66,13 +74,13 @@ def find_doctor(doctor=None):
 
 def _run(args, doctor):
     try:
-        p = subprocess.run([find_doctor(doctor)] + args, capture_output=True, text=True)
+        p = subprocess.run([find_doctor(doctor)] + args, check=False, capture_output=True, text=True)
     except OSError as e:
-        raise DoctorError("cannot run doctor: %s" % e)
+        raise DoctorError(f"cannot run doctor: {e}")
     # 0 and 1 are results - nothing at the --fail-on level, something at
     # it; 2 is input Doctor could not use.
     if p.returncode not in (0, 1):
-        raise DoctorError(p.stderr.strip() or "doctor exited %d" % p.returncode)
+        raise DoctorError(p.stderr.strip() or f"doctor exited {p.returncode}")
     return p.stdout
 
 
@@ -80,7 +88,7 @@ def _findings(sarif_text):
     try:
         doc = json.loads(sarif_text)
     except ValueError as e:
-        raise DoctorError("doctor's SARIF output did not parse: %s" % e)
+        raise DoctorError(f"doctor's SARIF output did not parse: {e}")
     out = []
     for run in doc.get("runs", []):
         for r in run.get("results", []):

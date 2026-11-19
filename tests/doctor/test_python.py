@@ -8,7 +8,7 @@ import os
 import sys
 
 sys.path.insert(0, sys.argv[1])
-import configforge_doctor as doctor  # noqa: E402
+import configforge_doctor as doctor
 
 DOCTOR, FIXTURES = sys.argv[2], sys.argv[3]
 failures = 0
@@ -90,5 +90,5 @@ try:
 except doctor.DoctorError as e:
     check("none of the reports" in str(e), "a key in none of the reports is refused")
 
-print("%d checks, %d failures" % (checks, failures))
+print(f"{checks} checks, {failures} failures")
 sys.exit(1 if failures else 0)

@@ -193,7 +193,7 @@ typedef struct cf_cli_spec {
 /* `spec` may be NULL, which is Tier 0.
  *
  * A malformed option is rejected rather than skipped. A command line
- * belongs to this program alone, so an unparseable option is the user's
+ * belongs to this program alone, so an unparsable option is the user's
  * typo, and ignoring it is how a misspelled flag becomes an hour of
  * confusion. */
 CF_API cf_bool cf_lex_cli(int argc, char* const* argv, const cf_keymap* map,

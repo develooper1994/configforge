@@ -1,3 +1,4 @@
+# shellcheck shell=sh disable=SC2034 # `here` and cf_win are read by the scripts that source this
 # Sourced by the scripts beside it: where they work and how they reach
 # Linux. Every value can be set from outside.
 #   CF_WORK    a directory with room for copies and Windows builds

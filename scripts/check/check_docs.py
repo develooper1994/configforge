@@ -1,8 +1,8 @@
 """Validate the rendered pages and searchable API before deployment."""
 
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 
 def main() -> None:
@@ -36,7 +36,7 @@ def main() -> None:
     for symbol in ("cf_emit", "cf_report", "cf_live"):
         if symbol not in api_text:
             raise SystemExit("docs: API search is missing " + symbol)
-    print("docs: rendered pages and %d search entries verified" % len(entries))
+    print(f"docs: rendered pages and {len(entries)} search entries verified")
 
 
 if __name__ == "__main__":

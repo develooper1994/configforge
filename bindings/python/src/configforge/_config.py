@@ -7,7 +7,7 @@ import ctypes
 import logging
 import os
 import sys
-from typing import Any, Dict, Iterator, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Iterator, Mapping, Sequence, Union
 
 from . import _native as n
 
@@ -27,7 +27,7 @@ class Error(Exception):
         self.message = message
 
     @classmethod
-    def _from(cls, e: n.cf_error) -> "Error":
+    def _from(cls, e: n.cf_error) -> Error:
         return cls(
             e.code,
             n.decode(n.lib.cf_code_name(e.code)),
@@ -77,9 +77,9 @@ class _Keep:
     __slots__ = ("items",)
 
     def __init__(self) -> None:
-        self.items: List[Any] = []
+        self.items: list[Any] = []
 
-    def s(self, v: Optional[str]) -> Optional[bytes]:
+    def s(self, v: str | None) -> bytes | None:
         b = n.encode(v)
         if b is not None:
             self.items.append(b)
@@ -110,16 +110,16 @@ def _text_of(v: Any) -> str:
     return str(v)
 
 
-def _as_text(key: str, v: Any) -> Optional[str]:
+def _as_text(key: str, v: Any) -> str | None:
     """A default or a bound for define: None stays None, a scalar its text."""
     if v is None:
         return None
     if not isinstance(v, (bool, int, float, str)):
-        raise TypeError("define(%r): %r is not a bool, int, float or str" % (key, v))
+        raise TypeError(f"define({key!r}): {v!r} is not a bool, int, float or str")
     return _text_of(v)
 
 
-def log_sink(logger: Optional[logging.Logger] = None):
+def log_sink(logger: logging.Logger | None = None):
     """A cf_log function that hands each event to ``logger`` (by default
     the ``configforge`` logger): its level is the event's - the library's
     levels are Python's numbers - and the event's name, key, source and
@@ -139,7 +139,7 @@ def log_sink(logger: Optional[logging.Logger] = None):
                 extra["cf_fingerprint"] = n.fingerprint_text(e.fingerprint)
             target.log(e.level, "%s: %s", n.decode(e.event), n.decode(e.message),
                        extra=extra)
-        except Exception:  # never across the C frame
+        except Exception:  # noqa: BLE001,S110 - never across the C frame
             pass
 
     return n.LOG_FN(emit)
@@ -150,12 +150,12 @@ class Builder:
     definition and returns the builder; :meth:`create` resolves it all,
     once, and is where every error is raised."""
 
-    def __init__(self, _raw: Optional[int] = None, _keep: Optional[_Keep] = None):
+    def __init__(self, _raw: int | None = None, _keep: _Keep | None = None):
         self._keep = _keep or _Keep()
         self._b = _raw if _raw is not None else n.lib.cf_build(None)
 
     @classmethod
-    def app(cls, name: str, argv: Optional[Sequence[str]] = None) -> "Builder":
+    def app(cls, name: str, argv: Sequence[str] | None = None) -> Builder:
         """The usual sources for a program: its command line, the
         environment (``NAME_`` prefix) and the defaults."""
         keep = _Keep()
@@ -168,13 +168,13 @@ class Builder:
             raise RuntimeError("this builder was already consumed")
         return self._b
 
-    def cli(self, name: str, rank: int, argv: Sequence[str]) -> "Builder":
+    def cli(self, name: str, rank: int, argv: Sequence[str]) -> Builder:
         args = list(argv)
         n.lib.cf_builder_cli(self._live(), self._keep.s(name), rank, len(args),
                              self._keep.argv(args))
         return self
 
-    def response_files(self) -> "Builder":
+    def response_files(self) -> Builder:
         """Expand ``@file`` arguments on the command line of a builder made
         by :meth:`app` (off by default: an argument that starts with ``@``
         is an ordinary argument, so an untrusted one cannot inject options
@@ -189,42 +189,42 @@ class Builder:
         return self
 
     def env(self, name: str, rank: int, prefix: str,
-            environ: Optional[Mapping[str, str]] = None) -> "Builder":
+            environ: Mapping[str, str] | None = None) -> Builder:
         """Variables with ``prefix``: the process's own, or ``environ``."""
         env = os.environ if environ is None else environ
-        items = ["%s=%s" % (k, v) for k, v in env.items()]
+        items = [f"{k}={v}" for k, v in env.items()]
         n.lib.cf_builder_env(self._live(), self._keep.s(name), rank, self._keep.s(prefix),
                              self._keep.argv(items))
         return self
 
-    def file(self, name: str, rank: int, path: str, format: Optional[str] = None,
-             flags: int = 0) -> "Builder":
+    def file(self, name: str, rank: int, path: str, format: str | None = None,
+             flags: int = 0) -> Builder:
         n.lib.cf_builder_file(self._live(), self._keep.s(name), rank, self._keep.s(path),
                               self._keep.s(format), flags)
         return self
 
-    def dir(self, name: str, rank: int, path: str, format: Optional[str] = None,
-            flags: int = 0) -> "Builder":
+    def dir(self, name: str, rank: int, path: str, format: str | None = None,
+            flags: int = 0) -> Builder:
         """A drop-in directory, conf.d style."""
         n.lib.cf_builder_dir(self._live(), self._keep.s(name), rank, self._keep.s(path),
                              self._keep.s(format), flags)
         return self
 
-    def dotenv(self, name: str, rank: int, path: str, prefix: Optional[str] = None,
-               flags: int = 0) -> "Builder":
+    def dotenv(self, name: str, rank: int, path: str, prefix: str | None = None,
+               flags: int = 0) -> Builder:
         n.lib.cf_builder_dotenv(self._live(), self._keep.s(name), rank, self._keep.s(path),
                                 self._keep.s(prefix), flags)
         return self
 
-    def secrets(self, name: str, rank: int, path: str, prefix: Optional[str] = None,
-                flags: int = 0) -> "Builder":
+    def secrets(self, name: str, rank: int, path: str, prefix: str | None = None,
+                flags: int = 0) -> Builder:
         """A directory of secrets, one file a key."""
         n.lib.cf_builder_secrets(self._live(), self._keep.s(name), rank, self._keep.s(path),
                                  self._keep.s(prefix), flags)
         return self
 
-    def credentials(self, name: Optional[str], rank: int, prefix: Optional[str] = None,
-                    flags: int = 0) -> "Builder":
+    def credentials(self, name: str | None, rank: int, prefix: str | None = None,
+                    flags: int = 0) -> Builder:
         """systemd's credentials: the directory ``$CREDENTIALS_DIRECTORY``
         names, one file a key, read as :meth:`secrets` reads one. Every
         value's place in :meth:`Config.explain` is ``systemd credential
@@ -240,8 +240,8 @@ class Builder:
                                      self._keep.s(prefix), flags)
         return self
 
-    def preferences(self, name: Optional[str], rank: int, domain: str,
-                    flags: int = 0) -> "Builder":
+    def preferences(self, name: str | None, rank: int, domain: str,
+                    flags: int = 0) -> Builder:
         """macOS's user defaults for a domain, what ``defaults read
         <domain>`` shows: the current user's, on any host. ``Server/Port``
         is ``server.port``, and each value's place in :meth:`Config.explain`
@@ -258,37 +258,37 @@ class Builder:
                                      self._keep.s(domain), flags)
         return self
 
-    def memory(self, name: str, rank: int, values: Mapping[str, Any]) -> "Builder":
+    def memory(self, name: str, rank: int, values: Mapping[str, Any]) -> Builder:
         """Values given by the program, as text the contract types."""
         arr, count = self._keep.pairs(values)
         n.lib.cf_builder_memory(self._live(), self._keep.s(name), rank, arr, count)
         return self
 
-    def define_bool(self, key: str, default: bool = False, flags: int = 0) -> "Builder":
+    def define_bool(self, key: str, default: bool = False, flags: int = 0) -> Builder:
         n.lib.cf_builder_bool(self._live(), self._keep.s(key), int(default), flags)
         return self
 
     def define_int(self, key: str, default: int = 0, min: int = 0, max: int = 0,
-                   flags: int = 0) -> "Builder":
+                   flags: int = 0) -> Builder:
         """An integer; ``min == max`` means no range."""
         n.lib.cf_builder_int(self._live(), self._keep.s(key), default, min, max, flags)
         return self
 
-    def define_text(self, key: str, default: Optional[str] = None,
-                    flags: int = 0) -> "Builder":
+    def define_text(self, key: str, default: str | None = None,
+                    flags: int = 0) -> Builder:
         n.lib.cf_builder_text(self._live(), self._keep.s(key), self._keep.s(default), flags)
         return self
 
     def define_real(self, key: str, default: float = 0.0, min: float = 0.0,
-                    max: float = 0.0, flags: int = 0) -> "Builder":
+                    max: float = 0.0, flags: int = 0) -> Builder:
         if not n.HAVE_REAL:
             raise RuntimeError("this libconfigforge was built without reals")
         n.lib.cf_builder_real(self._live(), self._keep.s(key), default, min, max, flags)
         return self
 
-    def define(self, key: str, default: Optional[Scalar] = None,
-               type: Optional[type] = None, *, min: Optional[Scalar] = None,
-               max: Optional[Scalar] = None, flags: int = 0) -> "Builder":
+    def define(self, key: str, default: Scalar | None = None,
+               type: type | None = None, *, min: Scalar | None = None,
+               max: Scalar | None = None, flags: int = 0) -> Builder:
         """One spelling for every scalar type (D-74), through the library's
         one call for it (cf_builder_key): ``type`` names the type, or the
         default decides - ``define("port", 8080)`` is an int. The library
@@ -300,7 +300,7 @@ class Builder:
         kinds = {None: n.TYPE_NULL, bool: n.TYPE_BOOL, int: n.TYPE_INT,
                  float: n.TYPE_REAL, str: n.TYPE_TEXT}
         if type not in kinds:
-            raise TypeError("define(%r): the type must be bool, int, float or str" % key)
+            raise TypeError(f"define({key!r}): the type must be bool, int, float or str")
         n.lib.cf_builder_key(self._live(), self._keep.s(key), kinds[type],
                              self._keep.s(_as_text(key, default)),
                              self._keep.s(_as_text(key, min)),
@@ -308,12 +308,12 @@ class Builder:
         return self
 
     def define_list(self, key: str, element_type: type,
-                    default: Optional[Sequence[Scalar]] = None, *,
+                    default: Sequence[Scalar] | None = None, *,
                     append: bool = False, separator: str = ",", flags: int = 0,
                     min: float = 0, max: float = 0,
-                    allowed: Optional[Sequence[str]] = None,
-                    aliases: Optional[Sequence[str]] = None,
-                    policy: Optional[Sequence[str]] = None) -> "Builder":
+                    allowed: Sequence[str] | None = None,
+                    aliases: Sequence[str] | None = None,
+                    policy: Sequence[str] | None = None) -> Builder:
         """Declare a scalar list; defaults are copied, and ``[]`` is an
         empty default. ``append`` combines lower-precedence lists.
         ``separator=""`` disables environment splitting. Numeric bounds
@@ -382,7 +382,7 @@ class Builder:
         n.lib.cf_builder_define(raw, ctypes.byref(d))
         return self
 
-    def schema(self, text: str, name: str = "<schema>") -> "Builder":
+    def schema(self, text: str, name: str = "<schema>") -> Builder:
         """The contract from a JSON Schema's text, as the library reads one
         (cf_builder_schema); a keyword it does not read is refused, by name
         and place, at create()."""
@@ -393,7 +393,7 @@ class Builder:
                                 self._keep.s(name))
         return self
 
-    def schema_file(self, path: str) -> "Builder":
+    def schema_file(self, path: str) -> Builder:
         """:meth:`schema` from a file; one that cannot be read is refused
         at create()."""
         if not n.HAVE_SCHEMA:
@@ -401,16 +401,16 @@ class Builder:
         n.lib.cf_builder_schema_file(self._live(), self._keep.s(path))
         return self
 
-    def open(self, prefix: str) -> "Builder":
+    def open(self, prefix: str) -> Builder:
         """Exempt a prefix from unknown-key rejection: a plugin's settings."""
         n.lib.cf_builder_open(self._live(), self._keep.s(prefix))
         return self
 
-    def unknown(self, policy: int) -> "Builder":
+    def unknown(self, policy: int) -> Builder:
         n.lib.cf_builder_unknown(self._live(), policy)
         return self
 
-    def track_reads(self) -> "Builder":
+    def track_reads(self) -> Builder:
         """Record which keys the program reads. Reading a value, ``in`` and
         ``get`` count; iterating keys, explaining and reporting do not, but
         ``items()`` and ``to_dict()`` read every key they return. The
@@ -423,8 +423,8 @@ class Builder:
         n.lib.cf_builder_track_reads(self._live())
         return self
 
-    def log(self, logger: Optional[logging.Logger] = None,
-            level: int = logging.INFO) -> "Builder":
+    def log(self, logger: logging.Logger | None = None,
+            level: int = logging.INFO) -> Builder:
         """Send what is not an error - an unknown key under
         ``UNKNOWN_WARN``, a deprecated key in use, a value fallen back
         from - to ``logger`` (the ``configforge`` logger by default),
@@ -435,7 +435,7 @@ class Builder:
         n.lib.cf_builder_log(self._live(), fn, None, level)
         return self
 
-    def create(self) -> "Config":
+    def create(self) -> Config:
         """Resolve everything, once. Raises :class:`Error`, which names the
         key and the place."""
         e = n.new_error()
@@ -445,7 +445,7 @@ class Builder:
             raise Error._from(e)
         return Config(raw, self._keep)
 
-    def _release(self) -> Tuple[int, _Keep]:
+    def _release(self) -> tuple[int, _Keep]:
         """The C builder, uncreated, and what it borrows: for cf_live."""
         raw, self._b = self._live(), None
         return raw, self._keep
@@ -460,7 +460,7 @@ class _Node:
 
     __slots__ = ("_cfg", "_prefix")
 
-    def __init__(self, cfg: "Config", prefix: str):
+    def __init__(self, cfg: Config, prefix: str):
         self._cfg = cfg
         self._prefix = prefix
 
@@ -474,7 +474,7 @@ class _Node:
         return iter(self._cfg.children(self._prefix))
 
     def __repr__(self) -> str:
-        return "<configforge table %r>" % self._prefix
+        return f"<configforge table {self._prefix!r}>"
 
 
 class Config(collections.abc.Mapping):
@@ -507,7 +507,7 @@ class Config(collections.abc.Mapping):
 
     # Reading -----------------------------------------------------------
 
-    def _read(self, key: str) -> Tuple[bool, Any]:
+    def _read(self, key: str) -> tuple[bool, Any]:
         k = key.encode("utf-8")
         t = n.lib.cf_type_of(self._c, k)
         if t == n.TYPE_BOOL:
@@ -541,7 +541,7 @@ class Config(collections.abc.Mapping):
             return v
         if self._is_table(key):
             return _Node(self, key)
-        raise AttributeError("no key or table %r in this configuration" % key)
+        raise AttributeError(f"no key or table {key!r} in this configuration")
 
     def __getattr__(self, name: str) -> Any:
         if name.startswith("_"):
@@ -560,7 +560,7 @@ class Config(collections.abc.Mapping):
     def __iter__(self) -> Iterator[str]:
         return iter(self.keys())
 
-    def get(self, key: str, default: Any = None, *, type: Optional[type] = None) -> Any:
+    def get(self, key: str, default: Any = None, *, type: type | None = None) -> Any:
         """The value of ``key``, as ``Mapping.get`` gives it; ``default``
         when it is absent or, with ``type``, of another type. An ``int``
         asked for as ``float`` is another type: nothing is converted behind
@@ -573,7 +573,7 @@ class Config(collections.abc.Mapping):
             return default
         return v
 
-    def _walk(self, prefix: Optional[str], children: bool) -> List[str]:
+    def _walk(self, prefix: str | None, children: bool) -> list[str]:
         it = n.cf_iter()
         p = n.encode(prefix)
         (n.lib.cf_iter_children if children else n.lib.cf_iter_keys)(
@@ -584,22 +584,22 @@ class Config(collections.abc.Mapping):
             out.append(ctypes.string_at(s, ln).decode("utf-8", "replace"))
         return out
 
-    def keys(self, prefix: Optional[str] = None) -> List[str]:  # type: ignore[override]
+    def keys(self, prefix: str | None = None) -> list[str]:  # type: ignore[override]
         """Every key under a prefix (a segment boundary: "server" is not
         "servername")."""
         return self._walk(prefix, False)
 
-    def children(self, prefix: Optional[str] = None) -> List[str]:
+    def children(self, prefix: str | None = None) -> list[str]:
         """Each immediate child of a prefix, once."""
         return self._walk(prefix, True)
 
-    def items(self, prefix: Optional[str] = None) -> List[Tuple[str, Scalar]]:  # type: ignore[override]
+    def items(self, prefix: str | None = None) -> list[tuple[str, Scalar]]:  # type: ignore[override]
         """(key, value) for every key under a prefix."""
         return [(k, self[k]) for k in self.keys(prefix)]
 
-    def to_dict(self, prefix: Optional[str] = None) -> Dict[str, Any]:
+    def to_dict(self, prefix: str | None = None) -> dict[str, Any]:
         """The keys under ``prefix`` as nested dictionaries."""
-        out: Dict[str, Any] = {}
+        out: dict[str, Any] = {}
         cut = len(prefix) + 1 if prefix else 0
         for k, v in self.items(prefix):
             node = out
@@ -622,7 +622,7 @@ class Config(collections.abc.Mapping):
     def inspect(self) -> str:
         return n.render(lambda buf, cap: n.lib.cf_inspect(self._c, buf, cap))
 
-    def changes_since(self, before: "Config") -> str:
+    def changes_since(self, before: Config) -> str:
         """What changed since ``before``, a line a key, secrets redacted."""
         return n.render(lambda buf, cap: n.lib.cf_diff_text(before._c, self._c, buf, cap))
 
@@ -668,7 +668,7 @@ class Config(collections.abc.Mapping):
 
     # Changing ------------------------------------------------------------
 
-    def derive(self, source: str, values: Mapping[str, Any]) -> "Config":
+    def derive(self, source: str, values: Mapping[str, Any]) -> Config:
         """A new snapshot with ``values`` applied as a source named
         ``source``; this one is unchanged. Raises :class:`Error` when the
         contract refuses a value."""
@@ -681,4 +681,4 @@ class Config(collections.abc.Mapping):
         return Config(raw, (self._keep, keep))
 
     def __repr__(self) -> str:
-        return "<configforge.Config %d keys, digest %016x>" % (len(self), self.digest)
+        return f"<configforge.Config {len(self)} keys, digest {self.digest:016x}>"

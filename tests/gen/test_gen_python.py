@@ -14,7 +14,7 @@ import sys
 sys.path.insert(0, sys.argv[1])
 GEN, SCHEMA, WORK = sys.argv[2], sys.argv[3], sys.argv[4]
 
-import configforge as cf  # noqa: E402
+import configforge as cf
 
 os.makedirs(WORK, exist_ok=True)
 OUT = os.path.join(WORK, "gen_contract.py")

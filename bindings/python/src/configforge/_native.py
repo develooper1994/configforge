@@ -27,7 +27,6 @@ from ctypes import (
     c_uint64,
     c_void_p,
 )
-from typing import Optional
 
 KEY_MAX = 256
 SOURCE_MAX = 64
@@ -141,7 +140,7 @@ def _load() -> ctypes.CDLL:
         try:
             return ctypes.CDLL(path)
         except OSError as e:
-            tried.append("%s (%s)" % (path, e))
+            tried.append(f"{path} ({e})")
     raise ImportError(
         "configforge: no shared libconfigforge; build it with -DBUILD_SHARED_LIBS=ON "
         "and set CONFIGFORGE_LIB. Tried: " + "; ".join(tried or ["nothing"])
@@ -156,7 +155,7 @@ def _declare(name: str, restype, *argtypes, optional: bool = False) -> None:
     if fn is None:
         if optional:
             return
-        raise ImportError("configforge: the library has no %s" % name)
+        raise ImportError(f"configforge: the library has no {name}")
     fn.restype = restype
     fn.argtypes = list(argtypes)
 
@@ -302,8 +301,8 @@ for _limit, _ours in (("key", KEY_MAX), ("source", SOURCE_MAX), ("message", MESS
     _theirs = lib.cf_build_limit(_limit.encode())
     if _theirs != _ours:
         raise ImportError(
-            "configforge: libconfigforge was built with CF_%s_MAX %d; this binding expects %d"
-            % (_limit.upper(), _theirs, _ours)
+            f"configforge: libconfigforge was built with CF_{_limit.upper()}_MAX {_theirs}; "
+            f"this binding expects {_ours}"
         )
 
 # ctypes lets go of the GIL for every call, so two Python threads do reach
@@ -323,14 +322,14 @@ def new_error() -> cf_error:
 
 def fingerprint_text(fp: int) -> str:
     """A fingerprint as reports and logs write it: cf_fingerprint_format."""
-    return "fnv1a:%016x" % fp
+    return f"fnv1a:{fp:016x}"
 
 
-def encode(s: Optional[str]) -> Optional[bytes]:
+def encode(s: str | None) -> bytes | None:
     return None if s is None else s.encode("utf-8")
 
 
-def decode(b: Optional[bytes]) -> str:
+def decode(b: bytes | None) -> str:
     return "" if not b else b.decode("utf-8", "replace")
 
 

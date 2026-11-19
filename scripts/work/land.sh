@@ -8,6 +8,7 @@
 #   sh scripts/work/land.sh <card id> "<subject after 'id: '>"
 # SKIP_SHIP=1 when the branch's last commit already passed ship.sh.
 set -e
+# shellcheck source=env.sh
 . "$(dirname "$0")/env.sh"
 id=${1:?card id}; subj=${2:?subject}; br=work/$id
 root=$(git rev-parse --show-toplevel); cd "$root"
@@ -36,7 +37,7 @@ $body
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 MSG
-[ "$(git rev-parse HEAD^{tree})" = "$(git rev-parse "$br^{tree}")" ] || { echo "tree differs: not pushed"; git reset -q --hard origin/main; exit 1; }
+[ "$(git rev-parse "HEAD^{tree}")" = "$(git rev-parse "$br^{tree}")" ] || { echo "tree differs: not pushed"; git reset -q --hard origin/main; exit 1; }
 h=$(git rev-parse --short HEAD)
 "$(command -v python3 || command -v python)" - "$id" "$h" <<'PY'
 import sys,re
@@ -57,6 +58,7 @@ git commit -q -m "Plan: $id done ($h)
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 git push -q origin main 2>&1 | grep -v '^remote' || true
 git worktree remove -f -f "$wt" 2>/dev/null || git worktree prune
+# shellcheck disable=SC2046 # the branch names are words
 git branch -D "$br" $(git branch --format='%(refname:short)' | grep '^worktree-agent-') >/dev/null 2>&1 || true
 git push -q origin --delete "$br" 2>/dev/null || true
 git log --oneline -2

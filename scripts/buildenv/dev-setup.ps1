@@ -23,7 +23,11 @@ $tools = @(
     @("ninja", "Ninja-build.Ninja", "fast builds"),
     @("git", "Git.Git", "SOURCE=index, release"),
     @("python", "Python.Python.3.12", "gates, amalgamation, Python binding"),
-    @("clang-format", "LLVM.LLVM", "gate.format")
+    @("clang-format", "LLVM.LLVM", "gate.format"),
+    @("shellcheck", "koalaman.shellcheck", "gate.shellcheck"),
+    @("ruff", "astral-sh.ruff", "gate.ruff"),
+    @("actionlint", "rhysd.actionlint", "gate.actionlint"),
+    @("codespell", "", "gate.codespell")
 )
 $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
 
@@ -65,7 +69,8 @@ if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
 }
 foreach ($t in $tools) {
     if (-not (Get-Command $t[0] -ErrorAction SilentlyContinue)) {
-        winget install --id $t[1] --exact --source winget
+        if ($t[1]) { winget install --id $t[1] --exact --source winget }
+        else { python -m pip install --user $t[0] }   # no winget package: PyPI's
     }
 }
 if (-not (Test-Msvc)) {

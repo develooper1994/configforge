@@ -16,7 +16,7 @@ import ctypes
 import dataclasses
 import enum
 import logging
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable
 
 from . import _native as n
 from ._config import Builder, Config, Error, log_sink
@@ -42,9 +42,9 @@ class Status:
     generation: int
     reloads: int  #: rebuilds tried, from poll, reload and wait
     failures: int  #: of those, refused or failed
-    last: Optional[Reload]  #: what the last one did; None when it failed
+    last: Reload | None  #: what the last one did; None when it failed
     pending: bool  #: a change waits for approve()
-    last_error: Optional[Error]  #: why the last failure failed
+    last_error: Error | None  #: why the last failure failed
     rollbacks: int = 0  #: swaps undone, by rollback() or the health function
     probation: bool = False  #: a swap is on probation now
 
@@ -54,8 +54,8 @@ class Live:
     belong to the one thread that drives them."""
 
     def __init__(self, mode: Mode, build: Callable[[], Builder],
-                 logger: Optional[logging.Logger] = None, level: int = logging.INFO,
-                 probation: int = 0, health: Optional[Callable[[Config], Any]] = None):
+                 logger: logging.Logger | None = None, level: int = logging.INFO,
+                 probation: int = 0, health: Callable[[Config], Any] | None = None):
         """``logger``, when given, receives each reload's result and the
         events of every configuration built - see :meth:`Builder.log`.
 
@@ -70,8 +70,8 @@ class Live:
                 "rebuild the library from sources containing this API"
             )
         self._build = build
-        self._kept: List[Any] = []  # what every builder handed over borrows
-        self._failure: Optional[BaseException] = None
+        self._kept: list[Any] = []  # what every builder handed over borrows
+        self._failure: BaseException | None = None
         # Held for the life of the Live: the C side keeps the pointers.
         self._fn = n.BUILD_FN(self._trampoline)
         self._log = log_sink(logger) if logger is not None else n.LOG_FN()
@@ -90,11 +90,11 @@ class Live:
         if not self._l:
             raise self._error(e)
 
-    def _trampoline(self, _user: Any) -> Optional[int]:
+    def _trampoline(self, _user: Any) -> int | None:
         try:
             b = self._build()
             raw, keep = b._release()
-        except BaseException as exc:  # never across the C frame
+        except BaseException as exc:  # noqa: BLE001 - never across the C frame
             self._failure = exc
             return None
         # The library copies every name and path, and reads the rest only
@@ -111,7 +111,7 @@ class Live:
             n.lib.cf_config_ref(running)
             ok = self._health_py(Config(running, self._kept))
             reason = "the health function said no"
-        except BaseException as exc:  # never across the C frame
+        except BaseException as exc:  # noqa: BLE001 - never across the C frame
             ok, reason = False, str(exc) or type(exc).__name__
         if ok:
             return 1
@@ -153,7 +153,7 @@ class Live:
         return self._result(r, e)
 
     @property
-    def pending(self) -> Optional[Config]:
+    def pending(self) -> Config | None:
         """The snapshot waiting for approval."""
         p = n.lib.cf_live_pending(self._l)
         if not p:
@@ -168,7 +168,7 @@ class Live:
     def reject(self) -> None:
         n.lib.cf_live_reject(self._l)
 
-    def rollback(self, reason: Optional[str] = None) -> Reload:
+    def rollback(self, reason: str | None = None) -> Reload:
         """Back to the snapshot before the swap on probation; raise
         :class:`Error` when none is."""
         e = n.new_error()
@@ -179,7 +179,7 @@ class Live:
         """End the probation, keeping the snapshot readers have."""
         return n.lib.cf_live_confirm(self._l) != 0
 
-    def commit(self, edit, note: Optional[str] = None) -> Reload:
+    def commit(self, edit, note: str | None = None) -> Reload:
         """Commit ``edit`` (an :class:`Edit`) and reload, in one step; raise
         :class:`Error`, with nothing written, when the commit is refused."""
         raw, edit._e = edit._live(), None
@@ -211,7 +211,7 @@ class Live:
         return n.lib.cf_live_generation(self._l)
 
     @property
-    def restarts(self) -> List[str]:
+    def restarts(self) -> list[str]:
         """The keys defined RESTART whose new value waits for a restart."""
         return n.render(lambda buf, cap: n.lib.cf_live_restarts(self._l, buf, cap)).split()
 
@@ -220,10 +220,10 @@ class Live:
             n.lib.cf_live_close(self._l)
             self._l = None
 
-    def __enter__(self) -> "Live":
+    def __enter__(self) -> Live:  # noqa: PYI034 - typing.Self is 3.11
         return self
 
-    def __exit__(self, *exc: Any) -> None:
+    def __exit__(self, *exc: object) -> None:
         self.close()
 
     def __del__(self) -> None:

@@ -1,0 +1,4 @@
+# runs-on labels the checker does not know yet: the image CI runs on.
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04

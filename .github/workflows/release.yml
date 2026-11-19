@@ -191,6 +191,6 @@ jobs:
             $0 ~ "^## " v "( |$)" { on = 1; next }
             on && /^## / { exit }
             on { print }' CHANGELOG.md > notes.md
-          (cd dist && sha256sum * > SHA256SUMS)
+          (cd dist && sha256sum ./* > SHA256SUMS)
           # Each release opens its discussion under Announcements.
           gh release create "$GITHUB_REF_NAME" dist/* --title "ConfigForge $v"             --notes-file notes.md --discussion-category Announcements

@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import dataclasses
 import typing
-from typing import Any, Optional, Tuple, Type, TypeVar
+from typing import Any, TypeVar
 
 from ._config import Builder, Config, flag
 
@@ -35,13 +35,13 @@ _META = "configforge"
 @dataclasses.dataclass(frozen=True)
 class _Spec:
     key: str
-    range: Optional[Tuple[float, float]]
+    range: tuple[float, float] | None
     flags: int
-    doc: Optional[str]
+    doc: str | None
 
 
-def setting(key: str, default: Any, *, range: Optional[Tuple[float, float]] = None,
-            flags: int = 0, doc: Optional[str] = None) -> Any:
+def setting(key: str, default: Any, *, range: tuple[float, float] | None = None,
+            flags: int = 0, doc: str | None = None) -> Any:
     """A dataclass field read from ``key``, with its default and, for a
     number, its permitted ``range`` (inclusive). A ``flag.SENSITIVE``
     field is left out of the dataclass's repr, so printing or logging a
@@ -50,22 +50,22 @@ def setting(key: str, default: Any, *, range: Optional[Tuple[float, float]] = No
                              metadata={_META: _Spec(key, range, flags, doc)})
 
 
-def section(cls: Type[Any]) -> Any:
+def section(cls: type[Any]) -> Any:
     """A field that is itself a settings dataclass."""
     return dataclasses.field(default_factory=cls, metadata={_META: None})
 
 
-def _fields(cls: Type[Any]):
+def _fields(cls: type[Any]):
     if not dataclasses.is_dataclass(cls):
-        raise TypeError("%r is not a dataclass" % (cls,))
+        raise TypeError(f"{cls!r} is not a dataclass")
     hints = typing.get_type_hints(cls)
     for f in dataclasses.fields(cls):
         if _META not in f.metadata:
-            raise TypeError("%s.%s: use setting() or section()" % (cls.__name__, f.name))
+            raise TypeError(f"{cls.__name__}.{f.name}: use setting() or section()")
         yield f, hints[f.name], f.metadata[_META]
 
 
-def define(builder: Builder, cls: Type[Any]) -> Builder:
+def define(builder: Builder, cls: type[Any]) -> Builder:
     """Every field of ``cls``, nested sections included, defined in
     ``builder``."""
     for f, tp, spec in _fields(cls):
@@ -83,12 +83,11 @@ def define(builder: Builder, cls: Type[Any]) -> Builder:
         elif tp is str:
             builder.define_text(spec.key, None if d is None else str(d), spec.flags)
         else:
-            raise TypeError("%s.%s: a setting is bool, int, float or str, not %r"
-                            % (cls.__name__, f.name, tp))
+            raise TypeError(f"{cls.__name__}.{f.name}: a setting is bool, int, float or str, not {tp!r}")
     return builder
 
 
-def read(cfg: Config, cls: Type[T]) -> T:
+def read(cfg: Config, cls: type[T]) -> T:
     """An instance of ``cls`` filled from ``cfg``; an unset field has its
     default."""
     values = {}

@@ -347,6 +347,23 @@ jobs:
           cmake -S . -B bfmt
           ctest --test-dir bfmt -R gate.format --output-on-failure
 
+  # The other languages' checkers: shell, Python, the workflows and the
+  # spelling, each as a gate test, at the versions setup.sh pins.
+  lint:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install the pinned checkers
+        run: |
+          python3 -m venv "$RUNNER_TEMP/lint"
+          "$RUNNER_TEMP/lint/bin/pip" install --quiet shellcheck-py==0.11.0.1 \
+            ruff==0.17.6 actionlint-py==1.7.12.25 codespell==2.4.3
+      - name: shellcheck, ruff, actionlint, codespell
+        run: |
+          export PATH="$RUNNER_TEMP/lint/bin:$PATH"
+          cmake -S . -B blint
+          ctest --test-dir blint -R 'gate\.(shellcheck|ruff|actionlint|codespell)' --output-on-failure
+
   # What the format gate wants, as a patch. The gate reports and does not
   # rewrite, and the one version it accepts is not on every machine: a
   # tree formatted with another fails here and nowhere else. This job

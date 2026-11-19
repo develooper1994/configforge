@@ -1,0 +1,4 @@
+# shellcheck reads the scripts a script sources: the work scripts source env.sh
+# by a path built from $0, which a source= directive names for it.
+external-sources=true
+source-path=SCRIPTDIR

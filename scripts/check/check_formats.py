@@ -82,8 +82,7 @@ def main(paths):
             for conv in CONVERSION.findall(literal):
                 if conv in SUPPORTED:
                     continue
-                print("VIOLATION: %s:%d: '%s' is not a cf_fmt conversion"
-                      % (path, line, conv))
+                print(f"VIOLATION: {path}:{line}: '{conv}' is not a cf_fmt conversion")
                 print("  it would be copied out literally, not formatted")
                 bad = 1
     if bad:

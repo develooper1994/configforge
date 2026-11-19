@@ -34,10 +34,29 @@ from ._native import lib as _lib
 from ._settings import define, read, section, setting
 
 __all__ = [
-    "Builder", "Config", "Edit", "Error", "Live", "Mode", "Reload", "Status", "edit",
-    "rank", "flag", "OPTIONAL", "TRUSTED_DIR", "ANY_WRITER", "UNKNOWN_IGNORE",
-    "UNKNOWN_WARN", "UNKNOWN_REJECT",
-    "setting", "section", "define", "read", "version", "has_feature",
+    "ANY_WRITER",
+    "OPTIONAL",
+    "TRUSTED_DIR",
+    "UNKNOWN_IGNORE",
+    "UNKNOWN_REJECT",
+    "UNKNOWN_WARN",
+    "Builder",
+    "Config",
+    "Edit",
+    "Error",
+    "Live",
+    "Mode",
+    "Reload",
+    "Status",
+    "define",
+    "edit",
+    "flag",
+    "has_feature",
+    "rank",
+    "read",
+    "section",
+    "setting",
+    "version",
 ]
 
 __version__ = "1.8.0"
@@ -45,7 +64,7 @@ __version__ = "1.8.0"
 
 def version() -> str:
     """The library's version, and the commit it was built from."""
-    return "%s (%s)" % (_lib.cf_version().decode(), _lib.cf_build_id().decode())
+    return f"{_lib.cf_version().decode()} ({_lib.cf_build_id().decode()})"
 
 
 def has_feature(name: str) -> bool:
