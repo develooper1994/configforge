@@ -226,10 +226,10 @@ code. The order, and why each comes where it does:
    `cf_formats[]` in `src/serialize/codec.c`). After W5-V1: a test of
    every ordered pair of formats (W5-V2, to write). After W5-G3:
    generators outside the tree (W5-G4, to write).
-2. **P-1, the measurement.** It changes only `bench/`. Its baseline,
+2. **P-1, the measurement** (1.8.0). It changes only `bench/`. Its baseline,
    instruction counts included, shows what each wave below costs or
    saves.
-3. **Architecture.** First a table of the helpers each reader writes
+3. **Architecture** (1.8.0). First a table of the helpers each reader writes
    again (UTF-8, escapes, numbers, whitespace, line and column), with
    line counts. Then those helpers as one internal layer behind an
    interface, with a scalar reference. Then the serialization sources'
@@ -239,7 +239,7 @@ code. The order, and why each comes where it does:
    feature matrix made from the build, and `docs/Limits.md`. This comes
    first because MISRA and the optimizations touch the same files:
    moving code after them is moving it twice.
-4. **Trust**, the 1.8.0 row's "outside trust checks": cppcheck on the
+4. **Trust** (1.9.0), the "outside trust checks": cppcheck on the
    library itself, the `misra` profile, the public headers with no
    violation, the deviation records, `gate.misra`; then the CERT
    matrix, the CWE table and the known-weaknesses table from other
@@ -247,16 +247,19 @@ code. The order, and why each comes where it does:
    Big-endian, 32-bit, Arm and bare-metal CI (each target with how it was
    shown: hardware, qemu, built only) run beside it, and are needed
    before any SIMD.
-5. **Ways to read**: the events made a public API (SAX), then in-situ
-   strings, then lazy reading. These are API decisions, so they come
-   before the optimizations that would bind them.
-6. **Optimization**: P-2, P-3, then the SWAR and SIMD backend (build
+5. **Ways to read** (2.0.0, with the stream reader): the events made a
+   public API (SAX), then in-situ strings, then lazy reading. These are
+   API decisions, so they come before the optimizations that would bind
+   them. Between trust and this, 1.10.0's newcomer items; after it, more
+   formats (2.1.0), files written back (2.2.0) and more languages
+   (2.3.0).
+6. **Optimization** (2.4.0): P-2, P-3, then the SWAR and SIMD backend (build
    time and run-time detection, manual choice first, then automatic),
    with the benchmark against the other libraries and its live page.
 
 Speed never at the cost of the `misra` and `minimal` profiles: the
 benchmark measures those profiles against the other libraries too.
 
-Which milestone each wave belongs to is the maintainer's to place
-(`docs/Maintaining.md`, "Versions"). The table there is not changed
-here, and the items it does not name wait for that.
+Each wave's milestone is in `docs/Maintaining.md`, "Versions", laid
+out again on 2026-11-19: versions go on after 2.0.0, which marks what
+breaks, not the end of the plan.

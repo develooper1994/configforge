@@ -65,32 +65,50 @@ carries no version of its own.
   `main` gathers under the one unreleased heading until then. A changed
   default, or an input refused that was accepted, goes in that minor's
   "### Changed" with its D-number.
-* **Major**: 2.0.0, once, when everything in the plan is done. What
-  breaks the 1.x promise waits for it and is done together.
+* **Major**: made when the promise must break. What breaks it waits
+  for the next major and is done there together, so a major is rare
+  and holds every break at once. 2.0.0 is the first, and the numbering
+  goes on after it (2.1.0, 2.2.0, ...): a major marks a break, not the
+  end of the plan.
 * **Experimental** (`CF_EXPERIMENTAL`): a function may come in outside
   the promise for its first minor; the card that opens the next minor
   makes it `CF_API` or removes it - `gate.abi` fails until one is done.
 * A new item of work joins the milestone it belongs to; it does not
-  make a new version number. Only the maintainer adds or moves a
-  milestone.
+  make a new version number. An item no row fits goes under "Later",
+  below the table, until the maintainer gives it a row. Only the
+  maintainer adds or moves a milestone.
+* **Planned ahead, not to the end.** The table holds what can be
+  planned now; it is not the whole future. Rows are added at the end
+  as work is asked for, and the last row is never "everything else".
 * The version is opened once per milestone - the first card that needs
   a CHANGELOG entry runs `version.cmake`, as 1.6.0 was opened on
   2026-11-16 - and is not touched again until the release.
 
-**The milestones** (decided 2026-11-16). Each item of the Roadmap is in
-one row.
+**The milestones** (decided 2026-11-16, laid out again 2026-11-19).
+Each item of the Roadmap is in one row.
 
 | Version | Theme | Holds | Released when |
 | ------- | ----- | ----- | ------------- |
 | 1.6.0 | hardened, and native | every hardening card: H-2 the contract `doctor gen` writes, checked by the compiler; H-5 a directory others can write to (done); H-6 `--redact-all`; H-7 an undefined key named like a secret; H-8a a digest that cannot be tested without a key; H-8b Doctor tells digests of different keys apart. Wave 3's rest: the native sources - W3-F2a the platform capability for macOS's user defaults, W3-F2b `cf_builder_preferences`, W3-F2c reading CFPreferences on macOS, W3-F2d user defaults in C++, Rust, Python and the Guide, W3-F3 `cf_builder_credentials` in every language | every card above is done, CI green, the macOS job included |
 | 1.7.0 | tools and a smaller promise | Doctor kept to reports, the `configforge` front door, `configforge gen`, the serialization library's own tool; wave 5: W5-V1 `convert`, W5-S1 `schema --from`, W5-G1, W5-G2 and W5-G3 code generation in C++, Rust and Python; the smaller 1.x promise (internals fenced, an experimental tier) with the serialization layer as a library target of its own, before the first new format; one digest a purpose, SHA-256 for a fingerprint that decides, a digest the program gives; publishing to the registries by trusted publishing; `doctor graph`, if asked for | each item is done and a consumer test builds against the serialization library alone and against ConfigForge alone |
-| 1.8.0 | formats and platforms | "More formats, and what a format is": MessagePack first, then BSON, UBJSON, Smile, Ion, Bencode, property lists, HCL, HOCON, KDL, Avro, Protobuf, Thrift, FlatBuffers, Cap'n Proto, TLV as embedded devices write it, the benchmark, a stream; the comparison with other libraries; the platform's file locations with profiles; misreads noticed; help and completions from the contract; durations and sizes; value migrations; big-endian, 32-bit and bare-metal CI; outside trust checks; `.properties` against Java's own reader; the cumulative C99 and C23 layers | each format has its reader, writer, vectors and fuzz target, and the three CI jobs are green |
-| 1.9.0 | files written back, and more languages | wave 6: every operation on a file's data written back in its format; a file written whole or not at all, with `examples/c/settings.c` moved onto it; an override file the library owns; a reload that names the keys it changed. Wave 7: Go and .NET. A report asked of a running program; the OpenTelemetry and OPA recipes; a "Start here" page a language; distribution and being found, the WebAssembly playground first; one program not written for the library moved onto it; the language server | each item is done; Go and .NET each have tests, an example and a CI job |
-| 2.0.0 | everything, and what breaks once | wave 8: the stream reader, the dynamic sizing modes, the image header's layout; proofs with CBMC; and whatever of the rows above is still open | 2.0.0 is not tagged while any item on the Roadmap is short of done |
+| 1.8.0 | measured, and laid out | P-1, the benchmark of large documents, and the comparison with other libraries, its page kept by CI; the helpers each reader writes again (UTF-8, escapes, numbers, whitespace, line and column) as one internal layer behind an interface, with a scalar reference; the serialization sources laid out by what they share; build profiles by name (`CF_PROFILE`); the C version raised per file, with a warning, and the cumulative C99 and C23 layers; the feature matrix made from the build; `docs/Limits.md`; the formats' table with what each can do; one diagnostic model, its breaking part kept for 2.0.0; W5-V2 every pair of formats; W5-G4 generators outside the tree; T-5 Doctor's aliases removed | each item is done, and the benchmark's numbers before and after the layout are on its page |
+| 1.9.0 | trusted, on every target | outside trust checks: cppcheck on the library, the `misra` profile, the public headers with no violation, the deviation records and `gate.misra`; the CERT matrix, the CWE table and the known weaknesses of other libraries' CVEs as tests; mutation testing; the release built twice and compared; differential fuzzing against other readers; OSS-Fuzz; proofs with CBMC; the safety manual and the evidence pack with each release. Big-endian, 32-bit, Arm and bare-metal CI, each target with how it was shown; the embedded presets and the `minimal` build held to numbers | `gate.misra` and the three CI jobs are green and required, and the release carries its evidence pack |
+| 1.10.0 | what a newcomer misses | the platform's file locations with profiles; misreads noticed; help and completions from the contract; durations and sizes; value migrations; `.properties` against Java's own reader | each item is done |
+| 2.0.0 | ways to read, and what breaks once | wave 8: the stream reader, the dynamic sizing modes, the image header's layout. The ways to read designed with the stream: the events as a public API (SAX), in-situ strings, lazy reading. The diagnostic model's breaking part, and whatever else 1.x held back | each break is done and listed under the release's "### Changed" with its D-number |
+| 2.1.0 | more formats | "More formats, and what a format is": MessagePack first, then BSON, UBJSON, Smile, Ion, Bencode, property lists, HCL, HOCON, KDL, Avro, Protobuf, Thrift, FlatBuffers, Cap'n Proto, TLV as embedded devices write it, a stream; each on the shared layer and under the `misra` rules from its first line | each format has its reader, writer, vectors and fuzz target, and is on the benchmark's page |
+| 2.2.0 | files written back | wave 6: every operation on a file's data written back in its format; a file written whole or not at all, with `examples/c/settings.c` moved onto it; an override file the library owns; a reload that names the keys it changed | each item is done |
+| 2.3.0 | more languages, and being found | wave 7: Go and .NET. A report asked of a running program; the OpenTelemetry and OPA recipes; a "Start here" page a language; distribution and being found, the WebAssembly playground first; one program not written for the library moved onto it; the language server | each item is done; Go and .NET each have tests, an example and a CI job |
+| 2.4.0 | speed | P-2 and P-3, word at a time; the SWAR and SIMD backend, chosen at build time and at run time, by hand first and then automatically; build options (LTO, PGO) measured; threads for documents that split. Last, so it measures the code as it will stay (the maintainer, 2026-11-17) | each change kept is on the benchmark's page with its numbers, and the `misra` and `minimal` profiles are no slower |
+
+**Later**, no row yet: the SIMD backend as a library of its own, if a
+second project asks for it; the GPU, if a user brings the load
+(`docs/plan/P-word-at-a-time.md`).
 
 1.0.0 to 1.5.0 came in two weeks, a feature a version. From 1.6.0 a
-version is a milestone, so that 2.0.0 is the end of the plan and not a
-number reached on the way.
+version is a milestone. Until 2026-11-19, 2.0.0 was to be the end of
+the plan; since then it is the version that breaks, and the numbering
+goes on after it, so the table plans as far ahead as is useful and no
+further (the maintainer, 2026-11-19).
 
 ## Lessons made into checks
 

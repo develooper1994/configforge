@@ -138,9 +138,9 @@ short keeps its branch, unmerged, and says so here.
    rewritten for it.
 6. ⬜ **Wave 6**: every operation on a file's data through its codec -
    read, add, change, remove, written back in its own format, keeping
-   the layout where the format can. **1.9.0.**
+   the layout where the format can. **2.2.0.**
 7. ⬜ **Wave 7**: Go (cgo) and .NET (P/Invoke) bindings, each with its
-   tests, an example and a CI job. **1.9.0.**
+   tests, an example and a CI job. **2.3.0.**
 8. ⬜ **Wave 8, 2.0**: the stream reader and the dynamic sizing modes
    (D-61), and what else waits for a major version (the image header's
    layout), together, once. **2.0.0.**
@@ -944,7 +944,7 @@ first user meets. In the order proposed:
   decided once, and the standards left out are named with why
   (`docs/Compliance.md`). Nothing is called "certified" until a
   qualified tool has run. Done when the gate is in CI and the
-  compliance report is attached to a release. Belongs with 1.8.0's
+  compliance report is attached to a release. Belongs with 1.9.0's
   "outside trust checks". Found on 2026-11-16: the library's own
   sources have never run through cppcheck (the `configforge` target is
   made before `configforge_setup_cppcheck()`; only tests and tools are
