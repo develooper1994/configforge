@@ -204,7 +204,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 34 | W5-S1 `configforge gen schema --from` | medium | T-2 | done (0a8de0f) |
 | 35 | W5-G1 `configforge gen --lang cpp` | large | W5-S1 | done (071ed40) |
 | 36 | W5-G2 `configforge gen --lang rust` | large | W5-G1 | done (54f39fb) |
-| 37 | W5-G3 `configforge gen --lang python` | medium | W5-G2 | open |
+| 37 | W5-G3 `configforge gen --lang python` | medium | W5-G2 | done (950a099) |
 | 38 | T-5 Doctor's aliases, and the name `doctor`, removed | small | 1.7.0 released, W5-G3 | waits: 1.7.0 released (it belongs to 1.8.0) |
 | 39 | P-1 The benchmark measures large documents, and says where time goes | medium | 1.7.0 released | waits: 1.7.0 released |
 | 40 | A-1 One directory per component: the files moved, nothing else changed | large | 1.7.0 released | waits: 1.7.0 released |
