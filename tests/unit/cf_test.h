@@ -40,8 +40,8 @@ static void check_text(const char* got, const char* want, const char* what) {
     ++g_run;
     if (got == NULL || strcmp(got, want) != 0) {
         ++g_fail;
-        printf("FAIL: %s  got=\"%s\" want=\"%s\"\n", what,
-               got != NULL ? got : "(null)", want);
+        printf("FAIL: %s  got=\"%s\" want=\"%s\"\n", what, got != NULL ? got : "(null)",
+               want);
     }
 }
 

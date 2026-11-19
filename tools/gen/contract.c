@@ -1277,8 +1277,11 @@ static void rs_shape(rs_key* keys, size_t n, const cf_defset* ds,
         gen_ident(k->field, k->def->key, strlen(k->def->key), lang);
         for (j = 0; k->field[j] != '\0'; ++j) {
             char ch = k->field[j];
-            k->constant[j] =
-                (ch >= 'a' && ch <= 'z') ? "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[ch - 'a'] : ch;
+            /* Not a conditional expression: its char operands become int. */
+            k->constant[j] = ch;
+            if (ch >= 'a' && ch <= 'z') {
+                k->constant[j] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[ch - 'a'];
+            }
         }
         k->constant[j] = '\0';
         if (gen_reserved(lang, k->constant)) {
