@@ -145,8 +145,10 @@ In the order to be done. A card is `open`, `done` (with its commit), or
 the 1.6.0 milestone; the S-*, T-* and W5-* cards to 1.7.0, but T-5 to
 1.8.0 (`docs/Maintaining.md`, "Versions"; the S and T cards are in
 `docs/plan/T-tools-and-serialization.md`). The P-* cards, word-at-a-time
-scanning before SIMD (`docs/plan/P-word-at-a-time.md`), are last: they
-wait until every other card is done.
+scanning before SIMD (`docs/plan/P-word-at-a-time.md`), are last,
+except P-1: it only measures, and comes once 1.7.0 is released, so the
+waves after it are measured from the start; P-2 and P-3 wait for those
+waves ("After 1.7.0: the order of the waves", below).
 
 | Order | Card | Size | Needs | Status |
 | ----: | ---- | ----- | ----- | ------ |
@@ -176,7 +178,7 @@ wait until every other card is done.
 | 36 | W5-G2 `configforge gen --lang rust` | large | W5-G1 | waits: W5-G1 |
 | 37 | W5-G3 `configforge gen --lang python` | medium | W5-G2 | waits: W5-G2 |
 | 38 | T-5 Doctor's aliases, and the name `doctor`, removed | small | 1.7.0 released, W5-G3 | waits: 1.7.0 released (it belongs to 1.8.0) |
-| 39 | P-1 The benchmark measures large documents, and says where time goes | medium | every card above | waits: every card above |
+| 39 | P-1 The benchmark measures large documents, and says where time goes | medium | 1.7.0 released | waits: 1.7.0 released |
 | 40 | P-2 Word-at-a-time scans in C89, with the byte loop as reference | medium | P-1 | waits: P-1 |
 | 41 | P-3 The scans P-1 found, a word at a time, kept only where they win | medium | P-2 | waits: P-2 |
 
@@ -209,3 +211,52 @@ language.
 
 Each group's version is in the table in `docs/Maintaining.md`,
 "Versions".
+
+## After 1.7.0: the order of the waves
+
+Decided by the maintainer on 2026-11-19, from the Roadmap's
+"Critical-system standards, and large files" and "Suggestions of 2026-11-17".
+None of these is a card yet. Only the next wave's cards are written,
+when the wave before it ends, so the plan does not run ahead of the
+code. The order, and why each comes where it does:
+
+1. **Now: 1.7.0's cards**, as the index says. Two decisions are
+   already in them: W5-G1 makes `gen`'s languages a table (its
+   "decided"), and the codecs already are one (`cf_codecs[]` and
+   `cf_formats[]` in `src/serialize/codec.c`). After W5-V1: a test of
+   every ordered pair of formats (W5-V2, to write). After W5-G3:
+   generators outside the tree (W5-G4, to write).
+2. **P-1, the measurement.** It changes only `bench/`. Its baseline,
+   instruction counts included, shows what each wave below costs or
+   saves.
+3. **Architecture.** First a table of the helpers each reader writes
+   again (UTF-8, escapes, numbers, whitespace, line and column), with
+   line counts. Then those helpers as one internal layer behind an
+   interface, with a scalar reference. Then the serialization sources'
+   layout. Then build profiles by name (`CF_PROFILE`; not the
+   platform's file locations "with profiles" above, which are a
+   program's), the C version raised per file through one helper, the
+   feature matrix made from the build, and `docs/Limits.md`. This comes
+   first because MISRA and the optimizations touch the same files:
+   moving code after them is moving it twice.
+4. **Trust**, the 1.8.0 row's "outside trust checks": cppcheck on the
+   library itself, the `misra` profile, the public headers with no
+   violation, the deviation records, `gate.misra`; then the CERT
+   matrix, the CWE table and the known-weaknesses table from other
+   libraries' CVEs, mutation testing, and the release built twice.
+   Big-endian, 32-bit, Arm and bare-metal CI (each target with how it was
+   shown: hardware, qemu, built only) run beside it, and are needed
+   before any SIMD.
+5. **Ways to read**: the events made a public API (SAX), then in-situ
+   strings, then lazy reading. These are API decisions, so they come
+   before the optimizations that would bind them.
+6. **Optimization**: P-2, P-3, then the SWAR and SIMD backend (build
+   time and run-time detection, manual choice first, then automatic),
+   with the benchmark against the other libraries and its live page.
+
+Speed never at the cost of the `misra` and `minimal` profiles: the
+benchmark measures those profiles against the other libraries too.
+
+Which milestone each wave belongs to is the maintainer's to place
+(`docs/Maintaining.md`, "Versions"). The table there is not changed
+here, and the items it does not name wait for that.

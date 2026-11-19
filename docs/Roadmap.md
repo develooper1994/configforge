@@ -1105,7 +1105,8 @@ first user meets. In the order proposed:
   named `configforge-gen-<lang>` on the PATH, handed the model as JSON
   on its input, the way `git` and `cargo` find their subcommands. A
   `--lang` with no built-in entry and no program fails with the list of
-  what is there; `--lang` absent keeps today's C.
+  what is there; `--lang` absent keeps today's C. Placed (2026-11-19):
+  the table is W5-G1's, the outside generators W5-G4 after W5-G3.
 * ⬜ **A live optimization and benchmark page.** `docs/Performance.md`
   (P-1 opens it) becomes a page CI keeps current: every push to main
   runs the benchmark, appends its numbers to a history kept on a branch
@@ -1248,14 +1249,15 @@ first user meets. In the order proposed:
   list entry whose reason is empty, fails. A profile that must stay C89
   (`minimal`, `misra`) refuses any part on the list, by name, at
   configure time. `docs/Limits.md` shows the list.
-* ⬜ **Formats registered, not wired.** As `gen`'s languages become a
-  table, so do the formats: each reader and writer registers its name,
-  extensions, detection test and capabilities (the modes it supports,
-  what it cannot hold) in one table the codec API, `detect.c`, Doctor
-  and the conversion tests all read. Adding a format is then one file
-  and one table entry, a profile leaves one out by removing its entry,
-  and the pair-conversion table and `docs/Limits.md` are generated from
-  the capabilities rather than kept by hand.
+* ⬜ **Formats registered, with what each can do.** The codecs already
+  are a table (`cf_codecs[]` and `cf_formats[]` in
+  `src/serialize/codec.c`, read through `cf_codec_by_name` and
+  `cf_codec_at`). What is left is the capabilities beside each entry:
+  the ways it can be read (DOM, events, in-situ, lazy) and what it
+  cannot hold. `detect.c`, Doctor, `codec convert` and the pair test
+  (W5-V2) then read one table, and the pair table and
+  `docs/Limits.md` are generated from it rather than kept by hand. To
+  check first how much of this `cf_format_info` holds today.
 * ⬜ **One diagnostic model across formats.** Each reader reports a
   refusal its own way today, as far as the formats differ; a single
   diagnostic record (code, severity, byte offset, line and column, the
@@ -1270,6 +1272,29 @@ first user meets. In the order proposed:
   files and CI's results, and a gate fails when the committed tables
   differ from what the script makes, so the documentation of what can
   be turned off never falls behind the options themselves.
+* ⬜ **Differential fuzzing against the other readers.** The same input
+  goes to ConfigForge and to another library's reader for the format
+  (yyjson or RapidJSON for JSON, libyaml for YAML, toml++ for TOML,
+  expat for XML, tinycbor for CBOR). Where one accepts and the other
+  refuses, or both accept with different values, there is either a bug
+  or a confusion an attacker can use (two programs reading one file
+  differently). Each such case found is a test here, with the decision
+  of which reading is right and why. Built on the fuzz targets that
+  exist, in a CI job of its own, since it links the other libraries.
+* ⬜ **OSS-Fuzz.** ClusterFuzzLite runs on every change (`cflite`);
+  OSS-Fuzz would fuzz the project continuously on Google's machines,
+  report crashes privately, and give a public, checkable "fuzzed by
+  OSS-Fuzz", a claim the README can make. An application to the
+  project, with the existing fuzz targets and their build script.
+* ⬜ **An evidence pack with each release.** One archive attached to a
+  release: the MISRA compliance summary and deviation records, the CERT,
+  CWE and known-weakness tables, statement, branch and MC/DC coverage,
+  the mutation score, fuzzing hours and corpora sizes, the benchmark
+  against the other libraries, the safety manual, and the provenance
+  and reproducible-build results. Everything an integrator's safety
+  case asks the library for, from one place and for one commit.
+  Built by the release workflow from what the gates already produce
+  (`docs/Compliance.md`).
 
 ### Considered, and decided against for now: a GitHub wiki
 

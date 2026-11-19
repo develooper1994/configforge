@@ -29,6 +29,12 @@ Order: W5-V1, W5-S1, W5-G1, W5-G2, W5-G3, after T-3. W5-V1 is
 Linux and Windows; W5-G2's Rust part runs where cargo is (CI's cargo
 job, and `CF_RUST=ON` locally).
 
+Two cards to write after these (`docs/Plan.md`, "After 1.7.0"): W5-V2,
+a test that takes every document of the conformance suites through
+every ordered pair of formats and checks what each pair loses against a
+table; and W5-G4, generators outside the tree, found as
+`configforge-gen-<lang>` on the PATH.
+
 Rewritten 2026-11-16 for the tools split: each card says in its notes
 what moved. Where the programs, files and tests are named below, they
 are T-1, T-2 and T-3's (`configforge-gen` in `tools/gen/`, tested in
@@ -470,14 +476,25 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
 * **needs**: W5-S1
 * **size**: large
 * **decided**:
-  * Options: `--lang c|cpp|rust|python`, default `c`; anything else is the
-    usage, exit 2. `--name` names what the language calls the generated
+  * Options: `--lang c|cpp|rust|python`, default `c`; a name the language
+    table (next) does not hold is refused as it says. `--name` names what the language calls the generated
     thing: C the function (default `cf_contract`), C++ the namespace
     (default `cf_contract`), Rust and Python the top struct or dataclass
     (default `Settings`, W5-G2 and W5-G3). Each is checked as an identifier
     of its language (`c_identifier` for C and C++; W5-G2 and W5-G3 say
     theirs). Usage, in `tools/gen/gen.c`'s usage:
     `"  configforge gen --schema <schema> [--lang c|cpp|rust|python] [--name <name>] [--out <file>]\n"`.
+  * **The languages are a table** (the maintainer, 2026-11-19): in
+    `tools/gen/gen.c`, `static const gen_lang gen_langs[]`, each entry
+    `{ name, file extension, identifier check, reserved words, writer }`,
+    C the first, made in step 2. `--lang` finds its entry there and
+    nothing else names a language: no `strcmp(lang, "cpp")` outside the
+    table. A name not in it: `gen: no language '%s'; there are: c, cpp`
+    (the table's names in its order), exit 2, in place of the usage.
+    W5-G2 and W5-G3 each add one entry and change nothing around it.
+    A generator outside the tree (`configforge-gen-<lang>` on the PATH,
+    handed the model as JSON, as git and cargo find their subcommands)
+    is W5-G4, after W5-G3, a card not yet written.
   * **C is unchanged, byte for byte**: `gen_write` is split, without changing
     a byte it writes, into `gen_c_body(FILE* out, const cf_defset* ds)` -
     the declarations, `cf_def d`, `ok`, every definition, the opens and
@@ -623,7 +640,8 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
   1. Before any change: `build/default/tools/bin/configforge-gen --schema tests/doctor/contract.schema.json --name gen_contract --out before.c`
      (the path to the built `configforge-gen` is the preset's; on Windows the
      `Debug` directory under it).
-  2. The split into `gen_c_body`, and `--lang` with only `c`. Generate
+  2. The split into `gen_c_body`, and the language table with only `c`,
+     `--lang` read through it. Generate
      again into `after.c`; `cmake -E compare_files before.c after.c` exits
      0. Remove both. `ctest --preset default -R "gen\\.c$"` passes.
   3. The test and its build lines, and a `--lang cpp` that writes only the
