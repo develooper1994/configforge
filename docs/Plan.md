@@ -180,7 +180,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 38 | T-5 Doctor's aliases, and the name `doctor`, removed | small | 1.7.0 released, W5-G3 | waits: 1.7.0 released (it belongs to 1.8.0) |
 | 39 | P-1 The benchmark measures large documents, and says where time goes | medium | 1.7.0 released | waits: 1.7.0 released |
 | 40 | A-1 One directory per component: the files moved, nothing else changed | large | 1.7.0 released | waits: 1.7.0 released |
-| 41 | A-2 The vector library, its interface and its scalar reference | medium | A-1, its name | waits: A-1; TO DECIDE: the name |
+| 41 | A-2 The vector library, its interface and its scalar reference | medium | A-1 | waits: A-1 |
 | 42 | A-3 One UTF-8, one hex digit, one table hash | medium | A-2 | waits: A-2 |
 | 43 | A-4 Invalid UTF-8 refused alike, and the escapes in families | medium | A-3 | waits: A-3; card to complete; TO DECIDE: invalid UTF-8 |
 | 44 | A-5 Whitespace, comments, newlines and the place of a refusal | medium | A-4 | waits: A-4; card to complete |

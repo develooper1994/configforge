@@ -87,11 +87,10 @@ lib/cxx/         configforge.hpp and the compile-time layer (D-104)
 
 The word-at-a-time and SIMD work (docs/plan/P-word-at-a-time.md) is a
 library of its own, usable by any C program, and ConfigForge is one of
-its users. Its working name is **lanes** (prefix `lanes_`, directory
-`lib/lanes/`); **TO DECIDE** by the maintainer before its first card,
-the name and prefix (recommended: `lanes`, short and saying what a
-vector is; alternatives `wordlane`, `swarmi`). A rename before its first
-release is one commit.
+its users. Its name is **lanes**: prefix `lanes_`, directory
+`lib/lanes/`, headers under `include/lanes/` (the maintainer,
+2026-11-19; `wordlane` and `swarmi` were the other names weighed).
+Short, and it says what a vector is.
 
 Checked on 2026-11-19 (docs/Roadmap.md, the SWAR and SIMD item): no
 library found combines a C89 SWAR tier, a scalar reference per
@@ -536,8 +535,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
 * **why**: D-101. The interface and the reference come first, so that
   A-3 can call it and the SWAR and SIMD backends (2.4.0) only add
   tables.
-* **needs**: A-1; the maintainer's answer to the name (D-101, **TO
-  DECIDE**). Below, `lanes` stands for the name chosen.
+* **needs**: A-1
 * **size**: medium
 * **decided**:
   * Files: `lib/lanes/CMakeLists.txt`, `lib/lanes/include/lanes/lanes.h`,
@@ -632,7 +630,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
 * **stop if**: detection cannot be written for a compiler of the matrix
   without a feature C89 lacks: that compiler reports only the scalar and
   SWAR bits, and the notes say so.
-* **docs**: add **D-101** from the design above, with the name chosen.
+* **docs**: add **D-101** from the design above.
   CHANGELOG `### Added`: "`lanes`, a vector library of its own: span
   operations with a scalar reference and the processor's detection;
   ConfigForge does not use it yet (D-101)."
