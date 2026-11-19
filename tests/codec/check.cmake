@@ -22,8 +22,7 @@ function(check_case expect_rc out_re err_re)
     RESULT_VARIABLE rc
     OUTPUT_VARIABLE out
     ERROR_VARIABLE err)
-  set(shown
-      "codec check ${ARGN}\nexit ${rc}\nstdout:\n${out}\nstderr:\n${err}")
+  set(shown "codec check ${ARGN}\nexit ${rc}\nstdout:\n${out}\nstderr:\n${err}")
   if(NOT rc EQUAL expect_rc)
     message(FATAL_ERROR "expected exit ${expect_rc}\n${shown}")
   endif()
@@ -36,21 +35,54 @@ function(check_case expect_rc out_re err_re)
 endfunction()
 
 # Two files that are well formed: one line each, and the exit is 0.
-check_case(0 "^good.json: ok\ngood.toml: ok\n$" - good.json good.toml)
+check_case(
+  0
+  "^good.json: ok\ngood.toml: ok\n$"
+  -
+  good.json
+  good.toml)
 
 # One that is not: its name and the reader's message, and exit 1.
 check_case(1 "bad.json: [^\n]+" - bad.json)
-check_case(1 "good.json: ok\nbad.json: " - good.json bad.json)
+check_case(
+  1
+  "good.json: ok\nbad.json: "
+  -
+  good.json
+  bad.json)
 
 # The format named: the same bytes are not TOML.
-check_case(1 "bad.json: " - bad.json --as toml)
-check_case(0 "good.json: ok" - good.json --as json)
+check_case(
+  1
+  "bad.json: "
+  -
+  bad.json
+  --as
+  toml)
+check_case(
+  0
+  "good.json: ok"
+  -
+  good.json
+  --as
+  json)
 
 # A format nothing calls so is unusable input.
-check_case(2 - "no format called 'nosuch'" x --as nosuch)
+check_case(
+  2
+  -
+  "no format called 'nosuch'"
+  x
+  --as
+  nosuch)
 
 # A file that is not there is unusable input, and the worst of the run.
-check_case(2 - "cannot read missing.json" bad.json missing.json)
+check_case(
+  2
+  -
+  "cannot read missing.json"
+  bad.json
+  missing.json)
 
 # A JSON string of 300 bytes: the sink lends the reader room for it.
 check_case(0 "^long.json: ok\n$" - long.json)

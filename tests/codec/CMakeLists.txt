@@ -28,7 +28,6 @@ set_tests_properties(
                            "^ConfigForge codec [0-9]+\\.[0-9]+\\.[0-9]+")
 
 # Anything else is the usage, on stderr, exit 2.
-add_test(
-  NAME codec.usage
-  COMMAND ${CMAKE_COMMAND} -DCODEC=$<TARGET_FILE:configforge_codec> -P
-          ${CMAKE_CURRENT_SOURCE_DIR}/usage.cmake)
+add_test(NAME codec.usage
+         COMMAND ${CMAKE_COMMAND} -DCODEC=$<TARGET_FILE:configforge_codec> -P
+                 ${CMAKE_CURRENT_SOURCE_DIR}/usage.cmake)

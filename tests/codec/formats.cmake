@@ -57,8 +57,8 @@ string(SUBSTRING "${page}" ${start} ${len} held)
 
 set(regen
     "Regenerate it with a build that has every format (-DCF_WITH_XML=ON): "
-    "configforge codec formats --format markdown, and put the output between the "
-    "markers.")
+    "configforge codec formats --format markdown, and put the output between "
+    "the markers.")
 
 # The page holds every format. A build that left some out prints fewer
 # rows, each of which the page must have exactly; a build with all of

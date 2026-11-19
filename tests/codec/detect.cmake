@@ -46,4 +46,9 @@ detect_case(2 - "cannot read missing.json" missing.json)
 # reading one text differently is cf_codec_detect's own test's to show;
 # the message that passes it on is read in the code.)
 detect_case(2 - "codec: detect <file>")
-detect_case(2 - "codec: detect <file>" a.json noext)
+detect_case(
+  2
+  -
+  "codec: detect <file>"
+  a.json
+  noext)

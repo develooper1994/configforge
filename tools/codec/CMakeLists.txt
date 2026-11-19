@@ -24,8 +24,7 @@ if(WIN32 AND BUILD_SHARED_LIBS)
     TARGET configforge_codec
     POST_BUILD
     COMMAND
-      ${CMAKE_COMMAND} -E copy_if_different
-      $<TARGET_FILE:configforge_serialize>
+      ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:configforge_serialize>
       $<TARGET_FILE_DIR:configforge_codec>
     VERBATIM)
 endif()
@@ -42,5 +41,5 @@ endif()
 # Everything clang-tidy checks, less cert-err33-c, as Doctor's.
 if(CMAKE_C_CLANG_TIDY)
   set(codec_tidy ${CMAKE_C_CLANG_TIDY} --checks=-cert-err33-c)
-  set_target_properties(configforge_codec PROPERTIES C_CLANG_TIDY "${codec_tidy}")
+  set_property(TARGET configforge_codec PROPERTY C_CLANG_TIDY "${codec_tidy}")
 endif()
