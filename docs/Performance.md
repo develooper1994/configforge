@@ -144,6 +144,24 @@ callgrind_annotate --inclusive=no cg-json.out | head -30
 | | `cbor_item`, `cbor_head_read` | 7, 5 % |
 | INI | `ini_decode`, `ini_trim` (ini.c) | 68, 9 % |
 
+The same, by time, on a Linux virtual machine (VMware, Ubuntu 26.04,
+4 cores, GCC 15.2 `-O2 -g -fno-omit-frame-pointer`) with `perf record -e
+cpu-clock -F 4000 -g`, self time:
+
+| Format | Top functions by time | Share |
+| ------ | --------------------- | ----: |
+| JSON | `js_string`, `js_value`, `js_space` | 76, 5, 4 % |
+| TOML | `toml_string`, `toml_value`, `toml_find` | 71, 4, 3 % |
+| YAML | `yp_quoted`, `yp_is_key`, `yp_plain_line` | 43, 19, 7 % |
+| CBOR | `cf_text_is_utf8`, `cf_vformat`, `cf_u64_to_text` | 32, 24, 10 % |
+| INI | `ini_decode`, `ini_trim` | 64, 7 % |
+
+Time agrees with the instruction counts on every format but one: in CBOR
+the UTF-8 check is first by time (32 against 25 %), a sign that it waits
+on memory. A virtual machine gives perf no hardware counters unless the
+host lets it (VMware: "Virtualize CPU performance counters"); `cpu-clock`
+sampling works without them, cycles and cache events do not.
+
 What it answers for P-3: in JSON and TOML four fifths of the work is the
 string scan - the search for a quote, a backslash and a control byte -
 and in YAML the quoted scan and the key test are three fifths: those are
