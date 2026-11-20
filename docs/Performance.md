@@ -104,17 +104,25 @@ Where the time goes inside each reader is the profile below.
 
 ### The profile
 
-`perf record` needs Linux. On a Linux machine, or in WSL from a copy off
-`/mnt`:
+One command takes the profile, from HEAD, on every place it can reach and
+with every profiler that is there (`docs/plan/L-tools.md`, group 13):
 
 ```sh
-cmake -B build-prof -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCF_BUILD_BENCH=ON
-cmake --build build-prof --target cf_bench
-for f in json yaml toml cbor ini; do
-  perf record -g -o perf-$f.data build-prof/bench/cf_bench docs $f
-  perf report -i perf-$f.data --no-children --stdio | head -40
-done
+python scripts/work/profile.py json yaml toml cbor ini           # all reachable places
+python scripts/work/profile.py --host cfvm --wsl --windows json  # or named ones
 ```
+
+It builds `cf_bench` with symbols (RelWithDebInfo, `-O2 -g
+-fno-omit-frame-pointer`; MSVC on Windows) and writes one Markdown file in
+`CF_WORK` - for each format the top six functions by time (perf with
+`cpu-clock`, hardware events when the kernel has them; on Windows Visual
+Studio's collector read with `xperf`, no administrator rights), by
+instructions (callgrind), cache misses (cachegrind), the peak and the
+count of allocations (heaptrack, else massif) and the loops GCC did not
+vectorize in the source files of the top functions - and one summary
+line per format on the screen. A tool or place that is missing is one
+`skipped:` line and the run goes on. The tables below were taken this
+way, first by hand.
 
 Each format's top functions are written below, with the compiler and
 its flags, and the compiler's vectorization report for the scans the

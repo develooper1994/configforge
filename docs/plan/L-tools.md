@@ -26,7 +26,7 @@ or milestone names it), `new` (a card below).
 | 10. Interface | a release that breaks callers | abidiff (verify `EXTRA`) | include-what-you-use (L-4) |
 | 11. Supply chain and security | a leaked secret, a weak dependency, an untraceable build | Dependabot, an SBOM with the release, reproducible-build check (CI), REUSE (verify) | gitleaks, osv-scanner, OpenSSF Scorecard (L-2) |
 | 12. Documentation | a dead link, a misspelling | mkdocs build (CI `docs`); codespell (verify, CI `lint`; L-1) | lychee link check (L-4) |
-| 13. Profiling and measurement | where the time and the memory go, so that a speed-up starts from data | `cf_bench` (P-1, CI `bench` runs it), Valgrind callgrind (the profile in `docs/Performance.md`) | perf where the kernel has it, cachegrind and the compilers' vectorization reports beside each profile, heaptrack or massif for memory, hyperfine for whole-program timings, uftrace for call traces (L-5); Intel VTune and AMD uProf (free, vendor-bound) where the maintainer has them |
+| 13. Profiling and measurement | where the time and the memory go, so that a speed-up starts from data | `cf_bench` (P-1, CI `bench` runs it); `scripts/work/profile.py` (L-5): perf, callgrind, cachegrind, heaptrack or massif, GCC's vectorization notes on Linux, Visual Studio's collector and xperf on Windows, each where it is present | hyperfine for whole-program timings, uftrace for call traces, `setup.sh` installing the profilers (L-5); Intel VTune and AMD uProf (free, vendor-bound) where the maintainer has them |
 
 Wished for, paid (open-source projects may get them free; to be asked for
 only by the maintainer): Coverity Scan, PVS-Studio, Polyspace, LDRA,

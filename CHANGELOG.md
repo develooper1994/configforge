@@ -22,6 +22,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   Python, and `.shellcheckrc`, `.codespellrc`, `.github/actionlint.yaml`
   and `[tool.ruff]` in `pyproject.toml` record the few exceptions, each
   with its reason.
+- **`scripts/work/profile.py`**: one command for the profile of `cf_bench`: time (perf, Visual Studio's collector with xperf), instructions (callgrind), cache misses (cachegrind), peak memory and allocations (heaptrack or massif) and GCC's missed-vectorization notes, on this machine, in WSL and over ssh, each tool where it is present.
 - **`lanes`**, a vector library of its own: span operations with a scalar
   reference and the processor's detection; ConfigForge does not use it yet
   (D-101).

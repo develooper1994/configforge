@@ -117,6 +117,7 @@ change where.
 | `work/ship.sh <id>` | `verify.sh`, and only if it passes the push and CI; a failed style step does not fail it, any other step does |
 | `work/land.sh <id> "<subject>"` | from the main checkout: main merged into the branch, `format.sh`, `ship.sh`, the branch squashed onto main with its tree checked, the index updated (the card done, the cards that waited only on it open), pushed, the worktree and branches removed |
 | `work/win.cmd <worktree> <id> [regex]` | the MSVC build and tests, found with vswhere, built under `CF_WORK` |
+| `work/profile.py [--host H]... [--wsl] [--windows] <format>...` | the profile of `cf_bench docs <format>` from HEAD, on every place it can reach (this machine, WSL, each ssh host; on Windows MSVC with Visual Studio's collector and xperf): perf, callgrind, cachegrind, heaptrack or massif and GCC's missed-vectorization notes where present; a missing tool or host is one `skipped:` line. One Markdown file in `CF_WORK`, one summary line per format; exit 1 when no profile was taken |
 
 ## buildenv: the environment, as a file
 
