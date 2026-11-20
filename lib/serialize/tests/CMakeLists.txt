@@ -2,6 +2,9 @@
 # that is not config's: it includes cf_serialize.h and nothing above it.
 cf_component_tests(serialize configforge_serialize)
 
+# D-109: what each format can hold, held to what its codec says.
+cf_unit_tests(test_holds)
+
 # D-90: a program linked to
 # the serialization library and nothing else, which includes one header. An
 # unresolved symbol fails its link, naming what the library lacks.

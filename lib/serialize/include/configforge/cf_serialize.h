@@ -187,6 +187,36 @@ enum {
     CF_CODEC_SELF_ENCODED = 1u << 8
 };
 
+/* What a format's syntax can carry, the words `holds` of
+   cf_format_holds is made of. A format that lacks a bit does not
+   fail to write: a type it lacks is written as the value's text
+   (the reader gives text back), and anything else it lacks is left
+   out by the converter, which names it (D-109). Experimental in 1.8. */
+enum {
+    CF_HOLDS_INT           = 1u << 0, /* integers as integers         */
+    CF_HOLDS_REAL          = 1u << 1,
+    CF_HOLDS_BOOL          = 1u << 2,
+    CF_HOLDS_NULL          = 1u << 3,
+    CF_HOLDS_ARRAYS        = 1u << 4,  /* arrays of values             */
+    CF_HOLDS_EMPTY_ARRAY   = 1u << 5,
+    CF_HOLDS_TABLE_ARRAYS  = 1u << 6,  /* a table inside an array      */
+    CF_HOLDS_NESTED_ARRAYS = 1u << 7,  /* an array inside an array     */
+    CF_HOLDS_EMPTY_TABLE   = 1u << 8,  /* a table with nothing in it,
+                                          as a member of a table       */
+    CF_HOLDS_ANY_NAME      = 1u << 9,  /* not only A-Z a-z 0-9 _ and - */
+    CF_HOLDS_EMPTY_NAME    = 1u << 10,
+    CF_HOLDS_LONG_PATHS    = 1u << 11, /* a table whose parent's path
+                                          and own name together pass
+                                          CF_KEY_MAX - 2 bytes         */
+    CF_HOLDS_LINE_BREAK    = 1u << 12, /* a line feed in a text        */
+    CF_HOLDS_NUL           = 1u << 13, /* a NUL byte in a text         */
+    CF_HOLDS_ALL           = (1u << 14) - 1u,
+    /* Set when a format that lacks CF_HOLDS_NULL refuses a null
+       outright (TOML); without it a null is written as the text
+       `null` (INI). */
+    CF_REFUSES_NULL = 1u << 16
+};
+
 /* `size` is sizeof(cf_codec) where the codec was compiled (D-51). */
 typedef struct cf_codec {
     size_t      size;
@@ -256,6 +286,12 @@ CF_API cf_bool cf_codec_can_read(const cf_codec* c);
    compiled in, so the error can say which option to turn on. */
 CF_API const char* cf_format_of_path(const char* path);
 CF_API const char* cf_format_option(const char* format);
+
+/* CF_TRUE and *holds the bits of the format called `format`, whether
+   or not this build has its codec; CF_FALSE, *holds untouched, for a
+   format this library has no writer for (xml, properties) and for a
+   name it does not know. (1.8, experimental) */
+CF_EXPERIMENTAL(1, 8) cf_bool cf_format_holds(const char* format, unsigned* holds);
 
 CF_API size_t          cf_codec_count(void);
 CF_API const cf_codec* cf_codec_at(size_t i);
