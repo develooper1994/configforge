@@ -63,8 +63,12 @@ function(cf_component_lanes lanes_dir)
   add_library(cf_lanes STATIC ${LANES_SOURCES})
   target_include_directories(cf_lanes
                              PUBLIC $<BUILD_INTERFACE:${lanes_dir}/include>)
-  target_compile_definitions(cf_lanes PRIVATE LANES_PREFIX_CF=1
-                                              LANES_BUILDING_LIBRARY=1)
+  # The prefix is PUBLIC: a component built against cf_lanes must call the
+  # names cf_lanes defines (text's utf8.c called lanes_scalar, unprefixed).
+  target_compile_definitions(
+    cf_lanes
+    PUBLIC LANES_PREFIX_CF=1
+    PRIVATE LANES_BUILDING_LIBRARY=1)
   configforge_apply_warnings(cf_lanes)
   configforge_apply_hardening(cf_lanes)
   configforge_apply_analysis(cf_lanes)

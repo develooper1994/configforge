@@ -16,6 +16,7 @@ foreach(
   port
   numeric
   base
+  text
   serialize
   config
   cxx)

@@ -29,6 +29,7 @@
  */
 
 #include "configforge/cf_serialize.h"
+#include "configforge/cf_text.h"
 
 #include <string.h>
 
@@ -42,52 +43,6 @@ typedef struct prop_scan {
     const char*  line_start;
     cf_error*    err;
 } prop_scan;
-
-static int prop_hex(int c) {
-    if (c >= '0' && c <= '9') {
-        return c - '0';
-    }
-    if (c >= 'a' && c <= 'f') {
-        return c - 'a' + 10;
-    }
-    if (c >= 'A' && c <= 'F') {
-        return c - 'A' + 10;
-    }
-    return -1;
-}
-
-/* One code point as UTF-8 into out[at..]; the new length, or 0. */
-static size_t prop_utf8(char* out, size_t at, size_t cap, unsigned long cp) {
-    unsigned char b[4];
-    size_t        n, i;
-
-    if (cp < 0x80u) {
-        b[0] = (unsigned char)cp;
-        n    = 1;
-    } else if (cp < 0x800u) {
-        b[0] = (unsigned char)(0xC0u | (cp >> 6));
-        b[1] = (unsigned char)(0x80u | (cp & 0x3Fu));
-        n    = 2;
-    } else if (cp < 0x10000u) {
-        b[0] = (unsigned char)(0xE0u | (cp >> 12));
-        b[1] = (unsigned char)(0x80u | ((cp >> 6) & 0x3Fu));
-        b[2] = (unsigned char)(0x80u | (cp & 0x3Fu));
-        n    = 3;
-    } else {
-        b[0] = (unsigned char)(0xF0u | (cp >> 18));
-        b[1] = (unsigned char)(0x80u | ((cp >> 12) & 0x3Fu));
-        b[2] = (unsigned char)(0x80u | ((cp >> 6) & 0x3Fu));
-        b[3] = (unsigned char)(0x80u | (cp & 0x3Fu));
-        n    = 4;
-    }
-    if (at + n > cap) {
-        return 0;
-    }
-    for (i = 0; i < n; ++i) {
-        out[at + i] = (char)b[i];
-    }
-    return at + n;
-}
 
 static cf_bool prop_fail(prop_scan* s, const char* what) {
     return cf_error_set(s->err, CF_E_SOURCE, NULL, s->file, "%s:%u: %s", s->file,
@@ -144,7 +99,7 @@ static cf_bool prop_element(prop_scan* s, cf_bool is_key, char* out, size_t cap,
                     int           k;
                     for (k = 0; k < 4; ++k) {
                         int h = (s->p + 1 + k < eol)
-                                    ? prop_hex((unsigned char)s->p[1 + k])
+                                    ? cf_text_hex_value((unsigned char)s->p[1 + k])
                                     : -1;
                         if (h < 0) {
                             return prop_fail(s, "\\"
@@ -161,7 +116,7 @@ static cf_bool prop_element(prop_scan* s, cf_bool is_key, char* out, size_t cap,
                         cf_bool       good = CF_TRUE;
                         for (k = 0; k < 4; ++k) {
                             int h = (s->p + 3 + k < eol)
-                                        ? prop_hex((unsigned char)s->p[3 + k])
+                                        ? cf_text_hex_value((unsigned char)s->p[3 + k])
                                         : -1;
                             if (h < 0) {
                                 good = CF_FALSE;
@@ -178,10 +133,16 @@ static cf_bool prop_element(prop_scan* s, cf_bool is_key, char* out, size_t cap,
                         return prop_fail(s, "a \\"
                                             "u escape is half a surrogate pair");
                     }
-                    n = prop_utf8(out, n, cap, cp);
-                    if (n == 0) {
-                        return prop_fail(s, is_key ? "the key is too long"
-                                                   : "the value is too long");
+                    {
+                        char   enc[4];
+                        size_t ek = cf_text_utf8_encode((cf_u32)cp, enc);
+
+                        if (n + ek > cap) {
+                            return prop_fail(s, is_key ? "the key is too long"
+                                                       : "the value is too long");
+                        }
+                        memcpy(out + n, enc, ek);
+                        n += ek;
                     }
                     ++s->p;
                     continue;

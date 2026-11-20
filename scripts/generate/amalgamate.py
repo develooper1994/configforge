@@ -25,6 +25,7 @@ HEADERS = [
     "cf_error.h",
     "cf_log.h",
     "cf_numeric.h",
+    "cf_text.h",
     "cf_value.h",
     "cf_alloc.h",
     "cf_platform_file.h",
@@ -62,6 +63,8 @@ SOURCES = [
     "platform/src/none/none.c", "platform/src/none/file.c",
     "config/src/core/version.c", "port/src/port.c", "base/src/error.c",
     "numeric/src/numeric.c", "base/src/alloc.c",
+    "text/src/utf8.c", "text/src/hex.c", "text/src/hash.c",
+    "lanes/src/lanes.c", "lanes/src/scalar.c",
     "base/src/value.c", "config/src/core/keyspace.c", "config/src/core/define.c",
     "config/src/core/validate.c",
     "config/src/core/config.c", "config/src/core/iterate.c", "config/src/core/live.c",
@@ -77,9 +80,13 @@ SOURCES = [
 # The components, in D-100's order: the public headers of each are in
 # lib/<component>/include/configforge/, and the sources in
 # lib/<component>/src/.  A header is looked for in each in turn.
-COMPONENTS = ["port", "numeric", "base", "platform", "serialize", "config", "cxx"]
+COMPONENTS = ["port", "numeric", "base", "text", "platform", "serialize", "config", "cxx"]
 
-LOCAL_INCLUDE = re.compile(r'^\s*#\s*include\s*"configforge/([^"]+)"\s*$')
+# lanes is not ConfigForge's (D-101): "lanes/..." and <lanes/...> are local
+# includes too. Its header is put into configforge.c under its prefix, and
+# its sources are among SOURCES.
+LOCAL_INCLUDE = re.compile(
+    r'^\s*#\s*include\s*(?:"configforge/([^"]+)"|["<]lanes/([^">]+)[">])\s*$')
 GUARD_OPEN = re.compile(r'^\s*#\s*ifndef\s+CONFIGFORGE\w*\s*$')
 GUARD_DEF = re.compile(r'^\s*#\s*define\s+CONFIGFORGE\w*\s*$')
 
@@ -106,7 +113,7 @@ def resolve(line, incdirs):
     m = LOCAL_INCLUDE.match(line)
     if m is None:
         return [line]
-    name = m.group(1)
+    name = m.group(1) or m.group(2)
     if not name.endswith(".def"):
         return []
     with open(find_header(incdirs, name), encoding="utf-8") as f:
@@ -219,7 +226,7 @@ def check_complete(src):
     """
     on_disk = set()
     lib = os.path.join(src, "lib")
-    for c in COMPONENTS:
+    for c in COMPONENTS + ["lanes"]:
         for root, _dirs, files in os.walk(os.path.join(lib, c, "src")):
             for name in files:
                 if name.endswith(".c"):
@@ -299,6 +306,13 @@ def main():
         "#define CF_INTERNAL_API 1\n\n"
         '#include <configforge/configforge.h>\n'
     ]
+    # lanes under ConfigForge's prefix (cf_lanes_*), its header read from
+    # its own directory, before the sources that include it.
+    with open(os.path.join(src, "lib", "lanes", "include", "lanes", "lanes.h"),
+              encoding="utf-8") as f:
+        body.append(banner("lanes/lanes.h"))
+        body.append("#define LANES_PREFIX_CF 1\n\n")
+        body.append(strip_header(f.read(), incdirs))
     seen = set()
     for s in SOURCES:
         p = os.path.join(src, "lib", s)

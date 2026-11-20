@@ -35,6 +35,7 @@
  */
 
 #include "configforge/cf_serialize.h"
+#include "configforge/cf_text.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -172,43 +173,11 @@ static cf_bool xml_plain_name(xml_scan* s, const XML_Char* name) {
  * The first pass: the record
  * ================================================================== */
 
-/* The seed every hash of a name in this decode starts from, so that a
-   document's author cannot choose names that all land in one bucket: the
-   hash was FNV-1a from its fixed offset basis, which anyone can compute
-   against. The library has no clock and no random source, so the seed is
-   made of two addresses, the scan's and a local's, which differ from run to
-   run where the system randomises addresses and which a document cannot
-   know. Where it does not (no address randomisation), the seed is the
-   same every run: no worse than the unseeded hash was, and no better.
-   Nothing observable may depend on it: no table is walked in bucket
-   order. The high bits of an address are the random ones and a bucket
-   index is the low bits of a hash, so they are folded down first. The
-   two addresses are often both on the stack, sharing their random high
-   bits, so the second is multiplied before the XOR lest they cancel. */
-static size_t xml_seed(const void* where) {
-    char   here;
-    size_t x = (size_t)where ^ ((size_t)&here * 2654435761u);
-
-    x ^= x >> 12;
-    x ^= x >> 24;
-    x *= 16777619u;
-    x = (size_t)(cf_u32)(x ^ (x >> 16 >> 16));
-    return (x == 0) ? (size_t)2166136261u : x;
-}
-
-static size_t xml_hash(size_t seed, const char* p, size_t n) {
-    size_t h = seed, i;
-    for (i = 0; i < n; ++i) {
-        h = (h ^ (size_t)(unsigned char)p[i]) * 16777619u;
-    }
-    return h;
-}
-
 /* The slot holding `name` at the level `owner` names, or the free one
    where it would go. */
 static xml_slot* xml_slot_of(const xml_scan* s, const char* name, size_t n,
                              unsigned long owner) {
-    size_t i = xml_hash(s->seed, name, n) & (s->capindex - 1);
+    size_t i = cf_text_hash(s->seed, name, n) & (s->capindex - 1);
 
     for (;;) {
         xml_slot* x = &s->index[i];
@@ -617,7 +586,7 @@ static cf_bool xml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
     cf_bool    ok;
 
     memset(&s, 0, sizeof s);
-    s.seed = xml_seed(&s);
+    s.seed = cf_text_seed(&s);
     s.file = (in->name != NULL) ? in->name : "<xml>";
     s.out  = out;
     s.err  = err;

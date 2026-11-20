@@ -4,6 +4,7 @@
 
 #include "configforge/cf_platform_file.h"
 #include "configforge/cf_serialize.h"
+#include "configforge/cf_text.h"
 
 #include <stdarg.h>
 #include <string.h>
@@ -30,51 +31,7 @@ size_t cf_blob_skip_bom(const cf_blob* b) {
 }
 
 cf_bool cf_text_is_utf8(const char* p, size_t n) {
-    const unsigned char* s = (const unsigned char*)p;
-    size_t               i = 0;
-
-    while (i < n) {
-        unsigned c = s[i];
-        size_t   len;
-        unsigned lo = 0x80u, hi = 0xBFu; /* the range of the second byte */
-
-        if (c < 0x80u) {
-            ++i;
-            continue;
-        }
-        if (c >= 0xC2u && c <= 0xDFu) {
-            len = 2;
-        } else if (c >= 0xE0u && c <= 0xEFu) {
-            len = 3;
-            if (c == 0xE0u) {
-                lo = 0xA0u; /* not overlong */
-            } else if (c == 0xEDu) {
-                hi = 0x9Fu; /* not a surrogate */
-            }
-        } else if (c >= 0xF0u && c <= 0xF4u) {
-            len = 4;
-            if (c == 0xF0u) {
-                lo = 0x90u; /* not overlong */
-            } else if (c == 0xF4u) {
-                hi = 0x8Fu; /* not past U+10FFFF */
-            }
-        } else {
-            return CF_FALSE;
-        }
-        if (n - i < len || s[i + 1] < lo || s[i + 1] > hi) {
-            return CF_FALSE;
-        }
-        {
-            size_t k;
-            for (k = 2; k < len; ++k) {
-                if (s[i + k] < 0x80u || s[i + k] > 0xBFu) {
-                    return CF_FALSE;
-                }
-            }
-        }
-        i += len;
-    }
-    return CF_TRUE;
+    return cf_text_utf8_valid(p, n) == n ? CF_TRUE : CF_FALSE;
 }
 
 cf_arena* cf_blob_arena(cf_arena* ar) {

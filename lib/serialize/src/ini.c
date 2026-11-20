@@ -32,6 +32,7 @@
  */
 
 #include "configforge/cf_serialize.h"
+#include "configforge/cf_text.h"
 
 #include <string.h>
 
@@ -224,8 +225,6 @@ typedef struct ini_names {
     size_t             seed; /* what every hash of a name starts from */
 } ini_names;
 
-static size_t ini_seed(const void* where);
-
 static void ini_names_init(ini_names* t, const cf_doc_sink* out, const char* base) {
     /* How large a sink is that has reserve_work at all. */
     size_t need = offsetof(cf_doc_sink, reserve_work);
@@ -239,49 +238,17 @@ static void ini_names_init(ini_names* t, const cf_doc_sink* out, const char* bas
     t->used = 0;
     t->gen  = 1;
     t->off  = CF_TRUE;
-    t->seed = ini_seed(t);
+    t->seed = cf_text_seed(t);
     if (out->size >= need && out->reserve_work != NULL) {
         t->off = CF_FALSE;
     }
-}
-
-/* The seed every hash of a name in this decode starts from, so that a
-   document's author cannot choose names that all land in one bucket: the
-   hash was FNV-1a from its fixed offset basis, which anyone can compute
-   against. The library has no clock and no random source, so the seed is
-   made of two addresses, the table's and a local's, which differ from run to
-   run where the system randomises addresses and which a document cannot
-   know. Where it does not (no address randomisation), the seed is the
-   same every run: no worse than the unseeded hash was, and no better.
-   Nothing observable may depend on it: no table is walked in bucket
-   order. The high bits of an address are the random ones and a bucket
-   index is the low bits of a hash, so they are folded down first. The
-   two addresses are often both on the stack, sharing their random high
-   bits, so the second is multiplied before the XOR lest they cancel. */
-static size_t ini_seed(const void* where) {
-    char   here;
-    size_t x = (size_t)where ^ ((size_t)&here * 2654435761u);
-
-    x ^= x >> 12;
-    x ^= x >> 24;
-    x *= 16777619u;
-    x = (size_t)(cf_u32)(x ^ (x >> 16 >> 16));
-    return (x == 0) ? (size_t)2166136261u : x;
-}
-
-static size_t ini_names_hash(size_t seed, const char* p, size_t n) {
-    size_t h = seed, i;
-    for (i = 0; i < n; ++i) {
-        h = (h ^ (size_t)(unsigned char)p[i]) * 16777619u;
-    }
-    return h;
 }
 
 /* The slot holding `name` in this section, or the free one where it
    would go. Nothing leaves a section's table, so a probe ends at the
    first slot that is not this section's. */
 static ini_name* ini_names_slot(const ini_names* t, const char* name, size_t n) {
-    size_t i = ini_names_hash(t->seed, name, n) & (t->cap - 1);
+    size_t i = cf_text_hash(t->seed, name, n) & (t->cap - 1);
 
     for (;;) {
         ini_name* x = &t->slot[i];

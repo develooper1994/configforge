@@ -79,6 +79,7 @@ Every error carries one of these codes, stable from 1.0;
 - [`cf_serialize.h`](#cf_serializeh) - 29
 - [`cf_serialize_version.h`](#cf_serialize_versionh) - 2
 - [`cf_source.h`](#cf_sourceh) - 34
+- [`cf_text.h`](#cf_texth) - 6
 - [`cf_value.h`](#cf_valueh) - 12
 - [`cf_version.h`](#cf_versionh) - 7
 
@@ -3644,13 +3645,13 @@ property any configuration file needs.
 CF_API void cf_blob_mem(cf_blob* b, const char* p, size_t n, const char* name);
 ```
 
-Implementation: [`cf_blob_mem` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L15).
+Implementation: [`cf_blob_mem` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L16).
 
 ```c
 CF_API size_t cf_blob_skip_bom(const cf_blob* b);
 ```
 
-Implementation: [`cf_blob_skip_bom` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L24).
+Implementation: [`cf_blob_skip_bom` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L25).
 
 How many bytes a reader skips at the start of a document: 3 when it
 begins with a UTF-8 byte order mark (EF BB BF), else 0. A mark is not
@@ -3660,7 +3661,7 @@ part of the text, and only the first bytes are one.
 CF_API cf_bool cf_text_is_utf8(const char* p, size_t n);
 ```
 
-Implementation: [`cf_text_is_utf8` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L32).
+Implementation: [`cf_text_is_utf8` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L33).
 
 Whether n bytes are UTF-8 as RFC 3629 has it: no overlong form, no
 surrogate (U+D800 to U+DFFF), nothing past U+10FFFF, no sequence cut
@@ -3670,7 +3671,7 @@ short. A NUL is a character like any other. (1.5)
 CF_API cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err);
 ```
 
-Implementation: [`cf_blob_file` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L95).
+Implementation: [`cf_blob_file` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L52).
 
 Reads a whole file into the arena. CF_E_SOURCE when it cannot be
 opened or read; the caller decides whether that is fatal.
@@ -3680,7 +3681,7 @@ CF_API cf_arena* cf_blob_arena(cf_arena* ar);
 CF_API void cf_blob_arena_done(cf_arena* bytes, cf_arena* ar);
 ```
 
-Implementation: [`cf_blob_arena` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L80), [`cf_blob_arena_done` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L87).
+Implementation: [`cf_blob_arena` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L37), [`cf_blob_arena_done` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L44).
 
 Where a file's bytes go for one reading (D-61): an arena of their own,
 from `ar`'s allocator, so that they are gone once the reader is done -
@@ -3704,14 +3705,14 @@ CF_API void cf_sink_terminate(cf_sink* s);
 CF_API cf_bool cf_sink_overflowed(const cf_sink* s);
 ```
 
-Implementation: [`cf_sink_init` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L189), [`cf_sink_write` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L195), [`cf_sink_putc` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L208), [`cf_sink_puts` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L215), [`cf_sink_fmt` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L221), [`cf_sink_terminate` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L241), [`cf_sink_overflowed` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L247).
+Implementation: [`cf_sink_init` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L146), [`cf_sink_write` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L152), [`cf_sink_putc` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L165), [`cf_sink_puts` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L172), [`cf_sink_fmt` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L178), [`cf_sink_terminate` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L198), [`cf_sink_overflowed` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L204).
 
 ```c
 CF_API void cf_sink_json_string(cf_sink* out, const char* p, size_t n);
 CF_API void cf_sink_json_value(cf_sink* out, const cf_value* v);
 ```
 
-Implementation: [`cf_sink_json_string` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L251), [`cf_sink_json_value` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L292).
+Implementation: [`cf_sink_json_string` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L208), [`cf_sink_json_value` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L249).
 
 JSON, written by hand where a document is not the key space's (a
 report, a diff): text as a JSON string, escaped; a value as JSON.
@@ -3722,7 +3723,7 @@ report, a diff): text as a JSON string, escaped; a value as JSON.
 CF_API size_t cf_loc_text(const cf_loc* at, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_loc_text` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L316).
+Implementation: [`cf_loc_text` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L273).
 
 "app.toml:14:3", or just the file when there is no position.
 
@@ -4288,6 +4289,83 @@ section 39).
 This writes what it is given and asks nothing; it is the tool for
 provisioning a store. A running program writes through cf_write,
 which asks whether it may.
+
+## cf_text.h
+
+cf_text.h - the text helpers every reader shares: UTF-8 decoded,
+validated and encoded, a hexadecimal digit read, and the hash of a
+reader's name table (D-102).
+
+INTERNAL (D-51): exported for the tests, and outside the 1.x promise - a
+minor release may change it. Its functions are declared only under
+CF_INTERNAL_API (D-51, D-88). A program uses cf_text_is_utf8 from
+cf_serialize.h instead.
+
+```c
+CF_API size_t cf_text_utf8_decode(const char* p, const char* end, cf_u32* cp);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_text_utf8_decode` (lib/text/src/utf8.c)](https://github.com/develooper1994/configforge/blob/main/lib/text/src/utf8.c#L12).
+
+The code point at p, and its length, or 0 when p does not start a
+whole, valid sequence before end, and 0 when p == end. *cp is written
+only when the length is not 0. Valid is RFC 3629's: no overlong form,
+no surrogate, nothing above U+10FFFF.
+
+```c
+CF_API size_t cf_text_utf8_valid(const char* p, size_t n);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_text_utf8_valid` (lib/text/src/utf8.c)](https://github.com/develooper1994/configforge/blob/main/lib/text/src/utf8.c#L55).
+
+The length of the longest valid prefix of p[0..n), through lanes_scalar().
+
+```c
+CF_API size_t cf_text_utf8_encode(cf_u32 cp, char out[4]);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_text_utf8_encode` (lib/text/src/utf8.c)](https://github.com/develooper1994/configforge/blob/main/lib/text/src/utf8.c#L59).
+
+Writes cp into out[0..3] and returns 1 to 4; the caller has refused
+surrogates and values above 0x10FFFF.
+
+```c
+CF_API int cf_text_hex_value(int c);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_text_hex_value` (lib/text/src/hex.c)](https://github.com/develooper1994/configforge/blob/main/lib/text/src/hex.c#L7).
+
+0-15 for a hex digit of either case, -1 otherwise.
+
+```c
+CF_API size_t cf_text_seed(const void* where);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_text_seed` (lib/text/src/hash.c)](https://github.com/develooper1994/configforge/blob/main/lib/text/src/hash.c#L20).
+
+The seed the readers' name tables use: made of two addresses, `where`
+and a local's, and never 0.
+
+```c
+CF_API size_t cf_text_hash(size_t seed, const char* s, size_t n);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_text_hash` (lib/text/src/hash.c)](https://github.com/develooper1994/configforge/blob/main/lib/text/src/hash.c#L31).
+
+FNV-1a of n bytes from seed, in a size_t. The same in 32 bits agrees
+with its low 32 bits, so a bucket chosen by the low bits is the same.
 
 ## cf_value.h
 

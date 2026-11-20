@@ -46,6 +46,7 @@
  */
 
 #include "configforge/cf_serialize.h"
+#include "configforge/cf_text.h"
 
 /* Which parser: CF_YAML_LIBFYAML, CF_YAML_LIBYAML, or the built-in one. */
 #include "configforge/cf_yamlparse.h"
@@ -231,39 +232,6 @@ static cf_bool yaml_record(yaml_scan* s, const yaml_ev* e) {
     return CF_TRUE;
 }
 
-/* The seed every hash of a name in this decode starts from, so that a
-   document's author cannot choose names that all land in one bucket: the
-   hash was FNV-1a from its fixed offset basis, which anyone can compute
-   against. The library has no clock and no random source, so the seed is
-   made of two addresses, the scan's and a local's, which differ from run to
-   run where the system randomises addresses and which a document cannot
-   know. Where it does not (no address randomisation), the seed is the
-   same every run: no worse than the unseeded hash was, and no better.
-   Nothing observable may depend on it: no table is walked in bucket
-   order. The high bits of an address are the random ones and a bucket
-   index is the low bits of a hash, so they are folded down first. The
-   two addresses are often both on the stack, sharing their random high
-   bits, so the second is multiplied before the XOR lest they cancel. */
-static size_t yaml_seed(const void* where) {
-    char   here;
-    size_t x = (size_t)where ^ ((size_t)&here * 2654435761u);
-
-    x ^= x >> 12;
-    x ^= x >> 24;
-    x *= 16777619u;
-    x = (size_t)(cf_u32)(x ^ (x >> 16 >> 16));
-    return (x == 0) ? (size_t)2166136261u : x;
-}
-
-static cf_u32 yaml_hash(cf_u32 seed, const char* p, size_t n) {
-    cf_u32 h = seed;
-    size_t i;
-    for (i = 0; i < n; ++i) {
-        h = (h ^ (cf_u32)(unsigned char)p[i]) * 16777619u;
-    }
-    return h;
-}
-
 /* The latest anchor of that name, + 1; 0 when there is none. YAML lets a
    name be anchored again, and an alias means the one before it. */
 static cf_u32 yaml_find(const yaml_scan* s, const char* p, size_t n) {
@@ -271,7 +239,7 @@ static cf_u32 yaml_find(const yaml_scan* s, const char* p, size_t n) {
     if (s->nbuckets == 0) {
         return 0;
     }
-    i = s->buckets[yaml_hash(s->seed, p, n) & (s->nbuckets - 1u)];
+    i = s->buckets[(cf_u32)cf_text_hash(s->seed, p, n) & (s->nbuckets - 1u)];
     while (i != 0) {
         const yaml_anchor* a = &s->anchors[i - 1u];
         if ((size_t)a->nlen == n && memcmp(s->pool + a->name, p, n) == 0) {
@@ -335,8 +303,8 @@ static cf_bool yaml_anchor_open(yaml_scan* s, unsigned line, unsigned col,
             memset(buckets, 0, nb * sizeof *buckets);
             for (i = 0; i < s->nanchors; ++i) {
                 yaml_anchor* x = &s->anchors[i];
-                cf_u32       b =
-                    yaml_hash(s->seed, s->pool + x->name, x->nlen) & (cf_u32)(nb - 1u);
+                cf_u32 b   = (cf_u32)cf_text_hash(s->seed, s->pool + x->name, x->nlen) &
+                             (cf_u32)(nb - 1u);
                 x->chain   = buckets[b];
                 buckets[b] = (cf_u32)(i + 1u);
             }
@@ -348,14 +316,14 @@ static cf_bool yaml_anchor_open(yaml_scan* s, unsigned line, unsigned col,
     if (!yaml_keep(s, name, n, &a->name)) {
         return CF_FALSE;
     }
-    a->nlen           = (cf_u32)n;
-    a->first          = (cf_u32)s->nrecs;
-    a->count          = 0;
-    a->done           = 0;
-    a->depth          = s->depth + 1;
-    h                 = yaml_hash(s->seed, name, n) & (cf_u32)(s->nbuckets - 1u);
-    a->chain          = s->buckets[h];
-    s->buckets[h]     = (cf_u32)(s->nanchors + 1u);
+    a->nlen       = (cf_u32)n;
+    a->first      = (cf_u32)s->nrecs;
+    a->count      = 0;
+    a->done       = 0;
+    a->depth      = s->depth + 1;
+    h             = (cf_u32)cf_text_hash(s->seed, name, n) & (cf_u32)(s->nbuckets - 1u);
+    a->chain      = s->buckets[h];
+    s->buckets[h] = (cf_u32)(s->nanchors + 1u);
     s->open[s->nopen] = (int)s->nanchors;
     ++s->nopen;
     ++s->nanchors;
@@ -733,7 +701,7 @@ static cf_bool yaml_stream_end(yaml_scan* s, unsigned line, unsigned col) {
 static void yaml_scan_init(yaml_scan* s, const cf_blob* in, const cf_doc_sink* out,
                            cf_error* err) {
     memset(s, 0, sizeof *s);
-    s->seed  = (cf_u32)yaml_seed(s);
+    s->seed  = (cf_u32)cf_text_seed(s);
     s->file  = (in->name != NULL) ? in->name : "<yaml>";
     s->out   = out;
     s->err   = err;
@@ -1151,47 +1119,6 @@ typedef struct yaml_enc {
 /* cf_emit keeps this on its own frame, in CF_ENCODER_STATE_MAX bytes. */
 typedef char yaml_enc_fits[(sizeof(yaml_enc) <= CF_ENCODER_STATE_MAX) ? 1 : -1];
 
-/* The code point at the front of p[0..n) and how many bytes it takes;
-   0 when they are not UTF-8 as a YAML reader takes it: the shortest form
-   only, no surrogate, nothing past U+10FFFF. */
-static size_t yaml_utf8(const unsigned char* p, size_t n, cf_u32* cp) {
-    size_t len;
-    size_t i;
-    cf_u32 v;
-
-    if (p[0] < 0x80u) {
-        *cp = p[0];
-        return 1;
-    }
-    if (p[0] >= 0xC2u && p[0] <= 0xDFu) {
-        len = 2;
-        v   = p[0] & 0x1Fu;
-    } else if (p[0] >= 0xE0u && p[0] <= 0xEFu) {
-        len = 3;
-        v   = p[0] & 0x0Fu;
-    } else if (p[0] >= 0xF0u && p[0] <= 0xF4u) {
-        len = 4;
-        v   = p[0] & 0x07u;
-    } else {
-        return 0;
-    }
-    if (n < len) {
-        return 0;
-    }
-    for (i = 1; i < len; ++i) {
-        if ((p[i] & 0xC0u) != 0x80u) {
-            return 0;
-        }
-        v = (v << 6) | (p[i] & 0x3Fu);
-    }
-    if ((len == 3 && v < 0x800u) || (len == 4 && v < 0x10000u) ||
-        (v >= 0xD800u && v <= 0xDFFFu) || v > 0x10FFFFu) {
-        return 0;
-    }
-    *cp = v;
-    return len;
-}
-
 /* One double-quoted scalar. Escaped is what a reader would not give
    back as written: the C0 controls, DEL, and the C1 controls, which
    libyaml refuses outright - but for U+0085, which it takes for a line
@@ -1205,7 +1132,7 @@ static cf_bool yaml_quote(cf_sink* out, const char* p, size_t n) {
     cf_sink_putc(out, '"');
     while (i < n) {
         cf_u32 cp;
-        size_t len = yaml_utf8((const unsigned char*)p + i, n - i, &cp);
+        size_t len = cf_text_utf8_decode(p + i, p + n, &cp);
 
         if (len == 0) {
             return CF_FALSE;

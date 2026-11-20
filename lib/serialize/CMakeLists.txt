@@ -42,6 +42,7 @@ cf_component(
   port
   numeric
   base
+  text
   lanes
   platform:cf_platform_file.h
   SOURCES

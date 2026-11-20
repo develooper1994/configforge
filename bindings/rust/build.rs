@@ -70,6 +70,9 @@ fn main() {
     }
     build
         .define("CF_INTERNAL_API", Some("1"))
+        // lanes is compiled in under ConfigForge's prefix, so that the
+        // crate exports no unprefixed `lanes_` symbol (D-101).
+        .define("LANES_PREFIX_CF", Some("1"))
         .files(&files)
         // The library's own warnings are its build's business; this one
         // only compiles it.

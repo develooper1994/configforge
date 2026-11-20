@@ -22,6 +22,7 @@
  */
 
 #include "configforge/cf_serialize.h"
+#include "configforge/cf_text.h"
 
 #include <string.h>
 
@@ -65,51 +66,6 @@ static cf_bool js_fail(js_scan* s, const char* at, const char* what) {
                         l.line, l.col, what);
 }
 
-/* One UTF-8 code point at p: its length, or 0 where the bytes are not
-   one (overlong, a surrogate, past U+10FFFF, cut short). */
-static size_t js_utf8_at(const char* p, const char* end, cf_u32* cp) {
-    const unsigned char* u    = (const unsigned char*)p;
-    size_t               left = (size_t)(end - p);
-    size_t               k;
-    size_t               i;
-    cf_u32               v;
-
-    if (left == 0) {
-        return 0;
-    }
-    if (u[0] < 0x80u) {
-        *cp = u[0];
-        return 1;
-    }
-    if (u[0] >= 0xC2u && u[0] <= 0xDFu) {
-        k = 2;
-        v = u[0] & 0x1Fu;
-    } else if (u[0] >= 0xE0u && u[0] <= 0xEFu) {
-        k = 3;
-        v = u[0] & 0x0Fu;
-    } else if (u[0] >= 0xF0u && u[0] <= 0xF4u) {
-        k = 4;
-        v = u[0] & 0x07u;
-    } else {
-        return 0;
-    }
-    if (left < k) {
-        return 0;
-    }
-    for (i = 1; i < k; ++i) {
-        if ((u[i] & 0xC0u) != 0x80u) {
-            return 0;
-        }
-        v = (v << 6) | (cf_u32)(u[i] & 0x3Fu);
-    }
-    if ((k == 3 && v < 0x800u) || (k == 4 && (v < 0x10000u || v > 0x10FFFFu)) ||
-        (v >= 0xD800u && v <= 0xDFFFu)) {
-        return 0;
-    }
-    *cp = v;
-    return k;
-}
-
 /* JSON5's line separators beyond the line feed and carriage return. */
 static cf_bool js5_is_ls(cf_u32 cp) {
     return (cp == 0x2028u || cp == 0x2029u) ? CF_TRUE : CF_FALSE;
@@ -129,7 +85,7 @@ static cf_bool js5_is_space(cf_u32 cp) {
 /* Past one character of a block comment, counting its lines. */
 static void js5_comment_step(js_scan* s) {
     cf_u32 cp = 0;
-    size_t k  = js_utf8_at(s->p, s->end, &cp);
+    size_t k  = cf_text_utf8_decode(s->p, s->end, &cp);
 
     if (*s->p == '\r') {
         ++s->p;
@@ -168,7 +124,7 @@ static cf_bool js_space(js_scan* s) {
         } else if (c == '/' && s->end - s->p >= 2 && s->p[1] == '/') {
             s->p += 2;
             while (s->p < s->end && *s->p != '\n' && *s->p != '\r') {
-                k = js_utf8_at(s->p, s->end, &cp);
+                k = cf_text_utf8_decode(s->p, s->end, &cp);
                 if (k == 3 && js5_is_ls(cp)) {
                     break;
                 }
@@ -187,7 +143,7 @@ static cf_bool js_space(js_scan* s) {
                 js5_comment_step(s);
             }
         } else {
-            k = js_utf8_at(s->p, s->end, &cp);
+            k = cf_text_utf8_decode(s->p, s->end, &cp);
             if (k == 0 || !js5_is_space(cp)) {
                 break;
             }
@@ -200,52 +156,13 @@ static cf_bool js_space(js_scan* s) {
     return CF_TRUE;
 }
 
-/* UTF-8 encoding of one code point. JSON's \u escapes are UTF-16, so
-   surrogate pairs have to be recombined; a lone surrogate is invalid
-   rather than something to pass through. */
-static size_t js_utf8(cf_u32 cp, char* out) {
-    if (cp < 0x80u) {
-        out[0] = (char)cp;
-        return 1;
-    }
-    if (cp < 0x800u) {
-        out[0] = (char)(0xC0u | (cp >> 6));
-        out[1] = (char)(0x80u | (cp & 0x3Fu));
-        return 2;
-    }
-    if (cp < 0x10000u) {
-        out[0] = (char)(0xE0u | (cp >> 12));
-        out[1] = (char)(0x80u | ((cp >> 6) & 0x3Fu));
-        out[2] = (char)(0x80u | (cp & 0x3Fu));
-        return 3;
-    }
-    out[0] = (char)(0xF0u | (cp >> 18));
-    out[1] = (char)(0x80u | ((cp >> 12) & 0x3Fu));
-    out[2] = (char)(0x80u | ((cp >> 6) & 0x3Fu));
-    out[3] = (char)(0x80u | (cp & 0x3Fu));
-    return 4;
-}
-
-static int js_hexval(int c) {
-    if (c >= '0' && c <= '9') {
-        return c - '0';
-    }
-    if (c >= 'a' && c <= 'f') {
-        return c - 'a' + 10;
-    }
-    if (c >= 'A' && c <= 'F') {
-        return c - 'A' + 10;
-    }
-    return -1;
-}
-
 /* k hexadecimal digits at p, which has at least k bytes. */
 static cf_bool js_hex(const char* p, int k, cf_u32* out) {
     cf_u32 v = 0;
     int    i;
 
     for (i = 0; i < k; ++i) {
-        int d = js_hexval((unsigned char)p[i]);
+        int d = cf_text_hex_value((unsigned char)p[i]);
         if (d < 0) {
             return CF_FALSE;
         }
@@ -271,7 +188,7 @@ static cf_bool js_put(js_scan* s, char* dst, size_t cap, size_t* n, const char* 
 
 static cf_bool js_put_cp(js_scan* s, char* dst, size_t cap, size_t* n, cf_u32 cp) {
     char enc[4];
-    return js_put(s, dst, cap, n, enc, js_utf8(cp, enc));
+    return js_put(s, dst, cap, n, enc, cf_text_utf8_encode(cp, enc));
 }
 
 /* \u, with s->p on the u: UTF-16, so a surrogate pair is recombined and
@@ -332,7 +249,7 @@ static cf_bool js5_escape(js_scan* s, char* dst, size_t cap, size_t* n) {
         }
         js_line(s);
         return CF_TRUE;
-    } else if (js_utf8_at(s->p, s->end, &cp) == 3 && js5_is_ls(cp)) {
+    } else if (cf_text_utf8_decode(s->p, s->end, &cp) == 3 && js5_is_ls(cp)) {
         s->p += 3;
         js_line(s);
         return CF_TRUE;
@@ -464,7 +381,7 @@ static size_t js5_name(js_scan* s, char* dst, size_t cap) {
                 return (size_t)-1;
             }
         } else {
-            size_t k = js_utf8_at(s->p, s->end, &cp);
+            size_t k = cf_text_utf8_decode(s->p, s->end, &cp);
             if (k == 0 || !js5_is_id(cp, first)) {
                 break;
             }
@@ -576,11 +493,11 @@ static cf_bool js5_hex(js_scan* s, const char* start, cf_bool neg, cf_value* v) 
     cf_u64      mag    = 0;
     cf_bool     over   = CF_FALSE;
 
-    while (s->p < s->end && js_hexval((unsigned char)*s->p) >= 0) {
+    while (s->p < s->end && cf_text_hex_value((unsigned char)*s->p) >= 0) {
         if (mag > (CF_U64_MAX >> 4)) {
             over = CF_TRUE;
         }
-        mag = (mag << 4) | (cf_u64)js_hexval((unsigned char)*s->p);
+        mag = (mag << 4) | (cf_u64)cf_text_hex_value((unsigned char)*s->p);
         ++s->p;
     }
     if (s->p == digits) {
@@ -599,7 +516,7 @@ static cf_bool js5_hex(js_scan* s, const char* start, cf_bool neg, cf_value* v) 
         double      d = 0.0;
         const char* p;
         for (p = digits; p < s->p; ++p) {
-            int digit = js_hexval((unsigned char)*p);
+            int digit = cf_text_hex_value((unsigned char)*p);
             d         = d * 16.0 + (double)digit;
         }
         cf_value_real(v, neg ? -d : d);

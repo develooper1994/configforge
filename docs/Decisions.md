@@ -4597,7 +4597,7 @@ never a second copy.
 
 **Status.** Decided, 2026-11-19.
 
-Built: A-3, A-7 and A-8.
+Built, in part: A-3 (the UTF-8 decoder and encoder, the hex digit and the table hash, one function each in `lib/text/`, with lanes compiled into both libraries). To build: A-7 and A-8.
 
 ## D-103 — Reading what is almost a format
 

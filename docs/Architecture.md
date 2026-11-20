@@ -50,8 +50,9 @@ the same for a program.
 | `lib/port` | the compiler's door: `cf_port.h`, the build options, the bounded formatter and the integer writers | nothing | anything |
 | `lib/numeric` | numbers read, floating point read and written | port | anything above it |
 | `lib/base` | what every component shares: allocation, errors, the value model | port, numeric | anything above it |
+| `lib/text` | UTF-8 decoded, validated and encoded, a hexadecimal digit read, a name table's seeded hash: one function each, internal (D-102) | port, numeric, base, lanes | anything above it |
 | `lib/platform` | the environment, UTF-8 arguments, directory listing, file stamps, the change handle | port, numeric, base | anything above it |
-| `lib/serialize` | readers, writers, codecs, document events | port, numeric, base, the platform's file opener (`cf_platform_file.h`) | the key space, definitions, sources |
+| `lib/serialize` | readers, writers, codecs, document events | port, numeric, base, text, lanes, the platform's file opener (`cf_platform_file.h`) | the key space, definitions, sources |
 | `lib/config/src/core` | key space, definitions, validation, `cf_config` | the components above | serialize's codecs, sources, bridge |
 | `lib/config/src/sources` | flat lexers, key mappings, the sources with no bytes to read | core | serialize, bridge |
 | `lib/config/src/bridge` | flattener, file source, binary image | core **and** serialize | diag |
@@ -73,7 +74,7 @@ builds it as a static library `cf_<c>`, with the components its
 declaration names, and runs its tests, which is how a component is taken
 out by a copy. `verify.cmake -DEXTRA=components` and CI's `components` job
 do that for every component. A unit test is in the lowest component, in
-the order port, numeric, base, platform, serialize, config, cxx, that holds
+the order port, numeric, base, text, platform, serialize, config, cxx, that holds
 every `configforge/` header it includes; a C++ test is cxx's.
 
 `lib/serialize` and the leaves it uses are also a library of their own,

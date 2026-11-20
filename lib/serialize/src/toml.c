@@ -39,6 +39,7 @@
  */
 
 #include "configforge/cf_serialize.h"
+#include "configforge/cf_text.h"
 
 #include <string.h>
 
@@ -166,50 +167,13 @@ static void toml_blank(toml_scan* s) {
     }
 }
 
-/* The length of the well-formed UTF-8 sequence at p (RFC 3629: no
-   overlong form, no surrogate, nothing above U+10FFFF), or 0. */
-static size_t toml_utf8_len(const char* p, const char* end) {
-    const unsigned char* u = (const unsigned char*)p;
-    size_t               n, i;
-    cf_u32               cp;
-
-    if (u[0] < 0x80u) {
-        return 1;
-    }
-    if (u[0] >= 0xC2u && u[0] <= 0xDFu) {
-        n  = 2;
-        cp = u[0] & 0x1Fu;
-    } else if (u[0] >= 0xE0u && u[0] <= 0xEFu) {
-        n  = 3;
-        cp = u[0] & 0x0Fu;
-    } else if (u[0] >= 0xF0u && u[0] <= 0xF4u) {
-        n  = 4;
-        cp = u[0] & 0x07u;
-    } else {
-        return 0;
-    }
-    if ((size_t)(end - p) < n) {
-        return 0;
-    }
-    for (i = 1; i < n; ++i) {
-        if ((u[i] & 0xC0u) != 0x80u) {
-            return 0;
-        }
-        cp = (cp << 6) | (u[i] & 0x3Fu);
-    }
-    if ((n == 3 && cp < 0x800u) || (n == 4 && (cp < 0x10000u || cp > 0x10FFFFu)) ||
-        (cp >= 0xD800u && cp <= 0xDFFFu)) {
-        return 0;
-    }
-    return n;
-}
-
 /* A comment, to the end of its line: any character but the controls
    TOML excludes (all below U+0020 but tab, and DEL), in UTF-8. */
 static cf_bool toml_comment(toml_scan* s) {
     while (s->p < s->end && *s->p != '\n') {
         unsigned char c = (unsigned char)*s->p;
         size_t        n;
+        cf_u32        cp;
         if (c == '\r' && s->end - s->p >= 2 && s->p[1] == '\n') {
             ++s->p;
             continue;
@@ -217,7 +181,7 @@ static cf_bool toml_comment(toml_scan* s) {
         if ((c < 0x20u && c != '\t') || c == 0x7Fu) {
             return toml_fail(s, s->p, "a comment may not contain a control character");
         }
-        n = toml_utf8_len(s->p, s->end);
+        n = cf_text_utf8_decode(s->p, s->end, &cp);
         if (n == 0) {
             return toml_fail(s, s->p, "a comment is not valid UTF-8");
         }
@@ -253,42 +217,6 @@ static cf_bool toml_end_of_line(toml_scan* s) {
         return toml_fail(s, s->p, "expected the end of the line");
     }
     return CF_TRUE;
-}
-
-static int toml_hex(int c) {
-    if (c >= '0' && c <= '9') {
-        return c - '0';
-    }
-    if (c >= 'a' && c <= 'f') {
-        return c - 'a' + 10;
-    }
-    if (c >= 'A' && c <= 'F') {
-        return c - 'A' + 10;
-    }
-    return -1;
-}
-
-static size_t toml_utf8(cf_u32 cp, char* out) {
-    if (cp < 0x80u) {
-        out[0] = (char)cp;
-        return 1;
-    }
-    if (cp < 0x800u) {
-        out[0] = (char)(0xC0u | (cp >> 6));
-        out[1] = (char)(0x80u | (cp & 0x3Fu));
-        return 2;
-    }
-    if (cp < 0x10000u) {
-        out[0] = (char)(0xE0u | (cp >> 12));
-        out[1] = (char)(0x80u | ((cp >> 6) & 0x3Fu));
-        out[2] = (char)(0x80u | (cp & 0x3Fu));
-        return 3;
-    }
-    out[0] = (char)(0xF0u | (cp >> 18));
-    out[1] = (char)(0x80u | ((cp >> 12) & 0x3Fu));
-    out[2] = (char)(0x80u | ((cp >> 6) & 0x3Fu));
-    out[3] = (char)(0x80u | (cp & 0x3Fu));
-    return 4;
 }
 
 /* Append k bytes, keeping room for the NUL; false, with the error set,
@@ -412,7 +340,8 @@ static size_t toml_string(toml_scan* s, char* dst, size_t cap, cf_bool multi) {
             return (size_t)-1;
         }
         if (c >= 0x80u) {
-            size_t k = toml_utf8_len(s->p, s->end);
+            cf_u32 cp;
+            size_t k = cf_text_utf8_decode(s->p, s->end, &cp);
             if (k == 0) {
                 toml_fail(s, s->p, "a string is not valid UTF-8");
                 return (size_t)-1;
@@ -485,7 +414,7 @@ static size_t toml_string(toml_scan* s, char* dst, size_t cap, cf_bool multi) {
                     return (size_t)-1;
                 }
                 for (i = 0; i < digits; ++i) {
-                    int h = toml_hex((unsigned char)s->p[i]);
+                    int h = cf_text_hex_value((unsigned char)s->p[i]);
                     if (h < 0) {
                         toml_fail(s, s->p, TOML_UNICODE_DIGITS);
                         return (size_t)-1;
@@ -497,7 +426,7 @@ static size_t toml_string(toml_scan* s, char* dst, size_t cap, cf_bool multi) {
                     toml_fail(s, s->p, "not a Unicode scalar value");
                     return (size_t)-1;
                 }
-                k = toml_utf8(cp, enc);
+                k = cf_text_utf8_encode(cp, enc);
                 if (n + k + 1 > cap) {
                     toml_fail(s, s->p, "the string is too long");
                     return (size_t)-1;
@@ -624,30 +553,6 @@ static cf_bool toml_fail_named(toml_scan* s, const char* at, const char* name, s
 static cf_bool toml_no_room(toml_scan* s) {
     return cf_error_set(s->err, CF_E_MEMORY, NULL, s->file,
                         "no room to record the TOML document's definitions");
-}
-
-/* The seed every hash of a name in this decode starts from, so that a
-   document's author cannot choose names that all land in one bucket: the
-   hash was FNV-1a from its fixed offset basis, which anyone can compute
-   against. The library has no clock and no random source, so the seed is
-   made of two addresses, the scan's and a local's, which differ from run to
-   run where the system randomises addresses and which a document cannot
-   know. Where it does not (no address randomisation), the seed is the
-   same every run: no worse than the unseeded hash was, and no better.
-   Nothing observable may depend on it: no table is walked in bucket
-   order. The high bits of an address are the random ones and a bucket
-   index is the low bits of a hash, so they are folded down first. The
-   two addresses are often both on the stack, sharing their random high
-   bits, so the second is multiplied before the XOR lest they cancel. */
-static size_t toml_seed(const void* where) {
-    char   here;
-    size_t x = (size_t)where ^ ((size_t)&here * 2654435761u);
-
-    x ^= x >> 12;
-    x ^= x >> 24;
-    x *= 16777619u;
-    x = (size_t)(cf_u32)(x ^ (x >> 16 >> 16));
-    return (x == 0) ? (size_t)2166136261u : x;
 }
 
 /* FNV-1a from the decode's seed, over the parent, and the name or the
@@ -785,7 +690,7 @@ static cf_bool toml_track_init(toml_scan* s) {
     s->nodes   = NULL;
     s->buckets = NULL;
     s->pool    = NULL;
-    s->seed    = (cf_u32)toml_seed(s);
+    s->seed    = (cf_u32)cf_text_seed(s);
     if (o->size < offsetof(cf_doc_sink, reserve_work) + sizeof o->reserve_work ||
         o->reserve_work == NULL) {
         return CF_TRUE;
@@ -958,7 +863,7 @@ static cf_bool toml_digits(toml_scan* s, int base, char* buf, size_t cap, size_t
     cf_bool any = CF_FALSE;
 
     for (;;) {
-        int d = (s->p < s->end) ? toml_hex((unsigned char)*s->p) : -1;
+        int d = (s->p < s->end) ? cf_text_hex_value((unsigned char)*s->p) : -1;
         if (d >= 0 && d < base) {
             if (*n + 1 >= cap) {
                 return CF_FALSE;
@@ -968,7 +873,7 @@ static cf_bool toml_digits(toml_scan* s, int base, char* buf, size_t cap, size_t
             continue;
         }
         if (any && s->p + 1 < s->end && *s->p == '_') {
-            int next = toml_hex((unsigned char)s->p[1]);
+            int next = cf_text_hex_value((unsigned char)s->p[1]);
             if (next >= 0 && next < base) {
                 ++s->p;
                 continue;
@@ -1175,7 +1080,7 @@ static cf_bool toml_number(toml_scan* s, cf_value* v, cf_bool* textual) {
         cf_u64 acc = 0;
         size_t i;
         for (i = (buf[0] == '+' || buf[0] == '-') ? 1u : 0u; i < n; ++i) {
-            cf_u64 d = (cf_u64)toml_hex((unsigned char)buf[i]);
+            cf_u64 d = (cf_u64)cf_text_hex_value((unsigned char)buf[i]);
             if (acc > (CF_U64_MAX - d) / (cf_u64)base) {
                 return toml_fail(s, start, "the integer does not fit in 64 bits");
             }

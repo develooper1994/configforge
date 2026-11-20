@@ -12,6 +12,7 @@
  * anchors, which are replayed - is yaml.c's.
  */
 
+#include "configforge/cf_text.h"
 #include "configforge/cf_yamlparse.h"
 
 #include <string.h>
@@ -382,22 +383,16 @@ static cf_bool yp_put(yp* y, size_t* n, int c) {
 }
 
 static cf_bool yp_put_cp(yp* y, size_t* n, cf_u32 cp) {
-    if (cp < 0x80u) {
-        return yp_put(y, n, (int)cp);
+    char   enc[4];
+    size_t k = cf_text_utf8_encode(cp, enc);
+    size_t i;
+
+    for (i = 0; i < k; ++i) {
+        if (!yp_put(y, n, (unsigned char)enc[i])) {
+            return CF_FALSE;
+        }
     }
-    if (cp < 0x800u) {
-        return yp_put(y, n, (int)(0xC0u | (cp >> 6))) &&
-               yp_put(y, n, (int)(0x80u | (cp & 0x3Fu)));
-    }
-    if (cp < 0x10000u) {
-        return yp_put(y, n, (int)(0xE0u | (cp >> 12))) &&
-               yp_put(y, n, (int)(0x80u | ((cp >> 6) & 0x3Fu))) &&
-               yp_put(y, n, (int)(0x80u | (cp & 0x3Fu)));
-    }
-    return yp_put(y, n, (int)(0xF0u | (cp >> 18))) &&
-           yp_put(y, n, (int)(0x80u | ((cp >> 12) & 0x3Fu))) &&
-           yp_put(y, n, (int)(0x80u | ((cp >> 6) & 0x3Fu))) &&
-           yp_put(y, n, (int)(0x80u | (cp & 0x3Fu)));
+    return CF_TRUE;
 }
 
 /* ':' as the value indicator: before white space, or a flow indicator
@@ -673,10 +668,7 @@ static cf_bool yp_escape(yp* y, size_t* k, int n) {
     ++y->p;
     for (i = 0; i < digits; ++i) {
         int d = yp_c(y, 0);
-        int v = cf_is_digit(d)           ? d - '0'
-                : (d >= 'a' && d <= 'f') ? d - 'a' + 10
-                : (d >= 'A' && d <= 'F') ? d - 'A' + 10
-                                         : -1;
+        int v = cf_text_hex_value(d);
         if (v < 0) {
             return yp_fail(y, "an escape needs its hexadecimal digits");
         }

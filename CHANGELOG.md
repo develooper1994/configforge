@@ -37,6 +37,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   installed headers and libraries are unchanged.
 - Each component under `lib/` is a project of its own: its declaration,
   its tests and README, and a build of it alone that CI runs (D-100).
+- The readers share one UTF-8 decoder and encoder, one hex-digit reader and
+  one table hash (D-102); no input is read differently. `lanes` is compiled
+  into both libraries under the prefix `cf_lanes_`.
 
 ## 1.7.0 — 2026-11-20
 

@@ -48,6 +48,7 @@ foreach(
   cf_inc
   lib/port/include/
   lib/numeric/include/
+  lib/text/include/
   lib/base/include/
   lib/platform/include/
   lib/serialize/include/

@@ -21,12 +21,12 @@ If a change makes a value harder to explain, it is the wrong change.
 | Path | What | Read |
 | ---- | ---- | ---- |
 | `lib/<component>/` | one directory a component (D-100), each with `include/configforge/` (its public headers), `src/` and a build file; `configforge.h` is the facade | the header comments are the API reference; `docs/API.md` collects them; `docs/Architecture.md` says what each holds |
-| `lib/port`, `numeric`, `base`, `platform` | the compiler's door, numbers, value model, error and allocation, and the only code that knows the operating system | |
+| `lib/port`, `numeric`, `base`, `text`, `platform` | the compiler's door, numbers, value model, error and allocation, the text the readers share (UTF-8, a hex digit, a table's hash), and the only code that knows the operating system | |
 | `lib/serialize` | blob, sink, and the INI, JSON, TOML, YAML, XML and properties codecs | |
 | `lib/config/src` | `core` (key space, definitions, validation, `cf_config`), `sources` (defaults, memory, environment, command line, compatibility shims, entries, snapshots), `bridge` (file, `.env`, drop-in directory, image, emit, flatten, registry, secrets, store), `diag` (`explain()`, provenance report, Report Replay, diff) | |
 | `lib/cxx` | `configforge.hpp` | |
 | `tools/doctor` | the Doctor CLI and its adapters | `docs/Doctor.md` |
-| `lib/<component>/tests` | one C program per area, in the lowest component that holds every `configforge/` header it includes (port, numeric, base, platform, serialize, config, cxx; a C++ test is cxx's); also the best usage examples | |
+| `lib/<component>/tests` | one C program per area, in the lowest component that holds every `configforge/` header it includes (port, numeric, base, text, platform, serialize, config, cxx; a C++ test is cxx's); also the best usage examples | |
 | `tests/support` | the helpers every test program shares (`cf_test.h`, `cf_fixture.h`, `cf_kv_codec.h`) and the test data | |
 | `tests/doctor` | Doctor's fixtures and CLI tests | |
 | `examples/c`, `examples/cpp`, `examples/rust` | programs the README and `docs/Guide.md` quote, one directory a language, run by the suite and checked for their output (`expect.cmake`) | `docs/Guide.md` |
