@@ -480,6 +480,41 @@ def verify_in(id_, mode, tar, style, extra, base):
             if logged("yaml", steps, r"error:|\(Failed\)", "yaml"):
                 return 1
             say("yaml ok")
+        # CI's iwyu job, here when include-what-you-use is installed.
+        if shutil.which("include-what-you-use"):
+            say("--- include-what-you-use (CI's iwyu job)")
+            ib = str(home / f"iwyu-{id_}")
+            iwyu = (
+                "include-what-you-use;-Xiwyu;--error;-Xiwyu;--mapping_file="
+                + str(Path.cwd() / ".iwyu.imp")
+                + ";-Wno-unknown-warning-option"
+            )
+            steps = [
+                [
+                    "cmake",
+                    "-S",
+                    ".",
+                    "-B",
+                    ib,
+                    "-DCMAKE_BUILD_TYPE=Debug",
+                    "-DCMAKE_C_INCLUDE_WHAT_YOU_USE=" + iwyu,
+                ],
+                [
+                    "cmake",
+                    "--build",
+                    ib,
+                    "--target",
+                    "configforge",
+                    "configforge_serialize",
+                    "--",
+                    "-k",
+                ],
+            ]
+            if logged("iwyu", steps, r"should add these lines|error:", "iwyu"):
+                return 1
+            say("iwyu ok")
+        else:
+            say("iwyu skipped: include-what-you-use not installed here")
     # CF_EXTRA names more verify EXTRA steps (a card's ACCEPT may ask).
     ex = "-DEXTRA="
     if mode == "full":
@@ -682,6 +717,15 @@ def cmd_land(a):
         )
         if rc:
             raise Fail(f"format exit {rc}", rc)
+        # docs/API.md links to source lines: made again, as gate.apiref wants.
+        rc = run(
+            ["cmake", "-P", "scripts/generate/apiref.cmake"],
+            600,
+            cwd=wt,
+            out=subprocess.DEVNULL,
+        )
+        if rc:
+            raise Fail(f"apiref exit {rc}", rc)
         git("add", "-A", cwd=wt)
         if git("diff", "--cached", "--quiet", cwd=wt, ok=True):
             git(
