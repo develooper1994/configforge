@@ -1148,7 +1148,7 @@ first user meets. In the order proposed:
   stays what fails a build, the page is what shows the trend. Each
   optimization tried, kept or reverted, is listed on it with its
   numbers, so the page is also the log of what was learned.
-* ⬜ **Tests that convert between every pair of formats.** For each
+* 🟩 **Tests that convert between every pair of formats** (D-109). For each
   document of the conformance suites and the fuzz corpora: read it in
   format A, write it in B, read it back, write it in A, and require the
   model to be the same, or the refusal to name what B cannot hold (a
@@ -1284,7 +1284,7 @@ first user meets. In the order proposed:
   list entry whose reason is empty, fails. A profile that must stay C89
   (`minimal`, `misra`) refuses any part on the list, by name, at
   configure time. `docs/Limits.md` shows the list.
-* ⬜ **Formats registered, with what each can do.** The codecs already
+* 🟨 **Formats registered, with what each can do.** What each writer can hold is done, as one table the converter, the tests and the page read (D-109); the ways to read it, and `docs/Limits.md` generated from it, are left (A-13). The codecs already
   are a table (`cf_codecs[]` and `cf_formats[]` in
   `lib/serialize/src/codec.c`, read through `cf_codec_by_name` and
   `cf_codec_at`). What is left is the capabilities beside each entry:
@@ -1293,6 +1293,16 @@ first user meets. In the order proposed:
   (W5-V2) then read one table, and the pair table and
   `docs/Limits.md` are generated from it rather than kept by hand. To
   check first how much of this `cf_format_info` holds today.
+* ⬜ **The YAML reader: no second document table.** At the end of every
+  file the reader says an empty document table again (`yaml_stream_end`
+  takes the depth of -1 after the top-level mapping for a stream with
+  nothing in it), so a sink that takes one root, as `codec dump` shows and
+  as a converter's tree would, refuses it. `configforge codec convert`
+  and the pair test tolerate it (D-109); done when the reader says the
+  empty document only for a file with nothing in it, with a test, and the
+  two tolerances come out. The same pass: TOML's reader limits the dotted
+  key of a line and INI's reader limits no depth, which
+  `cf_format_limits` records and which could be made equal.
 * ⬜ **One diagnostic model across formats.** Each reader reports a
   refusal its own way today, as far as the formats differ; a single
   diagnostic record (code, severity, byte offset, line and column, the
