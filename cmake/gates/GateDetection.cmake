@@ -15,6 +15,15 @@ list(
   EXCLUDE
   REGEX
   "/lib/[^/]+/tests/")
+# lanes is its own portability layer (D-101): what a processor can run is
+# known only to the instructions that ask it, so its files read the
+# compiler's and the platform's macros themselves.
+list(
+  FILTER
+  files
+  EXCLUDE
+  REGEX
+  "/lib/lanes/")
 set(bad 0)
 foreach(f ${files})
   get_filename_component(basename "${f}" NAME)

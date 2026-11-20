@@ -42,6 +42,7 @@ cf_component(
   port
   numeric
   base
+  lanes
   platform:cf_platform_file.h
   SOURCES
   ${cf_serialize_sources}

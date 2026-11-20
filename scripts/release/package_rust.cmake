@@ -22,6 +22,8 @@ set(native "${stage}/native")
 file(MAKE_DIRECTORY "${native}")
 # What build.rs compiles (D-70): the components, headers and C sources.
 file(COPY "${root}/lib" DESTINATION "${native}")
+# lanes is not ConfigForge's, and its tests are its own (D-101).
+file(REMOVE_RECURSE "${native}/lib/lanes/tests")
 foreach(name LICENSE README.md CHANGELOG.md)
   file(COPY "${root}/${name}" DESTINATION "${native}")
 endforeach()

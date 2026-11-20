@@ -10,6 +10,7 @@ cf_component(
   numeric
   DEPENDS
   port
+  lanes
   SOURCES
   src/numeric.c
   SERIALIZE_SOURCES

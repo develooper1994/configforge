@@ -12,6 +12,7 @@ set(CMAKE_C_CLANG_TIDY "")
 # always were.
 foreach(
   c
+  lanes
   port
   numeric
   base

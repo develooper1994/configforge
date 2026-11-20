@@ -20,6 +20,7 @@ cf_component(
   port
   numeric
   base
+  lanes
   platform
   serialize
   SOURCES

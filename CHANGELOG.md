@@ -22,6 +22,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   Python, and `.shellcheckrc`, `.codespellrc`, `.github/actionlint.yaml`
   and `[tool.ruff]` in `pyproject.toml` record the few exceptions, each
   with its reason.
+- **`lanes`**, a vector library of its own: span operations with a scalar
+  reference and the processor's detection; ConfigForge does not use it yet
+  (D-101).
 
 ### Changed
 

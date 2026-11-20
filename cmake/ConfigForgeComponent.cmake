@@ -52,6 +52,29 @@ function(cf_component_whole dir sources serialize_sources)
       PARENT_SCOPE)
 endfunction()
 
+# lanes is not ConfigForge's (D-101): its own CMakeLists.txt reads nothing
+# of ours, so a component built alone that depends on it compiles its
+# LANES_SOURCES under ConfigForge's prefix, as the static library cf_lanes,
+# whose symbols are cf_lanes_*. Only `cmake -S lib/lanes` builds the
+# unprefixed library `lanes`.
+function(cf_component_lanes lanes_dir)
+  get_filename_component(lanes_dir "${lanes_dir}" REALPATH)
+  include("${lanes_dir}/lanes_sources.cmake")
+  add_library(cf_lanes STATIC ${LANES_SOURCES})
+  target_include_directories(cf_lanes
+                             PUBLIC $<BUILD_INTERFACE:${lanes_dir}/include>)
+  target_compile_definitions(cf_lanes PRIVATE LANES_PREFIX_CF=1
+                                              LANES_BUILDING_LIBRARY=1)
+  configforge_apply_warnings(cf_lanes)
+  configforge_apply_hardening(cf_lanes)
+  configforge_apply_analysis(cf_lanes)
+  set_target_properties(
+    cf_lanes
+    PROPERTIES C_STANDARD 90
+               C_STANDARD_REQUIRED ON
+               C_EXTENSIONS OFF)
+endfunction()
+
 # What cf_component does alone: the components it depends on, from the
 # directories beside it, and a library cf_<name> of its own, static, or an
 # interface library where there is nothing to compile (cxx). Sets
@@ -64,7 +87,11 @@ function(
   sources)
   foreach(d ${deps})
     if(NOT TARGET cf_${d})
-      add_subdirectory("${dir}/../${d}" "${CMAKE_BINARY_DIR}/${d}")
+      if(d STREQUAL "lanes")
+        cf_component_lanes("${dir}/../lanes")
+      else()
+        add_subdirectory("${dir}/../${d}" "${CMAKE_BINARY_DIR}/${d}")
+      endif()
     endif()
   endforeach()
 
@@ -102,6 +129,27 @@ function(
   set(CF_FULL_TARGET
       "${tgt}"
       PARENT_SCOPE)
+endfunction()
+
+# What the layering gate is told of a component (cf_write_layers writes
+# it): its name, what it depends on, and which of its files, as
+# <name>/<file>, the serialization library is made of. cf_component calls
+# it; a directory that cannot call cf_component, because it reads none of
+# ConfigForge's variables (lib/lanes), is recorded by lib/CMakeLists.txt.
+#
+# ~~~
+# cf_component_record(<name> [DEPENDS <dep>...] [LEAVES <file>...])
+# ~~~
+function(cf_component_record name)
+  cmake_parse_arguments(
+    R
+    ""
+    ""
+    "DEPENDS;LEAVES"
+    ${ARGN})
+  set_property(GLOBAL APPEND PROPERTY CF_COMPONENTS ${name})
+  set_property(GLOBAL PROPERTY CF_COMPONENT_${name}_DEPENDS "${R_DEPENDS}")
+  set_property(GLOBAL PROPERTY CF_COMPONENT_${name}_LEAVES "${R_LEAVES}")
 endfunction()
 
 # Declare a component.
@@ -144,9 +192,12 @@ function(cf_component name)
   foreach(s ${A_SERIALIZE_SOURCES})
     list(APPEND leaves "${name}/${s}")
   endforeach()
-  set_property(GLOBAL APPEND PROPERTY CF_COMPONENTS ${name})
-  set_property(GLOBAL PROPERTY CF_COMPONENT_${name}_DEPENDS "${A_DEPENDS}")
-  set_property(GLOBAL PROPERTY CF_COMPONENT_${name}_LEAVES "${leaves}")
+  cf_component_record(
+    ${name}
+    DEPENDS
+    ${A_DEPENDS}
+    LEAVES
+    ${leaves})
 
   set(sources "")
   foreach(s ${A_SOURCES})
