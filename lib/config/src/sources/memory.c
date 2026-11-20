@@ -7,12 +7,22 @@
  * case anywhere.
  */
 
+#include "configforge/cf_error.h"
+#include "configforge/cf_encoding.h"
 #include "configforge/cf_source.h"
+#include "configforge/cf_keyspace.h"
+#include "configforge/cf_port.h"
 
 #include <string.h>
+/* iwyu asks for this include and against it by turns (cf_keyspace.h
+   and cf_error.h carry each other's names): it is kept. */
+/* IWYU pragma: begin_keep */
+#include "configforge/cf_keyspace.h"
+/* IWYU pragma: end_keep */
 
 static cf_bool cf_memory_load(const cf_source* s, cf_keyspace* ks) {
-    size_t i;
+    size_t   i;
+    cf_error err = CF_ERROR_INIT;
 
     for (i = 0; i < s->u.mem.count; ++i) {
         const cf_pair* p = &s->u.mem.pairs[i];
@@ -23,6 +33,11 @@ static cf_bool cf_memory_load(const cf_source* s, cf_keyspace* ks) {
         }
         klen = strlen(p->key);
         if (!cf_key_valid(p->key, klen)) {
+            return CF_FALSE;
+        }
+        /* The program's own text is UTF-8 too (D-108), named by its key. */
+        if (!cf_encoding_check(p->key, p->value, strlen(p->value), &err)) {
+            cfi_ks_refuse(ks, &err);
             return CF_FALSE;
         }
         /* Recorded as written. The type is decided later, by a

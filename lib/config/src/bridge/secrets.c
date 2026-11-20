@@ -40,6 +40,10 @@
 #include "configforge/cf_platform.h"
 #include "configforge/cf_serialize.h"
 #include "configforge/cf_source.h"
+#include "configforge/cf_alloc.h"
+#include "configforge/cf_build_options.h"
+#include "configforge/cf_error.h"
+#include "configforge/cf_port.h"
 
 #include <string.h>
 

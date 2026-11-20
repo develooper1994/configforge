@@ -31,6 +31,11 @@
 
 #include "configforge/cf_define.h"
 #include "configforge/cf_serialize.h"
+#include "configforge/cf_alloc.h"
+#include "configforge/cf_build_options.h"
+#include "configforge/cf_error.h"
+#include "configforge/cf_port.h"
+#include "configforge/cf_value.h"
 
 #include <string.h>
 
@@ -735,7 +740,7 @@ cf_bool cf_defset_schema(cf_defset* ds, const char* text, size_t n, const char* 
     sink.ctx          = &t;
     sink.reserve_text = st_text;
     cf_blob_mem(&blob, text, n, (name != NULL) ? name : "<schema>");
-    if (!json->decode(&blob, &sink, err)) {
+    if (!cf_codec_decode(json, &blob, &sink, err)) {
         return CF_FALSE;
     }
     if (t.failed || t.root == NULL) {

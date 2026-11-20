@@ -5,6 +5,11 @@
 #include "configforge/cf_platform_file.h"
 #include "configforge/cf_serialize.h"
 #include "configforge/cf_text.h"
+#include "configforge/cf_alloc.h"
+#include "configforge/cf_build_options.h"
+#include "configforge/cf_error.h"
+#include "configforge/cf_port.h"
+#include "configforge/cf_value.h"
 
 #include <stdarg.h>
 #include <string.h>

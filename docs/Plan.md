@@ -190,7 +190,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 37 | W5-G3 `configforge gen --lang python` | medium | W5-G2 | done (950a099) |
 | 38b | L-1 shellcheck, ruff, actionlint and codespell, as gates | medium | 1.7.0 released | done (7bec7d8) |
 | 38c | L-2 Valgrind, AFL++, gitleaks, osv-scanner and Scorecard in CI | medium | L-1 | waits: L-1 (outline; written out when L-1 is done) |
-| 38d | L-4 include-what-you-use and a link check | small | L-1 | open |
+| 38d | L-4 include-what-you-use and a link check | small | L-1 | done (a87a174) |
 | 38e | L-3 Infer and semgrep; IKOS or Frama-C with 1.9.0 | large | L-2 | waits: L-2 (outline) |
 | 38f | L-5 Profilers: one command for time, cache, memory and vectorization | medium | P-1 | done (13e9e70) |
 | 39 | P-1 The benchmark measures large documents, and says where time goes | medium | 1.7.0 released | done (90b6541) |
@@ -199,8 +199,8 @@ waves ("After 1.7.0: the order of the waves", below).
 | 42 | A-2 The vector library, its interface and its scalar reference | medium | A-1b | done (da0dd49) |
 | 43 | A-3 One UTF-8, one hex digit, one table hash | medium | A-2 | done (520baa2) |
 | 44 | A-4 Another encoding, read only by name | medium | A-3 | done (e4069b8) |
-| 45 | A-5 Bytes that are not UTF-8 are refused, with their place and a hint | medium | A-4 | open |
-| 46 | A-6 `configforge codec recode`: a file converted once, for review | small | A-5, T-3 | waits: A-5 |
+| 45 | A-5 Bytes that are not UTF-8 are refused, with their place and a hint | medium | A-4 | done (98c068e) |
+| 46 | A-6 `configforge codec recode`: a file converted once, for review | small | A-5, T-3 | open |
 | 47 | A-7 The escapes in families | large | A-6 | waits: A-6 |
 | 48 | A-8 Whitespace, comments, newlines and the place of a refusal | large | A-7 | waits: A-7 |
 | 49 | A-9 Composed codecs, for what is almost a format | medium | A-5 | waits: A-8 (the order) |
@@ -208,7 +208,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 51 | A-11 Build profiles and the C version per file | large | A-1b | waits: A-10 (the order) |
 | 52 | A-12 The feature matrix made from the build | medium | A-11 | waits: A-11 |
 | 53 | W5-V2 Every pair of formats, and what each can hold | large | A-1b, W5-V1 | waits: A-12 (the order) |
-| 54 | W5-G4 Generators outside the tree | medium | A-1b, W5-G3 | waits: W5-V2 (the order) |
+| 54 | W5-G4 Generators outside the tree | medium | A-1b, W5-G3 | done (adc2a63) |
 | 55 | P-1b The other libraries beside ours, and a page CI keeps | large | P-1, A-1b | waits: W5-G4 (the order) |
 | 56 | A-13 A page of the project's limits | medium | A-12, W5-V2, P-1 | waits: P-1b (the order) |
 | 57 | P-2 Word-at-a-time scans in C89, with the byte loop as reference | medium | P-1, A-3 | waits: 2.4.0; to be rewritten on D-101 |

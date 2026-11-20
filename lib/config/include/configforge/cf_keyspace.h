@@ -198,6 +198,8 @@ typedef struct cf_keyspace {
     cf_bool      lists_merged;
     const char** original_keys;
     size_t       original_capacity;
+
+    cf_error* refusal; /* why a source refused what it read, or NULL (D-108) */
 } cf_keyspace;
 
 /* Internal append plan: source-local bounds and final offsets.
@@ -253,7 +255,15 @@ cf_bool cfi_ks_add_pinned(cf_keyspace* ks, const char* key, size_t keylen, int s
    zero - leaves everything as it was; the doubling stays the fallback.
    Candidates already held are counted: `more` is what is still to come. */
 void cfi_ks_expect(cf_keyspace* ks, size_t more);
-void cfi_ks_expect_lines(cf_keyspace* ks, const char* text, size_t n);
+
+/* Internal: a source that has no state of its own to keep its error in (the
+   environment, the arguments, the pairs, the defaults) leaves the reason it
+   refused with the key space, and the builder reads it when the load fails.
+   Only a refusal of what was read (CF_E_SOURCE) is kept, the first, copied
+   into the arena; NULL for none. */
+void            cfi_ks_refuse(cf_keyspace* ks, const cf_error* err);
+const cf_error* cfi_ks_refusal(const cf_keyspace* ks);
+void            cfi_ks_expect_lines(cf_keyspace* ks, const char* text, size_t n);
 
 /* Record a definition's default (CF_CAND_DEFAULT). */
 CF_API cf_bool cf_ks_add_default(cf_keyspace* ks, const char* key, size_t keylen,

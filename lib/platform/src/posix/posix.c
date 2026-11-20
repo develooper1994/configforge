@@ -22,6 +22,11 @@
 #endif
 
 #include "configforge/cf_platform.h"
+#include "configforge/cf_alloc.h"
+#include "configforge/cf_build_options.h"
+#include "configforge/cf_error.h"
+#include "configforge/cf_platform_file.h"
+#include "configforge/cf_port.h"
 
 #if CF_PLATFORM_POSIX
 
@@ -62,10 +67,8 @@
 #endif
 
 #if CF_POSIX_WAKE == 1
-#include <errno.h>
 #include <poll.h>
 #include <sys/inotify.h>
-#include <unistd.h>
 #elif CF_POSIX_WAKE == 2
 #include <errno.h>
 #include <fcntl.h>

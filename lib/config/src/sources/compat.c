@@ -10,6 +10,9 @@
 #include "configforge/cf_entry.h"
 #include "configforge/cf_platform.h"
 #include "configforge/cf_source.h"
+#include "configforge/cf_alloc.h"
+
+#include <stddef.h>
 
 const char* cf_source_path(const cf_source* s) {
     if (s == NULL || s->vt == NULL || s->vt->path == NULL) {

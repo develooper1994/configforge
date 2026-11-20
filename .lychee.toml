@@ -1,0 +1,12 @@
+# lychee's settings (gate.links offline; the weekly `links` job online).
+# Every exception carries its reason.
+
+# A link to a heading must find the heading, not only the file.
+include_fragments = true
+
+# 429 is a site asking for fewer requests (GitHub does it to a crawler
+# that follows many links to one repository): not a dead link.
+accept = ["200..=299", "429"]
+
+# One slow site is not a dead one; the weekly job retries three times.
+timeout = 30

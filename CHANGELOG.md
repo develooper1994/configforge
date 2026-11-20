@@ -7,6 +7,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **`configforge gen --lang <name>` runs `configforge-gen-<name>`**, found
+  beside `configforge-gen` or on the PATH, with the contract as JSON on its
+  standard input - a generator in any language, outside the project
+  (D-110); `--lang contract-json` writes that JSON.
 - **`cf_bench docs`**: the benchmark reads JSON, YAML, TOML, CBOR and INI
   documents of 1 and 16 MiB (256 MiB with `--large`) through the codec API
   and prints MiB/s per format and size. The documents are made by the
@@ -22,6 +26,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   Python, and `.shellcheckrc`, `.codespellrc`, `.github/actionlint.yaml`
   and `[tool.ruff]` in `pyproject.toml` record the few exceptions, each
   with its reason.
+- **include-what-you-use and lychee**: CI's job `iwyu` builds the two
+  libraries under include-what-you-use and fails on a finding, so each source
+  under `lib/*/src` includes what it uses (`.iwyu.imp` holds the mapping);
+  `gate.links` holds every link and anchor inside the repository's Markdown,
+  and the `docs` workflow's weekly job `links` checks those to other sites
+  (`.lychee.toml`). `setup.sh` installs both.
 - **`scripts/work/profile.py`**: one command for the profile of `cf_bench`: time (perf, Visual Studio's collector with xperf), instructions (callgrind), cache misses (cachegrind), peak memory and allocations (heaptrack or massif) and GCC's missed-vectorization notes, on this machine, in WSL and over ssh, each tool where it is present.
 - **`lanes`**, a vector library of its own: span operations with a scalar
   reference and the processor's detection; ConfigForge does not use it yet
@@ -56,6 +66,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - The readers share one UTF-8 decoder and encoder, one hex-digit reader and
   one table hash (D-102); no input is read differently. `lanes` is compiled
   into both libraries under the prefix `cf_lanes_`.
+- Bytes that are not UTF-8 are refused by every text reader, dotenv,
+  response files, the environment, the arguments and the program's own
+  values, with their place and, when they look like one, the encoding to
+  name; XML still reads by its own declaration. Before, JSON, JSON5,
+  YAML, INI, `.properties` and dotenv passed them on (D-108).
 
 ## 1.7.0 — 2026-11-20
 

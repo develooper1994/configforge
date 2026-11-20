@@ -10,6 +10,8 @@
  */
 
 #include "configforge/cf_encoding.h"
+#include "configforge/cf_error.h"
+#include "configforge/cf_port.h"
 #include "configforge/cf_text.h"
 
 #include <string.h>
@@ -238,4 +240,83 @@ size_t cf_encoding_recode(unsigned from, const char* in, size_t n, char* out,
         /* UTF-8 is read as it is, and no other value is known. */
         return enc_refuse(bad, n);
     }
+}
+
+/* What the bytes of the whole input that are not part of a valid sequence
+   look like: 0 for nothing to say, else 1 to 3 as enc_hints is indexed. A
+   document that also holds valid multi-byte UTF-8 mixes encodings, and a
+   guess at one of them would be a guess. */
+static size_t enc_look(const char* p, size_t n) {
+    const char* end  = p + n;
+    cf_bool     turk = CF_FALSE;
+    cf_bool     win  = CF_FALSE;
+    size_t      i    = 0;
+
+    while (i < n) {
+        unsigned char b = (unsigned char)p[i];
+        cf_u32        cp;
+        size_t        k;
+
+        if (b < 0x80u) {
+            ++i;
+            continue;
+        }
+        k = cf_text_utf8_decode(p + i, end, &cp);
+        if (k != 0) {
+            return 0; /* a valid multi-byte sequence: it mixes encodings */
+        }
+        if (b == 0xD0u || b == 0xDDu || b == 0xDEu || b == 0xF0u || b == 0xFDu ||
+            b == 0xFEu) {
+            turk = CF_TRUE;
+        } else if (b <= 0x9Fu) {
+            win = CF_TRUE;
+        }
+        ++i;
+    }
+    if (turk) {
+        return 1;
+    }
+    return win ? 2 : 3;
+}
+
+/* The three encodings a refusal may name: its name, a word after it, and
+   the constant that reads it. */
+static const struct {
+    const char* name;
+    const char* note;
+    const char* constant;
+} enc_hints[] = {{"", "", ""},
+                 {"windows-1254", " (Turkish)", "CF_ENCODING_WINDOWS_1254"},
+                 {"windows-1252", "", "CF_ENCODING_WINDOWS_1252"},
+                 {"iso-8859-1", "", "CF_ENCODING_ISO_8859_1"}};
+
+cf_bool cf_encoding_check(const char* origin, const char* p, size_t n, cf_error* err) {
+    static const char digits[] = "0123456789ABCDEF";
+    char              hint[200];
+    char              hex[3];
+    size_t            at, look;
+    cf_u32            line = 1, col = 1;
+
+    at = (n == 0) ? 0 : cf_text_utf8_valid(p, n);
+    if (at == n) {
+        return CF_TRUE;
+    }
+    if (origin == NULL) {
+        origin = "input";
+    }
+    hex[0] = digits[((unsigned char)p[at] >> 4) & 15u];
+    hex[1] = digits[(unsigned char)p[at] & 15u];
+    hex[2] = '\0';
+    cf_text_place(p, at, 1, &line, &col);
+    look    = enc_look(p, n);
+    hint[0] = '\0';
+    if (look != 0) {
+        cf_fmt(hint, sizeof hint,
+               "; it may be %s%s: read it with %s, or the encoding %s in the tools",
+               enc_hints[look].name, enc_hints[look].note, enc_hints[look].constant,
+               enc_hints[look].name);
+    }
+    return cf_error_set(err, CF_E_SOURCE, NULL, origin,
+                        "%s:%u:%u: byte 0x%s is not valid UTF-8%s", origin,
+                        (unsigned)line, (unsigned)col, hex, hint);
 }

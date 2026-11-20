@@ -16,12 +16,24 @@
 
 #include "configforge/cf_flatten.h"
 #include "configforge/cf_define.h"
+#include "configforge/cf_encoding.h"
 #include "configforge/cf_entry.h"
 #include "configforge/cf_platform.h"
 #include "configforge/cf_source.h"
+#include "configforge/cf_alloc.h"
+#include "configforge/cf_build_options.h"
+#include "configforge/cf_error.h"
+#include "configforge/cf_keyspace.h"
+#include "configforge/cf_port.h"
+#include "configforge/cf_serialize.h"
 #include "configforge/cf_text.h"
 
 #include <string.h>
+/* iwyu asks for this include and against it by turns (cf_keyspace.h
+   and cf_error.h carry each other's names): it is kept. */
+/* IWYU pragma: begin_keep */
+#include "configforge/cf_encoding.h"
+/* IWYU pragma: end_keep */
 
 typedef struct file_state {
     const char*            path;   /* a document's name */
@@ -278,6 +290,11 @@ cf_bool cfi_source_text(unsigned flags, const cf_codec* const* own, size_t nown,
         return CF_FALSE;
     }
     if (*codec == NULL) {
+        /* Bytes that are not UTF-8 are refused before the content decides
+           (D-108), unless a format that declares its own encoding or has
+           none (XML, CBOR, TLV) reads them. */
+        cf_bool utf8 = cf_encoding_check(raw->name, text->p, text->n, NULL);
+
         /* A recoded XML text still says encoding="UTF-16", which the
            reader refuses in UTF-8 bytes: XML is tried on what was given. */
         if (*used != CF_ENCODING_UTF8) {
@@ -291,6 +308,9 @@ cf_bool cfi_source_text(unsigned flags, const cf_codec* const* own, size_t nown,
         }
         if (*codec == NULL) {
             *codec = cf_source_by_content(own, nown, text, raw->name, arena, err);
+        }
+        if (!utf8 && !file_declares(*codec)) {
+            return cf_encoding_check(raw->name, text->p, text->n, err);
         }
         if (*codec == NULL) {
             return CF_FALSE;

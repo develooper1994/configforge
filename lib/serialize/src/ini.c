@@ -33,8 +33,13 @@
 
 #include "configforge/cf_serialize.h"
 #include "configforge/cf_text.h"
+#include "configforge/cf_build_options.h"
+#include "configforge/cf_error.h"
+#include "configforge/cf_port.h"
+#include "configforge/cf_value.h"
 
 #include <string.h>
+#include <stddef.h>
 
 #if CF_WITH_INI
 

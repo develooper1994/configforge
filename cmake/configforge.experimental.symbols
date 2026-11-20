@@ -3,6 +3,7 @@
 # rewrite with cmake -DSRC=. -DWRITE=ON -P cmake/gates/GateAbi.cmake.
 # One line a name, "name major.minor": the release it came in, which the next minor makes promised or removes (D-89).
 cf_encoding_by_name 1.8
+cf_encoding_check 1.8
 cf_encoding_name 1.8
 cf_encoding_recode 1.8
 cf_format_holds 1.8

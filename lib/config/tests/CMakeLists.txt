@@ -75,7 +75,8 @@ set(CF_UNIT_TESTS
     test_cbor
     test_tlv
     test_kinds
-    test_encoding)
+    test_encoding
+    test_utf8_refused)
 
 # The directories test_starve's every-source run reads. C89 has no mkdir.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_starve.d

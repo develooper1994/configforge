@@ -7,6 +7,10 @@
  */
 
 #include "configforge/cf_serialize.h"
+#include "configforge/cf_build_options.h"
+#include "configforge/cf_encoding.h"
+#include "configforge/cf_error.h"
+#include "configforge/cf_port.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -257,8 +261,8 @@ cf_bool cf_codec_can_read(const cf_codec* c) {
     return (c->decode != NULL || codec_has_self(c)) ? CF_TRUE : CF_FALSE;
 }
 
-cf_bool cf_codec_decode(const cf_codec* c, const cf_blob* in, const cf_doc_sink* out,
-                        cf_error* err) {
+cf_bool cfi_codec_decode_raw(const cf_codec* c, const cf_blob* in,
+                             const cf_doc_sink* out, cf_error* err) {
     if (c != NULL && c->size >= CODEC_SIZE_1_0) {
         if (codec_has_self(c)) {
             return c->decode_self(c, in, out, err);
@@ -270,6 +274,19 @@ cf_bool cf_codec_decode(const cf_codec* c, const cf_blob* in, const cf_doc_sink*
     return cf_error_set(err, CF_E_CAPABILITY, NULL, (c != NULL) ? c->name : NULL,
                         "format '%s' can be written but not read",
                         (c != NULL && c->name != NULL) ? c->name : "");
+}
+
+cf_bool cf_codec_decode(const cf_codec* c, const cf_blob* in, const cf_doc_sink* out,
+                        cf_error* err) {
+    /* Every text codec reads UTF-8 and nothing else (D-108): XML declares
+       its own encoding, and a binary format checks its text strings as it
+       reads them. */
+    if (c != NULL && in != NULL && c->size >= CODEC_SIZE_1_0 &&
+        (c->caps & (CF_CODEC_BINARY | CF_CODEC_SELF_ENCODED)) == 0 &&
+        !cf_encoding_check(in->name, in->p, in->n, err)) {
+        return CF_FALSE;
+    }
+    return cfi_codec_decode_raw(c, in, out, err);
 }
 
 /* ------------------------------------------------------------------ *

@@ -399,11 +399,35 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/lint"
           "$RUNNER_TEMP/lint/bin/pip" install --quiet shellcheck-py==0.11.0.1 \
             ruff==0.17.6 actionlint-py==1.7.12.25 codespell==2.4.3
-      - name: shellcheck, ruff, actionlint, codespell
+      - name: Install lychee
+        # The release binary setup.sh pins, checked against its checksum.
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/lychee.tgz" https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2/lychee-x86_64-unknown-linux-musl.tar.gz
+          echo "73657a111819a30c47c08352896796f23d64e4eb2b3ed39b6d32149241566fc5  $RUNNER_TEMP/lychee.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/lychee.tgz" -C "$RUNNER_TEMP" --strip-components=1 lychee-x86_64-unknown-linux-musl/lychee
+          mv "$RUNNER_TEMP/lychee" "$RUNNER_TEMP/lint/bin/lychee"
+      - name: shellcheck, ruff, actionlint, codespell, links
         run: |
           export PATH="$RUNNER_TEMP/lint/bin:$PATH"
           cmake -S . -B blint
-          ctest --test-dir blint -R 'gate\.(shellcheck|ruff|actionlint|codespell)' --output-on-failure
+          ctest --test-dir blint -R 'gate\.(shellcheck|ruff|actionlint|codespell|links)' --output-on-failure
+
+  # include-what-you-use on the library's sources: a header included for
+  # what it does not use binds components the layering table keeps apart
+  # (D-100). Only the two libraries are built, so the tests and tools are
+  # not held to it. include-what-you-use is clang; -Wno-unknown-warning-option
+  # keeps it from refusing the GCC-only warnings of the build's own flags.
+  # iwyu's output differs by version: this job's is the judge.
+  iwyu:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install include-what-you-use
+        run: sudo apt-get update && sudo apt-get install -y iwyu
+      - name: Build the libraries under it
+        run: |
+          cmake -S . -B biwyu -DCMAKE_BUILD_TYPE=Debug             "-DCMAKE_C_INCLUDE_WHAT_YOU_USE=include-what-you-use;-Xiwyu;--error;-Xiwyu;--mapping_file=${{ github.workspace }}/.iwyu.imp;-Wno-unknown-warning-option"
+          cmake --build biwyu --target configforge configforge_serialize
 
   # What the format gate wants, as a patch. The gate reports and does not
   # rewrite, and the one version it accepts is not on every machine: a

@@ -6,8 +6,21 @@
  * never has to know that.
  */
 
+#include "configforge/cf_encoding.h"
 #include "configforge/configforge.h"
 #include "configforge/cf_platform.h"
+#include "configforge/cf_alloc.h"
+#include "configforge/cf_build_options.h"
+#include "configforge/cf_define.h"
+#include "configforge/cf_entry.h"
+#include "configforge/cf_error.h"
+#include "configforge/cf_explain.h"
+#include "configforge/cf_keyspace.h"
+#include "configforge/cf_live.h"
+#include "configforge/cf_log.h"
+#include "configforge/cf_port.h"
+#include "configforge/cf_report.h"
+#include "configforge/cf_value.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -1409,6 +1422,9 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
             }
             if (detail == NULL) {
                 detail = cf_source_registry_error(&c->sources[i]);
+            }
+            if (detail == NULL) {
+                detail = cfi_ks_refusal(&c->keys);
             }
             if (detail == NULL) {
                 detail = cfi_source_preferences_error(&c->sources[i]);

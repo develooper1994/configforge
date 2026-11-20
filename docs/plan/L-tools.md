@@ -23,9 +23,9 @@ or milestone names it), `new` (a card below).
 | 7. Run-time checks | memory and thread faults while tests run | ASan, LSan and UBSan's default checks (sanitize preset, GCC and MSVC), TSan (CI), Valgrind (verify `EXTRA`) | MemorySanitizer, clang's extra UBSan groups, fatal and stricter sanitizer options, Valgrind as a CI job (L-2); HWASan with the Arm CI (1.9.0) |
 | 8. Fuzzing | input no test thought of | libFuzzer (CI), ClusterFuzzLite (cflite) | AFL++ on the same targets (L-2); OSS-Fuzz (1.9.0) |
 | 9. Coverage and mutation | tests that run code without checking it | gcov (CI `coverage`) | mutation testing with Mull (planned for 1.9.0) |
-| 10. Interface | a release that breaks callers | abidiff (verify `EXTRA`) | include-what-you-use (L-4) |
+| 10. Interface | a release that breaks callers, a header that includes what it does not use | abidiff (verify `EXTRA`); include-what-you-use on `lib/*/src` (CI `iwyu`; L-4) | - |
 | 11. Supply chain and security | a leaked secret, a weak dependency, an untraceable build | Dependabot, an SBOM with the release, reproducible-build check (CI), REUSE (verify) | gitleaks, osv-scanner, OpenSSF Scorecard (L-2) |
-| 12. Documentation | a dead link, a misspelling | mkdocs build (CI `docs`); codespell (verify, CI `lint`; L-1) | lychee link check (L-4) |
+| 12. Documentation | a dead link, a misspelling | mkdocs build (CI `docs`); codespell (verify, CI `lint`; L-1); lychee: the links inside the repository (`gate.links`, verify, CI `lint`) and, weekly, those to other sites (`docs.yml` job `links`; L-4) | - |
 | 13. Profiling and measurement | where the time and the memory go, so that a speed-up starts from data | `cf_bench` (P-1, CI `bench` runs it); `scripts/work/profile.py` (L-5): perf, callgrind, cachegrind, heaptrack or massif, GCC's vectorization notes on Linux, Visual Studio's collector and xperf on Windows, each where it is present | hyperfine for whole-program timings, uftrace for call traces, `setup.sh` installing the profilers (L-5); Intel VTune and AMD uProf (free, vendor-bound) where the maintainer has them |
 
 Wished for, paid (open-source projects may get them free; to be asked for

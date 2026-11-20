@@ -93,6 +93,20 @@ for t in shellcheck ruff actionlint codespell; do
   ln -sf "/opt/cf-tools/bin/$t" "/usr/local/bin/$t"
 done
 
+# lychee, the link checker (gate.links), as its pinned release binary: it
+# is not in Ubuntu's archive. The checksum is the release archive's.
+LYCHEE_VERSION=0.24.2
+LYCHEE_SHA256=73657a111819a30c47c08352896796f23d64e4eb2b3ed39b6d32149241566fc5
+if ! /opt/cf-tools/bin/lychee --version 2>/dev/null | grep -qF "lychee $LYCHEE_VERSION"; then
+  lychee_dir=lychee-x86_64-unknown-linux-musl
+  curl -fsSL -o /tmp/lychee.tgz     "https://github.com/lycheeverse/lychee/releases/download/lychee-v$LYCHEE_VERSION/$lychee_dir.tar.gz"
+  echo "$LYCHEE_SHA256  /tmp/lychee.tgz" | sha256sum -c -
+  tar -xzf /tmp/lychee.tgz -C /tmp "$lychee_dir/lychee"
+  install -m 755 "/tmp/$lychee_dir/lychee" /opt/cf-tools/bin/lychee
+  rm -rf /tmp/lychee.tgz "/tmp/$lychee_dir"
+fi
+ln -sf /opt/cf-tools/bin/lychee /usr/local/bin/lychee
+
 # ccache's cache, bounded: verify reuses it from one unit to the next.
 ccache --max-size=5G >/dev/null
 

@@ -8,8 +8,10 @@
  * 1.
  */
 
+#include "configforge/cf_port.h"
 #include "configforge/cf_encoding.h"
 #include "configforge/cf_text.h"
+#include <stddef.h>
 
 void cf_text_place(const char* p, size_t at, unsigned unit, cf_u32* line, cf_u32* col) {
     const unsigned char* u    = (const unsigned char*)p;

@@ -10,9 +10,16 @@
 #include "configforge/cf_entry.h"
 #include "configforge/cf_source.h"
 #include "configforge/cf_define.h"
-#include "configforge/cf_platform.h"
+#include "configforge/cf_error.h"
+#include "configforge/cf_keyspace.h"
+#include "configforge/cf_port.h"
 
 #include <string.h>
+/* iwyu asks for this include and against it by turns (cf_keyspace.h
+   and cf_error.h carry each other's names): it is kept. */
+/* IWYU pragma: begin_keep */
+#include "configforge/cf_keyspace.h"
+/* IWYU pragma: end_keep */
 
 static cf_bool cf_env_load(const cf_source* s, cf_keyspace* ks) {
     cf_listsink out;
@@ -29,12 +36,16 @@ static cf_bool cf_env_load(const cf_source* s, cf_keyspace* ks) {
            additional unknown keys. */
         out.natural_pass = CF_TRUE;
         if (!cf_lex_env(s->u.env.env, &map, cf_listsink_of(&out), &err)) {
+            cfi_ks_refuse(ks, &err);
             return CF_FALSE;
         }
         out.natural_pass = CF_FALSE;
     }
-    return cf_lex_env(s->u.env.env, &map, cf_listsink_of(&out), &err) &&
-           cf_listsink_finish(&out);
+    if (!cf_lex_env(s->u.env.env, &map, cf_listsink_of(&out), &err)) {
+        cfi_ks_refuse(ks, &err);
+        return CF_FALSE;
+    }
+    return cf_listsink_finish(&out);
 }
 
 const char* cf_env_value(char* const* environment, const char* name, size_t* n) {

@@ -2,7 +2,7 @@
  * contract.c - a JSON Schema contract, checked against and written (D-64, D-67).
  *
  *     configforge gen check --schema <schema> <file>...
- *     configforge gen       --schema <schema> [--lang c|cpp|rust|python] [--name
+ *     configforge gen       --schema <schema> [--lang <lang>] [--name
  * <name>] [--out <file>]
  *
  * `check` reads configuration files against the contract as a program
@@ -20,7 +20,9 @@
  */
 
 #include "gen.h"
+#include "spawn.h"
 
+#include <configforge/cf_platform.h>
 #include <configforge/configforge.h>
 
 #include <stdio.h>
@@ -33,7 +35,7 @@
 #endif
 
 static int contract_usage(void) {
-    fputs("  configforge gen --schema <schema> [--lang c|cpp|rust|python] [--name "
+    fputs("  configforge gen --schema <schema> [--lang <lang>] [--name "
           "<name>] "
           "[--out <file>]\n"
           "  configforge gen check --schema <schema> <file>...\n",
@@ -1774,6 +1776,344 @@ static int gen_py_file(FILE* out, const cf_defset* ds, const char* schema,
     return rc;
 }
 
+/* ------------------------------------------------------------------ *
+ * The contract as JSON (D-110)
+ *
+ * What a generator outside the tree is given on its standard input, and
+ * what `--lang contract-json` writes: every member always present, an
+ * absent value `null`, so a generator never tests for a missing key.
+ * ------------------------------------------------------------------ */
+
+/* The member name and its colon, at `depth` levels of two spaces. */
+static void cj_member(cf_sink* s, int depth, const char* name) {
+    int i;
+
+    for (i = 0; i < depth; ++i) {
+        cf_sink_puts(s, "  ");
+    }
+    cf_sink_putc(s, '"');
+    cf_sink_puts(s, name);
+    cf_sink_puts(s, "\": ");
+}
+
+static void cj_string(cf_sink* s, const char* z) {
+    if (z == NULL) {
+        cf_sink_puts(s, "null");
+    } else {
+        cf_sink_json_string(s, z, strlen(z));
+    }
+}
+
+/* A NULL-terminated list of text on one line; null when there is none. */
+static void cj_text_list(cf_sink* s, const char* const* list) {
+    cf_bool first = CF_TRUE;
+
+    if (list == NULL) {
+        cf_sink_puts(s, "null");
+        return;
+    }
+    cf_sink_putc(s, '[');
+    for (; *list != NULL; ++list) {
+        if (!first) {
+            cf_sink_puts(s, ", ");
+        }
+        cj_string(s, *list);
+        first = CF_FALSE;
+    }
+    cf_sink_putc(s, ']');
+}
+
+/* A count as digits, or null for 0 (no bound). */
+static void cj_bound(cf_sink* s, size_t n) {
+    char buf[32];
+
+    if (n == 0) {
+        cf_sink_puts(s, "null");
+        return;
+    }
+    sprintf(buf, "%lu", (unsigned long)n);
+    cf_sink_puts(s, buf);
+}
+
+/* One value as JSON; CF_FALSE for one the contract cannot hold: a type a
+   definition cannot have, or a real that is not a finite number. */
+static cf_bool cj_value(cf_sink* s, const cf_value* v) {
+    char   buf[CF_VALUE_TEXT_MAX + 2];
+    size_t i;
+
+    switch (v->type) {
+    case CF_TYPE_BOOL:
+        cf_sink_puts(s, v->u.b ? "true" : "false");
+        return CF_TRUE;
+    case CF_TYPE_INT:
+    case CF_TYPE_REAL:
+        if (cf_value_to_text(v, buf, sizeof buf) == 0) {
+            return CF_FALSE;
+        }
+        for (i = 0; buf[i] != '\0'; ++i) {
+            if (strchr("0123456789+-.eE", buf[i]) == NULL) {
+                return CF_FALSE;
+            }
+        }
+        cf_sink_puts(s, buf);
+        return CF_TRUE;
+    case CF_TYPE_TEXT:
+        cf_sink_json_string(s, v->u.t.p, v->u.t.n);
+        return CF_TRUE;
+    case CF_TYPE_NULL:
+    default:
+        return CF_FALSE;
+    }
+}
+
+static void cj_flags(cf_sink* s, unsigned flags) {
+    static const struct {
+        unsigned    bit;
+        const char* name;
+    } names[] = {{CF_REQUIRED, "required"},
+                 {CF_SENSITIVE, "sensitive"},
+                 {CF_DEPRECATED, "deprecated"},
+                 {CF_TRANSIENT, "transient"},
+                 {CF_RESTART, "restart"}};
+    size_t  i;
+    cf_bool any = CF_FALSE;
+
+    cf_sink_putc(s, '[');
+    for (i = 0; i < sizeof names / sizeof names[0]; ++i) {
+        if ((flags & names[i].bit) != 0) {
+            cf_sink_puts(s, any ? ", " : "");
+            cj_string(s, names[i].name);
+            any = CF_TRUE;
+        }
+    }
+    cf_sink_putc(s, ']');
+}
+
+/* The range of an int or a real, or null: `hi` picks the upper end. */
+static cf_bool cj_range(cf_sink* s, const cf_def* d, cf_bool hi) {
+    cf_value v;
+
+    if (!d->has_range) {
+        cf_sink_puts(s, "null");
+        return CF_TRUE;
+    }
+    if (d->type == CF_TYPE_INT) {
+        cf_value_int(&v, hi ? d->imax : d->imin);
+#if CF_WITH_REAL
+    } else if (d->type == CF_TYPE_REAL) {
+        cf_value_real(&v, hi ? d->rmax : d->rmin);
+#endif
+    } else {
+        cf_sink_puts(s, "null");
+        return CF_TRUE;
+    }
+    return cj_value(s, &v);
+}
+
+static cf_bool cj_default(cf_sink* s, const cf_def* d) {
+    size_t i;
+
+    if (!d->has_default) {
+        cf_sink_puts(s, "null");
+        return CF_TRUE;
+    }
+    if (d->list_mode == CF_LIST_NONE) {
+        return cj_value(s, &d->default_value);
+    }
+    cf_sink_putc(s, '[');
+    for (i = 0; i < d->list_default_count; ++i) {
+        cf_sink_puts(s, (i > 0) ? ", " : "");
+        if (!cj_value(s, &d->list_defaults[i])) {
+            return CF_FALSE;
+        }
+    }
+    cf_sink_putc(s, ']');
+    return CF_TRUE;
+}
+
+static void cj_list(cf_sink* s, const cf_def* d) {
+    char sep[2];
+
+    if (d->list_mode == CF_LIST_NONE) {
+        cf_sink_puts(s, "null");
+        return;
+    }
+    cf_sink_puts(s, "{\n");
+    cj_member(s, 4, "mode");
+    cj_string(s, (d->list_mode == CF_LIST_APPEND) ? "append" : "replace");
+    cf_sink_puts(s, ",\n");
+    cj_member(s, 4, "separator");
+    sep[0] = d->list_separator;
+    sep[1] = '\0';
+    cj_string(s, (d->list_separator != '\0') ? sep : NULL);
+    cf_sink_puts(s, "\n      }");
+}
+
+/* One definition, its members at three levels. */
+static cf_bool cj_definition(cf_sink* s, const cf_def* d) {
+    const char* type = cf_type_name(d->type);
+
+    if ((d->flags & ~(unsigned)CF_DEF_FLAGS) != 0 || d->type == CF_TYPE_NULL
+#if !CF_WITH_REAL
+        || d->type == CF_TYPE_REAL
+#endif
+    ) {
+        return CF_FALSE;
+    }
+    cf_sink_puts(s, "    {\n");
+    cj_member(s, 3, "key");
+    cj_string(s, d->key);
+    cf_sink_puts(s, ",\n");
+    cj_member(s, 3, "type");
+    cj_string(s, type);
+    cf_sink_puts(s, ",\n");
+    cj_member(s, 3, "description");
+    cj_string(s, d->description);
+    cf_sink_puts(s, ",\n");
+    cj_member(s, 3, "flags");
+    cj_flags(s, d->flags);
+    cf_sink_puts(s, ",\n");
+    cj_member(s, 3, "on_invalid");
+    cj_string(s, (d->on_invalid == CF_INVALID_FALLBACK) ? "fallback" : "strict");
+    cf_sink_puts(s, ",\n");
+    cj_member(s, 3, "replaced_by");
+    cj_string(s, d->replaced_by);
+    cf_sink_puts(s, ",\n");
+    cj_member(s, 3, "default");
+    if (!cj_default(s, d)) {
+        return CF_FALSE;
+    }
+    cf_sink_puts(s, ",\n");
+    cj_member(s, 3, "min");
+    if (!cj_range(s, d, CF_FALSE)) {
+        return CF_FALSE;
+    }
+    cf_sink_puts(s, ",\n");
+    cj_member(s, 3, "max");
+    if (!cj_range(s, d, CF_TRUE)) {
+        return CF_FALSE;
+    }
+    cf_sink_puts(s, ",\n");
+    cj_member(s, 3, "min_length");
+    cj_bound(s, d->min_len);
+    cf_sink_puts(s, ",\n");
+    cj_member(s, 3, "max_length");
+    cj_bound(s, d->max_len);
+    cf_sink_puts(s, ",\n");
+    cj_member(s, 3, "allowed");
+    cj_text_list(s, d->allowed);
+    cf_sink_puts(s, ",\n");
+    cj_member(s, 3, "aliases");
+    cj_text_list(s, d->aliases);
+    cf_sink_puts(s, ",\n");
+    cj_member(s, 3, "policy");
+    cj_text_list(s, d->policy);
+    cf_sink_puts(s, ",\n");
+    cj_member(s, 3, "list");
+    cj_list(s, d);
+    cf_sink_puts(s, "\n    }");
+    return CF_TRUE;
+}
+
+int gen_contract_json(const cf_defset* ds, const char* schema, const char* name,
+                      const char* text, size_t n, cf_sink* out) {
+    size_t i;
+    size_t count = cf_defset_count(ds);
+
+    cf_sink_puts(out,
+                 "{\n  \"format\": \"configforge-contract\",\n  \"version\": 1,\n");
+    cj_member(out, 1, "schema");
+    cj_string(out, schema);
+    cf_sink_puts(out, ",\n");
+    cj_member(out, 1, "name");
+    cj_string(out, name);
+    cf_sink_puts(out, ",\n");
+    cj_member(out, 1, "schema_text");
+    cf_sink_json_string(out, text, n);
+    cf_sink_puts(out, ",\n");
+    cj_member(out, 1, "open");
+    {
+        const char* open[CF_MAX_OPEN_PREFIXES + 1];
+
+        for (i = 0; i < ds->open_count; ++i) {
+            open[i] = ds->open_prefixes[i];
+        }
+        open[ds->open_count] = NULL;
+        cj_text_list(out, open);
+    }
+    cf_sink_puts(out, ",\n");
+    cj_member(out, 1, "definitions");
+    cf_sink_puts(out, (count > 0) ? "[\n" : "[]");
+    for (i = 0; i < count; ++i) {
+        const cf_def* d = cf_defset_at(ds, i);
+
+        if (!cj_definition(out, d)) {
+            fprintf(stderr, "gen: '%s' has a value the contract JSON cannot hold\n",
+                    d->key);
+            return 2;
+        }
+        cf_sink_puts(out, (i + 1 < count) ? ",\n" : "\n");
+    }
+    cf_sink_puts(out, (count > 0) ? "  ]\n}\n" : "\n}\n");
+    return 0;
+}
+
+/* The contract's JSON in memory the caller frees, `*len` bytes, measured
+   by a first pass and written by a second. NULL, with the reason on
+   stderr, when it cannot be had. */
+static char* gen_contract_bytes(const cf_defset* ds, const char* schema,
+                                const char* name, const char* text, size_t n,
+                                size_t* len) {
+    cf_sink s;
+    char*   buf;
+
+    cf_sink_init(&s, NULL, 0);
+    if (gen_contract_json(ds, gen_base(schema), name, text, n, &s) != 0) {
+        return NULL;
+    }
+    buf = (char*)malloc(s.len + 1);
+    if (buf == NULL) {
+        fputs("gen: out of memory\n", stderr);
+        return NULL;
+    }
+    cf_sink_init(&s, buf, s.len + 1);
+    if (gen_contract_json(ds, gen_base(schema), name, text, n, &s) != 0) {
+        free(buf);
+        return NULL;
+    }
+    *len = s.len;
+    return buf;
+}
+
+/* The contract as its JSON: the table's entry for `--lang contract-json`. */
+static int gen_json_file(FILE* out, const cf_defset* ds, const char* schema,
+                         const char* name, const gen_lang* self) {
+    size_t text_n = 0;
+    size_t len    = 0;
+    char*  text   = gen_slurp(schema, &text_n);
+    char*  json;
+    int    rc = 2;
+
+    (void)self;
+    if (text == NULL) {
+        fputs("gen: cannot read the schema\n", stderr);
+        return 2;
+    }
+    json = gen_contract_bytes(ds, schema, name, text, text_n, &len);
+    if (json != NULL) {
+        rc = (fwrite(json, 1, len, out) == len) ? 0 : 2;
+    }
+    free(json);
+    free(text);
+    return rc;
+}
+
+/* `--name` is whatever the reader of the JSON makes of it. */
+static cf_bool gen_any_name(const char* name) {
+    (void)name;
+    return CF_TRUE;
+}
+
 static const gen_lang gen_langs[] = {
     {"c", ".c", "cf_contract", c_identifier, NULL, 0, gen_c_file},
     {"cpp", ".hpp", "cf_contract", c_identifier, gen_cxx_reserved,
@@ -1782,11 +2122,12 @@ static const gen_lang gen_langs[] = {
      sizeof gen_rs_reserved / sizeof gen_rs_reserved[0], gen_rs_file},
     {"python", ".py", "Settings", py_identifier, gen_py_reserved,
      sizeof gen_py_reserved / sizeof gen_py_reserved[0], gen_py_file},
+    {"contract-json", ".json", NULL, gen_any_name, NULL, 0, gen_json_file},
 };
 
 #define GEN_LANGS (sizeof gen_langs / sizeof gen_langs[0])
 
-/* The language `--lang` names; NULL, and what there is said, when none. */
+/* The table's language `--lang` names; NULL when it is none of them. */
 static const gen_lang* gen_find(const char* name) {
     size_t i;
 
@@ -1795,14 +2136,142 @@ static const gen_lang* gen_find(const char* name) {
             return &gen_langs[i];
         }
     }
+    return NULL;
+}
+
+/* A name `configforge-gen-<name>` may be run for (D-110): 1 to 64 bytes of
+   a-z, 0-9 and -, not starting with -, so `../x` and `Fake` never are. */
+static cf_bool gen_lang_name(const char* s) {
+    size_t n = strlen(s);
+    size_t i;
+
+    if (n == 0 || n > 64 || s[0] == '-') {
+        return CF_FALSE;
+    }
+    for (i = 0; i < n; ++i) {
+        if (!(s[i] >= 'a' && s[i] <= 'z') && !(s[i] >= '0' && s[i] <= '9') &&
+            s[i] != '-') {
+            return CF_FALSE;
+        }
+    }
+    return CF_TRUE;
+}
+
+/* What there is, and where the program was looked for: `dir` is this
+   program's directory, NULL when not known. */
+static void gen_no_language(const char* name, const char* dir) {
+    size_t i;
+
     fprintf(stderr, "gen: no language '%s'; there are: ", name);
     for (i = 0; i < GEN_LANGS; ++i) {
         fprintf(stderr, "%s%s", (i > 0) ? ", " : "", gen_langs[i].name);
     }
-    fputc('\n', stderr);
-    return NULL;
+#if !CF_PLATFORM_POSIX && !CF_PLATFORM_WIN32
+    (void)dir;
+    fputs("; this platform cannot run another program\n", stderr);
+#else
+    if (dir != NULL) {
+        fprintf(stderr, "; no configforge-gen-%s in %s or on the PATH\n", name, dir);
+    } else {
+        fprintf(stderr, "; no configforge-gen-%s on the PATH\n", name);
+    }
+#endif
 }
 
+/* The schema read into a definition set of its own arena, which the
+   caller frees; 0, or 2 with the reason on stderr. */
+static int gen_load(cf_arena** ar, cf_defset* ds, const char* schema) {
+    cf_error err = CF_ERROR_INIT;
+
+    *ar = cf_arena_new(NULL, 0);
+    if (*ar == NULL || !cf_defset_init(ds, *ar, 0) ||
+        !cf_defset_schema_file(ds, schema, &err)) {
+        fprintf(stderr, "gen: %s\n", (*ar == NULL) ? "cannot start" : err.message);
+        cf_arena_free(*ar);
+        *ar = NULL;
+        return 2;
+    }
+    return 0;
+}
+
+/* What the program said of how it ended, and the exit code it gives. */
+static int gen_ended(const char* path, int ran, int code) {
+    if (ran == 0) {
+        return code;
+    }
+    if (ran == 1) {
+        fprintf(stderr, "gen: cannot run %s\n", path);
+        return 2;
+    }
+#if CF_PLATFORM_WIN32
+    fprintf(stderr, "gen: %s stopped with code 0x%08lX\n", path, (unsigned long)code);
+#else
+    fprintf(stderr, "gen: %s was stopped (signal %d)\n", path, code);
+#endif
+    return 2;
+}
+
+/* A language outside the tree (D-110): the program configforge-gen-<lang>,
+   handed the contract as JSON on its standard input and the arguments but
+   `--lang` and `--schema` on its own; its exit code is the result. */
+static int gen_outside(int argc, char** argv, const char* lang, const char* schema) {
+    static const char* const drop[] = {"--lang", "--schema", NULL};
+    const char*              name   = NULL;
+    char*                    dir    = NULL;
+    char*                    exe;
+    char*                    text;
+    char*                    json;
+    size_t                   text_n = 0;
+    size_t                   len    = 0;
+    cf_arena*                ar;
+    cf_defset                ds;
+    int                      code = 0;
+    int                      rc;
+    int                      i;
+
+    if (!gen_lang_name(lang)) {
+        fprintf(stderr, "gen: '%s' is not a language name\n", lang);
+        return 2;
+    }
+    exe = spawn_find(argv[0], lang, &dir);
+    if (exe == NULL) {
+        gen_no_language(lang, dir);
+        free(dir);
+        return 2;
+    }
+    free(dir);
+    for (i = 1; i + 1 < argc; i += 2) {
+        if (strcmp(argv[i], "--name") == 0) {
+            name = argv[i + 1];
+        }
+    }
+    if (gen_load(&ar, &ds, schema) != 0) {
+        free(exe);
+        return 2;
+    }
+    text = gen_slurp(schema, &text_n);
+    if (text == NULL) {
+        fputs("gen: cannot read the schema\n", stderr);
+        cf_arena_free(ar);
+        free(exe);
+        return 2;
+    }
+    json = gen_contract_bytes(&ds, schema, name, text, text_n, &len);
+    cf_arena_free(ar);
+    free(text);
+    if (json == NULL) {
+        free(exe);
+        return 2;
+    }
+    rc = spawn_run(exe, argc, argv, drop, json, len, &code);
+    rc = gen_ended(exe, rc, code);
+    free(json);
+    free(exe);
+    return rc;
+}
+
+/* argv is the program's own: argv[0], then --schema, --lang, --name and
+   --out, each with its value. */
 int gen_code(int argc, char** argv) {
     const char*     schema = NULL;
     const char*     name   = NULL;
@@ -1811,12 +2280,11 @@ int gen_code(int argc, char** argv) {
     const gen_lang* gl;
     cf_arena*       ar;
     cf_defset       ds;
-    cf_error        err = CF_ERROR_INIT;
     FILE*           out = stdout;
     int             rc;
     int             i;
 
-    for (i = 0; i + 1 < argc; i += 2) {
+    for (i = 1; i + 1 < argc; i += 2) {
         if (strcmp(argv[i], "--schema") == 0) {
             schema = argv[i + 1];
         } else if (strcmp(argv[i], "--lang") == 0) {
@@ -1834,7 +2302,7 @@ int gen_code(int argc, char** argv) {
     }
     gl = gen_find(lang);
     if (gl == NULL) {
-        return 2;
+        return gen_outside(argc, argv, lang, schema);
     }
     if (name == NULL) {
         name = gl->default_name;
@@ -1842,11 +2310,7 @@ int gen_code(int argc, char** argv) {
     if (!gl->identifier(name)) {
         return contract_usage();
     }
-    ar = cf_arena_new(NULL, 0);
-    if (ar == NULL || !cf_defset_init(&ds, ar, 0) ||
-        !cf_defset_schema_file(&ds, schema, &err)) {
-        fprintf(stderr, "gen: %s\n", (ar == NULL) ? "cannot start" : err.message);
-        cf_arena_free(ar);
+    if (gen_load(&ar, &ds, schema) != 0) {
         return 2;
     }
     if (path != NULL) {

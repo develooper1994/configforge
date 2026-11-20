@@ -110,13 +110,21 @@ distribution `buildenv/wsl-distro.ps1` makes. `CF_WORK` (a directory with
 room; `D:\cf-work` when D: exists) and `CF_DISTRO` (`configforge-dev`)
 change where.
 
-| Script | Does |
-| ------ | ---- |
-| `work/verify.sh <id> [full\|quick]` | the staged tree, copied, formatted with the pinned clang-format, built with clang as CI's clang job, then `verify.cmake` with the old compilers (`EXTRA=compilers`) in a full run; one run at a time on the machine. `STYLE=1` formats nothing and runs clang-tidy first: a milestone's end |
-| `work/format.sh` | the files changed against `origin/main`, formatted: C and C++ with the pinned clang-format, CMake with cmake-format |
-| `work/ship.sh <id>` | `verify.sh`, and only if it passes the push and CI; a failed style step does not fail it, any other step does |
-| `work/land.sh <id> "<subject>"` | from the main checkout: main merged into the branch, `format.sh`, `ship.sh`, the branch squashed onto main with its tree checked, the index updated (the card done, the cards that waited only on it open), pushed, the worktree and branches removed |
-| `work/win.cmd <worktree> <id> [regex]` | the MSVC build and tests, found with vswhere, built under `CF_WORK` |
+`work/work.py` does all of it, one subcommand per step (Python 3.8+, the
+standard library only; on Windows its Linux half runs through `wsl.exe`).
+The `.sh` and `.cmd` files beside it (`verify.sh`, `verify-in.sh`,
+`format.sh`, `ship.sh`, `land.sh`, `win.cmd`, `env.sh`) are being replaced
+by it and will go. Every wait has a limit (`CF_STEP_MINUTES`,
+`CF_LOCK_MINUTES`, `CF_VERIFY_MINUTES`, `CF_CI_MINUTES`); every failure is
+one line and a non-zero exit.
+
+| Command | Does |
+| ------- | ---- |
+| `work/work.py verify <id> [full\|quick]` | the staged tree, copied inside the machine's one lock (a queued run never deletes a running one's files), formatted with the pinned clang-format, built with clang as CI's clang job; in a full run also CI's `yaml` configuration (libyaml, XML, SQLite; skipped with a reason when a library is missing), then `verify.cmake` with the old compilers (`EXTRA=compilers`, plus `CF_EXTRA`). `STYLE=1` formats nothing and runs clang-tidy first: a milestone's end |
+| `work/work.py format` | the files changed against `origin/main`, formatted: C and C++ with the pinned clang-format, CMake with cmake-format |
+| `work/work.py ship <id>` | `verify`, and only if it passes the push and CI; a failed style step does not fail it, any other step does; a CI run still going after `CF_CI_MINUTES` is cancelled |
+| `work/work.py land <id> "<subject>" [--dry-run]` | from the main checkout: main merged into the branch, `format`, `ship` (`SKIP_SHIP=1` skips it when the last commit passed), the branch squashed onto main with its tree checked, the index updated (the card done, the cards that waited only on it open), pushed, the worktree and branches removed; `--dry-run` prints the steps and does none |
+| `work/work.py win <worktree> <id> [regex]` | the MSVC build and tests, found with vswhere, built under `CF_WORK`; `gate.format` is left to Linux |
 | `work/profile.py [--host H]... [--wsl] [--windows] <format>...` | the profile of `cf_bench docs <format>` from HEAD, on every place it can reach (this machine, WSL, each ssh host; on Windows MSVC with Visual Studio's collector and xperf): perf, callgrind, cachegrind, heaptrack or massif and GCC's missed-vectorization notes where present; a missing tool or host is one `skipped:` line. One Markdown file in `CF_WORK`, one summary line per format; exit 1 when no profile was taken |
 
 ## buildenv: the environment, as a file

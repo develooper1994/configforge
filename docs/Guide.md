@@ -651,6 +651,40 @@ source's format, only when it is not `"utf-8"`, so the report of a UTF-8
 file is what it was. A drop-in directory and a `.env` file say nothing
 yet.
 
+### Bytes that are not UTF-8
+
+A file with no encoding named is UTF-8, and bytes that are not are
+refused, never replaced and never guessed at. Every text format does it -
+JSON, JSON5, TOML, YAML, INI, `.properties`, `.env` - and so do the
+response files (`@file`), the value of an environment variable that maps
+to a key, an option's value on the command line, and the program's own
+values (the memory source's pairs and a definition's defaults). The
+refusal has the form every reader's has, the place of the first byte that
+is not UTF-8, lines counted by LF and columns in bytes from 1:
+
+```text
+app.ini:2:6: byte 0xDE is not valid UTF-8; it may be windows-1254 (Turkish): read it with CF_ENCODING_WINDOWS_1254, or the encoding windows-1254 in the tools
+```
+
+The hint is the one place that looks at what the bytes might be. It is
+made from the bytes of the whole input that are not part of a valid UTF-8
+sequence, and it is only a hint: it never changes a value. If the input
+also holds valid multi-byte UTF-8 it mixes encodings and gets no hint;
+else a byte among 0xD0, 0xDD, 0xDE, 0xF0, 0xFD and 0xFE (Turkish letters)
+names `windows-1254`; else one from 0x80 to 0x9F names `windows-1252`;
+else `iso-8859-1`. The check is `cf_encoding_check`, which a program can
+call on its own bytes.
+
+A file whose format is left to its content is checked first, so it gets
+this refusal and not "cannot tell the format". A variable that maps to no
+key is never looked at, so an unrelated one cannot stop a start; its
+message names the variable (`env APP_NAME:1:4: ...`), never the value. An
+option's value is named `argument 3`, and a positional argument, which
+belongs to the program, is not checked. XML is read by the encoding it
+declares, and the binary formats check the text strings they hold. The
+contents of a secrets or credentials directory are opaque bytes the
+library never parses or prints, and are not checked.
+
 ## 9. Secrets
 
 Define a key `CF_SENSITIVE` and its value never appears in a diagnostic:

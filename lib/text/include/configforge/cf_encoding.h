@@ -16,6 +16,7 @@
 #define CONFIGFORGE_CF_ENCODING_H
 
 #include "configforge/cf_port.h"
+#include "configforge/cf_error.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,6 +59,19 @@ CF_EXPERIMENTAL(1, 8) const char* cf_encoding_name(unsigned flags);
    having written nothing past cap. */
 CF_EXPERIMENTAL(1, 8) size_t cf_encoding_recode(unsigned from, const char* in, size_t n,
                                                 char* out, size_t cap, size_t* bad);
+
+/* CF_TRUE when the n bytes at p are UTF-8. Otherwise CF_FALSE, and
+   err set (CF_E_SOURCE) to
+   "<origin>:<line>:<column>: byte 0x<XX> is not valid UTF-8<hint>",
+   the place of the first byte that is not, counted as every reader
+   counts (lines by LF, columns in bytes from 1). The hint, when the bytes
+   that are not part of a valid sequence look like another encoding and
+   the input has no multi-byte UTF-8 of its own, says which and how to
+   read it so: "; it may be windows-1254 (Turkish): read it with
+   CF_ENCODING_WINDOWS_1254, or the encoding windows-1254 in the tools".
+   It never changes a value. A NULL origin is "input". (D-108) */
+CF_EXPERIMENTAL(1, 8) cf_bool cf_encoding_check(const char* origin, const char* p,
+                                                size_t n, cf_error* err);
 
 #ifdef __cplusplus
 }

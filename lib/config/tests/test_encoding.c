@@ -369,15 +369,17 @@ static void test_single_byte(void) {
     check(g.ok && strcmp(g.value, "\xC3\x9E\xC3\xBCkr\xC3\xBC") == 0,
           "Windows-1252 reads 0xDE as another letter: nothing is guessed");
 
-    /* No encoding named: the bytes are what they were (A-5 refuses them). */
+    /* No encoding named: the bytes are not UTF-8, and are refused (A-5). */
     from_file(&g, NULL, 0, "cf_encoding_d.ini",
               "ad=\xDE\xFC"
               "kr\xFC\n",
               9, "ad");
-    check(g.ok && strcmp(g.value, "\xDE\xFC"
-                                  "kr\xFC") == 0,
-          "without the flag the file gives what it gave");
-    check_text(g.encoding, "utf-8", "and says UTF-8");
+    check(!g.ok, "without the flag the file is refused");
+    has(g.error, "cf_encoding_d.ini:1:4: byte 0xDE is not valid UTF-8",
+        "at its place, and says why");
+#if CF_MESSAGE_MAX >= 256 /* a short message is cut before the hint ends */
+    has(g.error, "CF_ENCODING_WINDOWS_1254", "and what to name to read it");
+#endif
 
     /* The euro sign is three bytes in UTF-8. */
     from_file(&g, NULL, CF_ENCODING_WINDOWS_1252, "cf_encoding_e.ini", "ad=\x80\n", 5,
@@ -655,7 +657,8 @@ static void test_document(void) {
                         "kr\xFC\n",
                         9, NULL, 0);
     finish(&g, b, "ad");
-    check_text(g.encoding, "utf-8", "a document with none named says UTF-8");
+    check(!g.ok, "a document with none named is refused: it is not UTF-8");
+    has(g.error, "doc2.ini:1:4: byte 0xDE is not valid UTF-8", "at its place");
 }
 
 #if CF_WITH_DOTENV

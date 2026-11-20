@@ -3,6 +3,9 @@
  */
 
 #include "configforge/cf_text.h"
+#include "configforge/cf_port.h"
+
+#include <stddef.h>
 
 /* The seed every hash of a name in a decode starts from, so that a
    document's author cannot choose names that all land in one bucket: the

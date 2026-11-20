@@ -758,6 +758,16 @@ static void write_seed(const char* name, const char* p, size_t n) {
     fclose(f);
 }
 
+/* The documents with a byte that is not UTF-8, one line each: the byte is
+   0xE9, Latin-1's e acute, ending the text where a reader meets it. */
+static const char g_bad_json[]       = "{\"name\": \"caf\xE9\"}\n";
+static const char g_bad_json5[]      = "{name: 'caf\xE9', // a comment\n}\n";
+static const char g_bad_ini[]        = "[server]\nname = caf\xE9\n";
+static const char g_bad_toml[]       = "[server]\nname = \"caf\xE9\"\n";
+static const char g_bad_yaml[]       = "server:\n  name: caf\xE9\n";
+static const char g_bad_properties[] = "server.name = caf\xE9\n";
+static const char g_bad_env[]        = "APP_NAME=caf\xE9\n";
+
 int main(void) {
     static const char argv_seed[] = "--server.port=8080 --no-tls -p 1 @none";
 
@@ -774,6 +784,16 @@ int main(void) {
     write_seed("seed_dotenv", g_env, strlen(g_env));
     write_seed("seed_replay", g_report, strlen(g_report));
     write_seed("seed_argv", argv_seed, sizeof argv_seed - 1);
+    /* One document for each text reader with a byte that is not UTF-8
+       (D-108), so the refusal and its place are fuzzed too: Latin-1's e
+       acute where the text goes. */
+    write_seed("seed_json_utf8", g_bad_json, strlen(g_bad_json));
+    write_seed("seed_json5_utf8", g_bad_json5, strlen(g_bad_json5));
+    write_seed("seed_ini_utf8", g_bad_ini, strlen(g_bad_ini));
+    write_seed("seed_toml_utf8", g_bad_toml, strlen(g_bad_toml));
+    write_seed("seed_yaml_utf8", g_bad_yaml, strlen(g_bad_yaml));
+    write_seed("seed_properties_utf8", g_bad_properties, strlen(g_bad_properties));
+    write_seed("seed_dotenv_utf8", g_bad_env, strlen(g_bad_env));
 #if CF_WITH_IMAGE
     {
         static char img[MAX_INPUT];
