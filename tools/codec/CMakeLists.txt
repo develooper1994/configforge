@@ -8,6 +8,7 @@ add_executable(
   configforge_codec
   codec.c
   convert.c
+  convert_core.c
   detect.c
   dump.c
   formats.c)
