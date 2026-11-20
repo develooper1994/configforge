@@ -626,6 +626,11 @@ int main(int argc, char** argv) {
         }
     }
     pr_run_docs(&st);
+    for (m = 0; m < st.ndocs; ++m) {
+        free(st.docs[m].name);
+        free(st.docs[m].bytes);
+    }
+    free(st.docs);
     printf("pairs: %lu documents (%lu not read), 36 pairs, %lu checks, %lu failures\n",
            (unsigned long)st.ndocs, (unsigned long)st.not_read,
            (unsigned long)st.checks, (unsigned long)st.failures);
