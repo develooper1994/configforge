@@ -76,6 +76,8 @@ typedef struct cv_check {
     cv_finding*     list;
     size_t          n;
     size_t          cap;
+    unsigned        holds; /* of the target, when `known` */
+    cf_bool         known; /* the table of what a format holds has the target */
     cf_bool         nomem;
 } cv_check;
 
@@ -216,10 +218,15 @@ static cv_node* cv_member(cv_tree* t, cv_nkind kind, const char* name, size_t n,
     size_t    text = (v != NULL && v->type == CF_TYPE_TEXT) ? v->u.t.n : 0;
 
     if (parent == NULL) {
-        if (t->root != NULL || kind != CVN_TABLE) {
+        if (kind != CVN_TABLE) {
             return NULL;
         }
-        t->root = cv_new(t, NULL, kind, NULL, 0, 0);
+        /* The document again, with nothing in it: the YAML reader says
+           one at the end of every file, and a configuration's sinks
+           take it as the same table reopened. */
+        if (t->root == NULL) {
+            t->root = cv_new(t, NULL, kind, NULL, 0, 0);
+        }
         return t->root;
     }
     if (parent->kind != CVN_TABLE) {
@@ -506,11 +513,116 @@ static void cv_pass_arrays(cv_check* k, cv_node* n) {
     }
 }
 
+/* What kind of finding an array is, by the bits the target holds, judged
+   on its children as they were read (whatever a pass has left out
+   since): 0 for none. */
+static cv_kind cv_array_kind(const cv_node* a, unsigned holds) {
+    const cv_node* m;
+
+    if ((holds & CF_HOLDS_ARRAYS) == 0u) {
+        return CV_ARRAY;
+    }
+    if (a->first == NULL) {
+        return ((holds & CF_HOLDS_EMPTY_ARRAY) == 0u) ? CV_EMPTY_ARRAY : (cv_kind)0;
+    }
+    for (m = a->first; m != NULL; m = m->next) {
+        if (m->kind == CVN_TABLE && (holds & CF_HOLDS_TABLE_ARRAYS) == 0u) {
+            return CV_TABLE_ARRAY;
+        }
+    }
+    for (m = a->first; m != NULL; m = m->next) {
+        if (m->kind == CVN_ARRAY && (holds & CF_HOLDS_NESTED_ARRAYS) == 0u) {
+            return CV_NESTED_ARRAY;
+        }
+    }
+    return (cv_kind)0;
+}
+
+/* Passes 1 and 2 for a target the table of what a format holds knows
+   (D-109): each member of `n` is judged by the bits and on the document
+   as it was read, so that no finding depends on the order of the
+   checks. A name is judged first, an empty one by EMPTY_NAME and any
+   other by ANY_NAME; then, by its kind, an array, a table's path, an
+   empty table. `plen` is the length of the joined path of `n` when it is
+   a table written with a header (0 for the document); inside an array
+   (`inline_`) a table is written with no path. */
+static void cv_pass_bits(cv_check* k, cv_node* n, size_t plen, cf_bool inline_) {
+    cv_node* c;
+    cf_bool  in_table = (n->kind == CVN_TABLE) ? CF_TRUE : CF_FALSE;
+
+    for (c = n->first; c != NULL; c = c->next) {
+        if (c->left_out) {
+            continue;
+        }
+        if (in_table && c->nlen == 0) {
+            if ((k->holds & CF_HOLDS_EMPTY_NAME) == 0u) {
+                cv_note(k, c, CV_EMPTY_NAME, CF_FALSE);
+                continue;
+            }
+        } else if (in_table && !cv_plain_name(c->name, c->nlen) &&
+                   (k->holds & CF_HOLDS_ANY_NAME) == 0u) {
+            cv_note(k, c, CV_NAME, CF_TRUE);
+            continue;
+        }
+        if (c->kind == CVN_ARRAY) {
+            cv_kind what = cv_array_kind(c, k->holds);
+
+            if (what != (cv_kind)0) {
+                cv_note(k, c, what, CF_FALSE);
+            } else {
+                cv_pass_bits(k, c, 0u, CF_TRUE);
+            }
+        } else if (c->kind == CVN_TABLE) {
+            size_t sub = plen;
+
+            if (in_table && !inline_) {
+                if (plen + c->nlen > (size_t)CF_KEY_MAX - 2u &&
+                    (k->holds & CF_HOLDS_LONG_PATHS) == 0u) {
+                    cv_note(k, c, CV_LONG_PATH, CF_FALSE);
+                    continue;
+                }
+                sub = (plen == 0) ? c->nlen : plen + 1u + c->nlen;
+            }
+            if (in_table && c->first == NULL && (k->holds & CF_HOLDS_EMPTY_TABLE) == 0u) {
+                cv_note(k, c, CV_EMPTY_TABLE, CF_FALSE);
+            } else {
+                cv_pass_bits(k, c, sub, inline_);
+            }
+        }
+    }
+}
+
 /* ------------------------------------------------------------------ *
  * The replay
  * ------------------------------------------------------------------ */
 
 static void cv_emit(cv_out* o, cv_node* n);
+
+/* Whether the target writes `v` as its text: a value that is not text,
+   of a type its format lacks (D-109); a target the table does not know
+   is held to its CF_CODEC_TYPED. Only counted in the passes. */
+static cf_bool cv_as_text(const cv_check* k, const cf_value* v) {
+    if (k == NULL || v->type == CF_TYPE_TEXT) {
+        return CF_FALSE;
+    }
+    if (!k->known) {
+        return ((k->target->caps & CF_CODEC_TYPED) == 0u) ? CF_TRUE : CF_FALSE;
+    }
+    switch (v->type) {
+    case CF_TYPE_INT:
+        return ((k->holds & CF_HOLDS_INT) == 0u) ? CF_TRUE : CF_FALSE;
+    case CF_TYPE_REAL:
+        return ((k->holds & CF_HOLDS_REAL) == 0u) ? CF_TRUE : CF_FALSE;
+    case CF_TYPE_BOOL:
+        return ((k->holds & CF_HOLDS_BOOL) == 0u) ? CF_TRUE : CF_FALSE;
+    case CF_TYPE_NULL:
+        return ((k->holds & (CF_HOLDS_NULL | CF_REFUSES_NULL)) == 0u) ? CF_TRUE
+                                                                      : CF_FALSE;
+    default:
+        break;
+    }
+    return CF_FALSE;
+}
 
 /* The encoder refused `n`: a finding in the last pass, a bug after it. */
 static void cv_refused(cv_out* o, cv_node* n) {
@@ -563,7 +675,7 @@ static void cv_emit(cv_out* o, cv_node* n) {
         ok = s->scalar(s->ctx, n->name, n->nlen, &n->value, n->textual, &o->none);
         if (!ok) {
             cv_refused(o, n);
-        } else if (n->value.type != CF_TYPE_TEXT) {
+        } else if (cv_as_text(o->check, &n->value)) {
             ++o->non_text;
         }
         return;
@@ -646,13 +758,15 @@ static void cv_find(cv_check* k, cv_node* root, size_t* non_text) {
     const cf_codec* c = k->target;
     cf_sink         nothing;
 
-    if ((c->name == NULL) ||
-        (strcmp(c->name, "json") != 0 && strcmp(c->name, "json5") != 0 &&
-         strcmp(c->name, "cbor") != 0 && strcmp(c->name, "yaml") != 0)) {
+    k->known = (c->name != NULL && cf_format_holds(c->name, &k->holds)) ? CF_TRUE : CF_FALSE;
+    if (k->known) {
+        cv_pass_bits(k, root, 0u, CF_FALSE);
+    } else {
+        /* A codec the table does not know: W5-V1's passes, by its caps. */
         cv_pass_names(k, root);
-    }
-    if ((c->caps & CF_CODEC_ARRAYS) == 0u) {
-        cv_pass_arrays(k, root);
+        if ((c->caps & CF_CODEC_ARRAYS) == 0u) {
+            cv_pass_arrays(k, root);
+        }
     }
     cf_sink_init(&nothing, NULL, 0);
     if (!cv_run(c, root, k, &nothing, non_text)) {
@@ -723,9 +837,7 @@ int cv_convert(cf_arena* ar, const cf_blob* in, const cf_codec* from,
                            "the '%s' encoder refused the document", to->name);
         return 3;
     }
-    if ((to->caps & CF_CODEC_TYPED) == 0u) {
-        res->as_text = non_text;
-    }
+    res->as_text = non_text;
     if (!cv_bytes(to, t.root, ar, &res->out, err)) {
         return (err->code == CF_E_MEMORY) ? 2 : 3;
     }

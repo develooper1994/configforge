@@ -131,6 +131,10 @@ static const char* cv_what(cv_kind kind) {
 /* `<cmd>: <path>: <what>, which <format> cannot hold; left out`. */
 static void cv_print(const cv_say* k, const cv_finding* f) {
     fprintf(stderr, "%s: %s: %s", k->cmd, f->path, cv_what(f->kind));
+    if (f->kind == CV_LONG_PATH) {
+        fprintf(stderr, " (the path above it and its name pass %u bytes)",
+                (unsigned)(CF_KEY_MAX - 2));
+    }
     if (f->kind == CV_NAME) {
         fprintf(stderr, " ('%s')", f->name);
     }

@@ -36,3 +36,29 @@ set_tests_properties(
 add_test(NAME codec.usage
          COMMAND ${CMAKE_COMMAND} -DCODEC=$<TARGET_FILE:configforge_codec> -P
                  ${CMAKE_CURRENT_SOURCE_DIR}/usage.cmake)
+
+# D-109: every document through every ordered pair of the six writing
+# formats, held to the table of what each can hold. It runs the
+# converter's own code (convert_core.c) without a process, which is why it
+# is a program and not a script; it needs every format the pairs name.
+if(CF_WITH_EMIT
+   AND CF_WITH_REAL
+   AND CF_WITH_INI
+   AND CF_WITH_JSON
+   AND CF_WITH_TOML
+   AND CF_WITH_YAML
+   AND CF_WITH_CBOR)
+  add_executable(codec_pairs pairs.c
+                             ${CMAKE_SOURCE_DIR}/tools/codec/convert_core.c)
+  target_include_directories(codec_pairs
+                             PRIVATE ${CMAKE_SOURCE_DIR}/tools/codec)
+  target_link_libraries(codec_pairs PRIVATE configforge_serialize)
+  set_target_properties(
+    codec_pairs PROPERTIES C_STANDARD 90 C_STANDARD_REQUIRED ON C_EXTENSIONS
+                                                                OFF)
+  configforge_apply_warnings(codec_pairs)
+  configforge_apply_analysis(codec_pairs)
+  add_test(NAME codec.pairs
+           COMMAND codec_pairs --root ${CMAKE_SOURCE_DIR} --docs
+                   ${CMAKE_CURRENT_SOURCE_DIR}/pairs.manifest)
+endif()

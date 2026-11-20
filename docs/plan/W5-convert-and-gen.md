@@ -1659,6 +1659,52 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
   read, done (D-109); the ways to read it, and `docs/Limits.md`
   generated from it, left (A-13)".
 * **notes**:
+  * 2026-11-20, stopped on branch `work/W5-V2` (steps 1 to 5 built; steps
+    6 to 10 not started). Done and green on the branch: `convert_core.c`
+    behind `cv_convert` (W5-V1's cases unchanged), `cf_format_holds` with
+    `test_holds`, `chain.h`, `pairs.c`, `pairs.manifest`, `codec.pairs`,
+    the converter's passes from the bits. With the passes from the bits
+    `codec.pairs` has exactly three kinds of failure left, all about
+    limits the card does not state ("stop if" 2):
+    1. **TOML's reader refuses what its writer wrote at a path of 255
+       bytes.** `path_2_ok` (a table `a` holding a table of 253 bytes,
+       a leaf): the TOML writer writes `[a.nnn...]` (its test is exact
+       in `plen + n`, 1 + 253), and TOML's reader refuses that header,
+       `the key is too long`, column 256. INI's reader accepts the same
+       path (the INI cell passes). The reader counts the dot, the
+       writer does not, so for TOML the boundary is one less than the
+       card says (a header of 254 bytes is read, 255 is not), while INI's
+       is 255. One bit and one threshold (`CF_KEY_MAX - 2`) cannot say
+       both: the card must choose between making TOML's writer refuse
+       a path of 255 (then the table's rule for LONG_PATHS is `plen + n`
+       for INI and `plen + 1 + n` for TOML, or one rule at the smaller
+       value with INI's boundary changed) and a different edge document.
+    2. **`limits`, as written, is false for TOML and INI.** A document
+       of 32 nested tables is read by the TOML reader (a header of 32
+       parts; 33 are refused, `the key has too many parts`: one level
+       more than JSON, CBOR and YAML) and by the INI reader (34 dotted
+       parts read; its depth is not counted in the reader, only in its
+       encoder's `stack[CF_MAX_DEPTH]`); `properties` has no nesting at
+       all. The card says every reader refuses 32; it needs the real
+       limit of each, or the readers made equal.
+    3. Found on the way, and settled in the code with the smaller change
+       (say if the other is wanted): the YAML reader says a second,
+       empty document table at the end of every file (`yaml_stream_end`
+       takes `depth < 0` after the top-level mapping for "nothing in the
+       file"), so `configforge codec convert x.yaml --to json` failed
+       before this card (`the document could not be recorded`). The
+       converter's tree and `chain.h` now take a second root as the same
+       table reopened; the reader is not changed. Also settled: the
+       pair check "writing is stable" compares hop 2's bytes with hop 1's,
+       not hop 0's (a YAML file written from a typed source has `1`, from
+       its own reading `"1"`); `ch_lower` also counts the values it writes
+       as text and `ch_hop_run` requires the converter's `as_text` to
+       equal it (that is the card's `types json -> yaml ... as_text`
+       failure); `pairs.c` has `--root`, `--show`, `--verbose` and takes
+       the manifest's paths from the source root itself (the card's
+       `pairs.cmake` is in no file list); `cv_finding` has a third
+       member, `name`, for the message's `('<name>')`; `ch_same` takes
+       an arena.
 
 ---
 

@@ -1,0 +1,14 @@
+# The project's own documents, for codec_pairs: <format> TAB <path from the
+# source root> TAB <mode>. Mode `-` is the file as it is, `split` a file of
+# documents separated by a line of five dashes; the readers refuse most of
+# the edges.* documents, which is what they are for, and those that read are
+# used.
+json	tests/support/data/edges.json	split
+toml	tests/support/data/edges.toml	split
+ini	tests/support/data/edges.ini	split
+toml	examples/c/layers/app.toml	-
+ini	examples/c/layers/conf.d/10-site.ini	-
+ini	examples/c/layers/conf.d/90-local.ini	-
+ini	examples/c/flags/features.ini	-
+ini	examples/c/flags/conf.d/50-canary.ini	-
+json	tests/conformance/data/module.json	-
