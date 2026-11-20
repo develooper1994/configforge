@@ -142,6 +142,7 @@ static void pr_add(pr_state* st, const char* name, const cf_codec* codec, const 
         size_t  cap = (st->cap == 0) ? 128u : st->cap * 2u;
         pr_doc* v   = (pr_doc*)pr_alloc(cap * sizeof *v);
 
+        memset(v, 0, cap * sizeof *v); /* every slot set, as MSVC's analyzer asks */
         if (st->ndocs > 0) {
             memcpy(v, st->docs, st->ndocs * sizeof *v);
         }
