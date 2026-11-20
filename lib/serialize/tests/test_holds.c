@@ -56,7 +56,7 @@ static void test_known(void) {
 
         sprintf(what, "cf_format_holds knows %s", g_writers[i]);
         check(cf_format_holds(g_writers[i], &holds) == CF_TRUE, what);
-        check((holds & ~(CF_HOLDS_ALL | CF_REFUSES_NULL)) == 0, "no bit beyond the table's");
+        check((holds & ~(unsigned)(CF_HOLDS_ALL | CF_REFUSES_NULL)) == 0u, "no bit beyond the table's");
         check(holds != 0, "a format holds something");
     }
     check(cf_format_holds("xml", &untouched) == CF_FALSE && untouched == 0x5A5Au,
