@@ -62,8 +62,16 @@ second opinion beside cppcheck's.
 
 * **id**: L-4
 * **goal**: include-what-you-use on the library's sources and lychee on the docs site, in CI.
+* **why**: a header that includes what it does not use binds two components the layering table keeps apart (D-100); a dead link in the docs is a reader sent nowhere.
 * **needs**: L-1
 * **size**: small
+* **decided**:
+  * **include-what-you-use**: a CI job `iwyu` (ubuntu-26.04; `apt-get install iwyu`) builds the library with `-DCMAKE_C_INCLUDE_WHAT_YOU_USE="include-what-you-use;-Xiwyu;--error;-Xiwyu;--mapping_file=${{ github.workspace }}/.iwyu.imp"` and fails on a finding. Only `lib/*/src` is held to it (the tests and tools are not, in this card). `.iwyu.imp` (new, at the root) maps what iwyu would get wrong on this project: `cf_build_options.h` and `cf_port.h` as the providers of the fixed-width types and the `CF_` macros. The first pass fixes each finding in the sources, or keeps an include iwyu calls unused with `/* IWYU pragma: keep */` and the reason after it, on the same line. `setup.sh` installs iwyu; no gate in verify (iwyu's output differs by version: CI's version is the judge, as clang-format's is).
+  * **lychee**: `gate.links` in verify and CI (beside `gate.codespell`, skipped when `lychee` is absent), `lychee --offline --no-progress docs README.md CONTRIBUTING.md CHANGELOG.md scripts/README.md`: every link inside the repository and every anchor. Outside links are checked weekly by a CI job `links` (a `schedule:` of its own in `docs.yml`, `lychee --no-progress` with `--max-retries 3`, failing the job, not the push). `setup.sh` pins lychee's release binary as it pins clang-format; `.lychee.toml` (new) holds the exceptions, each with its reason.
+* **files**: `.github/workflows/ci.yml` (job `iwyu`), `.github/workflows/docs.yml` (job `links`), `.iwyu.imp`, `.lychee.toml`, `cmake/ConfigForgeFormat.cmake` (`gate.links`), `scripts/buildenv/setup.sh`, the sources iwyu's first pass names; last: `docs/plan/L-tools.md` (group 10 and 12 "Today"), `CHANGELOG.md`.
+* **steps**: 1. `gate.links`, see it fail on the tree, fix the links. 2. The `iwyu` job, its first run on a branch, fix what it names. 3. The weekly `links` job. 4. ACCEPT.
+* **accept**: ACCEPT-LINUX, ACCEPT-CI with the `iwyu` job green.
+* **stop if**: iwyu's fix for a header would include a header across the layering table's order (gate.layering refuses it): keep the include with the pragma and note it, do not reorder components.
 
 ## L-5 - profilers, so that every speed-up starts from data
 
