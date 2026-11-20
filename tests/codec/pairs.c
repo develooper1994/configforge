@@ -158,7 +158,8 @@ static void pr_add(pr_state* st, const char* name, const cf_codec* codec, const 
 
 /* ------------------------------------------------------------------ *
  * The edge documents, JSON text: a single quote stands for a double
- * quote, and a quote that is meant is the escape u0027 or u0022.
+ * quote, a backtick for the backslash of an escape, and a quote that is
+ * meant is the escape `u0027 or `u0022.
  * ------------------------------------------------------------------ */
 
 static void pr_edge(pr_state* st, const char* name, const char* json) {
@@ -167,7 +168,10 @@ static void pr_edge(pr_state* st, const char* name, const char* json) {
 
     memset(&b, 0, sizeof b);
     for (i = 0; json[i] != '\0'; ++i) {
-        pb_put(&b, (json[i] == '\'') ? "\"" : &json[i], 1u);
+        /* A backtick stands for the backslash of a JSON escape: a string
+           literal with a backslash and a u is a universal character name
+           to some compilers. */
+        pb_put(&b, (json[i] == '\'') ? "\"" : (json[i] == '`') ? "\\" : &json[i], 1u);
     }
     pr_add(st, name, cf_codec_by_name("json"), b.p, b.n);
     pb_free(&b);
@@ -206,8 +210,8 @@ static void pr_nest_doc(pr_state* st, const char* doc, size_t count, const char*
 }
 
 #define NAMES                                                                   \
-    "'Mixed_Case':1,'with space':2,'dot.ted':3,'quote\\u0022d':4,'\\t':5,"      \
-    "'\\u00e9':6,'':7,'a-b_c9':8"
+    "'Mixed_Case':1,'with space':2,'dot.ted':3,'quote`u0022d':4,'\\t':5,"      \
+    "'`u00e9':6,'':7,'a-b_c9':8"
 
 static void pr_edges(pr_state* st) {
     pr_buf b = {NULL, 0, 0};
@@ -223,13 +227,13 @@ static void pr_edges(pr_state* st) {
             "'d':0.1,'e':1e22,'f':1e-7,'g':-0.0,'h':1e16,'i':123456789012345.6}");
     pr_edge(st, "non_finite", "{'a':'nan','b':'inf','c':'-inf','d':'Infinity'}");
     pr_edge(st, "texts",
-            "{'t0':'','t1':'  x  ','t2':'\\u0022','t3':'\\\\','t4':'\\u0027q\\u0027',"
+            "{'t0':'','t1':'  x  ','t2':'`u0022','t3':'\\\\','t4':'`u0027q`u0027',"
             "'t5':'#','t6':';','t7':'=','t8':'[x]','t9':'${x}','t10':'$${y}',"
-            "'t11':'\\t','t12':'\\u00e9','t13':'\\u20ac','t14':'\\ud83d\\ude00',"
-            "'t15':'\\udbff\\udfff','t16':'\\ufffe','t17':'\\u007f','t18':'\\u0085',"
-            "'t19':'\\u2028'}");
+            "'t11':'\\t','t12':'`u00e9','t13':'`u20ac','t14':'`ud83d`ude00',"
+            "'t15':'`udbff`udfff','t16':'`ufffe','t17':'`u007f','t18':'`u0085',"
+            "'t19':'`u2028'}");
     pr_edge(st, "breaks", "{'a':'a\\nb','b':'a\\r\\nb','c':'a\\rb','k':'v'}");
-    pr_edge(st, "nul", "{'a':'x\\u0000y','b':'\\u0000'}");
+    pr_edge(st, "nul", "{'a':'x`u0000y','b':'`u0000'}");
 
     memset(&b, 0, sizeof b);
     pb_str(&b, "{" NAMES ",'t':{" NAMES "}}");
