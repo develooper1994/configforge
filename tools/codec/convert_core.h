@@ -22,6 +22,7 @@ typedef enum cv_kind {
     CV_NULL,
     CV_LINE_BREAK,
     CV_NUL,
+    CV_DEEP, /* nested deeper than the target's reader accepts */
     CV_OTHER /* a refusal the table did not predict */
 } cv_kind;
 

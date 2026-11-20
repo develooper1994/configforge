@@ -205,12 +205,9 @@ enum {
                                           as a member of a table       */
     CF_HOLDS_ANY_NAME      = 1u << 9,  /* not only A-Z a-z 0-9 _ and - */
     CF_HOLDS_EMPTY_NAME    = 1u << 10,
-    CF_HOLDS_LONG_PATHS    = 1u << 11, /* a table whose parent's path
-                                          and own name together pass
-                                          CF_KEY_MAX - 2 bytes         */
-    CF_HOLDS_LINE_BREAK    = 1u << 12, /* a line feed in a text        */
-    CF_HOLDS_NUL           = 1u << 13, /* a NUL byte in a text         */
-    CF_HOLDS_ALL           = (1u << 14) - 1u,
+    CF_HOLDS_LINE_BREAK    = 1u << 11, /* a line feed in a text        */
+    CF_HOLDS_NUL           = 1u << 12, /* a NUL byte in a text         */
+    CF_HOLDS_ALL           = (1u << 13) - 1u,
     /* Set when a format that lacks CF_HOLDS_NULL refuses a null
        outright (TOML); without it a null is written as the text
        `null` (INI). */
@@ -292,6 +289,20 @@ CF_API const char* cf_format_option(const char* format);
    format this library has no writer for (xml, properties) and for a
    name it does not know. (1.8, experimental) */
 CF_EXPERIMENTAL(1, 8) cf_bool cf_format_holds(const char* format, unsigned* holds);
+
+/* CF_TRUE and the limits of the reader of the format called `format`:
+   *max_path the longest joined path of names (dots counted) to a table,
+   array or value that the format both writes and reads back, a length
+   the reader and the writer both take and not the first one refused
+   (TOML's reader limits the dotted key of a line, relative to its header,
+   so no one number is exact); (size_t)-1 when there is none; and
+   *max_depth the most tables and arrays one inside another below the
+   document it accepts ((size_t)-1 for none; 0 for a format with no
+   nesting). A format never writes what its own reader refuses, so the
+   converter leaves out a table past these. CF_FALSE, both untouched, for
+   a name this library does not know. (1.8, experimental) */
+CF_EXPERIMENTAL(1, 8) cf_bool cf_format_limits(const char* format, size_t* max_path,
+                                               size_t* max_depth);
 
 CF_API size_t          cf_codec_count(void);
 CF_API const cf_codec* cf_codec_at(size_t i);

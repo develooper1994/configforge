@@ -477,6 +477,22 @@ static cf_bool ch_same(cf_arena* ar, const ch_tree* a, const ch_tree* b) {
  * What the table says a format writes
  * ------------------------------------------------------------------ */
 
+/* What the table says a format writes: its bits and its reader's limits
+   (cf_format_holds, cf_format_limits). */
+typedef struct ch_rules {
+    unsigned holds;
+    size_t   max_path;
+    size_t   max_depth;
+} ch_rules;
+
+/* The rules of the format called `name`; false when the table has none. */
+static cf_bool ch_rules_of(const char* name, ch_rules* r) {
+    return (cf_format_holds(name, &r->holds) &&
+            cf_format_limits(name, &r->max_path, &r->max_depth))
+               ? CF_TRUE
+               : CF_FALSE;
+}
+
 static cf_bool ch_plain_name(const char* p, size_t n) {
     size_t i;
 
@@ -574,10 +590,11 @@ static cf_bool ch_array_kept(const ch_node* a, unsigned holds) {
    written with a header (0 for the document); `inline_` is set inside
    an array, where no path is written. False when out of memory. */
 static cf_bool ch_lower_into(cf_arena* ar, const ch_node* src, ch_node* dst,
-                             unsigned holds, size_t plen, cf_bool inline_,
-                             size_t* lowered) {
+                             const ch_rules* rules, size_t plen, cf_bool inline_,
+                             size_t depth, size_t* lowered) {
     const ch_node* c;
     cf_bool        in_table = (src->kind == CH_TABLE) ? CF_TRUE : CF_FALSE;
+    unsigned       holds    = rules->holds;
 
     for (c = src->first; c != NULL; c = c->next) {
         ch_node* made;
@@ -592,6 +609,13 @@ static cf_bool ch_lower_into(cf_arena* ar, const ch_node* src, ch_node* dst,
                 continue;
             }
         }
+        if (c->kind != CH_SCALAR && depth + 1u > rules->max_depth) {
+            continue;
+        }
+        if (in_table && !inline_ && c->kind != CH_TABLE &&
+            ((plen == 0) ? c->nlen : plen + 1u + c->nlen) > rules->max_path) {
+            continue;
+        }
         if (c->kind == CH_SCALAR) {
             if (!ch_lower_scalar(ar, c, dst, holds, lowered)) {
                 return CF_FALSE;
@@ -602,22 +626,21 @@ static cf_bool ch_lower_into(cf_arena* ar, const ch_node* src, ch_node* dst,
             }
             made = ch_new(ar, dst, CH_ARRAY, c->name, c->nlen);
             if (made == NULL ||
-                !ch_lower_into(ar, c, made, holds, 0u, CF_TRUE, lowered)) {
+                !ch_lower_into(ar, c, made, rules, 0u, CF_TRUE, depth + 1u, lowered)) {
                 return CF_FALSE;
             }
         } else {
             size_t sub = plen;
 
             if (in_table && !inline_) {
-                if (plen + c->nlen > (size_t)CF_KEY_MAX - 2u &&
-                    (holds & CF_HOLDS_LONG_PATHS) == 0u) {
+                sub = (plen == 0) ? c->nlen : plen + 1u + c->nlen;
+                if (sub > rules->max_path) {
                     continue;
                 }
-                sub = (plen == 0) ? c->nlen : plen + 1u + c->nlen;
             }
             made = ch_new(ar, dst, CH_TABLE, c->name, c->nlen);
             if (made == NULL ||
-                !ch_lower_into(ar, c, made, holds, sub, inline_, lowered)) {
+                !ch_lower_into(ar, c, made, rules, sub, inline_, depth + 1u, lowered)) {
                 return CF_FALSE;
             }
             if (in_table && made->first == NULL && (holds & CF_HOLDS_EMPTY_TABLE) == 0u) {
@@ -631,12 +654,13 @@ static cf_bool ch_lower_into(cf_arena* ar, const ch_node* src, ch_node* dst,
 /* What the table says a format with `holds` writes of a tree, as a new
    tree, written from the bits and from nothing else (D-109). *lowered
    is how many values became their text. */
-static ch_tree* ch_lower(cf_arena* ar, const ch_tree* t, unsigned holds,
+static ch_tree* ch_lower(cf_arena* ar, const ch_tree* t, const ch_rules* rules,
                          size_t* lowered) {
     ch_node* root = ch_new(ar, NULL, CH_TABLE, NULL, 0);
 
     *lowered = 0;
-    if (root == NULL || !ch_lower_into(ar, t, root, holds, 0u, CF_FALSE, lowered)) {
+    if (root == NULL ||
+        !ch_lower_into(ar, t, root, rules, 0u, CF_FALSE, 0u, lowered)) {
         return NULL;
     }
     return root;
@@ -700,7 +724,8 @@ static void ch_why_diff(cf_arena* ar, char* why, size_t cap, const char* what,
    quietly. CH_OK, or CH_FAILED with `why`, or CH_BOUND when the
    converter refuses the document by D-82's bound (or has no memory). */
 static int ch_hop_run(cf_arena* ar, const cf_blob* in, const cf_codec* src,
-                      const cf_codec* to, unsigned holds, ch_hop* h) {
+                      const cf_codec* to, ch_hop* h) {
+    ch_rules  rules;
     cv_result res;
     cf_error  err = CF_ERROR_INIT;
     ch_tree*  m;
@@ -711,6 +736,10 @@ static int ch_hop_run(cf_arena* ar, const cf_blob* in, const cf_codec* src,
     int       rc;
 
     memset(h, 0, sizeof *h);
+    if (!ch_rules_of(to->name, &rules)) {
+        sprintf(h->why, "the table has no row for '%.100s'", to->name);
+        return CH_FAILED;
+    }
     rc = cv_convert(ar, in, src, to, &res, &err);
     if (rc == 2) {
         return CH_BOUND;
@@ -740,7 +769,7 @@ static int ch_hop_run(cf_arena* ar, const cf_blob* in, const cf_codec* src,
                 err.message);
         return CH_FAILED;
     }
-    want = ch_lower(ar, m, holds, &lowered);
+    want = ch_lower(ar, m, &rules, &lowered);
     if (want == NULL) {
         sprintf(h->why, "out of memory");
         return CH_FAILED;

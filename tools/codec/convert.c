@@ -122,6 +122,8 @@ static const char* cv_what(cv_kind kind) {
         return "text with a line break";
     case CV_NUL:
         return "text with a NUL byte";
+    case CV_DEEP:
+        return "a table or array nested too deep";
     case CV_OTHER:
         break;
     }

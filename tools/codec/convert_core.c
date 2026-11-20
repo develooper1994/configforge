@@ -76,7 +76,9 @@ typedef struct cv_check {
     cv_finding*     list;
     size_t          n;
     size_t          cap;
-    unsigned        holds; /* of the target, when `known` */
+    unsigned        holds;     /* of the target, when `known` */
+    size_t          max_path;  /* and its reader's limits */
+    size_t          max_depth;
     cf_bool         known; /* the table of what a format holds has the target */
     cf_bool         nomem;
 } cv_check;
@@ -546,7 +548,8 @@ static cv_kind cv_array_kind(const cv_node* a, unsigned holds) {
    empty table. `plen` is the length of the joined path of `n` when it is
    a table written with a header (0 for the document); inside an array
    (`inline_`) a table is written with no path. */
-static void cv_pass_bits(cv_check* k, cv_node* n, size_t plen, cf_bool inline_) {
+static void cv_pass_bits(cv_check* k, cv_node* n, size_t plen, cf_bool inline_,
+                         size_t depth) {
     cv_node* c;
     cf_bool  in_table = (n->kind == CVN_TABLE) ? CF_TRUE : CF_FALSE;
 
@@ -564,29 +567,37 @@ static void cv_pass_bits(cv_check* k, cv_node* n, size_t plen, cf_bool inline_) 
             cv_note(k, c, CV_NAME, CF_TRUE);
             continue;
         }
+        if (c->kind != CVN_VALUE && depth + 1u > k->max_depth) {
+            cv_note(k, c, CV_DEEP, CF_FALSE);
+            continue;
+        }
+        if (in_table && !inline_ && c->kind != CVN_TABLE &&
+            ((plen == 0) ? c->nlen : plen + 1u + c->nlen) > k->max_path) {
+            cv_note(k, c, CV_LONG_PATH, CF_FALSE);
+            continue;
+        }
         if (c->kind == CVN_ARRAY) {
             cv_kind what = cv_array_kind(c, k->holds);
 
             if (what != (cv_kind)0) {
                 cv_note(k, c, what, CF_FALSE);
             } else {
-                cv_pass_bits(k, c, 0u, CF_TRUE);
+                cv_pass_bits(k, c, 0u, CF_TRUE, depth + 1u);
             }
         } else if (c->kind == CVN_TABLE) {
             size_t sub = plen;
 
             if (in_table && !inline_) {
-                if (plen + c->nlen > (size_t)CF_KEY_MAX - 2u &&
-                    (k->holds & CF_HOLDS_LONG_PATHS) == 0u) {
+                sub = (plen == 0) ? c->nlen : plen + 1u + c->nlen;
+                if (sub > k->max_path) {
                     cv_note(k, c, CV_LONG_PATH, CF_FALSE);
                     continue;
                 }
-                sub = (plen == 0) ? c->nlen : plen + 1u + c->nlen;
             }
             if (in_table && c->first == NULL && (k->holds & CF_HOLDS_EMPTY_TABLE) == 0u) {
                 cv_note(k, c, CV_EMPTY_TABLE, CF_FALSE);
             } else {
-                cv_pass_bits(k, c, sub, inline_);
+                cv_pass_bits(k, c, sub, inline_, depth + 1u);
             }
         }
     }
@@ -758,9 +769,12 @@ static void cv_find(cv_check* k, cv_node* root, size_t* non_text) {
     const cf_codec* c = k->target;
     cf_sink         nothing;
 
-    k->known = (c->name != NULL && cf_format_holds(c->name, &k->holds)) ? CF_TRUE : CF_FALSE;
+    k->known = (c->name != NULL && cf_format_holds(c->name, &k->holds) &&
+                cf_format_limits(c->name, &k->max_path, &k->max_depth))
+                   ? CF_TRUE
+                   : CF_FALSE;
     if (k->known) {
-        cv_pass_bits(k, root, 0u, CF_FALSE);
+        cv_pass_bits(k, root, 0u, CF_FALSE, 0u);
     } else {
         /* A codec the table does not know: W5-V1's passes, by its caps. */
         cv_pass_names(k, root);

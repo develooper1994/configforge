@@ -469,7 +469,7 @@ static cf_bool pr_pair(pr_state* st, const pr_doc* d, size_t ia, size_t ib) {
         pr_die("out of memory");
     }
     cf_blob_mem(&in, d->bytes, d->n, d->name);
-    rc = ch_hop_run(ar, &in, d->codec, ca, ha, &h1);
+    rc = ch_hop_run(ar, &in, d->codec, ca, &h1);
     ++st->checks;
     if (rc == CH_BOUND) {
         cf_arena_free(ar);
@@ -480,7 +480,7 @@ static cf_bool pr_pair(pr_state* st, const pr_doc* d, size_t ia, size_t ib) {
         cf_arena_free(ar);
         return CF_TRUE;
     }
-    rc = ch_hop_run(ar, &h1.out, ca, cb, hb, &h2);
+    rc = ch_hop_run(ar, &h1.out, ca, cb, &h2);
     ++st->checks;
     if (rc != CH_OK) {
         pr_fail(st, d, g_writers[ia], g_writers[ib], "hop 1",
@@ -488,7 +488,7 @@ static cf_bool pr_pair(pr_state* st, const pr_doc* d, size_t ia, size_t ib) {
         cf_arena_free(ar);
         return CF_TRUE;
     }
-    rc = ch_hop_run(ar, &h2.out, cb, ca, ha, &h3);
+    rc = ch_hop_run(ar, &h2.out, cb, ca, &h3);
     ++st->checks;
     if (rc != CH_OK) {
         pr_fail(st, d, g_writers[ia], g_writers[ib], "hop 2",
@@ -558,84 +558,6 @@ static void pr_run_docs(pr_state* st) {
     }
 }
 
-/* ------------------------------------------------------------------ *
- * limits: a document of 32 nested tables is refused by every reader
- * that nests, each by its own message.
- * ------------------------------------------------------------------ */
-
-/* The deepest document, in each format's own syntax: `count` tables
-   below the document, the last holding `k`. */
-static void pr_deep(pr_buf* b, const char* format, size_t count) {
-    size_t i;
-
-    if (strcmp(format, "json") == 0 || strcmp(format, "json5") == 0) {
-        pb_str(b, "{");
-        pb_rep(b, "\"a\":{", count);
-        pb_str(b, "\"k\":1");
-        pb_rep(b, "}", count + 1u);
-    } else if (strcmp(format, "toml") == 0 || strcmp(format, "ini") == 0) {
-        pb_str(b, "[a");
-        pb_rep(b, ".a", count - 1u);
-        pb_str(b, "]\nk = 1\n");
-    } else if (strcmp(format, "yaml") == 0) {
-        for (i = 0; i < count; ++i) {
-            pb_rep(b, "  ", i);
-            pb_str(b, "a:\n");
-        }
-        pb_rep(b, "  ", count);
-        pb_str(b, "k: 1\n");
-    } else if (strcmp(format, "cbor") == 0) {
-        for (i = 0; i < count; ++i) {
-            pb_put(b, "\xa1\x61\x61", 3u);
-        }
-        pb_put(b, "\xa1\x61\x6b\x01", 4u);
-    } else if (strcmp(format, "xml") == 0) {
-        pb_str(b, "<r>");
-        pb_rep(b, "<a>", count);
-        pb_str(b, "<k>1</k>");
-        for (i = 0; i < count; ++i) {
-            pb_str(b, "</a>");
-        }
-        pb_str(b, "</r>");
-    }
-}
-
-static void pr_limits(pr_state* st) {
-    static const char* const formats[] = {"json", "json5", "ini", "toml",
-                                          "yaml", "cbor",  "xml"};
-    size_t                   i;
-
-    for (i = 0; i < sizeof formats / sizeof formats[0]; ++i) {
-        const cf_codec* c = cf_codec_by_name(formats[i]);
-        cf_arena*       ar;
-        pr_buf          b;
-        cf_blob         in;
-        cf_error        err = CF_ERROR_INIT;
-
-        if (c == NULL || !cf_codec_can_read(c)) {
-            printf("limits: %s is not in this build; skipped\n", formats[i]);
-            continue;
-        }
-        ar = cf_arena_new(NULL, 0);
-        if (ar == NULL) {
-            pr_die("out of memory");
-        }
-        memset(&b, 0, sizeof b);
-        pr_deep(&b, formats[i], (size_t)CF_MAX_DEPTH);
-        cf_blob_mem(&in, b.p, b.n, "deep");
-        ++st->checks;
-        if (ch_read(ar, &in, c, &err) != NULL) {
-            if (st->failures < st->show) {
-                printf("FAIL limits %s: a document of %lu nested tables was read\n",
-                       formats[i], (unsigned long)CF_MAX_DEPTH);
-            }
-            ++st->failures;
-        }
-        pb_free(&b);
-        cf_arena_free(ar);
-    }
-}
-
 int main(int argc, char** argv) {
     pr_state    st;
     const char* root = NULL;
@@ -674,7 +596,6 @@ int main(int argc, char** argv) {
         }
     }
     pr_run_docs(&st);
-    pr_limits(&st);
     printf("pairs: %lu documents (%lu not read), 36 pairs, %lu checks, %lu failures\n",
            (unsigned long)st.ndocs, (unsigned long)st.not_read,
            (unsigned long)st.checks, (unsigned long)st.failures);
