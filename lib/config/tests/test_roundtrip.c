@@ -112,16 +112,30 @@ enum { EXACT, UNTYPED, TEXT_ONLY };
 typedef struct format {
     const char* name;
     int         compare; /* how a read-back is judged       */
-    int         arrays; /* syntax for any array (1), or for arrays of values only (2) */
-    int         nulls;  /* for a null                      */
-    int         lines;  /* and for a line break in a value */
+    /* The rest is read from cf_format_holds, the one table of what a
+       format can hold (D-109), when main starts. */
+    int arrays; /* syntax for any array (1), or for arrays of values only (2) */
+    int nulls;  /* for a null: held, or written as text and not refused */
+    int lines;  /* and for a line break in a value */
 } format;
 
-static const format g_formats[] = {{"json", EXACT, 1, 1, 1},
-                                   {"cbor", EXACT, 1, 1, 1},
-                                   {"toml", EXACT, 1, 0, 1},
-                                   {"yaml", UNTYPED, 1, 1, 1},
-                                   {"ini", TEXT_ONLY, 2, 1, 0}};
+static format g_formats[] = {{"json", EXACT, 0, 0, 0},
+                             {"cbor", EXACT, 0, 0, 0},
+                             {"toml", EXACT, 0, 0, 0},
+                             {"yaml", UNTYPED, 0, 0, 0},
+                             {"ini", TEXT_ONLY, 0, 0, 0}};
+
+/* `f`'s arrays, nulls and lines from the table. */
+static void format_from_table(format* f, const cf_codec* c) {
+    unsigned holds = 0;
+
+    if (!cf_format_holds(f->name, &holds)) {
+        return;
+    }
+    f->arrays = ((c->caps & CF_CODEC_ARRAYS) != 0u) ? 1 : (((c->caps & CF_CODEC_SCALAR_ARRAYS) != 0u) ? 2 : 0);
+    f->nulls  = ((holds & CF_HOLDS_NULL) != 0u || (holds & CF_REFUSES_NULL) == 0u) ? 1 : 0;
+    f->lines  = ((holds & CF_HOLDS_LINE_BREAK) != 0u) ? 1 : 0;
+}
 
 static const format* g_have[LEN(g_formats)]; /* the ones this build writes */
 static size_t        g_nhave;
@@ -1378,11 +1392,8 @@ int main(void) {
         const cf_codec* c = cf_codec_by_name(g_formats[i].name);
 
         if (c != NULL && c->encoder != NULL) {
+            format_from_table(&g_formats[i], c);
             g_have[g_nhave++] = &g_formats[i];
-            check(((c->caps & CF_CODEC_ARRAYS) != 0) == (g_formats[i].arrays == 1) &&
-                      ((c->caps & (CF_CODEC_ARRAYS | CF_CODEC_SCALAR_ARRAYS)) != 0) ==
-                          (g_formats[i].arrays != 0),
-                  "the table says what the codec says about arrays");
         }
     }
 
