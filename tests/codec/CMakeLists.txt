@@ -11,6 +11,14 @@ add_test(
     -DPAGE=${CMAKE_SOURCE_DIR}/docs/Formats.md -DEMIT=${CF_WITH_EMIT} -P
     ${CMAKE_CURRENT_SOURCE_DIR}/formats.cmake)
 
+# `configforge codec pairs`, and docs/Formats.md's generated tables held to
+# it. The table is the same in every build.
+add_test(
+  NAME codec.pairs_page
+  COMMAND ${CMAKE_COMMAND} -DCODEC=$<TARGET_FILE:configforge_codec>
+          -DPAGE=${CMAKE_SOURCE_DIR}/docs/Formats.md -P
+          ${CMAKE_CURRENT_SOURCE_DIR}/pairs_page.cmake)
+
 # `detect`, `check`, `dump` and `convert`; `convert` writes, so it needs
 # the encoders (CF_WITH_EMIT, off in the minimal preset).
 set(cf_codec_scripts detect check dump)

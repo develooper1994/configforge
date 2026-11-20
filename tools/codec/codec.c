@@ -2,6 +2,7 @@
  * codec.c - configforge-codec: the serialization library's own program.
  *
  *     configforge codec formats [--format text|markdown]
+ *     configforge codec pairs [--format text|markdown]
  *     configforge codec detect <file>
  *     configforge codec check <file>... [--as <format>]
  *     configforge codec dump <file> [--as <format>]
@@ -26,6 +27,9 @@ static int usage(void) {
         "\n",
         "  configforge codec formats [--format text|markdown]\n",
         "                                 the built-in codecs and their kind\n",
+        "  configforge codec pairs [--format text|markdown]\n",
+        "                                 what each format can hold, and what each\n",
+        "                                 pair of formats loses\n",
         "  configforge codec detect <file>\n",
         "                                 the format of a file, and how it was told\n",
         "  configforge codec check <file>... [--as <format>]\n",
@@ -51,6 +55,9 @@ static int usage(void) {
 int main(int argc, char** argv) {
     if (argc >= 2 && strcmp(argv[1], "formats") == 0) {
         return codec_formats(argc - 2, argv + 2);
+    }
+    if (argc >= 2 && strcmp(argv[1], "pairs") == 0) {
+        return codec_pairs(argc - 2, argv + 2);
     }
     if (argc >= 2 && strcmp(argv[1], "detect") == 0) {
         return codec_detect(argc - 2, argv + 2);
