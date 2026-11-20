@@ -23,7 +23,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import conformance  # noqa: E402
+import conformance
 
 
 def manifest_lines(root, tmp):
@@ -59,8 +59,7 @@ def main():
             return 2
         manifest = os.path.join(tmp, "pairs.manifest")
         with open(manifest, "w", encoding="utf-8", newline="\n") as out:
-            for fmt, path, mode in lines:
-                out.write(f"{fmt}\t{path}\t{mode}\n")
+            out.writelines(f"{fmt}\t{path}\t{mode}\n" for fmt, path, mode in lines)
         return subprocess.call([program, "--docs", manifest])
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

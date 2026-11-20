@@ -3872,8 +3872,11 @@ Experimental since 1.8: outside the 1.x promise until the next minor release mak
 Implementation: [`cf_format_limits` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L353).
 
 CF_TRUE and the limits of the reader of the format called `format`:
-max_path the longest joined path of table names (dots counted) a
-   header or key may carry, (size_t)-1 when the reader sets none, and
+max_path the longest joined path of names (dots counted) to a table,
+   array or value that the format both writes and reads back, a length
+   the reader and the writer both take and not the first one refused
+   (TOML's reader limits the dotted key of a line, relative to its header,
+   so no one number is exact); (size_t)-1 when there is none; and
 max_depth the most tables and arrays one inside another below the
    document it accepts ((size_t)-1 for none; 0 for a format with no
    nesting). A format never writes what its own reader refuses, so the
