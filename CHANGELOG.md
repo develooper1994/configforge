@@ -7,6 +7,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **`configforge gen --lang <name>` runs `configforge-gen-<name>`**, found
+  beside `configforge-gen` or on the PATH, with the contract as JSON on its
+  standard input - a generator in any language, outside the project
+  (D-110); `--lang contract-json` writes that JSON.
 - **`cf_bench docs`**: the benchmark reads JSON, YAML, TOML, CBOR and INI
   documents of 1 and 16 MiB (256 MiB with `--large`) through the codec API
   and prints MiB/s per format and size. The documents are made by the

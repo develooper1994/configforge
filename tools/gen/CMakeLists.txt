@@ -5,7 +5,19 @@
 # contract code uses the definition set's functions.
 add_definitions(-DCF_INTERNAL_API=1)
 
-add_executable(configforge_gen gen.c contract.c)
+# A generator outside the tree is found and run by the file the platform
+# has (D-110), chosen as the front door's is.
+if(CF_PLATFORM STREQUAL "none" OR CMAKE_SYSTEM_NAME STREQUAL "WASI")
+  set(gen_spawn spawn_none.c)
+elseif(WIN32)
+  set(gen_spawn spawn_win32.c)
+else()
+  set(gen_spawn spawn_posix.c)
+endif()
+add_executable(configforge_gen gen.c contract.c ${gen_spawn})
+if(WIN32)
+  target_link_libraries(configforge_gen PRIVATE shell32)
+endif()
 target_link_libraries(configforge_gen PRIVATE configforge)
 set_target_properties(
   configforge_gen

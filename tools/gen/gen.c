@@ -19,7 +19,7 @@
 
 static int usage(void) {
     fputs("ConfigForge gen: the contract, and code from it\n\n", stderr);
-    fputs("  configforge gen --schema <schema> [--lang c|cpp|rust|python] [--name "
+    fputs("  configforge gen --schema <schema> [--lang <lang>] [--name "
           "<name>] "
           "[--out <file>]\n",
           stderr);
@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
         return 0;
     }
     if (argc >= 2 && strncmp(argv[1], "--", 2) == 0) {
-        return gen_code(argc - 1, argv + 1);
+        return gen_code(argc, argv);
     }
     return usage();
 }

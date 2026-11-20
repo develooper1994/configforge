@@ -1125,7 +1125,7 @@ first user meets. In the order proposed:
   ConfigForge first, split into its own repository only if a second
   project wants it (the shared-tools rule: upstream only what is
   repeated).
-* ⬜ **`configforge gen --lang <lang>`, open to more languages.** Today
+* 🟩 **`configforge gen --lang <lang>`, open to more languages** (D-95, D-110). Today
   `gen` writes one contract, in C (`tools/gen/contract.c`). Each
   language becomes a generator behind one interface (its name, its file
   extension, and a function from the contract's model to text), held in

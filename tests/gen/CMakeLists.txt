@@ -64,6 +64,63 @@ gen_case(lang_name 2 --schema|${contract}|--lang|cpp|--name|1x)
 gen_case(lang_name_rust 2 --schema|${contract}|--lang|rust|--name|_x)
 gen_case(lang_name_python 2 --schema|${contract}|--lang|python|--name|class)
 
+# A generator outside the tree (`--lang <name>` runs configforge-gen-<name>,
+# D-110): fake_gen.c is the program, built into ext/ with the copies the cases
+# need - one named for a language the table has, which must never run, and
+# configforge-gen itself, for finding a generator beside the program.
+# external.cmake holds the cases. Not built where a program cannot run
+# another (the front door's own test).
+if(NOT CF_PLATFORM STREQUAL "none"
+   AND NOT CMAKE_SYSTEM_NAME STREQUAL "WASI"
+   AND NOT CMAKE_CROSSCOMPILING)
+  set(gen_ext ${CMAKE_CURRENT_BINARY_DIR}/ext)
+  # $<0:> keeps multi-config generators (Visual Studio, Xcode) from adding
+  # a Debug/ or Release/ directory: the cases find the program in ext/.
+  add_executable(gen_fake fake_gen.c)
+  set_target_properties(
+    gen_fake
+    PROPERTIES C_STANDARD 90
+               C_STANDARD_REQUIRED ON
+               C_EXTENSIONS OFF
+               OUTPUT_NAME configforge-gen-fake
+               RUNTIME_OUTPUT_DIRECTORY ${gen_ext}$<0:>)
+  configforge_apply_warnings(gen_fake)
+  configforge_apply_analysis(gen_fake)
+  # The copies are made by a target of their own, so that a rebuilt
+  # configforge-gen is copied again and not only when gen_fake is relinked.
+  add_custom_target(
+    gen_ext ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:gen_fake>
+            ${gen_ext}/configforge-gen-c${CMAKE_EXECUTABLE_SUFFIX}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:configforge_gen>
+            ${gen_ext}/configforge-gen${CMAKE_EXECUTABLE_SUFFIX}
+    VERBATIM)
+  add_dependencies(gen_ext gen_fake configforge_gen)
+  if(WIN32 AND BUILD_SHARED_LIBS)
+    add_custom_command(
+      TARGET gen_ext
+      POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:configforge>
+              ${gen_ext}
+      VERBATIM)
+  endif()
+endif()
+
+# The golden file has a real (`ratio` and its range), which a build without
+# reals cannot read from the schema.
+if(NOT CMAKE_CROSSCOMPILING
+   AND CF_WITH_REAL
+   AND TARGET gen_fake)
+  add_test(
+    NAME gen.external
+    COMMAND
+      ${CMAKE_COMMAND} -DGEN=$<TARGET_FILE:configforge_gen> -DEXT=${gen_ext}
+      -DEXE=${CMAKE_EXECUTABLE_SUFFIX} -DSCHEMA=${contract}
+      -DGOLDEN=${CMAKE_CURRENT_SOURCE_DIR}/golden_contract.json
+      -DWORK=${CMAKE_CURRENT_BINARY_DIR}/external_work -P
+      ${CMAKE_CURRENT_SOURCE_DIR}/external.cmake)
+endif()
+
 # The version it reports is the one cf_version.h says, with the commit
 # after it when the build knew one.
 add_test(NAME gen.version COMMAND configforge_gen --version)

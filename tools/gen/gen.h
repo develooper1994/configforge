@@ -7,6 +7,7 @@
 #ifndef CONFIGFORGE_GEN_H
 #define CONFIGFORGE_GEN_H
 
+#include <configforge/cf_define.h>
 #include <configforge/cf_flatten.h>
 #include <configforge/cf_keyspace.h>
 #include <configforge/cf_serialize.h>
@@ -24,9 +25,20 @@ int gen_read_keys(const char* path, const char* as, cf_arena* ar, cf_keyspace* k
 int gen_check(int argc, char** argv);
 
 /* The contract as code (contract.c), in the language `--lang` names, C
-   by default. argv is what follows the program's name: --schema, --lang,
+   by default. argv is the program's own: argv[0], then --schema, --lang,
    --name, --out. */
 int gen_code(int argc, char** argv);
+
+/* The contract as the JSON every generator outside the tree is
+   given: version 1 of "configforge-contract" (D-110). `schema` is the
+   schema file's name without its directories, `name` the --name given
+   or NULL, `text` the schema file's bytes. Written into `out`, measured
+   or written as every sink is. 0, or 2 with `gen: '%s' has a value the
+   contract JSON cannot hold` on stderr for a definition with a flag no
+   name is known for (a bit above CF_RESTART), or a value of a type a
+   definition cannot have. */
+int gen_contract_json(const cf_defset* ds, const char* schema, const char* name,
+                      const char* text, size_t n, cf_sink* out);
 
 /* A JSON Schema contract drafted from a sample configuration file
    (contract.c, D-96). argv is what follows `schema`: --from, --as,

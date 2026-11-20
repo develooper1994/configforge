@@ -180,7 +180,7 @@ It is built wherever Doctor is, and not where tools are off (WASI,
 `CF_PLATFORM=none`).
 
 ```text
-configforge gen --schema <schema> [--lang c|cpp|rust|python] [--name <name>] [--out <file>]
+configforge gen --schema <schema> [--lang <lang>] [--name <name>] [--out <file>]
                                the contract as code, C by default
 configforge gen check --schema <schema> <file>...
                                files against the contract
@@ -225,9 +225,12 @@ with a smaller `CF_KEY_MAX`, or a schema whose default its own bounds refuse,
 does not compile. As C89 it is plain calls, checked by `cf_builder_create`.
 
 `--lang` names the language: `c` (the default, what is described above),
-`cpp`, `rust` and `python`; the program's table of languages holds them, and a
-name it does not hold is refused with the names it does (`gen: no language 'x';
-there are: c, cpp, rust, python`, exit 2). `--name` is what the language calls
+`cpp`, `rust`, `python` and `contract-json` (the contract as JSON, below); the
+program's table of languages holds them. A name it does not hold is the name of
+a program, `configforge-gen-<name>`, and is refused with the names the table
+does hold when there is none (`gen: no language 'x'; there are: c, cpp, rust,
+python, contract-json; no configforge-gen-x in <dir> or on the PATH`, exit 2;
+"A generator of your own", below). `--name` is what the language calls
 the generated thing - for C the function, for C++ the namespace (both
 `cf_contract` unless named), for Rust and Python the struct (`Settings` unless
 named) - and must be an identifier of the language.
@@ -348,3 +351,80 @@ ranges before it is the contract.
 The pre-commit hook `configforge-check` (`actions/doctor/check.sh`) runs
 `configforge gen check` on each staged file. It uses the `configforge-gen`
 that `CONFIGFORGE_GEN` names, else one it builds once from the checkout.
+
+### A generator of your own
+
+A language the project does not ship is a program, not a change to it
+(D-110): `configforge gen --schema S --lang X`, when X is no language of the
+table, runs `configforge-gen-X`, as git runs `git-X`. The order of a `--lang`:
+
+1. a name the table holds (`c`, `cpp`, `rust`, `python`, `contract-json`) is
+   the table's writer, and nothing outside the tree is looked at: a program
+   called `configforge-gen-c` on the PATH never replaces C;
+2. else the name must be 1 to 64 bytes of `a-z`, `0-9` and `-`, not starting
+   with `-`, so `../x` and `Fake` are never run: `gen: 'Fake' is not a
+   language name`, exit 2;
+3. else the program is looked for in the directory of `configforge-gen`
+   first, then in each directory of the PATH - never the current directory,
+   and never an empty PATH entry. The first that is a regular file that may
+   be run is the one. On Windows the file is `configforge-gen-X.exe`, and
+   only that: not PATHEXT, and no `.cmd` or `.bat`, which Windows runs
+   through `cmd.exe` and its quoting (batch-file arguments have been
+   injected through it); a generator written as a script needs an `.exe` to
+   start it. Not found, `gen: no language 'X'; there are: c, cpp, rust,
+   python, contract-json; no configforge-gen-X in <dir> or on the PATH`, exit
+   2;
+4. else the schema is read as for any language (one that cannot be read is
+   `gen: <message>`, exit 2, and nothing is started), and the program runs.
+
+The program is given the contract as JSON on its standard input, written
+whole and then closed, and on its command line every argument `configforge
+gen` was given but `--lang <lang>` and `--schema <schema>`, in order and
+unchanged: `--name <name>` and `--out <file>` when they were given, nothing
+when not. `--name N` is what the generated thing is called in the generator's
+language; `--out F` is where the generated file goes, standard output without
+it. `gen` checks neither - the identifier rules above are the built-in
+languages' - so it is for the generator to check them and to have a default.
+The program's standard output and standard error are `gen`'s own, and `gen`
+writes nothing to either; a file `--out` names is the generator's, which `gen`
+does not create, truncate or remove.
+
+The exit code is the generator's, unchanged. `gen` itself uses 2 when the
+program cannot be started (`gen: cannot run <path>`) or was stopped by a
+signal or, on Windows, ended with a code above 255 (`gen: <path> was stopped
+(signal <n>)`, `gen: <path> stopped with code 0x<8 hex digits>`). A generator
+that does not read its input and exits is not a failure of `gen`: the write
+that finds the pipe closed is dropped, and its code is returned.
+
+`configforge gen --schema S --lang contract-json` writes that JSON itself, to
+see an input before writing a program for it. Two spaces of indent, one member
+or array element a line but for an array of scalars; every member is always
+there, an absent value `null`, so a generator never tests for a missing key:
+
+| Member | Holds |
+|---|---|
+| `format`, `version` | `"configforge-contract"` and `1` |
+| `schema` | the schema file's name, without its directories |
+| `name` | the `--name` given, or `null` |
+| `schema_text` | the schema file's bytes, as a string |
+| `open` | the prefixes the schema opens, in order |
+| `definitions` | one object for each key, in the library's order |
+
+A definition has, in this order: `key`; `type`, `"bool"`, `"int"`, `"real"` or
+`"text"`; `description`, a string or `null`; `flags`, those set of
+`"required"`, `"sensitive"`, `"deprecated"`, `"transient"`, `"restart"`;
+`on_invalid`, `"strict"` or `"fallback"`; `replaced_by`; `default`, `null`
+without one, else the value, for a list the array of its default values;
+`min` and `max`, the range of an int or a real, else `null`; `min_length` and
+`max_length`, the text bounds, `null` for none; `allowed`, `aliases` and
+`policy`, an array of text or `null`; and `list`, `null` for a scalar, else
+`{"mode": "replace"|"append", "separator": null|","}`. An integer is its exact
+decimal digits, 64 bits, which a reader in a language of doubles must read as
+it can; a real always has a `.` or an exponent, so it is never taken for an
+integer. The schema's closedness, the compile-time checks a language makes and
+the library's version are not in it.
+
+`tests/gen/fake_gen.c` is the tested reference for a program that reads the
+input, and `tests/gen/golden_contract.json` the JSON of the test contract
+(`gen.external` holds the program to it byte for byte). No example in another
+language is written here, because it would not be tested.

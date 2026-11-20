@@ -4819,6 +4819,86 @@ follow.
 
 ---
 
+## D-110 — Generators outside the tree
+
+**Question.** `configforge gen` writes the contract in the languages the
+project ships (D-95). A team that wants it in Go, Zig or a schema of its own
+should not have to change this project. How does a language the project does
+not ship reach the program?
+
+**Options.**
+
+1. A plug-in loaded into the program: a shared library with a function the
+   program calls.
+2. A program found by name, as git finds its subcommands:
+   `configforge-gen-<lang>`, handed the contract on its input.
+3. A configuration file that names the generators.
+4. The library's own schema writer (`cf_schema_write`) as the hand-over.
+
+**Decision.** Option 2.
+
+1. A plug-in is built against this project's headers, loaded into its
+   process, written in a language that can export a C function, and its
+   crash is the program's. A program is none of those, and any language
+   writes one.
+2. A configuration file is a place to be wrong in and a thing to find; the
+   name on the PATH is the registration, and the installed tools are found
+   the same way (D-99).
+3. The schema is JSON Schema, where a generator would walk `$defs`, `type`
+   unions and nesting to find a key: the work the contract's JSON ends. The
+   definitions as C structs in a binary form would be read by C alone.
+
+**The order of a `--lang`.** (1) A name the table holds is its writer, and
+nothing outside the tree is looked at: `configforge-gen-c` on the PATH never
+replaces C. (2) Else the name must be 1 to 64 bytes of `a-z`, `0-9` and `-`,
+not starting with `-` (D-99's rule for a command), so `../x` and `Fake` are
+never run. (3) Else the program is looked for beside this program, then in
+each directory of the PATH, never the current directory and never an empty
+entry; the first regular file that may be run is the one. Not found is exit 2
+and the table's names and where it looked. (4) Else the schema is read, and a
+schema that cannot be is exit 2 with nothing started.
+
+**The JSON** (`gen_contract_json`, `--lang contract-json`): version 1 of
+`configforge-contract`, the schema's name and text, the `--name` given, the
+opened prefixes and a definition for each key in the library's order. Every
+member of a definition is always present and an absent value is `null`, so a
+generator never tests for a missing key and a missing key is always a version
+mismatch. Integers are their exact 64-bit digits and a real always has a `.`
+or an exponent, so a reader never takes one for the other. Not in it: the
+schema's closedness (the C writer does not write it either), the checks a
+language makes of its own, and the library's version (a golden file would change
+with every release). `contract-json` is an entry of the table like the others,
+so what is piped to a generator is what an author sees and what the golden file
+holds: one writer.
+
+**What the program is given.** The JSON on its standard input, written whole
+from memory and then closed; on its command line every argument `gen` was given
+but `--lang` and `--schema` and their values, in order and unchanged. `--name`
+and `--out` are the generator's to check; its standard output and error are
+`gen`'s own, and a file `--out` names is the generator's. The generator's exit
+code passes through. A program that cannot be started, or was stopped by a
+signal (Windows: ended with a code above 255), is exit 2 with the path. A write
+to a pipe the generator closed is dropped, so a generator that does not read
+its input is not a failure of `gen`.
+
+**Starting it.** POSIX: `posix_spawn` with file actions, not `fork` and
+`_exit(127)`: a program that cannot be executed is then the call's own error,
+and no exit code of a generator is mistaken for one. Windows: `CreateProcessW`
+with a quoted command line, and `.exe` only, not PATHEXT: `.cmd` and `.bat` run
+through `cmd.exe` and its quoting, where the 2024 batch-file argument
+injections lie. A platform that cannot run another program says so.
+
+**Why a pipe.** A temporary file is a name, a race and a file left behind;
+handing over the schema's path would make the generator read JSON Schema;
+capturing the generator's output and writing `--out` here would shut out a
+generator that writes more than one file or a binary one, and a large output
+would sit in memory.
+
+**Compatibility.** A new behaviour of a `--lang` that was an error. `--lang`
+absent still writes C; a name that is in the table is still its writer.
+
+**Status.** Decided and built: W5-G4.
+
 ## D-60 — Arrays in INI are the ones INI files already have
 
 **Question.** INI had no arrays here: a configuration with one could not
