@@ -70,8 +70,9 @@ You carry out one card of docs/Plan.md, alone.
 ## Habits
 
 - The checks and the landing are `scripts/work/` (`scripts/README.md`):
-  a card's subagent runs `win.cmd` and `verify.sh`; the organiser lands
-  it with `land.sh`. They work on any machine; nothing is kept outside
+  a card's subagent runs `work.py win` and `work.py verify`; the
+  organiser lands it with `work.py land` (the `.sh`/`.cmd` files are
+  being replaced). They work on any machine; nothing is kept outside
   the repository.
 - Documentation-only changes go straight to `main`. Pushing to `main`
   bypasses the required CI checks with the maintainer's rights: fine for

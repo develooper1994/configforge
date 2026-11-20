@@ -39,11 +39,12 @@ import shutil
 import subprocess
 import sys
 import tarfile
-import tempfile
 import time
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+from work import distro, work_dir
 
 FLAGS = "-O2 -g -fno-omit-frame-pointer"
 LIMIT = int(os.environ.get("CF_PROFILE_TIMEOUT", "1800"))
@@ -66,18 +67,6 @@ def first_line(text):
         if line.strip():
             return REASON.sub(" ", line.strip())[:160]
     return "no output"
-
-
-def work_dir():
-    env = os.environ.get("CF_WORK")
-    if env:
-        path = Path(env)
-    elif WINDOWS and Path("D:/").exists():
-        path = Path("D:/cf-work")
-    else:
-        path = Path(os.environ.get("TMPDIR", tempfile.gettempdir())) / "cf-work"
-    path.mkdir(parents=True, exist_ok=True)
-    return path
 
 
 def run(cmd, timeout=None, env=None, **kw):
@@ -691,7 +680,7 @@ def main():
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     report = Report(work / f"profile-{stamp}.md")
     places = []  # (what, a function that profiles)
-    distro = os.environ.get("CF_DISTRO", "configforge-dev")
+    wsl_name = distro()
 
     if WINDOWS:
         if a.windows or not chosen:
@@ -699,12 +688,12 @@ def main():
         if a.wsl or not chosen:
             rc, out = run(["wsl.exe", "-l", "-q"], timeout=30)
             names = out.replace("\x00", "").split()
-            if rc == 0 and distro in names:
+            if rc == 0 and wsl_name in names:
                 places.append("wsl")
             else:
                 skipped(
                     "wsl",
-                    f"distribution {distro} is not listed by wsl.exe -l -q"
+                    f"distribution {wsl_name} is not listed by wsl.exe -l -q"
                     if rc == 0
                     else "wsl.exe: " + first_line(out),
                 )
@@ -733,7 +722,7 @@ def main():
                     w.profile(a.formats, tar, report)
                     continue
                 if place == "wsl":
-                    lx = Linux(f"wsl {distro}", "wsl", distro)
+                    lx = Linux(f"wsl {wsl_name}", "wsl", wsl_name)
                 elif place == "local":
                     lx = Linux("linux", "local")
                 else:
