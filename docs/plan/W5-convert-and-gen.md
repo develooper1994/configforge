@@ -1040,7 +1040,7 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
 * **why**: a file converted from one format to another is trusted
   because the new file says what the old one said. Today what a format
   cannot hold is written in three places that do not know each other
-  (`g_formats` in `lib/config/tests/test_roundtrip.c`, today `tests/unit/test_roundtrip.c`, W5-V1's three passes,
+  (`g_formats` in `lib/config/tests/test_roundtrip.c`, W5-V1's three passes,
   and each encoder's refusals), and two losses fall between them: an
   empty table is written as nothing by TOML and INI, and a null is
   counted as text for YAML, which writes and reads it as a null. One
@@ -1058,11 +1058,11 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
     size guard would grow another case); a table kept inside the tools
     (convert and the test would then each keep a copy, which is the
     fault this card ends). The table is `cf_formats[]` in
-    `lib/serialize/src/codec.c` (today `src/serialize/codec.c:289`):
+    `lib/serialize/src/codec.c:289`:
     `cf_format_info` gains a last member `unsigned holds`, so it is
     beside each format's name, extensions and option, and is known
     for a format a build left out. In `lib/serialize/include/configforge/cf_serialize.h`
-    (today `include/configforge/cf_serialize.h`, after the `CF_CODEC_*`
+    (after the `CF_CODEC_*`
     enum, :184), exactly:
 
     ```c
@@ -1345,7 +1345,7 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
     a manifest line is `<format>\t<path>\t<mode>`, mode `-` (the file as
     it is), `wrap` (the suites' own wrapping, below) or `split` (the file
     holds documents separated by a line of five dashes, as
-    `tests/support/data/edges.*` do, today `tests/unit/data/`).
+    `tests/support/data/edges.*` do).
     1. **Edge documents**, built in `pairs.c` from JSON text (JSON holds
        every type) and read through `json`, so the default run needs no
        file and no network:
@@ -1388,7 +1388,7 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
          build has, each by its own message.
     2. **The project's own fixtures**, in the default run: the manifest
        `tests/codec/pairs.manifest` (new) lists, with paths from the
-       source root that `pairs.cmake` expands: `tests/support/data/edges.json` (today `tests/unit/data/`),
+       source root that `pairs.cmake` expands: `tests/support/data/edges.json`,
        `edges.toml` and `edges.ini` (mode `split`: the readers refuse
        most of them, which is what they are for; those that read are
        used), `examples/c/layers/app.toml`,
@@ -1529,7 +1529,7 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
     none; `CF_REFUSES_NULL` only without `CF_HOLDS_NULL`; and every codec
     in `cf_codec_at(i)` with an encoder is one of the six (a writer
     added without a table row fails here). `lib/config/tests/test_roundtrip.c`
-    (today `tests/unit/test_roundtrip.c`, the `format` struct and
+    (the `format` struct and
     `g_formats`) loses `arrays`, `nulls` and `lines` from them, keeps
     `compare`, and reads the rest from `cf_format_holds` (`arrays` is 1
     with `CF_CODEC_ARRAYS`, 2 with `CF_CODEC_SCALAR_ARRAYS` only; `lines`
@@ -1772,8 +1772,7 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
     ```
 
     The members of a definition, each from `cf_def`
-    (`include/configforge/cf_define.h:68`, `lib/config/include/configforge/cf_define.h`
-    after A-1): `key`; `type`, one of `"bool"`, `"int"`, `"real"`,
+    (`lib/config/include/configforge/cf_define.h:68`): `key`; `type`, one of `"bool"`, `"int"`, `"real"`,
     `"text"`; `description`, a string or `null` (as `d->description`,
     where the schema gives none); `flags`, an array of names in this
     order of those set, `"required"`, `"sensitive"`, `"deprecated"`,

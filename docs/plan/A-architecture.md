@@ -1014,7 +1014,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     no clash. A test builds `scalar.c` both ways.
   * **The gates and scripts it meets.** gate.detection forbids
     `__GNUC__`, `_MSC_VER` and the like outside the portability files
-    (GateDetection.cmake:7-9, its exemption at :35): `lib/lanes/src/` is
+    (GateDetection.cmake:7-9, its exemption at :43): `lib/lanes/src/` is
     exempted beside `lib/platform/`, since lanes is its own portability
     layer. The format globs (`scripts/format.cmake`,
     `cmake/ConfigForgeFormat.cmake`, `.github/workflows/ci.yml`) cover
@@ -1044,6 +1044,13 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   operations with a scalar reference and the processor's detection;
   ConfigForge does not use it yet (D-101)."
 * **notes**:
+  * Read against the tree after A-1b: this card says `lib/CMakeLists.txt`
+    "records it, with no dependency, for `gate.layering`". After A-1b
+    `lib/CMakeLists.txt` only adds the component directories, and
+    `gate.layering` reads the components declared by `cf_component`
+    (written by `cf_write_layers` into `layers.cmake`). `lib/lanes/CMakeLists.txt`
+    must read none of ConfigForge's variables and so cannot call
+    `cf_component`; how `lanes` gets into that file is not stated here.
 
 ---
 
@@ -1121,7 +1128,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     and config (A-1b); `CF_SERIALIZE_LEAVES` is derived from the
     declarations and is not edited.
     `scripts/generate/amalgamate.py` gains `lanes.h` and the lanes
-    sources, and its `LOCAL_INCLUDE` pattern (:74) also takes
+    sources, and its `LOCAL_INCLUDE` pattern (:82) also takes
     `"lanes/..."` and `<lanes/...>`. The `cf_lanes_*` names join the
     internal symbol lists. Its scalar table is the one
     `cf_text_utf8_valid` calls.
@@ -1132,7 +1139,8 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   `lib/serialize/src/{blob,json,toml,yaml,yamlparse,properties,ini,xml}.c`,
   `scripts/generate/amalgamate.py` (the new sources and header),
   `cmake/configforge.internal.symbols` (gate.abi with `-DWRITE=ON`),
-  `tests/unit/test_text.c` (new) and its build line; last: `CHANGELOG.md`, `docs/Architecture.md`.
+  `lib/text/tests/test_text.c` (new) and its build line in
+  `lib/text/tests/CMakeLists.txt` (new); last: `CHANGELOG.md`, `docs/Architecture.md`.
 * **steps**:
   1. `test_text.c`: each function on the cases each old copy was used
      for, gathered by reading the copies (every overlong and surrogate
@@ -1311,8 +1319,8 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   in the experimental list as `name 1.8`, `cf_text_place` in the
   internal list), `lib/cxx/include/configforge/configforge.hpp`,
   `bindings/rust/src/`, `bindings/python/src/configforge/`; tests:
-  `tests/unit/test_encoding.c` (new) and its entry in
-  `tests/unit/CMakeLists.txt`'s `CF_UNIT_TESTS`, the bindings' tests;
+  `lib/config/tests/test_encoding.c` (new) and its entry in
+  `lib/config/tests/CMakeLists.txt`'s `CF_UNIT_TESTS`, the bindings' tests;
   last: `docs/Guide.md` (a section "Files in another encoding"),
   `CHANGELOG.md`.
 * **steps**:
@@ -1376,7 +1384,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     ```
 
     The form `file:line:col: message` is the readers' own, and the words
-    "not valid UTF-8" are TOML's today, so `tests/unit/test_toml.c`
+    "not valid UTF-8" are TOML's today, so `lib/config/tests/test_toml.c`
     (its assertions at about :130 and :166-168) keeps passing; read
     those lines first and keep both strings.
   * **The hint**, deterministic, from the bytes of the whole input that
@@ -1434,7 +1442,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     cases are `i_`. Every `y_` case must stay accepted and every `n_`
     case refused.
   * **Fuzzing**: `lib/config/tests/test_fuzz.c`'s seeds (under `#if
-    defined(CF_FUZZ_SEEDS)`, today :745 of `tests/unit/test_fuzz.c`) gain one document with an
+    defined(CF_FUZZ_SEEDS)`, today :745) gain one document with an
     invalid byte for each text format, so the refusal path is fuzzed.
   * **Writing back**: since every text inside is now UTF-8 but for
     secrets, a value written by `cf_emit` or the report reads back; a
@@ -1449,8 +1457,8 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   `-DWRITE=ON`: `cf_encoding_check 1.8` in the experimental list;
   `cfi_codec_decode_raw` is in no list),
   `scripts/generate/amalgamate.py` if a file is added; tests:
-  `tests/unit/test_utf8_refused.c` (new) and its entry in
-  `CF_UNIT_TESTS`, `tests/unit/test_toml.c` if a string must change
+  `lib/config/tests/test_utf8_refused.c` (new) and its entry in
+  `CF_UNIT_TESTS`, `lib/config/tests/test_toml.c` if a string must change
   (it should not); last: `docs/Guide.md` (A-4's section, the refusal),
   `docs/Formats.md` (each format: UTF-8 required; XML by its
   declaration), `CHANGELOG.md`.
@@ -1746,8 +1754,8 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     its rules, and replaces the three by `CF_NL_NONE`, `CF_NL_JSON5`
     and `CF_NL_ANY` in the two families that use them.
   * **How each reader calls it** (the reader's own `put`, its own
-    messages, as today). `lib/serialize/src/...` is today's
-    `src/serialize/...`; line numbers are today's.
+    messages, as today). The readers are in `lib/serialize/src/`; line
+    numbers are those of the files, which A-1's move did not change.
     * **JSON and JSON5**, `js_escape`, `js_escape_u`, `js5_escape`
       (json.c :279-377), `js_hex`, `js_put_cp`: one function
       `js_escape(s, dst, cap, n)` calls `cf_text_esc_decode(s->json5 ?
@@ -1854,7 +1862,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     Under "### Changed" (docs/Maintaining.md allows a refusal of what
     was never valid in a minor).
   * **The proof of "no input read differently".**
-    1. `tests/unit/test_text_escape.c` (new). Part one, the decoder,
+    1. `lib/serialize/tests/test_text_escape.c` (new). Part one, the decoder,
        one table per family of `(input after the backslash, end offset,
        kind, cp, used, at, letter)`, at least:
        * JSON: `n` CP 10 used 1; `"` 34; `/` 47; `u0041` 0x41 used 5;
@@ -1954,12 +1962,12 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   `cf_text_esc_decode`,
   `cf_text_escape`, `cf_text_ref_count`, `cf_text_ref_next`,
   `cf_text_ref_unescape`, `cf_text_ref_widen`; all internal, none
-  experimental or public); tests: `tests/unit/test_text_escape.c`
-  (it includes `cf_serialize.h`, so by A-1b's rule `lib/serialize/tests/`),
+  experimental or public); tests: `lib/serialize/tests/test_text_escape.c`
+  (it includes `cf_serialize.h`, so by A-1b's rule it is in `lib/serialize/tests/`),
   `lib/config/tests/test_reader_corpus.c`,
   `tests/support/data/reader_corpus.golden`
   (new; both tests in their component's test list),
-  `tests/unit/test_yaml.c` (the
+  `lib/config/tests/test_yaml.c` (the
   tag cases may go here instead of part four if its helpers fit),
   `lib/config/tests/test_fuzz.c` (one seed a family: `{"a":"😀\x41"}`
   as JSON5, `a = "\U0001F600\e"`, `a: "\x41é\N\L"`,
@@ -1975,7 +1983,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
      it fail, as the loop asks: change one function of one reader on
      purpose (for example `js_escape`'s `\n` to give 11), see the corpus
      test name that reader and length, restore it.
-  3. `tests/unit/test_text_escape.c`, parts one to three, with the old
+  3. `lib/serialize/tests/test_text_escape.c`, parts one to three, with the old
      copies; the declarations in `cf_text.h` and empty bodies; see the
      test fail.
   4. `escape.c` and `refs.c`; parts one to three pass (the decoder and
@@ -2194,8 +2202,8 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     (the family field `breaks` holds a `CF_NL_*`), and the decoder's own
     few lines for them are a call of `cf_text_break`; the private names
     go.
-  * **How each reader changes** (names today's; line numbers today's
-    `src/serialize/...`, which is `lib/serialize/src/...` after A-1):
+  * **How each reader changes** (names today's; line numbers today's, of
+    `lib/serialize/src/...`):
     * **json.c**: `js_scan`'s `line_start` and `line` become `cf_text_track
       tr`; `js_line` is `cf_text_track_line(&s->tr, s->p)`; `js_loc`'s
       column `cf_text_track_col(&s->tr, at)`; `js_fail` is
@@ -2293,7 +2301,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
       keeps the prose and loses the one declaration. It is a public
       1.x function and stays, with its name, signature and
       `CF_API`, not experimental.
-    * `src/core/keyspace.c`'s definition goes; `cf_key_segments` and
+    * `lib/config/src/core/keyspace.c`'s definition goes; `cf_key_segments` and
       `cf_key_cmp` stay there.
     * `tlv.c`: `tlv_key_valid` goes, its two callers (:167, :267) call
       `cf_key_valid`; the comment above it (:126-128) goes.
@@ -2303,18 +2311,18 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
       `cmake/configforge.symbols` keeps it. `docs/API.md` is
       regenerated (gate.apiref: the declaration moved). abidiff sees an
       addition to the serialization library and nothing else.
-    * `tests/unit/test_tlv.c` :566-587 (`layout_key_rule`) compares
+    * `lib/config/tests/test_tlv.c` :566-587 (`layout_key_rule`) compares
       the layout's judgement with `cf_key_valid`'s: now one function,
       so it can no longer disagree, and it stays as a test that a
       layout refuses what a key refuses (its comment changes to say
-      so). `tests/unit/test_serialize_alone.c` gains
+      so). `lib/serialize/tests/test_serialize_alone.c` gains
       `check(cf_key_valid("a.b", 3) && !cf_key_valid("A", 1), ...)`,
       which links only if the serialization library has it.
   * **The proof of "no input read differently".**
-    1. `tests/unit/test_reader_corpus.c` and its golden (A-7) pass
+    1. `lib/config/tests/test_reader_corpus.c` and its golden (A-7) pass
        unchanged after every reader is switched. Its alphabets already
        hold every newline kind, comment start and blank of the readers.
-    2. `tests/unit/test_text_space.c` (new): `cf_text_break` for each
+    2. `lib/text/tests/test_text_space.c` (new): `cf_text_break` for each
        rule on `\n`, `\r\n`, `\r`, `\r` before `a`, E2 80 A8, E2 80 A9,
        E2 80 AA, a cut E2 80, the empty input, and `p == end`;
        `cf_text_eol`; `cf_text_blanks` for each set on a string with
@@ -2332,7 +2340,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
        tokens; `cf_text_fail` for the three forms and for a `%S` and a
        message cut at `CF_MESSAGE_MAX` (compared with `cf_error_set` of
        the old format on the same arguments).
-    3. `tests/unit/test_places.c` (new): the places that a skip or a
+    3. `lib/config/tests/test_places.c` (new): the places that a skip or a
        tracker can get wrong, through each codec's `decode`, as `file
        : line : col : message` strings checked against what the code
        **before** the card gives (written in step 2, which sees them
@@ -2364,20 +2372,19 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   `cmake/configforge_serialize.symbols` (`-DPART=serialize -DWRITE=ON`:
   `cf_key_valid` is the one promised name that changes),
   `docs/API.md` (regenerated); tests:
-  `tests/unit/test_text_space.c`, `tests/unit/test_places.c` (new, in
-  their components' test lists: `lib/text/tests/`, and `lib/config/tests/`
-  for the dotenv case), `tests/unit/test_tlv.c`,
-  `tests/unit/test_serialize_alone.c`, `lib/config/tests/test_fuzz.c`; last:
+  `lib/text/tests/test_text_space.c`, `lib/config/tests/test_places.c` (new, in
+  their components' test lists), `lib/config/tests/test_tlv.c`,
+  `lib/serialize/tests/test_serialize_alone.c`, `lib/config/tests/test_fuzz.c`; last:
   `CHANGELOG.md`, `docs/Architecture.md`, `docs/Decisions.md`.
 * **steps**:
   1. `ctest --preset default`, `test_reader_corpus`: both pass (A-7's
      golden is the baseline). Run the conformance suites once and keep
      the scores.
-  2. `tests/unit/test_places.c` with its expected strings taken from
+  2. `lib/config/tests/test_places.c` with its expected strings taken from
      the tree as it is; it passes. To see it fail, as the loop asks:
      change one function on purpose (`js_line` not counting a line),
      see the named case fail, restore it. Commit it with the card.
-  3. `tests/unit/test_text_space.c` and the declarations with empty
+  3. `lib/text/tests/test_text_space.c` and the declarations with empty
      bodies; see it fail to link.
   4. `space.c`, `track.c`, `fail.c`; the test passes.
   5. One reader at a time, `ctest --preset default`,
@@ -2422,6 +2429,11 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   `docs/Roadmap.md`: the item "Infrastructure behind abstractions" stays
   🟨, its line gains "A-8 done".
 * **notes**:
+  * Read against the tree after A-1b: `test_places.c` is placed in
+    `lib/config/tests/` by A-1b's rule (one file; its dotenv case includes
+    `configforge.h`). The card's earlier wording said "their components'
+    test lists: `lib/text/tests/`, and `lib/config/tests/` for the dotenv
+    case"; if `test_places.c` is meant to be split, that is not stated here.
 
 ---
 
@@ -2472,8 +2484,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     name and both contexts, and each outlives every configuration that
     reads with the codec, as for `cf_tlv_codec` (a `static` is the usual
     way). The library allocates nothing and copies nothing: `out->data`
-    is `spec`. Read `cf_tlv_codec_sized` first (`lib/serialize/src/tlv.c`,
-    today `src/serialize/tlv.c:1072`); this function is built the same
+    is `spec`. Read `cf_tlv_codec_sized` first (`lib/serialize/src/tlv.c:1072`); this function is built the same
     way: refuse an `out_size` below `offsetof(cf_codec, data) +
     sizeof(const void*)`, `memset(out, 0, out_size)`, check the
     description, then fill.
@@ -2630,14 +2641,13 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     in the `CF_FEATURES` list there, line 113;
     `cmake/templates/cf_build_options.h.in:24`, a line
     `#define CF_WITH_COMPOSE @CF_OPT_COMPOSE@`;
-    `lib/port/include/configforge/cf_build_options.h`, today
-    `include/configforge/cf_build_options.h:51`, its `#ifndef` default
+    `lib/port/include/configforge/cf_build_options.h:51`, its `#ifndef` default
     of 1); wherever `git grep -n CF_WITH_TLV` finds the option named in
     the build, the README's table and the fuzz build, `CF_WITH_COMPOSE`
     is named beside it (not the places that are about a layout).
-    "compose" is also a feature name: `src/core/version.c:51`'s list
+    "compose" is also a feature name: `lib/config/src/core/version.c:51`'s list
     (`cf_has_feature("compose")`) gains it under `#if CF_WITH_COMPOSE`,
-    and `tests/unit/test_features.c:46` a line beside `"tlv"`. The
+    and `lib/config/tests/test_features.c:46` a line beside `"tlv"`. The
     `minimal` preset (CMakePresets.json:70-87) sets `CF_WITH_COMPOSE` OFF,
     which is how ACCEPT-LINUX builds the option off; A-11's `misra`
     profile sets it OFF too (D-103). With it off,
@@ -2854,7 +2864,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   * **`cf_loc` moves to `cf_error.h`.** `cf_error.h` is in `lib/base` and
     may not include `cf_serialize.h` (`gate.layering`, D-100's table).
     The typedef (`file`, `line`, `col`; today
-    `include/configforge/cf_serialize.h:104-108`) moves, unchanged, to
+    `lib/serialize/include/configforge/cf_serialize.h:104-108`) moves, unchanged, to
     `lib/base/include/configforge/cf_error.h` above `cf_error`;
     `cf_serialize.h` includes `cf_error.h` already, so every program
     still sees it. `cf_loc_text` stays in `cf_serialize.h`.
@@ -2888,8 +2898,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     no column (INI, `.properties`, dotenv) sets `col` 0. (Reported, not
     left as a question: if an offset is wanted later it is a new member
     after `reason`, another card.)
-  * **Three changes in `lib/base/src/error.c`** (today
-    `src/core/error.c`), all by the size rule:
+  * **Three changes in `lib/base/src/error.c`**, all by the size rule:
     * `cf_error_clear` also zeroes `where` and `reason` where `e->size`
       reaches `offsetof(cf_error, reason) + sizeof(int)`;
     * `cf_error_set` zeroes them at the same condition, before it
@@ -2995,8 +3004,8 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     | `xml.c` | `DEPTH`: "nesting is too deep". `STRUCTURE`: "an attribute and a child element have the same name; ...", "elements of one name are a list, and a list's elements must be ...", "text beside child elements: ...", "the root element holds settings, not a value". `UNSUPPORTED`: "namespaces are not in the XML this library reads: ...", "a DOCTYPE is not read: ...". `KEY`: "not a valid key" and every `xml_sink_failed` call. `TOO_LONG`: "the key is too long". `BUDGET`: "too large for this XML reader". At the call that reports `XML_ErrorString` (the parse error), by `XML_GetErrorCode`: `XML_ERROR_NO_ELEMENTS` is `EMPTY` when `in->n == 0` and else `TRUNCATED`; `XML_ERROR_UNCLOSED_TOKEN`, `XML_ERROR_PARTIAL_CHAR`, `XML_ERROR_UNCLOSED_CDATA_SECTION` `TRUNCATED`; `XML_ERROR_JUNK_AFTER_DOC_ELEMENT` `TRAILING`; `XML_ERROR_DUPLICATE_ATTRIBUTE` `DUPLICATE_KEY`; `XML_ERROR_UNKNOWN_ENCODING`, `XML_ERROR_INCORRECT_ENCODING` `ENCODING`; `XML_ERROR_AMPLIFICATION_LIMIT_BREACH` (inside `#ifdef`, expat 2.4 and later) `BUDGET`; every other `SYNTAX`. Invalid UTF-8 in a UTF-8 XML document is expat's `XML_ERROR_INVALID_TOKEN`, so `SYNTAX`: XML reads by its declaration (A-5) and does not claim what expat does not say |
     | `cbor.c` | `TRUNCATED`: "the document ends inside a data item", "a length of %U, and %zu bytes are left", "a map of %U pairs, and ...", "an array of %U items, and ...". `STORAGE`: "the value could not be recorded", "an indefinite-length text string needs sink ...", "an indefinite-length map key needs sink work ...", "the document could not be recorded", "sink refused". `KEY`: "'%S' is not a valid key", "a map key that is %s, which a configuration ...". `UTF8`: "a text string that is not UTF-8". `DEPTH`: "nests deeper than %d levels". `NUMBER_RANGE`: "an integer past the 64-bit signed range, ...". `UNSUPPORTED`: "a byte string, which ...", "undefined, which ...", "this build has no floating point support", "simple value %u, which ...", "tag %U, which this reader does not read: ...". `EMPTY`: "the document is empty". `TOP_LEVEL`: "a configuration is a map at the top, ...". `TRAILING`: "bytes after the document". `SYNTAX`: every other call. No `where`: line and column are 0 |
     | `tlv.c` | `TRUNCATED`: "a tag cut short", "a length cut short", "tag 0x%s says %U bytes, and %zu are left", "the document ends at byte %zu without the end tag". `UNSUPPORTED`: "an indefinite length, which ...", "tag 0x%s is not in the layout '%s'", "tag 0x%s is a record of %U bytes, ...", "a type this reader does not read". `TOO_LONG`: "a length of %u bytes". `KEY`: "'%s' is not a valid key". `NUMBER`: "holds a nibble that is not a digit". `NUMBER_RANGE`: "has %U digits, more than an integer ...", "is %U, past the largest integer ...". `UTF8`: "is text that is not UTF-8". `DEPTH`: "nests deeper than %d levels". `STORAGE`: "the value could not be recorded", "needs sink text storage", "the document could not be recorded", "sink refused". `STRUCTURE`: "continues a list that ended at byte ...". `TRAILING`: "bytes after the end tag". `EMPTY`: "the document is empty". `SYNTAX`: every other call. The layout's own checks (`tlv_check`, and the size and name checks in `cf_tlv_codec_sized`) are `NONE`: they refuse the program's description, not a document. No `where` |
-    | `sources/entry.c` | `lib/config/src/sources/entry.c`: the dotenv lexer: `SYNTAX`: `expected NAME=value`, with `where.line` the line and `col` 0; `KEY`: `not a usable name`, same place. The environment and arguments: `cf_lex_cli`'s `not a valid option` `KEY`, `needs a value` `SYNTAX`; `cf_lex_env` refuses nothing of a document. The response file: `may not include another` `UNSUPPORTED`. `where` is empty for these |
-    | `bridge/flatten.c`, `bridge/file.c` | the budget (the refusal after `cf_codec_decode` in `cf_flatten_decode`) `BUDGET`; `file.c`'s `contains a key this build cannot hold` `TOO_LONG`; `cf_source_by_content`'s three "cannot tell the format" refusals `NONE` (a choice of format, not a refusal of bytes) |
+    | `lib/config/src/sources/entry.c` | the dotenv lexer: `SYNTAX`: `expected NAME=value`, with `where.line` the line and `col` 0; `KEY`: `not a usable name`, same place. The environment and arguments: `cf_lex_cli`'s `not a valid option` `KEY`, `needs a value` `SYNTAX`; `cf_lex_env` refuses nothing of a document. The response file: `may not include another` `UNSUPPORTED`. `where` is empty for these |
+    | `lib/config/src/bridge/flatten.c`, `lib/config/src/bridge/file.c` | the budget (the refusal after `cf_codec_decode` in `cf_flatten_decode`) `BUDGET`; `file.c`'s `contains a key this build cannot hold` `TOO_LONG`; `cf_source_by_content`'s three "cannot tell the format" refusals `NONE` (a choice of format, not a refusal of bytes) |
     | A-4 and A-5, written before this card | `cf_encoding_check`'s refusal `UTF8` with the line and column it already computes (A-5), and the hint is in the message as it was; A-4's three messages (`byte 0x%02X has no character in %s`, `an unpaired UTF-16 surrogate`, `ends in half a UTF-16 code unit`), the UTF-32 refusal and the refusal of an encoding named for a codec that has its own: `ENCODING`, the first two with their line and column. `cf_lex_dotenv`'s, the response file's, `cf_lex_env`'s and `cf_lex_cli`'s UTF-8 refusals and the memory and defaults sources': `UTF8` |
     | A-9 | a repair or a filter that returns CF_FALSE without setting `err`: `cf_error_place(err, CF_REASON_SYNTAX, 0, 0)` after the library's own message; one that sets `err` keeps what it set |
 
@@ -3303,7 +3312,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
 
     Why each is what it is:
     * `default` is today's defaults (cmake/ConfigForgeOptions.cmake,
-      ConfigForgeSize.cmake, `src/serialize/CMakeLists.txt:43`), and
+      ConfigForgeSize.cmake, `lib/serialize/backends.cmake:22`), and
       `gate.profiles` holds it to them.
     * `minimal` is today's `minimal` preset (CMakePresets.json) to the
       option: the six parts off, the four limits and the budget,
@@ -3355,7 +3364,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     `CMakeLists.txt` runs; (2) the profile, loaded as the first
     statement of `cmake/ConfigForgeOptions.cmake`, before its first
     `option()` and before `ConfigForgeSize.cmake`, `ConfigForgeCVersion.cmake`
-    and `src/serialize/CMakeLists.txt` declare theirs; (3) each
+    and `lib/serialize/backends.cmake` declare theirs; (3) each
     option's own default. `cf_profile_load()` does exactly this for
     every line: it remembers the profile's value in the variable
     `_cf_pv_<OPTION>` and then runs `set(<OPTION> <value> CACHE <type>
@@ -3434,18 +3443,16 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     cf_build_profile(void);` with the comment "The build profile this
     library was built with (D-105): "default", "minimal", "file:acme",
     or "unspecified" for a build of the sources that named none. Never
-    NULL." Defined in `lib/config/src/core/version.c` (today
-    `src/core/version.c:28`) as `return CF_BUILD_PROFILE;`. The
+    NULL." Defined in `lib/config/src/core/version.c` (:28) as `return CF_BUILD_PROFILE;`. The
     provenance report's `library` object gets one more member after
-    `"build"` (`lib/config/src/diag/report.c`, today
-    `src/diag/report.c`, the `"library": { "version": ... "build": `
+    `"build"` (`lib/config/src/diag/report.c`, the `"library": { "version": ... "build": `
     line): `"build_profile": "<name>"`, written
     with the same `report_quote_z`. The name is not `profile`: a
     report's top-level `"profile"` is the program's configuration
     profile. Schema 1 readers ignore members they do not know (the
     comment at report.c:438-440 says the same of `build`).
   * **The build id stays the commit.** `cf_build_id()` is pinned as a
-    commit hash by `tests/unit/test_features.c:194-210` and by the
+    commit hash by `lib/config/tests/test_features.c:194-210` and by the
     Python binding, and D-105 and D-106 say the profile and the C
     versions go "into the build id". They go into the build's other
     identification: the SBOM (`cmake/ConfigForgeSbom.cmake`,
@@ -3493,7 +3500,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
        list says what was declared.
     `cf_cversion_write()`, in the same file, writes that property to
     `${CMAKE_BINARY_DIR}/cf_cversion.txt` (through
-    `configforge_write_lf`, ConfigForgeVersion.cmake:37; a file of one
+    `configforge_write_lf`, ConfigForgeVersion.cmake:38; a file of one
     blank line when nothing was declared, which that function's own
     final newline makes, so every reader of the file skips blank
     lines) and returns the SBOM text; it is
@@ -3606,7 +3613,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     ...}, {"properties"}, {"cbor"}, {"tlv"}, {"xml"}, {"yaml"},
     {"sqlite"}, {"real"}, {"dir"}, {"dotenv"}, {"preferences"},
     {"emit"}, {"image"}, {"report"}` that `cf_has_feature(name)` is
-    true exactly when the macro is 1 (names as `src/core/version.c:35-84`
+    true exactly when the macro is 1 (names as `lib/config/src/core/version.c:35-84`
     gives them); that `cf_build_limit("key")`, `"message"`, `"path"` and
     `"depth"` equal `CF_KEY_MAX`, `CF_MESSAGE_MAX`, `CF_PATH_MAX` and
     `CF_MAX_DEPTH`; and that a build with `CF_SINGLE_THREADED` defined
@@ -3670,7 +3677,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     steps do; `full` and `server` are skipped with a note when
     `expat.h` or `sqlite3.h` is not found (`find_path`). The header
     comment and the `unknown EXTRA step` message list it. The
-    kept-build check (verify.cmake:296-308) adds
+    kept-build check (verify.cmake:301-315) adds
     `cmake/ConfigForgeProfile.cmake`, `cmake/ConfigForgeCVersion.cmake`
     and every `cmake/profiles/*.cmake` to the files whose change
     starts from nothing.
@@ -4200,10 +4207,10 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     each from the `foreach(lim CF_KEY_MAX:32:65535 ...)` list that
     follows them. It also reads the
     defaults in `lib/port/include/configforge/cf_build_options.h`
-    (today `include/configforge/cf_build_options.h`, the four `#ifndef
+    (the four `#ifndef
     CF_KEY_MAX` blocks) and the
     ranges in the `#error` lines of `lib/port/include/configforge/cf_port.h`
-    (today `include/configforge/cf_port.h`, "The limits, checked where
+    ("The limits, checked where
     every translation unit sees them") and **fails, naming
     both files, when the three sources disagree**: the CMake default,
     the header's `#ifndef` default and the `#error` range are one
@@ -4213,19 +4220,19 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     range (0 to 1048576) is in the CMake list only, and is shown from
     there.
   * **Section 3, the fixed limits.** Each row: name, value, the file and
-    the line it is read from, what it bounds. After A-1's map (today's
-    path after it):
+    the line it is read from, what it bounds. Paths as
+    A-1's map made them:
 
     | Name | Value | Read from | Bounds |
     | ---- | ----: | --------- | ------ |
-    | `CF_SOURCE_MAX` | 64 | `lib/base/include/configforge/cf_error.h` (today `include/configforge/cf_error.h:27`) | a source's name in an error; part of the ABI (D-45) |
+    | `CF_SOURCE_MAX` | 64 | `lib/base/include/configforge/cf_error.h:27` | a source's name in an error; part of the ABI (D-45) |
     | `CF_MAX_SOURCES` | 32 | `lib/config/include/configforge/cf_explain.h` (today `:24`) | the sources one `explain()` lists |
     | `CF_MAX_OPEN_PREFIXES` | 8 | `lib/config/include/configforge/cf_define.h` (today `:153`) | open key prefixes a definition set holds |
     | `CF_EXPAND_MAX` | 1 MiB | `cf_define.h` (today `:163`) | the bytes one value's `${...}` may expand to (D-77) |
     | `CF_EXPAND_TOTAL_MAX` | 16 MiB | `cf_define.h` (today `:173`) | the expansion of a whole configuration |
-    | `CF_DIR_MAX_FILES` | 256 | `lib/config/src/bridge/dir.c` (today `src/bridge/dir.c:28`) | files in a drop-in directory |
-    | `CF_SECRETS_MAX_FILES` | 256 | `lib/config/src/bridge/secrets.c` (today `src/bridge/secrets.c:46`) | files in a secrets directory |
-    | `YP_KEY_MAX` | 1024 | `lib/serialize/src/yamlparse.c` (today `src/serialize/yamlparse.c:22`) | an implicit YAML key (spec 7.4.2) |
+    | `CF_DIR_MAX_FILES` | 256 | `lib/config/src/bridge/dir.c:28` | files in a drop-in directory |
+    | `CF_SECRETS_MAX_FILES` | 256 | `lib/config/src/bridge/secrets.c:46` | files in a secrets directory |
+    | `YP_KEY_MAX` | 1024 | `lib/serialize/src/yamlparse.c:22` | an implicit YAML key (spec 7.4.2) |
     | `CF_XML_INPUT_MAX` | 0x7FFFFFFF | `lib/serialize/src/xml.c` (new macro, see step 3) | the bytes of one XML document |
 
     `CF_PLATFORM_NAME_MAX` is `CF_PATH_MAX` (`cf_platform.h`, its
@@ -4252,14 +4259,13 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     replaced by its value, `0x...` is read as hexadecimal, and what is
     left (numbers, `*`, parentheses) is given to `math(EXPR)`.
   * **Section 4.** The three constants of
-    `lib/config/include/configforge/cf_flatten.h` (today
-    `include/configforge/cf_flatten.h`, after "What one document may
+    `lib/config/include/configforge/cf_flatten.h` (after "What one document may
     make of the key space"), `CF_DECODE_FACTOR` 64,
     `CF_DECODE_FLOOR` 1 MiB, `CF_DECODE_KEY_COST` 64, and three
     computed rows made by the generator, `64 x n + 1 MiB` for n of 1 KiB,
     1 MiB and 256 MiB, printed as `1.06 MiB`, `65 MiB` and `16.0 GiB`
     each with its arithmetic. YAML's own bounds, from
-    `lib/serialize/src/yaml.c` (today `src/serialize/yaml.c`, the
+    `lib/serialize/src/yaml.c` (the
     `YAML_ALIAS_*` defines):
     `YAML_ALIAS_FACTOR` 64, `YAML_ALIAS_FLOOR` 4096 (events),
     `YAML_ALIAS_BYTES_FACTOR` 64, `YAML_ALIAS_BYTES_FLOOR` 1 MiB
@@ -4355,7 +4361,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     value interpolation is "rejected with a clear message, not
     implemented" and that a second document binary format is not
     here: interpolation is implemented and bounded
-    (`tests/unit/test_interpolate.c`, `CF_EXPAND_MAX`, D-77) and CBOR is
+    (`lib/config/tests/test_interpolate.c`, `CF_EXPAND_MAX`, D-77) and CBOR is
     a codec (D-91). Both bullets are rewritten to say what is true and
     point to Limits.md; the bullets for the DOM and for streaming stay
     and gain "(the serialization library: Roadmap, "Ways to read")".
@@ -4392,8 +4398,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
       does not name a file (a `#anchor` also needs its heading in that
       file). Its messages are matched with `[ \n]+` between words
       wherever a test matches them, as A-11 says.
-    * `test_limits` (T; `lib/config/tests/test_limits.c`, today
-      `tests/unit/test_limits.c`). It is **not** in the component's
+    * `test_limits` (T; `lib/config/tests/test_limits.c`). It is **not** in the component's
       `CF_UNIT_TESTS` list: that list's loop registers every test as
       `add_test(NAME unit.${t} COMMAND ${t})` with no argument, and this
       one needs the page. It has a block of its own beside
@@ -4437,11 +4442,10 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
 * **files**: `docs/Limits.md` (new), `scripts/generate/limits.cmake`
   (new), `cmake/gates/GateLimits.cmake` (new),
   `cmake/ConfigForgeGates.cmake`,
-  `lib/config/tests/test_limits.c` (new; today
-  `tests/unit/test_limits.c`), `lib/config/tests/CMakeLists.txt`
-  (today `tests/unit/CMakeLists.txt`: a block of its own for
+  `lib/config/tests/test_limits.c` (new), `lib/config/tests/CMakeLists.txt`
+  (a block of its own for
   `test_limits`, beside `test_dirlimits`'s), `lib/serialize/src/xml.c`
-  (today `src/serialize/xml.c`, the `in->n > 0x7FFFFFFFu` test in
+  (the `in->n > 0x7FFFFFFFu` test in
   `xml_run`), `mkdocs.yml`, `scripts/README.md`;
   last: `README.md`, `docs/Architecture.md`, `docs/Roadmap.md`,
   `docs/Plan.md`, `CHANGELOG.md`.

@@ -88,11 +88,11 @@ merged in any order; items in one group go one after another.
 
 | Group | Items | Changes | Size |
 | ----- | ----- | ------- | ---- |
-| A | D-73, the format from the name and the content; `cf_builder_document` | `src/serialize/codec.c`, `src/bridge/file.c`, a new source, `cf_serialize.h` | large |
-| C | D-76's rest: the key space and the index sized from the bytes or the last generation; the emitter's output sized in dump mode | `src/core/keyspace.c`, `src/core/define.c`, `src/bridge/emit.c`, `bench/` | medium |
+| A | D-73, the format from the name and the content; `cf_builder_document` | `lib/serialize/src/codec.c`, `lib/config/src/bridge/file.c`, a new source, `cf_serialize.h` | large |
+| C | D-76's rest: the key space and the index sized from the bytes or the last generation; the emitter's output sized in dump mode | `lib/config/src/core/keyspace.c`, `lib/config/src/core/define.c`, `lib/config/src/bridge/emit.c`, `bench/` | medium |
 | D | Doctor checks a report's fingerprint against its contents | `tools/doctor/` | small |
 | E | INI compared value by value with Python's `configparser` (Java's `Properties` needs a JVM the machines here do not have, so `.properties` is left to its own tests) | `scripts/check/conformance.py`, `tests/conformance/` | small |
-| F | Native OS sources | `src/platform/`, a source each | large, and each system tested on itself |
+| F | Native OS sources | `lib/platform/src/`, a source each | large, and each system tested on itself |
 
 Only A and B touch one file in common (a declaration each in
 `configforge.h`), which merges by hand in a minute. Not in any group:
@@ -983,7 +983,7 @@ first user meets. In the order proposed:
   one decision rather than scrolls past ninety. The Roadmap's finished
   items move to a page of their own, the Roadmap keeping what is left.
 * ⬜ **The serialization sources, laid out by what they share.** Today
-  `src/serialize/` is one file per format (about 10,900 lines; `toml.c`,
+  `lib/serialize/src/` is one file per format (about 10,900 lines; `toml.c`,
   `yamlparse.c`, `yaml.c`, `json.c` and `tlv.c` over 1,100 each). To
   weigh, each split or merge kept only if it removes duplicated code or
   lets a build leave a part out:
@@ -1280,7 +1280,7 @@ first user meets. In the order proposed:
   configure time. `docs/Limits.md` shows the list.
 * ⬜ **Formats registered, with what each can do.** The codecs already
   are a table (`cf_codecs[]` and `cf_formats[]` in
-  `src/serialize/codec.c`, read through `cf_codec_by_name` and
+  `lib/serialize/src/codec.c`, read through `cf_codec_by_name` and
   `cf_codec_at`). What is left is the capabilities beside each entry:
   the ways it can be read (DOM, events, in-situ, lazy) and what it
   cannot hold. `detect.c`, Doctor, `codec convert` and the pair test

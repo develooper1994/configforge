@@ -264,7 +264,7 @@ The rules every card here keeps:
   * **Fetching is not FetchContent, and not the build's.**
     `scripts/bench/fetch.cmake` (new, `cmake -DLIBS=<dir> -P
     scripts/bench/fetch.cmake`) fetches each library the way
-    `scripts/verify.cmake:845-925` fetches the conformance suites:
+    `scripts/verify.cmake:893-957` fetches the conformance suites:
     `git init`, `git fetch --depth 1 <url> <commit>`, `git checkout
     FETCH_HEAD`, `core.autocrlf=false`, skipped when `HEAD` is already
     the commit. `bench/compare/CMakeLists.txt` never fetches: given
@@ -315,7 +315,7 @@ The rules every card here keeps:
 
     | Name | Flags, for every library alike |
     | ---- | ------------------------------ |
-    | `shipped` (the headline) | `-O2 -fstack-protector-strong -fstack-clash-protection -fcf-protection=full -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3`, the hardening ConfigForge ships with (`CF_HARDEN`, cmake/ConfigForgeCompiler.cmake:245-298); ConfigForge built with `CF_HARDEN=ON` |
+    | `shipped` (the headline) | `-O2 -fstack-protector-strong -fstack-clash-protection -fcf-protection=full -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3`, the hardening ConfigForge ships with (`CF_HARDEN`, cmake/ConfigForgeCompiler.cmake:244-297); ConfigForge built with `CF_HARDEN=ON` |
     | `bare` | `-O2` alone; ConfigForge with `CF_HARDEN=OFF` |
     | `native` | `-O3 -march=native`, for the record; never a headline |
 
@@ -640,7 +640,8 @@ The rules every card here keeps:
   (register `gate.perfpage`), `cmake/gates/GateDependencies.cmake`
   (its `file(GLOB_RECURSE build_files ...)`, which gains `bench/CMakeLists.txt`,
   `bench/compare/CMakeLists.txt` and `bench/compare/libs/*.cmake`;
-  A-1 has changed its `src/` entries by then, add after them),
+  A-1 and A-1b changed its `src/` entries to `lib/CMakeLists.txt` and
+  `lib/*/CMakeLists.txt`; add after them),
   `.github/workflows/ci.yml` (the trigger; `bench-gate`,
   `bench-smoke`; the clang-format step of the `format-patch` job gains
   `bench/compare`), `.github/workflows/bench.yml` (new),
@@ -868,6 +869,13 @@ The rules every card here keeps:
   CHANGELOG, "### Added" of the open version: "`CF_WITH_SWAR` (on): the
   readers scan a word at a time; off, byte by byte."
 * **notes**:
+  * Read against the tree after A-1b: `tests/unit/` no longer exists; unit
+    tests are in `lib/<c>/tests/` (A-1b's rule). This card names
+    `tests/unit/test_swar.c` and `tests/unit/CMakeLists.txt`, and
+    `lib/serialize/src/swar.h` is an internal header under a source
+    directory, which no test of `lib/serialize/tests/` includes today. Which
+    component's `tests/` holds `test_swar.c`, and how it reaches `swar.h`,
+    is not plain; the card is to be rewritten on D-101 first.
 
 ---
 
