@@ -512,7 +512,6 @@ static cf_bool ch_plain_name(const char* p, size_t n) {
 static cf_bool ch_lower_scalar(cf_arena* ar, const ch_node* s, ch_node* dst,
                                unsigned holds, size_t* lowered) {
     cf_value v = s->value;
-    char     num[CF_VALUE_TEXT_MAX + 1];
     ch_node* n;
     cf_bool  as_text = CF_FALSE;
 
@@ -548,6 +547,7 @@ static cf_bool ch_lower_scalar(cf_arena* ar, const ch_node* s, ch_node* dst,
         return CF_FALSE;
     }
     if (as_text) {
+        char   num[CF_VALUE_TEXT_MAX + 1];
         size_t len  = cf_value_to_text(&v, num, sizeof num);
         char*  copy = (char*)cf_arena_alloc(ar, len + 1u);
 
