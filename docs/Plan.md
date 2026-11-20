@@ -199,8 +199,8 @@ waves ("After 1.7.0: the order of the waves", below).
 | 42 | A-2 The vector library, its interface and its scalar reference | medium | A-1b | done (da0dd49) |
 | 43 | A-3 One UTF-8, one hex digit, one table hash | medium | A-2 | done (520baa2) |
 | 44 | A-4 Another encoding, read only by name | medium | A-3 | done (e4069b8) |
-| 45 | A-5 Bytes that are not UTF-8 are refused, with their place and a hint | medium | A-4 | open |
-| 46 | A-6 `configforge codec recode`: a file converted once, for review | small | A-5, T-3 | waits: A-5 |
+| 45 | A-5 Bytes that are not UTF-8 are refused, with their place and a hint | medium | A-4 | done (98c068e) |
+| 46 | A-6 `configforge codec recode`: a file converted once, for review | small | A-5, T-3 | open |
 | 47 | A-7 The escapes in families | large | A-6 | waits: A-6 |
 | 48 | A-8 Whitespace, comments, newlines and the place of a refusal | large | A-7 | waits: A-7 |
 | 49 | A-9 Composed codecs, for what is almost a format | medium | A-5 | waits: A-8 (the order) |
