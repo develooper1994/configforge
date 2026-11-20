@@ -3845,7 +3845,7 @@ CF_API const char* cf_format_of_path(const char* path);
 CF_API const char* cf_format_option(const char* format);
 ```
 
-Implementation: [`cf_format_of_path` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L320), [`cf_format_option` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L369).
+Implementation: [`cf_format_of_path` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L321), [`cf_format_option` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L370).
 
 Names a format this library knows about whether or not it was
 compiled in, so the error can say which option to turn on.
@@ -3856,7 +3856,7 @@ CF_EXPERIMENTAL(1, 8) cf_bool cf_format_holds(const char* format, unsigned* hold
 
 Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
 
-Implementation: [`cf_format_holds` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L335).
+Implementation: [`cf_format_holds` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L336).
 
 CF_TRUE and *holds the bits of the format called `format`, whether
 or not this build has its codec; CF_FALSE, *holds untouched, for a
@@ -3869,7 +3869,7 @@ CF_EXPERIMENTAL(1, 8) cf_bool cf_format_limits(const char* format, size_t* max_p
 
 Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
 
-Implementation: [`cf_format_limits` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L353).
+Implementation: [`cf_format_limits` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L354).
 
 CF_TRUE and the limits of the reader of the format called `format`:
 max_path the longest joined path of names (dots counted) to a table,

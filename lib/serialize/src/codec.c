@@ -296,8 +296,8 @@ typedef struct cf_format_info {
 /* The values of `holds`, one line a format, from the encoders and the
    readers as they are (D-109); 0 for a format with no writer. */
 #define HOLDS_SCALARS (CF_HOLDS_INT | CF_HOLDS_REAL | CF_HOLDS_BOOL)
-#define HOLDS_ARRAYS                                                        \
-    (CF_HOLDS_ARRAYS | CF_HOLDS_EMPTY_ARRAY | CF_HOLDS_TABLE_ARRAYS |       \
+#define HOLDS_ARRAYS                                                                   \
+    (CF_HOLDS_ARRAYS | CF_HOLDS_EMPTY_ARRAY | CF_HOLDS_TABLE_ARRAYS |                  \
      CF_HOLDS_NESTED_ARRAYS)
 
 static const cf_format_info cf_formats[] = {
@@ -306,7 +306,8 @@ static const cf_format_info cf_formats[] = {
     {"json", ".json;.jsn", "CF_WITH_JSON", CF_HOLDS_ALL, NO_LIMIT, DEPTH_MAX},
     {"json5", ".json5;.jsonc", "CF_WITH_JSON", CF_HOLDS_ALL, NO_LIMIT, DEPTH_MAX},
     {"toml", ".toml", "CF_WITH_TOML",
-     HOLDS_SCALARS | HOLDS_ARRAYS | CF_HOLDS_LINE_BREAK | CF_HOLDS_NUL | CF_REFUSES_NULL,
+     HOLDS_SCALARS | HOLDS_ARRAYS | CF_HOLDS_LINE_BREAK | CF_HOLDS_NUL |
+         CF_REFUSES_NULL,
      (size_t)CF_KEY_MAX - 2u, (size_t)CF_MAX_DEPTH},
     {"xml", ".xml", "CF_WITH_XML", 0u, NO_LIMIT, DEPTH_MAX},
     {"yaml", ".yaml;.yml", "CF_WITH_YAML",
