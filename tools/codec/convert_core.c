@@ -629,7 +629,7 @@ static cf_bool cv_as_text(const cv_check* k, const cf_value* v) {
     case CF_TYPE_NULL:
         return ((k->holds & (CF_HOLDS_NULL | CF_REFUSES_NULL)) == 0u) ? CF_TRUE
                                                                       : CF_FALSE;
-    default:
+    case CF_TYPE_TEXT:
         break;
     }
     return CF_FALSE;

@@ -534,7 +534,7 @@ static cf_bool ch_lower_scalar(cf_arena* ar, const ch_node* s, ch_node* dst,
             as_text = CF_TRUE;
         }
         break;
-    default:
+    case CF_TYPE_TEXT:
         if (memchr(v.u.t.p, '\n', v.u.t.n) != NULL && (holds & CF_HOLDS_LINE_BREAK) == 0u) {
             return CF_TRUE;
         }
