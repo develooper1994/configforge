@@ -13,7 +13,8 @@
 #include <stdio.h>
 #include <string.h>
 
-static const char* const pr_formats[] = {"ini", "json", "json5", "toml", "yaml", "cbor"};
+static const char* const pr_formats[] = {"ini",  "json", "json5",
+                                         "toml", "yaml", "cbor"};
 
 #define PR_N (sizeof pr_formats / sizeof pr_formats[0])
 
@@ -23,19 +24,20 @@ typedef struct pr_row {
 } pr_row;
 
 /* In bit order. */
-static const pr_row pr_rows[] = {{CF_HOLDS_INT, "integers"},
-                                 {CF_HOLDS_REAL, "reals"},
-                                 {CF_HOLDS_BOOL, "booleans"},
-                                 {CF_HOLDS_NULL, "null"},
-                                 {CF_HOLDS_ARRAYS, "arrays of values"},
-                                 {CF_HOLDS_EMPTY_ARRAY, "empty arrays"},
-                                 {CF_HOLDS_TABLE_ARRAYS, "arrays of tables"},
-                                 {CF_HOLDS_NESTED_ARRAYS, "arrays of arrays"},
-                                 {CF_HOLDS_EMPTY_TABLE, "empty tables"},
-                                 {CF_HOLDS_ANY_NAME, "names beyond letters, digits, _ and -"},
-                                 {CF_HOLDS_EMPTY_NAME, "an empty name"},
-                                 {CF_HOLDS_LINE_BREAK, "line breaks in text"},
-                                 {CF_HOLDS_NUL, "NUL bytes in text"}};
+static const pr_row pr_rows[] = {
+    {CF_HOLDS_INT, "integers"},
+    {CF_HOLDS_REAL, "reals"},
+    {CF_HOLDS_BOOL, "booleans"},
+    {CF_HOLDS_NULL, "null"},
+    {CF_HOLDS_ARRAYS, "arrays of values"},
+    {CF_HOLDS_EMPTY_ARRAY, "empty arrays"},
+    {CF_HOLDS_TABLE_ARRAYS, "arrays of tables"},
+    {CF_HOLDS_NESTED_ARRAYS, "arrays of arrays"},
+    {CF_HOLDS_EMPTY_TABLE, "empty tables"},
+    {CF_HOLDS_ANY_NAME, "names beyond letters, digits, _ and -"},
+    {CF_HOLDS_EMPTY_NAME, "an empty name"},
+    {CF_HOLDS_LINE_BREAK, "line breaks in text"},
+    {CF_HOLDS_NUL, "NUL bytes in text"}};
 
 #define PR_ROWS (sizeof pr_rows / sizeof pr_rows[0])
 
@@ -145,7 +147,8 @@ int codec_pairs(int argc, char** argv) {
             if (a == b) {
                 continue;
             }
-            printf(markdown ? "| %s | %s | " : "%s\t%s\t", pr_formats[a], pr_formats[b]);
+            printf(markdown ? "| %s | %s | " : "%s\t%s\t", pr_formats[a],
+                   pr_formats[b]);
             pr_lost(holds[a], holds[b]);
             fputs(markdown ? " |\n" : "\n", stdout);
         }

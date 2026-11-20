@@ -47,7 +47,8 @@ string(REPLACE "\n" ";" lines "${second}")
 list(REMOVE_ITEM lines "")
 list(LENGTH lines n_lines)
 if(NOT n_lines EQUAL 30)
-  message(FATAL_ERROR "the second table has ${n_lines} lines, not 30:\n${second}")
+  message(
+    FATAL_ERROR "the second table has ${n_lines} lines, not 30:\n${second}")
 endif()
 
 file(READ ${PAGE} page)

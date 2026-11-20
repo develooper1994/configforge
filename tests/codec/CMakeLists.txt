@@ -15,9 +15,10 @@ add_test(
 # it. The table is the same in every build.
 add_test(
   NAME codec.pairs_page
-  COMMAND ${CMAKE_COMMAND} -DCODEC=$<TARGET_FILE:configforge_codec>
-          -DPAGE=${CMAKE_SOURCE_DIR}/docs/Formats.md -P
-          ${CMAKE_CURRENT_SOURCE_DIR}/pairs_page.cmake)
+  COMMAND
+    ${CMAKE_COMMAND} -DCODEC=$<TARGET_FILE:configforge_codec>
+    -DPAGE=${CMAKE_SOURCE_DIR}/docs/Formats.md -P
+    ${CMAKE_CURRENT_SOURCE_DIR}/pairs_page.cmake)
 
 # `detect`, `check`, `dump` and `convert`; `convert` writes, so it needs
 # the encoders (CF_WITH_EMIT, off in the minimal preset).
@@ -62,8 +63,10 @@ if(CF_WITH_EMIT
                              PRIVATE ${CMAKE_SOURCE_DIR}/tools/codec)
   target_link_libraries(codec_pairs PRIVATE configforge_serialize)
   set_target_properties(
-    codec_pairs PROPERTIES C_STANDARD 90 C_STANDARD_REQUIRED ON C_EXTENSIONS
-                                                                OFF)
+    codec_pairs
+    PROPERTIES C_STANDARD 90
+               C_STANDARD_REQUIRED ON
+               C_EXTENSIONS OFF)
   configforge_apply_warnings(codec_pairs)
   configforge_apply_analysis(codec_pairs)
   add_test(NAME codec.pairs

@@ -127,9 +127,8 @@ if(CF_WITH_EMIT
   file(WRITE "${chain_dir}/fuzz_chain_seed3" "3154[s]\nk = 1\n")
   add_executable(fuzz_chain chain.c
                             ${CMAKE_SOURCE_DIR}/tools/codec/convert_core.c)
-  target_include_directories(
-    fuzz_chain PRIVATE ${CMAKE_SOURCE_DIR}/tools/codec
-                       ${CMAKE_SOURCE_DIR}/tests/codec)
+  target_include_directories(fuzz_chain PRIVATE ${CMAKE_SOURCE_DIR}/tools/codec
+                                                ${CMAKE_SOURCE_DIR}/tests/codec)
   target_link_libraries(fuzz_chain PRIVATE configforge_serialize)
   configforge_apply_analysis(fuzz_chain)
   target_compile_options(fuzz_chain PRIVATE -fsanitize=fuzzer)

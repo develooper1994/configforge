@@ -410,7 +410,7 @@ static void test_empty_written(void) {
         cf_i64 align;
         char   b[CF_ENCODER_STATE_MAX];
     } state;
-    const cf_codec* c = cf_codec_by_name("yaml");
+    const cf_codec* c   = cf_codec_by_name("yaml");
     cf_error        err = CF_ERROR_INIT;
     cf_doc_sink     sink;
     cf_sink         out;
@@ -427,7 +427,7 @@ static void test_empty_written(void) {
           "an empty document is written");
     check(out.len < sizeof text, "and fits");
     text[out.len < sizeof text ? out.len : sizeof text - 1u] = '\0';
-    back = load(text, &err);
+    back                                                     = load(text, &err);
     check(back != NULL, "and what was written parses");
     if (back == NULL) {
         printf("  %s\n--- written:\n%s\n", err.message, text);

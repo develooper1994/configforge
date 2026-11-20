@@ -209,8 +209,8 @@ static void pr_nest_doc(pr_state* st, const char* doc, size_t count, const char*
     pb_free(&b);
 }
 
-#define NAMES                                                                   \
-    "'Mixed_Case':1,'with space':2,'dot.ted':3,'quote`u0022d':4,'\\t':5,"      \
+#define NAMES                                                                          \
+    "'Mixed_Case':1,'with space':2,'dot.ted':3,'quote`u0022d':4,'\\t':5,"              \
     "'`u00e9':6,'':7,'a-b_c9':8"
 
 static void pr_edges(pr_state* st) {
@@ -240,14 +240,18 @@ static void pr_edges(pr_state* st) {
     pr_edge(st, "names", b.p);
     pb_free(&b);
 
-    pr_edge(st, "arrays", "{'a':[1,2,3],'b':[1,'a',true,null,0.5],'c':['a','b'],'d':[7]}");
-    pr_edge(st, "arrays_hard",
-            "{'a':[],'b':[{'a':1},{'b':2}],'c':[[1,2],[3]],'d':[[[1]]],'e':[{'a':[1,2]}]}");
-    pr_edge(st, "empty_tables",
-            "{'e': {}, 'n': {'e': {}}, 'k': 1, 't': {'only': {'x': 1}}, 'o': {'p': {}}}");
+    pr_edge(st, "arrays",
+            "{'a':[1,2,3],'b':[1,'a',true,null,0.5],'c':['a','b'],'d':[7]}");
+    pr_edge(
+        st, "arrays_hard",
+        "{'a':[],'b':[{'a':1},{'b':2}],'c':[[1,2],[3]],'d':[[[1]]],'e':[{'a':[1,2]}]}");
+    pr_edge(
+        st, "empty_tables",
+        "{'e': {}, 'n': {'e': {}}, 'k': 1, 't': {'only': {'x': 1}}, 'o': {'p': {}}}");
     pr_edge(st, "order", "{'z': 1, 'a': 2, 'm': {'b': 1, 'a': 2}}");
     pr_edge(st, "looks",
-            "{'a':'true','b':'123','c':'null','d':'0x1F','e':'1e3','f':'~','g':'yes','n':5}");
+            "{'a':'true','b':'123','c':'null','d':'0x1F','e':'1e3','f':'~','g':'yes','"
+            "n':5}");
 
     pr_nest_doc(st, "deep31", 31u, "a");
     name = pr_name(60);
@@ -301,10 +305,10 @@ static void pr_edges(pr_state* st) {
 
 /* `path` read whole into memory, NULL when it cannot be read. */
 static char* pr_slurp(const char* path, size_t* n) {
-    FILE*  f = fopen(path, "rb");
-    pr_buf b = {NULL, 0, 0};
+    FILE*       f = fopen(path, "rb");
+    pr_buf      b = {NULL, 0, 0};
     static char chunk[4096];
-    size_t got;
+    size_t      got;
 
     if (f == NULL) {
         return NULL;
@@ -478,9 +482,9 @@ static cf_bool pr_pair_in(pr_state* st, const pr_doc* d, size_t ia, size_t ib,
     unsigned        hb = 0;
     cf_blob         in;
     cf_arena*       ar;
-    ch_hop*         h1 = &sc->hop[0];
-    ch_hop*         h2 = &sc->hop[1];
-    ch_hop*         h3 = &sc->hop[2];
+    ch_hop*         h1   = &sc->hop[0];
+    ch_hop*         h2   = &sc->hop[1];
+    ch_hop*         h3   = &sc->hop[2];
     cf_error*       errp = &sc->err;
     int             rc;
 
@@ -531,7 +535,8 @@ static cf_bool pr_pair_in(pr_state* st, const pr_doc* d, size_t ia, size_t ib,
                1's. (Not hop 0's: a YAML file written from a typed source
                has `1`, and from its own reading `"1"`.) */
             ++st->checks;
-            if (h2->out.n != h3->out.n || memcmp(h2->out.p, h3->out.p, h2->out.n) != 0) {
+            if (h2->out.n != h3->out.n ||
+                memcmp(h2->out.p, h3->out.p, h2->out.n) != 0) {
                 pr_fail(st, d, g_writers[ia], g_writers[ib], "pair",
                         "writing is not stable: hop 2's bytes are not hop 1's");
             }
@@ -576,7 +581,7 @@ static void pr_run_docs(pr_state* st) {
     size_t b;
 
     for (i = 0; i < st->ndocs; ++i) {
-        const pr_doc* d = &st->docs[i];
+        const pr_doc* d  = &st->docs[i];
         cf_bool       ok = pr_readable(d);
 
         for (a = 0; ok && a < WRITERS; ++a) {
@@ -614,9 +619,8 @@ int main(int argc, char** argv) {
                    nman < sizeof manifests / sizeof manifests[0]) {
             manifests[nman++] = argv[++i];
         } else {
-            fprintf(stderr,
-                    "usage: codec_pairs [--root <dir>] [--docs <manifest>]... "
-                    "[--show <n>] [--verbose]\n");
+            fprintf(stderr, "usage: codec_pairs [--root <dir>] [--docs <manifest>]... "
+                            "[--show <n>] [--verbose]\n");
             return 2;
         }
     }

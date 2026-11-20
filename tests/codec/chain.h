@@ -376,8 +376,8 @@ static void ch_walk(ch_list* l, const ch_node* n, const char* path, size_t plen)
         return;
     }
     if (n->first == NULL) {
-        const char* line = ch_join(l, path, plen, "\t", (n->kind == CH_TABLE) ? "table" : "array",
-                                   "", 0u);
+        const char* line = ch_join(l, path, plen, "\t",
+                                   (n->kind == CH_TABLE) ? "table" : "array", "", 0u);
 
         if (line != NULL) {
             ch_push(l, line);
@@ -462,10 +462,10 @@ static size_t ch_first_diff(const char* const* a, size_t an, const char* const* 
 
 /* Two trees say the same: equal lines. */
 static cf_bool ch_same(cf_arena* ar, const ch_tree* a, const ch_tree* b) {
-    size_t              an = 0;
-    size_t              bn = 0;
-    const char* const*  al = ch_lines(ar, a, &an);
-    const char* const*  bl = ch_lines(ar, b, &bn);
+    size_t             an = 0;
+    size_t             bn = 0;
+    const char* const* al = ch_lines(ar, a, &an);
+    const char* const* bl = ch_lines(ar, b, &bn);
 
     if (al == NULL || bl == NULL) {
         return CF_FALSE;
@@ -534,7 +534,8 @@ static cf_bool ch_lower_scalar(cf_arena* ar, const ch_node* s, ch_node* dst,
         }
         break;
     case CF_TYPE_TEXT:
-        if (memchr(v.u.t.p, '\n', v.u.t.n) != NULL && (holds & CF_HOLDS_LINE_BREAK) == 0u) {
+        if (memchr(v.u.t.p, '\n', v.u.t.n) != NULL &&
+            (holds & CF_HOLDS_LINE_BREAK) == 0u) {
             return CF_TRUE;
         }
         if (memchr(v.u.t.p, '\0', v.u.t.n) != NULL && (holds & CF_HOLDS_NUL) == 0u) {
@@ -648,7 +649,8 @@ static cf_bool ch_lower_into(cf_arena* ar, const ch_node* src, ch_node* dst,
                 !ch_lower_into(ar, c, made, rules, sub, inline_, depth + 1u, lowered)) {
                 return CF_FALSE;
             }
-            if (in_table && made->first == NULL && (holds & CF_HOLDS_EMPTY_TABLE) == 0u) {
+            if (in_table && made->first == NULL &&
+                (holds & CF_HOLDS_EMPTY_TABLE) == 0u) {
                 ch_unlink(made);
             }
         }
@@ -664,8 +666,7 @@ static ch_tree* ch_lower(cf_arena* ar, const ch_tree* t, const ch_rules* rules,
     ch_node* root = ch_new(ar, NULL, CH_TABLE, NULL, 0);
 
     *lowered = 0;
-    if (root == NULL ||
-        !ch_lower_into(ar, t, root, rules, 0u, CF_FALSE, 0u, lowered)) {
+    if (root == NULL || !ch_lower_into(ar, t, root, rules, 0u, CF_FALSE, 0u, lowered)) {
         return NULL;
     }
     return root;
@@ -678,7 +679,7 @@ static ch_tree* ch_lower(cf_arena* ar, const ch_tree* t, const ch_rules* rules,
 enum { CH_OK = 0, CH_FAILED = 1, CH_BOUND = 2 };
 
 typedef struct ch_hop {
-    cf_blob out;      /* what the target wrote, in the arena */
+    cf_blob out; /* what the target wrote, in the arena */
     size_t  nfindings;
     size_t  as_text;
     char    why[400]; /* when CH_FAILED */
@@ -730,15 +731,15 @@ static void ch_why_diff(cf_arena* ar, char* why, size_t cap, const char* what,
    converter refuses the document by D-82's bound (or has no memory). */
 static int ch_hop_run(cf_arena* ar, const cf_blob* in, const cf_codec* src,
                       const cf_codec* to, ch_hop* h) {
-    ch_rules  rules;
-    cv_result res;
-    cf_error  err = CF_ERROR_INIT;
+    ch_rules       rules;
+    cv_result      res;
+    cf_error       err = CF_ERROR_INIT;
     const ch_tree* m;
     const ch_tree* r;
     const ch_tree* want;
-    size_t    lowered = 0;
-    size_t    i;
-    int       rc;
+    size_t         lowered = 0;
+    size_t         i;
+    int            rc;
 
     memset(h, 0, sizeof *h);
     if (!ch_rules_of(to->name, &rules)) {
@@ -780,8 +781,10 @@ static int ch_hop_run(cf_arena* ar, const cf_blob* in, const cf_codec* src,
         return CH_FAILED;
     }
     if (res.as_text != lowered) {
-        sprintf(h->why, "the converter counted %lu value(s) written as text, the table says %lu",
-                (unsigned long)res.as_text, (unsigned long)lowered);
+        sprintf(
+            h->why,
+            "the converter counted %lu value(s) written as text, the table says %lu",
+            (unsigned long)res.as_text, (unsigned long)lowered);
         return CH_FAILED;
     }
     if (!ch_same(ar, r, want)) {

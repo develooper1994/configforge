@@ -56,7 +56,8 @@ static void test_known(void) {
 
         sprintf(what, "cf_format_holds knows %s", g_writers[i]);
         check(cf_format_holds(g_writers[i], &holds) == CF_TRUE, what);
-        check((holds & ~(unsigned)(CF_HOLDS_ALL | CF_REFUSES_NULL)) == 0u, "no bit beyond the table's");
+        check((holds & ~(unsigned)(CF_HOLDS_ALL | CF_REFUSES_NULL)) == 0u,
+              "no bit beyond the table's");
         check(holds != 0, "a format holds something");
     }
     check(cf_format_holds("xml", &untouched) == CF_FALSE && untouched == 0x5A5Au,
@@ -224,7 +225,7 @@ static int reads(const cf_codec* c) {
 static void deep(const char* format, size_t count) {
     size_t i;
 
-    g_len = 0;
+    g_len    = 0;
     g_doc[0] = '\0';
     if (strcmp(format, "json") == 0 || strcmp(format, "json5") == 0) {
         put("{");
@@ -259,7 +260,7 @@ static void deep(const char* format, size_t count) {
 /* A header of `plen` bytes of joined path, as one name or, with `dotted`,
    as `a.` and one name. */
 static void header(size_t plen, int dotted) {
-    g_len = 0;
+    g_len    = 0;
     g_doc[0] = '\0';
     put("[");
     if (dotted) {
@@ -277,7 +278,7 @@ static void test_limits(void) {
     size_t                   i;
 
     for (i = 0; i < sizeof names / sizeof names[0]; ++i) {
-        const cf_codec* c = cf_codec_by_name(names[i]);
+        const cf_codec* c         = cf_codec_by_name(names[i]);
         size_t          max_path  = 0;
         size_t          max_depth = 0;
         char            what[128];
@@ -303,13 +304,14 @@ static void test_limits(void) {
 
             for (dotted = 0; dotted < 2; ++dotted) {
                 header(max_path, dotted);
-                sprintf(what, "%s reads a header path of %lu bytes (dotted %d)", names[i],
-                        (unsigned long)max_path, dotted);
+                sprintf(what, "%s reads a header path of %lu bytes (dotted %d)",
+                        names[i], (unsigned long)max_path, dotted);
                 check(reads(c), what);
             }
         }
     }
-    check(cf_format_limits("nosuch", &i, &i) == CF_FALSE, "an unknown name has no limits");
+    check(cf_format_limits("nosuch", &i, &i) == CF_FALSE,
+          "an unknown name has no limits");
 }
 
 int main(void) {

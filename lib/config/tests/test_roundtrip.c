@@ -132,9 +132,12 @@ static void format_from_table(format* f, const cf_codec* c) {
     if (!cf_format_holds(f->name, &holds)) {
         return;
     }
-    f->arrays = ((c->caps & CF_CODEC_ARRAYS) != 0u) ? 1 : (((c->caps & CF_CODEC_SCALAR_ARRAYS) != 0u) ? 2 : 0);
-    f->nulls  = ((holds & CF_HOLDS_NULL) != 0u || (holds & CF_REFUSES_NULL) == 0u) ? 1 : 0;
-    f->lines  = ((holds & CF_HOLDS_LINE_BREAK) != 0u) ? 1 : 0;
+    f->arrays = ((c->caps & CF_CODEC_ARRAYS) != 0u)
+                    ? 1
+                    : (((c->caps & CF_CODEC_SCALAR_ARRAYS) != 0u) ? 2 : 0);
+    f->nulls =
+        ((holds & CF_HOLDS_NULL) != 0u || (holds & CF_REFUSES_NULL) == 0u) ? 1 : 0;
+    f->lines = ((holds & CF_HOLDS_LINE_BREAK) != 0u) ? 1 : 0;
 }
 
 static const format* g_have[LEN(g_formats)]; /* the ones this build writes */

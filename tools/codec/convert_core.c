@@ -76,8 +76,8 @@ typedef struct cv_check {
     cv_finding*     list;
     size_t          n;
     size_t          cap;
-    unsigned        holds;     /* of the target, when `known` */
-    size_t          max_path;  /* and its reader's limits */
+    unsigned        holds;    /* of the target, when `known` */
+    size_t          max_path; /* and its reader's limits */
     size_t          max_depth;
     cf_bool         known; /* the table of what a format holds has the target */
     cf_bool         nomem;
@@ -336,7 +336,6 @@ static void* cv_rec_work(void* ctx, size_t n) {
     return cf_arena_alloc(((cv_tree*)ctx)->ar, n);
 }
 
-
 /* ------------------------------------------------------------------ *
  * Findings
  * ------------------------------------------------------------------ */
@@ -594,7 +593,8 @@ static void cv_pass_bits(cv_check* k, cv_node* n, size_t plen, cf_bool inline_,
                     continue;
                 }
             }
-            if (in_table && c->first == NULL && (k->holds & CF_HOLDS_EMPTY_TABLE) == 0u) {
+            if (in_table && c->first == NULL &&
+                (k->holds & CF_HOLDS_EMPTY_TABLE) == 0u) {
                 cv_note(k, c, CV_EMPTY_TABLE, CF_FALSE);
             } else {
                 cv_pass_bits(k, c, sub, inline_, depth + 1u);
@@ -806,7 +806,7 @@ static cf_bool cv_bytes(const cf_codec* target, cv_node* root, cf_arena* ar,
             return CF_FALSE;
         }
         cf_sink_init(&s, buf, len + 1u);
-        ok = cv_run(target, root, NULL, &s, NULL) && s.len == len;
+        ok     = cv_run(target, root, NULL, &s, NULL) && s.len == len;
         out->p = buf;
         out->n = len;
     }
