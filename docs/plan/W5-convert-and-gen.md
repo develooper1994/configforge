@@ -1705,6 +1705,29 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
        `pairs.cmake` is in no file list); `cv_finding` has a third
        member, `name`, for the message's `('<name>')`; `ch_same` takes
        an arena.
+  * **Answered 2026-11-20 (the organiser), and the card goes on from step 5:**
+    1. A format never writes what its own reader refuses. Limits that
+       differ by format are numbers, not bits: a second experimental
+       function `cf_format_limits(const char* format, size_t* max_path,
+       size_t* max_depth)` (beside `cf_format_holds`, same header, same
+       `CF_EXPERIMENTAL`, its own line in the symbol list) gives each
+       format's reader limits as they are: `max_path` the longest table
+       path a header or key may carry (TOML `CF_KEY_MAX - 2`, the dot
+       counted; INI `CF_KEY_MAX - 1`; the others `CF_KEY_MAX - 1`),
+       `max_depth` the deepest nesting the reader accepts (JSON, CBOR,
+       YAML 31; TOML 32; INI `(size_t)-1`, not limited by its reader;
+       `properties` 1, no nesting; each confirmed by `test_holds`, which
+       reads a document at the limit and one past it). `CF_HOLDS_LONG_PATHS`
+       is dropped (the experimental tier allows it); the converter's
+       names pass refuses, as a finding, a path longer than the target's
+       `max_path`, and its depth pass one deeper than `max_depth`.
+       `path_2_ok` and the `limits` cells are written from these numbers.
+       The readers are not changed in this card.
+    2. The YAML reader's second empty root stays settled in the
+       converter as built; the reader's own fault goes to docs/Roadmap.md
+       ("Formats", a YAML reader fix: no second document table at the end
+       of a file) in this card's docs commit.
+    3. The other judgements in the note above stand.
 
 ---
 
