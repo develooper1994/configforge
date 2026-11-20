@@ -192,7 +192,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 38c | L-2 Valgrind, AFL++, gitleaks, osv-scanner and Scorecard in CI | medium | L-1 | waits: L-1 (outline; written out when L-1 is done) |
 | 38d | L-4 include-what-you-use and a link check | small | L-1 | waits: L-1 (outline) |
 | 38e | L-3 Infer and semgrep; IKOS or Frama-C with 1.9.0 | large | L-2 | waits: L-2 (outline) |
-| 38f | L-5 Profilers: one command for time, cache, memory and vectorization | medium | P-1 | open (outline; written out when it is taken; before P-2) |
+| 38f | L-5 Profilers: one command for time, cache, memory and vectorization | medium | P-1 | done (13e9e70) |
 | 39 | P-1 The benchmark measures large documents, and says where time goes | medium | 1.7.0 released | done (90b6541) |
 | 40 | A-1 One directory per component: the files moved, nothing else changed | large | 1.7.0 released | done (824181f) |
 | 41 | A-1b Each component a project: its declaration, its tests, its README, built alone | large | A-1 | done (031d54d) |
