@@ -193,21 +193,28 @@ enum {
    (the reader gives text back), and anything else it lacks is left
    out by the converter, which names it (D-109). Experimental in 1.8. */
 enum {
-    CF_HOLDS_INT           = 1u << 0, /* integers as integers         */
-    CF_HOLDS_REAL          = 1u << 1,
-    CF_HOLDS_BOOL          = 1u << 2,
-    CF_HOLDS_NULL          = 1u << 3,
-    CF_HOLDS_ARRAYS        = 1u << 4,  /* arrays of values             */
-    CF_HOLDS_EMPTY_ARRAY   = 1u << 5,
-    CF_HOLDS_TABLE_ARRAYS  = 1u << 6,  /* a table inside an array      */
-    CF_HOLDS_NESTED_ARRAYS = 1u << 7,  /* an array inside an array     */
-    CF_HOLDS_EMPTY_TABLE   = 1u << 8,  /* a table with nothing in it,
-                                          as a member of a table       */
-    CF_HOLDS_ANY_NAME      = 1u << 9,  /* not only A-Z a-z 0-9 _ and - */
-    CF_HOLDS_EMPTY_NAME    = 1u << 10,
-    CF_HOLDS_LINE_BREAK    = 1u << 11, /* a line feed in a text        */
-    CF_HOLDS_NUL           = 1u << 12, /* a NUL byte in a text         */
-    CF_HOLDS_ALL           = (1u << 13) - 1u,
+    /* integers as integers */
+    CF_HOLDS_INT  = 1u << 0,
+    CF_HOLDS_REAL = 1u << 1,
+    CF_HOLDS_BOOL = 1u << 2,
+    CF_HOLDS_NULL = 1u << 3,
+    /* arrays of values */
+    CF_HOLDS_ARRAYS      = 1u << 4,
+    CF_HOLDS_EMPTY_ARRAY = 1u << 5,
+    /* a table inside an array */
+    CF_HOLDS_TABLE_ARRAYS = 1u << 6,
+    /* an array inside an array */
+    CF_HOLDS_NESTED_ARRAYS = 1u << 7,
+    /* a table with nothing in it, as a member of a table */
+    CF_HOLDS_EMPTY_TABLE = 1u << 8,
+    /* a name that is not only A-Z a-z 0-9 _ and - */
+    CF_HOLDS_ANY_NAME   = 1u << 9,
+    CF_HOLDS_EMPTY_NAME = 1u << 10,
+    /* a line feed in a text */
+    CF_HOLDS_LINE_BREAK = 1u << 11,
+    /* a NUL byte in a text */
+    CF_HOLDS_NUL = 1u << 12,
+    CF_HOLDS_ALL = (1u << 13) - 1u,
     /* Set when a format that lacks CF_HOLDS_NULL refuses a null
        outright (TOML); without it a null is written as the text
        `null` (INI). */
