@@ -298,7 +298,7 @@ static void pr_edges(pr_state* st) {
 static char* pr_slurp(const char* path, size_t* n) {
     FILE*  f = fopen(path, "rb");
     pr_buf b;
-    char   chunk[4096];
+    static char chunk[4096];
     size_t got;
 
     if (f == NULL) {
@@ -460,18 +460,24 @@ static cf_bool pr_lossless(unsigned from, unsigned to) {
 /* One document through one ordered pair. False when the document turned
    out not to be convertible at all (the bound at hop 0): it is counted
    as not read, once. */
-static cf_bool pr_pair(pr_state* st, const pr_doc* d, size_t ia, size_t ib) {
+typedef struct pr_scratch {
+    ch_hop   hop[3];
+    cf_error err;
+} pr_scratch;
+
+static cf_bool pr_pair_in(pr_state* st, const pr_doc* d, size_t ia, size_t ib,
+                          pr_scratch* sc) {
     const cf_codec* ca = cf_codec_by_name(g_writers[ia]);
     const cf_codec* cb = cf_codec_by_name(g_writers[ib]);
     unsigned        ha = 0;
     unsigned        hb = 0;
     cf_blob         in;
     cf_arena*       ar;
-    ch_hop          h1;
-    ch_hop          h2;
-    ch_hop          h3;
+    ch_hop*         h1 = &sc->hop[0];
+    ch_hop*         h2 = &sc->hop[1];
+    ch_hop*         h3 = &sc->hop[2];
+    cf_error*       errp = &sc->err;
     int             rc;
-    cf_error        err = CF_ERROR_INIT;
 
     (void)cf_format_holds(g_writers[ia], &ha);
     (void)cf_format_holds(g_writers[ib], &hb);
@@ -480,36 +486,36 @@ static cf_bool pr_pair(pr_state* st, const pr_doc* d, size_t ia, size_t ib) {
         pr_die("out of memory");
     }
     cf_blob_mem(&in, d->bytes, d->n, d->name);
-    rc = ch_hop_run(ar, &in, d->codec, ca, &h1);
+    rc = ch_hop_run(ar, &in, d->codec, ca, h1);
     ++st->checks;
     if (rc == CH_BOUND) {
         cf_arena_free(ar);
         return CF_FALSE;
     }
     if (rc != CH_OK) {
-        pr_fail(st, d, g_writers[ia], g_writers[ib], "hop 0", h1.why);
+        pr_fail(st, d, g_writers[ia], g_writers[ib], "hop 0", h1->why);
         cf_arena_free(ar);
         return CF_TRUE;
     }
-    rc = ch_hop_run(ar, &h1.out, ca, cb, &h2);
+    rc = ch_hop_run(ar, &h1->out, ca, cb, h2);
     ++st->checks;
     if (rc != CH_OK) {
         pr_fail(st, d, g_writers[ia], g_writers[ib], "hop 1",
-                (rc == CH_BOUND) ? "the converter refused by its bound" : h2.why);
+                (rc == CH_BOUND) ? "the converter refused by its bound" : h2->why);
         cf_arena_free(ar);
         return CF_TRUE;
     }
-    rc = ch_hop_run(ar, &h2.out, cb, ca, &h3);
+    rc = ch_hop_run(ar, &h2->out, cb, ca, h3);
     ++st->checks;
     if (rc != CH_OK) {
         pr_fail(st, d, g_writers[ia], g_writers[ib], "hop 2",
-                (rc == CH_BOUND) ? "the converter refused by its bound" : h3.why);
+                (rc == CH_BOUND) ? "the converter refused by its bound" : h3->why);
         cf_arena_free(ar);
         return CF_TRUE;
     }
     if (pr_lossless(ha, hb)) {
-        ch_tree* r1 = ch_read(ar, &h1.out, ca, &err);
-        ch_tree* r3 = ch_read(ar, &h3.out, ca, &err);
+        ch_tree* r1 = ch_read(ar, &h1->out, ca, errp);
+        ch_tree* r3 = ch_read(ar, &h3->out, ca, errp);
 
         ++st->checks;
         if (r1 == NULL || r3 == NULL || !ch_same(ar, r1, r3)) {
@@ -520,7 +526,7 @@ static cf_bool pr_pair(pr_state* st, const pr_doc* d, size_t ia, size_t ib) {
                1's. (Not hop 0's: a YAML file written from a typed source
                has `1`, and from its own reading `"1"`.) */
             ++st->checks;
-            if (h2.out.n != h3.out.n || memcmp(h2.out.p, h3.out.p, h2.out.n) != 0) {
+            if (h2->out.n != h3->out.n || memcmp(h2->out.p, h3->out.p, h2->out.n) != 0) {
                 pr_fail(st, d, g_writers[ia], g_writers[ib], "pair",
                         "writing is not stable: hop 2's bytes are not hop 1's");
             }
@@ -528,6 +534,19 @@ static cf_bool pr_pair(pr_state* st, const pr_doc* d, size_t ia, size_t ib) {
     }
     cf_arena_free(ar);
     return CF_TRUE;
+}
+
+/* The scratch is on the heap: three hops' messages and an error are too
+   much for a frame. */
+static cf_bool pr_pair(pr_state* st, const pr_doc* d, size_t ia, size_t ib) {
+    pr_scratch* sc = (pr_scratch*)pr_alloc(sizeof *sc);
+    cf_bool     ok;
+
+    memset(sc, 0, sizeof *sc);
+    sc->err.size = sizeof sc->err;
+    ok           = pr_pair_in(st, d, ia, ib, sc);
+    free(sc);
+    return ok;
 }
 
 /* Whether the document is read by its own format at all. */
