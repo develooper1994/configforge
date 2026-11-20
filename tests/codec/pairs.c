@@ -93,6 +93,7 @@ static void pb_put(pr_buf* b, const char* s, size_t n) {
             cap *= 2u;
         }
         p = (char*)pr_alloc(cap);
+        memset(p, 0, cap);
         if (b->n > 0) {
             memcpy(p, b->p, b->n);
         }
@@ -161,7 +162,7 @@ static void pr_add(pr_state* st, const char* name, const cf_codec* codec, const 
  * ------------------------------------------------------------------ */
 
 static void pr_edge(pr_state* st, const char* name, const char* json) {
-    pr_buf b;
+    pr_buf b = {NULL, 0, 0};
     size_t i;
 
     memset(&b, 0, sizeof b);
@@ -196,7 +197,7 @@ static char* pr_name(size_t len) {
 }
 
 static void pr_nest_doc(pr_state* st, const char* doc, size_t count, const char* name) {
-    pr_buf b;
+    pr_buf b = {NULL, 0, 0};
 
     memset(&b, 0, sizeof b);
     pr_nest(&b, count, name);
@@ -209,7 +210,7 @@ static void pr_nest_doc(pr_state* st, const char* doc, size_t count, const char*
     "'\\u00e9':6,'':7,'a-b_c9':8"
 
 static void pr_edges(pr_state* st) {
-    pr_buf b;
+    pr_buf b = {NULL, 0, 0};
     size_t i;
     char*  name;
     size_t lim = (size_t)CF_KEY_MAX;
@@ -297,7 +298,7 @@ static void pr_edges(pr_state* st) {
 /* `path` read whole into memory, NULL when it cannot be read. */
 static char* pr_slurp(const char* path, size_t* n) {
     FILE*  f = fopen(path, "rb");
-    pr_buf b;
+    pr_buf b = {NULL, 0, 0};
     static char chunk[4096];
     size_t got;
 
@@ -381,7 +382,7 @@ static void pr_manifest(pr_state* st, const char* manifest, const char* root) {
         tab2 = (tab1 != NULL) ? strchr(tab1 + 1, '\t') : NULL;
         if (line[0] != '\0' && line[0] != '#') {
             const cf_codec* c;
-            pr_buf          path;
+            pr_buf          path = {NULL, 0, 0};
             char*           bytes;
             size_t          len = 0;
 
