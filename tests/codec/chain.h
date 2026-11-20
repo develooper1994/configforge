@@ -629,6 +629,11 @@ static cf_bool ch_lower_into(cf_arena* ar, const ch_node* src, ch_node* dst,
                 !ch_lower_into(ar, c, made, rules, 0u, CF_TRUE, depth + 1u, lowered)) {
                 return CF_FALSE;
             }
+            /* Every member left out: a format with no empty array writes
+               nothing (INI's name[] lines are its members). */
+            if (made->first == NULL && (holds & CF_HOLDS_EMPTY_ARRAY) == 0u) {
+                ch_unlink(made);
+            }
         } else {
             size_t sub = plen;
 

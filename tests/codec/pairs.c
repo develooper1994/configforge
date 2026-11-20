@@ -25,6 +25,7 @@
 #define CF_INTERNAL_API 0
 
 #include "chain.h"
+#include "../conformance/wrap.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -412,9 +413,19 @@ static void pr_manifest(pr_state* st, const char* manifest, const char* root) {
                 pr_split(st, tab1 + 1, c, bytes, len);
             } else if (strcmp(tab2 + 1, "-") == 0) {
                 pr_add(st, tab1 + 1, c, bytes, len);
+            } else if (strcmp(tab2 + 1, "wrap") == 0) {
+                /* The suites' own wrapping, as conform measures it. */
+                cf_blob blob;
+
+                cf_blob_mem(&blob, bytes, len, tab1 + 1);
+                if (!conform_wrap(line, tab1 + 1, &blob)) {
+                    fprintf(stderr, "pairs: %s does not fit the wrapper\n", tab1 + 1);
+                    exit(2);
+                }
+                pr_add(st, tab1 + 1, c, blob.p, blob.n);
             } else {
-                fprintf(stderr, "pairs: %s: mode '%s' is not - or split\n", manifest,
-                        tab2 + 1);
+                fprintf(stderr, "pairs: %s: mode '%s' is not -, wrap or split\n",
+                        manifest, tab2 + 1);
                 exit(2);
             }
             free(bytes);
