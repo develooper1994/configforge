@@ -45,6 +45,17 @@ A document that starts with a UTF-8 byte order mark has it skipped, by
 the JSON, JSON5, TOML, INI, YAML and `.properties` readers alike, at the
 start only and with every line and column as if it were not there.
 
+Every text format is UTF-8 and nothing else (D-108): JSON, JSON5, TOML,
+YAML, INI, `.properties` and `.env` refuse a byte that is not, with its
+line and column and, when the bytes look like another encoding, its name,
+and so do the response files, the environment, the arguments and the
+program's own values (the memory and defaults sources). The binary
+formats check the text strings they hold as they read them. XML is the
+exception, for it declares its own encoding in the document
+(`<?xml ... encoding="ISO-8859-1"?>`), and is read by that declaration. A
+file in another encoding is read when its source names it, or by its
+UTF-16 byte-order mark (`docs/Guide.md`, "Files in another encoding").
+
 INI has no standard, so its reader is compared with the one most INI is
 written for, Python's `configparser` (`RawConfigParser`: interpolation
 off, keys keeping their case, a repeated key or section read with the

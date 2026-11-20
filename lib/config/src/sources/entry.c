@@ -4,6 +4,7 @@
 
 #include "configforge/cf_entry.h"
 #include "configforge/cf_define.h"
+#include "configforge/cf_encoding.h"
 #include "configforge/cf_serialize.h"
 #include "configforge/cf_alloc.h"
 #include "configforge/cf_build_options.h"
@@ -322,6 +323,7 @@ cf_bool cf_lex_env(char* const* environment, const cf_keymap* map,
                    const cf_entry_sink* out, cf_error* err) {
     char         key[CF_KEY_MAX];
     char         at[CF_KEY_MAX];
+    char         origin[CF_KEY_MAX + 8];
     char* const* e;
 
     if (out == NULL || map == NULL) {
@@ -353,6 +355,13 @@ cf_bool cf_lex_env(char* const* environment, const cf_keymap* map,
         memcpy(at, line, namelen);
         at[namelen] = '\0';
 
+        /* Only a variable that maps to a key is looked at, so an unrelated
+           one never stops a start, and the message names the variable,
+           never its value (D-108). */
+        cf_fmt(origin, sizeof origin, "env %s", at);
+        if (!cf_encoding_check(origin, eq + 1, strlen(eq + 1), err)) {
+            return CF_FALSE;
+        }
         if (!out->text(out->ctx, key, klen, eq + 1, strlen(eq + 1), at)) {
             return cf_error_set(err, CF_E_MEMORY, key, at, "could not record '%s'",
                                 key);
@@ -388,6 +397,7 @@ cf_bool cf_lex_cli(int argc, char* const* argv, const cf_keymap* map,
                    const cf_cli_spec* spec, const cf_entry_sink* out, cf_error* err) {
     char key[CF_KEY_MAX];
     char at[32];
+    char origin[32];
     int  i;
 
     if (out == NULL || map == NULL) {
@@ -491,6 +501,12 @@ cf_bool cf_lex_cli(int argc, char* const* argv, const cf_keymap* map,
            occurrence when the same option appears twice. */
         cf_fmt(at, sizeof at, "argv[%d]", i);
 
+        /* An option's value, never a positional argument, which is the
+           program's own (D-108). */
+        cf_fmt(origin, sizeof origin, "argument %d", i);
+        if (!cf_encoding_check(origin, val, strlen(val), err)) {
+            return CF_FALSE;
+        }
         if (!out->text(out->ctx, key, klen, val, strlen(val), at)) {
             return cf_error_set(err, CF_E_MEMORY, key, at, "could not record '%s'",
                                 key);
@@ -579,7 +595,8 @@ cf_bool cf_cli_expand(int argc, char* const* argv, cf_arena* arena, int* out_arg
             continue;
         }
 
-        if (!cf_blob_file(&blob, arena, a + 1, err)) {
+        if (!cf_blob_file(&blob, arena, a + 1, err) ||
+            !cf_encoding_check(a + 1, blob.p, blob.n, err)) {
             return CF_FALSE;
         }
         while (at < blob.n) {
@@ -661,6 +678,9 @@ cf_bool cf_lex_dotenv(const char* text, size_t n, const char* origin,
     }
     if (origin == NULL) {
         origin = ".env";
+    }
+    if (!cf_encoding_check(origin, text, n, err)) {
+        return CF_FALSE;
     }
     while (i < n) {
         size_t      start = i;

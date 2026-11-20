@@ -68,7 +68,21 @@ set(all_readers
     cbor
     tlv
     ber)
+# The readers of text that is UTF-8 and nothing else (D-108): each has a
+# second seed, a document with a byte that is not, so the refusal is fuzzed.
+set(utf8_readers
+    json
+    json5
+    ini
+    toml
+    yaml
+    properties
+    dotenv)
 foreach(reader ${readers})
+  set(seeds seed_${reader})
+  if(reader IN_LIST utf8_readers)
+    set(seeds ${seeds},seed_${reader}_utf8)
+  endif()
   list(FIND all_readers ${reader} target)
   math(EXPR target "${target} + 1")
   add_executable(fuzz_${reader} libfuzzer.c)
@@ -81,7 +95,7 @@ foreach(reader ${readers})
   add_test(
     NAME fuzz.${reader}
     COMMAND fuzz_${reader} corpus_${reader} -max_total_time=${CF_FUZZ_SECONDS}
-            -max_len=8192 -seed_inputs=seed_${reader} -print_final_stats=1)
+            -max_len=8192 -seed_inputs=${seeds} -print_final_stats=1)
   math(EXPR limit "${CF_FUZZ_SECONDS} * 3 + 60")
   set_tests_properties(
     fuzz.${reader}

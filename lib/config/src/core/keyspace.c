@@ -150,6 +150,27 @@ cf_bool cf_ks_init(cf_keyspace* ks, cf_arena* arena, size_t hint) {
     return (ks->cands != NULL) ? CF_TRUE : CF_FALSE;
 }
 
+void cfi_ks_refuse(cf_keyspace* ks, const cf_error* err) {
+    cf_error* copy;
+
+    if (ks == NULL || err == NULL || err->code != CF_E_SOURCE || ks->refusal != NULL ||
+        ks->arena == NULL) {
+        return;
+    }
+    copy = (cf_error*)cf_arena_alloc(ks->arena, sizeof(cf_error));
+    if (copy == NULL) {
+        return;
+    }
+    memset(copy, 0, sizeof *copy);
+    copy->size = sizeof(cf_error);
+    cf_error_copy(copy, err);
+    ks->refusal = copy;
+}
+
+const cf_error* cfi_ks_refusal(const cf_keyspace* ks) {
+    return (ks != NULL) ? ks->refusal : NULL;
+}
+
 cf_arena* cf_ks_arena(const cf_keyspace* ks) {
     return (ks != NULL) ? ks->arena : NULL;
 }

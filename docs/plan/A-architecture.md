@@ -1540,7 +1540,29 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   values, with their place and, when they look like one, the encoding
   to name; XML still reads by its own declaration. Before, JSON, JSON5,
   YAML, INI, `.properties` and dotenv passed them on (D-108)."
-* **notes**:
+* **notes**: where the tree asked for more than the card said.
+  * The environment, the arguments, the memory pairs and the defaults
+    have no state to keep an error in (`cf_source_vtable::load` returns
+    a bool), so the builder would have said "source 'env' could not be
+    read" and lost the name the card wants. The key space carries the
+    reason (`cfi_ks_refuse`, `cfi_ks_refusal`, a pointer at the end of
+    `cf_keyspace`), and `config.c` reads it when no source has a detail
+    of its own. Only a refusal of the bytes (`CF_E_SOURCE`) is kept;
+    `cf_lex_cli`'s other errors are as lost as they were.
+  * A file whose format is left to the content may be binary: a CBOR
+    file with no extension in a drop-in directory is read by its content
+    (test_detect). So `cfi_source_text` lets the content decide first
+    and refuses the bytes unless the format it finds declares its own
+    encoding or has none (`file_declares`: XML, CBOR, TLV); the card's
+    plain "check before detection" would have refused CBOR.
+  * The response-file reader is `cf_cli_expand`; the file is checked
+    whole, its place the line and column in the file.
+  * `test_encoding.c` (a document with none named) and `test_roundtrip.c`
+    (a memory value that is not UTF-8) described what the card changes,
+    and say the refusal now; the writer's own refusal is still tested by
+    `test_invalid_utf8`.
+  * The fuzz seeds are one second file for each of the seven text
+    readers, `seed_<reader>_utf8`, named in `tests/fuzz/CMakeLists.txt`.
 
 ---
 

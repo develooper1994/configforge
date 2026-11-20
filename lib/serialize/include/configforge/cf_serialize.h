@@ -245,12 +245,22 @@ CF_API const cf_codec* cf_codec_among(const cf_codec* const* list, size_t n,
 
 /* Reads `in` through `c`: its decode_self when its size reaches that
    member and it is set, else its decode. False with `err` set when it
-   refuses the bytes, or has neither. (1.5) */
+   refuses the bytes, or has neither. A text codec that does not declare
+   its own encoding (CF_CODEC_SELF_ENCODED) reads only bytes that are
+   UTF-8: cf_encoding_check looks first, and refuses the rest with their
+   place. (1.5; the check 1.8, D-108) */
 CF_API cf_bool cf_codec_decode(const cf_codec* c, const cf_blob* in,
                                const cf_doc_sink* out, cf_error* err);
 
 /* Whether `c` reads: CF_CODEC_READ and a decoder of either kind. (1.5) */
 CF_API cf_bool cf_codec_can_read(const cf_codec* c);
+
+/* Internal, as cfi_defset_nearest_secret is: cf_codec_decode without the
+   check for UTF-8, for a caller that has made it or tries one candidate
+   after another over the same bytes (detect.c). Called inside the
+   library only. */
+cf_bool cfi_codec_decode_raw(const cf_codec* c, const cf_blob* in,
+                             const cf_doc_sink* out, cf_error* err);
 
 /* Names a format this library knows about whether or not it was
    compiled in, so the error can say which option to turn on. */

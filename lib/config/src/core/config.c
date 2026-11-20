@@ -1424,6 +1424,9 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
                 detail = cf_source_registry_error(&c->sources[i]);
             }
             if (detail == NULL) {
+                detail = cfi_ks_refusal(&c->keys);
+            }
+            if (detail == NULL) {
                 detail = cfi_source_preferences_error(&c->sources[i]);
             }
             if (detail != NULL) {

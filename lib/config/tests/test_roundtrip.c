@@ -903,21 +903,15 @@ static void test_emit_refusals(void) {
     }
     cf_config_free(c);
 
-    if (format_named("yaml") == NULL) {
-        return;
-    }
+    /* A value that is not UTF-8 never gets as far as a writer: the source
+       refuses it by its key (A-5), and test_invalid_utf8 has the writer
+       refuse such a value handed to it directly. */
     b = cf_build(NULL);
     cf_builder_memory(b, "m", CF_RANK_USER_FILE, utf8, 1);
     c = cf_builder_create(b, &err);
-    if (c == NULL) {
-        check(0, "a value that is not UTF-8 builds");
-        return;
-    }
-    buf[0] = 'x';
-    check(cf_emit(c, "yaml", CF_EMIT_ALL, 0, buf, sizeof buf, &err) == 0,
-          "YAML refuses a value that is not UTF-8");
-    refused_key(&err, "'k'", "YAML and bytes that are not UTF-8");
-    check(buf[0] == '\0', "and writes nothing");
+    check(c == NULL, "a value that is not UTF-8 does not build");
+    has(err.message, "k:1:1: byte 0xFF is not valid UTF-8",
+        "and is refused by its key");
     cf_config_free(c);
 }
 

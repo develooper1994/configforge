@@ -15,6 +15,11 @@
 #include "configforge/cf_value.h"
 
 #include <string.h>
+/* iwyu asks for this include and against it by turns (cf_keyspace.h
+   and cf_error.h carry each other's names): it is kept. */
+/* IWYU pragma: begin_keep */
+#include "configforge/cf_keyspace.h"
+/* IWYU pragma: end_keep */
 
 /* The spec is built from the definition set when there is one. Without
    it the lexer gets NULL and falls back to the two forms that need no
@@ -75,9 +80,12 @@ static cf_bool cf_cli_load(const cf_source* s, cf_keyspace* ks) {
         return CF_FALSE;
     }
     cf_keymap_init(&map, CF_KEYMAP_DIRECT, NULL);
-    return cf_lex_cli(s->u.cli.argc, s->u.cli.argv, &map, spec, cf_listsink_of(&out),
-                      &err) &&
-           cf_listsink_finish(&out);
+    if (!cf_lex_cli(s->u.cli.argc, s->u.cli.argv, &map, spec, cf_listsink_of(&out),
+                    &err)) {
+        cfi_ks_refuse(ks, &err);
+        return CF_FALSE;
+    }
+    return cf_listsink_finish(&out);
 }
 
 static void cf_cli_destroy(cf_source* s) {

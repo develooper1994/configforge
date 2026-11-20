@@ -311,7 +311,7 @@ int doctor_import_spring(int argc, char** argv) {
     sink.end          = spring_end;
     sink.ctx          = &s;
     sink.reserve_text = spring_reserve_text;
-    if (!json->decode(&blob, &sink, &err) || s.failed) {
+    if (!cf_codec_decode(json, &blob, &sink, &err) || s.failed) {
         fprintf(stderr, "doctor: %s\n",
                 (err.message[0] != '\0') ? err.message
                                          : "stdin is not /actuator/env output");

@@ -147,7 +147,7 @@ static cf_bool trial_read(const cf_codec* c, const cf_blob* in, cf_arena* ar,
     sink.ctx          = &t;
     sink.reserve_text = trial_reserve_text;
     sink.reserve_work = trial_reserve_work;
-    if (!cf_codec_decode(c, in, &sink, &err) || t.keyed == 0) {
+    if (!cfi_codec_decode_raw(c, in, &sink, &err) || t.keyed == 0) {
         return CF_FALSE;
     }
     *h1 = t.h1;

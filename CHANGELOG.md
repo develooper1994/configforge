@@ -54,6 +54,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - The readers share one UTF-8 decoder and encoder, one hex-digit reader and
   one table hash (D-102); no input is read differently. `lanes` is compiled
   into both libraries under the prefix `cf_lanes_`.
+- Bytes that are not UTF-8 are refused by every text reader, dotenv,
+  response files, the environment, the arguments and the program's own
+  values, with their place and, when they look like one, the encoding to
+  name; XML still reads by its own declaration. Before, JSON, JSON5,
+  YAML, INI, `.properties` and dotenv passed them on (D-108).
 
 ## 1.7.0 — 2026-11-20
 
