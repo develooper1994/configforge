@@ -922,7 +922,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     `lib/lanes/src/scalar.c`, `lib/lanes/tests/test_lanes.c`,
     `lib/lanes/tests/fuzz_lanes.c`, `lib/lanes/tests/CMakeLists.txt`,
     `lib/lanes/README.md` (what it is, its API, that it is not
-    ConfigForge's), `lib/lanes/LICENSE` (the project's MIT text).
+    ConfigForge's), `lib/lanes/LICENSE` (the project's zlib text; "MIT" was a slip, corrected when A-2 was built).
   * It includes no `configforge/` header (the table says `lanes` may use
     nothing) and defines its own export macro, `LANES_API`, as
     `cf_port.h` defines `CF_API`, and its own
@@ -1172,6 +1172,9 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   UTF-8 decoder and encoder, one hex-digit reader and one table hash
   (D-102); no input is read differently."
 * **notes**:
+  * From A-2 (2026-11-20): `bindings/rust/build.rs` compiles every
+    `lib/*/src`, lanes included, without `LANES_PREFIX_CF`: this card sets
+    it there, so the crate exports no unprefixed `lanes_` symbol.
 
 ---
 

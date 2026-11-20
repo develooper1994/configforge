@@ -4567,7 +4567,7 @@ what this one is.
 
 **Status.** Decided, 2026-11-19.
 
-Built: A-2.
+Built: A-2 (da0dd49).
 
 ## D-102 — One copy of each text and number helper
 
