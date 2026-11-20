@@ -4860,7 +4860,7 @@ the comparison ignores it), a key that is not text (no reader gives one).
 What differs by number and not by kind is `cf_format_limits(format,
 &max_path, &max_depth)`, a second experimental function: a format never
 writes what its own reader refuses, and the readers disagree. Nesting
-below the document: JSON, JSON5, YAML, CBOR and XML 31, TOML 32, INI none
+below the document: JSON, JSON5, YAML and CBOR 31, XML 30 (its leaf is an element too), TOML 32, INI none
 in its reader. A joined path of names to a table, array or value: INI and
 TOML `CF_KEY_MAX - 2` (a length both the writer and the reader take, and
 not the first one refused: TOML's reader limits the dotted key of a line

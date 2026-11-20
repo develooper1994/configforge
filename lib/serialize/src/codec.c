@@ -326,7 +326,8 @@ static const cf_format_info cf_formats[] = {
      HOLDS_SCALARS | HOLDS_ARRAYS | CF_HOLDS_LINE_BREAK | CF_HOLDS_NUL |
          CF_REFUSES_NULL,
      (size_t)CF_KEY_MAX - 2u, (size_t)CF_MAX_DEPTH},
-    {"xml", ".xml", "CF_WITH_XML", 0u, NO_LIMIT, DEPTH_MAX},
+    /* XML: the leaf is an element too, so one table fewer than the others */
+    {"xml", ".xml", "CF_WITH_XML", 0u, NO_LIMIT, DEPTH_MAX - 1},
     {"yaml", ".yaml;.yml", "CF_WITH_YAML",
      CF_HOLDS_NULL | HOLDS_ARRAYS | CF_HOLDS_EMPTY_TABLE | CF_HOLDS_ANY_NAME |
          CF_HOLDS_LINE_BREAK | CF_HOLDS_NUL,
