@@ -2,7 +2,7 @@
 
 Roadmap wave 5 as cards (docs/Plan.md says what a card is and how one is
 carried out). Three pieces, in the two programs the tools split makes
-(docs/plan/T-tools-and-serialization.md):
+(its cards' record: docs/Plan.md, "Done, their cards removed"):
 
 * **W5-V1**: `configforge codec convert`, a document read through one
   codec and written through another as the codecs' events, every value
@@ -43,14 +43,14 @@ are T-1, T-2 and T-3's (`configforge-gen` in `tools/gen/`, tested in
 
 D-numbers: this file uses **D-94, D-95 and D-96**, and W5-V2 and W5-G4
 **D-109 and D-110** (the wave 4 cards used
-D-91 to D-93; the cards of T-tools-and-serialization.md skip these
+D-91 to D-93; the cards of the T file (removed; see docs/Plan.md) skip these
 three). Check with `git grep -n "^## D-9[4-6]" docs/Decisions.md` before
 writing one; if a number is taken, take the next free one and change it
 in every card of this file in the same commit.
 
 The CHANGELOG: W5-V1 to W5-G3 add to `## 1.7.0 — unreleased`, W5-V2 and
 W5-G4 to `## 1.8.0 — unreleased` (1.7.0 opened by the first card of
-T-tools-and-serialization.md, 1.8.0 by the first card of 1.8.0 that
+the first T card, 1.8.0 by the first card of 1.8.0 that
 writes to it), under `### Added`.
 
 For the maintainer: one question, in W5-G2 (what the generated Rust and

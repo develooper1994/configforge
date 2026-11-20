@@ -204,7 +204,9 @@ The serialization layer becomes a library of its own in two steps
    builds a program against the serialization library alone, and one
    against ConfigForge alone, and `gate.abi` holds both lists.
 2. **A repository of its own** once that library has users of its own,
-   or at 2.0, whichever is first.
+   or at 2.0, whichever is first. A second amalgamation of the
+   serialization library alone comes with it (S-4 left it out: a second
+   distribution form to gate, for a library nobody asked for alone).
 
 Doctor stays here as a package of its own (it already ships as its own
 binary and depends only on the report's schema), and so do the Rust and
@@ -609,6 +611,10 @@ verified commits, and a release is cut where the order says so. The
     * CFD012 against the contract rather than the key list.
     * native OS sources: gsettings, where the platform is at hand to
       test (macOS's user defaults are done, D-87).
+    * the user defaults' other scopes (this host, any user, a managed
+      profile): a scope prefix in `domain` (`"currentHost:..."`,
+      `"anyUser:..."`, `"managed:..."`), each its own source at its own
+      rank (D-87, option c).
     * Go and .NET bindings over the C ABI.
 11. **2.0**: what 8 and 9 break, together, once.
 

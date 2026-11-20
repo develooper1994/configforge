@@ -171,10 +171,10 @@ Things only the maintainer can do or decide. Each unblocks the cards named.
 ## The index
 
 In the order to be done. A card is `open`, `done` (with its commit), or
-`waits` (with what it waits for). The H-* and W3-* cards belong to
-the 1.6.0 milestone; the S-*, T-* and W5-* cards to 1.7.0, but T-5 to
-1.8.0 (`docs/Maintaining.md`, "Versions"; the S and T cards are in
-`docs/plan/T-tools-and-serialization.md`). The L-* cards, the tools by
+`waits` (with what it waits for). The W5-* cards belong to
+the 1.7.0 milestone (`docs/Maintaining.md`, "Versions"; the finished
+H, W3, S and T cards are recorded in "Done, their cards removed",
+below). The L-* cards, the tools by
 group (`docs/plan/L-tools.md`), come right after 1.7.0's release. The P-* cards, word-at-a-time
 scanning before SIMD (`docs/plan/P-word-at-a-time.md`), are last,
 except P-1: it only measures, and comes once 1.7.0 is released, so the
@@ -183,32 +183,11 @@ waves ("After 1.7.0: the order of the waves", below).
 
 | Order | Card | Size | Needs | Status |
 | ----: | ---- | ----- | ----- | ------ |
-| 13 | H-5 A directory others can write to is not read as secrets | large | - | done (f37813d, 4f42242, 88c8071) |
-| 14 | H-7 An undefined key named like a secret is kept as one | large | - | done (5dca003, 84bd14a) |
-| 15 | H-8a A secret's digest that cannot be tested without a key | large | - | done (0b082bf, d3094ff) |
-| 16 | H-2 The contract `doctor gen` writes, checked by the compiler | medium | H-1 | done (b9383d1, aa9436d, 490ee4f, 38c5a58) |
-| 17 | H-6 Doctor's `--redact-all`, on in the action unless asked | medium | - | done (9f3394b, 0b85a24, 9de9ef3) |
-| 18 | H-8b Doctor tells digests of different keys apart | medium | H-8a | done (ed37f5f, 23018f7, cbe0050) |
-| 19 | W3-F2a The platform capability for macOS's user defaults | medium | - | done (d3cbbf8, 5bb5967, 221b6ca) |
-| 20 | W3-F2b `cf_builder_preferences`: the source, off macOS | medium | W3-F2a | done (9ac9540, 6aa4566, 928f71c) |
-| 21 | W3-F2c Reading CFPreferences on macOS (CI-only) | large | W3-F2b | done (a751ba0..529d84d) |
-| 22 | W3-F3 `cf_builder_credentials` in every language, the Guide, an example | medium | - | done (470cb8d, 059cdd9, 035ce3a, 71142a0) |
-| 23 | W3-F2d User defaults in C++, Rust, Python and the Guide | medium | W3-F2c | done (1ddb2ce, 146c605, e4435f0) |
-| 24 | S-1 The internal tier fenced: a program cannot call what 1.x does not promise | large | 1.6.0 released | done (ee3d976, d60a0a7, e4abee8, d13fdd8) |
-| 25 | S-2 An experimental tier, and the promise written in one place | medium | S-1 | done (8479c91, b096cc3, 2acb279) |
-| 26 | S-3 The serialization layer's last ties cut, and held by the gate | medium | S-1 | done (dc54a27, f02e087, 3540ffd, bae204a) |
-| 27 | S-4 The serialization library, a target of its own | large | S-2, S-3 | done (bbd2a88, 203cffa, 84df09d, 1de8975) |
-| 28 | S-5 The serialization library installed, found and packaged | medium | S-4 | done (22772d8, 563517c, ac8023e) |
-| 29 | T-1 `configforge <command>`, and Doctor's own name | large | S-1, H-6, H-8b | done (94ab557, b7cbb7c, 297130f, 10929ab, f87885d) |
-| 30 | T-2 `configforge gen`: the contract's own program | medium | T-1, H-2 | done (9ad95d2, 01738ac, 555b855, 9ee1c41) |
-| 31 | T-3 `configforge codec`: the serialization library's own program | medium | T-2, S-5 | done (d8d06c1, da16549, 57f897f) |
-| 32 | T-4 `configforge codec dump`: every value with its place | medium | T-3 | done (0074c04) |
 | 33 | W5-V1 `configforge codec convert` and `format` | large | T-3 | done (26ab6bd) |
 | 34 | W5-S1 `configforge gen schema --from` | medium | T-2 | done (0a8de0f) |
 | 35 | W5-G1 `configforge gen --lang cpp` | large | W5-S1 | done (071ed40) |
 | 36 | W5-G2 `configforge gen --lang rust` | large | W5-G1 | done (54f39fb) |
 | 37 | W5-G3 `configforge gen --lang python` | medium | W5-G2 | done (950a099) |
-| 38 | T-5 Doctor's aliases, and the name `doctor`, removed | small | 1.7.0 released, W5-G3 | done (fa6295a) |
 | 38b | L-1 shellcheck, ruff, actionlint and codespell, as gates | medium | 1.7.0 released | done (7bec7d8) |
 | 38c | L-2 Valgrind, AFL++, gitleaks, osv-scanner and Scorecard in CI | medium | L-1 | waits: L-1 (outline; written out when L-1 is done) |
 | 38d | L-4 include-what-you-use and a link check | small | L-1 | waits: L-1 (outline) |
@@ -235,8 +214,48 @@ waves ("After 1.7.0: the order of the waves", below).
 | 57 | P-2 Word-at-a-time scans in C89, with the byte loop as reference | medium | P-1, A-3 | waits: 2.4.0; to be rewritten on D-101 |
 | 58 | P-3 The scans P-1 found, a word at a time, kept only where they win | medium | P-2 | waits: P-2 |
 
-Done and released in 1.5.0, their cards removed: H-1, H-3, H-4 and the
-whole of wave 4 (CBOR; TLV by a layout and BER-TLV).
+## Done, their cards removed
+
+A finished card is removed from the index and from its file; what it
+did is kept here, and its text in git (`git log -- docs/plan/<file>`).
+
+* **1.5.0**: H-1, H-3, H-4 and the whole of wave 4 (CBOR; TLV by a
+  layout and BER-TLV).
+* **H-hardening.md** (1.6.0; H-2 to H-8b; D-75, D-83 to D-86). A
+  definition's constant key, default and bounds are checked by the
+  compiler, in the C that `doctor gen` writes too (H-2, b9383d1,
+  aa9436d, 490ee4f, 38c5a58); Doctor's `--redact-all` is on in the
+  action (H-6, 9f3394b, 0b85a24, 9de9ef3; D-86); a directory others can
+  write to is not read as secrets (H-5, f37813d, 4f42242, 88c8071;
+  D-83); an undefined key named like a secret is kept as one (H-7,
+  5dca003, 84bd14a; D-84); a secret's digest is keyed (H-8a, 0b082bf,
+  d3094ff; D-85) and Doctor tells keys apart (H-8b, ed37f5f, 23018f7,
+  cbe0050).
+* **W3-native-sources.md** (1.6.0; W3-F2a to W3-F2d, W3-F3; D-80,
+  D-87). `cf_builder_credentials` in C++, Rust and Python, the Guide
+  and an example (W3-F3, 470cb8d, 059cdd9, 035ce3a, 71142a0); macOS's
+  user defaults as an optional source over the flattener: the platform
+  capability (W3-F2a, d3cbbf8, 5bb5967, 221b6ca), the source off macOS
+  (W3-F2b, 9ac9540, 6aa4566, 928f71c), the read on macOS in CI (W3-F2c,
+  a751ba0..529d84d) and the three languages (W3-F2d, 1ddb2ce, 146c605,
+  e4435f0).
+* **T-tools-and-serialization.md** (1.7.0; S-1 to S-5, T-1 to T-4;
+  D-88 to D-90, D-99; T-5 in 1.8.0, fa6295a). What 1.x promises is
+  smaller: the internal tier fenced (S-1, ee3d976, d60a0a7, e4abee8,
+  d13fdd8; D-88) and an experimental tier (S-2, 8479c91, b096cc3,
+  2acb279; D-89). The serialization library is a target of its own
+  (S-3, dc54a27, f02e087, 3540ffd, bae204a; S-4, bbd2a88, 203cffa,
+  84df09d, 1de8975; D-90), installed, found and packaged (S-5, 22772d8,
+  563517c, ac8023e). Three programs behind `configforge <command>`
+  (D-99): the front door (T-1, 94ab557, b7cbb7c, 297130f, 10929ab,
+  f87885d), `configforge gen` (T-2, 9ad95d2, 01738ac, 555b855,
+  9ee1c41), `configforge codec` (T-3, d8d06c1, da16549, 57f897f) and
+  `codec dump` (T-4, 0074c04); T-5 removed Doctor's aliases and the
+  name `doctor`.
+
+Left over from those cards, now in `docs/Roadmap.md`: the user
+defaults' other scopes (a scope prefix in `domain`); a second
+amalgamation of the serialization library (with its own repository).
 
 Not yet cards: the Roadmap's "More formats, and what a format is"
 (MessagePack first, then BSON, UBJSON, property lists, HCL, Avro,
