@@ -4478,7 +4478,7 @@ lib/cxx/         configforge.hpp and the compile-time layer (D-104)
 
 **Status.** Decided, 2026-11-19.
 
-Built: A-1.
+Built: A-1 (824181f).
 
 ## D-101 — The vector library, not ConfigForge's
 
