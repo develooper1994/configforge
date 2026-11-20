@@ -20,7 +20,7 @@ or milestone names it), `new` (a card below).
 | 4. Static analysis, sound | the proof that a class of fault cannot happen | CBMC (verify `EXTRA`, planned for 1.9.0) | IKOS, Frama-C EVA (L-3, 1.9.0) |
 | 5. Rules and standards | a rule a safety standard writes | - | cppcheck's MISRA addon (1.9.0), CERT and CWE tables (1.9.0), semgrep for the project's own rules (L-3) |
 | 6. Compilers | what one compiler accepts and another refuses | GCC, clang, MSVC, tcc, pcc, musl, FreeBSD clang (CI `compilers`, matrix) | - |
-| 7. Run-time checks | memory and thread faults while tests run | ASan and UBSan (sanitize preset), TSan (CI), Valgrind (verify `EXTRA`) | Valgrind as a CI job (L-2) |
+| 7. Run-time checks | memory and thread faults while tests run | ASan, LSan and UBSan's default checks (sanitize preset, GCC and MSVC), TSan (CI), Valgrind (verify `EXTRA`) | MemorySanitizer, clang's extra UBSan groups, fatal and stricter sanitizer options, Valgrind as a CI job (L-2); HWASan with the Arm CI (1.9.0) |
 | 8. Fuzzing | input no test thought of | libFuzzer (CI), ClusterFuzzLite (cflite) | AFL++ on the same targets (L-2); OSS-Fuzz (1.9.0) |
 | 9. Coverage and mutation | tests that run code without checking it | gcov (CI `coverage`) | mutation testing with Mull (planned for 1.9.0) |
 | 10. Interface | a release that breaks callers | abidiff (verify `EXTRA`) | include-what-you-use (L-4) |
@@ -46,7 +46,7 @@ second opinion beside cppcheck's.
 ## L-2 - run-time, fuzzing and supply chain in CI
 
 * **id**: L-2
-* **goal**: Valgrind's memcheck, AFL++ on the libFuzzer targets, gitleaks, osv-scanner and OpenSSF Scorecard run in CI.
+* **goal**: Valgrind's memcheck, AFL++ on the libFuzzer targets, gitleaks, osv-scanner and OpenSSF Scorecard run in CI; and every sanitizer a compiler offers for C on the CI's targets runs: MemorySanitizer (a clang preset `msan`), clang's extra UBSan groups (`integer`, `implicit-conversion`, `nullability`, `local-bounds`; a clang preset `ubsan-strict`), and the run-time options that make a finding fatal and look further (`UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1`, `ASAN_OPTIONS=detect_stack_use_after_return=1:strict_string_checks=1:detect_invalid_pointer_pairs=2:check_initialization_order=1`) in the presets' test environment. HWASan comes with the Arm CI (1.9.0).
 * **needs**: L-1
 * **size**: medium
 * **decided**: Valgrind and AFL++ as `EXTRA` steps of verify, run by CI jobs; gitleaks and osv-scanner on every push; Scorecard weekly, its result on the docs site.
