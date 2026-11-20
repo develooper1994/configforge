@@ -1728,6 +1728,33 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
        ("Formats", a YAML reader fix: no second document table at the end
        of a file) in this card's docs commit.
     3. The other judgements in the note above stand.
+  * **Done 2026-11-20 (steps 5 to 10), and what the run found.**
+    `cf_format_limits` is built as answered, with one reading: `max_path`
+    is the longest joined path of names to a table, array or value (not
+    only a table) that the format both writes and reads back, `CF_KEY_MAX
+    - 2` for INI and TOML and none for the others, because TOML's reader
+    limits the dotted key of a line relative to its header (a table of
+    path 255 holding `leaf` was refused though its header is 254), so no
+    exact number for a table exists; `test_holds` reads each depth at the
+    limit and one past, each path at the limit. Properties has `max_depth`
+    0. `CF_HOLDS_LONG_PATHS` is gone (bits 0 to 12, `CF_REFUSES_NULL` 16).
+    `limits` is in `test_holds`, not in `pairs.c`. The converter's findings
+    gain `CV_DEEP` (`a table or array nested too deep`). The oracle drops
+    an array whose every member was left out when the format has no empty
+    array (INI's `name[]` lines are its members): found by the suites,
+    `{"v": ["a\nb"]}` to INI. The suites through every pair on MSVC: 806
+    documents, 199 not read, 0 failures. The YAML encoder wrote an empty
+    document as `{}`, which its reader refuses as a single value: found by
+    `fuzz_chain`, written as nothing now, with `test_empty_written` in
+    `test_yaml.c` (seen failing only as the fuzz input: the MSVC build's
+    YAML backend reads `{}`). **Left out of `fuzz_chain`'s domain, and
+    still wrong:** a source whose names carry a control byte or a NUL, or
+    that is not UTF-8 (INI passes the bytes on until D-108's refusal is
+    built): `[s]` with the key `k 31\xb2\0[\x15\x15\x15\x15` through YAML
+    writes `"k 31: "...` with no closing quote, which YAML's reader refuses
+    (`unexpected text after the value`); the target skips such documents
+    (`fz_clean`), and the fault wants its own card (a name with a control
+    byte is no bit of the table).
 
 ---
 
