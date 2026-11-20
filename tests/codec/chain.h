@@ -733,9 +733,9 @@ static int ch_hop_run(cf_arena* ar, const cf_blob* in, const cf_codec* src,
     ch_rules  rules;
     cv_result res;
     cf_error  err = CF_ERROR_INIT;
-    ch_tree*  m;
-    ch_tree*  r;
-    ch_tree*  want;
+    const ch_tree* m;
+    const ch_tree* r;
+    const ch_tree* want;
     size_t    lowered = 0;
     size_t    i;
     int       rc;

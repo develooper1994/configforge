@@ -514,8 +514,8 @@ static cf_bool pr_pair_in(pr_state* st, const pr_doc* d, size_t ia, size_t ib,
         return CF_TRUE;
     }
     if (pr_lossless(ha, hb)) {
-        ch_tree* r1 = ch_read(ar, &h1->out, ca, errp);
-        ch_tree* r3 = ch_read(ar, &h3->out, ca, errp);
+        const ch_tree* r1 = ch_read(ar, &h1->out, ca, errp);
+        const ch_tree* r3 = ch_read(ar, &h3->out, ca, errp);
 
         ++st->checks;
         if (r1 == NULL || r3 == NULL || !ch_same(ar, r1, r3)) {
