@@ -32,6 +32,7 @@ file(
   "${CMAKE_SOURCE_DIR}/scripts/*.cmake"
   "${CMAKE_SOURCE_DIR}/lib/CMakeLists.txt"
   "${CMAKE_SOURCE_DIR}/lib/*/CMakeLists.txt"
+  "${CMAKE_SOURCE_DIR}/lib/*.cmake"
   "${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt"
   "${CMAKE_SOURCE_DIR}/tests/*/CMakeLists.txt"
   "${CMAKE_SOURCE_DIR}/tools/CMakeLists.txt"
@@ -142,8 +143,8 @@ endif()
 if(CODESPELL_EXE)
   add_test(
     NAME gate.codespell
-    COMMAND ${CODESPELL_EXE} docs lib tools README.md CHANGELOG.md
-            CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md
+    COMMAND ${CODESPELL_EXE} --skip=lib/*/tests docs lib tools README.md
+            CHANGELOG.md CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 else()
   message(STATUS "codespell not found: gate.codespell skipped")

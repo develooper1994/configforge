@@ -22,6 +22,10 @@ function(cf_must_not_compile name)
     ""
     ${ARGN})
   string(REPLACE "." "_" t "mnc_${name}")
+  set(lib ${CF_TEST_LIB})
+  if(NOT lib)
+    set(lib configforge)
+  endif()
   add_library(${t} OBJECT EXCLUDE_FROM_ALL ${MNC_SOURCE})
   set_target_properties(
     ${t}
@@ -36,13 +40,19 @@ function(cf_must_not_compile name)
                ${MNC_LANG}_CPPCHECK ""
                ${MNC_LANG}_CLANG_TIDY "")
   # The library's headers and definitions, without depending on the
-  # library: building the case must not build anything else.
+  # library: building the case must not build anything else. The library is
+  # the one the tests link (CF_TEST_LIB, or configforge); alone, its own
+  # properties do not hold what its dependencies' headers need, and the
+  # staged copy does.
   target_include_directories(
-    ${t} PRIVATE $<TARGET_PROPERTY:configforge,INTERFACE_INCLUDE_DIRECTORIES>
+    ${t} PRIVATE $<TARGET_PROPERTY:${lib},INTERFACE_INCLUDE_DIRECTORIES>
                  ${CMAKE_CURRENT_SOURCE_DIR})
+  if(NOT CF_WHOLE_PROJECT)
+    target_include_directories(${t} PRIVATE ${CF_STAGED_DIR})
+  endif()
   target_compile_definitions(
     ${t} PRIVATE ${MNC_DEFINE}
-                 $<TARGET_PROPERTY:configforge,INTERFACE_COMPILE_DEFINITIONS>)
+                 $<TARGET_PROPERTY:${lib},INTERFACE_COMPILE_DEFINITIONS>)
   add_test(NAME ${name} COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}
                                 --target ${t} --config $<CONFIG>)
   set_tests_properties(

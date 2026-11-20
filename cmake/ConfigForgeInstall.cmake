@@ -15,7 +15,7 @@ if(SKBUILD)
     RENAME "${wheel_library}"
     COMPONENT python)
   install(
-    FILES "${CMAKE_SOURCE_DIR}/bindings/python/src/configforge_doctor.py"
+    FILES "${CF_REPO_ROOT}/bindings/python/src/configforge_doctor.py"
     DESTINATION .
     COMPONENT python)
 endif()
@@ -61,7 +61,7 @@ foreach(
 endforeach()
 
 # The licence travels with the headers, which are a source distribution.
-install(FILES "${CMAKE_SOURCE_DIR}/LICENSE"
+install(FILES "${CF_REPO_ROOT}/LICENSE"
         DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/configforge)
 install(FILES "${CMAKE_BINARY_DIR}/generated/configforge/cf_build_options.h"
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/configforge)
@@ -78,7 +78,7 @@ write_basic_package_version_file(
   COMPATIBILITY SameMajorVersion)
 
 configure_package_config_file(
-  "${CMAKE_SOURCE_DIR}/cmake/templates/ConfigForgeConfig.cmake.in"
+  "${CF_REPO_ROOT}/cmake/templates/ConfigForgeConfig.cmake.in"
   "${CMAKE_CURRENT_BINARY_DIR}/ConfigForgeConfig.cmake"
   INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ConfigForge)
 
@@ -134,9 +134,9 @@ if(CF_WITH_PREFERENCES AND APPLE)
 endif()
 string(STRIP "${CF_PC_LIBS_PRIVATE}" CF_PC_LIBS_PRIVATE)
 string(STRIP "${CF_PC_SERIALIZE_LIBS_PRIVATE}" CF_PC_SERIALIZE_LIBS_PRIVATE)
-configure_file("${CMAKE_SOURCE_DIR}/cmake/templates/configforge.pc.in"
+configure_file("${CF_REPO_ROOT}/cmake/templates/configforge.pc.in"
                "${CMAKE_CURRENT_BINARY_DIR}/configforge.pc" @ONLY)
-configure_file("${CMAKE_SOURCE_DIR}/cmake/templates/configforge_serialize.pc.in"
+configure_file("${CF_REPO_ROOT}/cmake/templates/configforge_serialize.pc.in"
                "${CMAKE_CURRENT_BINARY_DIR}/configforge_serialize.pc" @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/configforge.pc"
               "${CMAKE_CURRENT_BINARY_DIR}/configforge_serialize.pc"

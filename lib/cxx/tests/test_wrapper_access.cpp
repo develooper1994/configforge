@@ -25,7 +25,7 @@ static const cf::Key<long>        kWorkers("server.workers", 4L, 1L, 64L);
 /* D-75: from C++11 a Key can be a constant, and as one it is checked by
    the compiler with the library's rule - a name the library would refuse,
    a range upside down or a default outside its own range does not compile
-   (the CF_TEST_REFUSED cases at the end, which tests/unit/CMakeLists.txt
+   (the CF_TEST_REFUSED cases at the end, which lib/cxx/tests/CMakeLists.txt
    builds expecting each to fail by name). */
 constexpr cf::Key<int> kLimit("server.limit", 100, 1, 1000);
 static_assert(kLimit.fallback() == 100, "a Key read at compile time");

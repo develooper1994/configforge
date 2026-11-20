@@ -32,6 +32,8 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   for no other name.
 - The source tree: one directory per component under `lib/` (D-100); the
   installed headers and libraries are unchanged.
+- Each component under `lib/` is a project of its own: its declaration,
+  its tests and README, and a build of it alone that CI runs (D-100).
 
 ## 1.7.0 — 2026-11-20
 

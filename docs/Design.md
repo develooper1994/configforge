@@ -162,7 +162,7 @@ Tier 4 — Extension
     custom sources, cf_derive, cf_emit, watching, snapshot images
 ```
 
-`tests/unit/test_usage.c` is this list as a program: the smallest real use
+`lib/config/tests/test_usage.c` is this list as a program: the smallest real use
 of each tier, compiled and run by the suite, so the tiers here cannot name
 an interface that does not exist. They once did - Tier 1 and Tier 2 above
 showed functions from an early draft that the library never had.

@@ -198,7 +198,7 @@ function(configforge_generate_options tgt)
   endif()
 
   set(gen "${CMAKE_BINARY_DIR}/generated/configforge")
-  configure_file("${CMAKE_SOURCE_DIR}/cmake/templates/cf_build_options.h.in"
+  configure_file("${CF_REPO_ROOT}/cmake/templates/cf_build_options.h.in"
                  "${gen}/cf_build_options.h" @ONLY)
 
   # Ahead of the source include directory, so the generated file wins

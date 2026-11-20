@@ -67,9 +67,12 @@ function(configforge_add_gates tgt)
       ${CMAKE_SOURCE_DIR}/cmake/gates/GateVersion.cmake)
 
   # 2. The core may not reach into sources, platform or serialize.
-  add_test(NAME gate.layering
-           COMMAND ${CMAKE_COMMAND} -DLIB=${CMAKE_SOURCE_DIR}/lib -P
-                   ${CMAKE_SOURCE_DIR}/cmake/gates/GateLayering.cmake)
+  add_test(
+    NAME gate.layering
+    COMMAND
+      ${CMAKE_COMMAND} -DLIB=${CMAKE_SOURCE_DIR}/lib
+      -DLAYERS=${CMAKE_BINARY_DIR}/layers.cmake -P
+      ${CMAKE_SOURCE_DIR}/cmake/gates/GateLayering.cmake)
 
   # 2. Feature detection macros may appear only in the portability layer.
   add_test(NAME gate.detection

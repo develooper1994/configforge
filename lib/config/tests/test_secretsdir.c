@@ -4,7 +4,7 @@
  * names it refuses, and the build that left directories out.
  *
  * The directories cf_secrets and cf_secrets_bad are made by the build
- * (tests/unit/CMakeLists.txt), since C89 has no way to make one.
+ * (lib/config/tests/CMakeLists.txt), since C89 has no way to make one.
  */
 
 #include <configforge/configforge.h>

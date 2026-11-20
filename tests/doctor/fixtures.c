@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../unit/cf_fixture.h"
+#include "../support/cf_fixture.h"
 
 static char a0[] = "app";
 

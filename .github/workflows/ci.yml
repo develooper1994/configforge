@@ -30,8 +30,8 @@ jobs:
         run: |
           cmake -S . -B a && cmake --build a
           cmake -S . -B b -DCF_FORCE_PORTABLE=ON -DCF_SINGLE_THREADED=ON && cmake --build b
-          ./a/tests/unit/test_numeric > a.txt
-          ./b/tests/unit/test_numeric > b.txt
+          ./a/lib/numeric/tests/test_numeric > a.txt
+          ./b/lib/numeric/tests/test_numeric > b.txt
           diff a.txt b.txt
 
   matrix:
@@ -81,6 +81,32 @@ jobs:
           "$py" -m pip install --no-index --no-deps "$RUNNER_TEMP"/python-dist/*.whl
           "$py" -I tests/python/test_package.py
           cmake "-DWORK=$RUNNER_TEMP/rust-package" -P scripts/release/package_rust.cmake
+
+  # Each component of lib/ built alone, `cmake -S lib/<c>`, with only what
+  # its declaration names, and its own tests run (D-100): the proof that
+  # each one can be taken out by a copy. Not a ctest gate, since nine
+  # configures are too slow for every build; verify's EXTRA=components is
+  # the same loop.
+  components:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Generate the locales the suite needs
+        run: |
+          sudo locale-gen tr_TR.UTF-8 de_DE.UTF-8
+          sudo update-locale
+      - name: Build and test each component alone
+        run: |
+          set -e
+          for dir in lib/*/; do
+            c=$(basename "$dir")
+            [ -f "lib/$c/CMakeLists.txt" ] || continue
+            echo "::group::$c"
+            cmake -S "lib/$c" -B "$RUNNER_TEMP/components/$c" -DBUILD_TESTING=ON
+            cmake --build "$RUNNER_TEMP/components/$c"
+            ctest --test-dir "$RUNNER_TEMP/components/$c" --output-on-failure
+            echo "::endgroup::"
+          done
 
   # macOS's user defaults (W3-F2c): the one source only a Mac can read,
   # built with its option and tested against values `defaults import`
@@ -316,7 +342,7 @@ jobs:
           cmake --preset sanitize && cmake --build --preset sanitize
           for i in $(seq 1 25); do
             seed=$(( (RANDOM << 16) ^ RANDOM ^ $(date +%s) ^ i ))
-            ./build-sanitize/tests/unit/test_fuzz "$seed" || exit 1
+            ./build-sanitize/lib/config/tests/test_fuzz "$seed" || exit 1
           done
 
   # The benchmark is built and run, so it keeps working between the times

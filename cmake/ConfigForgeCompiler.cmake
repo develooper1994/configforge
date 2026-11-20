@@ -230,8 +230,7 @@ function(configforge_stack_budget tgt)
       ${CMAKE_COMMAND}
       -DOBJDIR=${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${tgt}.dir
       -DBUDGET=${CF_STACK_BUDGET} -DOUT=${CMAKE_BINARY_DIR}/${tgt}-stack.txt
-      -DLIB=$<TARGET_FILE:${tgt}> -P
-      ${CMAKE_SOURCE_DIR}/scripts/check/stack.cmake
+      -DLIB=$<TARGET_FILE:${tgt}> -P ${CF_REPO_ROOT}/scripts/check/stack.cmake
     VERBATIM)
 endfunction()
 

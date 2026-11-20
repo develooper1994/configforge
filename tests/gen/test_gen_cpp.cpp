@@ -13,7 +13,7 @@
 #include <cstring>
 #include <string>
 
-#include "../unit/cf_test.h"
+#include "../support/cf_test.h"
 
 /* A builder, either way: the generated function or the schema itself,
    given these pairs. */

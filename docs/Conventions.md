@@ -178,11 +178,11 @@ compiler or standard macro outside `cf_port.h` and `port.c`
 ## Tests
 
 No framework. A test is a C89 (or C++) program returning non-zero on
-failure, with the helpers of `tests/unit/cf_test.h`, written once and
+failure, with the helpers of `tests/support/cf_test.h`, written once and
 included by every test program - never redefined in one:
 
 ```c
-#include "cf_test.h"   /* tests/doctor: "../unit/cf_test.h" */
+#include "cf_test.h"   /* tests/doctor: "../support/cf_test.h" */
 
 check(cond, "what was expected");
 check_text(got, "want", "what");

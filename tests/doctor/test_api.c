@@ -11,7 +11,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "../unit/cf_test.h"
+#include "../support/cf_test.h"
 
 /* A configuration with two things wrong: a password on the command line
    (CFD007) and a key nobody defined (CFD005). */

@@ -1828,7 +1828,7 @@ so a provenance report from a reduced build is distinguishable from a full one.
 already drops a function nobody calls. The options matter for a shared library, the
 amalgamation, and code reached through a table, as every codec's encoder is.
 
-`tests/unit/test_features.c` checks each part in both directions - working when it is
+`lib/config/tests/test_features.c` checks each part in both directions - working when it is
 on, refusing by name when it is off - and the `minimal` preset turns them all off, so
 both directions run on every verify.
 
@@ -3698,7 +3698,7 @@ promise.
 `gate.abi` keeps two lists, the promised one and
 `cmake/configforge.internal.symbols` ("no version at all"), and fails a
 name in both; `gate.headers` compiles each header again with the fence
-open. Held to by `unit.internal_fenced` (`tests/unit/fenced.c` must not
+open. Held to by `unit.internal_fenced` (`lib/config/tests/fenced.c` must not
 compile, naming `cf_ks_count`) and the same check in `gate.install`
 against the installed headers.
 
@@ -4478,7 +4478,14 @@ lib/cxx/         configforge.hpp and the compile-time layer (D-104)
 
 **Status.** Decided, 2026-11-19.
 
-Built: A-1 (824181f).
+Built: A-1 (824181f), A-1b.
+
+A-1b: the table is the components' DEPENDS lists, one in each
+`lib/<c>/CMakeLists.txt`; `cmake/ConfigForgeLayers.cmake` is gone, and
+`gate.layering` reads the declarations the build writes at configure time.
+A dependency may be spelled `<component>:<header>` (serialize's
+`platform:cf_platform_file.h`): the build needs the component, and the
+source may include that header of it and no other.
 
 ## D-101 — The vector library, not ConfigForge's
 

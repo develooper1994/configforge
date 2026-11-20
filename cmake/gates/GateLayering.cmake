@@ -2,15 +2,20 @@
 # something checks them.
 #
 # 1. A component includes the public headers of itself and of the
-#    components cmake/ConfigForgeLayers.cmake allows it, and of no other:
-#    the header's component is the one whose include/ holds it, the
-#    file's is the one it is under (D-100).
+#    components it declares in cf_component(... DEPENDS ...), and of those
+#    they declare, and of no other: the header's component is the one whose
+#    include/ holds it, the file's is the one it is under (D-100). The
+#    declarations are read from the file the build wrote at configure time
+#    (-DLAYERS=, cf_write_layers in cmake/ConfigForgeComponent.cmake). A
+#    dependency spelled <component>:<header> allows that header and no
+#    other of the component.
 # 2. lib/config/src/core must not reach into sources, serialize or
 #    platform, nor include cf_serialize.h, cf_flatten.h or cf_source.h.
 # 3. core, sources and serialize include neither cf_flatten.h nor
 #    cf_image.h, which are the bridge's.
 # 4. The serialization library - every file of lib/serialize/src, the
-#    leaf files it calls and its headers - may include, of configforge/,
+#    leaf files it calls (the SERIALIZE_SOURCES of the declarations) and its
+#    headers - may include, of configforge/,
 #    only the headers in cmake/ConfigForgeSerialize.cmake and the two
 #    definition lists. A list of what is allowed rather than of what is
 #    not: a header the layer reaches for is a line in that file, and one
@@ -22,8 +27,55 @@ cmake_minimum_required(VERSION 3.10)
 
 set(bad 0)
 
-include("${LIB}/../cmake/ConfigForgeLayers.cmake")
+include("${LAYERS}")
 include("${LIB}/../cmake/ConfigForgeSerialize.cmake")
+
+# What each component may use: its declared dependencies, and theirs.
+foreach(c ${CF_LAYER_COMPONENTS})
+  set(allowed "")
+  set(todo ${CF_DEPENDS_${c}})
+  while(NOT "${todo}" STREQUAL "")
+    list(GET todo 0 d)
+    list(REMOVE_AT todo 0)
+    if(d IN_LIST allowed)
+      continue()
+    endif()
+    list(APPEND allowed ${d})
+    # A header of a component is not the component: what it uses is not
+    # allowed by it.
+    if(NOT d MATCHES ":")
+      if(NOT DEFINED CF_DEPENDS_${d})
+        message(
+          "VIOLATION: ${c} depends on ${d}, which no cf_component declares")
+        set(bad 1)
+      else()
+        list(APPEND todo ${CF_DEPENDS_${d}})
+      endif()
+    endif()
+  endwhile()
+  set(CF_LAYER_${c} ${allowed})
+endforeach()
+
+# The leaf files of the serialization library: the sources the declarations
+# say go into it. The platform's files are one per platform and the build
+# compiles one of them; each is held to the same rule, whichever this
+# build took.
+set(CF_SERIALIZE_LEAVES "")
+foreach(c ${CF_LAYER_COMPONENTS})
+  foreach(leaf ${CF_LEAVES_${c}})
+    list(APPEND CF_SERIALIZE_LEAVES ${leaf})
+    if(leaf MATCHES "^(.*/src)/(posix|win32|none)/(.*)$")
+      set(leaf_dir "${CMAKE_MATCH_1}")
+      set(leaf_file "${CMAKE_MATCH_3}")
+      foreach(variant posix win32 none)
+        list(APPEND CF_SERIALIZE_LEAVES "${leaf_dir}/${variant}/${leaf_file}")
+      endforeach()
+    endif()
+  endforeach()
+endforeach()
+if(CF_SERIALIZE_LEAVES)
+  list(REMOVE_DUPLICATES CF_SERIALIZE_LEAVES)
+endif()
 
 # 1. The table. A header's component is the one whose include/ holds it.
 foreach(c ${CF_LAYER_COMPONENTS})

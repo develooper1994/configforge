@@ -860,6 +860,47 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   CI runs (D-100)." `docs/Roadmap.md`: the item "Infrastructure behind
   abstractions" stays 🟨, its line gains "A-1b done".
 * **notes**:
+  * **The map of tests** (written before the moves; the rule is "the
+    lowest component, in the order port, numeric, base, platform,
+    serialize, config, cxx, that holds every `configforge/` header the
+    test includes"): port: `test_port`. numeric: `test_numeric` (and its
+    two locale runs). base: `test_alloc`, `test_value` (and its two locale
+    runs). platform: none. serialize: `test_serialize_alone`. cxx:
+    `test_wrapper_access`, `test_wrapper_cxx17`, `test_wrapper_cxx20`,
+    `test_wrapper_watch`, `test_wrapper_write`. config: every other
+    `test_*.c` (each includes `configforge.h` or another header of
+    config's, so none of them is lower), `test_fuzz.c` by decision, and
+    `fenced.c`. `ctest -N` lists the same 229 names on Windows and 236 on
+    Linux as before the moves; the order differs, since the unit tests are
+    registered by component.
+  * **Where the tree differed from the card.** The lines of
+    `cmake/ConfigForgeInstall.cmake` that name `${CMAKE_SOURCE_DIR}` are
+    18, 64, 81, 137 and 139. A fifth file includes `../unit/cf_test.h`:
+    `tests/gen/test_gen_cpp.cpp:16`. The layer directories had build files
+    of their own (`lib/config/src/<layer>/`, `lib/platform/src/`,
+    `lib/serialize/src/`); they are folded into the component's
+    `CMakeLists.txt`, and the parsers' detection that was in
+    `lib/serialize/src/CMakeLists.txt` is `lib/serialize/backends.cmake`,
+    which sets variables and touches no target.
+  * **Choices the card left to the build.** A dependency may be spelled
+    `<component>:<header>` in DEPENDS (serialize: `platform:cf_platform_file.h`),
+    which is how the gate keeps A-1's entry. The gate allows a component the
+    DEPENDS of what it depends on too (cxx: config's), as D-100's table has
+    it. The platform's `file.c` is one per platform and one is compiled; the
+    gate holds all three to the leaf rule. Alone, only the top component's
+    `tests/` are added (a dependency's tests run in its own build); `cxx`,
+    with no sources, is an interface library. The unit tests' build
+    directories are `build/lib/<c>/tests`, so CI's and `freebsd.sh`'s paths
+    follow. `gate.detection` leaves `lib/*/tests/` out and `gate.codespell`
+    skips it, as neither read the tests before they were under `lib/`.
+    `cf_component_tests` and `cf_unit_tests` (cmake/ConfigForgeComponent.cmake)
+    are the tests' environment and the one loop, written once.
+  * **Seen to fail.** A source taken out of config's SOURCES: the link of
+    Doctor's `configforge-gen` fails on `cf_ks_init`. A DEPENDS entry taken
+    out of base (numeric): `gate.layering` names `cf_value.h` including
+    `cf_numeric.h`. Both restored.
+  * Each of the seven components built alone, with `cmake -S lib/<c>`,
+    and its tests passed; none needed a component its DEPENDS does not name.
 
 ---
 

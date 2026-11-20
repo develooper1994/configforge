@@ -40,6 +40,9 @@
 #   shared   the whole suite against a shared library (BUILD_SHARED_LIBS),
 #            CI's shared job; the Python binding's tests run only here,
 #            since ctypes loads a shared library
+#   components every component of lib/ built alone, `cmake -S lib/<c>`, with
+#            what it depends on, and its own tests run (D-100): the proof
+#            that each one can be taken out
 #   tsan     the whole suite under the thread sanitiser (the tsan preset)
 #   yaml     the whole suite with CF_WITH_YAML, where libyaml is installed
 #   compilers the whole suite against musl (musl-gcc) and with the Tiny C
@@ -110,6 +113,7 @@ if(DEFINED TIER)
       EXTRA
       clang
       shared
+      components
       valgrind
       proofs
       wasm
@@ -200,7 +204,7 @@ endfunction()
 
 # A build with YAML read through libfyaml (D-62), where the build accepts
 # the one installed: the system's, or the one under FYAML_PREFIX. The
-# least version is the build's to enforce (lib/serialize/src/CMakeLists.txt),
+# least version is the build's to enforce (lib/serialize/backends.cmake),
 # so it is tried rather than looked for, and a libfyaml the build refuses
 # skips the step with the build's own reason. Sets fyaml_ok.
 function(fyaml_configure dir label)
@@ -676,6 +680,30 @@ foreach(x ${EXTRA})
       -DBUILD_SHARED_LIBS=ON)
     step("shared build" ${build} build-shared ${debug})
     step("shared test" ${test} build-shared)
+  elseif(x STREQUAL "components")
+    # gate.components (D-100): each component is a project of its own, and
+    # builds with only what its declaration names. Not a ctest gate: a
+    # configure for each is too slow for every build.
+    file(
+      GLOB components
+      LIST_DIRECTORIES true
+      RELATIVE "${ROOT}/lib"
+      "${ROOT}/lib/*")
+    foreach(c ${components})
+      if(NOT EXISTS "${ROOT}/lib/${c}/CMakeLists.txt")
+        continue()
+      endif()
+      step(
+        "${c} alone configure"
+        ${CMAKE_COMMAND}
+        -S
+        lib/${c}
+        -B
+        build-components/${c}
+        -DBUILD_TESTING=ON)
+      step("${c} alone build" ${build} build-components/${c} ${debug})
+      step("${c} alone test" ${test} build-components/${c})
+    endforeach()
   elseif(x STREQUAL "compilers")
     # name:compiler:extra option. pcc and tcc have no atomics, so their
     # builds are the single-threaded one the support matrix promises for
@@ -1031,8 +1059,8 @@ foreach(x ${EXTRA})
     message(
       FATAL_ERROR
         "unknown EXTRA step '${x}': kqueue, tidy, clang, "
-        "shared, valgrind, proofs, wasm, abi, tsan, yaml, compilers, "
-        "fuzz, coverage or conformance")
+        "shared, components, valgrind, proofs, wasm, abi, tsan, yaml, "
+        "compilers, fuzz, coverage or conformance")
   endif()
 endforeach()
 

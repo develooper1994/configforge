@@ -133,8 +133,8 @@ endif()
 # (D-88): the same source the unit test compiles must fail here, naming
 # the function.
 execute_process(
-  COMMAND ${CC} -std=c89 -c -o "${work}/fenced.o" "${SRC}/tests/unit/fenced.c"
-          -I "${prefix}/include"
+  COMMAND ${CC} -std=c89 -c -o "${work}/fenced.o"
+          "${SRC}/lib/config/tests/fenced.c" -I "${prefix}/include"
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE out
   ERROR_VARIABLE out)

@@ -6,8 +6,8 @@
 # one, not the source tree's defaults, as the build's own include order
 # (cmake/ConfigForgeOptions.cmake) and an installed copy have it.
 set(CF_STAGED_DIR "${CMAKE_BINARY_DIR}/staged/include")
-file(GLOB cf_staged_headers "${CMAKE_SOURCE_DIR}/lib/*/include/configforge/*"
-     "${CMAKE_SOURCE_DIR}/tools/doctor/include/configforge/*")
+file(GLOB cf_staged_headers "${CF_REPO_ROOT}/lib/*/include/configforge/*"
+     "${CF_REPO_ROOT}/tools/doctor/include/configforge/*")
 foreach(h ${cf_staged_headers})
   get_filename_component(name "${h}" NAME)
   if(NOT name STREQUAL "cf_build_options.h")

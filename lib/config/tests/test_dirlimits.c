@@ -6,7 +6,7 @@
  * Each is a place where a file used to be dropped without a word, or
  * where the call never returned. The test runs in a directory of its
  * own, and the build makes the directories it fills, since C89 has no
- * way to make one (tests/unit/CMakeLists.txt).
+ * way to make one (lib/config/tests/CMakeLists.txt).
  */
 
 #if defined(CF_TEST_FIFO)

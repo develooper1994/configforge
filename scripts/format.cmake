@@ -54,6 +54,7 @@ if(ALL)
     "${REPO}/cmake/*.cmake"
     "${REPO}/scripts/*.cmake"
     "${REPO}/lib/*CMakeLists.txt"
+    "${REPO}/lib/*.cmake"
     "${REPO}/tests/*CMakeLists.txt"
     "${REPO}/tests/*.cmake"
     "${REPO}/tools/*CMakeLists.txt"

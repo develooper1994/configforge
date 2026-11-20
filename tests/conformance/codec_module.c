@@ -4,13 +4,13 @@
  * <symbol>, D-68): each exported as a pointer to its cf_codec.
  *
  *   conform_kv     the "key: value" codec the unit tests use
- *                  (tests/unit/cf_kv_codec.h)
+ *                  (tests/support/cf_kv_codec.h)
  *   conform_json   a codec of its own that reads through this library's
  *                  JSON reader, so the conformance run scores a loaded
  *                  codec against JSONTestSuite and its floors
  */
 
-#include "../unit/cf_kv_codec.h"
+#include "../support/cf_kv_codec.h"
 
 #if defined(_WIN32)
 #define CONFORM_EXPORT __declspec(dllexport)

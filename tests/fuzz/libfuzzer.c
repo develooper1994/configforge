@@ -16,7 +16,7 @@
  */
 
 #define CF_LIBFUZZER 1
-#include "../unit/test_fuzz.c"
+#include "../../lib/config/tests/test_fuzz.c"
 
 int LLVMFuzzerTestOneInput(const unsigned char* data, size_t size);
 

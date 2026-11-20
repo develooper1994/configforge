@@ -527,7 +527,7 @@ cf_codec_kind(bin[0], kind, sizeof kind);
 /* "binary, self-describing, typed, arrays, read and written" */
 ```
 
-A format of your own is a `cf_codec` (`tests/unit/cf_kv_codec.h` is a
+A format of your own is a `cf_codec` (`tests/support/cf_kv_codec.h` is a
 complete one, reading and writing). Hand it to one file with
 `cf_builder_file_codec`, or register it on the builder (D-68):
 

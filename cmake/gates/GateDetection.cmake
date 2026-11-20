@@ -7,6 +7,14 @@ file(
   "${SRC}/lib/*.c"
   "${SRC}/lib/*.h"
   "${SRC}/tools/doctor/include/*.h")
+# The tests under lib/<component>/tests are programs that use the library,
+# and some of them ask the platform what it is on purpose.
+list(
+  FILTER
+  files
+  EXCLUDE
+  REGEX
+  "/lib/[^/]+/tests/")
 set(bad 0)
 foreach(f ${files})
   get_filename_component(basename "${f}" NAME)

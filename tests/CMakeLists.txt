@@ -1,13 +1,26 @@
-# clang-tidy is pointed at the product - the library and Doctor - and not
-# at the programs that exercise it. Here its findings were a printf whose
-# result went unchecked and a test asserting on a pointer it had just
+# The unit tests are in lib/<component>/tests (D-100); the tests here cross
+# components. clang-tidy is pointed at the product - the library and Doctor
+# - and not at the programs that exercise it. Here its findings were a printf
+# whose result went unchecked and a test asserting on a pointer it had just
 # checked, forty of them, and a check whose advice nobody will take
 # teaches people to run it with the output ignored. The tests still get
 # the compiler's warnings, cppcheck, -fanalyzer and the sanitisers.
 add_definitions(-DCF_INTERNAL_API=1)
 set(CMAKE_C_CLANG_TIDY "")
 
-add_subdirectory(unit)
+# Registered first, in the order a component uses another, as the unit tests
+# always were.
+foreach(
+  c
+  port
+  numeric
+  base
+  serialize
+  config
+  cxx)
+  add_subdirectory(${CMAKE_SOURCE_DIR}/lib/${c}/tests
+                   ${CMAKE_BINARY_DIR}/lib/${c}/tests)
+endforeach()
 add_subdirectory(conformance)
 
 if(CF_BUILD_TOOLS

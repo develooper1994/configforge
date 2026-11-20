@@ -17,6 +17,13 @@ if(cf_src STREQUAL cf_bin)
                       "cmake -S . -B build (or cmake --preset default)")
 endif()
 
+# What the modules name a file of the repository by. A component built alone
+# sets it to its own repository (cmake/ConfigForgeComponent.cmake).
+set(CF_REPO_ROOT "${CMAKE_SOURCE_DIR}")
+# The sources of each component go into the two libraries below, not into
+# a library of its own.
+set(CF_WHOLE_PROJECT ON)
+
 # The version is written once, in lib/config/include/configforge/cf_version.h.
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ConfigForgeVersion.cmake)
 configforge_read_version(CF_VERSION)
@@ -30,6 +37,7 @@ project(
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(ConfigForgeOptions)
+include(ConfigForgeComponent)
 
 # After the options, not before: CF_WITH_CXX does not exist until
 # ConfigForgeOptions has declared it, and an if() on an undefined
@@ -93,6 +101,8 @@ target_compile_definitions(configforge_serialize PRIVATE CF_BUILDING_LIBRARY=1
 set_target_properties(configforge_serialize PROPERTIES C_CPPCHECK "")
 
 add_subdirectory(lib)
+# What the components declared, for gate.layering, which runs with -P.
+cf_write_layers("${CMAKE_BINARY_DIR}/layers.cmake")
 include(ConfigForgeStaged)
 if(CF_WITH_YAML)
   target_link_libraries(configforge PRIVATE ${CF_YAML_LIBRARY})

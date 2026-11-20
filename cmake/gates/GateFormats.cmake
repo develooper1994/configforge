@@ -22,6 +22,14 @@ file(
   "${SRC}/lib/*.c"
   "${SRC}/lib/*.h"
   "${SRC}/tools/doctor/include/configforge/*.h")
+# The tests under lib/<component>/tests are programs that use the library,
+# and check what it prints; they are not library code.
+list(
+  FILTER
+  sources
+  EXCLUDE
+  REGEX
+  "/lib/[^/]+/tests/")
 
 execute_process(
   COMMAND ${Python3_EXECUTABLE} "${SRC}/scripts/check/check_formats.py"

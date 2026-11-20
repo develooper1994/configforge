@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../unit/cf_test.h"
+#include "../support/cf_test.h"
 
 cf_bool gen_contract(cf_builder* b);
 

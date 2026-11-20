@@ -11,8 +11,12 @@ set(CF_FUZZ_SECONDS
     10
     CACHE STRING "How long each libFuzzer test runs, in seconds")
 
+# test_fuzz.c, which both programs here are made from, is in lib/config/tests
+# and includes the helpers every test shares.
+include_directories(${CMAKE_SOURCE_DIR}/tests/support)
+
 # The deterministic fuzzer's corpora, written as files.
-add_executable(fuzz_seeds ${CMAKE_SOURCE_DIR}/tests/unit/test_fuzz.c)
+add_executable(fuzz_seeds ${CMAKE_SOURCE_DIR}/lib/config/tests/test_fuzz.c)
 target_compile_definitions(fuzz_seeds PRIVATE CF_FUZZ_SEEDS=1)
 target_link_libraries(fuzz_seeds PRIVATE configforge)
 configforge_apply_analysis(fuzz_seeds)

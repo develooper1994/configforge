@@ -1,14 +1,7 @@
-# The serialization library: what it is made of and what it may
-# include. One list, read by gate.layering and by the build.
-set(CF_SERIALIZE_LEAVES
-    port/src/port.c
-    numeric/src/numeric.c
-    base/src/alloc.c
-    base/src/error.c
-    base/src/value.c
-    platform/src/posix/file.c
-    platform/src/win32/file.c
-    platform/src/none/file.c)
+# What the serialization library may include: the names of the headers, in
+# one list, read by gate.layering and by gate.abi. The files it is made of
+# are not listed here: they are the SERIALIZE_SOURCES of the components'
+# declarations (cmake/ConfigForgeComponent.cmake), which the gate reads.
 set(CF_SERIALIZE_HEADERS
     cf_build_options.h
     cf_port.h

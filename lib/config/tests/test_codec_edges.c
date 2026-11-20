@@ -9,7 +9,7 @@
  * sink that refuses at each event in turn, because a codec has a path
  * for its consumer saying no, and every one of them must stop cleanly.
  *
- * The documents are in tests/unit/data/edges.<format>, separated by a
+ * The documents are in tests/support/data/edges.<format>, separated by a
  * line of five dashes, so that what they spell is what the file says -
  * no C escapes between the reader and the bytes.
  *

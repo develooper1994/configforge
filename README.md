@@ -387,7 +387,7 @@ a claim that decays.
 | ---- | ------ |
 | conformance | `-std=c89 -pedantic -Werror` |
 | portability | full suite under `CF_FORCE_PORTABLE`, output compared byte for byte |
-| layering | `lib/config/src/core` includes nothing from `sources`, `platform` or `serialize`; no component includes one the table in `cmake/ConfigForgeLayers.cmake` does not allow it |
+| layering | `lib/config/src/core` includes nothing from `sources`, `platform` or `serialize`; no component includes one its `cf_component` declaration (`cmake/ConfigForgeComponent.cmake`) does not allow it |
 | detection | only `cf_port.h` and `port.c` may test compiler macros |
 | symbols | no locale-sensitive libc function; every export prefixed `cf_` |
 | amalgamation | the single-file build compiles as C89 and runs |

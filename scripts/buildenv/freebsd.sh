@@ -81,7 +81,7 @@ $SSH 'cd src && { cmake -S . -B build -G Ninja -DCF_WITH_CXX=OFF -DCF_BUILD_EXAM
       cmake --build build; } > build.log 2>&1 || { tail -40 build.log; exit 1; }
       ctest --test-dir build -R "^unit\." --output-on-failure'
 # What test_watch saw, for the record: the wait handle it used is kqueue.
-$SSH 'cd src/build/tests/unit && ./test_watch | tail -3'
+$SSH 'cd src/build/lib/config/tests && ./test_watch | tail -3'
 $SSH 'shutdown -p now' || true
 # The trap stops qemu if the shutdown did not; the disk goes with the
 # work directory.

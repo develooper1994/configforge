@@ -6,7 +6,7 @@
  * build that left directories out.
  *
  * Runs in a working directory of its own, where the build made cf_creds
- * (tests/unit/CMakeLists.txt): the test sets the process's environment,
+ * (lib/config/tests/CMakeLists.txt): the test sets the process's environment,
  * and a relative path keeps it from depending on where the tree is.
  */
 

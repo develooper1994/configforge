@@ -5,7 +5,7 @@
  * file in it they may write to, a sticky directory's entries, a group
  * that is the owner's own, CF_ANY_WRITER and CF_TRUSTED_DIR.
  *
- * Runs in a working directory of its own (tests/unit/CMakeLists.txt),
+ * Runs in a working directory of its own (lib/config/tests/CMakeLists.txt),
  * makes its directories and sets their modes itself, and removes what
  * it made. On Windows the platform cannot say who may write, and a
  * drop-in directory that asks is refused for it.
