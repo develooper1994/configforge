@@ -48,7 +48,7 @@
 #            library, and nothing about which
 #   fuzz     libFuzzer on every reader for FUZZ_SECONDS each (default 10),
 #            clang only
-#   coverage line coverage of src/ by the suite, failing below COVERAGE_MIN
+#   coverage line coverage of lib/ by the suite, failing below COVERAGE_MIN
 #            percent of lines (default 89) or COVERAGE_BRANCH_MIN of
 #            branches (default 80): ratchets, raised as tests are added
 #   conformance each reader against its standard's own suite, fetched at a
@@ -200,7 +200,7 @@ endfunction()
 
 # A build with YAML read through libfyaml (D-62), where the build accepts
 # the one installed: the system's, or the one under FYAML_PREFIX. The
-# least version is the build's to enforce (src/serialize/CMakeLists.txt),
+# least version is the build's to enforce (lib/serialize/src/CMakeLists.txt),
 # so it is tried rather than looked for, and a libfyaml the build refuses
 # skips the step with the build's own reason. Sets fyaml_ok.
 function(fyaml_configure dir label)
@@ -299,7 +299,7 @@ if(SOURCE STREQUAL "index")
   # kept builds went on without it. A change to the options or the presets
   # starts from nothing.
   foreach(f cmake/ConfigForgeOptions.cmake CMakePresets.json
-            include/configforge/cf_build_options.h)
+            lib/port/include/configforge/cf_build_options.h)
     if(NOT FRESH AND EXISTS "${ROOT}/${f}")
       file(SHA256 "${ROOT}/${f}" was)
       file(SHA256 "${incoming}/${f}" now)
@@ -545,9 +545,17 @@ foreach(x ${EXTRA})
     list(SORT new_lib)
     list(GET old_lib 0 old_lib)
     list(GET new_lib 0 new_lib)
+    # The base's headers are in one directory while it has the old layout,
+    # and in its build's staged directory (cmake/ConfigForgeStaged.cmake)
+    # once it has lib/; this build's are always in its own.
+    set(base_headers "${base}/include/configforge")
+    if(EXISTS "${base}/lib/config/include/configforge")
+      set(base_headers "${base}/build/staged/include/configforge")
+    endif()
     execute_process(
-      COMMAND ${ABIDIFF_EXE} --headers-dir1 "${base}/include/configforge"
-              --headers-dir2 "${ROOT}/include/configforge" ${old_lib} ${new_lib}
+      COMMAND
+        ${ABIDIFF_EXE} --headers-dir1 "${base_headers}" --headers-dir2
+        "${ROOT}/build-abi/staged/include/configforge" ${old_lib} ${new_lib}
       RESULT_VARIABLE abi_rc
       OUTPUT_VARIABLE abi_out
       ERROR_VARIABLE abi_out)
@@ -619,6 +627,7 @@ foreach(x ${EXTRA})
       "proofs"
       ${CMAKE_COMMAND}
       -DSRC=${ROOT}
+      -DSTAGED=${ROOT}/build/staged/include
       -P
       ${ROOT}/scripts/check/proofs.cmake)
   elseif(x STREQUAL "valgrind")
@@ -787,7 +796,7 @@ foreach(x ${EXTRA})
       -r
       .
       --filter
-      src/
+      lib/[^/]*/src/
       --gcov-ignore-parse-errors=negative_hits.warn_once_per_file
       --fail-under-line
       ${COVERAGE_MIN}

@@ -39,7 +39,8 @@ cmake_minimum_required(VERSION 3.10)
 # Refused rather than guessed: a shell that splits -DSRC=. from its value
 # (PowerShell does) left SRC empty, and the list was written to
 # /cmake/configforge.symbols at the root of the drive, twice.
-if(NOT DEFINED SRC OR NOT EXISTS "${SRC}/include/configforge/configforge.h")
+if(NOT DEFINED SRC OR NOT EXISTS
+                      "${SRC}/lib/config/include/configforge/configforge.h")
   message(FATAL_ERROR "gate.abi: SRC must name the repository (-DSRC=<repo>), "
                       "not \"${SRC}\"")
 endif()
@@ -75,12 +76,12 @@ endif()
 if(PART STREQUAL "serialize")
   set(headers "")
   foreach(h ${CF_SERIALIZE_HEADERS})
-    if(EXISTS "${SRC}/include/configforge/${h}")
-      list(APPEND headers "${SRC}/include/configforge/${h}")
-    endif()
+    file(GLOB found "${SRC}/lib/*/include/configforge/${h}")
+    list(APPEND headers ${found})
   endforeach()
 else()
-  file(GLOB headers "${SRC}/include/configforge/*.h")
+  file(GLOB headers "${SRC}/lib/*/include/configforge/*.h"
+       "${SRC}/tools/doctor/include/configforge/*.h")
 endif()
 list(SORT headers)
 set(declared "")

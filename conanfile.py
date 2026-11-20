@@ -51,13 +51,13 @@ class ConfigForgeConan(ConanFile):
     default_options.update({"with_" + f: d for f, d in FEATURES.items()})
 
     exports_sources = (
-        "CMakeLists.txt", "CMakePresets.json", "LICENSE", "cmake/*", "include/*",
-        "src/*", "scripts/*", "tools/*", "tests/*", "examples/*", "docs/*")
+        "CMakeLists.txt", "CMakePresets.json", "LICENSE", "cmake/*", "lib/*",
+        "scripts/*", "tools/*", "tests/*", "examples/*", "docs/*")
 
     def set_version(self):
         # cf_version.h is the one place the version is written.
-        header = load(self, os.path.join(self.recipe_folder, "include", "configforge",
-                                         "cf_version.h"))
+        header = load(self, os.path.join(self.recipe_folder, "lib", "config",
+                                         "include", "configforge", "cf_version.h"))
         parts = [re.search(rf"#define CF_VERSION_{p}\s+(\d+)", header).group(1)
                  for p in ("MAJOR", "MINOR", "PATCH")]
         self.version = ".".join(parts)

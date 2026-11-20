@@ -1806,7 +1806,7 @@ It could be. The layer has no dependency on the configuration model and would be
 standalone C89 serialization component.
 
 **Recommendation: keep it internal for now, with the boundary drawn as if it were
-separate.** `src/serialize` may not include anything from `src/core` beyond the
+separate.** `lib/serialize` may not include anything from `lib/config/src/core` beyond the
 portability layer, checked in CI. Extracting it later is then a directory move plus a
 build file. Extracting it now buys nothing and costs a second version number, a second
 release process and a second set of documentation.
@@ -1898,7 +1898,7 @@ warning when it does not.
 
 ### TOML
 
-Built in (`src/serialize/toml.c`), held to TOML 1.1.0 by toml-test (D-62,
+Built in (`lib/serialize/src/toml.c`), held to TOML 1.1.0 by toml-test (D-62,
 docs/Conformance.md): every valid document read to the values the suite states, every
 invalid one refused. Native types map directly; arrays and arrays of tables become index
 keys; every value carries its line and column. TOML's dates and times have no ConfigForge
@@ -2647,7 +2647,7 @@ configforge/
 
 **Two rules, both checked by script in CI.**
 
-1. `src/core` must not include anything from `src/sources` or `src/platform`.
+1. `lib/config/src/core` must not include anything from `lib/config/src/sources` or `lib/platform`.
 2. No file outside `cf_port.h` and `port.c` may contain compiler or standard detection
    macros.
 

@@ -3,7 +3,7 @@
  * - which every untyped value from every file passes through - reads
  * nothing outside the input and returns one of the four kinds.
  *
- * cbmc-sources: src/core/numeric.c
+ * cbmc-sources: lib/numeric/src/numeric.c lib/port/src/port.c
  */
 
 #include <configforge/cf_numeric.h>

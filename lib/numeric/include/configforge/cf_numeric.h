@@ -29,16 +29,6 @@ extern "C" {
  * Integers
  * ------------------------------------------------------------------ */
 
-/* Worst case including sign and terminator. */
-#define CF_I64_DIGITS 21
-
-/* Write the decimal form of v. Returns the length written, or 0 when
-   cap is too small. Always terminates when cap > 0. */
-#if CF_INTERNAL_API
-CF_API size_t cf_i64_to_text(cf_i64 v, char* buf, size_t cap);
-CF_API size_t cf_u64_to_text(cf_u64 v, char* buf, size_t cap);
-#endif /* CF_INTERNAL_API */
-
 /* Parse an optionally signed decimal integer. Returns CF_TRUE on
    success. Rejects overflow, empty input, and surrounding space;
    callers trim deliberately. When end is NULL the whole input must be

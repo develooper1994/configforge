@@ -16,7 +16,12 @@ if(NOT Python3_Interpreter_FOUND)
   return()
 endif()
 
-file(GLOB_RECURSE sources "${SRC}/src/*.c" "${SRC}/include/configforge/*.h")
+file(
+  GLOB_RECURSE
+  sources
+  "${SRC}/lib/*.c"
+  "${SRC}/lib/*.h"
+  "${SRC}/tools/doctor/include/configforge/*.h")
 
 execute_process(
   COMMAND ${Python3_EXECUTABLE} "${SRC}/scripts/check/check_formats.py"

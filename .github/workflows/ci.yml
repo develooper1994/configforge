@@ -391,9 +391,9 @@ jobs:
         run: |
           python3 -m venv "$RUNNER_TEMP/cft"
           "$RUNNER_TEMP/cft/bin/pip" install --quiet clang-format==22.1.8
-          git ls-files -z 'src/*.c' 'include/configforge/*.h' \
-            'include/configforge/*.hpp' 'tests/*.c' 'tests/*.cpp' 'tools/*.c' \
-            'examples/*.c' 'examples/*.cpp' 'bench/*.c' |
+          git ls-files -z 'lib/*.c' 'lib/*.h' 'lib/*.hpp' \
+            'tools/doctor/include/configforge/*.h' 'tests/*.c' 'tests/*.cpp' \
+            'tools/*.c' 'examples/*.c' 'examples/*.cpp' 'bench/*.c' |
             xargs -0 "$RUNNER_TEMP/cft/bin/clang-format" -i
           git diff > format.patch
           if [ -s format.patch ]; then

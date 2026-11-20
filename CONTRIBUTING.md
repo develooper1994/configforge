@@ -20,13 +20,11 @@ If a change makes a value harder to explain, it is the wrong change.
 
 | Path | What | Read |
 | ---- | ---- | ---- |
-| `include/configforge/` | the public headers; `configforge.h` is the facade | the header comments are the API reference; `docs/API.md` collects them |
-| `src/core` | value model, key space, definitions, validation, `cf_config` | |
-| `src/sources` | defaults, memory, environment, command line, compatibility shims, entries, snapshots | |
-| `src/serialize` | blob, sink, and the INI, JSON, TOML, YAML, XML and properties codecs | |
-| `src/bridge` | file, `.env`, drop-in directory, image, emit, flatten, registry, secrets, store | |
-| `src/diag` | `explain()`, provenance report, Report Replay, diff | |
-| `src/platform` | the only code that knows the operating system | |
+| `lib/<component>/` | one directory a component (D-100), each with `include/configforge/` (its public headers), `src/` and a build file; `configforge.h` is the facade | the header comments are the API reference; `docs/API.md` collects them; `docs/Architecture.md` says what each holds |
+| `lib/port`, `numeric`, `base`, `platform` | the compiler's door, numbers, value model, error and allocation, and the only code that knows the operating system | |
+| `lib/serialize` | blob, sink, and the INI, JSON, TOML, YAML, XML and properties codecs | |
+| `lib/config/src` | `core` (key space, definitions, validation, `cf_config`), `sources` (defaults, memory, environment, command line, compatibility shims, entries, snapshots), `bridge` (file, `.env`, drop-in directory, image, emit, flatten, registry, secrets, store), `diag` (`explain()`, provenance report, Report Replay, diff) | |
+| `lib/cxx` | `configforge.hpp` | |
 | `tools/doctor` | the Doctor CLI and its adapters | `docs/Doctor.md` |
 | `tests/unit` | one C program per area; also the best usage examples | |
 | `tests/doctor` | Doctor's fixtures and CLI tests | |

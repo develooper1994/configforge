@@ -30,6 +30,8 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   `configforge codec formats` and `configforge-doctor` (D-99). The release
   archives carry `configforge-doctor` alone, and the Python module looks
   for no other name.
+- The source tree: one directory per component under `lib/` (D-100); the
+  installed headers and libraries are unchanged.
 
 ## 1.7.0 — 2026-11-20
 

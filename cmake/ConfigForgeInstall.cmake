@@ -44,10 +44,21 @@ endif()
 # exclusion is here so that it does not have to: a correctness that
 # depends on the order of two install() calls is a correctness nobody
 # will preserve through the next edit.
-install(
-  DIRECTORY include/
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  PATTERN "cf_build_options.h" EXCLUDE)
+foreach(
+  cf_inc
+  lib/port/include/
+  lib/numeric/include/
+  lib/base/include/
+  lib/platform/include/
+  lib/serialize/include/
+  lib/config/include/
+  lib/cxx/include/
+  tools/doctor/include/)
+  install(
+    DIRECTORY ${cf_inc}
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    PATTERN "cf_build_options.h" EXCLUDE)
+endforeach()
 
 # The licence travels with the headers, which are a source distribution.
 install(FILES "${CMAKE_SOURCE_DIR}/LICENSE"

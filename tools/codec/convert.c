@@ -8,7 +8,7 @@
  * values, then its arrays, then its tables. Events straight from the
  * decoder to the encoder would put a JSON document's later root key
  * inside an INI section, and a TOML array after a sub-table inside that
- * sub-table (the two faults src/bridge/flatten.c's comment above
+ * sub-table (the two faults lib/config/src/bridge/flatten.c's comment above
  * all_digits records), and the key space that orders them is not in the
  * serialization library, which this program links alone.
  *

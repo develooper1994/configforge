@@ -23,55 +23,6 @@
  * Integers
  * ================================================================== */
 
-size_t cf_u64_to_text(cf_u64 v, char* buf, size_t cap) {
-    char   tmp[CF_I64_DIGITS];
-    size_t n = 0;
-    size_t i;
-
-    if (buf == NULL || cap == 0) {
-        return 0;
-    }
-    do {
-        tmp[n++] = (char)('0' + (int)(v % (cf_u64)10));
-        v /= (cf_u64)10;
-    } while (v != 0);
-
-    if (n + 1 > cap) {
-        buf[0] = '\0';
-        return 0;
-    }
-    for (i = 0; i < n; ++i) {
-        buf[i] = tmp[n - 1 - i];
-    }
-    buf[n] = '\0';
-    return n;
-}
-
-size_t cf_i64_to_text(cf_i64 v, char* buf, size_t cap) {
-    cf_u64 mag;
-    size_t n;
-
-    if (buf == NULL || cap == 0) {
-        return 0;
-    }
-    if (v < 0) {
-        /* Negate through the unsigned domain: defined for CF_I64_MIN. */
-        mag = (cf_u64)(-(v + 1)) + (cf_u64)1;
-        if (cap < 2) {
-            buf[0] = '\0';
-            return 0;
-        }
-        buf[0] = '-';
-        n      = cf_u64_to_text(mag, buf + 1, cap - 1);
-        if (n == 0) {
-            buf[0] = '\0';
-            return 0;
-        }
-        return n + 1;
-    }
-    return cf_u64_to_text((cf_u64)v, buf, cap);
-}
-
 cf_bool cf_text_to_u64(const char* s, size_t len, cf_u64* out, size_t* end) {
     cf_u64 acc = 0;
     size_t i   = 0;

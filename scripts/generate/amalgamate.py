@@ -57,26 +57,43 @@ NOT_AMALGAMATED = {"cf_doctor.h"}
 SOURCES = [
     # Every platform, each guarded internally: the amalgamation is one
     # translation unit and has no build to choose for it.
-    "platform/posix/posix.c", "platform/posix/file.c",
-    "platform/win32/win32.c", "platform/win32/file.c",
-    "platform/none/none.c", "platform/none/file.c",
-    "core/version.c", "core/port.c", "core/error.c", "core/numeric.c", "core/alloc.c",
-    "core/value.c", "core/keyspace.c", "core/define.c", "core/validate.c",
-    "core/config.c", "core/iterate.c", "core/live.c", "core/edit.c",
-    "serialize/blob.c", "serialize/codec.c", "serialize/detect.c", "serialize/ini.c",
-    "serialize/json.c", "serialize/toml.c", "serialize/yamlparse.c", "serialize/yaml.c", "serialize/xml.c", "serialize/properties.c", "serialize/cbor.c", "serialize/tlv.c", "serialize/version.c",
-    "sources/entry.c", "sources/memory.c", "sources/defaults.c", "sources/env.c",
-    "sources/cli.c", "sources/compat.c", "sources/snapshot.c",
-    "bridge/flatten.c", "bridge/file.c", "bridge/dotenv.c", "bridge/dir.c", "bridge/emit.c", "bridge/image.c", "bridge/store.c", "bridge/secrets.c", "bridge/registry.c", "bridge/preferences.c","bridge/schema.c",
-    "diag/explain.c", "diag/report.c", "diag/diff.c",
+    "platform/src/posix/posix.c", "platform/src/posix/file.c",
+    "platform/src/win32/win32.c", "platform/src/win32/file.c",
+    "platform/src/none/none.c", "platform/src/none/file.c",
+    "config/src/core/version.c", "port/src/port.c", "base/src/error.c",
+    "numeric/src/numeric.c", "base/src/alloc.c",
+    "base/src/value.c", "config/src/core/keyspace.c", "config/src/core/define.c",
+    "config/src/core/validate.c",
+    "config/src/core/config.c", "config/src/core/iterate.c", "config/src/core/live.c",
+    "config/src/core/edit.c",
+    "serialize/src/blob.c", "serialize/src/codec.c", "serialize/src/detect.c", "serialize/src/ini.c",
+    "serialize/src/json.c", "serialize/src/toml.c", "serialize/src/yamlparse.c", "serialize/src/yaml.c", "serialize/src/xml.c", "serialize/src/properties.c", "serialize/src/cbor.c", "serialize/src/tlv.c", "serialize/src/version.c",
+    "config/src/sources/entry.c", "config/src/sources/memory.c", "config/src/sources/defaults.c", "config/src/sources/env.c",
+    "config/src/sources/cli.c", "config/src/sources/compat.c", "config/src/sources/snapshot.c",
+    "config/src/bridge/flatten.c", "config/src/bridge/file.c", "config/src/bridge/dotenv.c", "config/src/bridge/dir.c", "config/src/bridge/emit.c", "config/src/bridge/image.c", "config/src/bridge/store.c", "config/src/bridge/secrets.c", "config/src/bridge/registry.c", "config/src/bridge/preferences.c","config/src/bridge/schema.c",
+    "config/src/diag/explain.c", "config/src/diag/report.c", "config/src/diag/diff.c",
 ]
+
+# The components, in D-100's order: the public headers of each are in
+# lib/<component>/include/configforge/, and the sources in
+# lib/<component>/src/.  A header is looked for in each in turn.
+COMPONENTS = ["port", "numeric", "base", "platform", "serialize", "config", "cxx"]
 
 LOCAL_INCLUDE = re.compile(r'^\s*#\s*include\s*"configforge/([^"]+)"\s*$')
 GUARD_OPEN = re.compile(r'^\s*#\s*ifndef\s+CONFIGFORGE\w*\s*$')
 GUARD_DEF = re.compile(r'^\s*#\s*define\s+CONFIGFORGE\w*\s*$')
 
 
-def resolve(line, incdir):
+def find_header(incdirs, name):
+    """The path of a public header, in whichever component holds it."""
+    for d in incdirs:
+        p = os.path.join(d, name)
+        if os.path.exists(p):
+            return p
+    raise SystemExit(f"amalgamate: no component holds configforge/{name}")
+
+
+def resolve(line, incdirs):
     """Return the replacement lines for a local include.
 
     A .h include is dropped: the amalgamation already contains it.  A
@@ -92,12 +109,12 @@ def resolve(line, incdir):
     name = m.group(1)
     if not name.endswith(".def"):
         return []
-    with open(os.path.join(incdir, name), encoding="utf-8") as f:
+    with open(find_header(incdirs, name), encoding="utf-8") as f:
         body = f.read().splitlines()
     return ([f"/* inlined: configforge/{name} */"] + body)
 
 
-def strip_header(text, incdir):
+def strip_header(text, incdirs):
     """Drop the include guard and local includes; keep everything else."""
     out = []
     lines = text.splitlines()
@@ -106,7 +123,7 @@ def strip_header(text, incdir):
     # Remove the outermost guard: the opening #ifndef, its #define, and
     # the matching #endif at the very end.
     while i < len(lines) and not GUARD_OPEN.match(lines[i]):
-        out.extend(resolve(lines[i], incdir))
+        out.extend(resolve(lines[i], incdirs))
         i += 1
     if i < len(lines):
         i += 1                      # the #ifndef
@@ -123,7 +140,7 @@ def strip_header(text, incdir):
                 if depth == 0:
                     i += 1
                     continue
-            body.extend(resolve(line, incdir))
+            body.extend(resolve(line, incdirs))
             i += 1
         out.extend(body)
     return "\n".join(out).rstrip() + "\n"
@@ -132,7 +149,7 @@ def strip_header(text, incdir):
 SYSTEM_INCLUDE = re.compile(r'^\s*#\s*include\s*<([^>]+)>\s*$')
 
 
-def strip_source(text, incdir, seen):
+def strip_source(text, incdirs, seen):
     """Drop local includes, and a system header a source before this one
     already included outside any #if.
 
@@ -155,7 +172,7 @@ def strip_source(text, incdir, seen):
             if m.group(1) in seen:
                 continue
             seen.add(m.group(1))
-        out.extend(resolve(line, incdir))
+        out.extend(resolve(line, incdirs))
     return "\n".join(out).rstrip() + "\n"
 
 
@@ -185,8 +202,14 @@ def banner(title):
             " * " + "=" * 68 + " */\n\n")
 
 
+def include_dirs(src):
+    return [os.path.join(src, "lib", c, "include", "configforge")
+            for c in COMPONENTS]
+
+
 def check_complete(src):
-    """Every .c under src/ has to be in SOURCES, and every .h in HEADERS.
+    """Every .c under lib/*/src/ has to be in SOURCES, and every .h of
+    lib/*/include/configforge/ in HEADERS.
 
     Relying on a test program to notice a missing file only works when
     that program happens to use a symbol from it - a negative test here
@@ -195,21 +218,23 @@ def check_complete(src):
     instead, which does not depend on what anyone remembered to call.
     """
     on_disk = set()
-    for root, _dirs, files in os.walk(os.path.join(src, "src")):
-        for name in files:
-            if name.endswith(".c"):
-                rel = os.path.relpath(os.path.join(root, name),
-                                      os.path.join(src, "src"))
-                on_disk.add(rel.replace(os.sep, "/"))
+    lib = os.path.join(src, "lib")
+    for c in COMPONENTS:
+        for root, _dirs, files in os.walk(os.path.join(lib, c, "src")):
+            for name in files:
+                if name.endswith(".c"):
+                    rel = os.path.relpath(os.path.join(root, name), lib)
+                    on_disk.add(rel.replace(os.sep, "/"))
 
     listed = set(SOURCES)
     missing = sorted(on_disk - listed)
     extra = sorted(listed - on_disk)
 
     hdr_disk = set()
-    for name in os.listdir(os.path.join(src, "include", "configforge")):
-        if name.endswith(".h"):
-            hdr_disk.add(name)
+    for d in include_dirs(src):
+        for name in os.listdir(d):
+            if name.endswith(".h"):
+                hdr_disk.add(name)
     hdr_missing = sorted(hdr_disk - set(HEADERS) - NOT_AMALGAMATED)
 
     problems = []
@@ -234,7 +259,7 @@ def main():
             sys.stderr.write(f"amalgamate: {p}\n")
         sys.stderr.write("amalgamate: the file list and the tree disagree\n")
         return 1
-    incdir = os.path.join(src, "include", "configforge")
+    incdirs = include_dirs(src)
     os.makedirs(out, exist_ok=True)
 
     head = [
@@ -249,10 +274,9 @@ def main():
         "#define CONFIGFORGE_AMALGAMATED_H\n"
     ]
     for h in HEADERS:
-        p = os.path.join(src, "include", "configforge", h)
-        with open(p, encoding="utf-8") as f:
+        with open(find_header(incdirs, h), encoding="utf-8") as f:
             head.append(banner(h))
-            head.append(strip_header(f.read(), incdir))
+            head.append(strip_header(f.read(), incdirs))
     head.append("\n#endif /* CONFIGFORGE_AMALGAMATED_H */\n")
 
     body = [
@@ -263,7 +287,7 @@ def main():
         " * Compile this one file and include <configforge/configforge.h>.\n" " * No build\n"
         " * system, no options, no dependencies beyond the C library.\n"
         " */\n\n"
-        # Before any header, where src/platform/posix/posix.c has it for
+        # Before any header, where lib/platform/src/posix/posix.c has it for
         # the library built file by file: here that file comes after
         # every header has been read, which is too late (D-83).
         "/* What glibc hides in strict C89 and the POSIX platform asks\n"
@@ -277,10 +301,10 @@ def main():
     ]
     seen = set()
     for s in SOURCES:
-        p = os.path.join(src, "src", s)
+        p = os.path.join(src, "lib", s)
         with open(p, encoding="utf-8") as f:
             body.append(banner(s))
-            body.append(strip_source(f.read(), incdir, seen))
+            body.append(strip_source(f.read(), incdirs, seen))
 
     # Into a configforge/ subdirectory, so that <configforge/configforge.h>
     # is the only spelling anywhere: the same source compiles against the

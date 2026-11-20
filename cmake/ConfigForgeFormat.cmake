@@ -10,9 +10,10 @@ find_program(CMAKE_LINT_EXE NAMES cmake-lint)
 file(
   GLOB_RECURSE
   CF_C_SOURCES
-  "${CMAKE_SOURCE_DIR}/src/*.c"
-  "${CMAKE_SOURCE_DIR}/include/configforge/*.h"
-  "${CMAKE_SOURCE_DIR}/include/configforge/*.hpp"
+  "${CMAKE_SOURCE_DIR}/lib/*.c"
+  "${CMAKE_SOURCE_DIR}/lib/*.h"
+  "${CMAKE_SOURCE_DIR}/tools/doctor/include/configforge/*.h"
+  "${CMAKE_SOURCE_DIR}/lib/*.hpp"
   "${CMAKE_SOURCE_DIR}/tests/*.c"
   "${CMAKE_SOURCE_DIR}/tests/*.cpp"
   "${CMAKE_SOURCE_DIR}/tools/*.c"
@@ -29,8 +30,8 @@ file(
   "${CMAKE_SOURCE_DIR}/cmake/*.cmake"
   "${CMAKE_SOURCE_DIR}/cmake/gates/*.cmake"
   "${CMAKE_SOURCE_DIR}/scripts/*.cmake"
-  "${CMAKE_SOURCE_DIR}/src/CMakeLists.txt"
-  "${CMAKE_SOURCE_DIR}/src/*/CMakeLists.txt"
+  "${CMAKE_SOURCE_DIR}/lib/CMakeLists.txt"
+  "${CMAKE_SOURCE_DIR}/lib/*/CMakeLists.txt"
   "${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt"
   "${CMAKE_SOURCE_DIR}/tests/*/CMakeLists.txt"
   "${CMAKE_SOURCE_DIR}/tools/CMakeLists.txt"
@@ -141,7 +142,7 @@ endif()
 if(CODESPELL_EXE)
   add_test(
     NAME gate.codespell
-    COMMAND ${CODESPELL_EXE} docs src include tools README.md CHANGELOG.md
+    COMMAND ${CODESPELL_EXE} docs lib tools README.md CHANGELOG.md
             CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 else()

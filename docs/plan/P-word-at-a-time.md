@@ -5,7 +5,7 @@ now a library of its own, `lanes` (docs/plan/A-architecture.md, D-101),
 whose interface and scalar reference come in 1.8.0 (A-2). P-2 and P-3
 are rewritten on it before they open (2.4.0): P-2's primitives become
 the library's `swar32` and `swar64` backends rather than
-`src/serialize/swar.h`, and P-3's scans are the few functions of
+`lib/serialize/src/swar.h`, and P-3's scans are the few functions of
 `lib/text/` (D-102). P-1 and the rules below stand.
 
 The Roadmap's "Large files, and SIMD as an option" orders the work:
@@ -350,8 +350,7 @@ The rules every card here keeps:
     `INI_MAX_LINE 8192` (its default of 200 bytes would refuse the
     long-line documents), INI documents having no line over 4096 bytes.
     ConfigForge: `cf_codec_by_name(<format>)` and `cf_codec_decode`
-    (lib/serialize/include/configforge/cf_serialize.h, today
-    include/configforge/cf_serialize.h:233 and :245) into a
+    (lib/serialize/include/configforge/cf_serialize.h:233 and :245) into a
     `cf_doc_sink` whose callbacks touch the value and which supplies
     `reserve_text` (:146; without it the JSON and TOML readers refuse a
     string over 255 bytes) from one buffer kept between documents, and
@@ -823,8 +822,8 @@ The rules every card here keeps:
 * **needs**: P-1
 * **size**: medium
 * **decided**:
-  * `src/serialize/swar.h` (internal, not installed, inside
-    `CF_SERIALIZE_HEADERS`' rule since it is not under `include/`),
+  * `lib/serialize/src/swar.h` (internal, not installed, inside
+    `CF_SERIALIZE_HEADERS`' rule since it is not under an `include/`),
     with `static` functions so each user inlines them:
     * `cf_swar_find_any(p, n, a, b, c, d)`: the index of the first byte
       equal to one of up to four bytes, or `n` (whitespace, `"`, `\`,
@@ -847,7 +846,7 @@ The rules every card here keeps:
   * A CBMC proof of `cf_swar_find_any`'s bounds (no read past `n`),
     next to the existing proofs, if the proof harness takes it in under
     the time the others take.
-* **files**: `src/serialize/swar.h` (new), `include/configforge/cf_build_options.h`,
+* **files**: `lib/serialize/src/swar.h` (new), `lib/port/include/configforge/cf_build_options.h`,
   `cmake/templates/cf_build_options.h.in`, `cmake/ConfigForgeOptions.cmake`,
   `tests/unit/test_swar.c` (new), `tests/unit/CMakeLists.txt`,
   `tests/fuzz/swar.c` (new), `tests/fuzz/CMakeLists.txt`; last: `.github/workflows/ci.yml`
@@ -882,7 +881,7 @@ The rules every card here keeps:
 * **size**: medium
 * **decided**:
   * Candidates, to be confirmed by P-1's profile and nothing else:
-    `src/serialize/json.c` `js_string` (the run up to `"`, `\` or a
+    `lib/serialize/src/json.c` `js_string` (the run up to `"`, `\` or a
     control byte) and `js_utf8_at` (ASCII runs skipped whole), the
     whitespace skips of the JSON, YAML and TOML lexers, `ini.c` and
     `properties.c`'s blank skips (`while (... == ' ' || ... == '\t')`),
@@ -940,7 +939,7 @@ the order; none is a card until it says where the time goes.
   each accepts without `-m` flags), so a portable layer is chosen
   rather than written per compiler: SIMDe (C, MIT, header-only; needs
   C99, which D-72 allows for an opt-in layer) is the first candidate,
-  a small intrinsics layer in `src/platform/` of our own the second.
+  a small intrinsics layer in `lib/platform/src/` of our own the second.
   The instruction set is chosen at run time (CPUID on x86, the
   auxiliary vector on Arm), never assumed from the build machine.
   simdjson and Highway are C++ and not usable in the C core; the C++

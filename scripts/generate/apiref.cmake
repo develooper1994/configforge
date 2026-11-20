@@ -22,10 +22,14 @@ if(NOT DEFINED OUT)
 endif()
 
 # The facade first, as a reader meets it; the rest by name.
-file(
-  GLOB names
-  RELATIVE "${REPO}/include/configforge"
-  "${REPO}/include/configforge/*.h")
+file(GLOB paths "${REPO}/lib/*/include/configforge/*.h"
+     "${REPO}/tools/doctor/include/configforge/*.h")
+set(names "")
+foreach(p ${paths})
+  get_filename_component(n "${p}" NAME)
+  set(path_of_${n} "${p}")
+  list(APPEND names "${n}")
+endforeach()
 list(SORT names)
 list(REMOVE_ITEM names "configforge.h")
 set(names "configforge.h;${names}")
@@ -73,7 +77,7 @@ endfunction()
 file(
   GLOB_RECURSE implementations
   RELATIVE "${REPO}"
-  "${REPO}/src/*.c" "${REPO}/tools/doctor/*.c")
+  "${REPO}/lib/*.c" "${REPO}/tools/doctor/*.c")
 list(SORT implementations)
 set(definition_pattern "(^|\n)[A-Za-z_][A-Za-z0-9_ \t*]*[ \t*]")
 string(APPEND definition_pattern
@@ -191,7 +195,7 @@ string(
 
 # The error codes, from the one list every other place takes them from,
 # so the table cannot name a code the library does not have.
-file(STRINGS "${REPO}/include/configforge/cf_code.def" codes
+file(STRINGS "${REPO}/lib/base/include/configforge/cf_code.def" codes
      REGEX "^CF_CODE_(LAST_)?X\\(CF_")
 string(
   APPEND
@@ -215,7 +219,7 @@ set(total 0)
 string(CONCAT decl_re "^(CF_NODISCARD[ \t]+)?(CF_(DOCTOR_)?API[ \t]|"
               "CF_EXPERIMENTAL\\([0-9]+, *[0-9]+\\)[ \t])")
 foreach(h ${names})
-  file(READ "${REPO}/include/configforge/${h}" text)
+  file(READ "${path_of_${h}}" text)
   string(REPLACE ";" "<SEMI>" text "${text}")
   string(REPLACE "[" "<LB>" text "${text}")
   string(REPLACE "]" "<RB>" text "${text}")

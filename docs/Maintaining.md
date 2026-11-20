@@ -43,7 +43,7 @@ says, as `docs/Roadmap.md` is.
 ## Versions
 
 **How one is written.** `MAJOR.MINOR.PATCH`, semantic versioning. The
-number is written by hand in one place, `include/configforge/cf_version.h`
+number is written by hand in one place, `lib/config/include/configforge/cf_version.h`
 (`CF_VERSION_MAJOR`, `_MINOR`, `_PATCH`); CMake and the Conan recipe read
 it. `cmake -DTO=x.y.z -P scripts/release/version.cmake` rewrites it, and
 the copies that cannot read it: `packaging/vcpkg/configforge/vcpkg.json`,
@@ -187,7 +187,7 @@ The round of 2026-11-16 (H-5, the first card carried out from the plan):
 | ----- | --------- |
 | a card gave a helper a 1024-byte buffer, and the `minimal` preset's stack check (1024 bytes a frame) refused it an hour in, at the fourth preset of the full verify | a card that puts a buffer in a frame says the frame's size; a unit with a new local array runs `cmake --preset minimal` and its build before the full verify |
 | the single file put `posix.c`'s feature-test macro after every header, and only CI's newest gcc, where an implicit declaration is an error, said so | `amalgamate.py` writes the macro before the first header; a function a file calls is declared by a header that file includes, checked by reading where no local compiler refuses it |
-| the card named no answer for wasm32-wasi, which has no users and no `pwd.h` | a card that touches `src/platform/` says what each platform does: POSIX, Windows, none and WASI |
+| the card named no answer for wasm32-wasi, which has no users and no `pwd.h` | a card that touches `lib/platform/` says what each platform does: POSIX, Windows, none and WASI |
 | the CHANGELOG had no unreleased section and `gate.version` wanted one, so the card's commit had to open a version and change files the card did not list | a version is opened once a milestone ("Versions"); a card's "files" names the CHANGELOG section it writes under |
 | the card's first rule refused a Kubernetes secret mounted under a pod's `fsGroup`, found by reading the finished diff against the mounts the card named | a rule about files others own is checked, before it is built, against each real layout the card claims to read: its owner, group and mode written out |
 | two branches were worked at once in one checkout's copies, and the formatter's regenerated `docs/API.md` stayed behind in the copy | a second piece of work gets a worktree of its own (`git worktree add`); after the last verify the copy is compared with the checkout and what differs is brought back before the commit |

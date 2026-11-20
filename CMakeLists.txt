@@ -17,7 +17,7 @@ if(cf_src STREQUAL cf_bin)
                       "cmake -S . -B build (or cmake --preset default)")
 endif()
 
-# The version is written once, in include/configforge/cf_version.h.
+# The version is written once, in lib/config/include/configforge/cf_version.h.
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ConfigForgeVersion.cmake)
 configforge_read_version(CF_VERSION)
 
@@ -59,9 +59,7 @@ endif()
 add_library(configforge)
 add_library(ConfigForge::configforge ALIAS configforge)
 
-target_include_directories(
-  configforge PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-                     $<INSTALL_INTERFACE:include>)
+target_include_directories(configforge PUBLIC $<INSTALL_INTERFACE:include>)
 
 configforge_setup_cppcheck()
 configforge_apply_warnings(configforge)
@@ -80,10 +78,8 @@ configforge_build_id(configforge)
 include(ConfigForgeSerialize)
 add_library(configforge_serialize)
 add_library(ConfigForge::configforge_serialize ALIAS configforge_serialize)
-target_include_directories(
-  configforge_serialize
-  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-         $<INSTALL_INTERFACE:include>)
+target_include_directories(configforge_serialize
+                           PUBLIC $<INSTALL_INTERFACE:include>)
 configforge_apply_warnings(configforge_serialize)
 configforge_apply_hardening(configforge_serialize)
 configforge_generate_options(configforge_serialize)
@@ -96,7 +92,8 @@ target_compile_definitions(configforge_serialize PRIVATE CF_BUILDING_LIBRARY=1
 # until both are (Roadmap, "Critical-system standards").
 set_target_properties(configforge_serialize PROPERTIES C_CPPCHECK "")
 
-add_subdirectory(src)
+add_subdirectory(lib)
+include(ConfigForgeStaged)
 if(CF_WITH_YAML)
   target_link_libraries(configforge PRIVATE ${CF_YAML_LIBRARY})
   target_link_libraries(configforge_serialize PRIVATE ${CF_YAML_LIBRARY})
@@ -106,8 +103,9 @@ if(CF_WITH_YAML)
   # the library stays C89. libfyaml builds with neither MSVC nor a C89-only
   # compiler, and the libyaml backend is the one for those (D-62).
   if(_CF_YAML_LIBFYAML AND NOT MSVC)
-    set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/serialize/yaml.c
-                                PROPERTIES COMPILE_OPTIONS "-std=c11")
+    set_source_files_properties(
+      ${CMAKE_CURRENT_SOURCE_DIR}/lib/serialize/src/yaml.c
+      PROPERTIES COMPILE_OPTIONS "-std=c11")
   endif()
 endif()
 if(CF_WITH_XML)
@@ -124,7 +122,7 @@ endif()
 # links the framework too. Elsewhere nothing changes.
 if(CF_WITH_PREFERENCES AND APPLE)
   set_source_files_properties(
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/posix/posix.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/platform/src/posix/posix.c
     PROPERTIES COMPILE_OPTIONS "-std=c99")
   target_link_libraries(configforge PUBLIC "-framework CoreFoundation")
 endif()

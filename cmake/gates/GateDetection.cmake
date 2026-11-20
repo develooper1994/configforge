@@ -4,9 +4,9 @@
 file(
   GLOB_RECURSE
   files
-  "${SRC}/src/*.c"
-  "${SRC}/src/*.h"
-  "${SRC}/include/*.h")
+  "${SRC}/lib/*.c"
+  "${SRC}/lib/*.h"
+  "${SRC}/tools/doctor/include/*.h")
 set(bad 0)
 foreach(f ${files})
   get_filename_component(basename "${f}" NAME)
@@ -27,12 +27,12 @@ foreach(f ${files})
       set(bad 1)
     endif()
 
-    # Platform detection belongs to src/platform, where the build picks
+    # Platform detection belongs to lib/platform, where the build picks
     # the file and the call site never asks. A raw _WIN32 anywhere else
     # is how three layers ended up each knowing what an operating system
     # is. CF_ATOMIC_WIN32 and friends are derived names and are fine -
     # hence the boundary on the left of the match.
-    if(NOT f MATCHES "/src/platform/")
+    if(NOT f MATCHES "/lib/platform/")
       set(plat "_WIN32|_WIN64|__unix__|__unix|__linux__")
       set(plat "${plat}|__APPLE__|__FreeBSD__|__MINGW32__")
       set(edge "[^A-Za-z0-9_]")

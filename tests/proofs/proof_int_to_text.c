@@ -8,7 +8,7 @@
  * (the extremes and a sweep, test_numeric): asked here too, the round
  * trip made the formula too large to solve in hours.
  *
- * cbmc-sources: src/core/numeric.c
+ * cbmc-sources: lib/port/src/port.c
  */
 
 #include <configforge/cf_numeric.h>

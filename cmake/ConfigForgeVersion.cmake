@@ -9,9 +9,10 @@
 # Taken now: inside a function CMAKE_CURRENT_LIST_DIR is the caller's.
 set(CF_VERSION_MODULE_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
-# The X.Y.Z in include/configforge/cf_version.h, into `out`.
+# The X.Y.Z in lib/config/include/configforge/cf_version.h, into `out`.
 function(configforge_read_version out)
-  set(header "${CF_VERSION_MODULE_DIR}/../include/configforge/cf_version.h")
+  set(header
+      "${CF_VERSION_MODULE_DIR}/../lib/config/include/configforge/cf_version.h")
   file(STRINGS "${header}" lines
        REGEX "^#define CF_VERSION_(MAJOR|MINOR|PATCH)[ \t]")
   foreach(part MAJOR MINOR PATCH)

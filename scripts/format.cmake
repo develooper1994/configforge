@@ -40,9 +40,10 @@ if(ALL)
   file(
     GLOB_RECURSE files
     RELATIVE "${REPO}"
-    "${REPO}/src/*.c"
-    "${REPO}/include/configforge/*.h"
-    "${REPO}/include/configforge/*.hpp"
+    "${REPO}/lib/*.c"
+    "${REPO}/lib/*.h"
+    "${REPO}/tools/doctor/include/configforge/*.h"
+    "${REPO}/lib/*.hpp"
     "${REPO}/tests/*.c"
     "${REPO}/tests/*.cpp"
     "${REPO}/tools/*.c"
@@ -52,7 +53,7 @@ if(ALL)
     "${REPO}/CMakeLists.txt"
     "${REPO}/cmake/*.cmake"
     "${REPO}/scripts/*.cmake"
-    "${REPO}/src/*CMakeLists.txt"
+    "${REPO}/lib/*CMakeLists.txt"
     "${REPO}/tests/*CMakeLists.txt"
     "${REPO}/tests/*.cmake"
     "${REPO}/tools/*CMakeLists.txt"
@@ -79,8 +80,8 @@ foreach(f ${files})
   if(NOT EXISTS "${REPO}/${f}" OR f MATCHES "^build")
     continue()
   endif()
-  if(f MATCHES "^(src|tests|tools|examples|bench)/.*\\.(c|cpp)$"
-     OR f MATCHES "^include/configforge/.*\\.(h|hpp)$")
+  if(f MATCHES "^(lib|tests|tools|examples|bench)/.*\\.(c|cpp)$"
+     OR f MATCHES "^(lib/|tools/doctor/include/configforge/).*\\.(h|hpp)$")
     list(APPEND c_files "${f}")
   elseif(f MATCHES "(^|/)CMakeLists\\.txt$" OR f MATCHES "\\.cmake$")
     list(APPEND cmake_files "${f}")

@@ -5,7 +5,7 @@
 //! Every source file guards itself - a reader by its CF_WITH_* option, a
 //! platform by the platform - so all of them are compiled, as the
 //! amalgamation compiles them in one unit, and the defaults are
-//! include/configforge/cf_build_options.h's.
+//! lib/port/include/configforge/cf_build_options.h's.
 
 use std::env;
 use std::fs;
@@ -32,23 +32,43 @@ fn main() {
     // A packaged crate carries the sources in native/; a checkout has them
     // two directories up.
     let native = manifest.join("native");
-    let root = if native.join("src").is_dir() {
+    let root = if native.join("lib").is_dir() {
         native
     } else {
         manifest.join("..").join("..")
     };
-    let include = root.join("include");
-    let src = root.join("src");
+    let lib = root.join("lib");
     assert!(
-        include.join("configforge").join("configforge.h").is_file() && src.is_dir(),
+        lib.join("config")
+            .join("include")
+            .join("configforge")
+            .join("configforge.h")
+            .is_file(),
         "the C sources are missing; stage the crate with scripts/release/package_rust.cmake"
     );
 
+    // One directory per component (D-100): its headers in include/, its
+    // sources in src/.
+    let mut components: Vec<PathBuf> = fs::read_dir(&lib)
+        .unwrap_or_else(|e| panic!("cannot read {}: {}", lib.display(), e))
+        .map(|e| e.expect("a directory entry").path())
+        .filter(|p| p.is_dir())
+        .collect();
+    components.sort();
+
     let mut files = Vec::new();
-    sources(&src, &mut files);
     let mut build = cc::Build::new();
+    for component in &components {
+        let include = component.join("include");
+        if include.is_dir() {
+            build.include(&include);
+        }
+        let src = component.join("src");
+        if src.is_dir() {
+            sources(&src, &mut files);
+        }
+    }
     build
-        .include(&include)
         .define("CF_INTERNAL_API", Some("1"))
         .files(&files)
         // The library's own warnings are its build's business; this one
@@ -64,6 +84,5 @@ fn main() {
         println!("cargo:rustc-link-lib=advapi32");
         println!("cargo:rustc-link-lib=shell32");
     }
-    println!("cargo:rerun-if-changed={}", src.display());
-    println!("cargo:rerun-if-changed={}", include.display());
+    println!("cargo:rerun-if-changed={}", lib.display());
 }

@@ -1,14 +1,14 @@
 # The serialization library: what it is made of and what it may
 # include. One list, read by gate.layering and by the build.
 set(CF_SERIALIZE_LEAVES
-    core/alloc.c
-    core/port.c
-    core/error.c
-    core/numeric.c
-    core/value.c
-    platform/posix/file.c
-    platform/win32/file.c
-    platform/none/file.c)
+    port/src/port.c
+    numeric/src/numeric.c
+    base/src/alloc.c
+    base/src/error.c
+    base/src/value.c
+    platform/src/posix/file.c
+    platform/src/win32/file.c
+    platform/src/none/file.c)
 set(CF_SERIALIZE_HEADERS
     cf_build_options.h
     cf_port.h

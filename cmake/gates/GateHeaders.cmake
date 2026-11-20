@@ -2,7 +2,8 @@
 # included before it. A header that only works because some other
 # header happened to come first is a header that breaks for the first
 # user who includes it alone.
-file(GLOB headers "${SRC}/include/configforge/*.h")
+file(GLOB headers "${SRC}/lib/*/include/configforge/*.h"
+     "${SRC}/tools/doctor/include/configforge/*.h")
 set(bad 0)
 
 # This build's cf_build_options.h ahead of the source tree's defaults, as
@@ -45,8 +46,8 @@ foreach(std ${c_stds})
       execute_process(
         COMMAND
           ${CC} -std=${std} -pedantic -Werror ${tier_flag} ${gen_inc}
-          -I${SRC}/include -c -o "${BIN}/probe_${std}${tier}_${basename}.o"
-          "${probe}"
+          -I${BIN}/staged/include -c -o
+          "${BIN}/probe_${std}${tier}_${basename}.o" "${probe}"
         RESULT_VARIABLE rc
         OUTPUT_VARIABLE out
         ERROR_VARIABLE out)
@@ -90,7 +91,7 @@ function(probe_cxx header std prereq)
     "int main(){return 0;}\n")
   execute_process(
     COMMAND ${CXX} -std=c++${std} -pedantic -Werror -Wall -Wextra ${gen_inc}
-            -I${SRC}/include -c -o "${base}.o" "${base}.cpp"
+            -I${BIN}/staged/include -c -o "${base}.o" "${base}.cpp"
     RESULT_VARIABLE rc
     OUTPUT_VARIABLE out
     ERROR_VARIABLE out)
@@ -103,7 +104,7 @@ function(probe_cxx header std prereq)
   endif()
 endfunction()
 
-if(CXX AND EXISTS "${SRC}/include/configforge/configforge.hpp")
+if(CXX AND EXISTS "${SRC}/lib/cxx/include/configforge/configforge.hpp")
   set(cxx_bad 0)
   foreach(
     std

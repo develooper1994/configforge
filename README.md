@@ -307,7 +307,7 @@ frame sizes; MSVC does not, and there the budget is not checked.
 
 ### Versions
 
-The version is written once, in `include/configforge/cf_version.h`;
+The version is written once, in `lib/config/include/configforge/cf_version.h`;
 everything else reads it, and `gate.version` fails if a copy disagrees.
 A release is that version dated in `CHANGELOG.md` and tagged:
 
@@ -387,7 +387,7 @@ a claim that decays.
 | ---- | ------ |
 | conformance | `-std=c89 -pedantic -Werror` |
 | portability | full suite under `CF_FORCE_PORTABLE`, output compared byte for byte |
-| layering | `src/core` includes nothing from `sources`, `platform` or `serialize` |
+| layering | `lib/config/src/core` includes nothing from `sources`, `platform` or `serialize`; no component includes one the table in `cmake/ConfigForgeLayers.cmake` does not allow it |
 | detection | only `cf_port.h` and `port.c` may test compiler macros |
 | symbols | no locale-sensitive libc function; every export prefixed `cf_` |
 | amalgamation | the single-file build compiles as C89 and runs |

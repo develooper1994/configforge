@@ -5,7 +5,7 @@
  * for every capacity, every string argument of up to N bytes, every
  * slice of one (%S), and every int64 (%I).
  *
- * cbmc-sources: src/core/port.c src/core/numeric.c
+ * cbmc-sources: lib/port/src/port.c lib/numeric/src/numeric.c
  */
 
 #include <configforge/cf_port.h>

@@ -6,7 +6,7 @@
  * Not a test: a proof, over all inputs at once, by bounded model
  * checking. Run by verify -DEXTRA=proofs.
  *
- * cbmc-sources: src/core/numeric.c
+ * cbmc-sources: lib/numeric/src/numeric.c lib/port/src/port.c
  */
 
 #include <configforge/cf_numeric.h>

@@ -1,16 +1,19 @@
-# Each layer owns its own list. The core knows nothing about formats;
-# the serialization layer knows nothing about configuration semantics.
+# One directory per component (D-100). Each adds its sources to
+# configforge, and the ones the serialization library is made of to
+# configforge_serialize too, as the order here says: a component uses
+# only the ones before it.
+add_subdirectory(port)
+add_subdirectory(numeric)
+add_subdirectory(base)
 add_subdirectory(platform)
-add_subdirectory(core)
-add_subdirectory(sources)
-add_subdirectory(diag)
 add_subdirectory(serialize)
-add_subdirectory(bridge)
+add_subdirectory(config)
+add_subdirectory(cxx)
 
-# The serialization library's sources beyond src/serialize/: the leaves it
+# The serialization library's sources beyond lib/serialize/: the leaves it
 # uses (cmake/ConfigForgeSerialize.cmake), which configforge compiles in the
 # directories above. The three platform file.c are chosen as
-# platform/CMakeLists.txt chooses.
+# platform/src/CMakeLists.txt chooses.
 if(CF_PLATFORM STREQUAL "none")
   set(cf_serialize_platform none)
 elseif(WIN32)
@@ -19,8 +22,8 @@ else()
   set(cf_serialize_platform posix)
 endif()
 foreach(leaf ${CF_SERIALIZE_LEAVES})
-  if(NOT leaf MATCHES "^platform/"
-     OR leaf STREQUAL "platform/${cf_serialize_platform}/file.c")
+  if(NOT leaf MATCHES "^platform/src/"
+     OR leaf STREQUAL "platform/src/${cf_serialize_platform}/file.c")
     target_sources(configforge_serialize
                    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/${leaf})
   endif()

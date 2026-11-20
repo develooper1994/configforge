@@ -275,7 +275,7 @@ code. The order, and why each comes where it does:
 1. **Now: 1.7.0's cards**, as the index says. Two decisions are
    already in them: W5-G1 makes `gen`'s languages a table (its
    "decided"), and the codecs already are one (`cf_codecs[]` and
-   `cf_formats[]` in `src/serialize/codec.c`). After W5-V1: a test of
+   `cf_formats[]` in `lib/serialize/src/codec.c`). After W5-V1: a test of
    every ordered pair of formats (W5-V2, to write). After W5-G3:
    generators outside the tree (W5-G4, to write).
 2. **P-1, the measurement** (1.8.0). It changes only `bench/`. Its baseline,

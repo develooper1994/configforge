@@ -3,14 +3,18 @@
 # bounds, pointers, signed overflow, every loop unwound far enough that
 # no execution is left out (an assertion says so, or the proof fails).
 #
-#   cmake -DSRC=<repo> [-DUNWIND=48] -P scripts/check/proofs.cmake
+#   cmake -DSRC=<repo> -DSTAGED=<build>/staged/include [-DUNWIND=48]
+#         -P scripts/check/proofs.cmake
 #
 # Each harness says which library sources it proves, on a line
-#   cbmc-sources: src/core/numeric.c src/core/port.c
+#   cbmc-sources: lib/numeric/src/numeric.c lib/port/src/port.c
 cmake_minimum_required(VERSION 3.10)
 
-if(NOT DEFINED SRC OR NOT EXISTS "${SRC}/include/configforge/configforge.h")
-  message(FATAL_ERROR "proofs: SRC must name the repository")
+if(NOT DEFINED SRC
+   OR NOT DEFINED STAGED
+   OR NOT EXISTS "${STAGED}/configforge/configforge.h")
+  message(FATAL_ERROR "proofs: SRC must name the repository and STAGED the "
+                      "build's staged headers")
 endif()
 if(NOT DEFINED UNWIND)
   set(UNWIND 48)
@@ -34,7 +38,7 @@ foreach(h ${harnesses})
   endforeach()
   execute_process(
     COMMAND
-      ${CBMC_EXE} "${h}" ${sources} -I "${SRC}/include" -DCF_INTERNAL_API=1
+      ${CBMC_EXE} "${h}" ${sources} -I "${STAGED}" -DCF_INTERNAL_API=1
       --bounds-check --pointer-check --signed-overflow-check --div-by-zero-check
       --undefined-shift-check --unwind ${UNWIND} --unwinding-assertions
     RESULT_VARIABLE rc

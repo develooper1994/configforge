@@ -1,0 +1,7 @@
+# The formats, codecs and document events.
+foreach(t configforge configforge_serialize)
+  target_include_directories(
+    ${t} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+endforeach()
+
+add_subdirectory(src)

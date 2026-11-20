@@ -1,4 +1,4 @@
-//! The C interface, declared by hand from include/configforge - the part
+//! The C interface, declared by hand from lib/*/include/configforge - the part
 //! the safe API uses. Written out rather than generated: bindgen would
 //! need libclang wherever the crate is built, for a few dozen functions.
 //!

@@ -20,10 +20,8 @@ configforge_read_version(version)
 set(stage "${work}/package")
 set(native "${stage}/native")
 file(MAKE_DIRECTORY "${native}")
-# What build.rs compiles (D-70): the headers and the C sources.
-foreach(dir include src)
-  file(COPY "${root}/${dir}" DESTINATION "${native}")
-endforeach()
+# What build.rs compiles (D-70): the components, headers and C sources.
+file(COPY "${root}/lib" DESTINATION "${native}")
 foreach(name LICENSE README.md CHANGELOG.md)
   file(COPY "${root}/${name}" DESTINATION "${native}")
 endforeach()

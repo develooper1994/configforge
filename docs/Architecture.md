@@ -31,33 +31,44 @@ When a change would make `explain()` harder, the change is wrong.
                   core          value, key space, definitions, facade
                    / \
        portability     platform
-       cf_port.h       src/platform/<name>/
+       cf_port.h       lib/platform/src/<name>/
        which compiler  which operating system
 ```
 
 Two doors, not one. `cf_port.h` decides which *compiler* this is;
-`src/platform/` decides which *operating system*. They are separate
+`lib/platform/` decides which *operating system*. They are separate
 because they vary separately — MinGW is GCC on Windows, and clang-cl is
 the Microsoft platform with a Clang front end.
 
-| Layer | Owns | May use | May not use |
-| ----- | ---- | ------- | ----------- |
-| `src/platform` | the environment, UTF-8 arguments, directory listing, file stamps, the change handle | portability | anything above it |
-| `src/core` | value model, key space, definitions, validation, `cf_config` | portability, platform | anything above it |
-| `src/serialize` | readers, writers, codecs, document events | portability, `cf_value`, `cf_error`, `cf_alloc`, `cf_numeric`, the platform's file opener | the key space, definitions, sources |
-| `src/sources` | flat lexers, key mappings, the sources with no bytes to read | core | serialize, bridge |
-| `src/bridge` | flattener, file source, binary image | core **and** serialize | diag |
-| `src/diag` | `explain`, `inspect`, the report, replay | everything below | — |
+Each layer is a directory under `lib/` (D-100): its public headers in
+`include/configforge/`, its sources in `src/`, its build file beside them.
+The installed headers do not move, so `#include <configforge/cf_x.h>` is
+the same for a program.
+
+| Component | Owns | May use | May not use |
+| --------- | ---- | ------- | ----------- |
+| `lib/port` | the compiler's door: `cf_port.h`, the build options, the bounded formatter and the integer writers | nothing | anything |
+| `lib/numeric` | numbers read, floating point read and written | port | anything above it |
+| `lib/base` | what every component shares: allocation, errors, the value model | port, numeric | anything above it |
+| `lib/platform` | the environment, UTF-8 arguments, directory listing, file stamps, the change handle | port, numeric, base | anything above it |
+| `lib/serialize` | readers, writers, codecs, document events | port, numeric, base, the platform's file opener (`cf_platform_file.h`) | the key space, definitions, sources |
+| `lib/config/src/core` | key space, definitions, validation, `cf_config` | the components above | serialize's codecs, sources, bridge |
+| `lib/config/src/sources` | flat lexers, key mappings, the sources with no bytes to read | core | serialize, bridge |
+| `lib/config/src/bridge` | flattener, file source, binary image | core **and** serialize | diag |
+| `lib/config/src/diag` | `explain`, `inspect`, the report, replay | everything below | - |
+| `lib/cxx` | `configforge.hpp`, the C++ layer | config and what it uses | - |
 
 Three of those rules are checked by `gate.layering` rather than
 intended. The serialize boundary exists so that extracting that layer
 into its own library later stays a directory move and a build file
 (decision D-27); the bridge exists because some components are honestly
 both, and hiding them in one side or the other would have made the
-boundary a lie. `gate.layering` holds the serialization library to a list
-of what it may include (`cmake/ConfigForgeSerialize.cmake`).
+boundary a lie. `gate.layering` reads the table of what each component
+may include (`cmake/ConfigForgeLayers.cmake`) and holds the serialization
+library to a list of what it may include
+(`cmake/ConfigForgeSerialize.cmake`).
 
-`src/serialize` and the leaves it uses are also a library of their own,
+`lib/serialize` and the leaves it uses are also a library of their own,
 `configforge_serialize` (D-90); every function of it is in
 `libconfigforge` too.
 
@@ -124,11 +135,11 @@ implementation of `cf_entry_sink`; a test's implementation is an array.
 
 ### Adding a format
 
-1. Write a `cf_codec` in `src/serialize/`. It is an **event producer**,
+1. Write a `cf_codec` in `lib/serialize/src/`. It is an **event producer**,
    never a source: it emits `begin_table`, `begin_array`, `scalar`,
    `end` and knows nothing about keys. One shared flattener owns key
    construction, array counting and location formatting.
-2. Register it in `src/serialize/codec.c` behind its `CF_WITH_*` option,
+2. Register it in `lib/serialize/src/codec.c` behind its `CF_WITH_*` option,
    and add the format to `cf_formats[]` there **even if it is not
    compiled in**, so a file the build cannot read produces an error
    naming the option to turn on rather than "unknown format".
@@ -177,7 +188,7 @@ way, and the recipe held:
    `none` implementation is not a placeholder — it is the answer for a
    target with no operating system, and it must fail with a message
    naming the capability.
-3. Never name a platform macro outside `src/platform/`;
+3. Never name a platform macro outside `lib/platform/`;
    `gate.detection` fails the build if you do.
 
 Each implementation guards its whole body with its own `CF_PLATFORM_*`
@@ -214,7 +225,7 @@ Three rules the implementation encodes, each of which was a decision:
 
 ### Adding a flat source
 
-1. Write the lexer in `src/sources/entry.c`, taking
+1. Write the lexer in `lib/config/src/sources/entry.c`, taking
    `(input, cf_keymap, cf_entry_sink, cf_error)`. No arena, no key
    space.
 2. If the source spells keys its own way, add a `cf_keymap_kind` and
@@ -239,7 +250,7 @@ not.
 
 ### Adding an error code, a value type, or an outcome
 
-Add one line to `include/configforge/cf_*.def`. The enum, the names and
+Add one line to `lib/*/include/configforge/cf_*.def`. The enum, the names and
 the descriptions all come from that line, and `-Wswitch-enum` makes
 every switch over the enum exhaustive, so nothing can be added and
 silently forgotten. Put the last entry through `CF_*_LAST_X` so the enum
@@ -256,8 +267,10 @@ finding.
 ## Where things live
 
 ```text
-include/configforge/   the public interface, and the .def X-macro lists
-src/                   the library, one directory per layer
+lib/                   the library, one directory per component:
+                       include/configforge/ (its public headers, and the
+                       .def X-macro lists) and src/ (its sources)
+tools/doctor/include/  Doctor's public header, cf_doctor.h
 cmake/                 modules, included by CMakeLists
 cmake/gates/           gate scripts, run by ctest
 scripts/               developer scripts: verify, amalgamate
@@ -286,7 +299,7 @@ exists because something in the design is otherwise only a sentence.
 | ---- | -------- |
 | `gate.version` | `cf_version.h` and `CMakeLists.txt` agreeing |
 | `gate.layering` | the dependency rules above |
-| `gate.detection` | compiler detection only in `cf_port.h`, platform detection only in `cf_platform.h` and `src/platform/` |
+| `gate.detection` | compiler detection only in `cf_port.h`, platform detection only in `cf_platform.h` and `lib/platform/` |
 | `gate.headers` | every public header compiling standalone, C89 and C++98 |
 | `gate.amalgamation` | the no-build-system path compiling and running |
 | `gate.symbols` | no locale-sensitive libc function; every export prefixed; no mutable global data; only `alloc.c` calls the allocator |

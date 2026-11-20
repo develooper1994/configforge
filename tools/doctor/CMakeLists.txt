@@ -11,6 +11,9 @@ add_definitions(-DCF_INTERNAL_API=1)
 add_library(configforge_doctor STATIC engine.c gate.c)
 add_library(ConfigForge::configforge_doctor ALIAS configforge_doctor)
 target_link_libraries(configforge_doctor PUBLIC configforge)
+target_include_directories(
+  configforge_doctor
+  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 set_target_properties(
   configforge_doctor
   PROPERTIES C_STANDARD 90

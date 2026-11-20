@@ -18,7 +18,8 @@ if(DEFINED PROJECT_VER AND NOT PROJECT_VER STREQUAL from_header)
 endif()
 
 # The serialization library's copy of the numbers (D-90).
-file(READ "${SRC}/include/configforge/cf_serialize_version.h" serialize_header)
+file(READ "${SRC}/lib/serialize/include/configforge/cf_serialize_version.h"
+     serialize_header)
 set(serialize_version "")
 foreach(part MAJOR MINOR PATCH)
   if(serialize_header MATCHES
@@ -30,7 +31,7 @@ foreach(part MAJOR MINOR PATCH)
 endforeach()
 string(REPLACE ";" "." serialize_version "${serialize_version}")
 if(NOT serialize_version STREQUAL from_header)
-  list(APPEND bad "include/configforge/cf_serialize_version.h says \
+  list(APPEND bad "cf_serialize_version.h says \
 ${serialize_version}")
 endif()
 

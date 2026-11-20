@@ -401,6 +401,20 @@ CF_API int cf_cmp_ascii_ci(const char* a, size_t alen, const char* b, size_t ble
 #endif /* CF_INTERNAL_API */
 
 /* ------------------------------------------------------------------ *
+ * Integers
+ * ------------------------------------------------------------------ */
+
+/* Worst case including sign and terminator. */
+#define CF_I64_DIGITS 21
+
+/* Write the decimal form of v. Returns the length written, or 0 when
+   cap is too small. Always terminates when cap > 0. */
+#if CF_INTERNAL_API
+CF_API size_t cf_i64_to_text(cf_i64 v, char* buf, size_t cap);
+CF_API size_t cf_u64_to_text(cf_u64 v, char* buf, size_t cap);
+#endif /* CF_INTERNAL_API */
+
+/* ------------------------------------------------------------------ *
  * Bounded formatting
  *
  * snprintf is C99. The C89 fallback is not "use sprintf" - an unbounded

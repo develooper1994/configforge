@@ -239,7 +239,7 @@ if(LIB MATCHES "\\.(so|dylib)(\\.[0-9.]+)?$")
 endif()
 execute_process(
   COMMAND
-    ${CC} -std=c89 -I "${BIN}/generated" -I "${SRC}/include" -o
+    ${CC} -std=c89 -I "${BIN}/generated" -I "${BIN}/staged/include" -o
     "${BIN}/amalgamation/digest_lib" "${SRC}/tests/consumer/digest.c" "${LIB}"
     ${DEP_LIB} ${rpath} ${dep_rpath}
   RESULT_VARIABLE rc

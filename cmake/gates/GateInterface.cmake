@@ -12,7 +12,8 @@
 
 set(bad 0)
 
-file(GLOB headers "${SRC}/include/configforge/*.h")
+file(GLOB headers "${SRC}/lib/*/include/configforge/*.h"
+     "${SRC}/tools/doctor/include/configforge/*.h")
 foreach(h ${headers})
   file(READ "${h}" text)
   string(REGEX MATCHALL "#[ \t]*include[ \t]*<[^>]+>" incs "${text}")
@@ -36,7 +37,7 @@ endforeach()
 file(WRITE "${BIN}/iface.c"
      "#include <configforge/configforge.h>\nint main(void){return 0;}\n")
 execute_process(
-  COMMAND ${CC} -std=c89 -I "${SRC}/include" -E "${BIN}/iface.c"
+  COMMAND ${CC} -std=c89 -I "${BIN}/staged/include" -E "${BIN}/iface.c"
   OUTPUT_VARIABLE pp
   ERROR_QUIET
   RESULT_VARIABLE rc)
