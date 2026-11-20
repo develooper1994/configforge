@@ -162,6 +162,26 @@ on memory. A virtual machine gives perf no hardware counters unless the
 host lets it (VMware: "Virtualize CPU performance counters"); `cpu-clock`
 sampling works without them, cycles and cache events do not.
 
+On Windows, without administrator rights: Visual Studio's collector
+samples the program, and the Windows Performance Toolkit's `xperf` turns
+the trace into a table (MSVC RelWithDebInfo, `cf_bench docs json`):
+
+```bat
+VSDiagnostics.exe start 7 /launch:cf_bench.exe /launchArgs:"docs json" /loadConfig:"<Collector>\AgentConfigs\CpuUsageHigh.json"
+VSDiagnostics.exe stop 7 /output:json.diagsession
+rem a .diagsession is a zip; its sc.user_aux.etl is the trace
+set _NT_SYMBOL_PATH=<the directory of cf_bench.pdb>
+xperf -i sc.user_aux.etl -symbols -o json-prof.txt -a profile -detail
+```
+
+| Format | Top functions by time, MSVC | Share |
+| ------ | --------------------------- | ----: |
+| JSON | `js_string`, `js_put`, `memcpy` (vcruntime) | 52, 24, 10 % |
+
+MSVC keeps `js_put` - the append of each byte to the value - a call of
+its own, a quarter of the time, where GCC and Clang inline it into
+`js_string`: part of why MSVC reads JSON at 200 MiB/s and GCC at 290.
+
 What it answers for P-3: in JSON and TOML four fifths of the work is the
 string scan - the search for a quote, a backslash and a control byte -
 and in YAML the quoted scan and the key test are three fifths: those are

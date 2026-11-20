@@ -73,7 +73,9 @@ second opinion beside cppcheck's.
   by time (perf where the kernel has it, callgrind otherwise), the cache
   misses (cachegrind), the peak and the count of allocations (heaptrack,
   else massif) and the compilers' vectorization report for the functions
-  it names; `setup.sh` installs the tools; `docs/Performance.md` explains
+  it names - and on Windows the same table from Visual Studio's collector
+  and `xperf`, which need no administrator (`docs/Performance.md`);
+  `setup.sh` installs the tools; `docs/Performance.md` explains
   each table and is refreshed by the command.
 * **why**: P-1's profile was taken by hand, and `perf` is missing in WSL;
   the P cards and the SIMD backend (2.4.0) are to change only what a
