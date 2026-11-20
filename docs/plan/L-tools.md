@@ -26,6 +26,7 @@ or milestone names it), `new` (a card below).
 | 10. Interface | a release that breaks callers | abidiff (verify `EXTRA`) | include-what-you-use (L-4) |
 | 11. Supply chain and security | a leaked secret, a weak dependency, an untraceable build | Dependabot, an SBOM with the release, reproducible-build check (CI), REUSE (verify) | gitleaks, osv-scanner, OpenSSF Scorecard (L-2) |
 | 12. Documentation | a dead link, a misspelling | mkdocs build (CI `docs`); codespell (verify, CI `lint`; L-1) | lychee link check (L-4) |
+| 13. Profiling and measurement | where the time and the memory go, so that a speed-up starts from data | `cf_bench` (P-1, CI `bench` runs it), Valgrind callgrind (the profile in `docs/Performance.md`) | perf where the kernel has it, cachegrind and the compilers' vectorization reports beside each profile, heaptrack or massif for memory, hyperfine for whole-program timings, uftrace for call traces (L-5); Intel VTune and AMD uProf (free, vendor-bound) where the maintainer has them |
 
 Wished for, paid (open-source projects may get them free; to be asked for
 only by the maintainer): Coverity Scan, PVS-Studio, Polyspace, LDRA,
@@ -64,4 +65,22 @@ second opinion beside cppcheck's.
 * **needs**: L-1
 * **size**: small
 
-L-2 to L-4 are outlines; each is written out in full when L-1 is done.
+## L-5 - profilers, so that every speed-up starts from data
+
+* **id**: L-5
+* **goal**: one command, `scripts/work/profile.sh <format>...`, builds the
+  benchmark with symbols and writes, for each format, the top functions
+  by time (perf where the kernel has it, callgrind otherwise), the cache
+  misses (cachegrind), the peak and the count of allocations (heaptrack,
+  else massif) and the compilers' vectorization report for the functions
+  it names; `setup.sh` installs the tools; `docs/Performance.md` explains
+  each table and is refreshed by the command.
+* **why**: P-1's profile was taken by hand, and `perf` is missing in WSL;
+  the P cards and the SIMD backend (2.4.0) are to change only what a
+  profile names, and to show the gain under the same command.
+* **needs**: P-1 (done)
+* **size**: medium
+* **before**: P-2 - no word-at-a-time code is written without this
+  command's numbers before and after.
+
+L-2 to L-5 are outlines; each is written out in full when it opens.
