@@ -14,12 +14,17 @@ for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
   run=$(gh run list --branch "$br" --workflow ci --limit 1 --json databaseId,headSha --jq ".[]|select(.headSha==\"$sha\")|.databaseId")
   [ -n "$run" ] && break; sleep 10
 done
+# A job that hangs would hold the chain for GitHub's six hours: after
+# CF_CI_MINUTES (60) the run is cancelled, and a cancelled job fails below.
+( sleep $(( ${CF_CI_MINUTES:-60} * 60 )); gh run cancel "$run" >/dev/null 2>&1 ) &
+timer=$!
 gh run watch "$run" >/dev/null 2>&1
+kill "$timer" 2>/dev/null
 # Code first: a failed style step (clang-format, clang-tidy, format-patch)
 # does not fail a card; any other failed step does (docs/Plan.md).
 # shellcheck disable=SC2016 # ($j...) is jq, not the shell
-bad=$(gh run view "$run" --json jobs --jq '.jobs[] as $j | if $j.name=="format-patch" then empty else ($j.steps[]? | select(.conclusion=="failure") | select(.name!="clang-tidy" and .name!="clang-format" and (.name|test("format";"i")|not)) | "\($j.name): \(.name)") end')
-style=$(gh run view "$run" --json jobs --jq '[.jobs[]|select(.conclusion=="failure")|.name]|join(", ")')
+bad=$(gh run view "$run" --json jobs --jq '.jobs[] as $j | if $j.name=="format-patch" then empty else ($j.steps[]? | select(.conclusion=="failure" or .conclusion=="cancelled" or .conclusion=="timed_out") | select(.name!="clang-tidy" and .name!="clang-format" and (.name|test("format";"i")|not)) | "\($j.name): \(.name)") end')
+style=$(gh run view "$run" --json jobs --jq '[.jobs[]|select(.conclusion=="failure" or .conclusion=="cancelled" or .conclusion=="timed_out")|.name]|join(", ")')
 echo "$id CI run $run; failed jobs: ${style:-none}"
 [ -z "$bad" ] && { echo "code CI green"; exit 0; }
 echo "code failures:"; echo "$bad"; exit 1
