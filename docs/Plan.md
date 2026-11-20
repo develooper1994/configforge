@@ -214,8 +214,8 @@ waves ("After 1.7.0: the order of the waves", below).
 | 38d | L-4 include-what-you-use and a link check | small | L-1 | waits: L-1 (outline) |
 | 38e | L-3 Infer and semgrep; IKOS or Frama-C with 1.9.0 | large | L-2 | waits: L-2 (outline) |
 | 39 | P-1 The benchmark measures large documents, and says where time goes | medium | 1.7.0 released | done (90b6541) |
-| 40 | A-1 One directory per component: the files moved, nothing else changed | large | 1.7.0 released | open |
-| 41 | A-1b Each component a project: its declaration, its tests, its README, built alone | large | A-1 | waits: A-1 |
+| 40 | A-1 One directory per component: the files moved, nothing else changed | large | 1.7.0 released | done (824181f) |
+| 41 | A-1b Each component a project: its declaration, its tests, its README, built alone | large | A-1 | open |
 | 42 | A-2 The vector library, its interface and its scalar reference | medium | A-1b | waits: A-1b |
 | 43 | A-3 One UTF-8, one hex digit, one table hash | medium | A-2 | waits: A-2 |
 | 44 | A-4 Another encoding, read only by name | medium | A-3 | waits: A-3 |
