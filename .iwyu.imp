@@ -1,0 +1,9 @@
+# include-what-you-use's mapping for this tree (CI job `iwyu`, L-4).
+#
+# cf_build_options.h and cf_port.h are where the CF_ macros and the
+# fixed-width types (cf_u32, cf_bool, CF_TRUE, ...) are defined, and
+# include-what-you-use already names them as those symbols' providers, so
+# no entry is needed for them. An entry goes here when include-what-you-use
+# asks for a header that is not the one to include, with the reason.
+[
+]

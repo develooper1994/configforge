@@ -7,6 +7,9 @@
  */
 
 #include "configforge/cf_serialize.h"
+#include "configforge/cf_build_options.h"
+#include "configforge/cf_error.h"
+#include "configforge/cf_port.h"
 
 #include <stddef.h>
 #include <string.h>

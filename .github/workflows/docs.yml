@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  schedule:
+    # Mondays: the links to other sites, which no push can break.
+    - cron: '17 5 * * 1'
 
 permissions:
   contents: read
@@ -15,6 +18,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-26.04
     permissions:
       contents: read
@@ -37,7 +41,7 @@ jobs:
           path: build/docs-site
 
   deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && github.event_name != 'schedule'
     needs: build
     runs-on: ubuntu-26.04
     permissions:
@@ -49,3 +53,21 @@ jobs:
     steps:
       - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
         id: deployment
+
+  # Every link, those to other sites included, as the weekly check. It
+  # fails the job and not a push: a site that went away is not the
+  # commit's doing. The links inside the repository are gate.links.
+  links:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install lychee
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/lychee.tgz" https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2/lychee-x86_64-unknown-linux-musl.tar.gz
+          echo "73657a111819a30c47c08352896796f23d64e4eb2b3ed39b6d32149241566fc5  $RUNNER_TEMP/lychee.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/lychee.tgz" -C "$RUNNER_TEMP" --strip-components=1 lychee-x86_64-unknown-linux-musl/lychee
+      - name: Check every link
+        run: >-
+          "$RUNNER_TEMP/lychee" --no-progress --max-retries 3
+          docs README.md CONTRIBUTING.md CHANGELOG.md scripts/README.md

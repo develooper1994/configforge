@@ -12,6 +12,10 @@
  */
 
 #include "configforge/configforge.h"
+#include "configforge/cf_build_options.h"
+#include "configforge/cf_iterate.h"
+#include "configforge/cf_keyspace.h"
+#include "configforge/cf_port.h"
 
 #include <string.h>
 

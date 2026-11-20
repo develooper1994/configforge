@@ -27,7 +27,8 @@ $tools = @(
     @("shellcheck", "koalaman.shellcheck", "gate.shellcheck"),
     @("ruff", "astral-sh.ruff", "gate.ruff"),
     @("actionlint", "rhysd.actionlint", "gate.actionlint"),
-    @("codespell", "", "gate.codespell")
+    @("codespell", "", "gate.codespell"),
+    @("lychee", "lycheeverse.lychee", "gate.links")
 )
 $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
 

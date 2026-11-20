@@ -92,6 +92,8 @@ system, no generated header, no options.
 | ruff 0.17.6 | MIT | `gate.ruff`; pinned as above |
 | actionlint (`actionlint-py`, 1.7.12.25) | MIT | `gate.actionlint`; pinned as above |
 | codespell 2.4.3 | GPL-2.0-only | `gate.codespell`; pinned as above |
+| lychee 0.24.2 (the release binary, checked against its checksum by `setup.sh` and CI) | Apache-2.0 OR MIT | `gate.links`: the links and anchors inside the repository; the weekly `links` job checks those to other sites |
+| include-what-you-use (`iwyu`, Ubuntu's package) | NCSA | the CI job `iwyu`: the libraries' sources include what they use; no gate in verify, as its output differs by version |
 | Rust: `rustc`, `cargo`, `clippy`, `rustfmt` (`setup.sh` installs 1.99.1 with rustup, checked against its published checksum) | MIT OR Apache-2.0 | `bindings/rust`, and `CF_RUST`: the Rust examples and `cargo test`; clippy and rustfmt check the crate |
 | cc 1.11.1, with find-msvc-tools 0.1.15 and shlex 2.0.1 (crates.io, pinned with their checksums in `bindings/rust/Cargo.lock`) | MIT OR Apache-2.0 | the Rust crate's build only (D-70): `build.rs` compiles the C sources with it; cargo runs `--locked` |
 | GNU binutils: `nm`, `objdump` | GPL-3.0-or-later | `gate.symbols`, `gate.abi` |

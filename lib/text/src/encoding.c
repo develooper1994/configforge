@@ -10,6 +10,7 @@
  */
 
 #include "configforge/cf_encoding.h"
+#include "configforge/cf_port.h"
 #include "configforge/cf_text.h"
 
 #include <string.h>

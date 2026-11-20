@@ -37,6 +37,7 @@ shellcheck gate.shellcheck
 ruff gate.ruff
 actionlint gate.actionlint
 codespell gate.codespell
+lychee gate.links
 cppcheck the analyze preset
 python3 gates, amalgamation, Python binding
 git SOURCE=index, release
@@ -73,7 +74,7 @@ if [ -r /etc/os-release ] && command -v apt-get >/dev/null 2>&1; then
   as_root sh "$here/setup.sh"
 elif [ "$(uname -s)" = Darwin ] && command -v brew >/dev/null 2>&1; then
   brew install cmake ninja ccache llvm cppcheck python node rust cbmc gcovr \
-    libyaml expat sqlite shellcheck actionlint ruff codespell
+    libyaml expat sqlite shellcheck actionlint ruff codespell lychee
   python3 -m pip install --user cmakelang
 elif command -v podman >/dev/null 2>&1 || command -v docker >/dev/null 2>&1; then
   run=$(command -v podman || command -v docker)

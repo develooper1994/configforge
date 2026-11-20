@@ -11,6 +11,8 @@
  */
 
 #include "configforge/cf_numeric.h"
+#include "configforge/cf_build_options.h"
+#include "configforge/cf_port.h"
 
 #include <string.h>
 

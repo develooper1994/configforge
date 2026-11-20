@@ -105,6 +105,7 @@ find_program(SHELLCHECK_EXE NAMES shellcheck)
 find_program(RUFF_EXE NAMES ruff)
 find_program(ACTIONLINT_EXE NAMES actionlint)
 find_program(CODESPELL_EXE NAMES codespell)
+find_program(LYCHEE_EXE NAMES lychee)
 
 file(
   GLOB_RECURSE
@@ -148,4 +149,15 @@ if(CODESPELL_EXE)
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 else()
   message(STATUS "codespell not found: gate.codespell skipped")
+endif()
+if(LYCHEE_EXE)
+  # Offline: every link inside the repository and every anchor. The links
+  # to other sites are checked weekly by the docs workflow's job `links`.
+  add_test(
+    NAME gate.links
+    COMMAND ${LYCHEE_EXE} --offline --no-progress docs README.md CONTRIBUTING.md
+            CHANGELOG.md scripts/README.md
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+else()
+  message(STATUS "lychee not found: gate.links skipped")
 endif()

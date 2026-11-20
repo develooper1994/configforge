@@ -25,12 +25,21 @@
 #include "configforge/cf_alloc.h"
 #include "configforge/cf_keyspace.h"
 #include "configforge/cf_entry.h"
+/* The headers the core may not include by name (the layering gate) are
+   exported for include-what-you-use: a file that includes this one has
+   them. */
+/* IWYU pragma: begin_exports */
 #include "configforge/cf_source.h"
+/* IWYU pragma: end_exports */
 #include "configforge/cf_define.h"
+/* IWYU pragma: begin_exports */
 #include "configforge/cf_serialize.h"
 #include "configforge/cf_flatten.h"
+/* IWYU pragma: end_exports */
 #include "configforge/cf_emit.h"
+/* IWYU pragma: begin_exports */
 #include "configforge/cf_image.h"
+/* IWYU pragma: end_exports */
 #include "configforge/cf_explain.h"
 #include "configforge/cf_iterate.h"
 #include "configforge/cf_report.h"

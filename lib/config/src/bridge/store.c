@@ -25,9 +25,14 @@
  */
 
 #include "configforge/cf_keyspace.h"
-#include "configforge/cf_numeric.h"
-#include "configforge/cf_platform.h"
 #include "configforge/cf_source.h"
+#include "configforge/cf_build_options.h"
+#include "configforge/cf_error.h"
+/* cf_platform.h is used only with CF_WITH_SQLITE. */
+/* IWYU pragma: begin_keep */
+#include "configforge/cf_platform.h"
+/* IWYU pragma: end_keep */
+#include "configforge/cf_port.h"
 
 #include <string.h>
 

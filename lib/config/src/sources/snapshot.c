@@ -15,8 +15,9 @@
  * somebody asks.
  */
 
-#include "configforge/cf_explain.h"
 #include "configforge/cf_source.h"
+#include "configforge/cf_keyspace.h"
+#include "configforge/cf_port.h"
 
 #include <string.h>
 

@@ -12,6 +12,10 @@
 
 #include "configforge/cf_define.h"
 #include "configforge/cf_source.h"
+#include "configforge/cf_build_options.h"
+#include "configforge/cf_keyspace.h"
+#include "configforge/cf_port.h"
+#include "configforge/cf_value.h"
 
 #include <string.h>
 

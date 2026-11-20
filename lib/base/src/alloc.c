@@ -3,6 +3,8 @@
  */
 
 #include "configforge/cf_alloc.h"
+#include "configforge/cf_build_options.h"
+#include "configforge/cf_port.h"
 
 #include <string.h>
 

@@ -50,8 +50,14 @@
 
 /* Which parser: CF_YAML_LIBFYAML, CF_YAML_LIBYAML, or the built-in one. */
 #include "configforge/cf_yamlparse.h"
+#include "configforge/cf_build_options.h"
+#include "configforge/cf_error.h"
+#include "configforge/cf_numeric.h"
+#include "configforge/cf_port.h"
+#include "configforge/cf_value.h"
 
 #include <string.h>
+#include <stddef.h>
 
 #if CF_WITH_YAML
 

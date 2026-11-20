@@ -8,6 +8,9 @@
 #include "configforge/cf_text.h"
 
 #include "lanes/lanes.h"
+#include "configforge/cf_port.h"
+
+#include <stddef.h>
 
 size_t cf_text_utf8_decode(const char* p, const char* end, cf_u32* cp) {
     const unsigned char* u;
