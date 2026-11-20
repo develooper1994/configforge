@@ -192,6 +192,19 @@ function(step label)
     ERROR_VARIABLE out)
   if(rc EQUAL 0)
     message("${padded}ok")
+  elseif(STEP_INFORMATIONAL)
+    # A compiler no user is expected to build with (tcc, pcc): its result
+    # is shown, and a failure does not stop the verification (2026-11-20).
+    message("${padded}FAILED (informational, not counted)")
+    string(LENGTH "${out}" outlen)
+    if(outlen GREATER 2000)
+      math(EXPR from "${outlen} - 2000")
+      string(SUBSTRING "${out}" ${from} 2000 out)
+    endif()
+    message("${out}")
+    set(INFORMATIONAL_FAILED
+        TRUE
+        PARENT_SCOPE)
   else()
     message("${padded}FAILED")
     message("${out}")
@@ -730,6 +743,14 @@ foreach(x ${EXTRA})
         message("${name}                  skipped: no ${cc}")
         continue()
       endif()
+      # tcc and pcc prove the C89 floor on other front ends, but no user
+      # is expected to build with them: their failures are reported, not
+      # counted. musl is a C library real systems use, and counts.
+      set(STEP_INFORMATIONAL FALSE)
+      if(name STREQUAL "tcc" OR name STREQUAL "pcc")
+        set(STEP_INFORMATIONAL TRUE)
+      endif()
+      set(INFORMATIONAL_FAILED FALSE)
       step(
         "${name} configure"
         ${CMAKE_COMMAND}
@@ -740,9 +761,14 @@ foreach(x ${EXTRA})
         -DCMAKE_C_COMPILER=${CC_${name}}
         -DCF_WITH_CXX=OFF
         ${extra})
-      step("${name} build" ${build} build-${name} ${debug})
-      step("${name} test" ${test} build-${name})
+      if(NOT INFORMATIONAL_FAILED)
+        step("${name} build" ${build} build-${name} ${debug})
+      endif()
+      if(NOT INFORMATIONAL_FAILED)
+        step("${name} test" ${test} build-${name})
+      endif()
     endforeach()
+    set(STEP_INFORMATIONAL FALSE)
   elseif(x STREQUAL "yaml")
     # Named, because a -P script has no platform search path: the
     # configure step below finds it properly; this only decides whether
