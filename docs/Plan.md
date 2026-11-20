@@ -165,6 +165,15 @@ Things only the maintainer can do or decide. Each unblocks the cards named.
   publishing, `doctor graph`) moved to 1.10.0 (`docs/Maintaining.md`,
   "Versions"), so that 1.7.0 is released with the tools its cards built.
   Trusted publishing needs each registry set up once by the maintainer.
+* **Decided by the maintainer, 2026-11-20: the project serves real
+  users.** tcc and pcc stay in verify's `compilers` step and in CI, but
+  as information: their results are shown and a failure no longer stops
+  a card (`scripts/verify.cmake`, `STEP_INFORMATIONAL`). GCC, Clang, MSVC
+  and musl count. The compilers real users build with join as they are
+  set up: bare-metal Arm (1.9.0), CompCert, SDCC; the paid embedded
+  compilers (IAR, Keil, TI, Microchip) are wished for. W5-V2's tcc-only
+  failure stays to be understood: undefined behaviour the sanitizers
+  missed would be a real fault.
 * 1.4.1 holds a changed default (response files are opt-in, D-79): it
   is released as 1.5.0 or as 1.4.1 - not decided.
 
