@@ -319,6 +319,29 @@ static void test_codecs() {
     std::remove("cf_wrapper.kv");
 }
 
+/* A file in another encoding, named by its name (D-108). */
+static void test_encoding() {
+    /* ad=Sukru with its Turkish letters, in Windows-1254. */
+    check(spill("cf_wrapper_enc.ini", "ad=\xDE\xFC"
+                                      "kr\xFC\n"),
+          "a Windows-1254 file");
+    cf::Config c =
+        cf::Builder()
+            .file("file", CF_RANK_USER_FILE, "cf_wrapper_enc.ini", 0, 0, "windows-1254")
+            .define(cf::Key<std::string>("ad", ""))
+            .create();
+    check(c.valid() && c["ad"].as<std::string>() == "\xC5\x9E\xC3\xBC"
+                                                    "kr\xC3\xBC",
+          "file() reads it as UTF-8 when its encoding is named");
+    cf::Config bad =
+        cf::Builder()
+            .file("file", CF_RANK_USER_FILE, "cf_wrapper_enc.ini", 0, 0, "klingon")
+            .define(cf::Key<std::string>("ad", ""))
+            .create();
+    check(!bad.valid(), "and refuses a name it does not know");
+    std::remove("cf_wrapper_enc.ini");
+}
+
 #if CF_WITH_DIR
 /* NULL unsets it. Windows' _putenv_s removes a variable set to "". */
 static void creds_set(const char* value) {
@@ -398,6 +421,7 @@ int main() {
     test_edit();
     test_lists();
     test_codecs();
+    test_encoding();
     return cf_test_done();
 }
 

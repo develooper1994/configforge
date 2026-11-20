@@ -360,12 +360,19 @@ static cf_bool builder_codecs_copy(cf_builder* b, const char* what,
    source knows: a directory knows more than the others (D-83). */
 static cf_source* builder_slot_mask(cf_builder* b, const char* name, unsigned flags,
                                     unsigned allowed) {
-    if (b != NULL && !b->failed && (flags & ~allowed) != 0) {
+    /* A value above the last encoding lies inside the mask a file source
+       passes, and is as unknown as a bit outside it (D-108). */
+    unsigned unknown = flags & ~allowed;
+
+    if ((flags & CF_ENCODING_MASK) > (unsigned)CF_ENCODING_LAST) {
+        unknown |= flags & (unsigned)CF_ENCODING_MASK;
+    }
+    if (b != NULL && !b->failed && unknown != 0) {
         cf_error e = CF_ERROR_INIT;
         cf_error_set(&e, CF_E_POLICY, NULL, name,
                      "flags 0x%x are not source flags this library knows (CF_OPTIONAL "
                      "is); a definition flag such as CF_REQUIRED belongs on the key",
-                     flags & ~allowed);
+                     unknown);
         builder_fail(b, &e);
         return NULL;
     }
@@ -374,6 +381,13 @@ static cf_source* builder_slot_mask(cf_builder* b, const char* name, unsigned fl
 
 static cf_source* builder_slot_flags(cf_builder* b, const char* name, unsigned flags) {
     return builder_slot_mask(b, name, flags, (unsigned)CF_SOURCE_FLAGS);
+}
+
+/* The slot of a source that reads one file's bytes - a file, a document,
+   an environment document, a .env file -, which may name their encoding
+   (D-108). */
+static cf_source* builder_slot_file(cf_builder* b, const char* name, unsigned flags) {
+    return builder_slot_mask(b, name, flags, (unsigned)CF_FILE_SOURCE_FLAGS);
 }
 
 cf_bool cf_builder_memory(cf_builder* b, const char* name, int rank,
@@ -423,7 +437,7 @@ cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const char* p
     if (own != NULL) {
         return cf_builder_file_codec(b, name, rank, path, own, flags);
     }
-    s = builder_slot_flags(b, name, flags);
+    s = builder_slot_file(b, name, flags);
     if (s == NULL) {
         return CF_FALSE;
     }
@@ -457,7 +471,7 @@ cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const char* p
 static cf_bool builder_document(cf_builder* b, const char* name, int rank,
                                 const char* bytes, size_t n, const char* variable,
                                 const char* format, unsigned flags) {
-    cf_source*             s = builder_slot_flags(b, name, flags);
+    cf_source*             s = builder_slot_file(b, name, flags);
     void*                  st;
     char*                  copy;
     const cf_codec* const* list;
@@ -525,7 +539,7 @@ cf_bool cf_builder_env_document(cf_builder* b, const char* name, int rank,
 cf_bool cf_builder_file_codec(cf_builder* b, const char* name, int rank,
                               const char* path, const struct cf_codec* codec,
                               unsigned flags) {
-    cf_source* s = builder_slot_flags(b, name, flags);
+    cf_source* s = builder_slot_file(b, name, flags);
     void*      st;
 
     if (s == NULL) {
@@ -559,7 +573,7 @@ cf_bool cf_builder_file_codec(cf_builder* b, const char* name, int rank,
 
 cf_bool cf_builder_dotenv(cf_builder* b, const char* name, int rank, const char* path,
                           const char* prefix, unsigned flags) {
-    cf_source* s = builder_slot_flags(b, name, flags);
+    cf_source* s = builder_slot_file(b, name, flags);
     void*      st;
 
     if (s == NULL) {
@@ -707,7 +721,7 @@ cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank, const char* pa
     void*                  st;
     const cf_codec* const* own = NULL;
 
-    s = builder_slot_mask(b, name, flags, (unsigned)CF_DIR_SOURCE_FLAGS);
+    s = builder_slot_mask(b, name, flags, (unsigned)CF_DROPIN_SOURCE_FLAGS);
     if (s == NULL) {
         return CF_FALSE;
     }

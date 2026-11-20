@@ -642,5 +642,30 @@ class Schema(unittest.TestCase):
                 cf.Builder().schema_file("s.json")
 
 
+@unittest.skipUnless(native.HAVE_ENCODING, "library with another encoding by name")
+class Encoding(unittest.TestCase):
+    """A file in another encoding, named (Builder.file's encoding, D-108)."""
+
+    def setUp(self):
+        self.path = os.path.join(WORK, "py_encoding.ini")
+        with open(self.path, "wb") as f:
+            f.write(b"ad=\xde\xfckr\xfc\n")  # the Turkish letters, in Windows-1254
+
+    def test_a_file_is_recoded_to_utf8_when_its_encoding_is_named(self):
+        cfg = (cf.Builder().file("f", rank.USER_FILE, self.path, encoding="windows-1254")
+               .define_text("ad", "").create())
+        self.assertEqual(cfg["ad"], "Şükrü")
+
+    def test_an_unknown_name_is_a_value_error(self):
+        with self.assertRaisesRegex(ValueError, "klingon"):
+            cf.Builder().file("f", rank.USER_FILE, self.path, encoding="klingon")
+
+    def test_a_library_without_the_calls(self):
+        patched = mock.patch("configforge._native.HAVE_ENCODING", False)
+        raised = self.assertRaisesRegex(RuntimeError, "cf_encoding_by_name")
+        with patched, raised:
+            cf.Builder().file("f", rank.USER_FILE, self.path, encoding="windows-1254")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

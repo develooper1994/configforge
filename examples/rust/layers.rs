@@ -10,7 +10,7 @@ use configforge::{flag, rank, Builder, Unknown, OPTIONAL};
 
 fn main() {
     let cfg = Builder::new()
-        .file("app.toml", 35, "app.toml", 0)
+        .file("app.toml", 35, "app.toml", 0, None)
         .dir("conf.d", 30, "conf.d", OPTIONAL)
         .dotenv(".env", 15, ".env", "LAYERS_", OPTIONAL)
         .env(

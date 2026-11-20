@@ -597,8 +597,10 @@ static cf_bool xml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
         s.noindex = CF_FALSE;
     }
 
-    /* The first pass, whose parser also owns the record. */
-    first = XML_ParserCreate("UTF-8");
+    /* The first pass, whose parser also owns the record. No encoding is
+       given to expat: it reads by the document's own byte-order mark and
+       declaration, which is what CF_CODEC_SELF_ENCODED says (D-108). */
+    first = XML_ParserCreate(NULL);
     if (first == NULL) {
         return cf_error_set(err, CF_E_MEMORY, NULL, s.file,
                             "no room for an XML parser");
@@ -616,7 +618,7 @@ static cf_bool xml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
         ok = CF_FALSE;
     }
     if (ok) {
-        XML_Parser second = XML_ParserCreate("UTF-8");
+        XML_Parser second = XML_ParserCreate(NULL);
         if (second == NULL) {
             ok = cf_error_set(err, CF_E_MEMORY, NULL, s.file,
                               "no room for an XML parser");
@@ -645,7 +647,7 @@ static cf_bool xml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
 const cf_codec cf_codec_xml = {sizeof(cf_codec),
                                "xml",
                                ".xml",
-                               CF_CODEC_READ | CF_CODEC_ARRAYS,
+                               CF_CODEC_READ | CF_CODEC_ARRAYS | CF_CODEC_SELF_ENCODED,
                                xml_decode,
                                NULL,
                                0,

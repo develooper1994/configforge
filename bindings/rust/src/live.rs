@@ -6,7 +6,7 @@
 //!
 //! let mut live = Live::open(Mode::Auto, || {
 //!     Builder::new()
-//!         .file("gateway.ini", configforge::rank::USER_FILE, "gateway.ini", 0)
+//!         .file("gateway.ini", configforge::rank::USER_FILE, "gateway.ini", 0, None)
 //!         .define_int("server.port", 8080, 1, 65535, configforge::flag::RESTART)
 //! })
 //! .unwrap();

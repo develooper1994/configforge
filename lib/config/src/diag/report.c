@@ -181,6 +181,7 @@ static void report_format(cf_sink* out, const cf_source* s) {
     static const char* const how_names[] = {"none", "named", "extension", "content"};
     cf_detect_how            how         = CF_DETECT_NONE;
     const char*              format      = cf_source_file_format(s, &how);
+    const char*              encoding    = cf_source_file_encoding(s);
 
     if (format == NULL || (int)how < 1 || (int)how > 3) {
         return;
@@ -188,6 +189,12 @@ static void report_format(cf_sink* out, const cf_source* s) {
     cf_sink_puts(out, ", \"format\": ");
     report_quote_z(out, format);
     cf_sink_fmt(out, ", \"format_how\": \"%s\"", how_names[(int)how]);
+    /* Only when it is not UTF-8, so the report of a UTF-8 file is what it
+       was (D-108). */
+    if (encoding != NULL && strcmp(encoding, "utf-8") != 0) {
+        cf_sink_puts(out, ", \"encoding\": ");
+        report_quote_z(out, encoding);
+    }
 }
 
 static void report_candidate(cf_sink* out, const cf_candidate* c,

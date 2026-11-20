@@ -8,6 +8,7 @@ set(CF_SERIALIZE_HEADERS
     cf_error.h
     cf_numeric.h
     cf_text.h
+    cf_encoding.h
     cf_value.h
     cf_alloc.h
     cf_platform_file.h

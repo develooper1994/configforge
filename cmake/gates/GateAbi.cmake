@@ -321,8 +321,8 @@ endforeach()
 if(PART STREQUAL "serialize")
   set(library_internal ${declared_internal})
   foreach(d ${declared_experimental})
-    string(REGEX REPLACE "^([a-z_][a-z0-9_]*) [0-9]+\\.[0-9]+( real)?$"
-                         "\\1\\2" plain "${d}")
+    # No back-reference to the optional group: older CMake rejects it.
+    string(REGEX REPLACE " [0-9]+\\.[0-9]+" "" plain "${d}")
     list(APPEND listed_experimental_plain "${plain}")
   endforeach()
 else()

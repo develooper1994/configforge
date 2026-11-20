@@ -87,6 +87,7 @@ cf_source_by_content
 cf_source_read_blob
 cf_text_hash
 cf_text_hex_value
+cf_text_place
 cf_text_seed
 cf_text_to_f64 real
 cf_text_to_i64

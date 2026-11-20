@@ -193,6 +193,9 @@ struct Keep {
     /// byte offset): refused at create or derive, rather than silently
     /// changed. Only the offset is kept - the string may be a secret.
     nul: Option<usize>,
+    /// The first encoding name handed over that the library does not
+    /// know: refused at create or derive, with the name.
+    bad_encoding: Option<String>,
     /// The log this builder's configurations call, kept with each of
     /// them - and with every one derived - so it outlives the calls.
     logger: Option<log::SharedLogger>,
@@ -201,7 +204,35 @@ struct Keep {
 impl Keep {
     /// The error for a string with a NUL, if one was handed over.
     fn refusal(&self) -> Option<Error> {
+        if let Some(name) = &self.bad_encoding {
+            return Some(Error {
+                code: sys::CF_E_POLICY,
+                name: text_of(unsafe { sys::cf_code_name(sys::CF_E_POLICY) }),
+                key: String::new(),
+                source: String::new(),
+                message: format!(
+                    "'{name}' is not an encoding this library reads (utf-8, iso-8859-1, \
+                     windows-1252, windows-1254, iso-8859-9, utf-16le, utf-16be)"
+                ),
+            });
+        }
         self.nul.map(|at| nul_refusal("a string", at))
+    }
+
+    /// `flags` with the encoding of `name` in them (cf_encoding_by_name),
+    /// or as they were when there is none. A name the library does not
+    /// know is kept to be refused when the builder is made.
+    fn encoding(&mut self, flags: u32, name: Option<&str>) -> u32 {
+        let Some(name) = name else { return flags };
+        let p = self.s(name);
+        let mut found = 0u32;
+        if unsafe { sys::cf_encoding_by_name(p, &mut found) } != 0 {
+            return flags | found;
+        }
+        if self.bad_encoding.is_none() {
+            self.bad_encoding = Some(name.to_string());
+        }
+        flags
     }
 }
 
@@ -483,8 +514,20 @@ impl Builder {
         self.env(name, rank, prefix, &refs)
     }
 
-    /// A file, its format by extension unless given.
-    pub fn file(mut self, name: &str, rank: i32, path: &str, flags: u32) -> Builder {
+    /// A file, its format by extension. `encoding` names the encoding it
+    /// is written in when that is not UTF-8 ("windows-1254", "latin5",
+    /// "utf-16le"...; a UTF-16 file with its byte-order mark needs none);
+    /// a name the library does not know is the error `create` returns
+    /// (D-108).
+    pub fn file(
+        mut self,
+        name: &str,
+        rank: i32,
+        path: &str,
+        flags: u32,
+        encoding: Option<&str>,
+    ) -> Builder {
+        let flags = self.keep.encoding(flags, encoding);
         let (n, p) = (self.keep.s(name), self.keep.s(path));
         unsafe { sys::cf_builder_file(self.b, n, rank, p, ptr::null(), flags) };
         self
@@ -1290,5 +1333,36 @@ mod schema_tests {
             .schema_file("no-such-dir/no-such.schema.json")
             .create();
         assert!(refused.is_err());
+    }
+}
+
+#[cfg(test)]
+mod encoding_tests {
+    use super::{rank, Builder};
+
+    #[test]
+    fn a_file_in_another_encoding_is_read_by_its_name() {
+        let path =
+            std::env::temp_dir().join(format!("cf_rust_encoding_{}.ini", std::process::id()));
+        // ad=Sukru with its Turkish letters, written in Windows-1254.
+        std::fs::write(&path, b"ad=\xDE\xFCkr\xFC\n").unwrap();
+        let p = path.to_str().unwrap();
+
+        let cfg = Builder::new()
+            .file("f", rank::USER_FILE, p, 0, Some("windows-1254"))
+            .define_text("ad", Some(""), 0)
+            .create()
+            .unwrap();
+        assert_eq!(cfg.text("ad").as_deref(), Some("\u{15e}\u{fc}kr\u{fc}"));
+
+        let refused = Builder::new()
+            .file("f", rank::USER_FILE, p, 0, Some("klingon"))
+            .define_text("ad", Some(""), 0)
+            .create();
+        let _ = std::fs::remove_file(&path);
+        match refused {
+            Ok(_) => panic!("an encoding the library does not know was accepted"),
+            Err(err) => assert!(err.message.contains("klingon"), "{}", err.message),
+        }
     }
 }

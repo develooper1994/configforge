@@ -991,9 +991,21 @@ class Builder {
         return *this;
     }
 
+    /* `encoding` names the encoding the file is written in when that is not
+       UTF-8 ("windows-1254", "latin5", "utf-16le"...: cf_encoding_by_name;
+       a UTF-16 file with its byte-order mark needs none). A name the
+       library does not know is refused by create(), as a flag it does not
+       know is (D-108). */
     Builder& file(const char* name, int rank, const char* path, const char* format = 0,
-                  unsigned flags = 0) {
+                  unsigned flags = 0, const char* encoding = 0) {
         if (b_) {
+            if (encoding != 0) {
+                unsigned found = 0;
+                /* Bits no encoding has: the builder's own refusal. */
+                flags |= cf_encoding_by_name(encoding, &found)
+                             ? found
+                             : (unsigned)CF_ENCODING_MASK;
+            }
             cf_builder_file(b_, name, rank, path, format, flags);
         }
         return *this;

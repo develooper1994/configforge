@@ -20,7 +20,7 @@ fn main() {
     )
     .expect("write the file");
     let live = Builder::new()
-        .file("service.ini", rank::SYS_FILE, "service.ini", 0)
+        .file("service.ini", rank::SYS_FILE, "service.ini", 0, None)
         .define_text("log.level", Some("warn"), 0)
         .define_int("server.workers", 1, 1, 64, 0)
         .create()

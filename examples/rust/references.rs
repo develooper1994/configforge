@@ -11,7 +11,7 @@ const FILE: &str = "app.ini";
 
 fn load(args: &[&str]) -> Result<Config, Error> {
     Builder::new()
-        .file("app.ini", rank::USER_FILE, FILE, 0)
+        .file("app.ini", rank::USER_FILE, FILE, 0, None)
         .cli("cli", rank::CLI, args)
         .define_text("server.host", Some("localhost"), 0)
         .define_int("server.port", 8080, 1, 65535, 0)

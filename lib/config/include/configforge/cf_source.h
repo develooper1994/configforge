@@ -11,6 +11,7 @@
 #ifndef CONFIGFORGE_CF_SOURCE_H
 #define CONFIGFORGE_CF_SOURCE_H
 
+#include "configforge/cf_encoding.h"
 #include "configforge/cf_keyspace.h"
 #include "configforge/cf_serialize.h"
 
@@ -239,8 +240,44 @@ enum {
     CF_DIR_SOURCE_FLAGS = CF_OPTIONAL | CF_TRUSTED_DIR | CF_ANY_WRITER,
 
     /* Every flag a source that is not a directory knows. */
-    CF_SOURCE_FLAGS = CF_OPTIONAL
+    CF_SOURCE_FLAGS = CF_OPTIONAL,
+
+    /* A file, a document, an environment document or a .env file: those,
+       and the encoding of its bytes, one CF_ENCODING_* value (cf_encoding.h,
+       D-108). The other sources read no file of their own, and refuse an
+       encoding as they refuse any flag they do not know. */
+    CF_FILE_SOURCE_FLAGS = CF_OPTIONAL | CF_ENCODING_MASK,
+
+    /* A drop-in directory: its own flags, and the encoding of every file
+       in it that has one to name. A secrets or credentials directory
+       keeps CF_DIR_SOURCE_FLAGS: its bytes are opaque (D-108). */
+    CF_DROPIN_SOURCE_FLAGS =
+        CF_OPTIONAL | CF_TRUSTED_DIR | CF_ANY_WRITER | CF_ENCODING_MASK
 };
+
+/* Internal, as cfi_defset_nearest_secret is: the bytes of a file, a
+   document or a .env file as UTF-8 (D-108). `in` is what was read and
+   `out` what is to be parsed: `in` itself when nothing is recoded, else
+   a copy from `arena`, which the caller frees with the bytes. The rules,
+   in this order: a codec that declares its own encoding or has none
+   (CF_CODEC_SELF_ENCODED, CF_CODEC_BINARY) is left alone, and an encoding
+   in `flags` is then refused; an encoding in `flags` recodes; a UTF-32
+   byte-order mark is refused; a UTF-16 mark recodes, the mark dropped;
+   anything else is UTF-8 and left as it is. `*used` is the CF_ENCODING_*
+   value read: CF_ENCODING_UTF8 when nothing was recoded. False with `err`
+   set (CF_E_SOURCE, naming in->name) for a byte with no character. */
+cf_bool cfi_source_recode(unsigned flags, const cf_codec* codec, const cf_blob* in,
+                          cf_blob* out, unsigned* used, cf_arena* arena, cf_error* err);
+
+/* Internal: cfi_source_recode, then the format when `*codec` is NULL, the
+   content deciding (cf_source_by_content; `*by_content` says it did),
+   over the recoded bytes: XML, which declares its own encoding, is read
+   from `raw` as it is when a mark made `text` a recoding. What a file and
+   a directory's file both do between reading their bytes and parsing. */
+cf_bool cfi_source_text(unsigned flags, const cf_codec* const* own, size_t nown,
+                        const cf_codec** codec, const cf_blob* raw, cf_blob* text,
+                        unsigned* used, cf_bool* by_content, cf_arena* arena,
+                        cf_error* err);
 
 CF_API size_t cf_source_file_state_size(void);
 
@@ -301,6 +338,13 @@ CF_API cf_bool cf_source_env_document(cf_source* s, const char* name, int rank,
    neither, and when no format was chosen. A load that failed in the
    chosen format still names it. */
 CF_API const char* cf_source_file_format(const cf_source* s, cf_detect_how* how);
+
+/* The encoding the last load of a file, document or environment-document
+   source read, by its canonical name: "utf-8", "utf-16le" or "utf-16be"
+   (a byte-order mark said so), or the one named in the flags, such as
+   "windows-1254". NULL before a load and for any other kind of source.
+   (1.8, D-108) */
+CF_EXPERIMENTAL(1, 8) const char* cf_source_file_encoding(const cf_source* s);
 
 /* A .env file: the same key mapping as the environment, because a .env
    file is an environment written down. Unlike the environment it

@@ -117,6 +117,9 @@ static cf_bool dir_read(dir_state* st, const cf_source* s, cf_keyspace* ks,
     for (i = 0; i < n; ++i) {
         const cf_codec* codec;
         cf_blob         blob;
+        cf_blob         text;
+        unsigned        enc;
+        cf_bool         by_content;
 
         if (cf_fmt(full, sizeof full, "%s/%s", st->path, names[i]) >= sizeof full) {
             /* Named, not skipped, by the rule below: the file left out
@@ -164,12 +167,11 @@ static cf_bool dir_read(dir_state* st, const cf_source* s, cf_keyspace* ks,
            as for a file; it was an error before. Every file shares the source's rank,
            so the later one wins by the same rule that makes --port=2
            beat --port=1. */
-        if (codec == NULL) {
-            codec = cf_source_by_content(st->codecs, st->ncodecs, &blob, full, scratch,
-                                         &st->err);
-        }
-        if (codec == NULL ||
-            !cf_source_read_blob(s, ks, codec, &blob, full, &st->err)) {
+        /* The bytes as UTF-8 first (D-108), the encoding the source names
+           for every file that has one to name. */
+        if (!cfi_source_text(st->flags, st->codecs, st->ncodecs, &codec, &blob, &text,
+                             &enc, &by_content, scratch, &st->err) ||
+            !cf_source_read_blob(s, ks, codec, &text, full, &st->err)) {
             return CF_FALSE;
         }
     }
@@ -234,7 +236,8 @@ cf_bool cf_source_dir(cf_source* s, const char* name, int rank, const char* path
                       size_t state_size) {
     dir_state* st = (dir_state*)state;
 
-    if (s == NULL || path == NULL || st == NULL || state_size < sizeof(dir_state)) {
+    if (s == NULL || path == NULL || st == NULL || state_size < sizeof(dir_state) ||
+        (flags & CF_ENCODING_MASK) > (unsigned)CF_ENCODING_LAST) {
         return CF_FALSE;
     }
     memset(st, 0, sizeof *st);

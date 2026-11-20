@@ -593,6 +593,64 @@ itself at the line it was written (D-63); the core schema's tags -
 says. A tag of the writing application's, a second document and a key
 that is not a scalar are refused by name.
 
+### Files in another encoding
+
+Inside the library every text is UTF-8 (D-108). A file written in another
+encoding is read when the program names it: a `CF_ENCODING_*` value in the
+flags of the source, which recodes the bytes to UTF-8 as they are read and
+before anything else looks at them.
+
+```c
+/* app.ini was written in Windows-1254, one byte a letter: ad=Sukru, with its Turkish letters */
+cf_builder_file(b, "file", CF_RANK_USER_FILE, "app.ini", NULL, CF_ENCODING_WINDOWS_1254);
+```
+
+There are seven names, and `cf_encoding_by_name` knows each, and the
+aliases, in any case of ASCII letters (`cf_encoding_name` gives the
+canonical one back):
+
+| Flag | Name | Also |
+| ---- | ---- | ---- |
+| `CF_ENCODING_UTF8` | `utf-8` | the default; nothing is recoded |
+| `CF_ENCODING_ISO_8859_1` | `iso-8859-1` | `latin1` |
+| `CF_ENCODING_WINDOWS_1252` | `windows-1252` | `cp1252` |
+| `CF_ENCODING_WINDOWS_1254` | `windows-1254` | `cp1254` |
+| `CF_ENCODING_ISO_8859_9` | `iso-8859-9` | `latin5` |
+| `CF_ENCODING_UTF16LE` | `utf-16le` | |
+| `CF_ENCODING_UTF16BE` | `utf-16be` | |
+
+The flag goes to a file, a document the program holds
+(`cf_builder_document`), an environment variable that holds one
+(`cf_builder_env_document`), a `.env` file and a drop-in directory, where
+it is the encoding of every file in it. A secrets or credentials
+directory, the registry, a store, preferences and a replayed report take
+none: an encoding given to them is refused as any flag the library does
+not know is. In C++ it is the last argument of `Builder::file`
+(`.file("file", rank, "app.ini", 0, 0, "windows-1254")`), in Rust the last
+of `Builder::file` (`Some("windows-1254")`), in Python
+`Builder.file(..., encoding="windows-1254")`; a name the library does not
+know is the binding's usual error.
+
+A byte-order mark is a declaration, not a guess. UTF-8's is skipped, as
+before. UTF-16's, in either byte order, makes the file UTF-16 and it is
+recoded without being named. UTF-32's is refused by name, and the refusal
+says to convert the file. Nothing else is detected: a file is in the
+encoding the program names, and in UTF-8 when it names none.
+
+A byte that has no character in the encoding is refused where it stands,
+with its line and column counted in the file's own units (bytes, or
+two-byte code units for UTF-16): `app.ini:2:3: byte 0x81 has no character
+in windows-1252`, `an unpaired UTF-16 surrogate 0xD800`, `ends in half a
+UTF-16 code unit`. Nothing is replaced. XML, which declares its own
+encoding, and CBOR and TLV, which have none, are left alone, and an
+encoding named for a file read as one of them is refused.
+
+A source says what its last load read: `cf_source_file_encoding` (`"utf-8"`,
+`"windows-1254"`...), and the report writes it as `"encoding"` next to the
+source's format, only when it is not `"utf-8"`, so the report of a UTF-8
+file is what it was. A drop-in directory and a `.env` file say nothing
+yet.
+
 ## 9. Secrets
 
 Define a key `CF_SENSITIVE` and its value never appears in a diagnostic:

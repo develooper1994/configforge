@@ -180,7 +180,11 @@ enum {
        bytes do not say what they are (a TLV layout, D-93). A format that
        describes itself lacks it; one that is text lacks CF_CODEC_BINARY.
        (1.5) */
-    CF_CODEC_SCHEMA = 1u << 7
+    CF_CODEC_SCHEMA = 1u << 7,
+    /* Reads by an encoding the document itself declares, as XML does: a
+       source recodes nothing for it and looks at no byte-order mark, and
+       a program that names an encoding for it is refused. (1.8, D-108) */
+    CF_CODEC_SELF_ENCODED = 1u << 8
 };
 
 /* `size` is sizeof(cf_codec) where the codec was compiled (D-51). */

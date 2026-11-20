@@ -44,6 +44,14 @@ CF_API size_t cf_text_seed(const void* where);
    with its low 32 bits, so a bucket chosen by the low bits is the same. */
 CF_API size_t cf_text_hash(size_t seed, const char* s, size_t n);
 
+/* The line and column, both from 1, of the byte at offset `at` of p, in the
+   original's units (D-108): bytes for `unit` 1, two-byte code units for
+   CF_ENCODING_UTF16LE or CF_ENCODING_UTF16BE, a line ending at each LF
+   unit. For a refusal of bytes that are not UTF-8 (A-5) and of a byte with
+   no character in the encoding named (A-4). */
+CF_API void cf_text_place(const char* p, size_t at, unsigned unit, cf_u32* line,
+                          cf_u32* col);
+
 #endif /* CF_INTERNAL_API */
 
 #ifdef __cplusplus

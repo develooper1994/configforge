@@ -254,6 +254,11 @@ extern "C" {
         format: *const c_char,
         flags: u32,
     ) -> cf_bool;
+    /// 1.8: the flags' encoding for a name, and a name for the flags
+    /// (cf_encoding.h), and the encoding a file source read (D-108).
+    pub fn cf_encoding_by_name(name: *const c_char, flags: *mut u32) -> cf_bool;
+    pub fn cf_encoding_name(flags: u32) -> *const c_char;
+    pub fn cf_source_file_encoding(s: *const std::ffi::c_void) -> *const c_char;
     pub fn cf_builder_dir(
         b: *mut cf_builder,
         name: *const c_char,

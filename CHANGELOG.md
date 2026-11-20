@@ -26,6 +26,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - **`lanes`**, a vector library of its own: span operations with a scalar
   reference and the processor's detection; ConfigForge does not use it yet
   (D-101).
+- A file in another encoding is read when its source names it
+  (`CF_ENCODING_*`, or the name in the tools and bindings), and a UTF-16
+  file by its byte-order mark, recoded to UTF-8 as it is read (D-108).
 
 ### Changed
 

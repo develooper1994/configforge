@@ -7,3 +7,6 @@ AlignConsecutiveAssignments: Consecutive
 AlignConsecutiveDeclarations: Consecutive
 AllowShortFunctionsOnASingleLine: None
 SortIncludes: false
+# An attribute, not a statement: kept on the line of the declaration it
+# marks, which is where gate.abi reads it.
+AttributeMacros: [CF_EXPERIMENTAL]

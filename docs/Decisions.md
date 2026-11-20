@@ -4814,7 +4814,8 @@ behaviour longer, while the users who would be broken are still few.
 
 **Status.** Decided, 2026-11-19.
 
-Built: A-4 to A-6.
+Built: A-4 (the reading by name and by byte-order mark); A-5 and A-6
+follow.
 
 ---
 

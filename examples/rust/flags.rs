@@ -10,7 +10,7 @@ use configforge::{rank, Builder, Unknown, OPTIONAL};
 
 fn main() {
     let cfg = Builder::new()
-        .file("features.ini", rank::SYS_FILE, "features.ini", 0)
+        .file("features.ini", rank::SYS_FILE, "features.ini", 0, None)
         .dir("conf.d", rank::USER_FILE, "conf.d", OPTIONAL)
         .env(
             "env",

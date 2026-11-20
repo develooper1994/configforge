@@ -198,7 +198,18 @@ class Builder:
         return self
 
     def file(self, name: str, rank: int, path: str, format: str | None = None,
-             flags: int = 0) -> Builder:
+             flags: int = 0, encoding: str | None = None) -> Builder:
+        """A file. ``encoding`` names the encoding it is written in when that
+        is not UTF-8 (``"windows-1254"``, ``"latin5"``, ``"utf-16le"``...; a
+        UTF-16 file with its byte-order mark needs none), and it is recoded
+        to UTF-8 as it is read (D-108)."""
+        if encoding is not None:
+            if not n.HAVE_ENCODING:
+                raise RuntimeError("encoding needs libconfigforge 1.8 (cf_encoding_by_name)")
+            found = ctypes.c_uint()
+            if not n.lib.cf_encoding_by_name(encoding.encode(), ctypes.byref(found)):
+                raise ValueError(f"{encoding!r} is not an encoding this library reads")
+            flags |= found.value
         n.lib.cf_builder_file(self._live(), self._keep.s(name), rank, self._keep.s(path),
                               self._keep.s(format), flags)
         return self

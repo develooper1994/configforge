@@ -1367,7 +1367,46 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   encoding is read when its source names it (`CF_ENCODING_*`, or the
   name in the tools and bindings), and a UTF-16 file by its byte-order
   mark, recoded to UTF-8 as it is read (D-108)."
-* **notes**:
+* **notes**: 2026-11-20, built.
+  * **Which builder passes which mask** (`config.c`, every caller of
+    `builder_slot_mask` read first): `CF_FILE_SOURCE_FLAGS` by
+    `cf_builder_file`, `cf_builder_file_codec`, `builder_document` (so
+    `cf_builder_document` and `cf_builder_env_document`) and
+    `cf_builder_dotenv`, through the new `builder_slot_file`;
+    `CF_DROPIN_SOURCE_FLAGS` by `cf_builder_dir` alone; `CF_DIR_SOURCE_FLAGS`
+    still by `cf_builder_secrets` and `cf_builder_credentials`;
+    `CF_SOURCE_FLAGS` (through `builder_slot_flags`) by the registry,
+    preferences, store and replay builders. `builder_slot_mask` refuses a
+    value above `CF_ENCODING_LAST` itself, whatever mask it is given, with
+    the unknown-flag message. `cf_source_file`, `cf_source_dotenv` and
+    `cf_source_dir` return false for such a value; `cf_source_document` and
+    `cf_source_env_document` do through `cf_source_file`; the file-codec
+    source too.
+  * **One place for the hook**: `cfi_source_recode` (rules 1 to 5, in
+    `file.c`) and `cfi_source_text` (it, then the content's choice of
+    format, then XML's re-read of the original bytes), both declared in
+    `cf_source.h` as the repository's other `cfi_` functions are. `file.c`
+    and `dir.c` call `cfi_source_text`; `dotenv.c` calls `cfi_source_recode`
+    with no codec. A-5's check before detection goes into
+    `cfi_source_text`, once.
+  * **Two things the card did not name, done because the intent is
+    plain**: `CF_CODEC_SELF_ENCODED` (A-5 names it) is added now, in
+    `cf_serialize.h`, and given to XML, as rule 1 needs it; and the XML
+    reader's `XML_ParserCreate("UTF-8")`, which overrides the document's
+    own declaration and mark, is `XML_ParserCreate(NULL)`, so that expat
+    reads a UTF-16 document by its mark, as the card says it does. A-5 then
+    only has to add the check and `cfi_codec_decode_raw`; its test of XML in
+    ISO-8859-1 "still read" now has the behaviour it assumes.
+  * **An encoding named for a file whose format the content chose and found
+    to be self-encoded** is refused as rule 1 refuses it (the card says
+    nothing of this case).
+  * `cf_encoding_recode` with too little room returns `(size_t)-1` with
+    `*bad == n`, and with `from` UTF-8 or unknown the same; the card leaves
+    both open.
+  * `cf_fmt` has no width, so the byte and the code unit in the messages
+    are written as hexadecimal text and passed as `0x%s`.
+  * `tests/support/cf_fixture.h` gained `spill_n` (bytes with a length,
+    for UTF-16), and `spill` is written with it.
 
 ---
 

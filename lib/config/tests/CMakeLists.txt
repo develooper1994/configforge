@@ -74,7 +74,8 @@ set(CF_UNIT_TESTS
     test_credentials
     test_cbor
     test_tlv
-    test_kinds)
+    test_kinds
+    test_encoding)
 
 # The directories test_starve's every-source run reads. C89 has no mkdir.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_starve.d
@@ -83,6 +84,8 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_starve.d
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_codec.d)
 # And test_detect's, whose files have no extension.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_detect.d)
+# And test_encoding's, whose files are in another encoding.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_encoding.d)
 
 # WebAssembly (WASI preview 1) has no file notification, so nothing for
 # test_watch to watch with; and no shell, so test_file's drop-in

@@ -14,7 +14,7 @@ const FILE: &str = "mistakes.ini";
 fn attempt(title: &str, text: &str) {
     fs::write(FILE, text).expect("write the file");
     let cfg = Builder::new()
-        .file("file", rank::USER_FILE, FILE, 0)
+        .file("file", rank::USER_FILE, FILE, 0, None)
         .define_int("server.port", 8080, 1, 65535, 0)
         .define(
             Def::text("log.level")
@@ -40,7 +40,7 @@ fn attempt(title: &str, text: &str) {
 fn forgiving() {
     fs::write(FILE, "[cache]\nsize = lots\n").expect("write the file");
     let cfg = Builder::new()
-        .file("file", rank::USER_FILE, FILE, 0)
+        .file("file", rank::USER_FILE, FILE, 0, None)
         .define(Def::int("cache.size").default_int(64).fallback())
         .create();
     println!("6. a value the contract may forgive");

@@ -22,7 +22,7 @@ configforge::settings! {
 }
 
 fn build() -> Builder {
-    Gateway::define(Builder::new().file(FILE, rank::USER_FILE, FILE, 0))
+    Gateway::define(Builder::new().file(FILE, rank::USER_FILE, FILE, 0, None))
 }
 
 fn serve(live: &Live) {

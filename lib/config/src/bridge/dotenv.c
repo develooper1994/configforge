@@ -28,6 +28,8 @@ static cf_bool dotenv_read(dotenv_state* st, const cf_source* s, cf_keyspace* ks
     cf_listsink out;
     cf_keymap   map;
     cf_blob     blob;
+    cf_blob     text;
+    unsigned    enc;
 
     if (bytes == NULL) {
         st->failed = CF_TRUE;
@@ -45,6 +47,11 @@ static cf_bool dotenv_read(dotenv_state* st, const cf_source* s, cf_keyspace* ks
         st->failed = CF_TRUE;
         return CF_FALSE;
     }
+    /* UTF-8 for the lexer, whatever the file was written in (D-108). */
+    if (!cfi_source_recode(st->flags, NULL, &blob, &text, &enc, bytes, &st->err)) {
+        st->failed = CF_TRUE;
+        return CF_FALSE;
+    }
     if (!cf_listsink_init(&out, ks, s->rank, (const cf_defset*)s->ref, CF_FALSE)) {
         st->failed = CF_TRUE;
         return cf_error_set(&st->err, CF_E_MEMORY, NULL, st->path,
@@ -53,14 +60,14 @@ static cf_bool dotenv_read(dotenv_state* st, const cf_source* s, cf_keyspace* ks
     cf_keymap_init(&map, CF_KEYMAP_ENV, st->prefix);
     if (cf_defset_count((const cf_defset*)s->ref) != 0) {
         out.natural_pass = CF_TRUE;
-        if (!cf_lex_dotenv(blob.p, blob.n, st->path, &map, cf_listsink_of(&out),
+        if (!cf_lex_dotenv(text.p, text.n, st->path, &map, cf_listsink_of(&out),
                            &st->err)) {
             st->failed = CF_TRUE;
             return CF_FALSE;
         }
         out.natural_pass = CF_FALSE;
     }
-    if (!cf_lex_dotenv(blob.p, blob.n, st->path, &map, cf_listsink_of(&out),
+    if (!cf_lex_dotenv(text.p, text.n, st->path, &map, cf_listsink_of(&out),
                        &st->err)) {
         st->failed = CF_TRUE;
         return CF_FALSE;
@@ -124,7 +131,8 @@ cf_bool cf_source_dotenv(cf_source* s, const char* name, int rank, const char* p
                          size_t state_size) {
     dotenv_state* st = (dotenv_state*)state;
 
-    if (s == NULL || path == NULL || st == NULL || state_size < sizeof(dotenv_state)) {
+    if (s == NULL || path == NULL || st == NULL || state_size < sizeof(dotenv_state) ||
+        (flags & CF_ENCODING_MASK) > (unsigned)CF_ENCODING_LAST) {
         return CF_FALSE;
     }
     memset(st, 0, sizeof *st);
