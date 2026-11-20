@@ -1051,6 +1051,16 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     (written by `cf_write_layers` into `layers.cmake`). `lib/lanes/CMakeLists.txt`
     must read none of ConfigForge's variables and so cannot call
     `cf_component`; how `lanes` gets into that file is not stated here.
+  * Answered 2026-11-20 (the organiser): the recording part of
+    `cf_component` (`cmake/ConfigForgeComponent.cmake`, the three
+    `set_property(GLOBAL ...)` lines under "For the layering gate") becomes
+    a function of its own, `cf_component_record(<name> DEPENDS <dep>...
+    LEAVES <file>...)`, which `cf_component` calls unchanged in effect.
+    `lib/CMakeLists.txt`, right after `add_subdirectory(lanes)`, calls
+    `cf_component_record(lanes)` - no dependency, no leaves - so lanes is
+    in `layers.cmake` while `lib/lanes/CMakeLists.txt` reads nothing of
+    ConfigForge's. Seen to fail first: before that call, a component
+    whose DEPENDS names `lanes` makes `gate.layering` refuse it.
 
 ---
 
