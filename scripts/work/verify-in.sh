@@ -18,7 +18,16 @@ if [ "$STYLE" != 1 ]; then
     xargs -0 -r clang-format -i
   find . -name CMakeLists.txt -o -name '*.cmake' | grep -v '^./build' | xargs -r cmake-format -i 2>/dev/null
 fi
-git init -q && git add -A || exit 1
+git init -q || exit 1
+# The last release as the copy's first commit, tagged, so verify's abi
+# step finds it; the tree under test is then what is staged.
+if [ -n "$CF_BASE" ] && [ -f "${tar%.tar}-base.tar" ]; then
+  mkdir -p "$src.base" && tar -xf "${tar%.tar}-base.tar" -C "$src.base" &&
+    git --work-tree="$src.base" add -A &&
+    git -c user.name=verify -c user.email=verify@localhost commit -q -m "$CF_BASE" &&
+    git tag "$CF_BASE" && rm -rf "$src.base" || exit 1
+fi
+git add -A || exit 1
 (
   flock 9
   if [ "$STYLE" = 1 ]; then
