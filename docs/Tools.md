@@ -56,7 +56,7 @@ the program's exit code.
 | Program | What it does | Page |
 | --- | --- | --- |
 | `configforge-doctor` | Reads provenance reports: `explain`, `dump`, `lint`, `diff`, `history`, `blame`, `import-*`. | [Doctor](Doctor.md) |
-| `configforge-codec` | The serialization library's own program: `formats`, `detect`, `check`, `dump`, `convert` and `format`, on documents and never on a configuration. | [below](#configforge-codec) |
+| `configforge-codec` | The serialization library's own program: `formats`, `detect`, `check`, `dump`, `convert`, `format` and `recode`, on documents and never on a configuration. | [below](#configforge-codec) |
 | `configforge-gen` | The contract's own program: `configforge gen --schema` writes a JSON Schema contract as C, `configforge gen check` holds files to it, `configforge gen schema --from` drafts one from a sample file. | [below](#configforge-gen) |
 
 ## configforge codec
@@ -82,6 +82,10 @@ configforge codec convert <file> --to <format> [--as <format>] [--out <file>] [-
                                the document in another format, and what it cannot hold
 configforge codec format <file> [--as <format>] [--out <file>] [--strict]
                                the document rewritten in its own format
+configforge codec recode <file> --from <encoding> [--out <file>]
+                               the file's bytes in UTF-8, nothing else changed
+configforge codec recode <file> --check
+                               whether the file is UTF-8, and if not what it may be
 configforge codec --version
 ```
 
@@ -177,6 +181,23 @@ member: a table reopened is one table, and anything else is replaced by
 the later one. Comments are lost. Exit 0 converted; 1 `--strict` and a
 finding, or a format that cannot be told; 2 unusable input; 3 an encoder
 refused what the check let through (a bug).
+
+### Converting a file to UTF-8
+
+`configforge codec recode app.ini --from windows-1254 --out app.utf8.ini`
+writes the file's bytes recoded to UTF-8 and nothing else changed: line
+endings, comments and layout come out as they went in, and no UTF-8 mark is
+added, so a person reviews the result as a diff, after which no reader needs
+to be lenient (D-108). `--from` takes the names `cf_encoding_by_name` knows
+(`windows-1254`, `cp1254`, `latin5`...); without `--out` the result is
+standard output, binary on Windows too. A file that starts with a UTF-16
+byte-order mark needs no `--from`: the mark decides and is dropped. `--out`
+may not be the input, and a byte with no character in the encoding is
+refused with its line and column and nothing is written.
+`recode <file> --check` says `'<file>' is UTF-8` (exit 0), or exit 1 with the
+refusal a reader would give, hint included, or `is UTF-16LE (by its
+byte-order mark): recode it with --from utf-16le`; a UTF-32 file is refused
+by name.
 
 ## configforge gen
 

@@ -20,9 +20,9 @@ add_test(
     -DPAGE=${CMAKE_SOURCE_DIR}/docs/Formats.md -P
     ${CMAKE_CURRENT_SOURCE_DIR}/pairs_page.cmake)
 
-# `detect`, `check`, `dump` and `convert`; `convert` writes, so it needs
-# the encoders (CF_WITH_EMIT, off in the minimal preset).
-set(cf_codec_scripts detect check dump)
+# `detect`, `check`, `dump`, `recode` and `convert`; `convert` writes, so it
+# needs the encoders (CF_WITH_EMIT, off in the minimal preset).
+set(cf_codec_scripts detect check dump recode)
 if(CF_WITH_EMIT)
   list(APPEND cf_codec_scripts convert)
 endif()
@@ -32,7 +32,8 @@ foreach(script ${cf_codec_scripts})
     COMMAND
       ${CMAKE_COMMAND} -DCODEC=$<TARGET_FILE:configforge_codec>
       -DWORK=${CMAKE_CURRENT_BINARY_DIR}/${script} -DCBOR=${CF_WITH_CBOR}
-      -DYAML=${CF_WITH_YAML} -DKEY_MAX=${CF_KEY_MAX} -P
+      -DYAML=${CF_WITH_YAML} -DKEY_MAX=${CF_KEY_MAX}
+      -DDATA=${CMAKE_CURRENT_SOURCE_DIR}/data -P
       ${CMAKE_CURRENT_SOURCE_DIR}/${script}.cmake)
 endforeach()
 

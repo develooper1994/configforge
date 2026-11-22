@@ -8,6 +8,8 @@
  *     configforge codec dump <file> [--as <format>]
  *     configforge codec convert <file> --to <format> [--as F] [--out F] [--strict]
  *     configforge codec format <file> [--as <format>] [--out F] [--strict]
+ *     configforge codec recode <file> --from <encoding> [--out F]
+ *     configforge codec recode <file> --check
  *     configforge codec --version
  *
  * It reads documents, in every format the library reads, and never a
@@ -40,6 +42,12 @@ static int usage(void) {
         "                                 what it cannot hold\n",
         "  configforge codec format <file> [--as <format>] [--out <file>] [--strict]\n",
         "                                 the document rewritten in its own format\n",
+        "  configforge codec recode <file> --from <encoding> [--out <file>]\n",
+        "                                 the file's bytes in UTF-8, nothing else\n",
+        "                                 changed\n",
+        "  configforge codec recode <file> --check\n",
+        "                                 whether the file is UTF-8, and if not what\n",
+        "                                 it may be\n",
         "  configforge codec --version\n",
         "\n",
         "Exit codes: 0 done (check: every file is well formed), 1 a file is\n",
@@ -73,6 +81,9 @@ int main(int argc, char** argv) {
     }
     if (argc >= 2 && strcmp(argv[1], "format") == 0) {
         return codec_convert(argc - 2, argv + 2, CF_TRUE);
+    }
+    if (argc >= 2 && strcmp(argv[1], "recode") == 0) {
+        return codec_recode(argc - 2, argv + 2);
     }
     if (argc == 2 && strcmp(argv[1], "--version") == 0) {
         printf("ConfigForge codec %s\n", cf_serialize_version());

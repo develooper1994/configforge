@@ -24,6 +24,9 @@ int codec_check(int argc, char** argv);
 /* Every value and table of a file, with its place (dump.c). */
 int codec_dump(int argc, char** argv);
 
+/* A file recoded to UTF-8 once, or checked to be UTF-8 (recode.c, D-108). */
+int codec_recode(int argc, char** argv);
+
 /* A document written in another format (convert.c): `convert` with
    same_format false, `format` with it true, the target then being the
    document's own format. */

@@ -651,6 +651,13 @@ source's format, only when it is not `"utf-8"`, so the report of a UTF-8
 file is what it was. A drop-in directory and a `.env` file say nothing
 yet.
 
+Converting a file for good. Naming the encoding on every run keeps a
+legacy file legacy. `configforge codec recode app.ini --from windows-1254
+--out app.utf8.ini` writes the same file in UTF-8, its bytes recoded and
+nothing else changed, to be reviewed as a diff; `configforge codec recode
+app.ini --check` lists whether a file is UTF-8 and, when it is not, says
+what it may be. See "Converting a file to UTF-8" in `docs/Tools.md`.
+
 ### Bytes that are not UTF-8
 
 A file with no encoding named is UTF-8, and bytes that are not are

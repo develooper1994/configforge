@@ -11,7 +11,8 @@ file stops being the same file on every system: .gitattributes keeps
 them out, and this checks that it did.
 
 Binary files - images, the image format's fixtures - are told apart by
-extension and left alone.
+extension and left alone, and so are the fixtures of the encodings
+(tests/codec/data/), which are other encodings' bytes kept byte for byte.
 """
 
 import os
@@ -23,6 +24,9 @@ TEXT = (
     ".cmake", ".txt", ".md", ".json", ".ini", ".yml", ".yaml", ".sh",
     ".ps1", ".cfg", ".env", ".properties", ".xml", ".css",
 )
+
+
+BYTES = ("tests/codec/data/",)
 
 
 def tracked(root):
@@ -39,6 +43,8 @@ def main(root):
         return 0
     bad = 0
     for rel in files:
+        if rel.startswith(BYTES):
+            continue
         if not rel.endswith(TEXT) and os.path.basename(rel) not in ("CMakeLists.txt", "LICENSE"):
             continue
         path = os.path.join(root, rel)

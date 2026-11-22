@@ -12,7 +12,8 @@ add_executable(
   detect.c
   dump.c
   formats.c
-  pairs.c)
+  pairs.c
+  recode.c)
 target_link_libraries(configforge_codec PRIVATE configforge_serialize)
 set_target_properties(
   configforge_codec

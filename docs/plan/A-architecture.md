@@ -405,6 +405,8 @@ the refusal names the one setting that reads the file again, so a
 warning period would only keep an inconsistent and attackable
 behaviour longer, while the users who would be broken are still few.
 
+Built: A-6 (`configforge codec recode`, rule 6).
+
 ---
 
 ## The helpers today
@@ -1635,7 +1637,54 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   "`configforge codec recode`: a file converted to UTF-8 once, its
   bytes recoded and nothing else changed, and `--check` to find the
   files that are not UTF-8 (D-108)."
-* **notes**:
+* **notes**: 2026-11-22, built.
+  * **Organiser's answers** (2026-11-22, binding; they close gaps found
+    reading the card against the tree):
+    * `cf_text_place` is internal (`CF_INTERNAL_API`), so `recode.c` has
+      its own static `rc_place`: lines and columns from 1; bytes for the
+      single-byte encodings, 2-byte code units for UTF-16, a new line
+      after each LF unit. Public API only: `cf_encoding.h`.
+    * The mark is read as `file_mark` in `lib/config/src/bridge/file.c`
+      does (not included): UTF-32's marks first, refused for recode and
+      `--check` alike (`codec: '<file>' is UTF-32, which this library
+      does not read; convert it to UTF-8`, exit 1).
+    * A byte with no character: exit 1, nothing written (the result is
+      built in a buffer, `--out` opened only after it succeeded);
+      single-byte `codec: <file>:<line>:<col>: byte 0x<XX> has no
+      character in <name>`, UTF-16 `... an unpaired UTF-16 surrogate
+      0x<XXXX>`, and `codec: <file>: ends in half a UTF-16 code unit`:
+      `file_refuse_at`'s words with the `codec: ` prefix.
+    * A UTF-16 mark with `--from`: the mark decides; `--from` naming the
+      mark's own encoding is accepted, any other is `codec: '<file>'
+      starts with a UTF-16LE byte-order mark; leave out --from` (or BE),
+      exit 2. No mark and no `--from`: the usage, exit 2.
+    * `--check` writes to standard output on exit 0 and to standard error
+      on exit 1; `cf_encoding_check`'s message is `codec: <message>`, its
+      origin the path as given.
+    * The output buffer is `3 * n` bytes (n after the mark), plus 1 when n
+      is 0; n above `((size_t)-1 - 1) / 3` is `codec: '<file>' is too
+      large`, exit 2.
+    * Fixtures under `tests/codec/data/` (`w1254.ini` with a CRLF on its
+      first line, kept on purpose; `w1254.utf8.ini`; `bad1254.ini`;
+      `u16le.json`; `utf8.toml`), each with a `-text` line in
+      `.gitattributes`; the test copies them into its work directory so
+      the messages show bare file names.
+  * `tests/codec/usage.cmake` checks only that the usage is on stderr and
+    names `formats`; it needed no change. `recode.cmake` has no case for
+    UTF-32 or a half UTF-16 unit (cmake cannot write such bytes with
+    `file(WRITE)`); both are straight copies of `file.c`'s words.
+  * Two things the card did not say. `gate.text` refuses a NUL or a
+    carriage return in a tracked `.json` or `.ini`, so `scripts/check/
+    check_text.py` leaves `tests/codec/data/` alone (bytes kept as they
+    are). And the expected UTF-8 JSON is a fixture too
+    (`u16le.utf8.json`): cmake's `file(WRITE)` turns `\n` into CRLF on
+    Windows, so a file it wrote could not be compared byte for byte.
+  * Found, not mine: on MSVC `tests/codec/pairs.c:639` (W5-V2) is warning
+    C4702, unreachable code after `pr_die`, an error under `/WX`; `work.py
+    win` stops there, so ACCEPT-WINDOWS was run with `ninja -k 0` and
+    `ctest -R codec[.]`.
+  * The `-DDATA` argument joins the `codec.*` scripts' command in
+    `tests/codec/CMakeLists.txt` for every script, used by `recode` only.
 
 ---
 

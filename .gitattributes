@@ -5,3 +5,10 @@
 *.bin binary
 # git archive writes the commit into it: the build id of a source tarball.
 cmake/build-id.txt export-subst
+# A-6: recode's fixtures are bytes in other encodings, kept byte for byte.
+tests/codec/data/w1254.ini -text
+tests/codec/data/w1254.utf8.ini -text
+tests/codec/data/bad1254.ini -text
+tests/codec/data/u16le.json -text
+tests/codec/data/utf8.toml -text
+tests/codec/data/u16le.utf8.json -text

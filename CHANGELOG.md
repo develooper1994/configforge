@@ -7,6 +7,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **`configforge codec recode`**: a file converted to UTF-8 once, its bytes
+  recoded and nothing else changed, and `--check` to find the files that
+  are not UTF-8 (D-108).
 - **`configforge gen --lang <name>` runs `configforge-gen-<name>`**, found
   beside `configforge-gen` or on the PATH, with the contract as JSON on its
   standard input - a generator in any language, outside the project
