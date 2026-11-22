@@ -242,6 +242,11 @@ static const char* apply_candidate(const cf_def* d, cf_candidate* c,
     }
     if ((c->flags & CF_CAND_TEXTUAL) != 0) {
         cf_value converted;
+        /* The struct's padding is stack, and the whole struct is copied
+           into the candidate and from there into the arena: a program
+           that reads the arena (the secrets example does) would read
+           what the stack held. MemorySanitizer found it. */
+        memset(&converted, 0, sizeof converted);
         if (!cf_value_from_text(d->type, c->value.u.t.p, c->value.u.t.n, &converted)) {
             *kind = CF_REFUSAL_TYPE;
             if ((d->flags & CF_SENSITIVE) != 0) {

@@ -27,6 +27,44 @@
       }
     },
     {
+      "name": "msan",
+      "displayName": "Memory sanitizer, with no library that is not built with it: expat, sqlite and libstdc++ are off, YAML is the built-in parser (clang)",
+      "binaryDir": "${sourceDir}/build-msan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CF_SANITIZE_MEMORY": "ON",
+        "CF_WITH_XML": "OFF",
+        "CF_WITH_SQLITE": "OFF",
+        "CF_WITH_CXX": "OFF"
+      }
+    },
+    {
+      "name": "ubsan-strict",
+      "displayName": "Address and undefined behaviour sanitizers with clang's integer, implicit-conversion, nullability and local-bounds groups",
+      "binaryDir": "${sourceDir}/build-ubsan-strict",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CF_SANITIZE": "ON",
+        "CF_SANITIZE_STRICT": "ON"
+      }
+    },
+    {
+      "name": "afl",
+      "displayName": "The libFuzzer harnesses under AFL++'s driver (afl-clang-fast), run by scripts/check/afl.cmake",
+      "binaryDir": "${sourceDir}/build-afl",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_C_COMPILER": "afl-clang-fast",
+        "CMAKE_CXX_COMPILER": "afl-clang-fast++",
+        "CF_FUZZ": "ON",
+        "CF_WITH_CXX": "OFF"
+      }
+    },
+    {
       "name": "coverage",
       "displayName": "Line coverage of the library by the suite (gcov, gcovr)",
       "binaryDir": "${sourceDir}/build-coverage",
@@ -91,6 +129,9 @@
     { "name": "default",  "configurePreset": "default",  "configuration": "Debug" },
     { "name": "sanitize", "configurePreset": "sanitize", "configuration": "Debug" },
     { "name": "tsan",     "configurePreset": "tsan",     "configuration": "Debug" },
+    { "name": "msan",     "configurePreset": "msan",     "configuration": "Debug" },
+    { "name": "ubsan-strict", "configurePreset": "ubsan-strict", "configuration": "Debug" },
+    { "name": "afl",      "configurePreset": "afl",      "configuration": "RelWithDebInfo" },
     { "name": "coverage", "configurePreset": "coverage", "configuration": "Debug" },
     { "name": "fuzz",     "configurePreset": "fuzz",     "configuration": "RelWithDebInfo" },
     { "name": "analyze",  "configurePreset": "analyze",  "configuration": "Debug" },
@@ -99,7 +140,34 @@
   ],
   "testPresets": [
     { "name": "default",  "configurePreset": "default",  "configuration": "Debug", "output": { "outputOnFailure": true } },
-    { "name": "sanitize", "configurePreset": "sanitize", "configuration": "Debug", "output": { "outputOnFailure": true } },
+    {
+      "name": "sanitize",
+      "configurePreset": "sanitize",
+      "configuration": "Debug",
+      "output": { "outputOnFailure": true },
+      "environment": {
+        "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1",
+        "ASAN_OPTIONS": "detect_stack_use_after_return=1:strict_string_checks=1:detect_invalid_pointer_pairs=2:check_initialization_order=1"
+      }
+    },
+    {
+      "name": "ubsan-strict",
+      "configurePreset": "ubsan-strict",
+      "configuration": "Debug",
+      "output": { "outputOnFailure": true },
+      "environment": {
+        "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1",
+        "ASAN_OPTIONS": "detect_stack_use_after_return=1:strict_string_checks=1:detect_invalid_pointer_pairs=2:check_initialization_order=1"
+      }
+    },
+    {
+      "name": "msan",
+      "configurePreset": "msan",
+      "configuration": "Debug",
+      "output": { "outputOnFailure": true },
+      "filter": { "exclude": { "label": "no-msan" } },
+      "environment": { "MSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1" }
+    },
     { "name": "tsan",     "configurePreset": "tsan",     "configuration": "Debug", "output": { "outputOnFailure": true } },
     { "name": "coverage", "configurePreset": "coverage", "configuration": "Debug", "output": { "outputOnFailure": true } },
     { "name": "fuzz",     "configurePreset": "fuzz",     "configuration": "RelWithDebInfo", "output": { "outputOnFailure": true }, "filter": { "include": { "label": "fuzz" } } },

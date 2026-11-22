@@ -849,8 +849,9 @@ first user meets. In the order proposed:
   provenance saying "from timeout_s, converted". Done when
   `migration.c` shows a unit change and `explain()` names the old key.
 * ⬜ **Trust that can be checked from outside.** The OpenSSF Scorecard
-  workflow, the OpenSSF Best Practices badge, and a job that builds a
-  release twice and compares the bytes. Done when the badges are in the
+  workflow is done (L-2; its badge shows after its first run on `main`);
+  the OpenSSF Best Practices badge and a job that builds a release twice
+  and compares the bytes are not. Done when the badges are in the
   README and the comparison is a release step.
 
 ### Tools, distribution and digests, 2026-11-14

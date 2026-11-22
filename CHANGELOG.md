@@ -43,6 +43,24 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   Python, and `.shellcheckrc`, `.codespellrc`, `.github/actionlint.yaml`
   and `[tool.ruff]` in `pyproject.toml` record the few exceptions, each
   with its reason.
+- **Run-time checks, a second fuzzer and the supply chain in CI**: the jobs
+  `valgrind` (memcheck over every unit test), `msan`, `ubsan-strict`, `afl`
+  (AFL++ on the libFuzzer harnesses, a minute a target), `secrets` (gitleaks
+  over every commit) and `osv` (osv-scanner over the Rust binding's and
+  the documentation's lockfiles); each of the first four is also a step of
+  `verify` (`EXTRA=msan`, `ubsan-strict`, `afl`). The preset `msan` builds
+  with no optional library, since one not built with MemorySanitizer makes
+  every value it returns read as uninitialised; the preset `ubsan-strict`
+  adds clang's `integer`, `implicit-conversion`, `nullability` and
+  `local-bounds` groups, and `.ubsan-ignorelist.txt` lists, by function and
+  with its reason, each wrap and shift the code means (hashes, a reverse
+  loop, sign extension, the tests' generators). The test presets make a
+  sanitizer's finding fatal and ask AddressSanitizer for more (stack use
+  after return, strict string checks, pointer-pair checks, initialisation
+  order). `scorecard.yml` runs the OpenSSF Scorecard weekly; its badge in
+  the README shows after the first run on `main`. The first passes fixed
+  a struct's padding copied unwritten into the arena (MemorySanitizer) and
+  made the live-reload thread test take smaller counts under Valgrind.
 - **include-what-you-use and lychee**: CI's job `iwyu` builds the two
   libraries under include-what-you-use and fails on a finding, so each source
   under `lib/*/src` includes what it uses (`.iwyu.imp` holds the mapping);

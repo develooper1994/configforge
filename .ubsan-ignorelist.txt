@@ -1,0 +1,44 @@
+# What the ubsan-strict preset (CF_SANITIZE_STRICT, clang) does not report.
+#
+# The integer and implicit-conversion groups report every wrap and every
+# narrowing. Most are faults and are fixed in the code; the ones listed
+# here are what the code means (hashing and checksums wrap on purpose, a
+# byte is taken from an int on purpose). Format: clang's
+# -fsanitize-ignorelist, a section naming the check, then
+# fun:<function> or src:<one file>, narrowest that silences it, each
+# entry preceded by a # line with its reason. Never a bare src: for a
+# whole library.
+
+[unsigned-integer-overflow]
+# FNV-1a: multiplying by the prime wraps modulo 2^64 by definition.
+fun:index_hash
+fun:fp_mix
+fun:fnv1a
+# SipHash: additions modulo 2^64 by definition.
+fun:sip_round
+# A character below '0' wraps to a large digit that the next test refuses.
+fun:cf_defset_find
+# The reverse loop `while (i-- > 0)` ends by wrapping the index past zero.
+fun:cut_arrays
+# The table's hash: FNV-style multiplication modulo 2^32 (or the word size).
+fun:toml_hash
+fun:cf_text_seed
+fun:cf_text_hash
+# Two's complement magnitude: 0 - (unsigned)v, defined for the minimum.
+fun:gen_decimal
+# Tests' own generators: a xorshift multiply and an FNV fold, both modular.
+fun:next
+fun:fnv
+fun:fnv64
+
+[unsigned-shift-base]
+# A multi-limb shift: the bits shifted out of a limb go to the carry.
+fun:big_shl
+# A 0x literal accumulates in 64 bits; the bits lost are flagged (`over`).
+fun:js5_hex
+# Sign extension: all ones shifted left by the integer's width in bits.
+fun:tlv_integer
+# SipHash rotations are built from shifts of the whole word.
+fun:sip_round
+# The tests' xorshift generator.
+fun:next

@@ -168,6 +168,13 @@ static double time_define(size_t n) {
     return best;
 }
 
+/* Under Valgrind (the verify wrapper sets the variable) every run is
+   slowed by a factor that is not the same for each part of the code, so
+   a ratio of two times says nothing about the algorithm. */
+static int under_valgrind(void) {
+    return getenv("CF_UNDER_VALGRIND") != NULL;
+}
+
 static void test_defining_is_not_quadratic(void) {
     double small = time_define(SMALL);
     double large = time_define(LARGE);
@@ -178,7 +185,7 @@ static void test_defining_is_not_quadratic(void) {
     }
     printf("  %d keys defined as %d x %d: %.1f ms, as %d x %d: %.1f ms\n", WORK,
            WORK / SMALL, SMALL, small, WORK / LARGE, LARGE, large);
-    if (small < 2.0) {
+    if (small < 2.0 || under_valgrind()) {
         printf("  (too fast to compare; ratio not checked)\n");
         return;
     }
@@ -256,7 +263,7 @@ static void test_resolution_is_not_quadratic(void) {
            WORK, WORK / SMALL, SMALL, small, (unsigned)small_kib, WORK / LARGE, LARGE,
            large, (unsigned)large_kib);
 
-    if (small < 2.0) {
+    if (small < 2.0 || under_valgrind()) {
         /* Below a couple of milliseconds the ratio is measuring the
            clock, not the algorithm. Saying so beats asserting it. */
         printf("  (too fast to compare; ratio not checked)\n");
@@ -297,7 +304,7 @@ static void test_lookup_is_a_binary_search(void) {
     printf("  %d lookups over %d keys: %.1f ms, over %d keys: %.1f ms\n", LOOKUPS,
            SMALL, small, LARGE, large);
 
-    if (small < 2.0) {
+    if (small < 2.0 || under_valgrind()) {
         printf("  (too fast to compare; ratio not checked)\n");
         return;
     }

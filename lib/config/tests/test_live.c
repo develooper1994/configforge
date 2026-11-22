@@ -19,6 +19,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "cf_test.h"
@@ -352,11 +353,12 @@ static void test_nothing(void) {
    the test that no reader is handed a snapshot already freed. */
 static cf_live* g_shared;
 static int      g_bad_reads;
+static int      g_reads = 20000, g_swaps = 400;
 
 static void* reader(void* arg) {
     int i;
     (void)arg;
-    for (i = 0; i < 20000; ++i) {
+    for (i = 0; i < g_reads; ++i) {
         cf_config*  c = cf_live_get(g_shared);
         const char* v = cf_get_text(c, "log.level", "?");
         if (strcmp(v, "info") != 0 && strcmp(v, "debug") != 0) {
@@ -372,6 +374,14 @@ static void test_threads(void) {
     pthread_t t[4];
     int       i, started = 0;
 
+    /* Valgrind runs one thread at a time, and the lock is a spin: a
+       thread that is switched out holding it keeps the others spinning
+       for their whole slice. The counts come down there (the verify
+       wrapper sets the variable); what is tested is the same. */
+    if (getenv("CF_UNDER_VALGRIND") != NULL) {
+        g_reads = 200;
+        g_swaps = 20;
+    }
     g_pairs  = g_info;
     g_shared = cf_live_open(CF_LIVE_MANUAL, build, NULL, NULL, NULL, &err);
     check(g_shared != NULL, "threads: opens");
@@ -381,7 +391,7 @@ static void test_threads(void) {
     for (i = 0; i < 4; ++i) {
         started += pthread_create(&t[i], NULL, reader, NULL) == 0 ? 1 : 0;
     }
-    for (i = 0; i < 400; ++i) {
+    for (i = 0; i < g_swaps; ++i) {
         g_pairs = (i % 2 == 0) ? g_debug : g_info;
         (void)cf_live_reload(g_shared, &err);
     }
@@ -389,7 +399,8 @@ static void test_threads(void) {
         pthread_join(t[i], NULL);
     }
     check(started == 4 && g_bad_reads == 0, "every reader saw a whole snapshot");
-    check(cf_live_generation(g_shared) == 401, "and every swap counted");
+    check(cf_live_generation(g_shared) == (cf_u64)g_swaps + 1,
+          "and every swap counted");
     cf_live_close(g_shared);
 }
 #endif

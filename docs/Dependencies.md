@@ -62,7 +62,7 @@ system, no generated header, no options.
 | Tool | Licence | Needed for |
 | ---- | ------- | ---------- |
 | CMake (`find_package` of `PkgConfig`, `Threads`, `Python3`, and `ConfigForge` in the install gate) | BSD-3-Clause | the build, the gates, `scripts/verify.cmake` |
-| Valgrind (`valgrind`) | GPL-2.0-or-later | `verify -DEXTRA=valgrind` (tier 2): every unit test under memcheck; also CI's `bench-gate`, which counts the instructions of one read under callgrind (D-111); not linked |
+| Valgrind (`valgrind`) | GPL-2.0-or-later | `verify -DEXTRA=valgrind` (tier 2) and the CI job `valgrind`: every unit test under memcheck; also CI's `bench-gate`, which counts the instructions of one read under callgrind (D-111); not linked |
 | CBMC (`cbmc`) | BSD-4-Clause | the bounded proofs (`docs/Safety.md`); not linked |
 | libabigail (`abidiff`) | Apache-2.0 WITH LLVM-exception | `verify -DEXTRA=abi` (tier 2): the shared library against the last release's (D-56); not linked |
 | wasi-libc, lld (`wasm-ld`), Node.js (`node`) | Apache-2.0 WITH LLVM-exception, MIT | `verify -DEXTRA=wasm` (tier 2): the library and its unit tests for wasm32-wasi, run under Node's WASI (`scripts/check/wasi_run.js`); wasi-libc is linked into what is built for wasm32 |
@@ -82,6 +82,11 @@ system, no generated header, no options.
 | vcpkg | MIT | the overlay port in `packaging/vcpkg`, and its CI job |
 | pkg-config | GPL-2.0-or-later | finding libkqueue; the install gate's pkg-config consumer |
 | libFuzzer (part of LLVM) | Apache-2.0 WITH LLVM-exception | `CF_FUZZ`, `EXTRA=fuzz`: the coverage-guided harnesses in `tests/fuzz` |
+| MemorySanitizer and clang's extra UBSan groups (clang's compiler-rt, `libclang-rt-21-dev`) | Apache-2.0 WITH LLVM-exception | the `msan` and `ubsan-strict` presets, `EXTRA=msan`, `EXTRA=ubsan-strict` and the CI jobs of those names. MSan follows initialised memory in shadow memory and needs every library in the program built with it, so the `msan` preset builds with expat, sqlite and C++ off, and **MSan covers no build with expat, libyaml, libfyaml or sqlite**: those are read by the `yaml` job and `EXTRA=yaml` (the built-in YAML parser it does cover) |
+| AFL++ (`afl-fuzz`, `afl-clang-fast`; Ubuntu's `afl++` package, 4.33c on 26.04) | Apache-2.0 | `EXTRA=afl` and the CI job `afl`: the libFuzzer harnesses of `tests/fuzz` under a second fuzzer (`scripts/check/afl.cmake`); not linked |
+| gitleaks 8.30.1 (the release binary, checked against its checksum by `setup.sh` and CI) | MIT | the CI job `secrets`: every commit for a committed secret (`.gitleaks.toml`); by hand with `setup.sh`'s copy |
+| osv-scanner 2.7.0 (the release binary, checked as above) | Apache-2.0 | the CI job `osv`: the two lockfiles (`bindings/rust/Cargo.lock`, `scripts/docs/requirements.txt`) against OSV's database; by hand with `setup.sh`'s copy |
+| `ossf/scorecard-action` (a GitHub Action, pinned by commit) | Apache-2.0 | `.github/workflows/scorecard.yml`: the weekly OpenSSF Scorecard run and the badge in `README.md`; no code of it is in a build |
 | gcovr | BSD-3-Clause | `EXTRA=coverage`: line coverage from gcov's data |
 | setarch (util-linux) | GPL-2.0-or-later | `EXTRA=tsan`: running the thread-sanitised suite with address randomisation off |
 | clang-format 22 (`clang-format-22` or `clang-format`; one major version: `cmake/ConfigForgeClangFormat.cmake`; pinned from PyPI by `setup.sh` and CI, LLVM 22 on Windows) | Apache-2.0 WITH LLVM-exception | `gate.format.c`, the `format` target, `scripts/format.cmake` |

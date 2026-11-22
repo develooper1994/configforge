@@ -1,0 +1,23 @@
+# gitleaks (CI job `secrets`): every commit, for a secret that was ever
+# committed. The default rules; an allowlist entry only for what is no
+# secret (a test's fixed key, a digest in a document), each with its reason
+# and as narrow a path and regex as it can be. A finding that is a real
+# secret is revoked, never allowlisted.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Doctor's fixtures: key names that look like secrets (PIN, SEED) carrying a MARKER-<word>-<number> placeholder, to test that a value is never printed"
+condition = "AND"
+regexTarget = "line"
+targetRules = ["generic-api-key"]
+paths = ['''^tests/doctor/fixtures\.c$''']
+regexes = ['''MYAPP_API__(PIN|SEED)=MARKER-[A-Z]+-[0-9]+''']
+
+[[allowlists]]
+description = "test_report.c: a value under the key secret.untouched, a fixed test string that the report must leave alone"
+condition = "AND"
+regexTarget = "line"
+targetRules = ["generic-api-key"]
+paths = ['''^tests/unit/test_report\.c$''']
+regexes = ['''secret\.untouched''']

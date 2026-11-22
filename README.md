@@ -2,6 +2,8 @@
 
 Configuration resolution for C that answers **why** a value is what it is.
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/develooper1994/configforge/badge)](https://scorecard.dev/viewer/?uri=github.com/develooper1994/configforge)
+
 [Searchable documentation](https://develooper1994.github.io/configforge/) follows
 `main`, including unreleased work. See the
 [release follow-up](docs/Roadmap.md#release-follow-up) before using an existing

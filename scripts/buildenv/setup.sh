@@ -21,7 +21,7 @@ apt-get install -y --no-install-recommends \
   clang clang-format clang-tidy libclang-rt-21-dev llvm \
   binutils cppcheck gcovr cmake-format valgrind cbmc \
   lld wasi-libc libclang-rt-21-dev-wasm32 nodejs abigail-tools \
-  musl-tools tcc pcc \
+  musl-tools tcc pcc afl++ \
   libyaml-dev libfyaml-dev libexpat1-dev libsqlite3-dev \
   qemu-system-x86 qemu-utils openssh-client \
   podman uidmap fuse-overlayfs
@@ -106,6 +106,31 @@ if ! /opt/cf-tools/bin/lychee --version 2>/dev/null | grep -qF "lychee $LYCHEE_V
   rm -rf /tmp/lychee.tgz "/tmp/$lychee_dir"
 fi
 ln -sf /opt/cf-tools/bin/lychee /usr/local/bin/lychee
+
+# gitleaks (a secret anywhere in the history) and osv-scanner (a vulnerable
+# pinned dependency), as their pinned release binaries, for the maintainer
+# to run by hand: CI's jobs `secrets` and `osv` install the same two. Each
+# is checked against the SHA-256 its release publishes.
+GITLEAKS_VERSION=8.30.1
+GITLEAKS_SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+if ! /opt/cf-tools/bin/gitleaks version 2>/dev/null | grep -qF "$GITLEAKS_VERSION"; then
+  curl -fsSL -o /tmp/gitleaks.tgz "https://github.com/gitleaks/gitleaks/releases/download/v$GITLEAKS_VERSION/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+  echo "$GITLEAKS_SHA256  /tmp/gitleaks.tgz" | sha256sum -c -
+  tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
+  install -m 755 /tmp/gitleaks /opt/cf-tools/bin/gitleaks
+  rm -f /tmp/gitleaks.tgz /tmp/gitleaks
+fi
+ln -sf /opt/cf-tools/bin/gitleaks /usr/local/bin/gitleaks
+
+OSV_SCANNER_VERSION=2.7.0
+OSV_SCANNER_SHA256=160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b
+if ! /opt/cf-tools/bin/osv-scanner --version 2>/dev/null | grep -qF "$OSV_SCANNER_VERSION"; then
+  curl -fsSL -o /tmp/osv-scanner "https://github.com/google/osv-scanner/releases/download/v$OSV_SCANNER_VERSION/osv-scanner_linux_amd64"
+  echo "$OSV_SCANNER_SHA256  /tmp/osv-scanner" | sha256sum -c -
+  install -m 755 /tmp/osv-scanner /opt/cf-tools/bin/osv-scanner
+  rm -f /tmp/osv-scanner
+fi
+ln -sf /opt/cf-tools/bin/osv-scanner /usr/local/bin/osv-scanner
 
 # ccache's cache, bounded: verify reuses it from one unit to the next.
 ccache --max-size=5G >/dev/null

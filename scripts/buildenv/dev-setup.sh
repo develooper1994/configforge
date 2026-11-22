@@ -38,10 +38,13 @@ ruff gate.ruff
 actionlint gate.actionlint
 codespell gate.codespell
 lychee gate.links
+gitleaks CI job secrets, by hand
+osv-scanner CI job osv, by hand
 cppcheck the analyze preset
 python3 gates, amalgamation, Python binding
 git SOURCE=index, release
 valgrind EXTRA=valgrind
+afl-fuzz EXTRA=afl
 cbmc EXTRA=proofs
 abidiff EXTRA=abi
 node EXTRA=wasm
@@ -74,7 +77,7 @@ if [ -r /etc/os-release ] && command -v apt-get >/dev/null 2>&1; then
   as_root sh "$here/setup.sh"
 elif [ "$(uname -s)" = Darwin ] && command -v brew >/dev/null 2>&1; then
   brew install cmake ninja ccache llvm cppcheck python node rust cbmc gcovr \
-    libyaml expat sqlite shellcheck actionlint ruff codespell lychee
+    libyaml expat sqlite shellcheck actionlint ruff codespell lychee gitleaks osv-scanner
   python3 -m pip install --user cmakelang
 elif command -v podman >/dev/null 2>&1 || command -v docker >/dev/null 2>&1; then
   run=$(command -v podman || command -v docker)

@@ -10,6 +10,20 @@ option(CF_SANITIZE "Address and undefined behaviour" OFF)
 # claim holds under a tool that watches every access, not only under a
 # test that did not happen to race.
 option(CF_SANITIZE_THREAD "Thread sanitiser" OFF)
+# Reads of memory nobody wrote. MemorySanitizer follows every byte's
+# "initialised" state in shadow memory, so it needs every library in the
+# program built with it: one that is not (expat, libyaml, libfyaml,
+# sqlite, libstdc++) writes memory the shadow never learns of, and each
+# value it hands back reads as uninitialised. The msan preset therefore
+# builds with no optional library; glibc is the exception, which MSan
+# knows through interceptors. Clang only.
+option(CF_SANITIZE_MEMORY "Memory sanitiser (clang)" OFF)
+# clang's extra UBSan groups on top of CF_SANITIZE: integer (every wrap,
+# unsigned too), implicit-conversion (every narrowing and sign change),
+# nullability and local-bounds. The wraps and narrowings that are the
+# code's meaning (hashing, checksums, bit packing) are listed in
+# .ubsan-ignorelist.txt, each with its reason. Clang only.
+option(CF_SANITIZE_STRICT "clang's extra undefined-behaviour groups" OFF)
 # Line coverage, read by gcovr in `verify.cmake -DEXTRA=coverage`.
 option(CF_COVERAGE "Coverage instrumentation (gcov)" OFF)
 # Coverage-guided fuzzing: every target instrumented for libFuzzer and
@@ -30,11 +44,36 @@ if(CF_SANITIZE AND CF_SANITIZE_THREAD)
   message(FATAL_ERROR "CF_SANITIZE and CF_SANITIZE_THREAD cannot be combined: "
                       "the address and thread sanitisers exclude each other")
 endif()
+if(CF_SANITIZE_MEMORY AND NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
+  message(FATAL_ERROR "CF_SANITIZE_MEMORY needs clang: MemorySanitizer is "
+                      "part of it")
+endif()
+if(CF_SANITIZE_MEMORY AND CF_SANITIZE)
+  message(FATAL_ERROR "CF_SANITIZE_MEMORY and CF_SANITIZE cannot be combined: "
+                      "the memory and address sanitisers exclude each other")
+endif()
+if(CF_SANITIZE_MEMORY AND CF_SANITIZE_THREAD)
+  message(
+    FATAL_ERROR
+      "CF_SANITIZE_MEMORY and CF_SANITIZE_THREAD cannot be "
+      "combined: the memory and thread sanitisers exclude " "each other")
+endif()
+if(CF_SANITIZE_MEMORY AND CF_FUZZ)
+  message(FATAL_ERROR "CF_FUZZ uses the address sanitiser, which the memory "
+                      "sanitiser excludes")
+endif()
+if(CF_SANITIZE_STRICT AND NOT CF_SANITIZE)
+  message(FATAL_ERROR "CF_SANITIZE_STRICT adds to CF_SANITIZE: turn that on")
+endif()
+if(CF_SANITIZE_STRICT AND NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
+  message(FATAL_ERROR "CF_SANITIZE_STRICT needs clang: the groups are its own")
+endif()
 # Either sanitiser instruments every frame and every access, so the
 # gates that compare against an uninstrumented build, and the stack
 # budget, step aside for both.
 if(CF_SANITIZE
    OR CF_SANITIZE_THREAD
+   OR CF_SANITIZE_MEMORY
    OR CF_COVERAGE
    OR CF_FUZZ)
   set(CF_INSTRUMENTED ON)
@@ -93,6 +132,12 @@ function(configforge_apply_analysis tgt)
       ${tgt} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer
                      -fno-sanitize-recover=all -g)
     target_link_options(${tgt} PRIVATE -fsanitize=address,undefined)
+    if(CF_SANITIZE_STRICT)
+      target_compile_options(
+        ${tgt}
+        PRIVATE -fsanitize=integer,implicit-conversion,nullability,local-bounds
+                -fsanitize-ignorelist=${CMAKE_SOURCE_DIR}/.ubsan-ignorelist.txt)
+    endif()
     get_target_property(kind ${tgt} TYPE)
     if(CF_ASAN_RUNTIME AND kind STREQUAL "EXECUTABLE")
       add_custom_command(
@@ -121,6 +166,16 @@ function(configforge_apply_analysis tgt)
     target_compile_options(${tgt} PRIVATE -fsanitize=thread
                                           -fno-omit-frame-pointer -g)
     target_link_options(${tgt} PRIVATE -fsanitize=thread)
+  endif()
+  if(CF_SANITIZE_MEMORY)
+    target_compile_options(
+      ${tgt}
+      PRIVATE -fsanitize=memory
+              -fsanitize-memory-track-origins=2
+              -fno-omit-frame-pointer
+              -fno-sanitize-recover=all
+              -g)
+    target_link_options(${tgt} PRIVATE -fsanitize=memory)
   endif()
 endfunction()
 

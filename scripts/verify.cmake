@@ -44,6 +44,12 @@
 #            what it depends on, and its own tests run (D-100): the proof
 #            that each one can be taken out
 #   tsan     the whole suite under the thread sanitiser (the tsan preset)
+#   msan     the whole suite under MemorySanitizer, with no optional library
+#            (the msan preset), clang only
+#   ubsan-strict the sanitize build with clang's integer, implicit-conversion,
+#            nullability and local-bounds groups (the ubsan-strict preset)
+#   afl      AFL++ on the libFuzzer harnesses for FUZZ_SECONDS each (default
+#            10), through afl-clang-fast (the afl preset)
 #   yaml     the whole suite with CF_WITH_YAML, where libyaml is installed
 #   compilers the whole suite against musl (musl-gcc) and with the Tiny C
 #            Compiler and the Portable C Compiler, each where installed:
@@ -119,6 +125,9 @@ if(DEFINED TIER)
       wasm
       abi
       tsan
+      msan
+      ubsan-strict
+      afl
       yaml
       compilers
       kqueue
@@ -661,7 +670,8 @@ foreach(x ${EXTRA})
     set(wrap "${ROOT}/memcheck.sh")
     file(
       WRITE "${wrap}"
-      "#!/bin/sh\nexec ${VALGRIND_EXE} -q --error-exitcode=99 "
+      "#!/bin/sh\nCF_UNDER_VALGRIND=1\nexport CF_UNDER_VALGRIND\n"
+      "exec ${VALGRIND_EXE} -q --error-exitcode=99 "
       "--leak-check=full --errors-for-leak-kinds=definite "
       "--track-origins=yes \"$@\"\n")
     execute_process(COMMAND chmod +x "${wrap}")
@@ -893,6 +903,83 @@ foreach(x ${EXTRA})
     else()
       step("tsan test" ${ctest} --preset tsan)
     endif()
+  elseif(x STREQUAL "msan")
+    find_program(CLANG_EXE clang)
+    if(NOT CLANG_EXE OR WIN32)
+      message("msan                  skipped: no clang with MemorySanitizer")
+      continue()
+    endif()
+    step("msan configure" ${CMAKE_COMMAND} --preset msan)
+    step(
+      "msan build"
+      ${CMAKE_COMMAND}
+      --build
+      --preset
+      msan
+      ${parallel})
+    # MemorySanitizer maps its shadow at fixed addresses, as the thread
+    # sanitiser does: see tsan above for why address randomisation goes
+    # off for the run.
+    find_program(SETARCH_EXE setarch)
+    if(SETARCH_EXE)
+      execute_process(
+        COMMAND uname -m
+        OUTPUT_VARIABLE arch
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+      step(
+        "msan test"
+        ${SETARCH_EXE}
+        ${arch}
+        -R
+        ${ctest}
+        --preset
+        msan)
+    else()
+      step("msan test" ${ctest} --preset msan)
+    endif()
+  elseif(x STREQUAL "ubsan-strict")
+    find_program(CLANG_EXE clang)
+    if(NOT CLANG_EXE OR WIN32)
+      message("ubsan-strict          skipped: no clang")
+      continue()
+    endif()
+    step("ubsan-strict configure" ${CMAKE_COMMAND} --preset ubsan-strict)
+    step(
+      "ubsan-strict build"
+      ${CMAKE_COMMAND}
+      --build
+      --preset
+      ubsan-strict
+      ${parallel})
+    step("ubsan-strict test" ${ctest} --preset ubsan-strict)
+  elseif(x STREQUAL "afl")
+    find_program(AFL_CC_EXE afl-clang-fast)
+    find_program(AFL_FUZZ_EXE afl-fuzz)
+    if(NOT AFL_CC_EXE
+       OR NOT AFL_FUZZ_EXE
+       OR WIN32)
+      message(
+        "afl                   skipped: no AFL++ (afl-clang-fast, afl-fuzz)")
+      continue()
+    endif()
+    if(NOT DEFINED FUZZ_SECONDS)
+      set(FUZZ_SECONDS 10)
+    endif()
+    step("afl configure" ${CMAKE_COMMAND} --preset afl)
+    step(
+      "afl build"
+      ${CMAKE_COMMAND}
+      --build
+      --preset
+      afl
+      ${parallel})
+    step(
+      "afl run"
+      ${CMAKE_COMMAND}
+      -DBUILD=build-afl
+      -DSECONDS=${FUZZ_SECONDS}
+      -P
+      ${ROOT}/scripts/check/afl.cmake)
   elseif(x STREQUAL "conformance")
     find_program(GIT_EXE git)
     # setup.sh's environment first: it has json5, the reference reader
@@ -1105,8 +1192,8 @@ foreach(x ${EXTRA})
     message(
       FATAL_ERROR
         "unknown EXTRA step '${x}': kqueue, tidy, clang, "
-        "shared, components, valgrind, proofs, wasm, abi, tsan, yaml, "
-        "compilers, fuzz, coverage or conformance")
+        "shared, components, valgrind, proofs, wasm, abi, tsan, msan, "
+        "ubsan-strict, afl, yaml, compilers, fuzz, coverage or conformance")
   endif()
 endforeach()
 
