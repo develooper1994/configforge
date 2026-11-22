@@ -247,6 +247,37 @@ cv_case(
   --to
   toml)
 cv_lacks("${cv_err}" "a name it would write unquoted")
+# YAML bounds each mapping key separately from its path.
+if(YAML)
+  set(yaml_long "k")
+  while(1)
+    string(LENGTH "${yaml_long}" yaml_len)
+    if(yaml_len GREATER_EQUAL KEY_MAX)
+      break()
+    endif()
+    string(APPEND yaml_long "${yaml_long}")
+  endwhile()
+  string(SUBSTRING "${yaml_long}" 0 ${KEY_MAX} yaml_long)
+  math(EXPR yaml_key_len "${KEY_MAX} - 1")
+  string(SUBSTRING "${yaml_long}" 0 ${yaml_key_len} yaml_key)
+  file(WRITE ${WORK}/long-name.ini
+       "[${yaml_key}]\n${yaml_long} = 1\nkept = 2\n")
+  cv_case(
+    yaml_long_key
+    0
+    "a name too long, which yaml cannot hold"
+    convert
+    long-name.ini
+    --to
+    yaml
+    --out
+    long-name.yaml)
+  cv_case(yaml_long_key_output 0 "-" check long-name.yaml)
+  file(READ ${WORK}/long-name.yaml yaml_out)
+  cv_has("${yaml_out}" "${yaml_key}:")
+  cv_has("${yaml_out}" "kept:")
+  cv_lacks("${yaml_out}" "${yaml_long}")
+endif()
 # ...and a path too long for a TOML or INI writer to write and read back.
 set(cv_n "n")
 foreach(i RANGE 7)

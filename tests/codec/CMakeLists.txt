@@ -31,7 +31,8 @@ foreach(script ${cf_codec_scripts})
     NAME codec.${script}
     COMMAND
       ${CMAKE_COMMAND} -DCODEC=$<TARGET_FILE:configforge_codec>
-      -DWORK=${CMAKE_CURRENT_BINARY_DIR}/${script} -DCBOR=${CF_WITH_CBOR} -P
+      -DWORK=${CMAKE_CURRENT_BINARY_DIR}/${script} -DCBOR=${CF_WITH_CBOR}
+      -DYAML=${CF_WITH_YAML} -DKEY_MAX=${CF_KEY_MAX} -P
       ${CMAKE_CURRENT_SOURCE_DIR}/${script}.cmake)
 endforeach()
 

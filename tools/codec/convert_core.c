@@ -79,6 +79,7 @@ typedef struct cv_check {
     unsigned        holds;    /* of the target, when `known` */
     size_t          max_path; /* and its reader's limits */
     size_t          max_depth;
+    size_t          max_name;
     cf_bool         known; /* the table of what a format holds has the target */
     cf_bool         nomem;
 } cv_check;
@@ -566,6 +567,10 @@ static void cv_pass_bits(cv_check* k, cv_node* n, size_t plen, cf_bool inline_,
             cv_note(k, c, CV_NAME, CF_TRUE);
             continue;
         }
+        if (in_table && c->nlen > k->max_name) {
+            cv_note(k, c, CV_LONG_NAME, CF_FALSE);
+            continue;
+        }
         if (c->kind != CVN_VALUE && depth + 1u > k->max_depth) {
             cv_note(k, c, CV_DEEP, CF_FALSE);
             continue;
@@ -793,6 +798,8 @@ static void cv_find(cv_check* k, cv_node* root, size_t* non_text) {
                    ? CF_TRUE
                    : CF_FALSE;
     if (k->known) {
+        /* YAML limits each mapping key separately from the path. */
+        k->max_name = strcmp(c->name, "yaml") == 0 ? CF_KEY_MAX - 1u : (size_t)-1;
         cv_pass_bits(k, root, 0u, CF_FALSE, 0u);
     } else {
         /* A codec the table does not know: W5-V1's passes, by its caps. */

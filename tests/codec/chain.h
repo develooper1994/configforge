@@ -483,10 +483,13 @@ typedef struct ch_rules {
     unsigned holds;
     size_t   max_path;
     size_t   max_depth;
+    size_t   max_name;
 } ch_rules;
 
 /* The rules of the format called `name`; false when the table has none. */
 static cf_bool ch_rules_of(const char* name, ch_rules* r) {
+    /* YAML checks the decoded bytes of each mapping key. */
+    r->max_name = strcmp(name, "yaml") == 0 ? CF_KEY_MAX - 1u : (size_t)-1;
     return (cf_format_holds(name, &r->holds) &&
             cf_format_limits(name, &r->max_path, &r->max_depth))
                ? CF_TRUE
@@ -609,6 +612,9 @@ static cf_bool ch_lower_into(cf_arena* ar, const ch_node* src, ch_node* dst,
                        (holds & CF_HOLDS_ANY_NAME) == 0u) {
                 continue;
             }
+        }
+        if (in_table && c->nlen > rules->max_name) {
+            continue;
         }
         if (c->kind != CH_SCALAR && depth + 1u > rules->max_depth) {
             continue;
