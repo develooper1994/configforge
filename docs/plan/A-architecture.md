@@ -1660,14 +1660,14 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     family shares: a letter after the backslash that stands for one code
     point (a table), or that opens 2, 4 or 8 hexadecimal digits, with
     UTF-16 pairs where the family has them. What differs between
-    families is data: the table, the letters that take digits, three
-    flags and the rule for a line break. What stays in each reader: its
+    families is data: the table, the letters that take digits, two
+    flags (`place` and `breaks`) and the rule for a line break. What stays in each reader: its
     messages, its limits and `put` (`js_put` leaves room for the NUL
     one way, `toml_put` another), TOML's line-ending backslash in a
-    multi-line string (`toml.c` today :384-405), JSON5's "any other
+    multi-line string (in toml.c), JSON5's "any other
     character stands for itself" (js5_escape's last lines), and the
     count of lines. XML's entities are expat's and INI has no escapes:
-    neither is in this card. `ini_text_form` (ini.c :681) is not an
+    neither is in this card. `ini_text_form` (ini.c) is not an
     escaper: it decides whether a value is quoted, writes no escape
     (INI has none), and stays where it is.
   * **Where `${` may live.** D-100's table: `cf_sink` is declared in
@@ -1679,10 +1679,10 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     keeps its own way of writing (a sink, an arena, the sink's buffer
     in place).
   * **The declarations**, added to `lib/text/include/configforge/cf_text.h`
-    (A-3 made that header; read it first and put these after the UTF-8
-    and hex functions). Only the `CF_API` function declarations go
-    inside `#if CF_INTERNAL_API`; the types, enums and macros stay
-    outside the fence, as D-88 has it ("only functions are fenced"), so
+    (A-3 made that header; read it first). The new types, enums and
+    macros go just before the existing `#if CF_INTERNAL_API`, outside
+    the fence; the new `CF_API` function declarations go inside the
+    fence, right after the hex functions. Only functions are fenced, as D-88 has it, so
     the header still compiles alone. C89: tables are `static const` with
     positional initialisers.
 
@@ -1748,7 +1748,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
        point below `below`, and each from `from` to `to` inclusive
        (from > to: none), is written \u00XX (or \uXXXX), or with
        CF_ESCAPER_X below 0x100 as \xXX; with CF_ESCAPER_NONCHARS U+FFFE
-       and U+FFFF as the six characters ￾ and ￿. Hex digits are
+       and U+FFFF as the six characters `\ufffe` and `\uffff`. Hex digits are
        lowercase. */
     enum { CF_ESCAPER_X = 1u, CF_ESCAPER_NONCHARS = 2u };
     typedef struct cf_text_escaper {
@@ -1801,10 +1801,10 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     7. Otherwise `v` above 0x10FFFF or in D800 to DFFF: E_SCALAR at
        `1 + n`; else CP, used `1 + n`.
     The offsets are what the readers place their failures at today:
-    JSON at the `u` (js_escape_u, json.c :282-287) and after the first
-    four digits for a half (:293, :298); TOML at the first digit
-    (:484, :490) and after the digits for a non-scalar (:497); YAML at
-    the bad digit (yamlparse.c :675-682) and after the digits (:687).
+    JSON at the `u` (`js_escape_u` in json.c) and after the first four
+    digits for a half; TOML at the first digit and after the digits for
+    a non-scalar (`toml_string` in toml.c); YAML at the bad digit and
+    after the digits (`yp_escape` in yamlparse.c).
   * **The families**, each a `static const` in its reader, names
     prefixed so that the amalgamation (one translation unit) has no
     clash:
@@ -1818,72 +1818,73 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     | `prop_family` (properties.c) | `t` 9, `n` 10, `r` 13, `f` 12 | "" | "u" | "" | PAIRS | AT_LETTER | CF_ESC_NL_NONE |
 
     (`x` is in TOML's table whatever the TOML version: `toml.c` reads
-    it today and A-7 keeps that.) `breaks` is one of three private
-    values defined beside the family, `CF_ESC_NL_NONE` (0, no escaped
+    it today and A-7 keeps that.) `breaks` holds one of the header's
+    values, `CF_ESC_NL_NONE` (0, no escaped
     break), `CF_ESC_NL_JSON5` (what JSON5's `js5_escape` takes today:
-    LF, CR, CR LF as one, U+2028, U+2029; json.c :328-338) and
+    LF, CR, CR LF as one, U+2028, U+2029) and
     `CF_ESC_NL_ANY` (YAML's: LF, CR, CR LF as one; the break itself is
-    then taken by `yp_quoted_fold`, :666-669). `cf_text_esc_decode`
+    then taken by `yp_quoted_fold`). `cf_text_esc_decode`
     tests them with its own few lines. A-8 adds `cf_text_break` and
     its rules, and replaces the three by `CF_NL_NONE`, `CF_NL_JSON5`
     and `CF_NL_ANY` in the two families that use them.
   * **How each reader calls it** (the reader's own `put`, its own
-    messages, as today). The readers are in `lib/serialize/src/`; line
-    numbers are those of the files, which A-1's move did not change.
+    messages, as today). The readers are in `lib/serialize/src/`; each
+    place is named by its function.
     * **JSON and JSON5**, `js_escape`, `js_escape_u`, `js5_escape`
-      (json.c :279-377), `js_hex`, `js_put_cp`: one function
+      (all in json.c), `js_hex`, `js_put_cp`: one function
       `js_escape(s, dst, cap, n)` calls `cf_text_esc_decode(s->json5 ?
       &js5_family : &js_family, s->p, s->end, &r)` (the caller has
-      tested `s->p < s->end`, as `js_string` does at :419) and acts on
+      tested `s->p < s->end`, as `js_string` does) and acts on
       `r.kind`: CP: `s->p += r.used`, then `js_put_cp`. BREAK: `s->p +=
       r.used; js_line(s)`. OTHER: in JSON `js_fail(s, s->p, "unknown
       escape")`; in JSON5 the one byte stands for itself (`++s->p`,
-      `js_put` of that byte, as :340-343). E_DIGITS: `js_fail(s, s->p +
+      `js_put` of that byte, as `js5_escape` does). E_DIGITS: `js_fail(s, s->p +
       r.at, ...)` with `\u needs four hexadecimal digits` for `r.letter
       == 'u'` and `\x needs two hexadecimal digits` for `'x'`, each
-      split after the backslash exactly as :284-286 and :322-324 write
-      them (pcc reads a backslash then `u` as a universal character
+      split after the backslash exactly as `js_escape_u` and
+      `js5_escape` write them (pcc reads a backslash then `u` as a universal character
       name). E_HIGH: `high surrogate without a low one`; E_LOW:
       `unpaired low surrogate`; E_NUL_DIGIT: `\0 may not be followed by
       a digit`; E_DIGIT: `a digit may not be escaped`; each at `s->p +
-      r.at` (these messages are single literals, as :315 and :319 write
+      r.at` (these messages are single literals, as `js5_escape` writes
       them; only the two with a backslash before `u` or `x` are split).
       `js_utf8` (already gone by A-3) and `js5_is_ls`'s use inside the
       escape go. `js_hex` stays, calling `cf_text_hex_value`: `js5_name`
-      (json.c :455) still reads `\u` with it, and `js_hexval` stays for
-      the JSON5 hexadecimal number (:579-602), both as A-3 left them.
+      in json.c still reads `\u` with it, as A-3 left it. (`js5_hex`,
+      the JSON5 hexadecimal number, calls `cf_text_hex_value` itself
+      and is not touched.)
       `js5_is_ls` stays for `js_space` until A-8.
-    * **TOML**, the escape at toml.c :431-519: after `++s->p` the code
+    * **TOML**, the escape in `toml_string` (toml.c): after `++s->p` the code
       today finds the letter; the new code calls `cf_text_esc_decode(
       &toml_family, s->p, s->end, &r)` first, with `s->p` still on the
-      letter (the `s->p >= s->end` test at :436 stays before it).
+      letter (the `s->p >= s->end` test stays before it).
       CP: `s->p += r.used`, `k = cf_text_utf8_encode(cp, enc)`, the
-      room test of :501 (`n + k + 1 > cap`, "the string is too long")
-      as it is, copy. OTHER: `toml_fail(s, s->p, "unknown escape")`.
+      room test as it is (`n + k + 1 > cap`, "the string is too long"),
+      copy. OTHER: `toml_fail(s, s->p, "unknown escape")`.
       E_DIGITS: `toml_fail(s, s->p + r.at, TOML_UNICODE_DIGITS)`.
       E_SCALAR: `toml_fail(s, s->p + r.at, "not a Unicode scalar
       value")`. The `case` list, `digits`, `one`, the digit loop and
-      the `toml_hex` use are deleted. The line-ending backslash in
-      `ml` strings (:384-405) is before this code and unchanged.
-    * **YAML**, `yp_escape` (yamlparse.c :595-690): called with `y->p`
-      on the letter, as now (the `++y->p` at :673 goes). `cf_text_esc_decode(
+      its inline `cf_text_hex_value` calls are deleted. The
+      line-ending backslash in `ml` strings is before this code and unchanged.
+    * **YAML**, `yp_escape` (yamlparse.c): called with `y->p`
+      on the letter, as now (its own `++y->p` before the digits goes). `cf_text_esc_decode(
       &yp_family, y->p, y->end, &r)`. BREAK: `return yp_quoted_fold(y,
-      k, n, CF_TRUE)` with `y->p` unmoved, as :669. OTHER: `return
+      k, n, CF_TRUE)` with `y->p` unmoved, as `yp_escape` does. OTHER: `return
       yp_fail(y, "an unknown escape")`. E_DIGITS: `yp_fail_at(y, y->p
       + r.at, "an escape needs its hexadecimal digits")`. E_SCALAR:
       `yp_fail_at(y, y->p + r.at, "an escape names no character")`.
       CP: `y->p += r.used; return yp_put_cp(y, k, r.cp)` (`yp_put_cp`
       stays, calling `cf_text_utf8_encode` as A-3 left it).
-    * **`.properties`**, `prop_element` (properties.c, its escape part :136-197): a `\`
+    * **`.properties`**, `prop_element` (properties.c, its escape part): a `\`
       not at the line's end is followed by `cf_text_esc_decode(
       &prop_family, s->p + 1, eol, &r)` (A bound: `eol`, the physical
       line's end, as today's `< eol` tests.) CP: `s->p += 1 + r.used`,
-      then the capacity-checked `prop_put_cp` (`prop_utf8` after A-3:
-      `cf_text_utf8_encode` plus today's `at + n > cap` test; the two
+      then the inline block in properties.c that encodes with
+      `cf_text_utf8_encode` and tests `n + ek > cap` (kept as it is; the two
       messages `the key is too long` and `the value is too long`
       unchanged). OTHER: the letter stands for itself (`out[n++] =
-      c`, as :189-199). E_DIGITS: `prop_fail(s, "\\" "u needs four
-      hexadecimal digits")` (split as :150). E_HIGH and E_LOW:
+      c`, as today). E_DIGITS: `prop_fail(s, "\\" "u needs four
+      hexadecimal digits")` (split as it is today). E_HIGH and E_LOW:
       `prop_fail(s, "a \\" "u escape is half a surrogate pair")`.
   * **The writers.** Each keeps its loop and its sink; the choice of
     what to escape is data:
@@ -1896,8 +1897,8 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
 
     In TOML `\b` and `\f` have no short form, so they come out `\u0008`
     and `\u000c`; in YAML `\r` comes out `\x0d` and U+0085 `\x85`; JSON
-    leaves DEL as it is. These are today's bytes (blob.c :251-290,
-    toml.c :1662-1692, yaml.c :1201-1231) and they stay. JSON and TOML
+    leaves DEL as it is. These are today's bytes (`cf_sink_json_string`
+    in blob.c, `toml_quote` in toml.c, `yaml_quote` in yaml.c) and they stay. JSON and TOML
     call `cf_text_escape(&set, c, esc)` with each **byte** (as today:
     bytes from 0x80 are passed on, and none of their ranges reaches
     them); YAML with each decoded **code point** (its loop stays on
@@ -1906,22 +1907,22 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     sequence); else `cf_sink_write(out, esc, len)`. The `"0123456789abcdef"`
     tables and the `cf_sink_fmt` calls go.
   * **The `${` users.**
-    * `validate.c` `unescape` (:161-177) keeps the arena: `out =
+    * `validate.c` `unescape` keeps the arena: `out =
       cf_arena_alloc(ar, n + 1)`; `m = cf_text_ref_unescape(p, n,
       out); out[m] = '\0'`. The loop is `cf_text_ref_unescape`'s:
       `$${` with `i + 2 < n` drops one `$` of the pair.
-    * `emit.c` `literal_scalar` (:214-243) counts `extra` with
+    * `emit.c` `literal_scalar` counts `extra` with
       `cf_text_ref_count(v->u.t.p, v->u.t.n)`; `escape_written`
-      (:181-212) keeps its first lines (a NULL buffer, a zero `cap`,
+      keeps its first lines (a NULL buffer, a zero `cap`,
       `limit`, the clamp to `end`, `from >= end`) and ends with
       `cf_text_ref_widen(out->buf, from, end, limit)`.
-    * `cbor.c` `cbor_put_text` (:709-730) counts with
+    * `cbor.c` `cbor_put_text` counts with
       `cf_text_ref_count`, writes the head, then `for (i =
       cf_text_ref_next(p, n, 0); i < n; i = cf_text_ref_next(p, n, i +
       1))` writes `p + from .. i + 1`, the extra `$`, and sets `from =
       i + 1`.
-  * **The one change of behaviour**, `yp_tag_put` (yamlparse.c
-    :239-262, the escape at :244-254): `hi` and `lo` come from
+  * **The one change of behaviour**, `yp_tag_put` (yamlparse.c, its
+    `%XX` escape): `hi` and `lo` come from
     `cf_text_hex_value((unsigned char)p[i + 1])` and `[i + 2]`, and a
     negative one is `yp_fail(y, "an escape in a tag is two hexadecimal
     digits")` as now. Today `(c | 0x20) - 'a' + 10` reads `@` and a
@@ -1979,8 +1980,10 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
        change".
     2. `lib/config/tests/test_reader_corpus.c` (new; it drives dotenv,
        which is in the configuration library) and
-       `tests/support/data/reader_corpus.golden` (found through
-       `CF_REPO_ROOT`): for each of JSON, JSON5,
+       `tests/support/data/reader_corpus.golden` (its path is a
+       compile definition, `CF_READER_CORPUS_GOLDEN`, set with
+       `target_compile_definitions` in `lib/config/tests/CMakeLists.txt`
+       as `CF_EDGES_DIR` is there): for each of JSON, JSON5,
        TOML, built-in YAML, INI, `.properties` and dotenv, every
        document of length 0 to the length below over its alphabet,
        decoded with the codec's `decode` (dotenv has no codec: the
@@ -1997,10 +2000,10 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
        feed): JSON and JSON5 (16 symbols, length 4): `{` `}` `"` `:`
        `,` `a` `0` space TAB CR LF `/` `*` `\` `u` `LS`; and for JSON5
        a second run of length 4 over `'` `x` `1` `v` `\` `u` `0` `D`
-       `8` CR LF `"` `{` `}` `:` `a`; TOML (16, length 4): `[` `]` `=`
-       `a` `1` `"` `'` `#` space CR LF `\` `,` `{` `}` `.`, and a
+       `8` CR LF `"` `{` `}` `:` `a`; TOML (17, length 4): `[` `]` `=`
+       `a` `1` `"` `'` `#` space TAB CR LF `\` `,` `{` `}` `.`, and a
        second run over `"` `\` `u` `x` `U` `0` `D` `8` `e` `b` LF CR
-       `=` `a` space `'`; YAML (18, length 4): `a` `:` space `-` `#` LF
+       `=` `a` space `'`; YAML (19, length 4): `a` `:` space TAB `-` `#` LF
        CR `"` `'` `\` `|` `[` `]` `{` `}` `,` `!` `%`, and a second run
        over `"` `\` `x` `u` `U` `0` `D` `8` `N` `L` LF CR `a` `:` space
        `/`; INI (11, length 5): `[` `]` `=` `a` space TAB CR LF `#`
@@ -2025,10 +2028,26 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
        eight`; `a: "\x4g"` as `t.yaml`: `t.yaml:1:8: an escape needs its
        hexadecimal digits`; `a=\u12` as `t.properties`:
        `t.properties:1: \u needs four hexadecimal digits`.
+  * **What the corpus sink writes.** Into the hashed buffer,
+    platform-independently: an integer as 16 lowercase hexadecimal
+    digits of its two's-complement value as `cf_u64`; a real as 16
+    lowercase hexadecimal digits of its IEEE-754 bits (`memcpy` into a
+    `cf_u64`); a boolean `t` or `f`; null `n`; text as its bytes. The
+    kind letters and the separators are as the card already says.
+  * **`test_reader_corpus`'s command line.** No argument: compare with
+    the golden. `--write`: rewrite the golden at
+    `CF_READER_CORPUS_GOLDEN`. `--dump <reader> <length>`: print each
+    document and its buffer for that reader and length to standard
+    output. Its ctest entry has `TIMEOUT 600`.
+  * **`cf_text_escape`'s ranges.** `to` is at most 0xFFFF: a code point
+    above U+FFFF is never escaped (it is written as its UTF-8). The
+    test asserts that every table of the card obeys it.
 * **files**: `lib/text/include/configforge/cf_text.h`,
   `lib/text/src/escape.c` (new: `cf_text_esc_decode`, `cf_text_escape`),
   `lib/text/src/refs.c` (new), `lib/text/CMakeLists.txt` (their place in
-  the list where A-3 put `utf8.c`, `hex.c`, `hash.c`),
+  both lists, `SOURCES` and `SERIALIZE_SOURCES`, where A-3 put `utf8.c`,
+  `hex.c`, `hash.c`), `lib/config/tests/CMakeLists.txt`
+  (`CF_READER_CORPUS_GOLDEN`),
   `scripts/generate/amalgamate.py` (the two sources in `SOURCES`),
   `lib/serialize/src/{json,toml,yamlparse,properties,blob,yaml,cbor}.c`,
   `lib/config/src/core/validate.c`, `lib/config/src/bridge/emit.c`,
@@ -2064,10 +2083,12 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
      the three old-against-new comparisons); no reader uses them yet.
   5. One reader at a time, `ctest --preset default` and
      `test_reader_corpus` after each, and the conformance suites after
-     JSON, TOML and YAML (`-DEXTRA=conformance`: the block of
-     scripts/verify.cmake that builds `build-conformance` and runs
-     `scripts/check/conformance.py` against `tests/conformance/floor.txt`
-     does it alone): JSON and JSON5 together; TOML; YAML; `.properties`.
+     JSON, TOML and YAML (`cmake -DMODE=quick -DEXTRA=conformance -P
+     scripts/verify.cmake`: the block of scripts/verify.cmake that
+     builds `build-conformance` and runs `scripts/check/conformance.py`
+     against `tests/conformance/floor.txt` does it alone; the same run
+     also runs `codec_pairs` against `tests/codec/pairs.manifest`
+     (W5-V2), a second proof for the writers): JSON and JSON5 together; TOML; YAML; `.properties`.
   6. One writer at a time, same checks: `cf_sink_json_string`,
      `toml_quote`, `yaml_quote`.
   7. One `${` copy at a time: `validate.c`, `emit.c`, `cbor.c`; after
@@ -2082,9 +2103,10 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
      name changes here), the amalgamation, the
      documents; ACCEPT.
 * **accept**: ACCEPT-LINUX with
-  `-DEXTRA="conformance;fuzz;coverage;abi;yaml"` (conformance fetches its
+  `-DEXTRA="conformance;fuzz;coverage;abi;yaml;components"` (conformance fetches its
   suites with git at pinned commits and needs the network and Python;
-  fuzz needs clang; `yaml` builds the library backends, which share
+  fuzz needs clang; `components` builds each component of `lib/` alone,
+  so `cf_text.h` and the new sources stand without the others; `yaml` builds the library backends, which share
   `yaml.c`'s writer), ACCEPT-WINDOWS, ACCEPT-CI. Conformance scores equal
   to `tests/conformance/floor.txt`'s, no record raised or lowered.
 * **stop if**: `test_reader_corpus` fails after a reader is switched
@@ -2093,8 +2115,9 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   the decoder's table or flag as data if it is a format's, and if it
   cannot be (a difference that would need a seventh flag), stop and
   report with the document. A conformance record moves: stop.
-* **docs**: D-102's entry (written by A-1) gets "Built, in part: A-7"
-  with the commit. CHANGELOG `### Changed`: "The readers share one
+* **docs**: D-102's entry in docs/Decisions.md reads "Built, in part: A-3 (...)
+  To build: A-7 and A-8"; A-7 appends itself and its commit to "Built"
+  and leaves "To build: A-8". CHANGELOG `### Changed`: "The readers share one
   escape decoder a family (JSON and JSON5, TOML, YAML, `.properties`),
   the writers one escaper, and the three `${` copies one definition
   (D-102); no input is read differently and no output changes. In a
@@ -2209,10 +2232,9 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   * **The rules**, byte for byte what the readers do today:
     * `cf_text_break`: `CF_NL_LF`: `*p == '\n'` gives 1. `CF_NL_JSON5`:
       LF 1; CR LF 2; a CR not followed by LF 1; E2 80 A8 and E2 80 A9 3
-      (`js_space` :156-163, :195; `js5_comment_step`; `js5_escape`). 
-      `CF_NL_TOML`: LF 1; CR LF 2; CR alone 0 (`toml_newline`, toml.c
-      :310-320). `CF_NL_ANY`: LF 1; CR LF 2; CR alone 1
-      (`yp_eat_break` :101-109, `prop_next_line` :107-116). NONE: 0.
+      (`js_space`, `js5_comment_step`, `js5_escape` in json.c).
+      `CF_NL_TOML`: LF 1; CR LF 2; CR alone 0 (`toml_newline` in toml.c). `CF_NL_ANY`: LF 1; CR LF 2; CR alone 1
+      (`yp_eat_break` in yamlparse.c, `prop_next_line` in properties.c). NONE: 0.
       `p == end` is 0 for all.
     * `cf_text_eol`: steps by one byte until `cf_text_break` is above 0
       (`prop_eol`, `ini_skip_to_eol`, the comment loops). Stepping by
@@ -2220,9 +2242,9 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
       starts with a continuation byte.
     * `cf_text_blanks`: the bytes of the set, as listed; for
       `CF_BLANK_TOML` a CR is blank only when `end - p >= 2` and `p[1]
-      == '\n'` (`toml_blank` :161-167).
-    * `cf_text_trim`: `ini_trim` (ini.c :71-82) and `dotenv_trim`
-      (entry.c :633-643) are the same function; this is it.
+      == '\n'` (`toml_blank` in toml.c).
+    * `cf_text_trim`: `ini_trim` (ini.c) and `dotenv_trim`
+      (entry.c) are the same function; this is it.
     * `cf_text_track_col`: `(unsigned)(at - line_start) + 1u`. The
       tracker is **not** built on `cf_text_place` (A-4, `place.c`):
       that function counts from the start of the input to one offset,
@@ -2239,16 +2261,16 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
       each position is: end of input, refusal `CF_SKIP_UNCLOSED` with
       `*bad = end`; `*/`, done; a break (`sy->rule`), counted; else one
       byte; and a byte that is the first of an ECMAScript space (`js5_is_space`
-      :121-127, json.c, moved into `space.c`, decoded with
+      in json.c, moved into `space.c`, decoded with
       `cf_text_utf8_decode`) is skipped (a break among them is rule
       JSON5's, handled in (1)); (4) with `CF_SYN_HASH`: a `#` is a
       comment, but with `CF_SYN_HASH_BLANK` only if `p == t->line_start`
-      or `p[-1]` is a space or TAB (`yp_comment_here` :118-120), skipped
+      or `p[-1]` is a space or TAB (`yp_comment_here`), skipped
       by `cf_text_comment`. The order is (1), (2), (3), (4) because
       that is the order in which `js_space`, `toml_space_lines` and
       `yp_skip` test a byte, and they never disagree on one.
     * `cf_text_comment` with `CF_SYN_TOML_COMMENT`: `toml_comment`
-      (toml.c :209-227): until LF, a CR followed by LF is passed; a byte
+      (in toml.c): until LF, a CR followed by LF is passed; a byte
       below 0x20 but TAB, or DEL, is `CF_SKIP_CONTROL` at it; a byte that
       does not start a whole UTF-8 sequence (`cf_text_utf8_decode`
       returns 0) is `CF_SKIP_UTF8` at it. Without the flag it goes to
@@ -2271,27 +2293,27 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
 
     JSON's CR is a blank (a JSON text counts LF only), JSON5's a break;
     TOML's CR is blank only before LF, which as a rule means a CR LF
-    break; INI treats CR as a blank. In A-7's decoder the three private
-    `CF_ESC_NL_*` become `CF_NL_NONE`, `CF_NL_JSON5` and `CF_NL_ANY`
+    break; INI treats CR as a blank. In A-7's decoder the three
+    `CF_ESC_NL_*` values become `CF_NL_NONE`, `CF_NL_JSON5` and `CF_NL_ANY`
     (the family field `breaks` holds a `CF_NL_*`), and the decoder's own
-    few lines for them are a call of `cf_text_break`; the private names
+    few lines for them are a call of `cf_text_break`; the `CF_ESC_NL_*` names
     go.
-  * **How each reader changes** (names today's; line numbers today's, of
+  * **How each reader changes** (names today's, of
     `lib/serialize/src/...`):
     * **json.c**: `js_scan`'s `line_start` and `line` become `cf_text_track
       tr`; `js_line` is `cf_text_track_line(&s->tr, s->p)`; `js_loc`'s
       column `cf_text_track_col(&s->tr, at)`; `js_fail` is
       `cf_text_fail(s->err, CF_E_SOURCE, s->file, s->tr.line, col,
-      "%s", what)`; `js_space` (:150-201), `js5_comment_step` and the
+      "%s", what)`; `js_space`, `js5_comment_step` and the
       two comment loops are one call of `cf_text_skip(s->json5 ?
       &js5_syntax : &js_syntax, &s->tr, &s->p, s->end, &bad)` whose
       `CF_SKIP_UNCLOSED` is `js_fail(s, bad, "a comment is not
       closed")`; `js5_is_ls` is used by A-7's decoder no more and goes,
-      `js5_is_space` stays for `js5_is_id` (:442), now a call of the
+      `js5_is_space` stays for `js5_is_id`, now a call of the
       function in `space.c` (`cf_text_is_ecma_space`, declared above and
       in the internal list). JSON5's line continuation in
       a string (A-7's BREAK) calls `cf_text_track_line`. The string's
-      "raw newline" test (:401) is not a skip and stays.
+      "raw newline" test in `js_string` is not a skip and stays.
     * **toml.c**: `toml_scan`'s pair likewise; `toml_blank` is
       `cf_text_blanks(CF_BLANK_TOML, ...)`; `toml_comment` is
       `cf_text_comment(&toml_syntax, ...)` with `CF_SKIP_CONTROL` as
@@ -2304,24 +2326,25 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     * **ini.c**: `ini_scan`'s pair; `ini_col`, `ini_newline`,
       `ini_skip_blank`, `ini_skip_to_eol`, `ini_trim` become the calls
       named in the table; every `cf_error_set(... "%s:%u: ..." ...)` of
-      the decoder (:95-112, :411-562, sixteen of them) becomes
+      the decoder (sixteen of them) becomes
       `cf_text_fail(err, <the same code>, file, line, 0, <the same
       text>)` with the format's `%S` and `%u` arguments as they are.
-      The `"%s: the document could not be recorded"` ones (:571-582)
+      The `"%s: the document could not be recorded"` ones
       and `sink refused` carry no place and are not touched. Look-back
-      `ini_earlier_run`'s own loop (:172-199) counts lines by LF and
+      `ini_earlier_run`'s own loop counts lines by LF and
       uses `ini_trim`: `cf_text_trim`.
     * **properties.c**: the pair; `prop_eol` and `prop_next_line` are
       `cf_text_eol(CF_NL_ANY, ...)` and `p += cf_text_break(CF_NL_ANY,
       p, end); cf_text_track_line(&tr, p)` (counted even when the break
-      length is 0, as today, at the end of input after a continuation:
-      :210-211); the blanks at :250, :270, :275 and :212 are
-      `cf_text_blanks(CF_BLANK_PROP)`; `prop_fail` and :283, :291 are
+      length is 0, as today, at the end of input after a continuation, in `prop_next_line`); the blank skips in
+      properties.c are
+      `cf_text_blanks(CF_BLANK_PROP)`; `prop_fail` and the two other
+      placed failures in properties.c are
       `cf_text_fail` with col 0 (the last with `CF_E_KEY`).
     * **yamlparse.c**: `yp`'s `ls` and `line` become `cf_text_track tr`
       (55 uses, mechanical: `y->ls` is `y->tr.line_start`, `y->line`
       is `y->tr.line`); `yp_quoted` saves and restores the tracker as
-      one struct copy (:697-698, :759-768); `yp_col` is `cf_text_track_col`;
+      one struct copy (at its start and where it restores); `yp_col` is `cf_text_track_col`;
       `yp_fail_at` is `cf_text_fail(y->err, CF_E_SOURCE, y->file,
       y->tr.line, col, "%s", what)` (keeping its test that `q` lies in
       the line); `yp_eat_break` is `y->p += cf_text_break(CF_NL_ANY,
@@ -2330,32 +2353,36 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
       `cf_text_skip(&yp_syntax, ...)` (it never refuses: the result is
       ignored); `yp_line_rest` keeps its shape on `cf_text_blanks`,
       `cf_text_comment` and `cf_text_eol`.
-    * **yaml.c** (`yaml_fail_at`, :155-159) and **xml.c** (`xml_fail`
-      :127-138 and the parse error :604-608): `cf_text_fail`. XML's
+    * **yaml.c** (`yaml_fail_at`) and **xml.c** (`xml_fail`
+      and the parse error): `cf_text_fail`. XML's
       "what (name)" is formed first into a `char what[CF_MESSAGE_MAX]`
       with `cf_fmt(what, sizeof what, "%s%s%s%s", ...)` as the
       `%s%s%s%s` part reads today, then passed as `"%s"`. The
       line and column are expat's (`XML_GetCurrentLineNumber`,
       `XML_GetCurrentColumnNumber() + 1u`): XML has no tracker.
-    * **`lib/config/src/bridge/schema.c`** (:197-200): the placed form is
+    * **`lib/config/src/bridge/schema.c`**: the placed form is
       `cf_text_fail(w->err, CF_E_DEFINITION, w->file, at->at.line,
       at->at.col, "%s", what)`; the `"%s: %s"` form is not a place and
       stays.
     * **`lib/config/src/sources/entry.c`**: `dotenv_trim` goes for
-      `cf_text_trim`; the two dotenv failures (:688, :704) are
+      `cf_text_trim`; the two dotenv failures are
       `cf_text_fail(err, CF_E_SOURCE / CF_E_KEY, origin, line, 0, ...)`.
       The line counting there (a `++line` a line; no column) stays: no
       tracker is needed for a form with no column.
     * **CBOR and TLV** report byte offsets, not lines, and are not
       touched but for `tlv_key_valid`.
-    * **A-4's and A-5's refusals** (`lib/config/src/bridge/{file,dir}.c`'s
-      recoding message `byte 0x%02X has no character in %s`, the
-      UTF-16 ones, and `cf_encoding_check`'s `byte 0x%02X is not valid
-      UTF-8%s`): they call `cf_text_fail` when they give
-      `file:line:col: text`, the place from `cf_text_place` cast to
-      `unsigned int`. The strings are the ones A-4 and A-5 wrote.
+    * **A-4's and A-5's refusals** (`lib/config/src/bridge/file.c`'s
+      recoding messages, and `cf_encoding_check` in
+      `lib/text/src/encoding.c`): they call `cf_text_fail` when they
+      give `file:line:col: text`, the place from `cf_text_place` cast to
+      `unsigned int`. The wordings are kept as they are:
+      `byte 0x%s has no character in %s`, `an unpaired UTF-16 surrogate
+      0x%s` and `byte 0x%s is not valid UTF-8%s` (the hex is `0x%s`:
+      `cf_fmt` has no width, so the digits are formed first).
+      `lib/config/src/bridge/dir.c` has no placed message and is not
+      touched.
   * **`tlv_key_valid` and `cf_key_valid`.** Their two bodies are the
-    same, token for token (tlv.c :129-160, keyspace.c :13-44). Which
+    same, token for token (`tlv_key_valid` in tlv.c, `cf_key_valid` in keyspace.c). Which
     component: D-100's table lets `serialize` use `base`, and
     `cf_key_valid` needs only `CF_KEY_MAX` (cf_error.h, base),
     `cf_is_lower`, `cf_is_digit`, `cf_bool` and `size_t` (cf_port.h):
@@ -2370,32 +2397,36 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
       serialize may not include) to `cf_error.h` (base; already in
       `CF_SERIALIZE_HEADERS`), after `CF_ERROR_INIT`, under a comment
       "Keys" taken from `cf_keyspace.h`. `cf_keyspace.h` includes
-      `cf_error.h` (its line 22), so `#include <configforge/cf_keyspace.h>`
+      `cf_error.h`, so `#include <configforge/cf_keyspace.h>`
       still declares it, and no program changes; its "Keys" block
       keeps the prose and loses the one declaration. It is a public
       1.x function and stays, with its name, signature and
       `CF_API`, not experimental.
     * `lib/config/src/core/keyspace.c`'s definition goes; `cf_key_segments` and
       `cf_key_cmp` stay there.
-    * `tlv.c`: `tlv_key_valid` goes, its two callers (:167, :267) call
-      `cf_key_valid`; the comment above it (:126-128) goes.
+    * `tlv.c`: `tlv_key_valid` goes, its two callers call
+      `cf_key_valid`; the comment above it goes.
     * The symbol lists: `cf_key_valid` is now a function of both
       libraries. `cmake/configforge_serialize.symbols` gains it in its
       place in the alphabet (gate.abi `-DPART=serialize -DWRITE=ON`);
       `cmake/configforge.symbols` keeps it. `docs/API.md` is
       regenerated (gate.apiref: the declaration moved). abidiff sees an
       addition to the serialization library and nothing else.
-    * `lib/config/tests/test_tlv.c` :566-587 (`layout_key_rule`) compares
+    * `lib/config/tests/test_tlv.c` (`layout_key_rule`) compares
       the layout's judgement with `cf_key_valid`'s: now one function,
       so it can no longer disagree, and it stays as a test that a
       layout refuses what a key refuses (its comment changes to say
       so). `lib/serialize/tests/test_serialize_alone.c` gains
       `check(cf_key_valid("a.b", 3) && !cf_key_valid("A", 1), ...)`,
-      which links only if the serialization library has it.
+      which builds and links only if `cf_error.h` declares it and the
+      serialization library has it.
   * **The proof of "no input read differently".**
     1. `lib/config/tests/test_reader_corpus.c` and its golden (A-7) pass
-       unchanged after every reader is switched. Its alphabets already
-       hold every newline kind, comment start and blank of the readers.
+       unchanged after every reader is switched. Its alphabets hold every
+       newline kind and comment start of the readers, and, with A-7's
+       TAB in TOML's and YAML's first runs, every blank but four of
+       JSON5's: JSON5's alphabets lack VT, FF, U+00A0 and U+FEFF, which
+       `test_places` below covers with one explicit case each.
     2. `lib/text/tests/test_text_space.c` (new): `cf_text_break` for each
        rule on `\n`, `\r\n`, `\r`, `\r` before `a`, E2 80 A8, E2 80 A9,
        E2 80 AA, a cut E2 80, the empty input, and `p == end`;
@@ -2432,16 +2463,35 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   * **Fuzzing**: `lib/config/tests/test_fuzz.c`'s seeds gain one document a
     syntax with each break kind and a comment of each kind, so the new
     skip is fuzzed (A-5 added its seeds the same way).
+  * **Placement of `test_places.c`.** Read against the tree after A-1b:
+    `test_places.c` is in `lib/config/tests/` by A-1b's rule (one file;
+    its dotenv case includes `configforge.h`); it is not split, and
+    `test_text_space.c` is the one in `lib/text/tests/`.
+  * **Blanks the corpus lacks.** JSON5's corpus alphabets lack VT, FF,
+    U+00A0 and U+FEFF; `test_places` gets one explicit case for each of
+    the four in JSON5. TAB for TOML and YAML comes from A-7's
+    alphabets.
+  * **`cf_text.h` includes `configforge/cf_error.h`** (for
+    `cf_text_fail`'s `cf_error` and `cf_code`).
+  * **Choices of the organiser.** `cf_text_track_init` sets line 1 (and
+    `line_start` to `start`, so the first column is 1). `cf_text_skip`
+    leaves `*bad` unwritten when it returns `CF_SKIP_OK`, and on
+    `CF_SKIP_CONTROL` or `CF_SKIP_UTF8` leaves `*pp` at the byte
+    refused (as `js_space` leaves `s->p`). The `cf_text_place`
+    agreement test runs over the documents of A-7's reader corpus.
+    `cf_text_fail`'s `CF_MESSAGE_MAX` buffer is the same size as
+    `cf_error_set`'s own (`tmp` in lib/base/src/error.c), and the stack
+    gate judges it.
 * **files**: `lib/text/include/configforge/cf_text.h`,
-  `lib/text/src/{space,track,fail}.c` (new),
+  `lib/text/src/{space,track,fail}.c` (new), `lib/text/src/encoding.c`,
   `lib/text/CMakeLists.txt`, `scripts/generate/amalgamate.py`,
   `lib/serialize/src/{json,toml,ini,properties,yamlparse,yaml,xml,tlv}.c`,
-  `lib/config/src/bridge/{schema,file,dir}.c`,
+  `lib/config/src/bridge/{schema,file}.c`,
   `lib/config/src/sources/entry.c`, `lib/base/src/key.c` (new),
   `lib/base/CMakeLists.txt`, `lib/base/include/configforge/cf_error.h`,
   `lib/config/include/configforge/cf_keyspace.h`,
-  `lib/config/src/core/keyspace.c`, `lib/serialize/CMakeLists.txt` and
-  `lib/text/CMakeLists.txt` if a source list changes,
+  `lib/config/src/core/keyspace.c`, `lib/serialize/CMakeLists.txt`
+  if a source list changes,
   `cmake/configforge.internal.symbols` (gate.abi with `-DWRITE=ON`) and
   `cmake/configforge_serialize.symbols` (`-DPART=serialize -DWRITE=ON`:
   `cf_key_valid` is the one promised name that changes),
@@ -2468,14 +2518,19 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
      function); XML; then `schema.c` and `entry.c`, then A-4's and A-5's
      refusals.
   6. `cf_key_valid`: first the test that fails (`test_serialize_alone`
-     with the new check: unresolved symbol); `key.c`, the header, the
+     with the new check: it fails to build, because it includes only
+     `cf_serialize.h` and `cf_key_valid` is not yet in `cf_error.h`);
+     `key.c`, the header, the
      lists; `tlv.c`; `tlv`'s tests pass.
   7. The symbol lists, `docs/API.md`
      (`cmake -P scripts/generate/apiref.cmake`), the amalgamation, the
      documents; ACCEPT.
 * **accept**: ACCEPT-LINUX with
-  `-DEXTRA="conformance;fuzz;coverage;abi;yaml"` (abi: the serialization
-  library gains `cf_key_valid`; yaml: `yaml.c`'s failure function is
+  `-DEXTRA="conformance;fuzz;coverage;abi;yaml;components;shared"` (abi: the serialization
+  library gains `cf_key_valid`; components: each component of `lib/`
+  builds alone with the new sources and `key.c` in `base`; shared: the
+  suite against a shared library, where the serialization library now
+  exports `cf_key_valid`; yaml: `yaml.c`'s failure function is
   shared with the library backends), ACCEPT-WINDOWS, ACCEPT-CI. Conformance
   scores equal to step 1's and to `tests/conformance/floor.txt`. The
   stack check of `scripts/check/stack.cmake` is part of the full
@@ -2492,8 +2547,10 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   message differs by a byte: stop; the message is what the tests and
   users read.
 * **docs**: D-102's entry gets "Built, in part: A-8" with the commit; with
-  A-3 and A-7 the entry is complete: the card that closes it also says
-  so ("Built: A-3, A-7, A-8") for the maintainer's review of the
+  A-3 and A-7 the entry is complete but for the number reader (D-102
+  also promises an integer and real reader in `lib/numeric/`, which no
+  card builds yet): the card says so ("Built: A-3, A-7, A-8; the number
+  reader has no card yet") for the maintainer's review of the
   index. CHANGELOG `### Changed`: "The readers share one count of lines
   and columns, one skip of blanks, comments and line breaks a syntax,
   one trim and one form of the failure message `file:line:col:
@@ -2503,11 +2560,6 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   `docs/Roadmap.md`: the item "Infrastructure behind abstractions" stays
   🟨, its line gains "A-8 done".
 * **notes**:
-  * Read against the tree after A-1b: `test_places.c` is placed in
-    `lib/config/tests/` by A-1b's rule (one file; its dotenv case includes
-    `configforge.h`). The card's earlier wording said "their components'
-    test lists: `lib/text/tests/`, and `lib/config/tests/` for the dotenv
-    case"; if `test_places.c` is meant to be split, that is not stated here.
 
 ---
 
