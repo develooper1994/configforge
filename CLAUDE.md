@@ -31,6 +31,24 @@ directory, a second worktree).
 - Check what a subagent reports before passing it on. When it fails,
   stalls or returns something doubtful: read its output, sharpen the
   brief and retry, or take the step yourself.
+- **Two budgets: the manager and the deputy** (maintainer, 2026-11-22).
+  When Codex is installed, the Claude session is the manager and Codex
+  (GPT-6.2-Astra for a large or subtle card, GPT-6.2-Sol otherwise) the
+  deputy. The deputy carries cards and CI fixes, with sub-agents of its
+  own if it has them; the manager commits, pushes, watches CI, answers
+  design questions, and takes over whatever the deputy leaves half done.
+  The manager's budget must last longest: as its 5-hour window fills,
+  start fewer Claude subagents (one past half, none past ~70%), give the
+  work to the deputy, and keep the last ~10% for committing and pushing.
+  When Codex nears its own limit, Claude carries on. How to run Codex,
+  what its sandbox cannot do, and the desk (`inbox.md`/`outbox.md`)
+  are in docs/Maintaining.md, "Working habits that paid". AGENTS.md is
+  the deputy's page.
+- A card's question that is only about the order of its steps, or a
+  fixture that contradicts the card's own rule, is not a design question:
+  whoever carries the card decides it by the card's rules and writes one
+  line under the card's "Organiser's answers". Only a real design choice
+  stops the card.
 
 ## Where the work is
 
@@ -63,7 +81,11 @@ You carry out one card of docs/Plan.md, alone.
    Push only when the brief says so.
 5. Three failures on the same thing: stop, restore, write what failed under
    the card's "notes", report.
-6. Report: files changed, ACCEPT results with exit codes, anything the card
+6. Before every push: `python scripts/work/work.py format`, then
+   `cmake -P scripts/generate/apiref.cmake` last, on Linux (docs/API.md
+   cites source lines). Watch CI with `gh run watch --interval 60`.
+   Commit and push after each step, so that a stop loses nothing.
+7. Report: files changed, ACCEPT results with exit codes, anything the card
    got wrong, anything left. Under 300 words.
 ```
 
@@ -86,3 +108,11 @@ You carry out one card of docs/Plan.md, alone.
   files or logs; answer a repeated report once.
 - The design is decided in `docs/plan/A-architecture.md`; a card does
   not reopen it. A real reason to change a decision goes to the user.
+- Cards may be stacked (one cut from the branch of the card before it)
+  so that work goes on while CI runs; each still lands alone, by tree
+  (docs/Maintaining.md: "A card cut from another card's branch").
+- Before the maintainer's stop time (a machine switched off, a workday
+  ended): every branch pushed, `HANDOFF.md` current, and what was learnt
+  written into the repository, not only into a session's memory. The
+  next session may be on another machine with other tools and knows
+  only what the repository says.

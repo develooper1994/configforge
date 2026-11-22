@@ -132,6 +132,7 @@ large (a design, an interface, anything subtle). A larger one may always take it
 | **accept** | Which ACCEPT applies, plus any check particular to the card. |
 | **stop if** | The conditions under which nothing is changed and the card is handed back. |
 | **docs** | The exact documents to update: the D-number to add, the CHANGELOG heading, the Roadmap row. |
+| **Organiser's answers** | Only when needed: a question someone carrying the card met and the organiser (or, for a question of step order or of a fixture against the card's own rule, whoever carries it) answered, dated. They are part of "decided". |
 | **notes** | Empty until someone fails at it; then what failed, dated. |
 
 A card that turns out wrong - its "decided" cannot be built as written -
