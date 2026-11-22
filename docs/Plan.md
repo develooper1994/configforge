@@ -209,8 +209,8 @@ waves ("After 1.7.0: the order of the waves", below).
 | 43 | A-3 One UTF-8, one hex digit, one table hash | medium | A-2 | done (520baa2) |
 | 44 | A-4 Another encoding, read only by name | medium | A-3 | done (e4069b8) |
 | 45 | A-5 Bytes that are not UTF-8 are refused, with their place and a hint | medium | A-4 | done (98c068e) |
-| 46 | A-6 `configforge codec recode`: a file converted once, for review | small | A-5, T-3 | open |
-| 47 | A-7 The escapes in families | large | A-6 | waits: A-6 |
+| 46 | A-6 `configforge codec recode`: a file converted once, for review | small | A-5, T-3 | done (0b4b97a) |
+| 47 | A-7 The escapes in families | large | A-6 | open (work/A-7 pushed, unfinished) |
 | 48 | A-8 Whitespace, comments, newlines and the place of a refusal | large | A-7 | waits: A-7 |
 | 49 | A-9 Composed codecs, for what is almost a format | medium | A-5 | waits: A-8 (the order) |
 | 50 | A-10 A refusal's place and reason | medium | A-8, A-9 | waits: A-9 |
@@ -218,7 +218,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 52 | A-12 The feature matrix made from the build | medium | A-11 | waits: A-11 |
 | 53 | W5-V2 Every pair of formats, and what each can hold | large | A-1b, W5-V1 | done (70bd398) |
 | 54 | W5-G4 Generators outside the tree | medium | A-1b, W5-G3 | done (adc2a63) |
-| 55 | P-1b The other libraries beside ours, and a page CI keeps | large | P-1, A-1b | waits: W5-G4 (the order) |
+| 55 | P-1b The other libraries beside ours, and a page CI keeps | large | P-1, A-1b | open |
 | 56 | A-13 A page of the project's limits | medium | A-12, W5-V2, P-1 | waits: P-1b (the order) |
 | 57 | P-2 Word-at-a-time scans in C89, with the byte loop as reference | medium | P-1, A-3 | waits: 2.4.0; to be rewritten on D-101 |
 | 58 | P-3 The scans P-1 found, a word at a time, kept only where they win | medium | P-2 | waits: P-2 |
