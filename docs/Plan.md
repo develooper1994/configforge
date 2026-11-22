@@ -210,8 +210,8 @@ waves ("After 1.7.0: the order of the waves", below).
 | 44 | A-4 Another encoding, read only by name | medium | A-3 | done (e4069b8) |
 | 45 | A-5 Bytes that are not UTF-8 are refused, with their place and a hint | medium | A-4 | done (98c068e) |
 | 46 | A-6 `configforge codec recode`: a file converted once, for review | small | A-5, T-3 | done (0b4b97a) |
-| 47 | A-7 The escapes in families | large | A-6 | open (work/A-7 pushed, unfinished) |
-| 48 | A-8 Whitespace, comments, newlines and the place of a refusal | large | A-7 | waits: A-7 |
+| 47 | A-7 The escapes in families | large | A-6 | done (fca866c) |
+| 48 | A-8 Whitespace, comments, newlines and the place of a refusal | large | A-7 | open |
 | 49 | A-9 Composed codecs, for what is almost a format | medium | A-5 | waits: A-8 (the order) |
 | 50 | A-10 A refusal's place and reason | medium | A-8, A-9 | waits: A-9 |
 | 51 | A-11 Build profiles and the C version per file | large | A-1b | waits: A-10 (the order) |
