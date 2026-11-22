@@ -340,6 +340,16 @@ default can be argued from a number.
 * The loop's checks run from `scripts/work/` (see `scripts/README.md`),
   the same on every machine; `D:\cf-work` holds their copies and builds.
 
+### The profiling VM
+
+A VMware Ubuntu guest on the workstation (the maintainer, 2026-11-22),
+for perf, heaptrack, massif and callgrind where WSL has no access to the
+CPU's counters: `ssh cfvm` (`~/.ssh/config`: developer@192.168.238.128,
+key `~/.ssh/id_ed25519_cfvm`; never a password). 4 cores, 3 GB: copy the
+tree in with `git archive | ssh cfvm tar -x -C <dir>`, build there, and
+bring back only the numbers. Measure on Windows first (MSVC, cf_bench,
+the library's allocator hook), then here.
+
 ### Another machine
 
 Nothing above is needed to continue. Clone, then run
