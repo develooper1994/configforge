@@ -21,7 +21,16 @@ A-12 and A-13 follow A-11. P-4 (allocation) is written and waits for P-1b.
    branch is missing, the card starts again from its card.
 4. **A-12, A-13** after A-11; then **P-4** after P-1b. P-2 and P-3 wait for
    2.4.0 and L-3 for L-2, as the index says.
-5. At the end of the group: `style-1.8.0` (docs/Plan.md, "Code first, style
+5. **The integration check**, once every card of the night is on main
+   (each landed alone, its CI green, by tree): on main, the full Linux
+   verify (`CF_EXTRA="components;shared;conformance" python
+   scripts/work/work.py verify main full`), `work.py win`, main's CI wholly
+   green but for the style gates, and a read-only review of the night's
+   changes together (`git diff 0b4b97a..main`) for what each card's own CI
+   could not see: two cards changing one function differently, CHANGELOG
+   or Decisions entries twice, the index of docs/Plan.md. Fix what it
+   finds before anything else.
+6. At the end of the group: `style-1.8.0` (docs/Plan.md, "Code first, style
    at the group's end"), then the 1.8.0 tag, which is the maintainer's.
 
 How the work was done tonight, and what to keep doing, is in
