@@ -2681,10 +2681,11 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
        taken): `composition '%s': '%s' is the name of a built-in format;
        choose another`. Two readers answering to one name for one
        document is the disagreement D-103 exists to avoid;
-    5. `base` NULL, or `!cf_codec_can_read(base)`: `composition '%s': no
+    5. `base == out`: `composition '%s': the base is the codec being
+       made` (before the next check: `out` was just cleared, so it
+       cannot read, and the identity is the reason to give);
+    6. `base` NULL, or `!cf_codec_can_read(base)`: `composition '%s': no
        base codec that reads`;
-    6. `base == out`: `composition '%s': the base is the codec being
-       made`;
     7. `repair` and `filter` both NULL: `composition '%s': a repair or a
        filter is needed; with neither it is the base under another
        name`.

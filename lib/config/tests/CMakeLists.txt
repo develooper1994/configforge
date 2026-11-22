@@ -74,6 +74,7 @@ set(CF_UNIT_TESTS
     test_credentials
     test_cbor
     test_tlv
+    test_compose
     test_kinds
     test_encoding
     test_utf8_refused

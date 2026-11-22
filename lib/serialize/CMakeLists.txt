@@ -19,6 +19,7 @@ set(cf_serialize_sources
     src/codec.c
     src/detect.c
     src/tlv.c
+    src/compose.c
     src/version.c)
 foreach(
   f

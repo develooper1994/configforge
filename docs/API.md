@@ -77,7 +77,7 @@ Every error carries one of these codes, stable from 1.0;
 - [`cf_platform_file.h`](#cf_platform_fileh) - 1
 - [`cf_port.h`](#cf_porth) - 12
 - [`cf_report.h`](#cf_reporth) - 6
-- [`cf_serialize.h`](#cf_serializeh) - 31
+- [`cf_serialize.h`](#cf_serializeh) - 32
 - [`cf_serialize_version.h`](#cf_serialize_versionh) - 2
 - [`cf_source.h`](#cf_sourceh) - 35
 - [`cf_text.h`](#cf_texth) - 24
@@ -3973,6 +3973,20 @@ name, takes its extensions, reads only, and is never chosen from
 content (CF_CODEC_NAMED_ONLY). Off in a build without CF_WITH_TLV,
 and says so. (1.5)
 
+```c
+CF_EXPERIMENTAL(1, 8) cf_bool cf_codec_compose_sized(cf_codec* out, size_t out_size, const cf_compose* spec, cf_error*         err);
+```
+
+Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
+
+Implementation: [`cf_codec_compose_sized` (lib/serialize/src/compose.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/compose.c#L174).
+
+Make a named, read-only codec in the program's storage. Keep out, spec,
+the base, the name and both contexts alive while any configuration uses
+the codec. A repair lends its bytes until decoding returns. A filter
+fills the four document callbacks of up and forwards events to down.
+A build without CF_WITH_COMPOSE refuses with CF_E_CAPABILITY.
+
 ### The format from the name, then the content (D-73)
 
 Several simple strategies in turn, the first that answers deciding, and
@@ -4812,7 +4826,7 @@ CF_API const char* cf_feature_at(size_t i);
 CF_API cf_bool cf_has_feature(const char* name);
 ```
 
-Implementation: [`cf_feature_count` (lib/config/src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/version.c#L109), [`cf_feature_at` (lib/config/src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/version.c#L113), [`cf_has_feature` (lib/config/src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/version.c#L140).
+Implementation: [`cf_feature_count` (lib/config/src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/version.c#L112), [`cf_feature_at` (lib/config/src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/version.c#L116), [`cf_has_feature` (lib/config/src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/version.c#L143).
 
 What this build can do, as a NUL-terminated list: "ini", "json",
 "real", and so on. Recorded in the provenance report as well, so a
@@ -4825,7 +4839,7 @@ that implements them, including a minimal build.
 CF_API size_t cf_build_limit(const char* name);
 ```
 
-Implementation: [`cf_build_limit` (lib/config/src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/version.c#L121).
+Implementation: [`cf_build_limit` (lib/config/src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/version.c#L124).
 
 A build limit, by name: "key" (CF_KEY_MAX), "source" (CF_SOURCE_MAX),
 "message" (CF_MESSAGE_MAX), "path" (CF_PATH_MAX) and "depth"

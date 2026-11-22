@@ -14,6 +14,8 @@ option(CF_WITH_PROPERTIES "Java .properties reader (built in, no dependency)"
        ON)
 option(CF_WITH_CBOR "CBOR codec, RFC 8949 (built in, no dependency)" ON)
 option(CF_WITH_TLV "TLV codecs made from a layout (built in, no dependency)" ON)
+option(CF_WITH_COMPOSE "Codecs composed of a base codec and a repair or filter"
+       ON)
 option(CF_WITH_XML "XML codec (requires expat)" OFF)
 option(CF_WITH_YAML
        "YAML codec (built in; libfyaml or libyaml by CF_YAML_BACKEND)" ON)
@@ -111,6 +113,7 @@ set(CF_FEATURES
     PROPERTIES
     CBOR
     TLV
+    COMPOSE
     XML
     YAML
     SQLITE

@@ -593,6 +593,112 @@ itself at the line it was written (D-63); the core schema's tags -
 says. A tag of the writing application's, a second document and a key
 that is not a scalar are refused by name.
 
+### Reading what is almost a format
+
+1. A dialect with a standard has its own codec, as JSON5 and JSONC do.
+2. A whole format of your own uses a `cf_codec` you supply.
+3. A composition gives a base codec a repair, an event filter, or both.
+4. Recovery inside a lexer is out of scope because it would expose the lexer's internals.
+
+A composition exists when your program creates it and reads a source that
+explicitly names it. Content detection skips it so the same document
+keeps the same interpretation unless the program asks for a repair or
+filter. `CF_WITH_COMPOSE` is on by default. The planned `misra` profile
+turns it off.
+
+For `{{a:1, b:2}}`, lend JSON5 the range between the extra braces. The
+repair can return a slice of the original bytes.
+
+```c
+static cf_bool braces_repair(void* ctx, const cf_blob* in, cf_blob* out,
+                             cf_error* err) {
+    size_t first = 0, last = in->n;
+    const char* space = " \t\r\n\v\f";
+    (void)ctx;
+    (void)err;
+    while (first < last && in->p[first] && strchr(space, in->p[first])) ++first;
+    while (last > first && in->p[last - 1] && strchr(space, in->p[last - 1])) --last;
+    out->p = in->p;
+    out->n = in->n;
+    if (last - first >= 4 && memcmp(in->p + first, "{{", 2) == 0 &&
+        memcmp(in->p + last - 2, "}}", 2) == 0) {
+        out->p = in->p + first + 1;
+        out->n = last - first - 2;
+    }
+    return CF_TRUE;
+}
+```
+
+```c
+static cf_compose spec = CF_COMPOSE_INIT;
+static cf_codec composed;
+spec.name = "json5+braces";
+spec.base = cf_codec_by_name("json5");
+spec.repair = braces_repair;
+if (cf_codec_compose(&composed, &spec, &err)) {
+    cf_builder_codec(b, &composed);
+    cf_builder_document(b, "x.json", CF_RANK_USER_FILE, "{{a:1, b:2}}", 12,
+                        spec.name, 0);
+}
+```
+
+For `{a:{2}, b:{2}}`, a `braces` codec reads each inner table as an
+unnamed scalar. The `unwrap` filter postpones each inner table's start.
+If it sees the unnamed scalar, it forwards that scalar with the saved
+name and drops the table's closing event. It forwards both events of an
+empty table. The filter and its four callbacks are in
+`lib/config/tests/test_compose.c`.
+
+```c
+static cf_bool unwrap(void* ctx, const cf_doc_sink* down, cf_doc_sink* up,
+                      cf_error* err) {
+    unwrap_state* state = (unwrap_state*)ctx;
+    (void)err;
+    state->down = down;
+    state->depth = 0;
+    state->pending = 0;
+    up->ctx = state;
+    up->begin_table = unwrap_table;
+    up->begin_array = unwrap_array;
+    up->scalar = unwrap_scalar;
+    up->end = unwrap_end;
+    return CF_TRUE;
+}
+```
+
+Set the description's `name` to `braces+unwrap`, `base` to `&braces`,
+`filter` to `unwrap` and `filter_ctx` to the address of an
+`unwrap_state`. Make and register the codec as above and pass its name
+to `cf_builder_document`. The result holds `a = 2` and `b = 2`.
+
+The repair receives the original bytes, including any byte-order mark,
+and lends either a range of those bytes or its own memory until the
+decode returns. If the repair or filter keeps mutable state in its
+context, use that context for one load at a time. Give configurations
+that may load concurrently their own codec and context. Keep the codec,
+description, base, name and contexts alive as long as a configuration
+uses them.
+
+Set all four document callbacks on the filter's upstream sink and use
+the downstream sink's `ctx` when passing events on. Copy any member
+name or text you keep past its callback. The root table's `end` is the
+end of the document and the point to flush buffered events.
+
+`explain("a")` gives a place such as `x.json (json5+braces):1:2` and
+the report gives `"format": "json5+braces"` and `"format_how": "named"`.
+Line and column refer to the repaired bytes. A repair can preserve both
+by replacing each unwanted brace with a space.
+
+With a repair and a UTF-8 base codec, the composition checks UTF-8
+after the repair. The source rejects `CF_ENCODING_*` flags for that
+composition and leaves a UTF-16 mark to the repair. A filter-only
+composition over a UTF-8 base uses the ordinary input check. Binary
+bases and bases that declare their own encoding keep their own rules.
+
+`CF_WITH_COMPOSE=OFF` leaves a stub that reports `CF_E_CAPABILITY`.
+Composition is currently a C API. The C++, Rust and Python bindings
+will take these callbacks when the document events become public.
+
 ### Files in another encoding
 
 Inside the library every text is UTF-8 (D-108). A file written in another

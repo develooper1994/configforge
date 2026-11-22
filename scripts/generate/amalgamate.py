@@ -73,7 +73,7 @@ SOURCES = [
     "config/src/core/config.c", "config/src/core/iterate.c", "config/src/core/live.c",
     "config/src/core/edit.c",
     "serialize/src/blob.c", "serialize/src/codec.c", "serialize/src/detect.c", "serialize/src/ini.c",
-    "serialize/src/json.c", "serialize/src/toml.c", "serialize/src/yamlparse.c", "serialize/src/yaml.c", "serialize/src/xml.c", "serialize/src/properties.c", "serialize/src/cbor.c", "serialize/src/tlv.c", "serialize/src/version.c",
+    "serialize/src/json.c", "serialize/src/toml.c", "serialize/src/yamlparse.c", "serialize/src/yaml.c", "serialize/src/xml.c", "serialize/src/properties.c", "serialize/src/cbor.c", "serialize/src/tlv.c", "serialize/src/compose.c", "serialize/src/version.c",
     "config/src/sources/entry.c", "config/src/sources/memory.c", "config/src/sources/defaults.c", "config/src/sources/env.c",
     "config/src/sources/cli.c", "config/src/sources/compat.c", "config/src/sources/snapshot.c",
     "config/src/bridge/flatten.c", "config/src/bridge/file.c", "config/src/bridge/dotenv.c", "config/src/bridge/dir.c", "config/src/bridge/emit.c", "config/src/bridge/image.c", "config/src/bridge/store.c", "config/src/bridge/secrets.c", "config/src/bridge/registry.c", "config/src/bridge/preferences.c","config/src/bridge/schema.c",

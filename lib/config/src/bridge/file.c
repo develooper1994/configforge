@@ -342,8 +342,8 @@ static void file_hint(file_state* st, const cf_codec* tried, const cf_blob* blob
     char            source[CF_SOURCE_MAX];
     int             code = st->err.code;
 
-    if (st->codec != NULL) {
-        return; /* the program handed that codec over: no second opinion */
+    if (st->codec != NULL || (tried->caps & CF_CODEC_NAMED_ONLY) != 0) {
+        return; /* the program chose this reader: no second opinion */
     }
     like = cf_codec_detect(st->codecs, st->ncodecs, blob, NULL, scratch, &d);
     if (like == NULL || like == tried) {

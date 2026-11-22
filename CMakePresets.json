@@ -74,6 +74,7 @@
         "CMAKE_BUILD_TYPE": "MinSizeRel",
         "CF_GC_SECTIONS": "ON",
         "CF_WITH_REAL": "OFF",
+        "CF_WITH_COMPOSE": "OFF",
         "CF_WITH_DIR": "OFF",
         "CF_WITH_DOTENV": "OFF",
         "CF_WITH_EMIT": "OFF",

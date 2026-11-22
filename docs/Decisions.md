@@ -4616,7 +4616,7 @@ ones. Four levels, of which three exist:
 2. **A whole format of the program's own** is a `cf_codec` the program
    fills and registers with `cf_builder_codec` (the Guide, "Your own
    format"). Exists.
-3. **A codec composed from a codec** (new, `cf_codec_compose`): a base
+3. **A codec composed from a codec** (experimental, `cf_codec_compose`): a base
    codec, a name, and either or both of
    * a **repair**, `cf_bool (*)(void* ctx, const cf_blob* in, cf_blob*
      out, cf_error* err)`, run on the bytes before the base reads them
@@ -4644,7 +4644,7 @@ Its repair and filter are the program's code, named in every report.
 
 **Status.** Decided, 2026-11-19.
 
-Built: A-9.
+Built: A-9. The examples are in the Guide, “Reading what is almost a format”.
 
 ## D-104 — Work moved to build time, in layers
 

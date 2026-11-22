@@ -183,7 +183,9 @@ enum {
     CF_CODEC_SCHEMA = 1u << 7,
     /* Reads by an encoding the document itself declares, as XML does: a
        source recodes nothing for it and looks at no byte-order mark, and
-       a program that names an encoding for it is refused. (1.8, D-108) */
+       a program that names an encoding for it is refused. (1.8, D-108)
+       Also a composed codec with a repair, which checks the repaired
+       bytes itself (cf_codec_compose). */
     CF_CODEC_SELF_ENCODED = 1u << 8
 };
 
@@ -435,6 +437,31 @@ CF_API cf_bool cf_tlv_codec_sized(cf_codec* out, size_t out_size,
                                   const cf_tlv_layout* layout, cf_error* err);
 #define cf_tlv_codec(out, layout, err)                                                 \
     cf_tlv_codec_sized((out), sizeof(cf_codec), (layout), (err))
+
+/* A codec made of another (D-103); start from CF_COMPOSE_INIT. */
+typedef struct cf_compose {
+    size_t          size; /* sizeof(cf_compose) */
+    const char*     name; /* "json5+braces" */
+    const cf_codec* base; /* reads what the repair leaves */
+    cf_bool (*repair)(void* ctx, const cf_blob* in, cf_blob* out, cf_error* err);
+    void* repair_ctx;
+    cf_bool (*filter)(void* ctx, const cf_doc_sink* down, cf_doc_sink* up,
+                      cf_error* err);
+    void* filter_ctx;
+} cf_compose;
+
+#define CF_COMPOSE_INIT {sizeof(cf_compose), NULL, NULL, NULL, NULL, NULL, NULL}
+
+/* Make a named, read-only codec in the program's storage. Keep out, spec,
+   the base, the name and both contexts alive while any configuration uses
+   the codec. A repair lends its bytes until decoding returns. A filter
+   fills the four document callbacks of up and forwards events to down.
+   A build without CF_WITH_COMPOSE refuses with CF_E_CAPABILITY. */
+CF_EXPERIMENTAL(1, 8) cf_bool cf_codec_compose_sized(cf_codec* out, size_t out_size,
+                                                     const cf_compose* spec,
+                                                     cf_error*         err);
+#define cf_codec_compose(out, spec, err)                                               \
+    cf_codec_compose_sized((out), sizeof(cf_codec), (spec), (err))
 
 /* ------------------------------------------------------------------ *
  * The format from the name, then the content (D-73)
