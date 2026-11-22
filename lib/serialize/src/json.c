@@ -627,7 +627,10 @@ static cf_bool js_between(js_scan* s, cf_bool* first, char close, const char* un
         if (!js_space(s)) {
             return CF_FALSE;
         }
-        if (s->p < s->end && *s->p == close) {
+        if (s->p >= s->end) {
+            return js_fail(s, s->p, unclosed);
+        }
+        if (*s->p == close) {
             if (!s->json5) {
                 return js_fail(s, s->p, "trailing comma");
             }
