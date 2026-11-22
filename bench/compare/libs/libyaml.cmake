@@ -1,0 +1,27 @@
+# libyaml: the eight files of its CMakeLists.txt, and its version definitions.
+cfb_library(
+  libyaml
+  SOURCES
+  "${LIB_DIR}/src/api.c"
+  "${LIB_DIR}/src/dumper.c"
+  "${LIB_DIR}/src/emitter.c"
+  "${LIB_DIR}/src/loader.c"
+  "${LIB_DIR}/src/parser.c"
+  "${LIB_DIR}/src/reader.c"
+  "${LIB_DIR}/src/scanner.c"
+  "${LIB_DIR}/src/writer.c"
+  INCLUDES
+  "${LIB_DIR}/include"
+  DEFINITIONS
+  YAML_DECLARE_STATIC
+  YAML_VERSION_MAJOR=0
+  YAML_VERSION_MINOR=2
+  YAML_VERSION_PATCH=5
+  "YAML_VERSION_STRING=\"0.2.5\"")
+cfb_adapter(
+  libyaml
+  adapters/libyaml.cpp
+  VERSIONOF
+  libyaml
+  LIBS
+  libyaml)

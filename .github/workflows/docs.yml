@@ -29,6 +29,18 @@ jobs:
         run: |
           python -m venv "$RUNNER_TEMP/docs-env"
           "$RUNNER_TEMP/docs-env/bin/python" -m pip install -r scripts/docs/requirements.txt
+      # The benchmark's history (P-1b): the branch bench-history, which CI
+      # writes, drawn into docs/Performance.md and docs/performance/*.svg for
+      # this build alone, never committed. No branch yet, a fork or a pull
+      # request: the page says so and its charts are empty, and the build passes.
+      - name: Fetch the benchmark's history
+        continue-on-error: true
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: bench-history
+          path: bench-history
+      - name: Draw the benchmark's history
+        run: python3 scripts/bench/page.py --history "$PWD/bench-history" --out docs/performance
       - name: Check and build the documentation
         run: |
           cmake -DSRC="$PWD" -DBIN="$RUNNER_TEMP/docs-api" -P cmake/gates/GateApiref.cmake

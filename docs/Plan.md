@@ -99,7 +99,7 @@ pinned clang-format 22, clang-tidy 21, MSVC `/analyze`, cargo. A card
 whose code runs only there (marked **CI-only**) is accepted by CI alone,
 and is expected to take more than one push.
 
-Three failures that are not the code, so that they are recognised:
+Four failures that are not the code, so that they are recognised:
 
 * `gate.format.c` in CI and not locally: the local clang-format is not
   22.1.8. Rewrite the lines CI names so that no version moves them
@@ -109,6 +109,9 @@ Three failures that are not the code, so that they are recognised:
   alone before believing it.
 * `gate.apiref`: a header comment changed. Run
   `cmake -P scripts/generate/apiref.cmake` and stage `docs/API.md`.
+* `bench gate` exit 3: the runner's compiler or C library is not the
+  baseline's; regenerate the baseline with `scripts/bench/gate.py --write`
+  from the CI artifact `bench-quick` (D-111).
 
 ## A card
 

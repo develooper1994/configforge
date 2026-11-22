@@ -738,6 +738,9 @@ SHA-256 would add a hash to the library for no gain here. What was new:
   "Measured" whichever way they come out. The "Fast, and without
   copying" benchmark of the formats above uses the same harness. Done
   when CI runs it on Linux and the table is generated, not written.
+  This is the other comparison, of whole configuration libraries: the
+  one of the readers is "The aim: beat the others at everything" below
+  (P-1b), and this stays open.
 * ⬜ **Used by a program not written for it.** Every example here was
   written for the library. One small open-source daemon whose
   configuration code is replaced by this library, in a fork, shows what
@@ -1062,7 +1065,7 @@ first user meets. In the order proposed:
   shared layer (a structural index, in-situ strings, number parsing,
   a byte-class scan), so YAML, TOML, INI, XML, CBOR and the rest gain
   from it too; a JSON-only trick is the exception, and named as one.
-* ⬜ **The aim: beat the others at everything, and say where it does.**
+* 🟨 **The aim: beat the others at everything, and say where it does.**
   The benchmark (P-1, and 1.8.0's comparison) runs the same documents
   through yyjson, simdjson and RapidJSON for JSON, and through each
   format's best-known C or C++ reader for the others (to be listed:
@@ -1072,7 +1075,8 @@ first user meets. In the order proposed:
   print speed, memory, code size - per format and size. Winning every
   line may not be possible; the README leads with the lines it wins,
   and the page shows all of them, losses included, with the machine and
-  compiler.
+  compiler. Built (P-1b), first round: 11 libraries in 6 formats; the
+  README's lead lines wait for the first weekly run.
 * ⬜ **A SWAR and SIMD backend, in C89/C99, possibly a library of its
   own.** The gap, as checked on 2026-11-19 against the libraries'
   own pages: every piece exists somewhere, the whole does not.
@@ -1138,7 +1142,7 @@ first user meets. In the order proposed:
   `--lang` with no built-in entry and no program fails with the list of
   what is there; `--lang` absent keeps today's C. Placed (2026-11-19):
   the table is W5-G1's, the outside generators W5-G4 after W5-G3.
-* ⬜ **A live optimization and benchmark page.** `docs/Performance.md`
+* 🟨 **A live optimization and benchmark page.** `docs/Performance.md`
   (P-1 opens it) becomes a page CI keeps current: every push to main
   runs the benchmark, appends its numbers to a history kept on a branch
   of its own or in the Pages site, and the page draws each format's
@@ -1147,7 +1151,9 @@ first user meets. In the order proposed:
   it lands; the instruction-count gate (P cards, "What keeps a gain")
   stays what fails a build, the page is what shows the trend. Each
   optimization tried, kept or reverted, is listed on it with its
-  numbers, so the page is also the log of what was learned.
+  numbers, so the page is also the log of what was learned. Built
+  (P-1b), first round: 11 libraries in 6 formats; the README's lead lines
+  wait for the first weekly run.
 * 🟩 **Tests that convert between every pair of formats** (D-109). For each
   document of the conformance suites and the fuzz corpora: read it in
   format A, write it in B, read it back, write it in A, and require the
@@ -1159,7 +1165,7 @@ first user meets. In the order proposed:
   round-trip in fewer digits, empty keys, deep nesting, every Unicode
   plane, a NUL inside a string). What one format loses is written down
   per pair, in a table the test checks.
-* ⬜ **Benchmarks fair, and without mercy.** Fair: every library is
+* 🟨 **Benchmarks fair, and without mercy.** Fair: every library is
   built with the same compiler and flags, at its own recommended
   settings, from a named version; each is asked for the same work (a
   library that validates is not set against one that does not, or both
@@ -1171,7 +1177,8 @@ first user meets. In the order proposed:
   invalid input that fails late, 256 MiB and beyond, a cold cache and
   a warm one, one thread and every thread; memory and code size are
   counted, not only speed; and a case ConfigForge loses is kept on the
-  page, not dropped.
+  page, not dropped. Built (P-1b), first round: 11 libraries in 6
+  formats; the README's lead lines wait for the first weekly run.
 * ⬜ **The other libraries' CVEs and bug reports, as tests here.** The
   readers this project is compared with have public histories: CVEs and
   issue trackers of libyaml, PyYAML, SnakeYAML, yaml-cpp, rapidyaml,

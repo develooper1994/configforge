@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "commit": "83125f89bf43c7549649b1669791130cb1387d25",
+  "toolchain": {
+    "compiler": "c++ (Ubuntu 15.2.0-16ubuntu1) 15.2.0",
+    "libc": "ldd (Ubuntu GLIBC 2.43-2ubuntu2.7) 2.43"
+  },
+  "cells": {
+    "cbor/mixed/4": 456186061,
+    "cbor/numbers-edge/4": 497219025,
+    "cbor/strings-plain/4": 35719342,
+    "ini/mixed/4": 157094405,
+    "ini/strings-plain/4": 75977793,
+    "ini/whitespace/4": 86112015,
+    "json/mixed/4": 416352681,
+    "json/numbers-edge/4": 8855944916,
+    "json/strings-escape/4": 468991503,
+    "json/strings-plain/4": 260855674,
+    "json/whitespace/4": 104172681,
+    "toml/mixed/4": 478687939,
+    "toml/numbers-edge/4": 8915542547,
+    "toml/strings-escape/4": 480589020,
+    "toml/strings-plain/4": 328014657,
+    "toml/whitespace/4": 152552388,
+    "xml/mixed/4": 997769700,
+    "xml/strings-escape/4": 642975599,
+    "xml/strings-plain/4": 141116596,
+    "xml/whitespace/4": 790190972,
+    "yaml/mixed/4": 642501056,
+    "yaml/numbers-edge/4": 463925270,
+    "yaml/strings-escape/4": 364143004,
+    "yaml/strings-plain/4": 246186627,
+    "yaml/whitespace/4": 98402294
+  }
+}

@@ -41,8 +41,12 @@ CF_ENABLE_GATES = "OFF"
 CF_WITH_CXX = "OFF"
 
 # ruff, at its own defaults (the version is pinned in scripts/buildenv/setup.sh
-# and CI), with one exception.
+# and CI), with two exceptions.
 [tool.ruff.lint.per-file-ignores]
+# The benchmark's scripts write tables and messages whose columns are the
+# printf conversions they have always been (the gate's own messages are
+# specified to the character in docs/plan/P-word-at-a-time.md, P-1b).
+"scripts/bench/*.py" = ["UP031"]
 # Conan reads these as class attributes; a ClassVar annotation would change
 # what the recipe means.
 "conanfile.py" = ["RUF012"]

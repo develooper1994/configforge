@@ -170,6 +170,13 @@ function(configforge_add_gates tgt)
              COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
                      ${CMAKE_SOURCE_DIR}/cmake/gates/GateFormats.cmake)
 
+    # docs/Performance.md's static block is what scripts/bench/page.py writes
+    # (P-1b, D-111). Unix only, like gate.formats, and skipped when there is no
+    # Python.
+    add_test(NAME gate.perfpage
+             COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
+                     ${CMAKE_SOURCE_DIR}/cmake/gates/GatePerfpage.cmake)
+
     add_test(
       NAME gate.interface
       COMMAND

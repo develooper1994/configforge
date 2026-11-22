@@ -1,0 +1,178 @@
+name: bench
+
+# The benchmark's numbers over time (P-1b, D-111). Three triggers, and no job
+# on a pull request writes anything:
+#
+#  * when ci has succeeded on a push to main: the quick run of that push
+#    (the artifact bench-quick of ci's job bench-gate) is added to the
+#    branch bench-history;
+#  * every Sunday, and by hand: the full comparison, every library and every
+#    document, under GCC and Clang, and the same added to bench-history.
+#
+# docs/Performance.md draws the branch; .github/workflows/docs.yml reads it.
+# These triggers exist only from the default branch: the first real run of this
+# file is after the merge.
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+  schedule:
+    - cron: "17 2 * * 0"
+  workflow_dispatch:
+    inputs:
+      sizes:
+        description: "Sizes in MiB, comma separated"
+        default: "1,16,256"
+      publish:
+        description: "Add the results to bench-history (true or false)"
+        default: "true"
+
+permissions:
+  contents: read
+
+jobs:
+  history:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+      actions: read
+    concurrency:
+      group: bench-history
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: bench-quick
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - name: Check the results, then add them to the branch
+        run: |
+          python3 scripts/bench/page.py --validate bench-quick.json
+          bash scripts/bench/publish.sh bench-quick.json
+
+  compare:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 120
+    env:
+      CC: ${{ matrix.compiler }}
+      CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install what the comparison needs
+        run: sudo apt-get update && sudo apt-get install -y valgrind libexpat1-dev clang
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/cfb-libs
+          key: cfb-libs-${{ hashFiles('bench/compare/libraries.cmake') }}
+      - name: Fetch the libraries at their pinned commits
+        run: cmake -DLIBS="$HOME/cfb-libs" -P scripts/bench/fetch.cmake
+      - name: Build the benchmark that makes the documents
+        run: |
+          cmake -S . -B build-bench -DCMAKE_BUILD_TYPE=Release -DCF_BUILD_BENCH=ON
+          cmake --build build-bench --target cf_bench
+      - name: Build the comparison
+        run: |
+          cmake -S bench/compare -B build-cfb -DCMAKE_BUILD_TYPE=Release \
+            -DCF_BENCH_LIBS="$HOME/cfb-libs"
+          cmake --build build-cfb --parallel
+      - name: The full run
+        run: >-
+          python3 scripts/bench/run.py --scope full
+          --sizes "${{ inputs.sizes || '1,16,256' }}"
+          --build build-cfb --cfbench build-bench/bench/cf_bench
+          --out bench-full-${{ matrix.compiler }}.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: bench-full-${{ matrix.compiler }}
+          path: bench-full-${{ matrix.compiler }}.json
+          retention-days: 90
+      # What a first read costs, with the page cache dropped between runs:
+      # root is needed for that, and only that. Not in the history.
+      - name: Cold reads of mixed at 256 MiB
+        if: matrix.compiler == 'gcc' && contains(inputs.sizes || '1,16,256', '256')
+        run: >-
+          sudo env "PATH=$PATH" python3 scripts/bench/run.py --scope full
+          --sizes 256 --mixed-only --cold --reps 3
+          --build build-cfb --cfbench build-bench/bench/cf_bench
+          --out bench-cold.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: matrix.compiler == 'gcc' && contains(inputs.sizes || '1,16,256', '256')
+        with:
+          name: bench-cold
+          path: bench-cold.json
+          retention-days: 90
+
+  # `bare` and `native`, on GCC, for `mixed` at 16 MiB alone: what the flags
+  # of docs/Performance.md cost, for the record.
+  variants:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install what the comparison needs
+        run: sudo apt-get update && sudo apt-get install -y valgrind libexpat1-dev
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/cfb-libs
+          key: cfb-libs-${{ hashFiles('bench/compare/libraries.cmake') }}
+      - name: Fetch the libraries at their pinned commits
+        run: cmake -DLIBS="$HOME/cfb-libs" -P scripts/bench/fetch.cmake
+      - name: Build the benchmark that makes the documents
+        run: |
+          cmake -S . -B build-bench -DCMAKE_BUILD_TYPE=Release -DCF_BUILD_BENCH=ON
+          cmake --build build-bench --target cf_bench
+      - name: bare and native
+        run: |
+          for flags in bare native; do
+            cmake -S bench/compare -B "build-cfb-$flags" -DCMAKE_BUILD_TYPE=Release \
+              -DCF_BENCH_LIBS="$HOME/cfb-libs" -DCF_BENCH_FLAGSET="$flags"
+            cmake --build "build-cfb-$flags" --parallel
+            python3 scripts/bench/run.py --scope full --sizes 16 --mixed-only \
+              --flags "$flags" --build "build-cfb-$flags" \
+              --cfbench build-bench/bench/cf_bench --out "bench-full-gcc-$flags.json"
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: bench-full-variants
+          path: bench-full-gcc-*.json
+          retention-days: 90
+
+  publish-full:
+    needs: [compare, variants]
+    if: >-
+      always() && needs.compare.result == 'success' &&
+      github.ref == 'refs/heads/main' && inputs.publish != 'false'
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+    concurrency:
+      group: bench-history
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: bench-full-*
+          path: results
+          merge-multiple: true
+      - name: Check the results, then add them to the branch
+        run: |
+          for f in results/*.json; do python3 scripts/bench/page.py --validate "$f"; done
+          bash scripts/bench/publish.sh results/*.json

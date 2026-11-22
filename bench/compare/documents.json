@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "formats": {
+    "J": "json",
+    "Y": "yaml",
+    "T": "toml",
+    "C": "cbor",
+    "I": "ini",
+    "X": "xml"
+  },
+  "sizes_mib": [
+    1,
+    16,
+    256
+  ],
+  "documents": [
+    {
+      "name": "mixed",
+      "what": "tables of strings, integers, reals, booleans and short arrays, as a configuration looks",
+      "formats": "JYTCIX"
+    },
+    {
+      "name": "strings-plain",
+      "what": "strings of 64 to 4096 ASCII bytes, no escape",
+      "formats": "JYTCIX"
+    },
+    {
+      "name": "strings-escape",
+      "what": "every byte of every string an escape: a line feed, a backslash, a quote, an e-acute, a character outside the first plane (a surrogate pair in JSON); entities in XML",
+      "formats": "JYTX"
+    },
+    {
+      "name": "strings-utf8",
+      "what": "half the bytes non-ASCII, two-, three- and four-byte sequences mixed",
+      "formats": "JYTCIX"
+    },
+    {
+      "name": "numbers-int",
+      "what": "integers of one to three digits, one a line or element",
+      "formats": "JYTC"
+    },
+    {
+      "name": "numbers-edge",
+      "what": "the int64 limits and their neighbours, reals of 17 significant digits, the largest and smallest exponents, subnormals",
+      "formats": "JYTC"
+    },
+    {
+      "name": "nest-deep",
+      "what": "tables or arrays 31 levels deep (CF_MAX_DEPTH 32 allows 31 inside the document), repeated",
+      "formats": "JYTCX"
+    },
+    {
+      "name": "array-huge",
+      "what": "one array of one-digit elements, as many as the size holds (INI: name[] = x lines, D-60)",
+      "formats": "JYTCIX"
+    },
+    {
+      "name": "table-wide",
+      "what": "one table of unique short keys, as many as the size holds",
+      "formats": "JYTCIX"
+    },
+    {
+      "name": "keys-prefix",
+      "what": "keys sharing a 200-byte prefix (under CF_KEY_MAX): quadratic time on crafted keys",
+      "formats": "JYTCI"
+    },
+    {
+      "name": "whitespace",
+      "what": "mostly blanks, newlines, indentation and comments, a value now and then",
+      "formats": "JYTIX"
+    },
+    {
+      "name": "many-tiny",
+      "what": "documents of 20 to 64 bytes, parsed one at a time from their own slice; measures what one parse costs to start and to end",
+      "formats": "JYTCIX"
+    },
+    {
+      "name": "invalid-late",
+      "what": "a valid document with its one error in the last KiB: a stray ] (JSON), a tab indent (YAML), a duplicate key (TOML), a truncated last item (CBOR), a line with no = (INI), a mismatched end tag (XML); measures the time to refuse",
+      "formats": "JYTCIX"
+    },
+    {
+      "name": "records",
+      "what": "P-1's records (docs/Performance.md, Large documents): strings of 40 to 240 bytes and, once in 64 records, of 16 to 64 KiB, escapes, non-ASCII, 8 to 31 small numbers, a chain of nested tables",
+      "formats": "JYTCI"
+    },
+    {
+      "name": "yaml-aliases",
+      "what": "YAML alone, 1 MiB: plain entries, then aliases of aliases nine levels deep; an outcome table, not a speed row",
+      "formats": "Y"
+    }
+  ]
+}

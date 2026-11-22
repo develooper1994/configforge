@@ -10,6 +10,9 @@
  *     ./cf_bench docs [--large] [format ...]
  *                               large documents (P-1, below): MiB/s per
  *                               format at 1 and 16 MiB, and 256 with --large
+ *     ./cf_bench --emit-docs <dir> [--size 1|16|256] [--only <format>]
+ *                               the documents as files, for bench/compare/
+ *                               (P-1b), and a line each: name, bytes, FNV-1a
  *
  * For each N: a configuration of N keys built from memory with a
  * definition each; cf_get_int on every key; a blind report written; and
@@ -1037,12 +1040,1273 @@ static int run_docs(int argc, char** argv) {
     return 0;
 }
 
+/* ------------------------------------------------------------------ *
+ * The documents as files (P-1b): `cf_bench --emit-docs <dir>`.
+ *
+ * The comparison (bench/compare/) reads these files and generates
+ * nothing itself, so every library, and every compiler, is given the same
+ * bytes. A document is one logical content written by a small writer in
+ * each format's syntax: the records are chosen to hurt a reader (long
+ * strings, every byte an escape, 31 levels of nesting, 100,000 unique
+ * keys, a late error), the same for every format, from one seed.
+ * ------------------------------------------------------------------ */
+
+/* 64 bits in two 32-bit halves held in unsigned long: C89 has no
+   64-bit type, and the seed must give the same bytes on every compiler. */
+typedef struct u64 {
+    unsigned long hi, lo;
+} u64;
+
+#define M32 0xFFFFFFFFul
+
+static u64 u64_of(unsigned long hi, unsigned long lo) {
+    u64 r;
+    r.hi = hi & M32;
+    r.lo = lo & M32;
+    return r;
+}
+
+static u64 u64_xor(u64 a, u64 b) {
+    return u64_of(a.hi ^ b.hi, a.lo ^ b.lo);
+}
+
+static u64 u64_shr(u64 a, int n) {
+    return u64_of(a.hi >> n, (a.lo >> n) | (a.hi << (32 - n)));
+}
+
+static u64 u64_shl(u64 a, int n) {
+    return u64_of((a.hi << n) | (a.lo >> (32 - n)), a.lo << n);
+}
+
+/* The 64-bit product of two 32-bit values, as hi and lo. */
+static void mul32(unsigned long a, unsigned long b, unsigned long* hi,
+                  unsigned long* lo) {
+    unsigned long a0 = a & 0xFFFFul, a1 = (a >> 16) & 0xFFFFul;
+    unsigned long b0 = b & 0xFFFFul, b1 = (b >> 16) & 0xFFFFul;
+    unsigned long p00 = a0 * b0, p01 = a0 * b1, p10 = a1 * b0, p11 = a1 * b1;
+    unsigned long mid = (p00 >> 16) + (p01 & 0xFFFFul) + (p10 & 0xFFFFul);
+
+    *lo = (((mid & 0xFFFFul) << 16) | (p00 & 0xFFFFul)) & M32;
+    *hi = (p11 + (p01 >> 16) + (p10 >> 16) + (mid >> 16)) & M32;
+}
+
+/* The low 64 bits of a * b. */
+static u64 u64_mul(u64 a, u64 b) {
+    unsigned long hi, lo;
+
+    mul32(a.lo, b.lo, &hi, &lo);
+    hi = (hi + ((a.hi * b.lo) & M32) + ((a.lo * b.hi) & M32)) & M32;
+    return u64_of(hi, lo);
+}
+
+/* xorshift64*: the next value of the state, and its high 32 bits. */
+static unsigned long xs_next(u64* s) {
+    u64 x = *s;
+    u64 r;
+
+    x  = u64_xor(x, u64_shr(x, 12));
+    x  = u64_xor(x, u64_shl(x, 25));
+    x  = u64_xor(x, u64_shr(x, 27));
+    *s = x;
+    r  = u64_mul(x, u64_of(0x2545F491ul, 0x4F6CDD1Dul));
+    return r.hi;
+}
+
+/* One constant for the seed, run through xorshift64* and mixed with the
+   document's number, so that a document does not change when another is
+   added. */
+#define SEED_HI 0x9E3779B9ul
+#define SEED_LO 0x7F4A7C15ul
+
+static u64 doc_seed(int which) {
+    u64 s = u64_of(SEED_HI, SEED_LO);
+
+    s = u64_xor(s, u64_mul(u64_of(0, (unsigned long)which + 1ul),
+                           u64_of(0xD6E8FEB8ul, 0x6659FD93ul)));
+    (void)xs_next(&s);
+    (void)xs_next(&s);
+    return s;
+}
+
+enum { F_JSON, F_YAML, F_TOML, F_CBOR, F_INI, F_XML, F_COUNT };
+
+static const char* const fname[F_COUNT]       = {"json", "yaml", "toml",
+                                                 "cbor", "ini",  "xml"};
+static const char* const fext[F_COUNT]        = {".json", ".yaml", ".toml",
+                                                 ".cbor", ".ini",  ".xml"};
+static const char        fletter[F_COUNT + 1] = "JYTCIX";
+
+enum {
+    D_MIXED,
+    D_STR_PLAIN,
+    D_STR_ESC,
+    D_STR_UTF8,
+    D_NUM_INT,
+    D_NUM_EDGE,
+    D_NEST_DEEP,
+    D_ARRAY_HUGE,
+    D_TABLE_WIDE,
+    D_KEYS_PREFIX,
+    D_WHITESPACE,
+    D_MANY_TINY,
+    D_INVALID_LATE,
+    D_RECORDS,
+    D_ALIASES,
+    D_COUNT
+};
+
+static const char* const dname[D_COUNT] = {
+    "mixed",        "strings-plain", "strings-escape", "strings-utf8", "numbers-int",
+    "numbers-edge", "nest-deep",     "array-huge",     "table-wide",   "keys-prefix",
+    "whitespace",   "many-tiny",     "invalid-late",   "records",      "yaml-aliases"};
+
+/* The formats a document exists in: the letters of the table in
+   docs/plan/P-word-at-a-time.md. */
+static const char* const dhas[D_COUNT] = {
+    "JYTCIX", "JYTCIX", "JYTX",  "JYTCIX", "JYTC",   "JYTC",  "JYTCX", "JYTCIX",
+    "JYTCIX", "JYTCI",  "JYTIX", "JYTCIX", "JYTCIX", "JYTCI", "Y"};
+
+static int doc_exists(int format, int docn) {
+    return strchr(dhas[docn], fletter[format]) != NULL;
+}
+
+#define WR_MAXD 40
+
+typedef struct wlvl {
+    int           arr;
+    unsigned long n;
+    size_t        at;   /* CBOR: where the head is */
+    size_t        plen; /* the dotted path's length outside this level */
+    char          key[24];
+} wlvl;
+
+typedef struct wr {
+    doc           d;
+    int           fmt;
+    int           depth; /* 0 is the root table */
+    wlvl          st[WR_MAXD];
+    char          path[512];
+    size_t        plen;
+    int           inarr;   /* TOML: inside an inline array */
+    int           nl_each; /* a line to an element of an array */
+    int           yplain;  /* YAML: simple strings plain */
+    u64           rng;
+    unsigned char bad; /* a writer misuse: the document is not made */
+} wr;
+
+static unsigned long rn(wr* w) {
+    return xs_next(&w->rng);
+}
+
+static void wr_puts(wr* w, const char* s) {
+    puts_(&w->d, s);
+}
+
+static void wr_ch(wr* w, char c) {
+    put(&w->d, &c, 1);
+}
+
+static void wr_ws(wr* w, int n) {
+    while (n-- > 0) {
+        wr_ch(w, ' ');
+    }
+}
+
+/* A CBOR head with a four-byte argument, whatever the number: the count
+   of a container is patched in when it closes. */
+static void wr_head4(wr* w, int major, unsigned long n) {
+    unsigned char h[5];
+
+    h[0] = (unsigned char)((major << 5) | 26);
+    h[1] = (unsigned char)((n >> 24) & 0xFFu);
+    h[2] = (unsigned char)((n >> 16) & 0xFFu);
+    h[3] = (unsigned char)((n >> 8) & 0xFFu);
+    h[4] = (unsigned char)(n & 0xFFu);
+    put(&w->d, (const char*)h, 5);
+}
+
+/* A CBOR head at the shortest length. */
+static void wr_head(wr* w, int major, unsigned long n) {
+    cbor_head(&w->d, major, n);
+}
+
+static void wr_ctext(wr* w, const char* s, size_t n) {
+    wr_head(w, 3, (unsigned long)n);
+    put(&w->d, s, n);
+}
+
+static void wr_begin(wr* w, int fmt, size_t cap, int docn) {
+    memset(w, 0, sizeof *w);
+    w->d.p   = (char*)malloc(cap);
+    w->d.cap = cap;
+    w->fmt   = fmt;
+    w->rng   = doc_seed(docn);
+    if (w->d.p == NULL) {
+        w->bad = 1;
+        return;
+    }
+    switch (fmt) {
+    case F_JSON:
+        wr_ch(w, '{');
+        break;
+    case F_CBOR:
+        w->st[0].at = w->d.n;
+        wr_head4(w, 5, 0);
+        break;
+    case F_XML:
+        wr_puts(w, "<r>");
+        break;
+    default:
+        break;
+    }
+}
+
+static void wr_close(wr* w);
+
+static void wr_end(wr* w) {
+    while (w->depth > 0) {
+        wr_close(w);
+    }
+    switch (w->fmt) {
+    case F_JSON:
+        wr_puts(w, "\n}\n");
+        break;
+    case F_CBOR:
+        if (!w->d.over) {
+            size_t        at = w->st[0].at;
+            unsigned long n  = w->st[0].n;
+            w->d.p[at + 1]   = (char)((n >> 24) & 0xFFu);
+            w->d.p[at + 2]   = (char)((n >> 16) & 0xFFu);
+            w->d.p[at + 3]   = (char)((n >> 8) & 0xFFu);
+            w->d.p[at + 4]   = (char)(n & 0xFFu);
+        }
+        break;
+    case F_XML:
+        wr_puts(w, "</r>\n");
+        break;
+    default:
+        break;
+    }
+}
+
+/* What comes before an item of the open container, `key` its name (NULL
+   in an array): a comma, an indent, a dash, the key. */
+static void wr_pre(wr* w, const char* key) {
+    wlvl* l = &w->st[w->depth];
+
+    switch (w->fmt) {
+    case F_JSON:
+        if (l->n > 0) {
+            wr_ch(w, ',');
+        }
+        if (w->depth == 0 ||
+            (l->arr && (w->nl_each || (l->n > 0 && (l->n & 63u) == 0)))) {
+            wr_ch(w, '\n');
+        }
+        if (!l->arr) {
+            wr_ch(w, '"');
+            wr_puts(w, key);
+            wr_puts(w, "\":");
+        }
+        break;
+    case F_YAML:
+        wr_ws(w, 2 * w->depth);
+        if (l->arr) {
+            wr_puts(w, "- ");
+        } else {
+            wr_puts(w, key);
+            wr_puts(w, ": ");
+        }
+        break;
+    case F_TOML:
+        if (w->inarr > 0) {
+            if (l->n > 0) {
+                wr_puts(w, ((l->n & 63u) == 0 || w->nl_each) ? ",\n" : ", ");
+            }
+        } else {
+            wr_puts(w, key);
+            wr_puts(w, " = ");
+        }
+        break;
+    case F_INI:
+        wr_puts(w, l->arr ? l->key : key);
+        wr_puts(w, l->arr ? "[] = " : " = ");
+        break;
+    case F_XML:
+        wr_ch(w, '<');
+        wr_puts(w, l->arr ? l->key : key);
+        wr_ch(w, '>');
+        break;
+    case F_CBOR:
+        if (!l->arr) {
+            wr_ctext(w, key, strlen(key));
+        }
+        break;
+    default:
+        break;
+    }
+    ++l->n;
+}
+
+static void wr_post(wr* w, const char* key) {
+    wlvl* l = &w->st[w->depth];
+
+    switch (w->fmt) {
+    case F_YAML:
+    case F_INI:
+        wr_ch(w, '\n');
+        break;
+    case F_TOML:
+        if (w->inarr == 0) {
+            wr_ch(w, '\n');
+        }
+        break;
+    case F_XML:
+        wr_puts(w, "</");
+        wr_puts(w, l->arr ? l->key : key);
+        wr_puts(w, ">\n");
+        break;
+    default:
+        break;
+    }
+}
+
+/* A number is told from the text it is written as. */
+static int is_real_token(const char* s) {
+    return strchr(s, '.') != NULL || strchr(s, 'e') != NULL || strchr(s, 'E') != NULL;
+}
+
+/* An integer token's magnitude into two halves, and its sign. */
+static void parse_int(const char* s, int* neg, u64* mag) {
+    u64 ten = u64_of(0, 10);
+    u64 v   = u64_of(0, 0);
+
+    *neg = (*s == '-');
+    if (*s == '-') {
+        ++s;
+    }
+    for (; *s >= '0' && *s <= '9'; ++s) {
+        u64           m  = u64_mul(v, ten);
+        unsigned long lo = (m.lo + (unsigned long)(*s - '0')) & M32;
+
+        v.hi = (m.hi + ((lo < m.lo) ? 1ul : 0ul)) & M32;
+        v.lo = lo;
+    }
+    *mag = v;
+}
+
+/* A 64-bit CBOR head: major, then the magnitude. */
+static void wr_head64(wr* w, int major, u64 v) {
+    unsigned char h[9];
+
+    if (v.hi == 0) {
+        wr_head(w, major, v.lo);
+        return;
+    }
+    h[0] = (unsigned char)((major << 5) | 27);
+    h[1] = (unsigned char)((v.hi >> 24) & 0xFFu);
+    h[2] = (unsigned char)((v.hi >> 16) & 0xFFu);
+    h[3] = (unsigned char)((v.hi >> 8) & 0xFFu);
+    h[4] = (unsigned char)(v.hi & 0xFFu);
+    h[5] = (unsigned char)((v.lo >> 24) & 0xFFu);
+    h[6] = (unsigned char)((v.lo >> 16) & 0xFFu);
+    h[7] = (unsigned char)((v.lo >> 8) & 0xFFu);
+    h[8] = (unsigned char)(v.lo & 0xFFu);
+    put(&w->d, (const char*)h, 9);
+}
+
+/* A string, its bytes as they are to be written in the format's own
+   quoting (escapes already made), or raw. */
+static int simple_word(const char* s, size_t n) {
+    size_t i;
+    if (n == 0 || !((s[0] >= 'a' && s[0] <= 'z') || (s[0] >= 'A' && s[0] <= 'Z'))) {
+        return 0;
+    }
+    for (i = 0; i < n; ++i) {
+        char c = s[i];
+        if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+              (c >= '0' && c <= '9'))) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static void wr_str(wr* w, const char* key, const char* s, size_t n) {
+    wr_pre(w, key);
+    switch (w->fmt) {
+    case F_CBOR:
+        wr_ctext(w, s, n);
+        break;
+    case F_INI:
+    case F_XML:
+        put(&w->d, s, n);
+        break;
+    case F_YAML:
+        if (w->yplain && simple_word(s, n)) {
+            put(&w->d, s, n);
+            break;
+        }
+        wr_ch(w, '"');
+        put(&w->d, s, n);
+        wr_ch(w, '"');
+        break;
+    default:
+        wr_ch(w, '"');
+        put(&w->d, s, n);
+        wr_ch(w, '"');
+        break;
+    }
+    wr_post(w, key);
+}
+
+/* A number or a boolean, as the text of its token. */
+static void wr_tok(wr* w, const char* key, const char* tok, int isbool) {
+    wr_pre(w, key);
+    if (w->fmt == F_CBOR) {
+        if (isbool) {
+            wr_ch(w, (tok[0] == 't') ? (char)0xF5 : (char)0xF4);
+        } else if (is_real_token(tok)) {
+            double        v = strtod(tok, NULL);
+            unsigned char b[9];
+            unsigned char t[sizeof(double)];
+            unsigned long one    = 1;
+            int           little = (*(unsigned char*)&one == 1);
+            size_t        i;
+            memcpy(t, &v, sizeof t);
+            b[0] = 0xFB;
+            for (i = 0; i < 8; ++i) {
+                b[1 + i] = little ? t[7 - i] : t[i];
+            }
+            put(&w->d, (const char*)b, 9);
+        } else {
+            int neg;
+            u64 mag;
+            parse_int(tok, &neg, &mag);
+            if (neg) {
+                /* -1 - n: the argument is magnitude - 1 */
+                if (mag.lo == 0) {
+                    mag.hi = (mag.hi - 1ul) & M32;
+                    mag.lo = M32;
+                } else {
+                    mag.lo = (mag.lo - 1ul) & M32;
+                }
+                wr_head64(w, 1, mag);
+            } else {
+                wr_head64(w, 0, mag);
+            }
+        }
+    } else {
+        wr_puts(w, tok);
+    }
+    wr_post(w, key);
+}
+
+static void wr_int(wr* w, const char* key, long v) {
+    char t[32];
+    sprintf(t, "%ld", v);
+    wr_tok(w, key, t, 0);
+}
+
+static void wr_bool(wr* w, const char* key, int v) {
+    wr_tok(w, key, v ? "true" : "false", 1);
+}
+
+/* A table (arr 0) or an array (arr 1) opens; wr_close ends the innermost. */
+static void wr_open(wr* w, const char* key, int arr) {
+    wlvl*  l = &w->st[w->depth];
+    wlvl*  c;
+    size_t kn  = key != NULL ? strlen(key) : 0;
+    size_t old = w->plen;
+
+    if (w->depth + 1 >= WR_MAXD) {
+        w->bad = 1;
+        return;
+    }
+    switch (w->fmt) {
+    case F_JSON:
+        wr_pre(w, key);
+        wr_ch(w, arr ? '[' : '{');
+        break;
+    case F_YAML:
+        wr_ws(w, 2 * w->depth);
+        if (l->arr) {
+            wr_puts(w, "-\n");
+        } else {
+            wr_puts(w, key);
+            wr_puts(w, ":\n");
+        }
+        ++l->n;
+        break;
+    case F_TOML:
+        if (w->inarr > 0 || arr) {
+            /* an array, inline: `key = [` or `[` inside an array */
+            wr_pre(w, key);
+            wr_ch(w, '[');
+            ++w->inarr;
+        } else {
+            size_t more = (w->plen > 0 ? 1 : 0) + kn;
+            if (w->plen + more + 1 >= sizeof w->path) {
+                w->bad = 1;
+                return;
+            }
+            if (w->plen > 0) {
+                w->path[w->plen++] = '.';
+            }
+            memcpy(w->path + w->plen, key, kn);
+            w->plen += kn;
+            w->path[w->plen] = '\0';
+            wr_puts(w, "\n[");
+            wr_puts(w, w->path);
+            wr_puts(w, "]\n");
+            ++l->n;
+        }
+        break;
+    case F_INI:
+        if (!arr) {
+            size_t more = (w->plen > 0 ? 1 : 0) + kn;
+            if (w->plen + more + 1 >= sizeof w->path) {
+                w->bad = 1;
+                return;
+            }
+            if (w->plen > 0) {
+                w->path[w->plen++] = '.';
+            }
+            memcpy(w->path + w->plen, key, kn);
+            w->plen += kn;
+            w->path[w->plen] = '\0';
+            wr_puts(w, "[");
+            wr_puts(w, w->path);
+            wr_puts(w, "]\n");
+        }
+        ++l->n;
+        break;
+    case F_XML:
+        if (!arr) {
+            wr_ch(w, '<');
+            wr_puts(w, l->arr ? l->key : key);
+            wr_puts(w, ">\n");
+        }
+        ++l->n;
+        break;
+    case F_CBOR:
+        if (!l->arr) {
+            wr_ctext(w, key, kn);
+        }
+        ++l->n;
+        break;
+    default:
+        break;
+    }
+    ++w->depth;
+    c = &w->st[w->depth];
+    memset(c, 0, sizeof *c);
+    c->arr  = arr;
+    c->plen = old;
+    if (l->arr && w->fmt == F_XML) {
+        strncpy(c->key, l->key, sizeof c->key - 1);
+    } else if (key != NULL) {
+        strncpy(c->key, key, sizeof c->key - 1);
+    }
+    if (w->fmt == F_CBOR) {
+        c->at = w->d.n;
+        wr_head4(w, arr ? 4 : 5, 0);
+    }
+}
+
+static void wr_close(wr* w) {
+    wlvl* c = &w->st[w->depth];
+
+    if (w->depth == 0) {
+        return;
+    }
+    switch (w->fmt) {
+    case F_JSON:
+        wr_ch(w, c->arr ? ']' : '}');
+        break;
+    case F_TOML:
+        if (w->inarr > 0) {
+            --w->inarr;
+            wr_ch(w, ']');
+            if (w->inarr == 0) {
+                wr_ch(w, '\n');
+            }
+        } else {
+            w->plen          = c->plen;
+            w->path[w->plen] = '\0';
+        }
+        break;
+    case F_INI:
+        w->plen          = c->plen;
+        w->path[w->plen] = '\0';
+        break;
+    case F_XML:
+        if (!c->arr) {
+            wr_puts(w, "</");
+            wr_puts(w, c->key);
+            wr_puts(w, ">\n");
+        }
+        break;
+    case F_CBOR:
+        if (!w->d.over) {
+            w->d.p[c->at + 1] = (char)((c->n >> 24) & 0xFFu);
+            w->d.p[c->at + 2] = (char)((c->n >> 16) & 0xFFu);
+            w->d.p[c->at + 3] = (char)((c->n >> 8) & 0xFFu);
+            w->d.p[c->at + 4] = (char)(c->n & 0xFFu);
+        }
+        break;
+    default:
+        break;
+    }
+    --w->depth;
+}
+
+/* ---- the strings the documents are made of ---- */
+
+static const char letters[] = "abcdefghijklmnopqrstuvwxyz";
+
+/* ASCII: letters, digits and single spaces, a letter first and last. */
+static size_t fill_ascii(wr* w, char* b, size_t n) {
+    size_t i;
+
+    for (i = 0; i < n; ++i) {
+        unsigned long r = rn(w);
+        if (i == 0 || i + 1 == n) {
+            b[i] = letters[r % 26];
+        } else if (r % 7 == 0 && b[i - 1] != ' ') {
+            b[i] = ' ';
+        } else if (r % 7 == 1) {
+            b[i] = (char)('0' + (r >> 8) % 10);
+        } else {
+            b[i] = letters[(r >> 4) % 26];
+        }
+    }
+    b[n] = '\0';
+    return n;
+}
+
+/* A word of 3 to 8 letters; with a w first, so that no word is a
+   YAML or TOML keyword. */
+static void fill_word(wr* w, char* b) {
+    size_t n = 3 + rn(w) % 6;
+    size_t i;
+
+    b[0] = 'w';
+    for (i = 1; i < n; ++i) {
+        b[i] = letters[rn(w) % 26];
+    }
+    b[n] = '\0';
+}
+
+static const char* const mb2[] = {"\xc3\xa9", "\xc3\xb6", "\xc3\xbc", "\xce\xb1",
+                                  "\xd0\xb6"};
+static const char* const mb3[] = {"\xe6\x97\xa5", "\xe6\x9c\xac", "\xe2\x9c\x93",
+                                  "\xe4\xb8\xad", "\xe2\x82\xac"};
+static const char* const mb4[] = {"\xf0\x9f\x98\x80", "\xf0\x9f\x8e\x89",
+                                  "\xf0\x9d\x84\x9e", "\xf0\x9f\x92\xa1"};
+
+/* About half the bytes non-ASCII: units of four ASCII letters, and of a
+   two, three or four-byte sequence, a letter at each end. */
+static size_t fill_utf8(wr* w, char* b, size_t want) {
+    size_t n = 0;
+    int    k;
+
+    b[n++] = 'a';
+    while (n + 6 < want) {
+        unsigned long r = rn(w);
+        if (r % 2 == 0) {
+            for (k = 0; k < 4; ++k) {
+                b[n++] = letters[rn(w) % 26];
+            }
+        } else {
+            const char* s;
+            switch ((r >> 3) % 3) {
+            case 0:
+                s = mb2[(r >> 6) % 5];
+                break;
+            case 1:
+                s = mb3[(r >> 6) % 5];
+                break;
+            default:
+                s = mb4[(r >> 6) % 4];
+                break;
+            }
+            memcpy(b + n, s, strlen(s));
+            n += strlen(s);
+        }
+    }
+    b[n++] = 'z';
+    b[n]   = '\0';
+    return n;
+}
+
+/* Strings in which every byte is an escape: a line feed, a backslash, a
+   quote, an e-acute, a character outside the plane (a surrogate pair in
+   JSON). The ends are never a line feed, which XML would trim. */
+static size_t fill_escapes(wr* w, char* b, size_t units) {
+    static const char* const json[] = {"\\n", "\\\\", "\\\"", "\\u00e9",
+                                       "\\ud83d\\ude00"};
+    static const char* const yaml[] = {"\\n", "\\\\", "\\\"", "\\u00e9", "\\U0001F600"};
+    static const char* const xml[]  = {"&#10;", "&amp;", "&lt;", "&#233;", "&#x1F600;"};
+    const char* const* t = (w->fmt == F_XML) ? xml : (w->fmt == F_JSON) ? json : yaml;
+    size_t             i, n = 0;
+
+    for (i = 0; i < units; ++i) {
+        unsigned long u = rn(w) % 5;
+        const char*   s;
+        if ((i == 0 || i + 1 == units) && u == 0) {
+            u = 1;
+        }
+        s = t[u];
+        memcpy(b + n, s, strlen(s));
+        n += strlen(s);
+    }
+    b[n] = '\0';
+    return n;
+}
+
+static const char* const edge_tok[] = {"9223372036854775807",
+                                       "9223372036854775806",
+                                       "-9223372036854775808",
+                                       "-9223372036854775807",
+                                       "0",
+                                       "-1",
+                                       "1.2345678901234567",
+                                       "3.1415926535897931",
+                                       "2.7182818284590451",
+                                       "1.7976931348623157e308",
+                                       "-1.7976931348623157e308",
+                                       "2.2250738585072014e-308",
+                                       "4.9406564584124654e-324",
+                                       "1e-320",
+                                       "5e-324",
+                                       "1e22",
+                                       "1.0e-5",
+                                       "0.1"};
+
+#define EDGE_N (sizeof edge_tok / sizeof edge_tok[0])
+
+static char* tmpbuf(void) {
+    static char* b;
+    if (b == NULL) {
+        b = (char*)malloc(300000);
+    }
+    return b;
+}
+
+/* ---- one record of each document ---- */
+
+static void rec_mixed(wr* w, unsigned long i) {
+    char                     key[32], b[64], r[32];
+    unsigned long            whole, frac;
+    static const char* const modes[] = {"fast", "safe", "debug", "release"};
+    int                      k;
+
+    sprintf(key, "s%lu", i);
+    wr_open(w, key, 0);
+    fill_word(w, b);
+    wr_str(w, "name", b, strlen(b));
+    wr_int(w, "port", 1024 + (long)(rn(w) % 60000));
+    whole = rn(w) % 1000;
+    frac  = rn(w) % 100;
+    sprintf(r, "%lu.%02lu", whole, frac);
+    wr_tok(w, "ratio", r, 0);
+    wr_bool(w, "enabled", (int)(rn(w) & 1u));
+    k = (int)(rn(w) % 4);
+    wr_str(w, "mode", modes[k], strlen(modes[k]));
+    wr_open(w, "tags", 1);
+    for (k = 0; k < 3; ++k) {
+        fill_word(w, b);
+        wr_str(w, NULL, b, strlen(b));
+    }
+    wr_close(w);
+    wr_open(w, "limits", 1);
+    for (k = 0; k < 4; ++k) {
+        wr_int(w, NULL, (long)(rn(w) % 100000));
+    }
+    wr_close(w);
+    wr_close(w);
+}
+
+static void rec_str(wr* w, unsigned long i, int docn) {
+    char   key[32];
+    char*  b = tmpbuf();
+    size_t n;
+
+    sprintf(key, "s%lu", i);
+    if (docn == D_STR_PLAIN) {
+        n = fill_ascii(w, b, 64 + rn(w) % 4033);
+    } else if (docn == D_STR_UTF8) {
+        n = fill_utf8(w, b, 64 + rn(w) % 1985);
+    } else {
+        n = fill_escapes(w, b, 20 + rn(w) % 181);
+    }
+    wr_str(w, key, b, n);
+}
+
+/* Deep: member r<i>, then 30 more levels below it, 31 inside the root.
+   XML's root element is a level of its own, so one fewer there. */
+static void rec_deep(wr* w, unsigned long i) {
+    char key[32];
+    int  k, lv = (w->fmt == F_XML) ? 29 : 30;
+    int  arr = (int)(i & 1u) && w->fmt != F_XML && w->fmt != F_INI;
+
+    sprintf(key, "r%lu", i);
+    if (arr) {
+        for (k = 0; k < 31; ++k) {
+            wr_open(w, k == 0 ? key : NULL, 1);
+        }
+        wr_int(w, NULL, 1);
+        for (k = 0; k < 31; ++k) {
+            wr_close(w);
+        }
+    } else {
+        wr_open(w, key, 0);
+        for (k = 0; k < lv; ++k) {
+            wr_open(w, "d", 0);
+        }
+        wr_int(w, "v", 1);
+        for (k = 0; k < lv + 1; ++k) {
+            wr_close(w);
+        }
+    }
+}
+
+/* Whitespace, comments and indentation, a value now and then. */
+static void ws_run(wr* w, size_t n) {
+    size_t i;
+    for (i = 0; i < n; ++i) {
+        unsigned long r = rn(w) % 16;
+        if (r < 11) {
+            wr_ch(w, ' ');
+        } else if (r < 15) {
+            wr_ch(w, '\n');
+        } else {
+            wr_ch(w, (w->fmt == F_JSON || w->fmt == F_XML || w->fmt == F_TOML) ? '\t'
+                                                                               : ' ');
+        }
+    }
+}
+
+static void comment_line(wr* w, const char* lead, size_t n, const char* tail) {
+    size_t i;
+    wr_ws(w, (int)(rn(w) % 6));
+    wr_puts(w, lead);
+    for (i = 0; i < n; ++i) {
+        wr_ch(w, (rn(w) % 6 == 0) ? ' ' : letters[rn(w) % 26]);
+    }
+    wr_puts(w, tail);
+    wr_ch(w, '\n');
+}
+
+static void wr_rawint(wr* w, long v) {
+    char t[32];
+    sprintf(t, "%ld", v);
+    wr_puts(w, t);
+}
+
+static void rec_white(wr* w, unsigned long i) {
+    char key[32];
+    int  k;
+
+    sprintf(key, "k%lu", i);
+    switch (w->fmt) {
+    case F_JSON:
+        ws_run(w, 300 + rn(w) % 400);
+        wr_ch(w, '"');
+        wr_puts(w, key);
+        wr_ch(w, '"');
+        ws_run(w, 20);
+        wr_ch(w, ':');
+        ws_run(w, 300 + rn(w) % 400);
+        wr_rawint(w, (long)i);
+        ws_run(w, 20);
+        wr_ch(w, ',');
+        break;
+    case F_XML:
+        ws_run(w, 200 + rn(w) % 300);
+        wr_puts(w, "<!--");
+        for (k = 0; k < 60; ++k) {
+            wr_ch(w, letters[rn(w) % 26]);
+        }
+        wr_puts(w, "-->");
+        ws_run(w, 200 + rn(w) % 300);
+        wr_ch(w, '<');
+        wr_puts(w, key);
+        wr_ch(w, '>');
+        wr_rawint(w, (long)i);
+        wr_puts(w, "</");
+        wr_puts(w, key);
+        wr_ch(w, '>');
+        break;
+    default:
+        for (k = 0; k < 8; ++k) {
+            comment_line(w, w->fmt == F_INI ? "; " : "# ", 40 + rn(w) % 60, "");
+            ws_run(w, 20 + rn(w) % 60);
+            wr_ch(w, '\n');
+        }
+        wr_puts(w, key);
+        wr_puts(w, w->fmt == F_YAML ? ": " : " = ");
+        wr_rawint(w, (long)i);
+        wr_ch(w, '\n');
+        break;
+    }
+}
+
+/* ---- a document of `want` bytes in `fmt` ---- */
+
+static unsigned char* g_idx;
+static size_t         g_idx_len;
+
+static void put_u32(char* d, unsigned long v) {
+    d[0] = (char)(v & 0xFFu);
+    d[1] = (char)((v >> 8) & 0xFFu);
+    d[2] = (char)((v >> 16) & 0xFFu);
+    d[3] = (char)((v >> 24) & 0xFFu);
+}
+
+/* Documents of 20 to 64 bytes, one after another; their lengths, as
+   four bytes each, in g_idx. */
+static unsigned char* tiny_docs(int fmt, size_t want, size_t* len) {
+    size_t idx_cap = (want / 16 + 16) * 4;
+    u64    rs      = doc_seed(D_MANY_TINY);
+    doc    out;
+
+    out.p     = (char*)malloc(want + 4096);
+    out.cap   = want + 4096;
+    out.n     = 0;
+    out.over  = 0;
+    g_idx     = (unsigned char*)malloc(idx_cap);
+    g_idx_len = 0;
+    if (out.p == NULL || g_idx == NULL) {
+        free(out.p);
+        free(g_idx);
+        g_idx = NULL;
+        return NULL;
+    }
+    while (out.n < want) {
+        static wr wstore;
+        wr*       wp = &wstore;
+        char      b[64];
+        size_t    n;
+
+        wr_begin(wp, fmt, 1024, D_MANY_TINY);
+        wp->rng    = rs;
+        wp->yplain = 1;
+        wr_int(wp, "a", (long)(rn(wp) % 100000));
+        n = fill_ascii(wp, b, 10 + rn(wp) % 33);
+        wr_str(wp, "b", b, n);
+        wr_end(wp);
+        rs = wp->rng;
+        if (wp->bad || wp->d.over || g_idx_len + 4 > idx_cap) {
+            free(wp->d.p);
+            free(out.p);
+            free(g_idx);
+            g_idx = NULL;
+            return NULL;
+        }
+        put(&out, wp->d.p, wp->d.n);
+        put_u32((char*)g_idx + g_idx_len, (unsigned long)wp->d.n);
+        g_idx_len += 4;
+        free(wp->d.p);
+    }
+    *len = out.n;
+    return (unsigned char*)out.p;
+}
+
+/* The one error of `invalid-late`, in the last KiB. */
+static void late_error(wr* w) {
+    switch (w->fmt) {
+    case F_JSON:
+        wr_puts(w, ",\n\"late\":1]");
+        break;
+    case F_YAML:
+        wr_puts(w, "late:\n\tx: 1\n");
+        break;
+    case F_TOML:
+        wr_puts(w, "\n[late]\na = 1\na = 2\n");
+        break;
+    case F_INI:
+        wr_puts(w, "[late]\nnoequals\n");
+        break;
+    case F_XML:
+        wr_puts(w, "<late><a>1</b></late>\n");
+        break;
+    case F_CBOR:
+        /* the pair is counted; its text value is cut short */
+        wr_ctext(w, "late", 4);
+        wr_ch(w, (char)0x6A);
+        wr_puts(w, "abc");
+        ++w->st[0].n;
+        break;
+    default:
+        break;
+    }
+}
+
+static unsigned char* yaml_aliases(size_t want, size_t* len) {
+    static wr wstore;
+    wr*       wp = &wstore;
+    int       lv, k;
+    char      b[64];
+
+    wr_begin(wp, F_YAML, want + (4u << 20), D_ALIASES);
+    wp->yplain = 1;
+    /* padding, so that the document is the size asked: plain entries */
+    {
+        unsigned long i = 0;
+        while (wp->d.n + 1200 < want) {
+            char key[32];
+            sprintf(key, "p%lu", i++);
+            fill_word(wp, b);
+            wr_str(wp, key, b, strlen(b));
+        }
+    }
+    wr_puts(wp, "a0: &a0 [\"lol\", \"lol\", \"lol\", \"lol\", \"lol\", \"lol\", "
+                "\"lol\", \"lol\", \"lol\"]\n");
+    for (lv = 1; lv <= 9; ++lv) {
+        sprintf(b, "a%d: &a%d [", lv, lv);
+        wr_puts(wp, b);
+        for (k = 0; k < 9; ++k) {
+            sprintf(b, "%s*a%d", k == 0 ? "" : ", ", lv - 1);
+            wr_puts(wp, b);
+        }
+        wr_puts(wp, "]\n");
+    }
+    if (wp->bad || wp->d.over) {
+        free(wp->d.p);
+        return NULL;
+    }
+    *len = wp->d.n;
+    return (unsigned char*)wp->d.p;
+}
+
+/* The bytes of document `docn` in format `format`, `size` MiB of them
+   (within a record); NULL when it does not exist or memory runs out.
+   P-1's generators (make_doc) are wrapped; the rest are written here. */
+static unsigned char* bench_doc(int format, int docn, size_t size, size_t* len) {
+    size_t        want = size << 20;
+    static wr     wstore;
+    wr*           wp = &wstore;
+    unsigned long i  = 0;
+
+    *len = 0;
+    if (!doc_exists(format, docn)) {
+        return NULL;
+    }
+    if (docn == D_RECORDS) {
+        size_t start = 0;
+        char*  p     = make_doc(fname[format], want, &start, len);
+        if (p != NULL && start > 0) {
+            memmove(p, p + start, *len);
+        }
+        return (unsigned char*)p;
+    }
+    if (docn == D_MANY_TINY) {
+        return tiny_docs(format, want, len);
+    }
+    if (docn == D_ALIASES) {
+        return yaml_aliases(size << 20, len);
+    }
+    wr_begin(wp, format, want + (8u << 20), docn);
+    if (wp->bad) {
+        return NULL;
+    }
+    wp->yplain = (docn == D_MIXED);
+    if (docn == D_ARRAY_HUGE || docn == D_NUM_INT) {
+        wp->nl_each = (docn == D_NUM_INT);
+        wr_open(wp, "a", 1);
+        while (wp->d.n < want && !wp->d.over) {
+            if (docn == D_ARRAY_HUGE) {
+                wr_int(wp, NULL, (long)(rn(wp) % 10));
+            } else {
+                long v = (long)(rn(wp) % 1000);
+                wr_int(wp, NULL, (rn(wp) % 5 == 0) ? -v : v);
+            }
+        }
+    } else {
+        int tail = (docn == D_INVALID_LATE);
+        while (!wp->d.over && wp->d.n + (tail ? 1500u : 0u) < want) {
+            static char key[300];
+            switch (docn) {
+            case D_MIXED:
+            case D_INVALID_LATE:
+                rec_mixed(wp, i);
+                break;
+            case D_STR_PLAIN:
+            case D_STR_ESC:
+            case D_STR_UTF8:
+                rec_str(wp, i, docn);
+                break;
+            case D_NUM_EDGE:
+                if (i == 0) {
+                    wr_open(wp, "n", 1);
+                    wp->nl_each = 1;
+                }
+                wr_tok(wp, NULL, edge_tok[i % EDGE_N], 0);
+                break;
+            case D_NEST_DEEP:
+                rec_deep(wp, i);
+                break;
+            case D_TABLE_WIDE:
+                sprintf(key, "k%07lx", i);
+                wr_int(wp, key, (long)(rn(wp) % 1000));
+                break;
+            case D_KEYS_PREFIX:
+                memset(key, 'p', 200);
+                sprintf(key + 200, "%07lu", i);
+                wr_int(wp, key, (long)(rn(wp) % 1000));
+                break;
+            case D_WHITESPACE:
+                rec_white(wp, i);
+                break;
+            default:
+                break;
+            }
+            ++i;
+        }
+        if (docn == D_WHITESPACE && format == F_JSON) {
+            wr_puts(wp, "\"end\":0");
+        }
+        if (docn == D_INVALID_LATE) {
+            late_error(wp);
+        }
+    }
+    wr_end(wp);
+    if (wp->bad || wp->d.over) {
+        free(wp->d.p);
+        return NULL;
+    }
+    *len = wp->d.n;
+    return (unsigned char*)wp->d.p;
+}
+
+/* FNV-1a, 64 bits, in 16 hex digits. */
+static void fnv1a64(const unsigned char* p, size_t n, char* out) {
+    u64    h     = u64_of(0xCBF29CE4ul, 0x84222325ul);
+    u64    prime = u64_of(0x00000100ul, 0x000001B3ul);
+    size_t i;
+
+    for (i = 0; i < n; ++i) {
+        h.lo ^= p[i];
+        h = u64_mul(h, prime);
+    }
+    sprintf(out, "%08lx%08lx", h.hi, h.lo);
+}
+
+static int emit_file(const char* dir, const char* name, const unsigned char* p,
+                     size_t n) {
+    char  path[1024];
+    char  hex[20];
+    FILE* f;
+
+    sprintf(path, "%s/%s", dir, name);
+    f = fopen(path, "wb");
+    if (f == NULL || fwrite(p, 1, n, f) != n || fclose(f) != 0) {
+        fprintf(stderr, "bench: cannot write %s\n", path);
+        return 1;
+    }
+    fnv1a64(p, n, hex);
+    printf("%s %lu %s\n", name, (unsigned long)n, hex);
+    return 0;
+}
+
+/* `--emit-docs <dir> [--size 1|16|256] [--only <format>]`: every document
+   that exists, as `<format>-<doc>-<size>.<ext>`, and a line each. */
+static int run_emit_docs(int argc, char** argv) {
+    const char* dir  = NULL;
+    const char* only = NULL;
+    size_t      sizes[3];
+    size_t      nsize = 0, s;
+    int         j, f, d;
+
+    for (j = 2; j < argc; ++j) {
+        if (strcmp(argv[j], "--size") == 0 && j + 1 < argc) {
+            if (nsize < 3) {
+                sizes[nsize++] = (size_t)strtoul(argv[++j], NULL, 10);
+            }
+        } else if (strcmp(argv[j], "--only") == 0 && j + 1 < argc) {
+            only = argv[++j];
+        } else if (dir == NULL) {
+            dir = argv[j];
+        }
+    }
+    if (dir == NULL) {
+        fprintf(
+            stderr,
+            "usage: cf_bench --emit-docs <dir> [--size 1|16|256] [--only <format>]\n");
+        return 2;
+    }
+    if (nsize == 0) {
+        sizes[nsize++] = 1;
+        sizes[nsize++] = 16;
+        sizes[nsize++] = 256;
+    }
+    for (s = 0; s < nsize; ++s) {
+        for (f = 0; f < F_COUNT; ++f) {
+            if (only != NULL && strcmp(only, fname[f]) != 0) {
+                continue;
+            }
+            for (d = 0; d < D_COUNT; ++d) {
+                unsigned char* p;
+                size_t         n = 0;
+                char           name[128];
+
+                if (!doc_exists(f, d)) {
+                    continue;
+                }
+                if (d == D_ALIASES && sizes[s] != 1) {
+                    continue;
+                }
+                p = bench_doc(f, d, sizes[s], &n);
+                if (p == NULL) {
+                    fprintf(stderr, "bench: cannot make %s %s %lu MiB\n", fname[f],
+                            dname[d], (unsigned long)sizes[s]);
+                    return 1;
+                }
+                if (d == D_MANY_TINY) {
+                    int rc;
+                    sprintf(name, "%s-%s-%lu.bin", fname[f], dname[d],
+                            (unsigned long)sizes[s]);
+                    rc = emit_file(dir, name, p, n);
+                    sprintf(name, "%s-%s-%lu.idx", fname[f], dname[d],
+                            (unsigned long)sizes[s]);
+                    rc |= emit_file(dir, name, g_idx, g_idx_len);
+                    free(g_idx);
+                    g_idx = NULL;
+                    free(p);
+                    if (rc != 0) {
+                        return 1;
+                    }
+                    continue;
+                }
+                if (strncmp(dname[d], fname[f], strlen(fname[f])) == 0) {
+                    sprintf(name, "%s-%lu%s", dname[d], (unsigned long)sizes[s],
+                            fext[f]);
+                } else {
+                    sprintf(name, "%s-%s-%lu%s", fname[f], dname[d],
+                            (unsigned long)sizes[s], fext[f]);
+                }
+                if (emit_file(dir, name, p, n) != 0) {
+                    free(p);
+                    return 1;
+                }
+                free(p);
+            }
+        }
+    }
+    return 0;
+}
+
 int main(int argc, char** argv) {
     static const size_t dflt[] = {100, 1000, 10000, 20000};
     int                 i;
 
     if (argc >= 2 && strcmp(argv[1], "docs") == 0) {
         return run_docs(argc, argv);
+    }
+    if (argc >= 2 && strcmp(argv[1], "--emit-docs") == 0) {
+        return run_emit_docs(argc, argv);
     }
     if (argc >= 2 && (strcmp(argv[1], "files") == 0 || strcmp(argv[1], "reload") == 0 ||
                       strcmp(argv[1], "define") == 0 || strcmp(argv[1], "emit") == 0)) {

@@ -49,6 +49,10 @@ if(ALL)
     "${REPO}/tools/*.c"
     "${REPO}/examples/*.c"
     "${REPO}/bench/*.c"
+    "${REPO}/bench/compare/*.cpp"
+    "${REPO}/bench/compare/*.h"
+    "${REPO}/bench/compare/adapters/*.cpp"
+    "${REPO}/bench/compare/size/*.cpp"
     "${REPO}/examples/*.cpp"
     "${REPO}/CMakeLists.txt"
     "${REPO}/cmake/*.cmake"
@@ -82,7 +86,8 @@ foreach(f ${files})
     continue()
   endif()
   if(f MATCHES "^(lib|tests|tools|examples|bench)/.*\\.(c|cpp)$"
-     OR f MATCHES "^(lib/|tools/doctor/include/configforge/).*\\.(h|hpp)$")
+     OR f MATCHES
+        "^(lib/|tools/doctor/include/configforge/|bench/compare/).*\\.(h|hpp)$")
     list(APPEND c_files "${f}")
   elseif(f MATCHES "(^|/)CMakeLists\\.txt$" OR f MATCHES "\\.cmake$")
     list(APPEND cmake_files "${f}")

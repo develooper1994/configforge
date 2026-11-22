@@ -121,6 +121,8 @@ gets reopened every six months.
 | D-107 | One refusal, the same in every format | architecture | **Decided** |
 | D-108 | Every text is UTF-8 inside; another encoding only by name | architecture | **Decided** |
 | D-109 | What a format can hold, and every pair tested | formats, tests | **Decided** |
+| D-110 | Generators outside the tree | generators | **Decided** |
+| D-111 | The comparison with other libraries: one set of flags, the same work, and a history kept on its own branch | benchmark, CI | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -4985,6 +4987,77 @@ would sit in memory.
 absent still writes C; a name that is in the table is still its writer.
 
 **Status.** Decided and built: W5-G4.
+
+## D-111 — The comparison with other libraries: one set of flags, the same work, and a history kept on its own branch
+
+**Question.** How is "faster than the others" made a claim that can be checked,
+and how is a change that makes it false seen before it is merged? A reader that
+is faster than it was last month is not shown to be fast; one that is faster
+than what a user would otherwise pick is (Roadmap, "The aim: beat the others at
+everything, and say where it does").
+
+**Options.**
+
+1. The numbers each library publishes. Rejected: different documents, flags
+   and work, so the figures cannot be set beside one another.
+2. A comparison built by each library's own build files. Rejected: each
+   applies its own flags (`-O3`, `-march=native`, a sanitizer), and a library
+   built with them is not compared with one built without.
+3. One harness: every library's sources compiled by this project, under one
+   flag set; every adapter given the same bytes, as files, and doing the same
+   work, one fold over every value; validation shown by probes, not assumed;
+   each version pinned by commit (decided).
+4. None. Rejected: P-2, P-3 and the SWAR and SIMD backend would have nothing to
+   be held to.
+
+And for the history of the numbers:
+
+1. A data file in the documentation site. Rejected: every deploy replaces the
+   whole site, so a file kept in it has to be carried from the last build by
+   something that is itself a store.
+2. Workflow artifacts. Rejected: they expire (90 days).
+3. A database or a service. Rejected: a dependency for a page.
+4. A branch of the repository, `bench-history`, an orphan (decided): every
+   point is a commit, with the date, the diff and an author a reader can audit;
+   the docs build reads it with a plain checkout and no token; and main's
+   history stays free of a bot's commits.
+
+**Decision.** Option 3, and a branch.
+
+* The documents are made by `cf_bench --emit-docs`, deterministic (a fixed
+  seed mixed with the document's number), and the comparison reads files, so a
+  library and a compiler are given the same bytes. The 1 MiB lines are
+  committed (`bench/docs-1mib.fnv`) and `bench.docs` regenerates them: a
+  generator that drifts, or differs between compilers, is seen. It found one on
+  the first run: an argument evaluation order that GCC and Clang took
+  differently.
+* The libraries are fetched at a commit (`scripts/bench/fetch.cmake`), not by
+  FetchContent, which fetches at configure time and brings in each library's
+  flags, and not by submodules, which would put eleven libraries in every clone
+  of a project whose default build has no dependency. They are built by
+  `bench/compare/`, a CMake project the top-level never adds, with
+  `CF_BENCH_FLAGS` and nothing else.
+* Each adapter has a strict mode (every check the library offers that
+  ConfigForge makes) and a loose one (its own default); the headline rows are
+  strict. Eight probe documents per format say what each reader refuses, and
+  the gap is printed on the page, not hidden.
+* **The gate counts instructions and never wall time**: a shared runner varies
+  by tens of percent in time and almost not at all in instructions. A format's
+  4 MiB read (16 took 15 minutes under callgrind, over the budget) that costs more than 110% of
+  `bench/baseline/instructions.json` fails the push. The baseline is raised
+  only in a commit whose message says what made the code cost more.
+* Every push's numbers, from the quick run (ConfigForge alone), are appended
+  to `bench-history`; the full comparison, every library and document, runs
+  weekly. `docs/Performance.md` draws each format's line over time, with the
+  commit of each point, and shows where ConfigForge is behind first.
+
+**Consequence.** A library enters the round by an adapter, a
+`libs/<name>.cmake`, an entry in `settings.json` and its probe lines, and
+leaves by removing them. XML cannot be a win: ConfigForge's reader is expat
+(D-23) with the layer's own handlers on top, so its row is an overhead of the
+layer and is said to be.
+
+**Status.** Built: P-1b.
 
 ## D-60 — Arrays in INI are the ones INI files already have
 

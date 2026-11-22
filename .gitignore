@@ -61,3 +61,6 @@ __pycache__/
 *.egg-info/
 *.whl
 *.crate
+
+# The benchmark's charts, drawn by the docs build alone (scripts/bench/page.py)
+/docs/performance/

@@ -833,6 +833,41 @@ The rules every card here keeps:
   history on the branch `bench-history`, and `docs/Performance.md`
   draws each format's line over time, losses first (D-111)."
 * **notes**:
+  * 2026-11-22: built. What the card got wrong or did not decide:
+    * rapidyaml 0.16.0 carries c4core inside its own tree (`ext/c4core.src`,
+      no submodule), so there is no separate c4core pin.
+    * inih with `INI_USE_STACK 0` needs `INI_ALLOW_REALLOC 1`: without it a
+      heap buffer stays at `INI_INITIAL_ALLOC` (200 bytes) and `INI_MAX_LINE`
+      is not the limit. P-1's INI `records` has lines of up to 64 KiB, which
+      inih refuses at 8192: shown as a refusal (`settings.json`).
+    * tomlc17 refuses `array-huge`, `numbers-int`, `numbers-edge`,
+      `table-wide`, `nest-deep` and `records` ("array too large", "table too
+      large", "too many key parts"): real limits, shown as refusals.
+    * `CF_PROFILE` (A-11) does not exist yet: the `minimal` size row is left
+      out until it does.
+    * The page has two charts for each of six formats (12), not "four".
+    * `array-huge` and `keys-prefix` cannot hold "a million" and "100,000"
+      keys at 1 MiB: a document is filled to the size asked.
+    * ConfigForge's YAML reports every scalar as text and an empty second root
+      table; its sink needs `reserve_work` for YAML even in loose mode. XML's
+      root element is a level of its own, so `nest-deep` is one level
+      shallower there.
+    * `bench.docs` found an unspecified argument evaluation order (GCC and
+      Clang disagreed): fixed in the generator.
+    * Callgrind check: `cfb_cell` noinline gives 15589426 instructions twice;
+      without the attribute nothing is collected (0).
+    * `bench-gate` took 15 minutes 16 seconds with the 16 MiB documents (the
+      stop condition: over ten): the gated documents are 4 MiB now, and the
+      gate, `run.py quick` and the page read size 4.
+    * Added beyond the card's files: `scripts/bench/check_docs.cmake` (the
+      body of `bench.docs`), `scripts/bench/publish.sh`, a ruff exception for
+      `UP031` under `scripts/bench`, D-110's row in the Decisions index.
+    * `gate.perfpage`: one character of the committed static block changed,
+      the gate failed with its message; restored, it passes.
+  * 2026-11-22: with the quick scope reading 4 MiB (run.py's default
+    sizes now follow the scope), bench-gate took 4 min 11 s in CI run
+    45060505249, within the ten minutes; bench/baseline/instructions.json
+    is that run's bench-quick artifact (`gate.py --write`).
 
 ---
 
@@ -997,7 +1032,7 @@ the order; none is a card until it says where the time goes.
   peak memory per MiB of input. Tables, unrolled loops and SIMD grow
   the code; on the embedded targets 1.8.0 adds to CI, growth of the
   `minimal` build is a cost, weighed against the gain, not ignored.
-* **A reference point.** P-1's benchmark also runs the same documents
+* **A reference point (P-1b: the comparison and its page).** P-1's benchmark also runs the same documents
   through the other libraries of the Roadmap's comparison (1.8.0), so
   "faster" means faster than something a user would otherwise pick,
   not only faster than before.

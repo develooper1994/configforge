@@ -1,5 +1,10 @@
 name: ci
-on: [push, pull_request]
+# bench-history is a branch of this repository that CI writes the benchmark's
+# numbers to (D-111): its commits must not run the suite.
+on:
+  push:
+    branches-ignore: [bench-history]
+  pull_request: {}
 
 # Every job reads the repository and nothing else; the one that comments
 # on a pull request asks for that itself.
@@ -360,6 +365,90 @@ jobs:
           cmake --build bbench --target cf_bench
           bbench/bench/cf_bench docs
 
+  # The gate on instructions (P-1b, D-111): ConfigForge's own readers on the
+  # documents of bench/compare/, 4 MiB each, one parse under callgrind. It
+  # fails a change that makes a format's read cost more than 110% of
+  # bench/baseline/instructions.json; wall time never gates, a shared runner
+  # varies by tens of percent. Nothing is fetched: bench/compare/ builds
+  # ConfigForge alone without CF_BENCH_LIBS. The results are the artifact the
+  # baseline is taken from (scripts/bench/gate.py --write) and the point
+  # .github/workflows/bench.yml adds to the branch bench-history.
+  bench-gate:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install valgrind and expat
+        run: sudo apt-get update && sudo apt-get install -y valgrind libexpat1-dev
+      - name: Build the benchmark that makes the documents
+        run: |
+          cmake -S . -B build-bench -DCMAKE_BUILD_TYPE=Release -DCF_BUILD_BENCH=ON
+          cmake --build build-bench --target cf_bench
+      - name: The gate's own tests
+        run: python3 -m unittest scripts/bench/test_gate.py
+      - name: Build the comparison, ConfigForge alone
+        run: |
+          cmake -S bench/compare -B build-cfb -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-cfb --target cfb_compare
+      - name: The quick run
+        run: >-
+          python3 scripts/bench/run.py --scope quick --build build-cfb
+          --cfbench build-bench/bench/cf_bench --out bench-quick.json
+      - name: The gate
+        run: python3 scripts/bench/gate.py bench-quick.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: bench-quick
+          path: bench-quick.json
+          retention-days: 14
+
+  # The comparison builds and its adapters work, when something they are
+  # made of changed (scripts/bench/changed.py): every library fetched at its
+  # pinned commit (cached, keyed on the pins), every adapter through the
+  # probe and touch checks, and one speed run of `mixed`. It costs nothing on
+  # a push that touches none of it.
+  bench-smoke:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - name: Did the comparison change
+        id: changed
+        run: python3 scripts/bench/changed.py --before "${{ github.event.before }}"
+      - name: Install valgrind and expat
+        if: steps.changed.outputs.run == 'true'
+        run: sudo apt-get update && sudo apt-get install -y valgrind libexpat1-dev
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        if: steps.changed.outputs.run == 'true'
+        with:
+          path: ~/cfb-libs
+          key: cfb-libs-${{ hashFiles('bench/compare/libraries.cmake') }}
+      - name: Fetch the libraries at their pinned commits
+        if: steps.changed.outputs.run == 'true'
+        run: cmake -DLIBS="$HOME/cfb-libs" -P scripts/bench/fetch.cmake
+      - name: Build the benchmark that makes the documents
+        if: steps.changed.outputs.run == 'true'
+        run: |
+          cmake -S . -B build-bench -DCMAKE_BUILD_TYPE=Release -DCF_BUILD_BENCH=ON
+          cmake --build build-bench --target cf_bench
+      - name: Build the whole comparison
+        if: steps.changed.outputs.run == 'true'
+        run: |
+          cmake -S bench/compare -B build-cfb -DCMAKE_BUILD_TYPE=Release \
+            -DCF_BENCH_LIBS="$HOME/cfb-libs" -DCF_BENCH_CFBENCH="$PWD/build-bench/bench/cf_bench"
+          cmake --build build-cfb --parallel
+      - name: The probes and the touch check
+        if: steps.changed.outputs.run == 'true'
+        run: ctest --test-dir build-cfb --output-on-failure
+      - name: One speed run of mixed, every library
+        if: steps.changed.outputs.run == 'true'
+        run: >-
+          python3 scripts/bench/run.py --scope full --sizes 1 --reps 3 --mixed-only
+          --build build-cfb --cfbench build-bench/bench/cf_bench --out bench-smoke.json
+
   clang:
     runs-on: ubuntu-26.04
     steps:
@@ -445,7 +534,9 @@ jobs:
           "$RUNNER_TEMP/cft/bin/pip" install --quiet clang-format==22.1.8
           git ls-files -z 'lib/*.c' 'lib/*.h' 'lib/*.hpp' \
             'tools/doctor/include/configforge/*.h' 'tests/*.c' 'tests/*.cpp' \
-            'tools/*.c' 'examples/*.c' 'examples/*.cpp' 'bench/*.c' |
+            'tools/*.c' 'examples/*.c' 'examples/*.cpp' 'bench/*.c' \
+            'bench/compare/*.cpp' 'bench/compare/*.h' \
+            'bench/compare/adapters/*.cpp' 'bench/compare/size/*.cpp' |
             xargs -0 "$RUNNER_TEMP/cft/bin/clang-format" -i
           git diff > format.patch
           if [ -s format.patch ]; then

@@ -20,7 +20,10 @@ file(
   "${SRC}/tools/CMakeLists.txt"
   "${SRC}/tools/*/CMakeLists.txt"
   "${SRC}/examples/CMakeLists.txt"
-  "${SRC}/examples/*/CMakeLists.txt")
+  "${SRC}/examples/*/CMakeLists.txt"
+  "${SRC}/bench/CMakeLists.txt"
+  "${SRC}/bench/compare/CMakeLists.txt"
+  "${SRC}/bench/compare/libs/*.cmake")
 
 set(ws "[ \t\r\n]")
 set(names "")

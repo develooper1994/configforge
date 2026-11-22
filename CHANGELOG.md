@@ -26,6 +26,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   and prints MiB/s per format and size. The documents are made by the
   benchmark, the same bytes every run. The first baseline is in
   `docs/Performance.md`.
+- **The benchmark against other libraries** (`bench/compare/`): the same
+  documents read through yyjson, simdjson, RapidJSON, cJSON, libyaml,
+  rapidyaml, tomlc17, toml++, tinycbor, expat and inih, under one set of
+  flags and the same work; CI counts instructions and fails a 4 MiB read
+  that costs more than 10% over its baseline, keeps a history on the branch
+  `bench-history`, and `docs/Performance.md` draws each format's line over
+  time, losses first (D-111).
 - **Four more gates**: `gate.shellcheck` (every tracked shell script),
   `gate.ruff` (the Python binding, the scripts, the examples and the
   tests), `gate.actionlint` (the workflows) and `gate.codespell` (the

@@ -19,6 +19,10 @@ file(
   "${CMAKE_SOURCE_DIR}/tools/*.c"
   "${CMAKE_SOURCE_DIR}/examples/*.c"
   "${CMAKE_SOURCE_DIR}/bench/*.c"
+  "${CMAKE_SOURCE_DIR}/bench/compare/*.cpp"
+  "${CMAKE_SOURCE_DIR}/bench/compare/*.h"
+  "${CMAKE_SOURCE_DIR}/bench/compare/adapters/*.cpp"
+  "${CMAKE_SOURCE_DIR}/bench/compare/size/*.cpp"
   "${CMAKE_SOURCE_DIR}/examples/*.cpp")
 
 # The build files are source code too, and they had drifted into three

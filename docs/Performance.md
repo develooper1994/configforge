@@ -198,3 +198,179 @@ not a scan but text made for each value (`cf_vformat` and
 `cf_u64_to_text`, an array index written as a name) and the UTF-8
 check of every string; the first is work to remove, not to speed up.
 INI is already fast and its time is its one loop.
+
+## Against the other libraries
+
+A reader that is faster than itself last month is not shown to be fast;
+one that is faster than what a user would otherwise pick is. `bench/compare/`
+reads the same documents through ConfigForge and through yyjson, simdjson,
+RapidJSON, cJSON, libyaml, rapidyaml, tomlc17, toml++, tinycbor, expat and
+inih, under one set of flags and the same work, and reports speed,
+instructions, peak memory and code size (D-111). Later cards, P-2 and P-3
+and the SWAR and SIMD backend, are held to the numbers it produces.
+
+### How it is measured
+
+* **The same bytes.** `cf_bench --emit-docs <dir>` writes every document
+  as a file, deterministic (a fixed seed, mixed with the document's
+  number, so one document does not change when another is added), and
+  prints a line a file: name, bytes, FNV-1a. The comparison reads these
+  files and generates nothing, so every library, and every compiler, is
+  given the same bytes. `bench/docs-1mib.fnv` holds the 1 MiB lines, and
+  the check `bench.docs` regenerates them: a generator that drifts, or
+  differs between compilers, is seen.
+* **The same flags.** No library is built by its own build files. Each
+  one's sources are compiled by this project's compiler with one flag
+  set, `shipped` (the headline: `-O2` with the hardening ConfigForge
+  ships with), `bare` (`-O2` alone) or `native` (`-O3 -march=native`,
+  for the record, never a headline), and ConfigForge is configured to
+  match. GCC and Clang, the runner's own, one build each; the headline
+  is GCC's. x86-64 Linux only: macOS and arm64 are added when a runner
+  for each is in CI. MSVC is not in the comparison; the baseline above
+  has it.
+* **The same work.** Every adapter parses and touches every value in
+  one fold: containers, strings (keys and values) and their bytes,
+  numbers (read into a 64-bit integer or a double and folded into an
+  accumulator, so the conversion stays in the loop), booleans, nulls. A
+  format whose values are all text counts every value as a string. The
+  check `bench.touch` gives every adapter of a format the same
+  documents at 1 MiB and fails when a counter differs.
+* **Validation, on or off for both, and shown.** Every adapter has
+  `--strict` (default: every check the library offers that ConfigForge
+  makes) and `--loose` (the library's own default). The headline rows
+  are strict. `bench.probes` compares the eight probes of each library
+  with `bench/compare/probes.expected`; the gaps are printed below.
+* **Speed** is the median of 9 runs (3 at 256 MiB) after a warm-up,
+  each run at least 200 ms for a small document, the input read once into
+  one buffer with 64 bytes of padding for every library alike, pinned to
+  one CPU where `taskset` exists. **Instructions** are one parse under
+  callgrind, `cfb_cell` alone. **Memory** is the peak growth of the
+  process over its size after the input was loaded. **Size** is what a
+  library adds to a program that parses one fixed document, with
+  unused sections dropped and the result stripped.
+* **The gate counts instructions, never wall time.** CI fails a change
+  that makes a format's 4 MiB read cost more than 110% of the
+  instructions of `bench/baseline/instructions.json`; a shared runner
+  varies by tens of percent in time and by almost nothing in
+  instructions. The baseline is raised only in a commit whose message
+  says what made the code cost more, and lowered in the commit that made
+  it cheaper.
+* **Not measured in this round:** one thread against every thread (no
+  library here parses in parallel), printing speed (a card for the
+  writers), and in-situ and lazy reading as modes of their own.
+
+### What is not compared
+
+JSON5, JSONC, `.properties`, dotenv and TLV: no library was found whose
+job is the same. pugixml (a DOM for XML), libfyaml (which ConfigForge can
+use as a backend, D-62) and libcbor (a tree, a different interface) are
+a second round. Whole configuration libraries (lookup time, libconfig)
+are another comparison, in the Roadmap.
+
+The XML row cannot be a win: ConfigForge's XML reader is expat (D-23)
+with the layer's own handlers and flattening on top, so its line is
+expat's plus what the layer costs, and the page says overhead of the
+layer and not behind.
+
+### The machine
+
+A hosted runner cannot fix its frequency, and the record says so
+rather than claims it: every results file holds the kernel, the CPU's
+name, the logical CPU count, the compiler's first `--version` line, the
+C library's, the runner image (`ImageOS`, `ImageVersion`) and the
+governor (or `unknown`). Numbers from different machines are not drawn
+as one line: the instruction counts are the trend, and the speed chart
+is noisy by the runner and says so.
+
+### What was tried
+
+The log that the cards after P-1b add a row to: the change, the cell,
+before, after, kept or reverted, and the commit. The numbers in the
+section "Measured" of `docs/Maintaining.md` stay and are linked there.
+
+| Change | Cell | Before | After | Kept | Commit |
+| ------ | ---- | -----: | ----: | ---- | ------ |
+
+<!-- bench:static:begin -->
+
+### The libraries
+
+Each library's sources are compiled by this project's compiler with one set of flags, and read the same files. One row a library: its pinned version, the settings it is given, and what each gets.
+
+| Library | Version | Commit | Licence | Reads | Settings |
+| ------- | ------- | ------ | ------- | ----- | -------- |
+| ConfigForge | this tree | - | MIT | JSON, YAML, TOML, CBOR, INI, XML | cf_codec_by_name(<format>) and cf_codec_decode into a cf_doc_sink whose callbacks touch the value; reserve_text from one buffer kept between documents; strict supplies reserve_work (TOML's duplicate check; YAML cannot be read without it) from blocks freed between documents. The readers library (configforge_serialize), built with CF_HARDEN=ON in `shipped`, OFF in `bare` and `native`; its own YAML reader (D-69), XML through expat (D-23). |
+| [yyjson](https://github.com/ibireme/yyjson) | 0.13.0 | `6447536015f3` | MIT | JSON | yyjson_read with no flag: it validates structure and UTF-8, and reads a copy of the input. Strict and loose are the same: the library has no option that checks more. |
+| [simdjson](https://github.com/simdjson/simdjson) | v5.0.5 | `9c003534b1be` | Apache-2.0 OR MIT | JSON | The runtime-dispatched kernel it picks, padded input, one parser reused between documents (its documented fast path). dom::parser, and ondemand::parser, which is lazy: the adapter touches every value, so the work is equal. UTF-8 is always validated; no option checks more. |
+| [RapidJSON](https://github.com/Tencent/rapidjson) | commit of 2025-02-05 | `24b5e7a8b27f` | MIT | JSON | Document::Parse over the bytes and their length. `rapidjson`: kParseValidateEncodingFlag in strict mode (ConfigForge refuses invalid UTF-8 from A-5 on, D-108), the default flags in loose; `rapidjson-nocheck`: the default flags (kParseDefaultFlags), which do not check the encoding. No SSE define in `shipped` (a generic target); RAPIDJSON_SSE42 in `native`. |
+| [cJSON](https://github.com/DaveGamble/cJSON) | v1.7.19 | `c859b25da029` | MIT | JSON | cJSON_ParseWithLength; strict: cJSON_ParseWithLengthOpts(..., require_null_terminated = 1) over the document and its NUL (a slice of many-tiny has no NUL after it and is parsed by cJSON_ParseWithLength alone). |
+| [libyaml](https://github.com/yaml/libyaml) | 0.2.5 | `2c891fc7a770` | MIT | YAML | yaml_parser_parse in an event loop over yaml_parser_set_input_string. Every scalar is text to it, and to ConfigForge's YAML reader: every scalar is a string here. |
+| [rapidyaml](https://github.com/biojppm/rapidyaml) | v0.16.0 | `f8ac8dd50f4f` | MIT | YAML | ryml::parse_in_arena (a copy of the input; parse_in_place destroys its input and is the in-situ row of a later card). Errors throw so that a refusal is an answer. c4core is carried in rapidyaml's own tree at 0.16.0 (ext/c4core.src), so one commit pins both. |
+| [tomlc17](https://github.com/cktan/tomlc17) | commit of 2026-10-22 | `4987cf895df6` | MIT | TOML | toml_parse over the bytes and their length; strict turns on its check_utf8 option (a global, off by default). |
+| [toml++](https://github.com/marzer/tomlplusplus) | v3.4.0 | `30172438cee6` | MIT | TOML | toml::parse of a string_view with TOML_EXCEPTIONS=0 and TOML_HEADER_ONLY=1, the parse_result checked. No option checks more than it does. |
+| [tinycbor](https://github.com/intel/tinycbor) | v7.1 | `da6421f2b5b9` | MIT | CBOR | cbor_parser_init and the iteration calls, with cbor_value_validate first. Strict: CborValidateUtf8 \| CborValidateCompleteData, the checks ConfigForge's CBOR reader also makes. The check for unique keys exists only with sorted keys (CborValidateMapIsSorted), which a document is not, so a duplicate key is not checked. |
+| [inih](https://github.com/benhoyt/inih) | r62 | `26254ee9de76` | BSD-3-Clause | INI | ini_parse_string with INI_STOP_ON_FIRST_ERROR 1, INI_USE_STACK 0, INI_ALLOW_REALLOC 1 and INI_MAX_LINE 8192 (its default of 200 bytes would refuse the long-line documents; without INI_ALLOW_REALLOC a heap buffer stays at 200 bytes whatever INI_MAX_LINE is). A slice with no NUL after it (many-tiny) is copied first: ini_parse_string needs one. |
+| expat | the system's (libexpat1-dev) | - | MIT | XML | XML_Parse in one call, handlers for start, end and character data; ConfigForge's mapping (D-23) rebuilt from the events. The system's libexpat1-dev, the one ConfigForge's XML reader links too: the two rows run one library. |
+
+Notes on a library:
+
+* **ConfigForge**: The root container, and YAML's empty second one, are not counted. XML's line is expat's plus what the layer costs: the page says overhead of the layer, not behind. The size rows use the default build; the `minimal` row waits for CF_PROFILE (A-11).
+* **RapidJSON**: Not a tagged release: RapidJSON's last release, a 2016 tag, does not build with today's compilers; the pin is a commit of master.
+* **cJSON**: One number type: every number is counted in `numbers`, and the integer or real is not told.
+* **libyaml**: An alias is one event and is not expanded; ConfigForge expands it under D-63 and D-82's bound. The yaml-aliases outcome table shows what each does.
+* **rapidyaml**: An alias is kept as a reference and not expanded.
+* **tomlc17**: The library has limits of its own that ConfigForge does not: an array of many elements (`array too large`), a table of many keys (`table too large`) and a dotted key of many parts (`too many key parts`) are refused. They are shown as refusals, not left out. Refused in this round: `array-huge` (array too large), `numbers-int` (array too large), `numbers-edge` (array too large), `table-wide` (table too large), `nest-deep` (too many key parts), `records` (too many key parts).
+* **inih**: The handler is given names and values, not structure: sections and name[] runs are rebuilt from them. Its line limit is a limit of the library: P-1's records, with strings of up to 64 KiB on a line, are refused. Refused in this round: `records` (a line over INI_MAX_LINE (8192 bytes)).
+* **expat**: ConfigForge's XML reader is expat with the layer's own handlers and flattening on top, so its line is expat's plus what the layer costs. It cannot be a win.
+
+Not compared, and said so: JSON5, JSONC, `.properties`, dotenv and TLV (no library found whose job is the same), and pugixml, a DOM for XML (second round, with libfyaml and libcbor).
+
+### The documents
+
+Each is chosen to hurt a reader. A letter says the document exists in that format (J JSON, Y YAML, T TOML, C CBOR, I INI, X XML), a blank that the format cannot say it. Sizes 1, 16 and 256 MiB.
+
+| Name | What it is | J | Y | T | C | I | X |
+| ---- | ---------- | - | - | - | - | - | - |
+| `mixed` | tables of strings, integers, reals, booleans and short arrays, as a configuration looks | J | Y | T | C | I | X |
+| `strings-plain` | strings of 64 to 4096 ASCII bytes, no escape | J | Y | T | C | I | X |
+| `strings-escape` | every byte of every string an escape: a line feed, a backslash, a quote, an e-acute, a character outside the first plane (a surrogate pair in JSON); entities in XML | J | Y | T |   |   | X |
+| `strings-utf8` | half the bytes non-ASCII, two-, three- and four-byte sequences mixed | J | Y | T | C | I | X |
+| `numbers-int` | integers of one to three digits, one a line or element | J | Y | T | C |   |   |
+| `numbers-edge` | the int64 limits and their neighbours, reals of 17 significant digits, the largest and smallest exponents, subnormals | J | Y | T | C |   |   |
+| `nest-deep` | tables or arrays 31 levels deep (CF_MAX_DEPTH 32 allows 31 inside the document), repeated | J | Y | T | C |   | X |
+| `array-huge` | one array of one-digit elements, as many as the size holds (INI: name[] = x lines, D-60) | J | Y | T | C | I | X |
+| `table-wide` | one table of unique short keys, as many as the size holds | J | Y | T | C | I | X |
+| `keys-prefix` | keys sharing a 200-byte prefix (under CF_KEY_MAX): quadratic time on crafted keys | J | Y | T | C | I |   |
+| `whitespace` | mostly blanks, newlines, indentation and comments, a value now and then | J | Y | T |   | I | X |
+| `many-tiny` | documents of 20 to 64 bytes, parsed one at a time from their own slice; measures what one parse costs to start and to end | J | Y | T | C | I | X |
+| `invalid-late` | a valid document with its one error in the last KiB: a stray ] (JSON), a tab indent (YAML), a duplicate key (TOML), a truncated last item (CBOR), a line with no = (INI), a mismatched end tag (XML); measures the time to refuse | J | Y | T | C | I | X |
+| `records` | P-1's records (docs/Performance.md, Large documents): strings of 40 to 240 bytes and, once in 64 records, of 16 to 64 KiB, escapes, non-ASCII, 8 to 31 small numbers, a chain of nested tables | J | Y | T | C | I |   |
+| `yaml-aliases` | YAML alone, 1 MiB: plain entries, then aliases of aliases nine levels deep; an outcome table, not a speed row |   | Y |   |   |   |   |
+
+### What each library checks
+
+`cfb_compare --mode probe` gives every reader the same eight probe documents per format (invalid UTF-8 in a string, a duplicate key, an integer past int64, a truncated document, text after the root value, nesting 100 deep, a lone surrogate escape, a NUL inside a string) in strict mode, which turns on every check the library offers that ConfigForge makes. A line is a probe ConfigForge refuses and the library reads: the gap is shown, not hidden. The table is `bench/compare/probes.expected`.
+
+| Library | Format | Does not check (strict) |
+| ------- | ------ | ----------------------- |
+| yyjson | JSON | nesting-100 |
+| simdjson-dom | JSON | nesting-100 |
+| simdjson-ondemand | JSON | nesting-100 |
+| rapidjson | JSON | nesting-100 |
+| rapidjson-nocheck | JSON | invalid-utf8, nesting-100 |
+| cjson | JSON | invalid-utf8, nesting-100 |
+| libyaml | YAML | nesting-100 |
+| rapidyaml | YAML | invalid-utf8, nesting-100, lone-surrogate |
+| tomlc17 | TOML | nothing ConfigForge checks |
+| tomlpp | TOML | nesting-100 |
+| tinycbor | CBOR | int-past-int64, nesting-100 |
+| inih | INI | invalid-utf8 |
+| expat | XML | duplicate-key, nesting-100 |
+
+<!-- bench:static:end -->
+
+### The history
+
+<!-- bench:history:begin -->
+No history yet: the page is filled by CI from the branch bench-history.
+<!-- bench:history:end -->

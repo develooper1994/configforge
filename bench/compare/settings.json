@@ -1,0 +1,198 @@
+{
+  "schema": 1,
+  "libraries": {
+    "configforge": {
+      "title": "ConfigForge",
+      "adapters": [
+        "configforge"
+      ],
+      "formats": [
+        "json",
+        "yaml",
+        "toml",
+        "cbor",
+        "ini",
+        "xml"
+      ],
+      "settings": "cf_codec_by_name(<format>) and cf_codec_decode into a cf_doc_sink whose callbacks touch the value; reserve_text from one buffer kept between documents; strict supplies reserve_work (TOML's duplicate check; YAML cannot be read without it) from blocks freed between documents. The readers library (configforge_serialize), built with CF_HARDEN=ON in `shipped`, OFF in `bare` and `native`; its own YAML reader (D-69), XML through expat (D-23).",
+      "notes": "The root container, and YAML's empty second one, are not counted. XML's line is expat's plus what the layer costs: the page says overhead of the layer, not behind. The size rows use the default build; the `minimal` row waits for CF_PROFILE (A-11).",
+      "refuses": [],
+      "touch_exempt": []
+    },
+    "yyjson": {
+      "title": "yyjson",
+      "adapters": [
+        "yyjson"
+      ],
+      "formats": [
+        "json"
+      ],
+      "settings": "yyjson_read with no flag: it validates structure and UTF-8, and reads a copy of the input. Strict and loose are the same: the library has no option that checks more.",
+      "notes": "",
+      "refuses": [],
+      "touch_exempt": []
+    },
+    "simdjson": {
+      "title": "simdjson",
+      "adapters": [
+        "simdjson-dom",
+        "simdjson-ondemand"
+      ],
+      "formats": [
+        "json"
+      ],
+      "settings": "The runtime-dispatched kernel it picks, padded input, one parser reused between documents (its documented fast path). dom::parser, and ondemand::parser, which is lazy: the adapter touches every value, so the work is equal. UTF-8 is always validated; no option checks more.",
+      "notes": "",
+      "refuses": [],
+      "touch_exempt": []
+    },
+    "rapidjson": {
+      "title": "RapidJSON",
+      "adapters": [
+        "rapidjson",
+        "rapidjson-nocheck"
+      ],
+      "formats": [
+        "json"
+      ],
+      "settings": "Document::Parse over the bytes and their length. `rapidjson`: kParseValidateEncodingFlag in strict mode (ConfigForge refuses invalid UTF-8 from A-5 on, D-108), the default flags in loose; `rapidjson-nocheck`: the default flags (kParseDefaultFlags), which do not check the encoding. No SSE define in `shipped` (a generic target); RAPIDJSON_SSE42 in `native`.",
+      "notes": "Not a tagged release: RapidJSON's last release, a 2016 tag, does not build with today's compilers; the pin is a commit of master.",
+      "refuses": [],
+      "touch_exempt": []
+    },
+    "cjson": {
+      "title": "cJSON",
+      "adapters": [
+        "cjson"
+      ],
+      "formats": [
+        "json"
+      ],
+      "settings": "cJSON_ParseWithLength; strict: cJSON_ParseWithLengthOpts(..., require_null_terminated = 1) over the document and its NUL (a slice of many-tiny has no NUL after it and is parsed by cJSON_ParseWithLength alone).",
+      "notes": "One number type: every number is counted in `numbers`, and the integer or real is not told.",
+      "refuses": [],
+      "touch_exempt": []
+    },
+    "libyaml": {
+      "title": "libyaml",
+      "adapters": [
+        "libyaml"
+      ],
+      "formats": [
+        "yaml"
+      ],
+      "settings": "yaml_parser_parse in an event loop over yaml_parser_set_input_string. Every scalar is text to it, and to ConfigForge's YAML reader: every scalar is a string here.",
+      "notes": "An alias is one event and is not expanded; ConfigForge expands it under D-63 and D-82's bound. The yaml-aliases outcome table shows what each does.",
+      "refuses": [],
+      "touch_exempt": []
+    },
+    "rapidyaml": {
+      "title": "rapidyaml",
+      "adapters": [
+        "rapidyaml"
+      ],
+      "formats": [
+        "yaml"
+      ],
+      "settings": "ryml::parse_in_arena (a copy of the input; parse_in_place destroys its input and is the in-situ row of a later card). Errors throw so that a refusal is an answer. c4core is carried in rapidyaml's own tree at 0.16.0 (ext/c4core.src), so one commit pins both.",
+      "notes": "An alias is kept as a reference and not expanded.",
+      "refuses": [],
+      "touch_exempt": []
+    },
+    "tomlc17": {
+      "title": "tomlc17",
+      "adapters": [
+        "tomlc17"
+      ],
+      "formats": [
+        "toml"
+      ],
+      "settings": "toml_parse over the bytes and their length; strict turns on its check_utf8 option (a global, off by default).",
+      "notes": "The library has limits of its own that ConfigForge does not: an array of many elements (`array too large`), a table of many keys (`table too large`) and a dotted key of many parts (`too many key parts`) are refused. They are shown as refusals, not left out.",
+      "refuses": [
+        {
+          "doc": "array-huge",
+          "why": "array too large"
+        },
+        {
+          "doc": "numbers-int",
+          "why": "array too large"
+        },
+        {
+          "doc": "numbers-edge",
+          "why": "array too large"
+        },
+        {
+          "doc": "table-wide",
+          "why": "table too large"
+        },
+        {
+          "doc": "nest-deep",
+          "why": "too many key parts"
+        },
+        {
+          "doc": "records",
+          "why": "too many key parts"
+        }
+      ],
+      "touch_exempt": []
+    },
+    "tomlpp": {
+      "title": "toml++",
+      "adapters": [
+        "tomlpp"
+      ],
+      "formats": [
+        "toml"
+      ],
+      "settings": "toml::parse of a string_view with TOML_EXCEPTIONS=0 and TOML_HEADER_ONLY=1, the parse_result checked. No option checks more than it does.",
+      "notes": "",
+      "refuses": [],
+      "touch_exempt": []
+    },
+    "tinycbor": {
+      "title": "tinycbor",
+      "adapters": [
+        "tinycbor"
+      ],
+      "formats": [
+        "cbor"
+      ],
+      "settings": "cbor_parser_init and the iteration calls, with cbor_value_validate first. Strict: CborValidateUtf8 | CborValidateCompleteData, the checks ConfigForge's CBOR reader also makes. The check for unique keys exists only with sorted keys (CborValidateMapIsSorted), which a document is not, so a duplicate key is not checked.",
+      "notes": "",
+      "refuses": [],
+      "touch_exempt": []
+    },
+    "inih": {
+      "title": "inih",
+      "adapters": [
+        "inih"
+      ],
+      "formats": [
+        "ini"
+      ],
+      "settings": "ini_parse_string with INI_STOP_ON_FIRST_ERROR 1, INI_USE_STACK 0, INI_ALLOW_REALLOC 1 and INI_MAX_LINE 8192 (its default of 200 bytes would refuse the long-line documents; without INI_ALLOW_REALLOC a heap buffer stays at 200 bytes whatever INI_MAX_LINE is). A slice with no NUL after it (many-tiny) is copied first: ini_parse_string needs one.",
+      "notes": "The handler is given names and values, not structure: sections and name[] runs are rebuilt from them. Its line limit is a limit of the library: P-1's records, with strings of up to 64 KiB on a line, are refused.",
+      "refuses": [
+        {
+          "doc": "records",
+          "why": "a line over INI_MAX_LINE (8192 bytes)"
+        }
+      ],
+      "touch_exempt": []
+    },
+    "expat": {
+      "title": "expat",
+      "adapters": [
+        "expat"
+      ],
+      "formats": [
+        "xml"
+      ],
+      "settings": "XML_Parse in one call, handlers for start, end and character data; ConfigForge's mapping (D-23) rebuilt from the events. The system's libexpat1-dev, the one ConfigForge's XML reader links too: the two rows run one library.",
+      "notes": "ConfigForge's XML reader is expat with the layer's own handlers and flattening on top, so its line is expat's plus what the layer costs. It cannot be a win.",
+      "refuses": [],
+      "touch_exempt": []
+    }
+  }
+}

@@ -62,7 +62,7 @@ system, no generated header, no options.
 | Tool | Licence | Needed for |
 | ---- | ------- | ---------- |
 | CMake (`find_package` of `PkgConfig`, `Threads`, `Python3`, and `ConfigForge` in the install gate) | BSD-3-Clause | the build, the gates, `scripts/verify.cmake` |
-| Valgrind (`valgrind`) | GPL-2.0-or-later | `verify -DEXTRA=valgrind` (tier 2): every unit test under memcheck; not linked |
+| Valgrind (`valgrind`) | GPL-2.0-or-later | `verify -DEXTRA=valgrind` (tier 2): every unit test under memcheck; also CI's `bench-gate`, which counts the instructions of one read under callgrind (D-111); not linked |
 | CBMC (`cbmc`) | BSD-4-Clause | the bounded proofs (`docs/Safety.md`); not linked |
 | libabigail (`abidiff`) | Apache-2.0 WITH LLVM-exception | `verify -DEXTRA=abi` (tier 2): the shared library against the last release's (D-56); not linked |
 | wasi-libc, lld (`wasm-ld`), Node.js (`node`) | Apache-2.0 WITH LLVM-exception, MIT | `verify -DEXTRA=wasm` (tier 2): the library and its unit tests for wasm32-wasi, run under Node's WASI (`scripts/check/wasi_run.js`); wasi-libc is linked into what is built for wasm32 |
@@ -126,7 +126,18 @@ build or test on a machine that already has the tools.
 | Component | Licence | Used for |
 | --------- | ------- | -------- |
 | `actions/checkout` | MIT | every CI job |
-| `actions/upload-artifact`, `actions/download-artifact` | MIT | the release workflow: carrying each platform's archive to the job that publishes them |
+| `actions/upload-artifact`, `actions/download-artifact` | MIT | the release workflow: carrying each platform's archive to the job that publishes them; `bench-gate` and `.github/workflows/bench.yml`: carrying the quick and the full results of the benchmark (D-111) |
+| `actions/cache` | MIT | the libfuzzer corpus, and the fetched sources of the benchmark's comparison (`bench-smoke`, `compare`), keyed on the hash of `bench/compare/libraries.cmake` |
+| yyjson | MIT | the benchmark's comparison, `bench/compare/`, fetched by `scripts/bench/fetch.cmake` at a pinned commit, built by CI only, never shipped |
+| simdjson | Apache-2.0 OR MIT | the benchmark's comparison, `bench/compare/`, fetched by `scripts/bench/fetch.cmake` at a pinned commit, built by CI only, never shipped |
+| RapidJSON | MIT, but for `bin/jsonchecker/` (the JSON licence), which is not built | the benchmark's comparison, `bench/compare/`, fetched by `scripts/bench/fetch.cmake` at a pinned commit, built by CI only, never shipped |
+| cJSON | MIT | the benchmark's comparison, `bench/compare/`, fetched by `scripts/bench/fetch.cmake` at a pinned commit, built by CI only, never shipped |
+| libyaml | MIT | the benchmark's comparison, `bench/compare/`, fetched by `scripts/bench/fetch.cmake` at a pinned commit, built by CI only, never shipped |
+| rapidyaml (with the c4core it carries) | MIT | the benchmark's comparison, `bench/compare/`, fetched by `scripts/bench/fetch.cmake` at a pinned commit, built by CI only, never shipped |
+| tomlc17 | MIT | the benchmark's comparison, `bench/compare/`, fetched by `scripts/bench/fetch.cmake` at a pinned commit, built by CI only, never shipped |
+| toml++ | MIT | the benchmark's comparison, `bench/compare/`, fetched by `scripts/bench/fetch.cmake` at a pinned commit, built by CI only, never shipped |
+| tinycbor | MIT | the benchmark's comparison, `bench/compare/`, fetched by `scripts/bench/fetch.cmake` at a pinned commit, built by CI only, never shipped |
+| inih | BSD-3-Clause | the benchmark's comparison, `bench/compare/`, fetched by `scripts/bench/fetch.cmake` at a pinned commit, built by CI only, never shipped |
 | the `alpine:3.20` image (musl, BusyBox, Alpine's gcc) | MIT; GPL-2.0-only; GPL-3.0-or-later with the runtime exception | the Alpine CI job, and the release's static Linux build. Static linking puts musl's code in Doctor, so the archive carries musl's `COPYRIGHT`, fetched from musl's repository at the version linked |
 | GitHub CLI (`gh`, on the runner) | MIT | the release workflow: creating the release |
 | Ubuntu packages: libkqueue-dev, cppcheck, clang, clang-tidy, clang-format, locales | as above | the jobs that name them |
