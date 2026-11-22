@@ -165,10 +165,11 @@ static void toml_loc(const toml_scan* s, const char* at, cf_loc* out) {
     out->col  = cf_text_track_col(&s->tr, at);
 }
 
-static cf_bool toml_fail(toml_scan* s, const char* at, const char* what) {
+static cf_bool toml_fail(toml_scan* s, const char* at, int reason, const char* what) {
     unsigned int col = cf_text_track_col(&s->tr, at);
 
-    return cf_text_fail(s->err, CF_E_SOURCE, s->file, s->tr.line, col, "%s", what);
+    return cf_text_fail(s->err, CF_E_SOURCE, s->file, s->tr.line, col, reason, "%s",
+                        what);
 }
 
 static void toml_blank(toml_scan* s) {
@@ -177,10 +178,11 @@ static void toml_blank(toml_scan* s) {
 
 static cf_bool toml_comment_result(toml_scan* s, int result, const char* bad) {
     if (result == CF_SKIP_CONTROL) {
-        return toml_fail(s, bad, "a comment may not contain a control character");
+        return toml_fail(s, bad, CF_REASON_CONTROL,
+                         "a comment may not contain a control character");
     }
     if (result == CF_SKIP_UTF8) {
-        return toml_fail(s, bad, "a comment is not valid UTF-8");
+        return toml_fail(s, bad, CF_REASON_UTF8, "a comment is not valid UTF-8");
     }
     return CF_TRUE;
 }
@@ -206,7 +208,7 @@ static cf_bool toml_end_of_line(toml_scan* s) {
         return CF_FALSE;
     }
     if (s->p < s->end && *s->p != '\n') {
-        return toml_fail(s, s->p, "expected the end of the line");
+        return toml_fail(s, s->p, CF_REASON_SYNTAX, "expected the end of the line");
     }
     return CF_TRUE;
 }
@@ -216,7 +218,7 @@ static cf_bool toml_end_of_line(toml_scan* s) {
 static cf_bool toml_put(toml_scan* s, char* dst, size_t* n, size_t cap, const char* p,
                         size_t k) {
     if (*n + k + 1 > cap) {
-        return toml_fail(s, s->p, "the string is too long");
+        return toml_fail(s, s->p, CF_REASON_TOO_LONG, "the string is too long");
     }
     if (dst != NULL) {
         memcpy(dst + *n, p, k);
@@ -249,7 +251,8 @@ static size_t toml_string(toml_scan* s, char* dst, size_t cap, cf_bool multi) {
 
     if (s->end - s->p >= 3 && s->p[1] == q && s->p[2] == q) {
         if (!multi) {
-            toml_fail(s, s->p, "a key may not be a multi-line string");
+            toml_fail(s, s->p, CF_REASON_SYNTAX,
+                      "a key may not be a multi-line string");
             return (size_t)-1;
         }
         ml = CF_TRUE;
@@ -274,7 +277,7 @@ static size_t toml_string(toml_scan* s, char* dst, size_t cap, cf_bool multi) {
                     continue;
                 }
                 if (run > 5) {
-                    toml_fail(s, s->p + 5,
+                    toml_fail(s, s->p + 5, CF_REASON_SYNTAX,
                               "more than two quotes before the closing three");
                     return (size_t)-1;
                 }
@@ -291,7 +294,8 @@ static size_t toml_string(toml_scan* s, char* dst, size_t cap, cf_bool multi) {
         }
         if (ml && (c == '\n' || c == '\r')) {
             if (toml_newline(s) == 0) {
-                toml_fail(s, s->p, "a string may not contain a control character");
+                toml_fail(s, s->p, CF_REASON_CONTROL,
+                          "a string may not contain a control character");
                 return (size_t)-1;
             }
             if (!toml_put(s, dst, &n, cap, "\n", 1)) {
@@ -322,22 +326,24 @@ static size_t toml_string(toml_scan* s, char* dst, size_t cap, cf_bool multi) {
             }
         }
         if (c == '\n') {
-            toml_fail(s, s->p, "the string is not closed on its line");
+            toml_fail(s, s->p, CF_REASON_TRUNCATED,
+                      "the string is not closed on its line");
             return (size_t)-1;
         }
         if ((c < 0x20u && c != '\t') || c == 0x7Fu) {
-            toml_fail(s, s->p, "a string may not contain a control character");
+            toml_fail(s, s->p, CF_REASON_CONTROL,
+                      "a string may not contain a control character");
             return (size_t)-1;
         }
         if (c >= 0x80u) {
             cf_u32 cp;
             size_t k = cf_text_utf8_decode(s->p, s->end, &cp);
             if (k == 0) {
-                toml_fail(s, s->p, "a string is not valid UTF-8");
+                toml_fail(s, s->p, CF_REASON_UTF8, "a string is not valid UTF-8");
                 return (size_t)-1;
             }
             if (n + k + 1 > cap) {
-                toml_fail(s, s->p, "the string is too long");
+                toml_fail(s, s->p, CF_REASON_TOO_LONG, "the string is too long");
                 return (size_t)-1;
             }
             if (dst != NULL) {
@@ -354,26 +360,28 @@ static size_t toml_string(toml_scan* s, char* dst, size_t cap, cf_bool multi) {
 
             ++s->p;
             if (s->p >= s->end) {
-                toml_fail(s, s->p, "escape at the end of the input");
+                toml_fail(s, s->p, CF_REASON_TRUNCATED,
+                          "escape at the end of the input");
                 return (size_t)-1;
             }
             cf_text_esc_decode(&toml_family, s->p, s->end, &r);
             if (r.kind == CF_ESC_OTHER) {
-                toml_fail(s, s->p, "unknown escape");
+                toml_fail(s, s->p, CF_REASON_ESCAPE, "unknown escape");
                 return (size_t)-1;
             }
             if (r.kind == CF_ESC_E_DIGITS) {
-                toml_fail(s, s->p + r.at, TOML_UNICODE_DIGITS);
+                toml_fail(s, s->p + r.at, CF_REASON_ESCAPE, TOML_UNICODE_DIGITS);
                 return (size_t)-1;
             }
             if (r.kind == CF_ESC_E_SCALAR) {
-                toml_fail(s, s->p + r.at, "not a Unicode scalar value");
+                toml_fail(s, s->p + r.at, CF_REASON_ESCAPE,
+                          "not a Unicode scalar value");
                 return (size_t)-1;
             }
             s->p += r.used;
             k = cf_text_utf8_encode(r.cp, enc);
             if (n + k + 1 > cap) {
-                toml_fail(s, s->p, "the string is too long");
+                toml_fail(s, s->p, CF_REASON_TOO_LONG, "the string is too long");
                 return (size_t)-1;
             }
             if (dst != NULL) {
@@ -383,7 +391,7 @@ static size_t toml_string(toml_scan* s, char* dst, size_t cap, cf_bool multi) {
             continue;
         }
         if (n + 2 > cap) {
-            toml_fail(s, s->p, "the string is too long");
+            toml_fail(s, s->p, CF_REASON_TOO_LONG, "the string is too long");
             return (size_t)-1;
         }
         if (dst != NULL) {
@@ -392,7 +400,7 @@ static size_t toml_string(toml_scan* s, char* dst, size_t cap, cf_bool multi) {
         ++n;
         ++s->p;
     }
-    toml_fail(s, s->p, "the string is not closed");
+    toml_fail(s, s->p, CF_REASON_TRUNCATED, "the string is not closed");
     return (size_t)-1;
 }
 
@@ -409,13 +417,13 @@ static size_t toml_key_segment(toml_scan* s, char* dst, size_t cap) {
     }
     while (s->p < s->end && toml_bare((unsigned char)*s->p)) {
         if (n + 1 >= cap) {
-            toml_fail(s, s->p, "the key is too long");
+            toml_fail(s, s->p, CF_REASON_TOO_LONG, "the key is too long");
             return (size_t)-1;
         }
         dst[n++] = *s->p++;
     }
     if (n == 0) {
-        toml_fail(s, s->p, "expected a key");
+        toml_fail(s, s->p, CF_REASON_SYNTAX, "expected a key");
         return (size_t)-1;
     }
     dst[n] = '\0';
@@ -432,10 +440,10 @@ static cf_bool toml_key(toml_scan* s, toml_dkey* k) {
 
         toml_blank(s);
         if (k->n >= TOML_KEY_PARTS) {
-            return toml_fail(s, s->p, "the key has too many parts");
+            return toml_fail(s, s->p, CF_REASON_TOO_LONG, "the key has too many parts");
         }
         if (used + 2 > sizeof k->buf) {
-            return toml_fail(s, s->p, "the key is too long");
+            return toml_fail(s, s->p, CF_REASON_TOO_LONG, "the key is too long");
         }
         n = toml_key_segment(s, k->buf + used, sizeof k->buf - used);
         if (n == (size_t)-1) {
@@ -465,7 +473,7 @@ static cf_bool toml_key(toml_scan* s, toml_dkey* k) {
  * ------------------------------------------------------------------ */
 
 static cf_bool toml_fail_named(toml_scan* s, const char* at, const char* name, size_t n,
-                               const char* what) {
+                               int reason, const char* what) {
     /* cf_fmt has no precision for %s: the name is copied, cut short
        where the message would not hold it. */
     char   text[CF_MESSAGE_MAX];
@@ -482,7 +490,7 @@ static cf_bool toml_fail_named(toml_scan* s, const char* at, const char* name, s
     memcpy(text + k, what, w < sizeof text - k - 1 ? w : sizeof text - k - 1);
     k += w < sizeof text - k - 1 ? w : sizeof text - k - 1;
     text[k] = '\0';
-    return toml_fail(s, at, text);
+    return toml_fail(s, at, reason, text);
 }
 
 static cf_bool toml_no_room(toml_scan* s) {
@@ -683,13 +691,13 @@ static cf_u32 toml_define_key(toml_scan* s, const toml_dkey* k, const char* at,
                 why = "is a table a [header] defines; a dotted key may not add to it";
                 break;
             }
-            toml_fail_named(s, at, TOML_SEG(k, i), k->len[i], why);
+            toml_fail_named(s, at, TOML_SEG(k, i), k->len[i], CF_REASON_STRUCTURE, why);
             return 0;
         }
         node = c;
     }
     if (toml_find(s, node, 0, TOML_SEG(k, i), k->len[i], 0) != 0) {
-        toml_fail_named(s, at, TOML_SEG(k, i), k->len[i],
+        toml_fail_named(s, at, TOML_SEG(k, i), k->len[i], CF_REASON_DUPLICATE_KEY,
                         "is already defined; TOML defines a key once");
         return 0;
     }
@@ -724,11 +732,12 @@ static cf_bool toml_define_header(toml_scan* s, const toml_dkey* k, const char* 
                 break;
             case TOML_VALUE:
                 return toml_fail_named(s, at, TOML_SEG(k, i), k->len[i],
-                                       "is a value, not a table");
+                                       CF_REASON_STRUCTURE, "is a value, not a table");
             case TOML_INLINE:
             case TOML_SEALED:
             default:
                 return toml_fail_named(s, at, TOML_SEG(k, i), k->len[i],
+                                       CF_REASON_STRUCTURE,
                                        "is an inline table, which is complete as "
                                        "written");
             }
@@ -744,6 +753,7 @@ static cf_bool toml_define_header(toml_scan* s, const toml_dkey* k, const char* 
             }
         } else if (s->nodes[c].kind != (cf_u8)TOML_TABLES) {
             return toml_fail_named(s, at, TOML_SEG(k, i), k->len[i],
+                                   CF_REASON_DUPLICATE_KEY,
                                    "is already defined, and not as an array of tables");
         } else {
             *existed = CF_TRUE;
@@ -763,12 +773,15 @@ static cf_bool toml_define_header(toml_scan* s, const toml_dkey* k, const char* 
         node             = c;
     } else {
         const char* why;
+        int         reason = CF_REASON_STRUCTURE;
         switch ((toml_def)s->nodes[c].kind) {
         case TOML_HEADER:
-            why = "is a table defined twice; TOML defines a table once";
+            reason = CF_REASON_DUPLICATE_KEY;
+            why    = "is a table defined twice; TOML defines a table once";
             break;
         case TOML_DOTTED:
-            why = "was defined by dotted keys; a [header] may not define it again";
+            reason = CF_REASON_DUPLICATE_KEY;
+            why    = "was defined by dotted keys; a [header] may not define it again";
             break;
         case TOML_TABLES:
             why = "is an array of tables; [[...]] adds an element to it";
@@ -783,7 +796,7 @@ static cf_bool toml_define_header(toml_scan* s, const toml_dkey* k, const char* 
             why = "is an inline table, which is complete as written";
             break;
         }
-        return toml_fail_named(s, at, TOML_SEG(k, i), k->len[i], why);
+        return toml_fail_named(s, at, TOML_SEG(k, i), k->len[i], reason, why);
     }
     s->body = node;
     return CF_TRUE;
@@ -890,7 +903,7 @@ static cf_bool toml_datetime(toml_scan* s, cf_value* v) {
         int leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
         if (mo < 1 || mo > 12 || d < 1 || d > days[mo - 1] ||
             (mo == 2 && d == 29 && !leap)) {
-            return toml_fail(s, start,
+            return toml_fail(s, start, CF_REASON_NUMBER,
                              "not a date: the month or the day is out of range");
         }
         s->p += 10;
@@ -900,30 +913,31 @@ static cf_bool toml_datetime(toml_scan* s, cf_value* v) {
                                s->end - s->p > 3 && s->p[3] == ':'))) {
             ++s->p;
             if (!toml_time(s)) {
-                return toml_fail(s, start, "not a date-time: the time is malformed");
+                return toml_fail(s, start, CF_REASON_NUMBER,
+                                 "not a date-time: the time is malformed");
             }
             if (s->p < s->end && (*s->p == 'Z' || *s->p == 'z')) {
                 ++s->p;
             } else if (s->p < s->end && (*s->p == '+' || *s->p == '-')) {
                 int oh = toml_fixed(s->p + 1, s->end, 2), om;
                 if (oh < 0 || s->end - s->p < 6 || s->p[3] != ':') {
-                    return toml_fail(s, start,
+                    return toml_fail(s, start, CF_REASON_NUMBER,
                                      "not a date-time: the offset is malformed");
                 }
                 om = toml_fixed(s->p + 4, s->end, 2);
                 if (oh > 23 || om < 0 || om > 59) {
-                    return toml_fail(s, start,
+                    return toml_fail(s, start, CF_REASON_NUMBER,
                                      "not a date-time: the offset is out of range");
                 }
                 s->p += 6;
             }
         }
     } else if (!toml_time(s)) {
-        return toml_fail(s, start, "not a time: HH:MM or HH:MM:SS");
+        return toml_fail(s, start, CF_REASON_NUMBER, "not a time: HH:MM or HH:MM:SS");
     }
     if (s->p < s->end && (cf_is_alnum((unsigned char)*s->p) || *s->p == '.' ||
                           *s->p == ':' || *s->p == '-' || *s->p == '+')) {
-        return toml_fail(s, start, "malformed date or time");
+        return toml_fail(s, start, CF_REASON_NUMBER, "malformed date or time");
     }
     cf_value_text(v, start, (size_t)(s->p - start));
     return CF_TRUE;
@@ -955,7 +969,7 @@ static cf_bool toml_number(toml_scan* s, cf_value* v, cf_bool* textual) {
         s->p += 3;
         if (s->p < s->end &&
             (cf_is_alnum((unsigned char)*s->p) || *s->p == '_' || *s->p == '.')) {
-            return toml_fail(s, start, "malformed number");
+            return toml_fail(s, start, CF_REASON_NUMBER, "malformed number");
         }
         *textual = CF_TRUE;
         cf_value_text(v, start, (size_t)(s->p - start));
@@ -964,32 +978,34 @@ static cf_bool toml_number(toml_scan* s, cf_value* v, cf_bool* textual) {
     if (s->end - s->p >= 2 && s->p[0] == '0' &&
         (s->p[1] == 'x' || s->p[1] == 'o' || s->p[1] == 'b')) {
         if (n > 0) {
-            return toml_fail(s, start,
+            return toml_fail(s, start, CF_REASON_NUMBER,
                              "a hexadecimal, octal or binary integer has no sign");
         }
         base = (s->p[1] == 'x') ? 16 : (s->p[1] == 'o') ? 8 : 2;
         s->p += 2;
         if (!toml_digits(s, base, buf, sizeof buf, &n)) {
-            return toml_fail(s, start, "malformed integer");
+            return toml_fail(s, start, CF_REASON_NUMBER, "malformed integer");
         }
     } else {
         size_t first = n;
         if (!toml_digits(s, 10, buf, sizeof buf, &n)) {
-            return toml_fail(s, start,
+            return toml_fail(s, start, n == 0 ? CF_REASON_SYNTAX : CF_REASON_NUMBER,
                              (n == 0) ? "expected a value" : "malformed number");
         }
         /* Digits then '-' or ':' that were not a date or a time above. */
         if (s->p < s->end && (*s->p == ':' || (*s->p == '-' && first == 0))) {
-            return toml_fail(s, start, "malformed date, time or number");
+            return toml_fail(s, start, CF_REASON_NUMBER,
+                             "malformed date, time or number");
         }
         if (buf[first] == '0' && n - first > 1) {
-            return toml_fail(s, start, "malformed number: a leading zero");
+            return toml_fail(s, start, CF_REASON_NUMBER,
+                             "malformed number: a leading zero");
         }
         if (s->p < s->end && *s->p == '.') {
             is_real  = CF_TRUE;
             buf[n++] = *s->p++;
             if (!toml_digits(s, 10, buf, sizeof buf, &n)) {
-                return toml_fail(s, start,
+                return toml_fail(s, start, CF_REASON_NUMBER,
                                  "malformed number: no digit after the point");
             }
         }
@@ -1000,7 +1016,7 @@ static cf_bool toml_number(toml_scan* s, cf_value* v, cf_bool* textual) {
                 buf[n++] = *s->p++;
             }
             if (!toml_digits(s, 10, buf, sizeof buf, &n)) {
-                return toml_fail(s, start,
+                return toml_fail(s, start, CF_REASON_NUMBER,
                                  "malformed number: no digit in the exponent");
             }
         }
@@ -1009,7 +1025,7 @@ static cf_bool toml_number(toml_scan* s, cf_value* v, cf_bool* textual) {
        the text was not one (1x, 0x1.5, 1e5.0). */
     if (s->p < s->end && (cf_is_alpha((unsigned char)*s->p) || *s->p == '_' ||
                           *s->p == '.' || cf_is_digit((unsigned char)*s->p))) {
-        return toml_fail(s, start, "malformed number");
+        return toml_fail(s, start, CF_REASON_NUMBER, "malformed number");
     }
     if (base != 10) {
         cf_u64 acc = 0;
@@ -1017,12 +1033,13 @@ static cf_bool toml_number(toml_scan* s, cf_value* v, cf_bool* textual) {
         for (i = (buf[0] == '+' || buf[0] == '-') ? 1u : 0u; i < n; ++i) {
             cf_u64 d = (cf_u64)cf_text_hex_value((unsigned char)buf[i]);
             if (acc > (CF_U64_MAX - d) / (cf_u64)base) {
-                return toml_fail(s, start, "the integer does not fit in 64 bits");
+                return toml_fail(s, start, CF_REASON_NUMBER_RANGE,
+                                 "the integer does not fit in 64 bits");
             }
             acc = acc * (cf_u64)base + d;
         }
         if (acc > (cf_u64)CF_I64_MAX || buf[0] == '-' || buf[0] == '+') {
-            return toml_fail(s, start,
+            return toml_fail(s, start, CF_REASON_NUMBER_RANGE,
                              "a hexadecimal, octal or binary integer is unsigned and "
                              "must fit in 63 bits");
         }
@@ -1032,7 +1049,8 @@ static cf_bool toml_number(toml_scan* s, cf_value* v, cf_bool* textual) {
     if (!is_real) {
         cf_i64 i;
         if (!cf_text_to_i64(buf, n, &i, NULL)) {
-            return toml_fail(s, start, "the integer does not fit in 64 bits");
+            return toml_fail(s, start, CF_REASON_NUMBER_RANGE,
+                             "the integer does not fit in 64 bits");
         }
         cf_value_int(v, i);
         return CF_TRUE;
@@ -1041,13 +1059,14 @@ static cf_bool toml_number(toml_scan* s, cf_value* v, cf_bool* textual) {
     {
         double d;
         if (!cf_text_to_f64(buf, n, &d, NULL)) {
-            return toml_fail(s, start, "malformed number");
+            return toml_fail(s, start, CF_REASON_NUMBER, "malformed number");
         }
         cf_value_real(v, d);
         return CF_TRUE;
     }
 #else
-    return toml_fail(s, start, "this build has no floating point support");
+    return toml_fail(s, start, CF_REASON_UNSUPPORTED,
+                     "this build has no floating point support");
 #endif
 }
 
@@ -1068,7 +1087,7 @@ static cf_bool toml_keyval(toml_scan* s) {
     }
     n = k.n;
     if (s->p >= s->end || *s->p != '=') {
-        return toml_fail(s, s->p, "expected '=' after the key");
+        return toml_fail(s, s->p, CF_REASON_SYNTAX, "expected '=' after the key");
     }
     ++s->p;
     toml_blank(s);
@@ -1081,7 +1100,7 @@ static cf_bool toml_keyval(toml_scan* s) {
     }
     for (i = 0; i + 1 < n; ++i) {
         if (!s->out->begin_table(s->out->ctx, TOML_SEG(&k, i), k.len[i])) {
-            return toml_fail(s, s->p, "not a valid key");
+            return toml_fail(s, s->p, CF_REASON_KEY, "not a valid key");
         }
     }
     if (!toml_value(s, TOML_SEG(&k, n - 1), k.len[n - 1], node)) {
@@ -1089,7 +1108,8 @@ static cf_bool toml_keyval(toml_scan* s) {
     }
     for (i = 0; i + 1 < n; ++i) {
         if (!s->out->end(s->out->ctx)) {
-            return toml_fail(s, s->p, "the document could not be recorded");
+            return toml_fail(s, s->p, CF_REASON_STORAGE,
+                             "the document could not be recorded");
         }
     }
     return CF_TRUE;
@@ -1102,10 +1122,10 @@ static cf_bool toml_array(toml_scan* s, const char* name, size_t nlen, cf_u32 no
     cf_u32 count = 0;
 
     if (++s->depth > TOML_MAX_DEPTH) {
-        return toml_fail(s, s->p, "nesting is too deep");
+        return toml_fail(s, s->p, CF_REASON_DEPTH, "nesting is too deep");
     }
     if (!s->out->begin_array(s->out->ctx, name, nlen)) {
-        return toml_fail(s, s->p, "not a valid key");
+        return toml_fail(s, s->p, CF_REASON_KEY, "not a valid key");
     }
     ++s->p; /* '[' */
     for (;;) {
@@ -1113,7 +1133,7 @@ static cf_bool toml_array(toml_scan* s, const char* name, size_t nlen, cf_u32 no
             return CF_FALSE;
         }
         if (s->p >= s->end) {
-            return toml_fail(s, s->p, "the array is not closed");
+            return toml_fail(s, s->p, CF_REASON_TRUNCATED, "the array is not closed");
         }
         if (*s->p == ']') {
             ++s->p;
@@ -1144,12 +1164,12 @@ static cf_bool toml_array(toml_scan* s, const char* name, size_t nlen, cf_u32 no
             ++s->p;
             break;
         }
-        return toml_fail(s, s->p, "expected ',' or ']'");
+        return toml_fail(s, s->p, CF_REASON_SYNTAX, "expected ',' or ']'");
     }
     --s->depth;
-    return s->out->end(s->out->ctx)
-               ? CF_TRUE
-               : toml_fail(s, s->p, "the document could not be recorded");
+    return s->out->end(s->out->ctx) ? CF_TRUE
+                                    : toml_fail(s, s->p, CF_REASON_STORAGE,
+                                                "the document could not be recorded");
 }
 
 /* `node`, when the definitions are kept, is the table's: its keys are
@@ -1161,10 +1181,10 @@ static cf_bool toml_inline_table(toml_scan* s, const char* name, size_t nlen,
     cf_u32  body  = s->body;
 
     if (++s->depth > TOML_MAX_DEPTH) {
-        return toml_fail(s, s->p, "nesting is too deep");
+        return toml_fail(s, s->p, CF_REASON_DEPTH, "nesting is too deep");
     }
     if (!s->out->begin_table(s->out->ctx, name, nlen)) {
-        return toml_fail(s, s->p, "not a valid key");
+        return toml_fail(s, s->p, CF_REASON_KEY, "not a valid key");
     }
     ++s->p; /* '{' */
     if (node != 0) {
@@ -1177,7 +1197,8 @@ static cf_bool toml_inline_table(toml_scan* s, const char* name, size_t nlen,
             return CF_FALSE;
         }
         if (s->p >= s->end) {
-            return toml_fail(s, s->p, "the inline table is not closed");
+            return toml_fail(s, s->p, CF_REASON_TRUNCATED,
+                             "the inline table is not closed");
         }
         if (*s->p == '}') {
             ++s->p;
@@ -1185,7 +1206,7 @@ static cf_bool toml_inline_table(toml_scan* s, const char* name, size_t nlen,
         }
         if (!first) {
             if (*s->p != ',') {
-                return toml_fail(s, s->p, "expected ',' or '}'");
+                return toml_fail(s, s->p, CF_REASON_SYNTAX, "expected ',' or '}'");
             }
             ++s->p;
             if (!toml_space_lines(s)) {
@@ -1206,9 +1227,9 @@ static cf_bool toml_inline_table(toml_scan* s, const char* name, size_t nlen,
         s->body             = body;
     }
     --s->depth;
-    return s->out->end(s->out->ctx)
-               ? CF_TRUE
-               : toml_fail(s, s->p, "the document could not be recorded");
+    return s->out->end(s->out->ctx) ? CF_TRUE
+                                    : toml_fail(s, s->p, CF_REASON_STORAGE,
+                                                "the document could not be recorded");
 }
 
 static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen, cf_u32 node) {
@@ -1218,7 +1239,7 @@ static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen, cf_u32 no
     cf_bool     textual = CF_FALSE;
 
     if (s->p >= s->end) {
-        return toml_fail(s, s->p, "expected a value");
+        return toml_fail(s, s->p, CF_REASON_SYNTAX, "expected a value");
     }
     toml_loc(s, start, &at);
     switch (*s->p) {
@@ -1239,7 +1260,8 @@ static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen, cf_u32 no
             if (s->out->size <
                     offsetof(cf_doc_sink, reserve_text) + sizeof s->out->reserve_text ||
                 s->out->reserve_text == NULL) {
-                return toml_fail(s, start, "a long string needs sink text storage");
+                return toml_fail(s, start, CF_REASON_STORAGE,
+                                 "a long string needs sink text storage");
             }
             text = s->out->reserve_text(s->out->ctx, n + 1);
             if (text == NULL) {
@@ -1256,18 +1278,18 @@ static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen, cf_u32 no
         cf_value_text(&v, text, n);
         return s->out->scalar(s->out->ctx, name, nlen, &v, CF_FALSE, &at)
                    ? CF_TRUE
-                   : toml_fail(s, start, "not a valid key");
+                   : toml_fail(s, start, CF_REASON_KEY, "not a valid key");
     }
     case 't':
         if (s->end - s->p < 4 || memcmp(s->p, "true", 4) != 0) {
-            return toml_fail(s, start, "expected a value");
+            return toml_fail(s, start, CF_REASON_SYNTAX, "expected a value");
         }
         s->p += 4;
         cf_value_bool(&v, CF_TRUE);
         break;
     case 'f':
         if (s->end - s->p < 5 || memcmp(s->p, "false", 5) != 0) {
-            return toml_fail(s, start, "expected a value");
+            return toml_fail(s, start, CF_REASON_SYNTAX, "expected a value");
         }
         s->p += 5;
         cf_value_bool(&v, CF_FALSE);
@@ -1280,7 +1302,7 @@ static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen, cf_u32 no
     }
     return s->out->scalar(s->out->ctx, name, nlen, &v, textual, &at)
                ? CF_TRUE
-               : toml_fail(s, start, "not a valid key");
+               : toml_fail(s, start, CF_REASON_KEY, "not a valid key");
 }
 
 /* ------------------------------------------------------------------ *
@@ -1305,7 +1327,8 @@ static cf_bool toml_close_to(toml_scan* s, int keep) {
             s->closed_set   = CF_TRUE;
         }
         if (!s->out->end(s->out->ctx)) {
-            return toml_fail(s, s->p, "the document could not be recorded");
+            return toml_fail(s, s->p, CF_REASON_STORAGE,
+                             "the document could not be recorded");
         }
         s->nused = o->at;
         --s->nopen;
@@ -1318,7 +1341,7 @@ static cf_bool toml_push(toml_scan* s, const char* name, size_t n, toml_kind kin
     cf_bool    ok;
 
     if (s->nopen >= TOML_MAX_DEPTH) {
-        return toml_fail(s, s->p, "tables are nested too deeply");
+        return toml_fail(s, s->p, CF_REASON_DEPTH, "tables are nested too deeply");
     }
     o     = &s->open[s->nopen];
     o->at = (unsigned short)s->nused;
@@ -1327,7 +1350,7 @@ static cf_bool toml_push(toml_scan* s, const char* name, size_t n, toml_kind kin
         ok = s->out->begin_table(s->out->ctx, NULL, 0);
     } else {
         if (s->nused + n + 1 > sizeof s->names) {
-            return toml_fail(s, s->p, "the key is too long");
+            return toml_fail(s, s->p, CF_REASON_TOO_LONG, "the key is too long");
         }
         ok = (kind == TOML_ARRAY) ? s->out->begin_array(s->out->ctx, name, n)
                                   : s->out->begin_table(s->out->ctx, name, n);
@@ -1337,7 +1360,7 @@ static cf_bool toml_push(toml_scan* s, const char* name, size_t n, toml_kind kin
         s->nused += n + 1;
     }
     if (!ok) {
-        return toml_fail(s, s->p, "not a valid key");
+        return toml_fail(s, s->p, CF_REASON_KEY, "not a valid key");
     }
     o->kind = kind;
     ++s->nopen;
@@ -1362,7 +1385,8 @@ static cf_bool toml_header(toml_scan* s) {
     n = k.n;
     if (s->p >= s->end || *s->p != ']' ||
         (is_array && (s->end - s->p < 2 || s->p[1] != ']'))) {
-        return toml_fail(s, s->p, is_array ? "expected ']]'" : "expected ']'");
+        return toml_fail(s, s->p, CF_REASON_SYNTAX,
+                         is_array ? "expected ']]'" : "expected ']'");
     }
     s->p += is_array ? 2 : 1;
     if (s->track && !toml_define_header(s, &k, at, is_array, &existed)) {
@@ -1402,7 +1426,7 @@ static cf_bool toml_header(toml_scan* s) {
         (s->track ? existed
                   : (s->closed_set && strlen(s->closed) == (size_t)k.len[n - 1] &&
                      memcmp(s->closed, TOML_SEG(&k, n - 1), k.len[n - 1]) == 0))) {
-        return toml_fail(s, at,
+        return toml_fail(s, at, CF_REASON_STRUCTURE,
                          "an array of tables reopened after another table; keep its "
                          "[[blocks]] together");
     }
@@ -1438,7 +1462,9 @@ static cf_bool toml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     }
 
     if (!out->begin_table(out->ctx, NULL, 0)) {
-        return cf_error_set(err, CF_E_SOURCE, NULL, s.file, "sink refused");
+        cf_error_set(err, CF_E_SOURCE, NULL, s.file, "sink refused");
+        cf_error_place(err, CF_REASON_STORAGE, 0, 0);
+        return CF_FALSE;
     }
     for (;;) {
         if (!toml_space_lines(&s)) {

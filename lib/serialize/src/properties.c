@@ -47,8 +47,9 @@ typedef struct prop_scan {
     cf_error*     err;
 } prop_scan;
 
-static cf_bool prop_fail(prop_scan* s, const char* what) {
-    return cf_text_fail(s->err, CF_E_SOURCE, s->file, s->tr.line, 0, "%s", what);
+static cf_bool prop_fail(prop_scan* s, int reason, const char* what) {
+    return cf_text_fail(s->err, CF_E_SOURCE, s->file, s->tr.line, 0, reason, "%s",
+                        what);
 }
 
 /* The end of the physical line at s->p, without moving. */
@@ -97,20 +98,23 @@ static cf_bool prop_element(prop_scan* s, cf_bool is_key, char* out, size_t cap,
                 ++s->p;
                 cf_text_esc_decode(&prop_family, s->p, eol, &r);
                 if (r.kind == CF_ESC_E_DIGITS) {
-                    return prop_fail(s, "\\"
-                                        "u needs four hexadecimal digits");
+                    return prop_fail(s, CF_REASON_ESCAPE,
+                                     "\\"
+                                     "u needs four hexadecimal digits");
                 }
                 if (r.kind == CF_ESC_E_HIGH || r.kind == CF_ESC_E_LOW) {
-                    return prop_fail(s, "a \\"
-                                        "u escape is half a surrogate pair");
+                    return prop_fail(s, CF_REASON_ESCAPE,
+                                     "a \\"
+                                     "u escape is half a surrogate pair");
                 }
                 if (r.kind == CF_ESC_CP) {
                     char   enc[4];
                     size_t ek = cf_text_utf8_encode(r.cp, enc);
 
                     if (n + ek > cap) {
-                        return prop_fail(s, is_key ? "the key is too long"
-                                                   : "the value is too long");
+                        return prop_fail(s, CF_REASON_TOO_LONG,
+                                         is_key ? "the key is too long"
+                                                : "the value is too long");
                     }
                     memcpy(out + n, enc, ek);
                     n += ek;
@@ -121,8 +125,9 @@ static cf_bool prop_element(prop_scan* s, cf_bool is_key, char* out, size_t cap,
                 c = *s->p;
             }
             if (n >= cap) {
-                return prop_fail(s, is_key ? "the key is too long"
-                                           : "the value is too long");
+                return prop_fail(s, CF_REASON_TOO_LONG,
+                                 is_key ? "the key is too long"
+                                        : "the value is too long");
             }
             out[n++] = c;
             ++s->p;
@@ -163,7 +168,9 @@ static cf_bool prop_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     s.err = err;
 
     if (!out->begin_table(out->ctx, NULL, 0)) {
-        return cf_error_set(err, CF_E_SOURCE, NULL, s.file, "sink refused");
+        cf_error_set(err, CF_E_SOURCE, NULL, s.file, "sink refused");
+        cf_error_place(err, CF_REASON_STORAGE, 0, 0);
+        return CF_FALSE;
     }
     while (s.p < s.end) {
         size_t       klen = 0, vlen = 0;
@@ -199,14 +206,15 @@ static cf_bool prop_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
             return CF_FALSE;
         }
         if (klen == 0) {
-            return cf_text_fail(err, CF_E_SOURCE, s.file, line, 0, "empty key");
+            return cf_text_fail(err, CF_E_SOURCE, s.file, line, 0, CF_REASON_KEY,
+                                "empty key");
         }
         at.file = s.file;
         at.line = line;
         at.col  = col;
         cf_value_text(&v, val, vlen);
         if (!out->scalar(out->ctx, key, klen, &v, CF_TRUE, &at)) {
-            return cf_text_fail(err, CF_E_KEY, s.file, line, 0,
+            return cf_text_fail(err, CF_E_KEY, s.file, line, 0, CF_REASON_KEY,
                                 "'%S' is not a valid key", key, klen);
         }
     }

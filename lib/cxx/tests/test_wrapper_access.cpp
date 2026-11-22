@@ -410,6 +410,32 @@ static void test_preferences() {
 }
 
 int main() {
+#if CF_WITH_JSON
+    /* The level's digits by hand: std::to_string is C++11, and this test
+       builds as C++98 too. */
+    std::string path = "cf_wrapper_reason_";
+    {
+        char digits[16];
+        int  n = 0;
+        int  v = (int)CF_CXX_LEVEL;
+        do {
+            digits[n++] = (char)('0' + v % 10);
+            v /= 10;
+        } while (v > 0 && n < 15);
+        while (n > 0) {
+            path += digits[--n];
+        }
+    }
+    path += ".json";
+    check(spill(path.c_str(), "{\"a\" 1}"), "write malformed JSON");
+    cf::Config refused =
+        cf::Builder().file("doc", CF_RANK_USER_FILE, path.c_str()).create();
+    check(!refused && refused.error().reason() == CF_REASON_SYNTAX &&
+              std::strcmp(refused.error().reason_name(), "syntax") == 0 &&
+              refused.error().line() == 1 && refused.error().column() == 6,
+          "JSON reports the missing colon at its position");
+    std::remove(path.c_str());
+#endif
     test_key_rule();
     test_directories();
     test_preferences();

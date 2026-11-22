@@ -392,9 +392,11 @@ typedef struct tlv_scan {
 } tlv_scan;
 
 /* "<name>, byte <n>: <what>" */
-static cf_bool tlv_fail(tlv_scan* s, size_t off, const char* what) {
-    return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name, "%s, byte %zu: %s", s->name,
-                        off, what);
+static cf_bool tlv_fail(tlv_scan* s, size_t off, int reason, const char* what) {
+    cf_error_set(s->err, CF_E_SOURCE, NULL, s->name, "%s, byte %zu: %s", s->name, off,
+                 what);
+    cf_error_place(s->err, reason, 0, 0);
+    return CF_FALSE;
 }
 
 /* `n` bytes as one unsigned number in `order`. */
@@ -415,9 +417,10 @@ static cf_bool tlv_ber_tag(tlv_scan* s, size_t* at, size_t end, cf_u32* tag) {
     unsigned b;
 
     if (*at >= end) {
-        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
-                            "%s, byte %zu: a tag cut short: 0 bytes are left", s->name,
-                            *at);
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                     "%s, byte %zu: a tag cut short: 0 bytes are left", s->name, *at);
+        cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+        return CF_FALSE;
     }
     b    = s->base[(*at)++];
     *tag = b;
@@ -426,12 +429,14 @@ static cf_bool tlv_ber_tag(tlv_scan* s, size_t* at, size_t end, cf_u32* tag) {
     }
     do {
         if (*at >= end) {
-            return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
-                                "%s, byte %zu: a tag cut short: %zu bytes are left",
-                                s->name, start, end - start);
+            cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                         "%s, byte %zu: a tag cut short: %zu bytes are left", s->name,
+                         start, end - start);
+            cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+            return CF_FALSE;
         }
         if (*at - start >= 4u) {
-            return tlv_fail(s, start, "a tag longer than 4 bytes");
+            return tlv_fail(s, start, CF_REASON_SYNTAX, "a tag longer than 4 bytes");
         }
         b    = s->base[(*at)++];
         *tag = (*tag << 8) | b;
@@ -447,9 +452,11 @@ static cf_bool tlv_ber_len(tlv_scan* s, size_t start, size_t* at, size_t end,
     size_t   k;
 
     if (*at >= end) {
-        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
-                            "%s, byte %zu: a length cut short: 0 bytes are left",
-                            s->name, start);
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                     "%s, byte %zu: a length cut short: 0 bytes are left", s->name,
+                     start);
+        cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+        return CF_FALSE;
     }
     b = s->base[(*at)++];
     if (b < 0x80u) {
@@ -458,18 +465,22 @@ static cf_bool tlv_ber_len(tlv_scan* s, size_t start, size_t* at, size_t end,
     }
     if (b == 0x80u) {
         return tlv_fail(
-            s, start, "an indefinite length, which ISO/IEC 7816-4 and EMV do not use");
+            s, start, CF_REASON_UNSUPPORTED,
+            "an indefinite length, which ISO/IEC 7816-4 and EMV do not use");
     }
     k = b & 0x7Fu;
     if (k > 4u) {
-        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
-                            "%s, byte %zu: a length of %u bytes", s->name, start,
-                            (unsigned)k);
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                     "%s, byte %zu: a length of %u bytes", s->name, start, (unsigned)k);
+        cf_error_place(s->err, CF_REASON_TOO_LONG, 0, 0);
+        return CF_FALSE;
     }
     if (end - *at < k) {
-        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
-                            "%s, byte %zu: a length cut short: %zu bytes are left",
-                            s->name, start, end - *at);
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                     "%s, byte %zu: a length cut short: %zu bytes are left", s->name,
+                     start, end - *at);
+        cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+        return CF_FALSE;
     }
     *len = tlv_number(s->base + *at, k, CF_TLV_BIG);
     *at += k;
@@ -495,9 +506,11 @@ static cf_bool tlv_tag_read(tlv_scan* s, size_t* at, size_t end, cf_u32* tag) {
         return tlv_ber_tag(s, at, end, tag);
     }
     if (end - *at < w) {
-        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
-                            "%s, byte %zu: a tag cut short: %zu bytes are left",
-                            s->name, *at, end - *at);
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                     "%s, byte %zu: a tag cut short: %zu bytes are left", s->name, *at,
+                     end - *at);
+        cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+        return CF_FALSE;
     }
     *tag = (cf_u32)tlv_number(s->base + *at, w, s->l->order);
     *at += w;
@@ -513,9 +526,11 @@ static cf_bool tlv_len_read(tlv_scan* s, size_t start, size_t* at, size_t end,
         return tlv_ber_len(s, start, at, end, len);
     }
     if (end - *at < w) {
-        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
-                            "%s, byte %zu: a length cut short: %zu bytes are left",
-                            s->name, start, end - *at);
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                     "%s, byte %zu: a length cut short: %zu bytes are left", s->name,
+                     start, end - *at);
+        cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+        return CF_FALSE;
     }
     *len = tlv_number(s->base + *at, w, s->l->order);
     *at += w;
@@ -543,10 +558,12 @@ static const cf_tlv_tag* tlv_find(const cf_tlv_tag* tags, size_t n, cf_u32 tag) 
 /* The sink refused something named `key`, or an element with no name. */
 static cf_bool tlv_refused(tlv_scan* s, size_t start, const char* key) {
     if (key == NULL) {
-        return tlv_fail(s, start, "the value could not be recorded");
+        return tlv_fail(s, start, CF_REASON_STORAGE, "the value could not be recorded");
     }
-    return cf_error_set(s->err, CF_E_KEY, NULL, s->name,
-                        "%s, byte %zu: '%s' is not a valid key", s->name, start, key);
+    cf_error_set(s->err, CF_E_KEY, NULL, s->name,
+                 "%s, byte %zu: '%s' is not a valid key", s->name, start, key);
+    cf_error_place(s->err, CF_REASON_KEY, 0, 0);
+    return CF_FALSE;
 }
 
 /* One scalar under `key` - NULL for a list's element - placed at its tag. */
@@ -581,20 +598,22 @@ static cf_bool tlv_bcd(tlv_scan* s, const char* key, const char* hex, size_t sta
     size_t   i;
 
     if (n > 9u) {
-        return cf_error_set(
-            s->err, CF_E_SOURCE, NULL, s->name,
-            "%s, byte %zu: tag 0x%s has %U digits, more than an integer "
-            "holds",
-            s->name, start, hex, (cf_u64)n * 2u);
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                     "%s, byte %zu: tag 0x%s has %U digits, more than an integer "
+                     "holds",
+                     s->name, start, hex, (cf_u64)n * 2u);
+        cf_error_place(s->err, CF_REASON_NUMBER_RANGE, 0, 0);
+        return CF_FALSE;
     }
     for (i = 0; i < n; ++i) {
         unsigned hi = (unsigned)(p[i] >> 4), lo = (unsigned)(p[i] & 0xFu);
 
         if (hi > 9u || lo > 9u) {
-            return cf_error_set(
-                s->err, CF_E_SOURCE, NULL, s->name,
-                "%s, byte %zu: tag 0x%s holds a nibble that is not a digit", s->name,
-                start, hex);
+            cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                         "%s, byte %zu: tag 0x%s holds a nibble that is not a digit",
+                         s->name, start, hex);
+            cf_error_place(s->err, CF_REASON_NUMBER, 0, 0);
+            return CF_FALSE;
         }
         u = u * 100u + (cf_u64)hi * 10u + lo;
     }
@@ -620,9 +639,11 @@ static cf_bool tlv_hexval(tlv_scan* s, const char* key, const char* hex, size_t 
     } else if (n <= 127u) {
         t = s->text;
     } else {
-        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
-                            "%s, byte %zu: tag 0x%s needs sink text storage", s->name,
-                            start, hex);
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                     "%s, byte %zu: tag 0x%s needs sink text storage", s->name, start,
+                     hex);
+        cf_error_place(s->err, CF_REASON_STORAGE, 0, 0);
+        return CF_FALSE;
     }
     for (i = 0; i < n; ++i) {
         t[2u * i]      = digits[p[i] >> 4];
@@ -641,14 +662,18 @@ static cf_bool tlv_text(tlv_scan* s, const char* key, const char* hex, size_t st
         --n;
     }
     if (memchr(p, 0, n) != NULL) {
-        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
-                            "%s, byte %zu: tag 0x%s is text with a NUL inside", s->name,
-                            start, hex);
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                     "%s, byte %zu: tag 0x%s is text with a NUL inside", s->name, start,
+                     hex);
+        cf_error_place(s->err, CF_REASON_SYNTAX, 0, 0);
+        return CF_FALSE;
     }
     if (!cf_text_is_utf8((const char*)p, n)) {
-        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
-                            "%s, byte %zu: tag 0x%s is text that is not UTF-8", s->name,
-                            start, hex);
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                     "%s, byte %zu: tag 0x%s is text that is not UTF-8", s->name, start,
+                     hex);
+        cf_error_place(s->err, CF_REASON_UTF8, 0, 0);
+        return CF_FALSE;
     }
     cf_value_text(&v, (const char*)p, n);
     return tlv_emit(s, start, key, &v, CF_FALSE);
@@ -662,10 +687,11 @@ static cf_bool tlv_integer(tlv_scan* s, const cf_tlv_tag* e, const char* key,
     cf_value v;
 
     if (n < 1u || n > 8u) {
-        return cf_error_set(
-            s->err, CF_E_SOURCE, NULL, s->name,
-            "%s, byte %zu: tag 0x%s is %U bytes, and an integer is 1 to 8", s->name,
-            start, hex, (cf_u64)n);
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                     "%s, byte %zu: tag 0x%s is %U bytes, and an integer is 1 to 8",
+                     s->name, start, hex, (cf_u64)n);
+        cf_error_place(s->err, CF_REASON_SYNTAX, 0, 0);
+        return CF_FALSE;
     }
     u = tlv_number(p, n, order);
     if (e->type == CF_TLV_INT) {
@@ -675,11 +701,12 @@ static cf_bool tlv_integer(tlv_scan* s, const cf_tlv_tag* e, const char* key,
         cf_value_int(&v, (cf_i64)u);
     } else {
         if (u > (cf_u64)CF_I64_MAX) {
-            return cf_error_set(
-                s->err, CF_E_SOURCE, NULL, s->name,
-                "%s, byte %zu: tag 0x%s is %U, past the largest integer a "
-                "configuration holds",
-                s->name, start, hex, u);
+            cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                         "%s, byte %zu: tag 0x%s is %U, past the largest integer a "
+                         "configuration holds",
+                         s->name, start, hex, u);
+            cf_error_place(s->err, CF_REASON_NUMBER_RANGE, 0, 0);
+            return CF_FALSE;
         }
         cf_value_int(&v, (cf_i64)u);
     }
@@ -718,9 +745,11 @@ static cf_bool tlv_seq(tlv_scan* s, size_t at, size_t end, const cf_tlv_tag* tag
    every other reader count them. */
 static cf_bool tlv_enter(tlv_scan* s, size_t start) {
     if (s->depth + 1 > CF_MAX_DEPTH) {
-        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
-                            "%s, byte %zu: nests deeper than %d levels", s->name, start,
-                            (int)CF_MAX_DEPTH);
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                     "%s, byte %zu: nests deeper than %d levels", s->name, start,
+                     (int)CF_MAX_DEPTH);
+        cf_error_place(s->err, CF_REASON_DEPTH, 0, 0);
+        return CF_FALSE;
     }
     ++s->depth;
     return CF_TRUE;
@@ -729,8 +758,10 @@ static cf_bool tlv_enter(tlv_scan* s, size_t start) {
 static cf_bool tlv_leave(tlv_scan* s) {
     --s->depth;
     if (!s->out->end(s->out->ctx)) {
-        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
-                            "%s: the document could not be recorded", s->name);
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                     "%s: the document could not be recorded", s->name);
+        cf_error_place(s->err, CF_REASON_STORAGE, 0, 0);
+        return CF_FALSE;
     }
     return CF_TRUE;
 }
@@ -762,9 +793,11 @@ static cf_bool tlv_unknown(tlv_scan* s, cf_u32 tag, const char* hex, size_t star
         return CF_TRUE;
     }
     if (s->l->unknown != CF_TLV_UNKNOWN_KEEP) {
-        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
-                            "%s, byte %zu: tag 0x%s is not in the layout '%s'", s->name,
-                            start, hex, tlv_name(s->l));
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                     "%s, byte %zu: tag 0x%s is not in the layout '%s'", s->name, start,
+                     hex, tlv_name(s->l));
+        cf_error_place(s->err, CF_REASON_UNSUPPORTED, 0, 0);
+        return CF_FALSE;
     }
     memcpy(s->ukey, "tag-", 4);
     for (i = 0; hex[i] != '\0'; ++i) {
@@ -793,15 +826,19 @@ static cf_bool tlv_element(tlv_scan* s, const cf_tlv_tag* e, const char* key,
         return CF_TRUE; /* the layout knows it, and chose not to read it */
     }
     if (e->type == CF_TLV_RECORD) {
-        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
-                            "%s, byte %zu: tag 0x%s is a record of %U bytes, which the "
-                            "layout does not read",
-                            s->name, start, hex, (cf_u64)n);
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                     "%s, byte %zu: tag 0x%s is a record of %U bytes, which the "
+                     "layout does not read",
+                     s->name, start, hex, (cf_u64)n);
+        cf_error_place(s->err, CF_REASON_UNSUPPORTED, 0, 0);
+        return CF_FALSE;
     }
     if (e->width != 0 && n != e->width) {
-        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
-                            "%s, byte %zu: tag 0x%s is %U bytes, and its entry says %u",
-                            s->name, start, hex, (cf_u64)n, e->width);
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                     "%s, byte %zu: tag 0x%s is %U bytes, and its entry says %u",
+                     s->name, start, hex, (cf_u64)n, e->width);
+        cf_error_place(s->err, CF_REASON_SYNTAX, 0, 0);
+        return CF_FALSE;
     }
     switch (e->type) {
     case CF_TLV_TEXT:
@@ -817,14 +854,18 @@ static cf_bool tlv_element(tlv_scan* s, const cf_tlv_tag* e, const char* key,
         return tlv_nest(s, key, e->inner, e->ninner, start, at, n);
     case CF_TLV_BOOL:
         if (n != 1u) {
-            return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
-                                "%s, byte %zu: tag 0x%s is %U bytes, and a bool is one",
-                                s->name, start, hex, (cf_u64)n);
+            cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                         "%s, byte %zu: tag 0x%s is %U bytes, and a bool is one",
+                         s->name, start, hex, (cf_u64)n);
+            cf_error_place(s->err, CF_REASON_SYNTAX, 0, 0);
+            return CF_FALSE;
         }
         if (p[0] > 1u) {
-            return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
-                                "%s, byte %zu: tag 0x%s holds %u, and a bool is 0 or 1",
-                                s->name, start, hex, (unsigned)p[0]);
+            cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                         "%s, byte %zu: tag 0x%s holds %u, and a bool is 0 or 1",
+                         s->name, start, hex, (unsigned)p[0]);
+            cf_error_place(s->err, CF_REASON_SYNTAX, 0, 0);
+            return CF_FALSE;
         }
         cf_value_bool(&v, (p[0] != 0) ? CF_TRUE : CF_FALSE);
         return tlv_emit(s, start, key, &v, CF_FALSE);
@@ -835,7 +876,8 @@ static cf_bool tlv_element(tlv_scan* s, const cf_tlv_tag* e, const char* key,
     default:
         break;
     }
-    return tlv_fail(s, start, "a type this reader does not read");
+    return tlv_fail(s, start, CF_REASON_UNSUPPORTED,
+                    "a type this reader does not read");
 }
 
 /* Where an earlier run of `tag` in this level, from `from` to `upto`,
@@ -879,11 +921,12 @@ static cf_bool tlv_list(tlv_scan* s, const cf_tlv_tag* e, const cf_tlv_tag** ope
     ended = tlv_ran_before(s, level, start, e->tag);
     if (ended != 0) {
         tlv_hex(hex, e->tag, tlv_tag_bytes(s->l, e->tag));
-        return cf_error_set(
-            s->err, CF_E_SOURCE, NULL, s->name,
-            "%s, byte %zu: tag 0x%s continues a list that ended at byte "
-            "%zu",
-            s->name, start, hex, ended);
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                     "%s, byte %zu: tag 0x%s continues a list that ended at byte "
+                     "%zu",
+                     s->name, start, hex, ended);
+        cf_error_place(s->err, CF_REASON_STRUCTURE, 0, 0);
+        return CF_FALSE;
     }
     if (!tlv_enter(s, start)) {
         return CF_FALSE;
@@ -945,17 +988,20 @@ static cf_bool tlv_seq(tlv_scan* s, size_t at, size_t end, const cf_tlv_tag* tag
                     return CF_FALSE;
                 }
                 if (len != 0) {
-                    return cf_error_set(
-                        s->err, CF_E_SOURCE, NULL, s->name,
-                        "%s, byte %zu: the end tag has a length of %U; it "
-                        "must be 0",
-                        s->name, start, len);
+                    cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                                 "%s, byte %zu: the end tag has a length of %U; it "
+                                 "must be 0",
+                                 s->name, start, len);
+                    cf_error_place(s->err, CF_REASON_SYNTAX, 0, 0);
+                    return CF_FALSE;
                 }
             }
             if (at != end) {
-                return cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
-                                    "%s, byte %zu: %zu bytes after the end tag",
-                                    s->name, at, end - at);
+                cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                             "%s, byte %zu: %zu bytes after the end tag", s->name, at,
+                             end - at);
+                cf_error_place(s->err, CF_REASON_TRAILING, 0, 0);
+                return CF_FALSE;
             }
             return CF_TRUE;
         }
@@ -964,10 +1010,11 @@ static cf_bool tlv_seq(tlv_scan* s, size_t at, size_t end, const cf_tlv_tag* tag
         }
         if (len > (cf_u64)(end - at)) {
             tlv_hex(hex, tag, tlv_tag_bytes(l, tag));
-            return cf_error_set(
-                s->err, CF_E_SOURCE, NULL, s->name,
-                "%s, byte %zu: tag 0x%s says %U bytes, and %zu are left", s->name,
-                start, hex, len, end - at);
+            cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                         "%s, byte %zu: tag 0x%s says %U bytes, and %zu are left",
+                         s->name, start, hex, len, end - at);
+            cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+            return CF_FALSE;
         }
         e = tlv_find(tags, n, tag);
         if (open != NULL && e != open) {
@@ -992,10 +1039,11 @@ static cf_bool tlv_seq(tlv_scan* s, size_t at, size_t end, const cf_tlv_tag* tag
     }
     if (top && (l->flags & CF_TLV_END) != 0) {
         tlv_hex(hex, l->end_tag, tlv_tag_bytes(l, l->end_tag));
-        return cf_error_set(
-            s->err, CF_E_SOURCE, NULL, s->name,
-            "%s: the document ends at byte %zu without the end tag 0x%s", s->name, end,
-            hex);
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
+                     "%s: the document ends at byte %zu without the end tag 0x%s",
+                     s->name, end, hex);
+        cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+        return CF_FALSE;
     }
     return CF_TRUE;
 }
@@ -1012,18 +1060,24 @@ static cf_bool tlv_decode(const cf_codec* self, const cf_blob* in,
     s.err   = err;
     s.depth = 1;
     if (n == 0) {
-        return cf_error_set(err, CF_E_SOURCE, NULL, s.name, "%s: the document is empty",
-                            s.name);
+        cf_error_set(err, CF_E_SOURCE, NULL, s.name, "%s: the document is empty",
+                     s.name);
+        cf_error_place(err, CF_REASON_EMPTY, 0, 0);
+        return CF_FALSE;
     }
     if (!out->begin_table(out->ctx, NULL, 0)) {
-        return cf_error_set(err, CF_E_SOURCE, NULL, s.name, "%s: sink refused", s.name);
+        cf_error_set(err, CF_E_SOURCE, NULL, s.name, "%s: sink refused", s.name);
+        cf_error_place(err, CF_REASON_STORAGE, 0, 0);
+        return CF_FALSE;
     }
     if (!tlv_seq(&s, 0, n, s.l->tags, s.l->ntags, CF_TRUE)) {
         return CF_FALSE;
     }
     if (!out->end(out->ctx)) {
-        return cf_error_set(err, CF_E_SOURCE, NULL, s.name,
-                            "%s: the document could not be recorded", s.name);
+        cf_error_set(err, CF_E_SOURCE, NULL, s.name,
+                     "%s: the document could not be recorded", s.name);
+        cf_error_place(err, CF_REASON_STORAGE, 0, 0);
+        return CF_FALSE;
     }
     return CF_TRUE;
 }

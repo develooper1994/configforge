@@ -189,7 +189,8 @@ CF_API int cf_text_comment(const cf_text_syntax* sy, const char** pp, const char
    With col 0 the message is "file:line: body". line is at least 1.
    fmt uses cf_fmt's conversions, including %S. Returns CF_FALSE. */
 CF_API cf_bool cf_text_fail(cf_error* err, cf_code code, const char* file,
-                            unsigned int line, unsigned int col, const char* fmt, ...);
+                            unsigned int line, unsigned int col, int reason,
+                            const char* fmt, ...);
 
 /* The ECMAScript 5.1 whitespace and line terminators beyond the basic
    ASCII spaces and CR/LF, including VT, FF, U+2028 and U+2029. */

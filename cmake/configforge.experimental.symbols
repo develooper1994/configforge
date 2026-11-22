@@ -7,6 +7,9 @@ cf_encoding_by_name 1.8
 cf_encoding_check 1.8
 cf_encoding_name 1.8
 cf_encoding_recode 1.8
+cf_error_place 1.8
 cf_format_holds 1.8
 cf_format_limits 1.8
+cf_reason_description 1.8
+cf_reason_name 1.8
 cf_source_file_encoding 1.8

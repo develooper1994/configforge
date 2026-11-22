@@ -71,8 +71,10 @@ cf_bool cf_source_read_blob(const cf_source* s, cf_keyspace* ks, const cf_codec*
         return CF_FALSE;
     }
     if (fl.failed || fl.overflow) {
-        return cf_error_set(err, CF_E_KEY, NULL, path,
-                            "'%s' contains a key this build cannot hold", path);
+        cf_error_set(err, CF_E_KEY, NULL, path,
+                     "'%s' contains a key this build cannot hold", path);
+        cf_error_place(err, CF_REASON_TOO_LONG, 0, 0);
+        return CF_FALSE;
     }
     return CF_TRUE;
 }
@@ -183,12 +185,15 @@ static cf_bool file_refuse_at(cf_error* err, const char* path, unsigned enc,
         cf_text_place(p, bad, 1, &line, &col);
         file_hex((unsigned)(unsigned char)p[bad], 2, hex);
         return cf_text_fail(err, CF_E_SOURCE, path, (unsigned int)line,
-                            (unsigned int)col, "byte 0x%s has no character in %s", hex,
+                            (unsigned int)col, CF_REASON_ENCODING,
+                            "byte 0x%s has no character in %s", hex,
                             cf_encoding_name(enc));
     }
     if (n - bad < 2) {
-        return cf_error_set(err, CF_E_SOURCE, NULL, path,
-                            "%s: ends in half a UTF-16 code unit", path);
+        cf_error_set(err, CF_E_SOURCE, NULL, path,
+                     "%s: ends in half a UTF-16 code unit", path);
+        cf_error_place(err, CF_REASON_ENCODING, 0, 0);
+        return CF_FALSE;
     }
     cf_text_place(p, bad, enc, &line, &col);
     if (enc == (unsigned)CF_ENCODING_UTF16BE) {
@@ -200,7 +205,7 @@ static cf_bool file_refuse_at(cf_error* err, const char* path, unsigned enc,
     }
     file_hex(unit, 4, hex);
     return cf_text_fail(err, CF_E_SOURCE, path, (unsigned int)line, (unsigned int)col,
-                        "an unpaired UTF-16 surrogate 0x%s", hex);
+                        CF_REASON_ENCODING, "an unpaired UTF-16 surrogate 0x%s", hex);
 }
 
 /* The encoding the first bytes declare: UTF-16's byte-order mark, or
@@ -239,19 +244,23 @@ cf_bool cfi_source_recode(unsigned flags, const cf_codec* codec, const cf_blob* 
     *used = CF_ENCODING_UTF8;
     if (file_declares(codec)) {
         if (enc != 0) {
-            return cf_error_set(err, CF_E_SOURCE, NULL, path,
-                                "'%s': %s declares its own encoding or has none; name "
-                                "no encoding for it",
-                                path, codec->name);
+            cf_error_set(err, CF_E_SOURCE, NULL, path,
+                         "'%s': %s declares its own encoding or has none; name "
+                         "no encoding for it",
+                         path, codec->name);
+            cf_error_place(err, CF_REASON_ENCODING, 0, 0);
+            return CF_FALSE;
         }
         return CF_TRUE;
     }
     if (enc == 0) {
         if (!file_mark(in, &enc, &skip)) {
-            return cf_error_set(err, CF_E_SOURCE, NULL, path,
-                                "'%s' is UTF-32, which this library does not read; "
-                                "convert it to UTF-8",
-                                path);
+            cf_error_set(err, CF_E_SOURCE, NULL, path,
+                         "'%s' is UTF-32, which this library does not read; "
+                         "convert it to UTF-8",
+                         path);
+            cf_error_place(err, CF_REASON_ENCODING, 0, 0);
+            return CF_FALSE;
         }
         if (enc == 0) {
             return CF_TRUE;
@@ -340,7 +349,9 @@ static void file_hint(file_state* st, const cf_codec* tried, const cf_blob* blob
     char            message[CF_MESSAGE_MAX];
     char            key[CF_KEY_MAX];
     char            source[CF_SOURCE_MAX];
-    int             code = st->err.code;
+    int             code   = st->err.code;
+    int             reason = st->err.reason;
+    cf_loc          where  = st->err.where;
 
     if (st->codec != NULL || (tried->caps & CF_CODEC_NAMED_ONLY) != 0) {
         return; /* the program chose this reader: no second opinion */
@@ -355,6 +366,7 @@ static void file_hint(file_state* st, const cf_codec* tried, const cf_blob* blob
     cf_error_set(&st->err, (cf_code)code, key[0] != '\0' ? key : NULL,
                  source[0] != '\0' ? source : NULL, "%s (the content looks like %s)",
                  message, like->name);
+    cf_error_place(&st->err, reason, where.line, where.col);
 }
 
 static cf_bool file_load(const cf_source* s, cf_keyspace* ks) {

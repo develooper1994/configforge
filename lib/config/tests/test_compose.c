@@ -642,9 +642,17 @@ static void test_definition(void) {
     bad_spec(&composed, sizeof composed, &spec, "without its size");
     spec.size = sizeof spec;
     for (i = 0; i < sizeof names / sizeof names[0]; ++i) {
+        char expected[CF_MESSAGE_MAX];
         spec.name = names[i];
-        bad_spec(&composed, sizeof composed, &spec,
-                 i < 4 ? "is not a codec's name" : "the name of a built-in format");
+        if (i < 4) {
+            cf_fmt(expected, sizeof expected,
+                   "composition '%s': '%s' is not a codec's name", spec.name,
+                   spec.name);
+            bad_spec(&composed, sizeof composed, &spec, expected);
+        } else {
+            bad_spec(&composed, sizeof composed, &spec,
+                     "the name of a built-in format");
+        }
     }
     spec.name = "json5+braces";
     spec.base = NULL;

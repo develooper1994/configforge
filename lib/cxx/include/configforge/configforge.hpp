@@ -113,14 +113,26 @@ namespace configforge {
 class Error {
   public:
     Error() {
-        cf_error_clear(&e_);
         e_.size = sizeof(cf_error);
+        cf_error_clear(&e_);
     }
     explicit Error(const cf_error& e) : e_(e) {
     }
 
     int code() const {
         return e_.code;
+    }
+    int reason() const {
+        return e_.reason;
+    }
+    const char* reason_name() const {
+        return cf_reason_name(e_.reason);
+    }
+    unsigned int line() const {
+        return e_.where.line;
+    }
+    unsigned int column() const {
+        return e_.where.col;
     }
     const char* message() const {
         return e_.message;

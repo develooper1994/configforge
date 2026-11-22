@@ -4754,7 +4754,8 @@ form a program can test rather than read:
 
 **Status.** Decided, 2026-11-19.
 
-Built: A-10.
+Built: A-10. `where` holds line and column; the byte offset D-107 first
+named stays in the message.
 
 ## D-108 — Every text is UTF-8 inside; another encoding only by name
 

@@ -18,22 +18,30 @@ class Error(Exception):
     """What went wrong, with the key and the source: the C library's one
     error. ``str(error)`` is the message a person reads."""
 
-    def __init__(self, code: int, name: str, key: str, source: str, message: str):
+    def __init__(self, code: int, name: str, key: str, source: str, message: str,
+                 *, reason: str = "", line: int = 0, column: int = 0):
         super().__init__(message)
         self.code = code
         self.name = name
         self.key = key
         self.source = source
         self.message = message
+        self.reason = reason
+        self.line = line
+        self.column = column
 
     @classmethod
     def _from(cls, e: n.cf_error) -> Error:
+        name_of = getattr(n.lib, "cf_reason_name", None)
         return cls(
             e.code,
             n.decode(n.lib.cf_code_name(e.code)),
             n.decode(e.key),
             n.decode(e.source),
             n.decode(e.message),
+            reason=n.decode(name_of(e.reason)) if e.reason and name_of else "",
+            line=e.where_line,
+            column=e.where_col,
         )
 
 

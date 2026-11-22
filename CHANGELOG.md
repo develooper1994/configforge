@@ -7,6 +7,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+* `cf_error` carries the place (`where`) and the reason (`reason`, from
+  `cf_reason.def`) of a refusal, the same in every reader: invalid UTF-8,
+  depth, a number out of range, a truncated input and the rest; `cf_reason_name`,
+  `cf_reason_description` and `cf_error_place`. Every message is what it
+  was (D-107).
+
 - `cf_codec_compose`: a codec made from a base codec, a repair of the
   bytes and a filter of the events, for a document that is almost a format
   (`{{a:1}}`, `{a:{2}}`); it is chosen by its name only, and every value

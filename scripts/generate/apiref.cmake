@@ -211,6 +211,20 @@ foreach(l IN LISTS codes)
   endif()
 endforeach()
 string(APPEND doc "\n")
+file(STRINGS "${REPO}/lib/base/include/configforge/cf_reason.def" reasons
+     REGEX "^CF_REASON_(LAST_)?X\\(CF_")
+string(
+  APPEND
+  doc
+  "Document refusals also carry a reason and, where known, a line and column.\n\n"
+  "| Reason | Name | Meaning |\n| ------ | ---- | ------- |\n")
+foreach(l IN LISTS reasons)
+  if(l MATCHES "\\((CF_REASON_[A-Z0-9_]+), *\"([a-z0-9-]+)\", *\"([^\"]*)\"\\)")
+    string(APPEND doc
+           "| `${CMAKE_MATCH_1}` | `${CMAKE_MATCH_2}` | ${CMAKE_MATCH_3} |\n")
+  endif()
+endforeach()
+string(APPEND doc "\n")
 set(toc "")
 set(sections "")
 

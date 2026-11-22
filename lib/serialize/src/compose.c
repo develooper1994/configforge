@@ -76,9 +76,10 @@ static cf_bool compose_refused(cf_error* err, const char* name, const char* code
     if (err != NULL && err->code != CF_OK) {
         return CF_FALSE;
     }
-    return cf_error_set(err, CF_E_SOURCE, NULL, name,
-                        "%s: the %s of '%s' refused the document", name, callback,
-                        codec);
+    cf_error_set(err, CF_E_SOURCE, NULL, name,
+                 "%s: the %s of '%s' refused the document", name, callback, codec);
+    cf_error_place(err, CF_REASON_SYNTAX, 0, 0);
+    return CF_FALSE;
 }
 
 static cf_bool compose_filtered(const cf_compose* spec, const cf_blob* cur,

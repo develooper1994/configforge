@@ -59,6 +59,7 @@ static void one(const char* name, const char* text) {
     check(!decode(name, text, 256, &err, &over), msg);
     sprintf(msg, "%s: with the source's code", name);
     check(err.code == CF_E_SOURCE, msg);
+    check(err.reason == CF_REASON_BUDGET, "the refusal's reason is budget");
     sprintf(msg, "%s: and the limit by name", name);
     has(err.message, "a document may make", msg);
     sprintf(msg, "%s: the flattener says it was the budget", name);

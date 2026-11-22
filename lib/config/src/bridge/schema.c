@@ -201,7 +201,7 @@ static cf_bool sw_fail(const swalk* w, const snode* at, const char* what,
     }
     if (at != NULL && at->placed) {
         return cf_text_fail(w->err, CF_E_DEFINITION, w->file, at->at.line, at->at.col,
-                            "%s", what);
+                            CF_REASON_NONE, "%s", what);
     }
     return cf_error_set(w->err, CF_E_DEFINITION, NULL, w->file, "%s: %s", w->file,
                         what);

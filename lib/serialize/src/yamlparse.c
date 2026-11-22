@@ -90,16 +90,16 @@ static unsigned yp_col(const yp* y, const char* q) {
     return cf_text_track_col(&y->tr, q);
 }
 
-static cf_bool yp_fail_at(yp* y, const char* q, const char* what) {
+static cf_bool yp_fail_at(yp* y, const char* q, int reason, const char* what) {
     if (q < y->tr.line_start || q > y->end) {
         q = y->p;
     }
-    return cf_text_fail(y->err, CF_E_SOURCE, y->file, y->tr.line, yp_col(y, q), "%s",
-                        what);
+    return cf_text_fail(y->err, CF_E_SOURCE, y->file, y->tr.line, yp_col(y, q), reason,
+                        "%s", what);
 }
 
-static cf_bool yp_fail(yp* y, const char* what) {
-    return yp_fail_at(y, y->p, what);
+static cf_bool yp_fail(yp* y, int reason, const char* what) {
+    return yp_fail_at(y, y->p, reason, what);
 }
 
 static const cf_text_syntax yp_syntax = {CF_BLANK_SPTAB, CF_NL_ANY,
@@ -135,7 +135,7 @@ static cf_bool yp_line_rest(yp* y) {
         (void)cf_text_comment(&yp_syntax, &y->p, y->end, &bad);
     }
     if (cf_text_eol(CF_NL_ANY, y->p, y->end) != y->p) {
-        return yp_fail(y, "unexpected text after the value");
+        return yp_fail(y, CF_REASON_SYNTAX, "unexpected text after the value");
     }
     return CF_TRUE;
 }
@@ -234,13 +234,14 @@ static cf_bool yp_tag_put(yp* y, size_t* n, const char* p, size_t k) {
             int hi = cf_text_hex_value((unsigned char)p[i + 1]);
             int lo = cf_text_hex_value((unsigned char)p[i + 2]);
             if (hi < 0 || lo < 0) {
-                return yp_fail(y, "an escape in a tag is two hexadecimal digits");
+                return yp_fail(y, CF_REASON_ESCAPE,
+                               "an escape in a tag is two hexadecimal digits");
             }
             c = hi * 16 + lo;
             i += 2;
         }
         if (*n + 1 >= sizeof y->tag) {
-            return yp_fail(y, "the tag is too long");
+            return yp_fail(y, CF_REASON_TOO_LONG, "the tag is too long");
         }
         y->tag[(*n)++] = (char)c;
     }
@@ -267,7 +268,7 @@ static cf_bool yp_tag(yp* y) {
             ++y->p;
         }
         if (y->p >= y->end || *y->p != '>' || y->p == q) {
-            return yp_fail_at(y, start,
+            return yp_fail_at(y, start, CF_REASON_SYNTAX,
                               "a verbatim tag is !<...> with something inside");
         }
         ++y->p;
@@ -284,7 +285,7 @@ static cf_bool yp_tag(yp* y) {
     tn  = (size_t)(y->p - start);
     for (i = 1; (size_t)i < tn; ++i) {
         if (yp_flowind((unsigned char)tok[i]) || (tok[i] == '!' && tok + i != bang2)) {
-            return yp_fail_at(y, start,
+            return yp_fail_at(y, start, CF_REASON_SYNTAX,
                               "a tag cannot hold ',', '[', ']', '{', '}' or '!'");
         }
     }
@@ -306,7 +307,7 @@ static cf_bool yp_tag(yp* y) {
     }
     if (hn == 2 && h[1] == '!') {
         if (tn == 2) {
-            return yp_fail_at(y, start, "!! names no tag");
+            return yp_fail_at(y, start, CF_REASON_SYNTAX, "!! names no tag");
         }
         return yp_tag_put(y, &n, YP_CORE, sizeof YP_CORE - 1) &&
                yp_tag_put(y, &n, tok + 2, tn - 2);
@@ -314,7 +315,8 @@ static cf_bool yp_tag(yp* y) {
     if (hn == 1) {
         return yp_tag_put(y, &n, tok, tn);
     }
-    return yp_fail_at(y, start, "the tag's handle is not declared by a TAG directive");
+    return yp_fail_at(y, start, CF_REASON_SYNTAX,
+                      "the tag's handle is not declared by a TAG directive");
 }
 
 /* Properties on this line, in either order, each at most once. */
@@ -323,7 +325,7 @@ static cf_bool yp_props_read(yp* y, yp_props* pr) {
         int c = yp_c(y, 0);
         if (c == '&') {
             if (pr->anchor != NULL) {
-                return yp_fail(y, "a node has one anchor");
+                return yp_fail(y, CF_REASON_SYNTAX, "a node has one anchor");
             }
             if (pr->at == NULL) {
                 pr->at = y->p;
@@ -332,11 +334,11 @@ static cf_bool yp_props_read(yp* y, yp_props* pr) {
             pr->anchor = y->p;
             pr->alen   = yp_name(y);
             if (pr->alen == 0) {
-                return yp_fail(y, "an anchor has a name");
+                return yp_fail(y, CF_REASON_SYNTAX, "an anchor has a name");
             }
         } else if (c == '!') {
             if (pr->has_tag) {
-                return yp_fail(y, "a node has one tag");
+                return yp_fail(y, CF_REASON_SYNTAX, "a node has one tag");
             }
             if (pr->at == NULL) {
                 pr->at = y->p;
@@ -350,7 +352,8 @@ static cf_bool yp_props_read(yp* y, yp_props* pr) {
         }
         if (y->p < y->end && !yp_blankz((unsigned char)*y->p) &&
             !(y->flow > 0 && yp_flowind((unsigned char)*y->p))) {
-            return yp_fail(y, "a property is followed by white space");
+            return yp_fail(y, CF_REASON_SYNTAX,
+                           "a property is followed by white space");
         }
         yp_blanks(y);
     }
@@ -362,7 +365,7 @@ static cf_bool yp_props_read(yp* y, yp_props* pr) {
 
 static cf_bool yp_put(yp* y, size_t* n, int c) {
     if (*n + 1 >= y->cap) {
-        return yp_fail(y, "a value is longer than the document");
+        return yp_fail(y, CF_REASON_BUDGET, "a value is longer than the document");
     }
     y->buf[(*n)++] = (char)c;
     return CF_TRUE;
@@ -449,7 +452,8 @@ static cf_bool yp_plain_line(yp* y, size_t* n) {
             continue;
         }
         if (!yp_printable(c)) {
-            return yp_fail(y, "a value holds a character YAML does not print");
+            return yp_fail(y, CF_REASON_CONTROL,
+                           "a value holds a character YAML does not print");
         }
         if (!yp_put(y, n, c)) {
             return CF_FALSE;
@@ -468,7 +472,7 @@ static cf_bool yp_plain(yp* y, int n, cf_bool key, const yp_props* pr) {
     const char* first_ls;
 
     if (!yp_plain_start(y)) {
-        return yp_fail(y, "a value cannot start with this character");
+        return yp_fail(y, CF_REASON_SYNTAX, "a value cannot start with this character");
     }
     first_line = y->tr.line;
     first_ls   = y->tr.line_start;
@@ -548,18 +552,20 @@ static cf_bool yp_quoted_fold(yp* y, size_t* k, int n, cf_bool escaped) {
         break;
     }
     if (y->p >= y->end) {
-        return yp_fail(y, "a quoted value is not closed");
+        return yp_fail(y, CF_REASON_TRUNCATED, "a quoted value is not closed");
     }
     {
         const char* q = y->p;
         y->p          = y->tr.line_start;
         if (yp_marker(y)) {
-            return yp_fail(y, "a document marker inside a quoted value");
+            return yp_fail(y, CF_REASON_SYNTAX,
+                           "a document marker inside a quoted value");
         }
         y->p = q;
     }
     if (y->flow == 0 && yp_indent(y) <= n) {
-        return yp_fail(y, "a quoted value's next line is not indented enough");
+        return yp_fail(y, CF_REASON_SYNTAX,
+                       "a quoted value's next line is not indented enough");
     }
     if (!escaped && empty == 0) {
         return yp_put(y, k, ' ');
@@ -591,14 +597,16 @@ static cf_bool yp_escape(yp* y, size_t* k, int n) {
         /* An escaped line break: the lines join with nothing between. */
         return yp_quoted_fold(y, k, n, CF_TRUE);
     case CF_ESC_E_DIGITS:
-        return yp_fail_at(y, y->p + r.at, "an escape needs its hexadecimal digits");
+        return yp_fail_at(y, y->p + r.at, CF_REASON_ESCAPE,
+                          "an escape needs its hexadecimal digits");
     case CF_ESC_E_SCALAR:
-        return yp_fail_at(y, y->p + r.at, "an escape names no character");
+        return yp_fail_at(y, y->p + r.at, CF_REASON_ESCAPE,
+                          "an escape names no character");
     case CF_ESC_CP:
         y->p += r.used;
         return yp_put_cp(y, k, r.cp);
     default:
-        return yp_fail(y, "an unknown escape");
+        return yp_fail(y, CF_REASON_ESCAPE, "an unknown escape");
     }
 }
 
@@ -614,7 +622,7 @@ static cf_bool yp_quoted(yp* y, int n, cf_bool key, const yp_props* pr) {
     for (;;) {
         int c = yp_c(y, 0);
         if (c < 0) {
-            return yp_fail(y, "a quoted value is not closed");
+            return yp_fail(y, CF_REASON_TRUNCATED, "a quoted value is not closed");
         }
         if (c == quote) {
             if (quote == '\'' && yp_c(y, 1) == '\'') {
@@ -652,7 +660,7 @@ static cf_bool yp_quoted(yp* y, int n, cf_bool key, const yp_props* pr) {
         }
         if (yp_brk(c)) {
             if (key) {
-                return yp_fail(y, "a key is on one line");
+                return yp_fail(y, CF_REASON_SYNTAX, "a key is on one line");
             }
             if (!yp_quoted_fold(y, &k, n, CF_FALSE)) {
                 return CF_FALSE;
@@ -660,7 +668,8 @@ static cf_bool yp_quoted(yp* y, int n, cf_bool key, const yp_props* pr) {
             continue;
         }
         if (!yp_printable(c)) {
-            return yp_fail(y, "a value holds a character YAML does not print");
+            return yp_fail(y, CF_REASON_CONTROL,
+                           "a value holds a character YAML does not print");
         }
         if (!yp_put(y, &k, c)) {
             return CF_FALSE;
@@ -698,7 +707,8 @@ static cf_bool yp_block_breaks(yp* y, int least, int* indent, int* breaks,
         }
         /* A tab short of a known indentation; after it, a tab is content. */
         if (y->p < y->end && *y->p == '\t' && *indent < 0 && col < least) {
-            return yp_fail(y, "a tab where the block's indentation is");
+            return yp_fail(y, CF_REASON_SYNTAX,
+                           "a tab where the block's indentation is");
         }
         if (y->p < y->end && *y->p == '\t' && *indent >= 0 && col < *indent) {
             const char* q = y->p;
@@ -706,7 +716,8 @@ static cf_bool yp_block_breaks(yp* y, int least, int* indent, int* breaks,
                 ++q;
             }
             if (q < y->end && !yp_brk(*q)) {
-                return yp_fail(y, "a tab where the block's indentation is");
+                return yp_fail(y, CF_REASON_SYNTAX,
+                               "a tab where the block's indentation is");
             }
         }
         if (y->p >= y->end) {
@@ -764,11 +775,13 @@ static cf_bool yp_block_scalar(yp* y, int n, const yp_props* pr) {
             inc = c - '0';
             ++y->p;
         } else if (c == '0') {
-            return yp_fail(y, "a block scalar's indentation is 1 to 9");
+            return yp_fail(y, CF_REASON_SYNTAX,
+                           "a block scalar's indentation is 1 to 9");
         }
     }
     if (y->p < y->end && !yp_blankz((unsigned char)*y->p)) {
-        return yp_fail(y, "a block scalar's header is its indicators and a comment");
+        return yp_fail(y, CF_REASON_SYNTAX,
+                       "a block scalar's header is its indicators and a comment");
     }
     if (!yp_line_rest(y)) {
         return CF_FALSE;
@@ -790,8 +803,9 @@ static cf_bool yp_block_scalar(yp* y, int n, const yp_props* pr) {
             }
             if (y->p < y->end && !yp_brk(*y->p) &&
                 max_empty > (int)(y->p - y->tr.line_start)) {
-                return yp_fail(y, "an empty line before the content is indented more "
-                                  "than the content");
+                return yp_fail(y, CF_REASON_SYNTAX,
+                               "an empty line before the content is indented more "
+                               "than the content");
             }
         }
     }
@@ -812,7 +826,8 @@ static cf_bool yp_block_scalar(yp* y, int n, const yp_props* pr) {
         leading_blank = yp_blank((unsigned char)*y->p);
         while (y->p < y->end && !yp_brk(*y->p)) {
             if (!yp_printable((unsigned char)*y->p)) {
-                return yp_fail(y, "a value holds a character YAML does not print");
+                return yp_fail(y, CF_REASON_CONTROL,
+                               "a value holds a character YAML does not print");
             }
             if (!yp_put(y, &k, *y->p++)) {
                 return CF_FALSE;
@@ -982,7 +997,7 @@ static cf_bool yp_flow_node(yp* y, int n);
 
 static cf_bool yp_deeper(yp* y) {
     if (++y->depth > YP_DEPTH) {
-        return yp_fail(y, "nesting is too deep");
+        return yp_fail(y, CF_REASON_DEPTH, "nesting is too deep");
     }
     return CF_TRUE;
 }
@@ -994,13 +1009,14 @@ static cf_bool yp_alias(yp* y, const yp_props* pr) {
     size_t      nlen;
 
     if (pr->at != NULL) {
-        return yp_fail_at(y, pr->at, "an alias has no properties of its own");
+        return yp_fail_at(y, pr->at, CF_REASON_SYNTAX,
+                          "an alias has no properties of its own");
     }
     ++y->p;
     name = y->p;
     nlen = yp_name(y);
     if (nlen == 0) {
-        return yp_fail_at(y, at, "an alias has a name");
+        return yp_fail_at(y, at, CF_REASON_SYNTAX, "an alias has a name");
     }
     return y->ev->alias(y->ev->ctx, name, nlen, y->tr.line, yp_col(y, at));
 }
@@ -1018,7 +1034,8 @@ static cf_bool yp_flow_skip(yp* y, int n) {
         if (y->p < y->end && yp_brk(*y->p)) {
             yp_eat_break(y);
             if (yp_marker(y)) {
-                return yp_fail(y, "a document marker inside a flow collection");
+                return yp_fail(y, CF_REASON_SYNTAX,
+                               "a document marker inside a flow collection");
             }
             {
                 const char* q = y->p;
@@ -1027,7 +1044,7 @@ static cf_bool yp_flow_skip(yp* y, int n) {
                 }
                 if (q < y->end && !yp_brk(*q) && *q != '#' && yp_indent(y) <= n &&
                     n >= 0) {
-                    return yp_fail(y,
+                    return yp_fail(y, CF_REASON_SYNTAX,
                                    "a flow collection's line is not indented enough");
                 }
             }
@@ -1089,15 +1106,16 @@ static cf_bool yp_flow_collection(yp* y, int n, const yp_props* pr) {
             return CF_FALSE;
         }
         if (y->p >= y->end) {
-            return yp_fail(y, map ? "a flow mapping is not closed"
-                                  : "a flow sequence is not closed");
+            return yp_fail(y, CF_REASON_TRUNCATED,
+                           map ? "a flow mapping is not closed"
+                               : "a flow sequence is not closed");
         }
         if (*y->p == close) {
             ++y->p;
             break;
         }
         if (*y->p == ',') {
-            return yp_fail(y, "an entry is missing before ','");
+            return yp_fail(y, CF_REASON_SYNTAX, "an entry is missing before ','");
         }
         if (map) {
             if (!yp_flow_key(y, n, close) || !yp_flow_pair_value(y, n, close)) {
@@ -1125,7 +1143,8 @@ static cf_bool yp_flow_collection(yp* y, int n, const yp_props* pr) {
             ++y->p;
             break;
         }
-        return yp_fail(y, map ? "expected ',' or '}'" : "expected ',' or ']'");
+        return yp_fail(y, CF_REASON_SYNTAX,
+                       map ? "expected ',' or '}'" : "expected ',' or ']'");
     }
     --y->flow;
     --y->depth;
@@ -1216,14 +1235,14 @@ static cf_bool yp_block_map(yp* y, int m, const yp_props* pr) {
             }
         } else {
             if (!yp_is_key(y)) {
-                return yp_fail(y, "expected a key and ':'");
+                return yp_fail(y, CF_REASON_SYNTAX, "expected a key and ':'");
             }
             if (!yp_block_key(y)) {
                 return CF_FALSE;
             }
             yp_blanks(y);
             if (y->p >= y->end || *y->p != ':') {
-                return yp_fail(y, "expected ':' after the key");
+                return yp_fail(y, CF_REASON_SYNTAX, "expected ':' after the key");
             }
             ++y->p;
             if (!yp_block_node(y, m, YP_VALUE)) {
@@ -1238,9 +1257,10 @@ static cf_bool yp_block_map(yp* y, int m, const yp_props* pr) {
             break;
         }
         if (yp_indent(y) > m || (int)(y->p - y->tr.line_start) != m) {
-            return yp_fail(y, yp_tabbed(y) ? "a tab cannot indent"
-                                           : "this line is indented more than its "
-                                             "mapping's keys");
+            return yp_fail(y, CF_REASON_SYNTAX,
+                           yp_tabbed(y) ? "a tab cannot indent"
+                                        : "this line is indented more than its "
+                                          "mapping's keys");
         }
     }
     --y->depth;
@@ -1262,9 +1282,10 @@ static cf_bool yp_block_seq(yp* y, int s, const yp_props* pr) {
             break;
         }
         if (yp_indent(y) > s || (int)(y->p - y->tr.line_start) != s) {
-            return yp_fail(y, yp_tabbed(y) ? "a tab cannot indent"
-                                           : "this line is indented more than its "
-                                             "sequence's entries");
+            return yp_fail(y, CF_REASON_SYNTAX,
+                           yp_tabbed(y) ? "a tab cannot indent"
+                                        : "this line is indented more than its "
+                                          "sequence's entries");
         }
         if (!(*y->p == '-' && yp_blankz(yp_c(y, 1)))) {
             break; /* the mapping this sequence is the value of goes on */
@@ -1343,29 +1364,31 @@ static cf_bool yp_block_node(yp* y, int n, int ctx) {
     c = yp_c(y, 0);
     if (c == '-' && yp_blankz(yp_c(y, 1)) && props_inline != 1) {
         if (props_inline == 2 || (!fresh && !compact)) {
-            return yp_fail(y, "a block sequence cannot start on this line");
+            return yp_fail(y, CF_REASON_SYNTAX,
+                           "a block sequence cannot start on this line");
         }
         if ((fresh && yp_tabbed(y)) || (!fresh && yp_tab_before(y))) {
-            return yp_fail(y, "a tab cannot indent");
+            return yp_fail(y, CF_REASON_SYNTAX, "a tab cannot indent");
         }
         return yp_block_seq(y, (int)(y->p - y->tr.line_start), &pr);
     }
     if (c == '?' && yp_blankz(yp_c(y, 1)) && props_inline != 1) {
         if (props_inline == 2 || (!fresh && !compact)) {
-            return yp_fail(y, "a mapping cannot start on this line");
+            return yp_fail(y, CF_REASON_SYNTAX, "a mapping cannot start on this line");
         }
         if (!fresh && yp_tab_before(y)) {
-            return yp_fail(y, "a tab cannot indent");
+            return yp_fail(y, CF_REASON_SYNTAX, "a tab cannot indent");
         }
         return yp_block_map(y, (int)(y->p - y->tr.line_start), &pr);
     }
     if (props_inline != 2 && yp_is_key(y)) {
         if (!fresh && !compact) {
-            return yp_fail(y, "a mapping cannot start on this line: a value "
-                              "with ': ' in it is quoted");
+            return yp_fail(y, CF_REASON_SYNTAX,
+                           "a mapping cannot start on this line: a value "
+                           "with ': ' in it is quoted");
         }
         if ((fresh && yp_tabbed(y)) || (!fresh && yp_tab_before(y))) {
-            return yp_fail(y, "a tab cannot indent");
+            return yp_fail(y, CF_REASON_SYNTAX, "a tab cannot indent");
         }
         return yp_block_map(y, (int)(entry - y->tr.line_start), &pr);
     }
@@ -1408,17 +1431,18 @@ static cf_bool yp_directive(yp* y, int* seen_yaml) {
     yp_blanks(y);
     if (nlen == 4 && memcmp(name, "YAML", 4) == 0) {
         if (*seen_yaml) {
-            return yp_fail(y, "a second YAML directive");
+            return yp_fail(y, CF_REASON_SYNTAX, "a second YAML directive");
         }
         *seen_yaml = 1;
         if (!cf_is_digit(yp_c(y, 0))) {
-            return yp_fail(y, "the YAML directive names a version");
+            return yp_fail(y, CF_REASON_SYNTAX, "the YAML directive names a version");
         }
         while (cf_is_digit(yp_c(y, 0))) {
             ++y->p;
         }
         if (yp_c(y, 0) != '.' || !cf_is_digit(yp_c(y, 1))) {
-            return yp_fail(y, "the YAML directive names a version, as 1.2");
+            return yp_fail(y, CF_REASON_SYNTAX,
+                           "the YAML directive names a version, as 1.2");
         }
         ++y->p;
         while (cf_is_digit(yp_c(y, 0))) {
@@ -1433,7 +1457,8 @@ static cf_bool yp_directive(yp* y, int* seen_yaml) {
         }
         d.hn = (size_t)(y->p - d.h);
         if (d.hn == 0 || d.h[0] != '!' || d.h[d.hn - 1] != '!') {
-            return yp_fail(y, "the TAG directive names a handle, as !e!");
+            return yp_fail(y, CF_REASON_SYNTAX,
+                           "the TAG directive names a handle, as !e!");
         }
         yp_blanks(y);
         d.pre = y->p;
@@ -1442,15 +1467,15 @@ static cf_bool yp_directive(yp* y, int* seen_yaml) {
         }
         d.pn = (size_t)(y->p - d.pre);
         if (d.pn == 0) {
-            return yp_fail(y, "the TAG directive names a prefix");
+            return yp_fail(y, CF_REASON_SYNTAX, "the TAG directive names a prefix");
         }
         for (i = 0; i < y->ntags; ++i) {
             if (y->tags[i].hn == d.hn && memcmp(y->tags[i].h, d.h, d.hn) == 0) {
-                return yp_fail(y, "a handle declared twice");
+                return yp_fail(y, CF_REASON_SYNTAX, "a handle declared twice");
             }
         }
         if (y->ntags >= YP_TAGS) {
-            return yp_fail(y, "too many TAG directives");
+            return yp_fail(y, CF_REASON_SYNTAX, "too many TAG directives");
         }
         y->tags[y->ntags++] = d;
     } else {
@@ -1497,13 +1522,15 @@ cf_bool cf_yaml_parse(const cf_blob* in, const char* file, const cf_yp_events* e
         }
         if (y.p >= y.end) {
             if (directives) {
-                return yp_fail(&y, "directives without a document after them");
+                return yp_fail(&y, CF_REASON_TRUNCATED,
+                               "directives without a document after them");
             }
             break;
         }
         if (yp_marker(&y) && *y.p == '.') {
             if (directives) {
-                return yp_fail(&y, "directives need '---' after them");
+                return yp_fail(&y, CF_REASON_SYNTAX,
+                               "directives need '---' after them");
             }
             y.p += 3;
             if (!yp_line_rest(&y)) {
@@ -1512,7 +1539,7 @@ cf_bool cf_yaml_parse(const cf_blob* in, const char* file, const cf_yp_events* e
             continue;
         }
         if (!yp_marker(&y) && directives) {
-            return yp_fail(&y, "directives need '---' after them");
+            return yp_fail(&y, CF_REASON_SYNTAX, "directives need '---' after them");
         }
         if (!ev->document(ev->ctx, y.tr.line, yp_col(&y, y.p))) {
             return CF_FALSE;
@@ -1537,7 +1564,7 @@ cf_bool cf_yaml_parse(const cf_blob* in, const char* file, const cf_yp_events* e
         if (yp_marker(&y)) {
             continue;
         }
-        return yp_fail(&y, "expected the end of the document");
+        return yp_fail(&y, CF_REASON_SYNTAX, "expected the end of the document");
     }
     return ev->stream_end(ev->ctx, y.tr.line, yp_col(&y, y.p));
 }

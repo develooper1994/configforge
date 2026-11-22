@@ -227,23 +227,25 @@ static void failures(void) {
     cf_error old = CF_ERROR_INIT;
     char     text[CF_MESSAGE_MAX + 12];
 
-    check(!cf_text_fail(&got, CF_E_SOURCE, "t.json", 2, 3, "%s", "body"),
-          "failure returns false");
+    check(
+        !cf_text_fail(&got, CF_E_SOURCE, "t.json", 2, 3, CF_REASON_NONE, "%s", "body"),
+        "failure returns false");
     check(got.code == CF_E_SOURCE && strcmp(got.source, "t.json") == 0 &&
               got.key[0] == '\0' && strcmp(got.message, "t.json:2:3: body") == 0,
           "file, line and column");
-    cf_text_fail(&got, CF_E_KEY, "t.ini", 4, 0, "'%S': %u", "abcd", (size_t)2, 9u);
+    cf_text_fail(&got, CF_E_KEY, "t.ini", 4, 0, CF_REASON_NONE, "'%S': %u", "abcd",
+                 (size_t)2, 9u);
     cf_error_set(&old, CF_E_KEY, NULL, "t.ini", "%s:%u: '%S': %u", "t.ini", 4u, "abcd",
                  (size_t)2, 9u);
     check(got.code == CF_E_KEY && strcmp(got.message, old.message) == 0,
           "file and line with a length-delimited string");
     memset(text, 'a', sizeof text);
     text[sizeof text - 1] = '\0';
-    cf_text_fail(&got, CF_E_SOURCE, "t.toml", 5, 6, "%s!", text);
+    cf_text_fail(&got, CF_E_SOURCE, "t.toml", 5, 6, CF_REASON_NONE, "%s!", text);
     cf_error_set(&old, CF_E_SOURCE, NULL, "t.toml", "%s:%u:%u: %s!", "t.toml", 5u, 6u,
                  text);
     check(strcmp(got.message, old.message) == 0, "message is cut at the same byte");
-    check(!cf_text_fail(NULL, CF_E_SOURCE, "t.toml", 1, 1, "body"),
+    check(!cf_text_fail(NULL, CF_E_SOURCE, "t.toml", 1, 1, CF_REASON_NONE, "body"),
           "failure without error storage");
 }
 

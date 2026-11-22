@@ -3441,8 +3441,97 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   `cf_reason_description` and `cf_error_place`. Every message is what it
   was (D-107)." `docs/Roadmap.md`: the item "Infrastructure behind
   abstractions" stays 🟨, its line gains "A-10 done".
-* **notes**:
+* **Organiser's answers, 2026-11-22**:
+  * INI's TOO_LONG row uses a 300-character name followed by `[1]=1`; the plain name reaches the scalar sink's KEY refusal, while the indexed name reaches INI's length check.
+  * The minimal build's composition test compares the invalid-name diagnostic up to the configured message capacity; the 49-byte fixture puts part of the wording beyond 128 bytes.
+  * During step 4, run the current reader's reason rows and the existing unit tests; run the combined reason test once its remaining readers and step 5 sources are implemented.
+  * Step order: `file_hint`'s keeping of `reason` and `where`, and the
+    budget's reason, move into step 4, before the readers' checks that
+    depend on them; step 5 keeps the rest.
+  * The STORAGE row's JSON and JSON5 case uses a sink that accepts the
+    begin and value events and refuses `end`, so the reader's own "sink
+    refused" is what is classified; a refused root `begin_table` gives
+    "key is not valid", which stays `KEY` as the table says.
+  * TOML's DEPTH row is tested through `cf_codec_decode` directly, with a
+    sink that accepts every event, so that the reader's own depth check is
+    what refuses (through the configuration the flattener's key check
+    refuses first, and that is not the reason the row is about).
+  * JSON5 accepts `\q` (any other character stands for itself) and a raw
+    0x01 inside a string, so those two fixtures are replaced: the ESCAPE
+    row's JSON5 case is `\8` ("a digit may not be escaped"), and the
+    CONTROL row's JSON5 case is a raw line feed inside a string ("a string
+    may not contain a raw newline"). Both were probed to give those
+    refusals.
 
+* **notes**:
+  * 2026-11-22: F is `cf_text_fail`. The text wrappers are `js_fail`,
+    `toml_fail`, `toml_fail_named`, `prop_fail`, `yaml_fail_at`,
+    `yp_fail` through `yp_fail_at`, and `xml_fail`. The XML parse error,
+    INI line refusals, and `.properties` key refusals already call F
+    directly. `cbor_fail` and `tlv_fail` still format byte offsets by
+    hand. Direct `cf_error_set` calls also remain in the readers for
+    errors such as sink refusals and workspace failures.
+  * 2026-11-22: The baseline accepts both the JSON5 `ESCAPE` row
+    (`\q`) and the JSON5 `CONTROL` row (raw `0x01`). Step 2 needs a
+    decision on replacing or dropping those rows while preserving
+    reader behaviour. The existing reader refuses `\8` and a raw LF
+    inside a string, respectively, with the messages listed for those
+    reasons. The baseline also finds `KEY` first in the TOML `DEPTH`
+    row and `SYNTAX` first in the TOML and built-in YAML `TRUNCATED`
+    rows. Those three rows fall under the card's fixture replacement rule.
+  * 2026-11-22: The Release baseline confirms `a = [1, 2,` for TOML
+    ("the array is not closed", 1:11) and `a: "x` for built-in YAML
+    ("a quoted value is not closed", 1:6) as `TRUNCATED` fixtures. The
+    TOML `DEPTH` row still needs a decision. Through `cf_builder_document`,
+    nested inline tables, nested arrays and a maximum-length dotted
+    array-of-tables header all report "not a valid key". The flattener
+    counts the document root in its `CF_MAX_DEPTH` frames. TOML opens
+    that root before any array, inline table or header, so the sink
+    refuses a begin event before TOML can reach either depth check.
+    Should this one row use `cf_codec_decode` with a sink that accepts
+    all events, or should the organiser change the specified reason for
+    a depth refusal from the flattener? The runtime and the test have
+    not been changed.
+  * 2026-11-22: The organiser's replacements were checked against the
+    Release baseline. Direct TOML decoding with an accepting sink gives
+    `CF_E_SOURCE`, `doc:1:99: nesting is too deep` at the default depth.
+    The baseline, including the replacement inputs and `edges.*`, is
+    saved at `%TEMP%/cf-codex-a10-release/A-10/before.txt`.
+  * 2026-11-22: Step 2's `STORAGE` case conflicts with the JSON and JSON5
+    reason table. With every sink callback returning false, both decoders
+    stop at the root `begin_table` (`json.c:529`) with `CF_E_SOURCE` and
+    `doc:1:1: key is not valid`. The table assigns that message `KEY`.
+    Their `sink refused` calls are reached only at `end`. The same probe
+    reaches `sink refused` in TOML and INI. Should the JSON and JSON5 test
+    accept the begin and scalar events and refuse `end`, or should the
+    root `begin_table` refusal get `STORAGE` while keeping its message
+    and code? Stopped before adding the test or changing the readers.
+  * 2026-11-22: Step 2 failed before the implementation as intended.
+    The Release MSVC build exited 2 with C2065 for `CF_REASON_SYNTAX`
+    at `lib/config/tests/test_reason.c:34` and C2039 at line 21 for
+    the missing `cf_error.reason` field. Step 3 built successfully and
+    passed all 43 size and reason-name checks.
+  * 2026-11-22: Stopped in step 4 after classifying the JSON and JSON5
+    calls. Both targeted runs gave 96/99 checks. The JSON number, escape
+    and control rows and the JSON5 number, key and control rows all reach
+    `file_hint` through the builder. It rewrites the message to append
+    the detected format and resets the new metadata. The Release unit
+    suite exited 8 (119/121 passed; `test_reason` and `test_budget`
+    failed). Step 4 asks for green reader rows and unit tests, but step 5
+    schedules both the `file_hint` preservation and the budget reason.
+    May the two step 5 prerequisites move ahead of the reader checks, or
+    should step 4 check reader output directly and defer the builder
+    and budget assertions to step 5? Other callers of the widened
+    formatter use `CF_REASON_NONE` while awaiting classification.
+  * 2026-11-22: JSON, JSON5, YAML, INI and properties accept repeated
+    keys, so they have no duplicate-key refusal row. A reason in Doctor's
+    JSON is left for a later decision. The step 6 comparison of the
+    saved Release baseline and the rebuilt probe had no differences.
+  * 2026-11-22: MSVC Release and Debug each passed 241/241 tests;
+    minimal passed 162/162 with the requested exclusions. An additional
+    Release build with Expat passed all 484 refusal checks. The Rust
+    library passed 32/32 tests. Python binding tests, Linux and CI
+    acceptance were not run here.
 ---
 
 ## A-11 - Build profiles and the C version per file

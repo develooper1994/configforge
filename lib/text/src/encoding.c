@@ -317,5 +317,5 @@ cf_bool cf_encoding_check(const char* origin, const char* p, size_t n, cf_error*
                enc_hints[look].name);
     }
     return cf_text_fail(err, CF_E_SOURCE, origin, (unsigned int)line, (unsigned int)col,
-                        "byte 0x%s is not valid UTF-8%s", hex, hint);
+                        CF_REASON_UTF8, "byte 0x%s is not valid UTF-8%s", hex, hint);
 }

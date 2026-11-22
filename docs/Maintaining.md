@@ -61,6 +61,9 @@ carries no version of its own.
 
 **What moves which number.**
 
+The 1.x promise includes the names returned by `cf_reason_name`.
+The text of diagnostic messages remains outside that promise.
+
 * **Patch**: only a fix to a version already released, made because the
   defect cannot wait for the milestone. Nothing new.
 * **Minor**: a milestone of the table below, released when every card

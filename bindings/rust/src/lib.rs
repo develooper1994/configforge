@@ -91,6 +91,9 @@ pub struct Error {
     pub key: String,
     pub source: String,
     pub message: String,
+    pub reason: String,
+    pub line: u32,
+    pub column: u32,
 }
 
 fn text_of(p: *const c_char) -> String {
@@ -108,6 +111,13 @@ impl Error {
             key: text_of(e.key.as_ptr()),
             source: text_of(e.source.as_ptr()),
             message: text_of(e.message.as_ptr()),
+            reason: if e.reason == 0 {
+                String::new()
+            } else {
+                text_of(unsafe { sys::cf_reason_name(e.reason) })
+            },
+            line: e.where_.line,
+            column: e.where_.col,
         }
     }
 }
@@ -167,6 +177,8 @@ fn new_error() -> sys::cf_error {
         key: [0; sys::CF_KEY_MAX],
         source: [0; sys::CF_SOURCE_MAX],
         message: [0; sys::CF_MESSAGE_MAX],
+        where_: sys::cf_loc { file: std::ptr::null(), line: 0, col: 0 },
+        reason: 0,
     }
 }
 
@@ -207,6 +219,9 @@ impl Keep {
         if let Some(name) = &self.bad_encoding {
             return Some(Error {
                 code: sys::CF_E_POLICY,
+                reason: String::new(),
+                line: 0,
+                column: 0,
                 name: text_of(unsafe { sys::cf_code_name(sys::CF_E_POLICY) }),
                 key: String::new(),
                 source: String::new(),
@@ -242,6 +257,9 @@ impl Keep {
 pub(crate) fn nul_refusal(what: &str, at: usize) -> Error {
     Error {
         code: sys::CF_E_CONVERT,
+        reason: String::new(),
+        line: 0,
+        column: 0,
         name: text_of(unsafe { sys::cf_code_name(sys::CF_E_CONVERT) }),
         key: String::new(),
         source: String::new(),
@@ -1339,6 +1357,19 @@ mod schema_tests {
 #[cfg(test)]
 mod encoding_tests {
     use super::{rank, Builder};
+
+    #[test]
+    fn malformed_json_reports_its_reason_and_place() {
+        let path = std::env::temp_dir().join(format!("cf_reason_{}.json", std::process::id()));
+        std::fs::write(&path, br#"{"a" 1}"#).unwrap();
+        let result = Builder::new()
+            .file("doc", rank::USER_FILE, path.to_str().unwrap(), 0, None)
+            .create();
+        std::fs::remove_file(path).unwrap();
+        let error = result.err().expect("missing colon");
+        assert_eq!(error.reason, "syntax");
+        assert_eq!((error.line, error.column), (1, 6));
+    }
 
     #[test]
     fn a_file_in_another_encoding_is_read_by_its_name() {

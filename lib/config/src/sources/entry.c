@@ -473,8 +473,10 @@ cf_bool cf_lex_cli(int argc, char* const* argv, const cf_keymap* map,
         }
 
         if (klen == 0) {
-            return cf_error_set(err, CF_E_KEY, NULL, "cli",
-                                "argv[%d]: '%s' is not a valid option", i, a);
+            cf_error_set(err, CF_E_KEY, NULL, "cli",
+                         "argv[%d]: '%s' is not a valid option", i, a);
+            cf_error_place(err, CF_REASON_KEY, 0, 0);
+            return CF_FALSE;
         }
 
         kind = cli_classify(spec, key, klen);
@@ -489,8 +491,10 @@ cf_bool cf_lex_cli(int argc, char* const* argv, const cf_keymap* map,
                    that guesses ruins a command line. */
                 if (i + 1 >= argc || argv[i + 1] == NULL ||
                     cli_is_option(argv[i + 1])) {
-                    return cf_error_set(err, CF_E_KEY, key, "cli",
-                                        "argv[%d]: '%s' needs a value", i, a);
+                    cf_error_set(err, CF_E_KEY, key, "cli",
+                                 "argv[%d]: '%s' needs a value", i, a);
+                    cf_error_place(err, CF_REASON_SYNTAX, 0, 0);
+                    return CF_FALSE;
                 }
                 val = argv[++i];
             } else {
@@ -629,10 +633,12 @@ cf_bool cf_cli_expand(int argc, char* const* argv, cf_arena* arena, int* out_arg
                 /* A response file that includes another is a command
                    line nobody can follow from the one they typed, and
                    one that includes itself is a loop. */
-                return cf_error_set(err, CF_E_SOURCE, NULL, a + 1,
-                                    "%s: a response file may not include "
-                                    "another",
-                                    a + 1);
+                cf_error_set(err, CF_E_SOURCE, NULL, a + 1,
+                             "%s: a response file may not include "
+                             "another",
+                             a + 1);
+                cf_error_place(err, CF_REASON_UNSUPPORTED, 0, 0);
+                return CF_FALSE;
             }
             if (!argv_push(&b, line, len)) {
                 return cf_error_set(err, CF_E_MEMORY, NULL, a + 1,
@@ -700,7 +706,7 @@ cf_bool cf_lex_dotenv(const char* text, size_t n, const char* origin,
 
         eq = (const char*)memchr(raw, '=', len);
         if (eq == NULL) {
-            return cf_text_fail(err, CF_E_SOURCE, origin, line, 0,
+            return cf_text_fail(err, CF_E_SOURCE, origin, line, 0, CF_REASON_SYNTAX,
                                 "expected NAME=value");
         }
         namelen = cf_text_trim(raw, (size_t)(eq - raw), &name);
@@ -716,7 +722,7 @@ cf_bool cf_lex_dotenv(const char* text, size_t n, const char* origin,
             /* Unlike the environment, this file belongs to this program,
                so a name that derives no key is a mistake rather than
                somebody else's variable. */
-            return cf_text_fail(err, CF_E_KEY, origin, line, 0,
+            return cf_text_fail(err, CF_E_KEY, origin, line, 0, CF_REASON_KEY,
                                 "'%S' is not a usable name", name, namelen);
         }
         cf_fmt(at, sizeof at, "%s:%u", origin, line);

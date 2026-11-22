@@ -44,6 +44,14 @@
 
 #include <expat.h>
 
+/* Expat added this enum value in 2.4.0. Expose its presence to the
+   conditional case below when the header supplies only the enum. */
+#if XML_MAJOR_VERSION > 2 || (XML_MAJOR_VERSION == 2 && XML_MINOR_VERSION >= 4)
+#ifndef XML_ERROR_AMPLIFICATION_LIMIT_BREACH
+#define XML_ERROR_AMPLIFICATION_LIMIT_BREACH XML_ERROR_AMPLIFICATION_LIMIT_BREACH
+#endif
+#endif
+
 /* What the first pass learns about each element, in document order. */
 enum {
     XML_F_MEMBER = 1u << 0, /* one of a run of same-named siblings  */
@@ -123,7 +131,7 @@ typedef struct xml_scan {
 } xml_scan;
 
 /* Record the first failure and stop the parser. */
-static void xml_fail(xml_scan* s, const char* message, const char* name) {
+static void xml_fail(xml_scan* s, int reason, const char* message, const char* name) {
     char what[CF_MESSAGE_MAX];
 
     if (s->failed) {
@@ -132,9 +140,9 @@ static void xml_fail(xml_scan* s, const char* message, const char* name) {
     s->failed = CF_TRUE;
     cf_fmt(what, sizeof what, "%s%s%s%s", message, (name != NULL) ? " (" : "",
            (name != NULL) ? name : "", (name != NULL) ? ")" : "");
-    cf_text_fail(s->err, CF_E_SOURCE, s->file,
-                 (unsigned int)XML_GetCurrentLineNumber(s->parser),
-                 (unsigned int)XML_GetCurrentColumnNumber(s->parser) + 1u, "%s", what);
+    cf_text_fail(
+        s->err, CF_E_SOURCE, s->file, (unsigned int)XML_GetCurrentLineNumber(s->parser),
+        (unsigned int)XML_GetCurrentColumnNumber(s->parser) + 1u, reason, "%s", what);
     XML_StopParser(s->parser, XML_FALSE);
 }
 
@@ -153,7 +161,7 @@ static void* xml_grow(xml_scan* s, void* buf, size_t* cap, size_t used, size_t w
     }
     p = XML_MemRealloc(s->parser, buf, n * size);
     if (p == NULL) {
-        xml_fail(s, "no room to read the document", NULL);
+        xml_fail(s, CF_REASON_SYNTAX, "no room to read the document", NULL);
         return NULL;
     }
     *cap = n;
@@ -162,7 +170,7 @@ static void* xml_grow(xml_scan* s, void* buf, size_t* cap, size_t used, size_t w
 
 static cf_bool xml_plain_name(xml_scan* s, const XML_Char* name) {
     if (strchr(name, ':') != NULL) {
-        xml_fail(s,
+        xml_fail(s, CF_REASON_UNSUPPORTED,
                  "namespaces are not in the XML this library reads: a key has no room "
                  "for a prefix",
                  name);
@@ -311,7 +319,7 @@ static void XMLCALL xml_scan_start(void* ctx, const XML_Char* name,
         return;
     }
     if (s->depth >= CF_MAX_DEPTH) {
-        xml_fail(s, "nesting is too deep", name);
+        xml_fail(s, CF_REASON_DEPTH, "nesting is too deep", name);
         return;
     }
     {
@@ -333,14 +341,14 @@ static void XMLCALL xml_scan_start(void* ctx, const XML_Char* name,
             (unsigned char)(s->flags[parent->element] | XML_F_KIDS);
         found = xml_find(s, name, n);
         if (found >= 0 && s->table[found].is_attr) {
-            xml_fail(s,
+            xml_fail(s, CF_REASON_STRUCTURE,
                      "an attribute and a child element have the same name; one key "
                      "cannot be both",
                      name);
             return;
         }
         if (found >= 0 && found != parent->prev) {
-            xml_fail(s,
+            xml_fail(s, CF_REASON_STRUCTURE,
                      "elements of one name are a list, and a list's elements must be "
                      "next to each other",
                      name);
@@ -392,7 +400,7 @@ static void XMLCALL xml_scan_end(void* ctx, const XML_Char* name) {
     xml_close_run(s, l);
     f = s->flags[l->element];
     if ((f & XML_F_TEXT) && (f & (XML_F_KIDS | XML_F_ATTRS))) {
-        xml_fail(s,
+        xml_fail(s, (f & XML_F_KIDS) ? CF_REASON_STRUCTURE : CF_REASON_SYNTAX,
                  (f & XML_F_KIDS)
                      ? "text beside child elements: an element holds a value "
                        "or settings, not both"
@@ -427,7 +435,7 @@ static void XMLCALL xml_doctype(void* ctx, const XML_Char* name, const XML_Char*
     (void)sysid;
     (void)pubid;
     (void)internal;
-    xml_fail((xml_scan*)ctx,
+    xml_fail((xml_scan*)ctx, CF_REASON_UNSUPPORTED,
              "a DOCTYPE is not read: entities and external references are how XML "
              "configuration is attacked, and configuration needs neither",
              name);
@@ -444,7 +452,7 @@ static void xml_here(xml_scan* s) {
 }
 
 static void xml_sink_failed(xml_scan* s, const char* name) {
-    xml_fail(s, "not a valid key", name);
+    xml_fail(s, CF_REASON_KEY, "not a valid key", name);
 }
 
 static void XMLCALL xml_emit_start(void* ctx, const XML_Char* name,
@@ -464,7 +472,8 @@ static void XMLCALL xml_emit_start(void* ctx, const XML_Char* name,
 
     if (s->depth == 1) {
         if (f & XML_F_TEXT) {
-            xml_fail(s, "the root element holds settings, not a value", name);
+            xml_fail(s, CF_REASON_STRUCTURE,
+                     "the root element holds settings, not a value", name);
             return;
         }
         ok = s->out->begin_table(s->out->ctx, NULL, 0);
@@ -481,7 +490,7 @@ static void XMLCALL xml_emit_start(void* ctx, const XML_Char* name,
         } else {
             /* A value: collected until the element ends. */
             if (n >= sizeof s->key) {
-                xml_fail(s, "the key is too long", name);
+                xml_fail(s, CF_REASON_TOO_LONG, "the key is too long", name);
                 return;
             }
             memcpy(s->key, name, n);
@@ -568,16 +577,50 @@ static void XMLCALL xml_emit_end(void* ctx, const XML_Char* name) {
 
 static cf_bool xml_run(xml_scan* s, const cf_blob* in) {
     if (in->n > 0x7FFFFFFFu) {
-        return cf_error_set(s->err, CF_E_SOURCE, NULL, s->file,
-                            "%s: too large for this XML reader", s->file);
+        cf_error_set(s->err, CF_E_SOURCE, NULL, s->file,
+                     "%s: too large for this XML reader", s->file);
+        cf_error_place(s->err, CF_REASON_BUDGET, 0, 0);
+        return CF_FALSE;
     }
     if (XML_Parse(s->parser, in->p, (int)in->n, XML_TRUE) == XML_STATUS_ERROR &&
         !s->failed) {
+        enum XML_Error code = XML_GetErrorCode(s->parser);
+        int            reason;
+        /* An int: the switch names the codes it classifies, and expat has
+           more than -Wswitch-enum would have listed. */
+        switch ((int)code) {
+        case XML_ERROR_NO_ELEMENTS:
+            reason = in->n == 0 ? CF_REASON_EMPTY : CF_REASON_TRUNCATED;
+            break;
+        case XML_ERROR_UNCLOSED_TOKEN:
+        case XML_ERROR_PARTIAL_CHAR:
+        case XML_ERROR_UNCLOSED_CDATA_SECTION:
+            reason = CF_REASON_TRUNCATED;
+            break;
+        case XML_ERROR_JUNK_AFTER_DOC_ELEMENT:
+            reason = CF_REASON_TRAILING;
+            break;
+        case XML_ERROR_DUPLICATE_ATTRIBUTE:
+            reason = CF_REASON_DUPLICATE_KEY;
+            break;
+        case XML_ERROR_UNKNOWN_ENCODING:
+        case XML_ERROR_INCORRECT_ENCODING:
+            reason = CF_REASON_ENCODING;
+            break;
+#ifdef XML_ERROR_AMPLIFICATION_LIMIT_BREACH
+        case XML_ERROR_AMPLIFICATION_LIMIT_BREACH:
+            reason = CF_REASON_BUDGET;
+            break;
+#endif
+        default:
+            reason = CF_REASON_SYNTAX;
+            break;
+        }
         s->failed = CF_TRUE;
         cf_text_fail(s->err, CF_E_SOURCE, s->file,
                      (unsigned int)XML_GetCurrentLineNumber(s->parser),
-                     (unsigned int)XML_GetCurrentColumnNumber(s->parser) + 1u, "%s",
-                     XML_ErrorString(XML_GetErrorCode(s->parser)));
+                     (unsigned int)XML_GetCurrentColumnNumber(s->parser) + 1u, reason,
+                     "%s", XML_ErrorString(code));
     }
     return s->failed ? CF_FALSE : CF_TRUE;
 }

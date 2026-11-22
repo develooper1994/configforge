@@ -56,6 +56,31 @@ Every error carries one of these codes, stable from 1.0;
 | `CF_E_POLICY` | `policy` | policy conflict |
 | `CF_E_MEMORY` | `memory` | allocation refused or arena full |
 
+Document refusals also carry a reason and, where known, a line and column.
+
+| Reason | Name | Meaning |
+| ------ | ---- | ------- |
+| `CF_REASON_NONE` | `none` | no document refusal |
+| `CF_REASON_SYNTAX` | `syntax` | the bytes break the format's grammar |
+| `CF_REASON_UTF8` | `utf-8` | bytes that are not UTF-8 |
+| `CF_REASON_ENCODING` | `encoding` | invalid or inapplicable source encoding |
+| `CF_REASON_TRUNCATED` | `truncated` | the input ends inside a construct |
+| `CF_REASON_TRAILING` | `trailing` | text or bytes after the document |
+| `CF_REASON_EMPTY` | `empty` | no document where one is required |
+| `CF_REASON_TOP_LEVEL` | `top-level` | the document is not a table at its top |
+| `CF_REASON_DEPTH` | `depth` | nesting deeper than CF_MAX_DEPTH |
+| `CF_REASON_TOO_LONG` | `too-long` | a key, string, name or length over a library limit |
+| `CF_REASON_BUDGET` | `budget` | a document over the reader's size budget |
+| `CF_REASON_ESCAPE` | `escape` | a malformed, unknown or invalid escape |
+| `CF_REASON_CONTROL` | `control-character` | a control character where the format forbids it |
+| `CF_REASON_NUMBER` | `number` | a malformed number, date or time |
+| `CF_REASON_NUMBER_RANGE` | `number-range` | a number the library's types cannot hold |
+| `CF_REASON_DUPLICATE_KEY` | `duplicate-key` | a key, table or attribute defined twice |
+| `CF_REASON_KEY` | `key` | a name or value that cannot be a key |
+| `CF_REASON_STRUCTURE` | `structure` | a shape the key space cannot hold |
+| `CF_REASON_UNSUPPORTED` | `unsupported` | a construct this library does not read |
+| `CF_REASON_STORAGE` | `storage` | the consumer or its workspace refused |
+
 - [`configforge.h`](#configforgeh) - 83
 - [`cf_alloc.h`](#cf_alloch) - 12
 - [`cf_define.h`](#cf_defineh) - 27
@@ -64,7 +89,7 @@ Every error carries one of these codes, stable from 1.0;
 - [`cf_emit.h`](#cf_emith) - 1
 - [`cf_encoding.h`](#cf_encodingh) - 4
 - [`cf_entry.h`](#cf_entryh) - 14
-- [`cf_error.h`](#cf_errorh) - 6
+- [`cf_error.h`](#cf_errorh) - 9
 - [`cf_explain.h`](#cf_explainh) - 4
 - [`cf_flatten.h`](#cf_flattenh) - 10
 - [`cf_image.h`](#cf_imageh) - 10
@@ -1244,7 +1269,7 @@ Give a .env file the same natural names and list separators.
 CF_API void cf_source_file_defs(struct cf_source* s, const cf_defset* ds);
 ```
 
-Implementation: [`cf_source_file_defs` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L556).
+Implementation: [`cf_source_file_defs` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L568).
 
 Give a file, or a directory of them, the list separators, for a format
 that carries no types (cf_flatten_lists): a declared list splits an
@@ -1825,7 +1850,7 @@ itself is a loop.
 CF_API cf_bool cf_cli_expand(int argc, char* const* argv, cf_arena* arena, int* out_argc, char*** out_argv, cf_error* err);
 ```
 
-Implementation: [`cf_cli_expand` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L557).
+Implementation: [`cf_cli_expand` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L561).
 
 ### The command line in UTF-8
 
@@ -1860,7 +1885,7 @@ escape and the natural spelling behave identically in both.
 CF_API cf_bool cf_lex_dotenv(const char* text, size_t n, const char* origin, const cf_keymap* map, const cf_entry_sink* out, cf_error* err);
 ```
 
-Implementation: [`cf_lex_dotenv` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L657).
+Implementation: [`cf_lex_dotenv` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L663).
 
 ## cf_error.h
 
@@ -1896,28 +1921,30 @@ Implementation: [`cf_key_valid` (lib/base/src/key.c)](https://github.com/develoo
 CF_API void cf_error_clear(cf_error* e);
 ```
 
-Implementation: [`cf_error_clear` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L34).
+Implementation: [`cf_error_clear` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L73).
 
-Empties `e`: code CF_OK, key, source and message empty. `size` is
+Empties `e`: code CF_OK, key, source, message, place and reason empty. `size` is
 kept, so a cleared error can be reused. NULL is ignored.
 
 ```c
 CF_API void cf_error_copy(cf_error* dst, const cf_error* src);
 ```
 
-Implementation: [`cf_error_copy` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L44).
+Implementation: [`cf_error_copy` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L84).
 
 What `src` says, copied into `dst` as far as `dst` has room: 1.0's
-fields always, a later field where dst->size covers it. dst->size is
+fields always, a later field where dst->size covers it. If src->size
+does not cover a later field, that field is cleared. dst->size is
 kept. Safe with NULL on either side.
 
 ```c
 CF_API cf_bool cf_error_set(cf_error* e, cf_code code, const char* key, const char* source, const char* fmt, ...);
 ```
 
-Implementation: [`cf_error_set` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L74).
+Implementation: [`cf_error_set` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L121).
 
-Set code, key, source and a formatted message. Safe with a NULL
+Set code, key, source and a formatted message, clearing place and reason.
+Safe with a NULL
 error, so every call site can report unconditionally instead of
 guarding. Returns CF_FALSE so a caller can write
 `return cf_error_set(err, ...);`
@@ -1927,7 +1954,30 @@ CF_API const char* cf_code_name(cf_code c);
 CF_API const char* cf_code_description(cf_code c);
 ```
 
-Implementation: [`cf_code_name` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L12), [`cf_code_description` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L23).
+Implementation: [`cf_code_name` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L16), [`cf_code_description` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L27).
+
+```c
+CF_EXPERIMENTAL(1, 8) const char* cf_reason_name(int reason);
+CF_EXPERIMENTAL(1, 8) const char* cf_reason_description(int reason);
+```
+
+Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
+
+Implementation: [`cf_reason_name` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L38), [`cf_reason_description` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L51).
+
+The name ("number-range") and description of a reason. Returns "?" and
+"unknown", respectively, for an unknown value.
+
+```c
+CF_EXPERIMENTAL(1, 8) void cf_error_place(cf_error* e, int reason, unsigned int line, unsigned int col);
+```
+
+Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
+
+Implementation: [`cf_error_place` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L64).
+
+Sets where (file NULL, line, col) and reason on an error whose message
+is already set, where e->size reaches them. NULL is ignored.
 
 ## cf_explain.h
 
@@ -2072,7 +2122,7 @@ CF_API const cf_codec* cf_source_by_content(const cf_codec* const* own, size_t n
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_source_by_content` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L123).
+Implementation: [`cf_source_by_content` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L125).
 
 The codec the content of `blob` says (D-73; cf_codec_detect), `own`
 (n of them) a program's codecs looked at first; NULL with `err` set,
@@ -2087,7 +2137,7 @@ CF_API cf_bool cf_doc_emit(const cf_keyspace* ks, const cf_doc_sink* out, cf_err
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_doc_emit` (lib/config/src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/flatten.c#L823).
+Implementation: [`cf_doc_emit` (lib/config/src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/flatten.c#L824).
 
 Walk a resolved key space, emitting the document it describes.
 Structure is reconstructed from the sorted keys with nothing built:
@@ -2112,7 +2162,7 @@ CF_API cf_bool cf_doc_emit_where(const cf_keyspace* ks, const cf_doc_sink* out, 
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_doc_emit_where` (lib/config/src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/flatten.c#L827).
+Implementation: [`cf_doc_emit_where` (lib/config/src/bridge/flatten.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/flatten.c#L828).
 
 ## cf_image.h
 
@@ -3960,7 +4010,7 @@ is wave 6's.
 CF_API cf_bool cf_tlv_codec_sized(cf_codec* out, size_t out_size, const cf_tlv_layout* layout, cf_error* err);
 ```
 
-Implementation: [`cf_tlv_codec_sized` (lib/serialize/src/tlv.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/tlv.c#L1040).
+Implementation: [`cf_tlv_codec_sized` (lib/serialize/src/tlv.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/tlv.c#L1094).
 
 A codec that reads `layout`, made in `out`: the program owns `out`,
 the layout, and every table and key it points to, and each must
@@ -3979,7 +4029,7 @@ CF_EXPERIMENTAL(1, 8) cf_bool cf_codec_compose_sized(cf_codec* out, size_t out_s
 
 Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
 
-Implementation: [`cf_codec_compose_sized` (lib/serialize/src/compose.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/compose.c#L174).
+Implementation: [`cf_codec_compose_sized` (lib/serialize/src/compose.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/compose.c#L175).
 
 Make a named, read-only codec in the program's storage. Keep out, spec,
 the base, the name and both contexts alive while any configuration uses
@@ -4157,19 +4207,19 @@ library about provenance must never do.
 CF_API size_t cf_source_file_state_size(void);
 ```
 
-Implementation: [`cf_source_file_state_size` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L562).
+Implementation: [`cf_source_file_state_size` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L574).
 
 ```c
 CF_API cf_bool cf_source_file(cf_source* s, const char* name, int rank, const char* path, const char* format, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_file` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L467).
+Implementation: [`cf_source_file` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L479).
 
 ```c
 CF_API cf_bool cf_source_file_codec(cf_source* s, const char* name, int rank, const char* path, const struct cf_codec* codec, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_file_codec` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L490).
+Implementation: [`cf_source_file_codec` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L502).
 
 The same, with the codec handed over rather than looked up: a format
 this library does not have, written against cf_doc_sink - over
@@ -4185,7 +4235,7 @@ name would be a conflict nobody could see.
 CF_API const cf_error* cf_source_file_error(const cf_source* s);
 ```
 
-Implementation: [`cf_source_file_error` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L566).
+Implementation: [`cf_source_file_error` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L578).
 
 The reason a file source failed, or NULL when it did not. Sources
 return a plain boolean because most cannot fail in interesting ways;
@@ -4195,7 +4245,7 @@ a file can fail in a dozen, and the caller needs the detail.
 CF_API void cf_source_file_codecs(cf_source* s, const struct cf_codec* const* codecs, size_t n);
 ```
 
-Implementation: [`cf_source_file_codecs` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L534).
+Implementation: [`cf_source_file_codecs` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L546).
 
 A program's own codecs for a file or a document, looked at before the
 built-in ones, for the extension and for the content (D-73). The list
@@ -4205,7 +4255,7 @@ is borrowed and must outlive the source.
 CF_API cf_bool cf_source_document(cf_source* s, const char* name, int rank, const char* bytes, size_t n, const char* format, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_document` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L503).
+Implementation: [`cf_source_document` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L515).
 
 A document the program holds in memory, as a source: the same reading
 as a file's, from `bytes` (n of them) instead of a path. `name` is what
@@ -4217,7 +4267,7 @@ must outlive the source; cf_builder_document copies them.
 CF_API cf_bool cf_source_env_document(cf_source* s, const char* name, int rank, const char* variable, const char* format, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_env_document` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L519).
+Implementation: [`cf_source_env_document` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L531).
 
 A whole document in one environment variable, as a source (D-73),
 opt-in per variable: its value is read as a document, `format` named,
@@ -4232,7 +4282,7 @@ variable that is not set is an error, or nothing with CF_OPTIONAL.
 CF_API const char* cf_source_file_format(const cf_source* s, cf_detect_how* how);
 ```
 
-Implementation: [`cf_source_file_format` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L544).
+Implementation: [`cf_source_file_format` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L556).
 
 The format a file or document source read with at its last load, by
 the codec's name, and how it was chosen (CF_DETECT_NAMED, _EXTENSION or
@@ -4246,7 +4296,7 @@ CF_EXPERIMENTAL(1, 8) const char* cf_source_file_encoding(const cf_source* s);
 
 Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
 
-Implementation: [`cf_source_file_encoding` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L572).
+Implementation: [`cf_source_file_encoding` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L584).
 
 The encoding the last load of a file, document or environment-document
 source read, by its canonical name: "utf-8", "utf-16le" or "utf-16be"
@@ -4642,7 +4692,7 @@ One '#' comment at pp, to its line's end. The TOML rule consumes a
 CR before LF and checks the comment body.
 
 ```c
-CF_API cf_bool cf_text_fail(cf_error* err, cf_code code, const char* file, unsigned int line, unsigned int col, const char* fmt, ...);
+CF_API cf_bool cf_text_fail(cf_error* err, cf_code code, const char* file, unsigned int line, unsigned int col, int reason, const char* fmt, ...);
 ```
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.

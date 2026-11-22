@@ -456,6 +456,34 @@ The codes: `key` (malformed or unknown key), `definition`, `convert`,
 `capability` (a source cannot do what was asked - a format this build
 left out, say), `policy` and `memory`.
 
+When a reader refuses a document, `reason` identifies the cause across
+formats. Use `cf_reason_name` for its name and `cf_reason_description`
+for its meaning. Treat a reason your program does not know as `syntax`.
+`where.line` and `where.col` start at 1. A zero means that coordinate is
+unavailable. The file name is in `source` and `where.file` is always NULL.
+Binary readers keep the byte offset in the message.
+
+| What the reader found | Reason names |
+| --- | --- |
+| Document boundaries or grammar | `empty`, `syntax`, `truncated`, `trailing` |
+| Text or character encoding | `utf-8`, `encoding`, `escape`, `control-character` |
+| Numeric input | `number`, `number-range` |
+| Keys and document shape | `key`, `duplicate-key`, `structure`, `top-level` |
+| Reader limits | `depth`, `too-long`, `budget`, `unsupported` |
+| Consumer refusal or no document reason | `storage`, `none` |
+
+For example, a program importing a Windows-1254 file can offer the
+encoding by name when the default UTF-8 read fails:
+
+```c
+if (err.reason == CF_REASON_UTF8) {
+    fprintf(stderr, "%s:%u:%u: try reading as %s\n", err.source,
+            err.where.line, err.where.col, cf_encoding_name(CF_ENCODING_WINDOWS_1254));
+} else {
+    fprintf(stderr, "%s\n", err.message);
+}
+```
+
 What the person running the program reads, from `examples/c/mistakes.c`,
 which builds one contract from five files with one mistake each:
 

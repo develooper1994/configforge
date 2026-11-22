@@ -33,6 +33,17 @@ def server_cfg(values=None):
             .create())
 
 
+class Refusal(unittest.TestCase):
+    def test_json_reason_and_place(self):
+        path = os.path.join(WORK, "refusal.json")
+        with open(path, "w", encoding="utf-8") as doc:
+            doc.write('{"a" 1}')
+        with self.assertRaises(cf.Error) as refused:
+            cf.Builder().file("doc", rank.USER_FILE, path).create()
+        error = refused.exception
+        self.assertEqual((error.reason, error.line, error.column), ("syntax", 1, 6))
+
+
 class Lists(unittest.TestCase):
     @staticmethod
     def values(cfg, key):

@@ -406,9 +406,10 @@ cf_bool cf_flatten_decode(cf_flatten* f, const cf_codec* codec, const cf_blob* b
     }
     ok = cf_codec_decode(codec, blob, cf_flatten_sink(f), err);
     if (f->over_budget) {
-        return cf_error_set(err, CF_E_SOURCE, NULL, path, fl_over_budget, path,
-                            (cf_u64)f->budget, (cf_u64)blob->n,
-                            (unsigned)CF_DECODE_FACTOR);
+        cf_error_set(err, CF_E_SOURCE, NULL, path, fl_over_budget, path,
+                     (cf_u64)f->budget, (cf_u64)blob->n, (unsigned)CF_DECODE_FACTOR);
+        cf_error_place(err, CF_REASON_BUDGET, 0, 0);
+        return CF_FALSE;
     }
     return ok;
 }

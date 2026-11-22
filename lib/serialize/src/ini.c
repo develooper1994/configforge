@@ -61,7 +61,7 @@ static cf_bool ini_emit_path(const cf_doc_sink* out, const char* path, size_t n,
     while (*depth > 0) {
         if (!out->end(out->ctx)) {
             /* The consumer said no; a refusal still says where. */
-            return cf_text_fail(err, CF_E_SOURCE, file, line, 0,
+            return cf_text_fail(err, CF_E_SOURCE, file, line, 0, CF_REASON_STORAGE,
                                 "the document could not be recorded");
         }
         --*depth;
@@ -72,10 +72,11 @@ static cf_bool ini_emit_path(const cf_doc_sink* out, const char* path, size_t n,
             ++j;
         }
         if (j == i) {
-            return cf_text_fail(err, CF_E_KEY, file, line, 0, "empty section segment");
+            return cf_text_fail(err, CF_E_KEY, file, line, 0, CF_REASON_KEY,
+                                "empty section segment");
         }
         if (!out->begin_table(out->ctx, path + i, j - i)) {
-            return cf_text_fail(err, CF_E_KEY, file, line, 0,
+            return cf_text_fail(err, CF_E_KEY, file, line, 0, CF_REASON_KEY,
                                 "'%S' is not a valid key segment", path + i, j - i);
         }
         ++*depth;
@@ -315,7 +316,9 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
     section_start = s.p;
 
     if (!out->begin_table(out->ctx, NULL, 0)) {
-        return cf_error_set(err, CF_E_SOURCE, NULL, s.file, "sink refused");
+        cf_error_set(err, CF_E_SOURCE, NULL, s.file, "sink refused");
+        cf_error_place(err, CF_REASON_STORAGE, 0, 0);
+        return CF_FALSE;
     }
 
     while (s.p < s.end) {
@@ -340,6 +343,7 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
 
             if (!ini_run_close(&run, out)) {
                 return cf_text_fail(err, CF_E_SOURCE, s.file, s.tr.line, 0,
+                                    CF_REASON_STORAGE,
                                     "the document could not be recorded");
             }
             ++s.p;
@@ -349,13 +353,14 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
             }
             if (s.p >= s.end || *s.p != ']') {
                 return cf_text_fail(err, CF_E_SOURCE, s.file, s.tr.line, 0,
+                                    CF_REASON_TRUNCATED,
                                     "section header is not closed");
             }
             n = cf_text_trim(start, (size_t)(s.p - start), &trimmed);
             ++s.p;
             if (n == 0) {
                 return cf_text_fail(err, CF_E_SOURCE, s.file, s.tr.line, 0,
-                                    "empty section header");
+                                    CF_REASON_SYNTAX, "empty section header");
             }
             if (!ini_emit_path(out, trimmed, n, &depth, err, s.file, s.tr.line)) {
                 return CF_FALSE;
@@ -363,6 +368,7 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
             s.p = cf_text_blanks(CF_BLANK_INI, s.p, s.end);
             if (s.p < s.end && *s.p != '\n' && *s.p != '#' && *s.p != ';') {
                 return cf_text_fail(err, CF_E_SOURCE, s.file, s.tr.line, 0,
+                                    CF_REASON_SYNTAX,
                                     "trailing text after a section "
                                     "header");
             }
@@ -389,7 +395,7 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
             }
             if (s.p >= s.end || *s.p != '=') {
                 return cf_text_fail(err, CF_E_SOURCE, s.file, s.tr.line, 0,
-                                    "expected 'key = value'");
+                                    CF_REASON_SYNTAX, "expected 'key = value'");
             }
             klen = cf_text_trim(kstart, (size_t)(s.p - kstart), &key);
             eq   = s.p;
@@ -410,7 +416,7 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
             }
             if (klen == 0) {
                 return cf_text_fail(err, CF_E_SOURCE, s.file, s.tr.line, 0,
-                                    "empty key");
+                                    CF_REASON_KEY, "empty key");
             }
 
             at.file = s.file;
@@ -430,6 +436,7 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
                         unsigned int earlier;
                         if (!ini_run_close(&run, out)) {
                             return cf_text_fail(err, CF_E_SOURCE, s.file, s.tr.line, 0,
+                                                CF_REASON_STORAGE,
                                                 "the document could not be recorded");
                         }
                         earlier = names.off ? ini_earlier_run(section_start, kstart,
@@ -438,6 +445,7 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
                         if (earlier != 0) {
                             return cf_text_fail(
                                 err, CF_E_SOURCE, s.file, s.tr.line, 0,
+                                CF_REASON_STRUCTURE,
                                 "'%S[]' again after line %u; an array's "
                                 "lines go together, or name each index",
                                 key, nlen, earlier);
@@ -445,6 +453,7 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
                         if (nlen >= sizeof run.name ||
                             !out->begin_array(out->ctx, key, nlen)) {
                             return cf_text_fail(err, CF_E_KEY, s.file, s.tr.line, 0,
+                                                CF_REASON_KEY,
                                                 "'%S' is not a valid key", key, nlen);
                         }
                         memcpy(run.name, key, nlen);
@@ -459,19 +468,22 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
                     }
                     if (!out->scalar(out->ctx, NULL, 0, &v, CF_TRUE, &at)) {
                         return cf_text_fail(err, CF_E_KEY, s.file, s.tr.line, 0,
+                                            CF_REASON_STORAGE,
                                             "'%S' could not be recorded", key, klen);
                     }
                     continue;
                 }
                 if (!ini_run_close(&run, out)) {
                     return cf_text_fail(err, CF_E_SOURCE, s.file, s.tr.line, 0,
+                                        CF_REASON_STORAGE,
                                         "the document could not be recorded");
                 }
                 if (nlen > 0) {
                     /* name[i]: the flat name.i every format's element is */
                     if (klen + 1 > sizeof flat) {
                         return cf_text_fail(err, CF_E_KEY, s.file, s.tr.line, 0,
-                                            "'%S' is too long", key, klen);
+                                            CF_REASON_TOO_LONG, "'%S' is too long", key,
+                                            klen);
                     }
                     memcpy(flat, key, nlen);
                     flat[nlen] = '.';
@@ -481,26 +493,33 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
                 }
                 if (!out->scalar(out->ctx, key, klen, &v, CF_TRUE, &at)) {
                     return cf_text_fail(err, CF_E_KEY, s.file, s.tr.line, 0,
-                                        "'%S' is not a valid key", key, klen);
+                                        CF_REASON_KEY, "'%S' is not a valid key", key,
+                                        klen);
                 }
             }
         }
     }
 
     if (!ini_run_close(&run, out)) {
-        return cf_error_set(err, CF_E_SOURCE, NULL, s.file,
-                            "%s: the document could not be recorded", s.file);
+        cf_error_set(err, CF_E_SOURCE, NULL, s.file,
+                     "%s: the document could not be recorded", s.file);
+        cf_error_place(err, CF_REASON_STORAGE, 0, 0);
+        return CF_FALSE;
     }
     while (depth > 0) {
         if (!out->end(out->ctx)) {
-            return cf_error_set(err, CF_E_SOURCE, NULL, s.file,
-                                "%s: the document could not be recorded", s.file);
+            cf_error_set(err, CF_E_SOURCE, NULL, s.file,
+                         "%s: the document could not be recorded", s.file);
+            cf_error_place(err, CF_REASON_STORAGE, 0, 0);
+            return CF_FALSE;
         }
         --depth;
     }
     if (!out->end(out->ctx)) {
-        return cf_error_set(err, CF_E_SOURCE, NULL, s.file,
-                            "%s: the document could not be recorded", s.file);
+        cf_error_set(err, CF_E_SOURCE, NULL, s.file,
+                     "%s: the document could not be recorded", s.file);
+        cf_error_place(err, CF_REASON_STORAGE, 0, 0);
+        return CF_FALSE;
     }
     return CF_TRUE;
 }

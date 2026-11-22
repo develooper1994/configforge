@@ -11,7 +11,7 @@
 #include <stddef.h>
 
 cf_bool cf_text_fail(cf_error* err, cf_code code, const char* file, unsigned int line,
-                     unsigned int col, const char* fmt, ...) {
+                     unsigned int col, int reason, const char* fmt, ...) {
     char    body[CF_MESSAGE_MAX];
     va_list ap;
 
@@ -22,7 +22,10 @@ cf_bool cf_text_fail(cf_error* err, cf_code code, const char* file, unsigned int
     cf_vfmt(body, sizeof body, fmt, ap);
     va_end(ap);
     if (col == 0) {
-        return cf_error_set(err, code, NULL, file, "%s:%u: %s", file, line, body);
+        cf_error_set(err, code, NULL, file, "%s:%u: %s", file, line, body);
+    } else {
+        cf_error_set(err, code, NULL, file, "%s:%u:%u: %s", file, line, col, body);
     }
-    return cf_error_set(err, code, NULL, file, "%s:%u:%u: %s", file, line, col, body);
+    cf_error_place(err, reason, line, col);
+    return CF_FALSE;
 }

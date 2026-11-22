@@ -61,10 +61,11 @@ static void js_loc(const js_scan* s, const char* at, cf_loc* out) {
     out->col  = cf_text_track_col(&s->tr, at);
 }
 
-static cf_bool js_fail(js_scan* s, const char* at, const char* what) {
+static cf_bool js_fail(js_scan* s, const char* at, int reason, const char* what) {
     unsigned int col = cf_text_track_col(&s->tr, at);
 
-    return cf_text_fail(s->err, CF_E_SOURCE, s->file, s->tr.line, col, "%s", what);
+    return cf_text_fail(s->err, CF_E_SOURCE, s->file, s->tr.line, col, reason, "%s",
+                        what);
 }
 
 /* White space and, in JSON5, comments. */
@@ -73,7 +74,7 @@ static cf_bool js_space(js_scan* s) {
     const cf_text_syntax* sy = s->json5 ? &js5_syntax : &js_syntax;
 
     if (cf_text_skip(sy, &s->tr, &s->p, s->end, &bad) == CF_SKIP_UNCLOSED) {
-        return js_fail(s, bad, "a comment is not closed");
+        return js_fail(s, bad, CF_REASON_TRUNCATED, "a comment is not closed");
     }
     return CF_TRUE;
 }
@@ -96,10 +97,17 @@ static cf_bool js_hex(const char* p, int k, cf_u32* out) {
 
 /* k bytes onto a string being decoded, or measured with a NULL
    destination, always leaving room for its terminator. */
+/* The refusal of js_put, apart from it so that js_put stays small enough
+   to be inlined in js_string's loop (bench-gate: a call and a memcpy a
+   byte cost JSON's plain strings 78% more instructions). */
+static cf_bool js_too_long(js_scan* s) {
+    return js_fail(s, s->p, CF_REASON_TOO_LONG, "string is too long");
+}
+
 static cf_bool js_put(js_scan* s, char* dst, size_t cap, size_t* n, const char* b,
                       size_t k) {
     if (k >= cap - *n) {
-        return js_fail(s, s->p, "string is too long");
+        return js_too_long(s);
     }
     if (dst != NULL) {
         memcpy(dst + *n, b, k);
@@ -147,26 +155,28 @@ static cf_bool js_escape(js_scan* s, char* dst, size_t cap, size_t* n) {
     case CF_ESC_E_DIGITS:
         /* Split after the backslash, as toml.c explains. */
         if (r.letter == 'u') {
-            return js_fail(s, s->p + r.at,
+            return js_fail(s, s->p + r.at, CF_REASON_ESCAPE,
                            "\\"
                            "u needs four hexadecimal digits");
         }
-        return js_fail(s, s->p + r.at,
+        return js_fail(s, s->p + r.at, CF_REASON_ESCAPE,
                        "\\"
                        "x needs two hexadecimal digits");
     case CF_ESC_E_HIGH:
-        return js_fail(s, s->p + r.at, "high surrogate without a low one");
+        return js_fail(s, s->p + r.at, CF_REASON_ESCAPE,
+                       "high surrogate without a low one");
     case CF_ESC_E_LOW:
-        return js_fail(s, s->p + r.at, "unpaired low surrogate");
+        return js_fail(s, s->p + r.at, CF_REASON_ESCAPE, "unpaired low surrogate");
     case CF_ESC_E_NUL_DIGIT:
-        return js_fail(s, s->p + r.at, "\\0 may not be followed by a digit");
+        return js_fail(s, s->p + r.at, CF_REASON_ESCAPE,
+                       "\\0 may not be followed by a digit");
     case CF_ESC_E_DIGIT:
-        return js_fail(s, s->p + r.at, "a digit may not be escaped");
+        return js_fail(s, s->p + r.at, CF_REASON_ESCAPE, "a digit may not be escaped");
     default:
         break;
     }
     if (!s->json5) {
-        return js_fail(s, s->p, "unknown escape");
+        return js_fail(s, s->p, CF_REASON_ESCAPE, "unknown escape");
     }
     /* Any other byte, the first of a longer character included: the
        rest of it follows as ordinary string bytes. */
@@ -183,7 +193,7 @@ static size_t js_string(js_scan* s, char* dst, size_t cap) {
     char   quote;
 
     if (s->p >= s->end || !(*s->p == '"' || (s->json5 && *s->p == '\''))) {
-        js_fail(s, s->p, "expected a string");
+        js_fail(s, s->p, CF_REASON_SYNTAX, "expected a string");
         return (size_t)-1;
     }
     quote = *s->p++;
@@ -198,32 +208,39 @@ static size_t js_string(js_scan* s, char* dst, size_t cap) {
             return n;
         }
         if (c == '\n' || (s->json5 && c == '\r')) {
-            js_fail(s, s->p, "a string may not contain a raw newline");
+            js_fail(s, s->p, CF_REASON_CONTROL,
+                    "a string may not contain a raw newline");
             return (size_t)-1;
         }
         if (c < 0x20u && !s->json5) {
-            js_fail(s, s->p,
+            js_fail(s, s->p, CF_REASON_CONTROL,
                     "a string may not contain a raw control "
                     "character");
             return (size_t)-1;
         }
         if (c != '\\') {
-            if (!js_put(s, dst, cap, &n, s->p, 1)) {
+            /* js_put of one byte, written out: the loop's every byte. */
+            if (1u >= cap - n) {
+                js_too_long(s);
                 return (size_t)-1;
             }
+            if (dst != NULL) {
+                dst[n] = (char)c;
+            }
+            ++n;
             ++s->p;
             continue;
         }
         ++s->p;
         if (s->p >= s->end) {
-            js_fail(s, s->p, "escape at end of input");
+            js_fail(s, s->p, CF_REASON_TRUNCATED, "escape at end of input");
             return (size_t)-1;
         }
         if (!js_escape(s, dst, cap, &n)) {
             return (size_t)-1;
         }
     }
-    js_fail(s, s->p, "string is not closed");
+    js_fail(s, s->p, CF_REASON_TRUNCATED, "string is not closed");
     return (size_t)-1;
 }
 
@@ -252,14 +269,15 @@ static size_t js5_name(js_scan* s, char* dst, size_t cap) {
 
         if (s->p < s->end && *s->p == '\\') {
             if (s->end - s->p < 6 || s->p[1] != 'u' || !js_hex(s->p + 2, 4, &cp)) {
-                js_fail(s, at,
+                js_fail(s, at, CF_REASON_ESCAPE,
                         "an escape in a name is \\"
                         "u and four hexadecimal digits");
                 return (size_t)-1;
             }
             s->p += 6;
             if ((cp >= 0xD800u && cp <= 0xDFFFu) || !js5_is_id(cp, first)) {
-                js_fail(s, at, "the escape is not a character a name may hold");
+                js_fail(s, at, CF_REASON_ESCAPE,
+                        "the escape is not a character a name may hold");
                 return (size_t)-1;
             }
         } else {
@@ -275,7 +293,7 @@ static size_t js5_name(js_scan* s, char* dst, size_t cap) {
         first = CF_FALSE;
     }
     if (first) {
-        js_fail(s, s->p, "expected a member name");
+        js_fail(s, s->p, CF_REASON_SYNTAX, "expected a member name");
         return (size_t)-1;
     }
     if (dst != NULL && n < cap) {
@@ -305,13 +323,14 @@ static cf_bool js_number_value(js_scan* s, const char* start, cf_bool is_real,
     {
         double d;
         if (!cf_text_to_f64(start, len, &d, NULL)) {
-            return js_fail(s, start, "malformed number");
+            return js_fail(s, start, CF_REASON_NUMBER, "malformed number");
         }
         cf_value_real(v, d);
         return CF_TRUE;
     }
 #else
-    return js_fail(s, start, "this build has no floating point support");
+    return js_fail(s, start, CF_REASON_UNSUPPORTED,
+                   "this build has no floating point support");
 #endif
 }
 
@@ -329,13 +348,14 @@ static cf_bool js_number(js_scan* s, cf_value* v) {
         ++s->p;
     }
     if (s->p >= s->end || !cf_is_digit((unsigned char)*s->p)) {
-        return js_fail(s, start,
+        return js_fail(s, start, (s->p == start) ? CF_REASON_SYNTAX : CF_REASON_NUMBER,
                        (s->p == start) ? "expected a value" : "malformed number");
     }
     if (*s->p == '0') {
         ++s->p;
         if (s->p < s->end && cf_is_digit((unsigned char)*s->p)) {
-            return js_fail(s, start, "malformed number: a leading zero");
+            return js_fail(s, start, CF_REASON_NUMBER,
+                           "malformed number: a leading zero");
         }
     } else {
         while (s->p < s->end && cf_is_digit((unsigned char)*s->p)) {
@@ -346,7 +366,8 @@ static cf_bool js_number(js_scan* s, cf_value* v) {
         is_real = CF_TRUE;
         ++s->p;
         if (s->p >= s->end || !cf_is_digit((unsigned char)*s->p)) {
-            return js_fail(s, start, "malformed number: no digit after the point");
+            return js_fail(s, start, CF_REASON_NUMBER,
+                           "malformed number: no digit after the point");
         }
         while (s->p < s->end && cf_is_digit((unsigned char)*s->p)) {
             ++s->p;
@@ -359,7 +380,8 @@ static cf_bool js_number(js_scan* s, cf_value* v) {
             ++s->p;
         }
         if (s->p >= s->end || !cf_is_digit((unsigned char)*s->p)) {
-            return js_fail(s, start, "malformed number: no digit in the exponent");
+            return js_fail(s, start, CF_REASON_NUMBER,
+                           "malformed number: no digit in the exponent");
         }
         while (s->p < s->end && cf_is_digit((unsigned char)*s->p)) {
             ++s->p;
@@ -383,7 +405,8 @@ static cf_bool js5_hex(js_scan* s, const char* start, cf_bool neg, cf_value* v) 
         ++s->p;
     }
     if (s->p == digits) {
-        return js_fail(s, start, "malformed number: no hexadecimal digit");
+        return js_fail(s, start, CF_REASON_NUMBER,
+                       "malformed number: no hexadecimal digit");
     }
     if (!over && mag <= (cf_u64)CF_I64_MAX) {
         cf_value_int(v, neg ? -(cf_i64)mag : (cf_i64)mag);
@@ -405,7 +428,8 @@ static cf_bool js5_hex(js_scan* s, const char* start, cf_bool neg, cf_value* v) 
         return CF_TRUE;
     }
 #else
-    return js_fail(s, start, "this build has no floating point support");
+    return js_fail(s, start, CF_REASON_UNSUPPORTED,
+                   "this build has no floating point support");
 #endif
 }
 
@@ -440,7 +464,8 @@ static cf_bool js5_number(js_scan* s, cf_value* v, cf_bool* textual) {
         ++s->p;
         any = CF_TRUE;
         if (s->p < s->end && cf_is_digit((unsigned char)*s->p)) {
-            return js_fail(s, start, "malformed number: a leading zero");
+            return js_fail(s, start, CF_REASON_NUMBER,
+                           "malformed number: a leading zero");
         }
     } else {
         while (s->p < s->end && cf_is_digit((unsigned char)*s->p)) {
@@ -457,7 +482,7 @@ static cf_bool js5_number(js_scan* s, cf_value* v, cf_bool* textual) {
         }
     }
     if (!any) {
-        return js_fail(s, start,
+        return js_fail(s, start, (s->p == start) ? CF_REASON_SYNTAX : CF_REASON_NUMBER,
                        (s->p == start) ? "expected a value" : "malformed number");
     }
     if (s->p < s->end && (*s->p == 'e' || *s->p == 'E')) {
@@ -467,7 +492,8 @@ static cf_bool js5_number(js_scan* s, cf_value* v, cf_bool* textual) {
             ++s->p;
         }
         if (s->p >= s->end || !cf_is_digit((unsigned char)*s->p)) {
-            return js_fail(s, start, "malformed number: no digit in the exponent");
+            return js_fail(s, start, CF_REASON_NUMBER,
+                           "malformed number: no digit in the exponent");
         }
         while (s->p < s->end && cf_is_digit((unsigned char)*s->p)) {
             ++s->p;
@@ -488,7 +514,7 @@ static cf_bool js_between(js_scan* s, cf_bool* first, char close, const char* un
         return CF_FALSE;
     }
     if (s->p >= s->end) {
-        return js_fail(s, s->p, unclosed);
+        return js_fail(s, s->p, CF_REASON_TRUNCATED, unclosed);
     }
     if (*s->p == close) {
         ++s->p;
@@ -497,18 +523,18 @@ static cf_bool js_between(js_scan* s, cf_bool* first, char close, const char* un
     }
     if (!*first) {
         if (*s->p != ',') {
-            return js_fail(s, s->p, expected);
+            return js_fail(s, s->p, CF_REASON_SYNTAX, expected);
         }
         ++s->p;
         if (!js_space(s)) {
             return CF_FALSE;
         }
         if (s->p >= s->end) {
-            return js_fail(s, s->p, unclosed);
+            return js_fail(s, s->p, CF_REASON_TRUNCATED, unclosed);
         }
         if (*s->p == close) {
             if (!s->json5) {
-                return js_fail(s, s->p, "trailing comma");
+                return js_fail(s, s->p, CF_REASON_SYNTAX, "trailing comma");
             }
             ++s->p;
             *done = CF_TRUE;
@@ -524,10 +550,10 @@ static cf_bool js_object(js_scan* s, const char* name, size_t nlen) {
     cf_bool done  = CF_FALSE;
 
     if (++s->depth > JS_MAX_DEPTH) {
-        return js_fail(s, s->p, "nesting is too deep");
+        return js_fail(s, s->p, CF_REASON_DEPTH, "nesting is too deep");
     }
     if (!s->out->begin_table(s->out->ctx, name, nlen)) {
-        return js_fail(s, s->p, "key is not valid");
+        return js_fail(s, s->p, CF_REASON_KEY, "key is not valid");
     }
     ++s->p; /* '{' */
     for (;;) {
@@ -546,7 +572,7 @@ static cf_bool js_object(js_scan* s, const char* name, size_t nlen) {
             return CF_FALSE;
         }
         if (s->p >= s->end || *s->p != ':') {
-            return js_fail(s, s->p, "expected ':'");
+            return js_fail(s, s->p, CF_REASON_SYNTAX, "expected ':'");
         }
         ++s->p;
         {
@@ -554,7 +580,7 @@ static cf_bool js_object(js_scan* s, const char* name, size_t nlen) {
                reuses the scratch buffer for the next string. */
             char keep[CF_KEY_MAX];
             if (klen + 1 > sizeof keep) {
-                return js_fail(s, s->p, "member name is too long");
+                return js_fail(s, s->p, CF_REASON_TOO_LONG, "member name is too long");
             }
             memcpy(keep, s->scratch, klen + 1);
             if (!js_value(s, keep, klen)) {
@@ -563,7 +589,9 @@ static cf_bool js_object(js_scan* s, const char* name, size_t nlen) {
         }
     }
     --s->depth;
-    return s->out->end(s->out->ctx) ? CF_TRUE : js_fail(s, s->p, "sink refused");
+    return s->out->end(s->out->ctx)
+               ? CF_TRUE
+               : js_fail(s, s->p, CF_REASON_STORAGE, "sink refused");
 }
 
 static cf_bool js_array(js_scan* s, const char* name, size_t nlen) {
@@ -571,10 +599,10 @@ static cf_bool js_array(js_scan* s, const char* name, size_t nlen) {
     cf_bool done  = CF_FALSE;
 
     if (++s->depth > JS_MAX_DEPTH) {
-        return js_fail(s, s->p, "nesting is too deep");
+        return js_fail(s, s->p, CF_REASON_DEPTH, "nesting is too deep");
     }
     if (!s->out->begin_array(s->out->ctx, name, nlen)) {
-        return js_fail(s, s->p, "key is not valid");
+        return js_fail(s, s->p, CF_REASON_KEY, "key is not valid");
     }
     ++s->p; /* '[' */
     for (;;) {
@@ -590,7 +618,9 @@ static cf_bool js_array(js_scan* s, const char* name, size_t nlen) {
         }
     }
     --s->depth;
-    return s->out->end(s->out->ctx) ? CF_TRUE : js_fail(s, s->p, "sink refused");
+    return s->out->end(s->out->ctx)
+               ? CF_TRUE
+               : js_fail(s, s->p, CF_REASON_STORAGE, "sink refused");
 }
 
 /* A string value: measured, then decoded where it fits. */
@@ -608,7 +638,8 @@ static cf_bool js_text(js_scan* s, const char* name, size_t nlen, const cf_loc* 
         if (s->out->size <
                 offsetof(cf_doc_sink, reserve_text) + sizeof s->out->reserve_text ||
             s->out->reserve_text == NULL) {
-            return js_fail(s, start, "a long string needs sink text storage");
+            return js_fail(s, start, CF_REASON_STORAGE,
+                           "a long string needs sink text storage");
         }
         text = s->out->reserve_text(s->out->ctx, n + 1);
         if (text == NULL) {
@@ -628,7 +659,7 @@ static cf_bool js_text(js_scan* s, const char* name, size_t nlen, const cf_loc* 
        an integer has a mismatch rather than something to coerce. */
     return s->out->scalar(s->out->ctx, name, nlen, &v, CF_FALSE, at)
                ? CF_TRUE
-               : js_fail(s, start, "key is not valid");
+               : js_fail(s, start, CF_REASON_KEY, "key is not valid");
 }
 
 static cf_bool js_value(js_scan* s, const char* name, size_t nlen) {
@@ -641,7 +672,7 @@ static cf_bool js_value(js_scan* s, const char* name, size_t nlen) {
         return CF_FALSE;
     }
     if (s->p >= s->end) {
-        return js_fail(s, s->p, "expected a value");
+        return js_fail(s, s->p, CF_REASON_SYNTAX, "expected a value");
     }
     start = s->p;
     js_loc(s, start, &at);
@@ -656,7 +687,7 @@ static cf_bool js_value(js_scan* s, const char* name, size_t nlen) {
 
     case 't':
         if ((size_t)(s->end - s->p) < 4 || memcmp(s->p, "true", 4) != 0) {
-            return js_fail(s, start, "expected a value");
+            return js_fail(s, start, CF_REASON_SYNTAX, "expected a value");
         }
         s->p += 4;
         cf_value_bool(&v, CF_TRUE);
@@ -664,7 +695,7 @@ static cf_bool js_value(js_scan* s, const char* name, size_t nlen) {
 
     case 'f':
         if ((size_t)(s->end - s->p) < 5 || memcmp(s->p, "false", 5) != 0) {
-            return js_fail(s, start, "expected a value");
+            return js_fail(s, start, CF_REASON_SYNTAX, "expected a value");
         }
         s->p += 5;
         cf_value_bool(&v, CF_FALSE);
@@ -672,7 +703,7 @@ static cf_bool js_value(js_scan* s, const char* name, size_t nlen) {
 
     case 'n':
         if ((size_t)(s->end - s->p) < 4 || memcmp(s->p, "null", 4) != 0) {
-            return js_fail(s, start, "expected a value");
+            return js_fail(s, start, CF_REASON_SYNTAX, "expected a value");
         }
         s->p += 4;
         cf_value_null(&v);
@@ -689,7 +720,7 @@ static cf_bool js_value(js_scan* s, const char* name, size_t nlen) {
     }
     return s->out->scalar(s->out->ctx, name, nlen, &v, textual, &at)
                ? CF_TRUE
-               : js_fail(s, start, "key is not valid");
+               : js_fail(s, start, CF_REASON_KEY, "key is not valid");
 }
 
 static cf_bool js_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* err,
@@ -709,17 +740,20 @@ static cf_bool js_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* er
         return CF_FALSE;
     }
     if (s.p >= s.end) {
-        return cf_error_set(err, CF_E_SOURCE, NULL, s.file, "%s: the document is empty",
-                            s.file);
+        cf_error_set(err, CF_E_SOURCE, NULL, s.file, "%s: the document is empty",
+                     s.file);
+        cf_error_place(err, CF_REASON_EMPTY, 0, 0);
+        return CF_FALSE;
     }
     if (*s.p != '{') {
-        return js_fail(&s, s.p, "a configuration document must be an object");
+        return js_fail(&s, s.p, CF_REASON_TOP_LEVEL,
+                       "a configuration document must be an object");
     }
     if (!js_object(&s, NULL, 0) || !js_space(&s)) {
         return CF_FALSE;
     }
     if (s.p != s.end) {
-        return js_fail(&s, s.p, "trailing text after the document");
+        return js_fail(&s, s.p, CF_REASON_TRAILING, "trailing text after the document");
     }
     return CF_TRUE;
 }

@@ -40,6 +40,10 @@ class cf_error(Structure):
         ("key", c_char * KEY_MAX),
         ("source", c_char * SOURCE_MAX),
         ("message", c_char * MESSAGE_MAX),
+        ("where_file", c_void_p),
+        ("where_line", c_uint),
+        ("where_col", c_uint),
+        ("reason", c_int),
     ]
 
 
@@ -162,6 +166,7 @@ def _declare(name: str, restype, *argtypes, optional: bool = False) -> None:
 
 B, C, L = c_void_p, c_void_p, c_void_p  # builder, config, live: opaque
 E = POINTER(cf_error)
+_declare("cf_reason_name", c_char_p, c_int, optional=True)
 ARGV = POINTER(c_char_p)
 
 for _name, _res, _args in [

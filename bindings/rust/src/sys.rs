@@ -53,12 +53,21 @@ pub const CF_UNKNOWN_WARN: c_int = 1;
 pub const CF_UNKNOWN_REJECT: c_int = 2;
 
 #[repr(C)]
+pub struct cf_loc {
+    pub file: *const c_char,
+    pub line: u32,
+    pub col: u32,
+}
+
+#[repr(C)]
 pub struct cf_error {
     pub size: usize,
     pub code: c_int,
     pub key: [c_char; CF_KEY_MAX],
     pub source: [c_char; CF_SOURCE_MAX],
     pub message: [c_char; CF_MESSAGE_MAX],
+    pub where_: cf_loc,
+    pub reason: c_int,
 }
 
 #[repr(C)]
@@ -385,6 +394,7 @@ extern "C" {
         err: *mut cf_error,
     ) -> *mut cf_config;
     pub fn cf_code_name(code: c_int) -> *const c_char;
+    pub fn cf_reason_name(reason: c_int) -> *const c_char;
     pub fn cf_version() -> *const c_char;
     pub fn cf_build_limit(name: *const c_char) -> usize;
     pub fn cf_build_id() -> *const c_char;

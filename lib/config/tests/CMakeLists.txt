@@ -69,6 +69,7 @@ set(CF_UNIT_TESTS
     test_roundtrip
     test_bom
     test_budget
+    test_reason
     test_dirlimits
     test_trusted
     test_credentials
@@ -181,10 +182,12 @@ set_tests_properties(unit.test_reader_corpus PROPERTIES TIMEOUT 600)
 if(_CF_YAML_LIBYAML)
   target_compile_definitions(test_reader_corpus PRIVATE CF_YAML_LIBYAML=1)
   target_compile_definitions(test_places PRIVATE CF_YAML_LIBYAML=1)
+  target_compile_definitions(test_reason PRIVATE CF_YAML_LIBYAML=1)
 endif()
 if(_CF_YAML_LIBFYAML)
   target_compile_definitions(test_reader_corpus PRIVATE CF_YAML_LIBFYAML=1)
   target_compile_definitions(test_places PRIVATE CF_YAML_LIBFYAML=1)
+  target_compile_definitions(test_reason PRIVATE CF_YAML_LIBFYAML=1)
 endif()
 # And the inputs a YAML parser once hung on, which test_yaml reads: a hang
 # is this test's timeout.

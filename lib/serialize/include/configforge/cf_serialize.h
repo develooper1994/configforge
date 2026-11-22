@@ -101,12 +101,6 @@ CF_API void cf_sink_json_value(cf_sink* out, const cf_value* v);
  * Locations
  * ------------------------------------------------------------------ */
 
-typedef struct cf_loc {
-    const char*  file;
-    unsigned int line;
-    unsigned int col;
-} cf_loc;
-
 /* "app.toml:14:3", or just the file when there is no position. */
 CF_API size_t cf_loc_text(const cf_loc* at, char* buf, size_t cap);
 

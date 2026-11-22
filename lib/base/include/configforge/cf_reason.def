@@ -1,0 +1,39 @@
+/*
+ * cf_reason.def - the reasons for a document refusal, once.
+ *
+ *   CF_REASON_X(symbol, name, description)
+ *
+ * Append new reasons without renumbering existing ones. The last entry
+ * uses CF_REASON_LAST_X so the C89 enum expansion has no trailing comma.
+ */
+
+#ifndef CF_REASON_LAST_X
+#define CF_REASON_LAST_X(sym, name, desc) CF_REASON_X(sym, name, desc)
+#define CF_REASON_LAST_X_IS_DEFAULT
+#endif
+
+CF_REASON_X(CF_REASON_NONE,          "none",              "no document refusal")
+CF_REASON_X(CF_REASON_SYNTAX,        "syntax",            "the bytes break the format's grammar")
+CF_REASON_X(CF_REASON_UTF8,          "utf-8",             "bytes that are not UTF-8")
+CF_REASON_X(CF_REASON_ENCODING,      "encoding",          "invalid or inapplicable source encoding")
+CF_REASON_X(CF_REASON_TRUNCATED,     "truncated",         "the input ends inside a construct")
+CF_REASON_X(CF_REASON_TRAILING,      "trailing",          "text or bytes after the document")
+CF_REASON_X(CF_REASON_EMPTY,         "empty",             "no document where one is required")
+CF_REASON_X(CF_REASON_TOP_LEVEL,     "top-level",         "the document is not a table at its top")
+CF_REASON_X(CF_REASON_DEPTH,         "depth",             "nesting deeper than CF_MAX_DEPTH")
+CF_REASON_X(CF_REASON_TOO_LONG,      "too-long",          "a key, string, name or length over a library limit")
+CF_REASON_X(CF_REASON_BUDGET,        "budget",            "a document over the reader's size budget")
+CF_REASON_X(CF_REASON_ESCAPE,        "escape",            "a malformed, unknown or invalid escape")
+CF_REASON_X(CF_REASON_CONTROL,       "control-character", "a control character where the format forbids it")
+CF_REASON_X(CF_REASON_NUMBER,        "number",            "a malformed number, date or time")
+CF_REASON_X(CF_REASON_NUMBER_RANGE,  "number-range",      "a number the library's types cannot hold")
+CF_REASON_X(CF_REASON_DUPLICATE_KEY, "duplicate-key",     "a key, table or attribute defined twice")
+CF_REASON_X(CF_REASON_KEY,           "key",               "a name or value that cannot be a key")
+CF_REASON_X(CF_REASON_STRUCTURE,     "structure",         "a shape the key space cannot hold")
+CF_REASON_X(CF_REASON_UNSUPPORTED,   "unsupported",       "a construct this library does not read")
+CF_REASON_LAST_X(CF_REASON_STORAGE,  "storage",           "the consumer or its workspace refused")
+
+#ifdef CF_REASON_LAST_X_IS_DEFAULT
+#undef CF_REASON_LAST_X
+#undef CF_REASON_LAST_X_IS_DEFAULT
+#endif
