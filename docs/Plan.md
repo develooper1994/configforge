@@ -222,6 +222,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 56 | A-13 A page of the project's limits | medium | A-12, W5-V2, P-1 | waits: P-1b (the order) |
 | 57 | P-2 Word-at-a-time scans in C89, with the byte loop as reference | medium | P-1, A-3 | waits: 2.4.0; to be rewritten on D-101 |
 | 58 | P-3 The scans P-1 found, a word at a time, kept only where they win | medium | P-2 | waits: P-2 |
+| 59 | P-4 Allocation measured, and changed only where it wins | medium | P-1b | waits: P-1b |
 
 ## Done, their cards removed
 
