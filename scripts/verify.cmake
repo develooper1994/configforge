@@ -1020,6 +1020,26 @@ foreach(x ${EXTRA})
       --self
       "${conform}"
       .)
+    # D-109: every valid document of the suites through every ordered pair
+    # of the six writing formats (the built-in YAML parser's build only).
+    step(
+      "conformance pairs build"
+      ${build}
+      build-conformance
+      --target
+      codec_pairs
+      ${debug})
+    if(EXISTS "${ROOT}/build-conformance/tests/codec/Debug/codec_pairs.exe")
+      set(pairs "${ROOT}/build-conformance/tests/codec/Debug/codec_pairs.exe")
+    else()
+      set(pairs "${ROOT}/build-conformance/tests/codec/codec_pairs")
+    endif()
+    step(
+      "conformance pairs"
+      "${PYTHON3_EXE}"
+      scripts/check/pairs.py
+      "${pairs}"
+      "${SUITES}")
     # libyaml, where it is installed, as the yaml step decides it.
     find_path(CONFORM_YAML_H yaml.h
               PATHS /usr/include /usr/local/include /opt/homebrew/include

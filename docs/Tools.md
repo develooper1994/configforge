@@ -147,13 +147,21 @@ the way (D-94). `--as` names the input's format, as for `dump`; without
 file piped on is its bytes. `format` is `convert` into the document's own
 format.
 
-What the target cannot hold is a finding on stderr, with its path, and is
-left out; nothing is dropped quietly. `--strict` makes any finding exit 1
+What the target cannot hold is read from one table, `cf_format_holds` and
+`cf_format_limits` (D-109), and `configforge codec pairs` prints it: what
+each format holds and what each pair loses, as the section of
+`docs/Formats.md` that a test holds to it. A finding names a null, an
+array, an array of tables or of arrays, an empty array or table, a name
+that is empty or that the target would write unquoted, a path too long,
+nesting too deep, a text with a line break or a NUL byte; it is on stderr,
+with its path, and is left out; nothing is dropped quietly. `--strict` makes any finding exit 1
 and writes nothing:
 
 ```text
 $ configforge codec convert n.json --to toml
 codec convert: a: a null, which toml cannot hold; left out
+$ configforge codec convert et.json --to toml
+codec convert: e: an empty table, which toml cannot hold; left out
 ```
 
 Two notes are said once and are not findings, since they are about the

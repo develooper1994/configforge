@@ -106,3 +106,40 @@ foreach(reader ${readers})
                TIMEOUT
                ${limit})
 endforeach()
+
+# D-109: a random document through a random chain of the six writing
+# formats, each hop held to the table of what a format can hold
+# (tests/codec/chain.h). Not one of the readers: it has no reader number.
+# The seeds are written here: the bytes are ASCII digits, which modulo 8, 4
+# and 6 are the numbers (source, hops less one, one writer a hop), so a
+# digit is its own number.
+if(CF_WITH_EMIT
+   AND CF_WITH_REAL
+   AND CF_WITH_INI
+   AND CF_WITH_JSON
+   AND CF_WITH_TOML
+   AND CF_WITH_YAML
+   AND CF_WITH_CBOR)
+  set(chain_dir "${CMAKE_CURRENT_BINARY_DIR}")
+  file(WRITE "${chain_dir}/fuzz_chain_seed1"
+       "1131{\"a\": 1, \"b\": [true, null]}")
+  file(WRITE "${chain_dir}/fuzz_chain_seed2" "001[s]\nk = v\n")
+  file(WRITE "${chain_dir}/fuzz_chain_seed3" "3154[s]\nk = 1\n")
+  add_executable(fuzz_chain chain.c
+                            ${CMAKE_SOURCE_DIR}/tools/codec/convert_core.c)
+  target_include_directories(fuzz_chain PRIVATE ${CMAKE_SOURCE_DIR}/tools/codec
+                                                ${CMAKE_SOURCE_DIR}/tests/codec)
+  target_link_libraries(fuzz_chain PRIVATE configforge_serialize)
+  configforge_apply_analysis(fuzz_chain)
+  target_compile_options(fuzz_chain PRIVATE -fsanitize=fuzzer)
+  target_link_options(fuzz_chain PRIVATE -fsanitize=fuzzer)
+  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/corpus_chain")
+  add_test(
+    NAME fuzz.chain
+    COMMAND
+      fuzz_chain corpus_chain -max_total_time=${CF_FUZZ_SECONDS} -max_len=8192
+      -seed_inputs=fuzz_chain_seed1,fuzz_chain_seed2,fuzz_chain_seed3
+      -print_final_stats=1)
+  math(EXPR limit "${CF_FUZZ_SECONDS} * 3 + 60")
+  set_tests_properties(fuzz.chain PROPERTIES LABELS fuzz TIMEOUT ${limit})
+endif()

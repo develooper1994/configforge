@@ -137,6 +137,20 @@ if(EXISTS ${WORK}/s.toml)
   message(FATAL_ERROR "null_strict: s.toml was written")
 endif()
 
+# Dropping the only leaf of a named table leaves the array slot in place.
+file(WRITE ${WORK}/inline.json
+     "{\"a\": [{\"nested\": {\"inner\": {\"omitted\": null}}}, {\"keep\": 1}]}")
+cv_case(
+  inline_empty_toml
+  0
+  "a\\.0\\.nested\\.inner\\.omitted: a null, which toml cannot hold"
+  convert
+  inline.json
+  --to
+  toml)
+cv_has("${cv_out}" "a = [{  }, { keep = 1 }]")
+cv_lacks("${cv_err}" "an empty table")
+
 # What INI cannot hold: an array of tables, an empty array, a line break.
 file(WRITE ${WORK}/t.json
      "{\"k\": \"v\", \"n\": 5, \"s\": {\"list\": [{\"x\": 1}]}}")
@@ -189,6 +203,92 @@ cv_case(
   --to
   json)
 cv_has("${cv_out}" "\"a b\": 2")
+
+# What a target cannot hold is named from one table (cf_format_holds,
+# D-109): an empty table, which TOML and INI write as nothing...
+file(WRITE ${WORK}/et.json "{\"e\": {}, \"k\": 1}")
+cv_case(
+  empty_toml
+  0
+  "e: an empty table, which toml cannot hold; left out"
+  convert
+  et.json
+  --to
+  toml)
+cv_case(
+  empty_toml_strict
+  1
+  "e: an empty table, which toml cannot hold; left out"
+  convert
+  et.json
+  --to
+  toml
+  --strict)
+# ...a null YAML does write as a null, so it is not counted as text...
+file(WRITE ${WORK}/yn.json "{\"a\": null, \"b\": 1}")
+cv_case(
+  yaml_null
+  0
+  "yaml carries no types: 1 value\\(s\\)"
+  convert
+  yn.json
+  --to
+  yaml)
+cv_has("${cv_out}" "a: null")
+# ...an empty name, which TOML would otherwise call a name it would write
+# unquoted...
+file(WRITE ${WORK}/en.json "{\"\": 1, \"k\": 2}")
+cv_case(
+  empty_name
+  0
+  "an empty name, which toml cannot hold"
+  convert
+  en.json
+  --to
+  toml)
+cv_lacks("${cv_err}" "a name it would write unquoted")
+# ...and a path too long for a TOML or INI writer to write and read back.
+set(cv_n "n")
+foreach(i RANGE 7)
+  string(APPEND cv_n "${cv_n}")
+endforeach()
+function(cv_path_doc file inner)
+  string(SUBSTRING "${cv_n}" 0 ${inner} name)
+  file(WRITE ${WORK}/${file} "{\"a\": {\"${name}\": {\"k\": 1}}}")
+endfunction()
+set(cv_six "")
+foreach(i RANGE 5)
+  string(SUBSTRING "${cv_n}" 0 50 part)
+  string(APPEND cv_six "{\"${part}\": ")
+endforeach()
+file(WRITE ${WORK}/lp.json "${cv_six}{\"k\": 1}}}}}}}")
+cv_case(
+  long_path
+  0
+  "a table path too long"
+  convert
+  lp.json
+  --to
+  ini)
+cv_path_doc(p_long.json 251)
+cv_case(
+  path_long
+  0
+  "a table path too long"
+  convert
+  p_long.json
+  --to
+  ini)
+cv_path_doc(p_ok.json 250)
+cv_case(
+  path_ok
+  0
+  -
+  convert
+  p_ok.json
+  --to
+  ini)
+cv_lacks("${cv_err}" "path too long")
 
 # A section met twice is one table.
 file(WRITE ${WORK}/d.ini "[s]\na = 1\n[t]\nc = 0\n[s]\nb = 2\n")

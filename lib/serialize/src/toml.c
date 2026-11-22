@@ -242,9 +242,14 @@ static cf_bool toml_put(toml_scan* s, char* dst, size_t* n, size_t cap, const ch
 /* A line break inside a multi-line string, LF or CRLF: counted as a
    line, so what follows has its own line and column. */
 static size_t toml_newline(toml_scan* s) {
-    size_t k = (*s->p == '\n')                                            ? 1u
-               : (*s->p == '\r' && s->end - s->p >= 2 && s->p[1] == '\n') ? 2u
-                                                                          : 0u;
+    size_t k;
+
+    if (s->p == s->end) {
+        return 0;
+    }
+    k = (*s->p == '\n')                                            ? 1u
+        : (*s->p == '\r' && s->end - s->p >= 2 && s->p[1] == '\n') ? 2u
+                                                                   : 0u;
     if (k > 0) {
         s->p += k;
         ++s->line;

@@ -8,9 +8,11 @@ add_executable(
   configforge_codec
   codec.c
   convert.c
+  convert_core.c
   detect.c
   dump.c
-  formats.c)
+  formats.c
+  pairs.c)
 target_link_libraries(configforge_codec PRIVATE configforge_serialize)
 set_target_properties(
   configforge_codec

@@ -39,8 +39,20 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - A file in another encoding is read when its source names it
   (`CF_ENCODING_*`, or the name in the tools and bindings), and a UTF-16
   file by its byte-order mark, recoded to UTF-8 as it is read (D-108).
+- `cf_format_holds` and `cf_format_limits` (experimental): what each format
+  that has a writer can hold, and how deep and how long a path its reader
+  takes. `configforge codec pairs`: what each format holds and what each
+  pair of formats loses, generated into docs/Formats.md. Every document of
+  the conformance suites and the project's fixtures is tested through every
+  ordered pair of the six writing formats, and a fuzz target takes a random
+  document through a random chain (D-109).
 
 ### Changed
+
+- `configforge codec convert` names an empty table, a path too long for
+  TOML and INI, a table nested deeper than the target's reader takes, and
+  a name that is empty, where the target cannot hold them, from one table,
+  and no longer counts a YAML null as written as text (D-109).
 
 - Doctor no longer answers `check`, `gen` or `formats`, and the program
   `doctor` is gone: `configforge gen check`, `configforge gen`,

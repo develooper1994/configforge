@@ -27,6 +27,8 @@
 #include <configforge/configforge.h>
 #include <configforge/cf_serialize.h>
 
+#include "wrap.h"
+
 #include <stdio.h>
 #include <string.h>
 
@@ -321,52 +323,10 @@ int main(int argc, char** argv) {
         cf_arena_free(ar);
         return 2;
     }
-    /* JSON's grammar allows any value at the root, and the configuration
-       model, enforced by the reader, a table only; a suite's lone value
-       or array is measured as the member of one, `{"v": ...}`, which
-       keeps an invalid document invalid. JSON5's is always wrapped: a
-       comment may come before the root, and one may end the last line,
-       so the brace closing the wrapper goes on a line of its own. */
-    if (strcmp(argv[1], "json5") == 0) {
-        static char wrapped[1 << 20];
-        if (blob.n + 8 > sizeof wrapped) {
-            cf_arena_free(ar);
-            return 2;
-        }
-        memcpy(wrapped, "{\"v\":", 5);
-        memcpy(wrapped + 5, blob.p, blob.n);
-        memcpy(wrapped + 5 + blob.n, "\n}", 2);
-        cf_blob_mem(&blob, wrapped, blob.n + 7, argv[2]);
-    } else if (strcmp(argv[1], "cbor") == 0) {
-        /* A vector is mostly a lone value and a configuration a map: it
-           is measured as the value of the member "v" (A1 61 76 before
-           it), which keeps a malformed item malformed - the map's value
-           is cut short, or holds a stray break. */
-        static char wrapped[1 << 20];
-        if (blob.n + 3 > sizeof wrapped) {
-            cf_arena_free(ar);
-            return 2;
-        }
-        memcpy(wrapped, "\xA1\x61\x76", 3);
-        memcpy(wrapped + 3, blob.p, blob.n);
-        cf_blob_mem(&blob, wrapped, blob.n + 3, argv[2]);
-    } else if (strcmp(argv[1], "json") == 0) {
-        size_t k = 0;
-        while (k < blob.n && (blob.p[k] == ' ' || blob.p[k] == '\t' ||
-                              blob.p[k] == '\n' || blob.p[k] == '\r')) {
-            ++k;
-        }
-        if (k >= blob.n || blob.p[k] != '{') {
-            static char wrapped[1 << 20];
-            if (blob.n + 7 > sizeof wrapped) {
-                cf_arena_free(ar);
-                return 2;
-            }
-            memcpy(wrapped, "{\"v\":", 5);
-            memcpy(wrapped + 5, blob.p, blob.n);
-            wrapped[5 + blob.n] = '}';
-            cf_blob_mem(&blob, wrapped, blob.n + 6, argv[2]);
-        }
+    /* A suite's lone value is measured as a member of a table (wrap.h). */
+    if (!conform_wrap(argv[1], argv[2], &blob)) {
+        cf_arena_free(ar);
+        return 2;
     }
     g_sink.print = keys;
     g_sink.depth = -1;

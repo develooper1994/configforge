@@ -132,6 +132,9 @@ static void refused(const char* text, const char* needle, const char* what) {
 }
 
 static void test_refuses(void) {
+    refused("x = '''", "not closed", "a literal multi-line opening at end of input");
+    refused("x = \"\"\"", "not closed", "a basic multi-line opening at end of input");
+    refused("x = \"\"\"a\\\n", "not closed", "a continuation at end of input");
     refused("when = 1979-02-29\n", "out of range", "a February 29th of no leap year");
     refused("when = 1979-13-01\n", "out of range", "a thirteenth month");
     refused("when = 07:3\n", "HH:MM or HH:MM:SS", "a time cut short");

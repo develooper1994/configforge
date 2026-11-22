@@ -402,6 +402,41 @@ static void test_empty(void) {
 }
 
 #if CF_WITH_EMIT
+/* A document with nothing in it is written as nothing, which the reader
+   takes as an empty configuration; written as `{}` it refused its own
+   writer's file (found by the chain fuzzer, D-109). */
+static void test_empty_written(void) {
+    static union {
+        cf_i64 align;
+        char   b[CF_ENCODER_STATE_MAX];
+    } state;
+    const cf_codec* c   = cf_codec_by_name("yaml");
+    cf_error        err = CF_ERROR_INIT;
+    cf_doc_sink     sink;
+    cf_sink         out;
+    char            text[64];
+    cf_config*      back;
+
+    if (c == NULL || c->encoder == NULL) {
+        return;
+    }
+    memset(&sink, 0, sizeof sink);
+    cf_sink_init(&out, text, sizeof text);
+    check(c->encoder(&out, state.b, &sink), "the encoder starts");
+    check(sink.begin_table(sink.ctx, NULL, 0) && sink.end(sink.ctx),
+          "an empty document is written");
+    check(out.len < sizeof text, "and fits");
+    text[out.len < sizeof text ? out.len : sizeof text - 1u] = '\0';
+    back                                                     = load(text, &err);
+    check(back != NULL, "and what was written parses");
+    if (back == NULL) {
+        printf("  %s\n--- written:\n%s\n", err.message, text);
+        return;
+    }
+    check(cf_count(back) == 0, "as an empty configuration");
+    cf_config_free(back);
+}
+
 /* What YAML writes, YAML reads, and it is the same configuration. */
 static void test_round_trip(void) {
     cf_error    err = CF_ERROR_INIT;
@@ -548,6 +583,7 @@ int main(void) {
     test_empty();
     test_seeded();
 #if CF_WITH_EMIT
+    test_empty_written();
     test_round_trip();
 #endif
 #else

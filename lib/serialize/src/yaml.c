@@ -1277,9 +1277,9 @@ static cf_bool yaml_enc_end(void* ctx) {
     }
     if (e->depth > 1 && e->empty[e->depth]) {
         cf_sink_puts(e->out, e->is_seq[e->depth] ? " []\n" : " {}\n");
-    } else if (e->depth == 1 && e->empty[e->depth]) {
-        cf_sink_puts(e->out, "{}\n");
     }
+    /* An empty document is nothing at all, which the reader takes as an
+       empty configuration: its own `{}` it refused as a single value. */
     --e->depth;
     return CF_TRUE;
 }

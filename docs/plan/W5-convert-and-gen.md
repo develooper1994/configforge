@@ -1659,6 +1659,102 @@ recommendation (docs/Plan.md, "For the maintainer"). Nothing to install.
   read, done (D-109); the ways to read it, and `docs/Limits.md`
   generated from it, left (A-13)".
 * **notes**:
+  * 2026-11-20, stopped on branch `work/W5-V2` (steps 1 to 5 built; steps
+    6 to 10 not started). Done and green on the branch: `convert_core.c`
+    behind `cv_convert` (W5-V1's cases unchanged), `cf_format_holds` with
+    `test_holds`, `chain.h`, `pairs.c`, `pairs.manifest`, `codec.pairs`,
+    the converter's passes from the bits. With the passes from the bits
+    `codec.pairs` has exactly three kinds of failure left, all about
+    limits the card does not state ("stop if" 2):
+    1. **TOML's reader refuses what its writer wrote at a path of 255
+       bytes.** `path_2_ok` (a table `a` holding a table of 253 bytes,
+       a leaf): the TOML writer writes `[a.nnn...]` (its test is exact
+       in `plen + n`, 1 + 253), and TOML's reader refuses that header,
+       `the key is too long`, column 256. INI's reader accepts the same
+       path (the INI cell passes). The reader counts the dot, the
+       writer does not, so for TOML the boundary is one less than the
+       card says (a header of 254 bytes is read, 255 is not), while INI's
+       is 255. One bit and one threshold (`CF_KEY_MAX - 2`) cannot say
+       both: the card must choose between making TOML's writer refuse
+       a path of 255 (then the table's rule for LONG_PATHS is `plen + n`
+       for INI and `plen + 1 + n` for TOML, or one rule at the smaller
+       value with INI's boundary changed) and a different edge document.
+    2. **`limits`, as written, is false for TOML and INI.** A document
+       of 32 nested tables is read by the TOML reader (a header of 32
+       parts; 33 are refused, `the key has too many parts`: one level
+       more than JSON, CBOR and YAML) and by the INI reader (34 dotted
+       parts read; its depth is not counted in the reader, only in its
+       encoder's `stack[CF_MAX_DEPTH]`); `properties` has no nesting at
+       all. The card says every reader refuses 32; it needs the real
+       limit of each, or the readers made equal.
+    3. Found on the way, and settled in the code with the smaller change
+       (say if the other is wanted): the YAML reader says a second,
+       empty document table at the end of every file (`yaml_stream_end`
+       takes `depth < 0` after the top-level mapping for "nothing in the
+       file"), so `configforge codec convert x.yaml --to json` failed
+       before this card (`the document could not be recorded`). The
+       converter's tree and `chain.h` now take a second root as the same
+       table reopened; the reader is not changed. Also settled: the
+       pair check "writing is stable" compares hop 2's bytes with hop 1's,
+       not hop 0's (a YAML file written from a typed source has `1`, from
+       its own reading `"1"`); `ch_lower` also counts the values it writes
+       as text and `ch_hop_run` requires the converter's `as_text` to
+       equal it (that is the card's `types json -> yaml ... as_text`
+       failure); `pairs.c` has `--root`, `--show`, `--verbose` and takes
+       the manifest's paths from the source root itself (the card's
+       `pairs.cmake` is in no file list); `cv_finding` has a third
+       member, `name`, for the message's `('<name>')`; `ch_same` takes
+       an arena.
+  * **Answered 2026-11-20 (the organiser), and the card goes on from step 5:**
+    1. A format never writes what its own reader refuses. Limits that
+       differ by format are numbers, not bits: a second experimental
+       function `cf_format_limits(const char* format, size_t* max_path,
+       size_t* max_depth)` (beside `cf_format_holds`, same header, same
+       `CF_EXPERIMENTAL`, its own line in the symbol list) gives each
+       format's reader limits as they are: `max_path` the longest table
+       path a header or key may carry (TOML `CF_KEY_MAX - 2`, the dot
+       counted; INI `CF_KEY_MAX - 1`; the others `CF_KEY_MAX - 1`),
+       `max_depth` the deepest nesting the reader accepts (JSON, CBOR,
+       YAML 31; TOML 32; INI `(size_t)-1`, not limited by its reader;
+       `properties` 1, no nesting; each confirmed by `test_holds`, which
+       reads a document at the limit and one past it). `CF_HOLDS_LONG_PATHS`
+       is dropped (the experimental tier allows it); the converter's
+       names pass refuses, as a finding, a path longer than the target's
+       `max_path`, and its depth pass one deeper than `max_depth`.
+       `path_2_ok` and the `limits` cells are written from these numbers.
+       The readers are not changed in this card.
+    2. The YAML reader's second empty root stays settled in the
+       converter as built; the reader's own fault goes to docs/Roadmap.md
+       ("Formats", a YAML reader fix: no second document table at the end
+       of a file) in this card's docs commit.
+    3. The other judgements in the note above stand.
+  * **Done 2026-11-20 (steps 5 to 10), and what the run found.**
+    `cf_format_limits` is built as answered, with one reading: `max_path`
+    is the longest joined path of names to a table, array or value (not
+    only a table) that the format both writes and reads back, `CF_KEY_MAX
+    - 2` for INI and TOML and none for the others, because TOML's reader
+    limits the dotted key of a line relative to its header (a table of
+    path 255 holding `leaf` was refused though its header is 254), so no
+    exact number for a table exists; `test_holds` reads each depth at the
+    limit and one past, each path at the limit. Properties has `max_depth`
+    0. `CF_HOLDS_LONG_PATHS` is gone (bits 0 to 12, `CF_REFUSES_NULL` 16).
+    `limits` is in `test_holds`, not in `pairs.c`. The converter's findings
+    gain `CV_DEEP` (`a table or array nested too deep`). The oracle drops
+    an array whose every member was left out when the format has no empty
+    array (INI's `name[]` lines are its members): found by the suites,
+    `{"v": ["a\nb"]}` to INI. The suites through every pair on MSVC: 806
+    documents, 199 not read, 0 failures. The YAML encoder wrote an empty
+    document as `{}`, which its reader refuses as a single value: found by
+    `fuzz_chain`, written as nothing now, with `test_empty_written` in
+    `test_yaml.c` (seen failing only as the fuzz input: the MSVC build's
+    YAML backend reads `{}`). **Left out of `fuzz_chain`'s domain, and
+    still wrong:** a source whose names carry a control byte or a NUL, or
+    that is not UTF-8 (INI passes the bytes on until D-108's refusal is
+    built): `[s]` with the key `k 31\xb2\0[\x15\x15\x15\x15` through YAML
+    writes `"k 31: "...` with no closing quote, which YAML's reader refuses
+    (`unexpected text after the value`); the target skips such documents
+    (`fz_clean`), and the fault wants its own card (a name with a control
+    byte is no bit of the table).
 
 ---
 

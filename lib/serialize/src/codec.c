@@ -301,18 +301,40 @@ typedef struct cf_format_info {
     const char* format;
     const char* extensions;
     const char* option;
+    unsigned    holds;     /* what the format's syntax can carry (D-109) */
+    size_t      max_path;  /* its reader's longest joined table path */
+    size_t      max_depth; /* and deepest nesting below the document */
 } cf_format_info;
 
+#define NO_LIMIT ((size_t)-1)
+/* A reader allows the document and CF_MAX_DEPTH - 1 levels inside it. */
+#define DEPTH_MAX ((size_t)CF_MAX_DEPTH - 1u)
+
+/* The values of `holds`, one line a format, from the encoders and the
+   readers as they are (D-109); 0 for a format with no writer. */
+#define HOLDS_SCALARS (CF_HOLDS_INT | CF_HOLDS_REAL | CF_HOLDS_BOOL)
+#define HOLDS_ARRAYS                                                                   \
+    (CF_HOLDS_ARRAYS | CF_HOLDS_EMPTY_ARRAY | CF_HOLDS_TABLE_ARRAYS |                  \
+     CF_HOLDS_NESTED_ARRAYS)
+
 static const cf_format_info cf_formats[] = {
-    {"ini", ".ini;.cfg;.conf", "CF_WITH_INI"},
-    {"json", ".json;.jsn", "CF_WITH_JSON"},
-    {"json5", ".json5;.jsonc", "CF_WITH_JSON"},
-    {"toml", ".toml", "CF_WITH_TOML"},
-    {"xml", ".xml", "CF_WITH_XML"},
-    {"yaml", ".yaml;.yml", "CF_WITH_YAML"},
-    {"properties", ".properties", "CF_WITH_PROPERTIES"},
-    {"cbor", ".cbor", "CF_WITH_CBOR"},
-    {NULL, NULL, NULL}};
+    {"ini", ".ini;.cfg;.conf", "CF_WITH_INI", CF_HOLDS_ARRAYS | CF_HOLDS_NUL,
+     (size_t)CF_KEY_MAX - 2u, NO_LIMIT},
+    {"json", ".json;.jsn", "CF_WITH_JSON", CF_HOLDS_ALL, NO_LIMIT, DEPTH_MAX},
+    {"json5", ".json5;.jsonc", "CF_WITH_JSON", CF_HOLDS_ALL, NO_LIMIT, DEPTH_MAX},
+    {"toml", ".toml", "CF_WITH_TOML",
+     HOLDS_SCALARS | HOLDS_ARRAYS | CF_HOLDS_LINE_BREAK | CF_HOLDS_NUL |
+         CF_REFUSES_NULL,
+     (size_t)CF_KEY_MAX - 2u, (size_t)CF_MAX_DEPTH},
+    /* XML: the leaf is an element too, so one table fewer than the others */
+    {"xml", ".xml", "CF_WITH_XML", 0u, NO_LIMIT, DEPTH_MAX - 1},
+    {"yaml", ".yaml;.yml", "CF_WITH_YAML",
+     CF_HOLDS_NULL | HOLDS_ARRAYS | CF_HOLDS_EMPTY_TABLE | CF_HOLDS_ANY_NAME |
+         CF_HOLDS_LINE_BREAK | CF_HOLDS_NUL,
+     NO_LIMIT, DEPTH_MAX},
+    {"properties", ".properties", "CF_WITH_PROPERTIES", 0u, NO_LIMIT, 0u},
+    {"cbor", ".cbor", "CF_WITH_CBOR", CF_HOLDS_ALL, NO_LIMIT, DEPTH_MAX},
+    {NULL, NULL, NULL, 0u, 0u, 0u}};
 
 const char* cf_format_of_path(const char* path) {
     const char* ext = path_ext(path);
@@ -327,6 +349,40 @@ const char* cf_format_of_path(const char* path) {
         }
     }
     return NULL;
+}
+
+cf_bool cf_format_holds(const char* format, unsigned* holds) {
+    size_t i;
+
+    if (format == NULL || holds == NULL) {
+        return CF_FALSE;
+    }
+    for (i = 0; cf_formats[i].format != NULL; ++i) {
+        if (strcmp(cf_formats[i].format, format) == 0) {
+            if (cf_formats[i].holds == 0u) {
+                return CF_FALSE;
+            }
+            *holds = cf_formats[i].holds;
+            return CF_TRUE;
+        }
+    }
+    return CF_FALSE;
+}
+
+cf_bool cf_format_limits(const char* format, size_t* max_path, size_t* max_depth) {
+    size_t i;
+
+    if (format == NULL || max_path == NULL || max_depth == NULL) {
+        return CF_FALSE;
+    }
+    for (i = 0; cf_formats[i].format != NULL; ++i) {
+        if (strcmp(cf_formats[i].format, format) == 0) {
+            *max_path  = cf_formats[i].max_path;
+            *max_depth = cf_formats[i].max_depth;
+            return CF_TRUE;
+        }
+    }
+    return CF_FALSE;
 }
 
 const char* cf_format_option(const char* format) {

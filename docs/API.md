@@ -77,7 +77,7 @@ Every error carries one of these codes, stable from 1.0;
 - [`cf_platform_file.h`](#cf_platform_fileh) - 1
 - [`cf_port.h`](#cf_porth) - 12
 - [`cf_report.h`](#cf_reporth) - 6
-- [`cf_serialize.h`](#cf_serializeh) - 29
+- [`cf_serialize.h`](#cf_serializeh) - 31
 - [`cf_serialize_version.h`](#cf_serialize_versionh) - 2
 - [`cf_source.h`](#cf_sourceh) - 35
 - [`cf_text.h`](#cf_texth) - 7
@@ -3867,10 +3867,43 @@ CF_API const char* cf_format_of_path(const char* path);
 CF_API const char* cf_format_option(const char* format);
 ```
 
-Implementation: [`cf_format_of_path` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L317), [`cf_format_option` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L332).
+Implementation: [`cf_format_of_path` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L339), [`cf_format_option` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L388).
 
 Names a format this library knows about whether or not it was
 compiled in, so the error can say which option to turn on.
+
+```c
+CF_EXPERIMENTAL(1, 8) cf_bool cf_format_holds(const char* format, unsigned* holds);
+```
+
+Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
+
+Implementation: [`cf_format_holds` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L354).
+
+CF_TRUE and *holds the bits of the format called `format`, whether
+or not this build has its codec; CF_FALSE, *holds untouched, for a
+format this library has no writer for (xml, properties) and for a
+name it does not know. (1.8, experimental)
+
+```c
+CF_EXPERIMENTAL(1, 8) cf_bool cf_format_limits(const char* format, size_t* max_path, size_t* max_depth);
+```
+
+Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
+
+Implementation: [`cf_format_limits` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L372).
+
+CF_TRUE and the limits of the reader of the format called `format`:
+max_path the longest joined path of names (dots counted) to a table,
+   array or value that the format both writes and reads back, a length
+   the reader and the writer both take and not the first one refused
+   (TOML's reader limits the dotted key of a line, relative to its header,
+   so no one number is exact); (size_t)-1 when there is none; and
+max_depth the most tables and arrays one inside another below the
+   document it accepts ((size_t)-1 for none; 0 for a format with no
+   nesting). A format never writes what its own reader refuses, so the
+   converter leaves out a table past these. CF_FALSE, both untouched, for
+   a name this library does not know. (1.8, experimental)
 
 ```c
 CF_API size_t cf_codec_count(void);

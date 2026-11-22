@@ -14,6 +14,9 @@
 
 /* Every built-in codec, its extensions and its kind (formats.c). */
 int codec_formats(int argc, char** argv);
+/* What each format that has a writer can hold, and what each pair loses
+   (pairs.c, D-109). */
+int codec_pairs(int argc, char** argv);
 /* The format of a file and how it was told (detect.c). */
 int codec_detect(int argc, char** argv);
 /* Whether each file is well formed in its format (detect.c). */
