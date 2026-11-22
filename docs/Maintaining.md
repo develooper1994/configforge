@@ -258,6 +258,36 @@ default can be argued from a number.
 * **Write source through a file, not a heredoc**: heredocs lost
   backslashes again and again here (`'\0'`, `"\n"`, a line
   continuation). Check the result byte for byte.
+* **`work.py verify` does not run the format gates; CI does, in every
+  job.** Before a push: `python scripts/work/work.py format`, then
+  `cmake -P scripts/generate/apiref.cmake` last (docs/API.md cites source
+  line numbers, so any change to a C file can make `gate.apiref` fail).
+  Regenerate API.md on Linux, as CI does. When CI still names
+  gate.format.c, its `format-patch` artifact applies with `git apply`.
+* **include-what-you-use stops at the first file it refuses**, so CI
+  shows one finding per push. Run it locally over the whole library at
+  once (`-DCMAKE_C_INCLUDE_WHAT_YOU_USE=...` as ci.yml's `iwyu` job,
+  `cmake --build ... -- -k`) and fix them together.
+* **Watch CI with `gh run watch --interval 60`**: several agents with the
+  default 3 s interval spent the API's 5000 requests an hour (2026-11-22),
+  and every `gh` call failed until the hour turned.
+* **A card cut from another card's branch is landed by tree, not by
+  `git merge --squash`**: the squash re-applies the earlier card and
+  conflicts (a4ea9e1 reached main with merge markers in two documents;
+  bc7d29c made it whole). On main: `git checkout <branch> -- .`, check
+  `git diff --quiet <branch> -- . ':!docs/Plan.md'`, commit. Never pipe a
+  landing step into another command: `set -e` does not see it fail.
+* **Codex as a second worker** (when it is installed): `codex exec -s
+  workspace-write -C <worktree> -o <report.md> - < prompt` carries a
+  card that is decided in full. Its sandbox builds and tests with CMake
+  and MSVC (build directories under the system temporary directory, not
+  D:), but cannot write the git index, start Python, reach WSL or the
+  network: it leaves the card uncommitted and the organiser commits,
+  formats, regenerates API.md and pushes. Its limits are in the newest
+  `~/.codex/sessions/**/rollout-*.jsonl` (`"rate_limits"`, 5-hour and
+  weekly). Ask it to begin its report with `STATUS: DONE` or `STATUS:
+  STOPPED`; a stopped card is answered in the card itself, under
+  "Organiser's answers", and the run started again on the same tree.
 
 ## The machines
 
