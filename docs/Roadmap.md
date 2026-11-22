@@ -1018,11 +1018,7 @@ first user meets. In the order proposed:
   D-108: the components under `lib/`, the vector library, one copy of
   each text helper, composed codecs, the build-time layers, profiles,
   the C version per file, one refusal model, every text UTF-8 inside);
-<<<<<<< HEAD
-  built from 1.8.0 (A-1b, A-7 and A-8 done). As first
-=======
   built from 1.8.0 (A-1b, A-7, A-8 and A-9 done). As first
->>>>>>> origin/work/A-9
   written: Every capability the
   readers lean on - the byte scans, number parsing, memory, the
   processor's features - is reached through an internal interface with

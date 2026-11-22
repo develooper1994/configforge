@@ -7,14 +7,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
-<<<<<<< HEAD
-=======
 - `cf_codec_compose`: a codec made from a base codec, a repair of the
   bytes and a filter of the events, for a document that is almost a format
   (`{{a:1}}`, `{a:{2}}`); it is chosen by its name only, and every value
   read through it is placed under that name in `explain()` (D-103). The
   build option `CF_WITH_COMPOSE`, on by default.
->>>>>>> origin/work/A-9
 - `cf_key_valid` is in the serialization library too, where the TLV
   layouts' check used a copy of it (D-102).
 - **`configforge codec recode`**: a file converted to UTF-8 once, its bytes
@@ -62,13 +59,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Changed
 
-<<<<<<< HEAD
-=======
 - A format chosen by name that is `CF_CODEC_NAMED_ONLY` (a TLV layout's
   codec, a composed codec) no longer adds 'the content looks like ...'
   to its refusal.
 
->>>>>>> origin/work/A-9
 - The readers share one count of lines and columns, one skip of blanks,
   comments and line breaks a syntax, one trim and one form of the failure
   message `file:line:col: message` (D-102). This preserves how readers
