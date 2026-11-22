@@ -70,7 +70,7 @@ static const cf_text_esc_simple toml_simple[] = {{'"', 34}, {'\\', 92}, {'b', 8}
                                                  {'t', 9},  {'n', 10},  {'f', 12},
                                                  {'r', 13}, {'e', 27},  {0, 0}};
 static const cf_text_esc_family toml_family   = {
-    toml_simple, "x", "u", "U", 0u, CF_ESC_AT_DIGITS, CF_ESC_NL_NONE};
+    toml_simple, "x", "u", "U", 0u, CF_ESC_AT_DIGITS, CF_NL_NONE};
 
 /* What the open path is made of. A table segment is one header segment;
    an array of tables is one segment plus an element that has no name. */
@@ -116,8 +116,7 @@ typedef struct toml_scan {
     const char*        p;
     const char*        end;
     const char*        file;
-    const char*        line_start;
-    unsigned int       line;
+    cf_text_track      tr;
     const cf_doc_sink* out;
     cf_error*          err;
     int                depth;                /* nesting inside one value */
@@ -157,67 +156,47 @@ typedef struct toml_dkey {
 
 #define TOML_SEG(k, i) ((k)->buf + (k)->at[i])
 
+static const cf_text_syntax toml_syntax = {CF_BLANK_TOML, CF_NL_TOML,
+                                           CF_SYN_HASH | CF_SYN_TOML_COMMENT};
+
 static void toml_loc(const toml_scan* s, const char* at, cf_loc* out) {
     out->file = s->file;
-    out->line = s->line;
-    out->col  = (unsigned int)(at - s->line_start) + 1u;
+    out->line = s->tr.line;
+    out->col  = cf_text_track_col(&s->tr, at);
 }
 
 static cf_bool toml_fail(toml_scan* s, const char* at, const char* what) {
-    cf_loc l;
-    toml_loc(s, at, &l);
-    return cf_error_set(s->err, CF_E_SOURCE, NULL, s->file, "%s:%u:%u: %s", l.file,
-                        l.line, l.col, what);
+    unsigned int col = cf_text_track_col(&s->tr, at);
+
+    return cf_text_fail(s->err, CF_E_SOURCE, s->file, s->tr.line, col, "%s", what);
 }
 
-/* Space within a line. A carriage return is space only as the first half
-   of a CRLF line ending: TOML has no bare CR. */
 static void toml_blank(toml_scan* s) {
-    while (s->p < s->end &&
-           (*s->p == ' ' || *s->p == '\t' ||
-            (*s->p == '\r' && s->end - s->p >= 2 && s->p[1] == '\n'))) {
-        ++s->p;
-    }
+    s->p = cf_text_blanks(CF_BLANK_TOML, s->p, s->end);
 }
 
-/* A comment, to the end of its line: any character but the controls
-   TOML excludes (all below U+0020 but tab, and DEL), in UTF-8. */
-static cf_bool toml_comment(toml_scan* s) {
-    while (s->p < s->end && *s->p != '\n') {
-        unsigned char c = (unsigned char)*s->p;
-        size_t        n;
-        cf_u32        cp;
-        if (c == '\r' && s->end - s->p >= 2 && s->p[1] == '\n') {
-            ++s->p;
-            continue;
-        }
-        if ((c < 0x20u && c != '\t') || c == 0x7Fu) {
-            return toml_fail(s, s->p, "a comment may not contain a control character");
-        }
-        n = cf_text_utf8_decode(s->p, s->end, &cp);
-        if (n == 0) {
-            return toml_fail(s, s->p, "a comment is not valid UTF-8");
-        }
-        s->p += n;
+static cf_bool toml_comment_result(toml_scan* s, int result, const char* bad) {
+    if (result == CF_SKIP_CONTROL) {
+        return toml_fail(s, bad, "a comment may not contain a control character");
+    }
+    if (result == CF_SKIP_UTF8) {
+        return toml_fail(s, bad, "a comment is not valid UTF-8");
     }
     return CF_TRUE;
 }
 
-/* Space, newlines and comments: what may sit between array elements. */
+static cf_bool toml_comment(toml_scan* s) {
+    const char* bad    = NULL;
+    int         result = cf_text_comment(&toml_syntax, &s->p, s->end, &bad);
+
+    return toml_comment_result(s, result, bad);
+}
+
 static cf_bool toml_space_lines(toml_scan* s) {
-    for (;;) {
-        toml_blank(s);
-        if (s->p < s->end && *s->p == '#' && !toml_comment(s)) {
-            return CF_FALSE;
-        }
-        if (s->p < s->end && *s->p == '\n') {
-            ++s->p;
-            ++s->line;
-            s->line_start = s->p;
-            continue;
-        }
-        return CF_TRUE;
-    }
+    const char* bad    = NULL;
+    int         result = cf_text_skip(&toml_syntax, &s->tr, &s->p, s->end, &bad);
+
+    return toml_comment_result(s, result, bad);
 }
 
 /* After a value or a header: only a comment may follow on the line. */
@@ -249,18 +228,11 @@ static cf_bool toml_put(toml_scan* s, char* dst, size_t* n, size_t cap, const ch
 /* A line break inside a multi-line string, LF or CRLF: counted as a
    line, so what follows has its own line and column. */
 static size_t toml_newline(toml_scan* s) {
-    size_t k;
+    size_t k = cf_text_break(CF_NL_TOML, s->p, s->end);
 
-    if (s->p == s->end) {
-        return 0;
-    }
-    k = (*s->p == '\n')                                            ? 1u
-        : (*s->p == '\r' && s->end - s->p >= 2 && s->p[1] == '\n') ? 2u
-                                                                   : 0u;
-    if (k > 0) {
+    if (k != 0) {
         s->p += k;
-        ++s->line;
-        s->line_start = s->p;
+        cf_text_track_line(&s->tr, s->p);
     }
     return k;
 }
@@ -1256,11 +1228,10 @@ static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen, cf_u32 no
         return toml_inline_table(s, name, nlen, node);
     case '"':
     case '\'': {
-        char         local[256];
-        char*        text       = local;
-        unsigned int line       = s->line;
-        const char*  line_start = s->line_start;
-        size_t       n          = toml_string(s, NULL, (size_t)-1, CF_TRUE);
+        char          local[256];
+        char*         text = local;
+        cf_text_track tr   = s->tr;
+        size_t        n    = toml_string(s, NULL, (size_t)-1, CF_TRUE);
         if (n == (size_t)-1) {
             return CF_FALSE;
         }
@@ -1277,9 +1248,8 @@ static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen, cf_u32 no
             }
         }
         /* The second pass reads the same lines again. */
-        s->p          = start;
-        s->line       = line;
-        s->line_start = line_start;
+        s->p  = start;
+        s->tr = tr;
         if (toml_string(s, text, n + 1, CF_TRUE) == (size_t)-1) {
             return CF_FALSE;
         }
@@ -1451,11 +1421,10 @@ static cf_bool toml_header(toml_scan* s) {
 static cf_bool toml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* err) {
     toml_scan s;
 
-    s.p          = in->p + cf_blob_skip_bom(in);
-    s.end        = in->p + in->n;
-    s.file       = (in->name != NULL) ? in->name : "<toml>";
-    s.line_start = s.p;
-    s.line       = 1;
+    s.p    = in->p + cf_blob_skip_bom(in);
+    s.end  = in->p + in->n;
+    s.file = (in->name != NULL) ? in->name : "<toml>";
+    cf_text_track_init(&s.tr, s.p);
     s.out        = out;
     s.err        = err;
     s.depth      = 0;

@@ -43,8 +43,7 @@ typedef struct yp_tagdef {
 typedef struct yp {
     const char*         p;
     const char*         end;
-    const char*         ls; /* the start of the current line */
-    unsigned            line;
+    cf_text_track       tr;
     const char*         file;
     cf_error*           err;
     const cf_yp_events* ev;
@@ -88,57 +87,43 @@ static int yp_flowind(int c) {
 }
 
 static unsigned yp_col(const yp* y, const char* q) {
-    return (unsigned)(q - y->ls) + 1u;
+    return cf_text_track_col(&y->tr, q);
 }
 
 static cf_bool yp_fail_at(yp* y, const char* q, const char* what) {
-    if (q < y->ls || q > y->end) {
+    if (q < y->tr.line_start || q > y->end) {
         q = y->p;
     }
-    return cf_error_set(y->err, CF_E_SOURCE, NULL, y->file, "%s:%u:%u: %s", y->file,
-                        y->line, yp_col(y, q), what);
+    return cf_text_fail(y->err, CF_E_SOURCE, y->file, y->tr.line, yp_col(y, q), "%s",
+                        what);
 }
 
 static cf_bool yp_fail(yp* y, const char* what) {
     return yp_fail_at(y, y->p, what);
 }
 
+static const cf_text_syntax yp_syntax = {CF_BLANK_SPTAB, CF_NL_ANY,
+                                         CF_SYN_HASH | CF_SYN_HASH_BLANK};
+
 static void yp_eat_break(yp* y) {
-    if (*y->p == '\r' && y->p + 1 < y->end && y->p[1] == '\n') {
-        y->p += 2;
-    } else {
-        ++y->p;
-    }
-    ++y->line;
-    y->ls = y->p;
+    y->p += cf_text_break(CF_NL_ANY, y->p, y->end);
+    cf_text_track_line(&y->tr, y->p);
 }
 
 static void yp_blanks(yp* y) {
-    while (y->p < y->end && yp_blank(*y->p)) {
-        ++y->p;
-    }
+    y->p = cf_text_blanks(CF_BLANK_SPTAB, y->p, y->end);
 }
 
 /* A comment starts at '#' after white space or at a line's start. */
 static int yp_comment_here(const yp* y) {
-    return y->p < y->end && *y->p == '#' && (y->p == y->ls || yp_blank(y->p[-1]));
+    return y->p < y->end && *y->p == '#' &&
+           (y->p == y->tr.line_start || yp_blank(y->p[-1]));
 }
 
-/* Past white space, comments and line ends, to the next content. */
 static void yp_skip(yp* y) {
-    for (;;) {
-        yp_blanks(y);
-        if (yp_comment_here(y)) {
-            while (y->p < y->end && !yp_brk(*y->p)) {
-                ++y->p;
-            }
-        }
-        if (y->p < y->end && yp_brk(*y->p)) {
-            yp_eat_break(y);
-            continue;
-        }
-        return;
-    }
+    const char* bad;
+
+    (void)cf_text_skip(&yp_syntax, &y->tr, &y->p, y->end, &bad);
 }
 
 /* The rest of a line after a node: white space and a comment, nothing
@@ -146,11 +131,10 @@ static void yp_skip(yp* y) {
 static cf_bool yp_line_rest(yp* y) {
     yp_blanks(y);
     if (yp_comment_here(y)) {
-        while (y->p < y->end && !yp_brk(*y->p)) {
-            ++y->p;
-        }
+        const char* bad;
+        (void)cf_text_comment(&yp_syntax, &y->p, y->end, &bad);
     }
-    if (y->p < y->end && !yp_brk(*y->p)) {
+    if (cf_text_eol(CF_NL_ANY, y->p, y->end) != y->p) {
         return yp_fail(y, "unexpected text after the value");
     }
     return CF_TRUE;
@@ -158,17 +142,17 @@ static cf_bool yp_line_rest(yp* y) {
 
 /* The leading spaces of the current line: its indentation. */
 static int yp_indent(const yp* y) {
-    const char* q = y->ls;
+    const char* q = y->tr.line_start;
     while (q < y->end && *q == ' ') {
         ++q;
     }
-    return (int)(q - y->ls);
+    return (int)(q - y->tr.line_start);
 }
 
 /* Only white space between the line's start and here. */
 static int yp_fresh(const yp* y) {
     const char* q;
-    for (q = y->ls; q < y->p; ++q) {
+    for (q = y->tr.line_start; q < y->p; ++q) {
         if (!yp_blank(*q)) {
             return 0;
         }
@@ -178,7 +162,7 @@ static int yp_fresh(const yp* y) {
 
 /* "---" or "..." at a line's start, then white space or the end. */
 static int yp_marker(const yp* y) {
-    return y->p == y->ls && y->end - y->p >= 3 &&
+    return y->p == y->tr.line_start && y->end - y->p >= 3 &&
            ((y->p[0] == '-' && y->p[1] == '-' && y->p[2] == '-') ||
             (y->p[0] == '.' && y->p[1] == '.' && y->p[2] == '.')) &&
            yp_blankz(yp_c(y, 3));
@@ -210,8 +194,8 @@ static cf_bool yp_emit(yp* y, int kind, const yp_props* pr, const char* text, si
     if (pr != NULL && pr->at != NULL && kind != CF_YP_END) {
         at = pr->at;
     }
-    node.line = y->line;
-    node.col  = yp_col(y, (at >= y->ls && at <= y->end) ? at : y->p);
+    node.line = y->tr.line;
+    node.col  = yp_col(y, (at >= y->tr.line_start && at <= y->end) ? at : y->p);
     return y->ev->node(y->ev->ctx, &node);
 }
 
@@ -486,15 +470,15 @@ static cf_bool yp_plain(yp* y, int n, cf_bool key, const yp_props* pr) {
     if (!yp_plain_start(y)) {
         return yp_fail(y, "a value cannot start with this character");
     }
-    first_line = y->line;
-    first_ls   = y->ls;
+    first_line = y->tr.line;
+    first_ls   = y->tr.line_start;
     if (!yp_plain_line(y, &k)) {
         return CF_FALSE;
     }
     while (!key && y->p < y->end && yp_brk(*y->p)) {
         const char* save_p    = y->p;
-        const char* save_ls   = y->ls;
-        unsigned    save_line = y->line;
+        const char* save_ls   = y->tr.line_start;
+        unsigned    save_line = y->tr.line;
         int         empty     = 0;
 
         yp_eat_break(y);
@@ -507,15 +491,15 @@ static cf_bool yp_plain(yp* y, int n, cf_bool key, const yp_props* pr) {
             }
             break;
         }
-        y->p = y->ls;
+        y->p = y->tr.line_start;
         while (y->p < y->end && *y->p == ' ') {
             ++y->p;
         }
         if (y->p >= y->end || yp_marker(y) || (y->flow == 0 && yp_indent(y) <= n) ||
             (yp_blanks(y), y->p >= y->end) || *y->p == '#' || yp_plain_stop(y)) {
-            y->p    = save_p;
-            y->ls   = save_ls;
-            y->line = save_line;
+            y->p             = save_p;
+            y->tr.line_start = save_ls;
+            y->tr.line       = save_line;
             break;
         }
         if (empty == 0) {
@@ -535,14 +519,14 @@ static cf_bool yp_plain(yp* y, int n, cf_bool key, const yp_props* pr) {
     y->buf[k] = '\0';
     {
         /* The event is placed where the scalar began. */
-        const char* now_ls   = y->ls;
-        unsigned    now_line = y->line;
+        const char* now_ls   = y->tr.line_start;
+        unsigned    now_line = y->tr.line;
         cf_bool     ok;
-        y->ls   = first_ls;
-        y->line = first_line;
-        ok      = yp_emit(y, CF_YP_SCALAR, pr, y->buf, k, CF_TRUE, at);
-        y->ls   = now_ls;
-        y->line = now_line;
+        y->tr.line_start = first_ls;
+        y->tr.line       = first_line;
+        ok               = yp_emit(y, CF_YP_SCALAR, pr, y->buf, k, CF_TRUE, at);
+        y->tr.line_start = now_ls;
+        y->tr.line       = now_line;
         return ok;
     }
 }
@@ -568,7 +552,7 @@ static cf_bool yp_quoted_fold(yp* y, size_t* k, int n, cf_bool escaped) {
     }
     {
         const char* q = y->p;
-        y->p          = y->ls;
+        y->p          = y->tr.line_start;
         if (yp_marker(y)) {
             return yp_fail(y, "a document marker inside a quoted value");
         }
@@ -594,8 +578,8 @@ static const cf_text_esc_simple yp_simple[] = {
     {'n', 10},   {'v', 11},     {'f', 12},     {'r', 13},  {'e', 27},
     {' ', 32},   {'"', 34},     {'/', 47},     {'\\', 92}, {'N', 0x85},
     {'_', 0xA0}, {'L', 0x2028}, {'P', 0x2029}, {0, 0}};
-static const cf_text_esc_family yp_family = {yp_simple,     "x",          "u", "U", 0u,
-                                             CF_ESC_AT_BAD, CF_ESC_NL_ANY};
+static const cf_text_esc_family yp_family = {yp_simple, "x",           "u",      "U",
+                                             0u,        CF_ESC_AT_BAD, CF_NL_ANY};
 
 /* With y->p on the letter after the backslash. */
 static cf_bool yp_escape(yp* y, size_t* k, int n) {
@@ -620,12 +604,11 @@ static cf_bool yp_escape(yp* y, size_t* k, int n) {
 
 /* A single- or double-quoted scalar. */
 static cf_bool yp_quoted(yp* y, int n, cf_bool key, const yp_props* pr) {
-    const char* at         = y->p;
-    int         quote      = (unsigned char)*y->p;
-    size_t      k          = 0;
-    unsigned    first_line = y->line;
-    const char* first_ls   = y->ls;
-    cf_bool     ok;
+    const char*   at    = y->p;
+    int           quote = (unsigned char)*y->p;
+    size_t        k     = 0;
+    cf_text_track first = y->tr;
+    cf_bool       ok;
 
     ++y->p;
     for (;;) {
@@ -686,14 +669,11 @@ static cf_bool yp_quoted(yp* y, int n, cf_bool key, const yp_props* pr) {
     }
     y->buf[k] = '\0';
     {
-        const char* now_ls   = y->ls;
-        unsigned    now_line = y->line;
-        y->ls                = first_ls;
-        y->line              = first_line;
-        y->style             = quote;
-        ok                   = yp_emit(y, CF_YP_SCALAR, pr, y->buf, k, CF_FALSE, at);
-        y->ls                = now_ls;
-        y->line              = now_line;
+        cf_text_track now = y->tr;
+        y->tr             = first;
+        y->style          = quote;
+        ok                = yp_emit(y, CF_YP_SCALAR, pr, y->buf, k, CF_FALSE, at);
+        y->tr             = now;
     }
     return ok;
 }
@@ -709,10 +689,10 @@ static cf_bool yp_block_breaks(yp* y, int least, int* indent, int* breaks,
     for (;;) {
         int col;
         while (y->p < y->end && *y->p == ' ' &&
-               (*indent < 0 || (int)(y->p - y->ls) < *indent)) {
+               (*indent < 0 || (int)(y->p - y->tr.line_start) < *indent)) {
             ++y->p;
         }
-        col = (int)(y->p - y->ls);
+        col = (int)(y->p - y->tr.line_start);
         if (col > max) {
             max = col;
         }
@@ -759,8 +739,8 @@ static cf_bool yp_block_breaks(yp* y, int least, int* indent, int* breaks,
    indentation indicators, in a block indented n. */
 static cf_bool yp_block_scalar(yp* y, int n, const yp_props* pr) {
     const char* at            = y->p;
-    unsigned    at_line       = y->line;
-    const char* at_ls         = y->ls;
+    unsigned    at_line       = y->tr.line;
+    const char* at_ls         = y->tr.line_start;
     cf_bool     folded        = (*y->p == '>') ? CF_TRUE : CF_FALSE;
     int         chomp         = 0; /* -1 strip, 0 clip, +1 keep */
     int         inc           = 0;
@@ -808,13 +788,14 @@ static cf_bool yp_block_scalar(yp* y, int n, const yp_props* pr) {
             if (indent < n + 1) {
                 indent = n + 1; /* at the top, n is -1: column 0 is content */
             }
-            if (y->p < y->end && !yp_brk(*y->p) && max_empty > (int)(y->p - y->ls)) {
+            if (y->p < y->end && !yp_brk(*y->p) &&
+                max_empty > (int)(y->p - y->tr.line_start)) {
                 return yp_fail(y, "an empty line before the content is indented more "
                                   "than the content");
             }
         }
     }
-    while ((int)(y->p - y->ls) == indent && y->p < y->end && !yp_marker(y)) {
+    while ((int)(y->p - y->tr.line_start) == indent && y->p < y->end && !yp_marker(y)) {
         trailing_blank = yp_blank((unsigned char)*y->p);
         if (folded && leading_break && !leading_blank && !trailing_blank) {
             if (breaks == 0 && !yp_put(y, &k, ' ')) {
@@ -858,14 +839,14 @@ static cf_bool yp_block_scalar(yp* y, int n, const yp_props* pr) {
     }
     y->buf[k] = '\0';
     {
-        const char* now_ls   = y->ls;
-        unsigned    now_line = y->line;
-        y->ls                = at_ls;
-        y->line              = at_line;
+        const char* now_ls   = y->tr.line_start;
+        unsigned    now_line = y->tr.line;
+        y->tr.line_start     = at_ls;
+        y->tr.line           = at_line;
         y->style             = folded ? '>' : '|';
         ok                   = yp_emit(y, CF_YP_SCALAR, pr, y->buf, k, CF_FALSE, at);
-        y->ls                = now_ls;
-        y->line              = now_line;
+        y->tr.line_start     = now_ls;
+        y->tr.line           = now_line;
     }
     return ok;
 }
@@ -1021,7 +1002,7 @@ static cf_bool yp_alias(yp* y, const yp_props* pr) {
     if (nlen == 0) {
         return yp_fail_at(y, at, "an alias has a name");
     }
-    return y->ev->alias(y->ev->ctx, name, nlen, y->line, yp_col(y, at));
+    return y->ev->alias(y->ev->ctx, name, nlen, y->tr.line, yp_col(y, at));
 }
 
 /* In flow: white space, comments and line breaks, each new line more
@@ -1204,7 +1185,7 @@ static cf_bool yp_block_key(yp* y) {
 /* A tab in the current line's indentation, before the content here. */
 static int yp_tabbed(const yp* y) {
     const char* q;
-    for (q = y->ls; q < y->p; ++q) {
+    for (q = y->tr.line_start; q < y->p; ++q) {
         if (*q == '\t') {
             return 1;
         }
@@ -1224,7 +1205,7 @@ static cf_bool yp_block_map(yp* y, int m, const yp_props* pr) {
                 return CF_FALSE;
             }
             yp_skip(y);
-            if (y->p < y->end && !yp_marker(y) && (int)(y->p - y->ls) == m &&
+            if (y->p < y->end && !yp_marker(y) && (int)(y->p - y->tr.line_start) == m &&
                 *y->p == ':' && yp_blankz(yp_c(y, 1))) {
                 ++y->p;
                 if (!yp_block_node(y, m, YP_EXPLICIT)) {
@@ -1256,7 +1237,7 @@ static cf_bool yp_block_map(yp* y, int m, const yp_props* pr) {
         if (yp_indent(y) < m) {
             break;
         }
-        if (yp_indent(y) > m || (int)(y->p - y->ls) != m) {
+        if (yp_indent(y) > m || (int)(y->p - y->tr.line_start) != m) {
             return yp_fail(y, yp_tabbed(y) ? "a tab cannot indent"
                                            : "this line is indented more than its "
                                              "mapping's keys");
@@ -1280,7 +1261,7 @@ static cf_bool yp_block_seq(yp* y, int s, const yp_props* pr) {
         if (y->p >= y->end || yp_marker(y) || yp_indent(y) < s) {
             break;
         }
-        if (yp_indent(y) > s || (int)(y->p - y->ls) != s) {
+        if (yp_indent(y) > s || (int)(y->p - y->tr.line_start) != s) {
             return yp_fail(y, yp_tabbed(y) ? "a tab cannot indent"
                                            : "this line is indented more than its "
                                              "sequence's entries");
@@ -1311,7 +1292,7 @@ static int yp_none_here(const yp* y, int n, int ctx) {
 /* A tab between an indicator and a collection on its line. */
 static int yp_tab_before(const yp* y) {
     const char* q = y->p;
-    while (q > y->ls && yp_blank(q[-1])) {
+    while (q > y->tr.line_start && yp_blank(q[-1])) {
         if (q[-1] == '\t') {
             return 1;
         }
@@ -1367,7 +1348,7 @@ static cf_bool yp_block_node(yp* y, int n, int ctx) {
         if ((fresh && yp_tabbed(y)) || (!fresh && yp_tab_before(y))) {
             return yp_fail(y, "a tab cannot indent");
         }
-        return yp_block_seq(y, (int)(y->p - y->ls), &pr);
+        return yp_block_seq(y, (int)(y->p - y->tr.line_start), &pr);
     }
     if (c == '?' && yp_blankz(yp_c(y, 1)) && props_inline != 1) {
         if (props_inline == 2 || (!fresh && !compact)) {
@@ -1376,7 +1357,7 @@ static cf_bool yp_block_node(yp* y, int n, int ctx) {
         if (!fresh && yp_tab_before(y)) {
             return yp_fail(y, "a tab cannot indent");
         }
-        return yp_block_map(y, (int)(y->p - y->ls), &pr);
+        return yp_block_map(y, (int)(y->p - y->tr.line_start), &pr);
     }
     if (props_inline != 2 && yp_is_key(y)) {
         if (!fresh && !compact) {
@@ -1386,7 +1367,7 @@ static cf_bool yp_block_node(yp* y, int n, int ctx) {
         if ((fresh && yp_tabbed(y)) || (!fresh && yp_tab_before(y))) {
             return yp_fail(y, "a tab cannot indent");
         }
-        return yp_block_map(y, (int)(entry - y->ls), &pr);
+        return yp_block_map(y, (int)(entry - y->tr.line_start), &pr);
     }
     if (c == '|' || c == '>') {
         return yp_block_scalar(y, n, &pr);
@@ -1485,10 +1466,9 @@ cf_bool cf_yaml_parse(const cf_blob* in, const char* file, const cf_yp_events* e
     yp y;
 
     memset(&y, 0, sizeof y);
-    y.p    = in->p;
-    y.end  = in->p + in->n;
-    y.ls   = in->p;
-    y.line = 1;
+    y.p   = in->p;
+    y.end = in->p + in->n;
+    cf_text_track_init(&y.tr, in->p);
     y.file = file;
     y.err  = err;
     y.ev   = ev;
@@ -1501,14 +1481,14 @@ cf_bool cf_yaml_parse(const cf_blob* in, const char* file, const cf_yp_events* e
                             file);
     }
     y.p += cf_blob_skip_bom(in);
-    y.ls = y.p;
+    y.tr.line_start = y.p;
     for (;;) {
         int seen_yaml  = 0;
         int directives = 0;
 
         y.ntags = 0;
         yp_skip(&y);
-        while (y.p < y.end && y.p == y.ls && *y.p == '%') {
+        while (y.p < y.end && y.p == y.tr.line_start && *y.p == '%') {
             directives = 1;
             if (!yp_directive(&y, &seen_yaml)) {
                 return CF_FALSE;
@@ -1534,7 +1514,7 @@ cf_bool cf_yaml_parse(const cf_blob* in, const char* file, const cf_yp_events* e
         if (!yp_marker(&y) && directives) {
             return yp_fail(&y, "directives need '---' after them");
         }
-        if (!ev->document(ev->ctx, y.line, yp_col(&y, y.p))) {
+        if (!ev->document(ev->ctx, y.tr.line, yp_col(&y, y.p))) {
             return CF_FALSE;
         }
         if (yp_marker(&y)) {
@@ -1559,7 +1539,7 @@ cf_bool cf_yaml_parse(const cf_blob* in, const char* file, const cf_yp_events* e
         }
         return yp_fail(&y, "expected the end of the document");
     }
-    return ev->stream_end(ev->ctx, y.line, yp_col(&y, y.p));
+    return ev->stream_end(ev->ctx, y.tr.line, yp_col(&y, y.p));
 }
 
 #else

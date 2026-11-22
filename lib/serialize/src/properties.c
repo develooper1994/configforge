@@ -40,38 +40,26 @@
 #if CF_WITH_PROPERTIES
 
 typedef struct prop_scan {
-    const char*  p;
-    const char*  end;
-    const char*  file;
-    unsigned int line;
-    const char*  line_start;
-    cf_error*    err;
+    const char*   p;
+    const char*   end;
+    const char*   file;
+    cf_text_track tr;
+    cf_error*     err;
 } prop_scan;
 
 static cf_bool prop_fail(prop_scan* s, const char* what) {
-    return cf_error_set(s->err, CF_E_SOURCE, NULL, s->file, "%s:%u: %s", s->file,
-                        s->line, what);
+    return cf_text_fail(s->err, CF_E_SOURCE, s->file, s->tr.line, 0, "%s", what);
 }
 
 /* The end of the physical line at s->p, without moving. */
 static const char* prop_eol(const prop_scan* s) {
-    const char* q = s->p;
-    while (q < s->end && *q != '\n' && *q != '\r') {
-        ++q;
-    }
-    return q;
+    return cf_text_eol(CF_NL_ANY, s->p, s->end);
 }
 
 /* Past a line break, counting it. */
 static void prop_next_line(prop_scan* s) {
-    if (s->p < s->end && *s->p == '\r') {
-        ++s->p;
-    }
-    if (s->p < s->end && *s->p == '\n') {
-        ++s->p;
-    }
-    ++s->line;
-    s->line_start = s->p;
+    s->p += cf_text_break(CF_NL_ANY, s->p, s->end);
+    cf_text_track_line(&s->tr, s->p);
 }
 
 /* The escapes of a .properties file, as data (D-102): the letters for a
@@ -81,7 +69,7 @@ static void prop_next_line(prop_scan* s) {
 static const cf_text_esc_simple prop_simple[] = {
     {'t', 9}, {'n', 10}, {'r', 13}, {'f', 12}, {0, 0}};
 static const cf_text_esc_family prop_family = {
-    prop_simple, "", "u", "", CF_ESC_PAIRS, CF_ESC_AT_LETTER, CF_ESC_NL_NONE};
+    prop_simple, "", "u", "", CF_ESC_PAIRS, CF_ESC_AT_LETTER, CF_NL_NONE};
 
 /* Read one logical line's element - the key, or the value - unescaping
    it into out. A key stops at an unescaped '=', ':' or whitespace; a
@@ -149,9 +137,7 @@ static cf_bool prop_element(prop_scan* s, cf_bool is_key, char* out, size_t cap,
            next line's leading whitespace. */
         s->p = eol;
         prop_next_line(s);
-        while (s->p < s->end && (*s->p == ' ' || *s->p == '\t' || *s->p == '\f')) {
-            ++s->p;
-        }
+        s->p = cf_text_blanks(CF_BLANK_PROP, s->p, s->end);
         if (s->p >= s->end) {
             break;
         }
@@ -170,12 +156,11 @@ static cf_bool prop_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     char val[CF_PATH_MAX * 2];
 
     /* A byte order mark is not part of the first key. */
-    s.p          = in->p + cf_blob_skip_bom(in);
-    s.end        = in->p + in->n;
-    s.file       = (in->name != NULL) ? in->name : "<properties>";
-    s.line       = 1;
-    s.line_start = s.p;
-    s.err        = err;
+    s.p    = in->p + cf_blob_skip_bom(in);
+    s.end  = in->p + in->n;
+    s.file = (in->name != NULL) ? in->name : "<properties>";
+    cf_text_track_init(&s.tr, s.p);
+    s.err = err;
 
     if (!out->begin_table(out->ctx, NULL, 0)) {
         return cf_error_set(err, CF_E_SOURCE, NULL, s.file, "sink refused");
@@ -187,9 +172,7 @@ static cf_bool prop_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
         cf_value     v;
         cf_loc       at;
 
-        while (s.p < s.end && (*s.p == ' ' || *s.p == '\t' || *s.p == '\f')) {
-            ++s.p;
-        }
+        s.p = cf_text_blanks(CF_BLANK_PROP, s.p, s.end);
         if (s.p >= s.end) {
             break;
         }
@@ -201,36 +184,30 @@ static cf_bool prop_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
             s.p = prop_eol(&s);
             continue;
         }
-        line = s.line;
-        col  = (unsigned int)(s.p - s.line_start) + 1u;
+        line = s.tr.line;
+        col  = cf_text_track_col(&s.tr, s.p);
         if (!prop_element(&s, CF_TRUE, key, sizeof key, &klen)) {
             return CF_FALSE;
         }
         /* Whitespace, then at most one '=' or ':', then whitespace. */
-        while (s.p < s.end && (*s.p == ' ' || *s.p == '\t' || *s.p == '\f')) {
-            ++s.p;
-        }
+        s.p = cf_text_blanks(CF_BLANK_PROP, s.p, s.end);
         if (s.p < s.end && (*s.p == '=' || *s.p == ':')) {
             ++s.p;
-            while (s.p < s.end && (*s.p == ' ' || *s.p == '\t' || *s.p == '\f')) {
-                ++s.p;
-            }
+            s.p = cf_text_blanks(CF_BLANK_PROP, s.p, s.end);
         }
         if (!prop_element(&s, CF_FALSE, val, sizeof val, &vlen)) {
             return CF_FALSE;
         }
         if (klen == 0) {
-            return cf_error_set(err, CF_E_SOURCE, NULL, s.file, "%s:%u: empty key",
-                                s.file, line);
+            return cf_text_fail(err, CF_E_SOURCE, s.file, line, 0, "empty key");
         }
         at.file = s.file;
         at.line = line;
         at.col  = col;
         cf_value_text(&v, val, vlen);
         if (!out->scalar(out->ctx, key, klen, &v, CF_TRUE, &at)) {
-            return cf_error_set(err, CF_E_KEY, NULL, s.file,
-                                "%s:%u: '%S' is not a valid key", s.file, line, key,
-                                klen);
+            return cf_text_fail(err, CF_E_KEY, s.file, line, 0,
+                                "'%S' is not a valid key", key, klen);
         }
     }
     out->end(out->ctx);

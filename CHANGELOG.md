@@ -7,6 +7,8 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- `cf_key_valid` is in the serialization library too, where the TLV
+  layouts' check used a copy of it (D-102).
 - **`configforge codec recode`**: a file converted to UTF-8 once, its bytes
   recoded and nothing else changed, and `--check` to find the files that
   are not UTF-8 (D-108).
@@ -51,6 +53,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   document through a random chain (D-109).
 
 ### Changed
+
+- The readers share one count of lines and columns, one skip of blanks,
+  comments and line breaks a syntax, one trim and one form of the failure
+  message `file:line:col: message` (D-102). This preserves how readers
+  interpret inputs and the exact bytes of their refusal messages.
 
 - The readers share one escape decoder a family (JSON and JSON5, TOML,
   YAML, `.properties`), the writers one escaper, and the three `${` copies

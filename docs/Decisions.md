@@ -4598,7 +4598,12 @@ never a second copy.
 
 **Status.** Decided, 2026-11-19.
 
-Built, in part: A-3 (520baa2; the UTF-8 decoder and encoder, the hex digit and the table hash, one function each in `lib/text/`, with lanes compiled into both libraries), A-7 (the escape decoder a family, the writers' escaper and the `${` functions in `lib/text/`; the commit is on `main` once the card lands). To build: A-8.
+Built, in part: A-3 (520baa2) put the UTF-8 decoder and encoder, the hex
+digit and the table hash in `lib/text/` and compiled lanes into both
+libraries. A-7 added the escape decoder per family, the writers' escaper
+and the `${` functions in `lib/text/`. A-8 added shared blanks, comments,
+line breaks, locations and refusal messages. The number reader has no
+card yet.
 
 ## D-103 — Reading what is almost a format
 

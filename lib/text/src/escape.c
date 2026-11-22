@@ -16,24 +16,6 @@
 
 #include <string.h>
 
-/* The length of the escaped line break at p, by the family's rule, or 0. */
-static size_t esc_break(unsigned rule, const char* p, const char* end) {
-    unsigned char c = (unsigned char)*p;
-
-    if (c == '\n') {
-        return 1;
-    }
-    if (c == '\r') {
-        return (p + 1 < end && p[1] == '\n') ? 2 : 1;
-    }
-    if (rule == CF_ESC_NL_JSON5 && c == 0xE2u && end - p >= 3 &&
-        (unsigned char)p[1] == 0x80u &&
-        ((unsigned char)p[2] == 0xA8u || (unsigned char)p[2] == 0xA9u)) {
-        return 3;
-    }
-    return 0;
-}
-
 /* Whether c is one of the letters in the list. */
 static int esc_in(const char* letters, char c) {
     return c != '\0' && strchr(letters, c) != NULL;
@@ -59,14 +41,12 @@ void cf_text_esc_decode(const cf_text_esc_family* f, const char* p, const char* 
     if (p >= end) {
         return;
     }
-    c = *p;
-    if (f->breaks != CF_ESC_NL_NONE) {
-        brk = esc_break(f->breaks, p, end);
-        if (brk != 0) {
-            r->kind = CF_ESC_BREAK;
-            r->used = brk;
-            return;
-        }
+    c   = *p;
+    brk = cf_text_break(f->breaks, p, end);
+    if (brk != 0) {
+        r->kind = CF_ESC_BREAK;
+        r->used = brk;
+        return;
     }
     if ((f->flags & CF_ESC_NO_OCTAL) != 0) {
         if (c == '0' && p + 1 < end && p[1] >= '0' && p[1] <= '9') {

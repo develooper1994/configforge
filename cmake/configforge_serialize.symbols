@@ -38,6 +38,7 @@ cf_fmt
 cf_fmt_append
 cf_format_of_path
 cf_format_option
+cf_key_valid
 cf_loc_text
 cf_port_description
 cf_serialize_version

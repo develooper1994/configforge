@@ -77,7 +77,8 @@ set(CF_UNIT_TESTS
     test_kinds
     test_encoding
     test_utf8_refused
-    test_reader_corpus)
+    test_reader_corpus
+    test_places)
 
 # The directories test_starve's every-source run reads. C89 has no mkdir.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_starve.d
@@ -178,9 +179,11 @@ set_tests_properties(unit.test_reader_corpus PROPERTIES TIMEOUT 600)
 # The golden is the built-in YAML parser's: the test must know when it is not.
 if(_CF_YAML_LIBYAML)
   target_compile_definitions(test_reader_corpus PRIVATE CF_YAML_LIBYAML=1)
+  target_compile_definitions(test_places PRIVATE CF_YAML_LIBYAML=1)
 endif()
 if(_CF_YAML_LIBFYAML)
   target_compile_definitions(test_reader_corpus PRIVATE CF_YAML_LIBFYAML=1)
+  target_compile_definitions(test_places PRIVATE CF_YAML_LIBFYAML=1)
 endif()
 # And the inputs a YAML parser once hung on, which test_yaml reads: a hang
 # is this test's timeout.

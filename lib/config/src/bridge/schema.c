@@ -31,6 +31,7 @@
 
 #include "configforge/cf_define.h"
 #include "configforge/cf_serialize.h"
+#include "configforge/cf_text.h"
 #include "configforge/cf_alloc.h"
 #include "configforge/cf_build_options.h"
 #include "configforge/cf_error.h"
@@ -199,8 +200,8 @@ static cf_bool sw_fail(const swalk* w, const snode* at, const char* what,
         what             = text;
     }
     if (at != NULL && at->placed) {
-        return cf_error_set(w->err, CF_E_DEFINITION, NULL, w->file, "%s:%u:%u: %s",
-                            w->file, at->at.line, at->at.col, what);
+        return cf_text_fail(w->err, CF_E_DEFINITION, w->file, at->at.line, at->at.col,
+                            "%s", what);
     }
     return cf_error_set(w->err, CF_E_DEFINITION, NULL, w->file, "%s: %s", w->file,
                         what);

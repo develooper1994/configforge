@@ -44,48 +44,11 @@
 #if CF_WITH_INI
 
 typedef struct ini_scan {
-    const char*  p;
-    const char*  end;
-    const char*  file;
-    unsigned int line;
-    const char*  line_start;
+    const char*   p;
+    const char*   end;
+    const char*   file;
+    cf_text_track tr;
 } ini_scan;
-
-static unsigned int ini_col(const ini_scan* s, const char* at) {
-    return (unsigned int)(at - s->line_start) + 1u;
-}
-
-static void ini_newline(ini_scan* s) {
-    ++s->line;
-    s->line_start = s->p;
-}
-
-/* Space within a line. A newline is a token here, so cf_is_space is
-   not what is wanted. */
-static void ini_skip_blank(ini_scan* s) {
-    while (s->p < s->end && (*s->p == ' ' || *s->p == '\t' || *s->p == '\r')) {
-        ++s->p;
-    }
-}
-
-static void ini_skip_to_eol(ini_scan* s) {
-    while (s->p < s->end && *s->p != '\n') {
-        ++s->p;
-    }
-}
-
-static size_t ini_trim(const char* p, size_t n, const char** out) {
-    size_t a = 0;
-
-    while (a < n && (p[a] == ' ' || p[a] == '\t' || p[a] == '\r')) {
-        ++a;
-    }
-    while (n > a && (p[n - 1] == ' ' || p[n - 1] == '\t' || p[n - 1] == '\r')) {
-        --n;
-    }
-    *out = p + a;
-    return n - a;
-}
 
 /* A section header becomes a key prefix, so its segments must be legal
    keys. Rejecting here rather than at cf_ks_add means the error can
@@ -98,9 +61,8 @@ static cf_bool ini_emit_path(const cf_doc_sink* out, const char* path, size_t n,
     while (*depth > 0) {
         if (!out->end(out->ctx)) {
             /* The consumer said no; a refusal still says where. */
-            return cf_error_set(err, CF_E_SOURCE, NULL, file,
-                                "%s:%u: the document could not be recorded", file,
-                                line);
+            return cf_text_fail(err, CF_E_SOURCE, file, line, 0,
+                                "the document could not be recorded");
         }
         --*depth;
     }
@@ -110,13 +72,11 @@ static cf_bool ini_emit_path(const cf_doc_sink* out, const char* path, size_t n,
             ++j;
         }
         if (j == i) {
-            return cf_error_set(err, CF_E_KEY, NULL, file,
-                                "%s:%u: empty section segment", file, line);
+            return cf_text_fail(err, CF_E_KEY, file, line, 0, "empty section segment");
         }
         if (!out->begin_table(out->ctx, path + i, j - i)) {
-            return cf_error_set(err, CF_E_KEY, NULL, file,
-                                "%s:%u: '%S' is not a valid key segment", file, line,
-                                path + i, j - i);
+            return cf_text_fail(err, CF_E_KEY, file, line, 0,
+                                "'%S' is not a valid key segment", path + i, j - i);
         }
         ++*depth;
         i = (j < n) ? j + 1 : j;
@@ -188,7 +148,7 @@ static unsigned int ini_earlier_run(const char* from, const char* upto,
         while (eol < upto && *eol != '\n') {
             ++eol;
         }
-        kl = ini_trim(p, (size_t)(eol - p), &k);
+        kl = cf_text_trim(p, (size_t)(eol - p), &k);
         if (kl > n + 2 && memcmp(k, name, n) == 0 && k[n] == '[' && k[n + 1] == ']') {
             const char* q = k + n + 2;
             while (q < eol && (*q == ' ' || *q == '\t')) {
@@ -348,11 +308,10 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
     run.noted = CF_FALSE;
     run.n     = 0;
     ini_names_init(&names, out, in->p);
-    s.p           = in->p + cf_blob_skip_bom(in);
-    s.end         = in->p + in->n;
-    s.file        = (in->name != NULL) ? in->name : "<ini>";
-    s.line        = 1;
-    s.line_start  = s.p;
+    s.p    = in->p + cf_blob_skip_bom(in);
+    s.end  = in->p + in->n;
+    s.file = (in->name != NULL) ? in->name : "<ini>";
+    cf_text_track_init(&s.tr, s.p);
     section_start = s.p;
 
     if (!out->begin_table(out->ctx, NULL, 0)) {
@@ -360,17 +319,17 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
     }
 
     while (s.p < s.end) {
-        ini_skip_blank(&s);
+        s.p = cf_text_blanks(CF_BLANK_INI, s.p, s.end);
         if (s.p >= s.end) {
             break;
         }
         if (*s.p == '\n') {
             ++s.p;
-            ini_newline(&s);
+            cf_text_track_line(&s.tr, s.p);
             continue;
         }
         if (*s.p == '#' || *s.p == ';') {
-            ini_skip_to_eol(&s);
+            s.p = cf_text_eol(CF_NL_LF, s.p, s.end);
             continue;
         }
 
@@ -380,9 +339,8 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
             size_t      n;
 
             if (!ini_run_close(&run, out)) {
-                return cf_error_set(err, CF_E_SOURCE, NULL, s.file,
-                                    "%s:%u: the document could not be recorded", s.file,
-                                    s.line);
+                return cf_text_fail(err, CF_E_SOURCE, s.file, s.tr.line, 0,
+                                    "the document could not be recorded");
             }
             ++s.p;
             start = s.p;
@@ -390,29 +348,27 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
                 ++s.p;
             }
             if (s.p >= s.end || *s.p != ']') {
-                return cf_error_set(err, CF_E_SOURCE, NULL, s.file,
-                                    "%s:%u: section header is not closed", s.file,
-                                    s.line);
+                return cf_text_fail(err, CF_E_SOURCE, s.file, s.tr.line, 0,
+                                    "section header is not closed");
             }
-            n = ini_trim(start, (size_t)(s.p - start), &trimmed);
+            n = cf_text_trim(start, (size_t)(s.p - start), &trimmed);
             ++s.p;
             if (n == 0) {
-                return cf_error_set(err, CF_E_SOURCE, NULL, s.file,
-                                    "%s:%u: empty section header", s.file, s.line);
+                return cf_text_fail(err, CF_E_SOURCE, s.file, s.tr.line, 0,
+                                    "empty section header");
             }
-            if (!ini_emit_path(out, trimmed, n, &depth, err, s.file, s.line)) {
+            if (!ini_emit_path(out, trimmed, n, &depth, err, s.file, s.tr.line)) {
                 return CF_FALSE;
             }
-            ini_skip_blank(&s);
+            s.p = cf_text_blanks(CF_BLANK_INI, s.p, s.end);
             if (s.p < s.end && *s.p != '\n' && *s.p != '#' && *s.p != ';') {
-                return cf_error_set(err, CF_E_SOURCE, NULL, s.file,
-                                    "%s:%u: trailing text after a section "
-                                    "header",
-                                    s.file, s.line);
+                return cf_text_fail(err, CF_E_SOURCE, s.file, s.tr.line, 0,
+                                    "trailing text after a section "
+                                    "header");
             }
-            ini_skip_to_eol(&s);
+            s.p           = cf_text_eol(CF_NL_LF, s.p, s.end);
             section_start = s.p;
-            section_line  = s.line;
+            section_line  = s.tr.line;
             ++names.gen;
             names.used = 0;
             continue;
@@ -426,23 +382,23 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
             size_t       klen, vlen;
             cf_value     v;
             cf_loc       at;
-            unsigned int col = ini_col(&s, s.p);
+            unsigned int col = cf_text_track_col(&s.tr, s.p);
 
             while (s.p < s.end && *s.p != '=' && *s.p != '\n') {
                 ++s.p;
             }
             if (s.p >= s.end || *s.p != '=') {
-                return cf_error_set(err, CF_E_SOURCE, NULL, s.file,
-                                    "%s:%u: expected 'key = value'", s.file, s.line);
+                return cf_text_fail(err, CF_E_SOURCE, s.file, s.tr.line, 0,
+                                    "expected 'key = value'");
             }
-            klen = ini_trim(kstart, (size_t)(s.p - kstart), &key);
+            klen = cf_text_trim(kstart, (size_t)(s.p - kstart), &key);
             eq   = s.p;
             ++s.p;
 
             {
                 const char* vstart = s.p;
-                ini_skip_to_eol(&s);
-                vlen = ini_trim(vstart, (size_t)(s.p - vstart), &val);
+                s.p                = cf_text_eol(CF_NL_LF, s.p, s.end);
+                vlen               = cf_text_trim(vstart, (size_t)(s.p - vstart), &val);
             }
             /* Quotes are stripped when they wrap the whole value.
                They are never required, so a value that merely contains
@@ -453,12 +409,12 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
                 vlen -= 2;
             }
             if (klen == 0) {
-                return cf_error_set(err, CF_E_SOURCE, NULL, s.file, "%s:%u: empty key",
-                                    s.file, s.line);
+                return cf_text_fail(err, CF_E_SOURCE, s.file, s.tr.line, 0,
+                                    "empty key");
             }
 
             at.file = s.file;
-            at.line = s.line;
+            at.line = s.tr.line;
             at.col  = col;
             cf_value_text(&v, val, vlen);
 
@@ -473,55 +429,49 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
                         memcmp(run.name, key, nlen) != 0) {
                         unsigned int earlier;
                         if (!ini_run_close(&run, out)) {
-                            return cf_error_set(
-                                err, CF_E_SOURCE, NULL, s.file,
-                                "%s:%u: the document could not be recorded", s.file,
-                                s.line);
+                            return cf_text_fail(err, CF_E_SOURCE, s.file, s.tr.line, 0,
+                                                "the document could not be recorded");
                         }
                         earlier = names.off ? ini_earlier_run(section_start, kstart,
                                                               section_line, key, nlen)
                                             : ini_names_line(&names, key, nlen);
                         if (earlier != 0) {
-                            return cf_error_set(
-                                err, CF_E_SOURCE, NULL, s.file,
-                                "%s:%u: '%S[]' again after line %u; an array's "
+                            return cf_text_fail(
+                                err, CF_E_SOURCE, s.file, s.tr.line, 0,
+                                "'%S[]' again after line %u; an array's "
                                 "lines go together, or name each index",
-                                s.file, s.line, key, nlen, earlier);
+                                key, nlen, earlier);
                         }
                         if (nlen >= sizeof run.name ||
                             !out->begin_array(out->ctx, key, nlen)) {
-                            return cf_error_set(err, CF_E_KEY, NULL, s.file,
-                                                "%s:%u: '%S' is not a valid key",
-                                                s.file, s.line, key, nlen);
+                            return cf_text_fail(err, CF_E_KEY, s.file, s.tr.line, 0,
+                                                "'%S' is not a valid key", key, nlen);
                         }
                         memcpy(run.name, key, nlen);
                         run.n     = nlen;
                         run.open  = CF_TRUE;
                         run.noted = CF_FALSE;
-                        run.line  = s.line;
+                        run.line  = s.tr.line;
                     }
                     if (!run.noted && ini_names_seen(key + klen, eq)) {
-                        ini_names_add(&names, key, nlen, s.line);
+                        ini_names_add(&names, key, nlen, s.tr.line);
                         run.noted = CF_TRUE;
                     }
                     if (!out->scalar(out->ctx, NULL, 0, &v, CF_TRUE, &at)) {
-                        return cf_error_set(err, CF_E_KEY, NULL, s.file,
-                                            "%s:%u: '%S' could not be recorded", s.file,
-                                            s.line, key, klen);
+                        return cf_text_fail(err, CF_E_KEY, s.file, s.tr.line, 0,
+                                            "'%S' could not be recorded", key, klen);
                     }
                     continue;
                 }
                 if (!ini_run_close(&run, out)) {
-                    return cf_error_set(err, CF_E_SOURCE, NULL, s.file,
-                                        "%s:%u: the document could not be recorded",
-                                        s.file, s.line);
+                    return cf_text_fail(err, CF_E_SOURCE, s.file, s.tr.line, 0,
+                                        "the document could not be recorded");
                 }
                 if (nlen > 0) {
                     /* name[i]: the flat name.i every format's element is */
                     if (klen + 1 > sizeof flat) {
-                        return cf_error_set(err, CF_E_KEY, NULL, s.file,
-                                            "%s:%u: '%S' is too long", s.file, s.line,
-                                            key, klen);
+                        return cf_text_fail(err, CF_E_KEY, s.file, s.tr.line, 0,
+                                            "'%S' is too long", key, klen);
                     }
                     memcpy(flat, key, nlen);
                     flat[nlen] = '.';
@@ -530,9 +480,8 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
                     klen = klen - 1;
                 }
                 if (!out->scalar(out->ctx, key, klen, &v, CF_TRUE, &at)) {
-                    return cf_error_set(err, CF_E_KEY, NULL, s.file,
-                                        "%s:%u: '%S' is not a valid key", s.file,
-                                        s.line, key, klen);
+                    return cf_text_fail(err, CF_E_KEY, s.file, s.tr.line, 0,
+                                        "'%S' is not a valid key", key, klen);
                 }
             }
         }

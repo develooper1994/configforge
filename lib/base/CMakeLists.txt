@@ -13,9 +13,11 @@ cf_component(
   numeric
   SOURCES
   src/error.c
+  src/key.c
   src/alloc.c
   src/value.c
   SERIALIZE_SOURCES
   src/error.c
+  src/key.c
   src/alloc.c
   src/value.c)

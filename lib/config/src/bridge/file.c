@@ -182,9 +182,9 @@ static cf_bool file_refuse_at(cf_error* err, const char* path, unsigned enc,
     if (enc != (unsigned)CF_ENCODING_UTF16LE && enc != (unsigned)CF_ENCODING_UTF16BE) {
         cf_text_place(p, bad, 1, &line, &col);
         file_hex((unsigned)(unsigned char)p[bad], 2, hex);
-        return cf_error_set(err, CF_E_SOURCE, NULL, path,
-                            "%s:%u:%u: byte 0x%s has no character in %s", path,
-                            (unsigned)line, (unsigned)col, hex, cf_encoding_name(enc));
+        return cf_text_fail(err, CF_E_SOURCE, path, (unsigned int)line,
+                            (unsigned int)col, "byte 0x%s has no character in %s", hex,
+                            cf_encoding_name(enc));
     }
     if (n - bad < 2) {
         return cf_error_set(err, CF_E_SOURCE, NULL, path,
@@ -199,9 +199,8 @@ static cf_bool file_refuse_at(cf_error* err, const char* path, unsigned enc,
                (unsigned)(unsigned char)p[bad];
     }
     file_hex(unit, 4, hex);
-    return cf_error_set(err, CF_E_SOURCE, NULL, path,
-                        "%s:%u:%u: an unpaired UTF-16 surrogate 0x%s", path,
-                        (unsigned)line, (unsigned)col, hex);
+    return cf_text_fail(err, CF_E_SOURCE, path, (unsigned int)line, (unsigned int)col,
+                        "an unpaired UTF-16 surrogate 0x%s", hex);
 }
 
 /* The encoding the first bytes declare: UTF-16's byte-order mark, or

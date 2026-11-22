@@ -6,6 +6,7 @@
 #include "configforge/cf_define.h"
 #include "configforge/cf_encoding.h"
 #include "configforge/cf_serialize.h"
+#include "configforge/cf_text.h"
 #include "configforge/cf_alloc.h"
 #include "configforge/cf_build_options.h"
 #include "configforge/cf_error.h"
@@ -653,18 +654,6 @@ cf_bool cf_cli_expand(int argc, char* const* argv, cf_arena* arena, int* out_arg
 
 #if CF_WITH_DOTENV
 
-static size_t dotenv_trim(const char* p, size_t n, const char** out) {
-    size_t a = 0;
-    while (a < n && (p[a] == ' ' || p[a] == '\t' || p[a] == '\r')) {
-        ++a;
-    }
-    while (n > a && (p[n - 1] == ' ' || p[n - 1] == '\t' || p[n - 1] == '\r')) {
-        --n;
-    }
-    *out = p + a;
-    return n - a;
-}
-
 cf_bool cf_lex_dotenv(const char* text, size_t n, const char* origin,
                       const cf_keymap* map, const cf_entry_sink* out, cf_error* err) {
     char         key[CF_KEY_MAX];
@@ -694,7 +683,7 @@ cf_bool cf_lex_dotenv(const char* text, size_t n, const char* origin,
         while (i < n && text[i] != '\n') {
             ++i;
         }
-        len = dotenv_trim(text + start, i - start, &raw);
+        len = cf_text_trim(text + start, i - start, &raw);
         if (i < n) {
             ++i;
         }
@@ -706,16 +695,16 @@ cf_bool cf_lex_dotenv(const char* text, size_t n, const char* origin,
            Accepting and ignoring the word costs three lines and saves
            every user who copied their file from somewhere. */
         if (len > 7 && memcmp(raw, "export ", 7) == 0) {
-            len = dotenv_trim(raw + 7, len - 7, &raw);
+            len = cf_text_trim(raw + 7, len - 7, &raw);
         }
 
         eq = (const char*)memchr(raw, '=', len);
         if (eq == NULL) {
-            return cf_error_set(err, CF_E_SOURCE, NULL, origin,
-                                "%s:%u: expected NAME=value", origin, line);
+            return cf_text_fail(err, CF_E_SOURCE, origin, line, 0,
+                                "expected NAME=value");
         }
-        namelen = dotenv_trim(raw, (size_t)(eq - raw), &name);
-        vallen  = dotenv_trim(eq + 1, len - (size_t)(eq - raw) - 1, &val);
+        namelen = cf_text_trim(raw, (size_t)(eq - raw), &name);
+        vallen  = cf_text_trim(eq + 1, len - (size_t)(eq - raw) - 1, &val);
 
         if (vallen >= 2 && ((val[0] == '"' && val[vallen - 1] == '"') ||
                             (val[0] == '\'' && val[vallen - 1] == '\''))) {
@@ -727,9 +716,8 @@ cf_bool cf_lex_dotenv(const char* text, size_t n, const char* origin,
             /* Unlike the environment, this file belongs to this program,
                so a name that derives no key is a mistake rather than
                somebody else's variable. */
-            return cf_error_set(err, CF_E_KEY, NULL, origin,
-                                "%s:%u: '%S' is not a usable name", origin, line, name,
-                                namelen);
+            return cf_text_fail(err, CF_E_KEY, origin, line, 0,
+                                "'%S' is not a usable name", name, namelen);
         }
         cf_fmt(at, sizeof at, "%s:%u", origin, line);
         if (!out->text(out->ctx, key, klen, val, vallen, at)) {

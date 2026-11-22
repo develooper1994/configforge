@@ -13,7 +13,6 @@
 #include "configforge/cf_build_options.h"
 #include "configforge/cf_edit.h"
 #include "configforge/cf_error.h"
-#include "configforge/cf_keyspace.h"
 #include "configforge/cf_port.h"
 #include "configforge/cf_value.h"
 

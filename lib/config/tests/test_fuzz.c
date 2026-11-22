@@ -542,6 +542,19 @@ static const char* const g_esc_yaml       = "a: \"\\x41\xC3\xA9\\N\\L\"\n";
 static const char* const g_esc_properties = "a=\xF0\x9F\x98\x80\\t\n";
 static const char* const g_esc_tag        = "a: !<t:%41> 1\n";
 
+/* Each syntax's line breaks and comment markers (A-8). */
+static const char g_space_json[]  = " \t{\r\n \"a\":\n1\r }\n";
+static const char g_space_json5[] = "/* first\r\nsecond\rthird\nfourth\xE2\x80\xA8"
+                                    "fifth\xE2\x80\xA9"
+                                    " */ // last\xE2\x80\xA8"
+                                    "{a:\v\f\xC2\xA0\xEF\xBB\xBF"
+                                    "1}\n";
+static const char g_space_ini[]   = "# first\r\n; second\n a\r = 1\n";
+static const char g_space_toml[]  = "# first\r\na = [1,\n # second\r\n 2]\n";
+static const char g_space_yaml[]  = "# first\r\n# second\ra: [1,\n # third\r\n 2]\r";
+static const char g_space_properties[] = "# first\r\n! second\ra=1\n\fb=2\r\n";
+static const char g_space_env[]        = "# first\r\nA=1\n# second\n";
+
 /* CBOR: one indefinite-length map holding a member of each kind the
    reader takes - nested definite maps and arrays, a text in chunks, an
    indefinite array, a tag, every width of float - so that every branch
@@ -794,6 +807,14 @@ int main(void) {
     write_seed("seed_yaml_esc", g_esc_yaml, strlen(g_esc_yaml));
     write_seed("seed_properties_esc", g_esc_properties, strlen(g_esc_properties));
     write_seed("seed_yaml_tag", g_esc_tag, strlen(g_esc_tag));
+    write_seed("seed_json_space", g_space_json, sizeof g_space_json - 1);
+    write_seed("seed_json5_space", g_space_json5, sizeof g_space_json5 - 1);
+    write_seed("seed_ini_space", g_space_ini, sizeof g_space_ini - 1);
+    write_seed("seed_toml_space", g_space_toml, sizeof g_space_toml - 1);
+    write_seed("seed_yaml_space", g_space_yaml, sizeof g_space_yaml - 1);
+    write_seed("seed_properties_space", g_space_properties,
+               sizeof g_space_properties - 1);
+    write_seed("seed_dotenv_space", g_space_env, sizeof g_space_env - 1);
     write_seed("seed_cbor", (const char*)g_cbor, sizeof g_cbor);
     write_seed("seed_tlv", (const char*)g_tlv, sizeof g_tlv);
     write_seed("seed_ber", (const char*)g_ber, sizeof g_ber);
@@ -849,6 +870,13 @@ int main(int argc, char** argv) {
     fuzz_text("yaml", g_esc_yaml, 0);
     fuzz_text("properties", g_esc_properties, 0);
     fuzz_text("yaml", g_esc_tag, 0);
+    fuzz_text("json", g_space_json, 0);
+    fuzz_text("json5", g_space_json5, 0);
+    fuzz_text("ini", g_space_ini, 1);
+    fuzz_text("toml", g_space_toml, 0);
+    fuzz_text("yaml", g_space_yaml, 0);
+    fuzz_text("properties", g_space_properties, 0);
+    fuzz_text(NULL, g_space_env, -1);
     fuzz_bytes(cf_codec_by_name("cbor"), g_cbor, sizeof g_cbor);
     fuzz_bytes(fz_tlv(), g_tlv, sizeof g_tlv);
     fuzz_bytes(fz_ber(), g_ber, sizeof g_ber);

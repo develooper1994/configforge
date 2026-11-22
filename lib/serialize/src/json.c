@@ -42,8 +42,7 @@ typedef struct js_scan {
     const char*        p;
     const char*        end;
     const char*        file;
-    const char*        line_start;
-    unsigned int       line;
+    cf_text_track      tr;
     const cf_doc_sink* out;
     cf_error*          err;
     char               scratch[CF_KEY_MAX];
@@ -53,111 +52,28 @@ typedef struct js_scan {
 
 #define JS_MAX_DEPTH CF_MAX_DEPTH
 
-/* A line ends where s->p now is. */
-static void js_line(js_scan* s) {
-    ++s->line;
-    s->line_start = s->p;
-}
+static const cf_text_syntax js_syntax  = {CF_BLANK_INI, CF_NL_LF, 0};
+static const cf_text_syntax js5_syntax = {CF_BLANK_SPTAB, CF_NL_JSON5, CF_SYN_SLASH};
 
 static void js_loc(const js_scan* s, const char* at, cf_loc* out) {
     out->file = s->file;
-    out->line = s->line;
-    out->col  = (unsigned int)(at - s->line_start) + 1u;
+    out->line = s->tr.line;
+    out->col  = cf_text_track_col(&s->tr, at);
 }
 
 static cf_bool js_fail(js_scan* s, const char* at, const char* what) {
-    cf_loc l;
-    js_loc(s, at, &l);
-    return cf_error_set(s->err, CF_E_SOURCE, NULL, s->file, "%s:%u:%u: %s", l.file,
-                        l.line, l.col, what);
+    unsigned int col = cf_text_track_col(&s->tr, at);
+
+    return cf_text_fail(s->err, CF_E_SOURCE, s->file, s->tr.line, col, "%s", what);
 }
 
-/* JSON5's line separators beyond the line feed and carriage return. */
-static cf_bool js5_is_ls(cf_u32 cp) {
-    return (cp == 0x2028u || cp == 0x2029u) ? CF_TRUE : CF_FALSE;
-}
-
-/* JSON5's white space past ASCII: ECMAScript 5.1's WhiteSpace and
-   LineTerminator, which is Unicode's Zs category, the no-break space
-   and the byte order mark. */
-static cf_bool js5_is_space(cf_u32 cp) {
-    return (cp == 0x0Bu || cp == 0x0Cu || cp == 0xA0u || cp == 0xFEFFu ||
-            cp == 0x1680u || (cp >= 0x2000u && cp <= 0x200Au) || js5_is_ls(cp) ||
-            cp == 0x202Fu || cp == 0x205Fu || cp == 0x3000u)
-               ? CF_TRUE
-               : CF_FALSE;
-}
-
-/* Past one character of a block comment, counting its lines. */
-static void js5_comment_step(js_scan* s) {
-    cf_u32 cp = 0;
-    size_t k  = cf_text_utf8_decode(s->p, s->end, &cp);
-
-    if (*s->p == '\r') {
-        ++s->p;
-        if (s->p >= s->end || *s->p != '\n') {
-            js_line(s);
-        }
-        return;
-    }
-    s->p += (k == 0) ? 1 : k;
-    if (cp == '\n' || (k == 3 && js5_is_ls(cp))) {
-        js_line(s);
-    }
-}
-
-/* White space, and in JSON5 comments; false where a comment is not
-   closed. A lone carriage return ends a line in JSON5 only: JSON has
-   no line terminator but the line feed for a place to count. */
+/* White space and, in JSON5, comments. */
 static cf_bool js_space(js_scan* s) {
-    while (s->p < s->end) {
-        char   c = *s->p;
-        cf_u32 cp;
-        size_t k;
+    const char*           bad;
+    const cf_text_syntax* sy = s->json5 ? &js5_syntax : &js_syntax;
 
-        if (c == '\n') {
-            ++s->p;
-            js_line(s);
-        } else if (c == '\r') {
-            ++s->p;
-            if (s->json5 && (s->p >= s->end || *s->p != '\n')) {
-                js_line(s);
-            }
-        } else if (c == ' ' || c == '\t') {
-            ++s->p;
-        } else if (!s->json5) {
-            break;
-        } else if (c == '/' && s->end - s->p >= 2 && s->p[1] == '/') {
-            s->p += 2;
-            while (s->p < s->end && *s->p != '\n' && *s->p != '\r') {
-                k = cf_text_utf8_decode(s->p, s->end, &cp);
-                if (k == 3 && js5_is_ls(cp)) {
-                    break;
-                }
-                s->p += (k == 0) ? 1 : k;
-            }
-        } else if (c == '/' && s->end - s->p >= 2 && s->p[1] == '*') {
-            s->p += 2;
-            for (;;) {
-                if (s->p >= s->end) {
-                    return js_fail(s, s->p, "a comment is not closed");
-                }
-                if (*s->p == '*' && s->end - s->p >= 2 && s->p[1] == '/') {
-                    s->p += 2;
-                    break;
-                }
-                js5_comment_step(s);
-            }
-        } else {
-            k = cf_text_utf8_decode(s->p, s->end, &cp);
-            if (k == 0 || !js5_is_space(cp)) {
-                break;
-            }
-            s->p += k;
-            if (js5_is_ls(cp)) {
-                js_line(s);
-            }
-        }
+    if (cf_text_skip(sy, &s->tr, &s->p, s->end, &bad) == CF_SKIP_UNCLOSED) {
+        return js_fail(s, bad, "a comment is not closed");
     }
     return CF_TRUE;
 }
@@ -209,10 +125,10 @@ static const cf_text_esc_simple js5_simple[] = {
     {'"', 34}, {'\\', 92}, {'/', 47}, {'b', 8}, {'f', 12}, {'n', 10},
     {'r', 13}, {'t', 9},   {'v', 11}, {'0', 0}, {0, 0}};
 static const cf_text_esc_family js_family = {
-    js_simple, "", "u", "", CF_ESC_PAIRS, CF_ESC_AT_LETTER, CF_ESC_NL_NONE};
+    js_simple, "", "u", "", CF_ESC_PAIRS, CF_ESC_AT_LETTER, CF_NL_NONE};
 static const cf_text_esc_family js5_family = {
-    js5_simple,     "x", "u", "", CF_ESC_PAIRS | CF_ESC_NO_OCTAL, CF_ESC_AT_LETTER,
-    CF_ESC_NL_JSON5};
+    js5_simple,       "x",        "u", "", CF_ESC_PAIRS | CF_ESC_NO_OCTAL,
+    CF_ESC_AT_LETTER, CF_NL_JSON5};
 
 /* With s->p on the letter after the backslash. */
 static cf_bool js_escape(js_scan* s, char* dst, size_t cap, size_t* n) {
@@ -226,7 +142,7 @@ static cf_bool js_escape(js_scan* s, char* dst, size_t cap, size_t* n) {
         return js_put_cp(s, dst, cap, n, r.cp);
     case CF_ESC_BREAK:
         s->p += r.used;
-        js_line(s);
+        cf_text_track_line(&s->tr, s->p);
         return CF_TRUE;
     case CF_ESC_E_DIGITS:
         /* Split after the backslash, as toml.c explains. */
@@ -322,7 +238,7 @@ static cf_bool js5_is_id(cf_u32 cp, cf_bool first) {
     if ((cp >= '0' && cp <= '9') || cp == 0x200Cu || cp == 0x200Du) {
         return first ? CF_FALSE : CF_TRUE;
     }
-    return (cp >= 0x80u && !js5_is_space(cp)) ? CF_TRUE : CF_FALSE;
+    return (cp >= 0x80u && !cf_text_is_ecma_space(cp)) ? CF_TRUE : CF_FALSE;
 }
 
 /* An unquoted member name, decoded as js_string decodes a string. */
@@ -701,9 +617,9 @@ static cf_bool js_text(js_scan* s, const char* name, size_t nlen, const cf_loc* 
         }
     }
     /* Measuring counted the lines a continuation holds: count again. */
-    s->p          = start;
-    s->line       = at->line;
-    s->line_start = start - (at->col - 1u);
+    s->p             = start;
+    s->tr.line       = at->line;
+    s->tr.line_start = start - (at->col - 1u);
     if (js_string(s, text, n + 1) == (size_t)-1) {
         return CF_FALSE;
     }
@@ -780,15 +696,14 @@ static cf_bool js_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* er
                          cf_bool json5) {
     js_scan s;
 
-    s.p          = in->p + cf_blob_skip_bom(in);
-    s.end        = in->p + in->n;
-    s.file       = (in->name != NULL) ? in->name : json5 ? "<json5>" : "<json>";
-    s.line_start = s.p;
-    s.line       = 1;
-    s.out        = out;
-    s.err        = err;
-    s.depth      = 0;
-    s.json5      = json5;
+    s.p    = in->p + cf_blob_skip_bom(in);
+    s.end  = in->p + in->n;
+    s.file = (in->name != NULL) ? in->name : json5 ? "<json5>" : "<json>";
+    cf_text_track_init(&s.tr, s.p);
+    s.out   = out;
+    s.err   = err;
+    s.depth = 0;
+    s.json5 = json5;
 
     if (!js_space(&s)) {
         return CF_FALSE;

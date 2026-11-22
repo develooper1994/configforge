@@ -45,16 +45,16 @@ static const cf_text_esc_simple t_prop_simple[] = {
     {'t', 9}, {'n', 10}, {'r', 13}, {'f', 12}, {0, 0}};
 
 static const cf_text_esc_family t_js = {
-    t_js_simple, "", "u", "", CF_ESC_PAIRS, CF_ESC_AT_LETTER, CF_ESC_NL_NONE};
+    t_js_simple, "", "u", "", CF_ESC_PAIRS, CF_ESC_AT_LETTER, CF_NL_NONE};
 static const cf_text_esc_family t_js5 = {
-    t_js5_simple,   "x", "u", "", CF_ESC_PAIRS | CF_ESC_NO_OCTAL, CF_ESC_AT_LETTER,
-    CF_ESC_NL_JSON5};
-static const cf_text_esc_family t_toml = {t_toml_simple,    "x",           "u", "U", 0,
-                                          CF_ESC_AT_DIGITS, CF_ESC_NL_NONE};
-static const cf_text_esc_family t_yp   = {t_yp_simple, "x",           "u",          "U",
-                                          0,           CF_ESC_AT_BAD, CF_ESC_NL_ANY};
+    t_js5_simple,     "x",        "u", "", CF_ESC_PAIRS | CF_ESC_NO_OCTAL,
+    CF_ESC_AT_LETTER, CF_NL_JSON5};
+static const cf_text_esc_family t_toml = {t_toml_simple,    "x",       "u", "U", 0,
+                                          CF_ESC_AT_DIGITS, CF_NL_NONE};
+static const cf_text_esc_family t_yp   = {t_yp_simple, "x",           "u",      "U",
+                                          0,           CF_ESC_AT_BAD, CF_NL_ANY};
 static const cf_text_esc_family t_prop = {
-    t_prop_simple, "", "u", "", CF_ESC_PAIRS, CF_ESC_AT_LETTER, CF_ESC_NL_NONE};
+    t_prop_simple, "", "u", "", CF_ESC_PAIRS, CF_ESC_AT_LETTER, CF_NL_NONE};
 
 /* ------------------------------------------------------------------ *
  * Part one: the decoder

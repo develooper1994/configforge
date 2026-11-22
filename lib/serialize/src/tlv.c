@@ -127,48 +127,12 @@ static cf_bool tlv_fits(const cf_tlv_layout* l, cf_u32 tag) {
     return ((tag >> (8u * l->tag_width)) == 0) ? CF_TRUE : CF_FALSE;
 }
 
-/* The key space's rule (cf_key_valid), which this layer may not reach: a
-   canonical key is frozen for 1.x, and test_tlv holds the two to each
-   other. */
-static cf_bool tlv_key_valid(const char* key, size_t len) {
-    size_t i;
-    int    seg = 0;
-
-    /* CF_KEY_MAX counts the terminator, as every buffer that holds a key
-       does: the longest key is one byte shorter. */
-    if (key == NULL || len == 0 || len >= CF_KEY_MAX) {
-        return CF_FALSE;
-    }
-    if (key[0] == '.' || key[len - 1] == '.') {
-        return CF_FALSE;
-    }
-    for (i = 0; i < len; ++i) {
-        char c = key[i];
-        if (c == '.') {
-            if (seg == 0) {
-                return CF_FALSE; /* empty segment */
-            }
-            seg = 0;
-            continue;
-        }
-        /* Canonical form is lowercase ASCII. Uppercase is rejected
-           rather than folded, because folding is where two distinct
-           keys quietly become one. */
-        if (!cf_is_lower((unsigned char)c) && !cf_is_digit((unsigned char)c) &&
-            c != '_' && c != '-') {
-            return CF_FALSE;
-        }
-        ++seg;
-    }
-    return (seg > 0) ? CF_TRUE : CF_FALSE;
-}
-
 /* A format's name: one segment of a key. */
 static cf_bool tlv_name_ok(const char* name) {
     if (name == NULL || strchr(name, '.') != NULL) {
         return CF_FALSE;
     }
-    return tlv_key_valid(name, strlen(name));
+    return cf_key_valid(name, strlen(name));
 }
 
 /* Whether the width suits the type. */
@@ -268,7 +232,7 @@ static cf_bool tlv_check_tag(const cf_tlv_layout* l, const cf_tlv_tag* t,
             return cf_error_set(err, CF_E_DEFINITION, NULL, l->name,
                                 "layout '%s': tag 0x%s has no key", tlv_name(l), hex);
         }
-    } else if (!tlv_key_valid(t->key, strlen(t->key))) {
+    } else if (!cf_key_valid(t->key, strlen(t->key))) {
         return cf_error_set(err, CF_E_DEFINITION, NULL, l->name,
                             "layout '%s': tag 0x%s: '%s' is not a valid key",
                             tlv_name(l), hex, t->key);

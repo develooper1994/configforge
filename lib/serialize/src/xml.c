@@ -123,16 +123,18 @@ typedef struct xml_scan {
 } xml_scan;
 
 /* Record the first failure and stop the parser. */
-static void xml_fail(xml_scan* s, const char* what, const char* name) {
+static void xml_fail(xml_scan* s, const char* message, const char* name) {
+    char what[CF_MESSAGE_MAX];
+
     if (s->failed) {
         return;
     }
     s->failed = CF_TRUE;
-    cf_error_set(s->err, CF_E_SOURCE, NULL, s->file, "%s:%u:%u: %s%s%s%s", s->file,
+    cf_fmt(what, sizeof what, "%s%s%s%s", message, (name != NULL) ? " (" : "",
+           (name != NULL) ? name : "", (name != NULL) ? ")" : "");
+    cf_text_fail(s->err, CF_E_SOURCE, s->file,
                  (unsigned int)XML_GetCurrentLineNumber(s->parser),
-                 (unsigned int)XML_GetCurrentColumnNumber(s->parser) + 1u, what,
-                 (name != NULL) ? " (" : "", (name != NULL) ? name : "",
-                 (name != NULL) ? ")" : "");
+                 (unsigned int)XML_GetCurrentColumnNumber(s->parser) + 1u, "%s", what);
     XML_StopParser(s->parser, XML_FALSE);
 }
 
@@ -572,9 +574,9 @@ static cf_bool xml_run(xml_scan* s, const cf_blob* in) {
     if (XML_Parse(s->parser, in->p, (int)in->n, XML_TRUE) == XML_STATUS_ERROR &&
         !s->failed) {
         s->failed = CF_TRUE;
-        cf_error_set(s->err, CF_E_SOURCE, NULL, s->file, "%s:%u:%u: %s", s->file,
+        cf_text_fail(s->err, CF_E_SOURCE, s->file,
                      (unsigned int)XML_GetCurrentLineNumber(s->parser),
-                     (unsigned int)XML_GetCurrentColumnNumber(s->parser) + 1u,
+                     (unsigned int)XML_GetCurrentColumnNumber(s->parser) + 1u, "%s",
                      XML_ErrorString(XML_GetErrorCode(s->parser)));
     }
     return s->failed ? CF_FALSE : CF_TRUE;

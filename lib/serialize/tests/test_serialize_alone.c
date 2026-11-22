@@ -143,6 +143,8 @@ static void test_version(void) {
 }
 
 int main(void) {
+    check(cf_key_valid("a.b", 3) && !cf_key_valid("A", 1),
+          "the serialization library validates canonical keys");
 #if CF_WITH_JSON
     test_reads();
     test_writes();

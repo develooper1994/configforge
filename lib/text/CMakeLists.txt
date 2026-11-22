@@ -21,6 +21,9 @@ cf_component(
   src/place.c
   src/escape.c
   src/refs.c
+  src/space.c
+  src/track.c
+  src/fail.c
   SERIALIZE_SOURCES
   src/utf8.c
   src/hex.c
@@ -28,4 +31,7 @@ cf_component(
   src/encoding.c
   src/place.c
   src/escape.c
-  src/refs.c)
+  src/refs.c
+  src/space.c
+  src/track.c
+  src/fail.c)

@@ -36,8 +36,6 @@ extern "C" {
  * --server-port belongs to the source that needs it, not here.
  * ------------------------------------------------------------------ */
 
-CF_API cf_bool cf_key_valid(const char* key, size_t len);
-
 /* Number of dot-separated segments, 0 when the key is invalid. */
 CF_API size_t cf_key_segments(const char* key, size_t len);
 

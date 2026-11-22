@@ -57,6 +57,19 @@ typedef struct cf_error {
 #define CF_ERROR_INIT {sizeof(cf_error), 0, {0}, {0}, {0}}
 /* clang-format on */
 
+/* ------------------------------------------------------------------ *
+ * Keys
+ *
+ * Canonical form is dotted, lowercase ASCII, and at most CF_KEY_MAX - 1
+ * bytes, so that a key and its terminator fit the buffers sized by the
+ * limit. Comparison is byte-wise and case-sensitive: case-insensitive
+ * keys are Viper's most-reported defect, because they silently collapse
+ * two distinct parameters. Derivation to MYAPP_SERVER_PORT and
+ * --server-port belongs to the source that needs it, not here.
+ * ------------------------------------------------------------------ */
+
+CF_API cf_bool cf_key_valid(const char* key, size_t len);
+
 /* Empties `e`: code CF_OK, key, source and message empty. `size` is
    kept, so a cleared error can be reused. NULL is ignored. */
 CF_API void cf_error_clear(cf_error* e);

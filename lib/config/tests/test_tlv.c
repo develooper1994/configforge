@@ -566,10 +566,8 @@ static void test_ber_refusals(void) {
                 "padding without the flag");
 }
 
-/* A layout names its keys by a copy of the key space's rule, which the
-   serialization library may not call (tlv.c, tlv_key_valid): the two
-   have to say the same about every key, and this is what holds them to
-   it. Kept off the frame: a key is up to CF_KEY_MAX bytes. */
+/* A layout refuses the same keys as cf_key_valid. The long test keys
+   live off the stack. */
 static void layout_key_rule(const char* key, const char* what) {
     cf_tlv_layout l = dev_layout();
     cf_tlv_tag    t;

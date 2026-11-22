@@ -161,8 +161,7 @@ typedef struct yaml_scan {
 
 static cf_bool yaml_fail_at(yaml_scan* s, unsigned line, unsigned col,
                             const char* what) {
-    return cf_error_set(s->err, CF_E_SOURCE, NULL, s->file, "%s:%u:%u: %s", s->file,
-                        line, col, what);
+    return cf_text_fail(s->err, CF_E_SOURCE, s->file, line, col, "%s", what);
 }
 
 static cf_bool yaml_no_room(yaml_scan* s) {
