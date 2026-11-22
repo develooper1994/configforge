@@ -216,7 +216,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 50 | A-10 A refusal's place and reason | medium | A-8, A-9 | waits: A-9 |
 | 51 | A-11 Build profiles and the C version per file | large | A-1b | waits: A-10 (the order) |
 | 52 | A-12 The feature matrix made from the build | medium | A-11 | waits: A-11 |
-| 53 | W5-V2 Every pair of formats, and what each can hold | large | A-1b, W5-V1 | waits: A-12 (the order) |
+| 53 | W5-V2 Every pair of formats, and what each can hold | large | A-1b, W5-V1 | done (70bd398) |
 | 54 | W5-G4 Generators outside the tree | medium | A-1b, W5-G3 | done (adc2a63) |
 | 55 | P-1b The other libraries beside ours, and a page CI keeps | large | P-1, A-1b | waits: W5-G4 (the order) |
 | 56 | A-13 A page of the project's limits | medium | A-12, W5-V2, P-1 | waits: P-1b (the order) |
