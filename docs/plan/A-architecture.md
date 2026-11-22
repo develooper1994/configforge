@@ -4101,8 +4101,12 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
       that `cf_option_defaults` finds in `cmake/*.cmake`,
       `CMakeLists.txt`, `lib/*/CMakeLists.txt` and `lib/*/*.cmake`
       (a name that starts `_CF_` or is `CACHE INTERNAL` is not an
-      option). The block's last line is `The limits are in the table
-      below.`
+      option), **less the five limits** (`CF_KEY_MAX`,
+      `CF_MESSAGE_MAX`, `CF_PATH_MAX`, `CF_MAX_DEPTH` and
+      `CF_STACK_BUDGET`: the five of the range list in
+      `ConfigForgeOptions.cmake` that begins `CF_KEY_MAX:32:65535`),
+      which are numbers and not switches. The block's last line is
+      `The limits are in the table below.`
     * `parts`: header `` | Option | What goes | Code it saves (<arch>, `-Os`) | ``
       with `<arch>` the second field of the `tool` line of `sizes.txt`;
       one row per `off|` line of `sizes.txt`, the largest saving first,
@@ -4122,6 +4126,24 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
       with a job), `local run` (`runner` with no job), `qemu`,
       `built only` or `not tried`; `Where` is `` job `<job>` `` or `-`;
       the note or `-`.
+  * **This card widens the scan A-11 wrote, and adds two things to
+    `ConfigForgeProfile.cmake`.** A-11's `cf_option_defaults` scans
+    `cmake/*.cmake`, `lib/serialize/CMakeLists.txt` and `lib/lanes/*`
+    and gives only the defaults. That misses `CF_BUILD_TOOLS` and
+    `CF_BUILD_BENCH` (in `CMakeLists.txt`) and `CF_YAML_BACKEND` (in
+    `lib/serialize/backends.cmake`), so this card gives it the four
+    patterns of the `options` block above and says so in A-11's text.
+    A-11's `gate.profiles` calls the same function and follows; it still
+    compares only the options of `CF_PROFILE_OPTIONS`, so the wider
+    scan changes nothing it checks. A-12 also adds
+    `cf_option_help(<NAME> <out>)` beside `cf_option_defaults` (the
+    help string of a declaration, found by the same scan) and the list
+    `CF_SIZE_PARTS`, defined there as an explicit list, the thirteen
+    parts the off-builds turn off, in the order of the `parts` rows
+    before sorting: `CF_WITH_INI`, `CF_WITH_JSON`, `CF_WITH_TOML`,
+    `CF_WITH_PROPERTIES`, `CF_WITH_CBOR`, `CF_WITH_TLV`, `CF_WITH_YAML`,
+    `CF_WITH_DIR`, `CF_WITH_DOTENV`, `CF_WITH_EMIT`, `CF_WITH_IMAGE`,
+    `CF_WITH_REPORT`, `CF_WITH_REAL`.
   * **The options' help strings are the README's words.** The `parts`
     table reads each option's help string, so the strings of the thirteen
     measured options in `cmake/ConfigForgeOptions.cmake` become the
@@ -4222,7 +4244,8 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     job: `armv7 Linux`, `Cortex-M`, `s390x Linux (big-endian)` and
     `riscv64 Linux`, each with the note `planned (docs/Roadmap.md)`. A card that builds or runs a
     target changes its line in its own commit; the script prints the
-    table from the file.
+    table from the file. `.gitattributes` is not touched: it has
+    `* text=auto eol=lf`, and generated text needs nothing more.
   * **`gate.matrix`**: `cmake/gates/GateMatrix.cmake` (new), registered
     in `cmake/ConfigForgeGates.cmake` among the gates that run on MSVC
     too (the script is CMake and reads text), `-DSRC=${CMAKE_SOURCE_DIR}
@@ -4244,22 +4267,31 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     alone never enters) and only when `CHECK` is off; it writes only when
     the result differs. `scripts/prestage.cmake` mentions it where it mentions
     `apiref`; `scripts/README.md` gets two rows, `generate/matrix.cmake`
-    and `check/sizes.cmake`, and a line in its table of EXTRA steps for
-    `sizes`.
+    and `check/sizes.cmake`, and `sizes` is added to the `EXTRA` list
+    in its `verify.cmake` row.
   * **`scripts/verify.cmake`**: an EXTRA step `sizes` runs
     `-DCHECK=ON` (skipped with a note without `size`), listed in the
     header comment and in the `unknown EXTRA step` message.
   * **CI**: one job `sizes` in `ci.yml` after `profiles`, `ubuntu-26.04`,
-    `timeout-minutes: 45` (about forty library builds). It runs only when
+    `timeout-minutes: 45`. A run of the script is 22 library builds (1
+    `base`, 13 `off`, 1 `all`, 7 `profile`), each a configure and the one
+    target `configforge`, and the job runs the script twice (the check
+    and the write), so 44 builds; 45 minutes is a guess of about a
+    minute a build, not a measurement, and step 7 writes the real time
+    in the notes. It runs only when
     the build or its options changed: checkout with `fetch-depth: 0`,
-    then a first step `changed` that lists the files changed against the
+    then a first step `changed`, written inline in the job (a few lines
+    of `git diff --name-only`; it does not wait for P-1b's
+    `scripts/bench/changed.py`), that lists the files changed against the
     merge base with `origin/main` (a pull request) or against
     `github.event.before` (a push, when that is a real commit), sets
     `run=true` in `$GITHUB_OUTPUT` when any is `CMakeLists.txt`, under
     `cmake/`, `lib/`, `scripts/check/sizes.cmake` or `docs/sizes.txt`,
     and sets it `true` too when the listing fails; every later step is
     `if: steps.changed.outputs.run == 'true'`. The steps: `sudo apt-get
-    update && sudo apt-get install -y binutils`, `cmake -DCHECK=ON -P
+    update && sudo apt-get install -y binutils libexpat1-dev
+    libsqlite3-dev` (the `full` and `server` profiles need expat and
+    sqlite3 to configure), `cmake -DCHECK=ON -P
     scripts/check/sizes.cmake` (against the committed `docs/sizes.txt`),
     `cmake -DWRITE=ON -DOUT=$RUNNER_TEMP/sizes.txt -P
     scripts/check/sizes.cmake`, and an upload of that file with
@@ -4271,12 +4303,12 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   `scripts/check/sizes.cmake` (new), `cmake/gates/GateMatrix.cmake`
   (new), `docs/targets.txt` (new), `docs/sizes.txt` (new, written by the
   script), `cmake/ConfigForgeGates.cmake`, `cmake/ConfigForgeOptions.cmake`
-  (the help strings), `cmake/ConfigForgeProfile.cmake` (small additions
-  A-11 left for this: an exported `CF_SIZE_PARTS` list and a function
-  `cf_option_help(<NAME> <out>)` beside `cf_option_defaults`),
+  (the help strings), `cmake/ConfigForgeProfile.cmake` (this card adds
+  the list `CF_SIZE_PARTS` and the function
+  `cf_option_help(<NAME> <out>)` beside `cf_option_defaults`, and
+  widens that function's scan; see "This card widens the scan"),
   `scripts/format.cmake`, `scripts/prestage.cmake`,
-  `scripts/verify.cmake`, `.github/workflows/ci.yml`, `.gitattributes`
-  (`docs/targets.txt`, `docs/sizes.txt` `-text`); tests:
+  `scripts/verify.cmake`, `.github/workflows/ci.yml`; tests:
   `tests/CMakeLists.txt` (`add_subdirectory(matrix)`),
   `tests/matrix/CMakeLists.txt` (new: registers `matrix.script`,
   `matrix.markers`, `matrix.tables` and `matrix.sizes`, each a
@@ -4286,8 +4318,10 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   `scripts/*.cmake` for every `find_program`, and `sizes.cmake` and the
   verify step look for `size`, which the page does not name: add it to
   the GNU binutils row, beside `nm` and `objdump`); last:
-  `README.md` (markers and the first generation), `scripts/README.md`,
-  `docs/Roadmap.md`, `CHANGELOG.md`.
+  `README.md` (markers and the first generation; and one row,
+  `matrix`, in its "Gates" table), `docs/Architecture.md` (one row,
+  `gate.matrix`, in its table of gates), `scripts/README.md`,
+  `docs/Roadmap.md`, `CHANGELOG.md`. `docs/Plan.md` is not changed.
 * **steps**:
   1. `docs/targets.txt` and the check of it inside
      `scripts/generate/matrix.cmake` (`cf_targets_read()`), and
@@ -4303,8 +4337,8 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
      needs a board, a date YYYY-MM-DD and a commit`); `x|none|gates||||`
      (`a 'none' line names no job`); a name twice (`target 'x' is
      there twice`); and `x|runner|||||` (`a runner line with no job
-     needs a note`) while `x|runner||||| run by verify` reads. `-text`
-     for the fixtures. See it fail (no script).
+     needs a note`) while `x|runner||||| run by verify` reads. See it
+     fail (no script).
   2. The script's `README.md` handling with a fixture README of two
      markers: replacement between markers; a missing, a duplicate, an
      unpaired and an unknown marker each an error with the words above;
@@ -4326,7 +4360,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
      `not compared` and passes. See it fail (no script). Then
      `scripts/check/sizes.cmake`; on a machine with `size`, `cmake
      -DWRITE=ON -DWORK=$HOME/cfsizes -P scripts/check/sizes.cmake`
-     writes `docs/sizes.txt` (about twenty library builds); `-DCHECK=ON`
+     writes `docs/sizes.txt` (22 library builds); `-DCHECK=ON`
      right after passes. Run `profiles`'s generator: the sizes appear.
      Then the help strings of the thirteen options and the first
      generation. The old figures are now the measured ones; the
@@ -4400,7 +4434,8 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   nothing checks goes the same way.
 * **needs**: A-12 (the platforms, tested and only built; A-11 and A-1b
   come before it), W5-V2 (the table section 6 links to), P-1 (the sizes
-  the readers were run at).
+  the readers were run at), P-1b (the order only: nothing of it is
+  read).
 * **size**: medium
 * **decided**:
   * **The page, section by section, and who keeps each.** G is
@@ -4425,11 +4460,15 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   * **Section 2.** The generator reads `cmake/ConfigForgeOptions.cmake`:
     the default of each `set(CF_KEY_MAX 256 CACHE STRING ...)` (the five
     declarations under "Limits and the stack budget") and the range of
-    each from the `foreach(lim CF_KEY_MAX:32:65535 ...)` list that
-    follows them. It also reads the
-    defaults in `lib/port/include/configforge/cf_build_options.h`
-    (the four `#ifndef
-    CF_KEY_MAX` blocks) and the
+    each from that file's range list, the entries `CF_KEY_MAX:32:65535`,
+    `CF_MESSAGE_MAX:64:65535`, `CF_PATH_MAX:64:65535`,
+    `CF_MAX_DEPTH:4:1024` and `CF_STACK_BUDGET:0:1048576` of the
+    `foreach(lim ...)` that follows them (not the later
+    `foreach(lim CF_KEY_MAX CF_MESSAGE_MAX ...)` lists of names). It
+    also reads the defaults in
+    `lib/port/include/configforge/cf_build_options.h` (the four
+    `#ifndef` blocks, one each for `CF_KEY_MAX`, `CF_MESSAGE_MAX`,
+    `CF_PATH_MAX` and `CF_MAX_DEPTH`) and the
     ranges in the `#error` lines of `lib/port/include/configforge/cf_port.h`
     ("The limits, checked where
     every translation unit sees them") and **fails, naming
@@ -4440,22 +4479,24 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     and the stack budget"; the numbers never are. `CF_STACK_BUDGET`'s
     range (0 to 1048576) is in the CMake list only, and is shown from
     there.
-  * **Section 3, the fixed limits.** Each row: name, value, the file and
-    the line it is read from, what it bounds. Paths as
-    A-1's map made them:
+  * **Section 3, the fixed limits.** Each row: name, value, the file it
+    is read from (the file, never a line: lines move), what it bounds.
+    Paths as A-1's map made them:
 
     | Name | Value | Read from | Bounds |
     | ---- | ----: | --------- | ------ |
-    | `CF_SOURCE_MAX` | 64 | `lib/base/include/configforge/cf_error.h:27` | a source's name in an error; part of the ABI (D-45) |
-    | `CF_MAX_SOURCES` | 32 | `lib/config/include/configforge/cf_explain.h` (today `:24`) | the sources one `explain()` lists |
-    | `CF_MAX_OPEN_PREFIXES` | 8 | `lib/config/include/configforge/cf_define.h` (today `:153`) | open key prefixes a definition set holds |
-    | `CF_EXPAND_MAX` | 1 MiB | `cf_define.h` (today `:163`) | the bytes one value's `${...}` may expand to (D-77) |
-    | `CF_EXPAND_TOTAL_MAX` | 16 MiB | `cf_define.h` (today `:173`) | the expansion of a whole configuration |
-    | `CF_DIR_MAX_FILES` | 256 | `lib/config/src/bridge/dir.c:28` | files in a drop-in directory |
-    | `CF_SECRETS_MAX_FILES` | 256 | `lib/config/src/bridge/secrets.c:46` | files in a secrets directory |
-    | `YP_KEY_MAX` | 1024 | `lib/serialize/src/yamlparse.c:22` | an implicit YAML key (spec 7.4.2) |
+    | `CF_SOURCE_MAX` | 64 | `lib/base/include/configforge/cf_error.h` | a source's name in an error; part of the ABI (D-45) |
+    | `CF_MAX_SOURCES` | 32 | `lib/config/include/configforge/cf_explain.h` | the sources one `explain()` lists |
+    | `CF_MAX_OPEN_PREFIXES` | 8 | `lib/config/include/configforge/cf_define.h` | open key prefixes a definition set holds |
+    | `CF_EXPAND_MAX` | 1 MiB | `cf_define.h` | the bytes one value's `${...}` may expand to (D-77) |
+    | `CF_EXPAND_TOTAL_MAX` | 16 MiB | `cf_define.h` | the expansion of a whole configuration |
+    | `CF_DIR_MAX_FILES` | 256 | `lib/config/src/bridge/dir.c` | files in a drop-in directory |
+    | `CF_SECRETS_MAX_FILES` | 256 | `lib/config/src/bridge/secrets.c` | files in a secrets directory |
+    | `YP_KEY_MAX` | 1024 | `lib/serialize/src/yamlparse.c` | an implicit YAML key (spec 7.4.2) |
     | `CF_XML_INPUT_MAX` | 0x7FFFFFFF | `lib/serialize/src/xml.c` (new macro, see step 3) | the bytes of one XML document |
 
+    `CF_XML_INPUT_MAX` is a macro in `xml.c` (step 3 makes it), and
+    the generator reads it there, like the others.
     `CF_PLATFORM_NAME_MAX` is `CF_PATH_MAX` (`cf_platform.h`, its
     `#define CF_PLATFORM_NAME_MAX CF_PATH_MAX`) and is
     one row's note, not a row. The values are not all numbers, so each
@@ -4502,21 +4543,28 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     so.
   * **Section 5, the largest document.** One row a format, three
     columns. "In the code": what a reader itself refuses: XML
-    `CF_XML_INPUT_MAX` (the expat call takes an `int`, xml.c:599);
+    `CF_XML_INPUT_MAX` (the call to expat in `xml_run` takes an `int`);
     every text reader's line and column are `unsigned int`
-    (`cf_loc`, cf_serialize.h:104-108), so a position past 4,294,967,295
+    (`cf_loc`, in `cf_serialize.h`), so a position past 4,294,967,295
     lines or columns wraps: stated as a bound on the document, in lines
     and in bytes of one line; the other readers: "no limit of its own:
     the document's size, `size_t`, and the decode budget when read
-    through the configuration library". "Run at": the largest size P-1
-    ran, from `docs/Performance.md`'s baseline (256 MiB where all five
-    formats read it, else the size P-1's "stop if" recorded and the
-    reason); this column is **H**, with the date and the commit,
-    because a size cannot be tested on every build. "A string": with
-    the configuration library, the document's own bound; read through
-    a sink without `reserve_text`, 255 bytes (cf_serialize.h:141-145,
-    `char local[256]` at json.c:797). The row for a format the
-    comparison does not run it at says "not run beyond N MiB".
+    through the configuration library". This column is written by hand
+    for every format but XML (the generator reads `CF_XML_INPUT_MAX`
+    for that one); it is not generated. "Run at": the largest size P-1
+    ran, from the baseline of `docs/Performance.md` ("Baseline, before
+    any change (P-1)": an Intel Core i7-10750H at 2.6 GHz, Windows 11,
+    MSVC; its WSL 2 table has GCC and Clang), in the words of that page
+    (256 MiB where all five formats read it, else the size P-1's "stop
+    if" recorded and the reason); this column is **H**, with the date
+    and the commit, because a size cannot be tested on every build.
+    `docs/Performance.md` has no XML row, so the XML row says "not run"
+    in this column. "A string": with the configuration library, the
+    document's own bound; read through a sink without `reserve_text`
+    (the member of `cf_doc_sink` in `cf_serialize.h`), 255 bytes (the
+    `char local[256]` of the JSON reader's string buffer in `json.c`).
+    The row for a format the comparison does not run it at says "not
+    run beyond N MiB".
   * **Section 6.** One sentence and a link to W5-V2's pair table: in
     `docs/Formats.md`, the section "What each format holds, and what a
     conversion loses", between its `<!-- pairs:begin -->` and
@@ -4528,13 +4576,13 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   * **Sections 7 and 8, from the cards before.** 7 is read from
     `docs/targets.txt` (A-12): one row a target, with its `how`:
     `hardware`, `runner`, `qemu`, `built` and `none`. The page has A-12's
-    five classes in four words: `hardware` is "tested on hardware",
-    `runner` "tested on CI runners" (a `runner` line with no job, which
-    A-12 allows for a local run, reads "tested by `verify`, not CI"),
-    `qemu` "tested under qemu", `none` "not tried"; `built` is the
-    fourth heading, "Built, not run". The generator prints a table
-    for each of those with a row, target and note, and leaves out a
-    heading with no row. 8 is read
+    five classes as five headings, in this order: `hardware` is "tested
+    on hardware", `runner` "tested on CI runners" (a `runner` line with
+    no job, which A-12 allows for a local run, reads "tested by
+    `verify`, not CI"), `qemu` "tested under qemu", `built` "built, not
+    run", `none` "not tried". The generator prints a table for each of
+    those with a row, target and note, and leaves out a heading with no
+    row. 8 is read
     **statically**, from the sources, not from the build's
     `cf_cversion.txt` (a default build declares nothing, so that file
     would give a page that changes with the options and a gate that
@@ -4589,7 +4637,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     The README's row for `CF_MESSAGE_MAX` (in "Limits and the stack
     budget") says it is
     also the longest string the JSON and TOML readers take; JSON's
-    buffer is the fixed `char local[256]` (json.c:797) and a longer
+    buffer is the fixed `char local[256]` of `js_text` in `json.c` and a longer
     string is read through the sink's `reserve_text`: the row loses
     the sentence and the section after the table gains "The rest of
     the limits, and the fixed ones, are on `[Limits](docs/Limits.md)`."
@@ -4605,7 +4653,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     * `gate.limits` (ctest, `cmake/gates/GateLimits.cmake`, registered
       in `cmake/ConfigForgeGates.cmake` beside `gate.apiref`; needs no
       compiler): regenerates the blocks and compares with the page,
-      line endings ignored, as `GateApiref.cmake:10-31` does; fails
+      line endings ignored, as `GateApiref.cmake` does; fails
       with `docs/Limits.md does not match the sources: run cmake
       -DWRITE=docs/Limits.md -P scripts/generate/limits.cmake`. It
       also fails when a `D-nn` named anywhere on the page has no
@@ -4613,9 +4661,14 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
       names D-nn, which docs/Decisions.md does not have`; when a
       ctest name in a "Held by" cell (section 4's rows name
       `unit.test_budget` and `unit.test_limits`; section 3's name
-      `unit.test_dirlimits` for the two directory caps) is not listed
-      by `ctest --test-dir <build> -N`, with `docs/Limits.md names the
-      test <name>, which is not registered`; and when a relative link
+      `unit.test_dirlimits` for the two directory caps) is not registered,
+      with `docs/Limits.md names the test <name>, which is not
+      registered`. The gate reads the registered names from the text of
+      the `CMakeLists.txt` files under `lib/*/tests/` and `tests/`: each
+      `add_test(NAME <name> ...)` and each entry `<t>` of a
+      `CF_UNIT_TESTS` list (registered as `unit.<t>`); it needs no
+      compiler and no build tree, so it runs where `gate.apiref` runs.
+      It fails, too, when a relative link
       does not name a file (a `#anchor` also needs its heading in that
       file). Its messages are matched with `[ \n]+` between words
       wherever a test matches them, as A-11 says.
@@ -4625,22 +4678,24 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
       one needs the page. It has a block of its own beside
       `test_dirlimits`'s (the one that sets that test's working
       directory): `add_executable`, the same warnings and analysis
-      calls, `target_compile_definitions(test_limits PRIVATE
-      CF_LIMITS_DEFAULT=<1 or 0>)` from `CF_DEFAULT_LIMITS`
-      (ConfigForgeOptions.cmake, "Whether the limits are the ones this
-      project's own code is written against"), and `add_test(NAME
+      calls, and `add_test(NAME
       unit.test_limits COMMAND test_limits ${CF_REPO_ROOT}/docs/Limits.md)`.
+      It is given no definition: the test computes the default limits
+      from the four compiled values itself (below), not from
+      `CF_DEFAULT_LIMITS`, so the standalone `cmake -S lib/config`
+      build needs nothing the whole build sets.
       `CF_REPO_ROOT` is A-1b's variable: the whole build's
       `${CMAKE_SOURCE_DIR}`, and in `cmake -S lib/config`
       `${CMAKE_CURRENT_LIST_DIR}/../..` (A-1b's `cf_component` sets it
       in both cases; if it is not set, A-1b is not as written: stop).
       C89. It reads the page named
       by `argv[1]`, finds the section-2 block, and for each of the
-      five rows parses the default: when `CF_LIMITS_DEFAULT` is 1 it
-      checks that the compiled `CF_KEY_MAX` (and the others) equals
-      it and that `cf_build_limit("key")`, `"message"`, `"path"`,
+      five rows parses the default; when the compiled `CF_KEY_MAX`,
+      `CF_MESSAGE_MAX`, `CF_PATH_MAX` and `CF_MAX_DEPTH` all equal the
+      defaults of the page's rows (a default build) it
+      checks the five rows against the compiled values and that `cf_build_limit("key")`, `"message"`, `"path"`,
       `"depth"` and `"source"` return the numbers of the page's rows;
-      when 0 it prints `limits: not a default build, page not compared`
+      otherwise it prints `limits: not a default build, page not compared`
       and passes (the `minimal` preset is such a build; `portable`
       keeps the default limits and compares). Always: the section-4 constants equal `CF_DECODE_FACTOR`,
       `CF_DECODE_FLOOR`, `CF_DECODE_KEY_COST`, `cf_decode_budget(0)`
@@ -4668,8 +4723,10 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   `test_limits`, beside `test_dirlimits`'s), `lib/serialize/src/xml.c`
   (the `in->n > 0x7FFFFFFFu` test in
   `xml_run`), `mkdocs.yml`, `scripts/README.md`;
-  last: `README.md`, `docs/Architecture.md`, `docs/Roadmap.md`,
-  `docs/Plan.md`, `CHANGELOG.md`.
+  last: `README.md` (the corrected row, and one row, `limits`, in its
+  "Gates" table), `docs/Architecture.md` (the two corrected bullets,
+  and one row, `gate.limits`, in its table of gates),
+  `docs/Roadmap.md`, `docs/Plan.md`, `CHANGELOG.md`.
 * **steps**:
   0. If `## 1.8.0 — unreleased` is not open, open it:
      `cmake -DTO=1.8.0 -P scripts/release/version.cmake`; commit that
@@ -4686,8 +4743,11 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
      with `scripts/generate/limits.cmake: cannot be run`). See it.
   3. In `xml.c`, replace the literal `0x7FFFFFFFu` of the size test in
      `xml_run` by a macro defined above it as `#define CF_XML_INPUT_MAX
-     0x7FFFFFFFu`; the build and `ctest` pass unchanged (the value is
-     the same). Done before the generator, whose section-3 row reads it.
+     0x7FFFFFFFu`; the value is the same. No default build compiles `xml.c` (it needs
+     `CF_WITH_XML=ON` and expat), so the change is built and tested
+     by CI's `yaml` job (it configures `-DCF_WITH_XML=ON` and runs
+     `ctest`) and locally with `-DCF_WITH_XML=ON`: configure, build and
+     `ctest` there, passing unchanged. Done before the generator, whose section-3 row reads it.
   4. `scripts/generate/limits.cmake`, section by section, each added
      with the sentence it reads from; `-DWRITE=docs/Limits.md`; the
      gate passes. Then break each source on purpose and see the gate
@@ -4699,7 +4759,7 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   5. The test that fails first: `test_limits.c`, with the page's
      `CF_KEY_MAX` row edited by hand to `255`; `ctest -R
      unit.test_limits` fails naming the row; restore the row and it
-     passes (`-DCF_LIMITS_DEFAULT=1`); configure the `minimal` preset
+     passes; configure the `minimal` preset
      and see the line `limits: not a default build, page not compared`
      and a pass.
   6. The hand-written sections 1, 5's "Run at", 6, 9, 10 and 11, each
@@ -4729,7 +4789,14 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   says it: drop the row, name it in the notes, go on.
 * **docs**: no D-number (above). `docs/Roadmap.md`: "A page of the
   project's limits" goes 🟩 with "docs/Limits.md; `gate.limits`,
-  `unit.test_limits`". `docs/Plan.md`: A-13's index row `done` with its
+  `unit.test_limits`"; and the item "Formats registered, with what each
+  can do" says twice that `docs/Limits.md` is generated from the
+  formats table ("and `docs/Limits.md` generated from it, are left
+  (A-13)", and "the pair table and `docs/Limits.md` are generated from
+  it"): it is not. Section 6 links the pair table, and the rest of the
+  page is generated from the build options and the sources, so both
+  sentences are reworded to say that `docs/Limits.md` links the table
+  and does not copy it. `docs/Plan.md`: A-13's index row `done` with its
   commits (the row is there already). CHANGELOG,
   `## 1.8.0 — unreleased`, "### Added": "- **`docs/Limits.md`**: the
   build limits, the fixed ones, the decode budget, the largest

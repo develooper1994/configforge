@@ -181,7 +181,9 @@ The rules every card here keeps:
     reach a library fetched for the comparison.
   * **One more mode in `cf_bench`: the documents as files.**
     `cf_bench --emit-docs <dir> [--size 1|16|256] [--only <format>]`
-    writes P-1's generated documents and the ones below as
+    (dispatched in `main` of `bench/bench.c`, beside `docs`, which is
+    untouched; the existing CI job `bench`, which runs `cf_bench docs`,
+    stays as it is, and `bench-gate` below is a separate job) writes P-1's generated documents and the ones below as
     `<dir>/<format>-<doc>-<size>.<ext>` (`.json .yaml .toml .cbor .ini
     .xml`; `many-tiny` is a pair, `.bin` and `.idx`) and prints one
     line a file, `<name> <bytes> <fnv1a64 in 16 hex digits>`. The
@@ -251,20 +253,30 @@ The rules every card here keeps:
     the commit is what is fetched and is checked against the tag.
     Floors, to be replaced in step 1 by the newest release tag at least
     30 days old on the day the card is carried out: yyjson 0.10.0,
-    simdjson 3.10.1, cJSON 1.7.18, libyaml 0.2.5, rapidyaml 0.7.2
-    (with its submodule c4core, fetched with
-    `--recurse-submodules --depth 1`), toml++ 3.4.0, tinycbor 0.6.0,
-    inih r58. tomlc17 and RapidJSON have no usable tag (RapidJSON's
-    last release is from 2016): a commit of the default branch at
-    least 30 days old, written with its date. Never a branch name,
-    never "latest". expat is not fetched: it is the system's
+    simdjson 3.10.1, cJSON 1.7.18, libyaml 0.2.5, rapidyaml 0.7.2,
+    toml++ 3.4.0, tinycbor 0.6.0, inih r58. tomlc17 and RapidJSON have
+    no usable tag (RapidJSON's last release, a 2016 tag, does not build
+    with today's compilers): a commit of the default branch at least 30
+    days old, written with its date. Never a branch name, never
+    "latest". The repositories, all on github.com (step 1 pins each at
+    a commit): yyjson `ibireme/yyjson`, simdjson `simdjson/simdjson`,
+    RapidJSON `Tencent/rapidjson`, cJSON `DaveGamble/cJSON`, libyaml
+    `yaml/libyaml`, rapidyaml `biojppm/rapidyaml`, c4core
+    `biojppm/c4core`, tomlc17 `cktan/tomlc17`, toml++
+    `marzer/tomlplusplus`, tinycbor `intel/tinycbor`, inih
+    `benhoyt/inih`. rapidyaml needs c4core, which it carries as a
+    submodule: c4core is pinned as a library of its own, at the commit
+    rapidyaml's tree records for it (`git ls-tree <rapidyaml commit>
+    ext/c4core`, or the path rapidyaml's `.gitmodules` names), and the
+    fetch never recurses submodules. expat is not fetched: it is the system's
     (`libexpat1-dev`, which ConfigForge's XML reader links too), so the
     two XML rows run one library; its version is recorded. A version
     changes only by a commit that also reruns the baseline.
   * **Fetching is not FetchContent, and not the build's.**
     `scripts/bench/fetch.cmake` (new, `cmake -DLIBS=<dir> -P
-    scripts/bench/fetch.cmake`) fetches each library the way
-    `scripts/verify.cmake:893-957` fetches the conformance suites:
+    scripts/bench/fetch.cmake`) fetches each library the way the
+    conformance fetch block of `scripts/verify.cmake` fetches the
+    conformance suites:
     `git init`, `git fetch --depth 1 <url> <commit>`, `git checkout
     FETCH_HEAD`, `core.autocrlf=false`, skipped when `HEAD` is already
     the commit. `bench/compare/CMakeLists.txt` never fetches: given
@@ -286,10 +298,11 @@ The rules every card here keeps:
     flag of its own, no `-O`, no `-march`), and makes a static library
     `lib_<name>` of them. So every library is built by this project's
     compiler with this project's flags, and by nothing else.
-    ConfigForge is **not** `add_subdirectory`'d: the root project uses
-    `CMAKE_SOURCE_DIR` for its templates, scripts and install files
-    (cmake/ConfigForgeOptions.cmake, ConfigForgeInstall.cmake,
-    ConfigForgeSbom.cmake, ConfigForgeCompiler.cmake), which inside
+    ConfigForge is **not** `add_subdirectory`'d: the root project's
+    modules use `CF_REPO_ROOT` for their templates, scripts and install
+    files (cmake/ConfigForgeOptions.cmake, ConfigForgeInstall.cmake,
+    ConfigForgeSbom.cmake, ConfigForgeCompiler.cmake), and
+    `CMakeLists.txt` sets it from `CMAKE_SOURCE_DIR`, which inside
     another project is that project's directory, so the configure would
     stop. It is configured on its own, by `bench/compare/CMakeLists.txt`
     through `execute_process` at configure time (or by the driver
@@ -315,7 +328,7 @@ The rules every card here keeps:
 
     | Name | Flags, for every library alike |
     | ---- | ------------------------------ |
-    | `shipped` (the headline) | `-O2 -fstack-protector-strong -fstack-clash-protection -fcf-protection=full -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3`, the hardening ConfigForge ships with (`CF_HARDEN`, cmake/ConfigForgeCompiler.cmake:244-297); ConfigForge built with `CF_HARDEN=ON` |
+    | `shipped` (the headline) | `-O2 -fstack-protector-strong -fstack-clash-protection -fcf-protection=full -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3`, the hardening ConfigForge ships with (`CF_HARDEN`, applied by `configforge_apply_hardening` in `cmake/ConfigForgeCompiler.cmake`); ConfigForge built with `CF_HARDEN=ON` |
     | `bare` | `-O2` alone; ConfigForge with `CF_HARDEN=OFF` |
     | `native` | `-O3 -march=native`, for the record; never a headline |
 
@@ -350,12 +363,13 @@ The rules every card here keeps:
     `INI_MAX_LINE 8192` (its default of 200 bytes would refuse the
     long-line documents), INI documents having no line over 4096 bytes.
     ConfigForge: `cf_codec_by_name(<format>)` and `cf_codec_decode`
-    (lib/serialize/include/configforge/cf_serialize.h:233 and :245) into a
+    (both in lib/serialize/include/configforge/cf_serialize.h) into a
     `cf_doc_sink` whose callbacks touch the value and which supplies
-    `reserve_text` (:146; without it the JSON and TOML readers refuse a
-    string over 255 bytes) from one buffer kept between documents, and
-    in strict mode `reserve_work` (:155; it turns on TOML's duplicate
-    check) from an arena reset between documents.
+    `reserve_text` (a member of `cf_doc_sink`; without it the JSON and
+    TOML readers refuse a string over 255 bytes) from one buffer kept
+    between documents, and in strict mode `reserve_work` (also a member
+    of `cf_doc_sink`; it turns on TOML's duplicate check) from an arena
+    reset between documents.
   * **The same work: parse and touch every value, in one fold.** Every
     adapter walks what its library gave and fills one
     `struct Touch { u64 containers, strings, string_bytes, numbers,
@@ -520,8 +534,11 @@ The rules every card here keeps:
       `$GITHUB_OUTPUT`: a file under `bench/`, `scripts/bench/` or
       `.github/workflows/bench.yml` changed against the merge base with
       `origin/main`, or against `github.event.before` when that is a
-      real commit; `fetch-depth: 0`): fetches every library, builds the
-      whole comparison, runs `--scope full --sizes 1` with `--reps 3`
+      real commit; `fetch-depth: 0`): fetches every library (the fetched
+      sources are cached with `actions/cache`, pinned by commit like the
+      other actions, keyed on the hash of `bench/compare/libraries.cmake`,
+      so a pin that changes is fetched again and nothing else is),
+      builds the whole comparison, runs `--scope full --sizes 1` with `--reps 3`
       on `mixed` only, and fails if any adapter fails its probe or
       touch check. It proves the fetch, the builds and the adapters
       still work, and costs nothing on a push that touches none of
@@ -542,7 +559,8 @@ The rules every card here keeps:
       message `bench: <sha7> quick [skip ci]`, and pushes, three
       attempts with `git pull --rebase` between. Job `compare`: on
       `schedule` and `workflow_dispatch`, a matrix `compiler: [gcc,
-      clang]`, `timeout-minutes: 120`, fetches, builds, runs `--scope
+      clang]`, `timeout-minutes: 120`, fetches (cached the same way),
+      builds, runs `--scope
       full` and uploads `bench-full-<compiler>`; job `publish-full`
       (`needs: compare`, `contents: write`, `if: github.ref ==
       'refs/heads/main' && inputs.publish != 'false'`) appends both
@@ -550,7 +568,7 @@ The rules every card here keeps:
       `concurrency: {group: bench-history, cancel-in-progress: false}`.
     * Because `bench-history` is a branch of the repository, `ci.yml`'s
       trigger becomes `on: {push: {branches-ignore: [bench-history]},
-      pull_request: {}}` (today `on: [push, pull_request]`, line 2), or
+      pull_request: {}}` (today `on: [push, pull_request]`), or
       every history commit would run the whole suite.
   * **What a weekly run costs, and why the split.** The quick run
     (ConfigForge only, 16 MiB) is a few minutes and is on every push,
@@ -574,8 +592,10 @@ The rules every card here keeps:
     `bench/compare/documents.json`, new), and "What each library
     checks" (from `bench/compare/probes.expected`). The check
     `gate.perfpage` (ctest, `cmake/gates/GatePerfpage.cmake`, runs
-    `scripts/bench/page.py --check docs/Performance.md`; skipped, as
-    `gate.formats` is, when there is no Python) regenerates this block
+    `scripts/bench/page.py --check docs/Performance.md`; registered
+    beside `gate.formats` in `cmake/ConfigForgeGates.cmake`, after the
+    return for MSVC, so on Unix only, and skipped, as `gate.formats` is,
+    when there is no Python) regenerates this block
     and fails when the file differs, with
     `docs/Performance.md is not what scripts/bench/page.py writes: run
     python3 scripts/bench/page.py --write docs/Performance.md`. (3)
@@ -646,10 +666,10 @@ The rules every card here keeps:
   `bench-smoke`; the clang-format step of the `format-patch` job gains
   `bench/compare`), `.github/workflows/bench.yml` (new),
   `.github/workflows/docs.yml`, `.gitignore`, `scripts/format.cmake`
-  (its two globs for `bench/*.c`) and `cmake/ConfigForgeFormat.cmake` (its `bench/*.c`
-  glob), both gaining `bench/compare/*.cpp`, `bench/compare/*.h` and
+  (its one `bench/*.c` glob and its `bench/CMakeLists.txt` entry) and
+  `cmake/ConfigForgeFormat.cmake` (its `bench/*.c` glob), both gaining `bench/compare/*.cpp`, `bench/compare/*.h` and
   `bench/compare/adapters/*.cpp`; last: `docs/Performance.md`,
-  `docs/Dependencies.md`, `mkdocs.yml`, `scripts/README.md`,
+  `docs/Dependencies.md`, `scripts/README.md`,
   `docs/Decisions.md`, `docs/Plan.md`, `docs/Roadmap.md`,
   `docs/Maintaining.md`, `CHANGELOG.md`.
 * **steps**:
@@ -725,8 +745,15 @@ The rules every card here keeps:
       library of the table above (licence from step 1, "the benchmark's
       comparison, `bench/compare/`, fetched by `scripts/bench/fetch.cmake`
       at a pinned commit, built by CI only, never shipped"), and
-      valgrind's row says it is also used by `bench-gate`. The page,
-      `mkdocs.yml`, the README of scripts, the decision, the index.
+      valgrind's row says it is also used by `bench-gate`; and, in the same
+      section "3. Continuous integration", the row of
+      `actions/upload-artifact` and `actions/download-artifact` gains
+      their new uses (`bench-gate` and `bench.yml`: carrying the quick
+      and full results), and a row for `actions/cache` (MIT: the
+      libfuzzer corpus and the fetched benchmark sources of `bench-smoke`
+      and `compare`) is added. The page,
+      the README of scripts, the decision, the index (`mkdocs.yml`
+      already has the page: P-1 put it there).
   13. ACCEPT; after the merge to main, the first `workflow_run` writes
       `bench-history`: `git fetch origin bench-history` shows one file;
       then `gh workflow run bench.yml -f sizes=1`, and when it ends
@@ -744,8 +771,9 @@ The rules every card here keeps:
   built, with `ctest --test-dir $HOME/cfb --output-on-failure -R
   "bench\.(touch|probes)"` passing (the adapters' tests are registered
   there, and need the fetched libraries);
-  ACCEPT-WINDOWS (`gate.perfpage` and `gate.dependencies` run there; the
-  comparison is Linux only and is not built); ACCEPT-CI, with the
+  ACCEPT-WINDOWS (`gate.dependencies` runs there, and `gate.perfpage`
+  does not: it is Unix only; the comparison is Linux only and is not
+  built); ACCEPT-CI, with the
   jobs `bench-gate` and `bench-smoke` green on the branch. CI-only
   part: `bench.yml` and the history (steps 11 and 13), accepted by the
   first runs after the merge.
@@ -763,11 +791,7 @@ The rules every card here keeps:
   permissions or on the orphan branch: fix the workflow in a commit of
   its own, and say so in the notes; the card stays open until
   `bench-history` has its first file.
-* **docs**: **D-111** in `docs/Decisions.md` (D-109 and
-  D-110 belong to other cards written with this one; if they
-  are not in the file when this card runs, add D-111 after D-108 and
-  keep the gap in the index with the title "reserved" for them, and
-  not renumber), title "The comparison with other libraries: one set
+* **docs**: **D-111** in `docs/Decisions.md` (after D-110), title "The comparison with other libraries: one set
   of flags, the same work, and a history kept on its own branch".
   Question: how is "faster than the others" made a claim that can be
   checked. Options: (1) numbers from each library's own benchmark,
@@ -784,7 +808,9 @@ The rules every card here keeps:
   a `libs/<name>.cmake`, a settings entry and probe lines, and leaves
   by removing them. "Built: P-1b." `docs/Plan.md`: the index row of P-1b
   `done` with its commits (it is there already); and the fourth failure
-  that is not the code, under "ACCEPT": "`bench gate` exit 3: the runner's compiler
+  that is not the code: under "ACCEPT" the heading "Three failures that
+  are not the code" becomes "Four failures that are not the code", and
+  the list gains "`bench gate` exit 3: the runner's compiler
   or C library is not the baseline's; regenerate the baseline with
   `scripts/bench/gate.py --write` from the CI artifact." `docs/Roadmap.md`:
   "The aim: beat the others...", "Benchmarks fair, and without mercy"
@@ -798,9 +824,7 @@ The rules every card here keeps:
   `docs/plan/P-word-at-a-time.md`, "What keeps a gain": "A reference
   point" gains "(P-1b: the comparison and its page)". `scripts/README.md`:
   rows for `bench/fetch.cmake`, `bench/run.py`, `bench/gate.py`,
-  `bench/page.py`. `mkdocs.yml`: under Design, after Conformance,
-  `- Performance: docs/Performance.md`, when P-1 has not put it
-  there. CHANGELOG, `## 1.8.0 — unreleased`, "### Added":
+  `bench/page.py`. CHANGELOG, `## 1.8.0 — unreleased`, "### Added":
   "- **The benchmark against other libraries** (`bench/compare/`):
   the same documents read through yyjson, simdjson, RapidJSON, cJSON,
   libyaml, rapidyaml, tomlc17, toml++, tinycbor, expat and inih, under
