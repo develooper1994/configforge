@@ -204,7 +204,8 @@ waves ("After 1.7.0: the order of the waves", below).
 | 38b | L-1 shellcheck, ruff, actionlint and codespell, as gates | medium | 1.7.0 released | done (7bec7d8) |
 | 38c | L-2 Valgrind, AFL++, gitleaks, osv-scanner and Scorecard in CI | medium | L-1 | done (6442c8f) |
 | 38d | L-4 include-what-you-use and a link check | small | L-1 | done (a87a174) |
-| 38e | L-3 Infer and semgrep; IKOS or Frama-C with 1.9.0 | large | L-2 | waits: written out (outline) |
+| 38e | L-3 Infer and semgrep | large | L-2 | open |
+| 38g | L-3b Frama-C EVA on port, numeric and base | large | L-3; 1.9.0 under way | open |
 | 38f | L-5 Profilers: one command for time, cache, memory and vectorization | medium | P-1 | done (13e9e70) |
 | 39 | P-1 The benchmark measures large documents, and says where time goes | medium | 1.7.0 released | done (90b6541) |
 | 40 | A-1 One directory per component: the files moved, nothing else changed | large | 1.7.0 released | done (824181f) |
