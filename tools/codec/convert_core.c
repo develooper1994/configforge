@@ -99,6 +99,18 @@ typedef struct cv_out {
  * The tree
  * ------------------------------------------------------------------ */
 
+/* The longest name a mapping key or member may have in the format
+   called `format`: its reader decodes each one into a buffer of
+   CF_KEY_MAX bytes (the scratch buffer of json.c for JSON and JSON5,
+   the key buffer of yamlparse for YAML), apart from the path. Other
+   formats have no such limit. */
+static size_t cv_max_name(const char* format) {
+    return (strcmp(format, "yaml") == 0 || strcmp(format, "json") == 0 ||
+            strcmp(format, "json5") == 0)
+               ? CF_KEY_MAX - 1u
+               : (size_t)-1;
+}
+
 static unsigned long cv_fnv(unsigned long h, const unsigned char* p, size_t n) {
     size_t i;
 
@@ -798,8 +810,8 @@ static void cv_find(cv_check* k, cv_node* root, size_t* non_text) {
                    ? CF_TRUE
                    : CF_FALSE;
     if (k->known) {
-        /* YAML limits each mapping key separately from the path. */
-        k->max_name = strcmp(c->name, "yaml") == 0 ? CF_KEY_MAX - 1u : (size_t)-1;
+        /* Some readers limit each name separately from the path. */
+        k->max_name = cv_max_name(c->name);
         cv_pass_bits(k, root, 0u, CF_FALSE, 0u);
     } else {
         /* A codec the table does not know: W5-V1's passes, by its caps. */

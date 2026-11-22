@@ -247,21 +247,21 @@ cv_case(
   --to
   toml)
 cv_lacks("${cv_err}" "a name it would write unquoted")
-# YAML bounds each mapping key separately from its path.
+# YAML, JSON and JSON5 bound each mapping key separately from its path.
+set(yaml_long "k")
+while(1)
+  string(LENGTH "${yaml_long}" yaml_len)
+  if(yaml_len GREATER_EQUAL KEY_MAX)
+    break()
+  endif()
+  string(APPEND yaml_long "${yaml_long}")
+endwhile()
+string(SUBSTRING "${yaml_long}" 0 ${KEY_MAX} yaml_long)
+math(EXPR yaml_key_len "${KEY_MAX} - 1")
+string(SUBSTRING "${yaml_long}" 0 ${yaml_key_len} yaml_key)
+file(WRITE ${WORK}/long-name.ini
+     "[${yaml_key}]\n${yaml_long} = 1\nkept = 2\n")
 if(YAML)
-  set(yaml_long "k")
-  while(1)
-    string(LENGTH "${yaml_long}" yaml_len)
-    if(yaml_len GREATER_EQUAL KEY_MAX)
-      break()
-    endif()
-    string(APPEND yaml_long "${yaml_long}")
-  endwhile()
-  string(SUBSTRING "${yaml_long}" 0 ${KEY_MAX} yaml_long)
-  math(EXPR yaml_key_len "${KEY_MAX} - 1")
-  string(SUBSTRING "${yaml_long}" 0 ${yaml_key_len} yaml_key)
-  file(WRITE ${WORK}/long-name.ini
-       "[${yaml_key}]\n${yaml_long} = 1\nkept = 2\n")
   cv_case(
     yaml_long_key
     0
@@ -278,6 +278,22 @@ if(YAML)
   cv_has("${yaml_out}" "kept:")
   cv_lacks("${yaml_out}" "${yaml_long}")
 endif()
+foreach(fmt json5 json)
+  cv_case(
+    ${fmt}_long_key
+    0
+    "a name too long, which ${fmt} cannot hold"
+    convert
+    long-name.ini
+    --to
+    ${fmt}
+    --out
+    long-name.${fmt})
+  cv_case(${fmt}_long_key_output 0 "-" check long-name.${fmt})
+  file(READ ${WORK}/long-name.${fmt} fmt_out)
+  cv_has("${fmt_out}" "kept")
+  cv_lacks("${fmt_out}" "${yaml_long}")
+endforeach()
 # ...and a path too long for a TOML or INI writer to write and read back.
 set(cv_n "n")
 foreach(i RANGE 7)

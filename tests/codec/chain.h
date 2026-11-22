@@ -486,10 +486,21 @@ typedef struct ch_rules {
     size_t   max_name;
 } ch_rules;
 
+/* The longest name a mapping key or member may have in the format
+   called `format`: its reader decodes each one into a buffer of
+   CF_KEY_MAX bytes (the scratch buffer of json.c for JSON and JSON5,
+   the key buffer of yamlparse for YAML), apart from the path. Other
+   formats have no such limit. */
+static size_t ch_max_name(const char* format) {
+    return (strcmp(format, "yaml") == 0 || strcmp(format, "json") == 0 ||
+            strcmp(format, "json5") == 0)
+               ? CF_KEY_MAX - 1u
+               : (size_t)-1;
+}
+
 /* The rules of the format called `name`; false when the table has none. */
 static cf_bool ch_rules_of(const char* name, ch_rules* r) {
-    /* YAML checks the decoded bytes of each mapping key. */
-    r->max_name = strcmp(name, "yaml") == 0 ? CF_KEY_MAX - 1u : (size_t)-1;
+    r->max_name = ch_max_name(name);
     return (cf_format_holds(name, &r->holds) &&
             cf_format_limits(name, &r->max_path, &r->max_depth))
                ? CF_TRUE
