@@ -4,9 +4,11 @@
  * itself is no looser for it, and that places stay exact.
  */
 
+#include <configforge/cf_flatten.h>
 #include <configforge/configforge.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "cf_test.h"
@@ -142,6 +144,49 @@ static void test_refuses(void) {
             has(err.message, bad[i][1], bad[i][0]);
         }
         cf_config_free(c);
+    }
+}
+
+/* A document that ends right after a comma is refused where it ends.
+   Each is read from a buffer of exactly its length, so a read past the
+   end is a fault under a checker and not a byte that happens to be there. */
+static void test_cut_after_comma(void) {
+    static const char* const bad[][2] = {
+        {"{\"a\":1,", "object is not closed"},
+        {"{\"a\":[1,", "array is not closed"},
+        {"{a:1, ", "object is not closed"},
+    };
+    static char     arena[1 << 16];
+    const cf_codec* codec = cf_codec_by_name("json5");
+    size_t          i;
+
+    if (codec == NULL) {
+        return;
+    }
+    for (i = 0; i < sizeof bad / sizeof bad[0]; ++i) {
+        size_t      n   = strlen(bad[i][0]);
+        char*       buf = (char*)malloc(n);
+        cf_arena*   ar  = cf_arena_fixed(arena, sizeof arena);
+        cf_keyspace ks;
+        cf_flatten  fl;
+        cf_blob     b;
+        cf_error    err = CF_ERROR_INIT;
+        cf_bool     ok  = CF_TRUE;
+
+        check(buf != NULL && ar != NULL && cf_ks_init(&ks, ar, 32), "room to read");
+        if (buf == NULL || ar == NULL) {
+            free(buf);
+            continue;
+        }
+        memcpy(buf, bad[i][0], n);
+        cf_blob_mem(&b, buf, n, "cut");
+        cf_flatten_init(&fl, &ks, 0);
+        ok = cf_flatten_decode(&fl, codec, &b, "cut", &err);
+        check(!ok, bad[i][0]);
+        if (!ok) {
+            has(err.message, bad[i][1], bad[i][0]);
+        }
+        free(buf);
     }
 }
 
@@ -289,6 +334,7 @@ int main(void) {
     test_jsonc();
     test_json_stays_json();
     test_refuses();
+    test_cut_after_comma();
     test_numbers();
 #if CF_WITH_REAL
     test_points();

@@ -636,7 +636,6 @@ int main(int argc, char** argv) {
     st.arena = cf_arena_new(NULL, 0);
     if (st.arena == NULL) {
         pr_die("out of memory");
-        return 2;
     }
     pr_edges(&st);
     for (m = 0; m < nman; ++m) {

@@ -116,6 +116,8 @@ static const char* cv_what(cv_kind kind) {
         return "an empty table";
     case CV_LONG_PATH:
         return "a table path too long";
+    case CV_LONG_NAME:
+        return "a name too long";
     case CV_NULL:
         return "a null";
     case CV_LINE_BREAK:

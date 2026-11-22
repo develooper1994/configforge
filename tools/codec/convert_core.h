@@ -20,6 +20,7 @@ typedef enum cv_kind {
     CV_NESTED_ARRAY,
     CV_EMPTY_TABLE,
     CV_LONG_PATH,
+    CV_LONG_NAME,
     CV_NULL,
     CV_LINE_BREAK,
     CV_NUL,

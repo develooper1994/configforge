@@ -60,8 +60,17 @@ static const char* said(const char* bytes, int* ok) {
     msg[0] = '\0';
     *ok    = cf_encoding_check("a.ini", bytes, strlen(bytes), &err) ? 1 : 0;
     if (!*ok) {
+        size_t n = strlen(err.message);
+
         check(err.code == CF_E_SOURCE, "the refusal is a CF_E_SOURCE");
-        sprintf(msg, "%.500s", err.message);
+        if (n > 500u) {
+            n = 500u;
+        }
+        if (n >= sizeof msg) {
+            n = sizeof msg - 1u;
+        }
+        memcpy(msg, err.message, n);
+        msg[n] = '\0';
     }
     return msg;
 }
