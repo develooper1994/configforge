@@ -61,7 +61,7 @@ static const char* said(const char* bytes, int* ok) {
     *ok    = cf_encoding_check("a.ini", bytes, strlen(bytes), &err) ? 1 : 0;
     if (!*ok) {
         check(err.code == CF_E_SOURCE, "the refusal is a CF_E_SOURCE");
-        sprintf(msg, "%.500s", err.message);
+        memcpy(msg, err.message, sizeof msg);
     }
     return msg;
 }
