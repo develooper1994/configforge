@@ -143,13 +143,11 @@ static void pr_add(pr_state* st, const char* name, const cf_codec* codec, const 
 
     if (d == NULL) {
         pr_die("out of memory");
-        return;
     }
     d->name  = (char*)cf_arena_alloc(st->arena, nlen);
     d->bytes = (char*)cf_arena_alloc(st->arena, n + 1u);
     if (d->name == NULL || d->bytes == NULL) {
         pr_die("out of memory");
-        return;
     }
     memcpy(d->name, name, nlen);
     memcpy(d->bytes, p, n);
@@ -636,7 +634,6 @@ int main(int argc, char** argv) {
     st.arena = cf_arena_new(NULL, 0);
     if (st.arena == NULL) {
         pr_die("out of memory");
-        return 2;
     }
     pr_edges(&st);
     for (m = 0; m < nman; ++m) {
