@@ -52,6 +52,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Changed
 
+- The readers share one escape decoder a family (JSON and JSON5, TOML,
+  YAML, `.properties`), the writers one escaper, and the three `${` copies
+  one definition (D-102); no input is read differently and no output
+  changes. In a YAML tag, `%` followed by characters that are not both
+  hexadecimal digits is refused by the built-in reader; `%@0` and a
+  backquote in place of a digit were read as the digit 9 (D-102).
+
 - `configforge codec convert` names an empty table, a path too long for
   TOML and INI, a table nested deeper than the target's reader takes, and
   a name that is empty, where the target cannot hold them, from one table,

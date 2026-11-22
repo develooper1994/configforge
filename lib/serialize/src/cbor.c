@@ -27,6 +27,7 @@
 #include "configforge/cf_build_options.h"
 #include "configforge/cf_error.h"
 #include "configforge/cf_port.h"
+#include "configforge/cf_text.h"
 #include "configforge/cf_value.h"
 
 #include <float.h>
@@ -714,20 +715,14 @@ static void cbor_put_text(cf_sink* out, const char* p, size_t n, cf_bool escape)
     size_t i, from = 0, extra = 0;
 
     if (escape) {
-        for (i = 0; i + 1 < n; ++i) {
-            if (p[i] == '$' && p[i + 1] == '{') {
-                ++extra;
-            }
-        }
+        extra = cf_text_ref_count(p, n);
     }
     cbor_put_head(out, 3, (cf_u64)n + (cf_u64)extra);
     if (extra != 0) {
-        for (i = 0; i + 1 < n; ++i) {
-            if (p[i] == '$' && p[i + 1] == '{') {
-                cf_sink_write(out, p + from, i + 1 - from);
-                cf_sink_putc(out, '$');
-                from = i + 1;
-            }
+        for (i = cf_text_ref_next(p, n, 0); i < n; i = cf_text_ref_next(p, n, i + 1)) {
+            cf_sink_write(out, p + from, i + 1 - from);
+            cf_sink_putc(out, '$');
+            from = i + 1;
         }
     }
     cf_sink_write(out, p + from, n - from);

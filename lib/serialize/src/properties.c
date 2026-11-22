@@ -74,6 +74,15 @@ static void prop_next_line(prop_scan* s) {
     s->line_start = s->p;
 }
 
+/* The escapes of a .properties file, as data (D-102): the letters for a
+   tab, a line feed, a carriage return and a form feed, and the four-digit
+   escape with UTF-16 pairs, as Java writes anything above U+FFFF. Any other
+   letter after a backslash stands for itself. */
+static const cf_text_esc_simple prop_simple[] = {
+    {'t', 9}, {'n', 10}, {'r', 13}, {'f', 12}, {0, 0}};
+static const cf_text_esc_family prop_family = {
+    prop_simple, "", "u", "", CF_ESC_PAIRS, CF_ESC_AT_LETTER, CF_ESC_NL_NONE};
+
 /* Read one logical line's element - the key, or the value - unescaping
    it into out. A key stops at an unescaped '=', ':' or whitespace; a
    value runs to the end of the logical line. Continuations are followed:
@@ -86,7 +95,8 @@ static cf_bool prop_element(prop_scan* s, cf_bool is_key, char* out, size_t cap,
     for (;;) {
         const char* eol = prop_eol(s);
         while (s->p < eol) {
-            char c = *s->p;
+            char        c = *s->p;
+            cf_text_esc r;
             if (is_key &&
                 (c == '=' || c == ':' || c == ' ' || c == '\t' || c == '\f')) {
                 *len = n;
@@ -97,65 +107,30 @@ static cf_bool prop_element(prop_scan* s, cf_bool is_key, char* out, size_t cap,
                     break; /* a continuation, handled below */
                 }
                 ++s->p;
-                c = *s->p;
-                if (c == 'u') {
-                    unsigned long cp = 0;
-                    int           k;
-                    for (k = 0; k < 4; ++k) {
-                        int h = (s->p + 1 + k < eol)
-                                    ? cf_text_hex_value((unsigned char)s->p[1 + k])
-                                    : -1;
-                        if (h < 0) {
-                            return prop_fail(s, "\\"
-                                                "u needs four hexadecimal digits");
-                        }
-                        cp = cp * 16u + (unsigned long)h;
-                    }
-                    s->p += 4;
-                    /* A surrogate pair, as Java writes anything above
-                       U+FFFF. */
-                    if (cp >= 0xD800u && cp <= 0xDBFFu && s->p + 6 < eol &&
-                        s->p[1] == '\\' && s->p[2] == 'u') {
-                        unsigned long lo   = 0;
-                        cf_bool       good = CF_TRUE;
-                        for (k = 0; k < 4; ++k) {
-                            int h = (s->p + 3 + k < eol)
-                                        ? cf_text_hex_value((unsigned char)s->p[3 + k])
-                                        : -1;
-                            if (h < 0) {
-                                good = CF_FALSE;
-                                break;
-                            }
-                            lo = lo * 16u + (unsigned long)h;
-                        }
-                        if (good && lo >= 0xDC00u && lo <= 0xDFFFu) {
-                            cp = 0x10000u + ((cp - 0xD800u) << 10) + (lo - 0xDC00u);
-                            s->p += 6;
-                        }
-                    }
-                    if (cp >= 0xD800u && cp <= 0xDFFFu) {
-                        return prop_fail(s, "a \\"
-                                            "u escape is half a surrogate pair");
-                    }
-                    {
-                        char   enc[4];
-                        size_t ek = cf_text_utf8_encode((cf_u32)cp, enc);
+                cf_text_esc_decode(&prop_family, s->p, eol, &r);
+                if (r.kind == CF_ESC_E_DIGITS) {
+                    return prop_fail(s, "\\"
+                                        "u needs four hexadecimal digits");
+                }
+                if (r.kind == CF_ESC_E_HIGH || r.kind == CF_ESC_E_LOW) {
+                    return prop_fail(s, "a \\"
+                                        "u escape is half a surrogate pair");
+                }
+                if (r.kind == CF_ESC_CP) {
+                    char   enc[4];
+                    size_t ek = cf_text_utf8_encode(r.cp, enc);
 
-                        if (n + ek > cap) {
-                            return prop_fail(s, is_key ? "the key is too long"
-                                                       : "the value is too long");
-                        }
-                        memcpy(out + n, enc, ek);
-                        n += ek;
+                    if (n + ek > cap) {
+                        return prop_fail(s, is_key ? "the key is too long"
+                                                   : "the value is too long");
                     }
-                    ++s->p;
+                    memcpy(out + n, enc, ek);
+                    n += ek;
+                    s->p += r.used;
                     continue;
                 }
-                c = (char)((c == 't')   ? '\t'
-                           : (c == 'n') ? '\n'
-                           : (c == 'r') ? '\r'
-                           : (c == 'f') ? '\f'
-                                        : c);
+                /* No escape of this format: the letter stands for itself. */
+                c = *s->p;
             }
             if (n >= cap) {
                 return prop_fail(s, is_key ? "the key is too long"

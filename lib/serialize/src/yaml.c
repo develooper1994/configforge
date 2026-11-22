@@ -1125,6 +1125,17 @@ typedef struct yaml_enc {
 /* cf_emit keeps this on its own frame, in CF_ENCODER_STATE_MAX bytes. */
 typedef char yaml_enc_fits[(sizeof(yaml_enc) <= CF_ENCODER_STATE_MAX) ? 1 : -1];
 
+/* What a double-quoted YAML scalar escapes, as data (D-102): the quote and
+   the backslash, a line feed and a tab as letters, the C0 controls, DEL and
+   the C1 controls as backslash, x and two digits, and U+FFFE and U+FFFF as
+   backslash, u and four. */
+static const cf_text_escaper yaml_escaper = {"\"\""
+                                             "\\\\"
+                                             "\nn"
+                                             "\tt",
+                                             0x20u, 0x7Fu, 0x9Fu,
+                                             CF_ESCAPER_X | CF_ESCAPER_NONCHARS};
+
 /* One double-quoted scalar. Escaped is what a reader would not give
    back as written: the C0 controls, DEL, and the C1 controls, which
    libyaml refuses outright - but for U+0085, which it takes for a line
@@ -1132,30 +1143,23 @@ typedef char yaml_enc_fits[(sizeof(yaml_enc) <= CF_ENCODER_STATE_MAX) ? 1 : -1];
    as well. False for a string that is not UTF-8, with the scalar left
    unfinished. */
 static cf_bool yaml_quote(cf_sink* out, const char* p, size_t n) {
-    static const char hex[] = "0123456789abcdef";
-    size_t            i     = 0;
+    size_t i = 0;
 
     cf_sink_putc(out, '"');
     while (i < n) {
         cf_u32 cp;
+        char   esc[8];
         size_t len = cf_text_utf8_decode(p + i, p + n, &cp);
+        size_t elen;
 
         if (len == 0) {
             return CF_FALSE;
         }
-        if (cp == '"' || cp == '\\') {
-            cf_sink_putc(out, '\\');
-            cf_sink_putc(out, (char)cp);
-        } else if (cp == '\n') {
-            cf_sink_puts(out, "\\n");
-        } else if (cp == '\t') {
-            cf_sink_puts(out, "\\t");
-        } else if (cp < 0x20u || (cp >= 0x7Fu && cp <= 0x9Fu)) {
-            cf_sink_fmt(out, "\\x%c%c", hex[(cp >> 4) & 0xFu], hex[cp & 0xFu]);
-        } else if (cp == 0xFFFEu || cp == 0xFFFFu) {
-            cf_sink_fmt(out, "\\ufff%c", hex[cp & 0xFu]);
-        } else {
+        elen = cf_text_escape(&yaml_escaper, cp, esc);
+        if (elen == 0) {
             cf_sink_write(out, p + i, len);
+        } else {
+            cf_sink_write(out, esc, elen);
         }
         i += len;
     }

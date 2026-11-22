@@ -50,7 +50,7 @@ the same for a program.
 | `lib/port` | the compiler's door: `cf_port.h`, the build options, the bounded formatter and the integer writers | nothing | anything |
 | `lib/numeric` | numbers read, floating point read and written | port | anything above it |
 | `lib/base` | what every component shares: allocation, errors, the value model | port, numeric | anything above it |
-| `lib/text` | UTF-8 decoded, validated and encoded, a hexadecimal digit read, a name table's seeded hash: one function each, internal (D-102) | port, numeric, base, lanes | anything above it |
+| `lib/text` | UTF-8 decoded, validated and encoded, a hexadecimal digit read, a name table's seeded hash, the escapes of a family of formats read and written, the `${` of a reference: one function each, internal (D-102) | port, numeric, base, lanes | anything above it |
 | `lib/platform` | the environment, UTF-8 arguments, directory listing, file stamps, the change handle | port, numeric, base | anything above it |
 | `lib/serialize` | readers, writers, codecs, document events | port, numeric, base, text, lanes, the platform's file opener (`cf_platform_file.h`) | the key space, definitions, sources |
 | `lib/config/src/core` | key space, definitions, validation, `cf_config` | the components above | serialize's codecs, sources, bridge |

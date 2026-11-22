@@ -247,11 +247,9 @@ static cf_bool yp_tag_put(yp* y, size_t* n, const char* p, size_t k) {
         int c = (unsigned char)p[i];
         /* %XX in a tag stands for the byte it names. */
         if (c == '%' && i + 2 < k) {
-            int hi =
-                cf_is_digit(p[i + 1]) ? p[i + 1] - '0' : (p[i + 1] | 0x20) - 'a' + 10;
-            int lo =
-                cf_is_digit(p[i + 2]) ? p[i + 2] - '0' : (p[i + 2] | 0x20) - 'a' + 10;
-            if (hi < 0 || hi > 15 || lo < 0 || lo > 15) {
+            int hi = cf_text_hex_value((unsigned char)p[i + 1]);
+            int lo = cf_text_hex_value((unsigned char)p[i + 2]);
+            if (hi < 0 || lo < 0) {
                 return yp_fail(y, "an escape in a tag is two hexadecimal digits");
             }
             c = hi * 16 + lo;
@@ -590,99 +588,34 @@ static cf_bool yp_quoted_fold(yp* y, size_t* k, int n, cf_bool escaped) {
     return CF_TRUE;
 }
 
-/* The double-quoted escapes (spec 5.7). */
-static cf_bool yp_escape(yp* y, size_t* k, int n) {
-    int    c = yp_c(y, 0);
-    cf_u32 cp;
-    int    digits = 0;
-    int    i;
+/* The double-quoted escapes (spec 5.7), as data (D-102). */
+static const cf_text_esc_simple yp_simple[] = {
+    {'0', 0},    {'a', 7},      {'b', 8},      {'t', 9},   {'\t', 9},
+    {'n', 10},   {'v', 11},     {'f', 12},     {'r', 13},  {'e', 27},
+    {' ', 32},   {'"', 34},     {'/', 47},     {'\\', 92}, {'N', 0x85},
+    {'_', 0xA0}, {'L', 0x2028}, {'P', 0x2029}, {0, 0}};
+static const cf_text_esc_family yp_family = {yp_simple,     "x",          "u", "U", 0u,
+                                             CF_ESC_AT_BAD, CF_ESC_NL_ANY};
 
-    switch (c) {
-    case '0':
-        cp = 0;
-        break;
-    case 'a':
-        cp = 7;
-        break;
-    case 'b':
-        cp = 8;
-        break;
-    case 't':
-    case '\t':
-        cp = 9;
-        break;
-    case 'n':
-        cp = 10;
-        break;
-    case 'v':
-        cp = 11;
-        break;
-    case 'f':
-        cp = 12;
-        break;
-    case 'r':
-        cp = 13;
-        break;
-    case 'e':
-        cp = 27;
-        break;
-    case ' ':
-        cp = 32;
-        break;
-    case '"':
-        cp = 34;
-        break;
-    case '/':
-        cp = 47;
-        break;
-    case '\\':
-        cp = 92;
-        break;
-    case 'N':
-        cp = 0x85u;
-        break;
-    case '_':
-        cp = 0xA0u;
-        break;
-    case 'L':
-        cp = 0x2028u;
-        break;
-    case 'P':
-        cp = 0x2029u;
-        break;
-    case 'x':
-        digits = 2;
-        cp     = 0;
-        break;
-    case 'u':
-        digits = 4;
-        cp     = 0;
-        break;
-    case 'U':
-        digits = 8;
-        cp     = 0;
-        break;
-    case '\n':
-    case '\r':
+/* With y->p on the letter after the backslash. */
+static cf_bool yp_escape(yp* y, size_t* k, int n) {
+    cf_text_esc r;
+
+    cf_text_esc_decode(&yp_family, y->p, y->end, &r);
+    switch (r.kind) {
+    case CF_ESC_BREAK:
         /* An escaped line break: the lines join with nothing between. */
         return yp_quoted_fold(y, k, n, CF_TRUE);
+    case CF_ESC_E_DIGITS:
+        return yp_fail_at(y, y->p + r.at, "an escape needs its hexadecimal digits");
+    case CF_ESC_E_SCALAR:
+        return yp_fail_at(y, y->p + r.at, "an escape names no character");
+    case CF_ESC_CP:
+        y->p += r.used;
+        return yp_put_cp(y, k, r.cp);
     default:
         return yp_fail(y, "an unknown escape");
     }
-    ++y->p;
-    for (i = 0; i < digits; ++i) {
-        int d = yp_c(y, 0);
-        int v = cf_text_hex_value(d);
-        if (v < 0) {
-            return yp_fail(y, "an escape needs its hexadecimal digits");
-        }
-        cp = (cp << 4) | (cf_u32)v;
-        ++y->p;
-    }
-    if ((cp >= 0xD800u && cp <= 0xDFFFu) || cp > 0x10FFFFu) {
-        return yp_fail(y, "an escape names no character");
-    }
-    return yp_put_cp(y, k, cp);
 }
 
 /* A single- or double-quoted scalar. */

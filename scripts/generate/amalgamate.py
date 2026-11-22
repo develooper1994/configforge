@@ -64,7 +64,7 @@ SOURCES = [
     "platform/src/none/none.c", "platform/src/none/file.c",
     "config/src/core/version.c", "port/src/port.c", "base/src/error.c",
     "numeric/src/numeric.c", "base/src/alloc.c",
-    "text/src/utf8.c", "text/src/hex.c", "text/src/hash.c", "text/src/encoding.c", "text/src/place.c",
+    "text/src/utf8.c", "text/src/hex.c", "text/src/hash.c", "text/src/encoding.c", "text/src/place.c", "text/src/escape.c", "text/src/refs.c",
     "lanes/src/lanes.c", "lanes/src/scalar.c",
     "base/src/value.c", "config/src/core/keyspace.c", "config/src/core/define.c",
     "config/src/core/validate.c",

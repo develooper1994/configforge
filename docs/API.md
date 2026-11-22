@@ -80,7 +80,7 @@ Every error carries one of these codes, stable from 1.0;
 - [`cf_serialize.h`](#cf_serializeh) - 31
 - [`cf_serialize_version.h`](#cf_serialize_versionh) - 2
 - [`cf_source.h`](#cf_sourceh) - 35
-- [`cf_text.h`](#cf_texth) - 7
+- [`cf_text.h`](#cf_texth) - 13
 - [`cf_value.h`](#cf_valueh) - 12
 - [`cf_version.h`](#cf_versionh) - 7
 
@@ -1194,7 +1194,7 @@ down the chain only when that is what the definition asked for.
 CF_API void cf_policy_text(const char* const* policy, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_policy_text` (lib/config/src/core/validate.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/validate.c#L625).
+Implementation: [`cf_policy_text` (lib/config/src/core/validate.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/validate.c#L621).
 
 Renders a policy list as the specification writes it: "env > local".
 Shared because both the rejection message and the coherence check
@@ -1204,7 +1204,7 @@ below want the same spelling, and two renderings of one thing drift.
 CF_API cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names* names, cf_unknown_policy unknown, cf_apply_report* report, cf_error* err);
 ```
 
-Implementation: [`cf_defs_apply` (lib/config/src/core/validate.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/validate.c#L1074).
+Implementation: [`cf_defs_apply` (lib/config/src/core/validate.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/validate.c#L1070).
 
 ```c
 CF_API cf_bool cf_source_defaults(struct cf_source* s, const char* name, int rank, const cf_defset* ds);
@@ -1566,7 +1566,7 @@ what git config, systemd drop-ins and sudoers.d all are.
 CF_API size_t cf_emit(const struct cf_config* c, const char* format, cf_emit_what what, int rank, char* buf, size_t cap, cf_error* err);
 ```
 
-Implementation: [`cf_emit` (lib/config/src/bridge/emit.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/emit.c#L252).
+Implementation: [`cf_emit` (lib/config/src/bridge/emit.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/emit.c#L230).
 
 Measure-or-write, like everything else that renders: with a NULL
 buffer nothing is stored and the length still accumulates.
@@ -3789,7 +3789,7 @@ CF_API void cf_sink_json_string(cf_sink* out, const char* p, size_t n);
 CF_API void cf_sink_json_value(cf_sink* out, const cf_value* v);
 ```
 
-Implementation: [`cf_sink_json_string` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L213), [`cf_sink_json_value` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L254).
+Implementation: [`cf_sink_json_string` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L225), [`cf_sink_json_value` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L242).
 
 JSON, written by hand where a document is not the key space's (a
 report, a diff): text as a JSON string, escaped; a value as JSON.
@@ -3800,7 +3800,7 @@ report, a diff): text as a JSON string, escaped; a value as JSON.
 CF_API size_t cf_loc_text(const cf_loc* at, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_loc_text` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L278).
+Implementation: [`cf_loc_text` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L266).
 
 "app.toml:14:3", or just the file when there is no position.
 
@@ -4471,6 +4471,70 @@ Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and 
 Implementation: [`cf_text_hex_value` (lib/text/src/hex.c)](https://github.com/develooper1994/configforge/blob/main/lib/text/src/hex.c#L7).
 
 0-15 for a hex digit of either case, -1 otherwise.
+
+```c
+CF_API void cf_text_esc_decode(const cf_text_esc_family* f, const char* p, const char* end, cf_text_esc* r);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_text_esc_decode` (lib/text/src/escape.c)](https://github.com/develooper1994/configforge/blob/main/lib/text/src/escape.c#L47).
+
+Decodes the escape whose letter is at p (the byte after the
+backslash), reading nothing at or past end. Moves nothing.
+
+```c
+CF_API size_t cf_text_escape(const cf_text_escaper* e, cf_u32 cp, char out[8]);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_text_escape` (lib/text/src/escape.c)](https://github.com/develooper1994/configforge/blob/main/lib/text/src/escape.c#L150).
+
+The escape for cp into out (at most 6 bytes are written; out holds
+8) and its length, or 0 when cp is written as it is.
+
+```c
+CF_API size_t cf_text_ref_count(const char* p, size_t n);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_text_ref_count` (lib/text/src/refs.c)](https://github.com/develooper1994/configforge/blob/main/lib/text/src/refs.c#L14).
+
+The "${" of a reference. How many of them n bytes hold.
+
+```c
+CF_API size_t cf_text_ref_next(const char* p, size_t n, size_t from);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_text_ref_next` (lib/text/src/refs.c)](https://github.com/develooper1994/configforge/blob/main/lib/text/src/refs.c#L25).
+
+The index of the '$' of the first "${" at or after `from`, or n.
+
+```c
+CF_API size_t cf_text_ref_unescape(const char* p, size_t n, char* out);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_text_ref_unescape` (lib/text/src/refs.c)](https://github.com/develooper1994/configforge/blob/main/lib/text/src/refs.c#L36).
+
+"$${" read as "${", into out, which holds n bytes; the length.
+
+```c
+CF_API void cf_text_ref_widen(char* buf, size_t from, size_t end, size_t limit);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_text_ref_widen` (lib/text/src/refs.c)](https://github.com/develooper1994/configforge/blob/main/lib/text/src/refs.c#L48).
+
+buf[from..end) widened in place, each "${" written "$${": from the
+back, with extra = cf_text_ref_count(buf + from, end - from); a
+byte is stored only where its new place is below `limit`.
 
 ```c
 CF_API size_t cf_text_seed(const void* where);

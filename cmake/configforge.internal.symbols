@@ -85,9 +85,15 @@ cf_ref_init
 cf_siphash24
 cf_source_by_content
 cf_source_read_blob
+cf_text_esc_decode
+cf_text_escape
 cf_text_hash
 cf_text_hex_value
 cf_text_place
+cf_text_ref_count
+cf_text_ref_next
+cf_text_ref_unescape
+cf_text_ref_widen
 cf_text_seed
 cf_text_to_f64 real
 cf_text_to_i64

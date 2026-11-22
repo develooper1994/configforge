@@ -3,7 +3,15 @@
 cf_component_tests(serialize configforge_serialize)
 
 # D-109: what each format can hold, held to what its codec says.
-cf_unit_tests(test_holds)
+cf_unit_tests(test_holds test_text_escape)
+# A-7: its YAML cases are the built-in parser's: the test must know when
+# libyaml or libfyaml reads instead.
+if(_CF_YAML_LIBYAML)
+  target_compile_definitions(test_text_escape PRIVATE CF_YAML_LIBYAML=1)
+endif()
+if(_CF_YAML_LIBFYAML)
+  target_compile_definitions(test_text_escape PRIVATE CF_YAML_LIBFYAML=1)
+endif()
 
 # D-90: a program linked to
 # the serialization library and nothing else, which includes one header. An

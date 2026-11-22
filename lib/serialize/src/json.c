@@ -197,104 +197,64 @@ static cf_bool js_put_cp(js_scan* s, char* dst, size_t cap, size_t* n, cf_u32 cp
     return js_put(s, dst, cap, n, enc, cf_text_utf8_encode(cp, enc));
 }
 
-/* \u, with s->p on the u: UTF-16, so a surrogate pair is recombined and
-   a lone surrogate is invalid rather than something to pass through. */
-static cf_bool js_escape_u(js_scan* s, char* dst, size_t cap, size_t* n) {
-    cf_u32 cp = 0;
+/* The escapes of JSON and of JSON5, as data (D-102): the decoder is
+   cf_text_esc_decode's, and the messages and the place of each refusal are
+   this reader's. JSON5 adds \v, \0 not before a digit, \xHH, an escaped
+   line break, and any other character standing for itself - but a
+   digit, which is an octal escape in ECMAScript and none in JSON5. */
+static const cf_text_esc_simple js_simple[]  = {{'"', 34}, {'\\', 92}, {'/', 47},
+                                                {'b', 8},  {'f', 12},  {'n', 10},
+                                                {'r', 13}, {'t', 9},   {0, 0}};
+static const cf_text_esc_simple js5_simple[] = {
+    {'"', 34}, {'\\', 92}, {'/', 47}, {'b', 8}, {'f', 12}, {'n', 10},
+    {'r', 13}, {'t', 9},   {'v', 11}, {'0', 0}, {0, 0}};
+static const cf_text_esc_family js_family = {
+    js_simple, "", "u", "", CF_ESC_PAIRS, CF_ESC_AT_LETTER, CF_ESC_NL_NONE};
+static const cf_text_esc_family js5_family = {
+    js5_simple,     "x", "u", "", CF_ESC_PAIRS | CF_ESC_NO_OCTAL, CF_ESC_AT_LETTER,
+    CF_ESC_NL_JSON5};
 
-    if (s->end - s->p < 5 || !js_hex(s->p + 1, 4, &cp)) {
+/* With s->p on the letter after the backslash. */
+static cf_bool js_escape(js_scan* s, char* dst, size_t cap, size_t* n) {
+    cf_text_esc r;
+    char        e;
+
+    cf_text_esc_decode(s->json5 ? &js5_family : &js_family, s->p, s->end, &r);
+    switch (r.kind) {
+    case CF_ESC_CP:
+        s->p += r.used;
+        return js_put_cp(s, dst, cap, n, r.cp);
+    case CF_ESC_BREAK:
+        s->p += r.used;
+        js_line(s);
+        return CF_TRUE;
+    case CF_ESC_E_DIGITS:
         /* Split after the backslash, as toml.c explains. */
-        return js_fail(s, s->p,
-                       "\\"
-                       "u needs four hexadecimal digits");
-    }
-    s->p += 5;
-    if (cp >= 0xD800u && cp <= 0xDBFFu) {
-        cf_u32 lo = 0;
-        if (s->end - s->p < 6 || s->p[0] != '\\' || s->p[1] != 'u' ||
-            !js_hex(s->p + 2, 4, &lo) || lo < 0xDC00u || lo > 0xDFFFu) {
-            return js_fail(s, s->p, "high surrogate without a low one");
-        }
-        s->p += 6;
-        cp = 0x10000u + ((cp - 0xD800u) << 10) + (lo - 0xDC00u);
-    } else if (cp >= 0xDC00u && cp <= 0xDFFFu) {
-        return js_fail(s, s->p, "unpaired low surrogate");
-    }
-    return js_put_cp(s, dst, cap, n, cp);
-}
-
-/* JSON5's escapes past JSON's, with s->p after the backslash: \v, \0
-   not before a digit, \xHH, a line continuation, and any other
-   character standing for itself - but a digit, which is an octal
-   escape in ECMAScript and none in JSON5. */
-static cf_bool js5_escape(js_scan* s, char* dst, size_t cap, size_t* n) {
-    char   e  = *s->p;
-    cf_u32 cp = 0;
-
-    if (e == 'v') {
-        e = '\v';
-    } else if (e == '0') {
-        if (s->end - s->p >= 2 && cf_is_digit((unsigned char)s->p[1])) {
-            return js_fail(s, s->p, "\\0 may not be followed by a digit");
-        }
-        e = '\0';
-    } else if (e >= '1' && e <= '9') {
-        return js_fail(s, s->p, "a digit may not be escaped");
-    } else if (e == 'x') {
-        if (s->end - s->p < 3 || !js_hex(s->p + 1, 2, &cp)) {
-            return js_fail(s, s->p,
+        if (r.letter == 'u') {
+            return js_fail(s, s->p + r.at,
                            "\\"
-                           "x needs two hexadecimal digits");
+                           "u needs four hexadecimal digits");
         }
-        s->p += 3;
-        return js_put_cp(s, dst, cap, n, cp);
-    } else if (e == '\n' || e == '\r') {
-        ++s->p;
-        if (e == '\r' && s->p < s->end && *s->p == '\n') {
-            ++s->p;
-        }
-        js_line(s);
-        return CF_TRUE;
-    } else if (cf_text_utf8_decode(s->p, s->end, &cp) == 3 && js5_is_ls(cp)) {
-        s->p += 3;
-        js_line(s);
-        return CF_TRUE;
+        return js_fail(s, s->p + r.at,
+                       "\\"
+                       "x needs two hexadecimal digits");
+    case CF_ESC_E_HIGH:
+        return js_fail(s, s->p + r.at, "high surrogate without a low one");
+    case CF_ESC_E_LOW:
+        return js_fail(s, s->p + r.at, "unpaired low surrogate");
+    case CF_ESC_E_NUL_DIGIT:
+        return js_fail(s, s->p + r.at, "\\0 may not be followed by a digit");
+    case CF_ESC_E_DIGIT:
+        return js_fail(s, s->p + r.at, "a digit may not be escaped");
+    default:
+        break;
+    }
+    if (!s->json5) {
+        return js_fail(s, s->p, "unknown escape");
     }
     /* Any other byte, the first of a longer character included: the
        rest of it follows as ordinary string bytes. */
-    ++s->p;
-    return js_put(s, dst, cap, n, &e, 1);
-}
-
-static cf_bool js_escape(js_scan* s, char* dst, size_t cap, size_t* n) {
-    char e = *s->p;
-
-    switch (e) {
-    case '"':
-    case '\\':
-    case '/':
-        break;
-    case 'b':
-        e = '\b';
-        break;
-    case 'f':
-        e = '\f';
-        break;
-    case 'n':
-        e = '\n';
-        break;
-    case 'r':
-        e = '\r';
-        break;
-    case 't':
-        e = '\t';
-        break;
-    case 'u':
-        return js_escape_u(s, dst, cap, n);
-    default:
-        return s->json5 ? js5_escape(s, dst, cap, n)
-                        : js_fail(s, s->p, "unknown escape");
-    }
+    e = *s->p;
     ++s->p;
     return js_put(s, dst, cap, n, &e, 1);
 }

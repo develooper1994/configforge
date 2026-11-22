@@ -65,6 +65,13 @@
     "u four and \\"                                                                    \
     "U eight"
 
+/* The escapes of a TOML basic string, as data (D-102); \x and \e are 1.1's. */
+static const cf_text_esc_simple toml_simple[] = {{'"', 34}, {'\\', 92}, {'b', 8},
+                                                 {'t', 9},  {'n', 10},  {'f', 12},
+                                                 {'r', 13}, {'e', 27},  {0, 0}};
+static const cf_text_esc_family toml_family   = {
+    toml_simple, "x", "u", "U", 0u, CF_ESC_AT_DIGITS, CF_ESC_NL_NONE};
+
 /* What the open path is made of. A table segment is one header segment;
    an array of tables is one segment plus an element that has no name. */
 typedef enum toml_kind { TOML_TABLE, TOML_ARRAY, TOML_ELEMENT } toml_kind;
@@ -369,93 +376,38 @@ static size_t toml_string(toml_scan* s, char* dst, size_t cap, cf_bool multi) {
             continue;
         }
         if (c == '\\' && q == '"') {
-            cf_u32 cp     = 0;
-            int    digits = 0;
-            char   one    = 0;
+            cf_text_esc r;
+            char        enc[4];
+            size_t      k;
+
             ++s->p;
             if (s->p >= s->end) {
                 toml_fail(s, s->p, "escape at the end of the input");
                 return (size_t)-1;
             }
-            switch (*s->p) {
-            case '"':
-                one = '"';
-                break;
-            case '\\':
-                one = '\\';
-                break;
-            case 'b':
-                one = '\b';
-                break;
-            case 't':
-                one = '\t';
-                break;
-            case 'n':
-                one = '\n';
-                break;
-            case 'f':
-                one = '\f';
-                break;
-            case 'r':
-                one = '\r';
-                break;
-            case 'e': /* TOML 1.1 */
-                one = 27;
-                break;
-            case 'x': /* TOML 1.1: two hexadecimal digits, U+0000 to U+00FF */
-                digits = 2;
-                break;
-            case 'u':
-                digits = 4;
-                break;
-            case 'U':
-                digits = 8;
-                break;
-            default:
+            cf_text_esc_decode(&toml_family, s->p, s->end, &r);
+            if (r.kind == CF_ESC_OTHER) {
                 toml_fail(s, s->p, "unknown escape");
                 return (size_t)-1;
             }
-            ++s->p;
-            if (digits > 0) {
-                char   enc[4];
-                size_t k;
-                int    i;
-                if (s->end - s->p < digits) {
-                    toml_fail(s, s->p, TOML_UNICODE_DIGITS);
-                    return (size_t)-1;
-                }
-                for (i = 0; i < digits; ++i) {
-                    int h = cf_text_hex_value((unsigned char)s->p[i]);
-                    if (h < 0) {
-                        toml_fail(s, s->p, TOML_UNICODE_DIGITS);
-                        return (size_t)-1;
-                    }
-                    cp = (cp << 4) | (cf_u32)h;
-                }
-                s->p += digits;
-                if (cp > 0x10FFFFu || (cp >= 0xD800u && cp <= 0xDFFFu)) {
-                    toml_fail(s, s->p, "not a Unicode scalar value");
-                    return (size_t)-1;
-                }
-                k = cf_text_utf8_encode(cp, enc);
-                if (n + k + 1 > cap) {
-                    toml_fail(s, s->p, "the string is too long");
-                    return (size_t)-1;
-                }
-                if (dst != NULL) {
-                    memcpy(dst + n, enc, k);
-                }
-                n += k;
-            } else {
-                if (n + 2 > cap) {
-                    toml_fail(s, s->p, "the string is too long");
-                    return (size_t)-1;
-                }
-                if (dst != NULL) {
-                    dst[n] = one;
-                }
-                ++n;
+            if (r.kind == CF_ESC_E_DIGITS) {
+                toml_fail(s, s->p + r.at, TOML_UNICODE_DIGITS);
+                return (size_t)-1;
             }
+            if (r.kind == CF_ESC_E_SCALAR) {
+                toml_fail(s, s->p + r.at, "not a Unicode scalar value");
+                return (size_t)-1;
+            }
+            s->p += r.used;
+            k = cf_text_utf8_encode(r.cp, enc);
+            if (n + k + 1 > cap) {
+                toml_fail(s, s->p, "the string is too long");
+                return (size_t)-1;
+            }
+            if (dst != NULL) {
+                memcpy(dst + n, enc, k);
+            }
+            n += k;
             continue;
         }
         if (n + 2 > cap) {
@@ -1575,36 +1527,29 @@ typedef struct toml_enc {
 /* cf_emit keeps this on its own frame, in CF_ENCODER_STATE_MAX bytes. */
 typedef char toml_enc_fits[(sizeof(toml_enc) <= CF_ENCODER_STATE_MAX) ? 1 : -1];
 
+/* What a TOML basic string escapes, as data (D-102): the quote, the
+   backslash, three letters, the other C0 controls and DEL as backslash, u
+   and four digits (this writer gives a backspace and a form feed no short
+   form). Bytes from 0x80 go as they are. */
+static const cf_text_escaper toml_escaper = {"\"\""
+                                             "\\\\"
+                                             "\nn"
+                                             "\rr"
+                                             "\tt",
+                                             0x20u, 0x7Fu, 0x7Fu, 0u};
+
 static void toml_quote(cf_sink* out, const char* p, size_t n) {
     size_t i;
 
     cf_sink_putc(out, '"');
     for (i = 0; i < n; ++i) {
-        unsigned char c = (unsigned char)p[i];
-        switch (c) {
-        case '"':
-            cf_sink_puts(out, "\\\"");
-            break;
-        case '\\':
-            cf_sink_puts(out, "\\\\");
-            break;
-        case '\n':
-            cf_sink_puts(out, "\\n");
-            break;
-        case '\r':
-            cf_sink_puts(out, "\\r");
-            break;
-        case '\t':
-            cf_sink_puts(out, "\\t");
-            break;
-        default:
-            if (c < 0x20u || c == 0x7Fu) {
-                cf_sink_fmt(out, "\\u00%c%c", "0123456789abcdef"[(c >> 4) & 0xF],
-                            "0123456789abcdef"[c & 0xF]);
-            } else {
-                cf_sink_putc(out, (char)c);
-            }
-            break;
+        char   esc[8];
+        size_t len = cf_text_escape(&toml_escaper, (unsigned char)p[i], esc);
+
+        if (len == 0) {
+            cf_sink_putc(out, p[i]);
+        } else {
+            cf_sink_write(out, esc, len);
         }
     }
     cf_sink_putc(out, '"');

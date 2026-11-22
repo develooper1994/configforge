@@ -20,6 +20,7 @@
 #include "configforge/cf_error.h"
 #include "configforge/cf_keyspace.h"
 #include "configforge/cf_port.h"
+#include "configforge/cf_text.h"
 #include "configforge/cf_value.h"
 
 #include <string.h>
@@ -186,8 +187,7 @@ static cf_bool literal_end(void* ctx) {
    bytes, not the measured length: even a truncated output must be the
    prefix of the full escaped document, without allocating a copy. */
 static void escape_written(cf_sink* out, size_t from) {
-    size_t limit, end, i, extra = 0;
-    char   next = '\0';
+    size_t limit, end;
 
     if (out->buf == NULL || out->cap == 0) {
         return;
@@ -197,25 +197,7 @@ static void escape_written(cf_sink* out, size_t from) {
     if (from >= end) {
         return;
     }
-    for (i = from; i + 1 < end; ++i) {
-        if (out->buf[i] == '$' && out->buf[i + 1] == '{') {
-            ++extra;
-        }
-    }
-    i = end;
-    while (i > from) {
-        char c = out->buf[--i];
-        if (extra < limit - i) {
-            out->buf[i + extra] = c;
-        }
-        if (c == '$' && next == '{') {
-            --extra;
-            if (extra < limit - i) {
-                out->buf[i + extra] = '$';
-            }
-        }
-        next = c;
-    }
+    cf_text_ref_widen(out->buf, from, end, limit);
 }
 
 static cf_bool literal_scalar(void* ctx, const char* name, size_t n, const cf_value* v,
@@ -224,7 +206,7 @@ static cf_bool literal_scalar(void* ctx, const char* name, size_t n, const cf_va
     cf_doc_sink*   encoded  = literals->encoded;
     cf_sink*       out      = literals->out;
     size_t         from     = out->len;
-    size_t         i, extra = 0;
+    size_t         extra    = 0;
 
     if (!encoded->scalar(encoded->ctx, name, n, v, textual, at)) {
         return CF_FALSE;
@@ -233,11 +215,7 @@ static cf_bool literal_scalar(void* ctx, const char* name, size_t n, const cf_va
         return CF_TRUE;
     }
     if (v->type == CF_TYPE_TEXT) {
-        for (i = 0; i + 1 < v->u.t.n; ++i) {
-            if (v->u.t.p[i] == '$' && v->u.t.p[i + 1] == '{') {
-                ++extra;
-            }
-        }
+        extra = cf_text_ref_count(v->u.t.p, v->u.t.n);
     }
     if (extra > (size_t)-1 - out->len) {
         return CF_FALSE;

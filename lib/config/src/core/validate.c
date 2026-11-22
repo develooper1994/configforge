@@ -14,6 +14,7 @@
 #include "configforge/cf_keyspace.h"
 #include "configforge/cf_numeric.h"
 #include "configforge/cf_port.h"
+#include "configforge/cf_text.h"
 #include "configforge/cf_value.h"
 
 #include <string.h>
@@ -167,19 +168,14 @@ static int ref_next(const char* p, size_t n, size_t* i, const char** name,
 /* $${ undone, once, into the arena. */
 static char* unescape(cf_arena* ar, const char* p, size_t n, size_t* out_n) {
     char*  out = (char*)cf_arena_alloc(ar, n + 1);
-    size_t i, j = 0;
+    size_t m;
 
     if (out == NULL) {
         return NULL;
     }
-    for (i = 0; i < n; ++i) {
-        if (p[i] == '$' && i + 2 < n && p[i + 1] == '$' && p[i + 2] == '{') {
-            ++i; /* drop one '$' of the pair */
-        }
-        out[j++] = p[i];
-    }
-    out[j] = '\0';
-    *out_n = j;
+    m      = cf_text_ref_unescape(p, n, out);
+    out[m] = '\0';
+    *out_n = m;
     return out;
 }
 

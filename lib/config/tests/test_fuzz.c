@@ -531,6 +531,17 @@ static const char* const g_properties = "# comment\n"
                                         "bad=\\"
                                         "u12\n";
 
+/* One document for each family of escapes (A-7), so that the shared
+   decoder is fuzzed from a seed that reaches it: a character above U+FFFF
+   and a two-digit escape in JSON5, an eight-digit escape and \e in TOML,
+   a two-digit escape, \N and \L in YAML, a character above U+FFFF and a
+   tab in .properties, and an escape in a YAML tag. */
+static const char* const g_esc_json5      = "{\"a\":\"\xF0\x9F\x98\x80\\x41\"}\n";
+static const char* const g_esc_toml       = "a = \"\\U0001F600\\e\"\n";
+static const char* const g_esc_yaml       = "a: \"\\x41\xC3\xA9\\N\\L\"\n";
+static const char* const g_esc_properties = "a=\xF0\x9F\x98\x80\\t\n";
+static const char* const g_esc_tag        = "a: !<t:%41> 1\n";
+
 /* CBOR: one indefinite-length map holding a member of each kind the
    reader takes - nested definite maps and arrays, a text in chunks, an
    indefinite array, a tag, every width of float - so that every branch
@@ -778,6 +789,11 @@ int main(void) {
     write_seed("seed_yaml", g_yaml, strlen(g_yaml));
     write_seed("seed_xml", g_xml, strlen(g_xml));
     write_seed("seed_properties", g_properties, strlen(g_properties));
+    write_seed("seed_json5_esc", g_esc_json5, strlen(g_esc_json5));
+    write_seed("seed_toml_esc", g_esc_toml, strlen(g_esc_toml));
+    write_seed("seed_yaml_esc", g_esc_yaml, strlen(g_esc_yaml));
+    write_seed("seed_properties_esc", g_esc_properties, strlen(g_esc_properties));
+    write_seed("seed_yaml_tag", g_esc_tag, strlen(g_esc_tag));
     write_seed("seed_cbor", (const char*)g_cbor, sizeof g_cbor);
     write_seed("seed_tlv", (const char*)g_tlv, sizeof g_tlv);
     write_seed("seed_ber", (const char*)g_ber, sizeof g_ber);
@@ -828,6 +844,11 @@ int main(int argc, char** argv) {
     fuzz_text("yaml", g_yaml, 0);
     fuzz_text("xml", g_xml, 0);
     fuzz_text("properties", g_properties, 0);
+    fuzz_text("json5", g_esc_json5, 0);
+    fuzz_text("toml", g_esc_toml, 0);
+    fuzz_text("yaml", g_esc_yaml, 0);
+    fuzz_text("properties", g_esc_properties, 0);
+    fuzz_text("yaml", g_esc_tag, 0);
     fuzz_bytes(cf_codec_by_name("cbor"), g_cbor, sizeof g_cbor);
     fuzz_bytes(fz_tlv(), g_tlv, sizeof g_tlv);
     fuzz_bytes(fz_ber(), g_ber, sizeof g_ber);

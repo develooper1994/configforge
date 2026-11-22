@@ -76,7 +76,8 @@ set(CF_UNIT_TESTS
     test_tlv
     test_kinds
     test_encoding
-    test_utf8_refused)
+    test_utf8_refused
+    test_reader_corpus)
 
 # The directories test_starve's every-source run reads. C89 has no mkdir.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_starve.d
@@ -168,6 +169,19 @@ cf_must_not_compile(
 # (tests/support/data, shared with the tests of the other components).
 target_compile_definitions(
   test_codec_edges PRIVATE CF_EDGES_DIR="${CF_REPO_ROOT}/tests/support/data")
+# A-7: the hashes of every short document each reader reads, written on the
+# code before the escapes were made one function, and held to since.
+set(corpus_golden "${CF_REPO_ROOT}/tests/support/data/reader_corpus.golden")
+target_compile_definitions(test_reader_corpus
+                           PRIVATE CF_READER_CORPUS_GOLDEN="${corpus_golden}")
+set_tests_properties(unit.test_reader_corpus PROPERTIES TIMEOUT 600)
+# The golden is the built-in YAML parser's: the test must know when it is not.
+if(_CF_YAML_LIBYAML)
+  target_compile_definitions(test_reader_corpus PRIVATE CF_YAML_LIBYAML=1)
+endif()
+if(_CF_YAML_LIBFYAML)
+  target_compile_definitions(test_reader_corpus PRIVATE CF_YAML_LIBFYAML=1)
+endif()
 # And the inputs a YAML parser once hung on, which test_yaml reads: a hang
 # is this test's timeout.
 set(conform_data "${CF_REPO_ROOT}/tests/conformance/data")

@@ -210,42 +210,30 @@ cf_bool cf_sink_overflowed(const cf_sink* s) {
     return (s->buf != NULL && s->len + 1 > s->cap) ? CF_TRUE : CF_FALSE;
 }
 
+/* What JSON escapes, as data (D-102): the quote and the backslash, the
+   five letters, and every other control character as backslash, u and
+   four digits. DEL and everything from 0x80 up goes as it is. */
+static const cf_text_escaper json_escaper = {"\"\""
+                                             "\\\\"
+                                             "\bb"
+                                             "\ff"
+                                             "\nn"
+                                             "\rr"
+                                             "\tt",
+                                             0x20u, 1u, 0u, 0u};
+
 void cf_sink_json_string(cf_sink* out, const char* p, size_t n) {
     size_t i;
 
     cf_sink_putc(out, '"');
     for (i = 0; i < n; ++i) {
-        unsigned char c = (unsigned char)p[i];
-        switch (c) {
-        case '"':
-            cf_sink_puts(out, "\\\"");
-            break;
-        case '\\':
-            cf_sink_puts(out, "\\\\");
-            break;
-        case '\b':
-            cf_sink_puts(out, "\\b");
-            break;
-        case '\f':
-            cf_sink_puts(out, "\\f");
-            break;
-        case '\n':
-            cf_sink_puts(out, "\\n");
-            break;
-        case '\r':
-            cf_sink_puts(out, "\\r");
-            break;
-        case '\t':
-            cf_sink_puts(out, "\\t");
-            break;
-        default:
-            if (c < 0x20u) {
-                cf_sink_fmt(out, "\\u00%c%c", "0123456789abcdef"[(c >> 4) & 0xF],
-                            "0123456789abcdef"[c & 0xF]);
-            } else {
-                cf_sink_putc(out, (char)c);
-            }
-            break;
+        char   esc[8];
+        size_t len = cf_text_escape(&json_escaper, (unsigned char)p[i], esc);
+
+        if (len == 0) {
+            cf_sink_putc(out, p[i]);
+        } else {
+            cf_sink_write(out, esc, len);
         }
     }
     cf_sink_putc(out, '"');

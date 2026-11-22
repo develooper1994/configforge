@@ -19,9 +19,13 @@ cf_component(
   src/hash.c
   src/encoding.c
   src/place.c
+  src/escape.c
+  src/refs.c
   SERIALIZE_SOURCES
   src/utf8.c
   src/hex.c
   src/hash.c
   src/encoding.c
-  src/place.c)
+  src/place.c
+  src/escape.c
+  src/refs.c)
