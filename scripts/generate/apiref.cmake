@@ -216,7 +216,8 @@ file(STRINGS "${REPO}/lib/base/include/configforge/cf_reason.def" reasons
 string(
   APPEND
   doc
-  "Document refusals also carry a reason and, where known, a line and column.\n\n"
+  "Document refusals also carry a reason and, where known, a line and column.\n"
+  "\n"
   "| Reason | Name | Meaning |\n| ------ | ---- | ------- |\n")
 foreach(l IN LISTS reasons)
   if(l MATCHES "\\((CF_REASON_[A-Z0-9_]+), *\"([a-z0-9-]+)\", *\"([^\"]*)\"\\)")

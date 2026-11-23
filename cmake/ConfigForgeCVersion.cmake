@@ -2,6 +2,7 @@
 option(CF_C89_ONLY "Refuse every source file that needs more than C89 (D-106)"
        OFF)
 
+# Give one source the C standard it needs and record why.
 function(cf_source_needs_c file standard)
   cmake_parse_arguments(
     PARSE_ARGV
@@ -46,8 +47,8 @@ function(cf_source_needs_c file standard)
     if(MSVC_VERSION LESS 1928)
       message(
         FATAL_ERROR
-          "${file} needs C11 and MSVC 19.28 (Visual Studio 2019 16.8) is the first with /std:c11"
-      )
+          "${file} needs C11 and MSVC 19.28 (Visual Studio 2019 16.8) is the "
+          "first with /std:c11")
     endif()
     set(flag "/std:c11")
   endif()
@@ -62,13 +63,14 @@ function(cf_source_needs_c file standard)
   else()
     message(
       WARNING
-        "${file} needs C${standard}, and ${CMAKE_C_COMPILER_ID} is given no flag for it here: ${need_REASON}."
-    )
+        "${file} needs C${standard}, and ${CMAKE_C_COMPILER_ID} is given no "
+        "flag for it here: ${need_REASON}.")
   endif()
   set_property(GLOBAL APPEND_STRING
                PROPERTY CF_C_ABOVE_89 "${file}|c${standard}|${need_REASON}\n")
 endfunction()
 
+# Write the C-version declarations and the SBOM summary.
 function(cf_cversion_write)
   get_property(entries GLOBAL PROPERTY CF_C_ABOVE_89)
   configforge_write_lf("${CMAKE_BINARY_DIR}/cf_cversion.txt" "${entries}")

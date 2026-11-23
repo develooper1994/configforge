@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.10)
 
+# Read the target rows and check their jobs against the CI workflow.
+# One pass over the rows, each check beside the field it reads.
+# cmake-lint: disable=C0103,R0912,R0915
 function(cf_targets_read file workflow out)
+  # cmake-lint: disable=C0103
+  # Exported field names include the output prefix and row number.
   file(STRINGS "${workflow}" workflow_lines)
   set(jobs "")
   set(in_jobs OFF)
@@ -21,9 +26,9 @@ function(cf_targets_read file workflow out)
   set(count 0)
   while(NOT contents STREQUAL "")
     string(REGEX MATCH "^([^\n]*)\n" line "${contents}")
-    string(LENGTH "${line}" length)
+    string(LENGTH "${line}" line_length)
     set(line "${CMAKE_MATCH_1}")
-    string(SUBSTRING "${contents}" ${length} -1 contents)
+    string(SUBSTRING "${contents}" ${line_length} -1 contents)
     math(EXPR number "${number} + 1")
     if(line MATCHES "^[ \t]*(#|$)")
       continue()
@@ -42,8 +47,8 @@ function(cf_targets_read file workflow out)
     if(NOT how MATCHES "^(hardware|runner|qemu|built|none)$")
       message(
         FATAL_ERROR
-          "${location}: how '${how}' is not one of hardware, runner, qemu, built, none"
-      )
+          "${location}: how '${how}' is not one of hardware, runner, qemu, "
+          "built, none")
     endif()
     string(MD5 key "${target}")
     if(DEFINED seen_${key})
@@ -51,17 +56,16 @@ function(cf_targets_read file workflow out)
     endif()
     set(seen_${key} ON)
     if(how STREQUAL "hardware")
+      string(CONCAT commit_pattern
+                    "^[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]"
+                    "[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]+$")
       if(where STREQUAL ""
          OR NOT date MATCHES "^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$"
-         OR NOT
-            commit
-            MATCHES
-            "^[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]+$"
-      )
+         OR NOT commit MATCHES "${commit_pattern}")
         message(
           FATAL_ERROR
-            "${location}: a hardware line needs a board, a date YYYY-MM-DD and a commit"
-        )
+            "${location}: a hardware line needs a board, a date YYYY-MM-DD and "
+            "a commit")
       endif()
     elseif(how STREQUAL "none")
       if(NOT where STREQUAL ""
@@ -98,6 +102,7 @@ function(cf_targets_read file workflow out)
       PARENT_SCOPE)
 endfunction()
 
+# Replace the named generated blocks in the README.
 function(
   cf_matrix_replace
   readme
@@ -109,8 +114,8 @@ function(
   set(result "")
   while(NOT readme STREQUAL "")
     string(REGEX MATCH "^[^\n]*\n?" line "${readme}")
-    string(LENGTH "${line}" length)
-    string(SUBSTRING "${readme}" ${length} -1 readme)
+    string(LENGTH "${line}" line_length)
+    string(SUBSTRING "${readme}" ${line_length} -1 readme)
     if(line MATCHES "^<!-- matrix:(begin|end) ([^ \n]+) -->\n?$")
       set(kind "${CMAKE_MATCH_1}")
       set(name "${CMAKE_MATCH_2}")
@@ -149,6 +154,7 @@ function(
       message(FATAL_ERROR "README.md: marker '${name}' is missing")
     endif()
   endforeach()
+  # cmake-lint: disable=C0103
   set("${out}"
       "${result}"
       PARENT_SCOPE)
@@ -173,15 +179,19 @@ function(cf_matrix_kb bytes out)
     math(EXPR decimal "${tenths} % 10")
     set(value "${sign}${whole}.${decimal} KB")
   endif()
+  # cmake-lint: disable=C0103
   set("${out}"
       "${value}"
       PARENT_SCOPE)
 endfunction()
 
+# Write the profile table from the checked-in profiles and sizes.
 function(cf_matrix_profiles root)
-  set(profiles
-      "| Profile | Library code | What it is for |\n| ------- | -----------: | -------------- |\n"
-  )
+  string(
+    CONCAT
+      profiles
+      "| Profile | Library code | What it is for |\n| ------- | -----------: | "
+      "-------------- |\n")
   set(header "| Option |")
   set(rule "| ------ |")
   foreach(profile IN LISTS CF_PROFILES)
@@ -221,6 +231,7 @@ function(cf_matrix_profiles root)
       PARENT_SCOPE)
 endfunction()
 
+# List the build options in a wrapped paragraph.
 function(cf_matrix_options out)
   set(names "${_cf_option_names}")
   list(
@@ -241,31 +252,34 @@ function(cf_matrix_options out)
     if(remaining EQUAL 0)
       string(APPEND word ".")
     endif()
-    string(LENGTH "${line} ${word}" length)
-    if(length GREATER 72)
+    string(LENGTH "${line} ${word}" line_length)
+    if(line_length GREATER 72)
       string(APPEND result "${line}\n")
       set(line "${word}")
     else()
       string(APPEND line " ${word}")
     endif()
   endforeach()
+  # cmake-lint: disable=C0103
   set("${out}"
       "${result}${line}\nThe limits are in the table below.\n"
       PARENT_SCOPE)
 endfunction()
 
+# Write the optional parts table in order of measured savings.
 function(cf_matrix_parts out)
   if(arch)
     set(title "Code it saves (${arch}, `-Os`)")
   else()
     set(title "Code it saves")
   endif()
-  set(parts
-      "| Option | What goes | ${title} |\n| ------ | --------- | ------------------------------: |\n"
-  )
+  string(CONCAT parts
+                "| Option | What goes | ${title} |\n| ------ | --------- | "
+                "------------------------------: |\n")
   set(pending "${size_parts}")
   list(SORT pending)
-  # The first of equal savings is already first alphabetically. Unknowns go last.
+  # The first of equal savings is already first alphabetically. Unknowns go
+  # last.
   while(pending)
     list(GET pending 0 best)
     foreach(name IN LISTS pending)
@@ -283,25 +297,24 @@ function(cf_matrix_parts out)
   if(arch)
     math(EXPR before "(${size_base_default} + 500) / 1000")
     math(EXPR after "(${size_all_parts} + 500) / 1000")
-    string(
-      APPEND
-      parts
-      "\nLeaving out TOML, EMIT, REAL, REPORT, IMAGE, INI, DOTENV and DIR together takes the library from ${before} KB to ${after} KB.\n"
-    )
+    string(APPEND parts
+           "\nLeaving out TOML, EMIT, REAL, REPORT, IMAGE, INI, DOTENV and DIR "
+           "together takes the library from ${before} KB to ${after} KB.\n")
   else()
     string(APPEND parts "\nCI's `sizes` job measures these figures.\n")
   endif()
+  # cmake-lint: disable=C0103
   set("${out}"
       "${parts}"
       PARENT_SCOPE)
 endfunction()
 
+# Write the target support table from the checked target rows.
 function(cf_matrix_targets root out)
   cf_targets_read("${root}/docs/targets.txt" "${root}/.github/workflows/ci.yml"
                   rows)
-  set(table
-      "| Target | Shown by | Where | Note |\n| ------ | -------- | ----- | ---- |\n"
-  )
+  string(CONCAT table "| Target | Shown by | Where | Note |\n| ------ | "
+                "-------- | ----- | ---- " "|\n")
   set(i 0)
   while(i LESS rows)
     math(EXPR i "${i} + 1")
@@ -331,12 +344,16 @@ function(cf_matrix_targets root out)
     string(APPEND table
            "| ${rows_${i}_target} | ${shown} | ${location} | ${note} |\n")
   endwhile()
+  # cmake-lint: disable=C0103
   set("${out}"
       "${table}"
       PARENT_SCOPE)
 endfunction()
 
+# Generate the README blocks from the repository inputs.
 function(cf_matrix_tables root prefix)
+  # cmake-lint: disable=C0103
+  # Size keys combine the report variant and target name.
   cf_option_defaults()
   set(arch "")
   set(size_parts "")

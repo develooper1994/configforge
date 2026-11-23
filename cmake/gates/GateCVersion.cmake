@@ -3,24 +3,27 @@ cmake_minimum_required(VERSION 3.10)
 if(NOT EXISTS "${COMPDB}")
   message(
     STATUS
-      "C version gate: no compile_commands.json (this generator writes none); skipped"
-  )
+      "C version gate: no compile_commands.json (this generator writes none); "
+      "skipped")
   return()
 endif()
 
 set(violations "")
-macro(violation detail)
+# Add one C-version violation to the gate's report.
+macro(VIOLATION detail)
   string(APPEND violations "\nVIOLATION: ${detail}")
 endmacro()
 
 file(READ "${LIST}" declarations)
 string(APPEND declarations "\n")
 set(files "")
+# The names standard_<file> are built from the file names at run time.
+# cmake-lint: disable=C0103
 while(NOT declarations STREQUAL "")
   string(REGEX MATCH "^([^\n]*)\n" line "${declarations}")
-  string(LENGTH "${line}" length)
+  string(LENGTH "${line}" line_length)
   set(line "${CMAKE_MATCH_1}")
-  string(SUBSTRING "${declarations}" ${length} -1 declarations)
+  string(SUBSTRING "${declarations}" ${line_length} -1 declarations)
   if(line STREQUAL "")
     continue()
   endif()
@@ -51,12 +54,14 @@ endwhile()
 # because CMake list separators can appear inside a quoted compiler argument.
 file(READ "${COMPDB}" database)
 set(entry "\n[ \t]*\"command\": \"([^\n]*)\",\n[ \t]*\"file\": \"([^\n]*)\"")
+# cmake-lint: disable=C0103
+# Compiler flags are tracked by source file.
 while(database MATCHES "${entry}")
   set(command "${CMAKE_MATCH_1}")
   string(REPLACE "\\\\" "/" path "${CMAKE_MATCH_2}")
   string(FIND "${database}" "${CMAKE_MATCH_0}" start)
-  string(LENGTH "${CMAKE_MATCH_0}" length)
-  math(EXPR next "${start} + ${length}")
+  string(LENGTH "${CMAKE_MATCH_0}" line_length)
+  math(EXPR next "${start} + ${line_length}")
   string(SUBSTRING "${database}" ${next} -1 database)
   string(FIND "${path}" "${SRC}/lib/" in_lib)
   if(NOT in_lib EQUAL 0)
@@ -73,6 +78,7 @@ while(database MATCHES "${entry}")
     string(REGEX REPLACE "^[ \t]*-std=" "" standard "${standard}")
   endif()
   if(standard MATCHES "^(c90|c89|iso9899:1990)?$")
+    # cmake-lint: disable=C0103
     if(file IN_LIST files)
       set("baseline_${file}" "${standard}")
     endif()
@@ -81,13 +87,17 @@ while(database MATCHES "${entry}")
   set("above_${file}" ON)
   if(NOT file IN_LIST files)
     string(REGEX REPLACE "^[a-z]+" "" number "${standard}")
-    violation(
-      "${file} is compiled with -std=${standard} and is not declared; declare it with cf_source_needs_c(${file} ${number} REASON \"...\")"
-    )
+    string(
+      CONCAT detail "${file} is compiled with -std=${standard} and is not "
+             "declared; declare "
+             "it with cf_source_needs_c(${file} ${number} REASON \"...\")")
+    violation("${detail}")
   elseif(NOT standard STREQUAL standard_${file})
-    violation(
-      "${file} is declared as ${standard_${file}} but compiled with -std=${standard}"
-    )
+    string(
+      CONCAT detail
+             "${file} is declared as ${standard_${file}} but compiled with "
+             "-std=${standard}")
+    violation("${detail}")
   endif()
 endwhile()
 
@@ -96,9 +106,11 @@ foreach(file IN LISTS files)
     violation(
       "${file} is declared in cf_cversion.txt and is never compiled above C89")
   elseif(DEFINED baseline_${file})
-    violation(
-      "${file} is declared as ${standard_${file}} but compiled with -std=${baseline_${file}}"
-    )
+    string(
+      CONCAT detail
+             "${file} is declared as ${standard_${file}} but compiled with "
+             "-std=${baseline_${file}}")
+    violation("${detail}")
   endif()
 endforeach()
 if(violations)

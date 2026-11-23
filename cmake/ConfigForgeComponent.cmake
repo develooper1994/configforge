@@ -298,6 +298,7 @@ function(cf_unit_test_executable t lib)
   endif()
 endfunction()
 
+# Register the component's unit tests and link their dependencies.
 function(cf_unit_tests)
   foreach(t ${ARGN})
     cf_unit_test_executable(${t} ${CF_TEST_LIB})

@@ -25,6 +25,7 @@ function(read_sizes path prefix)
         message(FATAL_ERROR "${path}: duplicate ${key}")
       endif()
       list(APPEND keys "${key}")
+      # cmake-lint: disable=C0103
       set("${prefix}_${key}"
           "${CMAKE_MATCH_3}"
           PARENT_SCOPE)
@@ -46,14 +47,15 @@ function(read_sizes path prefix)
       PARENT_SCOPE)
 endfunction()
 
+# Compare size records made by compatible compilers.
 function(compare_sizes recorded measured)
   read_sizes("${recorded}" old)
   read_sizes("${measured}" new)
   if(NOT old_family STREQUAL new_family)
     message(
       STATUS
-        "sizes: recorded with ${old_compiler}, this is ${new_compiler}; not compared"
-    )
+        "sizes: recorded with ${old_compiler}, this is ${new_compiler}; not "
+        "compared")
     return()
   endif()
   foreach(key IN LISTS old_keys new_keys)
@@ -84,6 +86,7 @@ function(compare_sizes recorded measured)
   endforeach()
 endfunction()
 
+# Build one profile and measure its library code.
 function(build_size name profile out)
   set(dir "${WORK}/${name}")
   # Reuse objects between runs, but read project defaults and profiles anew.
@@ -119,6 +122,7 @@ function(build_size name profile out)
       PARENT_SCOPE)
 endfunction()
 
+# Measure the default build, the profiles and the optional parts.
 function(measure_sizes out)
   find_program(size_program NAMES size)
   if(NOT size_program)
@@ -151,8 +155,9 @@ function(measure_sizes out)
   string(
     APPEND
     lines
-    "tool|${CMAKE_SYSTEM_PROCESSOR}|${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}|MinSizeRel|${commit}|${date}\nbase|default|${base}\n"
-  )
+    "tool|${CMAKE_SYSTEM_PROCESSOR}|${CMAKE_C_COMPILER_ID} "
+    "${CMAKE_C_COMPILER_VERSION}|MinSizeRel|${commit}|${date}\n"
+    "base|default|${base}\n")
   set(unavailable "")
   foreach(part IN LISTS CF_SIZE_PARTS)
     build_size("${part}" default bytes "-D${part}=OFF")
@@ -209,9 +214,8 @@ else()
     set(FILE "${root}/docs/sizes.txt")
     if(NOT EXISTS "${FILE}")
       message(
-        STATUS
-          "sizes: the first CI artifact will supply docs/sizes.txt; not compared"
-      )
+        STATUS "sizes: the first CI artifact will supply docs/sizes.txt; not "
+               "compared")
       return()
     endif()
   endif()

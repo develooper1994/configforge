@@ -41,25 +41,26 @@ set(CF_PROFILE_OPTIONS
     CF_STACK_BUDGET:STRING)
 set(_cf_profile_root "${CMAKE_CURRENT_LIST_DIR}/..")
 
+# Read the option values and names from a profile file.
 function(cf_profile_parse file prefix)
+  # cmake-lint: disable=C0103
+  # Profile keys use the caller's output prefix.
   file(READ "${file}" contents)
   string(APPEND contents "\n")
   set(names "")
   set(number 0)
+  string(CONCAT profile_pattern "^set\\(([A-Za-z0-9_]+) ([^ \t;\"()]+) CACHE "
+                "(BOOL|STRING) \"profile\"\\)$")
   while(NOT contents STREQUAL "")
     string(REGEX MATCH "^([^\n]*)\n" line "${contents}")
-    string(LENGTH "${line}" length)
+    string(LENGTH "${line}" line_length)
     set(line "${CMAKE_MATCH_1}")
-    string(SUBSTRING "${contents}" ${length} -1 contents)
+    string(SUBSTRING "${contents}" ${line_length} -1 contents)
     math(EXPR number "${number} + 1")
     if(line STREQUAL "" OR line MATCHES "^#")
       continue()
     endif()
-    if(NOT
-       line
-       MATCHES
-       "^set\\(([A-Za-z0-9_]+) ([^ \t;\"()]+) CACHE (BOOL|STRING) \"profile\"\\)$"
-    )
+    if(NOT line MATCHES "${profile_pattern}")
       message(FATAL_ERROR "${file}:${number}: expected a profile set(...) line")
     endif()
     set(name "${CMAKE_MATCH_1}")
@@ -127,9 +128,8 @@ function(cf_option_defaults)
     foreach(head IN LISTS heads)
       string(REGEX MATCH "CF_[A-Za-z0-9_]+$" name "${head}")
       if(head MATCHES "option\\(")
-        set(pattern
-            "(^|\n)[ \t]*option\\(${padding}${name}${space}\"([^\"]*)\"(${space}${word})?${padding}\\)"
-        )
+        string(CONCAT pattern "(^|\n)[ \t]*option\\(${padding}${name}${space}"
+                      "\"([^\"]*)\"(${space}" "${word})?${padding}\\)")
         if(NOT contents MATCHES "${pattern}")
           continue()
         endif()
@@ -139,9 +139,11 @@ function(cf_option_defaults)
           set(value OFF)
         endif()
       else()
-        set(pattern
-            "(^|\n)[ \t]*set\\(${padding}${name}${space}${word}${space}CACHE${space}(STRING|BOOL|FILEPATH|PATH)${space}\"([^\"]*)\""
-        )
+        string(
+          CONCAT
+            pattern
+            "(^|\n)[ \t]*set\\(${padding}${name}${space}${word}${space}CACHE"
+            "${space}(STRING|BOOL|FILEPATH|PATH)${space}\"([^\"]*)\"")
         if(NOT contents MATCHES "${pattern}")
           continue()
         endif()
@@ -150,9 +152,11 @@ function(cf_option_defaults)
       endif()
       string(REGEX REPLACE "^\"(.*)\"$" "\\1" value "${value}")
       list(APPEND names "${name}")
+      # cmake-lint: disable=C0103
       set("_cf_default_${name}"
           "${value}"
           PARENT_SCOPE)
+      # cmake-lint: disable=C0103
       set("_cf_help_${name}"
           "${help}"
           PARENT_SCOPE)
@@ -168,22 +172,27 @@ function(cf_option_defaults)
       PARENT_SCOPE)
 endfunction()
 
+# Return the help text declared for a build option.
 function(cf_option_help name out)
   if(NOT "${_cf_option_root}" STREQUAL "${_cf_profile_root}")
     cf_option_defaults()
   endif()
+  # cmake-lint: disable=C0103
   set("${out}"
       "${_cf_help_${name}}"
       PARENT_SCOPE)
 endfunction()
 
+# Select a build profile and apply its defaults to the cache.
 function(cf_profile_load)
+  # cmake-lint: disable=C0103
+  # Cache and output names come from the profile option list.
+  string(CONCAT profile_help
+                "Build profile: full, default, minimal, misra, embedded-json, "
+                "embedded-cbor or server")
   set(CF_PROFILE
       default
-      CACHE
-        STRING
-        "Build profile: full, default, minimal, misra, embedded-json, embedded-cbor or server"
-  )
+      CACHE STRING "${profile_help}")
   set_property(CACHE CF_PROFILE PROPERTY STRINGS ${CF_PROFILES})
   # Save the spelling before CACHE FILEPATH resolves it against the shell.
   set(requested "${CF_PROFILE_FILE}")
@@ -195,8 +204,8 @@ function(cf_profile_load)
   if(NOT requested STREQUAL "")
     message(
       STATUS
-        "profile: CF_PROFILE_FILE is set; CF_PROFILE '${CF_PROFILE}' is not used"
-    )
+        "profile: CF_PROFILE_FILE is set; CF_PROFILE '${CF_PROFILE}' is not "
+        "used")
     get_filename_component(
       file
       "${requested}"
@@ -208,8 +217,8 @@ function(cf_profile_load)
     if(NOT stem MATCHES "^[A-Za-z0-9._+-]+$")
       message(
         FATAL_ERROR
-          "CF_PROFILE_FILE: the file name '${stem}' may hold only letters, digits and . _ + -"
-      )
+          "CF_PROFILE_FILE: the file name '${stem}' may hold only letters, "
+          "digits and . _ + -")
     endif()
     # Keep the source-relative resolution for later configures too.
     get_property(
@@ -272,6 +281,7 @@ function(cf_profile_load)
       PARENT_SCOPE)
 endfunction()
 
+# Report the selected profile, option overrides and estimated code size.
 function(cf_profile_report)
   file(RELATIVE_PATH path "${CMAKE_SOURCE_DIR}" "${_cf_profile_file}")
   if(path MATCHES "^\\.\\.(/|$)" OR IS_ABSOLUTE "${path}")
@@ -303,8 +313,8 @@ function(cf_profile_report)
   if(NOT rows OR NOT readme MATCHES "from ([0-9]+) KB to")
     message(
       STATUS
-        "profile: library code size not estimated (the README's table was not found)"
-    )
+        "profile: library code size not estimated (the README's table was not "
+        "found)")
     return()
   endif()
   math(EXPR size "10 * ${CMAKE_MATCH_1}")
@@ -332,7 +342,7 @@ function(cf_profile_report)
   else()
     message(
       STATUS
-        "profile: library code about ${size} KB (README table; parts overlap, so a build with several off is a little larger)"
-    )
+        "profile: library code about ${size} KB (README table; parts overlap, "
+        "so a build with several off is a little larger)")
   endif()
 endfunction()

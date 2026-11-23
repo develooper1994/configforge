@@ -75,11 +75,9 @@ if(NOT CF_WHOLE_PROJECT)
     target_link_libraries(cf_serialize PRIVATE ${CF_YAML_LIBRARY})
     if(_CF_YAML_LIBFYAML AND NOT MSVC)
       cf_source_needs_c(
-        src/yaml.c
-        11
-        REASON
-        "libfyaml's header needs C11 (0.9.x's pre-C11 fallback for atomics does not compile)"
-      )
+        src/yaml.c 11 REASON
+        "libfyaml's header needs C11 (0.9.x's pre-C11 fallback for \
+atomics does not compile)")
     endif()
   endif()
   if(CF_WITH_XML)

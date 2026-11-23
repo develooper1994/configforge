@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 
 include("${SRC}/cmake/ConfigForgeProfile.cmake")
 
-macro(violation name detail)
+# Add one profile violation to the gate's report.
+macro(VIOLATION name detail)
   message(STATUS "VIOLATION: profile ${name}: ${detail}")
   set(failed ON)
 endmacro()
@@ -13,6 +14,8 @@ file(
   RELATIVE "${directory}"
   "${directory}/*")
 set(names "")
+# cmake-lint: disable=C0103
+# Each option's name indexes its declared cache type.
 foreach(entry IN LISTS CF_PROFILE_OPTIONS)
   string(REPLACE ":" ";" pair "${entry}")
   list(GET pair 0 name)
@@ -49,6 +52,7 @@ else()
       ${i}
       cacheVariables
       CF_PROFILE)
+    # cmake-lint: disable=C0103
     if(error STREQUAL "NOTFOUND")
       set("selection_${preset}" "${selection}")
     endif()

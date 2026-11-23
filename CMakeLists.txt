@@ -117,11 +117,9 @@ if(CF_WITH_YAML)
   # compiler, and the libyaml backend is the one for those (D-62).
   if(_CF_YAML_LIBFYAML AND NOT MSVC)
     cf_source_needs_c(
-      lib/serialize/src/yaml.c
-      11
-      REASON
-      "libfyaml's header needs C11 (0.9.x's pre-C11 fallback for atomics does not compile)"
-    )
+      lib/serialize/src/yaml.c 11 REASON
+      "libfyaml's header needs C11 (0.9.x's pre-C11 fallback for \
+atomics does not compile)")
   endif()
 endif()
 if(CF_WITH_XML)

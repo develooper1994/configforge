@@ -1345,8 +1345,8 @@ foreach(x ${EXTRA})
       FATAL_ERROR
         "unknown EXTRA step '${x}': kqueue, tidy, clang, "
         "shared, components, valgrind, proofs, wasm, abi, tsan, msan, "
-        "ubsan-strict, afl, infer, yaml, profiles, sizes, compilers, fuzz, coverage or conformance"
-    )
+        "ubsan-strict, afl, infer, yaml, profiles, sizes, compilers, fuzz, "
+        "coverage or conformance")
   endif()
 endforeach()
 

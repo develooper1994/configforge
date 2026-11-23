@@ -3,6 +3,7 @@ cf_unit_test_executable(test_profile configforge)
 add_test(NAME profile.${CF_BUILD_PROFILE_NAME}
          COMMAND test_profile "${CF_BUILD_PROFILE_NAME}")
 
+# Add a configure test and check its C-version diagnostic.
 function(cf_cversion_case name pattern)
   add_test(
     NAME profile.cversion.${name}
@@ -15,19 +16,29 @@ function(cf_cversion_case name pattern)
                        PROPERTIES PASS_REGULAR_EXPRESSION "${pattern}")
 endfunction()
 
-cf_cversion_case(
-  gnu
-  "a.c[ \n]+is[ \n]+compiled[ \n]+as[ \n]+C11[ \n]+\\(-std=c11\\),[ \n]+not[ \n]+C89:[ \n]+libfyaml[ \n]+needs[ \n]+it[ \n]+here.*options:[ \n]+-std=c11"
-  -DCMAKE_C_COMPILER_ID=GNU)
-cf_cversion_case(
-  other
-  "a.c[ \n]+needs[ \n]+C11,[ \n]+and[ \n]+TinyCC[ \n]+is[ \n]+given[ \n]+no[ \n]+flag"
-  -DCMAKE_C_COMPILER_ID=TinyCC)
+string(
+  CONCAT
+    gnu_pattern
+    "a.c[ \n]+is[ \n]+compiled[ \n]+as[ \n]+C11[ \n]+\\(-std=c11\\),[ \n]+not"
+    "[ \n]+C89:[ \n]+libfyaml[ \n]+needs[ \n]+it[ \n]+here.*options:[ \n]+-std="
+    "c11")
+cf_cversion_case(gnu "${gnu_pattern}" -DCMAKE_C_COMPILER_ID=GNU)
+string(
+  CONCAT
+    other_pattern
+    "a.c[ \n]+needs[ \n]+C11,[ \n]+and[ \n]+TinyCC[ \n]+is[ \n]+given[ \n]+no"
+    "[ \n]+flag")
+cf_cversion_case(other "${other_pattern}" -DCMAKE_C_COMPILER_ID=TinyCC)
 cf_cversion_case(msvc-old "MSVC[ \n]+19\\.28" -DCMAKE_C_COMPILER_ID=MSVC
                  -DMSVC_VERSION=1920)
+string(
+  CONCAT
+    refused_pattern
+    "a.c[ \n]+needs[ \n]+C11[ \n]+\\(libfyaml[ \n]+needs[ \n]+it[ \n]+here\\),"
+    "[ \n]+which[ \n]+profile[ \n]+misra[ \n]+does[ \n]+not[ \n]+allow")
 cf_cversion_case(
   refused
-  "a.c[ \n]+needs[ \n]+C11[ \n]+\\(libfyaml[ \n]+needs[ \n]+it[ \n]+here\\),[ \n]+which[ \n]+profile[ \n]+misra[ \n]+does[ \n]+not[ \n]+allow"
+  "${refused_pattern}"
   -DCMAKE_C_COMPILER_ID=GNU
   -DCF_C89_ONLY=ON
   -DCF_BUILD_PROFILE_NAME=misra)

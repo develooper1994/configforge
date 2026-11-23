@@ -3,7 +3,8 @@
 #   cmake -DWRITE=docs/Limits.md -P scripts/generate/limits.cmake
 #                                  replaces the blocks of that page in place
 #   cmake -DOUT=<file> -P scripts/generate/limits.cmake
-#                                  writes the blocks alone, between their markers
+#                                  writes the blocks alone, between their
+#                                  markers
 #
 # A limit is stated in the code and again on a page, and a page nothing
 # checks goes the way two statements of the limits already did. So the
@@ -21,16 +22,18 @@ get_filename_component(REPO "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 if(NOT DEFINED WRITE AND NOT DEFINED OUT)
   message(
     FATAL_ERROR
-      "limits.cmake: give -DWRITE=<page> or -DOUT=<file> (see the top of the script)"
-  )
+      "limits.cmake: give -DWRITE=<page> or -DOUT=<file> (see the top of the "
+      "script)")
 endif()
 
 set(MATRIX_LIB ON)
 include("${REPO}/scripts/generate/matrix.cmake")
 
+# Read a repository file and strip carriage returns.
 function(cf_limits_read file out)
   file(READ "${REPO}/${file}" text)
   string(REPLACE "\r" "" text "${text}")
+  # cmake-lint: disable=C0103
   set("${out}"
       "${text}"
       PARENT_SCOPE)
@@ -45,6 +48,7 @@ function(cf_limits_define file name out)
   set(raw "${CMAKE_MATCH_2}")
   string(REGEX REPLACE "[ \t]*/\\*.*$" "" raw "${raw}")
   string(STRIP "${raw}" raw)
+  # cmake-lint: disable=C0103
   set("${out}"
       "${raw}"
       PARENT_SCOPE)
@@ -62,6 +66,7 @@ function(cf_limits_eval raw out)
   string(REGEX REPLACE "([0-9])[uU][lL]?([^A-Za-z0-9_]|$)" "\\1\\2" raw
                        "${raw}")
   math(EXPR value "${raw}")
+  # cmake-lint: disable=C0103
   set("${out}"
       "${value}"
       PARENT_SCOPE)
@@ -77,9 +82,11 @@ function(cf_limits_row name file expected)
     )
   endif()
   cf_limits_eval("${raw}" value)
+  # cmake-lint: disable=C0103
   set("LIM_${name}"
       "${value}"
       PARENT_SCOPE)
+  # cmake-lint: disable=C0103
   set("LIM_${name}_FILE"
       "${file}"
       PARENT_SCOPE)
@@ -97,10 +104,12 @@ function(cf_limits_size bytes out)
     math(EXPR tenths "${bytes} * 10 / 1073741824")
     math(EXPR whole "${tenths} / 10")
     math(EXPR frac "${tenths} % 10")
+    # cmake-lint: disable=C0103
     set("${out}"
         "${whole}.${frac} GiB"
         PARENT_SCOPE)
   elseif(bytes GREATER_EQUAL 1048576 AND rest EQUAL 0)
+    # cmake-lint: disable=C0103
     set("${out}"
         "${mib} MiB"
         PARENT_SCOPE)
@@ -111,10 +120,12 @@ function(cf_limits_size bytes out)
     if(frac LESS 10)
       set(frac "0${frac}")
     endif()
+    # cmake-lint: disable=C0103
     set("${out}"
         "${whole}.${frac} MiB"
         PARENT_SCOPE)
   else()
+    # cmake-lint: disable=C0103
     set("${out}"
         "${bytes} bytes"
         PARENT_SCOPE)
@@ -127,10 +138,12 @@ function(cf_limits_show value out)
   math(EXPR rest "${value} % 1048576")
   if(value GREATER_EQUAL 1048576 AND rest EQUAL 0)
     cf_limits_size("${value}" size)
+    # cmake-lint: disable=C0103
     set("${out}"
         "${value} (${size})"
         PARENT_SCOPE)
   else()
+    # cmake-lint: disable=C0103
     set("${out}"
         "${value}"
         PARENT_SCOPE)
@@ -139,6 +152,7 @@ endfunction()
 
 # ---- Section 2: the build limits, three sources that are one fact ----
 
+# Check each build limit against its headers and write the options table.
 function(cf_limits_section2 out)
   set(options "cmake/ConfigForgeOptions.cmake")
   set(buildh "lib/port/include/configforge/cf_build_options.h")
@@ -146,24 +160,35 @@ function(cf_limits_section2 out)
   cf_limits_read("${options}" optionstext)
   cf_limits_read("${buildh}" buildtext)
   cf_limits_read("${porth}" porttext)
-  set(bounds_CF_KEY_MAX
-      "longest key, terminator included, so one byte less of text; held by every error, the flattener and the decoders that name the path they are in"
-  )
-  set(bounds_CF_MESSAGE_MAX
-      "longest error message; every `cf_error` holds one, and a builder call keeps one on its frame"
-  )
-  set(bounds_CF_PATH_MAX
-      "longest file path; the directory source and the platform layer hold two or three at once"
-  )
-  set(bounds_CF_MAX_DEPTH
-      "deepest nesting a document may have, the document counting as the first level (every reader and writer; see the depth rule below)"
-  )
-  set(bounds_CF_STACK_BUDGET
-      "bytes a library function's stack frame may take; `0` measures without checking"
-  )
-  set(table
-      "| Option | Default | Range | What it bounds |\n| ------ | ------: | ----- | -------------- |\n"
-  )
+  string(
+    CONCAT
+      bounds_CF_KEY_MAX
+      "longest key, terminator included, so one byte less of "
+      "text; held by every "
+      "error, the flattener and the decoders that name the path they are in")
+  string(
+    CONCAT
+      bounds_CF_MESSAGE_MAX
+      "longest error message; every `cf_error` holds one, and a builder call "
+      "keeps one on its frame")
+  string(
+    CONCAT
+      bounds_CF_PATH_MAX
+      "longest file path; the directory source and the platform layer hold two "
+      "or three at once")
+  string(
+    CONCAT
+      bounds_CF_MAX_DEPTH
+      "deepest nesting a document may have, the document counting as the first "
+      "level (every reader and writer; see the depth rule below)")
+  string(
+    CONCAT
+      bounds_CF_STACK_BUDGET
+      "bytes a library function's stack frame may take; `0` measures without "
+      "checking")
+  string(CONCAT table
+                "| Option | Default | Range | What it bounds |\n| ------ "
+                "| ------: | ----- " "| -------------- |\n")
   foreach(
     name
     CF_KEY_MAX
@@ -195,23 +220,34 @@ function(cf_limits_section2 out)
       if(NOT header_default EQUAL default)
         message(
           FATAL_ERROR
-            "${name} is ${default} in ${options} and ${header_default} in ${buildh} (its range is ${port_low} to ${port_high} in ${porth}): the CMake default, the header default and the range are one fact"
-        )
+            "${name} is ${default} in ${options} and ${header_default} in "
+            "${buildh} (its range is ${port_low} to ${port_high} in ${porth}): "
+            "the CMake default, the header default and the range are one fact")
       endif()
       if(NOT port_low EQUAL low OR NOT port_high EQUAL high)
         message(
           FATAL_ERROR
-            "${name} ranges ${low} to ${high} in ${options} and ${port_low} to ${port_high} in ${porth}: the CMake default, the header default and the range are one fact"
-        )
+            "${name} ranges ${low} to ${high} in ${options} and ${port_low} to "
+            "${port_high} in ${porth}: the CMake default, the header default "
+            "and the range are one fact")
       endif()
     endif()
     string(
       APPEND table
       "| `${name}` | ${default} | ${low} to ${high} | ${bounds_${name}} |\n")
   endforeach()
-  set(text
-      "These are the options of \"Limits and the stack budget\" in the [README](../README.md#limits-and-the-stack-budget) (D-37). Each is a fixed buffer, so each is stack. The default, the range and the check are read from `${options}`, `${buildh}` and `${porth}`, and the build fails if the three disagree.\n\n${table}\nThe first three size `cf_error`'s buffers and so belong to a build's ABI (D-45): `cf_build_limit()` says which numbers a library was built with.\n"
-  )
+  string(
+    CONCAT
+      text
+      "These are the options of \"Limits and the stack budget\" in the "
+      "[README](../README.md#limits-and-the-stack-budget) (D-37). Each is a "
+      "fixed buffer, so each is stack. The default, the range "
+      "and the check are "
+      "read from `${options}`, `${buildh}` and `${porth}`, and the build fails "
+      "if the three disagree.\n\n${table}\nThe first three size `cf_error`'s "
+      "buffers and so belong to a build's ABI (D-45): `cf_build_limit()` says "
+      "which numbers a library was built with.\n")
+  # cmake-lint: disable=C0103
   set("${out}"
       "${text}"
       PARENT_SCOPE)
@@ -219,6 +255,7 @@ endfunction()
 
 # ---- Sections 3, 4 and 5: constants read from the headers ----
 
+# Read and check the fixed limits used by the following sections.
 function(cf_limits_fixed_rows)
   set(base "lib/base/include/configforge")
   set(config "lib/config/include/configforge")
@@ -248,9 +285,11 @@ function(cf_limits_fixed_rows)
     cf_limits_row("${name}" "${file}" "${expected}")
   endforeach()
   foreach(name IN LISTS CF_LIMITS_NAMES)
+    # cmake-lint: disable=C0103
     set("LIM_${name}"
         "${LIM_${name}}"
         PARENT_SCOPE)
+    # cmake-lint: disable=C0103
     set("LIM_${name}_FILE"
         "${LIM_${name}_FILE}"
         PARENT_SCOPE)
@@ -260,6 +299,7 @@ function(cf_limits_fixed_rows)
       PARENT_SCOPE)
 endfunction()
 
+# Write the table of fixed library limits.
 function(cf_limits_section3 out)
   set(bounds_CF_SOURCE_MAX
       "a source's name in an error; part of the ABI (D-45)")
@@ -274,9 +314,9 @@ function(cf_limits_section3 out)
   set(bounds_CF_XML_INPUT_MAX "the bytes of one XML document (2 GiB less one)")
   set(held_CF_DIR_MAX_FILES "`unit.test_dirlimits`")
   set(held_CF_SECRETS_MAX_FILES "`unit.test_dirlimits`")
-  set(table
-      "| Name | Value | Read from | What it bounds | Held by |\n| ---- | ----: | --------- | -------------- | ------- |\n"
-  )
+  string(CONCAT table "| Name | Value | Read from | What it bounds | Held by "
+                "|\n| ---- | ----: | "
+                "--------- | -------------- | ------- |\n")
   foreach(
     name
     CF_SOURCE_MAX
@@ -294,37 +334,44 @@ function(cf_limits_section3 out)
       set(held "${held_${name}}")
     endif()
     string(
-      APPEND
-      table
-      "| `${name}` | ${shown} | `${LIM_${name}_FILE}` | ${bounds_${name}} | ${held} |\n"
-    )
+      APPEND table
+      "| `${name}` | ${shown} | `${LIM_${name}_FILE}` | ${bounds_${name}} | "
+      "${held} |\n")
   endforeach()
-  set(text
-      "These are not build options: each is a constant in the file named, read from it. `CF_PLATFORM_NAME_MAX` is `CF_PATH_MAX` (`cf_platform.h`).\n\n${table}"
-  )
+  string(
+    CONCAT
+      text
+      "These are not build options: each is a constant in the file named, read "
+      "from it. `CF_PLATFORM_NAME_MAX` is `CF_PATH_MAX` (`cf_platform.h`).\n\n"
+      "${table}")
+  # cmake-lint: disable=C0103
   set("${out}"
       "${text}"
       PARENT_SCOPE)
 endfunction()
 
+# Write the decoder budget, YAML alias limits and depth rule.
 function(cf_limits_section4 out)
   set(factor "${LIM_CF_DECODE_FACTOR}")
   set(floor "${LIM_CF_DECODE_FLOOR}")
   cf_limits_size("${floor}" floor_size)
-  set(constants
-      "| Name | Value | Read from | Held by |\n| ---- | ----: | --------- | ------- |\n"
-  )
+  string(
+    CONCAT
+      constants
+      "| Name | Value | Read from | Held by |\n| ---- | ----: | --------- | "
+      "------- |\n")
   foreach(name CF_DECODE_FACTOR CF_DECODE_FLOOR CF_DECODE_KEY_COST)
     cf_limits_show("${LIM_${name}}" shown)
     string(
-      APPEND
-      constants
-      "| `${name}` | ${shown} | `${LIM_${name}_FILE}` | `unit.test_budget`, `unit.test_limits` |\n"
-    )
+      APPEND constants
+      "| `${name}` | ${shown} | `${LIM_${name}_FILE}` | `unit.test_budget`, "
+      "`unit.test_limits` |\n")
   endforeach()
-  set(computed
-      "| A document of | May make at most | Arithmetic |\n| ------------- | ---------------: | ---------- |\n"
-  )
+  string(
+    CONCAT
+      computed
+      "| A document of | May make at most | Arithmetic |\n| ------------- | "
+      "---------------: | ---------- |\n")
   foreach(n 1024 1048576 268435456)
     math(EXPR budget "${factor} * ${n} + ${floor}")
     cf_limits_size("${n}" n_size)
@@ -333,14 +380,12 @@ function(cf_limits_section4 out)
     endif()
     cf_limits_size("${budget}" budget_size)
     string(
-      APPEND
-      computed
-      "| ${n_size} | ${budget_size} | ${factor} x ${n} + ${floor} = ${budget} bytes |\n"
-    )
+      APPEND computed
+      "| ${n_size} | ${budget_size} | ${factor} x ${n} + ${floor} = ${budget} "
+      "bytes |\n")
   endforeach()
-  set(yaml
-      "| Name | Value | Read from | What it bounds |\n| ---- | ----: | --------- | -------------- |\n"
-  )
+  string(CONCAT yaml "| Name | Value | Read from | What it bounds |\n| ---- | "
+                "----: | --------- " "| -------------- |\n")
   set(bounds_YAML_ALIAS_FACTOR "events an alias may replay per event read")
   set(bounds_YAML_ALIAS_FLOOR "events, the floor of that rule")
   set(bounds_YAML_ALIAS_BYTES_FACTOR
@@ -360,18 +405,46 @@ function(cf_limits_section4 out)
   endif()
   set(depth "${CMAKE_MATCH_1}")
   math(EXPR inside "${depth} - 1")
-  set(text
-      "One document may make at most `CF_DECODE_FACTOR` times its own size, and `CF_DECODE_FLOOR` more, of keys and values, each key charged `CF_DECODE_KEY_COST` for the records that hold it (D-82). Past that the document is refused by name, whatever its format. It is not a build option: it sizes no buffer.\n\n${constants}\nSo a document of n bytes may make at most ${factor} x n + ${floor_size} (\`cf_decode_budget(n)\`):\n\n${computed}\nThe budget is the flattener's. A codec used alone, through \`cf_codec_decode\` and a sink of the program's, is not under it (D-82).\n\nYAML's aliases are bounded on their own, in \`yaml.c\`, so that a document of aliases of aliases is refused in linear time (D-63):\n\n${yaml}\n**The depth rule.** The document is level one, so \`CF_MAX_DEPTH\` ${depth} allows ${inside} levels of tables and arrays inside it, in every reader and writer; a build with more or less is another number, and \`cf_build_limit(\"depth\")\` says which. Held by `unit.test_serialize` and `unit.test_cbor`.\n"
-  )
+  string(
+    CONCAT
+      text
+      "One document may make at most `CF_DECODE_FACTOR` times "
+      "its own size, and "
+      "`CF_DECODE_FLOOR` more, of keys and values, each key charged "
+      "`CF_DECODE_KEY_COST` for the records that hold it (D-82). Past that the "
+      "document is refused by name, whatever its format. It is not a build "
+      "option: it sizes no buffer.\n\n${constants}\nSo a "
+      "document of n bytes may "
+      "make at most ${factor} x n + ${floor_size} "
+      "(\`cf_decode_budget(n)\`):\n\n"
+      "${computed}\nThe budget is the flattener's. A codec used alone, through "
+      "\`cf_codec_decode\` and a sink of the program's, is not "
+      "under it (D-82).\n"
+      "\nYAML's aliases are bounded on their own, in \`yaml.c\`, so that a "
+      "document of aliases of aliases is refused in linear time (D-63):\n\n"
+      "${yaml}\n**The depth rule.** The document is level one, so "
+      "\`CF_MAX_DEPTH\` ${depth} allows ${inside} levels of tables and arrays "
+      "inside it, in every reader and writer; a build with more or less is "
+      "another number, and \`cf_build_limit(\"depth\")\` says which. Held by "
+      "`unit.test_serialize` and `unit.test_cbor`.\n")
+  # cmake-lint: disable=C0103
   set("${out}"
       "${text}"
       PARENT_SCOPE)
 endfunction()
 
+# Write the XML reader's input limit.
 function(cf_limits_section5 out)
-  set(text
-      "The one limit a reader of its own states in a constant:\n\n| Format | What the reader refuses | Read from |\n| ------ | ----------------------- | --------- |\n| XML | a document of more than ${LIM_CF_XML_INPUT_MAX} bytes (`CF_XML_INPUT_MAX`; the call to expat takes an `int`) | `${LIM_CF_XML_INPUT_MAX_FILE}` |\n"
-  )
+  string(
+    CONCAT
+      text
+      "The one limit a reader of its own states in a constant:\n\n| Format | "
+      "What the reader refuses | Read from |\n| ------ | "
+      "----------------------- "
+      "| --------- |\n| XML | a document of more than ${LIM_CF_XML_INPUT_MAX} "
+      "bytes (`CF_XML_INPUT_MAX`; the call to expat takes an `int`) | "
+      "`${LIM_CF_XML_INPUT_MAX_FILE}` |\n")
+  # cmake-lint: disable=C0103
   set("${out}"
       "${text}"
       PARENT_SCOPE)
@@ -379,6 +452,7 @@ endfunction()
 
 # ---- Section 7: the platforms, from docs/targets.txt ----
 
+# Group targets by how the project tests or builds them.
 function(cf_limits_section7 out)
   cf_targets_read("${REPO}/docs/targets.txt" "${REPO}/.github/workflows/ci.yml"
                   rows)
@@ -387,9 +461,8 @@ function(cf_limits_section7 out)
   set(heading_qemu "Tested under qemu")
   set(heading_built "Built, not run")
   set(heading_none "Not tried")
-  set(text
-      "Read from `docs/targets.txt` (A-12); how a target is shown is the heading it is under.\n"
-  )
+  string(CONCAT text "Read from `docs/targets.txt` (A-12); how a target is "
+                "shown is the heading " "it is under.\n")
   foreach(
     how
     hardware
@@ -422,13 +495,12 @@ function(cf_limits_section7 out)
       string(APPEND table "| ${rows_${i}_target} | ${note} |\n")
     endwhile()
     if(NOT table STREQUAL "")
-      string(
-        APPEND
-        text
-        "\n### ${heading_${how}}\n\n| Target | Note |\n| ------ | ---- |\n${table}"
-      )
+      string(APPEND text
+             "\n### ${heading_${how}}\n\n| Target | Note |\n| ------ | ---- |\n"
+             "${table}")
     endif()
   endforeach()
+  # cmake-lint: disable=C0103
   set("${out}"
       "${text}"
       PARENT_SCOPE)
@@ -436,7 +508,10 @@ endfunction()
 
 # ---- Section 8: C versions, from the cf_source_needs_c calls ----
 
+# Read the C-version declarations and list the files above C89.
 function(cf_limits_section8 out)
+  # One section of the page, read top to bottom; split, it would scatter.
+  # cmake-lint: disable=R0915
   set(files "CMakeLists.txt")
   file(
     GLOB libs
@@ -449,14 +524,16 @@ function(cf_limits_section8 out)
   foreach(file IN LISTS files)
     cf_limits_read("${file}" text)
     string(REGEX REPLACE "(^|\n)[ \t]*#[^\n]*" "\\1" text "${text}")
+    # A quoted REASON can continue onto the next source line.
+    string(REPLACE "\\\n" "" text "${text}")
     string(REGEX MATCHALL "cf_source_needs_c\\(" opened "${text}")
     list(LENGTH opened opened_count)
     string(
-      REGEX
-        MATCHALL
-        "cf_source_needs_c\\([ \n\t]*[^ \n\t]+[ \n\t]+[0-9]+[ \n\t]+REASON[ \n\t]+\"[^\"]*\"[ \n\t]*\\)"
-        calls
-        "${text}")
+      CONCAT
+        call_pattern
+        "cf_source_needs_c\\([ \n\t]*[^ \n\t]+[ \n\t]+[0-9]+[ \n\t]+REASON[ \n"
+        "\t]+\"[^\"]*\"[ \n\t]*\\)")
+    string(REGEX MATCHALL "${call_pattern}" calls "${text}")
     list(LENGTH calls call_count)
     if(NOT opened_count EQUAL call_count)
       message(
@@ -465,12 +542,10 @@ function(cf_limits_section8 out)
     get_filename_component(dir "${file}" DIRECTORY)
     foreach(call IN LISTS calls)
       string(
-        REGEX
-        REPLACE
-          "^cf_source_needs_c\\([ \n\t]*([^ \n\t]+)[ \n\t]+([0-9]+)[ \n\t]+REASON[ \n\t]+\"([^\"]*)\"[ \n\t]*\\)$"
-          "\\1|\\2|\\3"
-          fields
-          "${call}")
+        CONCAT field_pattern
+               "^cf_source_needs_c\\([ \n\t]*([^ \n\t]+)[ \n\t]+([0-9]+)[ \n"
+               "\t]+REASON[ \n\t]+\"([^\"]*)\"[ \n\t]*\\)$")
+      string(REGEX REPLACE "${field_pattern}" "\\1|\\2|\\3" fields "${call}")
       string(REPLACE "|" ";" parts "${fields}")
       list(GET parts 0 source)
       list(GET parts 1 standard)
@@ -520,9 +595,18 @@ function(cf_limits_section8 out)
         "no cf_source_needs_c call in CMakeLists.txt: A-11's helper is not used"
     )
   endif()
-  set(text
-      "Every source file is C89 (D-72, D-106) except the files below, each of which says why in a `cf_source_needs_c` call (scanned from `CMakeLists.txt` and `lib/*/CMakeLists.txt`, not from a build, so the page does not change with the options). Where a library is built alone, `lib/<name>/CMakeLists.txt` repeats the call for the same file.\n\n| File | Standard | Why | Only with |\n| ---- | -------- | --- | --------- |\n${table}"
-  )
+  string(
+    CONCAT
+      text
+      "Every source file is C89 (D-72, D-106) except the files below, each of "
+      "which says why in a `cf_source_needs_c` call (scanned from "
+      "`CMakeLists.txt` and `lib/*/CMakeLists.txt`, not from a build, so the "
+      "page does not change with the options). Where a library is built alone, "
+      "`lib/<name>/CMakeLists.txt` repeats the call for the "
+      "same file.\n\n| File "
+      "| Standard | Why | Only with |\n| ---- | -------- | --- | --------- |\n"
+      "${table}")
+  # cmake-lint: disable=C0103
   set("${out}"
       "${text}"
       PARENT_SCOPE)
@@ -530,6 +614,7 @@ endfunction()
 
 # ---- Assembly ----
 
+# Replace the named generated blocks in the limits page.
 function(cf_limits_replace page names out)
   set(result "${page}")
   foreach(n IN LISTS names)
@@ -546,6 +631,7 @@ function(cf_limits_replace page names out)
     string(SUBSTRING "${result}" ${e} -1 tail)
     set(result "${head}\n${block_${n}}\n${tail}")
   endforeach()
+  # cmake-lint: disable=C0103
   set("${out}"
       "${result}"
       PARENT_SCOPE)

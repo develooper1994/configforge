@@ -7,9 +7,8 @@ configure_file("${page}" "${fresh}" COPYONLY)
 execute_process(
   COMMAND "${CMAKE_COMMAND}" "-DWRITE=${fresh}" -P
           "${SRC}/scripts/generate/limits.cmake" RESULT_VARIABLE rc)
-set(mismatch
-    "docs/Limits.md does not match the sources: run cmake -DWRITE=docs/Limits.md -P scripts/generate/limits.cmake"
-)
+string(CONCAT mismatch "docs/Limits.md does not match the sources: run cmake "
+              "-DWRITE=docs/Limits.md " "-P scripts/generate/limits.cmake")
 if(NOT rc EQUAL 0)
   message(
     FATAL_ERROR "scripts/generate/limits.cmake: cannot be run\n${mismatch}")
