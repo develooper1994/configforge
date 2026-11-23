@@ -1,0 +1,24 @@
+# Written by scripts/check/sizes.cmake -DWRITE=ON; do not edit.
+tool|x86_64|GNU 15.2.0|MinSizeRel|03634e2|2026-11-23
+base|default|252950
+off|CF_WITH_INI|5172
+off|CF_WITH_JSON|16376
+off|CF_WITH_TOML|15140
+off|CF_WITH_PROPERTIES|1816
+off|CF_WITH_CBOR|8417
+off|CF_WITH_TLV|12092
+off|CF_WITH_YAML|23632
+off|CF_WITH_DIR|3072
+off|CF_WITH_DOTENV|1533
+off|CF_WITH_EMIT|11800
+off|CF_WITH_IMAGE|4433
+off|CF_WITH_REPORT|10132
+off|CF_WITH_REAL|7810
+all|parts|197141
+profile|full|261925
+profile|default|252950
+profile|minimal|211393
+profile|misra|211426
+profile|embedded-json|150820
+profile|embedded-cbor|142870
+profile|server|258791
