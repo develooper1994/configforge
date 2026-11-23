@@ -477,18 +477,22 @@ static cf_bool toml_fail_named(toml_scan* s, const char* at, const char* name, s
     /* cf_fmt has no precision for %s: the name is copied, cut short
        where the message would not hold it. */
     char   text[CF_MESSAGE_MAX];
+    size_t room = sizeof text - 4; /* two quotes, a space, the NUL */
     size_t w = strlen(what), k = 0;
 
-    if (n + w + 4 > sizeof text) {
-        n = (w + 4 < sizeof text) ? sizeof text - w - 4 : 0;
+    if (w > room) {
+        w = room;
+    }
+    if (n > room - w) {
+        n = room - w;
     }
     text[k++] = '\'';
     memcpy(text + k, name, n);
     k += n;
     text[k++] = '\'';
     text[k++] = ' ';
-    memcpy(text + k, what, w < sizeof text - k - 1 ? w : sizeof text - k - 1);
-    k += w < sizeof text - k - 1 ? w : sizeof text - k - 1;
+    memcpy(text + k, what, w);
+    k += w;
     text[k] = '\0';
     return toml_fail(s, at, reason, text);
 }

@@ -173,7 +173,7 @@ list, which works everywhere and does not need a generated locale.
 Also absent by rule: variable-length arrays **[gate: `-Wvla`]**,
 `complex`, `tgmath.h`, allocation on a failure path, and `#ifdef` on a
 compiler or standard macro outside `cf_port.h` and `port.c`
-**[gate: `gate.detection`]**.
+**[gate: `gate.semgrep`]**.
 
 ## Tests
 

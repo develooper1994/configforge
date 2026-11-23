@@ -1,0 +1,21 @@
+rules:
+  - id: cf-detect-platform
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      Platform detection belongs to lib/platform, where the build picks the
+      file and the call site never asks: use the CF_* macro cf_platform.h
+      defines (docs/Conventions.md).
+    paths:
+      include:
+        - "**/*.c"
+        - "**/*.h"
+      exclude:
+        - "**/cf_port.h"
+        - "**/port.c"
+        - "**/cf_platform.h"
+        - "**/cf_platform_file.h"
+        - "**/tests/"
+        - "**/lanes/"
+        - "**/platform/"
+    pattern-regex: (?<![A-Za-z0-9_])(_WIN32|_WIN64|__unix__|__unix|__linux__|__APPLE__|__FreeBSD__|__MINGW32__)(?![A-Za-z0-9_])

@@ -1,0 +1,18 @@
+rules:
+  - id: cf-no-unbounded-copy
+    languages: [c]
+    severity: ERROR
+    message: >-
+      An unbounded copy, or a tokenizer with hidden state: copy with
+      memcpy and a length that was checked, or the library's bounded
+      formatter (docs/Safety.md).
+    paths:
+      exclude:
+        - "**/tests/"
+    pattern-either:
+        - pattern: strcpy(...)
+        - pattern: strcat(...)
+        - pattern: strncpy(...)
+        - pattern: strncat(...)
+        - pattern: strtok(...)
+        - pattern: gets(...)

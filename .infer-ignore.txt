@@ -1,0 +1,27 @@
+# A false positive of Infer (scripts/check/infer.py): a '#' line with the
+# reason, then '<bug_type> <file> <procedure>' on one line. Never a whole
+# file, never a bare bug type. A real finding is fixed in the code. An entry
+# that no finding matches is an error: a fix removes its line.
+
+# cf_ks_at returns NULL only for an index past the count or an unresolved
+# keyspace; emit_group is called with i the first entry of a group of
+# entries it was just handed, so i < count and the keyspace is resolved.
+NULLPTR_DEREFERENCE lib/config/src/bridge/flatten.c emit_group
+
+# def_check, called two lines above, refuses a descriptor whose key is
+# NULL (its first test); Infer does not carry that through the call.
+NULLPTR_DEREFERENCE lib/config/src/core/define.c cf_define
+
+# a->n <= CF_BIG_LIMBS is the number's invariant and the lines above clamp
+# a->n to CF_BIG_LIMBS - limbs, so i + limbs < CF_BIG_LIMBS; Infer has no
+# bound for a field.
+BUFFER_OVERRUN_L2 lib/numeric/src/numeric.c big_shl
+
+# eb holds 8 bytes and cf_u64_to_text writes n + 1 <= cap = 8 or returns 0,
+# so en <= 7 (the exponent has three digits); Infer's summary of the callee
+# does not carry its cap test to the returned length.
+BUFFER_OVERRUN_L2 lib/numeric/src/numeric.c cf_f64_to_text
+
+# extra is the number of "${" in buf[from..end), and --extra runs once per
+# "${" met going backward, so it is at least 1 there.
+INTEGER_OVERFLOW_L1 lib/text/src/refs.c cf_text_ref_widen

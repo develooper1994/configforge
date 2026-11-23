@@ -3098,7 +3098,7 @@ target with neither.
 The rule is the same one the portability layer follows for compilers:
 **the build picks the file, the call site never asks**. A platform
 implementation lives in src/platform/&lt;name>/ and is the only place
-allowed to name a platform macro, which gate.detection enforces.
+allowed to name a platform macro, which gate.semgrep enforces.
 
 Each implementation guards its whole body with its own
 CF_PLATFORM_* macro. That guard is not a scattered #ifdef: it exists

@@ -1,0 +1,12 @@
+rules:
+  - id: cf-public-header-include
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      A public header includes stddef.h, stdarg.h and stdint.h and nothing
+      else: every consumer of the library pays for another include.
+    paths:
+      include:
+        - "**/include/configforge/*.h"
+        - .semgrep/cf-public-header-include.c
+    pattern-regex: '#[ 	]*include[ 	]*<(?!(stddef|stdarg|stdint)\.h>)[^>]+>'

@@ -1,0 +1,37 @@
+rules:
+  - id: cf-no-locale-call
+    languages: [c]
+    severity: ERROR
+    message: >-
+      A call that reads the C locale or formats through it: use the
+      library's own ASCII classification, number conversion and bounded
+      formatter (cf_fmt), which give the same answer in every locale
+      (docs/Conventions.md).
+    paths:
+      exclude:
+        - "**/tests/"
+    pattern-either:
+        - pattern: strtod(...)
+        - pattern: atof(...)
+        - pattern: atoi(...)
+        - pattern: atol(...)
+        - pattern: strtol(...)
+        - pattern: strtoul(...)
+        - pattern: tolower(...)
+        - pattern: toupper(...)
+        - pattern: isalpha(...)
+        - pattern: isdigit(...)
+        - pattern: isspace(...)
+        - pattern: isalnum(...)
+        - pattern: isupper(...)
+        - pattern: islower(...)
+        - pattern: strcoll(...)
+        - pattern: strxfrm(...)
+        - pattern: localeconv(...)
+        - pattern: setlocale(...)
+        - pattern: sprintf(...)
+        - pattern: snprintf(...)
+        - pattern: vsprintf(...)
+        - pattern: vsnprintf(...)
+        - pattern: printf(...)
+        - pattern: fprintf(...)

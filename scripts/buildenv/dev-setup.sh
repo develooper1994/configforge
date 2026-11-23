@@ -37,6 +37,8 @@ shellcheck gate.shellcheck
 ruff gate.ruff
 actionlint gate.actionlint
 codespell gate.codespell
+semgrep gate.semgrep
+infer EXTRA=infer, CI job infer
 lychee gate.links
 gitleaks CI job secrets, by hand
 osv-scanner CI job osv, by hand

@@ -1,0 +1,19 @@
+rules:
+  - id: cf-detect-compiler
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      Compiler and standard detection belongs to cf_port.h and port.c: ask
+      the CF_* macro they define (docs/Conventions.md).
+    paths:
+      include:
+        - "**/*.c"
+        - "**/*.h"
+      exclude:
+        - "**/cf_port.h"
+        - "**/port.c"
+        - "**/cf_platform.h"
+        - "**/cf_platform_file.h"
+        - "**/tests/"
+        - "**/lanes/"
+    pattern-regex: (?<![A-Za-z0-9_])(__STDC_VERSION__|_MSC_VER|__GNUC__|__clang__)

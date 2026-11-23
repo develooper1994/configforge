@@ -3,7 +3,7 @@
  * choice between them.
  *
  * This is lanes' own portability layer: the compiler's and the platform's
- * macros are read here and nowhere else in it (gate.detection exempts
+ * macros are read here and nowhere else in it (gate.semgrep exempts
  * lib/lanes/, as it does lib/platform/), because what a processor can run
  * is only known to the instructions that ask it.
  *

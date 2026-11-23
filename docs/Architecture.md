@@ -198,7 +198,7 @@ way, and the recipe held:
    target with no operating system, and it must fail with a message
    naming the capability.
 3. Never name a platform macro outside `lib/platform/`;
-   `gate.detection` fails the build if you do.
+   `gate.semgrep` fails the build if you do.
 
 Each implementation guards its whole body with its own `CF_PLATFORM_*`
 macro. That single guard is not a scattered `#ifdef`: the build normally
@@ -312,7 +312,7 @@ exists because something in the design is otherwise only a sentence.
 | ---- | -------- |
 | `gate.version` | `cf_version.h` and `CMakeLists.txt` agreeing |
 | `gate.layering` | the dependency rules above |
-| `gate.detection` | compiler detection only in `cf_port.h`, platform detection only in `cf_platform.h` and `lib/platform/` |
+| `gate.semgrep` | the project's own rules, `.semgrep/`, each with a fixture: compiler detection only in `cf_port.h`, platform detection only in `cf_platform.h` and `lib/platform/`, public headers include `stddef.h`, `stdarg.h`, `stdint.h` only, no locale-sensitive call, no unbounded copy, no raw allocation outside `alloc.c` |
 | `gate.headers` | every public header compiling standalone, C89 and C++98 |
 | `gate.amalgamation` | the no-build-system path compiling and running |
 | `gate.symbols` | no locale-sensitive libc function; every export prefixed; no mutable global data; only `alloc.c` calls the allocator |

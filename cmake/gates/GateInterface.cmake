@@ -12,26 +12,9 @@
 
 set(bad 0)
 
-file(GLOB headers "${SRC}/lib/*/include/configforge/*.h"
-     "${SRC}/tools/doctor/include/configforge/*.h")
-foreach(h ${headers})
-  file(READ "${h}" text)
-  string(REGEX MATCHALL "#[ \t]*include[ \t]*<[^>]+>" incs "${text}")
-  foreach(inc ${incs})
-    string(REGEX MATCH "<([^>]+)>" _m "${inc}")
-    set(name "${CMAKE_MATCH_1}")
-    # The allowed set, and the reason each one is in it:
-    #   stddef  size_t, which is in every signature
-    #   stdarg  the formatter's va_list
-    #   stdint  exact-width types, where the toolchain has them
-    if(NOT name MATCHES "^(stddef|stdarg|stdint)\\.h$")
-      get_filename_component(basename "${h}" NAME)
-      message("VIOLATION: public header ${basename} includes <${name}>")
-      message("  every consumer of this library pays for that include")
-      set(bad 1)
-    endif()
-  endforeach()
-endforeach()
+# What the public headers include - stddef, stdarg and stdint, and nothing
+# else - is gate.semgrep's rule cf-public-header-include: a rule in source,
+# with a fixture, that names the line.
 
 # And the whole interface, measured rather than assumed.
 file(WRITE "${BIN}/iface.c"

@@ -131,7 +131,7 @@ size_t cf_u64_to_text(cf_u64 v, char* buf, size_t cap) {
     do {
         tmp[n++] = (char)('0' + (int)(v % (cf_u64)10));
         v /= (cf_u64)10;
-    } while (v != 0);
+    } while (v != 0 && n < sizeof tmp);
 
     if (n + 1 > cap) {
         buf[0] = '\0';

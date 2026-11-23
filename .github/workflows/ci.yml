@@ -372,7 +372,7 @@ jobs:
           curl -fsSL -o "$RUNNER_TEMP/osv-scanner" https://github.com/google/osv-scanner/releases/download/v2.7.0/osv-scanner_linux_amd64
           echo "160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b  $RUNNER_TEMP/osv-scanner" | sha256sum -c -
           chmod +x "$RUNNER_TEMP/osv-scanner"
-      - run: '"$RUNNER_TEMP/osv-scanner" scan source --lockfile=bindings/rust/Cargo.lock --lockfile=scripts/docs/requirements.txt'
+      - run: '"$RUNNER_TEMP/osv-scanner" scan source --lockfile=bindings/rust/Cargo.lock --lockfile=scripts/docs/requirements.txt --lockfile=scripts/check/semgrep-requirements.txt'
 
   # Coverage-guided fuzzing of every reader of untrusted bytes, a minute
   # each. A finding leaves its input as crash-<hash>, kept as an artifact.
@@ -612,6 +612,9 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/lint"
           "$RUNNER_TEMP/lint/bin/pip" install --quiet shellcheck-py==0.11.0.1 \
             ruff==0.17.6 actionlint-py==1.7.12.25 codespell==2.4.3
+          # semgrep, every package with its hash (made by the command at the
+          # top of the file): nothing a registry could change under it.
+          "$RUNNER_TEMP/lint/bin/pip" install --quiet --require-hashes --no-deps             -r scripts/check/semgrep-requirements.txt
       - name: Install lychee
         # The release binary setup.sh pins, checked against its checksum.
         run: |
@@ -619,11 +622,11 @@ jobs:
           echo "73657a111819a30c47c08352896796f23d64e4eb2b3ed39b6d32149241566fc5  $RUNNER_TEMP/lychee.tgz" | sha256sum -c -
           tar -xzf "$RUNNER_TEMP/lychee.tgz" -C "$RUNNER_TEMP" --strip-components=1 lychee-x86_64-unknown-linux-musl/lychee
           mv "$RUNNER_TEMP/lychee" "$RUNNER_TEMP/lint/bin/lychee"
-      - name: shellcheck, ruff, actionlint, codespell, links
+      - name: shellcheck, ruff, actionlint, codespell, links, semgrep
         run: |
           export PATH="$RUNNER_TEMP/lint/bin:$PATH"
           cmake -S . -B blint
-          ctest --test-dir blint -R 'gate\.(shellcheck|ruff|actionlint|codespell|links)' --output-on-failure
+          ctest --test-dir blint -R 'gate\.(shellcheck|ruff|actionlint|codespell|links|semgrep)' --output-on-failure
 
   # include-what-you-use on the library's sources: a header included for
   # what it does not use binds components the layering table keeps apart
@@ -641,6 +644,41 @@ jobs:
         run: |
           cmake -S . -B biwyu -DCMAKE_BUILD_TYPE=Debug             "-DCMAKE_C_INCLUDE_WHAT_YOU_USE=include-what-you-use;-Xiwyu;--error;-Xiwyu;--mapping_file=${{ github.workspace }}/.iwyu.imp;-Wno-unknown-warning-option"
           cmake --build biwyu --target configforge configforge_serialize
+
+  # Infer's Pulse, buffer-overrun and liveness checkers over the libraries'
+  # sources: a fault that crosses function calls, which clang-tidy, cppcheck
+  # and -fanalyzer do not follow. Its exit code is not used: infer.py reads
+  # the report against .infer-ignore.txt. The build is made with clang, the
+  # optional libraries off, so the flags recorded are ones Infer knows.
+  infer:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install clang and what Infer's binary loads
+        run: sudo apt-get update && sudo apt-get install -y clang libffi8 libzstd1 zlib1g
+      - name: Install Infer
+        # The release tarball setup.sh pins, checked against its checksum.
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/infer.tar.xz" https://github.com/facebook/infer/releases/download/v1.3.0/infer-linux-x86_64-v1.3.0.tar.xz
+          echo "02be62ba931cb43e2d42bbf7abf4bd9a410cf8464cce5453934e25c90a825850  $RUNNER_TEMP/infer.tar.xz" | sha256sum -c -
+          mkdir "$RUNNER_TEMP/infer"
+          tar -xJf "$RUNNER_TEMP/infer.tar.xz" -C "$RUNNER_TEMP/infer" --strip-components=1
+          ldd "$RUNNER_TEMP"/infer/lib/infer/infer/bin/infer | grep 'not found' || true
+      - name: Build the libraries with clang
+        run: |
+          cmake -S . -B binfer -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCF_BUILD_TESTING=OFF -DCF_BUILD_EXAMPLES=OFF -DCF_BUILD_TOOLS=OFF -DCF_WITH_CXX=OFF -DCF_WITH_XML=OFF -DCF_WITH_SQLITE=OFF
+          cmake --build binfer --target configforge configforge_serialize
+      - name: Run Infer
+        run: |
+          "$RUNNER_TEMP/infer/bin/infer" run --compilation-database binfer/compile_commands.json --project-root . --results-dir binfer/infer-out --no-default-checkers --pulse --bufferoverrun --liveness --disable-issue-type INTEGER_OVERFLOW_L2 --disable-issue-type BUFFER_OVERRUN_L3 --disable-issue-type BUFFER_OVERRUN_L4 --disable-issue-type BUFFER_OVERRUN_L5 --report-force-relative-path
+      - name: Findings against .infer-ignore.txt
+        run: python3 scripts/check/infer.py binfer .
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: failure()
+        with:
+          name: infer-out
+          path: binfer/infer-out/report.txt
 
   # What the format gate wants, as a patch. The gate reports and does not
   # rewrite, and the one version it accepts is not on every machine: a

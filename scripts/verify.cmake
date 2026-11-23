@@ -50,6 +50,9 @@
 #            nullability and local-bounds groups (the ubsan-strict preset)
 #   afl      AFL++ on the libFuzzer harnesses for FUZZ_SECONDS each (default
 #            10), through afl-clang-fast (the afl preset)
+#   infer    Infer's Pulse, buffer-overrun and liveness checkers over the
+#            libraries' sources, a finding not in .infer-ignore.txt failing
+#            (scripts/check/infer.py); needs infer and clang
 #   yaml     the whole suite with CF_WITH_YAML, where libyaml is installed
 #   sizes    compare library sizes with the recorded binutils measurement
 #   profiles the five additional build profiles, with full and server
@@ -131,6 +134,7 @@ if(DEFINED TIER)
       msan
       ubsan-strict
       afl
+      infer
       yaml
       compilers
       kqueue
@@ -1049,6 +1053,85 @@ foreach(x ${EXTRA})
       -DSECONDS=${FUZZ_SECONDS}
       -P
       ${ROOT}/scripts/check/afl.cmake)
+  elseif(x STREQUAL "infer")
+    # Infer follows a null, an uninitialised value or a use after free
+    # across function calls and an index across calls, which clang-tidy,
+    # cppcheck and -fanalyzer do not. Its exit code is not used:
+    # scripts/check/infer.py reads the report and the exceptions in
+    # .infer-ignore.txt. A build of the libraries alone, with clang (so the
+    # recorded flags are ones Infer's front end knows) and no optional
+    # library (Infer would see their headers and not their code).
+    find_program(INFER_EXE infer HINTS /opt/cf-tools/bin
+                                       $ENV{HOME}/cf-tools/infer-1.3.0/bin)
+    find_program(CLANG_EXE clang)
+    find_program(
+      PYTHON3_EXE
+      NAMES python3 python
+      HINTS /opt/cf-tools/bin)
+    if(NOT INFER_EXE
+       OR NOT CLANG_EXE
+       OR NOT PYTHON3_EXE
+       OR WIN32)
+      message("infer                 skipped: no infer")
+      continue()
+    endif()
+    step(
+      "infer configure"
+      ${CMAKE_COMMAND}
+      -S
+      .
+      -B
+      build-infer
+      -DCMAKE_C_COMPILER=clang
+      -DCMAKE_BUILD_TYPE=Debug
+      -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      -DCF_BUILD_TESTING=OFF
+      -DCF_BUILD_EXAMPLES=OFF
+      -DCF_BUILD_TOOLS=OFF
+      -DCF_WITH_CXX=OFF
+      -DCF_WITH_XML=OFF
+      -DCF_WITH_SQLITE=OFF)
+    step(
+      "infer build"
+      ${CMAKE_COMMAND}
+      --build
+      build-infer
+      --target
+      configforge
+      configforge_serialize
+      ${parallel})
+    # Infer's results directory is rebuilt every run: a stale report must
+    # not stand for this run's.
+    file(REMOVE_RECURSE "${ROOT}/build-infer/infer-out")
+    step(
+      "infer run"
+      ${INFER_EXE}
+      run
+      --compilation-database
+      build-infer/compile_commands.json
+      --project-root
+      .
+      --results-dir
+      build-infer/infer-out
+      --no-default-checkers
+      --pulse
+      --bufferoverrun
+      --liveness
+      --disable-issue-type
+      INTEGER_OVERFLOW_L2
+      --disable-issue-type
+      BUFFER_OVERRUN_L3
+      --disable-issue-type
+      BUFFER_OVERRUN_L4
+      --disable-issue-type
+      BUFFER_OVERRUN_L5
+      --report-force-relative-path)
+    step(
+      "infer report"
+      ${PYTHON3_EXE}
+      scripts/check/infer.py
+      build-infer
+      .)
   elseif(x STREQUAL "conformance")
     find_program(GIT_EXE git)
     # setup.sh's environment first: it has json5, the reference reader
@@ -1262,7 +1345,7 @@ foreach(x ${EXTRA})
       FATAL_ERROR
         "unknown EXTRA step '${x}': kqueue, tidy, clang, "
         "shared, components, valgrind, proofs, wasm, abi, tsan, msan, "
-        "ubsan-strict, afl, yaml, profiles, sizes, compilers, fuzz, coverage or conformance"
+        "ubsan-strict, afl, infer, yaml, profiles, sizes, compilers, fuzz, coverage or conformance"
     )
   endif()
 endforeach()

@@ -75,21 +75,26 @@ ln -sf /opt/cf-tools/bin/clang-format /usr/local/bin/clang-format
 
 # The other languages' checkers, pinned, from PyPI (shellcheck and
 # actionlint as the wheels that carry their binaries): gate.shellcheck,
-# gate.ruff, gate.actionlint and gate.codespell. A release of any of
+# gate.ruff, gate.actionlint, gate.codespell and gate.semgrep. A release of any of
 # them can find something new, so a version changes here, in CI
 # (.github/workflows/ci.yml) and in the tree's fixes together.
 SHELLCHECK_PY_VERSION=0.11.0.1
 RUFF_VERSION=0.17.6
 ACTIONLINT_PY_VERSION=1.7.12.25
 CODESPELL_VERSION=2.4.3
+# semgrep has no repository beside this file (the Containerfile copies it
+# alone), so it is pinned by version here; CI installs it with every
+# package's hash from scripts/check/semgrep-requirements.txt.
+SEMGREP_VERSION=1.186.0
 if [ "$(/opt/cf-tools/bin/pip list --format=freeze 2>/dev/null |
   grep -cxF -e "shellcheck-py==$SHELLCHECK_PY_VERSION" -e "ruff==$RUFF_VERSION" \
-    -e "actionlint-py==$ACTIONLINT_PY_VERSION" -e "codespell==$CODESPELL_VERSION")" -ne 4 ]; then
+    -e "actionlint-py==$ACTIONLINT_PY_VERSION" -e "codespell==$CODESPELL_VERSION" \
+    -e "semgrep==$SEMGREP_VERSION")" -ne 5 ]; then
   /opt/cf-tools/bin/pip install --quiet "shellcheck-py==$SHELLCHECK_PY_VERSION" \
     "ruff==$RUFF_VERSION" "actionlint-py==$ACTIONLINT_PY_VERSION" \
-    "codespell==$CODESPELL_VERSION"
+    "codespell==$CODESPELL_VERSION" "semgrep==$SEMGREP_VERSION"
 fi
-for t in shellcheck ruff actionlint codespell; do
+for t in shellcheck ruff actionlint codespell semgrep; do
   ln -sf "/opt/cf-tools/bin/$t" "/usr/local/bin/$t"
 done
 
@@ -131,6 +136,22 @@ if ! /opt/cf-tools/bin/osv-scanner --version 2>/dev/null | grep -qF "$OSV_SCANNE
   rm -f /tmp/osv-scanner
 fi
 ln -sf /opt/cf-tools/bin/osv-scanner /usr/local/bin/osv-scanner
+
+# Infer (EXTRA=infer, CI job `infer`: Pulse, buffer overrun and liveness over
+# the libraries), as its pinned release tarball, checked against the SHA-256
+# GitHub publishes for the asset. It brings its own clang front end.
+INFER_VERSION=1.3.0
+INFER_SHA256=02be62ba931cb43e2d42bbf7abf4bd9a410cf8464cce5453934e25c90a825850
+if ! /opt/cf-tools/bin/infer --version 2>/dev/null | grep -qF "$INFER_VERSION"; then
+  curl -fsSL -o /tmp/infer.tar.xz "https://github.com/facebook/infer/releases/download/v$INFER_VERSION/infer-linux-x86_64-v$INFER_VERSION.tar.xz"
+  echo "$INFER_SHA256  /tmp/infer.tar.xz" | sha256sum -c -
+  rm -rf "/opt/cf-tools/infer-$INFER_VERSION"
+  mkdir -p "/opt/cf-tools/infer-$INFER_VERSION"
+  tar -xJf /tmp/infer.tar.xz -C "/opt/cf-tools/infer-$INFER_VERSION" --strip-components=1
+  ln -sf "/opt/cf-tools/infer-$INFER_VERSION/bin/infer" /opt/cf-tools/bin/infer
+  rm -f /tmp/infer.tar.xz
+fi
+ln -sf /opt/cf-tools/bin/infer /usr/local/bin/infer
 
 # ccache's cache, bounded: verify reuses it from one unit to the next.
 ccache --max-size=5G >/dev/null

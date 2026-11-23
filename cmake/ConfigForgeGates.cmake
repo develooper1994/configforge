@@ -74,10 +74,8 @@ function(configforge_add_gates tgt)
       -DLAYERS=${CMAKE_BINARY_DIR}/layers.cmake -P
       ${CMAKE_SOURCE_DIR}/cmake/gates/GateLayering.cmake)
 
-  # 2. Feature detection macros may appear only in the portability layer.
-  add_test(NAME gate.detection
-           COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
-                   ${CMAKE_SOURCE_DIR}/cmake/gates/GateDetection.cmake)
+  # 2. Feature detection macros may appear only in the portability layer:
+  #    gate.semgrep (cf-detect-compiler, cf-detect-platform; ConfigForgeFormat).
 
   # The dependency page names everything the build looks for, and the
   # generated SBOM is a valid document about this build. Neither needs

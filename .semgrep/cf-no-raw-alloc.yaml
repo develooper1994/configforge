@@ -1,0 +1,17 @@
+rules:
+  - id: cf-no-raw-alloc
+    languages: [c]
+    severity: ERROR
+    message: >-
+      malloc, calloc, realloc and free are called in lib/base/src/alloc.c
+      only: allocate and release through the library's allocator
+      (docs/Conventions.md).
+    paths:
+      exclude:
+        - "**/base/src/alloc.c"
+        - "**/tests/"
+    pattern-either:
+        - pattern: malloc(...)
+        - pattern: calloc(...)
+        - pattern: realloc(...)
+        - pattern: free(...)

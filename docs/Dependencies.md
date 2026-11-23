@@ -99,6 +99,8 @@ system, no generated header, no options.
 | codespell 2.4.3 | GPL-2.0-only | `gate.codespell`; pinned as above |
 | lychee 0.24.2 (the release binary, checked against its checksum by `setup.sh` and CI) | Apache-2.0 OR MIT | `gate.links`: the links and anchors inside the repository; the weekly `links` job checks those to other sites |
 | include-what-you-use (`iwyu`, Ubuntu's package) | NCSA | the CI job `iwyu`: the libraries' sources include what they use; no gate in verify, as its output differs by version |
+| Infer 1.3.0 (the release tarball, checked against its checksum by `setup.sh` and CI) | MIT | `EXTRA=infer` (tier 2) and the CI job `infer`: Pulse, buffer overrun and liveness over the libraries' sources (`scripts/check/infer.py`, `.infer-ignore.txt`); not linked |
+| semgrep 1.186.0 (PyPI; CI installs it with every package's hash, `scripts/check/semgrep-requirements.txt`) | LGPL-2.1-only | `gate.semgrep`: the project's rules in `.semgrep/`, each with a fixture; no rule from the registry, no metrics |
 | Rust: `rustc`, `cargo`, `clippy`, `rustfmt` (`setup.sh` installs 1.99.1 with rustup, checked against its published checksum) | MIT OR Apache-2.0 | `bindings/rust`, and `CF_RUST`: the Rust examples and `cargo test`; clippy and rustfmt check the crate |
 | cc 1.11.1, with find-msvc-tools 0.1.15 and shlex 2.0.1 (crates.io, pinned with their checksums in `bindings/rust/Cargo.lock`) | MIT OR Apache-2.0 | the Rust crate's build only (D-70): `build.rs` compiles the C sources with it; cargo runs `--locked` |
 | GNU binutils: `nm`, `objdump`, `size` | GPL-3.0-or-later | `gate.symbols`, `gate.abi`, library size measurements |

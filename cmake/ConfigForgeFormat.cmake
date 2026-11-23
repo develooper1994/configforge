@@ -110,6 +110,7 @@ find_program(RUFF_EXE NAMES ruff)
 find_program(ACTIONLINT_EXE NAMES actionlint)
 find_program(CODESPELL_EXE NAMES codespell)
 find_program(LYCHEE_EXE NAMES lychee)
+find_program(SEMGREP_EXE NAMES semgrep)
 
 file(
   GLOB_RECURSE
@@ -164,4 +165,14 @@ if(LYCHEE_EXE)
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 else()
   message(STATUS "lychee not found: gate.links skipped")
+endif()
+if(SEMGREP_EXE)
+  # The project's own rules, .semgrep/: each fixture, then the tree
+  # (scripts/check/semgrep.cmake).
+  add_test(
+    NAME gate.semgrep
+    COMMAND ${CMAKE_COMMAND} -DSEMGREP=${SEMGREP_EXE} -DSRC=${CMAKE_SOURCE_DIR}
+            -P ${CMAKE_SOURCE_DIR}/scripts/check/semgrep.cmake)
+else()
+  message(STATUS "semgrep not found: gate.semgrep skipped")
 endif()

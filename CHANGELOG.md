@@ -84,6 +84,15 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   `gate.links` holds every link and anchor inside the repository's Markdown,
   and the `docs` workflow's weekly job `links` checks those to other sites
   (`.lychee.toml`). `setup.sh` installs both.
+- **Infer and the project's semgrep rules**: `EXTRA=infer` and CI's job
+  `infer` run Infer's Pulse, buffer-overrun and liveness checkers over the
+  libraries (`scripts/check/infer.py` reads the report against
+  `.infer-ignore.txt`, each entry with its reason); `gate.semgrep` holds
+  the rules in `.semgrep/`, each with a fixture, over `lib`. `gate.detection`
+  and the include check of `gate.interface` are semgrep rules now
+  (`cf-detect-compiler`, `cf-detect-platform`, `cf-public-header-include`),
+  beside new ones for a locale-sensitive call, an unbounded copy and a raw
+  allocation outside `alloc.c`. `setup.sh` installs both tools.
 - **`scripts/work/profile.py`**: one command for the profile of `cf_bench`: time (perf, Visual Studio's collector with xperf), instructions (callgrind), cache misses (cachegrind), peak memory and allocations (heaptrack or massif) and GCC's missed-vectorization notes, on this machine, in WSL and over ssh, each tool where it is present.
 - **`lanes`**, a vector library of its own: span operations with a scalar
   reference and the processor's detection; ConfigForge does not use it yet
