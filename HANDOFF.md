@@ -6,15 +6,15 @@ A-11 (b837c23), A-12 (23b5d2a), L-3 (c2c14f4), A-13 (622d26b); the cards L-3 and
 written out (d01c389). The night's lessons are in docs/Maintaining.md,
 "Working habits that paid" (its last six items).
 
-1. **P-4** (allocation) on `origin/work/P-4`, 47f6aa0, CI green: the
+1. **P-4** (allocation) on `origin/work/P-4`, d32708a (CI green as 47f6aa0, before the rebase): the
    measurement (Linux) and candidate (0) are done: `cf_wipe` is memset
    through a volatile function pointer, -25% instructions on a 16 MiB
    load, -72% on a tiny document. Left, in the card's notes: step 3
    (`bench/bench.c`'s builder path and abandoned bytes), candidates (2),
-   (1), (3) against 47f6aa0 as the new "before", the Windows (MSVC)
+   (1), (3) against d32708a as the new "before", the Windows (MSVC)
    table, `docs/Performance.md`, then land. The profiling VM's driver
    (`~/cf-p4-drv/drv.c` on `ssh cfvm`) is what step 3 puts in the tree.
-   The branch is cut from 8ef51e9: rebase it onto main first.
+   The branch is rebased onto main (03634e2); its CI ran on push.
 2. **The integration check**, once 1 is on main: on main, the
    full Linux verify (`CF_EXTRA="components;shared;conformance" python
    scripts/work/work.py verify main full`), `work.py win`, main's CI
