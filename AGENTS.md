@@ -26,6 +26,12 @@ and build and test with CMake and MSVC (build directories under the
 system temporary directory). You cannot write git's index (so you cannot
 commit), start Python, reach WSL or the network. Leave changes
 uncommitted and say what is ready, with commit subjects and their files.
+When a card needs the network (reading a CI log with `gh`, a download),
+the manager runs you with `-c sandbox_workspace_write.network_access=true`
+(maintainer, 2026-11-23): the files stay fenced to the worktree, only the
+network opens. Then read and download only what the card names; never
+push, never change a remote (a branch, a release, a setting), never send
+the repository's content anywhere. Never `danger-full-access`.
 Regenerate `docs/API.md` (`cmake -P scripts/generate/apiref.cmake`) as
 your last action in a worktree you changed: it cites source lines.
 
