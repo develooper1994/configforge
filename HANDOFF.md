@@ -1,40 +1,33 @@
-# Handoff (2026-11-23, 05:55, the end of the second night)
+# Handoff (2026-11-23, evening)
 
-Landed on main tonight, each alone, CI green, by tree: A-10 (f1a4fd7),
-L-2 (6442c8f), P-1b (427ec6a), the subnormal reading fix (80db71d),
-A-11 (b837c23), A-12 (23b5d2a), L-3 (c2c14f4), A-13 (622d26b); the cards L-3 and L-3b
-written out (d01c389). The night's lessons are in docs/Maintaining.md,
-"Working habits that paid" (its last six items).
+On main since the night: the rules without model names and with adaptive
+effort (CLAUDE.md "Roles"); the token measurement and its rules
+(docs/Maintaining.md "Where the tokens go", CLAUDE.md "Habits");
+cards L-6 (a map of the tree, a brief per card) and I-1 (the
+integration check's findings); `docs/sizes.txt`.
 
-1. **P-4** (allocation) on `origin/work/P-4`, d32708a (CI green as 47f6aa0, before the rebase): the
-   measurement (Linux) and candidate (0) are done: `cf_wipe` is memset
-   through a volatile function pointer, -25% instructions on a 16 MiB
-   load, -72% on a tiny document. Left, in the card's notes: step 3
-   (`bench/bench.c`'s builder path and abandoned bytes), candidates (2),
-   (1), (3) against d32708a as the new "before", the Windows (MSVC)
-   table, `docs/Performance.md`, then land. The profiling VM's driver
-   (`~/cf-p4-drv/drv.c` on `ssh cfvm`) is what step 3 puts in the tree.
-   The branch is rebased onto main (03634e2); its CI ran on push.
-2. **The integration check**, once 1 is on main: on main, the
-   full Linux verify (`CF_EXTRA="components;shared;conformance" python
-   scripts/work/work.py verify main full`), `work.py win`, main's CI
-   wholly green but for the style gates, and a read-only review of the
-   two nights' changes together (`git diff 0b4b97a..main`) for what each
-   card's own CI could not see: two cards changing one function
-   differently, CHANGELOG or Decisions entries twice, the Plan index, the
-   `EXTRA` and `TIER=2` lists in `scripts/verify.cmake` (four cards
-   edited them; `profiles` and `sizes` are not in the `TIER=2` list:
-   decide whether a release runs them). Fix what it finds first.
-3. At the end of the group: `style-1.8.0` (docs/Plan.md, "Code first,
-   style at the group's end"). Known red: `gate.cmake.lint` on main
-   (`scripts/generate/apiref.cmake:219` and other long lines). Then the
-   1.8.0 tag, which is the maintainer's.
-4. L-3b (Frama-C EVA) waits for 1.9.0; P-2 and P-3 for 2.4.0.
+1. **style-1.8.0** on `work/style-1.8.0` (worktree
+   `.claude/worktrees/style`): Codex is fixing `gate.cmake.lint`'s 141
+   findings (A-11..A-13's CMake). When its report says DONE: commit,
+   run `gate.cmake.lint` and `gate.limits|matrix|profiles` on Linux,
+   push, CI, land by tree.
+2. **I-1** (docs/plan/I-integration.md) after 1, from its branch: 12
+   findings left (finding 9 is a real fault: a refused multi-line
+   string's place). Give it to Codex with its card; the manager commits.
+3. **P-4** on `origin/work/P-4` (b871526): step 3 and the Windows table
+   committed; candidate (2)'s question answered in the card; Codex is
+   doing (2), (1), (3) in `.claude/worktrees/p4`. Commit what it keeps
+   (each candidate in its own file), CI, then the card's last steps and
+   land.
+4. Then the full Linux verify on main (`CF_EXTRA="components;shared;
+   conformance" python scripts/work/work.py verify main full`), `work.py
+   win`, and the 1.8.0 tag, which is the maintainer's.
+5. L-6 is open (needs L-5, done): a good first card for Codex.
+6. L-3b waits for 1.9.0; P-2 and P-3 for 2.4.0.
 
-On the maintainer's workstation only (nothing needed elsewhere): the
-worktrees under `.claude/worktrees/` and the Codex desk
-(`.claude/worktrees/deputy/`); every branch they hold is pushed. Codex's
-5-hour window ran out at 03:20; it did the subnormal fix, A-12 and half
-of A-13, which Claude finished; A-13's verify on the presets other than the default, `components` and `abi` was not run locally (CI's are green).
+Codex's allowance is the larger: it carries the cards (prompts in the
+style of the last ones: the card, the state, what to report; `-m` the
+larger model for a large card, the smaller otherwise; `-c
+model_reasoning_effort=`). Claude briefs, checks, commits and lands.
 
-Delete this file in the commit that finishes step 2.
+Delete this file in the commit that finishes step 4.
