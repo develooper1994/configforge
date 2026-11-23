@@ -224,7 +224,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 53 | W5-V2 Every pair of formats, and what each can hold | large | A-1b, W5-V1 | done (70bd398) |
 | 54 | W5-G4 Generators outside the tree | medium | A-1b, W5-G3 | done (adc2a63) |
 | 55 | P-1b The other libraries beside ours, and a page CI keeps | large | P-1, A-1b | done (427ec6a) |
-| 56 | A-13 A page of the project's limits | medium | A-12, W5-V2, P-1 | done (branch work/A-13, not landed) |
+| 56 | A-13 A page of the project's limits | medium | A-12, W5-V2, P-1 | done (622d26b) |
 | 57 | P-2 Word-at-a-time scans in C89, with the byte loop as reference | medium | P-1, A-3 | waits: 2.4.0; to be rewritten on D-101 |
 | 58 | P-3 The scans P-1 found, a word at a time, kept only where they win | medium | P-2 | waits: P-2 |
 | 59 | P-4 Allocation measured, and changed only where it wins | medium | P-1b | open |
