@@ -231,6 +231,48 @@ default can be argued from a number.
 | (numbers of this kind now go to `docs/Performance.md`, with the machine, the compiler and the commit; the comparison with other libraries and its history are there too, D-111) | `docs/Performance.md` | see that page |
 | `FUZZ_COST_EMPTY` (`test_fuzz.c`, H-4): the arena an empty or one-byte input costs a reader | `cf_arena_used` in `feed_codec`, GCC 15 Debug, WSL, 2026-11-13, every format `fuzz_from_nothing` feeds | JSON, JSON5, INI, XML 3,072 bytes; `.properties` 3,152; YAML 3,080; TOML 5,376 (the largest). Rounded up to 8,192 and doubled: 16,384. The costliest input of the whole deterministic run was 9,480 bytes (YAML, 324 bytes of input) |
 
+## Where the tokens go
+
+Measured 2026-11-23 from this project's session transcripts (the five
+largest sessions and their 45 subagents; characters / 4 ≈ tokens):
+
+| Session | Turns | Context re-read (cache) | Tool results | Output |
+| ------- | ----- | ----------------------- | ------------ | ------ |
+| organiser, longest | 3,630 | 1,827 M | 1.2 M | 2.9 M |
+| organiser, second | 2,206 | 1,137 M | 0.67 M | 1.9 M |
+| organiser / its 19 subagents | 552 / 1,538 | 203 M / 341 M | 0.14 / 0.83 M | 0.3 / 1.1 M |
+| organiser / its 26 subagents | 580 / 2,848 | 235 M / 610 M | 0.09 / 1.17 M | 0.3 / 1.7 M |
+
+What it says:
+* The bill is turns times the context carried. An organiser that runs
+  thousands of turns at ~500k tokens of context reads that context back
+  each turn; tool results themselves are a thousandth of it. Fewer
+  turns and a shorter context are the levers, then the size of reads.
+* Workers spend ~18 calls and ~18k tokens on orientation before their
+  first edit, and the median worker ran 76 turns (the longest 383).
+* The planning documents are read again by nearly every worker:
+  `A-architecture.md` by 20 workers (873k characters), `Plan.md` by 32,
+  `Decisions.md` by 27, `Roadmap.md` by 25, often in 28k-character
+  chunks.
+* Shell commands used as a file viewer (`cat`, `sed -n`) were a third
+  of what workers read; reading a file again after editing it, 135
+  times in one session; one file read 15 or 16 times in one transcript.
+
+The rules that follow from it are in CLAUDE.md, "Habits" (Tokens). Two
+tools would carry them further, written as card L-6: a generated map of
+the tree (each source file's functions and types with line ranges, and
+the large documents' headings with theirs), held by a gate as
+`docs/API.md` is, so that a worker finds a range without reading a
+file; and `scripts/work/brief.py <card>`, which writes a card's brief
+with exactly the sections it cites. `docs/API.md` cannot be that map:
+it covers the public headers only, gives no ranges, and is 244 KB.
+
+Sources: the Claude Code costs page (long sessions re-read their
+history every request; clear or compact between tasks; delegate);
+the prompt-caching documentation (a cached read is cheap per token but
+paid on every turn); aider's repository map (a symbol map in a small
+token budget).
+
 ## Working habits that paid
 
 * **Negative proofs on MSVC** must disable a check with a condition

@@ -122,11 +122,30 @@ You carry out one card of docs/Plan.md, alone.
   documents; code goes through the loop's branch and CI first.
 - Formatting is clang-format 22 (CI's). A machine without it formats
   with what it has and lets CI judge.
-- Tokens: no tool call that a notification, a chained command or the
-  brief already covers. Wait for background work instead of peeking;
-  chain dependent steps into one command, each step only if the one
-  before succeeded; read the card and the failing lines, not whole
-  files or logs; answer a repeated report once.
+- Tokens (measured 2026-11-23, docs/Maintaining.md "Where the tokens
+  go"): the bill is turns times the context each turn carries, not the
+  size of one read. So:
+  - The brief quotes the 20-60 lines of design a worker needs (or names
+    `file:start-end`); a worker never reads `A-architecture.md`,
+    `Decisions.md`, `Roadmap.md` or `Plan.md` whole, only the section
+    cited. Those four were a quarter of what workers read.
+  - Find, then read a range: `grep -n` (or the tree map, once it
+    exists), then a read of at most ~120 lines. Never `cat` or read
+    whole a file over 300 lines; never `sed -n` a document in big
+    chunks.
+  - Never read a file again to check an edit: the edit tool fails if it
+    did not apply; `git diff -U2 <file>` shows it. Read a file once and
+    carry its facts forward in the next message.
+  - Cap command output (`| tail -n 60`, `| grep` the failing lines);
+    never print a whole build, test or CI log.
+  - A worker that passes ~60 turns stops and reports; the card is split
+    instead of run longer.
+  - The organiser's own context: past ~250k tokens, write the state into
+    `HANDOFF.md`, commit, and start a fresh session (or compact) from it.
+  - No tool call that a notification, a chained command or the brief
+    already covers; wait for background work instead of peeking or
+    polling; chain dependent steps into one command; answer a repeated
+    report once.
 - The design is decided in `docs/plan/A-architecture.md`; a card does
   not reopen it. A real reason to change a decision goes to the user.
 - Cards may be stacked (one cut from the branch of the card before it)

@@ -155,3 +155,107 @@ second opinion beside cppcheck's.
 * **size**: medium
 * **before**: P-2 - no word-at-a-time code is written without this
   command's numbers before and after.
+
+## L-6 - a map of the tree and a brief per card, so that workers read less
+
+* **id**: L-6
+* **goal**: `docs/Codemap.md`, generated from the sources and held by
+  `gate.codemap`, gives every source file's functions and types with
+  their line ranges and the large documents' headings with theirs; and
+  `python scripts/work/brief.py <card id>` prints the brief a worker gets:
+  CLAUDE.md's standard brief, the card, and exactly the sections it cites.
+* **why**: docs/Maintaining.md, "Where the tokens go": workers spent ~18
+  calls and ~18k tokens finding their way before the first edit, and the
+  four planning documents were a quarter of everything they read. A map
+  turns "read the file to find the function" into one `grep` and one
+  ranged read; a brief turns "read the design document" into the 20 to 60
+  lines the card needs.
+* **needs**: L-5 (done)
+* **size**: medium
+* **decided**:
+  * **The map** is `scripts/generate/codemap.cmake` (CMake, as
+    `apiref.cmake`, so that it runs wherever the build does and in the
+    deputy's sandbox), writing `docs/Codemap.md`; `-DOUT=<file>` writes
+    elsewhere. Part 1, code: for each file of `lib/*/src/**.c`,
+    `lib/*/src/**.h`, `lib/*/include/configforge/*.h`, `tools/**/*.c` and
+    `tools/**/*.h` (not tests, not generated files), sorted by path, one
+    line `` `path` `` then one line per definition in file order:
+    `- name start-end` for a function definition (a line at column 0 that
+    begins a declaration and is followed, before any `;`, by a `{` at
+    column 0; its end is the next `}` at column 0), `- struct name
+    start-end`, `- enum name start-end`, `- typedef name line` for a
+    typedef outside them, `- #define NAME line` only for a macro in a
+    public header. Part 2, documents: for `docs/plan/*.md`,
+    `docs/Decisions.md`, `docs/Roadmap.md`, `docs/Plan.md`,
+    `docs/Maintaining.md`, `docs/Architecture.md` and
+    `scripts/verify.cmake`, each `##` and `###` heading (for
+    `verify.cmake`, each `if(x STREQUAL "<step>")`) as `- heading
+    start-end`, where the end is the line before the next heading of the
+    same or a higher level. A card heading (`## A-11 - ...`) is a heading
+    like any other, so `grep -n "A-11" docs/Codemap.md` gives its range.
+    No prose, no comments copied: names and numbers only.
+  * **Size**: the generator fails when the result is over 64 KiB, with
+    the five largest files' share; the card's first pass must fit.
+  * **`gate.codemap`** (in `cmake/ConfigForgeGates.cmake`, beside
+    `gate.apiref`): regenerates into the build tree and fails when it
+    differs from `docs/Codemap.md`, with the first differing line.
+    `scripts/format.cmake` and `scripts/prestage.cmake` rewrite it where
+    they rewrite `docs/API.md`, so a line shift is regenerated with the
+    format pass; like `docs/API.md` it is generated on Linux before a
+    push (CLAUDE.md, brief step 6).
+  * **`scripts/work/brief.py <card id> [--max-bytes N]`** (Python,
+    standard library only, ruff-checked like the rest of
+    `scripts/work`): finds the card by its heading `## <id> - ` in
+    `docs/plan/*.md`; prints CLAUDE.md's fenced brief (the block under
+    "The brief every card's subagent gets"), the card's text, and then,
+    for each reference the card makes, the cited part: a `D-<n>` is its
+    section of `docs/Decisions.md`; `` `<path>` "<heading>" `` or
+    `<path>, "<heading>"` is that heading's section of that file; a
+    ``` `<path>:<a>-<b>` ``` is those lines. Each cited part once, in the
+    order cited, under a line `--- <path>, <heading or lines>`. A reference
+    it cannot resolve is printed as `--- unresolved: <text>` (never
+    silently dropped). Over `--max-bytes` (default 15000) it still prints
+    everything and ends with `--- over budget: <n> bytes; split the card
+    or cite less`, exit 0.
+  * **Tests**: `work.brief` (a ctest test, run when Python 3 is found,
+    skipped with a message otherwise) on a fixture card in
+    `tests/work/data/` that cites one D-number, one heading and one line
+    range and one unresolvable reference; it checks each part is printed
+    once, the unresolved line, and the over-budget line with
+    `--max-bytes 100`. `matrix`-style fixture CMake files are fenced from
+    cmake-format (`# cmake-format: off` first, `on` last).
+  * **CLAUDE.md**: the brief section says the organiser starts a card's
+    worker with `brief.py`'s output; "Habits" (Tokens) names
+    `docs/Codemap.md` as the first place to look. `scripts/README.md`
+    lists both.
+* **files**: `scripts/generate/codemap.cmake`, `docs/Codemap.md`,
+  `cmake/ConfigForgeGates.cmake`, `scripts/format.cmake`,
+  `scripts/prestage.cmake`, `scripts/work/brief.py`, `tests/work/`
+  (CMakeLists.txt, data/), `tests/CMakeLists.txt`, `CLAUDE.md`,
+  `scripts/README.md`; last: `docs/Maintaining.md` ("Where the tokens
+  go": the tools exist), `CHANGELOG.md` is not touched (a maintainer's
+  tool, not the library).
+* **steps**:
+  1. `git switch -c work/L-6`.
+  2. `gate.codemap` first, with no generator: see it fail ("cannot be
+     run"). Then `codemap.cmake`; see the gate pass; move a function in
+     `lib/base/src/alloc.c` down one line in a scratch copy and see the
+     gate fail naming the line; restore.
+  3. Check the size against 64 KiB; if over, stop and report the
+     largest files (the stop below).
+  4. `brief.py` and `work.brief`: the test first against the fixture
+     (see it fail: no script), then the script.
+  5. Run `brief.py L-6` and `brief.py P-4` and read the output: every
+     reference resolved or listed as unresolved. Fix the parser, not the
+     cards; a card whose reference form the rule does not cover gets the
+     form added to this card's "Organiser's answers".
+  6. `format.cmake`, `prestage.cmake`, CLAUDE.md, `scripts/README.md`,
+     `docs/Maintaining.md`.
+  7. ACCEPT.
+* **accept**: ACCEPT-LINUX, ACCEPT-CI; `ctest -R "gate.codemap|work.brief"`
+  passing; `docs/Codemap.md` at most 64 KiB.
+* **stop if**: the map is over 64 KiB with the rule above (report the
+  share per directory; the organiser decides what to drop); a C construct
+  in the tree that the column-0 rule reads wrongly in more than five
+  places (list them).
+* **notes**: (empty)
