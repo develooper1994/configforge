@@ -232,7 +232,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 58 | P-3 The scans P-1 found, a word at a time, kept only where they win | medium | P-2 | waits: P-2 |
 | 59 | P-4 Allocation measured, and changed only where it wins | medium | P-1b | done (ca2f115) |
 | 60 | N-1 Compare two flat configuration files by value | medium | W5-V1 | done (77a11ae) |
-| 61 | N-2 Rebuild the Linux musl release archive and compare the bytes | medium | nothing | open |
+| 61 | N-2 Rebuild the Linux musl release archive and compare the bytes | medium | nothing | done (6c67353) |
 | 62 | N-3 Show a tracked JSON file's value changes in Git difftool | small | N-1 | open |
 
 ## Done, their cards removed
