@@ -646,7 +646,7 @@ static const double cf_pow10_exact[23] = {
 static double cf_slow_path(const cf_big* digits, int exp10, int neg, int lost) {
     cf_big N, D;
     cf_u64 q = 0;
-    int    i, bn, bd, shiftN, shiftD, sticky;
+    int    i, bn, bd, shiftN, shiftD, exponent, bits, guard;
     double r;
 
     big_copy(&N, digits);
@@ -683,8 +683,14 @@ static double cf_slow_path(const cf_big* digits, int exp10, int neg, int lost) {
         shiftN += 1;
     }
 
-    /* Generate 55 significant bits by binary long division. */
-    for (i = 0; i < 55; ++i) {
+    /* Round once at the destination precision. Subnormals have a fixed
+       unit of 2^-1074; rounding to 53 bits first can manufacture a tie. */
+    exponent = shiftD - shiftN;
+    if (exponent < -1075) {
+        return neg ? -0.0 : 0.0;
+    }
+    bits = exponent < -1022 ? exponent + 1075 : 53;
+    for (i = 0; i < bits; ++i) {
         q <<= 1;
         if (big_cmp(&N, &D) >= 0) {
             big_sub(&N, &D);
@@ -692,33 +698,14 @@ static double cf_slow_path(const cf_big* digits, int exp10, int neg, int lost) {
         }
         big_shl(&N, 1);
     }
-    /* A non-zero digit the parser dropped puts the true value above
-       N/D, which matters only when N/D is exactly halfway. */
-    sticky = !big_is_zero(&N) || lost;
-
-    /* q holds 55 bits; round to 53, half to even. */
-    {
-        cf_u64 dropped  = q & (cf_u64)3;
-        cf_u64 keep     = q >> 2;
-        int    round_up = 0;
-
-        if (dropped > 2) {
-            round_up = 1;
-        } else if (dropped == 2) {
-            round_up = sticky || ((keep & (cf_u64)1) != 0);
-        }
-        if (round_up) {
-            keep += 1;
-            if (keep == ((cf_u64)1 << 53)) {
-                keep >>= 1;
-                shiftD += 1; /* exponent grows by one */
-            }
-        }
-        q = keep;
+    /* N/D is twice the remaining fraction. At exactly one, decimal
+       digits omitted from N break the tie; otherwise choose even. */
+    guard = big_cmp(&N, &D);
+    if (guard > 0 || (guard == 0 && (lost || (q & (cf_u64)1) != 0))) {
+        ++q;
     }
 
-    /* value = q * 2^(shiftD - shiftN - 54 + 2) */
-    r = ldexp((double)q, shiftD - shiftN - 52);
+    r = ldexp((double)q, exponent - bits + 1);
     return neg ? -r : r;
 }
 

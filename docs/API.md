@@ -3030,7 +3030,7 @@ CF_API cf_bool cf_text_to_f64(const char* s, size_t len, double* out, size_t* en
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_text_to_f64` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L737).
+Implementation: [`cf_text_to_f64` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L724).
 
 Parse a C-locale floating point number. The decimal separator is
 always '.', never the locale's. Accepts the forms produced by
@@ -3050,7 +3050,7 @@ CF_API double cf_f64_from_bits(cf_u64 bits);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_f64_bits` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L901), [`cf_f64_from_bits` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L907).
+Implementation: [`cf_f64_bits` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L888), [`cf_f64_from_bits` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L894).
 
 A double as its IEEE 754 bit pattern, and back, by memcpy. (1.5)
 
@@ -3061,7 +3061,7 @@ CF_API double cf_f64_from_f32_bits(cf_u32 bits);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_f64_from_f16_bits` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L916), [`cf_f64_from_f32_bits` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L933).
+Implementation: [`cf_f64_from_f16_bits` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L903), [`cf_f64_from_f32_bits` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L920).
 
 A half- and a single-precision pattern (in the low 16 and 32 bits) as
 a double, exactly, the non-finite ones included. (1.5)
@@ -3077,7 +3077,7 @@ CF_API cf_scalar_kind cf_infer_scalar(const char* s, size_t len);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_infer_scalar` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L1026).
+Implementation: [`cf_infer_scalar` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L1013).
 
 ## cf_platform.h
 

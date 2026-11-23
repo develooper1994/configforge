@@ -10,6 +10,7 @@
 
 #include "configforge/cf_numeric.h"
 
+#include <float.h>
 #include <stdio.h>
 #include <string.h>
 #include <locale.h>
@@ -143,47 +144,49 @@ static void test_f64_carry(void) {
     fmt_is(4.9999999999999996, "5.0", "rounds up to a single digit");
 }
 
+static void check_f64_roundtrip(double value, size_t element) {
+    char   buf[CF_F64_DIGITS];
+    double back = 0.0;
+    size_t n    = cf_f64_to_text(value, buf, sizeof buf);
+
+    ++g_run;
+    if (n == 0) {
+        ++g_fail;
+        printf("FAIL: format failed for element %u\n", (unsigned)element);
+    } else if (!cf_text_to_f64(buf, n, &back, NULL) ||
+               memcmp(&back, &value, sizeof back) != 0) {
+        ++g_fail;
+        printf("FAIL: round-trip element %u text=\"%s\"\n", (unsigned)element, buf);
+    }
+}
+
 static void test_f64_roundtrip(void) {
-    static const double vals[] = {0.1,
-                                  0.2,
-                                  0.3,
-                                  1.0 / 3.0,
-                                  2.0 / 3.0,
-                                  1.0,
-                                  2.0,
-                                  3.0,
-                                  10.0,
-                                  1e10,
-                                  1e-10,
-                                  1e100,
-                                  1e-100,
-                                  3.141592653589793,
-                                  2.718281828459045,
-                                  1234.5678,
-                                  0.0001,
-                                  123456789.123456,
-                                  1e300,
-                                  1e-300,
-                                  5e-324,
-                                  1.7976931348623157e308,
-                                  2.2250738585072014e-308};
-    char                buf[CF_F64_DIGITS];
+    static const double vals[] = {
+        0.1, 0.2, 0.3, 1.0 / 3.0, 2.0 / 3.0, 1.0, 2.0, 3.0, 10.0, 1e10, 1e-10, 1e100,
+        1e-100, 3.141592653589793, 2.718281828459045, 1234.5678, 0.0001,
+        123456789.123456, 1e300, 1e-300, 1.7976931348623157e308,
+        /* The smallest two subnormals, followed by
+           values around the chain-fuzzer cases. */
+        4.9406564584124654e-324, 9.8813129168249309e-324, 2.781347213671473e-309,
+        2.78134721367146e-309, 2.0191894549312623e-308, 2.019189454931258e-308,
+        2.1758355328459157e-308,
+        /* Neighbours across the normal boundary. */
+        2.2250738585072004e-308, 2.2250738585072009e-308, DBL_MIN,
+        2.2250738585072019e-308};
+    /* Bit patterns for the short decimal spellings in the fuzzer report.
+       The first is the binary64 payload from the saved CBOR input. */
+    static const cf_u64 cbor[] = {((cf_u64)0x000e8500u << 32) | 0x0e00003du,
+                                  ((cf_u64)0x000fa55cu << 32) | 0x380f000fu,
+                                  ((cf_u64)0x00020000u << 32) | 0x3b00003bu};
     size_t              i;
 
     for (i = 0; i < sizeof vals / sizeof vals[0]; ++i) {
-        double back = 0.0;
-        size_t n    = cf_f64_to_text(vals[i], buf, sizeof buf);
-        if (n == 0) {
-            ++g_run;
-            ++g_fail;
-            printf("FAIL: format failed for element %u\n", (unsigned)i);
-            continue;
-        }
-        ++g_run;
-        if (!cf_text_to_f64(buf, n, &back, NULL) || back != vals[i]) {
-            ++g_fail;
-            printf("FAIL: round-trip element %u text=\"%s\"\n", (unsigned)i, buf);
-        }
+        check_f64_roundtrip(vals[i], i);
+    }
+    for (i = 0; i < sizeof cbor / sizeof cbor[0]; ++i) {
+        double value;
+        memcpy(&value, &cbor[i], sizeof value);
+        check_f64_roundtrip(value, sizeof vals / sizeof vals[0] + i);
     }
 }
 
