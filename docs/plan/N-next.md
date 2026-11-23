@@ -244,8 +244,23 @@ equal cross-format fixture therefore pairs them with JSON strings.
   needs a change in package layout. Report the smallest affected
   member and both hashes. Follow the three-attempt rule in
   `docs/Plan.md:27-36`.
-* **notes**: (empty)
+* **Organiser's answers**: 2026-11-23: there is no Alpine (Docker) on the
+  deputy's machine; the "see it fail" and the two-build comparison run
+  in CI on the branch instead: the workflow change is written first with
+  a deliberate difference between the two builds (an environment value
+  baked into one archive) so that the branch's first run must fail at the
+  comparison, then the difference is removed and the second run passes.
+  Both run ids go under "notes". Locally: actionlint's rules by reading,
+  the MSVC suites as usual.
+* **notes**: The release dry run on `work/N-2` (commit `7d26929`) failed
+  at the Linux musl archive comparison as intended. The job printed both
+  archives' SHA-256 hashes and reported that `configforge.spdx.json` differed
+  after the deliberate one-second increase to `SOURCE_DATE_EPOCH` in the
+  second build.
 
+  Release dry runs on work/N-2: 45265306838 all green (the two archives
+  equal, publish skipped), after the first, with the deliberate
+  difference, failed at the comparison as it should.
 ## N-3 - show a tracked JSON file's value changes in Git difftool
 
 * **id**: N-3

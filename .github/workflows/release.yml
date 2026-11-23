@@ -29,6 +29,7 @@ on:
       - .github/workflows/release.yml
       - CMakeLists.txt
       - cmake/**
+      - scripts/release/linux_musl.sh
       - tools/**
       - tests/doctor/**
       - tests/front/**
@@ -51,6 +52,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           v="${GITHUB_REF_NAME#v}"
+          v="${v//\//-}"
           built=$(cmake -P scripts/release/version.cmake)
           [ "$built" = "$v" ] || { echo "tag $v, cf_version.h says $built"; exit 1; }
           head=$(grep -E "^## $v( |$)" CHANGELOG.md || true)
@@ -65,6 +67,7 @@ jobs:
       - name: Amalgamation
         run: |
           v="${GITHUB_REF_NAME#v}"
+          v="${v//\//-}"
           mkdir -p dist
           python3 scripts/generate/amalgamate.py . "amalgamation/configforge-$v"
           cp LICENSE "amalgamation/configforge-$v/"
@@ -79,29 +82,50 @@ jobs:
     steps:
       - run: apk add --no-cache build-base cmake ninja git python3 tar
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Build static, test, install
+        with:
+          path: source-a
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          path: source-second
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Build, test and compare both archives
         run: |
-          v="${GITHUB_REF_NAME#v}"
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_EXE_LINKER_FLAGS=-static -DCF_WITH_CXX=OFF \
-            -DCMAKE_INSTALL_PREFIX="$PWD/stage/configforge-$v"
-          cmake --build build
-          ctest --test-dir build --output-on-failure
-          cmake --install build
-          mkdir -p "stage/configforge-$v/bin"
-          for p in configforge configforge-doctor; do
-            install -s -m 755 "build/tools/bin/$p" "stage/configforge-$v/bin/$p"
-          done
+          set -eu
+          source_a="$GITHUB_WORKSPACE/source-a"
+          source_second="$GITHUB_WORKSPACE/source-second"
+          test "$(git -C "$source_a" rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C "$source_second" rev-parse HEAD)" = "$GITHUB_SHA"
+          v=$(cd "$source_a" && cmake -P scripts/release/version.cmake)
+          SOURCE_DATE_EPOCH=$(git -C "$source_a" show -s --format=%ct HEAD)
+          export SOURCE_DATE_EPOCH TZ=UTC LC_ALL=C
+          umask 022
+          work=$(mktemp -d)
+          trap 'rm -rf "$work"' EXIT
+
           # Linked statically, the tools carry musl, whose MIT licence asks
           # for its notice in every copy; Alpine does not ship the text,
           # so it comes from musl's own repository, at the version used.
           m=$(apk info musl | sed -n '1s/^musl-\([0-9.]*\)-r.*/\1/p')
-          d="stage/configforge-$v/share/doc/configforge/third-party"
-          mkdir -p "$d"
-          wget -q -O "$d/musl-COPYRIGHT" "https://git.musl-libc.org/cgit/musl/plain/COPYRIGHT?h=v$m"
-          grep -q "MIT license" "$d/musl-COPYRIGHT"
+          notice="$work/musl-COPYRIGHT"
+          wget -q -O "$notice" "https://git.musl-libc.org/cgit/musl/plain/COPYRIGHT?h=v$m"
+          grep -q "MIT license" "$notice"
+
+          sh "$source_a/scripts/release/linux_musl.sh" \
+            "$source_a" "$work/a" "$v" "$notice"
+          sh "$source_second/scripts/release/linux_musl.sh" \
+            "$source_second" "$work/second" "$v" "$notice"
+
+          archive="configforge-$v-linux-x86_64-musl.tar.gz"
+          if ! cmake -E compare_files "$work/a/$archive" "$work/second/$archive"; then
+            cmake -E sha256sum "$work/a/$archive" "$work/second/$archive"
+            diff -qr "$work/a/stage" "$work/second/stage" || true
+            exit 1
+          fi
           mkdir -p dist
-          tar -C stage -czf "dist/configforge-$v-linux-x86_64-musl.tar.gz" "configforge-$v"
+          cp "$work/a/$archive" dist/
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with: { name: linux-musl, path: dist/* }
 
@@ -116,7 +140,7 @@ jobs:
           # Without this a pwsh step fails only on its last command's exit
           # code, and a failing ctest in the middle would ship.
           $PSNativeCommandUseErrorActionPreference = $true
-          $v = $env:GITHUB_REF_NAME.TrimStart('v')
+          $v = ($env:GITHUB_REF_NAME -creplace '^v', '') -replace '/', '-'
           cmake -S . -B build -DCMAKE_INSTALL_PREFIX="$PWD/stage/configforge-$v"
           cmake --build build --config Release
           ctest --test-dir build -C Release --output-on-failure
@@ -147,6 +171,7 @@ jobs:
       - name: Build, test, install
         run: |
           v="${GITHUB_REF_NAME#v}"
+          v="${v//\//-}"
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX="$PWD/stage/configforge-$v"
           cmake --build build --parallel
@@ -186,6 +211,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           v="${GITHUB_REF_NAME#v}"
+          v="${v//\//-}"
           # This version's section of the CHANGELOG, and nothing else.
           awk -v v="$v" '
             $0 ~ "^## " v "( |$)" { on = 1; next }
