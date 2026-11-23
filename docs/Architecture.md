@@ -378,8 +378,9 @@ consumer who never reads a file never pays for the ability.
 
 It is also one careless `#include` away from being untrue, and the
 person who adds `<stdio.h>` to a public header will never see the cost
-while every consumer will. So `gate.interface` checks both the include
-list and the preprocessed size. Nothing here needed optimising; what it
+while every consumer will. The `cf-public-header-include` rule in
+`gate.semgrep` checks the includes, and `gate.interface` checks the
+preprocessed size. Nothing here needed optimising; what it
 needed was protecting.
 
 ## What is deliberately not here

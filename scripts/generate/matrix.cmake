@@ -84,6 +84,9 @@ function(cf_targets_read file workflow out)
       message(FATAL_ERROR "${location}: job '${where}' is not in ci.yml")
     endif()
     math(EXPR count "${count} + 1")
+    if(how STREQUAL "runner" AND where STREQUAL "")
+      set(how "local")
+    endif()
     foreach(
       field
       target
@@ -313,8 +316,10 @@ endfunction()
 function(cf_matrix_targets root out)
   cf_targets_read("${root}/docs/targets.txt" "${root}/.github/workflows/ci.yml"
                   rows)
-  string(CONCAT table "| Target | Shown by | Where | Note |\n| ------ | "
+  string(CONCAT header "| Target | Shown by | Where | Note |\n| ------ | "
                 "-------- | ----- | ---- " "|\n")
+  set(table "${header}")
+  set(local_rows "")
   set(i 0)
   while(i LESS rows)
     math(EXPR i "${i} + 1")
@@ -326,8 +331,9 @@ function(cf_matrix_targets root out)
       set(shown "hardware (${where}, ${rows_${i}_date}, ${rows_${i}_commit})")
     elseif(how STREQUAL "none")
       set(shown "not tried")
-    elseif(how STREQUAL "runner" AND where STREQUAL "")
-      set(shown "local run")
+    elseif(how STREQUAL "local")
+      string(APPEND local_rows "| ${rows_${i}_target} | ${note} |\n")
+      continue()
     else()
       set(location "job `${where}`")
       if(how STREQUAL "runner")
@@ -344,6 +350,11 @@ function(cf_matrix_targets root out)
     string(APPEND table
            "| ${rows_${i}_target} | ${shown} | ${location} | ${note} |\n")
   endwhile()
+  if(local_rows)
+    string(APPEND table
+           "\n### Run locally\n\n| Target | Note |\n| ------ | ---- |\n"
+           "${local_rows}")
+  endif()
   # cmake-lint: disable=C0103
   set("${out}"
       "${table}"

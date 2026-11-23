@@ -77,26 +77,20 @@ static void same(const char* name, long compiled) {
 static void test_build_rows(void) {
     long key = row("CF_KEY_MAX"), message = row("CF_MESSAGE_MAX"),
          path = row("CF_PATH_MAX"), depth = row("CF_MAX_DEPTH");
-    int  differ;
 
     check(key > 0 && message > 0 && path > 0 && depth > 0,
           "limits: the page has the four build-limit rows");
     check(row("CF_STACK_BUDGET") >= 0, "limits: the page has the stack-budget row");
-    /* A build that keeps the default limits is told by the page's rows, which
-       are the defaults: one row that differs is a page that has drifted, and
-       fails by name below; a profile that changes several (`minimal`) is
-       another build, which the page does not describe. */
-    differ = (key != (long)CF_KEY_MAX) + (message != (long)CF_MESSAGE_MAX) +
-             (path != (long)CF_PATH_MAX) + (depth != (long)CF_MAX_DEPTH);
-    if (differ >= 2) {
-        printf("limits: not a default build, page not compared\n");
-        return;
-    }
+#ifndef CF_LIMITS_DEFAULT
+    printf("limits: not a default build, page not compared\n");
+    return;
+#else
     same("CF_KEY_MAX", (long)cf_build_limit("key"));
     same("CF_MESSAGE_MAX", (long)cf_build_limit("message"));
     same("CF_PATH_MAX", (long)cf_build_limit("path"));
     same("CF_MAX_DEPTH", (long)cf_build_limit("depth"));
     same("CF_SOURCE_MAX", (long)cf_build_limit("source"));
+#endif
 }
 
 static void test_fixed(void) {

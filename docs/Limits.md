@@ -31,10 +31,10 @@ These are the options of "Limits and the stack budget" in the [README](../README
 | `CF_KEY_MAX` | 256 | 32 to 65535 | longest key, terminator included, so one byte less of text; held by every error, the flattener and the decoders that name the path they are in |
 | `CF_MESSAGE_MAX` | 256 | 64 to 65535 | longest error message; every `cf_error` holds one, and a builder call keeps one on its frame |
 | `CF_PATH_MAX` | 512 | 64 to 65535 | longest file path; the directory source and the platform layer hold two or three at once |
-| `CF_MAX_DEPTH` | 32 | 4 to 1024 | deepest nesting a document may have, the document counting as the first level (every reader and writer; see the depth rule below) |
+| `CF_MAX_DEPTH` | 32 | 4 to 1024 | deepest nesting in the configuration layer, counting the document as the first level (see the depth rule below) |
 | `CF_STACK_BUDGET` | 2048 | 0 to 1048576 | bytes a library function's stack frame may take; `0` measures without checking |
 
-The first three size `cf_error`'s buffers and so belong to a build's ABI (D-45): `cf_build_limit()` says which numbers a library was built with.
+`CF_KEY_MAX`, `CF_MESSAGE_MAX` and `CF_SOURCE_MAX` size `cf_error`'s buffers and so belong to a build's ABI (D-45): `cf_build_limit()` says which numbers a library was built with.
 
 <!-- limits:2:end -->
 
@@ -89,7 +89,7 @@ YAML's aliases are bounded on their own, in `yaml.c`, so that a document of alia
 | `YAML_ALIAS_BYTES_FACTOR` | 64 | `lib/serialize/src/yaml.c` | bytes of scalar text an alias may replay per byte of the document |
 | `YAML_ALIAS_BYTES_FLOOR` | 1048576 (1 MiB) | `lib/serialize/src/yaml.c` | bytes, the floor of that rule |
 
-**The depth rule.** The document is level one, so `CF_MAX_DEPTH` 32 allows 31 levels of tables and arrays inside it, in every reader and writer; a build with more or less is another number, and `cf_build_limit("depth")` says which. Held by `unit.test_serialize` and `unit.test_cbor`.
+**The depth rule.** The configuration layer counts the document as level one, so `CF_MAX_DEPTH` 32 allows 31 levels of tables and arrays inside it. `cf_build_limit("depth")` gives the build's limit. See [D-109](Decisions.md) for each codec's nesting limit.
 
 <!-- limits:4:end -->
 
@@ -157,7 +157,12 @@ Read from `docs/targets.txt` (A-12); how a target is shown is the heading it is 
 | x86-64 Windows, MSVC | job `matrix` |
 | arm64 macOS, Apple clang | job `matrix` |
 | x86-64 Linux, tcc and pcc | job `compilers` |
-| wasm32-wasi (Node's WASI) | tested by `verify`, not CI: run by scripts/verify.cmake -DEXTRA=wasm, not by CI |
+
+### Run locally
+
+| Target | Note |
+| ------ | ---- |
+| wasm32-wasi (Node's WASI) | run by scripts/verify.cmake -DEXTRA=wasm, not by CI |
 
 ### Not tried
 

@@ -360,8 +360,7 @@ jobs:
           tar -xzf "$RUNNER_TEMP/gitleaks.tgz" -C "$RUNNER_TEMP" gitleaks
       - run: '"$RUNNER_TEMP/gitleaks" git --no-banner --redact --exit-code 1 .'
 
-  # The two lockfiles the tree has (the Rust binding's and the documentation's
-  # Python packages) against OSV's database. The library has no dependency.
+  # Check the Rust binding, documentation and semgrep lockfiles against OSV.
   osv:
     runs-on: ubuntu-26.04
     steps:

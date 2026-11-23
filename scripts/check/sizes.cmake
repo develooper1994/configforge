@@ -141,14 +141,18 @@ function(measure_sizes out)
     message(
       FATAL_ERROR "sizes: requires GCC or Clang, got ${CMAKE_C_COMPILER_ID}")
   endif()
-  execute_process(
-    COMMAND git rev-parse --short=7 HEAD
-    WORKING_DIRECTORY "${root}"
-    RESULT_VARIABLE result
-    OUTPUT_VARIABLE commit
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-  if(NOT result EQUAL 0)
-    message(FATAL_ERROR "sizes: cannot identify the source commit")
+  if(TREE)
+    set(commit "${TREE}")
+  else()
+    execute_process(
+      COMMAND git rev-parse --short=7 HEAD
+      WORKING_DIRECTORY "${root}"
+      RESULT_VARIABLE result
+      OUTPUT_VARIABLE commit
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(NOT result EQUAL 0)
+      message(FATAL_ERROR "sizes: cannot identify the source commit")
+    endif()
   endif()
   string(TIMESTAMP date "%Y-%m-%d" UTC)
   set(lines "# Written by scripts/check/sizes.cmake -DWRITE=ON; do not edit.\n")

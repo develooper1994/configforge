@@ -465,6 +465,21 @@ static void test_storage(const char* format, const char* doc, cf_bool root_accep
     check(err.code == CF_E_SOURCE, "the sink refusal retains its existing code");
 }
 
+static void test_multiline_storage(const char* format, const char* doc, unsigned col) {
+    const cf_codec* codec = cf_codec_by_name(format);
+    cf_doc_sink     sink  = accepting;
+    cf_error        err   = CF_ERROR_INIT;
+    cf_blob         blob;
+
+    if (codec == NULL) {
+        return;
+    }
+    sink.scalar = refuse_scalar;
+    cf_blob_mem(&blob, doc, strlen(doc), "doc");
+    check(!cf_codec_decode(codec, &blob, &sink, &err), "the sink refuses the string");
+    check_place(&err, CF_REASON_KEY, 2, col);
+}
+
 static void test_file(const char* doc, int reason, int code, unsigned line,
                       unsigned col, cf_bool dotenv) {
     const char* path = dotenv ? "cf_reason.env" : "cf_reason.ini";
@@ -501,6 +516,8 @@ int main(int argc, char** argv) {
         test_storage("json", "{\"a\":1}", CF_TRUE);
         test_storage("json5", "{\"a\":1}", CF_TRUE);
         test_storage("toml", "a=1", CF_FALSE);
+        test_multiline_storage("toml", "\na = \"\"\"first\nsecond\"\"\"", 5);
+        test_multiline_storage("json5", "{\n a: 'first\\\nsecond'}", 5);
         test_storage("ini", "a=1", CF_FALSE);
         if (cf_codec_by_name("ini") != NULL) {
             test_file("a=\x81\n", CF_REASON_ENCODING, CF_E_SOURCE, 1, 3, CF_FALSE);

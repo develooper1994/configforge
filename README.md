@@ -214,11 +214,16 @@ device or an emulator run becomes available (`docs/targets.txt`).
 | x86-64 Windows, MSVC | CI runner | job `matrix` | - |
 | arm64 macOS, Apple clang | CI runner | job `matrix` | - |
 | x86-64 Linux, tcc and pcc | CI runner | job `compilers` | - |
-| wasm32-wasi (Node's WASI) | local run | - | run by scripts/verify.cmake -DEXTRA=wasm, not by CI |
 | armv7 Linux | not tried | - | planned (docs/Roadmap.md) |
 | Cortex-M | not tried | - | planned (docs/Roadmap.md) |
 | s390x Linux (big-endian) | not tried | - | planned (docs/Roadmap.md) |
 | riscv64 Linux | not tried | - | planned (docs/Roadmap.md) |
+
+### Run locally
+
+| Target | Note |
+| ------ | ---- |
+| wasm32-wasi (Node's WASI) | run by scripts/verify.cmake -DEXTRA=wasm, not by CI |
 <!-- matrix:end targets -->
 
 ## Build

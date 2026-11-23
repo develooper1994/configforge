@@ -581,8 +581,8 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     `lib/*/include/configforge/*.h` (plus `tools/doctor/include/...`
     where `cf_doctor.h` was read), every `src/*.c` glob `lib/*/src/*.c`
     recursively. The places: GateAbi.cmake:42, 78-79, 83;
-    GateAmalgamation.cmake:222, 242; GateDetection.cmake:7-9, 35 (its
-    exemption of `/src/platform/` becomes `/lib/platform/`);
+    GateAmalgamation.cmake:222, 242; `gate.semgrep`'s
+    `cf-detect-platform` rule exempts the platform implementation;
     GateFormats.cmake:19; GateHeaders.cmake:5, 48, 106;
     GateInstall.cmake:121, 136, 195, 241; GateInterface.cmake:15, 39;
     GateVersion.cmake:21; GateDependencies.cmake:16-17 (the component
@@ -897,7 +897,8 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     `tests/` are added (a dependency's tests run in its own build); `cxx`,
     with no sources, is an interface library. The unit tests' build
     directories are `build/lib/<c>/tests`, so CI's and `freebsd.sh`'s paths
-    follow. `gate.detection` leaves `lib/*/tests/` out and `gate.codespell`
+    follow. `gate.semgrep`'s `cf-detect-compiler` and `cf-detect-platform`
+    rules leave `lib/*/tests/` out and `gate.codespell`
     skips it, as neither read the tests before they were under `lib/`.
     `cf_component_tests` and `cf_unit_tests` (cmake/ConfigForgeComponent.cmake)
     are the tests' environment and the one loop, written once.
@@ -1018,9 +1019,10 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     `cf_lanes_*`, which gate.symbols' `cf_` rule accepts and which go in
     the internal list; a program that also links a lanes of its own sees
     no clash. A test builds `scalar.c` both ways.
-  * **The gates and scripts it meets.** gate.detection forbids
+  * **The gates and scripts it meets.** The `cf-detect-compiler` and
+    `cf-detect-platform` rules in `gate.semgrep` forbid
     `__GNUC__`, `_MSC_VER` and the like outside the portability files
-    (GateDetection.cmake:7-9, its exemption at :43): `lib/lanes/src/` is
+    (see the exclusions in `.semgrep/`): `lib/lanes/src/` is
     exempted beside `lib/platform/`, since lanes is its own portability
     layer. The format globs (`scripts/format.cmake`,
     `cmake/ConfigForgeFormat.cmake`, `.github/workflows/ci.yml`) cover

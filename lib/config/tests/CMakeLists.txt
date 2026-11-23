@@ -237,10 +237,12 @@ if(UNIX AND NOT CMAKE_SYSTEM_NAME STREQUAL "WASI")
   target_compile_definitions(test_dirlimits PRIVATE CF_TEST_FIFO=1)
 endif()
 # test_limits reads docs/Limits.md, so it is no entry of CF_UNIT_TESTS (its
-# loop registers a test with no argument). It is given no definition: it works
-# the default limits out from the compiled ones, so `cmake -S lib/config`
-# builds it as the whole build does (A-13).
+# loop registers a test with no argument). Only a default build compares
+# its compiled limits with the defaults documented on the page.
 cf_unit_test_executable(test_limits ${CF_TEST_LIB})
+if(CF_DEFAULT_LIMITS AND CF_STACK_BUDGET EQUAL 2048)
+  target_compile_definitions(test_limits PRIVATE CF_LIMITS_DEFAULT=1)
+endif()
 add_test(NAME unit.test_limits COMMAND test_limits
                                        ${CF_REPO_ROOT}/docs/Limits.md)
 # And test_trusted's: it makes directories, sets their modes and owners,

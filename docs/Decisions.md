@@ -92,6 +92,7 @@ gets reopened every six months.
 | D-73 | The format from the name, then the content, by several strategies | formats, codecs | **Decided** |
 | D-74 | One `define`, the type given or inferred | definitions, bindings | **Decided** |
 | D-75 | Checked at compile time where the language can, at run time always | definitions, C++, Rust | **Decided** |
+| D-76 | Predict sizes and measure the result | file input, key space | **Decided** |
 | D-77 | A reference's expansion is bounded, by a constant and not a build limit | interpolation, resolver | **Decided** |
 | D-78 | A directory that cannot be read whole is an error, optional or not | drop-in, secrets, platform | **Decided** |
 | D-79 | Response files (`@file`) are opt-in | command line, security | **Decided** |
@@ -3091,6 +3092,13 @@ is not a mapping, a second document, a key that is not a scalar, an
 empty key. The conformance run counts these apart from the grammar's.
 
 ---
+
+## D-76 — Predict sizes and measure the result
+
+Use the reported file size to reserve the input buffer and estimate the key
+space from the input or the previous generation. Measure each proposed
+optimisation separately. The [roadmap](Roadmap.md) records which estimates
+were kept and which were left after measurement.
 
 ## D-77 — A reference's expansion is bounded, by a constant and not a build limit
 

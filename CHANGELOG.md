@@ -64,9 +64,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - **Run-time checks, a second fuzzer and the supply chain in CI**: the jobs
   `valgrind` (memcheck over every unit test), `msan`, `ubsan-strict`, `afl`
   (AFL++ on the libFuzzer harnesses, a minute a target), `secrets` (gitleaks
-  over every commit) and `osv` (osv-scanner over the Rust binding's and
-  the documentation's lockfiles); each of the first four is also a step of
-  `verify` (`EXTRA=msan`, `ubsan-strict`, `afl`). The preset `msan` builds
+  over every commit) and `osv` (osv-scanner over the Rust binding,
+  documentation and semgrep lockfiles); each of the first four is also a step of
+  `verify` (`EXTRA=valgrind;msan;ubsan-strict;afl`). The preset `msan` builds
   with no optional library, since one not built with MemorySanitizer makes
   every value it returns read as uninitialised; the preset `ubsan-strict`
   adds clang's `integer`, `implicit-conversion`, `nullability` and
@@ -134,10 +134,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 - The readers share one escape decoder a family (JSON and JSON5, TOML,
   YAML, `.properties`), the writers one escaper, and the three `${` copies
-  one definition (D-102); no input is read differently and no output
-  changes. In a YAML tag, `%` followed by characters that are not both
-  hexadecimal digits is refused by the built-in reader; `%@0` and a
-  backquote in place of a digit were read as the digit 9 (D-102).
+  one definition (D-102).
 
 - `configforge codec convert` names an empty table, a path too long for
   TOML and INI, a table nested deeper than the target's reader takes, and
@@ -161,6 +158,15 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   values, with their place and, when they look like one, the encoding to
   name; XML still reads by its own declaration. Before, JSON, JSON5,
   YAML, INI, `.properties` and dotenv passed them on (D-108).
+
+### Fixed
+
+- The built-in YAML reader refuses a tag escape unless both digits after
+  `%` are hexadecimal. It previously accepted `@` and a backquote as
+  the digit 9 (D-102).
+- Decimals near `DBL_MIN` now round once at the destination precision.
+  Double rounding could read a writer's decimal one subnormal unit off.
+- JSON5 and TOML report a refused multi-line string at its opening quote.
 
 ## 1.7.0 — 2026-11-20
 

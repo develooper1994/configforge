@@ -179,8 +179,8 @@ function(cf_limits_section2 out)
   string(
     CONCAT
       bounds_CF_MAX_DEPTH
-      "deepest nesting a document may have, the document counting as the first "
-      "level (every reader and writer; see the depth rule below)")
+      "deepest nesting in the configuration layer, counting the document as "
+      "the first level (see the depth rule below)")
   string(
     CONCAT
       bounds_CF_STACK_BUDGET
@@ -244,7 +244,8 @@ function(cf_limits_section2 out)
       "fixed buffer, so each is stack. The default, the range "
       "and the check are "
       "read from `${options}`, `${buildh}` and `${porth}`, and the build fails "
-      "if the three disagree.\n\n${table}\nThe first three size `cf_error`'s "
+      "if the three disagree.\n\n${table}\n`CF_KEY_MAX`, `CF_MESSAGE_MAX` "
+      "and `CF_SOURCE_MAX` size `cf_error`'s "
       "buffers and so belong to a build's ABI (D-45): `cf_build_limit()` says "
       "which numbers a library was built with.\n")
   # cmake-lint: disable=C0103
@@ -422,11 +423,12 @@ function(cf_limits_section4 out)
       "under it (D-82).\n"
       "\nYAML's aliases are bounded on their own, in \`yaml.c\`, so that a "
       "document of aliases of aliases is refused in linear time (D-63):\n\n"
-      "${yaml}\n**The depth rule.** The document is level one, so "
+      "${yaml}\n**The depth rule.** The configuration layer counts the "
+      "document as level one, so "
       "\`CF_MAX_DEPTH\` ${depth} allows ${inside} levels of tables and arrays "
-      "inside it, in every reader and writer; a build with more or less is "
-      "another number, and \`cf_build_limit(\"depth\")\` says which. Held by "
-      "`unit.test_serialize` and `unit.test_cbor`.\n")
+      "inside it. `cf_build_limit(\"depth\")` gives the build's limit. "
+      "See [D-109](Decisions.md) "
+      "for each codec's nesting limit.\n")
   # cmake-lint: disable=C0103
   set("${out}"
       "${text}"
@@ -458,6 +460,7 @@ function(cf_limits_section7 out)
                   rows)
   set(heading_hardware "Tested on hardware")
   set(heading_runner "Tested on CI runners")
+  set(heading_local "Run locally")
   set(heading_qemu "Tested under qemu")
   set(heading_built "Built, not run")
   set(heading_none "Not tried")
@@ -467,6 +470,7 @@ function(cf_limits_section7 out)
     how
     hardware
     runner
+    local
     qemu
     built
     none)
@@ -480,13 +484,10 @@ function(cf_limits_section7 out)
       set(note "${rows_${i}_note}")
       if(how STREQUAL "hardware")
         set(note "${rows_${i}_where}, ${rows_${i}_date}, ${rows_${i}_commit}")
-      elseif(how STREQUAL "runner")
-        if(rows_${i}_where STREQUAL "")
-          set(note "tested by `verify`, not CI: ${note}")
-        else()
-          set(note "job `${rows_${i}_where}`")
-        endif()
-      elseif(how STREQUAL "qemu" OR how STREQUAL "built")
+      elseif(
+        how STREQUAL "runner"
+        OR how STREQUAL "qemu"
+        OR how STREQUAL "built")
         set(note "job `${rows_${i}_where}`")
       endif()
       if(note STREQUAL "")
@@ -669,4 +670,5 @@ set(target "${OUT}")
 if(DEFINED WRITE)
   set(target "${WRITE}")
 endif()
-file(WRITE "${target}" "${result}")
+include("${REPO}/cmake/ConfigForgeVersion.cmake")
+configforge_write_lf("${target}" "${result}")

@@ -56,7 +56,7 @@
 #   yaml     the whole suite with CF_WITH_YAML, where libyaml is installed
 #   sizes    compare library sizes with the recorded binutils measurement
 #   profiles the five additional build profiles, with full and server
-#            skipped unless the expat and sqlite3 headers are installed
+#            requiring expat and full also requiring sqlite3
 #   compilers the whole suite against musl (musl-gcc) and with the Tiny C
 #            Compiler and the Portable C Compiler, each where installed:
 #            the claim that the library needs a C89 compiler and a C
@@ -136,6 +136,8 @@ if(DEFINED TIER)
       afl
       infer
       yaml
+      profiles
+      sizes
       compilers
       kqueue
       tidy
@@ -466,6 +468,7 @@ foreach(x ${EXTRA})
         "sizes"
         ${CMAKE_COMMAND}
         -DCHECK=ON
+        "-DTREE=${tree}"
         -P
         "${ROOT}/scripts/check/sizes.cmake")
     else()
@@ -487,10 +490,12 @@ foreach(x ${EXTRA})
       embedded-json
       embedded-cbor)
       if((p STREQUAL "full" OR p STREQUAL "server")
-         AND (NOT CF_PROFILE_EXPAT_INCLUDE_DIR OR NOT
-                                                  CF_PROFILE_SQLITE_INCLUDE_DIR
-             ))
-        message("${p} skipped: expat.h and sqlite3.h are required")
+         AND NOT CF_PROFILE_EXPAT_INCLUDE_DIR)
+        message("${p} skipped: expat.h is required")
+        continue()
+      endif()
+      if(p STREQUAL "full" AND NOT CF_PROFILE_SQLITE_INCLUDE_DIR)
+        message("${p} skipped: sqlite3.h is required")
         continue()
       endif()
       step("${p} configure" ${CMAKE_COMMAND} --preset ${p})

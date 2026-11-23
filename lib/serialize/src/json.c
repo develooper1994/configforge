@@ -638,8 +638,9 @@ static cf_bool js_text(js_scan* s, const char* name, size_t nlen, const cf_loc* 
         if (s->out->size <
                 offsetof(cf_doc_sink, reserve_text) + sizeof s->out->reserve_text ||
             s->out->reserve_text == NULL) {
-            return js_fail(s, start, CF_REASON_STORAGE,
-                           "a long string needs sink text storage");
+            return cf_text_fail(s->err, CF_E_SOURCE, s->file, at->line, at->col,
+                                CF_REASON_STORAGE,
+                                "a long string needs sink text storage");
         }
         text = s->out->reserve_text(s->out->ctx, n + 1);
         if (text == NULL) {
@@ -659,7 +660,8 @@ static cf_bool js_text(js_scan* s, const char* name, size_t nlen, const cf_loc* 
        an integer has a mismatch rather than something to coerce. */
     return s->out->scalar(s->out->ctx, name, nlen, &v, CF_FALSE, at)
                ? CF_TRUE
-               : js_fail(s, start, CF_REASON_KEY, "key is not valid");
+               : cf_text_fail(s->err, CF_E_SOURCE, s->file, at->line, at->col,
+                              CF_REASON_KEY, "key is not valid");
 }
 
 static cf_bool js_value(js_scan* s, const char* name, size_t nlen) {
