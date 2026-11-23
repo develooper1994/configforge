@@ -329,4 +329,7 @@ second opinion beside cppcheck's.
 * **accept**: ACCEPT-CI, the wall time in "notes"; `gate.actionlint`.
 * **stop if**: `msan` cannot be brought under 9 minutes without dropping
   a test (write the numbers, keep it whole, and land the rest).
-* **notes**: (empty)
+* **notes**: step 1, by the organiser (run 45240013488): `msan`'s build 0.7
+  minutes, its `setarch -R ctest --preset msan` 16.1 minutes: the tests are
+  the time, so `msan` is split by tests (decided, second case). `afl`'s one
+  step (verify's `EXTRA=afl`, `FUZZ_SECONDS=60`) 16.3 minutes.
