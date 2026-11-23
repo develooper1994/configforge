@@ -49,9 +49,12 @@ MSYS_NO_PATHCONV=1 "$WSL" -d configforge-dev -- sh "/mnt/d/cf-work/$ID-gen.sh"
 for f in docs/API.md docs/Codemap.md docs/Limits.md README.md; do
   [ -f "$SRC/$f" ] && ! cmp -s "$SRC/$f" "$f" && cp "$SRC/$f" "$f" && say "regenerated $f"
 done
-git add -A && git commit -q -m "$SUBJECT
+git add -A
+if ! git commit -q -m "$SUBJECT
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>" || say "nothing to commit"
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"; then
+  say "nothing to commit"
+fi
 git push -q -u origin "HEAD:refs/heads/$BR" 2>&1 | grep -v '^remote' || true
 sleep 20
 RUN=$(gh run list --branch "$BR" --workflow ci.yml --limit 1 --json databaseId --jq '.[0].databaseId')
