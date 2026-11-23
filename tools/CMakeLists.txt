@@ -10,6 +10,7 @@ add_subdirectory(configforge)
 # The serialization library's program needs neither the JSON option nor
 # the report: it reads whatever formats the build has.
 add_subdirectory(codec)
+add_subdirectory(diff)
 
 # Doctor reads reports (JSON) and its adapters write them.
 if(CF_WITH_JSON AND CF_WITH_REPORT)
@@ -26,7 +27,13 @@ endif()
 
 # The programs, for `cmake --install`: the front door and every tool
 # it runs, in one directory (D-99).
-foreach(t configforge_front doctor configforge_gen configforge_codec)
+foreach(
+  t
+  configforge_front
+  doctor
+  configforge_gen
+  configforge_codec
+  configforge_diff)
   if(TARGET ${t})
     install(TARGETS ${t} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
                                  COMPONENT tools)

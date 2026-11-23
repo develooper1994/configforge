@@ -35,7 +35,9 @@ static void help(FILE* to) {
           "                                     history, blame, import-*\n"
           "  configforge gen ...                the contract: check files, write code\n"
           "  configforge codec <command> ...    documents: formats, detect, check,\n"
-          "                                     dump, convert, format\n"
+          "                                     dump, convert, format\n",
+          to);
+    fputs("  configforge diff ...               compare two flat documents by value\n"
           "  configforge help\n"
           "  configforge --version\n"
           "\n",

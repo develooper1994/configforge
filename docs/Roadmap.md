@@ -1367,12 +1367,11 @@ from parts that exist:
 
 * ⬜ **`configforge diff a.yaml b.json`: two files, any formats, compared
   by value.** What exists: `configforge doctor diff` compares two
-  *reports* (a program's resolved configuration, `cf_report`), and
-  `cf_doctor_diff_files` the library call on two files; `--redact-all`
-  keeps every value out. What is left: a command on two plain files
-  with no program run and no report, any pair of formats (the codec
-  tree W5-V1 builds), the order of keys and the format's own spelling
-  never shown as a change, secrets by digest. Later, with a contract,
+  *reports* (a program's resolved configuration, `cf_report`).
+  **Flat slice built (N-1):** `configforge diff` compares two plain
+  scalar mappings across readable formats, ignoring key order and
+  scalar spelling. It lists changed keys without values or digests.
+  What is left: nested shapes and contract-aware secret digests. With a contract,
   units compared as values (`30s` is `30000ms`, with 1.10.0's durations
   and sizes), which plain semantic diffs (dyff, graphtage) do not do.
 * ⬜ **Git shows configuration changes by value.** A `textconv` driver

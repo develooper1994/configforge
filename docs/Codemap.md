@@ -1833,9 +1833,9 @@
 - codec_recode 208-282
 `tools/configforge/front.h`
 `tools/configforge/main.c`
-- help 31-46
-- is_name 49-62
-- main 64-96
+- help 31-48
+- is_name 51-64
+- main 66-98
 `tools/configforge/run_posix.c`
 - out_of_memory 31-34
 - runnable 37-46
@@ -1858,6 +1858,24 @@
 - spawn 307-345
 - front_run 347-370
 - typedef front_run_win32_unused 374
+`tools/diff/main.c`
+- struct entry 11-17
+- struct side 19-28
+- reserve_work 30-40
+- reserve_text 42-44
+- copy_span 46-52
+- begin_table 54-63
+- begin_array 65-70
+- end_table 72-79
+- scalar 81-115
+- key_order 117-124
+- entry_order 126-134
+- read_side 136-182
+- next_key 184-190
+- write_change 192-218
+- compare 220-249
+- usage 251-255
+- main 257-310
 `tools/doctor/adapters.h`
 `tools/doctor/doctor.c`
 - text_field 39-64
@@ -2215,9 +2233,9 @@
 - ACCEPT 69-115
 - A card 116-143
 - For the maintainer 144-183
-- The index 184-233
-- Done, their cards removed 234-303
-- After 1.7.0: the order of the waves 304-363
+- The index 184-237
+- Done, their cards removed 238-307
+- After 1.7.0: the order of the waves 308-367
 `docs/Roadmap.md`
 - Status 11-215
 - Marks 13-28
@@ -2233,7 +2251,7 @@
 - The plan from the evening of 2026-11-06 (the order to follow) 316-363
 - The plan from 2026-11-06 (accepted; the order to follow) 364-461
 - The plan from 1.1.0 (2026-11-05) 462-620
-- Ideas 621-1448
+- Ideas 621-1447
 - ⬜ Sizes predicted, then checked (2026-11-06) 627-643
 - From the security pass of 2026-11-11 644-692
 - From a review of the whole, 2026-11-14 693-767
@@ -2241,11 +2259,11 @@
 - Tools, distribution and digests, 2026-11-14 857-939
 - Critical-system standards, and large files (asked 2026-11-16; not yet cards) 940-976
 - Suggestions of 2026-11-17 (not yet cards) 977-1354
-- For the people who change configuration (side discussion, 2026-11-19; not yet cards) 1355-1412
-- Considered, and decided against for now: a GitHub wiki 1413-1420
-- Considered, and decided against for now: TOON 1421-1434
-- Considered, and decided against for now: a jq-like query language 1435-1448
-- Open decisions 1449-1461
+- For the people who change configuration (side discussion, 2026-11-19; not yet cards) 1355-1411
+- Considered, and decided against for now: a GitHub wiki 1412-1419
+- Considered, and decided against for now: TOON 1420-1433
+- Considered, and decided against for now: a jq-like query language 1434-1447
+- Open decisions 1448-1460
 `docs/plan/A-architecture.md`
 - The design 19-415
 - D-100 - One directory per component 21-110
@@ -2283,7 +2301,12 @@
 - L-3b - a sound analyser: Frama-C EVA on the bottom components 95-123
 - L-4 - interface and documentation 124-138
 - L-5 - profilers, so that every speed-up starts from data 139-158
-- L-6 - a map of the tree and a brief per card, so that workers read less 159-281
+- L-6 - a map of the tree and a brief per card, so that workers read less 159-335
+`docs/plan/N-next.md`
+- N-1 - compare two flat configuration files by value 3-142
+- Organiser's answers 138-142
+- N-2 - rebuild the Linux musl release archive and compare the bytes 143-248
+- N-3 - show a tracked JSON file's value changes in Git difftool 249-334
 `docs/plan/P-allocators.md`
 - Findings 8-138
 - What the library does now 10-64

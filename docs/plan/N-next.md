@@ -135,6 +135,11 @@
   thing use the Plan's stop rule.
 * **notes**: (empty)
 
+### Organiser's answers
+
+The YAML reader emits the plain scalars `1` and `true` as text. The
+equal cross-format fixture therefore pairs them with JSON strings.
+
 ## N-2 - rebuild the Linux musl release archive and compare the bytes
 
 * **id**: N-2

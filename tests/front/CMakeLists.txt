@@ -26,3 +26,12 @@ add_test(
 if(have_doctor)
   set_tests_properties(front.run PROPERTIES FIXTURES_REQUIRED DOCTOR_REPORTS)
 endif()
+
+if(TARGET configforge_front AND CF_WITH_JSON)
+  add_test(
+    NAME front.diff
+    COMMAND
+      ${CMAKE_COMMAND} -DFRONT=$<TARGET_FILE:configforge_front>
+      -DHAVE_YAML=${CF_WITH_YAML} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/diff -P
+      ${CMAKE_CURRENT_SOURCE_DIR}/diff.cmake)
+endif()

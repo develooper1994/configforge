@@ -7,6 +7,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- `configforge diff` compares two flat configuration files across readable
+  formats. It lists added, removed and changed keys without printing values.
+
 - **`docs/Limits.md`**: the build limits, the fixed ones, the decode budget, the largest document of each format, the platforms and C versions, the threading rules, what is not proven and not claimed, and what is not offered, with the decision for each; its numbers are generated from the build options and the sources, and `gate.limits` and `test_limits` fail when it drifts.
 - `cf_error` carries the place (`where`) and the reason (`reason`, from
   `cf_reason.def`) of a refusal, the same in every reader: invalid UTF-8,
