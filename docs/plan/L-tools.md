@@ -350,3 +350,43 @@ second opinion beside cppcheck's.
   of the tests brings `msan` under 9 minutes; it stays as split, and
   `doctor.api`'s cost under MSan is the next item (as L-2 shrank the
   live-reload counts under Valgrind).
+
+## L-8 - doctor.api cheap under MemorySanitizer, nothing dropped
+
+* **id**: L-8
+* **goal**: `doctor.api` (tests/doctor/CMakeLists.txt:196) runs in under
+  90 seconds in CI's `msan` job, from 615, with every check it makes kept.
+* **why**: L-7's notes: it is CI's floor (the next test under MSan is 35
+  s), so every push waits 10 minutes for one test.
+* **needs**: L-7 (done)
+* **size**: small
+* **decided**:
+  * **Measure first**: build the `msan` preset in WSL (clang; `setarch -R`
+    as CI does) and run `doctor_api` alone; find what takes the time (its
+    loops' counts, a size, one case), with `perf` on the profiling VM
+    (`ssh cfvm`) if it is not plain from the source.
+  * **The fix is the count, not the check**: a loop or a size that is there
+    for volume (many keys, many reports, a large document) takes a smaller
+    count when the run is under a slow checker, exactly as
+    `lib/config/tests/test_complexity.c:175` does for Valgrind: an
+    environment variable the test preset sets (`CF_UNDER_MSAN=1` in the
+    `msan` test preset's `environment`, beside `CF_UNDER_VALGRIND`), read by
+    the test; each case still runs. A case whose value is the volume itself
+    (a complexity bound) keeps its count and moves to a test of its own,
+    labelled so the `msan` shards can balance it.
+  * Nothing else in the test changes; no `#ifdef` on the sanitizer in
+    library code.
+* **files**: `tests/doctor/` (the test's source and CMakeLists),
+  `CMakePresets.json` (the `msan` test preset's environment); last:
+  `docs/plan/L-tools.md` (this card's notes: before and after).
+* **steps**: 1. `git switch -c work/L-8`; measure (above) and write the
+  numbers under "notes". 2. The smaller counts under `CF_UNDER_MSAN`; the
+  default build's `doctor.api` unchanged (same counts, same checks: diff
+  its output before and after without the variable). 3. CI: the `msan`
+  jobs' wall time in "notes". 4. ACCEPT.
+* **accept**: ACCEPT-LINUX, ACCEPT-CI; `doctor.api` under 90 s in CI's
+  `msan` log.
+* **stop if**: the time is not in a count but in one operation the library
+  does (then it is a performance fault: write it under "notes" with the
+  profile, and stop).
+* **notes**: (empty)
