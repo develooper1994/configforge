@@ -108,7 +108,9 @@ You carry out one card of docs/Plan.md, alone.
 6. Before every push, on Linux: `python scripts/work/work.py format`,
    then `cmake -P scripts/generate/codemap.cmake` and
    `cmake -P scripts/generate/apiref.cmake` last. Both documents cite
-   line numbers. Watch CI with `gh run watch --interval 60`.
+   line numbers. Run every `gate.*` test on Linux before the push
+   (`scripts/work/codex-card.sh` does it for Codex's cards).
+   Watch CI with `gh run watch --interval 60`.
    Commit and push after each step, so that a stop loses nothing.
 7. Report: files changed, ACCEPT results with exit codes, anything the card
    got wrong, anything left. Under 300 words.

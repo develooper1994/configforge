@@ -271,6 +271,10 @@ second opinion beside cppcheck's.
   citations, including `path` ("Heading": explanation). Treat these as
   heading citations. P-4's Roadmap citation "Large files" is unresolved
   because the Roadmap has no heading with that name.
+  Third, 2026-11-23: part 2 keeps only `docs/Architecture.md` and
+  `scripts/verify.cmake`: the cards, Roadmap and Maintaining change with
+  every landing, and the map of them went stale on every open branch at
+  once.
 * **notes**: 2026-11-23: the first gate run failed with “cannot be run”
   (CTest exit 8). The initial generator exceeded the limit at 67,530
   bytes (generator exit 1, CTest exit 8). With the organiser's exclusion,
@@ -329,7 +333,20 @@ second opinion beside cppcheck's.
 * **accept**: ACCEPT-CI, the wall time in "notes"; `gate.actionlint`.
 * **stop if**: `msan` cannot be brought under 9 minutes without dropping
   a test (write the numbers, keep it whole, and land the rest).
+* **Organiser's answers**: 2026-11-23: `paths-ignore` takes no exceptions,
+  so the filter is `paths` with ordered patterns, on `push` only: `'**'`,
+  then `'!docs/**'`, `'!**/*.md'`, `'!.lychee.toml'`, then again
+  `'docs/sizes.txt'`, `'docs/targets.txt'`, `'docs/API.md'`,
+  `'docs/Codemap.md'`, `'docs/Limits.md'`, `'README.md'`. `pull_request`
+  stays unfiltered, so a pull request's required checks always report.
 * **notes**: step 1, by the organiser (run 45240013488): `msan`'s build 0.7
   minutes, its `setarch -R ctest --preset msan` 16.1 minutes: the tests are
   the time, so `msan` is split by tests (decided, second case). `afl`'s one
   step (verify's `EXTRA=afl`, `FUZZ_SECONDS=60`) 16.3 minutes.
+  Result, run 45257081918 (the branch, all green): wall 13.9 minutes
+  (from 19.2); `msan (2)` 13.7, `clang` 6.8, `bench-gate` 6.0, `matrix
+  (windows-latest)` 5.8, `afl` 5.7. The stop: one test, `doctor.api`,
+  takes 615 s under MemorySanitizer alone (the next is 35 s), so no split
+  of the tests brings `msan` under 9 minutes; it stays as split, and
+  `doctor.api`'s cost under MSan is the next item (as L-2 shrank the
+  live-reload counts under Valgrind).

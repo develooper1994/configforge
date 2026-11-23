@@ -202,18 +202,11 @@ list(
 list(APPEND code ${tools})
 list(SORT code)
 
-file(
-  GLOB documents
-  RELATIVE "${repo}"
-  "${repo}/docs/plan/*.md")
-list(
-  APPEND
-  documents
-  docs/Roadmap.md
-  docs/Plan.md
-  docs/Maintaining.md
-  docs/Architecture.md
-  scripts/verify.cmake)
+# Only documents that change with the code: the plan's cards, Roadmap and
+# Maintaining change with every landing, and a map of them went stale on
+# every branch at once (2026-11-23). A card is found with
+# `grep -n "^## <id> " docs/plan/*.md` or scripts/work/brief.py.
+set(documents docs/Architecture.md scripts/verify.cmake)
 list(SORT documents)
 
 set(page "")

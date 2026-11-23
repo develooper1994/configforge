@@ -4,7 +4,25 @@ name: ci
 on:
   push:
     branches-ignore: [bench-history]
+    paths:
+      - '**'
+      - '!docs/**'
+      - '!**/*.md'
+      - '!.lychee.toml'
+      - 'docs/sizes.txt'
+      - 'docs/targets.txt'
+      - 'docs/API.md'
+      - 'docs/Codemap.md'
+      - 'docs/Limits.md'
+      - 'README.md'
   pull_request: {}
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 # Every job reads the repository and nothing else; the one that comments
 # on a pull request asks for that itself.
@@ -301,11 +319,16 @@ jobs:
   # at fixed addresses, so address randomisation goes off, as for tsan.
   msan:
     runs-on: ubuntu-26.04
+    strategy:
+      fail-fast: false
+      matrix:
+        first-test: [1, 2]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: sudo apt-get update && sudo apt-get install -y clang llvm libclang-rt-21-dev
       - run: cmake --preset msan && cmake --build --preset msan
-      - run: setarch "$(uname -m)" -R ctest --preset msan
+      # Odd and even positions cover the entire preset's filtered test list.
+      - run: setarch "$(uname -m)" -R ctest --preset msan -I "${{ matrix.first-test }},,2" --no-tests=error
 
   # clang's integer, implicit-conversion, nullability and local-bounds
   # groups on top of the sanitize job's; what the code means by a wrap or a
@@ -334,10 +357,12 @@ jobs:
   # iwyu's is. A finding leaves its input in afl-out/<reader>/default/crashes.
   afl:
     runs-on: ubuntu-26.04
+    env:
+      FUZZ_SECONDS: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 60 || 15 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: sudo apt-get update && sudo apt-get install -y afl++ clang llvm
-      - run: cmake -DEXTRA=afl -DFUZZ_SECONDS=60 -DMODE=quick -DJOBS=4 -P scripts/verify.cmake
+      - run: cmake -DEXTRA=afl -DFUZZ_SECONDS="$FUZZ_SECONDS" -DMODE=quick -DJOBS=4 -P scripts/verify.cmake
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: failure()
         with:
@@ -373,10 +398,12 @@ jobs:
           chmod +x "$RUNNER_TEMP/osv-scanner"
       - run: '"$RUNNER_TEMP/osv-scanner" scan source --lockfile=bindings/rust/Cargo.lock --lockfile=scripts/docs/requirements.txt --lockfile=scripts/check/semgrep-requirements.txt'
 
-  # Coverage-guided fuzzing of every reader of untrusted bytes, a minute
-  # each. A finding leaves its input as crash-<hash>, kept as an artifact.
+  # Coverage-guided fuzzing of every reader of untrusted bytes.
+  # A finding leaves its input as crash-<hash>, kept as an artifact.
   libfuzzer:
     runs-on: ubuntu-26.04
+    env:
+      FUZZ_SECONDS: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 60 || 15 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       # What earlier runs learned: a new cache entry each run, restored
@@ -386,7 +413,7 @@ jobs:
           path: build-fuzz/tests/fuzz/corpus_*
           key: fuzz-corpus-${{ github.run_id }}
           restore-keys: fuzz-corpus-
-      - run: cmake -DEXTRA=fuzz -DFUZZ_SECONDS=60 -DMODE=quick -DJOBS=4 -P scripts/verify.cmake
+      - run: cmake -DEXTRA=fuzz -DFUZZ_SECONDS="$FUZZ_SECONDS" -DMODE=quick -DJOBS=4 -P scripts/verify.cmake
       # Minimised before it is saved: only the inputs that still reach
       # something no other input does, so the cache does not grow with
       # every run.
