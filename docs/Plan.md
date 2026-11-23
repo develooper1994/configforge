@@ -233,7 +233,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 59 | P-4 Allocation measured, and changed only where it wins | medium | P-1b | done (ca2f115) |
 | 60 | N-1 Compare two flat configuration files by value | medium | W5-V1 | done (77a11ae) |
 | 61 | N-2 Rebuild the Linux musl release archive and compare the bytes | medium | nothing | done (6c67353) |
-| 62 | N-3 Show a tracked JSON file's value changes in Git difftool | small | N-1 | open |
+| 62 | N-3 Show a tracked JSON file's value changes in Git difftool | small | N-1 | done (efb74f1) |
 | 63 | N-4 Deliver one root table to a YAML document sink | small | W5-V2 | open |
 
 ## Done, their cards removed
