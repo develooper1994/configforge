@@ -279,3 +279,54 @@ second opinion beside cppcheck's.
   (`21-24` became `22-25`). The deputy's Windows sandbox cannot run
   Python. The manager runs the missing-script check, `work.brief`, the
   L-6 and P-4 brief commands, and ACCEPT on Linux and CI.
+
+## L-7 - CI in minutes, with nothing taken away
+
+* **id**: L-7
+* **goal**: a push to a work branch gets CI's verdict in about 7 minutes
+  instead of 19, with every check still run in full on `main` and nightly.
+* **why**: measured 2026-11-23 (run 45240013488): wall 19 minutes, the sum
+  of 47 jobs 120; `msan` 17.1 and `afl` 16.5 minutes set the wall, the
+  next is `matrix (windows-latest)` at 6.8. Superseded runs of an amended
+  branch ran to the end. Most red runs of the night were not faults but
+  style and generated files (format, `docs/API.md`'s lines, a fixture,
+  cmake-lint), which a local gate run catches before the push.
+* **needs**: nothing
+* **size**: small
+* **decided**:
+  * **`concurrency`** at the top of `.github/workflows/ci.yml`: `group:
+    ci-${{ github.ref }}`, `cancel-in-progress: ${{ github.ref !=
+    'refs/heads/main' }}` (a run on `main` is never cancelled).
+  * **Documentation-only pushes** skip `ci.yml`: `paths-ignore` on `push`
+    and `pull_request` for `docs/**`, `**/*.md`, `.lychee.toml`, except
+    files CI reads: `docs/sizes.txt`, `docs/targets.txt`, `docs/API.md`,
+    `docs/Codemap.md`, `docs/Limits.md` and `README.md` (a generated
+    page's gate must run when it changes). The `docs` workflow keeps
+    checking the documents.
+  * **`afl` and `libfuzzer`**: `FUZZ_SECONDS` is 60 on `main`, on a
+    schedule (a nightly `schedule:` added to `ci.yml`, 03:00 UTC) and on
+    a manual run; 15 on any other branch (`${{ github.ref ==
+    'refs/heads/main' && 60 || 15 }}`-style expression, written once as a
+    job-level `env`).
+  * **`msan`**: first measure (step 1) which step takes the time. If its
+    tests are the time, split them into two jobs by ctest label or by
+    `-I` ranges, each under 9 minutes; if the build is, cache the build
+    directory's third-party part with `actions/cache` (pinned by commit,
+    as the other actions are). No test is dropped.
+  * **The local gate before a push**: CLAUDE.md's brief, step 6, gains
+    "run every `gate.*` test on Linux before the push
+    (`scripts/work/codex-card.sh` does it for Codex's cards)".
+* **files**: `.github/workflows/ci.yml`, `CLAUDE.md`; last:
+  `docs/Maintaining.md` ("Working habits that paid": the new times).
+* **steps**: 1. `git switch -c work/L-7`; read `msan`'s step times from
+  the run above (`gh run view --log` of that job, the `##[group]` lines
+  with their timestamps) and write them under "notes". 2. `concurrency`
+  and `paths-ignore`; `gate.actionlint` passes. 3. The fuzz seconds and
+  the nightly schedule. 4. `msan` as decided by step 1. 5. Push twice in a
+  row (a second commit a minute after the first): see the first run
+  cancelled; then a docs-only commit: see no `ci` run. 6. ACCEPT: the
+  branch's run finishes in under 9 minutes of wall time, all green.
+* **accept**: ACCEPT-CI, the wall time in "notes"; `gate.actionlint`.
+* **stop if**: `msan` cannot be brought under 9 minutes without dropping
+  a test (write the numbers, keep it whole, and land the rest).
+* **notes**: (empty)
