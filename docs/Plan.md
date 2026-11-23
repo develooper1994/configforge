@@ -238,6 +238,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 63 | N-4 Deliver one root table to a YAML document sink | small | W5-V2 | done (f6c0ba7) |
 | 64 | N-5 Compare nested tables by value in `configforge diff` | small | N-1 | done (ad5b840) |
 | 65 | N-6 `cf_usage`: the `--help` text from the contract | small | nothing | done (83f5c64) |
+| 66 | N-7 A reload names the keys it changed | small | nothing | open |
 
 ## Done, their cards removed
 

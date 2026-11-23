@@ -74,9 +74,9 @@
 - #define CF_EXPAND_MAX 163
 - #define CF_EXPAND_TOTAL_MAX 173
 - struct cf_defset 180-206
-- enum cf_unknown_policy 313-317
-- struct cf_apply_report 319-325
-- struct cf_rank_names 340-343
+- enum cf_unknown_policy 318-322
+- struct cf_apply_report 324-330
+- struct cf_rank_names 345-348
 `lib/config/include/configforge/cf_edit.h`
 - #define CONFIGFORGE_CF_EDIT_H 26
 - typedef cf_edit 36
@@ -147,9 +147,9 @@
 - typedef cf_live_build_fn 110
 - typedef cf_live_check_fn 116
 - typedef cf_live_health_fn 123
-- struct cf_live_options 131-161
-- #define CF_LIVE_OPTIONS_INIT 164
-- struct cf_live_status 244-256
+- struct cf_live_options 131-162
+- #define CF_LIVE_OPTIONS_INIT 165
+- struct cf_live_status 245-257
 `lib/config/include/configforge/cf_log.h`
 - #define CONFIGFORGE_CF_LOG_H 26
 - enum cf_log_level 35-40
@@ -676,34 +676,38 @@
 - live_build 245-288
 - live_watch 292-295
 - live_drop_kept 297-304
-- live_swap 311-346
-- live_drop_pending 348-354
-- live_rebuild_once 356-392
-- live_log 395-412
-- live_log_restarts 416-436
-- live_record 440-476
-- live_rollback 480-510
-- live_confirm 512-519
-- live_probation 522-543
-- live_rebuild 545-549
-- cf_live_open 555-566
-- struct live_options_1_0 571-582
-- cf_live_open_with 588-660
-- cf_live_close 662-673
-- cf_live_get 675-686
-- cf_live_poll 688-725
-- cf_live_reload 727-736
-- cf_live_wait 738-743
-- cf_live_pending 745-747
-- cf_live_approve 749-762
-- cf_live_reject 764-772
-- cf_live_rollback 774-782
-- cf_live_confirm 784-790
-- cf_live_commit 796-810
-- cf_live_status_get 812-825
-- cf_live_last_error 827-843
-- cf_live_generation 845-855
-- cf_live_restarts 857-873
+- live_swap 314-350
+- live_drop_pending 352-358
+- live_rebuild_once 360-396
+- live_event 399-417
+- live_log 419-422
+- struct live_changed 427-430
+- live_key_changed 432-462
+- live_log_changes 465-475
+- live_log_restarts 479-499
+- live_record 503-539
+- live_rollback 543-573
+- live_confirm 575-582
+- live_probation 585-606
+- live_rebuild 608-612
+- cf_live_open 618-629
+- struct live_options_1_0 634-645
+- cf_live_open_with 651-723
+- cf_live_close 725-736
+- cf_live_get 738-749
+- cf_live_poll 751-788
+- cf_live_reload 790-799
+- cf_live_wait 801-806
+- cf_live_pending 808-810
+- cf_live_approve 812-825
+- cf_live_reject 827-835
+- cf_live_rollback 837-845
+- cf_live_confirm 847-853
+- cf_live_commit 859-873
+- cf_live_status_get 875-888
+- cf_live_last_error 890-906
+- cf_live_generation 908-918
+- cf_live_restarts 920-936
 `lib/config/src/core/validate.c`
 - sealed 35-38
 - validate_value 40-116
@@ -751,15 +755,15 @@
 - cf_diff 35-103
 - diff_secret 108-110
 - struct diff_text 116-122
-- diff_source_name 124-134
-- diff_put_value 138-157
-- diff_put_origin 159-164
-- diff_line 166-211
-- struct diff_json 217-221
-- diff_json_origin 223-233
-- diff_json_line 235-265
-- cf_diff_json 267-277
-- cf_diff_text 279-302
+- cfi_source_name 126-136
+- diff_put_value 140-159
+- diff_put_origin 161-166
+- diff_line 168-213
+- struct diff_json 219-223
+- diff_json_origin 225-235
+- diff_json_line 237-267
+- cf_diff_json 269-279
+- cf_diff_text 281-304
 `lib/config/src/diag/explain.c`
 - find_source 18-30
 - pad 35-46

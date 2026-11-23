@@ -7,6 +7,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- A `cf_live` swap logs one `"key-changed"` event at debug level for each
+  key it changed, naming the key and the source its new value comes from
+  and never a value, before the swap's `"reload"` event.
+
 - `configforge diff` compares two configuration files across readable
   formats, nested tables included. It lists added, removed and changed
   keys by path, such as `$["db"]["port"]`, without printing values.

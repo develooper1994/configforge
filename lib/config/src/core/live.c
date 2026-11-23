@@ -303,6 +303,9 @@ static void live_drop_kept(cf_live* l) {
     l->left              = 0;
 }
 
+static void live_log_changes(const cf_live* l, const cf_config* old,
+                             const cf_config* next);
+
 /* Readers get `next` from now on; `quiet` says it is the same values
    (a neighbour woke the watcher, or a file was touched), so the stamps
    move on and the generation does not. A swap that is not quiet starts
@@ -330,6 +333,7 @@ static void live_swap(cf_live* l, cf_config* next, char* list, size_t list_len,
     if (!quiet) {
         l->previous    = l->fingerprint;
         l->fingerprint = cf_fingerprint(next);
+        live_log_changes(l, old, next);
     }
     if (keep && l->kept == NULL) {
         l->kept              = old;
@@ -392,8 +396,9 @@ static cf_live_result live_rebuild_once(cf_live* l, cf_error* err) {
 }
 
 /* One event to the reloads' log, if there is one and it is loud enough. */
-static void live_log(const cf_live* l, cf_log_level level, const char* event,
-                     cf_code code, const char* key, const char* message) {
+static void live_event(const cf_live* l, cf_log_level level, const char* event,
+                       cf_code code, const char* key, const char* source,
+                       const char* message) {
     cf_log_event e;
 
     if (l->log == NULL || level < l->log_min) {
@@ -404,11 +409,69 @@ static void live_log(const cf_live* l, cf_log_level level, const char* event,
     e.event       = event;
     e.code        = code;
     e.key         = key;
-    e.source      = NULL;
+    e.source      = source;
     e.message     = message;
     e.previous    = l->previous;
     e.fingerprint = l->fingerprint;
     l->log(l->log_user, &e);
+}
+
+static void live_log(const cf_live* l, cf_log_level level, const char* event,
+                     cf_code code, const char* key, const char* message) {
+    live_event(l, level, event, code, key, NULL, message);
+}
+
+/* One "key-changed" event for each key `fn` is called with: the key and
+   where its new value comes from, in a fixed sentence and never the
+   value itself, so that a secret needs no case of its own. */
+typedef struct live_changed {
+    const cf_live*   l;
+    const cf_config* next;
+} live_changed;
+
+static cf_bool live_key_changed(void* ctx, const char* key, size_t klen, cf_change kind,
+                                const cf_candidate* before, const cf_candidate* after) {
+    const live_changed* c = (const live_changed*)ctx;
+    char                name[CF_KEY_MAX];
+    const char*         what;
+
+    (void)before;
+    if (klen >= sizeof name) {
+        klen = sizeof name - 1;
+    }
+    memcpy(name, key, klen);
+    name[klen] = '\0';
+    switch (kind) {
+    case CF_CHANGE_ADDED:
+        what = "added";
+        break;
+    case CF_CHANGE_REMOVED:
+        what = "removed";
+        break;
+    case CF_CHANGE_VALUE:
+        what = "changed";
+        break;
+    case CF_CHANGE_ORIGIN:
+    default:
+        what = "same value, from another source";
+        break;
+    }
+    live_event(c->l, CF_LOG_DEBUG, "key-changed", CF_OK, name,
+               (after != NULL) ? cfi_source_name(c->next, after->source) : NULL, what);
+    return CF_TRUE;
+}
+
+/* Only with a sink that asked for debug: otherwise no pass is made. */
+static void live_log_changes(const cf_live* l, const cf_config* old,
+                             const cf_config* next) {
+    live_changed c;
+
+    if (l->log == NULL || l->log_min > CF_LOG_DEBUG) {
+        return;
+    }
+    c.l    = l;
+    c.next = next;
+    (void)cf_diff(old, next, live_key_changed, &c);
 }
 
 /* Each key the swap kept at its running value: one line apiece, so a

@@ -121,7 +121,9 @@ typedef struct diff_text {
     const cf_config* b;
 } diff_text;
 
-static const char* diff_source_name(const cf_config* c, int rank) {
+/* The name of the source of rank `rank` in `c`, "?" when there is none.
+   cf_live's "key-changed" events name sources the same way. */
+const char* cfi_source_name(const cf_config* c, int rank) {
     const cf_source_view* sv = cf_sources(c);
     size_t                i;
 
@@ -157,7 +159,7 @@ static void diff_put_value(diff_text* t, const cf_value* v, cf_bool secret) {
 }
 
 static void diff_put_origin(diff_text* t, const cf_config* c, const cf_candidate* k) {
-    t->at = cf_fmt_append(t->buf, t->cap, t->at, "%s", diff_source_name(c, k->source));
+    t->at = cf_fmt_append(t->buf, t->cap, t->at, "%s", cfi_source_name(c, k->source));
     if (k->at != NULL) {
         t->at = cf_fmt_append(t->buf, t->cap, t->at, " %s", k->at);
     }
@@ -223,8 +225,8 @@ typedef struct diff_json {
 static void diff_json_origin(cf_sink* out, const char* name, const cf_config* c,
                              const cf_candidate* k) {
     cf_sink_fmt(out, ", \"%s\": {\"source\": ", name);
-    cf_sink_json_string(out, diff_source_name(c, k->source),
-                        strlen(diff_source_name(c, k->source)));
+    cf_sink_json_string(out, cfi_source_name(c, k->source),
+                        strlen(cfi_source_name(c, k->source)));
     if (k->at != NULL) {
         cf_sink_puts(out, ", \"at\": ");
         cf_sink_json_string(out, k->at, strlen(k->at));

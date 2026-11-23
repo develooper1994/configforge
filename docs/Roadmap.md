@@ -722,7 +722,7 @@ SHA-256 would add a hash to the library for no gain here. What was new:
   the provenance would name it like any other file. Done when
   `settings.c` is that source's example and no longer writes a file
   itself.
-* ⬜ **A reload names the keys it changed.** A swap's `"reload"` event
+* ⬜ **A reload names the keys it changed** (card N-7). A swap's `"reload"` event
   says the generation and the fingerprints, not which keys moved; a
   program gets those today only by keeping the old snapshot and calling
   `cf_diff`. One `"key-changed"` event a key at debug level, with the

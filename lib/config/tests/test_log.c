@@ -21,6 +21,7 @@ typedef struct seen {
     cf_code      code;
     char         event[32];
     char         key[64];
+    char         source[32];
     char         message[CF_MESSAGE_MAX];
 } seen;
 
@@ -38,6 +39,7 @@ static void sink(void* user, const cf_log_event* e) {
     s->code  = e->code;
     cf_fmt(s->event, sizeof s->event, "%s", e->event);
     cf_fmt(s->key, sizeof s->key, "%s", (e->key != NULL) ? e->key : "");
+    cf_fmt(s->source, sizeof s->source, "%s", (e->source != NULL) ? e->source : "");
     cf_fmt(s->message, sizeof s->message, "%s", e->message);
 }
 
@@ -50,6 +52,19 @@ static const seen* find(const char* event, const char* key) {
         }
     }
     return NULL;
+}
+
+/* Whether any event kept holds `text` in its key, source or message. */
+static int seen_text(const char* text) {
+    size_t i;
+    for (i = 0; i < g_count; ++i) {
+        if (strstr(g_seen[i].key, text) != NULL ||
+            strstr(g_seen[i].source, text) != NULL ||
+            strstr(g_seen[i].message, text) != NULL) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 static cf_config* build(cf_log_level min) {
@@ -168,10 +183,20 @@ static void test_live(void) {
           "a swap is logged with its generation");
     s = find("restart-pending", "server.port");
     check(s != NULL && s->level == CF_LOG_WARN, "and the key waiting for a restart");
+    s = find("key-changed", "log.level");
+    check(s != NULL && s->level == CF_LOG_DEBUG && strcmp(s->source, "mem") == 0 &&
+              strcmp(s->message, "changed") == 0,
+          "each changed key is a debug event naming its source");
+    s = find("key-changed", "server.port");
+    check(s != NULL && strcmp(s->source, "running") == 0 &&
+              strstr(s->message, "same value") != NULL,
+          "a key kept at its running value is one of origin only");
+    check(!seen_text("9443") && !seen_text("debug"), "and no value reaches the log");
     g_count = 0;
     (void)cf_live_reload(l, &err);
     s = find("reload", NULL);
     check(s != NULL && s->level == CF_LOG_DEBUG, "nothing changed is debug");
+    check(find("key-changed", NULL) == NULL, "and names no key");
     g_count = 0;
     g_pairs = g_bad;
     (void)cf_live_reload(l, &err);
@@ -181,8 +206,32 @@ static void test_live(void) {
     cf_live_close(l);
 }
 
+/* Under debug nothing is asked for: no key is named. */
+static void test_live_quiet(void) {
+    cf_error        err = CF_ERROR_INIT;
+    cf_live_options o   = CF_LIVE_OPTIONS_INIT;
+    cf_live*        l;
+
+    g_pairs   = g_v1;
+    o.build   = live_build;
+    o.log     = sink;
+    o.log_min = CF_LOG_INFO;
+    l         = cf_live_open_with(&o, &err);
+    check(l != NULL, "live: opens at info");
+    if (l == NULL) {
+        return;
+    }
+    g_count = 0;
+    g_pairs = g_v2;
+    (void)cf_live_reload(l, &err);
+    check(find("reload", NULL) != NULL && find("key-changed", NULL) == NULL,
+          "a swap at info logs the reload and no key");
+    cf_live_close(l);
+}
+
 int main(void) {
     test_create();
     test_live();
+    test_live_quiet();
     return cf_test_done();
 }

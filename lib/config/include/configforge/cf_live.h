@@ -139,7 +139,8 @@ typedef struct cf_live_options {
 
     /* Where each reload's result goes (cf_log.h): "reload",
        "reload-pending", "reload-failed", "restart-pending",
-       "edit-refused". Set on every
+       "edit-refused", and at debug a "key-changed" for each key a
+       swap changed, before its "reload". Set on every
        builder the build function returns, so the configuration's own
        events go there too. NULL for nowhere. */
     cf_log_fn    log;

@@ -669,3 +669,88 @@ equal cross-format fixture therefore pairs them with JSON strings.
   golden's order, not the rule); `cf_builder_create` refuses the
   contract (say which definition and why).
 * **notes**: Organiser's answer: the item order in "decided" put `env` before `deprecated` while the golden text puts `deprecated` first; the golden is what reads right, so the rule was changed to match it (`deprecated`, then `env`, then `sensitive`).
+
+## N-7 - a reload names the keys it changed
+
+* **id**: N-7
+* **goal**: When a `cf_live` swap makes a new configuration the one readers
+  get, the log carries one `"key-changed"` event per changed key, at debug
+  level, naming the key and the source its new value comes from, never a
+  value.
+* **why**: A swap's `"reload"` event says the generation and the
+  fingerprints, not which keys moved. A program gets that today only by
+  keeping the old snapshot and calling `cf_diff` itself. A log pipeline that
+  must tell what a reload did at 03:00 has nothing to read. The swap already
+  holds both snapshots, so the diff costs one pass, and only when a sink is
+  set at debug. Roadmap, "From a review of the whole, 2026-11-14".
+* **size**: small
+* **decided**:
+  * The event is made in `live_swap` (`lib/config/src/core/live.c:311-346`),
+    after the fingerprints move (`previous`, `fingerprint`) and before the old
+    snapshot is released, because that is the only place both snapshots are
+    alive. It follows that the `"key-changed"` events come before the swap's
+    `"reload"` event (`live_record`, `lib/config/src/core/live.c:440-476`),
+    all carrying the new fingerprints. Document the order.
+  * Only a swap that is not `quiet` logs them. A quiet swap (same values)
+    and a rollback log none; a rollback keeps its `"reload-rolled-back"`.
+    A swap made by `cf_live_approve` goes through `live_swap` and logs them.
+  * Skip the diff altogether unless `l->log != NULL` and
+    `l->log_min <= CF_LOG_DEBUG`. Otherwise no cost is added.
+  * One event per `cf_diff` change (`lib/config/src/diag/diff.c:35-103`),
+    level `CF_LOG_DEBUG`, `event` `"key-changed"`, `code` `CF_OK`, `key` the
+    key copied NUL-terminated into a `CF_KEY_MAX` buffer (truncated as
+    `live_log_restarts` does, `live.c:416-436`), `source` the name of the
+    winning source in the new configuration, `message` one of the fixed
+    sentences `"added"`, `"changed"`, `"removed"`, `"same value, from
+    another source"` for `CF_CHANGE_ADDED`, `CF_CHANGE_VALUE`,
+    `CF_CHANGE_REMOVED`, `CF_CHANGE_ORIGIN`. For a removed key `source` is
+    NULL. No value is ever formatted: a secret needs no special case.
+  * A `CF_RESTART` key that keeps its running value is reported by `cf_diff`
+    as `CF_CHANGE_ORIGIN`, source `"running"`; it is logged as such, beside its
+    `"restart-pending"` event. The log says what the diff says, with no case
+    of its own.
+  * `live_log` (`live.c:395-412`) keeps its signature (ten callers); a new
+    `live_event` takes the `source` too and `live_log` passes NULL to it.
+  * The source name comes from `diff_source_name` (`diff.c:124-133`), made
+    non-static as `cfi_source_name` and declared beside `cfi_entry_secret` in
+    `lib/config/include/configforge/cf_define.h:301`, so that the lookup is
+    written once. `diff.c` calls the new name.
+  * `"key-changed"` is added to the stable names in `cf_log.h:46-52` and in
+    `cf_live.h:140-142`. Nothing else in the public interface changes: no
+    new function, no new member.
+  * C89; the callback is a `static` function in `live.c` taking a small
+    struct `{const cf_live* l; const cf_config* next;}` as `ctx`.
+  * The marker test (`lib/config/tests/test_marker.c:744-790`) already
+    reloads with `log_min = CF_LOG_DEBUG` and checks every event's key,
+    source and message for the secret; it covers the new events unchanged.
+* **files**: `lib/config/src/core/live.c`, `lib/config/src/diag/diff.c`,
+  `lib/config/include/configforge/cf_define.h`,
+  `lib/config/include/configforge/cf_log.h`,
+  `lib/config/include/configforge/cf_live.h`, `lib/config/tests/test_log.c`,
+  `CHANGELOG.md`, and the generated `docs/API.md`, `docs/Codemap.md`,
+  `docs/Limits.md` if they change.
+* **steps**:
+  1. `git switch -c work/N-7` (already cut by the organiser's worktree).
+  2. In `lib/config/tests/test_log.c` add a `source[32]` member to `seen`
+     and its copy in `sink`. In `test_live`, after the first reload to `g_v2`
+     assert: `find("key-changed","server.port")` and
+     `find("key-changed","log.level")` exist, level `CF_LOG_DEBUG`, source
+     `"mem"`, message `"changed"`, and no message or key of any event holds
+     `"9443"` or `"debug"`. After the following reload that changes nothing,
+     assert no `"key-changed"` was seen. Run
+     `ctest --preset default -R "^unit[.]test_log$" --output-on-failure`
+     (find the exact name with `ctest -N | grep log`); see it fail at the
+     first new assertion.
+  3. Make the change as decided. Run the same test and `test_live`,
+     `test_marker`, `test_diff`; all pass.
+  4. Add one test with `log_min = CF_LOG_INFO`: a swap logs `"reload"` and
+     no `"key-changed"`.
+  5. CHANGELOG, 1.8.0 "Added": one sentence. Format, regenerate the three
+     generated documents on Linux, run `ctest -R "^gate\."`.
+* **accept**: ACCEPT-LINUX (default preset, ctest with `unit.test_log`,
+  `unit.test_live`, `unit.test_marker`, `unit.test_diff` and every `gate.`
+  test passing), ACCEPT-CI.
+* **stop if**: the marker test finds a value in an event, or a swap with a
+  sink at debug becomes measurably slower on `bench` (it must not: one pass
+  over the keys). Record which.
+* **notes**: (empty)

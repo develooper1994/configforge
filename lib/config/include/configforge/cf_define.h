@@ -300,6 +300,11 @@ const cf_def* cfi_defset_nearest_secret(const cf_defset* ds, const char* key,
    or it has none and is marked CF_CAND_SECRET_LIKE. Internal. */
 cf_bool cfi_entry_secret(const cf_defset* ds, const cf_entry* e);
 
+/* The name of the source of precedence rank `rank` in `c`, or "?".
+   Internal: the diff's lines and cf_live's "key-changed" events. */
+struct cf_config;
+const char* cfi_source_name(const struct cf_config* c, int rank);
+
 /* ------------------------------------------------------------------ *
  * Applying the contract
  *
