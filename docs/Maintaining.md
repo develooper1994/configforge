@@ -292,8 +292,10 @@ default can be argued from a number.
   weekly). Ask it to begin its report with `STATUS: DONE` or `STATUS:
   STOPPED`; a stopped card is answered in the card itself, under
   "Organiser's answers", and the run started again on the same tree.
-  Its models: GPT-6.2-Sol (the default, for a decided card) and
-  GPT-6.2-Astra (`-m gpt-6.2-astra`, for a large or subtle one). Trust
+  Its model and effort follow CLAUDE.md's hierarchy (`-m <model>`, `-c
+  model_reasoning_effort=low|medium|high`): `codex exec --help` and its
+  config list the models of the day; the smaller for a decided card, the
+  larger for a large or subtle one. Trust
   its report only as far as the builds and CI confirm it: it can stop
   early and say little about why, so the report's STATUS line, its
   "see it fail" lines and a build of its tree are what count.

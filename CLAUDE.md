@@ -15,26 +15,47 @@ directory, a second worktree).
 
 ## Roles: who organises, who carries out
 
-- The largest model in the session (Fable; when it is not available,
-  Opus) is the **organiser**. It plans, writes the cards and briefs,
+- **A hierarchy, not a list of names.** The largest model the session
+  has is the **organiser**: it plans, writes the cards and briefs,
   checks every result, and intervenes when something goes wrong. It does
-  not do routine work itself. The user should not have to repeat this.
-- Units of work go to subagents with `model` set explicitly: **haiku**
-  for lookups and mechanical edits; **sonnet** for research, documents,
-  tests and code that follows a fully decided card; **opus** only for
-  genuinely hard code or design. Independent units run in parallel.
-- A card must be good enough that a sonnet subagent carries it out
-  without asking anything (exact files, every choice made, numbered
-  steps, the test that fails first, ACCEPT, when to stop). Before a new
-  card opens, someone who did not write it reads it cold against the
-  tree (docs/Plan.md, "Read again after the layout changes").
+  not do routine work itself. Every other unit goes to a **worker**: a
+  subagent of any model the tools offer, today's or a later one. No rule
+  here names a model; models change, the hierarchy stays. The user
+  should not have to repeat this.
+- **The smallest worker that can carry the unit.** A card described
+  well enough lets a small model do work that a vague one would need a
+  large model for, so the first lever is the card, the second the model.
+  Pick by the unit, from the tiers the tools have (smallest, middle,
+  largest): lookups and mechanical edits to the smallest; a fully
+  decided card, tests, documents and research to the middle; only
+  genuinely hard code or open design to the largest. Set `model`
+  explicitly on every subagent. Independent units run in parallel.
+- **Effort is set per unit, and adapts** (maintainer, 2026-11-23). Every
+  subagent gets an explicit `effort` (and Codex `-c
+  model_reasoning_effort=`): `low` for a lookup or a mechanical edit,
+  `medium` for a decided card, `high` for a hard fault or a design
+  choice. It moves with what happens: a retry after a failure or a
+  doubtful report goes one step up (effort first, then a larger model);
+  a unit that came back clean and fast lets the next of its kind go one
+  step down; as the budget fills, units drop one step unless they failed
+  before. The organiser itself works at the effort the unit in front of
+  it needs, not one fixed level.
+- A card must be good enough that a middle-tier worker carries it out
+  without asking anything (exact files and line ranges, every choice
+  made, numbered steps, the test that fails first, ACCEPT, when to
+  stop). Before a new card opens, someone who did not write it reads it
+  cold against the tree (docs/Plan.md, "Read again after the layout
+  changes").
 - Check what a subagent reports before passing it on. When it fails,
   stalls or returns something doubtful: read its output, sharpen the
   brief and retry, or take the step yourself.
 - **Two budgets: the manager and the deputy** (maintainer, 2026-11-22).
   When Codex is installed, the Claude session is the manager and Codex
-  (GPT-6.2-Astra for a large or subtle card, GPT-6.2-Sol otherwise) the
-  deputy. The deputy carries cards and CI fixes, with sub-agents of its
+  (its larger model for a large or subtle card, its smaller one
+  otherwise, chosen as above) the deputy. Codex's allowance is the
+  larger of the two (maintainer, 2026-11-23): plan so that the deputy
+  carries most cards and the manager's budget goes to briefs, checks,
+  commits and CI. The deputy carries cards and CI fixes, with sub-agents of its
   own if it has them; the manager commits, pushes, watches CI, answers
   design questions, and takes over whatever the deputy leaves half done.
   The manager's budget must last longest: as its 5-hour window fills,
