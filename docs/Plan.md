@@ -237,6 +237,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 62 | N-3 Show a tracked JSON file's value changes in Git difftool | small | N-1 | done (efb74f1) |
 | 63 | N-4 Deliver one root table to a YAML document sink | small | W5-V2 | done (f6c0ba7) |
 | 64 | N-5 Compare nested tables by value in `configforge diff` | small | N-1 | done (ad5b840) |
+| 65 | N-6 `cf_usage`: the `--help` text from the contract | small | nothing | open |
 
 ## Done, their cards removed
 

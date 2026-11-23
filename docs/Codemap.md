@@ -208,7 +208,7 @@
 - #define cf_get 547
 - enum cf_change 596-601
 - typedef cf_diff_fn 608
-- typedef cf_watcher 841
+- typedef cf_watcher 854
 `lib/config/src/bridge/dir.c`
 - struct dir_state 36-44
 - typedef dir_name 57
@@ -804,6 +804,15 @@
 - cf_source_replay_state_size 1040-1042
 - cf_source_replay 1044-1062
 - cf_source_replay_error 1064-1072
+`lib/config/src/diag/usage.c`
+- struct usage_items 30-33
+- item 35-39
+- put_value 43-55
+- put_range 57-78
+- put_flags 80-109
+- put_description 111-123
+- put_details 125-172
+- cf_usage 174-209
 `lib/config/src/sources/cli.c`
 - cli_kind_of 27-36
 - cli_alias_of 38-62

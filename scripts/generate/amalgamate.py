@@ -77,7 +77,7 @@ SOURCES = [
     "config/src/sources/entry.c", "config/src/sources/memory.c", "config/src/sources/defaults.c", "config/src/sources/env.c",
     "config/src/sources/cli.c", "config/src/sources/compat.c", "config/src/sources/snapshot.c",
     "config/src/bridge/flatten.c", "config/src/bridge/file.c", "config/src/bridge/dotenv.c", "config/src/bridge/dir.c", "config/src/bridge/emit.c", "config/src/bridge/image.c", "config/src/bridge/store.c", "config/src/bridge/secrets.c", "config/src/bridge/registry.c", "config/src/bridge/preferences.c","config/src/bridge/schema.c",
-    "config/src/diag/explain.c", "config/src/diag/report.c", "config/src/diag/diff.c",
+    "config/src/diag/explain.c", "config/src/diag/report.c", "config/src/diag/diff.c", "config/src/diag/usage.c",
 ]
 
 # The components, in D-100's order: the public headers of each are in

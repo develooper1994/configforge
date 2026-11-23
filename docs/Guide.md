@@ -145,7 +145,26 @@ $ ./tier1 --server.port=99999
 configuration error (validate): server.port: 99999 is outside 1..65535
 $ ./tier1 --server.pot=1
 configuration error (key): unknown key 'server.pot'; did you mean 'server.port'?
+$ ./tier1 --help
+Usage: tier1 [options]
+
+Options:
+  --cf.explain <text>
+        env MYAPP_CF_EXPLAIN
+  -h, --help
+        Print this help and exit.
+        env MYAPP_HELP
+  --log.level <debug|info|warn>
+        How much to log.
+        default "info"; env MYAPP_LOG_LEVEL
+  ...
 ```
+
+The last of these is `cf_usage` (1.8, experimental): the `--help` text is 
+written from the definitions - each key's flags, description, default, range, 
+permitted spellings and environment name - so it cannot drift from the 
+contract. The program declares a `help` switch and prints it; the test 
+`example.tier1.help` runs it.
 
 One call does for every type (D-74), beside the typed ones:
 `cf_builder_key` takes the type as a parameter, or `CF_TYPE_NULL` to let

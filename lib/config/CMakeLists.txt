@@ -43,6 +43,7 @@ cf_component(
   src/diag/explain.c
   src/diag/report.c
   src/diag/diff.c
+  src/diag/usage.c
   src/bridge/flatten.c
   src/bridge/image.c
   src/bridge/file.c

@@ -11,6 +11,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   formats, nested tables included. It lists added, removed and changed
   keys by path, such as `$["db"]["port"]`, without printing values.
   Arrays are still refused.
+- `cf_usage` (experimental): the `--help` text written from a configuration's 
+  definitions - flags, aliases, description, default, range, permitted 
+  spellings, environment name, deprecation - so a program's help is the 
+  contract's and cannot drift from it. `examples/c/tier1.c` prints it for 
+  `--help`; `test_help` holds the text. Completions, a man page and a sample 
+  file from the same definitions are not here yet.
 
 - **`docs/Limits.md`**: the build limits, the fixed ones, the decode budget, the largest document of each format, the platforms and C versions, the threading rules, what is not proven and not claimed, and what is not offered, with the decision for each; its numbers are generated from the build options and the sources, and `gate.limits` and `test_limits` fail when it drifts.
 - `cf_error` carries the place (`where`) and the reason (`reason`, from

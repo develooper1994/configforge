@@ -9,6 +9,7 @@
  *   ./tier1 --server.pot=1           typo, suggests the right key
  *   ./tier1 --log.level=verbose      not permitted, lists what is
  *   ./tier1 --cf.explain=server.port
+ *   ./tier1 --help          the contract's own text, from cf_usage
  *
  * Note how the diagnostic switch is declared: a program that reads its
  * command line through this library should not also parse it itself,
@@ -23,21 +24,49 @@
 int main(int argc, char** argv) {
     static const char* const levels[] = {"debug", "info", "warn", NULL};
 
-    cf_error    err = CF_ERROR_INIT;
-    cf_builder* b;
-    cf_config*  cfg;
-    cf_def      lvl;
-    static char buf[8192];
-    const char* which;
+    cf_error                 err = CF_ERROR_INIT;
+    cf_builder*              b;
+    cf_config*               cfg;
+    cf_def                   lvl;
+    cf_def                   d;
+    static const char* const help_alias[] = {"h", NULL};
+    static char              buf[8192];
+    const char*              which;
 
     b = cf_app_builder("myapp", argc, argv);
 
-    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
-    cf_builder_text(b, "server.host", "0.0.0.0", 0);
-    cf_builder_bool(b, "tls.enabled", CF_FALSE, 0);
+    /* A description is a field of the definition, so --help can say what
+       each key is for without a second list to keep in step. */
+    cf_def_init(&d, CF_TYPE_INT, "server.port");
+    d.description = "Port to listen on.";
+    d.has_default = CF_TRUE;
+    cf_value_int(&d.default_value, 8080);
+    d.has_range = CF_TRUE;
+    d.imin      = 1;
+    d.imax      = 65535;
+    cf_builder_define(b, &d);
+
+    cf_def_init(&d, CF_TYPE_TEXT, "server.host");
+    d.description = "Address to listen on.";
+    d.has_default = CF_TRUE;
+    cf_value_text(&d.default_value, "0.0.0.0", 7);
+    cf_builder_define(b, &d);
+
+    cf_def_init(&d, CF_TYPE_BOOL, "tls.enabled");
+    d.description = "Serve TLS.";
+    d.has_default = CF_TRUE;
+    cf_value_bool(&d.default_value, CF_FALSE);
+    cf_builder_define(b, &d);
+
+    cf_def_init(&d, CF_TYPE_BOOL, "help");
+    d.description = "Print this help and exit.";
+    d.aliases     = help_alias;
+    cf_builder_define(b, &d);
+
     cf_builder_text(b, "cf.explain", NULL, 0);
 
     cf_def_init(&lvl, CF_TYPE_TEXT, "log.level");
+    lvl.description = "How much to log.";
     lvl.allowed     = levels;
     lvl.has_default = CF_TRUE;
     cf_value_text(&lvl.default_value, "info", 4);
@@ -55,6 +84,13 @@ int main(int argc, char** argv) {
             fprintf(stderr, "  set at: %s\n", err.source);
         }
         return 1;
+    }
+
+    if (cf_get_bool(cfg, "help", CF_FALSE)) {
+        cf_usage(cfg, "tier1", "MYAPP_", buf, sizeof buf);
+        fputs(buf, stdout);
+        cf_config_free(cfg);
+        return 0;
     }
 
     which = cf_get_text(cfg, "cf.explain", NULL);

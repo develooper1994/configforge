@@ -670,6 +670,19 @@ CF_API size_t cf_report(const cf_config* c, const cf_report_info* info, char* bu
    unknown keys (CF_UNKNOWN_REJECT). See cf_schema_write. */
 CF_API size_t cf_schema(const cf_config* c, const char* title, char* buf, size_t cap);
 
+/* The --help text of a program, from its contract: for each definition
+   its flags (its aliases, then --key), value, description, and one line
+   of what the contract knows - required, default, range, length,
+   repeatable, environment name, deprecated, sensitive. A sensitive
+   key's default is not shown. `env_prefix` is the one given to
+   cf_builder_env ("MYAPP_" for cf_app); NULL leaves the environment
+   name out. `program` NULL is "program". Measure-or-write: the length
+   of the whole text, without the NUL; NULL `buf` only measures, and a
+   short one gets the prefix that fits. It does not intercept --help:
+   a program declares a bool and calls this. (1.8) */
+CF_EXPERIMENTAL(1, 8) size_t cf_usage(const cf_config* c, const char* program,
+                                      const char* env_prefix, char* buf, size_t cap);
+
 /* Load a full report as a source. Reproduces exactly the configuration
    a process was running, rather than a reconstruction from files that
    may have changed since. `flags` is a source's: CF_OPTIONAL, or 0. */

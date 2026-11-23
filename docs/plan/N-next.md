@@ -495,3 +495,177 @@ equal cross-format fixture therefore pairs them with JSON strings.
   or reopens a named table in a way that makes one path two tables with
   different scalars lost. Record the format and the input.
 * **notes**: (empty)
+## N-6 - `cf_usage`: the `--help` text from the contract
+
+* **id**: N-6
+* **goal**: `cf_usage(cfg, program, env_prefix, buf, cap)` writes a `--help`
+  text from the definitions of a built configuration: each key's flags,
+  type, description, default, range, permitted spellings, environment
+  name and flags. `examples/c/tier1.c` prints it for `--help`, and a test
+  holds both.
+* **why**: A definition already holds the description, aliases, permitted
+  spellings, range, default and environment name
+  (`lib/config/include/configforge/cf_define.h:68-134`), yet every program
+  writes its `--help` by hand, a second list that drifts from the
+  contract. This is the first part of the Roadmap item "Help, completions
+  and a sample file from the contract" ("From reading the project as a
+  newcomer, 2026-11-14"). Not in this card: completions for bash, zsh,
+  fish and PowerShell, a man page, a sample file, and `doctor gen`. They
+  are later cards that read the same definitions.
+* **needs**: nothing
+  * Declaration in `lib/config/include/configforge/configforge.h`, after
+    `cf_schema` (`configforge.h:670-671`), as
+    `CF_EXPERIMENTAL(1, 8) size_t cf_usage(const cf_config* c, const char* program, const char* env_prefix, char* buf, size_t cap);`
+    The release is 1.8.0 (open in CHANGELOG.md). gate.abi's list is
+    `cmake/configforge.experimental.symbols`: add `cf_usage 1.8` in the
+    file's order. No other header and no `CF_API` item changes.
+  * Measure-or-write as `cf_schema` and `cf_explain` are, through
+    `cf_sink` (`lib/serialize/include/configforge/cf_serialize.h:79-92`):
+    the return value is the length the whole text has, without the NUL;
+    `buf == NULL` measures; a `buf` too small gets the prefix that fits,
+    NUL-terminated (`cf_sink_terminate`), and the return value is still
+    the full length. `c == NULL`: return 0 and set `buf[0] = '\0'` when
+    `buf != NULL && cap > 0` (as `cf_schema`, `config.c:2381-2393`).
+    `program == NULL` prints `program`. `env_prefix == NULL` prints no
+    `env` item; otherwise it is the string given to `cf_builder_env`
+    (`cf_app` uses the upper-cased name and an underscore, `"MYAPP_"`),
+    and the name is `cf_keymap_from_key(&m, key, len, CF_FALSE, out, cap)`
+    with `m` from `cf_keymap_init(&m, CF_KEYMAP_ENV, env_prefix)`
+    (`lib/config/src/sources/entry.c:229-271`), the natural spelling, into
+    a 256-byte local buffer; a key for which it returns 0 gets no `env`
+    item.
+  * New file `lib/config/src/diag/usage.c`, listed in
+    `lib/config/CMakeLists.txt` after `src/diag/diff.c`. It needs no
+    `CF_WITH_REPORT`. It walks `cf_defs(c)` with `cf_defset_count` and
+    `cf_defset_at` in the order they come (sorted by key once the set is
+    sealed, which `cf_builder_create` does). Only authored definitions
+    are listed, never a list's element projections.
+  * The text, exactly. It begins
+    `Usage: <program> [options]`, a newline, an empty line, `Options:`,
+    a newline; then one block for each definition. With no definitions
+    only the `Usage:` line is written (no empty line, no `Options:`). A
+    definition's block:
+    * Line 1: two spaces, then the flags, then the value. The flags are
+      each alias of `d->aliases` in order (`-x` when the alias is one
+      byte, `--word` otherwise, `cf_define.h:95-99`), each followed by
+      `, `, then `--` and the key. The value is absent for `CF_TYPE_BOOL`;
+      otherwise a space, `<`, the permitted spellings of `d->allowed`
+      joined by `|` when there are any, else `cf_type_name(d->type)`
+      (`int`, `real`, `text`), and `>`; then `...` when
+      `d->list_mode != CF_LIST_NONE`.
+    * Then the description, when not NULL and not empty: eight spaces and
+      the text, a newline after it; inside the text each newline is
+      followed by eight spaces.
+    * Then one line of details, eight spaces and the items joined by `; `,
+      only if there is at least one item; the items in this order:
+      `required` (CF_REQUIRED); `default X` (`has_default`, a scalar,
+      not CF_SENSITIVE; X is `cf_value_to_text` of `default_value`, in
+      double quotes for `CF_TYPE_TEXT`, with no escaping); `range A..B`
+      (`has_range`, for `CF_TYPE_INT` from `imin`, `imax`, for
+      `CF_TYPE_REAL` from `rmin`, `rmax` as `cf_value_to_text` writes
+      them, the real part only `#if CF_WITH_REAL`); `length A..B`
+      (`CF_TYPE_TEXT` and `max_len != 0`, from `min_len`, `max_len`);
+      `repeatable` (`list_mode != CF_LIST_NONE`);
+      `deprecated, use --NEW` when CF_DEPRECATED and `replaced_by` is set,
+      else `deprecated`; `env NAME`; `sensitive` (CF_SENSITIVE).
+    * Every line ends with `\n`. No wrapping, no colour, no terminal width.
+  * The library does not intercept `--help` itself. A program declares a
+    `help` bool (as `tier1.c` declares `cf.explain`) and calls `cf_usage`.
+  * The golden text of the unit test, program `myapp`, prefix `MYAPP_`,
+    for the contract below (in the file the lines are flush left; each
+    continuation line has eight spaces, shown here as written):
+    ```
+    Usage: myapp [options]
+
+    Options:
+      --db.password <text>
+            Database password.
+            Set it in the environment.
+            env MYAPP_DB_PASSWORD; sensitive
+      --log.level <debug|info|warn>
+            Log level.
+            default "info"; env MYAPP_LOG_LEVEL
+      --old.port <int>
+            deprecated, use --server.port; env MYAPP_OLD_PORT
+      -p, --server.port <int>
+            Port to listen on.
+            default 8080; range 1..65535; env MYAPP_SERVER_PORT
+      --tags <text>...
+            Labels.
+            repeatable; env MYAPP_TAGS
+      --tls.enabled
+            default false; env MYAPP_TLS_ENABLED
+    ```
+    Here the whole block is indented four spaces by the card; remove
+    those four, so `Usage:` is at column 0, `--db.password` at column 2
+    and `Database password.` at column 8. The contract: `server.port`
+    int, default 8080, range 1..65535, alias `p`, description "Port to
+    listen on."; `log.level` text, permitted debug/info/warn, default
+    "info", description "Log level."; `tls.enabled` bool default false
+    (`cf_builder_bool`); `db.password` text, default "x", CF_SENSITIVE,
+    description "Database password.\nSet it in the environment.";
+    `old.port` int, CF_DEPRECATED, `replaced_by` "server.port"; `tags`
+    text, `list_mode` CF_LIST_APPEND, `list_separator` ',', description
+    "Labels.". Each is a `cf_def` (`cf_def_init`, fields, then
+    `cf_builder_define`) except `tls.enabled`. The default `x` of
+    `db.password` must not appear in the text.
+  * `tier1.c`: declare `help` as a bool `cf_def` with `aliases = {"h",
+    NULL}` and description "Print this help and exit."; give
+    `server.port`, `server.host`, `tls.enabled` and `log.level`
+    descriptions by `cf_def` where the shorthand has none. After
+    `cf_builder_create`, if `cf_get_bool(cfg, "help", CF_FALSE)`, print
+    `cf_usage(cfg, "tier1", "MYAPP_", buf, sizeof buf)` to stdout and
+    return 0. The `cf.explain` path and the three WILL_FAIL tests are
+    unchanged.
+  * C89 (no `//`, declarations at block start). Layer D-100: `usage.c`
+    includes config's, base's and `cf_serialize.h` as `report.c` does,
+    nothing from `tools/`.
+* **files**: `lib/config/include/configforge/configforge.h`,
+  `lib/config/src/diag/usage.c` (new), `lib/config/CMakeLists.txt`,
+  `lib/config/tests/test_help.c` (new), `lib/config/tests/CMakeLists.txt`
+  (add `test_help` to `CF_UNIT_TESTS`),
+  `cmake/configforge.experimental.symbols`, `examples/c/tier1.c`,
+  `examples/c/CMakeLists.txt`, `docs/Guide.md` (tier 1: `$ ./tier1 --help`
+  and its first lines, pasted from the run), `CHANGELOG.md` (1.8.0,
+  Added), `docs/Roadmap.md`, `docs/API.md` and `docs/Codemap.md`
+  (generated).
+  1. The branch is `work/N-6` (already cut).
+  2. Add the declaration, the symbols-file line, and `usage.c` as a stub
+     that returns 0 after the `c == NULL` rule; list it in CMake. Write
+     `test_help.c` (C89, `cf_test.h`, `check()`, ending `return
+     cf_test_done();`): the golden compare; the measured length equals
+     the written length and `strlen` of the golden; a 20-byte buffer
+     holds the first 19 bytes NUL-terminated and the return value is the
+     full length; `c == NULL`; `env_prefix == NULL` leaves no ` env ` and
+     no `MYAPP`; `program == NULL` starts `Usage: program [options]`; a
+     contract with no definitions gives exactly `Usage: myapp
+     [options]\n`; the string `default "x"` is absent. Add `test_help` to the list. Build in a
+     copy, run it (`ctest -N | grep test_help` for the name): **see it
+     fail** on the golden compare.
+  3. Write the real `usage.c`. The test passes.
+  4. `tier1.c` and, in `examples/c/CMakeLists.txt`, the test
+     `example.tier1.help`: `add_test(NAME example.tier1.help COMMAND
+     ${CMAKE_COMMAND} -DEXE=$<TARGET_FILE:tier1>
+     -DDIR=${CMAKE_CURRENT_BINARY_DIR}/tier1-help -DARGS=--help
+     "-DEXPECT=Usage: tier1 \\[options\\]|||--server.port <int>|||range
+     1..65535" -P ${CF_EXAMPLE_EXPECT})` (`examples/expect.cmake`; check
+     that the variable is set where `examples/c` is added, else use the
+     path `${CMAKE_SOURCE_DIR}/examples/expect.cmake`; adjust the
+     escapes until it passes). See it fail first by running it before
+     `tier1.c` is changed. Paste the first lines of the real `./tier1
+     --help` into `docs/Guide.md`.
+  5. On Linux regenerate `docs/API.md`, `docs/Codemap.md` and
+     `docs/Limits.md` (the three cmake commands of the brief's step 6 and
+     `-DWRITE=docs/Limits.md -P scripts/generate/limits.cmake`); the
+     CHANGELOG entry; the Roadmap item marked "(card N-6, `cf_usage`
+     only)"; `python scripts/work/work.py format`.
+  6. ACCEPT, and `ctest -R "^gate[.]"` in the Linux copy.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI. `test_help`,
+  `example.tier1.help` and every `gate.*` (`gate.abi` among them) pass;
+  in the `minimal` preset `test_help` still passes.
+* **stop if**: `gate.abi` or `gate.apiref` wants a declaration that
+  differs from the other `CF_EXPERIMENTAL(1, 8)` ones; the order of
+  `cf_defset_at` is not bytewise by key (say so and change only the
+  golden's order, not the rule); `cf_builder_create` refuses the
+  contract (say which definition and why).
+* **notes**: Organiser's answer: the item order in "decided" put `env` before `deprecated` while the golden text puts `deprecated` first; the golden is what reads right, so the rule was changed to match it (`deprecated`, then `env`, then `sensitive`).

@@ -819,7 +819,7 @@ first user meets. In the order proposed:
   may be on any thread - and `cf_misreads()` and the report list them,
   and Doctor's CFD021 reports them (CFD020 is H-8b's). Done when both mistakes in a test
   program reach `doctor lint`.
-* ⬜ **Help, completions and a sample file from the contract.** A
+* 🟨 **Help, completions and a sample file from the contract** (card N-6: `cf_usage` only). A
   definition has its description, aliases, permitted spellings, range,
   default and environment name: enough for `--help`, completions for
   bash, zsh, fish and PowerShell, a man page, and a sample file in a

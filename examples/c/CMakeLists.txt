@@ -39,6 +39,18 @@ add_test(NAME example.tier1.enum COMMAND tier1 --log.level=verbose)
 set_tests_properties(example.tier1.range example.tier1.typo example.tier1.enum
                      PROPERTIES WILL_FAIL TRUE)
 
+# --help is the contract's own text (cf_usage), so it is run and its lines
+# are checked rather than described.
+string(CONCAT tier1_help_expect
+              "Usage: tier1 .options.|||--server.port <int>|||"
+              "range 1..65535|||--log.level <debug.info.warn>")
+add_test(
+  NAME example.tier1.help
+  COMMAND
+    ${CMAKE_COMMAND} -DEXE=$<TARGET_FILE:tier1>
+    -DDIR=${CMAKE_CURRENT_BINARY_DIR}/tier1-help -DARGS=--help
+    "-DEXPECT=${tier1_help_expect}" -P ${CF_EXAMPLE_EXPECT})
+
 # The examples docs/Guide.md walks through. Each is built in every build,
 # so it compiles against any set of options, and run where the parts it
 # uses are compiled in - checked for a clean exit and for the lines that

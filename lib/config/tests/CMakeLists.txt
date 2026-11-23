@@ -33,6 +33,7 @@ set(CF_UNIT_TESTS
     test_reserved
     test_unicode
     test_usage
+    test_help
     test_toml
     test_json5
     test_codec

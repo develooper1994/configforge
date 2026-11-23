@@ -81,7 +81,7 @@ Document refusals also carry a reason and, where known, a line and column.
 | `CF_REASON_UNSUPPORTED` | `unsupported` | a construct this library does not read |
 | `CF_REASON_STORAGE` | `storage` | the consumer or its workspace refused |
 
-- [`configforge.h`](#configforgeh) - 83
+- [`configforge.h`](#configforgeh) - 84
 - [`cf_alloc.h`](#cf_alloch) - 12
 - [`cf_define.h`](#cf_defineh) - 27
 - [`cf_doctor.h`](#cf_doctorh) - 26
@@ -704,6 +704,25 @@ Implementation: [`cf_schema` (lib/config/src/core/config.c)](https://github.com/
 
 The configuration's contract as a JSON Schema, closed when it rejects
 unknown keys (CF_UNKNOWN_REJECT). See cf_schema_write.
+
+```c
+CF_EXPERIMENTAL(1, 8) size_t cf_usage(const cf_config* c, const char* program, const char* env_prefix, char* buf, size_t cap);
+```
+
+Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
+
+Implementation: [`cf_usage` (lib/config/src/diag/usage.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/diag/usage.c#L174).
+
+The --help text of a program, from its contract: for each definition
+its flags (its aliases, then --key), value, description, and one line
+of what the contract knows - required, default, range, length,
+repeatable, environment name, deprecated, sensitive. A sensitive
+key's default is not shown. `env_prefix` is the one given to
+cf_builder_env ("MYAPP_" for cf_app); NULL leaves the environment
+name out. `program` NULL is "program". Measure-or-write: the length
+of the whole text, without the NUL; NULL `buf` only measures, and a
+short one gets the prefix that fits. It does not intercept --help:
+a program declares a bool and calls this. (1.8)
 
 ```c
 CF_API cf_bool cf_builder_replay(cf_builder* b, const char* name, int rank, const char* path, unsigned flags);
