@@ -184,7 +184,7 @@ claim about ConfigForge's numbers: no benchmark was run to write it.
     it costs reading (P-3's rule). Its numbers go under "notes" and in
     `docs/Performance.md`.
   * **No allocator is imposed on a program.** The library never links or
-    selects mimalloc, jemalloc, rpmalloc or snmalloc. **TO DECIDE**,
+    selects mimalloc, jemalloc, rpmalloc or snmalloc. **Answered** (below),
     recommendation: **a benchmark comparison only**. `bench/compare/`
     (the C++17 project P-1b creates; never in the default build or the
     gates' build) gets a mode that passes a `cf_allocator` wrapping
@@ -207,7 +207,7 @@ claim about ConfigForge's numbers: no benchmark was run to write it.
     unchanged; `cf_arena_new`'s signature and `cf_allocator` untouched.
     A change that needs a new function is an addition, named in
     `docs/API.md` by `gate.apiref`.
-  * **TO DECIDE (maintainer), recommendation each:** (a) the block-growth
+  * **Answered below (Organiser's answers), recommendation each:** (a) the block-growth
     cap (recommendation: 1 MiB; a smaller cap wastes less tail, a
     larger one saves calls on 256 MiB documents; the measured table
     decides inside 256 KiB to 4 MiB); (b) whether candidate (4), the
@@ -263,3 +263,68 @@ claim about ConfigForge's numbers: no benchmark was run to write it.
   ("Large files": allocation measured); a D-number in
   `docs/Decisions.md` only if a policy (block growth, a hint) is kept.
 * **notes**:
+  * **Step 2 on Linux, 2026-11-23** (the profiling VM: kernel 7.0.0-44,
+    Ubuntu 26.04.1, gcc 15.2.0, 4 cores; Release `-O2 -DNDEBUG
+    -fno-omit-frame-pointer -g`, `-DCF_BUILD_BENCH=ON -DCF_WITH_XML=ON`).
+    `cf_bench docs` and `profile.py` time the codec's event path
+    (`cf_codec_decode` into a sink), which never touches `cf_arena` or
+    the key space, so the measurement used a driver that loads each
+    document through `cf_builder_document`, `cf_builder_create`,
+    `cf_count` and `cf_config_free`, with a counting `cf_allocator`
+    (the card's worker adds it to `bench/bench.c`: step 3 then measures
+    the same path). Documents: `cf_bench --emit-docs`, `<fmt>-mixed-16`
+    and `<fmt>-many-tiny-16`; callgrind on the 1 MiB `many-tiny`.
+    Commands: `perf record -e cpu-clock -F 5000 -g` then `perf report
+    --no-children --sort symbol`; `heaptrack` then `heaptrack_print`;
+    `valgrind --tool=callgrind` then `callgrind_annotate
+    --inclusive=no`.
+
+    `mixed-16`, one load (perf self %, callgrind instructions %):
+
+    | format | allocator calls | bytes asked | of them 4 KiB blocks | libc malloc+free (perf) | `cf_arena_alloc` (perf / callgrind) | `cf_arena_free` (perf / callgrind) | abandoned by growth (estimate) |
+    | ------ | --------------- | ----------- | -------------------- | ----------------------- | ----------------------------------- | ---------------------------------- | ------------------------------ |
+    | json | 12,727 | 443 MiB | 12,715 | 0.31 | 0.78 / 0.97 | 9.7 / 25.7 | 156 MB |
+    | yaml | 11,788 | 424 MiB | 11,778 | 0.30 | 0.65 / 1.03 | 15.4 / 15.7 | 101 MB |
+    | toml | 12,520 | 410 MiB | 12,476 | 0.25 | 0.57 / 0.96 | 10.7 / 23.3 | 72 MB |
+    | cbor | 17,518 | 566 MiB | 17,504 | 0.38 | 0.68 / 1.04 | 11.4 / 27.9 | 205 MB |
+    | ini | 11,360 | 404 MiB | 11,351 | 0.45 | 1.10 / 1.18 | 11.2 / 28.9 | 100 MB |
+    | xml | 8,047 | 172 MiB | 8,029 | 0.81 | 0.63 / 0.75 | 7.0 / 11.0 | 3 MB |
+
+    `many-tiny-16` (about 350,000 to 417,000 documents of about 48
+    bytes, one configuration each): 7 allocator calls per document, 4 of
+    them 4 KiB blocks, 22,784 bytes live per document; libc
+    malloc+free 2.6 to 3.3% (xml 6.2%), `cf_arena_alloc` about 1.2%,
+    `cf_arena_free` 47 to 73% of perf's samples and 67 to 86% of
+    callgrind's instructions. Kernel page faults and `clear_page` are 9
+    to 17% of the 16 MiB loads. `cf_ks_resize` is inlined and has no
+    symbol; the abandoned bytes are estimated from the sizes of the
+    large allocations (the candidate array starts at the guess capped by
+    `CF_KS_EXPECT_MAX`, 96 bytes a candidate, and doubles), the exact
+    figure is step 3's.
+
+    Reading: a general allocator (mimalloc and the like) has under 1% to
+    win on large documents and about 3% on tiny ones; `cf_arena_alloc`
+    about 1%. The cost is `cf_arena_free`, which is `cf_arena_wipe`:
+    `cf_wipe` stores one byte at a time through a volatile pointer.
+    Windows (MSVC) figures: the deputy's run, to be added here.
+* **Organiser's answers** (2026-11-23, from the measurement above; each
+  is reversible and the maintainer may revisit it):
+  * **A candidate (0), first, inside the constraints**: the wipe stays
+    for every block, as decided; only its speed changes. `cf_wipe` calls
+    `memset` through a `volatile` function pointer
+    (`static void* (*const volatile cf_wipe_memset)(void*, int, size_t)
+    = memset;` in `alloc.c`), which C89 allows and no optimiser can
+    remove, because it cannot know the call's target. The wipe test
+    (contents zero after `cf_arena_wipe`, read through the arena before
+    release) pins it first; kept by the card's rule (the 16 MiB read and
+    `many-tiny` faster beyond noise).
+  * **(a) the block-growth cap**: decided by the measurement inside 256
+    KiB to 4 MiB as the card says; candidate (2), the first block from
+    the input's length, matters most for `many-tiny` (four 4 KiB blocks
+    for 48 bytes).
+  * **(b) reuse (candidate 4)**: not built: the wipe, not the
+    allocation, is the cost of many small documents, and reuse wipes
+    too.
+  * **(c) mimalloc**: a benchmark comparison only, as recommended, and
+    only if time allows: malloc+free is under 1% of a large read, so by
+    step 4's rule it is closed with these numbers.
