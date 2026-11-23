@@ -219,8 +219,8 @@ waves ("After 1.7.0: the order of the waves", below).
 | 48 | A-8 Whitespace, comments, newlines and the place of a refusal | large | A-7 | done (c3bba84) |
 | 49 | A-9 Composed codecs, for what is almost a format | medium | A-5 | done (a4ea9e1, made whole in the next commit) |
 | 50 | A-10 A refusal's place and reason | medium | A-8, A-9 | done (f1a4fd7) |
-| 51 | A-11 Build profiles and the C version per file | large | A-1b | open |
-| 52 | A-12 The feature matrix made from the build | medium | A-11 | waits: A-11 |
+| 51 | A-11 Build profiles and the C version per file | large | A-1b | done (b837c23) |
+| 52 | A-12 The feature matrix made from the build | medium | A-11 | done (23b5d2a) |
 | 53 | W5-V2 Every pair of formats, and what each can hold | large | A-1b, W5-V1 | done (70bd398) |
 | 54 | W5-G4 Generators outside the tree | medium | A-1b, W5-G3 | done (adc2a63) |
 | 55 | P-1b The other libraries beside ours, and a page CI keeps | large | P-1, A-1b | done (427ec6a) |
