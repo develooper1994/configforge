@@ -323,7 +323,7 @@ token budget).
   bc7d29c made it whole). On main: `git checkout <branch> -- .`, check
   `git diff --quiet <branch> -- . ':!docs/Plan.md'`, commit. Never pipe a
   landing step into another command: `set -e` does not see it fail.
-* **Codex as a second worker** (when it is installed): `codex exec -s
+* **Codex as a second worker** (when it is installed; `scripts/work/codex-card.sh` runs one card through it and back: Codex, format, the line-citing files and the style gates on Linux, commit, push, CI, one summary): `codex exec -s
   workspace-write -C <worktree> -o <report.md> - < prompt` carries a
   card that is decided in full. Its sandbox builds and tests with CMake
   and MSVC (build directories under the system temporary directory, not
