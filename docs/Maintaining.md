@@ -304,6 +304,30 @@ default can be argued from a number.
   keep the last ~10% of Claude's window for committing and pushing,
   which Codex's sandbox cannot do. When one side runs out, the other
   goes on: Codex's chain runs alone, and Claude commits what it left.
+* **Codex's window can end the night early.** On 2026-11-23 it reached
+  100% at 03:20 after one hour, and its next window opened at 08:02,
+  after the machine's stop: give it the cards that matter first in a
+  fresh window, have it report each finished item in `outbox.md` as it
+  finishes (not at the end of the run), and keep its half-done card
+  where Claude can pick it up (the A-13 hand-over: its uncommitted diff
+  applied as a patch on the card's base in a new worktree).
+* **cmake-format empties a file that says `# cmake-format: off` and
+  never `on`**: a matrix test fixture was cut to its first line
+  (2026-11-23, A-12, `matrix.tables` red in every job). A CMake file
+  whose lines are data (a profile, a fixture another script parses) is
+  fenced with both lines, `off` first and `on` last.
+* **Profile the path the card is about.** `cf_bench docs` and
+  `profile.py` time the codec's events into a sink, which never touches
+  the arena or the key space; P-4's allocation questions needed a
+  driver through `cf_builder_document` and `cf_config_free`. Its answer
+  was not the allocator (under 1%) but the byte-at-a-time wipe (up to
+  86% of a small document's load; 47f6aa0 on `work/P-4`).
+* **The bench gate pays for itself**: it caught A-10's JSON strings
+  78% dearer (a helper no longer inlined, memcpy per byte) before the
+  card landed; callgrind_annotate on the two builds named the function.
+* **A fuzzer's round-trip finding is checked in both directions**: the
+  chain fuzzer's "written one digit short" near DBL_MIN was the reader's
+  double rounding (80db71d); the writer was right.
 
 ## The machines
 
