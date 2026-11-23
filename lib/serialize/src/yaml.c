@@ -139,6 +139,7 @@ typedef struct yaml_scan {
     char               key[CF_KEY_MAX];
     size_t             klen;
     int                documents;
+    int                rooted; /* the sink has the top-level mapping */
 
     /* Anchors, when the sink lends workspace (cf_doc_sink.reserve_work):
        events are recorded while an anchored node is open, and an alias
@@ -412,6 +413,9 @@ static cf_bool yaml_open(yaml_scan* s, const yaml_ev* e) {
                 "a configuration is a mapping at the top, not a sequence");
         }
         ok = s->out->begin_table(s->out->ctx, NULL, 0);
+        if (ok) {
+            s->rooted = 1;
+        }
     } else {
         if (!yaml_name(s, e, &name, &n)) {
             return CF_FALSE;
@@ -698,7 +702,7 @@ static cf_bool yaml_document(yaml_scan* s, unsigned line, unsigned col) {
 /* The end of the stream. Nothing in the file is an empty configuration,
    not an error, which is what an empty INI or TOML file is too. */
 static cf_bool yaml_stream_end(yaml_scan* s, unsigned line, unsigned col) {
-    if (s->depth < 0) {
+    if (s->depth < 0 && !s->rooted) {
         return (s->out->begin_table(s->out->ctx, NULL, 0) && s->out->end(s->out->ctx))
                    ? CF_TRUE
                    : yaml_fail_at(s, line, col, CF_REASON_STORAGE,

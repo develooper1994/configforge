@@ -1554,56 +1554,56 @@
 - struct yaml_ev 88-95
 - struct yaml_rec 98-104
 - struct yaml_anchor 107-113
-- struct yaml_scan 133-160
-- yaml_fail_at 162-165
-- yaml_no_room 167-170
-- yaml_grow 174-192
-- yaml_keep 194-209
-- yaml_record 212-238
-- yaml_find 242-256
-- yaml_anchor_open 259-336
-- yaml_anchor_close 339-349
-- yaml_name 353-371
-- yaml_known_tag 378-397
-- yaml_open 399-433
-- yaml_is_null 436-442
-- yaml_tagged 446-510
-- yaml_scalar 512-570
-- yaml_handle 574-599
-- yaml_alias 604-679
-- yaml_node 682-688
-- yaml_document 690-696
-- yaml_stream_end 700-708
-- yaml_scan_init 710-728
-- yaml_ev_init 731-740
-- yaml_fy_text 750-757
-- yaml_fy_tag 761-773
-- yaml_fy_event 775-834
-- yaml_fy_fail 837-846
-- yaml_fy_version_ok 860-887
-- yaml_decode 889-946
-- yaml_line 954-956
-- yaml_col 957-959
-- yaml_event 964-1014
-- yaml_decode 1016-1042
-- yaml_b_document 1051-1053
-- yaml_b_stream_end 1055-1057
-- yaml_b_alias 1059-1062
-- yaml_b_node 1064-1079
-- yaml_b_work 1083-1086
-- yaml_decode 1088-1100
-- struct yaml_enc 1121-1126
-- typedef yaml_enc_fits 1129
-- yaml_quote 1148-1171
-- yaml_reserved 1175-1186
-- yaml_key 1188-1205
-- yaml_lead 1210-1226
-- yaml_enc_open 1228-1239
-- yaml_enc_table 1241-1243
-- yaml_enc_array 1245-1247
-- yaml_enc_scalar 1249-1277
-- yaml_enc_end 1279-1292
-- yaml_encoder 1294-1309
+- struct yaml_scan 133-161
+- yaml_fail_at 163-166
+- yaml_no_room 168-171
+- yaml_grow 175-193
+- yaml_keep 195-210
+- yaml_record 213-239
+- yaml_find 243-257
+- yaml_anchor_open 260-337
+- yaml_anchor_close 340-350
+- yaml_name 354-372
+- yaml_known_tag 379-398
+- yaml_open 400-437
+- yaml_is_null 440-446
+- yaml_tagged 450-514
+- yaml_scalar 516-574
+- yaml_handle 578-603
+- yaml_alias 608-683
+- yaml_node 686-692
+- yaml_document 694-700
+- yaml_stream_end 704-712
+- yaml_scan_init 714-732
+- yaml_ev_init 735-744
+- yaml_fy_text 754-761
+- yaml_fy_tag 765-777
+- yaml_fy_event 779-838
+- yaml_fy_fail 841-850
+- yaml_fy_version_ok 864-891
+- yaml_decode 893-950
+- yaml_line 958-960
+- yaml_col 961-963
+- yaml_event 968-1018
+- yaml_decode 1020-1046
+- yaml_b_document 1055-1057
+- yaml_b_stream_end 1059-1061
+- yaml_b_alias 1063-1066
+- yaml_b_node 1068-1083
+- yaml_b_work 1087-1090
+- yaml_decode 1092-1104
+- struct yaml_enc 1125-1130
+- typedef yaml_enc_fits 1133
+- yaml_quote 1152-1175
+- yaml_reserved 1179-1190
+- yaml_key 1192-1209
+- yaml_lead 1214-1230
+- yaml_enc_open 1232-1243
+- yaml_enc_table 1245-1247
+- yaml_enc_array 1249-1251
+- yaml_enc_scalar 1253-1281
+- yaml_enc_end 1283-1296
+- yaml_encoder 1298-1313
 `lib/serialize/src/yamlparse.c`
 - struct yp_tagdef 36-41
 - struct yp 43-58
@@ -1753,32 +1753,32 @@
 - cv_slot 136-149
 - cv_room 152-178
 - cv_new 183-221
-- cv_member 228-296
-- cv_open 298-306
-- cv_rec_table 308-310
-- cv_rec_array 312-314
-- cv_rec_scalar 316-331
-- cv_rec_end 333-341
-- cv_rec_text 344-346
-- cv_rec_work 348-350
-- cv_esc 358-381
-- cv_path 385-410
-- cv_note 414-461
-- cv_plain_name 465-477
-- cv_pass_names 480-493
-- cv_pass_arrays 497-528
-- cv_array_kind 533-553
-- cv_pass_bits 563-621
-- cv_as_text 632-653
-- cv_refused 656-670
-- cv_emit_members 675-693
-- cv_emit 695-721
-- cv_run 725-748
-- cv_record 755-782
-- cv_drop_empty_tables 786-801
-- cv_find 804-829
-- cv_bytes 832-860
-- cv_convert 862-899
+- cv_member 228-292
+- cv_open 294-302
+- cv_rec_table 304-306
+- cv_rec_array 308-310
+- cv_rec_scalar 312-327
+- cv_rec_end 329-337
+- cv_rec_text 340-342
+- cv_rec_work 344-346
+- cv_esc 354-377
+- cv_path 381-406
+- cv_note 410-457
+- cv_plain_name 461-473
+- cv_pass_names 476-489
+- cv_pass_arrays 493-524
+- cv_array_kind 529-549
+- cv_pass_bits 559-617
+- cv_as_text 628-649
+- cv_refused 652-666
+- cv_emit_members 671-689
+- cv_emit 691-717
+- cv_run 721-744
+- cv_record 751-778
+- cv_drop_empty_tables 782-797
+- cv_find 800-825
+- cv_bytes 828-856
+- cv_convert 858-895
 `tools/codec/convert_core.h`
 - enum cv_kind 13-29
 - struct cv_finding 31-35

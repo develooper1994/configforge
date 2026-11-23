@@ -233,15 +233,11 @@ static cv_node* cv_member(cv_tree* t, cv_nkind kind, const char* name, size_t n,
     size_t    text = (v != NULL && v->type == CF_TYPE_TEXT) ? v->u.t.n : 0;
 
     if (parent == NULL) {
-        if (kind != CVN_TABLE) {
+        /* The first root, and a table: a second one is refused. */
+        if (kind != CVN_TABLE || t->root != NULL) {
             return NULL;
         }
-        /* The document again, with nothing in it: the YAML reader says
-           one at the end of every file, and a configuration's sinks
-           take it as the same table reopened. */
-        if (t->root == NULL) {
-            t->root = cv_new(t, NULL, kind, NULL, 0, 0);
-        }
+        t->root = cv_new(t, NULL, kind, NULL, 0, 0);
         return t->root;
     }
     if (parent->kind != CVN_TABLE) {

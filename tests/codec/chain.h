@@ -119,14 +119,11 @@ static ch_node* ch_add(ch_rec* r, int kind, const char* name, size_t n) {
     ch_node* old;
 
     if (parent == NULL) {
-        if (kind != CH_TABLE) {
+        /* The first root, and a table: a second one is refused. */
+        if (kind != CH_TABLE || r->root != NULL) {
             return NULL;
         }
-        /* The document again, as the YAML reader says one at the end of
-           every file: the same table reopened, as convert_core.c takes it. */
-        if (r->root == NULL) {
-            r->root = ch_new(r->ar, NULL, kind, NULL, 0);
-        }
+        r->root = ch_new(r->ar, NULL, kind, NULL, 0);
         return r->root;
     }
     if (parent->kind == CH_ARRAY) {

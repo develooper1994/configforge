@@ -114,3 +114,53 @@ dump_case(
   json
   --as
   json)
+
+# One YAML document is one root table: a mapping, an empty mapping, a file
+# with nothing in it, and a file with only a comment each say it once, and a
+# second document is refused.
+if(YAML)
+  file(WRITE ${WORK}/m.yaml "a: one\n")
+  file(WRITE ${WORK}/empty.yaml "")
+  file(WRITE ${WORK}/comment.yaml "# nothing here\n")
+  file(WRITE ${WORK}/emptymap.yaml "{}\n")
+  file(WRITE ${WORK}/two.yaml "a: 1\n---\nb: 2\n")
+
+  # yaml_root(<file> <roots>): the whole root lines (-, ., table) counted.
+  function(yaml_root file roots)
+    dump_case(
+      0
+      -
+      -
+      ${file}
+      --as
+      yaml)
+    string(REGEX MATCHALL "(^|\n)-\t\.\ttable\n" found "${dump_out}")
+    list(LENGTH found n)
+    if(NOT n EQUAL roots)
+      message(
+        FATAL_ERROR
+          "${file}: expected ${roots} root lines, got ${n}\n${dump_out}")
+    endif()
+    set(dump_out
+        "${dump_out}"
+        PARENT_SCOPE)
+  endfunction()
+
+  # The real document must still be there: a scalar event, with its place.
+  yaml_root(m.yaml 1)
+  if(NOT dump_out MATCHES "(^|\n)m.yaml:1:[0-9]+\ta\ttext\t\"one\"")
+    message(FATAL_ERROR "m.yaml: the scalar event is missing\n${dump_out}")
+  endif()
+  yaml_root(empty.yaml 1)
+  yaml_root(comment.yaml 1)
+  yaml_root(emptymap.yaml 1)
+  dump_case(
+    1
+    -
+    "codec: [^\n]+"
+    two.yaml
+    --as
+    yaml)
+else()
+  message(STATUS "skipped: yaml is not in this build")
+endif()

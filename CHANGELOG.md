@@ -164,6 +164,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- The YAML codec delivers exactly one root table to a document sink: a
+  mapping no longer says a second, empty root at the end of the stream, and
+  an empty mapping, an empty file and a comment-only file each say one. A
+  second YAML document is still refused. The converter and the pair tests
+  no longer take a repeated root as the same table reopened.
 - The built-in YAML reader refuses a tag escape unless both digits after
   `%` are hexadecimal. It previously accepted `@` and a backquote as
   the digit 9 (D-102).
