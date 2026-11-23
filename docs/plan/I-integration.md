@@ -23,7 +23,7 @@ style unit's).
   1. `scripts/verify.cmake:119-144`: a release (`TIER=2`) runs `profiles`
      and `sizes` too; `scripts/README.md:11`'s list matches the script's
      (with `infer` and `conformance`).
-  2. `docs/sizes.txt` is missing, so `scripts/check/sizes.cmake:208-215`
+  2. (done in the commit after 0225ace) `docs/sizes.txt` is missing, so `scripts/check/sizes.cmake:208-215`
      compares nothing: the manager commits the first one from CI's
      `sizes` job artifact and regenerates the README's matrix (A-12's
      Organiser's answer).
