@@ -4990,3 +4990,12 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   (it never did); `docs/Architecture.md` no longer says value
   interpolation and a second binary format are absent."
 * **notes**:
+  * 2026-11-23, step 1 at fbdcbe9: docs/targets.txt has ten targets (six runner, four none). The top-level CMakeLists.txt has two cf_source_needs_c calls. docs/Formats.md has the pair-table heading and both pairs markers.
+  * 2026-11-23, steps 2 to 8 (work/A-13). Done: the gate, `scripts/generate/limits.cmake` (sections 2, 3, 4, 5 (XML row), 7, 8), `lib/config/tests/test_limits.c` and its block in `lib/config/tests/CMakeLists.txt`, the written sections, `mkdocs.yml`, the corrected Architecture.md and README.md statements, the READMEs' rows, Roadmap, Plan, CHANGELOG. The three source mutations of step 4 each failed the generator by name (CF_KEY_MAX's CMake default: the three-way message; `CF_DIR_MAX_FILES` renamed: "no #define"; `CF_EXPAND_MAX` reworded: "is now ... not ..."); step 5's edited row failed `unit.test_limits` naming the row, and the `minimal` build printed the "not a default build" line and passed.
+  * Organiser's answers (decided by the card's rules while carrying it):
+    * The gate checks "Held by" names against registered tests, so it cannot pass before `unit.test_limits` is registered: step 4's gate run therefore passed every check but that one until step 5 registered the test; the order of the two steps is otherwise as written.
+    * The card's rule "a default build is one whose compiled limits equal the page's rows" makes an edited row look like another build, and nothing then fails. `test_limits` takes a build as another build only when two or more of the four compiled limits differ from the page's rows (`minimal` differs in three); one that differs is a page that has drifted and fails naming the row.
+    * Section 5's marker block holds only the XML row (the one number the generator reads); the table of the other formats ("In the code", "Run at", "A string") is written by hand beside it, as the card says it is not generated.
+    * Section 8 lists each file once: `lib/platform/CMakeLists.txt` and `lib/serialize/CMakeLists.txt` repeat the top-level calls for their stand-alone builds, and a call's file is read as `lib/<name>/<path>` there, so the repeats are the same row.
+    * Section 3 has a fifth column, "Held by", because the gate finds test names by that column's heading.
+  * The card got wrong: `cf_loc` is in `lib/base/include/configforge/cf_error.h`, not `cf_serialize.h`.

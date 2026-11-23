@@ -51,6 +51,7 @@
 #define XML_ERROR_AMPLIFICATION_LIMIT_BREACH XML_ERROR_AMPLIFICATION_LIMIT_BREACH
 #endif
 #endif
+#define CF_XML_INPUT_MAX 0x7FFFFFFFu
 
 /* What the first pass learns about each element, in document order. */
 enum {
@@ -576,7 +577,7 @@ static void XMLCALL xml_emit_end(void* ctx, const XML_Char* name) {
 /* ================================================================== */
 
 static cf_bool xml_run(xml_scan* s, const cf_blob* in) {
-    if (in->n > 0x7FFFFFFFu) {
+    if (in->n > CF_XML_INPUT_MAX) {
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->file,
                      "%s: too large for this XML reader", s->file);
         cf_error_place(s->err, CF_REASON_BUDGET, 0, 0);

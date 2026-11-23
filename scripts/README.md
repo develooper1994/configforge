@@ -20,6 +20,7 @@ verify step runs), `generate/` (what the build writes from the sources),
 | `generate/matrix.cmake` | regenerates the five README feature tables |
 | `check/sizes.cmake` | measures library code by part and profile with GNU size (`-DWRITE=ON`), or checks the recorded measurements (`-DCHECK=ON`) |
 | `generate/apiref.cmake` | regenerates `docs/API.md` from the public headers' comments; `gate.apiref` checks it is current |
+| `generate/limits.cmake` | `-DWRITE=docs/Limits.md` regenerates the limits page's generated blocks from the build options and the sources; `gate.limits` checks the page is current and that the decisions, tests and links it names exist |
 | `generate/amalgamate.py` | generates the single-file distribution |
 | `check/check_formats.py`, `check/check_text.py` | every format string against what `cf_fmt` supports (`gate.formats`); every tracked text file without a NUL byte or a carriage return (`gate.text`) |
 | `release/release_local.sh`, `release/release_local.ps1` | the release workflow's jobs run on this machine, from a tag: amalgamation and static musl Linux (podman), and Windows (MSVC) - for when Actions cannot run |

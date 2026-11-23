@@ -320,6 +320,7 @@ exists because something in the design is otherwise only a sentence.
 | `gate.install` | that anyone can actually use it: install, `find_package`, compile, run |
 | `gate.formats` | every format string against what `cf_fmt` supports |
 | `gate.apiref` | `docs/API.md` regenerated from the header comments, and equal to the committed one |
+| `gate.limits` | `docs/Limits.md`'s generated blocks regenerated from the build options and the sources, and equal to the page; the decisions, tests and links it names exist |
 | `gate.matrix` | regenerates the README feature tables and checks each target's evidence |
 | `gate.abi` | `cmake/configforge.symbols` lists every promised `CF_API` function and `cmake/configforge.internal.symbols` every one declared under `CF_INTERNAL_API`, and nothing else; each is defined in the built library, and a shared library exports no other |
 | `gate.format.c`, `gate.format.cmake`, `gate.cmake.lint` | one style, checked not agreed |
@@ -385,14 +386,17 @@ needed was protecting.
 
 * **A DOM.** The key space is flat and sorted; that is what makes a C
   implementation reasonable, provenance per key trivial, and the binary
-  image a picture of memory rather than a serialisation.
+  image a picture of memory rather than a serialisation. (The serialization
+  library is a different matter: Roadmap, "Ways to read".)
 * **Streaming parsers.** Configuration files are kilobytes. Streaming
   doubles the code, needs a pushback buffer, and gives up both zero-copy
   slices and exact locations, to buy bounded memory over a document
-  nobody has.
-* **Value interpolation.** `${OTHER}` makes a value's origin a set of
-  origins plus a template, which turns `explain()` recursive. Reserved
-  in the syntax, rejected with a clear message, not implemented.
-* **A second document binary format.** CBOR and MessagePack give a
-  document, which JSON already gives; the gain is bytes, which is not
-  the problem. The binary artifact that was needed is the image.
+  nobody has. (The serialization library may get a stream for 2.0: Roadmap,
+  "Ways to read", D-61.)
+* **Value interpolation without a bound.** `${OTHER}` is implemented
+  (D-10) and bounded (`CF_EXPAND_MAX`, D-77); it keeps `explain()` one
+  level deep by naming the keys a value was built from, not by being
+  absent. What is bounded is in [Limits](Limits.md).
+* **A binary document format in the configuration library.** CBOR is a
+  codec of the serialization library (D-91); the library's own binary
+  artifact is the image. See [Limits](Limits.md) for what is not offered.

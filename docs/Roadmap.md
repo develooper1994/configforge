@@ -1200,7 +1200,7 @@ first user meets. In the order proposed:
   state, and `gate.cwe` checks that each named test exists. First
   step: the NVD and each project's tracker searched, and the list
   counted.
-* ⬜ **A page of the project's limits.** `docs/Limits.md`: what the
+* 🟩 **A page of the project's limits.** `docs/Limits.md`; `gate.limits`, `unit.test_limits`. What the
   library does not do and what it will not take, in one place, so a
   user learns it before they depend on it. The build limits
   (`CF_KEY_MAX`, `CF_PATH_MAX` and the rest, today in the README's
@@ -1293,14 +1293,14 @@ first user meets. In the order proposed:
   list entry whose reason is empty, fails. A profile that must stay C89
   (`minimal`, `misra`) refuses any part on the list, by name, at
   configure time. `docs/Limits.md` shows the list.
-* 🟨 **Formats registered, with what each can do.** What each writer can hold is done, as one table the converter, the tests and the page read (D-109); the ways to read it, and `docs/Limits.md` generated from it, are left (A-13). The codecs already
+* 🟨 **Formats registered, with what each can do.** What each writer can hold is done, as one table the converter, the tests and the page read (D-109); the ways to read it are left. `docs/Limits.md` links the pair table and does not copy it (A-13). The codecs already
   are a table (`cf_codecs[]` and `cf_formats[]` in
   `lib/serialize/src/codec.c`, read through `cf_codec_by_name` and
   `cf_codec_at`). What is left is the capabilities beside each entry:
   the ways it can be read (DOM, events, in-situ, lazy) and what it
   cannot hold. `detect.c`, Doctor, `codec convert` and the pair test
-  (W5-V2) then read one table, and the pair table and
-  `docs/Limits.md` are generated from it rather than kept by hand. To
+  (W5-V2) then read one table, and the pair table is generated from it
+  rather than kept by hand (`docs/Limits.md` links it). To
   check first how much of this `cf_format_info` holds today.
 * ⬜ **The YAML reader: no second document table.** At the end of every
   file the reader says an empty document table again (`yaml_stream_end`

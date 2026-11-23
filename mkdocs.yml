@@ -56,6 +56,7 @@ nav:
       - Image format: docs/ImageFormat.md
       - Decisions: docs/Decisions.md
       - Safety: docs/Safety.md
+      - Limits: docs/Limits.md
       - Formats: docs/Formats.md
       - Conformance: docs/Conformance.md
       - Performance: docs/Performance.md

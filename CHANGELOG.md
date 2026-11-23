@@ -7,6 +7,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- **`docs/Limits.md`**: the build limits, the fixed ones, the decode budget, the largest document of each format, the platforms and C versions, the threading rules, what is not proven and not claimed, and what is not offered, with the decision for each; its numbers are generated from the build options and the sources, and `gate.limits` and `test_limits` fail when it drifts.
 - `cf_error` carries the place (`where`) and the reason (`reason`, from
   `cf_reason.def`) of a refusal, the same in every reader: invalid UTF-8,
   depth, a number out of range, a truncated input and the rest; `cf_reason_name`,
@@ -110,6 +111,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Changed
 
+- The README's limits table no longer says `CF_MESSAGE_MAX` bounds a JSON or TOML string (it never did); `docs/Architecture.md` no longer says value interpolation and a second binary format are absent.
 - The README lists a size saving for each measured part, including every
   codec. CI measures these with `scripts/check/sizes.cmake` and GNU
   `size` on the x86-64 MinSizeRel build. A dash marks an unavailable figure.

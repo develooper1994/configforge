@@ -374,10 +374,12 @@ it is yours to make (D-37):
 | Option | Default | What it bounds, and what it costs |
 | ------ | ------- | --------------------------------- |
 | `CF_KEY_MAX` | 256 | longest key, terminator included, so 255 bytes; held by every error and by the flattener and decoders |
-| `CF_MESSAGE_MAX` | 256 | longest error message; every `cf_error` holds one. Also the longest string the JSON and TOML readers take, less two bytes |
+| `CF_MESSAGE_MAX` | 256 | longest error message; every `cf_error` holds one |
 | `CF_PATH_MAX` | 512 | longest file path; the directory source holds several |
 | `CF_MAX_DEPTH` | 32 | deepest nesting; the decoders recurse once per level |
 | `CF_STACK_BUDGET` | 2048 | bytes a library function's frame may take; `0` measures without checking |
+
+The rest of the limits, and the fixed ones, are on [Limits](docs/Limits.md).
 
 ```sh
 cmake -B build -DCF_KEY_MAX=64 -DCF_MESSAGE_MAX=128 -DCF_PATH_MAX=256 -DCF_STACK_BUDGET=1024
@@ -502,6 +504,7 @@ a claim that decays.
 | version | `cf_version.h` against project(), the vcpkg, Cargo and Python manifests, and the CHANGELOG's newest section |
 | abi | the exports match `cmake/configforge.symbols` and `cmake/configforge.internal.symbols` |
 | apiref | `docs/API.md` is what `scripts/generate/apiref.cmake` makes from the headers |
+| limits | `docs/Limits.md`'s numbers are what `scripts/generate/limits.cmake` reads from the build options and the sources, and the decisions, tests and links it names exist |
 | matrix | the README's feature tables match the build, recorded sizes and target evidence |
 | text | no NUL and no CR in a tracked text file |
 | dependencies | CMake looks for nothing `docs/Dependencies.md` does not name |
