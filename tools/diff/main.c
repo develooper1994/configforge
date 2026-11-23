@@ -1,4 +1,5 @@
-/* Compare two flat documents through their typed reader events. */
+/* Compare two documents of nested scalar mappings by their typed reader
+   events. */
 #include "configforge/cf_serialize.h"
 
 #include <stdio.h>
@@ -7,11 +8,17 @@
 
 #define DIFF_FLOOR ((size_t)1048576)
 #define DIFF_FACTOR 64u
+#define DIFF_SEGMENTS 64u
+
+typedef struct seg {
+    const char* p;
+    size_t      n;
+} seg;
 
 typedef struct entry {
     struct entry* next;
-    const char*   key;
-    size_t        length;
+    const seg*    path;
+    size_t        depth;
     size_t        ordinal;
     cf_value      value;
 } entry;
@@ -23,8 +30,9 @@ typedef struct side {
     entry*    first;
     entry*    last;
     entry**   ordered;
-    cf_bool   open;
+    size_t    tables;
     cf_bool   seen;
+    seg*      stack;
 } side;
 
 static void* reserve_work(void* ctx, size_t n) {
@@ -53,12 +61,23 @@ static char* copy_span(side* s, const char* p, size_t n) {
 
 static cf_bool begin_table(void* ctx, const char* name, size_t n) {
     side* s = (side*)ctx;
-    (void)n;
-    if (s->open || name != NULL) {
+    if (name == NULL) {
+        if (s->tables != 0) {
+            return CF_FALSE;
+        }
+        s->tables = 1;
+        s->seen   = CF_TRUE;
+        return CF_TRUE;
+    }
+    if (s->tables == 0 || s->tables >= DIFF_SEGMENTS) {
         return CF_FALSE;
     }
-    s->open = CF_TRUE;
-    s->seen = CF_TRUE;
+    s->stack[s->tables - 1].p = copy_span(s, name, n);
+    if (s->stack[s->tables - 1].p == NULL) {
+        return CF_FALSE;
+    }
+    s->stack[s->tables - 1].n = n;
+    ++s->tables;
     return CF_TRUE;
 }
 
@@ -71,10 +90,10 @@ static cf_bool begin_array(void* ctx, const char* name, size_t n) {
 
 static cf_bool end_table(void* ctx) {
     side* s = (side*)ctx;
-    if (!s->open) {
+    if (s->tables == 0) {
         return CF_FALSE;
     }
-    s->open = CF_FALSE;
+    --s->tables;
     return CF_TRUE;
 }
 
@@ -82,21 +101,29 @@ static cf_bool scalar(void* ctx, const char* name, size_t n, const cf_value* v,
                       cf_bool textual, const cf_loc* at) {
     side*  s = (side*)ctx;
     entry* e;
+    seg*   path;
     (void)textual;
     (void)at;
-    if (!s->open || name == NULL) {
+    if (s->tables == 0 || name == NULL) {
         return CF_FALSE;
     }
     e = (entry*)reserve_work(s, sizeof *e);
     if (e == NULL) {
         return CF_FALSE;
     }
-    e->key = copy_span(s, name, n);
-    if (e->key == NULL) {
+    path = (seg*)reserve_work(s, s->tables * sizeof *path);
+    if (path == NULL) {
         return CF_FALSE;
     }
-    e->length = n;
-    e->value  = *v;
+    memcpy(path, s->stack, (s->tables - 1) * sizeof *path);
+    path[s->tables - 1].p = copy_span(s, name, n);
+    if (path[s->tables - 1].p == NULL) {
+        return CF_FALSE;
+    }
+    path[s->tables - 1].n = n;
+    e->path               = path;
+    e->depth              = s->tables;
+    e->value              = *v;
     if (v->type == CF_TYPE_TEXT) {
         e->value.u.t.p = copy_span(s, v->u.t.p, v->u.t.n);
         if (e->value.u.t.p == NULL) {
@@ -115,12 +142,21 @@ static cf_bool scalar(void* ctx, const char* name, size_t n, const cf_value* v,
 }
 
 static int key_order(const entry* a, const entry* b) {
-    size_t n   = a->length < b->length ? a->length : b->length;
-    int    cmp = memcmp(a->key, b->key, n);
-    if (cmp != 0) {
-        return cmp;
+    size_t depth = a->depth < b->depth ? a->depth : b->depth;
+    size_t i;
+    for (i = 0; i < depth; ++i) {
+        const seg* x   = &a->path[i];
+        const seg* y   = &b->path[i];
+        size_t     n   = x->n < y->n ? x->n : y->n;
+        int        cmp = memcmp(x->p, y->p, n);
+        if (cmp != 0) {
+            return cmp;
+        }
+        if (x->n != y->n) {
+            return x->n > y->n ? 1 : -1;
+        }
     }
-    return (a->length > b->length) - (a->length < b->length);
+    return (a->depth > b->depth) - (a->depth < b->depth);
 }
 
 static int entry_order(const void* pa, const void* pb) {
@@ -141,7 +177,10 @@ static cf_bool read_side(side* s, const char* path, const char* format) {
     entry*          e;
 
     s->arena = cf_arena_new(NULL, 0);
-    if (s->arena == NULL || !cf_blob_file(&blob, s->arena, path, &err)) {
+    s->stack = s->arena == NULL
+                   ? NULL
+                   : (seg*)cf_arena_alloc(s->arena, DIFF_SEGMENTS * sizeof *s->stack);
+    if (s->stack == NULL || !cf_blob_file(&blob, s->arena, path, &err)) {
         return CF_FALSE;
     }
     codec = format != NULL ? cf_codec_by_name(format)
@@ -161,7 +200,7 @@ static cf_bool read_side(side* s, const char* path, const char* format) {
     sink.end          = end_table;
     sink.reserve_work = reserve_work;
     sink.reserve_text = reserve_text;
-    if (!cf_codec_decode(codec, &blob, &sink, &err) || !s->seen || s->open) {
+    if (!cf_codec_decode(codec, &blob, &sink, &err) || !s->seen || s->tables != 0) {
         return CF_FALSE;
     }
     if (s->count == 0) {
@@ -189,17 +228,14 @@ static size_t next_key(const side* s, size_t i) {
     return i;
 }
 
-static cf_bool write_change(const char* kind, const entry* e) {
+static cf_bool write_segment(const seg* g) {
     static const char hex[] = "0123456789abcdef";
     size_t            i;
-    if (e == NULL) {
+    if (fputs("[\"", stdout) == EOF) {
         return CF_FALSE;
     }
-    if (fputs(kind, stdout) == EOF || fputs("\t$[\"", stdout) == EOF) {
-        return CF_FALSE;
-    }
-    for (i = 0; i < e->length; ++i) {
-        unsigned char c = (unsigned char)e->key[i];
+    for (i = 0; i < g->n; ++i) {
+        unsigned char c = (unsigned char)g->p[i];
         if (c < 32 || c > 126) {
             if (fputs("\\x", stdout) == EOF || putchar(hex[c >> 4]) == EOF ||
                 putchar(hex[c & 15]) == EOF) {
@@ -214,7 +250,20 @@ static cf_bool write_change(const char* kind, const entry* e) {
             }
         }
     }
-    return fputs("\"]\n", stdout) == EOF ? CF_FALSE : CF_TRUE;
+    return fputs("\"]", stdout) == EOF ? CF_FALSE : CF_TRUE;
+}
+
+static cf_bool write_change(const char* kind, const entry* e) {
+    size_t i;
+    if (e == NULL || fputs(kind, stdout) == EOF || fputs("\t$", stdout) == EOF) {
+        return CF_FALSE;
+    }
+    for (i = 0; i < e->depth; ++i) {
+        if (!write_segment(&e->path[i])) {
+            return CF_FALSE;
+        }
+    }
+    return putchar('\n') == EOF ? CF_FALSE : CF_TRUE;
 }
 
 static int compare(const side* left, const side* right) {

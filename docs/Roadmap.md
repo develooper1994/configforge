@@ -1371,7 +1371,8 @@ from parts that exist:
   **Flat slice built (N-1):** `configforge diff` compares two plain
   scalar mappings across readable formats, ignoring key order and
   scalar spelling. It lists changed keys without values or digests.
-  What is left: nested shapes and contract-aware secret digests. With a contract,
+  Nested tables, named by their whole path, are card N-5. What is left:
+  arrays and contract-aware secret digests. With a contract,
   units compared as values (`30s` is `30000ms`, with 1.10.0's durations
   and sizes), which plain semantic diffs (dyff, graphtage) do not do.
 * ⬜ **Git shows configuration changes by value.** N-3 adds a

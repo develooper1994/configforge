@@ -7,8 +7,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
-- `configforge diff` compares two flat configuration files across readable
-  formats. It lists added, removed and changed keys without printing values.
+- `configforge diff` compares two configuration files across readable
+  formats, nested tables included. It lists added, removed and changed
+  keys by path, such as `$["db"]["port"]`, without printing values.
+  Arrays are still refused.
 
 - **`docs/Limits.md`**: the build limits, the fixed ones, the decode budget, the largest document of each format, the platforms and C versions, the threading rules, what is not proven and not claimed, and what is not offered, with the decision for each; its numbers are generated from the build options and the sources, and `gate.limits` and `test_limits` fail when it drifts.
 - `cf_error` carries the place (`where`) and the reason (`reason`, from

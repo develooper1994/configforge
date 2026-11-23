@@ -55,7 +55,7 @@ the program's exit code.
 
 | Program | What it does | Page |
 | --- | --- | --- |
-| `configforge-diff` | Compares two flat documents by value. | [below](#configforge-diff) |
+| `configforge-diff` | Compares two documents by value. | [below](#configforge-diff) |
 | `configforge-doctor` | Reads provenance reports: `explain`, `dump`, `lint`, `diff`, `history`, `blame`, `import-*`. | [Doctor](Doctor.md) |
 | `configforge-codec` | The serialization library's own program: `formats`, `detect`, `check`, `dump`, `convert`, `format` and `recode`, on documents and never on a configuration. | [below](#configforge-codec) |
 | `configforge-gen` | The contract's own program: `configforge gen --schema` writes a JSON Schema contract as C, `configforge gen check` holds files to it, `configforge gen schema --from` drafts one from a sample file. | [below](#configforge-gen) |
@@ -66,7 +66,7 @@ the program's exit code.
 configforge diff [--as-left FORMAT] [--as-right FORMAT] [--] LEFT RIGHT
 ```
 
-Compare two files containing flat mappings of named scalars. Each side
+Compare two files containing mappings of named scalars, which may nest. Each side
 uses its file extension, then its content, to select a reader. To name
 a format explicitly, place its option before the paths. Use `--`
 before paths beginning with a dash. Both paths name files, even `-`.
@@ -74,10 +74,13 @@ before paths beginning with a dash. Both paths name files, even `-`.
 Keys can include dots, quotes and the empty string. Where a reader
 accepts duplicate keys, the last value wins. Comparison preserves the
 reader's scalar types, so the JSON string `"1"` differs from the number
-`1`. Empty mappings are supported. Arrays and nested tables are refused.
+`1`. Empty mappings are supported, and an empty nested table equals a
+missing one. Arrays are refused. A scalar is named by its whole path, so
+`{"a.b":1}` and `{"a":{"b":1}}` differ.
 
-Each output line gives `added`, `removed` or `changed`, a tab and a key
-such as `$["port"]`. Keys appear in unsigned byte order. Double quotes
+Each output line gives `added`, `removed` or `changed`, a tab and a path
+such as `$["port"]` or `$["db"]["port"]`. Paths appear in order, segment
+by segment, each in unsigned byte order. Double quotes
 and backslashes are backslash-escaped. Bytes outside printable ASCII
 appear as `\xhh` in lowercase hex. Key names are visible. Scalar values
 and digests never appear in either stream.
@@ -88,8 +91,8 @@ failed and leaves stdout empty. Use `configforge diff --help` for usage.
 
 ### Git difftool for JSON
 
-Use this recipe for modified regular files containing flat JSON mappings
-of scalars. With `configforge` on `PATH`, run `git config --local --edit`
+Use this recipe for modified regular files containing JSON mappings
+of scalars, which may nest. With `configforge` on `PATH`, run `git config --local --edit`
 and add this stanza to the repository's local Git config.
 
 ```gitconfig

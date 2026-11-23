@@ -194,7 +194,7 @@ check(
   SENTINEL
   a.json
   b.json)
-foreach(bad IN ITEMS [[{"bad":SENTINEL}]] [[{"a":{}}]] [[{"a":[]}]] "[]")
+foreach(bad IN ITEMS [[{"bad":SENTINEL}]] [[{"a":{"b":[]}}]] [[{"a":[]}]] "[]")
   file(WRITE "${WORK}/bad.json" "${bad}")
   check(
     2
@@ -203,3 +203,69 @@ foreach(bad IN ITEMS [[{"bad":SENTINEL}]] [[{"a":{}}]] [[{"a":[]}]] "[]")
     a.json
     bad.json)
 endforeach()
+
+# Nested tables are compared by their whole path.
+function(
+  nested
+  left_text
+  right_text
+  expected
+  stdout)
+  file(WRITE "${WORK}/nl.json" "${left_text}")
+  file(WRITE "${WORK}/nr.json" "${right_text}")
+  check(
+    ${expected}
+    "${stdout}"
+    ""
+    nl.json
+    nr.json)
+endfunction()
+nested([[{"z":{"password":"SENTINEL-A","k":1},"a":2}]]
+       [[{"a":2,"z":{"k":1,"password":"SENTINEL-A"}}]] 0 "")
+nested(
+  [[{"db":{"host":"h","port":1,"old":true},"top":1}]]
+  [[{"db":{"host":"h","port":2,"new":true},"top":1}]]
+  1
+  "added\t$[\"db\"][\"new\"]\nremoved\t$[\"db\"][\"old\"]\nchanged\t$[\"db\"][\"port\"]\n"
+)
+nested([[{"a":1}]] [[{"a":{"b":1}}]] 1
+       "removed\t$[\"a\"]\nadded\t$[\"a\"][\"b\"]\n")
+nested([[{"ab":1,"a":{"z":1}}]] [[{}]] 1
+       "removed\t$[\"a\"][\"z\"]\nremoved\t$[\"ab\"]\n")
+nested([[{"a.b":1}]] [[{"a":{"b":1}}]] 1
+       "added\t$[\"a\"][\"b\"]\nremoved\t$[\"a.b\"]\n")
+nested([[{"a":{}}]] [[{}]] 0 "")
+nested([[{"":{"":1}}]] [[{"":{"":2}}]] 1 "changed\t$[\"\"][\"\"]\n")
+nested([[{"a":{"q\"":1}}]] [[{"a":{"q\"":2}}]] 1
+       "changed\t$[\"a\"][\"q\\\"\"]\n")
+set(deep_l "1")
+set(deep_r "2")
+set(path "")
+foreach(level RANGE 1 20)
+  set(deep_l "{\"k\":${deep_l}}")
+  set(deep_r "{\"k\":${deep_r}}")
+  string(APPEND path "[\"k\"]")
+endforeach()
+nested("${deep_l}" "${deep_r}" 1 "changed\t$${path}\n")
+set(deep_l "1")
+foreach(level RANGE 1 40)
+  set(deep_l "{\"k\":${deep_l}}")
+endforeach()
+file(WRITE "${WORK}/nl.json" "{}")
+file(WRITE "${WORK}/nr.json" "${deep_l}")
+check(
+  2
+  ""
+  "${rerr}"
+  nl.json
+  nr.json)
+if(HAVE_YAML)
+  file(WRITE "${WORK}/ny.yaml" "a:\n  b: x\n  c: y\n")
+  file(WRITE "${WORK}/nj.json" [[{"a":{"c":"y","b":"x"}}]])
+  check(
+    0
+    ""
+    ""
+    ny.yaml
+    nj.json)
+endif()

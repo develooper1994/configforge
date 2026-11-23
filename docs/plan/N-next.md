@@ -404,3 +404,94 @@ equal cross-format fixture therefore pairs them with JSON strings.
   workarounds are removed, or the backends disagree about these four inputs.
   Record the input, backend and event lines.
 * **notes**: (empty)
+
+## N-5 - compare nested tables by value in `configforge diff`
+
+* **id**: N-5
+* **goal**: `configforge diff` compares two documents whose mappings nest
+  (`{"db":{"port":1}}`, YAML, TOML, INI sections) and names each changed
+  scalar by its whole path, `$["db"]["port"]`. Arrays stay refused.
+* **why**: N-1 refuses a nested table, so the command cannot read most real
+  configuration files (`docs/Roadmap.md:1368-1377`, "What is left: nested
+  shapes"). The recorder already takes one scalar per event and the output
+  already quotes keys in a path form, so the slice is small
+  (`tools/diff/main.c:54-115`, `192-218`).
+* **needs**: N-1 (done)
+* **size**: small
+* **decided**:
+  * **Shape**: one unnamed root table, as today, then named tables to any
+    depth up to 64 segments in a path (a named table may be reopened; the
+    path is the same). `begin_table` with a NULL name is accepted only
+    while no table is open (root, or the root reopened after it closed, as
+    in N-1). A named `begin_table` is accepted only while the root is open
+    and the path has room; it pushes the name. `end` pops one table.
+    Replace `side.open` by a depth counter. At the end of the decode the
+    counter must be zero and a root must have been seen. `begin_array`
+    still returns false, so an array anywhere is refused (exit 2).
+  * **Path**: an entry stores the path as an array of `(pointer, length)`
+    segments: the names of the open named tables, then the scalar's own
+    name. Copy each table name into the arena once, when it opens
+    (the reader's span ends with the callback); an entry copies the
+    pointer array, not the bytes. Charge every allocation through
+    `reserve_work` as today. An empty name is a valid segment.
+  * **Order**: compare paths segment by segment; a segment compares by
+    unsigned bytes, a shorter proper prefix first; when every segment of
+    the shorter path matches, the shorter path comes first. Equal paths
+    are one key: the entry with the highest ordinal (the last one read)
+    wins, as today. So `["a","z"]` sorts before `["ab"]`, and `["a"]`
+    before `["a","b"]`.
+  * **Compare**: unchanged: `cf_value_equal`, the reader's scalar type is
+    kept. A path that is a scalar on one side and a table on the other
+    gives two lines, `removed`/`added` for the scalar's path and for each
+    scalar below the table, in the order above. `{"a.b":1}` and
+    `{"a":{"b":1}}` differ the same way.
+  * **Empty tables**: a table with no scalar below it records nothing, so
+    `{"a":{}}` equals `{}` and equals a missing `a`. Say so in Tools.md.
+  * **Output**: `added`, `removed` or `changed`, a tab, `$`, then for each
+    segment `["`, the escaped segment, `"]`, then a newline. Escaping is
+    N-1's (backslash and double quote escaped, bytes outside printable
+    ASCII as `\xhh` lowercase). A flat document prints exactly what N-1
+    printed. Values and digests never appear.
+  * **Limits**: the budget, the exit statuses and the fixed refusal lines
+    are N-1's. A path deeper than 64 segments is a refusal like any other
+    (the reader's own depth limit, `CF_MAX_DEPTH`, stops a document first
+    in the default build, so a fixture cannot reach it).
+  * C89. No public API, no new target, no new file in `tools/`.
+* **files**: `tools/diff/main.c`, `tools/configforge/main.c:40` (help
+  text: drop "flat"), `tests/front/diff.cmake`, `docs/Tools.md`,
+  `docs/Roadmap.md`, `CHANGELOG.md`.
+* **steps**:
+  1. Work in branch `work/N-5` (already cut from `main`).
+  2. In `tests/front/diff.cmake` first: remove `[[{"a":{}}]]` from the
+     refused list (it is now accepted) and add `[[{"a":{"b":[]}}]]` to it.
+     Add the cases below, each with exact stdout, stderr and status:
+     (a) reordered nested pair with `SENTINEL-A` under a nested
+     `password` key: 0, empty; (b) `{"db":{"host":"h","port":1,"old":true},"top":1}`
+     against `{"db":{"host":"h","port":2,"new":true},"top":1}`: 1, lines
+     `added\t$["db"]["new"]`, `removed\t$["db"]["old"]`,
+     `changed\t$["db"]["port"]`; (c) `{"a":1}` against `{"a":{"b":1}}`: 1,
+     `removed\t$["a"]` then `added\t$["a"]["b"]`; (d) `{"ab":1,"a":{"z":1}}`
+     against `{}`: 1, `removed\t$["a"]["z"]` then `removed\t$["ab"]`;
+     (e) `{"a.b":1}` against `{"a":{"b":1}}`: 1, `added\t$["a"]["b"]`
+     then `removed\t$["a.b"]`; (f) `{"a":{}}` against `{}`: 0; (g) a
+     table `{"":{"":1}}` against `{"":{"":2}}`: 1, `changed\t$[""][""]`;
+     (h) a key with a quote inside a nested table, escaped as in N-1;
+     (i) 20 nested tables with a changed leaf: 1, one line of 21
+     segments; 40 nested tables: 2 with the right-side refusal line;
+     (j) with `HAVE_YAML`, a nested YAML mapping against the equal JSON
+     with string leaves: 0. Run `ctest --preset default -R "^front[.]diff$"
+     --output-on-failure`; see it fail on the first nested case (status 2
+     where 0 was expected).
+  3. Change `tools/diff/main.c` as decided. Run the test until it passes;
+     then `ctest --preset default -R "^(front|codec)[.]" `.
+  4. Update Tools.md (the table row, the section text, the recipe's
+     "flat"), the help line, the Roadmap item (nested tables built
+     (card N-5); arrays and contract still left) and the Changelog.
+  5. Run ACCEPT.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI. `front.diff`,
+  `front.git_difftool`, `front.run` and the codec tests pass; the YAML case
+  runs in a build with the YAML reader.
+* **stop if**: a reader emits a named `begin_table` while no root is open,
+  or reopens a named table in a way that makes one path two tables with
+  different scalars lost. Record the format and the input.
+* **notes**: (empty)

@@ -37,7 +37,7 @@ static void help(FILE* to) {
           "  configforge codec <command> ...    documents: formats, detect, check,\n"
           "                                     dump, convert, format\n",
           to);
-    fputs("  configforge diff ...               compare two flat documents by value\n"
+    fputs("  configforge diff ...               compare two documents by value\n"
           "  configforge help\n"
           "  configforge --version\n"
           "\n",
