@@ -71,8 +71,8 @@ claim about ConfigForge's numbers: no benchmark was run to write it.
   compile-time default, and 0.10.0 added a dynamic allocator
   (`yyjson_alc_dyn_new`) that takes more memory as needed and frees it
   all at once
-  ([API](https://ibireme.github.io/yyjson/doc/doxygen/html/md_doc__a_p_i.html),
-  [changelog](https://ibireme.github.io/yyjson/doc/doxygen/html/md__c_h_a_n_g_e_l_o_g.html)).
+  ([API](https://github.com/ibireme/yyjson/blob/master/doc/API.md),
+  [changelog](https://github.com/ibireme/yyjson/blob/master/CHANGELOG.md)).
   rapidyaml keeps a flat index-based tree whose nodes view the source
   buffer, supports per-tree allocators, and its benchmark has `_reserve`
   (target sized before parsing) and `_reuse` (arena kept between parses)

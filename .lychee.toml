@@ -10,3 +10,13 @@ accept = ["200..=299", "429"]
 
 # One slow site is not a dead one; the weekly job retries three times.
 timeout = 30
+
+# Sites that refuse automated clients with 403; the links work in a browser.
+exclude = [
+  # refuses automated clients (403); checked by hand 2026-11-23
+  "lib\\.rs/crates/diffx",
+  # refuses automated clients (403); checked by hand 2026-11-23
+  "ideals\\.illinois\\.edu/items/31156",
+  # refuses automated clients (403); checked by hand 2026-11-23
+  "netapp\\.com/atg/publications",
+]
