@@ -12,6 +12,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   depth, a number out of range, a truncated input and the rest; `cf_reason_name`,
   `cf_reason_description` and `cf_error_place`. Every message is what it
   was (D-107).
+- The README's feature tables come from the build declarations, the
+  profiles, recorded sizes and the target evidence in `docs/targets.txt`.
+  `gate.matrix` checks them against `scripts/generate/matrix.cmake`.
 - Build profiles by name, `-DCF_PROFILE=<name>` (`full`, `default`,
   `minimal`, `misra`, `embedded-json`, `embedded-cbor`, `server`) or
   `-DCF_PROFILE_FILE=<file>`. Configure reports the selected profile
@@ -97,6 +100,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   document through a random chain (D-109).
 
 ### Changed
+
+- The README lists a size saving for each measured part, including every
+  codec. CI measures these with `scripts/check/sizes.cmake` and GNU
+  `size` on the x86-64 MinSizeRel build. A dash marks an unavailable figure.
 
 - The `minimal` preset selects the `minimal` profile and builds the same
   components.

@@ -124,7 +124,13 @@ string(REGEX MATCHALL
              "[|] `CF_WITH_[A-Z_]+` [|] [^|\n]+ [|] [0-9]+\\.[0-9]+ KB [|]"
              rows "${readme}")
 list(LENGTH rows count)
-if(count LESS 8 OR NOT readme MATCHES "from [0-9]+ KB to")
+if(NOT EXISTS "${SRC}/docs/sizes.txt")
+  foreach(part IN LISTS CF_SIZE_PARTS)
+    if(NOT readme MATCHES "[|] `${part}` [|] [^|\n]+ [|] - [|]")
+      violation("README" "size table needs an unmeasured row for ${part}")
+    endif()
+  endforeach()
+elseif(count LESS 8 OR NOT readme MATCHES "from [0-9]+ KB to")
   violation("README" "library size table needs eight rows and a starting size")
 endif()
 

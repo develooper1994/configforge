@@ -1,0 +1,3 @@
+tool|x86-64|Clang 20.1.0|MinSizeRel|cba1234|2026-11-23
+base|default|200
+off|CF_WITH_INI|110

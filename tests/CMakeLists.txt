@@ -24,6 +24,7 @@ foreach(
                    ${CMAKE_BINARY_DIR}/lib/${c}/tests)
 endforeach()
 add_subdirectory(profile)
+add_subdirectory(matrix)
 add_subdirectory(conformance)
 
 if(CF_BUILD_TOOLS

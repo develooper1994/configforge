@@ -161,6 +161,41 @@ jobs:
       - run: cmake --preset ${{ matrix.profile }} && cmake --build --preset ${{ matrix.profile }}
       - run: ctest --preset ${{ matrix.profile }}
 
+  sizes:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - id: changed
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          base="$BEFORE"
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            base=$(git merge-base HEAD origin/main) || base=
+          fi
+          run=true
+          if git diff --name-only "$base" HEAD > "$RUNNER_TEMP/size-changes"; then
+            if ! grep -Eq '^(CMakeLists\.txt$|cmake/|lib/|scripts/check/sizes\.cmake$|docs/sizes\.txt$|\.github/workflows/ci\.yml$)' "$RUNNER_TEMP/size-changes"; then
+              run=false
+            fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+      - if: steps.changed.outputs.run == 'true'
+        run: sudo apt-get update && sudo apt-get install -y binutils libexpat1-dev libsqlite3-dev
+      - if: steps.changed.outputs.run == 'true'
+        run: cmake -DCHECK=ON -DWORK="$RUNNER_TEMP/size-builds" -P scripts/check/sizes.cmake
+      - id: measure
+        if: "!cancelled() && steps.changed.outputs.run == 'true'"
+        run: cmake -DWRITE=ON -DWORK="$RUNNER_TEMP/size-builds" -DOUT="$RUNNER_TEMP/sizes.txt" -P scripts/check/sizes.cmake
+      - if: "!cancelled() && steps.measure.outcome == 'success'"
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: sizes
+          path: ${{ runner.temp }}/sizes.txt
+
   sanitize:
     runs-on: ubuntu-26.04
     steps:

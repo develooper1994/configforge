@@ -87,40 +87,94 @@ function(cf_profile_parse file prefix)
       PARENT_SCOPE)
 endfunction()
 
-# Read the literal declarations of the options the profiles can set.
+# Options whose individual code savings are measured for the README.
+set(CF_SIZE_PARTS
+    CF_WITH_INI
+    CF_WITH_JSON
+    CF_WITH_TOML
+    CF_WITH_PROPERTIES
+    CF_WITH_CBOR
+    CF_WITH_TLV
+    CF_WITH_YAML
+    CF_WITH_DIR
+    CF_WITH_DOTENV
+    CF_WITH_EMIT
+    CF_WITH_IMAGE
+    CF_WITH_REPORT
+    CF_WITH_REAL)
+
+# Read literal declarations, including help strings that span lines or
+# contain parentheses and semicolons. Only declaration heads are lists.
 function(cf_option_defaults)
   set(root "${_cf_profile_root}")
-  file(GLOB files "${root}/cmake/*.cmake" "${root}/lib/lanes/*.cmake")
-  list(
-    APPEND
+  file(
+    GLOB
     files
-    "${root}/lib/lanes/CMakeLists.txt"
-    "${root}/lib/serialize/CMakeLists.txt"
-    "${root}/lib/serialize/backends.cmake")
-  set(contents "")
+    "${root}/CMakeLists.txt"
+    "${root}/cmake/*.cmake"
+    "${root}/lib/*/CMakeLists.txt"
+    "${root}/lib/*/*.cmake")
+  set(names "")
+  set(space "[ \t\n]+")
+  set(padding "[ \t\n]*")
+  set(word "(\"[^\"]*\"|[^ \t\n)]+)")
   foreach(file IN LISTS files)
-    file(READ "${file}" declarations)
-    string(APPEND contents "\n${declarations}")
-  endforeach()
-  foreach(entry IN LISTS CF_PROFILE_OPTIONS)
-    string(REPLACE ":" ";" pair "${entry}")
-    list(GET pair 0 name)
-    list(GET pair 1 type)
-    set(space "[ \t\n]+")
-    if(type STREQUAL "BOOL")
-      set(pattern "option\\(${name}${space}\"[^\"]*\"${space}(ON|OFF)\\)")
-    else()
-      set(pattern
-          "set\\(${name}${space}(\"[^\"]*\"|[^ \t\n)]+)${space}CACHE${space}STRING[ \t\n]"
-      )
-    endif()
-    if(contents MATCHES "${pattern}")
-      string(REGEX REPLACE "^\"(.*)\"$" "\\1" value "${CMAKE_MATCH_1}")
+    file(READ "${file}" contents)
+    string(REGEX MATCHALL
+                 "(^|\n)[ \t]*(option|set)\\(${padding}CF_[A-Za-z0-9_]+" heads
+                 "${contents}")
+    list(REMOVE_DUPLICATES heads)
+    foreach(head IN LISTS heads)
+      string(REGEX MATCH "CF_[A-Za-z0-9_]+$" name "${head}")
+      if(head MATCHES "option\\(")
+        set(pattern
+            "(^|\n)[ \t]*option\\(${padding}${name}${space}\"([^\"]*)\"(${space}${word})?${padding}\\)"
+        )
+        if(NOT contents MATCHES "${pattern}")
+          continue()
+        endif()
+        set(help "${CMAKE_MATCH_2}")
+        set(value "${CMAKE_MATCH_4}")
+        if(value STREQUAL "")
+          set(value OFF)
+        endif()
+      else()
+        set(pattern
+            "(^|\n)[ \t]*set\\(${padding}${name}${space}${word}${space}CACHE${space}(STRING|BOOL|FILEPATH|PATH)${space}\"([^\"]*)\""
+        )
+        if(NOT contents MATCHES "${pattern}")
+          continue()
+        endif()
+        set(value "${CMAKE_MATCH_2}")
+        set(help "${CMAKE_MATCH_4}")
+      endif()
+      string(REGEX REPLACE "^\"(.*)\"$" "\\1" value "${value}")
+      list(APPEND names "${name}")
       set("_cf_default_${name}"
           "${value}"
           PARENT_SCOPE)
-    endif()
+      set("_cf_help_${name}"
+          "${help}"
+          PARENT_SCOPE)
+    endforeach()
   endforeach()
+  list(REMOVE_DUPLICATES names)
+  list(SORT names)
+  set(_cf_option_names
+      "${names}"
+      PARENT_SCOPE)
+  set(_cf_option_root
+      "${root}"
+      PARENT_SCOPE)
+endfunction()
+
+function(cf_option_help name out)
+  if(NOT "${_cf_option_root}" STREQUAL "${_cf_profile_root}")
+    cf_option_defaults()
+  endif()
+  set("${out}"
+      "${_cf_help_${name}}"
+      PARENT_SCOPE)
 endfunction()
 
 function(cf_profile_load)

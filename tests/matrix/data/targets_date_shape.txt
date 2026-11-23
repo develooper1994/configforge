@@ -1,0 +1,1 @@
+x|hardware|board|2026-13-01|abcdef1|

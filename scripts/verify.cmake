@@ -51,6 +51,7 @@
 #   afl      AFL++ on the libFuzzer harnesses for FUZZ_SECONDS each (default
 #            10), through afl-clang-fast (the afl preset)
 #   yaml     the whole suite with CF_WITH_YAML, where libyaml is installed
+#   sizes    compare library sizes with the recorded binutils measurement
 #   profiles the five additional build profiles, with full and server
 #            skipped unless the expat and sqlite3 headers are installed
 #   compilers the whole suite against musl (musl-gcc) and with the Tiny C
@@ -454,7 +455,19 @@ set(test ${ctest} -C Debug --test-dir)
 set(debug --config Debug ${parallel})
 
 foreach(x ${EXTRA})
-  if(x STREQUAL "profiles")
+  if(x STREQUAL "sizes")
+    find_program(SIZE_EXE size)
+    if(SIZE_EXE)
+      step(
+        "sizes"
+        ${CMAKE_COMMAND}
+        -DCHECK=ON
+        -P
+        "${ROOT}/scripts/check/sizes.cmake")
+    else()
+      message("sizes skipped: size is missing")
+    endif()
+  elseif(x STREQUAL "profiles")
     # Script mode has no platform search path (see the yaml step).
     set(profile_include_paths /usr/include /usr/local/include
                               /opt/homebrew/include /opt/local/include)
@@ -1249,7 +1262,7 @@ foreach(x ${EXTRA})
       FATAL_ERROR
         "unknown EXTRA step '${x}': kqueue, tidy, clang, "
         "shared, components, valgrind, proofs, wasm, abi, tsan, msan, "
-        "ubsan-strict, afl, yaml, profiles, compilers, fuzz, coverage or conformance"
+        "ubsan-strict, afl, yaml, profiles, sizes, compilers, fuzz, coverage or conformance"
     )
   endif()
 endforeach()

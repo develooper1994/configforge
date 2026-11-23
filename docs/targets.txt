@@ -1,0 +1,11 @@
+# target|how|job-or-board|date|commit|note
+x86-64 Linux, glibc|runner|gates|||
+x86-64 Linux, musl (Alpine)|runner|alpine|||
+x86-64 Windows, MSVC|runner|matrix|||
+arm64 macOS, Apple clang|runner|matrix|||
+x86-64 Linux, tcc and pcc|runner|compilers|||
+wasm32-wasi (Node's WASI)|runner||||run by scripts/verify.cmake -DEXTRA=wasm, not by CI
+armv7 Linux|none||||planned (docs/Roadmap.md)
+Cortex-M|none||||planned (docs/Roadmap.md)
+s390x Linux (big-endian)|none||||planned (docs/Roadmap.md)
+riscv64 Linux|none||||planned (docs/Roadmap.md)

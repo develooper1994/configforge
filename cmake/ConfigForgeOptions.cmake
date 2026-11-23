@@ -9,28 +9,28 @@
 include("${CMAKE_CURRENT_LIST_DIR}/ConfigForgeProfile.cmake")
 cf_profile_load()
 
-option(CF_WITH_INI "INI subset codec (built in, no dependency)" ON)
-option(CF_WITH_JSON "JSON codec (built in; Report Replay and Doctor read it)"
-       ON)
-option(CF_WITH_TOML "TOML subset codec (built in, no dependency)" ON)
-option(CF_WITH_PROPERTIES "Java .properties reader (built in, no dependency)"
-       ON)
-option(CF_WITH_CBOR "CBOR codec, RFC 8949 (built in, no dependency)" ON)
-option(CF_WITH_TLV "TLV codecs made from a layout (built in, no dependency)" ON)
+option(CF_WITH_INI "the INI codec" ON)
+option(CF_WITH_JSON
+       "the JSON and JSON5 codec, which Report Replay and Doctor read" ON)
+option(CF_WITH_TOML "the TOML codec" ON)
+option(CF_WITH_PROPERTIES "the Java .properties reader" ON)
+option(CF_WITH_CBOR "the CBOR codec" ON)
+option(CF_WITH_TLV "the TLV codecs made from a layout" ON)
 option(CF_WITH_COMPOSE "Codecs composed of a base codec and a repair or filter"
        ON)
 option(CF_WITH_XML "XML codec (requires expat)" OFF)
-option(CF_WITH_YAML
-       "YAML codec (built in; libfyaml or libyaml by CF_YAML_BACKEND)" ON)
+option(CF_WITH_YAML "the YAML codec" ON)
 option(CF_WITH_SQLITE "SQLite store source (requires sqlite3)" OFF)
 option(CF_WITH_PREFERENCES "macOS user defaults source (links CoreFoundation)"
        OFF)
-option(CF_WITH_DIR "Drop-in directory source (conf.d)" ON)
-option(CF_WITH_DOTENV ".env file source" ON)
-option(CF_WITH_EMIT "Writing a configuration out (cf_emit, the encoders)" ON)
-option(CF_WITH_IMAGE "Binary snapshot image, writer and reader" ON)
-option(CF_WITH_REPORT
-       "Provenance report, Report Replay, JSON Schema (Doctor needs it)" ON)
+option(CF_WITH_DIR "the drop-in directory source" ON)
+option(CF_WITH_DOTENV "the .env source" ON)
+option(CF_WITH_EMIT "cf_emit and every encoder" ON)
+option(CF_WITH_IMAGE "the binary snapshot image" ON)
+option(
+  CF_WITH_REPORT
+  "the provenance report, Report Replay, the JSON Schema writer - and Doctor"
+  ON)
 set(CF_PLATFORM
     "auto"
     CACHE STRING "posix, win32, none, or auto")
@@ -42,7 +42,7 @@ set_property(
            win32
            none)
 
-option(CF_WITH_REAL "CF_REAL value type and its conversions" ON)
+option(CF_WITH_REAL "floating point and its exact formatter" ON)
 option(CF_WITH_CXX "C++03 wrapper header" ON)
 # The kqueue change handle on Linux, through libkqueue: how the macOS and
 # BSD implementation is compiled and run by a machine that is neither.

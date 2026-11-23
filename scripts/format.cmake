@@ -165,6 +165,15 @@ if(cmake_files)
   endif()
 endif()
 
+if(NOT CHECK)
+  execute_process(
+    COMMAND "${CMAKE_COMMAND}" -P "${REPO}/scripts/generate/matrix.cmake"
+    RESULT_VARIABLE rc)
+  if(NOT rc EQUAL 0)
+    set(bad 1)
+  endif()
+endif()
+
 list(LENGTH c_files nc)
 list(LENGTH cmake_files ncm)
 if(bad)

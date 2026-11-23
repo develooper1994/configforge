@@ -1249,7 +1249,8 @@ first user meets. In the order proposed:
   **tested under qemu**, **built only**, **not tried**. A target moves
   up the list as a device or an emulator run becomes available, and a
   test run on hardware is recorded with the commit it ran. Built-only
-  targets are still built in CI so they do not rot.
+  targets are still built in CI so they do not rot. Its per-target list is
+  `docs/targets.txt`.
 * ⬜ **Small embedded systems: everything optional, a minimal build
   that stays minimal.** The library will gain many features (the modes
   above, SWAR and SIMD, gen's languages, every format); each one is a

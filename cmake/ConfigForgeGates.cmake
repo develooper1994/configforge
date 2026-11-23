@@ -123,6 +123,12 @@ function(configforge_add_gates tgt)
       -DPROJECT_VER=${PROJECT_VERSION} -P
       ${CMAKE_SOURCE_DIR}/cmake/gates/GateSbom.cmake)
 
+  add_test(
+    NAME gate.matrix
+    COMMAND
+      ${CMAKE_COMMAND} "-DSRC=${CMAKE_SOURCE_DIR}" "-DBIN=${CMAKE_BINARY_DIR}"
+      -P ${CMAKE_SOURCE_DIR}/cmake/gates/GateMatrix.cmake)
+
   add_test(NAME gate.profiles
            COMMAND ${CMAKE_COMMAND} "-DSRC=${CMAKE_SOURCE_DIR}" -P
                    ${CMAKE_SOURCE_DIR}/cmake/gates/GateProfiles.cmake)

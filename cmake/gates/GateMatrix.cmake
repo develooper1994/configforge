@@ -1,0 +1,39 @@
+cmake_minimum_required(VERSION 3.10)
+
+set(fresh "${BIN}/README.matrix.md")
+execute_process(
+  COMMAND "${CMAKE_COMMAND}" "-DOUT=${fresh}" -P
+          "${SRC}/scripts/generate/matrix.cmake" RESULT_VARIABLE rc)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "matrix gate failed")
+endif()
+
+file(READ "${SRC}/README.md" have)
+file(READ "${fresh}" want)
+string(REPLACE "\r" "" have "${have}")
+string(REPLACE "\r" "" want "${want}")
+if(NOT have STREQUAL want)
+  message("VIOLATION: README.md does not match the build; "
+          "run `cmake -P scripts/generate/matrix.cmake` and commit the result")
+  set(number 1)
+  while(TRUE)
+    foreach(side have want)
+      string(REGEX MATCH "^[^\n]*\n?" ${side}_line "${${side}}")
+      string(LENGTH "${${side}_line}" length)
+      string(SUBSTRING "${${side}}" ${length} -1 ${side})
+    endforeach()
+    if(NOT have_line STREQUAL want_line)
+      string(REGEX REPLACE "\n$" "" have_line "${have_line}")
+      string(REGEX REPLACE "\n$" "" want_line "${want_line}")
+      message(
+        "README.md:${number}: has \"${have_line}\", the build makes \"${want_line}\""
+      )
+      break()
+    endif()
+    math(EXPR number "${number} + 1")
+  endwhile()
+  message(FATAL_ERROR "matrix gate failed")
+endif()
+file(STRINGS "${SRC}/docs/targets.txt" targets REGEX "^[^# \t]")
+list(LENGTH targets count)
+message("matrix gate: clean (5 blocks, ${count} targets)")

@@ -3910,8 +3910,8 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
     `CF_PROFILE_OPTIONS` once, in order, with its type; (3)
     `default.cmake` equals each option's own default, scanned from the
     `option(<NAME> "..." ON|OFF)` and `set(<NAME> <v> CACHE ...)`
-    declarations in `cmake/*.cmake`, `lib/serialize/CMakeLists.txt`,
-    `lib/lanes/CMakeLists.txt` and `lib/lanes/*.cmake` (the scan is
+    declarations in `cmake/*.cmake`, `CMakeLists.txt`,
+    `lib/*/CMakeLists.txt` and `lib/*/*.cmake` (the scan is
     `cf_option_defaults()` in `ConfigForgeProfile.cmake`, which A-12
     uses too; it reads the whole file, since nearly every declaration
     in ConfigForgeOptions.cmake is spread over several lines, and takes
@@ -4580,7 +4580,25 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   Roadmap's item "A feature matrix generated from the build" is marked
   done with the commit; the item "Arm supported well" keeps its text and
   gains one sentence: "Its per-target list is `docs/targets.txt`."
+* **Organiser's answers, 2026-11-22**:
+  * Until CI supplies the first `docs/sizes.txt`, show `-` in the parts
+    table's size cells and one line saying CI's `sizes` job measures them.
+    The manager commits the runner's artifact and regenerates the README.
+  * The fixtures of step 1 have six fields (five `|`), as the format says:
+    `x|bogus||||`; `x|runner|nosuchjob|||`; `x|hardware|board|2026-13-01|abcdef1|`
+    is accepted (the regex checks the date's shape, not the calendar) while
+    `x|hardware|board|11-12-2026|abcdef1|` is refused; `x|none|gates|||`;
+    `x|runner||||` is refused and `x|runner||||run by verify` reads.
+
 * **notes**:
+  * 2026-11-22: Steps 1–3 are in the worktree. Step 4 requires a first
+    generation on the real README, including the parts block, but that
+    block needs the architecture and the base and all measurements from
+    `docs/sizes.txt`, first written in step 5. The first generation
+    needs an order or output decision from the organiser.
+    `gate.profiles` fails in all three MSVC configurations while the
+    parts markers are empty. With the listed minimal flags,
+    `unit.test_compose` also fails on a truncated diagnostic.
 
 ---
 

@@ -1,0 +1,6 @@
+# Evidence for the target fixtures.
+x86-64 Linux|runner|gates|||
+arm64 Linux|qemu|matrix|||emulated
+armv7 Linux|built|matrix|||
+arm64 macOS|hardware|board|2026-11-22|abcdef1|
+Cortex-M|none||||planned

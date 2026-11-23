@@ -4,7 +4,8 @@
 #
 #   cmake -P scripts/prestage.cmake            [-DWORK=dir] [-DANALYZE=OFF]
 #
-# 1. format and lint what changed (scripts/format.cmake);
+# 1. format and lint what changed and regenerate the README feature matrix
+#    (scripts/format.cmake, gate.matrix);
 # 2. regenerate docs/API.md, whose links name source lines, so any edit
 #    to a header or a source moves them (gate.apiref);
 # 3. the text gate: no NUL and no CR (gate.text);

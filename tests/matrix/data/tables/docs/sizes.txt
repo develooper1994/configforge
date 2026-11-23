@@ -1,0 +1,5 @@
+tool|test-arch|GNU 15.2.0|MinSizeRel|abcdef0|2026-11-22
+base|default|3550
+off|CF_Z|150
+all|parts|3400
+profile|small|1250

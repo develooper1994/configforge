@@ -201,6 +201,26 @@ it before every release, are D-56.
 Every line marked done is covered by the suite and by the gates below;
 `cmake -P scripts/verify.cmake` is what says so.
 
+### Targets
+
+Where the library has run, and how it was shown. A target moves up as a
+device or an emulator run becomes available (`docs/targets.txt`).
+
+<!-- matrix:begin targets -->
+| Target | Shown by | Where | Note |
+| ------ | -------- | ----- | ---- |
+| x86-64 Linux, glibc | CI runner | job `gates` | - |
+| x86-64 Linux, musl (Alpine) | CI runner | job `alpine` | - |
+| x86-64 Windows, MSVC | CI runner | job `matrix` | - |
+| arm64 macOS, Apple clang | CI runner | job `matrix` | - |
+| x86-64 Linux, tcc and pcc | CI runner | job `compilers` | - |
+| wasm32-wasi (Node's WASI) | local run | - | run by scripts/verify.cmake -DEXTRA=wasm, not by CI |
+| armv7 Linux | not tried | - | planned (docs/Roadmap.md) |
+| Cortex-M | not tried | - | planned (docs/Roadmap.md) |
+| s390x Linux (big-endian) | not tried | - | planned (docs/Roadmap.md) |
+| riscv64 Linux | not tried | - | planned (docs/Roadmap.md) |
+<!-- matrix:end targets -->
+
 ## Build
 
 ```sh
@@ -218,15 +238,6 @@ cmake -DMODE=quick -P scripts/verify.cmake       # the default preset only
 Written in CMake rather than a shell script so they run wherever the
 build does. `scripts/README.md` lists the options.
 
-**Profiles** group build options. The seven profiles are `full`, `default`,
-`minimal`, `misra`, `embedded-json`, `embedded-cbor` and `server`. Select one
-with `-DCF_PROFILE=<name>`. Use `-DCF_PROFILE_FILE=<path>` for your own
-profile, with one `set(...)` line per option as in `cmake/profiles/`. An explicit `-D`
-option wins. A parent project's normal variable also takes precedence
-when it adds ConfigForge with `add_subdirectory`. A build directory
-keeps its profile and cached options. Use a fresh build directory or
-delete its `CMakeCache.txt` to change profiles.
-
 | Preset | What it is for |
 | ------ | -------------- |
 | `default` | C89 conformance, full warning set |
@@ -243,15 +254,82 @@ delete its `CMakeCache.txt` to change profiles.
 | `embedded-json` | JSON alone, for a device: no files, no reals, one thread, nesting 16. |
 | `embedded-cbor` | CBOR alone, for a device: no files, no reals, one thread, nesting 16. |
 
-`minimal` also drops every function and object no program reaches (`CF_GC_SECTIONS`): a third of a small program's size. `CF_LTO` is link-time optimisation, off by default, since the stack budget cannot measure its frames. `portable` and `minimal` are optimised on purpose: inlining merges frames, so a stack
+`minimal` also drops every function and object no program reaches (`CF_GC_SECTIONS`). `CF_LTO` is link-time optimisation, off by default, since the stack budget cannot measure its frames. `portable` and `minimal` are optimised on purpose: inlining merges frames, so a stack
 frame that fits in a Debug build can break the budget in a release one.
 
-Options: `CF_WITH_INI` `CF_WITH_JSON` `CF_WITH_TOML` `CF_WITH_PROPERTIES` `CF_WITH_CBOR` `CF_WITH_TLV` `CF_WITH_COMPOSE` `CF_WITH_XML` `CF_WITH_SQLITE`
-`CF_WITH_REAL` `CF_WITH_DIR` `CF_WITH_DOTENV` `CF_WITH_EMIT` `CF_WITH_IMAGE`
-`CF_WITH_REPORT` `CF_WITH_CXX` `CF_WITH_YAML` `CF_PLATFORM` `CF_FORCE_PORTABLE`
-`CF_PROFILE` `CF_PROFILE_FILE` `CF_C89_ONLY`
-`CF_SINGLE_THREADED` `CF_HARDEN` `CF_RUST` `CF_BUILD_TOOLS` `CF_GC_SECTIONS` `CF_LTO`, and the limits
-below.
+### Profiles
+
+A profile is a named set of options (`-DCF_PROFILE=<name>`); one given on
+the command line still wins, and a build directory keeps the profile it
+was configured with. `cmake/profiles/` has the files, and
+`-DCF_PROFILE_FILE=<file>` reads one of your own.
+
+<!-- matrix:begin profiles -->
+| Profile | Library code | What it is for |
+| ------- | -----------: | -------------- |
+| `full` | - | Every part that builds on a host with expat and sqlite3. |
+| `default` | - | What a plain build gives: the formats that need nothing, reals, threads. |
+| `minimal` | - | Codecs only, short limits, a 1 KB stack budget, unreached code dropped. |
+| `misra` | - | The build a MISRA C checker runs against: minimal, one thread, no reals. |
+| `embedded-json` | - | JSON alone, for a device: no files, no reals, one thread, nesting 16. |
+| `embedded-cbor` | - | CBOR alone, for a device: no files, no reals, one thread, nesting 16. |
+| `server` | - | Every format, XML too, and every source but SQLite and preferences. |
+<!-- matrix:end profiles -->
+
+What each profile sets:
+
+<!-- matrix:begin features -->
+| Option | full | default | minimal | misra | embedded-json | embedded-cbor | server |
+| ------ | ---- | ------- | ------- | ----- | ------------- | ------------- | ------ |
+| `CF_WITH_INI` | on | on | on | on | off | off | on |
+| `CF_WITH_JSON` | on | on | on | on | on | off | on |
+| `CF_WITH_TOML` | on | on | on | on | off | off | on |
+| `CF_WITH_PROPERTIES` | on | on | on | on | off | off | on |
+| `CF_WITH_CBOR` | on | on | on | on | off | on | on |
+| `CF_WITH_TLV` | on | on | on | on | off | off | on |
+| `CF_WITH_COMPOSE` | on | on | off | off | off | off | on |
+| `CF_WITH_XML` | on | off | off | off | off | off | on |
+| `CF_WITH_YAML` | on | on | on | on | off | off | on |
+| `CF_WITH_SQLITE` | on | off | off | off | off | off | off |
+| `CF_WITH_PREFERENCES` | off | off | off | off | off | off | off |
+| `CF_WITH_DIR` | on | on | off | off | off | off | on |
+| `CF_WITH_DOTENV` | on | on | off | off | off | off | on |
+| `CF_WITH_EMIT` | on | on | off | off | off | off | on |
+| `CF_WITH_IMAGE` | on | on | off | off | off | off | on |
+| `CF_WITH_REPORT` | on | on | off | off | off | off | on |
+| `CF_WITH_REAL` | on | on | off | off | off | off | on |
+| `CF_WITH_CXX` | on | on | on | off | off | off | on |
+| `CF_YAML_BACKEND` | auto | auto | builtin | builtin | auto | auto | auto |
+| `CF_PLATFORM` | auto | auto | auto | auto | auto | auto | auto |
+| `CF_SINGLE_THREADED` | off | off | off | on | on | on | off |
+| `CF_FORCE_PORTABLE` | off | off | off | on | on | on | off |
+| `CF_GC_SECTIONS` | off | off | on | on | on | on | off |
+| `CF_LTO` | off | off | off | off | off | off | off |
+| `CF_C89_ONLY` | off | off | on | on | on | on | off |
+| `CF_LANES_BACKENDS` | all | all | c89 | scalar | c89 | c89 | all |
+| `CF_KEY_MAX` | 256 | 256 | 64 | 64 | 64 | 64 | 256 |
+| `CF_MESSAGE_MAX` | 256 | 256 | 128 | 128 | 128 | 128 | 256 |
+| `CF_PATH_MAX` | 512 | 512 | 256 | 256 | 256 | 256 | 512 |
+| `CF_MAX_DEPTH` | 32 | 32 | 32 | 32 | 16 | 16 | 32 |
+| `CF_STACK_BUDGET` | 2048 | 2048 | 1024 | 1024 | 1024 | 1024 | 2048 |
+<!-- matrix:end features -->
+
+<!-- matrix:begin options -->
+Options: `CF_ANALYZER` `CF_BUILD_BENCH` `CF_BUILD_EXAMPLES`
+`CF_BUILD_TESTING` `CF_BUILD_TOOLS` `CF_C89_ONLY` `CF_CLANG_TIDY`
+`CF_COVERAGE` `CF_CPPCHECK` `CF_ENABLE_GATES` `CF_FORCE_PORTABLE`
+`CF_FUZZ` `CF_FUZZ_SANITIZE` `CF_GC_SECTIONS` `CF_HARDEN`
+`CF_LANES_BACKENDS` `CF_LTO` `CF_PLATFORM` `CF_PROFILE`
+`CF_PROFILE_FILE` `CF_RUST` `CF_SANITIZE` `CF_SANITIZE_MEMORY`
+`CF_SANITIZE_STRICT` `CF_SANITIZE_THREAD` `CF_SINGLE_THREADED`
+`CF_WAKE_KQUEUE` `CF_WERROR` `CF_WITH_CBOR` `CF_WITH_COMPOSE`
+`CF_WITH_CXX` `CF_WITH_DIR` `CF_WITH_DOTENV` `CF_WITH_EMIT`
+`CF_WITH_IMAGE` `CF_WITH_INI` `CF_WITH_JSON` `CF_WITH_PREFERENCES`
+`CF_WITH_PROPERTIES` `CF_WITH_REAL` `CF_WITH_REPORT` `CF_WITH_SQLITE`
+`CF_WITH_TLV` `CF_WITH_TOML` `CF_WITH_XML` `CF_WITH_YAML`
+`CF_YAML_BACKEND` `CF_YAML_INCLUDE_DIR` `CF_YAML_LIBRARY`.
+The limits are in the table below.
+<!-- matrix:end options -->
 
 ### Leaving parts out
 
@@ -261,19 +339,27 @@ any build - and each one refuses by name instead of doing nothing, so a
 drop-in directory a build cannot read never looks like an empty one
 (D-38).
 
-| Option | What goes | Code it saves (x86-64, `-Os`) |
-| ------ | --------- | ----------------------------- |
-| `CF_WITH_TOML` | the TOML codec | 8.3 KB |
-| `CF_WITH_EMIT` | `cf_emit` and every encoder | 6.7 KB |
-| `CF_WITH_REAL` | floating point and its exact formatter | 5.9 KB |
-| `CF_WITH_REPORT` | the provenance report, Report Replay, the JSON Schema writer - and Doctor | 5.5 KB |
-| `CF_WITH_IMAGE` | the binary snapshot image | 4.1 KB |
-| `CF_WITH_INI` | the INI codec | 2.9 KB |
-| `CF_WITH_DOTENV` | the `.env` source | 1.3 KB |
-| `CF_WITH_DIR` | the drop-in directory source | 1.1 KB |
+<!-- matrix:begin parts -->
+| Option | What goes | Code it saves |
+| ------ | --------- | ------------------------------: |
+| `CF_WITH_CBOR` | the CBOR codec | - |
+| `CF_WITH_DIR` | the drop-in directory source | - |
+| `CF_WITH_DOTENV` | the .env source | - |
+| `CF_WITH_EMIT` | cf_emit and every encoder | - |
+| `CF_WITH_IMAGE` | the binary snapshot image | - |
+| `CF_WITH_INI` | the INI codec | - |
+| `CF_WITH_JSON` | the JSON and JSON5 codec, which Report Replay and Doctor read | - |
+| `CF_WITH_PROPERTIES` | the Java .properties reader | - |
+| `CF_WITH_REAL` | floating point and its exact formatter | - |
+| `CF_WITH_REPORT` | the provenance report, Report Replay, the JSON Schema writer - and Doctor | - |
+| `CF_WITH_TLV` | the TLV codecs made from a layout | - |
+| `CF_WITH_TOML` | the TOML codec | - |
+| `CF_WITH_YAML` | the YAML codec | - |
 
-All of them together take the library from 92 KB to 58 KB. A static
-link with `--gc-sections` already drops functions a program never
+CI's `sizes` job measures these figures.
+<!-- matrix:end parts -->
+
+A static link with `--gc-sections` already drops functions a program never
 calls; the options are for what it cannot drop - a shared library, the
 amalgamation, and code reached through a table, as every codec is.
 `cf_has_feature()` and every provenance report say which parts a build
@@ -416,6 +502,7 @@ a claim that decays.
 | version | `cf_version.h` against project(), the vcpkg, Cargo and Python manifests, and the CHANGELOG's newest section |
 | abi | the exports match `cmake/configforge.symbols` and `cmake/configforge.internal.symbols` |
 | apiref | `docs/API.md` is what `scripts/generate/apiref.cmake` makes from the headers |
+| matrix | the README's feature tables match the build, recorded sizes and target evidence |
 | text | no NUL and no CR in a tracked text file |
 | dependencies | CMake looks for nothing `docs/Dependencies.md` does not name |
 | sbom | the SPDX bill of materials is generated from the configured options |

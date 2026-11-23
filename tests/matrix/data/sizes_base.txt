@@ -1,0 +1,3 @@
+tool|x86-64|GNU 15.2.0|MinSizeRel|abc1234|2026-11-22
+base|default|200
+off|CF_WITH_INI|100
