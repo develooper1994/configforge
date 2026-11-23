@@ -1374,12 +1374,10 @@ from parts that exist:
   What is left: nested shapes and contract-aware secret digests. With a contract,
   units compared as values (`30s` is `30000ms`, with 1.10.0's durations
   and sizes), which plain semantic diffs (dyff, graphtage) do not do.
-* ⬜ **Git shows configuration changes by value.** A `textconv` driver
-  (`configforge codec dump` written for it, T-4) and a `difftool`
-  entry, set up by one `.gitattributes` line, so `git diff` and
-  `git log -p` on a configuration file show values that changed rather
-  than lines; the history of a configuration is then git's own, and no
-  store is needed.
+* ⬜ **Git shows configuration changes by value.** N-3 adds a
+  [repository-local Git difftool recipe](Tools.md#git-difftool-for-json)
+  for modified flat JSON mappings. It lists changed keys without values.
+  The `textconv` driver for `git diff` and `git log -p` remains open.
 * ⬜ **A pull request that changes configuration, reviewed without a
   report.** What exists: `actions/doctor` with `base` and
   `comment: true` diffs the base branch's report against the head's and

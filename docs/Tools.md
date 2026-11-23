@@ -86,6 +86,39 @@ Exit 0 means equal (empty output), 1 means changes, and 2 means a usage,
 input or output error. An input error identifies only the side that
 failed and leaves stdout empty. Use `configforge diff --help` for usage.
 
+### Git difftool for JSON
+
+Use this recipe for modified regular files containing flat JSON mappings
+of scalars. With `configforge` on `PATH`, run `git config --local --edit`
+and add this stanza to the repository's local Git config.
+
+```gitconfig
+[difftool "configforge-json"]
+  cmd = "configforge diff --as-left json --as-right json -- \"$LOCAL\" \"$REMOTE\"; rc=$?; test \"$rc\" -eq 1 || exit \"$rc\""
+```
+
+Select the tool for this invocation and pass the path of the file you
+want to review. `--diff-filter=M` selects modifications.
+
+```sh
+git difftool --no-prompt --trust-exit-code --tool=configforge-json --diff-filter=M -- "app settings.json"
+```
+
+The recipe quotes both paths and explicitly selects JSON because Git
+can supply temporary filenames. It maps the comparison's change status
+of 1 to success and passes through other statuses. Git exits nonzero
+on a tool error.
+
+Changing just the value of `port` prints its key.
+
+```text
+changed	$["port"]
+```
+
+Changing `{"port":8000,"tag":"app"}` to `{"tag":"app","port":8000}`
+only reorders keys and gives empty output.
+See the [Git difftool manual](https://git-scm.com/docs/git-difftool).
+
 ## configforge codec
 
 The serialization library's own program (`configforge-codec`), linked to

@@ -28,6 +28,17 @@ if(have_doctor)
 endif()
 
 if(TARGET configforge_front AND CF_WITH_JSON)
+  find_package(Git QUIET)
+  if(Git_FOUND)
+    add_test(
+      NAME front.git_difftool
+      COMMAND
+        ${CMAKE_COMMAND} "-DGIT_EXECUTABLE=${GIT_EXECUTABLE}"
+        "-DFRONT_DIR=$<TARGET_FILE_DIR:configforge_front>"
+        "-DTOOLS_PAGE=${PROJECT_SOURCE_DIR}/docs/Tools.md"
+        "-DWORK=${CMAKE_CURRENT_BINARY_DIR}/git_difftool" -P
+        ${CMAKE_CURRENT_SOURCE_DIR}/git_difftool.cmake)
+  endif()
   add_test(
     NAME front.diff
     COMMAND

@@ -346,7 +346,13 @@ equal cross-format fixture therefore pairs them with JSON strings.
   contract above; the documented Git command needs a different wrapper on
   Linux and Windows; a value appears in either stream. Report the command and
   exit code, with fixture values omitted from failure evidence.
-* **notes**: (empty)
+* **Organiser's answers**:
+  * Use the default preset with the Release override in the temporary Ninja
+    build for the red and green checks, then verify Release before Debug.
+    The root handoff concerns other worktrees and stays with the manager.
+* **notes**: On Windows MSVC/Ninja Release, `front.git_difftool` failed
+  before the recipe with the expected missing-recipe message (CTest exit 8).
+  After the recipe, all three invocations met their assertions (CTest exit 0).
 
 ## N-4 - deliver one root table to a YAML document sink
 
