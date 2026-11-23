@@ -969,8 +969,10 @@ first user meets. In the order proposed:
   vector path is tested against it on the same inputs, and the fuzzers
   run both. Not before the measurement says so. Measured (P-1): the
   benchmark reads documents of 1, 16 and 256 MiB and `docs/Performance.md`
-  has the baseline; the profile, which says where the time goes, is still to
-  be taken on Linux.
+  has the baseline. P-4 measured allocation on Linux and Windows. Faster
+  arena wiping cut a 16 MiB JSON builder load from 1.16 s to 1.04 s on
+  Linux. All three sizing trials exceeded the memory limit for acceptance.
+  [Allocation measurements](Performance.md#allocation)
 
 ### Suggestions of 2026-11-17 (not yet cards)
 

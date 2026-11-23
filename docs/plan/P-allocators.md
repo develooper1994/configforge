@@ -306,7 +306,170 @@ claim about ConfigForge's numbers: no benchmark was run to write it.
     win on large documents and about 3% on tiny ones; `cf_arena_alloc`
     about 1%. The cost is `cf_arena_free`, which is `cf_arena_wipe`:
     `cf_wipe` stores one byte at a time through a volatile pointer.
-    Windows (MSVC) figures: the deputy's run, to be added here.
+    Windows (MSVC) figures: not taken (the deputy's budget ran out on
+    2026-11-23 before it reached P-4); the card's worker adds them.
+  * **Candidate (0), kept, 2026-11-23** (commit on `work/P-4`): `cf_wipe`
+    is `memset` through a volatile function pointer. Same VM and flags,
+    the same driver linked against main (8ef51e9) and against the
+    change; callgrind instructions of one load: json `mixed-1`
+    569,665,696 to 430,337,353 (-24.5%); cbor `mixed-1` 673,817,626 to
+    494,910,137 (-26.5%); json `many-tiny-1` 1,820,347,853 to
+    513,607,893 (-71.8%). Wall time, two runs each (`/usr/bin/time`, the
+    VM's 3 GB make the 16 MiB loads noisy): `many-tiny-16` json 1.87,
+    1.66 s to 0.47, 0.48 s; yaml 2.39, 2.11 to 0.78, 0.71; cbor 2.06,
+    2.06 to 0.54, 0.66; ini 1.82, 1.80 to 0.49, 0.53; `mixed-16` json
+    1.29, 1.16 to 1.09, 1.04; yaml 1.37, 1.16 to 1.07, 1.07; ini 0.98 to
+    0.89 (its first "before" run, 2.43, was the cache warming). The wipe
+    tests (`ctest -R "wipe|alloc|arena|secret"`, 9 tests) pass. Left for
+    the card: step 3's abandoned-bytes figure in `bench/bench.c` and its
+    builder path, then candidates (2), (1) and (3), measured against this
+    commit as the new "before".
+  * **Step 3 on Windows, 2026-11-23.**
+    Windows x64, Intel Core i7-10750H, MSVC 19.52.37029, Ninja Release
+    (`/O2`), built-in YAML. CMake could not find Expat. The library is
+    `d32708a`. Run `cf_bench allocation` with `CF_BUILD_BENCH=ON`.
+    Each row totals one pass over the generated input. Each tiny document
+    gets its own builder and configuration. The time is the fastest of three
+    passes, including release and excluding input generation. Bytes asked
+    and arena slack are sums over loads. Slack counts unused block capacity.
+    Superseded key-space arrays still count as used.
+
+    | Format | Document | MiB | Loads | Allocator calls | Bytes asked | Capacity minus used (bytes) | Best of 3 (s) |
+    | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+    | json | mixed | 1 | 1 | 812 | 29266232 | 18056 | 0.066 |
+    | json | many-tiny | 1 | 21907 | 153349 | 499129088 | 187458504 | 0.047 |
+    | json | mixed | 16 | 1 | 12729 | 464762944 | 72600 | 1.338 |
+    | json | many-tiny | 16 | 350322 | 2452254 | 7981736448 | 2997693496 | 1.293 |
+    | yaml | mixed | 1 | 1 | 752 | 17171408 | 13544 | 0.072 |
+    | yaml | many-tiny | 1 | 25736 | 180152 | 586369024 | 219035856 | 0.078 |
+    | yaml | mixed | 16 | 1 | 11790 | 444904736 | 56032 | 1.600 |
+    | yaml | many-tiny | 16 | 411573 | 2881011 | 9377279232 | 3502811688 | 1.636 |
+    | toml | mixed | 1 | 1 | 826 | 26511944 | 40960 | 0.066 |
+    | toml | many-tiny | 1 | 24465 | 171255 | 557410560 | 153104800 | 0.053 |
+    | toml | mixed | 16 | 1 | 12521 | 429669712 | 113384 | 1.563 |
+    | toml | many-tiny | 16 | 391185 | 2738295 | 8912759040 | 2448053152 | 0.718 |
+    | cbor | mixed | 1 | 1 | 1208 | 38431824 | 26272 | 0.062 |
+    | cbor | many-tiny | 1 | 26061 | 182427 | 593773824 | 222786232 | 0.038 |
+    | cbor | mixed | 16 | 1 | 19418 | 601566920 | 143920 | 1.200 |
+    | cbor | many-tiny | 16 | 416751 | 2917257 | 9495254784 | 3562631728 | 0.600 |
+    | ini | mixed | 1 | 1 | 725 | 26611648 | 12952 | 0.038 |
+    | ini | many-tiny | 1 | 25655 | 179585 | 584523520 | 219504904 | 0.036 |
+    | ini | mixed | 16 | 1 | 11362 | 423135768 | 56824 | 0.736 |
+    | ini | many-tiny | 16 | 410326 | 2872282 | 9348867584 | 3510741560 | 0.812 |
+
+  * **Candidate (2) awaits a design decision.** `cf_build(alloc)` creates
+    the arena and allocates the builder and its definitions in it before
+    the caller supplies a document length or file path. A one-shot hint
+    on the next refill would leave the first block as allocated. Sizing
+    the actual first block requires a different builder construction or
+    ownership scheme. Which behaviour should the pinning test require?
+    Candidates (1) and (3) follow (2) and have no Windows trial yet.
+  * **Candidate (2), Windows trial, reverted.** MSVC x64 Release, Ninja,
+    same documents and counting allocator as step 3. The baseline was
+    rerun at b871526 (d3f58de plus the answer). Triplets were timed before
+    a separate untimed pass tracking the sum of live requested bytes at
+    each allocation and release. Peak is per configuration, excluding
+    allocator overhead. Each pair is baseline / trial; a single number
+    means both were equal. The original step 3 timings remain above.
+
+    | Format, case, MiB | Calls | Bytes asked | Slack (bytes) | Peak (bytes) | Best of 3 (s) |
+    | --- | ---: | ---: | ---: | ---: | ---: |
+    | json mixed 1 | 812 | 29266232 | 18056 | 29266184 | 0.058 / 0.052 |
+    | json many-tiny 1 | 153349 / 109535 | 499129088 / 722054720 | 187458504 / 411786184 | 22784 / 32960 | 0.043 / 0.036 |
+    | json mixed 16 | 12729 | 464762944 | 72600 | 464762896 | 1.062 / 0.872 |
+    | json many-tiny 16 | 2452254 / 1751610 | 7981736448 / 11546613120 | 2997693496 / 6584990776 | 22784 / 32960 | 0.587 / 0.542 |
+    | yaml mixed 1 | 752 | 17171408 | 13544 | 17171360 | 0.061 / 0.047 |
+    | yaml many-tiny 1 | 180152 / 128680 | 586369024 / 848258560 | 219035856 / 482572496 | 22784 / 32960 | 0.068 / 0.049 |
+    | yaml mixed 16 | 11790 | 444904736 | 56032 | 444904688 | 0.997 / 0.918 |
+    | yaml many-tiny 16 | 2881011 / 2057865 | 9377279232 / 13565446080 | 3502811688 / 7717319208 | 22784 / 32960 | 1.247 / 0.925 |
+    | toml mixed 1 | 826 | 26511944 | 40960 | 26511896 | 0.078 / 0.060 |
+    | toml many-tiny 1 | 171255 / 122325 | 557410560 / 806366400 | 153104800 / 403626400 | 22784 / 32960 | 0.064 / 0.047 |
+    | toml mixed 16 | 12521 | 429669712 | 113384 | 429669664 | 1.354 / 1.061 |
+    | toml many-tiny 16 | 2738295 / 1955925 | 8912759040 / 12893457600 | 2448053152 / 6453787552 | 22784 / 32960 | 0.803 / 0.757 |
+    | cbor mixed 1 | 1208 | 38431824 | 26272 | 38431776 | 0.068 / 0.073 |
+    | cbor many-tiny 1 | 182427 / 130305 | 593773824 / 858970560 | 222786232 / 489650872 | 22784 / 32960 | 0.041 / 0.043 |
+    | cbor mixed 16 | 19418 | 601566920 | 143920 | 601566872 | 1.263 / 1.198 |
+    | cbor many-tiny 16 | 2917257 / 2083755 | 9495254784 / 13736112960 | 3562631728 / 7830161968 | 22784 / 32960 | 0.579 / 1.693 |
+    | ini mixed 1 | 725 | 26611648 | 12952 | 26611600 | 0.043 / 0.091 |
+    | ini many-tiny 1 | 179585 / 128275 | 584523520 / 845588800 | 219504904 / 482212104 | 22784 / 32960 | 0.042 / 0.110 |
+    | ini mixed 16 | 11362 | 423135768 | 56824 | 423135720 | 0.803 / 1.774 |
+    | ini many-tiny 16 | 2872282 / 2051630 | 9348867584 / 13524344960 | 3510741560 / 7712479800 | 22784 / 32960 | 0.622 / 1.722 |
+
+    A 48-byte JSON pin failed on all three runs. Before the change,
+    the allocator trace showed an arena header (48 bytes) and two
+    4,128-byte requests already in `cf_build`. The original two-block
+    total and second-block size checks both failed. A fixture counting
+    from the point where the length becomes known also failed before
+    the change. With the one-shot hint, the large-document checks passed;
+    the tiny fixture expected three further calls (one hinted block, a
+    scratch arena and a scratch block). This exact count failed. The
+    benchmark observed five calls per tiny load in total, down from seven.
+    The 24 KiB floor raised every tiny load's peak by 10,176 bytes
+    (+44.7%). This independently rules out keeping the change.
+    Stopped at the third failed run; (1) and (3) have no trials.
+  * **Windows trials (1) and (3), 2026-11-23.** Each ran alone against
+    `a9848d7` in the same x64 MSVC Release build as step 3. The timed
+    builder benchmark used its counting allocator, best of three. A
+    fourth pass tracked live requested bytes per configuration and
+    checked that the live count returned to zero on release. Peak
+    excludes allocator overhead. Slack is final arena capacity minus
+    used. Calls, bytes asked and slack are totals over all loads in a row.
+    XML was unavailable (Expat not found).
+
+    **(1) Reverted.** The first block kept its original size. Each refill
+    took the larger of the request and twice the previous block size,
+    capping the doubled size at 256 KiB. The smallest allowed cap limits
+    unused tails. Even this cap raised the tiny-document peak from
+    22,784 to 28,864 bytes before the cap was reached, so increasing it
+    cannot fix that regression. `unit.test_alloc` failed on
+    “4 MiB in at most 22 refills” (CTest 8), then passed (0).
+
+    **(3) Reverted.** The trial kept the line estimate when the number
+    of equals signs matched the estimated nonzero key count. Otherwise
+    it reserved from the input length using the existing bounds of one
+    candidate per four bytes and at most 2^20 candidates. The sort
+    buffers already take the exact candidate count at resolution.
+    `unit.test_keyspace` failed on “compact document fits its initial
+    reservation” (CTest 8), then passed alongside `unit.test_predict`
+    (0). Peak fell by 110,990,080 bytes on 16 MiB CBOR, but nearly
+    doubled on 1 MiB YAML. No mixed 16 MiB load was faster.
+
+    Each cell lists baseline / (1) / (3). Seconds include release.
+
+    | Format, case, MiB | Calls | Bytes asked | Slack (bytes) | Peak (bytes) | Best of 3 (s) |
+    | --- | ---: | ---: | ---: | ---: | ---: |
+    | json mixed 1 | 812 / 29 / 807 | 29266232 / 30164824 / 34111128 | 18056 / 941704 / 13960 | 29266184 / 30164776 / 34111080 | 0.045 / 0.053 / 0.059 |
+    | json many-tiny 1 | 153349 / 109535 / 153349 | 499129088 / 632323648 / 499129088 | 187458504 / 322055112 / 187458504 | 22784 / 28864 / 22784 | 0.037 / 0.040 / 0.038 |
+    | json mixed 16 | 12729 / 217 / 12725 | 464762944 / 465757248 / 444117472 | 72600 / 1467288 / 68504 | 464762896 / 465757200 / 444117424 | 0.891 / 0.949 / 1.015 |
+    | json many-tiny 16 | 2452254 / 1751610 / 2452254 | 7981736448 / 10111694208 / 7981736448 | 2997693496 / 5150071864 / 2997693496 | 22784 / 28864 / 22784 | 0.607 / 0.650 / 0.637 |
+    | yaml mixed 1 | 752 / 24 / 752 | 17171408 / 17780944 / 34158608 | 13544 / 646376 / 13544 | 17171360 / 17780896 / 34158560 | 0.047 / 0.056 / 0.059 |
+    | yaml many-tiny 1 | 180152 / 128680 / 180152 | 586369024 / 742843904 / 586369024 | 219035856 / 377157840 / 219035856 | 22784 / 28864 / 22784 | 0.053 / 0.059 / 0.055 |
+    | yaml mixed 16 | 11790 / 198 / 11790 | 444904736 / 445309984 / 444904736 | 56032 / 832224 / 56032 | 444904688 / 445309936 / 444904688 | 0.935 / 1.009 / 1.036 |
+    | yaml many-tiny 16 | 2881011 / 2057865 / 2881011 | 9377279232 / 11879643072 / 9377279232 | 3502811688 / 6031516200 / 3502811688 | 22784 / 28864 / 22784 | 0.985 / 0.976 / 1.026 |
+    | toml mixed 1 | 826 / 38 / 826 | 26511944 / 28173256 / 26511944 | 40960 / 1727488 / 40960 | 26511896 / 28173208 / 26511896 | 0.051 / 0.065 / 0.054 |
+    | toml many-tiny 1 | 171255 / 122325 / 171255 | 557410560 / 706157760 / 557410560 | 153104800 / 303417760 / 153104800 | 22784 / 28864 / 22784 | 0.057 / 0.053 / 0.046 |
+    | toml mixed 16 | 12521 / 237 / 12521 | 429669712 / 431872464 / 429669712 | 113384 / 2709224 / 113384 | 429669664 / 431872416 / 429669664 | 0.999 / 1.162 / 1.047 |
+    | toml many-tiny 16 | 2738295 / 1955925 / 2738295 | 8912759040 / 11291163840 / 8912759040 | 2448053152 / 4851493792 / 2448053152 | 22784 / 28864 / 22784 | 0.788 / 0.768 / 0.758 |
+    | cbor mixed 1 | 1208 / 38 / 1200 | 38431824 / 39591504 / 36939216 | 26272 / 1223392 / 18080 | 38431776 / 39591456 / 36939168 | 0.074 / 0.067 / 0.097 |
+    | cbor many-tiny 1 | 182427 / 130305 / 182427 | 593773824 / 752224704 / 593773824 | 222786232 / 382905016 / 222786232 | 22784 / 28864 / 22784 | 0.049 / 0.043 / 0.065 |
+    | cbor mixed 16 | 19418 / 323 / 19410 | 601566920 / 602223592 / 490576840 | 143920 / 1411632 / 131632 | 601566872 / 602223544 / 490576792 | 1.089 / 1.179 / 1.314 |
+    | cbor many-tiny 16 | 2917257 / 2083755 / 2917257 | 9495254784 / 12029100864 / 9495254784 | 3562631728 / 6123149872 / 3562631728 | 22784 / 28864 / 22784 | 0.707 / 0.730 / 0.904 |
+    | ini mixed 1 | 725 / 24 / 725 | 26611648 / 27332640 / 26611648 | 12952 / 756376 / 12952 | 26611600 / 27332592 / 26611600 | 0.036 / 0.042 / 0.071 |
+    | ini many-tiny 1 | 179585 / 128275 / 179585 | 584523520 / 740505920 / 584523520 | 219504904 / 377129224 / 219504904 | 22784 / 28864 / 22784 | 0.050 / 0.048 / 0.067 |
+    | ini mixed 16 | 11362 / 190 / 11362 | 423135768 / 423468440 / 423135768 | 56824 / 747000 / 56824 | 423135720 / 423468392 / 423135720 | 0.711 / 0.790 / 0.849 |
+    | ini many-tiny 16 | 2872282 / 2051630 / 2872282 | 9348867584 / 11843649664 / 9348867584 | 3510741560 / 6031784504 / 3510741560 | 22784 / 28864 / 22784 | 0.748 / 0.680 / 0.723 |
+  * **Verification after reverting (1) and (3).** All three Windows
+    benchmark runs exited 0. The final MSVC builds exited 0. Release
+    passed 244/247 and Debug 246/249 with `ctest -E "^gate\."`.
+    The three failures in each were the HKCU tests (`unit.test_registry`,
+    `example.policy`, `example.policy_cpp`). The full minimal and misra
+    preset suites passed 177/181 and 140/143 respectively. Both had the
+    known 128-byte diagnostic truncation in `unit.test_yaml` and the
+    applicable HKCU failures. All four CTest runs exited 8. The wipe
+    test passed in each. In the Release archive, `llvm-nm -u` found
+    malloc and free references only in `alloc.c.obj`. The Unix symbol
+    gate, external conformance suites and 60-second libFuzzer runs still
+    need verification outside the MSVC sandbox.
 * **Organiser's answers** (2026-11-23, from the measurement above; each
   is reversible and the maintainer may revisit it):
   * **A candidate (0), first, inside the constraints**: the wipe stays
@@ -328,3 +491,21 @@ claim about ConfigForge's numbers: no benchmark was run to write it.
   * **(c) mimalloc**: a benchmark comparison only, as recommended, and
     only if time allows: malloc+free is under 1% of a large read, so by
     step 4's rule it is closed with these numbers.
+  * **Windows test fixture for (2)**: count from the point the length
+    becomes known. The Windows trace found two blocks already allocated
+    during builder creation. The next-refill policy takes precedence
+    over block numbering.
+  * **Candidate (2) when the length comes after the builder** (the
+    deputy's question, 2026-11-23): `cf_build(alloc)` puts the builder in
+    the arena's first block before any length is known, and that stays
+    so (no signature changes, the builder's creation unchanged). The
+    length sizes the *next* block: when the builder learns the input's
+    length (a document's bytes, or a file source's size), it calls an
+    internal `cf_arena_hint(ar, n)` (`CF_INTERNAL_API`, in `alloc.c`)
+    with n = 8 × length, and the arena's next new block is the larger of
+    the request and n clamped to [24 KiB, `CF_ARENA_HINT_MAX`] (1 MiB
+    until candidate (1) sets its cap, then that cap). A hint is used
+    once. The pinning test: after a builder loads a 48-byte document,
+    the arena has taken at most two blocks from the allocator (today
+    four), and a 1 MiB document's second block is the clamped hint's
+    size. Then measured and kept or reverted by the card's rule.

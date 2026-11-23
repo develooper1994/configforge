@@ -111,6 +111,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Changed
 
+- Arena release wipes each used block region with an optimised `memset`
+  through a volatile function pointer. A Linux JSON builder load used
+  24.5% fewer instructions on a 1 MiB mixed document and 71.8% fewer
+  across 1 MiB of tiny documents (P-4).
 - The README's limits table no longer says `CF_MESSAGE_MAX` bounds a JSON or TOML string (it never did); `docs/Architecture.md` no longer says value interpolation and a second binary format are absent.
 - The README lists a size saving for each measured part, including every
   codec. CI measures these with `scripts/check/sizes.cmake` and GNU

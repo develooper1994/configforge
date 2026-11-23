@@ -10,6 +10,7 @@
  *     ./cf_bench docs [--large] [format ...]
  *                               large documents (P-1, below): MiB/s per
  *                               format at 1 and 16 MiB, and 256 with --large
+ *     ./cf_bench allocation     builder loads of mixed and many-tiny documents
  *     ./cf_bench --emit-docs <dir> [--size 1|16|256] [--only <format>]
  *                               the documents as files, for bench/compare/
  *                               (P-1b), and a line each: name, bytes, FNV-1a
@@ -200,10 +201,12 @@ static int write_file(const char* path, size_t n, size_t width) {
 /* malloc, counting what it was asked for: the memory a load takes from
    the system, abandoned blocks and all (not the arena's own accounting). */
 static size_t asked;
+static size_t calls;
 
 static void* counted_alloc(void* ctx, size_t n) {
     (void)ctx;
     asked += n;
+    ++calls;
     return malloc(n);
 }
 
@@ -1465,7 +1468,7 @@ static void wr_tok(wr* w, const char* key, const char* tok, int isbool) {
     wr_pre(w, key);
     if (w->fmt == F_CBOR) {
         if (isbool) {
-            wr_ch(w, (tok[0] == 't') ? (char)0xF5 : (char)0xF4);
+            wr_ch(w, (char)((tok[0] == 't') ? 0xF5 : 0xF4));
         } else if (is_real_token(tok)) {
             double        v = strtod(tok, NULL);
             unsigned char b[9];
@@ -2298,10 +2301,98 @@ static int run_emit_docs(int argc, char** argv) {
     return 0;
 }
 
+/* Count before cf_build, sample the arena after create, and include the wipe
+   and release in the time. Tiny documents have separate configuration lifetimes. */
+static int allocation_case(int f, int d, size_t mib) {
+    size_t         bytes, docs, i;
+    unsigned char* data = bench_doc(f, d, mib, &bytes);
+    double         best = 0, total_calls = 0, total_asked = 0, total_slack = 0;
+    int            r, rc = 1;
+
+    if (data == NULL) {
+        return 1;
+    }
+    docs = d == D_MANY_TINY ? g_idx_len / 4 : 1;
+    for (r = 0; r < 3; ++r) {
+        size_t  offset = 0;
+        clock_t begin  = clock();
+        double  elapsed;
+        total_calls = total_asked = total_slack = 0;
+        for (i = 0; i < docs; ++i) {
+            size_t          len = bytes;
+            cf_error        err = CF_ERROR_INIT;
+            cf_builder*     b;
+            cf_config*      c;
+            const cf_arena* arena;
+            if (d == D_MANY_TINY) {
+                const unsigned char* p = g_idx + i * 4;
+                len = p[0] | ((size_t)p[1] << 8) | ((size_t)p[2] << 16) |
+                      ((size_t)p[3] << 24);
+            }
+            calls = asked = 0;
+            b             = cf_build(&counting);
+            if (b == NULL ||
+                !cf_builder_document(b, "doc", CF_RANK_USER_FILE,
+                                     (const char*)data + offset, len, fname[f], 0)) {
+                cf_builder_abort(b);
+                goto done;
+            }
+            c = cf_builder_create(b, &err);
+            if (c == NULL || cf_count(c) == 0) {
+                fprintf(stderr, "bench: %s %s: %s\n", fname[f], dname[d], err.message);
+                cf_config_free(c);
+                goto done;
+            }
+            arena = cf_ks_arena(cf_keys(c));
+            total_slack += (double)(cf_arena_capacity(arena) - cf_arena_used(arena));
+            cf_config_free(c);
+            total_calls += (double)calls;
+            total_asked += (double)asked;
+            offset += len;
+        }
+        elapsed = seconds_since(begin);
+        if (r == 0 || elapsed < best) {
+            best = elapsed;
+        }
+    }
+    printf("%s %s %lu %lu %.0f %.0f %.0f %.3f\n", fname[f], dname[d],
+           (unsigned long)mib, (unsigned long)docs, total_calls, total_asked,
+           total_slack, best);
+    rc = 0;
+done:
+    free(data);
+    free(g_idx);
+    g_idx = NULL;
+    return rc;
+}
+
+static int run_allocation(void) {
+    int f;
+    printf(
+        "format case MiB docs calls bytes_asked capacity_minus_used seconds_best3\n");
+    for (f = 0; f < F_COUNT; ++f) {
+        size_t          mib;
+        const cf_codec* codec = cf_codec_by_name(fname[f]);
+        if (codec == NULL || !cf_codec_can_read(codec)) {
+            continue;
+        }
+        for (mib = 1; mib <= 16; mib *= 16) {
+            if (allocation_case(f, D_MIXED, mib) ||
+                allocation_case(f, D_MANY_TINY, mib)) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
 int main(int argc, char** argv) {
     static const size_t dflt[] = {100, 1000, 10000, 20000};
     int                 i;
 
+    if (argc == 2 && strcmp(argv[1], "allocation") == 0) {
+        return run_allocation();
+    }
     if (argc >= 2 && strcmp(argv[1], "docs") == 0) {
         return run_docs(argc, argv);
     }

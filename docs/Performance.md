@@ -19,6 +19,100 @@ Release, or the numbers are the debug build's. The other cases of the
 benchmark (`cf_bench`, `files`, `reload`, `define`, `emit`) measure
 configurations of thousands of keys, and D-76 has their sizes.
 
+## Allocation
+
+### Where a builder load spends time
+
+Ubuntu 26.04.1 VM, GCC 15.2, Release `-O2`. Each mixed 16 MiB document
+went through builder creation, key resolution and release. Before P-4,
+the byte-at-a-time wipe accounted for much of the cost of freeing an arena.
+The percentages below are perf self samples. Asked is the counting
+allocator's total, and the last column estimates superseded candidate
+arrays from their allocation sizes.
+
+| Format | Calls | Asked (MiB) | malloc + free (%) | Arena alloc (%) | Arena free (%) | Superseded arrays (MB, est.) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| JSON | 12,727 | 443 | 0.31 | 0.78 | 9.7 | 156 |
+| YAML | 11,788 | 424 | 0.30 | 0.65 | 15.4 | 101 |
+| TOML | 12,520 | 410 | 0.25 | 0.57 | 10.7 | 72 |
+| CBOR | 17,518 | 566 | 0.38 | 0.68 | 11.4 | 205 |
+| INI | 11,360 | 404 | 0.45 | 1.10 | 11.2 | 100 |
+| XML | 8,047 | 172 | 0.81 | 0.63 | 7.0 | 3 |
+
+**Wipe (0), kept.** Each used block region is zeroed with `memset`
+through a volatile function pointer. The table gives Callgrind
+instructions for 1 MiB and the better of two wall times for 16 MiB.
+
+| Linux builder load | Metric | Before (`8ef51e9`) | After (`d32708a`) |
+| --- | --- | ---: | ---: |
+| JSON mixed, 1 MiB | instructions | 569,665,696 | 430,337,353 |
+| CBOR mixed, 1 MiB | instructions | 673,817,626 | 494,910,137 |
+| JSON many-tiny, 1 MiB | instructions | 1,820,347,853 | 513,607,893 |
+| JSON mixed, 16 MiB | seconds | 1.16 | 1.04 |
+| YAML mixed, 16 MiB | seconds | 1.16 | 1.07 |
+| INI mixed, 16 MiB | seconds | 0.98 | 0.89 |
+| JSON many-tiny, 16 MiB | seconds | 1.66 | 0.47 |
+| YAML many-tiny, 16 MiB | seconds | 2.11 | 0.71 |
+| CBOR many-tiny, 16 MiB | seconds | 2.06 | 0.54 |
+| INI many-tiny, 16 MiB | seconds | 1.80 | 0.49 |
+
+On many-tiny, arena release took 47–73% of perf samples before the
+wipe change. A reusable arena would also need wiping. The profile
+put libc allocation and release below 1% on every mixed 16 MiB load,
+so P-4 closed the mimalloc comparison without running it.
+
+### Windows builder loads after the wipe change
+
+Windows x64, Intel Core i7-10750H, MSVC 19.52.37029, Ninja Release
+(`/O2`), built-in YAML. CMake could not find Expat. The library is
+`d32708a`. Run `cf_bench allocation` with `CF_BUILD_BENCH=ON`.
+Each row totals one pass over the generated input. Each tiny document
+gets its own builder and configuration. The time is the fastest of three
+passes, including release and excluding input generation. Bytes asked
+and arena slack are sums over loads. Slack counts unused block capacity.
+Superseded key-space arrays still count as used.
+
+| Format | Document | MiB | Loads | Allocator calls | Bytes asked | Capacity minus used (bytes) | Best of 3 (s) |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| json | mixed | 1 | 1 | 812 | 29266232 | 18056 | 0.066 |
+| json | many-tiny | 1 | 21907 | 153349 | 499129088 | 187458504 | 0.047 |
+| json | mixed | 16 | 1 | 12729 | 464762944 | 72600 | 1.338 |
+| json | many-tiny | 16 | 350322 | 2452254 | 7981736448 | 2997693496 | 1.293 |
+| yaml | mixed | 1 | 1 | 752 | 17171408 | 13544 | 0.072 |
+| yaml | many-tiny | 1 | 25736 | 180152 | 586369024 | 219035856 | 0.078 |
+| yaml | mixed | 16 | 1 | 11790 | 444904736 | 56032 | 1.600 |
+| yaml | many-tiny | 16 | 411573 | 2881011 | 9377279232 | 3502811688 | 1.636 |
+| toml | mixed | 1 | 1 | 826 | 26511944 | 40960 | 0.066 |
+| toml | many-tiny | 1 | 24465 | 171255 | 557410560 | 153104800 | 0.053 |
+| toml | mixed | 16 | 1 | 12521 | 429669712 | 113384 | 1.563 |
+| toml | many-tiny | 16 | 391185 | 2738295 | 8912759040 | 2448053152 | 0.718 |
+| cbor | mixed | 1 | 1 | 1208 | 38431824 | 26272 | 0.062 |
+| cbor | many-tiny | 1 | 26061 | 182427 | 593773824 | 222786232 | 0.038 |
+| cbor | mixed | 16 | 1 | 19418 | 601566920 | 143920 | 1.200 |
+| cbor | many-tiny | 16 | 416751 | 2917257 | 9495254784 | 3562631728 | 0.600 |
+| ini | mixed | 1 | 1 | 725 | 26611648 | 12952 | 0.038 |
+| ini | many-tiny | 1 | 25655 | 179585 | 584523520 | 219504904 | 0.036 |
+| ini | mixed | 16 | 1 | 11362 | 423135768 | 56824 | 0.736 |
+| ini | many-tiny | 16 | 410326 | 2872282 | 9348867584 | 3510741560 | 0.812 |
+
+### Windows allocation policy trials
+
+All three sizing candidates were reverted. Each row compares a trial
+with its baseline. Times are best of three. Peak is the maximum live requested
+bytes in one configuration, measured separately from timing.
+
+| Candidate | 16 MiB mixed load | Baseline → trial (s) | Peak that ruled it out | Baseline → trial (bytes) |
+| --- | --- | ---: | --- | ---: |
+| (2) Next block sized from input | INI | 0.803 → 1.774 | each tiny document | 22,784 → 32,960 |
+| (1) Doubling blocks, 256 KiB cap | JSON | 0.891 → 0.949 | each tiny document | 22,784 → 28,864 |
+| (3) Candidate capacity from input | CBOR | 1.089 → 1.314 | YAML mixed, 1 MiB | 17,171,360 → 34,158,560 |
+
+On 16 MiB JSON, doubling cut allocator calls from 12,729 to 217 but
+increased unused arena capacity from 72,600 to 1,467,288 bytes. On
+16 MiB CBOR the capacity estimate saved 110,990,080 requested bytes.
+Neither trial sped up any mixed 16 MiB read. The card records all
+five formats, both document sizes and both workloads. [P-4 trial tables](plan/P-allocators.md#p-4---allocation-measured-and-changed-only-where-it-wins)
+
 ## Large documents
 
 A format library is also handed megabytes: a JSON export, a CBOR dump.

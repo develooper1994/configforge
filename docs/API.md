@@ -958,7 +958,7 @@ times and reporting it as three results.
 CF_API void cf_arena_free(cf_arena* ar);
 ```
 
-Implementation: [`cf_arena_free` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L206).
+Implementation: [`cf_arena_free` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L209).
 
 Release the arena, zeroing every byte it handed out first. A
 configuration's arena holds its values - passwords and tokens among
@@ -971,7 +971,7 @@ released: the buffer is the caller's.
 CF_API void cf_arena_wipe(cf_arena* ar);
 ```
 
-Implementation: [`cf_arena_wipe` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L195).
+Implementation: [`cf_arena_wipe` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L198).
 
 Zero every byte the arena has handed out, without releasing it. For a
 caller who owns the arena - cf_build_in - and is done with what lived
@@ -992,13 +992,13 @@ CF_API void* cf_arena_alloc(cf_arena* ar, size_t n);
 CF_API void* cf_arena_calloc(cf_arena* ar, size_t n);
 ```
 
-Implementation: [`cf_arena_alloc` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L229), [`cf_arena_calloc` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L266).
+Implementation: [`cf_arena_alloc` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L232), [`cf_arena_calloc` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L269).
 
 ```c
 CF_API char* cf_arena_dup(cf_arena* ar, const char* s, size_t len);
 ```
 
-Implementation: [`cf_arena_dup` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L274).
+Implementation: [`cf_arena_dup` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L277).
 
 Copy len bytes and terminate. Stored text is NUL-terminated in
 addition to carrying a length, so the convenience accessors are
@@ -1010,7 +1010,7 @@ CF_API size_t cf_arena_capacity(const cf_arena* ar);
 CF_API cf_bool cf_arena_is_fixed(const cf_arena* ar);
 ```
 
-Implementation: [`cf_arena_used` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L291), [`cf_arena_capacity` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L295), [`cf_arena_is_fixed` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L299).
+Implementation: [`cf_arena_used` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L294), [`cf_arena_capacity` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L298), [`cf_arena_is_fixed` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L302).
 
 ## cf_define.h
 

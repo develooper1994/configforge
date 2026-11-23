@@ -179,16 +179,19 @@ const cf_allocator* cf_arena_allocator(const cf_arena* ar) {
     return (ar != NULL && !ar->fixed) ? ar->alloc : NULL;
 }
 
-/* Zeroed through a volatile pointer, so the stores survive the
-   optimiser: memory about to be released is exactly the memory it may
-   prove nobody reads again, and memset before free is the textbook
-   dead store it removes. */
-static void cf_wipe(void* p, size_t n) {
-    volatile unsigned char* q = (volatile unsigned char*)p;
+/* memset called through a volatile function pointer, so the stores
+   survive the optimiser: memory about to be released is exactly the
+   memory it may prove nobody reads again, and memset before free is the
+   textbook dead store it removes. Through the pointer it cannot know
+   which function is called, so it must make the call; and the call is
+   the C library's memset, which writes a word or a vector at a time
+   where a volatile byte pointer wrote one byte (P-4: the byte loop was
+   11 to 29% of a 16 MiB load). */
+static void* (*const volatile cf_wipe_memset)(void*, int, size_t) = memset;
 
-    while (n > 0) {
-        *q++ = 0;
-        --n;
+static void cf_wipe(void* p, size_t n) {
+    if (n > 0) {
+        (void)cf_wipe_memset(p, 0, n);
     }
 }
 
