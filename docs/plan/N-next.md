@@ -347,3 +347,54 @@ equal cross-format fixture therefore pairs them with JSON strings.
   Linux and Windows; a value appears in either stream. Report the command and
   exit code, with fixture values omitted from failure evidence.
 * **notes**: (empty)
+
+## N-4 - deliver one root table to a YAML document sink
+
+* **id**: N-4
+* **goal**: A consumer of the YAML codec receives exactly one root table for a
+  mapping, an empty mapping, or an empty input. A second YAML document is refused.
+* **why**: A consumer that accepts one document currently has to special-case
+  YAML. The converter and the pair tests both hide the extra event. The
+  diagnosis and the two workarounds are recorded in `docs/Decisions.md:4908-4913`.
+* **needs**: W5-V2 (done)
+* **size**: small
+* **decided**:
+  * Use the shared event adapter for the built-in, libyaml and libfyaml
+    backends. Add one private zero-initialised flag to `yaml_scan`. Set it
+    when the sink accepts the top-level mapping in
+    `lib/serialize/src/yaml.c:398-433`. At stream end synthesise the
+    begin/end pair only if no mapping was delivered. Depth returns to its
+    initial value after a valid mapping. The document counter has a separate
+    purpose, rejecting a second document (`lib/serialize/src/yaml.c:689-719`).
+  * In `tools/codec/convert_core.c:228-249` and `tests/codec/chain.h:118-136`,
+    a parentless member must be the first root and a table. Return NULL for
+    a second root. Preserve named table reopening below the root (INI).
+  * Test the public event stream with `codec dump`. Count whole root lines
+    (the three tab-separated fields are `-`, `.`, `table`). Check a scalar
+    event as well, so losing the real document cannot make the count pass.
+    The empty file and comment-only file each yield just the synthetic root.
+    An explicit empty mapping yields just its own root. Keep today's refusal
+    for multiple documents and the existing sink-failure propagation.
+  * C89 and D-100 apply. The fix lives in serialize, consumers use the codec
+    interface, and the CLI regression belongs in the cross-component tests.
+    Reader depth limits and scalar typing stay outside this slice.
+* **files**: `lib/serialize/src/yaml.c`, `tools/codec/convert_core.c`,
+  `tests/codec/chain.h`, `tests/codec/dump.cmake`, `CHANGELOG.md`.
+* **steps**:
+  1. `git switch -c work/N-4`.
+  2. Add the four fixtures above to `codec.dump`, guarded by its existing
+     YAML feature flag. Start with `a: one\n`. Run
+     `ctest --preset default -R "^codec[.]dump$" --output-on-failure`;
+     see it fail with two root lines where one was expected.
+  3. Fix the shared adapter, run the dump cases, then remove both root
+     workarounds. Run the converter and ordered-pair tests, including INI
+     repeated sections. Record the observable event correction in the changelog.
+  4. Run ACCEPT and record which YAML backends ran.
+* **accept**: ACCEPT-LINUX with `-DEXTRA=yaml`, ACCEPT-WINDOWS, ACCEPT-CI.
+  On the built-in backend and each available external backend, `codec.dump`
+  and `unit.test_yaml` pass. `codec.convert` and `codec.pairs` pass in the
+  full build with the existing pair manifest.
+* **stop if**: another reader emits two roots for a valid fixture once the
+  workarounds are removed, or the backends disagree about these four inputs.
+  Record the input, backend and event lines.
+* **notes**: (empty)
