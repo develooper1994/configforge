@@ -209,7 +209,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 38f | L-5 Profilers: one command for time, cache, memory and vectorization | medium | P-1 | done (13e9e70) |
 | 38h | L-6 A map of the tree and a brief per card, so that workers read less | medium | L-5 | done (00dd641) |
 | 38i | L-7 CI in minutes, with nothing taken away | small | nothing | done (09fe647) |
-| 38j | L-8 doctor.api cheap under MemorySanitizer, nothing dropped | small | L-7 | open |
+| 38j | L-8 doctor.api cheap under MemorySanitizer, nothing dropped | small | L-7 | done (179c6df) |
 | 39 | P-1 The benchmark measures large documents, and says where time goes | medium | 1.7.0 released | done (90b6541) |
 | 40 | A-1 One directory per component: the files moved, nothing else changed | large | 1.7.0 released | done (824181f) |
 | 41 | A-1b Each component a project: its declaration, its tests, its README, built alone | large | A-1 | done (031d54d) |
