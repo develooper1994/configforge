@@ -1236,6 +1236,13 @@ static char* sized_report(size_t n, int bump, size_t* len) {
    of two such minimums still tells linear from quadratic. */
 #define DIFF_RUNS 7
 
+/* Under MemorySanitizer (the msan test preset sets CF_UNDER_MSAN) a run
+   costs twenty times as much and the slowdown is the same at both sizes,
+   so three runs find the minimum as well as seven do on a quiet machine. */
+static int diff_runs(void) {
+    return getenv("CF_UNDER_MSAN") != NULL ? 3 : DIFF_RUNS;
+}
+
 static double time_diff(size_t n) {
     size_t la = 0, lb = 0;
     char*  a    = sized_report(n, 0, &la);
@@ -1243,7 +1250,7 @@ static double time_diff(size_t n) {
     double best = -1.0;
     int    r;
 
-    for (r = 0; a != NULL && b != NULL && r < DIFF_RUNS; ++r) {
+    for (r = 0; a != NULL && b != NULL && r < diff_runs(); ++r) {
         cf_doctor* d   = cf_doctor_new();
         cf_error   err = CF_ERROR_INIT;
         clock_t    t0  = clock();
@@ -1288,8 +1295,15 @@ static void test_diff_scales(void) {
 }
 #endif
 
-int main(void) {
+int main(int argc, char** argv) {
 #if CF_WITH_REPORT && CF_WITH_JSON
+    /* "scales" runs the one case whose value is its volume (two reports
+       of 16000 keys), as the test doctor.api.scales; doctor.api runs the
+       rest, so that the slow case is a test of its own. */
+    if (argc > 1 && strcmp(argv[1], "scales") == 0) {
+        test_diff_scales();
+        return cf_test_done();
+    }
     test_lint();
     test_gate();
     test_secret_unshown();
@@ -1310,10 +1324,11 @@ int main(void) {
     test_default_marks();
     test_unread();
     test_fingerprint();
-    test_diff_scales();
 #else
     /* A configuration's report needs both; without them the library
        says so. */
+    (void)argc;
+    (void)argv;
     {
         cf_error   err = CF_ERROR_INIT;
         cf_doctor* d   = cf_doctor_new();

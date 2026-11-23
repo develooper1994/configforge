@@ -389,4 +389,15 @@ second opinion beside cppcheck's.
 * **stop if**: the time is not in a count but in one operation the library
   does (then it is a performance fault: write it under "notes" with the
   profile, and stop).
-* **notes**: (empty)
+* **notes**: Measured in WSL (msan preset, `setarch -R`, local): the whole of
+  `doctor_api` 246 s, of which `test_diff_scales` is all but ~10 s:
+  16000-key diff 30.0 s a run, seven runs (`DIFF_RUNS`) at each size. Not
+  an operation of the library (the 1000 to 16000 ratio is 20.7, as in a
+  plain build): a complexity bound. Done: that case is the test
+  `doctor.api.scales` (`doctor_api scales`, label `slow`), keeping its
+  sizes; `doctor.api` runs the rest (172 checks, plus the two of scales
+  = the 174 as before); under `CF_UNDER_MSAN` (msan test preset
+  environment) the runs per size are 3, not 7 (the minimum of runs).
+  After, local msan: `doctor.api` 1 s, `doctor.api.scales` 101 s. CI run 45272681034 (green), msan jobs: `doctor.api` 0.38 s, `doctor.api.scales` 269.64 s (was one test of 615 s); the next test is 35 s, so the msan floor is now scales at 270 s.
+  Organiser's answers: the card said the volume case moves to its own
+  test; the runs cut is the only use of the variable.

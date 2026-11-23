@@ -194,3 +194,8 @@ set_target_properties(
 configforge_apply_warnings(doctor_api)
 configforge_apply_analysis(doctor_api)
 add_test(NAME doctor.api COMMAND doctor_api)
+# The one case whose value is its volume (a complexity bound: sixteen
+# times the keys), a test of its own so that the rest stays cheap under a
+# slow checker and the msan shards can balance it.
+add_test(NAME doctor.api.scales COMMAND doctor_api scales)
+set_tests_properties(doctor.api.scales PROPERTIES LABELS slow)
