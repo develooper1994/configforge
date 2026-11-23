@@ -6,15 +6,15 @@
 #
 # 1. format and lint what changed and regenerate the README feature matrix
 #    (scripts/format.cmake, gate.matrix);
-# 2. regenerate docs/API.md, whose links name source lines, so any edit
-#    to a header or a source moves them (gate.apiref);
+# 2. regenerate docs/Codemap.md and docs/API.md, whose line references
+#    move with edits (gate.codemap and gate.apiref);
 # 3. the text gate: no NUL and no CR (gate.text);
 # 4. the analyze build - GCC's -fanalyzer and cppcheck - where GCC is the
 #    compiler, since it found what the default build did not.
 #
-# It changes the working tree (format, API.md) and stages nothing: look,
-# then stage, then verify. Written in CMake, as verify is, to run
-# wherever the build does.
+# It updates formatting, Codemap.md and API.md in the working tree.
+# Review the changes, then stage and verify. Like verify, this script
+# uses CMake so it can run wherever the build does.
 
 cmake_minimum_required(VERSION 3.10)
 
@@ -39,6 +39,7 @@ function(stage name)
 endfunction()
 
 stage("format" ${CMAKE_COMMAND} -P "${REPO}/scripts/format.cmake")
+stage("tree map" ${CMAKE_COMMAND} -P "${REPO}/scripts/generate/codemap.cmake")
 stage("API reference" ${CMAKE_COMMAND} -P
       "${REPO}/scripts/generate/apiref.cmake")
 find_program(PYTHON_EXE NAMES python3 python)

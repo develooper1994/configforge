@@ -25,6 +25,7 @@ foreach(
 endforeach()
 add_subdirectory(profile)
 add_subdirectory(matrix)
+add_subdirectory(work)
 add_subdirectory(conformance)
 
 if(CF_BUILD_TOOLS

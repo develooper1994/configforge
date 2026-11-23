@@ -96,6 +96,11 @@ function(configforge_add_gates tgt)
       ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR} -P
       ${CMAKE_SOURCE_DIR}/cmake/gates/GateApiref.cmake)
   add_test(
+    NAME gate.codemap
+    COMMAND
+      ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR} -P
+      ${CMAKE_SOURCE_DIR}/cmake/gates/GateCodemap.cmake)
+  add_test(
     NAME gate.limits
     COMMAND
       ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR} -P

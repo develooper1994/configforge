@@ -88,6 +88,9 @@ directory, a second worktree).
 
 ## The brief every card's subagent gets
 
+The organiser starts the worker with the output of
+`python scripts/work/brief.py <card id>`.
+
 ```
 You carry out one card of docs/Plan.md, alone.
 1. Read docs/Plan.md ("The loop", "ACCEPT") and the card in docs/plan/*.md
@@ -102,9 +105,10 @@ You carry out one card of docs/Plan.md, alone.
    Push only when the brief says so.
 5. Three failures on the same thing: stop, restore, write what failed under
    the card's "notes", report.
-6. Before every push: `python scripts/work/work.py format`, then
-   `cmake -P scripts/generate/apiref.cmake` last, on Linux (docs/API.md
-   cites source lines). Watch CI with `gh run watch --interval 60`.
+6. Before every push, on Linux: `python scripts/work/work.py format`,
+   then `cmake -P scripts/generate/codemap.cmake` and
+   `cmake -P scripts/generate/apiref.cmake` last. Both documents cite
+   line numbers. Watch CI with `gh run watch --interval 60`.
    Commit and push after each step, so that a stop loses nothing.
 7. Report: files changed, ACCEPT results with exit codes, anything the card
    got wrong, anything left. Under 300 words.
@@ -129,8 +133,8 @@ You carry out one card of docs/Plan.md, alone.
     `file:start-end`); a worker never reads `A-architecture.md`,
     `Decisions.md`, `Roadmap.md` or `Plan.md` whole, only the section
     cited. Those four were a quarter of what workers read.
-  - Find, then read a range: `grep -n` (or the tree map, once it
-    exists), then a read of at most ~120 lines. Never `cat` or read
+  - Look first in `docs/Codemap.md` for the file, symbol or heading,
+    then read a range of at most ~120 lines. Never `cat` or read
     whole a file over 300 lines; never `sed -n` a document in big
     chunks.
   - Never read a file again to check an edit: the edit tool fails if it

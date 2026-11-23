@@ -9,8 +9,8 @@ verify step runs), `generate/` (what the build writes from the sources),
 | Script | What it does |
 | ------ | ------------ |
 | `verify.cmake` | everything that has to be true before a commit; `-DTIER=1` (every commit) or `-DTIER=2` (a release) picks the steps (D-50), `-DSOURCE=index` checks only what is staged, `-DTEST_TIMEOUT=s` bounds a test (default 900), `-DEXTRA=kqueue;tidy;clang;shared;components;valgrind;proofs;wasm;abi;tsan;msan;ubsan-strict;afl;infer;yaml;profiles;sizes;compilers;fuzz;coverage;conformance` adds builds, `-DJOBS=N` bounds the parallelism of builds and tests, `-DWORK=dir` puts the staged copy in `dir` (under WSL, keep it off `/mnt/c`), and the copy with its build directories is kept from run to run, so a run rebuilds what changed; `-DFRESH=ON` (and every `-DTIER=2`) starts from nothing |
-| `prestage.cmake` | before staging, in minutes: format what changed, regenerate `docs/API.md`, the text check and the analyze build (GCC's `-fanalyzer`, cppcheck) - what used to fail one verify at a time. `-DWORK=dir` for the build, `-DANALYZE=OFF` to skip it |
-| `format.cmake` | formats and lints what changed, then rewrites `docs/API.md` when C did (`-DALL=ON` everything, `-DCHECK=ON` report only) |
+| `prestage.cmake` | before staging, in minutes: format what changed, regenerate `docs/Codemap.md` and `docs/API.md`, run the text check and the analyze build (GCC's `-fanalyzer`, cppcheck). `-DWORK=dir` for the build, `-DANALYZE=OFF` to skip it |
+| `format.cmake` | formats and lints what changed, rewrites `docs/API.md` when C changed and regenerates `docs/Codemap.md` (`-DALL=ON` everything, `-DCHECK=ON` report only) |
 | `check/stack.cmake` | every library frame against a budget, by feature; the build runs it after linking, and `-DOBJDIR=build/CMakeFiles/configforge.dir -DBUDGET=N` asks "what if" (D-37) |
 | `release/version.cmake` | prints the version, or changes it everywhere it is written: `-DTO=x.y.z` rewrites `cf_version.h`, the vcpkg manifest, the Rust crate's and the Python package's, and opens a CHANGELOG section (D-40) |
 | `check/conformance.py` | each reader against its standard's suite, and the project's own configuration against reference readers (`EXTRA=conformance`, docs/Conformance.md) |
@@ -20,6 +20,8 @@ verify step runs), `generate/` (what the build writes from the sources),
 | `generate/matrix.cmake` | regenerates the five README feature tables |
 | `check/sizes.cmake` | measures library code by part and profile with GNU size (`-DWRITE=ON`), or checks the recorded measurements (`-DCHECK=ON`) |
 | `generate/apiref.cmake` | regenerates `docs/API.md` from the public headers' comments; `gate.apiref` checks it is current |
+| `generate/codemap.cmake` | regenerates `docs/Codemap.md` from source definitions and document headings. `gate.codemap` checks the line ranges |
+| `work/brief.py <card id>` | prints the standard worker instructions, the card and its cited sections. `--max-bytes N` reports briefs over the byte budget |
 | `generate/limits.cmake` | `-DWRITE=docs/Limits.md` regenerates the limits page's generated blocks from the build options and the sources; `gate.limits` checks the page is current and that the decisions, tests and links it names exist |
 | `generate/amalgamate.py` | generates the single-file distribution |
 | `check/check_formats.py`, `check/check_text.py` | every format string against what `cf_fmt` supports (`gate.formats`); every tracked text file without a NUL byte or a carriage return (`gate.text`) |

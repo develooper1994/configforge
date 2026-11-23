@@ -172,6 +172,13 @@ if(NOT CHECK)
   if(NOT rc EQUAL 0)
     set(bad 1)
   endif()
+  # The map also tracks Markdown and verify.cmake, after CMake formatting.
+  execute_process(
+    COMMAND "${CMAKE_COMMAND}" -P "${REPO}/scripts/generate/codemap.cmake"
+    RESULT_VARIABLE rc)
+  if(NOT rc EQUAL 0)
+    set(bad 1)
+  endif()
 endif()
 
 list(LENGTH c_files nc)

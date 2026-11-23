@@ -258,14 +258,13 @@ What it says:
   of what workers read; reading a file again after editing it, 135
   times in one session; one file read 15 or 16 times in one transcript.
 
-The rules that follow from it are in CLAUDE.md, "Habits" (Tokens). Two
-tools would carry them further, written as card L-6: a generated map of
-the tree (each source file's functions and types with line ranges, and
-the large documents' headings with theirs), held by a gate as
-`docs/API.md` is, so that a worker finds a range without reading a
-file; and `scripts/work/brief.py <card>`, which writes a card's brief
-with exactly the sections it cites. `docs/API.md` cannot be that map:
-it covers the public headers only, gives no ranges, and is 244 KB.
+The rules that follow from it are in CLAUDE.md, "Habits" (Tokens).
+`docs/Codemap.md` lists line ranges for source definitions and planning
+headings, so a worker can find a range before opening a file.
+`gate.codemap` checks those ranges. Find decisions with
+`grep -n "^## D-<n>" docs/Decisions.md`.
+`python scripts/work/brief.py <card>` prints the worker instructions,
+the card and its cited excerpts, including decision sections.
 
 Sources: the Claude Code costs page (long sessions re-read their
 history every request; clear or compact between tasks; delegate);

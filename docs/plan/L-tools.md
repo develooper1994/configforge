@@ -180,13 +180,15 @@ second opinion beside cppcheck's.
     `lib/*/src/**.h`, `lib/*/include/configforge/*.h`, `tools/**/*.c` and
     `tools/**/*.h` (not tests, not generated files), sorted by path, one
     line `` `path` `` then one line per definition in file order:
-    `- name start-end` for a function definition (a line at column 0 that
-    begins a declaration and is followed, before any `;`, by a `{` at
-    column 0; its end is the next `}` at column 0), `- struct name
+    `- name start-end` for a function definition (a line at column 0, not a
+    comment or a preprocessor line, that contains `name(` and ends with
+    `{`, the project's style, or whose declaration runs on over the next
+    lines to a line ending in `{` before any `;`; its end is the next line
+    that is `}` alone at column 0), `- struct name
     start-end`, `- enum name start-end`, `- typedef name line` for a
     typedef outside them, `- #define NAME line` only for a macro in a
     public header. Part 2, documents: for `docs/plan/*.md`,
-    `docs/Decisions.md`, `docs/Roadmap.md`, `docs/Plan.md`,
+    `docs/Roadmap.md`, `docs/Plan.md`,
     `docs/Maintaining.md`, `docs/Architecture.md` and
     `scripts/verify.cmake`, each `##` and `###` heading (for
     `verify.cmake`, each `if(x STREQUAL "<step>")`) as `- heading
@@ -258,4 +260,22 @@ second opinion beside cppcheck's.
   share per directory; the organiser decides what to drop); a C construct
   in the tree that the column-0 rule reads wrongly in more than five
   places (list them).
-* **notes**: (empty)
+* **Organiser's answers**: 2026-11-23: the first rule looked for `{` at
+  column 0; the tree puts it at the end of the signature line (15 places
+  in `alloc.c` alone), so the rule above is the corrected one.
+  Second, 2026-11-23: the first map was 67,530 bytes (64 KiB + 1,994);
+  `docs/Decisions.md` (6,732 of them) leaves part 2: a decision is found
+  with `grep -n "^## D-<n>" docs/Decisions.md`, and `brief.py` resolves
+  D-numbers itself.
+  Third, 2026-11-23: L-6 and P-4 also use parenthesised heading
+  citations, including `path` ("Heading": explanation). Treat these as
+  heading citations. P-4's Roadmap citation "Large files" is unresolved
+  because the Roadmap has no heading with that name.
+* **notes**: 2026-11-23: the first gate run failed with “cannot be run”
+  (CTest exit 8). The initial generator exceeded the limit at 67,530
+  bytes (generator exit 1, CTest exit 8). With the organiser's exclusion,
+  the gate passes. In a scratch copy, moving `cf_std_alloc` down one
+  line made the gate script exit 1 and report Codemap line 21
+  (`21-24` became `22-25`). The deputy's Windows sandbox cannot run
+  Python. The manager runs the missing-script check, `work.brief`, the
+  L-6 and P-4 brief commands, and ACCEPT on Linux and CI.

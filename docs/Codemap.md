@@ -1,0 +1,2328 @@
+`lib/base/include/configforge/cf_alloc.h`
+- #define CONFIGFORGE_CF_ALLOC_H 14
+- struct cf_allocator 22-26
+- typedef cf_arena 39
+`lib/base/include/configforge/cf_error.h`
+- #define CONFIGFORGE_CF_ERROR_H 17
+- #define CF_SOURCE_MAX 27
+- enum cf_code 29-35
+- enum cf_reason 37-43
+- struct cf_loc 45-49
+- struct cf_error 51-59
+- #define CF_ERROR_INIT 73
+`lib/base/include/configforge/cf_value.h`
+- #define CONFIGFORGE_CF_VALUE_H 11
+- enum cf_type 23-29
+- struct cf_text 31-34
+- struct cf_value 36-46
+- #define CF_VALUE_TEXT_MAX 79
+- #define CF_VALUE_TEXT_MAX 81
+`lib/base/src/alloc.c`
+- cf_std_alloc 21-24
+- cf_std_release 26-29
+- cf_default_allocator 33-35
+- cf_default_allocator 39-41
+- typedef p 53
+- struct cf_block 64-71
+- struct cf_arena 73-81
+- cf_round_up 83-86
+- cf_block_header 89-91
+- cf_arena_new 93-122
+- cf_arena_fixed 124-176
+- cf_arena_allocator 178-180
+- cf_wipe 192-196
+- cf_arena_wipe 198-207
+- cf_arena_free 209-230
+- cf_arena_alloc 232-267
+- cf_arena_calloc 269-275
+- cf_arena_dup 277-292
+- cf_arena_used 294-296
+- cf_arena_capacity 298-300
+- cf_arena_is_fixed 302-304
+`lib/base/src/error.c`
+- cf_code_name 16-25
+- cf_code_description 27-36
+- cf_reason_name 38-49
+- cf_reason_description 51-62
+- cf_error_place 64-71
+- cf_error_clear 73-82
+- cf_error_copy 84-101
+- copy_bounded 103-119
+- cf_error_set 121-146
+`lib/base/src/key.c`
+- cf_key_valid 11-42
+`lib/base/src/value.c`
+- cf_type_name 12-21
+- cf_type_json_name 25-34
+- cf_value_null 36-39
+- cf_value_bool 41-44
+- cf_value_int 46-49
+- cf_value_real 52-55
+- cf_value_text 58-62
+- cf_value_from_text 64-118
+- cf_value_infer 120-139
+- cf_value_to_text 141-196
+- cf_value_cmp 198-229
+- cf_value_equal 231-233
+`lib/config/include/configforge/cf_define.h`
+- #define CONFIGFORGE_CF_DEFINE_H 16
+- enum cf_on_invalid 45-53
+- enum cf_list_mode 55-59
+- struct cf_def 68-134
+- #define cf_def_init 142
+- #define CF_MAX_OPEN_PREFIXES 153
+- #define CF_EXPAND_MAX 163
+- #define CF_EXPAND_TOTAL_MAX 173
+- struct cf_defset 180-206
+- enum cf_unknown_policy 313-317
+- struct cf_apply_report 319-325
+- struct cf_rank_names 340-343
+`lib/config/include/configforge/cf_edit.h`
+- #define CONFIGFORGE_CF_EDIT_H 26
+- typedef cf_edit 36
+`lib/config/include/configforge/cf_emit.h`
+- #define CONFIGFORGE_CF_EMIT_H 15
+- enum cf_emit_what 26-37
+`lib/config/include/configforge/cf_entry.h`
+- #define CONFIGFORGE_CF_ENTRY_H 26
+- enum cf_keymap_kind 45-53
+- struct cf_keymap 55-58
+- struct cf_entry_sink 85-94
+- struct cf_keysink 97-103
+- struct cf_listsink 119-126
+- enum cf_cli_kind 173-180
+- struct cf_cli_spec 184-191
+`lib/config/include/configforge/cf_explain.h`
+- #define CONFIGFORGE_CF_EXPLAIN_H 12
+- #define CF_MAX_SOURCES 24
+`lib/config/include/configforge/cf_flatten.h`
+- #define CONFIGFORGE_CF_FLATTEN_H 16
+- #define CF_FLATTEN_MAX_DEPTH 31
+- #define CF_EMIT_MAX_DEPTH 32
+- #define CF_DECODE_FACTOR 43
+- #define CF_DECODE_FLOOR 44
+- #define CF_DECODE_KEY_COST 45
+- struct cf_flatten_frame 51-55
+- struct cf_flatten 57-83
+- typedef cf_emit_pred 161
+`lib/config/include/configforge/cf_image.h`
+- #define CONFIGFORGE_CF_IMAGE_H 25
+- #define CF_IMAGE_MAGIC_0 36
+- #define CF_IMAGE_MAGIC_1 37
+- #define CF_IMAGE_MAGIC_2 38
+- #define CF_IMAGE_MAGIC_3 39
+- #define CF_IMAGE_MAJOR 41
+- #define CF_IMAGE_MINOR 42
+- struct cf_image 65-79
+`lib/config/include/configforge/cf_iterate.h`
+- #define CONFIGFORGE_CF_ITERATE_H 14
+- struct cf_iter 24-42
+`lib/config/include/configforge/cf_keyspace.h`
+- #define CONFIGFORGE_CF_KEYSPACE_H 18
+- enum cf_outcome 50-56
+- #define CF_CAND_TEXTUAL 72
+- #define CF_CAND_AUTHORED 80
+- #define CF_CAND_TEMPLATE 85
+- #define CF_CAND_EXPANDING 89
+- #define CF_CAND_DEFAULT 95
+- #define CF_CAND_RENAMED 101
+- #define CF_CAND_LIST_RESULT 104
+- #define CF_CAND_REFUSAL_SHIFT 108
+- #define CF_CAND_REFUSAL_MASK 109
+- #define CF_CAND_REFUSAL 110
+- #define CF_CAND_RESOLVED 115
+- #define CF_CAND_PINNED 118
+- #define CF_CAND_SECRET_LIKE 123
+- struct cf_candidate 125-134
+- enum cf_refusal 143-152
+- struct cf_entry 163-168
+- typedef cf_cand_rec 183
+- struct cf_keyspace 185-201
+- struct cf_list_part 206-213
+`lib/config/include/configforge/cf_live.h`
+- #define CONFIGFORGE_CF_LIVE_H 76
+- typedef cf_live 90
+- enum cf_live_mode 92-96
+- enum cf_live_result 99-106
+- typedef cf_live_build_fn 110
+- typedef cf_live_check_fn 116
+- typedef cf_live_health_fn 123
+- struct cf_live_options 131-161
+- #define CF_LIVE_OPTIONS_INIT 164
+- struct cf_live_status 244-256
+`lib/config/include/configforge/cf_log.h`
+- #define CONFIGFORGE_CF_LOG_H 26
+- enum cf_log_level 35-40
+- struct cf_log_event 45-66
+- typedef cf_log_fn 68
+`lib/config/include/configforge/cf_report.h`
+- #define CONFIGFORGE_CF_REPORT_H 13
+- #define CF_REPORT_SCHEMA 24
+- enum cf_report_mode 26-38
+- struct cf_report_info 45-52
+- #define CF_REPORT_INFO_INIT 55
+`lib/config/include/configforge/cf_source.h`
+- #define CONFIGFORGE_CF_SOURCE_H 12
+- typedef cf_source 35
+- struct cf_write_item 46-50
+- struct cf_source_vtable 55-78
+- struct cf_pair 80-83
+- struct cf_source 90-110
+- struct cf_source_view 125-128
+`lib/config/include/configforge/cf_version.h`
+- #define CONFIGFORGE_CF_VERSION_H 24
+- #define CF_VERSION_MAJOR 32
+- #define CF_VERSION_MINOR 33
+- #define CF_VERSION_PATCH 34
+- #define CF_VERSION_STRINGIFY_ 36
+- #define CF_VERSION_STRINGIFY 37
+- #define CF_VERSION_STRING 39
+- #define CF_VERSION_NUMBER 46
+`lib/config/include/configforge/configforge.h`
+- #define CONFIGFORGE_H 18
+- typedef cf_builder 54
+- typedef cf_config 55
+- #define CF_BUILDER_CODECS 198
+- cf_define_b_ 320-322
+- cf_define_i_ 323-325
+- cf_define_t_ 326-328
+- cf_define_r_ 330-332
+- #define CF_DEFINE_REAL_ 333
+- #define CF_DEFINE_REAL_ 335
+- #define CF_DEFINE 337
+- cf_define_tl_ 360-370
+- #define CF_C11_KEY_ 379
+- #define CF_C11_RANGE_ 382
+- #define CF_C11_LEN_ 388
+- #define CF_C11_DEFAULTED_ 395
+- #define CF_C11_CHECKED_ 398
+- #define CF_DEFINE_INT 405
+- #define CF_DEFINE_TEXT 410
+- cf_get_int_ 500-510
+- cf_get_long_ 511-521
+- cf_get_llong_ 522-529
+- cf_get_bool_ 530-537
+- cf_get_text_ 538-541
+- #define CF_GET_REAL_ 543
+- #define CF_GET_REAL_ 545
+- #define cf_get 547
+- enum cf_change 596-601
+- typedef cf_diff_fn 608
+- typedef cf_watcher 841
+`lib/config/src/bridge/dir.c`
+- struct dir_state 36-44
+- typedef dir_name 57
+- dir_sort 59-74
+- dir_read 82-184
+- dir_load 186-201
+- dir_load 210-219
+- dir_destroy 223-225
+- dir_path 227-230
+- cf_source_dir_state_size 235-237
+- cf_source_dir 239-260
+- cf_source_dir_error 262-270
+- cf_source_dir_codecs 272-282
+`lib/config/src/bridge/dotenv.c`
+- struct dotenv_state 21-27
+- dotenv_read 32-87
+- dotenv_load 89-101
+- dotenv_load 106-115
+- dotenv_destroy 119-121
+- dotenv_path 123-126
+- cf_source_dotenv_state_size 131-133
+- cf_source_dotenv 135-156
+- cf_source_dotenv_error 158-166
+- cf_source_dotenv_defs 168-172
+`lib/config/src/bridge/emit.c`
+- struct emit_filter 30-34
+- keep 36-66
+- struct emit_probe 77-87
+- probe_open 89-103
+- probe_table 105-109
+- probe_array 111-115
+- probe_scalar 117-129
+- probe_end 131-144
+- find_array 147-160
+- struct emit_literals 162-168
+- literal_table 170-173
+- literal_array 175-178
+- literal_end 180-183
+- escape_written 189-201
+- literal_scalar 203-228
+- cf_emit 230-344
+- cf_emit 348-360
+`lib/config/src/bridge/file.c`
+- struct file_state 38-54
+- cf_source_read_blob 58-80
+- file_named 87-119
+- cf_source_by_content 125-150
+- file_declares 158-163
+- file_hex 166-174
+- file_refuse_at 178-209
+- file_mark 214-231
+- cfi_source_recode 233-290
+- cfi_source_text 292-340
+- file_hint 345-370
+- file_load 372-451
+- file_destroy 453-455
+- file_path 457-460
+- file_state_of 471-477
+- cf_source_file 479-500
+- cf_source_file_codec 502-513
+- cf_source_document 515-529
+- cf_source_env_document 531-544
+- cf_source_file_codecs 546-554
+- cf_source_file_format 556-563
+- cf_source_file_defs 568-572
+- cf_source_file_state_size 574-576
+- cf_source_file_error 578-582
+- cf_source_file_encoding 584-588
+`lib/config/src/bridge/flatten.c`
+- fl_room 35-38
+- fl_push 40-73
+- fl_enter_member 78-118
+- fl_begin_table 120-142
+- fl_begin_array 144-164
+- fl_charge 168-179
+- fl_split 185-235
+- fl_scalar 237-282
+- fl_end 284-322
+- fl_reserve_text 324-344
+- fl_reserve_work 348-350
+- cf_flatten_init 352-370
+- cf_flatten_sink 372-374
+- cf_flatten_lists 376-380
+- cf_decode_budget 382-387
+- cf_flatten_budget 389-394
+- cf_flatten_decode 400-415
+- all_digits 453-464
+- seg_len 467-474
+- count_value 481-495
+- index_value 501-516
+- group_is_array 545-599
+- struct emit_ctx 601-604
+- included 606-614
+- any_included 619-628
+- run_end 632-647
+- too_deep 655-658
+- emit_group 672-699
+- emit_table 701-764
+- emit_array 769-822
+- cf_doc_emit 824-826
+- cf_doc_emit_where 828-847
+- cf_doc_emit 851-853
+- cf_doc_emit_where 855-863
+`lib/config/src/bridge/image.c`
+- put_u32 37-42
+- put_u64 44-47
+- get_u32 49-52
+- get_u64 54-56
+- get_u16 58-60
+- put_u16 62-65
+- align8 67-70
+- struct img_plan 76-85
+- plan_strings 92-123
+- plan 125-149
+- struct img_w 151-157
+- w_at 159-168
+- w_u32 170-174
+- w_u64 176-180
+- w_text 184-192
+- cf_image_write 194-328
+- bad 334-336
+- region_fits 339-341
+- records_fit 348-353
+- cf_image_open 355-437
+- cf_image_count 439-441
+- read_value 443-477
+- cf_image_at 479-512
+- cf_image_get 514-541
+- image_origin 550-587
+- cf_image_load 589-609
+- cf_image_write 615-624
+- cf_image_open 626-634
+- cf_image_count 636-639
+- cf_image_at 641-649
+- cf_image_get 651-657
+- cf_image_load 659-665
+- struct image_state 673-679
+- image_load_src 681-706
+- image_destroy 708-710
+- cf_source_image_state_size 715-717
+- image_source_init 719-733
+- cf_source_image_mem 735-746
+- cf_source_image_file 748-755
+- cf_source_image_error 757-765
+`lib/config/src/bridge/preferences.c`
+- struct prefs_state 57-62
+- struct prefs_walk 67-73
+- prefs_name 77-97
+- prefs_event 99-167
+- prefs_load 169-203
+- prefs_destroy 205-207
+- cfi_source_preferences_state_size 212-214
+- cfi_source_preferences 216-235
+- cfi_source_preferences_error 237-245
+`lib/config/src/bridge/registry.c`
+- struct registry_state 48-53
+- struct registry_walk 58-65
+- registry_key 68-93
+- registry_value 95-165
+- registry_load 167-198
+- registry_destroy 200-202
+- cf_source_registry_state_size 207-209
+- cf_source_registry 211-230
+- cf_source_registry_error 232-240
+`lib/config/src/bridge/schema.c`
+- struct snode 51-62
+- struct stree 64-71
+- st_add 73-94
+- st_open 96-106
+- st_table 108-110
+- st_array 111-113
+- st_scalar 114-143
+- st_end 144-151
+- st_text 152-166
+- struct swalk 172-177
+- sw_fail 182-208
+- sn_is 210-215
+- sn_child 217-225
+- sn_text 227-233
+- sn_true 236-242
+- sn_among 245-253
+- sw_known 257-271
+- sw_dup 273-277
+- sw_int 279-285
+- sw_real 288-301
+- sw_scalar 306-459
+- sw_value 462-494
+- sw_leaf 497-605
+- sw_required 608-621
+- sw_object 623-718
+- cf_defset_schema 720-764
+- cf_defset_schema_file 769-789
+- cf_defset_schema 793-801
+- cf_defset_schema_file 803-805
+`lib/config/src/bridge/secrets.c`
+- struct secrets_state 55-66
+- typedef secrets_name 70
+- secrets_credentials_dir 75-98
+- secrets_load 100-211
+- secrets_load 215-226
+- secrets_destroy 230-232
+- secrets_path 234-237
+- cf_source_secrets_state_size 248-250
+- secrets_init 252-274
+- cf_source_secrets 276-284
+- cfi_source_credentials 286-292
+- cf_source_secrets_error 294-305
+`lib/config/src/bridge/store.c`
+- struct store_state 39-44
+- store_value 57-98
+- store_load 100-175
+- store_type 179-185
+- store_failed 187-196
+- cf_store_set 198-292
+- store_load 298-307
+- cf_store_set 309-316
+- store_destroy 320-322
+- store_path 324-327
+- store_write 332-335
+- cf_source_store_state_size 344-346
+- cf_source_store 348-366
+- cf_source_store_error 368-376
+`lib/config/src/core/config.c`
+- struct cf_builder 48-99
+- struct cf_config 101-149
+- config_ghost_load 161-165
+- config_ghost_path 167-169
+- config_is_ghost 171-173
+- codecs_copy 176-181
+- builder_fail 183-189
+- builder_on 191-217
+- cf_build 219-221
+- cf_build_in 223-228
+- cf_builder_abort 230-234
+- derive_prefix 240-257
+- cf_app_builder 259-283
+- cf_builder_response_files 285-307
+- builder_dup 314-327
+- builder_slot 329-343
+- builder_codecs_copy 349-368
+- builder_slot_mask 374-393
+- builder_slot_flags 395-397
+- builder_slot_file 402-404
+- cf_builder_memory 406-414
+- cf_builder_env 416-425
+- cf_builder_cli 427-435
+- cf_builder_file 437-479
+- builder_document 484-537
+- cf_builder_document 539-543
+- cf_builder_env_document 545-550
+- cf_builder_file_codec 552-585
+- cf_builder_dotenv 587-609
+- cf_builder_secrets 611-633
+- cf_builder_credentials 635-656
+- cf_builder_registry 658-679
+- cf_builder_preferences 681-703
+- cf_builder_store 705-726
+- cf_builder_dir 728-767
+- builder_codec_ok 771-788
+- cf_builder_codec 790-812
+- cf_config_codec 814-822
+- cf_builder_replay 824-845
+- cf_builder_source 847-873
+- cf_builder_open 875-886
+- cf_builder_schema 888-899
+- cf_builder_schema_file 901-912
+- cf_builder_define 914-925
+- cf_builder_bool 927-937
+- cf_builder_int 939-950
+- cf_builder_text 952-963
+- cf_builder_real 966-977
+- key_infer 982-996
+- key_bound 999-1019
+- cf_builder_key 1021-1068
+- cf_builder_unknown 1070-1074
+- cf_builder_track_reads 1076-1080
+- cf_builder_digest_key 1082-1106
+- cf_builder_log 1108-1114
+- cfi_builder_expect_like 1116-1120
+- config_log 1126-1144
+- config_log_events 1150-1202
+- cf_builder_writable 1204-1220
+- config_name_of_rank 1231-1244
+- create_failed 1246-1252
+- cf_builder_create 1254-1562
+- cf_app 1564-1566
+- derive_ghost 1580-1608
+- derive_onto 1610-1714
+- cf_derive 1716-1736
+- cf_derive_in 1738-1745
+- cfi_config_keep_values 1747-1798
+- write_locked 1819-1831
+- write_authorized 1837-1933
+- write_local_keys 1939-2039
+- cf_write 2041-2090
+- cf_watch_count 2107-2109
+- cf_watch_path 2111-2116
+- cf_changed 2118-2137
+- cf_watcher_open 2141-2158
+- cf_watcher_fd 2160-2162
+- cf_watcher_handle 2164-2166
+- cf_watcher_drain 2168-2170
+- cf_watcher_wait 2172-2174
+- cf_watcher_close 2176-2178
+- cf_config_ref 2180-2184
+- cf_config_free 2186-2197
+- lookup 2203-2220
+- cf_get_bool 2222-2225
+- cf_get_int 2227-2230
+- cf_get_text 2232-2235
+- cf_get_text_n 2237-2251
+- cf_get_real 2254-2257
+- try_of 2260-2272
+- cf_try_bool 2274-2281
+- cf_try_int 2283-2290
+- cf_try_text 2292-2305
+- cf_try_real 2308-2315
+- cf_type_of 2318-2321
+- cf_has 2323-2325
+- cf_tracks_reads 2327-2329
+- cf_was_read 2331-2340
+- cf_read_count 2342-2354
+- cf_explain 2360-2369
+- cf_inspect 2371-2379
+- cf_schema 2381-2393
+- cf_digest 2395-2397
+- cf_fingerprint 2399-2402
+- cf_fingerprint_format 2404-2406
+- cf_count 2408-2410
+- cf_apply_stats 2412-2414
+- cf_sources 2416-2418
+- cf_defs 2420-2422
+- cf_explain_json 2424-2434
+- cf_report 2436-2445
+- cf_keys 2447-2449
+- cf_log_level_name 2451-2463
+`lib/config/src/core/define.c`
+- struct cf_list_projection 22-27
+- cf_def_init_sized 29-41
+- cf_defset_init 43-61
+- defset_grow 63-74
+- index_hash 86-94
+- index_put 96-103
+- index_reserve 106-130
+- index_find 132-143
+- def_check_default 153-173
+- def_check 175-308
+- defset_dup_list 312-336
+- defset_dup 338-348
+- defset_under 350-352
+- defset_project_list 354-388
+- cf_define 390-542
+- cf_def_bool 548-558
+- cf_def_int 560-575
+- cf_def_text 577-587
+- cf_def_real 590-605
+- cf_defset_open 612-631
+- cf_defset_is_open 633-650
+- def_order 652-656
+- cf_defset_seal 665-676
+- defset_inherit_sensitive 687-717
+- defset_exact 719-753
+- defset_list_projection 756-768
+- cf_defset_find 770-797
+- cf_defset_list 799-802
+- cf_defset_count 804-806
+- cf_defset_at 808-813
+- edit_distance 831-875
+- nearest_cutoff 879-888
+- cfi_defset_nearest_secret 890-916
+- cfi_entry_secret 918-931
+- cf_defset_nearest 933-958
+- fp_mix 971-982
+- cf_fingerprint_seed 984-986
+- cf_fingerprint_step 990-998
+- cf_defset_fingerprint 1000-1029
+`lib/config/src/core/edit.c`
+- struct cf_edit 21-30
+- cf_edit_begin 32-62
+- edit_refuse 65-71
+- edit_slot 74-114
+- cf_edit_set_text 116-134
+- cf_edit_set_int 136-144
+- cf_edit_set_bool 146-154
+- cf_edit_set_real 157-165
+- cf_edit_unset 168-176
+- cf_edit_count 178-180
+- cf_edit_abort 182-188
+- cf_edit_commit 190-204
+`lib/config/src/core/iterate.c`
+- keys_of 22-24
+- under 30-41
+- iter_start 43-60
+- cf_iter_keys 62-64
+- cf_iter_children 66-68
+- cf_iter_next 70-122
+- cf_array_count 124-143
+- cf_array_key 145-147
+`lib/config/src/core/keyspace.c`
+- cf_key_segments 18-30
+- cf_key_cmp 32-34
+- cf_outcome_name 36-45
+- cf_refusal_name 61-65
+- cf_refusal_text 67-71
+- cf_outcome_can_win 73-82
+- struct cf_cand_rec 88-93
+- cf_ks_init 95-118
+- cfi_ks_refuse 120-135
+- cfi_ks_refusal 137-139
+- cf_ks_arena 141-143
+- cf_ks_resize 148-158
+- cf_ks_grow 161-163
+- cfi_ks_expect 169-187
+- cfi_ks_expect_lines 203-227
+- cf_ks_push 229-282
+- cf_ks_add 284-287
+- cf_ks_add_text 289-299
+- cf_ks_add_authored 301-305
+- cf_ks_add_default 307-311
+- cf_ks_remember_original 313-335
+- cf_ks_rename_impl 337-383
+- cf_ks_rename 385-388
+- cf_ks_rename_list 390-393
+- cf_ks_add_candidate 395-414
+- cf_ks_add_resolved 416-420
+- cfi_ks_add_pinned 422-426
+- cf_ks_original_key 428-454
+- cf_ks_replay 456-478
+- cf_ks_append_list 480-551
+- cf_ks_reject 553-556
+- cand_cmp 574-601
+- cand_merge 603-620
+- cand_sort 622-647
+- cf_ks_candidate_count 653-655
+- cf_ks_resolve 657-740
+- cf_ks_infer_untyped 742-761
+- cf_ks_at_mut 763-768
+- cf_ks_reselect 770-794
+- cf_ks_is_sorted 796-809
+- cf_ks_lower_bound 811-829
+- cf_ks_find 831-852
+- cf_ks_get 854-860
+- cf_ks_count 862-864
+- cf_ks_at 866-871
+- fnv1a 882-894
+- ks_value_bytes 898-905
+- cf_ks_value_digest 907-913
+- cf_ks_digest_text 917-933
+- struct sip_state 942-944
+- sip_round 946-961
+- sip_word 965-976
+- cf_siphash24 978-1012
+- ks_hex_digits 1016-1024
+- cf_ks_secret_digest_text 1026-1047
+- cf_ks_digest 1049-1083
+`lib/config/src/core/live.c`
+- struct cf_live 22-76
+- live_lock 86-90
+- live_unlock 92-94
+- live_release 96-100
+- live_member 106-109
+- live_pins 113-170
+- live_list 173-199
+- live_keep 203-238
+- live_build 245-288
+- live_watch 292-295
+- live_drop_kept 297-304
+- live_swap 311-346
+- live_drop_pending 348-354
+- live_rebuild_once 356-392
+- live_log 395-412
+- live_log_restarts 416-436
+- live_record 440-476
+- live_rollback 480-510
+- live_confirm 512-519
+- live_probation 522-543
+- live_rebuild 545-549
+- cf_live_open 555-566
+- struct live_options_1_0 571-582
+- cf_live_open_with 588-660
+- cf_live_close 662-673
+- cf_live_get 675-686
+- cf_live_poll 688-725
+- cf_live_reload 727-736
+- cf_live_wait 738-743
+- cf_live_pending 745-747
+- cf_live_approve 749-762
+- cf_live_reject 764-772
+- cf_live_rollback 774-782
+- cf_live_confirm 784-790
+- cf_live_commit 796-810
+- cf_live_status_get 812-825
+- cf_live_last_error 827-843
+- cf_live_generation 845-855
+- cf_live_restarts 857-873
+`lib/config/src/core/validate.c`
+- sealed 35-38
+- validate_value 40-116
+- ref_next 145-166
+- unescape 169-180
+- reference_syntax 186-229
+- apply_candidate 237-277
+- reject 281-296
+- apply_entry 298-321
+- find_mut 328-333
+- ref_text 336-345
+- expand_fits 351-353
+- expand_build 362-424
+- struct expand_ctx 426-433
+- expand_no_value 438-446
+- expand_entry 452-559
+- expand_all 561-581
+- source_name 604-609
+- policy_index 612-624
+- cf_policy_text 626-639
+- apply_policy 644-703
+- array_member 738-753
+- index_reaches 759-768
+- cut_reason 775-799
+- cut_array 803-853
+- cut_arrays 859-882
+- struct validate_list_plan 884-891
+- validate_policies 893-903
+- validate_part_later 905-912
+- validate_append_lists 914-1032
+- validate_list_shape 1034-1073
+- cf_defs_apply 1075-1238
+`lib/config/src/core/version.c`
+- cf_version 13-15
+- cf_version_number 17-19
+- cf_build_id 31-33
+- cf_build_profile 35-37
+- compiled_count 102-108
+- cf_feature_count 116-118
+- cf_feature_at 120-126
+- cf_build_limit 128-145
+- cf_has_feature 147-160
+`lib/config/src/diag/diff.c`
+- diff_same_origin 25-33
+- cf_diff 35-103
+- diff_secret 108-110
+- struct diff_text 116-122
+- diff_source_name 124-134
+- diff_put_value 138-157
+- diff_put_origin 159-164
+- diff_line 166-211
+- struct diff_json 217-221
+- diff_json_origin 223-233
+- diff_json_line 235-265
+- cf_diff_json 267-277
+- cf_diff_text 279-302
+`lib/config/src/diag/explain.c`
+- find_source 18-30
+- pad 35-46
+- explain_value 48-67
+- is_secret 69-71
+- explain_entry 73-151
+- cf_ks_explain 153-156
+- cf_ks_inspect 158-161
+- cf_ks_explain_redacted 163-184
+- cf_ks_inspect_redacted 186-260
+`lib/config/src/diag/report.c`
+- report_quote_z 44-50
+- report_digest 57-66
+- source_of 68-80
+- report_default 82-96
+- report_definition 98-160
+- report_file_of 164-184
+- report_format 190-208
+- report_candidate 210-310
+- report_key 317-380
+- cf_report_key_write 382-411
+- cf_report_write 418-422
+- cfi_report_reads 424-528
+- struct schema_ctx 546-552
+- schema_item 556-574
+- schema_under 577-583
+- schema_segment 585-595
+- schema_indent 597-602
+- schema_annotations 604-623
+- schema_scalar 625-658
+- schema_leaf 660-676
+- schema_object 683-782
+- cf_schema_write 784-818
+- cf_schema_write 822-834
+- cf_report_key_write 836-849
+- cf_report_write 853-857
+- cfi_report_reads 859-871
+- struct replay_state 879-884
+- replay_load 893-1016
+- replay_load 1020-1029
+- replay_destroy 1033-1035
+- cf_source_replay_state_size 1040-1042
+- cf_source_replay 1044-1062
+- cf_source_replay_error 1064-1072
+`lib/config/src/sources/cli.c`
+- cli_kind_of 27-36
+- cli_alias_of 38-62
+- cf_cli_load 64-89
+- cf_cli_destroy 91-93
+- cf_source_cli 98-111
+- cf_source_cli_defs 113-117
+`lib/config/src/sources/compat.c`
+- cf_source_path 17-22
+- cf_environ 24-26
+- cf_cli_args 28-30
+`lib/config/src/sources/defaults.c`
+- defaults_utf8 31-39
+- cf_defaults_load 41-80
+- cf_defaults_destroy 82-84
+- cf_source_defaults 90-103
+`lib/config/src/sources/entry.c`
+- struct cf_list_input 19-24
+- entry_list_count 26-37
+- entry_list_item 39-48
+- entry_natural_def 50-71
+- entry_list_text 73-133
+- entry_list_typed 135-139
+- cf_listsink_init 141-156
+- cf_listsink_of 158-160
+- cf_listsink_finish 162-174
+- cf_keymap_init 180-186
+- cf_keymap_to_key 188-227
+- cf_keymap_from_key 229-271
+- keysink_text 277-287
+- keysink_typed 289-299
+- cf_keysink_init 301-313
+- cf_keysink_of 315-317
+- cf_lex_env 323-372
+- cli_classify 376-381
+- cli_alias 385-391
+- cli_is_option 393-395
+- cf_lex_cli 397-521
+- struct argv_build 527-532
+- argv_push 534-559
+- cf_cli_expand 561-652
+- cf_lex_dotenv 663-736
+- cf_lex_dotenv 740-748
+`lib/config/src/sources/env.c`
+- cf_env_load 24-49
+- cf_env_value 51-68
+- cf_env_destroy 70-72
+- cf_source_env 77-90
+- cf_source_env_defs 92-96
+- cf_env_key 99-104
+`lib/config/src/sources/memory.c`
+- cf_memory_load 23-53
+- cf_memory_destroy 55-57
+- cf_source_memory 65-78
+- cf_source_load 84-89
+- cf_source_destroy 91-95
+`lib/config/src/sources/snapshot.c`
+- snapshot_load 24-27
+- snapshot_destroy 29-31
+- cf_source_snapshot 36-47
+`lib/lanes/src/lanes.c`
+- lanes_cpuid 52-81
+- lanes_xcr0 84-95
+- lanes_cpu_x86 97-135
+- lanes_cpu 139-162
+- lanes_built 164-166
+- lanes_by_isa 168-173
+- lanes_best 175-177
+`lib/lanes/src/scalar.c`
+- lanes_set_init 10-18
+- scalar_find_byte 20-29
+- scalar_find_any 31-40
+- scalar_find_lt 42-51
+- scalar_ascii_run 53-60
+- in_range 63-65
+- sequence_length 71-110
+- scalar_utf8_valid 112-124
+- scalar_count_byte 126-135
+- scalar_digits8 137-149
+- lanes_scalar 156-158
+`lib/numeric/include/configforge/cf_numeric.h`
+- #define CONFIGFORGE_CF_NUMERIC_H 20
+- #define CF_F64_DIGITS 53
+- enum cf_scalar_kind 102-107
+`lib/numeric/src/numeric.c`
+- cf_text_to_u64 28-53
+- cf_text_to_i64 55-96
+- struct cf_big 115-118
+- big_zero 120-122
+- big_clamp 130-136
+- big_count 139-144
+- big_set_u64 146-154
+- big_copy 156-164
+- big_is_zero 166-168
+- big_trim 170-175
+- big_bitlen 177-197
+- big_cmp 199-214
+- big_add 217-247
+- big_sub 250-270
+- big_mul_u32 273-295
+- big_shl 298-339
+- big_mul10 342-344
+- big_mul_pow2 347-349
+- big_div_digit 352-362
+- struct cf_digits 372-376
+- cf_gen_digits 378-512
+- put 524-529
+- cf_f64_to_text 531-619
+- cf_slow_path 646-710
+- cf_text_to_f64 724-883
+- cf_f64_bits 888-892
+- cf_f64_from_bits 894-898
+- cf_f64_from_f16_bits 903-918
+- cf_f64_from_f32_bits 920-935
+- cf_looks_real 948-996
+- cf_has_leading_zero 998-1011
+- cf_infer_scalar 1013-1035
+`lib/platform/include/configforge/cf_platform.h`
+- #define CONFIGFORGE_CF_PLATFORM_H 29
+- #define CF_PLATFORM_NAME_MAX 95
+- struct cf_platform_reg_value 152-160
+- typedef cf_platform_reg_fn 164
+- struct cf_platform_pref_event 198-211
+- typedef cf_platform_pref_fn 215
+- struct cf_stamp 245-249
+- typedef cf_platform_wake 328
+`lib/platform/include/configforge/cf_platform_file.h`
+- #define CONFIGFORGE_CF_PLATFORM_FILE_H 20
+- #define CF_PLATFORM_WIN32 39
+- #define CF_PLATFORM_POSIX 41
+- #define CF_PLATFORM_WIN32 45
+- #define CF_PLATFORM_POSIX 48
+- #define CF_PLATFORM_NONE 51
+`lib/platform/src/none/file.c`
+- cf_platform_fopen 20-30
+`lib/platform/src/none/none.c`
+- cf_platform_name 14-16
+- cf_platform_has_environ 18-20
+- cf_platform_has_dir_list 22-24
+- cf_platform_has_wide_args 26-28
+- cf_platform_environ 30-32
+- cf_platform_args 34-39
+- cf_platform_stamp 41-49
+- cf_platform_dir_list 51-58
+- cf_platform_has_trusted_dir 61-63
+- cf_platform_dir_list_trusted 65-68
+- cf_platform_world_readable 70-73
+- cf_platform_has_private_create 75-77
+- cf_platform_create_private 79-83
+- cf_platform_has_registry 87-89
+- cf_platform_registry_walk 91-100
+- cf_platform_has_preferences 104-106
+- cf_platform_preferences_walk 108-123
+- cf_platform_has_wake 125-127
+- cf_platform_wake_open 129-136
+- cf_platform_wake_fd 138-141
+- cf_platform_wake_handle 143-146
+- cf_platform_wake_drain 148-151
+- cf_platform_wake_wait 153-157
+- cf_platform_wake_close 159-161
+`lib/platform/src/posix/file.c`
+- cf_platform_fopen 17-20
+`lib/platform/src/posix/posix.c`
+- cf_platform_name 86-88
+- cf_platform_has_environ 90-92
+- cf_platform_has_dir_list 94-96
+- cf_platform_has_wide_args 98-102
+- cf_platform_environ 104-106
+- cf_platform_args 108-113
+- posix_stamp_dir 117-140
+- cf_platform_stamp 142-162
+- cf_platform_has_registry 166-168
+- cf_platform_registry_walk 170-179
+- cf_platform_has_preferences 189-191
+- struct mac_prefs 193-199
+- mac_prefs_room 201-205
+- mac_prefs_utf8 208-219
+- mac_prefs_path 223-238
+- mac_prefs_emit 240-242
+- mac_prefs_array 248-265
+- mac_prefs_dict 270-325
+- mac_prefs_value 329-389
+- cf_platform_preferences_walk 391-436
+- cf_platform_has_preferences 442-444
+- cf_platform_preferences_walk 446-461
+- cf_platform_world_readable 465-472
+- cf_platform_has_private_create 474-476
+- cf_platform_create_private 478-498
+- posix_own_group 517-526
+- posix_group_writes 529-534
+- posix_refuse 537-544
+- posix_dir_list 558-669
+- cf_platform_dir_list 671-674
+- cf_platform_has_trusted_dir 676-682
+- cf_platform_dir_list_trusted 684-691
+- struct posix_target 699-703
+- struct cf_platform_wake 705-715
+- posix_up 719-736
+- posix_dir_of 739-754
+- posix_why 766-777
+- posix_arm 780-807
+- cf_platform_has_wake 809-811
+- cf_platform_wake_open 813-860
+- cf_platform_wake_fd 862-864
+- cf_platform_wake_handle 866-869
+- cf_platform_wake_drain 876-922
+- cf_platform_wake_wait 924-947
+- cf_platform_wake_close 949-957
+- kq_why 979-991
+- kq_close_all 998-1007
+- kq_add 1010-1076
+- kq_add_entries 1080-1103
+- kq_arm 1107-1135
+- kq_arm_all 1137-1149
+- cf_platform_has_wake 1151-1153
+- cf_platform_wake_open 1155-1204
+- cf_platform_wake_fd 1210-1212
+- cf_platform_wake_handle 1214-1217
+- cf_platform_wake_drain 1219-1231
+- cf_platform_wake_wait 1233-1254
+- cf_platform_wake_close 1256-1268
+- cf_platform_has_wake 1272-1274
+- cf_platform_wake_open 1276-1284
+- cf_platform_wake_fd 1286-1289
+- cf_platform_wake_handle 1291-1294
+- cf_platform_wake_drain 1296-1299
+- cf_platform_wake_wait 1301-1305
+- cf_platform_wake_close 1307-1309
+`lib/platform/src/win32/file.c`
+- win32f_wide 25-32
+- cf_platform_fopen 34-42
+`lib/platform/src/win32/win32.c`
+- cf_platform_name 34-36
+- cf_platform_has_environ 38-40
+- cf_platform_has_dir_list 42-44
+- cf_platform_has_wide_args 46-48
+- cf_platform_environ 50-52
+- cf_platform_args 54-96
+- win32_wide 101-108
+- win32_pattern 111-122
+- win32_join 127-130
+- win32_stamp_dir 134-159
+- cf_platform_stamp 161-184
+- cf_platform_world_readable 186-189
+- cf_platform_has_private_create 191-193
+- cf_platform_create_private 195-236
+- win32_name_error 241-256
+- cf_platform_dir_list 258-306
+- cf_platform_has_trusted_dir 311-313
+- cf_platform_dir_list_trusted 315-318
+- struct win32_target 339-346
+- struct cf_platform_wake 348-353
+- win32_is_sep 355-357
+- win32_up 363-389
+- win32_dir_of 392-411
+- win32_open_dir 413-424
+- win32_disarm 433-448
+- win32_issue 450-457
+- win32_arm 460-488
+- cf_platform_has_wake 490-492
+- cf_platform_wake_open 494-541
+- cf_platform_wake_fd 543-546
+- cf_platform_wake_handle 548-550
+- cf_platform_wake_drain 552-582
+- cf_platform_wake_wait 584-602
+- cf_platform_wake_close 604-617
+- cf_platform_has_registry 628-630
+- struct win32_reg 632-640
+- win32_reg_hive 643-664
+- win32_reg_utf8 669-684
+- win32_reg_fail 686-690
+- win32_reg_value 693-740
+- win32_reg_key 742-810
+- cf_platform_registry_walk 812-859
+- cf_platform_has_preferences 863-865
+- cf_platform_preferences_walk 867-882
+`lib/port/include/configforge/cf_build_options.h`
+- #define CONFIGFORGE_CF_BUILD_OPTIONS_H 27
+- #define CF_WITH_REAL 30
+- #define CF_SHARED 34
+- #define CF_WITH_INI 37
+- #define CF_WITH_JSON 40
+- #define CF_WITH_TOML 43
+- #define CF_WITH_PROPERTIES 46
+- #define CF_WITH_CBOR 49
+- #define CF_WITH_TLV 52
+- #define CF_WITH_COMPOSE 55
+- #define CF_WITH_XML 58
+- #define CF_WITH_YAML 63
+- #define CF_WITH_SQLITE 66
+- #define CF_WITH_DIR 72
+- #define CF_WITH_DOTENV 75
+- #define CF_WITH_PREFERENCES 78
+- #define CF_WITH_EMIT 81
+- #define CF_WITH_IMAGE 84
+- #define CF_WITH_REPORT 87
+- #define CF_KEY_MAX 112
+- #define CF_MESSAGE_MAX 115
+- #define CF_PATH_MAX 118
+- #define CF_MAX_DEPTH 121
+- #define CF_BUILD_PROFILE 124
+`lib/port/include/configforge/cf_port.h`
+- #define CONFIGFORGE_CF_PORT_H 16
+- #define CF_HAVE_C99 30
+- #define CF_HAVE_C11 31
+- #define CF_HAVE_C23 32
+- #define CF_HAVE_C23 35
+- #define CF_HAVE_C23 37
+- #define CF_HAVE_C99 40
+- #define CF_HAVE_C99 42
+- #define CF_HAVE_C11 45
+- #define CF_HAVE_C11 47
+- #define CF_C11_WARN_OFF_ 55
+- #define CF_C11_WARN_OFF_ 57
+- typedef cf_i64 106
+- typedef cf_u64 107
+- typedef cf_i32 108
+- typedef cf_u32 109
+- typedef cf_u16 110
+- typedef cf_u8 111
+- typedef cf_i64 113
+- typedef cf_u64 114
+- typedef cf_i32 115
+- typedef cf_u32 116
+- typedef cf_u16 117
+- typedef cf_u8 118
+- typedef cf_i32 134
+- typedef cf_u32 135
+- typedef cf_u16 136
+- typedef cf_u8 137
+- #define CF_U64_MAX 145
+- #define CF_I64_MAX 146
+- #define CF_I64_MIN 147
+- typedef cf_bool 156
+- #define CF_TRUE 157
+- #define CF_FALSE 158
+- #define CF_GNUC 172
+- #define CF_GNUC_MINOR 173
+- #define CF_GNUC 175
+- #define CF_GNUC_MINOR 176
+- #define CF_INLINE 184
+- #define CF_INLINE 186
+- #define CF_INLINE 188
+- #define CF_INLINE 190
+- #define CF_NODISCARD 209
+- #define CF_NODISCARD 211
+- #define CF_API 233
+- #define CF_API 235
+- #define CF_API 238
+- #define CF_API 240
+- #define CF_API 243
+- #define CF_INTERNAL_API 253
+- #define CF_EXPERIMENTAL 260
+- #define CF_STATIC_ASSERT 270
+- #define CF_SA_CAT2 272
+- #define CF_SA_CAT 273
+- #define CF_STATIC_ASSERT 274
+- #define CF_PRINTFLIKE 283
+- #define CF_UNUSED_RESULT 284
+- #define CF_LIKELY 285
+- #define CF_UNLIKELY 286
+- #define CF_PRINTFLIKE 288
+- #define CF_UNUSED_RESULT 289
+- #define CF_LIKELY 290
+- #define CF_UNLIKELY 291
+- #define CF_ANALYZER_COUNTED 303
+- #define CF_ANALYZER_FILLED 304
+- #define CF_ANALYZER_COUNTED 306
+- #define CF_ANALYZER_FILLED 307
+- #define CF_ATOMIC_KIND 320
+- #define CF_ATOMIC_GCC_ATOMIC 323
+- #define CF_ATOMIC_KIND 324
+- #define CF_ATOMIC_GCC_SYNC 327
+- #define CF_ATOMIC_KIND 328
+- #define CF_ATOMIC_WIN32 330
+- #define CF_ATOMIC_KIND 331
+- #define CF_ATOMIC_C11 335
+- #define CF_ATOMIC_KIND 336
+- #define CF_ATOMIC_NONE 338
+- #define CF_ATOMIC_KIND 339
+- struct cf_refcount 348-350
+- cf_is_digit 372-374
+- cf_is_upper 375-377
+- cf_is_lower 378-380
+- cf_is_alpha 381-383
+- cf_is_alnum 384-386
+- cf_is_space 387-389
+- cf_to_lower 390-392
+- cf_to_upper 393-395
+- #define CF_I64_DIGITS 408
+`lib/port/src/port.c`
+- cf_ref_init 23-25
+- cf_ref_inc 27-41
+- cf_ref_dec 43-57
+- cf_ref_get 61-79
+- cf_cmp_bytes 85-100
+- cf_cmp_ascii_ci 102-117
+- cf_u64_to_text 123-145
+- cf_i64_to_text 147-170
+- struct cf_fmt_out 179-183
+- cf_put 185-190
+- cf_puts_n 192-197
+- cf_put_hex 199-212
+- cf_vformat 214-301
+- cf_vfmt 303-310
+- cf_fmt 312-325
+- cf_fmt_append 327-349
+- cf_port_description 355-365
+`lib/serialize/include/configforge/cf_serialize.h`
+- #define CONFIGFORGE_CF_SERIALIZE_H 21
+- struct cf_blob 43-47
+- struct cf_sink 81-85
+- struct cf_doc_sink 126-150
+- struct cf_codec 221-245
+- #define CF_ENCODER_STATE_MAX 251
+- struct cf_encoder_head 258-260
+- struct cf_tlv_tag 380-396
+- struct cf_tlv_layout 401-414
+- #define CF_TLV_LAYOUT_INIT 416
+- #define cf_tlv_codec 432
+- struct cf_compose 436-445
+- #define CF_COMPOSE_INIT 447
+- #define cf_codec_compose 457
+- enum cf_detect_how 476-482
+- struct cf_detect 487-491
+`lib/serialize/include/configforge/cf_serialize_version.h`
+- #define CONFIGFORGE_CF_SERIALIZE_VERSION_H 11
+- #define CF_SERIALIZE_VERSION_MAJOR 23
+- #define CF_SERIALIZE_VERSION_MINOR 24
+- #define CF_SERIALIZE_VERSION_PATCH 25
+- #define CF_SERIALIZE_VERSION_NUMBER 27
+`lib/serialize/include/configforge/cf_yamlparse.h`
+- #define CONFIGFORGE_CF_YAMLPARSE_H 14
+- #define CF_YAML_LIBFYAML 21
+- #define CF_YAML_LIBYAML 24
+- struct cf_yp_node 33-43
+- struct cf_yp_events 45-55
+`lib/serialize/src/blob.c`
+- cf_blob_mem 21-28
+- cf_blob_skip_bom 30-36
+- cf_text_is_utf8 38-40
+- cf_blob_arena 42-47
+- cf_blob_arena_done 49-53
+- cf_blob_file 57-134
+- cf_blob_file 138-143
+- cf_sink_init 151-155
+- cf_sink_write 157-168
+- cf_sink_putc 170-175
+- cf_sink_puts 177-181
+- cf_sink_fmt 183-201
+- cf_sink_terminate 203-207
+- cf_sink_overflowed 209-211
+- cf_sink_json_string 225-240
+- cf_sink_json_value 242-260
+- cf_loc_text 266-277
+`lib/serialize/src/cbor.c`
+- struct cbor_scan 39-48
+- struct cbor_head 53-60
+- cbor_left 66-68
+- cbor_at 70-72
+- cbor_has_text 76-81
+- cbor_has_work 83-88
+- cbor_fail 91-96
+- cbor_kind 99-119
+- cbor_head_read 123-180
+- cbor_place 183-188
+- cbor_refused 191-199
+- cbor_emit 201-210
+- cbor_definite 214-230
+- cbor_chunks 236-265
+- cbor_string 270-318
+- cbor_text_value 320-333
+- cbor_float 339-364
+- cbor_enter 372-381
+- cbor_close 383-392
+- cbor_key 396-416
+- cbor_map 418-474
+- cbor_array 476-514
+- cbor_value 517-575
+- cbor_item 581-644
+- cbor_decode 646-696
+- struct cbor_enc 711-715
+- typedef cbor_enc_fits 718
+- cbor_put 721-730
+- cbor_put_head 734-748
+- cbor_put_text 751-766
+- cbor_put_int 768-774
+- typedef cbor_float_is_32 779
+- cbor_half 784-811
+- cbor_put_real 815-845
+- cbor_put_byte 849-851
+- cbor_enc_open 856-866
+- cbor_enc_table 868-870
+- cbor_enc_array 872-874
+- cbor_enc_scalar 876-910
+- cbor_enc_end 912-921
+- cbor_encoder 923-940
+`lib/serialize/src/codec.c`
+- cf_codec_count 66-72
+- cf_codec_at 74-76
+- cf_codec_select 78-94
+- kind_add 98-106
+- cf_codec_kind 108-145
+- cf_codec_by_name 147-160
+- path_ext 172-187
+- ext_matches 189-205
+- cf_codec_by_path 207-220
+- cf_codec_among 222-239
+- codec_has_self 250-255
+- cf_codec_can_read 257-262
+- cfi_codec_decode_raw 264-277
+- cf_codec_decode 279-290
+- struct cf_format_info 300-307
+- cf_format_of_path 339-352
+- cf_format_holds 354-370
+- cf_format_limits 372-386
+- cf_format_option 388-400
+`lib/serialize/src/compose.c`
+- struct compose_frame 18-21
+- compose_table 23-27
+- compose_array 29-33
+- compose_scalar 35-40
+- compose_end 42-46
+- compose_has_text 48-52
+- compose_has_work 54-58
+- compose_text 60-65
+- compose_work 67-72
+- compose_refused 74-83
+- compose_filtered 85-115
+- compose_decode 117-156
+- compose_name_valid 158-173
+- cf_codec_compose_sized 175-233
+- cf_codec_compose_sized 237-250
+`lib/serialize/src/detect.c`
+- struct trial 30-37
+- trial_mix 39-47
+- trial_event 49-55
+- trial_table 57-60
+- trial_array 62-72
+- trial_scalar 76-93
+- trial_end 95-98
+- trial_reserve_text 100-122
+- trial_reserve_work 124-127
+- trial_read 131-156
+- is_space 175-177
+- look_at 180-241
+- is_loose 245-248
+- cf_codec_detect 250-341
+`lib/serialize/src/ini.c`
+- struct ini_scan 46-51
+- ini_emit_path 56-86
+- ini_bracket 90-116
+- struct ini_run 119-125
+- ini_run_close 127-133
+- ini_earlier_run 139-166
+- struct ini_name 176-181
+- struct ini_names 183-192
+- ini_names_init 194-211
+- ini_names_slot 216-227
+- ini_names_line 230-238
+- ini_names_grow 242-264
+- ini_names_add 266-284
+- ini_names_seen 290-298
+- ini_decode 300-525
+- struct ini_enc 537-548
+- typedef ini_enc_fits 551
+- ini_enc_push 553-570
+- ini_enc_header 572-579
+- ini_enc_table 584-590
+- ini_enc_array 595-611
+- ini_text_form 621-638
+- ini_enc_scalar 640-680
+- ini_enc_end 682-692
+- ini_encoder 694-710
+`lib/serialize/src/json.c`
+- struct js_scan 41-51
+- js_loc 58-62
+- js_fail 64-69
+- js_space 72-80
+- js_hex 83-96
+- js_too_long 103-105
+- js_put 107-117
+- js_put_cp 119-122
+- js_escape 142-186
+- js_string 191-245
+- js5_is_id 250-259
+- js5_name 262-303
+- js_number_value 310-335
+- js_number 337-391
+- js5_hex 395-434
+- js5_number 440-503
+- js_between 510-546
+- js_object 548-595
+- js_array 597-624
+- js_text 627-665
+- js_value 667-726
+- js_decode 728-761
+- json_decode 763-765
+- json5_decode 767-769
+- struct js_enc 777-785
+- typedef js_enc_fits 788
+- js_indent 794-800
+- js_sep 802-810
+- js_name 812-817
+- js_enc_open 819-839
+- js_enc_table 841-851
+- js_enc_array 853-855
+- js_enc_scalar 857-883
+- js_enc_end 885-904
+- json_encoder 906-923
+`lib/serialize/src/properties.c`
+- struct prop_scan 42-48
+- prop_fail 50-53
+- prop_eol 56-58
+- prop_next_line 61-64
+- prop_element 80-152
+- prop_decode 154-223
+`lib/serialize/src/tlv.c`
+- tlv_hex 39-47
+- tlv_type_word 54-59
+- tlv_name 61-63
+- tlv_bad 65-68
+- tlv_ber_bytes 72-79
+- tlv_tag_bytes 81-83
+- tlv_ber_first 87-89
+- tlv_ber_constructed 91-93
+- tlv_ber_ident 98-120
+- tlv_fits 123-128
+- tlv_name_ok 131-136
+- tlv_width_ok 139-153
+- tlv_check_ber 157-181
+- tlv_check_tag 184-272
+- tlv_on_path 277-287
+- tlv_check_table 291-314
+- tlv_check 317-376
+- struct tlv_scan 382-392
+- tlv_fail 395-400
+- tlv_number 403-411
+- tlv_ber_tag 415-445
+- tlv_ber_len 449-488
+- tlv_pad 492-499
+- tlv_tag_read 502-518
+- tlv_len_read 521-538
+- tlv_find 541-556
+- tlv_refused 559-567
+- tlv_emit 570-583
+- tlv_has_text 586-591
+- tlv_bcd 594-622
+- tlv_hexval 626-655
+- tlv_text 657-680
+- tlv_integer 682-714
+- tlv_real 719-738
+- tlv_enter 746-756
+- tlv_leave 758-767
+- tlv_nest 771-783
+- tlv_unknown 788-811
+- tlv_element 815-881
+- tlv_ran_before 885-908
+- tlv_list 913-939
+- tlv_is_list 942-947
+- tlv_close 950-956
+- tlv_seq 960-1049
+- tlv_decode 1051-1083
+- tlv_sized 1086-1092
+- cf_tlv_codec_sized 1094-1122
+- cf_tlv_codec_sized 1126-1139
+`lib/serialize/src/toml.c`
+- enum toml_kind 77-87
+- enum toml_def 95-103
+- struct toml_node 105-113
+- struct toml_scan 115-142
+- struct toml_dkey 150-155
+- toml_loc 162-166
+- toml_fail 168-173
+- toml_blank 175-177
+- toml_comment_result 179-188
+- toml_comment 190-195
+- toml_space_lines 197-202
+- toml_end_of_line 205-214
+- toml_put 218-228
+- toml_newline 232-240
+- toml_string 247-405
+- toml_bare 407-409
+- toml_key_segment 412-431
+- toml_key 434-463
+- toml_fail_named 475-498
+- toml_no_room 500-503
+- toml_hash 507-524
+- toml_find 528-542
+- toml_room 547-596
+- toml_add 601-628
+- toml_track_init 633-661
+- toml_define_key 666-709
+- toml_define_header 715-807
+- toml_digits 814-836
+- toml_fixed 847-859
+- toml_time 863-891
+- toml_datetime 899-948
+- toml_number 950-1075
+- toml_keyval 1081-1120
+- toml_array 1125-1177
+- toml_inline_table 1182-1237
+- toml_value 1239-1312
+- toml_close_to 1324-1343
+- toml_push 1345-1374
+- toml_header 1376-1449
+- toml_decode 1451-1495
+- struct toml_enc 1515-1526
+- typedef toml_enc_fits 1529
+- toml_quote 1542-1557
+- toml_enc_lead 1562-1589
+- toml_enc_open_inline 1591-1604
+- toml_enc_table 1606-1634
+- toml_enc_array 1636-1638
+- toml_enc_scalar 1640-1679
+- toml_enc_end 1681-1701
+- toml_encoder 1703-1718
+`lib/serialize/src/version.c`
+- cf_serialize_version 15-18
+- cf_serialize_version_number 20-22
+`lib/serialize/src/xml.c`
+- struct xml_name 69-74
+- struct xml_slot 84-88
+- struct xml_level 90-95
+- struct xml_scan 97-132
+- xml_fail 135-148
+- xml_grow 152-170
+- xml_plain_name 172-181
+- xml_slot_of 189-205
+- xml_slot_put 207-215
+- xml_index_room 221-250
+- xml_find 253-267
+- xml_remember 269-299
+- xml_close_run 302-309
+- xml_scan_start 311-389
+- xml_scan_end 391-416
+- xml_scan_text 418-432
+- xml_doctype 434-443
+- xml_here 449-453
+- xml_sink_failed 455-457
+- xml_emit_start 459-520
+- xml_emit_text 522-539
+- xml_emit_end 541-575
+- xml_run 579-627
+- xml_decode 629-691
+`lib/serialize/src/yaml.c`
+- struct yaml_level 78-81
+- struct yaml_ev 88-95
+- struct yaml_rec 98-104
+- struct yaml_anchor 107-113
+- struct yaml_scan 133-160
+- yaml_fail_at 162-165
+- yaml_no_room 167-170
+- yaml_grow 174-192
+- yaml_keep 194-209
+- yaml_record 212-238
+- yaml_find 242-256
+- yaml_anchor_open 259-336
+- yaml_anchor_close 339-349
+- yaml_name 353-371
+- yaml_known_tag 378-397
+- yaml_open 399-433
+- yaml_is_null 436-442
+- yaml_tagged 446-510
+- yaml_scalar 512-570
+- yaml_handle 574-599
+- yaml_alias 604-679
+- yaml_node 682-688
+- yaml_document 690-696
+- yaml_stream_end 700-708
+- yaml_scan_init 710-728
+- yaml_ev_init 731-740
+- yaml_fy_text 750-757
+- yaml_fy_tag 761-773
+- yaml_fy_event 775-834
+- yaml_fy_fail 837-846
+- yaml_fy_version_ok 860-887
+- yaml_decode 889-946
+- yaml_line 954-956
+- yaml_col 957-959
+- yaml_event 964-1014
+- yaml_decode 1016-1042
+- yaml_b_document 1051-1053
+- yaml_b_stream_end 1055-1057
+- yaml_b_alias 1059-1062
+- yaml_b_node 1064-1079
+- yaml_b_work 1083-1086
+- yaml_decode 1088-1100
+- struct yaml_enc 1121-1126
+- typedef yaml_enc_fits 1129
+- yaml_quote 1148-1171
+- yaml_reserved 1175-1186
+- yaml_key 1188-1205
+- yaml_lead 1210-1226
+- yaml_enc_open 1228-1239
+- yaml_enc_table 1241-1243
+- yaml_enc_array 1245-1247
+- yaml_enc_scalar 1249-1277
+- yaml_enc_end 1279-1292
+- yaml_encoder 1294-1309
+`lib/serialize/src/yamlparse.c`
+- struct yp_tagdef 36-41
+- struct yp 43-58
+- struct yp_props 62-67
+- yp_c 73-75
+- yp_blank 76-78
+- yp_brk 79-81
+- yp_blankz 82-84
+- yp_flowind 85-87
+- yp_col 89-91
+- yp_fail_at 93-99
+- yp_fail 101-103
+- yp_eat_break 108-111
+- yp_blanks 113-115
+- yp_comment_here 118-121
+- yp_skip 123-127
+- yp_line_rest 131-141
+- yp_indent 144-150
+- yp_fresh 153-161
+- yp_marker 164-169
+- yp_printable 173-175
+- yp_emit 181-200
+- yp_empty 203-205
+- yp_end 207-209
+- yp_anchor_char 215-217
+- yp_name 220-226
+- yp_tag_put 228-250
+- yp_tag 254-320
+- yp_props_read 323-360
+- yp_put 366-372
+- yp_put_cp 374-385
+- yp_colon 389-392
+- yp_plain_start 396-407
+- yp_plain_stop 411-425
+- yp_plain_line 428-464
+- yp_plain 468-536
+- yp_quoted_fold 541-579
+- yp_escape 591-611
+- yp_quoted 614-688
+- yp_block_breaks 693-747
+- yp_block_scalar 751-867
+- yp_peek_node 877-963
+- yp_is_key 967-989
+- yp_deeper 998-1003
+- yp_alias 1006-1022
+- yp_flow_skip 1026-1055
+- yp_flow_pair_value 1059-1074
+- yp_flow_key 1076-1091
+- yp_flow_collection 1093-1152
+- yp_flow_node 1155-1177
+- yp_block_key 1180-1202
+- yp_tabbed 1205-1213
+- yp_block_map 1216-1268
+- yp_block_seq 1271-1296
+- yp_same_seq 1301-1304
+- yp_none_here 1308-1311
+- yp_tab_before 1314-1323
+- yp_block_node 1325-1416
+- yp_directive 1423-1487
+- cf_yaml_parse 1489-1570
+- typedef cf_yamlparse_empty 1575
+`lib/text/include/configforge/cf_encoding.h`
+- #define CONFIGFORGE_CF_ENCODING_H 16
+- #define CF_ENCODING_SHIFT 27
+- #define CF_ENCODING_MASK 28
+`lib/text/include/configforge/cf_text.h`
+- #define CONFIGFORGE_CF_TEXT_H 13
+- struct cf_text_esc_simple 23-26
+- struct cf_text_esc_family 40-49
+- struct cf_text_esc 63-70
+- struct cf_text_escaper 80-85
+- struct cf_text_track 105-108
+- struct cf_text_syntax 117-121
+`lib/text/src/encoding.c`
+- struct enc_name 80-84
+- enc_same 100-112
+- cf_encoding_by_name 114-127
+- cf_encoding_name 129-142
+- enc_refuse 145-150
+- enc_put 153-163
+- enc_single 165-183
+- enc_unit 186-189
+- enc_utf16 191-220
+- cf_encoding_recode 222-243
+- enc_look 249-280
+- cf_encoding_check 293-321
+`lib/text/src/escape.c`
+- esc_in 20-22
+- esc_fail 24-27
+- cf_text_esc_decode 29-128
+- cf_text_escape 130-160
+`lib/text/src/fail.c`
+- cf_text_fail 13-31
+`lib/text/src/hash.c`
+- cf_text_seed 23-32
+- cf_text_hash 34-40
+`lib/text/src/hex.c`
+- cf_text_hex_value 7-18
+`lib/text/src/place.c`
+- cf_text_place 16-46
+`lib/text/src/refs.c`
+- cf_text_ref_count 14-23
+- cf_text_ref_next 25-34
+- cf_text_ref_unescape 36-46
+- cf_text_ref_widen 48-66
+`lib/text/src/space.c`
+- cf_text_break 10-29
+- cf_text_eol 31-36
+- cf_text_blanks 38-46
+- cf_text_trim 48-57
+- cf_text_is_ecma_space 59-65
+- cf_text_comment 67-97
+- text_block_comment 100-121
+- cf_text_skip 123-176
+`lib/text/src/track.c`
+- cf_text_track_init 7-10
+- cf_text_track_line 12-15
+- cf_text_track_col 17-19
+`lib/text/src/utf8.c`
+- cf_text_utf8_decode 15-56
+- cf_text_utf8_valid 58-60
+- cf_text_utf8_encode 62-83
+`tools/codec/codec.c`
+- usage 26-61
+- main 63-93
+`tools/codec/codec.h`
+`tools/codec/convert.c`
+- struct cv_say 23-26
+- struct cv_args 28-34
+- cv_parse 38-66
+- cv_has_comments 69-80
+- cv_notes 84-98
+- cv_what 101-134
+- cv_print 137-147
+- cv_write 150-182
+- cv_target 185-195
+- cv_report 199-238
+- codec_convert 240-294
+`tools/codec/convert_core.c`
+- enum cv_nkind 38-55
+- struct cv_tree 58-70
+- struct cv_check 73-85
+- struct cv_out 90-96
+- cv_max_name 107-112
+- cv_fnv 114-122
+- cv_hash 124-132
+- cv_slot 136-149
+- cv_room 152-178
+- cv_new 183-221
+- cv_member 228-296
+- cv_open 298-306
+- cv_rec_table 308-310
+- cv_rec_array 312-314
+- cv_rec_scalar 316-331
+- cv_rec_end 333-341
+- cv_rec_text 344-346
+- cv_rec_work 348-350
+- cv_esc 358-381
+- cv_path 385-410
+- cv_note 414-461
+- cv_plain_name 465-477
+- cv_pass_names 480-493
+- cv_pass_arrays 497-528
+- cv_array_kind 533-553
+- cv_pass_bits 563-621
+- cv_as_text 632-653
+- cv_refused 656-670
+- cv_emit_members 675-693
+- cv_emit 695-721
+- cv_run 725-748
+- cv_record 755-782
+- cv_drop_empty_tables 786-801
+- cv_find 804-829
+- cv_bytes 832-860
+- cv_convert 862-899
+`tools/codec/convert_core.h`
+- enum cv_kind 13-29
+- struct cv_finding 31-35
+- struct cv_result 37-42
+`tools/codec/detect.c`
+- read_stdin 24-56
+- codec_named 58-75
+- codec_read 77-125
+- codec_detect 127-150
+- keep_table 155-160
+- keep_scalar 162-171
+- keep_end 173-176
+- lend_text 178-180
+- lend_work 182-184
+- codec_check 186-250
+`tools/codec/dump.c`
+- struct dp_frame 20-25
+- struct dp_ctx 27-34
+- dp_put 38-53
+- dp_member 57-69
+- dp_path 71-80
+- dp_open 82-102
+- dp_table 104-106
+- dp_array 108-110
+- dp_quoted 113-140
+- dp_scalar 142-175
+- dp_end 177-186
+- dp_text 189-191
+- dp_work 193-195
+- dp_args 198-218
+- codec_dump 220-267
+`tools/codec/formats.c`
+- ext_list 16-28
+- codec_formats 30-68
+`tools/codec/pairs.c`
+- struct pr_row 21-24
+- pr_missing 46-54
+- pr_cell 56-58
+- pr_load 62-72
+- pr_lost 75-89
+- codec_pairs 91-157
+`tools/codec/recode.c`
+- rc_usage 21-26
+- rc_is_utf16 28-33
+- rc_place 38-61
+- rc_refuse 65-90
+- rc_mark 94-111
+- rc_utf32 113-119
+- rc_write 122-151
+- rc_check 155-177
+- rc_recode 180-206
+- codec_recode 208-282
+`tools/configforge/front.h`
+`tools/configforge/main.c`
+- help 31-46
+- is_name 49-62
+- main 64-96
+`tools/configforge/run_posix.c`
+- out_of_memory 31-34
+- runnable 37-46
+- join 50-59
+- front_run 61-138
+- typedef front_run_posix_unused 142
+`tools/configforge/run_win32.c`
+- out_of_memory 28-31
+- cannot_run 33-36
+- not_found 39-45
+- keep_waiting 51-53
+- to_wide 56-71
+- own_dir 75-111
+- join 115-128
+- is_file 131-137
+- try_dir 141-153
+- find_program 157-216
+- put_arg 224-279
+- build_command_line 283-303
+- spawn 307-345
+- front_run 347-370
+- typedef front_run_win32_unused 374
+`tools/doctor/adapters.h`
+`tools/doctor/doctor.c`
+- text_field 39-64
+- baseline_stale 66-80
+- sarif_quote 82-96
+- sarif_level 98-102
+- print_sarif 104-155
+- md_cell 166-189
+- print_markdown 194-253
+- print_text 255-264
+- cand_line 272-283
+- type_field 287-293
+- cmd_dump 295-328
+- cmd_explain 330-360
+- usage 362-412
+- load 415-422
+- main 426-463
+- run 465-654
+`tools/doctor/dotnet.c`
+- dotnet_usage 49-58
+- dotnet_kind 61-80
+- dotnet_provider 86-110
+- doctor_import_dotnet 112-327
+`tools/doctor/engine.c`
+- text_at 28-60
+- flag_at 66-77
+- read_at 80-93
+- entry_key_length 102-121
+- defaults_by_source 128-146
+- key_order 152-156
+- index_keys 159-173
+- parse 175-385
+- doctor_load 390-404
+- doctor_load_text 406-422
+- doctor_release 424-429
+- doctor_find_key 431-456
+- doctor_shown 462-464
+- doctor_reason 476-491
+- doctor_find_source 493-504
+- doctor_place_of 512-554
+- baseline_load 578-613
+- baseline_accepts 617-627
+- doctor_level_known 648-653
+- severity_load 658-715
+- severity_of 717-739
+- doctor_level_rank 741-752
+- found_push 763-784
+- found_reserve 789-814
+- found_release 816-823
+- same_text 835-840
+- same_candidates 842-856
+- source_note 858-869
+- only_prepare 874-921
+- only_done 923-935
+- only_touched 939-951
+- vfinding 953-988
+- finding 990-996
+- finding_at 999-1005
+- doctor_key_name 1043-1047
+- rule_dead_source 1058-1126
+- rule_undefined 1133-1155
+- rule_deprecated 1160-1187
+- rule_empty 1193-1215
+- rule_unreachable 1230-1266
+- rule_sensitive_source 1279-1316
+- rule_inversion 1325-1347
+- rule_required 1350-1362
+- rule_refused 1365-1387
+- rule_policy 1395-1412
+- rule_default_only 1416-1432
+- rule_truncated 1441-1457
+- winner 1464-1473
+- typedef agreement 1475
+- digest_kind_end 1479-1483
+- digests_comparable 1488-1493
+- digests_apart 1497-1505
+- apart_text 1508-1514
+- values_agree 1522-1536
+- told_by_digest 1542-1547
+- origin_kind 1552-1556
+- rule_origin_drift 1563-1589
+- rule_shadow_divergence 1593-1622
+- rule_parity 1625-1637
+- rule_value_diff 1639-1682
+- default_of 1685-1694
+- rule_default_drift 1702-1755
+- rule_unread 1764-1783
+- rule_fingerprint 1794-1857
+- typedef lint_rule 1863
+- typedef diff_rule 1864
+- doctor_lint_reports 1876-1889
+- doctor_diff_reports 1891-1900
+- typedef step_result 1914
+- chosen 1916-1918
+- key_step 1926-1988
+- history_step 1991-2008
+- history_pass 2013-2040
+- blame_key 2045-2082
+- cf_doctor_new 2088-2096
+- cf_doctor_free 2098-2110
+- cf_doctor_only_changed_file 2112-2136
+- cf_doctor_unchanged_count 2138-2140
+- cf_doctor_redact_all 2142-2146
+- cf_doctor_accept 2148-2158
+- cf_doctor_baseline 2160-2166
+- cf_doctor_severity 2168-2189
+- cf_doctor_severity_file 2191-2196
+- doctor_report_of 2200-2222
+- doctor_report_free 2224-2236
+- cf_doctor_lint_report 2238-2252
+- cf_doctor_lint_file 2254-2267
+- cf_doctor_lint 2269-2283
+- cf_doctor_diff_report 2285-2303
+- cf_doctor_diff_files 2305-2321
+- cf_doctor_diff 2323-2338
+- reports_release 2340-2348
+- reports_load 2353-2385
+- key_in_any 2387-2396
+- cf_doctor_history_files 2398-2416
+- cf_doctor_blame_files 2418-2440
+- cf_doctor_count 2442-2444
+- cf_doctor_finding 2446-2459
+- cf_doctor_count_at 2461-2478
+- cf_doctor_stale_count 2480-2492
+- cf_doctor_stale 2494-2513
+- cf_doctor_rule_count 2515-2517
+- cf_doctor_rule_id 2519-2521
+- cf_doctor_rule_text 2523-2532
+`tools/doctor/engine.h`
+- struct cand 19-31
+- struct rkey 33-52
+- struct rkey_ref 56-58
+- struct rsrc 62-71
+- struct report 73-90
+- struct baseline 97-103
+- struct severity_line 110-114
+- struct dfinding 117-126
+- struct cf_doctor 131-154
+`tools/doctor/gate.c`
+- gate_stops 21-26
+- cf_doctor_live_check 35-78
+`tools/doctor/git.c`
+- git_scope 47-55
+- git_origin 61-78
+- git_usage 80-89
+- doctor_import_git 91-260
+`tools/doctor/include/configforge/cf_doctor.h`
+- #define CONFIGFORGE_CF_DOCTOR_H 31
+- #define CF_DOCTOR_API 42
+- typedef cf_doctor 44
+- struct cf_finding 50-56
+- struct cf_doctor_gate 176-182
+- #define CF_DOCTOR_GATE_INIT 185
+`tools/doctor/spring.c`
+- struct spring_scan 39-60
+- spring_note_skip 62-68
+- spring_origin 73-85
+- spring_property 88-106
+- spring_table 108-137
+- spring_array 139-151
+- spring_scalar 153-186
+- spring_end 188-204
+- spring_kind 209-224
+- spring_read_all 226-252
+- spring_reserve_text 254-256
+- spring_usage 258-267
+- doctor_import_spring 269-369
+`tools/doctor/systemd.c`
+- systemd_usage 57-66
+- systemd_space 68-70
+- systemd_key 73-89
+- doctor_import_systemd 91-311
+`tools/gen/contract.c`
+- contract_usage 37-44
+- gen_check 50-98
+- c_string 107-120
+- c_text 122-124
+- c_i64 128-146
+- c_type 148-162
+- c_value 165-193
+- c_flags 195-220
+- c_list_decl 223-234
+- c_lines 279-284
+- c_checks 289-316
+- c_define 319-405
+- c_identifier 408-419
+- c_comment_name 424-436
+- gen_c_body 442-482
+- gen_has_reals 485-494
+- gen_need_reals 496-501
+- typedef gen_lang 513
+- struct gen_lang 515-528
+- gen_c_file 531-555
+- gen_word_cmp 668-670
+- gen_reserved 672-676
+- gen_ident 680-700
+- gen_append 702-704
+- gen_struct_name 709-737
+- struct cx_table 740-747
+- struct cx_key 751-758
+- struct cx_model 760-767
+- cx_type 769-783
+- cx_table_of 786-804
+- cx_shape 809-829
+- cx_clash 831-835
+- cx_distinct_tables 839-863
+- cx_distinct 867-887
+- cx_default 890-924
+- cx_upper 926-930
+- cx_member 933-944
+- cx_keys 946-964
+- cx_structs 966-990
+- cx_bind 992-1023
+- cx_emit 1025-1070
+- cx_start 1075-1092
+- cx_finish 1094-1097
+- gen_cxx_file 1100-1110
+- rs_identifier 1134-1148
+- rs_string 1155-1178
+- gen_decimal 1182-1199
+- rs_i64 1202-1210
+- rs_type 1212-1225
+- rs_default 1228-1254
+- struct rs_key 1258-1263
+- rs_shape 1265-1293
+- rs_distinct 1297-1313
+- gen_slurp 1317-1344
+- gen_base 1348-1358
+- rs_keys 1360-1383
+- rs_struct 1385-1400
+- rs_emit 1402-1424
+- gen_rs_file 1427-1448
+- py_identifier 1473-1487
+- py_escape 1493-1514
+- py_string 1516-1520
+- py_schema 1524-1542
+- py_type 1544-1558
+- py_real 1562-1570
+- py_default 1574-1608
+- py_range 1611-1623
+- py_flags 1626-1650
+- py_arg 1654-1666
+- py_member 1669-1703
+- py_class 1707-1728
+- py_emit 1730-1757
+- gen_py_file 1760-1777
+- cj_member 1788-1797
+- cj_string 1799-1805
+- cj_text_list 1808-1824
+- cj_bound 1827-1836
+- cj_value 1840-1867
+- cj_flags 1869-1890
+- cj_range 1893-1911
+- cj_default 1913-1932
+- cj_list 1934-1950
+- cj_definition 1953-2016
+- gen_contract_json 2018-2059
+- gen_contract_bytes 2064-2086
+- gen_json_file 2089-2109
+- gen_any_name 2112-2115
+- gen_find 2131-2140
+- gen_lang_name 2144-2158
+- gen_no_language 2162-2179
+- gen_load 2183-2195
+- gen_ended 2198-2212
+- gen_outside 2217-2271
+- gen_code 2275-2331
+- sd_stdin 2340-2370
+- sd_not_compiled 2372-2375
+- sd_codec 2379-2408
+- gen_read_keys 2410-2470
+- struct sd_frame 2478-2481
+- struct sd_walk 2483-2499
+- sd_name 2502-2515
+- sd_type 2520-2542
+- sd_left_out 2544-2546
+- sd_define 2550-2559
+- sd_begin 2561-2594
+- sd_begin_table 2596-2598
+- sd_begin_array 2600-2602
+- sd_scalar 2604-2646
+- sd_end 2648-2676
+- sd_title 2679-2706
+- schema_usage 2708-2713
+- sd_write 2716-2752
+- gen_schema 2754-2836
+`tools/gen/gen.c`
+- usage 20-40
+- main 42-61
+`tools/gen/gen.h`
+`tools/gen/spawn.h`
+`tools/gen/spawn_none.c`
+- spawn_find 12-17
+- spawn_run 19-29
+- typedef spawn_none_unused 33
+`tools/gen/spawn_posix.c`
+- runnable 35-42
+- join 46-58
+- try_dir 62-74
+- spawn_find 76-134
+- free_args 137-140
+- build_args 144-176
+- write_all 180-194
+- spawn_run 196-259
+- typedef spawn_posix_unused 263
+`tools/gen/spawn_win32.c`
+- keep_waiting 34-36
+- to_utf8 39-55
+- to_wide 58-74
+- own_dir 78-115
+- join 119-133
+- is_file 136-143
+- try_dir 147-160
+- find_on_path 164-212
+- spawn_find 214-253
+- put_arg 261-315
+- is_dropped 318-327
+- build_command_line 332-366
+- write_all 371-383
+- start 387-400
+- spawn_run 402-480
+- typedef spawn_win32_unused 484
+`docs/Architecture.md`
+- The one decision everything else follows from 9-21
+- Layers 22-83
+- Data flow 84-112
+- Construction is two-phase 113-125
+- Source kinds 126-142
+- Extension points, with recipes 143-275
+- Adding a format 145-182
+- Adding a platform capability 183-207
+- Writing a configuration out 208-234
+- Adding a flat source 235-251
+- Adding a definition attribute 252-259
+- Adding an error code, a value type, or an outcome 260-267
+- Adding a Doctor rule 268-275
+- Where things live 276-305
+- The gates 306-333
+- Run time 334-360
+- Compile time 361-385
+- What is deliberately not here 386-403
+`docs/Maintaining.md`
+- How the work is done 8-42
+- Versions 43-121
+- Lessons made into checks 122-212
+- Measured 213-233
+- Where the tokens go 234-274
+- Working habits that paid 275-374
+- The machines 375-440
+- The maintainer's Windows workstation 377-412
+- The profiling VM 413-422
+- Another machine 423-440
+`docs/Plan.md`
+- The loop 10-68
+- ACCEPT 69-115
+- A card 116-143
+- For the maintainer 144-183
+- The index 184-233
+- Done, their cards removed 234-303
+- After 1.7.0: the order of the waves 304-363
+`docs/Roadmap.md`
+- Status 11-215
+- Marks 13-28
+- At a glance 29-64
+- Left from the security pass 65-82
+- What can run at once 83-103
+- Every item to done (2026-11-07): the order, in waves 104-145
+- More formats, and what a format is (asked 2026-11-13; not yet cards) 146-215
+- Release follow-up 216-236
+- Next: 1.x 237-315
+- Resume here (2026-11-05) 243-279
+- Accepted follow-up 280-315
+- The plan from the evening of 2026-11-06 (the order to follow) 316-363
+- The plan from 2026-11-06 (accepted; the order to follow) 364-461
+- The plan from 1.1.0 (2026-11-05) 462-620
+- Ideas 621-1448
+- ⬜ Sizes predicted, then checked (2026-11-06) 627-643
+- From the security pass of 2026-11-11 644-692
+- From a review of the whole, 2026-11-14 693-767
+- From reading the project as a newcomer, 2026-11-14 768-856
+- Tools, distribution and digests, 2026-11-14 857-939
+- Critical-system standards, and large files (asked 2026-11-16; not yet cards) 940-976
+- Suggestions of 2026-11-17 (not yet cards) 977-1354
+- For the people who change configuration (side discussion, 2026-11-19; not yet cards) 1355-1412
+- Considered, and decided against for now: a GitHub wiki 1413-1420
+- Considered, and decided against for now: TOON 1421-1434
+- Considered, and decided against for now: a jq-like query language 1435-1448
+- Open decisions 1449-1461
+`docs/plan/A-architecture.md`
+- The design 19-415
+- D-100 - One directory per component 21-110
+- D-101 - The vector library, not ConfigForge's 111-188
+- D-102 - One copy of each text and number helper 189-214
+- D-103 - Reading what is almost a format 215-251
+- D-104 - Work moved to build time, in layers 252-294
+- D-105 - Build profiles by name 295-314
+- D-106 - A newer C only where a file needs it, and said so 315-328
+- D-107 - One refusal, the same in every format 329-347
+- D-108 - Every text is UTF-8 inside; another encoding only by name 348-415
+- The helpers today 416-464
+- The cards of 1.8.0 465-483
+- A-1 - One directory per component: the files moved, nothing else changed 484-683
+- A-1b - Each component a project: its declaration, its tests, its README, built alone 684-913
+- A-2 - The vector library, its interface and its scalar reference 914-1074
+- A-3 - One UTF-8, one hex digit, one table hash 1075-1188
+- A-4 - Another encoding, read only by name 1189-1420
+- A-5 - Bytes that are not UTF-8 are refused, with their place and a hint 1421-1576
+- A-6 - `configforge codec recode`: a file converted once, for review 1577-1696
+- A-7 - The escapes in families 1697-2187
+- A-8 - Whitespace, comments, newlines and the place of a refusal 2188-2620
+- A-9 - Composed codecs, for what is almost a format 2621-3061
+- A-10 - A refusal's place and reason 3062-3542
+- A-11 - Build profiles and the C version per file 3543-4179
+- A-12 - The feature matrix made from the build 4180-4606
+- A-13 - A page of the project's limits 4607-5003
+`docs/plan/I-integration.md`
+- I-1 - the 1.8.0 group's integration findings 9-87
+`docs/plan/L-tools.md`
+- The groups 13-35
+- L-1 - the other languages' linters 36-45
+- L-2 - run-time, fuzzing and supply chain in CI 46-56
+- L-3 - Infer and semgrep 57-94
+- L-3b - a sound analyser: Frama-C EVA on the bottom components 95-123
+- L-4 - interface and documentation 124-138
+- L-5 - profilers, so that every speed-up starts from data 139-158
+- L-6 - a map of the tree and a brief per card, so that workers read less 159-281
+`docs/plan/P-allocators.md`
+- Findings 8-138
+- What the library does now 10-64
+- Techniques, and what the sources say 65-138
+- P-4 - Allocation measured, and changed only where it wins 139-511
+`docs/plan/P-word-at-a-time.md`
+- P-1 - The benchmark measures large documents, and says where time goes 89-148
+- P-1b - The other libraries beside ours, and a page CI keeps 149-873
+- P-2 - Word-at-a-time scans in C89, with the byte loop as reference 874-940
+- P-3 - The scans P-1 found, a word at a time, kept only where they win 941-985
+- After P-3: what else is weighed, by the same rule 986-1022
+- What keeps a gain 1023-1038
+`docs/plan/W5-convert-and-gen.md`
+- W5-V1 - `configforge codec convert` and `format` 62-324
+- W5-S1 - `configforge gen schema --from`: a contract drafted from a sample 325-467
+- W5-G1 - `configforge gen --lang cpp` 468-686
+- W5-G2 - `configforge gen --lang rust` 687-872
+- W5-G3 - `configforge gen --lang python` 873-1028
+- W5-V2 - Every pair of formats, and what each can hold 1029-1760
+- W5-G4 - Generators outside the tree 1761-2161
+`scripts/verify.cmake`
+- sizes 464-476
+- profiles 477-509
+- kqueue 510-538
+- tidy 539-553
+- clang 554-571
+- abi 572-691
+- wasm 692-721
+- proofs 722-736
+- valgrind 737-772
+- shared 773-783
+- components 784-807
+- compilers 808-859
+- yaml 860-887
+- fuzz 888-910
+- coverage 911-948
+- tsan 949-983
+- msan 984-1017
+- ubsan-strict 1018-1032
+- afl 1033-1060
+- infer 1061-1139
+- conformance 1140-1366
