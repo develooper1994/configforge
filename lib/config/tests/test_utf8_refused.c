@@ -166,6 +166,8 @@ static void finish(got* g, cf_builder* b, const char* key) {
     cf_config_free(c);
 }
 
+#if CF_WITH_JSON || CF_WITH_YAML || CF_WITH_TOML || CF_WITH_INI || CF_WITH_PROPERTIES
+
 /* `bytes` as a file at `path`, read with `format`. */
 static void from_file(got* g, const char* format, const char* path, const char* bytes,
                       const char* key) {
@@ -193,6 +195,8 @@ static void refused_in(const char* path, const char* doc, const char* place,
         has(g.error, "windows-1254", "with the hint");
     }
 }
+
+#endif
 
 static void test_formats(void) {
 #if CF_WITH_JSON

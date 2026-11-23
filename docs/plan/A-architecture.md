@@ -308,6 +308,10 @@ binding pin its form). Every shipped profile is built
 in CI. ("Profile" here is a build's; the platform's file locations
 "with profiles" in the Roadmap are a program's, a different thing.)
 
+`CF_PROFILE_FILE`'s file and the shipped ones are read as data, one
+`set(...)` a line, and the build directory keeps the profile it was
+configured with.
+
 ### D-106 - A newer C only where a file needs it, and said so
 
 C89 stays the floor. A file that needs more - a dependency's header
@@ -4147,7 +4151,27 @@ opens it with `cmake -DTO=1.8.0 -P scripts/release/version.cmake`
   `minimal` preset is the `minimal` profile; what it builds is
   unchanged." `docs/Plan.md`'s index: A-11 `done` with its commits (the
   rows of A-12 and the cards after it are already there).
+* **Organiser's answers, 2026-11-22**:
+  * `gate.cversion` scans the library's sources only (`lib/*/src`); the
+    components' tests (`lib/*/tests`, e.g. `test_c11.c`, compiled as C11 on
+    purpose) are outside it.
+  * Step 2 writes the gates and sees them fail; `gate.profiles` and the C
+    version fixture test are expected to pass only at the end of step 5,
+    once the presets (step 4) and `CF_C89_ONLY`'s default (step 5) exist.
+  * `cf_option_defaults` also scans `lib/serialize/backends.cmake`, where
+    `CF_YAML_BACKEND` is declared.
+
 * **notes**:
+  * 2026-11-22: Steps 1–5 reached the profile and fixture checks
+    (9/9 under MSVC). All three deliberate breaks in step 6 produced
+    the expected violations and were removed. With Clang and Ninja,
+    the clean `gate.cversion` still exits 8:
+    `lib/config/tests/test_c11.c is compiled with -std=c11 and is not declared`.
+    `lib/config/tests/CMakeLists.txt` deliberately builds this consumer
+    test with `C_STANDARD 11`. The gate's specified `lib/` filter
+    includes component tests, but the card calls for only the two
+    library source declarations. Decide whether the gate should omit
+    component tests or account for their standards separately.
 
 ---
 

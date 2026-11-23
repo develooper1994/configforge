@@ -17,7 +17,7 @@ function(configforge_generate_sbom)
   # file reproducible where a build asks for that.
   string(TIMESTAMP CF_SBOM_CREATED "%Y-%m-%dT%H:%M:%SZ" UTC)
 
-  set(opts "")
+  set(opts "profile=${CF_BUILD_PROFILE_NAME} ")
   set(sbom_opts "")
   foreach(f ${CF_FEATURES})
     list(APPEND sbom_opts CF_WITH_${f})
@@ -29,7 +29,7 @@ function(configforge_generate_sbom)
       string(APPEND opts "${opt}=OFF ")
     endif()
   endforeach()
-  string(STRIP "${opts}" CF_SBOM_OPTIONS)
+  set(CF_SBOM_OPTIONS "${opts}${CF_C_ABOVE_89_SBOM}")
   string(MD5 CF_SBOM_ID "${PROJECT_VERSION} ${CF_SBOM_OPTIONS}")
 
   set(CF_SBOM_PACKAGES "")

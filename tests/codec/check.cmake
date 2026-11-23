@@ -2,8 +2,15 @@
 # is well formed in its format. It writes its own inputs.
 #
 #   -DCODEC=<the program>  -DWORK=<a directory of its own>
+#   -DJSON=ON|OFF  -DTOML=ON|OFF
 
 cmake_minimum_required(VERSION 3.10)
+
+# Its documents are JSON, and TOML where the build has it.
+if(NOT JSON)
+  message(STATUS "skipped: json is not in this build")
+  return()
+endif()
 
 file(REMOVE_RECURSE ${WORK})
 file(MAKE_DIRECTORY ${WORK})
@@ -35,12 +42,17 @@ function(check_case expect_rc out_re err_re)
 endfunction()
 
 # Two files that are well formed: one line each, and the exit is 0.
-check_case(
-  0
-  "^good.json: ok\ngood.toml: ok\n$"
-  -
-  good.json
-  good.toml)
+if(TOML)
+  check_case(
+    0
+    "^good.json: ok\ngood.toml: ok\n$"
+    -
+    good.json
+    good.toml)
+else()
+  message(STATUS "skipped: toml is not in this build")
+  check_case(0 "^good.json: ok\n$" - good.json)
+endif()
 
 # One that is not: its name and the reader's message, and exit 1.
 check_case(1 "bad.json: [^\n]+" - bad.json)
@@ -52,13 +64,15 @@ check_case(
   bad.json)
 
 # The format named: the same bytes are not TOML.
-check_case(
-  1
-  "bad.json: "
-  -
-  bad.json
-  --as
-  toml)
+if(TOML)
+  check_case(
+    1
+    "bad.json: "
+    -
+    bad.json
+    --as
+    toml)
+endif()
 check_case(
   0
   "good.json: ok"

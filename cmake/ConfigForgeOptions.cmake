@@ -6,6 +6,9 @@
 # functions stay, so a program still links, and each one says which
 # option it needs. See Design.md, Build-Time Feature Selection.
 
+include("${CMAKE_CURRENT_LIST_DIR}/ConfigForgeProfile.cmake")
+cf_profile_load()
+
 option(CF_WITH_INI "INI subset codec (built in, no dependency)" ON)
 option(CF_WITH_JSON "JSON codec (built in; Report Replay and Doctor read it)"
        ON)
@@ -173,6 +176,7 @@ string(REPLACE ";" "|" _CF_OPTION_DEFS "${_CF_OPTION_DEFS}")
 # configforge_generate_options(<target>)
 # ~~~
 function(configforge_generate_options tgt)
+  set(CF_OPT_PROFILE "${CF_BUILD_PROFILE_NAME}")
   foreach(f ${CF_FEATURES})
     if(CF_WITH_${f})
       set(CF_OPT_${f} 1)

@@ -19,6 +19,9 @@
 
 #include "cf_test.h"
 
+/* The files it opens are INI files: a build without INI has no test. */
+#if CF_WITH_INI
+
 #ifdef _WIN32
 #include <direct.h>
 #include <wchar.h>
@@ -132,3 +135,12 @@ int main(void) {
 
     return cf_test_done();
 }
+
+#else
+
+int main(void) {
+    printf("skipped: ini is not in this build\n");
+    return cf_test_done();
+}
+
+#endif

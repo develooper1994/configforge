@@ -19,6 +19,17 @@
 #include "cf_kv_codec.h"
 #include "cf_test.h"
 
+/* A document whose format only its content tells, on its second line the
+   key server.port = 9443, in the format the build has: TOML, else JSON.
+   A build with neither leaves DETECT_DOC undefined and skips what needs it. */
+#if CF_WITH_TOML
+#define DETECT_DOC "[server]\nport = 9443\n"
+#define DETECT_FMT "toml"
+#elif CF_WITH_JSON
+#define DETECT_DOC "{\n\"server\": {\"port\": 9443}}\n"
+#define DETECT_FMT "json"
+#endif
+
 /* server.port from a file read with whatever format its content is; -1
    with `err` set when it was refused. */
 static int port_of(cf_builder* b, cf_error* err) {
@@ -63,6 +74,7 @@ static const char* detected(const char* text, const char* name,
 
 /* ------------------------------------------------------------------ */
 
+#if CF_WITH_JSON || CF_WITH_TOML || CF_WITH_YAML || CF_WITH_INI || CF_WITH_XML
 /* One file with no extension for each built-in format: the content
    decides, and the value is the one that was written. */
 static void one(const char* what, const char* text, const char* format) {
@@ -82,6 +94,8 @@ static void one(const char* what, const char* text, const char* format) {
     check_text(got, format, msg);
     check(d.how == CF_DETECT_CONTENT, "and said that the content decided");
 }
+
+#endif
 
 static void test_each_format(void) {
 #if CF_WITH_TOML
@@ -112,6 +126,7 @@ static void test_each_format(void) {
 }
 
 /* A format that was not named and not in the name: said by the source. */
+#ifdef DETECT_DOC
 static void test_source_says(void) {
     cf_arena*     ar = cf_arena_new(NULL, 0);
     cf_keyspace   ks;
@@ -119,7 +134,7 @@ static void test_source_says(void) {
     void*         st;
     cf_detect_how how = CF_DETECT_NONE;
 
-    check(spill("cf_detect_noext", "[server]\nport = 9443\n"), "wrote a TOML file");
+    check(spill("cf_detect_noext", DETECT_DOC), "wrote a file with no extension");
     st = cf_arena_calloc(ar, cf_source_file_state_size());
     check(cf_source_file(&s, "file", 0, "cf_detect_noext", NULL, 0, st,
                          cf_source_file_state_size()),
@@ -127,10 +142,9 @@ static void test_source_says(void) {
     check(cf_source_file_format(&s, &how) == NULL && how == CF_DETECT_NONE,
           "which has no format before it is loaded");
     check(cf_ks_init(&ks, ar, 16) && cf_source_load(&s, &ks), "is loaded");
-#if CF_WITH_TOML
-    check_text(cf_source_file_format(&s, &how), "toml", "and says the format it read");
+    check_text(cf_source_file_format(&s, &how), DETECT_FMT,
+               "and says the format it read");
     check(how == CF_DETECT_CONTENT, "from its content");
-#endif
     cf_arena_free(ar);
 
 #if CF_WITH_JSON
@@ -152,6 +166,7 @@ static void test_source_says(void) {
 #endif
     remove("cf_detect_noext");
 }
+#endif
 
 #if CF_WITH_JSON && CF_WITH_YAML
 /* The name's format is tried first, and when it cannot read the file the
@@ -234,7 +249,8 @@ static void test_look(void) {
     cf_error    err = CF_ERROR_INIT;
     cf_builder* b;
     cf_config*  c;
-    size_t      n;
+#if CF_WITH_TOML
+    size_t n;
 
     strcpy(doc, "# a comment\n   # another\n\n[server]\nport = 9443\n");
     b = cf_build(NULL);
@@ -265,6 +281,7 @@ static void test_look(void) {
     } else {
         cf_config_free(c);
     }
+#endif
 
     /* Markup first, and a document that is only blanks and comments. */
     strcpy(doc, "  <config><port>1</port></config>\n");
@@ -302,7 +319,9 @@ static void test_look(void) {
    for a string of 256 bytes or more, and a refusal to lend is not the
    document's fault - both are still detected. */
 static void test_no_arena(void) {
-    static char     doc[400];
+#if CF_WITH_TOML || CF_WITH_JSON
+    static char doc[400];
+#endif
     cf_blob         blob;
     cf_detect       d;
     const cf_codec* c = NULL;
@@ -333,30 +352,36 @@ static void test_no_arena(void) {
 static void test_document(void) {
     cf_error    err = CF_ERROR_INIT;
     cf_builder* b;
-    cf_config*  c;
     char        buf[64];
-    char        ex[512];
 
-    /* No format: the content decides, and the bytes are copied. */
-    strcpy(buf, "[server]\nport = 9443\n");
-    b = cf_build(NULL);
-    check(
-        cf_builder_document(b, "remote", CF_RANK_USER_FILE, buf, strlen(buf), NULL, 0),
-        "a document is added with no format");
-    memset(buf, 'x', sizeof buf - 1);
-    buf[sizeof buf - 1] = '\0';
-    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
-    c = cf_builder_create(b, &err);
-    check(c != NULL, "and is read from its content");
-    if (c == NULL) {
-        printf("  %s\n", err.message);
-    } else {
-        check(cf_get_int(c, "server.port", 0) == 9443,
-              "from the copy: the buffer changed after the call");
-        cf_explain(c, "server.port", ex, sizeof ex);
-        has(ex, "remote:2", "and explain() names the document and the line");
-        cf_config_free(c);
+    (void)buf;
+#ifdef DETECT_DOC
+    {
+        /* No format: the content decides, and the bytes are copied. */
+        cf_config* c;
+        char       ex[512];
+
+        strcpy(buf, DETECT_DOC);
+        b = cf_build(NULL);
+        check(cf_builder_document(b, "remote", CF_RANK_USER_FILE, buf, strlen(buf),
+                                  NULL, 0),
+              "a document is added with no format");
+        memset(buf, 'x', sizeof buf - 1);
+        buf[sizeof buf - 1] = '\0';
+        cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+        c = cf_builder_create(b, &err);
+        check(c != NULL, "and is read from its content");
+        if (c == NULL) {
+            printf("  %s\n", err.message);
+        } else {
+            check(cf_get_int(c, "server.port", 0) == 9443,
+                  "from the copy: the buffer changed after the call");
+            cf_explain(c, "server.port", ex, sizeof ex);
+            has(ex, "remote:2", "and explain() names the document and the line");
+            cf_config_free(c);
+        }
     }
+#endif
 
 #if CF_WITH_JSON
     /* The name's extension. */
@@ -545,25 +570,32 @@ static void set_var(const char* name, const char* value) {
 static void test_env_document(void) {
     cf_error    err = CF_ERROR_INIT;
     cf_builder* b;
-    cf_config*  c;
-    char        ex[512];
 
-    set_var("CF_DETECT_DOC", "[server]\nport = 9443\n");
-    b = cf_build(NULL);
-    check(cf_builder_env_document(b, "app-doc", CF_RANK_ENV, "CF_DETECT_DOC", NULL, 0),
-          "a variable is added as a document");
-    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
-    c = cf_builder_create(b, &err);
-    check(c != NULL, "and read from its content");
-    if (c == NULL) {
-        printf("  %s\n", err.message);
-    } else {
-        check(cf_get_int(c, "server.port", 0) == 9443, "the value is the document's");
-        cf_explain(c, "server.port", ex, sizeof ex);
-        has(ex, "CF_DETECT_DOC:2", "and explain() names the variable and the line");
-        has(ex, "app-doc", "under the source's name");
-        cf_config_free(c);
+#ifdef DETECT_DOC
+    {
+        cf_config* c;
+        char       ex[512];
+
+        set_var("CF_DETECT_DOC", DETECT_DOC);
+        b = cf_build(NULL);
+        check(cf_builder_env_document(b, "app-doc", CF_RANK_ENV, "CF_DETECT_DOC", NULL,
+                                      0),
+              "a variable is added as a document");
+        cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+        c = cf_builder_create(b, &err);
+        check(c != NULL, "and read from its content");
+        if (c == NULL) {
+            printf("  %s\n", err.message);
+        } else {
+            check(cf_get_int(c, "server.port", 0) == 9443,
+                  "the value is the document's");
+            cf_explain(c, "server.port", ex, sizeof ex);
+            has(ex, "CF_DETECT_DOC:2", "and explain() names the variable and the line");
+            has(ex, "app-doc", "under the source's name");
+            cf_config_free(c);
+        }
     }
+#endif
 
 #if CF_WITH_YAML
     set_var("CF_DETECT_DOC", "server:\n  port: 9443\n");
@@ -655,7 +687,11 @@ int main(void) {
     test_report();
 #endif
     test_each_format();
+#ifdef DETECT_DOC
     test_source_says();
+#else
+    printf("skipped: neither toml nor json is in this build\n");
+#endif
 #if CF_WITH_JSON && CF_WITH_YAML
     test_renamed();
 #endif

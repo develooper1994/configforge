@@ -458,6 +458,8 @@ size_t cfi_report_reads(const cf_keyspace* ks, const cf_defset* ds,
     cf_sink_fmt(&out,
                 "  \"library\": { \"version\": \"%s\", \"build\": ", cf_version());
     report_quote_z(&out, cf_build_id());
+    cf_sink_puts(&out, ", \"build_profile\": ");
+    report_quote_z(&out, cf_build_profile());
     cf_sink_puts(&out, ", \"features\": [");
     for (i = 0; i < cf_codec_count(); ++i) {
         if (i > 0) {

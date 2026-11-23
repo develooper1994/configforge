@@ -10,6 +10,10 @@
 
 #include "cf_test.h"
 
+/* The tests that watch a file watch an INI file: a build without INI has
+   none of them. */
+#if CF_WITH_INI
+
 static cf_config* build(cf_error* err) {
     cf_builder* b = cf_build(NULL);
 
@@ -99,6 +103,8 @@ static void test_appearance(void) {
     }
 }
 
+#endif /* CF_WITH_INI */
+
 /* A configuration with no files has nothing to watch and says so
    rather than reporting a change forever. */
 static void test_nothing_to_watch(void) {
@@ -127,6 +133,8 @@ static void test_nothing_to_watch(void) {
     }
     cf_config_free(c);
 }
+
+#if CF_WITH_INI
 
 /* Directories for the tests below. system() and the shell's mkdir,
    because C89 has no way to make a directory and test_file.c already
@@ -340,15 +348,22 @@ static void test_wake_missing_directory(void) {
     drop_dir("cf_wd", "cf_wd");
 }
 
+#endif /* CF_WITH_INI */
+
 int main(void) {
     /* The feature list says what is true: "watch" exactly where there is
        a handle to wait on. It was once an option that switched nothing
        and reported the feature absent on every build. */
     check((cf_has_feature("watch") ? 1 : 0) == (cf_platform_has_wake() ? 1 : 0),
           "the feature list agrees with the platform about watching");
+#if CF_WITH_INI
     test_watch();
     test_appearance();
+#else
+    printf("skipped: ini is not in this build\n");
+#endif
     test_nothing_to_watch();
+#if CF_WITH_INI
 #if CF_WITH_DIR
     test_directory_edited_in_place();
 #endif
@@ -357,5 +372,6 @@ int main(void) {
 
     remove("cf_w.ini");
     remove("cf_w_absent.ini");
+#endif
     return cf_test_done();
 }

@@ -1,0 +1,17 @@
+[
+{
+  "directory": ".",
+  "command": "cc -std=c90 -c lib/serialize/src/yaml.c -std=c11",
+  "file": "lib/serialize/src/yaml.c"
+},
+{
+  "directory": ".",
+  "command": "cc -std=c90 -c lib/serialize/src/yaml.c -std=c11",
+  "file": "lib/serialize/src/yaml.c"
+},
+{
+  "directory": ".",
+  "command": "cc -std=c90 -c lib/serialize/src/json.c",
+  "file": "lib/serialize/src/json.c"
+}
+]

@@ -11,14 +11,19 @@
 #include "cf_test.h"
 
 /* A format the library knows and this build left out, for the checks of
-   what that does - XML unless it is in, then YAML; none when every one
-   is in, and then those checks have nothing to say. */
+   what that does. */
 #if !CF_WITH_XML
 #define ABSENT "xml"
 #define ABSENT_OPTION "CF_WITH_XML"
 #elif !CF_WITH_YAML
 #define ABSENT "yaml"
 #define ABSENT_OPTION "CF_WITH_YAML"
+#elif !CF_WITH_INI
+#define ABSENT "ini"
+#define ABSENT_OPTION "CF_WITH_INI"
+#elif !CF_WITH_JSON
+#define ABSENT "json"
+#define ABSENT_OPTION "CF_WITH_JSON"
 #endif
 
 static char  a0[]    = "prog";
@@ -105,16 +110,15 @@ static void test_missing_file(void) {
 
     /* Required and absent: an error that names the file. */
     b = cf_build(NULL);
-    cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_absent.ini", NULL, 0);
+    cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_absent", NULL, 0);
     cfg = cf_builder_create(b, &err);
     check(cfg == NULL, "a missing required file fails");
     check(err.code == CF_E_SOURCE, "reported as a source error");
-    has(err.message, "cf_absent.ini", "names the file");
+    has(err.message, "cf_absent", "names the file");
 
     /* Optional and absent: not an error, and not silence either. */
     b = cf_build(NULL);
-    cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_absent.ini", NULL,
-                    CF_FILE_OPTIONAL);
+    cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_absent", NULL, CF_FILE_OPTIONAL);
     cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
     cfg = cf_builder_create(b, &err);
     check(cfg != NULL, "a missing optional file is accepted");
@@ -155,6 +159,8 @@ static void test_unknown_extension(void) {
     cf_error    err = CF_ERROR_INIT;
     cf_builder* b   = cf_build(NULL);
     cf_config*  cfg;
+    int         has_ini  = CF_WITH_INI;
+    int         has_json = CF_WITH_JSON;
 
     /* The name gives no format, so the content decides (D-73); text that
        no format reads is still an error. */
@@ -164,17 +170,23 @@ static void test_unknown_extension(void) {
     check(cfg == NULL, "an unrecognised extension and unreadable content is an error");
     has(err.message, "set one explicitly", "and says what to do about it");
 
-    /* Naming the format explicitly is the way out. */
-    check(spill("cf_t4.zzz", "port = 1\n"), "wrote a file in INI");
-    b = cf_build(NULL);
-    cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_t4.zzz", "ini", 0);
-    cf_builder_int(b, "port", 0, 0, 0, 0);
-    cfg = cf_builder_create(b, &err);
-    check(cfg != NULL, "an explicit format overrides the extension");
-    if (cfg != NULL) {
-        check(cf_get_int(cfg, "port", 0) == 1, "and it reads");
-        cf_config_free(cfg);
+    if (has_ini || has_json) {
+        const char* format = has_ini ? "ini" : "json";
+        const char* doc    = strcmp(format, "ini") == 0 ? "port = 1\n" : "{\"port\":1}";
+
+        /* Naming the format explicitly is the way out. */
+        check(spill("cf_t4.zzz", doc), "wrote a file in an explicitly named format");
+        b = cf_build(NULL);
+        cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_t4.zzz", format, 0);
+        cf_builder_int(b, "port", 0, 0, 0, 0);
+        cfg = cf_builder_create(b, &err);
+        check(cfg != NULL, "an explicit format overrides the extension");
+        if (cfg != NULL) {
+            check(cf_get_int(cfg, "port", 0) == 1, "and it reads");
+            cf_config_free(cfg);
+        }
     }
+
     remove("cf_t4.zzz");
 }
 
@@ -333,6 +345,7 @@ static void test_drop_in_directory(void) {
     cf_builder* b;
     cf_config*  cfg;
     static char buf[4096];
+    int         has_ini = CF_WITH_INI;
 
 #if defined(__wasi__)
     /* No shell to run mkdir: the build made the directory (CMake). */
@@ -341,38 +354,40 @@ static void test_drop_in_directory(void) {
 #else
     check(system("mkdir -p cf_confd") == 0, "made a directory");
 #endif
-    check(spill("cf_confd/10-base.ini", "[server]\nport = 1000\nhost = 0.0.0.0\n"),
-          "wrote the base file");
-    check(spill("cf_confd/90-site.ini", "[server]\nport = 9000\n"),
-          "wrote the override");
-    check(spill("cf_confd/.10-editor.ini.swp", "[server]\nport = 7\n"),
-          "wrote something an editor would leave behind");
+    if (has_ini) {
+        check(spill("cf_confd/10-base.ini", "[server]\nport = 1000\nhost = 0.0.0.0\n"),
+              "wrote the base file");
+        check(spill("cf_confd/90-site.ini", "[server]\nport = 9000\n"),
+              "wrote the override");
+        check(spill("cf_confd/.10-editor.ini.swp", "[server]\nport = 7\n"),
+              "wrote something an editor would leave behind");
 
-    b = cf_build(NULL);
-    cf_builder_dir(b, "conf.d", CF_RANK_SYS_FILE, "cf_confd", NULL, 0);
-    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
-    cf_builder_text(b, "server.host", "0.0.0.0", 0);
-    cfg = cf_builder_create(b, &err);
-    check(cfg != NULL, "a directory source builds");
-    if (cfg == NULL) {
-        printf("  %s\n", err.message);
-        return;
+        b = cf_build(NULL);
+        cf_builder_dir(b, "conf.d", CF_RANK_SYS_FILE, "cf_confd", NULL, 0);
+        cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+        cf_builder_text(b, "server.host", "0.0.0.0", 0);
+        cfg = cf_builder_create(b, &err);
+        check(cfg != NULL, "a directory source builds");
+        if (cfg == NULL) {
+            printf("  %s\n", err.message);
+            return;
+        }
+
+        check(cf_get_int(cfg, "server.port", 0) == 9000, "90-site overrides 10-base");
+        check(strcmp(cf_get_text(cfg, "server.host", ""), "0.0.0.0") == 0,
+              "and what it does not set is left alone");
+
+        /* Precedence, not a merge rule: the losing file is still in the
+           chain with its own line number. */
+        cf_explain(cfg, "server.port", buf, sizeof buf);
+        has(buf, "cf_confd/90-site.ini", "the winner is named");
+        has(buf, "cf_confd/10-base.ini", "and so is the file it beat");
+        has(buf, "shadowed", "which did not silently disappear");
+
+        /* A dotfile is not configuration. */
+        check(cf_get_int(cfg, "server.port", 0) != 7, "the .swp was skipped");
+        cf_config_free(cfg);
     }
-
-    check(cf_get_int(cfg, "server.port", 0) == 9000, "90-site overrides 10-base");
-    check(strcmp(cf_get_text(cfg, "server.host", ""), "0.0.0.0") == 0,
-          "and what it does not set is left alone");
-
-    /* Precedence, not a merge rule: the losing file is still in the
-       chain with its own line number. */
-    cf_explain(cfg, "server.port", buf, sizeof buf);
-    has(buf, "cf_confd/90-site.ini", "the winner is named");
-    has(buf, "cf_confd/10-base.ini", "and so is the file it beat");
-    has(buf, "shadowed", "which did not silently disappear");
-
-    /* A dotfile is not configuration. */
-    check(cf_get_int(cfg, "server.port", 0) != 7, "the .swp was skipped");
-    cf_config_free(cfg);
 
     /* A missing directory is an error unless it was declared optional,
        exactly like a missing file. */
@@ -458,9 +473,16 @@ static void test_bytes_are_transient(void) {
 }
 
 int main(void) {
+    int has_ini  = CF_WITH_INI;
+    int has_json = CF_WITH_JSON;
+
     (void)argv0;
-    test_bytes_are_transient();
-    test_ini_file();
+    if (has_ini) {
+        test_bytes_are_transient();
+        test_ini_file();
+    } else {
+        printf("skipped: ini is not in this build\n");
+    }
     test_cli_tier1_end_to_end();
 #if CF_WITH_DOTENV
     test_dotenv_file();
@@ -468,12 +490,18 @@ int main(void) {
 #if CF_WITH_DIR
     test_drop_in_directory();
 #endif
-    test_json_file_and_precedence();
+    if (has_json) {
+        test_json_file_and_precedence();
+        test_malformed_file();
+    } else {
+        printf("skipped: json is not in this build\n");
+    }
     test_missing_file();
     test_uncompiled_format();
     test_unknown_extension();
-    test_malformed_file();
-    test_file_over_defaults_over_nothing();
+    if (has_ini && has_json) {
+        test_file_over_defaults_over_nothing();
+    }
 
     return cf_test_done();
 }

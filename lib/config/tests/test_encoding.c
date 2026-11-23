@@ -391,14 +391,14 @@ static void test_single_byte(void) {
 static void test_refusals(void) {
     got g;
 
-    from_file(&g, NULL, CF_ENCODING_WINDOWS_1252, "cf_encoding_f.ini", "a=1\nb=\x81\n",
-              8, "b");
+    /* With no filename extension, recoding runs before format detection. */
+    from_file(&g, NULL, CF_ENCODING_WINDOWS_1252, "cf_encoding_f", "a=1\nb=\x81\n", 8,
+              "b");
     check(!g.ok, "a byte with no character is refused");
-    has(g.error, "cf_encoding_f.ini:2:3: byte 0x81 has no character in windows-1252",
+    has(g.error, "cf_encoding_f:2:3: byte 0x81 has no character in windows-1252",
         "at its line and column, in the encoding's name");
 
-    from_file(&g, NULL, CF_ENCODING_WINDOWS_1254, "cf_encoding_g.ini", "a=\x9E\n", 4,
-              "a");
+    from_file(&g, NULL, CF_ENCODING_WINDOWS_1254, "cf_encoding_g", "a=\x9E\n", 4, "a");
     has(g.error, ":1:3: byte 0x9E has no character in windows-1254",
         "0x9E has none in 1254");
 
@@ -411,38 +411,36 @@ static void test_refusals(void) {
         wide(buf, &n, "{\"ad\": \"", 0);
         unit(buf, &n, 0xD800u, 0);
         wide(buf, &n, "\"}", 0);
-        from_file(&g, NULL, 0, "cf_encoding_h.json", buf, n, "ad");
+        from_file(&g, NULL, 0, "cf_encoding_h", buf, n, "ad");
         check(!g.ok, "an unpaired surrogate is refused");
-        has(g.error, "cf_encoding_h.json:1:9: an unpaired UTF-16 surrogate 0xD800",
+        has(g.error, "cf_encoding_h:1:9: an unpaired UTF-16 surrogate 0xD800",
             "at its code unit, counted in units");
 
         n = 0;
         mark(buf, &n, 1);
         wide(buf, &n, "{\n", 1);
         unit(buf, &n, 0xDC00u, 1);
-        from_file(&g, NULL, 0, "cf_encoding_i.json", buf, n, "ad");
-        has(g.error, "cf_encoding_i.json:2:1: an unpaired UTF-16 surrogate 0xDC00",
+        from_file(&g, NULL, 0, "cf_encoding_i", buf, n, "ad");
+        has(g.error, "cf_encoding_i:2:1: an unpaired UTF-16 surrogate 0xDC00",
             "a low surrogate alone, on the second line, in big-endian");
 
         n = 0;
         mark(buf, &n, 0);
         wide(buf, &n, "{}", 0);
         buf[n++] = '\n';
-        from_file(&g, NULL, 0, "cf_encoding_j.json", buf, n, "ad");
-        has(g.error, "cf_encoding_j.json: ends in half a UTF-16 code unit",
+        from_file(&g, NULL, 0, "cf_encoding_j", buf, n, "ad");
+        has(g.error, "cf_encoding_j: ends in half a UTF-16 code unit",
             "an odd length is half a code unit");
     }
 
     /* UTF-32's mark is refused by name. */
-    from_file(&g, NULL, 0, "cf_encoding_k.json", "\xFF\xFE\x00\x00{\x00\x00\x00", 8,
-              "ad");
+    from_file(&g, NULL, 0, "cf_encoding_k", "\xFF\xFE\x00\x00{\x00\x00\x00", 8, "ad");
     check(!g.ok, "a UTF-32 byte-order mark is refused");
     has(g.error,
-        "'cf_encoding_k.json' is UTF-32, which this library does not read; "
+        "'cf_encoding_k' is UTF-32, which this library does not read; "
         "convert it to UTF-8",
         "by name");
-    from_file(&g, NULL, 0, "cf_encoding_l.json", "\x00\x00\xFE\xFF\x00\x00\x00{", 8,
-              "ad");
+    from_file(&g, NULL, 0, "cf_encoding_l", "\x00\x00\xFE\xFF\x00\x00\x00{", 8, "ad");
     has(g.error, "is UTF-32", "in either order");
 }
 
@@ -780,33 +778,45 @@ static void test_report(void) {
 #endif
 
 int main(void) {
+    int has_ini = CF_WITH_INI;
+
     test_tables();
     test_bad_offset();
     test_room();
     test_utf16();
     test_names();
-    test_single_byte();
+    if (has_ini) {
+        test_single_byte();
+        test_document();
+#if CF_WITH_DIR
+        test_dir();
+#endif
+        test_env_document();
+#if CF_WITH_REPORT
+        test_report();
+#endif
+    } else {
+        printf("skipped: ini is not in this build\n");
+    }
     test_refusals();
 #if CF_WITH_JSON
     test_utf16_by_mark();
+#else
+    printf("skipped: json is not in this build\n");
 #endif
 #if CF_WITH_XML
     test_xml();
+#else
+    printf("skipped: xml is not in this build\n");
 #endif
 #if CF_WITH_CBOR
     test_binary();
+#else
+    printf("skipped: cbor is not in this build\n");
 #endif
     test_masks();
-    test_document();
 #if CF_WITH_DOTENV
     test_dotenv();
-#endif
-#if CF_WITH_DIR
-    test_dir();
-#endif
-    test_env_document();
-#if CF_WITH_REPORT
-    test_report();
 #endif
     return cf_test_done();
 }

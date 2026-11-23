@@ -283,20 +283,24 @@ endfunction()
 # ~~~
 # cf_unit_tests(<test>...)
 # ~~~
+function(cf_unit_test_executable t lib)
+  add_executable(${t} ${t}.c)
+  target_link_libraries(${t} PRIVATE ${lib})
+  set_target_properties(
+    ${t}
+    PROPERTIES C_STANDARD 90
+               C_STANDARD_REQUIRED ON
+               C_EXTENSIONS OFF)
+  configforge_apply_warnings(${t})
+  configforge_apply_analysis(${t})
+  if(CF_CPPCHECK_TESTS)
+    set_target_properties(${t} PROPERTIES C_CPPCHECK "${CF_CPPCHECK_TESTS}")
+  endif()
+endfunction()
+
 function(cf_unit_tests)
   foreach(t ${ARGN})
-    add_executable(${t} ${t}.c)
-    target_link_libraries(${t} PRIVATE ${CF_TEST_LIB})
-    set_target_properties(
-      ${t}
-      PROPERTIES C_STANDARD 90
-                 C_STANDARD_REQUIRED ON
-                 C_EXTENSIONS OFF)
-    configforge_apply_warnings(${t})
-    configforge_apply_analysis(${t})
-    if(CF_CPPCHECK_TESTS)
-      set_target_properties(${t} PROPERTIES C_CPPCHECK "${CF_CPPCHECK_TESTS}")
-    endif()
+    cf_unit_test_executable(${t} ${CF_TEST_LIB})
     add_test(NAME unit.${t} COMMAND ${t})
   endforeach()
 endfunction()

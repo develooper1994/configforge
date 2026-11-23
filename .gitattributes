@@ -12,3 +12,9 @@ tests/codec/data/bad1254.ini -text
 tests/codec/data/u16le.json -text
 tests/codec/data/utf8.toml -text
 tests/codec/data/u16le.utf8.json -text
+tests/profile/data/ok_db.json -text
+tests/profile/data/gnu_db.json -text
+tests/profile/data/ok_list.txt -text
+tests/profile/data/empty_list.txt -text
+tests/profile/data/c99_list.txt -text
+tests/profile/data/stale_list.txt -text

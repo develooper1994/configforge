@@ -10,6 +10,9 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(cf_serialize C)
   include(${CMAKE_CURRENT_LIST_DIR}/../../cmake/ConfigForgeOptions.cmake)
 endif()
+if(NOT CF_WHOLE_PROJECT)
+  include(${CMAKE_CURRENT_LIST_DIR}/../../cmake/ConfigForgeCVersion.cmake)
+endif()
 include(${CMAKE_CURRENT_LIST_DIR}/../../cmake/ConfigForgeComponent.cmake)
 
 include(${CMAKE_CURRENT_LIST_DIR}/backends.cmake)
@@ -71,8 +74,12 @@ if(NOT CF_WHOLE_PROJECT)
   if(CF_WITH_YAML)
     target_link_libraries(cf_serialize PRIVATE ${CF_YAML_LIBRARY})
     if(_CF_YAML_LIBFYAML AND NOT MSVC)
-      set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/yaml.c
-                                  PROPERTIES COMPILE_OPTIONS "-std=c11")
+      cf_source_needs_c(
+        src/yaml.c
+        11
+        REASON
+        "libfyaml's header needs C11 (0.9.x's pre-C11 fallback for atomics does not compile)"
+      )
     endif()
   endif()
   if(CF_WITH_XML)

@@ -1,0 +1,1 @@
+lib/serialize/src/yaml.c|c99|libfyaml's header needs C11

@@ -106,12 +106,15 @@ static void test_tier0(void) {
     cf_config_free(c);
 }
 
+#if CF_WITH_JSON || CF_WITH_INI
+
 /* A file is written by somebody too, typed or not. */
 static void test_files(void) {
     cf_error    err = CF_ERROR_INIT;
     cf_builder* b;
     cf_config*  c;
 
+#if CF_WITH_JSON
     check(spill("cf_res.json", "{ \"cache\": { \"dir\": \"${HOME}\" } }\n"),
           "wrote a JSON file");
     b = cf_build(NULL);
@@ -122,7 +125,9 @@ static void test_files(void) {
     has(err.source, "cf_res.json", "and the file is named");
     cf_config_free(c);
     remove("cf_res.json");
+#endif
 
+#if CF_WITH_INI
     check(spill("cf_res.ini", "[cache]\ndir = ${HOME}\n"), "wrote an INI file");
     b = cf_build(NULL);
     cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_res.ini", NULL, 0);
@@ -132,7 +137,10 @@ static void test_files(void) {
     has(err.source, "cf_res.ini:2", "with its line");
     cf_config_free(c);
     remove("cf_res.ini");
+#endif
 }
+
+#endif
 
 /* The program's own default is code, not configuration, and changes
    with the program; it is not refused. */
@@ -202,7 +210,11 @@ int main(void) {
     test_escape();
     test_fallback();
     test_tier0();
+#if CF_WITH_JSON || CF_WITH_INI
     test_files();
+#else
+    printf("skipped: json and ini are not in this build\n");
+#endif
     test_default_is_code();
 #if CF_WITH_REPORT
     test_replay();

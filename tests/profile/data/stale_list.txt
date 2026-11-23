@@ -1,0 +1,2 @@
+lib/serialize/src/yaml.c|c11|libfyaml's header needs C11
+lib/serialize/src/json.c|c11|a reason that is long enough

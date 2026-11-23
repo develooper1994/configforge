@@ -123,6 +123,10 @@ function(configforge_add_gates tgt)
       -DPROJECT_VER=${PROJECT_VERSION} -P
       ${CMAKE_SOURCE_DIR}/cmake/gates/GateSbom.cmake)
 
+  add_test(NAME gate.profiles
+           COMMAND ${CMAKE_COMMAND} "-DSRC=${CMAKE_SOURCE_DIR}" -P
+                   ${CMAKE_SOURCE_DIR}/cmake/gates/GateProfiles.cmake)
+
   # The rest drive the compiler with a GCC-style command line, which
   # MSVC rejects at the first flag - and it has no C89 mode to ask for
   # in any case (see ConfigForgeCompiler.cmake). They are about the
@@ -134,6 +138,15 @@ function(configforge_add_gates tgt)
   if(MSVC)
     return()
   endif()
+
+  add_test(
+    NAME gate.cversion
+    COMMAND
+      ${CMAKE_COMMAND} "-DSRC=${CMAKE_SOURCE_DIR}"
+      "-DLIST=${CMAKE_BINARY_DIR}/cf_cversion.txt"
+      "-DCOMPDB=${CMAKE_BINARY_DIR}/compile_commands.json"
+      "-DC89_ONLY=$<BOOL:${CF_C89_ONLY}>" -P
+      ${CMAKE_SOURCE_DIR}/cmake/gates/GateCVersion.cmake)
 
   # 3. Every public header compiles standalone as C89.
   add_test(

@@ -32,6 +32,10 @@ const char* cf_build_id(void) {
     return CF_BUILD_ID;
 }
 
+const char* cf_build_profile(void) {
+    return CF_BUILD_PROFILE;
+}
+
 /* Built from the same options the rest of the library compiles under,
    so the list cannot describe a build that was not made. */
 static const char* const cf_features[] = {"lists",

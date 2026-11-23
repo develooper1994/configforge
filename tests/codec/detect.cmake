@@ -1,9 +1,15 @@
 # `configforge codec detect <file>`: the format of a file and how it was
 # told. It writes its own inputs, so it needs no fixture.
 #
-#   -DCODEC=<the program>  -DWORK=<a directory of its own>
+#   -DCODEC=<the program>  -DWORK=<a directory of its own>  -DJSON=ON|OFF
 
 cmake_minimum_required(VERSION 3.10)
+
+# Its documents are JSON.
+if(NOT JSON)
+  message(STATUS "skipped: json is not in this build")
+  return()
+endif()
 
 file(REMOVE_RECURSE ${WORK})
 file(MAKE_DIRECTORY ${WORK})

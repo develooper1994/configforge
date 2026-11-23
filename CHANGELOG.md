@@ -7,12 +7,20 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
-* `cf_error` carries the place (`where`) and the reason (`reason`, from
+- `cf_error` carries the place (`where`) and the reason (`reason`, from
   `cf_reason.def`) of a refusal, the same in every reader: invalid UTF-8,
   depth, a number out of range, a truncated input and the rest; `cf_reason_name`,
   `cf_reason_description` and `cf_error_place`. Every message is what it
   was (D-107).
-
+- Build profiles by name, `-DCF_PROFILE=<name>` (`full`, `default`,
+  `minimal`, `misra`, `embedded-json`, `embedded-cbor`, `server`) or
+  `-DCF_PROFILE_FILE=<file>`. Configure reports the selected profile
+  and differing options. `cf_build_profile()` and the report's
+  `library.build_profile` identify the build, and CI builds each profile
+  (D-105).
+- `cf_source_needs_c` and `gate.cversion` (D-106). Each file above C89
+  is declared with its reason and reported at configure time. Profiles
+  that allow only C89 refuse it.
 - `cf_codec_compose`: a codec made from a base codec, a repair of the
   bytes and a filter of the events, for a document that is almost a format
   (`{{a:1}}`, `{a:{2}}`); it is chosen by its name only, and every value
@@ -89,6 +97,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   document through a random chain (D-109).
 
 ### Changed
+
+- The `minimal` preset selects the `minimal` profile and builds the same
+  components.
 
 - A format chosen by name that is `CF_CODEC_NAMED_ONLY` (a TLV layout's
   codec, a composed codec) no longer adds 'the content looks like ...'

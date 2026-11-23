@@ -39,6 +39,7 @@
 #define CF_MESSAGE_MAX @CF_MESSAGE_MAX@
 #define CF_PATH_MAX    @CF_PATH_MAX@
 #define CF_MAX_DEPTH   @CF_MAX_DEPTH@
+#define CF_BUILD_PROFILE "@CF_OPT_PROFILE@"
 
 /* Whether this build has threads: a library built single-threaded, or
    with every upgrade off, is that for every program including it, which

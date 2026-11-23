@@ -98,6 +98,8 @@ static void tier1(void) {
     cf_config_free(cfg);
 }
 
+#if CF_WITH_INI /* tiers 2 and 4 read INI files */
+
 /* ================================================================== *
  * Tier 2 - choose the sources
  *
@@ -139,6 +141,8 @@ static void tier2(void) {
     remove("cf_usage.ini");
 }
 
+#endif /* CF_WITH_INI */
+
 /* ================================================================== *
  * Tier 3 - policy
  *
@@ -178,6 +182,8 @@ static void tier3(void) {
           "tier 3: the command line's try is on record");
     cf_config_free(cfg);
 }
+
+#if CF_WITH_INI
 
 /* ================================================================== *
  * Tier 4 - change and watch
@@ -234,11 +240,21 @@ static void tier4(void) {
     remove("cf_usage4.ini");
 }
 
+#endif /* CF_WITH_INI */
+
 int main(void) {
     tier0();
     tier1();
+#if CF_WITH_INI
     tier2();
+#else
+    printf("skipped: tier 2 reads an INI file, and ini is not in this build\n");
+#endif
     tier3();
+#if CF_WITH_INI
     tier4();
+#else
+    printf("skipped: tier 4 reads an INI file, and ini is not in this build\n");
+#endif
     return cf_test_done();
 }

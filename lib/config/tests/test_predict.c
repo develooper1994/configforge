@@ -16,6 +16,10 @@
 
 #include "cf_test.h"
 
+/* The documents are INI, a line to a key, and so is every test here: a
+   build without INI has none of them. */
+#if CF_WITH_INI
+
 /* A document of `n` keys, section s, key k<i> = "v<i>" padded by `pad`
    bytes: INI one to a line, or JSON all on one line (nothing to count),
    with `comments` comment lines before the first key (INI). */
@@ -278,3 +282,12 @@ int main(void) {
     test_reload_after_a_different_size();
     return cf_test_done();
 }
+
+#else
+
+int main(void) {
+    printf("skipped: ini is not in this build\n");
+    return cf_test_done();
+}
+
+#endif

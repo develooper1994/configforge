@@ -218,6 +218,15 @@ cmake -DMODE=quick -P scripts/verify.cmake       # the default preset only
 Written in CMake rather than a shell script so they run wherever the
 build does. `scripts/README.md` lists the options.
 
+**Profiles** group build options. The seven profiles are `full`, `default`,
+`minimal`, `misra`, `embedded-json`, `embedded-cbor` and `server`. Select one
+with `-DCF_PROFILE=<name>`. Use `-DCF_PROFILE_FILE=<path>` for your own
+profile, with one `set(...)` line per option as in `cmake/profiles/`. An explicit `-D`
+option wins. A parent project's normal variable also takes precedence
+when it adds ConfigForge with `add_subdirectory`. A build directory
+keeps its profile and cached options. Use a fresh build directory or
+delete its `CMakeCache.txt` to change profiles.
+
 | Preset | What it is for |
 | ------ | -------------- |
 | `default` | C89 conformance, full warning set |
@@ -228,6 +237,11 @@ build does. `scripts/README.md` lists the options.
 | `fuzz` | libFuzzer on every reader of untrusted bytes, with ASan and UBSan; clang (`EXTRA=fuzz`) |
 | `coverage` | line coverage of the library, held above a floor (`EXTRA=coverage`) |
 | `minimal` | every optional part but the codecs off, short limits (64-byte keys) and a 1024-byte stack budget, for very small targets; built `-Os` |
+| `full` | Every part that builds on a host with expat and sqlite3. |
+| `server` | Every format, XML too, and every source but SQLite and preferences. |
+| `misra` | The build a MISRA C checker runs against: minimal, one thread, no reals. |
+| `embedded-json` | JSON alone, for a device: no files, no reals, one thread, nesting 16. |
+| `embedded-cbor` | CBOR alone, for a device: no files, no reals, one thread, nesting 16. |
 
 `minimal` also drops every function and object no program reaches (`CF_GC_SECTIONS`): a third of a small program's size. `CF_LTO` is link-time optimisation, off by default, since the stack budget cannot measure its frames. `portable` and `minimal` are optimised on purpose: inlining merges frames, so a stack
 frame that fits in a Debug build can break the budget in a release one.
@@ -235,6 +249,7 @@ frame that fits in a Debug build can break the budget in a release one.
 Options: `CF_WITH_INI` `CF_WITH_JSON` `CF_WITH_TOML` `CF_WITH_PROPERTIES` `CF_WITH_CBOR` `CF_WITH_TLV` `CF_WITH_COMPOSE` `CF_WITH_XML` `CF_WITH_SQLITE`
 `CF_WITH_REAL` `CF_WITH_DIR` `CF_WITH_DOTENV` `CF_WITH_EMIT` `CF_WITH_IMAGE`
 `CF_WITH_REPORT` `CF_WITH_CXX` `CF_WITH_YAML` `CF_PLATFORM` `CF_FORCE_PORTABLE`
+`CF_PROFILE` `CF_PROFILE_FILE` `CF_C89_ONLY`
 `CF_SINGLE_THREADED` `CF_HARDEN` `CF_RUST` `CF_BUILD_TOOLS` `CF_GC_SECTIONS` `CF_LTO`, and the limits
 below.
 
@@ -390,6 +405,8 @@ a claim that decays.
 | conformance | `-std=c89 -pedantic -Werror` |
 | portability | full suite under `CF_FORCE_PORTABLE`, output compared byte for byte |
 | layering | `lib/config/src/core` includes nothing from `sources`, `platform` or `serialize`; no component includes one its `cf_component` declaration (`cmake/ConfigForgeComponent.cmake`) does not allow it |
+| cversion | no file is compiled above C89 that `cf_source_needs_c` does not declare |
+| profiles | every profile file is complete, and `default` is the options' own defaults |
 | detection | only `cf_port.h` and `port.c` may test compiler macros |
 | symbols | no locale-sensitive libc function; every export prefixed `cf_` |
 | amalgamation | the single-file build compiles as C89 and runs |

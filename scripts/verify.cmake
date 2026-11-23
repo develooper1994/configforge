@@ -51,6 +51,8 @@
 #   afl      AFL++ on the libFuzzer harnesses for FUZZ_SECONDS each (default
 #            10), through afl-clang-fast (the afl preset)
 #   yaml     the whole suite with CF_WITH_YAML, where libyaml is installed
+#   profiles the five additional build profiles, with full and server
+#            skipped unless the expat and sqlite3 headers are installed
 #   compilers the whole suite against musl (musl-gcc) and with the Tiny C
 #            Compiler and the Portable C Compiler, each where installed:
 #            the claim that the library needs a C89 compiler and a C
@@ -324,17 +326,40 @@ if(SOURCE STREQUAL "index")
   # old value when its default changes: YAML went on by default and the
   # kept builds went on without it. A change to the options or the presets
   # starts from nothing.
-  foreach(f cmake/ConfigForgeOptions.cmake CMakePresets.json
-            lib/port/include/configforge/cf_build_options.h)
-    if(NOT FRESH AND EXISTS "${ROOT}/${f}")
-      file(SHA256 "${ROOT}/${f}" was)
-      file(SHA256 "${incoming}/${f}" now)
-      if(NOT was STREQUAL now)
+  if(NOT FRESH AND EXISTS "${ROOT}")
+    file(
+      GLOB old_profiles
+      RELATIVE "${ROOT}"
+      "${ROOT}/cmake/profiles/*.cmake")
+    file(
+      GLOB new_profiles
+      RELATIVE "${incoming}"
+      "${incoming}/cmake/profiles/*.cmake")
+    set(profiles ${old_profiles} ${new_profiles})
+    list(REMOVE_DUPLICATES profiles)
+    foreach(
+      f
+      cmake/ConfigForgeOptions.cmake
+      cmake/ConfigForgeProfile.cmake
+      cmake/ConfigForgeCVersion.cmake
+      CMakePresets.json
+      lib/port/include/configforge/cf_build_options.h
+      ${profiles})
+      unset(was)
+      unset(now)
+      if(EXISTS "${ROOT}/${f}")
+        file(SHA256 "${ROOT}/${f}" was)
+      endif()
+      if(EXISTS "${incoming}/${f}")
+        file(SHA256 "${incoming}/${f}" now)
+      endif()
+      if(NOT "${was}" STREQUAL "${now}")
         message("${f} changed: verifying from nothing")
         set(FRESH ON)
+        break()
       endif()
-    endif()
-  endforeach()
+    endforeach()
+  endif()
   if(FRESH OR NOT EXISTS "${ROOT}")
     file(REMOVE_RECURSE "${ROOT}")
     file(RENAME "${incoming}" "${ROOT}")
@@ -429,7 +454,38 @@ set(test ${ctest} -C Debug --test-dir)
 set(debug --config Debug ${parallel})
 
 foreach(x ${EXTRA})
-  if(x STREQUAL "kqueue")
+  if(x STREQUAL "profiles")
+    # Script mode has no platform search path (see the yaml step).
+    set(profile_include_paths /usr/include /usr/local/include
+                              /opt/homebrew/include /opt/local/include)
+    find_path(CF_PROFILE_EXPAT_INCLUDE_DIR expat.h
+              PATHS ${profile_include_paths})
+    find_path(CF_PROFILE_SQLITE_INCLUDE_DIR sqlite3.h
+              PATHS ${profile_include_paths})
+    foreach(
+      p
+      full
+      server
+      misra
+      embedded-json
+      embedded-cbor)
+      if((p STREQUAL "full" OR p STREQUAL "server")
+         AND (NOT CF_PROFILE_EXPAT_INCLUDE_DIR OR NOT
+                                                  CF_PROFILE_SQLITE_INCLUDE_DIR
+             ))
+        message("${p} skipped: expat.h and sqlite3.h are required")
+        continue()
+      endif()
+      step("${p} configure" ${CMAKE_COMMAND} --preset ${p})
+      step(
+        "${p} build"
+        ${build}
+        --preset
+        ${p}
+        ${parallel})
+      step("${p} test" ${ctest} --preset ${p})
+    endforeach()
+  elseif(x STREQUAL "kqueue")
     find_program(PKG_CONFIG_EXE pkg-config)
     set(have 0)
     if(PKG_CONFIG_EXE)
@@ -1193,7 +1249,8 @@ foreach(x ${EXTRA})
       FATAL_ERROR
         "unknown EXTRA step '${x}': kqueue, tidy, clang, "
         "shared, components, valgrind, proofs, wasm, abi, tsan, msan, "
-        "ubsan-strict, afl, yaml, compilers, fuzz, coverage or conformance")
+        "ubsan-strict, afl, yaml, profiles, compilers, fuzz, coverage or conformance"
+    )
   endif()
 endforeach()
 

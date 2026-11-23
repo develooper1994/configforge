@@ -6,7 +6,7 @@
       "name": "default",
       "displayName": "C89 conformance build",
       "binaryDir": "${sourceDir}/build",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "CF_PROFILE": "default" }
     },
     {
       "name": "sanitize",
@@ -14,6 +14,7 @@
       "binaryDir": "${sourceDir}/build-sanitize",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
+        "CF_PROFILE": "default",
         "CF_SANITIZE": "ON"
       }
     },
@@ -23,6 +24,7 @@
       "binaryDir": "${sourceDir}/build-tsan",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
+        "CF_PROFILE": "default",
         "CF_SANITIZE_THREAD": "ON"
       }
     },
@@ -70,6 +72,7 @@
       "binaryDir": "${sourceDir}/build-coverage",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
+        "CF_PROFILE": "default",
         "CF_COVERAGE": "ON"
       }
     },
@@ -81,6 +84,7 @@
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "CMAKE_C_COMPILER": "clang",
         "CMAKE_CXX_COMPILER": "clang++",
+        "CF_PROFILE": "default",
         "CF_FUZZ": "ON"
       }
     },
@@ -90,6 +94,7 @@
       "binaryDir": "${sourceDir}/build-analyze",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
+        "CF_PROFILE": "default",
         "CF_ANALYZER": "ON",
         "CF_CPPCHECK": "ON"
       }
@@ -100,6 +105,7 @@
       "binaryDir": "${sourceDir}/build-portable",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
+        "CF_PROFILE": "default",
         "CF_FORCE_PORTABLE": "ON",
         "CF_SINGLE_THREADED": "ON"
       }
@@ -110,18 +116,56 @@
       "binaryDir": "${sourceDir}/build-minimal",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "MinSizeRel",
-        "CF_GC_SECTIONS": "ON",
-        "CF_WITH_REAL": "OFF",
-        "CF_WITH_COMPOSE": "OFF",
-        "CF_WITH_DIR": "OFF",
-        "CF_WITH_DOTENV": "OFF",
-        "CF_WITH_EMIT": "OFF",
-        "CF_WITH_IMAGE": "OFF",
-        "CF_WITH_REPORT": "OFF",
-        "CF_KEY_MAX": "64",
-        "CF_MESSAGE_MAX": "128",
-        "CF_PATH_MAX": "256",
-        "CF_STACK_BUDGET": "1024"
+        "CF_PROFILE": "minimal"
+      }
+    },
+    {
+      "name": "full",
+      "displayName": "Every part that builds on a host with expat and sqlite3.",
+      "binaryDir": "${sourceDir}/build-full",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CF_PROFILE": "full"
+      }
+    },
+    {
+      "name": "server",
+      "displayName": "Every format, XML too, and every source but SQLite and preferences.",
+      "binaryDir": "${sourceDir}/build-server",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CF_PROFILE": "server"
+      }
+    },
+    {
+      "name": "misra",
+      "displayName": "The build a MISRA C checker runs against: minimal, one thread, no reals.",
+      "binaryDir": "${sourceDir}/build-misra",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CF_PROFILE": "misra"
+      }
+    },
+    {
+      "name": "embedded-json",
+      "displayName": "JSON alone, for a device: no files, no reals, one thread, nesting 16.",
+      "binaryDir": "${sourceDir}/build-embedded-json",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MinSizeRel",
+        "CF_PROFILE": "embedded-json",
+        "CF_BUILD_TOOLS": "OFF",
+        "CF_BUILD_EXAMPLES": "OFF"
+      }
+    },
+    {
+      "name": "embedded-cbor",
+      "displayName": "CBOR alone, for a device: no files, no reals, one thread, nesting 16.",
+      "binaryDir": "${sourceDir}/build-embedded-cbor",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MinSizeRel",
+        "CF_PROFILE": "embedded-cbor",
+        "CF_BUILD_TOOLS": "OFF",
+        "CF_BUILD_EXAMPLES": "OFF"
       }
     }
   ],
@@ -136,7 +180,12 @@
     { "name": "fuzz",     "configurePreset": "fuzz",     "configuration": "RelWithDebInfo" },
     { "name": "analyze",  "configurePreset": "analyze",  "configuration": "Debug" },
     { "name": "portable", "configurePreset": "portable", "configuration": "Release" },
-    { "name": "minimal",  "configurePreset": "minimal",  "configuration": "MinSizeRel" }
+    { "name": "minimal",  "configurePreset": "minimal",  "configuration": "MinSizeRel" },
+    { "name": "full", "configurePreset": "full", "configuration": "Release" },
+    { "name": "server", "configurePreset": "server", "configuration": "Release" },
+    { "name": "misra", "configurePreset": "misra", "configuration": "Debug" },
+    { "name": "embedded-json", "configurePreset": "embedded-json", "configuration": "MinSizeRel" },
+    { "name": "embedded-cbor", "configurePreset": "embedded-cbor", "configuration": "MinSizeRel" }
   ],
   "testPresets": [
     { "name": "default",  "configurePreset": "default",  "configuration": "Debug", "output": { "outputOnFailure": true } },
@@ -173,6 +222,11 @@
     { "name": "fuzz",     "configurePreset": "fuzz",     "configuration": "RelWithDebInfo", "output": { "outputOnFailure": true }, "filter": { "include": { "label": "fuzz" } } },
     { "name": "analyze",  "configurePreset": "analyze",  "configuration": "Debug", "output": { "outputOnFailure": true } },
     { "name": "portable", "configurePreset": "portable", "configuration": "Release", "output": { "outputOnFailure": true } },
-    { "name": "minimal",  "configurePreset": "minimal",  "configuration": "MinSizeRel", "output": { "outputOnFailure": true } }
+    { "name": "minimal",  "configurePreset": "minimal",  "configuration": "MinSizeRel", "output": { "outputOnFailure": true } },
+    {"name": "full", "configurePreset": "full", "configuration": "Release", "output": {"outputOnFailure": true}},
+    {"name": "server", "configurePreset": "server", "configuration": "Release", "output": {"outputOnFailure": true}},
+    {"name": "misra", "configurePreset": "misra", "configuration": "Debug", "output": {"outputOnFailure": true}},
+    {"name": "embedded-json", "configurePreset": "embedded-json", "configuration": "MinSizeRel", "output": {"outputOnFailure": true}, "filter": {"include": {"name": "^(profile|gate\\.(version|text|layering|detection|cversion|profiles))"}}},
+    {"name": "embedded-cbor", "configurePreset": "embedded-cbor", "configuration": "MinSizeRel", "output": {"outputOnFailure": true}, "filter": {"include": {"name": "^(profile|gate\\.(version|text|layering|detection|cversion|profiles))"}}}
   ]
 }

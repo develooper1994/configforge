@@ -37,6 +37,7 @@ project(
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(ConfigForgeOptions)
+include(ConfigForgeCVersion)
 include(ConfigForgeComponent)
 
 # After the options, not before: CF_WITH_CXX does not exist until
@@ -54,6 +55,7 @@ include(ConfigForgeFormat)
 set(CMAKE_C_STANDARD 90)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Windows finds a DLL beside the executable or on PATH and nowhere else.
 # With every binary of a shared build in one directory, every test and
@@ -72,6 +74,7 @@ target_include_directories(configforge PUBLIC $<INSTALL_INTERFACE:include>)
 configforge_setup_cppcheck()
 configforge_apply_warnings(configforge)
 configforge_apply_hardening(configforge)
+cf_profile_report()
 message(STATUS "limits: keys ${CF_KEY_MAX}, messages ${CF_MESSAGE_MAX}, "
                "paths ${CF_PATH_MAX}, nesting ${CF_MAX_DEPTH}; stack budget "
                "${CF_STACK_BUDGET} bytes per function")
@@ -113,9 +116,12 @@ if(CF_WITH_YAML)
   # the library stays C89. libfyaml builds with neither MSVC nor a C89-only
   # compiler, and the libyaml backend is the one for those (D-62).
   if(_CF_YAML_LIBFYAML AND NOT MSVC)
-    set_source_files_properties(
-      ${CMAKE_CURRENT_SOURCE_DIR}/lib/serialize/src/yaml.c
-      PROPERTIES COMPILE_OPTIONS "-std=c11")
+    cf_source_needs_c(
+      lib/serialize/src/yaml.c
+      11
+      REASON
+      "libfyaml's header needs C11 (0.9.x's pre-C11 fallback for atomics does not compile)"
+    )
   endif()
 endif()
 if(CF_WITH_XML)
@@ -131,9 +137,8 @@ endif()
 # wins, as yaml.c is for libfyaml. PUBLIC: a static library's consumer
 # links the framework too. Elsewhere nothing changes.
 if(CF_WITH_PREFERENCES AND APPLE)
-  set_source_files_properties(
-    ${CMAKE_CURRENT_SOURCE_DIR}/lib/platform/src/posix/posix.c
-    PROPERTIES COMPILE_OPTIONS "-std=c99")
+  cf_source_needs_c(lib/platform/src/posix/posix.c 99 REASON
+                    "CoreFoundation's headers use long long (SInt64)")
   target_link_libraries(configforge PUBLIC "-framework CoreFoundation")
 endif()
 
@@ -172,6 +177,7 @@ if(CF_BUILD_BENCH AND TARGET configforge_doctor)
   add_subdirectory(bench)
 endif()
 
+cf_cversion_write()
 configforge_add_gates(configforge)
 
 include(ConfigForgeInstall)

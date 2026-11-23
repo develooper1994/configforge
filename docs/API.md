@@ -107,7 +107,7 @@ Document refusals also carry a reason and, where known, a line and column.
 - [`cf_source.h`](#cf_sourceh) - 35
 - [`cf_text.h`](#cf_texth) - 24
 - [`cf_value.h`](#cf_valueh) - 12
-- [`cf_version.h`](#cf_versionh) - 7
+- [`cf_version.h`](#cf_versionh) - 8
 
 ## configforge.h
 
@@ -3706,7 +3706,7 @@ Measure-or-write; 0 without CF_WITH_REPORT.
 CF_API size_t cf_schema_write(const cf_defset* ds, const char* title, cf_bool closed, char* buf, size_t cap, cf_error* err);
 ```
 
-Implementation: [`cf_schema_write` (lib/config/src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/diag/report.c#L782).
+Implementation: [`cf_schema_write` (lib/config/src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/diag/report.c#L784).
 
 The definitions as a JSON Schema (draft 2020-12), for editors: a file
 that names it gets completion, documentation and validation as it is
@@ -3735,19 +3735,19 @@ refused rather than half-applied.
 CF_API size_t cf_source_replay_state_size(void);
 ```
 
-Implementation: [`cf_source_replay_state_size` (lib/config/src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/diag/report.c#L1038).
+Implementation: [`cf_source_replay_state_size` (lib/config/src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/diag/report.c#L1040).
 
 ```c
 CF_API cf_bool cf_source_replay(cf_source* s, const char* name, int rank, const char* path, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_replay` (lib/config/src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/diag/report.c#L1042).
+Implementation: [`cf_source_replay` (lib/config/src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/diag/report.c#L1044).
 
 ```c
 CF_API const cf_error* cf_source_replay_error(const cf_source* s);
 ```
 
-Implementation: [`cf_source_replay_error` (lib/config/src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/diag/report.c#L1062).
+Implementation: [`cf_source_replay_error` (lib/config/src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/diag/report.c#L1064).
 
 ## cf_serialize.h
 
@@ -4871,12 +4871,24 @@ time, so it follows a checkout without reconfiguring; a build without
 CMake can pass -DCF_BUILD_ID="\"...\"".
 
 ```c
+CF_EXPERIMENTAL(1, 8) const char* cf_build_profile(void);
+```
+
+Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
+
+Implementation: [`cf_build_profile` (lib/config/src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/version.c#L35).
+
+The build profile this library was built with (D-105): "default",
+"minimal", "file:acme", or "unspecified" for a build of the sources
+that named none. Never NULL.
+
+```c
 CF_API size_t cf_feature_count(void);
 CF_API const char* cf_feature_at(size_t i);
 CF_API cf_bool cf_has_feature(const char* name);
 ```
 
-Implementation: [`cf_feature_count` (lib/config/src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/version.c#L112), [`cf_feature_at` (lib/config/src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/version.c#L116), [`cf_has_feature` (lib/config/src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/version.c#L143).
+Implementation: [`cf_feature_count` (lib/config/src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/version.c#L116), [`cf_feature_at` (lib/config/src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/version.c#L120), [`cf_has_feature` (lib/config/src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/version.c#L147).
 
 What this build can do, as a NUL-terminated list: "ini", "json",
 "real", and so on. Recorded in the provenance report as well, so a
@@ -4889,7 +4901,7 @@ that implements them, including a minimal build.
 CF_API size_t cf_build_limit(const char* name);
 ```
 
-Implementation: [`cf_build_limit` (lib/config/src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/version.c#L124).
+Implementation: [`cf_build_limit` (lib/config/src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/version.c#L128).
 
 A build limit, by name: "key" (CF_KEY_MAX), "source" (CF_SOURCE_MAX),
 "message" (CF_MESSAGE_MAX), "path" (CF_PATH_MAX) and "depth"

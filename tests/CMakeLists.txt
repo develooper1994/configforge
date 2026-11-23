@@ -23,6 +23,7 @@ foreach(
   add_subdirectory(${CMAKE_SOURCE_DIR}/lib/${c}/tests
                    ${CMAKE_BINARY_DIR}/lib/${c}/tests)
 endforeach()
+add_subdirectory(profile)
 add_subdirectory(conformance)
 
 if(CF_BUILD_TOOLS

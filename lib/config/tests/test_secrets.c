@@ -20,23 +20,33 @@
 
 static void test_explain_and_inspect(void) {
     static const cf_pair env_like[] = {{"db.password", "older-secret-value"}};
+    static const cf_pair memory[]   = {{"db.host", "db.internal"},
+                                       {"db.password", "hunter2-horse"}};
+    int                  has_ini    = CF_WITH_INI;
     cf_error             err        = CF_ERROR_INIT;
     cf_builder*          b          = cf_build(NULL);
     cf_config*           c;
     static char          buf[4096];
 
-    check(
-        spill("cf_secret.ini", "[db]\nhost = db.internal\npassword = hunter2-horse\n"),
-        "wrote a file with a secret in it");
     cf_builder_memory(b, "vault", CF_RANK_DEFAULT, env_like, 1);
-    cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_secret.ini", NULL, 0);
+    if (has_ini) {
+        check(spill("cf_secret.ini",
+                    "[db]\nhost = db.internal\npassword = hunter2-horse\n"),
+              "wrote a file with a secret in it");
+        cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_secret.ini", NULL, 0);
+    } else {
+        printf("skipped: ini is not in this build\n");
+        cf_builder_memory(b, "memory", CF_RANK_USER_FILE, memory, 2);
+    }
     cf_builder_text(b, "db.host", "localhost", 0);
     cf_builder_text(b, "db.password", NULL, CF_SENSITIVE);
     c = cf_builder_create(b, &err);
+    if (has_ini) {
+        remove("cf_secret.ini");
+    }
     check(c != NULL, "builds");
     if (c == NULL) {
         printf("  %s\n", err.message);
-        remove("cf_secret.ini");
         return;
     }
     check(strcmp(cf_get_text(c, "db.password", ""), "hunter2-horse") == 0,
@@ -46,7 +56,11 @@ static void test_explain_and_inspect(void) {
     lacks(buf, "hunter2", "explain() does not show the winning secret");
     lacks(buf, "older-secret", "or the one it shadowed");
     has(buf, "<sensitive, 13 bytes>", "it shows that there is one, and its length");
-    has(buf, "cf_secret.ini:3", "and the whole chain: where it was set");
+    if (has_ini) {
+        has(buf, "cf_secret.ini:3", "and the whole chain: where it was set");
+    } else {
+        has(buf, "memory", "and the source that set it");
+    }
     has(buf, "vault", "and the source it overrode");
 
     cf_explain(c, "db.host", buf, sizeof buf);
@@ -57,7 +71,6 @@ static void test_explain_and_inspect(void) {
     has(buf, "db.internal", "while showing everything else");
 
     cf_config_free(c);
-    remove("cf_secret.ini");
 }
 
 static void test_refusals(void) {

@@ -16,6 +16,7 @@
 
 #include "cf_test.h"
 
+#if CF_WITH_INI
 /* The same program twice: the definitions do not change, the file
    does. */
 static cf_config* load(const char* text) {
@@ -143,9 +144,14 @@ static void test_a_reload(void) {
     cf_config_free(before);
     cf_config_free(after);
 }
+#endif
 
 int main(void) {
+#if CF_WITH_INI
     test_a_reload();
     remove("cf_diff.ini");
+#else
+    puts("skipped: ini is not in this build");
+#endif
     return cf_test_done();
 }

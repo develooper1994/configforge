@@ -11,14 +11,19 @@
 #include "cf_test.h"
 
 /* A format the library knows and this build left out, for the checks of
-   what that does - XML unless it is in, then YAML; none when every one
-   is in, and then those checks have nothing to say. */
+   what that does. */
 #if !CF_WITH_XML
 #define ABSENT "xml"
 #define ABSENT_OPTION "CF_WITH_XML"
 #elif !CF_WITH_YAML
 #define ABSENT "yaml"
 #define ABSENT_OPTION "CF_WITH_YAML"
+#elif !CF_WITH_INI
+#define ABSENT "ini"
+#define ABSENT_OPTION "CF_WITH_INI"
+#elif !CF_WITH_JSON
+#define ABSENT "json"
+#define ABSENT_OPTION "CF_WITH_JSON"
 #endif
 
 #if !CF_WITH_REAL
@@ -857,42 +862,50 @@ static void test_deepest_document(cf_arena* ar) {
     static const char* const names[]  = {"the deepest tables", "the deepest arrays",
                                          "the deepest tables and arrays"};
     static char              doc[(CF_MAX_DEPTH + 2) * 8 + 16];
+    int                      has_ini  = CF_WITH_INI;
+    int                      has_json = CF_WITH_JSON;
     int                      s;
 
     for (s = 0; shapes[s] != '\0'; ++s) {
-        cf_keyspace read, built;
-        cf_error    err = CF_ERROR_INIT;
+        cf_keyspace built;
 
-        /* The deepest one is read and written by every format, and
-           comes back the same. */
-        nested_doc(doc, sizeof doc, shapes[s], CF_MAX_DEPTH - 1);
-        round_trips(ar, doc, names[s]);
-        if (shapes[s] == 't') {
-            round_trip(ar, "ini", CF_TRUE, doc, names[s]);
+        if (has_json) {
+            cf_keyspace read;
+            cf_error    err = CF_ERROR_INIT;
+
+            /* The deepest one is read and written by every format, and
+               comes back the same. */
+            nested_doc(doc, sizeof doc, shapes[s], CF_MAX_DEPTH - 1);
+            round_trips(ar, doc, names[s]);
+            if (has_ini && shapes[s] == 't') {
+                round_trip(ar, "ini", CF_TRUE, doc, names[s]);
+            }
+
+            /* The keys put in directly are that document, so the one past
+               it is the same shape and nothing else. */
+            cf_ks_init(&read, ar, CF_MAX_DEPTH + 8);
+            check(decode("json", doc, &read, ar, 10, &err), names[s]);
+            cf_ks_resolve(&read);
+            cf_ks_init(&built, ar, CF_MAX_DEPTH + 8);
+            check(nested_keys(&built, shapes[s], CF_MAX_DEPTH - 1), names[s]);
+            cf_ks_resolve(&built);
+            check(cf_ks_digest(&read) == cf_ks_digest(&built),
+                  "the keys made directly are the keys that were read");
         }
-
-        /* The keys put in directly are that document, so the one past
-           it is the same shape and nothing else. */
-        cf_ks_init(&read, ar, CF_MAX_DEPTH + 8);
-        check(decode("json", doc, &read, ar, 10, &err), names[s]);
-        cf_ks_resolve(&read);
-        cf_ks_init(&built, ar, CF_MAX_DEPTH + 8);
-        check(nested_keys(&built, shapes[s], CF_MAX_DEPTH - 1), names[s]);
-        cf_ks_resolve(&built);
-        check(cf_ks_digest(&read) == cf_ks_digest(&built),
-              "the keys made directly are the keys that were read");
 
         cf_ks_init(&built, ar, CF_MAX_DEPTH + 8);
         check(nested_keys(&built, shapes[s], CF_MAX_DEPTH), names[s]);
         cf_ks_resolve(&built);
-        too_deep_for(&built, "json", names[s]);
+        if (has_json) {
+            too_deep_for(&built, "json", names[s]);
+        }
 #if CF_WITH_TOML
         too_deep_for(&built, "toml", names[s]);
 #endif
 #if CF_WITH_YAML
         too_deep_for(&built, "yaml", names[s]);
 #endif
-        if (shapes[s] == 't') {
+        if (has_ini && shapes[s] == 't') {
             too_deep_for(&built, "ini", names[s]);
         }
     }
@@ -989,12 +1002,16 @@ static void test_ini_roundtrip(cf_arena* ar) {
 /* ---------------------------------------------------------------- */
 
 static void test_registry(void) {
-    check(cf_codec_by_name("json") != NULL, "json is compiled in");
-    check(cf_codec_by_name("ini") != NULL, "ini is compiled in");
+    check((cf_codec_by_name("json") != NULL) == CF_WITH_JSON,
+          "json availability matches the build");
+    check((cf_codec_by_name("ini") != NULL) == CF_WITH_INI,
+          "ini availability matches the build");
     check(cf_codec_by_name("nope") == NULL, "unknown format is NULL");
 
-    check(cf_codec_by_path("a/b/app.json") != NULL, "by extension");
-    check(cf_codec_by_path("APP.JSON") != NULL, "extension is case blind");
+    check((cf_codec_by_path("a/b/app.json") != NULL) == CF_WITH_JSON, "by extension");
+    eq(cf_format_of_path("APP.JSON"), "json", "extension is case blind");
+    check((cf_codec_by_path("APP.JSON") != NULL) == CF_WITH_JSON,
+          "codec lookup by extension is case blind");
     check(cf_codec_by_path("app") == NULL, "no extension");
     check(cf_codec_by_path("a.json/b") == NULL,
           "a dot in a directory is not an extension");
@@ -1176,33 +1193,47 @@ static void test_encoder_sink_prefix(void) {
 #endif
 
 int main(void) {
-    cf_arena* ar = cf_arena_new(NULL, 1 << 16);
+    cf_arena* ar       = cf_arena_new(NULL, 1 << 16);
+    int       has_ini  = CF_WITH_INI;
+    int       has_json = CF_WITH_JSON;
 
     test_sink();
     test_registry();
-    test_ini(ar);
-    test_ini_errors(ar);
-    test_ini_arrays(ar);
-    test_ini_array_runs(ar);
-    test_ini_many_runs();
-    test_ini_seeded();
-    test_json(ar);
-    test_json_strings(ar);
-    test_json_errors(ar);
+    if (has_ini) {
+        test_ini(ar);
+        test_ini_errors(ar);
+        test_ini_arrays(ar);
+        test_ini_array_runs(ar);
+        test_ini_many_runs();
+        test_ini_seeded();
+#if CF_WITH_EMIT
+        test_ini_roundtrip(ar);
+#endif
+    } else {
+        printf("skipped: ini is not in this build\n");
+    }
+    if (has_json) {
+        test_json(ar);
+        test_json_strings(ar);
+        test_json_errors(ar);
+        test_deep_nesting(ar);
+#if CF_WITH_EMIT
+        test_json_roundtrip(ar);
+        test_array_order(ar);
+        test_array_members(ar);
+        test_count_is_a_key(ar);
+#endif
+    } else {
+        printf("skipped: json is not in this build\n");
+    }
     test_reader_text_storage();
 #if CF_WITH_EMIT
     test_encoder_sink_prefix();
-    test_json_roundtrip(ar);
-    test_array_order(ar);
-    test_array_members(ar);
-    test_count_is_a_key(ar);
 #if 2 * CF_MAX_DEPTH + 8 <= CF_KEY_MAX
     test_deepest_document(ar);
     test_writer_limit();
 #endif
-    test_ini_roundtrip(ar);
 #endif
-    test_deep_nesting(ar);
 
     cf_arena_free(ar);
     return cf_test_done();

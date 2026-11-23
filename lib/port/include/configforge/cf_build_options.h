@@ -120,5 +120,8 @@
 #ifndef CF_MAX_DEPTH
 #define CF_MAX_DEPTH 32
 #endif
+#ifndef CF_BUILD_PROFILE
+#define CF_BUILD_PROFILE "unspecified"
+#endif
 
 #endif /* CONFIGFORGE_CF_BUILD_OPTIONS_H */

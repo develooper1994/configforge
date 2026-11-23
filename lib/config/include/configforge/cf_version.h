@@ -63,6 +63,11 @@ CF_API int         cf_version_number(void);
    CMake can pass -DCF_BUILD_ID="\"...\"". */
 CF_API const char* cf_build_id(void);
 
+/* The build profile this library was built with (D-105): "default",
+   "minimal", "file:acme", or "unspecified" for a build of the sources
+   that named none. Never NULL. */
+CF_EXPERIMENTAL(1, 8) const char* cf_build_profile(void);
+
 /* What this build can do, as a NUL-terminated list: "ini", "json",
    "real", and so on. Recorded in the provenance report as well, so a
    report from a restricted build is distinguishable from a full one.

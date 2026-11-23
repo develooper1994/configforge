@@ -8,7 +8,8 @@ add_test(
   NAME codec.formats
   COMMAND
     ${CMAKE_COMMAND} -DCODEC=$<TARGET_FILE:configforge_codec>
-    -DPAGE=${CMAKE_SOURCE_DIR}/docs/Formats.md -DEMIT=${CF_WITH_EMIT} -P
+    -DPAGE=${CMAKE_SOURCE_DIR}/docs/Formats.md -DEMIT=${CF_WITH_EMIT}
+    -DJSON=${CF_WITH_JSON} -DCBOR=${CF_WITH_CBOR} -DINI=${CF_WITH_INI} -P
     ${CMAKE_CURRENT_SOURCE_DIR}/formats.cmake)
 
 # `configforge codec pairs`, and docs/Formats.md's generated tables held to
@@ -21,7 +22,9 @@ add_test(
     ${CMAKE_CURRENT_SOURCE_DIR}/pairs_page.cmake)
 
 # `detect`, `check`, `dump`, `recode` and `convert`; `convert` writes, so it
-# needs the encoders (CF_WITH_EMIT, off in the minimal preset).
+# needs the encoders (CF_WITH_EMIT, off in the minimal preset). The scripts
+# write their documents in JSON, and a build without it says `skipped:`; the
+# formats it has are passed as -DJSON, -DTOML, -DINI, -DCBOR and -DYAML.
 set(cf_codec_scripts detect check dump recode)
 if(CF_WITH_EMIT)
   list(APPEND cf_codec_scripts convert)
@@ -32,6 +35,7 @@ foreach(script ${cf_codec_scripts})
     COMMAND
       ${CMAKE_COMMAND} -DCODEC=$<TARGET_FILE:configforge_codec>
       -DWORK=${CMAKE_CURRENT_BINARY_DIR}/${script} -DCBOR=${CF_WITH_CBOR}
+      -DJSON=${CF_WITH_JSON} -DTOML=${CF_WITH_TOML} -DINI=${CF_WITH_INI}
       -DYAML=${CF_WITH_YAML} -DKEY_MAX=${CF_KEY_MAX}
       -DDATA=${CMAKE_CURRENT_SOURCE_DIR}/data -P
       ${CMAKE_CURRENT_SOURCE_DIR}/${script}.cmake)

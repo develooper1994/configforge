@@ -118,11 +118,12 @@ if(HAVE_GEN)
     --version)
 endif()
 
-# 8c. The serialization library's program.
+# 8c. The serialization library's program. It lists the formats the build
+# has, one a row ("json   .json, ..."), whichever they are.
 if(HAVE_CODEC)
   front_case(
     0
-    "json"
+    "(^|\n)[a-z0-9]+ +\\.[a-z0-9]+"
     -
     codec
     formats)

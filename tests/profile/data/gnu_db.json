@@ -1,0 +1,7 @@
+[
+{
+  "directory": ".",
+  "command": "cc -std=gnu90 -c lib/serialize/src/json.c",
+  "file": "lib/serialize/src/json.c"
+}
+]

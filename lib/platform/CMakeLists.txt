@@ -10,6 +10,9 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(cf_platform C)
   include(${CMAKE_CURRENT_LIST_DIR}/../../cmake/ConfigForgeOptions.cmake)
 endif()
+if(NOT CF_WHOLE_PROJECT)
+  include(${CMAKE_CURRENT_LIST_DIR}/../../cmake/ConfigForgeCVersion.cmake)
+endif()
 include(${CMAKE_CURRENT_LIST_DIR}/../../cmake/ConfigForgeComponent.cmake)
 
 if(CF_PLATFORM STREQUAL "none")
@@ -70,8 +73,8 @@ endif()
 if(NOT CF_WHOLE_PROJECT
    AND CF_WITH_PREFERENCES
    AND APPLE)
-  set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/posix/posix.c
-                              PROPERTIES COMPILE_OPTIONS "-std=c99")
+  cf_source_needs_c(src/posix/posix.c 99 REASON
+                    "CoreFoundation's headers use long long (SInt64)")
   target_link_libraries(cf_platform PUBLIC "-framework CoreFoundation")
 endif()
 

@@ -20,6 +20,24 @@
 
 static const char g_secret[] = "hunter2-correct-horse";
 
+/* The secret comes from a file, in INI where the build has it and in
+   JSON where it does not; a build with neither has no file test. */
+#if CF_WITH_INI
+#define WIPE_FILES
+#define WIPE1_FILE "cf_wipe.ini"
+#define WIPE1_BODY "[db]\npassword = hunter2-correct-horse\n"
+#define WIPE2_FILE "cf_wipe2.ini"
+#define WIPE2_BODY "[api]\ntoken = hunter2-correct-horse\n"
+#elif CF_WITH_JSON
+#define WIPE_FILES
+#define WIPE1_FILE "cf_wipe.json"
+#define WIPE1_BODY "{\"db\": {\"password\": \"hunter2-correct-horse\"}}\n"
+#define WIPE2_FILE "cf_wipe2.json"
+#define WIPE2_BODY "{\"api\": {\"token\": \"hunter2-correct-horse\"}}\n"
+#endif
+
+#ifdef WIPE_FILES
+
 #define MAX_BLOCKS 256
 
 typedef struct watching {
@@ -45,6 +63,8 @@ static void* w_alloc(void* ctx, size_t n) {
     return p;
 }
 
+#endif /* WIPE_FILES */
+
 static cf_bool holds_secret(const char* p, size_t n) {
     size_t k = sizeof g_secret - 1;
     size_t i;
@@ -55,6 +75,8 @@ static cf_bool holds_secret(const char* p, size_t n) {
     }
     return CF_FALSE;
 }
+
+#ifdef WIPE_FILES
 
 static void w_release(void* ctx, void* p) {
     watching* w = (watching*)ctx;
@@ -85,16 +107,15 @@ static void test_value_and_file(void) {
     a.release = w_release;
     a.ctx     = &w;
 
-    check(spill("cf_wipe.ini", "[db]\npassword = hunter2-correct-horse\n"),
-          "wrote a file with a secret in it");
+    check(spill(WIPE1_FILE, WIPE1_BODY), "wrote a file with a secret in it");
     b = cf_build(&a);
-    cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_wipe.ini", NULL, 0);
+    cf_builder_file(b, "file", CF_RANK_USER_FILE, WIPE1_FILE, NULL, 0);
     cf_builder_text(b, "db.password", NULL, CF_REQUIRED | CF_SENSITIVE);
     c = cf_builder_create(b, &err);
     check(c != NULL, "builds");
     if (c == NULL) {
         printf("  %s\n", err.message);
-        remove("cf_wipe.ini");
+        remove(WIPE1_FILE);
         return;
     }
     /* The secret is in the library's memory, not only in the file: the
@@ -106,7 +127,7 @@ static void test_value_and_file(void) {
     cf_config_free(c);
     check(w.released > 0, "freeing released the memory");
     check(w.leaked == 0, "and none of it still held the secret");
-    remove("cf_wipe.ini");
+    remove(WIPE1_FILE);
 }
 
 /* A build that fails after the secret was read: the builder is consumed
@@ -126,10 +147,9 @@ static void test_failed_build(void) {
     a.release = w_release;
     a.ctx     = &w;
 
-    check(spill("cf_wipe2.ini", "[api]\ntoken = hunter2-correct-horse\n"),
-          "wrote a file with a secret in it");
+    check(spill(WIPE2_FILE, WIPE2_BODY), "wrote a file with a secret in it");
     b = cf_build(&a);
-    cf_builder_file(b, "file", CF_RANK_USER_FILE, "cf_wipe2.ini", NULL, 0);
+    cf_builder_file(b, "file", CF_RANK_USER_FILE, WIPE2_FILE, NULL, 0);
     cf_builder_text(b, "api.token", NULL, CF_SENSITIVE);
     cf_builder_text(b, "api.url", NULL, CF_REQUIRED);
     c = cf_builder_create(b, &err);
@@ -137,8 +157,10 @@ static void test_failed_build(void) {
     check(w.released > 0, "the failed build released its memory");
     check(w.leaked == 0, "wiped first");
     cf_config_free(c);
-    remove("cf_wipe2.ini");
+    remove(WIPE2_FILE);
 }
+
+#endif /* WIPE_FILES */
 
 static void test_fixed_arena(void) {
     static char buf[16384];
@@ -151,8 +173,12 @@ static void test_fixed_arena(void) {
 }
 
 int main(void) {
+#ifdef WIPE_FILES
     test_value_and_file();
     test_failed_build();
+#else
+    printf("skipped: neither ini nor json is in this build\n");
+#endif
     test_fixed_arena();
     return cf_test_done();
 }

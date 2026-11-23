@@ -361,7 +361,10 @@ static void test_expansion_limit(void) {
 
 /* The limit on one key is not a limit on the file: a value just under
    it, named by enough short lines, is any size at all with no key over
-   it. All the expansions together stop at CF_EXPAND_TOTAL_MAX. */
+   it. All the expansions together stop at CF_EXPAND_TOTAL_MAX. The
+   references nest 18 levels, more than a build that limits nesting to
+   16 allows. */
+#if CF_MAX_DEPTH >= 32
 static void test_expansion_total(void) {
     cf_allocator a;
     cf_error     err = CF_ERROR_INIT;
@@ -401,6 +404,7 @@ static void test_expansion_total(void) {
     }
     cf_config_free(c);
 }
+#endif
 
 /* A referenced key whose own expansion is refused, under fallback, with
    nothing below it to fall to, has no value: the key that named it is
@@ -435,7 +439,11 @@ int main(void) {
     test_report();
     test_secret_reasons();
     test_expansion_limit();
+#if CF_MAX_DEPTH >= 32
     test_expansion_total();
+#else
+    printf("skipped: this build limits nesting to %d levels\n", CF_MAX_DEPTH);
+#endif
     test_reference_to_nothing();
     return cf_test_done();
 }

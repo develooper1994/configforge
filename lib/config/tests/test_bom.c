@@ -15,6 +15,9 @@
 
 #define BOM "\xEF\xBB\xBF"
 
+/* The file helpers are used only by the formats that read a mark from a file. */
+#if CF_WITH_TOML || CF_WITH_INI || CF_WITH_JSON
+
 /* server.port, and where explain() says it is, read from `text` as a file
    called `path` (the format from its extension); -1 when refused. */
 static int from_file(const char* path, const char* text, char* ex, size_t cap) {
@@ -38,6 +41,8 @@ static int from_file(const char* path, const char* text, char* ex, size_t cap) {
     return port;
 }
 
+#endif
+
 /* The same from memory, with no format named. */
 static int from_memory(const char* text, size_t n, char* ex, size_t cap) {
     cf_error    err = CF_ERROR_INIT;
@@ -57,6 +62,8 @@ static int from_memory(const char* text, size_t n, char* ex, size_t cap) {
     cf_config_free(c);
     return port;
 }
+
+#if CF_WITH_TOML || CF_WITH_INI || CF_WITH_JSON
 
 /* `body` is a document with server.port on its second line. */
 static void one(const char* what, const char* path, const char* body) {
@@ -82,7 +89,12 @@ static void one(const char* what, const char* path, const char* body) {
     has(ex, "bomdoc:2:", msg);
 }
 
+#endif
+
 static void test_each_format(void) {
+#if !(CF_WITH_TOML || CF_WITH_INI || CF_WITH_JSON)
+    printf("skipped: toml, ini and json are not in this build\n");
+#endif
 #if CF_WITH_TOML
     one("toml", "cf_bom.toml", "[server]\nport = 9443\n");
 #endif
