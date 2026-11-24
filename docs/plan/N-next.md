@@ -3,7 +3,44 @@
 Three cards from the Roadmap's "Next after 1.8.0": what a refusal's reason
 says about how serious it is (N-13), `configforge diff` over arrays of tables
 (N-14), and the changed keys of a pull request that touches configuration
-files only (N-15). Each is its own branch and lands alone.
+files only (N-15). Each is its own branch and lands alone. I-2, which opens
+1.9.0, comes first: the three need it.
+
+## I-2 - 1.9.0 opened: the 1.8 experimental functions settled (D-89)
+
+* **id**: I-2
+* **goal**: `cf_version.h` says 1.9.0, `CHANGELOG.md` has `## 1.9.0 — unreleased` on top, the thirteen functions experimental since 1.8 are `CF_API` (promised for the rest of 1.x), `cmake/configforge.experimental.symbols` lists no name, and every `gate.*` test passes.
+* **why**: D-89: "the card that opens the next minor makes it `CF_API` or removes it". Until then `gate.abi` fails on 1.9.0, and N-13 to N-15 and P-2 wait. The decision was the maintainer's; on 2026-11-24 the maintainer, away, told the organiser to go on without asking and to open the new version if needed, and HANDOFF.md's recommendation (read from each declaration and its callers) is taken as it stands.
+* **needs**: nothing (1.8.0 released, v1.8.0 at 7da87c6)
+* **size**: small
+* **decided**:
+  * **None removed; all thirteen become `CF_API`.** In each declaration replace `CF_EXPERIMENTAL(1, 8)` by `CF_API` and change nothing else on the line (continuation lines stay as they are; clang-format re-wraps if it must):
+    `lib/base/include/configforge/cf_error.h:112` `cf_reason_name`, `:113` `cf_reason_description`, `:117` `cf_error_place`;
+    `lib/config/include/configforge/cf_source.h:347` `cf_source_file_encoding`;
+    `lib/config/include/configforge/cf_version.h:69` `cf_build_profile`;
+    `lib/config/include/configforge/configforge.h:683` `cf_usage`;
+    `lib/serialize/include/configforge/cf_serialize.h:304` `cf_format_holds`, `:317` `cf_format_limits`, `:454` `cf_codec_compose_sized`;
+    `lib/text/include/configforge/cf_encoding.h:44` `cf_encoding_by_name`, `:48` `cf_encoding_name`, `:60` `cf_encoding_recode`, `:73` `cf_encoding_check`.
+    A comment next to one of them that says "experimental" (search `grep -n -i experimental` in those six headers) loses that word; nothing else in the comments changes.
+  * **`cf_format_limits` and `cf_usage` as they are.** HANDOFF.md offered a choice for these two (a third out-parameter, a trailing `flags`). Taken: promoted with today's signatures; a further limit or an option comes later as a new function (`cf_format_limits2`-style names are not chosen here: the card that needs one names it). This goes into D-89 (below) so that no later card reopens it.
+  * **`CF_EXPERIMENTAL` itself stays** in `cf_port.h`: it is the tier, and N-13 uses it with `(1, 9)`.
+  * **The symbols file** keeps its four comment lines and has no name line; write it with `cmake -DSRC=. -DWRITE=ON -P cmake/gates/GateAbi.cmake`, not by hand. If the promised list (`cmake/configforge.symbols`, and `cmake/configforge_serialize.symbols` for the three in `cf_serialize.h` and the four in `cf_encoding.h` if that list carries them) needs the names added, the same WRITE run does it; read `git diff --stat cmake/` after it and see only those files changed.
+  * **The bindings**: Python and Rust already call `cf_encoding_by_name`, `cf_encoding_name`, `cf_reason_name` and `cf_source_file_encoding`; promoted, they are no longer experimental, which settles D-89's "the bindings expose no experimental function". No binding code changes.
+  * **D-89 in `docs/Decisions.md`** (after its **Decision.** paragraph, before **Compatibility.**): one paragraph, "**Settled in 1.9.0 (I-2).** The thirteen functions of 1.8 were promoted, none removed. `cf_format_limits` and `cf_usage` kept their signatures; a further limit or an option comes as a new function." `docs/Decisions.md` is not read whole: `grep -n "^## D-89" docs/Decisions.md` and edit from there.
+  * **`CHANGELOG.md`**: `version.cmake` opens the section; add under it a "Changed" entry: "The thirteen functions experimental in 1.8 (list them) are promised for the rest of 1.x (D-89)." Never touch the dated `## 1.8.0` section.
+  * **The index** (`docs/Plan.md`): this card's row before N-13's, `open`; at the landing, `done (<hash>)`. N-13, N-14, N-15 keep their "Needs" text; their status stays `open`.
+* **files**: `scripts/release/version.cmake` (run, not edited) and what it rewrites (`lib/config/include/configforge/cf_version.h`, the vcpkg manifest, the Rust crate's and the Python package's version, `CHANGELOG.md`), the six headers above, `cmake/configforge.experimental.symbols` and the symbols lists the WRITE run changes; last: `docs/Decisions.md`, `docs/API.md` (generated: `cmake -P scripts/generate/apiref.cmake`), `docs/Codemap.md` (generated: `cmake -P scripts/generate/codemap.cmake`), `CHANGELOG.md`, `docs/Plan.md`.
+* **steps**:
+  1. A worktree of its own from `origin/main`: `git worktree add .claude/worktrees/i2 -b work/I-2 origin/main`. Work only there.
+  2. `cmake -DTO=1.9.0 -P scripts/release/version.cmake`; `git diff --stat` shows the version files and `CHANGELOG.md`. Commit that alone ("version: 1.9.0 opened").
+  3. **See it fail**: on Linux (below), configure and build the default preset and run `ctest -R "^gate\.abi$"`: it fails, naming the 1.8 names past their release. Write the first failing line into the report.
+  4. The thirteen edits; the WRITE run; `ctest -R "^gate\.abi"` passes. Commit.
+  5. D-89, CHANGELOG, the index row. `python scripts/work/work.py format`, then on Linux `cmake -P scripts/generate/apiref.cmake` and `cmake -P scripts/generate/codemap.cmake` last; `docs/API.md` no longer marks any function "experimental since 1.8" (`grep -n "1\.8" docs/API.md` in its experimental marks). Commit.
+  6. On Linux: `ctest -R "^gate\."` in the default preset exit 0; then ACCEPT-LINUX with `-DMODE=quick`. `work.py win` on Windows. Push `work/I-2`, ACCEPT-CI.
+* **Linux here**: WSL distro `configforge-dev`. Copy the tree off `/mnt` (e.g. `rsync -a --delete --exclude .git --exclude 'build*' /mnt/c/.../.claude/worktrees/i2/ $HOME/i2-src/`, then `git -C` is not needed: run from the copy) and build there; write long outputs to `/mnt/d/cf-work/I-2-*.out` and read only their tails. Never two verifies at once: before starting one, `pgrep -af "verify.cmake|ctest"` in the distro shows none (another card, L-9, may be running one; wait for it). Never type a password; never use sudo.
+* **accept**: ACCEPT-LINUX (quick), `ctest -R "^gate\."` exit 0 on Linux, `work.py win` exit 0, ACCEPT-CI.
+* **stop if**: `gate.abi` still fails after the WRITE run for a reason other than these thirteen names; any binding test fails because of the promotion; a gate other than `gate.abi`, `gate.apiref`, `gate.version` and `gate.codemap` changes its result.
+* **notes**: (empty)
 
 ## N-13 - a reason says how serious it is, and which weakness it defends
 
