@@ -42,12 +42,20 @@ Next, in this order; none waits on the maintainer:
    `gate.permissions`, vcpkg pinned by commit, dependency review on pull
    requests, the SBOM a release file. Its notes list the settings left
    to the maintainer.
-2. **N-13**, **N-14**, **N-15** (docs/plan/N-next.md): written and
-   decided. Carry each on its own branch and land it alone.
+2. **N-13** (2687154), **N-14** (73c2798) and **N-15** (dfc1fed) landed.
+   Under way: **N-16** (Git's textconv driver, `configforge codec
+   textconv`; `work/N-16`, worktree `.claude/worktrees/n16`) and **N-17**
+   (`configforge doctor drift`, many hosts; `work/N-17`, worktree n17),
+   each card read cold before it was carried. A branch with green CI is
+   landed; one stopped half done is finished from its branch.
 3. **P-3** (docs/plan/P-word-at-a-time.md), open now that P-2 is done.
-4. The Roadmap's "Next after 1.8.0" items: write each as a card first
-   (in N-13's form), then carry it. **L-3b** is open while 1.9.0 is
-   under way.
+4. The Roadmap's "Next after 1.8.0" items left: 5 (mutation testing),
+   6 (`gate.misra`), and a test that a lone CR after a YAML comment is
+   read as a line break (N-12's rewritten comment skip should already do
+   it; the Roadmap item then closes). Write each as a card first (a
+   middle-tier worker writes it, the organiser reads it cold, the same
+   worker carries it). Then P-3, rewritten on what P-2 landed (it still
+   names `CF_WITH_SWAR`), and L-3b.
 5. The maintainer's: PyPI and crates.io publishing (their tokens, or
    trusted publishing); the repository settings in L-9's and L-10's
    notes (a ruleset on `main` with required reviews and checks, signed
