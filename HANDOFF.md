@@ -42,12 +42,9 @@ Next, in this order; none waits on the maintainer:
    `gate.permissions`, vcpkg pinned by commit, dependency review on pull
    requests, the SBOM a release file. Its notes list the settings left
    to the maintainer.
-2. **N-13** (2687154), **N-14** (73c2798) and **N-15** (dfc1fed) landed.
-   Under way: **N-16** (Git's textconv driver, `configforge codec
-   textconv`; `work/N-16`, worktree `.claude/worktrees/n16`) and **N-17**
-   (`configforge doctor drift`, many hosts; `work/N-17`, worktree n17),
-   each card read cold before it was carried. A branch with green CI is
-   landed; one stopped half done is finished from its branch.
+2. **N-13** (2687154), **N-14** (73c2798), **N-15** (dfc1fed), **N-16**
+   (bbb1a77, Git's textconv driver) and **N-17** (ca3dd7b, `doctor
+   drift`) landed.
 3. **P-3** (docs/plan/P-word-at-a-time.md), open now that P-2 is done.
 4. The Roadmap's "Next after 1.8.0" items left: 5 (mutation testing),
    6 (`gate.misra`), and a test that a lone CR after a YAML comment is
@@ -73,5 +70,13 @@ paid"). Three this evening:
   (`/mnt/d/cf-work/i2-build.sh`).
 - From Git Bash, set `MSYS_NO_PATHCONV=1` for `wsl.exe` calls with
   `/mnt` paths.
+
+- `work.py land` formats first, and this machine's cmake-format reflows
+  one line of `tests/doctor/redact.cmake` that CI's keeps (gate.format.cmake
+  passes on the original). The format commit then forces a full local
+  verify. N-17 was landed by hand instead: `git merge --squash`, the tree
+  compared with the branch's (`git write-tree`), the index row, push,
+  branch and worktree removed. Until the versions agree, land so when the
+  only format change is that file.
 
 Delete this file in the commit that finishes step 4.
