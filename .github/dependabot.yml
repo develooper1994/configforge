@@ -13,3 +13,9 @@ updates:
     directory: /bindings/rust
     schedule:
       interval: monthly
+  # ClusterFuzzLite's builder image, pinned by digest (Dockerfile): Dependabot
+  # proposes the next digest, which is reviewed like any other change.
+  - package-ecosystem: docker
+    directory: /.clusterfuzzlite
+    schedule:
+      interval: monthly

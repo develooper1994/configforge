@@ -80,7 +80,8 @@ if [ -r /etc/os-release ] && command -v apt-get >/dev/null 2>&1; then
 elif [ "$(uname -s)" = Darwin ] && command -v brew >/dev/null 2>&1; then
   brew install cmake ninja ccache llvm cppcheck python node rust cbmc gcovr \
     libyaml expat sqlite shellcheck actionlint ruff codespell lychee gitleaks osv-scanner
-  python3 -m pip install --user cmakelang
+  python3 -m pip install --user --require-hashes --no-deps \
+    -r "$here/cmakelang-requirements.txt"
 elif command -v podman >/dev/null 2>&1 || command -v docker >/dev/null 2>&1; then
   run=$(command -v podman || command -v docker)
   "$run" build -t configforge-dev -f "$here/Containerfile" "$here"

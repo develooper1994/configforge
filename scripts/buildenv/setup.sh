@@ -49,51 +49,40 @@ if ! command -v cargo >/dev/null 2>&1 || ! cargo --version | grep -q "^cargo $RU
   done
 fi
 
-# clang-format pinned, from PyPI: the gate accepts one major version
-# (cmake/ConfigForgeClangFormat.cmake), because two versions disagree on
-# layouts no code can satisfy both ways. Ubuntu's own clang-format stays
-# for clang-tidy's use; this one comes first on PATH.
-# json5, pinned, is the reference reader JSON5's values are compared
-# with (verify -DEXTRA=conformance); Ubuntu packages none. The
-# environment sees the system's packages too (PyYAML, for the same
-# step), and verify runs that step with this interpreter.
-CLANG_FORMAT_VERSION=22.1.8
-JSON5_VERSION=0.17.3
+# The pinned Python tools, from PyPI, every file by its SHA-256
+# (`pip install --require-hashes --no-deps`, the lists beside this file,
+# made by requirements-lock.py; a list is installed again when any of its
+# lines is not what the environment holds):
+#  * clang-format: the gate accepts one major version
+#    (cmake/ConfigForgeClangFormat.cmake), because two versions disagree on
+#    layouts no code can satisfy both ways. Ubuntu's own clang-format stays
+#    for clang-tidy's use; this one comes first on PATH.
+#  * json5, the reference reader JSON5's values are compared with (verify
+#    -DEXTRA=conformance); Ubuntu packages none. The environment sees the
+#    system's packages too (PyYAML, for the same step), and verify runs that
+#    step with this interpreter.
+#  * shellcheck and actionlint as the wheels that carry their binaries,
+#    ruff, codespell: gate.shellcheck, gate.ruff, gate.actionlint and
+#    gate.codespell. A release of any of them can find something new, so a
+#    version changes in tools.in, in CI (.github/workflows/ci.yml, which
+#    installs the same list) and in the tree's fixes together.
+#  * semgrep and what it needs (gate.semgrep): CI installs the same list.
 if ! /opt/cf-tools/bin/python3 -c "import yaml" 2>/dev/null; then
   rm -rf /opt/cf-tools
   python3 -m venv --system-site-packages /opt/cf-tools
 fi
-if ! /opt/cf-tools/bin/clang-format --version 2>/dev/null |
-  grep -q " $CLANG_FORMAT_VERSION"; then
-  /opt/cf-tools/bin/pip install --quiet "clang-format==$CLANG_FORMAT_VERSION"
-fi
-if ! /opt/cf-tools/bin/python3 -c \
-  "import json5, sys; sys.exit(json5.__version__ != '$JSON5_VERSION')" 2>/dev/null; then
-  /opt/cf-tools/bin/pip install --quiet "json5==$JSON5_VERSION"
-fi
+here=$(cd "$(dirname "$0")" && pwd)
+for list in tools semgrep; do
+  req="$here/$list-requirements.txt"
+  # pip freeze writes names with underscores where the lists have hyphens.
+  have=$(/opt/cf-tools/bin/pip list --format=freeze 2>/dev/null | tr 'A-Z_' 'a-z-' || true)
+  stale=$(sed -n 's/^\([A-Za-z0-9_.-]*==[^ ]*\) .*/\1/p' "$req" | tr 'A-Z_' 'a-z-' |
+    grep -vxF "$have" || true)
+  if [ -n "$stale" ]; then
+    /opt/cf-tools/bin/pip install --quiet --require-hashes --no-deps -r "$req"
+  fi
+done
 ln -sf /opt/cf-tools/bin/clang-format /usr/local/bin/clang-format
-
-# The other languages' checkers, pinned, from PyPI (shellcheck and
-# actionlint as the wheels that carry their binaries): gate.shellcheck,
-# gate.ruff, gate.actionlint, gate.codespell and gate.semgrep. A release of any of
-# them can find something new, so a version changes here, in CI
-# (.github/workflows/ci.yml) and in the tree's fixes together.
-SHELLCHECK_PY_VERSION=0.11.0.1
-RUFF_VERSION=0.17.6
-ACTIONLINT_PY_VERSION=1.7.12.25
-CODESPELL_VERSION=2.4.3
-# semgrep has no repository beside this file (the Containerfile copies it
-# alone), so it is pinned by version here; CI installs it with every
-# package's hash from scripts/check/semgrep-requirements.txt.
-SEMGREP_VERSION=1.186.0
-if [ "$(/opt/cf-tools/bin/pip list --format=freeze 2>/dev/null |
-  grep -cxF -e "shellcheck-py==$SHELLCHECK_PY_VERSION" -e "ruff==$RUFF_VERSION" \
-    -e "actionlint-py==$ACTIONLINT_PY_VERSION" -e "codespell==$CODESPELL_VERSION" \
-    -e "semgrep==$SEMGREP_VERSION")" -ne 5 ]; then
-  /opt/cf-tools/bin/pip install --quiet "shellcheck-py==$SHELLCHECK_PY_VERSION" \
-    "ruff==$RUFF_VERSION" "actionlint-py==$ACTIONLINT_PY_VERSION" \
-    "codespell==$CODESPELL_VERSION" "semgrep==$SEMGREP_VERSION"
-fi
 for t in shellcheck ruff actionlint codespell semgrep; do
   ln -sf "/opt/cf-tools/bin/$t" "/usr/local/bin/$t"
 done

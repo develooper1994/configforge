@@ -196,7 +196,25 @@ def validate(path):
     for k in ("committed_at", "run_id", "machine", "compiler", "libraries", "cells"):
         if k not in r:
             bad.append("no " + k)
-    for c in r.get("cells", []):
+    # The file may come from a run of a pull request (CI's artifact bench-quick,
+    # read by .github/workflows/bench.yml with a token that writes), and
+    # publish.sh makes a path and a commit message of these fields: each must
+    # be exactly what run.py writes, and nothing a path or a shell could read.
+    if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z", str(r.get("committed_at", ""))):
+        bad.append("committed_at is not YYYY-MM-DDThh:mm:ssZ")
+    if not re.fullmatch(r"[0-9]{1,20}", str(r.get("run_id", ""))):
+        bad.append("run_id is not a number")
+    compiler = r.get("compiler")
+    if not isinstance(compiler, dict):
+        bad.append("compiler is not an object")
+    else:
+        if compiler.get("id") not in ("gcc", "clang"):
+            bad.append("compiler id is not gcc or clang")
+        if compiler.get("flags", "shipped") not in ("shipped", "bare", "native"):
+            bad.append("compiler flags is not shipped, bare or native")
+    if not isinstance(r.get("cells", []), list):
+        bad.append("cells is not a list")
+    for c in r.get("cells", []) if isinstance(r.get("cells", []), list) else []:
         for k in ("lib", "format", "doc", "size_mib", "mode"):
             if k not in c:
                 bad.append("a cell has no " + k)

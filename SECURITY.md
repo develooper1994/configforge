@@ -3,18 +3,27 @@
 ## Reporting a vulnerability
 
 Please report it privately, through GitHub's **private vulnerability
-reporting** on this repository (the *Security* tab, "Report a
-vulnerability"), not in a public issue. Include the input that shows it -
-for a parser, the bytes - and the build options.
+reporting** on this repository, not in a public issue:
 
-You will get an acknowledgement, and the fix will be credited to you in
-the CHANGELOG unless you ask otherwise.
+<https://github.com/develooper1994/configforge/security/advisories/new>
+
+(the *Security* tab, "Report a vulnerability"). Include the input that
+shows it - for a parser, the bytes - and the build options.
+
+The project has one maintainer and no support contract, so the times are
+a best effort, not a promise: an acknowledgement within a week, a first
+assessment within two, and a fix for a confirmed vulnerability as soon as
+it can be tested, with an advisory published when it is released. The fix
+is credited to you in the CHANGELOG unless you ask otherwise. If a week
+passes without an answer, say so on the advisory: it has been missed.
 
 ## Supported versions
 
-The latest release of the current major version and `main` receive
-fixes. A fix that cannot keep the interface (D-56) waits for the next
-major version, and the advisory says so.
+Only the latest minor version of the current major version (the newest
+release, and `main`) receives fixes; an older minor version is not patched,
+so the answer to a vulnerability there is to move to the latest. A fix
+that cannot keep the interface (D-56) waits for the next major version,
+and the advisory says so.
 
 ## What is in scope
 

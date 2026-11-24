@@ -1,0 +1,4 @@
+# cmake-format, for macOS (Ubuntu packages it).
+# `python3 scripts/buildenv/requirements-lock.py cmakelang` makes cmakelang-requirements.txt.
+cmakelang==0.6.13
+six>=1.13.0

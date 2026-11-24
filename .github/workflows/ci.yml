@@ -396,7 +396,7 @@ jobs:
           curl -fsSL -o "$RUNNER_TEMP/osv-scanner" https://github.com/google/osv-scanner/releases/download/v2.7.0/osv-scanner_linux_amd64
           echo "160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b  $RUNNER_TEMP/osv-scanner" | sha256sum -c -
           chmod +x "$RUNNER_TEMP/osv-scanner"
-      - run: '"$RUNNER_TEMP/osv-scanner" scan source --lockfile=bindings/rust/Cargo.lock --lockfile=scripts/docs/requirements.txt --lockfile=scripts/check/semgrep-requirements.txt'
+      - run: '"$RUNNER_TEMP/osv-scanner" scan source --lockfile=bindings/rust/Cargo.lock --lockfile=scripts/docs/requirements.txt --lockfile=scripts/buildenv/semgrep-requirements.txt --lockfile=scripts/buildenv/tools-requirements.txt'
 
   # Coverage-guided fuzzing of every reader of untrusted bytes.
   # A finding leaves its input as crash-<hash>, kept as an artifact.
@@ -535,7 +535,7 @@ jobs:
           cmake -S . -B build-bench -DCMAKE_BUILD_TYPE=Release -DCF_BUILD_BENCH=ON
           cmake --build build-bench --target cf_bench
       - name: The gate's own tests
-        run: python3 -m unittest scripts/bench/test_gate.py
+        run: python3 -m unittest scripts/bench/test_gate.py scripts/bench/test_page.py
       - name: Build the comparison, ConfigForge alone
         run: |
           cmake -S bench/compare -B build-cfb -DCMAKE_BUILD_TYPE=Release
@@ -636,11 +636,12 @@ jobs:
       - name: Install the pinned checkers
         run: |
           python3 -m venv "$RUNNER_TEMP/lint"
-          "$RUNNER_TEMP/lint/bin/pip" install --quiet shellcheck-py==0.11.0.1 \
-            ruff==0.17.6 actionlint-py==1.7.12.25 codespell==2.4.3
-          # semgrep, every package with its hash (made by the command at the
-          # top of the file): nothing a registry could change under it.
-          "$RUNNER_TEMP/lint/bin/pip" install --quiet --require-hashes --no-deps             -r scripts/check/semgrep-requirements.txt
+          # Every package with its hash (the lists are made by
+          # scripts/buildenv/requirements-lock.py, and setup.sh installs the
+          # same ones): nothing a registry could change under them.
+          "$RUNNER_TEMP/lint/bin/pip" install --quiet --require-hashes --no-deps \
+            -r scripts/buildenv/tools-requirements.txt \
+            -r scripts/buildenv/semgrep-requirements.txt
       - name: Install lychee
         # The release binary setup.sh pins, checked against its checksum.
         run: |

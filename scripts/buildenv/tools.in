@@ -1,0 +1,10 @@
+# The checkers and formatters setup.sh installs into /opt/cf-tools, pinned.
+# A release of any of them can find something new, so a version changes here,
+# in CI (.github/workflows/ci.yml) and in the tree's fixes together.
+# `python3 scripts/buildenv/requirements-lock.py tools` makes tools-requirements.txt.
+clang-format==22.1.8
+json5==0.17.3
+shellcheck-py==0.11.0.1
+ruff==0.17.6
+actionlint-py==1.7.12.25
+codespell==2.4.3

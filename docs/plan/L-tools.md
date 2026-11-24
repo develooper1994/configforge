@@ -1,7 +1,7 @@
 # L - the tools, by group
 
 L-1 to L-8 are done and removed (docs/Plan.md, "Done, their cards removed");
-L-3b, below, is open.
+L-3b and L-9, below, are open.
 
 Every kind of tool that finds a fault the others miss, in groups, each with
 what the project runs today and what it adds. The rule: a tool joins when it
@@ -64,3 +64,34 @@ second opinion beside cppcheck's.
 * **accept**: ACCEPT-LINUX, ACCEPT-CI with `eva` green twice running (the second from the cache); `cmake -DEXTRA="eva;proofs" -DMODE=quick -DJOBS=3 -P scripts/verify.cmake` ending `all green`.
 * **stop if**: a stop number above; an alarm that is a real fault needing a change to a public signature or limit (record it as accepted with the reason, write it under "notes", tell the maintainer); Frama-C 33.0 not installable from the pinned repository commit on the runner.
 * **notes**: (empty)
+
+## L-9 - the OpenSSF Scorecard findings the project can fix itself
+
+* **id**: L-9
+* **goal**: the repository's code-scanning alerts of the tool Scorecard that a commit can fix are fixed: DangerousWorkflow (`bench.yml`), PinnedDependencies (five pip installs and one container image), SecurityPolicy (`SECURITY.md` has no link); the rest are listed under "notes" for the maintainer.
+* **why**: the first is a real risk, the other two cost nothing. `bench.yml`'s job `history` runs on `workflow_run` of `ci`, which holds the base repository's token (`contents: write`), and its checkout takes `ref: ${{ github.event.workflow_run.head_sha }}`: the code of the run that triggered it. If that run is ever one a stranger controls (a pull request from a fork, a branch), their `scripts/bench/page.py` and `publish.sh` run with the write token. Today the job's `if` limits it to a push on `main`, but a guard that the next edit can drop is a weaker thing than a job that never checks out foreign code.
+* **needs**: L-2 (the gates `gate.actionlint` and `gate.shellcheck`)
+* **size**: small
+* **decided**:
+  * **DangerousWorkflow**: the privileged job checks out nothing but the default branch's tip (no `ref:`: a `workflow_run`'s GITHUB_SHA), so every script it runs is what is on `main` now. What the unprivileged run made is *data*: one JSON file (the artifact `bench-quick`), read by `page.py --validate` and `publish.sh`, never executed, never put in a shell line. `if:` also requires `head_branch == 'main'` and `head_repository.full_name == github.repository`. `permissions` stay as they are (`contents: write`, `actions: read` for this job alone, `contents: read` for the file): the job's purpose, adding a file to the branch `bench-history`, needs exactly them. The job's purpose does not need the pull request's code, so nothing moves into `ci.yml`. Pushes to `main` and the schedule behave as before.
+  * **The data is validated as untrusted**: `publish.sh` makes a path (`runs/<year>/<committed_at>-<sha7>-<kind>.json`) and a commit message from the file's fields, so `page.py --validate` must accept exactly what `run.py` writes: `committed_at` as `YYYY-MM-DDThh:mm:ssZ`, `run_id` digits, `compiler.id` `gcc` or `clang`, `compiler.flags` `shipped`, `bare` or `native`, `cells` a list. New `scripts/bench/test_page.py` (run by `bench-gate` beside `test_gate.py`); it fails before the change on the first three of its refusals.
+  * **PinnedDependencies, pip**: every `pip install` in `scripts/buildenv/setup.sh` and `dev-setup.sh` is `pip install --require-hashes --no-deps -r <list>`, the lists made by `scripts/buildenv/requirements-lock.py` from `<name>.in` as L-3 made the semgrep one (the script, `semgrep.in` and `semgrep-requirements.txt` move from `scripts/check/` to `scripts/buildenv/`, so that the Containerfile, whose context is that directory, can copy them): `tools` (clang-format, json5, shellcheck-py, ruff, actionlint-py, codespell), `semgrep`, `cmakelang` (macOS; with `six`). `setup.sh` installs a list again when a line of it is not what `pip list` holds; the versions are the ones it pinned before (a version that changes is a change of a `.in` file and a new lock). CI's job `lint` installs the `tools` list with the `semgrep` one, so the two cannot differ. `dev-setup.ps1`'s `pip install --user` (Windows, a tool name from a list) is not in the alerts and stays.
+  * **PinnedDependencies, image**: `.clusterfuzzlite/Dockerfile` names `gcr.io/oss-fuzz-base/base-builder@sha256:<digest>` (the manifest digest the registry returns for `latest` on the day); Dependabot's `docker` ecosystem on `/.clusterfuzzlite` proposes the next digest. If the digest cannot be read, the line goes under "notes" for the manager, who has `gh`.
+  * **SecurityPolicy**: `SECURITY.md` states how to report (the link `https://github.com/develooper1994/configforge/security/advisories/new`), the supported versions (the latest minor of the current major, and `main`), and the response times as a best effort of one maintainer.
+  * **Left to the maintainer** (settings or time, not files): BranchProtection, CodeReview, CIIBestPractices (the badge programme), Maintained.
+* **files**: `.github/workflows/bench.yml`, `.github/workflows/ci.yml` (`bench-gate`'s unit tests, `lint`'s installs, `osv`'s lockfiles), `.github/dependabot.yml`, `.clusterfuzzlite/Dockerfile`, `scripts/bench/page.py`, `scripts/bench/test_page.py` (new), `scripts/buildenv/` (`setup.sh`, `dev-setup.sh`, `Containerfile`, `requirements-lock.py`, `tools.in`, `cmakelang.in`, `semgrep.in`, and the three `*-requirements.txt`), `SECURITY.md`, `docs/Dependencies.md`, `docs/Plan.md`, this card. No `CHANGELOG.md` entry: CI and scripts only.
+* **steps**:
+  1. `git switch -c work/L-9`. Write down, under "notes", the line that let foreign code run with the write token.
+  2. `test_page.py` first; see it fail against the old `page.py`; then the validation.
+  3. `bench.yml`: no `ref`, the two guards, the comment. Read the job once more: no step runs anything the checkout did not take from `main`.
+  4. The lists and `requirements-lock.py`; `setup.sh`, `dev-setup.sh`, `Containerfile`, CI; run `setup.sh`'s block in the WSL distribution (`pip` accepts every hash).
+  5. The image digest and Dependabot; `SECURITY.md`; `docs/Dependencies.md`.
+  6. `gate.actionlint`, `gate.shellcheck` and every other `gate.*` on Linux; push the branch.
+* **accept**: ACCEPT-LINUX with `ctest -R "^gate\."` all passing; `python3 -m unittest scripts/bench/test_gate.py scripts/bench/test_page.py` ending OK; ACCEPT-CI on the branch. The next Scorecard run (after the merge) is the maintainer's to read: the three checks should rise.
+* **stop if**: PyPI lists no wheel for a pinned version on a platform CI uses; `setup.sh` run twice does not leave the second run without a `pip install`.
+* **notes**:
+  * **The line that let foreign code run with the write token** (before this card): `.github/workflows/bench.yml`, job `history`, step `actions/checkout`, `ref: ${{ github.event.workflow_run.head_sha }}` (line 48 in the commit Scorecard scanned, 50 on `main` before this card). The checkout is of the triggering run's commit; the next step, `python3 scripts/bench/page.py --validate` and `bash scripts/bench/publish.sh`, then ran that commit's scripts under `contents: write`. The `if:` (`event == 'push'`, `conclusion == 'success'`) was the only guard. After the fix the job has one checkout, without `ref`, and its only inputs from the triggering run are `github.event.workflow_run.id` (a number, given to `download-artifact`) and the artifact's JSON, which `page.py --validate` reads as data; no `run:` step interpolates anything from the event.
+  * The two other jobs that write (`publish-full`, with `contents: write`) run on `schedule` and `workflow_dispatch` only, from `main` (`github.ref == 'refs/heads/main'`), and check out their own ref: not a finding.
+  * `dev-setup.ps1` line 76, `python -m pip install --user <tool>` (Windows, no winget package), is not in the alerts; it stays, and goes into a hashed list the day a tool needs it there.
+  * The image digest is `latest` of `gcr.io/oss-fuzz-base/base-builder` on 2026-11-24; OSS-Fuzz moves it, Dependabot proposes the next.
+  * **Left to the maintainer** (repository settings or time, not files): BranchProtection (a ruleset on `main`: required reviews and checks), CodeReview (it follows from the first, with a second reviewer), CIIBestPractices (the OpenSSF badge: answers to the programme's questionnaire), Maintained (the age of the repository and recent activity: time).

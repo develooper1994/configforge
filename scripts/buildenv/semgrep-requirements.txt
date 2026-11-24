@@ -1,4 +1,4 @@
-# Made by scripts/check/semgrep-lock.py from scripts/check/semgrep.in:
+# Made by scripts/buildenv/requirements-lock.py from scripts/buildenv/semgrep.in:
 # every package of semgrep 1.186.0 with the SHA-256 of each of its files,
 # installed with `pip install --require-hashes --no-deps -r`. mcp, the
 # opentelemetry packages and wcmatch are newer than semgrep pins, whose

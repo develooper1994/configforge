@@ -1,7 +1,7 @@
 # semgrep 1.186.0 and what it needs, every package named. `name==version` is
 # what the last compile chose; `name>=version` is taken newer, because the
 # versions semgrep pins have known vulnerabilities (mcp, opentelemetry, wcmatch).
-# `python3 scripts/check/semgrep-lock.py` makes semgrep-requirements.txt.
+# `python3 scripts/buildenv/requirements-lock.py semgrep` makes semgrep-requirements.txt.
 annotated-types==0.8.0
 anyio==4.16.0
 attrs==26.1.0

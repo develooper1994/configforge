@@ -36,7 +36,9 @@ jobs:
     if: >-
       github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push'
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-26.04
     permissions:
       contents: write
@@ -45,9 +47,14 @@ jobs:
       group: bench-history
       cancel-in-progress: false
     steps:
+      # This job holds a token that can write, so it runs only what is on main
+      # now: no `ref`, so the checkout is the default branch's tip (GITHUB_SHA
+      # of a workflow_run), never the code of the run that triggered it. What
+      # that run made is data: one JSON file, read by page.py --validate (its
+      # shape, and every field publish.sh puts in a path or a commit message)
+      # and by publish.sh, never executed and never put in a shell line.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:

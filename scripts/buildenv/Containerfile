@@ -7,6 +7,7 @@
 #
 # podman takes the same file and the same arguments.
 FROM ubuntu:26.04
-COPY setup.sh /tmp/setup.sh
-RUN sh /tmp/setup.sh && rm /tmp/setup.sh
+# setup.sh reads the hashed lists beside it (requirements-lock.py makes them).
+COPY setup.sh tools-requirements.txt semgrep-requirements.txt /tmp/cf/
+RUN sh /tmp/cf/setup.sh && rm -rf /tmp/cf
 WORKDIR /src
