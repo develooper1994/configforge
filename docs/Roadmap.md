@@ -939,7 +939,8 @@ first user meets. In the order proposed:
 
 ### Critical-system standards, and large files (asked 2026-11-16; not yet cards)
 
-* ⬜ **Critical-system standards, checked by machine.** MISRA C first,
+* ⬜ **Critical-system standards, checked by machine** (card N-9 for the
+  first step, cppcheck on the libraries without its style class). MISRA C first,
   then SEI CERT C's rules no tool sees, a CWE table, and MISRA C++:2023
   for the wrapper; each rule's status in a matrix, each deviation in a
   record, and a gate (`gate.misra`, cppcheck's MISRA addon on a `misra`

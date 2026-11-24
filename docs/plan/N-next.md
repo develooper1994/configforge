@@ -824,3 +824,101 @@ equal cross-format fixture therefore pairs them with JSON strings.
   array or violates event balance on valid input. Record the format and
   input. Stop after three failures on the same thing, as in the loop.
 * **notes**: (empty)
+## N-9 - cppcheck runs on both libraries' own sources
+
+* **id**: N-9
+* **goal**: The `analyze` build runs cppcheck on the sources of `configforge`
+  and `configforge_serialize`, finds nothing, and a gate fails the day either
+  library is made again where cppcheck does not see it. The style class
+  (58 findings, listed in the notes) is a later card.
+* **why**: Roadmap, "Critical-system standards": the library's own sources
+  have never run through cppcheck. `configforge_setup_cppcheck()` is called
+  after `add_library(configforge)` (`CMakeLists.txt:74`), and the
+  serialization target has `C_CPPCHECK ""` set on purpose
+  (`CMakeLists.txt:101-104`). Only tests and tools were checked. A first run
+  (cppcheck 2.19.0, `--std=c89`, the `analyze` flags) reports seven
+  `uninitvar` errors, all of one shape: a buffer passed as an argument beside
+  the call that fills it, `cf_sink_write(out, tmp, cf_value_to_text(v, tmp,
+  sizeof tmp))`. The code is correct (an array decays to a pointer, nothing is
+  read before the call), but the order of the two reads is the thing a
+  reviewer has to prove, and a critical-system user should not have to. The
+  fix is one statement more, not a suppression. This is the item's first step;
+  the MISRA matrix, the gate `gate.misra` and the CWE table stay outside.
+* **needs**: nothing
+  * Both libraries are checked with the tests' classes
+    (`--enable=warning,performance,portability`, `--std=c89`,
+    `--error-exitcode=1`), not the style class: with it cppcheck 2.19.0 adds
+    58 findings (30 `variableScope`, which C89's declarations at the top of
+    a block answer badly; 12 `constVariablePointer`, 7 `constParameterCallback`,
+    5 `constParameterPointer`, 3 `unusedStructMember`, 1
+    `arrayIndexThenCheck`), advice and not defects, and a card of their own.
+    No suppression. `cmake/ConfigForgeAnalysis.cmake:187-239` gains a
+    variable `CF_CPPCHECK_LIBRARIES` (the tests' flags, set to the parent
+    scope beside `CF_CPPCHECK_TESTS`), nothing else changes there.
+  * In `CMakeLists.txt` replace the comment and the
+    `set_target_properties(configforge_serialize PROPERTIES C_CPPCHECK "")`
+    at lines 101-104 with one `if(CF_CPPCHECK_LIBRARIES)` block that sets
+    `C_CPPCHECK "${CF_CPPCHECK_LIBRARIES}"` on `configforge` and
+    `configforge_serialize` together. The call at line 74 stays where it is.
+    `lib/lanes` is compiled into both and is already clean.
+  * The one `arrayIndexThenCheck` (`lib/config/src/core/validate.c:105`,
+    `d->allowed[i2] != NULL && i2 < 8`) is answered at once by swapping the
+    two operands: the same result, the bound first.
+  * The seven findings are answered by code. In each function add a
+    `size_t len;` beside the `tmp` (or `enc`) declaration (C89: declarations
+    first) and split the call: `len = cf_value_to_text(v, tmp, sizeof tmp);`
+    then the write with `len`. A name clash with an existing `len` is solved
+    by `text_len`. Sites: `lib/serialize/src/yaml.c:1271`,
+    `lib/serialize/src/toml.c:1661`, `lib/serialize/src/json.c:879`,
+    `lib/serialize/src/json.c:121` (`enc`, with
+    `cf_text_utf8_encode(cp, enc)`), `lib/serialize/src/detect.c:87`,
+    `lib/serialize/src/blob.c:257`, `lib/config/src/diag/report.c:486`
+    (`fp`, with `cf_ks_digest_text`; the call is already the argument of
+    `cf_sink_write`, so bind it first). Behaviour does not change.
+  * The gate is `gate.cppcheck`, a `cmake -P` script
+    `cmake/gates/GateCppcheck.cmake` (starts with `cmake_minimum_required`,
+    reads `${SRC}/CMakeLists.txt`, whitespace collapsed to one space). It
+    fails when the text lacks `set_target_properties(configforge
+    configforge_serialize PROPERTIES C_CPPCHECK "${CF_CPPCHECK_LIBRARIES}")`
+    or contains `C_CPPCHECK ""`. It prints `VIOLATION: <reason>` lines like
+    `GateProfiles.cmake`. It is registered in
+    `cmake/ConfigForgeGates.cmake` after `gate.profiles` (line 140), with
+    `-DSRC=${CMAKE_SOURCE_DIR}`, and needs no compiler.
+  * No CHANGELOG entry: nothing a user can observe changes.
+    `docs/Maintaining.md:210` (the lessons table) gets its right-hand cell
+    changed to say the gate holds it; the Roadmap item says "(card N-9)" and
+    that the first step is done by it, nothing else.
+* **files**: `CMakeLists.txt`, `cmake/ConfigForgeAnalysis.cmake`,
+  `cmake/gates/GateCppcheck.cmake` (new), `cmake/ConfigForgeGates.cmake`,
+  `lib/config/src/core/validate.c`, `lib/serialize/src/yaml.c`, `toml.c`,
+  `json.c`, `detect.c`, `blob.c`, `lib/config/src/diag/report.c`,
+  `docs/Maintaining.md`, `docs/Roadmap.md`, generated `docs/API.md`,
+  `docs/Codemap.md`, `docs/Limits.md` if the regeneration changes them.
+  1. `git switch -c work/N-9`.
+  2. Write `GateCppcheck.cmake` and register it. Run it on the unchanged
+     `CMakeLists.txt`: `cmake -DSRC=<tree> -P cmake/gates/GateCppcheck.cmake`
+     must exit 1 and name both violations (no shared property, the empty
+     property). See it fail.
+  3. Make the `CMakeLists.txt` and `ConfigForgeAnalysis.cmake` change; the
+     gate passes. Build the `analyze` flags (`-DCF_ANALYZER=ON
+     -DCF_CPPCHECK=ON`, Debug) on Linux with `ninja -k 0`: see the seven
+     `uninitvar` errors, build exit 1.
+  4. Fix the seven sites as decided. Build again until it exits 0 with no
+     cppcheck output. Run `ctest --preset analyze`.
+  5. Update `docs/Maintaining.md:210` and the Roadmap line. Format,
+     regenerate the three documents on Linux, `ctest -R "^gate\."`.
+* **accept**: ACCEPT-LINUX with the `analyze` preset (build exit 0, cppcheck
+  silent on `lib/` apart from style findings, `ctest --preset analyze` passing, `gate.cppcheck` among
+  them) and the default preset's `ctest -R "^gate\."`; ACCEPT-CI (the
+  `analyze` job).
+* **stop if**: cppcheck reports something in the libraries beyond the seven
+  that a statement cannot answer (a true defect is a card of its own: record
+  file, line and message), or the result differs in CI's cppcheck version from
+  2.19.0 (record both).
+* **notes**: Found while carrying the card (2026-11-24): the first run was
+  read with `grep "error|warning"`, which hid the style class; the card first
+  decided the style class on and the first full build showed the 58 findings
+  above, so the card was changed to the tests' classes (organiser's answer).
+  The style findings by file are in the 2026-11-24 run of `ninja -k 0` with
+  `CF_CPPCHECK=ON` and `--enable=...style`; the card for them can regenerate
+  the list.

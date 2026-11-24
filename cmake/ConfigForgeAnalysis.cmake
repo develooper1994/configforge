@@ -230,4 +230,12 @@ function(configforge_setup_cppcheck)
   set(CF_CPPCHECK_TESTS
       ${common} "--enable=warning,performance,portability"
       PARENT_SCOPE)
+  # The libraries' own sources: the same classes as the tests. The style
+  # class there (variable scope, const pointers) is advice the C89 rule of
+  # declaring at the top of a block answers badly; it is a card of its own.
+  # Everything that is a defect (error, warning, performance, portability)
+  # is held at none.
+  set(CF_CPPCHECK_LIBRARIES
+      ${common} "--enable=warning,performance,portability"
+      PARENT_SCOPE)
 endfunction()

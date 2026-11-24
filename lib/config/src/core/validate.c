@@ -102,7 +102,7 @@ static const char* validate_value(const cf_def* d, const cf_value* v, char* reas
                 size_t at = 0;
                 size_t i2;
                 at = cf_fmt_append(reason, rcap, at, "not one of");
-                for (i2 = 0; d->allowed[i2] != NULL && i2 < 8; ++i2) {
+                for (i2 = 0; i2 < 8 && d->allowed[i2] != NULL; ++i2) {
                     at = cf_fmt_append(reason, rcap, at, " %s", d->allowed[i2]);
                 }
                 if (d->allowed[i2] != NULL) {

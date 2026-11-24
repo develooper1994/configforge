@@ -240,6 +240,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 65 | N-6 `cf_usage`: the `--help` text from the contract | small | nothing | done (83f5c64) |
 | 66 | N-7 A reload names the keys it changed | small | nothing | done (37ea469) |
 | 67 | N-8 Compare scalar arrays by value in `configforge diff` | small | N-5 | done (7bbd943) |
+| 68 | N-9 cppcheck runs on both libraries' own sources | small | nothing | open |
 
 ## Done, their cards removed
 

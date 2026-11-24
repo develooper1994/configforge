@@ -1641,6 +1641,7 @@ static cf_bool toml_enc_scalar(void* ctx, const char* name, size_t n, const cf_v
                                cf_bool textual, const cf_loc* at) {
     toml_enc* e = (toml_enc*)ctx;
     char      tmp[CF_VALUE_TEXT_MAX + 2];
+    size_t    len;
     size_t    k;
 
     (void)textual;
@@ -1658,7 +1659,8 @@ static cf_bool toml_enc_scalar(void* ctx, const char* name, size_t n, const cf_v
         cf_sink_puts(e->out, v->u.b ? "true" : "false");
         break;
     case CF_TYPE_INT:
-        cf_sink_write(e->out, tmp, cf_value_to_text(v, tmp, sizeof tmp));
+        len = cf_value_to_text(v, tmp, sizeof tmp);
+        cf_sink_write(e->out, tmp, len);
         break;
     case CF_TYPE_REAL:
         /* A real must look like one, or it reads back as an integer. */

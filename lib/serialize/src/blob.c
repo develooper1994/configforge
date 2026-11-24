@@ -240,7 +240,8 @@ void cf_sink_json_string(cf_sink* out, const char* p, size_t n) {
 }
 
 void cf_sink_json_value(cf_sink* out, const cf_value* v) {
-    char tmp[CF_VALUE_TEXT_MAX];
+    char   tmp[CF_VALUE_TEXT_MAX];
+    size_t len;
 
     switch (v->type) {
     case CF_TYPE_TEXT:
@@ -254,7 +255,8 @@ void cf_sink_json_value(cf_sink* out, const cf_value* v) {
         break;
     case CF_TYPE_INT:
     case CF_TYPE_REAL:
-        cf_sink_write(out, tmp, cf_value_to_text(v, tmp, sizeof tmp));
+        len = cf_value_to_text(v, tmp, sizeof tmp);
+        cf_sink_write(out, tmp, len);
         break;
     }
 }

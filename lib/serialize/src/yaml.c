@@ -1254,6 +1254,7 @@ static cf_bool yaml_enc_scalar(void* ctx, const char* name, size_t n, const cf_v
                                cf_bool textual, const cf_loc* at) {
     yaml_enc* e = (yaml_enc*)ctx;
     char      tmp[CF_VALUE_TEXT_MAX];
+    size_t    len;
 
     (void)textual;
     (void)at;
@@ -1268,7 +1269,8 @@ static cf_bool yaml_enc_scalar(void* ctx, const char* name, size_t n, const cf_v
         break;
     case CF_TYPE_INT:
     case CF_TYPE_REAL:
-        cf_sink_write(e->out, tmp, cf_value_to_text(v, tmp, sizeof tmp));
+        len = cf_value_to_text(v, tmp, sizeof tmp);
+        cf_sink_write(e->out, tmp, len);
         break;
     case CF_TYPE_TEXT:
         if (!yaml_quote(e->out, v->u.t.p, v->u.t.n)) {

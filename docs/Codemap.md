@@ -1270,8 +1270,8 @@
 - cf_sink_terminate 203-207
 - cf_sink_overflowed 209-211
 - cf_sink_json_string 225-240
-- cf_sink_json_value 242-260
-- cf_loc_text 266-277
+- cf_sink_json_value 242-262
+- cf_loc_text 268-279
 `lib/serialize/src/cbor.c`
 - struct cbor_scan 39-48
 - struct cbor_head 53-60
@@ -1356,15 +1356,15 @@
 - trial_event 49-55
 - trial_table 57-60
 - trial_array 62-72
-- trial_scalar 76-93
-- trial_end 95-98
-- trial_reserve_text 100-122
-- trial_reserve_work 124-127
-- trial_read 131-156
-- is_space 175-177
-- look_at 180-241
-- is_loose 245-248
-- cf_codec_detect 250-341
+- trial_scalar 76-95
+- trial_end 97-100
+- trial_reserve_text 102-124
+- trial_reserve_work 126-129
+- trial_read 133-158
+- is_space 177-179
+- look_at 182-243
+- is_loose 247-250
+- cf_codec_detect 252-343
 `lib/serialize/src/ini.c`
 - struct ini_scan 46-51
 - ini_emit_path 56-86
@@ -1399,34 +1399,34 @@
 - js_hex 83-96
 - js_too_long 103-105
 - js_put 107-117
-- js_put_cp 119-122
-- js_escape 142-186
-- js_string 191-245
-- js5_is_id 250-259
-- js5_name 262-303
-- js_number_value 310-335
-- js_number 337-391
-- js5_hex 395-434
-- js5_number 440-503
-- js_between 510-546
-- js_object 548-595
-- js_array 597-624
-- js_text 627-665
-- js_value 667-726
-- js_decode 728-761
-- json_decode 763-765
-- json5_decode 767-769
-- struct js_enc 777-785
-- typedef js_enc_fits 788
-- js_indent 794-800
-- js_sep 802-810
-- js_name 812-817
-- js_enc_open 819-839
-- js_enc_table 841-851
-- js_enc_array 853-855
-- js_enc_scalar 857-883
-- js_enc_end 885-904
-- json_encoder 906-923
+- js_put_cp 119-124
+- js_escape 144-188
+- js_string 193-247
+- js5_is_id 252-261
+- js5_name 264-305
+- js_number_value 312-337
+- js_number 339-393
+- js5_hex 397-436
+- js5_number 442-505
+- js_between 512-548
+- js_object 550-597
+- js_array 599-626
+- js_text 629-667
+- js_value 669-728
+- js_decode 730-763
+- json_decode 765-767
+- json5_decode 769-771
+- struct js_enc 779-787
+- typedef js_enc_fits 790
+- js_indent 796-802
+- js_sep 804-812
+- js_name 814-819
+- js_enc_open 821-841
+- js_enc_table 843-853
+- js_enc_array 855-857
+- js_enc_scalar 859-887
+- js_enc_end 889-908
+- json_encoder 910-927
 `lib/serialize/src/properties.c`
 - struct prop_scan 42-48
 - prop_fail 50-53
@@ -1531,9 +1531,9 @@
 - toml_enc_open_inline 1591-1604
 - toml_enc_table 1606-1634
 - toml_enc_array 1636-1638
-- toml_enc_scalar 1640-1679
-- toml_enc_end 1681-1701
-- toml_encoder 1703-1718
+- toml_enc_scalar 1640-1681
+- toml_enc_end 1683-1703
+- toml_encoder 1705-1720
 `lib/serialize/src/version.c`
 - cf_serialize_version 15-18
 - cf_serialize_version_number 20-22
@@ -1614,9 +1614,9 @@
 - yaml_enc_open 1232-1243
 - yaml_enc_table 1245-1247
 - yaml_enc_array 1249-1251
-- yaml_enc_scalar 1253-1281
-- yaml_enc_end 1283-1296
-- yaml_encoder 1298-1313
+- yaml_enc_scalar 1253-1283
+- yaml_enc_end 1285-1298
+- yaml_encoder 1300-1315
 `lib/serialize/src/yamlparse.c`
 - struct yp_tagdef 36-41
 - struct yp 43-58

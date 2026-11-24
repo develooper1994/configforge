@@ -98,10 +98,12 @@ configforge_apply_options(configforge_serialize)
 configforge_apply_analysis(configforge_serialize)
 target_compile_definitions(configforge_serialize PRIVATE CF_BUILDING_LIBRARY=1
                                                          CF_INTERNAL_API=1)
-# configforge is made before configforge_setup_cppcheck(), so its sources
-# have never run through cppcheck; the same sources here are not either,
-# until both are (Roadmap, "Critical-system standards").
-set_target_properties(configforge_serialize PROPERTIES C_CPPCHECK "")
+# Both libraries' own sources run through cppcheck in the analyze build,
+# without the style class (see configforge_setup_cppcheck).
+if(CF_CPPCHECK_LIBRARIES)
+  set_target_properties(configforge configforge_serialize
+                        PROPERTIES C_CPPCHECK "${CF_CPPCHECK_LIBRARIES}")
+endif()
 
 add_subdirectory(lib)
 # What the components declared, for gate.layering, which runs with -P.

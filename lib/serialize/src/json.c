@@ -117,8 +117,10 @@ static cf_bool js_put(js_scan* s, char* dst, size_t cap, size_t* n, const char* 
 }
 
 static cf_bool js_put_cp(js_scan* s, char* dst, size_t cap, size_t* n, cf_u32 cp) {
-    char enc[4];
-    return js_put(s, dst, cap, n, enc, cf_text_utf8_encode(cp, enc));
+    char   enc[4];
+    size_t len = cf_text_utf8_encode(cp, enc);
+
+    return js_put(s, dst, cap, n, enc, len);
 }
 
 /* The escapes of JSON and of JSON5, as data (D-102): the decoder is
@@ -858,6 +860,7 @@ static cf_bool js_enc_scalar(void* ctx, const char* name, size_t n, const cf_val
                              cf_bool textual, const cf_loc* at) {
     js_enc* e = (js_enc*)ctx;
     char    tmp[CF_VALUE_TEXT_MAX];
+    size_t  len;
 
     (void)textual;
     (void)at;
@@ -876,7 +879,8 @@ static cf_bool js_enc_scalar(void* ctx, const char* name, size_t n, const cf_val
         break;
     case CF_TYPE_INT:
     case CF_TYPE_REAL:
-        cf_sink_write(e->out, tmp, cf_value_to_text(v, tmp, sizeof tmp));
+        len = cf_value_to_text(v, tmp, sizeof tmp);
+        cf_sink_write(e->out, tmp, len);
         break;
     }
     return CF_TRUE;

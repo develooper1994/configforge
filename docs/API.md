@@ -3878,7 +3878,7 @@ report, a diff): text as a JSON string, escaped; a value as JSON.
 CF_API size_t cf_loc_text(const cf_loc* at, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_loc_text` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L266).
+Implementation: [`cf_loc_text` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L268).
 
 "app.toml:14:3", or just the file when there is no position.
 
@@ -4074,7 +4074,7 @@ whose grammar accepts nearly any text, is never chosen from content.
 CF_API const cf_codec* cf_codec_detect(const cf_codec* const* own, size_t n, const cf_blob* in, const char* name, cf_arena* ar, cf_detect* out);
 ```
 
-Implementation: [`cf_codec_detect` (lib/serialize/src/detect.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/detect.c#L250).
+Implementation: [`cf_codec_detect` (lib/serialize/src/detect.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/detect.c#L252).
 
 The codec for `in`, or NULL. `own` (n of them) are a builder's own
 codecs, looked at first, as for extensions; `name`, when not NULL, is a

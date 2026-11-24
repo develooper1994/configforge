@@ -481,10 +481,10 @@ size_t cfi_report_reads(const cf_keyspace* ks, const cf_defset* ds,
        a report to a log line or a trace. Added beside the others, which
        no reader of schema 1 objects to. */
     {
-        char fp[24];
+        char   fp[24];
+        size_t len = cf_ks_digest_text(cf_defset_fingerprint(ds, ks), fp, sizeof fp);
         cf_sink_puts(&out, ",\n  \"fingerprint\": \"");
-        cf_sink_write(&out, fp,
-                      cf_ks_digest_text(cf_defset_fingerprint(ds, ks), fp, sizeof fp));
+        cf_sink_write(&out, fp, len);
         cf_sink_puts(&out, "\"");
     }
     cf_sink_puts(&out, ",\n");

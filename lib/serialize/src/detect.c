@@ -77,6 +77,7 @@ static cf_bool trial_scalar(void* ctx, const char* name, size_t n, const cf_valu
                             cf_bool textual, const cf_loc* at) {
     trial* t = (trial*)ctx;
     char   tmp[CF_VALUE_TEXT_MAX];
+    size_t len;
 
     (void)textual;
     (void)at;
@@ -84,7 +85,8 @@ static cf_bool trial_scalar(void* ctx, const char* name, size_t n, const cf_valu
     if (v->type == CF_TYPE_TEXT) {
         trial_mix(t, v->u.t.p, v->u.t.n);
     } else {
-        trial_mix(t, tmp, cf_value_to_text(v, tmp, sizeof tmp));
+        len = cf_value_to_text(v, tmp, sizeof tmp);
+        trial_mix(t, tmp, len);
     }
     if (name != NULL) {
         ++t->keyed;

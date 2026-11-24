@@ -207,7 +207,7 @@ begun):
 | a `#define` continued with a backslash in generated code stopped pcc's preprocessor | each generated definition fits on one line, its messages and conditions short macros of their own |
 | a gate script using `IN_LIST` failed only on alpine: `cmake -P` starts with every policy unset | every gate script begins with `cmake_minimum_required`, as `GateAbi.cmake` did |
 | `gen.version`'s pattern wrote `\(`, which a quoted CMake argument reads as a plain `(` (`\\(` is the escape), and passed locally only because verify's copy has no commit id | the pattern escapes as `doctor.version`'s does; verify's copy without an id is a blind spot the Roadmap names |
-| the `configforge` target is made before `configforge_setup_cppcheck()`, so the library's own sources never ran through cppcheck | the first step of the Roadmap's critical-system item; the serialization library is treated alike until both are checked |
+| the `configforge` target is made before `configforge_setup_cppcheck()`, so the library's own sources never ran through cppcheck | both libraries now take the tests' cppcheck classes (`CF_CPPCHECK_LIBRARIES`, card N-9) and `gate.cppcheck` fails a library made without them; the style class's 58 findings are a later card |
 | a branch rebased onto `main` could not be force-pushed | a rebased branch is pushed under a new name, `work/<card>-r`, and the old one deleted |
 
 ## Measured

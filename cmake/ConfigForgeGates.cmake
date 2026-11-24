@@ -141,6 +141,11 @@ function(configforge_add_gates tgt)
            COMMAND ${CMAKE_COMMAND} "-DSRC=${CMAKE_SOURCE_DIR}" -P
                    ${CMAKE_SOURCE_DIR}/cmake/gates/GateProfiles.cmake)
 
+  # The libraries' own sources run through cppcheck in the analyze build.
+  add_test(NAME gate.cppcheck
+           COMMAND ${CMAKE_COMMAND} "-DSRC=${CMAKE_SOURCE_DIR}" -P
+                   ${CMAKE_SOURCE_DIR}/cmake/gates/GateCppcheck.cmake)
+
   # The rest drive the compiler with a GCC-style command line, which
   # MSVC rejects at the first flag - and it has no C89 mode to ask for
   # in any case (see ConfigForgeCompiler.cmake). They are about the
