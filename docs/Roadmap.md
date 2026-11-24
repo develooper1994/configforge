@@ -1492,6 +1492,14 @@ maintainer; each is a card to write.
    configuration). N-3 gave the difftool for flat JSON; a driver makes
    `git diff` and `git log -p` show changes by value in every format.
 
+* **A NUL inside a YAML comment is accepted** (a fault, found by N-12's
+  differential fuzzer against libyaml; input base64 `IwAj`). The built-in
+  reader skips a comment to the end of the line without looking at its
+  bytes; YAML forbids NUL anywhere, and libyaml refuses it. A fix for
+  1.9.0: refuse it with the reason the other control bytes get, and a
+  regression test. N-12's other differences (16 documented, 2 to decide)
+  are in its card on `origin/work/N-12`.
+
 After the features above (the maintainer, 2026-11-24):
 
 * **The vector library carried further** (the maintainer, 2026-11-24: it
