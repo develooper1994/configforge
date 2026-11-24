@@ -197,6 +197,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | ----: | ---- | ----- | ----- | ------ |
 | 38g | L-3b Frama-C EVA on port, numeric and base | large | L-3; 1.9.0 under way | open |
 | 38k | L-9 The Scorecard findings the project can fix | small | L-2 | done (3f251f8) |
+| 38l | L-10 Supply-chain hardening, the parts the project can do itself | medium | L-9 | open |
 | 39 | P-1 The benchmark measures large documents, and says where time goes | medium | 1.7.0 released | done (90b6541) |
 | 55 | P-1b The other libraries beside ours, and a page CI keeps | large | P-1, A-1b | done (427ec6a) |
 | 57 | P-2 The word-at-a-time backend of lanes, with the scalar loop as reference | medium | P-1, A-3 | done (e0c0904) |
