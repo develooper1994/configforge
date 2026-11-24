@@ -203,7 +203,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 57 | P-2 The word-at-a-time backend of lanes, with the scalar loop as reference | medium | P-1, A-3 | done (e0c0904) |
 | 58 | P-3 The scans P-1 found, a word at a time, kept only where they win | medium | P-2 | open |
 | 71 | I-2 1.9.0 opened: the 1.8 experimental functions settled (D-89) | small | 1.8.0 released | done (7146038) |
-| 72 | N-13 A reason's severity and weakness id | small | 1.9.0 opened (the D-89 decision; HANDOFF.md) | open |
+| 72 | N-13 A reason's severity and weakness id | small | 1.9.0 opened (the D-89 decision; HANDOFF.md) | done (2687154) |
 | 73 | N-14 `configforge diff` over arrays of tables | medium | N-8; 1.9.0 opened (the D-89 decision; HANDOFF.md) | open |
 | 74 | N-15 Changed configuration keys on a pull request | medium | N-8; 1.9.0 opened (the D-89 decision; HANDOFF.md) | open |
 | 75 | N-12 Differential fuzzing of the YAML reader: built-in parser against libyaml | small | nothing | done (d8a0cfa) |
