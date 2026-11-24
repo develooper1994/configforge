@@ -80,6 +80,7 @@ out (`tests/proofs`, `verify -DEXTRA=proofs`, tier 2).
 | `cf_i64_to_text`, `cf_u64_to_text` | int64 and uint64, every capacity up to the worst case and past it | nothing written past `cap`; what is written is terminated; 0 exactly when it does not fit |
 | `cf_infer_scalar` - every untyped value of every file | input of up to 12 bytes | no access outside the input; one of the four kinds |
 | `cf_fmt` - every error message and `explain()` line | capacity, string of up to 6 bytes, slice of it, int64 | nothing written past `cap`; terminated; the length the whole text needs |
+| `cf_blob_skip_bom` - every text reader's first read | blob of up to 4 bytes, every byte any value | no access outside the blob; 0 or 3, 3 exactly for EF BB BF, never more than the length |
 
 A proof that cannot fail proves nothing: with an off-by-one put into
 `cf_text_to_u64`'s loop, CBMC names the line and the read past the
@@ -87,7 +88,8 @@ input.
 
 ## Not yet proven
 
-The floating point parser and printer, the codecs' tokenizers, and
+The floating point parser and printer, the blob's file reader, the
+codecs' tokenizers (the INI reader first), and
 `cf_live`'s ticket lock (that it excludes, and always admits). Each is
 covered by the sanitizers, fuzzing and its tests, and none is claimed as
 proven until its harness is in `tests/proofs`.

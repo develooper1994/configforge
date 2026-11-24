@@ -1009,3 +1009,70 @@ equal cross-format fixture therefore pairs them with JSON strings.
   parameter) and 13 suppressed inline: 3 `unusedStructMember` (`cf_align`'s
   members exist for `sizeof`), 7 `constParameterCallback` (a public callback
   type fixes `void* ctx`), 3 `constParameterPointer` on public functions.
+
+## N-11 - prove `cf_blob_skip_bom` with CBMC
+
+* **id**: N-11
+* **goal**: `cf_blob_skip_bom`, which every text reader calls on untrusted
+  input before its first byte is read, has a CBMC harness that CI proves: for
+  every blob of up to 4 bytes it reads nothing outside the blob and returns
+  0 or 3, never more than the blob's length.
+* **why**: Roadmap "The readers proved, not only tested" (`docs/Roadmap.md:679-689`)
+  asks for the blob, the BOM skip and one text reader. Only the number and
+  formatting code is proven today (`docs/Safety.md:66-92`). This is the first,
+  smallest part of that item: the function every reader trusts to leave at
+  least the bytes it skipped (`lib/serialize/src/ini.c:312`,
+  `json.c:734`, `properties.c:164`, `toml.c:1455`, `yamlparse.c:1507`).
+  The blob type and `cf_blob_mem` come with it. The INI reader is a later card.
+* **needs**: nothing
+* **size**: small
+* **decided**:
+  * One new harness, `tests/proofs/proof_bom.c`, in the form of
+    `tests/proofs/proof_infer.c`: a `cbmc-sources:` line naming
+    `lib/serialize/src/blob.c` and `lib/port/src/port.c`, a macro `N` (4),
+    `nondet_size`/`nondet_char`, `__CPROVER_assume(len <= N)`, every byte
+    of the buffer nondeterministic.
+  * It builds the blob through `cf_blob_mem` (`lib/serialize/src/blob.c:21-28`)
+    with a nondeterministic name pointer left NULL, so that the default name
+    path is covered, and calls `cf_blob_skip_bom`
+    (`lib/serialize/src/blob.c:30-36`). It asserts: the result is 0 or 3;
+    the result is at most `len`; the result is 3 exactly when `len >= 3`
+    and the first three bytes are EF BB BF. It also asserts that a NULL
+    blob gives 0 (`cf_blob_skip_bom(NULL)`) and that `cf_blob_mem(NULL,...)`
+    is a no-op that does not crash.
+  * `scripts/check/proofs.cmake` globs `proof_*.c`; it needs no change. The
+    sources `blob.c` pulls in that are not named (arena, text) are left to
+    CBMC's nondeterministic stubs; if CBMC rejects that, name the extra
+    files on the `cbmc-sources:` line, not more.
+  * A proof that cannot fail proves nothing: the step "see it fail" puts
+    `b->n >= 2` in place of `b->n >= 3` in `cf_blob_skip_bom` (a read of
+    `p[2]` past a 2-byte blob), expects the failed assertions to be named, and
+    restores the line before anything is committed.
+  * No library code changes, so no public API change and no version bump.
+  * `docs/Safety.md`: one row in the table (`cf_blob_skip_bom` - every text
+    reader's first read | blob of up to 4 bytes, every byte any value |
+    no access outside the blob; 0 or 3, never more than the length), and
+    "Not yet proven" gains "the blob's file reader and the text readers
+    themselves (INI first)". `CHANGELOG.md`: the proofs bullet names it.
+    `docs/Roadmap.md`: the item gets "(card N-11: the BOM skip)".
+  * C89 in the harness; D-100 unaffected (a test, not a layer).
+* **files**: `tests/proofs/proof_bom.c`, `docs/Safety.md`, `CHANGELOG.md`,
+  `docs/Roadmap.md`, `docs/Plan.md`; generated `docs/Codemap.md` only if it
+  changes.
+* **steps**:
+  1. `git switch -c work/N-11` (done by the worktree).
+  2. Write `tests/proofs/proof_bom.c` as decided.
+  3. See it fail: with the `>= 2` mutation, run
+     `cmake -DSRC=<repo> -DSTAGED=<build>/staged/include -P scripts/check/proofs.cmake`
+     (or `cbmc` by hand with the same flags); expect `proof_bom` named as
+     not proven with failed assertions. Restore the line.
+  4. Run it again unmutated: `proof_bom: VERIFICATION SUCCESSFUL`, and the
+     four existing proofs still pass.
+  5. Docs and changelog as decided; format; regenerate the generated
+     documents; full `ctest` and `ctest -R "^gate\."` on Linux.
+* **accept**: ACCEPT-LINUX with `-DEXTRA=proofs` (all five proofs succeed,
+  the mutation fails), ACCEPT-CI. `gate.*` pass.
+* **stop if**: CBMC cannot link `blob.c` without more than `port.c` and
+  stubs (then name what it needs and report), or the proof fails
+  unmutated (a real bug: report the trace).
+* **notes**: (empty)

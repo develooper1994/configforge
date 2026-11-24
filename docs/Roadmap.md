@@ -685,7 +685,7 @@ whose size changes while it is read is still read whole.
   report's values are shown to no pull request unless asked for. Done
   when the action's default shows no value and a flag restores it: on in
   the action; `show-values` restores the values (D-86).
-* ⬜ **The readers proved, not only tested.** The aim is the safety a
+* ⬜ **The readers proved, not only tested** (card N-11: the BOM skip). The aim is the safety a
   language such as Rust or Go gives by construction, shown here by
   evidence: sanitizers, fuzzing and three analyzers find what an input
   happens to reach, and a bounded model checker (CBMC) shows that no

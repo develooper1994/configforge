@@ -1145,7 +1145,8 @@ key that is both a value and a table (`docs/Guide.md`, section 10;
 - **Proofs, not only tests, for the code untrusted input goes through**
   (`tests/proofs`, `verify -DEXTRA=proofs`, tier 2): CBMC shows for every
   input up to a bound that the integer parsers and printers,
-  `cf_infer_scalar` and `cf_fmt` read and write nothing outside their
+  `cf_infer_scalar`, `cf_fmt` and the byte-order-mark skip every text
+  reader begins with read and write nothing outside their
   buffers and overflow nothing - and names the line when an off-by-one
   is put in. `docs/Safety.md` lists what is proven and what is not yet.
 - **What Rust guarantees, stated and held for the C** (`docs/Safety.md`):
