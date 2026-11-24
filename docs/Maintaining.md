@@ -347,6 +347,13 @@ token budget).
   keep the last ~10% of Claude's window for committing and pushing,
   which Codex's sandbox cannot do. When one side runs out, the other
   goes on: Codex's chain runs alone, and Claude commits what it left.
+* **Copilot CLI on the free plan answers nothing** (2026-11-24): the
+  installed `copilot` 0.0.362 lists only premium models, and each
+  (`claude-haiku-4.5`, `gpt-5.1-codex-mini`, `gemini-3-pro-preview`, the
+  default) returns `model_not_supported`. A newer CLI may offer the free
+  models; until one does, it is not a worker. Gemini CLI is not
+  installed. When either works, give it read-only cold reads of cards
+  (`--deny-tool write --deny-tool shell`), never a card to carry.
 * **Codex's window can end the night early.** On 2026-11-23 it reached
   100% at 03:20 after one hour, and its next window opened at 08:02,
   after the machine's stop: give it the cards that matter first in a
