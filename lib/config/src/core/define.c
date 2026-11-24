@@ -388,12 +388,12 @@ static cf_bool defset_project_list(cf_defset* ds, const cf_def* d, size_t klen) 
 }
 
 cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err) {
-    size_t  klen;
-    char*   key;
-    size_t  i;
-    cf_bool copied = CF_TRUE;
-    cf_def* kept;
-    cf_def  normalized;
+    size_t      klen;
+    const char* key;
+    size_t      i;
+    cf_bool     copied = CF_TRUE;
+    cf_def*     kept;
+    cf_def      normalized;
 
     if (ds == NULL || ds->defs == NULL) {
         return cf_error_set(err, CF_E_MEMORY, NULL, NULL,
@@ -496,7 +496,7 @@ cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err) {
     }
 
     if (d->list_mode == CF_LIST_NONE && d->has_default && d->type == CF_TYPE_TEXT) {
-        char* t =
+        const char* t =
             cf_arena_dup(ds->arena, d->default_value.u.t.p, d->default_value.u.t.n);
         if (t == NULL) {
             return cf_error_set(err, CF_E_MEMORY, d->key, NULL,

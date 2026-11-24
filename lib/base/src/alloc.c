@@ -51,10 +51,15 @@ const cf_allocator* cf_default_allocator(void) {
  * ------------------------------------------------------------------ */
 
 typedef union cf_align {
+    /* The members exist only to make the union as strict as the
+       strictest type: sizeof and nothing else reads them. */
+    /* cppcheck-suppress unusedStructMember */
     void*  p;
     cf_i64 i;
-    long   l;
+    /* cppcheck-suppress unusedStructMember */
+    long l;
 #if CF_WITH_REAL
+    /* cppcheck-suppress unusedStructMember */
     double d;
 #endif
 } cf_align;
@@ -232,7 +237,6 @@ void cf_arena_free(cf_arena* ar) {
 void* cf_arena_alloc(cf_arena* ar, size_t n) {
     cf_block* b;
     size_t    need;
-    char*     p;
 
     if (ar == NULL) {
         return NULL;
@@ -241,7 +245,7 @@ void* cf_arena_alloc(cf_arena* ar, size_t n) {
 
     b = ar->head;
     if (b != NULL && b->size - b->used >= need) {
-        p = b->data + b->used;
+        char* p = b->data + b->used;
         b->used += need;
         ar->total += need;
         return p;

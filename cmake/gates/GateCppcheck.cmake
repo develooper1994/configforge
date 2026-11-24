@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 
 # The libraries' own sources run through cppcheck in the analyze build:
 # both targets take their C_CPPCHECK from CF_CPPCHECK_LIBRARIES, and no
-# target opts out with an empty C_CPPCHECK.
+# target opts out with an empty C_CPPCHECK; the libraries are held to the
+# style class as well.
 file(READ "${SRC}/CMakeLists.txt" text)
 string(REGEX REPLACE "[ \n]+" " " flat "${text}")
 set(failed OFF)
@@ -17,6 +18,14 @@ if(found EQUAL -1)
 endif()
 if("${flat}" MATCHES "C_CPPCHECK \"\"")
   message(STATUS "VIOLATION: a target sets an empty C_CPPCHECK")
+  set(failed ON)
+endif()
+
+file(READ "${SRC}/cmake/ConfigForgeAnalysis.cmake" analysis)
+string(REGEX MATCH "set\\(CF_CPPCHECK_LIBRARIES[^)]*\\)" libraries
+             "${analysis}")
+if(NOT "${libraries}" MATCHES "style")
+  message(STATUS "VIOLATION: CF_CPPCHECK_LIBRARIES lacks the style class")
   set(failed ON)
 endif()
 

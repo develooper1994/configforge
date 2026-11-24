@@ -241,6 +241,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 66 | N-7 A reload names the keys it changed | small | nothing | done (37ea469) |
 | 67 | N-8 Compare scalar arrays by value in `configforge diff` | small | N-5 | done (7bbd943) |
 | 68 | N-9 cppcheck runs on both libraries' own sources | small | nothing | done (ec0de1e) |
+| 69 | N-10 cppcheck's style class on the libraries | small | N-9 | open |
 
 ## Done, their cards removed
 

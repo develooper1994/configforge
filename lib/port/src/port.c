@@ -146,12 +146,12 @@ size_t cf_u64_to_text(cf_u64 v, char* buf, size_t cap) {
 
 size_t cf_i64_to_text(cf_i64 v, char* buf, size_t cap) {
     cf_u64 mag;
-    size_t n;
 
     if (buf == NULL || cap == 0) {
         return 0;
     }
     if (v < 0) {
+        size_t n;
         /* Negate through the unsigned domain: defined for CF_I64_MIN. */
         mag = (cf_u64)(-(v + 1)) + (cf_u64)1;
         if (cap < 2) {

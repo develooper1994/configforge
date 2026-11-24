@@ -760,8 +760,7 @@ static cf_bool yp_block_scalar(yp* y, int n, const yp_props* pr) {
     int         max_empty     = 0;
     int         leading_break = 0;
     int         leading_blank = 0;
-    int         trailing_blank;
-    size_t      k = 0;
+    size_t      k             = 0;
     int         i;
     cf_bool     ok;
 
@@ -810,7 +809,7 @@ static cf_bool yp_block_scalar(yp* y, int n, const yp_props* pr) {
         }
     }
     while ((int)(y->p - y->tr.line_start) == indent && y->p < y->end && !yp_marker(y)) {
-        trailing_blank = yp_blank((unsigned char)*y->p);
+        int trailing_blank = yp_blank((unsigned char)*y->p);
         if (folded && leading_break && !leading_blank && !trailing_blank) {
             if (breaks == 0 && !yp_put(y, &k, ' ')) {
                 return CF_FALSE;

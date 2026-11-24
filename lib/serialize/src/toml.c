@@ -665,10 +665,11 @@ static cf_bool toml_track_init(toml_scan* s) {
    the value defines, or 0 with the error set. */
 static cf_u32 toml_define_key(toml_scan* s, const toml_dkey* k, const char* at,
                               toml_def kind) {
-    cf_u32 node = s->body, c;
+    cf_u32 node = s->body;
     int    i;
 
     for (i = 0; i + 1 < k->n; ++i) {
+        cf_u32 c;
         c = toml_find(s, node, 0, TOML_SEG(k, i), k->len[i], 0);
         if (c == 0) {
             c = toml_add(s, node, 0, TOML_SEG(k, i), k->len[i], 0, TOML_DOTTED);
@@ -1323,7 +1324,7 @@ static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen, cf_u32 no
 
 static cf_bool toml_close_to(toml_scan* s, int keep) {
     while (s->nopen > keep) {
-        toml_open* o = &s->open[s->nopen - 1];
+        const toml_open* o = &s->open[s->nopen - 1];
         if (o->kind == TOML_ARRAY) {
             /* Remembered, so that reopening it later can be refused:
                an event stream cannot reopen an array, and appending

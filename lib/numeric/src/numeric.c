@@ -379,7 +379,6 @@ static void cf_gen_digits(double v, cf_digits* out) {
     cf_big R, S, mp, mm, t;
     cf_u64 f;
     int    e, is_boundary, k, n, low, high, d;
-    double m;
     int    e2;
 
     out->n = 0;
@@ -394,6 +393,7 @@ static void cf_gen_digits(double v, cf_digits* out) {
         is_boundary   = 0;
     } else {
         double scaled;
+        double m;
         m      = frexp(v, &e2); /* v = m * 2^e2, 0.5 <= m < 1 */
         scaled = ldexp(m, 53);  /* 2^52 <= scaled < 2^53      */
         f      = (cf_u64)scaled;
@@ -531,7 +531,7 @@ static size_t put(char* buf, size_t cap, size_t at, char c) {
 size_t cf_f64_to_text(double v, char* buf, size_t cap) {
     cf_digits g;
     size_t    at = 0;
-    int       exp10, i, z;
+    int       exp10, i;
 
     if (buf == NULL || cap == 0) {
         return 0;
@@ -559,6 +559,7 @@ size_t cf_f64_to_text(double v, char* buf, size_t cap) {
     exp10 = g.k - 1;
 
     if (exp10 >= -4 && exp10 < 16) {
+        int z;
         if (g.k <= 0) {
             at = put(buf, cap, at, '0');
             at = put(buf, cap, at, '.');

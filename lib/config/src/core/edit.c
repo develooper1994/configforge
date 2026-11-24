@@ -72,7 +72,7 @@ static cf_bool edit_refuse(cf_edit* e, cf_code code, const char* key, const char
 
 /* The item for `key`: the one already set, or a new one. */
 static cf_write_item* edit_slot(cf_edit* e, const char* key) {
-    size_t         i, n;
+    size_t         i;
     cf_write_item* grown;
 
     if (e == NULL) {
@@ -88,8 +88,8 @@ static cf_write_item* edit_slot(cf_edit* e, const char* key) {
         }
     }
     if (e->count == e->cap) {
-        n     = (e->cap == 0) ? 8 : e->cap * 2;
-        grown = (cf_write_item*)cf_arena_calloc(e->arena, n * sizeof *grown);
+        size_t n = (e->cap == 0) ? 8 : e->cap * 2;
+        grown    = (cf_write_item*)cf_arena_calloc(e->arena, n * sizeof *grown);
         if (grown == NULL) {
             (void)edit_refuse(e, CF_E_MEMORY, key, "no room for the change");
             return NULL;
@@ -115,7 +115,7 @@ static cf_write_item* edit_slot(cf_edit* e, const char* key) {
 
 cf_bool cf_edit_set_text(cf_edit* e, const char* key, const char* value) {
     cf_write_item* it = edit_slot(e, key);
-    char*          copy;
+    const char*    copy;
 
     if (it == NULL) {
         return CF_FALSE;

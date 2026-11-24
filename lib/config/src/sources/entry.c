@@ -72,9 +72,9 @@ static const cf_def* entry_natural_def(const cf_defset* ds, const char* key,
 
 static cf_bool entry_list_text(void* ctx, const char* key, size_t klen,
                                const char* value, size_t n, const char* at) {
-    cf_listsink*  out = (cf_listsink*)ctx;
-    const cf_def* d   = cf_defset_find(out->defs, key, klen);
-    size_t        i, start = 0, count = 0;
+    cf_listsink*  out   = (cf_listsink*)ctx;
+    const cf_def* d     = cf_defset_find(out->defs, key, klen);
+    size_t        count = 0;
     if (!out->repeated) {
         const cf_def* natural =
             d == NULL ? entry_natural_def(out->defs, key, klen) : NULL;
@@ -118,6 +118,7 @@ static cf_bool entry_list_text(void* ctx, const char* key, size_t klen,
         return CF_TRUE;
     }
     if (n != 0) {
+        size_t i, start = 0;
         for (i = 0; i <= n; ++i) {
             if (i != n && (d->list_separator == 0 || value[i] != d->list_separator)) {
                 continue;
@@ -160,7 +161,7 @@ const cf_entry_sink* cf_listsink_of(cf_listsink* out) {
 }
 
 cf_bool cf_listsink_finish(cf_listsink* out) {
-    struct cf_list_input* p;
+    const struct cf_list_input* p;
     if (out == NULL || out->base.failed) {
         return CF_FALSE;
     }

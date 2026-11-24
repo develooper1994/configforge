@@ -316,7 +316,6 @@ static cf_bool tlv_check_table(const cf_tlv_layout* l, const cf_tlv_tag* tags, s
 /* The layout's own fields, then its tables. */
 static cf_bool tlv_check(const cf_tlv_layout* l, cf_error* err) {
     unsigned          known = CF_TLV_END | CF_TLV_END_LENGTH | CF_TLV_PADDING;
-    char              hex[9];
     const cf_tlv_tag* path[CF_MAX_DEPTH];
 
     if (!tlv_name_ok(l->name)) {
@@ -359,6 +358,7 @@ static cf_bool tlv_check(const cf_tlv_layout* l, cf_error* err) {
         return tlv_bad(err, l, "CF_TLV_PADDING is BER-TLV's");
     }
     if ((l->flags & CF_TLV_END) != 0 && !tlv_fits(l, l->end_tag)) {
+        char hex[9];
         tlv_hex(hex, l->end_tag, 4u);
         return cf_error_set(err, CF_E_DEFINITION, NULL, l->name,
                             "layout '%s': the end tag 0x%s is wider than a tag",
@@ -913,13 +913,13 @@ static size_t tlv_ran_before(tlv_scan* s, size_t from, size_t upto, cf_u32 tag) 
 static cf_bool tlv_list(tlv_scan* s, const cf_tlv_tag* e, const cf_tlv_tag** open,
                         size_t level, size_t start) {
     size_t ended;
-    char   hex[9];
 
     if (*open == e) {
         return CF_TRUE;
     }
     ended = tlv_ran_before(s, level, start, e->tag);
     if (ended != 0) {
+        char hex[9];
         tlv_hex(hex, e->tag, tlv_tag_bytes(s->l, e->tag));
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s, byte %zu: tag 0x%s continues a list that ended at byte "

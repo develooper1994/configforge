@@ -76,8 +76,6 @@ static cf_bool trial_array(void* ctx, const char* name, size_t n) {
 static cf_bool trial_scalar(void* ctx, const char* name, size_t n, const cf_value* v,
                             cf_bool textual, const cf_loc* at) {
     trial* t = (trial*)ctx;
-    char   tmp[CF_VALUE_TEXT_MAX];
-    size_t len;
 
     (void)textual;
     (void)at;
@@ -85,7 +83,8 @@ static cf_bool trial_scalar(void* ctx, const char* name, size_t n, const cf_valu
     if (v->type == CF_TYPE_TEXT) {
         trial_mix(t, v->u.t.p, v->u.t.n);
     } else {
-        len = cf_value_to_text(v, tmp, sizeof tmp);
+        char   tmp[CF_VALUE_TEXT_MAX];
+        size_t len = cf_value_to_text(v, tmp, sizeof tmp);
         trial_mix(t, tmp, len);
     }
     if (name != NULL) {
@@ -291,11 +290,10 @@ const cf_codec* cf_codec_detect(const cf_codec* const* own, size_t nown,
            memory, so without it TOML, which borrows for every document,
            and JSON, for a string of 256 bytes or more, were never
            detected. Only a build with no allocator goes on without. */
-        cf_arena*       mine = cf_arena_new(NULL, 0);
-        const cf_codec* c;
+        cf_arena* mine = cf_arena_new(NULL, 0);
 
         if (mine != NULL) {
-            c = cf_codec_detect(own, nown, in, NULL, mine, d);
+            const cf_codec* c = cf_codec_detect(own, nown, in, NULL, mine, d);
             cf_arena_free(mine);
             return c;
         }

@@ -46,6 +46,8 @@ cf_arena* cf_blob_arena(cf_arena* ar) {
     return cf_arena_new(cf_arena_allocator(ar), 0);
 }
 
+/* public signature */
+/* cppcheck-suppress constParameterPointer */
 void cf_blob_arena_done(cf_arena* bytes, cf_arena* ar) {
     if (bytes != NULL && bytes != ar) {
         cf_arena_free(bytes); /* which zeroes first: a file may hold a secret */
@@ -155,9 +157,8 @@ void cf_sink_init(cf_sink* s, char* buf, size_t cap) {
 }
 
 void cf_sink_write(cf_sink* s, const char* p, size_t n) {
-    size_t i;
-
     if (s->buf != NULL) {
+        size_t i;
         for (i = 0; i < n; ++i) {
             if (s->len + i + 1 < s->cap) {
                 s->buf[s->len + i] = p[i];

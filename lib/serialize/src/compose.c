@@ -20,18 +20,24 @@ typedef struct compose_frame {
     cf_doc_sink        up;
 } compose_frame;
 
+/* public signature: cf_doc_sink fixes it */
+/* cppcheck-suppress constParameterCallback */
 static cf_bool compose_table(void* ctx, const char* name, size_t n) {
     const compose_frame* f = (const compose_frame*)ctx;
 
     return f->up.begin_table(f->up.ctx, name, n);
 }
 
+/* public signature: cf_doc_sink fixes it */
+/* cppcheck-suppress constParameterCallback */
 static cf_bool compose_array(void* ctx, const char* name, size_t n) {
     const compose_frame* f = (const compose_frame*)ctx;
 
     return f->up.begin_array(f->up.ctx, name, n);
 }
 
+/* public signature: cf_doc_sink fixes it */
+/* cppcheck-suppress constParameterCallback */
 static cf_bool compose_scalar(void* ctx, const char* name, size_t n, const cf_value* v,
                               cf_bool textual, const cf_loc* at) {
     const compose_frame* f = (const compose_frame*)ctx;
@@ -39,6 +45,8 @@ static cf_bool compose_scalar(void* ctx, const char* name, size_t n, const cf_va
     return f->up.scalar(f->up.ctx, name, n, v, textual, at);
 }
 
+/* public signature: cf_doc_sink fixes it */
+/* cppcheck-suppress constParameterCallback */
 static cf_bool compose_end(void* ctx) {
     const compose_frame* f = (const compose_frame*)ctx;
 
@@ -57,6 +65,8 @@ static cf_bool compose_has_work(const cf_doc_sink* sink) {
            sink->reserve_work != NULL;
 }
 
+/* public signature: cf_doc_sink fixes it */
+/* cppcheck-suppress constParameterCallback */
 static char* compose_text(void* ctx, size_t n) {
     const compose_frame* f    = (const compose_frame*)ctx;
     const cf_doc_sink*   sink = compose_has_text(&f->up) ? &f->up : f->down;
@@ -64,6 +74,8 @@ static char* compose_text(void* ctx, size_t n) {
     return sink->reserve_text(sink->ctx, n);
 }
 
+/* public signature: cf_doc_sink fixes it */
+/* cppcheck-suppress constParameterCallback */
 static void* compose_work(void* ctx, size_t n) {
     const compose_frame* f    = (const compose_frame*)ctx;
     const cf_doc_sink*   sink = compose_has_work(&f->up) ? &f->up : f->down;

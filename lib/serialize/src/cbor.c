@@ -122,7 +122,6 @@ static const char* cbor_kind(unsigned major, unsigned info) {
    not well-formed refused here. */
 static cf_bool cbor_head_read(cbor_scan* s, cbor_head* h) {
     unsigned b;
-    size_t   nb, i;
 
     h->off   = cbor_at(s);
     h->arg   = 0;
@@ -140,6 +139,7 @@ static cf_bool cbor_head_read(cbor_scan* s, cbor_head* h) {
         return CF_TRUE;
     }
     if (h->info <= 27u) {
+        size_t nb, i;
         nb = (size_t)1 << (h->info - 24u);
         if (cbor_left(s) < nb) {
             return cbor_fail(s, h->off, CF_REASON_TRUNCATED,
@@ -749,13 +749,14 @@ static void cbor_put_head(cf_sink* out, unsigned major, cf_u64 arg) {
 
 /* A text string; with `escape`, each ${ as $${, which the length counts. */
 static void cbor_put_text(cf_sink* out, const char* p, size_t n, cf_bool escape) {
-    size_t i, from = 0, extra = 0;
+    size_t from = 0, extra = 0;
 
     if (escape) {
         extra = cf_text_ref_count(p, n);
     }
     cbor_put_head(out, 3, (cf_u64)n + (cf_u64)extra);
     if (extra != 0) {
+        size_t i;
         for (i = cf_text_ref_next(p, n, 0); i < n; i = cf_text_ref_next(p, n, i + 1)) {
             cf_sink_write(out, p + from, i + 1 - from);
             cf_sink_putc(out, '$');

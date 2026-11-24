@@ -922,3 +922,90 @@ equal cross-format fixture therefore pairs them with JSON strings.
   The style findings by file are in the 2026-11-24 run of `ninja -k 0` with
   `CF_CPPCHECK=ON` and `--enable=...style`; the card for them can regenerate
   the list.
+
+## N-10 - cppcheck's style class on the libraries
+
+* **id**: N-10
+* **goal**: `CF_CPPCHECK_LIBRARIES` gains `style`; the `analyze` build finds
+  nothing in `configforge` and `configforge_serialize` with it, and
+  `gate.cppcheck` fails the day the libraries' setting loses the class.
+* **why**: N-9 put the libraries under cppcheck with the defect classes and
+  left the style class (58 findings, listed in N-9's notes) for this card.
+  A critical-system user reads "cppcheck, all classes, none left" more
+  easily than "all but one".
+* **needs**: N-9 (done, ec0de1e)
+  * In `cmake/ConfigForgeAnalysis.cmake` the `CF_CPPCHECK_LIBRARIES` flags
+    become `--enable=warning,style,performance,portability` (the same as
+    `CMAKE_C_CPPCHECK`); the comment above it is rewritten to say the
+    class is held at none and how findings are answered. The tests keep
+    `CF_CPPCHECK_TESTS` without `style`.
+  * Each finding is fixed in the code, by kind:
+    * `variableScope`: move the declaration into the narrowest block that
+      uses it. C89 holds: the declaration stays at the start of its block
+      (a new `{ ... }` block is allowed for the purpose only when the
+      variable is used in a few lines of one branch; otherwise move it into
+      the existing inner block). Never an initialiser that reads a variable
+      assigned later; never a declaration after a statement.
+    * `constVariablePointer`, `constParameterPointer`: add `const` to the
+      local variable or to the parameter of a `static` (file-local)
+      function, where cppcheck says so.
+    * `constParameterCallback`: a function whose address is stored as a
+      callback has a type fixed by the callback typedef. Adding `const` is
+      done only if the typedef and every function of that type take it too
+      and it is not a public typedef; otherwise the finding is suppressed
+      (see below).
+    * `unusedStructMember`: remove the member only if nothing reads or
+      writes it (grep the whole tree, tests and tools included, before
+      removing); if anything does, or the struct is part of a public
+      header's layout, an inline `/* cppcheck-suppress unusedStructMember */`
+      with the reason in a comment on the line before.
+  * A `const` added to a parameter of a PUBLIC function (declared in a
+    header under `lib/*/include`) is NOT done: ABI and API are the
+    maintainer's. Such a finding gets an inline suppression on the line
+    above the definition, `/* cppcheck-suppress constParameterPointer */`,
+    and the reason `public signature` in a comment on the line before it.
+    Suppressions are `/* */` comments (C89), never `//`; the
+    `unusedStructMember` kind follows the same form.
+  * Behaviour does not change. A fix that would change a name, a type
+    visible outside its file, or a public header is not made: suppress it
+    with the reason.
+  * `cmake/gates/GateCppcheck.cmake` also reads
+    `${SRC}/cmake/ConfigForgeAnalysis.cmake` and fails (`VIOLATION: ...`)
+    when the `set(CF_CPPCHECK_LIBRARIES ...)` text does not contain
+    `style`. The existing checks stay.
+  * No CHANGELOG entry: nothing a user can observe changes.
+    `docs/Roadmap.md` line for cppcheck: the style class is done by
+    "(card N-10)".
+* **files**: `cmake/ConfigForgeAnalysis.cmake`,
+  `cmake/gates/GateCppcheck.cmake`, `docs/Roadmap.md`, the `lib/**` files
+  the findings name (listed by the analyze build), generated `docs/API.md`,
+  `docs/Codemap.md`, `docs/Limits.md` if the regeneration changes them.
+  1. `git switch -c work/N-10` (done if the worktree already has it).
+  2. Extend `GateCppcheck.cmake`. Run it on the unchanged
+     `ConfigForgeAnalysis.cmake`: `cmake -DSRC=<tree> -P
+     cmake/gates/GateCppcheck.cmake` must exit 1 naming the missing class.
+     See it fail.
+  3. Add `style` to `CF_CPPCHECK_LIBRARIES`; the gate passes. Build the
+     `analyze` flags (`-DCF_ANALYZER=ON -DCF_CPPCHECK=ON`, Debug) on Linux
+     with `ninja -k 0`: see the findings, build exit 1. Keep the list.
+  4. Fix the findings file by file as decided; rebuild until exit 0 with
+     no cppcheck output. Run `ctest --preset analyze`.
+  5. Update the Roadmap line. Format, regenerate the three documents on
+     Linux, the default build's full `ctest` and `ctest -R "^gate\."`.
+* **accept**: ACCEPT-LINUX with the `analyze` preset (build exit 0, cppcheck
+  silent on `lib/`, `ctest --preset analyze` passing, `gate.cppcheck` among
+  them), the default preset's full `ctest` and `ctest -R "^gate\."`;
+  ACCEPT-CI (the `analyze` job and the rest).
+* **stop if**: a finding cannot be answered by code or a suppression with a
+  reason (record file, line and message), a fix needs a public signature or
+  type changed, or CI's cppcheck version is not 2.19.0 and reports
+  different findings (record both).
+* **notes**: the finding counts come from N-9: 30 `variableScope`, 12
+  `constVariablePointer`, 7 `constParameterCallback`, 5
+  `constParameterPointer`, 3 `unusedStructMember`; the 1 `arrayIndexThenCheck`
+  was fixed by N-9. Carried 2026-11-24: 57 findings (the first run listed
+  alloc.c, numeric.c and port.c, which the N-9 count had not): 44 fixed in the
+  code (30 `variableScope`, 14 `const` on a local or a static function's
+  parameter) and 13 suppressed inline: 3 `unusedStructMember` (`cf_align`'s
+  members exist for `sizeof`), 7 `constParameterCallback` (a public callback
+  type fixes `void* ctx`), 3 `constParameterPointer` on public functions.

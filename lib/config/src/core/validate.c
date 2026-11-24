@@ -216,8 +216,8 @@ static const char* reference_syntax(cf_arena* ar, cf_candidate* c, cf_bool secre
         return NULL;
     }
     if (memchr(p, '$', n) != NULL) {
-        size_t m   = 0;
-        char*  out = unescape(ar, p, n, &m);
+        size_t      m   = 0;
+        const char* out = unescape(ar, p, n, &m);
         if (out == NULL) {
             cf_fmt(reason, rcap, "no room to unescape '$${'");
             return reason;
@@ -772,7 +772,7 @@ static cf_bool index_reaches(const char* d, size_t n, const char* limit, size_t 
    as text; a reason does not quote a sensitive value, so for one it is a
    placeholder, and where the length came from is said either way, as
    explain() says it. */
-static const char* cut_reason(cf_keyspace* ks, const cf_entry* length,
+static const char* cut_reason(const cf_keyspace* ks, const cf_entry* length,
                               const char* shown, const cf_rank_names* names) {
     const cf_candidate* w = length->selected;
     const char*         from;

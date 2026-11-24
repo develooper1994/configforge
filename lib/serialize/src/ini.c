@@ -240,10 +240,10 @@ static unsigned int ini_names_line(const ini_names* t, const char* name, size_t 
 /* Twice the room, this section's names moved over. What was outgrown
    stays where the sink put it until the decode is over. */
 static cf_bool ini_names_grow(ini_names* t) {
-    size_t    c      = (t->cap == 0) ? 16 : t->cap * 2, i;
-    ini_name* old    = t->slot;
-    size_t    oldcap = t->cap;
-    ini_name* slot;
+    size_t          c      = (t->cap == 0) ? 16 : t->cap * 2, i;
+    const ini_name* old    = t->slot;
+    size_t          oldcap = t->cap;
+    ini_name*       slot;
 
     if (c > (size_t)-1 / sizeof *slot) {
         return CF_FALSE;
@@ -639,9 +639,7 @@ static int ini_text_form(const char* p, size_t n) {
 
 static cf_bool ini_enc_scalar(void* ctx, const char* name, size_t n, const cf_value* v,
                               cf_bool textual, const cf_loc* at) {
-    ini_enc* e = (ini_enc*)ctx;
-    char     tmp[CF_VALUE_TEXT_MAX];
-    size_t   len;
+    ini_enc* e    = (ini_enc*)ctx;
     int      form = 0;
 
     (void)textual;
@@ -672,7 +670,8 @@ static cf_bool ini_enc_scalar(void* ctx, const char* name, size_t n, const cf_va
             cf_sink_putc(e->out, '"');
         }
     } else {
-        len = cf_value_to_text(v, tmp, sizeof tmp);
+        char   tmp[CF_VALUE_TEXT_MAX];
+        size_t len = cf_value_to_text(v, tmp, sizeof tmp);
         cf_sink_write(e->out, tmp, len);
     }
     cf_sink_putc(e->out, '\n');

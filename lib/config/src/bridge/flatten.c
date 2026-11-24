@@ -282,8 +282,8 @@ static cf_bool fl_scalar(void* ctx, const char* name, size_t n, const cf_value* 
 }
 
 static cf_bool fl_end(void* ctx) {
-    cf_flatten*       f = (cf_flatten*)ctx;
-    cf_flatten_frame* fr;
+    cf_flatten*             f = (cf_flatten*)ctx;
+    const cf_flatten_frame* fr;
 
     if (f->depth < 0) {
         return CF_FALSE;

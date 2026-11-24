@@ -75,12 +75,11 @@ typedef struct prefs_walk {
 /* The member's name lowered into w->name; CF_FALSE with the error set
    when it does not fit or is not a key. */
 static cf_bool prefs_name(prefs_walk* w, const cf_platform_pref_event* e) {
-    size_t i;
-
     if (e->name == NULL) {
         return CF_TRUE;
     }
     if (e->namelen + 1 <= sizeof w->name) {
+        size_t i;
         for (i = 0; i < e->namelen; ++i) {
             w->name[i] = (char)cf_to_lower((unsigned char)e->name[i]);
         }

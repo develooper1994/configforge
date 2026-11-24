@@ -186,7 +186,7 @@ size_t cf_ks_explain_redacted(const cf_keyspace* ks, const cf_source_view* sv,
 size_t cf_ks_inspect_redacted(const cf_keyspace* ks, const cf_source_view* sv,
                               const cf_defset* ds, char* buf, size_t cap) {
     size_t at = 0;
-    size_t i, j;
+    size_t i;
 
     if (buf == NULL) {
         cap = 0;
@@ -216,6 +216,7 @@ size_t cf_ks_inspect_redacted(const cf_keyspace* ks, const cf_source_view* sv,
         unsigned short supplied[CF_MAX_SOURCES];
         unsigned short wins[CF_MAX_SOURCES];
         size_t         nsrc = (sv->count < CF_MAX_SOURCES) ? sv->count : CF_MAX_SOURCES;
+        size_t         j;
 
         memset(supplied, 0, nsrc * sizeof supplied[0]);
         memset(wins, 0, nsrc * sizeof wins[0]);

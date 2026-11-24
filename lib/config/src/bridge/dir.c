@@ -57,10 +57,11 @@ typedef struct dir_state {
 typedef char dir_name[CF_DIR_PATH_MAX];
 
 static void dir_sort(dir_name* names, int n) {
-    int i, j;
+    int i;
 
     for (i = 1; i < n; ++i) {
         char tmp[CF_DIR_PATH_MAX];
+        int  j;
         memcpy(tmp, names[i], CF_DIR_PATH_MAX);
         tmp[CF_DIR_PATH_MAX - 1] = '\0'; /* each name is; said for /analyze */
         j                        = i;

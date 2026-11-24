@@ -172,8 +172,8 @@ static cf_bool yaml_no_room(yaml_scan* s) {
 
 /* A larger block for one of the recording's arrays, the old one copied.
    What was outgrown stays where the sink put it until decode returns. */
-static void* yaml_grow(yaml_scan* s, void* old, size_t used, size_t* cap, size_t size,
-                       size_t need) {
+static void* yaml_grow(yaml_scan* s, const void* old, size_t used, size_t* cap,
+                       size_t size, size_t need) {
     size_t c = (*cap == 0) ? 64u : *cap;
     void*  p;
     while (c < need) {

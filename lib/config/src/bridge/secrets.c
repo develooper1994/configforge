@@ -106,7 +106,6 @@ static cf_bool secrets_load(const cf_source* s, cf_keyspace* ks) {
     secrets_name*  names;
     char           full[CF_PLATFORM_NAME_MAX];
     char           key[CF_KEY_MAX];
-    const char*    at;
     int            n, i;
 
     st->failed = CF_FALSE;
@@ -157,6 +156,7 @@ static cf_bool secrets_load(const cf_source* s, cf_keyspace* ks) {
         size_t      klen;
         cf_blob     blob;
         size_t      vlen;
+        const char* at;
 
         if (cf_fmt(full, sizeof full, "%s/%s", st->path, name) >= sizeof full) {
             st->failed = CF_TRUE;

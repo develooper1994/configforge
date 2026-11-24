@@ -122,7 +122,7 @@ static cf_bool st_scalar(void* ctx, const char* name, size_t n, const cf_value* 
     }
     s->value = *v;
     if (v->type == CF_TYPE_TEXT) {
-        char* p = cf_arena_dup(t->ar, v->u.t.p, v->u.t.n);
+        const char* p = cf_arena_dup(t->ar, v->u.t.p, v->u.t.n);
         if (p == NULL) {
             t->failed = CF_TRUE;
             return CF_FALSE;

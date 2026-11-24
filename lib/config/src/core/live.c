@@ -429,6 +429,8 @@ typedef struct live_changed {
     const cf_config* next;
 } live_changed;
 
+/* public signature: cf_diff_fn fixes it */
+/* cppcheck-suppress constParameterCallback */
 static cf_bool live_key_changed(void* ctx, const char* key, size_t klen, cf_change kind,
                                 const cf_candidate* before, const cf_candidate* after) {
     const live_changed* c = (const live_changed*)ctx;
@@ -480,10 +482,10 @@ static void live_log_restarts(const cf_live* l) {
     char        msg[CF_MESSAGE_MAX];
     char        key[CF_KEY_MAX];
     const char* p = l->restarts;
-    const char* nl;
 
     while (p != NULL && *p != '\0') {
-        size_t n;
+        size_t      n;
+        const char* nl;
         nl = strchr(p, '\n');
         n  = (nl != NULL) ? (size_t)(nl - p) : strlen(p);
         if (n >= sizeof key) {
@@ -518,11 +520,11 @@ static cf_live_result live_record(cf_live* l, cf_live_result r, cf_bool rebuilt,
                  (l->scratch.key[0] != '\0') ? l->scratch.key : NULL,
                  l->scratch.message);
     } else if (l->log != NULL) {
-        char msg[96];
         if (r == CF_LIVE_ROLLED_BACK) {
             /* logged by live_rollback, with its reason */
         } else if (r == CF_LIVE_SWAPPED) {
             char fp[24];
+            char msg[96];
             (void)cf_fingerprint_format(l->fingerprint, fp, sizeof fp);
             cf_fmt(msg, sizeof msg, "generation %U serving, %s", l->status.generation,
                    fp);

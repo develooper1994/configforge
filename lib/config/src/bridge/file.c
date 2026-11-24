@@ -543,6 +543,8 @@ cf_bool cf_source_env_document(cf_source* s, const char* name, int rank,
     return CF_TRUE;
 }
 
+/* public signature */
+/* cppcheck-suppress constParameterPointer */
 void cf_source_file_codecs(cf_source* s, const struct cf_codec* const* codecs,
                            size_t n) {
     file_state* st = file_state_of(s);

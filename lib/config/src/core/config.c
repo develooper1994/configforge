@@ -486,7 +486,7 @@ static cf_bool builder_document(cf_builder* b, const char* name, int rank,
                                 const char* format, unsigned flags) {
     cf_source*             s = builder_slot_file(b, name, flags);
     void*                  st;
-    char*                  copy;
+    const char*            copy;
     const cf_codec* const* list;
     cf_bool                ok;
     /* One error for every refusal below: a cf_error a block would put

@@ -230,7 +230,7 @@ static cf_bool cf_ks_push(cf_keyspace* ks, const char* key, size_t keylen, int s
                           const cf_value* value, const char* at, cf_outcome outcome,
                           const char* reason, unsigned flags) {
     cf_cand_rec* r;
-    char*        k;
+    const char*  k;
 
     /* cands is NULL when init could not allocate, which happens in a
        fixed arena that is simply too small. A caller that ignored the
@@ -265,7 +265,7 @@ static cf_bool cf_ks_push(cf_keyspace* ks, const char* key, size_t keylen, int s
 
     /* Text is copied so the caller's buffer need not outlive the call. */
     if (value->type == CF_TYPE_TEXT) {
-        char* p = cf_arena_dup(ks->arena, value->u.t.p, value->u.t.n);
+        const char* p = cf_arena_dup(ks->arena, value->u.t.p, value->u.t.n);
         if (p == NULL) {
             return CF_FALSE;
         }
@@ -394,8 +394,6 @@ cf_bool cf_ks_rename_list(cf_keyspace* ks, const char* from, size_t fromlen,
 
 cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key, size_t keylen,
                             const cf_candidate* c) {
-    size_t at;
-
     if (c == NULL ||
         !cf_ks_push(ks, key, keylen, c->source, &c->value, c->at, CF_OUT_PENDING, NULL,
                     c->flags & (CF_CAND_TEXTUAL | CF_CAND_DEFAULT | CF_CAND_RESOLVED |
@@ -403,7 +401,7 @@ cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key, size_t keylen,
         return CF_FALSE;
     }
     if (c->written != NULL) {
-        at = ks->ncand - 1;
+        size_t at = ks->ncand - 1;
         ks->cands[at].cand.written =
             cf_arena_dup(ks->arena, c->written, strlen(c->written));
         if (ks->cands[at].cand.written == NULL) {
@@ -739,6 +737,8 @@ cf_bool cf_ks_resolve(cf_keyspace* ks) {
     return CF_TRUE;
 }
 
+/* public signature (and it writes through ks) */
+/* cppcheck-suppress constParameterPointer */
 void cf_ks_infer_untyped(cf_keyspace* ks) {
     size_t i;
 
@@ -918,14 +918,13 @@ size_t cf_ks_digest_text(cf_u64 h, char* buf, size_t cap) {
     static const char hex[] = "0123456789abcdef";
     char              t[22] = "fnv1a:"; /* the rest zero, then the digits */
     int               k;
-    size_t            n;
 
     for (k = 21; k >= 6; --k) {
         t[k] = hex[(size_t)(h & (cf_u64)0xF)];
         h >>= 4;
     }
     if (buf != NULL && cap > 0) {
-        n = (sizeof t < cap - 1) ? sizeof t : cap - 1;
+        size_t n = (sizeof t < cap - 1) ? sizeof t : cap - 1;
         memcpy(buf, t, n);
         buf[n] = '\0';
     }
@@ -1029,7 +1028,7 @@ size_t cf_ks_secret_digest_text(const cf_value* v, const unsigned char* key, cha
     char              t[31]     = "sip24:";
     char              tmp[CF_VALUE_TEXT_MAX];
     const char*       bytes;
-    size_t            n, len;
+    size_t            n;
 
     if (key == NULL) {
         return cf_ks_digest_text(cf_ks_value_digest(v), buf, cap);
@@ -1039,7 +1038,7 @@ size_t cf_ks_secret_digest_text(const cf_value* v, const unsigned char* key, cha
     t[14] = ':';
     ks_hex_digits(t + 15, 16, cf_siphash24(key, bytes, n));
     if (buf != NULL && cap > 0) {
-        len = (sizeof t < cap - 1) ? sizeof t : cap - 1;
+        size_t len = (sizeof t < cap - 1) ? sizeof t : cap - 1;
         memcpy(buf, t, len);
         buf[len] = '\0';
     }
@@ -1059,7 +1058,6 @@ cf_u64 cf_ks_digest(const cf_keyspace* ks) {
     for (i = 0; i < ks->count; ++i) {
         const cf_entry* e = &ks->entries[i];
         const char*     tn;
-        size_t          n;
 
         if (e->selected == NULL) {
             continue;
@@ -1074,8 +1072,8 @@ cf_u64 cf_ks_digest(const cf_keyspace* ks) {
         if (e->selected->value.type == CF_TYPE_TEXT) {
             h = fnv1a(h, e->selected->value.u.t.p, e->selected->value.u.t.n);
         } else {
-            n = cf_value_to_text(&e->selected->value, buf, sizeof buf);
-            h = fnv1a(h, buf, n);
+            size_t n = cf_value_to_text(&e->selected->value, buf, sizeof buf);
+            h        = fnv1a(h, buf, n);
         }
         h = fnv1a(h, "\036", 1);
     }
