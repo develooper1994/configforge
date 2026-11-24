@@ -21,6 +21,19 @@ docs/Plan.md's index is done except those that wait for a release.
    cf_encoding_check, cf_encoding_name, cf_encoding_recode,
    cf_error_place, cf_format_holds, cf_format_limits,
    cf_reason_description, cf_reason_name, cf_source_file_encoding,
+   A recommendation was prepared (2026-11-24, by reading each declaration
+   and its callers): none to remove; CF_API for cf_build_profile,
+   cf_codec_compose_sized, cf_encoding_by_name, cf_encoding_check,
+   cf_encoding_name, cf_encoding_recode, cf_error_place (77 callers in
+   the library), cf_format_holds, cf_reason_description, cf_reason_name,
+   cf_source_file_encoding. Two want a choice first: `cf_format_limits`
+   has two fixed out-parameters (a third limit would break it: add it now,
+   or say further limits come as a new function); `cf_usage` takes no
+   options (a trailing `unsigned flags`, 0 for now, or promote as is).
+   Found on the way: four of them (cf_encoding_by_name, cf_encoding_name,
+   cf_reason_name, cf_source_file_encoding) are already used by the Python
+   and Rust bindings, which D-89 says expose no experimental function.
+   P-2's CI is red only on this (`gate.abi`), as expected until the opening.
    cf_usage (`cmake/configforge.experimental.symbols`). Opening 1.9.0
    without it turns `gate.abi` red (it did once tonight: reverted,
    a7fe458). Then `cmake -DTO=1.9.0 -P scripts/release/version.cmake`.
