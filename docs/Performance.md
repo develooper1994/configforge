@@ -111,7 +111,7 @@ On 16 MiB JSON, doubling cut allocator calls from 12,729 to 217 but
 increased unused arena capacity from 72,600 to 1,467,288 bytes. On
 16 MiB CBOR the capacity estimate saved 110,990,080 requested bytes.
 Neither trial sped up any mixed 16 MiB read. The card records all
-five formats, both document sizes and both workloads. [P-4 trial tables](plan/P-allocators.md#p-4---allocation-measured-and-changed-only-where-it-wins)
+five formats, both document sizes and both workloads. P-4's trial tables (docs/Plan.md, "Done, their cards removed"; the card's text in `git log -- docs/plan/P-allocators.md`)
 
 ## Large documents
 

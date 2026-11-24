@@ -184,11 +184,10 @@ Things only the maintainer can do or decide. Each unblocks the cards named.
 ## The index
 
 In the order to be done. A card is `open`, `done` (with its commit), or
-`waits` (with what it waits for). The W5-* cards belong to
-the 1.7.0 milestone (`docs/Maintaining.md`, "Versions"; the finished
-H, W3, S and T cards are recorded in "Done, their cards removed",
-below). The L-* cards, the tools by
-group (`docs/plan/L-tools.md`), come right after 1.7.0's release. The P-* cards, word-at-a-time
+`waits` (with what it waits for). The finished cards (H, W3, S, T,
+W5, L, A, I, N and P-4) are recorded in "Done, their cards removed",
+below; the cards are in `docs/plan/*.md`. L-3b is the one open L card
+(the tools by group: `docs/plan/L-tools.md`). The P-* cards, word-at-a-time
 scanning before SIMD (`docs/plan/P-word-at-a-time.md`), are last,
 except P-1: it only measures, and comes once 1.7.0 is released, so the
 waves after it are measured from the start; P-2 and P-3 wait for those
@@ -196,53 +195,11 @@ waves ("After 1.7.0: the order of the waves", below).
 
 | Order | Card | Size | Needs | Status |
 | ----: | ---- | ----- | ----- | ------ |
-| 33 | W5-V1 `configforge codec convert` and `format` | large | T-3 | done (26ab6bd) |
-| 34 | W5-S1 `configforge gen schema --from` | medium | T-2 | done (0a8de0f) |
-| 35 | W5-G1 `configforge gen --lang cpp` | large | W5-S1 | done (071ed40) |
-| 36 | W5-G2 `configforge gen --lang rust` | large | W5-G1 | done (54f39fb) |
-| 37 | W5-G3 `configforge gen --lang python` | medium | W5-G2 | done (950a099) |
-| 38b | L-1 shellcheck, ruff, actionlint and codespell, as gates | medium | 1.7.0 released | done (7bec7d8) |
-| 38c | L-2 Valgrind, AFL++, gitleaks, osv-scanner and Scorecard in CI | medium | L-1 | done (6442c8f) |
-| 38d | L-4 include-what-you-use and a link check | small | L-1 | done (a87a174) |
-| 38e | L-3 Infer and semgrep | large | L-2 | done (c2c14f4) |
 | 38g | L-3b Frama-C EVA on port, numeric and base | large | L-3; 1.9.0 under way | open |
-| 38f | L-5 Profilers: one command for time, cache, memory and vectorization | medium | P-1 | done (13e9e70) |
-| 38h | L-6 A map of the tree and a brief per card, so that workers read less | medium | L-5 | done (00dd641) |
-| 38i | L-7 CI in minutes, with nothing taken away | small | nothing | done (09fe647) |
-| 38j | L-8 doctor.api cheap under MemorySanitizer, nothing dropped | small | L-7 | done (179c6df) |
 | 39 | P-1 The benchmark measures large documents, and says where time goes | medium | 1.7.0 released | done (90b6541) |
-| 40 | A-1 One directory per component: the files moved, nothing else changed | large | 1.7.0 released | done (824181f) |
-| 41 | A-1b Each component a project: its declaration, its tests, its README, built alone | large | A-1 | done (031d54d) |
-| 42 | A-2 The vector library, its interface and its scalar reference | medium | A-1b | done (da0dd49) |
-| 43 | A-3 One UTF-8, one hex digit, one table hash | medium | A-2 | done (520baa2) |
-| 44 | A-4 Another encoding, read only by name | medium | A-3 | done (e4069b8) |
-| 45 | A-5 Bytes that are not UTF-8 are refused, with their place and a hint | medium | A-4 | done (98c068e) |
-| 46 | A-6 `configforge codec recode`: a file converted once, for review | small | A-5, T-3 | done (0b4b97a) |
-| 47 | A-7 The escapes in families | large | A-6 | done (fca866c) |
-| 48 | A-8 Whitespace, comments, newlines and the place of a refusal | large | A-7 | done (c3bba84) |
-| 49 | A-9 Composed codecs, for what is almost a format | medium | A-5 | done (a4ea9e1, made whole in the next commit) |
-| 50 | A-10 A refusal's place and reason | medium | A-8, A-9 | done (f1a4fd7) |
-| 51 | A-11 Build profiles and the C version per file | large | A-1b | done (b837c23) |
-| 52 | A-12 The feature matrix made from the build | medium | A-11 | done (23b5d2a) |
-| 53 | W5-V2 Every pair of formats, and what each can hold | large | A-1b, W5-V1 | done (70bd398) |
-| 54 | W5-G4 Generators outside the tree | medium | A-1b, W5-G3 | done (adc2a63) |
 | 55 | P-1b The other libraries beside ours, and a page CI keeps | large | P-1, A-1b | done (427ec6a) |
-| 56 | A-13 A page of the project's limits | medium | A-12, W5-V2, P-1 | done (622d26b) |
-| 56b | I-1 The 1.8.0 group's integration findings (docs/plan/I-integration.md) | medium | style-1.8.0 (done, 8fbe112) | done (cb9d8a3) |
 | 57 | P-2 Word-at-a-time scans in C89, with the byte loop as reference | medium | P-1, A-3 | waits: 2.4.0; to be rewritten on D-101 |
 | 58 | P-3 The scans P-1 found, a word at a time, kept only where they win | medium | P-2 | waits: P-2 |
-| 59 | P-4 Allocation measured, and changed only where it wins | medium | P-1b | done (ca2f115) |
-| 60 | N-1 Compare two flat configuration files by value | medium | W5-V1 | done (77a11ae) |
-| 61 | N-2 Rebuild the Linux musl release archive and compare the bytes | medium | nothing | done (6c67353) |
-| 62 | N-3 Show a tracked JSON file's value changes in Git difftool | small | N-1 | done (efb74f1) |
-| 63 | N-4 Deliver one root table to a YAML document sink | small | W5-V2 | done (f6c0ba7) |
-| 64 | N-5 Compare nested tables by value in `configforge diff` | small | N-1 | done (ad5b840) |
-| 65 | N-6 `cf_usage`: the `--help` text from the contract | small | nothing | done (83f5c64) |
-| 66 | N-7 A reload names the keys it changed | small | nothing | done (37ea469) |
-| 67 | N-8 Compare scalar arrays by value in `configforge diff` | small | N-5 | done (7bbd943) |
-| 68 | N-9 cppcheck runs on both libraries' own sources | small | nothing | done (ec0de1e) |
-| 69 | N-10 cppcheck's style class on the libraries | small | N-9 | done (67a451a) |
-| 70 | N-11 Prove `cf_blob_skip_bom` with CBMC | small | nothing | done (765de40) |
 
 ## Done, their cards removed
 
@@ -282,6 +239,53 @@ did is kept here, and its text in git (`git log -- docs/plan/<file>`).
   9ee1c41), `configforge codec` (T-3, d8d06c1, da16549, 57f897f) and
   `codec dump` (T-4, 0074c04); T-5 removed Doctor's aliases and the
   name `doctor`.
+
+* **W5-convert-and-gen.md** (1.7.0 and 1.8.0; W5-V1, W5-S1, W5-G1 to
+  W5-G4, W5-V2; D-94 to D-96, D-109, D-110). `configforge codec convert`
+  and `format`, every value the target cannot hold named, never dropped
+  quietly (W5-V1, 26ab6bd); a contract drafted from a sample, `gen
+  schema --from` (W5-S1, 0a8de0f); `gen --lang cpp`, `rust` and `python`
+  (W5-G1, 071ed40; W5-G2, 54f39fb; W5-G3, 950a099); every ordered pair
+  of formats tested against what each can hold (W5-V2, 70bd398); and
+  generators outside the tree, `configforge-gen-<lang>` on the PATH
+  (W5-G4, adc2a63).
+* **L-tools.md** (1.7.0 to 1.9.0; L-1 to L-8; L-3b is open). The other
+  languages' linters as gates: shellcheck, ruff, actionlint, codespell
+  (L-1, 7bec7d8); Valgrind, AFL++, gitleaks, osv-scanner and Scorecard
+  in CI (L-2, 6442c8f); include-what-you-use and a link check (L-4,
+  a87a174); Infer and semgrep with the project's own rules (L-3,
+  c2c14f4); one command for the profilers (L-5, 13e9e70); a map of the
+  tree and `brief.py`, a brief per card (L-6, 00dd641); CI in 13.9
+  minutes instead of 19.2, nothing taken away (L-7, 09fe647); and
+  `doctor.api` cheap under MemorySanitizer (L-8, 179c6df).
+* **A-architecture.md** (1.8.0; A-1 to A-13; D-100 to D-108, D-112; the
+  design stays in the file). One directory a component (A-1, 824181f) and
+  each a project built alone (A-1b, 031d54d); the `lanes` vector library
+  (A-2, da0dd49); one UTF-8, hex digit and table hash (A-3, 520baa2);
+  another encoding read by name (A-4, e4069b8); bytes that are not UTF-8 refused with place and
+  hint (A-5, 98c068e); `configforge codec recode` (A-6, 0b4b97a); the
+  escapes in families (A-7, fca866c); whitespace, comments, newlines and
+  the place of a refusal (A-8, c3bba84); composed codecs (A-9, a4ea9e1,
+  made whole in the next commit); a refusal's place and reason
+  (A-10, f1a4fd7); build profiles and the C version per file (A-11,
+  b837c23); the README's feature matrix made from the build (A-12,
+  23b5d2a); and a page of the project's limits held by `gate.limits`
+  (A-13, 622d26b).
+* **I-integration.md** (1.8.0; I-1, cb9d8a3; D-109). The thirteen
+  findings of the integration check of the 1.8.0 group, fixed together.
+* **P-allocators.md** (1.8.0; P-4, ca2f115; D-72). Allocation measured:
+  the wipe through `memset` saved 25% of instructions on a 16 MiB load
+  and 72% on a tiny document; three growth candidates measured and
+  closed. The findings stay in the file.
+* **N-next.md** (1.8.0; N-1 to N-11; D-100). `configforge diff` of two
+  files by value (N-1, 77a11ae), of nested tables (N-5, ad5b840) and of
+  scalar arrays (N-8, 7bbd943), with a Git difftool recipe (N-3,
+  efb74f1); the musl release archive built twice and compared (N-2,
+  6c67353); the YAML codec delivering one root table (N-4, f6c0ba7);
+  `cf_usage`, `--help` from the contract (N-6, 83f5c64); a reload that
+  names the keys it changed (N-7, 37ea469); cppcheck on both libraries
+  (N-9, ec0de1e) and its style class (N-10, 67a451a); and
+  `cf_blob_skip_bom` proved with CBMC (N-11, 765de40).
 
 Left over from those cards, now in `docs/Roadmap.md`: the user
 defaults' other scopes (a scope prefix in `domain`); a second
