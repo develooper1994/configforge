@@ -706,10 +706,8 @@ The configuration's contract as a JSON Schema, closed when it rejects
 unknown keys (CF_UNKNOWN_REJECT). See cf_schema_write.
 
 ```c
-CF_EXPERIMENTAL(1, 8) size_t cf_usage(const cf_config* c, const char* program, const char* env_prefix, char* buf, size_t cap);
+CF_API size_t cf_usage(const cf_config* c, const char* program, const char* env_prefix, char* buf, size_t cap);
 ```
-
-Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
 
 Implementation: [`cf_usage` (lib/config/src/diag/usage.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/diag/usage.c#L174).
 
@@ -1645,10 +1643,8 @@ Public, so that the serialization library's own program reaches it as
 the configuration library does.
 
 ```c
-CF_EXPERIMENTAL(1, 8) cf_bool cf_encoding_by_name(const char* name, unsigned* flags);
+CF_API cf_bool cf_encoding_by_name(const char* name, unsigned* flags);
 ```
-
-Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
 
 Implementation: [`cf_encoding_by_name` (lib/text/src/encoding.c)](https://github.com/develooper1994/configforge/blob/main/lib/text/src/encoding.c#L114).
 
@@ -1658,10 +1654,8 @@ CF_TRUE and *flags the encoding's value for one of: "utf-8",
 "utf-16le", "utf-16be"; ASCII case ignored. CF_FALSE otherwise.
 
 ```c
-CF_EXPERIMENTAL(1, 8) const char* cf_encoding_name(unsigned flags);
+CF_API const char* cf_encoding_name(unsigned flags);
 ```
-
-Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
 
 Implementation: [`cf_encoding_name` (lib/text/src/encoding.c)](https://github.com/develooper1994/configforge/blob/main/lib/text/src/encoding.c#L129).
 
@@ -1669,10 +1663,8 @@ The canonical name ("windows-1254") of the encoding in `flags`,
 or NULL for a value above CF_ENCODING_LAST.
 
 ```c
-CF_EXPERIMENTAL(1, 8) size_t cf_encoding_recode(unsigned from, const char* in, size_t n, char* out, size_t cap, size_t* bad);
+CF_API size_t cf_encoding_recode(unsigned from, const char* in, size_t n, char* out, size_t cap, size_t* bad);
 ```
-
-Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
 
 Implementation: [`cf_encoding_recode` (lib/text/src/encoding.c)](https://github.com/develooper1994/configforge/blob/main/lib/text/src/encoding.c#L222).
 
@@ -1688,10 +1680,8 @@ room it returns (size_t)-1 with *bad == n, an offset no byte has,
 having written nothing past cap.
 
 ```c
-CF_EXPERIMENTAL(1, 8) cf_bool cf_encoding_check(const char* origin, const char* p, size_t n, cf_error* err);
+CF_API cf_bool cf_encoding_check(const char* origin, const char* p, size_t n, cf_error* err);
 ```
-
-Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
 
 Implementation: [`cf_encoding_check` (lib/text/src/encoding.c)](https://github.com/develooper1994/configforge/blob/main/lib/text/src/encoding.c#L293).
 
@@ -1976,11 +1966,9 @@ CF_API const char* cf_code_description(cf_code c);
 Implementation: [`cf_code_name` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L16), [`cf_code_description` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L27).
 
 ```c
-CF_EXPERIMENTAL(1, 8) const char* cf_reason_name(int reason);
-CF_EXPERIMENTAL(1, 8) const char* cf_reason_description(int reason);
+CF_API const char* cf_reason_name(int reason);
+CF_API const char* cf_reason_description(int reason);
 ```
-
-Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
 
 Implementation: [`cf_reason_name` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L38), [`cf_reason_description` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L51).
 
@@ -1988,10 +1976,8 @@ The name ("number-range") and description of a reason. Returns "?" and
 "unknown", respectively, for an unknown value.
 
 ```c
-CF_EXPERIMENTAL(1, 8) void cf_error_place(cf_error* e, int reason, unsigned int line, unsigned int col);
+CF_API void cf_error_place(cf_error* e, int reason, unsigned int line, unsigned int col);
 ```
-
-Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
 
 Implementation: [`cf_error_place` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L64).
 
@@ -3951,23 +3937,19 @@ Names a format this library knows about whether or not it was
 compiled in, so the error can say which option to turn on.
 
 ```c
-CF_EXPERIMENTAL(1, 8) cf_bool cf_format_holds(const char* format, unsigned* holds);
+CF_API cf_bool cf_format_holds(const char* format, unsigned* holds);
 ```
-
-Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
 
 Implementation: [`cf_format_holds` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L354).
 
 CF_TRUE and *holds the bits of the format called `format`, whether
 or not this build has its codec; CF_FALSE, *holds untouched, for a
 format this library has no writer for (xml, properties) and for a
-name it does not know. (1.8, experimental)
+name it does not know. (1.8)
 
 ```c
-CF_EXPERIMENTAL(1, 8) cf_bool cf_format_limits(const char* format, size_t* max_path, size_t* max_depth);
+CF_API cf_bool cf_format_limits(const char* format, size_t* max_path, size_t* max_depth);
 ```
-
-Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
 
 Implementation: [`cf_format_limits` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L372).
 
@@ -3981,7 +3963,7 @@ max_depth the most tables and arrays one inside another below the
    document it accepts ((size_t)-1 for none; 0 for a format with no
    nesting). A format never writes what its own reader refuses, so the
    converter leaves out a table past these. CF_FALSE, both untouched, for
-   a name this library does not know. (1.8, experimental)
+   a name this library does not know. (1.8)
 
 ```c
 CF_API size_t cf_codec_count(void);
@@ -4043,10 +4025,8 @@ content (CF_CODEC_NAMED_ONLY). Off in a build without CF_WITH_TLV,
 and says so. (1.5)
 
 ```c
-CF_EXPERIMENTAL(1, 8) cf_bool cf_codec_compose_sized(cf_codec* out, size_t out_size, const cf_compose* spec, cf_error*         err);
+CF_API cf_bool cf_codec_compose_sized(cf_codec* out, size_t out_size, const cf_compose* spec, cf_error* err);
 ```
-
-Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
 
 Implementation: [`cf_codec_compose_sized` (lib/serialize/src/compose.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/compose.c#L187).
 
@@ -4310,10 +4290,8 @@ neither, and when no format was chosen. A load that failed in the
 chosen format still names it.
 
 ```c
-CF_EXPERIMENTAL(1, 8) const char* cf_source_file_encoding(const cf_source* s);
+CF_API const char* cf_source_file_encoding(const cf_source* s);
 ```
-
-Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
 
 Implementation: [`cf_source_file_encoding` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L586).
 
@@ -4890,10 +4868,8 @@ time, so it follows a checkout without reconfiguring; a build without
 CMake can pass -DCF_BUILD_ID="\"...\"".
 
 ```c
-CF_EXPERIMENTAL(1, 8) const char* cf_build_profile(void);
+CF_API const char* cf_build_profile(void);
 ```
-
-Experimental since 1.8: outside the 1.x promise until the next minor release makes it promised or removes it.
 
 Implementation: [`cf_build_profile` (lib/config/src/core/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/version.c#L35).
 

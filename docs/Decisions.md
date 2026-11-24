@@ -3746,6 +3746,10 @@ with what 1.x promises (`## What 1.x promises`), and an experimental
 function is marked there with the release it came in. A declaration is
 read on one line, as `CF_API`'s are.
 
+**Settled in 1.9.0 (I-2).** The thirteen functions of 1.8 were promoted, none removed.
+`cf_format_limits` and `cf_usage` kept their signatures; a further limit or an option comes
+as a new function.
+
 **Compatibility.** Additive; no function is experimental yet.
 
 ## D-90 — The serialization library, a target of its own

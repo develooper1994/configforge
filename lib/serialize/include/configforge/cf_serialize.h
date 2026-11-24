@@ -187,7 +187,7 @@ enum {
    cf_format_holds is made of. A format that lacks a bit does not
    fail to write: a type it lacks is written as the value's text
    (the reader gives text back), and anything else it lacks is left
-   out by the converter, which names it (D-109). Experimental in 1.8. */
+   out by the converter, which names it (D-109). */
 enum {
     /* integers as integers */
     CF_HOLDS_INT  = 1u << 0,
@@ -300,8 +300,8 @@ CF_API const char* cf_format_option(const char* format);
 /* CF_TRUE and *holds the bits of the format called `format`, whether
    or not this build has its codec; CF_FALSE, *holds untouched, for a
    format this library has no writer for (xml, properties) and for a
-   name it does not know. (1.8, experimental) */
-CF_EXPERIMENTAL(1, 8) cf_bool cf_format_holds(const char* format, unsigned* holds);
+   name it does not know. (1.8) */
+CF_API cf_bool cf_format_holds(const char* format, unsigned* holds);
 
 /* CF_TRUE and the limits of the reader of the format called `format`:
    *max_path the longest joined path of names (dots counted) to a table,
@@ -313,9 +313,9 @@ CF_EXPERIMENTAL(1, 8) cf_bool cf_format_holds(const char* format, unsigned* hold
    document it accepts ((size_t)-1 for none; 0 for a format with no
    nesting). A format never writes what its own reader refuses, so the
    converter leaves out a table past these. CF_FALSE, both untouched, for
-   a name this library does not know. (1.8, experimental) */
-CF_EXPERIMENTAL(1, 8) cf_bool cf_format_limits(const char* format, size_t* max_path,
-                                               size_t* max_depth);
+   a name this library does not know. (1.8) */
+CF_API cf_bool cf_format_limits(const char* format, size_t* max_path,
+                                size_t* max_depth);
 
 CF_API size_t          cf_codec_count(void);
 CF_API const cf_codec* cf_codec_at(size_t i);
@@ -451,9 +451,8 @@ typedef struct cf_compose {
    the codec. A repair lends its bytes until decoding returns. A filter
    fills the four document callbacks of up and forwards events to down.
    A build without CF_WITH_COMPOSE refuses with CF_E_CAPABILITY. */
-CF_EXPERIMENTAL(1, 8) cf_bool cf_codec_compose_sized(cf_codec* out, size_t out_size,
-                                                     const cf_compose* spec,
-                                                     cf_error*         err);
+CF_API cf_bool cf_codec_compose_sized(cf_codec* out, size_t out_size,
+                                      const cf_compose* spec, cf_error* err);
 #define cf_codec_compose(out, spec, err)                                               \
     cf_codec_compose_sized((out), sizeof(cf_codec), (spec), (err))
 

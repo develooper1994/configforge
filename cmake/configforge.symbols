@@ -27,6 +27,7 @@ cf_build
 cf_build_id
 cf_build_in
 cf_build_limit
+cf_build_profile
 cf_builder_abort
 cf_builder_bool
 cf_builder_cli
@@ -71,6 +72,7 @@ cf_codec_at
 cf_codec_by_name
 cf_codec_by_path
 cf_codec_can_read
+cf_codec_compose_sized
 cf_codec_count
 cf_codec_decode
 cf_codec_detect
@@ -100,11 +102,16 @@ cf_edit_set_real real
 cf_edit_set_text
 cf_edit_unset
 cf_emit
+cf_encoding_by_name
+cf_encoding_check
+cf_encoding_name
+cf_encoding_recode
 cf_env_key
 cf_env_value
 cf_environ
 cf_error_clear
 cf_error_copy
+cf_error_place
 cf_error_set
 cf_explain
 cf_explain_json
@@ -116,6 +123,8 @@ cf_fingerprint_seed
 cf_fingerprint_step
 cf_fmt
 cf_fmt_append
+cf_format_holds
+cf_format_limits
 cf_format_of_path
 cf_format_option
 cf_get_bool
@@ -190,6 +199,8 @@ cf_platform_name
 cf_policy_text
 cf_port_description
 cf_read_count
+cf_reason_description
+cf_reason_name
 cf_refusal_name
 cf_refusal_text
 cf_report
@@ -228,6 +239,7 @@ cf_source_file
 cf_source_file_codec
 cf_source_file_codecs
 cf_source_file_defs
+cf_source_file_encoding
 cf_source_file_error
 cf_source_file_format
 cf_source_file_state_size
@@ -263,6 +275,7 @@ cf_try_text
 cf_type_json_name
 cf_type_name
 cf_type_of
+cf_usage
 cf_value_bool
 cf_value_cmp
 cf_value_equal

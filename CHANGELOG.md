@@ -3,6 +3,17 @@
 Versions follow semantic versioning from 1.0. Before that, `0.x` promises
 nothing: the C interface is not frozen, and a minor bump may change it.
 
+## 1.9.0 — unreleased
+
+### Changed
+
+- The thirteen functions experimental in 1.8 (`cf_reason_name`,
+  `cf_reason_description`, `cf_error_place`, `cf_source_file_encoding`,
+  `cf_build_profile`, `cf_usage`, `cf_format_holds`, `cf_format_limits`,
+  `cf_codec_compose_sized`, `cf_encoding_by_name`, `cf_encoding_name`,
+  `cf_encoding_recode`, `cf_encoding_check`) are promised for the rest of
+  1.x (D-89).
+
 ## 1.8.0 — 2026-11-24
 
 ### Added

@@ -30,7 +30,7 @@ extern "C" {
 #endif
 
 #define CF_VERSION_MAJOR 1
-#define CF_VERSION_MINOR 8
+#define CF_VERSION_MINOR 9
 #define CF_VERSION_PATCH 0
 
 #define CF_VERSION_STRINGIFY_(x) #x
@@ -66,7 +66,7 @@ CF_API const char* cf_build_id(void);
 /* The build profile this library was built with (D-105): "default",
    "minimal", "file:acme", or "unspecified" for a build of the sources
    that named none. Never NULL. */
-CF_EXPERIMENTAL(1, 8) const char* cf_build_profile(void);
+CF_API const char* cf_build_profile(void);
 
 /* What this build can do, as a NUL-terminated list: "ini", "json",
    "real", and so on. Recorded in the provenance report as well, so a

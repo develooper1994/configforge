@@ -344,7 +344,7 @@ CF_API const char* cf_source_file_format(const cf_source* s, cf_detect_how* how)
    (a byte-order mark said so), or the one named in the flags, such as
    "windows-1254". NULL before a load and for any other kind of source.
    (1.8, D-108) */
-CF_EXPERIMENTAL(1, 8) const char* cf_source_file_encoding(const cf_source* s);
+CF_API const char* cf_source_file_encoding(const cf_source* s);
 
 /* A .env file: the same key mapping as the environment, because a .env
    file is an environment written down. Unlike the environment it

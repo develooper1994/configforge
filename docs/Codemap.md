@@ -1239,9 +1239,9 @@
 - #define cf_tlv_codec 432
 - struct cf_compose 436-445
 - #define CF_COMPOSE_INIT 447
-- #define cf_codec_compose 457
-- enum cf_detect_how 476-482
-- struct cf_detect 487-491
+- #define cf_codec_compose 456
+- enum cf_detect_how 475-481
+- struct cf_detect 486-490
 `lib/serialize/include/configforge/cf_serialize_version.h`
 - #define CONFIGFORGE_CF_SERIALIZE_VERSION_H 11
 - #define CF_SERIALIZE_VERSION_MAJOR 23

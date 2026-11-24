@@ -109,13 +109,13 @@ CF_API const char* cf_code_description(cf_code c);
 
 /* The name ("number-range") and description of a reason. Returns "?" and
    "unknown", respectively, for an unknown value. */
-CF_EXPERIMENTAL(1, 8) const char* cf_reason_name(int reason);
-CF_EXPERIMENTAL(1, 8) const char* cf_reason_description(int reason);
+CF_API const char* cf_reason_name(int reason);
+CF_API const char* cf_reason_description(int reason);
 
 /* Sets where (file NULL, line, col) and reason on an error whose message
    is already set, where e->size reaches them. NULL is ignored. */
-CF_EXPERIMENTAL(1, 8) void cf_error_place(cf_error* e, int reason, unsigned int line,
-                                          unsigned int col);
+CF_API void cf_error_place(cf_error* e, int reason, unsigned int line,
+                           unsigned int col);
 
 #ifdef __cplusplus
 }
