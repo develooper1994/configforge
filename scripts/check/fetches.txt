@@ -1,0 +1,24 @@
+# Every download in a workflow or a script, and how it is held. One line a
+# fetch: file <TAB> URL prefix as written there (up to the first $, " or
+# space; - for a line with no URL) <TAB> sha256 <where it is checked>,
+# commit <40-hex or where> or data <why no code runs from it>.
+# scripts/check/fetches.py (gate.fetches) fails on a fetch line with no
+# entry and on an entry with no line. docs/Dependencies.md, "Fetches".
+.github/workflows/ci.yml	https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/	sha256 the next line, sha256sum -c (job secrets)
+.github/workflows/ci.yml	https://github.com/google/osv-scanner/releases/download/v2.7.0/	sha256 the next line, sha256sum -c (job osv)
+.github/workflows/ci.yml	https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2/	sha256 the next line, sha256sum -c (job lint)
+.github/workflows/ci.yml	https://github.com/facebook/infer/releases/download/v1.3.0/	sha256 the next line, sha256sum -c (job infer)
+.github/workflows/docs.yml	https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2/	sha256 the next line, sha256sum -c
+.github/workflows/release.yml	https://git.musl-libc.org/cgit/musl/plain/COPYRIGHT?h=v	data musl's COPYRIGHT text, shipped in the archive's third-party notices; only grep -q reads it, nothing runs from it
+scripts/bench/publish.sh	-	data git fetch of this repository's own bench-history branch (benchmark numbers); nothing runs from it
+scripts/buildenv/freebsd.sh	-	sha256 CHECKSUM.SHA256 from the same server, compared with sha256sum before the image is used (the lines after the download)
+scripts/buildenv/setup.sh	-	sha256 rustup-init.sha256 from the same server, compared before rustup-init runs (the lines after the download)
+scripts/buildenv/setup.sh	https://github.com/lycheeverse/lychee/releases/download/lychee-v	sha256 LYCHEE_SHA256 pinned in this file, sha256sum -c on the next line
+scripts/buildenv/setup.sh	https://github.com/gitleaks/gitleaks/releases/download/v	sha256 GITLEAKS_SHA256 pinned in this file, sha256sum -c on the next line
+scripts/buildenv/setup.sh	https://github.com/google/osv-scanner/releases/download/v	sha256 OSV_SCANNER_SHA256 pinned in this file, sha256sum -c on the next line
+scripts/buildenv/setup.sh	https://github.com/facebook/infer/releases/download/v	sha256 INFER_SHA256 pinned in this file, sha256sum -c on the next line
+scripts/buildenv/wsl-distro.ps1	-	sha256 SHA256SUMS from the same server, compared with Get-FileHash before the tarball is imported (the lines after the download)
+scripts/release/release_local.sh	https://git.musl-libc.org/cgit/musl/plain/COPYRIGHT?h=v	data musl's COPYRIGHT text, shipped in the archive's third-party notices; only grep -q reads it, nothing runs from it
+scripts/work/land.sh	-	data git fetch of this repository's origin, run by the maintainer's own landing script; no foreign code
+scripts/work/work.py	-	data git fetch of this repository's origin, run by the maintainer's own landing step; no foreign code
+.github/workflows/ci.yml	https://github.com/microsoft/vcpkg.git	commit 2f8bf7a5bad48aaef99d80b221fca712f016ab8f (job vcpkg, fetched by commit)

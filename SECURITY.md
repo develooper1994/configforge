@@ -17,6 +17,13 @@ it can be tested, with an advisory published when it is released. The fix
 is credited to you in the CHANGELOG unless you ask otherwise. If a week
 passes without an answer, say so on the advisory: it has been missed.
 
+## Verifying a release
+
+Every file a release uploads, the Linux archive's SBOM
+(`configforge-<v>-linux-x86_64-musl.spdx.json`) included, is listed in
+`SHA256SUMS` and carries a build provenance attestation:
+`gh attestation verify <file> -R develooper1994/configforge`.
+
 ## Supported versions
 
 Only the latest minor version of the current major version (the newest

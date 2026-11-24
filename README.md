@@ -439,7 +439,8 @@ uploaded archives, not GitHub's generated source downloads. From 1.3.0
 each uploaded file also has a signed provenance attestation - which
 workflow, commit and runner built it - that
 `gh attestation verify <file> -R develooper1994/configforge` checks. The Linux
-one is built against musl and linked statically:
+archive's SBOM is published beside it as `configforge-<v>-linux-x86_64-musl.spdx.json`
+and verified the same way. The Linux archive is built against musl and linked statically:
 `bin/configforge` and `bin/configforge-doctor` run on any x86-64 Linux
 with nothing installed beside them, and the Windows `configforge.exe` and
 `configforge-doctor.exe` need no Visual C++ redistributable.

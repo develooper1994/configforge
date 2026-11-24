@@ -146,5 +146,22 @@ build or test on a machine that already has the tools.
 | tinycbor | MIT | the benchmark's comparison, `bench/compare/`, fetched by `scripts/bench/fetch.cmake` at a pinned commit, built by CI only, never shipped |
 | inih | BSD-3-Clause | the benchmark's comparison, `bench/compare/`, fetched by `scripts/bench/fetch.cmake` at a pinned commit, built by CI only, never shipped |
 | the `alpine:3.20` image (musl, BusyBox, Alpine's gcc) | MIT; GPL-2.0-only; GPL-3.0-or-later with the runtime exception | the Alpine CI job, and the release's static Linux build. Static linking puts musl's code in Doctor, so the archive carries musl's `COPYRIGHT`, fetched from musl's repository at the version linked |
+| `actions/dependency-review-action` | MIT | `.github/workflows/dependency-review.yml`: a pull request that adds a dependency with a moderate or worse vulnerability, or under GPL-2.0-only, GPL-3.0-only or AGPL-3.0-only, fails |
 | GitHub CLI (`gh`, on the runner) | MIT | the release workflow: creating the release |
 | Ubuntu packages: libkqueue-dev, cppcheck, clang, clang-tidy, clang-format, locales | as above | the jobs that name them |
+
+## 4. Fetches
+
+No code reaches a build of this repository unpinned and unseen. Every line
+of a workflow, script, CMake file, benchmark or packaging file that
+downloads or clones (`git clone`, `git fetch`, `curl -`, `wget `,
+`Invoke-WebRequest`, `file(DOWNLOAD`, `FetchContent_Declare`,
+`ExternalProject_Add`) has an entry in `scripts/check/fetches.txt`: the
+file, the URL prefix, and how it is held: `sha256` (and where it is
+checked), `commit` (the 40-hex, or where it is), or `data` (why no code
+runs from it). `gate.fetches` fails on a fetch line with no entry and on
+an entry with no line; it does not prove the hash is checked, the third
+field is for the reviewer. `gate.permissions` holds every workflow's
+top-level token read-only. The benchmark's and the conformance suites'
+fetches (`scripts/bench/fetch.cmake`, `scripts/verify.cmake`) are by commit
+and are not seen by the gate, which looks for the commands as written.

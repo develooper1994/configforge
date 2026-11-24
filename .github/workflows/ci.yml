@@ -239,7 +239,11 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: |
-          git clone --depth 1 https://github.com/microsoft/vcpkg.git "$RUNNER_TEMP/vcpkg"
+          # vcpkg master on 2026-11-24; moved by hand
+          git init -q "$RUNNER_TEMP/vcpkg"
+          cd "$RUNNER_TEMP/vcpkg"
+          git fetch -q --depth 1 https://github.com/microsoft/vcpkg.git 2f8bf7a5bad48aaef99d80b221fca712f016ab8f
+          git checkout -q FETCH_HEAD
           "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
       - run: >-
           "$RUNNER_TEMP/vcpkg/vcpkg" install configforge

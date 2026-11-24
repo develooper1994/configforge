@@ -1,0 +1,22 @@
+name: dependency-review
+on: pull_request
+
+# A pull request that adds a dependency with a known vulnerability, or
+# one under a copyleft licence the zlib-licensed project cannot carry
+# (it would bind its users), fails here. Not a required check until the
+# maintainer makes it one in the repository's settings. It reads GitHub's
+# dependency graph, which a public repository has on by default.
+permissions:
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
+        with:
+          fail-on-severity: moderate
+          deny-licenses: GPL-2.0-only, GPL-3.0-only, AGPL-3.0-only

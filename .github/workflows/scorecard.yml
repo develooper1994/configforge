@@ -8,7 +8,8 @@ on:
   workflow_dispatch:
 
 # Read-only unless a job asks for more.
-permissions: read-all
+permissions:
+  contents: read
 
 # OpenSSF Scorecard: the repository's practices measured from outside, the
 # result published at scorecard.dev and shown by the badge in README.md.

@@ -24,6 +24,7 @@ verify step runs), `generate/` (what the build writes from the sources),
 | `work/brief.py <card id>` | prints the standard worker instructions, the card and its cited sections. `--max-bytes N` reports briefs over the byte budget |
 | `generate/limits.cmake` | `-DWRITE=docs/Limits.md` regenerates the limits page's generated blocks from the build options and the sources; `gate.limits` checks the page is current and that the decisions, tests and links it names exist |
 | `generate/amalgamate.py` | generates the single-file distribution |
+| `check/fetches.py`, `check/permissions.py` | every download in a workflow or a script listed in `check/fetches.txt` with how it is held, a commit or a SHA-256 (`gate.fetches`); every workflow's top-level token read-only (`gate.permissions`) |
 | `check/check_formats.py`, `check/check_text.py` | every format string against what `cf_fmt` supports (`gate.formats`); every tracked text file without a NUL byte or a carriage return (`gate.text`) |
 | `release/release_local.sh`, `release/release_local.ps1` | the release workflow's jobs run on this machine, from a tag: amalgamation and static musl Linux (podman), and Windows (MSVC) - for when Actions cannot run |
 | `release/package_rust.cmake` | `-DWORK=<new-directory>` stages the C sources and examples inside a standalone crate, runs `cargo package --locked` with verification, then tests the unpacked package; never publishes |
