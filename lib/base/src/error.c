@@ -48,6 +48,40 @@ const char* cf_reason_name(int reason) {
     return "?";
 }
 
+/* One entry a reason, indexed by its value, in the order of cf_reason.def. */
+static const char* const severity_of[] = {
+    "none",    "error",   "error",   "error",   "error",   "error",  "error",
+    "error",   "warning", "warning", "warning", "error",   "error",  "error",
+    "warning", "error",   "error",   "error",   "warning", "warning"};
+
+static const char* const weakness_of[] = {
+    "",        "", "CWE-176", "", "", "",        "", "", "CWE-674", "CWE-770",
+    "CWE-400", "", "",        "", "", "CWE-694", "", "", "",        ""};
+
+/* A reason added to cf_reason.def without a row here stops the build. */
+typedef char cf_reason_severity_size[(sizeof severity_of / sizeof severity_of[0] ==
+                                      (size_t)CF_REASON_STORAGE + 1)
+                                         ? 1
+                                         : -1];
+typedef char cf_reason_weakness_size[(sizeof weakness_of / sizeof weakness_of[0] ==
+                                      (size_t)CF_REASON_STORAGE + 1)
+                                         ? 1
+                                         : -1];
+
+const char* cf_reason_severity(int reason) {
+    if (reason < 0 || reason > CF_REASON_STORAGE) {
+        return "?";
+    }
+    return severity_of[reason];
+}
+
+const char* cf_reason_weakness(int reason) {
+    if (reason < 0 || reason > CF_REASON_STORAGE) {
+        return "";
+    }
+    return weakness_of[reason];
+}
+
 const char* cf_reason_description(int reason) {
     switch (reason) {
 #define CF_REASON_X(sym, name, desc)                                                   \

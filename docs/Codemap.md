@@ -43,12 +43,16 @@
 - cf_code_name 16-25
 - cf_code_description 27-36
 - cf_reason_name 38-49
-- cf_reason_description 51-62
-- cf_error_place 64-71
-- cf_error_clear 73-82
-- cf_error_copy 84-101
-- copy_bounded 103-119
-- cf_error_set 121-146
+- typedef cf_reason_severity_size 62
+- typedef cf_reason_weakness_size 66
+- cf_reason_severity 71-76
+- cf_reason_weakness 78-83
+- cf_reason_description 85-96
+- cf_error_place 98-105
+- cf_error_clear 107-116
+- cf_error_copy 118-135
+- copy_bounded 137-153
+- cf_error_set 155-180
 `lib/base/src/key.c`
 - cf_key_valid 11-42
 `lib/base/src/value.c`

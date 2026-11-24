@@ -7,6 +7,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- `cf_reason_severity` and `cf_reason_weakness` (experimental in 1.9): for
+  every refusal reason, `error`, `warning` or `none`, and the CWE id the
+  refusal defends (`CWE-674` for depth, an empty string for most).
 - The vector library has a word-at-a-time backend (`lanes_swar()`, C89,
   words read with `memcpy`), built with `CF_LANES_BACKENDS` `c89` or `all`;
   `scalar` builds the reference alone. `cf_bench lanes` measures each

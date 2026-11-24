@@ -89,7 +89,7 @@ Document refusals also carry a reason and, where known, a line and column.
 - [`cf_emit.h`](#cf_emith) - 1
 - [`cf_encoding.h`](#cf_encodingh) - 4
 - [`cf_entry.h`](#cf_entryh) - 14
-- [`cf_error.h`](#cf_errorh) - 9
+- [`cf_error.h`](#cf_errorh) - 11
 - [`cf_explain.h`](#cf_explainh) - 4
 - [`cf_flatten.h`](#cf_flattenh) - 10
 - [`cf_image.h`](#cf_imageh) - 10
@@ -1930,7 +1930,7 @@ Implementation: [`cf_key_valid` (lib/base/src/key.c)](https://github.com/develoo
 CF_API void cf_error_clear(cf_error* e);
 ```
 
-Implementation: [`cf_error_clear` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L73).
+Implementation: [`cf_error_clear` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L107).
 
 Empties `e`: code CF_OK, key, source, message, place and reason empty. `size` is
 kept, so a cleared error can be reused. NULL is ignored.
@@ -1939,7 +1939,7 @@ kept, so a cleared error can be reused. NULL is ignored.
 CF_API void cf_error_copy(cf_error* dst, const cf_error* src);
 ```
 
-Implementation: [`cf_error_copy` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L84).
+Implementation: [`cf_error_copy` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L118).
 
 What `src` says, copied into `dst` as far as `dst` has room: 1.0's
 fields always, a later field where dst->size covers it. If src->size
@@ -1950,7 +1950,7 @@ kept. Safe with NULL on either side.
 CF_API cf_bool cf_error_set(cf_error* e, cf_code code, const char* key, const char* source, const char* fmt, ...);
 ```
 
-Implementation: [`cf_error_set` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L121).
+Implementation: [`cf_error_set` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L155).
 
 Set code, key, source and a formatted message, clearing place and reason.
 Safe with a NULL
@@ -1970,16 +1970,30 @@ CF_API const char* cf_reason_name(int reason);
 CF_API const char* cf_reason_description(int reason);
 ```
 
-Implementation: [`cf_reason_name` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L38), [`cf_reason_description` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L51).
+Implementation: [`cf_reason_name` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L38), [`cf_reason_description` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L85).
 
 The name ("number-range") and description of a reason. Returns "?" and
 "unknown", respectively, for an unknown value.
 
 ```c
+CF_EXPERIMENTAL(1, 9) const char* cf_reason_severity(int reason);
+CF_EXPERIMENTAL(1, 9) const char* cf_reason_weakness(int reason);
+```
+
+Experimental since 1.9: outside the 1.x promise until the next minor release makes it promised or removes it.
+
+Implementation: [`cf_reason_severity` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L71), [`cf_reason_weakness` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L78).
+
+Whether a refusal is "error" (the input is malformed by its format's own
+rules), "warning" (well formed, refused for a limit or a policy) or "none";
+and the CWE it defends, such as "CWE-674", or "" for none. "?" and "" for
+an unknown value. Experimental in 1.9.
+
+```c
 CF_API void cf_error_place(cf_error* e, int reason, unsigned int line, unsigned int col);
 ```
 
-Implementation: [`cf_error_place` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L64).
+Implementation: [`cf_error_place` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L98).
 
 Sets where (file NULL, line, col) and reason on an error whose message
 is already set, where e->size reaches them. NULL is ignored.

@@ -111,6 +111,12 @@ CF_API const char* cf_code_description(cf_code c);
    "unknown", respectively, for an unknown value. */
 CF_API const char* cf_reason_name(int reason);
 CF_API const char* cf_reason_description(int reason);
+/* Whether a refusal is "error" (the input is malformed by its format's own
+   rules), "warning" (well formed, refused for a limit or a policy) or "none";
+   and the CWE it defends, such as "CWE-674", or "" for none. "?" and "" for
+   an unknown value. Experimental in 1.9. */
+CF_EXPERIMENTAL(1, 9) const char* cf_reason_severity(int reason);
+CF_EXPERIMENTAL(1, 9) const char* cf_reason_weakness(int reason);
 
 /* Sets where (file NULL, line, col) and reason on an error whose message
    is already set, where e->size reaches them. NULL is ignored. */

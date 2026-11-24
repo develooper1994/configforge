@@ -477,7 +477,10 @@ left out, say), `policy` and `memory`.
 
 When a reader refuses a document, `reason` identifies the cause across
 formats. Use `cf_reason_name` for its name and `cf_reason_description`
-for its meaning. Treat a reason your program does not know as `syntax`.
+for its meaning. `cf_reason_severity` says whether the input was malformed
+(`error`) or well formed and over a limit (`warning`), and
+`cf_reason_weakness` names the CWE a defence answers, or an empty string;
+both are experimental in 1.9. Treat a reason your program does not know as `syntax`.
 `where.line` and `where.col` start at 1. A zero means that coordinate is
 unavailable. The file name is in `source` and `where.file` is always NULL.
 Binary readers keep the byte offset in the message.

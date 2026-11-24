@@ -10,6 +10,21 @@
 
 #define COUNT(a) (sizeof(a) / sizeof((a)[0]))
 
+typedef struct {
+    const char* severity;
+    const char* weakness;
+} reason_class;
+
+/* One row a reason, in the order of cf_reason.def. */
+static const reason_class classes[] = {
+    {"none", ""},           {"error", ""},          {"error", "CWE-176"},
+    {"error", ""},          {"error", ""},          {"error", ""},
+    {"error", ""},          {"error", ""},          {"warning", "CWE-674"},
+    {"warning", "CWE-770"}, {"warning", "CWE-400"}, {"error", ""},
+    {"error", ""},          {"error", ""},          {"warning", ""},
+    {"error", "CWE-694"},   {"error", ""},          {"error", ""},
+    {"warning", ""},        {"warning", ""}};
+
 static const char* const names[] = {"none",
                                     "syntax",
                                     "utf-8",
@@ -100,6 +115,16 @@ static void test_size(void) {
     check_text(cf_reason_description(-1), "unknown", "negative reason description");
     check_text(cf_reason_description(last + 1), "unknown",
                "unknown reason description");
+
+    for (i = 0; i < COUNT(classes); ++i) {
+        check_text(cf_reason_severity((int)i), classes[i].severity, "reason severity");
+        check_text(cf_reason_weakness((int)i), classes[i].weakness, "reason weakness");
+    }
+    check(COUNT(classes) == (size_t)(last + 1), "a class for every reason");
+    check_text(cf_reason_severity(-1), "?", "negative reason severity");
+    check_text(cf_reason_severity(last + 1), "?", "unknown reason severity");
+    check_text(cf_reason_weakness(-1), "", "negative reason weakness");
+    check_text(cf_reason_weakness(last + 1), "", "unknown reason weakness");
 }
 
 #if CF_WITH_TLV
