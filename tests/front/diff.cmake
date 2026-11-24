@@ -194,7 +194,7 @@ check(
   SENTINEL
   a.json
   b.json)
-foreach(bad IN ITEMS [[{"bad":SENTINEL}]] [=[{"a":[[]]}]=] [[{"a":[{}]}]] "[]")
+foreach(bad IN ITEMS [[{"bad":SENTINEL}]] [=[{"a":[[]]}]=] "[]")
   file(WRITE "${WORK}/bad.json" "${bad}")
   check(
     2
@@ -289,6 +289,95 @@ if(HAVE_YAML)
   file(WRITE "${WORK}/ny.yaml"
        "db:\n  peers:\n    - SENTINEL-A\n    - localhost\n")
   file(WRITE "${WORK}/nj.json" [[{"db":{"peers":["SENTINEL-A","localhost"]}}]])
+  check(
+    0
+    ""
+    ""
+    ny.yaml
+    nj.json)
+endif()
+
+# An array whose elements are all tables is compared element by element;
+# an element is named by its index, and each member by its path.
+nested([=[{"a":[{"x":1},{"x":2}]}]=] [=[{"a":[{"x":1},{"x":2}]}]=] 0 "")
+nested([=[{"a":[{"x":1},{"x":2}]}]=] [=[{"a":[{"x":1},{"x":3}]}]=] 1
+       "changed	$[\"a\"][1][\"x\"]
+")
+nested([=[{"a":[{"x":1}]}]=] [=[{"a":[{"x":1},{"x":2}]}]=] 1
+       "added	$[\"a\"][1][\"x\"]
+")
+nested([=[{"a":[{"x":1},{"x":2}]}]=] [=[{"a":[{"x":1}]}]=] 1
+       "removed	$[\"a\"][1][\"x\"]
+")
+nested(
+  [=[{"a":[{"x":1},{"x":2}]}]=]
+  [=[{"a":[{"x":2},{"x":1}]}]=]
+  1
+  "changed	$[\"a\"][0][\"x\"]
+changed	$[\"a\"][1][\"x\"]
+")
+set(el_l "")
+set(el_r "")
+foreach(k RANGE 0 10)
+  set(v "${k}")
+  if(k EQUAL 2 OR k EQUAL 10)
+    set(v "99")
+  endif()
+  string(APPEND el_l "{\"x\":${k}},")
+  string(APPEND el_r "{\"x\":${v}},")
+endforeach()
+string(REGEX REPLACE ",$" "" el_l "${el_l}")
+string(REGEX REPLACE ",$" "" el_r "${el_r}")
+nested("{\"a\":[${el_l}]}" "{\"a\":[${el_r}]}" 1 "changed	$[\"a\"][2][\"x\"]
+changed	$[\"a\"][10][\"x\"]
+")
+nested([=[{"a":[{"x":1,"y":2}]}]=] [=[{"a":[{"y":2,"x":1}]}]=] 0 "")
+nested(
+  [=[{"a":[{"p":[1,2],"t":{"k":1}}]}]=]
+  [=[{"a":[{"p":[1,3],"t":{"k":2}}]}]=]
+  1
+  "changed	$[\"a\"][0][\"p\"]
+changed	$[\"a\"][0][\"t\"][\"k\"]
+")
+nested([=[{"db":{"hosts":[{"n":1}]}}]=] [=[{"db":{"hosts":[{"n":2}]}}]=] 1
+       "changed	$[\"db\"][\"hosts\"][0][\"n\"]
+")
+nested([=[{"a":[1]}]=] [=[{"a":[{"x":1}]}]=] 1 "changed	$[\"a\"]
+added	$[\"a\"][0][\"x\"]
+")
+nested([=[{"a":[{"x":1}]}]=] [=[{}]=] 1 "removed	$[\"a\"]
+removed	$[\"a\"][0][\"x\"]
+")
+nested([=[{"a":[{}]}]=] [=[{}]=] 1 "removed	$[\"a\"]
+")
+nested([=[{"a":[{}]}]=] [=[{"a":[{},{}]}]=] 0 "")
+nested([=[{"a":[{"k":"SENTINEL-A"}]}]=] [=[{"a":[{"k":"SENTINEL-B"}]}]=] 1
+       "changed	$[\"a\"][0][\"k\"]
+")
+foreach(
+  bad IN
+  ITEMS [=[{"a":[{"x":1},2]}]=]
+        [=[{"a":[1,{"x":1}]}]=]
+        [=[{"a":[{"x":[{"y":1}]}]}]=]
+        [=[{"a":[{"x":1}],"a":[{"y":1}]}]=]
+        [=[{"a":[{"x":1}],"a":2}]=]
+        [=[{"a":2,"a":[{"x":1}]}]=])
+  file(WRITE "${WORK}/bad.json" "${bad}")
+  check(
+    2
+    ""
+    "${rerr}"
+    a.json
+    bad.json)
+endforeach()
+if(HAVE_YAML)
+  file(
+    WRITE "${WORK}/ny.yaml"
+    "a:
+  - x: s
+  - x: t
+")
+  file(WRITE "${WORK}/nj.json" [=[{"a":[{"x":"s"},{"x":"t"}]}]=])
   check(
     0
     ""

@@ -66,7 +66,8 @@ the program's exit code.
 configforge diff [--as-left FORMAT] [--as-right FORMAT] [--] LEFT RIGHT
 ```
 
-Compare two files containing nested mappings of scalars and scalar arrays.
+Compare two files containing nested mappings of scalars, scalar arrays and
+arrays of tables.
 Each side uses its file extension, then its content, to select a reader. To name
 a format explicitly, place its option before the paths. Use `--`
 before paths beginning with a dash. Both paths name files, even `-`.
@@ -81,8 +82,20 @@ missing one. A scalar is named by its whole path, so `{"a.b":1}` and
 A named array of scalars is compared in order and reported once at its
 whole path. For example, swapping the items in `{"peers":["a","b"]}`
 prints `changed` for `$["peers"]`. An empty array counts as a value, so
-adding one produces an `added` line. Root arrays and arrays containing
-tables or other arrays are refused.
+adding one produces an `added` line.
+
+An array whose elements are all tables is compared by element: each
+member of element 3 of `hosts` is named by its own path, `$["hosts"][3]["name"]`,
+and the index is a segment printed without quotes, sorted by number before
+any name. Elements are numbered from 0 in the order the reader delivers them,
+so reordering elements shows as changes. The array itself is one entry, so
+removing it prints `removed` for `$["hosts"]` and for each member; adding
+an element prints only its members. An empty element has no members, so
+`[{}]` equals `[{}, {}]`. Only one level is compared: an element may hold
+scalar arrays and tables, but an array of tables inside an element, arrays of
+arrays, arrays mixing tables and scalars, and root arrays are refused. A
+name that holds an array of tables and is defined twice in one table is
+refused as well, the one exception to last-wins.
 
 Each output line gives `added`, `removed` or `changed`, a tab and a path
 such as `$["port"]` or `$["db"]["port"]`. Paths appear in order, segment

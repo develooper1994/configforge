@@ -1382,8 +1382,9 @@ from parts that exist:
   scalar mappings across readable formats, ignoring key order and
   scalar spelling. It lists changed keys without values or digests.
   Nested tables, named by their whole path, were built in N-5. The first
-  array slice compares named arrays of scalars (card N-8). What is left:
-  arrays containing tables or arrays, and contract-aware secret digests.
+  array slice compares named arrays of scalars (card N-8), and N-14
+  compares arrays of tables element by element. What is left: arrays of
+  arrays, contract-aware secret digests.
   With a contract, units compared as values (`30s` is `30000ms`, with 1.10.0's durations
   and sizes), which plain semantic diffs (dyff, graphtage) do not do.
 * 🟨 **Git shows configuration changes by value** (card N-3: the difftool recipe). N-3 adds a
@@ -1470,8 +1471,9 @@ maintainer; each is a card to write.
    makes "the same bad input refused the same way in every format" a
    test that can be written.
 3. **`configforge diff` with the contract** (card N-14: arrays of
-   tables) (People who change configuration). Arrays of tables and arrays, then units compared as
-   values (`30s` is `30000ms`); N-1, N-5 and N-8 did the scalar cases.
+   tables) (People who change configuration). Arrays of tables are done
+   (N-14); arrays of arrays, then units compared as values (`30s` is
+   `30000ms`) remain; N-1, N-5 and N-8 did the scalar cases.
 4. **A pull request that changes configuration, reviewed without a
    report** (People who change configuration). Done in 1.9.0 (card N-15):
    the comment lists the changed keys. What waits is the contract read by

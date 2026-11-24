@@ -1,5 +1,8 @@
-/* Compare nested mappings of scalars and scalar arrays by their typed
-   reader events. */
+/* Compare nested mappings of scalars, scalar arrays and arrays of tables by
+   their typed reader events. An array whose elements are all tables is
+   compared element by element: element i of the array a is the path segment
+   pair ["a"][i], and each member of it is an entry. One level only: an
+   element may hold scalar arrays and tables but no array of tables. */
 #include "configforge/cf_serialize.h"
 
 #include <stdio.h>
@@ -10,10 +13,13 @@
 #define DIFF_FACTOR 64u
 #define DIFF_SEGMENTS 64u
 
+/* A name segment is {p, n}; an index segment has p == NULL and n the number. */
 typedef struct seg {
     const char* p;
     size_t      n;
 } seg;
+
+enum { ENTRY_SCALAR, ENTRY_ARRAY, ENTRY_TABLES };
 
 typedef struct array_item {
     struct array_item* next;
@@ -25,7 +31,7 @@ typedef struct entry {
     const seg*    path;
     size_t        depth;
     size_t        ordinal;
-    cf_bool       is_array;
+    int           kind;
     union {
         cf_value    scalar;
         array_item* items;
@@ -43,6 +49,10 @@ typedef struct side {
     cf_bool      seen;
     seg*         stack;
     array_item** array_next;
+    entry*       array;
+    cf_bool      in_element;
+    size_t       element;
+    size_t       element_tables;
 } side;
 
 static void* reserve_work(void* ctx, size_t n) {
@@ -71,7 +81,28 @@ static char* copy_span(side* s, const char* p, size_t n) {
 
 static cf_bool begin_table(void* ctx, const char* name, size_t n) {
     side* s = (side*)ctx;
-    if (s->array_next != NULL) {
+    if (name == NULL && s->array != NULL) {
+        entry* a = s->array;
+        if (s->in_element || s->tables + 2 > DIFF_SEGMENTS) {
+            return CF_FALSE;
+        }
+        if (a->kind == ENTRY_ARRAY) {
+            if (a->value.items != NULL) {
+                return CF_FALSE;
+            }
+            a->kind       = ENTRY_TABLES;
+            s->array_next = NULL;
+            s->element    = 0;
+        }
+        s->stack[s->tables - 1] = a->path[a->depth - 1];
+        s->stack[s->tables].p   = NULL;
+        s->stack[s->tables].n   = s->element++;
+        s->tables += 2;
+        s->element_tables = s->tables;
+        s->in_element     = CF_TRUE;
+        return CF_TRUE;
+    }
+    if (s->array_next != NULL || (s->array != NULL && !s->in_element)) {
         return CF_FALSE;
     }
     if (name == NULL) {
@@ -130,16 +161,19 @@ static entry* record_entry(side* s, const char* name, size_t n) {
 static cf_bool begin_array(void* ctx, const char* name, size_t n) {
     side*  s = (side*)ctx;
     entry* e;
-    if (s->array_next != NULL) {
+    if (s->array_next != NULL || (s->array != NULL && !s->in_element)) {
         return CF_FALSE;
     }
     e = record_entry(s, name, n);
     if (e == NULL) {
         return CF_FALSE;
     }
-    e->is_array    = CF_TRUE;
+    e->kind        = ENTRY_ARRAY;
     e->value.items = NULL;
     s->array_next  = &e->value.items;
+    if (!s->in_element) {
+        s->array = e;
+    }
     return CF_TRUE;
 }
 
@@ -147,6 +181,18 @@ static cf_bool end_container(void* ctx) {
     side* s = (side*)ctx;
     if (s->array_next != NULL) {
         s->array_next = NULL;
+        if (!s->in_element) {
+            s->array = NULL;
+        }
+        return CF_TRUE;
+    }
+    if (s->in_element && s->tables == s->element_tables) {
+        s->tables -= 2;
+        s->in_element = CF_FALSE;
+        return CF_TRUE;
+    }
+    if (s->array != NULL && !s->in_element) {
+        s->array = NULL;
         return CF_TRUE;
     }
     if (s->tables == 0) {
@@ -189,7 +235,7 @@ static cf_bool scalar(void* ctx, const char* name, size_t n, const cf_value* v,
     if (e == NULL) {
         return CF_FALSE;
     }
-    e->is_array = CF_FALSE;
+    e->kind = ENTRY_SCALAR;
     return copy_value(s, &e->value.scalar, v);
 }
 
@@ -197,10 +243,21 @@ static int key_order(const entry* a, const entry* b) {
     size_t depth = a->depth < b->depth ? a->depth : b->depth;
     size_t i;
     for (i = 0; i < depth; ++i) {
-        const seg* x   = &a->path[i];
-        const seg* y   = &b->path[i];
-        size_t     n   = x->n < y->n ? x->n : y->n;
-        int        cmp = memcmp(x->p, y->p, n);
+        const seg* x = &a->path[i];
+        const seg* y = &b->path[i];
+        size_t     n;
+        int        cmp;
+        if (x->p == NULL || y->p == NULL) {
+            if (x->p != y->p) {
+                return x->p == NULL ? -1 : 1;
+            }
+            if (x->n != y->n) {
+                return x->n > y->n ? 1 : -1;
+            }
+            continue;
+        }
+        n   = x->n < y->n ? x->n : y->n;
+        cmp = memcmp(x->p, y->p, n);
         if (cmp != 0) {
             return cmp;
         }
@@ -219,6 +276,33 @@ static int entry_order(const void* pa, const void* pb) {
         return cmp;
     }
     return (b->ordinal > a->ordinal) - (b->ordinal < a->ordinal);
+}
+
+static size_t next_key(const side* s, size_t i) {
+    const entry* first = s->ordered[i++];
+    while (i < s->count && key_order(first, s->ordered[i]) == 0) {
+        ++i;
+    }
+    return i;
+}
+
+/* A name that holds an array of tables is defined once: a repeat would leave
+   the earlier elements' members behind. */
+static cf_bool no_repeated_tables(const side* s) {
+    size_t i = 0;
+    while (i < s->count) {
+        size_t next = next_key(s, i);
+        if (next - i > 1) {
+            size_t k;
+            for (k = i; k < next; ++k) {
+                if (s->ordered[k]->kind == ENTRY_TABLES) {
+                    return CF_FALSE;
+                }
+            }
+        }
+        i = next;
+    }
+    return CF_TRUE;
 }
 
 static cf_bool read_side(side* s, const char* path, const char* format) {
@@ -253,7 +337,7 @@ static cf_bool read_side(side* s, const char* path, const char* format) {
     sink.reserve_work = reserve_work;
     sink.reserve_text = reserve_text;
     if (!cf_codec_decode(codec, &blob, &sink, &err) || !s->seen || s->tables != 0 ||
-        s->array_next != NULL) {
+        s->array_next != NULL || s->array != NULL || s->in_element) {
         return CF_FALSE;
     }
     if (s->count == 0) {
@@ -270,20 +354,15 @@ static cf_bool read_side(side* s, const char* path, const char* format) {
         s->ordered[e->ordinal] = e;
     }
     qsort((void*)s->ordered, s->count, sizeof *s->ordered, entry_order);
-    return CF_TRUE;
-}
-
-static size_t next_key(const side* s, size_t i) {
-    const entry* first = s->ordered[i++];
-    while (i < s->count && key_order(first, s->ordered[i]) == 0) {
-        ++i;
-    }
-    return i;
+    return no_repeated_tables(s);
 }
 
 static cf_bool write_segment(const seg* g) {
     static const char hex[] = "0123456789abcdef";
     size_t            i;
+    if (g->p == NULL) {
+        return fprintf(stdout, "[%lu]", (unsigned long)g->n) < 0 ? CF_FALSE : CF_TRUE;
+    }
     if (fputs("[\"", stdout) == EOF) {
         return CF_FALSE;
     }
@@ -322,10 +401,13 @@ static cf_bool write_change(const char* kind, const entry* e) {
 static cf_bool entry_equal(const entry* a, const entry* b) {
     const array_item* x;
     const array_item* y;
-    if (a->is_array != b->is_array) {
+    if (a->kind != b->kind) {
         return CF_FALSE;
     }
-    if (!a->is_array) {
+    if (a->kind == ENTRY_TABLES) {
+        return CF_TRUE;
+    }
+    if (a->kind == ENTRY_SCALAR) {
         return cf_value_equal(&a->value.scalar, &b->value.scalar);
     }
     x = a->value.items;

@@ -7,6 +7,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- `configforge diff` compares arrays whose elements are all tables: each
+  member of each element is an entry named by its path with the element's
+  index as a segment (`$["hosts"][1]["port"]`). One level; arrays of
+  arrays, mixed arrays and an array of tables inside an element stay
+  refused (N-14).
 - The Doctor action takes `config:` (path patterns) and, on a pull request,
   keeps one comment, apart from Doctor's, that lists the keys each matching
   file changed between the base and the head (`actions/doctor/changes.sh`,
