@@ -4,12 +4,12 @@ Landed on main this night, each alone with its CI green: style-1.8.0,
 P-4 (the wipe: -25% to -72% instructions), I-1 (the integration
 findings, with the full Linux verify all green), L-6 (docs/Codemap.md,
 scripts/work/brief.py), L-7 (CI 19 to 14 minutes), L-8 (doctor.api under
-MSan 615 s to 0.4), N-1 to N-8 (`configforge diff` with nested tables and
+MSan 615 s to 0.4), N-1 to N-10 (`configforge diff` with nested tables and
 arrays, the musl archive built twice and compared, a difftool recipe,
 YAML's single root, `cf_usage`, reload key-changed events). Every card of
 docs/Plan.md's index is done except those that wait for a release.
 
-1. **N-9** landed (ec0de1e): cppcheck on the libraries' own sources. Its style class (58 findings, listed in the card's notes) is the next card.
+1. **N-9** (ec0de1e) and **N-10** (67a451a): cppcheck on the libraries' own sources, its style class included.
 2. **The release**: 1.8.0's tag is the maintainer's. Before it: a full
    Linux verify on main (`CF_EXTRA="components;shared;conformance" python
    scripts/work/work.py verify main full`; it was green at I-1) and
