@@ -242,7 +242,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 67 | N-8 Compare scalar arrays by value in `configforge diff` | small | N-5 | done (7bbd943) |
 | 68 | N-9 cppcheck runs on both libraries' own sources | small | nothing | done (ec0de1e) |
 | 69 | N-10 cppcheck's style class on the libraries | small | N-9 | done (67a451a) |
-| 70 | N-11 Prove `cf_blob_skip_bom` with CBMC | small | nothing | open |
+| 70 | N-11 Prove `cf_blob_skip_bom` with CBMC | small | nothing | done (765de40) |
 
 ## Done, their cards removed
 
