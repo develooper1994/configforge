@@ -48,13 +48,23 @@ docs/Plan.md's index is done except those that wait for a release.
    accepted, input base64 `IwAj`), a fix for 1.8.1.
    Scratch directories `C:\d\cf-work\p2mut1..4` left by a worker
    (the safety check refused their removal): delete them by hand.
-3. **Next cards**: the Roadmap's sections marked "not yet cards" hold
+3. **L-9** (the Scorecard findings the project can fix: the dangerous
+   `workflow_run` checkout in bench.yml, pip and Docker pins, SECURITY.md)
+   was being carried on `origin/work/L-9` (worktree `.claude/worktrees/l9`)
+   at 2026-11-24 19:15. Check its last commit and CI (`gh run list
+   --branch work/L-9 --limit 1`); green: land it by tree (squash onto
+   main, the index row done with its hash); red: read the failing lines
+   and fix on the branch. BranchProtection, CodeReview, CIIBestPractices
+   and Maintained are the maintainer's (repository settings).
+   Then: the maintainer may switch the machine off (permission given):
+   `shutdown //s //t 60` after everything is pushed.
+4. **Next cards**: the Roadmap's sections marked "not yet cards" hold
    more; the way that worked tonight: an agent of the middle tier writes
    one card (in N-4's form) from one named section and carries it in its
    own worktree; the organiser lands it (conflicts in the card file, the
    index and CHANGELOG are both-sides additions; `docs/Codemap.md` is
    regenerated on Linux after every landing).
-4. L-3b waits for 1.9.0; P-2 and P-3 for 2.4.0.
+5. L-3b waits for 1.9.0; P-2 and P-3 for 2.4.0.
 
 Budgets at the stop: Claude weekly ~90%, Codex weekly ~95% (both reset
 2026-11-26 and later). Lessons are in docs/Maintaining.md ("Where the
