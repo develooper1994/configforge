@@ -37,10 +37,11 @@ that needs no decision, or weekly usage reaches 95%.
 
 Next, in this order; none waits on the maintainer:
 
-1. **L-10** (supply-chain hardening; docs/plan/L-tools.md), being
-   carried on `work/L-10` (worktree `.claude/worktrees/l10`). If its
-   branch has a green CI, land it; if it stopped half done, finish it
-   from the branch.
+1. **L-10** landed (c4a13af): every fetch held by `gate.fetches`
+   (`scripts/check/fetches.txt`), read-only workflow tokens by
+   `gate.permissions`, vcpkg pinned by commit, dependency review on pull
+   requests, the SBOM a release file. Its notes list the settings left
+   to the maintainer.
 2. **N-13**, **N-14**, **N-15** (docs/plan/N-next.md): written and
    decided. Carry each on its own branch and land it alone.
 3. **P-3** (docs/plan/P-word-at-a-time.md), open now that P-2 is done.
