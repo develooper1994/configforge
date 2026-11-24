@@ -21,6 +21,7 @@
 #error "this program is compiled with LANES_PREFIX_CF"
 #endif
 static const lanes_ops* (*prefixed_scalar)(void)     = cf_lanes_scalar;
+static const lanes_ops* (*prefixed_swar)(void)       = cf_lanes_swar;
 static unsigned (*prefixed_cpu)(void)                = cf_lanes_cpu;
 static unsigned (*prefixed_built)(void)              = cf_lanes_built;
 static const lanes_ops* (*prefixed_best)(void)       = cf_lanes_best;
@@ -28,12 +29,14 @@ static const lanes_ops* (*prefixed_by_isa)(unsigned) = cf_lanes_by_isa;
 static void (*prefixed_set_init)(lanes_set*, const unsigned char*,
                                  size_t)             = cf_lanes_set_init;
 #undef lanes_scalar
+#undef lanes_swar
 #undef lanes_by_isa
 #undef lanes_best
 #undef lanes_cpu
 #undef lanes_built
 #undef lanes_set_init
 const lanes_ops* lanes_scalar(void);
+const lanes_ops* lanes_swar(void);
 const lanes_ops* lanes_by_isa(unsigned isa);
 const lanes_ops* lanes_best(void);
 unsigned         lanes_cpu(void);
@@ -68,7 +71,19 @@ int main(void) {
           "the prefixed by_isa finds the prefixed table");
     check(lanes_by_isa(LANES_ISA_SCALAR) == b,
           "the unprefixed by_isa finds the unprefixed one");
-    check(prefixed_best() == a && lanes_best() == b, "each best is its own scalar");
+    /* Each copy has its own word backend, or none (scalar only) in both. */
+    check((prefixed_swar() == NULL) == (lanes_swar() == NULL),
+          "both copies built the same backends");
+    check(prefixed_swar() != lanes_swar() || lanes_swar() == NULL,
+          "the prefixed word backend is another copy too");
+    check(prefixed_best() == (prefixed_swar() != NULL ? prefixed_swar() : a) &&
+              lanes_best() == (lanes_swar() != NULL ? lanes_swar() : b),
+          "each best is its own copy's best");
+    if (lanes_swar() != NULL) {
+        check(prefixed_by_isa(prefixed_swar()->isa) == prefixed_swar() &&
+                  lanes_by_isa(lanes_swar()->isa) == lanes_swar(),
+              "each by_isa finds its own word backend");
+    }
     check(prefixed_cpu() == lanes_cpu(), "both detect the same processor");
     check(prefixed_built() == lanes_built(), "both built the same backends");
     check(strcmp(a->name, b->name) == 0 && a->isa == b->isa && a->size == b->size,

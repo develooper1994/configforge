@@ -198,7 +198,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 38g | L-3b Frama-C EVA on port, numeric and base | large | L-3; 1.9.0 under way | open |
 | 39 | P-1 The benchmark measures large documents, and says where time goes | medium | 1.7.0 released | done (90b6541) |
 | 55 | P-1b The other libraries beside ours, and a page CI keeps | large | P-1, A-1b | done (427ec6a) |
-| 57 | P-2 Word-at-a-time scans in C89, with the byte loop as reference | medium | P-1, A-3 | waits: 2.4.0; to be rewritten on D-101 |
+| 57 | P-2 The word-at-a-time backend of lanes, with the scalar loop as reference | medium | P-1, A-3 | open |
 | 58 | P-3 The scans P-1 found, a word at a time, kept only where they win | medium | P-2 | waits: P-2 |
 | 71 | I-2 1.9.0 opened: the 1.8 experimental functions settled (D-89) | small | 1.8.0 released | done (7146038) |
 | 72 | N-13 A reason's severity and weakness id | small | 1.9.0 opened (the D-89 decision; HANDOFF.md) | open |

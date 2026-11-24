@@ -67,7 +67,7 @@ SOURCES = [
     "numeric/src/numeric.c", "base/src/alloc.c",
     "text/src/utf8.c", "text/src/hex.c", "text/src/hash.c", "text/src/encoding.c", "text/src/place.c", "text/src/escape.c", "text/src/refs.c",
     "text/src/space.c", "text/src/track.c", "text/src/fail.c",
-    "lanes/src/lanes.c", "lanes/src/scalar.c",
+    "lanes/src/lanes.c", "lanes/src/scalar.c", "lanes/src/swar.c",
     "base/src/value.c", "config/src/core/keyspace.c", "config/src/core/define.c",
     "config/src/core/validate.c",
     "config/src/core/config.c", "config/src/core/iterate.c", "config/src/core/live.c",

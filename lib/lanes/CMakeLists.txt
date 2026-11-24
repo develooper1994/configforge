@@ -50,7 +50,8 @@ endfunction()
 add_library(lanes STATIC ${LANES_SOURCES})
 target_include_directories(
   lanes PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>)
-target_compile_definitions(lanes PRIVATE LANES_BUILDING_LIBRARY=1)
+target_compile_definitions(lanes PRIVATE LANES_BUILDING_LIBRARY=1
+                                         ${LANES_DEFINITIONS})
 lanes_target(lanes)
 
 if(BUILD_TESTING AND LANES_BUILD_TESTS)

@@ -2386,12 +2386,18 @@ static int run_allocation(void) {
     return 0;
 }
 
+/* lanes.c: the word backend of lanes against its scalar loops (P-2). */
+int run_lanes(int argc, char** argv);
+
 int main(int argc, char** argv) {
     static const size_t dflt[] = {100, 1000, 10000, 20000};
     int                 i;
 
     if (argc == 2 && strcmp(argv[1], "allocation") == 0) {
         return run_allocation();
+    }
+    if (argc >= 2 && strcmp(argv[1], "lanes") == 0) {
+        return run_lanes(argc, argv);
     }
     if (argc >= 2 && strcmp(argv[1], "docs") == 0) {
         return run_docs(argc, argv);

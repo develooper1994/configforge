@@ -30,8 +30,9 @@ foreach(t configforge configforge_serialize)
   target_sources(${t} PRIVATE ${LANES_SOURCES})
   target_include_directories(
     ${t} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/lanes/include>)
-  target_compile_definitions(${t} PRIVATE LANES_PREFIX_CF=1
-                                          LANES_BUILDING_LIBRARY=1)
+  target_compile_definitions(
+    ${t} PRIVATE LANES_PREFIX_CF=1 LANES_BUILDING_LIBRARY=1
+                 ${LANES_DEFINITIONS})
 endforeach()
 
 add_subdirectory(port)

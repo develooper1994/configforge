@@ -34,6 +34,7 @@ never race over a choice. The program asks for one and keeps it:
 | Call | Gives |
 | ---- | ----- |
 | `lanes_scalar()` | the reference, plain loops, always built |
+| `lanes_swar()` | the word-at-a-time backend, or NULL when it is not built |
 | `lanes_by_isa(LANES_ISA_x)` | that backend, or NULL when it was not built or this processor lacks it |
 | `lanes_best()` | the best built backend this processor runs |
 | `lanes_cpu()` | the `LANES_ISA_*` bits this processor runs |
@@ -55,16 +56,21 @@ A pointer may be NULL when `n` is 0. No function reads at or past `p + n`.
 
 ## Backends
 
-Only `scalar` is built so far; the word-at-a-time (`swar32`, `swar64`) and
-vector (`sse2`, `sse42`, `avx2`, `avx512`, `neon`, `sve`) backends come
-later, each added as a table and compared with the scalar one by the
-tests. `lanes_cpu()` is real already: `cpuid` and `xgetbv` on x86 (AVX2 and
+Two are built: `scalar`, and the word-at-a-time backend (`swar32` or
+`swar64`, by the width of `unsigned long`: C89, words read with `memcpy`,
+no pointer cast, no dependence on byte order). An operation of the word
+backend whose word body did not beat its loop in `cf_bench lanes` has the
+scalar function as its table entry. The vector backends (`sse2`, `sse42`,
+`avx2`, `avx512`, `neon`, `sve`) come later, each added as a table and
+compared with the scalar one by the tests. `lanes_cpu()` is real already: `cpuid` and `xgetbv` on x86 (AVX2 and
 AVX-512 counted only when the system saves their registers), the
 auxiliary vector on Linux Arm, NEON on any AArch64. The test prints it, so
 a CI log shows what each runner has.
 
 The option `CF_LANES_BACKENDS` (`scalar`, `c89` or `all`, default `all`)
-chooses what is compiled; today every value builds `scalar`.
+chooses what is compiled: `scalar` the reference alone (no word is read
+through `memcpy`), `c89` and `all` the word backend too (`all` adds the
+vector ones when they exist).
 
 ## Build it alone
 

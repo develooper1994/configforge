@@ -4,6 +4,8 @@
 #   cmake --build build-bench --target cf_bench && build-bench/bench/cf_bench
 #
 #   build-bench/bench/cf_bench docs [--large]     large documents (P-1)
+#   build-bench/bench/cf_bench lanes              the word backend of lanes
+#                                                 against its scalar loops (P-2)
 #   build-bench/bench/cf_bench --emit-docs <dir>  the documents as files, which
 #                                                 bench/compare/ reads (P-1b)
 #
@@ -11,7 +13,11 @@
 # libraries is bench/compare/, a CMake project of its own that this one never
 # adds: nothing fetched for it can reach this build.
 add_definitions(-DCF_INTERNAL_API=1)
-add_executable(cf_bench bench.c)
+# lanes is compiled in unprefixed, so that `cf_bench lanes` measures the
+# library as a program would use it (lanes.c, P-2).
+include(${CMAKE_SOURCE_DIR}/lib/lanes/lanes_sources.cmake)
+add_executable(cf_bench bench.c lanes.c ${LANES_SOURCES})
+target_compile_definitions(cf_bench PRIVATE ${LANES_DEFINITIONS})
 target_link_libraries(cf_bench PRIVATE configforge configforge_doctor)
 set_target_properties(
   cf_bench

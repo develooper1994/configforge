@@ -293,6 +293,40 @@ not a scan but text made for each value (`cf_vformat` and
 check of every string; the first is work to remove, not to speed up.
 INI is already fast and its time is its one loop.
 
+### The word-at-a-time backend of lanes (P-2)
+
+`cf_bench lanes` runs each span operation of lanes' word backend against
+its scalar loop, on spans of 8 to 4096 bytes, and prints the ratio (above 1
+is faster). The rule that decides what the word backend keeps: an operation
+keeps its word body when it is at least 5% faster than the loop on the
+spans of 64 bytes and longer, for every kind of input measured, and loses
+by no more than 5% on 16 bytes; otherwise its table entry is the scalar
+function (`LANES_SWAR_KEEP_*` in `lib/lanes/src/swar.c`). The numbers are
+GCC 15.2, `-O2`, x86-64, a shared Linux machine (WSL, 12 logical CPUs, other
+builds running: figures on the shortest spans move by 10 to 15% from run to
+run), `swar64`, best of fifteen short runs:
+
+| Operation, input | 8 | 16 | 64 | 256 | 4096 | Kept |
+| ---------------- | -: | -: | -: | -: | ---: | ---- |
+| `find_byte`, no match | 2.1 | 2.0 | 3.5 | 3.2 | 2.8 | yes |
+| `find_lt` (0x20), none | 2.0 | 2.1 | 3.4 | 2.6 | 2.9 | yes |
+| `ascii_run`, all ASCII | 1.7 | 2.0 | 5.7 | 7.2 | 7.1 | yes |
+| `count_byte`, one in eight | 2.3 | 1.4 | 1.7 | 1.9 | 1.9 | yes |
+| `find_any`, four blanks, none | 0.8 | 0.9 | 0.9 | 1.4 | 1.8 | no |
+| `find_any`, JSON stops, none | 0.9 | 0.9 | 1.0 | 1.3 | 2.4 | no |
+| `utf8_valid`, ASCII | 1.3 | 1.6 | 6.1 | 5.8 | 11.4 | no |
+| `utf8_valid`, a 2-byte letter in 12 | 0.6 | 0.7 | 0.9 | 0.9 | 0.9 | no |
+| `utf8_valid`, dense 3-byte | 0.7 | 0.8 | 0.9 | 1.0 | 1.0 | no |
+
+`find_any` and `utf8_valid` win on long and on ASCII spans and lose or tie
+on short and on non-ASCII ones, so by the rule they keep the loop for now;
+their word bodies stay in the file and P-3 measures them on the readers' own
+inputs (JSON strings, the CBOR text check), which is what decides a caller.
+`find_any` takes a set apart on every call and so wins only from 128 bytes
+(`LANES_SWAR_ANY_MIN`); caching the shape in `lanes_set` would change A-2's
+struct and is the maintainer's to decide when P-3's numbers ask for it.
+MSVC and Clang are judged by CI and a later run: only GCC is in this table.
+
 ## Against the other libraries
 
 A reader that is faster than itself last month is not shown to be fast;

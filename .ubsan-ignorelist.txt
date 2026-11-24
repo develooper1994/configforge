@@ -18,6 +18,17 @@ fun:fnv1a
 fun:sip_round
 # A character below '0' wraps to a large digit that the next test refuses.
 fun:cf_defset_find
+# The lanes' word bodies (P-2): a zero byte is found by (x - 0x0101..)
+# & ~x & 0x8080.., which wraps on purpose, and flags are summed into the
+# top byte by a multiplication that drops the bytes above it. Each body is
+# held against the byte loop by test_lanes, test_lanes_swar32,
+# test_lanes_swar_all and fuzz_lanes.
+fun:swar_find_byte
+fun:swar_find_lt
+fun:swar_find_any
+fun:swar_any_words
+fun:swar_ascii_run
+fun:swar_count_byte
 # The reverse loop `while (i-- > 0)` ends by wrapping the index past zero.
 fun:cut_arrays
 # The table's hash: FNV-style multiplication modulo 2^32 (or the word size).

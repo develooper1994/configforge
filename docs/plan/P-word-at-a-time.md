@@ -871,70 +871,198 @@ The rules every card here keeps:
 
 ---
 
-## P-2 - Word-at-a-time scans in C89, with the byte loop as reference
+## P-2 - The word-at-a-time backend of lanes, with the scalar loop as reference
+
+Rewritten on D-101 (2026-11-24): this card first said "an internal header
+of SWAR primitives in `lib/serialize/src/swar.h`, behind `CF_WITH_SWAR`".
+D-101 put vector code in the vector library, so the primitives are lanes'
+`swar` backend, behind lanes' interface, and the option is
+`CF_LANES_BACKENDS` (A-2). ConfigForge's readers are not touched here.
 
 * **id**: P-2
-* **goal**: an internal header of SWAR primitives exists, each with a
-  byte-loop twin, and a test proves every primitive equal to its twin
-  on every alignment, length and byte value that matters.
-* **why**: the primitives are the part that must be right once; P-3
-  then only calls them.
-* **needs**: P-1
+* **goal**: `lib/lanes/` has a word-at-a-time backend (C89, words read with
+  `memcpy`) behind `lanes_ops`, reachable by `lanes_swar()`,
+  `lanes_by_isa` and `lanes_best()`; a test proves every operation of it
+  equal to the scalar loop on every start, length and byte that matters;
+  and each operation keeps its word-at-a-time body only where the
+  benchmark shows it winning, else its table entry is the scalar one.
+* **why**: D-101. The primitives are the part that must be right once,
+  and in the library that is not ConfigForge's, so that the SIMD
+  backends (2.4.0) only add tables; P-3 then only changes callers.
+* **needs**: P-1 (the baseline), A-2 (the interface and the scalar
+  reference, `lib/lanes/`), A-3 (lanes joined both libraries and the
+  amalgamation)
 * **size**: medium
 * **decided**:
-  * `lib/serialize/src/swar.h` (internal, not installed, inside
-    `CF_SERIALIZE_HEADERS`' rule since it is not under an `include/`),
-    with `static` functions so each user inlines them:
-    * `cf_swar_find_any(p, n, a, b, c, d)`: the index of the first byte
-      equal to one of up to four bytes, or `n` (whitespace, `"`, `\`,
-      newline).
-    * `cf_swar_ascii_run(p, n)`: the length of the leading run of bytes
-      below 0x80 (UTF-8 validation skips it whole).
-    * `cf_swar_find_lt(p, n, c)`: the first byte below `c` (control
-      characters in a JSON string).
-    Each built on the classic has-zero-byte test,
-    `(w - ONES) & ~w & HIGHS`, with `ONES`/`HIGHS` made from
-    `(unsigned long)-1 / 255` so they fit any word width.
-  * `CF_WITH_SWAR` (default 1) in `cf_build_options.h`; 0 makes every
-    primitive its byte loop, for the reference build and for a target
-    where words are slower. CI builds one job with it 0.
-  * Tests, `tests/unit/test_swar.c`: every primitive against its byte
-    loop on lengths 0 to 3 words + 7, at every starting offset 0 to 7
-    in a buffer padded with poison bytes that must never be read
-    (sanitize build); every byte value 0 to 255 as the target and as
-    the filler; and a fuzz target (`tests/fuzz/swar.c`) comparing the two.
-  * A CBMC proof of `cf_swar_find_any`'s bounds (no read past `n`),
-    next to the existing proofs, if the proof harness takes it in under
-    the time the others take.
-* **files**: `lib/serialize/src/swar.h` (new), `lib/port/include/configforge/cf_build_options.h`,
-  `cmake/templates/cf_build_options.h.in`, `cmake/ConfigForgeOptions.cmake`,
-  `tests/unit/test_swar.c` (new), `tests/unit/CMakeLists.txt`,
-  `tests/fuzz/swar.c` (new), `tests/fuzz/CMakeLists.txt`; last: `.github/workflows/ci.yml`
-  (the `CF_WITH_SWAR=0` job), `docs/Architecture.md`, `CHANGELOG.md`.
+  * **Where**: `lib/lanes/src/swar.c` (new), one translation unit, C89
+    (`-Wall -Wextra -pedantic`, the lanes target's own flags). It
+    includes `lanes/lanes.h`, `<limits.h>`, `<string.h>` and nothing of
+    ConfigForge's. `lanes.h` gains `LANES_API const lanes_ops*
+    lanes_swar(void);` (declared after `lanes_scalar`, with
+    `#define lanes_swar cf_lanes_swar` in the prefix block): the word
+    table, or NULL when it is not built. It is lanes' interface at 0.1.0,
+    not ConfigForge's: `cf_lanes_swar` joins the internal symbols list
+    like the other `cf_lanes_*`; the 1.x public API does not change.
+  * **One backend, at the width of `unsigned long`**, not two: 4 bytes
+    where `ULONG_MAX == 0xFFFFFFFFUL` (isa `LANES_ISA_SWAR32`, name
+    `"swar32"`, e.g. Windows), 8 where `((ULONG_MAX >> 31) >> 1) ==
+    0xFFFFFFFFUL` (`LANES_ISA_SWAR64`, `"swar64"`, LP64); any other
+    width builds no word backend and `lanes_swar()` is NULL. C89 has no
+    `unsigned long long`, so a 64-bit word on LLP64 waits for a
+    compiler-specific type, if the benchmark ever asks. The other
+    width's bit is never built here, so `lanes_by_isa` returns NULL for
+    it; the 32-bit and the 64-bit forms are both tested by CI, on Windows
+    and on Linux.
+  * **The word**: `ONES = ULONG_MAX / 255UL`, `HIGHS = ONES * 128UL`
+    (so they fit any width). A word is read with `memcpy` from any
+    address, no alignment step and no pointer cast (strict aliasing, MISRA
+    21.15 is why `CF_LANES_BACKENDS=scalar` exists). The byte order never
+    matters: a word scan only says "there is a match in this word", and
+    the index is then found by the byte loop from the word's start (at
+    most one word of bytes), so no count-trailing-zeros and no per-order
+    form is needed.
+  * **The operations** (`scalar.c:20-149` is the meaning of each):
+    * `find_byte`: `(x - ONES) & ~x & HIGHS` of `word ^ (ONES * c)`.
+    * `find_lt(c)`: the same test with `x - ONES * c`, exact for `c <=
+      128`; `c == 0` is `n`; `c > 128` calls the scalar table.
+    * `ascii_run`: a word with `HIGHS` set ends the run.
+    * `count_byte`: the exact per-byte form, `t = ((x & ~HIGHS) + ~HIGHS)
+      | x; t = ~t & HIGHS`, and `((t >> 7) * ONES) >> ((W-1)*8)` counts
+      the flagged bytes of a word.
+    * `find_any`: used only when `n >= LANES_SWAR_ANY_MIN` (128; set by
+      the bench, one `#define`, numbers in the notes) and the set has at most four tests after one pass over its
+      32 bytes: a low run `[0, k)` with `k <= 128` is one `find_lt` test,
+      and each further member one `find_byte` test (so `{ ' ' '\t' '\n'
+      '\r' }`, `{ '"' '\\' }`, and the controls plus those two, which is
+      a JSON string's stops, all qualify); the tests of a word are
+      OR-ed. A set that is empty finds nothing; any other set, and a
+      span shorter than the minimum, goes to the scalar table. No change
+      to `lanes_set`: a shape cached in the set is a change of A-2's
+      struct, not decided here (see the notes).
+    * `utf8_valid`: ASCII words are skipped; at a byte `>= 0x80` the
+      scalar table's `utf8_valid` is called on the next `min(512, rest)`
+      bytes (so the meaning of a sequence stays in one place,
+      `scalar.c:71-110`), and the loop goes on from what it accepted;
+      the end of the span, or 0 accepted, ends it.
+    * `digits8`: the scalar function (no byte-order-free word form
+      that is worth the code; not one of the scans P-1 found).
+  * **Where no win is shown**, the table entry is a small wrapper that
+    calls `lanes_scalar()`'s function, chosen by one `#define
+    LANES_SWAR_KEEP_<OP>` per operation at the top of `swar.c` (1 keeps
+    the word body, 0 uses the wrapper). The word body of an operation
+    that lost stays in the file, so the next compiler can be measured;
+    it is compiled out of the table by the `#if` and nothing else.
+  * **`CF_LANES_BACKENDS`** (A-2): `scalar` builds no word backend:
+    `swar.c` compiles to `lanes_swar()` returning NULL, by
+    `LANES_SCALAR_ONLY=1`, which `lib/lanes/lanes_sources.cmake` puts in
+    `LANES_DEFINITIONS` and every consumer of `LANES_SOURCES` adds to its
+    target (`lib/lanes/CMakeLists.txt`, `lib/CMakeLists.txt`,
+    `cmake/ConfigForgeComponent.cmake`, the tests). `c89` and `all` build
+    the word backend (`all` adds the SIMD ones later). The `misra` profile
+    is `scalar` already; the CI `profiles` job builds and tests every
+    profile, so the reference build runs in CI as it is and no new job is
+    needed (the old card's `CF_WITH_SWAR=0` job). The Rust crate and the
+    amalgamation take `swar.c` whole, with the word backend on.
+  * **`lanes_best()`** is the word table when built, else scalar (D-101's
+    order, with no SIMD yet); `lanes_built()` is `SCALAR | word bit`.
+    ConfigForge's readers do not call them: `cf_text_utf8_valid`
+    (`lib/text/src/utf8.c:58-60`) still calls `lanes_scalar()`, and
+    stays so until P-3 measures it.
+  * **Tests**, `lib/lanes/tests/test_lanes.c` (A-2's, extended): every
+    operation, for the scalar table and every backend `lanes_by_isa`
+    gives that the processor runs, against the oracle already there
+    (lengths 0 to 70, offsets 0 to 15, poison bytes after the span, an
+    exact heap block for the sanitizers, every byte value as target);
+    new: neighbours of the target (0x00, 0x01, 0x1F-0x21, 0x7E-0x81, 0xBF,
+    0xC0, 0xFE, 0xFF, `"`, `\`, `a`) at every place of a match, every
+    length 0 to 90 (past two words and a tail on both widths), `find_lt`
+    at every threshold near 0, 128 and 255, and `find_any` on eleven
+    shapes of set (empty, one, two, four, five members, the JSON string
+    stops with and without a further member, all of ASCII, a run past
+    128, the edges of a byte, the whole high half). `test_lanes_prefix.c`
+    checks the word table of each copy. `fuzz_lanes.c` already compares
+    every backend `lanes_by_isa` gives with scalar: it needs no change.
+  * **The benchmark**: `cf_bench lanes` (new, `bench/lanes.c`, called from
+    `main` in `bench/bench.c`; the lanes sources compiled into `cf_bench`
+    unprefixed, so it measures the library as a program would use it). Each operation,
+    scalar table against word table, on spans of 8, 16, 64, 256 and
+    4096 bytes of two kinds (ASCII text with the match at the end; text
+    with a match every ~40 bytes for `find_any`/`count_byte`, and
+    non-ASCII-dense UTF-8 for `utf8_valid`), `clock()` as in
+    `bench/bench.c`, best of five, bytes per second and the ratio. The
+    rule is P-3's: an operation keeps its word body when it is at least
+    5% faster than the loop on the spans of 64 bytes and longer, for every
+    kind of input measured (`find_any`: from `LANES_SWAR_ANY_MIN`, below
+    which the entry runs the loop itself), at `-O2` with GCC and with Clang
+    where the machine has it, and does not lose by more than 5% on 16
+    bytes; MSVC is judged by CI's run of the same
+    bench (the numbers go in the notes when it has run). A loss anywhere
+    else it is measured is written down and the entry reverts.
+* **files**: `lib/lanes/src/swar.c` (new), `lib/lanes/src/lanes.c`
+  (`lanes_built`, `lanes_by_isa`, `lanes_best`: `lanes.c:164-177` before
+  this card), `lib/lanes/include/lanes/lanes.h`,
+  `lib/lanes/lanes_sources.cmake`, `lib/lanes/CMakeLists.txt`,
+  `lib/lanes/tests/CMakeLists.txt`, `lib/lanes/tests/test_lanes.c`,
+  `lib/lanes/tests/test_lanes_prefix.c`, `lib/lanes/README.md`,
+  `lib/CMakeLists.txt`, `cmake/ConfigForgeComponent.cmake`,
+  `scripts/generate/amalgamate.py` (`lanes/src/swar.c` in `SOURCES`),
+  `cmake/configforge.internal.symbols` (`cf_lanes_swar`, by gate.abi
+  with `-DWRITE=ON`), `bench/lanes.c` (new), `bench/bench.c`,
+  `bench/CMakeLists.txt`; last: `docs/Performance.md` (the numbers),
+  `docs/Decisions.md` (D-101's status), `CHANGELOG.md`.
 * **steps**:
-  1. The test with only the byte loops behind the names; see it pass,
-     then break one SWAR stub and see it fail.
-  2. The SWAR bodies; the test, sanitize and fuzz (a minute) pass.
-  3. The CI job and the docs.
-* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI, the compilers
-  job (tcc, pcc, musl) included: a 32-bit `unsigned long` (Windows) and
-  a 64-bit one both run the test.
-* **stop if**: a compiler of the matrix miscompiles the bit trick (a
-  test fails only there): keep the byte loop for that compiler by
-  `CF_WITH_SWAR=0` in its job, and record it.
-* **docs**: D-<next free>, "Word at a time, in C89, before SIMD": the
-  rules above, the options (none; SWAR; SIMD only; a library such as
-  simdjson, rejected for C89 and the dependency), the decision.
-  CHANGELOG, "### Added" of the open version: "`CF_WITH_SWAR` (on): the
-  readers scan a word at a time; off, byte by byte."
+  1. `swar.c` with every function answering 0, the table, `lanes_swar()`,
+     the changes to `lanes.c`, `lanes.h` and the CMake files, and the test
+     extended; **see it fail** (the word table fails every operation), and
+     see the scalar-only configuration pass with no word table.
+  2. The word bodies; the test passes with sanitizers (`asan`, `ubsan`)
+     and under `CF_LANES_BACKENDS=scalar`.
+  3. `cf_bench lanes`; run it; set each `LANES_SWAR_KEEP_*` by the rule;
+     write the numbers under the notes.
+  4. gate.abi's list, the amalgamation, `README.md`, the docs; format;
+     the generated references (`apiref`, `codemap`, `limits`).
+* **accept**: ACCEPT-LINUX (the default build, `ctest`, and `ctest -R
+  "^gate\."`), the lanes tests also under `CF_LANES_BACKENDS=scalar`
+  and with the sanitizers, ACCEPT-WINDOWS (32-bit `unsigned long`),
+  ACCEPT-CI, the compilers job (tcc, pcc, musl) included: a 32-bit
+  `unsigned long` (Windows) and a 64-bit one both run the test.
+* **stop if**: a compiler of the matrix miscompiles the bit trick (a test
+  fails only there): that compiler's job sets `CF_LANES_BACKENDS=scalar`,
+  and the notes say which; three failures on one thing; or an operation
+  wants a change of `lanes_set` or of an existing `lanes_ops` field (a
+  change of the interface A-2 fixed): stop and report, do not make it.
+* **docs**: D-101's status line gets "Built: A-2 (da0dd49); the word
+  backend: P-2" with the commit. CHANGELOG `### Added`: "`lanes` has a
+  word-at-a-time backend (`lanes_swar()`), built with
+  `CF_LANES_BACKENDS` `c89` or `all`; `scalar` builds the reference
+  alone. The readers do not use it yet (P-3)." `docs/Performance.md`:
+  the table of `cf_bench lanes` and which operations kept the word body.
 * **notes**:
-  * Read against the tree after A-1b: `tests/unit/` no longer exists; unit
-    tests are in `lib/<c>/tests/` (A-1b's rule). This card names
-    `tests/unit/test_swar.c` and `tests/unit/CMakeLists.txt`, and
-    `lib/serialize/src/swar.h` is an internal header under a source
-    directory, which no test of `lib/serialize/tests/` includes today. Which
-    component's `tests/` holds `test_swar.c`, and how it reaches `swar.h`,
-    is not plain; the card is to be rewritten on D-101 first.
+  * Rewritten 2026-11-24 on D-101 by the organiser; the first card
+    (`CF_WITH_SWAR`, `lib/serialize/src/swar.h`, `tests/unit/test_swar.c`)
+    is gone. What was dropped on purpose: a second option beside
+    `CF_LANES_BACKENDS`; the CBMC proof of the old card (lanes has no
+    proof harness; the sanitizer-run exact-block checks and the fuzz
+    target stand in, and a proof of `find_byte` is a later card if the
+    maintainer wants one); a `swar32` table on 64-bit machines.
+  * Done 2026-11-24, GCC 15.2 `-O2`, x86-64 (table in docs/Performance.md,
+    "The word-at-a-time backend of lanes"): `find_byte` 2.0 to 3.5 times the
+    loop, `find_lt` 2.0 to 3.4, `ascii_run` 1.7 to 7.2, `count_byte` 1.4 to
+    2.3: kept. `find_any` (0.8 to 1.0 under 128 bytes, 1.3 to 2.4 from 256)
+    and `utf8_valid` (ASCII 1.3 to 11.4, but 0.6 to 1.0 on non-ASCII text)
+    fail the rule on short or non-ASCII spans: `LANES_SWAR_KEEP_FIND_ANY`
+    and `_UTF8_VALID` are 0, the entries are the scalar ones, the word
+    bodies stay for P-3 to measure on the readers' inputs. Clang and MSVC
+    are not in the table (Clang was not measured; MSVC is CI's). The word
+    path of `find_any` and `utf8_valid` is still tested whatever the entry.
+    The first bench used `LANES_SWAR_ANY_MIN` 32 and an 8-byte window for
+    `utf8_valid`; both lost at 64 bytes (find_any 0.6 for JSON stops), and
+    became 128 and 512.
+  * Open for P-3, not decided here: `find_any` classifies the set at
+    each call (about 32 loads) and so wins only on spans of 32 bytes or
+    more; a JSON string is often shorter. Caching the shape in the set
+    means a field in `lanes_set` (A-2's struct, "exactly"); that is the
+    maintainer's decision, to be asked when P-3's numbers show it pays.
 
 ---
 

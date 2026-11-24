@@ -68,7 +68,7 @@ function(cf_component_lanes lanes_dir)
   target_compile_definitions(
     cf_lanes
     PUBLIC LANES_PREFIX_CF=1
-    PRIVATE LANES_BUILDING_LIBRARY=1)
+    PRIVATE LANES_BUILDING_LIBRARY=1 ${LANES_DEFINITIONS})
   configforge_apply_warnings(cf_lanes)
   configforge_apply_hardening(cf_lanes)
   configforge_apply_analysis(cf_lanes)

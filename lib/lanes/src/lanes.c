@@ -162,16 +162,28 @@ unsigned lanes_cpu(void) {
 }
 
 unsigned lanes_built(void) {
-    return LANES_ISA_SCALAR;
+    const lanes_ops* w = lanes_swar();
+
+    return LANES_ISA_SCALAR | (w != NULL ? w->isa : 0u);
 }
 
 const lanes_ops* lanes_by_isa(unsigned isa) {
+    const lanes_ops* w = lanes_swar();
+
     if (isa == LANES_ISA_SCALAR) {
         return lanes_scalar();
+    }
+    /* The word backends need nothing of the processor (lanes_cpu). */
+    if (w != NULL && isa == w->isa) {
+        return w;
     }
     return NULL;
 }
 
+/* D-101's order: the SIMD tiers (none built yet), then SWAR at the word
+   width, then scalar. */
 const lanes_ops* lanes_best(void) {
-    return lanes_scalar();
+    const lanes_ops* w = lanes_swar();
+
+    return w != NULL ? w : lanes_scalar();
 }

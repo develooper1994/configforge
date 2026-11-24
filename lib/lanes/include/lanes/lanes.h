@@ -75,6 +75,7 @@
 #ifdef LANES_PREFIX_CF
 #define lanes_set_init cf_lanes_set_init
 #define lanes_scalar cf_lanes_scalar
+#define lanes_swar cf_lanes_swar
 #define lanes_by_isa cf_lanes_by_isa
 #define lanes_best cf_lanes_best
 #define lanes_cpu cf_lanes_cpu
@@ -116,6 +117,11 @@ typedef struct lanes_ops {
 
 /* The reference: plain loops, always built. */
 LANES_API const lanes_ops* lanes_scalar(void);
+/* The word-at-a-time backend, at the width of `unsigned long` (LANES_ISA_SWAR32
+   where it is 32 bits, LANES_ISA_SWAR64 where it is 64): C89, words read with
+   memcpy. NULL when it is not built (CF_LANES_BACKENDS=scalar). Where an
+   operation showed no gain over its loop, its entry is the scalar one. */
+LANES_API const lanes_ops* lanes_swar(void);
 /* The backend of one LANES_ISA_* bit; NULL when it was not built or this
    processor lacks it (manual choice). */
 LANES_API const lanes_ops* lanes_by_isa(unsigned isa);

@@ -1,6 +1,7 @@
 /*
- * test_lanes.c - every span operation of lanes_scalar() against an oracle
- * written here, and the processor's detection.
+ * test_lanes.c - every span operation of every backend built (the scalar
+ * reference, and the word-at-a-time one) against an oracle written here, and
+ * the processor's detection.
  *
  * Each operation runs on lengths 0 to 70 at offsets 0 to 15, in a buffer
  * whose bytes after the span are poison (0xA5, which is a UTF-8
@@ -46,7 +47,7 @@ static void check_at(int c, const char* what, size_t n, size_t off, size_t extra
 }
 
 /* A buffer: bytes 0..off-1 poison, the span at off, poison after. */
-static unsigned char g_buf[MAXOFF + MAXN + 64];
+static unsigned char g_buf[MAXOFF + 256 + 64];
 
 static const unsigned char* place(const unsigned char* data, size_t n, size_t off) {
     memset(g_buf, POISON, sizeof g_buf);
@@ -577,7 +578,8 @@ static void test_utf8_valid(const lanes_ops* ops) {
  * ---------------------------------------------------------------- */
 
 static void test_selection(void) {
-    const lanes_ops* s     = lanes_scalar();
+    const lanes_ops* s = lanes_scalar();
+    const lanes_ops* w;
     unsigned         cpu   = lanes_cpu();
     unsigned         built = lanes_built();
     unsigned         bit;
@@ -611,17 +613,46 @@ static void test_selection(void) {
     check((cpu & LANES_ISA_SWAR32) != 0 && (cpu & LANES_ISA_SWAR64) != 0,
           "a processor runs the word backends");
     check((built & LANES_ISA_SCALAR) != 0, "scalar is built");
-    check(built == LANES_ISA_SCALAR, "only scalar is built so far");
 
     check(lanes_by_isa(LANES_ISA_SCALAR) == s,
           "lanes_by_isa(scalar) is the scalar table");
+    w = lanes_swar();
+#ifdef LANES_SCALAR_ONLY
+    check(w == NULL, "CF_LANES_BACKENDS=scalar builds no word backend");
+    check(built == LANES_ISA_SCALAR, "only scalar is built");
+    check(lanes_best() == s, "the best of what is built is scalar");
+#else
+    check(w != NULL, "the word backend is built");
+    if (w != NULL) {
+        check(w->size == sizeof(lanes_ops), "the word table says its own size");
+        check(w->isa == LANES_ISA_SWAR32 || w->isa == LANES_ISA_SWAR64,
+              "the word table is a word bit");
+#ifdef LANES_SWAR_WORD32
+        check(w->isa == LANES_ISA_SWAR32, "the 32-bit form, asked for");
+#else
+        check((w->isa == LANES_ISA_SWAR64) == (sizeof(unsigned long) == 8),
+              "the word backend is as wide as unsigned long");
+#endif
+        check(strcmp(w->name, w->isa == LANES_ISA_SWAR64 ? "swar64" : "swar32") == 0,
+              "the word table is named for its width");
+        check(w->find_byte != NULL && w->find_any != NULL && w->find_lt != NULL &&
+                  w->ascii_run != NULL && w->utf8_valid != NULL &&
+                  w->count_byte != NULL && w->digits8 != NULL,
+              "the word table has every operation");
+        check(lanes_swar() == w && lanes_by_isa(w->isa) == w,
+              "lanes_by_isa finds the word table");
+        check(built == (LANES_ISA_SCALAR | w->isa), "scalar and the word backend");
+        check(lanes_best() == w, "the best of what is built is the word backend");
+    }
+#endif
     for (bit = LANES_ISA_SWAR32; bit <= LANES_ISA_SVE; bit <<= 1) {
-        check(lanes_by_isa(bit) == NULL, "a backend not built is NULL");
+        if (w == NULL || bit != w->isa) {
+            check(lanes_by_isa(bit) == NULL, "a backend not built is NULL");
+        }
     }
     check(lanes_by_isa(0) == NULL, "no bit is no backend");
     check(lanes_by_isa(LANES_ISA_SCALAR | LANES_ISA_SWAR32) == NULL,
           "two bits are no backend");
-    check(lanes_best() == s, "the best of what is built is scalar");
 
 #if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
     check((cpu & LANES_ISA_SSE2) != 0, "x86-64 has SSE2");
@@ -642,12 +673,215 @@ static void test_selection(void) {
     check(lanes_cpu() == cpu, "detection answers the same twice");
 }
 
-int main(void) {
-    const lanes_ops* ops;
+/* ---------------------------------------------------------------- *
+ * What a word-at-a-time scan can get wrong: bytes beside the target
+ * (one below, one above, 0x00, 0x7F, 0x80, 0xFF), which is where a borrow
+ * or a carry between the bytes of a word shows, at every place of a match
+ * and every start in a word.
+ * ---------------------------------------------------------------- */
 
-    test_selection();
-    test_set();
-    ops = lanes_scalar();
+#define TMAX 200
+/* Every length near the word scan's minimum (LANES_SWAR_ANY_MIN), and the
+   short ones; the rest by threes. */
+#define TRAP_STEP(n) (((n) < 40 || ((n) >= 120 && (n) <= 140)) ? 1 : 3)
+
+static const unsigned char trap_pool[] = {0x00, 0x01, 0x1F, 0x20, 0x21, 0x7E,
+                                          0x7F, 0x80, 0x81, 0xBF, 0xC0, 0xFE,
+                                          0xFF, 0x22, 0x5C, 0x61};
+
+/* A byte of the pool that is not in the set. */
+static unsigned char trap_byte(const int* member) {
+    unsigned char b = trap_pool[next_byte() % sizeof trap_pool];
+    unsigned      k;
+
+    for (k = 0; member[b] && k < 256; ++k) {
+        b = (unsigned char)(b + 1);
+    }
+    return b;
+}
+
+static void test_traps_bytes(const lanes_ops* ops) {
+    static unsigned char  d[TMAX];
+    static const unsigned targets[] = {0x00, 0x01, 0x20, 0x7F, 0x80, 0x81, 0xFF, 0x61};
+    int                   member[256];
+    size_t                n, off, k, i;
+    unsigned              c, t;
+
+    for (c = 0; c < sizeof targets / sizeof targets[0]; ++c) {
+        t = targets[c];
+        memset(member, 0, sizeof member);
+        member[t] = 1;
+        for (n = 0; n <= TMAX; n += TRAP_STEP(n)) {
+            for (off = 0; off <= MAXOFF; off += 3) {
+                for (k = 0; k <= n; ++k) {
+                    const unsigned char* p;
+
+                    for (i = 0; i < n; ++i) {
+                        d[i] = trap_byte(member);
+                    }
+                    if (k < n) {
+                        d[k] = (unsigned char)t;
+                        if (k + 3 < n) {
+                            d[k + 3] = (unsigned char)t;
+                        }
+                    }
+                    p = place(d, n, off);
+                    check_at(ops->find_byte(p, n, (unsigned char)t) ==
+                                 want_find_byte(d, n, t),
+                             "find_byte, bytes beside the target", n, off, k);
+                    check_at(ops->count_byte(p, n, (unsigned char)t) ==
+                                 want_count(d, n, t),
+                             "count_byte, bytes beside the target", n, off, k);
+                }
+            }
+        }
+    }
+    /* find_lt at every threshold that matters, the one byte below it at
+       every place and the others as near above as they can be. */
+    for (c = 0; c <= 255; c += (c < 40 || (c >= 120 && c <= 136) || c > 250) ? 1 : 17) {
+        for (n = 0; n <= 41; ++n) {
+            for (k = 0; k <= n; ++k) {
+                const unsigned char* p;
+
+                for (i = 0; i < n; ++i) {
+                    d[i] = (unsigned char)(c + (i & 1) > 255 ? 255 : c + (i & 1));
+                }
+                if (k < n && c > 0) {
+                    d[k] = (unsigned char)(c - 1);
+                }
+                off = (k + c) & MAXOFF;
+                p   = place(d, n, off);
+                check_at(ops->find_lt(p, n, (unsigned char)c) == want_find_lt(d, n, c),
+                         "find_lt, bytes beside the threshold", n, off, c);
+            }
+        }
+    }
+    /* ascii_run: the first byte at or above 0x80 at every place. */
+    for (n = 0; n <= 90; ++n) {
+        for (k = 0; k <= n; ++k) {
+            static const unsigned char high[] = {0x80, 0xC3, 0xFF};
+            const unsigned char*       p;
+
+            for (i = 0; i < n; ++i) {
+                d[i] = (unsigned char)(0x7F - (i & 3));
+            }
+            if (k < n) {
+                d[k] = high[k % 3];
+            }
+            off = (k + n) & MAXOFF;
+            p   = place(d, n, off);
+            check_at(ops->ascii_run(p, n) == k, "ascii_run, a high byte at a place", n,
+                     off, k);
+        }
+    }
+}
+
+/* find_any on the shapes of set a word scan treats differently: none, one
+   to four members, five, a low run with two or three more, the whole of
+   ASCII, a run too long to say, the whole of the high half. */
+static void test_traps_set(const lanes_ops* ops) {
+    static unsigned char d[TMAX];
+    unsigned char        mem[256];
+    int                  member[256];
+    lanes_set            s;
+    size_t               shape, n, off, k, i, nm;
+
+    for (shape = 0; shape < 11; ++shape) {
+        nm = 0;
+        switch (shape) {
+        case 0: /* empty */
+            break;
+        case 1:
+            mem[nm++] = 0x22;
+            break;
+        case 2:
+            mem[nm++] = 0x22;
+            mem[nm++] = 0x5C;
+            break;
+        case 3: /* the blanks */
+            mem[nm++] = ' ';
+            mem[nm++] = '\t';
+            mem[nm++] = '\n';
+            mem[nm++] = '\r';
+            break;
+        case 4: /* five members, more than a word scan takes */
+            for (i = 1; i <= 5; ++i) {
+                mem[nm++] = (unsigned char)(i * 37);
+            }
+            break;
+        case 5: /* a JSON string's stops: the controls, a quote, a backslash */
+        case 6: /* and one more */
+            for (i = 0; i < 0x20; ++i) {
+                mem[nm++] = (unsigned char)i;
+            }
+            mem[nm++] = 0x22;
+            mem[nm++] = 0x5C;
+            if (shape == 6) {
+                mem[nm++] = 0xFF;
+            }
+            break;
+        case 7: /* all of ASCII */
+            for (i = 0; i < 0x80; ++i) {
+                mem[nm++] = (unsigned char)i;
+            }
+            break;
+        case 8: /* a run longer than a low run can say */
+            for (i = 0; i < 0xA0; ++i) {
+                mem[nm++] = (unsigned char)i;
+            }
+            break;
+        case 9: /* the edges of a byte */
+            mem[nm++] = 0x00;
+            mem[nm++] = 0x7F;
+            mem[nm++] = 0x80;
+            mem[nm++] = 0xFF;
+            break;
+        default: /* all of the high half */
+            for (i = 0x80; i < 0x100; ++i) {
+                mem[nm++] = (unsigned char)i;
+            }
+            break;
+        }
+        memset(member, 0, sizeof member);
+        for (i = 0; i < nm; ++i) {
+            member[mem[i]] = 1;
+        }
+        lanes_set_init(&s, mem, nm);
+        for (n = 0; n <= TMAX; n += TRAP_STEP(n)) {
+            for (off = 0; off <= MAXOFF; off += 3) {
+                for (k = 0; k <= n; ++k) {
+                    const unsigned char* p;
+                    unsigned char*       e;
+                    size_t               want;
+
+                    for (i = 0; i < n; ++i) {
+                        d[i] = trap_byte(member);
+                    }
+                    if (k < n && nm > 0) {
+                        d[k] = mem[(k + n) % nm];
+                        if (k + 5 < n) {
+                            d[k + 5] = mem[(k * 7 + 1) % nm];
+                        }
+                    }
+                    want = want_find_any(d, n, member);
+                    p    = place(d, n, off);
+                    check_at(ops->find_any(p, n, &s) == want,
+                             "find_any, a shape of set", n, off, shape * 1000 + k);
+                    if (k % 9 == 0) {
+                        e = exact(d, n);
+                        check_at(ops->find_any(e, n, &s) == want,
+                                 "find_any, a shape of set, exact block", n, off,
+                                 shape);
+                        free(e);
+                    }
+                }
+            }
+        }
+    }
+}
+
+static void run_backend(const lanes_ops* ops) {
+    printf("test_lanes: backend %s\n", ops->name);
     test_find_byte(ops);
     test_find_any(ops);
     test_find_lt(ops);
@@ -655,6 +889,26 @@ int main(void) {
     test_count_byte(ops);
     test_digits8(ops);
     test_utf8_valid(ops);
+    test_traps_bytes(ops);
+    test_traps_set(ops);
+}
+
+int main(void) {
+    unsigned bit;
+
+    test_selection();
+    test_set();
+    run_backend(lanes_scalar());
+    /* Every other backend this build has and the processor runs. */
+    for (bit = LANES_ISA_SWAR32; bit <= LANES_ISA_SVE; bit <<= 1) {
+        const lanes_ops* ops = lanes_by_isa(bit);
+
+        if (ops != NULL && (lanes_cpu() & bit) != 0) {
+            run_backend(ops);
+        }
+    }
+    check(lanes_by_isa(lanes_best()->isa) == lanes_best(),
+          "best is a backend lanes_by_isa finds");
 
     printf("test_lanes: %d checks, %d failed\n", g_run, g_fail);
     return g_fail == 0 ? 0 : 1;

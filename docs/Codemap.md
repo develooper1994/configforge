@@ -882,9 +882,9 @@
 - lanes_xcr0 84-95
 - lanes_cpu_x86 97-135
 - lanes_cpu 139-162
-- lanes_built 164-166
-- lanes_by_isa 168-173
-- lanes_best 175-177
+- lanes_built 164-168
+- lanes_by_isa 170-181
+- lanes_best 185-189
 `lib/lanes/src/scalar.c`
 - lanes_set_init 10-18
 - scalar_find_byte 20-29
@@ -897,6 +897,30 @@
 - scalar_count_byte 126-135
 - scalar_digits8 137-149
 - lanes_scalar 156-158
+`lib/lanes/src/swar.c`
+- typedef swar_word 40
+- typedef swar_word 46
+- typedef swar_word 52
+- lanes_swar 60-62
+- swar_load 113-118
+- swar_fallback_find_byte 125-128
+- swar_fallback_find_any 132-135
+- swar_fallback_find_lt 139-141
+- swar_fallback_ascii_run 145-147
+- swar_fallback_utf8_valid 151-153
+- swar_fallback_count_byte 157-160
+- swar_fallback_digits8 163-165
+- swar_find_byte 171-189
+- swar_find_lt 191-212
+- swar_ascii_run 214-227
+- swar_count_byte 229-251
+- struct swar_any_shape 255-259
+- swar_any_shape_of 262-288
+- swar_any_words 294-323
+- swar_find_any 325-339
+- swar_utf8_valid 341-365
+- swar_touch 404-423
+- lanes_swar 431-436
 `lib/numeric/include/configforge/cf_numeric.h`
 - #define CONFIGFORGE_CF_NUMERIC_H 20
 - #define CF_F64_DIGITS 53

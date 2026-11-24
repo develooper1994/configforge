@@ -5,6 +5,15 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ## 1.9.0 — unreleased
 
+### Added
+
+- The vector library has a word-at-a-time backend (`lanes_swar()`, C89,
+  words read with `memcpy`), built with `CF_LANES_BACKENDS` `c89` or `all`;
+  `scalar` builds the reference alone. `cf_bench lanes` measures each
+  operation against the loop, and one that did not win keeps the loop
+  (P-2): `find_byte`, `find_lt`, `ascii_run` and `count_byte` are a word at
+  a time, `find_any` and `utf8_valid` stay the loop.
+
 ### Changed
 
 - The thirteen functions experimental in 1.8 (`cf_reason_name`,
