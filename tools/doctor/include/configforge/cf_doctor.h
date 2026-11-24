@@ -137,6 +137,21 @@ CF_DOCTOR_API cf_bool cf_doctor_history_files(cf_doctor* d, const char* const* p
 CF_DOCTOR_API cf_bool cf_doctor_blame_files(cf_doctor* d, const char* const* paths,
                                             size_t n, const char* key, cf_error* err);
 
+/* A set of reports, in no order - one host's report each (1.9.0). For
+   each key on which they do not all agree, cf_doctor_drift_files adds a
+   warning finding, rule "DRIFT", whose message groups the reports by
+   what they hold: the values, or only "value 1", "value 2" for a secret
+   or under cf_doctor_redact_all, and "absent from" the reports that lack
+   the key. A set whose reports cannot all be compared for a key, a digest
+   on one side and none of its kind on the other, gets an info finding,
+   rule "CFD020", for that key instead. The source of a value is not
+   compared. `key` limits it to one key, NULL for every key. False with
+   `err` set, and nothing found, when a report cannot be read, there are
+   fewer than two reports or more than 1024, `key` is in none of them, or
+   there is no memory to record the result. */
+CF_DOCTOR_API cf_bool cf_doctor_drift_files(cf_doctor* d, const char* const* paths,
+                                            size_t n, const char* key, cf_error* err);
+
 /* The findings so far, in the order they were found. */
 CF_DOCTOR_API size_t            cf_doctor_count(const cf_doctor* d);
 CF_DOCTOR_API const cf_finding* cf_doctor_finding(cf_doctor* d, size_t i);

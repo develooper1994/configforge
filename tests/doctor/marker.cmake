@@ -84,6 +84,8 @@ set(templates
     "history|@X@|@Y@|--format|@F@#@changed@"
     "history|@X@|@Y@|--key|@Q@|--format|@F@#-"
     "history|@X@|--format|@F@#-"
+    "drift|@X@|@Y@|--format|@F@#@changed@"
+    "drift|@X@|@Y@|--key|@Q@|--format|@F@#-"
     "blame|@Q@|@X@|--format|@F@#@Q@"
     "blame|@Q@|@X@|@Y@|--format|@F@#@Q@")
 

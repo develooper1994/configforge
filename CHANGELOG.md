@@ -7,6 +7,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- `configforge doctor drift <report>...` (and `cf_doctor_drift_files`): with one
+  report a host, each key the reports do not all agree on, grouped by value and
+  by the hosts that hold it; a secret is shown as "value 1", "value 2", never
+  its value. Exit 1 on a drift (the one command whose `--fail-on` defaults to
+  `warning`), 2 on input it cannot use; two to 1024 reports; the rule is
+  `DRIFT`, and a key that cannot be compared is CFD020.
 - `configforge codec textconv <file>`, a Git `textconv` driver: `git diff`,
   `git log -p` and `git show` print JSON, YAML, TOML, INI, properties and
   CBOR files one line per key, so a reformat shows nothing and a changed

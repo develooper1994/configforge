@@ -15,10 +15,11 @@
  *     configforge doctor diff    <a> <b>  [options]
  *     configforge doctor history <report>... [--key <key>] [options]
  *     configforge doctor blame   <key> <report>... [options]
+ *     configforge doctor drift   <report>... [--key <key>] [options]
  *
  *     --baseline <file>   findings already accepted, one per line
  *     --severity <file>   this project's severities, one per line
- *     --fail-on <level>   error (default), warning, info or never
+ *     --fail-on <level>   error (default; drift: warning), warning, info or never
  *     --format <name>     text (default), sarif or markdown
  *
  * The rules are the library's (engine.c, cf_doctor.h); this file reads
@@ -371,6 +372,7 @@ static int usage(void) {
           "  configforge doctor diff    <report-a> <report-b> [options]\n"
           "  configforge doctor history <report>... [--key <key>] [options]\n"
           "  configforge doctor blame   <key> <report>... [options]\n"
+          "  configforge doctor drift   <report>... [--key <key>] [options]\n"
           "  configforge doctor --version\n"
           "\n",
           stderr);
@@ -383,7 +385,7 @@ static int usage(void) {
     fputs("  --base <file> --only-changed   lint: only what changed since <file>\n"
           "  --baseline <file>  findings already accepted\n"
           "  --severity <file>  this project's severities\n"
-          "  --fail-on <level>  error (default), warning, info, never\n"
+          "  --fail-on <level>  error (default; drift: warning), warning, info, never\n"
           "  --format <name>    text (default), sarif or markdown\n"
           "  --redact-all       show no value of any key, as for a secret\n"
           "\n",
@@ -497,16 +499,22 @@ static int run(cf_doctor* D, int argc, char** argv) {
         return rc;
     }
     if (strcmp(argv[1], "lint") == 0 || strcmp(argv[1], "diff") == 0 ||
-        strcmp(argv[1], "history") == 0 || strcmp(argv[1], "blame") == 0) {
-        cf_bool     is_diff    = (strcmp(argv[1], "diff") == 0) ? CF_TRUE : CF_FALSE;
-        cf_bool     is_history = (strcmp(argv[1], "history") == 0) ? CF_TRUE : CF_FALSE;
-        cf_bool     is_blame   = (strcmp(argv[1], "blame") == 0) ? CF_TRUE : CF_FALSE;
-        int         first      = is_diff ? 4 : 3;
-        int         pos        = 2; /* the first report */
-        const char* key        = NULL;
-        const char* fail_on    = "error";
-        const char* format     = "text";
-        const char* base       = NULL; /* lint --base, with --only-changed */
+        strcmp(argv[1], "history") == 0 || strcmp(argv[1], "blame") == 0 ||
+        strcmp(argv[1], "drift") == 0) {
+        cf_bool is_diff    = (strcmp(argv[1], "diff") == 0) ? CF_TRUE : CF_FALSE;
+        cf_bool is_history = (strcmp(argv[1], "history") == 0) ? CF_TRUE : CF_FALSE;
+        cf_bool is_blame   = (strcmp(argv[1], "blame") == 0) ? CF_TRUE : CF_FALSE;
+        cf_bool is_drift   = (strcmp(argv[1], "drift") == 0) ? CF_TRUE : CF_FALSE;
+        /* Reports in a row: a sequence, or for drift a set. */
+        cf_bool     is_row = (is_history || is_blame || is_drift) ? CF_TRUE : CF_FALSE;
+        int         first  = is_diff ? 4 : 3;
+        int         pos    = 2; /* the first report */
+        const char* key    = NULL;
+        /* A drift is a warning, and "is the set the same" has to be
+           answered by the status: so this command fails on a warning. */
+        const char* fail_on      = is_drift ? "warning" : "error";
+        const char* format       = "text";
+        const char* base         = NULL; /* lint --base, with --only-changed */
         cf_bool     only_changed = CF_FALSE;
         int         i;
         int         over = 0;
@@ -516,8 +524,9 @@ static int run(cf_doctor* D, int argc, char** argv) {
             return usage();
         }
         /* A sequence is every report up to the first option, oldest
-           first; blame names its key before them. */
-        if (is_history || is_blame) {
+           first; blame names its key before them. A set is the same,
+           in no order, and has two at least. */
+        if (is_row) {
             if (is_blame) {
                 key = argv[2];
                 pos = 3;
@@ -526,15 +535,14 @@ static int run(cf_doctor* D, int argc, char** argv) {
             while (first < argc && strncmp(argv[first], "--", 2) != 0) {
                 ++first;
             }
-            if (first == pos) {
+            if (first == pos || (is_drift && first - pos < 2)) {
                 return usage();
             }
         }
         /* Options read before anything runs, so a finding is matched
            as it is produced rather than filtered afterwards. */
         for (i = first; i < argc; ++i) {
-            if (strcmp(argv[i], "--only-changed") == 0 && !is_diff && !is_history &&
-                !is_blame) {
+            if (strcmp(argv[i], "--only-changed") == 0 && !is_diff && !is_row) {
                 only_changed = CF_TRUE; /* a flag: it takes no value */
                 continue;
             }
@@ -545,8 +553,7 @@ static int run(cf_doctor* D, int argc, char** argv) {
             if (i + 1 >= argc) {
                 return usage();
             }
-            if (strcmp(argv[i], "--base") == 0 && !is_diff && !is_history &&
-                !is_blame) {
+            if (strcmp(argv[i], "--base") == 0 && !is_diff && !is_row) {
                 base = argv[++i];
             } else if (strcmp(argv[i], "--baseline") == 0) {
                 cf_doctor_baseline(D, argv[++i], NULL);
@@ -567,7 +574,7 @@ static int run(cf_doctor* D, int argc, char** argv) {
                     strcmp(format, "markdown") != 0) {
                     return usage();
                 }
-            } else if (is_history && strcmp(argv[i], "--key") == 0) {
+            } else if ((is_history || is_drift) && strcmp(argv[i], "--key") == 0) {
                 key = argv[++i];
             } else {
                 return usage();
@@ -586,13 +593,14 @@ static int run(cf_doctor* D, int argc, char** argv) {
             }
         }
 
-        if (is_history || is_blame) {
+        if (is_row) {
             cf_error err = CF_ERROR_INIT;
             /* argv as the library takes it: C converts char** to
                const char* const* only when told to. */
             const char* const* seq = (const char* const*)(argv + pos);
             size_t             n   = (size_t)(first - pos);
             cf_bool ok = is_history ? cf_doctor_history_files(D, seq, n, key, &err)
+                         : is_drift ? cf_doctor_drift_files(D, seq, n, key, &err)
                                     : cf_doctor_blame_files(D, seq, n, key, &err);
             if (!ok) {
                 fprintf(stderr, "doctor: %s\n", err.message);
@@ -612,7 +620,8 @@ static int run(cf_doctor* D, int argc, char** argv) {
         }
 
         if (strcmp(format, "sarif") == 0) {
-            /* A sequence's artifact is its latest report. */
+            /* A sequence's artifact is its latest report, a set's its
+               first. */
             print_sarif(D, argv[(is_history || is_blame) ? first - 1 : 2]);
         } else if (strcmp(format, "markdown") == 0) {
             int stale = D->base.loaded ? (int)cf_doctor_stale_count(D) : 0;

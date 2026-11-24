@@ -1934,22 +1934,22 @@
 - main 462-515
 `tools/doctor/adapters.h`
 `tools/doctor/doctor.c`
-- text_field 39-64
-- baseline_stale 66-80
-- sarif_quote 82-96
-- sarif_level 98-102
-- print_sarif 104-155
-- md_cell 166-189
-- print_markdown 194-253
-- print_text 255-264
-- cand_line 272-283
-- type_field 287-293
-- cmd_dump 295-328
-- cmd_explain 330-360
-- usage 362-412
-- load 415-422
-- main 426-463
-- run 465-654
+- text_field 40-65
+- baseline_stale 67-81
+- sarif_quote 83-97
+- sarif_level 99-103
+- print_sarif 105-156
+- md_cell 167-190
+- print_markdown 195-254
+- print_text 256-265
+- cand_line 273-284
+- type_field 288-294
+- cmd_dump 296-329
+- cmd_explain 331-361
+- usage 363-414
+- load 417-424
+- main 428-465
+- run 467-663
 `tools/doctor/dotnet.c`
 - dotnet_usage 49-58
 - dotnet_kind 61-80
@@ -1990,76 +1990,87 @@
 - vfinding 953-988
 - finding 990-996
 - finding_at 999-1005
-- doctor_key_name 1043-1047
-- rule_dead_source 1058-1126
-- rule_undefined 1133-1155
-- rule_deprecated 1160-1187
-- rule_empty 1193-1215
-- rule_unreachable 1230-1266
-- rule_sensitive_source 1279-1316
-- rule_inversion 1325-1347
-- rule_required 1350-1362
-- rule_refused 1365-1387
-- rule_policy 1395-1412
-- rule_default_only 1416-1432
-- rule_truncated 1441-1457
-- winner 1464-1473
-- typedef agreement 1475
-- digest_kind_end 1479-1483
-- digests_comparable 1488-1493
-- digests_apart 1497-1505
-- apart_text 1508-1514
-- values_agree 1522-1536
-- told_by_digest 1542-1547
-- origin_kind 1552-1556
-- rule_origin_drift 1563-1589
-- rule_shadow_divergence 1593-1622
-- rule_parity 1625-1637
-- rule_value_diff 1639-1682
-- default_of 1685-1694
-- rule_default_drift 1702-1755
-- rule_unread 1764-1783
-- rule_fingerprint 1794-1857
-- typedef lint_rule 1863
-- typedef diff_rule 1864
-- doctor_lint_reports 1876-1889
-- doctor_diff_reports 1891-1900
-- typedef step_result 1914
-- chosen 1916-1918
-- key_step 1926-1988
-- history_step 1991-2008
-- history_pass 2013-2040
-- blame_key 2045-2082
-- cf_doctor_new 2088-2096
-- cf_doctor_free 2098-2110
-- cf_doctor_only_changed_file 2112-2136
-- cf_doctor_unchanged_count 2138-2140
-- cf_doctor_redact_all 2142-2146
-- cf_doctor_accept 2148-2158
-- cf_doctor_baseline 2160-2166
-- cf_doctor_severity 2168-2189
-- cf_doctor_severity_file 2191-2196
-- doctor_report_of 2200-2222
-- doctor_report_free 2224-2236
-- cf_doctor_lint_report 2238-2252
-- cf_doctor_lint_file 2254-2267
-- cf_doctor_lint 2269-2283
-- cf_doctor_diff_report 2285-2303
-- cf_doctor_diff_files 2305-2321
-- cf_doctor_diff 2323-2338
-- reports_release 2340-2348
-- reports_load 2353-2385
-- key_in_any 2387-2396
-- cf_doctor_history_files 2398-2416
-- cf_doctor_blame_files 2418-2440
-- cf_doctor_count 2442-2444
-- cf_doctor_finding 2446-2459
-- cf_doctor_count_at 2461-2478
-- cf_doctor_stale_count 2480-2492
-- cf_doctor_stale 2494-2513
-- cf_doctor_rule_count 2515-2517
-- cf_doctor_rule_id 2519-2521
-- cf_doctor_rule_text 2523-2532
+- doctor_key_name 1044-1048
+- rule_dead_source 1059-1127
+- rule_undefined 1134-1156
+- rule_deprecated 1161-1188
+- rule_empty 1194-1216
+- rule_unreachable 1231-1267
+- rule_sensitive_source 1280-1317
+- rule_inversion 1326-1348
+- rule_required 1351-1363
+- rule_refused 1366-1388
+- rule_policy 1396-1413
+- rule_default_only 1417-1433
+- rule_truncated 1442-1458
+- winner 1465-1474
+- typedef agreement 1476
+- digest_kind_end 1480-1484
+- digests_comparable 1489-1494
+- digests_apart 1498-1506
+- apart_text 1509-1515
+- values_agree 1523-1537
+- told_by_digest 1543-1548
+- origin_kind 1553-1557
+- rule_origin_drift 1564-1590
+- rule_shadow_divergence 1594-1623
+- rule_parity 1626-1638
+- rule_value_diff 1640-1683
+- default_of 1686-1695
+- rule_default_drift 1703-1756
+- rule_unread 1765-1784
+- rule_fingerprint 1795-1858
+- typedef lint_rule 1864
+- typedef diff_rule 1865
+- doctor_lint_reports 1877-1890
+- doctor_diff_reports 1892-1901
+- typedef step_result 1915
+- chosen 1917-1919
+- key_step 1927-1989
+- history_step 1992-2009
+- history_pass 2014-2041
+- blame_key 2046-2083
+- typedef drift_kind 2103
+- struct drift_state 2106-2110
+- struct drift_group 2112-2116
+- struct drift_work 2120-2124
+- drift_state_of 2126-2133
+- drift_agree 2138-2146
+- drift_group_text 2151-2178
+- drift_message 2182-2205
+- drift_key 2210-2278
+- drift_pass 2283-2314
+- cf_doctor_new 2320-2328
+- cf_doctor_free 2330-2342
+- cf_doctor_only_changed_file 2344-2368
+- cf_doctor_unchanged_count 2370-2372
+- cf_doctor_redact_all 2374-2378
+- cf_doctor_accept 2380-2390
+- cf_doctor_baseline 2392-2398
+- cf_doctor_severity 2400-2421
+- cf_doctor_severity_file 2423-2428
+- doctor_report_of 2432-2454
+- doctor_report_free 2456-2468
+- cf_doctor_lint_report 2470-2484
+- cf_doctor_lint_file 2486-2499
+- cf_doctor_lint 2501-2515
+- cf_doctor_diff_report 2517-2535
+- cf_doctor_diff_files 2537-2553
+- cf_doctor_diff 2555-2570
+- reports_release 2572-2580
+- reports_load 2585-2617
+- key_in_any 2619-2628
+- cf_doctor_history_files 2630-2648
+- cf_doctor_blame_files 2650-2672
+- cf_doctor_count 2674-2676
+- cf_doctor_finding 2678-2691
+- cf_doctor_count_at 2693-2710
+- cf_doctor_stale_count 2712-2724
+- cf_doctor_stale 2726-2745
+- cf_doctor_rule_count 2747-2749
+- cf_doctor_rule_id 2751-2753
+- cf_doctor_rule_text 2755-2764
+- cf_doctor_drift_files 2766-2803
 `tools/doctor/engine.h`
 - struct cand 19-31
 - struct rkey 33-52
@@ -2083,8 +2094,8 @@
 - #define CF_DOCTOR_API 42
 - typedef cf_doctor 44
 - struct cf_finding 50-56
-- struct cf_doctor_gate 176-182
-- #define CF_DOCTOR_GATE_INIT 185
+- struct cf_doctor_gate 191-197
+- #define CF_DOCTOR_GATE_INIT 200
 `tools/doctor/spring.c`
 - struct spring_scan 39-60
 - spring_note_skip 62-68

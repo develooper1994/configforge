@@ -228,6 +228,11 @@ configforge doctor blame <key> <report>...
     the report since which <key> has been as the last report has it, and what
     changed there; "at least" when an earlier step cannot be compared
 
+configforge doctor drift <report>... [--key K]
+    one report a host, in no order: each key they do not all agree on, with
+    the reports grouped by what they hold; a secret's value is never shown.
+    Fails on a warning by default (section 7e)
+
 --redact-all    (dump, explain, lint, diff, history, blame)
     show no value of any key, as if each were a secret: a finding says that a
     value changed, was refused or came from somewhere, not what it is. A flag
@@ -295,6 +300,7 @@ about a rule.
 | `cf_doctor_lint_report`, `cf_doctor_lint_file` | lint a report held as text, or in a file |
 | `cf_doctor_diff`, `cf_doctor_diff_report`, `cf_doctor_diff_files` | `doctor diff`, on two configurations, two texts or two files |
 | `cf_doctor_history_files`, `cf_doctor_blame_files` | `doctor history` and `doctor blame` over report files in the caller's order, oldest first: every file is read before anything is recorded, and room for every finding is reserved first, so an unreadable report or a full heap adds nothing |
+| `cf_doctor_drift_files` | `doctor drift` over a set of report files, one a host (1.9.0) |
 | `cf_doctor_accept`, `cf_doctor_baseline` | a baseline entry, or a `--baseline` file |
 | `cf_doctor_severity`, `cf_doctor_severity_file` | a severity line, or a `--severity` file |
 | `cf_doctor_count`, `cf_doctor_finding`, `cf_doctor_count_at` | the findings, each with its rule, level, key, place and message |
@@ -353,6 +359,61 @@ is exit 2 with no partial history, as is a `--key` or a `blame` key that
 none of the reports has. The fingerprint limits in section 5 apply: a
 digest match is evidence, not proof.
 
+### 7e. A set of reports
+
+`diff` compares two environments and `history` follows one service through
+time. `drift` asks the question of a fleet: with one report a host, which keys
+do the hosts not all agree on, and which hosts are the odd ones? The reports
+are given in no order; two at least, 1024 at most.
+
+```text
+$ configforge doctor drift web-1.json web-2.json web-3.json web-4.json web-5.json
+DRIFT   warning db.password                  differs (by digest): value 2 in web-4.json; value 1 in web-1.json, web-2.json, web-3.json, web-5.json
+DRIFT   warning feature.flag                 differs: absent from web-5.json; 'on' in web-1.json, web-2.json, web-3.json, web-4.json
+DRIFT   warning log.level                    differs: 'debug' in web-3.json; 'info' in web-1.json, web-2.json, web-4.json, web-5.json
+
+3 new finding(s): 0 error, 3 warning, 0 info
+```
+
+A key on which every report agrees is not mentioned. For each key the
+reports are put in groups, first fit in the order given: a report joins the
+first group whose first member holds the same value, and a report that lacks
+the key, or has it with no source that won, groups with the others like it.
+A finding lists the groups smallest first, so that the odd host is read before
+the rest, each with its reports as named on the command line, five at most and
+then "and N more". A key that takes more than 16 different values says so and
+names no one: a hostname is one finding, not a page. Findings come in the key
+order of the first report that has each key. `--key K` limits the run to one
+key; one that no report has is exit 2.
+
+What is compared is the value a key ends up with, as `diff` compares it, and
+whether the key is there. Where the value came from is not compared: a host
+that sets the port in a file and another that sets it in the environment agree
+if the port is the same (`doctor diff` says CFD002 for a pair). A default
+counts as a value.
+
+A secret is never shown. A key that is sensitive in any of the reports is
+compared by digest and its groups are "value 1", "value 2", numbered in the
+order they first appear, in text, SARIF and Markdown, from a full report as
+from a blind one; `--redact-all` does the same for every key (the message then
+says "not shown: --redact-all"). Where one report holds only a digest and
+another has none made the same way (digests under different keys, D-85), the
+key is not said to drift: it is CFD020, `info`, "cannot be told".
+
+The exit status is the one of every command: 0 when no finding reaches the
+`--fail-on` level, 1 when one does, 2 for a report that cannot be read, a key
+none of the reports has, fewer than two or more than 1024 reports, or a
+command line Doctor does not know. The one difference is the default level:
+a drift is a `warning`, and a command that asks whether a fleet is the same has
+to answer in its status, so `drift` fails on a warning unless `--fail-on` says
+otherwise (`--fail-on info` also fails on a set that cannot be compared;
+`--fail-on never` reports and exits 0). A baseline line `DRIFT log.level`
+accepts a drift that is known. The formats are `--format text|sarif|markdown`;
+SARIF's artifact is the first report. Every report is held in memory while
+the run lasts, as `history` holds them: 1000 reports of 200 keys (20 MB of
+files) took 4 seconds and 243 MB in an unoptimised build. A list of more
+reports than the shell passes to a program is not supported yet.
+
 ## 8. Rule Catalogue
 
 Each rule has a stable identifier so it can be suppressed individually. Rules marked
@@ -383,7 +444,8 @@ Each rule has a stable identifier so it can be suppressed individually. Rules ma
 
 `HISTORY` and `BLAME` are not rules of a configuration but records of a
 sequence (section 7c): each is `info`, and a severity file, a baseline or
-`--fail-on` treats them as it treats any identifier.
+`--fail-on` treats them as it treats any identifier. `DRIFT` is the record of
+a set (section 7e), and a `warning`.
 **What one report can prove.** The first draft of CFD001 read "a key set in a source
 that can never win", and the natural implementation — every shadowed candidate — is
 wrong twice over. A file shadowed by an environment variable here may win in the next
@@ -499,7 +561,8 @@ adopts Doctor one change at a time.
 3   internal error
 ```
 
-The threshold is `--fail-on error|warning|info|never`, error by default. SARIF output
+The threshold is `--fail-on error|warning|info|never`, error by default (warning for
+`drift`, section 7e). SARIF output
 keeps the same exit code, so one invocation can both annotate and gate.
 
 Reports are not comparable when their schema versions differ across a breaking

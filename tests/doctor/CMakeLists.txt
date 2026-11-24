@@ -69,6 +69,12 @@ doctor_case(history_strict 1
 doctor_case(history_unreadable 2 history|cf_fx_prod.json|cf_fx_none.json)
 doctor_case(blame 0 blame|server.port|cf_fx_prod.json|cf_fx_staging.json)
 doctor_case(blame_missing 2 blame|no.such.key|cf_fx_prod.json)
+# A set of reports, one a host: the keys they do not all agree on. A drift is
+# a warning and this command fails on a warning, so a set that differs is 1.
+doctor_case(drift_pair 1 drift|cf_fx_prod.json|cf_fx_staging.json)
+doctor_case(drift_pair_never 0
+            drift|cf_fx_prod.json|cf_fx_staging.json|--fail-on|never)
+doctor_case(drift_pair_unreadable 2 drift|cf_fx_prod.json|cf_fx_none.json)
 # Only what a change touched: nothing, against itself, so the info that a
 # plain lint shows fails no run; a source the change went through keeps
 # its warning; and the flag without a base is unusable.
@@ -179,7 +185,8 @@ foreach(
   refusals
   escape
   redact
-  keyed)
+  keyed
+  drift)
   add_test(NAME doctor.${script}
            COMMAND ${CMAKE_COMMAND} -DDOCTOR=$<TARGET_FILE:doctor> -P
                    ${CMAKE_SOURCE_DIR}/tests/doctor/${script}.cmake)

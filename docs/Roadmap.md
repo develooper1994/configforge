@@ -1402,11 +1402,14 @@ from parts that exist:
   (N-15, 1.9.0; keys only, never a value). What is left: checked against
   the contract when one is in the repository, and the comment saying
   which keys are out of range and which touch a secret.
-* ⬜ **Drift across many hosts.** What exists: `doctor diff` compares
-  two environments, origin drift is CFD002. What is left: N reports or
-  files at once (one a host), grouped by value, saying which hosts
-  differ from the rest and on which keys - the question "is this set
-  the same on a hundred servers".
+* 🟨 **Drift across many hosts.** What exists: `doctor diff` compares
+  two environments, origin drift is CFD002, and `doctor drift` (N-17,
+  1.9.0) reads two to 1024 reports, one a host, and says for each key the
+  hosts do not all agree on which reports hold which value, the odd ones
+  first; a secret is never shown, and the exit status says whether the set
+  is the same. What is left: the source of a value is not compared, a list
+  file for more reports than a shell passes, configuration files rather
+  than reports (`configforge diff` over N files), and the Python binding.
 * 🟨 **Market research before the next step.** Done on 2026-11-19 in
   [Market.md](Market.md): fields 1 (a diff that knows the contract) with
   3 (pull requests) and 5 (embedded configuration checked at build time)
@@ -1489,9 +1492,9 @@ maintainer; each is a card to write.
    the matrix and the deviation records are what is left of the first
    step.
 7. **Drift across many hosts** (People who change configuration).
-   `doctor diff` compares two environments; N reports grouped by value
-   answer "is this set the same on a hundred servers" and use the
-   comparison that now exists.
+   Done in 1.9.0 (card N-17): `doctor drift` groups N reports by value, per
+   key. What waits is the source of a value, a list file, N configuration
+   files and the Python binding.
 8. **Git's `textconv` driver for configuration** (card N-16) (People who change
    configuration). N-3 gave the difftool for flat JSON; a driver makes
    `git diff` and `git log -p` show changes by value in every format.

@@ -923,6 +923,108 @@ static void test_history(void) {
     }
 }
 
+/* Four hosts of one service, in no order. The port differs on one; the
+   token, a secret, by digest on one; `only` is on two of the four;
+   `same` agrees everywhere and is not drift. */
+static void test_drift(void) {
+    static const char* const set[] = {"cf_drift_1.json", "cf_drift_2.json",
+                                      "cf_drift_3.json", "cf_drift_4.json"};
+    static const char* const gap[] = {"cf_drift_1.json", "cf_drift_none.json",
+                                      "cf_drift_3.json"};
+    static const char*       many[1025];
+    cf_error                 err = CF_ERROR_INIT;
+    cf_doctor*               d   = cf_doctor_new();
+    const cf_finding*        f;
+    size_t                   i;
+
+    check(
+        d != NULL &&
+            seq_write(
+                set[0],
+                SEQ_KEY("port", "env", "\"value\":\"80\"") "," SEQ_KEY(
+                    "token", "env",
+                    "\"digest\":\"aaaa\"") "," SEQ_KEY("only", "env",
+                                                       "\"value\":\"x\"") "," SEQ_KEY("same",
+                                                                                      "env",
+                                                                                      "\"value\":\"v\"")) &&
+            seq_write(
+                set[1],
+                SEQ_KEY("port", "env", "\"value\":\"80\"") "," SEQ_KEY(
+                    "token", "env",
+                    "\"digest\":\"aaaa\"") "," SEQ_KEY("only", "env",
+                                                       "\"value\":\"x\"") "," SEQ_KEY("same",
+                                                                                      "env",
+                                                                                      "\"value\":\"v\"")) &&
+            seq_write(set[2],
+                      SEQ_KEY("port", "env", "\"value\":\"81\"") "," SEQ_KEY(
+                          "token", "env",
+                          "\"digest\":\"bbbb\"") "," SEQ_KEY("same", "env",
+                                                             "\"value\":\"v\"")) &&
+            seq_write(set[3],
+                      SEQ_KEY("port", "env", "\"value\":\"80\"") "," SEQ_KEY(
+                          "token", "env",
+                          "\"digest\":\"aaaa\"") "," SEQ_KEY("same", "env",
+                                                             "\"value\":\"v\"")),
+        "four reports of one service are written");
+    if (d == NULL) {
+        return;
+    }
+
+    check(cf_doctor_drift_files(d, set, 4, NULL, &err), err.message);
+    check(count_rule(d, "DRIFT", NULL) == 3 && cf_doctor_count(d) == 3 &&
+              find(d, "DRIFT", "same") == NULL,
+          "a set is one finding a key that differs, and none for a key that agrees");
+    f = find(d, "DRIFT", "port");
+    check(f != NULL && strcmp(f->level, "warning") == 0 &&
+              strcmp(f->message,
+                     "differs: '81' in cf_drift_3.json; '80' in cf_drift_1.json, "
+                     "cf_drift_2.json, cf_drift_4.json") == 0,
+          "the odd host first, the rest after it");
+    f = find(d, "DRIFT", "token");
+    check(f != NULL &&
+              strncmp(f->message,
+                      "differs (by digest): value 2 in cf_drift_3.json; value 1 in",
+                      59) == 0 &&
+              strstr(f->message, "aaaa") == NULL && strstr(f->message, "bbbb") == NULL,
+          "a secret is told by its digest, and neither digest is shown");
+    f = find(d, "DRIFT", "only");
+    check(f != NULL && strcmp(f->level, "warning") == 0 &&
+              strcmp(f->message,
+                     "differs: 'x' in cf_drift_1.json, cf_drift_2.json; absent from "
+                     "cf_drift_3.json, cf_drift_4.json") == 0,
+          "absence is a difference; two and two, the first to appear goes first");
+    cf_doctor_free(d);
+
+    d = cf_doctor_new();
+    check(d != NULL && cf_doctor_drift_files(d, set, 4, "port", &err) &&
+              cf_doctor_count(d) == 1,
+          "one key's drift is that key's alone");
+    cf_doctor_free(d);
+
+    d = cf_doctor_new();
+    check(d != NULL && !cf_doctor_drift_files(d, set, 4, "no.such.key", &err) &&
+              err.code == CF_E_KEY && cf_doctor_count(d) == 0,
+          "a key in none of the reports is an error, not an empty answer");
+    check(!cf_doctor_drift_files(d, set, 1, NULL, &err) && err.message[0] != '\0' &&
+              cf_doctor_count(d) == 0,
+          "one report has nothing to be compared with");
+    for (i = 0; i < 1025; ++i) {
+        many[i] = set[0];
+    }
+    check(!cf_doctor_drift_files(d, many, 1025, NULL, &err) &&
+              strstr(err.message, "at most 1024") != NULL && cf_doctor_count(d) == 0,
+          "more than 1024 reports is refused before any is read");
+    check(!cf_doctor_drift_files(d, gap, 3, NULL, &err) &&
+              strstr(err.message, "cf_drift_none.json") != NULL &&
+              cf_doctor_count(d) == 0,
+          "a set with an unreadable report records nothing from the rest");
+    cf_doctor_free(d);
+
+    for (i = 0; i < 4; ++i) {
+        remove(set[i]);
+    }
+}
+
 /* A program's blind report: a port it defaults to `port`, a token, a
    secret, it defaults to `token`, and the command line `arg` if any. */
 static size_t default_report(cf_i64 port, const char* token, const char* arg, char* buf,
@@ -1319,6 +1421,7 @@ int main(int argc, char** argv) {
     test_inputs();
     test_synthesized_list_count();
     test_history();
+    test_drift();
     test_only_changed();
     test_default_drift();
     test_default_marks();

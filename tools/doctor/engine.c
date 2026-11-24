@@ -1038,7 +1038,8 @@ static const struct {
     {"CFD019", "Fingerprint does not match the report's keys"},
     {"VALUE", "Value differs between environments"},
     {"HISTORY", "Changed between one report of a sequence and the next"},
-    {"BLAME", "The report a key's present state dates from"}};
+    {"BLAME", "The report a key's present state dates from"},
+    {"DRIFT", "A key the reports of a set do not all agree on"}};
 
 void doctor_key_name(const rkey* k, char* buf, size_t cap) {
     size_t n = (k->keylen + 1 < cap) ? k->keylen : cap - 1;
@@ -2082,6 +2083,237 @@ static void blame_key(const report* rs, size_t n, const char* key) {
 }
 
 /* ------------------------------------------------------------------ *
+ * A set of reports
+ *
+ * One report a host, in no order: for each key, which hosts hold what.
+ * What is compared is the value a key ends up with, and whether the key
+ * is there at all; where the value came from is `diff`'s business, for
+ * a pair. Reports are put in groups, first fit in the order given, so
+ * that a key is never more than DRIFT_GROUPS groups and a run costs
+ * (keys) x (reports) lookups. Nothing a secret holds is written: the
+ * groups of a key that is sensitive in any report, or of every key under
+ * --redact-all, are "value 1", "value 2", and the message says by what
+ * they were compared.
+ * ------------------------------------------------------------------ */
+
+#define DRIFT_MAX_REPORTS 1024
+#define DRIFT_GROUPS 16
+#define DRIFT_NAMES 5
+
+typedef enum { DRIFT_ABSENT, DRIFT_UNSET, DRIFT_VALUE } drift_kind;
+
+/* One report's state for one key. */
+typedef struct drift_state {
+    drift_kind  kind;
+    const rkey* k;
+    const cand* c;
+} drift_state;
+
+typedef struct drift_group {
+    drift_state rep;    /* the first report that was put in it            */
+    size_t      size;   /* how many reports                               */
+    unsigned    number; /* "value N", counting the groups with a value    */
+} drift_group;
+
+/* What a run needs besides the reports: allocated once, with `of`, one
+   unsigned a report, after it. */
+typedef struct drift_work {
+    drift_group group[DRIFT_GROUPS];
+    unsigned    order[DRIFT_GROUPS];
+    unsigned*   of; /* the group of each report */
+} drift_work;
+
+static drift_state drift_state_of(const report* r, const char* key, size_t kl) {
+    drift_state s;
+
+    s.k    = doctor_find_key(r, key, kl);
+    s.c    = chosen(s.k);
+    s.kind = (s.k == NULL) ? DRIFT_ABSENT : (s.c == NULL) ? DRIFT_UNSET : DRIFT_VALUE;
+    return s;
+}
+
+/* Two states are the same when both are absent, both unset, or both
+   hold a value that values_agree says is one. A state and a value are
+   never the same, and two values it cannot compare are neither. */
+static agreement drift_agree(const drift_state* a, const drift_state* b) {
+    if (a->kind != b->kind) {
+        return AGREE_NO;
+    }
+    if (a->c == NULL || b->c == NULL) {
+        return AGREE_YES; /* both absent, or both unset */
+    }
+    return values_agree(a->c, b->c);
+}
+
+/* What one group holds and the reports that hold it, appended at `at`:
+   "'debug' in web-3.json", "absent from web-5.json", "value 1 in a, b
+   and 2 more". Returns the length so far, as cf_fmt_append does. */
+static size_t drift_group_text(char* msg, size_t cap, size_t at, const drift_work* w,
+                               unsigned g, const report* rs, size_t n, cf_bool shown) {
+    const drift_group* gr = &w->group[g];
+    size_t             i, listed = 0;
+
+    if (gr->rep.kind == DRIFT_ABSENT) {
+        at = cf_fmt_append(msg, cap, at, "absent from ");
+    } else if (gr->rep.c == NULL) {
+        at = cf_fmt_append(msg, cap, at, "set by no source in ");
+    } else if (shown) {
+        at = cf_fmt_append(msg, cap, at, "'%s' in ", gr->rep.c->value);
+    } else {
+        at = cf_fmt_append(msg, cap, at, "value %u in ", gr->number);
+    }
+    for (i = 0; i < n; ++i) {
+        if (w->of[i] != g) {
+            continue;
+        }
+        if (listed == DRIFT_NAMES) {
+            at = cf_fmt_append(msg, cap, at, " and %u more",
+                               (unsigned)(gr->size - listed));
+            break;
+        }
+        at = cf_fmt_append(msg, cap, at, (listed > 0) ? ", %s" : "%s", rs[i].path);
+        ++listed;
+    }
+    return at;
+}
+
+/* The groups of a key, smallest first, ties in the order they appeared,
+   written as the finding's message. */
+static void drift_message(char* msg, size_t cap, const drift_work* w, size_t ng,
+                          const report* rs, size_t n, cf_bool by_digest,
+                          cf_bool hidden) {
+    unsigned order[DRIFT_GROUPS];
+    size_t   at   = cf_fmt(msg, cap, "%s",
+                           by_digest ? "differs (by digest): "
+                           : hidden  ? "differs (not shown: --redact-all): "
+                                     : "differs: ");
+    cf_bool  show = (by_digest || hidden) ? CF_FALSE : CF_TRUE;
+    unsigned a, c;
+
+    for (a = 0; a < ng; ++a) {
+        for (c = a; c > 0 && w->group[order[c - 1]].size > w->group[a].size; --c) {
+            order[c] = order[c - 1];
+        }
+        order[c] = a;
+    }
+    for (a = 0; a < ng; ++a) {
+        if (a > 0) {
+            at = cf_fmt_append(msg, cap, at, "; ");
+        }
+        at = drift_group_text(msg, cap, at, w, order[a], rs, n, show);
+    }
+}
+
+/* One key over the set: 0 when the reports agree, else 1, and a finding
+   when `record`. `first` is the key's entry in the first report that has
+   it, which gives its name. */
+static size_t drift_key(const report* rs, size_t n, const rkey* first, drift_work* w,
+                        cf_bool record) {
+    size_t   i, ng = 0, with_value = 0;
+    unsigned g;
+    cf_bool  unknown = CF_FALSE, overflow = CF_FALSE;
+    cf_bool  by_digest = CF_FALSE, hidden = CF_FALSE;
+
+    for (i = 0; i < n; ++i) {
+        drift_state s      = drift_state_of(&rs[i], first->key, first->keylen);
+        cf_bool     joined = CF_FALSE, doubt = CF_FALSE;
+
+        if (s.k != NULL) {
+            hidden = (hidden || s.k->hidden) ? CF_TRUE : CF_FALSE;
+            by_digest =
+                (by_digest || s.k->sensitive || (s.c != NULL && s.c->value == NULL))
+                    ? CF_TRUE
+                    : CF_FALSE;
+        }
+        for (g = 0; g < ng; ++g) {
+            agreement a = drift_agree(&w->group[g].rep, &s);
+
+            if (a == AGREE_YES) {
+                w->of[i] = g;
+                ++w->group[g].size;
+                joined = CF_TRUE;
+                break;
+            }
+            if (a == AGREE_UNKNOWN) {
+                doubt = CF_TRUE;
+            }
+        }
+        if (joined) {
+            continue;
+        }
+        if (ng == DRIFT_GROUPS) {
+            overflow = CF_TRUE;
+            break;
+        }
+        unknown             = (unknown || doubt) ? CF_TRUE : CF_FALSE;
+        w->group[ng].rep    = s;
+        w->group[ng].size   = 1;
+        w->group[ng].number = (s.kind == DRIFT_VALUE) ? (unsigned)(++with_value) : 0;
+        w->of[i]            = (unsigned)ng;
+        ++ng;
+    }
+    if (ng < 2) {
+        return 0;
+    }
+    if (record) {
+        char name[CF_KEY_MAX];
+
+        doctor_key_name(first, name, sizeof name);
+        if (unknown) {
+            finding(rs[0].D, "CFD020", "info", name, "%s",
+                    "whether the reports agree cannot be told: one holds only a "
+                    "digest and another has none of its kind to match");
+        } else if (overflow) {
+            finding(rs[0].D, "DRIFT", "warning", name,
+                    "differs: more than %u distinct values in %u reports",
+                    (unsigned)DRIFT_GROUPS, (unsigned)n);
+        } else {
+            char msg[512];
+
+            drift_message(msg, sizeof msg, w, ng, rs, n, by_digest, hidden);
+            finding(rs[0].D, "DRIFT", "warning", name, "%s", msg);
+        }
+    }
+    return 1;
+}
+
+/* Every key of the union, once, taken from the first report that has it:
+   the test "does an earlier report have it" stops at the first that does,
+   so reports with the same keys cost one lookup a key. */
+static size_t drift_pass(const report* rs, size_t n, const char* key, drift_work* w,
+                         cf_bool record) {
+    size_t i, j, count = 0;
+
+    if (key != NULL) {
+        size_t kl = strlen(key);
+
+        for (i = 0; i < n; ++i) {
+            const rkey* k = doctor_find_key(&rs[i], key, kl);
+            if (k != NULL) {
+                return drift_key(rs, n, k, w, record);
+            }
+        }
+        return 0;
+    }
+    for (i = 0; i < n; ++i) {
+        for (j = 0; j < rs[i].nkeys; ++j) {
+            const rkey* k = &rs[i].keys[j];
+            size_t      e;
+
+            for (e = 0; e < i; ++e) {
+                if (doctor_find_key(&rs[e], k->key, k->keylen) != NULL) {
+                    break;
+                }
+            }
+            if (e == i) {
+                count += drift_key(rs, n, k, w, record);
+            }
+        }
+    }
+    return count;
+}
+
+/* ------------------------------------------------------------------ *
  * The library (cf_doctor.h)
  * ------------------------------------------------------------------ */
 
@@ -2529,4 +2761,43 @@ const char* cf_doctor_rule_text(const char* id) {
         }
     }
     return NULL;
+}
+
+cf_bool cf_doctor_drift_files(cf_doctor* d, const char* const* paths, size_t n,
+                              const char* key, cf_error* err) {
+    const cf_allocator* a = cf_default_allocator();
+    report*             rs;
+    drift_work*         w;
+    cf_bool             ok = CF_FALSE;
+
+    if (paths == NULL || n < 2) {
+        return cf_error_set(err, CF_E_SOURCE, NULL, NULL,
+                            "a set needs at least two reports");
+    }
+    if (n > DRIFT_MAX_REPORTS) {
+        return cf_error_set(err, CF_E_SOURCE, NULL, NULL, "at most %u reports, not %u",
+                            (unsigned)DRIFT_MAX_REPORTS, (unsigned)n);
+    }
+    rs = reports_load(d, paths, n, err);
+    if (rs == NULL) {
+        return CF_FALSE;
+    }
+    w = (drift_work*)a->alloc(a->ctx, sizeof(drift_work) + n * sizeof(unsigned));
+    if (w == NULL) {
+        cf_error_set(err, CF_E_MEMORY, NULL, NULL, "no room for the comparison");
+    } else {
+        w->of = (unsigned*)(w + 1);
+        if (key != NULL && !key_in_any(rs, n, key)) {
+            cf_error_set(err, CF_E_KEY, key, NULL, "'%s' is in none of the reports",
+                         key);
+        } else if (!found_reserve(d, drift_pass(rs, n, key, w, CF_FALSE))) {
+            cf_error_set(err, CF_E_MEMORY, key, NULL, "no room for the drift");
+        } else {
+            (void)drift_pass(rs, n, key, w, CF_TRUE);
+            ok = CF_TRUE;
+        }
+        a->release(a->ctx, w);
+    }
+    reports_release(rs, n);
+    return ok;
 }
