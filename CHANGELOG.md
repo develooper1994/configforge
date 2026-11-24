@@ -12,9 +12,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   and never a value, before the swap's `"reload"` event.
 
 - `configforge diff` compares two configuration files across readable
-  formats, nested tables included. It lists added, removed and changed
-  keys by path, such as `$["db"]["port"]`, without printing values.
-  Arrays are still refused.
+  formats, including nested tables and named arrays of scalars. It lists
+  added, removed and changed keys by path, such as `$["db"]["port"]`,
+  without printing values. Each array is compared in order and reported
+  at its own path.
 - `cf_usage` (experimental): the `--help` text written from a configuration's 
   definitions - flags, aliases, description, default, range, permitted 
   spellings, environment name, deprecation - so a program's help is the 

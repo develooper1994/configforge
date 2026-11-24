@@ -239,6 +239,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 64 | N-5 Compare nested tables by value in `configforge diff` | small | N-1 | done (ad5b840) |
 | 65 | N-6 `cf_usage`: the `--help` text from the contract | small | nothing | done (83f5c64) |
 | 66 | N-7 A reload names the keys it changed | small | nothing | done (37ea469) |
+| 67 | N-8 Compare scalar arrays by value in `configforge diff` | small | N-5 | open |
 
 ## Done, their cards removed
 

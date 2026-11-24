@@ -1873,24 +1873,28 @@
 - typedef front_run_win32_unused 374
 `tools/diff/main.c`
 - struct seg 13-16
-- struct entry 18-24
-- struct side 26-36
-- reserve_work 38-48
-- reserve_text 50-52
-- copy_span 54-60
-- begin_table 62-82
-- begin_array 84-89
-- end_table 91-98
-- scalar 100-142
-- key_order 144-160
-- entry_order 162-170
-- read_side 172-221
-- next_key 223-229
-- write_segment 231-254
-- write_change 256-267
-- compare 269-298
-- usage 300-304
-- main 306-359
+- struct array_item 18-21
+- struct entry 23-33
+- struct side 35-46
+- reserve_work 48-58
+- reserve_text 60-62
+- copy_span 64-70
+- begin_table 72-95
+- record_entry 97-128
+- begin_array 130-144
+- end_container 146-157
+- copy_value 159-166
+- scalar 168-194
+- key_order 196-212
+- entry_order 214-222
+- read_side 224-274
+- next_key 276-282
+- write_segment 284-307
+- write_change 309-320
+- entry_equal 322-341
+- compare 343-372
+- usage 374-378
+- main 380-433
 `tools/doctor/adapters.h`
 `tools/doctor/doctor.c`
 - text_field 39-64

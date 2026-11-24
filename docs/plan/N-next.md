@@ -754,3 +754,73 @@ equal cross-format fixture therefore pairs them with JSON strings.
   sink at debug becomes measurably slower on `bench` (it must not: one pass
   over the keys). Record which.
 * **notes**: (empty)
+
+## N-8 - compare scalar arrays by value in `configforge diff`
+
+* **id**: N-8
+* **goal**: `configforge diff` compares named arrays of scalars in nested
+  mappings and reports the path of each added, removed or changed array.
+* **why**: A configuration with an ordered list of endpoints or search
+  paths is currently refused. The first array slice uses the existing
+  document events and key paths, so Git difftool can review those files too
+  (`docs/Roadmap.md:1368-1378`).
+* **needs**: N-5 (done)
+* **size**: small
+* **decided**:
+  * Accept a named array at any open table and treat it as one value at
+    that path. A root array, an array of tables or arrays, and a named
+    scalar inside an array are refused. Read unnamed scalar elements in
+    event order and close the array on the shared `end` event. The codec
+    defines names and array position in
+    `lib/serialize/include/configforge/cf_serialize.h:107-133`.
+  * Split entry recording from scalar copying in `tools/diff/main.c:72-194`.
+    An entry has a scalar/array flag and a union of a `cf_value` and a
+    linked list of scalar items. An open array holds a pointer to the
+    next list link, initially its entry’s head, which starts NULL. Copy
+    scalar text into the arena with the same helper for both branches.
+    Charge entries, paths, items and text to the existing work budget.
+    Verify both the table stack and the open-array state are closed after
+    decode (`tools/diff/main.c:224-274`).
+  * Compare elements in order with `cf_value_equal`. Length, order and
+    reader scalar types matter. An empty array equals another empty array
+    and is present when compared with a missing path. Scalar to array at
+    the same path is `changed`. A table contributes paths for its descendant
+    values as before. Where a reader accepts duplicate paths, the last
+    scalar or array at that path wins in full. Use the existing sort,
+    output escaping, status codes and refusal messages
+    (`tools/diff/main.c:196-222`, `tools/diff/main.c:276-372`). Print one
+    line per changed array path, with neither indices nor values or digests.
+  * C89 and D-100 apply. Use the existing CLI, codec interface and test
+    target. Root arrays, arrays of containers and contract-aware comparison
+    stay outside this slice.
+* **files**: `tests/front/diff.cmake`, `tools/diff/main.c`, `docs/Tools.md`,
+  `CHANGELOG.md`, and regenerated `docs/Codemap.md` and `docs/API.md`.
+  Card bookkeeping is in `docs/Plan.md`, `docs/Roadmap.md` and this file.
+* **steps**:
+  1. Work on `work/N-8` (already cut from `main`).
+  2. In `tests/front/diff.cmake`, replace the two now-valid refusal inputs
+     with `{"a":[[]]}` and `{"a":[{}]}`. Keep the root array refusal.
+     After the existing nested cases, add tests for equal nested arrays
+     with a `SENTINEL` string, reordered items, changed type, changed
+     length, empty arrays equal, missing versus empty (in both directions),
+     scalar versus array at the same path, and duplicate arrays where a
+     shorter last array wins. With `HAVE_YAML`, compare a YAML sequence of
+     strings with its JSON equivalent. Use the existing exact status,
+     stdout and stderr checks. Build MSVC/Ninja Debug at `%TEMP%/cf-n8/Debug`
+     and run `ctest --test-dir <Debug> -R "^front[.]diff$" --output-on-failure`.
+     See status 2 where 0 was expected on the equal nested arrays.
+  3. Implement the recorder and comparison above and rerun `front.diff`.
+     Update the diff section of Tools.md and the 1.8.0 Added entry in
+     CHANGELOG.md to describe scalar arrays and the path of a change.
+  4. Build MSVC/Ninja Release at `%TEMP%/cf-n8/Release` and rebuild Debug.
+     In both directories run `ctest -E "^gate\." --output-on-failure`
+     and the focused `front.diff` check. Run the generators last with
+     `cmake -P scripts/generate/codemap.cmake` and
+     `cmake -P scripts/generate/apiref.cmake`.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI. Deputy verification
+  uses the Debug and Release builds and CTest commands above. Report any
+  known sandbox failures named by AGENTS.md with the actual exit codes.
+* **stop if**: a reader sends named elements inside a supported scalar
+  array or violates event balance on valid input. Record the format and
+  input. Stop after three failures on the same thing, as in the loop.
+* **notes**: (empty)

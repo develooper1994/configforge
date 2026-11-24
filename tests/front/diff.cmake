@@ -194,7 +194,7 @@ check(
   SENTINEL
   a.json
   b.json)
-foreach(bad IN ITEMS [[{"bad":SENTINEL}]] [[{"a":{"b":[]}}]] [[{"a":[]}]] "[]")
+foreach(bad IN ITEMS [[{"bad":SENTINEL}]] [=[{"a":[[]]}]=] [[{"a":[{}]}]] "[]")
   file(WRITE "${WORK}/bad.json" "${bad}")
   check(
     2
@@ -262,6 +262,33 @@ check(
 if(HAVE_YAML)
   file(WRITE "${WORK}/ny.yaml" "a:\n  b: x\n  c: y\n")
   file(WRITE "${WORK}/nj.json" [[{"a":{"c":"y","b":"x"}}]])
+  check(
+    0
+    ""
+    ""
+    ny.yaml
+    nj.json)
+endif()
+
+# A named scalar array is compared in order as one value at its path.
+nested([[{"db":{"peers":["SENTINEL-A",2],"port":1}}]]
+       [[{"db":{"port":1,"peers":["SENTINEL-A",2]}}]] 0 "")
+nested([[{"db":{"peers":["SENTINEL-A",2]},"port":1}]]
+       [[{"db":{"peers":[2,"SENTINEL-A"]},"port":2}]] 1
+       "changed\t$[\"db\"][\"peers\"]\nchanged\t$[\"port\"]\n")
+nested([[{"a":[1]}]] [[{"a":["1"]}]] 1 "changed\t$[\"a\"]\n")
+nested([[{"a":[1]}]] [[{"a":[1,2]}]] 1 "changed\t$[\"a\"]\n")
+nested([[{"a":[]}]] [[{"a":[]}]] 0 "")
+nested([[{}]] [[{"a":[]}]] 1 "added\t$[\"a\"]\n")
+nested([[{"a":[]}]] [[{}]] 1 "removed\t$[\"a\"]\n")
+nested([[{"a":1}]] [[{"a":[1]}]] 1 "changed\t$[\"a\"]\n")
+nested([[{"a":[1,2],"a":[3]}]] [[{"a":[3]}]] 0 "")
+nested([[{"a":[1],"a":2}]] [[{"a":2}]] 0 "")
+nested([[{"a":2,"a":[1]}]] [[{"a":[1]}]] 0 "")
+if(HAVE_YAML)
+  file(WRITE "${WORK}/ny.yaml"
+       "db:\n  peers:\n    - SENTINEL-A\n    - localhost\n")
+  file(WRITE "${WORK}/nj.json" [[{"db":{"peers":["SENTINEL-A","localhost"]}}]])
   check(
     0
     ""

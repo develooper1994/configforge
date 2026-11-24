@@ -66,8 +66,8 @@ the program's exit code.
 configforge diff [--as-left FORMAT] [--as-right FORMAT] [--] LEFT RIGHT
 ```
 
-Compare two files containing mappings of named scalars, which may nest. Each side
-uses its file extension, then its content, to select a reader. To name
+Compare two files containing nested mappings of scalars and scalar arrays.
+Each side uses its file extension, then its content, to select a reader. To name
 a format explicitly, place its option before the paths. Use `--`
 before paths beginning with a dash. Both paths name files, even `-`.
 
@@ -75,8 +75,14 @@ Keys can include dots, quotes and the empty string. Where a reader
 accepts duplicate keys, the last value wins. Comparison preserves the
 reader's scalar types, so the JSON string `"1"` differs from the number
 `1`. Empty mappings are supported, and an empty nested table equals a
-missing one. Arrays are refused. A scalar is named by its whole path, so
-`{"a.b":1}` and `{"a":{"b":1}}` differ.
+missing one. A scalar is named by its whole path, so `{"a.b":1}` and
+`{"a":{"b":1}}` differ.
+
+A named array of scalars is compared in order and reported once at its
+whole path. For example, swapping the items in `{"peers":["a","b"]}`
+prints `changed` for `$["peers"]`. An empty array counts as a value, so
+adding one produces an `added` line. Root arrays and arrays containing
+tables or other arrays are refused.
 
 Each output line gives `added`, `removed` or `changed`, a tab and a path
 such as `$["port"]` or `$["db"]["port"]`. Paths appear in order, segment
@@ -91,9 +97,9 @@ failed and leaves stdout empty. Use `configforge diff --help` for usage.
 
 ### Git difftool for JSON
 
-Use this recipe for modified regular files containing JSON mappings
-of scalars, which may nest. With `configforge` on `PATH`, run `git config --local --edit`
-and add this stanza to the repository's local Git config.
+Use this recipe for modified regular files containing JSON mappings of
+scalars and scalar arrays. With `configforge` on `PATH`, run
+`git config --local --edit` and add this stanza to the repository's local Git config.
 
 ```gitconfig
 [difftool "configforge-json"]

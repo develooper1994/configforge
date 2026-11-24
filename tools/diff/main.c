@@ -1,5 +1,5 @@
-/* Compare two documents of nested scalar mappings by their typed reader
-   events. */
+/* Compare nested mappings of scalars and scalar arrays by their typed
+   reader events. */
 #include "configforge/cf_serialize.h"
 
 #include <stdio.h>
@@ -15,24 +15,34 @@ typedef struct seg {
     size_t      n;
 } seg;
 
+typedef struct array_item {
+    struct array_item* next;
+    cf_value           value;
+} array_item;
+
 typedef struct entry {
     struct entry* next;
     const seg*    path;
     size_t        depth;
     size_t        ordinal;
-    cf_value      value;
+    cf_bool       is_array;
+    union {
+        cf_value    scalar;
+        array_item* items;
+    } value;
 } entry;
 
 typedef struct side {
-    cf_arena* arena;
-    size_t    remaining;
-    size_t    count;
-    entry*    first;
-    entry*    last;
-    entry**   ordered;
-    size_t    tables;
-    cf_bool   seen;
-    seg*      stack;
+    cf_arena*    arena;
+    size_t       remaining;
+    size_t       count;
+    entry*       first;
+    entry*       last;
+    entry**      ordered;
+    size_t       tables;
+    cf_bool      seen;
+    seg*         stack;
+    array_item** array_next;
 } side;
 
 static void* reserve_work(void* ctx, size_t n) {
@@ -61,6 +71,9 @@ static char* copy_span(side* s, const char* p, size_t n) {
 
 static cf_bool begin_table(void* ctx, const char* name, size_t n) {
     side* s = (side*)ctx;
+    if (s->array_next != NULL) {
+        return CF_FALSE;
+    }
     if (name == NULL) {
         if (s->tables != 0) {
             return CF_FALSE;
@@ -81,15 +94,61 @@ static cf_bool begin_table(void* ctx, const char* name, size_t n) {
     return CF_TRUE;
 }
 
-static cf_bool begin_array(void* ctx, const char* name, size_t n) {
-    (void)ctx;
-    (void)name;
-    (void)n;
-    return CF_FALSE;
+static entry* record_entry(side* s, const char* name, size_t n) {
+    entry* e;
+    seg*   path;
+    if (s->tables == 0 || name == NULL) {
+        return NULL;
+    }
+    e = (entry*)reserve_work(s, sizeof *e);
+    if (e == NULL) {
+        return NULL;
+    }
+    path = (seg*)reserve_work(s, s->tables * sizeof *path);
+    if (path == NULL) {
+        return NULL;
+    }
+    memcpy(path, s->stack, (s->tables - 1) * sizeof *path);
+    path[s->tables - 1].p = copy_span(s, name, n);
+    if (path[s->tables - 1].p == NULL) {
+        return NULL;
+    }
+    path[s->tables - 1].n = n;
+    e->path               = path;
+    e->depth              = s->tables;
+    e->ordinal            = s->count++;
+    e->next               = NULL;
+    if (s->last != NULL) {
+        s->last->next = e;
+    } else {
+        s->first = e;
+    }
+    s->last = e;
+    return e;
 }
 
-static cf_bool end_table(void* ctx) {
+static cf_bool begin_array(void* ctx, const char* name, size_t n) {
+    side*  s = (side*)ctx;
+    entry* e;
+    if (s->array_next != NULL) {
+        return CF_FALSE;
+    }
+    e = record_entry(s, name, n);
+    if (e == NULL) {
+        return CF_FALSE;
+    }
+    e->is_array    = CF_TRUE;
+    e->value.items = NULL;
+    s->array_next  = &e->value.items;
+    return CF_TRUE;
+}
+
+static cf_bool end_container(void* ctx) {
     side* s = (side*)ctx;
+    if (s->array_next != NULL) {
+        s->array_next = NULL;
+        return CF_TRUE;
+    }
     if (s->tables == 0) {
         return CF_FALSE;
     }
@@ -97,48 +156,41 @@ static cf_bool end_table(void* ctx) {
     return CF_TRUE;
 }
 
+static cf_bool copy_value(side* s, cf_value* dest, const cf_value* src) {
+    *dest = *src;
+    if (src->type == CF_TYPE_TEXT) {
+        dest->u.t.p = copy_span(s, src->u.t.p, src->u.t.n);
+        return dest->u.t.p != NULL;
+    }
+    return CF_TRUE;
+}
+
 static cf_bool scalar(void* ctx, const char* name, size_t n, const cf_value* v,
                       cf_bool textual, const cf_loc* at) {
     side*  s = (side*)ctx;
     entry* e;
-    seg*   path;
     (void)textual;
     (void)at;
-    if (s->tables == 0 || name == NULL) {
-        return CF_FALSE;
+    if (s->array_next != NULL) {
+        array_item* item;
+        if (name != NULL) {
+            return CF_FALSE;
+        }
+        item = (array_item*)reserve_work(s, sizeof *item);
+        if (item == NULL || !copy_value(s, &item->value, v)) {
+            return CF_FALSE;
+        }
+        item->next     = NULL;
+        *s->array_next = item;
+        s->array_next  = &item->next;
+        return CF_TRUE;
     }
-    e = (entry*)reserve_work(s, sizeof *e);
+    e = record_entry(s, name, n);
     if (e == NULL) {
         return CF_FALSE;
     }
-    path = (seg*)reserve_work(s, s->tables * sizeof *path);
-    if (path == NULL) {
-        return CF_FALSE;
-    }
-    memcpy(path, s->stack, (s->tables - 1) * sizeof *path);
-    path[s->tables - 1].p = copy_span(s, name, n);
-    if (path[s->tables - 1].p == NULL) {
-        return CF_FALSE;
-    }
-    path[s->tables - 1].n = n;
-    e->path               = path;
-    e->depth              = s->tables;
-    e->value              = *v;
-    if (v->type == CF_TYPE_TEXT) {
-        e->value.u.t.p = copy_span(s, v->u.t.p, v->u.t.n);
-        if (e->value.u.t.p == NULL) {
-            return CF_FALSE;
-        }
-    }
-    e->ordinal = s->count++;
-    e->next    = NULL;
-    if (s->last != NULL) {
-        s->last->next = e;
-    } else {
-        s->first = e;
-    }
-    s->last = e;
-    return CF_TRUE;
+    e->is_array = CF_FALSE;
+    return copy_value(s, &e->value.scalar, v);
 }
 
 static int key_order(const entry* a, const entry* b) {
@@ -197,10 +249,11 @@ static cf_bool read_side(side* s, const char* path, const char* format) {
     sink.begin_table  = begin_table;
     sink.begin_array  = begin_array;
     sink.scalar       = scalar;
-    sink.end          = end_table;
+    sink.end          = end_container;
     sink.reserve_work = reserve_work;
     sink.reserve_text = reserve_text;
-    if (!cf_codec_decode(codec, &blob, &sink, &err) || !s->seen || s->tables != 0) {
+    if (!cf_codec_decode(codec, &blob, &sink, &err) || !s->seen || s->tables != 0 ||
+        s->array_next != NULL) {
         return CF_FALSE;
     }
     if (s->count == 0) {
@@ -266,6 +319,27 @@ static cf_bool write_change(const char* kind, const entry* e) {
     return putchar('\n') == EOF ? CF_FALSE : CF_TRUE;
 }
 
+static cf_bool entry_equal(const entry* a, const entry* b) {
+    const array_item* x;
+    const array_item* y;
+    if (a->is_array != b->is_array) {
+        return CF_FALSE;
+    }
+    if (!a->is_array) {
+        return cf_value_equal(&a->value.scalar, &b->value.scalar);
+    }
+    x = a->value.items;
+    y = b->value.items;
+    while (x != NULL && y != NULL) {
+        if (!cf_value_equal(&x->value, &y->value)) {
+            return CF_FALSE;
+        }
+        x = x->next;
+        y = y->next;
+    }
+    return x == NULL && y == NULL;
+}
+
 static int compare(const side* left, const side* right) {
     size_t i = 0, j = 0;
     int    rc = 0;
@@ -278,7 +352,7 @@ static int compare(const side* left, const side* right) {
             kind = "removed";
         } else if (order > 0) {
             kind = "added";
-        } else if (!cf_value_equal(&a->value, &b->value)) {
+        } else if (!entry_equal(a, b)) {
             kind = "changed";
         }
         if (kind != NULL) {
