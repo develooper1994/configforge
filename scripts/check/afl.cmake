@@ -50,12 +50,16 @@ file(REMOVE_RECURSE "${outroot}" "${seedroot}")
 file(MAKE_DIRECTORY "${outroot}")
 
 # The harnesses are the fuzz_* programs; the fuzz_seeds writer and the
-# fuzz_chain_seed<n> files its harness starts from are not.
+# fuzz_chain_seed<n> files its harness starts from are not, and neither is
+# fuzz_yamldiff (N-12), an exploratory target of the nightly yamldiff job:
+# a new class of difference there must not turn a per-push job red.
 file(GLOB candidates "${fuzzdir}/fuzz_*")
 set(targets)
 foreach(c ${candidates})
   get_filename_component(name "${c}" NAME)
-  if(IS_DIRECTORY "${c}" OR name MATCHES "_seed")
+  if(IS_DIRECTORY "${c}"
+     OR name MATCHES "_seed"
+     OR name STREQUAL "fuzz_yamldiff")
     continue()
   endif()
   list(APPEND targets "${name}")

@@ -272,6 +272,13 @@ static const reason_row rows[] = {
     ROW("json5", "{\"a\":\"\nx\"}", CONTROL, 0, 0),
     ROW("toml", "a = \"\x01\"\n", CONTROL, 0, 0),
     YAML_ROW("a: \"\x01\"\n", CONTROL),
+    YAML_ROW("#\0#", CONTROL),
+    YAML_ROW("# a\x01"
+             "b\n",
+             CONTROL),
+    YAML_ROW("a: 1 # x\x7f\n", CONTROL),
+    YAML_ROW("a: 1 # 0123456789abcdefghijk\x01lmnop\n", CONTROL),
+    YAML_ROW("a: 1\n# 0123456789abcdefghijklmnopqrstu\x7f\n", CONTROL),
     ROW("toml", "a = 1\n[a]\n", STRUCTURE, 0, 0),
 #if CF_WITH_XML
     ROW("xml", "<a x=\"1\"><x>2</x></a>", STRUCTURE, 0, 0),
@@ -465,6 +472,23 @@ static void test_storage(const char* format, const char* doc, cf_bool root_accep
     check(err.code == CF_E_SOURCE, "the sink refusal retains its existing code");
 }
 
+/* A comment YAML 1.2 lets through: a tab, UTF-8 and a lone or paired CR. */
+static void test_yaml_comment_kept(const char* doc, size_t n) {
+    cf_error    err = CF_ERROR_INIT;
+    cf_builder* builder;
+    cf_config*  config;
+
+    if (cf_codec_by_name("yaml") == NULL) {
+        return;
+    }
+    builder = cf_build(NULL);
+    check(cf_builder_document(builder, "doc", CF_RANK_USER_FILE, doc, n, "yaml", 0),
+          "add the document");
+    config = cf_builder_create(builder, &err);
+    check(config != NULL, "a printable comment is read");
+    cf_config_free(config);
+}
+
 static void test_multiline_storage(const char* format, const char* doc, unsigned col) {
     const cf_codec* codec = cf_codec_by_name(format);
     cf_doc_sink     sink  = accepting;
@@ -519,6 +543,13 @@ int main(int argc, char** argv) {
         test_multiline_storage("toml", "\na = \"\"\"first\nsecond\"\"\"", 5);
         test_multiline_storage("json5", "{\n a: 'first\\\nsecond'}", 5);
         test_storage("ini", "a=1", CF_FALSE);
+        test_yaml_comment_kept("a: 1 # tab\there\n", sizeof("a: 1 # tab\there\n") - 1);
+        test_yaml_comment_kept("a: 1\n# caf\xc3\xa9\n",
+                               sizeof("a: 1\n# caf\xc3\xa9\n") - 1);
+        test_yaml_comment_kept("a: 1\r\n# c\r\n", sizeof("a: 1\r\n# c\r\n") - 1);
+        test_yaml_comment_kept(
+            "a: 1 # 0123456789abcdefghij\tklmnop\xc3\xa9qrstuvwxyz\r# k\n",
+            sizeof("a: 1 # 0123456789abcdefghij\tklmnop\xc3\xa9qrstuvwxyz\r# k\n") - 1);
         if (cf_codec_by_name("ini") != NULL) {
             test_file("a=\x81\n", CF_REASON_ENCODING, CF_E_SOURCE, 1, 3, CF_FALSE);
         }

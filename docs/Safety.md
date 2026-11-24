@@ -40,6 +40,14 @@ The fuzzers fail a reader that spends more than four times D-82's bound
 on an input, so a document that costs a multiple of itself is found as a
 crash is (H-4).
 
+`fuzz_yamldiff` (N-12) feeds the same bytes to the YAML codec read through the
+built-in parser and through libyaml, and aborts on a difference that
+`tests/fuzz/yamldiff.known` does not document; build it where libyaml is
+installed and run it by hand from the build's `tests/fuzz` (`./fuzz_yamldiff
+corpus_yamldiff -max_len=8192 -seed_inputs=seed_yaml,seed_yaml_utf8,seed_yamldiff`
+after `./fuzz_seeds`). It runs nightly in the `yamldiff` CI job, which may fail
+without failing a push, and is not a ctest test.
+
 ## Hardening: what the build adds to what ships
 
 The library and Doctor are built with `-fstack-protector-strong`,

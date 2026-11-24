@@ -143,3 +143,35 @@ if(CF_WITH_EMIT
   math(EXPR limit "${CF_FUZZ_SECONDS} * 3 + 60")
   set_tests_properties(fuzz.chain PROPERTIES LABELS fuzz TIMEOUT ${limit})
 endif()
+
+# N-12: the same bytes to the YAML codec read through the built-in parser
+# and to the one read through libyaml, in one process; a difference that
+# yamldiff.known does not document aborts. Built where libyaml is found,
+# by the names backends.cmake uses; without it there is no such target.
+# An exploratory target, run by hand and nightly (the yamldiff job of
+# ci.yml), never by ctest: a new class of difference must not turn a
+# per-push run red.
+if(CF_WITH_YAML)
+  find_path(CF_LIBYAML_INCLUDE_DIR yaml.h)
+  find_library(CF_LIBYAML_LIBRARY NAMES yaml libyaml yaml-0)
+  if(CF_LIBYAML_INCLUDE_DIR AND CF_LIBYAML_LIBRARY)
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/seed_yamldiff"
+         "a: 1\nb: [x, y]\nc:\n  d: \"e\"\n")
+    add_executable(fuzz_yamldiff yamldiff.c yamldiff_builtin.c
+                                 yamldiff_libyaml.c)
+    target_include_directories(
+      fuzz_yamldiff PRIVATE ${CF_LIBYAML_INCLUDE_DIR}
+                            ${CMAKE_SOURCE_DIR}/lib/serialize/src)
+    target_compile_definitions(
+      fuzz_yamldiff
+      PRIVATE "YD_KNOWN=\"${CMAKE_CURRENT_SOURCE_DIR}/yamldiff.known\"")
+    target_link_libraries(fuzz_yamldiff PRIVATE configforge_serialize
+                                                ${CF_LIBYAML_LIBRARY})
+    configforge_apply_analysis(fuzz_yamldiff)
+    target_compile_options(fuzz_yamldiff PRIVATE -fsanitize=fuzzer)
+    target_link_options(fuzz_yamldiff PRIVATE -fsanitize=fuzzer)
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/corpus_yamldiff")
+  else()
+    message(STATUS "fuzz.yamldiff: libyaml not found, not built")
+  endif()
+endif()

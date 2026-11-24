@@ -1461,8 +1461,8 @@ The eight items that would help users most, from the sections marked
 "not yet cards", in this order. None needs a decision from the
 maintainer; each is a card to write.
 
-1. **Differential fuzzing against the other readers** (Suggestions of
-   2026-11-17). The libraries of P-1b are already built beside ours, so
+1. **Differential fuzzing against the other readers** (card N-12;
+   Suggestions of 2026-11-17). The libraries of P-1b are already built beside ours, so
    the same input can go to all of them; a disagreement is a bug in one
    of them, found before a user finds it.
 2. **One diagnostic model: severity and weakness ids** (card N-13)
@@ -1492,13 +1492,20 @@ maintainer; each is a card to write.
    configuration). N-3 gave the difftool for flat JSON; a driver makes
    `git diff` and `git log -p` show changes by value in every format.
 
-* **A NUL inside a YAML comment is accepted** (a fault, found by N-12's
-  differential fuzzer against libyaml; input base64 `IwAj`). The built-in
-  reader skips a comment to the end of the line without looking at its
-  bytes; YAML forbids NUL anywhere, and libyaml refuses it. A fix for
-  1.9.0: refuse it with the reason the other control bytes get, and a
-  regression test. N-12's other differences (16 documented, 2 to decide)
-  are in its card on `origin/work/N-12`.
+* **A lone CR inside a YAML comment** (a fault, found by N-12's
+  differential fuzzer against libyaml). The built-in reader's comment skip
+  was fixed in N-12 to refuse a NUL or other control byte; what stays is
+  the second half of that finding: `yp_syntax`
+  (`lib/serialize/src/yamlparse.c`) lacks `CF_SYN_TOML_COMMENT`, whose body
+  check ends a comment at LF only and so would refuse a lone CR, which YAML
+  ends a line with. A fix is a YAML flag in `lib/text/src/space.c`, and a
+  regression test with a lone CR. Two more differences are "to decide", not
+  examined: a literal block scalar whose last line is only spaces, with no
+  line break after it (the built-in parser ends its text with a line feed,
+  libyaml does not; base64 in N-12's notes), and two inputs libyaml accepts
+  and the built-in parser refuses (a block scalar header at the mapping's own
+  column; an anchor followed by tabs; both in N-12's notes, in
+  `docs/plan/N-next.md`).
 
 After the features above (the maintainer, 2026-11-24):
 

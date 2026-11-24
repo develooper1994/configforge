@@ -102,9 +102,6 @@ static cf_bool yp_fail(yp* y, int reason, const char* what) {
     return yp_fail_at(y, y->p, reason, what);
 }
 
-static const cf_text_syntax yp_syntax = {CF_BLANK_SPTAB, CF_NL_ANY,
-                                         CF_SYN_HASH | CF_SYN_HASH_BLANK};
-
 static void yp_eat_break(yp* y) {
     y->p += cf_text_break(CF_NL_ANY, y->p, y->end);
     cf_text_track_line(&y->tr, y->p);
@@ -120,10 +117,88 @@ static int yp_comment_here(const yp* y) {
            (y->p == y->tr.line_start || yp_blank(y->p[-1]));
 }
 
-static void yp_skip(yp* y) {
-    const char* bad;
+/* A byte a scalar may hold: YAML's printable set, by its single bytes
+   (a multi-byte character's bytes are all 0x80 and up). */
+static int yp_printable(int c) {
+    return c == '\t' || (c >= 0x20 && c != 0x7F);
+}
 
-    (void)cf_text_skip(&yp_syntax, &y->tr, &y->p, y->end, &bad);
+/* Whether a word of bytes may hold one a comment refuses: a byte whose low
+   seven bits are below 0x20 (a tab and the line breaks too) or 0x7F. A byte
+   from 0x80 up (UTF-8) counts by its low bits, so it may be flagged and is
+   then judged by the byte loop; no byte that is refused is ever missed. */
+static unsigned long yp_word_odd(unsigned long w) {
+    const unsigned long ones = ~0UL / 255UL;
+    const unsigned long low  = w & (ones * 0x7FUL);
+
+    return (~(low + ones * 0x60UL) | (low + ones)) & (ones * 0x80UL);
+}
+
+/* The comment at y->p, a '#', up to its line break, which it leaves. A
+   comment may hold what a scalar may (YAML 1.2, c-printable), so the same
+   pass that finds its end refuses a NUL or another control byte. It runs a
+   word at a time while the text holds nothing odd and by bytes where it does
+   (a tab, UTF-8, the line break), because a comment is most of the bytes of
+   a commented file and the library's per-byte line search costs far more. */
+static cf_bool yp_comment(yp* y) {
+    const char*   q = y->p;
+    unsigned long w;
+    size_t        k;
+
+    for (;;) {
+        while ((size_t)(y->end - q) >= sizeof w) {
+            memcpy(&w, q, sizeof w);
+            if (yp_word_odd(w) != 0UL) {
+                break;
+            }
+            q += sizeof w;
+        }
+        for (k = 0; k < sizeof w && q < y->end; ++k, ++q) {
+            if (*q == '\n' || *q == '\r') {
+                y->p = q;
+                return CF_TRUE;
+            }
+            if (!yp_printable((unsigned char)*q)) {
+                y->p = q;
+                return yp_fail(y, CF_REASON_CONTROL,
+                               "a comment holds a character YAML does not print");
+            }
+        }
+        if (q >= y->end) {
+            y->p = q;
+            return CF_TRUE;
+        }
+    }
+}
+
+/* White space, breaks and comments, as cf_text_skip skips them for YAML (blanks
+   are spaces and tabs, breaks are LF, CR LF and CR, a '#' after a blank or at a
+   line's start begins a comment), except that a comment goes through
+   yp_comment. */
+static cf_bool yp_skip(yp* y) {
+    while (y->p < y->end) {
+        size_t      n = cf_text_break(CF_NL_ANY, y->p, y->end);
+        const char* next;
+
+        if (n != 0) {
+            y->p += n;
+            cf_text_track_line(&y->tr, y->p);
+            continue;
+        }
+        next = cf_text_blanks(CF_BLANK_SPTAB, y->p, y->end);
+        if (next != y->p) {
+            y->p = next;
+            continue;
+        }
+        if (yp_comment_here(y)) {
+            if (!yp_comment(y)) {
+                return CF_FALSE;
+            }
+            continue;
+        }
+        break;
+    }
+    return CF_TRUE;
 }
 
 /* The rest of a line after a node: white space and a comment, nothing
@@ -131,8 +206,9 @@ static void yp_skip(yp* y) {
 static cf_bool yp_line_rest(yp* y) {
     yp_blanks(y);
     if (yp_comment_here(y)) {
-        const char* bad;
-        (void)cf_text_comment(&yp_syntax, &y->p, y->end, &bad);
+        if (!yp_comment(y)) {
+            return CF_FALSE;
+        }
     }
     if (cf_text_eol(CF_NL_ANY, y->p, y->end) != y->p) {
         return yp_fail(y, CF_REASON_SYNTAX, "unexpected text after the value");
@@ -166,12 +242,6 @@ static int yp_marker(const yp* y) {
            ((y->p[0] == '-' && y->p[1] == '-' && y->p[2] == '-') ||
             (y->p[0] == '.' && y->p[1] == '.' && y->p[2] == '.')) &&
            yp_blankz(yp_c(y, 3));
-}
-
-/* A byte a scalar may hold: YAML's printable set, by its single bytes
-   (a multi-byte character's bytes are all 0x80 and up). */
-static int yp_printable(int c) {
-    return c == '\t' || (c >= 0x20 && c != 0x7F);
 }
 
 /* ------------------------------------------------------------------ *
@@ -1026,8 +1096,8 @@ static cf_bool yp_flow_skip(yp* y, int n) {
     for (;;) {
         yp_blanks(y);
         if (yp_comment_here(y)) {
-            while (y->p < y->end && !yp_brk(*y->p)) {
-                ++y->p;
+            if (!yp_comment(y)) {
+                return CF_FALSE;
             }
         }
         if (y->p < y->end && yp_brk(*y->p)) {
@@ -1222,7 +1292,9 @@ static cf_bool yp_block_map(yp* y, int m, const yp_props* pr) {
             if (!yp_block_node(y, m, YP_EXPLICIT)) {
                 return CF_FALSE;
             }
-            yp_skip(y);
+            if (!yp_skip(y)) {
+                return CF_FALSE;
+            }
             if (y->p < y->end && !yp_marker(y) && (int)(y->p - y->tr.line_start) == m &&
                 *y->p == ':' && yp_blankz(yp_c(y, 1))) {
                 ++y->p;
@@ -1248,7 +1320,9 @@ static cf_bool yp_block_map(yp* y, int m, const yp_props* pr) {
                 return CF_FALSE;
             }
         }
-        yp_skip(y);
+        if (!yp_skip(y)) {
+            return CF_FALSE;
+        }
         if (y->p >= y->end || yp_marker(y)) {
             break;
         }
@@ -1276,7 +1350,9 @@ static cf_bool yp_block_seq(yp* y, int s, const yp_props* pr) {
         if (!yp_block_node(y, s, YP_ENTRY)) {
             return CF_FALSE;
         }
-        yp_skip(y);
+        if (!yp_skip(y)) {
+            return CF_FALSE;
+        }
         if (y->p >= y->end || yp_marker(y) || yp_indent(y) < s) {
             break;
         }
@@ -1332,7 +1408,9 @@ static cf_bool yp_block_node(yp* y, int n, int ctx) {
     memset(&pr, 0, sizeof pr);
     yp_blanks(y);
     if (y->p >= y->end || yp_brk(*y->p) || yp_comment_here(y)) {
-        yp_skip(y);
+        if (!yp_skip(y)) {
+            return CF_FALSE;
+        }
     }
     if (yp_none_here(y, n, ctx)) {
         return yp_empty(y, &pr);
@@ -1353,7 +1431,9 @@ static cf_bool yp_block_node(yp* y, int n, int ctx) {
             props_inline = 2;
             break;
         }
-        yp_skip(y);
+        if (!yp_skip(y)) {
+            return CF_FALSE;
+        }
         if (yp_none_here(y, n, ctx)) {
             return yp_empty(y, &pr);
         }
@@ -1511,13 +1591,17 @@ cf_bool cf_yaml_parse(const cf_blob* in, const char* file, const cf_yp_events* e
         int directives = 0;
 
         y.ntags = 0;
-        yp_skip(&y);
+        if (!yp_skip(&y)) {
+            return CF_FALSE;
+        }
         while (y.p < y.end && y.p == y.tr.line_start && *y.p == '%') {
             directives = 1;
             if (!yp_directive(&y, &seen_yaml)) {
                 return CF_FALSE;
             }
-            yp_skip(&y);
+            if (!yp_skip(&y)) {
+                return CF_FALSE;
+            }
         }
         if (y.p >= y.end) {
             if (directives) {
@@ -1549,7 +1633,9 @@ cf_bool cf_yaml_parse(const cf_blob* in, const char* file, const cf_yp_events* e
         if (!yp_block_node(&y, -1, YP_DOC)) {
             return CF_FALSE;
         }
-        yp_skip(&y);
+        if (!yp_skip(&y)) {
+            return CF_FALSE;
+        }
         if (y.p >= y.end) {
             break;
         }

@@ -13,6 +13,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   operation against the loop, and one that did not win keeps the loop
   (P-2): `find_byte`, `find_lt`, `ascii_run` and `count_byte` are a word at
   a time, `find_any` and `utf8_valid` stay the loop.
+- `fuzz_yamldiff` (an exploratory test target, run by hand and nightly, no
+  change to a library): the same bytes to the YAML codec read through the
+  built-in parser and through libyaml, which aborts on a difference that
+  `tests/fuzz/yamldiff.known` does not document.
 
 ### Changed
 
@@ -22,6 +26,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   `cf_codec_compose_sized`, `cf_encoding_by_name`, `cf_encoding_name`,
   `cf_encoding_recode`, `cf_encoding_check`) are promised for the rest of
   1.x (D-89).
+
+### Fixed
+
+- The built-in YAML reader refuses a NUL or other control character inside a
+  comment, as YAML 1.2 asks (`control-character`); found by `fuzz_yamldiff`.
 
 ## 1.8.0 — 2026-11-24
 

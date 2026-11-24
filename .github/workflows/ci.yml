@@ -432,6 +432,31 @@ jobs:
           name: fuzz-findings
           path: build-fuzz/tests/fuzz/crash-*
 
+  # The built-in YAML parser against libyaml on the same bytes (card N-12).
+  # Exploratory, so only on schedule or by hand, never a required check: a
+  # new class of difference is a finding to sort, not a red push. A finding
+  # leaves its input as crash-<hash>, kept as an artifact.
+  yamldiff:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-26.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: sudo apt-get update && sudo apt-get install -y clang libyaml-dev
+      - run: cmake --preset fuzz -B build-yamldiff
+      - run: cmake --build build-yamldiff --target fuzz_seeds fuzz_yamldiff -j4
+      - name: Seeds, then ten minutes of fuzzing
+        working-directory: build-yamldiff/tests/fuzz
+        run: |
+          ./fuzz_seeds
+          mkdir -p corpus_yamldiff
+          ./fuzz_yamldiff corpus_yamldiff -max_total_time=600 -max_len=8192 -seed_inputs=seed_yaml,seed_yaml_utf8,seed_yamldiff
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: failure()
+        with:
+          name: yamldiff-findings
+          path: build-yamldiff/tests/fuzz/crash-*
+
   # Which lines no test reaches, and a floor under the number: a ratchet
   # in verify.cmake (COVERAGE_MIN), raised as tests are added.
   coverage:

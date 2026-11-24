@@ -143,3 +143,189 @@ files only (N-15). Each is its own branch and lands alone. I-2, which opens
 * **accept**: ACCEPT-LINUX, ACCEPT-CI; `ctest -R doctor.action` exit 0 in the default preset. The action itself cannot run on a pull request before it is merged: the card does not claim it ran there, and the first pull request that sets `config:` is the check (write that under "notes" when it has run).
 * **stop if**: `git diff -z` and `read -d ''` behave differently between the CI runners' bash and the test's (write the difference under notes); the test needs a network; the action's condition syntax cannot express "report empty and config empty" without a third input (that is a design question: stop).
 * **notes**: (empty)
+
+## N-12 - differential fuzzing of the YAML reader: the built-in parser against libyaml
+
+* **id**: N-12
+* **goal**: One libFuzzer target, `fuzz_yamldiff`, feeds the same bytes to the
+  YAML codec read through the built-in parser and to the YAML codec read
+  through libyaml, in one process, compares the two event streams, and aborts
+  when they disagree in a way `tests/fuzz/yamldiff.known` does not document.
+* **why**: Roadmap, "Next after 1.8.0", item 1. The two parsers are chosen at
+  build time (`lib/serialize/backends.cmake:25-123`), so no test has put one
+  input to both. A disagreement is a bug in one of them, or a confusion two
+  programs can be made to share (one reads the file as a mapping, the other
+  refuses it). This is the first part only: YAML, one other reader. libfyaml
+  and the other formats (yyjson, toml++, expat, tinycbor) are cards of their
+  own once this one shows what a finding costs.
+* **needs**: nothing
+* **size**: small
+* **decided**:
+  * Both readers are the real codec, not a copy. `yaml.c` is included twice,
+    from two wrapper translation units, with `cf_codec_yaml` (the only name
+    `yaml.c` exports: `lib/serialize/src/yaml.c:1317` and `:1329`) renamed by a
+    macro. `tests/fuzz/yamldiff_builtin.c` defines `cf_codec_yaml` as
+    `cf_codec_yaml_builtin` and includes `../../lib/serialize/src/yaml.c`, with
+    `CF_YAML_LIBYAML` and `CF_YAML_LIBFYAML` undefined (the built-in parser,
+    `yaml.c:1048-1104`). `tests/fuzz/yamldiff_libyaml.c` does the same with
+    `cf_codec_yaml_libyaml` and `#define CF_YAML_LIBYAML 1` first (libyaml's
+    adapter, `yaml.c:952-1046`). The wrappers hold nothing else. The built-in
+    parser's `cf_yaml_parse` comes from the linked `configforge_serialize`
+    (`lib/serialize/src/yamlparse.c`); the library's own `cf_codec_yaml` is not
+    used by this target.
+  * The target is `tests/fuzz/yamldiff.c`: `LLVMFuzzerTestOneInput`, C89,
+    public headers (`#undef CF_INTERNAL_API`, `#define CF_INTERNAL_API 0`, as
+    `tests/fuzz/chain.c:15-16`). It decodes through `cf_codec_decode`
+    (`lib/serialize/src/codec.c:279`), not the raw decoder, so the UTF-8 check
+    both readers share runs first. The input is cut to 8192 bytes.
+  * Each side gets a sink that appends one line an event to its own buffer
+    (a fixed 256 KiB array and a length; past it the input is skipped, not
+    failed): `T <name>` for `begin_table`, `A <name>` for `begin_array`,
+    `S <name> <type> <value>[ textual]` for a scalar (written as
+    `tools/codec/dump.c:140-170` writes it: text quoted with `\n`, `\"` and
+    `\xHH` escapes, other types through `cf_value_to_text`), `E` for `end`.
+    The place (`cf_loc`) is not written: the two parsers mark a place
+    differently and that is not a difference of reading. `reserve_text` and
+    `reserve_work` are served from one `cf_arena` (`cf_arena_new(NULL, 0)`)
+    made per input and freed after, as `tools/codec/dump.c:240-262` does.
+  * A run ends in one of four ways, and only the last aborts: both refuse (the
+    messages and places differ, never compared); both accept with equal
+    streams; the sides differ and a rule of the known file covers the input;
+    the sides differ and no rule does: print both results, the first
+    differing line and the input in hex on stderr, then `abort()`.
+  * A difference is one of three sides: `lib-refuses` (built-in accepts,
+    libyaml refuses), `bi-refuses` (libyaml accepts, built-in refuses),
+    `events` (both accept, the streams differ).
+  * `tests/fuzz/yamldiff.known`, read once at start-up from the path in the
+    compile definition `YD_KNOWN` (the source directory's copy): one rule a
+    line, three tab-separated fields - the side, a needle, the reason; a line
+    starting with `#` and an empty line are ignored. The needle is a byte
+    string written with `\n`, `\t`, `\\` and `\xHH` escapes; a rule covers an
+    input of that side that contains the needle. A reason says which reading
+    is right and why (the YAML 1.2 rule, or the project decision). A missing
+    or unreadable file, a line without three fields, or a needle shorter than
+    3 bytes is `abort()` at start-up naming the line: a target that silently
+    allows everything is worse than none, and a one-byte needle blinds the
+    fuzzer. A needle is the shortest byte string that causes the difference.
+  * CMake, in `tests/fuzz/CMakeLists.txt` after the `fuzz.chain` block
+    (`:116-145`): when `CF_WITH_YAML`, `find_path(CF_LIBYAML_INCLUDE_DIR
+    yaml.h)` and `find_library(CF_LIBYAML_LIBRARY NAMES yaml libyaml yaml-0)`
+    (the names `lib/serialize/backends.cmake:107-108` uses, so a build that
+    chose libyaml shares them). When both are found, build `fuzz_yamldiff` from
+    the three sources, linked to `configforge_serialize` and libyaml, with
+    `-fsanitize=fuzzer` like the other targets and
+    `YD_KNOWN="${CMAKE_CURRENT_SOURCE_DIR}/yamldiff.known"`; the wrappers'
+    include path gets `lib/serialize/src`'s sibling headers the way
+    `fuzz_chain` gets `tools/codec`. When not found,
+    `message(STATUS "fuzz.yamldiff: libyaml not found, not built")` and no
+    target. No new CMake option (the matrix gate, `gate.matrix`, lists them).
+  * The test is `fuzz.yamldiff`, label `fuzz`, timeout `CF_FUZZ_SECONDS * 3 +
+    60`, `-max_len=8192`, corpus directory `corpus_yamldiff`, fixture
+    `FUZZ_SEEDS`. Seeds: `seed_yaml` and `seed_yaml_utf8` (written by
+    `fuzz_seeds`, `lib/config/tests/test_fuzz.c:802,831`) and `seed_yamldiff`,
+    which CMake writes beside the executable: `a: 1\nb: [x, y]\nc:\n  d: "e"\n`.
+    The AFL job (`scripts/check/afl.cmake:56-80`) runs every `fuzz_<reader>` it
+    finds and fails without a `seed_<reader>` beside it, so `seed_yamldiff`
+    must exist.
+  * CI: the `libfuzzer` job (`.github/workflows/ci.yml:403-433`) gets one step
+    before the verify step, `sudo apt-get update && sudo apt-get install -y
+    libyaml-dev`, so the target is built there. The AFL job is unchanged.
+  * What the first runs find is not decided here; how it is sorted is. A
+    sanitiser report or a crash in either parser is a bug: fixed if small and
+    clearly in ConfigForge with a regression test, otherwise recorded under
+    notes. A difference that is the YAML 1.1 (libyaml) against 1.2 (built-in)
+    split becomes a rule with that reason. Anything else is a finding: under
+    notes with the input in base64, and a rule only if its reason starts with
+    "to fix", so the list of what is wrong is the list of rules that start so.
+    libyaml is a reference, not an oracle; the spec decides.
+  * C89 and D-100 apply to `yamldiff.c`. Format, then regenerate
+    `docs/API.md`, `docs/Codemap.md` and `docs/Limits.md` on Linux, before
+    every push.
+* **files**: `tests/fuzz/yamldiff.c`, `tests/fuzz/yamldiff_builtin.c`,
+  `tests/fuzz/yamldiff_libyaml.c`, `tests/fuzz/yamldiff.known`,
+  `tests/fuzz/CMakeLists.txt`, `.github/workflows/ci.yml`, `CHANGELOG.md` (one
+  line under Unreleased: a fuzz target, no change to a library).
+* **steps**:
+  1. `git switch -c work/N-12` (the branch exists, cut from main).
+  2. Write the two wrappers, `yamldiff.c`, an empty `yamldiff.known` (comment
+     lines only) and the CMake block. Configure a Linux build in
+     `$HOME/cf-n12-fuzz` (clang, `CF_FUZZ=ON`, `CF_PROFILE=default`,
+     `RelWithDebInfo`, as the `fuzz` preset) and build `fuzz_yamldiff` with
+     `-j2`.
+  3. See it fail: a scratch edit in `yamldiff.c`, never committed, that appends
+     `E\n` to the libyaml side's buffer. `fuzz_yamldiff corpus_yamldiff
+     <seeds> -runs=1000` must abort and print both results. Remove the edit;
+     the same run on the seeds is clean.
+  4. Run `fuzz_yamldiff` for 60 s. For each abort: sort it (see decided),
+     write the rule or the note, run again. Aborts of one cause are one rule.
+  5. `ctest -R "^fuzz[.]yamldiff$"` in the fuzz build; then the default build's
+     full `ctest` and `ctest -R "^gate[.]"` in a second directory.
+  6. Format, regenerate the documents, commit, push the branch.
+* **accept**: ACCEPT-LINUX with libyaml-dev installed: the planted difference
+  aborts the target; `fuzz.yamldiff` runs its seconds clean; the default
+  build's `ctest` and `ctest -R "^gate[.]"` pass; a fuzz build without libyaml
+  prints the status line and builds the other targets unchanged. ACCEPT-CI:
+  the `libfuzzer` job builds and runs it.
+* **stop if**: `yaml.c` cannot be included twice in one program (a name other
+  than `cf_codec_yaml` clashes: record which; the fallback, two executables
+  and a script that compares their output, is another card); the two parsers
+  disagree on more than ten distinct needles in the first 60 s (the 1.1/1.2
+  split is wider than a list holds: report the ten); or a crash in either
+  parser needs more than a few lines to fix.
+* **notes**: done 2026-11-24 on `work/N-12`. Changes to the card as written:
+  a refusal's rule key is a part (8 bytes at least) of the refusing side's
+  message, not a byte needle in the input, because the first finding (a
+  flow collection continued at column 0) has no byte needle that is not
+  also in most inputs; only `events` rules keep a byte needle (3 bytes at
+  least); no control-byte exception is needed. The ten-rule stop was passed
+  on purpose: the fuzzer finds a new class every few seconds, so
+  `yamldiff.known` holds 16 rules and the run is not yet clean for long.
+  Findings, all of the built-in parser against libyaml, none a crash:
+  1. The built-in parser is stricter, and right by YAML 1.2, in: a flow
+     collection or a quoted scalar continued at a column not indented more
+     than its block mapping; a leading empty line of a block scalar more
+     indented than the content; a `#` straight after a flow `,`, a closing
+     quote or a flow collection (needs white space before it, so no comment).
+     libyaml accepts all of these.
+  2. libyaml is stricter, and the built-in parser right, in: anchor and alias
+     names (1.2 allows `!`, `~`, `:` and more; libyaml only letters, digits,
+     `_`, `-`), which gives four different libyaml messages; `[x, :abc]`
+     (a plain scalar starting with `:`); `[a:, b]` (not checked against a
+     third parser); a lone TAB line, and a TAB after the indentation.
+  3. To fix, built-in: a NUL or other control byte inside a comment is
+     accepted; libyaml and YAML 1.2 (c-printable) refuse. Input hex 23 00 23,
+     base64 `IwAj`. Not fixed: `yp_syntax` (`lib/serialize/src/yamlparse.c:105`)
+     lacks `CF_SYN_TOML_COMMENT`, whose body check ends a comment at LF only
+     and so refuses a lone CR, which YAML ends a line with; the fix is a
+     YAML flag in `lib/text/src/space.c:67-95`, not a small one.
+  4. To decide: a literal block scalar whose last line is only spaces, with
+     no line break after it, is read as text ending in a line feed by the
+     built-in parser and without one by libyaml (`yamlparse.c:844`, "the
+     input's end ends the last line too"). Input base64
+     `IyAKbW90ZDogfAogJ30KIH4KDTEjbW9pbmc6IH4KbW90ZDogfAogIHR3bwpiYXNlOiAmYiAxCmNvcHlnOiB+Cm1vdGQ6IHwKICd9CiAgdGFnczogdGhpbmc6IH4KbW9pbmc6IH4KbW90ZDogfAogIHQjIG8iMC4wLjAuMCIKICB0d28KYmFzZTogJmIgMQpjb3B5Zzogfgptb3RkOiB8CiAndQogIA==`.
+  5. To decide, not examined: base64
+     `IyBjb20gegptb3RkIDogCnwgCiAgdHdvCmJhc2V7b3B5Og==` (a block scalar header
+     at the mapping's own column) is refused by the built-in parser ("expected
+     a key and ':'") and accepted by libyaml; base64
+     `JmE6LXJdOnJdOjg6CQkJCQkJCQkwCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJIw==` (an
+     anchor, then tabs) is refused by the built-in parser ("a property is
+     followed by white space") and accepted by libyaml.
+  The rules keyed on a generic message (`did not find expected node content`,
+  `cannot start any token`, `found unexpected ':'`, `mapping values are not
+  allowed`, `an empty key`, `unexpected text after the value`, `expected a key
+  and ':'`) also hide other causes with that message: the next card narrows
+  them, by cause, as findings show. Both sides refusing is never compared, so
+  a bad input one parser refuses with a worse message is not seen. The
+  `libfuzzer` CI job may find a further class, and fail, until the list
+  catches up.
+  * Organiser's answers (2026-11-24):
+    * The card ends narrowed: the one fault that is small is fixed here (a
+      NUL or other control byte inside a YAML comment); `fuzz_yamldiff`
+      stays as an exploratory target, built and run by hand and nightly,
+      never a ctest test and never in a per-push job, so that a new class of
+      difference cannot turn main red; `yamldiff.known` stays.
+    * The 16 documented differences stay in these notes. The lone-CR
+      comment fault (finding 3, second half) and the two "to decide"
+      findings (4 and 5) go to `docs/Roadmap.md`, beside the item "A NUL
+      inside a YAML comment is accepted", which this card's fix replaces
+      with the lone-CR item.
