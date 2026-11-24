@@ -69,7 +69,7 @@ files only (N-15). Each is its own branch and lands alone. I-2, which opens
   7. `python scripts/work/work.py format`, then `cmake -P scripts/generate/apiref.cmake` on Linux (docs/API.md cites source lines); ACCEPT.
 * **accept**: ACCEPT-LINUX, ACCEPT-CI; `ctest -R "test_reason|gate.abi|gate.apiref"` exit 0 in the default preset.
 * **stop if**: the arrays cannot be kept in step by a C89 compile-time check on a compiler of the matrix (write what failed under notes); any gate other than `gate.abi` and `gate.apiref` fails on the new declarations.
-* **notes**: (empty)
+* **notes**: read cold against the tree on 2026-11-24 (after I-2 and N-12): the twenty reasons of `cf_reason.def` match the decided classes one to one (none, thirteen `error`, six `warning`), `CF_REASON_STORAGE` is still the last, and the cited ranges hold what the card says (`cf_error.h:110-113`, `error.c:38-62`, `test_reason.c`'s checks at 93-104, `docs/Guide.md:479`).
 
 ## N-14 - `configforge diff` over arrays of tables
 
