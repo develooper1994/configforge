@@ -61,6 +61,15 @@ beside what is not.
 | 🟩 | Checks at compile time where they can be, at run time always: Rust, C++, C11 and `doctor gen`'s output | D-75 |
 | 🟩 | GitHub used for all it offers that fits | plan of the evening |
 | 🟩 | A security pass: secrets in reasons, renames and Doctor's diff; bounds on references and YAML aliases; directories read whole or refused | 1.5.0 |
+| 🟩 | One refusal model: a place and a reason on every refusal | A-10, D-107 |
+| 🟩 | Build profiles, the C version per file, and the feature matrix made from the build | A-11, A-12, D-105, D-106 |
+| 🟩 | A page of the project's limits; every pair of formats and what each can hold | A-13, W5-V2, D-109 |
+| 🟩 | The other libraries measured beside ours; allocation measured | P-1b, P-4 |
+| 🟩 | Static analysis, run-time tools and supply-chain checks in CI; cppcheck on both libraries | L-2, L-3, N-9, N-10 |
+| 🟩 | The Linux musl release archive built twice, the bytes compared | N-2 |
+| 🟩 | A reload names the keys it changed; `cf_usage` writes `--help` | N-7, N-6 |
+| 🟩 | `configforge diff` by value: flat, nested and scalar-array; the Git difftool for JSON | N-1, N-5, N-8, N-3 |
+| 🟩 | The 1.8.0 group's integration findings | I-1 |
 
 ### Left from the security pass
 
@@ -722,7 +731,7 @@ SHA-256 would add a hash to the library for no gain here. What was new:
   the provenance would name it like any other file. Done when
   `settings.c` is that source's example and no longer writes a file
   itself.
-* ⬜ **A reload names the keys it changed** (card N-7). A swap's `"reload"` event
+* 🟩 **A reload names the keys it changed** (card N-7, done). A swap's `"reload"` event
   says the generation and the fingerprints, not which keys moved; a
   program gets those today only by keeping the old snapshot and calling
   `cf_diff`. One `"key-changed"` event a key at debug level, with the
@@ -848,11 +857,11 @@ first user meets. In the order proposed:
   key's winning value, its result offered at the same rank, the
   provenance saying "from timeout_s, converted". Done when
   `migration.c` shows a unit change and `explain()` names the old key.
-* ⬜ **Trust that can be checked from outside.** The OpenSSF Scorecard
-  workflow is done (L-2; its badge shows after its first run on `main`);
-  the OpenSSF Best Practices badge and a job that builds a release twice
-  and compares the bytes are not. Done when the badges are in the
-  README and the comparison is a release step.
+* 🟨 **Trust that can be checked from outside.** The OpenSSF Scorecard
+  workflow is done (L-2; its badge shows after its first run on `main`),
+  and so is the job that builds the Linux musl archive twice and
+  compares the bytes (N-2). The OpenSSF Best Practices badge is not.
+  Done when the badges are in the README.
 
 ### Tools, distribution and digests, 2026-11-14
 
@@ -939,8 +948,8 @@ first user meets. In the order proposed:
 
 ### Critical-system standards, and large files (asked 2026-11-16; not yet cards)
 
-* ⬜ **Critical-system standards, checked by machine** (cards N-9 and N-10 for
-  the first step, cppcheck on the libraries with every class, none left). MISRA C first,
+* 🟨 **Critical-system standards, checked by machine** (cards N-9 and N-10 for
+  the first step, cppcheck on the libraries with every class, none left: done). MISRA C first,
   then SEI CERT C's rules no tool sees, a CWE table, and MISRA C++:2023
   for the wrapper; each rule's status in a matrix, each deviation in a
   record, and a gate (`gate.misra`, cppcheck's MISRA addon on a `misra`
@@ -986,7 +995,7 @@ first user meets. In the order proposed:
   that a wrong line would fail a test. Mutation testing (mull, for C
   through LLVM) on the core and the readers, its score reported beside
   coverage; evidence `docs/Compliance.md` can cite.
-* ⬜ **The release built twice, compared byte for byte.** Provenance
+* 🟩 **The release built twice, compared byte for byte** (card N-2, the Linux musl archive). Provenance
   attestations say where an archive came from; a reproducible build
   says it is what the source makes. The release workflow builds the
   Linux archive twice in clean trees and fails if they differ.
@@ -1265,7 +1274,7 @@ first user meets. In the order proposed:
   by need (`embedded-json`, `embedded-cbor`: one format, DOM or SAX,
   fixed arena, no heap, no stdio), and the README's table gives each
   part's size, so a user adds up their build before making it.
-* ⬜ **Profiles: features turned on and off by name.** The options
+* 🟩 **Profiles: features turned on and off by name** (card A-11, D-105). The options
   grow (`CF_WITH_*` for each format, mode, backend and source), and a
   user should not have to learn forty switches to get a sensible build.
   A profile is a named set of options, chosen with one setting
@@ -1281,7 +1290,7 @@ first user meets. In the order proposed:
   README's table. The chosen profile is written into
   `cf_build_options.h` and the build id, so a report says which build
   produced it. Each shipped profile is built in CI.
-* ⬜ **The C version raised only where it must be, and said so.** C89
+* 🟩 **The C version raised only where it must be, and said so** (card A-11, D-106). C89
   stays the floor for the core: code already written in C89 is not
   rewritten for a newer standard unless it has to be. Where a part
   needs more - a dependency's header (libfyaml needs C11 today, the
@@ -1305,7 +1314,7 @@ first user meets. In the order proposed:
   (W5-V2) then read one table, and the pair table is generated from it
   rather than kept by hand (`docs/Limits.md` links it). To
   check first how much of this `cf_format_info` holds today.
-* ⬜ **The YAML reader: no second document table.** At the end of every
+* 🟨 **The YAML reader: no second document table** (card N-4: one root table delivered to a sink; the TOML and INI limits left). At the end of every
   file the reader says an empty document table again (`yaml_stream_end`
   takes the depth of -1 after the top-level mapping for a stream with
   nothing in it), so a sink that takes one root, as `codec dump` shows and
@@ -1315,7 +1324,7 @@ first user meets. In the order proposed:
   two tolerances come out. The same pass: TOML's reader limits the dotted
   key of a line and INI's reader limits no depth, which
   `cf_format_limits` records and which could be made equal.
-* ⬜ **One diagnostic model across formats.** Each reader reports a
+* 🟨 **One diagnostic model across formats** (card A-10: place and reason built; severity and weakness ids left). Each reader reports a
   refusal its own way today, as far as the formats differ; a single
   diagnostic record (code, severity, byte offset, line and column, the
   format's own detail, and the CWE or known-weakness id when the
@@ -1323,7 +1332,7 @@ first user meets. In the order proposed:
   so a test of "the same bad input refused the same way in every
   format" can be written, and a user filters by code rather than by
   message text. To check first how far the readers already share one.
-* ⬜ **A feature matrix generated from the build.** The README's
+* 🟩 **A feature matrix generated from the build** (card A-12; `gate.matrix`). The README's
   tables of options, sizes, profiles and per-target status (Arm entry
   above) are produced by a script from the CMake options, the profile
   files and CI's results, and a gate fails when the committed tables
@@ -1366,7 +1375,7 @@ The lens is meaning: a diff of values rather than of text, provenance,
 the contract's checks, secrets kept out. Four first steps, each mostly
 from parts that exist:
 
-* ⬜ **`configforge diff a.yaml b.json`: two files, any formats, compared
+* 🟨 **`configforge diff a.yaml b.json`: two files, any formats, compared
   by value.** What exists: `configforge doctor diff` compares two
   *reports* (a program's resolved configuration, `cf_report`).
   **Flat slice built (N-1):** `configforge diff` compares two plain
@@ -1377,7 +1386,7 @@ from parts that exist:
   arrays containing tables or arrays, and contract-aware secret digests.
   With a contract, units compared as values (`30s` is `30000ms`, with 1.10.0's durations
   and sizes), which plain semantic diffs (dyff, graphtage) do not do.
-* ⬜ **Git shows configuration changes by value.** N-3 adds a
+* 🟨 **Git shows configuration changes by value** (card N-3: the difftool recipe). N-3 adds a
   [repository-local Git difftool recipe](Tools.md#git-difftool-for-json)
   for modified flat JSON mappings. It lists changed keys without values.
   The `textconv` driver for `git diff` and `git log -p` remains open.
@@ -1445,6 +1454,48 @@ to read *two* documents to use one tool. Keys are flat dotted paths, so
 
 Revisit if there is a question jq cannot answer from a report - one
 that needs the live configuration rather than its record.
+
+### Next after 1.8.0 (2026-11-24)
+
+The eight items that would help users most, from the sections marked
+"not yet cards", in this order. None needs a decision from the
+maintainer; each is a card to write.
+
+1. **Differential fuzzing against the other readers** (Suggestions of
+   2026-11-17). The libraries of P-1b are already built beside ours, so
+   the same input can go to all of them; a disagreement is a bug in one
+   of them, found before a user finds it.
+2. **One diagnostic model: severity and weakness ids** (Suggestions of
+   2026-11-17). A-10 gave every refusal a place and a reason; the rest
+   makes "the same bad input refused the same way in every format" a
+   test that can be written.
+3. **`configforge diff` with the contract** (People who change
+   configuration). Arrays of tables and arrays, then units compared as
+   values (`30s` is `30000ms`); N-1, N-5 and N-8 did the scalar cases.
+4. **A pull request that changes configuration, reviewed without a
+   report** (People who change configuration). The diff by value now
+   exists to power it; the comment says which keys changed, which are
+   out of range and which touch a secret.
+5. **Mutation testing on the core and the readers** (Suggestions of
+   2026-11-17). Coverage says a line ran, not that a wrong line fails a
+   test; the score beside coverage shows where the tests are weak.
+6. **`gate.misra` on the `misra` profile** (Critical-system standards).
+   N-9 and N-10 put cppcheck on both libraries; A-11 made the profile;
+   the matrix and the deviation records are what is left of the first
+   step.
+7. **Drift across many hosts** (People who change configuration).
+   `doctor diff` compares two environments; N reports grouped by value
+   answer "is this set the same on a hundred servers" and use the
+   comparison that now exists.
+8. **Git's `textconv` driver for configuration** (People who change
+   configuration). N-3 gave the difftool for flat JSON; a driver makes
+   `git diff` and `git log -p` show changes by value in every format.
+
+Left for the maintainer, because each needs a decision: OSS-Fuzz (an
+application to Google), the evidence pack with each release (a release
+step), ways to read (DOM, SAX, lazy, in-situ: a new public interface),
+SIMD behind `CF_WITH_SIMD` (a new build option and its targets), and a
+Go or .NET binding (a new binding).
 
 ## Open decisions
 
