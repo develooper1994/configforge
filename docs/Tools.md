@@ -57,7 +57,7 @@ the program's exit code.
 | --- | --- | --- |
 | `configforge-diff` | Compares two documents by value. | [below](#configforge-diff) |
 | `configforge-doctor` | Reads provenance reports: `explain`, `dump`, `lint`, `diff`, `history`, `blame`, `import-*`. | [Doctor](Doctor.md) |
-| `configforge-codec` | The serialization library's own program: `formats`, `detect`, `check`, `dump`, `convert`, `format` and `recode`, on documents and never on a configuration. | [below](#configforge-codec) |
+| `configforge-codec` | The serialization library's own program: `formats`, `detect`, `check`, `dump`, `textconv`, `convert`, `format` and `recode`, on documents and never on a configuration. | [below](#configforge-codec) |
 | `configforge-gen` | The contract's own program: `configforge gen --schema` writes a JSON Schema contract as C, `configforge gen check` holds files to it, `configforge gen schema --from` drafts one from a sample file. | [below](#configforge-gen) |
 
 ## configforge diff
@@ -141,6 +141,69 @@ Changing `{"port":8000,"tag":"app"}` to `{"tag":"app","port":8000}`
 only reorders keys and gives empty output.
 See the [Git difftool manual](https://git-scm.com/docs/git-difftool).
 
+### Git textconv for configuration
+
+`git diff`, `git log -p` and `git show` can print a configuration file
+by value, one line a key, in every format the library reads: a Git
+`textconv` driver runs a program on each version of a file and diffs what
+it prints. With `configforge` on `PATH`, add this stanza to the
+repository's local Git config (`git config --local --edit`, or
+`git config --local diff.configforge.textconv "configforge codec textconv"`).
+
+```gitconfig
+[diff "configforge"]
+  textconv = configforge codec textconv
+```
+
+Then say which files use it, in `.gitattributes`, which is committed:
+
+```gitattributes
+*.json diff=configforge
+*.json5 diff=configforge
+*.jsonc diff=configforge
+*.yaml diff=configforge
+*.yml diff=configforge
+*.toml diff=configforge
+*.ini diff=configforge
+*.properties diff=configforge
+*.cbor diff=configforge
+```
+
+`*.conf`, `*.cfg` and `*.xml` are left out on purpose: the library reads
+`.conf` and `.cfg` as INI, but most such files are another program's
+syntax, and `.xml` is rarely configuration. A line for one path opts it in
+(`etc/app.conf diff=configforge`), and `-diff` on a path turns the driver
+off for it. The stanza is local config, so a fresh clone needs it once.
+
+Re-indenting `app.json` or adding a comment to a YAML file now shows
+nothing, and changing the port shows two lines:
+
+```text
+-port	int	8123
++port	int	9123
+```
+
+The text is [`configforge codec textconv`](#configforge-codec): one line a
+key, in the file's order and not sorted, so keys that only moved show as
+moved lines, as in any diff. A path joins names with dots, so `{"a.b":1}`
+and `{"a":{"b":1}}` read alike: the text is for reading in a diff, not for
+parsing back. A plain YAML scalar is untyped text and is shown as
+`(textual)`, a quoted one is not, so adding quotes shows as a change. For a comparison that ignores order, use the difftool above.
+
+**Values are shown, as the file holds them.** Nothing is redacted or
+digested: a changed value has to show, and `git diff` without the driver
+prints the same values from the same blobs. Read the plain diff with
+`git diff --no-textconv`. To review a change without seeing values, use
+the difftool recipe above, which lists keys only. Redaction that knows a
+contract is not built yet.
+
+A file the readers refuse (a syntax error in the new version, a merge
+conflict, a name no format claims) is printed as it is, so `git diff`
+shows the plain text diff and does not fail; the reason is one line on
+standard error. Leave `diff.configforge.cachetextconv` unset: Git's cache
+is keyed by the file's blob and not by this program's version, so a later
+fix to the output would be shown stale from the cache.
+
 ## configforge codec
 
 The serialization library's own program (`configforge-codec`), linked to
@@ -160,6 +223,8 @@ configforge codec check <file>... [--as <format>]
                                whether each file is well formed
 configforge codec dump <file> [--as <format>]
                                every value and table, with its place
+configforge codec textconv <file> [--as <format>]
+                               one line a key, for Git's textconv driver
 configforge codec convert <file> --to <format> [--as <format>] [--out <file>] [--strict]
                                the document in another format, and what it cannot hold
 configforge codec format <file> [--as <format>] [--out <file>] [--strict]
@@ -222,6 +287,18 @@ app.json:1:13   s.p     int     8080
 app.json:1:26   t.0     text    "x"
 app.json:1:43   u       null    null
 ```
+
+**textconv.** The same lines without the place column and without the `-`
+that stands in for one, in the file's order: `s.p`, a tab, `int`, a tab,
+`8080`. It is the program of Git's `textconv` driver
+([above](#git-textconv-for-configuration)), which wants one file in, text
+out, and never a failure. The file is read twice, the first time with the
+output held back, so a refusal in the middle prints nothing of the lines
+before it. A file the reader refuses, or whose format cannot be told, is
+written to standard output byte for byte, with the reason on standard
+error, and the exit is 0. Standard output is binary on Windows, so no line
+ending is changed. Exit 0 printed; 2 unusable input (the file cannot be
+read, `--as` names no format) or the usage; 3 a bug. It never exits 1.
 
 ### Converting between formats
 

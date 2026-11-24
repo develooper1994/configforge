@@ -23,6 +23,9 @@ int codec_detect(int argc, char** argv);
 int codec_check(int argc, char** argv);
 /* Every value and table of a file, with its place (dump.c). */
 int codec_dump(int argc, char** argv);
+/* A document as one line a key, with no place, for Git's textconv driver; a
+   file the readers refuse is printed as it is, exit 0 (dump.c, N-16). */
+int codec_textconv(int argc, char** argv);
 
 /* A file recoded to UTF-8 once, or checked to be UTF-8 (recode.c, D-108). */
 int codec_recode(int argc, char** argv);

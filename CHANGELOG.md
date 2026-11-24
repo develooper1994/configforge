@@ -7,6 +7,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- `configforge codec textconv <file>`, a Git `textconv` driver: `git diff`,
+  `git log -p` and `git show` print JSON, YAML, TOML, INI, properties and
+  CBOR files one line per key, so a reformat shows nothing and a changed
+  value shows one line; a file the readers refuse is shown as it is
+  (N-16; docs/Tools.md).
 - `configforge diff` compares arrays whose elements are all tables: each
   member of each element is an entry named by its path with the element's
   index as a segment (`$["hosts"][1]["port"]`). One level; arrays of

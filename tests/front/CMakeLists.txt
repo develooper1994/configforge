@@ -38,6 +38,17 @@ if(TARGET configforge_front AND CF_WITH_JSON)
         "-DTOOLS_PAGE=${PROJECT_SOURCE_DIR}/docs/Tools.md"
         "-DWORK=${CMAKE_CURRENT_BINARY_DIR}/git_difftool" -P
         ${CMAKE_CURRENT_SOURCE_DIR}/git_difftool.cmake)
+    if(TARGET configforge_codec)
+      add_test(
+        NAME front.git_textconv
+        COMMAND
+          ${CMAKE_COMMAND} "-DGIT_EXECUTABLE=${GIT_EXECUTABLE}"
+          "-DFRONT_DIR=$<TARGET_FILE_DIR:configforge_front>"
+          "-DTOOLS_PAGE=${PROJECT_SOURCE_DIR}/docs/Tools.md"
+          "-DWORK=${CMAKE_CURRENT_BINARY_DIR}/git_textconv"
+          "-DHAVE_YAML=${CF_WITH_YAML}" -P
+          ${CMAKE_CURRENT_SOURCE_DIR}/git_textconv.cmake)
+    endif()
   endif()
   add_test(
     NAME front.diff

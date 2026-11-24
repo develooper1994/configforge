@@ -25,7 +25,12 @@ add_test(
 # needs the encoders (CF_WITH_EMIT, off in the minimal preset). The scripts
 # write their documents in JSON, and a build without it says `skipped:`; the
 # formats it has are passed as -DJSON, -DTOML, -DINI, -DCBOR and -DYAML.
-set(cf_codec_scripts detect check dump recode)
+set(cf_codec_scripts
+    detect
+    check
+    dump
+    recode
+    textconv)
 if(CF_WITH_EMIT)
   list(APPEND cf_codec_scripts convert)
 endif()

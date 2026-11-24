@@ -1387,10 +1387,12 @@ from parts that exist:
   arrays, contract-aware secret digests.
   With a contract, units compared as values (`30s` is `30000ms`, with 1.10.0's durations
   and sizes), which plain semantic diffs (dyff, graphtage) do not do.
-* 🟨 **Git shows configuration changes by value** (card N-3: the difftool recipe). N-3 adds a
+* 🟩 **Git shows configuration changes by value** (card N-3: the difftool recipe). N-3 adds a
   [repository-local Git difftool recipe](Tools.md#git-difftool-for-json)
   for modified flat JSON mappings. It lists changed keys without values.
-  The `textconv` driver for `git diff` and `git log -p` remains open.
+  The `textconv` driver for `git diff` and `git log -p` is built (card N-16:
+  `configforge codec textconv`; values shown, unsorted, a refused file shown
+  as it is). What is left: sorted output, and contract-aware redaction.
 * ⬜ **A pull request that changes configuration, reviewed without a
   report.** What exists: `actions/doctor` with `base` and
   `comment: true` diffs the base branch's report against the head's and
@@ -1490,7 +1492,7 @@ maintainer; each is a card to write.
    `doctor diff` compares two environments; N reports grouped by value
    answer "is this set the same on a hundred servers" and use the
    comparison that now exists.
-8. **Git's `textconv` driver for configuration** (People who change
+8. **Git's `textconv` driver for configuration** (card N-16) (People who change
    configuration). N-3 gave the difftool for flat JSON; a driver makes
    `git diff` and `git log -p` show changes by value in every format.
 

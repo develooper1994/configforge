@@ -1770,8 +1770,8 @@
 - cf_text_utf8_valid 58-60
 - cf_text_utf8_encode 62-83
 `tools/codec/codec.c`
-- usage 26-61
-- main 63-93
+- usage 27-67
+- main 69-102
 `tools/codec/codec.h`
 `tools/codec/convert.c`
 - struct cv_say 23-26
@@ -1838,21 +1838,27 @@
 - lend_work 182-184
 - codec_check 186-250
 `tools/codec/dump.c`
-- struct dp_frame 20-25
-- struct dp_ctx 27-34
-- dp_put 38-53
-- dp_member 57-69
-- dp_path 71-80
-- dp_open 82-102
-- dp_table 104-106
-- dp_array 108-110
-- dp_quoted 113-140
-- dp_scalar 142-175
-- dp_end 177-186
-- dp_text 189-191
-- dp_work 193-195
-- dp_args 198-218
-- codec_dump 220-267
+- struct dp_frame 30-35
+- struct dp_ctx 37-46
+- dp_out_n 50-54
+- dp_out_s 56-58
+- dp_out_c 60-64
+- dp_put 68-83
+- dp_member 87-99
+- dp_path 101-110
+- dp_open 112-134
+- dp_table 136-138
+- dp_array 140-142
+- dp_quoted 145-172
+- dp_scalar 174-210
+- dp_end 212-221
+- dp_text 224-226
+- dp_work 228-230
+- dp_args 233-253
+- dp_run 258-279
+- codec_dump 281-318
+- dp_raw 322-329
+- codec_textconv 331-385
 `tools/codec/formats.c`
 - ext_list 16-28
 - codec_formats 30-68
