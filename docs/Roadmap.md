@@ -1491,6 +1491,22 @@ maintainer; each is a card to write.
    configuration). N-3 gave the difftool for flat JSON; a driver makes
    `git diff` and `git log -p` show changes by value in every format.
 
+After the features above (the maintainer, 2026-11-24):
+
+* **Profiling after every benchmark, and the optimisations it points to.**
+  A benchmark says how fast; a profile says where the time goes. Each
+  benchmark run is followed by `scripts/work/profile.py` (perf, callgrind,
+  heaptrack) on the same documents, and a change is made only where the
+  profile shows the cost and kept only if the benchmark shows the win (as
+  P-4 found the wipe, not the allocator, was 70% of a small load). The
+  profile is also read for the library's own faults: a cost that should
+  not be there is a bug before it is an optimisation.
+* **The OpenSSF Scorecard score raised** (low priority). `scorecard.yml`
+  runs weekly (L-2); its findings (branch protection, signed releases,
+  pinned dependencies, a security policy, code review) are read one by
+  one, the ones the project can meet are met, and the rest are written
+  down with why.
+
 Left for the maintainer, because each needs a decision: OSS-Fuzz (an
 application to Google), the evidence pack with each release (a release
 step), ways to read (DOM, SAX, lazy, in-situ: a new public interface),
