@@ -7,6 +7,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- The Doctor action takes `config:` (path patterns) and, on a pull request,
+  keeps one comment, apart from Doctor's, that lists the keys each matching
+  file changed between the base and the head (`actions/doctor/changes.sh`,
+  `configforge diff`). Keys only: no value is shown. `report:` is optional
+  when only `config:` is given; `comment.sh` takes `CF_MARKER`.
 - `cf_reason_severity` and `cf_reason_weakness` (experimental in 1.9): for
   every refusal reason, `error`, `warning` or `none`, and the CWE id the
   refusal defends (`CWE-674` for depth, an empty string for most).

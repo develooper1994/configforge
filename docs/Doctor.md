@@ -553,6 +553,37 @@ steps:
       comment: true
 ```
 
+A pull request that changes configuration files and writes no report can
+still be read by key. With `config:` (git pathspecs, one per line) the
+action runs `configforge diff` between each matching file's base and head
+version (`changes.sh`) and keeps a second comment, apart from Doctor's and
+found by its own marker, that lists the keys that changed, per file. It
+names keys only and never a value, so a secret cannot appear in it. A file
+the readers refuse (an array of tables, until the diff reads those) is
+listed as "could not be compared"; at most 50 files are shown and 100
+lines of each. Which keys are out of range or touch a secret is not
+checked yet, and the comment says so. `report:` may be left out when only
+`config:` is given:
+
+```yaml
+on: pull_request                # not pull_request_target
+permissions:
+  pull-requests: write
+steps:
+  - uses: actions/checkout@v4
+    with:
+      fetch-depth: 0            # the base commit must be there
+  - uses: develooper1994/configforge/actions/doctor@main
+    with:
+      config: config/**
+      comment: true
+```
+
+The files of the pull request are read by `git show` and parsed by the
+library's readers; nothing from the pull request is executed or sourced.
+Use the `pull_request` event, not `pull_request_target`, so that a fork's
+change does not run with the base repository's token.
+
 A pull request from a fork has a token that cannot write a comment; the
 step says so and passes, and the summary has everything. Only a comment
 written by the action's own account is taken for Doctor's and updated:

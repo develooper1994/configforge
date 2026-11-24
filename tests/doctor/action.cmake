@@ -229,6 +229,145 @@ if(NOT rc EQUAL 2)
   fail("the contract hook without --schema should be refused, got ${rc}")
 endif()
 
+# changes.sh in a repository of its own: the keys a change moved, per
+# file, and never a value. SENTINEL is in the files so that a value that
+# leaked into the Markdown would be seen.
+if(GIT)
+  set(repo ${WORK}/changes-repo)
+  file(REMOVE_RECURSE ${repo})
+  file(MAKE_DIRECTORY ${repo}/config)
+  # Runs git in the repository; the result is in git_out.
+  function(git_run)
+    execute_process(
+      COMMAND ${GIT} -c user.name=t -c user.email=t@example.com -c
+              commit.gpgsign=false -c core.autocrlf=false ${ARGN}
+      WORKING_DIRECTORY ${repo}
+      RESULT_VARIABLE grc
+      OUTPUT_VARIABLE gout
+      ERROR_VARIABLE gerr)
+    if(NOT grc EQUAL 0)
+      fail("git ${ARGN}: ${grc}: ${gerr}")
+    endif()
+    string(STRIP "${gout}" gout)
+    set(git_out
+        "${gout}"
+        PARENT_SCOPE)
+  endfunction()
+  git_run(init -q)
+  file(WRITE ${repo}/config/app.json "{\"port\":1,\"s\":\"SENTINEL-A\"}")
+  file(WRITE ${repo}/config/old.json "{\"k\":1}")
+  file(WRITE ${repo}/config/bad.json "{\"k\":1}")
+  file(WRITE ${repo}/README.md "one\n")
+  git_run(add -A)
+  git_run(commit -q -m first)
+  git_run(rev-parse HEAD)
+  set(first "${git_out}")
+  file(WRITE ${repo}/config/app.json
+       "{\"port\":2,\"s\":\"SENTINEL-A\",\"new\":true}")
+  file(WRITE ${repo}/config/new.json "{\"k\":1}")
+  file(REMOVE ${repo}/config/old.json)
+  file(WRITE ${repo}/config/bad.json "{\"k\":SENTINEL}")
+  file(WRITE ${repo}/README.md "two\n")
+  git_run(add -A)
+  git_run(commit -q -m second)
+  git_run(rev-parse HEAD)
+  set(second "${git_out}")
+
+  set(chg ${WORK}/changes-test.md)
+  file(REMOVE ${chg})
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E env CF_DIFF=${DIFF} CF_BASE_SHA=${first}
+            CF_FILES=config/** CF_MARKDOWN=${chg} ${BASH} ${ACTION}/changes.sh
+    WORKING_DIRECTORY ${repo}
+    RESULT_VARIABLE rc
+    OUTPUT_VARIABLE text
+    ERROR_VARIABLE err)
+  if(NOT rc EQUAL 0)
+    fail("changes: expected 0, got ${rc}:\n${text}${err}")
+  endif()
+  file(READ ${chg} c)
+  if(NOT c MATCHES "^<!-- configforge-changes -->")
+    fail("changes: the marker should come first:\n${c}")
+  endif()
+  set(tab "\t")
+  foreach(
+    want
+    "`config/app.json`"
+    "`config/new.json`"
+    "`config/old.json`"
+    "`config/bad.json`"
+    "changed${tab}$[\"port\"]"
+    "added${tab}$[\"new\"]"
+    "added${tab}$[\"k\"]"
+    "removed${tab}$[\"k\"]"
+    "could not be compared"
+    "Keys only: no value is shown")
+    string(FIND "${c}" "${want}" at)
+    if(at EQUAL -1)
+      fail("changes: the Markdown lacks '${want}':\n${c}")
+    endif()
+  endforeach()
+  if(c MATCHES "README" OR c MATCHES "SENTINEL")
+    fail(
+      "changes: a file outside config:, or a value, is in the Markdown:\n${c}")
+  endif()
+
+  # Nothing that matches changed: said, and the file still written.
+  git_run(
+    commit
+    -q
+    --allow-empty
+    -m
+    third)
+  git_run(rev-parse HEAD)
+  set(third "${git_out}")
+  foreach(case nomatch emptyfiles badbase)
+    set(files README.md)
+    set(base ${second})
+    if(case STREQUAL "emptyfiles")
+      set(files "")
+    elseif(case STREQUAL "badbase")
+      set(base 0123456789012345678901234567890123456789)
+      set(files "config/**")
+    endif()
+    file(REMOVE ${chg})
+    execute_process(
+      COMMAND ${CMAKE_COMMAND} -E env CF_DIFF=${DIFF} CF_BASE_SHA=${base}
+              CF_FILES=${files} CF_MARKDOWN=${chg} ${BASH} ${ACTION}/changes.sh
+      WORKING_DIRECTORY ${repo}
+      RESULT_VARIABLE rc
+      OUTPUT_VARIABLE text
+      ERROR_VARIABLE err)
+    if(case STREQUAL "nomatch")
+      file(READ ${chg} c)
+      if(NOT rc EQUAL 0 OR NOT c MATCHES "No file matching")
+        fail("changes: no change should say so, got ${rc}:\n${c}")
+      endif()
+    elseif(NOT rc EQUAL 2)
+      fail("changes, ${case}: expected 2, got ${rc}")
+    elseif(case STREQUAL "badbase" AND NOT err MATCHES "fetch-depth: 0")
+      fail("changes: an unknown base should give the fetch hint:\n${err}")
+    endif()
+  endforeach()
+
+  # A name with a backtick or a newline cannot break the Markdown's code
+  # span or heading: both are removed.
+  file(WRITE "${repo}/config/a`b.json" "{\"k\":1}")
+  git_run(add -A)
+  git_run(commit -q -m fourth)
+  file(REMOVE ${chg})
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E env CF_DIFF=${DIFF} CF_BASE_SHA=${third}
+            CF_FILES=config/** CF_MARKDOWN=${chg} ${BASH} ${ACTION}/changes.sh
+    WORKING_DIRECTORY ${repo}
+    RESULT_VARIABLE rc
+    OUTPUT_QUIET ERROR_QUIET)
+  file(READ ${chg} c)
+  if(NOT rc EQUAL 0 OR NOT c MATCHES "`config/ab.json`")
+    fail("changes: a backtick in a name should be removed:\n${c}")
+  endif()
+endif()
+
 # comment.sh against a stub gh: the first push posts, a later one finds
 # the marked comment and updates it, and a token that cannot write is a
 # note, not a failed job.
@@ -296,5 +435,42 @@ run_script(
 if(NOT rc EQUAL 2)
   fail("a pull-request number that is not one should be refused, got ${rc}")
 endif()
+# Another marker finds another comment; one that is not the shape of a
+# marker is refused, since it goes into a jq filter.
+file(REMOVE ${log})
+run_script(
+  rc
+  text
+  ${ACTION}/comment.sh
+  PATH=${stub}:$ENV{PATH}
+  GH_LOG=${log}
+  GH_EXISTING=
+  GH_FAIL=
+  "CF_MARKER=<!-- configforge-changes -->"
+  CF_REPO=o/r
+  CF_PR=7
+  CF_MARKDOWN=${md})
+file(READ ${log} calls)
+if(NOT rc EQUAL 0 OR NOT calls MATCHES
+                     "startswith[(]\"<!-- configforge-changes -->")
+  fail(
+    "comment: CF_MARKER should be the marker searched for, got ${rc}:\n${calls}"
+  )
+endif()
+run_script(
+  rc
+  text
+  ${ACTION}/comment.sh
+  PATH=${stub}:$ENV{PATH}
+  GH_LOG=${log}
+  "CF_MARKER=x\; rm -rf"
+  CF_REPO=o/r
+  CF_PR=7
+  CF_MARKDOWN=${md})
+if(NOT rc EQUAL 2)
+  fail("a marker that is not one should be refused, got ${rc}")
+endif()
 message(
-  STATUS "doctor action: run.sh, pre-commit.sh and comment.sh as CI runs them")
+  STATUS
+    "doctor action: run.sh, pre-commit.sh, comment.sh and changes.sh as CI runs them"
+)

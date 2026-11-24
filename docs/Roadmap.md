@@ -1393,12 +1393,12 @@ from parts that exist:
 * ⬜ **A pull request that changes configuration, reviewed without a
   report.** What exists: `actions/doctor` with `base` and
   `comment: true` diffs the base branch's report against the head's and
-  keeps one comment on the pull request up to date. What is left: the
-  same when the pull request changes only configuration files and no
-  program writes a report - the changed files' base and head versions
-  diffed by the command above, checked against the contract when one is
-  in the repository, and the comment saying which keys changed, which
-  are out of range and which touch a secret.
+  keeps one comment on the pull request up to date; with `config:` it
+  also diffs each matching file's base and head versions by the command
+  above and keeps a second comment that lists the changed keys per file
+  (N-15, 1.9.0; keys only, never a value). What is left: checked against
+  the contract when one is in the repository, and the comment saying
+  which keys are out of range and which touch a secret.
 * ⬜ **Drift across many hosts.** What exists: `doctor diff` compares
   two environments, origin drift is CFD002. What is left: N reports or
   files at once (one a host), grouped by value, saying which hosts
@@ -1473,10 +1473,10 @@ maintainer; each is a card to write.
    tables) (People who change configuration). Arrays of tables and arrays, then units compared as
    values (`30s` is `30000ms`); N-1, N-5 and N-8 did the scalar cases.
 4. **A pull request that changes configuration, reviewed without a
-   report** (card N-15: the changed keys) (People who change
-   configuration). The diff by value now
-   exists to power it; the comment says which keys changed, which are
-   out of range and which touch a secret.
+   report** (People who change configuration). Done in 1.9.0 (card N-15):
+   the comment lists the changed keys. What waits is the contract read by
+   `configforge diff`: which keys are out of range and which touch a
+   secret.
 5. **Mutation testing on the core and the readers** (Suggestions of
    2026-11-17). Coverage says a line ran, not that a wrong line fails a
    test; the score beside coverage shows where the tests are weak.

@@ -11,6 +11,9 @@
 #   CF_REPO       owner/name
 #   CF_PR         the pull request's number
 #   CF_MARKDOWN   the file run.sh wrote
+#   CF_MARKER     the HTML comment the Markdown begins with, which finds
+#                 the comment to update; default <!-- configforge-doctor -->
+#                 (changes.sh's is <!-- configforge-changes -->)
 #   CF_COMMENT_AUTHOR   the login the token comments as; when empty the
 #                 token is asked, and a token that cannot say is the
 #                 workflow's, github-actions[bot]
@@ -42,7 +45,12 @@ case "$author" in
     exit 2
     ;;
 esac
-marker="<!-- configforge-doctor -->"
+marker="${CF_MARKER:-<!-- configforge-doctor -->}"
+# The marker goes into a jq filter: only the shape of a marker is allowed.
+if ! printf '%s\n' "$marker" | grep -Eq '^<!-- [a-z-]+ -->$'; then
+  echo "doctor: '$marker' is not a marker (<!-- name -->)" >&2
+  exit 2
+fi
 
 id="$(gh api --paginate "repos/$CF_REPO/issues/$CF_PR/comments" \
   --jq ".[] | select((.user.login == \"$author\") and (.body | startswith(\"$marker\"))) | .id" |

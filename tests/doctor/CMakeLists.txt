@@ -93,12 +93,17 @@ doctor_case(moved_check 2 check|--schema|${contract}|cf_fx_contract_ok.json)
 # bash on PATH may be WSL's, which would not see this build's paths.
 if(CMAKE_HOST_UNIX)
   find_program(CF_BASH bash)
+  find_program(CF_GIT git)
   if(CF_BASH)
+    set(cf_action_git)
+    if(CF_GIT)
+      set(cf_action_git -DDIFF=$<TARGET_FILE:configforge_diff> -DGIT=${CF_GIT})
+    endif()
     add_test(
       NAME doctor.action
       COMMAND
         ${CMAKE_COMMAND} -DDOCTOR=$<TARGET_FILE:doctor>
-        -DGEN=$<TARGET_FILE:configforge_gen> -DBASH=${CF_BASH}
+        -DGEN=$<TARGET_FILE:configforge_gen> -DBASH=${CF_BASH} ${cf_action_git}
         -DACTION=${CMAKE_SOURCE_DIR}/actions/doctor
         -DWORK=${CMAKE_CURRENT_BINARY_DIR} -P
         ${CMAKE_CURRENT_SOURCE_DIR}/action.cmake)
