@@ -1465,15 +1465,16 @@ maintainer; each is a card to write.
    2026-11-17). The libraries of P-1b are already built beside ours, so
    the same input can go to all of them; a disagreement is a bug in one
    of them, found before a user finds it.
-2. **One diagnostic model: severity and weakness ids** (Suggestions of
-   2026-11-17). A-10 gave every refusal a place and a reason; the rest
+2. **One diagnostic model: severity and weakness ids** (card N-13)
+   (Suggestions of 2026-11-17). A-10 gave every refusal a place and a reason; the rest
    makes "the same bad input refused the same way in every format" a
    test that can be written.
-3. **`configforge diff` with the contract** (People who change
-   configuration). Arrays of tables and arrays, then units compared as
+3. **`configforge diff` with the contract** (card N-14: arrays of
+   tables) (People who change configuration). Arrays of tables and arrays, then units compared as
    values (`30s` is `30000ms`); N-1, N-5 and N-8 did the scalar cases.
 4. **A pull request that changes configuration, reviewed without a
-   report** (People who change configuration). The diff by value now
+   report** (card N-15: the changed keys) (People who change
+   configuration). The diff by value now
    exists to power it; the comment says which keys changed, which are
    out of range and which touch a secret.
 5. **Mutation testing on the core and the readers** (Suggestions of
