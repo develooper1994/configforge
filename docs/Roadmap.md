@@ -1494,6 +1494,16 @@ maintainer; each is a card to write.
 
 After the features above (the maintainer, 2026-11-24):
 
+* **The vector library carried further** (the maintainer, 2026-11-24: it
+  can pay). P-2 (on its branch, waiting for 1.9.0) gives lanes a
+  word-at-a-time backend; four of six operations won by 1.4 to 7 times on
+  their own. Next, in order: P-3 puts those operations under the readers'
+  own scans (JSON strings, YAML plain scalars, the UTF-8 check) and keeps
+  each only where the readers' benchmark shows it; then a measured case
+  for SSE2 and NEON backends behind the same `lanes_ops` table (both are
+  the baseline of their targets, so no detection is needed there), which
+  is the `CF_WITH_SIMD` decision listed below as the maintainer's. The
+  numbers decide each step, as for P-4.
 * **Profiling after every benchmark, and the optimisations it points to.**
   A benchmark says how fast; a profile says where the time goes. Each
   benchmark run is followed by `scripts/work/profile.py` (perf, callgrind,
