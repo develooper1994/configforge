@@ -63,19 +63,18 @@ Next, in this order; none waits on the maintainer:
    $HOME/.local/bin, no sudo; CI installs with apt; the job runs on
    schedule, dispatch and pushes to lib/port, lib/numeric, lib/base,
    tests/eva), is on `work/L-3b` (16e3ab8; worktree `.claude/worktrees/l3b`).
-   Under way on `work/L-3b` (4c4e765): Frama-C 33.0 in WSL (switch cf-eva;
-   the distro runs as root, so apt needs no password). Harnesses:
-   eva_port.c, eva_numeric.c (integer half only), eva_base.c (key, error,
-   value), eva_alloc.c (written, never run). **None of the "clean" results
-   counts yet**: the worker's scratch scripts kept the old CSV, so a run
-   may have read a stale one. scripts/check/eva.cmake must delete the CSV
-   first and fail when frama-c fails; then every harness is run again from
-   it. Reported open: port.c:141 (cf_u64_to_text, at the card's slevel
-   ceiling of 500) and :195 (cf_puts_n). Accepted: port.c:63 (Frama-C's
-   __atomic_load_n contract), error.c:147 (strlen of cf_error_set's
-   formatted text). Organiser's answers: numeric's float half and base's
-   split, under the card's notes. Next: eva.cmake and EXTRA=eva (step 3),
-   all harnesses run fresh, eva_alloc.c, then the CI job and the docs. Carry it from there; when it lands,
+   Under way on `work/L-3b` (46f5d1c): Frama-C 33.0 in WSL (switch cf-eva;
+   the distro runs as root, so apt needs no password).
+   scripts/check/eva.cmake is written (deletes its CSV first, fails when
+   frama-c fails, compares with .eva-accepted.txt). Its first run from
+   scratch over the four harnesses (2 min 15 s) is the real state: port 2
+   (port.c:141 cf_u64_to_text, at the card's slevel ceiling 500; :195
+   cf_puts_n), numeric 0 (its integer half; the float half is out of L-3b,
+   one line in the Roadmap), base 1 (error.c:147, accepted: the strlen of
+   cf_error_set's formatted text), alloc 8 (the growing arena: cf_wipe,
+   cf_arena_free, cf_arena_calloc, cf_arena_dup). Next: triage those ten as
+   the card says, eva_alloc.c's fixed-arena part, EXTRA=eva in
+   scripts/verify.cmake, the CI job, the docs. Carry it from there; when it lands,
    docs/plan holds no open card, and the Roadmap's items become cards
    again (item 5, mutation testing, first).
 5. The maintainer's: PyPI and crates.io publishing (their tokens, or
