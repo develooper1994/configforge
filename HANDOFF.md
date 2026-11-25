@@ -63,21 +63,22 @@ Next, in this order; none waits on the maintainer:
    $HOME/.local/bin, no sudo; CI installs with apt; the job runs on
    schedule, dispatch and pushes to lib/port, lib/numeric, lib/base,
    tests/eva), is on `work/L-3b` (16e3ab8; worktree `.claude/worktrees/l3b`).
-   Under way on `work/L-3b` (46f5d1c): Frama-C 33.0 in WSL (switch cf-eva;
-   the distro runs as root, so apt needs no password).
-   scripts/check/eva.cmake is written (deletes its CSV first, fails when
-   frama-c fails, compares with .eva-accepted.txt). Its first run from
-   scratch over the four harnesses (2 min 15 s) is the real state: port 2
-   (port.c:141 cf_u64_to_text, at the card's slevel ceiling 500; :195
-   cf_puts_n), numeric 0 (its integer half; the float half is out of L-3b,
-   one line in the Roadmap), base 1 (error.c:147, accepted: the strlen of
-   cf_error_set's formatted text), alloc 8 (the growing arena), triaged at
-   c6eac04 and accepted: cf_wipe's volatile pointer (2), cf_arena_free (1),
-   and cf_block's `data[1]` struct hack (5: outside C89's letter, kept on
-   purpose; **for the maintainer to confirm**). The fixed arena
-   (cf_arena_fixed's alignment arithmetic, 22 alarms) moves to its own
-   harness, eva_arena_fixed.c, with its own stop number. Next: that harness, EXTRA=eva in
-   scripts/verify.cmake, the CI job, the docs. Carry it from there; when it lands,
+   Under way on `work/L-3b` (9af8058). Done there: five harnesses
+   (tests/eva/eva_port, eva_numeric (integer half), eva_base (key, error,
+   value), eva_alloc (growing arena), eva_arena_fixed); scripts/check/
+   eva.cmake green from scratch (33 distinct alarms, all in
+   .eva-accepted.txt with a reason: port.c:141/:195 at the slevel ceiling,
+   port.c:63 Frama-C's contract, error.c:147, cf_wipe's volatile pointer,
+   cf_arena_free, cf_block's `data[1]` struct hack (5: **for the
+   maintainer to confirm**), cf_arena_fixed's alignment through an integer
+   (22, one root)); test_fixed_unaligned in lib/base/tests/test_alloc.c;
+   EXTRA=eva in scripts/verify.cmake; setup.sh's FRAMAC=1; the CI
+   workflow eva.yml with its fetches.txt entry. Not yet: one
+   `-DEXTRA=eva` verify from a real clone as a normal user (the tar copy
+   as root made gate.dependencies and gate.codemap fail there), the first
+   two CI runs of eva (the second from the cache, under 10 minutes), CI
+   green on the branch (a run was queued), docs/Safety.md, CHANGELOG.md.
+   Then land it. Carry it from there; when it lands,
    docs/plan holds no open card, and the Roadmap's items become cards
    again (item 5, mutation testing, first).
 5. The maintainer's: PyPI and crates.io publishing (their tokens, or
@@ -86,8 +87,8 @@ Next, in this order; none waits on the maintainer:
    commits and tags, two-factor authentication); whether to keep the
    Dependabot pull requests that queue ahead of card CI.
 
-Budgets at the stop (2026-11-25 16:50 UTC): Claude weekly 96%, the 5-hour
-window 98% (the maintainer said to go on until the allowance ran out); it resets 2026-11-26 10:00 UTC. Lessons
+Budgets at the stop (2026-11-25 16:50 UTC): Claude weekly 100% at 18:15 UTC
+(the maintainer said to go on until the allowance ran out); it resets 2026-11-26 10:00 UTC. Lessons
 are in docs/Maintaining.md ("Where the tokens go", "Working habits that
 paid"). Three this evening:
 
