@@ -37,7 +37,10 @@ that needs no decision, or weekly usage reaches 95%.
 
 The maintainer, 2026-11-25: the priority is finishing the cards already
 in the plan. No new card is written from the Roadmap until every open row
-of docs/Plan.md's index is done.
+of docs/Plan.md's index is done, and every card in docs/plan/ is
+finished (2026-11-25, again: "docs/plan dizinindeki tüm işler bitmeden
+yenisini üretme"). Roadmap item 5 (mutation testing) was to be N-18; its
+card was never written and waits for that.
 
 Next, in this order; none waits on the maintainer:
 
