@@ -185,31 +185,15 @@ Things only the maintainer can do or decide. Each unblocks the cards named.
 
 In the order to be done. A card is `open`, `done` (with its commit), or
 `waits` (with what it waits for). The finished cards (H, W3, S, T,
-W5, L, A, I, N and P-4) are recorded in "Done, their cards removed",
-below; the cards are in `docs/plan/*.md`. L-3b is the one open L card
-(the tools by group: `docs/plan/L-tools.md`). The P-* cards, word-at-a-time
-scanning before SIMD (`docs/plan/P-word-at-a-time.md`), are last,
-except P-1: it only measures, and comes once 1.7.0 is released, so the
-waves after it are measured from the start; P-2 and P-3 wait for those
-waves ("After 1.7.0: the order of the waves", below).
+W5, L, A, I, N and P, but for the open cards) are recorded in "Done, their
+cards removed", below; the cards are in `docs/plan/*.md`. The open cards are
+L-3b (the tools by group: `docs/plan/L-tools.md`), P-3 (word-at-a-time
+scanning before SIMD: `docs/plan/P-word-at-a-time.md`) and N-19.
 
 | Order | Card | Size | Needs | Status |
 | ----: | ---- | ----- | ----- | ------ |
 | 38g | L-3b Frama-C EVA on port, numeric and base | large | L-3; 1.9.0 under way | open |
-| 38k | L-9 The Scorecard findings the project can fix | small | L-2 | done (3f251f8) |
-| 38l | L-10 Supply-chain hardening, the parts the project can do itself | medium | L-9 | done (c4a13af) |
-| 39 | P-1 The benchmark measures large documents, and says where time goes | medium | 1.7.0 released | done (90b6541) |
-| 55 | P-1b The other libraries beside ours, and a page CI keeps | large | P-1, A-1b | done (427ec6a) |
-| 57 | P-2 The word-at-a-time backend of lanes, with the scalar loop as reference | medium | P-1, A-3 | done (e0c0904) |
 | 58 | P-3 The scans P-1 found, a word at a time, kept only where they win | medium | P-2 | open |
-| 71 | I-2 1.9.0 opened: the 1.8 experimental functions settled (D-89) | small | 1.8.0 released | done (7146038) |
-| 72 | N-13 A reason's severity and weakness id | small | 1.9.0 opened (the D-89 decision; HANDOFF.md) | done (2687154) |
-| 73 | N-14 `configforge diff` over arrays of tables | medium | N-8; 1.9.0 opened (the D-89 decision; HANDOFF.md) | done (73c2798) |
-| 74 | N-15 Changed configuration keys on a pull request | medium | N-8; 1.9.0 opened (the D-89 decision; HANDOFF.md) | done (dfc1fed) |
-| 75 | N-12 Differential fuzzing of the YAML reader: built-in parser against libyaml | small | nothing | done (d8a0cfa) |
-| 76 | N-16 Git's `textconv` driver: `git diff` shows configuration by value | medium | N-3; 1.9.0 opened (the D-89 decision; HANDOFF.md) | done (bbb1a77) |
-| 77 | N-17 `configforge doctor drift`: many reports grouped by value | medium | 1.9.0 opened (the D-89 decision; HANDOFF.md) | done (ca3dd7b) |
-| 80 | N-20 A lone CR ends a YAML comment: the rows that hold it | small | nothing | done (d04740d) |
 
 ## Done, their cards removed
 
@@ -259,7 +243,7 @@ did is kept here, and its text in git (`git log -- docs/plan/<file>`).
   of formats tested against what each can hold (W5-V2, 70bd398); and
   generators outside the tree, `configforge-gen-<lang>` on the PATH
   (W5-G4, adc2a63).
-* **L-tools.md** (1.7.0 to 1.9.0; L-1 to L-8; L-3b is open). The other
+* **L-tools.md** (1.7.0 to 1.9.0; L-1 to L-10; L-3b is open). The other
   languages' linters as gates: shellcheck, ruff, actionlint, codespell
   (L-1, 7bec7d8); Valgrind, AFL++, gitleaks, osv-scanner and Scorecard
   in CI (L-2, 6442c8f); include-what-you-use and a link check (L-4,
@@ -267,7 +251,11 @@ did is kept here, and its text in git (`git log -- docs/plan/<file>`).
   c2c14f4); one command for the profilers (L-5, 13e9e70); a map of the
   tree and `brief.py`, a brief per card (L-6, 00dd641); CI in 13.9
   minutes instead of 19.2, nothing taken away (L-7, 09fe647); and
-  `doctor.api` cheap under MemorySanitizer (L-8, 179c6df).
+  `doctor.api` cheap under MemorySanitizer (L-8, 179c6df); the Scorecard
+  findings the project can fix itself (L-9, 3f251f8); and supply-chain
+  hardening: every fetch held by `gate.fetches`, read-only workflow
+  tokens, vcpkg pinned, dependency review, the SBOM a release file
+  (L-10, c4a13af).
 * **A-architecture.md** (1.8.0; A-1 to A-13; D-100 to D-108, D-112; the
   design stays in the file). One directory a component (A-1, 824181f) and
   each a project built alone (A-1b, 031d54d); the `lanes` vector library
@@ -287,7 +275,7 @@ did is kept here, and its text in git (`git log -- docs/plan/<file>`).
   the wipe through `memset` saved 25% of instructions on a 16 MiB load
   and 72% on a tiny document; three growth candidates measured and
   closed. The findings stay in the file.
-* **N-next.md** (1.8.0; N-1 to N-11; D-100). `configforge diff` of two
+* **N-next.md** (1.8.0 and 1.9.0; N-1 to N-17 and N-20, I-2; D-100; the file keeps only its intro, for N-19). `configforge diff` of two
   files by value (N-1, 77a11ae), of nested tables (N-5, ad5b840) and of
   scalar arrays (N-8, 7bbd943), with a Git difftool recipe (N-3,
   efb74f1); the musl release archive built twice and compared (N-2,
@@ -295,7 +283,19 @@ did is kept here, and its text in git (`git log -- docs/plan/<file>`).
   `cf_usage`, `--help` from the contract (N-6, 83f5c64); a reload that
   names the keys it changed (N-7, 37ea469); cppcheck on both libraries
   (N-9, ec0de1e) and its style class (N-10, 67a451a); and
-  `cf_blob_skip_bom` proved with CBMC (N-11, 765de40).
+  `cf_blob_skip_bom` proved with CBMC (N-11, 765de40). In 1.9.0: the
+  thirteen 1.8 experimental functions promised (I-2, 7146038; D-89);
+  a reason's severity and weakness id (N-13, 2687154); `diff` over
+  arrays of tables (N-14, 73c2798); the changed keys of a pull request
+  in a comment (N-15, dfc1fed); differential fuzzing of the YAML reader
+  against libyaml (N-12, d8a0cfa); Git's `textconv` driver (N-16,
+  bbb1a77); `doctor drift`, many reports grouped by value (N-17,
+  ca3dd7b); and a lone CR ending a YAML comment (N-20, d04740d).
+* **P-word-at-a-time.md** (1.8.0 and 1.9.0; P-1, P-1b, P-2; P-3 is open;
+  D-101). The benchmark measures large documents and says where time
+  goes (P-1, 90b6541); the other libraries beside ours, on a page CI
+  keeps (P-1b, 427ec6a); and `lanes`' word-at-a-time backend, kept for
+  four operations where it wins (P-2, e0c0904).
 
 Left over from those cards, now in `docs/Roadmap.md`: the user
 defaults' other scopes (a scope prefix in `domain`); a second
