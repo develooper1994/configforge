@@ -187,7 +187,7 @@ In the order to be done. A card is `open`, `done` (with its commit), or
 `waits` (with what it waits for). The finished cards (H, W3, S, T,
 W5, L, A, I, N and P, but for the open cards) are recorded in "Done, their
 cards removed", below; the cards are in `docs/plan/*.md`. The open cards are
-L-3b (the tools by group: `docs/plan/L-tools.md`) and N-19 (`docs/plan/N-next.md`).
+L-3b (the tools by group: `docs/plan/L-tools.md`).
 P-3 (word-at-a-time scanning before SIMD: `docs/plan/P-word-at-a-time.md`)
 waits for 2.4.0: D-101 gives the choice of backend to the program then, and
 D-102 moves the scans into `lib/text`.
@@ -196,6 +196,7 @@ D-102 moves the scans into `lib/text`.
 | ----: | ---- | ----- | ----- | ------ |
 | 38g | L-3b Frama-C EVA on port, numeric and base | large | L-3; 1.9.0 under way | open |
 | 58 | P-3 The readers' scans on lanes' four kept operations, kept only where they win | large | P-2 | waits: 2.4.0 (D-101, D-102: the program chooses the backend; the scans move into lib/text) |
+| 79 | N-19 `gate.misra`: cppcheck's MISRA addon on the `misra` profile, with a deviation record | medium | nothing | done (24b1c7d) |
 
 ## Done, their cards removed
 
