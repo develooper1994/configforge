@@ -35,6 +35,10 @@ score is low priority. Shut down (`shutdown //s //t 60`) once this file
 is current and everything is pushed, at the first of: no card is left
 that needs no decision, or weekly usage reaches 95%.
 
+The maintainer, 2026-11-25: the priority is finishing the cards already
+in the plan. No new card is written from the Roadmap until every open row
+of docs/Plan.md's index is done.
+
 Next, in this order; none waits on the maintainer:
 
 1. **L-10** landed (c4a13af): every fetch held by `gate.fetches`
