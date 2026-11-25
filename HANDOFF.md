@@ -52,14 +52,19 @@ Next, in this order; none waits on the maintainer:
 2. **N-13** (2687154), **N-14** (73c2798), **N-15** (dfc1fed), **N-16**
    (bbb1a77, Git's textconv driver) and **N-17** (ca3dd7b, `doctor
    drift`) landed.
-3. **P-3** (docs/plan/P-word-at-a-time.md), open now that P-2 is done.
-4. The Roadmap's "Next after 1.8.0" items left: 5 (mutation testing),
-   6 (`gate.misra`), and a test that a lone CR after a YAML comment is
-   read as a line break (N-12's rewritten comment skip should already do
-   it; the Roadmap item then closes). Write each as a card first (a
-   middle-tier worker writes it, the organiser reads it cold, the same
-   worker carries it). Then P-3, rewritten on what P-2 landed (it still
-   names `CF_WITH_SWAR`), and L-3b.
+3. **N-20** landed (d04740d); the finished cards were cleaned out of
+   docs/plan (70ad1c3). **P-3 waits for 2.4.0** (d6bdd05): its rewrite on
+   what P-2 landed was read cold by two readers and conflicts with D-101
+   (the program, not the library, chooses the backend, from 2.4.0) and
+   D-102 (the scans move into lib/text); their nineteen findings are under
+   its notes. **N-19** (`gate.misra`) is green on `work/N-19` and lands
+   once CI passes on the branch merged with main (worktree n19).
+4. **L-3b** (Frama-C EVA) is the one open card left after N-19. Its
+   worktree `.claude/worktrees/l3b` holds the card's "Organiser's answers"
+   (opam's release binary, SHA-256 checked, in $HOME/.local/bin, no sudo;
+   CI installs with apt; the job runs on schedule, dispatch and pushes to
+   lib/port, lib/numeric, lib/base, tests/eva). Carry it from there. When
+   it lands, docs/plan holds no open card.
 5. The maintainer's: PyPI and crates.io publishing (their tokens, or
    trusted publishing); the repository settings in L-9's and L-10's
    notes (a ruleset on `main` with required reviews and checks, signed
