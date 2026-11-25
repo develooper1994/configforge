@@ -63,18 +63,19 @@ Next, in this order; none waits on the maintainer:
    $HOME/.local/bin, no sudo; CI installs with apt; the job runs on
    schedule, dispatch and pushes to lib/port, lib/numeric, lib/base,
    tests/eva), is on `work/L-3b` (16e3ab8; worktree `.claude/worktrees/l3b`).
-   Under way on `work/L-3b` (9ee6a75): Frama-C 33.0 in WSL (switch cf-eva;
-   the distro runs as root, so apt needs no password). Clean: numeric's
-   integer half (cf_text_to_i64/u64, cf_infer_scalar; 6 s, no alarm).
-   Organiser's answers: numeric's float half (bignum, cf_gen_digits,
-   cf_f64_to_text, cf_text_to_f64) is out of L-3b, one line in the
-   Roadmap's EVA item; base is split the same way: key.c, error.c and
-   value.c first (alarms at error.c:147 copy_bounded's strlen, value.c
-   171-225), then alloc.c's arena as a harness of its own with a
-   constructed arena (alloc.c:164-184 cf_arena_fixed's cast, 199
-   cf_wipe). port.c:63 is in .eva-accepted.txt; port's :187/:195/:278
-   wait for one run per conversion. Step 3 (eva.cmake, EXTRA=eva), the
-   CI job and the docs are not started. Carry it from there; when it lands,
+   Under way on `work/L-3b` (4c4e765): Frama-C 33.0 in WSL (switch cf-eva;
+   the distro runs as root, so apt needs no password). Harnesses:
+   eva_port.c, eva_numeric.c (integer half only), eva_base.c (key, error,
+   value), eva_alloc.c (written, never run). **None of the "clean" results
+   counts yet**: the worker's scratch scripts kept the old CSV, so a run
+   may have read a stale one. scripts/check/eva.cmake must delete the CSV
+   first and fail when frama-c fails; then every harness is run again from
+   it. Reported open: port.c:141 (cf_u64_to_text, at the card's slevel
+   ceiling of 500) and :195 (cf_puts_n). Accepted: port.c:63 (Frama-C's
+   __atomic_load_n contract), error.c:147 (strlen of cf_error_set's
+   formatted text). Organiser's answers: numeric's float half and base's
+   split, under the card's notes. Next: eva.cmake and EXTRA=eva (step 3),
+   all harnesses run fresh, eva_alloc.c, then the CI job and the docs. Carry it from there; when it lands,
    docs/plan holds no open card, and the Roadmap's items become cards
    again (item 5, mutation testing, first).
 5. The maintainer's: PyPI and crates.io publishing (their tokens, or
