@@ -187,13 +187,15 @@ In the order to be done. A card is `open`, `done` (with its commit), or
 `waits` (with what it waits for). The finished cards (H, W3, S, T,
 W5, L, A, I, N and P, but for the open cards) are recorded in "Done, their
 cards removed", below; the cards are in `docs/plan/*.md`. The open cards are
-L-3b (the tools by group: `docs/plan/L-tools.md`), P-3 (word-at-a-time
-scanning before SIMD: `docs/plan/P-word-at-a-time.md`) and N-19.
+L-3b (the tools by group: `docs/plan/L-tools.md`) and N-19 (`docs/plan/N-next.md`).
+P-3 (word-at-a-time scanning before SIMD: `docs/plan/P-word-at-a-time.md`)
+waits for 2.4.0: D-101 gives the choice of backend to the program then, and
+D-102 moves the scans into `lib/text`.
 
 | Order | Card | Size | Needs | Status |
 | ----: | ---- | ----- | ----- | ------ |
 | 38g | L-3b Frama-C EVA on port, numeric and base | large | L-3; 1.9.0 under way | open |
-| 58 | P-3 The scans P-1 found, a word at a time, kept only where they win | medium | P-2 | open |
+| 58 | P-3 The readers' scans on lanes' four kept operations, kept only where they win | large | P-2 | waits: 2.4.0 (D-101, D-102: the program chooses the backend; the scans move into lib/text) |
 
 ## Done, their cards removed
 
