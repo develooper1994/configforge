@@ -1499,20 +1499,15 @@ maintainer; each is a card to write.
    configuration). N-3 gave the difftool for flat JSON; a driver makes
    `git diff` and `git log -p` show changes by value in every format.
 
-* **A lone CR inside a YAML comment** (a fault, found by N-12's
-  differential fuzzer against libyaml). The built-in reader's comment skip
-  was fixed in N-12 to refuse a NUL or other control byte; what stays is
-  the second half of that finding: `yp_syntax`
-  (`lib/serialize/src/yamlparse.c`) lacks `CF_SYN_TOML_COMMENT`, whose body
-  check ends a comment at LF only and so would refuse a lone CR, which YAML
-  ends a line with. A fix is a YAML flag in `lib/text/src/space.c`, and a
-  regression test with a lone CR. Two more differences are "to decide", not
-  examined: a literal block scalar whose last line is only spaces, with no
-  line break after it (the built-in parser ends its text with a line feed,
-  libyaml does not; base64 in N-12's notes), and two inputs libyaml accepts
-  and the built-in parser refuses (a block scalar header at the mapping's own
-  column; an anchor followed by tabs; both in N-12's notes, in
-  `docs/plan/N-next.md`).
+* **Three more differences between the YAML readers, "to decide"** (found by
+  N-12's differential fuzzer against libyaml, not examined): a literal block
+  scalar whose last line is only spaces, with no line break after it (the
+  built-in parser ends its text with a line feed, libyaml does not; base64 in
+  N-12's notes), and two inputs libyaml accepts and the built-in parser refuses
+  (a block scalar header at the mapping's own column; an anchor followed by
+  tabs; both in N-12's notes, in `docs/plan/N-next.md`). A lone CR inside a
+  comment, once listed here, is closed by N-20: the comment skip ends it at LF
+  or CR, and rows hold that.
 
 After the features above (the maintainer, 2026-11-24):
 

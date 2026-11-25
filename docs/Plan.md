@@ -209,6 +209,7 @@ waves ("After 1.7.0: the order of the waves", below).
 | 75 | N-12 Differential fuzzing of the YAML reader: built-in parser against libyaml | small | nothing | done (d8a0cfa) |
 | 76 | N-16 Git's `textconv` driver: `git diff` shows configuration by value | medium | N-3; 1.9.0 opened (the D-89 decision; HANDOFF.md) | done (bbb1a77) |
 | 77 | N-17 `configforge doctor drift`: many reports grouped by value | medium | 1.9.0 opened (the D-89 decision; HANDOFF.md) | done (ca3dd7b) |
+| 80 | N-20 A lone CR ends a YAML comment: the rows that hold it | small | nothing | open |
 
 ## Done, their cards removed
 

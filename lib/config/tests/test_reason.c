@@ -302,6 +302,7 @@ static const reason_row rows[] = {
              "b\n",
              CONTROL),
     YAML_ROW("a: 1 # x\x7f\n", CONTROL),
+    YAML_ROW("# c\x0b\r", CONTROL),
     YAML_ROW("a: 1 # 0123456789abcdefghijk\x01lmnop\n", CONTROL),
     YAML_ROW("a: 1\n# 0123456789abcdefghijklmnopqrstu\x7f\n", CONTROL),
     ROW("toml", "a = 1\n[a]\n", STRUCTURE, 0, 0),

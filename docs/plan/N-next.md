@@ -444,3 +444,20 @@ branch and lands alone. I-2, which opens
 * **stop if**: `gate.abi` sees the new function or wants a symbols entry (then `CF_DOCTOR_API` is wrong for it: write what the gate said under notes and ask: it is this card's one open design point); step 9 is over its bounds; `marker.cmake`'s gate finds a marker in `drift`'s output (a leak is a fault to fix in this card, not an entry for `KNOWN_LEAK`); three failures on the grouping or the message text.
 * **notes**: read cold against the tree on 2026-11-25 at 7574d95 (before N-14 and N-16 land; neither touches `tools/doctor` or `tests/doctor`). Order number 77 is used because 76 is N-16's, on its branch; if N-16 lands under another number, take the next free one at landing. The one choice that departs from the brief's wording is the function's marker (see "A new public function"); the alternative is no public function (a private `doctor_drift_files` in `engine.c`, declared in `engine.h`), which would break the sentence of section 7b that the command line is the library with printing around it. The old `build/` Debug `doctor.exe` predates the digest handling and prints a secret in `diff`: do not run it to check an expectation of this card.
   * Carried (organiser's answers): step 4's three `doctor_case` rows are named `drift_pair`, `drift_pair_never` and `drift_pair_unreadable`, because the script test `doctor.drift` (step 3) already takes the name `drift`; CMake refuses two tests of one name. Step 3's `drift.cmake` and step 2's `test_drift` are as written. The group order in `drift_message` is an insertion sort over `order[]` kept in the function (no `drift_work` member), and the 1025 copies of case 11 are made with `configure_file` in a loop (`string(REPEAT)` and `list(SUBLIST)` need a newer CMake than the 3.10 floor). Step 9, Linux default preset (unoptimised, GCC): 1000 reports of 200 keys, 20 MB in all, 20 of the keys differing on one host in seven: 4.0 s, 243 MB peak, 20 findings; inside the bounds (60 s, 512 MiB).
+
+## N-20 - a lone CR ends a YAML comment: the rows that hold it
+
+* **id**: N-20
+* **goal**: the tests hold that a lone CR ends a YAML comment, and the Roadmap stops listing it as a fault.
+* **why**: N-12's fuzzer found a lone CR inside a comment and the Roadmap recorded a fault in `yp_syntax` (a missing `CF_SYN_TOML_COMMENT`-style flag). Since N-12 `yp_comment` (`lib/serialize/src/yamlparse.c:143-168`) ends a comment at `'\n'` or `'\r'` (line 157) and refuses a control byte, so the fault was closed in passing; no row said so.
+* **needs**: nothing
+* **size**: small
+* **decided**:
+  * Accepted, in `test_yaml.c` (`test_cr_comment`, built-in parser and libyaml alike, keys checked): `"# c\ra: 1\r"` (a is 1), `"a: 1 # c\rb: 2\r"` (a is 1, b is 2), `"a: [1, # c\r 2]\r"` (a.0 is 1).
+  * Refused with control-character, in `test_reason.c` after the `\x7f` comment row: `YAML_ROW("# c\x0b\r", CONTROL)` (a libyaml build reads it: the macro's `maybe` flag already covers that).
+  * No behaviour change, so no CHANGELOG entry. If a row fails, the card stops with the failing row; the fix is its own card.
+* **files**: `lib/config/tests/test_yaml.c`, `lib/config/tests/test_reason.c`, `docs/Roadmap.md` (the lone-CR item), `docs/Codemap.md` (generated).
+* **steps**: 1. add the rows; 2. build and run `test_yaml` and `test_reason` (they pass: the fault is closed); 3. edit the Roadmap; 4. format, gates, push, CI.
+* **accept**: ACCEPT-LINUX, ACCEPT-CI; `ctest -R "test_yaml|test_reason"` exit 0.
+* **stop if**: a row fails.
+* **notes**: decided and carried the same day (2026-11-25); the rows passed at once on Linux (default preset).

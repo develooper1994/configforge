@@ -550,6 +550,23 @@ static void test_seeded(void) {
     seeded_same("yaml", g_seeded_doc, "YAML read twice is the same");
 }
 
+/* A lone CR ends a comment, as it ends any YAML line: the next line is read. */
+static void test_cr_comment(void) {
+    cf_error   err = CF_ERROR_INIT;
+    cf_config* c   = load("# c\ra: 1\r", &err);
+
+    check(c != NULL && cf_get_int(c, "a", 0) == 1, "a lone CR ends a comment line");
+    cf_config_free(c);
+    c = load("a: 1 # c\rb: 2\r", &err);
+    check(c != NULL && cf_get_int(c, "a", 0) == 1 && cf_get_int(c, "b", 0) == 2,
+          "a lone CR ends a comment after a value");
+    cf_config_free(c);
+    c = load("a: [1, # c\r 2]\r", &err);
+    check(c != NULL && cf_get_int(c, "a.0", 0) == 1,
+          "a lone CR ends a comment in a flow");
+    cf_config_free(c);
+}
+
 #else /* !CF_WITH_YAML */
 
 /* Without it, a .yaml file is not read as nothing: the build says which
@@ -576,6 +593,7 @@ int main(void) {
     test_anchors();
     test_tags();
     test_refuses();
+    test_cr_comment();
     test_alias_bytes();
     test_reanchor();
     test_reanchor_entries();
