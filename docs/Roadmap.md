@@ -949,7 +949,12 @@ first user meets. In the order proposed:
 ### Critical-system standards, and large files (asked 2026-11-16; not yet cards)
 
 * 🟨 **Critical-system standards, checked by machine** (cards N-9 and N-10 for
-  the first step, cppcheck on the libraries with every class, none left: done). MISRA C first,
+  the first step, cppcheck on the libraries with every class, none left: done;
+  N-19: `gate.misra` runs the MISRA addon over the `misra` profile's sources
+  and every one of the 6,337 reports is recorded, in
+  `docs/compliance/deviations.txt`, as a deviation, a tool error or a backlog
+  line a later card lowers; what waits is the matrix of every rule, the
+  public headers' zero, and the compliance report). MISRA C first,
   then SEI CERT C's rules no tool sees, a CWE table, and MISRA C++:2023
   for the wrapper; each rule's status in a matrix, each deviation in a
   record, and a gate (`gate.misra`, cppcheck's MISRA addon on a `misra`
@@ -1488,9 +1493,11 @@ maintainer; each is a card to write.
    2026-11-17). Coverage says a line ran, not that a wrong line fails a
    test; the score beside coverage shows where the tests are weak.
 6. **`gate.misra` on the `misra` profile** (Critical-system standards).
-   N-9 and N-10 put cppcheck on both libraries; A-11 made the profile;
-   the matrix and the deviation records are what is left of the first
-   step.
+   Done in 1.9.0 (card N-19): the addon runs on every commit in the
+   `profiles (misra)` job, and a report the record lacks, or a record line
+   that matches no report, fails it. What waits is the matrix of every
+   rule, the public headers with no `backlog` line, and the compliance
+   report.
 7. **Drift across many hosts** (People who change configuration).
    Done in 1.9.0 (card N-17): `doctor drift` groups N reports by value, per
    key. What waits is the source of a value, a list file, N configuration

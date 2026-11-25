@@ -26,7 +26,7 @@ asks for.
 
 | Standard | Kind | Scope here | Status |
 | -------- | ---- | ---------- | ------ |
-| **MISRA C:2012** (with Amendments 1-4; MISRA C:2023 consolidates them) | coding, C | the library: `lib/` | planned: matrix and gate, below |
+| **MISRA C:2012** (with Amendments 1-4; MISRA C:2023 consolidates them) | coding, C | the library: `lib/` | partly: `gate.misra` runs the addon over the library's sources and every report is recorded (`docs/compliance/deviations.txt`); the matrix and the public headers' zero are planned, below |
 | **SEI CERT C** | coding, C, security | the library, Doctor | partly: clang-tidy's `cert-*` checks run as errors on every build (`.clang-tidy`); the matrix of rules no tool checks is planned |
 | **CWE** (Top 25, and CWE-658, weaknesses of C) | weakness catalogue | everything that reads untrusted bytes | planned: a table from each weakness to the design rule, test, fuzzer or proof that holds it |
 | **MISRA C++:2023** (absorbs AUTOSAR C++14) | coding, C++ | the C++ wrapper, `configforge.hpp` | later: the wrapper is a thin header over the C API |
@@ -95,8 +95,23 @@ these "for the integrator to check", not "followed".
 
 ## Deviation records
 
-Each deviation is one entry in `docs/compliance/deviations.md` (planned),
-in the form MISRA Compliance:2020 asks for:
+Each deviation is one record in `docs/compliance/deviations.txt`, in the
+form MISRA Compliance:2020 asks for. The file is plain text, one line a
+record, because the gate that reads it is CMake (D-112):
+
+| Line | Meaning |
+| ---- | ------- |
+| `tool \| cppcheck \| 2.19` | the cppcheck version the counts were made under; exactly one, first |
+| `ignore \| 2.5 \| <reason>` | a rule the gate does not read (the rules about a whole program) |
+| `<rule> \| <file> \| <count> \| <kind> \| <reason>` | the exact number of reports of that rule in that file |
+
+A kind is `deviation` (decided, permanent, the reason naming its row above or
+a D-number; refused in a public header), `tool` (the code complies and the
+addon is wrong) or `backlog` (a real report no one has decided on: counted,
+never growing, the first card to take the rule turns its lines into a fix or a
+deviation). A record is by file and count, not file and line: a line number
+moves with every edit. Each record carries what MISRA Compliance:2020 asks
+for:
 
 * the rule and its category (mandatory rules are never deviated);
 * where it applies (files, functions, or "the whole library");
@@ -105,8 +120,10 @@ in the form MISRA Compliance:2020 asks for:
   the risk the rule was written against;
 * who decided, and the D-number when it is a decision of the project.
 
-A suppression in the checker's configuration points at its record; a
-suppression with no record fails the gate.
+There are no suppressions: a `cppcheck-suppress` of a MISRA rule under
+`lib/` fails the gate, and the record is the only place. Regenerate it with
+`cmake -DSRC=. -DBIN=<misra build> -DDEFINES=<compiler macros> -DWRITE=ON -P
+cmake/gates/GateMisra.cmake` and review the difference.
 
 The records are one of three documents MISRA Compliance:2020 asks for,
 and a user who takes the library as adopted code needs all three:
@@ -128,8 +145,8 @@ What runs, and where. A row is "planned" until its gate is in the tree.
 | Check | Tool | Gate | Runs | Status |
 | ----- | ---- | ---- | ---- | ------ |
 | CERT C rules a tool can see | clang-tidy `cert-*`, warnings as errors | the `analyze` preset, `EXTRA=tidy` | every commit | done |
-| MISRA C rules a free tool can see | cppcheck with its MISRA addon, on the MISRA profile | `gate.misra`: fails a violation that has no record | every commit (tier 1) | planned |
-| Records and suppressions agree | a script reads `deviations.md` and the suppression list | inside `gate.misra`: a suppression without a record, or a record no suppression uses, fails | every commit | planned |
+| MISRA C rules a free tool can see | cppcheck with its MISRA addon, on the MISRA profile | `gate.misra`: fails a report the record lacks and a record line that matches no report | every commit (tier 1), the `profiles (misra)` job | done (N-19) |
+| Records and suppressions agree | `gate.misra` reads `deviations.txt` and scans `lib/` | there are no suppressions: one fails the gate, and a record no report uses fails as stale | every commit | done (N-19) |
 | The compliance report | the same run, written as Markdown | uploaded as a CI artifact and attached to each release: every rule, its status, its count, its record | each release | planned |
 | CWE coverage | the CWE table, checked to name only tests, fuzzers and proofs that exist | `gate.cwe` | every commit | planned |
 | Rules no tool checks (MISRA's "undecidable" and the directives) | a review checklist, one line per rule, kept with the matrix | read at each release; the report says when it was last read | each release | planned |
@@ -172,10 +189,14 @@ standard asks for can be prepared once here and reused by every user:
 ## Order of work
 
 1. The MISRA profile preset, and cppcheck's addon run against it to
-   count what there is.
-2. The public headers with no violation, and the gate on them.
+   count what there is. Done (A-11, N-19).
+2. The public headers with no violation, and the gate on them. Open: 33
+   record lines (131 reports) in `include/` directories; the card that takes
+   them to zero lets the gate refuse any `backlog` in one.
 3. The deviation records for the conflicts above, and `gate.misra` on
-   the sources.
+   the sources. Done (N-19): 6,337 reports in 613 lines, 33 of them lines
+   in `include/` directories, all `backlog`; the four deviations above are
+   recorded, 17.3 is the addon's.
 4. The CERT matrix of rules clang-tidy does not see.
 5. The CWE table and `gate.cwe`.
 6. The compliance report as a release artifact, and the safety manual.

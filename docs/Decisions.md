@@ -124,6 +124,7 @@ gets reopened every six months.
 | D-109 | What a format can hold, and every pair tested | formats, tests | **Decided** |
 | D-110 | Generators outside the tree | generators | **Decided** |
 | D-111 | The comparison with other libraries: one set of flags, the same work, and a history kept on its own branch | benchmark, CI | **Decided** |
+| D-112 | The MISRA record is plain text of file and count, three kinds, and the gate fails open nowhere | compliance, CI | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -5071,6 +5072,75 @@ leaves by removing them. XML cannot be a win: ConfigForge's reader is expat
 layer and is said to be.
 
 **Status.** Built: P-1b.
+
+## D-112 — The MISRA record is plain text of file and count, three kinds, and the gate fails open nowhere
+
+**Question.** `docs/Compliance.md` says the library is checked against
+MISRA C:2012 on every commit, and nothing checked it. How does a free checker
+(cppcheck's MISRA addon) become a gate that keeps the claim true while the
+library changes, without six thousand edits to quiet it on the first day, and
+without a green that means "the tool did not run"?
+
+**Options.**
+
+1. Fix every report, then fail on any. Rejected: a judgement per site (the
+   allocator's own `malloc`, an octal mode, a codec descriptor), and a commit
+   that changes code six thousand times to quiet a checker is how a gate loses
+   the trust it was made for.
+2. Inline suppressions with a comment each. Rejected: a comment that hides a
+   report is a record the gate cannot count, and it sits where a reader of the
+   code, not of the standard, finds it.
+3. A record of every report, the gate failing on a report the record lacks and
+   on a record line that matches no report (decided): a ratchet, which a later
+   card lowers by fixing.
+
+**Decision.** Option 3.
+
+* **The record** is `docs/compliance/deviations.txt`, plain text, because the
+  gate is CMake and a Markdown table needs a Markdown reader. One line a
+  record: `rule | file | count | kind | reason`, a `tool | cppcheck | N.M`
+  line (exactly one, the first), and `ignore | rule | reason` lines. A reason
+  is at least 12 characters, is not `TODO`, and holds no `;`, `[` or `]`.
+* **File and count, not file and line.** A line number moves with every edit
+  and every format pass, so each card that touched a file would rewrite the
+  record. With a count, a new report in a file that has the rule fails (the
+  count is higher), a fix fails until the line is lowered (the record no longer
+  matches), and a report moved between files fails twice. `-DWRITE` makes the
+  update one command, and the diff is what is reviewed.
+* **Three kinds.** `deviation`: decided and permanent, the reason naming its
+  row in `docs/Compliance.md` or a D-number, refused in an `include/`
+  directory (a deviation in a public header is one every user adopts). `tool`:
+  the code complies and the addon is wrong, the reason saying why. `backlog`:
+  a real report no one has decided on, counted and printed, never growing.
+  The gate does not enforce MISRA's classes (mandatory, required, advisory):
+  the licensed rule list is not in the repository and a wrong number in a gate
+  is a false claim; a reviewer checks them.
+* **Ignored rules**: 2.3, 2.4, 2.5 and 8.7, rules about a whole program, judged
+  by the integrator (`docs/Compliance.md`, "Rules about a whole program"). A
+  fifth showing up after a cppcheck update is an `ignore` line with its
+  reason, not a `backlog`.
+* **The threshold is zero on the first run**: nothing is fixed, every report
+  is recorded (6,337 in 613 lines at cppcheck 2.19), and each later card that
+  takes a rule lowers its lines.
+* **The gate fails open nowhere.** A canary (a file with a `goto`) must come
+  back as 15.1, or the gate fails: without `--enable=style` or python the
+  addon prints nothing, which looks exactly like a clean library. Without
+  cppcheck the gate is skipped locally with a status line and fails when `CI`
+  is `true`. The record names the cppcheck version (major.minor) its counts
+  were made under; another version is a skip locally and a failure in CI, and
+  the remedy is `-DWRITE` and a reviewed diff. No rule text and no rule
+  category is committed (MISRA's texts are copyright), and a
+  `cppcheck-suppress` of a MISRA rule under `lib/` fails the gate: the record
+  is the only place. A `misra-config` note is counted and printed: "no
+  violation" does not cover those places.
+
+**Consequence.** The claim in `docs/Compliance.md` is true of what the addon
+can see; the directives and the rules no tool checks stay on the review
+checklist, and "follows" is not "compliant" until a qualified tool has run.
+The matrix of every rule, the compliance report and the public headers' zero
+are later cards.
+
+**Status.** Built: N-19.
 
 ## D-60 — Arrays in INI are the ones INI files already have
 

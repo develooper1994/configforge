@@ -179,20 +179,14 @@ function(configforge_apply_analysis tgt)
   endif()
 endfunction()
 
-# Route compilation through cppcheck when it is present and requested.
+# The macros cppcheck needs to see the configuration the compiler compiles:
+# `<out>` is set to a list of -D options (empty for a compiler of no known
+# family). configforge_setup_cppcheck and gate.misra use the same.
 #
 # ~~~
-# configforge_setup_cppcheck()
+# cf_cppcheck_compiler_defines(<out>)
 # ~~~
-function(configforge_setup_cppcheck)
-  if(NOT CF_CPPCHECK)
-    return()
-  endif()
-  find_program(CPPCHECK_EXE cppcheck)
-  if(NOT CPPCHECK_EXE)
-    message(STATUS "cppcheck requested but not found; skipping")
-    return()
-  endif()
+function(cf_cppcheck_compiler_defines out)
   # cppcheck defines none of the compiler's own macros, so cf_port.h saw
   # a C89 compiler that was neither GCC nor MSVC and stopped at its
   # #error for want of a 64-bit type - before analysing a line. Every
@@ -211,6 +205,26 @@ function(configforge_setup_cppcheck)
   elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
     set(compiler "-D__GNUC__=4" "-D__GNUC_MINOR__=2")
   endif()
+  set(${out}
+      ${compiler}
+      PARENT_SCOPE)
+endfunction()
+
+# Route compilation through cppcheck when it is present and requested.
+#
+# ~~~
+# configforge_setup_cppcheck()
+# ~~~
+function(configforge_setup_cppcheck)
+  if(NOT CF_CPPCHECK)
+    return()
+  endif()
+  find_program(CPPCHECK_EXE cppcheck)
+  if(NOT CPPCHECK_EXE)
+    message(STATUS "cppcheck requested but not found; skipping")
+    return()
+  endif()
+  cf_cppcheck_compiler_defines(compiler)
   set(common
       "${CPPCHECK_EXE}"
       "--std=c89"

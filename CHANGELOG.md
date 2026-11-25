@@ -7,6 +7,14 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- `gate.misra`: cppcheck's MISRA C:2012 addon over the library's sources in
+  the `misra` profile (`ctest --preset misra -R gate.misra`, and the
+  `profiles (misra)` job). Every report is recorded in
+  `docs/compliance/deviations.txt`, one line a rule and file with its count, a
+  kind (deviation, tool, backlog) and a reason; a report the record lacks, or a
+  line that matches no report, fails, so a count only goes down. The addon
+  must have run (a canary), the record names the cppcheck version, and a
+  suppression comment fails the gate (N-19, D-112; docs/Compliance.md).
 - `configforge doctor drift <report>...` (and `cf_doctor_drift_files`): with one
   report a host, each key the reports do not all agree on, grouped by value and
   by the hosts that hold it; a secret is shown as "value 1", "value 2", never

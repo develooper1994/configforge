@@ -231,4 +231,20 @@ function(configforge_add_gates tgt)
         -DSANITIZE=${CF_INSTRUMENTED} -DCOMPILER=${CMAKE_C_COMPILER_ID} -P
         ${CMAKE_SOURCE_DIR}/cmake/gates/GateSymbols.cmake)
   endif()
+
+  # cppcheck's MISRA C:2012 addon over the sources the misra profile builds,
+  # against docs/compliance/deviations.txt (N-19, D-112). Only there: the
+  # profile's own compile database is what is analysed. The compiler's
+  # macros go through -D joined with '|', as the features do.
+  if(CF_BUILD_PROFILE_NAME STREQUAL "misra")
+    cf_cppcheck_compiler_defines(misra_defines)
+    string(REPLACE ";" "|" misra_defines "${misra_defines}")
+    add_test(
+      NAME gate.misra
+      COMMAND
+        ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR}
+        "-DDEFINES=${misra_defines}" -P
+        ${CMAKE_SOURCE_DIR}/cmake/gates/GateMisra.cmake)
+    set_tests_properties(gate.misra PROPERTIES TIMEOUT 900)
+  endif()
 endfunction()
