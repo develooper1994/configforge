@@ -71,9 +71,12 @@ Next, in this order; none waits on the maintainer:
    (port.c:141 cf_u64_to_text, at the card's slevel ceiling 500; :195
    cf_puts_n), numeric 0 (its integer half; the float half is out of L-3b,
    one line in the Roadmap), base 1 (error.c:147, accepted: the strlen of
-   cf_error_set's formatted text), alloc 8 (the growing arena: cf_wipe,
-   cf_arena_free, cf_arena_calloc, cf_arena_dup). Next: triage those ten as
-   the card says, eva_alloc.c's fixed-arena part, EXTRA=eva in
+   cf_error_set's formatted text), alloc 8 (the growing arena), triaged at
+   c6eac04 and accepted: cf_wipe's volatile pointer (2), cf_arena_free (1),
+   and cf_block's `data[1]` struct hack (5: outside C89's letter, kept on
+   purpose; **for the maintainer to confirm**). The fixed arena
+   (cf_arena_fixed's alignment arithmetic, 22 alarms) moves to its own
+   harness, eva_arena_fixed.c, with its own stop number. Next: that harness, EXTRA=eva in
    scripts/verify.cmake, the CI job, the docs. Carry it from there; when it lands,
    docs/plan holds no open card, and the Roadmap's items become cards
    again (item 5, mutation testing, first).
