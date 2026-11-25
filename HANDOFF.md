@@ -52,27 +52,28 @@ Next, in this order; none waits on the maintainer:
 2. **N-13** (2687154), **N-14** (73c2798), **N-15** (dfc1fed), **N-16**
    (bbb1a77, Git's textconv driver) and **N-17** (ca3dd7b, `doctor
    drift`) landed.
-3. **N-20** landed (d04740d); the finished cards were cleaned out of
-   docs/plan (70ad1c3). **P-3 waits for 2.4.0** (d6bdd05): its rewrite on
-   what P-2 landed was read cold by two readers and conflicts with D-101
-   (the program, not the library, chooses the backend, from 2.4.0) and
-   D-102 (the scans move into lib/text); their nineteen findings are under
-   its notes. **N-19** (`gate.misra`) is green on `work/N-19` and lands
-   once CI passes on the branch merged with main (worktree n19).
-4. **L-3b** (Frama-C EVA) is the one open card left after N-19. Its
-   worktree `.claude/worktrees/l3b` holds the card's "Organiser's answers"
-   (opam's release binary, SHA-256 checked, in $HOME/.local/bin, no sudo;
-   CI installs with apt; the job runs on schedule, dispatch and pushes to
-   lib/port, lib/numeric, lib/base, tests/eva). Carry it from there. When
-   it lands, docs/plan holds no open card.
+3. **N-20** landed (d04740d), **N-19** (`gate.misra`, D-112) landed
+   (24b1c7d); the finished cards were cleaned out of docs/plan (70ad1c3).
+   **P-3 waits for 2.4.0** (d6bdd05): its rewrite conflicts with D-101 (the
+   program, not the library, chooses the backend, from 2.4.0) and D-102
+   (the scans move into lib/text); two cold readers' nineteen findings are
+   under its notes.
+4. **L-3b** (Frama-C EVA) is the one open card. Its card, with the
+   "Organiser's answers" (opam's release binary, SHA-256 checked, in
+   $HOME/.local/bin, no sudo; CI installs with apt; the job runs on
+   schedule, dispatch and pushes to lib/port, lib/numeric, lib/base,
+   tests/eva), is on `work/L-3b` (16e3ab8; worktree `.claude/worktrees/l3b`).
+   Nothing of its code is written. Carry it from there; when it lands,
+   docs/plan holds no open card, and the Roadmap's items become cards
+   again (item 5, mutation testing, first).
 5. The maintainer's: PyPI and crates.io publishing (their tokens, or
    trusted publishing); the repository settings in L-9's and L-10's
    notes (a ruleset on `main` with required reviews and checks, signed
    commits and tags, two-factor authentication); whether to keep the
    Dependabot pull requests that queue ahead of card CI.
 
-Budgets: Claude weekly 44% at 20:20 UTC (resets 2026-11-26); the 5-hour
-window was at 79%, so no worker started until it reset. Lessons
+Budgets at the stop (2026-11-25 16:20 UTC): Claude weekly 94%, the stop
+line is 95%; it resets 2026-11-26 10:00 UTC. Lessons
 are in docs/Maintaining.md ("Where the tokens go", "Working habits that
 paid"). Three this evening:
 
