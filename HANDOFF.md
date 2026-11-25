@@ -63,7 +63,13 @@ Next, in this order; none waits on the maintainer:
    $HOME/.local/bin, no sudo; CI installs with apt; the job runs on
    schedule, dispatch and pushes to lib/port, lib/numeric, lib/base,
    tests/eva), is on `work/L-3b` (16e3ab8; worktree `.claude/worktrees/l3b`).
-   Nothing of its code is written. Carry it from there; when it lands,
+   Under way (3c7faff): Frama-C 33.0 installed in WSL (switch cf-eva;
+   the distro runs as root, so apt needs no password); tests/eva/eva_port.c
+   calls every export of port.c; three alarms left on port (port.c:63
+   __atomic_load_n, Frama-C's own contract: for .eva-accepted.txt;
+   187/298 cf_fmt_append; 195 the %I/%U digits), cf_u64_to_text needs
+   slevel 500, the card's ceiling. Next: port clean but :63, then
+   eva_numeric.c, eva_base.c, step 3. The card's notes say more. Carry it from there; when it lands,
    docs/plan holds no open card, and the Roadmap's items become cards
    again (item 5, mutation testing, first).
 5. The maintainer's: PyPI and crates.io publishing (their tokens, or
@@ -72,8 +78,8 @@ Next, in this order; none waits on the maintainer:
    commits and tags, two-factor authentication); whether to keep the
    Dependabot pull requests that queue ahead of card CI.
 
-Budgets at the stop (2026-11-25 16:20 UTC): Claude weekly 94%, the stop
-line is 95%; it resets 2026-11-26 10:00 UTC. Lessons
+Budgets at the stop (2026-11-25 16:50 UTC): Claude weekly 96%, the 5-hour
+window 98% (the maintainer said to go on until the allowance ran out); it resets 2026-11-26 10:00 UTC. Lessons
 are in docs/Maintaining.md ("Where the tokens go", "Working habits that
 paid"). Three this evening:
 
