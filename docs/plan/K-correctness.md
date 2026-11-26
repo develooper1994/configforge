@@ -440,3 +440,23 @@ card marked **TO DECIDE** has no number until the maintainer answers; D-138
 * **accept**: ACCEPT-LINUX with the conformance and `fuzz` extras; ACCEPT-WINDOWS; ACCEPT-CI; the YAML floors in `tests/conformance/floor.txt` unchanged or raised.
 * **stop if**: a part's reduced document shows a cause other than the one stated; a suite case that was valid is refused or read differently after a change (revert that part, the case's id under notes).
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Changed" (K-8.1 if A: a literal block scalar at the end of the input without a final line break no longer gains one; K-8.2 and K-8.3: a message) . **D-140** (text, when answered: the three answers, one sentence each, with YAML 1.2.2's sections); until then the three rules of `yamldiff.known` carry the reasons.
+
+## To be written: K-9a and K-9b (the maintainer, 2026-11-26)
+
+Asked by the maintainer (relayed from a side session: "son iki kartı
+beğendim ve exception safety özelliği getirilecek"), version 1.9.0, to be
+written as full cards here, read cold, and given index rows after K-8:
+
+* **K-9a - A failure guarantee for every public function.** Each public
+  function states one guarantee: nothrow; strong (all or nothing: on an
+  error the state is unchanged); basic (no leak, the object still
+  valid). Written in the headers and in a table of the documents; a gate
+  refuses a public function with no guarantee written. The embedded
+  rules: no `abort`, `exit` or `longjmp`; out of memory returns
+  `CF_E_MEMORY`.
+* **K-9b - Allocation faults injected, as SQLite does.** A test
+  allocator fails the 1st, 2nd, ... nth allocation of every load and
+  write path in turn; each case is checked for no leak (ASan), no crash,
+  and, for a "strong" function, the state unchanged.
+
+Their decisions take the numbers after D-222.

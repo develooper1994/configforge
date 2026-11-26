@@ -437,7 +437,7 @@ one that cannot be done is dropped and recorded under "Done" as dropped.
 
 | Card | Version | Waits on | Status |
 | ---- | ------- | -------- | ------ |
-| C-2a | 1.10.0 | its TO DECIDE | parked |
+| C-2a | 1.10.0 | answered (D-222, an open `cf_unit`); the card, C-2b and C-1b rewritten to it | parked |
 | F-1b | 2.2.0 | its TO DECIDE | parked |
 | F-2a | 2.2.0 | its TO DECIDE | parked |
 | F-3i | 2.2.0 | its TO DECIDE | parked |
