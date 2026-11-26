@@ -444,8 +444,8 @@ one that cannot be done is dropped and recorded under "Done" as dropped.
 | F-3j | 2.2.0 | its TO DECIDE | parked |
 | F-4b | 1.10.0 | its TO DECIDE | parked |
 | K-4d | 1.9.0 | its TO DECIDE | parked |
-| K-6a | 1.9.0 | its TO DECIDE | parked |
-| K-6b | 1.9.0 | its TO DECIDE | parked |
+| K-6a | 1.9.0 | answered (D-223, one error model, docs/plan/K-correctness.md); the card rewritten to it | parked |
+| K-6b | 1.9.0 | answered (D-223, one error model, docs/plan/K-correctness.md); the card rewritten to it | parked |
 | K-7a | 1.9.0 | its TO DECIDE | parked |
 | K-7b | 2.0.0 | its TO DECIDE | parked |
 | K-8 | 1.9.0 | its TO DECIDE | parked |
@@ -479,7 +479,7 @@ one that cannot be done is dropped and recorded under "Done" as dropped.
 | Y-24 | 1.9.0 | its TO DECIDE | parked |
 | Y-26 | 1.9.0 | its TO DECIDE | parked |
 | Y-27 | 1.9.0 | its TO DECIDE | parked |
-| Y-28 | 1.10.0 | its TO DECIDE | parked |
+| Y-28 | 1.10.0 | answered (D-223, one error model, docs/plan/K-correctness.md); the card rewritten to it | parked |
 | Y-29 | 1.10.0 | its TO DECIDE | parked |
 | Y-30-m | 1.10.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | Y-32-m | 1.10.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
