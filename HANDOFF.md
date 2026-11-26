@@ -228,6 +228,7 @@ cards read, what you changed in each, what you could not check, and each
 card's verdict: ready, or parked (with why).
 
 Every group is written (Y too: docs/plan/Y-asked.md, Y-1 to Y-42).
-Cold reads done: docs/plan/C-change.md, C-change-2.md and L-11 (2026-11-26; verdicts in their commit
-messages). Next: F-files, K-correctness, G-guides, P-measured,
-L-tools-2, M-maintainer, X-formats, Y-asked.
+Cold reads done: docs/plan/C-change.md, C-change-2.md, L-11 and G-guides (2026-11-26; verdicts in their commit
+messages; G-9 and G-9-m parked). Next: F-files, K-correctness, P-measured,
+L-tools-2, M-maintainer, X-formats, Y-asked. One cold read of ~300
+lines cost ~185k worker tokens (sonnet, ~100 tool calls).
