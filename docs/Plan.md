@@ -720,8 +720,8 @@ problems in six cards; the tree's layout changing under the cards is
 the surest way to make more.
 
 **Read cold once, just before the group opens** (the maintainer,
-2026-11-26, relayed from a side session: "gerçek bir iş yapmıyor bu
-sırada. iş sırası belli olması gerekiyor": no more whole-file readings in
+2026-11-26, relayed from a side session: "it does no real work meanwhile; the
+order of work must be clear": no more whole-file readings in
 advance; the work's order is the index). A card file is read cold once,
 by someone who did not write it, just before its group's first card
 opens, and corrected in one commit. It is not read again for every
@@ -732,9 +732,8 @@ citations still point at the symbol they name is to be written as a card
 of group L, so that a model's reading is kept for the design.
 
 **Features first, and layers so that code is touched once** (the
-maintainer, 2026-11-26, relayed from a side session: "gerçek anlamda
-özellik eklemeleri ön plana alınsın. refactor azaltmak üzere soyutlama
-katmanları kullanılsın"). Among the cards whose needs are done, the loop
+maintainer, 2026-11-26, relayed from a side session: "put real feature
+additions first; use abstraction layers to reduce refactoring"). Among the cards whose needs are done, the loop
 takes first one that adds something a user of the library sees (groups
 C, F, X, Y) before correctness, tools, documents or optimisation (K, L,
 G, P); the index's order is kept until the maintainer settles the order
