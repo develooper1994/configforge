@@ -32,10 +32,11 @@ targets), F-1b (`cf_emit_file`), F-2a (`cf_builder_overrides`), F-3j
 ## Steps
 
 1. Write the remaining groups' cards, one worker at a time while the
-   Claude window is past half: (K, G, P and L-12 on done) X, M. Then group Y, the maintainer's three ideas of 2026-11-26
+   Claude window is past half: (K, G, P and L-12 on done) X, M. Then group Y, the maintainer's five ideas of 2026-11-26
    (docs/Roadmap.md, "From the maintainer, 2026-11-26": concurrent reads
-   and writes by choice, compression, an analysis tool): FILE
-   docs/plan/Y-asked.md, ids Y-1 on, decisions from D-186; all three
+   and writes by choice, compression, an analysis tool, a configuration
+   compiler, threads and processes made easier): FILE
+   docs/plan/Y-asked.md, ids Y-1 on, decisions from D-186; all five
    researched in depth and thought through before any card (the maintainer,
    2026-11-26): for each, a research unit first, by the largest model at
    high effort with web search, writing docs/research/<topic>.md (what the

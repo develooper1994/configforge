@@ -1573,6 +1573,24 @@ Go or .NET binding (a new binding).
   yamllint, checkov, Spring Boot's configuration processor, systemd's
   `analyze verify`), what each finds, then the same first and what only
   the contract can add after.
+* ⬜ **A configuration compiler.** Not only merge, parse and convert,
+  but compile: sources, contract and rules in, one checked artifact out,
+  with what a compiler gives (a front end, an intermediate form, passes
+  that check and fold, diagnostics with places, a target chosen). Not yet
+  defined, and its competitors not yet known. What exists here to start
+  from: the image format (docs/ImageFormat.md), a baked configuration
+  read with no parser linked (D-104, layer 1), `configforge gen`. Research
+  first: CUE, Jsonnet, Dhall, Nickel, Pkl, KCL, HCL with Terraform's
+  planner, Nix, and what each compiles to.
+* ⬜ **Threads and processes made easier.** Programs that read
+  configuration will use threads and processes; to weigh what the library
+  can give them: a configuration shared by many threads and swapped on
+  reload without a lock on the read path, a child process handed the
+  same configuration (an image in shared memory or a file descriptor),
+  workers told of a reload. Research first: what other libraries and
+  runtimes do (RCU-style swaps, Go's atomic.Value, Java's
+  volatile-reference reload, systemd's socket and file-descriptor
+  passing, nginx's master and workers).
 
 ## Open decisions
 
