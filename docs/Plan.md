@@ -204,9 +204,9 @@ hack's five accepted EVA alarms in `.eva-accepted.txt` (`cf_block`'s
 `data[1]`); whether to keep Dependabot's pull requests, which queue ahead
 of a card's CI.
 
-| Order | Card | Size | Needs | Status |
-| ----: | ---- | ----- | ----- | ------ |
-| 58 | P-3 The readers' scans on lanes' four kept operations, kept only where they win | large | P-2 | waits: 2.4.0 (D-101, D-102: the program chooses the backend; the scans move into lib/text) |
+| Order | Card | Version | Size | Needs | Status |
+| ----: | ---- | ------- | ----- | ----- | ------ |
+| 58 | P-3 The readers' scans on lanes' four kept operations, kept only where they win | 2.4.0 | large | P-2 | waits: 2.4.0 (D-101, D-102: the program chooses the backend; the scans move into lib/text) |
 
 ## Done, their cards removed
 
