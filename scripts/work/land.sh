@@ -28,6 +28,23 @@ before=$(git rev-parse "$br")
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"; }; })
 [ "$(git rev-parse "$br")" = "$before" ] || SKIP_SHIP=0
 [ "${SKIP_SHIP:-0}" = 1 ] || (cd "$wt" && sh "$here/ship.sh" "$id")
+# The whole suite once a card (L-22): by hand, on the branch as it stands; a
+# green full run of this very commit is not run again.
+sha=$(git rev-parse "$br")
+if [ -z "$(gh run list --branch "$br" --workflow ci --event workflow_dispatch --limit 20 --json headSha,conclusion --jq ".[]|select(.headSha==\"$sha\" and .conclusion==\"success\")|.headSha")" ]; then
+  known=$(gh run list --branch "$br" --workflow ci --event workflow_dispatch --limit 20 --json databaseId --jq '.[].databaseId')
+  gh workflow run ci --ref "$br" -f tier=full
+  full=
+  for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    for r in $(gh run list --branch "$br" --workflow ci --event workflow_dispatch --limit 20 --json databaseId,headSha --jq ".[]|select(.headSha==\"$sha\")|.databaseId"); do
+      printf '%s
+' "$known" | grep -qx "$r" || full=$r
+    done
+    [ -n "$full" ] && break; sleep 10
+  done
+  [ -n "$full" ] || { echo "no full CI run for $sha"; exit 1; }
+  gh run watch "$full" --exit-status >/dev/null 2>&1 || { echo "full CI run $full failed: not squashed"; exit 1; }
+fi
 body=$(git log --reverse --no-merges main.."$br" --format='- %s')
 git merge --squash -q "$br" >/dev/null
 git commit -q -F - <<MSG

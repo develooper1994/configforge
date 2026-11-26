@@ -18,7 +18,13 @@ on:
   pull_request: {}
   schedule:
     - cron: '0 3 * * *'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: 'core: what the changed paths need; full: every job'
+        type: choice
+        options: [core, full]
+        default: core
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -30,7 +36,72 @@ permissions:
   contents: read
 
 jobs:
+  # What this run needs (L-22). A job is skipped by its own `if:`, never by
+  # the workflow's path filters: a skipped job counts as passed, while a
+  # required check that never reports waits for ever.
+  #   gates: the scripts' and the gate tests; core: the six required jobs
+  #   and the quick ones; full: every other job, once a card (work.py land
+  #   starts it by hand) and nightly when main moved.
+  # Nothing runs for a push to main that work.py land made (the card was
+  # tested whole on its branch) nor for a nightly on a main that already
+  # had one.
+  changes:
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      gates: ${{ steps.what.outputs.gates }}
+      core: ${{ steps.what.outputs.core }}
+      full: ${{ steps.what.outputs.full }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - id: what
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TIER: ${{ inputs.tier }}
+          BEFORE: ${{ github.event.before }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          code=false; workflows=false; full=false; skip=false
+          case "$GITHUB_EVENT_NAME" in
+            schedule)
+              last=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?event=schedule&status=success&per_page=1" --jq '.workflow_runs[0].head_sha // empty') || last=
+              if [ "$last" = "$GITHUB_SHA" ]; then skip=true; else full=true; fi ;;
+            workflow_dispatch)
+              [ "$TIER" = full ] && full=true ;;
+          esac
+          subject=$(git log -1 --format=%s)
+          if [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF" = refs/heads/main ] &&
+             [[ $subject =~ ^[A-Z]+-[0-9]+[a-z]?:\  || $subject =~ ^Plan:\ .*\ done\ \( ]]; then
+            skip=true
+          fi
+          if [ "$full" = false ] && [ "$skip" = false ]; then
+            range=origin/main...HEAD
+            [ "$GITHUB_EVENT_NAME" = pull_request ] && range="origin/$BASE_REF...HEAD"
+            # A push is judged by what it added; the first push of a branch
+            # (no earlier commit to compare) by what the branch changed.
+            if [ "$GITHUB_EVENT_NAME" = push ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+              range="$BEFORE..HEAD"
+            fi
+            if git diff --name-only "$range" > "$RUNNER_TEMP/changed"; then
+              grep -Ev '^tests/work/' "$RUNNER_TEMP/changed" > "$RUNNER_TEMP/code-paths" || true
+              grep -Eq '^((lib|tools|bindings|cmake|examples|tests|packaging)/|(CMakeLists\.txt|CMakePresets\.json|conanfile\.py|pyproject\.toml)$)' "$RUNNER_TEMP/code-paths" && code=true
+              grep -Eq '^\.github/' "$RUNNER_TEMP/changed" && workflows=true
+            else
+              code=true
+            fi
+          fi
+          core=false
+          if [ "$code" = true ] || [ "$workflows" = true ] || [ "$full" = true ]; then core=true; fi
+          gates=true; [ "$skip" = true ] && gates=false
+          { echo "gates=$gates"; echo "core=$core"; echo "full=$full"; } >> "$GITHUB_OUTPUT"
+          echo "gates=$gates core=$core full=$full (code=$code workflows=$workflows)"
   gates:
+    needs: changes
+    if: needs.changes.outputs.gates == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -46,6 +117,8 @@ jobs:
         run: ctest --test-dir build --output-on-failure
 
   portable:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -58,6 +131,8 @@ jobs:
           diff a.txt b.txt
 
   matrix:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     strategy:
       matrix:
         os: [ubuntu-26.04, macos-latest, windows-latest]
@@ -78,6 +153,8 @@ jobs:
   # marks, and everywhere else -fvisibility=hidden keeps the internals
   # out of the dynamic symbol table. Every test links the shared build.
   shared:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     strategy:
       matrix:
         os: [ubuntu-26.04, macos-latest, windows-latest]
@@ -111,6 +188,8 @@ jobs:
   # configures are too slow for every build; verify's EXTRA=components is
   # the same loop.
   components:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -135,6 +214,8 @@ jobs:
   # built with its option and tested against values `defaults import`
   # writes.
   macos-preferences:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -151,6 +232,8 @@ jobs:
   # also the job that keeps the previous LTS, its GCC 13 among them, in
   # the matrix.
   kqueue:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-24.04
     # A test that hangs under libkqueue held a run for hours (2026-11-20).
     timeout-minutes: 30
@@ -162,6 +245,8 @@ jobs:
       - run: ctest --test-dir bk -R "^unit\." --output-on-failure
 
   minimal:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -169,6 +254,8 @@ jobs:
       - run: ctest --preset minimal
 
   profiles:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     strategy:
       matrix:
@@ -180,6 +267,8 @@ jobs:
       - run: ctest --preset ${{ matrix.profile }}
 
   sizes:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     timeout-minutes: 45
     steps:
@@ -215,6 +304,8 @@ jobs:
           path: ${{ runner.temp }}/sizes.txt
 
   sanitize:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -224,6 +315,8 @@ jobs:
   # The packages, built by their package managers from this checkout
   # and used by a project that knows only the package.
   conan:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -235,6 +328,8 @@ jobs:
           -tf packaging/conan/test_package
 
   vcpkg:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -259,6 +354,8 @@ jobs:
   # one of either: musl through musl-gcc, the Tiny C Compiler and the
   # Portable C Compiler, besides GCC, Clang and MSVC above.
   compilers:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -271,6 +368,8 @@ jobs:
   # inlines differently from Ubuntu's: Doctor's main once grew past the
   # stack budget there and nowhere else.
   alpine:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     container: alpine:3.20
     steps:
@@ -283,6 +382,8 @@ jobs:
   # and sqlite3, and YAML reads through libyaml only when asked (D-69);
   # this is the build that has them, the whole suite included.
   yaml:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -299,6 +400,8 @@ jobs:
   # above the floor of 0.9.1 that the build enforces (24.04's 0.8 hangs
   # on malformed input, and is refused).
   libfyaml:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -312,6 +415,8 @@ jobs:
   # kernel randomises mmap with more bits than the thread sanitiser's
   # shadow layout allows, so the tests run with randomisation off.
   tsan:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -322,6 +427,8 @@ jobs:
   # it makes every value it returns read as uninitialised. The shadow is
   # at fixed addresses, so address randomisation goes off, as for tsan.
   msan:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
@@ -338,6 +445,8 @@ jobs:
   # groups on top of the sanitize job's; what the code means by a wrap or a
   # narrowing is in .ubsan-ignorelist.txt.
   ubsan-strict:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -349,6 +458,8 @@ jobs:
   # memory that was allocated and never written, which AddressSanitizer
   # does not see.
   valgrind:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     timeout-minutes: 60
     steps:
@@ -360,6 +471,8 @@ jobs:
   # reach inputs the first does not. Ubuntu's package is the pin, as
   # iwyu's is. A finding leaves its input in afl-out/<reader>/default/crashes.
   afl:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     env:
       FUZZ_SECONDS: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 60 || 15 }}
@@ -376,6 +489,8 @@ jobs:
   # Every commit, for a secret that was ever committed: a leaked key is
   # not removed by a later commit. The finding is redacted in the log.
   secrets:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -391,6 +506,8 @@ jobs:
 
   # Check the Rust binding, documentation and semgrep lockfiles against OSV.
   osv:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -405,6 +522,8 @@ jobs:
   # Coverage-guided fuzzing of every reader of untrusted bytes.
   # A finding leaves its input as crash-<hash>, kept as an artifact.
   libfuzzer:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     env:
       FUZZ_SECONDS: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 60 || 15 }}
@@ -441,7 +560,8 @@ jobs:
   # new class of difference is a finding to sort, not a red push. A finding
   # leaves its input as crash-<hash>, kept as an artifact.
   yamldiff:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     continue-on-error: true
     steps:
@@ -464,6 +584,8 @@ jobs:
   # Which lines no test reaches, and a floor under the number: a ratchet
   # in verify.cmake (COVERAGE_MIN), raised as tests are added.
   coverage:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -476,6 +598,8 @@ jobs:
   # SARIF and the Markdown there afterwards. On a pull request it
   # comments, which is how the comment is tried against a real forge.
   doctor-action:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     permissions:
       contents: read
@@ -504,6 +628,8 @@ jobs:
           grep -q 'ConfigForge Doctor: diff' "${{ steps.doctor-diff.outputs.markdown }}"
 
   analyze:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -512,6 +638,8 @@ jobs:
       - run: ctest --preset analyze
 
   fuzz:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -535,6 +663,8 @@ jobs:
   # its numbers are taken (docs/Performance.md); CI's timings are not
   # compared, a shared runner's are not a measurement.
   bench:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -553,6 +683,8 @@ jobs:
   # baseline is taken from (scripts/bench/gate.py --write) and the point
   # .github/workflows/bench.yml adds to the branch bench-history.
   bench-gate:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -588,6 +720,8 @@ jobs:
   # probe and touch checks, and one speed run of `mixed`. It costs nothing on
   # a push that touches none of it.
   bench-smoke:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     steps:
@@ -629,6 +763,8 @@ jobs:
           --build build-cfb --cfbench build-bench/bench/cf_bench --out bench-smoke.json
 
   clang:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -659,6 +795,8 @@ jobs:
   # The other languages' checkers: shell, Python, the workflows and the
   # spelling, each as a gate test, at the versions setup.sh pins.
   lint:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -691,6 +829,8 @@ jobs:
   # keeps it from refusing the GCC-only warnings of the build's own flags.
   # iwyu's output differs by version: this job's is the judge.
   iwyu:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -707,6 +847,8 @@ jobs:
   # the report against .infer-ignore.txt. The build is made with clang, the
   # optional libraries off, so the flags recorded are ones Infer knows.
   infer:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-26.04
     timeout-minutes: 60
     steps:
@@ -743,6 +885,8 @@ jobs:
   #   gh run download <run> -n format-patch && git apply format.patch
   # - so a disagreement costs one push, not one for each line.
   format-patch:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

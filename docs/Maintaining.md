@@ -390,6 +390,33 @@ token budget).
   chain fuzzer's "written one digit short" near DBL_MIN was the reader's
   double rounding (80db71d); the writer was right.
 
+### CI in two tiers (L-22)
+
+Every push used to run about 40 jobs, and the squash onto `main` ran them
+again on the same tree. Now a first job, `changes`, reads what the push
+added (`git diff` from the push's `before`; the first push of a branch,
+from `origin/main`; a pull request, from its base) and each other job
+has an `if:` on its output:
+
+* **gates**: `gates` alone, always (it runs `work.*` and `gate.*`), so a
+  change to `scripts/` or `tests/work/` costs one job.
+* **core**: the six required checks (`gates`, `matrix` on three systems,
+  `sanitize`, `clang`) with `portable`, `minimal`, `lint` and
+  `format-patch`, when a path under `lib/ tools/ bindings/ cmake/
+  examples/ tests/` (not `tests/work/`), a build file, `packaging/`
+  or `.github/` changed.
+* **full**: every other job. Only by hand (`gh workflow run ci --ref
+  work/<id> -f tier=full`, which `work.py land` does and waits for
+  before it squashes; a green full run of the same commit is not run
+  again) and on the nightly, when `main` moved since the last green
+  nightly (`head_sha` compared).
+
+A push to `main` whose subject is `ID-n: ...` or `Plan: ... done (...)`
+(what `land` makes) runs nothing: its tree was tested whole on the
+branch. A skipped job counts as passed, so the required checks stay
+reporting; the workflow's `paths:` is not used for this, because a
+required check that never starts waits for ever.
+
 ## The machines
 
 ### The maintainer's Windows workstation

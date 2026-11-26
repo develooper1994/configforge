@@ -550,3 +550,7 @@ section at its end).
 * **stop if**: a skipped required job does not count as passed on the branch's pull request view (report: the ruleset needs the maintainer); `gh workflow run` cannot pass the input.
 * **docs**: no CHANGELOG entry, no D-number; docs/Maintaining.md and docs/Plan.md as in files.
 
+* **Organiser's answers**:
+  * 2026-11-27 (the worker, by the card's rule on step order: step 2 could not pass as written): a branch push is judged by what that push added (`git diff <before>..HEAD`), not by `origin/main...HEAD`; with the whole branch as the base the scripts-only commit would still carry `ci.yml` and run the core. The first push of a branch, a pull request, and a `before` that does not exist (a force-push) fall back to `origin/main...HEAD`, or to `code` when the diff fails.
+  * 2026-11-27 (the worker): `work.py land` runs the full tier after `ship` and before the squash, and skips it when a green `workflow_dispatch` run of the same commit exists. A failed job of any kind refuses the squash (no style exception, as the card says); `land.sh` does the same.
+  * 2026-11-27 (the worker, a finding, not a decision): a job-level `if:` that skips a matrix job reports one check named `matrix`, not `matrix (ubuntu-26.04)` and its two siblings. The ruleset requires the three names, so on a pull request a scripts-only push would show them as expected, not passed. No pull request is used (the maintainer's push to `main` bypasses the checks), so nothing stops; if pull requests are used, the ruleset needs the maintainer.

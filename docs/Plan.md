@@ -98,6 +98,15 @@ cmake --preset default && cmake --build --preset default && ctest --preset defau
 gh run watch --exit-status $(gh run list --branch work/<card id> --workflow ci --limit 1 --json databaseId --jq '.[0].databaseId')
 ```
 
+Before the squash, the whole suite once, by hand (`work.py land` does it
+and refuses to squash on a failure; docs/Maintaining.md, "CI in two
+tiers"). Pushes to the branch run only what their paths need:
+
+```sh
+gh workflow run ci --ref work/<card id> -f tier=full
+gh run watch --exit-status $(gh run list --branch work/<card id> --workflow ci --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId')
+```
+
 CI has what no single machine has: macOS, FreeBSD's kqueue, musl, the
 pinned clang-format 22, clang-tidy 21, MSVC `/analyze`, cargo. A card
 whose code runs only there (marked **CI-only**) is accepted by CI alone,

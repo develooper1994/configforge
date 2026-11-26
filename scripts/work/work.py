@@ -736,6 +736,72 @@ def cmd_land(a):
         "ship the branch in the worktree (verify, push, CI) unless SKIP_SHIP=1 and nothing changed",
         ship,
     )
+
+    def full_ci():
+        # The whole suite once a card (L-22): by hand, on the branch as it
+        # stands. A green full run of this very commit is not run again.
+        sha = git("rev-parse", br)
+
+        def runs():
+            return json.loads(
+                gh(
+                    "run",
+                    "list",
+                    "--branch",
+                    br,
+                    "--workflow",
+                    "ci",
+                    "--event",
+                    "workflow_dispatch",
+                    "--limit",
+                    "20",
+                    "--json",
+                    "databaseId,headSha,conclusion",
+                )
+            )
+
+        known = {r["databaseId"] for r in runs()}
+        if any(r["headSha"] == sha and r["conclusion"] == "success" for r in runs()):
+            say(f"full CI already green for {sha[:10]}")
+            return
+        gh("workflow", "run", "ci", "--ref", br, "-f", "tier=full")
+        run_id = ""
+        for _ in range(12):
+            ids = [
+                r["databaseId"]
+                for r in runs()
+                if r["databaseId"] not in known and r["headSha"] == sha
+            ]
+            if ids:
+                run_id = str(max(ids))
+                break
+            time.sleep(10)
+        if not run_id:
+            raise Fail(f"no full CI run for {sha[:10]} on {br} after 2 minutes")
+        limit = minutes("CF_CI_MINUTES", 60)
+        rc = run(
+            ["gh", "run", "watch", run_id, "--exit-status"],
+            limit,
+            out=subprocess.DEVNULL,
+        )
+        if rc == 124:
+            capture(["gh", "run", "cancel", run_id], 120)
+            run(["gh", "run", "watch", run_id], 600, out=subprocess.DEVNULL)
+        failed = ", ".join(
+            j["name"]
+            for j in json.loads(gh("run", "view", run_id, "--json", "jobs"))["jobs"]
+            if j.get("conclusion") in BAD
+        )
+        say(f"{id_} full CI run {run_id}; failed jobs: {failed or 'none'}")
+        # The run's own conclusion decides: a job marked continue-on-error
+        # (yamldiff, exploratory) is listed above but does not stop a card.
+        if rc:
+            raise Fail(f"full CI run {run_id} failed: not squashed", rc)
+
+    do(
+        f"run the whole suite once: gh workflow run ci --ref {br} -f tier=full, wait (gh run watch --exit-status); stop on a failure",
+        full_ci,
+    )
     body = [""]
 
     def squash():
