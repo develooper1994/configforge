@@ -230,8 +230,11 @@ card's verdict: ready, or parked (with why).
 Every group is written. Group Y is Y-1 to Y-40-m (topics 3-5 restored
 from the 7fa30f3 draft in c16cae5 after b7fede3 had dropped them; next
 free Y-41, D-220); step 1 is done and `plan/cards-y` can be deleted.
-Cold reads done: docs/plan/C-change.md, C-change-2.md, L-11, G-guides
-and F-files (2026-11-26; verdicts in their commit messages). Running or
-next: K-correctness, P-measured, then L-tools-2, M-maintainer,
-X-formats, Y-asked. One cold read of ~300
+Cold reads done: docs/plan/C-change.md, C-change-2.md, L-11, G-guides,
+F-files, K-correctness, P-measured, L-tools-2 (2026-11-26; verdicts in
+their commit messages). Next: X-formats (running at 20:35), then
+M-maintainer (780 lines: two workers, by card halves) and Y-asked
+(~1350 lines: three workers, Y-1 to Y-13-m, Y-14 to Y-33, Y-34 to
+Y-40-m). A cold read costs ~250-315k worker tokens and ~8-12% of the
+Pro 5-hour window. One cold read of ~300
 lines cost ~185k worker tokens (sonnet, ~100 tool calls).
