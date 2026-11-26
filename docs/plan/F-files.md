@@ -482,6 +482,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **docs**: `CHANGELOG.md`, "## 2.2.0 — unreleased", "### Added": `cf_docedit`: a program edits a file in its own format, keeping its layout (F-3j; wave 6). `docs/Roadmap.md`: the three marks above. No new D-number.
 
 ---
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I approve"; "files may hold comments, but on request the comments must be removable: another reader may refuse them"), written as **D-226**: option B is the brick and A is built on it. `cf_docedit_bytes(format, in, n, changes, count, out, outn, options, err)` knows neither files nor configuration; `cf_docedit_open`, `_set_*`, `_unset`, `_count`, `_commit`, `_abort` are a thin layer (read, `cf_docedit_bytes`, `cf_file_replace` of D-224) with no logic of its own. An option `cf_docedit_options.comments`: `CF_COMMENTS_KEEP` (the default: comments and layout kept) or `CF_COMMENTS_DROP` (every comment removed); the same option, by the same name, on `cf_emit` and `configforge convert`. A target format that cannot hold comments (JSON, CBOR) drops them even under KEEP, and the report carries a warning: never silently. The card is rewritten to D-226 before it opens.
 
 ## F-4a - The references drawn, first by jq
 

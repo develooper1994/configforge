@@ -440,7 +440,7 @@ one that cannot be done is dropped and recorded under "Done" as dropped.
 | C-2a | 1.10.0 | answered (D-222, an open `cf_unit`); the card, C-2b and C-1b rewritten to it | parked |
 | F-1b | 2.2.0 | answered (D-224, writing in layers, docs/plan/F-files.md); F-1a, F-1b and F-2b rewritten to it | parked |
 | F-2a | 2.2.0 | answered (D-225, a writable file source); F-2a and F-2b rewritten to it | parked |
-| F-3j | 2.2.0 | its TO DECIDE | parked |
+| F-3j | 2.2.0 | answered (D-226, `cf_docedit_bytes` and a thin layer, a comment option); the card rewritten to it | parked |
 | F-4b | 1.10.0 | answered 2026-11-26: built only when it is asked for | parked |
 | K-6a | 1.9.0 | answered (D-223, one error model, docs/plan/K-correctness.md); the card rewritten to it | parked |
 | K-6b | 1.9.0 | answered (D-223, one error model, docs/plan/K-correctness.md); the card rewritten to it | parked |
