@@ -467,7 +467,7 @@ written as full cards here, read cold, and given index rows after K-8:
   public function that returns a failure is marked `CF_NODISCARD`, and a
   gate refuses one that is not.
 
-Their decisions take the numbers after D-226 (D-224 to D-226 are F-1b's, F-2a's and F-3j's).
+Their decisions take the numbers after D-227 (D-224 to D-227 are F-1b's, F-2a's, F-3j's and Y-3's).
 
 ## D-223 - One error model (the maintainer, 2026-11-26, relayed from a side session: "I like the error model"; "the core uses the C89 standard")
 

@@ -258,6 +258,13 @@ this answer under "Organiser's answers"). Both are copied into
 * **docs**: `CHANGELOG.md`, "## 2.2.0 — unreleased", "### Added": "`cf_platform_lock_take` and `_give` (internal tier): a kernel lock on a kept sidecar file, waiting up to a bound (Y-3, D-187)". `docs/Decisions.md`: D-187 and the edit of D-128. Roadmap: nothing until Y-5.
 
 ---
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I approve", after the comparison of docs/research/concurrent-access.md section 2), written as **D-227**, answering Y-3's TO DECIDE 1 and Y-4's TO DECIDE 2 and 3:
+  1. The lock is a part that plugs in: `cf_locker` (its name; `take(path, wait_ms, err)`; `give`), as `cf_packer` and `cf_unpacker` are. Built in: `cf_lock_none` (the default) and `cf_lock_sidecar` (Y-3's kernel lock on `<dir>/.<base>.cf-lock`: `flock`, OFD or `fcntl` on POSIX, `LockFileEx` on Windows; released by a crash). A program may plug in its own (a service it asks, a database lock, an embedded mutex).
+  2. Y-2's optimistic check is always on; its retry count is an option, 3 by default.
+  3. The wait is an option of each source in `cf_file_source_options` (`wait_ms`, 0 by default, as SQLite's), with a default for the whole configuration by `cf_builder_write_wait(b, ms)`; a `cf_locker` may carry its own suggested wait (as git's locks do). The SQLite store uses the same wait (`sqlite3_busy_timeout`).
+  4. A lock that is busy, or retries spent, return `CF_E_BUSY` with its place and reason (D-223).
+  5. The lock is chosen by `cf_file_source_options.lock` (`cf_lock_none` by default). D-128's "no lock file" holds for the default; the sidecar exists only when it is chosen.
+  Y-3 and Y-4 are rewritten to D-227 before they open.
 
 ## Y-4 - `CF_FILE_LOCK`, `cf_builder_write_wait`, `CF_E_BUSY`: the lock around `overrides_write`, and the store's wait (F-5b in the research) (TO DECIDE)
 
@@ -303,6 +310,7 @@ this answer under "Organiser's answers"). Both are copied into
 * **docs**: `CHANGELOG.md`, "## 2.2.0 — unreleased", "### Added": "`CF_FILE_LOCK` for an override file, `cf_builder_write_wait`, and the new code `CF_E_BUSY`: a write waits for another writer as long as the program says, then is refused as busy; the store waits the same time (Y-4, D-188)"; "### Changed": "an override file's refused retries are `CF_E_BUSY`, not `CF_E_SOURCE` (Y-4)". `docs/Decisions.md`: D-188. Roadmap: nothing until Y-5.
 
 ---
+* **Organiser's answers** (2026-11-26): TO DECIDE 2 and 3 are answered by D-227, written under Y-3's "Organiser's answers"; this card is rewritten to it before it opens.
 
 ## Y-5 - A stable read: a file read twice and compared, up to 3 reads (F-5c in the research)
 

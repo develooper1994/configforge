@@ -456,8 +456,8 @@ one that cannot be done is dropped and recorded under "Done" as dropped.
 | G-9 | 2.3.0 | its TO DECIDE | parked |
 | G-9-m | 2.3.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | P-15-m | 1.9.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
-| Y-3 | 2.2.0 | its TO DECIDE | parked |
-| Y-4 | 2.2.0 | its TO DECIDE | parked |
+| Y-3 | 2.2.0 | answered (D-227, a `cf_locker` that plugs in, `cf_lock_none` by default); the card rewritten to it | parked |
+| Y-4 | 2.2.0 | answered (D-227, a `cf_locker` that plugs in, `cf_lock_none` by default); the card rewritten to it | parked |
 | Y-5 | 2.2.0 | its TO DECIDE | parked |
 | Y-11 | 2.4.0 | its TO DECIDE | parked |
 | Y-12 | 2.2.0 | its TO DECIDE | parked |
