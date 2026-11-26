@@ -8,7 +8,8 @@ C-1a to C-6b), `plan/cards-c2` (docs/plan/C-change-2.md, C-7 to C-11),
 (docs/plan/L-tools.md, L-11 mutation testing with Mull, from a measured
 run). Also `plan/cards-k` (docs/plan/K-correctness.md, K-1a to K-8,
 20 cards; its TO DECIDE: K-4d, K-6a, K-6b, K-7a, K-7b, K-8), and `plan/cards-g`
-(docs/plan/G-guides.md, G-1a to G-9 and the parked G-9-m). Codex has no allowance until 2026-11-29 09:47; Claude carries on.
+(docs/plan/G-guides.md, G-1a to G-9 and the parked G-9-m), and `plan/cards-p`
+(docs/plan/P-measured.md, P-5 to P-16 and the parked P-15-m; TO DECIDE: P-13). Codex has no allowance until 2026-11-29 09:47; Claude carries on.
 
 The order (the maintainer, 2026-11-26, relayed from a side session):
 every open item in docs gets a card before any card is carried out; each
@@ -30,7 +31,7 @@ targets), F-1b (`cf_emit_file`), F-2a (`cf_builder_overrides`), F-3j
 ## Steps
 
 1. Write the remaining groups' cards, one worker at a time while the
-   Claude window is past half: (K and G done) X, L (L-12 on), G, P, M. Each worker
+   Claude window is past half: (K, G and P done) X, L (L-12 on), G, P, M. Each worker
    gets "the common brief" below followed by its group's part, works in
    a worktree `git worktree add .claude/worktrees/cards-<g> -b
    plan/cards-<g> origin/main`, and edits only its one file. Commit and
