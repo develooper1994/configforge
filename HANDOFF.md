@@ -25,9 +25,12 @@ Codex has no allowance until 2026-11-29 09:47; Claude carries on.
    `cf_unit`, under C-2a's "Organiser's answers" in docs/plan/C-change.md;
    810a100), their rows re-marked; and K-9a, K-9b written as full cards
    and K-9c from docs/plan/K-correctness.md "To be written" (1.9.0,
-   decisions from D-224), and K-6a, K-6b and Y-28 rewritten to D-223 (one
+   decisions from D-226), and K-6a, K-6b and Y-28 rewritten to D-223 (one
    error model, written there), read cold, index rows after K-8. More answers may come from the
    maintainer's side session: write each into its card when it comes.
+   Also: F-1a, F-1b, F-2a and F-2b rewritten to D-224 and D-225 (under
+   their "Organiser's answers" in docs/plan/F-files.md); `lib/compress`
+   optional and OFF by default (D-221 point 6b).
 1. Carry the first open card through the loop (docs/Plan.md, "The
    loop"): C-1a (`docs/plan/C-change.md`, read cold 2026-11-26), with
    `python scripts/work/brief.py C-1a` as its worker's brief; then the

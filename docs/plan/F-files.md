@@ -110,6 +110,14 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 
 ---
 
+* **Organiser's answers**:
+  * 2026-11-26, the maintainer (relayed from a side session: "option C is better for F-1b"; "do the design without departing from the standards: the compiler's or the platform's rules must be usable"): **option C, in layers**, written as **D-224** (copied into `docs/Decisions.md` by this card). This card, F-1a (its retry becomes an option) and F-2b are rewritten to D-224 before F-1b opens. D-224:
+    1. One options struct, `cf_file_options`, initialised by `cf_file_options_init(&o)` (C89); NULL is the defaults.
+    2. Three layers: `cf_file_writer`, a streaming writer (for a program that writes continuously: records, logs); `cf_file_replace(path, bytes, size, options, err)`, built on it: a temporary file, then one atomic replace, usable alone and knowing nothing of configuration; `cf_emit_file(c, path, format, ..., options, err)`: `cf_emit`, then `cf_file_replace`, with no logic of its own.
+    3. Two settings, independent, taken from the standards: buffering is C89's `setvbuf` (`CF_BUF_PLATFORM`, the default: `setvbuf` not called; `CF_BUF_FULL` `_IOFBF`; `CF_BUF_LINE` `_IOLBF`; `CF_BUF_NONE` `_IONBF`; and a buffer size); durability is the platform's call (`fsync`, `FlushFileBuffers`): `CF_SYNC_PLATFORM` (nothing forced), `CF_SYNC_COMMIT` (once, before the replace), `CF_SYNC_EVERY` (by bytes and/or milliseconds), `CF_SYNC_EACH` (every write, chosen knowingly).
+    4. The defaults are the compiler's and the platform's, with one exception the maintainer chose: `cf_file_replace`, and so `cf_emit_file`, defaults to `CF_SYNC_COMMIT` (one sync a save, so that "whole or not at all" holds across a power loss, as SQLite and Git do); `cf_file_writer` defaults to `CF_SYNC_PLATFORM`.
+    5. F-1a's Windows retry is an option of `cf_file_options`, 2 s by default.
+
 ## F-2a - An override file the library owns: a file source that cf_write can commit to (TO DECIDE)
 
 * **id**: F-2a
@@ -142,6 +150,9 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **docs**: `CHANGELOG.md`, "## 2.2.0 — unreleased" (amended 2026-11-26, as F-1a's), "### Added": `cf_builder_overrides`: a file the library owns and `cf_write` commits to, in any format that is written (F-2a, D-128). `docs/Decisions.md`: D-128. Roadmap: "An override file the library owns" is marked by F-2b, whose example is its "Done when".
 
 ---
+
+* **Organiser's answers**:
+  * 2026-11-26, the maintainer (relayed from a side session: "I accept your proposal for F-2a"), written as **D-225**: writing is a capability any file source can take, through `cf_file_source_options` (`writable`; `format`, by default the file name's; `encoding`; an init function; NULL is the defaults) given to a `cf_builder_file_with(...)` call, so that `cf_builder_file`'s flag word is not overloaded. `cf_builder_overrides(b, name, rank, path)` stays as a one-line shortcut (a file source read last and writable). Writing stays off until the program grants it (`cf_builder_writable`). This card and F-2b are rewritten to D-225 before F-2a opens.
 
 ## F-2b - settings.c is the override source's example
 

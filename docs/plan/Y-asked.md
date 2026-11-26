@@ -95,6 +95,10 @@ this answer under "Organiser's answers"). Both are copied into
      method.
   6. The backends (zlib, zstd) are build options, OFF by default; the
      core stays without dependencies.
+  6b. (2026-11-26, the maintainer: "compression was only an add-on; it must be
+     optional") `lib/compress` itself is an optional component, OFF by
+     default: not built or linked unless enabled, and nothing of it enters
+     the core otherwise.
   7. Y-15 splits in two: Y-15a, the two interfaces, the options with the
      method's defaults, the one-call shortcuts and a test backend; Y-15b,
      streaming and the chain. Both stay 1.10.0.
