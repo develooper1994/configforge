@@ -486,3 +486,29 @@ section at its end).
 * **stop if**: check 6 fails on more than half of the citations of C-1a (read cold on 2026-11-26): the rule is too strict; report examples.
 * **docs**: no CHANGELOG entry, no D-number; `scripts/README.md`; docs/Plan.md "The loop" step 3.
 
+## L-22 - CI in two tiers: a fast core on every push, the whole suite once a card
+
+* **id**: L-22
+* **goal**: a push to a `work/*` branch runs only the jobs its changed paths need, from a fast core; the whole suite runs once per card (by hand, before landing) and nightly on `main` only when `main` moved; a push to `main` that `work.py land` made runs nothing again.
+* **why**: every push runs about 40 jobs for about 18 minutes, the squash onto `main` runs them again on the same tree, and a `scripts/`-only change builds every compiler (the maintainer, 2026-11-27: "does the whole CI have to run every time? it takes needlessly long"; "be careful with CI use, this project earns no money"). The repository is public, so standard runners cost nothing, but time and the runners' fair use are the budget.
+* **needs**: nothing
+* **size**: medium
+* **version**: 1.9.0
+* **status**: open
+* **decided**:
+  * **The required checks stay reporting.** `main`'s ruleset requires `gates`, `matrix (ubuntu-26.04)`, `matrix (windows-latest)`, `matrix (macos-latest)`, `sanitize` and `clang`. A job is skipped by a job-level `if:` (a skipped job counts as passed), never by the workflow's `on.push.paths`, which would leave a required check waiting forever.
+  * **A first job `changes`** (ubuntu, `actions/checkout` with `fetch-depth: 0`) writes outputs from `git diff --name-only <base>...HEAD`, where base is `origin/main` for a branch push, the pull request's base for a pull request: `code` = any path under `lib/`, `tools/`, `bindings/`, `cmake/`, `examples/`, `tests/` other than `tests/work/`, `CMakeLists.txt`, `CMakePresets.json`, `conanfile.py`, `packaging/`, `pyproject.toml`; `workflows` = `.github/`; `full` = `true` for `schedule` and `workflow_dispatch` with input `tier: full`.
+  * **Tiers.** Core (on a branch push or pull request when `code` or `workflows`): the six required jobs, `portable`, `minimal`, `format-patch`/`lint`. Scripts only (no `code`, no `workflows`): `gates` alone (it runs `work.*` and `gate.*`). Every other job: only when `full`. The fuzzers keep their existing seconds rule.
+  * **Once a card.** `work.py land` (before its squash step) runs `gh workflow run ci --ref work/<id> -f tier=full`, waits for it with `gh run watch --exit-status`, and refuses to squash on a failure. `workflow_dispatch` gets the input `tier` (`core` default, `full`).
+  * **`main`.** A push to `main` runs no job unless its tree differs from every tree a green `work/*` run tested; decided simply: the `changes` job on a `main` push sets every output false when the commit's subject matches `^[A-Z]+-[0-9]+[a-z]?: ` (a card landed by `land`) or `^Plan: .* done \(` (the index commit). The nightly `schedule` first compares `main`'s sha with the last successful scheduled run's `head_sha` (`gh api repos/{owner}/{repo}/actions/workflows/ci.yml/runs?event=schedule&status=success&per_page=1`); equal: every output false.
+  * **Rejected**: a separate workflow per tier (the required checks are named by job in `ci.yml`); path filters at the workflow level (required checks would hang); dropping jobs (each found a fault once: docs/Maintaining.md).
+* **files**: `.github/workflows/ci.yml`, `scripts/work/work.py` (`cmd_land`), `scripts/work/land.sh`, then `docs/Maintaining.md` (a paragraph "CI in two tiers" under "Working habits that paid"), `docs/Plan.md` ("ACCEPT-CI": the full run before landing).
+* **steps**:
+  1. `git switch -c work/L-22 main`. Add `changes` and the `if:` lines; `actionlint` (`gate.actionlint`) exit 0.
+  2. See it work: push the branch with only `ci.yml` changed (`workflows`): the core runs. Then a commit touching only a comment in `scripts/work/brief.py`: only `gates` runs and the other required checks show skipped (`gh run view --json jobs --jq '.jobs[]|[.name,.conclusion]|@tsv'`). Revert that comment.
+  3. `gh workflow run ci --ref work/L-22 -f tier=full`: every job runs. Then the land change in `work.py` and `land.sh`.
+  4. Documents; format; commit `L-22: CI in two tiers, the whole suite once a card`; ACCEPT-CI.
+* **accept**: `ctest --preset default -R gate.actionlint` exit 0; the three runs of steps 2 and 3 as described (their URLs in the report); ACCEPT-CI on the full run.
+* **stop if**: a skipped required job does not count as passed on the branch's pull request view (report: the ruleset needs the maintainer); `gh workflow run` cannot pass the input.
+* **docs**: no CHANGELOG entry, no D-number; docs/Maintaining.md and docs/Plan.md as in files.
+

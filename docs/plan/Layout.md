@@ -13,6 +13,7 @@ Main is at 1.9.0, unreleased (11 CHANGELOG entries already).
 | - | ---- | ---- | ------- |
 | 0.1 | L-20 `scripts/work/index.py`: docs/Plan.md's index generated from the card files (id, title, version, size, needs, status) | new | 1.9.0 |
 | 0.2 | L-21 `scripts/check/ready.py`: a card opens only when it has no TO DECIDE, no "or" left in "decided", every option with its default, every `file:line` finding its symbol, every need in the index | new + HANDOFF's citation gate, merged | 1.9.0 |
+| 0.2b | L-22 CI in two tiers: a fast core on every push, the whole suite once a card | new (the maintainer, 2026-11-27) | 1.9.0 |
 | 0.3 | Options with defaults (D-220): `cf_*_options` + `_init` as one convention, the `none` platform, `CF_E_CAPABILITY`, the table of features by platform | new + L-18a (Cortex-M `minimal`, the `none` platform's proof) | 1.9.0 |
 | 0.4 | One error model (D-223): `CF_NODISCARD` everywhere and its gate | K-9c | 2.0.0 |
 | 0.5 | `cf_error`: place (file, line, column, byte offset, key), reason, chain of causes, `cf_error_handler`, stop-at-first or collect-all | K-6a + K-6b + M-11b (`cf_error` owns its text); the collect-all option `gen build --json` needs | 2.0.0 |
@@ -34,7 +35,7 @@ last column; the "not now" section's cards are `not now`.
 2. {2.2.0} **config: built ahead of time** (`gen build`, D-220's answer where there is no OS)
    - module + tool: Y-24, Y-25, Y-26, Y-27, Y-28 (its error part goes to 0.5), Y-29; documents: Y-31
 3. {2.2.0} **serialize: one table, one copy, correct** (lib/serialize)
-   - module: X-18, X-19, X-20, X-21, K-7a, K-5a, K-5b, K-8, K-1a, K-1b
+   - module: X-18, X-19, X-20, X-21, K-7a, K-5a, K-5b, K-8, K-1a, K-1b, K-10a, K-10b (a number's text kept; underflow and infinity as options, defaults unchanged)
    - proofs: K-2a, K-2b, K-2c, K-2d, K-2e, K-3a, K-3b, K-4a, K-4b, K-4c, K-4d, L-14a, L-14b
 4. {2.3.0} **compress** (lib/compress, D-221; optional, OFF by default)
    - module: Y-15 (to be split into Y-15a and Y-15b), Y-16, Y-17, Y-18; tool: Y-19; documents: Y-14
@@ -71,7 +72,7 @@ last column; the "not now" section's cards are `not now`.
 Each card named here has the status `parked: not now`; its version is the
 one of an earlier mention above, or else the one it had.
 
-Parked until the maintainer or a user asks: Y-41-m (simple expressions),
+Parked until the maintainer or a user asks: K-10c-m (numbers beyond 64 bits or `double` accepted as text), Y-41-m (simple expressions),
 C-9-m (one key split into two), C-10c-m (the report's channel on Windows),
 C-10d-m (`http://`, `tcp:`), Y-13-m (a shared image across processes),
 Y-21-m (built-in inflate), Y-22-m (xz, lz4), Y-23-m (zstd dictionaries),

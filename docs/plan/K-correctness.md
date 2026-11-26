@@ -497,3 +497,54 @@ feature is only a macro that is empty under C89.
 5. **Held to:** the `CF_NODISCARD` gate; cppcheck and clang-tidy's
    `bugprone-unused-return-value` on the library itself; K-9b's injected
    faults also check that each failure returns the right code.
+
+## K-10a - A number's text, kept when the program asks
+
+* **id**: K-10a
+* **goal**: with `cf_number_options.keep_text` set, `cf_get_number_text(c, key, &len)` returns an integer's or a real's literal as its source wrote it, so that a program can hand it to its own big-number or decimal library; with the defaults nothing changes.
+* **why**: a real is a binary64 `double` and an integer 64 bits (`lib/numeric/include/configforge/cf_numeric.h:66-77`); a scientific or financial program may need the digits the file holds, not their nearest `double` (the maintainer, 2026-11-27: "the default behaviour of numbers must not break").
+* **needs**: nothing
+* **size**: large
+* **version**: 2.2.0
+* **status**: open
+* **decided**:
+  * **Options (D-220).** `typedef struct cf_number_options { cf_bool keep_text; int underflow; int nonfinite; } cf_number_options;` in `configforge.h`; `cf_number_options_init(&o)` sets the defaults, which are today's behaviour: `keep_text` `CF_FALSE` (default), `underflow` `CF_UNDERFLOW_ZERO` (default; K-10b), `nonfinite` `CF_NONFINITE_REFUSE` (default; K-10b). `cf_builder_numbers(b, const cf_number_options* o)`; NULL is the defaults. This card adds the struct with all three fields; K-10b gives the last two their effect.
+  * **The text.** `CF_API const char* cf_get_number_text(const cf_config* c, const char* key, size_t* len);` returns the literal (sign, digits, point, exponent, as the document spelt it, underscores of TOML kept) for a value of type int or real, NUL-terminated; NULL when the key is absent, not a number, or `keep_text` was off. A number from a binary format (CBOR, MessagePack, TLV) or from a default has no literal: the text is the shortest form that reads back exactly (`cf_f64_to_text`, or the decimal integer).
+  * **Memory.** The text is stored only when `keep_text` is on, in the config's arena beside the value; with it off no byte is added (a test measures `cf_config`'s arena size before and after on the same document with the defaults: equal).
+  * **Range.** Unchanged: a number outside 64 bits or `double` is still refused with `CF_REASON_NUMBER_RANGE`, also when `keep_text` is on. Accepting such numbers as text is "not now" (K-10c-m in docs/plan/Layout.md).
+  * **Where.** The worker finds the places a number's literal reaches the key space with `grep -rn "cf_value_real\|cf_value_int" lib --include=*.c`; the literal is carried to the store through the sink event that already carries the value (no second parse). If the sink event has no access to the literal for a format, that format's text is the shortest form, written in the card's notes.
+  * **Bindings.** Python `Config.number_text(key)`, Rust `Config::number_text(&self, key) -> Option<&str>`, C++ `cf::config::number_text(key)` returning `std::optional<std::string_view>` under C++17 and `const char*` before it.
+  * **Rejected**: keeping the text always (memory for every user who does not need it); a big-number type of our own (an external dependency or a library inside the library).
+* **files**: `lib/config/include/configforge/configforge.h`, the builder and store sources found by the grep above, `lib/config/tests/test_number_text.c` (new), the bindings' sources and tests, then `docs/Guide.md` (a section "Numbers beyond double"), `CHANGELOG.md`, `docs/API.md` and `docs/Codemap.md` (generated).
+* **steps**:
+  1. `git switch -c work/K-10a main`. Test first: `test_number_text.c` reads `{"a": 6.62607015e-34, "b": 12345678901234567890, "c": 1_000}` (JSON for a and b as JSON allows, TOML for c) with `keep_text` on and off; asserts the texts, NULL with the defaults, and the arena size equal with the defaults.
+  2. See it fail: `ctest --preset default -R number_text --output-on-failure | tail -n 20`.
+  3. The options struct and its init; the text carried and stored; the getter. `ctest --preset default` exit 0.
+  4. Bindings and their tests; the Guide section.
+  5. Format; codemap and apiref last; ACCEPT; commit `K-10a: a number's text kept when the program asks`.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI; every existing test unchanged.
+* **stop if**: carrying the literal needs a change to a public sink callback's signature (that is a break: 2.0.0's, reported); the arena grows with the defaults.
+* **docs**: `CHANGELOG.md` under the newest unreleased heading, "### Added": `cf_number_options` and `cf_get_number_text` (K-10a); D-number: the next free one, "A number's text kept on request; defaults unchanged".
+
+## K-10b - Underflow and infinity as options, the defaults as today
+
+* **id**: K-10b
+* **goal**: `cf_number_options.underflow = CF_UNDERFLOW_REFUSE` refuses a real that would read as zero though its digits are not zero, and `nonfinite = CF_NONFINITE_ACCEPT` reads TOML's `inf`/`nan` and YAML's `.inf`/`.nan`; with the defaults nothing changes.
+* **why**: below the smallest subnormal a real becomes 0 without a word (`lib/numeric/include/configforge/cf_numeric.h:70-71`), which a scientific program may need to know; TOML and YAML define infinity and NaN, which the library refuses by design (`cf_numeric.h:59-61`).
+* **needs**: K-10a
+* **size**: medium
+* **version**: 2.2.0
+* **status**: open
+* **decided**:
+  * `underflow`: `CF_UNDERFLOW_ZERO` (the default, today's behaviour) or `CF_UNDERFLOW_REFUSE` (refused with `CF_REASON_NUMBER_RANGE`, the error's text "a real too small for a double, read as zero"). Detected by an internal `cf_text_to_f64_flags(s, len, out, end, unsigned* flags)` beside `cf_text_to_f64` (internal API, `CF_INTERNAL_API`), setting `CF_F64_UNDERFLOW` when non-zero digits gave zero.
+  * `nonfinite`: `CF_NONFINITE_REFUSE` (the default, today's behaviour) or `CF_NONFINITE_ACCEPT`: TOML's `inf`, `+inf`, `-inf`, `nan`, `+nan`, `-nan` and YAML 1.2's `.inf`, `-.inf`, `.nan` (and their case forms the spec lists) read as the IEEE values; other formats keep refusing. `cf_emit` writes them back in the same spellings for TOML and YAML; for a format with no spelling (JSON, INI, .properties) `cf_emit` fails with `CF_E_CONVERT`. A definition's bounds (`cf_def_real` min, max) still apply: NaN fails every bound.
+  * **Rejected**: changing either default (the maintainer, 2026-11-27).
+* **files**: `lib/numeric/src/` (the float reader, found by `grep -rn "cf_text_to_f64" lib/numeric`), the TOML and YAML readers and writers in `lib/serialize/`, `lib/config/tests/test_number_options.c` (new), then `docs/Guide.md` ("Numbers beyond double"), `CHANGELOG.md`, generated docs.
+* **steps**:
+  1. `git switch -c work/K-10b main`. Test: `1e-400` with each underflow value; `inf`, `-inf`, `nan` in TOML and `.inf`, `.nan` in YAML with each nonfinite value; defaults equal to today's results.
+  2. See it fail: `ctest --preset default -R number_options --output-on-failure | tail -n 20`.
+  3. The change; `ctest --preset default` exit 0; the conformance suites unchanged (`ctest --preset default -R conformance`).
+  4. Format; codemap and apiref last; ACCEPT; commit `K-10b: underflow and infinity as options, the defaults as today`.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI; the TOML and YAML conformance results unchanged with the defaults.
+* **stop if**: a conformance case changes with the defaults.
+* **docs**: `CHANGELOG.md`, "### Added": underflow and non-finite options (K-10b); the D-number of K-10a extended.

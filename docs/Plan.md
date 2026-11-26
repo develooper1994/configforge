@@ -193,6 +193,10 @@ Things only the maintainer can do or decide. Each unblocks the cards named.
   existing caller is answered by the card's own recommendation, without
   asking; whoever carries the card writes it under "Organiser's
   answers". Any other question still waits for the maintainer.
+* **2026-11-27** (the maintainer): the default behaviour of numbers
+  does not change (K-10a, K-10b add options only); CI use is kept small
+  (the repository earns nothing): L-22 runs a fast core on every push
+  and the whole suite once a card.
 * **Asked, 2026-11-26**: every card in "Waits on the maintainer" with
   "its TO DECIDE" waits for an answer written into the card (each
   TO DECIDE carries its options and a recommendation); the M cards wait
