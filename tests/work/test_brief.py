@@ -7,8 +7,12 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 
-def run_brief(script, *options):
-    return subprocess.check_output([sys.executable, str(script), "T-1", *options])
+def run_brief(script, *options, card="T-1"):
+    return subprocess.run(
+        [sys.executable, str(script), card, *options],
+        capture_output=True,
+        check=False,
+    )
 
 
 def main():
@@ -18,9 +22,25 @@ def main():
         shutil.copytree(fixture, root, dirs_exist_ok=True)
         fixture_script = root / "scripts" / "work" / "brief.py"
         fixture_script.parent.mkdir(parents=True)
+        (root / "scripts" / "check").mkdir()
         shutil.copyfile(script, fixture_script)
-        output = run_brief(fixture_script)
-        over = run_brief(fixture_script, "--max-bytes", "100")
+        shutil.copyfile(
+            script.with_name("index.py"), fixture_script.with_name("index.py")
+        )
+        shutil.copyfile(
+            script.parents[1] / "check" / "ready.py", root / "scripts/check/ready.py"
+        )
+        done = run_brief(fixture_script)
+        assert done.returncode == 0, done
+        output = done.stdout
+        over = run_brief(fixture_script, "--max-bytes", "100").stdout
+        refused = run_brief(fixture_script, card="T-2")
+        forced = run_brief(fixture_script, "--force", card="T-2")
+
+    assert refused.returncode == 1 and refused.stdout == b"", refused
+    assert b"T-2: fields: no 'id' field" in refused.stderr, refused
+    assert b"T-2: status: 'None' is not open" in refused.stderr, refused
+    assert forced.returncode == 0 and b"Outside the card." in forced.stdout, forced
 
     brief = output.decode("utf-8").replace("\r\n", "\n")
     parts = [

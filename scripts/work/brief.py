@@ -124,16 +124,42 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("card_id")
     parser.add_argument("--max-bytes", type=int, default=15000)
+    parser.add_argument(
+        "--force", action="store_true", help="brief a card that is not ready"
+    )
     args = parser.parse_args()
     try:
-        output = render(find_card(args.card_id))
+        card = find_card(args.card_id)
+    except (OSError, ValueError) as error:
+        parser.error(str(error))
+    if not args.force:
+        # Imported here: ready.py imports index.py, which imports this module.
+        sys.path.insert(0, str(ROOT / "scripts" / "check"))
+        import ready
+
+        failures = [
+            line
+            for card_id, _, lines in ready.run(ROOT, args.card_id)
+            for line in lines
+            if card_id == args.card_id
+        ]
+        if failures:
+            print("\n".join(failures), file=sys.stderr)
+            print(
+                f"{args.card_id}: not ready; mend the card, or --force",
+                file=sys.stderr,
+            )
+            return 1
+    try:
+        output = render(card)
     except (OSError, ValueError) as error:
         parser.error(str(error))
     sys.stdout.buffer.write(output)
     if len(output) > args.max_bytes:
         warning = f"--- over budget: {len(output)} bytes; split the card or cite less\n"
         sys.stdout.buffer.write(warning.encode("utf-8"))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

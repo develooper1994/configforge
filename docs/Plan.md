@@ -20,7 +20,10 @@ nothing else:
  2. If HANDOFF.md exists at the root: do its steps first, then delete it
       in the commit that finishes its last step.
  3. Open the index below. Take the first card whose status is "open"
-      and whose "needs" are all "done". A "parked" card (the section
+      and whose "needs" are all "done", and which `python
+      scripts/check/ready.py <card id>` passes (nothing left to decide,
+      every citation true; `brief.py` refuses a card that fails it).
+      A "parked" card (the section
       "Waits on the maintainer") is never taken and never stops the
       loop: skip it, and skip a card that needs it. No such card ->
       STOP: report which cards wait and on what.
