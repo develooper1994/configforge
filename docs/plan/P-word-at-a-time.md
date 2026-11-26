@@ -18,7 +18,7 @@ starts only when every other card is done (the maintainer, 2026-11-17),
 so it measures the code as it will stay. **P-1 alone may come
 earlier**: it changes only `bench/`, and its instruction-count baseline
 then shows what the MISRA work (`docs/Compliance.md`) costs or saves as
-it rewrites the sources. P-2 and after wait for that work to end, or
+it rewrites the sources. P-2 is done (e0c0904); P-3 waits for 2.4.0 (below); the rest waits for that work to end, or
 the tuned loops are written twice. A scan whose cost grows faster than
 its input is not optimization but a fault, and is fixed when found.
 
@@ -191,7 +191,7 @@ the order; none is a card until it says where the time goes.
 
 ## What keeps a gain
 
-* **A regression gate.** Once P-1 has a baseline, CI fails a change
+* **A regression gate** (in place: CI `bench-gate`, P-1b, 427ec6a). Once P-1 has a baseline, CI fails a change
   that makes a format's large-document run more than 10% slower.
   Wall time on a shared runner is noise, so the gate counts
   instructions (`callgrind`, or `perf stat -e instructions`), and the

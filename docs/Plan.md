@@ -206,9 +206,7 @@ of a card's CI.
 
 | Order | Card | Size | Needs | Status |
 | ----: | ---- | ----- | ----- | ------ |
-| 38g | L-3b Frama-C EVA on port, numeric and base | large | L-3; 1.9.0 under way | done (4c3ce8c) |
 | 58 | P-3 The readers' scans on lanes' four kept operations, kept only where they win | large | P-2 | waits: 2.4.0 (D-101, D-102: the program chooses the backend; the scans move into lib/text) |
-| 79 | N-19 `gate.misra`: cppcheck's MISRA addon on the `misra` profile, with a deviation record | medium | nothing | done (24b1c7d) |
 
 ## Done, their cards removed
 
@@ -292,7 +290,7 @@ did is kept here, and its text in git (`git log -- docs/plan/<file>`).
   the wipe through `memset` saved 25% of instructions on a 16 MiB load
   and 72% on a tiny document; three growth candidates measured and
   closed. The findings stay in the file.
-* **N-next.md** (1.8.0 and 1.9.0; N-1 to N-17 and N-20, I-2; D-100; the file keeps only its intro, for N-19). `configforge diff` of two
+* **N-next.md** (1.8.0 and 1.9.0; N-1 to N-17, N-19 and N-20, I-2; D-100; the file keeps only its intro). `configforge diff` of two
   files by value (N-1, 77a11ae), of nested tables (N-5, ad5b840) and of
   scalar arrays (N-8, 7bbd943), with a Git difftool recipe (N-3,
   efb74f1); the musl release archive built twice and compared (N-2,
@@ -307,7 +305,9 @@ did is kept here, and its text in git (`git log -- docs/plan/<file>`).
   in a comment (N-15, dfc1fed); differential fuzzing of the YAML reader
   against libyaml (N-12, d8a0cfa); Git's `textconv` driver (N-16,
   bbb1a77); `doctor drift`, many reports grouped by value (N-17,
-  ca3dd7b); and a lone CR ending a YAML comment (N-20, d04740d).
+  ca3dd7b); a lone CR ending a YAML comment (N-20, d04740d); and `gate.misra`,
+  cppcheck's MISRA addon on the `misra` profile with a record for every
+  report (N-19, 24b1c7d; D-112).
 * **P-word-at-a-time.md** (1.8.0 and 1.9.0; P-1, P-1b, P-2; P-3 is open;
   D-101). The benchmark measures large documents and says where time
   goes (P-1, 90b6541); the other libraries beside ours, on a page CI

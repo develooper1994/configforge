@@ -634,7 +634,7 @@ Every idea written here before 2026-11-05 is now in the plan above, in
 the order of its use. New ones go here until they are
 accepted.
 
-### ⬜ Sizes predicted, then checked (2026-11-06)
+### 🟩 Sizes predicted, then checked (2026-11-06; 068e065, dea83f0)
 
 Reading a file starts with a 4 KB buffer and doubles it, copying each
 time: a 1 MB file is copied about nine times and peaks near twice its
@@ -686,7 +686,7 @@ whose size changes while it is read is still read whole.
   report's values are shown to no pull request unless asked for. Done
   when the action's default shows no value and a flag restores it: on in
   the action; `show-values` restores the values (D-86).
-* ⬜ **The readers proved, not only tested** (card N-11: the BOM skip). The aim is the safety a
+* 🟨 **The readers proved, not only tested** (card N-11: the BOM skip, 765de40; the BOM skip, `cf_fmt` and the integer conversions are proved, the blob and an INI reader are not yet). The aim is the safety a
   language such as Rust or Go gives by construction, shown here by
   evidence: sanitizers, fuzzing and three analyzers find what an input
   happens to reach, and a bounded model checker (CBMC) shows that no
@@ -935,7 +935,7 @@ first user meets. In the order proposed:
   program's own loop accepted, with the value-blind report, and
   `configforge doctor pull unix:/run/myapp.sock`. Done when an example
   serves it from `cf_watcher`'s kind of loop and Doctor reads it.
-* ⬜ **Recipes, not code**, in the Guide: the fingerprint as an
+* 🟨 **Recipes, not code** (the fingerprint as an OpenTelemetry attribute is in the Guide; the reload events as log records and the OPA and CUE recipe remain), in the Guide: the fingerprint as an
   OpenTelemetry resource attribute and the reload events as its log
   records; a report as input to OPA (Rego) or CUE for rules about
   values per profile.
@@ -1096,8 +1096,8 @@ first user meets. In the order proposed:
   and the page shows all of them, losses included, with the machine and
   compiler. Built (P-1b), first round: 11 libraries in 6 formats; the
   README's lead lines wait for the first weekly run.
-* ⬜ **A SWAR and SIMD backend, in C89/C99, possibly a library of its
-  own.** The gap, as checked on 2026-11-19 against the libraries'
+* 🟨 **A SWAR and SIMD backend, in C89/C99, possibly a library of its
+  own** (the `lanes` library, A-2, da0dd49, with a scalar form and a SWAR backend, P-2, e0c0904; the SIMD tiers and run-time dispatch remain). The gap, as checked on 2026-11-19 against the libraries'
   own pages: every piece exists somewhere, the whole does not.
   Highway (C++17), xsimd (C++17), EVE (C++20), libsimdpp (C++14) and
   qlibs/swar (C++20, SWAR only) are C++. SIMDe (C99) maps one
@@ -1269,8 +1269,8 @@ first user meets. In the order proposed:
   test run on hardware is recorded with the commit it ran. Built-only
   targets are still built in CI so they do not rot. Its per-target list is
   `docs/targets.txt`.
-* ⬜ **Small embedded systems: everything optional, a minimal build
-  that stays minimal.** The library will gain many features (the modes
+* 🟨 **Small embedded systems: everything optional, a minimal build
+  that stays minimal** (card A-11, b837c23: the `minimal`, `embedded-json` and `embedded-cbor` profiles exist; the Cortex-M `.text` and stack gate remains). The library will gain many features (the modes
   above, SWAR and SIMD, gen's languages, every format); each one is a
   `CF_WITH_*` option, and none is required by the core. The `minimal`
   preset (today: codecs only, short limits, a 1 KiB stack budget,
@@ -1344,7 +1344,7 @@ first user meets. In the order proposed:
   files and CI's results, and a gate fails when the committed tables
   differ from what the script makes, so the documentation of what can
   be turned off never falls behind the options themselves.
-* ⬜ **Differential fuzzing against the other readers.** The same input
+* 🟨 **Differential fuzzing against the other readers** (card N-12, d8a0cfa: YAML against libyaml, a nightly exploratory target; JSON, TOML, XML and CBOR remain). The same input
   goes to ConfigForge and to another library's reader for the format
   (yyjson or RapidJSON for JSON, libyaml for YAML, toml++ for TOML,
   expat for XML, tinycbor for CBOR). Where one accepts and the other
@@ -1399,8 +1399,8 @@ from parts that exist:
   The `textconv` driver for `git diff` and `git log -p` is built (card N-16:
   `configforge codec textconv`; values shown, unsorted, a refused file shown
   as it is). What is left: sorted output, and contract-aware redaction.
-* ⬜ **A pull request that changes configuration, reviewed without a
-  report.** What exists: `actions/doctor` with `base` and
+* 🟨 **A pull request that changes configuration, reviewed without a
+  report** (card N-15, dfc1fed). What exists: `actions/doctor` with `base` and
   `comment: true` diffs the base branch's report against the head's and
   keeps one comment on the pull request up to date; with `config:` it
   also diffs each matching file's base and head versions by the command
@@ -1474,7 +1474,8 @@ The eight items that would help users most, from the sections marked
 maintainer; each is a card to write.
 
 1. **Differential fuzzing against the other readers** (card N-12;
-   Suggestions of 2026-11-17). The libraries of P-1b are already built beside ours, so
+   Suggestions of 2026-11-17). Begun: YAML against libyaml (N-12,
+   d8a0cfa); JSON, TOML, XML and CBOR remain. The libraries of P-1b are already built beside ours, so
    the same input can go to all of them; a disagreement is a bug in one
    of them, found before a user finds it.
 2. **One diagnostic model: severity and weakness ids** (card N-13)
@@ -1513,7 +1514,7 @@ maintainer; each is a card to write.
   built-in parser ends its text with a line feed, libyaml does not; base64 in
   N-12's notes), and two inputs libyaml accepts and the built-in parser refuses
   (a block scalar header at the mapping's own column; an anchor followed by
-  tabs; both in N-12's notes, in `docs/plan/N-next.md`). A lone CR inside a
+  tabs; both in N-12's notes, items 4 and 5, removed with the card in 70ad1c3: `git show 70ad1c3^:docs/plan/N-next.md`, lines 302-314). A lone CR inside a
   comment, once listed here, is closed by N-20: the comment skip ends it at LF
   or CR, and rows hold that.
 
