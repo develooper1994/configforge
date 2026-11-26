@@ -184,6 +184,15 @@ Things only the maintainer can do or decide. Each unblocks the cards named.
   is released as 1.5.0 or as 1.4.1 - not decided.
 
 * **Answered, 2026-11-26** (relayed from the maintainer's side session): every TO DECIDE discussed that day is answered, each under its card's "Organiser's answers" (D-220 to D-229; some cards are to be rewritten to their answer before they open, as their row in "Waits on the maintainer" says). Cards still to be written from those answers: K-9a, K-9b, K-9c (`docs/plan/K-correctness.md`), Y-41-m, Y-42 (`docs/plan/Y-asked.md`), C-9-m, C-10c-m, C-10d-m.
+* **The layout approved, 2026-11-26**: `docs/plan/Layout.md` (stage 0,
+  then each `lib/` module: module, tool, bindings, documents; interim
+  releases; the "not now" list) is the order of work. 2.0.0's breaks
+  come early, right after 1.9.0.
+* **The standing answer rule, 2026-11-26** (the maintainer): a question
+  whose answer follows D-220, adds no external dependency and breaks no
+  existing caller is answered by the card's own recommendation, without
+  asking; whoever carries the card writes it under "Organiser's
+  answers". Any other question still waits for the maintainer.
 * **Asked, 2026-11-26**: every card in "Waits on the maintainer" with
   "its TO DECIDE" waits for an answer written into the card (each
   TO DECIDE carries its options and a recommendation); the M cards wait

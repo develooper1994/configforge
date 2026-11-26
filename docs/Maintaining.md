@@ -109,6 +109,11 @@ Each item of the Roadmap is in one row.
 | 2.3.0 | more languages, and being found | wave 7: Go and .NET. The build-time layers for C++ (tiers 11 to 26) and Rust, and the facade that chooses between them and the core (D-104). A report asked of a running program; the OpenTelemetry and OPA recipes; a "Start here" page a language; distribution and being found, the WebAssembly playground first; one program not written for the library moved onto it; the language server | each item is done; Go and .NET each have tests, an example and a CI job |
 | 2.4.0 | speed | P-2 and P-3, word at a time; the vector library's SWAR and SIMD backends (D-101), chosen at build time and at run time, by hand first and then automatically; build options (LTO, PGO) measured; threads for documents that split. Last, so it measures the code as it will stay (the maintainer, 2026-11-17) | each change kept is on the benchmark's page with its numbers, and the `misra` and `minimal` profiles are no slower |
 
+**Laid out again, 2026-11-26** (the maintainer): from 1.9.0 on, the
+versions are those of `docs/plan/Layout.md`, "Interim releases"
+(2.0.0's breaks early; 2.1.0 onwards one module each). The rows above
+from 2.0.0 down keep their themes until a card moves them.
+
 **Later**, no row yet: the SIMD backend as a library of its own, if a
 second project asks for it; the GPU, if a user brings the load
 (`docs/plan/P-word-at-a-time.md`).

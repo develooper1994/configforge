@@ -1,7 +1,9 @@
-# The plan by module and stage (PROPOSED, 2026-11-26, for the maintainer's approval)
+# The plan by module and stage (approved by the maintainer, 2026-11-26)
 
-docs/Plan.md, "The plan laid out again", asks for this page. Nothing here
-is carried until the maintainer approves it. Card ids are the index's;
+docs/Plan.md, "The plan laid out again", asked for this page; the
+maintainer approved it as written, with 2.0.0's breaks early. It replaces
+the order of groups in docs/Plan.md's index and the milestone table of
+docs/Maintaining.md, "Versions", from 1.9.0 on. Card ids are the index's;
 "+" merges cards that overlap; "new" is a card still to be written.
 Main is at 1.9.0, unreleased (11 CHANGELOG entries already).
 
@@ -44,7 +46,7 @@ Main is at 1.9.0, unreleased (11 CHANGELOG entries already).
 
 ## Interim releases (tags stay the maintainer's)
 
-With 2.0.0's breaks early (question b, recommended):
+2.0.0's breaks come early (the maintainer, 2026-11-26): later cards are written on the new shapes.
 
 | Version | Scope |
 | ------- | ----- |
@@ -58,8 +60,6 @@ With 2.0.0's breaks early (question b, recommended):
 | 2.6.0 | module 8 (Go, .NET, "Start here") and the distribution cards M-22, M-24, M-26..M-28, M-31..M-34 |
 | 2.7.0 | module 9 (speed) |
 
-With the breaks last: 1.9.0 as above, 1.10.0 to 1.15.0 the modules 1-5 and
-7-9 in the same order, 2.0.0 last with stage 0.4-0.6 and module 6.
 
 ## Not now (written once; no session discusses them again)
 
