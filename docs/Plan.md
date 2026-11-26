@@ -266,202 +266,205 @@ of a card's CI.
 | 1 | L-20 The index generated from the card files, and `gate.index` | 1.9.0 | medium | nothing | done (84d48d9) |
 | 2 | L-21 A card opens only when a script says it is ready | 1.9.0 | medium | L-20 | open |
 | 3 | L-22 CI in two tiers: a fast core on every push, the whole suite once a card | 1.9.0 | medium | nothing | done (02acbdd) |
-| 4 | L-18a A Cortex-M build of `minimal` in CI, with its stack gate | 1.9.0 | medium | nothing | open |
-| 5 | F-1a The file layer: `cf_file_options`, `cf_file_writer`, `cf_file_replace`, a file replaced whole or not at all | 1.9.0 | large | nothing | open |
-| 6 | Y-2 `cf_platform_write_file_if`: the replace refused when the file no longer holds the bytes read (F-1c in the research) | 1.9.0 | small | F-1a | waits: F-1a |
-| 7 | Y-8 Close-on-exec and non-inheritable everywhere the library opens a file, with a child that lists its descriptors | 1.9.0 | small | F-1a, Y-3 | waits: F-1a |
-| 8 | Y-5 A stable read: a file read twice and compared, up to 3 reads by default (F-5c in the research) | 1.9.0 | small | nothing | open |
-| 9 | Y-6 Windows readers that share delete access, if a measurement shows a rename then succeeds over an open reader (F-5d in the research) | 1.9.0 | small | F-1a | waits: F-1a |
-| 10 | Y-3 `cf_locker`: a lock that plugs in, `cf_lock_none` and a kernel lock on a kept sidecar file, `cf_lock_sidecar` (F-5a in the research) | 1.9.0 | medium | F-1a | waits: F-1a |
-| 11 | K-9c Errors that cannot be ignored: `CF_NODISCARD` on every failure, and its gate | 1.9.0 | large | nothing | open |
-| 12 | K-6a A refusal's byte offset (TO DECIDE) | 2.0.0 | medium | nothing | parked |
-| 13 | K-6b A refusal's reason shown by the tools (TO DECIDE) | 2.0.0 | small | nothing | parked |
-| 14 | M-11b `cf_error` owns its text (the 2.0 break) | 2.0.0 | large | M-11a | parked |
-| 15 | C-2a Durations and sizes: the unit on an int definition | 2.1.0 | medium | nothing | parked |
-| 16 | C-2b Durations and sizes: the schema, the report, `cf_emit` and every reader | 2.1.0 | medium | C-2a | waits: C-2a |
-| 17 | C-8a A read the contract does not have, noticed: the library records it | 2.1.0 | medium | nothing | open |
-| 18 | C-9 Values migrated, not only renamed: a function on the old key's definition | 2.1.0 | medium | nothing | open |
-| 19 | C-11 A program's files where its platform keeps them: `cf_builder_app_files` | 2.1.0 | medium | C-7 | waits: C-7 |
-| 20 | C-7 Profiles: `--profile` or `NAME_PROFILE` adds `config.<profile>.<ext>` above the base file | 2.1.0 | medium | C-11 | waits: C-11 |
-| 21 | C-10a A running program asked for its report: the library answers one request on a descriptor | 2.1.0 | medium | nothing | open |
-| 22 | F-1b `cf_emit_file`: a configuration written to a file whole or not at all (the file layer's third part) | 2.1.0 | small | F-1a | waits: F-1a |
-| 23 | Y-9 A second `cf_live` driver refused, and D-48's sentence checked | 2.1.0 | small | Y-1 | waits: Y-1 |
-| 24 | Y-10 `cf_live_get` and `cf_config_free` under threads on the benchmark's page; `cf_live_generation` without the lock (TO DECIDE 1b) | 2.1.0 | medium | nothing | open |
-| 25 | Y-1 The Guide's "At the same time": what is guarded and what is not | 2.1.0 | small | nothing | open |
-| 26 | C-1a `configforge diff` over arrays of arrays | 2.1.0 | medium | nothing | open |
-| 27 | C-1b `configforge diff --schema`: units compared as values | 2.1.0 | medium | C-2a, C-2b, C-1a | waits: C-2a |
-| 28 | C-3a `configforge diff --schema` flags the keys out of range and the keys that touch a secret | 2.1.0 | medium | C-1b | waits: C-1b |
-| 29 | C-3b The pull request's comment says which keys are out of range and which touch a secret | 2.1.0 | small | C-3a, N-15 | waits: C-3a |
-| 30 | C-4a `doctor drift`: the source of a value, and a list file | 2.1.0 | medium | nothing | open |
-| 31 | C-4b Drift across N configuration files: `configforge diff --all` | 2.1.0 | medium | C-1a | waits: C-1a |
-| 32 | C-6a Shell completions from the contract: `configforge gen --lang bash\|zsh\|fish\|powershell` | 2.1.0 | medium | nothing | open |
-| 33 | C-6b A man page and a sample file from the contract: `configforge gen --lang man\|sample-toml\|sample-yaml` | 2.1.0 | medium | C-6a | waits: C-6a |
-| 34 | C-8b Doctor's CFD021: a read of a key the contract does not have, in `doctor lint` | 2.1.0 | small | C-8a | waits: C-8a |
-| 35 | C-10b `configforge doctor pull unix:<path>`, and an example that serves from a loop | 2.1.0 | medium | C-10a | waits: C-10a |
-| 36 | Y-34 `gen check --report`: a predicted, value-blind report from files and a contract (TO DECIDE) | 2.1.0 | medium | nothing | open |
-| 37 | Y-35 Doctor on a predicted report: the rules a running program is needed for are off and named; SARIF columns and fingerprints | 2.1.0 | small | Y-34 | waits: Y-34 |
-| 38 | Y-37 A secret written in a checked file: CFD022 (TO DECIDE) | 2.1.0 | small | Y-35, C-8b, C-8b | waits: Y-35 |
-| 39 | Y-38 Defined but never read, over a set of reports: CFD023 (TO DECIDE) | 2.1.0 | small | C-8a, C-8b | waits: C-8a |
-| 40 | F-4a The references drawn, first by jq | 2.1.0 | small | nothing | open |
-| 41 | C-4c `doctor drift` from Python | 2.1.0 | small | C-4a | waits: C-4a |
-| 42 | Y-7 "Threads and processes" in the Guide: four recipes, compiled in CI, a `fork` test | 2.1.0 | medium | Y-1, Y-8 | waits: Y-1 |
-| 43 | Y-36 Recipes: the contract's schema in yaml-language-server and Taplo, conftest over a report with places | 2.1.0 | small | Y-34 | parked |
-| 44 | G-1a The tools that read a decision follow the split | 2.1.0 | medium | nothing | open |
-| 45 | G-1b Decisions.md split into one file a decision | 2.1.0 | medium | G-1a | waits: G-1a |
-| 46 | G-2 The Roadmap's finished items on a page of their own | 2.1.0 | medium | G-1b, G-2 | waits: G-1b |
-| 47 | Y-24 `configforge gen build`: sources by rank, a contract, a target, deterministic output (TO DECIDE) | 2.2.0 | medium | Y-34 | parked |
-| 48 | Y-25 The open-key checks: what the compiler can prove about the keys left to run time | 2.2.0 | small | Y-24 | waits: Y-24 |
-| 49 | Y-26 `CF_IMAGE_CONFIGURED`: an image that holds only what a source configured, and defaults and secrets out unless asked | 2.2.0 | small | Y-24 | waits: Y-24 |
-| 50 | Y-27 The baked configuration: `gen build --target c` and `cf_config_from_baked` | 2.2.0 | large | Y-24, Y-26 | parked |
-| 51 | Y-28 `cf_builder_diagnostics`: every diagnostic with its place, and `gen build --json` and `gen check --all` (TO DECIDE) | 2.2.0 | medium | Y-24 | parked |
-| 52 | Y-29 The manifest: inputs and their digests, the contract's digest, version, profile, open keys, the output's digest | 2.2.0 | small | Y-24, Y-25, M-34 | parked |
-| 53 | Y-31 Guide recipes: CUE, Pkl, Jsonnet, Dhall, Nickel and KCL as front ends | 2.2.0 | small | Y-24 | waits: Y-24 |
-| 54 | X-18 The helpers each reader writes again: a table, kept true by a gate | 2.2.0 | medium | nothing | open |
-| 55 | X-19 The printers apart: one file a format's writer | 2.2.0 | medium | X-18 | waits: X-18 |
-| 56 | X-20 What repeats, once: the helpers X-18's table says move | 2.2.0 | large | X-19 | waits: X-19 |
-| 57 | X-21 Text and binary formats as two groups a build can take apart | 2.2.0 | medium | X-19 | parked |
-| 58 | K-7a One table of formats: the lists that copy it read it (TO DECIDE) | 2.2.0 | medium | nothing | open |
-| 59 | K-5a TOML's joined path judged as one number | 2.2.0 | medium | nothing | open |
-| 60 | K-5b INI's reader limits nesting as the others do | 2.2.0 | small | K-5a | waits: K-5a |
-| 61 | K-8 The YAML reader's three differences from libyaml, fixed to YAML 1.2's text (TO DECIDE, each) | 2.2.0 | medium | nothing | open |
-| 62 | K-1a `.properties` read by Java's own `Properties`, and the two compared | 2.2.0 | medium | nothing | open |
-| 63 | K-1b What the comparison with Java found, fixed | 2.2.0 | medium | K-1a | waits: K-1a |
-| 64 | K-10a A number's text, kept when the program asks | 2.2.0 | large | nothing | open |
-| 65 | K-10b Underflow and infinity as options, the defaults as today | 2.2.0 | medium | K-10a | waits: K-10a |
-| 66 | K-2a The other libraries' known weaknesses, searched and counted, as a table | 2.2.0 | medium | nothing | open |
-| 67 | K-2b `gate.weaknesses`: each row names a test that exists | 2.2.0 | medium | K-2a | waits: K-2a |
-| 68 | K-2c The weaknesses of expansion, nesting, lengths and time, as tests | 2.2.0 | medium | K-2b | waits: K-2b |
-| 69 | K-2d The weaknesses of truncation, NUL, UTF-8, numbers and duplicates, as tests | 2.2.0 | medium | K-2b | waits: K-2b |
-| 70 | K-2e The last rows, the table closed, the Roadmap item done | 2.2.0 | small | K-2c, K-2d | waits: K-2c |
-| 71 | K-3a The blob's file reader proved up to a bound | 2.2.0 | large | nothing | open |
-| 72 | K-3b The INI reader proved up to a bound | 2.2.0 | large | K-3a | waits: K-3a |
-| 73 | K-4a One harness for differential fuzzing, and JSON against yyjson | 2.2.0 | large | P-1b | open |
-| 74 | K-4b TOML against tomlc17 | 2.2.0 | medium | K-4a | waits: K-4a |
-| 75 | K-4c CBOR against tinycbor | 2.2.0 | medium | K-4a | waits: K-4a |
-| 76 | K-4d XML against a second parser (TO DECIDE) | 2.2.0 | medium | K-4a | waits: K-4a |
-| 77 | L-14a EVA over the float readers: `cf_text_to_f64` and the bit conversions | 2.2.0 | large | L-3b | open |
-| 78 | L-14b EVA over the float printer: `cf_gen_digits` and `cf_f64_to_text` | 2.2.0 | large | L-14a | waits: L-14a |
-| 79 | Y-15 The `cf_unpacker` interface: a byte layer under the codecs, its bounds, a NULL backend (TO DECIDE) | 2.3.0 | large | Y-14 | parked |
-| 80 | Y-16 gzip through zlib: CF_WITH_ZLIB (TO DECIDE) | 2.3.0 | medium | Y-15 | parked |
-| 81 | Y-17 zstd through libzstd: CF_WITH_ZSTD | 2.3.0 | medium | Y-16 | parked |
-| 82 | Y-18 The sources read through the layer: flags, extensions, provenance, bindings (TO DECIDE) | 2.3.0 | medium | Y-15, Y-16, Y-17, Y-15 | parked |
-| 83 | Y-19 `configforge codec` through the layer, and a bomb corpus | 2.3.0 | small | Y-18 | waits: Y-18 |
-| 84 | Y-14 Compressed input by the program's own zlib: the D-103 recipe, a Guide section and an example | 2.3.0 | small | nothing | open |
-| 85 | F-3a Wave 6, the core: a change spliced into a document and checked by reading it back | 2.3.0 | large | F-1a, F-3i, F-3j | waits: F-1a |
-| 86 | F-3b Wave 6, JSON and JSON5: a value changed, a member added or removed | 2.3.0 | medium | F-3a | waits: F-3a |
-| 87 | F-3c Wave 6, INI and .properties: a value changed, a line added or removed | 2.3.0 | medium | F-3a | waits: F-3a |
-| 88 | F-3d Wave 6, TOML: a value changed, a key removed | 2.3.0 | medium | F-3a | waits: F-3a |
-| 89 | F-3e Wave 6, TOML: a key added | 2.3.0 | medium | F-3d | waits: F-3d |
-| 90 | F-3f Wave 6, YAML: a value changed, a key removed | 2.3.0 | medium | F-3a | waits: F-3a |
-| 91 | F-3g Wave 6, YAML: a key added | 2.3.0 | medium | F-3f | waits: F-3f |
-| 92 | F-3h Wave 6, TLV: a value changed, an entry added or removed, the bytes a layout skips kept | 2.3.0 | large | F-3a | waits: F-3a |
-| 93 | F-3j Wave 6, the document edit as a public interface (TO DECIDE) | 2.3.0 | medium | F-3i, F-1b | parked |
-| 94 | Y-20 Writing: cf_pack, deterministic gzip and zstd, `convert --compress`, a compressed image | 2.3.0 | medium | Y-16, Y-17, Y-19, F-1b | waits: Y-16 |
-| 95 | F-2a An override file the library owns: a file source that cf_write can commit to (TO DECIDE) | 2.3.0 | large | F-1a, Y-2 | parked |
-| 96 | F-2b settings.c is the override source's example | 2.3.0 | small | F-2a, F-1b, F-1b | waits: F-2a |
-| 97 | Y-4 `cf_file_source_options.lock`, `.wait_ms` and `.write_attempts`, `.read_attempts`, `cf_builder_write_wait`: the lock around `overrides_write`, and the store's wait (F-5b in the research) | 2.3.0 | medium | Y-3, F-2a | waits: Y-3 |
-| 98 | Y-12 `swapped` in `cf_live_options`: workers told of a swap | 2.3.0 | small | nothing | parked |
-| 99 | F-3i Wave 6, `configforge codec get`, `set` and `unset` (TO DECIDE) | 2.3.0 | medium | F-1a, F-3b, F-3c, F-3d, F-3e, F-3f, F-3g, F-3h | waits: F-1a |
-| 100 | M-10 The dynamic sizing modes: the interface | 2.0.0 | medium | nothing | parked |
-| 101 | M-11a Sizing in the readers and the key space | 2.0.0 | medium | M-10 | parked |
-| 102 | M-12 The image header's layout, version 2 | 2.0.0 | medium | nothing | parked |
-| 103 | Y-33 The manifest inside the image (2.0.0, with the image header's layout) | 2.0.0 | small | Y-29 | waits: Y-29 |
-| 104 | K-7b The ways a format can be read, in its table entry (2.0.0; TO DECIDE) | 2.0.0 | small | K-7a | parked |
-| 105 | M-13 2.0, once: the list of what breaks, and the gate that holds it | 2.0.0 | small | M-9, M-11b, M-12 | parked |
-| 106 | M-5 The stream: one interface for reading in pieces, with a fallback every codec has | 2.4.0 | large | nothing | parked |
-| 107 | M-6 The stream, native: CBOR and TLV (the length-prefixed formats first) | 2.4.0 | medium | M-5 | parked |
-| 108 | M-7 The stream, native: JSON, JSON5 and `.properties` | 2.4.0 | large | M-5, M-6 | parked |
-| 109 | M-8 The stream, native: INI and TOML (the readers that look back) | 2.4.0 | large | M-5, M-7 | parked |
-| 110 | M-9 The stream, native: YAML, and the file source that uses it | 2.4.0 | large | M-5, M-7, M-8 | parked |
-| 111 | M-14 Ways to read: the document tree (DOM), a public type of the serialization library | 2.4.0 | large | nothing | parked |
-| 112 | M-15 Ways to read: lazy, a structural index first | 2.4.0 | large | M-14 | parked |
-| 113 | M-16 Ways to read: in-situ strings | 2.4.0 | medium | nothing | parked |
-| 114 | M-17 Ways to read: the table, and each mode measured | 2.4.0 | medium | M-9, M-14, M-15, M-16 | parked |
-| 115 | X-1 MessagePack: reader, writer, vectors, fuzz target | 2.5.0 | large | nothing | open |
-| 116 | X-2 BSON | 2.5.0 | large | X-1 | waits: X-1 |
-| 117 | X-3 UBJSON | 2.5.0 | medium | X-2, X-2 | waits: X-2 |
-| 118 | X-4 Smile | 2.5.0 | large | X-3 | waits: X-3 |
-| 119 | X-5 Amazon Ion (binary): reader; its writer is TO DECIDE | 2.5.0 | large | X-4 | waits: X-4 |
-| 120 | X-6 Bencode, read only | 2.5.0 | medium | X-5 | waits: X-5 |
-| 121 | X-7 Property lists, the binary form (bplist00) | 2.5.0 | large | X-6, X-1 | waits: X-6 |
-| 122 | X-8 Property lists, the XML form: TO DECIDE (the scanner) | 2.5.0 | large | X-7 | waits: X-7 |
-| 123 | X-9 HCL (HashiCorp Configuration Language 2), the literal subset | 2.5.0 | large | X-8 | parked: not now |
-| 124 | X-10 HOCON, without substitutions and includes | 2.5.0 | large | X-9 | parked: not now |
-| 125 | X-11 KDL (version 2) | 2.5.0 | large | X-10 | parked: not now |
-| 126 | X-12 TLV as the standards have it: DER, SIMPLE-TLV, EMV and KLV | 2.5.0 | large | nothing | parked: not now |
-| 127 | X-13 TLV as devices write it: field order, widths, an implied length, a packed head | 2.5.0 | large | X-12 | parked: not now |
-| 128 | X-14 Formats bound to a schema: Avro's container, and what the rest waits on | 2.5.0 | large | X-13 | parked: not now |
-| 129 | X-15 The benchmark learns the binary formats: MiB/s for each codec | 2.5.0 | medium | X-1, X-7 | waits: X-1 |
-| 130 | X-16 The benchmark learns the text formats and the read-only ones | 2.5.0 | medium | X-15, X-8, X-11, X-5, X-14 | waits: X-15 |
-| 131 | X-17 Text handed to the sink where it lies | 2.5.0 | large | X-16, P-1 | waits: X-16 |
-| 132 | M-1 Go (cgo): the module over the C library | 2.6.0 | large | M-23-m | parked |
-| 133 | M-2 Go: an example and a CI job | 2.6.0 | medium | M-1 | parked |
-| 134 | M-3 .NET (P/Invoke): the assembly over the C library | 2.6.0 | large | nothing | parked |
-| 135 | M-4 .NET: an example and a CI job | 2.6.0 | medium | M-3 | parked |
-| 136 | G-3 "Start here" in C, and the gate that keeps every such page true | 2.6.0 | medium | G-1b, G-1b, G-2 | waits: G-1b |
-| 137 | G-4 "Start here" in C++ | 2.6.0 | small | G-3 | waits: G-3 |
-| 138 | G-5 "Start here" in Rust | 2.6.0 | small | G-3 | waits: G-3 |
-| 139 | G-6 "Start here" in Python | 2.6.0 | small | G-2, G-3, G-4, G-5 | waits: G-2 |
-| 140 | G-7 Recipes: reload events as log records, a report in OPA and CUE | 2.6.0 | medium | G-2, G-3 | waits: G-2 |
-| 141 | G-8 A playground on the documentation site | 2.6.0 | large | G-1b, G-3 | waits: G-1b |
-| 142 | M-22 Publishing by trusted publishing: the release workflow's registry jobs | 2.6.0 | large | M-23-m | parked |
-| 143 | M-24 The clean-machine install, in CI | 2.6.0 | medium | M-22, M-23-m, M-25-m | parked |
-| 144 | M-26 Wheels for each platform | 2.6.0 | medium | M-22 | parked |
-| 145 | M-27 Recipes in the tree: Meson WrapDB, the Bazel Central Registry, conda-forge | 2.6.0 | large | M-22 | parked |
-| 146 | M-28 Embedded registries: ESP-IDF, PlatformIO, Zephyr | 2.6.0 | medium | M-27 | parked |
-| 147 | M-31 The monthly count of downloads, traffic and issues | 2.6.0 | small | nothing | parked |
-| 148 | M-32 One digest a purpose: SHA-256 as the fingerprint's option | 2.6.0 | large | nothing | parked |
-| 149 | M-33 A digest function the program gives | 2.6.0 | medium | M-32 | parked |
-| 150 | M-34 A gate built on a SHA-256 fingerprint, in the Guide, with its test | 2.6.0 | small | M-32, M-33 | parked |
-| 151 | P-3 The readers' scans on lanes' four kept operations, kept only where they win | 2.7.0 | large | P-2 | open |
-| 152 | P-7 Why a real number costs 2000 instructions a byte in JSON and TOML | 2.4.0 | large | P-6 | waits: P-6 |
-| 153 | P-8 CBOR writes a place for every scalar: build it by hand, same bytes | 2.4.0 | small | nothing | open |
-| 154 | P-9 The second profile: the formats and the lines P-1 did not look at | 2.4.0 | medium | P-3, P-7, P-8 | waits: P-3 |
-| 155 | P-10 What the fastest libraries do, as a written survey with its numbers | 2.4.0 | medium | nothing | open |
-| 156 | P-13 SSE2 and NEON: the measured case, in numbers and a recommendation | 2.4.0 | large | P-3, P-3 | waits: P-3 |
-| 157 | P-16 Eight digits at a time: a word body for `digits8`, measured in lanes | 2.4.0 | medium | P-10 | waits: P-10 |
-| 158 | L-16a The emitter sized from the key space it walks, kept only if it pays | 2.7.0 | small | nothing | open |
-| 159 | L-16b Sequential read advice for a large file, kept only if it pays | 2.7.0 | small | nothing | open |
-| 160 | L-16c Branch hints on the readers' hot paths, kept only where they pay | 2.7.0 | medium | P-3 | waits: P-3 |
-| 161 | Y-11 `cf_live_reader`: a worker's handle that caches a snapshot, its test under ThreadSanitizer, C++ and Rust wrappers (TO DECIDE) | 2.7.0 | medium | Y-10, Y-9 | parked |
-| 162 | L-11 Mutation testing with Mull: the score of every component beside coverage, held above a floor | 1.9.0 | medium | nothing | open |
-| 163 | L-12a The public headers with no record at all | 1.9.0 | large | nothing | open |
-| 164 | L-12b The matrix of every MISRA rule, made from the record | 1.9.0 | medium | L-12a | waits: L-12a |
-| 165 | L-12c The compliance report, attached to each release | 1.9.0 | small | L-12b | waits: L-12b |
-| 166 | L-13 verify sees the version CI sees | 1.9.0 | small | nothing | open |
-| 167 | L-15a The comparison with whole configuration libraries: time to look up | 1.9.0 | medium | nothing | open |
-| 168 | L-17 Byte order and word size in CI: s390x, i386 and armv7 under qemu-user | 1.9.0 | medium | nothing | open |
-| 169 | L-19a A Linux arm64 job | 1.9.0 | small | nothing | open |
-| 170 | L-19b A qemu line carries its date and commit | 1.9.0 | small | L-17 | waits: L-17 |
-| 171 | L-18b The Cortex-M `.text` of each part, in a table and a gate | 1.9.0 | medium | L-18a | waits: L-18a |
-| 172 | P-5 A profile after every weekly benchmark, kept as an artifact and compared | 1.9.0 | medium | nothing | open |
-| 173 | P-6 A cost that should not be there: bytes per instruction across sizes and formats | 1.9.0 | medium | nothing | open |
-| 174 | P-11 Print speed in the comparison: JSON, four libraries | 1.9.0 | large | nothing | open |
-| 175 | P-12 The README leads with the lines ConfigForge wins, made by a script from the numbers | 1.9.0 | medium | P-11, P-11 | waits: P-11 |
-| 176 | P-14 The OpenSSF Scorecard: every finding read, every one the repository can meet met | 1.9.0 | medium | nothing | open |
-| 177 | M-18 OSS-Fuzz: the project files in the repository | 1.9.0 | small | nothing | parked |
-| 178 | M-20 The evidence pack: the script that assembles it, with a manifest that never claims what is not there | 1.9.0 | medium | nothing | parked |
-| 179 | M-21 The evidence pack in the release | 1.9.0 | small | M-20 | parked |
-| 180 | Y-13-m A shared image across processes: memfd and seals, `shm_open`, a read-only section, the source (TO DECIDE 3b) | 2.4.0 | large | Y-7, Y-8 | parked: not now |
-| 181 | Y-21-m A built-in inflate for the embedded presets | 2.2.0 | large | Y-16, Y-20 | parked: not now |
-| 182 | Y-22-m xz and lz4 frames | 1.10.0 | medium | Y-17 | parked: not now |
-| 183 | Y-23-m zstd dictionaries on a source | 1.10.0 | medium | Y-18, Y-20 | parked: not now |
-| 184 | Y-30-m Rules across keys in the contract: a fixed declarative set (TO DECIDE D) | 1.10.0 | medium | Y-24, Y-39-m | parked: not now |
-| 185 | Y-32-m A build file read with the tool's own contract | 1.10.0 | medium | Y-24, Y-29 | parked: not now |
-| 186 | Y-39-m Relations in the contract: `pattern`, `if`/`then`, `dependentRequired` (TO DECIDE 2) | 2.3.0 | large | Y-36 | parked: not now |
-| 187 | Y-40-m The language server | 2.3.0 | large | Y-34, Y-36 | parked: not now |
-| 188 | F-4b `configforge doctor graph` (TO DECIDE: whether it is built at all) | 1.10.0 | medium | F-4a | parked: not now |
-| 189 | G-9 A program not written for the library, moved onto it in a fork | 2.3.0 | large | G-3 | parked: not now |
-| 190 | G-9-m Publishing the fork and what it found | 2.3.0 | small | G-9 | parked: not now |
-| 191 | L-15b libconfig in the comparison | 1.9.0 | medium | L-15a | parked: not now |
-| 192 | L-17-m The `targets` jobs required | 1.9.0 | small | L-17 | parked: not now |
-| 193 | L-19-m Arm devices run, recorded with their commit | 1.9.0 | small | L-19b | parked: not now |
-| 194 | P-15-m The repository settings the Scorecard waits on (the maintainer's) | 1.9.0 | small | P-14 | parked: not now |
-| 195 | M-19-m OSS-Fuzz: the application (parked) | 1.9.0 | small | M-18 | parked: not now |
-| 196 | M-23-m Registry set-up (parked) | 1.10.0 | small | M-22 | parked: not now |
-| 197 | M-25-m Upstream submissions: vcpkg and ConanCenter (parked) | 1.10.0 | small | M-22 | parked: not now |
-| 198 | M-29-m Submissions and registry accounts (parked) | 2.3.0 | small | M-27, M-28 | parked: not now |
-| 199 | M-30-m The GitHub Action in a repository of its own (parked) | 2.3.0 | small | nothing | parked: not now |
+| 4 | K-11a Options with defaults as one convention: `cf_*_options_init`, the fixed limits as options, and a gate | 1.9.0 | large | nothing | open |
+| 5 | K-11b The `none` platform builds and is tried: no feature assumes an operating system | 1.9.0 | large | L-18a | waits: L-18a |
+| 6 | L-18a A Cortex-M build of `minimal` in CI, with its stack gate | 1.9.0 | medium | nothing | open |
+| 7 | K-11c The table of each feature against each platform, checked by a gate | 1.9.0 | medium | K-11b | waits: K-11b |
+| 8 | F-1a The file layer: `cf_file_options`, `cf_file_writer`, `cf_file_replace`, a file replaced whole or not at all | 1.9.0 | large | nothing | open |
+| 9 | Y-2 `cf_platform_write_file_if`: the replace refused when the file no longer holds the bytes read (F-1c in the research) | 1.9.0 | small | F-1a | waits: F-1a |
+| 10 | Y-8 Close-on-exec and non-inheritable everywhere the library opens a file, with a child that lists its descriptors | 1.9.0 | small | F-1a, Y-3 | waits: F-1a |
+| 11 | Y-5 A stable read: a file read twice and compared, up to 3 reads by default (F-5c in the research) | 1.9.0 | small | nothing | open |
+| 12 | Y-6 Windows readers that share delete access, if a measurement shows a rename then succeeds over an open reader (F-5d in the research) | 1.9.0 | small | F-1a | waits: F-1a |
+| 13 | Y-3 `cf_locker`: a lock that plugs in, `cf_lock_none` and a kernel lock on a kept sidecar file, `cf_lock_sidecar` (F-5a in the research) | 1.9.0 | medium | F-1a | waits: F-1a |
+| 14 | K-9c Errors that cannot be ignored: `CF_NODISCARD` on every failure, and its gate | 1.9.0 | large | nothing | open |
+| 15 | K-6a A refusal's byte offset (TO DECIDE) | 2.0.0 | medium | nothing | parked |
+| 16 | K-6b A refusal's reason shown by the tools (TO DECIDE) | 2.0.0 | small | nothing | parked |
+| 17 | M-11b `cf_error` owns its text (the 2.0 break) | 2.0.0 | large | M-11a | parked |
+| 18 | C-2a Durations and sizes: the unit on an int definition | 2.1.0 | medium | nothing | parked |
+| 19 | C-2b Durations and sizes: the schema, the report, `cf_emit` and every reader | 2.1.0 | medium | C-2a | waits: C-2a |
+| 20 | C-8a A read the contract does not have, noticed: the library records it | 2.1.0 | medium | nothing | open |
+| 21 | C-9 Values migrated, not only renamed: a function on the old key's definition | 2.1.0 | medium | nothing | open |
+| 22 | C-11 A program's files where its platform keeps them: `cf_builder_app_files` | 2.1.0 | medium | C-7 | waits: C-7 |
+| 23 | C-7 Profiles: `--profile` or `NAME_PROFILE` adds `config.<profile>.<ext>` above the base file | 2.1.0 | medium | C-11 | waits: C-11 |
+| 24 | C-10a A running program asked for its report: the library answers one request on a descriptor | 2.1.0 | medium | nothing | open |
+| 25 | F-1b `cf_emit_file`: a configuration written to a file whole or not at all (the file layer's third part) | 2.1.0 | small | F-1a | waits: F-1a |
+| 26 | Y-9 A second `cf_live` driver refused, and D-48's sentence checked | 2.1.0 | small | Y-1 | waits: Y-1 |
+| 27 | Y-10 `cf_live_get` and `cf_config_free` under threads on the benchmark's page; `cf_live_generation` without the lock (TO DECIDE 1b) | 2.1.0 | medium | nothing | open |
+| 28 | Y-1 The Guide's "At the same time": what is guarded and what is not | 2.1.0 | small | nothing | open |
+| 29 | C-1a `configforge diff` over arrays of arrays | 2.1.0 | medium | nothing | open |
+| 30 | C-1b `configforge diff --schema`: units compared as values | 2.1.0 | medium | C-2a, C-2b, C-1a | waits: C-2a |
+| 31 | C-3a `configforge diff --schema` flags the keys out of range and the keys that touch a secret | 2.1.0 | medium | C-1b | waits: C-1b |
+| 32 | C-3b The pull request's comment says which keys are out of range and which touch a secret | 2.1.0 | small | C-3a, N-15 | waits: C-3a |
+| 33 | C-4a `doctor drift`: the source of a value, and a list file | 2.1.0 | medium | nothing | open |
+| 34 | C-4b Drift across N configuration files: `configforge diff --all` | 2.1.0 | medium | C-1a | waits: C-1a |
+| 35 | C-6a Shell completions from the contract: `configforge gen --lang bash\|zsh\|fish\|powershell` | 2.1.0 | medium | nothing | open |
+| 36 | C-6b A man page and a sample file from the contract: `configforge gen --lang man\|sample-toml\|sample-yaml` | 2.1.0 | medium | C-6a | waits: C-6a |
+| 37 | C-8b Doctor's CFD021: a read of a key the contract does not have, in `doctor lint` | 2.1.0 | small | C-8a | waits: C-8a |
+| 38 | C-10b `configforge doctor pull unix:<path>`, and an example that serves from a loop | 2.1.0 | medium | C-10a | waits: C-10a |
+| 39 | Y-34 `gen check --report`: a predicted, value-blind report from files and a contract (TO DECIDE) | 2.1.0 | medium | nothing | open |
+| 40 | Y-35 Doctor on a predicted report: the rules a running program is needed for are off and named; SARIF columns and fingerprints | 2.1.0 | small | Y-34 | waits: Y-34 |
+| 41 | Y-37 A secret written in a checked file: CFD022 (TO DECIDE) | 2.1.0 | small | Y-35, C-8b, C-8b | waits: Y-35 |
+| 42 | Y-38 Defined but never read, over a set of reports: CFD023 (TO DECIDE) | 2.1.0 | small | C-8a, C-8b | waits: C-8a |
+| 43 | F-4a The references drawn, first by jq | 2.1.0 | small | nothing | open |
+| 44 | C-4c `doctor drift` from Python | 2.1.0 | small | C-4a | waits: C-4a |
+| 45 | Y-7 "Threads and processes" in the Guide: four recipes, compiled in CI, a `fork` test | 2.1.0 | medium | Y-1, Y-8 | waits: Y-1 |
+| 46 | Y-36 Recipes: the contract's schema in yaml-language-server and Taplo, conftest over a report with places | 2.1.0 | small | Y-34 | parked |
+| 47 | G-1a The tools that read a decision follow the split | 2.1.0 | medium | nothing | open |
+| 48 | G-1b Decisions.md split into one file a decision | 2.1.0 | medium | G-1a | waits: G-1a |
+| 49 | G-2 The Roadmap's finished items on a page of their own | 2.1.0 | medium | G-1b, G-2 | waits: G-1b |
+| 50 | Y-24 `configforge gen build`: sources by rank, a contract, a target, deterministic output (TO DECIDE) | 2.2.0 | medium | Y-34 | parked |
+| 51 | Y-25 The open-key checks: what the compiler can prove about the keys left to run time | 2.2.0 | small | Y-24 | waits: Y-24 |
+| 52 | Y-26 `CF_IMAGE_CONFIGURED`: an image that holds only what a source configured, and defaults and secrets out unless asked | 2.2.0 | small | Y-24 | waits: Y-24 |
+| 53 | Y-27 The baked configuration: `gen build --target c` and `cf_config_from_baked` | 2.2.0 | large | Y-24, Y-26 | parked |
+| 54 | Y-28 `cf_builder_diagnostics`: every diagnostic with its place, and `gen build --json` and `gen check --all` (TO DECIDE) | 2.2.0 | medium | Y-24 | parked |
+| 55 | Y-29 The manifest: inputs and their digests, the contract's digest, version, profile, open keys, the output's digest | 2.2.0 | small | Y-24, Y-25, M-34 | parked |
+| 56 | Y-31 Guide recipes: CUE, Pkl, Jsonnet, Dhall, Nickel and KCL as front ends | 2.2.0 | small | Y-24 | waits: Y-24 |
+| 57 | X-18 The helpers each reader writes again: a table, kept true by a gate | 2.2.0 | medium | nothing | open |
+| 58 | X-19 The printers apart: one file a format's writer | 2.2.0 | medium | X-18 | waits: X-18 |
+| 59 | X-20 What repeats, once: the helpers X-18's table says move | 2.2.0 | large | X-19 | waits: X-19 |
+| 60 | X-21 Text and binary formats as two groups a build can take apart | 2.2.0 | medium | X-19 | parked |
+| 61 | K-7a One table of formats: the lists that copy it read it (TO DECIDE) | 2.2.0 | medium | nothing | open |
+| 62 | K-5a TOML's joined path judged as one number | 2.2.0 | medium | nothing | open |
+| 63 | K-5b INI's reader limits nesting as the others do | 2.2.0 | small | K-5a | waits: K-5a |
+| 64 | K-8 The YAML reader's three differences from libyaml, fixed to YAML 1.2's text (TO DECIDE, each) | 2.2.0 | medium | nothing | open |
+| 65 | K-1a `.properties` read by Java's own `Properties`, and the two compared | 2.2.0 | medium | nothing | open |
+| 66 | K-1b What the comparison with Java found, fixed | 2.2.0 | medium | K-1a | waits: K-1a |
+| 67 | K-10a A number's text, kept when the program asks | 2.2.0 | large | nothing | open |
+| 68 | K-10b Underflow and infinity as options, the defaults as today | 2.2.0 | medium | K-10a | waits: K-10a |
+| 69 | K-2a The other libraries' known weaknesses, searched and counted, as a table | 2.2.0 | medium | nothing | open |
+| 70 | K-2b `gate.weaknesses`: each row names a test that exists | 2.2.0 | medium | K-2a | waits: K-2a |
+| 71 | K-2c The weaknesses of expansion, nesting, lengths and time, as tests | 2.2.0 | medium | K-2b | waits: K-2b |
+| 72 | K-2d The weaknesses of truncation, NUL, UTF-8, numbers and duplicates, as tests | 2.2.0 | medium | K-2b | waits: K-2b |
+| 73 | K-2e The last rows, the table closed, the Roadmap item done | 2.2.0 | small | K-2c, K-2d | waits: K-2c |
+| 74 | K-3a The blob's file reader proved up to a bound | 2.2.0 | large | nothing | open |
+| 75 | K-3b The INI reader proved up to a bound | 2.2.0 | large | K-3a | waits: K-3a |
+| 76 | K-4a One harness for differential fuzzing, and JSON against yyjson | 2.2.0 | large | P-1b | open |
+| 77 | K-4b TOML against tomlc17 | 2.2.0 | medium | K-4a | waits: K-4a |
+| 78 | K-4c CBOR against tinycbor | 2.2.0 | medium | K-4a | waits: K-4a |
+| 79 | K-4d XML against a second parser (TO DECIDE) | 2.2.0 | medium | K-4a | waits: K-4a |
+| 80 | L-14a EVA over the float readers: `cf_text_to_f64` and the bit conversions | 2.2.0 | large | L-3b | open |
+| 81 | L-14b EVA over the float printer: `cf_gen_digits` and `cf_f64_to_text` | 2.2.0 | large | L-14a | waits: L-14a |
+| 82 | Y-15 The `cf_unpacker` interface: a byte layer under the codecs, its bounds, a NULL backend (TO DECIDE) | 2.3.0 | large | Y-14 | parked |
+| 83 | Y-16 gzip through zlib: CF_WITH_ZLIB (TO DECIDE) | 2.3.0 | medium | Y-15 | parked |
+| 84 | Y-17 zstd through libzstd: CF_WITH_ZSTD | 2.3.0 | medium | Y-16 | parked |
+| 85 | Y-18 The sources read through the layer: flags, extensions, provenance, bindings (TO DECIDE) | 2.3.0 | medium | Y-15, Y-16, Y-17, Y-15 | parked |
+| 86 | Y-19 `configforge codec` through the layer, and a bomb corpus | 2.3.0 | small | Y-18 | waits: Y-18 |
+| 87 | Y-14 Compressed input by the program's own zlib: the D-103 recipe, a Guide section and an example | 2.3.0 | small | nothing | open |
+| 88 | F-3a Wave 6, the core: a change spliced into a document and checked by reading it back | 2.3.0 | large | F-1a, F-3i, F-3j | waits: F-1a |
+| 89 | F-3b Wave 6, JSON and JSON5: a value changed, a member added or removed | 2.3.0 | medium | F-3a | waits: F-3a |
+| 90 | F-3c Wave 6, INI and .properties: a value changed, a line added or removed | 2.3.0 | medium | F-3a | waits: F-3a |
+| 91 | F-3d Wave 6, TOML: a value changed, a key removed | 2.3.0 | medium | F-3a | waits: F-3a |
+| 92 | F-3e Wave 6, TOML: a key added | 2.3.0 | medium | F-3d | waits: F-3d |
+| 93 | F-3f Wave 6, YAML: a value changed, a key removed | 2.3.0 | medium | F-3a | waits: F-3a |
+| 94 | F-3g Wave 6, YAML: a key added | 2.3.0 | medium | F-3f | waits: F-3f |
+| 95 | F-3h Wave 6, TLV: a value changed, an entry added or removed, the bytes a layout skips kept | 2.3.0 | large | F-3a | waits: F-3a |
+| 96 | F-3j Wave 6, the document edit as a public interface (TO DECIDE) | 2.3.0 | medium | F-3i, F-1b | parked |
+| 97 | Y-20 Writing: cf_pack, deterministic gzip and zstd, `convert --compress`, a compressed image | 2.3.0 | medium | Y-16, Y-17, Y-19, F-1b | waits: Y-16 |
+| 98 | F-2a An override file the library owns: a file source that cf_write can commit to (TO DECIDE) | 2.3.0 | large | F-1a, Y-2 | parked |
+| 99 | F-2b settings.c is the override source's example | 2.3.0 | small | F-2a, F-1b, F-1b | waits: F-2a |
+| 100 | Y-4 `cf_file_source_options.lock`, `.wait_ms` and `.write_attempts`, `.read_attempts`, `cf_builder_write_wait`: the lock around `overrides_write`, and the store's wait (F-5b in the research) | 2.3.0 | medium | Y-3, F-2a | waits: Y-3 |
+| 101 | Y-12 `swapped` in `cf_live_options`: workers told of a swap | 2.3.0 | small | nothing | parked |
+| 102 | F-3i Wave 6, `configforge codec get`, `set` and `unset` (TO DECIDE) | 2.3.0 | medium | F-1a, F-3b, F-3c, F-3d, F-3e, F-3f, F-3g, F-3h | waits: F-1a |
+| 103 | M-10 The dynamic sizing modes: the interface | 2.0.0 | medium | nothing | parked |
+| 104 | M-11a Sizing in the readers and the key space | 2.0.0 | medium | M-10 | parked |
+| 105 | M-12 The image header's layout, version 2 | 2.0.0 | medium | nothing | parked |
+| 106 | Y-33 The manifest inside the image (2.0.0, with the image header's layout) | 2.0.0 | small | Y-29 | waits: Y-29 |
+| 107 | K-7b The ways a format can be read, in its table entry (2.0.0; TO DECIDE) | 2.0.0 | small | K-7a | parked |
+| 108 | M-13 2.0, once: the list of what breaks, and the gate that holds it | 2.0.0 | small | M-9, M-11b, M-12 | parked |
+| 109 | M-5 The stream: one interface for reading in pieces, with a fallback every codec has | 2.4.0 | large | nothing | parked |
+| 110 | M-6 The stream, native: CBOR and TLV (the length-prefixed formats first) | 2.4.0 | medium | M-5 | parked |
+| 111 | M-7 The stream, native: JSON, JSON5 and `.properties` | 2.4.0 | large | M-5, M-6 | parked |
+| 112 | M-8 The stream, native: INI and TOML (the readers that look back) | 2.4.0 | large | M-5, M-7 | parked |
+| 113 | M-9 The stream, native: YAML, and the file source that uses it | 2.4.0 | large | M-5, M-7, M-8 | parked |
+| 114 | M-14 Ways to read: the document tree (DOM), a public type of the serialization library | 2.4.0 | large | nothing | parked |
+| 115 | M-15 Ways to read: lazy, a structural index first | 2.4.0 | large | M-14 | parked |
+| 116 | M-16 Ways to read: in-situ strings | 2.4.0 | medium | nothing | parked |
+| 117 | M-17 Ways to read: the table, and each mode measured | 2.4.0 | medium | M-9, M-14, M-15, M-16 | parked |
+| 118 | X-1 MessagePack: reader, writer, vectors, fuzz target | 2.5.0 | large | nothing | open |
+| 119 | X-2 BSON | 2.5.0 | large | X-1 | waits: X-1 |
+| 120 | X-3 UBJSON | 2.5.0 | medium | X-2, X-2 | waits: X-2 |
+| 121 | X-4 Smile | 2.5.0 | large | X-3 | waits: X-3 |
+| 122 | X-5 Amazon Ion (binary): reader; its writer is TO DECIDE | 2.5.0 | large | X-4 | waits: X-4 |
+| 123 | X-6 Bencode, read only | 2.5.0 | medium | X-5 | waits: X-5 |
+| 124 | X-7 Property lists, the binary form (bplist00) | 2.5.0 | large | X-6, X-1 | waits: X-6 |
+| 125 | X-8 Property lists, the XML form: TO DECIDE (the scanner) | 2.5.0 | large | X-7 | waits: X-7 |
+| 126 | X-9 HCL (HashiCorp Configuration Language 2), the literal subset | 2.5.0 | large | X-8 | parked: not now |
+| 127 | X-10 HOCON, without substitutions and includes | 2.5.0 | large | X-9 | parked: not now |
+| 128 | X-11 KDL (version 2) | 2.5.0 | large | X-10 | parked: not now |
+| 129 | X-12 TLV as the standards have it: DER, SIMPLE-TLV, EMV and KLV | 2.5.0 | large | nothing | parked: not now |
+| 130 | X-13 TLV as devices write it: field order, widths, an implied length, a packed head | 2.5.0 | large | X-12 | parked: not now |
+| 131 | X-14 Formats bound to a schema: Avro's container, and what the rest waits on | 2.5.0 | large | X-13 | parked: not now |
+| 132 | X-15 The benchmark learns the binary formats: MiB/s for each codec | 2.5.0 | medium | X-1, X-7 | waits: X-1 |
+| 133 | X-16 The benchmark learns the text formats and the read-only ones | 2.5.0 | medium | X-15, X-8, X-11, X-5, X-14 | waits: X-15 |
+| 134 | X-17 Text handed to the sink where it lies | 2.5.0 | large | X-16, P-1 | waits: X-16 |
+| 135 | M-1 Go (cgo): the module over the C library | 2.6.0 | large | M-23-m | parked |
+| 136 | M-2 Go: an example and a CI job | 2.6.0 | medium | M-1 | parked |
+| 137 | M-3 .NET (P/Invoke): the assembly over the C library | 2.6.0 | large | nothing | parked |
+| 138 | M-4 .NET: an example and a CI job | 2.6.0 | medium | M-3 | parked |
+| 139 | G-3 "Start here" in C, and the gate that keeps every such page true | 2.6.0 | medium | G-1b, G-1b, G-2 | waits: G-1b |
+| 140 | G-4 "Start here" in C++ | 2.6.0 | small | G-3 | waits: G-3 |
+| 141 | G-5 "Start here" in Rust | 2.6.0 | small | G-3 | waits: G-3 |
+| 142 | G-6 "Start here" in Python | 2.6.0 | small | G-2, G-3, G-4, G-5 | waits: G-2 |
+| 143 | G-7 Recipes: reload events as log records, a report in OPA and CUE | 2.6.0 | medium | G-2, G-3 | waits: G-2 |
+| 144 | G-8 A playground on the documentation site | 2.6.0 | large | G-1b, G-3 | waits: G-1b |
+| 145 | M-22 Publishing by trusted publishing: the release workflow's registry jobs | 2.6.0 | large | M-23-m | parked |
+| 146 | M-24 The clean-machine install, in CI | 2.6.0 | medium | M-22, M-23-m, M-25-m | parked |
+| 147 | M-26 Wheels for each platform | 2.6.0 | medium | M-22 | parked |
+| 148 | M-27 Recipes in the tree: Meson WrapDB, the Bazel Central Registry, conda-forge | 2.6.0 | large | M-22 | parked |
+| 149 | M-28 Embedded registries: ESP-IDF, PlatformIO, Zephyr | 2.6.0 | medium | M-27 | parked |
+| 150 | M-31 The monthly count of downloads, traffic and issues | 2.6.0 | small | nothing | parked |
+| 151 | M-32 One digest a purpose: SHA-256 as the fingerprint's option | 2.6.0 | large | nothing | parked |
+| 152 | M-33 A digest function the program gives | 2.6.0 | medium | M-32 | parked |
+| 153 | M-34 A gate built on a SHA-256 fingerprint, in the Guide, with its test | 2.6.0 | small | M-32, M-33 | parked |
+| 154 | P-3 The readers' scans on lanes' four kept operations, kept only where they win | 2.7.0 | large | P-2 | open |
+| 155 | P-7 Why a real number costs 2000 instructions a byte in JSON and TOML | 2.4.0 | large | P-6 | waits: P-6 |
+| 156 | P-8 CBOR writes a place for every scalar: build it by hand, same bytes | 2.4.0 | small | nothing | open |
+| 157 | P-9 The second profile: the formats and the lines P-1 did not look at | 2.4.0 | medium | P-3, P-7, P-8 | waits: P-3 |
+| 158 | P-10 What the fastest libraries do, as a written survey with its numbers | 2.4.0 | medium | nothing | open |
+| 159 | P-13 SSE2 and NEON: the measured case, in numbers and a recommendation | 2.4.0 | large | P-3, P-3 | waits: P-3 |
+| 160 | P-16 Eight digits at a time: a word body for `digits8`, measured in lanes | 2.4.0 | medium | P-10 | waits: P-10 |
+| 161 | L-16a The emitter sized from the key space it walks, kept only if it pays | 2.7.0 | small | nothing | open |
+| 162 | L-16b Sequential read advice for a large file, kept only if it pays | 2.7.0 | small | nothing | open |
+| 163 | L-16c Branch hints on the readers' hot paths, kept only where they pay | 2.7.0 | medium | P-3 | waits: P-3 |
+| 164 | Y-11 `cf_live_reader`: a worker's handle that caches a snapshot, its test under ThreadSanitizer, C++ and Rust wrappers (TO DECIDE) | 2.7.0 | medium | Y-10, Y-9 | parked |
+| 165 | L-11 Mutation testing with Mull: the score of every component beside coverage, held above a floor | 1.9.0 | medium | nothing | open |
+| 166 | L-12a The public headers with no record at all | 1.9.0 | large | nothing | open |
+| 167 | L-12b The matrix of every MISRA rule, made from the record | 1.9.0 | medium | L-12a | waits: L-12a |
+| 168 | L-12c The compliance report, attached to each release | 1.9.0 | small | L-12b | waits: L-12b |
+| 169 | L-13 verify sees the version CI sees | 1.9.0 | small | nothing | open |
+| 170 | L-15a The comparison with whole configuration libraries: time to look up | 1.9.0 | medium | nothing | open |
+| 171 | L-17 Byte order and word size in CI: s390x, i386 and armv7 under qemu-user | 1.9.0 | medium | nothing | open |
+| 172 | L-19a A Linux arm64 job | 1.9.0 | small | nothing | open |
+| 173 | L-19b A qemu line carries its date and commit | 1.9.0 | small | L-17 | waits: L-17 |
+| 174 | L-18b The Cortex-M `.text` of each part, in a table and a gate | 1.9.0 | medium | L-18a | waits: L-18a |
+| 175 | P-5 A profile after every weekly benchmark, kept as an artifact and compared | 1.9.0 | medium | nothing | open |
+| 176 | P-6 A cost that should not be there: bytes per instruction across sizes and formats | 1.9.0 | medium | nothing | open |
+| 177 | P-11 Print speed in the comparison: JSON, four libraries | 1.9.0 | large | nothing | open |
+| 178 | P-12 The README leads with the lines ConfigForge wins, made by a script from the numbers | 1.9.0 | medium | P-11, P-11 | waits: P-11 |
+| 179 | P-14 The OpenSSF Scorecard: every finding read, every one the repository can meet met | 1.9.0 | medium | nothing | open |
+| 180 | M-18 OSS-Fuzz: the project files in the repository | 1.9.0 | small | nothing | parked |
+| 181 | M-20 The evidence pack: the script that assembles it, with a manifest that never claims what is not there | 1.9.0 | medium | nothing | parked |
+| 182 | M-21 The evidence pack in the release | 1.9.0 | small | M-20 | parked |
+| 183 | Y-13-m A shared image across processes: memfd and seals, `shm_open`, a read-only section, the source (TO DECIDE 3b) | 2.4.0 | large | Y-7, Y-8 | parked: not now |
+| 184 | Y-21-m A built-in inflate for the embedded presets | 2.2.0 | large | Y-16, Y-20 | parked: not now |
+| 185 | Y-22-m xz and lz4 frames | 1.10.0 | medium | Y-17 | parked: not now |
+| 186 | Y-23-m zstd dictionaries on a source | 1.10.0 | medium | Y-18, Y-20 | parked: not now |
+| 187 | Y-30-m Rules across keys in the contract: a fixed declarative set (TO DECIDE D) | 1.10.0 | medium | Y-24, Y-39-m | parked: not now |
+| 188 | Y-32-m A build file read with the tool's own contract | 1.10.0 | medium | Y-24, Y-29 | parked: not now |
+| 189 | Y-39-m Relations in the contract: `pattern`, `if`/`then`, `dependentRequired` (TO DECIDE 2) | 2.3.0 | large | Y-36 | parked: not now |
+| 190 | Y-40-m The language server | 2.3.0 | large | Y-34, Y-36 | parked: not now |
+| 191 | F-4b `configforge doctor graph` (TO DECIDE: whether it is built at all) | 1.10.0 | medium | F-4a | parked: not now |
+| 192 | G-9 A program not written for the library, moved onto it in a fork | 2.3.0 | large | G-3 | parked: not now |
+| 193 | G-9-m Publishing the fork and what it found | 2.3.0 | small | G-9 | parked: not now |
+| 194 | L-15b libconfig in the comparison | 1.9.0 | medium | L-15a | parked: not now |
+| 195 | L-17-m The `targets` jobs required | 1.9.0 | small | L-17 | parked: not now |
+| 196 | L-19-m Arm devices run, recorded with their commit | 1.9.0 | small | L-19b | parked: not now |
+| 197 | P-15-m The repository settings the Scorecard waits on (the maintainer's) | 1.9.0 | small | P-14 | parked: not now |
+| 198 | M-19-m OSS-Fuzz: the application (parked) | 1.9.0 | small | M-18 | parked: not now |
+| 199 | M-23-m Registry set-up (parked) | 1.10.0 | small | M-22 | parked: not now |
+| 200 | M-25-m Upstream submissions: vcpkg and ConanCenter (parked) | 1.10.0 | small | M-22 | parked: not now |
+| 201 | M-29-m Submissions and registry accounts (parked) | 2.3.0 | small | M-27, M-28 | parked: not now |
+| 202 | M-30-m The GitHub Action in a repository of its own (parked) | 2.3.0 | small | nothing | parked: not now |
 <!-- index end -->
 
 ### Waits on the maintainer (skipped by the loop)
