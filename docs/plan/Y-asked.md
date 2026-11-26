@@ -66,6 +66,17 @@ this answer under "Organiser's answers"). Both are copied into
   value, never a fixed number ("in a system's design I always prefer an
   option and a default value to a hard limit", the maintainer). A layer
   is made only when a second real user of it exists: no empty layers.
+  The platform is one of those parts (the maintainer, 2026-11-26: "Platform
+  bir parçadır; OS'suz ortamda olmayan özellik derlenmez ve tabloda
+  yazar"): no feature assumes an operating system; a feature the target
+  platform cannot provide (files, locks, sync, threads, `cf_live`, clock,
+  environment, `malloc`) is either reached through the platform part or
+  not compiled at all for that platform (the `none` platform), so its use
+  is a link error, never a run-time surprise, or `CF_E_CAPABILITY` where
+  the call must exist; the documents carry one table of each feature
+  against each platform. The groups L (embedded targets) and every later
+  card follow it; `--target c` (Y-27) is the answer offered where there
+  is no operating system.
 * **D-221 - Compression, its own component.**
   1. `lib/compress` (D-100): bytes in, bytes out; it knows nothing of
      serialization, codecs or configuration, and is usable alone.
