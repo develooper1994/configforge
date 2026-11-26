@@ -181,6 +181,7 @@ Common to the codec cards (so a card need not say it again):
 * **accept**: X-1's, without the writer lists; `detect-ion` scored.
 * **stop if**: as X-1.
 * **docs**: `CHANGELOG.md` `### Added`: "Amazon Ion: `CF_WITH_ION`, a reader of the binary form with its symbol tables (D-142)"; `docs/Roadmap.md:168` "Ion done (X-5; read only, its writer waits on the maintainer's choice)"; D-142 paragraph; `docs/Formats.md` ("write: no").
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number.
 
 ## X-6 - Bencode, read only
 
@@ -238,6 +239,7 @@ Common to the codec cards (so a card need not say it again):
 * **accept**: X-1's (no writer lists).
 * **stop if**: as X-1; the maintainer has not answered the TO DECIDE (build with the recommendation, say so in the commit message).
 * **docs**: `CHANGELOG.md` `### Added`: "XML property lists: `cf_codec_plist`, a reader that takes either form (D-143)"; `docs/Roadmap.md:171` the item "Formats a configuration is really kept in": "property lists done (X-7, X-8)", the mark stays until X-11; D-143 paragraph; `docs/Formats.md`.
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number.
 
 ## X-9 - HCL (HashiCorp Configuration Language 2), the literal subset
 

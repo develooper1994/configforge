@@ -499,6 +499,7 @@ this answer under "Organiser's answers"). Both are copied into
 * **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Added": "the benchmark times `cf_live_get` under threads, and the page shows readers under 1 to twice-the-cores threads (Y-10)"; and, for (b) or (c), "### Changed": "`cf_live_generation` reads an atomic and takes no lock (Y-10, D-192)". `docs/Decisions.md`: D-192. Roadmap: marked by Y-12.
 
 ---
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number.
 
 ## Y-11 - `cf_live_reader`: a worker's handle that caches a snapshot, its test under ThreadSanitizer, C++ and Rust wrappers (TO DECIDE)
 
@@ -1364,6 +1365,7 @@ this answer under "Organiser's answers"). Both are copied into
 * **docs**: `CHANGELOG.md`, "## 1.10.0 — unreleased", "### Added": "Doctor's CFD023: a definition that no report in a set read (Y-38, D-217)." `docs/Decisions.md`: D-217. `docs/Roadmap.md`: "An analysis tool" 🟩.
 
 ---
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number.
 
 ## Y-39-m - Relations in the contract: `pattern`, `if`/`then`, `dependentRequired` (TO DECIDE 2)
 

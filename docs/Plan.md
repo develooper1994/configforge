@@ -260,7 +260,7 @@ of a card's CI.
 | 28 | F-3f Wave 6, YAML: a value changed, a key removed | 2.2.0 | medium | F-3a | open |
 | 29 | F-3g Wave 6, YAML: a key added | 2.2.0 | medium | F-3f | open |
 | 30 | F-3h Wave 6, TLV: a value changed, an entry added or removed, the bytes a layout skips kept | 2.2.0 | large | F-3a | open |
-| 31 | F-3i Wave 6, `configforge codec get`, `set` and `unset` (TO DECIDE) | 2.2.0 | medium | F-1a, F-3b, F-3c, F-3d, F-3e, F-3f, F-3g | parked |
+| 31 | F-3i Wave 6, `configforge codec get`, `set` and `unset` (TO DECIDE) | 2.2.0 | medium | F-1a, F-3b, F-3c, F-3d, F-3e, F-3f, F-3g | open |
 | 32 | F-3j Wave 6, the document edit as a public interface (TO DECIDE) | 2.2.0 | medium | F-3i, F-1b | parked |
 | 33 | F-4a The references drawn, first by jq | 1.10.0 | small | nothing | open |
 | 34 | F-4b `configforge doctor graph` (TO DECIDE: whether it is built at all) | 1.10.0 | medium | F-4a | parked |
@@ -276,14 +276,14 @@ of a card's CI.
 | 44 | K-4a One harness for differential fuzzing, and JSON against yyjson | 1.9.0 | large | nothing | open |
 | 45 | K-4b TOML against tomlc17 | 1.9.0 | medium | K-4a | open |
 | 46 | K-4c CBOR against tinycbor | 1.9.0 | medium | K-4a | open |
-| 47 | K-4d XML against a second parser (TO DECIDE) | 1.9.0 | medium | K-4a | parked |
+| 47 | K-4d XML against a second parser (TO DECIDE) | 1.9.0 | medium | K-4a | open |
 | 48 | K-5a TOML's joined path judged as one number | 1.9.0 | medium | nothing | open |
 | 49 | K-5b INI's reader limits nesting as the others do | 1.9.0 | small | K-5a | open |
 | 50 | K-6a A refusal's byte offset (TO DECIDE) | 1.9.0 | medium | nothing | parked |
 | 51 | K-6b A refusal's reason shown by the tools (TO DECIDE) | 1.9.0 | small | nothing | parked |
-| 52 | K-7a One table of formats: the lists that copy it read it (TO DECIDE) | 1.9.0 | medium | nothing | parked |
+| 52 | K-7a One table of formats: the lists that copy it read it (TO DECIDE) | 1.9.0 | medium | nothing | open |
 | 53 | K-7b The ways a format can be read, in its table entry (2.0.0; TO DECIDE) | 2.0.0 | small | K-7a | parked |
-| 54 | K-8 The YAML reader's three differences from libyaml, fixed to YAML 1.2's text (TO DECIDE, eac | 1.9.0 | medium | nothing | parked |
+| 54 | K-8 The YAML reader's three differences from libyaml, fixed to YAML 1.2's text (TO DECIDE, eac | 1.9.0 | medium | nothing | open |
 | 55 | X-18 The helpers each reader writes again: a table, kept true by a gate | 1.9.0 | medium | nothing | open |
 | 56 | X-19 The printers apart: one file a format's writer | 1.9.0 | medium | X-18 | open |
 | 57 | X-20 What repeats, once: the helpers X-18's table says move | 1.9.0 | large | X-19 | open |
@@ -292,19 +292,19 @@ of a card's CI.
 | 60 | X-2 BSON | 2.1.0 | large | X-1 | open |
 | 61 | X-3 UBJSON | 2.1.0 | medium | X-2 | open |
 | 62 | X-4 Smile | 2.1.0 | large | X-3 | open |
-| 63 | X-5 Amazon Ion (binary): reader; its writer is TO DECIDE | 2.1.0 | large | X-4 | parked |
-| 64 | X-6 Bencode, read only | 2.1.0 | medium | X-5 | waits: X-5 |
-| 65 | X-7 Property lists, the binary form (bplist00) | 2.1.0 | large | X-6 | waits: X-5 |
-| 66 | X-8 Property lists, the XML form: TO DECIDE (the scanner) | 2.1.0 | large | X-7 | parked |
+| 63 | X-5 Amazon Ion (binary): reader; its writer is TO DECIDE | 2.1.0 | large | X-4 | open |
+| 64 | X-6 Bencode, read only | 2.1.0 | medium | X-5 | open |
+| 65 | X-7 Property lists, the binary form (bplist00) | 2.1.0 | large | X-6 | open |
+| 66 | X-8 Property lists, the XML form: TO DECIDE (the scanner) | 2.1.0 | large | X-7 | open |
 | 67 | X-9 HCL (HashiCorp Configuration Language 2), the literal subset | 2.1.0 | large | X-8 | parked |
 | 68 | X-10 HOCON, without substitutions and includes | 2.1.0 | large | X-9 | waits: X-9 |
 | 69 | X-11 KDL (version 2) | 2.1.0 | large | X-10 | waits: X-9 |
 | 70 | X-12 TLV as the standards have it: DER, SIMPLE-TLV, EMV and KLV | 2.1.0 | large | nothing | parked |
 | 71 | X-13 TLV as devices write it: field order, widths, an implied length, a packed head | 2.1.0 | large | X-12 | parked |
 | 72 | X-14 Formats bound to a schema: Avro's container, and what the rest waits on | 2.1.0 | large | X-13 | parked |
-| 73 | X-15 The benchmark learns the binary formats: MiB/s for each codec | 2.1.0 | medium | X-1, X-7, X-2, X-3, X-4, X-5, X-6 | waits: X-5 |
-| 74 | X-16 The benchmark learns the text formats and the read-only ones | 2.1.0 | medium | X-15, X-8, X-11, X-5, X-14, X-9, X-10 | waits: X-5 |
-| 75 | X-17 Text handed to the sink where it lies | 2.1.0 | large | X-16 | waits: X-5 |
+| 73 | X-15 The benchmark learns the binary formats: MiB/s for each codec | 2.1.0 | medium | X-1, X-7, X-2, X-3, X-4, X-5, X-6 | open |
+| 74 | X-16 The benchmark learns the text formats and the read-only ones | 2.1.0 | medium | X-15, X-8, X-11, X-5, X-14, X-9, X-10 | waits: X-9 |
+| 75 | X-17 Text handed to the sink where it lies | 2.1.0 | large | X-16 | waits: X-9 |
 | 76 | L-11 Mutation testing with Mull: the score of every component beside coverage, held above a flo | 1.9.0 | medium | nothing | open |
 | 77 | L-12a The public headers with no record at all | 1.9.0 | large | nothing | open |
 | 78 | L-12b The matrix of every MISRA rule, made from the record | 1.9.0 | medium | L-12a | open |
@@ -357,7 +357,7 @@ of a card's CI.
 | 125 | Y-7 "Threads and processes" in the Guide: four recipes, compiled in CI, a `fork` test | 1.10.0 | medium | Y-1, Y-8 | open |
 | 126 | Y-8 Close-on-exec and non-inheritable everywhere the library opens a file, with a child that l | 1.9.0 | small | nothing | open |
 | 127 | Y-9 A second `cf_live` driver refused, and D-48's sentence checked | 1.9.0 | small | Y-1 | open |
-| 128 | Y-10 `cf_live_get` and `cf_config_free` under threads on the benchmark's page; `cf_live_generat | 1.9.0 | medium | nothing | parked |
+| 128 | Y-10 `cf_live_get` and `cf_config_free` under threads on the benchmark's page; `cf_live_generat | 1.9.0 | medium | nothing | open |
 | 129 | Y-11 `cf_live_reader`: a worker's handle that caches a snapshot, its test under ThreadSanitizer | 2.4.0 | medium | Y-10, Y-9 | parked |
 | 130 | Y-12 `swapped` in `cf_live_options`: workers told of a swap | 2.2.0 | small | nothing | parked |
 | 131 | Y-13-m A shared image across processes: memfd and seals, `shm_open`, a read-only section, the sou | 2.4.0 | large | Y-7, Y-8 | parked |
@@ -385,7 +385,7 @@ of a card's CI.
 | 153 | Y-35 Doctor on a predicted report: the rules a running program is needed for are off and named; | 1.10.0 | small | Y-34 | waits: Y-34 |
 | 154 | Y-36 Recipes: the contract's schema in yaml-language-server and Taplo, conftest over a report w | 1.10.0 | small | nothing | parked |
 | 155 | Y-37 A secret written in a checked file: CFD022 (TO DECIDE) | 1.10.0 | small | Y-35, C-8b | parked |
-| 156 | Y-38 Defined but never read, over a set of reports: CFD023 (TO DECIDE) | 1.10.0 | small | C-8a, C-8b | parked |
+| 156 | Y-38 Defined but never read, over a set of reports: CFD023 (TO DECIDE) | 1.10.0 | small | C-8a, C-8b | open |
 | 157 | Y-39-m Relations in the contract: `pattern`, `if`/`then`, `dependentRequired` (TO DECIDE 2) | 2.3.0 | large | Y-36 | parked |
 | 158 | Y-40-m The language server | 2.3.0 | large | Y-34, Y-36 | parked |
 | 159 | M-1 Go (cgo): the module over the C library | 2.3.0 | large | nothing | parked |
@@ -440,18 +440,12 @@ one that cannot be done is dropped and recorded under "Done" as dropped.
 | C-2a | 1.10.0 | answered (D-222, an open `cf_unit`); the card, C-2b and C-1b rewritten to it | parked |
 | F-1b | 2.2.0 | answered (D-224, writing in layers, docs/plan/F-files.md); F-1a, F-1b and F-2b rewritten to it | parked |
 | F-2a | 2.2.0 | answered (D-225, a writable file source); F-2a and F-2b rewritten to it | parked |
-| F-3i | 2.2.0 | its TO DECIDE | parked |
 | F-3j | 2.2.0 | its TO DECIDE | parked |
-| F-4b | 1.10.0 | its TO DECIDE | parked |
-| K-4d | 1.9.0 | its TO DECIDE | parked |
+| F-4b | 1.10.0 | answered 2026-11-26: built only when it is asked for | parked |
 | K-6a | 1.9.0 | answered (D-223, one error model, docs/plan/K-correctness.md); the card rewritten to it | parked |
 | K-6b | 1.9.0 | answered (D-223, one error model, docs/plan/K-correctness.md); the card rewritten to it | parked |
-| K-7a | 1.9.0 | its TO DECIDE | parked |
-| K-7b | 2.0.0 | its TO DECIDE | parked |
-| K-8 | 1.9.0 | its TO DECIDE | parked |
+| K-7b | 2.0.0 | answered 2026-11-26; still the 2.0.0 card of the ways to read, not written | parked |
 | X-21 | 1.9.0 | its TO DECIDE | parked |
-| X-5 | 2.1.0 | its TO DECIDE | parked |
-| X-8 | 2.1.0 | its TO DECIDE | parked |
 | X-9 | 2.1.0 | its TO DECIDE | parked |
 | X-12 | 2.1.0 | its TO DECIDE | parked |
 | X-13 | 2.1.0 | its TO DECIDE | parked |
@@ -465,7 +459,6 @@ one that cannot be done is dropped and recorded under "Done" as dropped.
 | Y-3 | 2.2.0 | its TO DECIDE | parked |
 | Y-4 | 2.2.0 | its TO DECIDE | parked |
 | Y-5 | 2.2.0 | its TO DECIDE | parked |
-| Y-10 | 1.9.0 | its TO DECIDE | parked |
 | Y-11 | 2.4.0 | its TO DECIDE | parked |
 | Y-12 | 2.2.0 | its TO DECIDE | parked |
 | Y-13-m | 2.4.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
@@ -486,7 +479,6 @@ one that cannot be done is dropped and recorded under "Done" as dropped.
 | Y-34 | 1.10.0 | its TO DECIDE | parked |
 | Y-36 | 1.10.0 | its TO DECIDE | parked |
 | Y-37 | 1.10.0 | its TO DECIDE | parked |
-| Y-38 | 1.10.0 | its TO DECIDE | parked |
 | Y-39-m | 2.3.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | Y-40-m | 2.3.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | M-1 | 2.3.0 | the maintainer's approval; its TO DECIDE | parked |

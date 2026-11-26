@@ -299,6 +299,7 @@ card marked **TO DECIDE** has no number until the maintainer answers; D-138
 * **accept**: as K-4a.
 * **stop if**: as K-4a; the library's licence, or its build, needs more than a C compiler and its own sources.
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added". If A: Roadmap "Differential fuzzing against the other readers" to 🟩 naming K-4a to K-4c and saying XML is closed by reason.
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number.
 
 ## K-5a - TOML's joined path judged as one number
 
@@ -402,6 +403,7 @@ card marked **TO DECIDE** has no number until the maintainer answers; D-138
 * **accept**: ACCEPT-LINUX; ACCEPT-WINDOWS; ACCEPT-CI; `gate.abi` green.
 * **stop if**: the output of `tools/codec/formats.c` changes (the tools print the table; its text is documented in `docs/Tools.md`).
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added" (experimental in 1.9); D-139; the Roadmap item stays 🟨 (K-7b).
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number.
 
 ## K-7b - The ways a format can be read, in its table entry (2.0.0; TO DECIDE)
 
@@ -417,6 +419,7 @@ card marked **TO DECIDE** has no number until the maintainer answers; D-138
 * **accept**: ACCEPT-LINUX; ACCEPT-WINDOWS; ACCEPT-CI.
 * **stop if**: the ways-to-read card changes the shape of a way.
 * **docs**: `CHANGELOG.md` "## 2.0.0 — unreleased", "### Added"; the Roadmap item to 🟩.
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number.
 
 ## K-8 - The YAML reader's three differences from libyaml, fixed to YAML 1.2's text (TO DECIDE, each)
 
@@ -440,6 +443,7 @@ card marked **TO DECIDE** has no number until the maintainer answers; D-138
 * **accept**: ACCEPT-LINUX with the conformance and `fuzz` extras; ACCEPT-WINDOWS; ACCEPT-CI; the YAML floors in `tests/conformance/floor.txt` unchanged or raised.
 * **stop if**: a part's reduced document shows a cause other than the one stated; a suite case that was valid is refused or read differently after a change (revert that part, the case's id under notes).
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Changed" (K-8.1 if A: a literal block scalar at the end of the input without a final line break no longer gains one; K-8.2 and K-8.3: a message) . **D-140** (text, when answered: the three answers, one sentence each, with YAML 1.2.2's sections); until then the three rules of `yamldiff.known` carry the reasons.
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the recommendation for each part: each follows YAML 1.2's text.
 
 ## To be written: K-9a and K-9b (the maintainer, 2026-11-26)
 

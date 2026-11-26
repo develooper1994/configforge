@@ -455,6 +455,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **docs**: `CHANGELOG.md`, "## 2.2.0 — unreleased", "### Added": `configforge codec get`, `set` and `unset` (F-3i). `docs/Tools.md`: the commands.
 
 ---
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number.
 
 ## F-3j - Wave 6, the document edit as a public interface (TO DECIDE)
 
@@ -532,3 +533,5 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **accept**: ACCEPT-LINUX; ACCEPT-WINDOWS; ACCEPT-CI; `ctest --preset default -R "doctor"` exit 0.
 * **stop if**: no answer to the TO DECIDE; the report's reader in the library does not expose a candidate's `written` (then a library change is needed first: say which).
 * **docs**: (A) `CHANGELOG.md`, "## 1.10.0 — unreleased" (as F-4a's), "### Added": `configforge doctor graph` (F-4b, D-132); `docs/Decisions.md`: D-132; `docs/Roadmap.md`: the item headed "The references drawn" becomes 🟩. (B) the Roadmap mark only.
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the recommendation; `doctor graph` is built only when it is asked for, so the card stays parked until then.
+
