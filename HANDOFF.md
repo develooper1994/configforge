@@ -38,7 +38,10 @@ targets), F-1b (`cf_emit_file`), F-2a (`cf_builder_overrides`), F-3j
    file:line against main's tree, every step runnable, every "decided"
    complete; it fixes what is wrong in place and lists what it changed.
    Done: each file read, its fixes committed on its branch.
-3. Number the cards in the order of the groups (1 to 7, then M), give
+3. Parked cards (ids ending "-m") go into docs/Plan.md's "Waits on the
+   maintainer (skipped by the loop)" table, status "parked"; any step
+   the C and F drafts left marked for the maintainer moves into one.
+   Number the cards in the order of the groups (1 to 7, then M), give
    each its version from docs/Maintaining.md "Versions", add the index
    rows to docs/Plan.md (Order | Card | Version | Size | Needs |
    Status), copy every card file onto main, delete the plan/cards-*
@@ -73,7 +76,7 @@ The standard: a middle-tier worker carries a card out without asking anything. S
 Then end with the report as your final answer: begin with `STATUS: DONE` (or `STATUS: STOPPED` and why), then one index row per card, `| ? | <id> <short title> | <size> | <needs> | open |`, then per card one line: what it decides that the Roadmap item left open, and each TO DECIDE. Under 500 words. Edit no file but FILE.
 
 
-VERSIONS: every card belongs to one milestone of docs/Maintaining.md lines 99-114 (read that table). Its index row carries it: `| ? | <id> <short title> | <version> | <size> | <needs> | open |`, and the card's docs field names that version's CHANGELOG heading ("## <version> — unreleased"). A TO DECIDE stays a TO DECIDE, with its options and recommendation; decide everything around it. Steps that need the maintainer's own access (registry tokens or trusted publishing, repository settings, the OSS-Fuzz application, pushing a tag or a release) are written as steps marked **maintainer** inside the card; everything else runs without them.
+VERSIONS: every card belongs to one milestone of docs/Maintaining.md lines 99-114 (read that table). Its index row carries it: `| ? | <id> <short title> | <version> | <size> | <needs> | open |`, and the card's docs field names that version's CHANGELOG heading ("## <version> — unreleased"). A TO DECIDE stays a TO DECIDE, with its options and recommendation; decide everything around it. Work that needs the maintainer's own access or an outside party (registry tokens or trusted publishing, repository settings, the OSS-Fuzz application, tags and releases, paid tools, hardware that cannot be reached) is never a step inside an agent card: it is a card of its own, with an id ending in "-m" (e.g. M-4-m), listed in the report as `PARKED | <id> <title> | <version> | <what it waits on>`. An agent card that would depend on it is written so its agent part stands alone (docs/Plan.md, "Waits on the maintainer").
 
 
 ## The groups' parts

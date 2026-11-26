@@ -20,8 +20,10 @@ nothing else:
  2. If HANDOFF.md exists at the root: do its steps first, then delete it
       in the commit that finishes its last step.
  3. Open the index below. Take the first card whose status is "open"
-      and whose "needs" are all "done". No such card -> STOP: report
-      which cards wait and on what.
+      and whose "needs" are all "done". A "parked" card (the section
+      "Waits on the maintainer") is never taken and never stops the
+      loop: skip it, and skip a card that needs it. No such card ->
+      STOP: report which cards wait and on what.
  4. Card says TO DECIDE and the answer is not written in it -> ask,
       write the answer into the card, commit that alone, go to 3.
  5. git switch -c work/<card id>
@@ -207,6 +209,20 @@ of a card's CI.
 | Order | Card | Version | Size | Needs | Status |
 | ----: | ---- | ------- | ----- | ----- | ------ |
 | 58 | P-3 The readers' scans on lanes' four kept operations, kept only where they win | 2.4.0 | large | P-2 | waits: 2.4.0 (D-101, D-102: the program chooses the backend; the scans move into lib/text) |
+
+### Waits on the maintainer (skipped by the loop)
+
+Work that needs the maintainer's own access or an outside party:
+registry tokens or trusted publishing, repository settings, the OSS-Fuzz
+application, tags and releases, paid tools, hardware that cannot be
+reached (the maintainer, 2026-11-26). Each is a card of its own, apart
+from the agents' cards, with status "parked". An agent card never holds
+such a step: its agent part is written to stand alone, or it is parked
+too. A parked card opens only when the maintainer says it can be done;
+one that cannot be done is dropped and recorded under "Done" as dropped.
+
+| Card | Version | Waits on | Status |
+| ---- | ------- | -------- | ------ |
 
 ## Done, their cards removed
 
