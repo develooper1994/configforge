@@ -469,9 +469,9 @@ one that cannot be done is dropped and recorded under "Done" as dropped.
 | Y-21-m | 2.2.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | Y-22-m | 1.10.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | Y-23-m | 1.10.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
-| Y-24 | 1.9.0 | its TO DECIDE | parked |
-| Y-26 | 1.9.0 | its TO DECIDE | parked |
-| Y-27 | 1.9.0 | its TO DECIDE | parked |
+| Y-24 | 1.9.0 | answered ((1), `gen build`); the card rewritten to it | parked |
+| Y-26 | 1.9.0 | answered (`--include defaults`, `--include secrets`, off by default) | parked |
+| Y-27 | 1.9.0 | answered (two C targets, plain `--target c` the default); the card rewritten to it | parked |
 | Y-28 | 1.10.0 | answered (D-223, one error model, docs/plan/K-correctness.md); the card rewritten to it | parked |
 | Y-29 | 1.10.0 | its TO DECIDE | parked |
 | Y-30-m | 1.10.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |

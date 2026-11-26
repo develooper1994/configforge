@@ -972,6 +972,7 @@ this answer under "Organiser's answers"). Both are copied into
 * **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Added": "`configforge gen build`: sources by rank and a contract to an image, a report or a written format, deterministically (Y-24, D-205)." `docs/Decisions.md`: D-205. `docs/Roadmap.md`: "A configuration compiler" under "From the maintainer, 2026-11-26" stays 🟨 until Y-31.
 
 ---
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I accept your recommendations"): TO DECIDE A is **(1)**: `configforge gen build`, a subcommand of `gen`, no fourth program; `gen --bake` becomes its C target (Y-27). Sources of mixed formats (`base.yaml`, `prod.toml`, `secrets.json`, the environment, the command line) are merged by rank under one contract, with provenance across formats: the Guide and the feature page present it as "mixed-format compilation", and a step of the card checks every claim about CUE, Pkl, Jsonnet, Dhall and dasel against their own documentation before any comparison is written. Extensions follow D-228. The card is rewritten to this before it opens.
 
 ## Y-25 - The open-key checks: what the compiler can prove about the keys left to run time
 
@@ -1027,6 +1028,7 @@ this answer under "Organiser's answers"). Both are copied into
 * **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Added": "`CF_IMAGE_CONFIGURED`; `gen build` leaves defaults out of an image and refuses secrets unless asked (Y-26, D-207)." `docs/Decisions.md`: D-207.
 
 ---
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I accept your recommendations"): TO DECIDE F: defaults and secrets stay out of the image unless asked for, by `--include defaults` and `--include secrets`, both off by default; a secret written into an image puts a warning in the report.
 
 ## Y-27 - The baked configuration: `gen build --target c` and `cf_config_from_baked`
 
@@ -1077,6 +1079,7 @@ this answer under "Organiser's answers"). Both are copied into
 * **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Added": "`gen build --target c` and `cf_baked`: a configuration resolved when the program is built, read with no parser linked (Y-27, D-208)." `docs/Decisions.md`: D-208. `docs/Roadmap.md`: the item "A baked configuration" (found by `grep -n "baked" docs/Roadmap.md`, line 1581 area) 🟩.
 
 ---
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I accept your recommendations") ("why should it read the data again at run time: it makes C code directly"): two C targets. `--target c`, **the default**: plain typed C89 code, a generated header with `struct app_config { ... }` and `extern const struct app_config APP_CONFIG;` and its `.c`; no library linked, no lookup, no parsing; a misspelled key is a compile error. `--target c-baked`: this card as written (static const tables loaded by the baked reader, `--runtime env,cli` overrides, `explain` works). The card is rewritten (or split) to this before it opens.
 
 ## Y-28 - `cf_builder_diagnostics`: every diagnostic with its place, and `gen build --json` and `gen check --all` (TO DECIDE)
 
@@ -1410,3 +1413,32 @@ this answer under "Organiser's answers"). Both are copied into
 * **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI.
 * **stop if**: no ask has come.
 * **docs**: when built: `CHANGELOG.md`, "## 2.3.0 — unreleased", "### Added"; `docs/Decisions.md`: D-219.
+
+## To be written: Y-41-m and Y-42, and D-228 (the maintainer, 2026-11-26)
+
+Approved in a side session ("I approve"); to be written as full cards
+here, read cold, and given index rows. Next free id after them: Y-43.
+
+* **D-228 - Extensions keep the formats standard.** (1) The syntax always
+  stays valid TOML, JSON or YAML: other tools read our files without an
+  error. (2) Each extension is enabled by an option of each source,
+  `cf_file_source_options.extensions` (`include`, `import`, `ref`,
+  `expr`), and `--extensions` in `gen build`. `${key}` stays on by default
+  (as today); `include` and `import` are off by default (a file that makes
+  the library read other files is a choice of security). (3) A double
+  extension, `app.cfx.toml`, turns the extensions on for that file while
+  editors still see `.toml`; no new extensions such as `.tomlx`.
+* **Y-42 - Include and import, in standard syntax** (open, not parked).
+  `"$include": "base.toml"` takes the whole document; `"$import":
+  "shared.yaml#/database"` takes a part, addressed by JSON Pointer
+  (RFC 6901), optionally placed under a key; across formats. Options with
+  defaults (D-220): only the file's directory and below are read by
+  default (no `../`), the depth an option (16 by default), cycles always
+  refused, provenance names the real file. The "what, and from where" is
+  a part that plugs in, so `https://` or a store can be added later.
+* **Y-41-m - Simple expressions** (parked: on request). String
+  concatenation and `+ - * /` on integers and reals, written inside
+  strings so that the files stay valid (`"${= 8000 + 80}"`); total, not
+  Turing-complete: no functions, loops or conditions. More power comes
+  from CUE, Pkl, Jsonnet or Dhall as front ends (Y-31's recipe), never a
+  language of our own.
