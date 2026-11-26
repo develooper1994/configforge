@@ -53,6 +53,25 @@ targets), F-1b (`cf_emit_file`), F-2a (`cf_builder_overrides`), F-3j
    plan/cards-<g> origin/main`, and edits only its one file. Commit and
    push the branch when it reports STATUS: DONE. Done: six branches
    pushed, one card file each.
+
+   Group Y, progress (2026-11-26): topics 1 and 2 (concurrent access;
+   threads and processes) are written, Y-1 to Y-13-m (Y-13-m parked on
+   TO DECIDE 3b), on main and on `plan/cards-y` (worktree
+   `.claude/worktrees/cards-y`). That worker also amended F-1a (version
+   2.2.0; the Windows replace retried for 2 s) and F-2a (re-read and
+   re-apply before the replace, up to 3 times) in docs/plan/F-files.md.
+   Next free: Y-14, D-196. Remaining, one worker each (sonnet, medium;
+   one worker cost ~20% of the 5-hour window), appending to
+   docs/plan/Y-asked.md in this order: compression
+   (docs/research/compression.md, section 6 lines 599-616, section 5
+   lines 483-598), configuration compiler (config-compiler.md, 730-747,
+   616-729), analysis tool (analysis-tool.md, 560-579, 488-559; C-8a and
+   C-8b are already cards in C-change-2.md: no new card). The brief for
+   each: the one used for topics 1-2 (worktree, the common brief lines
+   77-100, the group title and preamble already in the file, one Y card
+   per row of section 6, every TO DECIDE kept, a 1.8.0 version made
+   1.9.0, a "when asked"/"on request" row made a parked `-m` card,
+   report ending "Next free: Y-<n>, D-<n>").
 2. Cold read, per card file, by a worker that did not write it: every
    file:line against main's tree, every step runnable, every "decided"
    complete; it fixes what is wrong in place and lists what it changed.
