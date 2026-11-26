@@ -503,11 +503,36 @@ written as full cards here, read cold, and given index rows after K-8:
   write path in turn; each case is checked for no leak (ASan), no crash,
   and, for a "strong" function, the state unchanged.
 
-* **K-9c - Errors that cannot be ignored** (1.9.0, under D-223): every
-  public function that returns a failure is marked `CF_NODISCARD`, and a
-  gate refuses one that is not.
+K-9c is written as a full card below.
 
 Their decisions take the numbers after D-229 (D-224 to D-229 are F-1b's, F-2a's, F-3j's, Y-3's, the extensions' and C-10a's).
+
+## K-9c - Errors that cannot be ignored: `CF_NODISCARD` on every failure, and its gate
+
+* **id**: K-9c
+* **goal**: every public function whose result is the only way to know it failed is declared `CF_NODISCARD`, a gate refuses a new one that is not, and a C23 consumer build proves an ignored result does not compile with `-Werror`.
+* **why**: D-223 point 1 (below in this file): today about 11 of 156 such declarations carry the mark; a program compiled as C23 or C++17 is told nothing when it drops a failed `cf_builder_build` or `cf_try_int`.
+* **needs**: nothing
+* **size**: large
+* **version**: 1.9.0
+* **status**: open
+* **decided**:
+  * **Which functions.** A `CF_API` declaration in `lib/*/include/configforge/*.h` whose return type is `cf_bool` or `cf_code`, or a pointer from a function whose name contains `_new`, `_create`, `_open`, `_load`, `_build`, `_dup` or `_from`; except `cf_get_*`, `cf_has_*` and `cf_is_*` (queries that answer, with a fallback), and the names in `scripts/check/nodiscard.txt`, one `name|reason` a line. Its first and only line: `cf_error_set|returns CF_FALSE so that a caller may write return cf_error_set(...); dropping it loses nothing` (`lib/base/include/configforge/cf_error.h:103-104`).
+  * **The mark.** `CF_NODISCARD CF_API <type> <name>(...)`, the order the 16 existing marks use (`grep -rn "CF_NODISCARD CF_API" lib/*/include | head -3`). `CF_NODISCARD` is unchanged (`lib/port/include/configforge/cf_port.h:200-212`): empty under C89, so the library itself and every C89 tool build as before. No ABI change (an attribute).
+  * **Callers.** Every caller inside the repository that drops such a result and is compiled as C23 or C++17 (the C++ binding and its tests, `tests/consumer/consumer.cpp`, the new C23 test) is fixed: a real check where a failure matters, `(void)` with a one-line comment where ignoring is meant. Tools and examples compiled as C89 need no change.
+  * **gate.nodiscard**: `scripts/check/nodiscard.py <root>` (Python 3 standard library; a declaration may span lines: join from `CF_API` to the `(`), prints each unmarked declaration as `<header>:<line>: <name>: not CF_NODISCARD` and exits 1 if any; `cmake/gates/GateNodiscard.cmake` as `cmake/gates/GateFetches.cmake`, registered beside `gate.fetches` in `cmake/ConfigForgeGates.cmake`.
+  * **The C23 proof.** In `tests/consumer/CMakeLists.txt`, when `check_c_compiler_flag(-std=c23)` passes: `nodiscard_c23.c` (new) built with `target_compile_options(<target> PRIVATE -std=c23 -Werror)`; it calls ten marked functions and checks each result, so it compiles. A second file `nodiscard_ignored.c` drops `cf_builder_build`'s result; a `try_compile` in a CTest script `consumer.nodiscard` must fail on it (GCC and Clang only; skipped elsewhere, the message says so). Not on MSVC (no C23 `[[nodiscard]]` there).
+  * **Rejected**: GCC's `warn_unused_result` (a `(void)` cast cannot silence it, `cf_port.h:203-204`); marking every non-void function (queries would need casts for no safety).
+* **files**: every header under `lib/*/include/configforge/` that declares one (about 145 marks), `scripts/check/nodiscard.py`, `scripts/check/nodiscard.txt`, `cmake/gates/GateNodiscard.cmake`, `cmake/ConfigForgeGates.cmake`, `tests/consumer/CMakeLists.txt`, `tests/consumer/nodiscard_c23.c`, `tests/consumer/nodiscard_ignored.c`, the C++ binding's sources and tests that drop a result, then `CHANGELOG.md`, `docs/API.md` and `docs/Codemap.md` (generated).
+* **steps**:
+  1. `git switch -c work/K-9c main`. Write `nodiscard.py` and its gate; see it fail: `ctest --preset default -R gate.nodiscard --output-on-failure | tail -n 5` lists about 145 names.
+  2. Mark the declarations, in one commit. `ctest --preset default -R gate.nodiscard` exit 0.
+  3. The two consumer files and `consumer.nodiscard`; see `nodiscard_ignored.c` refused and `nodiscard_c23.c` built (in WSL, GCC 15).
+  4. Build the C++ binding and its tests as C++17 with `-Werror` (the `default` preset in WSL); fix each dropped result as decided.
+  5. Format; codemap and apiref last; ACCEPT; commit `K-9c: errors that cannot be ignored, CF_NODISCARD on every failure and gate.nodiscard`.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI; `ctest --preset default -R "gate.nodiscard|consumer"` exit 0; `gate.abi` unchanged.
+* **stop if**: a marked function is one a caller is documented to call for its effect alone (report the name for the exceptions file instead of casting in many places); `gate.abi` changes.
+* **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Changed": "Every public function whose result reports a failure is `CF_NODISCARD`: under C23 and C++17 an ignored failure is a warning (K-9c, D-223)". D-223 copied into `docs/Decisions.md` by this card (the first that lands under it), with the next free D-number's place kept as D-223.
 
 ## D-223 - One error model (the maintainer, 2026-11-26, relayed from a side session: "I like the error model"; "the core uses the C89 standard")
 

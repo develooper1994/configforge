@@ -15,11 +15,11 @@ Main is at 1.9.0, unreleased (11 CHANGELOG entries already).
 | 0.2 | L-21 `scripts/check/ready.py`: a card opens only when it has no TO DECIDE, no "or" left in "decided", every option with its default, every `file:line` finding its symbol, every need in the index | new + HANDOFF's citation gate, merged | 1.9.0 |
 | 0.2b | L-22 CI in two tiers: a fast core on every push, the whole suite once a card | new (the maintainer, 2026-11-27) | 1.9.0 |
 | 0.3 | Options with defaults (D-220): `cf_*_options` + `_init` as one convention, the `none` platform, `CF_E_CAPABILITY`, the table of features by platform | new + L-18a (Cortex-M `minimal`, the `none` platform's proof) | 1.9.0 |
-| 0.4 | One error model (D-223): `CF_NODISCARD` everywhere and its gate | K-9c | 2.0.0 |
-| 0.5 | `cf_error`: place (file, line, column, byte offset, key), reason, chain of causes, `cf_error_handler`, stop-at-first or collect-all | K-6a + K-6b + M-11b (`cf_error` owns its text); the collect-all option `gen build --json` needs | 2.0.0 |
-| 0.6 | The guarantees written and held; allocation faults injected | K-9a, K-9b | 2.0.0 |
 | 0.7 | The file layer (D-224): `cf_file_options`, `cf_file_writer`, `cf_file_replace`, Windows retry as an option | F-1a | 1.9.0 |
 | 0.8 | Around the file layer: replace-if-unchanged, close-on-exec, stable read, Windows share-delete, the kernel lock (D-227) | Y-2, Y-8, Y-5, Y-6, Y-3 | 1.9.0 |
+| 0.4 | One error model (D-223): `CF_NODISCARD` everywhere and its gate | K-9c | 1.9.0 |
+| 0.5 | `cf_error`: place (file, line, column, byte offset, key), reason, chain of causes, `cf_error_handler`, stop-at-first or collect-all | K-6a + K-6b + M-11b (`cf_error` owns its text); the collect-all option `gen build --json` needs | 2.0.0 |
+| 0.6 | The guarantees written and held; allocation faults injected | K-9a, K-9b | 2.0.0 |
 
 ## The modules, in order (each: module, tool, bindings, documents)
 
