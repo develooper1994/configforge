@@ -254,8 +254,8 @@ of a card's CI.
 <!-- index begin (scripts/work/index.py) -->
 | Order | Card | Version | Size | Needs | Status |
 | ----: | ---- | ------- | ----- | ----- | ------ |
-| 1 | L-20 The index generated from the card files, and `gate.index` | 1.9.0 | medium | nothing | open |
-| 2 | L-21 A card opens only when a script says it is ready | 1.9.0 | medium | L-20 | waits: L-20 |
+| 1 | L-20 The index generated from the card files, and `gate.index` | 1.9.0 | medium | nothing | done (84d48d9) |
+| 2 | L-21 A card opens only when a script says it is ready | 1.9.0 | medium | L-20 | open |
 | 3 | L-22 CI in two tiers: a fast core on every push, the whole suite once a card | 1.9.0 | medium | nothing | open |
 | 4 | L-18a A Cortex-M build of `minimal` in CI, with its stack gate | 1.9.0 | medium | nothing | open |
 | 5 | K-6a A refusal's byte offset (TO DECIDE) | 2.0.0 | medium | nothing | parked |

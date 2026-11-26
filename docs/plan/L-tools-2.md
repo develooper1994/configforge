@@ -467,7 +467,7 @@ section at its end).
 * **needs**: nothing
 * **size**: medium
 * **version**: 1.9.0
-* **status**: open
+* **status**: done (84d48d9)
 * **decided**:
   * **Two new card fields**, written right after `* **size**:` in every card: `* **version**: X.Y.Z` (or `not now`) and `* **status**:` one of `open`, `parked`, `parked: <why>`, `done (<short hash>)`. An optional last field `* **cost**: <model>, <effort>, <turns> turns, <percent of the 5-hour window>`, written by the organiser when a card lands. docs/Plan.md, "A card": three rows added to the field table (version, status, cost) with these words. "waits" is never written: it is computed.
   * **Seeding, once** (a throwaway script in the scratch directory, not committed): for every card heading `## <id> - <title>` in `docs/plan/*.md` (ids starting `D-` are decisions, not cards): version = the version in effect at the id's first mention in `docs/plan/Layout.md` - in the stage 0 table, the row's last cell; elsewhere the last `{X.Y.Z}` tag before it in the same `## ` section; an id first mentioned in "Not now" keeps its current index row's Version. Status = `parked: not now` for every id named in Layout.md's "Not now" section; else `parked` when the current index row says `parked`; else `open`. Check after seeding: every card has both fields exactly once.
