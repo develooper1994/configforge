@@ -207,6 +207,15 @@ Things only the maintainer can do or decide. Each unblocks the cards named.
   existing caller is answered by the card's own recommendation, without
   asking; whoever carries the card writes it under "Organiser's
   answers". Any other question still waits for the maintainer.
+* **Standing approval, 2026-11-27** (the maintainer: "always make the
+  best decision; I always approve"; "you are free to tag and publish a
+  release; if you cannot, do not stop working"): a card's design question
+  is answered by the organiser's best recommendation, written under the
+  card's "Organiser's answers" with "(the maintainer's standing approval,
+  2026-11-27)"; nothing waits for an answer. A milestone whose cards are
+  done with CI green is tagged and released by the organiser. Still the
+  maintainer's: the repository settings, a password or token, a decision
+  of docs/plan/A-architecture.md reopened, a default of numbers changed.
 * **2026-11-27** (the maintainer): the default behaviour of numbers
   does not change (K-10a, K-10b add options only); CI use is kept small
   (the repository earns nothing): L-22 runs a fast core on every push
