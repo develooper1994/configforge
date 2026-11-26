@@ -183,6 +183,7 @@ Things only the maintainer can do or decide. Each unblocks the cards named.
 * 1.4.1 holds a changed default (response files are opt-in, D-79): it
   is released as 1.5.0 or as 1.4.1 - not decided.
 
+* **Answered, 2026-11-26** (relayed from the maintainer's side session): every TO DECIDE discussed that day is answered, each under its card's "Organiser's answers" (D-220 to D-229; some cards are to be rewritten to their answer before they open, as their row in "Waits on the maintainer" says). Cards still to be written from those answers: K-9a, K-9b, K-9c (`docs/plan/K-correctness.md`), Y-41-m, Y-42 (`docs/plan/Y-asked.md`), C-9-m, C-10c-m, C-10d-m.
 * **Asked, 2026-11-26**: every card in "Waits on the maintainer" with
   "its TO DECIDE" waits for an answer written into the card (each
   TO DECIDE carries its options and a recommendation); the M cards wait
@@ -373,7 +374,7 @@ of a card's CI.
 | 141 | Y-23-m zstd dictionaries on a source | 1.10.0 | medium | Y-18, Y-20 | parked |
 | 142 | Y-24 `configforge gen build`: sources by rank, a contract, a target, deterministic output (TO D | 1.9.0 | medium | Y-34 | parked |
 | 143 | Y-25 The open-key checks: what the compiler can prove about the keys left to run time | 1.9.0 | small | Y-24 | waits: Y-24 |
-| 144 | Y-26 `CF_IMAGE_CONFIGURED`: an image that holds only what a source configured, and defaults and | 1.9.0 | small | Y-24 | parked |
+| 144 | Y-26 `CF_IMAGE_CONFIGURED`: an image that holds only what a source configured, and defaults and | 1.9.0 | small | Y-24 | waits: Y-24 |
 | 145 | Y-27 The baked configuration: `gen build --target c` and `cf_config_from_baked` | 1.9.0 | large | Y-24, Y-26 | parked |
 | 146 | Y-28 `cf_builder_diagnostics`: every diagnostic with its place, and `gen build --json` and `gen | 1.10.0 | medium | Y-24 | parked |
 | 147 | Y-29 The manifest: inputs and their digests, the contract's digest, version, profile, open keys | 1.10.0 | small | Y-24, Y-25, M-34 | parked |
@@ -381,10 +382,10 @@ of a card's CI.
 | 149 | Y-31 Guide recipes: CUE, Pkl, Jsonnet, Dhall, Nickel and KCL as front ends | 1.10.0 | small | Y-24 | waits: Y-24 |
 | 150 | Y-32-m A build file read with the tool's own contract | 1.10.0 | medium | Y-24, Y-29 | parked |
 | 151 | Y-33 The manifest inside the image (2.0.0, with the image header's layout) | 2.0.0 | small | Y-29 | waits: Y-29 |
-| 152 | Y-34 `gen check --report`: a predicted, value-blind report from files and a contract (TO DECIDE | 1.10.0 | medium | nothing | parked |
-| 153 | Y-35 Doctor on a predicted report: the rules a running program is needed for are off and named; | 1.10.0 | small | Y-34 | waits: Y-34 |
+| 152 | Y-34 `gen check --report`: a predicted, value-blind report from files and a contract (TO DECIDE | 1.10.0 | medium | nothing | open |
+| 153 | Y-35 Doctor on a predicted report: the rules a running program is needed for are off and named; | 1.10.0 | small | Y-34 | open |
 | 154 | Y-36 Recipes: the contract's schema in yaml-language-server and Taplo, conftest over a report w | 1.10.0 | small | nothing | parked |
-| 155 | Y-37 A secret written in a checked file: CFD022 (TO DECIDE) | 1.10.0 | small | Y-35, C-8b | parked |
+| 155 | Y-37 A secret written in a checked file: CFD022 (TO DECIDE) | 1.10.0 | small | Y-35, C-8b | open |
 | 156 | Y-38 Defined but never read, over a set of reports: CFD023 (TO DECIDE) | 1.10.0 | small | C-8a, C-8b | open |
 | 157 | Y-39-m Relations in the contract: `pattern`, `if`/`then`, `dependentRequired` (TO DECIDE 2) | 2.3.0 | large | Y-36 | parked |
 | 158 | Y-40-m The language server | 2.3.0 | large | Y-34, Y-36 | parked |
@@ -457,7 +458,7 @@ one that cannot be done is dropped and recorded under "Done" as dropped.
 | G-9-m | 2.3.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | P-15-m | 1.9.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | Y-3 | 2.2.0 | answered (D-227, a `cf_locker` that plugs in, `cf_lock_none` by default); the card rewritten to it | parked |
-| Y-4 | 2.2.0 | answered (D-227, a `cf_locker` that plugs in, `cf_lock_none` by default); the card rewritten to it | parked |
+| Y-4 | 2.2.0 | answered (D-227); the card rewritten to it | parked |
 | Y-5 | 2.2.0 | its TO DECIDE | parked |
 | Y-11 | 2.4.0 | answered ((c), `cf_live_reader`); opens only when Y-10's page shows a knee with the cores, or a binding asks | parked |
 | Y-12 | 2.2.0 | its TO DECIDE | parked |
@@ -470,15 +471,12 @@ one that cannot be done is dropped and recorded under "Done" as dropped.
 | Y-22-m | 1.10.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | Y-23-m | 1.10.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | Y-24 | 1.9.0 | answered ((1), `gen build`); the card rewritten to it | parked |
-| Y-26 | 1.9.0 | answered (`--include defaults`, `--include secrets`, off by default) | parked |
 | Y-27 | 1.9.0 | answered (two C targets, plain `--target c` the default); the card rewritten to it | parked |
 | Y-28 | 1.10.0 | answered (D-223, one error model, docs/plan/K-correctness.md); the card rewritten to it | parked |
 | Y-29 | 1.10.0 | its TO DECIDE | parked |
 | Y-30-m | 1.10.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | Y-32-m | 1.10.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
-| Y-34 | 1.10.0 | its TO DECIDE | parked |
 | Y-36 | 1.10.0 | its TO DECIDE | parked |
-| Y-37 | 1.10.0 | its TO DECIDE | parked |
 | Y-39-m | 2.3.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | Y-40-m | 2.3.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | M-1 | 2.3.0 | the maintainer's approval; its TO DECIDE | parked |

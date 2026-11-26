@@ -1268,6 +1268,7 @@ this answer under "Organiser's answers"). Both are copied into
 * **docs**: `CHANGELOG.md`, "## 1.10.0 — unreleased", "### Added": "`configforge gen check --report`: a predicted, value-blind report from files and a contract, for `doctor lint` (Y-34, D-214)." `docs/Decisions.md`: D-214. `docs/Roadmap.md`: the item "An analysis tool" under "From the maintainer, 2026-11-26" stays 🟨 until Y-37 and Y-40-m.
 
 ---
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I approve your recommendations"): TO DECIDE 1 is **(a)**: `gen check --report`, then `doctor lint`; no new program.
 
 ## Y-35 - Doctor on a predicted report: the rules a running program is needed for are off and named; SARIF columns and fingerprints
 
@@ -1350,6 +1351,7 @@ this answer under "Organiser's answers"). Both are copied into
 * **docs**: `CHANGELOG.md`, "## 1.10.0 — unreleased", "### Added": "Doctor's CFD022: a secret written in a file given to `gen check` (Y-37, D-216)." `docs/Decisions.md`: D-216. `docs/Roadmap.md`: "An analysis tool" 🟩 when Y-38 is done or closed.
 
 ---
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I approve your recommendations"): TO DECIDE 3 is **(a)**: the rule CFD022 (a sensitive or secret-named key with a value in a checked file is an error; the value is never printed); the Guide still names gitleaks for secrets outside the contract.
 
 ## Y-38 - Defined but never read, over a set of reports: CFD023 (TO DECIDE)
 
