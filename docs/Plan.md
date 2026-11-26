@@ -186,15 +186,27 @@ Things only the maintainer can do or decide. Each unblocks the cards named.
 In the order to be done. A card is `open`, `done` (with its commit), or
 `waits` (with what it waits for). The finished cards (H, W3, S, T,
 W5, L, A, I, N and P, but for the open cards) are recorded in "Done, their
-cards removed", below; the cards are in `docs/plan/*.md`. The open cards are
-L-3b (the tools by group: `docs/plan/L-tools.md`).
+cards removed", below; the cards are in `docs/plan/*.md`. No card is open
+(2026-11-26, L-3b the last to land).
 P-3 (word-at-a-time scanning before SIMD: `docs/plan/P-word-at-a-time.md`)
 waits for 2.4.0: D-101 gives the choice of backend to the program then, and
 D-102 moves the scans into `lib/text`.
 
+Where things stand (2026-11-26). The next card is written from
+docs/Roadmap.md, item 5 (mutation testing) first; it is read cold against
+the tree before it opens. Left to the maintainer, outside every card: the
+repository settings (a ruleset on `main` with required reviews and checks,
+signed commits and tags, two-factor authentication; the Roadmap's
+"Repository settings"), which Scorecard's BranchProtection, CodeReview,
+CIIBestPractices and Maintained findings wait on; publishing to PyPI and
+crates.io (their tokens, or trusted publishing); confirming the struct
+hack's five accepted EVA alarms in `.eva-accepted.txt` (`cf_block`'s
+`data[1]`); whether to keep Dependabot's pull requests, which queue ahead
+of a card's CI.
+
 | Order | Card | Size | Needs | Status |
 | ----: | ---- | ----- | ----- | ------ |
-| 38g | L-3b Frama-C EVA on port, numeric and base | large | L-3; 1.9.0 under way | open |
+| 38g | L-3b Frama-C EVA on port, numeric and base | large | L-3; 1.9.0 under way | done (4c3ce8c) |
 | 58 | P-3 The readers' scans on lanes' four kept operations, kept only where they win | large | P-2 | waits: 2.4.0 (D-101, D-102: the program chooses the backend; the scans move into lib/text) |
 | 79 | N-19 `gate.misra`: cppcheck's MISRA addon on the `misra` profile, with a deviation record | medium | nothing | done (24b1c7d) |
 
@@ -246,7 +258,7 @@ did is kept here, and its text in git (`git log -- docs/plan/<file>`).
   of formats tested against what each can hold (W5-V2, 70bd398); and
   generators outside the tree, `configforge-gen-<lang>` on the PATH
   (W5-G4, adc2a63).
-* **L-tools.md** (1.7.0 to 1.9.0; L-1 to L-10; L-3b is open). The other
+* **L-tools.md** (1.7.0 to 1.9.0; L-1 to L-10, L-3b). The other
   languages' linters as gates: shellcheck, ruff, actionlint, codespell
   (L-1, 7bec7d8); Valgrind, AFL++, gitleaks, osv-scanner and Scorecard
   in CI (L-2, 6442c8f); include-what-you-use and a link check (L-4,
@@ -258,7 +270,9 @@ did is kept here, and its text in git (`git log -- docs/plan/<file>`).
   findings the project can fix itself (L-9, 3f251f8); and supply-chain
   hardening: every fetch held by `gate.fetches`, read-only workflow
   tokens, vcpkg pinned, dependency review, the SBOM a release file
-  (L-10, c4a13af).
+  (L-10, c4a13af); and Frama-C EVA over `port`, the integer half of
+  `numeric` and `base`, every alarm accepted with its reason in
+  `.eva-accepted.txt` (L-3b, 4c3ce8c).
 * **A-architecture.md** (1.8.0; A-1 to A-13; D-100 to D-108, D-112; the
   design stays in the file). One directory a component (A-1, 824181f) and
   each a project built alone (A-1b, 031d54d); the `lanes` vector library
