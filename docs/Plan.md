@@ -459,7 +459,7 @@ one that cannot be done is dropped and recorded under "Done" as dropped.
 | Y-3 | 2.2.0 | answered (D-227, a `cf_locker` that plugs in, `cf_lock_none` by default); the card rewritten to it | parked |
 | Y-4 | 2.2.0 | answered (D-227, a `cf_locker` that plugs in, `cf_lock_none` by default); the card rewritten to it | parked |
 | Y-5 | 2.2.0 | its TO DECIDE | parked |
-| Y-11 | 2.4.0 | its TO DECIDE | parked |
+| Y-11 | 2.4.0 | answered ((c), `cf_live_reader`); opens only when Y-10's page shows a knee with the cores, or a binding asks | parked |
 | Y-12 | 2.2.0 | its TO DECIDE | parked |
 | Y-13-m | 2.4.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | Y-15 | 1.10.0 | its rewrite to D-221 (Y-asked.md, "Approved by the maintainer"), then any TO DECIDE left | parked |

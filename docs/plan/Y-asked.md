@@ -555,6 +555,7 @@ this answer under "Organiser's answers"). Both are copied into
 * **docs**: `CHANGELOG.md`, "## 2.4.0 — unreleased", "### Added": "`cf_live_reader`: a worker's handle that caches the live snapshot and costs one shared read when nothing was swapped; C++ `LiveReader`, Rust `LocalReader` (Y-11, D-193)". `docs/Decisions.md`: D-193. Roadmap: marked by Y-12.
 
 ---
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I approve"): TO DECIDE 1c is **(c)**: `cf_live_reader`, its borrowed pointer valid until the same thread's next call, a part beside `cf_live_get` (which stays the safe default, unchanged). It is gated by measurement: this card opens only when Y-10's page shows a knee with the number of cores, or a binding asks for it; until then (b), Y-10's generation read without the lock. Held to by its ThreadSanitizer test, and by lifetimes in the C++ and Rust wrappers.
 
 ## Y-12 - `swapped` in `cf_live_options`: workers told of a swap
 
