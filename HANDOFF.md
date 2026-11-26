@@ -46,8 +46,8 @@ targets), F-1b (`cf_emit_file`), F-2a (`cf_builder_overrides`), F-3j
    rows to docs/Plan.md (Order | Card | Version | Size | Needs |
    Status), copy every card file onto main, delete the plan/cards-*
    branches and worktrees, and delete this file in that commit. A card
-   whose needs include an unanswered TO DECIDE gets status "waits: the
-   maintainer (TO DECIDE)". Done: one docs-only commit on main.
+   whose needs include an unanswered TO DECIDE is parked too (status
+   "parked", waits on: the TO DECIDE), and the loop goes past it. Done: one docs-only commit on main.
 4. Carry the cards by the loop, the first open card first (docs/Plan.md,
    "The loop").
 
