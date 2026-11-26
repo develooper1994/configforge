@@ -161,3 +161,28 @@ FILE: docs/plan/M-maintainer.md. Group title: "M - the items that wait for the m
 7. Distribution, as infrastructure: lines 895-905 (version 2.3.0).
 8. One digest a purpose, and a door for the program's own: lines 916-931 (version 1.10.0).
 `CF_WITH_SIMD` with SSE2 and NEON is written in group P by another worker: not here.
+
+## The research brief (group Y)
+
+Each of group Y's five topics gets this brief, then its topic: the
+maintainer's words, what to cover, and its file
+(docs/research/concurrent-access.md, compression.md, analysis-tool.md,
+config-compiler.md, threads-and-processes.md). Model: the largest, at
+high effort.
+
+You do one research unit for ConfigForge, a configuration library in C (C89 core, layered components under lib/, readers and writers for JSON, YAML, TOML, INI, XML, CBOR and more, a contract of typed keys, sources ranked by precedence, Doctor reports, bindings for C++, Rust, Python). Repository: C:\Users\selcu\Projects\github\ProjectIdeas\ideas\library\configforge (branch main). You write ONE new file, named below, and change nothing else. Do not commit.
+
+Read first, only these ranges: CLAUDE.md "Habits" (Tokens); docs/plan/A-architecture.md, the headings D-100 to D-108 (find with grep -n '^### D-10'; read the ones the topic touches, ~120 lines at a time); docs/Roadmap.md, the section "From the maintainer, 2026-11-26" (grep for it) for your topic's item. Find what the library already does for your topic with docs/Codemap.md, grep and git log, and read the code ranges that matter.
+
+Then research the world, in depth, with web search: what other libraries, tools and runtimes do for this topic (name each, link its documentation, say what it does, its options and its failure modes), and any standard or paper that settles a point. Prefer primary sources (the project's own docs and source). At least eight sources.
+
+Then think it through and write the document, in English, in the project's plain style (short sentences, no marketing), with these sections:
+1. The question, as the maintainer asked it (their words, translated) and as it stands in this library today (what exists, with file:line).
+2. What the world does: one subsection per library or tool, with links.
+3. What breaks: the failure modes and hard cases the sources show (races, partial writes, bombs, portability, ...), each with its source.
+4. What fits this library: options measured against D-100 to D-108 and the C89 core, each with its cost, what it needs (a dependency, a build option, a new public interface) and what it rules out.
+5. A recommendation: what to build first, what after, and what not to build, with reasons; the public interface sketched (names, signatures) where one is needed; what is the maintainer's decision (a new dependency, a new public interface) marked TO DECIDE with options and the recommendation.
+6. The cards it implies: a short list (title, size, version from docs/Maintaining.md "Versions" lines 99-114), not the cards themselves.
+7. Sources: numbered list of links.
+
+Length: as long as the topic needs, typically 250-500 lines. End your turn with a report under 200 words: the file, the recommendation in three lines, the TO DECIDE items.
