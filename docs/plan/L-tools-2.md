@@ -500,7 +500,7 @@ section at its end).
 * **needs**: L-20
 * **size**: medium
 * **version**: 1.9.0
-* **status**: open
+* **status**: done (6521a97)
 * **decided**:
   * **The checks**; each failure is one line `<id>: <check>: <what>`, all are printed, exit 1 if any:
     1. `fields`: id, goal, why, needs, size, version, status, decided, files, steps, accept, stop if and docs, each present once (Organiser's answers, notes and cost optional).
