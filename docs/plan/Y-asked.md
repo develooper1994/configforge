@@ -51,6 +51,54 @@ server; written when they open). The analysis tool builds on C-8a and C-8b
 
 ---
 
+## Approved by the maintainer, 2026-11-26 (relayed from a side session: "Onaylıyorum")
+
+These two decisions replace Y-15's TO DECIDE 1, 4 and 5. **Y-15 to Y-20,
+and Y-21-m to Y-23-m where they touch it, do not open until they are
+rewritten to follow D-221** (the next organiser's first step: Y-15 is
+split into Y-15a and Y-15b as point 7 says; each rewritten card carries
+this answer under "Organiser's answers"). Both are copied into
+`docs/Decisions.md` by the first card that lands under them.
+
+* **D-220 - Parts that compose, options with defaults.** Every later
+  design is made of atomic parts, each simple and usable alone, that
+  compose into something rich. A limit is an option with a default
+  value, never a fixed number ("in a system's design I always prefer an
+  option and a default value to a hard limit", the maintainer). A layer
+  is made only when a second real user of it exists: no empty layers.
+* **D-221 - Compression, its own component.**
+  1. `lib/compress` (D-100): bytes in, bytes out; it knows nothing of
+     serialization, codecs or configuration, and is usable alone.
+  2. Two interfaces, `cf_packer` and `cf_unpacker` (not one struct with
+     a NULL half): a method that only decompresses gives a `cf_unpacker`
+     only. A method is a value filling the interface (`cf_gzip_packer`,
+     `cf_zstd_unpacker`, or the program's own); adding one fills a struct
+     and touches no other file. One-call entry points:
+     `cf_pack(const cf_packer*, const cf_pack_options*, in, out)` and
+     `cf_unpack(const cf_unpacker*, const cf_unpack_options*, in, out)`.
+  3. Streaming interfaces (open, read or write, finish, close), so that
+     they chain: file, unpacker, codec reader, without the whole document
+     in memory; `cf_pack` and `cf_unpack` are the one-call shortcuts.
+     `cf_unpack_chain(...)` composes unpackers and is itself a
+     `cf_unpacker`.
+  4. No fixed limits: `cf_unpack_options` and `cf_pack_options`
+     (`max_ratio`, `max_size`, `min_floor`, `level`, `window`, ...).
+     NULL options take the defaults; 0 means unlimited, chosen
+     explicitly; the bomb guard is on by default. The defaults are the
+     method's own: each `cf_packer` and `cf_unpacker` carries its default
+     options (a ZPAQ-like method may default to far more memory and window
+     than gzip); the caller's options override them field by field.
+  5. Configuration binds through one call, e.g.
+     `cf_builder_unpacker(b, &cf_zstd_unpacker)`; `lib/compress` knows
+     nothing of it. Detection by magic or extension (`cf_unpack_detect`
+     over an optional registry) is optional; a program may name the
+     method.
+  6. The backends (zlib, zstd) are build options, OFF by default; the
+     core stays without dependencies.
+  7. Y-15 splits in two: Y-15a, the two interfaces, the options with the
+     method's defaults, the one-call shortcuts and a test backend; Y-15b,
+     streaming and the chain. Both stay 1.10.0.
+
 ## Y-1 - The Guide's "At the same time": what is guarded and what is not
 
 * **id**: Y-1

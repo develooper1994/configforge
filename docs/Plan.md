@@ -469,10 +469,10 @@ one that cannot be done is dropped and recorded under "Done" as dropped.
 | Y-11 | 2.4.0 | its TO DECIDE | parked |
 | Y-12 | 2.2.0 | its TO DECIDE | parked |
 | Y-13-m | 2.4.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
-| Y-15 | 1.10.0 | its TO DECIDE | parked |
-| Y-16 | 1.10.0 | its TO DECIDE | parked |
-| Y-17 | 1.10.0 | its TO DECIDE | parked |
-| Y-18 | 1.10.0 | its TO DECIDE | parked |
+| Y-15 | 1.10.0 | its rewrite to D-221 (Y-asked.md, "Approved by the maintainer"), then any TO DECIDE left | parked |
+| Y-16 | 1.10.0 | its rewrite to D-221 (Y-asked.md, "Approved by the maintainer"), then any TO DECIDE left | parked |
+| Y-17 | 1.10.0 | its rewrite to D-221 (Y-asked.md, "Approved by the maintainer"), then any TO DECIDE left | parked |
+| Y-18 | 1.10.0 | its rewrite to D-221 (Y-asked.md, "Approved by the maintainer"), then any TO DECIDE left | parked |
 | Y-21-m | 2.2.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | Y-22-m | 1.10.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | Y-23-m | 1.10.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
