@@ -32,7 +32,8 @@ targets), F-1b (`cf_emit_file`), F-2a (`cf_builder_overrides`), F-3j
 ## Steps
 
 1. Write the remaining groups' cards, one worker at a time while the
-   Claude window is past half: (K, G, P, L-12 on and M done) X. Then group Y, the maintainer's five ideas of 2026-11-26
+   Claude window is past half: (K, G, P, L-12 on, M and X done; X-18 to X-21 say 1.8.0, which is
+   released: their version is 1.9.0). Then group Y, the maintainer's five ideas of 2026-11-26
    (docs/Roadmap.md, "From the maintainer, 2026-11-26": concurrent reads
    and writes by choice, compression, an analysis tool, a configuration
    compiler, threads and processes made easier): FILE
