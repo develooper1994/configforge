@@ -152,7 +152,11 @@ def check_defaults(fields, first):
         text = " ".join(line for _, line in group)
         if "default" in text.lower():
             continue
-        for name in dict.fromkeys(OPTIONS.findall(text)):
+        # Only a bullet that defines the struct must give its defaults; a
+        # bullet that merely names it is not checked (the organiser,
+        # 2026-11-27: the first run flagged every mention).
+        defined = re.findall(r"typedef struct (cf_\w+_options)\b", text)
+        for name in dict.fromkeys(defined):
             failures.append(
                 (
                     "defaults",

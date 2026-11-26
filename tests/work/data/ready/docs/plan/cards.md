@@ -113,7 +113,7 @@
 * **version**: 1.9.0
 * **status**: open
 * **decided**:
-  * `cf_two_options` is a struct.
+  * `typedef struct cf_two_options { int n; } cf_two_options;` is a struct; `cf_three_options` is only named.
 * **files**: `src/code.c`
 * **steps**: 1. Do it.
 * **accept**: ACCEPT-LINUX.
