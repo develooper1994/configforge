@@ -32,7 +32,7 @@ targets), F-1b (`cf_emit_file`), F-2a (`cf_builder_overrides`), F-3j
 ## Steps
 
 1. Write the remaining groups' cards, one worker at a time while the
-   Claude window is past half: (K, G and P done) X, L (L-12 on), G, P, M. Each worker
+   Claude window is past half: (K, G, P and L-12 on done) X, M. Each worker
    gets "the common brief" below followed by its group's part, works in
    a worktree `git worktree add .claude/worktrees/cards-<g> -b
    plan/cards-<g> origin/main`, and edits only its one file. Commit and

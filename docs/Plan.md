@@ -196,10 +196,10 @@ D-102 moves the scans into `lib/text`.
 
 **Drafts, not yet read cold (2026-11-26)**: `docs/plan/C-change.md`,
 `C-change-2.md`, `F-files.md`, `K-correctness.md`, `G-guides.md`,
-`P-measured.md` and L-11 in `L-tools.md`. They have no index rows yet,
+`P-measured.md`, `L-tools-2.md` and L-11 in `L-tools.md`. They have no index rows yet,
 so the loop takes none of them; each file gets its rows when it has been
-read cold against the tree (HANDOFF.md, steps 2 and 3). Groups X, L-12
-on and M are still to be written.
+read cold against the tree (HANDOFF.md, steps 2 and 3). Groups X and M are
+still to be written.
 
 Where things stand (2026-11-26). The next card is written from
 docs/Roadmap.md, item 5 (mutation testing) first; it is read cold against
