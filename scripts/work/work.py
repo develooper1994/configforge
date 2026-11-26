@@ -643,16 +643,18 @@ def plan_index(path, cid, h):
     with open(path, encoding="utf-8") as f:
         s = f.read().split("\n")
     for i, line in enumerate(s):
+        # | Order | Card | Version | Size | Needs | Status |: the status is
+        # the last cell, whatever columns come before it.
         c = [x.strip() for x in line.split("|")]
         if len(c) < 7 or not c[2]:
             continue
         if c[2].split(" ")[0] == cid:
-            c[5] = f"done ({h})"
-        elif c[5] == "waits: " + cid:
-            c[5] = "open"
+            c[-2] = f"done ({h})"
+        elif c[-2] == "waits: " + cid:
+            c[-2] = "open"
         else:
             continue
-        s[i] = "| " + " | ".join(c[1:6]) + " |"
+        s[i] = "| " + " | ".join(c[1:-1]) + " |"
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(s))
 

@@ -46,10 +46,10 @@ s=open(p,encoding='utf-8').read().split('\n')
 for i,l in enumerate(s):
     c=[x.strip() for x in l.split('|')]
     if len(c)<7 or not c[2]: continue
-    if c[2].split(' ')[0]==cid: c[5]='done (%s)'%h
-    elif c[5]=='waits: '+cid: c[5]='open'
+    if c[2].split(' ')[0]==cid: c[-2]='done (%s)'%h
+    elif c[-2]=='waits: '+cid: c[-2]='open'
     else: continue
-    s[i]='| '+' | '.join(c[1:6])+' |'
+    s[i]='| '+' | '.join(c[1:-1])+' |'
 open(p,'w',encoding='utf-8',newline='\n').write('\n'.join(s))
 PY
 git add docs/Plan.md CLAUDE.md
