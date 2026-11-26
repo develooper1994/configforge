@@ -709,7 +709,43 @@ next card opens. The first such reading, on 2026-11-19, found 39
 problems in six cards; the tree's layout changing under the cards is
 the surest way to make more.
 
-**Read cold once, just before the group opens** (the maintainer,
+**The plan laid out again (the maintainer, 2026-11-26, in this session).**
+The index above is ordered by group, not by version: the loop would carry
+2.2.0 cards (F) before 1.9.0 ones (K, L), 1.9.0 holds 73 cards, every
+2.0.0 card waits on the maintainer, and some needs point forward (F-2a
+needs Y-2). So, before any new card is written, the plan is laid out
+again, and the loop takes no card until it is:
+
+1. **By module and stage, not by group letter.** Stage 0 first, the
+   foundations every module builds on: one error model (D-223), options
+   with defaults (D-220), the file layer (D-224). Then each `lib/`
+   component climbs the same steps: the module (its C interface and
+   tests, for the programmer), then the tool (`configforge`'s command on
+   it), then the bindings, then the documents.
+2. **Interim releases.** When a module finishes its first step, an interim
+   release is proposed to the maintainer (tags stay the maintainer's).
+3. **No question left open.** A card opens only when a cheap check
+   (a script, not a model) passes: no TO DECIDE, no unsettled "or" in
+   "decided", every option named with its default, every `file:line`
+   finding its symbol, every need in the index. The index is generated
+   from the card files by a script in the repository and kept true by a
+   gate. A card carries its decision in its own text: no "to be
+   rewritten" state.
+4. **A "not now" list.** What is deferred is written once, so that no
+   session discusses it again.
+5. **The budget written down.** A card's measured cost (model, effort,
+   share of the window) is kept, and the versions are set by it.
+6. **Cold reads only when needed** (the maintainer: "useful, but only
+   when needed; scanning the whole plan wastes tokens"): when the check
+   of point 3 fails, or the code a card builds on changed in design.
+   Never a whole file, never in advance.
+
+The first step is a one-page outline of this layout (stage 0, the order of
+the modules, each interim release's scope, the "not now" list) for the
+maintainer's approval; the 193 cards are then placed into it, merged
+where they overlap.
+
+**Read cold once, just before the group opens** (superseded by point 6 above: only when needed) (the maintainer,
 2026-11-26, relayed from a side session: "it does no real work meanwhile; the
 order of work must be clear": no more whole-file readings in
 advance; the work's order is the index). A card file is read cold once,

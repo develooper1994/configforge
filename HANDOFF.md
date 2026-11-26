@@ -13,6 +13,10 @@ Codex has no allowance until 2026-11-29 09:47; Claude carries on.
 
 ## Steps
 
+00. FIRST: docs/Plan.md "The plan laid out again" (the maintainer,
+   2026-11-26). Write the one-page outline it asks for and give it to the
+   maintainer; carry no card and write no new card until it is approved.
+   The steps below are then placed into that layout.
 0. The maintainer approved D-220 and D-221 (docs/plan/Y-asked.md,
    "Approved by the maintainer, 2026-11-26"; ee46692). Have one worker
    (sonnet, high effort; it did not write the cards) rewrite Y-15 to
