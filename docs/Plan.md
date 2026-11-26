@@ -258,12 +258,12 @@ of a card's CI.
 | 2 | L-21 A card opens only when a script says it is ready | 1.9.0 | medium | L-20 | open |
 | 3 | L-22 CI in two tiers: a fast core on every push, the whole suite once a card | 1.9.0 | medium | nothing | open |
 | 4 | L-18a A Cortex-M build of `minimal` in CI, with its stack gate | 1.9.0 | medium | nothing | open |
-| 5 | F-1a cf_platform_write_file: a file replaced whole or not at all | 1.9.0 | medium | nothing | open |
+| 5 | F-1a The file layer: `cf_file_options`, `cf_file_writer`, `cf_file_replace`, a file replaced whole or not at all | 1.9.0 | large | nothing | open |
 | 6 | Y-2 `cf_platform_write_file_if`: the replace refused when the file no longer holds the bytes read (F-1c in the research) | 1.9.0 | small | F-1a | waits: F-1a |
-| 7 | Y-8 Close-on-exec and non-inheritable everywhere the library opens a file, with a child that lists its descriptors | 1.9.0 | small | nothing | open |
-| 8 | Y-5 A stable read: a file read twice and compared, up to 3 reads (F-5c in the research) | 1.9.0 | small | nothing | parked |
+| 7 | Y-8 Close-on-exec and non-inheritable everywhere the library opens a file, with a child that lists its descriptors | 1.9.0 | small | F-1a, Y-3 | waits: F-1a |
+| 8 | Y-5 A stable read: a file read twice and compared, up to 3 reads by default (F-5c in the research) | 1.9.0 | small | nothing | open |
 | 9 | Y-6 Windows readers that share delete access, if a measurement shows a rename then succeeds over an open reader (F-5d in the research) | 1.9.0 | small | F-1a | waits: F-1a |
-| 10 | Y-3 `cf_platform_lock_take` and `_give`: a kernel lock on a kept sidecar file (F-5a in the research) (TO DECIDE) | 1.9.0 | medium | F-1a | parked |
+| 10 | Y-3 `cf_locker`: a lock that plugs in, `cf_lock_none` and a kernel lock on a kept sidecar file, `cf_lock_sidecar` (F-5a in the research) | 1.9.0 | medium | F-1a | waits: F-1a |
 | 11 | K-9c Errors that cannot be ignored: `CF_NODISCARD` on every failure, and its gate | 1.9.0 | large | nothing | open |
 | 12 | K-6a A refusal's byte offset (TO DECIDE) | 2.0.0 | medium | nothing | parked |
 | 13 | K-6b A refusal's reason shown by the tools (TO DECIDE) | 2.0.0 | small | nothing | parked |
@@ -275,7 +275,7 @@ of a card's CI.
 | 19 | C-11 A program's files where its platform keeps them: `cf_builder_app_files` | 2.1.0 | medium | C-7 | waits: C-7 |
 | 20 | C-7 Profiles: `--profile` or `NAME_PROFILE` adds `config.<profile>.<ext>` above the base file | 2.1.0 | medium | C-11 | waits: C-11 |
 | 21 | C-10a A running program asked for its report: the library answers one request on a descriptor | 2.1.0 | medium | nothing | open |
-| 22 | F-1b A public call that writes a configuration to a file whole or not at all (TO DECIDE) | 2.1.0 | small | F-1a | parked |
+| 22 | F-1b `cf_emit_file`: a configuration written to a file whole or not at all (the file layer's third part) | 2.1.0 | small | F-1a | waits: F-1a |
 | 23 | Y-9 A second `cf_live` driver refused, and D-48's sentence checked | 2.1.0 | small | Y-1 | waits: Y-1 |
 | 24 | Y-10 `cf_live_get` and `cf_config_free` under threads on the benchmark's page; `cf_live_generation` without the lock (TO DECIDE 1b) | 2.1.0 | medium | nothing | open |
 | 25 | Y-1 The Guide's "At the same time": what is guarded and what is not | 2.1.0 | small | nothing | open |
@@ -350,7 +350,7 @@ of a card's CI.
 | 94 | Y-20 Writing: cf_pack, deterministic gzip and zstd, `convert --compress`, a compressed image | 2.3.0 | medium | Y-16, Y-17, Y-19, F-1b | waits: Y-16 |
 | 95 | F-2a An override file the library owns: a file source that cf_write can commit to (TO DECIDE) | 2.3.0 | large | F-1a, Y-2 | parked |
 | 96 | F-2b settings.c is the override source's example | 2.3.0 | small | F-2a, F-1b, F-1b | waits: F-2a |
-| 97 | Y-4 `CF_FILE_LOCK`, `cf_builder_write_wait`, `CF_E_BUSY`: the lock around `overrides_write`, and the store's wait (F-5b in the research) (TO DECIDE) | 2.3.0 | medium | Y-3, F-2a | parked |
+| 97 | Y-4 `cf_file_source_options.lock`, `.wait_ms` and `.write_attempts`, `.read_attempts`, `cf_builder_write_wait`: the lock around `overrides_write`, and the store's wait (F-5b in the research) | 2.3.0 | medium | Y-3, F-2a | waits: Y-3 |
 | 98 | Y-12 `swapped` in `cf_live_options`: workers told of a swap | 2.3.0 | small | nothing | parked |
 | 99 | F-3i Wave 6, `configforge codec get`, `set` and `unset` (TO DECIDE) | 2.3.0 | medium | F-1a, F-3b, F-3c, F-3d, F-3e, F-3f, F-3g, F-3h | waits: F-1a |
 | 100 | M-10 The dynamic sizing modes: the interface | 2.0.0 | medium | nothing | parked |
@@ -469,7 +469,6 @@ one that cannot be done is dropped and recorded under "Done" as dropped.
 | Card | Version | Waits on | Status |
 | ---- | ------- | -------- | ------ |
 | C-2a | 1.10.0 | answered (D-222, an open `cf_unit`); the card, C-2b and C-1b rewritten to it | parked |
-| F-1b | 2.2.0 | answered (D-224, writing in layers, docs/plan/F-files.md); F-1a, F-1b and F-2b rewritten to it | parked |
 | F-2a | 2.2.0 | answered (D-225, a writable file source); F-2a and F-2b rewritten to it | parked |
 | F-3j | 2.2.0 | answered (D-226, `cf_docedit_bytes` and a thin layer, a comment option); the card rewritten to it | parked |
 | F-4b | 1.10.0 | answered 2026-11-26: built only when it is asked for | parked |
@@ -487,9 +486,6 @@ one that cannot be done is dropped and recorded under "Done" as dropped.
 | G-9 | 2.3.0 | its TO DECIDE | parked |
 | G-9-m | 2.3.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | P-15-m | 1.9.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
-| Y-3 | 2.2.0 | answered (D-227, a `cf_locker` that plugs in, `cf_lock_none` by default); the card rewritten to it | parked |
-| Y-4 | 2.2.0 | answered (D-227); the card rewritten to it | parked |
-| Y-5 | 2.2.0 | its TO DECIDE | parked |
 | Y-11 | 2.4.0 | answered ((c), `cf_live_reader`); opens only when Y-10's page shows a knee with the cores, or a binding asks | parked |
 | Y-12 | 2.2.0 | its TO DECIDE | parked |
 | Y-13-m | 2.4.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
