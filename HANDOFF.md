@@ -228,5 +228,6 @@ cards read, what you changed in each, what you could not check, and each
 card's verdict: ready, or parked (with why).
 
 Every group is written (Y too: docs/plan/Y-asked.md, Y-1 to Y-42).
-Cold reads done: docs/plan/C-change.md (2026-11-26; verdicts in its commit
-message: C-2a, C-2b, C-1b parked on C-2a's TO DECIDE; the rest ready).
+Cold reads done: docs/plan/C-change.md and C-change-2.md (2026-11-26; verdicts in their commit
+messages). Next: F-files, K-correctness, G-guides, P-measured, L-tools (L-11),
+L-tools-2, M-maintainer, X-formats, Y-asked.
