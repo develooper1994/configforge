@@ -2,7 +2,8 @@
 
 State: main has the inventory (2395d65: finished cards removed, Roadmap
 items marked) and the index's Version column. Card drafts, not yet read
-cold, are on four pushed branches: `plan/cards-c1` (docs/plan/C-change.md,
+cold, are on main in docs/plan (moved from their branches, which are
+deleted), from: `plan/cards-c1` (docs/plan/C-change.md,
 C-1a to C-6b), `plan/cards-c2` (docs/plan/C-change-2.md, C-7 to C-11),
 `plan/cards-f` (docs/plan/F-files.md, F-1a to F-4b), `plan/cards-l`
 (docs/plan/L-tools.md, L-11 mutation testing with Mull, from a measured
