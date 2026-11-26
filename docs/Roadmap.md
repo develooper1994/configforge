@@ -1550,6 +1550,30 @@ step), ways to read (DOM, SAX, lazy, in-situ: a new public interface),
 SIMD behind `CF_WITH_SIMD` (a new build option and its targets), and a
 Go or .NET binding (a new binding).
 
+### From the maintainer, 2026-11-26 (not yet cards)
+
+* ⬜ **Reads and writes at the same time, guarded by choice.** Today reads
+  of a built configuration are safe at once from many threads; a mutation
+  or a reload needs the program's own lock (Decisions.md, "Reads are safe
+  concurrently"), and nothing guards a file two processes write at once.
+  To weigh, as an option the program asks for: an advisory lock on the
+  file written (`flock`/`fcntl`, `LockFileEx`) around F-1a's whole-or-
+  nothing write, a lock taken by a reload, and what the library does when
+  the lock is held (wait with a bound, or refuse).
+* ⬜ **Compression.** A document or an image read from, and written to,
+  a compressed file (gzip, zstd), chosen by name or by magic bytes, as a
+  composed codec (D-103) so no reader changes; a new optional dependency
+  each, behind its own build option.
+* ⬜ **An analysis tool for configuration files.** Doctor already lints a
+  report, diffs two and finds drift; this asks for more: static analysis
+  of configuration files (unused keys, keys the contract lacks, values a
+  rule forbids, secrets in plain text, what one file overrides in
+  another) and dynamic (what a running program read, misread or never
+  read). Research first: what exists (conftest/OPA, cue vet, kubeconform,
+  yamllint, checkov, Spring Boot's configuration processor, systemd's
+  `analyze verify`), what each finds, then the same first and what only
+  the contract can add after.
+
 ## Open decisions
 
 None. Two were decided on 2026-11-11:
