@@ -51,7 +51,7 @@ server; written when they open). The analysis tool builds on C-8a and C-8b
 
 ---
 
-## Approved by the maintainer, 2026-11-26 (relayed from a side session: "Onaylıyorum")
+## Approved by the maintainer, 2026-11-26 (relayed from a side session: "I approve")
 
 These two decisions replace Y-15's TO DECIDE 1, 4 and 5. **Y-15 to Y-20,
 and Y-21-m to Y-23-m where they touch it, do not open until they are

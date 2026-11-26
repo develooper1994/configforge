@@ -443,8 +443,8 @@ card marked **TO DECIDE** has no number until the maintainer answers; D-138
 
 ## To be written: K-9a and K-9b (the maintainer, 2026-11-26)
 
-Asked by the maintainer (relayed from a side session: "son iki kartı
-beğendim ve exception safety özelliği getirilecek"), version 1.9.0, to be
+Asked by the maintainer (relayed from a side session: "I like the last
+two cards; exception safety is to be added"), version 1.9.0, to be
 written as full cards here, read cold, and given index rows after K-8:
 
 * **K-9a - A failure guarantee for every public function.** Each public
