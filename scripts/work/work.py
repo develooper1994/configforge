@@ -638,27 +638,6 @@ def cmd_ship(a):
 # ---- land -----------------------------------------------------------------
 
 
-def plan_index(path, cid, h):
-    """docs/Plan.md: the card done (hash), the cards that waited only on it open."""
-    with open(path, encoding="utf-8") as f:
-        s = f.read().split("\n")
-    for i, line in enumerate(s):
-        # | Order | Card | Version | Size | Needs | Status |: the status is
-        # the last cell, whatever columns come before it.
-        c = [x.strip() for x in line.split("|")]
-        if len(c) < 7 or not c[2]:
-            continue
-        if c[2].split(" ")[0] == cid:
-            c[-2] = f"done ({h})"
-        elif c[-2] == "waits: " + cid:
-            c[-2] = "open"
-        else:
-            continue
-        s[i] = "| " + " | ".join(c[1:-1]) + " |"
-    with open(path, "w", encoding="utf-8", newline="\n") as f:
-        f.write("\n".join(s))
-
-
 def worktree_of(branch):
     wt = ""
     for line in git("worktree", "list", "--porcelain").splitlines():
@@ -777,15 +756,19 @@ def cmd_land(a):
 
     def index():
         h = git("rev-parse", "--short", "HEAD")
-        plan_index("docs/Plan.md", id_, h)
-        git("add", "docs/Plan.md", "CLAUDE.md")
+        rc, out = capture(
+            [sys.executable, str(HERE.with_name("index.py")), "--done", id_, h]
+        )
+        if rc:
+            raise Fail(f"index.py --done {id_} {h} failed: {first_line(out)}", rc)
+        git("add", "docs/Plan.md", "docs/plan", "CLAUDE.md")
         git("commit", "-q", "-m", f"Plan: {id_} done ({h})\n\n{TRAILER}")
         rc, out = capture(["git", "push", "-q", "origin", "main"], 600)
         if rc:
             raise Fail(f"git push of main failed: {first_line(out)}", rc)
 
     do(
-        f"docs/Plan.md index: {id_} done (hash), the cards that waited only on it open; commit; push main",
+        f"index.py --done {id_} (hash): the card's status and docs/Plan.md's index; commit; push main",
         index,
     )
 

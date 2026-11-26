@@ -22,6 +22,7 @@ verify step runs), `generate/` (what the build writes from the sources),
 | `generate/apiref.cmake` | regenerates `docs/API.md` from the public headers' comments; `gate.apiref` checks it is current |
 | `generate/codemap.cmake` | regenerates `docs/Codemap.md` from source definitions and document headings. `gate.codemap` checks the line ranges |
 | `work/brief.py <card id>` | prints the standard worker instructions, the card and its cited sections. `--max-bytes N` reports briefs over the byte budget |
+| `work/index.py` | writes docs/Plan.md's index from the card files and `docs/plan/Layout.md`. `--check` fails when the index is not what it would write (`gate.index`); `--done <id> <hash>` marks a card done and writes the index (`work.py land`, `land.sh`); `--root <dir>` runs it on another tree |
 | `generate/limits.cmake` | `-DWRITE=docs/Limits.md` regenerates the limits page's generated blocks from the build options and the sources; `gate.limits` checks the page is current and that the decisions, tests and links it names exist |
 | `generate/amalgamate.py` | generates the single-file distribution |
 | `check/fetches.py`, `check/permissions.py` | every download in a workflow or a script listed in `check/fetches.txt` with how it is held, a commit or a SHA-256 (`gate.fetches`); every workflow's top-level token read-only (`gate.permissions`) |

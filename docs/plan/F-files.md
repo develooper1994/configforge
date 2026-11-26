@@ -36,6 +36,8 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **why**: nothing the library writes may be half a file that the next start reads. `examples/c/settings.c:66` writes with `fopen(..., "wb")` over the old file (a crash or a full disk leaves neither), and wave 6 (F-3) will write users' files. The Roadmap item is "A file written whole or not at all" (`docs/Roadmap.md:714`).
 * **needs**: nothing
 * **size**: medium (three platform files of the same shape, one test)
+* **version**: 1.9.0
+* **status**: open
 * **decided**:
   * **Where.** The platform layer's file opener's own files, so that the serialization library carries it: `lib/platform/src/posix/file.c`, `win32/file.c`, `none/file.c` (the only platform sources of `SERIALIZE_SOURCES`, `lib/platform/CMakeLists.txt:35-36`). Declared in `lib/platform/include/configforge/cf_platform_file.h` after `cf_platform_fopen` (line 71, inside the `#if CF_INTERNAL_API` block of lines 70-72, before its `#endif`), under that guard as it is (D-51, D-88: the platform tier is outside the 1.x promise; F-1b makes the public one). The header adds `#include "configforge/cf_error.h"` (base; the platform layer depends on it, `lib/platform/CMakeLists.txt:26-30`).
   * **Names.**
@@ -90,6 +92,8 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **why**: F-1a is the internal tier; the example and every program that saves can only use the public one. The Roadmap item's "Done when ... every example that saves use it" (`docs/Roadmap.md:723-725`).
 * **needs**: F-1a
 * **size**: small
+* **version**: 2.1.0
+* **status**: parked
 * **decided**:
   * **TO DECIDE (the shape of the public interface).** Options: **A** `cf_emit_file(c, path, format, what, rank, err)` in `lib/config/include/configforge/cf_emit.h` after `cf_emit` (lines 56-57, before the `#ifdef __cplusplus` that closes the header), which emits and replaces the file. **B** `cf_file_replace(path, data, size, err)`, the bytes only, in `configforge.h`; each program emits into its own buffer first, as `settings.c:61-70` does. **C** both. **Recommended: A.** It is one new public name, it keeps the "refuse rather than truncate" rule of `cf_emit` (nothing is written when the emit is refused, so the old file stays), and it serves every program that saves a configuration, which is all the Roadmap names; wave 6 writes bytes through the internal function (F-3). B would add a second way to do what A does. The steps below are A's; for B or C the maintainer says so under "Organiser's answers" and the steps follow.
   * **A's shape.** `CF_API cf_bool cf_emit_file(const struct cf_config* c, const char* path, const char* format, cf_emit_what what, int rank, cf_error* err);` `format` NULL: `cf_format_of_path(path)`; still NULL: `CF_E_CAPABILITY`, `cannot tell the format of '%s' from its name; name it`. It measures with `cf_emit(c, format, what, rank, NULL, 0, err)` (`emit.c:230`: a refusal returns 0 with `err` set, nothing is written), allocates `n + 1` bytes from `cf_default_allocator()` (`lib/base/src/alloc.c:33-41`; `->alloc(ctx, n)` and `->release(ctx, p)`; it is NULL on a `CF_NO_STDLIB` build: then `CF_E_CAPABILITY`, `this build has no allocator to write a file with`; a NULL from `alloc` is `CF_E_MEMORY`, `out of memory`), emits into it, calls `cf_platform_write_file(path, buf, n, err)` and frees. Returns `CF_TRUE` when the file holds the document. Without `CF_WITH_EMIT` it is the `CF_E_CAPABILITY` of `cf_emit`'s own fallback (`emit.c:348-359`). The error is cleared first (`cf_error_clear`, as `cf_write` does, `config.c:2051`).
@@ -125,6 +129,8 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **why**: between the store (SQLite, D-42) and wave 6 there is the common case `examples/c/settings.c` writes by hand: a program keeps what its user changed in a file of its own, and a store may not be there (`docs/Design.md:1976`: "the built-in overrides file where it is not"). The Roadmap item is "An override file the library owns" (`docs/Roadmap.md:726`).
 * **needs**: F-1a, Y-2 (the optimistic check, amended 2026-11-26)
 * **size**: large (a source, a refactor of `cf_emit`, a contract for what a write does to a file)
+* **version**: 2.3.0
+* **status**: parked
 * **decided**:
   * **TO DECIDE (the shape of the public interface).** Options: **A** `CF_API cf_bool cf_builder_overrides(cf_builder* b, const char* name, int rank, const char* path, unsigned flags);` in `configforge.h` after `cf_builder_file` (line 152), the format told by the file's name. **B** the same with a `const char* format` argument, as `cf_builder_file` has. **C** no new call: `cf_builder_file` gains a flag `CF_WRITABLE_FILE` that gives its source the write capability. **Recommended: A.** A derived configuration's stand-in for a source keeps the path and nothing else (`derive_ghost`, `config.c:1580-1608`, copies `vt->write` and the path), so the format must be a function of the path; B would need the format to travel in the ghost, and C overloads a flag word that `cf_builder_file` also gives to the encoding (`CF_ENCODING_MASK`, `file.c:482`). The steps are A's.
   * **What it is.** A file source (`file.c:479-500`) whose vtable differs in `write` only: a second `cf_source_vtable`, `cf_overrides_vt`, in `lib/config/src/bridge/file.c` after `cf_file_vt` (line 462), `kind` still `"file"` (so reports and Doctor see a file, as the Roadmap asks), `load`, `destroy` and `path` shared, `write = overrides_write`. `file_state_of` (`file.c:471-477`, which accepts `cf_file_vt` and `cf_document_vt`) accepts `cf_overrides_vt` as well. `cf_source_file_overrides(cf_source* s)` (new, declared under `#if CF_INTERNAL_API` in `cf_source.h` after `cf_source_file`, line 284) sets `s->vt = &cf_overrides_vt`; `cf_builder_overrides` calls `cf_builder_file(b, name, rank, path, NULL, flags)` and then that on the source it added (the slot `builder_slot_file`, `config.c:402`, returned for it: `b->nsources - 1` after the call).
@@ -161,6 +167,8 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **why**: the Roadmap item is done "when `settings.c` is that source's example and no longer writes a file itself" (`docs/Roadmap.md:731-734`).
 * **needs**: F-2a, F-1b (F-1b's change to `save()` is what this card removes)
 * **size**: small
+* **version**: 2.3.0
+* **status**: open
 * **decided**:
   * `load()` (`settings.c:28-52`): the `cf_builder_file(b, "settings", CF_RANK_USER_FILE, SETTINGS_FILE, NULL, CF_OPTIONAL)` call (line 36) becomes `cf_builder_overrides(b, "settings", CF_RANK_USER_FILE, SETTINGS_FILE, CF_OPTIONAL)` followed by `cf_builder_writable(b, "settings")`; the comment above it says what the file is.
   * The `--set` path (`settings.c:107-155`, from `if (cf_has(cfg, "set"))`) no longer derives and saves: it builds one `cf_write_item` with the key, `cf_value_text` of the text after `=` (the contract types it: `cf_write` applies it as it applies a file's value), `op = CF_WRITE_SET`, and calls `cf_write(cfg, "settings", &change, 1, "settings --set", &err)`. On failure it prints `settings: <err.message>` and returns 1, as it does today. On success it prints `saved settings.json`, rebuilds with `load()` and prints `print()`'s line, exactly as the example prints now. `cf_write` hands the item to the source as it is, a text value (`write_authorized` checks it against the contract and does not retype it), so the file holds `"server.port": "9000"` as a JSON string where `save()` wrote the integer; the contract reads it back as the integer, and `settings_test.cmake:43-48` matches only `9000` in the file. The example's comment says so; no library change.
@@ -187,6 +195,8 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **why**: wave 6 is "every operation on a file's data through its codec - read, add, change, remove, written back in its own format, keeping the layout where the format can" (`docs/Roadmap.md:144-146`, and the assessment's item, `docs/Roadmap.md:444-447`). `cf_emit.h:1-13` and `docs/Design.md:1943-1969` give the reason it was never attempted: a writer that gets the layout slightly wrong destroys what a person wrote. This card makes that impossible to do silently: nothing is returned that the reader does not read back as the old document plus the change.
 * **needs**: nothing (the writes through F-1a are F-3i's and F-3j's)
 * **size**: large (the engine, its checker, the editor interface, a toy editor for the tests, the decisions)
+* **version**: 2.3.0
+* **status**: open
 * **decided**:
   * **Not in the readers.** A reader already gives each scalar's place: `cf_doc_sink.scalar`'s `at` (`cf_serialize.h:126-150`, line and column in bytes from 1, after a byte order mark, `docs/Formats.md`), as the readers emit it (`json.c:663`, `725`; `toml.c:1285`, `1310`; `ini.c:469`, `494`; `properties.c:216`; `yaml.c:570`); a binary reader gives `byte N`. The engine uses that place to start; each editor finds where its own token ends by lexing that one token. No reader changes (the hot loops are P-3's), and a mistake of an editor's lexing is caught by the check below, not trusted.
   * **Where.** `lib/serialize/include/configforge/cf_docedit_engine.h` (new, every function under `#if CF_INTERNAL_API`, D-51) and `lib/serialize/src/docedit.c` (new). In `lib/serialize` because `configforge codec` links `configforge_serialize` and nothing else (`docs/Tools.md:208-212`); no key space, so the engine has its own path recorder: a `cf_doc_sink` that keeps, for every scalar, `path` (the names joined by `.`, an array's members by their index from 0, as `configforge codec dump` writes them, `docs/Tools.md:268-275`), its `cf_value`, `textual` and `at`.
@@ -239,6 +249,8 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **why**: JSON is what `settings.c` writes and what most programs' files are; it is the first editor so that the engine meets a real format.
 * **needs**: F-3a
 * **size**: medium
+* **version**: 2.3.0
+* **status**: open
 * **decided**:
   * One editor, `lib/serialize/src/json_edit.c` (new), registered for `json` and `json5`, with `js_` helpers for the token it must skip: a string (escapes, JSON5's single quotes and line continuations), a number (JSON5's hex, `+`, `.5`, `Infinity`, `NaN`), `true`, `false`, `null`, an object or array (balanced, strings and comments skipped), a JSON5 comment (`//`, `/* */`). It does not use the reader's `js_scan` (`json.c:41-51`, static): the checker is what guards it.
   * **Set existing**: from `at` (the first byte of the value) to the end of that one token, replaced by `cfi_json_put_value` (factored out of `js_enc_scalar`, `json.c:859`, which writes through `cf_sink_json_value`, `cf_serialize.h:98`).
@@ -267,6 +279,8 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **why**: both are line formats whose files people keep by hand; `.properties` has no writer at all today (`docs/Formats.md`, "Java `.properties`": "no") and this is the first.
 * **needs**: F-3a
 * **size**: medium
+* **version**: 2.3.0
+* **status**: open
 * **decided**:
   * Two editors in `lib/serialize/src/ini_edit.c` and `properties_edit.c` (new). Both are untyped: every value is text; `cf_value` of any type is written as its text (`cf_value_text`'s forms), and a null as the text `null` (INI's encoder already does, `CF_HOLDS_NULL` absent, `cf_serialize.h:304`).
   * **INI set existing**: the value token is from the first byte after the `=` and its blanks (the reader's own, `ini_decode`, `ini.c:300-470`: the value is the rest of the line trimmed with `cf_text_trim`, a pair of double quotes wrapping the whole of it is stripped, there is no inline comment, and a whole-line comment starts with `#` or `;`, line 334) to the end of the line, trailing blanks excluded, the wrapping quotes inside the token; replaced by `cfi_ini_put_value` (factored from `ini_enc_scalar`, `ini.c:640`). A value with a line break is refused as the encoder refuses it (`docs/Formats.md`, INI row). **Add** `a.b` = v: INI's naming (the encoder's: `ini.c:56-132`, a path's last segment is the key, the rest the section, `[a]`): after the last key line of section `a` (before the next `[`, so a blank or comment line that belongs to the next section stays after it); a missing section is appended at the end of the file as a blank line, `[a]`, `b = v`; a key with no section goes before the first `[` of the file. **Unset**: the line, whole. An array member `name[] = x` is set through its place and not added or removed.
@@ -294,6 +308,8 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **why**: TOML is "the recommended hand-written format" (`docs/Design.md:1876`) and the one `docs/Design.md:1966` calls a separate project; changing what is there is the common edit, adding is F-3e.
 * **needs**: F-3a
 * **size**: medium
+* **version**: 2.3.0
+* **status**: open
 * **decided**:
   * `lib/serialize/src/toml_edit.c` (new), registered for `toml`; its token lexer covers basic and literal strings (and their `"""`/`'''` forms, which span lines), integers (`_`, hex, octal, binary), floats, booleans, dates and times, inline tables and arrays (balanced), and a comment. The reader's `toml_scan` (`toml.c:115-142`) is static and is not reused.
   * **Set existing**: `at` to the token's end, replaced by `cfi_toml_put_value` (from `toml_enc_scalar`, `toml.c:1641`): a text is written as a basic string (a literal one when the old token was a literal and the text allows it), an integer and a bool as themselves, a real by the encoder's form. Dates and times are text typed by the contract (D-62): a text that reads as one is written as a string, which reads back as the same text. `null` is refused (`CF_REFUSES_NULL`). A member of an inline table or an array is replaced the same way.
@@ -321,6 +337,8 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **why**: the rest of "add" for the format whose layout rules (a root key must precede every header; a table defined once) make adding the delicate operation.
 * **needs**: F-3d
 * **size**: medium
+* **version**: 2.3.0
+* **status**: open
 * **decided**:
   * **Where.** Root key: after the last root entry line (a key line before the first header), else at the top of the file after the leading comment lines. Into `[a.b]`: after the last line of that table's last entry (a multi-line value included), before the next header and before the blank and comment lines that lead to it. A parent defined only by dotted keys (`a.x = 1` at the root, no `[a]`): the new key is `a.c = v` after the last dotted key of `a`. A missing parent: at the end of the file, a blank line if the file does not end with one, `[a.b]`, `c = v`; for a key whose first segments exist as tables and the last parent does not, the header is the whole path.
   * **Written** as `name = value` (key bare when it is `A-Za-z0-9_-` only, else a basic string), with the table's own habit of spacing around `=` (taken from the line before it; ` = ` when none) and the file's line ending (the first one found).
@@ -347,6 +365,8 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **why**: YAML is the format in which "a rewrite" loses most (anchors, comments, styles); `docs/Formats.md` says the writer is "yes, block style" only for a whole document.
 * **needs**: F-3a
 * **size**: medium
+* **version**: 2.3.0
+* **status**: open
 * **decided**:
   * `lib/serialize/src/yaml_edit.c` (new), registered for `yaml`; one reading of the document, by the built-in parser's events (`cf_yaml_parse`, `cf_yamlparse.h:57-60`, whose `cf_yp_node` has `style` (`':'` plain, a quote, `'|'` or `'>'` block, `'['` or `'{'` flow), `anchor`, `line`, `col`): the editor takes the style of the node at the position and finds the token's end by it. It works in the default build only: `#if !CF_YAML_LIBYAML && !CF_YAML_LIBFYAML` (the guard `test_text_escape.c:811` uses); in a libyaml or libfyaml build `cfi_doc_editor("yaml")` is NULL and the engine says `cannot be edited in place: it has no editor`.
   * **Set existing**: plain, single- and double-quoted scalars on one line: the token replaced by `cfi_yaml_put_value` (from `yaml_enc_scalar`, `yaml.c:1253`: the style the encoder picks so that the text reads back as itself, plain when it can); a multi-line plain or quoted scalar: from its first byte to its last line; a block scalar (`|`, `>`): from the indicator to the end of its indented lines, replaced by a quoted scalar on the key's line (a text with line breaks as a double-quoted string with `\n`). A scalar with an anchor (`&a`) keeps the anchor; its tag stays. An **alias** (`*a`) is refused: `'<key>' is an alias of an anchor; set the anchor's own key` (`CF_E_CAPABILITY`). A key that has an anchor which an alias elsewhere uses is set: the aliases read the new value, and the check, which compares the whole list, then refuses it as changing other keys: the card lets the check say so, with F-3a's words. An element of a flow collection is replaced as a scalar.
@@ -373,6 +393,8 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **why**: the rest of "add" for YAML, where indentation is the structure.
 * **needs**: F-3f
 * **size**: medium
+* **version**: 2.3.0
+* **status**: open
 * **decided**:
   * **Where.** After the last line of the parent mapping's last entry (its children included), at the indentation of the mapping's first key; a top-level key after the last top-level entry and before a `...` end marker. A missing parent: the new mapping is written as nested block mappings, each level two spaces deeper than the one before, from the last existing parent. The line ending is the file's first.
   * **Written** `name: value` with the value as `cfi_yaml_put_value` writes it; a key that needs quoting (`:` , `#`, a leading special character, or reads as a non-text scalar) is written as a double-quoted string.
@@ -399,6 +421,8 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **why**: `docs/Formats.md` says "no (wave 6)" for TLV writing and D-93 says "what a layout skips must be kept to write the file back" (`docs/Decisions.md:4082`). A rewrite through an encoder would lose the skipped; a splice cannot.
 * **needs**: F-3a
 * **size**: large (a length that changes in every enclosing nest, three value kinds, a layout)
+* **version**: 2.3.0
+* **status**: open
 * **decided**:
   * **Editor from the layout.** TLV editing needs the layout, which a codec made by `cf_tlv_codec_sized` carries in `cf_codec.data` (`cf_serialize.h:243`, read by `decode_self`). `cf_doc_editor.apply` therefore takes the codec: add `const cf_codec* codec` to `cf_doc_text` (F-3a's struct; set by the engine; NULL changes nothing for the other editors). `cfi_doc_editor` returns the TLV editor for a codec that has `CF_CODEC_SCHEMA` and a TLV layout (`cf_tlv_layout`, `cf_serialize.h:401`), keyed by the codec's pointer rather than by name: `cfi_doc_editor_for(const cf_codec* c)` (new, replaces the call by name in the engine; the name call stays for the other formats).
   * **Places are bytes** (`cf_loc` is `byte N`, `docs/Tools.md:276`): the engine parses it. The editor re-reads the entry at that offset with the layout's widths, byte order and BER rules (`lib/serialize/src/tlv.c`) and finds the entry's tag, length field and value bytes, and the chain of enclosing nests from the document's start.
@@ -428,6 +452,8 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **why**: the whole wave as a tool, and the first thing of wave 6 a person can run; "read" is `get`, the rest are the engine.
 * **needs**: F-1a, F-3b, F-3c, F-3d, F-3e, F-3f, F-3g (F-3h by its row: a TLV file needs a layout and is not reachable from the tool, as for `dump`)
 * **size**: medium
+* **version**: 2.3.0
+* **status**: open
 * **decided**:
   * **TO DECIDE (the internal tier in the codec tool).** `tools/codec/CMakeLists.txt:1-6` says the tool is compiled without the internal tier (D-51, D-88) as the proof that the serialization library is enough, and the engine (F-3a) and `cf_platform_write_file` (F-1a) are declared only under `CF_INTERNAL_API`. Options: **A** `edit.c` alone is compiled with `CF_INTERNAL_API=1` (`set_source_files_properties(edit.c PROPERTIES COMPILE_DEFINITIONS CF_INTERNAL_API=1)`; Doctor's and gen's directories define it for all their files, `bench/CMakeLists.txt:15`); the rest of the tool, and its link line (`configforge_serialize` only), stay as they are. **B** wait for F-3j's public call and make `edit.c` use it (reorders: F-3i needs F-3j, and F-3j loses F-3i as a need; `cf_docedit` lives in `lib/config`, which `configforge_codec` does not link, so the tool would then link the library: against D-51's comment). **C** the tool gets no `set`/`unset`, only `get`. **Recommended: A.** The promise the comment protects is that the tool links `configforge_serialize` and nothing else, which A keeps; the define is scoped to the one file that needs the engine, and the symbols are in `configforge_serialize`'s library already. The steps below are A's; for B or C the maintainer says so under "Organiser's answers" and the card is rewritten.
   * Usage, added to `tools/codec/codec.c:80-92`'s dispatch and its usage text, and to `docs/Tools.md:218-236`:
@@ -464,6 +490,8 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **why**: the tool is a program; the Roadmap says "every operation on a file's data" and a program is the other caller. `cf_edit` and `cf_write` do it for a configuration and its stores today (`docs/Roadmap.md:444-447`).
 * **needs**: F-3i, F-1b
 * **size**: medium
+* **version**: 2.3.0
+* **status**: parked
 * **decided**:
   * **TO DECIDE (the shape of the public interface).** Options: **A** a family beside `cf_edit` in a new public `cf_docedit.h`: `typedef struct cf_docedit cf_docedit; cf_docedit* cf_docedit_open(const char* path, const char* format, cf_error* err);` (`format` NULL: by name), `cf_docedit_set_text`, `_set_int`, `_set_bool`, `_set_real`, `cf_docedit_unset`, `cf_docedit_count`, `cf_bool cf_docedit_commit(cf_docedit*, cf_error*)` (every change applied to the file's bytes, checked, and the file replaced whole or not at all), `cf_docedit_abort`; the shape of `cf_edit` (`cf_edit.h:36-60`), with the same rules (strings copied, one thread, consumed by commit). **B** a bytes-in, bytes-out function, `cf_docedit_bytes(const char* format, const char* in, size_t n, const cf_doc_change* ch, size_t count, char** out, size_t* outn, cf_error* err)`, no file, no `commit`. **C** `cf_edit_begin` accepts a document as its target (`cf_edit_begin(c, "file:app.toml", ...)`), so one interface edits stores and files. **Recommended: A.** It is the shape a program that knows `cf_edit` expects, it has one place that writes (the commit), and B can be added behind it later; C mixes a configuration's contract (types, ranges, policy, D-42) with a file that has none, which is the "second rule set" D-42 rejected. The steps are A's.
   * **A's behaviour.** `cf_docedit_open` reads the file whole (`cf_blob_file`), finds the codec (`cf_codec_by_path` or by `format`) and fails at once for a format with no editor (F-3a's words). `commit` calls `cfi_docedit` with the changes in the order they were made and `cf_platform_write_file` with the result; a refusal changes nothing, and the file's bytes are as they were. Types: `set_text` is typed as the codec types (`cf_infer_scalar` for an untyped format is not applied: text is text); `set_int`, `set_bool`, `set_real` are typed. No contract and no policy: this is a file, not a configuration (the page says so beside D-42).
@@ -491,6 +519,8 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **why**: the Roadmap item ("The references drawn", `docs/Roadmap.md:760-766`) applies "only if a report's JSON through jq proves not to be enough (as with the query language below)". Before a command is written, the question is answered with evidence, as `docs/Doctor.md:262-286` answers it for the other queries. Wave 5 is done, so the condition's first half is met.
 * **needs**: nothing
 * **size**: small
+* **version**: 2.1.0
+* **status**: open
 * **decided**:
   * **The edges a report holds.** A reference: a candidate's `written` field holds the text as written, `${a.b}` among it (`lib/config/src/diag/report.c:303-308`; absent for a secret in a blind report, and for a template, `CF_CAND_TEMPLATE`). A rename: a definition's `replaced_by` (`report.c:111-115`), the new key's name. A source: a key's `selected.source` and its `candidates[].source`. Nothing else is an edge.
   * **Filters** (written into `docs/Doctor.md` 7a after the third example, line 280, each run by the card): (1) references, DOT: every key `k` with a candidate whose `written` contains `${x}` gives `"k" -> "x" [label="ref"]`; (2) renames: `"old" -> "new" [style=dashed,label="replaced_by"]`; (3) sources: `"k" -> "source:<s>" [style=dotted]` for the selected one; the same three as Mermaid (`graph LR`, `k --> x`). One `jq -r` program each, the references' `${...}` found with `scan("\\$\\{([^}]+)\\}")` (a reference's own grammar is D-10's: keys, no nesting).
@@ -517,6 +547,8 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **why**: "The references drawn" (`docs/Roadmap.md:760-766`), `docs/Maintaining.md:93-96` and the 1.10.0 row of its versions table (lines 99-114): `doctor graph`, "if asked for".
 * **needs**: F-4a, and the maintainer's yes
 * **size**: medium
+* **version**: 1.10.0
+* **status**: parked: not now
 * **decided**:
   * **TO DECIDE (whether to build it).** Options: **A** build it, as below. **B** do not: F-4a's filters are the answer, the Roadmap item is closed with them. **Recommended: B unless F-4a's finding names a want the filters do not meet** (the Roadmap's own condition); then A, for that want only. The card stops until the maintainer answers, whatever F-4a found.
   * If built (A): the command `configforge doctor graph <report> [--format dot|mermaid] [--key K] [--redact-all]`, in `tools/doctor/doctor.c` beside `history` (line 502), `dot` the default; the edges of F-4a's list and no other; `--key K` limits the graph to the keys reachable from `K` through references and renames; a node is a key name or `source:<name>`; a key that is sensitive is drawn (its name is not a secret) and has no `written` edge (a blind report has none); no value is ever printed (D-86: the same tests `doctor.redact` and `doctor.marker` run over the output with a marked secret). Exit codes as the other commands (`docs/Doctor.md:555-572`): 0 drawn, 1 a report it cannot read, 2 usage. Output is sorted (edges by source then target) so two runs are equal. Written by the library's own report reader (`cf_doctor_*`, `docs/Doctor.md:288-300`), not by a second JSON reader.

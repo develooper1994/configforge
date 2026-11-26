@@ -41,6 +41,8 @@ Shared by every card here:
 * **why**: A program's environments (production, staging, a developer's machine) differ in a handful of keys, and the way to say so is a file per environment beside the base one, as .NET's `appsettings.Production.json` and Spring's profiles do. Today the report's `profile` is whatever the caller passes in `cf_report_info` (`lib/config/include/configforge/cf_report.h:48`), so a program that forgets it reports a configuration that does not say which environment it was: Doctor's profile-dependent severities (`tools/doctor/engine.c:637-724`) then never apply. The library knowing the profile makes the report the library's, not the caller's.
 * **needs**: C-11 (the places, `cf_builder_app_files`, `cfi_app_places` with its `profile` parameter, `CF_RANK_USER_PROFILE` and `CF_RANK_SYS_PROFILE`, the builder's recorded environment)
 * **size**: medium
+* **version**: 2.1.0
+* **status**: open
 * **decided**:
   * **The profile is the text key `profile`.** `--profile NAME` and `--profile=NAME` on the command line and `<PREFIX>PROFILE` in the environment are that key's ordinary spellings (`lib/config/src/sources/cli.c:22-31` reads `--key value` for any non-boolean definition; the environment source maps `MYAPP_PROFILE` to `profile`), so it ranks CLI above environment like any key, and `explain("profile")` says which won.
   * **Found at the call, not at create.** The files must be added when `cf_builder_app_files` runs, before a source is read, so the profile is found then, by `cfi_app_profile` (new, `lib/config/src/sources/appfiles.c`), from the builder's own command line (`b->cli_argc`/`b->cli_argv`, set by `cf_app_builder`, `config.c:275-279`) and the environment the call uses. The rule: scan `argv[1..]` up to a `--`; `--profile=NAME` or `--profile` with the next argument is an occurrence, the last occurrence wins, an occurrence with an empty NAME is "no profile" and stops the search (an explicit empty value beats the environment); with no occurrence, `<prefix>PROFILE` of the environment (an empty value is "no profile"). The prefix is `b->prefix` when it is not empty (`config.c:61`), else `derive_prefix(name)` (`config.c:240-257`, `static` in the same file as `cfi_builder_app_files`, which passes the result in: `cfi_app_profile` never computes it).
@@ -107,6 +109,8 @@ Shared by every card here:
 * **why**: `cf_get_int(cfg, "server.prot", 8080)` returns 8080 without a word, and so does reading a text key as an int; C++ and Rust catch both with typed keys and C does not. The value the program used is then not the value the configuration holds, and nothing in a report says so: `explain` and `doctor lint` look at what is configured, never at what is asked.
 * **needs**: nothing
 * **size**: medium
+* **version**: 2.1.0
+* **status**: open
 * **decided**:
   * **Opt-in.** `CF_EXPERIMENTAL(1, 9) void cf_builder_track_misreads(cf_builder* b)`, beside `cf_builder_track_reads` (`configforge.h:434`); `CF_EXPERIMENTAL(1, 9) cf_bool cf_tracks_misreads(const cf_config* c)`. Off by default: a read costs one pointer test more (`c->misreads != NULL`) and nothing else. Tracking reads and tracking misreads are independent. A derived configuration tracks as its base did (`derive_onto`, `config.c:1706`, beside `track_reads`); the log it makes starts empty.
   * **What is a misread.** A read through `cf_get_bool`, `cf_get_int`, `cf_get_text`, `cf_get_text_n`, `cf_get_real`, `cf_try_bool`, `cf_try_int`, `cf_try_text`, `cf_try_real` (the last under `CF_WITH_REAL`), with `want` the type it asks for, of `key`; not `cf_has`, `cf_type_of`, `cf_explain`, `cf_report`, the iterator or `cf_derive`: those ask what is there, not for a value. In this order:
@@ -201,6 +205,8 @@ Shared by every card here:
 * **why**: A misread (C-8a) is a bug in the program, found today only by a person who notices the fallback value; Doctor already audits the configuration in CI, and a report carries the evidence.
 * **needs**: C-8a (the report's `"misreads"` array)
 * **size**: small
+* **version**: 2.1.0
+* **status**: open
 * **decided**:
   * **The rule.** CFD021, severity `warning` (the program does the wrong thing, which is more than CFD018's `info`; an `error` would fail a build for what a person may have meant), id name in the catalogue `Misread: a key read that the contract does not have, or as another type` (`tools/doctor/engine.c:1015-1042`, after the CFD019 entry; CFD020 is H-8b's and its place is left). One finding for each misread. Key: the misread's key; no `at`. Messages: kind `undefined` -> `read as <wanted>, and no key of that name is defined`; kind `type` -> `read as <wanted>, but the key is <found>`. A report without `"misreads"` (a program that did not track, or an older library) gives nothing, said by nothing.
   * **Reading it.** A new `rmis` (`const char* key; const char* kind; const char* wanted; const char* found;`) in `tools/doctor/engine.h` after `rsrc` (line 71), `report` gets `rmis* mis; size_t nmis;` (after `nsrc`, line 89); `doctor_load` (`engine.c`) counts then reads them after the sources (the block that ends at `r->nsrc = count;`, `engine.c:238`), as `sources` is read there: `while (text_at(&r->doc, "misreads.%zu.key", count) != NULL) ++count;`, then `misreads.%zu.key`, `.kind`, `.wanted`, `.found`. A `kind` that is neither `undefined` nor `type` is skipped, so a later library's kind is not misread as these.
@@ -232,6 +238,8 @@ Shared by every card here:
 * **why**: `replaced_by` moves a value to a new name and nothing converts it (`lib/config/src/core/config.c:1476-1495`): a file written for version 1 that says `timeout_s = 30` reaches `timeout_ms` as 30, thirty milliseconds, with a provenance line that says only `(as timeout_s)`. A value that arrives in the wrong unit is the migration that goes wrong without a word.
 * **needs**: nothing
 * **size**: medium
+* **version**: 2.1.0
+* **status**: open
 * **decided**:
   * **The function on the definition.** In `lib/config/include/configforge/cf_define.h`, before `cf_def` (line 68):
     ```c
@@ -333,6 +341,8 @@ Shared by every card here:
 * **why**: Spring Boot's `/actuator/env` lets an operator ask a running program what it is configured with and where each value came from. ConfigForge's report is the same artifact (`cf_report`, `lib/config/include/configforge/configforge.h:666`) and today a program must write the listening, the parsing and the writing itself, or write the report to a file and hope somebody reads it. A function the program calls when its loop says a connection is ready gives the answer without the library running a server.
 * **needs**: nothing
 * **size**: medium
+* **version**: 2.1.0
+* **status**: open
 * **decided**:
   * **The function** (`configforge.h`, after `cf_report`, line 666):
     ```c
@@ -417,6 +427,8 @@ Shared by every card here:
 * **why**: A report taken from a running program is the one an operator needs and cannot get from the files (docs/Doctor.md, "Collecting a Production Report", line 176). C-10a lets the program answer; Doctor must be able to ask without `curl` and a shell pipeline.
 * **needs**: C-10a
 * **size**: medium
+* **version**: 2.1.0
+* **status**: open
 * **decided**:
   * **The command.** `configforge-doctor pull unix:<path>`, dispatched with the adapters before the report argument is expected (`tools/doctor/doctor.c:430-446`, beside `import-systemd`): `doctor_pull(argc - 2, argv + 2)`, declared in `tools/doctor/adapters.h`, in `tools/doctor/pull.c` (new, in the `doctor` target's source list, `tools/doctor/CMakeLists.txt:29-35`). It takes exactly one argument. No flag: the wait is 10 seconds for the connection and for each part of the answer, a report is bounded at 16 MiB. The `configforge` front door passes `doctor` through (`tools/configforge/main.c`); its help line (`main.c:33-36`) and `usage()` in `doctor.c` gain `pull`.
   * **What it does.** The argument must start `unix:`; the rest is a socket path of 1 to 103 bytes (macOS and the BSDs have a `sun_path` of 104 bytes, Linux 108: the shortest, so that one command means the same everywhere). It connects (`AF_UNIX`, `SOCK_STREAM`), writes `GET /report HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n`, reads to the end of the stream, requires `HTTP/1.` and a `200` status, checks the body is as long as `Content-Length` says when it says, and writes the body to stdout, nothing else, newline unchanged. Exit codes are Doctor's (docs/Doctor.md, section 10): 0 done, 2 unusable input (a refusal below), 3 cannot start. Refusals, each on stderr with `doctor: pull: ` in front: `'<arg>' is not unix:<path>`; `the path is longer than 103 bytes`; `cannot connect to <path>: <strerror>`; `the program answered <status line>`; `the answer is cut short (<got> of <want> bytes)`; `no answer within 10 s`; `the answer is longer than 16 MiB`. Nothing is written to stdout on a refusal.
@@ -446,6 +458,8 @@ Shared by every card here:
 * **why**: Design.md promised that `cf_app` would read the user's and the system's files (`docs/Design.md:309-320`); D-09 closed `cf_app` without them (`docs/Decisions.md:515-535`). So every program writes the XDG, `%APPDATA%` and `~/Library/Application Support` code itself, with its own mistakes (a relative `XDG_CONFIG_HOME` the specification says to ignore, an unset `HOME`): the repeated code this library exists to remove, and the one place a path is wrong without anybody being told.
 * **needs**: nothing (C-7 builds on it)
 * **size**: medium
+* **version**: 2.1.0
+* **status**: open
 * **decided**:
   * **The function** (`configforge.h`, after `cf_builder_response_files`, line 126; the comment at lines 65-69, "cf_app reads no file. For files, start from cf_app_builder...", gains "or call cf_builder_app_files, which reads the platform's places"):
     ```c

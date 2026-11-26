@@ -93,6 +93,9 @@ function(configforge_add_gates tgt)
   add_test(NAME gate.permissions
            COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
                    ${CMAKE_SOURCE_DIR}/cmake/gates/GatePermissions.cmake)
+  add_test(NAME gate.index
+           COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
+                   ${CMAKE_SOURCE_DIR}/cmake/gates/GateIndex.cmake)
 
   add_test(NAME gate.dependencies
            COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P

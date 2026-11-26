@@ -24,6 +24,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: a Go program gets the same answer to "why is this value what it is" as a C, Rust or Python one, because the C library does the work (D-104's rule for every binding; `docs/Roadmap.md:147-148`).
 * **needs**: the maintainer's approval (Go and .NET are "when asked", `docs/Roadmap.md:53`); the TO DECIDE below. Not registry publishing: the module is used from the repository (`replace` or a `go.work`) until M-23-m.
 * **size**: large (a new binding)
+* **version**: 2.6.0
+* **status**: parked
 * **decided**:
   * **TO DECIDE: how Go finds the library.** (a) cgo links `-lconfigforge` from `CF_GO_LIB`/`CGO_LDFLAGS` that the caller sets: nothing compiled by `go build`, the caller builds the shared library first (as `bindings/python` loads one, `bindings/python/src/configforge/_native.py`). (b) cgo compiles the C sources into the package (a copy of the amalgamation, `scripts/generate/amalgamate.py`, committed under `bindings/go/native/`), so `go get` needs only a C compiler, as the Rust crate does (`bindings/rust/build.rs`, `Cargo.toml:10-20`). **Recommendation: (b)**; it is the one that works from `go get`, and the amalgamation is already built and tested by the release (`release.yml:63`). The cards below are written for (b); under (a) step 3 of M-1 drops the copy and the `#cgo LDFLAGS` line names `-lconfigforge`.
   * **Module** `github.com/develooper1994/configforge/bindings/go`, package `configforge`, Go 1.21 or later, no dependencies outside the standard library.
@@ -51,6 +53,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: wave 7 asks each binding for "its tests, an example and a CI job" (`docs/Roadmap.md:147-148`); a binding with no CI job is not held to the library.
 * **needs**: M-1
 * **size**: medium
+* **version**: 2.6.0
+* **status**: parked
 * **decided**:
   * The example is `examples/go/main.go`, package `main`, importing the module by a `replace` in `examples/go/go.mod` (`replace github.com/develooper1994/configforge/bindings/go => ../../bindings/go`). It prints exactly the lines of `examples/python`'s first example (find it: `ls examples/python`; the expected text is in `examples/expect.cmake`), so one expectation file serves both: add a `go.example` test beside the Python one in `examples/CMakeLists.txt` using `expect.cmake`'s helper the way the Rust example does (`examples/rust/CMakeLists.txt:60-95`).
   * The CI job is `go` in `.github/workflows/ci.yml`, a matrix `ubuntu-26.04`, `macos-latest` (the job names used by the existing macOS job at `ci.yml:137`: copy its `runs-on`), `windows-latest`; steps: checkout (the same pinned action line as `ci.yml:33`'s job uses), `actions/setup-go` pinned by commit as the file's other actions are (`ci.yml:35`'s form: SHA and `# vN` comment), Go `1.21` and `stable`, then `cd bindings/go && go vet ./... && go test -race ./...` and `cd examples/go && go run .` compared with `examples/expect.cmake`'s text through `cmake -P`. Windows runs `go test` with `CC=gcc` from the runner's MinGW; if `go test -race` is unsupported there, run without `-race` on Windows only.
@@ -72,6 +76,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: as M-1, for .NET programs (`docs/Roadmap.md:147-148`).
 * **needs**: the maintainer's approval; the TO DECIDE below.
 * **size**: large
+* **version**: 2.6.0
+* **status**: parked
 * **decided**:
   * **TO DECIDE: where the native library comes from.** (a) the assembly loads `configforge` by `NativeLibrary` from the application's directory, and the package carries a built shared library per runtime identifier (`runtimes/<rid>/native/`), as the Python wheel carries its own (`pyproject.toml`'s scikit-build wheel). (b) a source build on install (not possible with NuGet). **Recommendation: (a)**; the cards are written for it. It needs a shared build per RID (linux-x64, win-x64, osx-arm64, the release's three, `release.yml:79-195`), made by the release workflow, which is the part M-4 cannot do before the registry card M-23-m publishes anything.
   * **Names** (PascalCase, .NET's rules): namespace `ConfigForge`; `Builder.App(string name, string[] argv)`, `.Cli`, `.Env`, `.File(name, rank, path, FileFlags flags = None)`, `.Memory(name, rank, IReadOnlyDictionary<string, object> values)`, `.DefineBool/Int/Text/Real`, `.Schema`, `.SchemaFile`, `.Unknown(UnknownPolicy)`, `.Create() : Config`. `Config : IDisposable`: `GetInt(key) : long` (throws `ConfigForgeException`), `TryGetInt(key, out long)`, `GetText`, `GetBool`, `GetReal`, `Has`, `Explain`. A refusal throws `ConfigForgeException` with `Code` (int), `Name`, `Key`, `Source`, `Line`, `Column`; the message is the C message as the Python `Error` writes it (`_config.py:21-46`). Disposed use throws `ObjectDisposedException`.
@@ -96,6 +102,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: as M-2, for .NET.
 * **needs**: M-3
 * **size**: medium
+* **version**: 2.6.0
+* **status**: parked
 * **decided**:
   * The example is `examples/dotnet/Program.cs` (`net8.0` console, a `ProjectReference` to `ConfigForge.csproj`) printing the same lines as `examples/go` (M-2), the expectation being `examples/expect.cmake`'s; test name `dotnet.example` in `examples/CMakeLists.txt`.
   * The job `dotnet` in `.github/workflows/ci.yml`, matrix as M-2's; steps: checkout, `actions/setup-dotnet` pinned by commit with `dotnet-version: 8.0.x`, `cmake --preset default -DBUILD_SHARED_LIBS=ON` (the shared build `ci.yml:80`'s `shared` job already makes: copy its configure line), `cmake --build`, then `CONFIGFORGE_NATIVE_DIR=<build dir> dotnet test bindings/dotnet/ConfigForge.Tests` and `dotnet run --project examples/dotnet`.
@@ -116,6 +124,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: D-61 part 3 leaves "a few kilobytes at a time" for 2.0: the peak, not the steady footprint, is what a device without room for the whole file needs (`docs/Decisions.md:2573-2620`). This card makes the interface and proves it with the fallback; M-6 to M-9 make the readers native, one card each.
 * **needs**: the maintainer's approval; the TO DECIDE below
 * **size**: large (a public interface)
+* **version**: 2.4.0
+* **status**: parked
 * **decided**:
   * **TO DECIDE: the shape of the chunk source.** (a) **Pull**: the library calls `read(ctx, buf, cap, err)` when its window is empty; the caller's code stays a plain function. (b) **Push**: the caller calls `cf_stream_feed(state, chunk, n)` and each reader is a resumable state machine: no look-back to manage, but all of `lib/serialize/src` (6,300 lines) is rewritten, and a TOML string measured and read again (D-61) is not expressible. **Recommendation: (a).** The cards are written for it; under (b) M-6 to M-9 are not written.
   * **Names** (in `lib/serialize/include/configforge/cf_serialize.h`, after `cf_blob`, lines 43-47; not `cf_source`, which is a builder's source, `lib/config/include/configforge/configforge.h:277`):
@@ -145,6 +155,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: a length-prefixed item names its length before its bytes, so a reader never looks back: a stream costs nothing there (`docs/Roadmap.md:187-190`: "the length-prefixed binary formats first").
 * **needs**: M-5
 * **size**: medium
+* **version**: 2.4.0
+* **status**: parked
 * **decided**:
   * `cbor.c` (969 lines) and `tlv.c` get a `decode_stream`. Each reads an item's head with `cfi_window_peek(w, &p, 9)` (the longest CBOR head). A text or byte string longer than the window goes whole to the sink's `reserve_text` buffer (`cf_serialize.h:135-140`), copied chunk by chunk from the feed and UTF-8-checked as copied (`cfi_window_utf8`).
   * One parse, not two: a local `struct cbor_src` with `peek`/`take` function pointers; the whole-blob `decode` points them at a `memcpy` over the blob, `decode_stream` at the window. The depth, count and size refusals are the whole read's (`grep -n "CF_REASON_" lib/serialize/src/cbor.c`), at the same bytes with the same messages.
@@ -168,6 +180,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: the text readers that never read back are the next cheapest after the binary ones.
 * **needs**: M-5; M-6 lands first so the source pattern is settled
 * **size**: large
+* **version**: 2.4.0
+* **status**: parked
 * **decided**:
   * JSON: `js_scan` (`lib/serialize/src/json.c:41-51`) holds `p` and `end` into the blob; the stream form keeps them into the window's buffer, refilled by `cfi_window_peek(w, &s->p, 1)` when `p == end`. Every function that reads more than one byte ahead (`true`, `false`, `null`, a number's end, `\uXXXX` and a surrogate pair's second half, up to 12 bytes) peeks the bytes it needs first. A string longer than the window is copied piecewise into the `reserve_text` buffer. Positions go through the window's counters (`js_fail`, `json.c:103-105`).
   * `.properties` (`lib/serialize/src/properties.c`, 235 lines): a line with its continuation lines is one value that must fit `reserve_text`; the line end is `cf_text_eol` (`lib/text/src/space.c:31-36`) over the window's bytes, a longer line read in several peeks and copied as it goes.
@@ -190,6 +204,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: D-61 names these two as the readers a stream reworks (`docs/Decisions.md:2573-2620`, part 3).
 * **needs**: M-5; M-7
 * **size**: large
+* **version**: 2.4.0
+* **status**: parked
 * **decided**:
   * TOML: `toml_scan` (`lib/serialize/src/toml.c:115-142`) holds pointers; `toml_string` measures then reads again. In stream mode a single-line string is copied piecewise into `reserve_text` once, with no measure pass; multi-line strings, arrays and inline tables go through the window. A key path and a table header must fit the window: the option's check (M-5) adds `CF_STREAM_WINDOW >= CF_KEY_MAX + 8`. TOML's record of what the document defined lives in `reserve_work` (`cf_serialize.h:142-149`), not in the window; its growth is part of the peak and is said in the `docs/Limits.md` row.
   * INI (`lib/serialize/src/ini.c`): the array run looks back one line; a `cfi_window_mark` is taken at each line start and rewound at most once per line. A line longer than the window is refused (M-5's reason).
@@ -213,6 +229,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: YAML's implicit keys look ahead along a line (D-61); the file source is where a program meets the stream (`lib/config/src/bridge/file.c:395-425` reads the bytes whole).
 * **needs**: M-5, M-7, M-8
 * **size**: large
+* **version**: 2.4.0
+* **status**: parked
 * **decided**:
   * YAML: `yp` (`lib/serialize/src/yamlparse.c:43-58`) looks ahead in `yp_is_key` and `yp_peek_node`; in stream mode the look-ahead is a window mark at the node's start, rewound once; a node whose line is longer than the window is refused (M-5's reason). The libyaml and libfyaml builds (`CF_YAML_LIBYAML`, `CF_YAML_LIBFYAML`) have no stream: their `decode_stream` is NULL and the fallback serves (said in `docs/Formats.md`'s YAML row).
   * `CF_STREAM` is a new `cf_builder_file` flag, the next free bit of the flags enum (`grep -n "CF_OPTIONAL" lib/config/include/configforge/*.h`); it applies to a file read by path (not `document`, not an environment variable). With it `file.c` makes a `cf_feed` by `cf_feed_file` and calls `cf_codec_decode_stream`, never `cf_blob_file`; the window buffer is wiped before it is freed, as the arena's bytes are (D-61, `cf_blob_arena_done`, `file.c:421`). A codec with no native stream reads the whole file as now: the flag is never refused. `cf_live` and Doctor use the same call and need no change.
@@ -234,6 +252,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: D-61 part 1: manual sizing is the mode by build today; the other two need a 2.0 interface (`docs/Decisions.md:2573-2620`).
 * **needs**: the maintainer's approval; the TO DECIDE below
 * **size**: medium
+* **version**: 2.0.0
+* **status**: parked
 * **decided**:
   * **TO DECIDE: what grows.** (a) Only the readers' scratch and the key space's keys and values (the 255-byte refusal of the built-in readers, `cf_serialize.h:136-139`; `scratch[CF_KEY_MAX]`, `json.c:48`), leaving `cf_error` as arrays. (b) (a) and `cf_error`'s `key`, `source` and `message` (`lib/base/include/configforge/cf_error.h:51-59`), which makes `cf_error` another struct: every program that declares one has its size compiled in (D-61). **Recommendation: (a) in M-11a and (b) in M-11b**, separate cards so the maintainer can drop (b).
   * **Interface**, in `lib/config/include/configforge/configforge.h` after `cf_builder_digest_key` (line ~445): `typedef enum cf_sizing { CF_SIZING_MANUAL = 0, CF_SIZING_SEMI = 1, CF_SIZING_DYNAMIC = 2 } cf_sizing;` `CF_API cf_bool cf_builder_sizing(cf_builder* b, cf_sizing mode, size_t cap);` `CF_API cf_sizing cf_config_sizing(const cf_config* c, size_t* cap);`. `cap` is the largest a single grown buffer may be: non-zero for `SEMI` (else `CF_E_ARG`, "semi-dynamic sizing needs a cap"), ignored otherwise. The last call wins; after `create` the mode is fixed.
@@ -257,6 +277,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: D-61 part 1: a long key is refused today only because a buffer is fixed.
 * **needs**: M-10
 * **size**: medium
+* **version**: 2.0.0
+* **status**: parked
 * **decided**:
   * The 255-byte limit of the built-in readers is the absence of `reserve_text` (`cf_serialize.h:136-139`); with `SEMI`/`DYNAMIC` the loader's sink supplies one that grows (`grep -n reserve_text lib/config/src/bridge/flatten.c`), capped at `cap` for `SEMI`. JSON's `scratch[CF_KEY_MAX]` (`json.c:48`) and TOML's and YAML's key buffers become `reserve_work` blocks of the size the key needs, doubled up to the cap (each growth one call: "Each call is new memory", `cf_serialize.h:142-149`); a key past the cap is refused with `CF_REASON_BUDGET`, "a key is longer than the sizing cap".
   * The key space's key limit (`cf_key_valid`, `cf_define.h`, the build's `CF_KEY_MAX`) is the mode's: `MANUAL` the build's, `SEMI` the cap, `DYNAMIC` bounded by `size_t` and the arena.
@@ -280,6 +302,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: D-61 part 1 predicts it: a message cannot grow while `cf_error` holds an array.
 * **needs**: M-11a; the maintainer's approval of the break
 * **size**: large
+* **version**: 2.0.0
+* **status**: parked
 * **decided**:
   * **TO DECIDE: the shape.** (a) `key`, `source`, `message` become `const char*` into a buffer `cf_error` owns (`cf_error_clear` frees it, `cf_error_copy` copies it). (b) Keep the arrays and add `char* long_message` for what does not fit. (c) Keep the arrays, never grow. **Recommendation: (a)**; the doc at `cf_error.h:61-67` already forbids copying one whole. Written for (a); under (c) this card is dropped.
   * `CF_ERROR_INIT` stays (zeroed, `size` set); messages shorter than the old arrays are stored in a small inline buffer first so an error with nothing long costs no allocation. The 1.x fields `code`, `where`, `reason` are unchanged.
@@ -305,6 +329,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "limits and the build id in the report and the image header" was done for the report only; "the image header keeps its layout until 2.0" (`docs/Roadmap.md:405-416`); the 12 reserved bytes at 52-63 (`docs/ImageFormat.md:34-55`) cannot hold the limits.
 * **needs**: the maintainer's approval; the TO DECIDE below
 * **size**: medium
+* **version**: 2.0.0
+* **status**: parked
 * **decided**:
   * **TO DECIDE: what major 2 changes.** (a) The header grows and offsets become 64-bit (an image over 4 GiB expressible). (b) The header grows only; offsets stay 32-bit. **Recommendation: (b)**: no target an image is for needs 4 GiB, and a requirement the Roadmap item does not ask for is not added. Written for (b).
   * **Layout, major 2**: bytes 0-51 as major 1 except `major` = 2, `minor` = 0; 52-63 reserved zero; at 64 `key_max`, `source_max`, `message_max`, `max_depth` (u16 each: the build's `CF_KEY_MAX`, `CF_SOURCE_MAX`, `CF_MESSAGE_MAX`, `CF_MAX_DEPTH`); at 72 `build_id`, 32 bytes NUL-padded text (the id the report writes: `grep -rn "build_id" lib/config/include/configforge/*.h`); 104-127 reserved zero. `index_off` is never below 128. Little-endian, offsets multiples of 8.
@@ -329,6 +355,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "what the sizing modes break, once" (`docs/Roadmap.md:58`, `405-417`) and `docs/Maintaining.md:111`: each break "listed under the release's `### Changed` with its D-number".
 * **needs**: M-9, M-11b, M-12; the maintainer's approval to open 2.0
 * **size**: small
+* **version**: 2.0.0
+* **status**: parked
 * **decided**:
   * One table, `| What changes | Since | Before | Now | D |`, a row per break and only those M-5 to M-12 made (`cf_error` owned text, D-176; image major 2, D-177; and whatever `gate.abi`'s diff shows: step 2). `decode_stream` and the stream are additions, not breaks.
   * The version is bumped by `scripts/release/version.cmake` with the argument its header comment documents (`Cargo.toml:3`, `pyproject.toml:7` and the rest are its job), never by hand. **The tag is the maintainer's** and is not a step.
@@ -350,6 +378,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "a document rather than a configuration" (`docs/Roadmap.md:1235-1257`): the readers already give events and that interface is public (`cf_doc_sink`, `lib/serialize/include/configforge/cf_serialize.h:126-150`); `configforge codec convert` builds a tree of its own (`tools/codec/convert_core.c`, `cv_convert` 858-895). This card moves that idea into the library as a public type and leaves the tool using it.
 * **needs**: the maintainer's approval; the TO DECIDE below
 * **size**: large (a public interface)
+* **version**: 2.4.0
+* **status**: parked
 * **decided**:
   * **TO DECIDE: the tree's shape.** (a) A **node tree**: one `cf_dom_node` per table, array and scalar, parent and child links, in an arena the `cf_dom` owns; walked by `cf_dom_root`, `cf_dom_child`, `cf_dom_next`. (b) A **flat index** like the key space's (path strings to values): smaller, but a document with arrays of tables and repeated names (XML, TOML array tables) is not a key space (`docs/Architecture.md`, "What is deliberately not here"). **Recommendation: (a)**; it is what "a document rather than a configuration" asks for. Written for (a).
   * **Names.** `typedef struct cf_dom cf_dom;` `typedef struct cf_dom_node cf_dom_node;` (opaque). `CF_API cf_dom* cf_dom_read(const cf_codec* c, const cf_blob* in, const cf_allocator* alloc, cf_error* err);` (NULL with `err` set; the tree is not partial); `cf_dom_free(cf_dom*)`; `cf_dom_root(const cf_dom*)`; `cf_dom_kind(const cf_dom_node*)` returns `CF_DOM_TABLE`, `CF_DOM_ARRAY` or `CF_DOM_SCALAR`; `cf_dom_name(const cf_dom_node*, size_t* n)` (the member's name, NULL for an array element and the root); `cf_dom_first(const cf_dom_node*)`, `cf_dom_next(const cf_dom_node*)`; `cf_dom_find(const cf_dom_node* table, const char* name, size_t n)` (the first member of that name; a table may hold repeated names, as XML does); `cf_dom_value(const cf_dom_node*, cf_value*)` (a scalar); `cf_dom_at(const cf_dom_node*)` (the `cf_loc` of the node: `cf_serialize.h`'s `cf_loc`). `cf_dom_write(const cf_dom*, const cf_codec*, cf_sink*, cf_error*)` writes it through an encoder (`cf_codec.encoder`, `cf_serialize.h:234`).
@@ -377,6 +407,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "for reading three keys of a large document" (`docs/Roadmap.md:1244-1246`).
 * **needs**: the maintainer's approval; the TO DECIDE below; M-14 (the node vocabulary)
 * **size**: large
+* **version**: 2.4.0
+* **status**: parked
 * **decided**:
   * **TO DECIDE: which formats.** (a) JSON and CBOR only (JSON's structure is found by a scan for `{ } [ ] , : "`; CBOR's by item heads). (b) Every text codec. **Recommendation: (a)**: TOML, YAML and INI's structure depends on line context and is not found without parsing (YAML's `yp_is_key` looks ahead, `yamlparse.c`). The others refuse: `CF_E_CAPABILITY`, "lazy reading is for JSON and CBOR".
   * **Names.** `typedef struct cf_lazy cf_lazy;` `CF_API cf_lazy* cf_lazy_open(const cf_codec* c, const cf_blob* in, const cf_allocator* alloc, cf_error* err)` (the blob must outlive the `cf_lazy`: it is borrowed, said in the header); `cf_lazy_free`; `cf_lazy_root(const cf_lazy*)` a `cf_lazy_ref` (a small value struct: index position); `cf_lazy_member(cf_lazy_ref table, const char* name, size_t n, cf_lazy_ref* out)` (false when absent); `cf_lazy_element(cf_lazy_ref array, size_t i, cf_lazy_ref* out)`; `cf_lazy_count(cf_lazy_ref)`; `cf_lazy_value(cf_lazy_ref, cf_value*, cf_error*)` (parses that one scalar: a bad number refuses here, with its place). The index is validated at open only as far as structure goes: unbalanced brackets, a string never closed, depth past `CF_MAX_DEPTH` refuse at `cf_lazy_open`; a malformed value inside refuses when asked for, never earlier. **Said in the header and the Guide**: a lazy read accepts some documents the event read refuses, until the value is touched; the event read is the validator.
@@ -402,6 +434,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: RapidJSON's in-situ mode (`docs/Roadmap.md:1247-1250`): no copy, no allocation for strings; a binary format is in-situ by nature (`:1255-1257`), so CBOR's text strings are passed by pointer into the blob in the same call.
 * **needs**: the maintainer's approval; the TO DECIDE below
 * **size**: medium
+* **version**: 2.4.0
+* **status**: parked
 * **decided**:
   * **TO DECIDE: the buffer.** (a) A `char*` and a length the caller owns and **gives up** (the call writes into it: unescaped strings shrink in place, each followed by a NUL written over the closing quote). (b) A copy made by the library first (no gain). **Recommendation: (a)**, the only form that is in-situ. Written for (a).
   * **Names.** `CF_API cf_bool cf_codec_decode_insitu(const cf_codec* c, char* buf, size_t n, const char* name, const cf_doc_sink* out, cf_error* err);` For JSON: the sink's `scalar` receives `v->u.t.p` pointing into `buf` (a text, NUL-terminated, valid until the caller reuses the buffer); `reserve_text` is not called. For CBOR (text strings are already unescaped): the pointer is into `buf` and the string is not NUL-terminated by the reader unless the byte after it is a head, so the call copies nothing and `textual` stays as the reader sets it; the header says a CBOR text is length-delimited and not terminated. For any other codec: `CF_E_CAPABILITY`, "in-situ reading is for JSON and CBOR". An unescape that would grow (never in JSON: `\uXXXX` shrinks) cannot happen; a string with an invalid escape refuses as the whole read does.
@@ -427,6 +461,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "Each mode is measured on the benchmark page ... Which formats support which mode is a table" (`docs/Roadmap.md:1251-1257`).
 * **needs**: M-9, M-14, M-15, M-16
 * **size**: medium
+* **version**: 2.4.0
+* **status**: parked
 * **decided**:
   * The table is generated, like `docs/Limits.md` and the feature matrix (`scripts/generate/matrix.cmake`, `limits.cmake`): `scripts/generate/readmodes.cmake` writes the part of `docs/Formats.md` between `<!-- readmodes:begin -->` and `<!-- readmodes:end -->`, from a table in `lib/serialize/src/codec.c` (a static array `{codec name, has decode_stream, in DOM (all), lazy, in-situ}`) printed by `configforge codec modes` (a one-line addition to `tools/codec`: `grep -n "\"list\"" tools/codec/*.c` for where the sub-commands are), so the document cannot drift from the code; a `gate.readmodes` test fails when the generated part is stale (as `gate.apiref` does).
   * Benchmark cells: in `bench/bench.c` (cells at `bench/bench.c:1448-1455` show the pattern) four new `mode` values for `json` and `cbor` at 4 MiB: `dom`, `stream`, `lazy3` (three keys), `insitu`, counted under callgrind like the others (`scripts/bench/run.py:157-174`); they are not in the quick scope's gated set until their first baseline is written from CI's artifact (never a laptop, `scripts/bench/gate.py`'s docstring).
@@ -447,6 +483,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "an application to the project, with the existing fuzz targets and their build script" (`docs/Roadmap.md:1356-1360`); the harnesses and the build already exist (`.clusterfuzzlite/build.sh`, `tests/fuzz/CMakeLists.txt:25-40`).
 * **needs**: the maintainer's approval (it names a contact and what Google may do with reports); nothing else
 * **size**: small
+* **version**: 1.9.0
+* **status**: parked
 * **decided**:
   * `oss-fuzz/project.yaml`: `homepage: "https://github.com/develooper1994/configforge"`, `language: c`, `primary_contact: "TO BE FILLED BY THE MAINTAINER"` (the one field an agent cannot know: **the card leaves it as that literal and `gate.ossfuzz` fails on it only when `OSSFUZZ_APPLY=1`**), `main_repo: "https://github.com/develooper1994/configforge"`, `sanitizers: [address, undefined]`, `architectures: [x86_64]`, `fuzzing_engines: [libfuzzer, afl, honggfuzz]`, `vendor_ccs: []`. A `primary_contact` is not an agent's to invent.
   * `oss-fuzz/Dockerfile`: `FROM gcr.io/oss-fuzz-base/base-builder`, `RUN apt-get update && apt-get install -y cmake`, `RUN git clone --depth 1 https://github.com/develooper1994/configforge $SRC/configforge`, `WORKDIR $SRC/configforge`, `COPY build.sh $SRC/`.
@@ -469,6 +507,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: `docs/Roadmap.md:1356-1360`; a public, checkable claim.
 * **needs**: M-18; the maintainer's own access
 * **size**: small (the maintainer's)
+* **version**: 1.9.0
+* **status**: parked: not now
 * **decided**: **Waits on**: the maintainer: a pull request to `google/oss-fuzz` adding `projects/configforge/` with the three files of `oss-fuzz/` (copied as they are, the contact filled), an email address Google accepts for reports (a Google account's address is required for the private bug view), and the application's review by Google. No agent step. When accepted: the README's badge and one line in `docs/Compliance.md` ("What may be said, and when", line 210) naming the date.
 * **files**: none in this repository by an agent; after acceptance the maintainer (or a card) edits `README.md` and `docs/Compliance.md`.
 * **steps**: the maintainer opens the pull request at `google/oss-fuzz`, answers its review, and tells the organiser when it is merged.
@@ -483,6 +523,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "everything an integrator's safety case asks the library for, from one place and for one commit", "built from what the gates already produce" (`docs/Roadmap.md:1361-1370`); `docs/Compliance.md:162-188` names the items and says which are planned.
 * **needs**: the maintainer's approval (what the pack promises in public); nothing else; the items whose producers arrive later (the safety manual, the CWE table, mutation score, MC/DC) are picked up by name when they exist, by the manifest's rule below.
 * **size**: medium
+* **version**: 1.9.0
+* **status**: parked
 * **decided**:
   * **The items, each with its producer in the tree today** (the manifest's keys): `deviations` (`docs/compliance/deviations.txt`, copied); `misra_report` (the Markdown report of `gate.misra`'s run, `docs/Compliance.md:141-160`, "planned": absent until a producer exists); `cert_matrix`, `cwe_table`, `known_weaknesses` (absent until their cards land; each is looked for at `docs/compliance/<key>.md`); `coverage` (gcovr's HTML and Cobertura XML from `cmake -DEXTRA=coverage -DMODE=quick -P scripts/verify.cmake`, the `coverage` job `ci.yml:466-476`: the script runs it when `--coverage` is given, else takes `--coverage-dir`); `mutation_score` (absent until the mutation card: looked for at `build/mutation/score.json`); `fuzzing` (the corpus directories' file counts and sizes, the `corpus_<reader>` directories `tests/fuzz/CMakeLists.txt:1-9` names, as a JSON table; hours are the sum of `CF_FUZZ_SECONDS` of the runs given by `--fuzz-log`, else absent); `benchmark` (`docs/Performance.md` and the bench JSON, `bench/baseline/instructions.json`); `safety_manual` (`docs/compliance/safety-manual.md`, "planned": absent until it exists); `provenance` (the SPDX SBOM the release already makes, `release.yml:132-134`, and the attestation's bundle path given by `--attestation`); `reproducible_build` (absent until the "release built twice and compared" card writes `build/repro/result.json`).
   * **The rule of the manifest**: an item is `"status": "present"` with `path` and `sha256` only if its file exists; otherwise `"absent"` with `"reason"` naming the file it looked for. The script never writes a placeholder file and never fills a gap with a general statement; the pack is honest about what it holds. `docs/Compliance.md:210-` ("What may be said, and when") is the test of every sentence in the pack's README: the README is generated from the manifest, one line an item, no adjectives.
@@ -507,6 +549,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "one archive attached to a release" (`docs/Roadmap.md:1361-1370`).
 * **needs**: M-20; the maintainer's approval
 * **size**: small
+* **version**: 1.9.0
+* **status**: parked
 * **decided**:
   * A job `evidence` in `release.yml` (`needs: [check]`, runs on `ubuntu-26.04`, same checkout and action pins as the file's other jobs, `release.yml:195-200`) runs `cmake -DEXTRA=coverage -DMODE=quick -P scripts/verify.cmake`-equivalent (`ci.yml:466-476`: `apt-get install gcovr` then the same command) and `python scripts/release/evidence.py --out evidence --coverage-dir <that run's coverage output>`; uploads `evidence/` as an artifact `evidence`.
   * `publish` (`needs` gains `evidence`) downloads it with the others (`actions/download-artifact`, `merge-multiple: true`, `release.yml:210-213`), so `dist/*` includes `configforge-<v>-evidence.tar.gz`, which the existing steps already attest (`attest-build-provenance`, `subject-path: dist/*`) and checksum (`sha256sum ./*`). No new permission.
@@ -529,6 +573,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "the crate on crates.io, the wheel on PyPI ... each from the release workflow, after the GitHub release" (`docs/Roadmap.md:787-793`); PyPI and crates.io accept OIDC (`docs/Roadmap.md:895-900`). The registry-side set-up is M-23-m.
 * **needs**: the maintainer's approval; the TO DECIDE below; nothing else (the jobs skip until M-23-m is done)
 * **size**: large
+* **version**: 2.6.0
+* **status**: parked
 * **decided**:
   * **TO DECIDE: the crate's registry token.** crates.io's trusted publishing exists (via `rust-lang/crates-io-auth-action`); a token in a repository secret does not need it. (a) Trusted publishing only, no secret. (b) A `CARGO_REGISTRY_TOKEN` secret, `cargo publish --locked`. **Recommendation: (a)**, as the Roadmap's "so no token is kept in the repository" says; written for (a). Under (b) the job reads the secret and the registry set-up card changes.
   * **Skipping**: each job has `if: startsWith(github.ref, 'refs/tags/v') && vars.PUBLISH_PYPI == 'true'` (and `PUBLISH_CRATES`): repository variables the maintainer sets in M-23-m. With them unset the job is skipped and the release is as it was.
@@ -553,6 +599,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: M-22's jobs publish nothing until the registries know them (`docs/Roadmap.md:787-793`: "needs the registries' ... set up once by the maintainer", `docs/Maintaining.md:109`).
 * **needs**: M-22; the maintainer's own access
 * **size**: small (the maintainer's)
+* **version**: 1.10.0
+* **status**: parked: not now
 * **decided**: **Waits on**: the maintainer. (1) PyPI: create the project `configforge` (or a "pending publisher" for a new name) with publisher GitHub, owner `develooper1994`, repository `configforge`, workflow `release.yml`, environment `pypi`. (2) crates.io: the first release of a crate cannot be published by OIDC: the maintainer publishes `0.x` or the current version once by hand with `cargo publish` from the staged package (`scripts/release/package_rust.cmake`), then adds the trusted publisher (repository, workflow `release.yml`, environment `crates-io`). (3) GitHub: create environments `pypi` and `crates-io` (with required reviewers if wished), and repository variables `PUBLISH_PYPI=true`, `PUBLISH_CRATES=true`. (4) The name `configforge` is checked free on both registries first; if taken, a TO DECIDE for the name (the maintainer's) and M-22's package names change.
 * **files**: none by an agent.
 * **steps**: the maintainer does (1) to (3) and tells the organiser; the organiser opens M-24.
@@ -567,6 +615,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "done when `cargo add configforge`, `pip install configforge` and `vcpkg install configforge` work on a clean machine, and CI installs each in a job of its own" (`docs/Roadmap.md:793-797`).
 * **needs**: M-22; M-23-m (nothing to install before it); M-25-m for the vcpkg job only (that job stays disabled until the port is merged upstream)
 * **size**: medium
+* **version**: 2.6.0
+* **status**: parked
 * **decided**:
   * `.github/workflows/registries.yml`, `on: workflow_run` of `release` (types `completed`, conclusion success) and `schedule` (weekly) and `workflow_dispatch` with an input `version` (default: the latest GitHub release's tag: `gh release view --json tagName`).
   * Job `pip` (matrix `ubuntu-26.04`, `macos-latest`, `windows-latest`): `python -m venv v && v/bin/pip install configforge==$VERSION` (retrying up to 10 times a minute apart: the index lags a publish), then `python -c "import configforge as cf; print(cf.version())"` equals `$VERSION` (the binding's `version`, `__init__.py`'s `__all__`).
@@ -590,6 +640,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "the vcpkg and ConanCenter recipes submitted upstream" (`docs/Roadmap.md:788-789`).
 * **needs**: M-22 (the recipes in `packaging/`, tested by CI: `ci.yml:226-261`); a tagged release to point at; the maintainer's own access
 * **size**: small (the maintainer's)
+* **version**: 1.10.0
+* **status**: parked: not now
 * **decided**: **Waits on**: the maintainer and the upstream reviewers. A pull request to `microsoft/vcpkg` adding `ports/configforge` from `packaging/vcpkg/configforge` (with the `versions/` database entry made by `vcpkg x-add-version configforge`), and one to `conan-io/conan-center-index` adding `recipes/configforge` from `packaging/conan` (its `config.yml`, `conandata.yml` with the release's URL and SHA-256 from `SHA256SUMS`). Upstream's reviewers' changes are folded back into `packaging/` by an agent card opened then.
 * **files**: none by an agent now.
 * **steps**: the maintainer opens both pull requests after a release; each upstream's CI must pass.
@@ -604,6 +656,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "wheels for each platform" (`docs/Roadmap.md:895-897`); today `ci.yml:96-105` builds one.
 * **needs**: M-22; the maintainer's approval (the wheel matrix is a promise)
 * **size**: medium
+* **version**: 2.6.0
+* **status**: parked
 * **decided**:
   * `cibuildwheel` (pinned by commit, version 2.x: the `pypa/cibuildwheel` action) in a `wheels` job of `release.yml`, matrix `ubuntu-26.04`, `ubuntu-24.04-arm`, `macos-13`, `macos-latest`, `windows-latest`. Configured in `pyproject.toml` `[tool.cibuildwheel]`: `build = "cp38-*"` (one wheel per platform: `wheel.py-api = "py3"` is already set, `pyproject.toml:26`; the wheel is tagged `py3-none-<platform>`), `skip = "*-musllinux_aarch64"` only if the aarch64 musl image is unavailable, `test-command = "python -I {project}/tests/python/test_package.py"`, `test-requires = ""`. The wheel's shared library is built by scikit-build-core from the CMake project (as today).
   * The wheels are uploaded as artifacts into `dist/`, so they are checksummed and attested with the rest (`release.yml:210-224`), and `publish-pypi` takes them from `dist/`.
@@ -625,6 +679,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "recipes submitted to ... Meson's WrapDB, the Bazel Central Registry and conda-forge" (`docs/Roadmap.md:897-899`); the in-tree recipes come first so a submission is a copy.
 * **needs**: the maintainer's approval; M-22 (the pattern)
 * **size**: large (split into M-27a Meson, M-27b Bazel, M-27c conda if the diff passes ~600 lines)
+* **version**: 2.6.0
+* **status**: parked
 * **decided**:
   * **Meson**: `packaging/meson/meson.build` (a `project('configforge', 'c', version: <the version>, meson_version: '>=0.57')` that builds the library's sources as the CMake does: the amalgamation `scripts/generate/amalgamate.py` makes is the one source list, so the file lists `configforge.c` and installs `configforge.h`, with `declare_dependency` as `configforge_dep` and a `pkg-config` file) and `packaging/meson/configforge.wrap` as a WrapDB `[wrap-file]` (`source_url` the release's amalgamation archive `configforge-<v>-amalgamation.tar.gz`, `source_hash` its SHA-256, `patch_directory = configforge`, `[provide] configforge = configforge_dep`). CI job `meson`: `pip install meson ninja`, a scratch project that `subproject('configforge')`s from the wrap and compiles `tests/consumer/consumer.c`.
   * **Bazel**: `packaging/bazel/MODULE.bazel` (`module(name = "configforge", version = <the version>)`), `BUILD.bazel` (a `cc_library` from the amalgamation with `hdrs`, `includes`), `presubmit.yml`, `source.json` (URL and `integrity` the SRI of the release's archive) in the BCR's layout `modules/configforge/<version>/`. CI job `bazel`: `bazel build //... ` in a scratch module that `bazel_dep(name = "configforge")` with `local_path_override` to `packaging/bazel`.
@@ -647,6 +703,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "for embedded targets the ESP-IDF Component Registry, PlatformIO's registry and a Zephyr module" (`docs/Roadmap.md:899-901`).
 * **needs**: the maintainer's approval; M-27 (`scripts/release/packaging.py` fills their versions)
 * **size**: medium
+* **version**: 2.6.0
+* **status**: parked
 * **decided**:
   * `idf_component.yml` at the root: `version` (filled), `description`, `url`, `license: Zlib`, `dependencies: { idf: ">=5.0" }`, `targets` omitted (all); `CMakeLists.txt`-side: `packaging/esp-idf/CMakeLists.txt` with `idf_component_register(SRCS "configforge.c" INCLUDE_DIRS ".")` over the amalgamation (the component's tree is a generated directory `packaging/esp-idf/` made by `scripts/release/packaging.py --esp-idf <dir>`: not committed, so the component has one source of truth).
   * `library.json`: `name`, `version`, `description`, `repository`, `license`, `frameworks: "*"`, `platforms: "*"`, `build: { srcDir: "native", includeDir: "native" }` over the same generated tree; a PlatformIO job runs `pio pkg pack` and `pio test` is not run (hardware).
@@ -667,6 +725,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: M-27 and M-28 prepare; the submissions are other projects' and need the maintainer's accounts (`docs/Roadmap.md:895-901`).
 * **needs**: M-27, M-28, a tagged release; the maintainer's own access
 * **size**: small (the maintainer's)
+* **version**: 2.3.0
+* **status**: parked: not now
 * **decided**: **Waits on**: the maintainer and each registry's reviewers. Pull requests to `mesonbuild/wrapdb` (the wrap), `bazelbuild/bazel-central-registry` (`modules/configforge/<v>/`), and `conda-forge/staged-recipes` (`recipes/configforge/meta.yaml`); `compote publish` (ESP-IDF) and `pio pkg publish` (PlatformIO) with the maintainer's accounts and tokens, run by the maintainer from the generated trees; the Zephyr module is listed by a pull request to the Zephyr modules list or used by `west.yml` entry (no registry), documented in `docs/Guide.md`.
 * **files**: none by an agent now.
 * **steps**: the maintainer submits each; reviewers' changes are folded back by an agent card.
@@ -681,6 +741,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "the GitHub Action in a repository of its own with `action.yml` at its root, as the Marketplace requires" (`docs/Roadmap.md:901-903`); today it is `actions/doctor` inside this repository (`ls actions/doctor`).
 * **needs**: a decision to rename (the repository's name is the maintainer's); the maintainer's own access (creating a repository and accepting the Marketplace's terms)
 * **size**: small (the maintainer's)
+* **version**: 2.3.0
+* **status**: parked: not now
 * **decided**: **Waits on**: the maintainer. Steps for the maintainer: create the repository; the organiser then opens an agent card M-30a that copies `actions/doctor/*` into a staging directory, rewrites its self-references (`uses: ./actions/doctor` in `ci.yml:478-505`'s job becomes the new repository at a tag), and adds a workflow to this repository that syncs the directory to the new repository's `main` on each release (deploy key or fine-grained token: a secret the maintainer creates). That card is not written until the repository exists.
 * **files**: none now.
 * **steps**: as above.
@@ -695,6 +757,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "downloads, traffic and issues counted once a month into Maintaining.md" (`docs/Roadmap.md:903-905`); with the M-29-m channels, the end of "Done when each channel installs a release on a clean machine in CI" (line 904).
 * **needs**: the maintainer's approval (it makes a bot's pull request)
 * **size**: small
+* **version**: 2.6.0
+* **status**: parked
 * **decided**:
   * The script uses `gh api` only (the CLI's token), no dependency: `repos/{o}/{r}/releases` (`assets[].download_count`), `repos/{o}/{r}/traffic/views` and `/clones` (needs push access: the workflow's `GITHUB_TOKEN` has `contents: read` and traffic needs `administration`-level; so **traffic is written only when `--traffic` is given and the token allows it; otherwise the section says "traffic: not collected"**), `gh issue list --state all --search "created:>=YYYY-MM-01"`. Output: one table row `| 2026-12 | downloads | views | clones | opened | closed |`.
   * The workflow `counts.yml`: `schedule: cron "17 4 2 * *"`, `workflow_dispatch`; `permissions: { contents: write, pull-requests: write }`; it runs the script, appends the row under the heading "## Counts" of `docs/Maintaining.md` (created by the card), and opens a pull request with `gh pr create` (never pushes to `main`).
@@ -716,6 +780,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "a fingerprint used to approve a configuration or allow it through a gate, where FNV-1a's collisions can be made on purpose" (`docs/Roadmap.md:916-931`); `cf_fingerprint` says "Not cryptographic ... proves nothing" (`lib/config/include/configforge/configforge.h:643-649`).
 * **needs**: the maintainer's approval; the TO DECIDE below
 * **size**: large
+* **version**: 2.6.0
+* **status**: parked
 * **decided**:
   * **TO DECIDE: the interface.** `cf_fingerprint` returns a `cf_u64` and `cf_fingerprint_format` writes 22 characters (`configforge.h:649-653`), neither can hold 256 bits. (a) New functions beside them: `cf_fingerprint_text(const cf_config*, char* buf, size_t cap)` writing whichever kind the builder chose (`fnv1a:` 22 bytes, `sha256:` 71), the 1.x pair unchanged. (b) A `cf_fingerprint256(const cf_config*, unsigned char out[32])` only. **Recommendation: (a)**: a program that logs a fingerprint wants the text, and the prefix tells a reader the kind (`docs/Roadmap.md:928-929`: "the prefix every digest already carries"). Written for (a).
   * **Names.** `typedef enum cf_fp_kind { CF_FP_FNV1A = 0, CF_FP_SHA256 = 1 } cf_fp_kind;` `CF_API cf_bool cf_builder_fingerprint(cf_builder* b, cf_fp_kind kind);` `CF_API size_t cf_fingerprint_text(const cf_config* c, char* buf, size_t cap);` (the length it needs: 22 or 71, nothing written past `cap`, as `cf_fingerprint_format`'s contract). `cf_fingerprint` (the u64) stays FNV-1a whatever the builder chose and its comment says so. **A report carries one fingerprint kind** (`docs/Roadmap.md:928-929`: so a diff compares): `"fingerprint"` is the chosen kind's text; Doctor compares two fingerprints only when their prefixes agree, else CFD020 (as D-85's digests: `docs/Decisions.md:3560-3568`) naming the two kinds.
@@ -742,6 +808,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "a rule or a device that names its own ... a function the program gives, with the name the report writes before its digests" (`docs/Roadmap.md:920-924`, `929-931`).
 * **needs**: the maintainer's approval; the TO DECIDE below; M-32 (the stream interface and the kinds)
 * **size**: medium
+* **version**: 2.6.0
+* **status**: parked
 * **decided**:
   * **TO DECIDE: the function's shape.** (a) A streaming triple `init(ctx)`, `update(ctx, p, n)`, `final(ctx, out, cap) -> n` (what a hash engine's driver offers; any digest size up to 64 bytes). (b) One-shot `digest(ctx, p, n, out)`: the library would have to buffer the whole byte stream (a configuration's can be large; no allocation for it in a freestanding build). **Recommendation: (a)**; written for (a).
   * **Names.** `typedef struct cf_digest_fn { size_t size; const char* name; size_t out_len; void (*init)(void* ctx); void (*update)(void* ctx, const void* p, size_t n); void (*final)(void* ctx, unsigned char* out); void* ctx; } cf_digest_fn;` — `size` is `sizeof` at the call site (D-51); `name` is `[a-z0-9-]` 1 to 16 characters (`"hmac-sha256"`, `"stm32-hash"`; the Roman letters of `cf_key_valid`'s class so a prefix is never ambiguous: `fnv1a`, `sip24` and `sha256` are refused as names: "that name is the library's"); `out_len` 8 to 64. `CF_API cf_bool cf_builder_digest_fn(cf_builder* b, const cf_digest_fn* fn);` — the struct is copied (the pointers it holds are the program's: it keeps `ctx` alive for the configuration's life, said in the header); refused with `CF_E_ARG` for a bad name, `out_len`, NULL function or a `size` too small, and `CF_E_POLICY` when `cf_builder_fingerprint` was given `CF_FP_SHA256` too ("one digest a purpose: a fingerprint has one kind"). With it `cf_fingerprint_text` writes `<name>:<2*out_len hex digits>`, up to 16 + 1 + 128 characters, over M-32's byte stream; `cf_fingerprint` (u64) stays FNV-1a.
@@ -765,6 +833,8 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "Done when a gate built on a SHA-256 fingerprint is in the Guide, and a test gives a digest function of its own and reads its name back from the report" (`docs/Roadmap.md:928-931`); the second half is M-33's test.
 * **needs**: M-32, M-33
 * **size**: small
+* **version**: 2.6.0
+* **status**: parked
 * **decided**:
   * The recipe is `examples/c/fingerprint_gate.c`: it builds a configuration (the example `examples/c/settings.c`'s first twenty lines for the pattern), calls `cf_builder_fingerprint(b, CF_FP_SHA256)`, reads `cf_fingerprint_text`, compares it to an approved string given as `argv[1]` with `strcmp` (not constant-time: the fingerprint is not a secret, said in the Guide) and exits 0 on equal and 3 otherwise, printing both. A second run with a changed value exits 3.
   * `examples/CMakeLists.txt`: two tests `example.fingerprint_gate.ok` and `.refused`, the first computing the approved string by running the example with no argument (it prints its own fingerprint when `argv[1]` is absent), the second passing a wrong one and expecting exit 3 (`WILL_FAIL`-style through `PASS_REGULAR_EXPRESSION` as `examples/expect.cmake` does for the others).

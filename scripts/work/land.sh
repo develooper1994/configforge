@@ -39,20 +39,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 MSG
 [ "$(git rev-parse "HEAD^{tree}")" = "$(git rev-parse "$br^{tree}")" ] || { echo "tree differs: not pushed"; git reset -q --hard origin/main; exit 1; }
 h=$(git rev-parse --short HEAD)
-"$(command -v python3 || command -v python)" - "$id" "$h" <<'PY'
-import sys,re
-cid,h=sys.argv[1],sys.argv[2]; p='docs/Plan.md'
-s=open(p,encoding='utf-8').read().split('\n')
-for i,l in enumerate(s):
-    c=[x.strip() for x in l.split('|')]
-    if len(c)<7 or not c[2]: continue
-    if c[2].split(' ')[0]==cid: c[-2]='done (%s)'%h
-    elif c[-2]=='waits: '+cid: c[-2]='open'
-    else: continue
-    s[i]='| '+' | '.join(c[1:-1])+' |'
-open(p,'w',encoding='utf-8',newline='\n').write('\n'.join(s))
-PY
-git add docs/Plan.md CLAUDE.md
+"$(command -v python3 || command -v python)" "$here/index.py" --done "$id" "$h"
+git add docs/Plan.md docs/plan CLAUDE.md
 git commit -q -m "Plan: $id done ($h)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"

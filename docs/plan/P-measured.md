@@ -47,6 +47,7 @@ Left out on purpose, with the reason:
 * **why**: a benchmark says how fast, a profile says where the time goes (Roadmap, "Profiling after every benchmark"); a change is made only where a profile shows the cost, and the next profile shows whether the cost moved. Today the profile is taken by hand (`scripts/work/profile.py`, L-5) and its tables are pasted into `docs/Performance.md:199-295`.
 * **needs**: nothing
 * **size**: medium
+* **status**: open
 * **version**: 1.9.0
 * **decided**:
   * **D-164 (text to copy into docs/Decisions.md).** "D-164 — The profile follows the benchmark. Each scheduled or manual run of `.github/workflows/bench.yml` ends with a profile of the reader of each format that `cf_bench docs` has a document for (JSON, YAML, TOML, CBOR, INI) on the documents `cf_bench docs <format>` makes (1 MiB and 16 MiB, as `scripts/work/profile.py` takes them), uploaded as the artifact `bench-profile` (JSON, 90 days). Only callgrind's tables are compared: a hosted runner gives `perf` no counters, and the cachegrind and massif output that `profile.py` also takes where valgrind is installed travels in the JSON but `profdiff.py` ignores it. A profile is never a gate: `bench-gate` counts instructions for pass and fail (D-111); the profile says where, and `scripts/bench/profdiff.py` says what moved. Rejected: comparing perf, cachegrind or heaptrack output in CI (it is not stable between runs on a shared machine)."
@@ -78,6 +79,7 @@ Left out on purpose, with the reason:
 * **why**: "The profile is also read for the library's own faults: a cost that should not be there is a bug before it is an optimisation" (Roadmap); P-word-at-a-time's preamble says a scan whose cost grows faster than its input is a fault, fixed when found. The quick baseline already holds one that looks like it: `json/numbers-edge/4` is 8.86e9 instructions and `toml/numbers-edge/4` 8.92e9 (`bench/baseline/instructions.json:16,21`) against 4.6e8 to 5.0e8 for `yaml/numbers-edge/4` and `cbor/numbers-edge/4` (lines 31 and 10): about 19 times the others on the same document name. P-7 looks into it; this card makes the finding automatic from now on.
 * **needs**: nothing
 * **size**: medium
+* **status**: open
 * **version**: 1.9.0
 * **decided**:
   * **D-165 (text to copy).** "D-165 — Outliers are reported, and the known ones are listed. `scripts/bench/scaling.py` flags a speed cell of ConfigForge whose MiB/s at 256 MiB is below 70% of its MiB/s at 1 MiB (the cost grows with the size: memory, a quadratic loop, a cache), and a quick or full instruction cell whose instructions per byte of the document are five times the median of the same document name in the other formats. A flagged cell that is in `bench/compare/scaling.expected` with a reason is not an error; one that is not there fails the unit test `bench.scaling` on its own fixtures only, never CI's benchmark (which informs, D-111). Rejected: failing the weekly run on a flag (a shared runner's speed varies by tens of percent; the instruction rule alone is stable, and a flag on it is a finding for a card, not a build)."
@@ -109,6 +111,7 @@ Left out on purpose, with the reason:
 * **why**: the profile of P-1 saw only the `mixed` documents (docs/Performance.md:231-247); `numbers-edge` (the int64 limits, reals of 17 significant digits, the largest and smallest exponents, subnormals) is the document that hurts the real-number reader, and it costs 8.9e9 instructions for 4 MiB (`bench/baseline/instructions.json:16,21`). A cost that should not be there is a fault before it is an optimisation (Roadmap).
 * **needs**: P-6 (its flags are the card's evidence)
 * **size**: large (a profile and, perhaps, a fix in the number reader)
+* **status**: open
 * **version**: 2.4.0
 * **decided**:
   * **Measure first, change second.** The profile: `valgrind --tool=callgrind --collect-atstart=no --toggle-collect=cfb_cell --callgrind-out-file=cg-json-ne.out <build-cfb>/cfb_compare --lib configforge --doc $HOME/p7-docs/json-numbers-edge-4.json --mode count` (the documents: `<build-bench>/bench/cf_bench --emit-docs $HOME/p7-docs --size 4`; the build as P-word-at-a-time P-3 step 3 says; a change to the library is measured only after `rm -rf build-cfb build-cfb-clang` and a fresh configure and build, because `bench/compare/CMakeLists.txt` builds ConfigForge into `build-cfb/configforge` only when its library is not there yet), then `callgrind_annotate --inclusive=no cg-json-ne.out | head -30`; the same for `toml-numbers-edge-4.toml` and, for the comparison, `yaml-numbers-edge-4.yaml`. The top six functions of each, with their share, go into `docs/Performance.md` under "The profile" as "### numbers-edge (P-7)".
@@ -140,6 +143,7 @@ Left out on purpose, with the reason:
 * **why**: in CBOR "the time is not a scan but text made for each value (`cf_vformat` and `cf_u64_to_text`)": `cf_vformat` is 34% of the instructions and 24% of the time (docs/Performance.md:238-247, 266-271). `cbor_emit` calls `cbor_place` for every scalar (`lib/serialize/src/cbor.c:201-210`), and `cbor_place` formats `"%s, byte %zu"` into `s->where` (183-188) although the place is read only when a sink refuses the value or explains it. It is work to remove, not to speed up.
 * **needs**: nothing
 * **size**: small
+* **status**: open
 * **version**: 2.4.0
 * **decided**:
   * **Same bytes.** The new body of `cbor_place` (`cbor.c:183-188`): `n = strlen(s->name)`; copy `min(n, sizeof s->where - 1 - 7 - 20)` bytes of `s->name` into `s->where` (`char where[CF_PATH_MAX + 32]`, `cbor.c:47`) with `memcpy`, where 7 is the length of `", byte "` and 20 the most digits of a `cf_u64`; then `", byte "`; then `cf_u64_to_text((cf_u64)off, s->where + k, sizeof s->where - k)`, which terminates (`lib/port/include/configforge/cf_port.h:410-414`: "Always terminates when cap > 0"); `at->file = s->where; at->line = 0; at->col = 0;` as now. `cf_fmt`'s `%s` cuts at the buffer's end with no marker; this cuts the name to the room left, so the offset is never cut: for a name over the room the old text lost the offset, and the new keeps it. That one difference is accepted and tested (`decided` here, not a design question): the name `s->name` is a file or a label, no longer than `CF_PATH_MAX` in any test or use, so the room is never short.
@@ -170,6 +174,7 @@ Left out on purpose, with the reason:
 * **why**: "A wave that finds nothing worth keeping ends with its profile written down, and the next wave starts from it" (P-word-at-a-time.md, "In waves"): the waves are opened by a profile since the last one moved where the time is. P-1's profile covered `mixed` for five formats and no XML (docs/Performance.md:231-247).
 * **needs**: P-3, P-7, P-8 (it profiles the code as it will stay)
 * **size**: medium
+* **status**: open
 * **version**: 2.4.0
 * **decided**:
   * **The command is P-7's, not `profile.py`'s** (`cf_bench docs` makes one document for each of JSON, YAML, TOML, CBOR and INI, none for XML, `bench/bench.c:812-838`, 1016-1040, so it cannot reach the documents below). The documents: `<build-bench>/bench/cf_bench --emit-docs $HOME/p9-docs --size 4`. For each (format, document) pair of the list below and for GCC (`build-cfb`) and Clang (`build-cfb-clang`), built fresh as P-7 says: `valgrind --tool=callgrind --collect-atstart=no --toggle-collect=cfb_cell --callgrind-out-file=cg-<format>-<doc>-<gcc|clang>.out <build>/cfb_compare --lib configforge --doc $HOME/p9-docs/<file> --mode count`, then `callgrind_annotate --inclusive=no <out> | head -30`. **The pairs (17)**: XML: `mixed`, `strings-plain`, `strings-escape`, `whitespace`; INI: `strings-plain`, `whitespace`, `records`; JSON, YAML and TOML each: `strings-escape`, `whitespace`, `records` (the first profile's `mixed` is not repeated); CBOR: `records`. Per-function lines: `callgrind_annotate --auto=yes --inclusive=no <out> <source file>` for the top three functions of each pair.
@@ -197,6 +202,7 @@ Left out on purpose, with the reason:
 * **why**: the Roadmap's "Where optimization learns from" says: read before the P cards' forms are chosen, and cited in each card's notes; its claims about yyjson's single pass and pool, and RapidJSON's in-situ and NEON, are "not confirmed" and are to be read in source before they are cited. A card is written only for what gives something checkable: a written survey with its numbers.
 * **needs**: nothing
 * **size**: medium
+* **status**: open
 * **version**: 2.4.0
 * **decided**:
   * **D-166 (text to copy).** "D-166 — Optimisation ideas are surveyed against source, and each has one verdict. `docs/Performance.md`, 'What the fastest libraries do', holds a row for each idea of yyjson, simdjson and RapidJSON that a ConfigForge optimisation card might take, with the library's file and line at the commit pinned in `bench/compare/libraries.cmake`, the counterpart in this tree, the benchmark cell and both libraries' numbers, and a verdict: `take as a lanes operation`, `take as a layer operation` (restated for every format), `JSON only` (the exception, named as one), `already here`, or `not taken` with the reason. Ideas are taken, not code (C++, and the licences differ). `scripts/bench/check_survey.py` checks the table's form; it cannot check that the reading was right: a reader checks that cold."
@@ -238,6 +244,7 @@ Left out on purpose, with the reason:
 * **why**: "Each measure is its own line - parse speed, print speed, memory, code size" (Roadmap, "The aim"), and "Not measured in this round: printing speed (a card for the writers)" (docs/Performance.md:386-388). Parse speed, memory and size are in; print speed is the line that is missing before the README can say where ConfigForge wins and where it loses.
 * **needs**: nothing
 * **size**: large (an interface, four adapters, a mode)
+* **status**: open
 * **version**: 1.9.0
 * **decided**:
   * **D-167 (text to copy).** "D-167 — Print speed is timed on a tree that already exists. `cfb_compare --mode write` reads the document once outside the timed region, with the library's own reader into the library's own tree (or, for ConfigForge, into a recorded list of events), then times writing it to a buffer in memory, compact, the way the library's documentation recommends; the output bytes are counted and their FNV-1a recorded. A library is set against another only when both write compact JSON (no indentation), UTF-8, with the same escapes that JSON requires (the bytes differ in a number's digits and a solidus: the line shows the byte count, never compares bytes). Rejected: timing parse and print together (it hides which is slow); indented output (libraries differ in the default)."
@@ -269,6 +276,7 @@ Left out on purpose, with the reason:
 * **why**: "the README leads with the lines it wins, and the page shows all of them, losses included" (Roadmap, "The aim"); that step is "waiting for the first weekly run" in the Roadmap. A sentence written by hand drifts from the numbers; a block written from them cannot.
 * **needs**: P-11 (for the print line; the card is written so that without P-11's `write` cells the print lines are absent, not wrong)
 * **size**: medium
+* **status**: open
 * **version**: 1.9.0
 * **decided**:
   * **D-168 (text to copy).** "D-168 — A lead line is computed, not written. For each format and each of the measures `parse` (the median MiB/s of `speed` cells, `mixed` at 16 MiB, GCC), `memory` (`peak_growth_kib`, `mixed` at 16 MiB) and, where P-11 made them, `print` (`write` cells), ConfigForge is compared with the best other library of that format. It leads when it is at least as fast, or no larger, than that library; a line says the ratio and the library's name, to one decimal. A line where it is behind says 'behind <library> by <ratio>' and is listed after the leads, in the same block. The block is made from `bench/lead.json`, a copy of the newest full results kept in the repository (a schema-1 results file with only the cells this script reads); updating it is a commit that says which run it is from. Rejected: reading the branch bench-history at build time (the README must be right without network)."
@@ -298,6 +306,7 @@ Left out on purpose, with the reason:
 * **why**: the Roadmap puts "a measured case for SSE2 and NEON backends behind the same `lanes_ops` table (both are the baseline of their targets, so no detection is needed there)" after P-3, and says the `CF_WITH_SIMD` decision is the maintainer's. A decision needs numbers; SSE2 is in every x86-64 and NEON in every AArch64, so these two need no run-time detection, which makes them the cheapest to carry.
 * **needs**: P-3 (the readers' own scans decide which operations matter; if P-3 closed with no kept change, this card still runs, on the operations' own table)
 * **size**: large
+* **status**: open
 * **version**: 2.4.0
 * **decided**:
   * **D-169 (text to copy).** "D-169 — A SIMD backend is measured outside the library first. The SSE2 and NEON forms of lanes' operations are written in `bench/lanes_simd.c` only, never in `lib/lanes/`, until the maintainer decides `CF_WITH_SIMD`; they are measured with `cf_bench lanes-simd` against `swar64` and scalar. A backend is recommended only where it is at least 1.5 times faster than `swar64` on spans of 64 bytes and longer, for every kind of input measured, and no slower than `swar64` by more than 5% on 16 bytes; and the readers' own cells must then move (P-3's rule) once it sits under them, which is the card after the decision. Rejected: AVX2 and wider in this card (they need run-time detection, D-101: one more decision)."
@@ -330,6 +339,7 @@ Left out on purpose, with the reason:
 * **why**: "its findings ... are read one by one, the ones the project can meet are met, and the rest are written down with why" (Roadmap, "The OpenSSF Scorecard score raised", low priority). `scorecard.yml` publishes the result (L-2); nobody has read it check by check.
 * **needs**: nothing
 * **size**: medium
+* **status**: open
 * **version**: 1.9.0
 * **decided**:
   * **D-170 (text to copy).** "D-170 — The Scorecard is read from its API. `scripts/work/scorecard.py` fetches `https://api.scorecard.dev/projects/github.com/develooper1994/configforge` (public, no token) and prints one line a check: name, score, the first line of its reason. `docs/Scorecard.md` records, for each check, one of `met` (with the file), `changed here` (with the commit), `waits on the maintainer` (with the setting, P-15-m) or `not applicable` (with why). A check that the repository can meet by a file is met by a card; one that needs a setting on GitHub or an account elsewhere is the maintainer's and never a step in an agent's card."
@@ -364,6 +374,7 @@ Left out on purpose, with the reason:
 * **why**: Scorecard's `Branch-Protection`, `Code-Review`, `CII-Best-Practices` and `Maintained` read GitHub's settings, an account, and the project's history. docs/Plan.md, "Waits on the maintainer", names these (repository settings: a ruleset on `main`).
 * **needs**: P-14 (its table names the scores)
 * **size**: small (the maintainer's, by hand; no agent card)
+* **status**: parked: not now
 * **version**: 1.9.0
 * **decided**:
   * **Parked: the loop skips it** (docs/Plan.md, "Waits on the maintainer"). P-14 stands alone.
@@ -384,6 +395,7 @@ Left out on purpose, with the reason:
 * **why**: `digits8` is an operation of the table that nothing calls, and in the word backend it is the scalar function (`lib/lanes/src/swar.c:163-165,429`). simdjson reads eight digits with SWAR (`parse_eight_digits_unrolled`); the Roadmap's "eight digits to a number" is one of lanes' operations. This card gives it a body and a number; the readers use it when 2.4.0 lets them choose a backend (D-101: the number readers call `lanes_scalar()` until then, `docs/plan/A-architecture.md:149-156`, so changing `cf_text_to_u64`, `lib/numeric/src/numeric.c:28-53`, is not this card and is not decided here).
 * **needs**: P-10 (its row 7 says whether to take it)
 * **size**: medium
+* **status**: open
 * **version**: 2.4.0
 * **decided**:
   * **The body**, on a 64-bit `unsigned long` only (`LANES_ISA_SWAR64`); on a 32-bit one the entry stays `swar_fallback_digits8`. It is built only where `unsigned long` is 64 bits, by the file's own test (`((ULONG_MAX >> 31) >> 1) == 0xFFFFFFFFUL`, `swar.c:48`), which also sets `SWAR_DIGITS8_BUILT` to 1 (else 0, and the body is not compiled: its 64-bit literals would not be valid). It reads the eight bytes with `memcpy` into an `unsigned long` `w` (as the other word bodies read, `swar.c`'s word-read helper near line 102), after which: `t = w - 0x3030303030303030UL`; the bytes are digits when `((t + 0x7676767676767676UL) | t) & 0x8080808080808080UL` is 0 (each byte of `t` is 0 to 9: adding 0x76 carries into the high bit exactly from 10, and a byte below `'0'` borrows into a high bit of `t`); on nonzero the function returns 0 and leaves `*value` alone (`lanes.h:25-30`). The body is for a little-endian machine, and `lanes` has no byte-order macro: the body begins with `if (!swar_little()) { return lanes_scalar()->digits8(p, value); }`, `swar_little` being `static int swar_little(void)` that stores `1UL` in an `unsigned long`, copies its first byte with `memcpy` into an `unsigned char` and returns whether it is 1 (decided: no byte swap is written, a big-endian machine keeps the scalar's answer). The value is the classic: `t = (t * 10) + (t >> 8)` masked as `t = ((t & 0x0F0F0F0F0F0F0F0FUL) * 2561UL) >> 8` (pairs), `t = ((t & 0x00FF00FF00FF00FFUL) * 6553601UL) >> 16`, `t = ((t & 0x0000FFFF0000FFFFUL) * 42949672960001UL) >> 32`; the tests of steps 2 and 4 prove these three constants before they are trusted.

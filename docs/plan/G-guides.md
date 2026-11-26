@@ -47,6 +47,8 @@ index (docs/Decisions.md:30-132).
 * **why**: G-1b moves 111 decisions out of a 5,326-line file. If the tools learn the new place first, the split is one mechanical commit that cannot break a card brief or the limits gate, and each card lands alone.
 * **needs**: nothing
 * **size**: medium
+* **version**: 2.1.0
+* **status**: open
 * **decided**:
   * **Layout (D-159, text below).** One decision, one file: `docs/decisions/D-<n>.md`, `<n>` exactly as the heading writes it (`D-01`, `D-70`, `D-112`; two digits at least, as now). The file begins with the decision's own `## D-<n> — <title>` line and holds its text unchanged. `docs/Decisions.md` keeps its title, "How to Use This Document" and "Decision Index" (lines 1-133); each index row's ID cell becomes a link `[D-01](decisions/D-01.md)`; the sections themselves leave. A section with no index row is a G-1b stop (D-18 to D-22 have rows, `docs/Decisions.md:51-55`; the sections are not in numeric order in the file: D-60 and D-62 come after D-112, so no tool may assume order).
   * **The five readers, and how each follows.**
@@ -79,6 +81,8 @@ index (docs/Decisions.md:30-132).
 * **why**: a reader opens one decision, not a 5,000-line file. A worker's brief names `D-<n>` and receives only it (CLAUDE.md "Tokens": Decisions.md was a quarter of what workers read).
 * **needs**: G-1a
 * **size**: medium (a script does the move; the rest is five small edits)
+* **version**: 2.1.0
+* **status**: open
 * **decided**:
   * **The splitter** is `scripts/docs/split_decisions.py`, run once and kept (so the commit shows how). It reads `docs/Decisions.md`; a decision is the text from a `## D-<n>` heading (outside code fences: reuse the fence rule of `scripts/work/brief.py:20-34`, import `sections`) to the next `## ` heading at the same level; text before the first (lines 1-~133: title, "How to Use This Document", "Decision Index") belongs to the preface. The sections are not in numeric order: the last decision in the file is D-62 (line 5186), not D-112. After D-62's own text come a `---` line (5307), an unheaded status-audit passage and `## Closing Phase 0` (5320) to the end: the rule is that the last decision ends at the last `---` line before the first `## ` heading that is not `## D-`, and everything from that `---` to the end of the file is the foot of the index file (so the passage and "Closing Phase 0" stay in `docs/Decisions.md`). Every other decision ends at the next `## ` heading.
   * **Links.** In a moved file, `](Design.md)` and every relative link that does not start with `http`, `#` or `../` gains `../` (the file is one directory deeper); `](#d-<n>...)` anchors to another decision become `](D-<n>.md)`; an anchor into the same decision stays. The splitter lists every link it changed and every `#anchor` it could not resolve; the unresolved are fixed by hand in the same commit (a handful is expected). `mkdocs build --strict` has `validation.links` at `warn` for anchors (mkdocs.yml:42-45): after the split the build must have no new warning.
@@ -110,6 +114,8 @@ index (docs/Decisions.md:30-132).
 * **why**: the Roadmap is 1,565 lines and a card's author needs the part that is not finished; the "At a glance" table already says what is done in one row (docs/Roadmap.md:29-~75).
 * **needs**: G-1b (both change `mkdocs.yml`; G-2 also states the Done page's place in the same pattern)
 * **size**: medium
+* **version**: 2.1.0
+* **status**: open
 * **decided**:
   * **What moves.** Whole items marked 🟩 in the detail sections, not in "At a glance": a bullet that begins `* 🟩 **` with its indented continuation, and a heading that begins `### 🟩` (for example `docs/Roadmap.md:637`) with everything to the next heading. A 🟨 item stays whole, with the text saying what is done and what remains (the maintainer's rule at docs/Roadmap.md:7-10). ✅ items already leave at a release (docs/Roadmap.md:24-26): the Done page is for 🟩 and is emptied of an item when it is released, as the Roadmap is.
   * **Where.** `docs/Done.md`, title `# Done, not yet released`, the preface "Items of the Roadmap marked 🟩: on `main` and verified, not in a published version. Each keeps the heading it had; the Roadmap's row in "At a glance" links here", then the moved items grouped under the heading they came from (`## <Roadmap's ## or ### heading>` then the item). The order inside is the Roadmap's order.
@@ -136,6 +142,8 @@ index (docs/Decisions.md:30-132).
 * **why**: Design.md, Decisions.md and API.md are 11,000 lines between them; the Guide is 1,700. A newcomer needs the one path that works, and a page whose code is not tested rots (docs/Roadmap.md:942-947).
 * **needs**: G-1b (D-160 is a file in `docs/decisions/`; the nav lines are the same ones G-1b and G-2 edit)
 * **size**: medium
+* **version**: 2.6.0
+* **status**: open
 * **decided**:
   * **Pages.** `docs/start/c.md`, `cpp.md`, `rust.md`, `python.md` (G-4 to G-6), (no index page `docs/start/index.md` is made); the nav has "Start here" with the four pages, and the README's and the Guide's first lines link to them (G-3 adds the C link and the "Start here" nav group; G-4 to G-6 add theirs).
   * **Form of a page (D-160, below).** Six headings, the same in every language: "1. Get it" (the one build line from Guide section 1, `docs/Guide.md:55-96`, for that language), "2. A contract" (a key with a default and a range), "3. Read a value", "4. Override it", "5. Ask why" (`explain()`; the output is the real output, copied from the test), "6. Where next" (three links into the Guide: sections 3, 5 and 7). No page explains a concept: a link does. A page carries one program of at most 40 lines, shown in pieces; the pieces together are that file, in order.
@@ -164,6 +172,8 @@ index (docs/Decisions.md:30-132).
 * **why**: as G-3, for the C++ reader, who is told in the Guide to read section 13 after twelve others (docs/Guide.md:1399).
 * **needs**: G-3
 * **size**: small (G-3 decided the form)
+* **version**: 2.6.0
+* **status**: open
 * **decided**:
   * The form, the markers (`// start:<n>`, `// end:<n>`), the six headings and the gate are G-3's and D-160's. The program is the C one in C++: `cf::` calls from `docs/Guide.md:1399-1472` (section 13), no call that section and `examples/cpp/tier1.cpp` do not show. Heading 1 gives the one CMake line, `target_link_libraries(app PRIVATE ConfigForge::configforge)` (Guide:62) and says the header is the same.
   * Built by `examples/cpp/CMakeLists.txt`: add `start` to the `foreach(ex tier0 tier1 layers ...)` list (lines 5-16; the target is `start_cpp`, C++98 with `-pedantic -Werror`, so the program is C++98: no `auto`, no `nullptr`), and run with `example_expect(start_cpp ${CMAKE_CURRENT_BINARY_DIR}/start-run <regex>...)` as G-3 does for C (the test is `example.start_cpp`; `tier0`/`tier1` use a bare `add_test`, not the model).
@@ -186,6 +196,8 @@ index (docs/Decisions.md:30-132).
 * **why**: as G-3, for the Rust reader (Guide section "Rust", docs/Guide.md:1511).
 * **needs**: G-3
 * **size**: small
+* **version**: 2.6.0
+* **status**: open
 * **decided**:
   * Form, markers (`// start:<n>`) and gate as G-3. Heading 1 gives the Cargo line the Guide gives (read `docs/Guide.md:1511-1562`; if it names a path dependency, the page says so and does not invent a crates.io name: publishing is the maintainer's, 1.10.0). The program uses the calls of `examples/rust/tier0.rs` and the Guide's Rust section only.
   * Built and run as the other Rust examples are: cargo finds an example through a `[[example]]` entry in `bindings/rust/Cargo.toml` (lines 28-31 show `tier0`: `name = "start"`, `path = "../../examples/rust/start.rs"`), and `examples/rust/CMakeLists.txt` registers `rust_expect(start ${CMAKE_CURRENT_BINARY_DIR}/start-run <regex>...)` (test `example.start_rust`; `file(MAKE_DIRECTORY)` for the directory as `tier0-run` is made there), one regex a line of `start.expected`. A machine without cargo skips the example test as the others are; `gate.start` still checks the page against the file and the recorded output.
@@ -208,6 +220,8 @@ index (docs/Decisions.md:30-132).
 * **why**: as G-3, for the Python reader (Guide "Python", docs/Guide.md:1563; install is `python -m pip install .`, line 1567).
 * **needs**: G-2 (the mover), G-3, G-4, G-5 (so that the last card marks the item)
 * **size**: small
+* **version**: 2.6.0
+* **status**: open
 * **decided**:
   * Form, markers (`# start:<n>`) and gate as G-3. Heading 1 is the Guide's install line (docs/Guide.md:1567) and nothing else. The program uses the calls of `examples/python/tier0.py` and the Guide's Python section only. Run as `examples/python/CMakeLists.txt:32` does `tier0.py`: `file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/start-run)` and `python_expect(start ${CMAKE_CURRENT_BINARY_DIR}/start-run <regex>...)` (test `example.start_python`), one regex a line of `start.expected`.
   * The item is marked 🟩 here, and `python scripts/docs/move_done.py` (G-2) moves it to `docs/Done.md`.
@@ -230,6 +244,8 @@ index (docs/Decisions.md:30-132).
 * **why**: the fingerprint as a resource attribute is in the Guide (docs/Guide.md:1286-1296); the other two halves of the item remain (docs/Roadmap.md:938-941). A recipe is a page of someone else's tool's syntax: the library gives no code for it (no tracing SDK, no policy engine is a dependency).
 * **needs**: G-2 (the mover), G-3 (the markers and `gate.start`)
 * **size**: medium
+* **version**: 2.6.0
+* **status**: open
 * **decided**:
   * **Place.** A new `### Recipes` heading at the end of Guide section 11 ("The editor, the report and Doctor", docs/Guide.md:1315-1361), before `## 12. Small targets` (line 1362); the contents list (docs/Guide.md:1-25) needs no new line (a `###`). The existing OpenTelemetry paragraph (Guide:1291) stays where it is; the Recipes section's first sentence links to it as `[the fingerprint recipe](#...)` with the anchor mkdocs makes from the heading just above it (`grep -n "^#" docs/Guide.md | sed -n` near 1280; stop to ask if that paragraph has no heading, and use the link `#11-the-editor-the-report-and-doctor`).
   * **Recipe 1: log records.** The program's own `cf_log_event` callback (docs/Guide.md:1656-1665) maps an event to an OpenTelemetry log record: severity from `e->level`, body `e->message`, attributes `configforge.event` (`e->event`), `configforge.key`, `configforge.source`, `configforge.code` (`e->code`) (all fields of `cf_log_event`, `lib/config/include/configforge/cf_log.h:45-56`; `key` and `source` may be NULL: the attribute is then left out). Shown as C with a stand-in `otel_log_emit(severity, body, n, attrs)` the reader supplies (as the fingerprint recipe's `otel_resource_set`, Guide:1286), the library's side being real: the example is `examples/c/recipe_otel.c`, compiled and run, with the stand-in printing the record as one JSON line; the page's fence is tied to it by G-3's markers (so G-3 must have landed: this card needs it). Reload events come from `cf_live_options.log`, `log_user`, `log_min` (`lib/config/include/configforge/cf_live.h:140-148`) and the example uses `examples/c/reload.c`'s recipe (Guide:1050-1066) for its trigger. It is run with `example_expect(recipe_otel ${CMAKE_CURRENT_BINARY_DIR}/recipe-otel-run "\"configforge.event\"" ...)` as G-3 registers `start` (add `recipe_otel` and `recipe_report` to the second `foreach` list of `examples/c/CMakeLists.txt`).
@@ -256,6 +272,8 @@ index (docs/Decisions.md:30-132).
 * **why**: "Being found" (docs/Roadmap.md:906-915): a newcomer sees why a value is what it is before they install anything. A WebAssembly build exists (tier 2, D-55, `cmake/toolchains/wasm32-wasi.cmake`, `verify -DEXTRA=wasm` at `scripts/verify.cmake:695-724`); it runs the unit tests under Node, never in a browser.
 * **needs**: G-1b (D-162 is a file), G-3 (the page's example text is the C start page's contract)
 * **size**: large (a build, an in-memory entry point, a page, a workflow change)
+* **version**: 2.6.0
+* **status**: open
 * **decided**:
   * **No new dependency (D-162, below).** The browser has no WASI. The library built for `wasm32-wasi` imports a handful of `wasi_snapshot_preview1` functions (`fd_write`, `proc_exit`, `clock_time_get`, `environ_*`, `args_*`, `random_get`: the real list is printed by `wasm-objdump -x` or, without it, by instantiating with an empty import object and reading the `WebAssembly.Module.imports` error): the page's script provides them in about 60 lines (writes to a buffer, a clock, empty environment, a fixed random). No shim library from a CDN, no file system. Therefore the playground feeds the library from memory, never a path.
   * **The entry point.** `playground/playground.c` (new), C89, exports (via `__attribute__((export_name("...")))` guarded by `#ifdef __wasm__`, else plain functions so a host build can test it): `cf_play_input(const char* contract_text, const char* file_name, const char* file_text, const char* key)` returning a `const char*` into a static buffer of 64 KiB (a longer result is cut with the line `... cut at 64 KiB`), `cf_play_alloc(size_t)` and `cf_play_free(void*)` for the page to place its strings. It builds a configuration whose one source is the pasted file read from memory by format name taken from `file_name`'s extension (`.toml`, `.json`, `.yaml`, `.ini`) and prints `cf_explain` for `key` (or `cf_report_write` text for the whole configuration when `key` is empty). The memory-source call is `cf_builder_document(b, name, rank, bytes, n, format, flags)` (`flags` 0) (`lib/config/include/configforge/configforge.h:162`; its source form `cf_source_document` is `cf_source.h:~205-212`: bytes and a format name, copied by the builder); `format` is `"toml"`, `"json"`, `"yaml"` or `"ini"` from `file_name`'s extension, and a format not compiled into the `minimal` profile is refused with the library's own message, shown as the result. (`cf_source_by_content` is `CF_INTERNAL_API` and takes a codec and a blob: not used.) Read the exact `cf_builder_document` parameters before writing the entry point; if it takes anything the page cannot give, stop.
@@ -287,6 +305,8 @@ index (docs/Decisions.md:30-132).
 * **why**: every example here was written for the library (docs/Roadmap.md:754-759); a real program shows what the Guide does not.
 * **needs**: nothing (G-3 helps: its page is the first thing the port follows)
 * **size**: large (a port of unfamiliar code; the card stops at ~60 turns and splits)
+* **version**: 2.3.0
+* **status**: parked: not now
 * **decided**:
   * **Which program is TO DECIDE (the choice of what to adopt is the maintainer's, and publishing is theirs).** Criteria, so the options are comparable: a C daemon of under 20,000 lines; its configuration read from one file of key-value or INI-like text by its own parser in one or two source files; a licence that lets a fork carry a library under MIT or Apache (GPL-2 or later, BSD, MIT, ISC); builds with `make` or CMake on Linux without a package the machine lacks; has a test or a way to start and check it. Options to put to the maintainer: **tinyproxy** (HTTP proxy, a directive file parsed in `src/conf.c`, GPL-2.0-or-later), **inadyn** (DDNS client, libConfuse-based, GPL-2.0), **darkhttpd** (no config file: its flags would be the contract, which shows the flag side, ISC). Recommendation: tinyproxy, because its directives (Port, Listen, Allow, Timeout, LogLevel) are the plain keys, ranges and defaults a contract expresses and its parser is one file. Until the maintainer chooses, the card is parked: it carries the id G-9 and does not open. Everything below is what the agent does once the choice is written under the card's "Organiser's answers".
   * **What the port keeps.** The daemon's behaviour with its own sample configuration: the same listening port, the same log level, the same refusals for a bad value (the daemon's wording of an error need not be kept: a refusal that names the key and the source is the library's and is a finding of its own).
@@ -313,6 +333,8 @@ index (docs/Decisions.md:30-132).
 * **why**: the Roadmap's "done" is "the change is published with what it found" (docs/Roadmap.md:758-759); publishing is the maintainer's.
 * **needs**: G-9
 * **size**: small (the maintainer's own steps)
+* **version**: 2.3.0
+* **status**: parked: not now
 * **decided**: a public repository under the maintainer's account, a README of the fork stating what changed and what was found (G-9's notes), a link from the Roadmap and the Guide's examples list (docs/Guide.md:26-54). Waits on: the maintainer's account and the choice of place.
 * **files**: none in this repository but `docs/Guide.md` and `docs/Roadmap.md` (a link).
 * **steps**:
