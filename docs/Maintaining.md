@@ -354,6 +354,12 @@ token budget).
   models; until one does, it is not a worker. Gemini CLI is not
   installed. When either works, give it read-only cold reads of cards
   (`--deny-tool write --deny-tool shell`), never a card to carry.
+* **One Codex job at a time, its limits read first.** On 2026-11-26
+  three card-writing runs in parallel at its larger model and high
+  effort spent its whole weekly allowance in one afternoon; it was
+  closed until 2026-11-29 09:47 and Claude carried everything. Before
+  each run read its `rate_limits` (above); run one job, the next only
+  when it has reported.
 * **Codex's window can end the night early.** On 2026-11-23 it reached
   100% at 03:20 after one hour, and its next window opened at 08:02,
   after the machine's stop: give it the cards that matter first in a
