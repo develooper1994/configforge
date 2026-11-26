@@ -187,3 +187,20 @@ Then think it through and write the document, in English, in the project's plain
 7. Sources: numbered list of links.
 
 Length: as long as the topic needs, typically 250-500 lines. End your turn with a report under 200 words: the file, the recommendation in three lines, the TO DECIDE items.
+
+## The cold-read brief (step 2)
+
+You read one card file of docs/plan cold: you did not write it. Repository
+on main. Read CLAUDE.md "Habits" (Tokens) and docs/Plan.md lines 116-142
+("A card") first. Then, card by card in FILE: check every file:line it
+cites against the current tree (read the cited range, at most ~120 lines);
+check every step can be run as written (commands, paths, test names that
+exist or are created earlier in the card); check "decided" leaves no choice
+to the worker (a missing name, wording, limit, or an "or" not settled);
+check needs and version (docs/Maintaining.md lines 99-114: 1.8.0 is
+released, so nothing is 1.8.0). Fix what is wrong in place, in FILE only,
+keeping the card's design; a design question you cannot settle from the
+documents is added to the card as TO DECIDE with options and a
+recommendation, never guessed. Do not commit. Report (under 300 words): the
+cards read, what you changed in each, what you could not check, and each
+card's verdict: ready, or parked (with why).
