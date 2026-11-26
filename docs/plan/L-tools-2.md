@@ -532,7 +532,7 @@ section at its end).
 * **needs**: nothing
 * **size**: medium
 * **version**: 1.9.0
-* **status**: open
+* **status**: done (02acbdd)
 * **decided**:
   * **The required checks stay reporting.** `main`'s ruleset requires `gates`, `matrix (ubuntu-26.04)`, `matrix (windows-latest)`, `matrix (macos-latest)`, `sanitize` and `clang`. A job is skipped by a job-level `if:` (a skipped job counts as passed), never by the workflow's `on.push.paths`, which would leave a required check waiting forever.
   * **A first job `changes`** (ubuntu, `actions/checkout` with `fetch-depth: 0`) writes outputs from `git diff --name-only <base>...HEAD`, where base is `origin/main` for a branch push, the pull request's base for a pull request: `code` = any path under `lib/`, `tools/`, `bindings/`, `cmake/`, `examples/`, `tests/` other than `tests/work/`, `CMakeLists.txt`, `CMakePresets.json`, `conanfile.py`, `packaging/`, `pyproject.toml`; `workflows` = `.github/`; `full` = `true` for `schedule` and `workflow_dispatch` with input `tier: full`.

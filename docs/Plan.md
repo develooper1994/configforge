@@ -265,7 +265,7 @@ of a card's CI.
 | ----: | ---- | ------- | ----- | ----- | ------ |
 | 1 | L-20 The index generated from the card files, and `gate.index` | 1.9.0 | medium | nothing | done (84d48d9) |
 | 2 | L-21 A card opens only when a script says it is ready | 1.9.0 | medium | L-20 | open |
-| 3 | L-22 CI in two tiers: a fast core on every push, the whole suite once a card | 1.9.0 | medium | nothing | open |
+| 3 | L-22 CI in two tiers: a fast core on every push, the whole suite once a card | 1.9.0 | medium | nothing | done (02acbdd) |
 | 4 | L-18a A Cortex-M build of `minimal` in CI, with its stack gate | 1.9.0 | medium | nothing | open |
 | 5 | F-1a The file layer: `cf_file_options`, `cf_file_writer`, `cf_file_replace`, a file replaced whole or not at all | 1.9.0 | large | nothing | open |
 | 6 | Y-2 `cf_platform_write_file_if`: the replace refused when the file no longer holds the bytes read (F-1c in the research) | 1.9.0 | small | F-1a | waits: F-1a |
