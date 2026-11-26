@@ -731,6 +731,18 @@ is checked again, alone. A gate that checks each card's `file:line`
 citations still point at the symbol they name is to be written as a card
 of group L, so that a model's reading is kept for the design.
 
+**Features first, and layers so that code is touched once** (the
+maintainer, 2026-11-26, relayed from a side session: "gerçek anlamda
+özellik eklemeleri ön plana alınsın. refactor azaltmak üzere soyutlama
+katmanları kullanılsın"). Among the cards whose needs are done, the loop
+takes first one that adds something a user of the library sees (groups
+C, F, X, Y) before correctness, tools, documents or optimisation (K, L,
+G, P); the index's order is kept until the maintainer settles the order
+of the groups. A card that changes code another card will change again
+does it through an interface of its component (D-100 to D-108: one
+component a `lib/` directory, its internal layers behind interfaces), so
+that the later card adds to the layer and does not rewrite its callers.
+
 Each wave's milestone is in `docs/Maintaining.md`, "Versions", laid
 out again on 2026-11-19: versions go on after 2.0.0, which marks what
 breaks, not the end of the plan.
