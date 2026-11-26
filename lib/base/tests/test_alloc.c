@@ -62,9 +62,48 @@ static void test_fixed(void) {
     cf_arena_free(ar); /* must be a no-op, not a crash */
 }
 
+/* cf_arena_fixed aligns the caller's buffer itself: from every start offset
+   1..15 each allocation is aligned for a double and lies inside the buffer
+   (the alignment arithmetic is otherwise argued only in a comment, and
+   EVA, which cannot follow it, records its alarms as accepted). */
+static void test_fixed_unaligned(void) {
+    union {
+        double d;
+        char   c[512];
+    } store;
+    size_t off;
+
+    for (off = 1; off < 16; ++off) {
+        char*     start = store.c + off;
+        size_t    size  = sizeof store.c - off;
+        cf_arena* ar    = cf_arena_fixed(start, size);
+        int       i;
+        int       ok = 1;
+
+        check(ar != NULL, "unaligned fixed arena created");
+        if (ar == NULL) {
+            continue;
+        }
+        check((char*)ar >= start && (char*)ar < start + size,
+              "arena struct inside buffer");
+        for (i = 0; i < 8; ++i) {
+            char* p = (char*)cf_arena_alloc(ar, 24);
+            if (p == NULL) {
+                break;
+            }
+            if (((size_t)p % sizeof(double)) != 0 || p < start ||
+                p + 24 > start + size) {
+                ok = 0;
+            }
+        }
+        check(ok, "every allocation aligned and inside the buffer");
+    }
+}
+
 int main(void) {
     test_growing();
     test_alignment();
     test_fixed();
+    test_fixed_unaligned();
     return cf_test_done();
 }

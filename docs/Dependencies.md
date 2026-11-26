@@ -64,6 +64,8 @@ system, no generated header, no options.
 | CMake (`find_package` of `PkgConfig`, `Threads`, `Python3`, and `ConfigForge` in the install gate) | BSD-3-Clause | the build, the gates, `scripts/verify.cmake` |
 | Valgrind (`valgrind`) | GPL-2.0-or-later | `verify -DEXTRA=valgrind` (tier 2) and the CI job `valgrind`: every unit test under memcheck; also CI's `bench-gate`, which counts the instructions of one read under callgrind (D-111); not linked |
 | CBMC (`cbmc`) | BSD-4-Clause | the bounded proofs (`docs/Safety.md`); not linked |
+| Frama-C 33.0 (`frama-c`; opam) | LGPL-2.1-only | `EXTRA=eva` (tier 2) and the workflow `eva`: EVA over `port`, `numeric` and `base` (`tests/eva`, `.eva-accepted.txt`); not linked |
+| opam 2.6.1 (`opam`) | LGPL-2.1-only with linking exception | installs Frama-C for `eva` (release binary checked by SHA-256); not linked |
 | libabigail (`abidiff`) | Apache-2.0 WITH LLVM-exception | `verify -DEXTRA=abi` (tier 2): the shared library against the last release's (D-56); not linked |
 | wasi-libc, lld (`wasm-ld`), Node.js (`node`) | Apache-2.0 WITH LLVM-exception, MIT | `verify -DEXTRA=wasm` (tier 2): the library and its unit tests for wasm32-wasi, run under Node's WASI (`scripts/check/wasi_run.js`); wasi-libc is linked into what is built for wasm32 |
 | GNU Bash (`bash`) | GPL-3.0-or-later | `doctor.action`: the GitHub Action's and the pre-commit hook's scripts (`actions/doctor`), on a Unix host; not linked, and not needed to build |

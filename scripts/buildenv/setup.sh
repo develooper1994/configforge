@@ -142,6 +142,33 @@ if ! /opt/cf-tools/bin/infer --version 2>/dev/null | grep -qF "$INFER_VERSION"; 
 fi
 ln -sf /opt/cf-tools/bin/infer /usr/local/bin/infer
 
+# Frama-C (EXTRA=eva, CI workflow `eva`: EVA over port, numeric and base),
+# only when FRAMAC=1 is in the environment: it builds OCaml and Frama-C from
+# source through opam and takes 20 to 40 minutes. opam is its pinned release
+# binary, checked against the SHA-256 GitHub publishes for the asset; the
+# opam repository is pinned to one commit.
+OPAM_VERSION=2.6.1
+OPAM_SHA256=b533d393a6967150d6ef41cb3d71e147e93ecbabeb59e921aa412c0ae79ebe3d
+OPAM_REPO_COMMIT=a305f52d0c9f1a98fb88f5fa4c4d2583ddbdbf0b
+FRAMAC_VERSION=33.0
+OCAML_VERSION=5.3.0
+if [ "${FRAMAC:-0}" = 1 ] && ! /opt/cf-tools/bin/frama-c -version 2>/dev/null | grep -qF "$FRAMAC_VERSION"; then
+  apt-get install -y --no-install-recommends m4 unzip libgmp-dev autoconf graphviz zlib1g-dev
+  curl -fsSL -o /tmp/opam "https://github.com/ocaml/opam/releases/download/$OPAM_VERSION/opam-$OPAM_VERSION-x86_64-linux"
+  echo "$OPAM_SHA256  /tmp/opam" | sha256sum -c -
+  install -m 755 /tmp/opam /opt/cf-tools/bin/opam
+  rm -f /tmp/opam
+  export PATH="/opt/cf-tools/bin:$PATH" OPAMROOT=/opt/cf-tools/opam
+  opam init --bare --disable-sandboxing --no-setup -y
+  opam repository set-url default "git+https://github.com/ocaml/opam-repository#$OPAM_REPO_COMMIT"
+  opam switch create cf-eva "ocaml-base-compiler.$OCAML_VERSION" -y
+  opam install -y --switch=cf-eva "frama-c.$FRAMAC_VERSION"
+  ln -sf "$OPAMROOT/cf-eva/bin/frama-c" /opt/cf-tools/bin/frama-c
+fi
+if [ -x /opt/cf-tools/bin/frama-c ]; then
+  ln -sf /opt/cf-tools/bin/frama-c /usr/local/bin/frama-c
+fi
+
 # ccache's cache, bounded: verify reuses it from one unit to the next.
 ccache --max-size=5G >/dev/null
 

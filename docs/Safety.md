@@ -94,6 +94,46 @@ A proof that cannot fail proves nothing: with an off-by-one put into
 `cf_text_to_u64`'s loop, CBMC names the line and the read past the
 input.
 
+## Proven, for every value: Frama-C EVA
+
+CBMC's proofs hold up to a length. Frama-C's EVA, an abstract
+interpreter, holds without one: it runs a harness over every value an
+argument can take at once and reports each place where a run could read
+or write outside an object, overflow, divide by zero, shift out of range
+or read memory never written (`tests/eva`, `verify -DEXTRA=eva`, the
+`eva` CI job weekly and on pushes to what it covers; Frama-C 33.0, from
+`scripts/buildenv/setup.sh` with `FRAMAC=1`).
+
+| Harness | Covers |
+| ------- | ------ |
+| `eva_port.c` | every export of `lib/port/port.c` and its inline helpers |
+| `eva_numeric.c` | `cf_text_to_i64`, `cf_text_to_u64`, `cf_infer_scalar` (the integer half of `lib/numeric`) |
+| `eva_base.c` | `lib/base`'s keys, errors and values |
+| `eva_alloc.c` | the growing arena |
+| `eva_arena_fixed.c` | the arena over a caller's fixed buffer, at every alignment |
+
+An alarm is not a fault until it is shown to be one, and EVA's are often
+its own imprecision. `scripts/check/eva.cmake` runs every harness from
+scratch and fails on an alarm that `.eva-accepted.txt` does not list, and
+on an entry there that no alarm matches; each entry (a file, a function,
+an alarm kind) follows its reason. Today 33 are accepted: two on Frama-C's
+own contract for `__atomic_load_n` (`port.c`), one where `error.c` copies
+what `cf_vfmt` terminated (EVA's loop abstraction loses the terminator),
+two on `cf_wipe`'s memset through a volatile pointer (kept so the compiler
+cannot drop the wipe), and the rest in the arena: `cf_arena_free` reading
+each block's next before releasing it, `cf_arena_fixed` aligning the
+caller's buffer through an integer that EVA does not link back to the
+pointer (every access after it inherits the alarm), and `cf_block`'s
+`data[1]`. That last is the struct hack: C89 has no flexible array member,
+and indexing past a one-element array is outside the letter of the
+standard, though every compiler the library supports gives it the meaning
+it is used for. It is kept on purpose.
+`test_fixed_unaligned` (`lib/base/tests/test_alloc.c`) runs the fixed
+arena at offsets 1 to 15 under the sanitizers, where EVA cannot follow the
+alignment.
+
+The float half of `lib/numeric` is outside these harnesses (below).
+
 ## Not yet proven
 
 The floating point parser and printer, the blob's file reader, the

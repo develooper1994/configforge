@@ -21,3 +21,11 @@ regexTarget = "line"
 targetRules = ["generic-api-key"]
 paths = ['''^tests/unit/test_report\.c$''']
 regexes = ['''secret\.untouched''']
+
+[[allowlists]]
+description = "eva.yml: the actions/cache key names the opam-repository commit that the opam switch is pinned to, a public Git hash"
+condition = "AND"
+regexTarget = "line"
+targetRules = ["generic-api-key"]
+paths = ['''^\.github/workflows/eva\.yml$''']
+regexes = ['''key: eva-[0-9.]+-[0-9.]+-[0-9a-f]{40}$''']

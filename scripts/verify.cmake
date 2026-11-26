@@ -34,6 +34,8 @@
 #   clang    the whole suite built with clang
 #   valgrind every unit test under memcheck, on an uninstrumented build
 #   proofs   the bounded proofs of tests/proofs under CBMC
+#   eva      Frama-C's EVA over port, numeric and base (tests/eva,
+#            .eva-accepted.txt): no alarm unaccounted for
 #   wasm     the unit tests built for wasm32-wasi, run under Node's WASI
 #   abi      the shared library against the last release's (abidiff);
 #            ABI_BASE=<tag> to compare with another
@@ -128,6 +130,7 @@ if(DEFINED TIER)
       components
       valgrind
       proofs
+      eva
       wasm
       abi
       tsan
@@ -734,6 +737,22 @@ foreach(x ${EXTRA})
       -DSTAGED=${ROOT}/build/staged/include
       -P
       ${ROOT}/scripts/check/proofs.cmake)
+  elseif(x STREQUAL "eva")
+    # Frama-C's EVA over the bottom components: every alarm is fixed or
+    # listed with its reason in .eva-accepted.txt (docs/Safety.md).
+    find_program(FRAMAC_EXE frama-c HINTS /opt/cf-tools/bin)
+    if(NOT FRAMAC_EXE)
+      message("eva                   skipped: no frama-c")
+      continue()
+    endif()
+    step(
+      "eva"
+      ${CMAKE_COMMAND}
+      -DSRC=${ROOT}
+      -DFRAMAC=${FRAMAC_EXE}
+      -DSTAGED=${ROOT}/build/staged/include
+      -P
+      ${ROOT}/scripts/check/eva.cmake)
   elseif(x STREQUAL "valgrind")
     # Every unit test under Valgrind's memcheck: what AddressSanitizer
     # cannot see - a read of memory that was allocated and never
@@ -1349,7 +1368,7 @@ foreach(x ${EXTRA})
     message(
       FATAL_ERROR
         "unknown EXTRA step '${x}': kqueue, tidy, clang, "
-        "shared, components, valgrind, proofs, wasm, abi, tsan, msan, "
+        "shared, components, valgrind, proofs, eva, wasm, abi, tsan, msan, "
         "ubsan-strict, afl, infer, yaml, profiles, sizes, compilers, fuzz, "
         "coverage or conformance")
   endif()

@@ -22,3 +22,5 @@ scripts/release/release_local.sh	https://git.musl-libc.org/cgit/musl/plain/COPYR
 scripts/work/land.sh	-	data git fetch of this repository's origin, run by the maintainer's own landing script; no foreign code
 scripts/work/work.py	-	data git fetch of this repository's origin, run by the maintainer's own landing step; no foreign code
 .github/workflows/ci.yml	https://github.com/microsoft/vcpkg.git	commit 2f8bf7a5bad48aaef99d80b221fca712f016ab8f (job vcpkg, fetched by commit)
+.github/workflows/eva.yml	https://github.com/ocaml/opam/releases/download/2.6.1/	sha256 the next line, sha256sum -c (workflow eva)
+scripts/buildenv/setup.sh	https://github.com/ocaml/opam/releases/download/	sha256 the next line, sha256sum -c (FRAMAC=1)

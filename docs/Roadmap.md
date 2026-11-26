@@ -66,6 +66,7 @@ beside what is not.
 | 🟩 | A page of the project's limits; every pair of formats and what each can hold | A-13, W5-V2, D-109 |
 | 🟩 | The other libraries measured beside ours; allocation measured | P-1b, P-4 |
 | 🟩 | Static analysis, run-time tools and supply-chain checks in CI; cppcheck on both libraries | L-2, L-3, N-9, N-10 |
+| ⬜ | EVA over `numeric`'s float half (bignum limbs, `cf_gen_digits`, `cf_f64_to_text`, `cf_text_to_f64`, `cf_f64_from_*bits`): a harness and precision work of its own, after L-3b | L-3b |
 | 🟩 | The Linux musl release archive built twice, the bytes compared | N-2 |
 | 🟩 | A reload names the keys it changed; `cf_usage` writes `--help` | N-7, N-6 |
 | 🟩 | `configforge diff` by value: flat, nested and scalar-array; the Git difftool for JSON | N-1, N-5, N-8, N-3 |

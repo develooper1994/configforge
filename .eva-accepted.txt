@@ -1,0 +1,69 @@
+# Alarms EVA reports that are held for a reason Frama-C cannot see.
+# Format: a '#' line with the reason, then "<file> <function> <kind>".
+# scripts/check/eva.cmake fails on an alarm not listed here and on an
+# entry no alarm matches.
+
+# cf_error_set formats into tmp with cf_vfmt and copies it with copy_bounded
+# (strlen). cf_vfmt writes the terminator at min(len, cap - 1) with every
+# earlier byte written; EVA's loop abstraction in cf_vformat cannot carry that
+# to the strlen. With a fixed format (no conversion) the alarm is absent.
+lib/base/src/error.c copy_bounded precondition_of_strlen
+
+# cf_wipe calls memset through a volatile function pointer (so that the
+# compiler cannot drop the wipe, alloc.c:185-200). EVA cannot resolve a
+# volatile pointer value: the call and memset's precondition are Unknown.
+lib/base/src/alloc.c cf_wipe function_pointer
+lib/base/src/alloc.c cf_wipe precondition_of_memset
+
+# cf_arena_free reads each block's next before releasing it; EVA cannot tell
+# the released block from the next one in the list (not relational).
+lib/base/src/alloc.c cf_arena_free dangling_pointer
+
+# C89 has no flexible array member. cf_block ends in char data[1], used as
+# one (the struct hack): b->data + b->used reaches past the declared bound
+# inside the block the allocator returned (header + bs bytes). That is outside
+# C89's letter (undefined), kept on purpose; for the maintainer to confirm.
+# EVA applies the declared bound, so every pointer derived from it is Unknown.
+# A change would derive the pointer from (char*)b + header + used.
+lib/base/src/alloc.c cf_arena_calloc ptr_comparison
+lib/base/src/alloc.c cf_arena_calloc precondition_of_memset
+lib/base/src/alloc.c cf_arena_dup ptr_comparison
+lib/base/src/alloc.c cf_arena_dup precondition_of_memcpy
+lib/base/src/alloc.c cf_arena_dup mem_access
+
+# Frama-C's own libc contract for __atomic_load_n (its "assigns \nothing"
+# and "assigns \result \from *x" clauses are reported Unknown); cf_ref_get
+# calls the builtin with a valid pointer to an int.
+lib/port/src/port.c __atomic_load_n assigns_clause
+lib/port/src/port.c __atomic_load_n from_clause
+
+# cf_arena_fixed (alloc.c:128-180) aligns the caller's buffer through an
+# integer: (size_t)base % CF_ALIGN_TO. EVA does not link that integer to the
+# pointer's alignment or to the buffer's bounds (no relational domain over a
+# pointer's address), so the cast to cf_arena* and cf_block* is reported
+# Unknown (alloc.c:164-166) and every access through ar and b after it, in
+# every function that reads them, inherits the alarm. The arithmetic is
+# argued in the comment at alloc.c:138-141; lib/base/tests has no test with
+# an unaligned buffer (a gap to close); nothing here is a separate finding.
+lib/base/src/alloc.c cf_arena_fixed pointer_alignment
+lib/base/src/alloc.c cf_arena_fixed mem_access
+lib/base/src/alloc.c cf_arena_fixed initialization
+lib/base/src/alloc.c cf_arena_allocator pointer_alignment
+lib/base/src/alloc.c cf_arena_allocator initialization
+lib/base/src/alloc.c cf_arena_wipe initialization
+lib/base/src/alloc.c cf_arena_wipe pointer_alignment
+lib/base/src/alloc.c cf_arena_wipe ptr_comparison
+lib/base/src/alloc.c cf_arena_wipe mem_access
+lib/base/src/alloc.c cf_arena_free initialization
+lib/base/src/alloc.c cf_arena_free pointer_alignment
+lib/base/src/alloc.c cf_arena_free ptr_comparison
+lib/base/src/alloc.c cf_arena_free mem_access
+lib/base/src/alloc.c cf_arena_free function_pointer
+lib/base/src/alloc.c cf_arena_alloc initialization
+lib/base/src/alloc.c cf_arena_alloc pointer_alignment
+lib/base/src/alloc.c cf_arena_alloc ptr_comparison
+lib/base/src/alloc.c cf_arena_alloc mem_access
+lib/base/src/alloc.c cf_arena_alloc function_pointer
+lib/base/src/alloc.c cf_arena_used initialization
+lib/base/src/alloc.c cf_arena_capacity initialization
+lib/base/src/alloc.c cf_arena_is_fixed initialization

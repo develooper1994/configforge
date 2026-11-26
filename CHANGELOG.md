@@ -7,6 +7,15 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- Frama-C EVA over `lib/port`, the integer half of `lib/numeric` and
+  `lib/base` (five harnesses in `tests/eva`; `verify -DEXTRA=eva`; the `eva`
+  CI job, weekly and on pushes to what it covers, not a required check).
+  `scripts/check/eva.cmake` runs every harness from scratch and fails on an
+  alarm `.eva-accepted.txt` does not list with its reason (33 today).
+  `scripts/buildenv/setup.sh` installs Frama-C 33.0 with `FRAMAC=1`, opam's
+  release binary checked by SHA-256 and its repository pinned to one commit.
+  `test_fixed_unaligned` runs the fixed arena at every misalignment (L-3b;
+  docs/Safety.md).
 - `gate.misra`: cppcheck's MISRA C:2012 addon over the library's sources in
   the `misra` profile (`ctest --preset misra -R gate.misra`, and the
   `profiles (misra)` job). Every report is recorded in

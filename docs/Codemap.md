@@ -2285,24 +2285,25 @@
 - Compile time 361-385
 - What is deliberately not here 386-403
 `scripts/verify.cmake`
-- sizes 464-476
-- profiles 477-509
-- kqueue 510-538
-- tidy 539-553
-- clang 554-571
-- abi 572-691
-- wasm 692-721
-- proofs 722-736
-- valgrind 737-772
-- shared 773-783
-- components 784-807
-- compilers 808-859
-- yaml 860-887
-- fuzz 888-910
-- coverage 911-948
-- tsan 949-983
-- msan 984-1017
-- ubsan-strict 1018-1032
-- afl 1033-1060
-- infer 1061-1139
-- conformance 1140-1366
+- sizes 467-479
+- profiles 480-512
+- kqueue 513-541
+- tidy 542-556
+- clang 557-574
+- abi 575-694
+- wasm 695-724
+- proofs 725-739
+- eva 740-755
+- valgrind 756-791
+- shared 792-802
+- components 803-826
+- compilers 827-878
+- yaml 879-906
+- fuzz 907-929
+- coverage 930-967
+- tsan 968-1002
+- msan 1003-1036
+- ubsan-strict 1037-1051
+- afl 1052-1079
+- infer 1080-1158
+- conformance 1159-1385

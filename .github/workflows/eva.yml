@@ -1,0 +1,74 @@
+name: eva
+
+# Frama-C's EVA over lib/port, lib/numeric and lib/base (card L-3b): not on
+# every push, because the opam switch is built from source (20 to 40
+# minutes) and cached. Not a required check.
+on:
+  schedule:
+    - cron: '41 3 * * 3'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/port/**'
+      - 'lib/numeric/**'
+      - 'lib/base/**'
+      - 'tests/eva/**'
+      - '.eva-accepted.txt'
+      - 'scripts/check/eva.cmake'
+      - '.github/workflows/eva.yml'
+  pull_request:
+    paths:
+      - 'lib/port/**'
+      - 'lib/numeric/**'
+      - 'lib/base/**'
+      - 'tests/eva/**'
+      - '.eva-accepted.txt'
+      - 'scripts/check/eva.cmake'
+      - '.github/workflows/eva.yml'
+
+# Read-only unless a job asks for more.
+permissions:
+  contents: read
+
+jobs:
+  eva:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 90
+    env:
+      OPAMROOT: ${{ github.workspace }}/.opam-root
+      OPAMYES: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: What OCaml and Frama-C need
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends m4 unzip libgmp-dev autoconf graphviz zlib1g-dev
+      - name: Cache the opam switch
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: .opam-root
+          key: eva-33.0-5.3.0-a305f52d0c9f1a98fb88f5fa4c4d2583ddbdbf0b
+      - name: Install opam
+        # The release binary setup.sh pins, checked against its checksum.
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/opam" https://github.com/ocaml/opam/releases/download/2.6.1/opam-2.6.1-x86_64-linux
+          echo "b533d393a6967150d6ef41cb3d71e147e93ecbabeb59e921aa412c0ae79ebe3d  $RUNNER_TEMP/opam" | sha256sum -c -
+          mkdir -p "$HOME/.local/bin" && install -m 755 "$RUNNER_TEMP/opam" "$HOME/.local/bin/opam"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Frama-C 33.0, from the pinned opam repository
+        run: |
+          if [ ! -d "$OPAMROOT/cf-eva" ]; then
+            opam init --bare --disable-sandboxing --no-setup
+            opam repository set-url default "git+https://github.com/ocaml/opam-repository#a305f52d0c9f1a98fb88f5fa4c4d2583ddbdbf0b"
+            opam switch create cf-eva ocaml-base-compiler.5.3.0
+            opam install --switch=cf-eva frama-c.33.0
+          fi
+      - name: EVA
+        run: |
+          eval "$(opam env --switch=cf-eva)"
+          frama-c -version
+          cmake -DSRC="$PWD" -DFRAMAC="$(command -v frama-c)" -P scripts/check/eva.cmake
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: failure()
+        with:
+          name: eva-out
+          path: build/eva
