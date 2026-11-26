@@ -207,3 +207,6 @@ documents is added to the card as TO DECIDE with options and a
 recommendation, never guessed. Do not commit. Report (under 300 words): the
 cards read, what you changed in each, what you could not check, and each
 card's verdict: ready, or parked (with why).
+
+Cold reads done: docs/plan/C-change.md (2026-11-26; verdicts in its commit
+message: C-2a, C-2b, C-1b parked on C-2a's TO DECIDE; the rest ready).
