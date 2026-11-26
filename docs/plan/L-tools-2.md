@@ -423,3 +423,66 @@ section at its end).
 * **stop if**: a test fails on the board: a finding (a card of its own), the line is not written as `hardware`.
 * **docs**: `docs/targets.txt`; `docs/Roadmap.md` item "Arm supported well" updated by the maintainer; `docs/Plan.md` "Waits on the maintainer": the row's status.
 
+## L-20 - The index generated from the card files, and `gate.index`
+
+* **id**: L-20
+* **goal**: `python scripts/work/index.py` writes docs/Plan.md's index from the card files and docs/plan/Layout.md, `--check` (run by `gate.index`) fails when the index is not what it would write, and `--done <id> <hash>` is how `work.py land` and `land.sh` mark a card done.
+* **why**: the index was ordered by group, kept by hand and wrong in places (docs/Plan.md, "The plan laid out again", point 3); a generated index cannot drift from the cards.
+* **needs**: nothing
+* **size**: medium
+* **version**: 1.9.0
+* **status**: open
+* **decided**:
+  * **Two new card fields**, written right after `* **size**:` in every card: `* **version**: X.Y.Z` (or `not now`) and `* **status**:` one of `open`, `parked`, `parked: <why>`, `done (<short hash>)`. An optional last field `* **cost**: <model>, <effort>, <turns> turns, <percent of the 5-hour window>`, written by the organiser when a card lands. docs/Plan.md, "A card": three rows added to the field table (version, status, cost) with these words. "waits" is never written: it is computed.
+  * **Seeding, once** (a throwaway script in the scratch directory, not committed): for every card heading `## <id> - <title>` in `docs/plan/*.md` (ids starting `D-` are decisions, not cards): version = the version in effect at the id's first mention in `docs/plan/Layout.md` - in the stage 0 table, the row's last cell; elsewhere the last `{X.Y.Z}` tag before it in the same `## ` section; an id first mentioned in "Not now" keeps its current index row's Version. Status = `parked: not now` for every id named in Layout.md's "Not now" section; else `parked` when the current index row says `parked`; else `open`. Check after seeding: every card has both fields exactly once.
+  * **index.py** (`scripts/work/index.py`, Python 3 standard library only, in the style of `brief.py`; import its `sections()` if it fits): reads every card (id, title, the first word of size, needs, version, status). Needs are the card ids matched in the needs field by `[A-Z]-\d+[a-z]?(?:-m)?`; none is shown as `nothing`. Order = the first mention in Layout.md of each card id (same regex, only ids that have a card). Row: `| <n> | <id> <title> | <version> | <size> | <needs, comma-separated> | <shown status> |`; the shown status is the field as written, except that `open` with a need not done is shown `waits: <first such need>`. A need is done when its card's status is `done (...)`, or when it has no card and `git log --format=%s main` has a subject starting `<id>: `.
+  * **Where it writes**: between the lines `<!-- index begin (scripts/work/index.py) -->` and `<!-- index end -->` in docs/Plan.md, which this card puts once around the current table (header rows included). Nothing outside the markers changes. Newline `\n`, UTF-8.
+  * **Errors** (exit 1, one line each, all printed): a card missing version or status, or with a status in none of the four forms; a card no Layout.md line names (`L-20: not in docs/plan/Layout.md`); a need that has no card and never landed (`Y-28: need K-9a has no card and never landed`); a duplicate card id. Ids named in Layout.md that have no card are ignored (cards still to be written).
+  * **`--check`**: computes the table and compares; exit 1 with `docs/Plan.md's index is not what scripts/work/index.py writes: run it` and the first differing row; exit 0 otherwise. **`--done <id> <hash>`**: sets that card's status field to `done (<hash>)`, then writes the index. **`--root <dir>`** (default: the repository) so that the test and the gate run it on any tree.
+  * **land**: `work.py`'s `index()` step (`scripts/work/work.py:778-786`) calls `index.py --done <id> <hash>` and stages `docs/Plan.md`, `docs/plan/` and `CLAUDE.md`; `plan_index` (641-659) is removed; `land.sh`'s inline Python block (`scripts/work/land.sh:42-54`) becomes the same call. `tests/work/test_plan_index.py` is replaced by `tests/work/test_index.py` with fixture cards and a Layout in `tests/work/data/index/` (order by Layout, `waits:` computed, `--check` red then green, `--done` sets the field and the row that waited shows `open`, each error above); in `tests/work/CMakeLists.txt` `work.plan_index` becomes `work.index`.
+  * **gate.index**: `cmake/gates/GateIndex.cmake`, written as `cmake/gates/GateFetches.cmake` is (skipped without Python), runs `index.py --check --root ${SRC}`; added after `gate.permissions` in `cmake/ConfigForgeGates.cmake` (`grep -n "gate.permissions" cmake/ConfigForgeGates.cmake`).
+  * **Rejected**: version and status kept in the index only (the index would stay the source); the order kept as a list inside index.py (Layout.md is the maintainer's approved order); generating "Waits on the maintainer" (it stays hand-written until a card says otherwise).
+* **files**: `scripts/work/index.py`, `cmake/gates/GateIndex.cmake`, `tests/work/test_index.py`, `tests/work/data/index/` (new); `tests/work/test_plan_index.py` (removed); `tests/work/CMakeLists.txt`, `cmake/ConfigForgeGates.cmake`, `scripts/work/work.py`, `scripts/work/land.sh`; every card in `docs/plan/*.md` (two fields); `docs/Plan.md` ("A card", the markers and the table, "The loop" step 10's words on the index); then `scripts/README.md` and `docs/Codemap.md` (generated).
+* **steps**:
+  1. `git switch -c work/L-20 main`. Write `tests/work/test_index.py`, its fixtures and the `work.index` test.
+  2. See it fail: `ctest --preset default -R work.index --output-on-failure | tail -n 20`.
+  3. Write `index.py`; `ctest --preset default -R work.index` exit 0. Commit.
+  4. Seed the two fields ("Seeding", above); put the markers around docs/Plan.md's table; `python scripts/work/index.py`; then `python scripts/work/index.py --check` exit 0. The first rows must be L-20, L-21, then stage 0's cards in Layout.md's order. Commit `Plan: version and status in every card; the index generated`.
+  5. land (work.py, land.sh) calls `--done`; `plan_index` and its test removed; `gate.index`; docs/Plan.md "A card" and "The loop" step 10; one line for index.py in `scripts/README.md`.
+  6. `python scripts/work/work.py format`; codemap and apiref last (Linux); ACCEPT; commit `L-20: the index generated from the card files, and gate.index`; push; ACCEPT-CI.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI; `ctest --preset default -R "work.index|gate.index"` exit 0; `python scripts/work/index.py --check` exit 0 on the branch's tip.
+* **stop if**: a card heading does not match `## <id> - <title>` (report file and line); more than 5 cards have no mention in Layout.md (the Layout is wrong, not the cards); a needs field holds something the regex misreads as an id.
+* **docs**: no CHANGELOG entry (the work tools are not the library), no D-number; `scripts/README.md`; docs/Plan.md as in files.
+
+## L-21 - A card opens only when a script says it is ready
+
+* **id**: L-21
+* **goal**: `python scripts/check/ready.py <id>` exits 0 only for a card with nothing left to decide and every reference true, and `brief.py` refuses to brief a card it fails.
+* **why**: docs/Plan.md, "The plan laid out again", point 3: a card opens only when a cheap check passes, not a model's reading; it replaces the cold read in advance (point 6) and the gate on `file:line` citations that HANDOFF.md asked for.
+* **needs**: L-20
+* **size**: medium
+* **version**: 1.9.0
+* **status**: open
+* **decided**:
+  * **The checks**; each failure is one line `<id>: <check>: <what>`, all are printed, exit 1 if any:
+    1. `fields`: id, goal, why, needs, size, version, status, decided, files, steps, accept, stop if and docs, each present once (Organiser's answers, notes and cost optional).
+    2. `status`: the status field is `open`.
+    3. `decide`: no `TO DECIDE`, `TBD`, `TODO`, `to be rewritten` or `rewritten to` anywhere in the card outside backticks and outside its notes field (a title holding `(TO DECIDE)` fails too: a card is renamed when answered).
+    4. `settled`: in decided, no `?` outside backticks and no word `either`.
+    5. `defaults`: every `cf_\w+_options` named in decided has the word `default` on the same bullet line.
+    6. `cites`: every `<path>:<N>` or `<path>:<N>-<M>` (path as `brief.py`'s `PATH`, relative to the root) names a file that exists and has at least M (or N) lines; when a backticked C or Python identifier stands within the 60 characters before the citation on the same line, that identifier occurs in the file between lines N-10 and M+10. A bare `(N-M)` after a citation is not checked.
+    7. `needs`: every need is done, as index.py decides (imported), and no need has a later version than the card (`not now` is later than every number).
+  * `--all` prints the result for every card whose status is `open` and exits 0 (a report for the organiser). `--root <dir>` as index.py.
+  * `brief.py <id>` runs the checks first; on a failure it prints them and exits 1, unless `--force` is given (the organiser's, for a card being repaired).
+  * **Rejected**: a CI gate over every card (citations go stale as the code moves; the check belongs at opening, point 6); a model in the check.
+* **files**: `scripts/check/ready.py`, `tests/work/test_ready.py`, `tests/work/data/ready/` (new); `tests/work/CMakeLists.txt` (`work.ready`); `scripts/work/brief.py`; `tests/work/test_brief.py` (its fixture card made ready, and one refused case); `docs/Plan.md` ("The loop" step 3: a card is taken only when `ready.py` passes); `scripts/README.md`.
+* **steps**:
+  1. `git switch -c work/L-21 main`. Fixtures: one ready card and one card failing each check; `test_ready.py` asserting each line.
+  2. See it fail: `ctest --preset default -R work.ready --output-on-failure | tail -n 20`.
+  3. Write `ready.py`; change `brief.py`; `ctest --preset default -R "work.ready|work.brief"` exit 0. Commit.
+  4. `python scripts/check/ready.py --all | tail -n 40`: the count of ready cards and the five commonest failures go into the report, not into a file.
+  5. Format; codemap last; ACCEPT; commit `L-21: a card opens only when scripts/check/ready.py passes`; push; ACCEPT-CI.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI; `ctest --preset default -R "work.ready|work.brief"` exit 0.
+* **stop if**: check 6 fails on more than half of the citations of C-1a (read cold on 2026-11-26): the rule is too strict; report examples.
+* **docs**: no CHANGELOG entry, no D-number; `scripts/README.md`; docs/Plan.md "The loop" step 3.
+
