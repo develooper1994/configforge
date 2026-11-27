@@ -24,19 +24,12 @@ approval and release rights: docs/Plan.md "For the maintainer".
 3. `batch` (D:\cf-work\batch; tip after a6eddd5) also holds the afl `chain`
    fix (5cdd262: the converter drops an emptied list as it drops an emptied
    table) and the cards K-9h, K-9i, F-6, F-7. No full run yet since the fix.
-   K-6a landed on `batch` too (2026-11-28). The batch's full run
-   46067496921 is red, all from K-6a (fix on `batch`, "Batch: ..."):
-   - MSVC C4141: fixed on batch (CF_API removed beside CF_EXPERIMENTAL).
-   - `unit.test_reason` in the `yaml`, `libfyaml` and `profiles (full)`
-     jobs: its offsets assume the built-in YAML and XML readers; with an
-     external backend (libyaml, libfyaml, expat) the offset is -1 or
-     another number. The test must check the offset only when the
-     built-in reader is the one compiled (the backend is CF_YAML_BACKEND in cmake/ConfigForgeProfile.cmake;
-     pass it to the test as a compile definition if nothing does yet), and expect -1 otherwise.
-   Run `python scripts/work/work.py format` first (the cf_error.h edit left
-   its continuation lines unaligned). Then run the full tier again; green -> `git push origin batch:main`
-   (main and batch differ then only by merges of HANDOFF.md: merge
-   origin/main into batch without another run if that is all).
+   K-6a landed on `batch` too. Its red run's causes are fixed on batch
+   (2026-11-28): MSVC C4141 (1543a45) and `unit.test_reason` (0945da2:
+   offsets checked only for the built-in readers; expat, libyaml and
+   libfyaml need only an offset inside the document). Full run
+   46071411137 started on 0945da2; green -> `git push origin batch:main`
+   (merge origin/main into batch first if main has only documents).
    After records change: sizes (scripts/check/sizes.cmake -DWRITE=ON
    -DTREE=<hash> on a copy without .git), then `cmake -P
    scripts/generate/matrix.cmake` (README cells), and the MISRA record
@@ -44,12 +37,14 @@ approval and release rights: docs/Plan.md "For the maintainer".
 
 ## Next
 
-4. 2.0.0 in Layout.md's order: K-9f, K-9g, K-9b, M-11b, M-13; beside-cards
+4. 2.0.0 in Layout.md's order: K-9f (in flight 2026-11-28, worktree
+   D:\cf-work\K-9f, branch work/K-9f cut from batch), K-9g, K-9b, M-11b, M-13; beside-cards
    ride along (K-9h, K-9i: the safety inventory of 2026-11-27).
 5. The maintainer wants the library usable in safety-critical work, free
    tools only, in stages (docs/Compliance.md "Order of work"): write the
-   four missing cards named there (MC/DC, D-number-to-tests table and
-   gate, safety manual, CERT C matrix). IO: F-6 and F-7 are written
+   four missing cards: written 2026-11-28 as L-25 (MC/DC), L-26a/b
+   (traces), L-27 (safety manual), L-28 (CERT matrix), taken after K-9b
+   in Layout.md's order. IO: F-6 and F-7 are written
    (reading is CPU-bound; the cost is fsync and, with many files, calls
    per file).
 6. Measure the batch flow after a few batches (cards a day, red full

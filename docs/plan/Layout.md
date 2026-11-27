@@ -41,7 +41,7 @@ last column; the "not now" section's cards are `not now`.
    - module + tool: Y-24, Y-25, Y-26, Y-27, Y-28 (its error part goes to 0.5), Y-29, Y-33 (the manifest in the image, in the header M-12 reserves for it); documents: Y-31; opened 2026-11-27: Y-30-m (rules across keys), Y-32-m (the build file)
    - {2.3.0} the contract's and the tool's later additions, opened 2026-11-27: Y-39-m (`pattern`, relations), Y-40-m (`gen hover`)
 3. {2.2.0} **serialize: one table, one copy, correct** (lib/serialize)
-   - module: X-18, X-19, X-20, X-21, K-7a, K-5a, K-5b, K-8, K-1a, K-1b, K-10a, K-10b (a number's text kept; underflow and infinity as options, defaults unchanged), K-10c-m (numbers beyond 64 bits or `double` accepted as text; opened 2026-11-27)
+   - module: X-18, X-19, X-20, X-21, K-7a, K-5a, K-5b, K-8, K-8b (written 2026-11-28 from a yamldiff finding), K-1a, K-1b, K-10a, K-10b (a number's text kept; underflow and infinity as options, defaults unchanged), K-10c-m (numbers beyond 64 bits or `double` accepted as text; opened 2026-11-27)
    - proofs: K-2a, K-2b, K-2c, K-2d, K-2e, K-3a, K-3b, K-4a, K-4b, K-4c, K-4d, L-14a, L-14b
 4. {2.3.0} **compress** (lib/compress, D-221; optional, OFF by default)
    - module: Y-15a (`lib/compress`: the two interfaces, their options, the one-call shortcuts), Y-15b (streams and the chain), Y-16, Y-17, Y-18, Y-21-m (built-in inflate), Y-22-m (xz, lz4), Y-23-m (zstd dictionaries; opened 2026-11-27); tool: Y-19; documents: Y-14
@@ -56,7 +56,7 @@ last column; the "not now" section's cards are `not now`.
    - {2.6.0} distribution: M-22, M-24, M-26, M-27, M-28, M-31
 9. {2.7.0} **speed** (lib/text, lib/lanes, lib/numeric) - P-3, P-7, P-8, P-9, P-10, P-13, P-16, L-16a, L-16b, L-16c, Y-11
 
-**Running beside the modules** {2.0.0} (no design shape; a worker takes one when a module waits on CI; a beside-card ships in whichever release is open when it lands, and a release never waits for one: at each tag the beside-cards still open move to the next version, 2026-11-27 after 1.9.0): L-11, L-12a, L-12b, L-12c, L-13, L-15a, L-15b (libconfig in the benchmark; opened 2026-11-27), L-17, L-19a, L-19b, L-18b, P-5, P-6, P-11, P-12, P-14, M-18, M-20, M-21, K-9h, K-9i (the safety inventory, 2026-11-27); F-6, F-7 (IO, 2026-11-27).
+**Running beside the modules** {2.0.0} (no design shape; a worker takes one when a module waits on CI; a beside-card ships in whichever release is open when it lands, and a release never waits for one: at each tag the beside-cards still open move to the next version, 2026-11-27 after 1.9.0): L-11, L-12a, L-12b, L-12c, L-13, L-15a, L-15b (libconfig in the benchmark; opened 2026-11-27), L-17, L-19a, L-19b, L-18b, P-5, P-6, P-11, P-12, P-14, M-18, M-20, M-21, K-9h, K-9i (the safety inventory, 2026-11-27); F-6, F-7 (IO, 2026-11-27); the safety-critical cards (written 2026-11-28, docs/Compliance.md "Order of work"), taken in this order after K-9b: L-28 (CERT matrix), L-25 (MC/DC), L-26a, L-26b (traces), then L-27 (the safety manual, after L-12c).
 
 ## Interim releases (tags stay the maintainer's)
 

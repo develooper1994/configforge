@@ -496,6 +496,32 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Changed" (K-8.1: a literal block scalar at the end of the input without a final line break no longer gains one; K-8.2 and K-8.3: a message) . **D-140** (text: the three decisions, one sentence each, with YAML 1.2.2's sections); the three rules of `yamldiff.known` carry the reasons.
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the recommendation for each part: each follows YAML 1.2's text. Each part decided (A) (the maintainer's standing approval, 2026-11-27).
 
+## K-8b - An anchor whose name holds `?`, alone at the top: the built-in parser and libyaml differ
+
+* **id**: K-8b
+* **goal**: the input `\n&----------?---\n` (17 bytes; found by the batch's yamldiff run in WSL, 2026-11-28) is read by YAML 1.2.2's text, and `fuzz_yamldiff` passes it: the built-in parser changes, or `tests/fuzz/yamldiff.known` holds a rule whose reason says libyaml is wrong.
+* **why**: yamldiff reports it as an undocumented difference on the side `lib-refuses`: the built-in parser accepts the document, the libyaml build refuses it with the message "a configuration is a mapping at the top, not a single value" at line 2, column 1 (`yaml_scalar` in `lib/serialize/src/yaml.c`). Each such difference is a place where nobody has said which reading is right (K-8's reason).
+* **needs**: nothing
+* **size**: small
+* **version**: 2.2.0
+* **status**: open
+* **decided**:
+  * **The facts first**: run the input through both builds with `codec dump` (the default build, and one with `-DCF_YAML_BACKEND=libyaml`) and write under notes the events each gives: the anchor's name and the node after it.
+  * **The rule that decides**: YAML 1.2.2 6.9.2: `ns-anchor-char` is `ns-char` minus the flow indicators `,[]{}`, so `?` and `-` belong to an anchor's name and `&----------?---` is one anchor, named `----------?---`, on an empty node (7.2, `e-scalar`). A document whose only node is an anchored empty scalar is then the same as an empty document for this library: `yaml_scalar` in `lib/serialize/src/yaml.c` accepts an empty plain untagged scalar at the top as an empty configuration, and an anchor changes nothing a configuration can see (D-63: anchors only replay events).
+  * **So**: if libyaml's events show the anchor ending before `?` (libyaml's anchor characters are YAML 1.1's `[0-9A-Za-z_-]`), the built-in parser is right: add to `tests/fuzz/yamldiff.known` a line `lib-refuses<TAB>mapping at the top, not a single value<TAB>the built-in parser is right where an anchor's name holds a character YAML 1.1 lacks (YAML 1.2.2 6.9.2, ns-anchor-char): libyaml ends the name early and reads the rest as a value. The message is the reader's for any value at the top, so the rule hides other causes too (to narrow when one shows)` (under 500 bytes: the loader reads 512-byte lines, `tests/fuzz/yamldiff.c:113`). If instead the built-in parser's name ends early or its node is not empty, the built-in parser is wrong: fix `yp_anchor_char` (`lib/serialize/src/yamlparse.c:290`) to `ns-anchor-char` with a test in the YAML reader's tests first.
+  * **The check**: the 17-byte input, kept under notes as hex, run as `./fuzz_yamldiff <file>`: exit 0 after the change (the seeds are written by `tests/fuzz/CMakeLists.txt`, not kept as files, so no seed is added).
+* **files**: `tests/fuzz/yamldiff.known`, or `lib/serialize/src/yamlparse.c` with its test; last: `CHANGELOG.md` (only if the parser changes, "### Fixed").
+* **steps**:
+  1. `git switch -c work/K-8b` from `batch`. The facts (above), under notes.
+  2. In WSL: `cmake --preset fuzz -B /root/K-8b/fuzz && cmake --build /root/K-8b/fuzz --target fuzz_yamldiff`; **see it fail**: `./fuzz_yamldiff <the input file>` aborts with "undocumented difference".
+  3. The rule or the fix, as decided; the same command exits 0.
+  4. Four minutes of fuzzing as CI runs it (`-max_total_time=240` with the job's seeds): a new finding goes under notes as the next card's input, not into this card.
+  5. Format; ACCEPT.
+* **accept**: ACCEPT-LINUX (the fuzz build with clang and libyaml-dev, in WSL), ACCEPT-WINDOWS, ACCEPT-CI.
+* **stop if**: the events show something neither branch covers (write them under notes; a design question).
+* **docs**: the rule's reason, or `CHANGELOG.md` "### Fixed" when the parser changes.
+* **notes**: the input, hex: `0a 26 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 3f 2d 2d 2d 0a`.
+
 ## K-9a - Three failure guarantees: written in every public function's header comment, listed in a table, and held by `gate.guarantees`
 
 * **id**: K-9a
