@@ -17,6 +17,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   the text helpers and the format readers (K-9d).
 - Failure guarantees written for every call of `configforge.h` (K-9e).
 - Failure guarantees written for the source and key-space calls (K-9f).
+- Every public function states one failure guarantee; `gate.guarantees` refuses one that does not (K-9g). The to-do list `scripts/check/guarantees_todo.txt` is gone.
 - `cf_builder_sizing` and `cf_sizing_options`: manual, semi- and full-dynamic sizing,
   recorded in the configuration and read back by `cf_config_sizing`; manual, today's
   limits, is the default and nothing changes with it. The new build option
@@ -43,6 +44,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- `cf_policy_text` with a NULL buffer and an empty policy, and `cf_fingerprint_step` with a NULL type, no longer read or write through the NULL (K-9g).
 - `cf_arena_alloc`, `cf_arena_calloc` and `cf_arena_dup` refuse a request too large to
   size (`SIZE_MAX` and just below) instead of serving a short block (K-9d).
 

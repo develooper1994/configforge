@@ -40,13 +40,19 @@ typedef struct cf_edit cf_edit;
    is NULL or there is no memory - an edit allocates from the default
    allocator, also for a configuration built in an arena. Whether the
    source exists, can be written and may be, is asked at commit with the
-   rest, so every refusal comes from one place. */
+   rest, so every refusal comes from one place.
+   Guarantee: strong. The checks come before anything is made: on NULL, `c` is
+   untouched and no edit exists; on success `c` gains one reference, which
+   commit or abort gives back. */
 CF_NODISCARD CF_API cf_edit* cf_edit_begin(struct cf_config* c, const char* target,
                                            cf_error* err);
 
 /* Set a key: as text, which the contract types as it types a file's, or
    already typed. A key set twice keeps the second. False for no memory
-   or a key that is not one, which commit then reports. */
+   or a key that is not one, which commit then reports.
+   Guarantee: basic. The edit stays valid: the first refusal is held for commit, the
+   keys set before it stay set, and cf_edit_abort drops it. The target is not read
+   or written until commit. */
 CF_NODISCARD CF_API cf_bool cf_edit_set_text(cf_edit* e, const char* key,
                                              const char* value);
 CF_NODISCARD CF_API cf_bool cf_edit_set_int(cf_edit* e, const char* key, cf_i64 value);
@@ -57,17 +63,23 @@ CF_NODISCARD CF_API cf_bool cf_edit_set_real(cf_edit* e, const char* key, double
 #endif
 
 /* Delete a key from the target, so that the next source down - a file,
-   the defaults - supplies it again. */
+   the defaults - supplies it again.
+   Guarantee: basic. As cf_edit_set_text. */
 CF_NODISCARD CF_API cf_bool cf_edit_unset(cf_edit* e, const char* key);
 
-/* How many keys the edit changes. */
+/* How many keys the edit changes.
+   Guarantee: nothrow. 0 for a NULL edit. */
 CF_API size_t cf_edit_count(const cf_edit* e);
 
 /* Check and write the whole change, `note` (who, when, why) beside each
-   value. Consumes the edit either way. */
+   value. Consumes the edit either way.
+   Guarantee: strong. Nothing is written until the whole document is made; a
+   failure leaves the target as it was and the error is the first refusal, or
+   the check's. A NULL edit fails with `err` set. */
 CF_NODISCARD CF_API cf_bool cf_edit_commit(cf_edit* e, const char* note, cf_error* err);
 
-/* Drop the edit; nothing is written. */
+/* Drop the edit; nothing is written.
+   Guarantee: nothrow. A NULL edit is accepted; the edit is consumed. */
 CF_API void cf_edit_abort(cf_edit* e);
 
 #ifdef __cplusplus

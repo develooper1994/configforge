@@ -633,7 +633,7 @@ void cf_policy_text(const char* const* policy, char* buf, size_t cap) {
         }
         at = cf_fmt_append(buf, cap, at, "%s", policy[i]);
     }
-    if (at == 0 && cap > 0) {
+    if (at == 0 && cap > 0 && buf != NULL) {
         buf[0] = '\0';
     }
 }

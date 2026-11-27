@@ -67,7 +67,8 @@ typedef struct cf_log_event {
 
 typedef void (*cf_log_fn)(void* user, const cf_log_event* e);
 
-/* The name of a level: "debug", "info", "warn", "error". */
+/* The name of a level: "debug", "info", "warn", "error".
+   Guarantee: nothrow. A static name; "?" for a level out of range. */
 CF_API const char* cf_log_level_name(cf_log_level level);
 
 #ifdef __cplusplus

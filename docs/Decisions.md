@@ -5483,9 +5483,9 @@ that can leave an object invalid or leak is a defect, never a fourth word.
 `docs/Guarantees.md` is what the headers say, and that no file of `lib/*/src`
 or `lib/*/include` calls `abort`, `exit`, `_Exit`, `quick_exit`, `longjmp`,
 `siglongjmp`, `setjmp`, `sigsetjmp`, `assert`, `raise` or `__builtin_trap`
-(exceptions: `scripts/check/nonlocal.txt`, empty). Names not yet annotated are
-in `scripts/check/guarantees_todo.txt`, a list that only shrinks (K-9d to
-K-9g). An allocation that fails returns `CF_E_MEMORY` (held at run time by
+(exceptions: `scripts/check/nonlocal.txt`, empty). Every public name has its
+line since K-9g; the list of names not yet annotated is gone, and a new
+public name without a line is refused. An allocation that fails returns `CF_E_MEMORY` (held at run time by
 K-9b).
 
 Rejected: a macro on each declaration (it changes every line and the compiler

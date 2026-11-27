@@ -12,7 +12,6 @@ and a full stop.
 Usage:
   guarantees.py <root>             check; exit 1 and one line a fault
   guarantees.py --write <root>     rewrite the table of docs/Guarantees.md
-  guarantees.py --baseline <root>  rewrite scripts/check/guarantees_todo.txt
   guarantees.py --todo <fragment> <root>
                                    names with no guarantee yet, in the
                                    headers whose path holds the fragment
@@ -44,7 +43,7 @@ NONLOCAL = [
     "__builtin_trap",
 ]
 CALL = re.compile(r"(?<![\w.>])(" + "|".join(NONLOCAL) + r")\s*\(")
-TODO = "scripts/check/guarantees_todo.txt"
+TODO = "scripts/check/guarantees_todo.txt"  # absent since K-9g: an empty list
 NONLOCAL_LIST = "scripts/check/nonlocal.txt"
 DOC = "docs/Guarantees.md"
 
@@ -250,8 +249,6 @@ def main(argv):
     for a in it:
         if a == "--write":
             mode = "write"
-        elif a == "--baseline":
-            mode = "baseline"
         elif a == "--todo":
             mode = "todo"
             fragment = next(it, "")
@@ -273,19 +270,6 @@ def main(argv):
             if fragment in rel and word is None:
                 print(n)
         return 0
-    if mode == "baseline":
-        path = os.path.join(root, *TODO.split("/"))
-        body = [n for n in names if found[n][2] is None]
-        with open(path, "w", encoding="utf-8", newline="\n") as f:
-            f.write(
-                "# Public names with no failure guarantee yet (docs/Guarantees.md).\n"
-                "# The list only shrinks: K-9d to K-9g annotate headers and rewrite it\n"
-                "# with scripts/check/guarantees.py --baseline; the last deletes the file.\n"
-            )
-            f.write("".join(n + "\n" for n in body))
-        print(f"{TODO}: {len(body)} name(s)")
-        return 0
-
     new_table = table(names, found, todo)
     doc_path = os.path.join(root, *DOC.split("/"))
     current = None

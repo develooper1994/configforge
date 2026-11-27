@@ -61,7 +61,9 @@ typedef struct cf_report_info {
    no key space or `info` did not start from CF_REPORT_INFO_INIT - its
    size is below 1.0's - or its mode is neither CF_REPORT_BLIND nor
    CF_REPORT_FULL. A call with no error to give refuses by writing
-   nothing. */
+   nothing.
+   Guarantee: strong. Key space, definitions and sources are read, never
+   written; `buf` is the caller's and holds an empty string on a refusal. */
 CF_API size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
                               const cf_source_view* sv, const cf_report_info* info,
                               char* buf, size_t cap);
@@ -81,7 +83,8 @@ size_t cfi_report_reads(const cf_keyspace* ks, const cf_defset* ds,
    "keys.<key>", so whatever reads one reads the other. A key nobody
    supplied has no candidates and a null selection. `mode` redacts as
    the report does. Unsupported modes return 0 and an empty buffer.
-   Measure-or-write; 0 without CF_WITH_REPORT. */
+   Measure-or-write; 0 without CF_WITH_REPORT.
+   Guarantee: strong. As cf_report_write. */
 CF_API size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds,
                                   const cf_source_view* sv, const char* key,
                                   size_t keylen, cf_report_mode mode, char* buf,
@@ -98,7 +101,9 @@ CF_API size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds,
    written - a required key may come from the environment, so a file
    without it is not wrong - and neither is a sensitive key's default.
    Measure-or-write; 0 with `err` set when the keys nest deeper than
-   CF_MAX_DEPTH, or in a build without CF_WITH_REPORT. */
+   CF_MAX_DEPTH, or in a build without CF_WITH_REPORT.
+   Guarantee: strong. The definitions are read, never written; a refusal sets `err`
+   and leaves an empty `buf`. */
 CF_API size_t cf_schema_write(const cf_defset* ds, const char* title, cf_bool closed,
                               char* buf, size_t cap, cf_error* err);
 
@@ -114,12 +119,17 @@ CF_API size_t cf_schema_write(const cf_defset* ds, const char* title, cf_bool cl
  * refused rather than half-applied.
  * ------------------------------------------------------------------ */
 
+/* Guarantee: nothrow. A size. */
 CF_API size_t cf_source_replay_state_size(void);
 
+/* Guarantee: strong. The arguments are checked before `s` or `state` is touched;
+   CF_FALSE leaves both as they were. The file is read at load, not here. */
 CF_NODISCARD CF_API cf_bool cf_source_replay(cf_source* s, const char* name, int rank,
                                              const char* path, unsigned flags,
                                              void* state, size_t state_size);
 
+/* Guarantee: nothrow. The load's error, or NULL when it did not fail (or `s` is not
+   a replay source). */
 CF_API const cf_error* cf_source_replay_error(const cf_source* s);
 
 #ifdef __cplusplus

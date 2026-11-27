@@ -49,7 +49,8 @@ extern "C" {
 /* The version the library was *compiled* as, which is not necessarily
    the header the caller compiled against. A program that links a shared
    build can compare the two and say so, which is the only way that
-   mismatch is ever noticed before it misbehaves. */
+   mismatch is ever noticed before it misbehaves.
+   Guarantee: nothrow. Static text and a number; nothing is allocated. */
 CF_API const char* cf_version(void);
 CF_API int         cf_version_number(void);
 
@@ -60,12 +61,15 @@ CF_API int         cf_version_number(void);
    two builds of 0.2.0 compare equal by cf_version_number() and can still
    be told apart by this. Never NULL. Set at build time, not configure
    time, so it follows a checkout without reconfiguring; a build without
-   CMake can pass -DCF_BUILD_ID="\"...\"". */
+   CMake can pass -DCF_BUILD_ID="\"...\"".
+   Guarantee: strong. A pure query of a constant (a nothrow function cannot be
+   CF_NODISCARD, so the word is strong); nothing changes. */
 CF_NODISCARD CF_API const char* cf_build_id(void);
 
 /* The build profile this library was built with (D-105): "default",
    "minimal", "file:acme", or "unspecified" for a build of the sources
-   that named none. Never NULL. */
+   that named none. Never NULL.
+   Guarantee: strong. As cf_build_id. */
 CF_NODISCARD CF_API const char* cf_build_profile(void);
 
 /* What this build can do, as a NUL-terminated list: "ini", "json",
@@ -73,7 +77,9 @@ CF_NODISCARD CF_API const char* cf_build_profile(void);
    report from a restricted build is distinguishable from a full one.
    "lists" means the sized definition supports scalar lists, their
    flat-source forms and append merging; it is present in every build
-   that implements them, including a minimal build. */
+   that implements them, including a minimal build.
+   Guarantee: nothrow. Reads a constant table; cf_feature_at gives NULL past the
+   end and cf_has_feature false for a NULL name. */
 CF_API size_t      cf_feature_count(void);
 CF_API const char* cf_feature_at(size_t i);
 CF_API cf_bool     cf_has_feature(const char* name);
@@ -83,7 +89,8 @@ CF_API cf_bool     cf_has_feature(const char* name);
    (CF_MAX_DEPTH); 0 for a name it does not know. The first three size
    cf_error's buffers, so they are part of a build's ABI (D-45): a
    program, or a binding that mirrors cf_error, compiled against other
-   limits must not trust the layout, and this is how it can tell. */
+   limits must not trust the layout, and this is how it can tell.
+   Guarantee: nothrow. 0 for a NULL or unknown name. */
 CF_API size_t cf_build_limit(const char* name);
 
 #ifdef __cplusplus

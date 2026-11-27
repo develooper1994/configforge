@@ -56,7 +56,9 @@ enum {
 
 /* Write the image. Measure-or-write, like everything else that renders:
    with a NULL buffer nothing is stored and the length still
-   accumulates. */
+   accumulates.
+   Guarantee: strong. The key space is only read; the size needed is returned
+   (0 for a NULL one) and `buf` is the caller's. */
 CF_API size_t cf_image_write(const cf_keyspace* ks, const cf_source_view* sv,
                              unsigned flags, char* buf, size_t cap);
 
@@ -94,11 +96,18 @@ typedef struct cf_image {
 
 /* Validates the header, the bounds and the digest. Refuses rather than
    guesses: a truncated image and a corrupt one look the same from
-   inside, and neither should produce a configuration. */
+   inside, and neither should produce a configuration.
+   Guarantee: basic. `img` is always valid: a refusal leaves it zeroed, an empty
+   image, so a caller that ignores the result iterates nothing; `err` says why. */
 CF_NODISCARD CF_API cf_bool cf_image_open(cf_image* img, const char* buf, size_t n,
                                           cf_error* err);
 
-CF_API size_t               cf_image_count(const cf_image* img);
+/* Guarantee: nothrow. 0 for a NULL image. */
+CF_API size_t cf_image_count(const cf_image* img);
+
+/* Guarantee: strong. A read of the image; false for an index past the end, a NULL
+   image or a record that points outside it, and then `key`, `klen` and `v` are
+   unspecified. */
 CF_NODISCARD CF_API cf_bool cf_image_at(const cf_image* img, size_t i, const char** key,
                                         size_t* klen, cf_value* v);
 CF_NODISCARD CF_API cf_bool cf_image_get(const cf_image* img, const char* key,
@@ -106,7 +115,9 @@ CF_NODISCARD CF_API cf_bool cf_image_get(const cf_image* img, const char* key,
 
 /* Load an image into a key space at a rank, which is what a source
    does. Text values point into the image, so it must outlive the
-   configuration. */
+   configuration.
+   Guarantee: basic. The key space stays valid and may hold the keys added before
+   a refusal; the image is only read, and `err` says why. */
 CF_NODISCARD CF_API cf_bool cf_image_load(const cf_image* img, cf_keyspace* ks,
                                           int rank, cf_error* err);
 
@@ -114,19 +125,25 @@ CF_NODISCARD CF_API cf_bool cf_image_load(const cf_image* img, cf_keyspace* ks,
  * As a source
  * ------------------------------------------------------------------ */
 
+/* Guarantee: nothrow. A size. */
 CF_API size_t cf_source_image_state_size(void);
 
 /* From memory: a build-time image linked into the program. No file, no
-   parser, no allocation - the freestanding path. */
+   parser, no allocation - the freestanding path.
+   Guarantee: strong. The arguments are checked before `s` or `state` is touched;
+   CF_FALSE leaves both as they were. The image is read at load, not here. */
 CF_NODISCARD CF_API cf_bool cf_source_image_mem(cf_source* s, const char* name,
                                                 int rank, const char* buf, size_t n,
                                                 void* state, size_t state_size);
 
-/* From a file, for hosted targets. */
+/* From a file, for hosted targets.
+   Guarantee: strong. As cf_source_image_mem. */
 CF_NODISCARD CF_API cf_bool cf_source_image_file(cf_source* s, const char* name,
                                                  int rank, const char* path,
                                                  void* state, size_t state_size);
 
+/* Guarantee: nothrow. The load's error, or NULL when it did not fail (or `s` is not
+   an image source). */
 CF_API const cf_error* cf_source_image_error(const cf_source* s);
 
 #ifdef __cplusplus

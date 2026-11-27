@@ -1380,6 +1380,8 @@ sizeof(cf_def), so a library from a later 1.x writes no further than
 the caller's struct reaches (D-51). Call it as cf_def_init, which
 passes that size; cf_def_init_sized is for a binding that lays out
 cf_def itself.
+Guarantee: nothrow. A NULL `d` is ignored; a `size` below 1.0's writes only
+`d->size`, which cf_builder_define then refuses by name.
 
 ### Definition set
 
@@ -1527,6 +1529,7 @@ seed, then give each selected entry in key order its key, the type name
 (cf_type_name) and the value's text, or for a secret the text of its
 cf_ks_value_digest. cf_defset_fingerprint is these steps over a key
 space, so the two cannot disagree.
+Guarantee: nothrow. A hash of what is given; a NULL key, type or text is empty.
 
 ```c
 CF_API size_t cf_defset_count(const cf_defset* ds);
@@ -1567,12 +1570,19 @@ Implementation: [`cf_policy_text` (lib/config/src/core/validate.c)](https://gith
 Renders a policy list as the specification writes it: "env > local".
 Shared because both the rejection message and the coherence check
 below want the same spelling, and two renderings of one thing drift.
+Guarantee: nothrow. Measure-or-write as cf_fmt: the text is cut where `cap` ends,
+a NULL `buf` stores nothing, and a NULL or empty policy gives "".
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names* names, cf_unknown_policy    unknown, cf_apply_report* report, cf_error* err);
 ```
 
 Implementation: [`cf_defs_apply` (lib/config/src/core/validate.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/validate.c#L1075).
+
+Applies the definitions to the key space: types, defaults, policy, lists, arrays.
+Guarantee: basic. `ks` stays valid but may be applied up to the key that failed
+(the caller drops it, as the builder does); `ds` is untouched, `report` is zeroed
+first, and a NULL `ks` or `ds` fails with `err` set before anything is touched.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_source_defaults(struct cf_source* s, const char* name, int rank, const cf_defset* ds);
@@ -1588,6 +1598,8 @@ A default is a value from the lowest-precedence source rather than a
 separate mechanism, which is why explain() shows one losing to a
 file with no special case anywhere - and why it has a name to print
 rather than a question mark.
+Guarantee: strong. A NULL `s` fails before anything is touched; otherwise `s` is
+set whole. The definitions are only referred to.
 
 ```c
 CF_API void cf_source_env_defs(struct cf_source* s, const cf_defset* ds);
@@ -1599,6 +1611,7 @@ Give the environment source the key list, so it accepts the natural
 single-underscore spelling as well as the escaped one. Without a
 contract only the escaped spelling can be enumerated unambiguously;
 with one, both work and nobody has to type the escape.
+Guarantee: nothrow. Stores the pointer; a NULL `s` is ignored.
 
 ```c
 CF_API void cf_source_dotenv_defs(struct cf_source* s, const cf_defset* ds);
@@ -1607,6 +1620,7 @@ CF_API void cf_source_dotenv_defs(struct cf_source* s, const cf_defset* ds);
 Implementation: [`cf_source_dotenv_defs` (lib/config/src/bridge/dotenv.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/dotenv.c#L168).
 
 Give a .env file the same natural names and list separators.
+Guarantee: nothrow. As cf_source_env_defs.
 
 ```c
 CF_API void cf_source_file_defs(struct cf_source* s, const cf_defset* ds);
@@ -1617,6 +1631,7 @@ Implementation: [`cf_source_file_defs` (lib/config/src/bridge/file.c)](https://g
 Give a file, or a directory of them, the list separators, for a format
 that carries no types (cf_flatten_lists): a declared list splits an
 INI value as it splits the environment's. (1.2)
+Guarantee: nothrow. As cf_source_env_defs.
 
 ```c
 CF_API void cf_source_cli_defs(struct cf_source* s, const cf_defset* ds);
@@ -1627,6 +1642,7 @@ Implementation: [`cf_source_cli_defs` (lib/config/src/sources/cli.c)](https://gi
 Give the command-line source the key list, which is what unlocks
 --key value, --no-key and aliases. Without it only the = form carries
 a value, because nothing else can be parsed correctly.
+Guarantee: nothrow. As cf_source_env_defs.
 
 ## cf_doctor.h
 
@@ -1888,6 +1904,9 @@ is NULL or there is no memory - an edit allocates from the default
 allocator, also for a configuration built in an arena. Whether the
 source exists, can be written and may be, is asked at commit with the
 rest, so every refusal comes from one place.
+Guarantee: strong. The checks come before anything is made: on NULL, `c` is
+untouched and no edit exists; on success `c` gains one reference, which
+commit or abort gives back.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_edit_set_text(cf_edit* e, const char* key, const char* value);
@@ -1901,6 +1920,9 @@ Implementation: [`cf_edit_set_text` (lib/config/src/core/edit.c)](https://github
 Set a key: as text, which the contract types as it types a file's, or
 already typed. A key set twice keeps the second. False for no memory
 or a key that is not one, which commit then reports.
+Guarantee: basic. The edit stays valid: the first refusal is held for commit, the
+keys set before it stay set, and cf_edit_abort drops it. The target is not read
+or written until commit.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_edit_unset(cf_edit* e, const char* key);
@@ -1910,6 +1932,7 @@ Implementation: [`cf_edit_unset` (lib/config/src/core/edit.c)](https://github.co
 
 Delete a key from the target, so that the next source down - a file,
 the defaults - supplies it again.
+Guarantee: basic. As cf_edit_set_text.
 
 ```c
 CF_API size_t cf_edit_count(const cf_edit* e);
@@ -1918,6 +1941,7 @@ CF_API size_t cf_edit_count(const cf_edit* e);
 Implementation: [`cf_edit_count` (lib/config/src/core/edit.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/edit.c#L178).
 
 How many keys the edit changes.
+Guarantee: nothrow. 0 for a NULL edit.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_edit_commit(cf_edit* e, const char* note, cf_error* err);
@@ -1927,6 +1951,9 @@ Implementation: [`cf_edit_commit` (lib/config/src/core/edit.c)](https://github.c
 
 Check and write the whole change, `note` (who, when, why) beside each
 value. Consumes the edit either way.
+Guarantee: strong. Nothing is written until the whole document is made; a
+failure leaves the target as it was and the error is the first refusal, or
+the check's. A NULL edit fails with `err` set.
 
 ```c
 CF_API void cf_edit_abort(cf_edit* e);
@@ -1935,6 +1962,7 @@ CF_API void cf_edit_abort(cf_edit* e);
 Implementation: [`cf_edit_abort` (lib/config/src/core/edit.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/edit.c#L182).
 
 Drop the edit; nothing is written.
+Guarantee: nothrow. A NULL edit is accepted; the edit is consumed.
 
 ## cf_emit.h
 
@@ -1972,6 +2000,8 @@ The lower-level cf_doc_emit does not interpret or escape references.
 Whatever the reason, a refusal returns 0 with `err` set, and a buffer
 that was given holds an empty string - not the front of a document
 that the walk had written before it came to the reason.
+Guarantee: strong. The configuration is untouched; a refusal returns 0 with
+`err` set and an empty `buf`, and the size needed is returned otherwise.
 
 ## cf_encoding.h
 
@@ -2774,6 +2804,8 @@ Implementation: [`cf_image_write` (lib/config/src/bridge/image.c)](https://githu
 Write the image. Measure-or-write, like everything else that renders:
 with a NULL buffer nothing is stored and the length still
 accumulates.
+Guarantee: strong. The key space is only read; the size needed is returned
+(0 for a NULL one) and `buf` is the caller's.
 
 ### Reading
 
@@ -2790,14 +2822,27 @@ Implementation: [`cf_image_open` (lib/config/src/bridge/image.c)](https://github
 Validates the header, the bounds and the digest. Refuses rather than
 guesses: a truncated image and a corrupt one look the same from
 inside, and neither should produce a configuration.
+Guarantee: basic. `img` is always valid: a refusal leaves it zeroed, an empty
+image, so a caller that ignores the result iterates nothing; `err` says why.
 
 ```c
 CF_API size_t cf_image_count(const cf_image* img);
+```
+
+Implementation: [`cf_image_count` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L491).
+
+Guarantee: nothrow. 0 for a NULL image.
+
+```c
 CF_NODISCARD CF_API cf_bool cf_image_at(const cf_image* img, size_t i, const char** key, size_t* klen, cf_value* v);
 CF_NODISCARD CF_API cf_bool cf_image_get(const cf_image* img, const char* key, size_t klen, cf_value* v);
 ```
 
-Implementation: [`cf_image_count` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L491), [`cf_image_at` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L531), [`cf_image_get` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L566).
+Implementation: [`cf_image_at` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L531), [`cf_image_get` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L566).
+
+Guarantee: strong. A read of the image; false for an index past the end, a NULL
+image or a record that points outside it, and then `key`, `klen` and `v` are
+unspecified.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_image_load(const cf_image* img, cf_keyspace* ks, int rank, cf_error* err);
@@ -2808,6 +2853,8 @@ Implementation: [`cf_image_load` (lib/config/src/bridge/image.c)](https://github
 Load an image into a key space at a rank, which is what a source
 does. Text values point into the image, so it must outlive the
 configuration.
+Guarantee: basic. The key space stays valid and may hold the keys added before
+a refusal; the image is only read, and `err` says why.
 
 ### As a source
 
@@ -2817,6 +2864,8 @@ CF_API size_t cf_source_image_state_size(void);
 
 Implementation: [`cf_source_image_state_size` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L767).
 
+Guarantee: nothrow. A size.
+
 ```c
 CF_NODISCARD CF_API cf_bool cf_source_image_mem(cf_source* s, const char* name, int rank, const char* buf, size_t n, void* state, size_t state_size);
 ```
@@ -2825,6 +2874,8 @@ Implementation: [`cf_source_image_mem` (lib/config/src/bridge/image.c)](https://
 
 From memory: a build-time image linked into the program. No file, no
 parser, no allocation - the freestanding path.
+Guarantee: strong. The arguments are checked before `s` or `state` is touched;
+CF_FALSE leaves both as they were. The image is read at load, not here.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_source_image_file(cf_source* s, const char* name, int rank, const char* path, void* state, size_t state_size);
@@ -2833,12 +2884,16 @@ CF_NODISCARD CF_API cf_bool cf_source_image_file(cf_source* s, const char* name,
 Implementation: [`cf_source_image_file` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L800).
 
 From a file, for hosted targets.
+Guarantee: strong. As cf_source_image_mem.
 
 ```c
 CF_API const cf_error* cf_source_image_error(const cf_source* s);
 ```
 
 Implementation: [`cf_source_image_error` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L809).
+
+Guarantee: nothrow. The load's error, or NULL when it did not fail (or `s` is not
+an image source).
 
 ## cf_iterate.h
 
@@ -3405,6 +3460,7 @@ Implementation: [`cf_live_options_init` (lib/config/src/core/live.c)](https://gi
 
 The same, as a call a binding can make: `size`, and every member at
 its default - what the macro sets. A NULL `o` does nothing.
+Guarantee: nothrow.
 
 ```c
 CF_NODISCARD CF_API cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err);
@@ -3415,16 +3471,28 @@ Implementation: [`cf_live_open_with` (lib/config/src/core/live.c)](https://githu
 Builds and checks the first snapshot, and fails as that does. A size
 below 1.0's is refused; NULL options are refused too, since `build` is
 required (docs/Architecture.md, "Options with defaults").
+Guarantee: strong. The options are checked before anything is made; a refusal
+or a failed first build leaves nothing behind but `err`.
 
 ```c
 CF_NODISCARD CF_API cf_live* cf_live_open(cf_live_mode mode, cf_live_build_fn build, cf_live_check_fn check, void* user, const cf_allocator* a, cf_error* err);
-CF_API void cf_live_close(cf_live* l);
 ```
 
-Implementation: [`cf_live_open` (lib/config/src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/live.c#L620), [`cf_live_close` (lib/config/src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/live.c#L736).
+Implementation: [`cf_live_open` (lib/config/src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/live.c#L620).
 
 The shorthand: one `user` for both functions. `check` may be NULL; `a`
 NULL is the default allocator.
+Guarantee: strong. As cf_live_open_with.
+
+```c
+CF_API void cf_live_close(cf_live* l);
+```
+
+Implementation: [`cf_live_close` (lib/config/src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/live.c#L736).
+
+Stops the reloads and frees them with the snapshots they hold; a reader's own
+reference to a snapshot outlives it.
+Guarantee: nothrow. A NULL `l` is accepted; `l` is consumed.
 
 ```c
 CF_API struct cf_config* cf_live_get(cf_live* l);
@@ -3435,6 +3503,7 @@ Implementation: [`cf_live_get` (lib/config/src/core/live.c)](https://github.com/
 The current snapshot, with a reference the caller releases with
 cf_config_free. Any thread. A reader keeps the snapshot it got for as
 long as it holds it, so one request sees one configuration.
+Guarantee: nothrow. NULL for a NULL `l`; the reference is the caller's.
 
 ```c
 CF_API cf_live_result cf_live_poll(cf_live* l, cf_error* err);
@@ -3444,6 +3513,8 @@ Implementation: [`cf_live_poll` (lib/config/src/core/live.c)](https://github.com
 
 Under APPROVE and AUTO: if a file of the running snapshot (or of the
 one pending) has changed, rebuild. MANUAL: CF_LIVE_UNCHANGED.
+Guarantee: strong. A failed rebuild keeps serving the snapshot readers had:
+CF_LIVE_FAILED, `err` set, the failure counted in the status.
 
 ```c
 CF_API cf_live_result cf_live_reload(cf_live* l, cf_error* err);
@@ -3454,6 +3525,8 @@ Implementation: [`cf_live_reload` (lib/config/src/core/live.c)](https://github.c
 Rebuild now, in any mode, as if a file had changed: SWAPPED, PENDING
 under APPROVE, or UNCHANGED when the rebuild found the same values
 (the file stamps are refreshed, and no new generation counted).
+Guarantee: strong. As cf_live_poll: a failed reload keeps serving the snapshot it
+had.
 
 ```c
 CF_API cf_live_result cf_live_wait(cf_live* l, long timeout_ms, cf_error* err);
@@ -3468,6 +3541,7 @@ Where the platform has no watcher, or the snapshot read no file, it
 polls at once: C89 has no portable way to sleep. Under MANUAL there
 is nothing to wait for and it returns UNCHANGED at once, so a thread
 looping on it spins: use cf_live_reload there.
+Guarantee: strong. As cf_live_poll.
 
 ```c
 CF_NODISCARD CF_API cf_live_result cf_live_commit(cf_live* l, struct cf_edit* e, const char* note, cf_error* err);
@@ -3483,16 +3557,37 @@ was refused, and nothing was written: the log has an "edit-refused"
 event, and the status is not touched, since nothing was reloaded. An
 edit that commits and then fails the build or the check is a failed
 reload like any other. Consumes the edit.
+Guarantee: strong. A refused commit writes nothing and touches no snapshot; one
+that commits and then fails the build or the check keeps serving the snapshot
+readers had, as cf_live_reload.
 
 ```c
 CF_API const struct cf_config* cf_live_pending(const cf_live* l);
+```
+
+Implementation: [`cf_live_pending` (lib/config/src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/live.c#L819).
+
+The snapshot waiting for approval, or NULL; it stays the cf_live's.
+Guarantee: nothrow. NULL for a NULL `l`.
+
+```c
 CF_API cf_live_result cf_live_approve(cf_live* l, cf_error* err);
+```
+
+Implementation: [`cf_live_approve` (lib/config/src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/live.c#L823).
+
+Makes the pending snapshot the one readers get; CF_LIVE_UNCHANGED when none waits.
+Guarantee: strong. Nothing waiting, or a NULL `l` (FAILED, `err` set), changes
+nothing; otherwise the swap is whole.
+
+```c
 CF_API void cf_live_reject(cf_live* l);
 ```
 
-Implementation: [`cf_live_pending` (lib/config/src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/live.c#L819), [`cf_live_approve` (lib/config/src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/live.c#L823), [`cf_live_reject` (lib/config/src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/live.c#L838).
+Implementation: [`cf_live_reject` (lib/config/src/core/live.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/live.c#L838).
 
-The snapshot waiting for approval, or NULL; it stays the cf_live's.
+Drops the pending snapshot; the running one is untouched.
+Guarantee: nothrow. A NULL `l` is accepted.
 
 ```c
 CF_API cf_live_result cf_live_rollback(cf_live* l, const char* reason, cf_error* err);
@@ -3505,6 +3600,8 @@ probation ends: CF_LIVE_ROLLED_BACK, the generation one more, a
 "reload-rolled-back" event with `reason`. CF_LIVE_FAILED, with `err`
 saying so and nothing else touched, when no swap is on probation.
 `reason` may be NULL. (1.1)
+Guarantee: strong. With no swap on probation nothing is touched; otherwise the
+old snapshot is back whole.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_live_confirm(cf_live* l);
@@ -3515,6 +3612,7 @@ Implementation: [`cf_live_confirm` (lib/config/src/core/live.c)](https://github.
 Ends the probation: the snapshot readers have is the one to keep, and
 the one before it is released. False when none was on probation. A
 "reload-confirmed" event. (1.1)
+Guarantee: strong. False changes nothing.
 
 ```c
 CF_API cf_u64 cf_live_generation(cf_live* l);
@@ -3524,6 +3622,7 @@ Implementation: [`cf_live_generation` (lib/config/src/core/live.c)](https://gith
 
 How many snapshots readers have been given: 1 after open, one more a
 swap. A reader can tell that what it holds is no longer current.
+Guarantee: nothrow. 0 for a NULL `l`.
 
 ```c
 CF_API size_t cf_live_restarts(const cf_live* l, char* buf, size_t cap);
@@ -3533,6 +3632,8 @@ Implementation: [`cf_live_restarts` (lib/config/src/core/live.c)](https://github
 
 The CF_RESTART keys whose new value waits for a restart, one a line,
 in `buf` as far as `cap` allows; the length it needs, 0 for none.
+Guarantee: nothrow. Measure-or-write: the text is cut where `cap` ends and is
+terminated; a NULL `buf` stores nothing.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_live_status_get(cf_live* l, cf_live_status* out);
@@ -3544,6 +3645,7 @@ Copies the status into `out`, whose `size` the caller sets, as far as
 it reaches (D-51): a caller built against a later, larger struct gets
 what this library has, one built against an earlier gets what it
 asked for. False for a NULL, or a size smaller than 1.0's.
+Guarantee: strong. False writes nothing to `out`; the live is only read.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_live_last_error(cf_live* l, cf_error* err);
@@ -3553,6 +3655,7 @@ Implementation: [`cf_live_last_error` (lib/config/src/core/live.c)](https://gith
 
 The last failure's error, copied into `err` (cf_error_copy); false,
 and `err` cleared, when no reload has failed. Any thread.
+Guarantee: strong. The live is only read; the copy is the caller's.
 
 ## cf_lock.h
 
@@ -3618,6 +3721,7 @@ CF_API const char* cf_log_level_name(cf_log_level level);
 Implementation: [`cf_log_level_name` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2568).
 
 The name of a level: "debug", "info", "warn", "error".
+Guarantee: nothrow. A static name; "?" for a level out of range.
 
 ## cf_numeric.h
 
@@ -4510,6 +4614,8 @@ no key space or `info` did not start from CF_REPORT_INFO_INIT - its
 size is below 1.0's - or its mode is neither CF_REPORT_BLIND nor
 CF_REPORT_FULL. A call with no error to give refuses by writing
 nothing.
+Guarantee: strong. Key space, definitions and sources are read, never
+written; `buf` is the caller's and holds an empty string on a refusal.
 
 ```c
 CF_API size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds, const cf_source_view* sv, const char* key, size_t keylen, cf_report_mode mode, char* buf, size_t cap);
@@ -4527,6 +4633,7 @@ The object under "value" is exactly what the report holds under
 supplied has no candidates and a null selection. `mode` redacts as
 the report does. Unsupported modes return 0 and an empty buffer.
 Measure-or-write; 0 without CF_WITH_REPORT.
+Guarantee: strong. As cf_report_write.
 
 ```c
 CF_API size_t cf_schema_write(const cf_defset* ds, const char* title, cf_bool closed, char* buf, size_t cap, cf_error* err);
@@ -4546,6 +4653,8 @@ written - a required key may come from the environment, so a file
 without it is not wrong - and neither is a sensitive key's default.
 Measure-or-write; 0 with `err` set when the keys nest deeper than
 CF_MAX_DEPTH, or in a build without CF_WITH_REPORT.
+Guarantee: strong. The definitions are read, never written; a refusal sets `err`
+and leaves an empty `buf`.
 
 ### Report Replay
 
@@ -4563,17 +4672,25 @@ CF_API size_t cf_source_replay_state_size(void);
 
 Implementation: [`cf_source_replay_state_size` (lib/config/src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/diag/report.c#L1040).
 
+Guarantee: nothrow. A size.
+
 ```c
 CF_NODISCARD CF_API cf_bool cf_source_replay(cf_source* s, const char* name, int rank, const char* path, unsigned flags, void* state, size_t state_size);
 ```
 
 Implementation: [`cf_source_replay` (lib/config/src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/diag/report.c#L1044).
 
+Guarantee: strong. The arguments are checked before `s` or `state` is touched;
+CF_FALSE leaves both as they were. The file is read at load, not here.
+
 ```c
 CF_API const cf_error* cf_source_replay_error(const cf_source* s);
 ```
 
 Implementation: [`cf_source_replay_error` (lib/config/src/diag/report.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/diag/report.c#L1064).
+
+Guarantee: nothrow. The load's error, or NULL when it did not fail (or `s` is not
+a replay source).
 
 ## cf_serialize.h
 
@@ -5969,6 +6086,7 @@ The version the library was *compiled* as, which is not necessarily
 the header the caller compiled against. A program that links a shared
 build can compare the two and say so, which is the only way that
 mismatch is ever noticed before it misbehaves.
+Guarantee: nothrow. Static text and a number; nothing is allocated.
 
 ```c
 CF_NODISCARD CF_API const char* cf_build_id(void);
@@ -5984,6 +6102,8 @@ two builds of 0.2.0 compare equal by cf_version_number() and can still
 be told apart by this. Never NULL. Set at build time, not configure
 time, so it follows a checkout without reconfiguring; a build without
 CMake can pass -DCF_BUILD_ID="\"...\"".
+Guarantee: strong. A pure query of a constant (a nothrow function cannot be
+CF_NODISCARD, so the word is strong); nothing changes.
 
 ```c
 CF_NODISCARD CF_API const char* cf_build_profile(void);
@@ -5994,6 +6114,7 @@ Implementation: [`cf_build_profile` (lib/config/src/core/version.c)](https://git
 The build profile this library was built with (D-105): "default",
 "minimal", "file:acme", or "unspecified" for a build of the sources
 that named none. Never NULL.
+Guarantee: strong. As cf_build_id.
 
 ```c
 CF_API size_t cf_feature_count(void);
@@ -6009,6 +6130,8 @@ report from a restricted build is distinguishable from a full one.
 "lists" means the sized definition supports scalar lists, their
 flat-source forms and append merging; it is present in every build
 that implements them, including a minimal build.
+Guarantee: nothrow. Reads a constant table; cf_feature_at gives NULL past the
+end and cf_has_feature false for a NULL name.
 
 ```c
 CF_API size_t cf_build_limit(const char* name);
@@ -6022,4 +6145,5 @@ A build limit, by name: "key" (CF_KEY_MAX), "source" (CF_SOURCE_MAX),
 cf_error's buffers, so they are part of a build's ABI (D-45): a
 program, or a binding that mirrors cf_error, compiled against other
 limits must not trust the layout, and this is how it can tell.
+Guarantee: nothrow. 0 for a NULL or unknown name.
 

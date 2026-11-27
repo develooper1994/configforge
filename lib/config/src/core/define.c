@@ -1023,7 +1023,7 @@ cf_u64 cf_fingerprint_step(cf_u64 h, const char* key, size_t keylen, const char*
                            const char* text, size_t n) {
     h = fp_mix(h, key, keylen);
     h = fp_mix(h, "\037", 1);
-    h = fp_mix(h, type, strlen(type));
+    h = fp_mix(h, type, (type != NULL) ? strlen(type) : 0);
     h = fp_mix(h, "\037", 1);
     h = fp_mix(h, text, n);
     return fp_mix(h, "\036", 1);

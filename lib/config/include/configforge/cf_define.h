@@ -137,7 +137,9 @@ typedef struct cf_def {
    sizeof(cf_def), so a library from a later 1.x writes no further than
    the caller's struct reaches (D-51). Call it as cf_def_init, which
    passes that size; cf_def_init_sized is for a binding that lays out
-   cf_def itself. */
+   cf_def itself.
+   Guarantee: nothrow. A NULL `d` is ignored; a `size` below 1.0's writes only
+   `d->size`, which cf_builder_define then refuses by name. */
 CF_API void cf_def_init_sized(cf_def* d, size_t size, cf_type type, const char* key);
 #define cf_def_init(d, type, key) cf_def_init_sized((d), sizeof(cf_def), (type), (key))
 
@@ -287,7 +289,8 @@ CF_API cf_u64 cf_defset_fingerprint(const cf_defset* ds, const cf_keyspace* ks);
    seed, then give each selected entry in key order its key, the type name
    (cf_type_name) and the value's text, or for a secret the text of its
    cf_ks_value_digest. cf_defset_fingerprint is these steps over a key
-   space, so the two cannot disagree. */
+   space, so the two cannot disagree.
+   Guarantee: nothrow. A hash of what is given; a NULL key, type or text is empty. */
 CF_API cf_u64 cf_fingerprint_seed(void);
 CF_API cf_u64 cf_fingerprint_step(cf_u64 h, const char* key, size_t keylen,
                                   const char* type, const char* text, size_t n);
@@ -353,7 +356,9 @@ typedef struct cf_apply_report {
    May be NULL when no key carries a policy. */
 /* Renders a policy list as the specification writes it: "env > local".
    Shared because both the rejection message and the coherence check
-   below want the same spelling, and two renderings of one thing drift. */
+   below want the same spelling, and two renderings of one thing drift.
+   Guarantee: nothrow. Measure-or-write as cf_fmt: the text is cut where `cap` ends,
+   a NULL `buf` stores nothing, and a NULL or empty policy gives "". */
 CF_API void cf_policy_text(const char* const* policy, char* buf, size_t cap);
 
 typedef struct cf_rank_names {
@@ -361,6 +366,10 @@ typedef struct cf_rank_names {
     const void* ctx;
 } cf_rank_names;
 
+/* Applies the definitions to the key space: types, defaults, policy, lists, arrays.
+   Guarantee: basic. `ks` stays valid but may be applied up to the key that failed
+   (the caller drops it, as the builder does); `ds` is untouched, `report` is zeroed
+   first, and a NULL `ks` or `ds` fails with `err` set before anything is touched. */
 CF_NODISCARD CF_API cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds,
                                           const cf_rank_names* names,
                                           cf_unknown_policy    unknown,
@@ -373,27 +382,33 @@ CF_NODISCARD CF_API cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds,
    A default is a value from the lowest-precedence source rather than a
    separate mechanism, which is why explain() shows one losing to a
    file with no special case anywhere - and why it has a name to print
-   rather than a question mark. */
+   rather than a question mark.
+   Guarantee: strong. A NULL `s` fails before anything is touched; otherwise `s` is
+   set whole. The definitions are only referred to. */
 CF_NODISCARD CF_API cf_bool cf_source_defaults(struct cf_source* s, const char* name,
                                                int rank, const cf_defset* ds);
 
 /* Give the environment source the key list, so it accepts the natural
    single-underscore spelling as well as the escaped one. Without a
    contract only the escaped spelling can be enumerated unambiguously;
-   with one, both work and nobody has to type the escape. */
+   with one, both work and nobody has to type the escape.
+   Guarantee: nothrow. Stores the pointer; a NULL `s` is ignored. */
 CF_API void cf_source_env_defs(struct cf_source* s, const cf_defset* ds);
 
-/* Give a .env file the same natural names and list separators. */
+/* Give a .env file the same natural names and list separators.
+   Guarantee: nothrow. As cf_source_env_defs. */
 CF_API void cf_source_dotenv_defs(struct cf_source* s, const cf_defset* ds);
 
 /* Give a file, or a directory of them, the list separators, for a format
    that carries no types (cf_flatten_lists): a declared list splits an
-   INI value as it splits the environment's. (1.2) */
+   INI value as it splits the environment's. (1.2)
+   Guarantee: nothrow. As cf_source_env_defs. */
 CF_API void cf_source_file_defs(struct cf_source* s, const cf_defset* ds);
 
 /* Give the command-line source the key list, which is what unlocks
    --key value, --no-key and aliases. Without it only the = form carries
-   a value, because nothing else can be parsed correctly. */
+   a value, because nothing else can be parsed correctly.
+   Guarantee: nothrow. As cf_source_env_defs. */
 CF_API void cf_source_cli_defs(struct cf_source* s, const cf_defset* ds);
 
 #ifdef __cplusplus

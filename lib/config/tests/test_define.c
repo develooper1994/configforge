@@ -335,6 +335,23 @@ static void test_defaults_are_ordinary_candidates(cf_arena* ar) {
     check(rep.defaults_used == 1, "one default actually used");
 }
 
+/* K-9g: two entry points that take text from the caller meet a NULL where
+   the text is empty: neither reads or writes through it. */
+static void test_null_text_is_empty(void) {
+    static const char* const none[] = {NULL};
+    char                     buf[8] = "xxxxxxx";
+    cf_u64                   a, b;
+
+    cf_policy_text(none, NULL, sizeof buf);
+    cf_policy_text(NULL, NULL, sizeof buf);
+    cf_policy_text(none, buf, sizeof buf);
+    check(buf[0] == '\0', "an empty policy renders as an empty text");
+
+    a = cf_fingerprint_step(cf_fingerprint_seed(), "k", 1, NULL, "v", 1);
+    b = cf_fingerprint_step(cf_fingerprint_seed(), "k", 1, "", "v", 1);
+    check(a == b, "a NULL type steps as an empty one");
+}
+
 int main(void) {
     cf_arena* ar = cf_arena_new(NULL, 0);
 
@@ -347,6 +364,7 @@ int main(void) {
     test_typed_source_mismatch(ar);
     test_allowed_values(ar);
     test_defaults_are_ordinary_candidates(ar);
+    test_null_text_is_empty();
 
     cf_arena_free(ar);
     return cf_test_done();

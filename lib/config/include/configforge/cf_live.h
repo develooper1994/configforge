@@ -166,33 +166,46 @@ typedef struct cf_live_options {
 /* clang-format on */
 
 /* The same, as a call a binding can make: `size`, and every member at
-   its default - what the macro sets. A NULL `o` does nothing. */
+   its default - what the macro sets. A NULL `o` does nothing.
+   Guarantee: nothrow. */
 CF_API void cf_live_options_init(cf_live_options* o);
 
 /* Builds and checks the first snapshot, and fails as that does. A size
    below 1.0's is refused; NULL options are refused too, since `build` is
-   required (docs/Architecture.md, "Options with defaults"). */
+   required (docs/Architecture.md, "Options with defaults").
+   Guarantee: strong. The options are checked before anything is made; a refusal
+   or a failed first build leaves nothing behind but `err`. */
 CF_NODISCARD CF_API cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err);
 
 /* The shorthand: one `user` for both functions. `check` may be NULL; `a`
-   NULL is the default allocator. */
+   NULL is the default allocator.
+   Guarantee: strong. As cf_live_open_with. */
 CF_NODISCARD CF_API cf_live* cf_live_open(cf_live_mode mode, cf_live_build_fn build,
                                           cf_live_check_fn check, void* user,
                                           const cf_allocator* a, cf_error* err);
-CF_API void                  cf_live_close(cf_live* l);
+
+/* Stops the reloads and frees them with the snapshots they hold; a reader's own
+   reference to a snapshot outlives it.
+   Guarantee: nothrow. A NULL `l` is accepted; `l` is consumed. */
+CF_API void cf_live_close(cf_live* l);
 
 /* The current snapshot, with a reference the caller releases with
    cf_config_free. Any thread. A reader keeps the snapshot it got for as
-   long as it holds it, so one request sees one configuration. */
+   long as it holds it, so one request sees one configuration.
+   Guarantee: nothrow. NULL for a NULL `l`; the reference is the caller's. */
 CF_API struct cf_config* cf_live_get(cf_live* l);
 
 /* Under APPROVE and AUTO: if a file of the running snapshot (or of the
-   one pending) has changed, rebuild. MANUAL: CF_LIVE_UNCHANGED. */
+   one pending) has changed, rebuild. MANUAL: CF_LIVE_UNCHANGED.
+   Guarantee: strong. A failed rebuild keeps serving the snapshot readers had:
+   CF_LIVE_FAILED, `err` set, the failure counted in the status. */
 CF_API cf_live_result cf_live_poll(cf_live* l, cf_error* err);
 
 /* Rebuild now, in any mode, as if a file had changed: SWAPPED, PENDING
    under APPROVE, or UNCHANGED when the rebuild found the same values
-   (the file stamps are refreshed, and no new generation counted). */
+   (the file stamps are refreshed, and no new generation counted).
+   Guarantee: strong. As cf_live_poll: a failed reload keeps serving the snapshot it
+   had. */
 CF_API cf_live_result cf_live_reload(cf_live* l, cf_error* err);
 
 /* cf_live_poll after waiting up to `timeout_ms` for a file to change,
@@ -201,7 +214,8 @@ CF_API cf_live_result cf_live_reload(cf_live* l, cf_error* err);
    Where the platform has no watcher, or the snapshot read no file, it
    polls at once: C89 has no portable way to sleep. Under MANUAL there
    is nothing to wait for and it returns UNCHANGED at once, so a thread
-   looping on it spins: use cf_live_reload there. */
+   looping on it spins: use cf_live_reload there.
+   Guarantee: strong. As cf_live_poll. */
 CF_API cf_live_result cf_live_wait(cf_live* l, long timeout_ms, cf_error* err);
 
 struct cf_edit;
@@ -213,33 +227,50 @@ struct cf_edit;
    was refused, and nothing was written: the log has an "edit-refused"
    event, and the status is not touched, since nothing was reloaded. An
    edit that commits and then fails the build or the check is a failed
-   reload like any other. Consumes the edit. */
+   reload like any other. Consumes the edit.
+   Guarantee: strong. A refused commit writes nothing and touches no snapshot; one
+   that commits and then fails the build or the check keeps serving the snapshot
+   readers had, as cf_live_reload. */
 CF_NODISCARD CF_API cf_live_result cf_live_commit(cf_live* l, struct cf_edit* e,
                                                   const char* note, cf_error* err);
 
-/* The snapshot waiting for approval, or NULL; it stays the cf_live's. */
+/* The snapshot waiting for approval, or NULL; it stays the cf_live's.
+   Guarantee: nothrow. NULL for a NULL `l`. */
 CF_API const struct cf_config* cf_live_pending(const cf_live* l);
-CF_API cf_live_result          cf_live_approve(cf_live* l, cf_error* err);
-CF_API void                    cf_live_reject(cf_live* l);
+
+/* Makes the pending snapshot the one readers get; CF_LIVE_UNCHANGED when none waits.
+   Guarantee: strong. Nothing waiting, or a NULL `l` (FAILED, `err` set), changes
+   nothing; otherwise the swap is whole. */
+CF_API cf_live_result cf_live_approve(cf_live* l, cf_error* err);
+
+/* Drops the pending snapshot; the running one is untouched.
+   Guarantee: nothrow. A NULL `l` is accepted. */
+CF_API void cf_live_reject(cf_live* l);
 
 /* Readers get the snapshot the probationary swap replaced, and the
    probation ends: CF_LIVE_ROLLED_BACK, the generation one more, a
    "reload-rolled-back" event with `reason`. CF_LIVE_FAILED, with `err`
    saying so and nothing else touched, when no swap is on probation.
-   `reason` may be NULL. (1.1) */
+   `reason` may be NULL. (1.1)
+   Guarantee: strong. With no swap on probation nothing is touched; otherwise the
+   old snapshot is back whole. */
 CF_API cf_live_result cf_live_rollback(cf_live* l, const char* reason, cf_error* err);
 
 /* Ends the probation: the snapshot readers have is the one to keep, and
    the one before it is released. False when none was on probation. A
-   "reload-confirmed" event. (1.1) */
+   "reload-confirmed" event. (1.1)
+   Guarantee: strong. False changes nothing. */
 CF_NODISCARD CF_API cf_bool cf_live_confirm(cf_live* l);
 
 /* How many snapshots readers have been given: 1 after open, one more a
-   swap. A reader can tell that what it holds is no longer current. */
+   swap. A reader can tell that what it holds is no longer current.
+   Guarantee: nothrow. 0 for a NULL `l`. */
 CF_API cf_u64 cf_live_generation(cf_live* l);
 
 /* The CF_RESTART keys whose new value waits for a restart, one a line,
-   in `buf` as far as `cap` allows; the length it needs, 0 for none. */
+   in `buf` as far as `cap` allows; the length it needs, 0 for none.
+   Guarantee: nothrow. Measure-or-write: the text is cut where `cap` ends and is
+   terminated; a NULL `buf` stores nothing. */
 CF_API size_t cf_live_restarts(const cf_live* l, char* buf, size_t cap);
 
 /* What a health page says about the reloads: how many were tried and
@@ -264,11 +295,13 @@ typedef struct cf_live_status {
 /* Copies the status into `out`, whose `size` the caller sets, as far as
    it reaches (D-51): a caller built against a later, larger struct gets
    what this library has, one built against an earlier gets what it
-   asked for. False for a NULL, or a size smaller than 1.0's. */
+   asked for. False for a NULL, or a size smaller than 1.0's.
+   Guarantee: strong. False writes nothing to `out`; the live is only read. */
 CF_NODISCARD CF_API cf_bool cf_live_status_get(cf_live* l, cf_live_status* out);
 
 /* The last failure's error, copied into `err` (cf_error_copy); false,
-   and `err` cleared, when no reload has failed. Any thread. */
+   and `err` cleared, when no reload has failed. Any thread.
+   Guarantee: strong. The live is only read; the copy is the caller's. */
 CF_NODISCARD CF_API cf_bool cf_live_last_error(cf_live* l, cf_error* err);
 
 /* Internal: the generation being replaced, as the guess for how many
