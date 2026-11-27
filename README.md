@@ -1,16 +1,35 @@
-# ConfigForge
+<h1 align="center">ConfigForge</h1>
 
-Configuration resolution for C that answers **why** a value is what it is.
+<p align="center">
+  <b>Configuration resolution for C that answers <i>why</i> a value is what it is.</b><br>
+  Every key keeps the chain of sources it came from: file, environment, command line, default.
+</p>
 
-[![CI](https://github.com/develooper1994/configforge/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/develooper1994/configforge/actions/workflows/ci.yml)
-[![ClusterFuzzLite](https://github.com/develooper1994/configforge/actions/workflows/cflite.yml/badge.svg?branch=main)](https://github.com/develooper1994/configforge/actions/workflows/cflite.yml)
-[![CodeQL](https://github.com/develooper1994/configforge/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/develooper1994/configforge/actions/workflows/codeql.yml)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/develooper1994/configforge/badge)](https://scorecard.dev/viewer/?uri=github.com/develooper1994/configforge)
-[![Release](https://img.shields.io/github/v/release/develooper1994/configforge?sort=semver)](https://github.com/develooper1994/configforge/releases/latest)
-[![License: zlib](https://img.shields.io/github/license/develooper1994/configforge)](LICENSE)
-[![C89](https://img.shields.io/badge/C-89%20and%20later-blue)](docs/Decisions.md)
-[![C++98](https://img.shields.io/badge/C%2B%2B-98%20and%20later-blue)](docs/Decisions.md)
-[![Documentation](https://img.shields.io/badge/docs-main-informational)](https://develooper1994.github.io/configforge/)
+<p align="center">
+  <a href="https://github.com/develooper1994/configforge/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/develooper1994/configforge/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/develooper1994/configforge/actions/workflows/cflite.yml"><img alt="ClusterFuzzLite" src="https://github.com/develooper1994/configforge/actions/workflows/cflite.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/develooper1994/configforge/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/develooper1994/configforge/actions/workflows/codeql.yml/badge.svg?branch=main"></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/develooper1994/configforge"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/develooper1994/configforge/badge"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/develooper1994/configforge/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/develooper1994/configforge?sort=semver"></a>
+  <a href="LICENSE"><img alt="License: zlib" src="https://img.shields.io/github/license/develooper1994/configforge"></a>
+  <a href="docs/Decisions.md"><img alt="C89 and later" src="https://img.shields.io/badge/C-89%20and%20later-blue"></a>
+  <a href="docs/Decisions.md"><img alt="C++98 and later" src="https://img.shields.io/badge/C%2B%2B-98%20and%20later-blue"></a>
+  <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-none-brightgreen">
+  <img alt="Platforms" src="https://img.shields.io/badge/platforms-Linux%20%7C%20Windows%20%7C%20macOS%20%7C%20FreeBSD%20%7C%20Cortex--M%20(built)-lightgrey">
+  <img alt="Bindings" src="https://img.shields.io/badge/bindings-C%2B%2B%20%7C%20Rust%20%7C%20Python-orange">
+  <a href="https://develooper1994.github.io/configforge/"><img alt="Documentation" src="https://img.shields.io/badge/docs-main-informational"></a>
+</p>
+
+<p align="center">
+  <a href="#why">Why</a> ·
+  <a href="#design">Design</a> ·
+  <a href="#build">Build</a> ·
+  <a href="#doctor">Doctor</a> ·
+  <a href="https://develooper1994.github.io/configforge/">Documentation</a>
+</p>
 
 [Searchable documentation](https://develooper1994.github.io/configforge/) follows
 `main`, including unreleased work. See the
