@@ -56,7 +56,7 @@ last column; the "not now" section's cards are `not now`.
    - {2.6.0} distribution: M-22, M-24, M-26, M-27, M-28, M-31
 9. {2.7.0} **speed** (lib/text, lib/lanes, lib/numeric) - P-3, P-7, P-8, P-9, P-10, P-13, P-16, L-16a, L-16b, L-16c, Y-11
 
-**Running beside the modules** {2.0.0} (no design shape; a worker takes one when a module waits on CI; a beside-card ships in whichever release is open when it lands, and a release never waits for one: at each tag the beside-cards still open move to the next version, 2026-11-27 after 1.9.0): L-11, L-12a, L-12b, L-12c, L-13, L-15a, L-15b (libconfig in the benchmark; opened 2026-11-27), L-17, L-19a, L-19b, L-18b, P-5, P-6, P-11, P-12, P-14, M-18, M-20, M-21.
+**Running beside the modules** {2.0.0} (no design shape; a worker takes one when a module waits on CI; a beside-card ships in whichever release is open when it lands, and a release never waits for one: at each tag the beside-cards still open move to the next version, 2026-11-27 after 1.9.0): L-11, L-12a, L-12b, L-12c, L-13, L-15a, L-15b (libconfig in the benchmark; opened 2026-11-27), L-17, L-19a, L-19b, L-18b, P-5, P-6, P-11, P-12, P-14, M-18, M-20, M-21, K-9h, K-9i (the safety inventory, 2026-11-27).
 
 ## Interim releases (tags stay the maintainer's)
 

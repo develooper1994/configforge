@@ -661,6 +661,55 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: the worker passes 60 turns (the commits stand and the cases left go to a second card, K-9b's notes name which); a path cannot be failed by the allocator because it calls `malloc` directly (`gate.symbols` should have refused it: report the file and line, add nothing); a fix needs a change to a public signature (as decided: listed as known, reported); three failures of the same step.
 * **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "An allocator that refuses the nth allocation, swept over every load and write path, and `gate.oom` (K-9b)"; "### Fixed": "`cf_edit_begin` and `cf_file_writer_open` take the caller's allocator, not malloc's (K-9b)" and one line a defect the sweep found; `docs/Safety.md` as above; `docs/Decisions.md`: the next free D-number after K-9a's, "Out of memory returns `CF_E_MEMORY` on every path, proved by an exhaustive allocation sweep".
 
+## K-9h - Thread, signal and allocation lines beside the guarantee, held by `gate.guarantees`
+
+* **id**: K-9h
+* **goal**: a public function's header comment may say, beside its `Guarantee:` line, `Thread: safe`, `Signal: safe` and `Alloc: none`; a function with no such line is `Thread: distinct objects`, `Signal: unsafe`, `Alloc: may`; `docs/Guarantees.md` lists the three columns and `gate.guarantees` refuses a word it does not know and a `Signal: safe` or `Alloc: none` on a function that reaches an allocator, stdio or a lock.
+* **why**: the maintainer (2026-11-27): "there are many safety notions: thread-safe, signal-safe, exception-safety ... which of them can the library provide?". The inventory of that day found failure safety, memory, stack, overflow and hostile input held by gates, the coarse thread contract written (D-14, `lib/config/tests/test_threads.c`), and per-function thread, signal, interrupt and real-time claims missing. Interrupt and real-time claims follow from `Signal: safe` with `Alloc: none`, so they need no words of their own.
+* **needs**: K-9a
+* **size**: medium
+* **version**: 2.0.0
+* **status**: open
+* **decided**:
+  * **Only the claim is written** (the organiser, 2026-11-27, under the maintainer's standing approval): the default is the weakest word, so no name needs a line to be honest; a line is written only where it is proved. Rejected: a line on all 314 names (three times K-9d to K-9g's work for the same truth).
+  * **The words**: `Thread: safe` (any number of threads may call it on the same objects at once; the readers of a built `cf_config`, D-14), `Thread: distinct objects` (the default), `Thread: unsafe` (touches state shared beyond its arguments: none is expected; the gate prints each). `Signal: safe` (may be called from a signal handler or an interrupt: no allocator, no stdio, no lock, no `errno` left changed). `Alloc: none` (never calls the allocator, directly or through a callee).
+  * **The check**: `scripts/check/guarantees.py` reads the three lines with the `Guarantee:` line's rule (the comment above a declaration or a run). For `Signal: safe` and `Alloc: none` it follows the call graph of the function's file and the files it calls into, as `scripts/check/stack.cmake` reads the compiler's `.su` and call data, or else from `-fcallgraph-info` (GCC 10+) on the `default` preset; a reached `cf_alloc`, `malloc`, `realloc`, `free`, `fopen`, `printf`, `pthread_mutex_*` or a name listed in `scripts/check/notsignal.txt` is refused, naming the path. When the call data is not there (a compiler without it), the check prints that it was skipped and passes, as `gate.stack` does.
+  * **Annotated here, to prove the format**: the `cf_get_*` and `cf_try_*` readers of `configforge.h` (`Thread: safe`, `Alloc: none`; `Signal: safe` only where the check passes), `cf_error_clear` (`Signal: safe`, `Alloc: none`).
+  * **D-number**: the next free one, "Thread, signal and allocation claims beside the guarantee, the weakest by default".
+* **files**: `scripts/check/guarantees.py`, `scripts/check/notsignal.txt` (new), `cmake/gates/GateGuarantees.cmake`, `docs/Guarantees.md` (the words and three columns), `lib/config/include/configforge/configforge.h`, `lib/base/include/configforge/cf_error.h`; last: `CHANGELOG.md`, `docs/Decisions.md`, `docs/Safety.md` (a pointer to the table), `docs/API.md` (generated).
+* **steps**:
+  1. See it fail: a test case in `tests/work/` (or the gate's own) with `Thread: brisk.` is refused, and an allocating function marked `Alloc: none` is refused; both fail before the check exists.
+  2. The parser and the table columns; the call-graph check; `notsignal.txt`.
+  3. Annotate the names above; the gate passes; `--write` the table.
+  4. Negative proofs in a scratch copy: an unknown word, `Signal: safe` on `cf_config_free`, `Alloc: none` on `cf_builder_new`, each refused.
+* **accept**: ACCEPT's local runs; `ctest --preset default -R "gate.guarantees|gate.apiref"` exit 0.
+* **stop if**: no compiler on the machine gives call data for the check: stop and report; the words land without the call-graph check only by the organiser's answer.
+* **docs**: `CHANGELOG.md`, under the newest unreleased heading, "### Added": "`Thread:`, `Signal:` and `Alloc:` lines beside a function's guarantee, the weakest by default, checked by `gate.guarantees`".
+
+## K-9i - Fork, callbacks, durability and inherited descriptors: one table, each row a test
+
+* **id**: K-9i
+* **goal**: `docs/Guarantees.md` has a table of what the library promises across a process: after `fork` (the child may read a `cf_config` built before it; `cf_live_*` refuses in the child with `CF_E_STATE`), callbacks (a callback must return; unwinding or `longjmp` through the library is outside the contract; the C++, Rust and Python bindings catch before C), durability (`cf_file_replace` syncs the file, renames it, then syncs the directory where the platform can), inherited descriptors (none: D-190); each row names the ctest that holds it.
+* **why**: the same inventory (2026-11-27): these four are written in research notes and decisions (`docs/research/threads-and-processes.md`, `docs/research/concurrent-access.md`, D-190) but not in one place a user reads, and fork and the crash point have no test.
+* **needs**: nothing
+* **size**: small
+* **version**: 2.0.0
+* **status**: open
+* **decided**:
+  * **Fork**: a new `lib/config/tests/test_fork.c`, POSIX only (skipped elsewhere by `cf_platform_has_*`): build, `fork`, the child reads every key and exits 0; the child's `cf_live_reload` answers `CF_E_STATE` (if the library cannot tell it is in a child, the row says "not detected" and the card stops for the organiser's answer instead of adding a pid check).
+  * **Callbacks**: a C++ test in `tests/cpp/` whose callback throws, caught by the wrapper before it reaches C; the C contract is one sentence in the table.
+  * **Durability**: the existing `cf_file_replace` tests; the row says which platforms sync the directory (read from `lib/platform/src/*/file.c`).
+  * **Descriptors**: `lib/config/tests/test_cloexec.c` (Y-8) is the row's test.
+  * **Gate**: none new; `gate.guarantees` checks that each test named in the table is a ctest name.
+* **files**: `docs/Guarantees.md`, `lib/config/tests/test_fork.c` (new), `lib/config/tests/CMakeLists.txt`, the C++ test, `scripts/check/guarantees.py` (the table's test names); last: `CHANGELOG.md`, `docs/Safety.md`.
+* **steps**:
+  1. See it fail: `test_fork.c` registered before the library's child check is read; run it.
+  2. The fork test, the C++ callback test, the table with its four rows, the guarantees.py check of the test names.
+  3. Negative proof: a table row naming a test that does not exist is refused.
+* **accept**: ACCEPT's local runs; `ctest --preset default -R "test_fork|test_cloexec|gate.guarantees"` exit 0.
+* **stop if**: `cf_live_*` does not refuse in a fork's child.
+* **docs**: `CHANGELOG.md`, under the newest unreleased heading, "### Added": "a table in docs/Guarantees.md of what holds across fork, callbacks, a crash and exec, each row with its test".
+
 ## D-223 - One error model (the maintainer, 2026-11-26, relayed from a side session: "I like the error model"; "the core uses the C89 standard")
 
 It answers K-6a's and K-6b's questions and Y-28's choice C, and K-9c
