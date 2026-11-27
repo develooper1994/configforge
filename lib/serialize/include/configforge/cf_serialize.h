@@ -167,7 +167,29 @@ typedef struct cf_doc_sink {
        this callback it does not check, and a later key wins as in 1.1.
        The configuration loader supplies it from the caller's arena. (1.2) */
     void* (*reserve_work)(void* ctx, size_t n);
+
+    /* The longest key, in bytes, a reader may build in workspace from
+       reserve_work: the sink's, set by the configuration loader from the
+       sizing mode (cf_builder_sizing). 0, the zeroed default, is the
+       build's own limit (CF_KEY_MAX - 1) and the readers' fixed buffers,
+       as before; a reader that finds more than that, and a sink that lends
+       workspace, grows its key buffer, each growth one reserve_work call,
+       and refuses a key past this with CF_REASON_BUDGET. (2.0) */
+    size_t key_limit;
 } cf_doc_sink;
+
+#if CF_INTERNAL_API
+/* What a reader may build a key of: the sink's key_limit when it reaches
+   that member and lends workspace, otherwise CF_KEY_MAX - 1. */
+CF_API size_t cf_sink_key_limit(const cf_doc_sink* out);
+
+/* Room for `need` bytes in *buf, which holds `cap` and whose first `keep`
+   bytes stay: when it is short, a block of twice the size (or `need`, if
+   more) from reserve_work, the kept bytes copied. CF_FALSE, with *buf and
+   *cap as they were, when the sink lends no workspace or is out of it. */
+CF_NODISCARD CF_API cf_bool cf_sink_grow(const cf_doc_sink* out, char** buf,
+                                         size_t* cap, size_t keep, size_t need);
+#endif /* CF_INTERNAL_API */
 
 /* ------------------------------------------------------------------ *
  * Codecs

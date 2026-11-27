@@ -198,6 +198,12 @@ typedef struct cf_keyspace {
     size_t       original_capacity;
 
     cf_error* refusal; /* why a source refused what it read, or NULL (D-108) */
+
+    /* The sizing mode's limits (D-176), set by cfi_ks_limits: the longest
+       key, and the longest value a reader may build in the arena; 0 is the
+       build's own (CF_KEY_MAX - 1) for a key and none for a value. */
+    size_t key_limit;
+    size_t text_limit;
 } cf_keyspace;
 
 /* Internal append plan: source-local bounds and final offsets.
@@ -262,7 +268,13 @@ void cfi_ks_expect(cf_keyspace* ks, size_t more);
    refused with the key space, and the builder reads it when the load fails.
    Only a refusal of what was read (CF_E_SOURCE) is kept, the first, copied
    into the arena; NULL for none. */
-void            cfi_ks_refuse(cf_keyspace* ks, const cf_error* err);
+void cfi_ks_refuse(cf_keyspace* ks, const cf_error* err);
+
+/* Internal: the longest key this key space takes (a mode's limit, or the
+   build's CF_KEY_MAX - 1), and the sizing mode's limits for it: 0 for the
+   build's own. */
+size_t          cfi_ks_key_limit(const cf_keyspace* ks);
+void            cfi_ks_limits(cf_keyspace* ks, size_t key_limit, size_t text_limit);
 const cf_error* cfi_ks_refusal(const cf_keyspace* ks);
 void            cfi_ks_expect_lines(cf_keyspace* ks, const char* text, size_t n);
 

@@ -94,6 +94,8 @@ cf_ref_dec
 cf_ref_get
 cf_ref_inc
 cf_ref_init
+cf_sink_grow
+cf_sink_key_limit
 cf_siphash24
 cf_source_by_content
 cf_source_read_blob

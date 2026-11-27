@@ -9,12 +9,16 @@
 #include <stddef.h>
 
 cf_bool cf_key_valid(const char* key, size_t len) {
+    /* CF_KEY_MAX counts the terminator, as every buffer that holds a key
+       does: the longest key is one byte shorter. */
+    return cfi_key_valid_n(key, len, (size_t)CF_KEY_MAX - 1u);
+}
+
+cf_bool cfi_key_valid_n(const char* key, size_t len, size_t limit) {
     size_t i;
     int    seg = 0;
 
-    /* CF_KEY_MAX counts the terminator, as every buffer that holds a key
-       does: the longest key is one byte shorter. */
-    if (key == NULL || len == 0 || len >= CF_KEY_MAX) {
+    if (key == NULL || len == 0 || len > limit) {
         return CF_FALSE;
     }
     if (key[0] == '.' || key[len - 1] == '.') {

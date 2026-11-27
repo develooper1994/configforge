@@ -17,6 +17,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   limits, is the default and nothing changes with it. The new build option
   `CF_FIXED_LIMITS` (on in the `minimal` profile) refuses the other two with
   `CF_E_CAPABILITY` (M-10, D-175).
+- Semi- and full-dynamic sizing in the readers and the key space: with
+  `CF_SIZING_SEMI` or `CF_SIZING_DYNAMIC` the JSON, TOML, INI and YAML readers and the
+  key space take keys and values longer than the build's limits, up to the cap under
+  semi-dynamic sizing; manual sizing reads exactly as before. A reader run on a sink of
+  its own takes the new `cf_doc_sink.key_limit` (0, the zeroed default, is the build's
+  limit) (M-11a, D-176).
 
 ### Changed
 

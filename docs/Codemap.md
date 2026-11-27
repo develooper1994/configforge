@@ -54,7 +54,8 @@
 - copy_bounded 137-153
 - cf_error_set 155-180
 `lib/base/src/key.c`
-- cf_key_valid 11-42
+- cf_key_valid 11-15
+- cfi_key_valid_n 17-46
 `lib/base/src/value.c`
 - cf_type_name 12-21
 - cf_type_json_name 25-34
@@ -106,9 +107,11 @@
 - #define CF_DECODE_FACTOR 43
 - #define CF_DECODE_FLOOR 44
 - #define CF_DECODE_KEY_COST 45
-- struct cf_flatten_frame 51-55
-- struct cf_flatten 57-83
-- typedef cf_emit_pred 163
+- typedef cf_flatten_len 52
+- typedef cf_flatten_len 54
+- struct cf_flatten_frame 58-62
+- struct cf_flatten 64-96
+- typedef cf_emit_pred 176
 `lib/config/include/configforge/cf_image.h`
 - #define CONFIGFORGE_CF_IMAGE_H 25
 - #define CF_IMAGE_MAGIC_0 36
@@ -141,8 +144,8 @@
 - enum cf_refusal 143-152
 - struct cf_entry 163-168
 - typedef cf_cand_rec 183
-- struct cf_keyspace 185-201
-- struct cf_list_part 206-213
+- struct cf_keyspace 185-207
+- struct cf_list_part 212-219
 `lib/config/include/configforge/cf_live.h`
 - #define CONFIGFORGE_CF_LIVE_H 76
 - typedef cf_live 90
@@ -286,40 +289,42 @@
 - cf_source_file_error 614-618
 - cf_source_file_encoding 620-624
 `lib/config/src/bridge/flatten.c`
-- fl_room 35-38
-- fl_push 40-73
-- fl_enter_member 78-118
-- fl_begin_table 120-142
-- fl_begin_array 144-164
-- fl_charge 168-179
-- fl_split 185-235
-- fl_scalar 237-282
-- fl_end 284-322
-- fl_reserve_text 324-344
-- fl_reserve_work 348-350
-- cf_flatten_init 352-370
-- cf_flatten_sink 372-374
-- cf_flatten_lists 376-380
-- cf_decode_budget 382-387
-- cf_flatten_budget 389-394
-- cf_flatten_decode 400-415
-- all_digits 453-464
-- seg_len 467-474
-- count_value 481-495
-- index_value 501-516
-- group_is_array 545-599
-- struct emit_ctx 601-604
-- included 606-614
-- any_included 619-628
-- run_end 632-647
-- too_deep 655-658
-- emit_group 672-699
-- emit_table 701-764
-- emit_array 769-822
-- cf_doc_emit 824-826
-- cf_doc_emit_where 828-847
-- cf_doc_emit 851-853
-- cf_doc_emit_where 855-863
+- fl_fit 35-65
+- fl_name_valid 69-79
+- fl_room 81-83
+- fl_push 85-118
+- fl_enter_member 123-163
+- fl_begin_table 165-187
+- fl_begin_array 189-209
+- fl_charge 213-224
+- fl_split 230-281
+- fl_scalar 283-334
+- fl_end 336-375
+- fl_reserve_text 377-401
+- fl_reserve_work 405-407
+- cf_flatten_init 409-430
+- cf_flatten_sink 432-434
+- cf_flatten_lists 436-440
+- cf_decode_budget 442-447
+- cf_flatten_budget 449-454
+- cf_flatten_decode 460-482
+- all_digits 520-531
+- seg_len 534-541
+- count_value 548-562
+- index_value 568-583
+- group_is_array 612-666
+- struct emit_ctx 668-671
+- included 673-681
+- any_included 686-695
+- run_end 699-714
+- too_deep 722-725
+- emit_group 739-766
+- emit_table 768-831
+- emit_array 836-889
+- cf_doc_emit 891-893
+- cf_doc_emit_where 895-914
+- cf_doc_emit 918-920
+- cf_doc_emit_where 922-930
 `lib/config/src/bridge/image.c`
 - put_u32 39-44
 - put_u64 46-49
@@ -496,68 +501,69 @@
 - cf_builder_unknown 1102-1106
 - cf_builder_track_reads 1108-1112
 - cf_builder_digest_key 1114-1138
-- cf_sizing_options_init 1140-1147
-- cf_builder_sizing 1149-1188
-- cf_config_sizing 1190-1198
-- cf_builder_log 1200-1206
-- cfi_builder_expect_like 1208-1212
-- config_log 1218-1236
-- config_log_events 1242-1294
-- cf_builder_writable 1296-1312
-- config_name_of_rank 1323-1336
-- create_failed 1338-1344
-- cf_builder_create 1346-1654
-- cf_app 1656-1658
-- derive_ghost 1672-1700
-- derive_onto 1702-1810
-- cf_derive 1812-1832
-- cf_derive_in 1834-1841
-- cfi_config_keep_values 1843-1894
-- write_locked 1915-1927
-- write_authorized 1933-2030
-- write_local_keys 2036-2136
-- cf_write 2138-2187
-- cf_watch_count 2204-2206
-- cf_watch_path 2208-2213
-- cf_changed 2215-2234
-- cf_watcher_open 2238-2255
-- cf_watcher_fd 2257-2259
-- cf_watcher_handle 2261-2263
-- cf_watcher_drain 2265-2267
-- cf_watcher_wait 2269-2271
-- cf_watcher_close 2273-2275
-- cf_config_ref 2277-2281
-- cf_config_free 2283-2294
-- lookup 2300-2317
-- cf_get_bool 2319-2322
-- cf_get_int 2324-2327
-- cf_get_text 2329-2332
-- cf_get_text_n 2334-2348
-- cf_get_real 2351-2354
-- try_of 2357-2369
-- cf_try_bool 2371-2378
-- cf_try_int 2380-2387
-- cf_try_text 2389-2402
-- cf_try_real 2405-2412
-- cf_type_of 2415-2418
-- cf_has 2420-2422
-- cf_tracks_reads 2424-2426
-- cf_was_read 2428-2437
-- cf_read_count 2439-2451
-- cf_explain 2457-2466
-- cf_inspect 2468-2476
-- cf_schema 2478-2490
-- cf_digest 2492-2494
-- cf_fingerprint 2496-2499
-- cf_fingerprint_format 2501-2503
-- cf_count 2505-2507
-- cf_apply_stats 2509-2511
-- cf_sources 2513-2515
-- cf_defs 2517-2519
-- cf_explain_json 2521-2531
-- cf_report 2533-2542
-- cf_keys 2544-2546
-- cf_log_level_name 2548-2560
+- config_ks_sizing 1144-1157
+- cf_sizing_options_init 1159-1166
+- cf_builder_sizing 1168-1207
+- cf_config_sizing 1209-1217
+- cf_builder_log 1219-1225
+- cfi_builder_expect_like 1227-1231
+- config_log 1237-1255
+- config_log_events 1261-1313
+- cf_builder_writable 1315-1331
+- config_name_of_rank 1342-1355
+- create_failed 1357-1363
+- cf_builder_create 1365-1674
+- cf_app 1676-1678
+- derive_ghost 1692-1720
+- derive_onto 1722-1830
+- cf_derive 1832-1852
+- cf_derive_in 1854-1861
+- cfi_config_keep_values 1863-1914
+- write_locked 1935-1947
+- write_authorized 1953-2050
+- write_local_keys 2056-2156
+- cf_write 2158-2207
+- cf_watch_count 2224-2226
+- cf_watch_path 2228-2233
+- cf_changed 2235-2254
+- cf_watcher_open 2258-2275
+- cf_watcher_fd 2277-2279
+- cf_watcher_handle 2281-2283
+- cf_watcher_drain 2285-2287
+- cf_watcher_wait 2289-2291
+- cf_watcher_close 2293-2295
+- cf_config_ref 2297-2301
+- cf_config_free 2303-2314
+- lookup 2320-2337
+- cf_get_bool 2339-2342
+- cf_get_int 2344-2347
+- cf_get_text 2349-2352
+- cf_get_text_n 2354-2368
+- cf_get_real 2371-2374
+- try_of 2377-2389
+- cf_try_bool 2391-2398
+- cf_try_int 2400-2407
+- cf_try_text 2409-2422
+- cf_try_real 2425-2432
+- cf_type_of 2435-2438
+- cf_has 2440-2442
+- cf_tracks_reads 2444-2446
+- cf_was_read 2448-2457
+- cf_read_count 2459-2471
+- cf_explain 2477-2486
+- cf_inspect 2488-2496
+- cf_schema 2498-2510
+- cf_digest 2512-2514
+- cf_fingerprint 2516-2519
+- cf_fingerprint_format 2521-2523
+- cf_count 2525-2527
+- cf_apply_stats 2529-2531
+- cf_sources 2533-2535
+- cf_defs 2537-2539
+- cf_explain_json 2541-2551
+- cf_report 2553-2562
+- cf_keys 2564-2566
+- cf_log_level_name 2568-2580
 `lib/config/src/core/define.c`
 - struct cf_list_projection 22-27
 - cf_def_init_sized 29-41
@@ -630,54 +636,56 @@
 - cf_outcome_can_win 73-82
 - struct cf_cand_rec 88-93
 - cf_ks_init 95-118
-- cfi_ks_refuse 120-135
-- cfi_ks_refusal 137-139
-- cf_ks_arena 141-143
-- cf_ks_resize 148-158
-- cf_ks_grow 161-163
-- cfi_ks_expect 169-187
-- cfi_ks_expect_lines 203-227
-- cf_ks_push 229-282
-- cf_ks_add 284-287
-- cf_ks_add_text 289-299
-- cf_ks_add_authored 301-305
-- cf_ks_add_default 307-311
-- cf_ks_remember_original 313-335
-- cf_ks_rename_impl 337-383
-- cf_ks_rename 385-388
-- cf_ks_rename_list 390-393
-- cf_ks_add_candidate 395-412
-- cf_ks_add_resolved 414-418
-- cfi_ks_add_pinned 420-424
-- cf_ks_original_key 426-452
-- cf_ks_replay 454-476
-- cf_ks_append_list 478-549
-- cf_ks_reject 551-554
-- cand_cmp 572-599
-- cand_merge 601-618
-- cand_sort 620-645
-- cf_ks_candidate_count 651-653
-- cf_ks_resolve 655-738
-- cf_ks_infer_untyped 742-761
-- cf_ks_at_mut 763-768
-- cf_ks_reselect 770-794
-- cf_ks_is_sorted 796-809
-- cf_ks_lower_bound 811-829
-- cf_ks_find 831-852
-- cf_ks_get 854-860
-- cf_ks_count 862-864
-- cf_ks_at 866-871
-- fnv1a 882-894
-- ks_value_bytes 898-905
-- cf_ks_value_digest 907-913
-- cf_ks_digest_text 917-932
-- struct sip_state 941-943
-- sip_round 945-960
-- sip_word 964-975
-- cf_siphash24 977-1011
-- ks_hex_digits 1015-1023
-- cf_ks_secret_digest_text 1025-1046
-- cf_ks_digest 1048-1081
+- cfi_ks_key_limit 120-122
+- cfi_ks_limits 124-129
+- cfi_ks_refuse 131-146
+- cfi_ks_refusal 148-150
+- cf_ks_arena 152-154
+- cf_ks_resize 159-169
+- cf_ks_grow 172-174
+- cfi_ks_expect 180-198
+- cfi_ks_expect_lines 214-238
+- cf_ks_push 240-293
+- cf_ks_add 295-298
+- cf_ks_add_text 300-310
+- cf_ks_add_authored 312-316
+- cf_ks_add_default 318-322
+- cf_ks_remember_original 324-346
+- cf_ks_rename_impl 348-404
+- cf_ks_rename 406-409
+- cf_ks_rename_list 411-414
+- cf_ks_add_candidate 416-433
+- cf_ks_add_resolved 435-439
+- cfi_ks_add_pinned 441-445
+- cf_ks_original_key 447-473
+- cf_ks_replay 475-497
+- cf_ks_append_list 499-581
+- cf_ks_reject 583-586
+- cand_cmp 604-631
+- cand_merge 633-650
+- cand_sort 652-677
+- cf_ks_candidate_count 683-685
+- cf_ks_resolve 687-770
+- cf_ks_infer_untyped 774-793
+- cf_ks_at_mut 795-800
+- cf_ks_reselect 802-826
+- cf_ks_is_sorted 828-841
+- cf_ks_lower_bound 843-861
+- cf_ks_find 863-884
+- cf_ks_get 886-892
+- cf_ks_count 894-896
+- cf_ks_at 898-903
+- fnv1a 914-926
+- ks_value_bytes 930-937
+- cf_ks_value_digest 939-945
+- cf_ks_digest_text 949-964
+- struct sip_state 973-975
+- sip_round 977-992
+- sip_word 996-1007
+- cf_siphash24 1009-1043
+- ks_hex_digits 1047-1055
+- cf_ks_secret_digest_text 1057-1078
+- cf_ks_digest 1080-1113
 `lib/config/src/core/live.c`
 - struct cf_live 22-76
 - live_lock 86-90
@@ -1362,19 +1370,19 @@
 - #define CONFIGFORGE_CF_SERIALIZE_H 21
 - struct cf_blob 43-47
 - struct cf_sink 89-93
-- struct cf_doc_sink 146-170
-- struct cf_codec 241-265
-- #define CF_ENCODER_STATE_MAX 271
-- struct cf_encoder_head 278-280
-- struct cf_tlv_tag 415-431
-- struct cf_tlv_layout 436-449
-- #define CF_TLV_LAYOUT_INIT 451
-- #define cf_tlv_codec 470
-- struct cf_compose 474-483
-- #define CF_COMPOSE_INIT 485
-- #define cf_codec_compose 497
-- enum cf_detect_how 516-522
-- struct cf_detect 527-531
+- struct cf_doc_sink 146-179
+- struct cf_codec 263-287
+- #define CF_ENCODER_STATE_MAX 293
+- struct cf_encoder_head 300-302
+- struct cf_tlv_tag 437-453
+- struct cf_tlv_layout 458-471
+- #define CF_TLV_LAYOUT_INIT 473
+- #define cf_tlv_codec 492
+- struct cf_compose 496-505
+- #define CF_COMPOSE_INIT 507
+- #define cf_codec_compose 519
+- enum cf_detect_how 538-544
+- struct cf_detect 549-553
 `lib/serialize/include/configforge/cf_serialize_version.h`
 - #define CONFIGFORGE_CF_SERIALIZE_VERSION_H 11
 - #define CF_SERIALIZE_VERSION_MAJOR 23
@@ -1467,6 +1475,9 @@
 - cf_format_holds 354-370
 - cf_format_limits 372-386
 - cf_format_option 388-400
+- sink_has_work 406-413
+- cf_sink_key_limit 415-422
+- cf_sink_grow 424-449
 `lib/serialize/src/compose.c`
 - struct compose_frame 18-21
 - compose_table 25-29
@@ -1478,11 +1489,11 @@
 - compose_text 70-75
 - compose_work 79-84
 - compose_refused 86-95
-- compose_filtered 97-127
-- compose_decode 129-168
-- compose_name_valid 170-185
-- cf_codec_compose_sized 187-245
-- cf_codec_compose_sized 249-262
+- compose_filtered 97-131
+- compose_decode 133-172
+- compose_name_valid 174-189
+- cf_codec_compose_sized 191-249
+- cf_codec_compose_sized 253-266
 `lib/serialize/src/detect.c`
 - struct trial 30-37
 - trial_mix 39-47
@@ -1513,53 +1524,54 @@
 - ini_names_grow 242-264
 - ini_names_add 266-284
 - ini_names_seen 290-298
-- ini_decode 300-525
-- struct ini_enc 537-548
-- typedef ini_enc_fits 551
-- ini_enc_push 553-570
-- ini_enc_header 572-579
-- ini_enc_table 584-590
-- ini_enc_array 595-611
-- ini_text_form 621-638
-- ini_enc_scalar 640-679
-- ini_enc_end 681-691
-- ini_encoder 693-709
+- ini_decode 300-529
+- struct ini_enc 541-552
+- typedef ini_enc_fits 555
+- ini_enc_push 557-574
+- ini_enc_header 576-583
+- ini_enc_table 588-594
+- ini_enc_array 599-615
+- ini_text_form 625-642
+- ini_enc_scalar 644-683
+- ini_enc_end 685-695
+- ini_encoder 697-713
 `lib/serialize/src/json.c`
-- struct js_scan 41-51
-- js_loc 58-62
-- js_fail 64-69
-- js_space 72-80
-- js_hex 83-96
-- js_too_long 103-105
-- js_put 107-117
-- js_put_cp 119-124
-- js_escape 144-188
-- js_string 193-247
-- js5_is_id 252-261
-- js5_name 264-305
-- js_number_value 312-337
-- js_number 339-393
-- js5_hex 397-436
-- js5_number 442-505
-- js_between 512-548
-- js_object 550-597
-- js_array 599-626
-- js_text 629-667
-- js_value 669-728
-- js_decode 730-763
-- json_decode 765-767
-- json5_decode 769-771
-- struct js_enc 779-787
-- typedef js_enc_fits 790
-- js_indent 796-802
-- js_sep 804-812
-- js_name 814-819
-- js_enc_open 821-841
-- js_enc_table 843-853
-- js_enc_array 855-857
-- js_enc_scalar 859-887
-- js_enc_end 889-908
-- json_encoder 910-927
+- struct js_scan 41-54
+- js_loc 61-65
+- js_fail 67-72
+- js_space 75-83
+- js_hex 86-99
+- js_too_long 106-108
+- js_put 110-120
+- js_put_cp 122-127
+- js_escape 147-191
+- js_string 196-250
+- js5_is_id 255-264
+- js5_name 267-308
+- js_number_value 315-340
+- js_number 342-396
+- js5_hex 400-439
+- js5_number 445-508
+- js_between 515-551
+- js_member_name 557-587
+- js_object 589-640
+- js_array 642-669
+- js_text 672-710
+- js_value 712-771
+- js_decode 773-809
+- json_decode 811-813
+- json5_decode 815-817
+- struct js_enc 825-833
+- typedef js_enc_fits 836
+- js_indent 842-848
+- js_sep 850-858
+- js_name 860-865
+- js_enc_open 867-887
+- js_enc_table 889-899
+- js_enc_array 901-903
+- js_enc_scalar 905-933
+- js_enc_end 935-954
+- json_encoder 956-973
 `lib/serialize/src/properties.c`
 - struct prop_scan 42-48
 - prop_fail 50-53
@@ -1617,56 +1629,59 @@
 - cf_tlv_codec_sized 1094-1122
 - cf_tlv_codec_sized 1126-1139
 `lib/serialize/src/toml.c`
-- enum toml_kind 77-87
-- enum toml_def 95-103
-- struct toml_node 105-113
-- struct toml_scan 115-142
-- struct toml_dkey 150-155
-- toml_loc 162-166
-- toml_fail 168-173
-- toml_blank 175-177
-- toml_comment_result 179-188
-- toml_comment 190-195
-- toml_space_lines 197-202
-- toml_end_of_line 205-214
-- toml_put 218-228
-- toml_newline 232-240
-- toml_string 247-405
-- toml_bare 407-409
-- toml_key_segment 412-431
-- toml_key 434-463
-- toml_fail_named 475-498
-- toml_no_room 500-503
-- toml_hash 507-524
-- toml_find 528-542
-- toml_room 547-596
-- toml_add 601-628
-- toml_track_init 633-661
-- toml_define_key 666-710
-- toml_define_header 716-808
-- toml_digits 815-837
-- toml_fixed 848-860
-- toml_time 864-892
-- toml_datetime 900-949
-- toml_number 951-1076
-- toml_keyval 1082-1121
-- toml_array 1126-1178
-- toml_inline_table 1183-1238
-- toml_value 1240-1313
-- toml_close_to 1325-1344
-- toml_push 1346-1375
-- toml_header 1377-1450
-- toml_decode 1452-1496
-- struct toml_enc 1516-1527
-- typedef toml_enc_fits 1530
-- toml_quote 1543-1558
-- toml_enc_lead 1563-1590
-- toml_enc_open_inline 1592-1605
-- toml_enc_table 1607-1635
-- toml_enc_array 1637-1639
-- toml_enc_scalar 1641-1682
-- toml_enc_end 1684-1704
-- toml_encoder 1706-1721
+- typedef toml_len 62
+- enum toml_kind 81-91
+- enum toml_def 99-107
+- struct toml_node 109-117
+- struct toml_scan 119-151
+- struct toml_dkey 159-166
+- toml_loc 173-177
+- toml_fail 179-184
+- toml_blank 186-188
+- toml_comment_result 190-199
+- toml_comment 201-206
+- toml_space_lines 208-213
+- toml_end_of_line 216-225
+- toml_put 229-239
+- toml_newline 243-251
+- toml_string 258-416
+- toml_bare 418-420
+- toml_key_segment 423-442
+- toml_key_measure 448-462
+- toml_key_grow 467-484
+- toml_key 487-521
+- toml_fail_named 533-556
+- toml_no_room 558-561
+- toml_hash 565-582
+- toml_find 586-600
+- toml_room 605-654
+- toml_add 659-686
+- toml_track_init 691-719
+- toml_define_key 724-768
+- toml_define_header 774-866
+- toml_digits 873-895
+- toml_fixed 906-918
+- toml_time 922-950
+- toml_datetime 958-1007
+- toml_number 1009-1134
+- toml_keyval 1140-1179
+- toml_array 1184-1236
+- toml_inline_table 1241-1296
+- toml_value 1298-1371
+- toml_close_to 1383-1406
+- toml_push 1408-1447
+- toml_header 1449-1522
+- toml_decode 1524-1576
+- struct toml_enc 1596-1607
+- typedef toml_enc_fits 1610
+- toml_quote 1623-1638
+- toml_enc_lead 1643-1670
+- toml_enc_open_inline 1672-1685
+- toml_enc_table 1687-1715
+- toml_enc_array 1717-1719
+- toml_enc_scalar 1721-1762
+- toml_enc_end 1764-1784
+- toml_encoder 1786-1801
 `lib/serialize/src/version.c`
 - cf_serialize_version 15-18
 - cf_serialize_version_number 20-22
@@ -1700,56 +1715,56 @@
 - struct yaml_ev 88-95
 - struct yaml_rec 98-104
 - struct yaml_anchor 107-113
-- struct yaml_scan 133-161
-- yaml_fail_at 163-166
-- yaml_no_room 168-171
-- yaml_grow 175-193
-- yaml_keep 195-210
-- yaml_record 213-239
-- yaml_find 243-257
-- yaml_anchor_open 260-337
-- yaml_anchor_close 340-350
-- yaml_name 354-372
-- yaml_known_tag 379-398
-- yaml_open 400-437
-- yaml_is_null 440-446
-- yaml_tagged 450-514
-- yaml_scalar 516-574
-- yaml_handle 578-603
-- yaml_alias 608-683
-- yaml_node 686-692
-- yaml_document 694-700
-- yaml_stream_end 704-712
-- yaml_scan_init 714-732
-- yaml_ev_init 735-744
-- yaml_fy_text 754-761
-- yaml_fy_tag 765-777
-- yaml_fy_event 779-838
-- yaml_fy_fail 841-850
-- yaml_fy_version_ok 864-891
-- yaml_decode 893-950
-- yaml_line 958-960
-- yaml_col 961-963
-- yaml_event 968-1018
-- yaml_decode 1020-1046
-- yaml_b_document 1055-1057
-- yaml_b_stream_end 1059-1061
-- yaml_b_alias 1063-1066
-- yaml_b_node 1068-1083
-- yaml_b_work 1087-1090
-- yaml_decode 1092-1104
-- struct yaml_enc 1125-1130
-- typedef yaml_enc_fits 1133
-- yaml_quote 1152-1175
-- yaml_reserved 1179-1190
-- yaml_key 1192-1209
-- yaml_lead 1214-1230
-- yaml_enc_open 1232-1243
-- yaml_enc_table 1245-1247
-- yaml_enc_array 1249-1251
-- yaml_enc_scalar 1253-1283
-- yaml_enc_end 1285-1298
-- yaml_encoder 1300-1315
+- struct yaml_scan 133-164
+- yaml_fail_at 166-169
+- yaml_no_room 171-174
+- yaml_grow 178-196
+- yaml_keep 198-213
+- yaml_record 216-242
+- yaml_find 246-260
+- yaml_anchor_open 263-340
+- yaml_anchor_close 343-353
+- yaml_name 357-375
+- yaml_known_tag 382-401
+- yaml_open 403-440
+- yaml_is_null 443-449
+- yaml_tagged 453-517
+- yaml_scalar 519-589
+- yaml_handle 593-618
+- yaml_alias 623-698
+- yaml_node 701-707
+- yaml_document 709-715
+- yaml_stream_end 719-727
+- yaml_scan_init 729-750
+- yaml_ev_init 753-762
+- yaml_fy_text 772-779
+- yaml_fy_tag 783-795
+- yaml_fy_event 797-856
+- yaml_fy_fail 859-868
+- yaml_fy_version_ok 882-909
+- yaml_decode 911-968
+- yaml_line 976-978
+- yaml_col 979-981
+- yaml_event 986-1036
+- yaml_decode 1038-1064
+- yaml_b_document 1073-1075
+- yaml_b_stream_end 1077-1079
+- yaml_b_alias 1081-1084
+- yaml_b_node 1086-1101
+- yaml_b_work 1105-1108
+- yaml_decode 1110-1122
+- struct yaml_enc 1143-1148
+- typedef yaml_enc_fits 1151
+- yaml_quote 1170-1193
+- yaml_reserved 1197-1208
+- yaml_key 1210-1227
+- yaml_lead 1232-1248
+- yaml_enc_open 1250-1261
+- yaml_enc_table 1263-1265
+- yaml_enc_array 1267-1269
+- yaml_enc_scalar 1271-1301
+- yaml_enc_end 1303-1316
+- yaml_encoder 1318-1333
 `lib/serialize/src/yamlparse.c`
 - struct yp_tagdef 36-41
 - struct yp 43-58

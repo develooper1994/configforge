@@ -136,7 +136,10 @@ typedef struct yaml_scan {
     cf_error*          err;
     yaml_level         level[CF_MAX_DEPTH];
     int                depth; /* -1 before the top-level mapping */
-    char               key[CF_KEY_MAX];
+    char*              key;   /* key_inl, or a block the sink lent (D-176) */
+    size_t             kcap;
+    size_t             klimit; /* the longest a key may be (cf_sink_key_limit) */
+    char               key_inl[CF_KEY_MAX];
     size_t             klen;
     int                documents;
     int                rooted; /* the sink has the top-level mapping */
@@ -536,10 +539,22 @@ static cf_bool yaml_scalar(yaml_scan* s, const yaml_ev* e) {
     }
     l = &s->level[s->depth];
     if (l->is_map && l->want_key) {
-        if (e->n == 0 || e->n >= sizeof s->key) {
-            return yaml_fail_at(s, e->line, e->col,
-                                e->n == 0 ? CF_REASON_KEY : CF_REASON_TOO_LONG,
-                                (e->n == 0) ? "an empty key" : "the key is too long");
+        if (e->n == 0) {
+            return yaml_fail_at(s, e->line, e->col, CF_REASON_KEY, "an empty key");
+        }
+        if (e->n >= s->kcap) {
+            if (s->klimit <= (size_t)CF_KEY_MAX - 1u) {
+                return yaml_fail_at(s, e->line, e->col, CF_REASON_TOO_LONG,
+                                    "the key is too long");
+            }
+            if (e->n > s->klimit) {
+                return yaml_fail_at(s, e->line, e->col, CF_REASON_BUDGET,
+                                    "a key is longer than the sizing cap");
+            }
+            if (!cf_sink_grow(s->out, &s->key, &s->kcap, 0, e->n + 1u)) {
+                return cf_error_set(s->err, CF_E_MEMORY, NULL, s->file,
+                                    "no room to read a YAML key");
+            }
         }
         memcpy(s->key, e->text, e->n);
         s->key[e->n] = '\0';
@@ -714,11 +729,14 @@ static cf_bool yaml_stream_end(yaml_scan* s, unsigned line, unsigned col) {
 static void yaml_scan_init(yaml_scan* s, const cf_blob* in, const cf_doc_sink* out,
                            cf_error* err) {
     memset(s, 0, sizeof *s);
-    s->seed  = (cf_u32)cf_text_seed(s);
-    s->file  = (in->name != NULL) ? in->name : "<yaml>";
-    s->out   = out;
-    s->err   = err;
-    s->depth = -1;
+    s->seed   = (cf_u32)cf_text_seed(s);
+    s->file   = (in->name != NULL) ? in->name : "<yaml>";
+    s->out    = out;
+    s->err    = err;
+    s->depth  = -1;
+    s->key    = s->key_inl;
+    s->kcap   = sizeof s->key_inl;
+    s->klimit = cf_sink_key_limit(out);
     /* Saturated rather than wrapped, for a document near SIZE_MAX. */
     s->max_bytes =
         (in->n > ((size_t)-1 - YAML_ALIAS_BYTES_FLOOR) / YAML_ALIAS_BYTES_FACTOR)

@@ -398,3 +398,52 @@ const char* cf_format_option(const char* format) {
     }
     return NULL;
 }
+
+/* ------------------------------------------------------------------ *
+ * Workspace for a long key (D-176)
+ * ------------------------------------------------------------------ */
+
+static cf_bool sink_has_work(const cf_doc_sink* out) {
+    return (out != NULL &&
+            out->size >=
+                offsetof(cf_doc_sink, reserve_work) + sizeof out->reserve_work &&
+            out->reserve_work != NULL)
+               ? CF_TRUE
+               : CF_FALSE;
+}
+
+size_t cf_sink_key_limit(const cf_doc_sink* out) {
+    if (sink_has_work(out) &&
+        out->size >= offsetof(cf_doc_sink, key_limit) + sizeof out->key_limit &&
+        out->key_limit > (size_t)CF_KEY_MAX - 1u) {
+        return out->key_limit;
+    }
+    return (size_t)CF_KEY_MAX - 1u;
+}
+
+cf_bool cf_sink_grow(const cf_doc_sink* out, char** buf, size_t* cap, size_t keep,
+                     size_t need) {
+    size_t more;
+    char*  block;
+
+    if (need <= *cap) {
+        return CF_TRUE;
+    }
+    if (!sink_has_work(out)) {
+        return CF_FALSE;
+    }
+    more = (*cap > (size_t)-1 / 2) ? need : *cap * 2u;
+    if (more < need) {
+        more = need;
+    }
+    block = (char*)out->reserve_work(out->ctx, more);
+    if (block == NULL) {
+        return CF_FALSE;
+    }
+    if (keep > 0) {
+        memcpy(block, *buf, keep);
+    }
+    *buf = block;
+    *cap = more;
+    return CF_TRUE;
+}

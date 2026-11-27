@@ -48,24 +48,37 @@ extern "C" {
    fits sixteen bits (CF_KEY_MAX is at most 65535), and no configuration
    array has four billion elements. CF_MAX_DEPTH levels of this sit in
    the frame of every source that reads a document. */
+#if CF_FIXED_LIMITS
+typedef cf_u16 cf_flatten_len;
+#else
+typedef cf_u32
+    cf_flatten_len; /* a key may outgrow sixteen bits when the sizing allows it */
+#endif
+
 typedef struct cf_flatten_frame {
-    cf_u32 index;
-    cf_u16 saved_len;
-    cf_u8  is_array;
+    cf_u32         index;
+    cf_flatten_len saved_len;
+    cf_u8          is_array;
 } cf_flatten_frame;
 
 typedef struct cf_flatten {
     cf_keyspace* ks;
     int          rank;
 
-    char   path[CF_KEY_MAX];
+    /* The key being built: path_buf, and a block from the key space's
+       arena, doubled, where the sizing mode lets a key outgrow it (D-176). */
+    char*  path;
+    size_t path_cap;
     size_t plen;
+    char   path_buf[CF_KEY_MAX];
 
     cf_flatten_frame stack[CF_FLATTEN_MAX_DEPTH];
     int              depth;
 
-    cf_bool     failed;   /* the key space refused a candidate     */
-    cf_bool     overflow; /* a key or the nesting grew too large   */
+    cf_bool     failed;    /* the key space refused a candidate     */
+    cf_bool     overflow;  /* a key or the nesting grew too large   */
+    cf_bool     over_key;  /* a key past the sizing cap             */
+    cf_bool     over_text; /* a value past the sizing cap          */
     cf_doc_sink sink;
     char*       text;
     size_t      text_cap;

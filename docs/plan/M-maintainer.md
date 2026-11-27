@@ -306,6 +306,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **accept**: the standard ACCEPT; `ctest -R test_sizing` exit 0.
 * **stop if**: `MANUAL` output differs from today's anywhere.
 * **Organiser's answers** (2026-11-27, the organiser, under the maintainer's standing approval): the card has no choice of its own; M-10's answer on what grows holds, and `cf_key_valid` is not changed (the maintainer's standing approval, 2026-11-27).
+  * Worker's notes (M-11a): the card's "refused under `MANUAL`" holds for keys only: a 4,000-byte string was already accepted under `MANUAL`, because the loader's sink has supplied `reserve_text` since 1.x, so the test pins that and `SEMI` holds a value to its cap. A reader cannot tell the mode from `reserve_work` alone (and a sink of one's own must read as before), so the loader hands it the key limit in a new last member of `cf_doc_sink`, `key_limit` (0 is the build's; D-176). A cap below the build's key limit leaves the build's (the maintainer's standing approval, 2026-11-27).
 * **docs**: `CHANGELOG.md` under "## 2.0.0 — unreleased", "### Added": "semi- and full-dynamic sizing in the readers and the key space". `docs/Decisions.md`: D-176 (below, with M-11b).
 
 ## M-11b - `cf_error` owns its text (the 2.0 break)

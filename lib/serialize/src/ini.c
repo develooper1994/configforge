@@ -117,7 +117,7 @@ static size_t ini_bracket(const char* key, size_t klen, size_t* index) {
 
 /* An open run of `name[]` lines: the array the sink has begun. */
 typedef struct ini_run {
-    char         name[CF_KEY_MAX];
+    const char*  name; /* in the blob, which outlives the decode */
     size_t       n;
     cf_bool      open;
     cf_bool      noted; /* its name is in the section's table */
@@ -304,7 +304,12 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
     ini_names    names;
     const char*  section_start;
     unsigned int section_line = 1;
+    char   flat_inl[CF_KEY_MAX]; /* name[i] as name.i: grown where the mode allows */
+    char*  flat   = flat_inl;
+    size_t fcap   = sizeof flat_inl;
+    size_t klimit = cf_sink_key_limit(out);
 
+    run.name  = NULL;
     run.open  = CF_FALSE;
     run.noted = CF_FALSE;
     run.n     = 0;
@@ -427,7 +432,6 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
             {
                 size_t index = 0;
                 size_t nlen  = ini_bracket(key, klen, &index);
-                char   flat[CF_KEY_MAX];
 
                 if (nlen > 0 && index == 0) {
                     /* name[]: one more element of the run, or a new run */
@@ -450,13 +454,12 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
                                 "lines go together, or name each index",
                                 key, nlen, earlier);
                         }
-                        if (nlen >= sizeof run.name ||
-                            !out->begin_array(out->ctx, key, nlen)) {
+                        if (nlen > klimit || !out->begin_array(out->ctx, key, nlen)) {
                             return cf_text_fail(err, CF_E_KEY, s.file, s.tr.line, 0,
                                                 CF_REASON_KEY,
                                                 "'%S' is not a valid key", key, nlen);
                         }
-                        memcpy(run.name, key, nlen);
+                        run.name  = key;
                         run.n     = nlen;
                         run.open  = CF_TRUE;
                         run.noted = CF_FALSE;
@@ -480,7 +483,8 @@ static cf_bool ini_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* e
                 }
                 if (nlen > 0) {
                     /* name[i]: the flat name.i every format's element is */
-                    if (klen + 1 > sizeof flat) {
+                    if (klen + 1 > klimit + 1u ||
+                        !cf_sink_grow(out, &flat, &fcap, 0, klen + 1)) {
                         return cf_text_fail(err, CF_E_KEY, s.file, s.tr.line, 0,
                                             CF_REASON_TOO_LONG, "'%S' is too long", key,
                                             klen);

@@ -46,6 +46,9 @@ typedef struct js_scan {
     const cf_doc_sink* out;
     cf_error*          err;
     char               scratch[CF_KEY_MAX];
+    char*              kbuf; /* the member name: scratch, or a block the sink lent */
+    size_t             kcap;
+    size_t             klimit; /* the longest a name may be (cf_sink_key_limit) */
     int                depth;
     cf_bool            json5;
 } js_scan;
@@ -547,6 +550,42 @@ static cf_bool js_between(js_scan* s, cf_bool* first, char close, const char* un
     return CF_TRUE;
 }
 
+/* A member name, decoded into s->kbuf. Where the sizing mode lets a key
+   outgrow scratch (s->klimit), the name is measured first and the buffer
+   grown to fit: each growth one reserve_work call, the block reused for the
+   next name. A name past the limit is refused as a budget. */
+static size_t js_member_name(js_scan* s) {
+    const char*   start;
+    cf_text_track saved;
+    cf_bool       quoted = (*s->p == '"' || *s->p == '\'') ? CF_TRUE : CF_FALSE;
+    size_t        n;
+
+    if (s->klimit <= (size_t)CF_KEY_MAX - 1u) {
+        return (s->json5 && !quoted) ? js5_name(s, s->kbuf, s->kcap)
+                                     : js_string(s, s->kbuf, s->kcap);
+    }
+    start = s->p;
+    saved = s->tr;
+    n     = (s->json5 && !quoted) ? js5_name(s, NULL, (size_t)-1)
+                                  : js_string(s, NULL, (size_t)-1);
+    if (n == (size_t)-1) {
+        return n;
+    }
+    if (n > s->klimit) {
+        js_fail(s, start, CF_REASON_BUDGET, "a key is longer than the sizing cap");
+        return (size_t)-1;
+    }
+    if (!cf_sink_grow(s->out, &s->kbuf, &s->kcap, 0, n + 1u)) {
+        cf_error_set(s->err, CF_E_MEMORY, NULL, s->file,
+                     "no room to decode a JSON member name");
+        return (size_t)-1;
+    }
+    s->p  = start;
+    s->tr = saved;
+    return (s->json5 && !quoted) ? js5_name(s, s->kbuf, s->kcap)
+                                 : js_string(s, s->kbuf, s->kcap);
+}
+
 static cf_bool js_object(js_scan* s, const char* name, size_t nlen) {
     cf_bool first = CF_TRUE;
     cf_bool done  = CF_FALSE;
@@ -567,9 +606,7 @@ static cf_bool js_object(js_scan* s, const char* name, size_t nlen) {
         if (done) {
             break;
         }
-        klen = (s->json5 && *s->p != '"' && *s->p != '\'')
-                   ? js5_name(s, s->scratch, sizeof s->scratch)
-                   : js_string(s, s->scratch, sizeof s->scratch);
+        klen = js_member_name(s);
         if (klen == (size_t)-1 || !js_space(s)) {
             return CF_FALSE;
         }
@@ -582,11 +619,17 @@ static cf_bool js_object(js_scan* s, const char* name, size_t nlen) {
                reuses the scratch buffer for the next string. */
             char keep[CF_KEY_MAX];
             if (klen + 1 > sizeof keep) {
-                return js_fail(s, s->p, CF_REASON_TOO_LONG, "member name is too long");
-            }
-            memcpy(keep, s->scratch, klen + 1);
-            if (!js_value(s, keep, klen)) {
-                return CF_FALSE;
+                /* Only where the sizing mode lets a name outgrow scratch: the
+                   name is consumed (begin_table, begin_array, scalar) before
+                   anything reads another name into the buffer. */
+                if (!js_value(s, s->kbuf, klen)) {
+                    return CF_FALSE;
+                }
+            } else {
+                memcpy(keep, s->kbuf, klen + 1);
+                if (!js_value(s, keep, klen)) {
+                    return CF_FALSE;
+                }
             }
         }
     }
@@ -735,10 +778,13 @@ static cf_bool js_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* er
     s.end  = in->p + in->n;
     s.file = (in->name != NULL) ? in->name : json5 ? "<json5>" : "<json>";
     cf_text_track_init(&s.tr, s.p);
-    s.out   = out;
-    s.err   = err;
-    s.depth = 0;
-    s.json5 = json5;
+    s.out    = out;
+    s.err    = err;
+    s.depth  = 0;
+    s.json5  = json5;
+    s.kbuf   = s.scratch;
+    s.kcap   = sizeof s.scratch;
+    s.klimit = cf_sink_key_limit(out);
 
     if (!js_space(&s)) {
         return CF_FALSE;

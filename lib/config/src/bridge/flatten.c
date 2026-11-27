@@ -32,9 +32,54 @@
 /* Whether a name of n bytes can be added to the path: the dot before it,
    when there is a path, and the terminator after it. A key that fills
    the buffer but for its terminator is the longest key, and is read. */
-static cf_bool fl_room(const cf_flatten* f, size_t n) {
-    return (f->plen + ((f->plen > 0) ? 1u : 0u) + n < sizeof f->path) ? CF_TRUE
-                                                                      : CF_FALSE;
+static cf_bool fl_fit(cf_flatten* f, size_t len) {
+    size_t limit;
+    size_t cap;
+    char*  grown;
+
+    if (len < f->path_cap) {
+        return CF_TRUE;
+    }
+    limit = cfi_ks_key_limit(f->ks);
+    if (len > limit || len >= (cf_flatten_len)-1) {
+        if (f->ks->key_limit != 0) {
+            f->over_key = CF_TRUE; /* the sizing mode's, not the build's */
+        }
+        return CF_FALSE;
+    }
+    /* Past the build's buffer, inside the mode's limit: a block twice the
+       size, from the arena the key goes to. */
+    cap = f->path_cap;
+    while (cap <= len) {
+        cap = (cap > (size_t)-1 / 2) ? len + 1 : cap * 2u;
+    }
+    grown = (char*)cf_arena_alloc(f->ks->arena, cap);
+    if (grown == NULL) {
+        f->failed = CF_TRUE;
+        return CF_FALSE;
+    }
+    memcpy(grown, f->path, f->plen);
+    f->path     = grown;
+    f->path_cap = cap;
+    return CF_TRUE;
+}
+
+/* A segment the key space can take: valid, and no longer than the mode's
+   limit, which is noted when it is the sizing mode's (D-176). */
+static cf_bool fl_name_valid(cf_flatten* f, const char* name, size_t n) {
+    size_t limit = cfi_ks_key_limit(f->ks);
+
+    if (cfi_key_valid_n(name, n, limit)) {
+        return CF_TRUE;
+    }
+    if (n > limit && f->ks->key_limit != 0) {
+        f->over_key = CF_TRUE;
+    }
+    return CF_FALSE;
+}
+
+static cf_bool fl_room(cf_flatten* f, size_t n) {
+    return fl_fit(f, f->plen + ((f->plen > 0) ? 1u : 0u) + n);
 }
 
 static cf_bool fl_push(cf_flatten* f, const char* name, size_t n, cf_bool is_array) {
@@ -48,7 +93,7 @@ static cf_bool fl_push(cf_flatten* f, const char* name, size_t n, cf_bool is_arr
         /* Segment validity is checked here rather than at cf_ks_add so
            that the parser can turn a refusal into a message with a
            line and column in it. */
-        if (!cf_key_valid(name, n)) {
+        if (!fl_name_valid(f, name, n)) {
             return CF_FALSE;
         }
         if (!fl_room(f, n)) {
@@ -58,7 +103,7 @@ static cf_bool fl_push(cf_flatten* f, const char* name, size_t n, cf_bool is_arr
     }
 
     fr            = &f->stack[++f->depth];
-    fr->saved_len = (cf_u16)f->plen;
+    fr->saved_len = (cf_flatten_len)f->plen;
     fr->is_array  = (cf_u8)(is_array ? 1 : 0);
     fr->index     = 0;
 
@@ -102,7 +147,7 @@ static cf_bool fl_enter_member(cf_flatten* f, const char* name, size_t n,
     if (name == NULL) {
         return CF_FALSE;
     }
-    if (!cf_key_valid(name, n)) {
+    if (!fl_name_valid(f, name, n)) {
         return CF_FALSE;
     }
     if (!fl_room(f, n)) {
@@ -132,7 +177,7 @@ static cf_bool fl_begin_table(void* ctx, const char* name, size_t n) {
                 return CF_FALSE;
             }
             fr            = &f->stack[++f->depth];
-            fr->saved_len = (cf_u16)saved;
+            fr->saved_len = (cf_flatten_len)saved;
             fr->is_array  = 0;
             fr->index     = 0;
             return CF_TRUE;
@@ -157,7 +202,7 @@ static cf_bool fl_begin_array(void* ctx, const char* name, size_t n) {
         return CF_FALSE;
     }
     fr            = &f->stack[++f->depth];
-    fr->saved_len = (cf_u16)saved;
+    fr->saved_len = (cf_flatten_len)saved;
     fr->is_array  = 1;
     fr->index     = 0;
     return CF_TRUE;
@@ -195,12 +240,13 @@ static cf_bool fl_split(cf_flatten* f, const cf_def* d, const cf_value* v,
         if (i != n && p[i] != d->list_separator) {
             continue;
         }
-        klen = cf_fmt(f->path + base, sizeof f->path - base, ".%U", count);
-        if (base + klen >= sizeof f->path) {
+        klen = cf_fmt(NULL, 0, ".%U", count);
+        if (!fl_fit(f, base + klen)) {
             f->overflow = CF_TRUE;
             f->plen     = base;
             return CF_FALSE;
         }
+        cf_fmt(f->path + base, f->path_cap - base, ".%U", count);
         if (!fl_charge(f, base + klen, i - start)) {
             f->plen = base;
             return CF_FALSE;
@@ -214,7 +260,7 @@ static cf_bool fl_split(cf_flatten* f, const cf_def* d, const cf_value* v,
         ++count;
         start = i + 1;
     }
-    if (base + 7 > sizeof f->path) {
+    if (!fl_fit(f, base + 6)) {
         f->overflow = CF_TRUE;
         f->plen     = base;
         return CF_FALSE;
@@ -246,6 +292,12 @@ static cf_bool fl_scalar(void* ctx, const char* name, size_t n, const cf_value* 
         return CF_FALSE;
     }
     if (!fl_enter_member(f, name, n, &saved)) {
+        return CF_FALSE;
+    }
+    if (f->ks->text_limit != 0 && v->type == CF_TYPE_TEXT &&
+        v->u.t.n > f->ks->text_limit) {
+        f->over_text = CF_TRUE;
+        f->plen      = saved;
         return CF_FALSE;
     }
     if (at != NULL && at->file != NULL) {
@@ -296,20 +348,21 @@ static cf_bool fl_end(void* ctx) {
        a lower one behind as ghosts - the documented defect this model
        inherits from .NET, and the reason the resolver truncates. */
     if (fr->is_array) {
-        char     idx[CF_KEY_MAX];
         cf_value count;
         size_t   plen = f->plen;
 
-        if (plen + 7 <= sizeof idx) {
-            memcpy(idx, f->path, plen);
-            memcpy(idx + plen, ".count", 7); /* with its terminator: room was checked */
+        if (fl_fit(f, plen + 6)) {
+            memcpy(f->path + plen, ".count",
+                   7); /* with its terminator: room was checked */
             cf_value_int(&count, (cf_i64)fr->index);
             if (!fl_charge(f, plen + 6, 0)) {
+                f->path[plen] = '\0';
                 return CF_FALSE;
             }
-            if (!cf_ks_add(f->ks, idx, plen + 6, f->rank, &count, NULL)) {
+            if (!cf_ks_add(f->ks, f->path, plen + 6, f->rank, &count, NULL)) {
                 f->failed = CF_TRUE;
             }
+            f->path[plen] = '\0';
         } else {
             /* Its elements fit and its length does not. Read without
                it, the array would be one no source could shorten. */
@@ -323,6 +376,10 @@ static cf_bool fl_end(void* ctx) {
 
 static char* fl_reserve_text(void* ctx, size_t n) {
     cf_flatten* f = (cf_flatten*)ctx;
+    if (f->ks->text_limit != 0 && n > f->ks->text_limit + 1u) {
+        f->over_text = CF_TRUE; /* the sizing cap, and the terminator */
+        return NULL;
+    }
     if (n > f->text_cap) {
         size_t cap = f->text_cap == 0 ? 256 : f->text_cap;
         char*  text;
@@ -354,9 +411,11 @@ cf_bool cf_flatten_init(cf_flatten* f, cf_keyspace* ks, int rank) {
         return CF_FALSE;
     }
     memset(f, 0, sizeof *f);
-    f->ks    = ks;
-    f->rank  = rank;
-    f->depth = -1;
+    f->ks       = ks;
+    f->rank     = rank;
+    f->depth    = -1;
+    f->path     = f->path_buf;
+    f->path_cap = sizeof f->path_buf;
 
     f->sink.size         = sizeof(cf_doc_sink);
     f->sink.begin_table  = fl_begin_table;
@@ -366,6 +425,7 @@ cf_bool cf_flatten_init(cf_flatten* f, cf_keyspace* ks, int rank) {
     f->sink.ctx          = f;
     f->sink.reserve_text = fl_reserve_text;
     f->sink.reserve_work = fl_reserve_work;
+    f->sink.key_limit    = ks->key_limit;
     return CF_TRUE;
 }
 
@@ -405,6 +465,13 @@ cf_bool cf_flatten_decode(cf_flatten* f, const cf_codec* codec, const cf_blob* b
         cf_flatten_budget(f, cf_decode_budget(blob->n));
     }
     ok = cf_codec_decode(codec, blob, cf_flatten_sink(f), err);
+    if (f->over_key || f->over_text) {
+        cf_error_set(err, CF_E_SOURCE, NULL, path,
+                     "'%s': a %s is longer than the sizing cap", path,
+                     f->over_key ? "key" : "value");
+        cf_error_place(err, CF_REASON_BUDGET, 0, 0);
+        return CF_FALSE;
+    }
     if (f->over_budget) {
         cf_error_set(err, CF_E_SOURCE, NULL, path, fl_over_budget, path,
                      (cf_u64)f->budget, (cf_u64)blob->n, (unsigned)CF_DECODE_FACTOR);

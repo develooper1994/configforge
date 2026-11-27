@@ -234,6 +234,150 @@ static void sz_derived(void) {
     cf_config_free(c);
 }
 
+/* ------------------------------------------------------------------ *
+ * M-11a: the readers and the key space follow the mode.
+ * ------------------------------------------------------------------ */
+
+enum { SZ_DOC_MAX = 6000 };
+
+/* A document of one key of `klen` letters holding a string of `vlen`
+   letters, in the named format; its length, or 0 for an unknown one. */
+static size_t sz_doc(char* out, const char* format, size_t klen, size_t vlen) {
+    size_t n = 0;
+    size_t i;
+    int    json = strcmp(format, "json") == 0;
+    int    toml = strcmp(format, "toml") == 0;
+    int    ini  = strcmp(format, "ini") == 0;
+
+    if (json) {
+        out[n++] = '{';
+        out[n++] = '"';
+    } else if (toml || ini) {
+        /* a bare key */
+    }
+    for (i = 0; i < klen; ++i) {
+        out[n++] = 'k';
+    }
+    if (json) {
+        out[n++] = '"';
+        out[n++] = ':';
+        out[n++] = '"';
+    } else if (toml) {
+        memcpy(out + n, " = \"", 4);
+        n += 4;
+    } else if (ini) {
+        memcpy(out + n, " = ", 3);
+        n += 3;
+    } else {
+        memcpy(out + n, ": ", 2);
+        n += 2;
+    }
+    for (i = 0; i < vlen; ++i) {
+        out[n++] = 'v';
+    }
+    if (json) {
+        out[n++] = '"';
+        out[n++] = '}';
+    } else if (toml) {
+        out[n++] = '"';
+    }
+    out[n++] = '\n';
+    out[n]   = '\0';
+    return n;
+}
+
+static void sz_fresh(cf_error* e) {
+    cf_error fresh = CF_ERROR_INIT;
+    *e             = fresh;
+}
+
+/* "<format>: <text>" in `out`, which holds 96 bytes. */
+static void sz_msg(char* out, const char* format, const char* text) {
+    size_t a = strlen(format);
+    size_t b = strlen(text);
+    memcpy(out, format, a);
+    out[a]     = ':';
+    out[a + 1] = ' ';
+    memcpy(out + a + 2, text, b + 1);
+}
+
+static cf_config* sz_read(cf_sizing mode, size_t cap, const char* format, size_t klen,
+                          size_t vlen, cf_error* err) {
+    static char       doc[SZ_DOC_MAX];
+    cf_sizing_options o;
+    cf_builder*       b = cf_build(NULL);
+    size_t            n = sz_doc(doc, format, klen, vlen);
+
+    cf_sizing_options_init(&o);
+    o.mode = mode;
+    o.cap  = cap;
+    if (!cf_builder_sizing(b, &o)) {
+        return cf_builder_create(b, err);
+    }
+    cf_builder_document(b, "doc", CF_RANK_USER_FILE, doc, n, format, 0);
+    return cf_builder_create(b, err);
+}
+
+static void sz_key_name(char* out, size_t klen) {
+    memset(out, 'k', klen);
+    out[klen] = '\0';
+}
+
+static void sz_readers_one(const char* format) {
+    static char key[SZ_DOC_MAX];
+    cf_error    err = CF_ERROR_INIT;
+    cf_config*  c;
+    size_t      n = 0;
+    char        what[96];
+
+    sz_key_name(key, 600);
+
+    /* MANUAL: refused, as before. */
+    c = sz_read(CF_SIZING_MANUAL, 0, format, 600, 1, &err);
+    sz_msg(what, format, "a 600-byte key is refused under manual sizing");
+    check(c == NULL, what);
+    cf_config_free(c);
+    sz_fresh(&err);
+    c = sz_read(CF_SIZING_MANUAL, 0, format, 4, 4000, &err);
+    sz_msg(what, format, "a 4000-byte string under manual sizing");
+    check(c != NULL || err.code != CF_OK, what);
+    cf_config_free(c);
+
+    /* DYNAMIC: accepted. */
+    sz_fresh(&err);
+    c = sz_read(CF_SIZING_DYNAMIC, 0, format, 600, 1, &err);
+    sz_msg(what, format, "a 600-byte key is accepted by dynamic sizing");
+    check(c != NULL, what);
+    check(c != NULL && cf_has(c, key), "and its key is there");
+    cf_config_free(c);
+    sz_fresh(&err);
+    c = sz_read(CF_SIZING_DYNAMIC, 0, format, 4, 4000, &err);
+    sz_msg(what, format, "a 4000-byte string is accepted by dynamic sizing");
+    check(c != NULL, what);
+    check(c != NULL && cf_get_text_n(c, "kkkk", &n, NULL) != NULL && n == 4000,
+          "and its value is whole");
+    cf_config_free(c);
+
+    /* SEMI with a cap of 1024: 600 in, 2000 out. */
+    sz_fresh(&err);
+    c = sz_read(CF_SIZING_SEMI, 1024, format, 600, 1, &err);
+    sz_msg(what, format, "a 600-byte key is accepted under a cap of 1024");
+    check(c != NULL, what);
+    cf_config_free(c);
+    sz_fresh(&err);
+    c = sz_read(CF_SIZING_SEMI, 1024, format, 2000, 1, &err);
+    sz_msg(what, format, "a 2000-byte key is refused under a cap of 1024");
+    check(c == NULL, what);
+    cf_config_free(c);
+}
+
+static void sz_readers(void) {
+    sz_readers_one("json");
+    sz_readers_one("toml");
+    sz_readers_one("ini");
+    sz_readers_one("yaml");
+}
+
 #endif
 
 int main(void) {
@@ -246,6 +390,7 @@ int main(void) {
     sz_modes();
     sz_semi_needs_cap();
     sz_derived();
+    sz_readers();
 #endif
     return cf_test_done();
 }

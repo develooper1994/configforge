@@ -117,6 +117,17 @@ cf_bool cf_ks_init(cf_keyspace* ks, cf_arena* arena, size_t hint) {
     return (ks->cands != NULL) ? CF_TRUE : CF_FALSE;
 }
 
+size_t cfi_ks_key_limit(const cf_keyspace* ks) {
+    return (ks != NULL && ks->key_limit != 0) ? ks->key_limit : (size_t)CF_KEY_MAX - 1u;
+}
+
+void cfi_ks_limits(cf_keyspace* ks, size_t key_limit, size_t text_limit) {
+    if (ks != NULL) {
+        ks->key_limit  = key_limit;
+        ks->text_limit = text_limit;
+    }
+}
+
 void cfi_ks_refuse(cf_keyspace* ks, const cf_error* err) {
     cf_error* copy;
 
@@ -238,7 +249,7 @@ static cf_bool cf_ks_push(cf_keyspace* ks, const char* key, size_t keylen, int s
     if (ks == NULL || value == NULL || ks->resolved || ks->cands == NULL) {
         return CF_FALSE;
     }
-    if (!cf_key_valid(key, keylen)) {
+    if (!cfi_key_valid_n(key, keylen, cfi_ks_key_limit(ks))) {
         return CF_FALSE;
     }
     if (ks->ncand == ks->ccand && !cf_ks_grow(ks)) {
@@ -338,7 +349,8 @@ static cf_bool cf_ks_rename_impl(cf_keyspace* ks, const char* from, size_t froml
                                  const char* to, size_t tolen, cf_bool members) {
     size_t i, n;
 
-    if (ks == NULL || ks->resolved || ks->cands == NULL || !cf_key_valid(to, tolen)) {
+    if (ks == NULL || ks->resolved || ks->cands == NULL ||
+        !cfi_key_valid_n(to, tolen, cfi_ks_key_limit(ks))) {
         return CF_FALSE;
     }
     n = ks->ncand; /* what is there now: the copies are not copied again */
@@ -346,7 +358,8 @@ static cf_bool cf_ks_rename_impl(cf_keyspace* ks, const char* from, size_t froml
         cf_candidate c;
         size_t       len;
         char*        at;
-        char         target[CF_KEY_MAX];
+        char         stack[CF_KEY_MAX];
+        char*        target       = stack;
         const char*  original     = ks->cands[i].key;
         size_t       original_len = ks->cands[i].keylen;
         size_t       target_len;
@@ -356,11 +369,19 @@ static cf_bool cf_ks_rename_impl(cf_keyspace* ks, const char* from, size_t froml
             (ks->cands[i].cand.flags & CF_CAND_RENAMED) != 0) {
             continue;
         }
-        target_len = cf_fmt(target, sizeof target, "%S%S", to, tolen,
-                            original + fromlen, original_len - fromlen);
-        if (target_len >= sizeof target) {
+        target_len = tolen + (original_len - fromlen);
+        if (target_len > cfi_ks_key_limit(ks)) {
             return CF_FALSE;
         }
+        if (target_len >= sizeof stack) {
+            /* Only where the mode lets a key outgrow the build's buffer. */
+            target = (char*)cf_arena_alloc(ks->arena, target_len + 1);
+            if (target == NULL) {
+                return CF_FALSE;
+            }
+        }
+        cf_fmt(target, target_len + 1, "%S%S", to, tolen, original + fromlen,
+               original_len - fromlen);
         c   = ks->cands[i].cand; /* a copy: pushing may move the array */
         len = cf_fmt(NULL, 0, "%s%s(as %S)", (c.at != NULL) ? c.at : "",
                      (c.at != NULL) ? " " : "", original, original_len);
@@ -479,8 +500,20 @@ cf_bool cf_ks_append_list(cf_keyspace* ks, const char* key, size_t keylen,
                           const cf_list_part* parts, size_t count,
                           const cf_candidate* result, cf_error* err) {
     size_t i, j;
-    char   renamed[CF_KEY_MAX];
+    char   stack[CF_KEY_MAX];
+    char*  renamed = stack;
+    size_t room    = sizeof stack;
     size_t n;
+    /* ".", an index of up to twenty digits, or ".count": where the mode
+       lets a key outgrow the build's buffer, the room for it. */
+    if (keylen + 22u >= room && cfi_ks_key_limit(ks) >= room) {
+        renamed = (char*)cf_arena_alloc(ks->arena, keylen + 23u);
+        if (renamed == NULL) {
+            return cf_error_set(err, CF_E_MEMORY, key, NULL,
+                                "no room for appended list keys");
+        }
+        room = keylen + 23u;
+    }
     for (i = 0; i < ks->ncand; ++i) {
         cf_cand_rec* r = &ks->cands[i];
         cf_i64       index;
@@ -513,9 +546,8 @@ cf_bool cf_ks_append_list(cf_keyspace* ks, const char* key, size_t keylen,
                 return cf_error_set(err, CF_E_KEY, r->key, r->cand.at,
                                     "appended list index overflows");
             }
-            n = cf_fmt(renamed, sizeof renamed, "%S.%I", key, keylen,
-                       index + parts[j].offset);
-            if (n >= sizeof renamed) {
+            n = cf_fmt(renamed, room, "%S.%I", key, keylen, index + parts[j].offset);
+            if (n >= room || n > cfi_ks_key_limit(ks)) {
                 return cf_error_set(err, CF_E_KEY, r->key, r->cand.at,
                                     "appended list index exceeds the key limit");
             }
@@ -535,8 +567,8 @@ cf_bool cf_ks_append_list(cf_keyspace* ks, const char* key, size_t keylen,
     if (result == NULL) {
         return CF_TRUE;
     }
-    n = cf_fmt(renamed, sizeof renamed, "%S.count", key, keylen);
-    if (n >= sizeof renamed ||
+    n = cf_fmt(renamed, room, "%S.count", key, keylen);
+    if (n >= room || n > cfi_ks_key_limit(ks) ||
         !cf_ks_push(ks, renamed, n, result->source, &result->value, result->at,
                     CF_OUT_PENDING,
                     "appended permitted source lists, lowest precedence first",

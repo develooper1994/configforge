@@ -57,6 +57,10 @@
 
 #define TOML_MAX_DEPTH CF_MAX_DEPTH
 
+/* A key's length and offsets, sixteen bits: a TOML key, however the sizing
+   mode (D-176) grows it, is at most 65535 bytes. */
+typedef cf_u16 toml_len;
+
 /* Split after the backslash: the Portable C Compiler reads a "\\" followed
    by u as the start of a universal character name, and stops. */
 #define TOML_UNICODE_DIGITS                                                            \
@@ -81,9 +85,9 @@ typedef enum toml_kind { TOML_TABLE, TOML_ARRAY, TOML_ELEMENT } toml_kind;
    key anyway, and thirty-two of those would be eight kilobytes of stack
    spent on nothing (the budget is two). */
 typedef struct toml_open {
-    unsigned short at; /* the name, in toml_scan.names */
-    unsigned short n;
-    toml_kind      kind;
+    toml_len  at; /* the name, in toml_scan.names */
+    toml_len  n;
+    toml_kind kind;
 } toml_open;
 
 /* What the document has defined, for TOML's rule that a key or a table is
@@ -103,13 +107,13 @@ typedef enum toml_def {
 } toml_def;
 
 typedef struct toml_node {
-    cf_u32 parent;
-    cf_u32 chain; /* the next node in the same bucket; 0 ends it */
-    cf_u32 name;  /* the name's offset in the pool, or the element's number */
-    cf_u32 count; /* elements so far, for an array */
-    cf_u16 len;
-    cf_u8  kind; /* a toml_def */
-    cf_u8  elem; /* an element of an array, named by its number */
+    cf_u32   parent;
+    cf_u32   chain; /* the next node in the same bucket; 0 ends it */
+    cf_u32   name;  /* the name's offset in the pool, or the element's number */
+    cf_u32   count; /* elements so far, for an array */
+    toml_len len;
+    cf_u8    kind; /* a toml_def */
+    cf_u8    elem; /* an element of an array, named by its number */
 } toml_node;
 
 typedef struct toml_scan {
@@ -122,10 +126,15 @@ typedef struct toml_scan {
     int                depth;                /* nesting inside one value */
     toml_open          open[TOML_MAX_DEPTH]; /* the header path currently open */
     int                nopen;
-    char               names[CF_KEY_MAX];
+    char*              names; /* names_buf, or a block the sink lent (D-176) */
+    size_t             ncap;
     size_t             nused;
-    char               closed[CF_KEY_MAX]; /* last array of tables left */
-    cf_bool            closed_set;         /* and whether there was one */
+    char*              closed; /* last array of tables left: closed_buf or a block */
+    size_t             ccap;
+    cf_bool            closed_set; /* and whether there was one */
+    size_t             klimit;     /* the longest a key may be (cf_sink_key_limit) */
+    char               names_buf[CF_KEY_MAX];
+    char               closed_buf[CF_KEY_MAX];
 
     /* The definitions, when the sink lends workspace; node 0 is the root,
        and a bucket or a chain of 0 is empty, since the root is no one's
@@ -148,10 +157,12 @@ typedef struct toml_scan {
 #define TOML_KEY_PARTS TOML_MAX_DEPTH
 
 typedef struct toml_dkey {
-    char   buf[CF_KEY_MAX];
-    cf_u16 at[TOML_KEY_PARTS];
-    cf_u16 len[TOML_KEY_PARTS];
-    int    n;
+    char*    buf; /* inl, or a block the sink lent where the key outgrows it */
+    size_t   cap;
+    toml_len at[TOML_KEY_PARTS];
+    toml_len len[TOML_KEY_PARTS];
+    int      n;
+    char     inl[CF_KEY_MAX];
 } toml_dkey;
 
 #define TOML_SEG(k, i) ((k)->buf + (k)->at[i])
@@ -430,11 +441,55 @@ static size_t toml_key_segment(toml_scan* s, char* dst, size_t cap) {
     return n;
 }
 
+static cf_bool toml_no_room(toml_scan* s);
+
+/* The length of the key segment at s->p, measured and left where it was:
+   0 for a bare one that is empty, which the decoder then refuses. */
+static size_t toml_key_measure(toml_scan* s) {
+    const char* start = s->p;
+    size_t      n     = 0;
+
+    if (s->p < s->end && (*s->p == '"' || *s->p == '\'')) {
+        n = toml_string(s, NULL, (size_t)-1, CF_FALSE);
+    } else {
+        while (s->p < s->end && toml_bare((unsigned char)*s->p)) {
+            ++s->p;
+        }
+        n = (size_t)(s->p - start);
+    }
+    s->p = start;
+    return n;
+}
+
+/* Room in the key for a segment of n bytes after `used`, where the sizing
+   mode allows more than the build's buffer: the buffer doubled, the
+   segments before it copied. A segment past the limit is a budget. */
+static cf_bool toml_key_grow(toml_scan* s, toml_dkey* k, size_t used) {
+    size_t n = toml_key_measure(s);
+
+    if (n == (size_t)-1) {
+        return CF_FALSE;
+    }
+    if (n == 0) {
+        return CF_TRUE; /* nothing there: the decoder says what is wrong */
+    }
+    if (used + n > s->klimit) {
+        return toml_fail(s, s->p, CF_REASON_BUDGET,
+                         "a key is longer than the sizing cap");
+    }
+    if (!cf_sink_grow(s->out, &k->buf, &k->cap, used, used + n + 1u)) {
+        return toml_no_room(s);
+    }
+    return CF_TRUE;
+}
+
 /* A dotted key into segments. */
 static cf_bool toml_key(toml_scan* s, toml_dkey* k) {
     size_t used = 0;
 
-    k->n = 0;
+    k->buf = k->inl;
+    k->cap = sizeof k->inl;
+    k->n   = 0;
     for (;;) {
         size_t n;
 
@@ -442,15 +497,18 @@ static cf_bool toml_key(toml_scan* s, toml_dkey* k) {
         if (k->n >= TOML_KEY_PARTS) {
             return toml_fail(s, s->p, CF_REASON_TOO_LONG, "the key has too many parts");
         }
-        if (used + 2 > sizeof k->buf) {
+        if (s->klimit > (size_t)CF_KEY_MAX - 1u && !toml_key_grow(s, k, used)) {
+            return CF_FALSE;
+        }
+        if (used + 2 > k->cap) {
             return toml_fail(s, s->p, CF_REASON_TOO_LONG, "the key is too long");
         }
-        n = toml_key_segment(s, k->buf + used, sizeof k->buf - used);
+        n = toml_key_segment(s, k->buf + used, k->cap - used);
         if (n == (size_t)-1) {
             return CF_FALSE;
         }
-        k->at[k->n]  = (cf_u16)used;
-        k->len[k->n] = (cf_u16)n;
+        k->at[k->n]  = (toml_len)used;
+        k->len[k->n] = (toml_len)n;
         ++k->n;
         used += n + 1;
         toml_blank(s);
@@ -618,7 +676,7 @@ static cf_u32 toml_add(toml_scan* s, cf_u32 parent, cf_u8 elem, const char* p, s
     } else {
         memcpy(s->pool + s->npool, p, n);
         x->name = (cf_u32)s->npool;
-        x->len  = (cf_u16)n;
+        x->len  = (toml_len)n;
         s->npool += n;
     }
     h = toml_hash(s->seed, parent, elem, p, n, index) & (cf_u32)(s->nbuckets - 1);
@@ -1329,6 +1387,10 @@ static cf_bool toml_close_to(toml_scan* s, int keep) {
             /* Remembered, so that reopening it later can be refused:
                an event stream cannot reopen an array, and appending
                to a closed one would restart its numbering. */
+            if ((size_t)o->n + 1u > s->ccap &&
+                !cf_sink_grow(s->out, &s->closed, &s->ccap, 0, (size_t)o->n + 1u)) {
+                return toml_no_room(s);
+            }
             memcpy(s->closed, s->names + o->at, o->n);
             s->closed[o->n] = '\0';
             s->closed_set   = CF_TRUE;
@@ -1351,19 +1413,29 @@ static cf_bool toml_push(toml_scan* s, const char* name, size_t n, toml_kind kin
         return toml_fail(s, s->p, CF_REASON_DEPTH, "tables are nested too deeply");
     }
     o     = &s->open[s->nopen];
-    o->at = (unsigned short)s->nused;
+    o->at = (toml_len)s->nused;
     o->n  = 0;
     if (kind == TOML_ELEMENT) {
         ok = s->out->begin_table(s->out->ctx, NULL, 0);
     } else {
-        if (s->nused + n + 1 > sizeof s->names) {
-            return toml_fail(s, s->p, CF_REASON_TOO_LONG, "the key is too long");
+        if (s->nused + n + 1 > s->ncap) {
+            if (s->klimit <= (size_t)CF_KEY_MAX - 1u) {
+                return toml_fail(s, s->p, CF_REASON_TOO_LONG, "the key is too long");
+            }
+            if (s->nused + n > s->klimit) {
+                return toml_fail(s, s->p, CF_REASON_BUDGET,
+                                 "a key is longer than the sizing cap");
+            }
+            if (!cf_sink_grow(s->out, &s->names, &s->ncap, s->nused,
+                              s->nused + n + 1u)) {
+                return toml_no_room(s);
+            }
         }
         ok = (kind == TOML_ARRAY) ? s->out->begin_array(s->out->ctx, name, n)
                                   : s->out->begin_table(s->out->ctx, name, n);
         memcpy(s->names + s->nused, name, n);
         s->names[s->nused + n] = '\0';
-        o->n                   = (unsigned short)n;
+        o->n                   = (toml_len)n;
         s->nused += n + 1;
     }
     if (!ok) {
@@ -1456,11 +1528,19 @@ static cf_bool toml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     s.end  = in->p + in->n;
     s.file = (in->name != NULL) ? in->name : "<toml>";
     cf_text_track_init(&s.tr, s.p);
-    s.out        = out;
-    s.err        = err;
-    s.depth      = 0;
-    s.nopen      = 0;
-    s.nused      = 0;
+    s.out    = out;
+    s.err    = err;
+    s.depth  = 0;
+    s.nopen  = 0;
+    s.nused  = 0;
+    s.names  = s.names_buf;
+    s.ncap   = sizeof s.names_buf;
+    s.closed = s.closed_buf;
+    s.ccap   = sizeof s.closed_buf;
+    s.klimit = cf_sink_key_limit(out);
+    if (s.klimit > (size_t)65535u) {
+        s.klimit = 65535u;
+    }
     s.closed[0]  = '\0';
     s.closed_set = CF_FALSE;
     s.body       = 0;

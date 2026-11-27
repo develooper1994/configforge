@@ -5,8 +5,14 @@
 Every limit below is the build's own, fixed when the library is built: that is the
 manual sizing mode, the default, and the only one a build with `CF_FIXED_LIMITS` (the
 `minimal` profile) accepts. `cf_builder_sizing` names two more, semi-dynamic (a buffer
-grows up to the program's cap) and dynamic (no limit but memory); what each lets grow
-is M-11a and M-11b's, and until they land every mode runs with the limits below (D-175).
+grows up to the program's cap) and dynamic (no limit but memory) (D-175). What they let
+grow so far (D-176): the key space's keys and the readers' key buffers (JSON, TOML, INI
+and YAML), to the cap under semi-dynamic sizing (a cap below `CF_KEY_MAX - 1` leaves the
+build's key limit), without one under dynamic sizing, and a value up to the cap; a key
+or a value past it is refused with the reason "budget". An error still holds its text
+in the build's arrays, so a message that names a long key is cut (M-11b). A TOML key is at most
+65535 bytes in any mode. Every other
+limit below is the build's in every mode.
 
 What the library does not do and what it will not take, in one place, so
 that a limit is learnt here and not from a refusal. Each line is one of

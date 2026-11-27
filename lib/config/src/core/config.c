@@ -1137,6 +1137,25 @@ cf_bool cf_builder_digest_key(cf_builder* b, const unsigned char* key, size_t n)
     return CF_TRUE;
 }
 
+/* What the sizing mode lets the key space take (D-176): MANUAL the build's
+   limits, SEMI and DYNAMIC a key up to the cap, none for DYNAMIC without
+   one, and a value up to the cap. A cap below the build's own key limit
+   leaves the build's: a mode never refuses what manual takes. */
+static void config_ks_sizing(cf_keyspace* ks, const cf_defset* ds) {
+    size_t cap;
+
+    if (ds->sizing_mode == (int)CF_SIZING_MANUAL) {
+        return;
+    }
+    cap = ds->sizing_cap;
+    if (cap == 0) {
+        cfi_ks_limits(ks, (size_t)-1, 0);
+    } else {
+        cfi_ks_limits(
+            ks, (cap > (size_t)CF_KEY_MAX - 1u) ? cap : (size_t)CF_KEY_MAX - 1u, cap);
+    }
+}
+
 void cf_sizing_options_init(cf_sizing_options* o) {
     if (o != NULL) {
         memset(o, 0, sizeof *o);
@@ -1470,6 +1489,7 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
         return create_failed(b, err, &e);
     }
     cfi_ks_expect(&c->keys, b->expect); /* a reload's guess; zero for none */
+    config_ks_sizing(&c->keys, &c->defs);
 
     /* A derived configuration's inheritance: every candidate the
        original held, at the rank it had. Loaded before the sources, not

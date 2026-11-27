@@ -87,6 +87,11 @@ typedef struct cf_error {
 /* Guarantee: strong. A pure check; CF_FALSE says the key is not canonical. */
 CF_NODISCARD CF_API cf_bool cf_key_valid(const char* key, size_t len);
 
+/* The same rule with the longest key a caller allows: the key space and
+   the loader pass the sizing mode's limit (D-176); cf_key_valid is this
+   with CF_KEY_MAX - 1. Internal. */
+cf_bool cfi_key_valid_n(const char* key, size_t len, size_t limit);
+
 /* Empties `e`: code CF_OK, key, source, message, place and reason empty. `size` is
    kept, so a cleared error can be reused. NULL is ignored.
    Guarantee: nothrow. */

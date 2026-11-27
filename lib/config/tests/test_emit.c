@@ -516,7 +516,8 @@ static void test_value_container_refusal(void) {
 static cf_config* read_emitted(const char* text, const cf_codec* codec, cf_error* err) {
     cf_arena*   ar = cf_arena_new(NULL, 4096);
     cf_keyspace ks;
-    cf_flatten  fl;
+    static cf_flatten
+                fl; /* off the stack: the flattener's key buffer grew with D-176 */
     cf_blob     blob;
     cf_pair     pairs[16];
     static char converted[16][CF_VALUE_TEXT_MAX];

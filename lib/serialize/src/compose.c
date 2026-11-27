@@ -123,6 +123,10 @@ static cf_bool compose_filtered(const cf_compose* spec, const cf_blob* cur,
         compose_has_text(&frame.up) || compose_has_text(down) ? compose_text : NULL;
     top.reserve_work =
         compose_has_work(&frame.up) || compose_has_work(down) ? compose_work : NULL;
+    /* What the downstream sink allows a key, passed on: 0 is the build's. */
+    top.key_limit = (cf_sink_key_limit(down) > (size_t)CF_KEY_MAX - 1u)
+                        ? cf_sink_key_limit(down)
+                        : 0u;
     return cfi_codec_decode_raw(spec->base, cur, &top, err);
 }
 

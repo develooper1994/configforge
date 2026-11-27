@@ -186,9 +186,15 @@ static cf_bool refuse_scalar(void* ctx, const char* name, size_t n,
     return refuse_begin(ctx, name, n);
 }
 
-static const cf_doc_sink accepting = {
-    sizeof(cf_doc_sink), accept_begin, accept_begin, accept_scalar,
-    accept_end,          NULL,         NULL,         NULL};
+static const cf_doc_sink accepting = {sizeof(cf_doc_sink),
+                                      accept_begin,
+                                      accept_begin,
+                                      accept_scalar,
+                                      accept_end,
+                                      NULL,
+                                      NULL,
+                                      NULL,
+                                      0};
 
 typedef struct reason_row {
     const char* format;

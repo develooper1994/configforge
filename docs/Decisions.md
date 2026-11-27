@@ -5700,6 +5700,14 @@ for with code.
 
 ---
 
+## D-176 — Sizing grows what the allocator holds, and `cf_error` owns its text
+
+Under `SEMI` and `DYNAMIC` the readers' scratch and the key space's keys follow the mode's cap; `cf_error`'s texts are owned and freed by `cf_error_clear`, so a long message round-trips. `MANUAL` is unchanged. Rejected: bigger stack buffers, a second error struct, arrays kept beside a long-message pointer.
+
+M-11a's part: the loader tells a reader how long a key it may build through a new last member of `cf_doc_sink`, `key_limit` (0, the zeroed default, is the build's `CF_KEY_MAX - 1`, so a sink of one's own, and `MANUAL`, read as before); the JSON, TOML, INI and YAML readers grow their key buffers from `reserve_work`, doubled, and refuse a key past the limit with the reason "budget". The key space and the loader check a key with `cfi_key_valid_n(key, len, limit)`; the public `cf_key_valid` keeps the build's limit. A cap below the build's key limit leaves the build's, so a mode never refuses what `MANUAL` takes; a value is held to the cap.
+
+---
+
 ## D-177 — Image major 2: a 128-byte header with the build's limits and id
 
 The 12 reserved bytes could not hold them; offsets stay 32-bit; a major 1 image loads (`build_id` NULL); a major 2 image from a build with longer keys is refused naming both limits. Rejected: 64-bit offsets, a section table. Bytes 104-111 are kept for the manifest.
