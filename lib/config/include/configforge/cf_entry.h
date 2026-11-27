@@ -57,11 +57,14 @@ typedef struct cf_keymap {
     const char*    prefix; /* "MYAPP_", or NULL */
 } cf_keymap;
 
+/* Guarantee: nothrow. A NULL map is ignored. */
 CF_API void cf_keymap_init(cf_keymap* m, cf_keymap_kind kind, const char* prefix);
 
 /* Source spelling to canonical. Returns the length written, or 0 when
    the name does not belong to this source or does not derive a valid
-   key. Skipped rather than repaired: PATH and HOME land here. */
+   key. Skipped rather than repaired: PATH and HOME land here.
+   Guarantee: nothrow. 0 for a NULL argument, a name that does not belong or derives
+   no valid key, or a `cap` too small; `out` is the caller's. */
 CF_API size_t cf_keymap_to_key(const cf_keymap* m, const char* raw, size_t n, char* out,
                                size_t cap);
 
@@ -74,7 +77,9 @@ CF_API size_t cf_keymap_to_key(const cf_keymap* m, const char* raw, size_t n, ch
                                                   unambiguous with a
                                                   definition to match
    Both are accepted when a contract exists, which is the whole gain:
-   the escape is what enumeration needs, and nobody has to type it. */
+   the escape is what enumeration needs, and nobody has to type it.
+   Guarantee: nothrow. 0 for a NULL argument or a `cap` too small; `out` is the
+   caller's. */
 CF_API size_t cf_keymap_from_key(const cf_keymap* m, const char* key, size_t n,
                                  cf_bool escaped, char* out, size_t cap);
 
@@ -102,7 +107,10 @@ typedef struct cf_keysink {
     cf_entry_sink sink;
 } cf_keysink;
 
+/* Guarantee: strong. A NULL sink or key space fails with the key space as it was. */
 CF_NODISCARD CF_API cf_bool cf_keysink_init(cf_keysink* k, cf_keyspace* ks, int rank);
+
+/* Guarantee: nothrow. NULL for a NULL sink. */
 CF_API const cf_entry_sink* cf_keysink_of(cf_keysink* k);
 
 struct cf_defset;
@@ -125,10 +133,18 @@ typedef struct cf_listsink {
     cf_entry_sink           sink;
 } cf_listsink;
 
+/* Guarantee: strong. A NULL `out` or key space fails with the key space as it was;
+   `out` is then empty. */
 CF_NODISCARD CF_API cf_bool cf_listsink_init(cf_listsink* out, cf_keyspace* ks,
                                              int rank, const struct cf_defset* defs,
                                              cf_bool repeated);
+
+/* Guarantee: nothrow. NULL for a NULL sink. */
 CF_API const cf_entry_sink* cf_listsink_of(cf_listsink* out);
+
+/* Guarantee: basic. The sink and the key space stay valid; the counts of some lists
+   may be recorded, so the caller drops them. False for a NULL sink or one that
+   already failed. */
 CF_NODISCARD CF_API cf_bool cf_listsink_finish(cf_listsink* out);
 
 /* ------------------------------------------------------------------ *
@@ -140,13 +156,17 @@ CF_NODISCARD CF_API cf_bool cf_listsink_finish(cf_listsink* out);
 
 /* Entries that do not belong to this prefix, or do not derive a valid
    key, are skipped. An environment is shared with every other program
-   on the machine, so refusing it would be refusing the machine. */
+   on the machine, so refusing it would be refusing the machine.
+   Guarantee: basic. `err` is set and the sink stays valid; the entries read before
+   the failure stay recorded in it, so the caller drops what it records into. */
 CF_NODISCARD CF_API cf_bool cf_lex_env(char* const* environment, const cf_keymap* map,
                                        const cf_entry_sink* out, cf_error* err);
 
 /* One variable's value, borrowed from the environment, and its length in
    `n` (which may be NULL); NULL when it is not set - an empty value is
-   "" and set. The first of two with one name, as getenv takes it. */
+   "" and set. The first of two with one name, as getenv takes it.
+   Guarantee: nothrow. NULL for a NULL environment or name, and for a variable that is
+   not set. */
 CF_API const char* cf_env_value(char* const* environment, const char* name, size_t* n);
 
 /* ------------------------------------------------------------------ *
@@ -196,7 +216,11 @@ typedef struct cf_cli_spec {
  * A malformed option is rejected rather than skipped. A command line
  * belongs to this program alone, so an unparsable option is the user's
  * typo, and ignoring it is how a misspelled flag becomes an hour of
- * confusion. */
+ * confusion.
+ *
+ * Guarantee: basic. `err` is set and the sink stays valid; the entries read before
+ * the failure stay recorded in it, so the caller drops what it records into.
+ */
 CF_NODISCARD CF_API cf_bool cf_lex_cli(int argc, char* const* argv,
                                        const cf_keymap* map, const cf_cli_spec* spec,
                                        const cf_entry_sink* out, cf_error* err);
@@ -221,6 +245,8 @@ CF_NODISCARD CF_API cf_bool cf_lex_cli(int argc, char* const* argv,
  * itself is a loop.
  * ------------------------------------------------------------------ */
 
+/* Guarantee: basic. The arena stays valid and keeps the copies made so far until it
+   is released; `*out_argc` and `*out_argv` are then unspecified and `err` is set. */
 CF_NODISCARD CF_API cf_bool cf_cli_expand(int argc, char* const* argv, cf_arena* arena,
                                           int* out_argc, char*** out_argv,
                                           cf_error* err);
@@ -239,6 +265,9 @@ CF_NODISCARD CF_API cf_bool cf_cli_expand(int argc, char* const* argv, cf_arena*
  * every platform and only one of them needed them.
  * ------------------------------------------------------------------ */
 
+/* Guarantee: basic. The arena may keep the arguments converted so far until it is
+   released; when the command line cannot be converted the result is `argv` and
+   `*out_argc` is `argc`. `out_argc` must not be NULL. */
 CF_API char* const* cf_cli_args(int argc, char* const* argv, cf_arena* arena,
                                 int* out_argc);
 
@@ -255,6 +284,8 @@ CF_API char* const* cf_cli_args(int argc, char* const* argv, cf_arena* arena,
  * escape and the natural spelling behave identically in both.
  * ------------------------------------------------------------------ */
 
+/* Guarantee: basic. `err` is set and the sink stays valid; the entries read before
+   the failure stay recorded in it, so the caller drops what it records into. */
 CF_NODISCARD CF_API cf_bool cf_lex_dotenv(const char* text, size_t n,
                                           const char* origin, const cf_keymap* map,
                                           const cf_entry_sink* out, cf_error* err);

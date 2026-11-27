@@ -108,8 +108,8 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_arena_new` | `cf_alloc.h` | strong |
 | `cf_arena_used` | `cf_alloc.h` | nothrow |
 | `cf_arena_wipe` | `cf_alloc.h` | nothrow |
-| `cf_array_count` | `cf_iterate.h` | not yet |
-| `cf_array_key` | `cf_iterate.h` | not yet |
+| `cf_array_count` | `cf_iterate.h` | nothrow |
+| `cf_array_key` | `cf_iterate.h` | nothrow |
 | `cf_blob_arena` | `cf_serialize.h` | strong |
 | `cf_blob_arena_done` | `cf_serialize.h` | nothrow |
 | `cf_blob_file` | `cf_serialize.h` | basic |
@@ -157,8 +157,8 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_builder_unknown` | `configforge.h` | nothrow |
 | `cf_builder_writable` | `configforge.h` | basic |
 | `cf_changed` | `configforge.h` | strong |
-| `cf_cli_args` | `cf_entry.h` | not yet |
-| `cf_cli_expand` | `cf_entry.h` | not yet |
+| `cf_cli_args` | `cf_entry.h` | basic |
+| `cf_cli_expand` | `cf_entry.h` | basic |
 | `cf_code_description` | `cf_error.h` | nothrow |
 | `cf_code_name` | `cf_error.h` | nothrow |
 | `cf_codec_among` | `cf_serialize.h` | nothrow |
@@ -201,9 +201,9 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_encoding_check` | `cf_encoding.h` | strong |
 | `cf_encoding_name` | `cf_encoding.h` | nothrow |
 | `cf_encoding_recode` | `cf_encoding.h` | strong |
-| `cf_env_key` | `cf_source.h` | not yet |
-| `cf_env_value` | `cf_entry.h` | not yet |
-| `cf_environ` | `cf_source.h` | not yet |
+| `cf_env_key` | `cf_source.h` | nothrow |
+| `cf_env_value` | `cf_entry.h` | nothrow |
+| `cf_environ` | `cf_source.h` | nothrow |
 | `cf_error_clear` | `cf_error.h` | nothrow |
 | `cf_error_copy` | `cf_error.h` | nothrow |
 | `cf_error_place` | `cf_error.h` | nothrow |
@@ -244,32 +244,32 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_image_open` | `cf_image.h` | not yet |
 | `cf_image_write` | `cf_image.h` | not yet |
 | `cf_inspect` | `configforge.h` | strong |
-| `cf_iter_children` | `cf_iterate.h` | not yet |
-| `cf_iter_keys` | `cf_iterate.h` | not yet |
-| `cf_iter_next` | `cf_iterate.h` | not yet |
-| `cf_key_cmp` | `cf_keyspace.h` | not yet |
-| `cf_key_segments` | `cf_keyspace.h` | not yet |
+| `cf_iter_children` | `cf_iterate.h` | strong |
+| `cf_iter_keys` | `cf_iterate.h` | strong |
+| `cf_iter_next` | `cf_iterate.h` | strong |
+| `cf_key_cmp` | `cf_keyspace.h` | nothrow |
+| `cf_key_segments` | `cf_keyspace.h` | nothrow |
 | `cf_key_valid` | `cf_error.h` | strong |
-| `cf_keymap_from_key` | `cf_entry.h` | not yet |
-| `cf_keymap_init` | `cf_entry.h` | not yet |
-| `cf_keymap_to_key` | `cf_entry.h` | not yet |
+| `cf_keymap_from_key` | `cf_entry.h` | nothrow |
+| `cf_keymap_init` | `cf_entry.h` | nothrow |
+| `cf_keymap_to_key` | `cf_entry.h` | nothrow |
 | `cf_keys` | `configforge.h` | nothrow |
-| `cf_keysink_init` | `cf_entry.h` | not yet |
-| `cf_keysink_of` | `cf_entry.h` | not yet |
-| `cf_ks_add` | `cf_keyspace.h` | not yet |
-| `cf_ks_add_authored` | `cf_keyspace.h` | not yet |
-| `cf_ks_add_candidate` | `cf_keyspace.h` | not yet |
-| `cf_ks_add_default` | `cf_keyspace.h` | not yet |
-| `cf_ks_add_resolved` | `cf_keyspace.h` | not yet |
-| `cf_ks_add_text` | `cf_keyspace.h` | not yet |
-| `cf_ks_arena` | `cf_keyspace.h` | not yet |
-| `cf_lex_cli` | `cf_entry.h` | not yet |
-| `cf_lex_dotenv` | `cf_entry.h` | not yet |
-| `cf_lex_env` | `cf_entry.h` | not yet |
+| `cf_keysink_init` | `cf_entry.h` | strong |
+| `cf_keysink_of` | `cf_entry.h` | nothrow |
+| `cf_ks_add` | `cf_keyspace.h` | basic |
+| `cf_ks_add_authored` | `cf_keyspace.h` | basic |
+| `cf_ks_add_candidate` | `cf_keyspace.h` | basic |
+| `cf_ks_add_default` | `cf_keyspace.h` | basic |
+| `cf_ks_add_resolved` | `cf_keyspace.h` | basic |
+| `cf_ks_add_text` | `cf_keyspace.h` | basic |
+| `cf_ks_arena` | `cf_keyspace.h` | nothrow |
+| `cf_lex_cli` | `cf_entry.h` | basic |
+| `cf_lex_dotenv` | `cf_entry.h` | basic |
+| `cf_lex_env` | `cf_entry.h` | basic |
 | `cf_limit_options_init` | `configforge.h` | nothrow |
-| `cf_listsink_finish` | `cf_entry.h` | not yet |
-| `cf_listsink_init` | `cf_entry.h` | not yet |
-| `cf_listsink_of` | `cf_entry.h` | not yet |
+| `cf_listsink_finish` | `cf_entry.h` | basic |
+| `cf_listsink_init` | `cf_entry.h` | strong |
+| `cf_listsink_of` | `cf_entry.h` | nothrow |
 | `cf_live_approve` | `cf_live.h` | not yet |
 | `cf_live_close` | `cf_live.h` | not yet |
 | `cf_live_commit` | `cf_live.h` | not yet |
@@ -292,8 +292,8 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_lock_none` | `cf_lock.h` | nothrow |
 | `cf_lock_sidecar` | `cf_lock.h` | nothrow |
 | `cf_log_level_name` | `cf_log.h` | not yet |
-| `cf_outcome_can_win` | `cf_keyspace.h` | not yet |
-| `cf_outcome_name` | `cf_keyspace.h` | not yet |
+| `cf_outcome_can_win` | `cf_keyspace.h` | strong |
+| `cf_outcome_name` | `cf_keyspace.h` | nothrow |
 | `cf_platform_has_dir_list` | `cf_platform.h` | strong |
 | `cf_platform_has_environ` | `cf_platform.h` | strong |
 | `cf_platform_has_preferences` | `cf_platform.h` | strong |
@@ -310,8 +310,8 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_reason_name` | `cf_error.h` | nothrow |
 | `cf_reason_severity` | `cf_error.h` | nothrow |
 | `cf_reason_weakness` | `cf_error.h` | nothrow |
-| `cf_refusal_name` | `cf_keyspace.h` | not yet |
-| `cf_refusal_text` | `cf_keyspace.h` | not yet |
+| `cf_refusal_name` | `cf_keyspace.h` | nothrow |
+| `cf_refusal_text` | `cf_keyspace.h` | nothrow |
 | `cf_report` | `configforge.h` | strong |
 | `cf_report_key_write` | `cf_report.h` | not yet |
 | `cf_report_write` | `cf_report.h` | not yet |
@@ -329,52 +329,52 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_sink_terminate` | `cf_serialize.h` | basic |
 | `cf_sink_write` | `cf_serialize.h` | basic |
 | `cf_sizing_options_init` | `configforge.h` | nothrow |
-| `cf_source_cli` | `cf_source.h` | not yet |
+| `cf_source_cli` | `cf_source.h` | strong |
 | `cf_source_cli_defs` | `cf_define.h` | not yet |
 | `cf_source_defaults` | `cf_define.h` | not yet |
-| `cf_source_destroy` | `cf_source.h` | not yet |
-| `cf_source_dir` | `cf_source.h` | not yet |
-| `cf_source_dir_codecs` | `cf_source.h` | not yet |
-| `cf_source_dir_error` | `cf_source.h` | not yet |
-| `cf_source_dir_state_size` | `cf_source.h` | not yet |
-| `cf_source_document` | `cf_source.h` | not yet |
-| `cf_source_dotenv` | `cf_source.h` | not yet |
+| `cf_source_destroy` | `cf_source.h` | nothrow |
+| `cf_source_dir` | `cf_source.h` | strong |
+| `cf_source_dir_codecs` | `cf_source.h` | nothrow |
+| `cf_source_dir_error` | `cf_source.h` | nothrow |
+| `cf_source_dir_state_size` | `cf_source.h` | nothrow |
+| `cf_source_document` | `cf_source.h` | strong |
+| `cf_source_dotenv` | `cf_source.h` | strong |
 | `cf_source_dotenv_defs` | `cf_define.h` | not yet |
-| `cf_source_dotenv_error` | `cf_source.h` | not yet |
-| `cf_source_dotenv_state_size` | `cf_source.h` | not yet |
-| `cf_source_env` | `cf_source.h` | not yet |
+| `cf_source_dotenv_error` | `cf_source.h` | nothrow |
+| `cf_source_dotenv_state_size` | `cf_source.h` | nothrow |
+| `cf_source_env` | `cf_source.h` | strong |
 | `cf_source_env_defs` | `cf_define.h` | not yet |
-| `cf_source_env_document` | `cf_source.h` | not yet |
-| `cf_source_file` | `cf_source.h` | not yet |
-| `cf_source_file_codec` | `cf_source.h` | not yet |
-| `cf_source_file_codecs` | `cf_source.h` | not yet |
+| `cf_source_env_document` | `cf_source.h` | strong |
+| `cf_source_file` | `cf_source.h` | strong |
+| `cf_source_file_codec` | `cf_source.h` | strong |
+| `cf_source_file_codecs` | `cf_source.h` | nothrow |
 | `cf_source_file_defs` | `cf_define.h` | not yet |
-| `cf_source_file_encoding` | `cf_source.h` | not yet |
-| `cf_source_file_error` | `cf_source.h` | not yet |
-| `cf_source_file_format` | `cf_source.h` | not yet |
-| `cf_source_file_state_size` | `cf_source.h` | not yet |
+| `cf_source_file_encoding` | `cf_source.h` | nothrow |
+| `cf_source_file_error` | `cf_source.h` | nothrow |
+| `cf_source_file_format` | `cf_source.h` | nothrow |
+| `cf_source_file_state_size` | `cf_source.h` | nothrow |
 | `cf_source_image_error` | `cf_image.h` | not yet |
 | `cf_source_image_file` | `cf_image.h` | not yet |
 | `cf_source_image_mem` | `cf_image.h` | not yet |
 | `cf_source_image_state_size` | `cf_image.h` | not yet |
-| `cf_source_load` | `cf_source.h` | not yet |
-| `cf_source_memory` | `cf_source.h` | not yet |
-| `cf_source_path` | `cf_source.h` | not yet |
-| `cf_source_registry` | `cf_source.h` | not yet |
-| `cf_source_registry_error` | `cf_source.h` | not yet |
-| `cf_source_registry_state_size` | `cf_source.h` | not yet |
+| `cf_source_load` | `cf_source.h` | basic |
+| `cf_source_memory` | `cf_source.h` | strong |
+| `cf_source_path` | `cf_source.h` | nothrow |
+| `cf_source_registry` | `cf_source.h` | strong |
+| `cf_source_registry_error` | `cf_source.h` | nothrow |
+| `cf_source_registry_state_size` | `cf_source.h` | nothrow |
 | `cf_source_replay` | `cf_report.h` | not yet |
 | `cf_source_replay_error` | `cf_report.h` | not yet |
 | `cf_source_replay_state_size` | `cf_report.h` | not yet |
-| `cf_source_secrets` | `cf_source.h` | not yet |
-| `cf_source_secrets_error` | `cf_source.h` | not yet |
-| `cf_source_secrets_state_size` | `cf_source.h` | not yet |
-| `cf_source_snapshot` | `cf_source.h` | not yet |
-| `cf_source_store` | `cf_source.h` | not yet |
-| `cf_source_store_error` | `cf_source.h` | not yet |
-| `cf_source_store_state_size` | `cf_source.h` | not yet |
+| `cf_source_secrets` | `cf_source.h` | strong |
+| `cf_source_secrets_error` | `cf_source.h` | nothrow |
+| `cf_source_secrets_state_size` | `cf_source.h` | nothrow |
+| `cf_source_snapshot` | `cf_source.h` | strong |
+| `cf_source_store` | `cf_source.h` | strong |
+| `cf_source_store_error` | `cf_source.h` | nothrow |
+| `cf_source_store_state_size` | `cf_source.h` | nothrow |
 | `cf_sources` | `configforge.h` | nothrow |
-| `cf_store_set` | `cf_source.h` | not yet |
+| `cf_store_set` | `cf_source.h` | basic |
 | `cf_text_is_utf8` | `cf_serialize.h` | strong |
 | `cf_tlv_codec_sized` | `cf_serialize.h` | strong |
 | `cf_tracks_reads` | `configforge.h` | strong |
@@ -410,6 +410,6 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_watcher_wait` | `configforge.h` | basic |
 | `cf_write` | `configforge.h` | strong |
 
-nothrow 81, strong 57, basic 47, not yet 130
+nothrow 115, strong 76, basic 61, not yet 63
 
 <!-- guarantees:end -->

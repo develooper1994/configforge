@@ -109,8 +109,15 @@ struct cf_source {
     } u;
 };
 
+/* Guarantee: basic. The key space stays valid and may hold some of the source's keys;
+   the caller drops it. The reason is the source's own (cf_source_file_error and its
+   kin) or the key space's refusal. A NULL or unfilled source, or a NULL key space,
+   fails and adds nothing. */
 CF_NODISCARD CF_API cf_bool cf_source_load(const cf_source* s, cf_keyspace* ks);
-CF_API void                 cf_source_destroy(cf_source* s);
+
+/* Guarantee: nothrow. A NULL or unfilled source is accepted; no source owns memory,
+   its state is the caller's. */
+CF_API void cf_source_destroy(cf_source* s);
 
 /* ------------------------------------------------------------------ *
  * A view over the sources
@@ -134,6 +141,8 @@ typedef struct cf_source_view {
  * value from the lowest-precedence source, not a separate mechanism.
  * ------------------------------------------------------------------ */
 
+/* Guarantee: strong. A NULL `s` or `pairs` fails with `s` as it was; the pairs are
+   borrowed. */
 CF_NODISCARD CF_API cf_bool cf_source_memory(cf_source* s, const char* name, int rank,
                                              const cf_pair* pairs, size_t count);
 
@@ -160,15 +169,20 @@ CF_NODISCARD CF_API cf_bool cf_source_memory(cf_source* s, const char* name, int
  * key, are skipped rather than guessed at.
  * ------------------------------------------------------------------ */
 
+/* Guarantee: strong. A NULL `s` fails with `s` as it was; the prefix and the
+   environment are borrowed. */
 CF_NODISCARD CF_API cf_bool cf_source_env(cf_source* s, const char* name, int rank,
                                           const char* prefix, char* const* environment);
 
-/* The platform environment, or NULL where none is reachable. */
+/* The platform environment, or NULL where none is reachable.
+   Guarantee: nothrow. NULL where no environment is reachable. */
 CF_API char* const* cf_environ(void); /* cf_platform_environ, kept for callers */
 
 /* Exposed for testing: derive a canonical key from a variable name.
    Returns the length written, or 0 when the name does not belong to
-   this prefix or does not derive a valid key. */
+   this prefix or does not derive a valid key.
+   Guarantee: nothrow. 0 for a name that does not belong to the prefix, derives no
+   valid key or does not fit `cap`; `out` is the caller's. */
 CF_API size_t cf_env_key(const char* prefix, const char* var, size_t varlen, char* out,
                          size_t cap);
 
@@ -194,6 +208,7 @@ CF_API size_t cf_env_key(const char* prefix, const char* var, size_t varlen, cha
  * positional arguments, not configuration.
  * ------------------------------------------------------------------ */
 
+/* Guarantee: strong. A NULL `s` fails with `s` as it was; argv is borrowed. */
 CF_NODISCARD CF_API cf_bool cf_source_cli(cf_source* s, const char* name, int rank,
                                           int argc, char* const* argv);
 
@@ -294,8 +309,12 @@ CF_NODISCARD CF_API cf_bool cf_file_read_stable(cf_blob* b, cf_arena* ar,
                                                 cf_error* err);
 #endif
 
+/* Guarantee: nothrow. A constant. */
 CF_API size_t cf_source_file_state_size(void);
 
+/* Guarantee: strong. A NULL `s`, `path` or `state`, a `state` smaller than the state
+   size, or an encoding the build does not know fails with `s` and `state` as they
+   were. */
 CF_NODISCARD CF_API cf_bool cf_source_file(cf_source* s, const char* name, int rank,
                                            const char* path, const char* format,
                                            unsigned flags, void* state,
@@ -311,7 +330,8 @@ struct cf_codec;
    Explicit rather than registered. A registry code could add to at run
    time would be global mutable state, which this library has none of,
    and two parts of one program registering different codecs under one
-   name would be a conflict nobody could see. */
+   name would be a conflict nobody could see.
+   Guarantee: strong. As cf_source_file; a codec that cannot read fails the same way. */
 CF_NODISCARD CF_API cf_bool cf_source_file_codec(cf_source* s, const char* name,
                                                  int rank, const char* path,
                                                  const struct cf_codec* codec,
@@ -320,12 +340,15 @@ CF_NODISCARD CF_API cf_bool cf_source_file_codec(cf_source* s, const char* name,
 
 /* The reason a file source failed, or NULL when it did not. Sources
    return a plain boolean because most cannot fail in interesting ways;
-   a file can fail in a dozen, and the caller needs the detail. */
+   a file can fail in a dozen, and the caller needs the detail.
+   Guarantee: nothrow. NULL for a NULL source, for a source of another kind and for
+   one whose last load did not fail. */
 CF_API const cf_error* cf_source_file_error(const cf_source* s);
 
 /* A program's own codecs for a file or a document, looked at before the
    built-in ones, for the extension and for the content (D-73). The list
-   is borrowed and must outlive the source. */
+   is borrowed and must outlive the source.
+   Guarantee: nothrow. A NULL source, or one of another kind, is ignored. */
 CF_API void cf_source_file_codecs(cf_source* s, const struct cf_codec* const* codecs,
                                   size_t n);
 
@@ -333,7 +356,9 @@ CF_API void cf_source_file_codecs(cf_source* s, const struct cf_codec* const* co
    as a file's, from `bytes` (n of them) instead of a path. `name` is what
    locations and explain() show; `format` is named, or NULL for the name's
    extension and then the content (D-73). The bytes are borrowed here and
-   must outlive the source; cf_builder_document copies them. */
+   must outlive the source; cf_builder_document copies them.
+   Guarantee: strong. As cf_source_file; a NULL `name`, or NULL `bytes` with `n` above
+   0, fails the same way. */
 CF_NODISCARD CF_API cf_bool cf_source_document(cf_source* s, const char* name, int rank,
                                                const char* bytes, size_t n,
                                                const char* format, unsigned flags,
@@ -346,7 +371,9 @@ CF_NODISCARD CF_API cf_bool cf_source_document(cf_source* s, const char* name, i
    variable holds then. `name` is the source's (NULL: the variable); what
    explain() and locations show is the variable. The variable is borrowed
    and must outlive the source; cf_builder_env_document copies it. A
-   variable that is not set is an error, or nothing with CF_OPTIONAL. */
+   variable that is not set is an error, or nothing with CF_OPTIONAL.
+   Guarantee: strong. As cf_source_document; a NULL or empty variable name, or one
+   holding '=', fails the same way. */
 CF_NODISCARD CF_API cf_bool cf_source_env_document(cf_source* s, const char* name,
                                                    int rank, const char* variable,
                                                    const char* format, unsigned flags,
@@ -356,27 +383,37 @@ CF_NODISCARD CF_API cf_bool cf_source_env_document(cf_source* s, const char* nam
    the codec's name, and how it was chosen (CF_DETECT_NAMED, _EXTENSION or
    _CONTENT; `how` may be NULL). NULL before a load, for a source that is
    neither, and when no format was chosen. A load that failed in the
-   chosen format still names it. */
+   chosen format still names it.
+   Guarantee: nothrow. NULL for a NULL source or one of another kind, with `*how` then
+   CF_DETECT_NONE. */
 CF_API const char* cf_source_file_format(const cf_source* s, cf_detect_how* how);
 
 /* The encoding the last load of a file, document or environment-document
    source read, by its canonical name: "utf-8", "utf-16le" or "utf-16be"
    (a byte-order mark said so), or the one named in the flags, such as
    "windows-1254". NULL before a load and for any other kind of source.
-   (1.8, D-108) */
+   (1.8, D-108)
+   Guarantee: nothrow. NULL for a NULL source or one of another kind. */
 CF_API const char* cf_source_file_encoding(const cf_source* s);
 
 /* A .env file: the same key mapping as the environment, because a .env
    file is an environment written down. Unlike the environment it
    belongs to this program, so a name that derives no key is an error
    rather than another program's variable. */
+
+/* Guarantee: nothrow. A constant. */
 CF_API size_t cf_source_dotenv_state_size(void);
 
+/* Guarantee: strong. A NULL `s`, `path` or `state`, a `state` smaller than the state
+   size, or an encoding the build does not know fails with `s` and `state` as they
+   were. */
 CF_NODISCARD CF_API cf_bool cf_source_dotenv(cf_source* s, const char* name, int rank,
                                              const char* path, const char* prefix,
                                              unsigned flags, void* state,
                                              size_t state_size);
 
+/* Guarantee: nothrow. NULL for a NULL source, for a source of another kind and for
+   one whose last load did not fail. */
 CF_API const cf_error* cf_source_dotenv_error(const cf_source* s);
 
 /* ------------------------------------------------------------------ *
@@ -396,25 +433,35 @@ CF_API const cf_error* cf_source_dotenv_error(const cf_source* s);
 /* An existing key space, replayed. Every candidate at the rank it
    originally had, not only the winners: a library whose premise is
    explaining itself must not lose provenance at the moment a value
-   changes, which is exactly when somebody asks. */
+   changes, which is exactly when somebody asks.
+   Guarantee: strong. A NULL `s` or `ks` fails with `s` as it was; `ks` is borrowed
+   and must outlive the source. */
 CF_NODISCARD CF_API cf_bool cf_source_snapshot(cf_source* s, const char* name,
                                                const cf_keyspace* ks);
 
-/* The file a source reads, or NULL. */
+/* The file a source reads, or NULL.
+   Guarantee: nothrow. NULL for a NULL source and for one with no path. */
 CF_API const char* cf_source_path(const cf_source* s);
 
+/* Guarantee: nothrow. A constant. */
 CF_API size_t cf_source_dir_state_size(void);
 
+/* Guarantee: strong. A NULL `s`, `path` or `state`, a `state` smaller than the state
+   size, or an encoding the build does not know fails with `s` and `state` as they
+   were. */
 CF_NODISCARD CF_API cf_bool cf_source_dir(cf_source* s, const char* name, int rank,
                                           const char* path, const char* format,
                                           unsigned flags, void* state,
                                           size_t state_size);
 
+/* Guarantee: nothrow. NULL for a NULL source, for a source of another kind and for
+   one whose last load did not fail. */
 CF_API const cf_error* cf_source_dir_error(const cf_source* s);
 
 /* A program's own codecs for the directory's files, looked at before the
    built-in ones (cf_builder_codec, D-68). The list is borrowed and must
-   outlive the source. */
+   outlive the source.
+   Guarantee: nothrow. A NULL source, or one of another kind, is ignored. */
 CF_API void cf_source_dir_codecs(cf_source* s, const struct cf_codec* const* codecs,
                                  size_t n);
 
@@ -431,13 +478,18 @@ CF_API void cf_source_dir_codecs(cf_source* s, const struct cf_codec* const* cod
  * what Kubernetes' own ..data entries are.
  * ------------------------------------------------------------------ */
 
+/* Guarantee: nothrow. A constant. */
 CF_API size_t cf_source_secrets_state_size(void);
 
+/* Guarantee: strong. A NULL `s`, `path` or `state`, or a `state` smaller than the
+   state size, fails with `s` and `state` as they were. */
 CF_NODISCARD CF_API cf_bool cf_source_secrets(cf_source* s, const char* name, int rank,
                                               const char* path, const char* prefix,
                                               unsigned flags, void* state,
                                               size_t state_size);
 
+/* Guarantee: nothrow. NULL for a NULL source, for a source of another kind and for
+   one whose last load did not fail. */
 CF_API const cf_error* cf_source_secrets_error(const cf_source* s);
 
 /* systemd's credentials: the same reading, of the directory
@@ -462,12 +514,17 @@ cf_bool cfi_source_credentials(cf_source* s, const char* name, int rank,
  * other platform the source fails, optional or not, and says why.
  * ------------------------------------------------------------------ */
 
+/* Guarantee: nothrow. A constant. */
 CF_API size_t cf_source_registry_state_size(void);
 
+/* Guarantee: strong. A NULL `s`, `root` or `state`, or a `state` smaller than the
+   state size, fails with `s` and `state` as they were. */
 CF_NODISCARD CF_API cf_bool cf_source_registry(cf_source* s, const char* name, int rank,
                                                const char* root, unsigned flags,
                                                void* state, size_t state_size);
 
+/* Guarantee: nothrow. NULL for a NULL source, for a source of another kind and for
+   one whose last load did not fail. */
 CF_API const cf_error* cf_source_registry_error(const cf_source* s);
 
 /* macOS's user defaults (cf_builder_preferences). Internal: the builder
@@ -490,12 +547,17 @@ const cf_error* cfi_source_preferences_error(const cf_source* s);
  * says which option it needs.
  * ------------------------------------------------------------------ */
 
+/* Guarantee: nothrow. A constant. */
 CF_API size_t cf_source_store_state_size(void);
 
+/* Guarantee: strong. A NULL `s`, `path` or `state`, or a `state` smaller than the
+   state size, fails with `s` and `state` as they were. */
 CF_NODISCARD CF_API cf_bool cf_source_store(cf_source* s, const char* name, int rank,
                                             const char* path, unsigned flags,
                                             void* state, size_t state_size);
 
+/* Guarantee: nothrow. NULL for a NULL source, for a source of another kind and for
+   one whose last load did not fail. */
 CF_API const cf_error* cf_source_store_error(const cf_source* s);
 
 /* Write `items` to the store at `path`, creating it and its table if
@@ -508,7 +570,9 @@ CF_API const cf_error* cf_source_store_error(const cf_source* s);
 
    This writes what it is given and asks nothing; it is the tool for
    provisioning a store. A running program writes through cf_write,
-   which asks whether it may. */
+   which asks whether it may.
+   Guarantee: basic. The store holds none of `items` (one transaction, rolled back),
+   but a store that did not exist may be left behind, empty; `err` is set. */
 CF_NODISCARD CF_API cf_bool cf_store_set(const char* path, const cf_write_item* items,
                                          size_t count, const char* meta, cf_error* err);
 

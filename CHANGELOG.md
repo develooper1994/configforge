@@ -16,6 +16,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - Failure guarantees written for the allocator, the error, the value, the file layer,
   the text helpers and the format readers (K-9d).
 - Failure guarantees written for every call of `configforge.h` (K-9e).
+- Failure guarantees written for the source and key-space calls (K-9f).
 - `cf_builder_sizing` and `cf_sizing_options`: manual, semi- and full-dynamic sizing,
   recorded in the configuration and read back by `cf_config_sizing`; manual, today's
   limits, is the default and nothing changes with it. The new build option

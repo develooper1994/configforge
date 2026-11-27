@@ -630,6 +630,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI; `ctest --preset default -R "gate.guarantees|gate.apiref|gate.abi"` exit 0.
 * **stop if**: the worker passes 60 turns (commits stand; the rest goes to a new card); a source constructor leaves a struct unsafe to destroy (fix if under 40 lines, else notes).
 * **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "Failure guarantees written for the source and key-space calls (K-9f)".
+* **Organiser's answers** (2026-11-28, under the maintainer's standing approval): `cf_iter_keys`, `cf_iter_children`, `cf_iter_next` and `cf_outcome_can_win` are `CF_NODISCARD`, so `strong` (a pure query changes nothing), as K-9d's answer decides; `cf_array_*` stay `nothrow`. Every `cf_source_*` constructor checks its arguments before it touches the struct: `strong`; every `destroy` is empty. `cf_store_set` is `basic` (a store that did not exist can be left, empty). Two findings, for K-9b: `cf_ks_add_candidate` can return false after the candidate was added, without its `written` text (written as `basic`); `cf_cli_args` reads `out_argc` with no NULL check (its comment now says it must not be NULL).
 
 ## K-9g - Guarantees written for the rest of the configuration library, and the to-do list closed
 
@@ -686,6 +687,7 @@ choices these cards left open were decided on 2026-11-27; D-138
   7. `docs/Safety.md`, `CHANGELOG.md`, the D-number. Format; codemap and apiref last; ACCEPT; commit `K-9b: allocation faults injected into every load and write path`.
 * **accept**: ACCEPT-LINUX (including the `sanitize` preset), ACCEPT-WINDOWS, ACCEPT-CI; `ctest --preset default -R "gate.oom|gate.guarantees|test_oom"` exit 0; `gate.abi` shows one addition at most (the appended `cf_file_options` member is not a symbol); the existing `test_oom.c` checks unchanged.
 * **stop if**: the worker passes 60 turns (the commits stand and the cases left go to a second card, K-9b's notes name which); a path cannot be failed by the allocator because it calls `malloc` directly (`gate.symbols` should have refused it: report the file and line, add nothing); a fix needs a change to a public signature (as decided: listed as known, reported); three failures of the same step.
+* **notes**: K-9f found (2026-11-28): `cf_ks_add_candidate` can return false after the candidate was added, leaving it without its `written` text; the allocation sweep should show it and fix it to strong or keep it basic with a test.
 * **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "An allocator that refuses the nth allocation, swept over every load and write path, and `gate.oom` (K-9b)"; "### Fixed": "`cf_edit_begin` and `cf_file_writer_open` take the caller's allocator, not malloc's (K-9b)" and one line a defect the sweep found; `docs/Safety.md` as above; `docs/Decisions.md`: the next free D-number after K-9a's, "Out of memory returns `CF_E_MEMORY` on every path, proved by an exhaustive allocation sweep".
 
 ## K-9h - Thread, signal and allocation lines beside the guarantee, held by `gate.guarantees`

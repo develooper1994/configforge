@@ -2085,6 +2085,8 @@ CF_API void cf_keymap_init(cf_keymap* m, cf_keymap_kind kind, const char* prefix
 
 Implementation: [`cf_keymap_init` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L183).
 
+Guarantee: nothrow. A NULL map is ignored.
+
 ```c
 CF_API size_t cf_keymap_to_key(const cf_keymap* m, const char* raw, size_t n, char* out, size_t cap);
 ```
@@ -2094,6 +2096,8 @@ Implementation: [`cf_keymap_to_key` (lib/config/src/sources/entry.c)](https://gi
 Source spelling to canonical. Returns the length written, or 0 when
 the name does not belong to this source or does not derive a valid
 key. Skipped rather than repaired: PATH and HOME land here.
+Guarantee: nothrow. 0 for a NULL argument, a name that does not belong or derives
+no valid key, or a `cap` too small; `out` is the caller's.
 
 ```c
 CF_API size_t cf_keymap_from_key(const cf_keymap* m, const char* key, size_t n, cf_bool escaped, char* out, size_t cap);
@@ -2111,23 +2115,53 @@ mapping can read back unaided and the natural one a person writes:
                                                definition to match
 Both are accepted when a contract exists, which is the whole gain:
 the escape is what enumeration needs, and nobody has to type it.
+Guarantee: nothrow. 0 for a NULL argument or a `cap` too small; `out` is the
+caller's.
 
 ### Entry sink
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_keysink_init(cf_keysink* k, cf_keyspace* ks, int rank);
+```
+
+Implementation: [`cf_keysink_init` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L304).
+
+Guarantee: strong. A NULL sink or key space fails with the key space as it was.
+
+```c
 CF_API const cf_entry_sink* cf_keysink_of(cf_keysink* k);
 ```
 
-Implementation: [`cf_keysink_init` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L304), [`cf_keysink_of` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L318).
+Implementation: [`cf_keysink_of` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L318).
+
+Guarantee: nothrow. NULL for a NULL sink.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_listsink_init(cf_listsink* out, cf_keyspace* ks, int rank, const struct cf_defset* defs, cf_bool repeated);
+```
+
+Implementation: [`cf_listsink_init` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L144).
+
+Guarantee: strong. A NULL `out` or key space fails with the key space as it was;
+`out` is then empty.
+
+```c
 CF_API const cf_entry_sink* cf_listsink_of(cf_listsink* out);
+```
+
+Implementation: [`cf_listsink_of` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L161).
+
+Guarantee: nothrow. NULL for a NULL sink.
+
+```c
 CF_NODISCARD CF_API cf_bool cf_listsink_finish(cf_listsink* out);
 ```
 
-Implementation: [`cf_listsink_init` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L144), [`cf_listsink_of` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L161), [`cf_listsink_finish` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L165).
+Implementation: [`cf_listsink_finish` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L165).
+
+Guarantee: basic. The sink and the key space stay valid; the counts of some lists
+may be recorded, so the caller drops them. False for a NULL sink or one that
+already failed.
 
 ### Lexers
 
@@ -2143,6 +2177,8 @@ Implementation: [`cf_lex_env` (lib/config/src/sources/entry.c)](https://github.c
 Entries that do not belong to this prefix, or do not derive a valid
 key, are skipped. An environment is shared with every other program
 on the machine, so refusing it would be refusing the machine.
+Guarantee: basic. `err` is set and the sink stays valid; the entries read before
+the failure stay recorded in it, so the caller drops what it records into.
 
 ```c
 CF_API const char* cf_env_value(char* const* environment, const char* name, size_t* n);
@@ -2153,6 +2189,8 @@ Implementation: [`cf_env_value` (lib/config/src/sources/env.c)](https://github.c
 One variable's value, borrowed from the environment, and its length in
 `n` (which may be NULL); NULL when it is not set - an empty value is
 "" and set. The first of two with one name, as getenv takes it.
+Guarantee: nothrow. NULL for a NULL environment or name, and for a variable that is
+not set.
 
 ### Command line
 
@@ -2187,6 +2225,9 @@ belongs to this program alone, so an unparsable option is the user's
 typo, and ignoring it is how a misspelled flag becomes an hour of
 confusion.
 
+Guarantee: basic. `err` is set and the sink stays valid; the entries read before
+the failure stay recorded in it, so the caller drops what it records into.
+
 ### Response files
 
 myapp @args.txt --port=8080
@@ -2211,6 +2252,9 @@ CF_NODISCARD CF_API cf_bool cf_cli_expand(int argc, char* const* argv, cf_arena*
 
 Implementation: [`cf_cli_expand` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L564).
 
+Guarantee: basic. The arena stays valid and keeps the copies made so far until it
+is released; `*out_argc` and `*out_argv` are then unspecified and `err` is set.
+
 ### The command line in UTF-8
 
 The real portability problem with a command line is not syntax. On
@@ -2229,6 +2273,10 @@ CF_API char* const* cf_cli_args(int argc, char* const* argv, cf_arena* arena, in
 
 Implementation: [`cf_cli_args` (lib/config/src/sources/compat.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/compat.c#L28).
 
+Guarantee: basic. The arena may keep the arguments converted so far until it is
+released; when the command line cannot be converted the result is `argv` and
+`*out_argc` is `argc`. `out_argc` must not be NULL.
+
 ### A .env file
 
 # comment
@@ -2245,6 +2293,9 @@ CF_NODISCARD CF_API cf_bool cf_lex_dotenv(const char* text, size_t n, const char
 ```
 
 Implementation: [`cf_lex_dotenv` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L666).
+
+Guarantee: basic. `err` is set and the sink stays valid; the entries read before
+the failure stay recorded in it, so the caller drops what it records into.
 
 ## cf_error.h
 
@@ -2813,6 +2864,9 @@ order a document had it: under an array "upstream.10" comes before
 below. A prefix matches at a segment boundary only, so "server" does
 not match "servername" - the bug every hand-written prefix check has.
 An empty or NULL prefix walks the whole configuration.
+Guarantee: strong. Reads a finished configuration and changes nothing but `it`;
+false for a NULL `it` or a configuration with no key space, with `it` then
+empty, so cf_iter_next is false too.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_iter_children(cf_iter* it, const struct cf_config* c, const char* prefix);
@@ -2830,11 +2884,16 @@ This is how a program discovers what is configured rather than being
 told in advance, which is what plugin and per-tenant configuration
 both need.
 
+Guarantee: strong. As cf_iter_keys.
+
 ```c
 CF_NODISCARD CF_API cf_bool cf_iter_next(cf_iter* it);
 ```
 
 Implementation: [`cf_iter_next` (lib/config/src/core/iterate.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/iterate.c#L70).
+
+Guarantee: strong. Changes nothing but `it`; false when the walk is done, and for
+a NULL or empty `it`.
 
 ### Arrays
 
@@ -2851,6 +2910,8 @@ and an element at or past it, from any source, is not in the
 configuration: it is not read, listed or written, and explain() shows
 it as a "truncated" candidate. A count that is not an integer, or is
 negative, fixes nothing, and nor does one that is a template.
+Guarantee: nothrow. 0 for a NULL key and for a configuration with no length
+recorded.
 
 ```c
 CF_API size_t cf_array_key(char* buf, size_t cap, const char* key, size_t index);
@@ -2860,6 +2921,7 @@ Implementation: [`cf_array_key` (lib/config/src/core/iterate.c)](https://github.
 
 Builds "&lt;key>.&lt;index>", so a loop does not have to. Measure-or-write
 like everything else that renders.
+Guarantee: nothrow. Measure-or-write, as cf_fmt: the text is cut where `cap` ends.
 
 ## cf_keyspace.h
 
@@ -2893,6 +2955,7 @@ CF_API size_t cf_key_segments(const char* key, size_t len);
 Implementation: [`cf_key_segments` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L18).
 
 Number of dot-separated segments, 0 when the key is invalid.
+Guarantee: nothrow. 0 for an invalid key.
 
 ```c
 CF_API int cf_key_cmp(const char* a, size_t alen, const char* b, size_t blen);
@@ -2902,6 +2965,7 @@ Implementation: [`cf_key_cmp` (lib/config/src/core/keyspace.c)](https://github.c
 
 Byte-wise, never strcoll: a reproducible snapshot hash depends on a
 reproducible order.
+Guarantee: nothrow.
 
 ### Provenance
 
@@ -2910,6 +2974,8 @@ CF_API const char* cf_outcome_name(cf_outcome o);
 ```
 
 Implementation: [`cf_outcome_name` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L36).
+
+Guarantee: nothrow. "?" for a value that is no outcome.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_outcome_can_win(cf_outcome o);
@@ -2920,6 +2986,8 @@ Implementation: [`cf_outcome_can_win` (lib/config/src/core/keyspace.c)](https://
 Whether a candidate with this outcome may still be selected. The
 resolver asks this instead of listing the losing outcomes, so a new
 one cannot be added and forgotten in the one place it matters.
+Guarantee: strong. A pure check; it changes nothing, and false is also the
+answer for a value that is no outcome.
 
 ```c
 CF_API const char* cf_refusal_name(cf_refusal k);
@@ -2931,6 +2999,8 @@ Implementation: [`cf_refusal_name` (lib/config/src/core/keyspace.c)](https://git
 The kind's short name ("range"), as the report writes it, and the fixed
 wording a sensitive key's reason takes ("out of range"). "" and "" for
 CF_REFUSAL_NONE.
+Guarantee: nothrow. "" for a value that is no refusal kind; the comment covers
+cf_refusal_text, which falls back the same way.
 
 ### Key space
 
@@ -2951,6 +3021,7 @@ Implementation: [`cf_ks_arena` (lib/config/src/core/keyspace.c)](https://github.
 The arena everything in this space lives in. Sources that have to
 read a document into memory borrow it, so a configuration remains
 one arena and one release.
+Guarantee: nothrow. NULL for a NULL space.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_ks_add(cf_keyspace* ks, const char* key, size_t keylen, int source, const cf_value* value, const char* at);
@@ -2961,6 +3032,9 @@ Implementation: [`cf_ks_add` (lib/config/src/core/keyspace.c)](https://github.co
 Record a candidate. Keys and text are copied into the arena, so the
 caller's buffers need not outlive the call. Candidates may arrive in
 any order; the chain is kept ordered by precedence.
+Guarantee: basic. The space stays valid and holds what was added before; a failed
+call adds no candidate, and the arena keeps the copies it made until it is
+released. False for a NULL or resolved space, an invalid key, or no room.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_ks_add_text(cf_keyspace* ks, const char* key, size_t keylen, int source, const char* text, size_t textlen, const char* at);
@@ -2969,6 +3043,7 @@ CF_NODISCARD CF_API cf_bool cf_ks_add_text(cf_keyspace* ks, const char* key, siz
 Implementation: [`cf_ks_add_text` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L300).
 
 Record a candidate as written, leaving its type to be decided.
+Guarantee: basic. As cf_ks_add.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_ks_add_authored(cf_keyspace* ks, const char* key, size_t keylen, int source, const cf_value* value, const char* at);
@@ -2978,12 +3053,15 @@ Implementation: [`cf_ks_add_authored` (lib/config/src/core/keyspace.c)](https://
 
 Record a typed candidate that somebody wrote - a JSON string, say -
 so the reserved syntax applies to it as it does to raw text.
+Guarantee: basic. As cf_ks_add.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_ks_add_resolved(cf_keyspace* ks, const char* key, size_t keylen, int source, const cf_value* value, const char* at);
 ```
 
 Implementation: [`cf_ks_add_resolved` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L435).
+
+Guarantee: basic. As cf_ks_add.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_ks_add_default(cf_keyspace* ks, const char* key, size_t keylen, int source, const cf_value* value);
@@ -2992,6 +3070,7 @@ CF_NODISCARD CF_API cf_bool cf_ks_add_default(cf_keyspace* ks, const char* key, 
 Implementation: [`cf_ks_add_default` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L318).
 
 Record a definition's default (CF_CAND_DEFAULT).
+Guarantee: basic. As cf_ks_add.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_ks_rename(cf_keyspace* ks, const char* from, size_t fromlen, const char* to, size_t tolen);
@@ -3015,6 +3094,8 @@ Implementation: [`cf_ks_add_candidate` (lib/config/src/core/keyspace.c)](https:/
 Record a copy of another key space's candidate, at its rank, with what
 it was - textual, a default, the template it was made from - and not
 what it was waiting for: it is not read for references again.
+Guarantee: basic. As cf_ks_add; the candidate may be left without its `written`
+text.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_ks_replay(cf_keyspace* ks, const cf_keyspace* base);
@@ -4976,10 +5057,23 @@ special cases in it.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_source_load(const cf_source* s, cf_keyspace* ks);
+```
+
+Implementation: [`cf_source_load` (lib/config/src/sources/memory.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/memory.c#L84).
+
+Guarantee: basic. The key space stays valid and may hold some of the source's keys;
+the caller drops it. The reason is the source's own (cf_source_file_error and its
+kin) or the key space's refusal. A NULL or unfilled source, or a NULL key space,
+fails and adds nothing.
+
+```c
 CF_API void cf_source_destroy(cf_source* s);
 ```
 
-Implementation: [`cf_source_load` (lib/config/src/sources/memory.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/memory.c#L84), [`cf_source_destroy` (lib/config/src/sources/memory.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/memory.c#L91).
+Implementation: [`cf_source_destroy` (lib/config/src/sources/memory.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/memory.c#L91).
+
+Guarantee: nothrow. A NULL or unfilled source is accepted; no source owns memory,
+its state is the caller's.
 
 ### A view over the sources
 
@@ -4999,6 +5093,9 @@ CF_NODISCARD CF_API cf_bool cf_source_memory(cf_source* s, const char* name, int
 ```
 
 Implementation: [`cf_source_memory` (lib/config/src/sources/memory.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/memory.c#L65).
+
+Guarantee: strong. A NULL `s` or `pairs` fails with `s` as it was; the pairs are
+borrowed.
 
 ### Environment source
 
@@ -5027,6 +5124,9 @@ CF_NODISCARD CF_API cf_bool cf_source_env(cf_source* s, const char* name, int ra
 
 Implementation: [`cf_source_env` (lib/config/src/sources/env.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/env.c#L77).
 
+Guarantee: strong. A NULL `s` fails with `s` as it was; the prefix and the
+environment are borrowed.
+
 ```c
 CF_API char* const* cf_environ(void); /* cf_platform_environ, kept for callers */
 ```
@@ -5034,6 +5134,7 @@ CF_API char* const* cf_environ(void); /* cf_platform_environ, kept for callers *
 Implementation: [`cf_environ` (lib/config/src/sources/compat.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/compat.c#L24).
 
 The platform environment, or NULL where none is reachable.
+Guarantee: nothrow. NULL where no environment is reachable.
 
 ```c
 CF_API size_t cf_env_key(const char* prefix, const char* var, size_t varlen, char* out, size_t cap);
@@ -5044,6 +5145,8 @@ Implementation: [`cf_env_key` (lib/config/src/sources/env.c)](https://github.com
 Exposed for testing: derive a canonical key from a variable name.
 Returns the length written, or 0 when the name does not belong to
 this prefix or does not derive a valid key.
+Guarantee: nothrow. 0 for a name that does not belong to the prefix, derives no
+valid key or does not fit `cap`; `out` is the caller's.
 
 ### Command line source
 
@@ -5070,6 +5173,8 @@ CF_NODISCARD CF_API cf_bool cf_source_cli(cf_source* s, const char* name, int ra
 ```
 
 Implementation: [`cf_source_cli` (lib/config/src/sources/cli.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/cli.c#L98).
+
+Guarantee: strong. A NULL `s` fails with `s` as it was; argv is borrowed.
 
 ### File source
 
@@ -5104,11 +5209,17 @@ CF_API size_t cf_source_file_state_size(void);
 
 Implementation: [`cf_source_file_state_size` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L611).
 
+Guarantee: nothrow. A constant.
+
 ```c
 CF_NODISCARD CF_API cf_bool cf_source_file(cf_source* s, const char* name, int rank, const char* path, const char* format, unsigned flags, void* state, size_t state_size);
 ```
 
 Implementation: [`cf_source_file` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L513).
+
+Guarantee: strong. A NULL `s`, `path` or `state`, a `state` smaller than the state
+size, or an encoding the build does not know fails with `s` and `state` as they
+were.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_source_file_codec(cf_source* s, const char* name, int rank, const char* path, const struct cf_codec* codec, unsigned flags, void* state, size_t state_size);
@@ -5125,6 +5236,7 @@ Explicit rather than registered. A registry code could add to at run
 time would be global mutable state, which this library has none of,
 and two parts of one program registering different codecs under one
 name would be a conflict nobody could see.
+Guarantee: strong. As cf_source_file; a codec that cannot read fails the same way.
 
 ```c
 CF_API const cf_error* cf_source_file_error(const cf_source* s);
@@ -5135,6 +5247,8 @@ Implementation: [`cf_source_file_error` (lib/config/src/bridge/file.c)](https://
 The reason a file source failed, or NULL when it did not. Sources
 return a plain boolean because most cannot fail in interesting ways;
 a file can fail in a dozen, and the caller needs the detail.
+Guarantee: nothrow. NULL for a NULL source, for a source of another kind and for
+one whose last load did not fail.
 
 ```c
 CF_API void cf_source_file_codecs(cf_source* s, const struct cf_codec* const* codecs, size_t n);
@@ -5145,6 +5259,7 @@ Implementation: [`cf_source_file_codecs` (lib/config/src/bridge/file.c)](https:/
 A program's own codecs for a file or a document, looked at before the
 built-in ones, for the extension and for the content (D-73). The list
 is borrowed and must outlive the source.
+Guarantee: nothrow. A NULL source, or one of another kind, is ignored.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_source_document(cf_source* s, const char* name, int rank, const char* bytes, size_t n, const char* format, unsigned flags, void* state, size_t state_size);
@@ -5157,6 +5272,8 @@ as a file's, from `bytes` (n of them) instead of a path. `name` is what
 locations and explain() show; `format` is named, or NULL for the name's
 extension and then the content (D-73). The bytes are borrowed here and
 must outlive the source; cf_builder_document copies them.
+Guarantee: strong. As cf_source_file; a NULL `name`, or NULL `bytes` with `n` above
+0, fails the same way.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_source_env_document(cf_source* s, const char* name, int rank, const char* variable, const char* format, unsigned flags, void* state, size_t state_size);
@@ -5172,6 +5289,8 @@ variable holds then. `name` is the source's (NULL: the variable); what
 explain() and locations show is the variable. The variable is borrowed
 and must outlive the source; cf_builder_env_document copies it. A
 variable that is not set is an error, or nothing with CF_OPTIONAL.
+Guarantee: strong. As cf_source_document; a NULL or empty variable name, or one
+holding '=', fails the same way.
 
 ```c
 CF_API const char* cf_source_file_format(const cf_source* s, cf_detect_how* how);
@@ -5184,6 +5303,8 @@ the codec's name, and how it was chosen (CF_DETECT_NAMED, _EXTENSION or
 _CONTENT; `how` may be NULL). NULL before a load, for a source that is
 neither, and when no format was chosen. A load that failed in the
 chosen format still names it.
+Guarantee: nothrow. NULL for a NULL source or one of another kind, with `*how` then
+CF_DETECT_NONE.
 
 ```c
 CF_API const char* cf_source_file_encoding(const cf_source* s);
@@ -5196,6 +5317,7 @@ source read, by its canonical name: "utf-8", "utf-16le" or "utf-16be"
 (a byte-order mark said so), or the one named in the flags, such as
 "windows-1254". NULL before a load and for any other kind of source.
 (1.8, D-108)
+Guarantee: nothrow. NULL for a NULL source or one of another kind.
 
 ```c
 CF_API size_t cf_source_dotenv_state_size(void);
@@ -5203,10 +5325,7 @@ CF_API size_t cf_source_dotenv_state_size(void);
 
 Implementation: [`cf_source_dotenv_state_size` (lib/config/src/bridge/dotenv.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/dotenv.c#L131).
 
-A .env file: the same key mapping as the environment, because a .env
-file is an environment written down. Unlike the environment it
-belongs to this program, so a name that derives no key is an error
-rather than another program's variable.
+Guarantee: nothrow. A constant.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_source_dotenv(cf_source* s, const char* name, int rank, const char* path, const char* prefix, unsigned flags, void* state, size_t state_size);
@@ -5214,11 +5333,18 @@ CF_NODISCARD CF_API cf_bool cf_source_dotenv(cf_source* s, const char* name, int
 
 Implementation: [`cf_source_dotenv` (lib/config/src/bridge/dotenv.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/dotenv.c#L135).
 
+Guarantee: strong. A NULL `s`, `path` or `state`, a `state` smaller than the state
+size, or an encoding the build does not know fails with `s` and `state` as they
+were.
+
 ```c
 CF_API const cf_error* cf_source_dotenv_error(const cf_source* s);
 ```
 
 Implementation: [`cf_source_dotenv_error` (lib/config/src/bridge/dotenv.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/dotenv.c#L158).
+
+Guarantee: nothrow. NULL for a NULL source, for a source of another kind and for
+one whose last load did not fail.
 
 ### A drop-in directory
 
@@ -5242,6 +5368,8 @@ An existing key space, replayed. Every candidate at the rank it
 originally had, not only the winners: a library whose premise is
 explaining itself must not lose provenance at the moment a value
 changes, which is exactly when somebody asks.
+Guarantee: strong. A NULL `s` or `ks` fails with `s` as it was; `ks` is borrowed
+and must outlive the source.
 
 ```c
 CF_API const char* cf_source_path(const cf_source* s);
@@ -5250,6 +5378,7 @@ CF_API const char* cf_source_path(const cf_source* s);
 Implementation: [`cf_source_path` (lib/config/src/sources/compat.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/compat.c#L17).
 
 The file a source reads, or NULL.
+Guarantee: nothrow. NULL for a NULL source and for one with no path.
 
 ```c
 CF_API size_t cf_source_dir_state_size(void);
@@ -5257,17 +5386,26 @@ CF_API size_t cf_source_dir_state_size(void);
 
 Implementation: [`cf_source_dir_state_size` (lib/config/src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/dir.c#L236).
 
+Guarantee: nothrow. A constant.
+
 ```c
 CF_NODISCARD CF_API cf_bool cf_source_dir(cf_source* s, const char* name, int rank, const char* path, const char* format, unsigned flags, void* state, size_t state_size);
 ```
 
 Implementation: [`cf_source_dir` (lib/config/src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/dir.c#L240).
 
+Guarantee: strong. A NULL `s`, `path` or `state`, a `state` smaller than the state
+size, or an encoding the build does not know fails with `s` and `state` as they
+were.
+
 ```c
 CF_API const cf_error* cf_source_dir_error(const cf_source* s);
 ```
 
 Implementation: [`cf_source_dir_error` (lib/config/src/bridge/dir.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/dir.c#L263).
+
+Guarantee: nothrow. NULL for a NULL source, for a source of another kind and for
+one whose last load did not fail.
 
 ```c
 CF_API void cf_source_dir_codecs(cf_source* s, const struct cf_codec* const* codecs, size_t n);
@@ -5278,6 +5416,7 @@ Implementation: [`cf_source_dir_codecs` (lib/config/src/bridge/dir.c)](https://g
 A program's own codecs for the directory's files, looked at before the
 built-in ones (cf_builder_codec, D-68). The list is borrowed and must
 outlive the source.
+Guarantee: nothrow. A NULL source, or one of another kind, is ignored.
 
 ### A directory of secrets (CF_WITH_DIR)
 
@@ -5296,17 +5435,25 @@ CF_API size_t cf_source_secrets_state_size(void);
 
 Implementation: [`cf_source_secrets_state_size` (lib/config/src/bridge/secrets.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/secrets.c#L248).
 
+Guarantee: nothrow. A constant.
+
 ```c
 CF_NODISCARD CF_API cf_bool cf_source_secrets(cf_source* s, const char* name, int rank, const char* path, const char* prefix, unsigned flags, void* state, size_t state_size);
 ```
 
 Implementation: [`cf_source_secrets` (lib/config/src/bridge/secrets.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/secrets.c#L276).
 
+Guarantee: strong. A NULL `s`, `path` or `state`, or a `state` smaller than the
+state size, fails with `s` and `state` as they were.
+
 ```c
 CF_API const cf_error* cf_source_secrets_error(const cf_source* s);
 ```
 
 Implementation: [`cf_source_secrets_error` (lib/config/src/bridge/secrets.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/secrets.c#L294).
+
+Guarantee: nothrow. NULL for a NULL source, for a source of another kind and for
+one whose last load did not fail.
 
 ### A key of the Windows Registry
 
@@ -5325,17 +5472,25 @@ CF_API size_t cf_source_registry_state_size(void);
 
 Implementation: [`cf_source_registry_state_size` (lib/config/src/bridge/registry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/registry.c#L207).
 
+Guarantee: nothrow. A constant.
+
 ```c
 CF_NODISCARD CF_API cf_bool cf_source_registry(cf_source* s, const char* name, int rank, const char* root, unsigned flags, void* state, size_t state_size);
 ```
 
 Implementation: [`cf_source_registry` (lib/config/src/bridge/registry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/registry.c#L211).
 
+Guarantee: strong. A NULL `s`, `root` or `state`, or a `state` smaller than the
+state size, fails with `s` and `state` as they were.
+
 ```c
 CF_API const cf_error* cf_source_registry_error(const cf_source* s);
 ```
 
 Implementation: [`cf_source_registry_error` (lib/config/src/bridge/registry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/registry.c#L232).
+
+Guarantee: nothrow. NULL for a NULL source, for a source of another kind and for
+one whose last load did not fail.
 
 ### A SQLite store (CF_WITH_SQLITE)
 
@@ -5353,17 +5508,25 @@ CF_API size_t cf_source_store_state_size(void);
 
 Implementation: [`cf_source_store_state_size` (lib/config/src/bridge/store.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/store.c#L344).
 
+Guarantee: nothrow. A constant.
+
 ```c
 CF_NODISCARD CF_API cf_bool cf_source_store(cf_source* s, const char* name, int rank, const char* path, unsigned flags, void* state, size_t state_size);
 ```
 
 Implementation: [`cf_source_store` (lib/config/src/bridge/store.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/store.c#L348).
 
+Guarantee: strong. A NULL `s`, `path` or `state`, or a `state` smaller than the
+state size, fails with `s` and `state` as they were.
+
 ```c
 CF_API const cf_error* cf_source_store_error(const cf_source* s);
 ```
 
 Implementation: [`cf_source_store_error` (lib/config/src/bridge/store.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/store.c#L368).
+
+Guarantee: nothrow. NULL for a NULL source, for a source of another kind and for
+one whose last load did not fail.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_store_set(const char* path, const cf_write_item* items, size_t count, const char* meta, cf_error* err);
@@ -5382,6 +5545,8 @@ section 39).
 This writes what it is given and asks nothing; it is the tool for
 provisioning a store. A running program writes through cf_write,
 which asks whether it may.
+Guarantee: basic. The store holds none of `items` (one transaction, rolled back),
+but a store that did not exist may be left behind, empty; `err` is set.
 
 ## cf_text.h
 

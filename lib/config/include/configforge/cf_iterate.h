@@ -46,7 +46,10 @@ typedef struct cf_iter {
    "upstream.2", so an array is read with cf_array_count and cf_array_key
    below. A prefix matches at a segment boundary only, so "server" does
    not match "servername" - the bug every hand-written prefix check has.
-   An empty or NULL prefix walks the whole configuration. */
+   An empty or NULL prefix walks the whole configuration.
+   Guarantee: strong. Reads a finished configuration and changes nothing but `it`;
+   false for a NULL `it` or a configuration with no key space, with `it` then
+   empty, so cf_iter_next is false too. */
 CF_NODISCARD CF_API cf_bool cf_iter_keys(cf_iter* it, const struct cf_config* c,
                                          const char* prefix);
 
@@ -59,10 +62,14 @@ CF_NODISCARD CF_API cf_bool cf_iter_keys(cf_iter* it, const struct cf_config* c,
  * This is how a program discovers what is configured rather than being
  * told in advance, which is what plugin and per-tenant configuration
  * both need.
+ *
+ * Guarantee: strong. As cf_iter_keys.
  */
 CF_NODISCARD CF_API cf_bool cf_iter_children(cf_iter* it, const struct cf_config* c,
                                              const char* prefix);
 
+/* Guarantee: strong. Changes nothing but `it`; false when the walk is done, and for
+   a NULL or empty `it`. */
 CF_NODISCARD CF_API cf_bool cf_iter_next(cf_iter* it);
 
 /* ------------------------------------------------------------------ *
@@ -75,11 +82,14 @@ CF_NODISCARD CF_API cf_bool cf_iter_next(cf_iter* it);
    and an element at or past it, from any source, is not in the
    configuration: it is not read, listed or written, and explain() shows
    it as a "truncated" candidate. A count that is not an integer, or is
-   negative, fixes nothing, and nor does one that is a template. */
+   negative, fixes nothing, and nor does one that is a template.
+   Guarantee: nothrow. 0 for a NULL key and for a configuration with no length
+   recorded. */
 CF_API size_t cf_array_count(const struct cf_config* c, const char* key);
 
 /* Builds "<key>.<index>", so a loop does not have to. Measure-or-write
-   like everything else that renders. */
+   like everything else that renders.
+   Guarantee: nothrow. Measure-or-write, as cf_fmt: the text is cut where `cap` ends. */
 CF_API size_t cf_array_key(char* buf, size_t cap, const char* key, size_t index);
 
 #ifdef __cplusplus

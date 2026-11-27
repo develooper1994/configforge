@@ -36,11 +36,13 @@ extern "C" {
  * --server-port belongs to the source that needs it, not here.
  * ------------------------------------------------------------------ */
 
-/* Number of dot-separated segments, 0 when the key is invalid. */
+/* Number of dot-separated segments, 0 when the key is invalid.
+   Guarantee: nothrow. 0 for an invalid key. */
 CF_API size_t cf_key_segments(const char* key, size_t len);
 
 /* Byte-wise, never strcoll: a reproducible snapshot hash depends on a
-   reproducible order. */
+   reproducible order.
+   Guarantee: nothrow. */
 CF_API int cf_key_cmp(const char* a, size_t alen, const char* b, size_t blen);
 
 /* ------------------------------------------------------------------ *
@@ -55,11 +57,14 @@ typedef enum cf_outcome {
 #undef CF_OUTCOME_LAST_X
 } cf_outcome;
 
+/* Guarantee: nothrow. "?" for a value that is no outcome. */
 CF_API const char* cf_outcome_name(cf_outcome o);
 
 /* Whether a candidate with this outcome may still be selected. The
    resolver asks this instead of listing the losing outcomes, so a new
-   one cannot be added and forgotten in the one place it matters. */
+   one cannot be added and forgotten in the one place it matters.
+   Guarantee: strong. A pure check; it changes nothing, and false is also the
+   answer for a value that is no outcome. */
 CF_NODISCARD CF_API cf_bool cf_outcome_can_win(cf_outcome o);
 
 /* A candidate from a textual source carries the bytes as written; its
@@ -153,7 +158,9 @@ typedef enum cf_refusal {
 
 /* The kind's short name ("range"), as the report writes it, and the fixed
    wording a sensitive key's reason takes ("out of range"). "" and "" for
-   CF_REFUSAL_NONE. */
+   CF_REFUSAL_NONE.
+   Guarantee: nothrow. "" for a value that is no refusal kind; the comment covers
+   cf_refusal_text, which falls back the same way. */
 CF_API const char* cf_refusal_name(cf_refusal k);
 CF_API const char* cf_refusal_text(cf_refusal k);
 
@@ -224,27 +231,34 @@ CF_NODISCARD CF_API cf_bool cf_ks_init(cf_keyspace* ks, cf_arena* arena, size_t 
 
 /* The arena everything in this space lives in. Sources that have to
    read a document into memory borrow it, so a configuration remains
-   one arena and one release. */
+   one arena and one release.
+   Guarantee: nothrow. NULL for a NULL space. */
 CF_API cf_arena* cf_ks_arena(const cf_keyspace* ks);
 
 /* Record a candidate. Keys and text are copied into the arena, so the
    caller's buffers need not outlive the call. Candidates may arrive in
-   any order; the chain is kept ordered by precedence. */
+   any order; the chain is kept ordered by precedence.
+   Guarantee: basic. The space stays valid and holds what was added before; a failed
+   call adds no candidate, and the arena keeps the copies it made until it is
+   released. False for a NULL or resolved space, an invalid key, or no room. */
 CF_NODISCARD CF_API cf_bool cf_ks_add(cf_keyspace* ks, const char* key, size_t keylen,
                                       int source, const cf_value* value,
                                       const char* at);
 
-/* Record a candidate as written, leaving its type to be decided. */
+/* Record a candidate as written, leaving its type to be decided.
+   Guarantee: basic. As cf_ks_add. */
 CF_NODISCARD CF_API cf_bool cf_ks_add_text(cf_keyspace* ks, const char* key,
                                            size_t keylen, int source, const char* text,
                                            size_t textlen, const char* at);
 
 /* Record a typed candidate that somebody wrote - a JSON string, say -
-   so the reserved syntax applies to it as it does to raw text. */
+   so the reserved syntax applies to it as it does to raw text.
+   Guarantee: basic. As cf_ks_add. */
 CF_NODISCARD CF_API cf_bool cf_ks_add_authored(cf_keyspace* ks, const char* key,
                                                size_t keylen, int source,
                                                const cf_value* value, const char* at);
 
+/* Guarantee: basic. As cf_ks_add. */
 CF_NODISCARD CF_API cf_bool cf_ks_add_resolved(cf_keyspace* ks, const char* key,
                                                size_t keylen, int source,
                                                const cf_value* value, const char* at);
@@ -278,7 +292,8 @@ void            cfi_ks_limits(cf_keyspace* ks, size_t key_limit, size_t text_lim
 const cf_error* cfi_ks_refusal(const cf_keyspace* ks);
 void            cfi_ks_expect_lines(cf_keyspace* ks, const char* text, size_t n);
 
-/* Record a definition's default (CF_CAND_DEFAULT). */
+/* Record a definition's default (CF_CAND_DEFAULT).
+   Guarantee: basic. As cf_ks_add. */
 CF_NODISCARD CF_API cf_bool cf_ks_add_default(cf_keyspace* ks, const char* key,
                                               size_t keylen, int source,
                                               const cf_value* value);
@@ -296,7 +311,9 @@ CF_NODISCARD CF_API cf_bool cf_ks_rename_list(cf_keyspace* ks, const char* from,
 
 /* Record a copy of another key space's candidate, at its rank, with what
    it was - textual, a default, the template it was made from - and not
-   what it was waiting for: it is not read for references again. */
+   what it was waiting for: it is not read for references again.
+   Guarantee: basic. As cf_ks_add; the candidate may be left without its `written`
+   text. */
 CF_NODISCARD CF_API cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key,
                                                 size_t keylen, const cf_candidate* c);
 
