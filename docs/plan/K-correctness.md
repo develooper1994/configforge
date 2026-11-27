@@ -515,7 +515,7 @@ Their decisions take the numbers after D-229 (D-224 to D-229 are F-1b's, F-2a's,
 * **needs**: nothing
 * **size**: large
 * **version**: 1.9.0
-* **status**: open
+* **status**: done (2c03110)
 * **decided**:
   * **Which functions.** A `CF_API` declaration in `lib/*/include/configforge/*.h` whose return type is `cf_bool` or `cf_code`, or a pointer from a function whose name contains `_new`, `_create`, `_open`, `_load`, `_build`, `_dup` or `_from`; except `cf_get_*`, `cf_has_*` and `cf_is_*` (queries that answer, with a fallback), and the names in `scripts/check/nodiscard.txt`, one `name|reason` a line. Its first and only line: `cf_error_set|returns CF_FALSE so that a caller may write return cf_error_set(...); dropping it loses nothing` (`lib/base/include/configforge/cf_error.h:103-104`).
   * **The mark.** `CF_NODISCARD CF_API <type> <name>(...)`, the order the 16 existing marks use (`grep -rn "CF_NODISCARD CF_API" lib/*/include | head -3`). `CF_NODISCARD` is unchanged (`lib/port/include/configforge/cf_port.h:200-212`): empty under C89, so the library itself and every C89 tool build as before. No ABI change (an attribute).

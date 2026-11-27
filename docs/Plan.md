@@ -288,7 +288,7 @@ of a card's CI.
 | 11 | Y-5 A stable read: a file read twice and compared, up to 3 reads by default (F-5c in the research) | 1.9.0 | small | nothing | open |
 | 12 | Y-6 Windows readers that share delete access, if a measurement shows a rename then succeeds over an open reader (F-5d in the research) | 1.9.0 | small | F-1a | waits: F-1a |
 | 13 | Y-3 `cf_locker`: a lock that plugs in, `cf_lock_none` and a kernel lock on a kept sidecar file, `cf_lock_sidecar` (F-5a in the research) | 1.9.0 | medium | F-1a | waits: F-1a |
-| 14 | K-9c Errors that cannot be ignored: `CF_NODISCARD` on every failure, and its gate | 1.9.0 | large | nothing | open |
+| 14 | K-9c Errors that cannot be ignored: `CF_NODISCARD` on every failure, and its gate | 1.9.0 | large | nothing | done (2c03110) |
 | 15 | K-6a A refusal's byte offset (TO DECIDE) | 2.0.0 | medium | nothing | parked |
 | 16 | K-6b A refusal's reason shown by the tools (TO DECIDE) | 2.0.0 | small | nothing | parked |
 | 17 | M-11b `cf_error` owns its text (the 2.0 break) | 2.0.0 | large | M-11a | parked |
