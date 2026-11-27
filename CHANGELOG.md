@@ -17,6 +17,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 - `cf_reason_severity` and `cf_reason_weakness`, experimental in 1.9, are promoted to
   `CF_API` and listed in `cmake/configforge.symbols` (D-89).
+- `configforge codec check`, `dump` and `recode`, when they refuse a file, print
+  a second line on standard error, `  reason: <name> (<severity>[, <CWE>])`, so a
+  user filters by the reason and not by the words of a message (K-6b, D-223).
 
 ## 1.9.0 — 2026-11-27
 

@@ -127,6 +127,16 @@ if(HAVE_CODEC)
     -
     codec
     formats)
+  # A refusal names its reason, severity and weakness (K-6b).
+  string(REPEAT "{\"a\":" 40 nest)
+  file(WRITE ${WORK}/deep.json "${nest}1")
+  front_case(
+    1
+    -
+    "reason: depth"
+    codec
+    dump
+    ${WORK}/deep.json)
 endif()
 
 # 9. A program on the PATH and not beside the front door.

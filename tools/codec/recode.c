@@ -170,6 +170,7 @@ static int rc_check(const char* path, const cf_blob* blob) {
     }
     if (!cf_encoding_check(path, blob->p, blob->n, &err)) {
         fprintf(stderr, "codec: %s\n", err.message);
+        codec_report(&err);
         return 1;
     }
     printf("'%s' is UTF-8\n", path);

@@ -240,6 +240,12 @@ Exit codes: 0 done (`check`: every file is well formed), 1 a file is not,
 or its format cannot be told; 2 unusable input. Anything else is the usage
 on stderr, exit 2.
 
+When `check`, `dump` or `recode` refuses a file, a second line follows the
+message on standard error, so that a person or a script filters by the reason
+and not by the words of a message: `  reason: depth (warning, CWE-674)` (the
+reason's name, its severity, and its weakness when it defends one). It is
+printed whenever the refusal has a reason, and standard output is unchanged.
+
 **formats.** Every built-in codec: its name, its extensions and what kind
 of format it is (text or binary, self-describing or schema-bound, typed,
 arrays, read and written). `--format markdown` is the table in

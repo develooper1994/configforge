@@ -310,6 +310,7 @@ int codec_dump(int argc, char** argv) {
         if (!dp_run(c, &blob, ctx, &err)) {
             fflush(stdout);
             fprintf(stderr, "codec: %s\n", err.message);
+            codec_report(&err);
             rc = 1;
         }
     }
@@ -367,6 +368,7 @@ int codec_textconv(int argc, char** argv) {
             ctx->mute = CF_TRUE;
             if (!dp_run(c, &blob, ctx, &err)) {
                 fprintf(stderr, "codec: %s\n", err.message);
+                codec_report(&err);
                 rc = dp_raw(&blob);
             } else {
                 ctx->mute  = CF_FALSE;

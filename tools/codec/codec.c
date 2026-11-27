@@ -24,6 +24,16 @@
 #include <stdio.h>
 #include <string.h>
 
+void codec_report(const cf_error* err) {
+    const char* weak = cf_reason_weakness(err->reason);
+
+    if (err->reason == CF_REASON_NONE) {
+        return;
+    }
+    fprintf(stderr, "  reason: %s (%s%s%s)\n", cf_reason_name(err->reason),
+            cf_reason_severity(err->reason), (weak[0] != '\0') ? ", " : "", weak);
+}
+
 static int usage(void) {
     static const char* const text[] = {
         "ConfigForge codec: documents, in every format the library reads\n",

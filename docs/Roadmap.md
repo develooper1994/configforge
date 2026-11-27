@@ -1335,7 +1335,7 @@ first user meets. In the order proposed:
   two tolerances come out. The same pass: TOML's reader limits the dotted
   key of a line and INI's reader limits no depth, which
   `cf_format_limits` records and which could be made equal.
-* 🟨 **One diagnostic model across formats** (card A-10: place and reason built; severity and weakness ids left). Each reader reports a
+* 🟩 **One diagnostic model across formats** (cards A-10, N-13, K-6a, K-6b: place, reason, severity and weakness, shown by the tools). Each reader reports a
   refusal its own way today, as far as the formats differ; a single
   diagnostic record (code, severity, byte offset, line and column, the
   format's own detail, and the CWE or known-weakness id when the

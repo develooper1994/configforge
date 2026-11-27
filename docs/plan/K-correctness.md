@@ -423,6 +423,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 
 * **Organiser's answers**:
   * 2026-11-27, the organiser: K-6b follows D-223 (one error model): the reason line is always printed, on stderr (the maintainer's standing approval, 2026-11-27).
+  * 2026-11-27, the worker: 1.9.0 is released, so the CHANGELOG entry opens "## 2.0.0 — unreleased"; D-138 does not exist in docs/Decisions.md and is left to K-6a; the line is printed by `check`, `dump`, `textconv` (on a refusal) and `recode` (the maintainer's standing approval, 2026-11-27).
 
 ## K-7a - One table of formats: the lists that copy it read it
 

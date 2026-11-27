@@ -238,6 +238,8 @@ int codec_check(int argc, char** argv) {
                 printf("%s: ok\n", argv[a]);
             } else {
                 printf("%s: %s\n", argv[a], err.message);
+                fflush(stdout);
+                codec_report(&err);
                 rc = 1;
             }
         }

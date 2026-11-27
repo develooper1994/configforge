@@ -39,6 +39,10 @@ int codec_convert(int argc, char** argv, cf_bool same_format);
    reason on stderr (no such format, or one this build left out). */
 int codec_named(const char* name, const cf_codec** out);
 
+/* A refusal's reason on stderr, one line after the message, when the error has
+   one: "  reason: depth (warning, CWE-674)" (K-6b, D-107). */
+void codec_report(const cf_error* err);
+
 /* `path` read whole ("-" is standard input, binary) into `ar`, and
    its codec: `as` by name when not NULL, else from its name and then
    its content (cf_codec_detect, D-73). 0 when read, with *out and

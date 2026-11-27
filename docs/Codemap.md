@@ -1875,8 +1875,9 @@
 - cf_text_utf8_valid 58-60
 - cf_text_utf8_encode 62-83
 `tools/codec/codec.c`
-- usage 27-67
-- main 69-102
+- codec_report 27-35
+- usage 37-77
+- main 79-112
 `tools/codec/codec.h`
 `tools/codec/convert.c`
 - struct cv_say 23-26
@@ -1941,7 +1942,7 @@
 - keep_end 173-176
 - lend_text 178-180
 - lend_work 182-184
-- codec_check 186-250
+- codec_check 186-252
 `tools/codec/dump.c`
 - struct dp_frame 30-35
 - struct dp_ctx 37-46
@@ -1961,9 +1962,9 @@
 - dp_work 228-230
 - dp_args 233-253
 - dp_run 258-279
-- codec_dump 281-318
-- dp_raw 322-329
-- codec_textconv 331-385
+- codec_dump 281-319
+- dp_raw 323-330
+- codec_textconv 332-387
 `tools/codec/formats.c`
 - ext_list 16-28
 - codec_formats 30-68
@@ -1982,9 +1983,9 @@
 - rc_mark 94-111
 - rc_utf32 113-119
 - rc_write 122-151
-- rc_check 155-177
-- rc_recode 180-206
-- codec_recode 208-282
+- rc_check 155-178
+- rc_recode 181-207
+- codec_recode 209-283
 `tools/configforge/front.h`
 `tools/configforge/main.c`
 - help 31-48
