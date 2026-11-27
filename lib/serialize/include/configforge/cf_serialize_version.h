@@ -20,8 +20,8 @@ extern "C" {
    two are in one repository (D-90). A copy of cf_version.h's numbers, which
    scripts/release/version.cmake rewrites with them and gate.version holds
    to them. */
-#define CF_SERIALIZE_VERSION_MAJOR 1
-#define CF_SERIALIZE_VERSION_MINOR 9
+#define CF_SERIALIZE_VERSION_MAJOR 2
+#define CF_SERIALIZE_VERSION_MINOR 0
 #define CF_SERIALIZE_VERSION_PATCH 0
 
 #define CF_SERIALIZE_VERSION_NUMBER                                                    \

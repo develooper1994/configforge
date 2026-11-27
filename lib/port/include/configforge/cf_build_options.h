@@ -120,6 +120,9 @@
 #ifndef CF_MAX_DEPTH
 #define CF_MAX_DEPTH 32
 #endif
+#ifndef CF_FIXED_LIMITS
+#define CF_FIXED_LIMITS 0
+#endif
 #ifndef CF_BUILD_PROFILE
 #define CF_BUILD_PROFILE "unspecified"
 #endif

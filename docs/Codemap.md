@@ -77,10 +77,10 @@
 - #define CF_MAX_OPEN_PREFIXES 156
 - #define CF_EXPAND_MAX 166
 - #define CF_EXPAND_TOTAL_MAX 176
-- struct cf_defset 183-211
-- enum cf_unknown_policy 329-333
-- struct cf_apply_report 335-341
-- struct cf_rank_names 356-359
+- struct cf_defset 183-214
+- enum cf_unknown_policy 332-336
+- struct cf_apply_report 338-344
+- struct cf_rank_names 359-362
 `lib/config/include/configforge/cf_edit.h`
 - #define CONFIGFORGE_CF_EDIT_H 26
 - typedef cf_edit 36
@@ -203,17 +203,19 @@
 - #define CF_C11_CHECKED_ 418
 - #define CF_DEFINE_INT 425
 - #define CF_DEFINE_TEXT 430
-- cf_get_int_ 520-530
-- cf_get_long_ 531-541
-- cf_get_llong_ 542-549
-- cf_get_bool_ 550-557
-- cf_get_text_ 558-561
-- #define CF_GET_REAL_ 563
-- #define CF_GET_REAL_ 565
-- #define cf_get 567
-- enum cf_change 616-621
-- typedef cf_diff_fn 628
-- typedef cf_watcher 874
+- enum cf_sizing 473-477
+- struct cf_sizing_options 479-484
+- cf_get_int_ 556-566
+- cf_get_long_ 567-577
+- cf_get_llong_ 578-585
+- cf_get_bool_ 586-593
+- cf_get_text_ 594-597
+- #define CF_GET_REAL_ 599
+- #define CF_GET_REAL_ 601
+- #define cf_get 603
+- enum cf_change 652-657
+- typedef cf_diff_fn 664
+- typedef cf_watcher 910
 `lib/config/src/bridge/dir.c`
 - struct dir_state 36-44
 - typedef dir_name 57
@@ -494,65 +496,68 @@
 - cf_builder_unknown 1102-1106
 - cf_builder_track_reads 1108-1112
 - cf_builder_digest_key 1114-1138
-- cf_builder_log 1140-1146
-- cfi_builder_expect_like 1148-1152
-- config_log 1158-1176
-- config_log_events 1182-1234
-- cf_builder_writable 1236-1252
-- config_name_of_rank 1263-1276
-- create_failed 1278-1284
-- cf_builder_create 1286-1594
-- cf_app 1596-1598
-- derive_ghost 1612-1640
-- derive_onto 1642-1747
-- cf_derive 1749-1769
-- cf_derive_in 1771-1778
-- cfi_config_keep_values 1780-1831
-- write_locked 1852-1864
-- write_authorized 1870-1967
-- write_local_keys 1973-2073
-- cf_write 2075-2124
-- cf_watch_count 2141-2143
-- cf_watch_path 2145-2150
-- cf_changed 2152-2171
-- cf_watcher_open 2175-2192
-- cf_watcher_fd 2194-2196
-- cf_watcher_handle 2198-2200
-- cf_watcher_drain 2202-2204
-- cf_watcher_wait 2206-2208
-- cf_watcher_close 2210-2212
-- cf_config_ref 2214-2218
-- cf_config_free 2220-2231
-- lookup 2237-2254
-- cf_get_bool 2256-2259
-- cf_get_int 2261-2264
-- cf_get_text 2266-2269
-- cf_get_text_n 2271-2285
-- cf_get_real 2288-2291
-- try_of 2294-2306
-- cf_try_bool 2308-2315
-- cf_try_int 2317-2324
-- cf_try_text 2326-2339
-- cf_try_real 2342-2349
-- cf_type_of 2352-2355
-- cf_has 2357-2359
-- cf_tracks_reads 2361-2363
-- cf_was_read 2365-2374
-- cf_read_count 2376-2388
-- cf_explain 2394-2403
-- cf_inspect 2405-2413
-- cf_schema 2415-2427
-- cf_digest 2429-2431
-- cf_fingerprint 2433-2436
-- cf_fingerprint_format 2438-2440
-- cf_count 2442-2444
-- cf_apply_stats 2446-2448
-- cf_sources 2450-2452
-- cf_defs 2454-2456
-- cf_explain_json 2458-2468
-- cf_report 2470-2479
-- cf_keys 2481-2483
-- cf_log_level_name 2485-2497
+- cf_sizing_options_init 1140-1147
+- cf_builder_sizing 1149-1188
+- cf_config_sizing 1190-1198
+- cf_builder_log 1200-1206
+- cfi_builder_expect_like 1208-1212
+- config_log 1218-1236
+- config_log_events 1242-1294
+- cf_builder_writable 1296-1312
+- config_name_of_rank 1323-1336
+- create_failed 1338-1344
+- cf_builder_create 1346-1654
+- cf_app 1656-1658
+- derive_ghost 1672-1700
+- derive_onto 1702-1810
+- cf_derive 1812-1832
+- cf_derive_in 1834-1841
+- cfi_config_keep_values 1843-1894
+- write_locked 1915-1927
+- write_authorized 1933-2030
+- write_local_keys 2036-2136
+- cf_write 2138-2187
+- cf_watch_count 2204-2206
+- cf_watch_path 2208-2213
+- cf_changed 2215-2234
+- cf_watcher_open 2238-2255
+- cf_watcher_fd 2257-2259
+- cf_watcher_handle 2261-2263
+- cf_watcher_drain 2265-2267
+- cf_watcher_wait 2269-2271
+- cf_watcher_close 2273-2275
+- cf_config_ref 2277-2281
+- cf_config_free 2283-2294
+- lookup 2300-2317
+- cf_get_bool 2319-2322
+- cf_get_int 2324-2327
+- cf_get_text 2329-2332
+- cf_get_text_n 2334-2348
+- cf_get_real 2351-2354
+- try_of 2357-2369
+- cf_try_bool 2371-2378
+- cf_try_int 2380-2387
+- cf_try_text 2389-2402
+- cf_try_real 2405-2412
+- cf_type_of 2415-2418
+- cf_has 2420-2422
+- cf_tracks_reads 2424-2426
+- cf_was_read 2428-2437
+- cf_read_count 2439-2451
+- cf_explain 2457-2466
+- cf_inspect 2468-2476
+- cf_schema 2478-2490
+- cf_digest 2492-2494
+- cf_fingerprint 2496-2499
+- cf_fingerprint_format 2501-2503
+- cf_count 2505-2507
+- cf_apply_stats 2509-2511
+- cf_sources 2513-2515
+- cf_defs 2517-2519
+- cf_explain_json 2521-2531
+- cf_report 2533-2542
+- cf_keys 2544-2546
+- cf_log_level_name 2548-2560
 `lib/config/src/core/define.c`
 - struct cf_list_projection 22-27
 - cf_def_init_sized 29-41
@@ -1244,7 +1249,8 @@
 - #define CF_MESSAGE_MAX 115
 - #define CF_PATH_MAX 118
 - #define CF_MAX_DEPTH 121
-- #define CF_BUILD_PROFILE 124
+- #define CF_FIXED_LIMITS 124
+- #define CF_BUILD_PROFILE 127
 `lib/port/include/configforge/cf_port.h`
 - #define CONFIGFORGE_CF_PORT_H 16
 - #define CF_HAVE_C99 30

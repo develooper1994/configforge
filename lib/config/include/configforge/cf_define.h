@@ -208,6 +208,9 @@ typedef struct cf_defset {
     size_t  index_cap;
 
     const unsigned char* digest_key; /* 16 bytes in the arena, or NULL: FNV-1a (D-85) */
+
+    int    sizing_mode; /* a cf_sizing: 0 manual, the zeroed default (D-175) */
+    size_t sizing_cap;  /* its cap in bytes, 0 for none */
 } cf_defset;
 
 #if CF_INTERNAL_API

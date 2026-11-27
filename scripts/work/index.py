@@ -72,9 +72,9 @@ DONE_FILE = "docs/plan/Done.md"
 DONE_INTRO = [
     "# Done",
     "",
-    "Cards that landed, one line each; the card's full text is in git at the"
+    ("Cards that landed, one line each; the card's full text is in git at the"
     " commit before it was archived: `git show <archive commit>^:docs/plan/<file>`."
-    " `python scripts/work/index.py --archive` adds the cards that are done.",
+    " `python scripts/work/index.py --archive` adds the cards that are done."),
     "",
     "| id | goal | landed | file |",
     "| -- | ---- | ------ | ---- |",

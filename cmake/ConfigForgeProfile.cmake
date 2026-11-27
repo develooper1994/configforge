@@ -40,7 +40,8 @@ set(CF_PROFILE_OPTIONS
     CF_MESSAGE_MAX:STRING
     CF_PATH_MAX:STRING
     CF_MAX_DEPTH:STRING
-    CF_STACK_BUDGET:STRING)
+    CF_STACK_BUDGET:STRING
+    CF_FIXED_LIMITS:BOOL)
 set(_cf_profile_root "${CMAKE_CURRENT_LIST_DIR}/..")
 
 # Read the option values and names from a profile file.

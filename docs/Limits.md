@@ -2,6 +2,12 @@
 
 ## What this page is
 
+Every limit below is the build's own, fixed when the library is built: that is the
+manual sizing mode, the default, and the only one a build with `CF_FIXED_LIMITS` (the
+`minimal` profile) accepts. `cf_builder_sizing` names two more, semi-dynamic (a buffer
+grows up to the program's cap) and dynamic (no limit but memory); what each lets grow
+is M-11a and M-11b's, and until they land every mode runs with the limits below (D-175).
+
 What the library does not do and what it will not take, in one place, so
 that a limit is learnt here and not from a refusal. Each line is one of
 three kinds, and the kind says who keeps it from going stale:

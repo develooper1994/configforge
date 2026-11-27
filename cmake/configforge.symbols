@@ -57,6 +57,7 @@ cf_builder_response_files
 cf_builder_schema
 cf_builder_schema_file
 cf_builder_secrets
+cf_builder_sizing
 cf_builder_source
 cf_builder_store
 cf_builder_text
@@ -82,6 +83,7 @@ cf_codec_select
 cf_config_codec
 cf_config_free
 cf_config_ref
+cf_config_sizing
 cf_count
 cf_def_init_sized
 cf_default_allocator
@@ -213,6 +215,8 @@ cf_port_description
 cf_read_count
 cf_reason_description
 cf_reason_name
+cf_reason_severity
+cf_reason_weakness
 cf_refusal_name
 cf_refusal_text
 cf_report
@@ -231,6 +235,7 @@ cf_sink_putc
 cf_sink_puts
 cf_sink_terminate
 cf_sink_write
+cf_sizing_options_init
 cf_source_cli
 cf_source_cli_defs
 cf_source_defaults

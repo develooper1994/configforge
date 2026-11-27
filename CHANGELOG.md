@@ -3,6 +3,21 @@
 Versions follow semantic versioning from 1.0. Before that, `0.x` promises
 nothing: the C interface is not frozen, and a minor bump may change it.
 
+## 2.0.0 — unreleased
+
+### Added
+
+- `cf_builder_sizing` and `cf_sizing_options`: manual, semi- and full-dynamic sizing,
+  recorded in the configuration and read back by `cf_config_sizing`; manual, today's
+  limits, is the default and nothing changes with it. The new build option
+  `CF_FIXED_LIMITS` (on in the `minimal` profile) refuses the other two with
+  `CF_E_CAPABILITY` (M-10, D-175).
+
+### Changed
+
+- `cf_reason_severity` and `cf_reason_weakness`, experimental in 1.9, are promoted to
+  `CF_API` and listed in `cmake/configforge.symbols` (D-89).
+
 ## 1.9.0 — 2026-11-27
 
 ### Added

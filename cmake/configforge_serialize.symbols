@@ -58,6 +58,8 @@ cf_loc_text
 cf_port_description
 cf_reason_description
 cf_reason_name
+cf_reason_severity
+cf_reason_weakness
 cf_serialize_version
 cf_serialize_version_number
 cf_sink_fmt

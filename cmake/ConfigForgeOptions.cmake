@@ -123,6 +123,8 @@ endif()
 
 option(CF_SINGLE_THREADED "Compile out all synchronisation" OFF)
 option(CF_FORCE_PORTABLE "Disable every opportunistic upgrade" OFF)
+option(CF_FIXED_LIMITS "Refuse the dynamic sizing modes (cf_builder_sizing)"
+       OFF)
 
 # Every CF_WITH_* option, once. Everything that turns the options into
 # something - definitions, the generated header, the SBOM - reads this
@@ -182,6 +184,9 @@ endif()
 if(CF_SINGLE_THREADED)
   list(APPEND _CF_OPTION_DEFS "-DCF_SINGLE_THREADED=1")
 endif()
+if(CF_FIXED_LIMITS)
+  list(APPEND _CF_OPTION_DEFS "-DCF_FIXED_LIMITS=1")
+endif()
 string(REPLACE ";" "|" _CF_OPTION_DEFS "${_CF_OPTION_DEFS}")
 
 # Generate the header that records which features this build has, and
@@ -210,6 +215,12 @@ function(configforge_generate_options tgt)
     set(CF_OPT_SHARED 1)
   else()
     set(CF_OPT_SHARED 0)
+  endif()
+
+  if(CF_FIXED_LIMITS)
+    set(CF_OPT_FIXED_LIMITS 1)
+  else()
+    set(CF_OPT_FIXED_LIMITS 0)
   endif()
 
   set(CF_OPT_THREADING "/* threads: the atomics of the compiler */")
@@ -255,5 +266,8 @@ function(configforge_apply_options tgt)
   endif()
   if(CF_FORCE_PORTABLE)
     target_compile_definitions(${tgt} PUBLIC CF_FORCE_PORTABLE=1)
+  endif()
+  if(CF_FIXED_LIMITS)
+    target_compile_definitions(${tgt} PUBLIC CF_FIXED_LIMITS=1)
   endif()
 endfunction()

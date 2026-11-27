@@ -464,6 +464,42 @@ CF_API void cf_builder_track_reads(cf_builder* b);
    configuration, and a derived configuration keeps them. */
 CF_API cf_bool cf_builder_digest_key(cf_builder* b, const unsigned char* key, size_t n);
 
+/* How a configuration's buffers may grow (D-61, D-175).
+   CF_SIZING_MANUAL is the build's own limits (CF_KEY_MAX and its
+   siblings), as before and the default. CF_SIZING_SEMI lets a buffer
+   grow from the allocator up to `cap` bytes; CF_SIZING_DYNAMIC has no
+   limit but memory, or `cap` when it is not 0. A build with fixed limits
+   (CF_FIXED_LIMITS, the minimal profile) takes MANUAL only. */
+typedef enum cf_sizing {
+    CF_SIZING_MANUAL  = 0,
+    CF_SIZING_SEMI    = 1,
+    CF_SIZING_DYNAMIC = 2
+} cf_sizing;
+
+typedef struct cf_sizing_options {
+    size_t    size; /* sizeof(cf_sizing_options): set by cf_sizing_options_init */
+    cf_sizing mode; /* default CF_SIZING_MANUAL */
+    size_t    cap;  /* the largest one grown buffer may be, in bytes; 0 (the default)
+                       is none, and is refused for CF_SIZING_SEMI */
+} cf_sizing_options;
+
+CF_API void cf_sizing_options_init(cf_sizing_options* o);
+
+/* Sets the sizing mode of what this builder creates; the last call wins,
+   and once cf_builder_create has run the mode is fixed. NULL options are
+   the defaults, CF_SIZING_MANUAL. CF_FALSE, with the error held for
+   cf_builder_create, for a NULL builder, options too small to hold a cap,
+   an unknown mode, SEMI with a cap of 0 (CF_E_POLICY), or a mode other than
+   MANUAL in a build with fixed limits (CF_E_CAPABILITY). A derived
+   configuration keeps its original's mode. */
+CF_NODISCARD CF_API cf_bool cf_builder_sizing(cf_builder*              b,
+                                              const cf_sizing_options* o);
+
+/* Fills `o` (its `size` is read first and kept) with the mode and cap this
+   configuration was built with. CF_FALSE for a NULL argument or options
+   too small to hold a cap. */
+CF_NODISCARD CF_API cf_bool cf_config_sizing(const cf_config* c, cf_sizing_options* o);
+
 CF_NODISCARD CF_API cf_config* cf_builder_create(cf_builder* b, cf_error* err);
 
 /* ------------------------------------------------------------------ *

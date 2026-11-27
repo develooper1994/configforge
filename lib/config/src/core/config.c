@@ -1137,6 +1137,66 @@ cf_bool cf_builder_digest_key(cf_builder* b, const unsigned char* key, size_t n)
     return CF_TRUE;
 }
 
+void cf_sizing_options_init(cf_sizing_options* o) {
+    if (o != NULL) {
+        memset(o, 0, sizeof *o);
+        o->size = sizeof(cf_sizing_options);
+        o->mode = CF_SIZING_MANUAL;
+        o->cap  = 0;
+    }
+}
+
+cf_bool cf_builder_sizing(cf_builder* b, const cf_sizing_options* o) {
+    cf_error          e = CF_ERROR_INIT;
+    cf_sizing_options want;
+
+    if (b == NULL || b->failed) {
+        return CF_FALSE;
+    }
+    cf_sizing_options_init(&want);
+    if (o != NULL) {
+        if (o->size < offsetof(cf_sizing_options, cap) + sizeof(size_t)) {
+            cf_error_set(&e, CF_E_POLICY, NULL, NULL,
+                         "sizing options of an unknown size");
+            builder_fail(b, &e);
+            return CF_FALSE;
+        }
+        want.mode = o->mode;
+        want.cap  = o->cap;
+    }
+    if ((unsigned)want.mode > (unsigned)CF_SIZING_DYNAMIC) {
+        cf_error_set(&e, CF_E_POLICY, NULL, NULL, "an unknown sizing mode");
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+    if (want.mode == CF_SIZING_SEMI && want.cap == 0) {
+        cf_error_set(&e, CF_E_POLICY, NULL, NULL, "semi-dynamic sizing needs a cap");
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+#if CF_FIXED_LIMITS
+    if (want.mode != CF_SIZING_MANUAL) {
+        cf_error_set(&e, CF_E_CAPABILITY, NULL, NULL,
+                     "this build has fixed limits (profile minimal)");
+        builder_fail(b, &e);
+        return CF_FALSE;
+    }
+#endif
+    b->defs.sizing_mode = (int)want.mode;
+    b->defs.sizing_cap  = want.cap;
+    return CF_TRUE;
+}
+
+cf_bool cf_config_sizing(const cf_config* c, cf_sizing_options* o) {
+    if (c == NULL || o == NULL ||
+        o->size < offsetof(cf_sizing_options, cap) + sizeof(size_t)) {
+        return CF_FALSE;
+    }
+    o->mode = (cf_sizing)c->defs.sizing_mode;
+    o->cap  = c->defs.sizing_cap;
+    return CF_TRUE;
+}
+
 void cf_builder_log(cf_builder* b, cf_log_fn fn, void* user, cf_log_level min) {
     if (b != NULL) {
         b->log      = fn;
@@ -1742,6 +1802,9 @@ static cf_config* derive_onto(const cf_config* base, cf_arena* ar, cf_bool owns,
     if (base->defs.digest_key != NULL) {
         cf_builder_digest_key(b, base->defs.digest_key, 16);
     }
+    /* And its sizing mode (D-175). */
+    b->defs.sizing_mode = base->defs.sizing_mode;
+    b->defs.sizing_cap  = base->defs.sizing_cap;
 
     return cf_builder_create(b, err);
 }

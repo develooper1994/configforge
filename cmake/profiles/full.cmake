@@ -33,4 +33,5 @@ set(CF_MESSAGE_MAX 256 CACHE STRING "profile")
 set(CF_PATH_MAX 512 CACHE STRING "profile")
 set(CF_MAX_DEPTH 32 CACHE STRING "profile")
 set(CF_STACK_BUDGET 2048 CACHE STRING "profile")
+set(CF_FIXED_LIMITS OFF CACHE BOOL "profile")
 # cmake-format: on

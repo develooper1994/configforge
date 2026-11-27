@@ -2,5 +2,4 @@
 # Checked by gate.abi against the headers and the built library;
 # rewrite with cmake -DSRC=. -DWRITE=ON -P cmake/gates/GateAbi.cmake.
 # One line a name, "name major.minor": the release it came in, which the next minor makes promised or removes (D-89).
-cf_reason_severity 1.9
-cf_reason_weakness 1.9
+

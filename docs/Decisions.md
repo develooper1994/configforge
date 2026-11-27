@@ -5651,6 +5651,12 @@ half the entries are wrong teaches a reader not to trust the column.
 
 ---
 
+## D-175 — Sizing is a mode of the builder
+
+`MANUAL` is the build's limits, as before, and the only mode of a `minimal` build; `SEMI` grows a buffer from the allocator up to the program's cap; `DYNAMIC` has no cap but memory. The mode is stored with the definitions and kept by a derived configuration. What each mode lets grow is D-176.
+
+---
+
 ## Closing Phase 0
 
 Phase 0 ends when every entry above reads `Decided` or `Deferred` with a written

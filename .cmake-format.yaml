@@ -45,4 +45,4 @@ lint:
   private_var_pattern: '_[0-9a-zA-Z_]+'
 
   max_arguments: 12
-  max_statements: 60
+  max_statements: 70   # configforge_add_gates registers every gate
