@@ -592,7 +592,7 @@ section at its end).
 * **needs**: nothing
 * **size**: small
 * **version**: 1.9.0
-* **status**: open
+* **status**: done (a0eb1a4)
 * **decided**:
   * **The job.** `crates` in `.github/workflows/release.yml`, `needs: publish` (the GitHub release exists first), `runs-on: ubuntu-26.04`, `permissions: contents: read`, `environment: crates-io` (an environment the workflow names; it needs no setup to run, and lets the maintainer add a reviewer later). Steps: checkout at the tag; the version check of the `check` job again (`cmake -P scripts/release/version.cmake` equals the tag without `v`); `cmake "-DWORK=$RUNNER_TEMP/rust-package" -P scripts/release/package_rust.cmake` (it packages and tests the unpacked crate); then, in `$RUNNER_TEMP/rust-package`, `cargo publish --locked --no-verify` (the script has just verified the package; publishing the same staged tree) with `CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}` as the step's env, nowhere else.
   * **Idempotent.** Before publishing, `curl -fsS -A configforge-release https://crates.io/api/v1/crates/configforge/<version>`: found means already published (a re-run): the step says so and exits 0.
