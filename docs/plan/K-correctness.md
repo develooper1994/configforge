@@ -616,7 +616,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **needs**: K-9a
 * **size**: medium
 * **version**: 2.0.0
-* **status**: open
+* **status**: done (0ea8118)
 * **decided**:
   * **The set**: 67 names at 18557b9 (`cf_source.h` 35, `cf_entry.h` 14, `cf_keyspace.h` 13, `cf_iterate.h` 5); the worker uses `python scripts/check/guarantees.py --todo lib/config/include/configforge/cf_source.h` and the other three paths.
   * **The families** (confirmed as in K-9e): a `cf_source_*` constructor (`cf_source_file`, `cf_source_dir`, `cf_source_env`, ...) fills a `cf_source` the caller owns: `strong` when a failure leaves the struct as it was, `basic` when it is left zeroed or half filled but safe to `cf_source_destroy`; the worker finds which by reading each, and a source left unsafe to destroy is a defect; `cf_source_destroy` is `nothrow`; `cf_source_load` is `basic: the key space may hold some of the source's keys; the caller drops it` unless its body shows the keys are added at the end; the `cf_ks_add*` calls are `basic` (the space stays valid and holds what was added), `cf_ks_arena`, `cf_key_cmp`, `cf_key_segments`, `cf_outcome_name` and the other readers of `cf_keyspace.h` `nothrow`; in `cf_entry.h` the `cf_lex_*` and `cf_cli_*` calls that fill a sink or a key space are `basic` and `cf_env_value`, `cf_keymap_*`, `cf_keysink_*` and `cf_listsink_*` are classified by reading them (an `_init` is `nothrow`); `cf_iterate.h`'s `cf_iter_*` and `cf_array_*` `nothrow` (they only read a finished configuration).
