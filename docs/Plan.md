@@ -279,8 +279,8 @@ of a card's CI.
 | 2 | L-21 A card opens only when a script says it is ready | 1.9.0 | medium | L-20 | done (6521a97) |
 | 3 | L-22 CI in two tiers: a fast core on every push, the whole suite once a card | 1.9.0 | medium | nothing | done (02acbdd) |
 | 4 | K-11a Options with defaults as one convention: `cf_*_options_init`, the fixed limits as options, and a gate | 1.9.0 | large | nothing | done (7a2af29) |
-| 5 | K-11b The `none` platform builds and is tried: no feature assumes an operating system | 1.9.0 | large | L-18a | waits: L-18a |
-| 6 | L-18a A Cortex-M build of `minimal` in CI, with its stack gate | 1.9.0 | medium | nothing | open |
+| 5 | K-11b The `none` platform builds and is tried: no feature assumes an operating system | 1.9.0 | large | L-18a | open |
+| 6 | L-18a A Cortex-M build of `minimal` in CI, with its stack gate | 1.9.0 | medium | nothing | done (b05e2a5) |
 | 7 | K-11c The table of each feature against each platform, checked by a gate | 1.9.0 | medium | K-11b | waits: K-11b |
 | 8 | F-1a The file layer: `cf_file_options`, `cf_file_writer`, `cf_file_replace`, a file replaced whole or not at all | 1.9.0 | large | nothing | open |
 | 9 | Y-2 `cf_platform_write_file_if`: the replace refused when the file no longer holds the bytes read (F-1c in the research) | 1.9.0 | small | F-1a | waits: F-1a |
@@ -448,7 +448,7 @@ of a card's CI.
 | 171 | L-17 Byte order and word size in CI: s390x, i386 and armv7 under qemu-user | 1.9.0 | medium | nothing | open |
 | 172 | L-19a A Linux arm64 job | 1.9.0 | small | nothing | open |
 | 173 | L-19b A qemu line carries its date and commit | 1.9.0 | small | L-17 | waits: L-17 |
-| 174 | L-18b The Cortex-M `.text` of each part, in a table and a gate | 1.9.0 | medium | L-18a | waits: L-18a |
+| 174 | L-18b The Cortex-M `.text` of each part, in a table and a gate | 1.9.0 | medium | L-18a | open |
 | 175 | P-5 A profile after every weekly benchmark, kept as an artifact and compared | 1.9.0 | medium | nothing | open |
 | 176 | P-6 A cost that should not be there: bytes per instruction across sizes and formats | 1.9.0 | medium | nothing | open |
 | 177 | P-11 Print speed in the comparison: JSON, four libraries | 1.9.0 | large | nothing | open |

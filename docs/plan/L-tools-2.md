@@ -349,7 +349,7 @@ section at its end).
 * **needs**: nothing
 * **size**: medium
 * **version**: 1.9.0
-* **status**: open
+* **status**: done (b05e2a5)
 * **decided**:
   * **D-157 (copy into docs/Decisions.md, "The Cortex-M numbers come from a cross build of the library alone")**: *Matter*: the Cortex-M build is held to numbers although no device or emulator runs the tests. *Options considered*: (1) build and run under qemu-system-arm; (2) cross-build the static library only (no linking of a program), gate its sizes and frames; (3) wait for hardware. *Decision*: option 2: the numbers the Roadmap asks for (`.text`, stack) are properties of the compiled objects, and a library that is not linked needs no board support package. Its status in `docs/targets.txt` is "built only", never "tested". Rejected: option 1 (a board model and semihosting to maintain for no number the build does not already give) and 3 (L-19-m records hardware when it exists). *Compatibility*: none.
   * **The toolchain file** `cmake/toolchains/arm-none-eabi.cmake`: `CMAKE_SYSTEM_NAME Generic`, `CMAKE_SYSTEM_PROCESSOR arm`, `CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY` (no linking of a test program), compilers `arm-none-eabi-gcc`, `CMAKE_C_FLAGS_INIT "-mcpu=cortex-m4 -mthumb -mfloat-abi=soft -ffunction-sections -fdata-sections"` (soft float: a Cortex-M0 or M3 has no FPU, and the numbers are then the pessimistic ones), `CMAKE_FIND_ROOT_PATH_MODE_*` `NEVER`/`ONLY` as the WASI file has. The package: `gcc-arm-none-eabi libnewlib-arm-none-eabi` (Ubuntu 26.04).
