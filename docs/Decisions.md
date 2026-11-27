@@ -5352,7 +5352,15 @@ Held to: `test_writefile` cases (l) to (q).
 ---
 ## D-189 (Y-6 part) — Windows readers that share delete access: measured, a rename over one still fails
 
-Option R5 of `docs/research/concurrent-access.md` (open reads with `FILE_SHARE_DELETE`) was measured on 2026-11-27, Windows 11 build 10.0.26300.10075, `cl` of Visual Studio 18: `MoveFileExW(MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)` over a file held open by `CreateFileW` with read, write and delete sharing fails with `ERROR_ACCESS_DENIED` (5), exactly as over a `_wfopen` reader (the control, also 5); with no reader open it succeeds. Rejected: `cf_platform_fopen` is unchanged. The `retry_ms` wait of F-1a stays the answer. The rest of D-189 is written by the card that lands it.
+Option R5 of `docs/research/concurrent-access.md` (open reads with `FILE_SHARE_DELETE`) was measured on 2026-11-27, Windows 11 build 10.0.26300.10075, `cl` of Visual Studio 18: `MoveFileExW(MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)` over a file held open by `CreateFileW` with read, write and delete sharing fails with `ERROR_ACCESS_DENIED` (5), exactly as over a `_wfopen` reader (the control, also 5); with no reader open it succeeds. Rejected: `cf_platform_fopen` is unchanged. The `retry_ms` wait of F-1a stays the answer. The rest of D-189 is Y-5's:
+
+**Question.** A reader of a file that something else (an editor, a deployment tool) is writing in place can read half of it, and no lock can stop that, because the writer takes none. What does the reader do?
+
+**Options.** Writers that never write in place (F-1a, already the library's); a stable read; a shared lock on every read (rejected: it buys nothing, since library writers never write in place and other writers take no lock, and it would make a reader wait for a writer, which D-14 refuses on the read path); readers that share delete access (Y-6, measured and rejected above).
+
+**Decision.** The stable read. The file source takes the file's stamp (`mtime`, `size`, presence), reads, and takes it again; when it moved it reads again, up to `read_attempts` reads in all (an option, 3 by default, D-220), then fails as an unreadable file does (`'%s' changed while it was read`), which `cf_live` already survives: a reload keeps the running snapshot. The code is `cf_file_read_stable` (internal), called by the file source; `cf_blob_file` is unchanged. It costs one `stat` more per file read and adds no public name. The stamp is a hint, as `cf_changed`'s is (a rewrite of the same length inside one clock tick passes it), so this catches most in-place writers, not all. A platform that cannot stamp reads once.
+
+Held to: `test_stable`.
 
 ---
 ## D-231 — The platform is a part: `none` is built and tried; what it cannot give answers `CF_E_CAPABILITY`

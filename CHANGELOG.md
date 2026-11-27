@@ -95,6 +95,8 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Changed
 
+- the file source reads a file only when its stamp is the same after the read as before, and
+  reads again when it moved, up to 3 reads by default (Y-5, D-189).
 - Reading a file in a build without files fails with `CF_E_CAPABILITY`, not
   `CF_E_SOURCE` (a build that could not exist before).
 - Every public function whose result reports a failure is `CF_NODISCARD`: under

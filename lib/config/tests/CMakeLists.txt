@@ -20,6 +20,7 @@ set(CF_UNIT_TESTS
     test_serialize
     test_file
     test_writefile
+    test_stable
     test_report
     test_image
     test_iterate

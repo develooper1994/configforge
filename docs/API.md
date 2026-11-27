@@ -105,7 +105,7 @@ Document refusals also carry a reason and, where known, a line and column.
 - [`cf_report.h`](#cf_reporth) - 6
 - [`cf_serialize.h`](#cf_serializeh) - 32
 - [`cf_serialize_version.h`](#cf_serialize_versionh) - 2
-- [`cf_source.h`](#cf_sourceh) - 35
+- [`cf_source.h`](#cf_sourceh) - 36
 - [`cf_text.h`](#cf_texth) - 24
 - [`cf_value.h`](#cf_valueh) - 12
 - [`cf_version.h`](#cf_versionh) - 8
@@ -1306,7 +1306,7 @@ Give a .env file the same natural names and list separators.
 CF_API void cf_source_file_defs(struct cf_source* s, const cf_defset* ds);
 ```
 
-Implementation: [`cf_source_file_defs` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L570).
+Implementation: [`cf_source_file_defs` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L604).
 
 Give a file, or a directory of them, the list separators, for a format
 that carries no types (cf_flatten_lists): a declared list splits an
@@ -2276,7 +2276,7 @@ CF_NODISCARD CF_API cf_bool cf_source_read_blob(const struct cf_source* s, cf_ke
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_source_read_blob` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L58).
+Implementation: [`cf_source_read_blob` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L90).
 
 A document's bytes through a codec into the key space, at the source's
 rank, the source's definitions deciding lists for a format without
@@ -2289,7 +2289,7 @@ CF_API const cf_codec* cf_source_by_content(const cf_codec* const* own, size_t n
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_source_by_content` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L125).
+Implementation: [`cf_source_by_content` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L157).
 
 The codec the content of `blob` says (D-73; cf_codec_detect), `own`
 (n of them) a program's codecs looked at first; NULL with `err` set,
@@ -4481,22 +4481,39 @@ to turn on. Silently skipping the file would be the one thing a
 library about provenance must never do.
 
 ```c
+CF_NODISCARD CF_API cf_bool cf_file_read_stable(cf_blob* b, cf_arena* ar, const char* path, unsigned attempts, void (*between)(void* user), void* user, cf_error* err);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_file_read_stable` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L61).
+
+cf_blob_file, but the file is stamped before and after the read and read
+again when the stamp moved (mtime, size or presence), up to `attempts`
+reads in all (0 reads as 3, the default); CF_E_SOURCE "'%s' changed while
+it was read" when all of them saw it move. `between(user)`, when not NULL,
+is called after each stamp and before the read: for the test, which
+changes the file there. A file that cannot be opened fails as
+cf_blob_file's does, with no retry (an absent file is not a file being
+written).
+
+```c
 CF_API size_t cf_source_file_state_size(void);
 ```
 
-Implementation: [`cf_source_file_state_size` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L576).
+Implementation: [`cf_source_file_state_size` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L610).
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_source_file(cf_source* s, const char* name, int rank, const char* path, const char* format, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_file` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L479).
+Implementation: [`cf_source_file` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L512).
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_source_file_codec(cf_source* s, const char* name, int rank, const char* path, const struct cf_codec* codec, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_file_codec` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L502).
+Implementation: [`cf_source_file_codec` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L536).
 
 The same, with the codec handed over rather than looked up: a format
 this library does not have, written against cf_doc_sink - over
@@ -4512,7 +4529,7 @@ name would be a conflict nobody could see.
 CF_API const cf_error* cf_source_file_error(const cf_source* s);
 ```
 
-Implementation: [`cf_source_file_error` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L580).
+Implementation: [`cf_source_file_error` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L614).
 
 The reason a file source failed, or NULL when it did not. Sources
 return a plain boolean because most cannot fail in interesting ways;
@@ -4522,7 +4539,7 @@ a file can fail in a dozen, and the caller needs the detail.
 CF_API void cf_source_file_codecs(cf_source* s, const struct cf_codec* const* codecs, size_t n);
 ```
 
-Implementation: [`cf_source_file_codecs` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L548).
+Implementation: [`cf_source_file_codecs` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L582).
 
 A program's own codecs for a file or a document, looked at before the
 built-in ones, for the extension and for the content (D-73). The list
@@ -4532,7 +4549,7 @@ is borrowed and must outlive the source.
 CF_NODISCARD CF_API cf_bool cf_source_document(cf_source* s, const char* name, int rank, const char* bytes, size_t n, const char* format, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_document` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L515).
+Implementation: [`cf_source_document` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L549).
 
 A document the program holds in memory, as a source: the same reading
 as a file's, from `bytes` (n of them) instead of a path. `name` is what
@@ -4544,7 +4561,7 @@ must outlive the source; cf_builder_document copies them.
 CF_NODISCARD CF_API cf_bool cf_source_env_document(cf_source* s, const char* name, int rank, const char* variable, const char* format, unsigned flags, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_env_document` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L531).
+Implementation: [`cf_source_env_document` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L565).
 
 A whole document in one environment variable, as a source (D-73),
 opt-in per variable: its value is read as a document, `format` named,
@@ -4559,7 +4576,7 @@ variable that is not set is an error, or nothing with CF_OPTIONAL.
 CF_API const char* cf_source_file_format(const cf_source* s, cf_detect_how* how);
 ```
 
-Implementation: [`cf_source_file_format` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L558).
+Implementation: [`cf_source_file_format` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L592).
 
 The format a file or document source read with at its last load, by
 the codec's name, and how it was chosen (CF_DETECT_NAMED, _EXTENSION or
@@ -4571,7 +4588,7 @@ chosen format still names it.
 CF_API const char* cf_source_file_encoding(const cf_source* s);
 ```
 
-Implementation: [`cf_source_file_encoding` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L586).
+Implementation: [`cf_source_file_encoding` (lib/config/src/bridge/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/file.c#L620).
 
 The encoding the last load of a file, document or environment-document
 source read, by its canonical name: "utf-8", "utf-16le" or "utf-16be"

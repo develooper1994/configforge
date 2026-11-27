@@ -29,6 +29,7 @@ cf_f64_from_bits real
 cf_f64_from_f16_bits real
 cf_f64_from_f32_bits real
 cf_f64_to_text real
+cf_file_read_stable
 cf_flatten_budget
 cf_flatten_decode
 cf_flatten_init

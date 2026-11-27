@@ -48,10 +48,42 @@ typedef struct file_state {
     unsigned               flags;
     cf_error               err;
     cf_bool                failed;
-    const cf_codec*        used;     /* what the last load read with */
-    cf_detect_how          how;      /* and how it was chosen */
-    const char*            encoding; /* the encoding it read, or NULL */
+    unsigned               read_attempts; /* reads in all of a stable read (Y-5) */
+    const cf_codec*        used;          /* what the last load read with */
+    cf_detect_how          how;           /* and how it was chosen */
+    const char*            encoding;      /* the encoding it read, or NULL */
 } file_state;
+
+/* A file read and trusted only when it did not move while it was read: the
+   stamp is taken before and after, and a read is made again when the two
+   differ. A hint, as every stamp is (a rewrite of the same length inside one
+   clock tick passes it); it catches most writers that write in place. */
+cf_bool cf_file_read_stable(cf_blob* b, cf_arena* ar, const char* path,
+                            unsigned attempts, void (*between)(void* user), void* user,
+                            cf_error* err) {
+    unsigned tries = (attempts == 0) ? 3U : attempts;
+    unsigned i;
+
+    for (i = 0; i < tries; i++) {
+        cf_stamp before = {0, 0, CF_FALSE}; /* MSVC C4701: set only when stamped */
+        cf_stamp after;
+        cf_bool  have = (path != NULL) && cf_platform_stamp(path, &before);
+
+        if (between != NULL) {
+            between(user);
+        }
+        if (!cf_blob_file(b, ar, path, err)) {
+            return CF_FALSE;
+        }
+        if (!have || !cf_platform_stamp(path, &after) ||
+            (before.mtime == after.mtime && before.size == after.size &&
+             before.present == after.present)) {
+            return CF_TRUE;
+        }
+    }
+    return cf_error_set(err, CF_E_SOURCE, NULL, path, "'%s' changed while it was read",
+                        path);
+}
 
 /* A document's bytes through its codec into the key space, at the
    source's rank. Shared with the drop-in directory (dir.c). */
@@ -418,7 +450,8 @@ static cf_bool file_load(const cf_source* s, cf_keyspace* ks) {
         cf_blob_mem(&blob, value, n, st->path);
     } else if (st->document) {
         cf_blob_mem(&blob, st->bytes, st->nbytes, st->path);
-    } else if (!cf_blob_file(&blob, bytes, st->path, &st->err)) {
+    } else if (!cf_file_read_stable(&blob, bytes, st->path, st->read_attempts, NULL,
+                                    NULL, &st->err)) {
         cf_blob_arena_done(bytes, ar);
         if ((st->flags & CF_OPTIONAL) != 0) {
             /* A missing optional file is not an error, and it is also
@@ -486,10 +519,11 @@ cf_bool cf_source_file(cf_source* s, const char* name, int rank, const char* pat
         return CF_FALSE;
     }
     memset(st, 0, sizeof *st);
-    st->path     = path;
-    st->format   = format;
-    st->flags    = flags;
-    st->err.size = sizeof(cf_error);
+    st->read_attempts = 3;
+    st->path          = path;
+    st->format        = format;
+    st->flags         = flags;
+    st->err.size      = sizeof(cf_error);
 
     s->vt   = &cf_file_vt;
     s->name = (name != NULL) ? name : path;

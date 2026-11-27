@@ -257,31 +257,32 @@
 - cf_emit 230-344
 - cf_emit 348-360
 `lib/config/src/bridge/file.c`
-- struct file_state 38-54
-- cf_source_read_blob 58-80
-- file_named 87-119
-- cf_source_by_content 125-150
-- file_declares 158-163
-- file_hex 166-174
-- file_refuse_at 178-209
-- file_mark 214-231
-- cfi_source_recode 233-290
-- cfi_source_text 292-340
-- file_hint 345-370
-- file_load 372-451
-- file_destroy 453-455
-- file_path 457-460
-- file_state_of 471-477
-- cf_source_file 479-500
-- cf_source_file_codec 502-513
-- cf_source_document 515-529
-- cf_source_env_document 531-544
-- cf_source_file_codecs 548-556
-- cf_source_file_format 558-565
-- cf_source_file_defs 570-574
-- cf_source_file_state_size 576-578
-- cf_source_file_error 580-584
-- cf_source_file_encoding 586-590
+- struct file_state 38-55
+- cf_file_read_stable 61-86
+- cf_source_read_blob 90-112
+- file_named 119-151
+- cf_source_by_content 157-182
+- file_declares 190-195
+- file_hex 198-206
+- file_refuse_at 210-241
+- file_mark 246-263
+- cfi_source_recode 265-322
+- cfi_source_text 324-372
+- file_hint 377-402
+- file_load 404-484
+- file_destroy 486-488
+- file_path 490-493
+- file_state_of 504-510
+- cf_source_file 512-534
+- cf_source_file_codec 536-547
+- cf_source_document 549-563
+- cf_source_env_document 565-578
+- cf_source_file_codecs 582-590
+- cf_source_file_format 592-599
+- cf_source_file_defs 604-608
+- cf_source_file_state_size 610-612
+- cf_source_file_error 614-618
+- cf_source_file_encoding 620-624
 `lib/config/src/bridge/flatten.c`
 - fl_room 35-38
 - fl_push 40-73

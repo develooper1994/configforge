@@ -279,6 +279,21 @@ cf_bool cfi_source_text(unsigned flags, const cf_codec* const* own, size_t nown,
                         unsigned* used, cf_bool* by_content, cf_arena* arena,
                         cf_error* err);
 
+#if CF_INTERNAL_API
+/* cf_blob_file, but the file is stamped before and after the read and read
+   again when the stamp moved (mtime, size or presence), up to `attempts`
+   reads in all (0 reads as 3, the default); CF_E_SOURCE "'%s' changed while
+   it was read" when all of them saw it move. `between(user)`, when not NULL,
+   is called after each stamp and before the read: for the test, which
+   changes the file there. A file that cannot be opened fails as
+   cf_blob_file's does, with no retry (an absent file is not a file being
+   written). */
+CF_NODISCARD CF_API cf_bool cf_file_read_stable(cf_blob* b, cf_arena* ar,
+                                                const char* path, unsigned attempts,
+                                                void (*between)(void* user), void* user,
+                                                cf_error* err);
+#endif
+
 CF_API size_t cf_source_file_state_size(void);
 
 CF_NODISCARD CF_API cf_bool cf_source_file(cf_source* s, const char* name, int rank,
