@@ -640,7 +640,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **needs**: K-9a, K-9d, K-9e, K-9f
 * **size**: medium
 * **version**: 2.0.0
-* **status**: open
+* **status**: done (c898df5)
 * **decided**:
   * **The set**: what `python scripts/check/guarantees.py --todo lib/config` lists once K-9e and K-9f have landed; 62 at 18557b9 (`cf_live.h` 18, `cf_image.h` 10, `cf_define.h` 10, `cf_version.h` 8, `cf_edit.h` 8, `cf_report.h` 6, `cf_log.h` 1, `cf_emit.h` 1).
   * **The families** (confirmed as in K-9e): `cf_live_reload`, `cf_live_commit`, `cf_live_rollback` and `cf_live_open_with` are `strong` (a failed reload keeps serving the snapshot it had); `cf_live_get`, `_generation`, `_pending`, `_restarts`, `_status_get` and `_last_error` are `nothrow`; `cf_image_write` and `cf_edit_commit` are `strong` (nothing is written until the whole document is made; K-9b proves it), `cf_edit_set_*` and `cf_edit_unset` are `basic` (the edit holds the failure; `cf_edit_abort` drops it), `cf_edit_begin` `strong`; `cf_image_open` is `strong` (the image struct is unchanged) and `cf_image_load` `basic` (the key space may hold some keys), `cf_image_count`, `_at` and `_get` `nothrow`; every `cf_version.h` call (`cf_version`, `cf_build_id`, `cf_feature_at`, ...) `nothrow`; in `cf_define.h` `cf_def_init_sized`, `cf_fingerprint_seed`, `cf_fingerprint_step` and `cf_policy_text` are `nothrow`, `cf_defs_apply` and the `cf_source_*_defs` calls are `strong` where a failure leaves the source's definitions as they were and `basic` otherwise (the worker reads which); `cf_report_*` as `cf_report` in K-9e.
