@@ -2033,13 +2033,18 @@ int gen_contract_json(const cf_defset* ds, const char* schema, const char* name,
     cf_sink_puts(out, ",\n");
     cj_member(out, 1, "open");
     {
-        const char* open[CF_MAX_OPEN_PREFIXES + 1];
+        const char** open = (const char**)malloc((ds->open_count + 1) * sizeof *open);
 
+        if (open == NULL) {
+            fprintf(stderr, "gen: no memory for the open prefixes\n");
+            return 2;
+        }
         for (i = 0; i < ds->open_count; ++i) {
             open[i] = ds->open_prefixes[i];
         }
         open[ds->open_count] = NULL;
         cj_text_list(out, open);
+        free((void*)open);
     }
     cf_sink_puts(out, ",\n");
     cj_member(out, 1, "definitions");

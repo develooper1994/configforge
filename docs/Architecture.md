@@ -265,6 +265,41 @@ every switch over the enum exhaustive, so nothing can be added and
 silently forgotten. Put the last entry through `CF_*_LAST_X` so the enum
 expansion has no trailing comma, which is C99.
 
+### Options with defaults
+
+A call that grows settings, or reaches a limit, takes an options struct,
+and every such struct has one shape (D-230, from D-220: a limit is an
+option with a default value, never a fixed number). `gate.options`
+(`scripts/check/options.py`) refuses a public one that lacks it.
+
+1. `typedef struct cf_<x>_options { size_t size; ... } cf_<x>_options;`:
+   `size` first, D-51's way to grow a struct in 1.x. A member added later
+   is read only where `size` reaches it.
+2. `CF_API void cf_<x>_options_init(cf_<x>_options* o);` sets `size` to
+   `sizeof` and every member to its default. A NULL `o` does nothing.
+3. A call that takes `const cf_<x>_options* o` treats NULL as what
+   `cf_<x>_options_init` writes, except where it cannot run without a
+   member (`cf_live_open_with` needs `build`): NULL is refused there, and
+   the header comment says so.
+4. A member's `0` means "unlimited" or "off" only where its comment says
+   so; the default is written in the comment.
+5. A struct that has a macro initializer keeps it
+   (`CF_LIVE_OPTIONS_INIT`): an existing caller is never broken.
+
+The structs are `cf_live_options` (`cf_live_options_init`) and
+`cf_limit_options` (`cf_limit_options_init`, `cf_builder_limits`), whose
+`max_open_prefixes` defaults to `CF_MAX_OPEN_PREFIXES`, 8.
+
+A fixed limit a public call reaches is an option with its old value as
+default; `scripts/check/options.txt` says where each `CF_MAX_*` macro
+went. `CF_MAX_SOURCES` is no limit now: it is the window of `cf_explain`'s
+summary counters, which are filled one window of sources at a time, so
+any number of sources is named. `CF_MAX_DEPTH` and the other build limits
+stay build options (D-37): each sizes a stack buffer in every reader and
+writer, and the user chooses its value when building; the reader options
+that modules 3 and 6 add will carry a `max_depth` (default the build's,
+0 meaning the build's).
+
 ### Adding a Doctor rule
 
 Rules live in `tools/doctor/doctor.c`. A rule earns its place by finding

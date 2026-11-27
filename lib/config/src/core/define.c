@@ -52,11 +52,12 @@ cf_bool cf_defset_init(cf_defset* ds, cf_arena* arena, size_t hint) {
        built a defset on the stack, and the next field added would do
        the same. */
     memset(ds, 0, sizeof *ds);
-    ds->arena    = arena;
-    ds->count    = 0;
-    ds->capacity = hint;
-    ds->sealed   = CF_FALSE;
-    ds->defs     = (cf_def*)cf_arena_alloc(arena, hint * sizeof(cf_def));
+    ds->arena      = arena;
+    ds->count      = 0;
+    ds->capacity   = hint;
+    ds->sealed     = CF_FALSE;
+    ds->open_limit = CF_MAX_OPEN_PREFIXES;
+    ds->defs       = (cf_def*)cf_arena_alloc(arena, hint * sizeof(cf_def));
     return (ds->defs != NULL) ? CF_TRUE : CF_FALSE;
 }
 
@@ -609,21 +610,50 @@ cf_bool cf_def_real(cf_defset* ds, const char* key, double dflt, double min, dou
  * Sealing and lookup
  * ------------------------------------------------------------------ */
 
+/* Room for one more open prefix: the list is grown in the arena, 8 entries
+   and then doubled. */
+static cf_bool defset_open_room(cf_defset* ds) {
+    cf_bool ok = CF_TRUE;
+
+    if (ds->open_count == ds->open_capacity) {
+        size_t       ncap = (ds->open_capacity == 0u) ? 8u : (ds->open_capacity * 2u);
+        const char** np =
+            (const char**)cf_arena_alloc(ds->arena, ncap * sizeof(const char*));
+
+        if (np == NULL) {
+            ok = CF_FALSE;
+        } else {
+            size_t i;
+
+            for (i = 0u; i < ds->open_count; ++i) {
+                np[i] = ds->open_prefixes[i];
+            }
+            ds->open_prefixes = np;
+            ds->open_capacity = ncap;
+        }
+    }
+    return ok;
+}
+
 cf_bool cf_defset_open(cf_defset* ds, const char* prefix, cf_error* err) {
     if (ds == NULL || prefix == NULL || prefix[0] == '\0') {
         return cf_error_set(err, CF_E_DEFINITION, NULL, NULL,
                             "an open prefix must name something");
     }
-    if (ds->open_count >= CF_MAX_OPEN_PREFIXES) {
+    if ((ds->open_limit != 0u) && (ds->open_count >= ds->open_limit)) {
         return cf_error_set(err, CF_E_DEFINITION, prefix, NULL,
-                            "more than %d open prefixes", CF_MAX_OPEN_PREFIXES);
+                            "more than %zu open prefixes", ds->open_limit);
     }
     {
         cf_bool     ok   = CF_TRUE;
         const char* kept = defset_dup(ds->arena, prefix, &ok);
-        if (!ok) {
-            return cf_error_set(err, CF_E_MEMORY, prefix, NULL,
-                                "no room to copy the prefix");
+        const char* why  = ok ? NULL : "no room to copy the prefix";
+
+        if ((why == NULL) && (!defset_open_room(ds))) {
+            why = "no room to keep the prefix";
+        }
+        if (why != NULL) {
+            return cf_error_set(err, CF_E_MEMORY, prefix, NULL, "%s", why);
         }
         ds->open_prefixes[ds->open_count++] = kept;
     }

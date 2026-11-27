@@ -165,8 +165,13 @@ typedef struct cf_live_options {
 #define CF_LIVE_OPTIONS_INIT {sizeof(cf_live_options), CF_LIVE_MANUAL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, CF_LOG_INFO, NULL, NULL, 0, 0}
 /* clang-format on */
 
+/* The same, as a call a binding can make: `size`, and every member at
+   its default - what the macro sets. A NULL `o` does nothing. */
+CF_API void cf_live_options_init(cf_live_options* o);
+
 /* Builds and checks the first snapshot, and fails as that does. A size
-   below 1.0's is refused. */
+   below 1.0's is refused; NULL options are refused too, since `build` is
+   required (docs/Architecture.md, "Options with defaults"). */
 CF_NODISCARD CF_API cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err);
 
 /* The shorthand: one `user` for both functions. `check` may be NULL; `a`

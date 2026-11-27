@@ -304,8 +304,10 @@ endfunction()
 function(cf_limits_section3 out)
   set(bounds_CF_SOURCE_MAX
       "a source's name in an error; part of the ABI (D-45)")
-  set(bounds_CF_MAX_SOURCES "the sources one `explain()` lists")
-  set(bounds_CF_MAX_OPEN_PREFIXES "open key prefixes a definition set holds")
+  set(bounds_CF_MAX_SOURCES
+      "the window of `explain`'s summary counters, not a limit (D-230)")
+  set(bounds_CF_MAX_OPEN_PREFIXES
+      "the default of `cf_limit_options.max_open_prefixes` (D-230)")
   set(bounds_CF_EXPAND_MAX
       "the bytes one value's `\${...}` may expand to (D-77)")
   set(bounds_CF_EXPAND_TOTAL_MAX "the expansion of a whole configuration")

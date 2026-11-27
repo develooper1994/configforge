@@ -125,6 +125,7 @@ gets reopened every six months.
 | D-110 | Generators outside the tree | generators | **Decided** |
 | D-111 | The comparison with other libraries: one set of flags, the same work, and a history kept on its own branch | benchmark, CI | **Decided** |
 | D-112 | The MISRA record is plain text of file and count, three kinds, and the gate fails open nowhere | compliance, CI | **Decided** |
+| D-230 | Options with defaults are one convention: `size` first, `_init`, NULL the defaults; a fixed limit a public call reaches is an option with its old value as default | public options structs, `gate.options` | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -5141,6 +5142,43 @@ The matrix of every rule, the compliance report and the public headers' zero
 are later cards.
 
 **Status.** Built: N-19.
+
+## D-230 — Options with defaults are one convention: `size` first, `_init`, NULL the defaults; a fixed limit a public call reaches is an option with its old value as default
+
+**Question.** D-220 says a limit is an option with a default value, never a
+fixed number. One options struct was public (`cf_live_options`), with a
+macro initializer and no function a binding can call, and the planned ones
+(`cf_file_options`, `cf_number_options`, `cf_serve_options`) would each have
+invented the shape again; two limits a public call reaches
+(`CF_MAX_OPEN_PREFIXES`, `CF_MAX_SOURCES`) were fixed numbers.
+
+**Decision.**
+
+* **One shape**, written in `docs/Architecture.md`, "Options with defaults":
+  `size` first (D-51); `cf_<x>_options_init(&o)` writes `size` and the
+  defaults, a NULL `o` does nothing; a NULL `const cf_<x>_options*` is the
+  defaults, except where the call cannot run without a member
+  (`cf_live_open_with` needs `build`); a member's `0` means "unlimited" or
+  "off" only where its comment says so; a struct that has a macro
+  initializer keeps it. `gate.options` (`scripts/check/options.py`) refuses a
+  public options struct that lacks it, and a `CF_MAX_*` macro with no line in
+  `scripts/check/options.txt`.
+* **`CF_MAX_OPEN_PREFIXES`** is the default of
+  `cf_limit_options.max_open_prefixes` (`cf_builder_limits`; 0 is unlimited).
+  The macro stays: a program may use it.
+* **`CF_MAX_SOURCES`** is not an option: it sized two counters of one
+  renderer, which are now filled a window of sources at a time, so the
+  summary names every source; the macro is the window.
+* **`CF_MAX_DEPTH` and the other build limits** stay build options (D-37);
+  the reader options of modules 3 and 6 add `max_depth` when they add the
+  struct.
+
+Rejected: renaming `CF_MAX_OPEN_PREFIXES`; making NULL the defaults for
+`cf_live_open_with`; a per-call `max_sources`, which would make an
+explanation depend on a number nobody should choose; one options struct for
+every limit of every call.
+
+**Status.** Built: K-11a.
 
 ## D-60 — Arrays in INI are the ones INI files already have
 

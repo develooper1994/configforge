@@ -885,6 +885,38 @@ cf_bool cf_builder_open(cf_builder* b, const char* prefix) {
     return CF_TRUE;
 }
 
+cf_bool cf_builder_limits(cf_builder* b, const cf_limit_options* o) {
+    cf_limit_options        defaults;
+    const cf_limit_options* use;
+    cf_error                e  = CF_ERROR_INIT;
+    cf_bool                 ok = CF_FALSE;
+
+    cf_limit_options_init(&defaults);
+    use = (o != NULL) ? o : &defaults;
+    if ((b != NULL) && (use->size >= (offsetof(cf_limit_options, max_open_prefixes) +
+                                      sizeof(size_t)))) {
+        const size_t limit = use->max_open_prefixes;
+
+        if ((limit != 0u) && (b->defs.open_count > limit)) {
+            (void)cf_error_set(&e, CF_E_DEFINITION, NULL, NULL,
+                               "more than %zu open prefixes", limit);
+            builder_fail(b, &e);
+        } else {
+            b->defs.open_limit = limit;
+            ok                 = CF_TRUE;
+        }
+    }
+    return ok;
+}
+
+void cf_limit_options_init(cf_limit_options* o) {
+    if (o != NULL) {
+        (void)memset(o, 0, sizeof *o);
+        o->size              = sizeof(cf_limit_options);
+        o->max_open_prefixes = (size_t)CF_MAX_OPEN_PREFIXES;
+    }
+}
+
 cf_bool cf_builder_schema(cf_builder* b, const char* text, size_t n, const char* name) {
     cf_error e = CF_ERROR_INIT;
 
@@ -1694,6 +1726,7 @@ static cf_config* derive_onto(const cf_config* base, cf_arena* ar, cf_bool owns,
             return NULL;
         }
     }
+    b->defs.open_limit = base->defs.open_limit;
     for (i = 0; i < base->defs.open_count; ++i) {
         cf_builder_open(b, base->defs.open_prefixes[i]);
     }
@@ -1863,6 +1896,7 @@ static cf_bool write_authorized(const cf_config* c, const cf_source* s,
         d.on_invalid = CF_INVALID_FALLBACK;
         ok           = cf_define(ds, &d, err);
     }
+    ds->open_limit = c->defs.open_limit;
     for (i = 0; ok && i < c->defs.open_count; ++i) {
         ok = cf_defset_open(ds, c->defs.open_prefixes[i], err);
     }

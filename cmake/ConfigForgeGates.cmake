@@ -87,19 +87,21 @@ function(configforge_add_gates tgt)
                    ${CMAKE_SOURCE_DIR}/cmake/gates/GateText.cmake)
   # Every download is listed with how it is held, and every workflow's
   # top-level token is read-only (scripts/check/fetches.py, permissions.py).
-  add_test(NAME gate.fetches
-           COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
-                   ${CMAKE_SOURCE_DIR}/cmake/gates/GateFetches.cmake)
-  add_test(NAME gate.permissions
-           COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
-                   ${CMAKE_SOURCE_DIR}/cmake/gates/GatePermissions.cmake)
-  add_test(NAME gate.index
-           COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
-                   ${CMAKE_SOURCE_DIR}/cmake/gates/GateIndex.cmake)
-
-  add_test(NAME gate.dependencies
-           COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
-                   ${CMAKE_SOURCE_DIR}/cmake/gates/GateDependencies.cmake)
+  # Every public options struct has size first and an _init function, and
+  # every CF_MAX_* macro says where its limit went (scripts/check/options.py).
+  # The rest read only the tree: each is cmake/gates/Gate<Name>.cmake.
+  foreach(
+    gate
+    Fetches
+    Options
+    Permissions
+    Index
+    Dependencies)
+    string(TOLOWER "${gate}" lower)
+    add_test(NAME gate.${lower}
+             COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
+                     ${CMAKE_SOURCE_DIR}/cmake/gates/Gate${gate}.cmake)
+  endforeach()
   # The API reference is the headers' comments, regenerated and compared.
   add_test(
     NAME gate.apiref

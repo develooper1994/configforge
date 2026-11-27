@@ -45,6 +45,7 @@ cf_builder_file
 cf_builder_file_codec
 cf_builder_int
 cf_builder_key
+cf_builder_limits
 cf_builder_log
 cf_builder_memory
 cf_builder_open
@@ -163,6 +164,7 @@ cf_ks_arena
 cf_lex_cli
 cf_lex_dotenv
 cf_lex_env
+cf_limit_options_init
 cf_listsink_finish
 cf_listsink_init
 cf_listsink_of
@@ -175,6 +177,7 @@ cf_live_get
 cf_live_last_error
 cf_live_open
 cf_live_open_with
+cf_live_options_init
 cf_live_pending
 cf_live_poll
 cf_live_reject

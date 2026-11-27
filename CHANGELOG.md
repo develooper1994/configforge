@@ -7,6 +7,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- Options with defaults are one convention (K-11a, D-230): `cf_live_options_init`
+  (what `CF_LIVE_OPTIONS_INIT` sets, as a call a binding can make);
+  `cf_limit_options` and `cf_builder_limits`, so that the most open prefixes a
+  builder holds (`CF_MAX_OPEN_PREFIXES`, 8, still the default) is an option,
+  0 meaning no limit; and `gate.options`, which refuses a public options struct
+  without `size` first and an `_init` function, and a `CF_MAX_*` macro with no
+  line in `scripts/check/options.txt`.
 - Frama-C EVA over `lib/port`, the integer half of `lib/numeric` and
   `lib/base` (five harnesses in `tests/eva`; `verify -DEXTRA=eva`; the `eva`
   CI job, weekly and on pushes to what it covers, not a required check).
@@ -70,6 +77,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- `cf_explain`'s summary names every source, not the first 32 (K-11a): the
+  notes "supplied nothing" and "won none" are made a window of sources at a
+  time.
 - The built-in YAML reader refuses a NUL or other control character inside a
   comment, as YAML 1.2 asks (`control-character`); found by `fuzz_yamldiff`.
 

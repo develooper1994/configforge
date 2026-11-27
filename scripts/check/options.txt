@@ -1,0 +1,8 @@
+# Every `#define CF_MAX_<NAME> <number>` in lib/*/include, and where its
+# limit went (D-220: a limit is an option with a default value). One line a
+# macro: CF_MAX_<NAME>|<its option, or why it is none>.
+# scripts/check/options.py (gate.options) fails on a macro with no line
+# here and on a line with no macro.
+CF_MAX_OPEN_PREFIXES|cf_limit_options.max_open_prefixes (default 8, 0 unlimited)
+CF_MAX_SOURCES|the window of cf_explain's summary counters, not a limit
+CF_MAX_DEPTH|build option (D-37); the reader options of modules 3 and 6 add max_depth

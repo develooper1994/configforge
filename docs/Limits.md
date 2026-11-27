@@ -47,8 +47,8 @@ These are not build options: each is a constant in the file named, read from it.
 | Name | Value | Read from | What it bounds | Held by |
 | ---- | ----: | --------- | -------------- | ------- |
 | `CF_SOURCE_MAX` | 64 | `lib/base/include/configforge/cf_error.h` | a source's name in an error; part of the ABI (D-45) | - |
-| `CF_MAX_SOURCES` | 32 | `lib/config/include/configforge/cf_explain.h` | the sources one `explain()` lists | - |
-| `CF_MAX_OPEN_PREFIXES` | 8 | `lib/config/include/configforge/cf_define.h` | open key prefixes a definition set holds | - |
+| `CF_MAX_SOURCES` | 32 | `lib/config/include/configforge/cf_explain.h` | the window of `explain`'s summary counters, not a limit (D-230) | - |
+| `CF_MAX_OPEN_PREFIXES` | 8 | `lib/config/include/configforge/cf_define.h` | the default of `cf_limit_options.max_open_prefixes` (D-230) | - |
 | `CF_EXPAND_MAX` | 1048576 (1 MiB) | `lib/config/include/configforge/cf_define.h` | the bytes one value's `${...}` may expand to (D-77) | - |
 | `CF_EXPAND_TOTAL_MAX` | 16777216 (16 MiB) | `lib/config/include/configforge/cf_define.h` | the expansion of a whole configuration | - |
 | `CF_DIR_MAX_FILES` | 256 | `lib/config/src/bridge/dir.c` | files in a drop-in directory | `unit.test_dirlimits` |

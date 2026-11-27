@@ -290,6 +290,25 @@ CF_API cf_bool cf_builder_schema_file(cf_builder* b, const char* path);
    program cannot know in advance: a plugin's settings are not in the
    contract because the plugin is not either. */
 CF_API cf_bool cf_builder_open(cf_builder* b, const char* prefix);
+
+/* The limits a builder keeps, as options (D-220). `size` first, and
+   cf_limit_options_init writes it with the defaults; a NULL `o` is the
+   defaults too. Each member's default is the old fixed number. */
+typedef struct cf_limit_options {
+    size_t size;
+    size_t max_open_prefixes; /* most cf_builder_open prefixes; default
+                                 CF_MAX_OPEN_PREFIXES (8); 0 is unlimited */
+} cf_limit_options;
+
+CF_API void cf_limit_options_init(cf_limit_options* o);
+
+/* Sets the limits of `b`, before or between its calls to cf_builder_open.
+   CF_FALSE for a NULL `b`, or an `o` whose `size` does not reach
+   `max_open_prefixes`; and, with the failure held for cf_builder_create as
+   the builder's others are (CF_E_DEFINITION, "more than N open
+   prefixes"), when `b` already holds more prefixes than the new limit. A
+   derived configuration (cf_derive) and a write keep the limit. */
+CF_API cf_bool cf_builder_limits(cf_builder* b, const cf_limit_options* o);
 CF_API cf_bool cf_builder_bool(cf_builder* b, const char* key, cf_bool dflt,
                                unsigned flags);
 CF_API cf_bool cf_builder_int(cf_builder* b, const char* key, cf_i64 dflt, cf_i64 min,

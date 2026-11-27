@@ -203,7 +203,9 @@ by ordinary precedence across sources - and `explain()` places it
 CFD009 names it too. `examples/c/migration.c`, and its C++ twin.
 
 A prefix you cannot know in advance - a plugin's settings - is exempted
-from unknown-key rejection with `cf_builder_open(b, "plugins")`.
+from unknown-key rejection with `cf_builder_open(b, "plugins")`. A builder
+holds eight such prefixes unless `cf_builder_limits` (a `cf_limit_options`
+with `max_open_prefixes`, 0 for no limit) says otherwise.
 
 A contract that already exists as a JSON Schema - the one an editor
 reads, or a service validates the same file against - is read as

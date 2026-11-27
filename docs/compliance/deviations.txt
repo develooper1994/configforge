@@ -99,7 +99,7 @@ ignore | 8.7 | the rules about a whole program: unused macros, types and tags, a
 10.4 | lib/config/src/bridge/registry.c | 16 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 10.4 | lib/config/src/bridge/schema.c | 17 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 10.4 | lib/config/src/core/config.c | 47 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-10.4 | lib/config/src/core/define.c | 69 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+10.4 | lib/config/src/core/define.c | 68 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 10.4 | lib/config/src/core/edit.c | 5 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 10.4 | lib/config/src/core/iterate.c | 4 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 10.4 | lib/config/src/core/keyspace.c | 57 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation

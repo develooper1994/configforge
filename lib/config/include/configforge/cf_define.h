@@ -150,6 +150,9 @@ CF_API void cf_def_init_sized(cf_def* d, size_t size, cf_type type, const char* 
 struct cf_source;
 struct cf_list_projection;
 
+/* The default of cf_limit_options.max_open_prefixes (configforge.h): the
+   open prefixes a builder holds unless cf_builder_limits says otherwise
+   (D-220). A program may use it; it is never removed. */
 #define CF_MAX_OPEN_PREFIXES 8
 
 /* The most bytes a value's references may expand to (D-10). A reference
@@ -190,8 +193,10 @@ typedef struct cf_defset {
        the plugin is not in the program either. Without this, Tier 1 and
        a dynamic key space are mutually exclusive - which the first
        example that tried to iterate plugins discovered immediately. */
-    const char*                open_prefixes[CF_MAX_OPEN_PREFIXES];
-    size_t                     open_count;
+    const char** open_prefixes; /* grown in the arena, first 8 then doubled */
+    size_t       open_count;
+    size_t       open_capacity;
+    size_t       open_limit; /* 0: unlimited; cf_defset_init: CF_MAX_OPEN_PREFIXES */
     struct cf_list_projection* lists;
     cf_bool partial; /* write authorization checks only the supplied keys */
 

@@ -18,9 +18,9 @@
 extern "C" {
 #endif
 
-/* More sources than this in one configuration would mean a precedence
-   chain nobody could reason about, which is the problem this library
-   exists to prevent rather than to scale. */
+/* The window of the summary's counters, not a limit: the notes about the
+   sources (supplied nothing, won none) are made CF_MAX_SOURCES sources at
+   a time, so any number of sources is named (D-220). */
 #define CF_MAX_SOURCES 32
 
 /* Render the chain for one key. The caller supplies the buffer, in

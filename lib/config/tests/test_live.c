@@ -443,6 +443,35 @@ static void test_options(void) {
     check(cf_live_open_with(NULL, &err) == NULL, "and no options");
 }
 
+/* K-11a: the init function sets what the macro sets, member by member. */
+static void test_options_init(void) {
+    cf_live_options m = CF_LIVE_OPTIONS_INIT;
+    cf_live_options o;
+
+    memset(&o, 0xAB, sizeof o);
+    cf_live_options_init(&o);
+    check(o.size == m.size && o.size == sizeof(cf_live_options), "options_init: size");
+    check(o.mode == m.mode && o.mode == CF_LIVE_MANUAL, "options_init: mode");
+    check(o.build == m.build && o.build_user == m.build_user && o.build == NULL &&
+              o.build_user == NULL,
+          "options_init: build");
+    check(o.check == m.check && o.check_user == m.check_user && o.check == NULL &&
+              o.check_user == NULL,
+          "options_init: check");
+    check(o.allocator == m.allocator && o.allocator == NULL, "options_init: allocator");
+    check(o.log == m.log && o.log_user == m.log_user && o.log == NULL &&
+              o.log_user == NULL,
+          "options_init: log");
+    check(o.log_min == m.log_min && o.log_min == CF_LOG_INFO, "options_init: log_min");
+    check(o.health == m.health && o.health_user == m.health_user && o.health == NULL &&
+              o.health_user == NULL,
+          "options_init: health");
+    check(o.probation == m.probation && o.probation == 0 && o.settle == m.settle &&
+              o.settle == 0,
+          "options_init: probation and settle");
+    cf_live_options_init(NULL); /* does nothing */
+}
+
 static cf_builder* live_literal_build(void* user) {
     const cf_pair* const* pairs = (const cf_pair* const*)user;
     cf_builder*           b     = cf_build(NULL);
@@ -739,6 +768,7 @@ int main(void) {
     test_probation();
     test_probation_file();
     test_options();
+    test_options_init();
     test_auto_and_manual();
     test_literal_pin();
     test_approve();

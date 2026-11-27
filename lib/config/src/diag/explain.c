@@ -215,41 +215,54 @@ size_t cf_ks_inspect_redacted(const cf_keyspace* ks, const cf_source_view* sv,
     if (sv != NULL && sv->count > 0) {
         unsigned short supplied[CF_MAX_SOURCES];
         unsigned short wins[CF_MAX_SOURCES];
-        size_t         nsrc = (sv->count < CF_MAX_SOURCES) ? sv->count : CF_MAX_SOURCES;
+        size_t         first;
         size_t         j;
 
-        memset(supplied, 0, nsrc * sizeof supplied[0]);
-        memset(wins, 0, nsrc * sizeof wins[0]);
+        /* The counters are a window of CF_MAX_SOURCES sources, not a
+           limit: each window runs the same scan for its own sources and
+           appends its notes, so every source is named, in order. */
+        for (first = 0; first < sv->count; first += CF_MAX_SOURCES) {
+            size_t nsrc = sv->count - first;
 
-        for (i = 0; i < cf_ks_count(ks); ++i) {
-            const cf_entry*     e = cf_ks_at(ks, i);
-            const cf_candidate* c;
-            for (c = e->chain; c != NULL; c = c->next) {
-                for (j = 0; j < nsrc; ++j) {
-                    if (sv->items[j] != NULL && sv->items[j]->rank == c->source) {
-                        if (supplied[j] < 0xFFFF) {
-                            ++supplied[j];
+            if (nsrc > CF_MAX_SOURCES) {
+                nsrc = CF_MAX_SOURCES;
+            }
+            memset(supplied, 0, sizeof supplied);
+            memset(wins, 0, sizeof wins);
+
+            for (i = 0; i < cf_ks_count(ks); ++i) {
+                const cf_entry*     e = cf_ks_at(ks, i);
+                const cf_candidate* c;
+                for (c = e->chain; c != NULL; c = c->next) {
+                    for (j = 0; j < nsrc; ++j) {
+                        if (sv->items[first + j] != NULL &&
+                            sv->items[first + j]->rank == c->source) {
+                            if (supplied[j] < 0xFFFF) {
+                                ++supplied[j];
+                            }
+                            if (c->outcome == CF_OUT_SELECTED && wins[j] < 0xFFFF) {
+                                ++wins[j];
+                            }
+                            break;
                         }
-                        if (c->outcome == CF_OUT_SELECTED && wins[j] < 0xFFFF) {
-                            ++wins[j];
-                        }
-                        break;
                     }
                 }
             }
-        }
-        for (j = 0; j < nsrc; ++j) {
-            if (sv->items[j] == NULL) {
-                continue;
-            }
-            if (supplied[j] == 0) {
-                at = cf_fmt_append(buf, cap, at, "note: source '%s' supplied nothing\n",
-                                   sv->items[j]->name);
-            } else if (wins[j] == 0) {
-                at = cf_fmt_append(buf, cap, at,
-                                   "note: source '%s' supplied %u values and "
-                                   "won none; every one is shadowed\n",
-                                   sv->items[j]->name, (unsigned)supplied[j]);
+            for (j = 0; j < nsrc; ++j) {
+                if (sv->items[first + j] == NULL) {
+                    continue;
+                }
+                if (supplied[j] == 0) {
+                    at = cf_fmt_append(buf, cap, at,
+                                       "note: source '%s' supplied nothing\n",
+                                       sv->items[first + j]->name);
+                } else if (wins[j] == 0) {
+                    at = cf_fmt_append(buf, cap, at,
+                                       "note: source '%s' supplied %u values and "
+                                       "won none; every one is shadowed\n",
+                                       sv->items[first + j]->name,
+                                       (unsigned)supplied[j]);
+                }
             }
         }
     }

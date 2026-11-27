@@ -724,6 +724,15 @@ cf_live* cf_live_open_with(const cf_live_options* o, cf_error* err) {
     return l;
 }
 
+void cf_live_options_init(cf_live_options* o) {
+    if (o != NULL) {
+        (void)memset(o, 0, sizeof *o);
+        o->size    = sizeof(cf_live_options);
+        o->mode    = CF_LIVE_MANUAL;
+        o->log_min = CF_LOG_INFO;
+    }
+}
+
 void cf_live_close(cf_live* l) {
     if (l == NULL) {
         return;
