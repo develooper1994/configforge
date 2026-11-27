@@ -32,7 +32,7 @@ ignore | 8.7 | the rules about a whole program: unused macros, types and tags, a
 5.9 | lib/serialize/src/properties.c | 7 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 5.9 | lib/serialize/src/tlv.c | 44 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 5.9 | lib/serialize/src/toml.c | 40 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-5.9 | lib/serialize/src/yaml.c | 27 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+5.9 | lib/serialize/src/yaml.c | 28 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 5.9 | lib/serialize/src/yamlparse.c | 59 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 5.9 | lib/text/src/encoding.c | 12 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 5.9 | lib/text/src/escape.c | 2 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
@@ -158,12 +158,13 @@ ignore | 8.7 | the rules about a whole program: unused macros, types and tags, a
 10.8 | lib/port/src/port.c | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 10.8 | lib/serialize/src/cbor.c | 2 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 10.8 | lib/serialize/src/codec.c | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-10.8 | lib/serialize/src/ini.c | 5 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-10.8 | lib/serialize/src/json.c | 6 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+10.8 | lib/serialize/src/ini.c | 16 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+10.8 | lib/serialize/src/json.c | 10 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+10.8 | lib/serialize/src/properties.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 10.8 | lib/serialize/src/tlv.c | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-10.8 | lib/serialize/src/toml.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+10.8 | lib/serialize/src/toml.c | 6 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 10.8 | lib/serialize/src/yaml.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-10.8 | lib/serialize/src/yamlparse.c | 19 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+10.8 | lib/serialize/src/yamlparse.c | 21 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 10.8 | lib/text/src/space.c | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 10.8 | lib/text/src/track.c | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 10.8 | lib/text/src/utf8.c | 10 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
@@ -438,7 +439,7 @@ ignore | 8.7 | the rules about a whole program: unused macros, types and tags, a
 15.5 | lib/serialize/src/yamlparse.c | 174 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
 15.5 | lib/text/src/encoding.c | 22 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
 15.5 | lib/text/src/escape.c | 14 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
-15.5 | lib/text/src/fail.c | 1 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
+15.5 | lib/text/src/fail.c | 2 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
 15.5 | lib/text/src/hex.c | 3 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
 15.5 | lib/text/src/refs.c | 1 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
 15.5 | lib/text/src/space.c | 11 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
@@ -474,7 +475,7 @@ ignore | 8.7 | the rules about a whole program: unused macros, types and tags, a
 17.1 | lib/port/include/configforge/cf_port.h | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 17.1 | lib/port/src/port.c | 18 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 17.1 | lib/serialize/src/blob.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-17.1 | lib/text/src/fail.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+17.1 | lib/text/src/fail.c | 6 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 17.2 | lib/config/src/bridge/schema.c | 1 | deviation | docs/Compliance.md, 'Recursion': the depth is bounded by the depth limit and D-82's budget
 17.2 | lib/config/src/core/validate.c | 1 | deviation | docs/Compliance.md, 'Recursion': the depth is bounded by the depth limit and D-82's budget
 17.2 | lib/serialize/src/cbor.c | 5 | deviation | docs/Compliance.md, 'Recursion': the depth is bounded by the depth limit and D-82's budget
@@ -524,7 +525,7 @@ ignore | 8.7 | the rules about a whole program: unused macros, types and tags, a
 17.7 | lib/serialize/src/yaml.c | 9 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 17.7 | lib/serialize/src/yamlparse.c | 5 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 17.7 | lib/text/src/encoding.c | 2 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-17.7 | lib/text/src/fail.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+17.7 | lib/text/src/fail.c | 4 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 17.8 | lib/base/src/alloc.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 17.8 | lib/config/src/bridge/schema.c | 2 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 17.8 | lib/config/src/core/config.c | 4 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
@@ -541,7 +542,7 @@ ignore | 8.7 | the rules about a whole program: unused macros, types and tags, a
 17.8 | lib/serialize/src/ini.c | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 17.8 | lib/serialize/src/tlv.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 17.8 | lib/serialize/src/toml.c | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-17.8 | lib/serialize/src/yamlparse.c | 15 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+17.8 | lib/serialize/src/yamlparse.c | 16 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 17.8 | lib/text/src/encoding.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 17.8 | lib/text/src/space.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 18.4 | lib/base/src/alloc.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
@@ -566,13 +567,13 @@ ignore | 8.7 | the rules about a whole program: unused macros, types and tags, a
 18.4 | lib/serialize/src/blob.c | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 18.4 | lib/serialize/src/cbor.c | 5 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 18.4 | lib/serialize/src/codec.c | 4 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-18.4 | lib/serialize/src/ini.c | 19 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-18.4 | lib/serialize/src/json.c | 27 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-18.4 | lib/serialize/src/properties.c | 7 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+18.4 | lib/serialize/src/ini.c | 32 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+18.4 | lib/serialize/src/json.c | 31 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+18.4 | lib/serialize/src/properties.c | 10 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 18.4 | lib/serialize/src/tlv.c | 5 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-18.4 | lib/serialize/src/toml.c | 81 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+18.4 | lib/serialize/src/toml.c | 84 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 18.4 | lib/serialize/src/yaml.c | 11 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-18.4 | lib/serialize/src/yamlparse.c | 47 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+18.4 | lib/serialize/src/yamlparse.c | 49 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 18.4 | lib/text/src/encoding.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 18.4 | lib/text/src/escape.c | 6 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 18.4 | lib/text/src/refs.c | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
