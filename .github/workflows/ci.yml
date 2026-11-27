@@ -3,7 +3,9 @@ name: ci
 # numbers to (D-111): its commits must not run the suite.
 on:
   push:
-    branches-ignore: [bench-history]
+    # Cards and the batch run CI by hand, one full run a batch (docs/Plan.md,
+    # "The loop", steps 9-11).
+    branches-ignore: [bench-history, 'work/**', batch]
     paths:
       - '**'
       - '!docs/**'
@@ -75,7 +77,7 @@ jobs:
           esac
           subject=$(git log -1 --format=%s)
           if [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF" = refs/heads/main ] &&
-             [[ $subject =~ ^[A-Z]+-[0-9]+[a-z]?:\  || $subject =~ ^Plan:\ .*\ done\ \( ]]; then
+             [[ $subject =~ ^[A-Z]+-[0-9]+[a-z]?:\  || $subject =~ ^Plan:\ .*\ done\ \( || $subject =~ ^Batch:\  ]]; then
             skip=true
           fi
           if [ "$full" = false ] && [ "$skip" = false ]; then

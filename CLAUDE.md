@@ -100,8 +100,9 @@ You carry out one card of docs/Plan.md, alone.
    marked TO DECIDE without an answer: stop.
 3. Steps in order. "See it fail" is a real step: run the test before the fix.
 4. Commit messages in the project's style (git log -20 --oneline).
-   Branches as the loop says: work/<card id>, CI green, then the card
-   squashed onto main as one commit (step 10) and the branch deleted.
+   Branches as the loop says: work/<card id>, ACCEPT green locally, then
+   the card squashed onto the batch branch (step 10); CI runs once a batch
+   (step 11), not per card.
    Push only when the brief says so.
 5. Three failures on the same thing: stop, restore, write what failed under
    the card's "notes", report.
@@ -110,7 +111,7 @@ You carry out one card of docs/Plan.md, alone.
    `cmake -P scripts/generate/apiref.cmake` last. Both documents cite
    line numbers. Run every `gate.*` test on Linux before the push
    (`scripts/work/codex-card.sh` does it for Codex's cards).
-   Watch CI with `gh run watch --interval 60`.
+   A push to work/* starts no CI; start none yourself.
    Commit and push after each step, so that a stop loses nothing.
 7. Report: files changed, ACCEPT results with exit codes, anything the card
    got wrong, anything left. Under 300 words.

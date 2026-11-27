@@ -37,26 +37,32 @@ nothing else:
       "Notes", commit that, report.
  8. Commit on the branch, as often as the work needs: the card's files,
       CHANGELOG.md and docs/Roadmap.md.
- 9. git push -u origin work/<card id>; wait for CI (ACCEPT-CI).
-      red -> read the failing job's log, fix, commit, push, go to 9.
-      main moved meanwhile -> git merge origin/main on the branch, go to 9.
-10. Only when the card is done - every step, ACCEPT, and ACCEPT-CI green
-      on the branch's last commit - squash it onto main as one commit:
-        git switch main; git merge --squash work/<card id>
+ 9. git push -u origin work/<card id> (a push to work/* starts no CI; the
+      maintainer, 2026-11-27: "anlamli degisiklik olsun sonra CI ile
+      ugras"). ACCEPT's local runs are the card's check.
+10. Only when the card is done - every step and ACCEPT green - squash it
+      onto the batch branch `batch` (cut from main when none exists) as
+      one commit:
+        git switch batch; git merge --squash work/<card id>
         git commit    # subject "<card id>: <its goal>", body: the
                       # branch's commit subjects, in order
-        test "$(git rev-parse HEAD^{tree})" = "$(git rev-parse work/<card id>^{tree})"
-        git push origin main
-      Delete the branch here and on the remote. The next commit to main
-      marks the card done: `python scripts/work/index.py --done <card id>
-      <that commit>` sets its status field to "done (<that commit>)" and
-      writes this index again (`work.py land` and `land.sh` run it).
-      Now and then, `python scripts/work/index.py --archive` moves done
-      cards to docs/plan/Done.md.
-      Go to 1.
+        python scripts/work/index.py --done <card id> <that commit>
+        git commit -am "Plan: <card id> done (<that commit>)"
+        git push origin batch           # no CI either
+      Delete the branch here and on the remote. Now and then, `python
+      scripts/work/index.py --archive` moves done cards to
+      docs/plan/Done.md.
+11. The batch goes to main once it holds about a dozen cards, when a
+      module ends, before a release, or before the maintainer's stop
+      time: `gh workflow run ci --ref batch -f tier=full` (ACCEPT-CI),
+      one run for the whole batch. Red -> fix on `batch` with a commit
+      "Batch: <what>", run again. Green -> `git push origin batch:main`
+      (a fast-forward; main moved meanwhile -> merge origin/main into
+      batch and run again), then delete `batch`. Go to 1.
+```
 ```
 
-A card is one commit on main, the same tree CI passed. Work that is not
+A card is one commit on main; a batch of cards reaches main only as the tree CI passed. Work that is not
 done is never squashed: a branch that stops or is handed back keeps its
 commits. The cards on main before this rule (T-3 and earlier) keep
 their commits: main's history is never rewritten.
