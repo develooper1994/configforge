@@ -93,6 +93,36 @@ CF_API int cf_platform_write_file_with(const char* path, const void* data, size_
                                        void (*on_retry)(void* user), void* user,
                                        cf_error* err);
 
+/* ------------------------------------------------------------------ *
+ * The replace refused when the file changed (D-186)
+ * ------------------------------------------------------------------ */
+
+/* 1 when `path` holds exactly `size` bytes of `data`. -1 when the file no
+   longer holds `expect` (`expect_size` bytes; NULL and 0: the file must not
+   exist), with `err` set (CF_E_SOURCE, "'%s' changed while it was written")
+   and the file as the other writer left it. 0 with `err` set for any other
+   failure, as cf_file_replace. */
+CF_API int cf_platform_write_file_if(const char* path, const void* data, size_t size,
+                                     const void* expect, size_t expect_size,
+                                     const cf_file_options* o, cf_error* err);
+
+/* The same, calling `between(user)` once, after the temporary is complete
+   and before the comparison: for the test, which changes the file there. No
+   global state (D-101). NULL: no call. */
+CF_API int cf_platform_write_file_if_hook(const char* path, const void* data,
+                                          size_t size, const void* expect,
+                                          size_t expect_size, const cf_file_options* o,
+                                          void (*between)(void* user), void* user,
+                                          cf_error* err);
+
+/* The core of both, failing at step `fail_at` as cf_platform_write_file_with
+   does (the test's loop over the steps). */
+CF_API int cf_platform_write_file_if_with(const char* path, const void* data,
+                                          size_t size, const void* expect,
+                                          size_t expect_size, const cf_file_options* o,
+                                          unsigned fail_at, void (*between)(void* user),
+                                          void* user, cf_error* err);
+
 /* How many steps can fail: POSIX 6, Windows 5, none 0. */
 CF_API unsigned cf_platform_write_steps(void);
 

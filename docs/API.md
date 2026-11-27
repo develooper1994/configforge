@@ -100,7 +100,7 @@ Document refusals also carry a reason and, where known, a line and column.
 - [`cf_log.h`](#cf_logh) - 1
 - [`cf_numeric.h`](#cf_numerich) - 9
 - [`cf_platform.h`](#cf_platformh) - 24
-- [`cf_platform_file.h`](#cf_platform_fileh) - 7
+- [`cf_platform_file.h`](#cf_platform_fileh) - 10
 - [`cf_port.h`](#cf_porth) - 12
 - [`cf_report.h`](#cf_reporth) - 6
 - [`cf_serialize.h`](#cf_serializeh) - 32
@@ -2142,7 +2142,7 @@ written. A failure of any call is CF_E_SOURCE, `cannot write '%s':
 CF_NODISCARD CF_API cf_file_writer* cf_file_writer_open(const char* path, const cf_file_options* o, cf_error* err);
 ```
 
-Implementation: [`cf_file_writer_open` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L140).
+Implementation: [`cf_file_writer_open` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L195).
 
 clang-format off
 
@@ -2150,7 +2150,7 @@ clang-format off
 CF_NODISCARD CF_API cf_bool cf_file_writer_write(cf_file_writer* w, const void* data, size_t size, cf_error* err);
 ```
 
-Implementation: [`cf_file_writer_write` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L148).
+Implementation: [`cf_file_writer_write` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L203).
 
 clang-format on
 
@@ -2158,7 +2158,7 @@ clang-format on
 CF_NODISCARD CF_API cf_bool cf_file_writer_flush(cf_file_writer* w, cf_error* err);
 ```
 
-Implementation: [`cf_file_writer_flush` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L157).
+Implementation: [`cf_file_writer_flush` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L212).
 
 To the system, not forced to the device.
 
@@ -2166,7 +2166,7 @@ To the system, not forced to the device.
 CF_NODISCARD CF_API cf_bool cf_file_writer_sync(cf_file_writer* w, cf_error* err);
 ```
 
-Implementation: [`cf_file_writer_sync` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L163).
+Implementation: [`cf_file_writer_sync` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L218).
 
 Flush, then forced to the device.
 
@@ -2174,7 +2174,7 @@ Flush, then forced to the device.
 CF_NODISCARD CF_API cf_bool cf_file_writer_close(cf_file_writer* w, cf_error* err);
 ```
 
-Implementation: [`cf_file_writer_close` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L169).
+Implementation: [`cf_file_writer_close` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L224).
 
 The last flush, the sync the policy asks for, the close. Always frees
 `w`, whether it returns true or not; NULL is fine.
@@ -3682,7 +3682,7 @@ CF_API int cf_platform_write_file_with(const char* path, const void* data, size_
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_write_file_with` (lib/platform/src/none/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/file.c#L47), [`cf_platform_write_file_with` (lib/platform/src/posix/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/file.c#L285), [`cf_platform_write_file_with` (lib/platform/src/win32/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/file.c#L300).
+Implementation: [`cf_platform_write_file_with` (lib/platform/src/none/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/file.c#L47), [`cf_platform_write_file_with` (lib/platform/src/posix/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/file.c#L316), [`cf_platform_write_file_with` (lib/platform/src/win32/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/file.c#L336).
 
 ------------------------------------------------------------------ *
 The core of cf_file_replace (cf_file.h; D-224, D-127)
@@ -3694,13 +3694,52 @@ test, which closes the holder there). No global state (D-101).
 cf_file_replace is this with fail_at 0 and no hook.
 ------------------------------------------------------------------
 
+### The replace refused when the file changed (D-186)
+
+```c
+CF_API int cf_platform_write_file_if(const char* path, const void* data, size_t size, const void* expect, size_t expect_size, const cf_file_options* o, cf_error* err);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_platform_write_file_if` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L183).
+
+1 when `path` holds exactly `size` bytes of `data`. -1 when the file no
+longer holds `expect` (`expect_size` bytes; NULL and 0: the file must not
+exist), with `err` set (CF_E_SOURCE, "'%s' changed while it was written")
+and the file as the other writer left it. 0 with `err` set for any other
+failure, as cf_file_replace.
+
+```c
+CF_API int cf_platform_write_file_if_hook(const char* path, const void* data, size_t size, const void* expect, size_t expect_size, const cf_file_options* o, void (*between)(void* user), void* user, cf_error* err);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_platform_write_file_if_hook` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L174).
+
+The same, calling `between(user)` once, after the temporary is complete
+and before the comparison: for the test, which changes the file there. No
+global state (D-101). NULL: no call.
+
+```c
+CF_API int cf_platform_write_file_if_with(const char* path, const void* data, size_t size, const void* expect, size_t expect_size, const cf_file_options* o, unsigned fail_at, void (*between)(void* user), void* user, cf_error* err);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_platform_write_file_if_with` (lib/platform/src/none/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/file.c#L63), [`cf_platform_write_file_if_with` (lib/platform/src/posix/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/file.c#L327), [`cf_platform_write_file_if_with` (lib/platform/src/win32/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/file.c#L343).
+
+The core of both, failing at step `fail_at` as cf_platform_write_file_with
+does (the test's loop over the steps).
+
 ```c
 CF_API unsigned cf_platform_write_steps(void);
 ```
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_write_steps` (lib/platform/src/none/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/file.c#L63), [`cf_platform_write_steps` (lib/platform/src/posix/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/file.c#L68), [`cf_platform_write_steps` (lib/platform/src/win32/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/file.c#L74).
+Implementation: [`cf_platform_write_steps` (lib/platform/src/none/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/file.c#L75), [`cf_platform_write_steps` (lib/platform/src/posix/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/file.c#L68), [`cf_platform_write_steps` (lib/platform/src/win32/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/file.c#L74).
 
 How many steps can fail: POSIX 6, Windows 5, none 0.
 
@@ -3710,7 +3749,7 @@ CF_API unsigned long cf_platform_now_ms(void);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_now_ms` (lib/platform/src/none/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/file.c#L67), [`cf_platform_now_ms` (lib/platform/src/posix/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/file.c#L48), [`cf_platform_now_ms` (lib/platform/src/win32/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/file.c#L59).
+Implementation: [`cf_platform_now_ms` (lib/platform/src/none/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/file.c#L79), [`cf_platform_now_ms` (lib/platform/src/posix/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/file.c#L48), [`cf_platform_now_ms` (lib/platform/src/win32/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/file.c#L59).
 
 A monotonic millisecond counter from an arbitrary start, for
 CF_SYNC_EVERY's sync_ms: clock_gettime(CLOCK_MONOTONIC) where that is
@@ -3724,7 +3763,7 @@ CF_NODISCARD CF_API cf_bool cf_platform_writer_close_counted(cf_file_writer* w, 
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_writer_syncs` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L175), [`cf_platform_writer_close_counted` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L180).
+Implementation: [`cf_platform_writer_syncs` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L230), [`cf_platform_writer_close_counted` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L235).
 
 For the test: how many syncs this writer has issued, and the close that
 says so (cf_file_writer_close, which also reports it in *syncs when that

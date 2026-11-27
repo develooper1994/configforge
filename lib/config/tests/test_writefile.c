@@ -395,6 +395,77 @@ static void test_writer(void) {
     check(cf_file_writer_close(NULL, &err), "writer: close(NULL) is fine");
 }
 
+/* (l) to (q): the replace refused when the file changed (D-186) */
+static char g_wi[] = "cf_wi.txt";
+static void mine(void* user) {
+    (void)spill((const char*)user, "mine");
+}
+
+static void test_if(void) {
+    cf_error err = CF_ERROR_INIT;
+    unsigned step, steps = cf_platform_write_steps();
+
+    /* (l) the file still holds what was read */
+    (void)spill("cf_wi.txt", "old");
+    check(cf_platform_write_file_if("cf_wi.txt", "new", 3, "old", 3, NULL, &err) == 1,
+          "if: the expected bytes, the write is done");
+    check(holds("cf_wi.txt", "new"), "if: and it reads the new content");
+
+    /* (m) it holds something else: refused, and left as it is */
+    (void)spill("cf_wi.txt", "other");
+    check(cf_platform_write_file_if("cf_wi.txt", "new", 3, "old", 3, NULL, &err) == -1,
+          "if: other bytes return -1");
+    check(err.code == CF_E_SOURCE, "if: the refusal is CF_E_SOURCE");
+    has(err.message, "changed while it was written", "if: the refusal is named");
+    check(holds("cf_wi.txt", "other"), "if: the other writer's file is left");
+    check(!exists(".cf_wi.txt.cf-tmp-0"), "if: no temporary is left");
+    (void)spill("cf_wi.txt", "oldx");
+    check(cf_platform_write_file_if("cf_wi.txt", "new", 3, "old", 3, NULL, &err) == -1,
+          "if: a longer file is a change");
+    (void)spill("cf_wi.txt", "ol");
+    check(cf_platform_write_file_if("cf_wi.txt", "new", 3, "old", 3, NULL, &err) == -1,
+          "if: a shorter file is a change");
+
+    /* (n) expect NULL: the file must be absent */
+    (void)spill("cf_wi.txt", "old");
+    check(cf_platform_write_file_if("cf_wi.txt", "new", 3, NULL, 0, NULL, &err) == -1,
+          "if: NULL expect and a file there returns -1");
+    check(holds("cf_wi.txt", "old"), "if: NULL expect: the file is left");
+    (void)remove("cf_wi.txt");
+    check(cf_platform_write_file_if("cf_wi.txt", "new", 3, NULL, 0, NULL, &err) == 1,
+          "if: NULL expect and no file: the write is done");
+    check(holds("cf_wi.txt", "new"), "if: NULL expect: the new content");
+
+    /* (o) an empty expect is a file that must exist and be empty */
+    (void)spill("cf_wi.txt", "");
+    check(cf_platform_write_file_if("cf_wi.txt", "new", 3, "", 0, NULL, &err) == 1,
+          "if: empty expect, an empty file: the write is done");
+    (void)remove("cf_wi.txt");
+    check(cf_platform_write_file_if("cf_wi.txt", "new", 3, "", 0, NULL, &err) == -1,
+          "if: empty expect, no file returns -1");
+    check(!exists("cf_wi.txt"), "if: empty expect, no file: still none");
+
+    /* (p) the race: another writer between the temporary and the rename */
+    (void)spill("cf_wi.txt", "old");
+    check(cf_platform_write_file_if_hook("cf_wi.txt", "new", 3, "old", 3, NULL, mine,
+                                         g_wi, &err) == -1,
+          "if: a write in the window returns -1");
+    check(holds("cf_wi.txt", "mine"), "if: the other writer's bytes stand");
+    check(!exists(".cf_wi.txt.cf-tmp-0"), "if: the race leaves no temporary");
+
+    /* (q) a failed step leaves the old file and no temporary */
+    for (step = 1; step <= steps; ++step) {
+        (void)spill("cf_wi.txt", "old");
+        check(cf_platform_write_file_if_with("cf_wi.txt", "new", 3, "old", 3, NULL,
+                                             step, NULL, NULL, &err) == 0,
+              "if: a failed step returns 0");
+        check(err.code == CF_E_SOURCE, "if: a failed step is CF_E_SOURCE");
+        check(holds("cf_wi.txt", "old"), "if: a failed step: the old file is intact");
+        check(!exists(".cf_wi.txt.cf-tmp-0"), "if: a failed step: no temporary");
+    }
+    (void)remove("cf_wi.txt");
+}
+
 int main(void) {
     cf_error err = CF_ERROR_INIT;
 
@@ -407,10 +478,12 @@ int main(void) {
     /* what an earlier run that failed may have left */
     (void)remove(".cf_wf.txt.cf-tmp-0");
     (void)remove(".cf_wf_new.txt.cf-tmp-0");
+    (void)remove(".cf_wi.txt.cf-tmp-0");
     test_replace();
     test_steps();
     test_retry();
     test_options();
     test_writer();
+    test_if();
     return cf_test_done();
 }

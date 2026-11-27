@@ -80,6 +80,9 @@ cf_platform_wake_handle
 cf_platform_wake_open
 cf_platform_wake_wait
 cf_platform_world_readable
+cf_platform_write_file_if
+cf_platform_write_file_if_hook
+cf_platform_write_file_if_with
 cf_platform_write_file_with
 cf_platform_write_steps
 cf_platform_writer_close_counted

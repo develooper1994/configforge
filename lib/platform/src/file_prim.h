@@ -39,6 +39,22 @@ cf_bool cfi_file_temp_name(const char* path, unsigned k, char* out, size_t cap);
 /* strerror(errno), into `buf`, for the failure of a C library call. */
 const char* cfi_file_why_stdio(char* buf, size_t cap);
 
+/* What a replace checks just before it puts the temporary in place
+   (cf_platform_write_file_if, D-186): `expect` is what the file must still
+   hold (NULL: the file must not exist), `between(user)` is called once before
+   the check when not NULL. */
+typedef struct cfi_file_guard {
+    const void* expect;
+    size_t      expect_size;
+    void (*between)(void* user);
+    void* user;
+} cfi_file_guard;
+
+/* True when `path` can be read and holds exactly `size` bytes of `expect`
+   (a NULL `expect` with `size` 0 is an empty file). False for anything
+   else, a file that cannot be read included. */
+cf_bool cfi_file_holds(const char* path, const void* expect, size_t size);
+
 /* ---- posix/file.c, win32/file.c, none/file.c ---- */
 
 /* The stream's file forced to the device: true, or false with the reason

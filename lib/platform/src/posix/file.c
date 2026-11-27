@@ -71,12 +71,14 @@ unsigned cf_platform_write_steps(void) {
 
 /* What file_core has made so far, for its one exit that undoes it. */
 typedef struct replace_state {
-    FILE* fp;   /* the temporary's stream while it is open */
-    int   made; /* the temporary exists */
-    int   raw;  /* `why` is the whole message, not the reason of a "cannot write" */
-    char  tmp[CF_PATH_MAX];
-    char  why[256]; /* a reason, or a message that names the path (cut to fit: the error
-                       carries the path whole) */
+    FILE* fp;      /* the temporary's stream while it is open */
+    int   made;    /* the temporary exists */
+    int   raw;     /* `why` is the whole message, not the reason of a "cannot write" */
+    int   changed; /* the guard found the file no longer as it was read */
+    const cfi_file_guard* guard; /* NULL: no check */
+    char                  tmp[CF_PATH_MAX];
+    char why[256]; /* a reason, or a message that names the path (cut to fit: the error
+                      carries the path whole) */
 } replace_state;
 
 /* A step that was told to fail. */
@@ -89,6 +91,19 @@ static int file_injected(replace_state* x, unsigned step) {
 static int file_failed(replace_state* x) {
     (void)cfi_file_why(x->why, sizeof x->why);
     return 0;
+}
+
+/* The guard's answer: the file is absent (no `expect`) or holds `expect`. */
+static int file_unchanged(const cfi_file_guard* g, const char* path) {
+    struct stat st;
+
+    if (g->between != NULL) {
+        g->between(g->user);
+    }
+    if (g->expect == NULL) {
+        return (lstat(path, &st) != 0 && errno == ENOENT) ? 1 : 0;
+    }
+    return cfi_file_holds(path, g->expect, g->expect_size) ? 1 : 0;
 }
 
 /* The temporary made, written, synced, given the original's mode and put in
@@ -175,6 +190,13 @@ static int file_steps(replace_state* x, const char* path, const void* data, size
         return file_failed(x);
     }
 
+    /* Not a step: the file is still what the caller read (D-186), checked now
+       that the temporary is complete and the rename is next. */
+    if (x->guard != NULL && !file_unchanged(x->guard, path)) {
+        x->changed = 1;
+        return 0;
+    }
+
     /* 6: one rename, and the file is the new one or the old one */
     if (fail_at == 6u) {
         return file_injected(x, 6u);
@@ -213,9 +235,11 @@ static void file_sync_directory(const char* path, char* dir, size_t cap) {
     }
 }
 
-/* The static core of cf_platform_write_file_with. */
+/* The static core of cf_platform_write_file_with and ..._if_with: 1, 0, or -1
+   when the guard found the file changed. */
 static int file_core(const char* path, const void* data, size_t size,
-                     const cf_file_options* o, unsigned fail_at, cf_error* err) {
+                     const cf_file_options* o, unsigned fail_at,
+                     const cfi_file_guard* guard, cf_error* err) {
     cf_file_options r;
     replace_state   x;
     struct stat     st;
@@ -255,11 +279,13 @@ static int file_core(const char* path, const void* data, size_t size,
         return 0;
     }
 
-    x.fp     = NULL;
-    x.made   = 0;
-    x.raw    = 0;
-    x.tmp[0] = '\0';
-    x.why[0] = '\0';
+    x.fp      = NULL;
+    x.made    = 0;
+    x.raw     = 0;
+    x.changed = 0;
+    x.guard   = guard;
+    x.tmp[0]  = '\0';
+    x.why[0]  = '\0';
     if (file_steps(&x, path, data, size, use_sync, &st, exists, fail_at)) {
         if (use_sync) {
             file_sync_directory(path, x.tmp, sizeof x.tmp);
@@ -273,6 +299,11 @@ static int file_core(const char* path, const void* data, size_t size,
     }
     if (x.made) {
         (void)unlink(x.tmp);
+    }
+    if (x.changed) {
+        (void)cf_error_set(err, CF_E_SOURCE, NULL, path,
+                           "'%s' changed while it was written", path);
+        return -1;
     }
     if (x.raw) {
         (void)cf_error_set(err, CF_E_SOURCE, NULL, path, "%s", x.why);
@@ -290,7 +321,21 @@ int cf_platform_write_file_with(const char* path, const void* data, size_t size,
        succeeds here. */
     (void)on_retry;
     (void)user;
-    return file_core(path, data, size, o, fail_at, err);
+    return file_core(path, data, size, o, fail_at, NULL, err);
+}
+
+int cf_platform_write_file_if_with(const char* path, const void* data, size_t size,
+                                   const void* expect, size_t expect_size,
+                                   const cf_file_options* o, unsigned fail_at,
+                                   void (*between)(void* user), void* user,
+                                   cf_error* err) {
+    cfi_file_guard g;
+
+    g.expect      = expect;
+    g.expect_size = expect_size;
+    g.between     = between;
+    g.user        = user;
+    return file_core(path, data, size, o, fail_at, &g, err);
 }
 
 #endif /* CF_PLATFORM_POSIX */

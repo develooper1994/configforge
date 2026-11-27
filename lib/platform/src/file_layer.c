@@ -132,6 +132,61 @@ cf_bool cf_file_replace(const char* path, const void* data, size_t size,
                : CF_FALSE;
 }
 
+cf_bool cfi_file_holds(const char* path, const void* expect, size_t size) {
+#ifdef CF_NO_STDIO
+    (void)path;
+    (void)expect;
+    (void)size;
+    return CF_FALSE;
+#else
+    char   buf[256];
+    FILE*  f;
+    size_t done = 0u;
+    int    same = 1;
+
+    f = (FILE*)cf_platform_fopen(path, "rb");
+    if (f == NULL) {
+        return CF_FALSE;
+    }
+    while (same && done < size) {
+        size_t want = size - done;
+        size_t got;
+
+        if (want > sizeof buf) {
+            want = sizeof buf;
+        }
+        got = fread(buf, 1u, want, f);
+        if (got != want || memcmp(buf, (const char*)expect + done, got) != 0) {
+            same = 0;
+        }
+        done += got;
+    }
+    /* one byte more than `size` and the file is longer; a read error is no
+       answer either */
+    if (same && (fread(buf, 1u, 1u, f) != 0u || ferror(f) != 0)) {
+        same = 0;
+    }
+    (void)fclose(f);
+    return same ? CF_TRUE : CF_FALSE;
+#endif
+}
+
+int cf_platform_write_file_if_hook(const char* path, const void* data, size_t size,
+                                   const void* expect, size_t expect_size,
+                                   const cf_file_options* o,
+                                   void (*between)(void* user), void* user,
+                                   cf_error* err) {
+    return cf_platform_write_file_if_with(path, data, size, expect, expect_size, o, 0u,
+                                          between, user, err);
+}
+
+int cf_platform_write_file_if(const char* path, const void* data, size_t size,
+                              const void* expect, size_t expect_size,
+                              const cf_file_options* o, cf_error* err) {
+    return cf_platform_write_file_if_with(path, data, size, expect, expect_size, o, 0u,
+                                          NULL, NULL, err);
+}
+
 #ifdef CF_NO_STDIO
 
 /* No stdio: no writer. The calls exist so that a program built for this

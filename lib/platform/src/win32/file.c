@@ -77,11 +77,13 @@ unsigned cf_platform_write_steps(void) {
 
 /* What file_core has made so far, for its one exit that undoes it. */
 typedef struct replace_state {
-    FILE*   fp;   /* the temporary's stream while it is open */
-    int     made; /* the temporary exists */
-    int     raw;  /* `why` is the whole message, not the reason of a "cannot write" */
-    char    tmp[CF_PATH_MAX];
-    wchar_t wtmp[CF_PATH_MAX];
+    FILE* fp;      /* the temporary's stream while it is open */
+    int   made;    /* the temporary exists */
+    int   raw;     /* `why` is the whole message, not the reason of a "cannot write" */
+    int   changed; /* the guard found the file no longer as it was read */
+    const cfi_file_guard* guard; /* NULL: no check */
+    char                  tmp[CF_PATH_MAX];
+    wchar_t               wtmp[CF_PATH_MAX];
     char why[256]; /* a reason, or a message that names the path (cut to fit: the error
                       carries the path whole) */
 } replace_state;
@@ -102,6 +104,24 @@ static int file_failed(replace_state* x, DWORD code) {
 static int file_failed_stdio(replace_state* x) {
     (void)cfi_file_why_stdio(x->why, sizeof x->why);
     return 0;
+}
+
+/* The guard's answer: the file is absent (no `expect`) or holds `expect`. */
+static int file_unchanged(const cfi_file_guard* g, const char* path,
+                          const wchar_t* wpath) {
+    if (g->between != NULL) {
+        g->between(g->user);
+    }
+    if (g->expect == NULL) {
+        if (GetFileAttributesW(wpath) != INVALID_FILE_ATTRIBUTES) {
+            return 0;
+        }
+        return (GetLastError() == ERROR_FILE_NOT_FOUND ||
+                GetLastError() == ERROR_PATH_NOT_FOUND)
+                   ? 1
+                   : 0;
+    }
+    return cfi_file_holds(path, g->expect, g->expect_size) ? 1 : 0;
 }
 
 /* The temporary made, written, synced and put in place: 1, or 0 with x->why
@@ -194,6 +214,13 @@ static int file_steps(replace_state* x, const char* path, const wchar_t* wpath,
         return file_failed_stdio(x);
     }
 
+    /* Not a step: the file is still what the caller read (D-186), checked now
+       that the temporary is complete and the rename is next. */
+    if (x->guard != NULL && !file_unchanged(x->guard, path, wpath)) {
+        x->changed = 1;
+        return 0;
+    }
+
     /* 5: one rename, retried while another handle holds the target without
        delete sharing (a reader's _wfopen), as Go's renameio does: the sleeps
        double from 10 ms to at most 200, and their sum is bound by retry_ms
@@ -226,10 +253,12 @@ static int file_steps(replace_state* x, const char* path, const wchar_t* wpath,
     return 1;
 }
 
-/* The static core of cf_platform_write_file_with. */
+/* The static core of cf_platform_write_file_with and ..._if_with: 1, 0, or -1
+   when the guard found the file changed. */
 static int file_core(const char* path, const void* data, size_t size,
                      const cf_file_options* o, unsigned  fail_at,
-                     void (*on_retry)(void* user), void* user, cf_error* err) {
+                     void (*on_retry)(void* user), void* user,
+                     const cfi_file_guard* guard, cf_error* err) {
     cf_file_options r;
     replace_state   x;
     wchar_t         wpath[CF_PATH_MAX];
@@ -272,11 +301,13 @@ static int file_core(const char* path, const void* data, size_t size,
         return 0;
     }
 
-    x.fp     = NULL;
-    x.made   = 0;
-    x.raw    = 0;
-    x.tmp[0] = '\0';
-    x.why[0] = '\0';
+    x.fp      = NULL;
+    x.made    = 0;
+    x.raw     = 0;
+    x.changed = 0;
+    x.guard   = guard;
+    x.tmp[0]  = '\0';
+    x.why[0]  = '\0';
     if (file_steps(&x, path, wpath, data, size, use_sync, r.retry_ms, fail_at, on_retry,
                    user)) {
         return 1;
@@ -288,6 +319,11 @@ static int file_core(const char* path, const void* data, size_t size,
     }
     if (x.made) {
         (void)DeleteFileW(x.wtmp);
+    }
+    if (x.changed) {
+        (void)cf_error_set(err, CF_E_SOURCE, NULL, path,
+                           "'%s' changed while it was written", path);
+        return -1;
     }
     if (x.raw) {
         (void)cf_error_set(err, CF_E_SOURCE, NULL, path, "%s", x.why);
@@ -301,7 +337,21 @@ int cf_platform_write_file_with(const char* path, const void* data, size_t size,
                                 const cf_file_options* o, unsigned  fail_at,
                                 void (*on_retry)(void* user), void* user,
                                 cf_error* err) {
-    return file_core(path, data, size, o, fail_at, on_retry, user, err);
+    return file_core(path, data, size, o, fail_at, on_retry, user, NULL, err);
+}
+
+int cf_platform_write_file_if_with(const char* path, const void* data, size_t size,
+                                   const void* expect, size_t expect_size,
+                                   const cf_file_options* o, unsigned fail_at,
+                                   void (*between)(void* user), void* user,
+                                   cf_error* err) {
+    cfi_file_guard g;
+
+    g.expect      = expect;
+    g.expect_size = expect_size;
+    g.between     = between;
+    g.user        = user;
+    return file_core(path, data, size, o, fail_at, NULL, NULL, &g, err);
 }
 
 #endif /* CF_PLATFORM_WIN32 */

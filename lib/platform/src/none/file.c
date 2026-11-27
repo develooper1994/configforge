@@ -60,6 +60,18 @@ int cf_platform_write_file_with(const char* path, const void* data, size_t size,
     return 0;
 }
 
+int cf_platform_write_file_if_with(const char* path, const void* data, size_t size,
+                                   const void* expect, size_t expect_size,
+                                   const cf_file_options* o, unsigned fail_at,
+                                   void (*between)(void* user), void* user,
+                                   cf_error* err) {
+    (void)expect;
+    (void)expect_size;
+    (void)between;
+    (void)user;
+    return cf_platform_write_file_with(path, data, size, o, fail_at, NULL, NULL, err);
+}
+
 unsigned cf_platform_write_steps(void) {
     return 0u;
 }

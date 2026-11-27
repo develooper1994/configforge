@@ -5325,6 +5325,31 @@ every limit of every call.
 
 **Status.** Built: K-11a.
 
+## D-186 — A write checks that the file is still what it was read from
+
+**Question.** Two programs that read, change and replace one file lose one
+update, silently. What does the replace do about it?
+
+**Decision.** The check is of bytes, after the temporary is complete and just
+before the rename (`cf_platform_write_file_if`, internal): the file must still
+hold exactly what the caller read (or be absent, when it read none). A mismatch
+returns -1 with `'%s' changed while it was written`, and the file stays as the
+other writer left it. The caller applies its change again to the new bytes up to
+`write_attempts` times (an option of the source, 3 by default, D-227) and then
+refuses with `'%s' changed while it was written; try again`. No option, no new
+public name, no file: the race lasts from a re-read to a rename, microseconds,
+and a change wins key by key, not file by file.
+
+Rejected: a stamp (a hint that can miss a rewrite of the same length inside one
+clock tick, as `cf_changed` can); unbounded retries (a file two programs rewrite
+forever never settles; the third refusal is the answer); a lock for this (Y-3 is
+for the program that asks for one).
+
+Held to: `test_writefile` cases (l) to (q).
+
+**Status.** Built: Y-2 (the check; `overrides_write` uses it in F-2a).
+
+---
 ## D-231 — The platform is a part: `none` is built and tried; what it cannot give answers `CF_E_CAPABILITY`
 
 **Question.** D-220 says a feature the target platform cannot provide is

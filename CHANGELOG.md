@@ -7,6 +7,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- `cf_platform_write_file_if` (internal): a replace that is refused when the file no
+  longer holds the bytes that were read, checked after the temporary is complete
+  and just before the rename, so that `overrides_write` can apply its change again
+  to the new bytes, up to 3 times by default, then refuse: two programs that set
+  different keys of one override file both keep their key (Y-2, D-186).
 - `cf_platform_has_files`, the options `CF_NO_STDIO` and `CF_NO_STDLIB`, the
   presets `none` and `none-bare` and a CI job for them: the `none` platform is
   built and its suite run, with the host's C library and with none; `auto`

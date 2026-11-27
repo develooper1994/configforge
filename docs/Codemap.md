@@ -996,34 +996,39 @@
 - cfi_file_temp_name 81-118
 - file_available 121-126
 - cf_file_replace 128-133
-- cf_file_writer_open 140-146
-- cf_file_writer_write 148-155
-- cf_file_writer_flush 157-161
-- cf_file_writer_sync 163-167
-- cf_file_writer_close 169-173
-- cf_platform_writer_syncs 175-178
-- cf_platform_writer_close_counted 180-188
-- cfi_file_why_stdio 192-195
-- struct cf_file_writer 197-208
-- writer_arg 210-215
-- writer_sync 218-231
-- writer_count 234-240
-- cf_file_writer_open 242-329
-- cf_file_writer_write 331-357
-- cf_file_writer_flush 359-370
-- cf_file_writer_sync 372-378
-- cf_platform_writer_syncs 380-382
-- cf_platform_writer_close_counted 384-413
-- cf_file_writer_close 415-417
+- cfi_file_holds 135-172
+- cf_platform_write_file_if_hook 174-181
+- cf_platform_write_file_if 183-188
+- cf_file_writer_open 195-201
+- cf_file_writer_write 203-210
+- cf_file_writer_flush 212-216
+- cf_file_writer_sync 218-222
+- cf_file_writer_close 224-228
+- cf_platform_writer_syncs 230-233
+- cf_platform_writer_close_counted 235-243
+- cfi_file_why_stdio 247-250
+- struct cf_file_writer 252-263
+- writer_arg 265-270
+- writer_sync 273-286
+- writer_count 289-295
+- cf_file_writer_open 297-384
+- cf_file_writer_write 386-412
+- cf_file_writer_flush 414-425
+- cf_file_writer_sync 427-433
+- cf_platform_writer_syncs 435-437
+- cf_platform_writer_close_counted 439-468
+- cf_file_writer_close 470-472
 `lib/platform/src/file_prim.h`
+- struct cfi_file_guard 46-51
 `lib/platform/src/none/file.c`
 - cf_platform_fopen 24-34
 - cf_platform_has_files 36-42
 - cf_platform_write_file_with 47-61
-- cf_platform_write_steps 63-65
-- cf_platform_now_ms 67-69
-- cfi_file_sync 71-74
-- cfi_file_why 76-81
+- cf_platform_write_file_if_with 63-73
+- cf_platform_write_steps 75-77
+- cf_platform_now_ms 79-81
+- cfi_file_sync 83-86
+- cfi_file_why 88-93
 `lib/platform/src/none/none.c`
 - cf_platform_name 14-16
 - cf_platform_has_environ 18-20
@@ -1056,13 +1061,15 @@
 - cfi_file_sync 60-62
 - cfi_file_why 64-66
 - cf_platform_write_steps 68-70
-- struct replace_state 73-80
-- file_injected 83-86
-- file_failed 89-92
-- file_steps 97-187
-- file_sync_directory 194-214
-- file_core 217-283
-- cf_platform_write_file_with 285-294
+- struct replace_state 73-82
+- file_injected 85-88
+- file_failed 91-94
+- file_unchanged 97-107
+- file_steps 112-209
+- file_sync_directory 216-236
+- file_core 240-314
+- cf_platform_write_file_with 316-325
+- cf_platform_write_file_if_with 327-339
 `lib/platform/src/posix/posix.c`
 - cf_platform_name 86-88
 - cf_platform_has_environ 90-92
@@ -1137,13 +1144,15 @@
 - cfi_file_sync 63-67
 - cfi_file_why 69-72
 - cf_platform_write_steps 74-76
-- struct replace_state 79-87
-- file_injected 90-93
-- file_failed 96-99
-- file_failed_stdio 102-105
-- file_steps 110-227
-- file_core 230-298
-- cf_platform_write_file_with 300-305
+- struct replace_state 79-89
+- file_injected 92-95
+- file_failed 98-101
+- file_failed_stdio 104-107
+- file_unchanged 110-125
+- file_steps 130-254
+- file_core 258-334
+- cf_platform_write_file_with 336-341
+- cf_platform_write_file_if_with 343-355
 `lib/platform/src/win32/win32.c`
 - cf_platform_name 34-36
 - cf_platform_has_environ 38-40
