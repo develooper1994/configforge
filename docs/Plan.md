@@ -288,10 +288,10 @@ of a card's CI.
 | 3 | K-6b A refusal's reason shown by the tools | 2.0.0 | small | nothing | done (1ed49bc) |
 | 4 | K-9a Three failure guarantees: written in every public function's header comment, listed in a table, and held by `gate.guarantees` | 2.0.0 | medium | nothing | done (da8f3b9) |
 | 5 | K-9d Guarantees written for the lower components: base, port, platform, text and serialize | 2.0.0 | medium | K-9a | done (21a1a1f) |
-| 6 | K-9e Guarantees written for the facade: `configforge.h` | 2.0.0 | medium | K-9a | open |
+| 6 | K-9e Guarantees written for the facade: `configforge.h` | 2.0.0 | medium | K-9a | done (52c76cc) |
 | 7 | K-9f Guarantees written for sources and the key space: `cf_source.h`, `cf_keyspace.h`, `cf_entry.h`, `cf_iterate.h` | 2.0.0 | medium | K-9a | open |
-| 8 | K-9g Guarantees written for the rest of the configuration library, and the to-do list closed | 2.0.0 | medium | K-9a, K-9d, K-9e, K-9f | waits: K-9e |
-| 9 | K-9b Allocation faults injected into every load and write path, and what a failure leaves behind checked | 2.0.0 | large | K-9a, K-9d, K-9e, K-9f, K-9g | waits: K-9e |
+| 8 | K-9g Guarantees written for the rest of the configuration library, and the to-do list closed | 2.0.0 | medium | K-9a, K-9d, K-9e, K-9f | waits: K-9f |
+| 9 | K-9b Allocation faults injected into every load and write path, and what a failure leaves behind checked | 2.0.0 | large | K-9a, K-9d, K-9e, K-9f, K-9g | waits: K-9f |
 | 10 | M-11a Sizing in the readers and the key space | 2.0.0 | medium | M-10 | done (a2eb91e) |
 | 11 | M-11b `cf_error` owns its text (the 2.0 break) | 2.0.0 | large | M-11a | open |
 | 12 | M-12 The image header's layout, version 2 | 2.0.0 | medium | nothing | done (c818cba) |

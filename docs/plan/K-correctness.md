@@ -565,7 +565,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **needs**: K-9a
 * **size**: medium
 * **version**: 2.0.0
-* **status**: open
+* **status**: done (52c76cc)
 * **decided**:
   * **The set**: `python scripts/check/guarantees.py --todo lib/config/include/configforge/configforge.h` (83 names at 18557b9; the worker works from that output, not from a count).
   * **The classification, decided for the families** (the worker confirms each by reading its function through `docs/Codemap.md`, in ranges of at most 120 lines, and writes down the one fact as K-9d does): the 30 `cf_builder_*` calls that return `cf_bool` and defer their first failure to `cf_builder_create` (`configforge.h`, "Tier 1 and 2"; the same 30 that `scripts/check/nodiscard.txt` lists) are `basic: the failure is held by the builder; cf_builder_create reports it`; `cf_builder_create`, `cf_derive`, `cf_derive_in` and `cf_build_in` are `strong` (the builder or the parent configuration is unchanged; a configuration is made apart); `cf_write` is `strong` (the read snapshot never changes, `lib/config/tests/test_oom.c` already checks it); `cf_get_*`, `cf_has`, `cf_count`, `cf_digest` and the other readers of a finished configuration are `nothrow` (reading is infallible once construction returned, the comment of `run_with` in `test_oom.c` says so); `cf_explain`, `cf_inspect`, `cf_report` and `cf_emit` write into the caller's buffer and report the size needed: `strong` (the configuration is untouched; the buffer is the caller's, unspecified on failure); `cf_config_free`, `cf_builder_abort` are `nothrow`.
