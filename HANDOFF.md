@@ -15,10 +15,13 @@ approval and release rights: docs/Plan.md "For the maintainer".
    archives and "How each archive was built"). Publishing to crates.io and
    PyPI is deferred by the maintainer (2026-11-27): the `crates` job waits on
    the repository variable PUBLISH_CRATES (M-23-m). Do not chase it.
-2. Landed for 2.0.0: M-10 (9d8cc70, opened 2.0.0), K-6b (1ed49bc), M-12
-   (c818cba). A core CI run was dispatched on main to check K-6b and M-12
-   together (`gh run list --branch main --workflow ci --limit 1`); if red, fix
-   on a branch first.
+2. Landed on main for 2.0.0: M-10, K-6b, M-12, K-9a. From now on CI runs once
+   a batch (docs/Plan.md "The loop", 9-11): cards land on branch `batch`
+   (cut from main at 53ae916) after local ACCEPT; one full-tier run on
+   `batch`, then `git push origin batch:main`.
+3. In flight, both told to skip CI and stop at a green local verify:
+   M-11a (worktree D:\cf-work\M-11a) and K-9d (D:\cf-work\K-9d). Land
+   each onto `batch`.
 
 ## Next
 
@@ -43,7 +46,7 @@ no push to the branch while it runs. Workers get `python scripts/work/brief.py
 
 ## Budget
 
-Weekly window was 86% on 2026-11-27 at 16:10 UTC (5-hour 94%, resets 16:50 UTC) (resets 2026-12-03 10:00 UTC):
+Weekly window was 89% on 2026-11-27 at 17:40 UTC: no new worker past 93% (resets 2026-12-03 10:00 UTC):
 one worker at a time. At 99% weekly: everything pushed, this
 file current, and give the maintainer one prompt for a session on another
 account ("Read CLAUDE.md, then HANDOFF.md, and continue").
