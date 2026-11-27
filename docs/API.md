@@ -2378,7 +2378,7 @@ is already set, where e->size reaches them. NULL is ignored.
 Guarantee: nothrow.
 
 ```c
-CF_EXPERIMENTAL(2, 0) CF_API void cf_error_place_at(cf_error* e, int reason, unsigned int line, unsigned int col, size_t offset);
+CF_EXPERIMENTAL(2, 0) void cf_error_place_at(cf_error* e, int reason, unsigned int line, unsigned int col, size_t offset);
 ```
 
 Experimental since 2.0: outside the 1.x promise until the next minor release makes it promised or removes it.
