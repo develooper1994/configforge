@@ -5350,6 +5350,11 @@ Held to: `test_writefile` cases (l) to (q).
 **Status.** Built: Y-2 (the check; `overrides_write` uses it in F-2a).
 
 ---
+## D-189 (Y-6 part) — Windows readers that share delete access: measured, a rename over one still fails
+
+Option R5 of `docs/research/concurrent-access.md` (open reads with `FILE_SHARE_DELETE`) was measured on 2026-11-27, Windows 11 build 10.0.26300.10075, `cl` of Visual Studio 18: `MoveFileExW(MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)` over a file held open by `CreateFileW` with read, write and delete sharing fails with `ERROR_ACCESS_DENIED` (5), exactly as over a `_wfopen` reader (the control, also 5); with no reader open it succeeds. Rejected: `cf_platform_fopen` is unchanged. The `retry_ms` wait of F-1a stays the answer. The rest of D-189 is written by the card that lands it.
+
+---
 ## D-231 — The platform is a part: `none` is built and tried; what it cannot give answers `CF_E_CAPABILITY`
 
 **Question.** D-220 says a feature the target platform cannot provide is

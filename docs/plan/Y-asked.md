@@ -427,6 +427,8 @@ this answer under "Organiser's answers"). Both are copied into
 * **accept**: ACCEPT-WINDOWS with `test_writefile` case (r) when the measurement says yes, and the measurement under "notes" in both cases; ACCEPT-LINUX and ACCEPT-CI when code changed (the change is Windows-only, and both must still be green); `ctest --preset default -R "test_writefile|test_file"` exit 0.
 * **stop if**: the control (`_wfopen`) does not fail; a mode string other than `rb`, `wb`, `ab` or `r` is passed to `cf_platform_fopen` anywhere; a path that `win32f_wide` accepts is not accepted by `CreateFileW` (a long path with no `\\?\` prefix: report); the measurement is not available because the machine is not Windows.
 * **docs**: when the code changed: `CHANGELOG.md`, "## 1.9.0 — unreleased" (this card's version), "### Changed": "on Windows a file the library reads is opened with delete sharing, so a writer's rename over it no longer waits for the reader (Y-6)". When it did not: only the line in `docs/Decisions.md`. No Roadmap row.
+* **result**: closed by measurement (rename fails; no code).
+* **notes**: measured 2026-11-27 on Windows `10.0.26300.10075` (`ver`), `cl` of Visual Studio 18, a throwaway C file, files on D:. Reader opened with `CreateFileW(GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, OPEN_EXISTING)` and kept open, same process: `MoveFileExW(temp, path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)` returned 0, `GetLastError()` = 5 (`ERROR_ACCESS_DENIED`). Control `_wfopen(path, L"rb")` open: 0, error 5 (it fails, as required). No reader open: the rename succeeds. So R5 is rejected; D-189 line in `docs/Decisions.md`.
 
 ---
 
