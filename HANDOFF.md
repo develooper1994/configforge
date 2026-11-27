@@ -15,18 +15,15 @@ approval and release rights: docs/Plan.md "For the maintainer".
    archives and "How each archive was built"). Publishing to crates.io and
    PyPI is deferred by the maintainer (2026-11-27): the `crates` job waits on
    the repository variable PUBLISH_CRATES (M-23-m). Do not chase it.
-2. M-10 landed (9d8cc70) and opened 2.0.0 on main.
-3. K-6b (tools show a refusal's reason), worktree D:\cf-work\K-6b, branch
-   `work/K-6b`: merging main after M-10 (take main's side for version and
-   symbol files), then core and full tier; land when the full run is green.
-4. M-12 (image header v2), worktree D:\cf-work\M-12, branch `work/M-12`:
-   in CI; its CHANGELOG lines may sit under "### 2.0.0 (held)": move them
-   under "## 2.0.0 — unreleased" when landing.
+2. Landed for 2.0.0: M-10 (9d8cc70, opened 2.0.0), K-6b (1ed49bc), M-12
+   (c818cba). A core CI run was dispatched on main to check K-6b and M-12
+   together (`gh run list --branch main --workflow ci --limit 1`); if red, fix
+   on a branch first.
 
 ## Next
 
 5. 2.0.0 in Layout.md's order: K-6a, K-9a, then K-9d-K-9g, K-9b; M-11a
-   (needs M-10, now ready), M-11b, M-13 (needs M-12). Beside-cards (version
+   (needs M-10, ready), M-11b, M-13 (needs M-12, ready). Beside-cards (version
    2.0.0 now) ride along; a release never waits for them. Done cards leave
    the plan with `python scripts/work/index.py --archive` now and then.
 
@@ -46,7 +43,7 @@ no push to the branch while it runs. Workers get `python scripts/work/brief.py
 
 ## Budget
 
-Weekly window was 84% on 2026-11-27 at 15:10 UTC (5-hour 82%) (resets 2026-12-03 10:00 UTC):
+Weekly window was 86% on 2026-11-27 at 16:10 UTC (5-hour 94%, resets 16:50 UTC) (resets 2026-12-03 10:00 UTC):
 one worker at a time. At 99% weekly: everything pushed, this
 file current, and give the maintainer one prompt for a session on another
 account ("Read CLAUDE.md, then HANDOFF.md, and continue").
