@@ -115,9 +115,9 @@
 - #define CF_IMAGE_MAGIC_1 37
 - #define CF_IMAGE_MAGIC_2 38
 - #define CF_IMAGE_MAGIC_3 39
-- #define CF_IMAGE_MAJOR 41
-- #define CF_IMAGE_MINOR 42
-- struct cf_image 65-79
+- #define CF_IMAGE_MAJOR 43
+- #define CF_IMAGE_MINOR 44
+- struct cf_image 71-93
 `lib/config/include/configforge/cf_iterate.h`
 - #define CONFIGFORGE_CF_ITERATE_H 14
 - struct cf_iter 24-42
@@ -321,46 +321,46 @@
 - cf_doc_emit 851-853
 - cf_doc_emit_where 855-863
 `lib/config/src/bridge/image.c`
-- put_u32 37-42
-- put_u64 44-47
-- get_u32 49-52
-- get_u64 54-56
-- get_u16 58-60
-- put_u16 62-65
-- align8 67-70
-- struct img_plan 76-85
-- plan_strings 92-123
-- plan 125-149
-- struct img_w 151-157
-- w_at 159-168
-- w_u32 170-174
-- w_u64 176-180
-- w_text 184-192
-- cf_image_write 194-328
-- bad 334-336
-- region_fits 339-341
-- records_fit 348-353
-- cf_image_open 355-437
-- cf_image_count 439-441
-- read_value 443-477
-- cf_image_at 479-512
-- cf_image_get 514-541
-- image_origin 550-587
-- cf_image_load 589-609
-- cf_image_write 615-624
-- cf_image_open 626-634
-- cf_image_count 636-639
-- cf_image_at 641-649
-- cf_image_get 651-657
-- cf_image_load 659-665
-- struct image_state 673-679
-- image_load_src 681-706
-- image_destroy 708-710
-- cf_source_image_state_size 715-717
-- image_source_init 719-733
-- cf_source_image_mem 735-746
-- cf_source_image_file 748-755
-- cf_source_image_error 757-765
+- put_u32 39-44
+- put_u64 46-49
+- get_u32 51-54
+- get_u64 56-58
+- get_u16 60-62
+- put_u16 64-67
+- align8 69-72
+- struct img_plan 78-87
+- plan_strings 94-125
+- plan 127-151
+- struct img_w 153-159
+- w_at 161-170
+- w_u32 172-176
+- w_u64 178-182
+- w_text 186-194
+- cf_image_write 196-348
+- bad 354-356
+- region_fits 359-361
+- records_fit 368-373
+- cf_image_open 375-489
+- cf_image_count 491-493
+- read_value 495-529
+- cf_image_at 531-564
+- cf_image_get 566-593
+- image_origin 602-639
+- cf_image_load 641-661
+- cf_image_write 667-676
+- cf_image_open 678-686
+- cf_image_count 688-691
+- cf_image_at 693-701
+- cf_image_get 703-709
+- cf_image_load 711-717
+- struct image_state 725-731
+- image_load_src 733-758
+- image_destroy 760-762
+- cf_source_image_state_size 767-769
+- image_source_init 771-785
+- cf_source_image_mem 787-798
+- cf_source_image_file 800-807
+- cf_source_image_error 809-817
 `lib/config/src/bridge/preferences.c`
 - struct prefs_state 57-62
 - struct prefs_walk 67-73

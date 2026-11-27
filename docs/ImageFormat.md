@@ -1,4 +1,4 @@
-# ConfigForge Binary Image, version 1
+# ConfigForge Binary Image, version 2
 
 The artifact behind decision D-28. Not a document format: an image of a
 resolved key space, laid out so that loading it is validation followed
@@ -22,7 +22,7 @@ Every offset is from the start of the image and is a multiple of 8.
 Every multi-byte field is little endian.
 
 ```text
-0                   header        64 bytes
+0                   header        128 bytes (major 1: 64)
 header.index_off    key index     count * 16 bytes
 header.value_off    values        count * 16 bytes
 header.chain_off    chain         optional, see below
@@ -48,6 +48,35 @@ off  size  field
  48     4  total          the image size, so truncation is detectable
  52    12  reserved       zero
 ```
+
+### Header, major 2
+
+Bytes 0-51 are the major 1 header, with `major` 2 and `minor` 0; the
+header grows to 128 bytes and `index_off` is never below 128.
+
+```text
+off  size  field
+ 52    12  reserved       zero
+ 64     2  key_max        the build's CF_KEY_MAX
+ 66     2  source_max     CF_SOURCE_MAX
+ 68     2  message_max    CF_MESSAGE_MAX
+ 70     2  max_depth      CF_MAX_DEPTH
+ 72    32  build_id       at most 31 bytes of cf_build_id(), NUL, NUL padded
+104     4  manifest_off   reserved for Y-33: zero in 2.0.0
+108     4  manifest_len   reserved for Y-33: zero in 2.0.0
+112    16  reserved       zero
+```
+
+Offsets stay 32-bit. A reader ignores every reserved byte and every
+field of a higher minor, so an image whose manifest fields are filled
+opens. An image whose `key_max` exceeds the reader's `CF_KEY_MAX` is
+refused ("image was made with longer keys (its limit N, this build's M)").
+
+### Loading major 1
+
+A major 1 image (a 64-byte header, `reserved` at 52-63) loads unchanged:
+`cf_image` has `build_id` NULL and the limits zero. `cf_image_write` with
+`CF_IMAGE_V1` writes one; the determinism digest is the same in both.
 
 ### Key index
 

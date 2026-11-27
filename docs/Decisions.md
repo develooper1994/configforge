@@ -5664,3 +5664,9 @@ reason, and the specification has been updated to match.
 
 At that point the specification is frozen. Any new section afterwards has to be paid
 for with code.
+
+---
+
+## D-177 — Image major 2: a 128-byte header with the build's limits and id
+
+The 12 reserved bytes could not hold them; offsets stay 32-bit; a major 1 image loads (`build_id` NULL); a major 2 image from a build with longer keys is refused naming both limits. Rejected: 64-bit offsets, a section table. Bytes 104-111 are kept for the manifest.

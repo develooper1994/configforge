@@ -2388,7 +2388,7 @@ with no filesystem can still answer why a value is what it is.
 CF_API size_t cf_image_write(const cf_keyspace* ks, const cf_source_view* sv, unsigned flags, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_image_write` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L194).
+Implementation: [`cf_image_write` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L196).
 
 Write the image. Measure-or-write, like everything else that renders:
 with a NULL buffer nothing is stored and the length still
@@ -2404,7 +2404,7 @@ a target where the buffer is a `const char[]` in flash.
 CF_NODISCARD CF_API cf_bool cf_image_open(cf_image* img, const char* buf, size_t n, cf_error* err);
 ```
 
-Implementation: [`cf_image_open` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L355).
+Implementation: [`cf_image_open` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L375).
 
 Validates the header, the bounds and the digest. Refuses rather than
 guesses: a truncated image and a corrupt one look the same from
@@ -2416,13 +2416,13 @@ CF_NODISCARD CF_API cf_bool cf_image_at(const cf_image* img, size_t i, const cha
 CF_NODISCARD CF_API cf_bool cf_image_get(const cf_image* img, const char* key, size_t klen, cf_value* v);
 ```
 
-Implementation: [`cf_image_count` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L439), [`cf_image_at` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L479), [`cf_image_get` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L514).
+Implementation: [`cf_image_count` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L491), [`cf_image_at` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L531), [`cf_image_get` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L566).
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_image_load(const cf_image* img, cf_keyspace* ks, int rank, cf_error* err);
 ```
 
-Implementation: [`cf_image_load` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L589).
+Implementation: [`cf_image_load` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L641).
 
 Load an image into a key space at a rank, which is what a source
 does. Text values point into the image, so it must outlive the
@@ -2434,13 +2434,13 @@ configuration.
 CF_API size_t cf_source_image_state_size(void);
 ```
 
-Implementation: [`cf_source_image_state_size` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L715).
+Implementation: [`cf_source_image_state_size` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L767).
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_source_image_mem(cf_source* s, const char* name, int rank, const char* buf, size_t n, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_image_mem` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L735).
+Implementation: [`cf_source_image_mem` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L787).
 
 From memory: a build-time image linked into the program. No file, no
 parser, no allocation - the freestanding path.
@@ -2449,7 +2449,7 @@ parser, no allocation - the freestanding path.
 CF_NODISCARD CF_API cf_bool cf_source_image_file(cf_source* s, const char* name, int rank, const char* path, void* state, size_t state_size);
 ```
 
-Implementation: [`cf_source_image_file` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L748).
+Implementation: [`cf_source_image_file` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L800).
 
 From a file, for hosted targets.
 
@@ -2457,7 +2457,7 @@ From a file, for hosted targets.
 CF_API const cf_error* cf_source_image_error(const cf_source* s);
 ```
 
-Implementation: [`cf_source_image_error` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L757).
+Implementation: [`cf_source_image_error` (lib/config/src/bridge/image.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/image.c#L809).
 
 ## cf_iterate.h
 

@@ -178,6 +178,9 @@ cf_must_not_compile(
 # (tests/support/data, shared with the tests of the other components).
 target_compile_definitions(
   test_codec_edges PRIVATE CF_EDGES_DIR="${CF_REPO_ROOT}/tests/support/data")
+# M-12: the major 1 image written before the header grew, kept as bytes.
+target_compile_definitions(
+  test_image PRIVATE CF_IMAGE_DATA="${CF_REPO_ROOT}/tests/support/data")
 # A-7: the hashes of every short document each reader reads, written on the
 # code before the escapes were made one function, and held to since.
 set(corpus_golden "${CF_REPO_ROOT}/tests/support/data/reader_corpus.golden")

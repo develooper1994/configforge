@@ -80,6 +80,10 @@ set(utf8_readers
     dotenv)
 foreach(reader ${readers})
   set(seeds seed_${reader})
+  if(reader STREQUAL "image")
+    # M-12: a major 1 image beside the major 2 one the seeds program writes.
+    set(seeds ${seeds},${CF_REPO_ROOT}/tests/support/data/image-v1.cfgb)
+  endif()
   if(reader IN_LIST utf8_readers)
     set(seeds ${seeds},seed_${reader}_utf8)
   endif()

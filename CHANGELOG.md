@@ -20,6 +20,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - `configforge codec check`, `dump` and `recode`, when they refuse a file, print
   a second line on standard error, `  reason: <name> (<severity>[, <CWE>])`, so a
   user filters by the reason and not by the words of a message (K-6b, D-223).
+- The image header is 128 bytes and carries the limits and the build id;
+  major 1 images still load (D-177). `cf_image_write` writes major 2, or
+  major 1 with `CF_IMAGE_V1`; `cf_image` gains `key_max`, `source_max`,
+  `message_max`, `max_depth` and `build_id`, and `reserved` shrinks to two.
 
 ## 1.9.0 — 2026-11-27
 

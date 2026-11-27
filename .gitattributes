@@ -18,3 +18,5 @@ tests/profile/data/ok_list.txt -text
 tests/profile/data/empty_list.txt -text
 tests/profile/data/c99_list.txt -text
 tests/profile/data/stale_list.txt -text
+# M-12: the major 1 image fixture, byte for byte.
+*.cfgb binary

@@ -38,14 +38,20 @@ extern "C" {
 #define CF_IMAGE_MAGIC_2 'G'
 #define CF_IMAGE_MAGIC_3 'B'
 
-#define CF_IMAGE_MAJOR 1
+/* Major 2 (2.0): a 128-byte header that carries the build's limits and
+   id. Major 1 images (a 64-byte header) still load. */
+#define CF_IMAGE_MAJOR 2
 #define CF_IMAGE_MINOR 0
 
 enum {
     /* Carry every candidate, not just the winners, so explain() still
        works after the image is loaded. Larger, and the only reason the
        image is a ConfigForge artifact rather than a blob. */
-    CF_IMAGE_PROVENANCE = 1u << 0
+    CF_IMAGE_PROVENANCE = 1u << 0,
+    /* Write major 1, the 64-byte header of 1.x, for a reader that is
+       not 2.0 yet. A request made at write time: not stored in the
+       image's own flags. */
+    CF_IMAGE_V1 = 1u << 1
 };
 
 /* Write the image. Measure-or-write, like everything else that renders:
@@ -73,9 +79,17 @@ typedef struct cf_image {
     const char* strings;
     cf_bool     swapped; /* the host reads the other way round */
 
-    /* Room a later 1.x may use without the struct growing: the caller
+    /* Major 2 only: the limits of the build that wrote the image and its
+       id, which points into the image. Zero and NULL for major 1. */
+    cf_u16      key_max;
+    cf_u16      source_max;
+    cf_u16      message_max;
+    cf_u16      max_depth;
+    const char* build_id;
+
+    /* Room a later 2.x may use without the struct growing: the caller
        allocates a cf_image and cf_image_open fills it (D-51). */
-    void* reserved[4];
+    void* reserved[2];
 } cf_image;
 
 /* Validates the header, the bounds and the digest. Refuses rather than

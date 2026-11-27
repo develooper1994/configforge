@@ -387,7 +387,7 @@ drop-in directory a build cannot read never looks like an empty one
 | `CF_WITH_CBOR` | the CBOR codec | 8.4 KB |
 | `CF_WITH_REAL` | floating point and its exact formatter | 7.9 KB |
 | `CF_WITH_INI` | the INI codec | 5.2 KB |
-| `CF_WITH_IMAGE` | the binary snapshot image | 4.4 KB |
+| `CF_WITH_IMAGE` | the binary snapshot image | 5.0 KB |
 | `CF_WITH_DIR` | the drop-in directory source | 3.1 KB |
 | `CF_WITH_PROPERTIES` | the Java .properties reader | 1.8 KB |
 | `CF_WITH_DOTENV` | the .env source | 1.5 KB |

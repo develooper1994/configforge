@@ -15,12 +15,14 @@
 #include "configforge/cf_serialize.h"
 #include "configforge/cf_source.h"
 #include "configforge/cf_value.h"
+#include "configforge/cf_version.h"
 
 #include <string.h>
 
 #if CF_WITH_IMAGE
 
-#define HDR_SIZE 64
+#define HDR_V1 64
+#define HDR_V2 128
 #define IDX_SIZE 16
 #define VAL_SIZE 16
 #define CHAIN_SIZE 24
@@ -140,7 +142,7 @@ static void plan(const cf_keyspace* ks, unsigned flags, img_plan* p) {
             }
         }
     }
-    p->index_off  = HDR_SIZE;
+    p->index_off  = ((flags & CF_IMAGE_V1) != 0) ? (size_t)HDR_V1 : (size_t)HDR_V2;
     p->value_off  = align8(p->index_off + p->count * IDX_SIZE);
     p->chain_off  = align8(p->value_off + p->count * VAL_SIZE);
     p->string_off = align8(p->chain_off + p->chain_count * CHAIN_SIZE);
@@ -212,12 +214,15 @@ size_t cf_image_write(const cf_keyspace* ks, const cf_source_view* sv, unsigned 
     w_at(&w, 0, "CFGB", 4);
     {
         char t[2];
-        put_u16(t, CF_IMAGE_MAJOR);
+        put_u16(t, ((flags & CF_IMAGE_V1) != 0) ? 1u : (cf_u32)CF_IMAGE_MAJOR);
         w_at(&w, 4, t, 2);
-        put_u16(t, CF_IMAGE_MINOR);
+        put_u16(t, (cf_u32)CF_IMAGE_MINOR);
+        if ((flags & CF_IMAGE_V1) != 0) {
+            put_u16(t, 0u); /* major 1 had minor 0 */
+        }
         w_at(&w, 6, t, 2);
     }
-    w_u32(&w, 8, (cf_u32)flags);
+    w_u32(&w, 8, (cf_u32)(flags & ~(unsigned)CF_IMAGE_V1));
     w_u32(&w, 12, (cf_u32)p.count);
     w_u32(&w, 16, (cf_u32)p.index_off);
     w_u32(&w, 20, (cf_u32)p.value_off);
@@ -228,9 +233,24 @@ size_t cf_image_write(const cf_keyspace* ks, const cf_source_view* sv, unsigned 
     w_u64(&w, 40, cf_ks_digest(ks));
     w_u32(&w, 48, (cf_u32)p.total);
     {
-        char z[12];
+        /* 52-63 reserved; in major 2 the rest of the header follows. */
+        char z[HDR_V2 - 52];
         memset(z, 0, sizeof z);
-        w_at(&w, 52, z, sizeof z);
+        if ((flags & CF_IMAGE_V1) != 0) {
+            w_at(&w, 52, z, HDR_V1 - 52);
+        } else {
+            const char* id = cf_build_id();
+            size_t      il = strlen(id);
+
+            put_u16(z + 64 - 52, (cf_u32)CF_KEY_MAX);
+            put_u16(z + 66 - 52, (cf_u32)CF_SOURCE_MAX);
+            put_u16(z + 68 - 52, (cf_u32)CF_MESSAGE_MAX);
+            put_u16(z + 70 - 52, (cf_u32)CF_MAX_DEPTH);
+            /* At most 31 bytes of the id and a NUL; the padding is zero. */
+            memcpy(z + 72 - 52, id, (il > 31u) ? 31u : il);
+            /* 104-111 (the manifest, Y-33) and 112-127 stay zero. */
+            w_at(&w, 52, z, sizeof z);
+        }
     }
 
     for (i = 0; i < cf_ks_count(ks); ++i) {
@@ -376,7 +396,7 @@ cf_bool cf_image_open(cf_image* img, const char* buf, size_t n, cf_error* err) {
     if ((addr % 8u) != 0) {
         return bad(err, "image buffer is not 8-byte aligned");
     }
-    if (n < HDR_SIZE) {
+    if (n < HDR_V1) {
         return bad(err, "image is shorter than its header");
     }
     if (buf[0] != CF_IMAGE_MAGIC_0 || buf[1] != CF_IMAGE_MAGIC_1 ||
@@ -384,10 +404,30 @@ cf_bool cf_image_open(cf_image* img, const char* buf, size_t n, cf_error* err) {
         return bad(err, "not a ConfigForge image");
     }
     major = get_u16(buf + 4);
-    if (major != CF_IMAGE_MAJOR) {
+    if (major != 1u && major != (cf_u32)CF_IMAGE_MAJOR) {
         return cf_error_set(err, CF_E_SOURCE, NULL, "image",
-                            "image format %u, this build reads %d", (unsigned)major,
-                            CF_IMAGE_MAJOR);
+                            "image format %u, this build reads 1 to %d",
+                            (unsigned)major, CF_IMAGE_MAJOR);
+    }
+    if (major >= 2u) {
+        cf_u32 key_max;
+        int    i;
+
+        if (n < HDR_V2) {
+            return bad(err, "image is shorter than its header");
+        }
+        key_max = get_u16(buf + 64);
+        if (key_max > (cf_u32)CF_KEY_MAX) {
+            return cf_error_set(err, CF_E_SOURCE, NULL, "image",
+                                "image was made with longer keys (its limit %u, this "
+                                "build's %d)",
+                                (unsigned)key_max, CF_KEY_MAX);
+        }
+        for (i = 72; i < 104 && buf[i] != 0; ++i) {
+        }
+        if (i == 104) {
+            return bad(err, "image build id is not terminated");
+        }
     }
 
     total      = get_u32(buf + 48);
@@ -412,12 +452,17 @@ cf_bool cf_image_open(cf_image* img, const char* buf, size_t n, cf_error* err) {
         cf_u32 chain_off   = get_u32(buf + 32);
         cf_u32 chain_count = get_u32(buf + 36);
         size_t limit       = total;
+        cf_u32 hdr         = (major >= 2u) ? (cf_u32)HDR_V2 : (cf_u32)HDR_V1;
 
         if (!records_fit(get_u32(buf + 16), count, IDX_SIZE, limit) ||
             !records_fit(get_u32(buf + 20), count, VAL_SIZE, limit) ||
             !region_fits(string_off, string_len, limit) ||
             !records_fit(chain_off, chain_count, CHAIN_SIZE, limit)) {
             return bad(err, "image offsets fall outside the image");
+        }
+        if (get_u32(buf + 16) < hdr || get_u32(buf + 20) < hdr || string_off < hdr ||
+            (chain_count > 0 && chain_off != 0 && chain_off < hdr)) {
+            return bad(err, "image offsets fall inside its header");
         }
         if (chain_count > 0 && chain_off == 0) {
             return bad(err, "image claims a chain and does not say where");
@@ -433,6 +478,13 @@ cf_bool cf_image_open(cf_image* img, const char* buf, size_t n, cf_error* err) {
     img->values  = buf + get_u32(buf + 20);
     img->strings = buf + string_off;
     img->swapped = CF_FALSE;
+    if (major >= 2u) {
+        img->key_max     = (cf_u16)get_u16(buf + 64);
+        img->source_max  = (cf_u16)get_u16(buf + 66);
+        img->message_max = (cf_u16)get_u16(buf + 68);
+        img->max_depth   = (cf_u16)get_u16(buf + 70);
+        img->build_id    = buf + 72;
+    }
     return CF_TRUE;
 }
 
