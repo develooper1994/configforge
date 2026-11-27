@@ -504,7 +504,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **needs**: nothing
 * **size**: small
 * **version**: 1.9.0
-* **status**: open
+* **status**: done (83264b0)
 * **decided**:
   * `oss-fuzz/project.yaml`: `homepage: "https://github.com/develooper1994/configforge"`, `language: c`, `primary_contact: "TO BE FILLED BY THE MAINTAINER"` (the one field an agent cannot know: **the card leaves it as that literal and `gate.ossfuzz` fails on it only when `OSSFUZZ_APPLY=1`**), `main_repo: "https://github.com/develooper1994/configforge"`, `sanitizers: [address, undefined]`, `architectures: [x86_64]`, `fuzzing_engines: [libfuzzer, afl, honggfuzz]`, `vendor_ccs: []`. A `primary_contact` is not an agent's to invent.
   * `oss-fuzz/Dockerfile`: `FROM gcr.io/oss-fuzz-base/base-builder`, `RUN apt-get update && apt-get install -y cmake`, `RUN git clone --depth 1 https://github.com/develooper1994/configforge $SRC/configforge`, `WORKDIR $SRC/configforge`, `COPY build.sh $SRC/`.

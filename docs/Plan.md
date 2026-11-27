@@ -480,7 +480,7 @@ of a card's CI.
 | 203 | P-11 Print speed in the comparison: JSON, four libraries | 1.9.0 | large | nothing | open |
 | 204 | P-12 The README leads with the lines ConfigForge wins, made by a script from the numbers | 1.9.0 | medium | P-11, P-11 | waits: P-11 |
 | 205 | P-14 The OpenSSF Scorecard: every finding read, every one the repository can meet met | 1.9.0 | medium | nothing | open |
-| 206 | M-18 OSS-Fuzz: the project files in the repository | 1.9.0 | small | nothing | open |
+| 206 | M-18 OSS-Fuzz: the project files in the repository | 1.9.0 | small | nothing | done (83264b0) |
 | 207 | M-20 The evidence pack: the script that assembles it, with a manifest that never claims what is not there | 1.9.0 | medium | nothing | open |
 | 208 | M-21 The evidence pack in the release | 1.9.0 | small | M-20 | waits: M-20 |
 | 209 | L-17-m The `targets` jobs required | 1.9.0 | small | L-17 | parked: not now |
