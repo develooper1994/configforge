@@ -7,6 +7,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- A table of each feature against each platform in `docs/Architecture.md`,
+  generated from `docs/platforms.txt`, and `gate.platforms`, which refuses a
+  platform function or query with no row or no definition on every platform
+  (K-11c, D-220).
 - `cf_platform_write_file_if` (internal): a replace that is refused when the file no
   longer holds the bytes that were read, checked after the temporary is complete
   and just before the rename, so that `overrides_write` can apply its change again

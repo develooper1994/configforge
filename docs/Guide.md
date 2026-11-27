@@ -1405,6 +1405,9 @@ For such a target:
   presets `none` (the whole suite on `none`) and `none-bare` (these two
   options, and one program, `tests/platform/freestanding.c`) build and run it.
 
+What each platform (`posix`, `win32`, `none`) can and cannot do, feature by
+feature, is one table: [Features by platform](Architecture.md#features-by-platform).
+
 ## 13. C++
 
 `<configforge/configforge.hpp>` is one header over the same library,

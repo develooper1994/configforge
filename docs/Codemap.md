@@ -2348,20 +2348,21 @@
 - Data flow 84-112
 - Construction is two-phase 113-125
 - Source kinds 126-142
-- Extension points, with recipes 143-310
+- Extension points, with recipes 143-333
 - Adding a format 145-182
-- Adding a platform capability 183-207
-- Writing a configuration out 208-234
-- Adding a flat source 235-251
-- Adding a definition attribute 252-259
-- Adding an error code, a value type, or an outcome 260-267
-- Options with defaults 268-302
-- Adding a Doctor rule 303-310
-- Where things live 311-340
-- The gates 341-368
-- Run time 369-395
-- Compile time 396-420
-- What is deliberately not here 421-438
+- Adding a platform capability 183-211
+- Features by platform 212-230
+- Writing a configuration out 231-257
+- Adding a flat source 258-274
+- Adding a definition attribute 275-282
+- Adding an error code, a value type, or an outcome 283-290
+- Options with defaults 291-325
+- Adding a Doctor rule 326-333
+- Where things live 334-363
+- The gates 364-391
+- Run time 392-418
+- Compile time 419-443
+- What is deliberately not here 444-461
 `scripts/verify.cmake`
 - sizes 467-479
 - profiles 480-512

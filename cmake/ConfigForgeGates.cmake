@@ -109,12 +109,15 @@ function(configforge_add_gates tgt)
   # (scripts/check/nodiscard.py).
   # Every public options struct has size first and an _init function, and
   # every CF_MAX_* macro says where its limit went (scripts/check/options.py).
+  # Every platform function and query has a row and a definition on each
+  # platform (scripts/check/platforms.py, docs/platforms.txt).
   # The rest read only the tree: each is cmake/gates/Gate<Name>.cmake.
   foreach(
     gate
     Fetches
     Nodiscard
     Options
+    Platforms
     Permissions
     Index
     Dependencies)

@@ -199,11 +199,34 @@ way, and the recipe held:
    naming the capability.
 3. Never name a platform macro outside `lib/platform/`;
    `gate.semgrep` fails the build if you do.
+4. Add its row to `docs/platforms.txt`; `gate.platforms` refuses a query
+   without one, and a function with no definition on a platform. The table
+   under "Features by platform" is generated from that file
+   (`python scripts/check/platforms.py --write .`).
 
 Each implementation guards its whole body with its own `CF_PLATFORM_*`
 macro. That single guard is not a scattered `#ifdef`: the build normally
 compiles one file, and the guard exists so the amalgamation — one
 translation unit with no build to choose for it — can carry all three.
+
+### Features by platform
+
+<!-- platforms:begin -->
+| Feature | Query | posix | win32 | none |
+| --- | --- | --- | --- | --- |
+| files (cf_platform_fopen) | `cf_platform_has_files` | yes | yes | E: stdio only; with CF_NO_STDIO the call fails CF_E_CAPABILITY, "this build has no files to read" |
+| file stamps (cf_platform_stamp) | none | yes | yes | E: present is CF_FALSE |
+| directory listing | `cf_platform_has_dir_list` | yes | yes | E: CF_E_CAPABILITY, "this build has no directory listing" |
+| trusted directory (who may write) | `cf_platform_has_trusted_dir` | yes | yes | E: CF_FALSE; a trusted source is refused |
+| private create (a new store) | `cf_platform_has_private_create` | yes | yes | E: CF_FALSE, no permission set |
+| environment | `cf_platform_has_environ` | yes | yes | E: no environment, NULL, not an error |
+| UTF-8 arguments | `cf_platform_has_wide_args` | no (argv is UTF-8) | yes | E: CF_FALSE, argv as given |
+| Windows registry | `cf_platform_has_registry` | no | yes | E: CF_FALSE |
+| macOS user defaults | `cf_platform_has_preferences` | CF_WITH_PREFERENCES on macOS | no | E: CF_FALSE |
+| change wake (cf_watcher) | `cf_platform_has_wake` | yes | yes | E: CF_FALSE; cf_watcher_open fails CF_E_CAPABILITY, "poll cf_changed instead"; cf_live does not use the wake and keeps all three modes |
+| threads (atomic reference counts) | none | CF_SINGLE_THREADED off | same | a build option, CF_SINGLE_THREADED=ON, no atomics (cf_port.h:319) |
+| malloc (cf_default_allocator) | none | yes | yes | E: NULL with CF_NO_STDLIB; cf_build_in and arenas work, cf_build(NULL) returns NULL |
+<!-- platforms:end -->
 
 ### Writing a configuration out
 

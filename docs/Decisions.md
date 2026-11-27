@@ -5377,13 +5377,17 @@ were macros no build option set, and no test ran on `none`.
 * **The allocator** stays as it was: `cf_default_allocator()` is NULL under
   `CF_NO_STDLIB`, a call with an error channel answers `CF_E_CAPABILITY`,
   `cf_build(NULL)` returns NULL, and `cf_build_in` is the path.
+* **One table** of each feature against each platform, in
+  `docs/Architecture.md`, generated from `docs/platforms.txt`; `gate.platforms`
+  refuses a platform function or query with no row or no definition on a
+  platform. The table is the document D-220 asks for.
 
 Rejected: a CI build with `-ffreestanding` and no host C library (the
 Cortex-M cross build is that proof); excluding tests by a regex in the
 `none` preset; failing the configure for a `Generic` system without
 `CF_PLATFORM`; a link error for the file functions on `none`.
 
-**Status.** Built: K-11b.
+**Status.** Built: K-11b, K-11c.
 
 ## D-157 — The Cortex-M numbers come from a cross build of the library alone
 
