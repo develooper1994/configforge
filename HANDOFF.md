@@ -15,20 +15,35 @@ approval and release rights: docs/Plan.md "For the maintainer".
    archives and "How each archive was built"). Publishing to crates.io and
    PyPI is deferred by the maintainer (2026-11-27): the `crates` job waits on
    the repository variable PUBLISH_CRATES (M-23-m). Do not chase it.
-2. Landed on main for 2.0.0: M-10, K-6b, M-12, K-9a. From now on CI runs once
-   a batch (docs/Plan.md "The loop", 9-11): cards land on branch `batch`
-   (cut from main at 53ae916) after local ACCEPT; one full-tier run on
-   `batch`, then `git push origin batch:main`.
-3. In flight, both told to skip CI and stop at a green local verify:
-   M-11a (worktree D:\cf-work\M-11a) and K-9d (D:\cf-work\K-9d). Land
-   each onto `batch`.
+2. Landed on main for 2.0.0: M-10, K-6b, M-12, K-9a. CI runs once a batch
+   (docs/Plan.md "The loop", 9-11): cards land on branch `batch` after local
+   ACCEPT; one full-tier run on `batch`, then `git push origin batch:main`.
+   `batch` now holds K-9d, M-11a, K-9e, two "Batch:" record fixes and the
+   cards K-9h/K-9i. Its last full run (46058347107) was green but for an
+   afl crash in the `chain` target (inputs: artifact `afl-findings`).
+3. In flight (worktrees under D:\cf-work, no CI of their own):
+   - fix-chain (branch `work/fix-chain`): a worker reproducing and fixing
+     the afl `chain` crash with a regression test. Land it onto `batch`,
+     then `gh workflow run ci --ref batch -f tier=full`; green -> batch to
+     main.
+   - K-6a (branch `work/K-6a`, cut from batch): land onto `batch`.
+   The batch worktree is D:\cf-work\batch. After records change: sizes
+   (scripts/check/sizes.cmake -DWRITE=ON -DTREE=<hash> on a copy without
+   .git), then `cmake -P scripts/generate/matrix.cmake` (README cells), and
+   the MISRA record (gate.misra -DWRITE=ON).
 
 ## Next
 
-5. 2.0.0 in Layout.md's order: K-6a, K-9a, then K-9d-K-9g, K-9b; M-11a
-   (needs M-10, ready), M-11b, M-13 (needs M-12, ready). Beside-cards (version
-   2.0.0 now) ride along; a release never waits for them. Done cards leave
-   the plan with `python scripts/work/index.py --archive` now and then.
+4. 2.0.0 in Layout.md's order: K-9f, K-9g, K-9b, M-11b, M-13; beside-cards
+   ride along (K-9h, K-9i: the safety inventory of 2026-11-27).
+5. The maintainer wants the library usable in safety-critical work, free
+   tools only, in stages (docs/Compliance.md "Order of work"): write the
+   four missing cards named there (MC/DC, D-number-to-tests table and
+   gate, safety manual, CERT C matrix).
+6. Measure the batch flow after a few batches (cards a day, red full
+   runs, time to fix) into docs/Maintaining.md "Working habits that paid".
+7. Codex's allowance returns 2026-11-29 09:47: give it most cards
+   (scripts/work/codex-card.sh).
 
 ## How to land a card by hand (what worked)
 
@@ -46,7 +61,7 @@ no push to the branch while it runs. Workers get `python scripts/work/brief.py
 
 ## Budget
 
-Weekly window was 89% on 2026-11-27 at 17:40 UTC: no new worker past 93% (resets 2026-12-03 10:00 UTC):
+Weekly window was 95% on 2026-11-27 at 20:10 UTC: this account hands off at 99% (resets 2026-12-03 10:00 UTC):
 one worker at a time. At 99% weekly: everything pushed, this
 file current, and give the maintainer one prompt for a session on another
 account ("Read CLAUDE.md, then HANDOFF.md, and continue").

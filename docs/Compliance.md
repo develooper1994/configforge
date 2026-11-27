@@ -188,6 +188,17 @@ standard asks for can be prepared once here and reused by every user:
 
 ## Order of work
 
+The maintainer's aim (2026-11-27): the library usable in the most
+critical work (safety-critical, high-integrity), with free tools only,
+each kind of safety added in stages as far as it is feasible. Cards that
+exist for the steps below: L-12a/b/c (MISRA headers, matrix, report),
+M-20/M-21 (the evidence pack), K-2a/b (known weaknesses), K-9a-K-9i
+(failure, thread and signal guarantees). Still to be written as cards:
+MC/DC coverage (GCC 14 `-fcondition-coverage`), the table from each
+D-number to its tests with a gate, the safety manual, and the CERT C
+matrix.
+
+
 1. The MISRA profile preset, and cppcheck's addon run against it to
    count what there is. Done (A-11, N-19).
 2. The public headers with no violation, and the gate on them. Open: 33
