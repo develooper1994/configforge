@@ -73,6 +73,12 @@ jobs:
           python3 scripts/generate/amalgamate.py . "amalgamation/configforge-$v"
           cp LICENSE "amalgamation/configforge-$v/"
           tar -C amalgamation -czf "dist/configforge-$v-amalgamation.tar.gz" "configforge-$v"
+          # Not a build: one C file, so there is no cache to read.
+          cat > dist/buildinfo-amalgamation.md <<'EOF'
+          ### amalgamation
+
+          The amalgamation: one C file, every option in `cf_build_options.h` at its default.
+          EOF
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with: { name: amalgamation, path: dist/* }
 
@@ -132,6 +138,8 @@ jobs:
           sbom=$(find "$work/a/stage" -name configforge.spdx.json)
           [ -n "$sbom" ] && [ "$(echo "$sbom" | wc -l)" -eq 1 ] || exit 1
           cp "$sbom" "dist/configforge-$v-linux-x86_64-musl.spdx.json"
+          # How this archive was built, read from the build's own cache.
+          cmake -DBUILD="$work/a/build" -DNAME=linux-musl             -DOUT="$PWD/dist/buildinfo-linux-musl.md"             -P "$source_a/scripts/release/buildinfo.cmake"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with: { name: linux-musl, path: dist/* }
 
@@ -166,6 +174,9 @@ jobs:
           Copy-Item build-doctor/tools/bin/Release/*.exe "stage/configforge-$v/bin/"
           New-Item -ItemType Directory -Force dist | Out-Null
           Compress-Archive -Path "stage/configforge-$v" -DestinationPath "dist/configforge-$v-windows-x64.zip"
+          # The library's build, the one the archive's headers and library came from.
+          cmake -DBUILD=build -DNAME=windows -DOUT="$PWD/dist/buildinfo-windows.md" `
+            -P scripts/release/buildinfo.cmake
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with: { name: windows, path: dist/* }
 
@@ -189,6 +200,7 @@ jobs:
           done
           mkdir -p dist
           tar -C stage -czf "dist/configforge-$v-macos-arm64.tar.gz" "configforge-$v"
+          cmake -DBUILD=build -DNAME=macos -DOUT="$PWD/dist/buildinfo-macos.md"             -P scripts/release/buildinfo.cmake
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with: { name: macos, path: dist/* }
 
@@ -208,6 +220,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with: { path: dist, merge-multiple: true }
+      # The records of how each archive was built go into the notes below,
+      # not onto the release as files: out of dist/ before it is attested
+      # and published.
+      - name: Keep the build records out of the assets
+        run: |
+          mkdir buildinfo
+          mv dist/buildinfo-*.md buildinfo/
       - name: Provenance for every file published
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
@@ -223,6 +242,14 @@ jobs:
             $0 ~ "^## " v "( |$)" { on = 1; next }
             on && /^## / { exit }
             on { print }' CHANGELOG.md > notes.md
+          # How each archive was built, from the build itself (L-23).
+          {
+            printf '\n## How each archive was built\n\n'
+            for j in linux-musl windows macos amalgamation; do
+              cat "buildinfo/buildinfo-$j.md"
+              printf '\n'
+            done
+          } >> notes.md
           (cd dist && sha256sum ./* > SHA256SUMS)
           # Each release opens its discussion under Announcements.
           gh release create "$GITHUB_REF_NAME" dist/* --title "ConfigForge $v"             --notes-file notes.md --discussion-category Announcements

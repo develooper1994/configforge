@@ -34,6 +34,15 @@ project(
   DESCRIPTION "Configuration resolution that explains itself"
   LANGUAGES C)
 
+# The cache does not hold the compiler otherwise; scripts/release/buildinfo.cmake
+# reads it to say how a release archive was built (L-23).
+set(CMAKE_C_COMPILER_ID
+    "${CMAKE_C_COMPILER_ID}"
+    CACHE INTERNAL "")
+set(CMAKE_C_COMPILER_VERSION
+    "${CMAKE_C_COMPILER_VERSION}"
+    CACHE INTERNAL "")
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(ConfigForgeOptions)

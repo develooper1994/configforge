@@ -29,6 +29,7 @@ verify step runs), `generate/` (what the build writes from the sources),
 | `check/fetches.py`, `check/permissions.py` | every download in a workflow or a script listed in `check/fetches.txt` with how it is held, a commit or a SHA-256 (`gate.fetches`); every workflow's top-level token read-only (`gate.permissions`) |
 | `check/check_formats.py`, `check/check_text.py` | every format string against what `cf_fmt` supports (`gate.formats`); every tracked text file without a NUL byte or a carriage return (`gate.text`) |
 | `release/release_local.sh`, `release/release_local.ps1` | the release workflow's jobs run on this machine, from a tag: amalgamation and static musl Linux (podman), and Windows (MSVC) - for when Actions cannot run |
+| `release/buildinfo.cmake` | `-DBUILD=<build dir> -DNAME=<archive> -DOUT=<file>` writes how an archive was built (compiler, generator, build type, every `CF_*` option) as Markdown, for the release notes (L-23) |
 | `release/package_rust.cmake` | `-DWORK=<new-directory>` stages the C sources and examples inside a standalone crate, runs `cargo package --locked` with verification, then tests the unpacked package; never publishes |
 | `docs/docs_site.py`, `check/check_docs.py` | MkDocs reads the existing repository Markdown with its original relative paths; the check requires rendered pages and searchable API entries before Pages deployment |
 

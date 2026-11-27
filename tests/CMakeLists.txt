@@ -26,6 +26,7 @@ endforeach()
 add_subdirectory(profile)
 add_subdirectory(misra)
 add_subdirectory(matrix)
+add_subdirectory(release)
 add_subdirectory(work)
 add_subdirectory(conformance)
 

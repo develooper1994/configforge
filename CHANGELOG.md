@@ -7,6 +7,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- A release's notes end with "How each archive was built": for each archive the
+  compiler, the generator, the build type and every `CF_*` option with its
+  value, read from the build's own cache (L-23).
 - `cf_file_options`, `cf_file_writer` and `cf_file_replace`: a file layer with
   buffering as C's `setvbuf` and durability as the platform's sync, each an
   option with a default; `cf_file_replace` replaces a file by a temporary in
