@@ -17,19 +17,21 @@ publishing to crates.io and PyPI is deferred (M-23-m): do not chase it.
    "-DDEFINES=-D__GNUC__=15|-D__GNUC_MINOR__=2" -DWRITE=ON -P
    cmake/gates/GateMisra.cmake`; the helper D:\cf-work\misra-regen.sh is
    not in the repository).
-2. `batch` (D:\cf-work\batch) now holds K-9f (0ea8118) and K-9g
-   (c898df5), landed after local ACCEPT; no full run yet.
-3. K-9b is in flight: worktree D:\cf-work\K-9b, branch work/K-9b, cut
-   from work/K-9g; its D-number is D-237. When it lands, squash it onto
-   batch (its K-9f/K-9g commits are already there: resolve by keeping
-   work/K-9b's tree for lib/ and scripts/), then one full run on batch.
-   D:\cf-work\K-9g and work/K-9g can then be removed.
+2. `batch` (D:\cf-work\batch) holds K-9f (0ea8118), K-9g (c898df5) and
+   K-9b (42dc309, D-237) with the MISRA record after them; local check
+   green (314 tests, gate.misra clean; D:\cf-work\batch-check.sh, not in
+   the repository). Full run 46083844789 started; green -> merge
+   origin/main into batch (documents only) and `git push origin
+   batch:main`. Red -> fix on batch ("Batch: ..."), run again.
+3. K-9j (written 2026-11-28) takes the two checks K-9b left: a builder
+   given its source again after a failed create, and
+   `cf_ks_add_candidate`'s partial state.
 4. yamldiff (exploratory, continue-on-error) found an anchor named with
    `?` alone at the top: card K-8b (2.2.0).
 
 ## Next
 
-5. 2.0.0 in Layout.md's order after K-9b: M-11b, M-13; beside-cards ride
+5. 2.0.0 in Layout.md's order: K-9j, M-11b, M-13; beside-cards ride
    along (K-9h, K-9i, F-6, F-7), then the safety-critical cards written
    2026-11-28: L-28 (CERT matrix), L-25 (MC/DC), L-26a, L-26b (traces),
    L-27 (safety manual, after L-12c). They decide D-233 to D-236.
