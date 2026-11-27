@@ -182,6 +182,21 @@ cv_case(
   m.json
   --to
   ini)
+# An array the trial leaves empty is no array INI writes (it holds no empty
+# array), so the table that held only it is no table either: no `[s]` header
+# (a regression of the chain fuzz target, a YAML table whose only member was
+# a list of one multi-line text).
+file(WRITE ${WORK}/ma.json "{\"s\": {\"a\": [\"x\\ny\"]}, \"k\": \"v\"}")
+cv_case(
+  emptied_array_ini
+  0
+  "s.a.0: text with a line break, which ini cannot hold; left out"
+  convert
+  ma.json
+  --to
+  ini)
+cv_lacks("${cv_out}" "[s]")
+cv_has("${cv_out}" "k = v")
 
 # A name TOML would write unquoted; JSON writes any name as a string.
 file(WRITE ${WORK}/names.json "{\"Name\": 1, \"a b\": 2}")

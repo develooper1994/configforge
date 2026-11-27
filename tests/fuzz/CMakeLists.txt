@@ -129,6 +129,9 @@ if(CF_WITH_EMIT
        "1131{\"a\": 1, \"b\": [true, null]}")
   file(WRITE "${chain_dir}/fuzz_chain_seed2" "001[s]\nk = v\n")
   file(WRITE "${chain_dir}/fuzz_chain_seed3" "3154[s]\nk = 1\n")
+  # A table whose only member is a list of one multi-line text, YAML to INI:
+  # INI holds neither the text nor an empty list nor, then, the table.
+  file(WRITE "${chain_dir}/fuzz_chain_seed4" "400b:\n  b: [t\n\n    v]\n")
   add_executable(fuzz_chain chain.c
                             ${CMAKE_SOURCE_DIR}/tools/codec/convert_core.c)
   target_include_directories(fuzz_chain PRIVATE ${CMAKE_SOURCE_DIR}/tools/codec
@@ -138,12 +141,13 @@ if(CF_WITH_EMIT
   target_compile_options(fuzz_chain PRIVATE -fsanitize=fuzzer)
   target_link_options(fuzz_chain PRIVATE -fsanitize=fuzzer)
   file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/corpus_chain")
+  set(chain_seeds fuzz_chain_seed1 fuzz_chain_seed2 fuzz_chain_seed3
+                  fuzz_chain_seed4)
+  string(REPLACE ";" "," chain_seeds "${chain_seeds}")
   add_test(
     NAME fuzz.chain
-    COMMAND
-      fuzz_chain corpus_chain -max_total_time=${CF_FUZZ_SECONDS} -max_len=8192
-      -seed_inputs=fuzz_chain_seed1,fuzz_chain_seed2,fuzz_chain_seed3
-      -print_final_stats=1)
+    COMMAND fuzz_chain corpus_chain -max_total_time=${CF_FUZZ_SECONDS}
+            -max_len=8192 -seed_inputs=${chain_seeds} -print_final_stats=1)
   math(EXPR limit "${CF_FUZZ_SECONDS} * 3 + 60")
   set_tests_properties(fuzz.chain PROPERTIES LABELS fuzz TIMEOUT ${limit})
 endif()

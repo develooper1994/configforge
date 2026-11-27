@@ -777,21 +777,28 @@ static int cv_record(const cf_codec* from, const cf_blob* blob, cv_tree* t,
     return 1;
 }
 
-/* A named table emptied by the trial has no separate finding (D-109).
-   Keep array elements so their positions, including empty tables, survive. */
-static void cv_drop_empty_tables(cv_node* n) {
+/* A named table emptied by the trial has no separate finding (D-109), nor
+   has an array, when the target holds no empty one: a name[] with nothing
+   under it is nothing to write. `holds` is the target's. Keep array
+   elements so their positions, including empty tables, survive. */
+static void cv_drop_empty(cv_node* n, unsigned holds) {
     cv_node* c;
     cf_bool  empty = CF_TRUE;
 
     for (c = n->first; c != NULL; c = c->next) {
         if (!c->left_out) {
-            cv_drop_empty_tables(c);
+            cv_drop_empty(c, holds);
             if (!c->left_out) {
                 empty = CF_FALSE;
             }
         }
     }
-    if (empty && n->kind == CVN_TABLE && n->name != NULL) {
+    if (!empty) {
+        return;
+    }
+    if ((n->kind == CVN_TABLE && n->name != NULL &&
+         (holds & CF_HOLDS_EMPTY_TABLE) == 0u) ||
+        (n->kind == CVN_ARRAY && (holds & CF_HOLDS_EMPTY_ARRAY) == 0u)) {
         n->left_out = CF_TRUE;
     }
 }
@@ -819,8 +826,8 @@ static void cv_find(cv_check* k, cv_node* root, size_t* non_text) {
     cf_sink_init(&nothing, NULL, 0);
     if (!cv_run(c, root, k, &nothing, non_text)) {
         *non_text = (size_t)-1;
-    } else if (k->known && (k->holds & CF_HOLDS_EMPTY_TABLE) == 0u) {
-        cv_drop_empty_tables(root);
+    } else if (k->known) {
+        cv_drop_empty(root, k->holds);
     }
 }
 

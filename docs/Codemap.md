@@ -1939,10 +1939,10 @@
 - cv_emit 691-717
 - cv_run 721-744
 - cv_record 751-778
-- cv_drop_empty_tables 782-797
-- cv_find 800-825
-- cv_bytes 828-856
-- cv_convert 858-895
+- cv_drop_empty 784-804
+- cv_find 807-832
+- cv_bytes 835-863
+- cv_convert 865-902
 `tools/codec/convert_core.h`
 - enum cv_kind 13-29
 - struct cv_finding 31-35
