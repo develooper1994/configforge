@@ -476,15 +476,17 @@ of a card's CI.
 | 191 | M-21 The evidence pack in the release | 2.0.0 | small | M-20 | waits: M-20 |
 | 192 | K-9h Thread, signal and allocation lines beside the guarantee, held by `gate.guarantees` | 2.0.0 | medium | K-9a | open |
 | 193 | K-9i Fork, callbacks, durability and inherited descriptors: one table, each row a test | 2.0.0 | small | nothing | open |
-| 194 | L-17-m The `targets` jobs required | 2.0.0 | small | L-17 | parked: not now |
-| 195 | L-19-m Arm devices run, recorded with their commit | 2.0.0 | small | L-19b | parked: not now |
-| 196 | P-15-m The repository settings the Scorecard waits on (the maintainer's) | 2.0.0 | small | P-14 | parked: not now |
-| 197 | M-19-m OSS-Fuzz: the application (parked) | 2.0.0 | small | M-18 | parked: not now |
-| 198 | M-23-m Registry set-up (parked) | 2.6.0 | small | M-22 | parked: not now |
-| 199 | M-25-m Upstream submissions: vcpkg and ConanCenter (parked) | 2.6.0 | small | M-22 | parked: not now |
-| 200 | M-29-m Submissions and registry accounts (parked) | 2.3.0 | small | M-27, M-28 | parked: not now |
-| 201 | M-30-m The GitHub Action in a repository of its own (parked) | 2.3.0 | small | nothing | parked: not now |
-| 202 | G-9-m Publishing the fork and what it found | 2.3.0 | small | G-9 | parked: not now |
+| 194 | F-6 The sync a replace needs, by platform: `fdatasync` on Linux, `F_FULLFSYNC` on macOS, kept only if measured | 2.7.0 | small | nothing | open |
+| 195 | F-7 Many small files: measured first, then the cost per file cut where it shows | 2.7.0 | medium | nothing | open |
+| 196 | L-17-m The `targets` jobs required | 2.0.0 | small | L-17 | parked: not now |
+| 197 | L-19-m Arm devices run, recorded with their commit | 2.0.0 | small | L-19b | parked: not now |
+| 198 | P-15-m The repository settings the Scorecard waits on (the maintainer's) | 2.0.0 | small | P-14 | parked: not now |
+| 199 | M-19-m OSS-Fuzz: the application (parked) | 2.0.0 | small | M-18 | parked: not now |
+| 200 | M-23-m Registry set-up (parked) | 2.6.0 | small | M-22 | parked: not now |
+| 201 | M-25-m Upstream submissions: vcpkg and ConanCenter (parked) | 2.6.0 | small | M-22 | parked: not now |
+| 202 | M-29-m Submissions and registry accounts (parked) | 2.3.0 | small | M-27, M-28 | parked: not now |
+| 203 | M-30-m The GitHub Action in a repository of its own (parked) | 2.3.0 | small | nothing | parked: not now |
+| 204 | G-9-m Publishing the fork and what it found | 2.3.0 | small | G-9 | parked: not now |
 <!-- index end -->
 
 ### Waits on the maintainer (skipped by the loop)

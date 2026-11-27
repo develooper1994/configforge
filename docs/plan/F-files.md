@@ -531,3 +531,47 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **docs**: (A) `CHANGELOG.md`, "## 2.1.0 — unreleased" (as F-4a's), "### Added": `configforge doctor graph` (F-4b, D-132); `docs/Decisions.md`: D-132; `docs/Roadmap.md`: the item headed "The references drawn" becomes 🟩. (B) the Roadmap mark only.
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the recommendation; `doctor graph` is built only when it is asked for, so the card stays parked until then.
   * 2026-11-27: the card opens at 2.1.0 (F-4a's version): B unless F-4a's finding names a want the filters do not meet, then A for that want; the finding decides, no one is asked (the maintainer's standing approval, 2026-11-27).
+
+## F-6 - The sync a replace needs, by platform: `fdatasync` on Linux, `F_FULLFSYNC` on macOS, kept only if measured
+
+* **id**: F-6
+* **goal**: `cf_file_replace` and `cf_file_writer_sync` sync a file with `fdatasync` where the platform has it (Linux, the BSDs), with `fcntl(fd, F_FULLFSYNC)` on macOS (falling back to `fsync` when it fails), and with `fsync` elsewhere; the Linux change stays only if a measurement shows it pays.
+* **why**: the maintainer (2026-11-27): "IO-bound work: can it be made faster, with the system's own functions?". Reading is CPU-bound (docs/Performance.md: 80 percent of JSON's and TOML's time in the string scanners), but a replace pays one `fsync` (`lib/platform/src/posix/file.c:103` and `:275`), milliseconds against microseconds of parsing. `fdatasync` skips the metadata a new file's size does not need; macOS's `fsync` leaves data in the drive's cache, so durability there needs `F_FULLFSYNC`.
+* **needs**: nothing
+* **size**: small
+* **version**: 2.7.0
+* **status**: open
+* **decided**:
+  * **Where**: one internal function `cf_platform_sync_fd(int fd)` in `lib/platform/src/posix/file.c` used by both call sites; the choice by preprocessor (`__APPLE__` and `F_FULLFSYNC`; `_POSIX_SYNCHRONIZED_IO > 0` or `__linux__` for `fdatasync`); Windows keeps `FlushFileBuffers`.
+  * **Durability is unchanged or stronger**: a replace writes a new temporary file, so its size is synced by `fdatasync`; the directory sync after the rename stays as it is.
+  * **The rule that keeps it** (Linux only; macOS's change is for correctness and stays): wall time of 1000 `cf_file_replace` calls of a 4 KiB file on the WSL ext4 disk, `hyperfine --runs 10`, before and after; kept when the median falls by 10 percent or more, else the `fdatasync` branch is removed and the measurement written in docs/Maintaining.md "Measured".
+* **files**: `lib/platform/src/posix/file.c`, `lib/config/tests/test_file.c` (a replace still reads back equal), `docs/Maintaining.md`; last: `CHANGELOG.md`, `docs/Decisions.md`, `docs/Codemap.md` (generated).
+* **steps**:
+  1. Measure before (the command above, a small program under `bench/` or the test's own loop).
+  2. The function and its two callers; the tests pass unchanged.
+  3. Measure after; keep or remove by the rule; write the numbers.
+* **accept**: ACCEPT's local runs; `ctest --preset default -R test_file` exit 0.
+* **stop if**: `fdatasync` is slower than `fsync` on the machine: write the numbers and remove the branch.
+* **docs**: `CHANGELOG.md`, under the newest unreleased heading, "### Changed": "a replace syncs with fdatasync on Linux and F_FULLFSYNC on macOS".
+
+## F-7 - Many small files: measured first, then the cost per file cut where it shows
+
+* **id**: F-7
+* **goal**: a benchmark loads a directory of 1000 configuration files of 200 bytes to 4 KiB (the `conf.d` case) and writes 1000 files with `cf_file_replace`; its report splits the time into system calls (open, fstat, read, close, fsync, rename) and parsing; one change is made only where the report shows system calls above a third of the time, chosen from: one directory sync for a batch of replaces in the same directory (a new `cf_file_options` flag, default off), and reading a file of known small size with one `read` into a stack buffer instead of a `FILE*` stream.
+* **why**: the maintainer (2026-11-27): "perhaps it makes sense when there are very many files". With one small file the open and the parse are both microseconds; with a thousand, the per-file system calls and above all a thousand `fsync`s of the same directory add up, and nothing in docs/Performance.md measures it yet.
+* **needs**: nothing
+* **size**: medium
+* **version**: 2.7.0
+* **status**: open
+* **decided**:
+  * **Measured with free tools**: `strace -c -f` for the system call share and `perf stat` (or `hyperfine`) for wall time, on WSL's ext4 and, where the maintainer's VM is up, on its disk; the report is a table in docs/Performance.md, "Many files".
+  * **Rejected now**: `io_uring` (Linux only, a new dependency surface, and the library is synchronous by design, D-14); threads inside the library (D-14: the caller owns threads; a caller may load files in parallel itself, and the document says how).
+  * **The batch sync flag**: `cf_file_options.sync_directory` stays per call by default; a new `cf_file_batch` pair (`cf_file_batch_begin(dir)` / `cf_file_batch_end`) syncs the directory once at the end. Only if the measurement shows directory syncs above a third of the write time.
+* **files**: `bench/many_files.c` (new) and its `bench/CMakeLists.txt` line, `docs/Performance.md`; if a change is made: `lib/platform/src/posix/file.c`, `lib/platform/include/configforge/cf_file.h`, `lib/config/tests/test_file.c`; last: `CHANGELOG.md`, `docs/Decisions.md`.
+* **steps**:
+  1. The benchmark and the report, before any change.
+  2. If the rule is met: the change, its test, the benchmark again.
+  3. Write the table and what was kept.
+* **accept**: ACCEPT's local runs; the benchmark builds in the default preset.
+* **stop if**: the measurement shows parsing above two thirds of the time: write the table, make no change, mark the card done with the numbers.
+* **docs**: `docs/Performance.md` "Many files"; `CHANGELOG.md` only if a change is made.
