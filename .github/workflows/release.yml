@@ -257,9 +257,12 @@ jobs:
   # The Rust crate, published to crates.io after the GitHub release
   # exists (L-24). The token is the secret CARGO_REGISTRY_TOKEN, given to
   # the one step that publishes and nowhere else. M-22's trusted
-  # publishing replaces it; the secret is then deleted.
+  # publishing replaces it; the secret is then deleted. Skipped until the
+  # maintainer sets the repository variable PUBLISH_CRATES to true (M-23-m):
+  # crates.io refuses an account without a verified email.
   crates:
     needs: publish
+    if: vars.PUBLISH_CRATES == 'true'
     runs-on: ubuntu-26.04
     permissions:
       contents: read

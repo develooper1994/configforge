@@ -631,6 +631,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **accept**: the next tagged release's `publish-pypi` and `publish-crates` jobs are green and the packages appear on the registries.
 * **stop if**: a registry refuses the name or the publisher: the maintainer reports; M-22 is amended, not this card.
 * **docs**: `docs/Maintaining.md` records the date and the environment names; nothing else.
+* **Organiser's answers**: 2026-11-27, the maintainer defers publishing to PyPI and crates.io for now ("cargo ve pypi yayınlamalarını ertele"). The 1.9.0 tag's `crates` job failed only because crates.io wants a verified email on the account; `release.yml`'s `crates` job now waits on `vars.PUBLISH_CRATES == 'true'` as M-22 decides, so a release is green without it. Once (2) is done, 1.9.0's crate goes out by `gh run rerun 46010730161 --failed` with the variable set.
 
 ## M-24 - The clean-machine install, in CI
 

@@ -12,10 +12,9 @@ approval and release rights: docs/Plan.md "For the maintainer".
 ## In flight
 
 1. 1.9.0 is released (tag v1.9.0, 2026-11-27; GitHub release with its
-   archives and "How each archive was built"). Its `crates` job failed:
-   crates.io wants a verified email on the maintainer's account. When the
-   maintainer has verified it: `gh run rerun 46010730161 --failed`, then check
-   https://crates.io/crates/configforge.
+   archives and "How each archive was built"). Publishing to crates.io and
+   PyPI is deferred by the maintainer (2026-11-27): the `crates` job waits on
+   the repository variable PUBLISH_CRATES (M-23-m). Do not chase it.
 2. M-10 (the sizing modes' interface, 2.0.0), worktree D:\cf-work\M-10,
    branch `work/M-10`: a worker is bringing it onto main (open 2.0.0 with
    `cmake -DTO=2.0.0 -P scripts/release/version.cmake`, move its CHANGELOG
