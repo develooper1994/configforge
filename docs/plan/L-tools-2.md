@@ -566,7 +566,7 @@ section at its end).
 * **needs**: nothing
 * **size**: small
 * **version**: 1.9.0
-* **status**: open
+* **status**: done (9cdc40e)
 * **decided**:
   * **The record.** `scripts/release/buildinfo.cmake` (new, `cmake -DBUILD=<dir> -DNAME=<archive> -DOUT=<file> -P`): reads `<dir>/CMakeCache.txt` and writes Markdown: a `### <archive>` heading, a line `C compiler: <CMAKE_C_COMPILER_ID> <CMAKE_C_COMPILER_VERSION>` (both written into the cache by a one-line `set(... CACHE INTERNAL "")` in the top `CMakeLists.txt` after `project()`, since the cache does not hold them otherwise), `Generator: <CMAKE_GENERATOR>`, `Build type: <CMAKE_BUILD_TYPE>` (or `multi-config, Release` when it is empty), then a two-column table of every cache entry whose name starts with `CF_` and is not INTERNAL, FILEPATH or PATH (a tool's path is the runner's, not the build's), sorted by name. No other source of truth: what the cache says is what was built.
   * **The jobs.** In `.github/workflows/release.yml`, the `linux-musl`, `windows` and `macos` jobs run it after their build on the build directory of the published archive and upload `buildinfo-<job>.md` beside their archive in the same artifact; the amalgamation job writes one too, with "the amalgamation: one C file, every option in `cf_build_options.h` at its default" and no table. `publish` appends `## How each archive was built` and the files, in the order musl, windows, macos, amalgamation, to `notes.md` before `gh release create`; the `.md` files are not attached as assets (`dist/*` excludes them: move them out of `dist/` first).
