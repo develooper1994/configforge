@@ -149,6 +149,9 @@ CF_NODISCARD CF_API cf_config* cf_app(const char* name, int argc, char* const* a
 
 Implementation: [`cf_app` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L1676).
 
+Guarantee: strong. Nothing of the caller's changes; NULL, with `err` set, when no
+configuration can be made.
+
 ### Tier 1 and 2
 
 The builder owns an arena; the configuration inherits it. A builder
@@ -166,6 +169,8 @@ CF_NODISCARD CF_API cf_builder* cf_build(const cf_allocator* alloc);
 ```
 
 Implementation: [`cf_build` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L219).
+
+Guarantee: strong. Nothing exists to change; NULL when the allocator fails.
 
 ```c
 CF_NODISCARD CF_API cf_builder* cf_build_in(cf_arena* arena);
@@ -185,6 +190,8 @@ configuration's hold on it and never frees the caller's buffer.
 Everything the configuration points at lives in that buffer, so it
 has to outlive the configuration - which on the target this exists
 for is a static array, and outlives everything.
+ Guarantee: strong. Nothing exists to change; NULL when the arena cannot hold a builder,
+ and the arena is then as it was.
 
 ```c
 CF_NODISCARD CF_API cf_builder* cf_app_builder(const char* name, int argc, char* const* argv);
@@ -195,6 +202,8 @@ Implementation: [`cf_app_builder` (lib/config/src/core/config.c)](https://github
 cf_app's builder, before create: the command line (CF_RANK_CLI) and
 the NAME_ environment (CF_RANK_ENV), for adding files and definitions
 to.
+Guarantee: strong. Nothing exists to change; NULL when no builder can be made. A
+source that cannot be added is held for cf_builder_create.
 
 ```c
 CF_API cf_bool cf_builder_response_files(cf_builder* b);
@@ -216,6 +225,9 @@ cf_build). Calling it twice is harmless.
 A program that relied on the old default - cf_app expanding @file -
 starts from cf_app_builder, calls this, and then cf_builder_create.
 cf_app itself never expands.
+ Guarantee: basic. the builder stays valid; a response file that cannot be read is held
+ for cf_builder_create. CF_FALSE with nothing held for a NULL builder or one with no
+ command line.
 
 ```c
 CF_API void cf_builder_abort(cf_builder* b);
@@ -225,6 +237,7 @@ Implementation: [`cf_builder_abort` (lib/config/src/core/config.c)](https://gith
 
 Frees a builder that will not be created; a cf_build_in arena is the
 caller's and is left alone.
+Guarantee: nothrow. A NULL builder is accepted; the builder is consumed.
 
 ```c
 CF_API cf_bool cf_builder_memory(cf_builder* b, const char* name, int rank, const cf_pair* pairs, size_t count);
@@ -240,6 +253,8 @@ cf_builder_create runs, so what it points at has to stay valid until
 that returns - an argument vector filled in an inner block is gone by
 then. What the configuration holds is its own copy, so none of the
 three has to outlive it. The name and the prefix are copied at once.
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API cf_bool cf_builder_file(cf_builder* b, const char* name, int rank, const char* path, const char* format, unsigned flags);
@@ -254,6 +269,8 @@ adds the format the content looks like, as a hint. A file whose format
 this build left out is an error that says which option to turn on;
 CF_OPTIONAL makes a *missing* file acceptable, and never makes an
 unreadable one acceptable.
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API cf_bool cf_builder_document(cf_builder* b, const char* name, int rank, const char* bytes, size_t n, const char* format, unsigned flags);
@@ -268,6 +285,8 @@ content, as for a file. Its places in explain() are `name` and the
 line. The `n` bytes are copied: the builder does not borrow them past
 the call, so a buffer freed afterwards is never read, and the document
 is read again on every reload.
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API cf_bool cf_builder_env_document(cf_builder* b, const char* name, int rank, const char* variable, const char* format, unsigned flags);
@@ -283,6 +302,8 @@ places in explain() are the variable's name and the line; `name` is the
 source's (NULL: the variable). A variable that is not set is an error,
 and nothing with CF_OPTIONAL. The sources of pairs - cf_builder_env -
 are another thing: there is no format in `APP_PORT=80`.
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API cf_bool cf_builder_file_codec(cf_builder* b, const char* name, int rank, const char* path, const struct cf_codec* codec, unsigned flags);
@@ -293,12 +314,17 @@ Implementation: [`cf_builder_file_codec` (lib/config/src/core/config.c)](https:/
 A file read by a codec the caller supplies, for a format this library
 does not have; see cf_source_file_codec. The codec must outlive the
 configuration.
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API cf_bool cf_builder_codec(cf_builder* b, const struct cf_codec* codec);
 ```
 
 Implementation: [`cf_builder_codec` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L790).
+
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API const struct cf_codec* cf_config_codec(const cf_config* c, const char* format);
@@ -308,6 +334,7 @@ Implementation: [`cf_config_codec` (lib/config/src/core/config.c)](https://githu
 
 The codec a configuration reads and writes `format` with: one its
 builder was given, else the built-in one, else NULL.
+Guarantee: nothrow. NULL when no codec of that name is known.
 
 ```c
 CF_API cf_bool cf_builder_dotenv(cf_builder* b, const char* name, int rank, const char* path, const char* prefix, unsigned flags);
@@ -318,6 +345,8 @@ Implementation: [`cf_builder_dotenv` (lib/config/src/core/config.c)](https://git
 A .env file, read with the environment's key mapping: a .env file is
 an environment written down, so the escape and the natural spelling
 behave identically in both.
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API cf_bool cf_builder_dir(cf_builder* b, const char* name, int rank, const char* path, const char* format, unsigned flags);
@@ -328,6 +357,8 @@ Implementation: [`cf_builder_dir` (lib/config/src/core/config.c)](https://github
 A drop-in directory: every file in byte order, all at one rank, so
 10-base losing to 90-site is precedence rather than a merge rule and
 explain() names the file that won.
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API cf_bool cf_builder_secrets(cf_builder* b, const char* name, int rank, const char* path, const char* prefix, unsigned flags);
@@ -337,6 +368,8 @@ Implementation: [`cf_builder_secrets` (lib/config/src/core/config.c)](https://gi
 
 A directory of secrets, one file a key, as containers mount them and
 systemd passes credentials (cf_source_secrets says how names map).
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API cf_bool cf_builder_credentials(cf_builder* b, const char* name, int rank, const char* prefix, unsigned flags);
@@ -356,6 +389,8 @@ and nothing with CF_OPTIONAL; set, it must name a directory that can be
 read whole, optional or not (D-78, D-80). Not Linux only: the variable
 is read wherever it is set. Under CF_WITH_DIR, as the secrets
 directory is.
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API cf_bool cf_builder_registry(cf_builder* b, const char* name, int rank, const char* root, unsigned flags);
@@ -366,6 +401,8 @@ Implementation: [`cf_builder_registry` (lib/config/src/core/config.c)](https://g
 A key of the Windows Registry and its subkeys (cf_source_registry
 says how names and types map). Windows only; elsewhere it fails by
 name, CF_OPTIONAL or not.
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API cf_bool cf_builder_preferences(cf_builder* b, const char* name, int rank, const char* domain, unsigned flags);
@@ -388,6 +425,8 @@ default: it links CoreFoundation); elsewhere it fails by name,
 CF_OPTIONAL or not. Not watched: cf_changed does not see a change to
 it, as it does not for the Registry. The other scopes (this host
 only, any user, managed) are not read (D-87).
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API cf_bool cf_builder_store(cf_builder* b, const char* name, int rank, const char* path, unsigned flags);
@@ -397,6 +436,8 @@ Implementation: [`cf_builder_store` (lib/config/src/core/config.c)](https://gith
 
 A SQLite store (CF_WITH_SQLITE): typed values, each with what its
 writer said about it. cf_write writes one, when it is granted.
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API cf_bool cf_builder_writable(cf_builder* b, const char* source_name);
@@ -410,6 +451,8 @@ only until granted. A grant to a source that cannot be written, or to
 no source of that name, fails cf_builder_create, before anything is
 read. A derived configuration keeps the grants of the one it came
 from.
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API cf_bool cf_builder_source(cf_builder* b, const cf_source* s);
@@ -420,12 +463,17 @@ Implementation: [`cf_builder_source` (lib/config/src/core/config.c)](https://git
 Register a source the caller built itself. The source object is
 copied, so the caller's may be on the stack; any state it points at
 must outlive the configuration.
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API cf_bool cf_builder_define(cf_builder* b, const cf_def* d);
 ```
 
 Implementation: [`cf_builder_define` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L946).
+
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API cf_bool cf_builder_schema(cf_builder* b, const char* text, size_t n, const char* name);
@@ -438,6 +486,8 @@ The contract from a JSON Schema - the text, or a file - as
 cf_defset_schema reads one: the definitions cf_schema would write
 back. A keyword it does not read is refused by name and place, and
 cf_builder_create reports it. (1.2)
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API cf_bool cf_builder_open(cf_builder* b, const char* prefix);
@@ -448,6 +498,8 @@ Implementation: [`cf_builder_open` (lib/config/src/core/config.c)](https://githu
 Exempt a prefix from unknown-key rejection, for a key space the
 program cannot know in advance: a plugin's settings are not in the
 contract because the plugin is not either.
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API void cf_limit_options_init(cf_limit_options* o);
@@ -455,15 +507,13 @@ CF_API void cf_limit_options_init(cf_limit_options* o);
 
 Implementation: [`cf_limit_options_init` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L912).
 
+Guarantee: nothrow.
+
 ```c
 CF_API cf_bool cf_builder_limits(cf_builder* b, const cf_limit_options* o);
-CF_API cf_bool cf_builder_bool(cf_builder* b, const char* key, cf_bool dflt, unsigned flags);
-CF_API cf_bool cf_builder_int(cf_builder* b, const char* key, cf_i64 dflt, cf_i64 min, cf_i64 max, unsigned flags);
-CF_API cf_bool cf_builder_text(cf_builder* b, const char* key, const char* dflt, unsigned flags);
-CF_API cf_bool cf_builder_real(cf_builder* b, const char* key, double dflt, double min, double max, unsigned flags);
 ```
 
-Implementation: [`cf_builder_limits` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L888), [`cf_builder_bool` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L959), [`cf_builder_int` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L971), [`cf_builder_text` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L984), [`cf_builder_real` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L998).
+Implementation: [`cf_builder_limits` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L888).
 
 Sets the limits of `b`, before or between its calls to cf_builder_open.
 CF_FALSE for a NULL `b`, or an `o` whose `size` does not reach
@@ -471,6 +521,44 @@ CF_FALSE for a NULL `b`, or an `o` whose `size` does not reach
 the builder's others are (CF_E_DEFINITION, "more than N open
 prefixes"), when `b` already holds more prefixes than the new limit. A
 derived configuration (cf_derive) and a write keep the limit.
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
+
+```c
+CF_API cf_bool cf_builder_bool(cf_builder* b, const char* key, cf_bool dflt, unsigned flags);
+```
+
+Implementation: [`cf_builder_bool` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L959).
+
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
+
+```c
+CF_API cf_bool cf_builder_int(cf_builder* b, const char* key, cf_i64 dflt, cf_i64 min, cf_i64 max, unsigned flags);
+```
+
+Implementation: [`cf_builder_int` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L971).
+
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
+
+```c
+CF_API cf_bool cf_builder_text(cf_builder* b, const char* key, const char* dflt, unsigned flags);
+```
+
+Implementation: [`cf_builder_text` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L984).
+
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
+
+```c
+CF_API cf_bool cf_builder_real(cf_builder* b, const char* key, double dflt, double min, double max, unsigned flags);
+```
+
+Implementation: [`cf_builder_real` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L998).
+
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API cf_bool cf_builder_key(cf_builder* b, const char* key, cf_type type, const char* dflt, const char* min, const char* max, unsigned flags);
@@ -486,12 +574,16 @@ real, anything else text. `min` and `max` bound an int or a real and
 are NULL for no range. A default or a bound that does not read as the
 type is refused, a range on a bool or text is refused, and so is a
 key with neither a type nor a default. (1.3)
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API void cf_builder_unknown(cf_builder* b, cf_unknown_policy policy);
 ```
 
 Implementation: [`cf_builder_unknown` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L1102).
+
+Guarantee: nothrow.
 
 ```c
 CF_API void cf_builder_log(cf_builder* b, cf_log_fn fn, void* user, cf_log_level min);
@@ -503,6 +595,7 @@ Where what deserves a log line and is not an error goes (cf_log.h):
 unknown keys under CF_UNKNOWN_WARN, deprecated keys in use, values
 refused and fallen back from. Events below `min` are not made. A
 configuration derived from this one logs to the same place.
+Guarantee: nothrow.
 
 ```c
 CF_API void cf_builder_track_reads(cf_builder* b);
@@ -519,6 +612,7 @@ flag is atomic and written once. A configuration derived from this
 one tracks too, from nothing. cf_was_read and cf_read_count answer;
 cf_report adds "read" to every key, a boolean, so a blind report
 still carries no value.
+Guarantee: nothrow.
 
 ```c
 CF_API cf_bool cf_builder_digest_key(cf_builder* b, const unsigned char* key, size_t n);
@@ -535,12 +629,16 @@ cannot, and reports made under one key still compare. `id` is the
 key's own digest, so two keys are told apart without either being
 shown. `n` must be 16; the bytes are copied and wiped with the
 configuration, and a derived configuration keeps them.
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API void cf_sizing_options_init(cf_sizing_options* o);
 ```
 
 Implementation: [`cf_sizing_options_init` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L1159).
+
+Guarantee: nothrow.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_builder_sizing(cf_builder* b, const cf_sizing_options* o);
@@ -555,6 +653,8 @@ cf_builder_create, for a NULL builder, options too small to hold a cap,
 an unknown mode, SEMI with a cap of 0 (CF_E_POLICY), or a mode other than
 MANUAL in a build with fixed limits (CF_E_CAPABILITY). A derived
 configuration keeps its original's mode.
+Guarantee: basic. the builder stays valid and holds its first failure; the mode and
+the cap are as they were when the options are refused.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_config_sizing(const cf_config* c, cf_sizing_options* o);
@@ -565,12 +665,17 @@ Implementation: [`cf_config_sizing` (lib/config/src/core/config.c)](https://gith
 Fills `o` (its `size` is read first and kept) with the mode and cap this
 configuration was built with. CF_FALSE for a NULL argument or options
 too small to hold a cap.
+Guarantee: strong. A query; `o` is not written when it returns CF_FALSE.
 
 ```c
 CF_NODISCARD CF_API cf_config* cf_builder_create(cf_builder* b, cf_error* err);
 ```
 
 Implementation: [`cf_builder_create` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L1365).
+
+Guarantee: strong. The configuration is made apart and published at the end. The
+builder is consumed whether this succeeds or fails, and the failure is in `err`; no
+half-made configuration exists.
 
 ### Reading
 
@@ -586,10 +691,19 @@ callers who want to know, and cf_type_of answers directly.
 CF_API cf_bool cf_get_bool(const cf_config* c, const char* key, cf_bool fallback);
 CF_API cf_i64 cf_get_int(const cf_config* c, const char* key, cf_i64 fallback);
 CF_API const char* cf_get_text(const cf_config* c, const char* key, const char* fallback);
+```
+
+Implementation: [`cf_get_bool` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2339), [`cf_get_int` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2344), [`cf_get_text` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2349).
+
+Guarantee: nothrow. The fallback for an absent key or another type.
+
+```c
 CF_API double cf_get_real(const cf_config* c, const char* key, double fallback);
 ```
 
-Implementation: [`cf_get_bool` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2339), [`cf_get_int` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2344), [`cf_get_text` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2349), [`cf_get_real` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2371).
+Implementation: [`cf_get_real` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2371).
+
+Guarantee: nothrow. The fallback for an absent key or another type.
 
 ```c
 CF_API const char* cf_get_text_n(const cf_config* c, const char* key, size_t* len, const char* fallback);
@@ -599,38 +713,65 @@ Implementation: [`cf_get_text_n` (lib/config/src/core/config.c)](https://github.
 
 Pointer and length, for text that may contain anything. The stored
 value is NUL-terminated as well, so cf_get_text stays free.
+Guarantee: nothrow. The fallback for an absent key or another type.
 
 ```c
 CF_NODISCARD CF_API cf_code cf_try_bool(const cf_config* c, const char* key, cf_bool* out);
 CF_NODISCARD CF_API cf_code cf_try_int(const cf_config* c, const char* key, cf_i64* out);
 CF_NODISCARD CF_API cf_code cf_try_text(const cf_config* c, const char* key, const char** out, size_t* len);
+```
+
+Implementation: [`cf_try_bool` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2391), [`cf_try_int` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2400), [`cf_try_text` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2409).
+
+CF_OK, CF_E_KEY when absent, CF_E_CONVERT on a type mismatch.
+Guarantee: strong. A read; the configuration is untouched and `out` is unspecified
+unless the result is CF_OK.
+
+```c
 CF_NODISCARD CF_API cf_code cf_try_real(const cf_config* c, const char* key, double* out);
 ```
 
-Implementation: [`cf_try_bool` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2391), [`cf_try_int` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2400), [`cf_try_text` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2409), [`cf_try_real` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2425).
+Implementation: [`cf_try_real` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2425).
 
-CF_OK, CF_E_KEY when absent, CF_E_CONVERT on a type mismatch.
+Guarantee: strong. A read; the configuration is untouched and `out` is unspecified
+unless the result is CF_OK.
 
 ```c
 CF_API cf_type cf_type_of(const cf_config* c, const char* key);
+```
+
+Implementation: [`cf_type_of` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2435).
+
+CF_TYPE_NULL when the key is absent.
+Guarantee: nothrow. CF_TYPE_NULL for an absent key.
+
+```c
 CF_NODISCARD CF_API cf_bool cf_has(const cf_config* c, const char* key);
 ```
 
-Implementation: [`cf_type_of` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2435), [`cf_has` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2440).
+Implementation: [`cf_has` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2440).
 
-CF_TYPE_NULL when the key is absent.
+Guarantee: strong. A query; it changes nothing.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_tracks_reads(const cf_config* c);
 CF_NODISCARD CF_API cf_bool cf_was_read(const cf_config* c, const char* key);
-CF_API size_t cf_read_count(const cf_config* c);
 ```
 
-Implementation: [`cf_tracks_reads` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2444), [`cf_was_read` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2448), [`cf_read_count` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2459).
+Implementation: [`cf_tracks_reads` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2444), [`cf_was_read` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2448).
 
 Read coverage (cf_builder_track_reads). CF_FALSE and 0 for a
 configuration that does not track. cf_read_count counts keys, not
 reads; neither of these is itself a read.
+Guarantee: strong. A query; it changes nothing.
+
+```c
+CF_API size_t cf_read_count(const cf_config* c);
+```
+
+Implementation: [`cf_read_count` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2459).
+
+Guarantee: nothrow.
 
 ### Diagnostics
 
@@ -647,17 +788,28 @@ CF_API size_t cf_explain(const cf_config* c, const char* key, char* buf, size_t 
 
 Implementation: [`cf_explain` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2477).
 
+Guarantee: strong. The configuration is untouched; the size needed is returned and
+`buf` is the caller's.
+
 ```c
 CF_API size_t cf_explain_json(const cf_config* c, const char* key, cf_report_mode mode, char* buf, size_t cap);
-CF_API size_t cf_inspect(const cf_config* c, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_explain_json` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2541), [`cf_inspect` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2488).
+Implementation: [`cf_explain_json` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2541).
 
 The same chain as JSON, for an administration endpoint or a tool:
 cf_report_key_write says what it holds. CF_REPORT_BLIND is what an
 endpoint wants - presence, origin, length and digest for a sensitive
 key, never its value.
+Guarantee: strong. As cf_explain.
+
+```c
+CF_API size_t cf_inspect(const cf_config* c, char* buf, size_t cap);
+```
+
+Implementation: [`cf_inspect` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2488).
+
+Guarantee: strong. As cf_explain.
 
 ```c
 CF_API size_t cf_diff(const cf_config* before, const cf_config* after, cf_diff_fn fn, void* ctx);
@@ -666,6 +818,7 @@ CF_API size_t cf_diff(const cf_config* before, const cf_config* after, cf_diff_f
 Implementation: [`cf_diff` (lib/config/src/diag/diff.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/diag/diff.c#L35).
 
 The number of changed keys; `fn` may be NULL to only count them.
+Guarantee: nothrow. Neither configuration is touched; `fn` may stop it.
 
 ```c
 CF_API size_t cf_diff_text(const cf_config* before, const cf_config* after, char* buf, size_t cap);
@@ -682,6 +835,8 @@ values of CF_SENSITIVE keys redacted as explain() redacts them:
   db.password: changed, &lt;sensitive> (env)
 
 Measure-or-write, like every renderer here.
+Guarantee: strong. Neither configuration is touched; the size needed is returned and
+`buf` is the caller's.
 
 ```c
 CF_API size_t cf_diff_json(const cf_config* before, const cf_config* after, char* buf, size_t cap);
@@ -697,6 +852,8 @@ The same changes as JSON Lines, one object a line, for a log pipeline:
 "change" is added, removed, value or origin; "from" is where the
 new value is, "was_from" where the old one was when that differs. A
 CF_SENSITIVE key has "sensitive": true and no values. Measure-or-write.
+Guarantee: strong. Neither configuration is touched; the size needed is returned and
+`buf` is the caller's.
 
 ```c
 CF_API cf_u64 cf_digest(const cf_config* c);
@@ -706,6 +863,7 @@ Implementation: [`cf_digest` (lib/config/src/core/config.c)](https://github.com/
 
 Order-independent over the resolved configuration, identical on
 every platform and in both portability modes.
+Guarantee: nothrow.
 
 ```c
 CF_API cf_u64 cf_fingerprint(const cf_config* c);
@@ -720,6 +878,7 @@ value, so the fingerprint can be published wherever a blind report
 could. Two configurations with the same values and secrets have the
 same one, on every platform. Not cryptographic: it tells changes
 apart, and proves nothing. (1.1)
+Guarantee: nothrow.
 
 ```c
 CF_API size_t cf_fingerprint_format(cf_u64 fp, char* buf, size_t cap);
@@ -729,6 +888,7 @@ Implementation: [`cf_fingerprint_format` (lib/config/src/core/config.c)](https:/
 
 `fp` as reports and logs write it, "fnv1a:" and sixteen hex digits,
 in `buf` as far as `cap` allows; the length it needs, 22. (1.1)
+Guarantee: nothrow. `buf` is the caller's; the length needed is returned.
 
 ```c
 CF_API size_t cf_report(const cf_config* c, const cf_report_info* info, char* buf, size_t cap);
@@ -747,6 +907,9 @@ A full report contains every value and is therefore a
 credential-bearing artifact. The blind form keeps presence, origin,
 length and a digest, which is everything an audit needs and nothing
 a leak would want.
+Guarantee: strong. The configuration is untouched; an `info` that did not start from
+CF_REPORT_INFO_INIT writes nothing; the size needed is returned and `buf` is the
+caller's.
 
 ```c
 CF_API size_t cf_schema(const cf_config* c, const char* title, char* buf, size_t cap);
@@ -756,6 +919,8 @@ Implementation: [`cf_schema` (lib/config/src/core/config.c)](https://github.com/
 
 The configuration's contract as a JSON Schema, closed when it rejects
 unknown keys (CF_UNKNOWN_REJECT). See cf_schema_write.
+Guarantee: strong. The configuration is untouched; the size needed is returned and
+`buf` is the caller's.
 
 ```c
 CF_API size_t cf_usage(const cf_config* c, const char* program, const char* env_prefix, char* buf, size_t cap);
@@ -773,6 +938,8 @@ name out. `program` NULL is "program". Measure-or-write: the length
 of the whole text, without the NUL; NULL `buf` only measures, and a
 short one gets the prefix that fits. It does not intercept --help:
 a program declares a bool and calls this. (1.8)
+Guarantee: strong. The configuration is untouched; the size needed is returned and
+`buf` is the caller's.
 
 ```c
 CF_API cf_bool cf_builder_replay(cf_builder* b, const char* name, int rank, const char* path, unsigned flags);
@@ -783,6 +950,8 @@ Implementation: [`cf_builder_replay` (lib/config/src/core/config.c)](https://git
 Load a full report as a source. Reproduces exactly the configuration
 a process was running, rather than a reconstruction from files that
 may have changed since. `flags` is a source's: CF_OPTIONAL, or 0.
+Guarantee: basic. the builder stays valid and holds its first failure;
+cf_builder_create reports it (nowhere to hold it for a NULL builder).
 
 ```c
 CF_API size_t cf_count(const cf_config* c);
@@ -798,6 +967,7 @@ How many keys the configuration knows. A key is known once anything
 supplied it, so one that has no value is counted too: every candidate
 for it was refused, or it is an element beyond the end of its array.
 cf_has says which keys have one.
+Guarantee: nothrow.
 
 ### Ownership and threads
 
@@ -842,6 +1012,9 @@ CF_NODISCARD CF_API cf_config* cf_derive(const cf_config* base, const char* sour
 
 Implementation: [`cf_derive` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L1832).
 
+Guarantee: strong. The derived configuration is made apart; on failure `base` is as
+it was and nothing is left behind.
+
 ```c
 CF_NODISCARD CF_API cf_config* cf_derive_in(const cf_config* base, cf_arena* arena, const char*    source_name, const cf_pair* pairs, size_t count, cf_error* err);
 ```
@@ -850,6 +1023,8 @@ Implementation: [`cf_derive_in` (lib/config/src/core/config.c)](https://github.c
 
 The same, inside an arena the caller owns. A configuration built with
 cf_build_in has no allocator to borrow, so it must use this one.
+Guarantee: strong. As cf_derive; the caller's arena is used only for what the derived
+configuration holds.
 
 ### Keeping a change
 
@@ -888,6 +1063,10 @@ CF_NODISCARD CF_API cf_bool cf_write(const cf_config* c, const char* target, con
 
 Implementation: [`cf_write` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2158).
 
+Guarantee: strong. The configuration (the read snapshot) never changes; every item is
+checked before one is written, and a store writes them in one transaction that is
+rolled back on failure.
+
 ### Change notification
 
 Pollable, never a callback: a library that owns a thread and calls
@@ -911,11 +1090,27 @@ which costs the re-read you were about to do anyway.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_changed(const cf_config* c);
+```
+
+Implementation: [`cf_changed` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2235).
+
+Guarantee: strong. A query; it changes nothing.
+
+```c
 CF_API size_t cf_watch_count(const cf_config* c);
+```
+
+Implementation: [`cf_watch_count` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2224).
+
+Guarantee: nothrow.
+
+```c
 CF_API const char* cf_watch_path(const cf_config* c, size_t i);
 ```
 
-Implementation: [`cf_changed` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2235), [`cf_watch_count` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2224), [`cf_watch_path` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2228).
+Implementation: [`cf_watch_path` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2228).
+
+Guarantee: nothrow. NULL for an index past the end.
 
 ### A handle an event loop can wait on
 
@@ -959,30 +1154,68 @@ Implementation: [`cf_watcher_open` (lib/config/src/core/config.c)](https://githu
 
 `a` NULL means the default allocator. Fails when the configuration
 read no file, since there would be nothing to wake it.
+Guarantee: strong. Nothing exists to change; NULL, with `err` set, when no watcher
+can be made.
 
 ```c
-CF_API int cf_watcher_fd(const cf_watcher* w); /* -1 where it is not a descriptor */
-CF_API void* cf_watcher_handle(const cf_watcher* w); /* NULL where it is not a HANDLE */
+CF_API int cf_watcher_fd(const cf_watcher* w);
+```
+
+Implementation: [`cf_watcher_fd` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2277).
+
+-1 where it is not a descriptor.
+Guarantee: nothrow.
+
+```c
+CF_API void* cf_watcher_handle(const cf_watcher* w);
+```
+
+Implementation: [`cf_watcher_handle` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2281).
+
+NULL where it is not a HANDLE.
+Guarantee: nothrow.
+
+```c
 CF_NODISCARD CF_API cf_bool cf_watcher_drain(cf_watcher* w);
 ```
 
-Implementation: [`cf_watcher_fd` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2277), [`cf_watcher_handle` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2281), [`cf_watcher_drain` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2285).
+Implementation: [`cf_watcher_drain` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2285).
+
+Guarantee: strong. A failed drain leaves the watcher valid, to be asked again.
 
 ```c
 CF_API int cf_watcher_wait(cf_watcher* w, long timeout_ms);
+```
+
+Implementation: [`cf_watcher_wait` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2289).
+
+1 woken (and drained), 0 timed out, -1 failed. Negative: no limit.
+Guarantee: basic. A failure (-1) leaves the watcher valid, but wake-ups may have been
+consumed.
+
+```c
 CF_API void cf_watcher_close(cf_watcher* w);
 ```
 
-Implementation: [`cf_watcher_wait` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2289), [`cf_watcher_close` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2293).
+Implementation: [`cf_watcher_close` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2293).
 
-1 woken (and drained), 0 timed out, -1 failed. Negative: no limit.
+Guarantee: nothrow. A NULL watcher is accepted.
 
 ```c
 CF_API void cf_config_ref(cf_config* c);
+```
+
+Implementation: [`cf_config_ref` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2297).
+
+Guarantee: nothrow.
+
+```c
 CF_API void cf_config_free(cf_config* c);
 ```
 
-Implementation: [`cf_config_ref` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2297), [`cf_config_free` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2303).
+Implementation: [`cf_config_free` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2303).
+
+Guarantee: nothrow. A NULL configuration is accepted.
 
 ## cf_alloc.h
 

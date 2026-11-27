@@ -94,9 +94,9 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 
 | Function | Header | Guarantee |
 | -------- | ------ | --------- |
-| `cf_app` | `configforge.h` | not yet |
-| `cf_app_builder` | `configforge.h` | not yet |
-| `cf_apply_stats` | `configforge.h` | not yet |
+| `cf_app` | `configforge.h` | strong |
+| `cf_app_builder` | `configforge.h` | strong |
+| `cf_apply_stats` | `configforge.h` | nothrow |
 | `cf_arena_alloc` | `cf_alloc.h` | strong |
 | `cf_arena_allocator` | `cf_alloc.h` | nothrow |
 | `cf_arena_calloc` | `cf_alloc.h` | strong |
@@ -115,48 +115,48 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_blob_file` | `cf_serialize.h` | basic |
 | `cf_blob_mem` | `cf_serialize.h` | nothrow |
 | `cf_blob_skip_bom` | `cf_serialize.h` | nothrow |
-| `cf_build` | `configforge.h` | not yet |
+| `cf_build` | `configforge.h` | strong |
 | `cf_build_id` | `cf_version.h` | not yet |
-| `cf_build_in` | `configforge.h` | not yet |
+| `cf_build_in` | `configforge.h` | strong |
 | `cf_build_limit` | `cf_version.h` | not yet |
 | `cf_build_profile` | `cf_version.h` | not yet |
-| `cf_builder_abort` | `configforge.h` | not yet |
-| `cf_builder_bool` | `configforge.h` | not yet |
-| `cf_builder_cli` | `configforge.h` | not yet |
-| `cf_builder_codec` | `configforge.h` | not yet |
-| `cf_builder_create` | `configforge.h` | not yet |
-| `cf_builder_credentials` | `configforge.h` | not yet |
-| `cf_builder_define` | `configforge.h` | not yet |
-| `cf_builder_digest_key` | `configforge.h` | not yet |
-| `cf_builder_dir` | `configforge.h` | not yet |
-| `cf_builder_document` | `configforge.h` | not yet |
-| `cf_builder_dotenv` | `configforge.h` | not yet |
-| `cf_builder_env` | `configforge.h` | not yet |
-| `cf_builder_env_document` | `configforge.h` | not yet |
-| `cf_builder_file` | `configforge.h` | not yet |
-| `cf_builder_file_codec` | `configforge.h` | not yet |
-| `cf_builder_int` | `configforge.h` | not yet |
-| `cf_builder_key` | `configforge.h` | not yet |
-| `cf_builder_limits` | `configforge.h` | not yet |
-| `cf_builder_log` | `configforge.h` | not yet |
-| `cf_builder_memory` | `configforge.h` | not yet |
-| `cf_builder_open` | `configforge.h` | not yet |
-| `cf_builder_preferences` | `configforge.h` | not yet |
-| `cf_builder_real` | `configforge.h` | not yet |
-| `cf_builder_registry` | `configforge.h` | not yet |
-| `cf_builder_replay` | `configforge.h` | not yet |
-| `cf_builder_response_files` | `configforge.h` | not yet |
-| `cf_builder_schema` | `configforge.h` | not yet |
-| `cf_builder_schema_file` | `configforge.h` | not yet |
-| `cf_builder_secrets` | `configforge.h` | not yet |
-| `cf_builder_sizing` | `configforge.h` | not yet |
-| `cf_builder_source` | `configforge.h` | not yet |
-| `cf_builder_store` | `configforge.h` | not yet |
-| `cf_builder_text` | `configforge.h` | not yet |
-| `cf_builder_track_reads` | `configforge.h` | not yet |
-| `cf_builder_unknown` | `configforge.h` | not yet |
-| `cf_builder_writable` | `configforge.h` | not yet |
-| `cf_changed` | `configforge.h` | not yet |
+| `cf_builder_abort` | `configforge.h` | nothrow |
+| `cf_builder_bool` | `configforge.h` | basic |
+| `cf_builder_cli` | `configforge.h` | basic |
+| `cf_builder_codec` | `configforge.h` | basic |
+| `cf_builder_create` | `configforge.h` | strong |
+| `cf_builder_credentials` | `configforge.h` | basic |
+| `cf_builder_define` | `configforge.h` | basic |
+| `cf_builder_digest_key` | `configforge.h` | basic |
+| `cf_builder_dir` | `configforge.h` | basic |
+| `cf_builder_document` | `configforge.h` | basic |
+| `cf_builder_dotenv` | `configforge.h` | basic |
+| `cf_builder_env` | `configforge.h` | basic |
+| `cf_builder_env_document` | `configforge.h` | basic |
+| `cf_builder_file` | `configforge.h` | basic |
+| `cf_builder_file_codec` | `configforge.h` | basic |
+| `cf_builder_int` | `configforge.h` | basic |
+| `cf_builder_key` | `configforge.h` | basic |
+| `cf_builder_limits` | `configforge.h` | basic |
+| `cf_builder_log` | `configforge.h` | nothrow |
+| `cf_builder_memory` | `configforge.h` | basic |
+| `cf_builder_open` | `configforge.h` | basic |
+| `cf_builder_preferences` | `configforge.h` | basic |
+| `cf_builder_real` | `configforge.h` | basic |
+| `cf_builder_registry` | `configforge.h` | basic |
+| `cf_builder_replay` | `configforge.h` | basic |
+| `cf_builder_response_files` | `configforge.h` | basic |
+| `cf_builder_schema` | `configforge.h` | basic |
+| `cf_builder_schema_file` | `configforge.h` | basic |
+| `cf_builder_secrets` | `configforge.h` | basic |
+| `cf_builder_sizing` | `configforge.h` | basic |
+| `cf_builder_source` | `configforge.h` | basic |
+| `cf_builder_store` | `configforge.h` | basic |
+| `cf_builder_text` | `configforge.h` | basic |
+| `cf_builder_track_reads` | `configforge.h` | nothrow |
+| `cf_builder_unknown` | `configforge.h` | nothrow |
+| `cf_builder_writable` | `configforge.h` | basic |
+| `cf_changed` | `configforge.h` | strong |
 | `cf_cli_args` | `cf_entry.h` | not yet |
 | `cf_cli_expand` | `cf_entry.h` | not yet |
 | `cf_code_description` | `cf_error.h` | nothrow |
@@ -172,21 +172,21 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_codec_detect` | `cf_serialize.h` | basic |
 | `cf_codec_kind` | `cf_serialize.h` | nothrow |
 | `cf_codec_select` | `cf_serialize.h` | nothrow |
-| `cf_config_codec` | `configforge.h` | not yet |
-| `cf_config_free` | `configforge.h` | not yet |
-| `cf_config_ref` | `configforge.h` | not yet |
-| `cf_config_sizing` | `configforge.h` | not yet |
-| `cf_count` | `configforge.h` | not yet |
+| `cf_config_codec` | `configforge.h` | nothrow |
+| `cf_config_free` | `configforge.h` | nothrow |
+| `cf_config_ref` | `configforge.h` | nothrow |
+| `cf_config_sizing` | `configforge.h` | strong |
+| `cf_count` | `configforge.h` | nothrow |
 | `cf_def_init_sized` | `cf_define.h` | not yet |
 | `cf_default_allocator` | `cf_alloc.h` | nothrow |
-| `cf_defs` | `configforge.h` | not yet |
+| `cf_defs` | `configforge.h` | nothrow |
 | `cf_defs_apply` | `cf_define.h` | not yet |
-| `cf_derive` | `configforge.h` | not yet |
-| `cf_derive_in` | `configforge.h` | not yet |
-| `cf_diff` | `configforge.h` | not yet |
-| `cf_diff_json` | `configforge.h` | not yet |
-| `cf_diff_text` | `configforge.h` | not yet |
-| `cf_digest` | `configforge.h` | not yet |
+| `cf_derive` | `configforge.h` | strong |
+| `cf_derive_in` | `configforge.h` | strong |
+| `cf_diff` | `configforge.h` | nothrow |
+| `cf_diff_json` | `configforge.h` | strong |
+| `cf_diff_text` | `configforge.h` | strong |
+| `cf_digest` | `configforge.h` | nothrow |
 | `cf_edit_abort` | `cf_edit.h` | not yet |
 | `cf_edit_begin` | `cf_edit.h` | not yet |
 | `cf_edit_commit` | `cf_edit.h` | not yet |
@@ -208,8 +208,8 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_error_copy` | `cf_error.h` | nothrow |
 | `cf_error_place` | `cf_error.h` | nothrow |
 | `cf_error_set` | `cf_error.h` | nothrow |
-| `cf_explain` | `configforge.h` | not yet |
-| `cf_explain_json` | `configforge.h` | not yet |
+| `cf_explain` | `configforge.h` | strong |
+| `cf_explain_json` | `configforge.h` | strong |
 | `cf_feature_at` | `cf_version.h` | not yet |
 | `cf_feature_count` | `cf_version.h` | not yet |
 | `cf_file_options_init` | `cf_file.h` | nothrow |
@@ -219,8 +219,8 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_file_writer_open` | `cf_file.h` | basic |
 | `cf_file_writer_sync` | `cf_file.h` | basic |
 | `cf_file_writer_write` | `cf_file.h` | basic |
-| `cf_fingerprint` | `configforge.h` | not yet |
-| `cf_fingerprint_format` | `configforge.h` | not yet |
+| `cf_fingerprint` | `configforge.h` | nothrow |
+| `cf_fingerprint_format` | `configforge.h` | nothrow |
 | `cf_fingerprint_seed` | `cf_define.h` | not yet |
 | `cf_fingerprint_step` | `cf_define.h` | not yet |
 | `cf_fmt` | `cf_port.h` | nothrow |
@@ -229,12 +229,12 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_format_limits` | `cf_serialize.h` | strong |
 | `cf_format_of_path` | `cf_serialize.h` | nothrow |
 | `cf_format_option` | `cf_serialize.h` | nothrow |
-| `cf_get_bool` | `configforge.h` | not yet |
-| `cf_get_int` | `configforge.h` | not yet |
-| `cf_get_real` | `configforge.h` | not yet |
-| `cf_get_text` | `configforge.h` | not yet |
-| `cf_get_text_n` | `configforge.h` | not yet |
-| `cf_has` | `configforge.h` | not yet |
+| `cf_get_bool` | `configforge.h` | nothrow |
+| `cf_get_int` | `configforge.h` | nothrow |
+| `cf_get_real` | `configforge.h` | nothrow |
+| `cf_get_text` | `configforge.h` | nothrow |
+| `cf_get_text_n` | `configforge.h` | nothrow |
+| `cf_has` | `configforge.h` | strong |
 | `cf_has_feature` | `cf_version.h` | not yet |
 | `cf_image_at` | `cf_image.h` | not yet |
 | `cf_image_count` | `cf_image.h` | not yet |
@@ -242,7 +242,7 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_image_load` | `cf_image.h` | not yet |
 | `cf_image_open` | `cf_image.h` | not yet |
 | `cf_image_write` | `cf_image.h` | not yet |
-| `cf_inspect` | `configforge.h` | not yet |
+| `cf_inspect` | `configforge.h` | strong |
 | `cf_iter_children` | `cf_iterate.h` | not yet |
 | `cf_iter_keys` | `cf_iterate.h` | not yet |
 | `cf_iter_next` | `cf_iterate.h` | not yet |
@@ -252,7 +252,7 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_keymap_from_key` | `cf_entry.h` | not yet |
 | `cf_keymap_init` | `cf_entry.h` | not yet |
 | `cf_keymap_to_key` | `cf_entry.h` | not yet |
-| `cf_keys` | `configforge.h` | not yet |
+| `cf_keys` | `configforge.h` | nothrow |
 | `cf_keysink_init` | `cf_entry.h` | not yet |
 | `cf_keysink_of` | `cf_entry.h` | not yet |
 | `cf_ks_add` | `cf_keyspace.h` | not yet |
@@ -265,7 +265,7 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_lex_cli` | `cf_entry.h` | not yet |
 | `cf_lex_dotenv` | `cf_entry.h` | not yet |
 | `cf_lex_env` | `cf_entry.h` | not yet |
-| `cf_limit_options_init` | `configforge.h` | not yet |
+| `cf_limit_options_init` | `configforge.h` | nothrow |
 | `cf_listsink_finish` | `cf_entry.h` | not yet |
 | `cf_listsink_init` | `cf_entry.h` | not yet |
 | `cf_listsink_of` | `cf_entry.h` | not yet |
@@ -304,17 +304,17 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_platform_name` | `cf_platform.h` | nothrow |
 | `cf_policy_text` | `cf_define.h` | not yet |
 | `cf_port_description` | `cf_port.h` | nothrow |
-| `cf_read_count` | `configforge.h` | not yet |
+| `cf_read_count` | `configforge.h` | nothrow |
 | `cf_reason_description` | `cf_error.h` | nothrow |
 | `cf_reason_name` | `cf_error.h` | nothrow |
 | `cf_reason_severity` | `cf_error.h` | nothrow |
 | `cf_reason_weakness` | `cf_error.h` | nothrow |
 | `cf_refusal_name` | `cf_keyspace.h` | not yet |
 | `cf_refusal_text` | `cf_keyspace.h` | not yet |
-| `cf_report` | `configforge.h` | not yet |
+| `cf_report` | `configforge.h` | strong |
 | `cf_report_key_write` | `cf_report.h` | not yet |
 | `cf_report_write` | `cf_report.h` | not yet |
-| `cf_schema` | `configforge.h` | not yet |
+| `cf_schema` | `configforge.h` | strong |
 | `cf_schema_write` | `cf_report.h` | not yet |
 | `cf_serialize_version` | `cf_serialize_version.h` | nothrow |
 | `cf_serialize_version_number` | `cf_serialize_version.h` | nothrow |
@@ -327,7 +327,7 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_sink_puts` | `cf_serialize.h` | basic |
 | `cf_sink_terminate` | `cf_serialize.h` | basic |
 | `cf_sink_write` | `cf_serialize.h` | basic |
-| `cf_sizing_options_init` | `configforge.h` | not yet |
+| `cf_sizing_options_init` | `configforge.h` | nothrow |
 | `cf_source_cli` | `cf_source.h` | not yet |
 | `cf_source_cli_defs` | `cf_define.h` | not yet |
 | `cf_source_defaults` | `cf_define.h` | not yet |
@@ -372,19 +372,19 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_source_store` | `cf_source.h` | not yet |
 | `cf_source_store_error` | `cf_source.h` | not yet |
 | `cf_source_store_state_size` | `cf_source.h` | not yet |
-| `cf_sources` | `configforge.h` | not yet |
+| `cf_sources` | `configforge.h` | nothrow |
 | `cf_store_set` | `cf_source.h` | not yet |
 | `cf_text_is_utf8` | `cf_serialize.h` | strong |
 | `cf_tlv_codec_sized` | `cf_serialize.h` | strong |
-| `cf_tracks_reads` | `configforge.h` | not yet |
-| `cf_try_bool` | `configforge.h` | not yet |
-| `cf_try_int` | `configforge.h` | not yet |
-| `cf_try_real` | `configforge.h` | not yet |
-| `cf_try_text` | `configforge.h` | not yet |
+| `cf_tracks_reads` | `configforge.h` | strong |
+| `cf_try_bool` | `configforge.h` | strong |
+| `cf_try_int` | `configforge.h` | strong |
+| `cf_try_real` | `configforge.h` | strong |
+| `cf_try_text` | `configforge.h` | strong |
 | `cf_type_json_name` | `cf_value.h` | nothrow |
 | `cf_type_name` | `cf_value.h` | nothrow |
-| `cf_type_of` | `configforge.h` | not yet |
-| `cf_usage` | `configforge.h` | not yet |
+| `cf_type_of` | `configforge.h` | nothrow |
+| `cf_usage` | `configforge.h` | strong |
 | `cf_value_bool` | `cf_value.h` | nothrow |
 | `cf_value_cmp` | `cf_value.h` | nothrow |
 | `cf_value_equal` | `cf_value.h` | strong |
@@ -398,17 +398,17 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_version` | `cf_version.h` | not yet |
 | `cf_version_number` | `cf_version.h` | not yet |
 | `cf_vfmt` | `cf_port.h` | nothrow |
-| `cf_was_read` | `configforge.h` | not yet |
-| `cf_watch_count` | `configforge.h` | not yet |
-| `cf_watch_path` | `configforge.h` | not yet |
-| `cf_watcher_close` | `configforge.h` | not yet |
-| `cf_watcher_drain` | `configforge.h` | not yet |
-| `cf_watcher_fd` | `configforge.h` | not yet |
-| `cf_watcher_handle` | `configforge.h` | not yet |
-| `cf_watcher_open` | `configforge.h` | not yet |
-| `cf_watcher_wait` | `configforge.h` | not yet |
-| `cf_write` | `configforge.h` | not yet |
+| `cf_was_read` | `configforge.h` | strong |
+| `cf_watch_count` | `configforge.h` | nothrow |
+| `cf_watch_path` | `configforge.h` | nothrow |
+| `cf_watcher_close` | `configforge.h` | nothrow |
+| `cf_watcher_drain` | `configforge.h` | strong |
+| `cf_watcher_fd` | `configforge.h` | nothrow |
+| `cf_watcher_handle` | `configforge.h` | nothrow |
+| `cf_watcher_open` | `configforge.h` | strong |
+| `cf_watcher_wait` | `configforge.h` | basic |
+| `cf_write` | `configforge.h` | strong |
 
-nothrow 50, strong 30, basic 15, not yet 219
+nothrow 80, strong 57, basic 47, not yet 130
 
 <!-- guarantees:end -->

@@ -189,36 +189,36 @@
 - #define CONFIGFORGE_H 18
 - typedef cf_builder 54
 - typedef cf_config 55
-- #define CF_BUILDER_CODECS 199
-- struct cf_limit_options 298-302
-- cf_define_b_ 340-342
-- cf_define_i_ 343-345
-- cf_define_t_ 346-348
-- cf_define_r_ 350-352
-- #define CF_DEFINE_REAL_ 353
-- #define CF_DEFINE_REAL_ 355
-- #define CF_DEFINE 357
-- cf_define_tl_ 380-390
-- #define CF_C11_KEY_ 399
-- #define CF_C11_RANGE_ 402
-- #define CF_C11_LEN_ 408
-- #define CF_C11_DEFAULTED_ 415
-- #define CF_C11_CHECKED_ 418
-- #define CF_DEFINE_INT 425
-- #define CF_DEFINE_TEXT 430
-- enum cf_sizing 473-477
-- struct cf_sizing_options 479-484
-- cf_get_int_ 556-566
-- cf_get_long_ 567-577
-- cf_get_llong_ 578-585
-- cf_get_bool_ 586-593
-- cf_get_text_ 594-597
-- #define CF_GET_REAL_ 599
-- #define CF_GET_REAL_ 601
-- #define cf_get 603
-- enum cf_change 652-657
-- typedef cf_diff_fn 664
-- typedef cf_watcher 910
+- #define CF_BUILDER_CODECS 220
+- struct cf_limit_options 346-350
+- cf_define_b_ 404-406
+- cf_define_i_ 407-409
+- cf_define_t_ 410-412
+- cf_define_r_ 414-416
+- #define CF_DEFINE_REAL_ 417
+- #define CF_DEFINE_REAL_ 419
+- #define CF_DEFINE 421
+- cf_define_tl_ 444-454
+- #define CF_C11_KEY_ 463
+- #define CF_C11_RANGE_ 466
+- #define CF_C11_LEN_ 472
+- #define CF_C11_DEFAULTED_ 479
+- #define CF_C11_CHECKED_ 482
+- #define CF_DEFINE_INT 489
+- #define CF_DEFINE_TEXT 494
+- enum cf_sizing 542-546
+- struct cf_sizing_options 548-553
+- cf_get_int_ 639-649
+- cf_get_long_ 650-660
+- cf_get_llong_ 661-668
+- cf_get_bool_ 669-676
+- cf_get_text_ 677-680
+- #define CF_GET_REAL_ 682
+- #define CF_GET_REAL_ 684
+- #define cf_get 686
+- enum cf_change 746-751
+- typedef cf_diff_fn 758
+- typedef cf_watcher 1034
 `lib/config/src/bridge/dir.c`
 - struct dir_state 36-44
 - typedef dir_name 57
