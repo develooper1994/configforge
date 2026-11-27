@@ -21,7 +21,7 @@ Main is at 1.9.0, unreleased (11 CHANGELOG entries already).
 | 0.8 | Around the file layer: replace-if-unchanged, close-on-exec, stable read, Windows share-delete, the kernel lock (D-227) | Y-2, Y-8, Y-5, Y-6, Y-3 | 1.9.0 |
 | 0.4 | One error model (D-223): `CF_NODISCARD` everywhere and its gate | K-9c | 1.9.0 |
 | 0.5 | `cf_error`: place (file, line, column, byte offset, key), reason, chain of causes, `cf_error_handler`, stop-at-first or collect-all | K-6a + K-6b; the collect-all option `gen build --json` needs (`cf_error` owning its text is in row 0.9: it needs the sizing modes, and `cf_error` still changes shape once in the 2.0.0 release) | 2.0.0 |
-| 0.6 | The guarantees written and held; allocation faults injected | K-9a, K-9b | 2.0.0 |
+| 0.6 | The guarantees written and held; allocation faults injected | K-9a, K-9d, K-9e, K-9f, K-9g, K-9b (K-9a: the three words, `gate.guarantees` and the rule that the library never ends the program; K-9d to K-9g: the guarantees written header by header, 309 names; K-9b: the allocation sweep over every load and write path) | 2.0.0 |
 | 0.9 | The sizing modes and what 2.0 breaks, right after the error model (the maintainer, 2026-11-27: long awaited) | M-10, M-11a, M-11b, M-12, M-13 (the stream is 2.4.0's and additive; the manifest in the image and the ways in the formats' table went to their modules, and M-12's header reserves the manifest's place; M-11b is `cf_error` owning its text) | 2.0.0 |
 
 ## The modules, in order (each: module, tool, bindings, documents)
@@ -41,7 +41,7 @@ last column; the "not now" section's cards are `not now`.
    - module: X-18, X-19, X-20, X-21, K-7a, K-5a, K-5b, K-8, K-1a, K-1b, K-10a, K-10b (a number's text kept; underflow and infinity as options, defaults unchanged)
    - proofs: K-2a, K-2b, K-2c, K-2d, K-2e, K-3a, K-3b, K-4a, K-4b, K-4c, K-4d, L-14a, L-14b
 4. {2.3.0} **compress** (lib/compress, D-221; optional, OFF by default)
-   - module: Y-15 (to be split into Y-15a and Y-15b), Y-16, Y-17, Y-18; tool: Y-19; documents: Y-14
+   - module: Y-15a (`lib/compress`: the two interfaces, their options, the one-call shortcuts), Y-15b (streams and the chain), Y-16, Y-17, Y-18; tool: Y-19; documents: Y-14
 5. {2.3.0} **serialize: written back** (wave 6) and **config: written back**
    - module: F-3a, F-3b, F-3c, F-3d, F-3e, F-3f, F-3g, F-3h, F-3j, Y-20; config: F-2a, F-2b, Y-4, Y-12; tool: F-3i
 6. **serialize: ways to read** (the stream and its modes)

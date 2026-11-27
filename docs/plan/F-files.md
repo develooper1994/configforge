@@ -195,6 +195,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 
 * **Organiser's answers**:
   * 2026-11-26, the maintainer (relayed from a side session: "I accept your proposal for F-2a"), written as **D-225**: writing is a capability any file source can take, through `cf_file_source_options` (`writable`; `format`, by default the file name's; `encoding`; an init function; NULL is the defaults) given to a `cf_builder_file_with(...)` call, so that `cf_builder_file`'s flag word is not overloaded. `cf_builder_overrides(b, name, rank, path)` stays as a one-line shortcut (a file source read last and writable). Writing stays off until the program grants it (`cf_builder_writable`). This card and F-2b are rewritten to D-225 before F-2a opens.
+  * 2026-11-27, the organiser (the maintainer's standing approval, 2026-11-27): Y-42 (docs/plan/Y-asked.md, module 1, 2.1.0) defines `cf_file_source_options` and `cf_builder_file_with(b, name, rank, path, const cf_file_source_options* o)` first, with `format`, `flags`, `extensions`, `max_depth`, `root` and `loader`; this card appends `writable` and `encoding` to the struct as it stands and does not define it again.
 
 ## F-2b - settings.c is the override source's example
 
