@@ -539,7 +539,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **needs**: K-9a
 * **size**: medium
 * **version**: 2.0.0
-* **status**: open
+* **status**: done (21a1a1f)
 * **decided**:
   * **The set**, 90 names at 18557b9 (the worker gets the live list from `python scripts/check/guarantees.py --todo lib/base`, then `lib/port`, `lib/platform`, `lib/text`, `lib/serialize`): `cf_alloc.h` 12, `cf_value.h` 11, `cf_error.h` 9 and `cf_port.h` 4 (base and port), `cf_platform.h` 9 and `cf_file.h` 7 (platform), `cf_encoding.h` 4 (text), `cf_serialize.h` 32 and `cf_serialize_version.h` 2 (serialize). `cf_error_clear`, `cf_arena_new` and `cf_arena_free` are K-9a's.
   * **How**: K-9a's rule of choosing, in its order, with the implementation read in ranges of at most 120 lines found through `docs/Codemap.md` (never a source file whole). For each name the evidence is one fact written in the worker's report, not in the header: the failure path found (or its absence), and for `strong` the point after which nothing can fail. The three usual answers: a `_free`, a `_get`, `_count`, `_name`, `_is_` or `_has_` is `nothrow` when its body has no failure path; `cf_arena_alloc` and `cf_arena_dup` are `strong` (a refused allocation changes nothing the arena holds); `cf_sink_*` is `basic` (the sink stays valid and cut), except `cf_sink_overflowed` and `cf_sink_init`, `nothrow`; `cf_file_replace` is `strong` (the target is unchanged until the rename), `cf_file_writer_write`, `_flush`, `_sync` and `_close` are `basic` (bytes may be on disk).
