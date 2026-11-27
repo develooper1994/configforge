@@ -41,7 +41,7 @@ last column; the "not now" section's cards are `not now`.
    - module + tool: Y-24, Y-25, Y-26, Y-27, Y-28 (its error part goes to 0.5), Y-29, Y-33 (the manifest in the image, in the header M-12 reserves for it); documents: Y-31; opened 2026-11-27: Y-30-m (rules across keys), Y-32-m (the build file)
    - {2.3.0} the contract's and the tool's later additions, opened 2026-11-27: Y-39-m (`pattern`, relations), Y-40-m (`gen hover`)
 3. {2.2.0} **serialize: one table, one copy, correct** (lib/serialize)
-   - module: X-18, X-19, X-20, X-21, K-7a, K-5a, K-5b, K-8, K-1a, K-1b, K-10a, K-10b (a number's text kept; underflow and infinity as options, defaults unchanged), K-10c-m (numbers beyond 64 bits or `double` accepted as text; opened 2026-11-27)
+   - module: X-18, X-19, X-20, X-21, K-7a, K-5a, K-5b, K-8, K-8b (written 2026-11-28 from a yamldiff finding), K-1a, K-1b, K-10a, K-10b (a number's text kept; underflow and infinity as options, defaults unchanged), K-10c-m (numbers beyond 64 bits or `double` accepted as text; opened 2026-11-27)
    - proofs: K-2a, K-2b, K-2c, K-2d, K-2e, K-3a, K-3b, K-4a, K-4b, K-4c, K-4d, L-14a, L-14b
 4. {2.3.0} **compress** (lib/compress, D-221; optional, OFF by default)
    - module: Y-15a (`lib/compress`: the two interfaces, their options, the one-call shortcuts), Y-15b (streams and the chain), Y-16, Y-17, Y-18, Y-21-m (built-in inflate), Y-22-m (xz, lz4), Y-23-m (zstd dictionaries; opened 2026-11-27); tool: Y-19; documents: Y-14
