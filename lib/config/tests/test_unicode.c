@@ -129,7 +129,11 @@ int main(void) {
     }
     test_file();
 #if CF_WITH_DIR
-    test_directory();
+    if (cf_platform_has_dir_list()) {
+        test_directory();
+    } else {
+        puts("skipped: no directory listing");
+    }
 #endif
     drop_tree();
 

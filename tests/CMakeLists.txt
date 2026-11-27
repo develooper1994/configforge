@@ -8,6 +8,13 @@
 add_definitions(-DCF_INTERNAL_API=1)
 set(CMAKE_C_CLANG_TIDY "")
 
+# A build with no C library has one test, the freestanding program: the
+# unit tests use stdio and malloc, and would fail by design (K-11b).
+if(CF_NO_STDIO OR CF_NO_STDLIB)
+  add_subdirectory(platform)
+  return()
+endif()
+
 # Registered first, in the order a component uses another, as the unit tests
 # always were.
 foreach(

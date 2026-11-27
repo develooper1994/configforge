@@ -65,6 +65,11 @@ cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err) 
     if (b == NULL || ar == NULL || path == NULL) {
         return cf_error_set(err, CF_E_SOURCE, NULL, path, "no path given");
     }
+    /* A build with no files says so, as a capability it lacks (D-220). */
+    if (!cf_platform_has_files()) {
+        return cf_error_set(err, CF_E_CAPABILITY, NULL, path,
+                            "this build has no files to read");
+    }
     /* Through the platform, so a path is UTF-8 on every system. */
     f = cf_platform_fopen(path, "rb");
     if (f == NULL) {
@@ -141,7 +146,7 @@ cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err) 
     (void)b;
     (void)ar;
     return cf_error_set(err, CF_E_CAPABILITY, NULL, path,
-                        "this build has no file input");
+                        "this build has no files to read");
 }
 
 #endif /* CF_NO_STDIO */

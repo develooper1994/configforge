@@ -488,7 +488,11 @@ int main(void) {
     test_dotenv_file();
 #endif
 #if CF_WITH_DIR
-    test_drop_in_directory();
+    if (cf_platform_has_dir_list()) {
+        test_drop_in_directory();
+    } else {
+        puts("skipped: no directory listing");
+    }
 #endif
     if (has_json) {
         test_json_file_and_precedence();

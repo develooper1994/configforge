@@ -295,8 +295,10 @@ static stage run_all_in(char* buf, size_t cap, cf_u64* digest, size_t* used,
     check(cf_get_int(c, "cache.size", 0) == 32, "a refused value fell back");
     check(strcmp(cf_get_text(c, "app.name", ""), "legacy") == 0, "a renamed key fed");
 #if CF_WITH_DIR
-    check(strcmp(cf_get_text(c, "db.password", ""), "hunter2") == 0,
-          "the secrets read");
+    if (cf_platform_has_dir_list()) {
+        check(strcmp(cf_get_text(c, "db.password", ""), "hunter2") == 0,
+              "the secrets read");
+    }
 #endif
     check(cf_get_int(c, "plugins.audit.level", 0) == 2, "an open prefix kept");
     (void)cf_explain(c, "server.url", scratch, sizeof scratch);

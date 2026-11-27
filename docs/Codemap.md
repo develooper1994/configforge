@@ -1018,11 +1018,12 @@
 `lib/platform/src/file_prim.h`
 `lib/platform/src/none/file.c`
 - cf_platform_fopen 24-34
-- cf_platform_write_file_with 39-53
-- cf_platform_write_steps 55-57
-- cf_platform_now_ms 59-61
-- cfi_file_sync 63-66
-- cfi_file_why 68-73
+- cf_platform_has_files 36-42
+- cf_platform_write_file_with 47-61
+- cf_platform_write_steps 63-65
+- cf_platform_now_ms 67-69
+- cfi_file_sync 71-74
+- cfi_file_why 76-81
 `lib/platform/src/none/none.c`
 - cf_platform_name 14-16
 - cf_platform_has_environ 18-20
@@ -1042,25 +1043,26 @@
 - cf_platform_has_preferences 104-106
 - cf_platform_preferences_walk 108-123
 - cf_platform_has_wake 125-127
-- cf_platform_wake_open 129-136
-- cf_platform_wake_fd 138-141
-- cf_platform_wake_handle 143-146
-- cf_platform_wake_drain 148-151
-- cf_platform_wake_wait 153-157
-- cf_platform_wake_close 159-161
+- cf_platform_wake_open 129-137
+- cf_platform_wake_fd 139-142
+- cf_platform_wake_handle 144-147
+- cf_platform_wake_drain 149-152
+- cf_platform_wake_wait 154-158
+- cf_platform_wake_close 160-162
 `lib/platform/src/posix/file.c`
 - cf_platform_fopen 39-42
-- cf_platform_now_ms 44-54
-- cfi_file_sync 56-58
-- cfi_file_why 60-62
-- cf_platform_write_steps 64-66
-- struct replace_state 69-76
-- file_injected 79-82
-- file_failed 85-88
-- file_steps 93-183
-- file_sync_directory 190-210
-- file_core 213-279
-- cf_platform_write_file_with 281-290
+- cf_platform_has_files 44-46
+- cf_platform_now_ms 48-58
+- cfi_file_sync 60-62
+- cfi_file_why 64-66
+- cf_platform_write_steps 68-70
+- struct replace_state 73-80
+- file_injected 83-86
+- file_failed 89-92
+- file_steps 97-187
+- file_sync_directory 194-214
+- file_core 217-283
+- cf_platform_write_file_with 285-294
 `lib/platform/src/posix/posix.c`
 - cf_platform_name 86-88
 - cf_platform_has_environ 90-92
@@ -1130,17 +1132,18 @@
 `lib/platform/src/win32/file.c`
 - win32f_wide 36-43
 - cf_platform_fopen 45-53
-- cf_platform_now_ms 55-57
-- cfi_file_sync 59-63
-- cfi_file_why 65-68
-- cf_platform_write_steps 70-72
-- struct replace_state 75-83
-- file_injected 86-89
-- file_failed 92-95
-- file_failed_stdio 98-101
-- file_steps 106-223
-- file_core 226-294
-- cf_platform_write_file_with 296-301
+- cf_platform_has_files 55-57
+- cf_platform_now_ms 59-61
+- cfi_file_sync 63-67
+- cfi_file_why 69-72
+- cf_platform_write_steps 74-76
+- struct replace_state 79-87
+- file_injected 90-93
+- file_failed 96-99
+- file_failed_stdio 102-105
+- file_steps 110-227
+- file_core 230-298
+- cf_platform_write_file_with 300-305
 `lib/platform/src/win32/win32.c`
 - cf_platform_name 34-36
 - cf_platform_has_environ 38-40
@@ -1353,18 +1356,18 @@
 - cf_text_is_utf8 38-40
 - cf_blob_arena 42-47
 - cf_blob_arena_done 51-55
-- cf_blob_file 59-136
-- cf_blob_file 140-145
-- cf_sink_init 153-157
-- cf_sink_write 159-169
-- cf_sink_putc 171-176
-- cf_sink_puts 178-182
-- cf_sink_fmt 184-202
-- cf_sink_terminate 204-208
-- cf_sink_overflowed 210-212
-- cf_sink_json_string 226-241
-- cf_sink_json_value 243-263
-- cf_loc_text 269-280
+- cf_blob_file 59-141
+- cf_blob_file 145-150
+- cf_sink_init 158-162
+- cf_sink_write 164-174
+- cf_sink_putc 176-181
+- cf_sink_puts 183-187
+- cf_sink_fmt 189-207
+- cf_sink_terminate 209-213
+- cf_sink_overflowed 215-217
+- cf_sink_json_string 231-246
+- cf_sink_json_value 248-268
+- cf_loc_text 274-285
 `lib/serialize/src/cbor.c`
 - struct cbor_scan 39-48
 - struct cbor_head 53-60

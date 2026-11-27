@@ -281,9 +281,9 @@ of a card's CI.
 | 4 | L-23 A release's notes say how each archive was built | 1.9.0 | small | nothing | done (9cdc40e) |
 | 5 | L-24 The Rust crate published to crates.io at a tag | 1.9.0 | small | nothing | done (a0eb1a4) |
 | 6 | K-11a Options with defaults as one convention: `cf_*_options_init`, the fixed limits as options, and a gate | 1.9.0 | large | nothing | done (7a2af29) |
-| 7 | K-11b The `none` platform builds and is tried: no feature assumes an operating system | 1.9.0 | large | L-18a | open |
+| 7 | K-11b The `none` platform builds and is tried: no feature assumes an operating system | 1.9.0 | large | L-18a | done (c2f07fe) |
 | 8 | L-18a A Cortex-M build of `minimal` in CI, with its stack gate | 1.9.0 | medium | nothing | done (b05e2a5) |
-| 9 | K-11c The table of each feature against each platform, checked by a gate | 1.9.0 | medium | K-11b | waits: K-11b |
+| 9 | K-11c The table of each feature against each platform, checked by a gate | 1.9.0 | medium | K-11b | open |
 | 10 | F-1a The file layer: `cf_file_options`, `cf_file_writer`, `cf_file_replace`, a file replaced whole or not at all | 1.9.0 | large | nothing | done (7596e78) |
 | 11 | Y-2 `cf_platform_write_file_if`: the replace refused when the file no longer holds the bytes read (F-1c in the research) | 1.9.0 | small | F-1a | open |
 | 12 | Y-8 Close-on-exec and non-inheritable everywhere the library opens a file, with a child that lists its descriptors | 1.9.0 | small | F-1a, Y-3 | waits: Y-3 |

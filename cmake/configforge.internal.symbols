@@ -68,6 +68,7 @@ cf_platform_dir_list
 cf_platform_dir_list_trusted
 cf_platform_environ
 cf_platform_fopen
+cf_platform_has_files
 cf_platform_now_ms
 cf_platform_preferences_walk
 cf_platform_registry_walk

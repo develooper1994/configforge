@@ -42,6 +42,24 @@ set_property(
            win32
            none)
 
+# A bare-metal system has no operating system: "auto" is "none" there. WASI
+# has a C library with files, so it stays "posix". A normal variable, so the
+# cache keeps "auto" (K-11b).
+if(CF_PLATFORM STREQUAL "auto" AND CMAKE_SYSTEM_NAME STREQUAL "Generic")
+  set(CF_PLATFORM none)
+endif()
+
+# The C library that a target with no operating system may not have. Each
+# adds a compile definition to every target (lib/platform/CMakeLists.txt).
+option(CF_NO_STDIO "no stdio.h: files cannot be opened" OFF)
+option(
+  CF_NO_STDLIB
+  "no stdlib.h: no default allocator; every call takes an arena or an allocator"
+  OFF)
+if((CF_NO_STDIO OR CF_NO_STDLIB) AND NOT CF_PLATFORM STREQUAL "none")
+  message(FATAL_ERROR "CF_NO_STDIO and CF_NO_STDLIB need CF_PLATFORM=none")
+endif()
+
 option(CF_WITH_REAL "floating point and its exact formatter" ON)
 option(CF_WITH_CXX "C++03 wrapper header" ON)
 # The kqueue change handle on Linux, through libkqueue: how the macOS and

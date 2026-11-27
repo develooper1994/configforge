@@ -1395,8 +1395,15 @@ For such a target:
   `CF_MAX_DEPTH`) and set `CF_STACK_BUDGET`: the build measures every
   function's frame and says which ones do not fit and what to turn off;
   the `minimal` preset holds the library to a kilobyte per function;
-* `CF_PLATFORM=none` for a target with no operating system, and
-  `CF_SINGLE_THREADED` where there are no threads (or no atomics).
+* `CF_PLATFORM=none` for a target with no operating system (a `Generic`
+  CMake system, a bare-metal toolchain, chooses it by itself), and
+  `CF_SINGLE_THREADED` where there are no threads (or no atomics);
+* `CF_NO_STDIO` and `CF_NO_STDLIB` where there is no C library either:
+  a file source answers `capability` (`this build has no files to read`,
+  `cf_platform_has_files()` is false), and `cf_default_allocator()` is NULL,
+  so every call takes an arena or an allocator (`cf_build_in`, above). The
+  presets `none` (the whole suite on `none`) and `none-bare` (these two
+  options, and one program, `tests/platform/freestanding.c`) build and run it.
 
 ## 13. C++
 

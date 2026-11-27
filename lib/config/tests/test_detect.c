@@ -677,12 +677,24 @@ static void test_report(void) {
 
 int main(void) {
 #if CF_WITH_DIR && CF_WITH_JSON && CF_WITH_TOML
-    test_dir();
+    if (cf_platform_has_dir_list()) {
+        test_dir();
+    } else {
+        puts("skipped: no directory listing");
+    }
 #endif
 #if CF_WITH_CBOR
-    test_cbor();
+    if (cf_platform_has_dir_list()) {
+        test_cbor();
+    } else {
+        puts("skipped: no directory listing");
+    }
 #endif
-    test_env_document();
+    if (cf_platform_has_environ()) {
+        test_env_document();
+    } else {
+        puts("skipped: no environment");
+    }
 #if CF_WITH_REPORT && CF_WITH_TOML
     test_report();
 #endif

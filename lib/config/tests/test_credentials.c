@@ -201,10 +201,14 @@ static void test_disabled(void) {
 int main(void) {
     test_null();
 #if CF_WITH_DIR
-    test_reads();
-    test_precedence();
-    test_unset();
-    test_refuses();
+    if (cf_platform_has_environ() && cf_platform_has_dir_list()) {
+        test_reads();
+        test_precedence();
+        test_unset();
+        test_refuses();
+    } else {
+        puts("skipped: no environment or directory listing");
+    }
 #else
     test_disabled();
 #endif

@@ -33,6 +33,14 @@ void* cf_platform_fopen(const char* path, const char* mode) {
 #endif
 }
 
+cf_bool cf_platform_has_files(void) {
+#ifndef CF_NO_STDIO
+    return CF_TRUE;
+#else
+    return CF_FALSE;
+#endif
+}
+
 /* No files to write: the program built for this target still links, and
    every call says what it lacks. */
 

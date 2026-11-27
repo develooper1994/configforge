@@ -259,8 +259,12 @@ static void test_not_a_file(void) {
 
 int main(void) {
 #if CF_WITH_DIR
-    test_too_many_files();
-    test_too_many_secrets();
+    if (cf_platform_has_dir_list()) {
+        test_too_many_files();
+        test_too_many_secrets();
+    } else {
+        puts("skipped: no directory listing");
+    }
 #if defined(_WIN32)
     test_long_name(169, "a path too long for dir.c is an error");
     test_long_name(171, "a name too long for the listing is an error");
@@ -269,7 +273,11 @@ int main(void) {
     test_missing_drive();
 #endif
 #if defined(CF_TEST_FIFO)
-    test_not_a_file();
+    if (cf_platform_has_dir_list()) {
+        test_not_a_file();
+    } else {
+        puts("skipped: no directory listing");
+    }
 #endif
 #endif
     return cf_test_done();

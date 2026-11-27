@@ -131,7 +131,8 @@ cf_platform_wake* cf_platform_wake_open(const char* const* paths, size_t n,
     (void)paths;
     (void)n;
     (void)a;
-    cf_error_set(err, CF_E_CAPABILITY, NULL, NULL, "this build has no change handle");
+    cf_error_set(err, CF_E_CAPABILITY, NULL, NULL,
+                 "this build has no change handle; poll cf_changed instead");
     return NULL;
 }
 

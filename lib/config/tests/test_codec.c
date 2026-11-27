@@ -290,12 +290,20 @@ int main(void) {
     test_registered();
     test_registered_refusals();
 #if CF_WITH_DIR
-    test_registered_dir();
+    if (cf_platform_has_dir_list()) {
+        test_registered_dir();
+    } else {
+        puts("skipped: no directory listing");
+    }
 #endif
     test_self_file();
     test_self_document();
 #if CF_WITH_DIR
-    test_self_dir();
+    if (cf_platform_has_dir_list()) {
+        test_self_dir();
+    } else {
+        puts("skipped: no directory listing");
+    }
 #endif
     test_named_only();
     test_old_size();

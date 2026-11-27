@@ -44,6 +44,16 @@ if(CF_PLATFORM STREQUAL "none")
   endforeach()
 endif()
 
+# A target with no C library says so to every part that would call it.
+foreach(t ${CF_TARGETS})
+  if(CF_NO_STDIO)
+    target_compile_definitions(${t} PUBLIC CF_NO_STDIO=1)
+  endif()
+  if(CF_NO_STDLIB)
+    target_compile_definitions(${t} PUBLIC CF_NO_STDLIB=1)
+  endif()
+endforeach()
+
 # kqueue is in the C library on macOS and the BSDs. Anywhere else it is
 # libkqueue, which only the test build asks for.
 if(CF_WAKE_KQUEUE)

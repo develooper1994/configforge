@@ -104,9 +104,13 @@ static void test_disabled(void) {
 
 int main(void) {
 #if CF_WITH_DIR
-    test_reads();
-    test_refuses();
-    test_missing();
+    if (cf_platform_has_dir_list()) {
+        test_reads();
+        test_refuses();
+        test_missing();
+    } else {
+        puts("skipped: no directory listing");
+    }
 #else
     test_disabled();
 #endif

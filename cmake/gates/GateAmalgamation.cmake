@@ -18,6 +18,17 @@ endif()
 if(PORTABLE)
   list(APPEND THREAD_DEFS "-DCF_FORCE_PORTABLE=1")
 endif()
+# The platform the library was built for, and the C library it lacks: the
+# amalgamation has no build to choose them for it (K-11b).
+if("${PLATFORM}" STREQUAL "none")
+  list(APPEND THREAD_DEFS "-DCF_PLATFORM_NONE=1")
+endif()
+if(NO_STDIO)
+  list(APPEND THREAD_DEFS "-DCF_NO_STDIO=1")
+endif()
+if(NO_STDLIB)
+  list(APPEND THREAD_DEFS "-DCF_NO_STDLIB=1")
+endif()
 
 find_package(
   Python3

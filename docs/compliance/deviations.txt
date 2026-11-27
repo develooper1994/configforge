@@ -420,7 +420,7 @@ ignore | 8.7 | the rules about a whole program: unused macros, types and tags, a
 15.5 | lib/platform/src/posix/file.c | 22 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
 15.5 | lib/platform/src/posix/posix.c | 13 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
 15.5 | lib/port/src/port.c | 10 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
-15.5 | lib/serialize/src/blob.c | 11 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
+15.5 | lib/serialize/src/blob.c | 12 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
 15.5 | lib/serialize/src/cbor.c | 70 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
 15.5 | lib/serialize/src/codec.c | 23 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
 15.5 | lib/serialize/src/compose.c | 1 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)

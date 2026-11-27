@@ -14,6 +14,15 @@
    none of them. */
 #if CF_WITH_INI
 
+/* cf_changed compares what the platform says of a file; a platform that
+   cannot stamp (none) never sees a change, so the tests that expect one
+   skip, by asking it. */
+static int can_stamp(void) {
+    cf_stamp st;
+
+    return cf_platform_stamp(".", &st) ? 1 : 0;
+}
+
 static cf_config* build(cf_error* err) {
     cf_builder* b = cf_build(NULL);
 
@@ -30,6 +39,10 @@ static void test_watch(void) {
     size_t     i;
     int        found = 0;
 
+    if (!can_stamp()) {
+        puts("skipped: no file stamps");
+        return;
+    }
     check(spill("cf_w.ini", "[server]\nport = 3000\n"), "wrote a file");
     c = build(&err);
     check(c != NULL, "builds");
@@ -80,6 +93,10 @@ static void test_appearance(void) {
     cf_error   err = CF_ERROR_INIT;
     cf_config* c;
 
+    if (!can_stamp()) {
+        puts("skipped: no file stamps");
+        return;
+    }
     check(spill("cf_w.ini", "[server]\nport = 3000\n"), "wrote a file");
     remove("cf_w_absent.ini");
     c = build(&err);
@@ -173,6 +190,10 @@ static void test_directory_edited_in_place(void) {
     cf_builder* b;
     cf_config*  c;
 
+    if (!cf_platform_has_dir_list() || !can_stamp()) {
+        puts("skipped: no directory listing or file stamps");
+        return;
+    }
     drop_dir("cf_wconf", "cf_wconf");
     make_dir("cf_wconf", "cf_wconf");
     check(spill("cf_wconf/10-base.ini", "[server]\nport = 3000\n"), "wrote a drop-in");

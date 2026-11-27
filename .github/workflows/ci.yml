@@ -264,7 +264,7 @@ jobs:
       - run: >
           cmake -S . -B build-cortexm
           --toolchain cmake/toolchains/arm-none-eabi.cmake
-          -DCF_PROFILE=minimal -DCMAKE_BUILD_TYPE=MinSizeRel
+          -DCF_PROFILE=minimal -DCF_PLATFORM=none -DCMAKE_BUILD_TYPE=MinSizeRel
           -DCF_BUILD_TESTING=OFF -DCF_BUILD_TOOLS=OFF -DCF_BUILD_EXAMPLES=OFF
       # The library alone, never run (D-157). The profile's 1 KiB stack
       # budget is checked by the build; the grep fails the job when the
@@ -272,6 +272,21 @@ jobs:
       - run: cmake --build build-cortexm 2>&1 | tee cortexm.log
         shell: bash
       - run: 'grep -q "stack: largest frame .* within" cortexm.log'
+
+  # No operating system (K-11b, D-220): the whole suite on the none platform
+  # with the host's C library for newlib, and the freestanding program with
+  # no C library at all (CF_NO_STDIO, CF_NO_STDLIB).
+  none:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: sudo apt-get update; sudo apt-get install -y libexpat1-dev libsqlite3-dev
+      - run: cmake --preset none && cmake --build --preset none
+      - run: ctest --preset none
+      - run: cmake --preset none-bare && cmake --build --preset none-bare
+      - run: ctest --preset none-bare
 
   profiles:
     needs: changes

@@ -234,7 +234,16 @@ static void tier4(void) {
     check(!cf_changed(cfg), "tier 4: nothing has moved on yet");
     check(spill("cf_usage4.ini", "[server]\nport = 3001\n# edited\n"),
           "tier 4: edited");
-    check(cf_changed(cfg), "tier 4: and now it has; rebuild and swap");
+    {
+        cf_stamp st;
+
+        /* cf_changed compares what the platform says of a file. */
+        if (cf_platform_stamp(".", &st)) {
+            check(cf_changed(cfg), "tier 4: and now it has; rebuild and swap");
+        } else {
+            puts("skipped: no file stamps");
+        }
+    }
 
     cf_config_free(cfg);
     remove("cf_usage4.ini");

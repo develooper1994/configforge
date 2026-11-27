@@ -231,6 +231,15 @@ static void test_approve(void) {
     cf_live_close(l);
 }
 
+/* cf_changed compares what the platform says of a file; a platform that
+   cannot stamp (none) never sees a change, so the tests that expect one
+   skip, by asking it. */
+static int can_stamp(void) {
+    cf_stamp st;
+
+    return cf_platform_stamp(".", &st) ? 1 : 0;
+}
+
 /* A poll notices a file that changed; each write has a new length, so
    a change within one clock tick is still seen. */
 static void test_poll(void) {
@@ -764,17 +773,33 @@ static void test_settle(void) {
 }
 
 int main(void) {
-    test_settle();
+    if (can_stamp()) {
+        test_settle();
+    } else {
+        puts("skipped: no file stamps");
+    }
     test_probation();
-    test_probation_file();
+    if (can_stamp()) {
+        test_probation_file();
+    } else {
+        puts("skipped: no file stamps");
+    }
     test_options();
     test_options_init();
     test_auto_and_manual();
     test_literal_pin();
     test_approve();
-    test_poll();
+    if (can_stamp()) {
+        test_poll();
+    } else {
+        puts("skipped: no file stamps");
+    }
 #if defined(CF_TEST_SYMLINKS)
-    test_configmap();
+    if (can_stamp()) {
+        test_configmap();
+    } else {
+        puts("skipped: no file stamps");
+    }
 #endif
     test_nothing();
 #if defined(CF_TEST_PTHREADS) && !defined(CF_SINGLE_THREADED)

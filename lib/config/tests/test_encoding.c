@@ -789,9 +789,17 @@ int main(void) {
         test_single_byte();
         test_document();
 #if CF_WITH_DIR
-        test_dir();
+        if (cf_platform_has_dir_list()) {
+            test_dir();
+        } else {
+            puts("skipped: no directory listing");
+        }
 #endif
-        test_env_document();
+        if (cf_platform_has_environ()) {
+            test_env_document();
+        } else {
+            puts("skipped: no environment");
+        }
 #if CF_WITH_REPORT
         test_report();
 #endif

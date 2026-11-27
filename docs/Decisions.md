@@ -126,6 +126,7 @@ gets reopened every six months.
 | D-111 | The comparison with other libraries: one set of flags, the same work, and a history kept on its own branch | benchmark, CI | **Decided** |
 | D-112 | The MISRA record is plain text of file and count, three kinds, and the gate fails open nowhere | compliance, CI | **Decided** |
 | D-230 | Options with defaults are one convention: `size` first, `_init`, NULL the defaults; a fixed limit a public call reaches is an option with its old value as default | public options structs, `gate.options` | **Decided** |
+| D-231 | The platform is a part: `none` is built and tried; what it cannot give answers `CF_E_CAPABILITY` | platform, build options, CI | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -5323,6 +5324,41 @@ explanation depend on a number nobody should choose; one options struct for
 every limit of every call.
 
 **Status.** Built: K-11a.
+
+## D-231 — The platform is a part: `none` is built and tried; what it cannot give answers `CF_E_CAPABILITY`
+
+**Question.** D-220 says a feature the target platform cannot provide is
+either not compiled, its use a link error, or `CF_E_CAPABILITY` where the
+call must exist. The `none` platform existed and nothing built it: `auto`
+chose `posix` for a bare-metal toolchain, `CF_NO_STDIO` and `CF_NO_STDLIB`
+were macros no build option set, and no test ran on `none`.
+
+**Decision.**
+
+* **`auto` knows a bare-metal system**: `CMAKE_SYSTEM_NAME` `Generic` is
+  `none`; WASI has a C library with files and stays `posix`. The Cortex-M job
+  also says `-DCF_PLATFORM=none`.
+* **Two options for a C library that is not there**: `CF_NO_STDIO` (files
+  cannot be opened) and `CF_NO_STDLIB` (no default allocator), each a public
+  compile definition, both refused unless the platform is `none`.
+* **`cf_platform_has_files`** is the query for files, like the other `has_`
+  queries, and `cf_blob_file` asks it before it opens: a build with no files
+  answers `CF_E_CAPABILITY` ("this build has no files to read"), not
+  `CF_E_SOURCE` "cannot open".
+* **Built and tried**: the preset `none` (the host's C library for newlib,
+  the whole suite; a test that needs what `none` cannot give asks the
+  platform and skips) and the preset `none-bare` (`CF_NO_STDIO` and
+  `CF_NO_STDLIB`, one test, `tests/platform/freestanding.c`), in one CI job.
+* **The allocator** stays as it was: `cf_default_allocator()` is NULL under
+  `CF_NO_STDLIB`, a call with an error channel answers `CF_E_CAPABILITY`,
+  `cf_build(NULL)` returns NULL, and `cf_build_in` is the path.
+
+Rejected: a CI build with `-ffreestanding` and no host C library (the
+Cortex-M cross build is that proof); excluding tests by a regex in the
+`none` preset; failing the configure for a `Generic` system without
+`CF_PLATFORM`; a link error for the file functions on `none`.
+
+**Status.** Built: K-11b.
 
 ## D-157 — The Cortex-M numbers come from a cross build of the library alone
 

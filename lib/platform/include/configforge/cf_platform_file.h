@@ -72,6 +72,12 @@ extern "C" {
 #if CF_INTERNAL_API
 CF_API void* cf_platform_fopen(const char* path, const char* mode);
 
+/* Whether this build has files to open: CF_TRUE on posix and win32, and on
+ * none unless CF_NO_STDIO is defined. A reader asks before it opens, so that
+ * a build with no files answers CF_E_CAPABILITY and not a plain "cannot
+ * open" (K-11b, D-220). */
+CF_NODISCARD CF_API cf_bool cf_platform_has_files(void);
+
 /* ------------------------------------------------------------------ *
  * The core of cf_file_replace (cf_file.h; D-224, D-127)
  *

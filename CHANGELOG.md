@@ -7,6 +7,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- `cf_platform_has_files`, the options `CF_NO_STDIO` and `CF_NO_STDLIB`, the
+  presets `none` and `none-bare` and a CI job for them: the `none` platform is
+  built and its suite run, with the host's C library and with none; `auto`
+  chooses `none` for a `Generic` (bare-metal) CMake system (K-11b, D-231).
 - A tag publishes the Rust crate to crates.io (L-24).
 - A release's notes end with "How each archive was built": for each archive the
   compiler, the generator, the build type and every `CF_*` option with its
@@ -82,6 +86,8 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Changed
 
+- Reading a file in a build without files fails with `CF_E_CAPABILITY`, not
+  `CF_E_SOURCE` (a build that could not exist before).
 - Every public function whose result reports a failure is `CF_NODISCARD`: under
   C23 and C++17 an ignored failure is a warning (K-9c, D-223). The builder's
   `cf_builder_*` calls are left out, as their first failure is deferred to

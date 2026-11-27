@@ -263,6 +263,11 @@ static void test_cannot_say(void) {
 int main(void) {
 #if CF_WITH_DIR
 #if defined(CF_TEST_POSIX)
+    if (!cf_platform_has_trusted_dir()) {
+        /* A POSIX host, a build for a target that cannot say (none). */
+        puts("skipped: no way to say who may write to a directory");
+        return cf_test_done();
+    }
     umask(022);
     test_plain();
     test_world_writable();

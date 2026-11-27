@@ -147,6 +147,32 @@
       }
     },
     {
+      "name": "none",
+      "displayName": "No operating system: CF_PLATFORM=none, with the host's C library standing for newlib; the whole suite, a test that needs what none cannot give skips by asking the platform.",
+      "binaryDir": "${sourceDir}/build-none",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CF_PROFILE": "default",
+        "CF_PLATFORM": "none",
+        "CF_BUILD_TOOLS": "OFF",
+        "CF_BUILD_EXAMPLES": "OFF"
+      }
+    },
+    {
+      "name": "none-bare",
+      "displayName": "No operating system and no C library: CF_PLATFORM=none, CF_NO_STDIO and CF_NO_STDLIB; its one test is the freestanding program.",
+      "binaryDir": "${sourceDir}/build-none-bare",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MinSizeRel",
+        "CF_PROFILE": "minimal",
+        "CF_PLATFORM": "none",
+        "CF_NO_STDIO": "ON",
+        "CF_NO_STDLIB": "ON",
+        "CF_BUILD_TOOLS": "OFF",
+        "CF_BUILD_EXAMPLES": "OFF"
+      }
+    },
+    {
       "name": "embedded-json",
       "displayName": "JSON alone, for a device: no files, no reals, one thread, nesting 16.",
       "binaryDir": "${sourceDir}/build-embedded-json",
@@ -184,6 +210,8 @@
     { "name": "full", "configurePreset": "full", "configuration": "Release" },
     { "name": "server", "configurePreset": "server", "configuration": "Release" },
     { "name": "misra", "configurePreset": "misra", "configuration": "Debug" },
+    { "name": "none", "configurePreset": "none", "configuration": "Debug" },
+    { "name": "none-bare", "configurePreset": "none-bare", "configuration": "MinSizeRel" },
     { "name": "embedded-json", "configurePreset": "embedded-json", "configuration": "MinSizeRel" },
     { "name": "embedded-cbor", "configurePreset": "embedded-cbor", "configuration": "MinSizeRel" }
   ],
@@ -226,6 +254,8 @@
     {"name": "full", "configurePreset": "full", "configuration": "Release", "output": {"outputOnFailure": true}},
     {"name": "server", "configurePreset": "server", "configuration": "Release", "output": {"outputOnFailure": true}},
     {"name": "misra", "configurePreset": "misra", "configuration": "Debug", "output": {"outputOnFailure": true}},
+    {"name": "none", "configurePreset": "none", "configuration": "Debug", "output": {"outputOnFailure": true}},
+    {"name": "none-bare", "configurePreset": "none-bare", "configuration": "MinSizeRel", "output": {"outputOnFailure": true}, "filter": {"include": {"name": "^platform\\.freestanding$"}}},
     {"name": "embedded-json", "configurePreset": "embedded-json", "configuration": "MinSizeRel", "output": {"outputOnFailure": true}, "filter": {"include": {"name": "^(profile|gate\\.(version|text|layering|detection|cversion|profiles))"}}},
     {"name": "embedded-cbor", "configurePreset": "embedded-cbor", "configuration": "MinSizeRel", "output": {"outputOnFailure": true}, "filter": {"include": {"name": "^(profile|gate\\.(version|text|layering|detection|cversion|profiles))"}}}
   ]

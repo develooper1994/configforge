@@ -36,9 +36,13 @@ function(configforge_add_gates tgt)
   # second way and have to compile the same one: see GateAmalgamation.
   string(REPLACE ";" "|" features "${CF_FEATURES}")
   set(options
-      "-DFEATURES=${features}" "-DWERROR=$<BOOL:${CF_WERROR}>"
+      "-DFEATURES=${features}"
+      "-DWERROR=$<BOOL:${CF_WERROR}>"
       "-DSINGLE=$<BOOL:${CF_SINGLE_THREADED}>"
-      "-DPORTABLE=$<BOOL:${CF_FORCE_PORTABLE}>")
+      "-DPORTABLE=$<BOOL:${CF_FORCE_PORTABLE}>"
+      "-DPLATFORM=${CF_PLATFORM}"
+      "-DNO_STDIO=$<BOOL:${CF_NO_STDIO}>"
+      "-DNO_STDLIB=$<BOOL:${CF_NO_STDLIB}>")
   foreach(f ${CF_FEATURES})
     list(APPEND options "-DO_${f}=$<BOOL:${CF_WITH_${f}}>")
   endforeach()

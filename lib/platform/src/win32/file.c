@@ -52,6 +52,10 @@ void* cf_platform_fopen(const char* path, const char* mode) {
     return _wfopen(wpath, wmode);
 }
 
+cf_bool cf_platform_has_files(void) {
+    return CF_TRUE;
+}
+
 unsigned long cf_platform_now_ms(void) {
     return (unsigned long)GetTickCount64();
 }

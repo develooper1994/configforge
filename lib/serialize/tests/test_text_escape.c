@@ -14,6 +14,8 @@
  * serialization library.
  */
 
+#include <configforge/cf_alloc.h>
+#include <configforge/cf_platform_file.h>
 #include <configforge/cf_serialize.h>
 #include <configforge/cf_text.h>
 #include <configforge/cf_yamlparse.h>
@@ -858,7 +860,28 @@ static void test_tag(void) {
 #endif
 }
 
+/* K-11b: a build with files asks the platform, and a file that is not there
+   is "cannot open", a source error; only a build with no files answers
+   CF_E_CAPABILITY (tests/platform/freestanding.c). */
+static void test_files(void) {
+    cf_arena* ar = cf_arena_new(NULL, 0);
+    cf_blob   b;
+    cf_error  err = CF_ERROR_INIT;
+
+    check(cf_platform_has_files(), "this build has files");
+    check(ar != NULL, "an arena");
+    if (ar == NULL) {
+        return;
+    }
+    check(!cf_blob_file(&b, ar, "no-such-dir/no-such-file.json", &err),
+          "a file that is not there is not read");
+    check(err.code == CF_E_SOURCE,
+          "and it is a source error, not a missing capability");
+    cf_arena_free(ar);
+}
+
 int main(void) {
+    test_files();
     test_decoder();
     test_writers();
     test_refs();

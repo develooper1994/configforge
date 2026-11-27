@@ -41,6 +41,10 @@ void* cf_platform_fopen(const char* path, const char* mode) {
     return (path != NULL && mode != NULL) ? fopen(path, mode) : NULL;
 }
 
+cf_bool cf_platform_has_files(void) {
+    return CF_TRUE;
+}
+
 unsigned long cf_platform_now_ms(void) {
 #if defined(CLOCK_MONOTONIC)
     struct timespec ts;

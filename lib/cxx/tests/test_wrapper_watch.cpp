@@ -51,7 +51,16 @@ int main() {
             check(w.wait(5000) == 1, "which wakes it");
         }
     }
-    check(cfg.changed(), "and Config::changed() sees it");
+    {
+        cf_stamp st;
+
+        /* changed() compares what the platform says of a file. */
+        if (cf_platform_stamp(".", &st)) {
+            check(cfg.changed(), "and Config::changed() sees it");
+        } else {
+            std::puts("skipped: no file stamps");
+        }
+    }
 
     /* Rebuild and say what the reload did: the line a program that
        watches its files would log. */

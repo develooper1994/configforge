@@ -366,6 +366,10 @@ static void creds_set(const char* value) {
    none removes it: another may be reading the directory. */
 static void test_directories() {
 #if CF_WITH_DIR
+    if (!cf_platform_has_dir_list() || !cf_platform_has_environ()) {
+        std::puts("skipped: no directory listing or environment");
+        return;
+    }
     const std::string key  = "db.password-" CF_T_TEXT(CF_CXX_LEVEL);
     const std::string path = "cf_wcreds/" + key;
     check(spill(path.c_str(), "s3cret\n"), "a credential");
