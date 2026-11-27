@@ -57,6 +57,7 @@ nav:
       - Decisions: docs/Decisions.md
       - Safety: docs/Safety.md
       - Limits: docs/Limits.md
+      - Guarantees: docs/Guarantees.md
       - Formats: docs/Formats.md
       - Conformance: docs/Conformance.md
       - Performance: docs/Performance.md

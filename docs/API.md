@@ -1012,16 +1012,22 @@ cleanly when it is exhausted, which is the freestanding profile.
 
 ```c
 CF_NODISCARD CF_API cf_arena* cf_arena_new(const cf_allocator* a, size_t block_size);
-CF_API cf_arena* cf_arena_fixed(void* buffer, size_t size);
 ```
 
-Implementation: [`cf_arena_new` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L98), [`cf_arena_fixed` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L129).
+Implementation: [`cf_arena_new` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L98).
 
 `block_size` is a hint: anything below 1 KiB is replaced by a sensible
 default, because an arena that takes sixty-four bytes at a time is a
 malloc wrapper with extra steps. Said out loud because a silently
 ignored parameter is how a test ends up measuring the default three
 times and reporting it as three results.
+Guarantee: strong. Nothing exists to change; NULL when the allocator fails.
+
+```c
+CF_API cf_arena* cf_arena_fixed(void* buffer, size_t size);
+```
+
+Implementation: [`cf_arena_fixed` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L129).
 
 ```c
 CF_API void cf_arena_free(cf_arena* ar);
@@ -1035,6 +1041,7 @@ them - and the text of every file it read, and memory handed back to
 an allocator is memory the next allocation, a core dump or a swap
 file can show to someone else. A fixed arena is zeroed and not
 released: the buffer is the caller's.
+Guarantee: nothrow.
 
 ```c
 CF_API void cf_arena_wipe(cf_arena* ar);
@@ -2005,6 +2012,7 @@ Implementation: [`cf_error_clear` (lib/base/src/error.c)](https://github.com/dev
 
 Empties `e`: code CF_OK, key, source, message, place and reason empty. `size` is
 kept, so a cleared error can be reused. NULL is ignored.
+Guarantee: nothrow.
 
 ```c
 CF_API void cf_error_copy(cf_error* dst, const cf_error* src);

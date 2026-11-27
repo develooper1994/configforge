@@ -87,7 +87,8 @@ typedef struct cf_error {
 CF_NODISCARD CF_API cf_bool cf_key_valid(const char* key, size_t len);
 
 /* Empties `e`: code CF_OK, key, source, message, place and reason empty. `size` is
-   kept, so a cleared error can be reused. NULL is ignored. */
+   kept, so a cleared error can be reused. NULL is ignored.
+   Guarantee: nothrow. */
 CF_API void cf_error_clear(cf_error* e);
 
 /* What `src` says, copied into `dst` as far as `dst` has room: 1.0's

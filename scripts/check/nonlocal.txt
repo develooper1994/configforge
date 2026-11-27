@@ -1,0 +1,4 @@
+# Exceptions to "the library never ends the program" (docs/Guarantees.md):
+# one path|token|reason a line. Empty: no library source calls abort,
+# exit, _Exit, quick_exit, longjmp, siglongjmp, setjmp, sigsetjmp, assert,
+# raise or __builtin_trap.

@@ -42,16 +42,19 @@ typedef struct cf_arena cf_arena;
    default, because an arena that takes sixty-four bytes at a time is a
    malloc wrapper with extra steps. Said out loud because a silently
    ignored parameter is how a test ends up measuring the default three
-   times and reporting it as three results. */
+   times and reporting it as three results.
+   Guarantee: strong. Nothing exists to change; NULL when the allocator fails. */
 CF_NODISCARD CF_API cf_arena* cf_arena_new(const cf_allocator* a, size_t block_size);
-CF_API cf_arena*              cf_arena_fixed(void* buffer, size_t size);
+
+CF_API cf_arena* cf_arena_fixed(void* buffer, size_t size);
 
 /* Release the arena, zeroing every byte it handed out first. A
    configuration's arena holds its values - passwords and tokens among
    them - and the text of every file it read, and memory handed back to
    an allocator is memory the next allocation, a core dump or a swap
    file can show to someone else. A fixed arena is zeroed and not
-   released: the buffer is the caller's. */
+   released: the buffer is the caller's.
+   Guarantee: nothrow. */
 CF_API void cf_arena_free(cf_arena* ar);
 
 /* Zero every byte the arena has handed out, without releasing it. For a

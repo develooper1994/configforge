@@ -7,6 +7,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- `docs/Guarantees.md` and `gate.guarantees`: every public function states one failure
+  guarantee (nothrow, strong or basic) in its header comment, and no library source ends
+  the program (K-9a, D-232).
 - `cf_builder_sizing` and `cf_sizing_options`: manual, semi- and full-dynamic sizing,
   recorded in the configuration and read back by `cf_config_sizing`; manual, today's
   limits, is the default and nothing changes with it. The new build option

@@ -116,6 +116,7 @@ function(configforge_add_gates tgt)
     gate
     Fetches
     Nodiscard
+    Guarantees
     Options
     Platforms
     Permissions

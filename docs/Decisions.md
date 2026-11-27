@@ -127,6 +127,7 @@ gets reopened every six months.
 | D-112 | The MISRA record is plain text of file and count, three kinds, and the gate fails open nowhere | compliance, CI | **Decided** |
 | D-230 | Options with defaults are one convention: `size` first, `_init`, NULL the defaults; a fixed limit a public call reaches is an option with its old value as default | public options structs, `gate.options` | **Decided** |
 | D-231 | The platform is a part: `none` is built and tried; what it cannot give answers `CF_E_CAPABILITY` | platform, build options, CI | **Decided** |
+| D-232 | Every public function states one failure guarantee; the library never ends the program | public headers, `docs/Guarantees.md`, `gate.guarantees` | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -5451,6 +5452,38 @@ Cortex-M cross build is that proof); excluding tests by a regex in the
 `CF_PLATFORM`; a link error for the file functions on `none`.
 
 **Status.** Built: K-11b, K-11c.
+
+## D-232 — Every public function states one failure guarantee; the library never ends the program
+
+**Question.** A library inside a controller or a daemon must say what is left
+when a call fails, and must never decide to stop the process (the maintainer,
+2026-11-26, "exception safety is to be added"). No header said it, and the
+second rule held by luck only.
+
+**Decision.** Three words, written as one line `Guarantee: <word>.` in the
+comment above each public declaration (or above a run of declarations with no
+blank line between them): `nothrow` (cannot fail), `strong` (on failure the
+arguments are as they were; a `cf_error` and the caller's output buffers are
+not counted) and `basic` (on failure nothing leaks and every object stays
+valid, its contents may have changed, and the comment says which). A function
+that can leave an object invalid or leak is a defect, never a fourth word.
+`scripts/check/guarantees.py` (`gate.guarantees`) holds that each public name
+(`cmake/configforge.symbols`, experimental included) has a line, that no
+`CF_NODISCARD` function claims `nothrow`, that the table in
+`docs/Guarantees.md` is what the headers say, and that no file of `lib/*/src`
+or `lib/*/include` calls `abort`, `exit`, `_Exit`, `quick_exit`, `longjmp`,
+`siglongjmp`, `setjmp`, `sigsetjmp`, `assert`, `raise` or `__builtin_trap`
+(exceptions: `scripts/check/nonlocal.txt`, empty). Names not yet annotated are
+in `scripts/check/guarantees_todo.txt`, a list that only shrinks (K-9d to
+K-9g). An allocation that fails returns `CF_E_MEMORY` (held at run time by
+K-9b).
+
+Rejected: a macro on each declaration (it changes every line and the compiler
+checks nothing by it); the words in prose only (a promise nothing reads
+drifts); a fourth word for "may leave the object unusable" (it is a defect);
+guarantees for the internal names (outside the promise); one word per header.
+
+**Status.** Built: K-9a.
 
 ## D-157 — The Cortex-M numbers come from a cross build of the library alone
 
