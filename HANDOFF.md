@@ -24,13 +24,12 @@ approval and release rights: docs/Plan.md "For the maintainer".
 3. `batch` (D:\cf-work\batch; tip after a6eddd5) also holds the afl `chain`
    fix (5cdd262: the converter drops an emptied list as it drops an emptied
    table) and the cards K-9h, K-9i, F-6, F-7. No full run yet since the fix.
-   In flight: K-6a (worktree D:\cf-work\K-6a, branch `work/K-6a`, cut from
-   batch): its worker was running the full local verify when this account
-   stopped. Read `git log origin/work/K-6a`; if its local verify is not
-   confirmed, run `python scripts/work/work.py verify K-6a full` (WSL dirs
-   named K-6a). Then land it onto `batch`, run
-   `gh workflow run ci --ref batch -f tier=full` once, fix on `batch`
-   ("Batch: ..." commits), and when green `git push origin batch:main`.
+   K-6a landed on `batch` too (2026-11-28). The batch's full run
+   46067496921 was started on it: read its result
+   (`gh run view 46067496921 --json conclusion,jobs`); red -> fix on
+   `batch` ("Batch: ..."), run again; green -> `git push origin batch:main`
+   (main and batch differ then only by merges of HANDOFF.md: merge
+   origin/main into batch without another run if that is all).
    After records change: sizes (scripts/check/sizes.cmake -DWRITE=ON
    -DTREE=<hash> on a copy without .git), then `cmake -P
    scripts/generate/matrix.cmake` (README cells), and the MISRA record
