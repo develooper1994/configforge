@@ -29,6 +29,7 @@ HEADERS = [
     "cf_encoding.h",
     "cf_value.h",
     "cf_alloc.h",
+    "cf_file.h",
     "cf_platform_file.h",
     "cf_platform.h",
     "cf_keyspace.h",
@@ -56,12 +57,18 @@ HEADERS = [
 # (cf_doctor.h), which a device reading configuration does not carry.
 NOT_AMALGAMATED = {"cf_doctor.h"}
 
+# Private headers of a component's src/, read before the sources: the
+# amalgamation drops every local include, so what a source takes from such a
+# header has to be written out once, here.
+PRIVATE_HEADERS = ["platform/src/file_prim.h"]
+
 SOURCES = [
     # Every platform, each guarded internally: the amalgamation is one
     # translation unit and has no build to choose for it.
     "platform/src/posix/posix.c", "platform/src/posix/file.c",
     "platform/src/win32/win32.c", "platform/src/win32/file.c",
     "platform/src/none/none.c", "platform/src/none/file.c",
+    "platform/src/file_layer.c",
     "config/src/core/version.c", "port/src/port.c", "base/src/error.c",
     "base/src/key.c",
     "numeric/src/numeric.c", "base/src/alloc.c",
@@ -89,7 +96,8 @@ COMPONENTS = ["port", "numeric", "base", "text", "platform", "serialize", "confi
 # includes too. Its header is put into configforge.c under its prefix, and
 # its sources are among SOURCES.
 LOCAL_INCLUDE = re.compile(
-    r'^\s*#\s*include\s*(?:"configforge/([^"]+)"|["<]lanes/([^">]+)[">])\s*$')
+    r'^\s*#\s*include\s*(?:"configforge/([^"]+)"|["<]lanes/([^">]+)[">]'
+    r'|"(?:\.\./)?(file_prim\.h)")\s*$')
 GUARD_OPEN = re.compile(r'^\s*#\s*ifndef\s+CONFIGFORGE\w*\s*$')
 GUARD_DEF = re.compile(r'^\s*#\s*define\s+CONFIGFORGE\w*\s*$')
 
@@ -116,7 +124,7 @@ def resolve(line, incdirs):
     m = LOCAL_INCLUDE.match(line)
     if m is None:
         return [line]
-    name = m.group(1) or m.group(2)
+    name = m.group(1) or m.group(2) or m.group(3)
     if not name.endswith(".def"):
         return []
     with open(find_header(incdirs, name), encoding="utf-8") as f:
@@ -317,6 +325,10 @@ def main():
         body.append("#define LANES_PREFIX_CF 1\n\n")
         body.append(strip_header(f.read(), incdirs))
     seen = set()
+    for h in PRIVATE_HEADERS:
+        with open(os.path.join(src, "lib", h), encoding="utf-8") as f:
+            body.append(banner(h))
+            body.append(strip_header(f.read(), incdirs))
     for s in SOURCES:
         p = os.path.join(src, "lib", s)
         with open(p, encoding="utf-8") as f:

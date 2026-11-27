@@ -118,6 +118,13 @@ cf_explain
 cf_explain_json
 cf_feature_at
 cf_feature_count
+cf_file_options_init
+cf_file_replace
+cf_file_writer_close
+cf_file_writer_flush
+cf_file_writer_open
+cf_file_writer_sync
+cf_file_writer_write
 cf_fingerprint
 cf_fingerprint_format
 cf_fingerprint_seed

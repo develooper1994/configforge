@@ -967,6 +967,12 @@
 - cf_looks_real 949-997
 - cf_has_leading_zero 999-1012
 - cf_infer_scalar 1014-1036
+`lib/platform/include/configforge/cf_file.h`
+- #define CONFIGFORGE_CF_FILE_H 28
+- enum cf_buf_mode 40-45
+- enum cf_sync_mode 62-68
+- struct cf_file_options 70-83
+- typedef cf_file_writer 104
 `lib/platform/include/configforge/cf_platform.h`
 - #define CONFIGFORGE_CF_PLATFORM_H 29
 - #define CF_PLATFORM_NAME_MAX 95
@@ -978,13 +984,45 @@
 - typedef cf_platform_wake 328
 `lib/platform/include/configforge/cf_platform_file.h`
 - #define CONFIGFORGE_CF_PLATFORM_FILE_H 20
-- #define CF_PLATFORM_WIN32 39
-- #define CF_PLATFORM_POSIX 41
-- #define CF_PLATFORM_WIN32 45
-- #define CF_PLATFORM_POSIX 48
-- #define CF_PLATFORM_NONE 51
+- #define CF_PLATFORM_WIN32 41
+- #define CF_PLATFORM_POSIX 43
+- #define CF_PLATFORM_WIN32 47
+- #define CF_PLATFORM_POSIX 50
+- #define CF_PLATFORM_NONE 53
+`lib/platform/src/file_layer.c`
+- cf_file_options_init 29-40
+- cfi_file_options 42-68
+- cfi_file_fail 70-73
+- cfi_file_temp_name 81-118
+- file_available 121-126
+- cf_file_replace 128-133
+- cf_file_writer_open 140-146
+- cf_file_writer_write 148-155
+- cf_file_writer_flush 157-161
+- cf_file_writer_sync 163-167
+- cf_file_writer_close 169-173
+- cf_platform_writer_syncs 175-178
+- cf_platform_writer_close_counted 180-188
+- cfi_file_why_stdio 192-195
+- struct cf_file_writer 197-208
+- writer_arg 210-215
+- writer_sync 218-231
+- writer_count 234-240
+- cf_file_writer_open 242-329
+- cf_file_writer_write 331-357
+- cf_file_writer_flush 359-370
+- cf_file_writer_sync 372-378
+- cf_platform_writer_syncs 380-382
+- cf_platform_writer_close_counted 384-413
+- cf_file_writer_close 415-417
+`lib/platform/src/file_prim.h`
 `lib/platform/src/none/file.c`
-- cf_platform_fopen 20-30
+- cf_platform_fopen 24-34
+- cf_platform_write_file_with 39-53
+- cf_platform_write_steps 55-57
+- cf_platform_now_ms 59-61
+- cfi_file_sync 63-66
+- cfi_file_why 68-73
 `lib/platform/src/none/none.c`
 - cf_platform_name 14-16
 - cf_platform_has_environ 18-20
@@ -1011,7 +1049,18 @@
 - cf_platform_wake_wait 153-157
 - cf_platform_wake_close 159-161
 `lib/platform/src/posix/file.c`
-- cf_platform_fopen 17-20
+- cf_platform_fopen 39-42
+- cf_platform_now_ms 44-54
+- cfi_file_sync 56-58
+- cfi_file_why 60-62
+- cf_platform_write_steps 64-66
+- struct replace_state 69-76
+- file_injected 79-82
+- file_failed 85-88
+- file_steps 93-183
+- file_sync_directory 190-210
+- file_core 213-279
+- cf_platform_write_file_with 281-290
 `lib/platform/src/posix/posix.c`
 - cf_platform_name 86-88
 - cf_platform_has_environ 90-92
@@ -1079,8 +1128,19 @@
 - cf_platform_wake_wait 1301-1305
 - cf_platform_wake_close 1307-1309
 `lib/platform/src/win32/file.c`
-- win32f_wide 25-32
-- cf_platform_fopen 34-42
+- win32f_wide 36-43
+- cf_platform_fopen 45-53
+- cf_platform_now_ms 55-57
+- cfi_file_sync 59-63
+- cfi_file_why 65-68
+- cf_platform_write_steps 70-72
+- struct replace_state 75-83
+- file_injected 86-89
+- file_failed 92-95
+- file_failed_stdio 98-101
+- file_steps 106-223
+- file_core 226-294
+- cf_platform_write_file_with 296-301
 `lib/platform/src/win32/win32.c`
 - cf_platform_name 34-36
 - cf_platform_has_environ 38-40

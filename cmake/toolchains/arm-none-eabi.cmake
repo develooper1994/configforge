@@ -14,9 +14,8 @@ set(CMAKE_SYSTEM_PROCESSOR arm)
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 set(CMAKE_C_COMPILER arm-none-eabi-gcc)
-set(CMAKE_C_FLAGS_INIT
-    "-mcpu=cortex-m4 -mthumb -mfloat-abi=soft"
-    "-ffunction-sections -fdata-sections")
+set(CMAKE_C_FLAGS_INIT "-mcpu=cortex-m4 -mthumb -mfloat-abi=soft"
+                       "-ffunction-sections -fdata-sections")
 string(REPLACE ";" " " CMAKE_C_FLAGS_INIT "${CMAKE_C_FLAGS_INIT}")
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)

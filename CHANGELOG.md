@@ -7,6 +7,13 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- `cf_file_options`, `cf_file_writer` and `cf_file_replace`: a file layer with
+  buffering as C's `setvbuf` and durability as the platform's sync, each an
+  option with a default; `cf_file_replace` replaces a file by a temporary in
+  its directory, synced once and renamed over it, on POSIX and Windows, the
+  rename retried for `retry_ms` (2 s by default) on Windows while another
+  handle holds the target; a failure at any step leaves the old file (F-1a,
+  D-224, D-127).
 - CI builds the minimal profile for a Cortex-M4 (soft float, library only) and
   holds its stack frames to the profile's budget (D-157). On a 32-bit `size_t`
   two comparisons against `CF_I64_MAX` no longer trip `-Wtype-limits`.

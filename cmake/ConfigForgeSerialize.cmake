@@ -12,6 +12,7 @@ set(CF_SERIALIZE_HEADERS
     cf_value.h
     cf_alloc.h
     cf_platform_file.h
+    cf_file.h
     cf_serialize_version.h
     cf_serialize.h
     cf_yamlparse.h)

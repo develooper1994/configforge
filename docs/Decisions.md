@@ -5143,6 +5143,121 @@ are later cards.
 
 **Status.** Built: N-19.
 
+## D-224 — The file layer: options, a writer, a replace, and an emit on top
+
+**Question.** `examples/c/settings.c` writes a program's settings with
+`fopen "wb"` over the old file: a crash or a full disk leaves neither the old
+file nor the new one, and wave 6 (F-3) will write users' files. What does the
+library offer for writing a file, and what does it let a program choose?
+
+**Options.** A: one `cf_emit_file` that does everything, with the options of
+a file on it. B: the file layer alone, the program calling `cf_emit` itself.
+C: the layers, each usable without the one above (decided by the maintainer,
+2026-11-26: "option C is better"; "do the design without departing from the
+standards: the compiler's or the platform's rules must be usable").
+
+**Decision.** Option C.
+
+1. **One options struct**, `cf_file_options`, initialised by
+   `cf_file_options_init(&o)` (C89, D-230's shape: `size` first); a NULL
+   `options` anywhere is the defaults. Every setting is an option with a
+   default (D-220).
+2. **Three layers.** `cf_file_writer`: streaming, in place, for a program
+   that writes continuously (records, logs). `cf_file_replace(path, data, size,
+   options, err)`: a temporary file, then one atomic replace, usable alone and
+   knowing nothing of configuration (D-127). `cf_emit_file(c, path, format,
+   what, rank, options, err)` (F-1b): `cf_emit`, then `cf_file_replace`, with no
+   logic of its own. The first two are in `lib/platform` (the platform is a
+   part, D-100, D-220), in `cf_file.h`; the third is `cf_emit.h`'s.
+3. **Two settings, independent, taken from the standards.** Buffering is
+   C89's `setvbuf`: `CF_BUF_PLATFORM` (the default: `setvbuf` is not called),
+   `CF_BUF_FULL` (`_IOFBF`), `CF_BUF_LINE` (`_IOLBF`), `CF_BUF_NONE`
+   (`_IONBF`), and a `buffer_size` (0: `BUFSIZ`; above it, a buffer taken from
+   `cf_default_allocator()` and released at the close). Durability is the
+   platform's call (`fsync`, `FlushFileBuffers`): `CF_SYNC_PLATFORM` (nothing
+   forced), `CF_SYNC_COMMIT` (once, before the file is closed; for a replace,
+   before the rename), `CF_SYNC_EVERY` (after `sync_bytes` bytes or `sync_ms`
+   milliseconds, whichever comes first, checked at each write; a zero trigger
+   never fires; the tail is synced at the close), `CF_SYNC_EACH` (after every
+   write, chosen knowingly).
+4. **The defaults are the compiler's and the platform's, with one exception**
+   the maintainer chose: `cf_file_replace`, and so `cf_emit_file`, defaults to
+   `CF_SYNC_COMMIT` (one sync a save, so that "whole or not at all" holds
+   across a power loss, as SQLite and Git do); `cf_file_writer` defaults to
+   `CF_SYNC_PLATFORM`. **`CF_SYNC_DEFAULT`** is how that is written (it is not
+   in the maintainer's list): it is the value `cf_file_options_init` sets and
+   what NULL means, resolved by each layer to its own, so that NULL and an
+   initialised struct are the same. A write that is one `fwrite` takes
+   `CF_SYNC_EVERY` and `CF_SYNC_EACH` as `CF_SYNC_COMMIT`.
+5. **The Windows retry of the rename is an option**, `retry_ms`, 2 s by default
+   (D-127); `append` is the writer's.
+6. **A clock for `sync_ms`**: `cf_platform_now_ms`, internal, a monotonic
+   millisecond counter (`clock_gettime(CLOCK_MONOTONIC)`, `GetTickCount64`).
+   Where there is none it returns `(unsigned long)-1` and a writer that asks for
+   `CF_SYNC_EVERY` with `sync_ms` refuses by name (`CF_E_CAPABILITY`).
+7. **The `none` platform** has no files to write: every call of the layer but
+   `cf_file_options_init` fails with `CF_E_CAPABILITY`, `this build has no
+   files to write`. The calls exist (D-220), so a program built for it links.
+
+Rejected: one `cf_emit_file` with the file's options on it (a program that
+writes records would have to go through configuration); the file layer alone,
+leaving every program to join `cf_emit` to it; a default of `CF_SYNC_PLATFORM`
+for the replace.
+
+**Status.** Built: F-1a (the layer); F-1b (`cf_emit_file`).
+
+## D-127 — A file is replaced whole or not at all
+
+**Question.** How does `cf_file_replace` make a file hold exactly the bytes
+given, so that a crash, a full disk or a reader at the wrong moment never
+leaves half a file?
+
+**Decision.** By a temporary file in the same directory, written, synced once
+and put in place by one rename; and at every step that can fail, the old file
+is intact and no temporary is left.
+
+* **The core** is `cf_platform_write_file_with(path, data, size, options,
+  fail_at, on_retry, user, err)`, internal, which `cf_file_replace` calls with
+  `fail_at` 0 and no hook; each platform's `file.c` holds one static
+  `file_core`. `cf_platform_write_steps()` says how many steps can fail
+  (POSIX 6, Windows 5, none 0), and `fail_at` fails step *k* as if that system
+  call had failed (`injected failure at step <k>`): no global state (D-101).
+* **POSIX**, after a check of what is there (`lstat`: a symbolic link is
+  refused, `'%s' is a symbolic link; write the file it points to`; what is not
+  a regular file is refused; no file is fine): **1** `open` the temporary
+  `<dir>/.<name>.cf-tmp-<k>` with `O_CREAT|O_EXCL` (and `O_CLOEXEC`, or
+  `FD_CLOEXEC` after it, D-190), `k` from 0 to 99, the next on `EEXIST`; mode
+  `0666` for a new file (the umask applies, as `fopen` gave) and `0600` for a
+  replacement; **2** every byte, and `fflush`; **3** `fsync`; **4** `fchmod` to
+  the original's mode; **5** `fclose`, its result checked; **6** `rename`. After
+  the rename, not a step and only when the sync is not `CF_SYNC_PLATFORM`, the
+  directory is opened, synced and closed, every failure ignored: the file is in
+  place, and reporting a failure then would tell the caller that nothing changed.
+* **Windows**, after `GetFileAttributesW` (a directory or a read-only file is
+  refused): **1** `CreateFileW` the temporary with `CREATE_NEW` and no
+  inheritance, into a stream; **2** write and `fflush`; **3** `FlushFileBuffers`;
+  **4** `fclose`; **5** `MoveFileExW(REPLACE_EXISTING | WRITE_THROUGH)`, retried
+  (as Go's `renameio` does) while it fails with `ERROR_ACCESS_DENIED` or
+  `ERROR_SHARING_VIOLATION`, which a reader's open handle without delete
+  sharing gives: the sleeps start at 10 ms, double to at most 200, and their
+  sum is bound by `retry_ms` (2000 by default; a sum, no clock). Without it
+  the library's own reload on one thread makes a save on another fail. No
+  attribute or ACL is copied: the new file takes the directory's.
+* **The temporary of a crash** is never read or removed by a later write: its
+  name is taken and the next `k` is used (it may be another process's live one).
+* **Errors** (D-223) name the place and the reason: `cannot write '%s': <why>`,
+  the reason being `strerror(errno)`, or on Windows `error <GetLastError()>`;
+  the checks before step 1 have their own wording.
+
+Rejected: following a symbolic link (the rename would replace the link, and
+writing through it needs `realpath`, which C89 and Windows do not share: the
+caller names the target); a lock file (one writer is the rule, D-128; the
+kernel lock a program asks for is Y-3's); cleaning an old temporary (it may be
+another process's live one); a fixed retry bound (D-220: it is `retry_ms`); a
+default of `CF_SYNC_PLATFORM` for `cf_file_replace`.
+
+**Status.** Built: F-1a. Held to: `test_writefile` fails each step.
+
 ## D-223 — One error model (the maintainer, 2026-11-26, relayed from a side session: "I like the error model"; "the core uses the C89 standard")
 
 It answers K-6a's and K-6b's TO DECIDE and Y-28's TO DECIDE C, and K-9c

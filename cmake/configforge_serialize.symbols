@@ -40,6 +40,13 @@ cf_error_clear
 cf_error_copy
 cf_error_place
 cf_error_set
+cf_file_options_init
+cf_file_replace
+cf_file_writer_close
+cf_file_writer_flush
+cf_file_writer_open
+cf_file_writer_sync
+cf_file_writer_write
 cf_fmt
 cf_fmt_append
 cf_format_holds

@@ -1,6 +1,6 @@
 /*
  * file.c (none) - opening a file by a UTF-8 path, on a target with no
- * platform.
+ * platform; and the file layer's calls, which exist (D-220) and refuse.
  *
  * Apart from none.c so that the serialization library, which opens
  * files and calls nothing else of the platform, carries this file
@@ -12,6 +12,10 @@
 #include "configforge/cf_platform_file.h"
 
 #if CF_PLATFORM_NONE
+
+#include "configforge/cf_error.h"
+#include "configforge/cf_file.h"
+#include "../file_prim.h"
 
 #ifndef CF_NO_STDIO
 #include <stdio.h>
@@ -27,6 +31,45 @@ void* cf_platform_fopen(const char* path, const char* mode) {
     (void)mode;
     return NULL;
 #endif
+}
+
+/* No files to write: the program built for this target still links, and
+   every call says what it lacks. */
+
+int cf_platform_write_file_with(const char* path, const void* data, size_t size,
+                                const cf_file_options* o, unsigned  fail_at,
+                                void (*on_retry)(void* user), void* user,
+                                cf_error* err) {
+    (void)data;
+    (void)size;
+    (void)o;
+    (void)fail_at;
+    (void)on_retry;
+    (void)user;
+    cf_error_clear(err);
+    (void)cf_error_set(err, CF_E_CAPABILITY, NULL, path,
+                       "this build has no files to write");
+    return 0;
+}
+
+unsigned cf_platform_write_steps(void) {
+    return 0u;
+}
+
+unsigned long cf_platform_now_ms(void) {
+    return (unsigned long)-1;
+}
+
+cf_bool cfi_file_sync(void* stream) {
+    (void)stream;
+    return CF_FALSE;
+}
+
+const char* cfi_file_why(char* buf, size_t cap) {
+    if (buf != NULL && cap > 0u) {
+        buf[0] = '\0';
+    }
+    return "this build has no files to write";
 }
 
 #endif /* CF_PLATFORM_NONE */

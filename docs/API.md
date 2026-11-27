@@ -91,6 +91,7 @@ Document refusals also carry a reason and, where known, a line and column.
 - [`cf_entry.h`](#cf_entryh) - 14
 - [`cf_error.h`](#cf_errorh) - 11
 - [`cf_explain.h`](#cf_explainh) - 4
+- [`cf_file.h`](#cf_fileh) - 7
 - [`cf_flatten.h`](#cf_flattenh) - 10
 - [`cf_image.h`](#cf_imageh) - 10
 - [`cf_iterate.h`](#cf_iterateh) - 5
@@ -99,7 +100,7 @@ Document refusals also carry a reason and, where known, a line and column.
 - [`cf_log.h`](#cf_logh) - 1
 - [`cf_numeric.h`](#cf_numerich) - 9
 - [`cf_platform.h`](#cf_platformh) - 24
-- [`cf_platform_file.h`](#cf_platform_fileh) - 1
+- [`cf_platform_file.h`](#cf_platform_fileh) - 6
 - [`cf_port.h`](#cf_porth) - 12
 - [`cf_report.h`](#cf_reporth) - 6
 - [`cf_serialize.h`](#cf_serializeh) - 32
@@ -2089,6 +2090,115 @@ diagnostic is where a secret is most often pasted: into a ticket, a
 chat, a log somebody else reads. The two above are the raw renderers
 for a key space with no definitions.
 
+## cf_file.h
+
+cf_file.h - the file layer: a file replaced whole or not at all, and a
+writer for a program that writes continuously (D-224, D-127).
+
+It knows nothing of configuration and any program can use it alone:
+a write that goes through here is never half a file that the next
+start reads. Three layers, each usable without the one above:
+
+  cf_file_options  how a file is written: buffering, durability, and the
+                   wait of a rename on Windows. Every setting has a
+                   default, and a NULL `options` anywhere below is those
+                   defaults.
+  cf_file_writer   streaming, in place, no temporary: records, logs.
+  cf_file_replace  a file made to hold exactly the bytes given, by a
+                   temporary in the same directory, synced once and put
+                   in place by one rename.
+
+(The third, cf_emit_file, writes a configuration and is cf_emit.h's.)
+
+Buffering is C's setvbuf, and durability is the platform's own sync
+(fsync, FlushFileBuffers). Paths are UTF-8 everywhere (D-15). A build
+for the `none` platform has no files to write: every call but
+cf_file_options_init fails with CF_E_CAPABILITY, `this build has no
+files to write`, and a program built for it still links.
+
+```c
+CF_API void cf_file_options_init(cf_file_options* o);
+```
+
+Implementation: [`cf_file_options_init` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L29).
+
+Sets every member to its default and `size`. A NULL `o` does nothing, and
+a NULL `options` in any call below is these defaults. A `size` below the
+members above is CF_E_SOURCE, `file options of an unknown size`.
+`sync_ms` needs a clock: a platform with none refuses a writer that asks
+for CF_SYNC_EVERY with sync_ms != 0 (CF_E_CAPABILITY, `this platform has
+no clock for sync_ms`). `buffer_size` above 0 is a buffer taken from
+cf_default_allocator() and released at the close; a build with no
+allocator refuses it (CF_E_CAPABILITY).
+
+### The writer: streaming, in place
+
+cf_file_writer_open opens `path` for writing (truncated, or appended
+to with options->append) - no temporary: a crash leaves what was
+written. A failure of any call is CF_E_SOURCE, `cannot write '%s':
+&lt;reason>`, source = path. One writer, one thread (D-128).
+
+```c
+CF_NODISCARD CF_API cf_file_writer* cf_file_writer_open(const char* path, const cf_file_options* o, cf_error* err);
+```
+
+Implementation: [`cf_file_writer_open` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L140).
+
+clang-format off
+
+```c
+CF_NODISCARD CF_API cf_bool cf_file_writer_write(cf_file_writer* w, const void* data, size_t size, cf_error* err);
+```
+
+Implementation: [`cf_file_writer_write` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L148).
+
+clang-format on
+
+```c
+CF_NODISCARD CF_API cf_bool cf_file_writer_flush(cf_file_writer* w, cf_error* err);
+```
+
+Implementation: [`cf_file_writer_flush` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L157).
+
+To the system, not forced to the device.
+
+```c
+CF_NODISCARD CF_API cf_bool cf_file_writer_sync(cf_file_writer* w, cf_error* err);
+```
+
+Implementation: [`cf_file_writer_sync` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L163).
+
+Flush, then forced to the device.
+
+```c
+CF_NODISCARD CF_API cf_bool cf_file_writer_close(cf_file_writer* w, cf_error* err);
+```
+
+Implementation: [`cf_file_writer_close` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L169).
+
+The last flush, the sync the policy asks for, the close. Always frees
+`w`, whether it returns true or not; NULL is fine.
+
+### The replace: a file whole or not at all
+
+True when `path` holds exactly `size` bytes of `data`; false with `err`
+set (CF_E_SOURCE, source = path) and the old file, or its absence, as it
+was, and no temporary left. The temporary is `.&lt;name>.cf-tmp-&lt;k>` in the
+same directory, written, synced (by default: see CF_SYNC_DEFAULT) and put
+in place by one rename. On Windows a rename fails while another handle
+holds the target without delete sharing, and is retried for `retry_ms`.
+
+A symbolic link is refused (name the file it points to), as is a path
+that is not a regular file and, on Windows, a read-only one. The mode of
+the file replaced is kept on POSIX; on Windows no attribute or ACL is
+copied and the new file takes the directory's.
+
+```c
+CF_NODISCARD CF_API cf_bool cf_file_replace(const char* path, const void* data, size_t size, const cf_file_options* o, cf_error* err);
+```
+
+Implementation: [`cf_file_replace` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L128).
+
 ## cf_flatten.h
 
 cf_flatten.h - document events to and from the flat key space.
@@ -3551,7 +3661,61 @@ CF_API void* cf_platform_fopen(const char* path, const char* mode);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_fopen` (lib/platform/src/none/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/file.c#L20), [`cf_platform_fopen` (lib/platform/src/posix/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/file.c#L17), [`cf_platform_fopen` (lib/platform/src/win32/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/file.c#L34).
+Implementation: [`cf_platform_fopen` (lib/platform/src/none/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/file.c#L24), [`cf_platform_fopen` (lib/platform/src/posix/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/file.c#L39), [`cf_platform_fopen` (lib/platform/src/win32/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/file.c#L45).
+
+```c
+CF_API int cf_platform_write_file_with(const char* path, const void* data, size_t size, const cf_file_options* o, unsigned  fail_at, void (*on_retry)(void* user), void* user, cf_error* err);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_platform_write_file_with` (lib/platform/src/none/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/file.c#L39), [`cf_platform_write_file_with` (lib/platform/src/posix/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/file.c#L281), [`cf_platform_write_file_with` (lib/platform/src/win32/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/file.c#L296).
+
+------------------------------------------------------------------ *
+The core of cf_file_replace (cf_file.h; D-224, D-127)
+
+1 or 0, failing at step `fail_at` (1 to cf_platform_write_steps()) as if
+that system call had failed (0: no failure), and calling `on_retry(user)`
+before each sleep of the Windows rename retry when not NULL (for the
+test, which closes the holder there). No global state (D-101).
+cf_file_replace is this with fail_at 0 and no hook.
+------------------------------------------------------------------
+
+```c
+CF_API unsigned cf_platform_write_steps(void);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_platform_write_steps` (lib/platform/src/none/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/file.c#L55), [`cf_platform_write_steps` (lib/platform/src/posix/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/file.c#L64), [`cf_platform_write_steps` (lib/platform/src/win32/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/file.c#L70).
+
+How many steps can fail: POSIX 6, Windows 5, none 0.
+
+```c
+CF_API unsigned long cf_platform_now_ms(void);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_platform_now_ms` (lib/platform/src/none/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/file.c#L59), [`cf_platform_now_ms` (lib/platform/src/posix/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/file.c#L44), [`cf_platform_now_ms` (lib/platform/src/win32/file.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/file.c#L55).
+
+A monotonic millisecond counter from an arbitrary start, for
+CF_SYNC_EVERY's sync_ms: clock_gettime(CLOCK_MONOTONIC) where that is
+defined, GetTickCount64 on Windows; (unsigned long)-1 where there is no
+clock.
+
+```c
+CF_API unsigned long cf_platform_writer_syncs(const cf_file_writer* w);
+CF_NODISCARD CF_API cf_bool cf_platform_writer_close_counted(cf_file_writer* w, unsigned long*  syncs, cf_error*       err);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_platform_writer_syncs` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L175), [`cf_platform_writer_close_counted` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L180).
+
+For the test: how many syncs this writer has issued, and the close that
+says so (cf_file_writer_close, which also reports it in *syncs when that
+is not NULL). A count of the writer's own, never a global.
 
 ## cf_port.h
 

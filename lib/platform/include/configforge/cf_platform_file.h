@@ -19,6 +19,8 @@
 #ifndef CONFIGFORGE_CF_PLATFORM_FILE_H
 #define CONFIGFORGE_CF_PLATFORM_FILE_H
 
+#include "configforge/cf_error.h"
+#include "configforge/cf_file.h"
 #include "configforge/cf_port.h"
 
 #ifdef __cplusplus
@@ -69,6 +71,38 @@ extern "C" {
 
 #if CF_INTERNAL_API
 CF_API void* cf_platform_fopen(const char* path, const char* mode);
+
+/* ------------------------------------------------------------------ *
+ * The core of cf_file_replace (cf_file.h; D-224, D-127)
+ *
+ * 1 or 0, failing at step `fail_at` (1 to cf_platform_write_steps()) as if
+ * that system call had failed (0: no failure), and calling `on_retry(user)`
+ * before each sleep of the Windows rename retry when not NULL (for the
+ * test, which closes the holder there). No global state (D-101).
+ * cf_file_replace is this with fail_at 0 and no hook.
+ * ------------------------------------------------------------------ */
+
+CF_API int cf_platform_write_file_with(const char* path, const void* data, size_t size,
+                                       const cf_file_options* o, unsigned  fail_at,
+                                       void (*on_retry)(void* user), void* user,
+                                       cf_error* err);
+
+/* How many steps can fail: POSIX 6, Windows 5, none 0. */
+CF_API unsigned cf_platform_write_steps(void);
+
+/* A monotonic millisecond counter from an arbitrary start, for
+   CF_SYNC_EVERY's sync_ms: clock_gettime(CLOCK_MONOTONIC) where that is
+   defined, GetTickCount64 on Windows; (unsigned long)-1 where there is no
+   clock. */
+CF_API unsigned long cf_platform_now_ms(void);
+
+/* For the test: how many syncs this writer has issued, and the close that
+   says so (cf_file_writer_close, which also reports it in *syncs when that
+   is not NULL). A count of the writer's own, never a global. */
+CF_API unsigned long        cf_platform_writer_syncs(const cf_file_writer* w);
+CF_NODISCARD CF_API cf_bool cf_platform_writer_close_counted(cf_file_writer* w,
+                                                             unsigned long*  syncs,
+                                                             cf_error*       err);
 #endif /* CF_INTERNAL_API */
 
 #ifdef __cplusplus

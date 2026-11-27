@@ -33,8 +33,10 @@ cf_component(
   SOURCES
   src/${cf_platform_dir}/${cf_platform_dir}.c
   src/${cf_platform_dir}/file.c
+  src/file_layer.c
   SERIALIZE_SOURCES
-  src/${cf_platform_dir}/file.c)
+  src/${cf_platform_dir}/file.c
+  src/file_layer.c)
 
 if(CF_PLATFORM STREQUAL "none")
   foreach(t ${CF_TARGETS})
