@@ -17,3 +17,4 @@ with every brief (`python scripts/work/brief.py <id>` and this page).
 - When two cards touch CHANGELOG.md or docs/Decisions.md at once, a merge conflicts on both sides' additions: keep both, in either order.
 
 - A card's CHANGELOG lines go under the newest `## X.Y.Z — unreleased` heading on main, whatever version the card's `docs` field names (older cards name 1.9.0 or 1.10.0, both past). No such heading yet: ask the organiser; never open a version yourself.
+- A card that adds tests builds them once with clang as well (`cmake -S . -B /root/<id>/clang -DCMAKE_C_COMPILER=clang`; clang's `-Wsign-conversion` refuses what GCC passes) and runs the `none` preset (`cmake --preset none`: no file writer, no directory listing, so a test that needs one skips on `CF_E_CAPABILITY` or `cf_platform_has_*`); a new Python script is executable when it has a shebang (ruff EXE001). K-9b's batch run went red on all three, 2026-11-28.
