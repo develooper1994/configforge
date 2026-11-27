@@ -194,6 +194,8 @@ cf_live_rollback
 cf_live_status_get
 cf_live_wait
 cf_loc_text
+cf_lock_none
+cf_lock_sidecar
 cf_log_level_name
 cf_outcome_can_win
 cf_outcome_name

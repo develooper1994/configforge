@@ -78,13 +78,17 @@ cf_bool cfi_file_fail(cf_error* err, const char* path, const char* why) {
 #define FILE_IS_SEP(c) ((c) == '/')
 #endif
 
-cf_bool cfi_file_temp_name(const char* path, unsigned k, char* out, size_t cap) {
-    static const char tag[] = ".cf-tmp-";
-    char              num[8];
-    size_t            len, cut = 0, i, n = 0, base, nl = 0;
+/* `<dir>/.<name><tag><num>` for `path`: the directory, ".", the name, the tag
+   and the digits (none when `num` is NULL). */
+static cf_bool file_dot_name(const char* path, const char* tag, const char* num,
+                             char* out, size_t cap) {
+    size_t len, cut = 0, i, n = 0, base, tl = strlen(tag), nl = 0;
 
-    if (path == NULL || out == NULL || k >= 100u) {
+    if (path == NULL || out == NULL) {
         return CF_FALSE;
+    }
+    if (num != NULL) {
+        nl = strlen(num);
     }
     len = strlen(path);
     for (i = 0; i < len; ++i) {
@@ -96,12 +100,8 @@ cf_bool cfi_file_temp_name(const char* path, unsigned k, char* out, size_t cap) 
     if (base == 0) {
         return CF_FALSE;
     }
-    if (k >= 10u) {
-        num[nl++] = (char)('0' + (int)(k / 10u));
-    }
-    num[nl++] = (char)('0' + (int)(k % 10u));
     /* the directory, ".", the name, the tag, the digits, the NUL */
-    if (cut + 1u + base + (sizeof tag - 1u) + nl + 1u > cap) {
+    if (cut + 1u + base + tl + nl + 1u > cap) {
         return CF_FALSE;
     }
     (void)memcpy(out, path, cut);
@@ -109,12 +109,33 @@ cf_bool cfi_file_temp_name(const char* path, unsigned k, char* out, size_t cap) 
     out[n++] = '.';
     (void)memcpy(out + n, path + cut, base);
     n += base;
-    (void)memcpy(out + n, tag, sizeof tag - 1u);
-    n += sizeof tag - 1u;
-    (void)memcpy(out + n, num, nl);
-    n += nl;
+    (void)memcpy(out + n, tag, tl);
+    n += tl;
+    if (nl != 0) {
+        (void)memcpy(out + n, num, nl);
+        n += nl;
+    }
     out[n] = '\0';
     return CF_TRUE;
+}
+
+cf_bool cfi_file_temp_name(const char* path, unsigned k, char* out, size_t cap) {
+    char   num[8];
+    size_t nl = 0;
+
+    if (k >= 100u) {
+        return CF_FALSE;
+    }
+    if (k >= 10u) {
+        num[nl++] = (char)('0' + (int)(k / 10u));
+    }
+    num[nl++] = (char)('0' + (int)(k % 10u));
+    num[nl]   = '\0';
+    return file_dot_name(path, ".cf-tmp-", num, out, cap);
+}
+
+cf_bool cfi_file_lock_name(const char* path, char* out, size_t cap) {
+    return file_dot_name(path, ".cf-lock", NULL, out, cap);
 }
 
 /* A platform with no files to write says so once, here, for every call. */

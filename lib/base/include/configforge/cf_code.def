@@ -31,7 +31,8 @@ CF_CODE_X(CF_E_REQUIRED,   "required",   "a required parameter has no value")
 CF_CODE_X(CF_E_SOURCE,     "source",     "a source could not be read")
 CF_CODE_X(CF_E_CAPABILITY, "capability", "a source cannot do what was asked")
 CF_CODE_X(CF_E_POLICY,     "policy",     "policy conflict")
-CF_CODE_LAST_X(CF_E_MEMORY, "memory",    "allocation refused or arena full")
+CF_CODE_X(CF_E_MEMORY,     "memory",     "allocation refused or arena full")
+CF_CODE_LAST_X(CF_E_BUSY,  "busy",       "another writer holds it; try again")
 
 #ifdef CF_CODE_LAST_X_IS_DEFAULT
 #undef CF_CODE_LAST_X

@@ -34,6 +34,7 @@ cf_component(
   src/${cf_platform_dir}/${cf_platform_dir}.c
   src/${cf_platform_dir}/file.c
   src/file_layer.c
+  src/lock.c
   SERIALIZE_SOURCES
   src/${cf_platform_dir}/file.c
   src/file_layer.c)

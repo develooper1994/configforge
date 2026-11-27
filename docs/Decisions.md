@@ -5252,8 +5252,8 @@ is intact and no temporary is left.
 
 Rejected: following a symbolic link (the rename would replace the link, and
 writing through it needs `realpath`, which C89 and Windows do not share: the
-caller names the target); a lock file (one writer is the rule, D-128; the
-kernel lock a program asks for is Y-3's); cleaning an old temporary (it may be
+caller names the target); a lock file by existence (one writer is the rule, D-128;
+D-187 holds the kernel lock a program chooses); cleaning an old temporary (it may be
 another process's live one); a fixed retry bound (D-220: it is `retry_ms`); a
 default of `CF_SYNC_PLATFORM` for `cf_file_replace`.
 
@@ -5348,6 +5348,43 @@ for the program that asks for one).
 Held to: `test_writefile` cases (l) to (q).
 
 **Status.** Built: Y-2 (the check; `overrides_write` uses it in F-2a).
+
+## D-187 — A write may take a lock that plugs in: none by default, a kernel lock on a kept file when the program chooses it
+
+**Question.** Should a write be able to exclude another writer at all, and with
+what?
+
+**Options.** No lock, the optimistic check only (D-186, what the default does);
+a lock by existence; a kernel lock on a kept sidecar file; a locker the program
+fills in.
+
+**Decision (D-227).** `cf_locker` (cf_lock.h): `take(path, wait_ms, err)` and
+`give`, a part that plugs in as `cf_packer` does. `cf_lock_none()` is the
+default and takes nothing; `cf_lock_sidecar()` takes an exclusive kernel lock
+on `<dir>/.<base>.cf-lock` beside the file; a program may fill its own (a
+service it asks, a database lock, an embedded mutex). The call per platform,
+one protocol chosen when the library is built and never two: `flock` where
+`LOCK_EX` exists, else `F_OFD_SETLK`, else classic `F_SETLK` (whose two faults:
+closing any descriptor of the file drops the process's locks, and threads of
+one process do not exclude each other), and `LockFileEx` on Windows. The
+sidecar is opened read-write with the file's own mode (`0666` when it does not
+exist), never followed through a link, kept and never removed, and released by
+a crash. The wait is a loop of non-blocking attempts with sleeps of 1, 2, 4 ...
+ms (at most 100 each), bounded by the `wait_ms` the program gives (0: one
+attempt). A lock that is held is `CF_E_BUSY` (`'%s' is busy: another writer
+holds its lock; try again`), distinct from "cannot lock" (`CF_E_SOURCE`). Where
+no call exists (WASI, `none`) the sidecar's `take` fails `CF_E_CAPABILITY`.
+
+Rejected: a lock by existence (a stale lock after every crash, and D-127
+refuses to clean one); locking the configuration file itself (a Windows reader
+would be refused and the rename would fail over a locked file); a lock on the
+read path or inside `cf_config` (D-14 holds, and with writers that never write
+in place a reader always opens a whole file); a writer service; an unbounded
+wait.
+
+Held to: `test_lock`.
+
+**Status.** Built: Y-3 (the lockers; Y-4 chooses one by `cf_file_source_options.lock`).
 
 ---
 ## D-189 (Y-6 part) — Windows readers that share delete access: measured, a rename over one still fails

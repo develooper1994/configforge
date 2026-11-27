@@ -30,6 +30,7 @@
 
 #include "configforge/cf_alloc.h"
 #include "configforge/cf_error.h"
+#include "configforge/cf_lock.h"
 #include "configforge/cf_platform_file.h"
 
 #ifdef __cplusplus
@@ -253,6 +254,16 @@ typedef struct cf_stamp {
    change like any other. */
 #if CF_INTERNAL_API
 CF_NODISCARD CF_API cf_bool cf_platform_stamp(const char* path, cf_stamp* out);
+
+/* The sidecar lock on `path`.cf-lock: 1 with it held; 0 with err set: CF_E_BUSY
+   "'%s' is busy: another writer holds its lock; try again" after `wait_ms`,
+   CF_E_SOURCE "cannot lock '%s': %s" when the lock file cannot be opened.
+   `held->handle` is a file descriptor on POSIX, (long)(INT_PTR) of the HANDLE
+   on Windows, -1 when not held. (D-227) */
+CF_NODISCARD CF_API int cf_platform_lock_take(cf_lock* held, const char* path,
+                                              unsigned long wait_ms, cf_error* err);
+/* Releases and closes; does nothing for a lock not held. The lock file is kept. */
+CF_API void cf_platform_lock_give(cf_lock* held);
 #endif /* CF_INTERNAL_API */
 
 /* cf_platform_fopen, opening a file by a UTF-8 path, is declared in

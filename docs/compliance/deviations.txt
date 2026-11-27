@@ -19,7 +19,7 @@ ignore | 8.7 | the rules about a whole program: unused macros, types and tags, a
 5.9 | lib/base/src/error.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 5.9 | lib/lanes/src/scalar.c | 10 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 5.9 | lib/numeric/src/numeric.c | 2 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-5.9 | lib/platform/src/file_layer.c | 4 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+5.9 | lib/platform/src/file_layer.c | 5 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 5.9 | lib/platform/src/posix/file.c | 6 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 5.9 | lib/port/include/configforge/cf_port.h | 8 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 5.9 | lib/port/src/port.c | 4 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
@@ -38,7 +38,7 @@ ignore | 8.7 | the rules about a whole program: unused macros, types and tags, a
 5.9 | lib/text/src/escape.c | 2 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 5.9 | lib/text/src/space.c | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 7.1 | lib/platform/src/posix/file.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-7.1 | lib/platform/src/posix/posix.c | 2 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+7.1 | lib/platform/src/posix/posix.c | 4 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 7.3 | lib/config/src/bridge/dir.c | 14 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 7.3 | lib/config/src/bridge/file.c | 6 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 7.3 | lib/config/src/bridge/preferences.c | 5 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
@@ -46,7 +46,8 @@ ignore | 8.7 | the rules about a whole program: unused macros, types and tags, a
 7.3 | lib/config/src/bridge/store.c | 8 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 7.3 | lib/config/src/core/define.c | 2 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 7.3 | lib/config/src/diag/report.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-7.3 | lib/platform/src/posix/posix.c | 30 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+7.3 | lib/platform/src/lock.c | 2 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+7.3 | lib/platform/src/posix/posix.c | 40 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 7.3 | lib/serialize/src/cbor.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 7.3 | lib/text/src/place.c | 4 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 7.4 | lib/config/src/core/keyspace.c | 2 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
@@ -118,7 +119,7 @@ ignore | 8.7 | the rules about a whole program: unused macros, types and tags, a
 10.4 | lib/config/src/sources/env.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 10.4 | lib/lanes/src/scalar.c | 18 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 10.4 | lib/numeric/src/numeric.c | 8 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-10.4 | lib/platform/src/file_layer.c | 2 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+10.4 | lib/platform/src/file_layer.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 10.4 | lib/platform/src/posix/posix.c | 2 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 10.4 | lib/port/include/configforge/cf_port.h | 15 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 10.4 | lib/port/src/port.c | 19 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
@@ -245,7 +246,8 @@ ignore | 8.7 | the rules about a whole program: unused macros, types and tags, a
 12.1 | lib/lanes/src/lanes.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 12.1 | lib/lanes/src/scalar.c | 7 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 12.1 | lib/numeric/src/numeric.c | 22 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-12.1 | lib/platform/src/file_layer.c | 23 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+12.1 | lib/platform/src/file_layer.c | 19 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+12.1 | lib/platform/src/lock.c | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 12.1 | lib/platform/src/posix/file.c | 8 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 12.1 | lib/platform/src/posix/posix.c | 9 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 12.1 | lib/port/include/configforge/cf_port.h | 8 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
@@ -295,7 +297,7 @@ ignore | 8.7 | the rules about a whole program: unused macros, types and tags, a
 12.3 | lib/config/src/sources/defaults.c | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 12.3 | lib/config/src/sources/entry.c | 6 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 12.3 | lib/lanes/src/scalar.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-12.3 | lib/platform/src/file_layer.c | 5 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+12.3 | lib/platform/src/file_layer.c | 6 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 12.3 | lib/serialize/include/configforge/cf_yamlparse.h | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 12.3 | lib/serialize/src/cbor.c | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 12.3 | lib/serialize/src/detect.c | 3 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
@@ -377,7 +379,7 @@ ignore | 8.7 | the rules about a whole program: unused macros, types and tags, a
 15.4 | lib/serialize/src/tlv.c | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 15.4 | lib/serialize/src/toml.c | 2 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 15.4 | lib/serialize/src/yamlparse.c | 7 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-15.5 | lib/base/include/configforge/cf_code.def | 10 | backlog | a public header takes no deviation (docs/Compliance.md, 'The public headers come first'), a later card fixes it
+15.5 | lib/base/include/configforge/cf_code.def | 11 | backlog | a public header takes no deviation (docs/Compliance.md, 'The public headers come first'), a later card fixes it
 15.5 | lib/base/include/configforge/cf_reason.def | 20 | backlog | a public header takes no deviation (docs/Compliance.md, 'The public headers come first'), a later card fixes it
 15.5 | lib/base/include/configforge/cf_type.def | 5 | backlog | a public header takes no deviation (docs/Compliance.md, 'The public headers come first'), a later card fixes it
 15.5 | lib/base/src/alloc.c | 15 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
@@ -417,7 +419,7 @@ ignore | 8.7 | the rules about a whole program: unused macros, types and tags, a
 15.5 | lib/lanes/src/lanes.c | 2 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
 15.5 | lib/lanes/src/scalar.c | 9 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
 15.5 | lib/numeric/src/numeric.c | 22 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
-15.5 | lib/platform/src/file_layer.c | 30 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
+15.5 | lib/platform/src/file_layer.c | 31 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
 15.5 | lib/platform/src/posix/file.c | 25 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
 15.5 | lib/platform/src/posix/posix.c | 13 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
 15.5 | lib/port/src/port.c | 10 | deviation | docs/Compliance.md, 'One exit per function': early return on error is the house style (docs/Conventions.md)
@@ -612,7 +614,7 @@ ignore | 8.7 | the rules about a whole program: unused macros, types and tags, a
 20.10 | lib/port/include/configforge/cf_port.h | 2 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 20.10 | lib/serialize/src/version.c | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 21.1 | lib/platform/src/posix/file.c | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
-21.1 | lib/platform/src/posix/posix.c | 1 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
+21.1 | lib/platform/src/posix/posix.c | 2 | backlog | not yet examined: the first run of gate.misra (N-19), the card that takes this rule turns the lines into a fix or a deviation
 21.3 | lib/base/src/alloc.c | 2 | deviation | docs/Compliance.md, 'Dynamic memory': every allocation goes through the allocator interface (D-03) into an arena, and cf_arena_fixed needs no heap
 21.6 | lib/platform/src/file_layer.c | 11 | deviation | docs/Compliance.md, 'Standard I/O': confined to the file sources and the platform layer, a build from memory calls none of it
 21.6 | lib/platform/src/posix/file.c | 6 | deviation | docs/Compliance.md, 'Standard I/O': confined to the file sources and the platform layer, a build from memory calls none of it

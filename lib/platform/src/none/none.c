@@ -38,6 +38,23 @@ char* const* cf_platform_args(int argc, char* const* argv, cf_arena* arena,
     return argv;
 }
 
+int cf_platform_lock_take(cf_lock* held, const char* path, unsigned long wait_ms,
+                          cf_error* err) {
+    (void)wait_ms;
+    if (held != NULL) {
+        held->handle = -1;
+    }
+    (void)cf_error_set(err, CF_E_CAPABILITY, NULL, path,
+                       "this build has no files to lock");
+    return 0;
+}
+
+void cf_platform_lock_give(cf_lock* held) {
+    if (held != NULL) {
+        held->handle = -1;
+    }
+}
+
 cf_bool cf_platform_stamp(const char* path, cf_stamp* out) {
     (void)path;
     if (out != NULL) {

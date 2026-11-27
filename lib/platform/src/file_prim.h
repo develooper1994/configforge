@@ -36,6 +36,10 @@ cf_bool cfi_file_fail(cf_error* err, const char* path, const char* why);
    fit in `cap`. */
 cf_bool cfi_file_temp_name(const char* path, unsigned k, char* out, size_t cap);
 
+/* `<dir>/.<name>.cf-lock` for `path`, in `out`: the sidecar's name (D-227); false
+   as cfi_file_temp_name is. */
+cf_bool cfi_file_lock_name(const char* path, char* out, size_t cap);
+
 /* strerror(errno), into `buf`, for the failure of a C library call. */
 const char* cfi_file_why_stdio(char* buf, size_t cap);
 

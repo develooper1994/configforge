@@ -17,6 +17,7 @@
  */
 
 #include "configforge/cf_platform.h"
+#include "../file_prim.h"
 
 #if CF_PLATFORM_WIN32
 
@@ -156,6 +157,79 @@ static void win32_stamp_dir(const char* path, cf_stamp* out) {
         out->size += win32_join(fd.nFileSizeHigh, fd.nFileSizeLow) + 1;
     } while (FindNextFileW(h, &fd) != 0);
     FindClose(h);
+}
+
+/* The sidecar lock (D-227): `<dir>/.<base>.cf-lock` beside the file, kept and
+   never removed; LockFileEx, exclusive and failing at once, on the byte at
+   offset 0, tried again with growing sleeps until the wait is spent. The
+   handle is not inheritable (D-190). Nobody reads the sidecar, so a
+   mandatory lock on it costs nothing. */
+int cf_platform_lock_take(cf_lock* held, const char* path, unsigned long wait_ms,
+                          cf_error* err) {
+    char          name[CF_PATH_MAX];
+    wchar_t       wname[CF_PLATFORM_NAME_MAX];
+    HANDLE        h;
+    OVERLAPPED    ov;
+    DWORD         e     = 0;
+    unsigned long spent = 0, step = 1;
+
+    if (held == NULL || path == NULL) {
+        (void)cf_error_set(err, CF_E_SOURCE, NULL, path, "no file to lock");
+        return 0;
+    }
+    held->handle = -1;
+    if (!cfi_file_lock_name(path, name, sizeof name) ||
+        !win32_wide(name, wname, CF_PLATFORM_NAME_MAX)) {
+        (void)cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot lock '%s': %s", path,
+                           "no name for its lock file");
+        return 0;
+    }
+    h = CreateFileW(wname, GENERIC_READ | GENERIC_WRITE,
+                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+                    OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (h == INVALID_HANDLE_VALUE) {
+        (void)cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot lock '%s': error %u",
+                           path, (unsigned)GetLastError());
+        return 0;
+    }
+    for (;;) {
+        unsigned long ms;
+
+        (void)memset(&ov, 0, sizeof ov);
+        if (LockFileEx(h, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0,
+                       &ov) != 0) {
+            held->handle = (long)(INT_PTR)h;
+            return 1;
+        }
+        e = GetLastError();
+        if (e != ERROR_LOCK_VIOLATION || spent >= wait_ms) {
+            break;
+        }
+        ms = (step > 100ul) ? 100ul : step;
+        if (ms > wait_ms - spent) {
+            ms = wait_ms - spent;
+        }
+        Sleep((DWORD)ms);
+        spent += ms;
+        step *= 2ul;
+    }
+    if (e == ERROR_LOCK_VIOLATION) {
+        (void)cf_error_set(err, CF_E_BUSY, NULL, path,
+                           "'%s' is busy: another writer holds its lock; try again",
+                           path);
+    } else {
+        (void)cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot lock '%s': error %u",
+                           path, (unsigned)e);
+    }
+    CloseHandle(h);
+    return 0;
+}
+
+void cf_platform_lock_give(cf_lock* held) {
+    if (held != NULL && held->handle != -1) {
+        CloseHandle((HANDLE)(INT_PTR)held->handle); /* the lock goes with the handle */
+        held->handle = -1;
+    }
 }
 
 cf_bool cf_platform_stamp(const char* path, cf_stamp* out) {

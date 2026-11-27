@@ -19,13 +19,18 @@
 /* A feature-test macro is the one reserved name a program is meant to
    define, which bugprone-reserved-identifier cannot know. */
 #define _POSIX_C_SOURCE 200112L /* NOLINT(bugprone-reserved-identifier) */
+/* flock (the sidecar lock, D-227) is what glibc hides under a strict
+   _POSIX_C_SOURCE: its default feature set shows it. */
+#define _DEFAULT_SOURCE 1 /* NOLINT(bugprone-reserved-identifier) */
 #endif
 
 #include "configforge/cf_platform.h"
 #include "configforge/cf_alloc.h"
 #include "configforge/cf_build_options.h"
 #include "configforge/cf_error.h"
+#include "configforge/cf_lock.h"
 #include "configforge/cf_platform_file.h"
+#include "../file_prim.h"
 #include "configforge/cf_port.h"
 
 #if CF_PLATFORM_POSIX
@@ -34,7 +39,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #if !defined(__wasi__)
+#include <poll.h>
 #include <pwd.h>
+#include <sys/file.h>
 #endif
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -67,7 +74,6 @@
 #endif
 
 #if CF_POSIX_WAKE == 1
-#include <poll.h>
 #include <sys/inotify.h>
 #elif CF_POSIX_WAKE == 2
 #include <errno.h>
@@ -469,6 +475,183 @@ int cf_platform_world_readable(const char* path) {
         return -1;
     }
     return ((st.st_mode & S_IROTH) != 0) ? 1 : 0;
+}
+
+/* The sidecar lock (D-227): `<dir>/.<base>.cf-lock` beside the file, kept and
+   never removed, never followed through a link, taken exclusively and
+   without blocking, and tried again with growing sleeps until the wait is
+   spent.
+
+   One protocol per platform, chosen when this file is built, never two:
+   flock where LOCK_EX is defined (Linux, the BSDs, macOS, musl: it excludes
+   descriptors opened separately in one process, survives an unrelated close
+   and dies with the process), else an open-file-description lock where
+   F_OFD_SETLK is defined, else the classic F_SETLK on the whole file. The
+   classic lock has two faults: closing any descriptor of the file drops
+   the process's locks on it, and threads of one process do not exclude each
+   other (D-187). Where none exists (WASI) the lock is refused with
+   CF_E_CAPABILITY. */
+#if defined(__wasi__)
+#define CF_LOCK_PROTO 0
+#elif defined(LOCK_EX)
+#define CF_LOCK_PROTO 1
+#elif defined(F_OFD_SETLK)
+#define CF_LOCK_PROTO 2
+#elif defined(F_SETLK)
+#define CF_LOCK_PROTO 3
+#else
+#define CF_LOCK_PROTO 0
+#endif
+
+#if CF_LOCK_PROTO != 0
+/* 1 held, 0 held by another, -1 the call failed (errno says why). */
+static int posix_lock_try(int fd) {
+    int rc;
+
+#if CF_LOCK_PROTO == 1
+    do {
+        rc = flock(fd, LOCK_EX | LOCK_NB);
+    } while (rc != 0 && errno == EINTR);
+#else
+    struct flock fl;
+
+    (void)memset(&fl, 0, sizeof fl);
+    fl.l_type   = F_WRLCK;
+    fl.l_whence = SEEK_SET;
+    do {
+#if CF_LOCK_PROTO == 2
+        rc = fcntl(fd, F_OFD_SETLK, &fl);
+#else
+        rc = fcntl(fd, F_SETLK, &fl);
+#endif
+    } while (rc != 0 && errno == EINTR);
+#endif
+    if (rc == 0) {
+        return 1;
+    }
+    if (errno == EAGAIN
+#if EWOULDBLOCK != EAGAIN
+        || errno == EWOULDBLOCK
+#endif
+#if CF_LOCK_PROTO == 3
+        || errno == EACCES
+#endif
+    ) {
+        return 0;
+    }
+    return -1;
+}
+
+/* The sidecar opened: its descriptor, or -1 with err set. */
+static int posix_lock_open(const char* path, cf_error* err) {
+    char        name[CF_PATH_MAX];
+    struct stat st;
+    mode_t      mode  = 0666;
+    int         flags = O_RDWR | O_CREAT;
+    int         fd;
+
+    if (!cfi_file_lock_name(path, name, sizeof name)) {
+        (void)cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot lock '%s': %s", path,
+                           "no name for its lock file");
+        return -1;
+    }
+    if (lstat(name, &st) == 0) {
+        if (S_ISLNK(st.st_mode)) {
+            (void)cf_error_set(err, CF_E_SOURCE, NULL, path, "'%s' is a symbolic link",
+                               name);
+            return -1;
+        }
+        if (!S_ISREG(st.st_mode)) {
+            (void)cf_error_set(err, CF_E_SOURCE, NULL, path,
+                               "'%s' is not a regular file", name);
+            return -1;
+        }
+    }
+    /* Whoever may write the file may lock it. */
+    if (stat(path, &st) == 0) {
+        mode = (mode_t)(st.st_mode & 0666);
+    }
+#if defined(O_CLOEXEC)
+    flags |= O_CLOEXEC;
+#endif
+#if defined(O_NOFOLLOW)
+    flags |= O_NOFOLLOW;
+#endif
+    fd = open(name, flags, mode);
+    if (fd < 0) {
+        (void)cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot lock '%s': %s", path,
+                           strerror(errno));
+        return -1;
+    }
+#if !defined(O_CLOEXEC)
+    (void)fcntl(fd, F_SETFD, FD_CLOEXEC);
+#endif
+    return fd;
+}
+#endif /* CF_LOCK_PROTO != 0 */
+
+int cf_platform_lock_take(cf_lock* held, const char* path, unsigned long wait_ms,
+                          cf_error* err) {
+#if CF_LOCK_PROTO == 0
+    (void)held;
+    (void)wait_ms;
+    (void)cf_error_set(err, CF_E_CAPABILITY, NULL, path,
+                       "this build has no files to lock");
+    return 0;
+#else
+    unsigned long spent = 0, step = 1;
+    int           fd, r;
+
+    if (held == NULL || path == NULL) {
+        (void)cf_error_set(err, CF_E_SOURCE, NULL, path, "no file to lock");
+        return 0;
+    }
+    held->handle = -1;
+    fd           = posix_lock_open(path, err);
+    if (fd < 0) {
+        return 0;
+    }
+    for (;;) {
+        unsigned long ms;
+
+        r = posix_lock_try(fd);
+        if (r != 0 || spent >= wait_ms) {
+            break;
+        }
+        ms = (step > 100ul) ? 100ul : step;
+        if (ms > wait_ms - spent) {
+            ms = wait_ms - spent;
+        }
+        (void)poll(NULL, 0, (int)ms);
+        spent += ms;
+        step *= 2ul;
+    }
+    if (r == 1) {
+        held->handle = (long)fd;
+        return 1;
+    }
+    if (r == 0) {
+        (void)cf_error_set(err, CF_E_BUSY, NULL, path,
+                           "'%s' is busy: another writer holds its lock; try again",
+                           path);
+    } else {
+        (void)cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot lock '%s': %s", path,
+                           strerror(errno));
+    }
+    (void)close(fd);
+    return 0;
+#endif
+}
+
+void cf_platform_lock_give(cf_lock* held) {
+#if CF_LOCK_PROTO != 0
+    if (held != NULL && held->handle >= 0) {
+        (void)close((int)held->handle); /* the lock goes with the descriptor */
+    }
+#endif
+    if (held != NULL) {
+        held->handle = -1;
+    }
 }
 
 cf_bool cf_platform_has_private_create(void) {
