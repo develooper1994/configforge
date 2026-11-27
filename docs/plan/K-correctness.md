@@ -503,7 +503,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **needs**: nothing
 * **size**: medium
 * **version**: 2.0.0
-* **status**: open
+* **status**: done (da8f3b9)
 * **decided**:
   * **The words** (written into `docs/Guarantees.md` by this card, as the first section). A *failure* is a call that returns `CF_FALSE`, `NULL` or a code other than `CF_OK`, or that records one where it returns nothing (a builder holds its first failure until `cf_builder_create`; a sink holds its overflow).
     * `nothrow`: it cannot fail. No allocation, no input or output; a NULL or an invalid argument gets the fallback its comment states. Destroying calls (`_free`, `_close`, `_destroy`, `_abort`), accessors and queries with a fallback (`cf_get_int`), and formatting into a caller's buffer that cuts the text (`cf_fmt`) are `nothrow`.
