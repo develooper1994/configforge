@@ -2,7 +2,8 @@
 
 State: the plan runs from docs/Plan.md's generated index (order:
 docs/plan/Layout.md). Landed today: L-20, L-21, L-22, L-23, L-24, K-11a,
-K-11b, K-11c, L-18a, F-1a, K-9c, Y-2, Y-3, Y-5, Y-6, M-18. No TO DECIDE is
+K-11b, K-11c, L-18a, F-1a, K-9c, Y-2, Y-3, Y-5, Y-6, Y-8, M-18; 1.9.0
+released. No TO DECIDE is
 left in any card; only nine account-bound cards stay parked (L-17-m, L-19-m,
 P-15-m, M-19-m, M-23-m, M-25-m, M-29-m, M-30-m, G-9-m): prepare their files,
 give the maintainer short steps when one comes up. The maintainer's standing
@@ -10,27 +11,22 @@ approval and release rights: docs/Plan.md "For the maintainer".
 
 ## In flight
 
-1. Y-8 (close-on-exec), worktree D:\cf-work\Y-8, branch `work/Y-8`: its
-   full-tier run 46001462250 failed in none (test_cloexec needs skips by
-   platform capability), infer (posix/file.c cf_platform_fopen), profiles
-   (misra record for posix/file.c, posix.c) and kqueue; a worker was fixing
-   them. Check `gh run list --branch work/Y-8`; when a full-tier run on the
-   branch tip is green, land it.
+1. 1.9.0 is released (tag v1.9.0, 2026-11-27; GitHub release with its
+   archives and "How each archive was built"). Its `crates` job failed:
+   crates.io wants a verified email on the maintainer's account. When the
+   maintainer has verified it: `gh run rerun 46010730161 --failed`, then check
+   https://crates.io/crates/configforge.
 2. M-10 (the sizing modes' interface, 2.0.0), worktree D:\cf-work\M-10,
-   branch `work/M-10`: its CHANGELOG lines sit under 1.9.0 in a subsection
-   "### 2.0.0 (held until 1.9.0 is released)". It lands after 1.9.0 is
-   released: move those lines under a new "## 2.0.0 — unreleased" opened by
-   `cmake -DTO=2.0.0 -P scripts/release/version.cmake`.
+   branch `work/M-10`: a worker is bringing it onto main (open 2.0.0 with
+   `cmake -DTO=2.0.0 -P scripts/release/version.cmake`, move its CHANGELOG
+   lines from "### 2.0.0 (held until 1.9.0 is released)" under the new
+   heading, full-tier run). When that run is green, land it.
 
 ## Next
 
-3. When Y-8 lands: release 1.9.0 (date the CHANGELOG heading, commit, tag
-   `v1.9.0`, push the tag). The release workflow publishes the archives with
-   "How each archive was built" (L-23) and the crate to crates.io (L-24,
-   secret CARGO_REGISTRY_TOKEN). Read the release notes and crates.io after.
-4. Then 2.0.0 in Layout.md's order: K-6a, K-6b, M-11b, K-9a, K-9d-K-9g, K-9b,
-   then row 0.9 (M-10, M-12, M-11a, M-13). Beside cards of 1.9.0 (L-11, L-12a,
-   L-13, ...) may be taken whenever a module waits.
+3. 2.0.0 in Layout.md's order: K-6a, K-6b, M-11b, K-9a, K-9d-K-9g, K-9b,
+   then row 0.9 (M-12, M-11a, M-13). Beside cards of 1.9.0's modules (L-11,
+   L-12a, L-13, ...) now go to the next minor after 2.0.0.
 
 ## How to land a card by hand (what worked)
 
@@ -48,9 +44,9 @@ no push to the branch while it runs. Workers get `python scripts/work/brief.py
 
 ## Budget
 
-Weekly window was 73% on 2026-11-27 afternoon (resets 2026-12-03 10:00 UTC):
-at most two or three workers at once. At 99% weekly: everything pushed, this
+Weekly window was 80% on 2026-11-27 at 14:00 UTC (resets 2026-12-03 10:00 UTC):
+one worker at a time. At 99% weekly: everything pushed, this
 file current, and give the maintainer one prompt for a session on another
 account ("Read CLAUDE.md, then HANDOFF.md, and continue").
 
-Delete this file in the commit that lands the last stage 0 1.9.0 card.
+Delete this file when the steps above are done and nothing is in flight.
