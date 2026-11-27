@@ -412,7 +412,7 @@ each push:
    fingerprint against its contents; limits and the build id in the
    report and the image header; CFD012 against the contract; `cf_diff_json`;
    a settle interval in `cf_live`; continuous fuzzing in CI
-   (ClusterFuzzLite); INI and `.properties` compared value by value with
+   (ClusterFuzzLite, done 2026-11-27); INI and `.properties` compared value by value with
    Python's `configparser` and Java's `Properties`; signed release
    artifacts (GitHub attestations); native OS sources where the platform
    is at hand. Go and .NET bindings last, and only when someone asks.
