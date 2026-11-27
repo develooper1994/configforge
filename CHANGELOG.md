@@ -7,6 +7,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- A tag publishes the Rust crate to crates.io (L-24).
 - A release's notes end with "How each archive was built": for each archive the
   compiler, the generator, the build type and every `CF_*` option with its
   value, read from the build's own cache (L-23).

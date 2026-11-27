@@ -253,3 +253,34 @@ jobs:
           (cd dist && sha256sum ./* > SHA256SUMS)
           # Each release opens its discussion under Announcements.
           gh release create "$GITHUB_REF_NAME" dist/* --title "ConfigForge $v"             --notes-file notes.md --discussion-category Announcements
+
+  # The Rust crate, published to crates.io after the GitHub release
+  # exists (L-24). The token is the secret CARGO_REGISTRY_TOKEN, given to
+  # the one step that publishes and nowhere else. M-22's trusted
+  # publishing replaces it; the secret is then deleted.
+  crates:
+    needs: publish
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    environment: crates-io
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: The tag and the build agree
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          built=$(cmake -P scripts/release/version.cmake)
+          [ "$built" = "$v" ] || { echo "tag $v, cf_version.h says $built"; exit 1; }
+      - name: Stage and test the crate
+        run: cmake "-DWORK=$RUNNER_TEMP/rust-package" -P scripts/release/package_rust.cmake
+      - name: Publish to crates.io
+        working-directory: ${{ runner.temp }}/rust-package/package
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          if curl -fsS -A configforge-release "https://crates.io/api/v1/crates/configforge/$v" > /dev/null; then
+            echo "configforge $v is already on crates.io; nothing to publish"
+            exit 0
+          fi
+          cargo publish --locked --no-verify

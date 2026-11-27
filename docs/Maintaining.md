@@ -51,7 +51,7 @@ the copies that cannot read it: `packaging/vcpkg/configforge/vcpkg.json`,
 `bindings/python/src/configforge/__init__.py`. Minor and patch stay below
 100 (`CF_VERSION_NUMBER` packs them in two digits each). The tag of a
 release is `vX.Y.Z`; the release workflow refuses a tag that disagrees
-with `cf_version.h`. The release's notes end with "How each archive was built", one record a job from `scripts/release/buildinfo.cmake`, read from that build's own cache. In `CHANGELOG.md` the work not yet released is under
+with `cf_version.h`. The same tag also publishes the Rust crate to crates.io, from the release workflow's `crates` job, after the GitHub release exists. The release's notes end with "How each archive was built", one record a job from `scripts/release/buildinfo.cmake`, read from that build's own cache. In `CHANGELOG.md` the work not yet released is under
 `## X.Y.Z — unreleased` (the script opens it), and a release is the same
 heading with its date, `## X.Y.Z — YYYY-MM-DD`. `gate.version` fails
 unless the header, the project version, the vcpkg manifest, the Rust and

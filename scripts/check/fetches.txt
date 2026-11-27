@@ -10,6 +10,7 @@
 .github/workflows/ci.yml	https://github.com/facebook/infer/releases/download/v1.3.0/	sha256 the next line, sha256sum -c (job infer)
 .github/workflows/docs.yml	https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2/	sha256 the next line, sha256sum -c
 .github/workflows/release.yml	https://git.musl-libc.org/cgit/musl/plain/COPYRIGHT?h=v	data musl's COPYRIGHT text, shipped in the archive's third-party notices; only grep -q reads it, nothing runs from it
+.github/workflows/release.yml	https://crates.io/api/v1/crates/configforge/	data only the HTTP status is read (is this version already published); nothing runs from it
 scripts/bench/publish.sh	-	data git fetch of this repository's own bench-history branch (benchmark numbers); nothing runs from it
 scripts/buildenv/freebsd.sh	-	sha256 CHECKSUM.SHA256 from the same server, compared with sha256sum before the image is used (the lines after the download)
 scripts/buildenv/setup.sh	-	sha256 rustup-init.sha256 from the same server, compared before rustup-init runs (the lines after the download)
