@@ -189,7 +189,7 @@ this answer under "Organiser's answers"). Both are copied into
 * **needs**: F-1a
 * **size**: small (one function in each of three files, the call in F-2a's card)
 * **version**: 1.9.0
-* **status**: open
+* **status**: done (82ddc27)
 * **decided**:
   * **Names** (internal tier, `lib/platform/include/configforge/cf_platform_file.h`, under `#if CF_INTERNAL_API`, after F-1a's `cf_platform_write_steps`; `o` is F-1a's `cf_file_options` (`cf_file.h`), NULL for the defaults, so the Windows rename retry and the sync are the options of the layer, D-224):
     ```c
