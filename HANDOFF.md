@@ -26,16 +26,13 @@ approval and release rights: docs/Plan.md "For the maintainer".
    table) and the cards K-9h, K-9i, F-6, F-7. No full run yet since the fix.
    K-6a landed on `batch` too (2026-11-28). The batch's full run
    46067496921 is red, all from K-6a (fix on `batch`, "Batch: ..."):
-   - MSVC `shared (windows-latest)`: C4141 'dllexport' used more than once
-     at lib/base/include/configforge/cf_error.h:148, `cf_error_place_at`
-     carries both CF_API and CF_EXPERIMENTAL(2, 0): keep only the form the
-     other experimental declarations use.
+   - MSVC C4141: fixed on batch (CF_API removed beside CF_EXPERIMENTAL).
    - `unit.test_reason` in the `yaml`, `libfyaml` and `profiles (full)`
      jobs: its offsets assume the built-in YAML and XML readers; with an
      external backend (libyaml, libfyaml, expat) the offset is -1 or
      another number. The test must check the offset only when the
-     built-in reader is the one compiled (see how test_reason or
-     test_yaml tells the backend), and expect -1 otherwise.
+     built-in reader is the one compiled (the backend is CF_YAML_BACKEND in cmake/ConfigForgeProfile.cmake;
+     pass it to the test as a compile definition if nothing does yet), and expect -1 otherwise.
    Then run the full tier again; green -> `git push origin batch:main`
    (main and batch differ then only by merges of HANDOFF.md: merge
    origin/main into batch without another run if that is all).
