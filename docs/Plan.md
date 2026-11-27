@@ -278,7 +278,7 @@ of a card's CI.
 | 1 | L-20 The index generated from the card files, and `gate.index` | 1.9.0 | medium | nothing | done (84d48d9) |
 | 2 | L-21 A card opens only when a script says it is ready | 1.9.0 | medium | L-20 | done (6521a97) |
 | 3 | L-22 CI in two tiers: a fast core on every push, the whole suite once a card | 1.9.0 | medium | nothing | done (02acbdd) |
-| 4 | K-11a Options with defaults as one convention: `cf_*_options_init`, the fixed limits as options, and a gate | 1.9.0 | large | nothing | open |
+| 4 | K-11a Options with defaults as one convention: `cf_*_options_init`, the fixed limits as options, and a gate | 1.9.0 | large | nothing | done (7a2af29) |
 | 5 | K-11b The `none` platform builds and is tried: no feature assumes an operating system | 1.9.0 | large | L-18a | waits: L-18a |
 | 6 | L-18a A Cortex-M build of `minimal` in CI, with its stack gate | 1.9.0 | medium | nothing | open |
 | 7 | K-11c The table of each feature against each platform, checked by a gate | 1.9.0 | medium | K-11b | waits: K-11b |
