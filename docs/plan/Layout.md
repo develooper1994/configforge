@@ -36,6 +36,7 @@ last column; the "not now" section's cards are `not now`.
    - bindings: C-4c (Python); Rust and C++ where the module's step adds a call
    - documents: Y-7 (threads and processes), Y-36, G-1a, G-1b, G-2
 2. {2.2.0} **config: built ahead of time** (`gen build`, D-220's answer where there is no OS)
+   - digests first (Y-29's manifest needs them): M-32, M-33, M-34
    - module + tool: Y-24, Y-25, Y-26, Y-27, Y-28 (its error part goes to 0.5), Y-29, Y-33 (the manifest in the image, in the header M-12 reserves for it); documents: Y-31
 3. {2.2.0} **serialize: one table, one copy, correct** (lib/serialize)
    - module: X-18, X-19, X-20, X-21, K-7a, K-5a, K-5b, K-8, K-1a, K-1b, K-10a, K-10b (a number's text kept; underflow and infinity as options, defaults unchanged)
@@ -49,7 +50,7 @@ last column; the "not now" section's cards are `not now`.
    - {2.4.0} the additions: M-5, M-6, M-7, M-8, M-9, M-14, M-15, M-16, K-7b (the ways in the formats' table), M-17
 7. {2.5.0} **serialize: more formats** - X-1, X-2, X-3, X-4, X-5, X-6, X-7, X-8, X-9, X-10, X-11, X-12, X-13, X-14, X-15, X-16, X-17
 8. {2.6.0} **bindings and documents across the library** - M-1, M-2, M-3, M-4 (Go, .NET), G-3, G-4, G-5, G-6, G-7, G-8
-   - {2.6.0} distribution: M-22, M-24, M-26, M-27, M-28, M-31, M-32, M-33, M-34
+   - {2.6.0} distribution: M-22, M-24, M-26, M-27, M-28, M-31
 9. {2.7.0} **speed** (lib/text, lib/lanes, lib/numeric) - P-3, P-7, P-8, P-9, P-10, P-13, P-16, L-16a, L-16b, L-16c, Y-11
 
 **Running beside the modules** {1.9.0} (no design shape; a worker takes one when a module waits on CI): L-11, L-12a, L-12b, L-12c, L-13, L-15a, L-17, L-19a, L-19b, L-18b, P-5, P-6, P-11, P-12, P-14, M-18, M-20, M-21.

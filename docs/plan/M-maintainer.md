@@ -809,7 +809,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "a fingerprint used to approve a configuration or allow it through a gate, where FNV-1a's collisions can be made on purpose" (`docs/Roadmap.md:916-931`); `cf_fingerprint` says "Not cryptographic ... proves nothing" (`lib/config/include/configforge/configforge.h:643-649`).
 * **needs**: nothing
 * **size**: large
-* **version**: 2.6.0
+* **version**: 2.2.0
 * **status**: open
 * **decided**:
   * **Decided: the interface.** `cf_fingerprint` returns a `cf_u64` and `cf_fingerprint_format` writes 22 characters (`configforge.h:649-653`), neither can hold 256 bits. (a) New functions beside them: `cf_fingerprint_text(const cf_config*, char* buf, size_t cap)` writing whichever kind the builder chose (`fnv1a:` 22 bytes, `sha256:` 71), the 1.x pair unchanged. (b) A `cf_fingerprint256(const cf_config*, unsigned char out[32])` only. **Chosen: ()**: a program that logs a fingerprint wants the text, and the prefix tells a reader the kind (`docs/Roadmap.md:928-929`: "the prefix every digest already carries"). Written for (a). Rejected: (b) `cf_fingerprint256` only, because a program logs text and the prefix names the kind.
@@ -838,7 +838,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "a rule or a device that names its own ... a function the program gives, with the name the report writes before its digests" (`docs/Roadmap.md:920-924`, `929-931`).
 * **needs**: M-32 (the stream interface and the kinds)
 * **size**: medium
-* **version**: 2.6.0
+* **version**: 2.2.0
 * **status**: open
 * **decided**:
   * **Decided: the function's shape.** (a) A streaming triple `init(ctx)`, `update(ctx, p, n)`, `final(ctx, out, cap) -> n` (what a hash engine's driver offers; any digest size up to 64 bytes). (b) One-shot `digest(ctx, p, n, out)`: the library would have to buffer the whole byte stream (a configuration's can be large; no allocation for it in a freestanding build). **Chosen: ()**; written for (a). Rejected: (b) one-shot `digest`, because it would buffer the whole byte stream, which a freestanding build cannot allocate.
@@ -864,7 +864,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "Done when a gate built on a SHA-256 fingerprint is in the Guide, and a test gives a digest function of its own and reads its name back from the report" (`docs/Roadmap.md:928-931`); the second half is M-33's test.
 * **needs**: M-32, M-33
 * **size**: small
-* **version**: 2.6.0
+* **version**: 2.2.0
 * **status**: open
 * **decided**:
   * The recipe is `examples/c/fingerprint_gate.c`: it builds a configuration (the example `examples/c/settings.c`'s first twenty lines for the pattern), calls `cf_builder_fingerprint(b, CF_FP_SHA256)`, reads `cf_fingerprint_text`, compares it to an approved string given as `argv[1]` with `strcmp` (not constant-time: the fingerprint is not a secret, said in the Guide) and exits 0 on equal and 3 otherwise, printing both. A second run with a changed value exits 3.
