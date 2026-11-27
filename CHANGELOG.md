@@ -7,6 +7,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- `cf_error.offset` and `cf_error_place_at` (experimental in 2.0): a refusal's byte offset,
+  as a number, in the JSON, JSON5, TOML, YAML, INI, properties, XML, CBOR and TLV readers;
+  `(size_t)-1` when a reader has none (K-6a, D-138).
 - `docs/Guarantees.md` and `gate.guarantees`: every public function states one failure
   guarantee (nothrow, strong or basic) in its header comment, and no library source ends
   the program (K-9a, D-232).

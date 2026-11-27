@@ -139,15 +139,16 @@ typedef struct toml_scan {
     /* The definitions, when the sink lends workspace; node 0 is the root,
        and a bucket or a chain of 0 is empty, since the root is no one's
        child. `body` is the table a key = value line defines into. */
-    cf_bool    track;
-    toml_node* nodes;
-    size_t     nnodes, cnodes;
-    cf_u32*    buckets;
-    size_t     nbuckets;
-    char*      pool;
-    size_t     npool, cpool;
-    cf_u32     body;
-    cf_u32     seed; /* what every hash of a name starts from */
+    cf_bool     track;
+    toml_node*  nodes;
+    size_t      nnodes, cnodes;
+    cf_u32*     buckets;
+    size_t      nbuckets;
+    char*       pool;
+    size_t      npool, cpool;
+    cf_u32      body;
+    cf_u32      seed;  /* what every hash of a name starts from */
+    const char* begin; /* the input's first byte, for an offset */
 } toml_scan;
 
 /* A dotted key, its segments in one buffer for the same reason. A key
@@ -179,8 +180,8 @@ static void toml_loc(const toml_scan* s, const char* at, cf_loc* out) {
 static cf_bool toml_fail(toml_scan* s, const char* at, int reason, const char* what) {
     unsigned int col = cf_text_track_col(&s->tr, at);
 
-    return cf_text_fail(s->err, CF_E_SOURCE, s->file, s->tr.line, col, reason, "%s",
-                        what);
+    return cf_text_fail_at(s->err, CF_E_SOURCE, s->file, s->tr.line, col,
+                           (size_t)(at - s->begin), reason, "%s", what);
 }
 
 static void toml_blank(toml_scan* s) {
@@ -1323,9 +1324,9 @@ static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen, cf_u32 no
             if (s->out->size <
                     offsetof(cf_doc_sink, reserve_text) + sizeof s->out->reserve_text ||
                 s->out->reserve_text == NULL) {
-                return cf_text_fail(s->err, CF_E_SOURCE, s->file, at.line, at.col,
-                                    CF_REASON_STORAGE,
-                                    "a long string needs sink text storage");
+                return cf_text_fail_at(s->err, CF_E_SOURCE, s->file, at.line, at.col,
+                                       (size_t)(start - s->begin), CF_REASON_STORAGE,
+                                       "a long string needs sink text storage");
             }
             text = s->out->reserve_text(s->out->ctx, n + 1);
             if (text == NULL) {
@@ -1342,8 +1343,9 @@ static cf_bool toml_value(toml_scan* s, const char* name, size_t nlen, cf_u32 no
         cf_value_text(&v, text, n);
         return s->out->scalar(s->out->ctx, name, nlen, &v, CF_FALSE, &at)
                    ? CF_TRUE
-                   : cf_text_fail(s->err, CF_E_SOURCE, s->file, at.line, at.col,
-                                  CF_REASON_KEY, "not a valid key");
+                   : cf_text_fail_at(s->err, CF_E_SOURCE, s->file, at.line, at.col,
+                                     (size_t)(start - s->begin), CF_REASON_KEY,
+                                     "not a valid key");
     }
     case 't':
         if (s->end - s->p < 4 || memcmp(s->p, "true", 4) != 0) {
@@ -1524,9 +1526,10 @@ static cf_bool toml_header(toml_scan* s) {
 static cf_bool toml_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* err) {
     toml_scan s;
 
-    s.p    = in->p + cf_blob_skip_bom(in);
-    s.end  = in->p + in->n;
-    s.file = (in->name != NULL) ? in->name : "<toml>";
+    s.p     = in->p + cf_blob_skip_bom(in);
+    s.begin = in->p;
+    s.end   = in->p + in->n;
+    s.file  = (in->name != NULL) ? in->name : "<toml>";
     cf_text_track_init(&s.tr, s.p);
     s.out    = out;
     s.err    = err;

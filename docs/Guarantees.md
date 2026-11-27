@@ -207,6 +207,7 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_error_clear` | `cf_error.h` | nothrow |
 | `cf_error_copy` | `cf_error.h` | nothrow |
 | `cf_error_place` | `cf_error.h` | nothrow |
+| `cf_error_place_at` | `cf_error.h` | nothrow |
 | `cf_error_set` | `cf_error.h` | nothrow |
 | `cf_explain` | `configforge.h` | strong |
 | `cf_explain_json` | `configforge.h` | strong |
@@ -409,6 +410,6 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_watcher_wait` | `configforge.h` | basic |
 | `cf_write` | `configforge.h` | strong |
 
-nothrow 80, strong 57, basic 47, not yet 130
+nothrow 81, strong 57, basic 47, not yet 130
 
 <!-- guarantees:end -->

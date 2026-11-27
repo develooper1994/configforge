@@ -395,7 +395,7 @@ typedef struct tlv_scan {
 static cf_bool tlv_fail(tlv_scan* s, size_t off, int reason, const char* what) {
     cf_error_set(s->err, CF_E_SOURCE, NULL, s->name, "%s, byte %zu: %s", s->name, off,
                  what);
-    cf_error_place(s->err, reason, 0, 0);
+    cf_error_place_at(s->err, reason, 0, 0, off);
     return CF_FALSE;
 }
 
@@ -419,7 +419,7 @@ static cf_bool tlv_ber_tag(tlv_scan* s, size_t* at, size_t end, cf_u32* tag) {
     if (*at >= end) {
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s, byte %zu: a tag cut short: 0 bytes are left", s->name, *at);
-        cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_TRUNCATED, 0, 0, *at);
         return CF_FALSE;
     }
     b    = s->base[(*at)++];
@@ -432,7 +432,7 @@ static cf_bool tlv_ber_tag(tlv_scan* s, size_t* at, size_t end, cf_u32* tag) {
             cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                          "%s, byte %zu: a tag cut short: %zu bytes are left", s->name,
                          start, end - start);
-            cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+            cf_error_place_at(s->err, CF_REASON_TRUNCATED, 0, 0, start);
             return CF_FALSE;
         }
         if (*at - start >= 4u) {
@@ -455,7 +455,7 @@ static cf_bool tlv_ber_len(tlv_scan* s, size_t start, size_t* at, size_t end,
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s, byte %zu: a length cut short: 0 bytes are left", s->name,
                      start);
-        cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_TRUNCATED, 0, 0, start);
         return CF_FALSE;
     }
     b = s->base[(*at)++];
@@ -472,14 +472,14 @@ static cf_bool tlv_ber_len(tlv_scan* s, size_t start, size_t* at, size_t end,
     if (k > 4u) {
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s, byte %zu: a length of %u bytes", s->name, start, (unsigned)k);
-        cf_error_place(s->err, CF_REASON_TOO_LONG, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_TOO_LONG, 0, 0, start);
         return CF_FALSE;
     }
     if (end - *at < k) {
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s, byte %zu: a length cut short: %zu bytes are left", s->name,
                      start, end - *at);
-        cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_TRUNCATED, 0, 0, start);
         return CF_FALSE;
     }
     *len = tlv_number(s->base + *at, k, CF_TLV_BIG);
@@ -509,7 +509,7 @@ static cf_bool tlv_tag_read(tlv_scan* s, size_t* at, size_t end, cf_u32* tag) {
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s, byte %zu: a tag cut short: %zu bytes are left", s->name, *at,
                      end - *at);
-        cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_TRUNCATED, 0, 0, *at);
         return CF_FALSE;
     }
     *tag = (cf_u32)tlv_number(s->base + *at, w, s->l->order);
@@ -529,7 +529,7 @@ static cf_bool tlv_len_read(tlv_scan* s, size_t start, size_t* at, size_t end,
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s, byte %zu: a length cut short: %zu bytes are left", s->name,
                      start, end - *at);
-        cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_TRUNCATED, 0, 0, start);
         return CF_FALSE;
     }
     *len = tlv_number(s->base + *at, w, s->l->order);
@@ -562,7 +562,7 @@ static cf_bool tlv_refused(tlv_scan* s, size_t start, const char* key) {
     }
     cf_error_set(s->err, CF_E_KEY, NULL, s->name,
                  "%s, byte %zu: '%s' is not a valid key", s->name, start, key);
-    cf_error_place(s->err, CF_REASON_KEY, 0, 0);
+    cf_error_place_at(s->err, CF_REASON_KEY, 0, 0, start);
     return CF_FALSE;
 }
 
@@ -602,7 +602,7 @@ static cf_bool tlv_bcd(tlv_scan* s, const char* key, const char* hex, size_t sta
                      "%s, byte %zu: tag 0x%s has %U digits, more than an integer "
                      "holds",
                      s->name, start, hex, (cf_u64)n * 2u);
-        cf_error_place(s->err, CF_REASON_NUMBER_RANGE, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_NUMBER_RANGE, 0, 0, start);
         return CF_FALSE;
     }
     for (i = 0; i < n; ++i) {
@@ -612,7 +612,7 @@ static cf_bool tlv_bcd(tlv_scan* s, const char* key, const char* hex, size_t sta
             cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                          "%s, byte %zu: tag 0x%s holds a nibble that is not a digit",
                          s->name, start, hex);
-            cf_error_place(s->err, CF_REASON_NUMBER, 0, 0);
+            cf_error_place_at(s->err, CF_REASON_NUMBER, 0, 0, start);
             return CF_FALSE;
         }
         u = u * 100u + (cf_u64)hi * 10u + lo;
@@ -642,7 +642,7 @@ static cf_bool tlv_hexval(tlv_scan* s, const char* key, const char* hex, size_t 
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s, byte %zu: tag 0x%s needs sink text storage", s->name, start,
                      hex);
-        cf_error_place(s->err, CF_REASON_STORAGE, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_STORAGE, 0, 0, start);
         return CF_FALSE;
     }
     for (i = 0; i < n; ++i) {
@@ -665,14 +665,14 @@ static cf_bool tlv_text(tlv_scan* s, const char* key, const char* hex, size_t st
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s, byte %zu: tag 0x%s is text with a NUL inside", s->name, start,
                      hex);
-        cf_error_place(s->err, CF_REASON_SYNTAX, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_SYNTAX, 0, 0, start);
         return CF_FALSE;
     }
     if (!cf_text_is_utf8((const char*)p, n)) {
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s, byte %zu: tag 0x%s is text that is not UTF-8", s->name, start,
                      hex);
-        cf_error_place(s->err, CF_REASON_UTF8, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_UTF8, 0, 0, start);
         return CF_FALSE;
     }
     cf_value_text(&v, (const char*)p, n);
@@ -690,7 +690,7 @@ static cf_bool tlv_integer(tlv_scan* s, const cf_tlv_tag* e, const char* key,
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s, byte %zu: tag 0x%s is %U bytes, and an integer is 1 to 8",
                      s->name, start, hex, (cf_u64)n);
-        cf_error_place(s->err, CF_REASON_SYNTAX, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_SYNTAX, 0, 0, start);
         return CF_FALSE;
     }
     u = tlv_number(p, n, order);
@@ -705,7 +705,7 @@ static cf_bool tlv_integer(tlv_scan* s, const cf_tlv_tag* e, const char* key,
                          "%s, byte %zu: tag 0x%s is %U, past the largest integer a "
                          "configuration holds",
                          s->name, start, hex, u);
-            cf_error_place(s->err, CF_REASON_NUMBER_RANGE, 0, 0);
+            cf_error_place_at(s->err, CF_REASON_NUMBER_RANGE, 0, 0, start);
             return CF_FALSE;
         }
         cf_value_int(&v, (cf_i64)u);
@@ -748,7 +748,7 @@ static cf_bool tlv_enter(tlv_scan* s, size_t start) {
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s, byte %zu: nests deeper than %d levels", s->name, start,
                      (int)CF_MAX_DEPTH);
-        cf_error_place(s->err, CF_REASON_DEPTH, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_DEPTH, 0, 0, start);
         return CF_FALSE;
     }
     ++s->depth;
@@ -796,7 +796,7 @@ static cf_bool tlv_unknown(tlv_scan* s, cf_u32 tag, const char* hex, size_t star
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s, byte %zu: tag 0x%s is not in the layout '%s'", s->name, start,
                      hex, tlv_name(s->l));
-        cf_error_place(s->err, CF_REASON_UNSUPPORTED, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_UNSUPPORTED, 0, 0, start);
         return CF_FALSE;
     }
     memcpy(s->ukey, "tag-", 4);
@@ -830,14 +830,14 @@ static cf_bool tlv_element(tlv_scan* s, const cf_tlv_tag* e, const char* key,
                      "%s, byte %zu: tag 0x%s is a record of %U bytes, which the "
                      "layout does not read",
                      s->name, start, hex, (cf_u64)n);
-        cf_error_place(s->err, CF_REASON_UNSUPPORTED, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_UNSUPPORTED, 0, 0, start);
         return CF_FALSE;
     }
     if (e->width != 0 && n != e->width) {
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s, byte %zu: tag 0x%s is %U bytes, and its entry says %u",
                      s->name, start, hex, (cf_u64)n, e->width);
-        cf_error_place(s->err, CF_REASON_SYNTAX, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_SYNTAX, 0, 0, start);
         return CF_FALSE;
     }
     switch (e->type) {
@@ -857,14 +857,14 @@ static cf_bool tlv_element(tlv_scan* s, const cf_tlv_tag* e, const char* key,
             cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                          "%s, byte %zu: tag 0x%s is %U bytes, and a bool is one",
                          s->name, start, hex, (cf_u64)n);
-            cf_error_place(s->err, CF_REASON_SYNTAX, 0, 0);
+            cf_error_place_at(s->err, CF_REASON_SYNTAX, 0, 0, start);
             return CF_FALSE;
         }
         if (p[0] > 1u) {
             cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                          "%s, byte %zu: tag 0x%s holds %u, and a bool is 0 or 1",
                          s->name, start, hex, (unsigned)p[0]);
-            cf_error_place(s->err, CF_REASON_SYNTAX, 0, 0);
+            cf_error_place_at(s->err, CF_REASON_SYNTAX, 0, 0, start);
             return CF_FALSE;
         }
         cf_value_bool(&v, (p[0] != 0) ? CF_TRUE : CF_FALSE);
@@ -925,7 +925,7 @@ static cf_bool tlv_list(tlv_scan* s, const cf_tlv_tag* e, const cf_tlv_tag** ope
                      "%s, byte %zu: tag 0x%s continues a list that ended at byte "
                      "%zu",
                      s->name, start, hex, ended);
-        cf_error_place(s->err, CF_REASON_STRUCTURE, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_STRUCTURE, 0, 0, start);
         return CF_FALSE;
     }
     if (!tlv_enter(s, start)) {
@@ -992,7 +992,7 @@ static cf_bool tlv_seq(tlv_scan* s, size_t at, size_t end, const cf_tlv_tag* tag
                                  "%s, byte %zu: the end tag has a length of %U; it "
                                  "must be 0",
                                  s->name, start, len);
-                    cf_error_place(s->err, CF_REASON_SYNTAX, 0, 0);
+                    cf_error_place_at(s->err, CF_REASON_SYNTAX, 0, 0, start);
                     return CF_FALSE;
                 }
             }
@@ -1000,7 +1000,7 @@ static cf_bool tlv_seq(tlv_scan* s, size_t at, size_t end, const cf_tlv_tag* tag
                 cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                              "%s, byte %zu: %zu bytes after the end tag", s->name, at,
                              end - at);
-                cf_error_place(s->err, CF_REASON_TRAILING, 0, 0);
+                cf_error_place_at(s->err, CF_REASON_TRAILING, 0, 0, at);
                 return CF_FALSE;
             }
             return CF_TRUE;
@@ -1013,7 +1013,7 @@ static cf_bool tlv_seq(tlv_scan* s, size_t at, size_t end, const cf_tlv_tag* tag
             cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                          "%s, byte %zu: tag 0x%s says %U bytes, and %zu are left",
                          s->name, start, hex, len, end - at);
-            cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+            cf_error_place_at(s->err, CF_REASON_TRUNCATED, 0, 0, start);
             return CF_FALSE;
         }
         e = tlv_find(tags, n, tag);
@@ -1042,7 +1042,7 @@ static cf_bool tlv_seq(tlv_scan* s, size_t at, size_t end, const cf_tlv_tag* tag
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s: the document ends at byte %zu without the end tag 0x%s",
                      s->name, end, hex);
-        cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_TRUNCATED, 0, 0, end);
         return CF_FALSE;
     }
     return CF_TRUE;
@@ -1062,7 +1062,7 @@ static cf_bool tlv_decode(const cf_codec* self, const cf_blob* in,
     if (n == 0) {
         cf_error_set(err, CF_E_SOURCE, NULL, s.name, "%s: the document is empty",
                      s.name);
-        cf_error_place(err, CF_REASON_EMPTY, 0, 0);
+        cf_error_place_at(err, CF_REASON_EMPTY, 0, 0, 0);
         return CF_FALSE;
     }
     if (!out->begin_table(out->ctx, NULL, 0)) {

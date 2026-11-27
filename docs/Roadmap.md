@@ -1343,6 +1343,7 @@ first user meets. In the order proposed:
   so a test of "the same bad input refused the same way in every
   format" can be written, and a user filters by code rather than by
   message text. To check first how far the readers already share one.
+  The byte offset is built (K-6a, D-138: `cf_error.offset`, experimental in 2.0); the tools show it with K-6b.
 * 🟩 **A feature matrix generated from the build** (card A-12; `gate.matrix`). The README's
   tables of options, sizes, profiles and per-target status (Arm entry
   above) are produced by a script from the CMake options, the profile

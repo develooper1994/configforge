@@ -41,6 +41,7 @@
 typedef struct js_scan {
     const char*        p;
     const char*        end;
+    const char*        begin; /* the input's first byte, for an offset */
     const char*        file;
     cf_text_track      tr;
     const cf_doc_sink* out;
@@ -67,8 +68,8 @@ static void js_loc(const js_scan* s, const char* at, cf_loc* out) {
 static cf_bool js_fail(js_scan* s, const char* at, int reason, const char* what) {
     unsigned int col = cf_text_track_col(&s->tr, at);
 
-    return cf_text_fail(s->err, CF_E_SOURCE, s->file, s->tr.line, col, reason, "%s",
-                        what);
+    return cf_text_fail_at(s->err, CF_E_SOURCE, s->file, s->tr.line, col,
+                           (size_t)(at - s->begin), reason, "%s", what);
 }
 
 /* White space and, in JSON5, comments. */
@@ -683,9 +684,9 @@ static cf_bool js_text(js_scan* s, const char* name, size_t nlen, const cf_loc* 
         if (s->out->size <
                 offsetof(cf_doc_sink, reserve_text) + sizeof s->out->reserve_text ||
             s->out->reserve_text == NULL) {
-            return cf_text_fail(s->err, CF_E_SOURCE, s->file, at->line, at->col,
-                                CF_REASON_STORAGE,
-                                "a long string needs sink text storage");
+            return cf_text_fail_at(s->err, CF_E_SOURCE, s->file, at->line, at->col,
+                                   (size_t)(start - s->begin), CF_REASON_STORAGE,
+                                   "a long string needs sink text storage");
         }
         text = s->out->reserve_text(s->out->ctx, n + 1);
         if (text == NULL) {
@@ -705,8 +706,9 @@ static cf_bool js_text(js_scan* s, const char* name, size_t nlen, const cf_loc* 
        an integer has a mismatch rather than something to coerce. */
     return s->out->scalar(s->out->ctx, name, nlen, &v, CF_FALSE, at)
                ? CF_TRUE
-               : cf_text_fail(s->err, CF_E_SOURCE, s->file, at->line, at->col,
-                              CF_REASON_KEY, "key is not valid");
+               : cf_text_fail_at(s->err, CF_E_SOURCE, s->file, at->line, at->col,
+                                 (size_t)(start - s->begin), CF_REASON_KEY,
+                                 "key is not valid");
 }
 
 static cf_bool js_value(js_scan* s, const char* name, size_t nlen) {
@@ -774,9 +776,10 @@ static cf_bool js_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* er
                          cf_bool json5) {
     js_scan s;
 
-    s.p    = in->p + cf_blob_skip_bom(in);
-    s.end  = in->p + in->n;
-    s.file = (in->name != NULL) ? in->name : json5 ? "<json5>" : "<json>";
+    s.p     = in->p + cf_blob_skip_bom(in);
+    s.begin = in->p;
+    s.end   = in->p + in->n;
+    s.file  = (in->name != NULL) ? in->name : json5 ? "<json5>" : "<json>";
     cf_text_track_init(&s.tr, s.p);
     s.out    = out;
     s.err    = err;
@@ -792,7 +795,7 @@ static cf_bool js_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* er
     if (s.p >= s.end) {
         cf_error_set(err, CF_E_SOURCE, NULL, s.file, "%s: the document is empty",
                      s.file);
-        cf_error_place(err, CF_REASON_EMPTY, 0, 0);
+        cf_error_place_at(err, CF_REASON_EMPTY, 0, 0, (size_t)(s.p - s.begin));
         return CF_FALSE;
     }
     if (*s.p != '{') {

@@ -92,6 +92,7 @@ typedef struct yaml_ev {
     const char* tag; /* resolved: NULL, "!" or a full tag */
     cf_bool     plain;
     unsigned    line, col; /* 1-based */
+    size_t      off;       /* the byte offset, (size_t)-1 when the backend has none */
 } yaml_ev;
 
 /* A recorded event: what an alias replays. */
@@ -163,9 +164,15 @@ typedef struct yaml_scan {
     size_t        bytes, max_bytes; /* scalar text replayed, and its bound */
 } yaml_scan;
 
+static cf_bool yaml_fail_off(yaml_scan* s, unsigned line, unsigned col, size_t off,
+                             int reason, const char* what) {
+    return cf_text_fail_at(s->err, CF_E_SOURCE, s->file, line, col, off, reason, "%s",
+                           what);
+}
+
 static cf_bool yaml_fail_at(yaml_scan* s, unsigned line, unsigned col, int reason,
                             const char* what) {
-    return cf_text_fail(s->err, CF_E_SOURCE, s->file, line, col, reason, "%s", what);
+    return yaml_fail_off(s, line, col, (size_t)-1, reason, what);
 }
 
 static cf_bool yaml_no_room(yaml_scan* s) {
@@ -363,8 +370,8 @@ static cf_bool yaml_name(yaml_scan* s, const yaml_ev* e, const char** name, size
         return CF_TRUE;
     }
     if (l->want_key) {
-        return yaml_fail_at(
-            s, e->line, e->col, CF_REASON_KEY,
+        return yaml_fail_off(
+            s, e->line, e->col, e->off, CF_REASON_KEY,
             "a key has to be a scalar: a mapping or a sequence cannot be "
             "a configuration key");
     }
@@ -397,7 +404,7 @@ static cf_bool yaml_known_tag(yaml_scan* s, const yaml_ev* e, const char* want) 
            "the tag %s is not one this library resolves: the core schema's !!str, "
            "!!int, !!float, !!bool, !!null, !!map and !!seq are",
            e->tag);
-    return yaml_fail_at(s, e->line, e->col, CF_REASON_UNSUPPORTED, what);
+    return yaml_fail_off(s, e->line, e->col, e->off, CF_REASON_UNSUPPORTED, what);
 }
 
 static cf_bool yaml_open(yaml_scan* s, const yaml_ev* e) {
@@ -411,8 +418,8 @@ static cf_bool yaml_open(yaml_scan* s, const yaml_ev* e) {
     }
     if (s->depth < 0) {
         if (!is_map) {
-            return yaml_fail_at(
-                s, e->line, e->col, CF_REASON_TOP_LEVEL,
+            return yaml_fail_off(
+                s, e->line, e->col, e->off, CF_REASON_TOP_LEVEL,
                 "a configuration is a mapping at the top, not a sequence");
         }
         ok = s->out->begin_table(s->out->ctx, NULL, 0);
@@ -424,14 +431,15 @@ static cf_bool yaml_open(yaml_scan* s, const yaml_ev* e) {
             return CF_FALSE;
         }
         if (s->depth + 1 >= CF_MAX_DEPTH) {
-            return yaml_fail_at(s, e->line, e->col, CF_REASON_DEPTH,
-                                "nesting is too deep");
+            return yaml_fail_off(s, e->line, e->col, e->off, CF_REASON_DEPTH,
+                                 "nesting is too deep");
         }
         ok = is_map ? s->out->begin_table(s->out->ctx, name, n)
                     : s->out->begin_array(s->out->ctx, name, n);
     }
     if (!ok) {
-        return yaml_fail_at(s, e->line, e->col, CF_REASON_KEY, "not a valid key");
+        return yaml_fail_off(s, e->line, e->col, e->off, CF_REASON_KEY,
+                             "not a valid key");
     }
     ++s->depth;
     s->level[s->depth].is_map   = (unsigned char)(is_map ? 1 : 0);
@@ -512,7 +520,7 @@ static cf_bool yaml_tagged(yaml_scan* s, const yaml_ev* e, cf_value* v,
     {
         char what[160];
         cf_fmt(what, sizeof what, "the value is not a !!%s", t);
-        return yaml_fail_at(s, e->line, e->col, CF_REASON_SYNTAX, what);
+        return yaml_fail_off(s, e->line, e->col, e->off, CF_REASON_SYNTAX, what);
     }
 }
 
@@ -533,23 +541,24 @@ static cf_bool yaml_scalar(yaml_scan* s, const yaml_ev* e) {
         if (plain && e->n == 0 && e->tag == NULL) {
             return CF_TRUE;
         }
-        return yaml_fail_at(
-            s, e->line, e->col, CF_REASON_TOP_LEVEL,
+        return yaml_fail_off(
+            s, e->line, e->col, e->off, CF_REASON_TOP_LEVEL,
             "a configuration is a mapping at the top, not a single value");
     }
     l = &s->level[s->depth];
     if (l->is_map && l->want_key) {
         if (e->n == 0) {
-            return yaml_fail_at(s, e->line, e->col, CF_REASON_KEY, "an empty key");
+            return yaml_fail_off(s, e->line, e->col, e->off, CF_REASON_KEY,
+                                 "an empty key");
         }
         if (e->n >= s->kcap) {
             if (s->klimit <= (size_t)CF_KEY_MAX - 1u) {
-                return yaml_fail_at(s, e->line, e->col, CF_REASON_TOO_LONG,
-                                    "the key is too long");
+                return yaml_fail_off(s, e->line, e->col, e->off, CF_REASON_TOO_LONG,
+                                     "the key is too long");
             }
             if (e->n > s->klimit) {
-                return yaml_fail_at(s, e->line, e->col, CF_REASON_BUDGET,
-                                    "a key is longer than the sizing cap");
+                return yaml_fail_off(s, e->line, e->col, e->off, CF_REASON_BUDGET,
+                                     "a key is longer than the sizing cap");
             }
             if (!cf_sink_grow(s->out, &s->key, &s->kcap, 0, e->n + 1u)) {
                 return cf_error_set(s->err, CF_E_MEMORY, NULL, s->file,
@@ -583,7 +592,8 @@ static cf_bool yaml_scalar(yaml_scan* s, const yaml_ev* e) {
     at.line = e->line;
     at.col  = e->col;
     if (!s->out->scalar(s->out->ctx, name, nlen, &v, plain, &at)) {
-        return yaml_fail_at(s, e->line, e->col, CF_REASON_KEY, "not a valid key");
+        return yaml_fail_off(s, e->line, e->col, e->off, CF_REASON_KEY,
+                             "not a valid key");
     }
     return CF_TRUE;
 }
@@ -607,8 +617,8 @@ static cf_bool yaml_handle(yaml_scan* s, const yaml_ev* e) {
         --s->depth;
         ok = s->out->end(s->out->ctx)
                  ? CF_TRUE
-                 : yaml_fail_at(s, e->line, e->col, CF_REASON_STORAGE,
-                                "the document could not be recorded");
+                 : yaml_fail_off(s, e->line, e->col, e->off, CF_REASON_STORAGE,
+                                 "the document could not be recorded");
         break;
     }
     if (ok) {
@@ -665,6 +675,7 @@ static cf_bool yaml_alias(yaml_scan* s, const char* name, size_t n, unsigned lin
         e.plain = r.plain ? CF_TRUE : CF_FALSE;
         e.line  = r.line;
         e.col   = r.col;
+        e.off   = (size_t)-1;
         e.tag   = NULL;
         if (r.ntag > 0) {
             size_t t = (r.ntag < sizeof tag) ? r.ntag : sizeof tag - 1u;
@@ -759,6 +770,7 @@ static void yaml_ev_init(yaml_ev* e, int kind, const char* tag, unsigned line,
     e->tag   = tag;
     e->line  = line;
     e->col   = col;
+    e->off   = (size_t)-1;
 }
 
 #if CF_YAML_LIBFYAML
@@ -1091,6 +1103,7 @@ static cf_bool yaml_b_node(void* ctx, const cf_yp_node* nd) {
                                                 : YAML_EV_END;
 
     yaml_ev_init(&e, kind, nd->tag, nd->line, nd->col);
+    e.off   = nd->off;
     e.text  = nd->text;
     e.n     = nd->n;
     e.plain = nd->plain;

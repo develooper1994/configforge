@@ -84,6 +84,12 @@ static void test_size(void) {
     check_place(e, reason, 3, 4);
     cf_error_copy(&copy, e);
     check_place(&copy, reason, 3, 4);
+    check(e->offset == (size_t)-1, "cf_error_place leaves the offset unknown");
+    cf_error_place_at(e, reason, 3, 4, 17);
+    check_place(e, reason, 3, 4);
+    check(e->offset == 17, "cf_error_place_at stores the offset");
+    cf_error_copy(&copy, e);
+    check(copy.offset == 17, "a copy keeps the offset");
     cf_error_set(e, CF_E_SOURCE, NULL, NULL, "another refusal");
     check_place(e, CF_REASON_NONE, 0, 0);
     cf_error_place(e, reason, 3, 4);
@@ -205,129 +211,133 @@ typedef struct reason_row {
     unsigned    col;
     int         code;
     int         maybe; /* another backend may read it: then nothing to classify */
+    size_t offset; /* the byte offset of the cause, NOOFF when the reader has none */
 } reason_row;
 
-#define ROW(fmt, doc, reason, line, col)                                               \
-    {fmt, doc, sizeof(doc) - 1, CF_REASON_##reason, line, col, CF_E_SOURCE, 0}
-#define KEY_ROW(fmt, doc, reason, line)                                                \
-    {fmt, doc, sizeof(doc) - 1, CF_REASON_##reason, line, 0, CF_E_KEY, 0}
+#define NOOFF ((size_t)-1)
+
+#define ROW(fmt, doc, reason, line, col, off)                                          \
+    {fmt, doc, sizeof(doc) - 1, CF_REASON_##reason, line, col, CF_E_SOURCE, 0, off}
+#define KEY_ROW(fmt, doc, reason, line, off)                                           \
+    {fmt, doc, sizeof(doc) - 1, CF_REASON_##reason, line, 0, CF_E_KEY, 0, off}
 #if (defined(CF_YAML_LIBYAML) && CF_YAML_LIBYAML) ||                                   \
     (defined(CF_YAML_LIBFYAML) && CF_YAML_LIBFYAML)
-#define YAML_ROW(doc, reason)                                                          \
-    {"yaml", doc, sizeof(doc) - 1, CF_REASON_SYNTAX, 0, 0, CF_E_SOURCE, 1}
+#define YAML_ROW(doc, reason, off)                                                     \
+    {"yaml", doc, sizeof(doc) - 1, CF_REASON_SYNTAX, 0, 0, CF_E_SOURCE, 1, NOOFF}
 #else
-#define YAML_ROW(doc, reason) ROW("yaml", doc, reason, 0, 0)
+#define YAML_ROW(doc, reason, off) ROW("yaml", doc, reason, 0, 0, off)
 #endif
 
 #define KEY_FIFTY "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 #define KEY_LONG KEY_FIFTY KEY_FIFTY KEY_FIFTY KEY_FIFTY KEY_FIFTY KEY_FIFTY
 
 static const reason_row rows[] = {
-    ROW("json", "{\"a\":\"\xFF\"}", UTF8, 1, 7),
-    ROW("json5", "{\"a\":\"\xFF\"}", UTF8, 1, 7),
-    ROW("toml", "a = \"\xFF\"\n", UTF8, 1, 6),
-    ROW("yaml", "a: \xFF\n", UTF8, 1, 4),
-    ROW("ini", "a=\xFF\n", UTF8, 1, 3),
-    ROW("properties", "a=\xFF\n", UTF8, 1, 3),
-    ROW("cbor", "\xA1\x61\x61\x61\xFF", UTF8, 0, 0),
+    ROW("json", "{\"a\":\"\xFF\"}", UTF8, 1, 7, 6),
+    ROW("json5", "{\"a\":\"\xFF\"}", UTF8, 1, 7, 6),
+    ROW("toml", "a = \"\xFF\"\n", UTF8, 1, 6, 5),
+    ROW("yaml", "a: \xFF\n", UTF8, 1, 4, 3),
+    ROW("ini", "a=\xFF\n", UTF8, 1, 3, 2),
+    ROW("properties", "a=\xFF\n", UTF8, 1, 3, 2),
+    ROW("cbor", "\xA1\x61\x61\x61\xFF", UTF8, 0, 0, 3),
 #if CF_WITH_TLV
-    ROW("tlv", "\x01\x00\x01\x00\xFF\xFF\xFF", UTF8, 0, 0),
+    ROW("tlv", "\x01\x00\x01\x00\xFF\xFF\xFF", UTF8, 0, 0, 0),
 #endif
-    ROW("json", "{\"a\":\"x", TRUNCATED, 0, 0),
-    ROW("json5", "{\"a\":\"x", TRUNCATED, 0, 0),
-    ROW("toml", "a = [1, 2,", TRUNCATED, 0, 0),
-    YAML_ROW("a: \"x", TRUNCATED),
-    ROW("ini", "[sec", TRUNCATED, 0, 0),
-    ROW("cbor", "\xA1\x61\x61", TRUNCATED, 0, 0),
+    ROW("json", "{\"a\":\"x", TRUNCATED, 0, 0, 7),
+    ROW("json5", "{\"a\":\"x", TRUNCATED, 0, 0, 7),
+    ROW("toml", "a = [1, 2,", TRUNCATED, 0, 0, 10),
+    YAML_ROW("a: \"x", TRUNCATED, 5),
+    ROW("ini", "[sec", TRUNCATED, 0, 0, 4),
+    ROW("cbor", "\xA1\x61\x61", TRUNCATED, 0, 0, 3),
 #if CF_WITH_TLV
     ROW("tlv",
         "\x01\x00\x05\x00"
         "a",
-        TRUNCATED, 0, 0),
+        TRUNCATED, 0, 0, 0),
 #endif
 #if CF_WITH_XML
-    ROW("xml", "<a><b>1</b>", TRUNCATED, 0, 0),
+    ROW("xml", "<a><b>1</b>", TRUNCATED, 0, 0, 11),
 #endif
-    ROW("json", "{\"a\":1} x", TRAILING, 0, 0),
-    ROW("json5", "{\"a\":1} x", TRAILING, 0, 0),
-    ROW("yaml", "a: 1\n---\nb: 2\n", TRAILING, 0, 0),
-    ROW("cbor", "\xA0\x00", TRAILING, 0, 0),
+    ROW("json", "{\"a\":1} x", TRAILING, 0, 0, 8),
+    ROW("json5", "{\"a\":1} x", TRAILING, 0, 0, 8),
+    ROW("yaml", "a: 1\n---\nb: 2\n", TRAILING, 0, 0, NOOFF),
+    ROW("cbor", "\xA0\x00", TRAILING, 0, 0, 1),
 #if CF_WITH_TLV
-    ROW("tlv", "\xFF\xFF\x00", TRAILING, 0, 0),
+    ROW("tlv", "\xFF\xFF\x00", TRAILING, 0, 0, 2),
 #endif
 #if CF_WITH_XML
-    ROW("xml", "<a/><b/>", TRAILING, 0, 0),
+    ROW("xml", "<a/><b/>", TRAILING, 0, 0, 4),
 #endif
-    ROW("json", "", EMPTY, 0, 0),
-    ROW("json5", "", EMPTY, 0, 0),
-    ROW("cbor", "", EMPTY, 0, 0),
+    ROW("json", "", EMPTY, 0, 0, 0),
+    ROW("json5", "", EMPTY, 0, 0, 0),
+    ROW("cbor", "", EMPTY, 0, 0, 0),
 #if CF_WITH_TLV
-    ROW("tlv", "", EMPTY, 0, 0),
+    ROW("tlv", "", EMPTY, 0, 0, 0),
 #endif
 #if CF_WITH_XML
-    ROW("xml", "", EMPTY, 0, 0),
+    ROW("xml", "", EMPTY, 0, 0, 0),
 #endif
-    ROW("json", "[1]", TOP_LEVEL, 0, 0),
-    ROW("json5", "[1]", TOP_LEVEL, 0, 0),
-    ROW("yaml", "- 1\n", TOP_LEVEL, 0, 0),
-    ROW("cbor", "\x81\x01", TOP_LEVEL, 0, 0),
-    ROW("json", "{\"a\":01}", NUMBER, 0, 0),
-    ROW("json5", "{\"a\":01}", NUMBER, 0, 0),
-    ROW("toml", "a = 01\n", NUMBER, 0, 0),
-    ROW("toml", "a = 9223372036854775808\n", NUMBER_RANGE, 0, 0),
-    ROW("cbor", "\xA1\x61\x61\x1B\x80\x00\x00\x00\x00\x00\x00\x00", NUMBER_RANGE, 0, 0),
-    ROW("toml", "a = 1\na = 2\n", DUPLICATE_KEY, 0, 0),
+    ROW("json", "[1]", TOP_LEVEL, 0, 0, 0),
+    ROW("json5", "[1]", TOP_LEVEL, 0, 0, 0),
+    ROW("yaml", "- 1\n", TOP_LEVEL, 0, 0, 0),
+    ROW("cbor", "\x81\x01", TOP_LEVEL, 0, 0, 0),
+    ROW("json", "{\"a\":01}", NUMBER, 0, 0, 5),
+    ROW("json5", "{\"a\":01}", NUMBER, 0, 0, 5),
+    ROW("toml", "a = 01\n", NUMBER, 0, 0, 4),
+    ROW("toml", "a = 9223372036854775808\n", NUMBER_RANGE, 0, 0, 4),
+    ROW("cbor", "\xA1\x61\x61\x1B\x80\x00\x00\x00\x00\x00\x00\x00", NUMBER_RANGE, 0, 0,
+        3),
+    ROW("toml", "a = 1\na = 2\n", DUPLICATE_KEY, 0, 0, 6),
 #if CF_WITH_XML
-    ROW("xml", "<a b=\"1\" b=\"2\"/>", DUPLICATE_KEY, 0, 0),
+    ROW("xml", "<a b=\"1\" b=\"2\"/>", DUPLICATE_KEY, 0, 0, 9),
 #endif
-    ROW("json", "{\"A\":1}", KEY, 0, 0),
-    ROW("json5", "{\"A\":1}", KEY, 0, 0),
-    ROW("toml", "A = 1\n", KEY, 0, 0),
-    ROW("yaml", "A: 1\n", KEY, 0, 0),
-    KEY_ROW("ini", "A=1\n", KEY, 0),
-    KEY_ROW("properties", "A=1\n", KEY, 0),
-    KEY_ROW("cbor", "\xA1\x61\x41\x01", KEY, 0),
+    ROW("json", "{\"A\":1}", KEY, 0, 0, 5),
+    ROW("json5", "{\"A\":1}", KEY, 0, 0, 5),
+    ROW("toml", "A = 1\n", KEY, 0, 0, 4),
+    ROW("yaml", "A: 1\n", KEY, 0, 0, 3),
+    KEY_ROW("ini", "A=1\n", KEY, 0, 0),
+    KEY_ROW("properties", "A=1\n", KEY, 0, 0),
+    KEY_ROW("cbor", "\xA1\x61\x41\x01", KEY, 0, 3),
 #if CF_WITH_XML
-    ROW("xml", "<a><B>1</B></a>", KEY, 0, 0),
+    ROW("xml", "<a><B>1</B></a>", KEY, 0, 0, 3),
 #endif
-    ROW("json", "{\"" KEY_LONG "\":1}", TOO_LONG, 0, 0),
-    ROW("json5", "{\"" KEY_LONG "\":1}", TOO_LONG, 0, 0),
-    ROW("toml", KEY_LONG " = 1\n", TOO_LONG, 0, 0),
-    KEY_ROW("ini", KEY_LONG "[1]=1\n", TOO_LONG, 0),
-    ROW("json", "{\"a\":\"\\q\"}", ESCAPE, 0, 0),
-    ROW("json5", "{\"a\":\"\\8\"}", ESCAPE, 0, 0),
-    ROW("toml", "a = \"\\q\"\n", ESCAPE, 0, 0),
-    YAML_ROW("a: \"\\q\"\n", ESCAPE),
-    ROW("properties", "a=\\u12\n", ESCAPE, 0, 0),
-    ROW("json", "{\"a\":\"\x01\"}", CONTROL, 0, 0),
-    ROW("json5", "{\"a\":\"\nx\"}", CONTROL, 0, 0),
-    ROW("toml", "a = \"\x01\"\n", CONTROL, 0, 0),
-    YAML_ROW("a: \"\x01\"\n", CONTROL),
-    YAML_ROW("#\0#", CONTROL),
+    ROW("json", "{\"" KEY_LONG "\":1}", TOO_LONG, 0, 0, CF_KEY_MAX + 1),
+    ROW("json5", "{\"" KEY_LONG "\":1}", TOO_LONG, 0, 0, CF_KEY_MAX + 1),
+    ROW("toml", KEY_LONG " = 1\n", TOO_LONG, 0, 0, CF_KEY_MAX - 1),
+    KEY_ROW("ini", KEY_LONG "[1]=1\n", TOO_LONG, 0, 0),
+    ROW("json", "{\"a\":\"\\q\"}", ESCAPE, 0, 0, 7),
+    ROW("json5", "{\"a\":\"\\8\"}", ESCAPE, 0, 0, 7),
+    ROW("toml", "a = \"\\q\"\n", ESCAPE, 0, 0, 6),
+    YAML_ROW("a: \"\\q\"\n", ESCAPE, 5),
+    ROW("properties", "a=\\u12\n", ESCAPE, 0, 0, 3),
+    ROW("json", "{\"a\":\"\x01\"}", CONTROL, 0, 0, 6),
+    ROW("json5", "{\"a\":\"\nx\"}", CONTROL, 0, 0, 6),
+    ROW("toml", "a = \"\x01\"\n", CONTROL, 0, 0, 5),
+    YAML_ROW("a: \"\x01\"\n", CONTROL, 4),
+    YAML_ROW("#\0#", CONTROL, 1),
     YAML_ROW("# a\x01"
              "b\n",
-             CONTROL),
-    YAML_ROW("a: 1 # x\x7f\n", CONTROL),
-    YAML_ROW("# c\x0b\r", CONTROL),
-    YAML_ROW("a: 1 # 0123456789abcdefghijk\x01lmnop\n", CONTROL),
-    YAML_ROW("a: 1\n# 0123456789abcdefghijklmnopqrstu\x7f\n", CONTROL),
-    ROW("toml", "a = 1\n[a]\n", STRUCTURE, 0, 0),
+             CONTROL, 3),
+    YAML_ROW("a: 1 # x\x7f\n", CONTROL, 8),
+    YAML_ROW("# c\x0b\r", CONTROL, 3),
+    YAML_ROW("a: 1 # 0123456789abcdefghijk\x01lmnop\n", CONTROL, 28),
+    YAML_ROW("a: 1\n# 0123456789abcdefghijklmnopqrstu\x7f\n", CONTROL, 38),
+    ROW("toml", "a = 1\n[a]\n", STRUCTURE, 0, 0, 6),
 #if CF_WITH_XML
-    ROW("xml", "<a x=\"1\"><x>2</x></a>", STRUCTURE, 0, 0),
+    ROW("xml", "<a x=\"1\"><x>2</x></a>", STRUCTURE, 0, 0, 9),
 #endif
-    ROW("cbor", "\xA1\x61\x61\x41\x61", UNSUPPORTED, 0, 0),
+    ROW("cbor", "\xA1\x61\x61\x41\x61", UNSUPPORTED, 0, 0, 3),
 #if CF_WITH_XML
-    ROW("xml", "<!DOCTYPE a><a/>", UNSUPPORTED, 0, 0),
+    ROW("xml", "<!DOCTYPE a><a/>", UNSUPPORTED, 0, 0, 0),
 #endif
-    ROW("yaml", "a: !foo 1\n", UNSUPPORTED, 0, 0),
-    ROW("json", "{\"a\" 1}", SYNTAX, 0, 0),
-    ROW("json5", "{\"a\" 1}", SYNTAX, 0, 0),
-    ROW("toml", "a 1\n", SYNTAX, 0, 0),
-    ROW("yaml", "a: b: c\n", SYNTAX, 0, 0),
-    ROW("ini", "a\n", SYNTAX, 0, 0),
-    ROW("cbor", "\xA1\x61\x61\x1C", SYNTAX, 0, 0),
+    ROW("yaml", "a: !foo 1\n", UNSUPPORTED, 0, 0, 3),
+    ROW("json", "{\"a\" 1}", SYNTAX, 0, 0, 5),
+    ROW("json5", "{\"a\" 1}", SYNTAX, 0, 0, 5),
+    ROW("toml", "a 1\n", SYNTAX, 0, 0, 2),
+    ROW("yaml", "a: b: c\n", SYNTAX, 0, 0, 3),
+    ROW("ini", "a\n", SYNTAX, 0, 0, 1),
+    ROW("cbor", "\xA1\x61\x61\x1C", SYNTAX, 0, 0, 3),
 #if CF_WITH_XML
-    ROW("xml", "<a></b>", SYNTAX, 0, 0),
+    ROW("xml", "<a></b>", SYNTAX, 0, 0, 3),
 #endif
 };
 
@@ -345,6 +355,9 @@ static void check_row(const reason_row* row, const cf_error* err) {
     if (row->col != 0) {
         check(err->where.col == row->col, "the refusal's expected column");
     }
+    sprintf(message, "%s %s: byte offset %ld, expected %ld", row->format,
+            cf_reason_name(row->reason), (long)err->offset, (long)row->offset);
+    check(err->offset == row->offset, message);
 }
 
 static int refuse_row(const reason_row* row) {
@@ -432,6 +445,11 @@ static unsigned test_depth(const char* only) {
             strcat(doc, depth[i].close);
         }
         row.n = strlen(doc);
+        /* The first byte of the nest that is one too deep; XML has none. */
+        row.offset =
+            (strcmp(row.format, "xml") == 0)
+                ? NOOFF
+                : strlen(depth[i].prefix) + CF_MAX_DEPTH * strlen(depth[i].open);
         count += (unsigned)refuse_row(&row);
     }
     return count;

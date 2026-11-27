@@ -4771,7 +4771,17 @@ form a program can test rather than read:
 **Status.** Decided, 2026-11-19.
 
 Built: A-10. `where` holds line and column; the byte offset D-107 first
-named stays in the message.
+named stays in the message until D-138, which builds it.
+
+## D-138 — A refusal's byte offset (K-6a)
+
+D-107 named the byte offset and left it in the message. D-223 gives `cf_error` its place, so the offset joins it once, as a number a program reads:
+
+* `size_t offset;` after `reason` in `cf_error`, `(size_t)-1` when the reader has none (`CF_ERROR_INIT` and `cf_error_set` set it so). Added through `size` as D-51 adds members: written and copied only where `size` reaches it.
+* `CF_EXPERIMENTAL(2, 0) cf_error_place_at(e, reason, line, col, offset)` fills it; `cf_error_place` is the same with no offset. Internally `cf_text_fail_at` is `cf_text_fail` with an offset.
+* The offset is the index, from 0 from the first byte of the input (a byte order mark included), of the byte the column names: the same pointer as `col` in the text readers, the item's start (the number its message names) in CBOR and TLV, expat's byte index in XML. A refusal from the sink, and YAML's document and alias events, have none: `(size_t)-1`.
+* Experimental in 2.0, not 1.9 as the card said: the tree is 2.0.0 and `gate.abi` refuses a name experimental since 1.9 (D-89).
+* Rejected: the offset inside `cf_loc` (every `cf_loc` grows: an ABI change in 1.x); `cf_error_offset()` parsing the message (a message is not an interface).
 
 ## D-108 — Every text is UTF-8 inside; another encoding only by name
 

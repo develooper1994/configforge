@@ -192,6 +192,13 @@ CF_NODISCARD CF_API cf_bool cf_text_fail(cf_error* err, cf_code code, const char
                                          unsigned int line, unsigned int col,
                                          int reason, const char* fmt, ...);
 
+/* As cf_text_fail, and the byte offset of the cause in the input, from 0
+   ((size_t)-1 when the caller has none): what cf_error_place_at stores. */
+CF_NODISCARD CF_API cf_bool cf_text_fail_at(cf_error* err, cf_code code,
+                                            const char* file, unsigned int line,
+                                            unsigned int col, size_t offset, int reason,
+                                            const char* fmt, ...);
+
 /* The ECMAScript 5.1 whitespace and line terminators beyond the basic
    ASCII spaces and CR/LF, including VT, FF, U+2028 and U+2029. */
 CF_NODISCARD CF_API cf_bool cf_text_is_ecma_space(cf_u32 cp);

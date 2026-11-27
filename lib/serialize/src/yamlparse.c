@@ -43,6 +43,7 @@ typedef struct yp_tagdef {
 typedef struct yp {
     const char*         p;
     const char*         end;
+    const char*         begin; /* the input's first byte, for an offset */
     cf_text_track       tr;
     const char*         file;
     cf_error*           err;
@@ -94,8 +95,8 @@ static cf_bool yp_fail_at(yp* y, const char* q, int reason, const char* what) {
     if (q < y->tr.line_start || q > y->end) {
         q = y->p;
     }
-    return cf_text_fail(y->err, CF_E_SOURCE, y->file, y->tr.line, yp_col(y, q), reason,
-                        "%s", what);
+    return cf_text_fail_at(y->err, CF_E_SOURCE, y->file, y->tr.line, yp_col(y, q),
+                           (size_t)(q - y->begin), reason, "%s", what);
 }
 
 static cf_bool yp_fail(yp* y, int reason, const char* what) {
@@ -264,8 +265,12 @@ static cf_bool yp_emit(yp* y, int kind, const yp_props* pr, const char* text, si
     if (pr != NULL && pr->at != NULL && kind != CF_YP_END) {
         at = pr->at;
     }
+    if (!(at >= y->tr.line_start && at <= y->end)) {
+        at = y->p;
+    }
     node.line = y->tr.line;
-    node.col  = yp_col(y, (at >= y->tr.line_start && at <= y->end) ? at : y->p);
+    node.col  = yp_col(y, at);
+    node.off  = (size_t)(at - y->begin);
     return y->ev->node(y->ev->ctx, &node);
 }
 
@@ -1570,8 +1575,9 @@ cf_bool cf_yaml_parse(const cf_blob* in, const char* file, const cf_yp_events* e
     yp y;
 
     memset(&y, 0, sizeof y);
-    y.p   = in->p;
-    y.end = in->p + in->n;
+    y.p     = in->p;
+    y.begin = in->p;
+    y.end   = in->p + in->n;
     cf_text_track_init(&y.tr, in->p);
     y.file = file;
     y.err  = err;

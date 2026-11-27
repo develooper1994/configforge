@@ -24,8 +24,9 @@ import re
 import sys
 
 WORDS = ("nothrow", "strong", "basic")
-START = re.compile(r"^\s*(CF_NODISCARD\s+)?CF_API\b")
-DECL = re.compile(r"CF_API\s+(.*?)\b([A-Za-z_]\w*)\s*\(", re.DOTALL)
+API = r"(?:CF_API|CF_EXPERIMENTAL\(\d+,\s*\d+\))"
+START = re.compile(r"^\s*(CF_NODISCARD\s+)?" + API + r"(?!\w)")
+DECL = re.compile(API + r"\s+(.*?)\b([A-Za-z_]\w*)\s*\(", re.DOTALL)
 LINE = re.compile(r"Guarantee:\s*([^.\s]*)")
 BEGIN = "<!-- guarantees:begin -->"
 END = "<!-- guarantees:end -->"
@@ -141,7 +142,7 @@ def declarations(root):
             m = START.match(line)
             if not m:
                 continue
-            text = line[line.index("CF_API") :]
+            text = line[re.search(API, line).start() :]
             j = i
             while "(" not in text and j + 1 < len(lines):
                 j += 1

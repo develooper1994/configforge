@@ -40,6 +40,7 @@ typedef struct cf_yp_node {
     const char* anchor; /* in the document, or NULL */
     size_t      alen;
     unsigned    line, col; /* 1-based */
+    size_t      off;       /* the byte offset of the node, from 0 */
 } cf_yp_node;
 
 typedef struct cf_yp_events {

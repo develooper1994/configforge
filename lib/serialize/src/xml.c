@@ -131,6 +131,13 @@ typedef struct xml_scan {
     cf_loc        at;
 } xml_scan;
 
+/* Where expat is, in bytes from the input's start, or (size_t)-1. */
+static size_t xml_offset(XML_Parser parser) {
+    XML_Index at = XML_GetCurrentByteIndex(parser);
+
+    return (at < 0) ? (size_t)-1 : (size_t)at;
+}
+
 /* Record the first failure and stop the parser. */
 static void xml_fail(xml_scan* s, int reason, const char* message, const char* name) {
     char what[CF_MESSAGE_MAX];
@@ -141,9 +148,10 @@ static void xml_fail(xml_scan* s, int reason, const char* message, const char* n
     s->failed = CF_TRUE;
     cf_fmt(what, sizeof what, "%s%s%s%s", message, (name != NULL) ? " (" : "",
            (name != NULL) ? name : "", (name != NULL) ? ")" : "");
-    cf_text_fail(
-        s->err, CF_E_SOURCE, s->file, (unsigned int)XML_GetCurrentLineNumber(s->parser),
-        (unsigned int)XML_GetCurrentColumnNumber(s->parser) + 1u, reason, "%s", what);
+    cf_text_fail_at(s->err, CF_E_SOURCE, s->file,
+                    (unsigned int)XML_GetCurrentLineNumber(s->parser),
+                    (unsigned int)XML_GetCurrentColumnNumber(s->parser) + 1u,
+                    xml_offset(s->parser), reason, "%s", what);
     XML_StopParser(s->parser, XML_FALSE);
 }
 
@@ -618,10 +626,10 @@ static cf_bool xml_run(xml_scan* s, const cf_blob* in) {
             break;
         }
         s->failed = CF_TRUE;
-        cf_text_fail(s->err, CF_E_SOURCE, s->file,
-                     (unsigned int)XML_GetCurrentLineNumber(s->parser),
-                     (unsigned int)XML_GetCurrentColumnNumber(s->parser) + 1u, reason,
-                     "%s", XML_ErrorString(code));
+        cf_text_fail_at(s->err, CF_E_SOURCE, s->file,
+                        (unsigned int)XML_GetCurrentLineNumber(s->parser),
+                        (unsigned int)XML_GetCurrentColumnNumber(s->parser) + 1u,
+                        xml_offset(s->parser), reason, "%s", XML_ErrorString(code));
     }
     return s->failed ? CF_FALSE : CF_TRUE;
 }

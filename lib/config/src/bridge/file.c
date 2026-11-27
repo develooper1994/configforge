@@ -384,6 +384,7 @@ static void file_hint(file_state* st, const cf_codec* tried, const cf_blob* blob
     int             code   = st->err.code;
     int             reason = st->err.reason;
     cf_loc          where  = st->err.where;
+    size_t          offset = st->err.offset;
 
     if (st->codec != NULL || (tried->caps & CF_CODEC_NAMED_ONLY) != 0) {
         return; /* the program chose this reader: no second opinion */
@@ -398,7 +399,7 @@ static void file_hint(file_state* st, const cf_codec* tried, const cf_blob* blob
     cf_error_set(&st->err, (cf_code)code, key[0] != '\0' ? key : NULL,
                  source[0] != '\0' ? source : NULL, "%s (the content looks like %s)",
                  message, like->name);
-    cf_error_place(&st->err, reason, where.line, where.col);
+    cf_error_place_at(&st->err, reason, where.line, where.col, offset);
 }
 
 static cf_bool file_load(const cf_source* s, cf_keyspace* ks) {

@@ -91,7 +91,7 @@ static cf_bool cbor_has_work(const cf_doc_sink* o) {
 static cf_bool cbor_fail(cbor_scan* s, size_t off, int reason, const char* what) {
     cf_error_set(s->err, CF_E_SOURCE, NULL, s->name, "%s, byte %zu: %s", s->name, off,
                  what);
-    cf_error_place(s->err, reason, 0, 0);
+    cf_error_place_at(s->err, reason, 0, 0, off);
     return CF_FALSE;
 }
 
@@ -160,7 +160,7 @@ static cf_bool cbor_head_read(cbor_scan* s, cbor_head* h) {
                      "%s, byte %zu: not well-formed: additional information %u "
                      "is reserved",
                      s->name, h->off, h->info);
-        cf_error_place(s->err, CF_REASON_SYNTAX, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_SYNTAX, 0, 0, h->off);
         return CF_FALSE;
     }
     if (h->major == 7) {
@@ -172,7 +172,7 @@ static cf_bool cbor_head_read(cbor_scan* s, cbor_head* h) {
                      "%s, byte %zu: not well-formed: major type %u has no "
                      "indefinite length",
                      s->name, h->off, h->major);
-        cf_error_place(s->err, CF_REASON_SYNTAX, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_SYNTAX, 0, 0, h->off);
         return CF_FALSE;
     }
     h->indef = CF_TRUE;
@@ -194,7 +194,7 @@ static cf_bool cbor_refused(cbor_scan* s, size_t off, const char* name, size_t n
     }
     cf_error_set(s->err, CF_E_KEY, NULL, s->name,
                  "%s, byte %zu: '%S' is not a valid key", s->name, off, name, nlen);
-    cf_error_place(s->err, CF_REASON_KEY, 0, 0);
+    cf_error_place_at(s->err, CF_REASON_KEY, 0, 0, off);
     return CF_FALSE;
 }
 
@@ -217,7 +217,7 @@ static cf_bool cbor_definite(cbor_scan* s, const cbor_head* h, const char** p,
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s, byte %zu: a length of %U, and %zu bytes are left", s->name,
                      h->off, h->arg, cbor_left(s));
-        cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_TRUNCATED, 0, 0, h->off);
         return CF_FALSE;
     }
     *n = (size_t)h->arg;
@@ -374,7 +374,7 @@ static cf_bool cbor_enter(cbor_scan* s, size_t start) {
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s, byte %zu: nests deeper than %d levels", s->name, start,
                      (int)CF_MAX_DEPTH);
-        cf_error_place(s->err, CF_REASON_DEPTH, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_DEPTH, 0, 0, start);
         return CF_FALSE;
     }
     return CF_TRUE;
@@ -411,7 +411,7 @@ static cf_bool cbor_key(cbor_scan* s, const char** key, size_t* klen) {
                  "%s, byte %zu: a map key that is %s, which a configuration "
                  "does not hold",
                  s->name, h.off, cbor_kind(h.major, h.info));
-    cf_error_place(s->err, CF_REASON_KEY, 0, 0);
+    cf_error_place_at(s->err, CF_REASON_KEY, 0, 0, h.off);
     return CF_FALSE;
 }
 
@@ -424,7 +424,7 @@ static cf_bool cbor_map(cbor_scan* s, const cbor_head* h, size_t start,
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s, byte %zu: a map of %U pairs, and %zu bytes are left", s->name,
                      h->off, h->arg, cbor_left(s));
-        cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_TRUNCATED, 0, 0, h->off);
         return CF_FALSE;
     }
     if (!cbor_enter(s, start)) {
@@ -481,7 +481,7 @@ static cf_bool cbor_array(cbor_scan* s, const cbor_head* h, size_t start,
         cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                      "%s, byte %zu: an array of %U items, and %zu bytes are left",
                      s->name, h->off, h->arg, cbor_left(s));
-        cf_error_place(s->err, CF_REASON_TRUNCATED, 0, 0);
+        cf_error_place_at(s->err, CF_REASON_TRUNCATED, 0, 0, h->off);
         return CF_FALSE;
     }
     if (!cbor_enter(s, start)) {
@@ -570,7 +570,7 @@ static cf_bool cbor_value(cbor_scan* s, const cbor_head* h, size_t start,
                  "%s, byte %zu: simple value %u, which a configuration does not "
                  "hold",
                  s->name, h->off, (unsigned)h->arg);
-    cf_error_place(s->err, CF_REASON_UNSUPPORTED, 0, 0);
+    cf_error_place_at(s->err, CF_REASON_UNSUPPORTED, 0, 0, h->off);
     return CF_FALSE;
 }
 
@@ -601,7 +601,7 @@ static cf_bool cbor_item(cbor_scan* s, const char* name, size_t nlen) {
             cf_error_set(s->err, CF_E_SOURCE, NULL, s->name,
                          "%s, byte %zu: tag %U holds a tag, and must hold %s", s->name,
                          h.off, tag, (tag == 1u) ? "a number" : "a text string");
-            cf_error_place(s->err, CF_REASON_SYNTAX, 0, 0);
+            cf_error_place_at(s->err, CF_REASON_SYNTAX, 0, 0, h.off);
             return CF_FALSE;
         }
         if (h.arg != 0 && h.arg != 1u && h.arg != 32u) {
@@ -609,7 +609,7 @@ static cf_bool cbor_item(cbor_scan* s, const char* name, size_t nlen) {
                          "%s, byte %zu: tag %U, which this reader does not read: "
                          "it reads tags 0, 1, 32 and 55799",
                          s->name, h.off, h.arg);
-            cf_error_place(s->err, CF_REASON_UNSUPPORTED, 0, 0);
+            cf_error_place_at(s->err, CF_REASON_UNSUPPORTED, 0, 0, h.off);
             return CF_FALSE;
         }
         tagged = CF_TRUE;
@@ -636,7 +636,7 @@ static cf_bool cbor_item(cbor_scan* s, const char* name, size_t nlen) {
                          "%s, byte %zu: tag %U holds %s, and must hold %s", s->name,
                          h.off, tag, cbor_kind(h.major, h.info),
                          (tag == 1u) ? "a number" : "a text string");
-            cf_error_place(s->err, CF_REASON_SYNTAX, 0, 0);
+            cf_error_place_at(s->err, CF_REASON_SYNTAX, 0, 0, h.off);
             return CF_FALSE;
         }
     }
@@ -658,7 +658,7 @@ static cf_bool cbor_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     if (s.p == s.end) {
         cf_error_set(err, CF_E_SOURCE, NULL, s.name, "%s: the document is empty",
                      s.name);
-        cf_error_place(err, CF_REASON_EMPTY, 0, 0);
+        cf_error_place_at(err, CF_REASON_EMPTY, 0, 0, 0);
         return CF_FALSE;
     }
     /* The top: a map, after any number of 55799 tags. No byte order mark
@@ -682,7 +682,7 @@ static cf_bool cbor_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
                      "%s, byte %zu: a configuration is a map at the top, and "
                      "this is %s",
                      s.name, h.off, cbor_kind(h.major, h.info));
-        cf_error_place(err, CF_REASON_TOP_LEVEL, 0, 0);
+        cf_error_place_at(err, CF_REASON_TOP_LEVEL, 0, 0, h.off);
         return CF_FALSE;
     }
     if (!cbor_map(&s, &h, 0, NULL, 0)) {

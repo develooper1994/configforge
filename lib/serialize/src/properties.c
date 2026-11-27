@@ -45,11 +45,12 @@ typedef struct prop_scan {
     const char*   file;
     cf_text_track tr;
     cf_error*     err;
+    const char*   begin; /* the input's first byte, for an offset */
 } prop_scan;
 
 static cf_bool prop_fail(prop_scan* s, int reason, const char* what) {
-    return cf_text_fail(s->err, CF_E_SOURCE, s->file, s->tr.line, 0, reason, "%s",
-                        what);
+    return cf_text_fail_at(s->err, CF_E_SOURCE, s->file, s->tr.line, 0,
+                           (size_t)(s->p - s->begin), reason, "%s", what);
 }
 
 /* The end of the physical line at s->p, without moving. */
@@ -161,9 +162,10 @@ static cf_bool prop_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
     char val[CF_PATH_MAX * 2];
 
     /* A byte order mark is not part of the first key. */
-    s.p    = in->p + cf_blob_skip_bom(in);
-    s.end  = in->p + in->n;
-    s.file = (in->name != NULL) ? in->name : "<properties>";
+    s.p     = in->p + cf_blob_skip_bom(in);
+    s.begin = in->p;
+    s.end   = in->p + in->n;
+    s.file  = (in->name != NULL) ? in->name : "<properties>";
     cf_text_track_init(&s.tr, s.p);
     s.err = err;
 
@@ -178,6 +180,7 @@ static cf_bool prop_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
         unsigned int col;
         cf_value     v;
         cf_loc       at;
+        const char*  kstart;
 
         s.p = cf_text_blanks(CF_BLANK_PROP, s.p, s.end);
         if (s.p >= s.end) {
@@ -191,8 +194,9 @@ static cf_bool prop_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
             s.p = prop_eol(&s);
             continue;
         }
-        line = s.tr.line;
-        col  = cf_text_track_col(&s.tr, s.p);
+        line   = s.tr.line;
+        col    = cf_text_track_col(&s.tr, s.p);
+        kstart = s.p;
         if (!prop_element(&s, CF_TRUE, key, sizeof key, &klen)) {
             return CF_FALSE;
         }
@@ -206,16 +210,18 @@ static cf_bool prop_decode(const cf_blob* in, const cf_doc_sink* out, cf_error* 
             return CF_FALSE;
         }
         if (klen == 0) {
-            return cf_text_fail(err, CF_E_SOURCE, s.file, line, 0, CF_REASON_KEY,
-                                "empty key");
+            return cf_text_fail_at(err, CF_E_SOURCE, s.file, line, 0,
+                                   (size_t)(kstart - s.begin), CF_REASON_KEY,
+                                   "empty key");
         }
         at.file = s.file;
         at.line = line;
         at.col  = col;
         cf_value_text(&v, val, vlen);
         if (!out->scalar(out->ctx, key, klen, &v, CF_TRUE, &at)) {
-            return cf_text_fail(err, CF_E_KEY, s.file, line, 0, CF_REASON_KEY,
-                                "'%S' is not a valid key", key, klen);
+            return cf_text_fail_at(err, CF_E_KEY, s.file, line, 0,
+                                   (size_t)(kstart - s.begin), CF_REASON_KEY,
+                                   "'%S' is not a valid key", key, klen);
         }
     }
     out->end(out->ctx);

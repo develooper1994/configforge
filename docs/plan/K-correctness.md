@@ -383,7 +383,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **size**: medium
 * **version**: 2.0.0
 * **status**: open
-* **decided**: (D-223, the one error model, which `cf_error` takes once: K-9c adds the chain, this card adds the offset) every codec reports through `cf_text_fail` (`lib/text/src/fail.c`) or `cf_error_place` (`lib/base/include/configforge/cf_error.h:123-124`) with a line and a column; the offset is added at the same call sites, as `(size_t)(s->p - in->p)` where the scan has both pointers (CBOR and TLV: their own `off`). **Compatibility**: additive through `size` (D-51; `cf_error.h:51-62`), as `where` and `reason` were added in 1.8.
+* **decided**: (D-223, the one error model, which `cf_error` takes once: K-9c adds the chain, this card adds the offset) every codec reports through `cf_text_fail` (`lib/text/src/fail.c`) or `cf_error_place` (`lib/base/include/configforge/cf_error.h:139-140`) with a line and a column; the offset is added at the same call sites, as `(size_t)(s->p - in->p)` where the scan has both pointers (CBOR and TLV: their own `off`). **Compatibility**: additive through `size` (D-51; `cf_error.h:51-62`), as `where` and `reason` were added in 1.8.
 * **Decided** (the shape of a new public member of `cf_error`; D-223 point 2 gives `cf_error` its place, so the offset joins it once): `size_t offset;` after `reason`, `(size_t)-1` when unknown, filled through a new `CF_EXPERIMENTAL(1, 9) void cf_error_place_at(cf_error*, int reason, unsigned line, unsigned col, size_t offset)` and read directly (`CF_ERROR_INIT`, `cf_error.h:73`, gains a member; it is fenced from the formatter for that reason). Experimental in 1.9 as N-13's `cf_reason_severity` is: one function and one member; `gate.abi` gets the function. **Rejected**: the offset inside `cf_loc` (every `cf_loc` grows, an ABI change in 1.x); `cf_error_offset(const cf_error*)` parsing the message (a message is not an interface).
 * **files**: `lib/base/include/configforge/cf_error.h`, `lib/base/src/error.c`, `lib/text/src/fail.c`, `lib/serialize/src/cbor.c`, `lib/serialize/src/tlv.c`, `lib/serialize/src/{json,toml,yamlparse,ini,xml,properties}.c` (each call site that has a pointer into the input), `lib/config/tests/test_reason.c`; last: `docs/Decisions.md` (D-138), `docs/API.md` and `docs/Codemap.md` (generated), `CHANGELOG.md`, `docs/Roadmap.md`.
 * **steps**:
@@ -398,6 +398,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added" (experimental in 1.9); D-138; the Roadmap item "One diagnostic model across formats" stays 🟨 until K-6b.
 
 * **Organiser's answers**:
+  * 2026-11-27, the worker: `cf_error_place_at` is `CF_EXPERIMENTAL(2, 0)`, not (1, 9): gate.abi refuses a 1.9 experimental name in a 2.0.0 tree (the maintainer's standing approval, 2026-11-27).
   * 2026-11-27, the organiser: K-6a follows D-223 (one error model): option A of the recommendation, the offset a member of `cf_error` beside the place D-223 point 2 names (the maintainer's standing approval, 2026-11-27).
 
 ## K-6b - A refusal's reason shown by the tools

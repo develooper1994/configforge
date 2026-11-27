@@ -12,6 +12,7 @@
 
 #define ERROR_SIZE_1_7 offsetof(cf_error, where)
 #define ERROR_SIZE_1_8 (offsetof(cf_error, reason) + sizeof(int))
+#define ERROR_SIZE_2_0 (offsetof(cf_error, offset) + sizeof(size_t))
 
 const char* cf_code_name(cf_code c) {
     switch (c) {
@@ -95,13 +96,21 @@ const char* cf_reason_description(int reason) {
     return "unknown";
 }
 
-void cf_error_place(cf_error* e, int reason, unsigned int line, unsigned int col) {
+void cf_error_place_at(cf_error* e, int reason, unsigned int line, unsigned int col,
+                       size_t offset) {
     if (e != NULL && e->size >= ERROR_SIZE_1_8) {
         e->where.file = NULL;
         e->where.line = line;
         e->where.col  = col;
         e->reason     = reason;
+        if (e->size >= ERROR_SIZE_2_0) {
+            e->offset = offset;
+        }
     }
+}
+
+void cf_error_place(cf_error* e, int reason, unsigned int line, unsigned int col) {
+    cf_error_place_at(e, reason, line, col, (size_t)-1);
 }
 
 void cf_error_clear(cf_error* e) {
@@ -127,7 +136,8 @@ void cf_error_copy(cf_error* dst, const cf_error* src) {
     memcpy(dst->message, src->message, sizeof dst->message);
     if (dst->size >= ERROR_SIZE_1_8) {
         if (src->size >= ERROR_SIZE_1_8) {
-            cf_error_place(dst, src->reason, src->where.line, src->where.col);
+            cf_error_place_at(dst, src->reason, src->where.line, src->where.col,
+                              (src->size >= ERROR_SIZE_2_0) ? src->offset : (size_t)-1);
         } else {
             cf_error_place(dst, CF_REASON_NONE, 0, 0);
         }

@@ -106,6 +106,7 @@ cf_text_eol
 cf_text_esc_decode
 cf_text_escape
 cf_text_fail
+cf_text_fail_at
 cf_text_hash
 cf_text_hex_value
 cf_text_is_ecma_space
