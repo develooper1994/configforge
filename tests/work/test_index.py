@@ -107,6 +107,23 @@ def main():
         rc, out = run(script, root, "--check")
         assert rc == 0, out
 
+        # --archive: the done card leaves its file for Done.md, once
+        rc, out = run(script, root, "--archive")
+        assert rc == 0 and "A-1" in out, (rc, out)
+        text = (root / "docs/plan/A-first.md").read_text(encoding="utf-8")
+        assert "## A-1 - " not in text and "## A-2 - " in text, text
+        done = (root / "docs/plan/Done.md").read_text(encoding="utf-8")
+        assert "| A-1 | First | abc1234 | A-first.md |" in done, done
+        rows = table(root).splitlines()
+        assert not any("A-1 First" in row for row in rows), rows
+        assert "| A-2 Second | 1.9.0 | small | A-1 | open |" in " ".join(rows).replace("| 2 ", "| ")
+        rc, out = run(script, root, "--check")
+        assert rc == 0, out
+        before = {p.name: p.read_bytes() for p in (root / "docs").rglob("*.md")}
+        rc, out = run(script, root, "--archive")
+        assert rc == 0 and "archived 0" in out, (rc, out)
+        assert before == {p.name: p.read_bytes() for p in (root / "docs").rglob("*.md")}
+
         # a card that cannot be found
         rc, out = run(script, root, "--done", "Q-1", "abc1234")
         assert rc == 1 and "Q-1" in out, (rc, out)

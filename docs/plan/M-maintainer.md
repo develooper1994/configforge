@@ -496,31 +496,6 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: a mode is slower than the event read on its own document and the card cannot say why: write the number down anyway; it is a finding, not a stop. Stop only if a cell cannot be built.
 * **docs**: `CHANGELOG.md` under "## 2.0.0 — unreleased", "### Added": "the table of ways to read each format, and a benchmark cell for each". `docs/Roadmap.md`: "**Ways to read: DOM, SAX, lazy, in-situ.**" (line 1235) to 🟩.
 
-## M-18 - OSS-Fuzz: the project files in the repository
-
-* **id**: M-18 (version 1.9.0)
-* **goal**: `oss-fuzz/` holds the three files OSS-Fuzz asks of a project (`project.yaml`, `Dockerfile`, `build.sh`) so that its builder produces the same harnesses ClusterFuzzLite builds, and a `gate.ossfuzz` test checks them, so M-19-m is only an application.
-* **why**: "an application to the project, with the existing fuzz targets and their build script" (`docs/Roadmap.md:1356-1360`); the harnesses and the build already exist (`.clusterfuzzlite/build.sh`, `tests/fuzz/CMakeLists.txt:25-40`).
-* **needs**: nothing
-* **size**: small
-* **version**: 1.9.0
-* **status**: done (83264b0)
-* **decided**:
-  * `oss-fuzz/project.yaml`: `homepage: "https://github.com/develooper1994/configforge"`, `language: c`, `primary_contact: "TO BE FILLED BY THE MAINTAINER"` (the one field an agent cannot know: **the card leaves it as that literal and `gate.ossfuzz` fails on it only when `OSSFUZZ_APPLY=1`**), `main_repo: "https://github.com/develooper1994/configforge"`, `sanitizers: [address, undefined]`, `architectures: [x86_64]`, `fuzzing_engines: [libfuzzer, afl, honggfuzz]`, `vendor_ccs: []`. A `primary_contact` is not an agent's to invent.
-  * `oss-fuzz/Dockerfile`: `FROM gcr.io/oss-fuzz-base/base-builder`, `RUN apt-get update && apt-get install -y cmake`, `RUN git clone --depth 1 https://github.com/develooper1994/configforge $SRC/configforge`, `WORKDIR $SRC/configforge`, `COPY build.sh $SRC/`.
-  * `oss-fuzz/build.sh`: the body of `.clusterfuzzlite/build.sh` (read it whole: it is 25 lines) with `$SRC/configforge` unchanged and the sanitizer flags taken from `$CFLAGS` as it does; the card does not duplicate it: `.clusterfuzzlite/build.sh` becomes `exec "$SRC/configforge/oss-fuzz/build.sh"`'s shared part, i.e. the common body moves to `scripts/fuzz/build_harnesses.sh`, and both files call it (one place, the project's rule against duplication).
-  * `gate.ossfuzz` (`tests/CMakeLists.txt`, a CMake script test `tests/fuzz/check_ossfuzz.cmake`): `project.yaml` has each key above; the Dockerfile has the three lines; `build.sh` calls the shared script; with `OSSFUZZ_APPLY` unset the contact placeholder passes.
-* **Organiser's answers** (2026-11-27, the organiser, under the maintainer's standing approval): approval only; the contact field stays the placeholder the card names until M-19-m, which needs the maintainer's own account (the maintainer's standing approval, 2026-11-27).
-* **files**: `oss-fuzz/project.yaml`, `oss-fuzz/Dockerfile`, `oss-fuzz/build.sh`, `scripts/fuzz/build_harnesses.sh`, `.clusterfuzzlite/build.sh`, `tests/fuzz/check_ossfuzz.cmake`, `tests/CMakeLists.txt`; last: `CHANGELOG.md`, `docs/Roadmap.md`.
-* **steps**:
-  1. `git switch -c work/M-18`. Write `check_ossfuzz.cmake` and the `gate.ossfuzz` entry; it fails (no files).
-  2. Create the shared script from `.clusterfuzzlite/build.sh`; make that file call it; run the cflite harness build locally if Docker is present (`python3 infra/helper.py` is OSS-Fuzz's, not here: skip) and otherwise `bash -n` both scripts and run `scripts/fuzz/build_harnesses.sh` in a temp dir with `OUT` set and `CC=clang` to see `fuzz_json` appear in `$OUT`.
-  3. Create the three `oss-fuzz/` files; `ctest -R gate.ossfuzz` exit 0.
-  4. Format (shell and cmake files are not clang-formatted), ACCEPT.
-* **accept**: the standard ACCEPT; `ctest -R gate.ossfuzz` exit 0; the `cflite` workflow (`.github/workflows/cflite.yml`) still builds its harnesses on the pull request.
-* **stop if**: the shared script cannot be used by both builders (a variable only one sets): keep two scripts and say so under notes.
-* **docs**: `CHANGELOG.md` under "## 1.9.0 — unreleased", "### Added": "OSS-Fuzz project files". `docs/Roadmap.md`: the item "**OSS-Fuzz.**" (line 1356) stays ⬜ (the application is M-19-m); add nothing.
-
 ## M-19-m - OSS-Fuzz: the application (parked)
 
 * **id**: M-19-m (version 1.9.0)

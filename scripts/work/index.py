@@ -68,6 +68,68 @@ def read_cards(root, errors):
     return cards
 
 
+DONE_FILE = "docs/plan/Done.md"
+DONE_INTRO = [
+    "# Done",
+    "",
+    "Cards that landed, one line each; the card's full text is in git at the"
+    " commit before it was archived: `git show <archive commit>^:docs/plan/<file>`."
+    " `python scripts/work/index.py --archive` adds the cards that are done.",
+    "",
+    "| id | goal | landed | file |",
+    "| -- | ---- | ------ | ---- |",
+]
+DONE_ROW = re.compile(rf"^\| ({ID}) \|")
+
+
+def archived(root):
+    """The ids listed in docs/plan/Done.md: landed, and no longer cards."""
+    path = root / DONE_FILE
+    if not path.exists():
+        return set()
+    return {m[1] for line in read_lines(path) if (m := DONE_ROW.match(line))}
+
+
+def archive(root):
+    """Move every done card into Done.md; return the ids moved."""
+    done_path = root / DONE_FILE
+    rows = read_lines(done_path) if done_path.exists() else list(DONE_INTRO)
+    moved = []
+    for path in sorted((root / "docs/plan").glob("*.md")):
+        if path.name in ("Layout.md", "A-architecture.md", "worker-notes.md", "Done.md"):
+            continue
+        lines = read_lines(path)
+        drop = []
+        for _, start, end in sections(lines):
+            match = CARD.match(lines[start])
+            if not match or match[1].startswith("D-"):
+                continue
+            status = next(
+                (
+                    f[2]
+                    for line in lines[start + 1 : end]
+                    if (f := FIELD.match(line)) and f[1] == "status"
+                ),
+                "",
+            )
+            hash_ = re.match(r"^done \(([0-9A-Za-z]+)\)$", status)
+            if not hash_:
+                continue
+            goal = re.sub(r"(?<!\\)\|", r"\\|", match[2])
+            rows.append(f"| {match[1]} | {goal} | {hash_[1]} | {path.name} |")
+            moved.append(match[1])
+            drop.append((start, end))
+        for start, end in reversed(drop):
+            del lines[start:end]
+        if drop:
+            while lines and not lines[-1].strip():
+                lines.pop()
+            write_lines(path, lines)
+    if moved:
+        write_lines(done_path, rows)
+    return moved
+
+
 def layout_order(root, cards):
     order = []
     text = (root / "docs/plan/Layout.md").read_text(encoding="utf-8")
@@ -111,6 +173,7 @@ def build(root):
     cards = read_cards(root, errors)
     order = layout_order(root, cards)
     subjects = landed(root)
+    gone = archived(root)
     for card_id, card in cards.items():
         if card["version"] is None or not VERSION.match(card["version"]):
             what = (
@@ -131,6 +194,7 @@ def build(root):
         for need in card["needs"]:
             if (
                 need not in cards
+                and need not in gone
                 and subjects is not None
                 and not any(s.startswith(f"{need}: ") for s in subjects)
             ):
@@ -186,6 +250,7 @@ def main():
     parser.add_argument("--root", type=Path, default=ROOT)
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--check", action="store_true")
+    mode.add_argument("--archive", action="store_true")
     mode.add_argument("--done", nargs=2, metavar=("ID", "HASH"))
     args = parser.parse_args()
     root = args.root.resolve()
@@ -209,6 +274,10 @@ def main():
         except ValueError as error:
             print(error)
             return 1
+
+    if args.archive:
+        moved = archive(root)
+        print(f"archived {len(moved)} card(s): " + ", ".join(moved))
 
     table, errors = build(root)
     if errors:
