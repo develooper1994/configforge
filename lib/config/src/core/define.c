@@ -269,8 +269,10 @@ static cf_bool def_check(const cf_def* d, cf_error* err) {
         return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
                             "list default needs has_default and its element values");
     }
-    if (d->list_default_count > (size_t)-1 / sizeof(cf_value) ||
-        (cf_u64)d->list_default_count > (cf_u64)CF_I64_MAX) {
+    /* A count no larger than SIZE_MAX / sizeof(cf_value) is also within
+     * CF_I64_MAX (a cf_value is two bytes or more); a second test says
+     * "always false" to -Wtype-limits where size_t is 32 bits. */
+    if (d->list_default_count > (size_t)-1 / sizeof(cf_value)) {
         return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
                             "list default is too large");
     }

@@ -1090,7 +1090,7 @@ CF_API cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_define` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L391).
+Implementation: [`cf_define` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L393).
 
 Copies the descriptor. Rejects a definition that contradicts itself:
 a default outside its own range, an empty enum, a range on a type
@@ -1106,7 +1106,7 @@ CF_API cf_bool cf_def_real(cf_defset* ds, const char* key, double dflt, double m
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_def_bool` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L549), [`cf_def_int` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L561), [`cf_def_text` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L578), [`cf_def_real` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L591).
+Implementation: [`cf_def_bool` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L551), [`cf_def_int` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L563), [`cf_def_text` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L580), [`cf_def_real` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L593).
 
 ```c
 CF_API void cf_defset_seal(cf_defset* ds);
@@ -1114,7 +1114,7 @@ CF_API void cf_defset_seal(cf_defset* ds);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_seal` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L695).
+Implementation: [`cf_defset_seal` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L697).
 
 Sorts for binary lookup; calling twice is harmless.
 
@@ -1124,7 +1124,7 @@ CF_API cf_bool cf_defset_open(cf_defset* ds, const char* prefix, cf_error* err);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_open` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L638).
+Implementation: [`cf_defset_open` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L640).
 
 Exempt a prefix from unknown-key rejection.
 
@@ -1163,7 +1163,7 @@ CF_API cf_bool cf_defset_is_open(const cf_defset* ds, const char* key, size_t ke
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_is_open` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L663).
+Implementation: [`cf_defset_is_open` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L665).
 
 Is this key under an exempt prefix? Matches at a segment boundary
 only, so opening "plugins" does not open "pluginsomething".
@@ -1174,7 +1174,7 @@ CF_API const cf_def* cf_defset_find(const cf_defset* ds, const char* key, size_t
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_find` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L800).
+Implementation: [`cf_defset_find` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L802).
 
 Authored descriptors are returned for exact keys. A declared list's
 count and canonical decimal indices return immutable scalar
@@ -1187,7 +1187,7 @@ CF_API const cf_def* cf_defset_list(const cf_defset* ds, const char* key, size_t
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_list` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L829).
+Implementation: [`cf_defset_list` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L831).
 
 The declared list containing a key, including its root. Unlike find,
 this also finds a list whose caller supplied an invalid member name,
@@ -1200,7 +1200,7 @@ CF_API cf_u64 cf_defset_fingerprint(const cf_defset* ds, const cf_keyspace* ks);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_fingerprint` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L1030).
+Implementation: [`cf_defset_fingerprint` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L1032).
 
 The fingerprint of `ks` under these definitions (cf_fingerprint): as
 cf_ks_digest, except that a key defined CF_SENSITIVE enters by its
@@ -1212,7 +1212,7 @@ CF_API cf_u64 cf_fingerprint_seed(void);
 CF_API cf_u64 cf_fingerprint_step(cf_u64 h, const char* key, size_t keylen, const char* type, const char* text, size_t n);
 ```
 
-Implementation: [`cf_fingerprint_seed` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L1014), [`cf_fingerprint_step` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L1020).
+Implementation: [`cf_fingerprint_seed` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L1016), [`cf_fingerprint_step` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L1022).
 
 The fingerprint a step at a time, for a reader that holds keys as text -
 Doctor, recomputing a report's - and not as a key space: start from the
@@ -1228,7 +1228,7 @@ CF_API const cf_def* cf_defset_at(const cf_defset* ds, size_t i);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_count` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L834), [`cf_defset_at` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L838).
+Implementation: [`cf_defset_count` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L836), [`cf_defset_at` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L840).
 
 ```c
 CF_API const cf_def* cf_defset_nearest(const cf_defset* ds, const char* key, size_t keylen, size_t* distance);
@@ -1236,7 +1236,7 @@ CF_API const cf_def* cf_defset_nearest(const cf_defset* ds, const char* key, siz
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_nearest` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L963).
+Implementation: [`cf_defset_nearest` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L965).
 
 Nearest defined key by edit distance, or NULL when nothing is close.
 This is what turns "unknown key server.pot" into "did you mean
@@ -1771,13 +1771,13 @@ contract exists.
 CF_API void cf_keymap_init(cf_keymap* m, cf_keymap_kind kind, const char* prefix);
 ```
 
-Implementation: [`cf_keymap_init` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L181).
+Implementation: [`cf_keymap_init` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L183).
 
 ```c
 CF_API size_t cf_keymap_to_key(const cf_keymap* m, const char* raw, size_t n, char* out, size_t cap);
 ```
 
-Implementation: [`cf_keymap_to_key` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L189).
+Implementation: [`cf_keymap_to_key` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L191).
 
 Source spelling to canonical. Returns the length written, or 0 when
 the name does not belong to this source or does not derive a valid
@@ -1787,7 +1787,7 @@ key. Skipped rather than repaired: PATH and HOME land here.
 CF_API size_t cf_keymap_from_key(const cf_keymap* m, const char* key, size_t n, cf_bool escaped, char* out, size_t cap);
 ```
 
-Implementation: [`cf_keymap_from_key` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L230).
+Implementation: [`cf_keymap_from_key` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L232).
 
 Canonical to source spelling. `escaped` selects between the form the
 mapping can read back unaided and the natural one a person writes:
@@ -1807,7 +1807,7 @@ CF_API cf_bool cf_keysink_init(cf_keysink* k, cf_keyspace* ks, int rank);
 CF_API const cf_entry_sink* cf_keysink_of(cf_keysink* k);
 ```
 
-Implementation: [`cf_keysink_init` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L302), [`cf_keysink_of` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L316).
+Implementation: [`cf_keysink_init` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L304), [`cf_keysink_of` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L318).
 
 ```c
 CF_API cf_bool cf_listsink_init(cf_listsink* out, cf_keyspace* ks, int rank, const struct cf_defset* defs, cf_bool repeated);
@@ -1815,7 +1815,7 @@ CF_API const cf_entry_sink* cf_listsink_of(cf_listsink* out);
 CF_API cf_bool cf_listsink_finish(cf_listsink* out);
 ```
 
-Implementation: [`cf_listsink_init` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L142), [`cf_listsink_of` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L159), [`cf_listsink_finish` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L163).
+Implementation: [`cf_listsink_init` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L144), [`cf_listsink_of` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L161), [`cf_listsink_finish` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L165).
 
 ### Lexers
 
@@ -1826,7 +1826,7 @@ an argument, which is what makes them testable against an array.
 CF_API cf_bool cf_lex_env(char* const* environment, const cf_keymap* map, const cf_entry_sink* out, cf_error* err);
 ```
 
-Implementation: [`cf_lex_env` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L324).
+Implementation: [`cf_lex_env` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L326).
 
 Entries that do not belong to this prefix, or do not derive a valid
 key, are skipped. An environment is shared with every other program
@@ -1866,7 +1866,7 @@ than guesswork.
 CF_API cf_bool cf_lex_cli(int argc, char* const* argv, const cf_keymap* map, const cf_cli_spec* spec, const cf_entry_sink* out, cf_error* err);
 ```
 
-Implementation: [`cf_lex_cli` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L398).
+Implementation: [`cf_lex_cli` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L400).
 
 `spec` may be NULL, which is Tier 0.
 
@@ -1897,7 +1897,7 @@ itself is a loop.
 CF_API cf_bool cf_cli_expand(int argc, char* const* argv, cf_arena* arena, int* out_argc, char*** out_argv, cf_error* err);
 ```
 
-Implementation: [`cf_cli_expand` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L562).
+Implementation: [`cf_cli_expand` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L564).
 
 ### The command line in UTF-8
 
@@ -1932,7 +1932,7 @@ escape and the natural spelling behave identically in both.
 CF_API cf_bool cf_lex_dotenv(const char* text, size_t n, const char* origin, const cf_keymap* map, const cf_entry_sink* out, cf_error* err);
 ```
 
-Implementation: [`cf_lex_dotenv` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L664).
+Implementation: [`cf_lex_dotenv` (lib/config/src/sources/entry.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/sources/entry.c#L666).
 
 ## cf_error.h
 

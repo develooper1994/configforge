@@ -5180,6 +5180,30 @@ every limit of every call.
 
 **Status.** Built: K-11a.
 
+## D-157 — The Cortex-M numbers come from a cross build of the library alone
+
+The Cortex-M build is held to numbers although no device or emulator runs the
+tests. Three ways were weighed: (1) build and run under qemu-system-arm; (2)
+cross-build the static library only (no linking of a program) and gate its
+sizes and frames; (3) wait for hardware.
+
+**Decision.** Option 2. The numbers the Roadmap asks for (`.text`, stack) are
+properties of the compiled objects, and a library that is not linked needs no
+board support package. `cmake/toolchains/arm-none-eabi.cmake` builds for a
+Cortex-M4, soft float (a Cortex-M0 or M3 has no FPU, so the numbers are the
+pessimistic ones), with the `none` platform and one thread; the CI job
+`cortex-m` builds the `minimal` profile and fails unless the build printed
+`stack: largest frame <n> bytes (<function>), within 1024`. The target's status
+in `docs/targets.txt` is "built only", never "tested".
+
+Rejected: option 1 (a board model and semihosting to maintain for no number
+the build does not already give) and option 3 (L-19-m records hardware when it
+exists).
+
+**Compatibility.** None.
+
+**Status.** Built: L-18a.
+
 ## D-60 — Arrays in INI are the ones INI files already have
 
 **Question.** INI had no arrays here: a configuration with one could not

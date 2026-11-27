@@ -1270,7 +1270,7 @@ first user meets. In the order proposed:
   targets are still built in CI so they do not rot. Its per-target list is
   `docs/targets.txt`.
 * 🟨 **Small embedded systems: everything optional, a minimal build
-  that stays minimal** (card A-11, b837c23: the `minimal`, `embedded-json` and `embedded-cbor` profiles exist; the Cortex-M `.text` and stack gate remains). The library will gain many features (the modes
+  that stays minimal** (card A-11, b837c23: the `minimal`, `embedded-json` and `embedded-cbor` profiles exist; the Cortex-M stack gate is a CI job, L-18a, D-157; the `.text` gate remains). The library will gain many features (the modes
   above, SWAR and SIMD, gen's languages, every format); each one is a
   `CF_WITH_*` option, and none is required by the core. The `minimal`
   preset (today: codecs only, short limits, a 1 KiB stack budget,

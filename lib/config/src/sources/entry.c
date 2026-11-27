@@ -28,7 +28,8 @@ static cf_bool entry_list_count(cf_listsink* out, const cf_def* d, size_t count,
     char     key[CF_KEY_MAX];
     size_t   n = cf_fmt(key, sizeof key, "%s.count", d->key);
     cf_value v;
-    if (n >= sizeof key || (cf_u64)count > (cf_u64)CF_I64_MAX) {
+    cf_u64   wide = (cf_u64)count; /* a variable: -Wtype-limits, 32-bit size_t */
+    if (n >= sizeof key || wide > (cf_u64)CF_I64_MAX) {
         out->base.failed = CF_TRUE;
         return CF_FALSE;
     }
@@ -40,7 +41,8 @@ static cf_bool entry_list_item(cf_listsink* out, const cf_def* d, size_t index,
                                const char* value, size_t n, const char* at) {
     char   key[CF_KEY_MAX];
     size_t klen = cf_fmt(key, sizeof key, "%s.%zu", d->key, index);
-    if (klen >= sizeof key || (cf_u64)index >= (cf_u64)CF_I64_MAX) {
+    cf_u64 wide = (cf_u64)index; /* a variable: -Wtype-limits, 32-bit size_t */
+    if (klen >= sizeof key || wide >= (cf_u64)CF_I64_MAX) {
         out->base.failed = CF_TRUE;
         return CF_FALSE;
     }

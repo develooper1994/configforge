@@ -164,12 +164,17 @@ Read from `docs/targets.txt` (A-12); how a target is shown is the heading it is 
 | ------ | ---- |
 | wasm32-wasi (Node's WASI) | run by scripts/verify.cmake -DEXTRA=wasm, not by CI |
 
+### Built, not run
+
+| Target | Note |
+| ------ | ---- |
+| Cortex-M | job `cortex-m` |
+
 ### Not tried
 
 | Target | Note |
 | ------ | ---- |
 | armv7 Linux | planned (docs/Roadmap.md) |
-| Cortex-M | planned (docs/Roadmap.md) |
 | s390x Linux (big-endian) | planned (docs/Roadmap.md) |
 | riscv64 Linux | planned (docs/Roadmap.md) |
 

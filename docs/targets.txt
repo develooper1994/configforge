@@ -6,6 +6,6 @@ arm64 macOS, Apple clang|runner|matrix|||
 x86-64 Linux, tcc and pcc|runner|compilers|||
 wasm32-wasi (Node's WASI)|runner||||run by scripts/verify.cmake -DEXTRA=wasm, not by CI
 armv7 Linux|none||||planned (docs/Roadmap.md)
-Cortex-M|none||||planned (docs/Roadmap.md)
+Cortex-M|built|cortex-m|2026-11-27|f955623|M4, soft float, minimal profile, library only
 s390x Linux (big-endian)|none||||planned (docs/Roadmap.md)
 riscv64 Linux|none||||planned (docs/Roadmap.md)

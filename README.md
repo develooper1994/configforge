@@ -215,7 +215,7 @@ device or an emulator run becomes available (`docs/targets.txt`).
 | arm64 macOS, Apple clang | CI runner | job `matrix` | - |
 | x86-64 Linux, tcc and pcc | CI runner | job `compilers` | - |
 | armv7 Linux | not tried | - | planned (docs/Roadmap.md) |
-| Cortex-M | not tried | - | planned (docs/Roadmap.md) |
+| Cortex-M | built only | job `cortex-m` | M4, soft float, minimal profile, library only |
 | s390x Linux (big-endian) | not tried | - | planned (docs/Roadmap.md) |
 | riscv64 Linux | not tried | - | planned (docs/Roadmap.md) |
 

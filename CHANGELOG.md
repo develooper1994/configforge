@@ -7,6 +7,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- CI builds the minimal profile for a Cortex-M4 (soft float, library only) and
+  holds its stack frames to the profile's budget (D-157). On a 32-bit `size_t`
+  two comparisons against `CF_I64_MAX` no longer trip `-Wtype-limits`.
 - Options with defaults are one convention (K-11a, D-230): `cf_live_options_init`
   (what `CF_LIVE_OPTIONS_INIT` sets, as a call a binding can make);
   `cf_limit_options` and `cf_builder_limits`, so that the most open prefixes a
