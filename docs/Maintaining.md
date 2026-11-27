@@ -465,6 +465,15 @@ tree in with `git archive | ssh cfvm tar -x -C <dir>`, build there, and
 bring back only the numbers. Measure on Windows first (MSVC, cf_bench,
 the library's allocator hook), then here.
 
+QEMU may serve as well where it does the job (the maintainer,
+2026-11-27): `qemu-user` in configforge-dev for other architectures
+(s390x, i386, armv7, arm64: byte order, word size, instruction counts
+under callgrind) and a `qemu-system` guest where a whole machine is
+needed and the VMware guest is not at hand. Hardware counters (cycles,
+cache misses) need real hardware or the VMware guest: under QEMU they
+are not the CPU's, so a number from QEMU says which architecture, never
+how fast.
+
 ### Another machine
 
 Nothing above is needed to continue. Clone, then run
