@@ -408,7 +408,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **needs**: nothing
 * **size**: small
 * **version**: 2.0.0
-* **status**: open
+* **status**: done (1ed49bc)
 * **decided**: the text, one line after the message, on stderr (`tools/codec/detect.c:240` prints its message on stdout; its reason line goes to stderr too, so that no stdout changes): `  reason: <cf_reason_name> (<cf_reason_severity>[, <cf_reason_weakness>])`, for instance `  reason: depth (warning, CWE-674)`; printed only when `err.reason != CF_REASON_NONE`. One helper in `tools/codec/codec.c` (`codec_report(const cf_error*)`, declared in `tools/codec/codec.h`), called by the four sites. A case in `tests/front/front.cmake`, inside `if(HAVE_CODEC)` (line 123): it writes a JSON file of 40 nested `{"a":` with `file(WRITE ...)` under `${WORK}` (as line 135 does) and runs `front_case(<the exit code `codec dump` returns on a refusal, read from `tools/codec/dump.c`> - "reason: depth" codec dump <file>)`.
 * **Decided** (whether the line is printed always or only with a flag): always. stderr's text is not a documented interface (`docs/Tools.md` documents exit codes and stdout) and a second line is read by a person; the project treats the message text as free (D-107: a user filters by code and not by message text is the point, D-223 point 2: the code, the place and the reason are the error), and a flag nobody passes defeats the aim. **Rejected**: only with `--reason` (a flag nobody passes).
 * **files**: `tools/codec/codec.c`, `tools/codec/codec.h`, `tools/codec/dump.c`, `tools/codec/recode.c`, `tools/codec/detect.c`, `tests/front/front.cmake`; last: `docs/Tools.md`, `CHANGELOG.md`, `docs/Roadmap.md`.

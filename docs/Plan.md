@@ -279,7 +279,7 @@ of a card's CI.
 | ----: | ---- | ------- | ----- | ----- | ------ |
 | 1 | M-10 The dynamic sizing modes: the interface | 2.0.0 | medium | nothing | done (9d8cc70) |
 | 2 | K-6a A refusal's byte offset | 2.0.0 | medium | nothing | open |
-| 3 | K-6b A refusal's reason shown by the tools | 2.0.0 | small | nothing | open |
+| 3 | K-6b A refusal's reason shown by the tools | 2.0.0 | small | nothing | done (1ed49bc) |
 | 4 | K-9a Three failure guarantees: written in every public function's header comment, listed in a table, and held by `gate.guarantees` | 2.0.0 | medium | nothing | open |
 | 5 | K-9d Guarantees written for the lower components: base, port, platform, text and serialize | 2.0.0 | medium | K-9a | waits: K-9a |
 | 6 | K-9e Guarantees written for the facade: `configforge.h` | 2.0.0 | medium | K-9a | waits: K-9a |
