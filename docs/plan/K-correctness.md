@@ -441,23 +441,26 @@ card marked **TO DECIDE** has no number until the maintainer answers; D-138
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added" (experimental in 1.9); D-139; the Roadmap item stays 🟨 (K-7b).
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number.
 
-## K-7b - The ways a format can be read, in its table entry (2.0.0; TO DECIDE)
+## K-7b - The ways a format can be read, in its table entry
 
 * **id**: K-7b
-* **goal**: each entry of the formats' table says which ways of reading its reader offers (events through a sink, a whole document, in-situ strings, lazy), and the tools read it.
-* **why**: the Roadmap's other half of "Formats registered, with what each can do": "the ways it can be read (DOM, events, in-situ, lazy)".
-* **needs**: K-7a, and the 2.0.0 card of the ways to read (`docs/Maintaining.md:106`: "the ways to read designed with the stream"), which is not written; nothing in the tree reads in-situ or lazily, so today every reader is an events reader and the only way is "events"
+* **goal**: each entry of the formats' table says which ways of reading its reader offers (events through a sink, a stream, a whole document, lazy, in-situ strings), `cf_format_reads` returns them, and the tools read it.
+* **why**: the Roadmap's other half of "Formats registered, with what each can do": "the ways it can be read (DOM, events, in-situ, lazy)". A bit with one value says nothing, so the card is cut when the ways exist (M-14, M-15, M-16), after the 2.0.0 breaks and with module 6's additions.
+* **needs**: K-7a, M-14, M-15, M-16
 * **size**: small
-* **version**: 2.0.0
-* **status**: parked
-* **decided**: nothing is built before the ways exist. The bit names, `CF_READS_EVENTS` (every built-in reader, today), `CF_READS_IN_SITU` and `CF_READS_LAZY`, are written by the card that adds a way, and each fills its own bit; this card adds the member `unsigned reads;` to `cf_format_info` (`codec.c:300-307`) and `cf_format_reads(const char*, unsigned*)` after `cf_format_holds` (`codec.c:354`).
-* **TO DECIDE** (the maintainer): whether the card is cut at all before 2.0.0. Options: (A) wait: cut it when the ways-to-read card is written, since a bit with one value says nothing; (B) add `CF_READS_EVENTS` now to every entry, with no function, to be extended. **Recommendation: A.** The card is parked at 2.0.0.
-* **files**: (when cut) `lib/serialize/src/codec.c`, `lib/serialize/include/configforge/cf_serialize.h`, `tools/codec/formats.c`; last: `docs/Limits.md` (generated), `docs/Decisions.md`, `CHANGELOG.md`, `docs/Roadmap.md`.
-* **steps**: written when the card is cut; the first is a table-driven test that each entry's `reads` has `CF_READS_EVENTS`, seen to fail.
-* **accept**: ACCEPT-LINUX; ACCEPT-WINDOWS; ACCEPT-CI.
-* **stop if**: the ways-to-read card changes the shape of a way.
-* **docs**: `CHANGELOG.md` "## 2.0.0 — unreleased", "### Added"; the Roadmap item to 🟩.
-* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number.
+* **version**: 2.4.0
+* **status**: open
+* **decided**: the member `unsigned reads;` is added to `cf_format_info` (`lib/serialize/src/codec.c:300-307`), after `max_depth`, and `CF_NODISCARD CF_EXPERIMENTAL(2, 4) cf_bool cf_format_reads(const char* format, unsigned* reads);` after `cf_format_holds` (`lib/serialize/src/codec.c:354`; declared in `lib/serialize/include/configforge/cf_serialize.h` beside `cf_format_holds`, line 305), with the same contract (`CF_TRUE` and `*reads` for a format of the table, whether or not this build has its codec; `CF_FALSE`, `*reads` untouched, for a name it does not know). The bits, an enum beside `CF_HOLDS_*`: `CF_READS_EVENTS = 1u << 0` (every built-in reader), `CF_READS_STREAM = 1u << 1` (the codec has a native `decode_stream`: M-6 to M-9; the fallback that feeds a whole input does not count), `CF_READS_DOM = 1u << 2` (every codec: M-14 reads through the events), `CF_READS_LAZY = 1u << 3` (the codecs M-15 implements: `grep -n lazy lib/serialize/src/*.c`), `CF_READS_IN_SITU = 1u << 4` (the codecs M-16 implements: `grep -n in_situ lib/serialize/src/*.c`). Each entry is written from what those cards built, not from a guess: a test in `lib/serialize/tests/test_holds.c` asserts, for every format of the table whose codec the build has, that `reads` has exactly the bits the codec's members and the cards' entry points show (a native `decode_stream` set, a lazy or in-situ entry point present), so the table cannot drift from the code. `configforge codec formats` (`tools/codec/formats.c`) prints a `reads` column and its page (`docs/Limits.md`, generated) carries it; M-17's `docs/Formats.md` table is made from `cf_format_reads`, not from an array of its own. Rejected: adding `CF_READS_EVENTS` alone before the ways exist (a bit with one value), a function per way.
+* **files**: `lib/serialize/src/codec.c`, `lib/serialize/include/configforge/cf_serialize.h`, `lib/serialize/tests/test_holds.c`, `tools/codec/formats.c`; last: `docs/Limits.md` (generated), `docs/Decisions.md`, `docs/API.md` (generated), `CHANGELOG.md`, `docs/Roadmap.md`.
+* **steps**:
+  1. `git switch -c work/K-7b main`. In `test_holds.c`: for each format of the table, `cf_format_reads` is true, has `CF_READS_EVENTS` and `CF_READS_DOM`, and its stream, lazy and in-situ bits equal what the codec offers; an unknown name returns `CF_FALSE`; **see it fail** (no function).
+  2. The member, the bits and the function; fill each entry.
+  3. The `reads` column of `tools/codec/formats.c`; `ctest --preset default` (the page test holds `docs/Limits.md` to the tool: regenerate it with the command its header names).
+  4. Format; generators last; ACCEPT.
+* **accept**: ACCEPT-LINUX; ACCEPT-WINDOWS; ACCEPT-CI; `gate.abi` green.
+* **stop if**: the output of `tools/codec/formats.c` changes in a column that is not the new one; a way of M-14, M-15 or M-16 changed its shape after this card was written.
+* **docs**: `CHANGELOG.md` "## 2.4.0 — unreleased", "### Added" (experimental in 2.4); D-139 (K-7a's) gets a sentence for `reads`; the Roadmap item "Formats registered, with what each can do" to 🟩.
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number. (2026-11-27, the organiser, under the maintainer's standing approval): the recommendation, wait for the ways to read, holds, so the card leaves 2.0.0 for 2.4.0, after M-14, M-15 and M-16 (module 6's additions); it needs K-7a (2.2.0); M-17 reads its table instead of making one (the maintainer's standing approval, 2026-11-27).
 
 ## K-8 - The YAML reader's three differences from libyaml, fixed to YAML 1.2's text (TO DECIDE, each)
 

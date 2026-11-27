@@ -18,9 +18,9 @@ Main is at 1.9.0, unreleased (11 CHANGELOG entries already).
 | 0.7 | The file layer (D-224): `cf_file_options`, `cf_file_writer`, `cf_file_replace`, Windows retry as an option | F-1a | 1.9.0 |
 | 0.8 | Around the file layer: replace-if-unchanged, close-on-exec, stable read, Windows share-delete, the kernel lock (D-227) | Y-2, Y-8, Y-5, Y-6, Y-3 | 1.9.0 |
 | 0.4 | One error model (D-223): `CF_NODISCARD` everywhere and its gate | K-9c | 1.9.0 |
-| 0.5 | `cf_error`: place (file, line, column, byte offset, key), reason, chain of causes, `cf_error_handler`, stop-at-first or collect-all | K-6a + K-6b + M-11b (`cf_error` owns its text); the collect-all option `gen build --json` needs | 2.0.0 |
+| 0.5 | `cf_error`: place (file, line, column, byte offset, key), reason, chain of causes, `cf_error_handler`, stop-at-first or collect-all | K-6a + K-6b; the collect-all option `gen build --json` needs (`cf_error` owning its text is in row 0.9: it needs the sizing modes, and `cf_error` still changes shape once in the 2.0.0 release) | 2.0.0 |
 | 0.6 | The guarantees written and held; allocation faults injected | K-9a, K-9b | 2.0.0 |
-| 0.9 | The sizing modes and what 2.0 breaks, right after the error model (the maintainer, 2026-11-27: long awaited) | M-10, M-11a, M-12, Y-33, K-7b, M-13 | 2.0.0 |
+| 0.9 | The sizing modes and what 2.0 breaks, right after the error model (the maintainer, 2026-11-27: long awaited) | M-10, M-11a, M-11b, M-12, M-13 (the stream is 2.4.0's and additive; the manifest in the image and the ways in the formats' table went to their modules, and M-12's header reserves the manifest's place; M-11b is `cf_error` owning its text) | 2.0.0 |
 
 ## The modules, in order (each: module, tool, bindings, documents)
 
@@ -34,7 +34,7 @@ last column; the "not now" section's cards are `not now`.
    - bindings: C-4c (Python); Rust and C++ where the module's step adds a call
    - documents: Y-7 (threads and processes), Y-36, G-1a, G-1b, G-2
 2. {2.2.0} **config: built ahead of time** (`gen build`, D-220's answer where there is no OS)
-   - module + tool: Y-24, Y-25, Y-26, Y-27, Y-28 (its error part goes to 0.5), Y-29; documents: Y-31
+   - module + tool: Y-24, Y-25, Y-26, Y-27, Y-28 (its error part goes to 0.5), Y-29, Y-33 (the manifest in the image, in the header M-12 reserves for it); documents: Y-31
 3. {2.2.0} **serialize: one table, one copy, correct** (lib/serialize)
    - module: X-18, X-19, X-20, X-21, K-7a, K-5a, K-5b, K-8, K-1a, K-1b, K-10a, K-10b (a number's text kept; underflow and infinity as options, defaults unchanged)
    - proofs: K-2a, K-2b, K-2c, K-2d, K-2e, K-3a, K-3b, K-4a, K-4b, K-4c, K-4d, L-14a, L-14b
@@ -44,7 +44,7 @@ last column; the "not now" section's cards are `not now`.
    - module: F-3a, F-3b, F-3c, F-3d, F-3e, F-3f, F-3g, F-3h, F-3j, Y-20; config: F-2a, F-2b, Y-4, Y-12; tool: F-3i
 6. **serialize: ways to read** (the stream and its modes)
    - the breaks moved to stage 0, row 0.9 (2.0.0)
-   - {2.4.0} the additions: M-5, M-6, M-7, M-8, M-9, M-14, M-15, M-16, M-17
+   - {2.4.0} the additions: M-5, M-6, M-7, M-8, M-9, M-14, M-15, M-16, K-7b (the ways in the formats' table), M-17
 7. {2.5.0} **serialize: more formats** - X-1, X-2, X-3, X-4, X-5, X-6, X-7, X-8, X-9, X-10, X-11, X-12, X-13, X-14, X-15, X-16, X-17
 8. {2.6.0} **bindings and documents across the library** - M-1, M-2, M-3, M-4 (Go, .NET), G-3, G-4, G-5, G-6, G-7, G-8
    - {2.6.0} distribution: M-22, M-24, M-26, M-27, M-28, M-31, M-32, M-33, M-34
@@ -59,7 +59,7 @@ last column; the "not now" section's cards are `not now`.
 | Version | Scope |
 | ------- | ----- |
 | 1.9.0 | what main holds now, plus stage 0.1-0.3 and 0.7-0.8 (nothing that breaks) and the beside-cards done by then |
-| 2.0.0 | stage 0.4-0.6 (the error model), module 6's breaks only: M-10, M-11a, M-12, Y-33, K-7b, M-13 |
+| 2.0.0 | stage 0.4-0.6 (the error model), module 6's breaks only: M-10, M-11a, M-11b, M-12, M-13 |
 | 2.1.0 | module 1 (config for the people who change it) |
 | 2.2.0 | module 2 (`gen build`) and module 3 (serialize, one table, correct) |
 | 2.3.0 | module 4 (compress) and module 5 (written back) |

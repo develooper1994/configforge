@@ -1217,7 +1217,7 @@ this answer under "Organiser's answers"). Both are copied into
 * **version**: 2.2.0
 * **status**: parked
 * **decided**:
-  * **TO DECIDE E (the manifest's place)**, research section 5.3 E. Options: **(1)** a JSON file beside the artifact; **(2)** a section of the image. **Recommended: (1) now, (2) with 2.0.0's image header (Y-33).** The steps are (1)'s.
+  * **TO DECIDE E (the manifest's place)**, research section 5.3 E. Options: **(1)** a JSON file beside the artifact; **(2)** a section of the image. **Recommended: (1) now, (2) with Y-33 (2.2.0, in the header M-12 reserves).** The steps are (1)'s.
   * **Shape**: `{"manifest_version": 1, "configforge": "<cf_version()>", "profile": "<p>"|null, "inputs": [{"path": "<as given>", "rank": "<name>", "sha256": "<hex>"}], "contract": {"path": "<schema>", "sha256": "<hex>"}, "open": ["<key>"], "sealed": ["<key>"], "output": {"target": "<t>", "path": "<out>", "sha256": "<hex>"}, "source_date_epoch": <n>|null}`, keys in this order, lists sorted (inputs in the order given, then none re-sorted; `open`, `sealed` sorted), two-space indentation, a final newline. Paths are written as given (no absolute path is added: a build in another directory differs only by what the user typed). `SOURCE_DATE_EPOCH` is read once from the environment, the only environment variable the command reads; no other clock.
   * **SHA-256** from M-34's interface (`cf_sha256` or what D-184 names: read `docs/plan/M-maintainer.md` around line 736 for the function; if M-34 is not landed, this card does not open).
   * **D-210** ("The manifest is a JSON file beside the artifact"): the shape above. Rejected: the manifest inside the image now; a timestamp; absolute paths.
@@ -1309,30 +1309,34 @@ this answer under "Organiser's answers"). Both are copied into
 
 ---
 
-## Y-33 - The manifest inside the image (2.0.0, with the image header's layout)
+## Y-33 - The manifest inside the image (2.2.0, in the header M-12 reserves for it)
 
 * **id**: Y-33
-* **goal**: the image format version 1.1 (`CF_IMAGE_MINOR` 1) carries the manifest of Y-29 as a section, so an artifact says what it was made from without a file beside it.
-* **why**: `docs/research/config-compiler.md` section 5.3 E (2) and section 6 (last row, 2.0.0, with the image header): the one place a manifest cannot be lost from its image.
-* **needs**: Y-29 and the image header's layout (wave 8, version 2.0.0; the card that fixes it is in `docs/plan/M-maintainer.md`: find it with `grep -n "image header" docs/plan/M-maintainer.md | head`)
+* **goal**: an image of major 2 and minor 1 carries the manifest of Y-29 after its other regions, found through two header fields, so an artifact says what it was made from without a file beside it.
+* **why**: `docs/research/config-compiler.md` section 5.3 E (2) and section 6 (last row, with the image header): the one place a manifest cannot be lost from its image. The image's layout is fixed in 2.0.0 by M-12, which reserves bytes 104-111 of its 128-byte header for this card; the manifest needs Y-29 (2.2.0), so the card is 2.2.0's and nothing of 2.0.0 waits for it.
+* **needs**: Y-29, M-12
 * **size**: small
-* **version**: 2.0.0
+* **version**: 2.2.0
 * **status**: open
 * **decided**:
-  * **Shape**: a new section kind in the image (`docs/ImageFormat.md`: the section table), `CF_IMAGE_SECTION_MANIFEST`, holding the manifest's JSON bytes as Y-29 writes them (the image's own digest excludes it, so the output digest in the manifest is of the image without the section: written in `ImageFormat.md`); `CF_IMAGE_MINOR` rises from 0 to 1 (`cf_image.h:42`); a reader of minor 0 ignores a section it does not know (check the reader's rule in `ImageFormat.md`; if it refuses, the card stops: that is a break and 2.0.0's list's). `cf_image_manifest(const cf_image*, const char** json, size_t* n)` reads it (a new public name, experimental tier); `gen build --manifest-in-image` writes it.
-  * **D-213** ("The manifest may live in the image"): the section, the minor, the digest rule.
-* **files**: `lib/config/include/configforge/cf_image.h`, the image reader and writer, `tools/gen/build.c`, `docs/ImageFormat.md`, tests; last: `CHANGELOG.md`, `docs/Decisions.md`, `docs/Codemap.md`, `docs/API.md` (generated).
+  * **Shape**: the manifest's JSON bytes as Y-29 writes them, placed after the last region (the strings), at an offset that is a multiple of 8 and ending at `total`; the header's `manifest_off` (byte 104) and `manifest_len` (byte 108), reserved zero by M-12 (`docs/ImageFormat.md`), say where. `minor` is 1 for an image that carries a manifest and 0 for one that does not, so Y-26's golden (an image of minor 0) is unchanged, and `CF_IMAGE_MINOR` (`lib/config/include/configforge/cf_image.h:42`) is the highest minor this build reads and writes, 1. There is no new section kind and no section table: the image has none, and a reader of minor 0 ignores bytes it does not know (M-12 tests it: "accept a higher one; fields only grow"), so no break is made. `cf_image_open` checks that a nonzero `manifest_off`/`manifest_len` lies inside `total` (a claim, like every number in an image).
+  * **The digest rule**: the manifest's `output.sha256` is the SHA-256 of the image as written without the manifest, that is, the bytes up to `manifest_off` with `manifest_off` and `manifest_len` zeroed, `minor` 0 and `total` equal to `manifest_off`: a verifier can rebuild exactly that from a finished image, and `gen build` makes the same bytes first (writes the image without a manifest, hashes it, writes the manifest, writes the image again with it). The determinism digest in the header is of the key space and is the same in both. Written in `ImageFormat.md`.
+  * **Names (D-220's convention, K-11a)**: `typedef struct cf_image_options { size_t size; unsigned flags; const char* manifest; size_t manifest_len; } cf_image_options;` in `cf_image.h`, with `CF_API void cf_image_options_init(cf_image_options* o);` (defaults: `size` set, `flags` 0, `manifest` NULL and `manifest_len` 0, which is no manifest) and `CF_EXPERIMENTAL(2, 2) size_t cf_image_write_with(const cf_keyspace* ks, const cf_source_view* sv, const cf_image_options* o, char* buf, size_t cap);` (measure-or-write like `cf_image_write`, NULL `o` is the defaults; `cf_image_write(ks, sv, flags, buf, cap)` is unchanged and calls it with the flags only). A manifest with `CF_IMAGE_V1` (M-12) is refused: nothing is written and the length is 0, as for any image that cannot be written. `CF_EXPERIMENTAL(2, 2) cf_bool cf_image_manifest(const cf_image* img, const char** json, size_t* n);` points into the image, `CF_FALSE` when there is none (major 1, or `manifest_len` 0). `gen build --manifest-in-image` writes it (with `--manifest <file>` the file is written too).
+  * **D-213** ("The manifest may live in the image"): the header fields, the minor, the digest rule.
+  * Rejected: a section table or a new section kind (the image has none; a table would be a second major), a new major (M-12's header already has the room).
+* **files**: `lib/config/include/configforge/cf_image.h`, `lib/config/src/bridge/image.c`, `tools/gen/build.c`, `docs/ImageFormat.md`, `lib/config/tests/test_image.c`, `tests/gen_build/`; last: `CHANGELOG.md`, `docs/Decisions.md`, `docs/Codemap.md`, `docs/API.md` (generated).
 * **steps**:
-  1. `git switch -c work/Y-33 main` (after Y-29 and the image header card).
-  2. Tests: (a) an image written with the manifest section reads back its JSON byte for byte; (b) an image of minor 0 (the golden of Y-26) opens unchanged; (c) a reader built to the minor-0 rules opens the minor-1 image (the section is skipped); (d) the output digest in the manifest equals the SHA-256 of the image without the section.
+  1. `git switch -c work/Y-33 main` (after Y-29 and M-12).
+  2. Tests: (a) an image written with a manifest through `cf_image_write_with` reads back its JSON byte for byte through `cf_image_manifest`, and has `minor` 1; (b) an image of minor 0 (the golden of Y-26) opens unchanged, `cf_image_manifest` false; (c) the same image opened by a reader that knows only minor 0 (the test reads the header with the minor-0 rules, ignoring bytes 104-111) opens it; (d) the output digest in the manifest equals the SHA-256 of the image rebuilt by the digest rule above (the test rebuilds it itself, not through the writer); (e) a nonzero `manifest_off` past `total` is refused; (f) a manifest with `CF_IMAGE_V1` writes nothing.
   3. See it fail: build the image test (`cf_image_manifest` undeclared).
-  4. Write the section, the minor and the call. `ctest --preset default -R "image|gen_build"`.
+  4. Write the options, the header fields, the minor and the call. `ctest --preset default -R "image|gen_build"`.
   5. See that the test can fail: hash the whole image behind a run-time-false condition; (d) fails; put it back.
   6. D-213, `docs/ImageFormat.md`, CHANGELOG. Format; codemap and apiref, last. Commit `Y-33: the manifest inside the image (D-213)`.
   7. ACCEPT; push; ACCEPT-CI.
 * **accept**: ACCEPT-LINUX; ACCEPT-WINDOWS; ACCEPT-CI; `ctest --preset default -R "image|gen_build"` exit 0; the minor-0 golden unchanged.
-* **stop if**: the reader of minor 0 refuses an unknown section; the image header card has not fixed the section table; three failures of the same step.
-* **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "The image format 1.1 carries a build's manifest; `cf_image_manifest` (Y-33, D-213)." `docs/Decisions.md`: D-213.
+* **stop if**: M-12's header does not have `manifest_off` and `manifest_len` at 104 and 108 (the card then waits for M-12's correction); three failures of the same step.
+* **Organiser's answers** (2026-11-27, the organiser, under the maintainer's standing approval): the card moves to 2.2.0, after Y-29, and M-12's header v2 reserves the manifest's place (bytes 104-111), so the image's layout is fixed once in 2.0.0 and no card of 2.0.0 needs a later one; the image has no section table, so the manifest is found through the header, not as a section (the maintainer's standing approval, 2026-11-27).
+* **docs**: `CHANGELOG.md`, "## 2.2.0 — unreleased", "### Added": "The image format 2.1 carries a build's manifest; `cf_image_manifest` (Y-33, D-213)." `docs/Decisions.md`: D-213.
 
 ---
 
