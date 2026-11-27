@@ -200,7 +200,7 @@ Things only the maintainer can do or decide. Each unblocks the cards named.
 * 1.4.1 holds a changed default (response files are opt-in, D-79): it
   is released as 1.5.0 or as 1.4.1 - not decided.
 
-* **Answered, 2026-11-26** (relayed from the maintainer's side session): every TO DECIDE discussed that day is answered, each under its card's "Organiser's answers" (D-220 to D-229; some cards are to be rewritten to their answer before they open, as their row in "Waits on the maintainer" says). Cards written from those answers (2026-11-27): K-9a, K-9d to K-9g, K-9b (`docs/plan/K-correctness.md`; K-9c is done), K-10c-m, Y-15a, Y-15b, Y-41-m, Y-42 (`docs/plan/Y-asked.md`), C-9-m, C-10c-m, C-10d-m (`docs/plan/C-change-2.md`).
+* **Answered, 2026-11-26** (relayed from the maintainer's side session): every TO DECIDE discussed that day is answered, each under its card's "Organiser's answers" (D-220 to D-229; the cards they answer follow them and are open: C-2a, F-2a, F-3j, K-6a, K-6b, X-21, Y-11, Y-12, Y-16, Y-17, Y-18, Y-24, Y-27, Y-28, Y-29, Y-36, 2026-11-27). Cards written from those answers (2026-11-27): K-9a, K-9d to K-9g, K-9b (`docs/plan/K-correctness.md`; K-9c is done), K-10c-m, Y-15a, Y-15b, Y-41-m, Y-42 (`docs/plan/Y-asked.md`), C-9-m, C-10c-m, C-10d-m (`docs/plan/C-change-2.md`).
 * **The layout approved, 2026-11-26**: `docs/plan/Layout.md` (stage 0,
   then each `lib/` module: module, tool, bindings, documents; interim
   releases; the "not now" list) is the order of work. 2.0.0's breaks
@@ -291,8 +291,8 @@ of a card's CI.
 | 14 | Y-6 Windows readers that share delete access, if a measurement shows a rename then succeeds over an open reader (F-5d in the research) | 1.9.0 | small | F-1a | done (16b115d) |
 | 15 | Y-3 `cf_locker`: a lock that plugs in, `cf_lock_none` and a kernel lock on a kept sidecar file, `cf_lock_sidecar` (F-5a in the research) | 1.9.0 | medium | F-1a | open |
 | 16 | K-9c Errors that cannot be ignored: `CF_NODISCARD` on every failure, and its gate | 1.9.0 | large | nothing | done (2c03110) |
-| 17 | K-6a A refusal's byte offset (TO DECIDE) | 2.0.0 | medium | nothing | parked |
-| 18 | K-6b A refusal's reason shown by the tools (TO DECIDE) | 2.0.0 | small | nothing | parked |
+| 17 | K-6a A refusal's byte offset | 2.0.0 | medium | nothing | open |
+| 18 | K-6b A refusal's reason shown by the tools | 2.0.0 | small | nothing | open |
 | 19 | K-9a Three failure guarantees: written in every public function's header comment, listed in a table, and held by `gate.guarantees` | 2.0.0 | medium | nothing | open |
 | 20 | K-9d Guarantees written for the lower components: base, port, platform, text and serialize | 2.0.0 | medium | K-9a | waits: K-9a |
 | 21 | K-9e Guarantees written for the facade: `configforge.h` | 2.0.0 | medium | K-9a | waits: K-9a |
@@ -304,7 +304,7 @@ of a card's CI.
 | 27 | M-11b `cf_error` owns its text (the 2.0 break) | 2.0.0 | large | M-11a | waits: M-11a |
 | 28 | M-12 The image header's layout, version 2 | 2.0.0 | medium | nothing | open |
 | 29 | M-13 2.0, once: the list of what breaks, and the gate that holds it | 2.0.0 | small | M-11b, M-12 | waits: M-11b |
-| 30 | C-2a Durations and sizes: the unit on an int definition | 2.1.0 | medium | nothing | parked |
+| 30 | C-2a Durations and sizes: the unit on an int definition | 2.1.0 | large | nothing | open |
 | 31 | C-2b Durations and sizes: the schema, the report, `cf_emit` and every reader | 2.1.0 | medium | C-2a | waits: C-2a |
 | 32 | C-8a A read the contract does not have, noticed: the library records it | 2.1.0 | medium | nothing | open |
 | 33 | C-9 Values migrated, not only renamed: a function on the old key's definition | 2.1.0 | medium | nothing | open |
@@ -333,22 +333,22 @@ of a card's CI.
 | 56 | F-4a The references drawn, first by jq | 2.1.0 | small | nothing | open |
 | 57 | C-4c `doctor drift` from Python | 2.1.0 | small | C-4a | waits: C-4a |
 | 58 | Y-7 "Threads and processes" in the Guide: four recipes, compiled in CI, a `fork` test | 2.1.0 | medium | Y-1, Y-8 | waits: Y-1 |
-| 59 | Y-36 Recipes: the contract's schema in yaml-language-server and Taplo, conftest over a report with places | 2.1.0 | small | Y-34 | parked |
+| 59 | Y-36 Recipes: the contract's schema in yaml-language-server and Taplo, conftest over a report with places | 2.1.0 | small | Y-34 | waits: Y-34 |
 | 60 | G-1a The tools that read a decision follow the split | 2.1.0 | medium | nothing | open |
 | 61 | G-1b Decisions.md split into one file a decision | 2.1.0 | medium | G-1a | waits: G-1a |
 | 62 | G-2 The Roadmap's finished items on a page of their own | 2.1.0 | medium | G-1b, G-2 | waits: G-1b |
-| 63 | Y-24 `configforge gen build`: sources by rank, a contract, a target, deterministic output (TO DECIDE) | 2.2.0 | medium | Y-34 | parked |
+| 63 | Y-24 `configforge gen build`: sources by rank, a contract, a target, deterministic output | 2.2.0 | medium | Y-34 | waits: Y-34 |
 | 64 | Y-25 The open-key checks: what the compiler can prove about the keys left to run time | 2.2.0 | small | Y-24 | waits: Y-24 |
 | 65 | Y-26 `CF_IMAGE_CONFIGURED`: an image that holds only what a source configured, and defaults and secrets out unless asked | 2.2.0 | small | Y-24 | waits: Y-24 |
-| 66 | Y-27 The baked configuration: `gen build --target c` and `cf_config_from_baked` | 2.2.0 | large | Y-24, Y-26 | parked |
-| 67 | Y-28 `cf_builder_diagnostics`: every diagnostic with its place, and `gen build --json` and `gen check --all` (TO DECIDE) | 2.2.0 | medium | Y-24 | parked |
-| 68 | Y-29 The manifest: inputs and their digests, the contract's digest, version, profile, open keys, the output's digest | 2.2.0 | small | Y-24, Y-25, M-34 | parked |
+| 66 | Y-27 The generated C: `gen build --target c` (plain typed code) and `--target c-baked` (the baked tables) | 2.2.0 | large | Y-24, Y-26 | waits: Y-24 |
+| 67 | Y-28 `cf_builder_errors`: every diagnostic with its place, and `gen build --json` and `gen check --all` | 2.2.0 | medium | Y-24, K-9c | waits: Y-24 |
+| 68 | Y-29 The manifest: inputs and their digests, the contract's digest, version, profile, open keys, the output's digest | 2.2.0 | small | Y-24, Y-25, M-34 | waits: Y-24 |
 | 69 | Y-33 The manifest inside the image (2.2.0, in the header M-12 reserves for it) | 2.2.0 | small | Y-29, M-12 | waits: Y-29 |
 | 70 | Y-31 Guide recipes: CUE, Pkl, Jsonnet, Dhall, Nickel and KCL as front ends | 2.2.0 | small | Y-24 | waits: Y-24 |
 | 71 | X-18 The helpers each reader writes again: a table, kept true by a gate | 2.2.0 | medium | nothing | open |
 | 72 | X-19 The printers apart: one file a format's writer | 2.2.0 | medium | X-18 | waits: X-18 |
 | 73 | X-20 What repeats, once: the helpers X-18's table says move | 2.2.0 | large | X-19 | waits: X-19 |
-| 74 | X-21 Text and binary formats as two groups a build can take apart | 2.2.0 | medium | X-19 | parked |
+| 74 | X-21 Text and binary formats as two groups a build can take apart | 2.2.0 | medium | X-19 | waits: X-19 |
 | 75 | K-7a One table of formats: the lists that copy it read it (TO DECIDE) | 2.2.0 | medium | nothing | open |
 | 76 | K-5a TOML's joined path judged as one number | 2.2.0 | medium | nothing | open |
 | 77 | K-5b INI's reader limits nesting as the others do | 2.2.0 | small | K-5a | waits: K-5a |
@@ -372,9 +372,9 @@ of a card's CI.
 | 95 | L-14b EVA over the float printer: `cf_gen_digits` and `cf_f64_to_text` | 2.2.0 | large | L-14a | waits: L-14a |
 | 96 | Y-15a `lib/compress`: the two interfaces `cf_packer` and `cf_unpacker`, their options with the method's own defaults, the one-call `cf_pack` and `cf_unpack`, and a test backend | 2.3.0 | large | Y-14, K-9b | waits: Y-14 |
 | 97 | Y-15b Streaming `cf_unpacker` and `cf_packer`, and `cf_unpack_chain` | 2.3.0 | large | Y-15a | waits: Y-15a |
-| 98 | Y-16 gzip through zlib: CF_WITH_ZLIB (TO DECIDE) | 2.3.0 | medium | Y-15a | parked |
-| 99 | Y-17 zstd through libzstd: CF_WITH_ZSTD | 2.3.0 | medium | Y-16 | parked |
-| 100 | Y-18 The sources read through the layer: flags, extensions, provenance, bindings (TO DECIDE) | 2.3.0 | medium | Y-15a, Y-16, Y-17 | parked |
+| 98 | Y-16 gzip through zlib: CF_WITH_ZLIB | 2.3.0 | medium | Y-15a | waits: Y-15a |
+| 99 | Y-17 zstd through libzstd: CF_WITH_ZSTD | 2.3.0 | medium | Y-16 | waits: Y-16 |
+| 100 | Y-18 The sources read through the layer: flags, extensions, provenance, bindings | 2.3.0 | medium | Y-15a, Y-16, Y-17 | waits: Y-15a |
 | 101 | Y-19 `configforge codec` through the layer, and a bomb corpus | 2.3.0 | small | Y-18 | waits: Y-18 |
 | 102 | Y-14 Compressed input by the program's own zlib: the D-103 recipe, a Guide section and an example | 2.3.0 | small | nothing | open |
 | 103 | F-3a Wave 6, the core: a change spliced into a document and checked by reading it back | 2.3.0 | large | F-1a, F-3i, F-3j | waits: F-3i |
@@ -385,12 +385,12 @@ of a card's CI.
 | 108 | F-3f Wave 6, YAML: a value changed, a key removed | 2.3.0 | medium | F-3a | waits: F-3a |
 | 109 | F-3g Wave 6, YAML: a key added | 2.3.0 | medium | F-3f | waits: F-3f |
 | 110 | F-3h Wave 6, TLV: a value changed, an entry added or removed, the bytes a layout skips kept | 2.3.0 | large | F-3a | waits: F-3a |
-| 111 | F-3j Wave 6, the document edit as a public interface (TO DECIDE) | 2.3.0 | medium | F-3i, F-1b | parked |
+| 111 | F-3j Wave 6, the document edit as a public interface | 2.3.0 | medium | F-3i, F-1b | waits: F-3i |
 | 112 | Y-20 Writing: cf_pack, deterministic gzip and zstd, `convert --compress`, a compressed image | 2.3.0 | medium | Y-16, Y-17, Y-19, F-1b | waits: Y-16 |
-| 113 | F-2a An override file the library owns: a file source that cf_write can commit to (TO DECIDE) | 2.3.0 | large | F-1a, Y-2 | parked |
+| 113 | F-2a An override file the library owns: a file source that cf_write can commit to | 2.3.0 | large | F-1a, Y-2, Y-42 | waits: Y-42 |
 | 114 | F-2b settings.c is the override source's example | 2.3.0 | small | F-2a, F-1b, F-1b | waits: F-2a |
 | 115 | Y-4 `cf_file_source_options.lock`, `.wait_ms` and `.write_attempts`, `.read_attempts`, `cf_builder_write_wait`: the lock around `overrides_write`, and the store's wait (F-5b in the research) | 2.3.0 | medium | Y-3, F-2a | waits: Y-3 |
-| 116 | Y-12 `swapped` in `cf_live_options`: workers told of a swap | 2.3.0 | small | nothing | parked |
+| 116 | Y-12 `swapped` in `cf_live_options`: workers told of a swap | 2.3.0 | small | Y-9 | waits: Y-9 |
 | 117 | F-3i Wave 6, `configforge codec get`, `set` and `unset` (TO DECIDE) | 2.3.0 | medium | F-1a, F-3b, F-3c, F-3d, F-3e, F-3f, F-3g, F-3h | waits: F-3b |
 | 118 | M-5 The stream: one interface for reading in pieces, with a fallback every codec has | 2.4.0 | large | nothing | open |
 | 119 | M-6 The stream, native: CBOR and TLV (the length-prefixed formats first) | 2.4.0 | medium | M-5 | waits: M-5 |
@@ -448,7 +448,7 @@ of a card's CI.
 | 171 | L-16a The emitter sized from the key space it walks, kept only if it pays | 2.7.0 | small | nothing | open |
 | 172 | L-16b Sequential read advice for a large file, kept only if it pays | 2.7.0 | small | nothing | open |
 | 173 | L-16c Branch hints on the readers' hot paths, kept only where they pay | 2.7.0 | medium | P-3 | waits: P-3 |
-| 174 | Y-11 `cf_live_reader`: a worker's handle that caches a snapshot, its test under ThreadSanitizer, C++ and Rust wrappers (TO DECIDE) | 2.7.0 | medium | Y-10, Y-9 | parked |
+| 174 | Y-11 `cf_live_reader`: a worker's handle that caches a snapshot, its test under ThreadSanitizer, C++ and Rust wrappers | 2.7.0 | medium | Y-10, Y-9 | waits: Y-10 |
 | 175 | L-11 Mutation testing with Mull: the score of every component beside coverage, held above a floor | 1.9.0 | medium | nothing | open |
 | 176 | L-12a The public headers with no record at all | 1.9.0 | large | nothing | open |
 | 177 | L-12b The matrix of every MISRA rule, made from the record | 1.9.0 | medium | L-12a | waits: L-12a |
@@ -507,40 +507,24 @@ one that cannot be done is dropped and recorded under "Done" as dropped.
 
 | Card | Version | Waits on | Status |
 | ---- | ------- | -------- | ------ |
-| C-2a | 1.10.0 | answered (D-222, an open `cf_unit`); the card, C-2b and C-1b rewritten to it | parked |
-| F-2a | 2.2.0 | answered (D-225, a writable file source); F-2a and F-2b rewritten to it | parked |
-| F-3j | 2.2.0 | answered (D-226, `cf_docedit_bytes` and a thin layer, a comment option); the card rewritten to it | parked |
 | F-4b | 1.10.0 | answered 2026-11-26: built only when it is asked for | parked |
-| K-6a | 1.9.0 | answered (D-223, one error model, docs/plan/K-correctness.md); the card rewritten to it | parked |
-| K-6b | 1.9.0 | answered (D-223, one error model, docs/plan/K-correctness.md); the card rewritten to it | parked |
-| X-21 | 1.9.0 | its TO DECIDE | parked |
 | L-15b | 1.9.0 | its TO DECIDE | parked |
 | L-17-m | 1.9.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | L-19-m | 1.9.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | G-9 | 2.3.0 | its TO DECIDE | parked |
 | G-9-m | 2.3.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | P-15-m | 1.9.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
-| Y-11 | 2.4.0 | answered ((c), `cf_live_reader`); opens only when Y-10's page shows a knee with the cores, or a binding asks | parked |
-| Y-12 | 2.2.0 | its TO DECIDE | parked |
 | Y-13-m | 2.4.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | K-10c-m | 2.2.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | C-9-m | 2.1.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | C-10c-m | 2.1.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | C-10d-m | 2.1.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | Y-41-m | 2.1.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
-| Y-16 | 1.10.0 | its rewrite to D-221 (Y-asked.md, "Approved by the maintainer"), then any TO DECIDE left | parked |
-| Y-17 | 1.10.0 | its rewrite to D-221 (Y-asked.md, "Approved by the maintainer"), then any TO DECIDE left | parked |
-| Y-18 | 1.10.0 | its rewrite to D-221 (Y-asked.md, "Approved by the maintainer"), then any TO DECIDE left | parked |
 | Y-21-m | 2.2.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | Y-22-m | 1.10.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | Y-23-m | 1.10.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
-| Y-24 | 1.9.0 | answered ((1), `gen build`); the card rewritten to it | parked |
-| Y-27 | 1.9.0 | answered (two C targets, plain `--target c` the default); the card rewritten to it | parked |
-| Y-28 | 1.10.0 | answered (D-223, one error model, docs/plan/K-correctness.md); the card rewritten to it | parked |
-| Y-29 | 1.10.0 | its TO DECIDE | parked |
 | Y-30-m | 1.10.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | Y-32-m | 1.10.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
-| Y-36 | 1.10.0 | its TO DECIDE | parked |
 | Y-39-m | 2.3.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | Y-40-m | 2.3.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | M-19-m | 1.9.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |

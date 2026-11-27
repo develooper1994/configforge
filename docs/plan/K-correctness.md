@@ -374,7 +374,7 @@ card marked **TO DECIDE** has no number until the maintainer answers; D-138
 * **stop if**: the pair test finds INI's writer writing a table deeper than the new limit (then the limit is the writer's depth: stop, the numbers under notes); a fixture in `tests/` or `examples/` with a header deeper than 31 segments.
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Changed": INI refuses a header nested deeper than 31 tables, by name (it reached the key space before); D-109's sentence; the Roadmap row.
 
-## K-6a - A refusal's byte offset (TO DECIDE)
+## K-6a - A refusal's byte offset
 
 * **id**: K-6a
 * **goal**: a refusal can say the byte offset it happened at as a number a program reads, in every reader that has one, as it says line, column and reason.
@@ -382,22 +382,25 @@ card marked **TO DECIDE** has no number until the maintainer answers; D-138
 * **needs**: nothing
 * **size**: medium
 * **version**: 2.0.0
-* **status**: parked
-* **decided**: every codec reports through `cf_text_fail` (`lib/text/src/fail.c`) or `cf_error_place` (`lib/base/include/configforge/cf_error.h:123-124`) with a line and a column; the offset is added at the same call sites, as `(size_t)(s->p - in->p)` where the scan has both pointers (CBOR and TLV: their own `off`). **Compatibility**: additive through `size` (D-51; `cf_error.h:51-62`), as `where` and `reason` were added in 1.8.
-* **TO DECIDE** (the maintainer): the shape of a new public member of `cf_error`. Options: (A) `size_t offset;` after `reason`, `(size_t)-1` when unknown, filled through a new `CF_EXPERIMENTAL(1, 9) void cf_error_place_at(cf_error*, int reason, unsigned line, unsigned col, size_t offset)` and read directly (`CF_ERROR_INIT`, `cf_error.h:73`, gains a member; it is fenced from the formatter for that reason). (B) the offset inside `cf_loc`: every `cf_loc` grows, an ABI change in 1.x, rejected. (C) leave it in the message and add `cf_error_offset(const cf_error*)`, which parses the message: rejected (a message is not an interface). **Recommendation: A**, experimental in 1.9 as N-13's `cf_reason_severity` is: one function and one member; `gate.abi` gets the function. Until answered the card is parked.
-* **files**: (if A) `lib/base/include/configforge/cf_error.h`, `lib/base/src/error.c`, `lib/text/src/fail.c`, `lib/serialize/src/cbor.c`, `lib/serialize/src/tlv.c`, `lib/serialize/src/{json,toml,yamlparse,ini,xml,properties}.c` (each call site that has a pointer into the input), `lib/config/tests/test_reason.c`; last: `docs/Decisions.md` (D-138), `docs/API.md` and `docs/Codemap.md` (generated), `CHANGELOG.md`, `docs/Roadmap.md`.
-* **steps**: (if A)
+* **status**: open
+* **decided**: (D-223, the one error model, which `cf_error` takes once: K-9c adds the chain, this card adds the offset) every codec reports through `cf_text_fail` (`lib/text/src/fail.c`) or `cf_error_place` (`lib/base/include/configforge/cf_error.h:123-124`) with a line and a column; the offset is added at the same call sites, as `(size_t)(s->p - in->p)` where the scan has both pointers (CBOR and TLV: their own `off`). **Compatibility**: additive through `size` (D-51; `cf_error.h:51-62`), as `where` and `reason` were added in 1.8.
+* **Decided** (the shape of a new public member of `cf_error`; D-223 point 2 gives `cf_error` its place, so the offset joins it once): `size_t offset;` after `reason`, `(size_t)-1` when unknown, filled through a new `CF_EXPERIMENTAL(1, 9) void cf_error_place_at(cf_error*, int reason, unsigned line, unsigned col, size_t offset)` and read directly (`CF_ERROR_INIT`, `cf_error.h:73`, gains a member; it is fenced from the formatter for that reason). Experimental in 1.9 as N-13's `cf_reason_severity` is: one function and one member; `gate.abi` gets the function. **Rejected**: the offset inside `cf_loc` (every `cf_loc` grows, an ABI change in 1.x); `cf_error_offset(const cf_error*)` parsing the message (a message is not an interface).
+* **files**: `lib/base/include/configforge/cf_error.h`, `lib/base/src/error.c`, `lib/text/src/fail.c`, `lib/serialize/src/cbor.c`, `lib/serialize/src/tlv.c`, `lib/serialize/src/{json,toml,yamlparse,ini,xml,properties}.c` (each call site that has a pointer into the input), `lib/config/tests/test_reason.c`; last: `docs/Decisions.md` (D-138), `docs/API.md` and `docs/Codemap.md` (generated), `CHANGELOG.md`, `docs/Roadmap.md`.
+* **steps**:
   1. `git switch -c work/K-6a`.
   2. In `test_reason.c`, to each row of `rows` (the refusing documents; `test_rows`, line 434, loops over them) add the offset its document must report, computed by hand (the index of the byte that is the cause); **see it fail** (the member does not exist: a compile error is the first failure, then every offset is `(size_t)-1`).
   3. Add the member and the function; `cf_text_fail` takes the offset from its caller's pointers; CBOR and TLV pass their `off`.
   4. `ctest --preset default` and `--preset sanitize`.
-  5. `docs/Decisions.md` D-138: the chosen option's text, with D-107's "byte offset" now built.
+  5. `docs/Decisions.md` D-138: the offset as decided, with D-107's "byte offset" now built.
   6. Format; generators last; ACCEPT.
 * **accept**: ACCEPT-LINUX; ACCEPT-WINDOWS; ACCEPT-CI; `gate.abi` and `gate.apiref` green.
 * **stop if**: a reader refuses from a point it has no pointer for (a refusal after the document, from the sink): its offset is `(size_t)-1` and `test_reason.c` says so for that row; more than three readers cannot give one.
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added" (experimental in 1.9); D-138; the Roadmap item "One diagnostic model across formats" stays 🟨 until K-6b.
 
-## K-6b - A refusal's reason shown by the tools (TO DECIDE)
+* **Organiser's answers**:
+  * 2026-11-27, the organiser: K-6a follows D-223 (one error model): option A of the recommendation, the offset a member of `cf_error` beside the place D-223 point 2 names (the maintainer's standing approval, 2026-11-27).
+
+## K-6b - A refusal's reason shown by the tools
 
 * **id**: K-6b
 * **goal**: `configforge codec dump`, `recode` and `detect`, when they refuse a file, show the reason name, its severity and its weakness, so that a user filters by reason and not by the words of a message.
@@ -405,9 +408,9 @@ card marked **TO DECIDE** has no number until the maintainer answers; D-138
 * **needs**: nothing
 * **size**: small
 * **version**: 2.0.0
-* **status**: parked
-* **decided**: the text, one line after the message, on stderr (`detect.c:240` prints its message on stdout; its reason line goes to stderr too, so that no stdout changes): `  reason: <cf_reason_name> (<cf_reason_severity>[, <cf_reason_weakness>])`, for instance `  reason: depth (warning, CWE-674)`; printed only when `err.reason != CF_REASON_NONE`. One helper in `tools/codec/codec.c` (`codec_report(const cf_error*)`, declared in `tools/codec/codec.h`), called by the four sites. A case in `tests/front/front.cmake`, inside `if(HAVE_CODEC)` (line 123): it writes a JSON file of 40 nested `{"a":` with `file(WRITE ...)` under `${WORK}` (as line 135 does) and runs `front_case(<the exit code `codec dump` returns on a refusal, read from `tools/codec/dump.c`> - "reason: depth" codec dump <file>)`.
-* **TO DECIDE** (the maintainer): whether the line is printed always or only with a flag. Options: (A) always: stderr's text is not a documented interface (`docs/Tools.md` documents exit codes and stdout) and a second line is read by a person; (B) only with `--reason`, so that no existing match on stderr changes before 2.0.0. **Recommendation: A**: the project treats the message text as free (D-107: a user filters by code and not by message text is the point), and a flag nobody passes defeats the aim. Until answered the card is parked.
+* **status**: open
+* **decided**: the text, one line after the message, on stderr (`tools/codec/detect.c:240` prints its message on stdout; its reason line goes to stderr too, so that no stdout changes): `  reason: <cf_reason_name> (<cf_reason_severity>[, <cf_reason_weakness>])`, for instance `  reason: depth (warning, CWE-674)`; printed only when `err.reason != CF_REASON_NONE`. One helper in `tools/codec/codec.c` (`codec_report(const cf_error*)`, declared in `tools/codec/codec.h`), called by the four sites. A case in `tests/front/front.cmake`, inside `if(HAVE_CODEC)` (line 123): it writes a JSON file of 40 nested `{"a":` with `file(WRITE ...)` under `${WORK}` (as line 135 does) and runs `front_case(<the exit code `codec dump` returns on a refusal, read from `tools/codec/dump.c`> - "reason: depth" codec dump <file>)`.
+* **Decided** (whether the line is printed always or only with a flag): always. stderr's text is not a documented interface (`docs/Tools.md` documents exit codes and stdout) and a second line is read by a person; the project treats the message text as free (D-107: a user filters by code and not by message text is the point, D-223 point 2: the code, the place and the reason are the error), and a flag nobody passes defeats the aim. **Rejected**: only with `--reason` (a flag nobody passes).
 * **files**: `tools/codec/codec.c`, `tools/codec/codec.h`, `tools/codec/dump.c`, `tools/codec/recode.c`, `tools/codec/detect.c`, `tests/front/front.cmake`; last: `docs/Tools.md`, `CHANGELOG.md`, `docs/Roadmap.md`.
 * **steps**:
   1. `git switch -c work/K-6b`. Write the front-door test first; **see it fail**.
@@ -415,8 +418,11 @@ card marked **TO DECIDE** has no number until the maintainer answers; D-138
   3. `docs/Tools.md`: the codec section's paragraph on refusals names the line.
   4. Roadmap "One diagnostic model across formats" to 🟩 (K-6a, K-6b; A-10 and N-13 earlier). Format; generators last; ACCEPT.
 * **accept**: ACCEPT-LINUX; ACCEPT-WINDOWS; ACCEPT-CI.
-* **stop if**: a test in `tests/` matches stderr exactly and fails (take option B).
-* **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Changed" (A) or "### Added" (B); D-138 shared with K-6a (one paragraph).
+* **stop if**: a test in `tests/` matches stderr exactly and fails (report it and change that test to match the new line: the line is on stderr only).
+* **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Changed"; D-138 shared with K-6a (one paragraph).
+
+* **Organiser's answers**:
+  * 2026-11-27, the organiser: K-6b follows D-223 (one error model): the reason line is always printed, on stderr (the maintainer's standing approval, 2026-11-27).
 
 ## K-7a - One table of formats: the lists that copy it read it (TO DECIDE)
 
@@ -804,10 +810,9 @@ card marked **TO DECIDE** has no number until the maintainer answers; D-138
 
 ## D-223 - One error model (the maintainer, 2026-11-26, relayed from a side session: "I like the error model"; "the core uses the C89 standard")
 
-It answers K-6a's and K-6b's TO DECIDE and Y-28's TO DECIDE C, and K-9c
+It answers K-6a's and K-6b's questions and Y-28's choice C, and K-9c
 follows it, so that `cf_error` changes shape once. K-6a, K-6b and Y-28
-are rewritten to it before they open; each carries it under
-"Organiser's answers". The core stays C89 (D-72): a newer standard's
+follow it; each carries it under "Organiser's answers". The core stays C89 (D-72): a newer standard's
 feature is only a macro that is empty under C89.
 
 1. **Errors cannot be ignored.** Every public function that returns a
