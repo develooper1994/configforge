@@ -2,7 +2,15 @@
 
 Configuration resolution for C that answers **why** a value is what it is.
 
+[![CI](https://github.com/develooper1994/configforge/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/develooper1994/configforge/actions/workflows/ci.yml)
+[![ClusterFuzzLite](https://github.com/develooper1994/configforge/actions/workflows/cflite.yml/badge.svg?branch=main)](https://github.com/develooper1994/configforge/actions/workflows/cflite.yml)
+[![CodeQL](https://github.com/develooper1994/configforge/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/develooper1994/configforge/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/develooper1994/configforge/badge)](https://scorecard.dev/viewer/?uri=github.com/develooper1994/configforge)
+[![Release](https://img.shields.io/github/v/release/develooper1994/configforge?sort=semver)](https://github.com/develooper1994/configforge/releases/latest)
+[![License: zlib](https://img.shields.io/github/license/develooper1994/configforge)](LICENSE)
+[![C89](https://img.shields.io/badge/C-89%20and%20later-blue)](docs/Decisions.md)
+[![C++98](https://img.shields.io/badge/C%2B%2B-98%20and%20later-blue)](docs/Decisions.md)
+[![Documentation](https://img.shields.io/badge/docs-main-informational)](https://develooper1994.github.io/configforge/)
 
 [Searchable documentation](https://develooper1994.github.io/configforge/) follows
 `main`, including unreleased work. See the
