@@ -1,33 +1,33 @@
-# HANDOFF (2026-11-27, evening)
+# HANDOFF (2026-11-27, afternoon)
 
-State: the plan runs from docs/Plan.md's generated index (L-20), cards
-open only when `python scripts/check/ready.py <id>` passes (L-21; `brief.py`
-refuses otherwise, `--force` for a card being repaired), CI is tiered
-(L-22). The maintainer's standing approval (docs/Plan.md "For the
-maintainer", 2026-11-27): decide with the best choice and record it; the
-organiser may tag and release a finished milestone.
+State: stage 0's work is under way from docs/Plan.md's generated index
+(docs/plan/Layout.md is the order). Landed today: L-20, L-21, L-22, L-23,
+L-24, K-11a, K-11b, L-18a, F-1a, K-9c, Y-2. Every worker gets its brief
+(`python scripts/work/brief.py --force <id>` once step 0 is in the brief)
+and docs/plan/worker-notes.md. The maintainer's standing approval and
+release rights: docs/Plan.md "For the maintainer".
 
 ## Steps
 
-1. K-11a (options with defaults) was being carried by a worker on
-   `work/K-11a`. If the branch exists: read its last commits, finish or
-   take over, land by hand (squash onto main, tree check, push,
-   `python scripts/work/index.py --done K-11a <hash>`, commit
-   "Plan: K-11a done (<hash>)", push, delete the branch). The full suite
-   must have run once on the branch (`gh workflow run ci --ref work/K-11a
-   -f tier=full`), as `work.py land` would do.
-2. Then the next `open` index row: run `ready.py` on it; a failing card is
-   corrected first (citations to full paths, the old option removed), as
-   the worker's step 0. Order now: L-18a, F-1a, Y-2, Y-8, Y-5, Y-6, Y-3,
-   K-9c, K-11b, K-11c (stage 0, 1.9.0).
-3. When stage 0's 1.9.0 rows are done: release 1.9.0 (docs/Maintaining.md
-   "Versions"; `cmake -DTO=... -P scripts/release/version.cmake` only when
-   opening the next version), then the 2.0.0 rows.
-4. Stale cards, rewritten only when they come up: F-2a, F-3i, F-3j
-   (D-224, D-225); cards to be written: K-9a, K-9b, Y-41-m, Y-42, C-9-m,
-   C-10c-m, C-10d-m, K-10c-m.
-5. For the maintainer: a skipped `matrix` job reports one check named
-   `matrix`, not the three `matrix (<os>)` the ruleset requires; pushes to
-   main bypass it, a pull request would wait.
+1. K-11c (the table of features by platform) was being carried in the
+   worktree D:\cf-work\K-11c on `work/K-11c`. If the branch exists, read it,
+   finish or land it by hand (squash onto main, tree check, push,
+   `python scripts/work/index.py --done <id> <hash>`, commit "Plan: <id> done
+   (<hash>)", push, delete the branch; a full-tier run once per card that
+   touched code or CMake).
+2. Then the file layer's rest, one at a time: Y-6 (ready), Y-5, Y-3 (its card
+   still says "rewritten to": fix in step 0), Y-8 (needs Y-3). Then K-6a,
+   K-6b, K-9a, K-9b (to be written), then row 0.9 (M-10, M-12, M-11a, M-11b,
+   M-13: the sizing modes, which the maintainer has long waited for).
+3. When stage 0's 1.9.0 rows are done: release 1.9.0 (the organiser may tag;
+   the notes now list how each archive was built, L-23, and the tag publishes
+   the Rust crate, L-24, with the secret CARGO_REGISTRY_TOKEN the maintainer
+   set). Read the release's notes and the crate on crates.io afterwards.
+4. Budget: the weekly window was at 63% on 2026-11-27 with six days left:
+   at most two workers at once, smaller models for mechanical work.
+5. Open findings: CodeQL's critical alert 22, artifact poisoning in
+   .github/workflows/bench.yml:59 (a card to write); a skipped `matrix` job
+   reports one check named `matrix` on a pull request (the ruleset wants the
+   three `matrix (<os>)` names; pushes to main bypass it).
 
 Delete this file in the commit that lands the last stage 0 1.9.0 card.
