@@ -45,34 +45,45 @@ typedef struct cf_value {
     } u;
 } cf_value;
 
+/* Guarantee: nothrow. */
 CF_API const char* cf_type_name(cf_type t);
 
 /* JSON Schema spells the same types differently; the report and the
-   schema generator both need that spelling. Two names, one list. */
+   schema generator both need that spelling. Two names, one list.
+   Guarantee: nothrow. */
 CF_API const char* cf_type_json_name(cf_type t);
 
+/* Guarantee: nothrow. */
 CF_API void cf_value_null(cf_value* v);
+/* Guarantee: nothrow. */
 CF_API void cf_value_bool(cf_value* v, cf_bool b);
+/* Guarantee: nothrow. */
 CF_API void cf_value_int(cf_value* v, cf_i64 i);
 #if CF_WITH_REAL
+/* Guarantee: nothrow. */
 CF_API void cf_value_real(cf_value* v, double r);
 #endif
+/* Guarantee: nothrow. The text is referenced, not copied. */
 CF_API void cf_value_text(cf_value* v, const char* p, size_t n);
 
 /* Convert text to the requested type. Returns CF_FALSE when the text
    does not denote a value of that type; the caller then reports a
    conversion failure naming the parameter and the source, which is
-   the only place conversion errors are allowed to appear. */
+   the only place conversion errors are allowed to appear.
+   Guarantee: strong. `out` is written only when the text denotes the type. */
 CF_NODISCARD CF_API cf_bool cf_value_from_text(cf_type t, const char* s, size_t n,
                                                cf_value* out);
 
 /* Infer a type from text. Used only where no definition exists, and
-   deliberately timid: see decision D-24. */
+   deliberately timid: see decision D-24.
+   Guarantee: strong. `out` is written only on success. */
 CF_NODISCARD CF_API cf_bool cf_value_infer(const char* s, size_t n, cf_value* out);
 
 /* Canonical text form. Identical on every platform, which is what
    makes the determinism hash and the golden fixtures meaningful.
-   Returns the length written, or 0 when cap is too small. */
+   Returns the length written, or 0 when cap is too small.
+   Guarantee: nothrow. When `cap` is too small, `buf` is left an empty string and the
+   length is 0. */
 CF_API size_t cf_value_to_text(const cf_value* v, char* buf, size_t cap);
 
 /* Longest output cf_value_to_text can produce for a non-text value. */
@@ -82,7 +93,9 @@ CF_API size_t cf_value_to_text(const cf_value* v, char* buf, size_t cap);
 #define CF_VALUE_TEXT_MAX CF_I64_DIGITS
 #endif
 
-CF_API int                  cf_value_cmp(const cf_value* a, const cf_value* b);
+/* Guarantee: nothrow. */
+CF_API int cf_value_cmp(const cf_value* a, const cf_value* b);
+/* Guarantee: strong. A pure comparison; it changes nothing. */
 CF_NODISCARD CF_API cf_bool cf_value_equal(const cf_value* a, const cf_value* b);
 
 #ifdef __cplusplus

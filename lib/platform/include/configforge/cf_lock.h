@@ -46,8 +46,10 @@ typedef struct cf_locker {
    kernel lock on the file `<dir>/.<base>.cf-lock` beside `path`, which is
    kept and never removed. A `cf_lock_sidecar()` on the `none` platform
    returns a locker whose `take` fails CF_E_CAPABILITY, `this build has no
-   files to lock`. */
+   files to lock`.
+   Guarantee: nothrow. A constant; nothing is taken. */
 CF_API const cf_locker* cf_lock_none(void);
+/* Guarantee: nothrow. A constant; nothing is taken until the locker is used. */
 CF_API const cf_locker* cf_lock_sidecar(void);
 
 #ifdef __cplusplus

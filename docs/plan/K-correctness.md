@@ -555,6 +555,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI; `ctest --preset default -R "gate.guarantees|gate.apiref|gate.abi"` exit 0.
 * **stop if**: the worker passes 60 turns (split by component: the commits already made stand, the rest goes to a new card); a header's function is declared in two headers with different words (report it).
 * **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "Failure guarantees written for the allocator, the error, the value, the file layer, the text helpers and the format readers (K-9d)", and under "### Fixed" one line a defect fixed.
+* **Organiser's answers**: a `CF_NODISCARD` predicate (`cf_key_valid`, `cf_value_equal`, `cf_sink_overflowed`, `cf_platform_has_*`, ...) cannot be `nothrow`, because the gate refuses it; it is written `strong` (a pure query changes nothing), which the card's `cf_sink_overflowed` line (`nothrow`) gives way to. A defect found: `cf_arena_alloc` and `cf_arena_dup` wrapped on a size near `SIZE_MAX`; fixed with its test (the maintainer's standing approval, 2026-11-27).
 
 ## K-9e - Guarantees written for the facade: `configforge.h`
 

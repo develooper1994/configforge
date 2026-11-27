@@ -1,7 +1,7 @@
 `lib/base/include/configforge/cf_alloc.h`
 - #define CONFIGFORGE_CF_ALLOC_H 14
 - struct cf_allocator 22-26
-- typedef cf_arena 39
+- typedef cf_arena 40
 `lib/base/include/configforge/cf_error.h`
 - #define CONFIGFORGE_CF_ERROR_H 17
 - #define CF_SOURCE_MAX 27
@@ -15,8 +15,8 @@
 - enum cf_type 23-29
 - struct cf_text 31-34
 - struct cf_value 36-46
-- #define CF_VALUE_TEXT_MAX 80
-- #define CF_VALUE_TEXT_MAX 82
+- #define CF_VALUE_TEXT_MAX 91
+- #define CF_VALUE_TEXT_MAX 93
 `lib/base/src/alloc.c`
 - cf_std_alloc 21-24
 - cf_std_release 26-29
@@ -33,12 +33,12 @@
 - cf_wipe 197-201
 - cf_arena_wipe 203-212
 - cf_arena_free 214-235
-- cf_arena_alloc 237-271
-- cf_arena_calloc 273-279
-- cf_arena_dup 281-296
-- cf_arena_used 298-300
-- cf_arena_capacity 302-304
-- cf_arena_is_fixed 306-308
+- cf_arena_alloc 237-281
+- cf_arena_calloc 283-289
+- cf_arena_dup 291-306
+- cf_arena_used 308-310
+- cf_arena_capacity 312-314
+- cf_arena_is_fixed 316-318
 `lib/base/src/error.c`
 - cf_code_name 16-25
 - cf_code_description 27-36
@@ -978,20 +978,20 @@
 - enum cf_buf_mode 40-45
 - enum cf_sync_mode 62-68
 - struct cf_file_options 70-83
-- typedef cf_file_writer 104
+- typedef cf_file_writer 105
 `lib/platform/include/configforge/cf_lock.h`
 - #define CONFIGFORGE_CF_LOCK_H 12
 - struct cf_lock 24-27
 - struct cf_locker 29-42
 `lib/platform/include/configforge/cf_platform.h`
 - #define CONFIGFORGE_CF_PLATFORM_H 29
-- #define CF_PLATFORM_NAME_MAX 96
-- struct cf_platform_reg_value 153-161
-- typedef cf_platform_reg_fn 165
-- struct cf_platform_pref_event 199-212
-- typedef cf_platform_pref_fn 216
-- struct cf_stamp 246-250
-- typedef cf_platform_wake 339
+- #define CF_PLATFORM_NAME_MAX 100
+- struct cf_platform_reg_value 158-166
+- typedef cf_platform_reg_fn 170
+- struct cf_platform_pref_event 205-218
+- typedef cf_platform_pref_fn 222
+- struct cf_stamp 253-257
+- typedef cf_platform_wake 347
 `lib/platform/include/configforge/cf_platform_file.h`
 - #define CONFIGFORGE_CF_PLATFORM_FILE_H 20
 - #define CF_PLATFORM_WIN32 41
@@ -1361,20 +1361,20 @@
 `lib/serialize/include/configforge/cf_serialize.h`
 - #define CONFIGFORGE_CF_SERIALIZE_H 21
 - struct cf_blob 43-47
-- struct cf_sink 82-86
-- struct cf_doc_sink 127-151
-- struct cf_codec 222-246
-- #define CF_ENCODER_STATE_MAX 252
-- struct cf_encoder_head 259-261
-- struct cf_tlv_tag 381-397
-- struct cf_tlv_layout 402-415
-- #define CF_TLV_LAYOUT_INIT 417
-- #define cf_tlv_codec 434
-- struct cf_compose 438-447
-- #define CF_COMPOSE_INIT 449
-- #define cf_codec_compose 459
-- enum cf_detect_how 478-484
-- struct cf_detect 489-493
+- struct cf_sink 89-93
+- struct cf_doc_sink 146-170
+- struct cf_codec 241-265
+- #define CF_ENCODER_STATE_MAX 271
+- struct cf_encoder_head 278-280
+- struct cf_tlv_tag 415-431
+- struct cf_tlv_layout 436-449
+- #define CF_TLV_LAYOUT_INIT 451
+- #define cf_tlv_codec 470
+- struct cf_compose 474-483
+- #define CF_COMPOSE_INIT 485
+- #define cf_codec_compose 497
+- enum cf_detect_how 516-522
+- struct cf_detect 527-531
 `lib/serialize/include/configforge/cf_serialize_version.h`
 - #define CONFIGFORGE_CF_SERIALIZE_VERSION_H 11
 - #define CF_SERIALIZE_VERSION_MAJOR 23

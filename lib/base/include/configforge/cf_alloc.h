@@ -25,7 +25,8 @@ typedef struct cf_allocator {
     void* ctx;
 } cf_allocator;
 
-/* malloc and free. NULL on targets built with CF_NO_STDLIB. */
+/* malloc and free. NULL on targets built with CF_NO_STDLIB.
+   Guarantee: nothrow. NULL on a target built with CF_NO_STDLIB. */
 CF_API const cf_allocator* cf_default_allocator(void);
 
 /* ------------------------------------------------------------------ *
@@ -46,6 +47,8 @@ typedef struct cf_arena cf_arena;
    Guarantee: strong. Nothing exists to change; NULL when the allocator fails. */
 CF_NODISCARD CF_API cf_arena* cf_arena_new(const cf_allocator* a, size_t block_size);
 
+/* Guarantee: strong. Nothing exists to change; NULL when the buffer is NULL or too
+ * small. */
 CF_API cf_arena* cf_arena_fixed(void* buffer, size_t size);
 
 /* Release the arena, zeroing every byte it handed out first. A
@@ -59,24 +62,34 @@ CF_API void cf_arena_free(cf_arena* ar);
 
 /* Zero every byte the arena has handed out, without releasing it. For a
    caller who owns the arena - cf_build_in - and is done with what lived
-   in it: nothing allocated from it may be used afterwards. */
+   in it: nothing allocated from it may be used afterwards.
+   Guarantee: nothrow. */
 CF_API void cf_arena_wipe(cf_arena* ar);
 
 /* The allocator this arena takes blocks from, or NULL for a fixed one.
    Needed so that deriving a configuration keeps using the allocator the
-   caller supplied rather than quietly falling back to malloc. */
+   caller supplied rather than quietly falling back to malloc.
+   Guarantee: nothrow. */
 CF_API const cf_allocator* cf_arena_allocator(const cf_arena* ar);
 
+/* Guarantee: strong. NULL when a fixed arena is exhausted or the allocator refuses; the
+ * arena is as it was. */
 CF_API void* cf_arena_alloc(cf_arena* ar, size_t n);
+/* Guarantee: strong. As cf_arena_alloc; the bytes are zeroed only once the request is
+ * served. */
 CF_API void* cf_arena_calloc(cf_arena* ar, size_t n);
 
 /* Copy len bytes and terminate. Stored text is NUL-terminated in
    addition to carrying a length, so the convenience accessors are
-   free and an embedded NUL is detectable by the caller. */
+   free and an embedded NUL is detectable by the caller.
+   Guarantee: strong. As cf_arena_alloc; NULL also for a NULL `s`. */
 CF_NODISCARD CF_API char* cf_arena_dup(cf_arena* ar, const char* s, size_t len);
 
-CF_API size_t               cf_arena_used(const cf_arena* ar);
-CF_API size_t               cf_arena_capacity(const cf_arena* ar);
+/* Guarantee: nothrow. */
+CF_API size_t cf_arena_used(const cf_arena* ar);
+/* Guarantee: nothrow. */
+CF_API size_t cf_arena_capacity(const cf_arena* ar);
+/* Guarantee: strong. A query; it changes nothing, and a NULL arena is not fixed. */
 CF_NODISCARD CF_API cf_bool cf_arena_is_fixed(const cf_arena* ar);
 
 #ifdef __cplusplus

@@ -10,6 +10,8 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - `docs/Guarantees.md` and `gate.guarantees`: every public function states one failure
   guarantee (nothrow, strong or basic) in its header comment, and no library source ends
   the program (K-9a, D-232).
+- Failure guarantees written for the allocator, the error, the value, the file layer,
+  the text helpers and the format readers (K-9d).
 - `cf_builder_sizing` and `cf_sizing_options`: manual, semi- and full-dynamic sizing,
   recorded in the configuration and read back by `cf_config_sizing`; manual, today's
   limits, is the default and nothing changes with it. The new build option
@@ -27,6 +29,11 @@ nothing: the C interface is not frozen, and a minor bump may change it.
   major 1 images still load (D-177). `cf_image_write` writes major 2, or
   major 1 with `CF_IMAGE_V1`; `cf_image` gains `key_max`, `source_max`,
   `message_max`, `max_depth` and `build_id`, and `reserved` shrinks to two.
+
+### Fixed
+
+- `cf_arena_alloc`, `cf_arena_calloc` and `cf_arena_dup` refuse a request too large to
+  size (`SIZE_MAX` and just below) instead of serving a short block (K-9d).
 
 ## 1.9.0 — 2026-11-27
 

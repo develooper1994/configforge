@@ -46,20 +46,25 @@ typedef struct cf_blob {
     const char* name; /* shown in locations: "app.toml" */
 } cf_blob;
 
+/* Guarantee: nothrow. */
 CF_API void cf_blob_mem(cf_blob* b, const char* p, size_t n, const char* name);
 
 /* How many bytes a reader skips at the start of a document: 3 when it
    begins with a UTF-8 byte order mark (EF BB BF), else 0. A mark is not
-   part of the text, and only the first bytes are one. */
+   part of the text, and only the first bytes are one.
+   Guarantee: nothrow. */
 CF_API size_t cf_blob_skip_bom(const cf_blob* b);
 
 /* Whether n bytes are UTF-8 as RFC 3629 has it: no overlong form, no
    surrogate (U+D800 to U+DFFF), nothing past U+10FFFF, no sequence cut
-   short. A NUL is a character like any other. (1.5) */
+   short. A NUL is a character like any other. (1.5)
+   Guarantee: strong. A pure check; it changes nothing. */
 CF_NODISCARD CF_API cf_bool cf_text_is_utf8(const char* p, size_t n);
 
 /* Reads a whole file into the arena. CF_E_SOURCE when it cannot be
-   opened or read; the caller decides whether that is fatal. */
+   opened or read; the caller decides whether that is fatal.
+   Guarantee: basic. `b` is untouched; the arena keeps the bytes it took and stays
+   valid; nothing leaks. */
 CF_NODISCARD CF_API cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path,
                                          cf_error* err);
 
@@ -67,9 +72,11 @@ CF_NODISCARD CF_API cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* p
    from `ar`'s allocator, so that they are gone once the reader is done -
    the key space keeps copies of the values - or `ar` itself when it is
    fixed and has none to lend. NULL when there is no room for one.
-   cf_blob_arena_done frees it, zeroed, when it was its own. */
+   cf_blob_arena_done frees it, zeroed, when it was its own.
+   Guarantee: strong. NULL when there is no room; `ar` is as it was. */
 CF_API cf_arena* cf_blob_arena(cf_arena* ar);
-CF_API void      cf_blob_arena_done(cf_arena* bytes, cf_arena* ar);
+/* Guarantee: nothrow. */
+CF_API void cf_blob_arena_done(cf_arena* bytes, cf_arena* ar);
 
 /* ------------------------------------------------------------------ *
  * Bytes out
@@ -85,24 +92,36 @@ typedef struct cf_sink {
     size_t len; /* what would have been written */
 } cf_sink;
 
-CF_API void                 cf_sink_init(cf_sink* s, char* buf, size_t cap);
-CF_API void                 cf_sink_write(cf_sink* s, const char* p, size_t n);
-CF_API void                 cf_sink_putc(cf_sink* s, char c);
-CF_API void                 cf_sink_puts(cf_sink* s, const char* z);
-CF_API void                 cf_sink_fmt(cf_sink* s, const char* fmt, ...);
-CF_API void                 cf_sink_terminate(cf_sink* s);
+/* Guarantee: nothrow. */
+CF_API void cf_sink_init(cf_sink* s, char* buf, size_t cap);
+/* Guarantee: basic. The sink stays valid; past its room the text is cut and the length
+ * still counts. */
+CF_API void cf_sink_write(cf_sink* s, const char* p, size_t n);
+/* Guarantee: basic. As cf_sink_write. */
+CF_API void cf_sink_putc(cf_sink* s, char c);
+/* Guarantee: basic. As cf_sink_write; a NULL `z` writes nothing. */
+CF_API void cf_sink_puts(cf_sink* s, const char* z);
+/* Guarantee: basic. As cf_sink_write. */
+CF_API void cf_sink_fmt(cf_sink* s, const char* fmt, ...);
+/* Guarantee: basic. As cf_sink_write; the text is cut at the room and ends with a NUL.
+ */
+CF_API void cf_sink_terminate(cf_sink* s);
+/* Guarantee: strong. A query; it changes nothing. */
 CF_NODISCARD CF_API cf_bool cf_sink_overflowed(const cf_sink* s);
 
 /* JSON, written by hand where a document is not the key space's (a
-   report, a diff): text as a JSON string, escaped; a value as JSON. */
+   report, a diff): text as a JSON string, escaped; a value as JSON.
+   Guarantee: basic. As cf_sink_write. */
 CF_API void cf_sink_json_string(cf_sink* out, const char* p, size_t n);
+/* Guarantee: basic. As cf_sink_write. */
 CF_API void cf_sink_json_value(cf_sink* out, const cf_value* v);
 
 /* ------------------------------------------------------------------ *
  * Locations
  * ------------------------------------------------------------------ */
 
-/* "app.toml:14:3", or just the file when there is no position. */
+/* "app.toml:14:3", or just the file when there is no position.
+   Guarantee: nothrow. Cut to `cap`; the return is the full length. */
 CF_API size_t cf_loc_text(const cf_loc* at, char* buf, size_t cap);
 
 /* ------------------------------------------------------------------ *
@@ -264,13 +283,16 @@ enum { CF_ENCODE_ESCAPE_REFS = 1u << 0 };
 /* Compiled-in codecs only. NULL when the format exists but this build
    left it out, which the caller must report rather than ignore: a
    configuration system whose purpose is explaining where values come
-   from must not have a build option that makes a file invisible. */
+   from must not have a build option that makes a file invisible.
+   Guarantee: nothrow. NULL for a name with no compiled-in codec. */
 CF_API const cf_codec* cf_codec_by_name(const char* name);
+/* Guarantee: nothrow. NULL for a path no compiled-in codec claims. */
 CF_API const cf_codec* cf_codec_by_path(const char* path);
 
 /* Among a caller's codecs (cf_builder_codec): the one called `name`
    when it is not NULL, else the one whose extensions match `path`;
-   NULL for none. The built-in codecs are not looked at. */
+   NULL for none. The built-in codecs are not looked at.
+   Guarantee: nothrow. NULL for none. */
 CF_API const cf_codec* cf_codec_among(const cf_codec* const* list, size_t n,
                                       const char* name, const char* path);
 
@@ -279,11 +301,14 @@ CF_API const cf_codec* cf_codec_among(const cf_codec* const* list, size_t n,
    refuses the bytes, or has neither. A text codec that does not declare
    its own encoding (CF_CODEC_SELF_ENCODED) reads only bytes that are
    UTF-8: cf_encoding_check looks first, and refuses the rest with their
-   place. (1.5; the check 1.8, D-108) */
+   place. (1.5; the check 1.8, D-108)
+   Guarantee: basic. `in` is not changed; `out` may have been given the events before
+   the refusal. */
 CF_NODISCARD CF_API cf_bool cf_codec_decode(const cf_codec* c, const cf_blob* in,
                                             const cf_doc_sink* out, cf_error* err);
 
-/* Whether `c` reads: CF_CODEC_READ and a decoder of either kind. (1.5) */
+/* Whether `c` reads: CF_CODEC_READ and a decoder of either kind. (1.5)
+   Guarantee: strong. A pure check; it changes nothing. */
 CF_NODISCARD CF_API cf_bool cf_codec_can_read(const cf_codec* c);
 
 /* Internal, as cfi_defset_nearest_secret is: cf_codec_decode without the
@@ -294,14 +319,17 @@ cf_bool cfi_codec_decode_raw(const cf_codec* c, const cf_blob* in,
                              const cf_doc_sink* out, cf_error* err);
 
 /* Names a format this library knows about whether or not it was
-   compiled in, so the error can say which option to turn on. */
+   compiled in, so the error can say which option to turn on.
+   Guarantee: nothrow. */
 CF_API const char* cf_format_of_path(const char* path);
+/* Guarantee: nothrow. */
 CF_API const char* cf_format_option(const char* format);
 
 /* CF_TRUE and *holds the bits of the format called `format`, whether
    or not this build has its codec; CF_FALSE, *holds untouched, for a
    format this library has no writer for (xml, properties) and for a
-   name it does not know. (1.8) */
+   name it does not know. (1.8)
+   Guarantee: strong. `holds` is written only on success. */
 CF_NODISCARD CF_API cf_bool cf_format_holds(const char* format, unsigned* holds);
 
 /* CF_TRUE and the limits of the reader of the format called `format`:
@@ -314,17 +342,22 @@ CF_NODISCARD CF_API cf_bool cf_format_holds(const char* format, unsigned* holds)
    document it accepts ((size_t)-1 for none; 0 for a format with no
    nesting). A format never writes what its own reader refuses, so the
    converter leaves out a table past these. CF_FALSE, both untouched, for
-   a name this library does not know. (1.8) */
+   a name this library does not know. (1.8)
+   Guarantee: strong. Both outputs are written only on success. */
 CF_NODISCARD CF_API cf_bool cf_format_limits(const char* format, size_t* max_path,
                                              size_t* max_depth);
 
-CF_API size_t          cf_codec_count(void);
+/* Guarantee: nothrow. */
+CF_API size_t cf_codec_count(void);
+/* Guarantee: nothrow. NULL past the last codec. */
 CF_API const cf_codec* cf_codec_at(size_t i);
 
 /* The built-in codecs whose caps hold every bit of `all_of` and none of
    `none_of`, in registry order: at most `cap` of them are written to
    `out` (NULL when `cap` is 0), and the number that match in all is
-   returned, as the size cf_report needs is. (1.5) */
+   returned, as the size cf_report needs is. (1.5)
+   Guarantee: nothrow. At most `cap` are written; the return is the number that match.
+ */
 CF_API size_t cf_codec_select(unsigned all_of, unsigned none_of, const cf_codec** out,
                               size_t cap);
 
@@ -333,7 +366,8 @@ CF_API size_t cf_codec_select(unsigned all_of, unsigned none_of, const cf_codec*
    "typed" or "untyped"; "arrays", "arrays of values" or "no arrays";
    "read and written", "read" or "written" ("neither read nor written"
    for a codec that does neither). Returns the length needed, as
-   snprintf does; a NULL codec gives 0 and an empty string. (1.5) */
+   snprintf does; a NULL codec gives 0 and an empty string. (1.5)
+   Guarantee: nothrow. Cut to `cap`; the return is the length needed. */
 CF_API size_t cf_codec_kind(const cf_codec* c, char* buf, size_t cap);
 
 /* ------------------------------------------------------------------ *
@@ -427,7 +461,9 @@ typedef struct cf_tlv_layout {
    mistake; `out` then reads nothing. The codec is named the layout's
    name, takes its extensions, reads only, and is never chosen from
    content (CF_CODEC_NAMED_ONLY). Off in a build without CF_WITH_TLV,
-   and says so. (1.5) */
+   and says so. (1.5)
+   Guarantee: strong. `out` is the caller's output and reads nothing after a refusal;
+   nothing else is touched. */
 CF_NODISCARD CF_API cf_bool cf_tlv_codec_sized(cf_codec* out, size_t out_size,
                                                const cf_tlv_layout* layout,
                                                cf_error*            err);
@@ -452,7 +488,9 @@ typedef struct cf_compose {
    the base, the name and both contexts alive while any configuration uses
    the codec. A repair lends its bytes until decoding returns. A filter
    fills the four document callbacks of up and forwards events to down.
-   A build without CF_WITH_COMPOSE refuses with CF_E_CAPABILITY. */
+   A build without CF_WITH_COMPOSE refuses with CF_E_CAPABILITY.
+   Guarantee: strong. `out` is the caller's output and reads nothing after a refusal;
+   nothing else is touched. */
 CF_NODISCARD CF_API cf_bool cf_codec_compose_sized(cf_codec* out, size_t out_size,
                                                    const cf_compose* spec,
                                                    cf_error*         err);
@@ -500,7 +538,9 @@ typedef struct cf_detect {
    content decides. `ar` is the trial readers' work space, and is not
    reset: pass one that can be thrown away (cf_blob_arena), or NULL for one
    made and released inside the call. `out`, when not NULL, says how the
-   answer was reached. */
+   answer was reached.
+   Guarantee: basic. `ar`, when lent, keeps what the trial readers took and stays valid;
+   nothing leaks. */
 CF_API const cf_codec* cf_codec_detect(const cf_codec* const* own, size_t n,
                                        const cf_blob* in, const char* name,
                                        cf_arena* ar, cf_detect* out);

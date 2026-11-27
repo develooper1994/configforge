@@ -1003,6 +1003,7 @@ CF_API const cf_allocator* cf_default_allocator(void);
 Implementation: [`cf_default_allocator` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L33).
 
 malloc and free. NULL on targets built with CF_NO_STDLIB.
+Guarantee: nothrow. NULL on a target built with CF_NO_STDLIB.
 
 ### Arena
 
@@ -1029,6 +1030,9 @@ CF_API cf_arena* cf_arena_fixed(void* buffer, size_t size);
 
 Implementation: [`cf_arena_fixed` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L129).
 
+Guarantee: strong. Nothing exists to change; NULL when the buffer is NULL or too
+small.
+
 ```c
 CF_API void cf_arena_free(cf_arena* ar);
 ```
@@ -1052,6 +1056,7 @@ Implementation: [`cf_arena_wipe` (lib/base/src/alloc.c)](https://github.com/deve
 Zero every byte the arena has handed out, without releasing it. For a
 caller who owns the arena - cf_build_in - and is done with what lived
 in it: nothing allocated from it may be used afterwards.
+Guarantee: nothrow.
 
 ```c
 CF_API const cf_allocator* cf_arena_allocator(const cf_arena* ar);
@@ -1062,31 +1067,60 @@ Implementation: [`cf_arena_allocator` (lib/base/src/alloc.c)](https://github.com
 The allocator this arena takes blocks from, or NULL for a fixed one.
 Needed so that deriving a configuration keeps using the allocator the
 caller supplied rather than quietly falling back to malloc.
+Guarantee: nothrow.
 
 ```c
 CF_API void* cf_arena_alloc(cf_arena* ar, size_t n);
+```
+
+Implementation: [`cf_arena_alloc` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L237).
+
+Guarantee: strong. NULL when a fixed arena is exhausted or the allocator refuses; the
+arena is as it was.
+
+```c
 CF_API void* cf_arena_calloc(cf_arena* ar, size_t n);
 ```
 
-Implementation: [`cf_arena_alloc` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L237), [`cf_arena_calloc` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L273).
+Implementation: [`cf_arena_calloc` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L283).
+
+Guarantee: strong. As cf_arena_alloc; the bytes are zeroed only once the request is
+served.
 
 ```c
 CF_NODISCARD CF_API char* cf_arena_dup(cf_arena* ar, const char* s, size_t len);
 ```
 
-Implementation: [`cf_arena_dup` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L281).
+Implementation: [`cf_arena_dup` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L291).
 
 Copy len bytes and terminate. Stored text is NUL-terminated in
 addition to carrying a length, so the convenience accessors are
 free and an embedded NUL is detectable by the caller.
+Guarantee: strong. As cf_arena_alloc; NULL also for a NULL `s`.
 
 ```c
 CF_API size_t cf_arena_used(const cf_arena* ar);
+```
+
+Implementation: [`cf_arena_used` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L308).
+
+Guarantee: nothrow.
+
+```c
 CF_API size_t cf_arena_capacity(const cf_arena* ar);
+```
+
+Implementation: [`cf_arena_capacity` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L312).
+
+Guarantee: nothrow.
+
+```c
 CF_NODISCARD CF_API cf_bool cf_arena_is_fixed(const cf_arena* ar);
 ```
 
-Implementation: [`cf_arena_used` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L298), [`cf_arena_capacity` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L302), [`cf_arena_is_fixed` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L306).
+Implementation: [`cf_arena_is_fixed` (lib/base/src/alloc.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/alloc.c#L316).
+
+Guarantee: strong. A query; it changes nothing, and a NULL arena is not fixed.
 
 ## cf_define.h
 
@@ -1730,6 +1764,7 @@ CF_TRUE and *flags the encoding's value for one of: "utf-8",
 "iso-8859-1" or "latin1", "windows-1252" or "cp1252",
 "windows-1254" or "cp1254", "iso-8859-9" or "latin5",
 "utf-16le", "utf-16be"; ASCII case ignored. CF_FALSE otherwise.
+Guarantee: strong. `flags` is written only when the name is known.
 
 ```c
 CF_API const char* cf_encoding_name(unsigned flags);
@@ -1739,6 +1774,7 @@ Implementation: [`cf_encoding_name` (lib/text/src/encoding.c)](https://github.co
 
 The canonical name ("windows-1254") of the encoding in `flags`,
 or NULL for a value above CF_ENCODING_LAST.
+Guarantee: nothrow. NULL for a value above CF_ENCODING_LAST.
 
 ```c
 CF_API size_t cf_encoding_recode(unsigned from, const char* in, size_t n, char* out, size_t cap, size_t* bad);
@@ -1756,6 +1792,8 @@ single-byte encodings (0x80 to 0x9F of the Windows pages are
 mostly U+20xx, three bytes), 3 * (n / 2) for UTF-16. With less
 room it returns (size_t)-1 with *bad == n, an offset no byte has,
 having written nothing past cap.
+Guarantee: strong. Only `out` and `*bad` are written; `out` is unspecified after a
+failure, and nothing is written past `cap`.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_encoding_check(const char* origin, const char* p, size_t n, cf_error* err);
@@ -1773,6 +1811,7 @@ the input has no multi-byte UTF-8 of its own, says which and how to
 read it so: "; it may be windows-1254 (Turkish): read it with
 CF_ENCODING_WINDOWS_1254, or the encoding windows-1254 in the tools".
 It never changes a value. A NULL origin is "input". (D-108)
+Guarantee: strong. The input is never changed; on a refusal only `err` is written.
 
 ## cf_entry.h
 
@@ -2004,6 +2043,8 @@ CF_NODISCARD CF_API cf_bool cf_key_valid(const char* key, size_t len);
 
 Implementation: [`cf_key_valid` (lib/base/src/key.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/key.c#L11).
 
+Guarantee: strong. A pure check; CF_FALSE says the key is not canonical.
+
 ```c
 CF_API void cf_error_clear(cf_error* e);
 ```
@@ -2024,6 +2065,7 @@ What `src` says, copied into `dst` as far as `dst` has room: 1.0's
 fields always, a later field where dst->size covers it. If src->size
 does not cover a later field, that field is cleared. dst->size is
 kept. Safe with NULL on either side.
+Guarantee: nothrow. Cut to the room `dst` has; a NULL side is ignored.
 
 ```c
 CF_API cf_bool cf_error_set(cf_error* e, cf_code code, const char* key, const char* source, const char* fmt, ...);
@@ -2036,35 +2078,61 @@ Safe with a NULL
 error, so every call site can report unconditionally instead of
 guarding. Returns CF_FALSE so a caller can write
 `return cf_error_set(err, ...);`
+Guarantee: nothrow. The message is cut to fit; a NULL `e` is ignored.
 
 ```c
 CF_API const char* cf_code_name(cf_code c);
+```
+
+Implementation: [`cf_code_name` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L16).
+
+Guarantee: nothrow. "?" for an unknown code.
+
+```c
 CF_API const char* cf_code_description(cf_code c);
 ```
 
-Implementation: [`cf_code_name` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L16), [`cf_code_description` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L27).
+Implementation: [`cf_code_description` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L27).
+
+Guarantee: nothrow. "unknown" for an unknown code.
 
 ```c
 CF_API const char* cf_reason_name(int reason);
-CF_API const char* cf_reason_description(int reason);
 ```
 
-Implementation: [`cf_reason_name` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L38), [`cf_reason_description` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L85).
+Implementation: [`cf_reason_name` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L38).
 
 The name ("number-range") and description of a reason. Returns "?" and
 "unknown", respectively, for an unknown value.
+Guarantee: nothrow.
+
+```c
+CF_API const char* cf_reason_description(int reason);
+```
+
+Implementation: [`cf_reason_description` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L85).
+
+Guarantee: nothrow.
 
 ```c
 CF_API const char* cf_reason_severity(int reason);
-CF_API const char* cf_reason_weakness(int reason);
 ```
 
-Implementation: [`cf_reason_severity` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L71), [`cf_reason_weakness` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L78).
+Implementation: [`cf_reason_severity` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L71).
 
 Whether a refusal is "error" (the input is malformed by its format's own
 rules), "warning" (well formed, refused for a limit or a policy) or "none";
 and the CWE it defends, such as "CWE-674", or "" for none. "?" and "" for
 an unknown value. Promoted in 2.0.
+Guarantee: nothrow.
+
+```c
+CF_API const char* cf_reason_weakness(int reason);
+```
+
+Implementation: [`cf_reason_weakness` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L78).
+
+Guarantee: nothrow.
 
 ```c
 CF_API void cf_error_place(cf_error* e, int reason, unsigned int line, unsigned int col);
@@ -2074,6 +2142,7 @@ Implementation: [`cf_error_place` (lib/base/src/error.c)](https://github.com/dev
 
 Sets where (file NULL, line, col) and reason on an error whose message
 is already set, where e->size reaches them. NULL is ignored.
+Guarantee: nothrow.
 
 ## cf_explain.h
 
@@ -2168,6 +2237,7 @@ for CF_SYNC_EVERY with sync_ms != 0 (CF_E_CAPABILITY, `this platform has
 no clock for sync_ms`). `buffer_size` above 0 is a buffer taken from
 cf_default_allocator() and released at the close; a build with no
 allocator refuses it (CF_E_CAPABILITY).
+Guarantee: nothrow.
 
 ### The writer: streaming, in place
 
@@ -2182,7 +2252,8 @@ CF_NODISCARD CF_API cf_file_writer* cf_file_writer_open(const char* path, const 
 
 Implementation: [`cf_file_writer_open` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L216).
 
-clang-format off
+Guarantee: basic. On failure no writer exists and nothing leaks; the file may
+have been created or truncated.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_file_writer_write(cf_file_writer* w, const void* data, size_t size, cf_error* err);
@@ -2190,7 +2261,7 @@ CF_NODISCARD CF_API cf_bool cf_file_writer_write(cf_file_writer* w, const void* 
 
 Implementation: [`cf_file_writer_write` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L224).
 
-clang-format on
+Guarantee: basic. The writer stays valid; some of the bytes may be on disk.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_file_writer_flush(cf_file_writer* w, cf_error* err);
@@ -2199,6 +2270,7 @@ CF_NODISCARD CF_API cf_bool cf_file_writer_flush(cf_file_writer* w, cf_error* er
 Implementation: [`cf_file_writer_flush` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L233).
 
 To the system, not forced to the device.
+Guarantee: basic. The writer stays valid; bytes may be on disk.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_file_writer_sync(cf_file_writer* w, cf_error* err);
@@ -2207,6 +2279,7 @@ CF_NODISCARD CF_API cf_bool cf_file_writer_sync(cf_file_writer* w, cf_error* err
 Implementation: [`cf_file_writer_sync` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L239).
 
 Flush, then forced to the device.
+Guarantee: basic. The writer stays valid; bytes may be on disk.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_file_writer_close(cf_file_writer* w, cf_error* err);
@@ -2216,6 +2289,7 @@ Implementation: [`cf_file_writer_close` (lib/platform/src/file_layer.c)](https:/
 
 The last flush, the sync the policy asks for, the close. Always frees
 `w`, whether it returns true or not; NULL is fine.
+Guarantee: basic. `w` is released whether it fails or not; bytes may be on disk.
 
 ### The replace: a file whole or not at all
 
@@ -2236,6 +2310,8 @@ CF_NODISCARD CF_API cf_bool cf_file_replace(const char* path, const void* data, 
 ```
 
 Implementation: [`cf_file_replace` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L149).
+
+Guarantee: strong. On failure the target is as it was and no temporary is left.
 
 ## cf_flatten.h
 
@@ -3164,10 +3240,9 @@ configuration; it is given a path and a wait.
 
 ```c
 CF_API const cf_locker* cf_lock_none(void);
-CF_API const cf_locker* cf_lock_sidecar(void);
 ```
 
-Implementation: [`cf_lock_none` (lib/platform/src/lock.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/lock.c#L47), [`cf_lock_sidecar` (lib/platform/src/lock.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/lock.c#L53).
+Implementation: [`cf_lock_none` (lib/platform/src/lock.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/lock.c#L47).
 
 The built-in lockers, as functions (no data is exported from the
 library): the default, which takes nothing and always succeeds, and the
@@ -3175,6 +3250,15 @@ kernel lock on the file `&lt;dir>/.&lt;base>.cf-lock` beside `path`, which is
 kept and never removed. A `cf_lock_sidecar()` on the `none` platform
 returns a locker whose `take` fails CF_E_CAPABILITY, `this build has no
 files to lock`.
+Guarantee: nothrow. A constant; nothing is taken.
+
+```c
+CF_API const cf_locker* cf_lock_sidecar(void);
+```
+
+Implementation: [`cf_lock_sidecar` (lib/platform/src/lock.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/lock.c#L53).
+
+Guarantee: nothrow. A constant; nothing is taken until the locker is used.
 
 ## cf_log.h
 
@@ -3360,6 +3444,7 @@ CF_API const char* cf_platform_name(void);
 Implementation: [`cf_platform_name` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L14), [`cf_platform_name` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L92), [`cf_platform_name` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L35).
 
 The name this build was compiled for, for explain() and the report.
+Guarantee: nothrow.
 
 ### Capabilities
 
@@ -3370,11 +3455,27 @@ two answers.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_platform_has_environ(void);
+```
+
+Implementation: [`cf_platform_has_environ` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L18), [`cf_platform_has_environ` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L96), [`cf_platform_has_environ` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L39).
+
+Guarantee: strong. A capability query; it changes nothing.
+
+```c
 CF_NODISCARD CF_API cf_bool cf_platform_has_dir_list(void);
+```
+
+Implementation: [`cf_platform_has_dir_list` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L22), [`cf_platform_has_dir_list` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L100), [`cf_platform_has_dir_list` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L43).
+
+Guarantee: strong. A capability query; it changes nothing.
+
+```c
 CF_NODISCARD CF_API cf_bool cf_platform_has_wide_args(void);
 ```
 
-Implementation: [`cf_platform_has_environ` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L18), [`cf_platform_has_environ` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L96), [`cf_platform_has_environ` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L39), [`cf_platform_has_dir_list` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L22), [`cf_platform_has_dir_list` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L100), [`cf_platform_has_dir_list` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L43), [`cf_platform_has_wide_args` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L26), [`cf_platform_has_wide_args` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L104), [`cf_platform_has_wide_args` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L47).
+Implementation: [`cf_platform_has_wide_args` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L26), [`cf_platform_has_wide_args` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L104), [`cf_platform_has_wide_args` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L47).
+
+Guarantee: strong. A capability query; it changes nothing.
 
 ### The environment
 
@@ -3441,6 +3542,7 @@ Whether this platform can say who may write to a directory and its
 files (POSIX: yes; Windows and a build with no operating system:
 no - an access control list is not a mode, and an answer that
 guessed would be wrong both ways).
+Guarantee: strong. A capability query; it changes nothing.
 
 ```c
 CF_API int cf_platform_dir_list_trusted(const char* path, char (*names)[CF_PLATFORM_NAME_MAX], int max, cf_error* err);
@@ -3472,6 +3574,8 @@ CF_NODISCARD CF_API cf_bool cf_platform_has_registry(void);
 
 Implementation: [`cf_platform_has_registry` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L104), [`cf_platform_has_registry` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L172), [`cf_platform_has_registry` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L702).
 
+Guarantee: strong. A capability query; it changes nothing.
+
 ```c
 CF_API int cf_platform_registry_walk(const char* root, cf_arena* arena, cf_platform_reg_fn fn, void* ctx, cf_error* err);
 ```
@@ -3498,6 +3602,8 @@ CF_NODISCARD CF_API cf_bool cf_platform_has_preferences(void);
 ```
 
 Implementation: [`cf_platform_has_preferences` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L121), [`cf_platform_has_preferences` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L195), [`cf_platform_has_preferences` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L937).
+
+Guarantee: strong. A capability query; it changes nothing.
 
 ```c
 CF_API int cf_platform_preferences_walk(const char* domain, cf_arena* arena, cf_platform_pref_fn fn, void* ctx, cf_error* err);
@@ -3609,6 +3715,8 @@ CF_NODISCARD CF_API cf_bool cf_platform_has_private_create(void);
 
 Implementation: [`cf_platform_has_private_create` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L92), [`cf_platform_has_private_create` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L657), [`cf_platform_has_private_create` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L265).
 
+Guarantee: strong. A capability query; it changes nothing.
+
 ```c
 CF_API int cf_platform_create_private(const char* path, cf_error* err);
 ```
@@ -3641,6 +3749,8 @@ CF_NODISCARD CF_API cf_bool cf_platform_has_wake(void);
 ```
 
 Implementation: [`cf_platform_has_wake` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L142), [`cf_platform_has_wake` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L1001), [`cf_platform_has_wake` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L564).
+
+Guarantee: strong. A capability query; it changes nothing.
 
 ```c
 CF_NODISCARD CF_API cf_platform_wake* cf_platform_wake_open(const char* const* paths, size_t              n, const cf_allocator* a, cf_error*           err);
@@ -4014,11 +4124,28 @@ when cap > 0.
 
 ```c
 CF_API size_t cf_fmt(char* buf, size_t cap, const char* fmt, ...);
+```
+
+Implementation: [`cf_fmt` (lib/port/src/port.c)](https://github.com/develooper1994/configforge/blob/main/lib/port/src/port.c#L312).
+
+Guarantee: nothrow. The text is cut to `cap`, NUL-terminated; the return is the full
+length.
+
+```c
 CF_API size_t cf_fmt_append(char* buf, size_t cap, size_t at, const char* fmt, ...);
+```
+
+Implementation: [`cf_fmt_append` (lib/port/src/port.c)](https://github.com/develooper1994/configforge/blob/main/lib/port/src/port.c#L327).
+
+Guarantee: nothrow. As cf_fmt; an `at` past the end of `buf` writes nothing.
+
+```c
 CF_API size_t cf_vfmt(char* buf, size_t cap, const char* fmt, va_list ap);
 ```
 
-Implementation: [`cf_fmt` (lib/port/src/port.c)](https://github.com/develooper1994/configforge/blob/main/lib/port/src/port.c#L312), [`cf_fmt_append` (lib/port/src/port.c)](https://github.com/develooper1994/configforge/blob/main/lib/port/src/port.c#L327), [`cf_vfmt` (lib/port/src/port.c)](https://github.com/develooper1994/configforge/blob/main/lib/port/src/port.c#L303).
+Implementation: [`cf_vfmt` (lib/port/src/port.c)](https://github.com/develooper1994/configforge/blob/main/lib/port/src/port.c#L303).
+
+Guarantee: nothrow. As cf_fmt.
 
 ### Build description, reported in explain() and in the provenance
 
@@ -4029,6 +4156,8 @@ CF_API const char* cf_port_description(void);
 ```
 
 Implementation: [`cf_port_description` (lib/port/src/port.c)](https://github.com/develooper1994/configforge/blob/main/lib/port/src/port.c#L355).
+
+Guarantee: nothrow.
 
 ## cf_report.h
 
@@ -4153,6 +4282,8 @@ CF_API void cf_blob_mem(cf_blob* b, const char* p, size_t n, const char* name);
 
 Implementation: [`cf_blob_mem` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L21).
 
+Guarantee: nothrow.
+
 ```c
 CF_API size_t cf_blob_skip_bom(const cf_blob* b);
 ```
@@ -4162,6 +4293,7 @@ Implementation: [`cf_blob_skip_bom` (lib/serialize/src/blob.c)](https://github.c
 How many bytes a reader skips at the start of a document: 3 when it
 begins with a UTF-8 byte order mark (EF BB BF), else 0. A mark is not
 part of the text, and only the first bytes are one.
+Guarantee: nothrow.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_text_is_utf8(const char* p, size_t n);
@@ -4172,6 +4304,7 @@ Implementation: [`cf_text_is_utf8` (lib/serialize/src/blob.c)](https://github.co
 Whether n bytes are UTF-8 as RFC 3629 has it: no overlong form, no
 surrogate (U+D800 to U+DFFF), nothing past U+10FFFF, no sequence cut
 short. A NUL is a character like any other. (1.5)
+Guarantee: strong. A pure check; it changes nothing.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err);
@@ -4181,19 +4314,29 @@ Implementation: [`cf_blob_file` (lib/serialize/src/blob.c)](https://github.com/d
 
 Reads a whole file into the arena. CF_E_SOURCE when it cannot be
 opened or read; the caller decides whether that is fatal.
+Guarantee: basic. `b` is untouched; the arena keeps the bytes it took and stays
+valid; nothing leaks.
 
 ```c
 CF_API cf_arena* cf_blob_arena(cf_arena* ar);
-CF_API void cf_blob_arena_done(cf_arena* bytes, cf_arena* ar);
 ```
 
-Implementation: [`cf_blob_arena` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L42), [`cf_blob_arena_done` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L51).
+Implementation: [`cf_blob_arena` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L42).
 
 Where a file's bytes go for one reading (D-61): an arena of their own,
 from `ar`'s allocator, so that they are gone once the reader is done -
 the key space keeps copies of the values - or `ar` itself when it is
 fixed and has none to lend. NULL when there is no room for one.
 cf_blob_arena_done frees it, zeroed, when it was its own.
+Guarantee: strong. NULL when there is no room; `ar` is as it was.
+
+```c
+CF_API void cf_blob_arena_done(cf_arena* bytes, cf_arena* ar);
+```
+
+Implementation: [`cf_blob_arena_done` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L51).
+
+Guarantee: nothrow.
 
 ### Bytes out
 
@@ -4203,25 +4346,78 @@ by rendering once into nothing.
 
 ```c
 CF_API void cf_sink_init(cf_sink* s, char* buf, size_t cap);
+```
+
+Implementation: [`cf_sink_init` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L158).
+
+Guarantee: nothrow.
+
+```c
 CF_API void cf_sink_write(cf_sink* s, const char* p, size_t n);
+```
+
+Implementation: [`cf_sink_write` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L164).
+
+Guarantee: basic. The sink stays valid; past its room the text is cut and the length
+still counts.
+
+```c
 CF_API void cf_sink_putc(cf_sink* s, char c);
+```
+
+Implementation: [`cf_sink_putc` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L176).
+
+Guarantee: basic. As cf_sink_write.
+
+```c
 CF_API void cf_sink_puts(cf_sink* s, const char* z);
+```
+
+Implementation: [`cf_sink_puts` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L183).
+
+Guarantee: basic. As cf_sink_write; a NULL `z` writes nothing.
+
+```c
 CF_API void cf_sink_fmt(cf_sink* s, const char* fmt, ...);
+```
+
+Implementation: [`cf_sink_fmt` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L189).
+
+Guarantee: basic. As cf_sink_write.
+
+```c
 CF_API void cf_sink_terminate(cf_sink* s);
+```
+
+Implementation: [`cf_sink_terminate` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L209).
+
+Guarantee: basic. As cf_sink_write; the text is cut at the room and ends with a NUL.
+
+```c
 CF_NODISCARD CF_API cf_bool cf_sink_overflowed(const cf_sink* s);
 ```
 
-Implementation: [`cf_sink_init` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L158), [`cf_sink_write` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L164), [`cf_sink_putc` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L176), [`cf_sink_puts` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L183), [`cf_sink_fmt` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L189), [`cf_sink_terminate` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L209), [`cf_sink_overflowed` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L215).
+Implementation: [`cf_sink_overflowed` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L215).
+
+Guarantee: strong. A query; it changes nothing.
 
 ```c
 CF_API void cf_sink_json_string(cf_sink* out, const char* p, size_t n);
-CF_API void cf_sink_json_value(cf_sink* out, const cf_value* v);
 ```
 
-Implementation: [`cf_sink_json_string` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L231), [`cf_sink_json_value` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L248).
+Implementation: [`cf_sink_json_string` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L231).
 
 JSON, written by hand where a document is not the key space's (a
 report, a diff): text as a JSON string, escaped; a value as JSON.
+Guarantee: basic. As cf_sink_write.
+
+```c
+CF_API void cf_sink_json_value(cf_sink* out, const cf_value* v);
+```
+
+Implementation: [`cf_sink_json_value` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L248).
+
+Guarantee: basic. As cf_sink_write.
 
 ### Locations
 
@@ -4232,6 +4428,7 @@ CF_API size_t cf_loc_text(const cf_loc* at, char* buf, size_t cap);
 Implementation: [`cf_loc_text` (lib/serialize/src/blob.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/blob.c#L274).
 
 "app.toml:14:3", or just the file when there is no position.
+Guarantee: nothrow. Cut to `cap`; the return is the full length.
 
 ### Document events
 
@@ -4250,15 +4447,23 @@ where position is the name.
 
 ```c
 CF_API const cf_codec* cf_codec_by_name(const char* name);
-CF_API const cf_codec* cf_codec_by_path(const char* path);
 ```
 
-Implementation: [`cf_codec_by_name` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L147), [`cf_codec_by_path` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L207).
+Implementation: [`cf_codec_by_name` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L147).
 
 Compiled-in codecs only. NULL when the format exists but this build
 left it out, which the caller must report rather than ignore: a
 configuration system whose purpose is explaining where values come
 from must not have a build option that makes a file invisible.
+Guarantee: nothrow. NULL for a name with no compiled-in codec.
+
+```c
+CF_API const cf_codec* cf_codec_by_path(const char* path);
+```
+
+Implementation: [`cf_codec_by_path` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L207).
+
+Guarantee: nothrow. NULL for a path no compiled-in codec claims.
 
 ```c
 CF_API const cf_codec* cf_codec_among(const cf_codec* const* list, size_t n, const char* name, const char* path);
@@ -4269,6 +4474,7 @@ Implementation: [`cf_codec_among` (lib/serialize/src/codec.c)](https://github.co
 Among a caller's codecs (cf_builder_codec): the one called `name`
 when it is not NULL, else the one whose extensions match `path`;
 NULL for none. The built-in codecs are not looked at.
+Guarantee: nothrow. NULL for none.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_codec_decode(const cf_codec* c, const cf_blob* in, const cf_doc_sink* out, cf_error* err);
@@ -4282,6 +4488,8 @@ refuses the bytes, or has neither. A text codec that does not declare
 its own encoding (CF_CODEC_SELF_ENCODED) reads only bytes that are
 UTF-8: cf_encoding_check looks first, and refuses the rest with their
 place. (1.5; the check 1.8, D-108)
+Guarantee: basic. `in` is not changed; `out` may have been given the events before
+the refusal.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_codec_can_read(const cf_codec* c);
@@ -4290,16 +4498,25 @@ CF_NODISCARD CF_API cf_bool cf_codec_can_read(const cf_codec* c);
 Implementation: [`cf_codec_can_read` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L257).
 
 Whether `c` reads: CF_CODEC_READ and a decoder of either kind. (1.5)
+Guarantee: strong. A pure check; it changes nothing.
 
 ```c
 CF_API const char* cf_format_of_path(const char* path);
-CF_API const char* cf_format_option(const char* format);
 ```
 
-Implementation: [`cf_format_of_path` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L339), [`cf_format_option` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L388).
+Implementation: [`cf_format_of_path` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L339).
 
 Names a format this library knows about whether or not it was
 compiled in, so the error can say which option to turn on.
+Guarantee: nothrow.
+
+```c
+CF_API const char* cf_format_option(const char* format);
+```
+
+Implementation: [`cf_format_option` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L388).
+
+Guarantee: nothrow.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_format_holds(const char* format, unsigned* holds);
@@ -4311,6 +4528,7 @@ CF_TRUE and *holds the bits of the format called `format`, whether
 or not this build has its codec; CF_FALSE, *holds untouched, for a
 format this library has no writer for (xml, properties) and for a
 name it does not know. (1.8)
+Guarantee: strong. `holds` is written only on success.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_format_limits(const char* format, size_t* max_path, size_t* max_depth);
@@ -4329,13 +4547,23 @@ max_depth the most tables and arrays one inside another below the
    nesting). A format never writes what its own reader refuses, so the
    converter leaves out a table past these. CF_FALSE, both untouched, for
    a name this library does not know. (1.8)
+   Guarantee: strong. Both outputs are written only on success.
 
 ```c
 CF_API size_t cf_codec_count(void);
+```
+
+Implementation: [`cf_codec_count` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L66).
+
+Guarantee: nothrow.
+
+```c
 CF_API const cf_codec* cf_codec_at(size_t i);
 ```
 
-Implementation: [`cf_codec_count` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L66), [`cf_codec_at` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L74).
+Implementation: [`cf_codec_at` (lib/serialize/src/codec.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/codec.c#L74).
+
+Guarantee: nothrow. NULL past the last codec.
 
 ```c
 CF_API size_t cf_codec_select(unsigned all_of, unsigned none_of, const cf_codec** out, size_t cap);
@@ -4347,6 +4575,7 @@ The built-in codecs whose caps hold every bit of `all_of` and none of
 `none_of`, in registry order: at most `cap` of them are written to
 `out` (NULL when `cap` is 0), and the number that match in all is
 returned, as the size cf_report needs is. (1.5)
+Guarantee: nothrow. At most `cap` are written; the return is the number that match.
 
 ```c
 CF_API size_t cf_codec_kind(const cf_codec* c, char* buf, size_t cap);
@@ -4360,6 +4589,7 @@ this order: "text" or "binary"; "self-describing" or "schema-bound";
 "read and written", "read" or "written" ("neither read nor written"
 for a codec that does neither). Returns the length needed, as
 snprintf does; a NULL codec gives 0 and an empty string. (1.5)
+Guarantee: nothrow. Cut to `cap`; the return is the length needed.
 
 ### Tag, length, value, by a layout the program gives (D-93)
 
@@ -4388,6 +4618,8 @@ mistake; `out` then reads nothing. The codec is named the layout's
 name, takes its extensions, reads only, and is never chosen from
 content (CF_CODEC_NAMED_ONLY). Off in a build without CF_WITH_TLV,
 and says so. (1.5)
+Guarantee: strong. `out` is the caller's output and reads nothing after a refusal;
+nothing else is touched.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_codec_compose_sized(cf_codec* out, size_t out_size, const cf_compose* spec, cf_error*         err);
@@ -4400,6 +4632,8 @@ the base, the name and both contexts alive while any configuration uses
 the codec. A repair lends its bytes until decoding returns. A filter
 fills the four document callbacks of up and forwards events to down.
 A build without CF_WITH_COMPOSE refuses with CF_E_CAPABILITY.
+Guarantee: strong. `out` is the caller's output and reads nothing after a refusal;
+nothing else is touched.
 
 ### The format from the name, then the content (D-73)
 
@@ -4430,6 +4664,8 @@ content decides. `ar` is the trial readers' work space, and is not
 reset: pass one that can be thrown away (cf_blob_arena), or NULL for one
 made and released inside the call. `out`, when not NULL, says how the
 answer was reached.
+Guarantee: basic. `ar`, when lent, keeps what the trial readers took and stays valid;
+nothing leaks.
 
 ## cf_serialize_version.h
 
@@ -4442,13 +4678,21 @@ library does not define.
 
 ```c
 CF_API const char* cf_serialize_version(void);
-CF_API int cf_serialize_version_number(void);
 ```
 
-Implementation: [`cf_serialize_version` (lib/serialize/src/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/version.c#L15), [`cf_serialize_version_number` (lib/serialize/src/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/version.c#L20).
+Implementation: [`cf_serialize_version` (lib/serialize/src/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/version.c#L15).
 
 The version the serialization library was compiled as: "1.7.0", and the
 same as one number. (1.7)
+Guarantee: nothrow.
+
+```c
+CF_API int cf_serialize_version_number(void);
+```
+
+Implementation: [`cf_serialize_version_number` (lib/serialize/src/version.c)](https://github.com/develooper1994/configforge/blob/main/lib/serialize/src/version.c#L20).
+
+Guarantee: nothrow.
 
 ## cf_source.h
 
@@ -5144,6 +5388,8 @@ CF_API const char* cf_type_name(cf_type t);
 
 Implementation: [`cf_type_name` (lib/base/src/value.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/value.c#L12).
 
+Guarantee: nothrow.
+
 ```c
 CF_API const char* cf_type_json_name(cf_type t);
 ```
@@ -5152,16 +5398,47 @@ Implementation: [`cf_type_json_name` (lib/base/src/value.c)](https://github.com/
 
 JSON Schema spells the same types differently; the report and the
 schema generator both need that spelling. Two names, one list.
+Guarantee: nothrow.
 
 ```c
 CF_API void cf_value_null(cf_value* v);
+```
+
+Implementation: [`cf_value_null` (lib/base/src/value.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/value.c#L36).
+
+Guarantee: nothrow.
+
+```c
 CF_API void cf_value_bool(cf_value* v, cf_bool b);
+```
+
+Implementation: [`cf_value_bool` (lib/base/src/value.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/value.c#L41).
+
+Guarantee: nothrow.
+
+```c
 CF_API void cf_value_int(cf_value* v, cf_i64 i);
+```
+
+Implementation: [`cf_value_int` (lib/base/src/value.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/value.c#L46).
+
+Guarantee: nothrow.
+
+```c
 CF_API void cf_value_real(cf_value* v, double r);
+```
+
+Implementation: [`cf_value_real` (lib/base/src/value.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/value.c#L52).
+
+Guarantee: nothrow.
+
+```c
 CF_API void cf_value_text(cf_value* v, const char* p, size_t n);
 ```
 
-Implementation: [`cf_value_null` (lib/base/src/value.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/value.c#L36), [`cf_value_bool` (lib/base/src/value.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/value.c#L41), [`cf_value_int` (lib/base/src/value.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/value.c#L46), [`cf_value_real` (lib/base/src/value.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/value.c#L52), [`cf_value_text` (lib/base/src/value.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/value.c#L58).
+Implementation: [`cf_value_text` (lib/base/src/value.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/value.c#L58).
+
+Guarantee: nothrow. The text is referenced, not copied.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_value_from_text(cf_type t, const char* s, size_t n, cf_value* out);
@@ -5173,6 +5450,7 @@ Convert text to the requested type. Returns CF_FALSE when the text
 does not denote a value of that type; the caller then reports a
 conversion failure naming the parameter and the source, which is
 the only place conversion errors are allowed to appear.
+Guarantee: strong. `out` is written only when the text denotes the type.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_value_infer(const char* s, size_t n, cf_value* out);
@@ -5182,6 +5460,7 @@ Implementation: [`cf_value_infer` (lib/base/src/value.c)](https://github.com/dev
 
 Infer a type from text. Used only where no definition exists, and
 deliberately timid: see decision D-24.
+Guarantee: strong. `out` is written only on success.
 
 ```c
 CF_API size_t cf_value_to_text(const cf_value* v, char* buf, size_t cap);
@@ -5192,13 +5471,24 @@ Implementation: [`cf_value_to_text` (lib/base/src/value.c)](https://github.com/d
 Canonical text form. Identical on every platform, which is what
 makes the determinism hash and the golden fixtures meaningful.
 Returns the length written, or 0 when cap is too small.
+Guarantee: nothrow. When `cap` is too small, `buf` is left an empty string and the
+length is 0.
 
 ```c
 CF_API int cf_value_cmp(const cf_value* a, const cf_value* b);
+```
+
+Implementation: [`cf_value_cmp` (lib/base/src/value.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/value.c#L198).
+
+Guarantee: nothrow.
+
+```c
 CF_NODISCARD CF_API cf_bool cf_value_equal(const cf_value* a, const cf_value* b);
 ```
 
-Implementation: [`cf_value_cmp` (lib/base/src/value.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/value.c#L198), [`cf_value_equal` (lib/base/src/value.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/value.c#L231).
+Implementation: [`cf_value_equal` (lib/base/src/value.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/value.c#L231).
+
+Guarantee: strong. A pure comparison; it changes nothing.
 
 ## cf_version.h
 

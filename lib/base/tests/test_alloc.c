@@ -100,10 +100,39 @@ static void test_fixed_unaligned(void) {
     }
 }
 
+/* A request that cannot be sized is refused, never served short (K-9d): the
+   rounding up to the alignment and the block header must not wrap. */
+static void test_oversize_refused(void) {
+    static char buf[512];
+    cf_arena*   ar  = cf_arena_new(NULL, 0);
+    cf_arena*   fx  = cf_arena_fixed(buf, sizeof buf);
+    size_t      max = (size_t)-1;
+    size_t      used;
+
+    check(ar != NULL && fx != NULL, "arenas created");
+    if (ar == NULL || fx == NULL) {
+        cf_arena_free(ar);
+        return;
+    }
+    used = cf_arena_used(ar);
+    check(cf_arena_alloc(ar, max) == NULL, "a request of SIZE_MAX is refused");
+    check(cf_arena_alloc(ar, max - 7) == NULL,
+          "a request that wraps on rounding is refused");
+    check(cf_arena_alloc(ar, max - 20) == NULL,
+          "a request that wraps with the block header is refused");
+    check(cf_arena_alloc(fx, max) == NULL, "a fixed arena refuses SIZE_MAX");
+    check(cf_arena_calloc(ar, max) == NULL, "calloc of SIZE_MAX is refused");
+    check(cf_arena_dup(ar, "x", max) == NULL, "dup of SIZE_MAX bytes is refused");
+    check(cf_arena_used(ar) == used, "a refusal leaves the arena as it was");
+    check(cf_arena_alloc(ar, 8) != NULL, "the arena still serves");
+    cf_arena_free(ar);
+}
+
 int main(void) {
     test_growing();
     test_alignment();
     test_fixed();
     test_fixed_unaligned();
+    test_oversize_refused();
     return cf_test_done();
 }

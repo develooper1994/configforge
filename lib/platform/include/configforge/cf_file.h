@@ -89,7 +89,8 @@ typedef struct cf_file_options {
    for CF_SYNC_EVERY with sync_ms != 0 (CF_E_CAPABILITY, `this platform has
    no clock for sync_ms`). `buffer_size` above 0 is a buffer taken from
    cf_default_allocator() and released at the close; a build with no
-   allocator refuses it (CF_E_CAPABILITY). */
+   allocator refuses it (CF_E_CAPABILITY).
+   Guarantee: nothrow. */
 CF_API void cf_file_options_init(cf_file_options* o);
 
 /* ------------------------------------------------------------------ *
@@ -104,16 +105,22 @@ CF_API void cf_file_options_init(cf_file_options* o);
 typedef struct cf_file_writer cf_file_writer;
 
 /* clang-format off */
+/* Guarantee: basic. On failure no writer exists and nothing leaks; the file may
+   have been created or truncated. */
 CF_NODISCARD CF_API cf_file_writer* cf_file_writer_open(const char* path, const cf_file_options* o, cf_error* err);
 /* clang-format on */
+/* Guarantee: basic. The writer stays valid; some of the bytes may be on disk. */
 CF_NODISCARD CF_API cf_bool cf_file_writer_write(cf_file_writer* w, const void* data,
                                                  size_t size, cf_error* err);
-/* To the system, not forced to the device. */
+/* To the system, not forced to the device.
+   Guarantee: basic. The writer stays valid; bytes may be on disk. */
 CF_NODISCARD CF_API cf_bool cf_file_writer_flush(cf_file_writer* w, cf_error* err);
-/* Flush, then forced to the device. */
+/* Flush, then forced to the device.
+   Guarantee: basic. The writer stays valid; bytes may be on disk. */
 CF_NODISCARD CF_API cf_bool cf_file_writer_sync(cf_file_writer* w, cf_error* err);
 /* The last flush, the sync the policy asks for, the close. Always frees
-   `w`, whether it returns true or not; NULL is fine. */
+   `w`, whether it returns true or not; NULL is fine.
+   Guarantee: basic. `w` is released whether it fails or not; bytes may be on disk. */
 CF_NODISCARD CF_API cf_bool cf_file_writer_close(cf_file_writer* w, cf_error* err);
 
 /* ------------------------------------------------------------------ *
@@ -132,6 +139,7 @@ CF_NODISCARD CF_API cf_bool cf_file_writer_close(cf_file_writer* w, cf_error* er
  * copied and the new file takes the directory's.
  * ------------------------------------------------------------------ */
 
+/* Guarantee: strong. On failure the target is as it was and no temporary is left. */
 CF_NODISCARD CF_API cf_bool cf_file_replace(const char* path, const void* data,
                                             size_t size, const cf_file_options* o,
                                             cf_error* err);

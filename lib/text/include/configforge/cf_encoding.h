@@ -40,11 +40,13 @@ enum {
 /* CF_TRUE and *flags the encoding's value for one of: "utf-8",
    "iso-8859-1" or "latin1", "windows-1252" or "cp1252",
    "windows-1254" or "cp1254", "iso-8859-9" or "latin5",
-   "utf-16le", "utf-16be"; ASCII case ignored. CF_FALSE otherwise. */
+   "utf-16le", "utf-16be"; ASCII case ignored. CF_FALSE otherwise.
+   Guarantee: strong. `flags` is written only when the name is known. */
 CF_NODISCARD CF_API cf_bool cf_encoding_by_name(const char* name, unsigned* flags);
 
 /* The canonical name ("windows-1254") of the encoding in `flags`,
-   or NULL for a value above CF_ENCODING_LAST. */
+   or NULL for a value above CF_ENCODING_LAST.
+   Guarantee: nothrow. NULL for a value above CF_ENCODING_LAST. */
 CF_API const char* cf_encoding_name(unsigned flags);
 
 /* Recodes n bytes of `from` (any value but CF_ENCODING_UTF8) into
@@ -56,7 +58,9 @@ CF_API const char* cf_encoding_name(unsigned flags);
    single-byte encodings (0x80 to 0x9F of the Windows pages are
    mostly U+20xx, three bytes), 3 * (n / 2) for UTF-16. With less
    room it returns (size_t)-1 with *bad == n, an offset no byte has,
-   having written nothing past cap. */
+   having written nothing past cap.
+   Guarantee: strong. Only `out` and `*bad` are written; `out` is unspecified after a
+   failure, and nothing is written past `cap`. */
 CF_API size_t cf_encoding_recode(unsigned from, const char* in, size_t n, char* out,
                                  size_t cap, size_t* bad);
 
@@ -69,7 +73,8 @@ CF_API size_t cf_encoding_recode(unsigned from, const char* in, size_t n, char* 
    the input has no multi-byte UTF-8 of its own, says which and how to
    read it so: "; it may be windows-1254 (Turkish): read it with
    CF_ENCODING_WINDOWS_1254, or the encoding windows-1254 in the tools".
-   It never changes a value. A NULL origin is "input". (D-108) */
+   It never changes a value. A NULL origin is "input". (D-108)
+   Guarantee: strong. The input is never changed; on a refusal only `err` is written. */
 CF_NODISCARD CF_API cf_bool cf_encoding_check(const char* origin, const char* p,
                                               size_t n, cf_error* err);
 

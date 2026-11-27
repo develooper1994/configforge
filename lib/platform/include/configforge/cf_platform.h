@@ -46,7 +46,8 @@ extern "C" {
  * capability below reports that it is absent rather than pretending.
  * ------------------------------------------------------------------ */
 
-/* The name this build was compiled for, for explain() and the report. */
+/* The name this build was compiled for, for explain() and the report.
+   Guarantee: nothrow. */
 CF_API const char* cf_platform_name(void);
 
 /* ------------------------------------------------------------------ *
@@ -58,8 +59,11 @@ CF_API const char* cf_platform_name(void);
  * two answers.
  * ------------------------------------------------------------------ */
 
+/* Guarantee: strong. A capability query; it changes nothing. */
 CF_NODISCARD CF_API cf_bool cf_platform_has_environ(void);
+/* Guarantee: strong. A capability query; it changes nothing. */
 CF_NODISCARD CF_API cf_bool cf_platform_has_dir_list(void);
+/* Guarantee: strong. A capability query; it changes nothing. */
 CF_NODISCARD CF_API cf_bool cf_platform_has_wide_args(void);
 
 /* ------------------------------------------------------------------ *
@@ -117,7 +121,8 @@ CF_API int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME
 /* Whether this platform can say who may write to a directory and its
    files (POSIX: yes; Windows and a build with no operating system:
    no - an access control list is not a mode, and an answer that
-   guessed would be wrong both ways). */
+   guessed would be wrong both ways).
+   Guarantee: strong. A capability query; it changes nothing. */
 CF_NODISCARD CF_API cf_bool cf_platform_has_trusted_dir(void);
 
 /* cf_platform_dir_list, and in the same pass the check of D-83: the
@@ -164,6 +169,7 @@ typedef struct cf_platform_reg_value {
    callback is expected to have said why. */
 typedef cf_bool (*cf_platform_reg_fn)(void* ctx, const cf_platform_reg_value* v);
 
+/* Guarantee: strong. A capability query; it changes nothing. */
 CF_NODISCARD CF_API cf_bool cf_platform_has_registry(void);
 
 /* Every value under `root` - "HKCU\\Software\\MyApp", HKCU, HKLM, HKCR,
@@ -215,6 +221,7 @@ typedef struct cf_platform_pref_event {
    callback is expected to have said why. */
 typedef cf_bool (*cf_platform_pref_fn)(void* ctx, const cf_platform_pref_event* e);
 
+/* Guarantee: strong. A capability query; it changes nothing. */
 CF_NODISCARD CF_API cf_bool cf_platform_has_preferences(void);
 
 /* Every value of `domain` ("com.example.app") in the scope W3-F2b's
@@ -310,6 +317,7 @@ CF_API int cf_platform_world_readable(const char* path);
  * operating system has no answer and reports it.
  * ------------------------------------------------------------------ */
 
+/* Guarantee: strong. A capability query; it changes nothing. */
 CF_NODISCARD CF_API cf_bool cf_platform_has_private_create(void);
 #if CF_INTERNAL_API
 CF_API int cf_platform_create_private(const char* path, cf_error* err);
@@ -338,6 +346,7 @@ CF_API int cf_platform_create_private(const char* path, cf_error* err);
 
 typedef struct cf_platform_wake cf_platform_wake;
 
+/* Guarantee: strong. A capability query; it changes nothing. */
 CF_NODISCARD CF_API cf_bool cf_platform_has_wake(void);
 
 #if CF_INTERNAL_API

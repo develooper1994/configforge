@@ -433,8 +433,12 @@ CF_API size_t cf_u64_to_text(cf_u64 v, char* buf, size_t cap);
  * when cap > 0.
  * ------------------------------------------------------------------ */
 
+/* Guarantee: nothrow. The text is cut to `cap`, NUL-terminated; the return is the full
+ * length. */
 CF_API size_t cf_fmt(char* buf, size_t cap, const char* fmt, ...);
+/* Guarantee: nothrow. As cf_fmt; an `at` past the end of `buf` writes nothing. */
 CF_API size_t cf_fmt_append(char* buf, size_t cap, size_t at, const char* fmt, ...);
+/* Guarantee: nothrow. As cf_fmt. */
 CF_API size_t cf_vfmt(char* buf, size_t cap, const char* fmt, va_list ap);
 
 /* ------------------------------------------------------------------ *
@@ -442,6 +446,7 @@ CF_API size_t cf_vfmt(char* buf, size_t cap, const char* fmt, va_list ap);
  * report so that a restricted build is distinguishable from a full one.
  * ------------------------------------------------------------------ */
 
+/* Guarantee: nothrow. */
 CF_API const char* cf_port_description(void);
 
 #ifdef __cplusplus

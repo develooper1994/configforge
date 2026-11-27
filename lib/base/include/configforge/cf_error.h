@@ -84,6 +84,7 @@ typedef struct cf_error {
  * --server-port belongs to the source that needs it, not here.
  * ------------------------------------------------------------------ */
 
+/* Guarantee: strong. A pure check; CF_FALSE says the key is not canonical. */
 CF_NODISCARD CF_API cf_bool cf_key_valid(const char* key, size_t len);
 
 /* Empties `e`: code CF_OK, key, source, message, place and reason empty. `size` is
@@ -94,33 +95,42 @@ CF_API void cf_error_clear(cf_error* e);
 /* What `src` says, copied into `dst` as far as `dst` has room: 1.0's
    fields always, a later field where dst->size covers it. If src->size
    does not cover a later field, that field is cleared. dst->size is
-   kept. Safe with NULL on either side. */
+   kept. Safe with NULL on either side.
+   Guarantee: nothrow. Cut to the room `dst` has; a NULL side is ignored. */
 CF_API void cf_error_copy(cf_error* dst, const cf_error* src);
 
 /* Set code, key, source and a formatted message, clearing place and reason.
    Safe with a NULL
    error, so every call site can report unconditionally instead of
    guarding. Returns CF_FALSE so a caller can write
-   `return cf_error_set(err, ...);` */
+   `return cf_error_set(err, ...);`
+   Guarantee: nothrow. The message is cut to fit; a NULL `e` is ignored. */
 CF_API cf_bool cf_error_set(cf_error* e, cf_code code, const char* key,
                             const char* source, const char* fmt, ...);
 
+/* Guarantee: nothrow. "?" for an unknown code. */
 CF_API const char* cf_code_name(cf_code c);
+/* Guarantee: nothrow. "unknown" for an unknown code. */
 CF_API const char* cf_code_description(cf_code c);
 
 /* The name ("number-range") and description of a reason. Returns "?" and
-   "unknown", respectively, for an unknown value. */
+   "unknown", respectively, for an unknown value.
+   Guarantee: nothrow. */
 CF_API const char* cf_reason_name(int reason);
+/* Guarantee: nothrow. */
 CF_API const char* cf_reason_description(int reason);
 /* Whether a refusal is "error" (the input is malformed by its format's own
    rules), "warning" (well formed, refused for a limit or a policy) or "none";
    and the CWE it defends, such as "CWE-674", or "" for none. "?" and "" for
-   an unknown value. Promoted in 2.0. */
+   an unknown value. Promoted in 2.0.
+   Guarantee: nothrow. */
 CF_API const char* cf_reason_severity(int reason);
+/* Guarantee: nothrow. */
 CF_API const char* cf_reason_weakness(int reason);
 
 /* Sets where (file NULL, line, col) and reason on an error whose message
-   is already set, where e->size reaches them. NULL is ignored. */
+   is already set, where e->size reaches them. NULL is ignored.
+   Guarantee: nothrow. */
 CF_API void cf_error_place(cf_error* e, int reason, unsigned int line,
                            unsigned int col);
 

@@ -241,6 +241,10 @@ void* cf_arena_alloc(cf_arena* ar, size_t n) {
     if (ar == NULL) {
         return NULL;
     }
+    /* A size the rounding up would wrap is a size no block holds. */
+    if (n > (size_t)-1 - CF_ALIGN_TO) {
+        return NULL;
+    }
     need = cf_round_up(n == 0 ? 1 : n);
 
     b = ar->head;
@@ -254,9 +258,15 @@ void* cf_arena_alloc(cf_arena* ar, size_t n) {
         return NULL; /* exhausted; resolution fails cleanly */
     }
     {
-        size_t    bs         = (need > ar->block_size) ? need : ar->block_size;
-        size_t    alloc_size = cf_block_header() + bs;
-        cf_block* nb         = (cf_block*)ar->alloc->alloc(ar->alloc->ctx, alloc_size);
+        size_t    bs = (need > ar->block_size) ? need : ar->block_size;
+        size_t    alloc_size;
+        cf_block* nb;
+
+        if (bs > (size_t)-1 - cf_block_header()) {
+            return NULL;
+        }
+        alloc_size = cf_block_header() + bs;
+        nb         = (cf_block*)ar->alloc->alloc(ar->alloc->ctx, alloc_size);
         if (nb == NULL) {
             return NULL;
         }
@@ -281,7 +291,7 @@ void* cf_arena_calloc(cf_arena* ar, size_t n) {
 char* cf_arena_dup(cf_arena* ar, const char* s, size_t len) {
     char* p;
 
-    if (s == NULL) {
+    if (s == NULL || len == (size_t)-1) {
         return NULL;
     }
     p = (char*)cf_arena_alloc(ar, len + 1);

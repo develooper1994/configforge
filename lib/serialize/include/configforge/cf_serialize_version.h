@@ -29,9 +29,11 @@ extern "C" {
      CF_SERIALIZE_VERSION_PATCH)
 
 /* The version the serialization library was compiled as: "1.7.0", and the
-   same as one number. (1.7) */
+   same as one number. (1.7)
+   Guarantee: nothrow. */
 CF_API const char* cf_serialize_version(void);
-CF_API int         cf_serialize_version_number(void);
+/* Guarantee: nothrow. */
+CF_API int cf_serialize_version_number(void);
 
 #ifdef __cplusplus
 }
