@@ -3,10 +3,17 @@
 # The library itself has no dependencies to watch (docs/Dependencies.md).
 version: 2
 updates:
+  # One pull request a month for every action: codeql-action's init,
+  # analyze and upload-sarif must move together (three pull requests, each
+  # moving one, failed CodeQL on 2026-11-24), and one CI run is cheaper
+  # than five.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
   # The Rust crate's one build dependency, the cc crate (D-70), and what
   # Cargo.lock pins under it.
   - package-ecosystem: cargo

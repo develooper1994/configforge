@@ -8,6 +8,11 @@ Each item says **why** it matters and **what done looks like**, and
 carries a mark for how far it has come. "At a glance" is the whole list
 in one table; the sections after it are the detail.
 
+The Roadmap says what is wanted and why; the order of the work and its
+cards are in `docs/Plan.md` (its index is generated) and
+`docs/plan/Layout.md` (stage 0, then each module). A card that lands
+marks its Roadmap item here.
+
 ## Status
 
 ### Marks
@@ -47,7 +52,7 @@ beside what is not.
 | 🟩 | One `define`, the type given or inferred: C, C11, C++, Python, Rust | D-74 |
 | 🟨 | 1.3.1 released (1.3.0 tagged, not published) | CHANGELOG |
 | 🟩 | Doctor checks a report's fingerprint against its contents (CFD019) | plan item 9 |
-| 🟨 | Continuous fuzzing in CI (ClusterFuzzLite): written, its first run to read | `.clusterfuzzlite/`, cflite.yml |
+| 🟩 | Continuous fuzzing in CI (ClusterFuzzLite): every pull request and a daily batch on main, green with no finding open (read 2026-11-27) | `.clusterfuzzlite/`, cflite.yml |
 | 🟩 | INI compared with `configparser` (36 of 36; `.properties` needs a JVM, left to its tests) | plan item 9 |
 | 🟩 | Native OS sources: systemd's credentials (D-80) and macOS's user defaults (D-87), in C, C++, Rust and Python | plan item 9 |
 | ⬜ | Go and .NET bindings, when asked | plan item 9 |

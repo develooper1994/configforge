@@ -20,6 +20,7 @@ Main is at 1.9.0, unreleased (11 CHANGELOG entries already).
 | 0.4 | One error model (D-223): `CF_NODISCARD` everywhere and its gate | K-9c | 1.9.0 |
 | 0.5 | `cf_error`: place (file, line, column, byte offset, key), reason, chain of causes, `cf_error_handler`, stop-at-first or collect-all | K-6a + K-6b + M-11b (`cf_error` owns its text); the collect-all option `gen build --json` needs | 2.0.0 |
 | 0.6 | The guarantees written and held; allocation faults injected | K-9a, K-9b | 2.0.0 |
+| 0.9 | The sizing modes and what 2.0 breaks, right after the error model (the maintainer, 2026-11-27: long awaited) | M-10, M-11a, M-12, Y-33, K-7b, M-13 | 2.0.0 |
 
 ## The modules, in order (each: module, tool, bindings, documents)
 
@@ -42,7 +43,7 @@ last column; the "not now" section's cards are `not now`.
 5. {2.3.0} **serialize: written back** (wave 6) and **config: written back**
    - module: F-3a, F-3b, F-3c, F-3d, F-3e, F-3f, F-3g, F-3h, F-3j, Y-20; config: F-2a, F-2b, Y-4, Y-12; tool: F-3i
 6. **serialize: ways to read** (the stream and its modes)
-   - {2.0.0} the breaks: M-10, M-11a, M-12, Y-33, K-7b, M-13 (the list of what breaks)
+   - the breaks moved to stage 0, row 0.9 (2.0.0)
    - {2.4.0} the additions: M-5, M-6, M-7, M-8, M-9, M-14, M-15, M-16, M-17
 7. {2.5.0} **serialize: more formats** - X-1, X-2, X-3, X-4, X-5, X-6, X-7, X-8, X-9, X-10, X-11, X-12, X-13, X-14, X-15, X-16, X-17
 8. {2.6.0} **bindings and documents across the library** - M-1, M-2, M-3, M-4 (Go, .NET), G-3, G-4, G-5, G-6, G-7, G-8
