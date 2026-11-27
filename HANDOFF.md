@@ -33,7 +33,8 @@ approval and release rights: docs/Plan.md "For the maintainer".
      another number. The test must check the offset only when the
      built-in reader is the one compiled (the backend is CF_YAML_BACKEND in cmake/ConfigForgeProfile.cmake;
      pass it to the test as a compile definition if nothing does yet), and expect -1 otherwise.
-   Then run the full tier again; green -> `git push origin batch:main`
+   Run `python scripts/work/work.py format` first (the cf_error.h edit left
+   its continuation lines unaligned). Then run the full tier again; green -> `git push origin batch:main`
    (main and batch differ then only by merges of HANDOFF.md: merge
    origin/main into batch without another run if that is all).
    After records change: sizes (scripts/check/sizes.cmake -DWRITE=ON
