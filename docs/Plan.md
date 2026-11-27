@@ -282,12 +282,12 @@ of a card's CI.
 | 5 | K-11b The `none` platform builds and is tried: no feature assumes an operating system | 1.9.0 | large | L-18a | open |
 | 6 | L-18a A Cortex-M build of `minimal` in CI, with its stack gate | 1.9.0 | medium | nothing | done (b05e2a5) |
 | 7 | K-11c The table of each feature against each platform, checked by a gate | 1.9.0 | medium | K-11b | waits: K-11b |
-| 8 | F-1a The file layer: `cf_file_options`, `cf_file_writer`, `cf_file_replace`, a file replaced whole or not at all | 1.9.0 | large | nothing | open |
-| 9 | Y-2 `cf_platform_write_file_if`: the replace refused when the file no longer holds the bytes read (F-1c in the research) | 1.9.0 | small | F-1a | waits: F-1a |
-| 10 | Y-8 Close-on-exec and non-inheritable everywhere the library opens a file, with a child that lists its descriptors | 1.9.0 | small | F-1a, Y-3 | waits: F-1a |
+| 8 | F-1a The file layer: `cf_file_options`, `cf_file_writer`, `cf_file_replace`, a file replaced whole or not at all | 1.9.0 | large | nothing | done (7596e78) |
+| 9 | Y-2 `cf_platform_write_file_if`: the replace refused when the file no longer holds the bytes read (F-1c in the research) | 1.9.0 | small | F-1a | open |
+| 10 | Y-8 Close-on-exec and non-inheritable everywhere the library opens a file, with a child that lists its descriptors | 1.9.0 | small | F-1a, Y-3 | waits: Y-3 |
 | 11 | Y-5 A stable read: a file read twice and compared, up to 3 reads by default (F-5c in the research) | 1.9.0 | small | nothing | open |
-| 12 | Y-6 Windows readers that share delete access, if a measurement shows a rename then succeeds over an open reader (F-5d in the research) | 1.9.0 | small | F-1a | waits: F-1a |
-| 13 | Y-3 `cf_locker`: a lock that plugs in, `cf_lock_none` and a kernel lock on a kept sidecar file, `cf_lock_sidecar` (F-5a in the research) | 1.9.0 | medium | F-1a | waits: F-1a |
+| 12 | Y-6 Windows readers that share delete access, if a measurement shows a rename then succeeds over an open reader (F-5d in the research) | 1.9.0 | small | F-1a | open |
+| 13 | Y-3 `cf_locker`: a lock that plugs in, `cf_lock_none` and a kernel lock on a kept sidecar file, `cf_lock_sidecar` (F-5a in the research) | 1.9.0 | medium | F-1a | open |
 | 14 | K-9c Errors that cannot be ignored: `CF_NODISCARD` on every failure, and its gate | 1.9.0 | large | nothing | done (2c03110) |
 | 15 | K-6a A refusal's byte offset (TO DECIDE) | 2.0.0 | medium | nothing | parked |
 | 16 | K-6b A refusal's reason shown by the tools (TO DECIDE) | 2.0.0 | small | nothing | parked |
@@ -303,7 +303,7 @@ of a card's CI.
 | 26 | C-11 A program's files where its platform keeps them: `cf_builder_app_files` | 2.1.0 | medium | C-7 | waits: C-7 |
 | 27 | C-7 Profiles: `--profile` or `NAME_PROFILE` adds `config.<profile>.<ext>` above the base file | 2.1.0 | medium | C-11 | waits: C-11 |
 | 28 | C-10a A running program asked for its report: the library answers one request on a descriptor | 2.1.0 | medium | nothing | open |
-| 29 | F-1b `cf_emit_file`: a configuration written to a file whole or not at all (the file layer's third part) | 2.1.0 | small | F-1a | waits: F-1a |
+| 29 | F-1b `cf_emit_file`: a configuration written to a file whole or not at all (the file layer's third part) | 2.1.0 | small | F-1a | open |
 | 30 | Y-9 A second `cf_live` driver refused, and D-48's sentence checked | 2.1.0 | small | Y-1 | waits: Y-1 |
 | 31 | Y-10 `cf_live_get` and `cf_config_free` under threads on the benchmark's page; `cf_live_generation` without the lock (TO DECIDE 1b) | 2.1.0 | medium | nothing | open |
 | 32 | Y-1 The Guide's "At the same time": what is guarded and what is not | 2.1.0 | small | nothing | open |
@@ -367,7 +367,7 @@ of a card's CI.
 | 90 | Y-18 The sources read through the layer: flags, extensions, provenance, bindings (TO DECIDE) | 2.3.0 | medium | Y-15, Y-16, Y-17, Y-15 | parked |
 | 91 | Y-19 `configforge codec` through the layer, and a bomb corpus | 2.3.0 | small | Y-18 | waits: Y-18 |
 | 92 | Y-14 Compressed input by the program's own zlib: the D-103 recipe, a Guide section and an example | 2.3.0 | small | nothing | open |
-| 93 | F-3a Wave 6, the core: a change spliced into a document and checked by reading it back | 2.3.0 | large | F-1a, F-3i, F-3j | waits: F-1a |
+| 93 | F-3a Wave 6, the core: a change spliced into a document and checked by reading it back | 2.3.0 | large | F-1a, F-3i, F-3j | waits: F-3i |
 | 94 | F-3b Wave 6, JSON and JSON5: a value changed, a member added or removed | 2.3.0 | medium | F-3a | waits: F-3a |
 | 95 | F-3c Wave 6, INI and .properties: a value changed, a line added or removed | 2.3.0 | medium | F-3a | waits: F-3a |
 | 96 | F-3d Wave 6, TOML: a value changed, a key removed | 2.3.0 | medium | F-3a | waits: F-3a |
@@ -381,7 +381,7 @@ of a card's CI.
 | 104 | F-2b settings.c is the override source's example | 2.3.0 | small | F-2a, F-1b, F-1b | waits: F-2a |
 | 105 | Y-4 `cf_file_source_options.lock`, `.wait_ms` and `.write_attempts`, `.read_attempts`, `cf_builder_write_wait`: the lock around `overrides_write`, and the store's wait (F-5b in the research) | 2.3.0 | medium | Y-3, F-2a | waits: Y-3 |
 | 106 | Y-12 `swapped` in `cf_live_options`: workers told of a swap | 2.3.0 | small | nothing | parked |
-| 107 | F-3i Wave 6, `configforge codec get`, `set` and `unset` (TO DECIDE) | 2.3.0 | medium | F-1a, F-3b, F-3c, F-3d, F-3e, F-3f, F-3g, F-3h | waits: F-1a |
+| 107 | F-3i Wave 6, `configforge codec get`, `set` and `unset` (TO DECIDE) | 2.3.0 | medium | F-1a, F-3b, F-3c, F-3d, F-3e, F-3f, F-3g, F-3h | waits: F-3b |
 | 108 | M-5 The stream: one interface for reading in pieces, with a fallback every codec has | 2.4.0 | large | nothing | parked |
 | 109 | M-6 The stream, native: CBOR and TLV (the length-prefixed formats first) | 2.4.0 | medium | M-5 | parked |
 | 110 | M-7 The stream, native: JSON, JSON5 and `.properties` | 2.4.0 | large | M-5, M-6 | parked |

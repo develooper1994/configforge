@@ -37,7 +37,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **needs**: nothing
 * **size**: large (a public header, three platform files of the same shape, one shared file, one test)
 * **version**: 1.9.0
-* **status**: open
+* **status**: done (7596e78)
 * **decided**:
   * **The three layers (D-224)** and where each lives. `cf_file_options` and the two public layers are in the platform component (D-100, `lib/platform`: the platform is a part, D-220), in a new public header `lib/platform/include/configforge/cf_file.h` (includes `cf_port.h`, `cf_error.h`; no `<stdio.h>`: the writer is an opaque struct). They know nothing of configuration and are usable alone. The third layer, `cf_emit_file` (`cf_emit`, then `cf_file_replace`, no logic of its own), is F-1b's. Under them, internal (`#if CF_INTERNAL_API`, D-51, D-88) in `lib/platform/include/configforge/cf_platform_file.h` after `cf_platform_fopen` (line 71, inside the block of lines 70-72, before its `#endif`): the replace core with its fault injection and the clock. `cf_platform_file.h` adds `#include "configforge/cf_file.h"` (the core takes the options).
   * **Options (D-224, D-220: every setting an option with a default).** In `cf_file.h`:
