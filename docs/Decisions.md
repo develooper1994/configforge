@@ -5400,6 +5400,19 @@ Option R5 of `docs/research/concurrent-access.md` (open reads with `FILE_SHARE_D
 Held to: `test_stable`.
 
 ---
+
+## D-190 (Y-8) — Every descriptor the library keeps is close-on-exec
+
+**Question.** A child started by another thread while the library has a file open inherits the descriptor, and a secret file read by a library should not reach a stranger's child.
+
+**Decision.** `cf_platform_fopen` on POSIX is `open` then `fdopen`, the mode string mapped as C says (`r`, `w`, `a`, a `+` for read and write, `b` ignored, anything else refused), close-on-exec from the open (`O_CLOEXEC`, or `fcntl` with `FD_CLOEXEC` right after where the flag is not declared: a window of two calls remains, and the file says so). On Windows the mode gets an `N` (`_wfopen`), so the C runtime opens it not inheritable. `cf_platform_create_private` opens with `O_CLOEXEC` or the `fcntl` form. The `kqueue` descriptor is marked with `fcntl` after `kqueue()`. F-1a's writer and temporary and Y-3's sidecar lock are born close-on-exec; the watcher's `inotify` descriptor and the files it watches already were. A directory scan is not changed: the C library's `opendir` marks its descriptor and the scan closes it before it returns.
+
+**Rejected.** `fopen` with `e` (a mode string the C standard does not know, and new to the macOS C library); `O_CLOEXEC` alone where `fcntl` would do (a platform without the flag gets the two-call form, not a refusal).
+
+Held to: `test_cloexec`: a child that lists its descriptors finds none of a `cf_platform_fopen` file, a watcher, a file writer and a sidecar lock, and finds a control opened with plain `fopen`.
+
+---
+
 ## D-231 — The platform is a part: `none` is built and tried; what it cannot give answers `CF_E_CAPABILITY`
 
 **Question.** D-220 says a feature the target platform cannot provide is

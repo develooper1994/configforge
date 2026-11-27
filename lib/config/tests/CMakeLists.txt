@@ -21,6 +21,7 @@ set(CF_UNIT_TESTS
     test_file
     test_writefile
     test_lock
+    test_cloexec
     test_stable
     test_report
     test_image
@@ -210,6 +211,9 @@ if(CF_WAKE_KQUEUE
    AND NOT CMAKE_SYSTEM_NAME MATCHES "BSD|DragonFly"
    AND TARGET test_watch)
   target_compile_definitions(test_watch PRIVATE CF_TEST_LIBKQUEUE=1)
+  # libkqueue opens descriptors of its own (epoll, eventfd) that are not
+  # close-on-exec; test_cloexec.c checks the library's own ones only.
+  target_compile_definitions(test_cloexec PRIVATE CF_TEST_LIBKQUEUE=1)
 endif()
 
 # A directory of its own for the watch test. It asserts that a handle

@@ -36,9 +36,51 @@
 #include <time.h>
 #include <unistd.h>
 
+/* open, then fdopen, so that the descriptor is close-on-exec from its birth
+   (D-190): a child another thread starts while the file is open does not
+   inherit it. The mode maps as C says: r, w or a, a + for read and write,
+   b ignored. Where O_CLOEXEC is not defined the flag is set by fcntl right
+   after the open, and a window of two calls remains. */
 void* cf_platform_fopen(const char* path, const char* mode) {
+    int   flags;
+    int   fd;
+    FILE* f;
+
     /* Paths are bytes here, and UTF-8 bytes are a path like any other. */
-    return (path != NULL && mode != NULL) ? fopen(path, mode) : NULL;
+    if (path == NULL || mode == NULL) {
+        return NULL;
+    }
+    switch (mode[0]) {
+    case 'r':
+        flags = O_RDONLY;
+        break;
+    case 'w':
+        flags = O_WRONLY | O_CREAT | O_TRUNC;
+        break;
+    case 'a':
+        flags = O_WRONLY | O_CREAT | O_APPEND;
+        break;
+    default:
+        return NULL;
+    }
+    if (strchr(mode, '+') != NULL) {
+        flags = (flags & ~(O_RDONLY | O_WRONLY)) | O_RDWR;
+    }
+#if defined(O_CLOEXEC)
+    flags |= O_CLOEXEC;
+#endif
+    fd = open(path, flags, 0666);
+    if (fd < 0) {
+        return NULL;
+    }
+#if !defined(O_CLOEXEC)
+    (void)fcntl(fd, F_SETFD, FD_CLOEXEC);
+#endif
+    f = fdopen(fd, mode);
+    if (f == NULL) {
+        close(fd);
+    }
+    return f;
 }
 
 cf_bool cf_platform_has_files(void) {

@@ -667,7 +667,13 @@ int cf_platform_create_private(const char* path, cf_error* err) {
     }
     /* The mode goes in with the creation: a chmod afterwards leaves a
        window in which the file has the umask's mode. */
-    fd = open(path, O_WRONLY | O_CREAT | O_EXCL, 0600);
+    fd = open(path,
+              O_WRONLY | O_CREAT | O_EXCL
+#ifdef O_CLOEXEC
+                  | O_CLOEXEC
+#endif
+              ,
+              0600);
     if (fd < 0) {
         if (errno == EEXIST) {
             return 0;
@@ -676,6 +682,9 @@ int cf_platform_create_private(const char* path, cf_error* err) {
                      strerror(errno));
         return -1;
     }
+#ifndef O_CLOEXEC
+    (void)fcntl(fd, F_SETFD, FD_CLOEXEC);
+#endif
     close(fd);
     return 1;
 }
@@ -1362,6 +1371,11 @@ cf_platform_wake* cf_platform_wake_open(const char* const* paths, size_t n,
     w->nvfd   = 0;
     w->capvfd = 0;
     w->fd     = kqueue();
+    /* kqueue takes no flags on macOS: the descriptor is marked after (D-190). */
+    if (w->fd >= 0 && fcntl(w->fd, F_SETFD, FD_CLOEXEC) != 0) {
+        close(w->fd);
+        w->fd = -1;
+    }
     if (w->fd < 0) {
         cf_error_set(err, CF_E_CAPABILITY, NULL, NULL, "kqueue is unavailable: %s",
                      kq_why(errno));

@@ -45,10 +45,16 @@ static cf_bool win32f_wide(const char* utf8, wchar_t* out, int cap) {
 void* cf_platform_fopen(const char* path, const char* mode) {
     wchar_t wpath[CF_PATH_MAX];
     wchar_t wmode[8];
+    size_t  n;
 
-    if (!win32f_wide(path, wpath, CF_PATH_MAX) || !win32f_wide(mode, wmode, 8)) {
+    /* N: the C runtime opens the file not inheritable (D-190). */
+    if (path == NULL || mode == NULL || strlen(mode) > 6 ||
+        !win32f_wide(path, wpath, CF_PATH_MAX) || !win32f_wide(mode, wmode, 8)) {
         return NULL;
     }
+    n            = wcslen(wmode);
+    wmode[n]     = L'N';
+    wmode[n + 1] = L'\0';
     return _wfopen(wpath, wmode);
 }
 

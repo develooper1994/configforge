@@ -120,6 +120,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- Files and descriptors the library opens are close-on-exec (POSIX) and not
+  inheritable (Windows), so a child started while one is open does not
+  receive it; the test lists a child's descriptors (Y-8, D-190).
 - `cf_explain`'s summary names every source, not the first 32 (K-11a): the
   notes "supplied nothing" and "won none" are made a window of sources at a
   time.
