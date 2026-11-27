@@ -345,7 +345,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **needs**: nothing
 * **size**: medium
 * **version**: 2.0.0
-* **status**: open
+* **status**: done (c818cba)
 * **decided**:
   * **What major 2 changes: the header grows; offsets stay 32-bit.** No target an image is for needs 4 GiB, and a requirement the Roadmap item does not ask for is not added. Rejected: 64-bit offsets (an image over 4 GiB), a section table (the manifest of Y-33 has a place in the header instead).
   * **Layout, major 2**: bytes 0-51 as major 1 except `major` = 2, `minor` = 0; 52-63 reserved zero; at 64 `key_max`, `source_max`, `message_max`, `max_depth` (u16 each: the build's `CF_KEY_MAX`, `CF_SOURCE_MAX`, `CF_MESSAGE_MAX`, `CF_MAX_DEPTH`); at 72 `build_id`, 32 bytes, at most 31 bytes of the text `cf_build_id()` returns (`lib/config/include/configforge/cf_version.h:64`; the report writes the whole id) and a NUL, NUL-padded; at 104 `manifest_off` and at 108 `manifest_len` (u32 each, **reserved for Y-33**: both zero in 2.0.0, written zero, and the reader accepts any value there as it accepts any reserved byte, so an image of a later minor that fills them opens); 112-127 reserved zero. `index_off` is never below 128. Little-endian, offsets multiples of 8. Y-33 (2.2.0) fills the two manifest fields and raises `minor` to 1 with no change of layout and no new major.

@@ -288,7 +288,7 @@ of a card's CI.
 | 9 | K-9b Allocation faults injected into every load and write path, and what a failure leaves behind checked | 2.0.0 | large | K-9a, K-9d, K-9e, K-9f, K-9g | waits: K-9a |
 | 10 | M-11a Sizing in the readers and the key space | 2.0.0 | medium | M-10 | open |
 | 11 | M-11b `cf_error` owns its text (the 2.0 break) | 2.0.0 | large | M-11a | waits: M-11a |
-| 12 | M-12 The image header's layout, version 2 | 2.0.0 | medium | nothing | open |
+| 12 | M-12 The image header's layout, version 2 | 2.0.0 | medium | nothing | done (c818cba) |
 | 13 | M-13 2.0, once: the list of what breaks, and the gate that holds it | 2.0.0 | small | M-11b, M-12 | waits: M-11b |
 | 14 | C-2a Durations and sizes: the unit on an int definition | 2.1.0 | large | nothing | open |
 | 15 | C-2b Durations and sizes: the schema, the report, `cf_emit` and every reader | 2.1.0 | medium | C-2a | waits: C-2a |
