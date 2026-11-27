@@ -84,7 +84,7 @@ typedef struct cf_error {
  * --server-port belongs to the source that needs it, not here.
  * ------------------------------------------------------------------ */
 
-CF_API cf_bool cf_key_valid(const char* key, size_t len);
+CF_NODISCARD CF_API cf_bool cf_key_valid(const char* key, size_t len);
 
 /* Empties `e`: code CF_OK, key, source, message, place and reason empty. `size` is
    kept, so a cleared error can be reused. NULL is ignored. */

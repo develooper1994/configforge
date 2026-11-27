@@ -533,6 +533,9 @@ Their decisions take the numbers after D-229 (D-224 to D-229 are F-1b's, F-2a's,
 * **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI; `ctest --preset default -R "gate.nodiscard|consumer"` exit 0; `gate.abi` unchanged.
 * **stop if**: a marked function is one a caller is documented to call for its effect alone (report the name for the exceptions file instead of casting in many places); `gate.abi` changes.
 * **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Changed": "Every public function whose result reports a failure is `CF_NODISCARD`: under C23 and C++17 an ignored failure is a warning (K-9c, D-223)". D-223 copied into `docs/Decisions.md` by this card (the first that lands under it), with the next free D-number's place kept as D-223.
+* **Organiser's answers**:
+  * The card's `cf_builder_build` is `cf_builder_create`. The 30 `cf_builder_*` functions that return `cf_bool` (`cf_builder_int`, `_bool`, `_text`, `_file`, ... ) are documented to defer their first failure to `cf_builder_create` (`configforge.h`, "Tier 1 and 2"); a definition block would warn on every line under C23. They go to `scripts/check/nodiscard.txt` (30 lines) and carry no mark: 115 marks, not about 145 (the maintainer's standing approval, 2026-11-27).
+  * `consumer.nodiscard` runs the compiler with `-fsyntax-only` in a CMake script (`cmake/gates/ConsumerNodiscard.cmake`), not `try_compile`, which a `-P` script cannot call; `nodiscard_c23.c` is built by `tests/consumer/CMakeLists.txt` (run by `gate.install`) and is also its control (the maintainer's standing approval, 2026-11-27).
 
 ## K-11a - Options with defaults as one convention: `cf_*_options_init`, the fixed limits as options, and a gate
 

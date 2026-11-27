@@ -57,9 +57,9 @@ CF_API const char* cf_platform_name(void);
  * two answers.
  * ------------------------------------------------------------------ */
 
-CF_API cf_bool cf_platform_has_environ(void);
-CF_API cf_bool cf_platform_has_dir_list(void);
-CF_API cf_bool cf_platform_has_wide_args(void);
+CF_NODISCARD CF_API cf_bool cf_platform_has_environ(void);
+CF_NODISCARD CF_API cf_bool cf_platform_has_dir_list(void);
+CF_NODISCARD CF_API cf_bool cf_platform_has_wide_args(void);
 
 /* ------------------------------------------------------------------ *
  * The environment
@@ -117,7 +117,7 @@ CF_API int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME
    files (POSIX: yes; Windows and a build with no operating system:
    no - an access control list is not a mode, and an answer that
    guessed would be wrong both ways). */
-CF_API cf_bool cf_platform_has_trusted_dir(void);
+CF_NODISCARD CF_API cf_bool cf_platform_has_trusted_dir(void);
 
 /* cf_platform_dir_list, and in the same pass the check of D-83: the
    directory, every entry and every file an entry names must be ones
@@ -163,7 +163,7 @@ typedef struct cf_platform_reg_value {
    callback is expected to have said why. */
 typedef cf_bool (*cf_platform_reg_fn)(void* ctx, const cf_platform_reg_value* v);
 
-CF_API cf_bool cf_platform_has_registry(void);
+CF_NODISCARD CF_API cf_bool cf_platform_has_registry(void);
 
 /* Every value under `root` - "HKCU\\Software\\MyApp", HKCU, HKLM, HKCR,
    HKU or HKCC first - and every subkey's, to CF_MAX_DEPTH. Buffers come
@@ -214,7 +214,7 @@ typedef struct cf_platform_pref_event {
    callback is expected to have said why. */
 typedef cf_bool (*cf_platform_pref_fn)(void* ctx, const cf_platform_pref_event* e);
 
-CF_API cf_bool cf_platform_has_preferences(void);
+CF_NODISCARD CF_API cf_bool cf_platform_has_preferences(void);
 
 /* Every value of `domain` ("com.example.app") in the scope W3-F2b's
    answer names. Buffers come from `arena`. 0 when walked, 1 when the
@@ -252,7 +252,7 @@ typedef struct cf_stamp {
    that is not there yet has a stamp saying so, and its arrival is a
    change like any other. */
 #if CF_INTERNAL_API
-CF_API cf_bool cf_platform_stamp(const char* path, cf_stamp* out);
+CF_NODISCARD CF_API cf_bool cf_platform_stamp(const char* path, cf_stamp* out);
 #endif /* CF_INTERNAL_API */
 
 /* cf_platform_fopen, opening a file by a UTF-8 path, is declared in
@@ -299,7 +299,7 @@ CF_API int cf_platform_world_readable(const char* path);
  * operating system has no answer and reports it.
  * ------------------------------------------------------------------ */
 
-CF_API cf_bool cf_platform_has_private_create(void);
+CF_NODISCARD CF_API cf_bool cf_platform_has_private_create(void);
 #if CF_INTERNAL_API
 CF_API int cf_platform_create_private(const char* path, cf_error* err);
 #endif /* CF_INTERNAL_API */
@@ -327,13 +327,15 @@ CF_API int cf_platform_create_private(const char* path, cf_error* err);
 
 typedef struct cf_platform_wake cf_platform_wake;
 
-CF_API cf_bool cf_platform_has_wake(void);
+CF_NODISCARD CF_API cf_bool cf_platform_has_wake(void);
 
 #if CF_INTERNAL_API
 /* NULL with `err` set, naming the path and the reason. The paths are
    copied; nothing passed here need outlive the call. */
-CF_API cf_platform_wake* cf_platform_wake_open(const char* const* paths, size_t n,
-                                               const cf_allocator* a, cf_error* err);
+CF_NODISCARD CF_API cf_platform_wake* cf_platform_wake_open(const char* const*  paths,
+                                                            size_t              n,
+                                                            const cf_allocator* a,
+                                                            cf_error*           err);
 
 /* A descriptor that becomes readable, or -1 where the handle is not a
    descriptor. */
@@ -344,7 +346,7 @@ CF_API void* cf_platform_wake_handle(const cf_platform_wake* w);
 
 /* Consume what woke the handle and re-arm anything that needs it. False
    when some path can no longer wake it; polling cf_changed still works. */
-CF_API cf_bool cf_platform_wake_drain(cf_platform_wake* w);
+CF_NODISCARD CF_API cf_bool cf_platform_wake_drain(cf_platform_wake* w);
 
 /* Wait up to `timeout_ms` (negative: without limit). 1 when woken, and
    then already drained; 0 on timeout; -1 when waiting failed. */

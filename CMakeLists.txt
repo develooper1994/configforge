@@ -179,6 +179,7 @@ endif()
 
 cf_cversion_write()
 configforge_add_gates(configforge)
+configforge_add_consumer_gates()
 
 include(ConfigForgeInstall)
 include(ConfigForgeSbom)

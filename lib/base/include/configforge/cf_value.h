@@ -63,11 +63,12 @@ CF_API void cf_value_text(cf_value* v, const char* p, size_t n);
    does not denote a value of that type; the caller then reports a
    conversion failure naming the parameter and the source, which is
    the only place conversion errors are allowed to appear. */
-CF_API cf_bool cf_value_from_text(cf_type t, const char* s, size_t n, cf_value* out);
+CF_NODISCARD CF_API cf_bool cf_value_from_text(cf_type t, const char* s, size_t n,
+                                               cf_value* out);
 
 /* Infer a type from text. Used only where no definition exists, and
    deliberately timid: see decision D-24. */
-CF_API cf_bool cf_value_infer(const char* s, size_t n, cf_value* out);
+CF_NODISCARD CF_API cf_bool cf_value_infer(const char* s, size_t n, cf_value* out);
 
 /* Canonical text form. Identical on every platform, which is what
    makes the determinism hash and the golden fixtures meaningful.
@@ -81,8 +82,8 @@ CF_API size_t cf_value_to_text(const cf_value* v, char* buf, size_t cap);
 #define CF_VALUE_TEXT_MAX CF_I64_DIGITS
 #endif
 
-CF_API int     cf_value_cmp(const cf_value* a, const cf_value* b);
-CF_API cf_bool cf_value_equal(const cf_value* a, const cf_value* b);
+CF_API int                  cf_value_cmp(const cf_value* a, const cf_value* b);
+CF_NODISCARD CF_API cf_bool cf_value_equal(const cf_value* a, const cf_value* b);
 
 #ifdef __cplusplus
 }

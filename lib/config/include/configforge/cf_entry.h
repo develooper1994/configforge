@@ -102,7 +102,7 @@ typedef struct cf_keysink {
     cf_entry_sink sink;
 } cf_keysink;
 
-CF_API cf_bool              cf_keysink_init(cf_keysink* k, cf_keyspace* ks, int rank);
+CF_NODISCARD CF_API cf_bool cf_keysink_init(cf_keysink* k, cf_keyspace* ks, int rank);
 CF_API const cf_entry_sink* cf_keysink_of(cf_keysink* k);
 
 struct cf_defset;
@@ -125,10 +125,11 @@ typedef struct cf_listsink {
     cf_entry_sink           sink;
 } cf_listsink;
 
-CF_API cf_bool cf_listsink_init(cf_listsink* out, cf_keyspace* ks, int rank,
-                                const struct cf_defset* defs, cf_bool repeated);
+CF_NODISCARD CF_API cf_bool cf_listsink_init(cf_listsink* out, cf_keyspace* ks,
+                                             int rank, const struct cf_defset* defs,
+                                             cf_bool repeated);
 CF_API const cf_entry_sink* cf_listsink_of(cf_listsink* out);
-CF_API cf_bool              cf_listsink_finish(cf_listsink* out);
+CF_NODISCARD CF_API cf_bool cf_listsink_finish(cf_listsink* out);
 
 /* ------------------------------------------------------------------ *
  * Lexers
@@ -140,8 +141,8 @@ CF_API cf_bool              cf_listsink_finish(cf_listsink* out);
 /* Entries that do not belong to this prefix, or do not derive a valid
    key, are skipped. An environment is shared with every other program
    on the machine, so refusing it would be refusing the machine. */
-CF_API cf_bool cf_lex_env(char* const* environment, const cf_keymap* map,
-                          const cf_entry_sink* out, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_lex_env(char* const* environment, const cf_keymap* map,
+                                       const cf_entry_sink* out, cf_error* err);
 
 /* One variable's value, borrowed from the environment, and its length in
    `n` (which may be NULL); NULL when it is not set - an empty value is
@@ -196,9 +197,9 @@ typedef struct cf_cli_spec {
  * belongs to this program alone, so an unparsable option is the user's
  * typo, and ignoring it is how a misspelled flag becomes an hour of
  * confusion. */
-CF_API cf_bool cf_lex_cli(int argc, char* const* argv, const cf_keymap* map,
-                          const cf_cli_spec* spec, const cf_entry_sink* out,
-                          cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_lex_cli(int argc, char* const* argv,
+                                       const cf_keymap* map, const cf_cli_spec* spec,
+                                       const cf_entry_sink* out, cf_error* err);
 
 /* ------------------------------------------------------------------ *
  * Response files
@@ -220,8 +221,9 @@ CF_API cf_bool cf_lex_cli(int argc, char* const* argv, const cf_keymap* map,
  * itself is a loop.
  * ------------------------------------------------------------------ */
 
-CF_API cf_bool cf_cli_expand(int argc, char* const* argv, cf_arena* arena,
-                             int* out_argc, char*** out_argv, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_cli_expand(int argc, char* const* argv, cf_arena* arena,
+                                          int* out_argc, char*** out_argv,
+                                          cf_error* err);
 
 /* ------------------------------------------------------------------ *
  * The command line in UTF-8
@@ -253,9 +255,9 @@ CF_API char* const* cf_cli_args(int argc, char* const* argv, cf_arena* arena,
  * escape and the natural spelling behave identically in both.
  * ------------------------------------------------------------------ */
 
-CF_API cf_bool cf_lex_dotenv(const char* text, size_t n, const char* origin,
-                             const cf_keymap* map, const cf_entry_sink* out,
-                             cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_lex_dotenv(const char* text, size_t n,
+                                          const char* origin, const cf_keymap* map,
+                                          const cf_entry_sink* out, cf_error* err);
 
 #ifdef __cplusplus
 }

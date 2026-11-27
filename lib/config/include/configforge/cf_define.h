@@ -211,30 +211,34 @@ typedef struct cf_defset {
 } cf_defset;
 
 #if CF_INTERNAL_API
-CF_API cf_bool cf_defset_init(cf_defset* ds, cf_arena* arena, size_t hint);
+CF_NODISCARD CF_API cf_bool cf_defset_init(cf_defset* ds, cf_arena* arena, size_t hint);
 
 /* Copies the descriptor. Rejects a definition that contradicts itself:
    a default outside its own range, an empty enum, a range on a type
    that has none. Those are programming errors and are worth refusing
    at the point they are written. */
-CF_API cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err);
 
-CF_API cf_bool cf_def_bool(cf_defset* ds, const char* key, cf_bool dflt, unsigned flags,
-                           cf_error* err);
-CF_API cf_bool cf_def_int(cf_defset* ds, const char* key, cf_i64 dflt, cf_i64 min,
-                          cf_i64 max, unsigned flags, cf_error* err);
-CF_API cf_bool cf_def_text(cf_defset* ds, const char* key, const char* dflt,
-                           unsigned flags, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_def_bool(cf_defset* ds, const char* key, cf_bool dflt,
+                                        unsigned flags, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_def_int(cf_defset* ds, const char* key, cf_i64 dflt,
+                                       cf_i64 min, cf_i64 max, unsigned flags,
+                                       cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_def_text(cf_defset* ds, const char* key,
+                                        const char* dflt, unsigned flags,
+                                        cf_error* err);
 #if CF_WITH_REAL
-CF_API cf_bool cf_def_real(cf_defset* ds, const char* key, double dflt, double min,
-                           double max, unsigned flags, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_def_real(cf_defset* ds, const char* key, double dflt,
+                                        double min, double max, unsigned flags,
+                                        cf_error* err);
 #endif
 
 /* Sorts for binary lookup; calling twice is harmless. */
 CF_API void cf_defset_seal(cf_defset* ds);
 
 /* Exempt a prefix from unknown-key rejection. */
-CF_API cf_bool cf_defset_open(cf_defset* ds, const char* prefix, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_defset_open(cf_defset* ds, const char* prefix,
+                                           cf_error* err);
 
 /* Definitions from a JSON Schema (draft 2020-12 or 2019-09), the reverse
    of cf_schema_write: an object's properties are keys, a leaf's type,
@@ -246,14 +250,16 @@ CF_API cf_bool cf_defset_open(cf_defset* ds, const char* prefix, cf_error* err);
    the library does not enforce is worse than an error. Read by the JSON
    reader, so CF_E_CAPABILITY in a build without CF_WITH_JSON. `name`
    is what errors call the text. (1.2) */
-CF_API cf_bool cf_defset_schema(cf_defset* ds, const char* text, size_t n,
-                                const char* name, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_defset_schema(cf_defset* ds, const char* text, size_t n,
+                                             const char* name, cf_error* err);
 /* The same, from a file. (1.2) */
-CF_API cf_bool cf_defset_schema_file(cf_defset* ds, const char* path, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_defset_schema_file(cf_defset* ds, const char* path,
+                                                  cf_error* err);
 
 /* Is this key under an exempt prefix? Matches at a segment boundary
    only, so opening "plugins" does not open "pluginsomething". */
-CF_API cf_bool cf_defset_is_open(const cf_defset* ds, const char* key, size_t keylen);
+CF_NODISCARD CF_API cf_bool cf_defset_is_open(const cf_defset* ds, const char* key,
+                                              size_t keylen);
 
 /* Authored descriptors are returned for exact keys. A declared list's
    count and canonical decimal indices return immutable scalar
@@ -352,9 +358,10 @@ typedef struct cf_rank_names {
     const void* ctx;
 } cf_rank_names;
 
-CF_API cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds,
-                             const cf_rank_names* names, cf_unknown_policy unknown,
-                             cf_apply_report* report, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds,
+                                          const cf_rank_names* names,
+                                          cf_unknown_policy    unknown,
+                                          cf_apply_report* report, cf_error* err);
 
 /* Definition defaults, as an ordinary source. Declared here because
    it is the one source that reads a definition set; it is implemented
@@ -364,8 +371,8 @@ CF_API cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds,
    separate mechanism, which is why explain() shows one losing to a
    file with no special case anywhere - and why it has a name to print
    rather than a question mark. */
-CF_API cf_bool cf_source_defaults(struct cf_source* s, const char* name, int rank,
-                                  const cf_defset* ds);
+CF_NODISCARD CF_API cf_bool cf_source_defaults(struct cf_source* s, const char* name,
+                                               int rank, const cf_defset* ds);
 
 /* Give the environment source the key list, so it accepts the natural
    single-underscore spelling as well as the escaped one. Without a

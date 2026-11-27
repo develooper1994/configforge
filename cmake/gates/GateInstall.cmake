@@ -100,6 +100,20 @@ if(WITH_CXX AND EXISTS "${work}/consumer_cpp")
   message("${out}")
 endif()
 
+# Built as C23 with -Werror, every result checked (tests/consumer).
+if(EXISTS "${work}/consumer_nodiscard")
+  execute_process(
+    COMMAND "${work}/consumer_nodiscard"
+    RESULT_VARIABLE rc
+    OUTPUT_VARIABLE out
+    ERROR_VARIABLE out)
+  if(NOT rc EQUAL 0)
+    message("${out}")
+    message(FATAL_ERROR "the C23 consumer compiles but does not run")
+  endif()
+  message("${out}")
+endif()
+
 # The path with no CMake: a plain -I against the install prefix, which
 # is where nothing hands over the feature definitions and where the
 # defaults used to win. A consumer who disagrees with the library about

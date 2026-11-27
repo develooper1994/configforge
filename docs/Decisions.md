@@ -5143,6 +5143,35 @@ are later cards.
 
 **Status.** Built: N-19.
 
+## D-223 — One error model (the maintainer, 2026-11-26, relayed from a side session: "I like the error model"; "the core uses the C89 standard")
+
+It answers K-6a's and K-6b's TO DECIDE and Y-28's TO DECIDE C, and K-9c
+follows it, so that `cf_error` changes shape once. K-6a, K-6b and Y-28
+are rewritten to it before they open; each carries it under
+"Organiser's answers". The core stays C89 (D-72): a newer standard's
+feature is only a macro that is empty under C89.
+
+1. **Errors cannot be ignored.** Every public function that returns a
+   failure (a `cf_bool` or a status; a create, open, try or write) is
+   marked `CF_NODISCARD` (`cf_port.h` defines it: `[[nodiscard]]` under
+   C23 and C++17, empty under C89; GCC's `warn_unused_result` is not
+   used). Today 16 of about 139 carry it: K-9c marks the rest, adds a
+   gate that refuses an unmarked one, and CI's C23 build treats the
+   warning as an error.
+2. **`cf_error` carries** its code, its place (source, file, line,
+   column, key), a reason text and a chain of causes ("could not read,
+   because permission denied"). A sensitive key's value never enters the
+   text. A plain C89 struct; the chain lives in the arena or a linked
+   list.
+3. **Every format and component returns the same `cf_error`.**
+4. **Options with defaults (D-220):** by default the first error stops
+   the work and is returned; an option collects every error (the
+   compiler's case, Y-28); an option `cf_error_handler`, a function
+   pointer, for logging or an embedded indicator.
+5. **Held to:** the `CF_NODISCARD` gate; cppcheck and clang-tidy's
+   `bugprone-unused-return-value` on the library itself; K-9b's injected
+   faults also check that each failure returns the right code.
+
 ## D-230 — Options with defaults are one convention: `size` first, `_init`, NULL the defaults; a fixed limit a public call reaches is an option with its old value as default
 
 **Question.** D-220 says a limit is an option with a default value, never a

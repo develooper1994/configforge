@@ -43,8 +43,8 @@ typedef struct cf_arena cf_arena;
    malloc wrapper with extra steps. Said out loud because a silently
    ignored parameter is how a test ends up measuring the default three
    times and reporting it as three results. */
-CF_API cf_arena* cf_arena_new(const cf_allocator* a, size_t block_size);
-CF_API cf_arena* cf_arena_fixed(void* buffer, size_t size);
+CF_NODISCARD CF_API cf_arena* cf_arena_new(const cf_allocator* a, size_t block_size);
+CF_API cf_arena*              cf_arena_fixed(void* buffer, size_t size);
 
 /* Release the arena, zeroing every byte it handed out first. A
    configuration's arena holds its values - passwords and tokens among
@@ -70,11 +70,11 @@ CF_API void* cf_arena_calloc(cf_arena* ar, size_t n);
 /* Copy len bytes and terminate. Stored text is NUL-terminated in
    addition to carrying a length, so the convenience accessors are
    free and an embedded NUL is detectable by the caller. */
-CF_API char* cf_arena_dup(cf_arena* ar, const char* s, size_t len);
+CF_NODISCARD CF_API char* cf_arena_dup(cf_arena* ar, const char* s, size_t len);
 
-CF_API size_t  cf_arena_used(const cf_arena* ar);
-CF_API size_t  cf_arena_capacity(const cf_arena* ar);
-CF_API cf_bool cf_arena_is_fixed(const cf_arena* ar);
+CF_API size_t               cf_arena_used(const cf_arena* ar);
+CF_API size_t               cf_arena_capacity(const cf_arena* ar);
+CF_NODISCARD CF_API cf_bool cf_arena_is_fixed(const cf_arena* ar);
 
 #ifdef __cplusplus
 }

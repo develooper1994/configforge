@@ -15,8 +15,8 @@
 - enum cf_type 23-29
 - struct cf_text 31-34
 - struct cf_value 36-46
-- #define CF_VALUE_TEXT_MAX 79
-- #define CF_VALUE_TEXT_MAX 81
+- #define CF_VALUE_TEXT_MAX 80
+- #define CF_VALUE_TEXT_MAX 82
 `lib/base/src/alloc.c`
 - cf_std_alloc 21-24
 - cf_std_release 26-29
@@ -78,9 +78,9 @@
 - #define CF_EXPAND_MAX 166
 - #define CF_EXPAND_TOTAL_MAX 176
 - struct cf_defset 183-211
-- enum cf_unknown_policy 323-327
-- struct cf_apply_report 329-335
-- struct cf_rank_names 350-353
+- enum cf_unknown_policy 329-333
+- struct cf_apply_report 335-341
+- struct cf_rank_names 356-359
 `lib/config/include/configforge/cf_edit.h`
 - #define CONFIGFORGE_CF_EDIT_H 26
 - typedef cf_edit 36
@@ -94,8 +94,8 @@
 - struct cf_entry_sink 85-94
 - struct cf_keysink 97-103
 - struct cf_listsink 119-126
-- enum cf_cli_kind 173-180
-- struct cf_cli_spec 184-191
+- enum cf_cli_kind 174-181
+- struct cf_cli_spec 185-192
 `lib/config/include/configforge/cf_explain.h`
 - #define CONFIGFORGE_CF_EXPLAIN_H 12
 - #define CF_MAX_SOURCES 24
@@ -108,7 +108,7 @@
 - #define CF_DECODE_KEY_COST 45
 - struct cf_flatten_frame 51-55
 - struct cf_flatten 57-83
-- typedef cf_emit_pred 161
+- typedef cf_emit_pred 163
 `lib/config/include/configforge/cf_image.h`
 - #define CONFIGFORGE_CF_IMAGE_H 25
 - #define CF_IMAGE_MAGIC_0 36
@@ -186,34 +186,34 @@
 - #define CONFIGFORGE_H 18
 - typedef cf_builder 54
 - typedef cf_config 55
-- #define CF_BUILDER_CODECS 198
-- struct cf_limit_options 297-301
-- cf_define_b_ 339-341
-- cf_define_i_ 342-344
-- cf_define_t_ 345-347
-- cf_define_r_ 349-351
-- #define CF_DEFINE_REAL_ 352
-- #define CF_DEFINE_REAL_ 354
-- #define CF_DEFINE 356
-- cf_define_tl_ 379-389
-- #define CF_C11_KEY_ 398
-- #define CF_C11_RANGE_ 401
-- #define CF_C11_LEN_ 407
-- #define CF_C11_DEFAULTED_ 414
-- #define CF_C11_CHECKED_ 417
-- #define CF_DEFINE_INT 424
-- #define CF_DEFINE_TEXT 429
-- cf_get_int_ 519-529
-- cf_get_long_ 530-540
-- cf_get_llong_ 541-548
-- cf_get_bool_ 549-556
-- cf_get_text_ 557-560
-- #define CF_GET_REAL_ 562
-- #define CF_GET_REAL_ 564
-- #define cf_get 566
-- enum cf_change 615-620
-- typedef cf_diff_fn 627
-- typedef cf_watcher 873
+- #define CF_BUILDER_CODECS 199
+- struct cf_limit_options 298-302
+- cf_define_b_ 340-342
+- cf_define_i_ 343-345
+- cf_define_t_ 346-348
+- cf_define_r_ 350-352
+- #define CF_DEFINE_REAL_ 353
+- #define CF_DEFINE_REAL_ 355
+- #define CF_DEFINE 357
+- cf_define_tl_ 380-390
+- #define CF_C11_KEY_ 399
+- #define CF_C11_RANGE_ 402
+- #define CF_C11_LEN_ 408
+- #define CF_C11_DEFAULTED_ 415
+- #define CF_C11_CHECKED_ 418
+- #define CF_DEFINE_INT 425
+- #define CF_DEFINE_TEXT 430
+- cf_get_int_ 520-530
+- cf_get_long_ 531-541
+- cf_get_llong_ 542-549
+- cf_get_bool_ 550-557
+- cf_get_text_ 558-561
+- #define CF_GET_REAL_ 563
+- #define CF_GET_REAL_ 565
+- #define cf_get 567
+- enum cf_change 616-621
+- typedef cf_diff_fn 628
+- typedef cf_watcher 874
 `lib/config/src/bridge/dir.c`
 - struct dir_state 36-44
 - typedef dir_name 57
@@ -932,8 +932,8 @@
 - lanes_swar 431-436
 `lib/numeric/include/configforge/cf_numeric.h`
 - #define CONFIGFORGE_CF_NUMERIC_H 20
-- #define CF_F64_DIGITS 53
-- enum cf_scalar_kind 102-107
+- #define CF_F64_DIGITS 55
+- enum cf_scalar_kind 105-110
 `lib/numeric/src/numeric.c`
 - cf_text_to_u64 28-53
 - cf_text_to_i64 55-96
@@ -1261,20 +1261,20 @@
 `lib/serialize/include/configforge/cf_serialize.h`
 - #define CONFIGFORGE_CF_SERIALIZE_H 21
 - struct cf_blob 43-47
-- struct cf_sink 81-85
-- struct cf_doc_sink 126-150
-- struct cf_codec 221-245
-- #define CF_ENCODER_STATE_MAX 251
-- struct cf_encoder_head 258-260
-- struct cf_tlv_tag 380-396
-- struct cf_tlv_layout 401-414
-- #define CF_TLV_LAYOUT_INIT 416
-- #define cf_tlv_codec 432
-- struct cf_compose 436-445
-- #define CF_COMPOSE_INIT 447
-- #define cf_codec_compose 456
-- enum cf_detect_how 475-481
-- struct cf_detect 486-490
+- struct cf_sink 82-86
+- struct cf_doc_sink 127-151
+- struct cf_codec 222-246
+- #define CF_ENCODER_STATE_MAX 252
+- struct cf_encoder_head 259-261
+- struct cf_tlv_tag 381-397
+- struct cf_tlv_layout 402-415
+- #define CF_TLV_LAYOUT_INIT 417
+- #define cf_tlv_codec 434
+- struct cf_compose 438-447
+- #define CF_COMPOSE_INIT 449
+- #define cf_codec_compose 459
+- enum cf_detect_how 478-484
+- struct cf_detect 489-493
 `lib/serialize/include/configforge/cf_serialize_version.h`
 - #define CONFIGFORGE_CF_SERIALIZE_VERSION_H 11
 - #define CF_SERIALIZE_VERSION_MAJOR 23

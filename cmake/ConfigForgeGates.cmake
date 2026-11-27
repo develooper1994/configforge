@@ -3,6 +3,20 @@
 # These are the checks that keep the specification's claims true. A
 # claim that is not checked by the build is a claim that decays.
 
+# configforge_add_consumer_gates(): the C23 proof (tests/consumer), apart from
+# configforge_add_gates, which is as long as a function here may be.
+function(configforge_add_consumer_gates)
+  if(NOT CF_ENABLE_GATES)
+    return()
+  endif()
+  add_test(
+    NAME consumer.nodiscard
+    COMMAND
+      ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR}
+      -DCC=${CMAKE_C_COMPILER} -DCC_ID=${CMAKE_C_COMPILER_ID} -P
+      ${CMAKE_SOURCE_DIR}/cmake/gates/ConsumerNodiscard.cmake)
+endfunction()
+
 # Register the architectural gates as tests. See the README.
 #
 # The gate scripts live in cmake/gates because they are *run* by ctest,
@@ -87,12 +101,15 @@ function(configforge_add_gates tgt)
                    ${CMAKE_SOURCE_DIR}/cmake/gates/GateText.cmake)
   # Every download is listed with how it is held, and every workflow's
   # top-level token is read-only (scripts/check/fetches.py, permissions.py).
+  # Every public function whose result reports a failure is CF_NODISCARD
+  # (scripts/check/nodiscard.py).
   # Every public options struct has size first and an _init function, and
   # every CF_MAX_* macro says where its limit went (scripts/check/options.py).
   # The rest read only the tree: each is cmake/gates/Gate<Name>.cmake.
   foreach(
     gate
     Fetches
+    Nodiscard
     Options
     Permissions
     Index

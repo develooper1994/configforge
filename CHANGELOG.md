@@ -71,6 +71,12 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Changed
 
+- Every public function whose result reports a failure is `CF_NODISCARD`: under
+  C23 and C++17 an ignored failure is a warning (K-9c, D-223). The builder's
+  `cf_builder_*` calls are left out, as their first failure is deferred to
+  `cf_builder_create`. `gate.nodiscard` refuses a new one that is not marked,
+  and `consumer.nodiscard` proves that a C23 program that drops a result does
+  not compile.
 - The thirteen functions experimental in 1.8 (`cf_reason_name`,
   `cf_reason_description`, `cf_error_place`, `cf_source_file_encoding`,
   `cf_build_profile`, `cf_usage`, `cf_format_holds`, `cf_format_limits`,

@@ -109,8 +109,8 @@ struct cf_source {
     } u;
 };
 
-CF_API cf_bool cf_source_load(const cf_source* s, cf_keyspace* ks);
-CF_API void    cf_source_destroy(cf_source* s);
+CF_NODISCARD CF_API cf_bool cf_source_load(const cf_source* s, cf_keyspace* ks);
+CF_API void                 cf_source_destroy(cf_source* s);
 
 /* ------------------------------------------------------------------ *
  * A view over the sources
@@ -134,8 +134,8 @@ typedef struct cf_source_view {
  * value from the lowest-precedence source, not a separate mechanism.
  * ------------------------------------------------------------------ */
 
-CF_API cf_bool cf_source_memory(cf_source* s, const char* name, int rank,
-                                const cf_pair* pairs, size_t count);
+CF_NODISCARD CF_API cf_bool cf_source_memory(cf_source* s, const char* name, int rank,
+                                             const cf_pair* pairs, size_t count);
 
 /* ------------------------------------------------------------------ *
  * Environment source
@@ -160,8 +160,8 @@ CF_API cf_bool cf_source_memory(cf_source* s, const char* name, int rank,
  * key, are skipped rather than guessed at.
  * ------------------------------------------------------------------ */
 
-CF_API cf_bool cf_source_env(cf_source* s, const char* name, int rank,
-                             const char* prefix, char* const* environment);
+CF_NODISCARD CF_API cf_bool cf_source_env(cf_source* s, const char* name, int rank,
+                                          const char* prefix, char* const* environment);
 
 /* The platform environment, or NULL where none is reachable. */
 CF_API char* const* cf_environ(void); /* cf_platform_environ, kept for callers */
@@ -194,8 +194,8 @@ CF_API size_t cf_env_key(const char* prefix, const char* var, size_t varlen, cha
  * positional arguments, not configuration.
  * ------------------------------------------------------------------ */
 
-CF_API cf_bool cf_source_cli(cf_source* s, const char* name, int rank, int argc,
-                             char* const* argv);
+CF_NODISCARD CF_API cf_bool cf_source_cli(cf_source* s, const char* name, int rank,
+                                          int argc, char* const* argv);
 
 /* ------------------------------------------------------------------ *
  * File source
@@ -281,9 +281,10 @@ cf_bool cfi_source_text(unsigned flags, const cf_codec* const* own, size_t nown,
 
 CF_API size_t cf_source_file_state_size(void);
 
-CF_API cf_bool cf_source_file(cf_source* s, const char* name, int rank,
-                              const char* path, const char* format, unsigned flags,
-                              void* state, size_t state_size);
+CF_NODISCARD CF_API cf_bool cf_source_file(cf_source* s, const char* name, int rank,
+                                           const char* path, const char* format,
+                                           unsigned flags, void* state,
+                                           size_t state_size);
 
 struct cf_codec;
 
@@ -296,9 +297,11 @@ struct cf_codec;
    time would be global mutable state, which this library has none of,
    and two parts of one program registering different codecs under one
    name would be a conflict nobody could see. */
-CF_API cf_bool cf_source_file_codec(cf_source* s, const char* name, int rank,
-                                    const char* path, const struct cf_codec* codec,
-                                    unsigned flags, void* state, size_t state_size);
+CF_NODISCARD CF_API cf_bool cf_source_file_codec(cf_source* s, const char* name,
+                                                 int rank, const char* path,
+                                                 const struct cf_codec* codec,
+                                                 unsigned flags, void* state,
+                                                 size_t state_size);
 
 /* The reason a file source failed, or NULL when it did not. Sources
    return a plain boolean because most cannot fail in interesting ways;
@@ -316,9 +319,10 @@ CF_API void cf_source_file_codecs(cf_source* s, const struct cf_codec* const* co
    locations and explain() show; `format` is named, or NULL for the name's
    extension and then the content (D-73). The bytes are borrowed here and
    must outlive the source; cf_builder_document copies them. */
-CF_API cf_bool cf_source_document(cf_source* s, const char* name, int rank,
-                                  const char* bytes, size_t n, const char* format,
-                                  unsigned flags, void* state, size_t state_size);
+CF_NODISCARD CF_API cf_bool cf_source_document(cf_source* s, const char* name, int rank,
+                                               const char* bytes, size_t n,
+                                               const char* format, unsigned flags,
+                                               void* state, size_t state_size);
 
 /* A whole document in one environment variable, as a source (D-73),
    opt-in per variable: its value is read as a document, `format` named,
@@ -328,9 +332,10 @@ CF_API cf_bool cf_source_document(cf_source* s, const char* name, int rank,
    explain() and locations show is the variable. The variable is borrowed
    and must outlive the source; cf_builder_env_document copies it. A
    variable that is not set is an error, or nothing with CF_OPTIONAL. */
-CF_API cf_bool cf_source_env_document(cf_source* s, const char* name, int rank,
-                                      const char* variable, const char* format,
-                                      unsigned flags, void* state, size_t state_size);
+CF_NODISCARD CF_API cf_bool cf_source_env_document(cf_source* s, const char* name,
+                                                   int rank, const char* variable,
+                                                   const char* format, unsigned flags,
+                                                   void* state, size_t state_size);
 
 /* The format a file or document source read with at its last load, by
    the codec's name, and how it was chosen (CF_DETECT_NAMED, _EXTENSION or
@@ -352,9 +357,10 @@ CF_API const char* cf_source_file_encoding(const cf_source* s);
    rather than another program's variable. */
 CF_API size_t cf_source_dotenv_state_size(void);
 
-CF_API cf_bool cf_source_dotenv(cf_source* s, const char* name, int rank,
-                                const char* path, const char* prefix, unsigned flags,
-                                void* state, size_t state_size);
+CF_NODISCARD CF_API cf_bool cf_source_dotenv(cf_source* s, const char* name, int rank,
+                                             const char* path, const char* prefix,
+                                             unsigned flags, void* state,
+                                             size_t state_size);
 
 CF_API const cf_error* cf_source_dotenv_error(const cf_source* s);
 
@@ -376,17 +382,18 @@ CF_API const cf_error* cf_source_dotenv_error(const cf_source* s);
    originally had, not only the winners: a library whose premise is
    explaining itself must not lose provenance at the moment a value
    changes, which is exactly when somebody asks. */
-CF_API cf_bool cf_source_snapshot(cf_source* s, const char* name,
-                                  const cf_keyspace* ks);
+CF_NODISCARD CF_API cf_bool cf_source_snapshot(cf_source* s, const char* name,
+                                               const cf_keyspace* ks);
 
 /* The file a source reads, or NULL. */
 CF_API const char* cf_source_path(const cf_source* s);
 
 CF_API size_t cf_source_dir_state_size(void);
 
-CF_API cf_bool cf_source_dir(cf_source* s, const char* name, int rank, const char* path,
-                             const char* format, unsigned flags, void* state,
-                             size_t state_size);
+CF_NODISCARD CF_API cf_bool cf_source_dir(cf_source* s, const char* name, int rank,
+                                          const char* path, const char* format,
+                                          unsigned flags, void* state,
+                                          size_t state_size);
 
 CF_API const cf_error* cf_source_dir_error(const cf_source* s);
 
@@ -411,9 +418,10 @@ CF_API void cf_source_dir_codecs(cf_source* s, const struct cf_codec* const* cod
 
 CF_API size_t cf_source_secrets_state_size(void);
 
-CF_API cf_bool cf_source_secrets(cf_source* s, const char* name, int rank,
-                                 const char* path, const char* prefix, unsigned flags,
-                                 void* state, size_t state_size);
+CF_NODISCARD CF_API cf_bool cf_source_secrets(cf_source* s, const char* name, int rank,
+                                              const char* path, const char* prefix,
+                                              unsigned flags, void* state,
+                                              size_t state_size);
 
 CF_API const cf_error* cf_source_secrets_error(const cf_source* s);
 
@@ -441,9 +449,9 @@ cf_bool cfi_source_credentials(cf_source* s, const char* name, int rank,
 
 CF_API size_t cf_source_registry_state_size(void);
 
-CF_API cf_bool cf_source_registry(cf_source* s, const char* name, int rank,
-                                  const char* root, unsigned flags, void* state,
-                                  size_t state_size);
+CF_NODISCARD CF_API cf_bool cf_source_registry(cf_source* s, const char* name, int rank,
+                                               const char* root, unsigned flags,
+                                               void* state, size_t state_size);
 
 CF_API const cf_error* cf_source_registry_error(const cf_source* s);
 
@@ -469,9 +477,9 @@ const cf_error* cfi_source_preferences_error(const cf_source* s);
 
 CF_API size_t cf_source_store_state_size(void);
 
-CF_API cf_bool cf_source_store(cf_source* s, const char* name, int rank,
-                               const char* path, unsigned flags, void* state,
-                               size_t state_size);
+CF_NODISCARD CF_API cf_bool cf_source_store(cf_source* s, const char* name, int rank,
+                                            const char* path, unsigned flags,
+                                            void* state, size_t state_size);
 
 CF_API const cf_error* cf_source_store_error(const cf_source* s);
 
@@ -486,8 +494,8 @@ CF_API const cf_error* cf_source_store_error(const cf_source* s);
    This writes what it is given and asks nothing; it is the tool for
    provisioning a store. A running program writes through cf_write,
    which asks whether it may. */
-CF_API cf_bool cf_store_set(const char* path, const cf_write_item* items, size_t count,
-                            const char* meta, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_store_set(const char* path, const cf_write_item* items,
+                                         size_t count, const char* meta, cf_error* err);
 
 #ifdef __cplusplus
 }

@@ -84,17 +84,17 @@ typedef struct cf_image {
 CF_NODISCARD CF_API cf_bool cf_image_open(cf_image* img, const char* buf, size_t n,
                                           cf_error* err);
 
-CF_API size_t  cf_image_count(const cf_image* img);
-CF_API cf_bool cf_image_at(const cf_image* img, size_t i, const char** key,
-                           size_t* klen, cf_value* v);
-CF_API cf_bool cf_image_get(const cf_image* img, const char* key, size_t klen,
-                            cf_value* v);
+CF_API size_t               cf_image_count(const cf_image* img);
+CF_NODISCARD CF_API cf_bool cf_image_at(const cf_image* img, size_t i, const char** key,
+                                        size_t* klen, cf_value* v);
+CF_NODISCARD CF_API cf_bool cf_image_get(const cf_image* img, const char* key,
+                                         size_t klen, cf_value* v);
 
 /* Load an image into a key space at a rank, which is what a source
    does. Text values point into the image, so it must outlive the
    configuration. */
-CF_API cf_bool cf_image_load(const cf_image* img, cf_keyspace* ks, int rank,
-                             cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_image_load(const cf_image* img, cf_keyspace* ks,
+                                          int rank, cf_error* err);
 
 /* ------------------------------------------------------------------ *
  * As a source
@@ -104,13 +104,14 @@ CF_API size_t cf_source_image_state_size(void);
 
 /* From memory: a build-time image linked into the program. No file, no
    parser, no allocation - the freestanding path. */
-CF_API cf_bool cf_source_image_mem(cf_source* s, const char* name, int rank,
-                                   const char* buf, size_t n, void* state,
-                                   size_t state_size);
+CF_NODISCARD CF_API cf_bool cf_source_image_mem(cf_source* s, const char* name,
+                                                int rank, const char* buf, size_t n,
+                                                void* state, size_t state_size);
 
 /* From a file, for hosted targets. */
-CF_API cf_bool cf_source_image_file(cf_source* s, const char* name, int rank,
-                                    const char* path, void* state, size_t state_size);
+CF_NODISCARD CF_API cf_bool cf_source_image_file(cf_source* s, const char* name,
+                                                 int rank, const char* path,
+                                                 void* state, size_t state_size);
 
 CF_API const cf_error* cf_source_image_error(const cf_source* s);
 

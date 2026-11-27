@@ -47,7 +47,8 @@ typedef struct cf_iter {
    below. A prefix matches at a segment boundary only, so "server" does
    not match "servername" - the bug every hand-written prefix check has.
    An empty or NULL prefix walks the whole configuration. */
-CF_API cf_bool cf_iter_keys(cf_iter* it, const struct cf_config* c, const char* prefix);
+CF_NODISCARD CF_API cf_bool cf_iter_keys(cf_iter* it, const struct cf_config* c,
+                                         const char* prefix);
 
 /* Each distinct immediate child of `prefix`, once, in key order:
  *
@@ -59,10 +60,10 @@ CF_API cf_bool cf_iter_keys(cf_iter* it, const struct cf_config* c, const char* 
  * told in advance, which is what plugin and per-tenant configuration
  * both need.
  */
-CF_API cf_bool cf_iter_children(cf_iter* it, const struct cf_config* c,
-                                const char* prefix);
+CF_NODISCARD CF_API cf_bool cf_iter_children(cf_iter* it, const struct cf_config* c,
+                                             const char* prefix);
 
-CF_API cf_bool cf_iter_next(cf_iter* it);
+CF_NODISCARD CF_API cf_bool cf_iter_next(cf_iter* it);
 
 /* ------------------------------------------------------------------ *
  * Arrays

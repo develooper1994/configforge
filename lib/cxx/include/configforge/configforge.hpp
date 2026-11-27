@@ -590,10 +590,12 @@ class Config {
         };
 
         Range(const cf_config* c, const char* prefix, bool children) {
+            /* A start that fails leaves the iterator empty, which is the
+               range's answer too: nothing to walk. */
             if (children) {
-                cf_iter_children(&start_, c, prefix);
+                (void)cf_iter_children(&start_, c, prefix);
             } else {
-                cf_iter_keys(&start_, c, prefix);
+                (void)cf_iter_keys(&start_, c, prefix);
             }
         }
         iterator begin() const {
@@ -1916,10 +1918,11 @@ class Items {
     Items() = default;
     Items(const Config& c, const char* prefix, bool children)
         : c_(c), names_(children) {
+        /* A start that fails leaves the iterator empty: nothing to walk. */
         if (children) {
-            cf_iter_children(&start_, c_.raw(), prefix);
+            (void)cf_iter_children(&start_, c_.raw(), prefix);
         } else {
-            cf_iter_keys(&start_, c_.raw(), prefix);
+            (void)cf_iter_keys(&start_, c_.raw(), prefix);
         }
     }
     iterator begin() const {

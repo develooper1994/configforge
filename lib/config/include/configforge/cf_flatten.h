@@ -83,8 +83,8 @@ typedef struct cf_flatten {
 } cf_flatten;
 
 #if CF_INTERNAL_API
-CF_API cf_bool            cf_flatten_init(cf_flatten* f, cf_keyspace* ks, int rank);
-CF_API const cf_doc_sink* cf_flatten_sink(cf_flatten* f);
+CF_NODISCARD CF_API cf_bool cf_flatten_init(cf_flatten* f, cf_keyspace* ks, int rank);
+CF_API const cf_doc_sink*   cf_flatten_sink(cf_flatten* f);
 
 /* For a format that carries no types - INI, .properties - whose values
    the definitions decide: a declared list with a separator splits its
@@ -104,8 +104,9 @@ CF_API void cf_flatten_budget(cf_flatten* f, size_t bytes);
    with `err` set: the codec's reason, or, when the budget refused a
    key, the budget's, naming `path` - whatever the codec said, since
    a refusal from the sink reads to it as a key it could not add. */
-CF_API cf_bool cf_flatten_decode(cf_flatten* f, const cf_codec* codec,
-                                 const cf_blob* blob, const char* path, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_flatten_decode(cf_flatten* f, const cf_codec* codec,
+                                              const cf_blob* blob, const char* path,
+                                              cf_error* err);
 #endif /* CF_INTERNAL_API */
 
 struct cf_source;
@@ -116,9 +117,10 @@ struct cf_source;
    rank, the source's definitions deciding lists for a format without
    types: what the file and directory sources do with each file, for a
    source of one's own that has bytes to read. False with `err` set. */
-CF_API cf_bool cf_source_read_blob(const struct cf_source* s, cf_keyspace* ks,
-                                   const cf_codec* codec, const cf_blob* blob,
-                                   const char* path, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_source_read_blob(const struct cf_source* s,
+                                                cf_keyspace* ks, const cf_codec* codec,
+                                                const cf_blob* blob, const char* path,
+                                                cf_error* err);
 
 /* The codec the content of `blob` says (D-73; cf_codec_detect), `own`
    (n of them) a program's codecs looked at first; NULL with `err` set,
@@ -148,8 +150,8 @@ CF_API const cf_codec* cf_source_by_content(const cf_codec* const* own, size_t n
    scalar and a container prefix is refused as CF_E_KEY, naming the key,
    rather than written as two members with the same name. */
 #if CF_INTERNAL_API
-CF_API cf_bool cf_doc_emit(const cf_keyspace* ks, const cf_doc_sink* out,
-                           cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_doc_emit(const cf_keyspace* ks, const cf_doc_sink* out,
+                                        cf_error* err);
 #endif /* CF_INTERNAL_API */
 
 /* The same walk, with a say in what is included.
@@ -161,8 +163,9 @@ CF_API cf_bool cf_doc_emit(const cf_keyspace* ks, const cf_doc_sink* out,
 typedef cf_bool (*cf_emit_pred)(const void* ctx, const cf_entry* e);
 
 #if CF_INTERNAL_API
-CF_API cf_bool cf_doc_emit_where(const cf_keyspace* ks, const cf_doc_sink* out,
-                                 cf_emit_pred pred, const void* ctx, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_doc_emit_where(const cf_keyspace* ks,
+                                              const cf_doc_sink* out, cf_emit_pred pred,
+                                              const void* ctx, cf_error* err);
 #endif /* CF_INTERNAL_API */
 
 #ifdef __cplusplus

@@ -41,7 +41,7 @@ enum {
    "iso-8859-1" or "latin1", "windows-1252" or "cp1252",
    "windows-1254" or "cp1254", "iso-8859-9" or "latin5",
    "utf-16le", "utf-16be"; ASCII case ignored. CF_FALSE otherwise. */
-CF_API cf_bool cf_encoding_by_name(const char* name, unsigned* flags);
+CF_NODISCARD CF_API cf_bool cf_encoding_by_name(const char* name, unsigned* flags);
 
 /* The canonical name ("windows-1254") of the encoding in `flags`,
    or NULL for a value above CF_ENCODING_LAST. */
@@ -70,8 +70,8 @@ CF_API size_t cf_encoding_recode(unsigned from, const char* in, size_t n, char* 
    read it so: "; it may be windows-1254 (Turkish): read it with
    CF_ENCODING_WINDOWS_1254, or the encoding windows-1254 in the tools".
    It never changes a value. A NULL origin is "input". (D-108) */
-CF_API cf_bool cf_encoding_check(const char* origin, const char* p, size_t n,
-                                 cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_encoding_check(const char* origin, const char* p,
+                                              size_t n, cf_error* err);
 
 #ifdef __cplusplus
 }

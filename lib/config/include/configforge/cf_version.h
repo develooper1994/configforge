@@ -61,12 +61,12 @@ CF_API int         cf_version_number(void);
    be told apart by this. Never NULL. Set at build time, not configure
    time, so it follows a checkout without reconfiguring; a build without
    CMake can pass -DCF_BUILD_ID="\"...\"". */
-CF_API const char* cf_build_id(void);
+CF_NODISCARD CF_API const char* cf_build_id(void);
 
 /* The build profile this library was built with (D-105): "default",
    "minimal", "file:acme", or "unspecified" for a build of the sources
    that named none. Never NULL. */
-CF_API const char* cf_build_profile(void);
+CF_NODISCARD CF_API const char* cf_build_profile(void);
 
 /* What this build can do, as a NUL-terminated list: "ini", "json",
    "real", and so on. Recorded in the provenance report as well, so a

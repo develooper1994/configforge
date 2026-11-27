@@ -56,11 +56,12 @@ CF_API size_t cf_blob_skip_bom(const cf_blob* b);
 /* Whether n bytes are UTF-8 as RFC 3629 has it: no overlong form, no
    surrogate (U+D800 to U+DFFF), nothing past U+10FFFF, no sequence cut
    short. A NUL is a character like any other. (1.5) */
-CF_API cf_bool cf_text_is_utf8(const char* p, size_t n);
+CF_NODISCARD CF_API cf_bool cf_text_is_utf8(const char* p, size_t n);
 
 /* Reads a whole file into the arena. CF_E_SOURCE when it cannot be
    opened or read; the caller decides whether that is fatal. */
-CF_API cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_blob_file(cf_blob* b, cf_arena* ar, const char* path,
+                                         cf_error* err);
 
 /* Where a file's bytes go for one reading (D-61): an arena of their own,
    from `ar`'s allocator, so that they are gone once the reader is done -
@@ -84,13 +85,13 @@ typedef struct cf_sink {
     size_t len; /* what would have been written */
 } cf_sink;
 
-CF_API void    cf_sink_init(cf_sink* s, char* buf, size_t cap);
-CF_API void    cf_sink_write(cf_sink* s, const char* p, size_t n);
-CF_API void    cf_sink_putc(cf_sink* s, char c);
-CF_API void    cf_sink_puts(cf_sink* s, const char* z);
-CF_API void    cf_sink_fmt(cf_sink* s, const char* fmt, ...);
-CF_API void    cf_sink_terminate(cf_sink* s);
-CF_API cf_bool cf_sink_overflowed(const cf_sink* s);
+CF_API void                 cf_sink_init(cf_sink* s, char* buf, size_t cap);
+CF_API void                 cf_sink_write(cf_sink* s, const char* p, size_t n);
+CF_API void                 cf_sink_putc(cf_sink* s, char c);
+CF_API void                 cf_sink_puts(cf_sink* s, const char* z);
+CF_API void                 cf_sink_fmt(cf_sink* s, const char* fmt, ...);
+CF_API void                 cf_sink_terminate(cf_sink* s);
+CF_NODISCARD CF_API cf_bool cf_sink_overflowed(const cf_sink* s);
 
 /* JSON, written by hand where a document is not the key space's (a
    report, a diff): text as a JSON string, escaped; a value as JSON. */
@@ -279,11 +280,11 @@ CF_API const cf_codec* cf_codec_among(const cf_codec* const* list, size_t n,
    its own encoding (CF_CODEC_SELF_ENCODED) reads only bytes that are
    UTF-8: cf_encoding_check looks first, and refuses the rest with their
    place. (1.5; the check 1.8, D-108) */
-CF_API cf_bool cf_codec_decode(const cf_codec* c, const cf_blob* in,
-                               const cf_doc_sink* out, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_codec_decode(const cf_codec* c, const cf_blob* in,
+                                            const cf_doc_sink* out, cf_error* err);
 
 /* Whether `c` reads: CF_CODEC_READ and a decoder of either kind. (1.5) */
-CF_API cf_bool cf_codec_can_read(const cf_codec* c);
+CF_NODISCARD CF_API cf_bool cf_codec_can_read(const cf_codec* c);
 
 /* Internal, as cfi_defset_nearest_secret is: cf_codec_decode without the
    check for UTF-8, for a caller that has made it or tries one candidate
@@ -301,7 +302,7 @@ CF_API const char* cf_format_option(const char* format);
    or not this build has its codec; CF_FALSE, *holds untouched, for a
    format this library has no writer for (xml, properties) and for a
    name it does not know. (1.8) */
-CF_API cf_bool cf_format_holds(const char* format, unsigned* holds);
+CF_NODISCARD CF_API cf_bool cf_format_holds(const char* format, unsigned* holds);
 
 /* CF_TRUE and the limits of the reader of the format called `format`:
    *max_path the longest joined path of names (dots counted) to a table,
@@ -314,8 +315,8 @@ CF_API cf_bool cf_format_holds(const char* format, unsigned* holds);
    nesting). A format never writes what its own reader refuses, so the
    converter leaves out a table past these. CF_FALSE, both untouched, for
    a name this library does not know. (1.8) */
-CF_API cf_bool cf_format_limits(const char* format, size_t* max_path,
-                                size_t* max_depth);
+CF_NODISCARD CF_API cf_bool cf_format_limits(const char* format, size_t* max_path,
+                                             size_t* max_depth);
 
 CF_API size_t          cf_codec_count(void);
 CF_API const cf_codec* cf_codec_at(size_t i);
@@ -427,8 +428,9 @@ typedef struct cf_tlv_layout {
    name, takes its extensions, reads only, and is never chosen from
    content (CF_CODEC_NAMED_ONLY). Off in a build without CF_WITH_TLV,
    and says so. (1.5) */
-CF_API cf_bool cf_tlv_codec_sized(cf_codec* out, size_t out_size,
-                                  const cf_tlv_layout* layout, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_tlv_codec_sized(cf_codec* out, size_t out_size,
+                                               const cf_tlv_layout* layout,
+                                               cf_error*            err);
 #define cf_tlv_codec(out, layout, err)                                                 \
     cf_tlv_codec_sized((out), sizeof(cf_codec), (layout), (err))
 
@@ -451,8 +453,9 @@ typedef struct cf_compose {
    the codec. A repair lends its bytes until decoding returns. A filter
    fills the four document callbacks of up and forwards events to down.
    A build without CF_WITH_COMPOSE refuses with CF_E_CAPABILITY. */
-CF_API cf_bool cf_codec_compose_sized(cf_codec* out, size_t out_size,
-                                      const cf_compose* spec, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_codec_compose_sized(cf_codec* out, size_t out_size,
+                                                   const cf_compose* spec,
+                                                   cf_error*         err);
 #define cf_codec_compose(out, spec, err)                                               \
     cf_codec_compose_sized((out), sizeof(cf_codec), (spec), (err))
 

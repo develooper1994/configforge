@@ -88,7 +88,7 @@ CF_NODISCARD CF_API cf_config* cf_app(const char* name, int argc, char* const* a
  * ceremony this design exists to remove.
  * ------------------------------------------------------------------ */
 
-CF_API cf_builder* cf_build(const cf_allocator* alloc);
+CF_NODISCARD CF_API cf_builder* cf_build(const cf_allocator* alloc);
 
 /* Build inside a buffer the caller owns.
  *
@@ -102,12 +102,13 @@ CF_API cf_builder* cf_build(const cf_allocator* alloc);
  * Everything the configuration points at lives in that buffer, so it
  * has to outlive the configuration - which on the target this exists
  * for is a static array, and outlives everything. */
-CF_API cf_builder* cf_build_in(cf_arena* arena);
+CF_NODISCARD CF_API cf_builder* cf_build_in(cf_arena* arena);
 
 /* cf_app's builder, before create: the command line (CF_RANK_CLI) and
    the NAME_ environment (CF_RANK_ENV), for adding files and definitions
    to. */
-CF_API cf_builder* cf_app_builder(const char* name, int argc, char* const* argv);
+CF_NODISCARD CF_API cf_builder* cf_app_builder(const char* name, int argc,
+                                               char* const* argv);
 
 /* Turns response files on for a builder made by cf_app_builder (1.5):
  * an argument `@path` past argv[0] (and before a `--`) is replaced by the
@@ -573,15 +574,15 @@ CF_INLINE cf_code cf_get_text_(const cf_config* c, const char* k, const char** o
 #endif
 
 /* CF_TYPE_NULL when the key is absent. */
-CF_API cf_type cf_type_of(const cf_config* c, const char* key);
-CF_API cf_bool cf_has(const cf_config* c, const char* key);
+CF_API cf_type              cf_type_of(const cf_config* c, const char* key);
+CF_NODISCARD CF_API cf_bool cf_has(const cf_config* c, const char* key);
 
 /* Read coverage (cf_builder_track_reads). CF_FALSE and 0 for a
    configuration that does not track. cf_read_count counts keys, not
    reads; neither of these is itself a read. */
-CF_API cf_bool cf_tracks_reads(const cf_config* c);
-CF_API cf_bool cf_was_read(const cf_config* c, const char* key);
-CF_API size_t  cf_read_count(const cf_config* c);
+CF_NODISCARD CF_API cf_bool cf_tracks_reads(const cf_config* c);
+CF_NODISCARD CF_API cf_bool cf_was_read(const cf_config* c, const char* key);
+CF_API size_t               cf_read_count(const cf_config* c);
 
 /* ------------------------------------------------------------------ *
  * Diagnostics
@@ -830,9 +831,9 @@ CF_NODISCARD CF_API cf_bool cf_write(const cf_config* c, const char* target,
  * which costs the re-read you were about to do anyway.
  * ------------------------------------------------------------------ */
 
-CF_API cf_bool     cf_changed(const cf_config* c);
-CF_API size_t      cf_watch_count(const cf_config* c);
-CF_API const char* cf_watch_path(const cf_config* c, size_t i);
+CF_NODISCARD CF_API cf_bool cf_changed(const cf_config* c);
+CF_API size_t               cf_watch_count(const cf_config* c);
+CF_API const char*          cf_watch_path(const cf_config* c, size_t i);
 
 /* ------------------------------------------------------------------ *
  * A handle an event loop can wait on
@@ -879,7 +880,7 @@ CF_NODISCARD CF_API cf_watcher* cf_watcher_open(const cf_config*    c,
 
 CF_API int   cf_watcher_fd(const cf_watcher* w); /* -1 where it is not a descriptor */
 CF_API void* cf_watcher_handle(const cf_watcher* w); /* NULL where it is not a HANDLE */
-CF_API cf_bool cf_watcher_drain(cf_watcher* w);
+CF_NODISCARD CF_API cf_bool cf_watcher_drain(cf_watcher* w);
 
 /* 1 woken (and drained), 0 timed out, -1 failed. Negative: no limit. */
 CF_API int  cf_watcher_wait(cf_watcher* w, long timeout_ms);

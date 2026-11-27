@@ -27,6 +27,17 @@ set_target_properties(
              C_STANDARD_REQUIRED ON
              C_EXTENSIONS OFF)
 
+# Under C23 CF_NODISCARD is [[nodiscard]]: a program that checks every
+# result builds with -Werror. (nodiscard_ignored.c, which must not, is
+# tried by the consumer.nodiscard test.) Not MSVC: no C23 [[nodiscard]].
+include(CheckCCompilerFlag)
+check_c_compiler_flag(-std=c23 CF_CONSUMER_HAS_C23)
+if(CF_CONSUMER_HAS_C23)
+  add_executable(consumer_nodiscard nodiscard_c23.c)
+  target_link_libraries(consumer_nodiscard PRIVATE ConfigForge::configforge)
+  target_compile_options(consumer_nodiscard PRIVATE -std=c23 -Werror)
+endif()
+
 if(CF_CONSUMER_CXX)
   enable_language(CXX)
   add_executable(consumer_cpp consumer.cpp)

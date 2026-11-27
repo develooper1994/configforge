@@ -232,7 +232,7 @@ CF_API cf_live_result cf_live_rollback(cf_live* l, const char* reason, cf_error*
 /* Ends the probation: the snapshot readers have is the one to keep, and
    the one before it is released. False when none was on probation. A
    "reload-confirmed" event. (1.1) */
-CF_API cf_bool cf_live_confirm(cf_live* l);
+CF_NODISCARD CF_API cf_bool cf_live_confirm(cf_live* l);
 
 /* How many snapshots readers have been given: 1 after open, one more a
    swap. A reader can tell that what it holds is no longer current. */
@@ -265,11 +265,11 @@ typedef struct cf_live_status {
    it reaches (D-51): a caller built against a later, larger struct gets
    what this library has, one built against an earlier gets what it
    asked for. False for a NULL, or a size smaller than 1.0's. */
-CF_API cf_bool cf_live_status_get(cf_live* l, cf_live_status* out);
+CF_NODISCARD CF_API cf_bool cf_live_status_get(cf_live* l, cf_live_status* out);
 
 /* The last failure's error, copied into `err` (cf_error_copy); false,
    and `err` cleared, when no reload has failed. Any thread. */
-CF_API cf_bool cf_live_last_error(cf_live* l, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_live_last_error(cf_live* l, cf_error* err);
 
 /* Internal: the generation being replaced, as the guess for how many
    candidates the next one's key space will hold (D-76). */

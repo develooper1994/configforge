@@ -60,7 +60,7 @@ CF_API const char* cf_outcome_name(cf_outcome o);
 /* Whether a candidate with this outcome may still be selected. The
    resolver asks this instead of listing the losing outcomes, so a new
    one cannot be added and forgotten in the one place it matters. */
-CF_API cf_bool cf_outcome_can_win(cf_outcome o);
+CF_NODISCARD CF_API cf_bool cf_outcome_can_win(cf_outcome o);
 
 /* A candidate from a textual source carries the bytes as written; its
    type is decided later, by a definition if one exists and by Tier 0
@@ -213,7 +213,7 @@ typedef struct cf_list_part {
 } cf_list_part;
 
 #if CF_INTERNAL_API
-CF_API cf_bool cf_ks_init(cf_keyspace* ks, cf_arena* arena, size_t hint);
+CF_NODISCARD CF_API cf_bool cf_ks_init(cf_keyspace* ks, cf_arena* arena, size_t hint);
 #endif /* CF_INTERNAL_API */
 
 /* The arena everything in this space lives in. Sources that have to
@@ -224,21 +224,24 @@ CF_API cf_arena* cf_ks_arena(const cf_keyspace* ks);
 /* Record a candidate. Keys and text are copied into the arena, so the
    caller's buffers need not outlive the call. Candidates may arrive in
    any order; the chain is kept ordered by precedence. */
-CF_API cf_bool cf_ks_add(cf_keyspace* ks, const char* key, size_t keylen, int source,
-                         const cf_value* value, const char* at);
+CF_NODISCARD CF_API cf_bool cf_ks_add(cf_keyspace* ks, const char* key, size_t keylen,
+                                      int source, const cf_value* value,
+                                      const char* at);
 
 /* Record a candidate as written, leaving its type to be decided. */
-CF_API cf_bool cf_ks_add_text(cf_keyspace* ks, const char* key, size_t keylen,
-                              int source, const char* text, size_t textlen,
-                              const char* at);
+CF_NODISCARD CF_API cf_bool cf_ks_add_text(cf_keyspace* ks, const char* key,
+                                           size_t keylen, int source, const char* text,
+                                           size_t textlen, const char* at);
 
 /* Record a typed candidate that somebody wrote - a JSON string, say -
    so the reserved syntax applies to it as it does to raw text. */
-CF_API cf_bool cf_ks_add_authored(cf_keyspace* ks, const char* key, size_t keylen,
-                                  int source, const cf_value* value, const char* at);
+CF_NODISCARD CF_API cf_bool cf_ks_add_authored(cf_keyspace* ks, const char* key,
+                                               size_t keylen, int source,
+                                               const cf_value* value, const char* at);
 
-CF_API cf_bool cf_ks_add_resolved(cf_keyspace* ks, const char* key, size_t keylen,
-                                  int source, const cf_value* value, const char* at);
+CF_NODISCARD CF_API cf_bool cf_ks_add_resolved(cf_keyspace* ks, const char* key,
+                                               size_t keylen, int source,
+                                               const cf_value* value, const char* at);
 
 /* Internal to live reload, not exported as a source API. */
 cf_bool cfi_ks_add_pinned(cf_keyspace* ks, const char* key, size_t keylen, int source,
@@ -264,37 +267,40 @@ const cf_error* cfi_ks_refusal(const cf_keyspace* ks);
 void            cfi_ks_expect_lines(cf_keyspace* ks, const char* text, size_t n);
 
 /* Record a definition's default (CF_CAND_DEFAULT). */
-CF_API cf_bool cf_ks_add_default(cf_keyspace* ks, const char* key, size_t keylen,
-                                 int source, const cf_value* value);
+CF_NODISCARD CF_API cf_bool cf_ks_add_default(cf_keyspace* ks, const char* key,
+                                              size_t keylen, int source,
+                                              const cf_value* value);
 
 /* Before resolution: every candidate of `from` offered to `to` as well,
    CF_CAND_RENAMED. The old key keeps its own, for code that still reads
    it. False when there is no room. */
 #if CF_INTERNAL_API
-CF_API cf_bool cf_ks_rename(cf_keyspace* ks, const char* from, size_t fromlen,
-                            const char* to, size_t tolen);
-CF_API cf_bool cf_ks_rename_list(cf_keyspace* ks, const char* from, size_t fromlen,
-                                 const char* to, size_t tolen);
+CF_NODISCARD CF_API cf_bool cf_ks_rename(cf_keyspace* ks, const char* from,
+                                         size_t fromlen, const char* to, size_t tolen);
+CF_NODISCARD CF_API cf_bool cf_ks_rename_list(cf_keyspace* ks, const char* from,
+                                              size_t fromlen, const char* to,
+                                              size_t tolen);
 #endif /* CF_INTERNAL_API */
 
 /* Record a copy of another key space's candidate, at its rank, with what
    it was - textual, a default, the template it was made from - and not
    what it was waiting for: it is not read for references again. */
-CF_API cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key, size_t keylen,
-                                   const cf_candidate* c);
+CF_NODISCARD CF_API cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key,
+                                                size_t keylen, const cf_candidate* c);
 
 /* Internal snapshot replay, in original insertion order and at the
    source-local keys of appended lists. Derived counts are not replayed. */
 #if CF_INTERNAL_API
-CF_API cf_bool cf_ks_replay(cf_keyspace* ks, const cf_keyspace* base);
+CF_NODISCARD CF_API cf_bool cf_ks_replay(cf_keyspace* ks, const cf_keyspace* base);
 #endif /* CF_INTERNAL_API */
 
 /* Internal: plans are collected before this changes the key index.
    Resolve once after applying all plans. */
 #if CF_INTERNAL_API
-CF_API cf_bool cf_ks_append_list(cf_keyspace* ks, const char* key, size_t keylen,
-                                 const cf_list_part* parts, size_t count,
-                                 const cf_candidate* result, cf_error* err);
+CF_NODISCARD CF_API cf_bool cf_ks_append_list(cf_keyspace* ks, const char* key,
+                                              size_t keylen, const cf_list_part* parts,
+                                              size_t count, const cf_candidate* result,
+                                              cf_error* err);
 #endif /* CF_INTERNAL_API */
 
 /* Original source-local key for a candidate from this space, or NULL
@@ -309,8 +315,10 @@ CF_API const char* cf_ks_original_key(const cf_keyspace* ks, const cf_candidate*
    wins, and it is never erased: explain() has to be able to say that
    the environment did supply a value and why it was refused. */
 #if CF_INTERNAL_API
-CF_API cf_bool cf_ks_reject(cf_keyspace* ks, const char* key, size_t keylen, int source,
-                            const cf_value* value, const char* at, const char* reason);
+CF_NODISCARD CF_API cf_bool cf_ks_reject(cf_keyspace* ks, const char* key,
+                                         size_t keylen, int source,
+                                         const cf_value* value, const char* at,
+                                         const char* reason);
 #endif /* CF_INTERNAL_API */
 
 /* Sort the candidates, group them into entries, and mark the
@@ -321,7 +329,7 @@ CF_API cf_bool cf_ks_reject(cf_keyspace* ks, const char* key, size_t keylen, int
    must distinguish, or a target out of memory gets a snapshot with no
    keys and nothing to say why. */
 #if CF_INTERNAL_API
-CF_API cf_bool cf_ks_resolve(cf_keyspace* ks);
+CF_NODISCARD CF_API cf_bool cf_ks_resolve(cf_keyspace* ks);
 #endif /* CF_INTERNAL_API */
 
 /* Candidates appended so far, which is what an out-of-room message
@@ -384,7 +392,7 @@ CF_API const cf_entry* cf_ks_at(const cf_keyspace* ks, size_t i);
 
 /* Verifies the ordering invariant the design depends on. */
 #if CF_INTERNAL_API
-CF_API cf_bool cf_ks_is_sorted(const cf_keyspace* ks);
+CF_NODISCARD CF_API cf_bool cf_ks_is_sorted(const cf_keyspace* ks);
 #endif /* CF_INTERNAL_API */
 
 /* Order-independent digest over the resolved space. Two runs that

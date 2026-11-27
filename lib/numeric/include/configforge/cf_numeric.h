@@ -34,8 +34,10 @@ extern "C" {
    callers trim deliberately. When end is NULL the whole input must be
    consumed; otherwise *end receives the number of bytes consumed. */
 #if CF_INTERNAL_API
-CF_API cf_bool cf_text_to_i64(const char* s, size_t len, cf_i64* out, size_t* end);
-CF_API cf_bool cf_text_to_u64(const char* s, size_t len, cf_u64* out, size_t* end);
+CF_NODISCARD CF_API cf_bool cf_text_to_i64(const char* s, size_t len, cf_i64* out,
+                                           size_t* end);
+CF_NODISCARD CF_API cf_bool cf_text_to_u64(const char* s, size_t len, cf_u64* out,
+                                           size_t* end);
 #endif /* CF_INTERNAL_API */
 
 /* ------------------------------------------------------------------ *
@@ -74,7 +76,8 @@ CF_API size_t cf_f64_to_text(double v, char* buf, size_t cap);
    as what it is, and one lying exactly on a halfway point may be one
    unit in the last place off. */
 #if CF_INTERNAL_API
-CF_API cf_bool cf_text_to_f64(const char* s, size_t len, double* out, size_t* end);
+CF_NODISCARD CF_API cf_bool cf_text_to_f64(const char* s, size_t len, double* out,
+                                           size_t* end);
 #endif /* CF_INTERNAL_API */
 
 /* A double as its IEEE 754 bit pattern, and back, by memcpy. (1.5) */

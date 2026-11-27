@@ -47,16 +47,18 @@ CF_NODISCARD CF_API cf_edit* cf_edit_begin(struct cf_config* c, const char* targ
 /* Set a key: as text, which the contract types as it types a file's, or
    already typed. A key set twice keeps the second. False for no memory
    or a key that is not one, which commit then reports. */
-CF_API cf_bool cf_edit_set_text(cf_edit* e, const char* key, const char* value);
-CF_API cf_bool cf_edit_set_int(cf_edit* e, const char* key, cf_i64 value);
-CF_API cf_bool cf_edit_set_bool(cf_edit* e, const char* key, cf_bool value);
+CF_NODISCARD CF_API cf_bool cf_edit_set_text(cf_edit* e, const char* key,
+                                             const char* value);
+CF_NODISCARD CF_API cf_bool cf_edit_set_int(cf_edit* e, const char* key, cf_i64 value);
+CF_NODISCARD CF_API cf_bool cf_edit_set_bool(cf_edit* e, const char* key,
+                                             cf_bool value);
 #if CF_WITH_REAL
-CF_API cf_bool cf_edit_set_real(cf_edit* e, const char* key, double value);
+CF_NODISCARD CF_API cf_bool cf_edit_set_real(cf_edit* e, const char* key, double value);
 #endif
 
 /* Delete a key from the target, so that the next source down - a file,
    the defaults - supplies it again. */
-CF_API cf_bool cf_edit_unset(cf_edit* e, const char* key);
+CF_NODISCARD CF_API cf_bool cf_edit_unset(cf_edit* e, const char* key);
 
 /* How many keys the edit changes. */
 CF_API size_t cf_edit_count(const cf_edit* e);
