@@ -360,7 +360,7 @@ this answer under "Organiser's answers"). Both are copied into
 * **needs**: nothing
 * **size**: small
 * **version**: 1.9.0
-* **status**: open
+* **status**: done (442f52e)
 * **decided**:
   * **Where.** Not in `cf_blob_file` (the serialization library has no stamp: `cf_platform_stamp` is in `posix.c`, `win32.c` and `none.c`, outside what the serialization library carries). In the file source, `lib/config/src/bridge/file.c`, at the one call that reads a file whole: `file_load`'s `cf_blob_file(&blob, bytes, st->path, &st->err)` (line 421). A static helper is not testable alone: the card adds an internal function, declared under `#if CF_INTERNAL_API` in `lib/config/include/configforge/cf_source.h` beside `cfi_source_text` (line 277), with its symbol line in `cmake/configforge.internal.symbols`:
     ```c
