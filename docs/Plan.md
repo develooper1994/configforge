@@ -55,8 +55,11 @@ nothing else:
 11. The batch goes to main once it holds about a dozen cards, when a
       module ends, before a release, or before the maintainer's stop
       time: `gh workflow run ci --ref batch -f tier=full` (ACCEPT-CI),
-      one run for the whole batch. Red -> fix on `batch` with a commit
-      "Batch: <what>", run again. Green -> `git push origin batch:main`
+      one run for the whole batch. Before each run, a fix on `batch`
+      included: `work.py format`, then codemap and apiref regenerated,
+      then every `gate.*` test in WSL (a format pass that moved a header
+      line once turned 30 jobs red on `gate.apiref`, 2026-11-28).
+      Red -> fix on `batch` with a commit "Batch: <what>", run again. Green -> `git push origin batch:main`
       (a fast-forward; main moved meanwhile -> merge origin/main into
       batch and run again), then delete `batch`. Go to 1.
 ```
