@@ -286,10 +286,10 @@ of a card's CI.
 | 9 | K-11c The table of each feature against each platform, checked by a gate | 1.9.0 | medium | K-11b | done (52d1cc3) |
 | 10 | F-1a The file layer: `cf_file_options`, `cf_file_writer`, `cf_file_replace`, a file replaced whole or not at all | 1.9.0 | large | nothing | done (7596e78) |
 | 11 | Y-2 `cf_platform_write_file_if`: the replace refused when the file no longer holds the bytes read (F-1c in the research) | 1.9.0 | small | F-1a | done (82ddc27) |
-| 12 | Y-8 Close-on-exec and non-inheritable everywhere the library opens a file, with a child that lists its descriptors | 1.9.0 | small | F-1a, Y-3 | waits: Y-3 |
+| 12 | Y-8 Close-on-exec and non-inheritable everywhere the library opens a file, with a child that lists its descriptors | 1.9.0 | small | F-1a, Y-3 | open |
 | 13 | Y-5 A stable read: a file read twice and compared, up to 3 reads by default (F-5c in the research) | 1.9.0 | small | nothing | done (442f52e) |
 | 14 | Y-6 Windows readers that share delete access, if a measurement shows a rename then succeeds over an open reader (F-5d in the research) | 1.9.0 | small | F-1a | done (16b115d) |
-| 15 | Y-3 `cf_locker`: a lock that plugs in, `cf_lock_none` and a kernel lock on a kept sidecar file, `cf_lock_sidecar` (F-5a in the research) | 1.9.0 | medium | F-1a | open |
+| 15 | Y-3 `cf_locker`: a lock that plugs in, `cf_lock_none` and a kernel lock on a kept sidecar file, `cf_lock_sidecar` (F-5a in the research) | 1.9.0 | medium | F-1a | done (3b241ee) |
 | 16 | K-9c Errors that cannot be ignored: `CF_NODISCARD` on every failure, and its gate | 1.9.0 | large | nothing | done (2c03110) |
 | 17 | K-6a A refusal's byte offset | 2.0.0 | medium | nothing | open |
 | 18 | K-6b A refusal's reason shown by the tools | 2.0.0 | small | nothing | open |
@@ -392,7 +392,7 @@ of a card's CI.
 | 115 | Y-20 Writing: cf_pack, deterministic gzip and zstd, `convert --compress`, a compressed image | 2.3.0 | medium | Y-16, Y-17, Y-19, F-1b | waits: Y-16 |
 | 116 | F-2a An override file the library owns: a file source that cf_write can commit to | 2.3.0 | large | F-1a, Y-2, Y-42 | waits: Y-42 |
 | 117 | F-2b settings.c is the override source's example | 2.3.0 | small | F-2a, F-1b, F-1b | waits: F-2a |
-| 118 | Y-4 `cf_file_source_options.lock`, `.wait_ms` and `.write_attempts`, `.read_attempts`, `cf_builder_write_wait`: the lock around `overrides_write`, and the store's wait (F-5b in the research) | 2.3.0 | medium | Y-3, F-2a | waits: Y-3 |
+| 118 | Y-4 `cf_file_source_options.lock`, `.wait_ms` and `.write_attempts`, `.read_attempts`, `cf_builder_write_wait`: the lock around `overrides_write`, and the store's wait (F-5b in the research) | 2.3.0 | medium | Y-3, F-2a | waits: F-2a |
 | 119 | Y-12 `swapped` in `cf_live_options`: workers told of a swap | 2.3.0 | small | Y-9 | waits: Y-9 |
 | 120 | F-3i Wave 6, `configforge codec get`, `set` and `unset` (TO DECIDE) | 2.3.0 | medium | F-1a, F-3b, F-3c, F-3d, F-3e, F-3f, F-3g, F-3h | waits: F-3b |
 | 121 | M-5 The stream: one interface for reading in pieces, with a fallback every codec has | 2.4.0 | large | nothing | open |

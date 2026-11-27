@@ -242,7 +242,7 @@ answer under "Organiser's answers"). Both are copied into
 * **needs**: F-1a (the sidecar's name follows the temporary's; `cf_lock.h` sits beside `cf_file.h`)
 * **size**: medium (a public header, three platform files of the same shape, one portable file, one test)
 * **version**: 1.9.0
-* **status**: open
+* **status**: done (3b241ee)
 * **decided**:
   * **The interface (D-227, D-220)**, a new public header `lib/platform/include/configforge/cf_lock.h` (includes `cf_port.h`, `cf_error.h`; the platform is a part, D-220, and the locker knows nothing of configuration):
     ```c
