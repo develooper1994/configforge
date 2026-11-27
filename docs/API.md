@@ -2555,7 +2555,7 @@ files to write`, and a program built for it still links.
 CF_API void cf_file_options_init(cf_file_options* o);
 ```
 
-Implementation: [`cf_file_options_init` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L29).
+Implementation: [`cf_file_options_init` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L30).
 
 Sets every member to its default and `size`. A NULL `o` does nothing, and
 a NULL `options` in any call below is these defaults. A `size` below the
@@ -2578,7 +2578,7 @@ written. A failure of any call is CF_E_SOURCE, `cannot write '%s':
 CF_NODISCARD CF_API cf_file_writer* cf_file_writer_open(const char* path, const cf_file_options* o, cf_error* err);
 ```
 
-Implementation: [`cf_file_writer_open` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L219).
+Implementation: [`cf_file_writer_open` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L220).
 
 Guarantee: basic. On failure no writer exists and nothing leaks; the file may
 have been created or truncated.
@@ -2587,7 +2587,7 @@ have been created or truncated.
 CF_NODISCARD CF_API cf_bool cf_file_writer_write(cf_file_writer* w, const void* data, size_t size, cf_error* err);
 ```
 
-Implementation: [`cf_file_writer_write` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L227).
+Implementation: [`cf_file_writer_write` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L228).
 
 Guarantee: basic. The writer stays valid; some of the bytes may be on disk.
 
@@ -2595,7 +2595,7 @@ Guarantee: basic. The writer stays valid; some of the bytes may be on disk.
 CF_NODISCARD CF_API cf_bool cf_file_writer_flush(cf_file_writer* w, cf_error* err);
 ```
 
-Implementation: [`cf_file_writer_flush` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L236).
+Implementation: [`cf_file_writer_flush` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L237).
 
 To the system, not forced to the device.
 Guarantee: basic. The writer stays valid; bytes may be on disk.
@@ -2604,7 +2604,7 @@ Guarantee: basic. The writer stays valid; bytes may be on disk.
 CF_NODISCARD CF_API cf_bool cf_file_writer_sync(cf_file_writer* w, cf_error* err);
 ```
 
-Implementation: [`cf_file_writer_sync` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L242).
+Implementation: [`cf_file_writer_sync` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L243).
 
 Flush, then forced to the device.
 Guarantee: basic. The writer stays valid; bytes may be on disk.
@@ -2613,7 +2613,7 @@ Guarantee: basic. The writer stays valid; bytes may be on disk.
 CF_NODISCARD CF_API cf_bool cf_file_writer_close(cf_file_writer* w, cf_error* err);
 ```
 
-Implementation: [`cf_file_writer_close` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L248).
+Implementation: [`cf_file_writer_close` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L249).
 
 The last flush, the sync the policy asks for, the close. Always frees
 `w`, whether it returns true or not; NULL is fine.
@@ -2637,7 +2637,7 @@ copied and the new file takes the directory's.
 CF_NODISCARD CF_API cf_bool cf_file_replace(const char* path, const void* data, size_t size, const cf_file_options* o, cf_error* err);
 ```
 
-Implementation: [`cf_file_replace` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L152).
+Implementation: [`cf_file_replace` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L153).
 
 Guarantee: strong. On failure the target is as it was and no temporary is left.
 
@@ -4331,7 +4331,7 @@ CF_API int cf_platform_write_file_if(const char* path, const void* data, size_t 
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_write_file_if` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L207).
+Implementation: [`cf_platform_write_file_if` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L208).
 
 1 when `path` holds exactly `size` bytes of `data`. -1 when the file no
 longer holds `expect` (`expect_size` bytes; NULL and 0: the file must not
@@ -4345,7 +4345,7 @@ CF_API int cf_platform_write_file_if_hook(const char* path, const void* data, si
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_write_file_if_hook` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L198).
+Implementation: [`cf_platform_write_file_if_hook` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L199).
 
 The same, calling `between(user)` once, after the temporary is complete
 and before the comparison: for the test, which changes the file there. No
@@ -4392,7 +4392,7 @@ CF_NODISCARD CF_API cf_bool cf_platform_writer_close_counted(cf_file_writer* w, 
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_writer_syncs` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L254), [`cf_platform_writer_close_counted` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L259).
+Implementation: [`cf_platform_writer_syncs` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L255), [`cf_platform_writer_close_counted` (lib/platform/src/file_layer.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/file_layer.c#L260).
 
 For the test: how many syncs this writer has issued, and the close that
 says so (cf_file_writer_close, which also reports it in *syncs when that

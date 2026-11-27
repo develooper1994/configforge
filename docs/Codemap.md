@@ -1011,36 +1011,36 @@
 - #define CF_PLATFORM_POSIX 50
 - #define CF_PLATFORM_NONE 53
 `lib/platform/src/file_layer.c`
-- cf_file_options_init 29-40
-- cfi_file_options 42-71
-- cfi_file_fail 73-76
-- file_dot_name 86-123
-- cfi_file_temp_name 125-138
-- cfi_file_lock_name 140-142
-- file_available 145-150
-- cf_file_replace 152-157
-- cfi_file_holds 159-196
-- cf_platform_write_file_if_hook 198-205
-- cf_platform_write_file_if 207-212
-- cf_file_writer_open 219-225
-- cf_file_writer_write 227-234
-- cf_file_writer_flush 236-240
-- cf_file_writer_sync 242-246
-- cf_file_writer_close 248-252
-- cf_platform_writer_syncs 254-257
-- cf_platform_writer_close_counted 259-267
-- cfi_file_why_stdio 271-274
-- struct cf_file_writer 276-287
-- writer_arg 289-294
-- writer_sync 297-310
-- writer_count 313-319
-- cf_file_writer_open 321-408
-- cf_file_writer_write 410-436
-- cf_file_writer_flush 438-449
-- cf_file_writer_sync 451-457
-- cf_platform_writer_syncs 459-461
-- cf_platform_writer_close_counted 463-492
-- cf_file_writer_close 494-496
+- cf_file_options_init 30-41
+- cfi_file_options 43-72
+- cfi_file_fail 74-77
+- file_dot_name 87-124
+- cfi_file_temp_name 126-139
+- cfi_file_lock_name 141-143
+- file_available 146-151
+- cf_file_replace 153-158
+- cfi_file_holds 160-197
+- cf_platform_write_file_if_hook 199-206
+- cf_platform_write_file_if 208-213
+- cf_file_writer_open 220-226
+- cf_file_writer_write 228-235
+- cf_file_writer_flush 237-241
+- cf_file_writer_sync 243-247
+- cf_file_writer_close 249-253
+- cf_platform_writer_syncs 255-258
+- cf_platform_writer_close_counted 260-268
+- cfi_file_why_stdio 272-275
+- struct cf_file_writer 277-288
+- writer_arg 290-295
+- writer_sync 298-311
+- writer_count 314-320
+- cf_file_writer_open 322-409
+- cf_file_writer_write 411-437
+- cf_file_writer_flush 439-450
+- cf_file_writer_sync 452-458
+- cf_platform_writer_syncs 460-462
+- cf_platform_writer_close_counted 464-493
+- cf_file_writer_close 495-497
 `lib/platform/src/file_prim.h`
 - struct cfi_file_guard 50-55
 `lib/platform/src/lock.c`

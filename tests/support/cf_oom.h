@@ -170,7 +170,7 @@ static size_t cf_oom_sweep(const char* what, cf_oom_try fn, void* ctx) {
             ++failures;
             cf_fmt(msg, sizeof msg,
                    "%s: refusing allocation %u is CF_E_MEMORY, not %s (%s)", what,
-                   (unsigned)budget + 1u, cf_code_name(err.code), err.message);
+                   (unsigned)budget + 1u, cf_code_name((cf_code)err.code), err.message);
             check(err.code == CF_E_MEMORY, msg);
             cf_fmt(msg, sizeof msg, "%s: refusing allocation %u says why", what,
                    (unsigned)budget + 1u);

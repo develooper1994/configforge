@@ -285,7 +285,7 @@ static int try_builder_dir(void* ctx, const cf_allocator* a, cf_u64* digest,
 }
 
 static void test_builder_dir(void) {
-    if (cf_codec_by_name("json") == NULL) {
+    if (cf_codec_by_name("json") == NULL || !cf_platform_has_dir_list()) {
         return;
     }
     check(spill(DIR "/10-a.json", "{\"a\": 1}") &&

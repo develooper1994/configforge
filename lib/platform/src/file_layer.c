@@ -16,6 +16,7 @@
 #include "configforge/cf_port.h"
 #include "file_prim.h"
 
+#include <stddef.h>
 #include <string.h>
 
 #ifndef CF_NO_STDIO

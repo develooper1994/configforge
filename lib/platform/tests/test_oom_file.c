@@ -71,7 +71,19 @@ static int try_file_writer(void* ctx, const cf_allocator* a, cf_u64* digest,
 }
 
 static void test_file_writer(void) {
-    size_t calls = cf_oom_sweep("a file writer with a buffer", try_file_writer, NULL);
+    cf_error        err = CF_ERROR_INIT;
+    cf_file_writer* w   = cf_file_writer_open(OUT, NULL, &err);
+    size_t          calls;
+
+    /* A platform with no files to write (none) answers CF_E_CAPABILITY. */
+    if (w == NULL && err.code == CF_E_CAPABILITY) {
+        puts("skipped: this platform has no file writer");
+        return;
+    }
+    if (w != NULL) {
+        (void)cf_file_writer_close(w, &err);
+    }
+    calls = cf_oom_sweep("a file writer with a buffer", try_file_writer, NULL);
 
     check(calls >= 2u, "the open takes the writer and the buffer from the allocator");
     remove(OUT);
