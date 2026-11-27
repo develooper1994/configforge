@@ -583,3 +583,28 @@ section at its end).
 * **stop if**: a job's build directory of the published archive is not at hand after its packaging step (report which).
 * **docs**: no CHANGELOG entry needed beyond "### Added: release notes say how each archive was built (L-23)" under the newest unreleased heading; docs/Maintaining.md as in files.
 * **Organiser's answers**: 2026-11-27, the organiser: FILEPATH and PATH entries left out of the table (`CF_CLANG_FORMAT_PROGRAM` showed the runner's path) (the maintainer's standing approval, 2026-11-27).
+
+## L-24 - The Rust crate published to crates.io at a tag
+
+* **id**: L-24
+* **goal**: a pushed `v*` tag publishes the `configforge` crate to crates.io from the release workflow, the same version as the tag, after every other release job is green; a step that cannot publish fails the job, never the release that is already out.
+* **why**: the maintainer, 2026-11-27, set the secret `CARGO_REGISTRY_TOKEN` for this; the name `configforge` is free on crates.io (checked 2026-11-27, 404); the crate is already packaged and tested in CI (`scripts/release/package_rust.cmake`, `.github/workflows/ci.yml:183`).
+* **needs**: nothing
+* **size**: small
+* **version**: 1.9.0
+* **status**: open
+* **decided**:
+  * **The job.** `crates` in `.github/workflows/release.yml`, `needs: publish` (the GitHub release exists first), `runs-on: ubuntu-26.04`, `permissions: contents: read`, `environment: crates-io` (an environment the workflow names; it needs no setup to run, and lets the maintainer add a reviewer later). Steps: checkout at the tag; the version check of the `check` job again (`cmake -P scripts/release/version.cmake` equals the tag without `v`); `cmake "-DWORK=$RUNNER_TEMP/rust-package" -P scripts/release/package_rust.cmake` (it packages and tests the unpacked crate); then, in `$RUNNER_TEMP/rust-package`, `cargo publish --locked --no-verify` (the script has just verified the package; publishing the same staged tree) with `CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}` as the step's env, nowhere else.
+  * **Idempotent.** Before publishing, `curl -fsS -A configforge-release https://crates.io/api/v1/crates/configforge/<version>`: found means already published (a re-run): the step says so and exits 0.
+  * **No secret in logs or files**: the token only as the env of the one step; no `cargo login`; no `set -x` in that step.
+  * **Later**: M-22's trusted publishing replaces the token; the job's comment says so, and that the secret is then deleted.
+  * **Rejected**: publishing from a developer machine (the token would live on it); publishing before the GitHub release (a crate whose release notes do not exist yet).
+* **files**: `.github/workflows/release.yml`, then `docs/Maintaining.md` ("Versions": one sentence: a tag also publishes the crate), `CHANGELOG.md`.
+* **steps**:
+  1. `git switch -c work/L-24 main`. Write the job.
+  2. `ctest --preset default -R gate.actionlint` (or `actionlint` in WSL) exit 0; `gate.permissions` exit 0 (the job's permissions are read-only).
+  3. Prove the staging without publishing: run `cmake -DWORK=<new dir> -P scripts/release/package_rust.cmake` in WSL and then `cargo publish --locked --no-verify --dry-run` in that directory (no token needed for a dry run); paste the last lines into the report.
+  4. Format; commit `L-24: the Rust crate published to crates.io at a tag`; push; ACCEPT-CI.
+* **accept**: `gate.actionlint` and `gate.permissions` exit 0; the dry run exits 0; ACCEPT-CI. The real publish is proved at the 1.9.0 tag, read by the organiser.
+* **stop if**: the dry run fails on something in the crate's contents (report it: a crate fix is its own card).
+* **docs**: `CHANGELOG.md` under the newest unreleased heading, "### Added": "A tag publishes the Rust crate to crates.io (L-24)."; docs/Maintaining.md as in files.
