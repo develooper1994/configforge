@@ -1,0 +1,8 @@
+homepage: "https://github.com/develooper1994/configforge"
+language: c
+primary_contact: "TO BE FILLED BY THE MAINTAINER"
+main_repo: "https://github.com/develooper1994/configforge"
+sanitizers: [address, undefined]
+architectures: [x86_64]
+fuzzing_engines: [libfuzzer, afl, honggfuzz]
+vendor_ccs: []

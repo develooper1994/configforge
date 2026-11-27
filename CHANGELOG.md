@@ -7,6 +7,9 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- OSS-Fuzz project files (`oss-fuzz/`), the harness build shared with
+  ClusterFuzzLite (`scripts/fuzz/build_harnesses.sh`) and `gate.ossfuzz`
+  (M-18).
 - `cf_locker`, a lock that plugs in, with `cf_lock_none()` (the default) and
   `cf_lock_sidecar()`, a kernel lock on a kept sidecar file that waits up to a
   bound the program gives, and the new code `CF_E_BUSY` (Y-3, D-187).

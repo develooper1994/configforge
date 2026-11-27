@@ -126,6 +126,10 @@ function(configforge_add_gates tgt)
              COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
                      ${CMAKE_SOURCE_DIR}/cmake/gates/Gate${gate}.cmake)
   endforeach()
+  # OSS-Fuzz's project files agree with ClusterFuzzLite's build (M-18).
+  add_test(NAME gate.ossfuzz
+           COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
+                   ${CMAKE_SOURCE_DIR}/tests/fuzz/check_ossfuzz.cmake)
   # The API reference is the headers' comments, regenerated and compared.
   add_test(
     NAME gate.apiref
