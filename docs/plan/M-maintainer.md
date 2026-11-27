@@ -289,7 +289,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **needs**: M-10
 * **size**: medium
 * **version**: 2.0.0
-* **status**: open
+* **status**: done (a2eb91e)
 * **decided**:
   * The 255-byte limit of the built-in readers is the absence of `reserve_text` (`cf_serialize.h:136-139`); with `SEMI`/`DYNAMIC` the loader's sink supplies one that grows (`grep -n reserve_text lib/config/src/bridge/flatten.c`), capped at `cap` for `SEMI`. JSON's key buffer, `scratch` (`lib/serialize/src/json.c:48`, sized `CF_KEY_MAX`), and TOML's and YAML's key buffers become `reserve_work` blocks of the size the key needs, doubled up to the cap (each growth one call: "Each call is new memory", `cf_serialize.h:142-149`); a key past the cap is refused with `CF_REASON_BUDGET`, "a key is longer than the sizing cap".
   * The key space's key limit is the mode's: `MANUAL` the build's `CF_KEY_MAX`, `SEMI` the cap, `DYNAMIC` bounded by `size_t` and the arena. The public `cf_key_valid` keeps the build's limit, as documented (`lib/base/include/configforge/cf_error.h:76-87` says so and no caller changes); the key space and the loader use an internal `key_valid_n(key, len, limit)` that `cf_key_valid` calls with `CF_KEY_MAX - 1`.
