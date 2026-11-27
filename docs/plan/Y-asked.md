@@ -20,11 +20,11 @@ check in F-2a). Neither has landed: a card of this file that names
 decide, and a symbol that is not in the tree when the card opens is that
 card's "stop if" only when the card it needs has landed.
 
-A **TO DECIDE** of a research stays a TO DECIDE here, in the card that
-needs it, with its options and the research's recommendation; every card
-around it is written so that an answer is the only thing missing. A card
-whose TO DECIDE has no answer under "Organiser's answers" stops at that
-step, with everything before it done and pushed.
+Every question a research left open was decided on 2026-11-27 (the
+maintainer's standing approval, which leaves nothing undecided or parked):
+each card says its choice under "decided", with a "Rejected:" line, and
+the date under "Organiser's answers". No card here waits on an answer,
+and none is parked.
 
 Decisions of this group: D-186 (a write checks the file is still what it
 was read from, Y-2), D-187 (the lock a program asks for, Y-3), D-188
@@ -32,28 +32,28 @@ was read from, Y-2), D-187 (the lock a program asks for, Y-3), D-188
 and compared, Y-5), D-190 (every descriptor the library keeps is close-on-exec, Y-8),
 D-191 (a second driver of a `cf_live` is refused, Y-9), D-192 (the read path is
 measured before it is changed, Y-10), D-193 (a worker's reader handle, Y-11),
-D-194 (workers told of a swap, Y-12), D-195 (a shared image, Y-13-m, written
-when it opens).
+D-194 (workers told of a swap, Y-12), D-195 (a shared image, Y-13-m).
 
 Compression (`docs/research/compression.md`), Y-14 to Y-23-m: D-196 and
 D-197 (a byte layer under the codecs, its bounds, Y-15), D-198 (gzip, Y-16),
 D-199 (zstd, Y-17), D-200 (the sources read through the layer, Y-18), D-201
-(writing, deterministic, Y-20), D-202 to D-204 (the parked built-in inflate,
-xz and lz4, zstd dictionaries; written when they open). The configuration
+(writing, deterministic, Y-20), D-202 to D-204 (the built-in inflate,
+xz and lz4, zstd dictionaries). The configuration
 compiler (`docs/research/config-compiler.md`), Y-24 to Y-33: D-205 to D-210
 (Y-24 to Y-29), D-211 (relations across keys, Y-30-m), D-212 (a build file,
 Y-32-m), D-213 (the manifest in the image, Y-33). The analysis tool
 (`docs/research/analysis-tool.md`), Y-34 to Y-40-m: D-214 and D-215 (a
 predicted report and Doctor on it, Y-34 and Y-35), D-216 and D-217
-(CFD022, CFD023), D-218 and D-219 (relations in the contract, the language
-server; written when they open). The analysis tool builds on C-8a and C-8b
+(CFD022, CFD023), D-218 and D-219 (`pattern` in the contract, the language
+server's hover through the schema). The analysis tool builds on C-8a and C-8b
 (`docs/plan/C-change-2.md`), which it does not repeat.
 
 ---
 
 ## Approved by the maintainer, 2026-11-26 (relayed from a side session: "I approve")
 
-These two decisions replace Y-15's TO DECIDE 1, 4 and 5. **Y-15 to Y-20,
+These two decisions replace Y-15's open questions 1, 4 and 5 (all
+decided; every other open question of this file was decided on 2026-11-27). **Y-15 to Y-20,
 and Y-21-m to Y-23-m where they touch it, follow D-221** (done: Y-15 is split into
 Y-15a and Y-15b as point 7 says, and each of Y-15a to Y-20 carries this
 answer under "Organiser's answers"). Both are copied into
@@ -532,38 +532,39 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
-## Y-10 - `cf_live_get` and `cf_config_free` under threads on the benchmark's page; `cf_live_generation` without the lock (TO DECIDE 1b)
+## Y-10 - `cf_live_get` and `cf_config_free` under threads on the benchmark's page; `cf_live_generation` without the lock
 
 * **id**: Y-10
-* **goal**: `cf_bench` times the `cf_live_get` plus `cf_config_free` pair on 1, 2, 4 and so on up to twice the machine's cores, and `docs/Performance.md` shows the numbers in a part "Readers under threads"; and, when TO DECIDE 1b is answered yes, `cf_live_generation` reads an atomic instead of taking the lock.
+* **goal**: `cf_bench` times the `cf_live_get` plus `cf_config_free` pair on 1, 2, 4 and so on up to twice the machine's cores, and `docs/Performance.md` shows the numbers in a part "Readers under threads"; and `cf_live_generation` reads an atomic instead of taking the lock.
 * **why**: the read path takes three shared writes on `get` and one on free, under a ticket lock with no pause and no yield (`lib/config/src/core/live.c:86-93`), and nobody has measured it under threads: the benchmark times a reload (`bench/bench.c:287-317`), not `cf_live_get` under contention (`docs/research/threads-and-processes.md:313-337`, items 2 and 3). A worker that asks "has it changed since I looked?" through `cf_live_generation` pays the same lock as a `get` (`live.c:910-920`). The numbers decide whether the reader handle of Y-11 is built.
-* **needs**: nothing; TO DECIDE 1b for the second half
+* **needs**: nothing
 * **size**: medium (a benchmark with threads, a page part, one small change in `live.c`)
 * **version**: 2.1.0
 * **status**: open
 * **decided**:
-  * **TO DECIDE 1 (a new public interface for the read path).** (a) None: the current `cf_live_get`, with the measurement on the benchmark's page. (b) A5 only: `cf_live_generation` lock-free, no new name. (c) `cf_live_reader` as sketched (Y-11), A5 included. **Recommendation: (b) now, as part of this measurement card; (c) when the measurement shows a knee or a binding asks for it.** Either way (c) is a borrowed pointer, which D-03 weighed: the maintainer says whether a borrow bounded by the worker's own next call is acceptable where one bounded by another thread's reload was not. This card is (a), plus (b) when the answer is (b) or (c); for (a) the maintainer says so under "Organiser's answers" and step 5 is skipped.
+  * **Decided 1 (a new public interface for the read path): (b)**, A5 only: `cf_live_generation` lock-free, no new name, as part of this measurement card. The reader handle (c) is Y-11's, after this card's numbers. **Rejected:** (a) none (a worker asking "has it changed?" keeps paying the lock for nothing); (c) `cf_live_reader` here (a borrowed pointer, which D-03 weighed: Y-11 decides it on the page's numbers).
   * **The measurement.** A new cell in `bench/bench.c` beside `run_reload`: `run_live_get(threads)`. It opens a `cf_live` (as `run_reload`, `bench.c:293-300`) on a small configuration, starts `threads` threads (pthreads where `<pthread.h>` exists, `_beginthreadex` on Windows, behind one small shim in the file; a build with neither prints `live-get: skipped (no threads)`) that each do 1,000,000 times `cfg = cf_live_get(live); cf_config_free(cfg);` after a start barrier, and reports, per `threads` in `1, 2, 4, ...` up to twice the cores (`sysconf(_SC_NPROCESSORS_ONLN)`, `GetSystemInfo`), the pairs per second for all threads together and the nanoseconds per pair per thread, in the line format `run_reload` uses (label `live-get/<threads>`). Also the control, a thread count of 1 with `cf_config_ref`/`cf_config_free` alone (no lock), label `ref/1`, so the lock's own cost shows. A knee is where the total pairs per second at 2 threads is under 1.2 times that at 1, or falls from one count to the next; the page says whether one appears.
   * **The page.** `docs/Performance.md` gains "Readers under threads" with a table of the cells and one paragraph: the machine (cores, OS, compiler), the numbers, and "no knee, so a reader handle waits" or "a knee at N, so Y-11 is the next card". The page's static block is generated and gated (`cmake/gates/GatePerfpage.cmake`): this part is hand-written below it and must not be inside the generated block; run `ctest --preset default -R gate.perfpage` after writing it and follow its message. The numbers come from one Linux run in WSL from a copy off `/mnt` and are not gated (bench-gate gates instruction counts of `--scope quick` cells; this cell is wall-clock and is not added to it).
-  * **The lock-free generation (when TO DECIDE 1 says b or c).** A `cf_refcount gen32;` in `struct cf_live`, initialised beside the ticket counters (`live.c:706-707`) and incremented in `live_swap` next to `l->generation += quiet ? 0u : 1u;` (`live.c:331`) with the same condition and still under the lock (so `gen32` equals `generation` modulo 2^32). `cf_live_generation` returns `(cf_u64)(cf_u32)cf_ref_get(&l->gen32)` and takes no lock. The `cf_u64 generation` stays for `cf_live_status_get`. The header comment of `cf_live_generation` (`cf_live.h:234`) says: "reads an atomic and takes no lock; compare it for equality: it counts swaps modulo 2^32". Rejected: a 64-bit atomic (the port has `i32` ones); changing the status field.
-  * **D-192** (after D-191, "The read path is measured before it is changed"): Question: is the lock on `cf_live_get` a cost, and what does a worker pay to ask for the generation. Decision: the measurement is on the page; `cf_live_generation` is lock-free (for answer b or c); `cf_live_get` is unchanged; a reader handle is Y-11 and waits for the page's numbers or a binding's request. Rejected: hazard pointers and liburcu (the research's A3 and A4: the same handle as Y-11 at more code, or an LGPL dependency that fails `minimal` and `misra`); a pause or yield in the spin (not measured to matter; the page's numbers decide). Held to: `test_live`'s new generation case and the page.
+  * **The lock-free generation.** A `cf_refcount gen32;` in `struct cf_live`, initialised beside the ticket counters (`live.c:706-707`) and incremented in `live_swap` next to `l->generation += quiet ? 0u : 1u;` (`live.c:331`) with the same condition and still under the lock (so `gen32` equals `generation` modulo 2^32). `cf_live_generation` returns `(cf_u64)(cf_u32)cf_ref_get(&l->gen32)` and takes no lock. The `cf_u64 generation` stays for `cf_live_status_get`. The header comment of `cf_live_generation` (`cf_live.h:234`) says: "reads an atomic and takes no lock; compare it for equality: it counts swaps modulo 2^32". Rejected: a 64-bit atomic (the port has `i32` ones); changing the status field.
+  * **D-192** (after D-191, "The read path is measured before it is changed"): Question: is the lock on `cf_live_get` a cost, and what does a worker pay to ask for the generation. Decision: the measurement is on the page; `cf_live_generation` is lock-free; `cf_live_get` is unchanged; a reader handle is Y-11 and waits for the page's numbers or a binding's request. Rejected: hazard pointers and liburcu (the research's A3 and A4: the same handle as Y-11 at more code, or an LGPL dependency that fails `minimal` and `misra`); a pause or yield in the spin (not measured to matter; the page's numbers decide). Held to: `test_live`'s new generation case and the page.
 * **files**: `bench/bench.c`, `docs/Performance.md`, `lib/config/src/core/live.c` and `lib/config/include/configforge/cf_live.h` (step 5), `lib/config/tests/test_live.c`, `CHANGELOG.md`, `docs/Decisions.md`; last: `docs/Codemap.md` (generated).
 * **steps**:
-  1. Stop here and say so if "Organiser's answers" holds no answer to TO DECIDE 1. `git switch -c work/Y-10 main`.
-  2. In `test_live.c` add `test_generation_lockfree` (for (b) and (c)): after `cf_live_open` the generation is 1 or what `cf_live_generation` returned before; a reload that changes a value makes it one more; a reload that finds the same values leaves it; a `CF_LIVE_APPROVE` live: pending leaves it, `cf_live_approve` adds one; a rollback leaves it (quiet swap); and four pthread readers (`#if` as the file's other thread tests) call `cf_live_generation` 100000 times each during 20 reloads and every value they see is at least the one seen before it by the same thread (monotonic). It passes before the change (it checks behaviour, not the lock): it is the oracle.
+  1. `git switch -c work/Y-10 main`.
+  2. In `test_live.c` add `test_generation_lockfree`: after `cf_live_open` the generation is 1 or what `cf_live_generation` returned before; a reload that changes a value makes it one more; a reload that finds the same values leaves it; a `CF_LIVE_APPROVE` live: pending leaves it, `cf_live_approve` adds one; a rollback leaves it (quiet swap); and four pthread readers (`#if` as the file's other thread tests) call `cf_live_generation` 100000 times each during 20 reloads and every value they see is at least the one seen before it by the same thread (monotonic). It passes before the change (it checks behaviour, not the lock): it is the oracle.
   3. Add `run_live_get` and the `ref/1` control to `bench/bench.c`, and the command-line way the other cells are asked for (`grep -n "run_reload" bench/bench.c` shows how it is selected; use the same, label `live-get`). Build `cf_bench` (`cmake --build --preset default --target cf_bench`) and run it: `build/bench/cf_bench live-get 2>&1 | tail -n 20` prints one line per thread count.
   4. See the cell is real: run it with `threads` forced to 1 and then to the largest, and see the two totals differ (a cell that prints equal numbers for both did not run its threads: fix before going on). Write "Readers under threads" into `docs/Performance.md` from one Linux run; `ctest --preset default -R gate.perfpage`.
-  5. For (b) or (c): add `gen32`, change `cf_live_generation`, the header comment. `ctest --preset default -R "test_live|gate" 2>&1 | tail -n 20`; `ctest --preset tsan -R test_live`.
+  5. Add `gen32`, change `cf_live_generation`, the header comment. `ctest --preset default -R "test_live|gate" 2>&1 | tail -n 20`; `ctest --preset tsan -R test_live`.
   6. See that the test can fail: make `live_swap` skip the `gen32` increment behind a run-time-false condition (`if (quiet == 0xFFu)`, never a constant); `test_generation_lockfree` fails; put it back.
   7. D-192 into `docs/Decisions.md`; the CHANGELOG entry.
   8. `python scripts/work/work.py format`; codemap last. Commit `Y-10: cf_live_get under threads on the page; cf_live_generation without the lock (D-192)`.
   9. ACCEPT; push `work/Y-10`; ACCEPT-CI (the `bench-gate` job included: it must not move).
 * **accept**: ACCEPT-LINUX; ACCEPT-WINDOWS; ACCEPT-CI, bench-gate and `tsan` included; `ctest --preset default -R "test_live|gate.perfpage"` exit 0; `docs/Performance.md` holds the part with numbers from a real run.
-* **stop if**: no answer to TO DECIDE 1; the bench's thread shim cannot be written without a new dependency (a build without pthreads prints the skip: that is not a stop); bench-gate moves on a cell (the card changed something it must not: revert and report); the machine has one core (the table has one row: write it, and say the knee cannot be seen).
-* **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Added": "the benchmark times `cf_live_get` under threads, and the page shows readers under 1 to twice-the-cores threads (Y-10)"; and, for (b) or (c), "### Changed": "`cf_live_generation` reads an atomic and takes no lock (Y-10, D-192)". `docs/Decisions.md`: D-192. Roadmap: marked by Y-12.
+* **stop if**: the bench's thread shim cannot be written without a new dependency (a build without pthreads prints the skip: that is not a stop); bench-gate moves on a cell (the card changed something it must not: revert and report); the machine has one core (the table has one row: write it, and say the knee cannot be seen).
+* **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Added": "the benchmark times `cf_live_get` under threads, and the page shows readers under 1 to twice-the-cores threads (Y-10)"; and "### Changed": "`cf_live_generation` reads an atomic and takes no lock (Y-10, D-192)". `docs/Decisions.md`: D-192. Roadmap: marked by Y-12.
 
 ---
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number.
+  * 2026-11-27, the organiser: question 1 is (b), the card's recommendation: `cf_live_generation` lock-free, no new name; the reader handle stays Y-11's (the maintainer's standing approval, 2026-11-27).
 
 ## Y-11 - `cf_live_reader`: a worker's handle that caches a snapshot, its test under ThreadSanitizer, C++ and Rust wrappers
 
@@ -645,7 +646,7 @@ answer under "Organiser's answers"). Both are copied into
   * **Callbacks and the guard.** `swapped` runs inside a driving call, so Y-9's guard is held: a `swapped` that calls a driving call is refused with `CF_E_POLICY`. The header comment says only `cf_live_get` and `cf_live_generation` are allowed.
   * **The changed keys.** 2.2.0's "a reload that names the keys it changed" is a different card; `swapped` gives both snapshots and `cf_diff_text` (`examples/c/live.c:100`) can be asked of them. This card does not wait for it.
   * **Bindings.** Not in this card (a binding wraps `cf_live_options` with its own members and its own gate decides; if a gate demands every member wrapped, stop and say which).
-  * **The Roadmap item.** After this card has landed with Y-7 to Y-10 landed (Y-11 and Y-13-m may be open or parked), "**Threads and processes made easier.**" in `docs/Roadmap.md` (by its words) is marked 🟩 with one line under it: what was built (Y-7 to Y-12, D-190 to D-194) and that the reader handle (Y-11) and the shared image (Y-13-m) are on request. When one of Y-7 to Y-10 is still open, this card marks nothing and says so.
+  * **The Roadmap item.** After this card has landed with Y-7 to Y-10 landed (Y-11 and Y-13-m may still be open), "**Threads and processes made easier.**" in `docs/Roadmap.md` (by its words) is marked 🟩 with one line under it: what was built (Y-7 to Y-12, D-190 to D-194) and that the reader handle (Y-11) and the shared image (Y-13-m) are later cards. When one of Y-7 to Y-10 is still open, this card marks nothing and says so.
   * **D-194** (after D-193, "Workers are told of a swap by a function on the driving thread"): Question: how a worker learns of a reload. Options: the generation at a safe point; a function the program supplies (decided); a descriptor per reader. Decision: `swapped`, called on the driving thread from `live_swap` after readers can get the new snapshot, before the old is released; it posts to the program's own workers and calls back only `cf_live_get` and `cf_live_generation`. Rejected: a descriptor per reader (platform code per reader, a second watcher, `eventfd` wakes one); waiting on a generation (a blocking primitive the C89 core has not); a thread of the library's (D-35). Held to: `test_live`'s new case.
 * **files**: `lib/config/include/configforge/cf_live.h`, `lib/config/src/core/live.c`, `lib/config/tests/test_live.c`, `CHANGELOG.md`, `docs/Decisions.md`, `docs/Guide.md` (section 15's closing list gains it), `docs/Roadmap.md`; last: `docs/Codemap.md` and `docs/API.md` (generated).
 * **steps**:
@@ -666,18 +667,18 @@ answer under "Organiser's answers"). Both are copied into
 * **Organiser's answers**:
   * 2026-11-27, the organiser: the choice 2 is (b), the card's recommendation (the maintainer's standing approval, 2026-11-27).
 
-## Y-13-m - A shared image across processes: memfd and seals, `shm_open`, a read-only section, the source (TO DECIDE 3b)
+## Y-13-m - A shared image across processes: memfd and seals, `shm_open`, a read-only section, the source
 
 * **id**: Y-13-m
 * **goal**: a parent process writes a configuration's image into an anonymous, sealed, read-only shared object; a child it hands the descriptor or handle to maps it read-only, refuses one that is not sealed or is writable, and reads it in place as a source, on Linux, FreeBSD, macOS and Windows, with the private file of the Guide's recipe 4 on every other platform.
-* **why**: the image was designed to be used in place (`docs/ImageFormat.md`, "Why it exists"; `lib/config/include/configforge/cf_image.h:58-63`) and a child can only read it from a private file today (a copy). Sharing pages is the zero-copy form; it is worth its platform code only when a program asks (`docs/research/threads-and-processes.md:607-640`, section 5, "Later, if asked"). It waits on the maintainer's answer to TO DECIDE 3 and, after that, on a program that asks.
-* **needs**: Y-7 (recipe 4 is the portable floor this card falls back to), Y-8, TO DECIDE 3b (the maintainer's)
+* **why**: the image was designed to be used in place (`docs/ImageFormat.md`, "Why it exists"; `lib/config/include/configforge/cf_image.h:58-63`) and a child can only read it from a private file today (a copy). Sharing pages is the zero-copy form (`docs/research/threads-and-processes.md:607-640`, section 5, "Later"); behind a build option that is OFF by default, its platform code costs nothing to a build that does not ask for it.
+* **needs**: Y-7 (recipe 4 is the portable floor this card falls back to), Y-8
 * **size**: large (a platform capability in three files, a public type, a source, a build option; split by the organiser into Y-13a, the platform capability and its tests, and Y-13b, the public type, the source and the Guide, if the first alone passes ~600 lines)
 * **version**: 2.4.0
-* **status**: parked: not now
+* **status**: open
 * **decided**:
-  * **PARKED, on the maintainer.** This card is an agent card whose start is the maintainer's answer to TO DECIDE 3 and a program's request: **TO DECIDE 3.** (a) Documentation only: Y-7's recipes 3 and 4 are all the library gives (C1 and C2 of the research); (b) the platform capability and the public type below, behind a build option `CF_WITH_IMAGE_SHARE` (off in `minimal`, `misra` and the embedded profiles; on in `server`). **Recommendation: (a) now; (b) only on a program's request**: C2 does the same job with one copy, and a configuration is kilobytes. With (a), this card is closed with no change and is not opened.
-  * **TO DECIDE 4 (does an image carry the contract).** Today it does not: a child must be built with the same definitions. Carrying them is a new image section and a minor version (`docs/ImageFormat.md`: "fields only grow"); it belongs to the configuration compiler's research. **Recommendation: no**; the child's own contract decides. This card does not carry the contract.
+  * **Decided 3 (what the library gives for a shared image): (b)**, the platform capability and the public type below, behind a build option `option(CF_WITH_IMAGE_SHARE "a configuration's image in a sealed read-only shared object" OFF)` in `cmake/ConfigForgeOptions.cmake` (OFF by default; off in `minimal`, `misra` and the embedded profiles; ON in `server`); listed for profiles in `cmake/ConfigForgeProfile.cmake` as the other `CF_WITH_*` are. Without the option nothing below is compiled and Y-7's recipes 3 and 4 stay the way. **Rejected:** (a) documentation only (C2 copies once; the image was designed to be used in place, and the option keeps the cost off every build that does not ask).
+  * **Decided 4 (does an image carry the contract): no.** The child's own contract decides; a child must be built with the same definitions, as today. **Rejected:** a contract section in the image (a new section and a minor format version, `docs/ImageFormat.md` "fields only grow"; the configuration compiler's business, not this card's).
   * **The public interface** (new `lib/config/include/configforge/cf_image_share.h`, under `#if CF_WITH_IMAGE_SHARE`; the research's sketch, copied):
     ```c
     typedef struct cf_image_share {
@@ -697,17 +698,25 @@ answer under "Organiser's answers"). Both are copied into
     CF_API cf_bool cf_image_share_source(cf_source* src, const char* name, int rank,
                                          const cf_image_share* s, void* state, size_t state_size);
     ```
-    (the research names the last `cf_source_image_share`; the card uses `cf_image_share_source` to keep the prefix of the type: the maintainer may rename at the answer.) `flags` is 0 now and refused otherwise.
-  * **The platform capability** (internal, `lib/platform/include/configforge/cf_platform.h`, `CF_INTERNAL_API`): `cf_platform_share_create(const void* bytes, size_t n, long* handle, cf_error*)` and `cf_platform_share_map(long handle, const char** base, size_t* n, cf_error*)`, `cf_platform_share_unmap(const char* base, size_t n)`. **Linux and FreeBSD 13+:** `memfd_create("configforge", MFD_CLOEXEC | MFD_ALLOW_SEALING)`, `ftruncate`, `write`, then `fcntl(fd, F_ADD_SEALS, F_SEAL_WRITE | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_SEAL)`; the child maps with `mmap(PROT_READ, MAP_SHARED)` and checks `fcntl(fd, F_GET_SEALS)` has all four, refusing otherwise (`'%s' is not a sealed image`): a read-only descriptor alone is not enough, since `/proc/<pid>/fd` reopens it (the research's item 10). **macOS and other BSDs** (no seals exist): `shm_open` of a random name with `O_CREAT | O_EXCL | O_RDWR`, `ftruncate`, `write`; then the same name opened a second time with `O_RDONLY`; then `shm_unlink` of the name at once. The read-only descriptor is the one handed over, the writable one is closed, so the child can only map `PROT_READ` (the parent is trusted: the child is given no way to write). **Windows:** an unnamed section (`CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, ...)`), filled through `MapViewOfFile(FILE_MAP_WRITE)`, then `DuplicateHandle` with `FILE_MAP_READ` access only; the child's `MapViewOfFile(FILE_MAP_READ)`; handed over by `PROC_THREAD_ATTRIBUTE_HANDLE_LIST` in the program's own `CreateProcess` (never a name: item 16). **None, and any target where none of these is known:** `CF_E_CAPABILITY`, `this platform cannot share an image; write it to a private file (cf_platform_create_private) and pass the path`. How the number reaches the child (an environment variable as `LISTEN_FDS` and nginx's `NGINX` do, `SCM_RIGHTS`, the systemd store) is the program's: the library reads a number it is given and starts no process.
-  * **Not decided here, left to the card that opens this one:** the exact `shm_open` name scheme and the errno wording (the opening card writes them with the code and the cold read checks them); the split into Y-13a and Y-13b.
-  * **D-195** (after D-194, "A shared image is a sealed read-only object handed over by the program"): written when the card opens, from the answer to TO DECIDE 3 and 4.
+    (the research names the last `cf_source_image_share`; the card uses `cf_image_share_source` to keep the prefix of the type.) `flags` is 0 now and refused otherwise (`CF_E_CAPABILITY`, `unknown flags 0x%x`). Errors (D-223): each names the operation, the handle and the system's reason: `cannot share the image: %s` (create), `cannot map image handle %ld: %s` (map), with `strerror(errno)` on POSIX and `error %lu` from `GetLastError()` on Windows, as F-1a's writes do.
+  * **The platform capability** (internal, `lib/platform/include/configforge/cf_platform.h`, `CF_INTERNAL_API`): `cf_platform_share_create(const void* bytes, size_t n, long* handle, cf_error*)` and `cf_platform_share_map(long handle, const char** base, size_t* n, cf_error*)`, `cf_platform_share_unmap(const char* base, size_t n)`. **Linux and FreeBSD 13+:** `memfd_create("configforge", MFD_CLOEXEC | MFD_ALLOW_SEALING)`, `ftruncate`, `write`, then `fcntl(fd, F_ADD_SEALS, F_SEAL_WRITE | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_SEAL)`; the child maps with `mmap(PROT_READ, MAP_SHARED)` and checks `fcntl(fd, F_GET_SEALS)` has all four, refusing otherwise (`'%s' is not a sealed image`): a read-only descriptor alone is not enough, since `/proc/<pid>/fd` reopens it (the research's item 10). **macOS and other BSDs** (no seals exist): `shm_open` of the name `/cf-<pid>-<n>-<t>` (`n` a process-wide counter, `t` the low 32 bits of the monotonic clock, both hex; under 31 characters for macOS's limit; on `EEXIST` the counter moves and it retries up to 8 times, then fails) with `O_CREAT | O_EXCL | O_RDWR`, `ftruncate`, `write`; then the same name opened a second time with `O_RDONLY`; then `shm_unlink` of the name at once. The read-only descriptor is the one handed over, the writable one is closed, so the child can only map `PROT_READ` (the parent is trusted: the child is given no way to write). **Windows:** an unnamed section (`CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, ...)`), filled through `MapViewOfFile(FILE_MAP_WRITE)`, then `DuplicateHandle` with `FILE_MAP_READ` access only; the child's `MapViewOfFile(FILE_MAP_READ)`; handed over by `PROC_THREAD_ATTRIBUTE_HANDLE_LIST` in the program's own `CreateProcess` (never a name: item 16). **None, and any target where none of these is known:** `CF_E_CAPABILITY`, `this platform cannot share an image; write it to a private file (cf_platform_create_private) and pass the path`. How the number reaches the child (an environment variable as `LISTEN_FDS` and nginx's `NGINX` do, `SCM_RIGHTS`, the systemd store) is the program's: the library reads a number it is given and starts no process.
+  * **The split.** The carrier splits the card into two commits on the one branch when the diff passes ~600 lines: first the platform capability and its tests, then the public type, the source and the Guide; it lands as one card.
+  * **D-195** (after D-194, "A shared image is a sealed read-only object handed over by the program"): Question: how a child process reads its parent's configuration without a copy. Decision: `cf_image_share` behind `CF_WITH_IMAGE_SHARE` (OFF by default): memfd with four seals on Linux and FreeBSD, a read-only `shm_open` descriptor with the name unlinked at once elsewhere on POSIX, a read-only duplicated section handle on Windows; the child refuses an unsealed or writable object; the program hands the number over and starts the process; the image does not carry the contract. Rejected: documentation only; a named object (item 16); a contract in the image. Held to: `test_share`.
 * **files**: `lib/config/include/configforge/cf_image_share.h` (new), `lib/config/src/bridge/image_share.c` (new), `lib/platform/include/configforge/cf_platform.h`, `lib/platform/src/posix/posix.c`, `lib/platform/src/win32/win32.c`, `lib/platform/src/none/none.c`, `lib/config/tests/test_share.c` (new), `lib/config/tests/CMakeLists.txt`, `CMakeLists.txt` and `cmake/profiles/*.cmake` (the option), `cmake/configforge.symbols`, `cmake/configforge.internal.symbols`, `docs/Guide.md`, `CHANGELOG.md`, `docs/Decisions.md`, `docs/Codemap.md` and `docs/API.md` (generated).
 * **steps**:
-  1. Stop here: the maintainer's answer to TO DECIDE 3 is "(b)" and a program has asked, written under "Organiser's answers". Without both, nothing is done.
-  2. The opening organiser has the card read cold against the tree (docs/Plan.md, "Read again after the layout changes"), splits it into Y-13a and Y-13b if it exceeds ~600 lines, and writes the open details above, the D-195 text and the exact steps as numbered steps with commands; this card is then replaced by those two. No agent starts from this text alone.
-* **accept**: when opened: ACCEPT-LINUX (Linux and the `sanitize` preset), ACCEPT-WINDOWS, ACCEPT-CI with the macOS and FreeBSD jobs, a test that a child maps the share and reads the parent's keys, and that an unsealed or writable object is refused.
-* **stop if**: TO DECIDE 3 has no answer "(b)", or no program has asked; the card is opened without its cold read.
-* **docs**: when opened: `CHANGELOG.md`, "## 2.4.0 — unreleased", "### Added": "`cf_image_share`: a configuration's image in a sealed read-only shared object, mapped by a child process (`CF_WITH_IMAGE_SHARE`) (Y-13-m, D-195)". `docs/Decisions.md`: D-195. Roadmap: nothing (the item is marked by Y-12; this card is on request).
+  1. `git switch -c work/Y-13-m main` (after Y-7 and Y-8). Add the option to `cmake/ConfigForgeOptions.cmake` and `cmake/ConfigForgeProfile.cmake`, ON in the `server` profile (`cmake/profiles/server.cmake`; `ls cmake/profiles` for its name).
+  2. Test first: `lib/config/tests/test_share.c` (compiled only under `CF_WITH_IMAGE_SHARE`, otherwise a test that prints `skipped: no image share`), added in `lib/config/tests/CMakeLists.txt` as `test_image` is: (a) the parent builds a config from a small TOML text, `cf_image_share_create`, then a child (`fork` on POSIX, `CreateProcessW` of the test binary itself with an argument `child <handle>` and `PROC_THREAD_ATTRIBUTE_HANDLE_LIST` on Windows) maps the handle, opens the source and reads two keys, exit 0; (b) on Linux and FreeBSD a memfd without seals, made by the test itself, is refused with `is not a sealed image`; (c) on every platform a writable descriptor or handle (the test opens one itself) is refused; (d) `flags` 1 is refused; (e) on `none` the create is `CF_E_CAPABILITY` with the recipe-4 message.
+  3. See it fail: `cmake -S . -B build-share -DCF_WITH_IMAGE_SHARE=ON && cmake --build build-share --target test_share 2>&1 | tail -n 20` (nothing declared).
+  4. The platform capability: the three functions in `cf_platform.h` (`CF_INTERNAL_API`), `posix.c` (memfd and seals under `#if defined(__linux__) || defined(__FreeBSD__)`, `shm_open` otherwise), `win32.c`, `none.c`; their names in `cmake/configforge.internal.symbols`. `ctest --test-dir build-share -R "test_share|test_platform" 2>&1 | tail -n 20` for (b), (c), (e).
+  5. The public part: `cf_image_share.h`, `lib/config/src/bridge/image_share.c` (create = `cf_image_write` into an arena buffer then `cf_platform_share_create`; map = `cf_platform_share_map` then `cf_image_open`; the source as `cf_source_image_mem`'s, `grep -n cf_source_image_mem lib/config/src/*/*.c`), the names in `cmake/configforge.symbols`. `ctest --test-dir build-share -R "test_share|test_image|gate" 2>&1 | tail -n 30`; the default build's `ctest --preset default` unchanged.
+  6. See that the test can fail: skip the seal check in the child behind a run-time-false condition (never a constant); (b) fails; put it back.
+  7. The Guide: a paragraph after recipe 4 in "Threads" (`grep -n "^## 14. Threads" docs/Guide.md`), D-195, CHANGELOG. `python scripts/work/work.py format`; codemap and apiref, last. Commit `Y-13-m: cf_image_share, a sealed read-only image for a child process (D-195)`.
+  8. ACCEPT; push; ACCEPT-CI.
+* **accept**: ACCEPT-LINUX (Linux and the `sanitize` preset), ACCEPT-WINDOWS, ACCEPT-CI with the macOS and FreeBSD jobs; `ctest --test-dir build-share -R test_share` exit 0 (a child maps the share and reads the parent's keys; an unsealed or writable object is refused); the default build's tests unchanged.
+* **stop if**: a CI platform's kernel lacks `memfd_create` or `F_ADD_SEALS` (FreeBSD older than 13: fall back to the `shm_open` path there and say so; stop only if neither works); `PROC_THREAD_ATTRIBUTE_HANDLE_LIST` is unavailable in the CI's Windows SDK (report); three failures of the same step.
+* **docs**: `CHANGELOG.md`, "## 2.4.0 — unreleased", "### Added": "`cf_image_share`: a configuration's image in a sealed read-only shared object, mapped by a child process (`CF_WITH_IMAGE_SHARE`) (Y-13-m, D-195)". `docs/Decisions.md`: D-195. Roadmap: nothing (the item is marked by Y-12).
+* **Organiser's answers**:
+  * 2026-11-27, the organiser: opened from "parked". Question 3 is (b), the shared image built behind `CF_WITH_IMAGE_SHARE`, OFF by default; question 4 is no, the card's recommendation; the `shm_open` name, the error wording and the split are written above; version 2.4.0 kept (the maintainer's standing approval, 2026-11-27).
 
 ---
 
@@ -893,7 +902,7 @@ answer under "Organiser's answers"). Both are copied into
 * **version**: 2.3.0
 * **status**: open
 * **decided**:
-  * **Decided 2 (new optional dependencies): both zlib and libzstd** (this card and Y-17), both OFF by default, ON in the `full` and `server` profiles (`CMakePresets.json:123-137`), a built-in inflate (Y-21-m) later if an embedded user asks. **Rejected**: zlib only; none (a built-in inflate first). Both need `CF_WITH_COMPRESS` (D-221 point 6b).
+  * **Decided 2 (new optional dependencies): both zlib and libzstd** (this card and Y-17), both OFF by default, ON in the `full` and `server` profiles (`CMakePresets.json:123-137`), a built-in inflate (Y-21-m, `CF_WITH_INFLATE`, OFF by default) after them. **Rejected**: zlib only; none (a built-in inflate first). Both need `CF_WITH_COMPRESS` (D-221 point 6b).
   * **The option**: `option(CF_WITH_ZLIB "gzip through zlib (requires zlib >= 1.2.13; zlib-ng in compat mode also)" OFF)` in `cmake/ConfigForgeOptions.cmake` after `CF_WITH_SQLITE` (line 23); `cmake/ConfigForgeProfile.cmake:20` lists the option for profiles (add `CF_WITH_ZLIB:BOOL` as `CF_WITH_SQLITE:BOOL` is); `lib/compress/CMakeLists.txt` finds zlib as `lib/config/CMakeLists.txt:62-68` finds sqlite3 and fails with `CF_WITH_ZLIB needs zlib: install it (zlib1g-dev, brew install zlib, vcpkg zlib)`. The profiles `minimal` and `misra` keep it OFF. `CF_WITH_ZLIB=ON` with `CF_WITH_COMPRESS=OFF` is a configure `FATAL_ERROR` (`CF_WITH_ZLIB needs CF_WITH_COMPRESS`).
   * **The floor, checked three ways** (D-… "enforce version floors", memory note, and the sqlite3 floor's pattern in `lib/config/CMakeLists.txt`): at configure time (`ZLIB_VERSION_STRING` `VERSION_LESS 1.2.13` is a `FATAL_ERROR`), at build time (a `#if ZLIB_VERNUM < 0x12d0` `#error` in `gzip.c`), at run time (`zlibVersion()` compared digit by digit in `cf_gzip_unpacker`'s `unpack`, a refusal `CF_E_CAPABILITY`, `the zlib in use is <v>; ConfigForge needs 1.2.13 or later`); zlib-ng in compat mode reports its zlib version and passes.
   * **gzip's header is read by the library's own code**, never `inflateGetHeader`: 10 fixed bytes (`1f 8b`, method 8, flags, MTIME, XFL, OS); FEXTRA (2-byte length, skipped by length), FNAME and FCOMMENT (skipped to a NUL, at most 4096 bytes: more is `unpack-corrupt`), FHCRC (2 bytes, skipped, not checked), reserved flag bits set is `unpack-corrupt`. Then raw inflate (`inflateInit2(&zs, -15)`) over the body with the output limit; then CRC-32 (zlib's `crc32`) and ISIZE (low 32 bits of the length) checked against the 8-byte trailer; another member starting with `1f 8b` is read in a loop (the limit counts all members together); other trailing bytes are `unpack-corrupt`, `trailing bytes after the last gzip member`.
@@ -1058,20 +1067,30 @@ answer under "Organiser's answers"). Both are copied into
 * **id**: Y-21-m
 * **goal**: a `CF_WITH_INFLATE` option adds a gzip reader with no dependency, written in C89 under the `misra` rules, differentially fuzzed against zlib, for the embedded presets that want a compressed image.
 * **why**: `docs/research/compression.md` section 5, "Later" (option D) and section 4.5 (embedded and minimal profiles).
-* **needs**: Y-16, Y-20; and a user's ask (status: parked, waits on the ask)
+* **needs**: Y-16, Y-20
 * **size**: large
-* **version**: 2.2.0
-* **status**: parked: not now
+* **version**: 2.3.0
+* **status**: open
 * **decided**:
-  * **TO DECIDE (whether to build it at all).** Options: build (a small inflate, about 400 lines, as `tinfl` or `puff.c` shows; research section 4.5); never (a program on a small target compresses nothing); use the program's own inflate through Y-14's recipe. **Recommended: wait for a user who asks**, then build.
-  * **Shape if built**: `lib/serialize/src/inflate.c`, one function of the `cf_unpacker` interface under the name `"gzip"` when `CF_WITH_ZLIB` is OFF and `CF_WITH_INFLATE` is ON (never both: a configure error `CF_WITH_INFLATE and CF_WITH_ZLIB both provide gzip`); reads only; the bounds of Y-15 and the header/trailer code of Y-16 are shared (`gzip_header.c`, moved out of `gzip.c` by the card, with no behaviour change); fixed and dynamic Huffman blocks, stored blocks, a 32 KiB window in the arena; no allocation outside the arena; a differential fuzz target `tests/fuzz/inflate_diff.c` comparing against zlib on every input (the `yamldiff` pattern: `tests/fuzz/yamldiff*.c`), required to find no difference in an hour.
-  * Its steps, accept and stop-if are written when a user asks, by the cold read that opens it; this card is parked until then (docs/Plan.md, "Waits on the maintainer").
-* **files**: `lib/serialize/src/inflate.c`, `lib/serialize/src/gzip_header.c`, `tests/fuzz/inflate_diff.c`, `cmake/ConfigForgeOptions.cmake`, tests; last: `CHANGELOG.md`, `docs/Decisions.md` (D-202), `docs/Dependencies.md`.
+  * **Decided (whether to build it): build**, a small inflate (about 400 lines, as `tinfl` or `puff.c` shows; research section 4.5) behind `option(CF_WITH_INFLATE "gzip reading with no dependency (built-in inflate)" OFF)`, OFF by default and in every profile; a build turns it on. **Rejected:** never (an embedded target that wants a compressed image would have no way without zlib); only the program's own inflate through Y-14's recipe (stays the way for a program that has zlib; it does not help one that cannot link it).
+  * **The shape**: `lib/compress/src/inflate.c`, one function of the `cf_unpacker` interface under the name `"gzip"` when `CF_WITH_ZLIB` is OFF and `CF_WITH_INFLATE` is ON (never both: a configure error `CF_WITH_INFLATE and CF_WITH_ZLIB both provide gzip`); reads only; the bounds of Y-15 and the header/trailer code of Y-16 are shared (`gzip_header.c`, moved out of `gzip.c` by the card, with no behaviour change); fixed and dynamic Huffman blocks, stored blocks, a 32 KiB window in the arena; no allocation outside the arena; a differential fuzz target `tests/fuzz/inflate_diff.c` comparing against zlib on every input (the `yamldiff` pattern: `tests/fuzz/yamldiff*.c`), required to find no difference in an hour.
+  * Errors (D-223): as Y-16's gzip (`unpack-corrupt`, `unpack-bomb` with the source and the offset); an inflate error names the block: `'%s': bad Huffman code in block %u`.
+  * **D-202** ("A built-in inflate, OFF by default, never beside zlib"): the bullets above; Rejected: never; the program's own inflate only.
+* **files**: `lib/compress/src/inflate.c` (new), `lib/compress/src/gzip_header.c` (new, moved out of `gzip.c`), `lib/compress/src/gzip.c`, `lib/compress/CMakeLists.txt`, `lib/compress/tests/test_inflate.c` (new), `tests/fuzz/inflate_diff.c` (new) and its CMake entry, `cmake/ConfigForgeOptions.cmake`, `cmake/ConfigForgeProfile.cmake`; last: `CHANGELOG.md`, `docs/Decisions.md` (D-202), `docs/Dependencies.md`, `docs/Codemap.md` (generated).
 * **steps**:
-  1. Wait for the ask; then the opening cold read writes the steps from this card's "decided" and the pattern of Y-16's steps (test first, see it fail, the differential fuzz hour).
-* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI and an hour of the differential fuzz without a difference.
-* **stop if**: no ask has come; the inflate cannot be held to the `misra` rules without a deviation the maintainer has not recorded.
-* **docs**: when built: `CHANGELOG.md`, "## 2.2.0 — unreleased" or the version then open, "### Added"; `docs/Decisions.md`: D-202.
+  1. `git switch -c work/Y-21-m main` (after Y-16 and Y-20). Move the gzip header and trailer code out of `gzip.c` into `gzip_header.c` with no behaviour change; `ctest --test-dir build-zlib -R "test_gzip|test_unpack"` unchanged (Y-16's build directory).
+  2. Test first: `test_inflate.c` (compiled under `CF_WITH_INFLATE`, otherwise prints `skipped: no inflate`), on Y-16's fixtures (`lib/compress/tests/data/`): the same results as `test_gzip`, plus a stored block, a fixed-Huffman block and a dynamic one written as C arrays, and a distance past the window refused; the configure error when both options are ON (a CMake test with `WILL_FAIL`).
+  3. See it fail: `cmake -S . -B build-inflate -DCF_WITH_INFLATE=ON && cmake --build build-inflate --target test_inflate 2>&1 | tail -n 20`.
+  4. Write `inflate.c` and the option; `ctest --test-dir build-inflate -R "test_inflate|test_unpack|gate" 2>&1 | tail -n 30`; the `misra` preset builds with it ON (`cmake --preset misra -DCF_WITH_INFLATE=ON` and build).
+  5. See that the test can fail: skip the CRC compare behind a run-time-false condition; the bad-CRC case fails; put it back.
+  6. The differential fuzz target `inflate_diff.c` (needs both inflate and zlib in one fuzz build: it links zlib directly as the oracle, not through `CF_WITH_ZLIB`); run it an hour: `cmake -DMODE=quick -DEXTRA="fuzz" -DFUZZ_SECONDS=3600 -DSOURCE=index -DJOBS=3 -DWORK=$HOME/cfv -P scripts/verify.cmake` as Y-16 step 7, with `CF_WITH_INFLATE=ON`.
+  7. D-202, Dependencies (no new dependency: one line saying so), CHANGELOG. `python scripts/work/work.py format`; codemap last. Commit `Y-21-m: a built-in inflate, CF_WITH_INFLATE (D-202)`.
+  8. ACCEPT; push; ACCEPT-CI.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI; `ctest --test-dir build-inflate -R test_inflate` exit 0; an hour of the differential fuzz without a difference.
+* **stop if**: the inflate cannot be held to the `misra` rules without a deviation that `docs/Compliance.md` does not already list (report the rule); the differential fuzz finds a difference that is zlib's leniency, not a bug (report the input); three failures of the same step.
+* **docs**: `CHANGELOG.md`, "## 2.3.0 — unreleased", "### Added": "`CF_WITH_INFLATE`: gzip read with no dependency, OFF by default (Y-21-m, D-202)"; `docs/Decisions.md`: D-202.
+* **Organiser's answers**:
+  * 2026-11-27, the organiser: opened from "parked". Build it, in its smallest form: reading only, behind `CF_WITH_INFLATE`, OFF by default and never beside `CF_WITH_ZLIB`; version 2.3.0, the version of Y-16 and Y-20 it needs (the maintainer's standing approval, 2026-11-27).
 
 ---
 
@@ -1080,20 +1099,26 @@ answer under "Organiser's answers"). Both are copied into
 * **id**: Y-22-m
 * **goal**: `CF_WITH_LZMA` (xz through liblzma, refusing 5.6.0 and 5.6.1, with a `memlimit` of the order of zstd's window) and `CF_WITH_LZ4` (lz4 frames) as backends of the `cf_unpacker` interface, each OFF by default.
 * **why**: `docs/research/compression.md` section 5, "Later" (E) and section 4.4 (the xz backdoor of 2024 and its refusal).
-* **needs**: Y-17; and a user's ask (status: parked)
+* **needs**: Y-17
 * **size**: medium
-* **version**: 1.10.0
-* **status**: parked: not now
+* **version**: 2.3.0
+* **status**: open
 * **decided**:
-  * **TO DECIDE (whether to build, and which of the two).** Options: xz only; lz4 only; both; neither. **Recommended: none until asked**; xz first when asked, because configuration archives from distributions are xz, and lz4 for a program whose own files are lz4.
-  * **Shape if built**: as Y-17: `xz.c` (`name "xz"`, `.xz`, magic `fd 37 7a 58 5a 00`, `lzma_stream_decoder` with `memlimit` 8 MiB written as a constant in `cf_serialize.h` beside the others, `LZMA_CONCATENATED`, `lzma_version_number()` refusing `50060002` to `50060012`, i.e. 5.6.0 and 5.6.1, at run time as well as at configure time) and `lz4.c` (`.lz4`, magic `04 22 4d 18`, `LZ4F_decompress` with a frame-size check); fuzz target and fixtures for each; Dependencies rows.
-  * The steps are written by the opening cold read, on Y-17's pattern.
-* **files**: `lib/serialize/src/xz.c`, `lib/serialize/src/lz4.c`, tests, fuzz targets, `cmake/ConfigForgeOptions.cmake`, `docs/Dependencies.md`; last: `CHANGELOG.md`, `docs/Decisions.md` (D-203).
+  * **Decided (whether to build, and which): both, xz first**, each its own option OFF by default and in every profile but `full`: `CF_WITH_LZMA` (liblzma) and `CF_WITH_LZ4` (liblz4); two commits on the one branch, xz then lz4. Configuration archives from distributions are xz; lz4 is for a program whose own files are lz4. **Rejected:** xz only or lz4 only (the second is the same pattern at little more cost, and the card is opened once); neither (leaves a common archive format unread).
+  * **The shape**: as Y-17: `lib/compress/src/xz.c` (`name "xz"`, `.xz`, magic `fd 37 7a 58 5a 00`, `lzma_stream_decoder` with a `memlimit` whose default is 8 MiB (D-220: `CF_UNPACK_DEFAULT_*` in `cf_compress.h` beside the others, an option of the backend's `defaults`), `LZMA_CONCATENATED`, `lzma_version_number()` refusing `50060002` to `50060012`, i.e. 5.6.0 and 5.6.1, at run time as well as at configure time: `liblzma 5.6.0 and 5.6.1 are refused (CVE-2024-3094)`) and `lib/compress/src/lz4.c` (`name "lz4"`, `.lz4`, magic `04 22 4d 18`, `LZ4F_decompress` with a frame-size check against the bomb guard); fuzz target and fixtures for each; Dependencies rows. Errors (D-223) and refusal reasons as Y-17's.
+  * **D-203** ("xz and lz4 frames, each OFF by default; the backdoored liblzma refused"): the bullets above; Rejected: one of the two only; neither.
+* **files**: `lib/compress/src/xz.c` (new), `lib/compress/src/lz4.c` (new), `lib/compress/include/configforge/cf_compress.h`, `lib/compress/CMakeLists.txt`, `lib/compress/tests/test_xz.c` and `test_lz4.c` (new), `tests/fuzz/unpack_xz.c` and `unpack_lz4.c` (new), `cmake/ConfigForgeOptions.cmake`, `cmake/ConfigForgeProfile.cmake`, `CMakePresets.json`, `docs/Dependencies.md`; last: `CHANGELOG.md`, `docs/Decisions.md` (D-203), `docs/Codemap.md`, `docs/API.md` (generated).
 * **steps**:
-  1. Wait for the ask; the opening cold read writes the steps from Y-17's.
-* **accept**: as Y-17, for each backend built.
-* **stop if**: no ask has come; the installed liblzma is 5.6.0 or 5.6.1 (the refusal fires: the card stops and says so).
-* **docs**: when built: `CHANGELOG.md`, "### Added" of the version then open; `docs/Decisions.md`: D-203.
+  1. `git switch -c work/Y-22-m main` (after Y-17).
+  2. xz, on Y-17's steps 2 to 7: fixtures with the system `xz` (`good.xz`, `two.xz` by `cat`, `badcrc.xz`, `trunc.xz`, `bomb.xz`, and one needing more than the `memlimit`); `test_xz.c` (skipped without the option); see it fail with `-DCF_WITH_LZMA=ON` in `build-xz`; write `xz.c` and the option; see the test can fail (skip the version refusal behind a run-time-false condition and a faked `lzma_version_number` seam returning `50060002` passes wrongly); fuzz a minute. Commit `Y-22-m: xz through liblzma, CF_WITH_LZMA`.
+  3. lz4, the same steps with the system `lz4` in `build-lz4` (`good.lz4`, `two.lz4`, `badframe.lz4`, `bomb.lz4`); see it fail; write `lz4.c`; see the test can fail (skip the frame-size check; the bomb passes); fuzz a minute. Commit `Y-22-m: lz4 frames through liblz4, CF_WITH_LZ4`.
+  4. D-203, Dependencies rows, CHANGELOG. Format; codemap and apiref, last; amend into the last commit.
+  5. ACCEPT; push; ACCEPT-CI, whose `full` profile now builds both.
+* **accept**: as Y-17, for each backend: ACCEPT-LINUX; ACCEPT-WINDOWS (from vcpkg, or the case skipped and said so); ACCEPT-CI; `ctest --test-dir build-xz -R test_xz` and `ctest --test-dir build-lz4 -R test_lz4` exit 0; a clean fuzz minute each.
+* **stop if**: the installed liblzma is 5.6.0 or 5.6.1 (the refusal fires: the card stops and says so); `gate.dependencies` refuses a find call and the fix is more than one line of its allow-list; three failures of the same step.
+* **docs**: `CHANGELOG.md`, "## 2.3.0 — unreleased", "### Added": "`CF_WITH_LZMA` and `CF_WITH_LZ4`: xz and lz4 frames read, each OFF by default (Y-22-m, D-203)"; `docs/Decisions.md`: D-203.
+* **Organiser's answers**:
+  * 2026-11-27, the organiser: opened from "parked". Both backends, xz first, each OFF by default; version 2.3.0, Y-17's (the maintainer's standing approval, 2026-11-27).
 
 ---
 
@@ -1102,20 +1127,29 @@ answer under "Organiser's answers"). Both are copied into
 * **id**: Y-23-m
 * **goal**: a source can name a zstd dictionary (through `cf_unpacker`'s `data` field) so that small files compressed with one are read.
 * **why**: `docs/research/compression.md` section 5, "Later" (F) and section 4.6 (dictionaries).
-* **needs**: Y-18, Y-20; and a user's ask (status: parked)
+* **needs**: Y-18, Y-20
 * **size**: medium
-* **version**: 1.10.0
-* **status**: parked: not now
+* **version**: 2.3.0
+* **status**: open
 * **decided**:
-  * **TO DECIDE (whether to build at all, and the interface).** Options: a dictionary by the program's own `cf_unpacker` whose `data` is the dictionary (no new public name: the program makes a copy of the built-in zstd descriptor with its own `data`); a builder call `cf_builder_dictionary(b, source, bytes, n)`; never. **Recommended: the first**, only when someone asks; it needs nothing new.
-  * **Shape if built**: `zstd.c` reads `self->data` as a dictionary (`ZSTD_DCtx_loadDictionary`), refuses a dictionary above 1 MiB (`CF_UNPACK_DICT_MAX`), and the frame's dictionary id is checked against the dictionary's (`'%s' needs dictionary <id>`); a frame that names a dictionary with none given is refused.
-  * The steps are written by the opening cold read, on Y-17's pattern.
-* **files**: `lib/serialize/src/zstd.c`, tests, the Guide's "Compressed input"; last: `CHANGELOG.md`, `docs/Decisions.md` (D-204).
+  * **Decided (the interface): the program's own `cf_unpacker` whose `data` is the dictionary**: no new public name; the program copies the built-in `cf_zstd_unpacker` and sets its `data` to the dictionary's bytes. **Rejected:** a builder call `cf_builder_dictionary(b, source, bytes, n)` (a new public name for what the descriptor already carries); never (small files compressed with a dictionary stay unreadable).
+  * **The shape**: `lib/compress/src/zstd.c` reads `self->data` as a dictionary (`ZSTD_DCtx_loadDictionary`), refuses a dictionary above 1 MiB (`CF_UNPACK_DICT_MAX`), and the frame's dictionary id is checked against the dictionary's (`'%s' needs dictionary <id>`); a frame that names a dictionary with none given is refused. The 1 MiB is a default (D-220): a member of the zstd backend's `defaults`, 0 unlimited. Errors (D-223): `unpack-corrupt` with the source and the message above.
+  * **D-204** ("A zstd dictionary is the descriptor's `data`"): the bullets above; Rejected: a builder call; never.
+* **files**: `lib/compress/src/zstd.c`, `lib/compress/include/configforge/cf_compress.h` (the constant), `lib/compress/tests/test_zstd.c`, `lib/compress/tests/data/` (a dictionary and two files), `docs/Guide.md` (the "Compressed input" section, Y-14's: `grep -n "Compressed input" docs/Guide.md`); last: `CHANGELOG.md`, `docs/Decisions.md` (D-204), `docs/Codemap.md`.
 * **steps**:
-  1. Wait for the ask; the opening cold read writes the steps from Y-17's.
-* **accept**: as Y-17.
-* **stop if**: no ask has come.
-* **docs**: when built: `CHANGELOG.md`, "### Added" of the version then open; `docs/Decisions.md`: D-204.
+  1. `git switch -c work/Y-23-m main` (after Y-18 and Y-20).
+  2. Fixtures with the system `zstd`: `zstd --train` a dictionary from twenty small TOML files (`dict.bin`, committed), `dict.zst` (a file compressed with it), `otherdict.zst` (with a second dictionary).
+  3. Tests in `test_zstd.c` (under `CF_WITH_ZSTD`): a copy of `cf_zstd_unpacker` with `data` = `dict.bin` reads `dict.zst`; without `data` it is refused `needs dictionary <id>`; `otherdict.zst` with `dict.bin` is refused by id; a 2 MiB dictionary is refused, and read with the option at 0; the descriptor without `data` reads every Y-17 fixture as before.
+  4. See it fail: `cmake --build build-zstd --target test_zstd && ctest --test-dir build-zstd -R test_zstd 2>&1 | tail -n 20`.
+  5. Write the dictionary load in `zstd.c`. `ctest --test-dir build-zstd -R "test_zstd|test_unpack|gate"`.
+  6. See that the test can fail: skip the id compare behind a run-time-false condition; the wrong-dictionary case fails; put it back.
+  7. The Guide paragraph, D-204, CHANGELOG. Format; codemap last. Commit `Y-23-m: zstd dictionaries through the descriptor's data (D-204)`.
+  8. ACCEPT; push; ACCEPT-CI.
+* **accept**: ACCEPT-LINUX; ACCEPT-WINDOWS (libzstd from vcpkg or skipped and said so); ACCEPT-CI; `ctest --test-dir build-zstd -R test_zstd` exit 0.
+* **stop if**: the installed libzstd lacks `ZSTD_getDictID_fromFrame` (older than Y-17's floor: report); three failures of the same step.
+* **docs**: `CHANGELOG.md`, "## 2.3.0 — unreleased", "### Added": "zstd dictionaries, through the descriptor's `data` (Y-23-m, D-204)"; `docs/Decisions.md`: D-204.
+* **Organiser's answers**:
+  * 2026-11-27, the organiser: opened from "parked". The first option, the card's recommendation: no new public name; version 2.3.0, Y-18's and Y-20's (the maintainer's standing approval, 2026-11-27).
 
 ---
 
@@ -1190,18 +1224,18 @@ answer under "Organiser's answers"). Both are copied into
 * **id**: Y-26
 * **goal**: `cf_image_write` takes a new flag `CF_IMAGE_CONFIGURED` that writes only keys a source set (no defaults); `gen build --target image` leaves defaults out unless `--with-defaults` and refuses a `CF_SENSITIVE` value in the artifact unless `--allow-secrets`; the C call with the old flags writes what it always wrote.
 * **why**: `docs/research/config-compiler.md` section 4.2 F and section 5.3 F: an artifact must not freeze defaults the next release of the program changes, and a full report or image is a credential-bearing file.
-* **needs**: Y-24, and TO DECIDE F below
+* **needs**: Y-24
 * **size**: small
 * **version**: 2.2.0
 * **status**: open
 * **decided**:
-  * **TO DECIDE F (defaults in a compiled image).** (1) left out unless asked; (2) written, as today. **Recommended: (1)** for the command; the C call keeps today's behaviour unless the new flag is given, so 1.x callers see no change. With (2) the command writes defaults and `--with-defaults` is not offered; the flag still exists.
+  * **Decided F (defaults in a compiled image): (1), left out unless asked** (2026-11-26, see "Organiser's answers": the command's options are `--include defaults` and `--include secrets`, which the `--with-defaults` and `--allow-secrets` of this card's text mean); the C call keeps today's behaviour unless the new flag is given, so 1.x callers see no change. **Rejected:** (2) written, as today (an artifact would freeze defaults the next release changes).
   * **The flag**: `cf_image.h:44-49`: `CF_IMAGE_CONFIGURED = 1u << 1`, "only what a source set: no defaults". An added enum value; the version of the format does not change (the image carries fewer keys). `cf_image_write` (`lib/config/src/*/image.c`: find with `grep -n "cf_image_write" lib/config/src/*/*.c`) skips a key whose winning candidate's source is the contract's default (the `CF_TRANSIENT`-like test `emit.c:36`'s `keep` uses for `CF_EMIT_CONFIGURED`: copy its test, do not write a second one).
   * **Secrets**: `gen build` refuses to write a `CF_SENSITIVE` key's value into the image, a report with `CF_REPORT_FULL`, or an emitted document, unless `--allow-secrets`: exit 1, `'<key>' is sensitive and would be written to the output; pass --allow-secrets to write it`. A blind report never holds a value, so it is not refused.
   * **D-207** ("An image keeps only what was configured, unless asked"): the flag, the two command options and their defaults. Rejected: stripping defaults silently from the existing flags.
 * **files**: `lib/config/include/configforge/cf_image.h`, the image writer, `tools/gen/build.c`, `lib/config/tests/test_image.c` (the image test file: `ls lib/config/tests | grep image`), `tests/gen_build/`, `docs/ImageFormat.md`; last: `CHANGELOG.md`, `docs/Decisions.md`, `docs/Codemap.md`, `docs/API.md` (generated).
 * **steps**:
-  1. Stop here and say so if there is no answer to TO DECIDE F (the default is (1)). `git switch -c work/Y-26 main` (after Y-24).
+  1. `git switch -c work/Y-26 main` (after Y-24).
   2. Tests: in `test_image.c` (a) an image written with `CF_IMAGE_CONFIGURED` holds no key whose only candidate is a default and holds each configured key, and an image written with flags 0 is byte-identical to the one before this card (a golden: take it from `git stash`-free means: write the image on main first and commit it as `tests/data/image-v1.cfgb` as the first commit of the card); (b) `gen build --target image` without `--with-defaults` writes the configured image; with it, the full one; (c) a sensitive key set in a file and `--target toml`: exit 1 with the message; with `--allow-secrets` exit 0.
   3. See it fail: build `test_image` (the flag is undeclared) and `ctest -R gen_build`.
   4. Write the flag and the options. `ctest --preset default -R "test_image|gen_build"`.
@@ -1213,7 +1247,7 @@ answer under "Organiser's answers"). Both are copied into
 * **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Added": "`CF_IMAGE_CONFIGURED`; `gen build` leaves defaults out of an image and refuses secrets unless asked (Y-26, D-207)." `docs/Decisions.md`: D-207.
 
 ---
-* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I accept your recommendations"): TO DECIDE F: defaults and secrets stay out of the image unless asked for, by `--include defaults` and `--include secrets`, both off by default; a secret written into an image puts a warning in the report.
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I accept your recommendations"): Decided F: defaults and secrets stay out of the image unless asked for, by `--include defaults` and `--include secrets`, both off by default; a secret written into an image puts a warning in the report.
 
 ## Y-27 - The generated C: `gen build --target c` (plain typed code) and `--target c-baked` (the baked tables)
 
@@ -1349,26 +1383,35 @@ answer under "Organiser's answers"). Both are copied into
 * **Organiser's answers**:
   * 2026-11-27, the organiser: the choice E is (1) now and (2) with Y-33, as the card recommended (the maintainer's standing approval, 2026-11-27).
 
-## Y-30-m - Rules across keys in the contract: a fixed declarative set (TO DECIDE D)
+## Y-30-m - Rules across keys in the contract: a fixed declarative set
 
 * **id**: Y-30-m
 * **goal**: the contract can say, with a fixed set of declarative rules and no expression language, that one key requires another (`dependentRequired`), that a key's value is at least another's (`minimum` by key), or that one of a set of keys is given (`oneOf`); the library checks them at run time, and therefore the compiler at build time.
 * **why**: `docs/research/config-compiler.md` section 4.2 G (option 2), section 5.3 D and section 6 (seventh row): a compiler that cannot check "if `tls.enabled` then `tls.cert`" proves less than the program does at start-up.
-* **needs**: Y-24; and TO DECIDE D answered with the analysis tool's TO DECIDE 2 (Y-39-m)
+* **needs**: Y-24
 * **size**: medium
-* **version**: 1.10.0
-* **status**: parked: not now
+* **version**: 2.2.0
+* **status**: open
 * **decided**:
-  * **TO DECIDE D (rules across keys).** (1) none, recipes for OPA and CUE (Y-36, Y-31); (2) a fixed declarative set in the contract; (3) an expression language. **Recommended by this research: (2), decided with the analysis-tool research**, whose own TO DECIDE 2 recommends (a) none now and (b) only on a user's ask: the two documents ask the same question, so the maintainer answers once, for both. This card is (2)'s declarative set without a regular-expression engine (that is Y-39-m's `pattern`); if the answer is (1), this card and Y-39-m are closed unbuilt; (3) is not offered.
-  * **The set**: JSON Schema's `dependentRequired` and `if`/`then` over `const` and `enum` tests (not over patterns), plus `x-configforge-atleast: {"key": "pool.max", "other": "pool.min"}` for "at least another key" (JSON Schema has no relation between two values; the `x-` prefix keeps the schema valid for every other validator, which ignore it). Names and a call for the C contract (`cf_def` side: `cf_builder_relation(b, kind, key, other)`, experimental tier) are written when the answer is given; the card's steps follow the answer.
-  * Run by the library when the configuration is built (so a program refuses at start-up what the compiler refused at build time), each violation a diagnostic with both keys and the place of the winning value of each.
-  * **D-211** ("Relations between keys are a fixed declarative set"), written by the card when it opens.
-* **files**: the schema reader and the contract's defset (`lib/config/src/core/`), `tools/gen/build.c`, tests; last: `CHANGELOG.md`, `docs/Decisions.md`, `docs/Guide.md`.
+  * **Decided D (rules across keys): (2), a fixed declarative set in the contract**, the research's recommendation, decided once for this card and the analysis tool's question 2 (Y-39-m): this card holds the relations, Y-39-m adds `pattern` on the same call. Recipes for OPA and CUE (Y-36, Y-31) stay for what the set cannot say. **Rejected:** (1) recipes only (a compiler that cannot check "if `tls.enabled` then `tls.cert`" proves less than the program does at start-up); (3) an expression language (a language of our own: CUE, Pkl, Jsonnet and Dhall exist).
+  * **The set**: JSON Schema's `dependentRequired` and `if`/`then` over `const` and `enum` tests (not over patterns), at the object level of the schema (`lib/config/src/bridge/schema.c`, the walker that reads `required`, near line 700; today these keywords are refused by name, so no schema that loads now changes meaning), plus `x-configforge-atleast: {"key": "pool.max", "other": "pool.min"}` for "at least another key" (JSON Schema has no relation between two values; the `x-` prefix keeps the schema valid for every other validator, which ignore it). `oneOf` of `required` lists (`"oneOf": [{"required": ["a"]}, {"required": ["b"]}]`) for "exactly one of these keys is given"; any other `oneOf` stays refused.
+  * **The C call** (experimental tier, beside `cf_builder_schema_file`: `grep -n cf_builder_schema_file lib/config/include/configforge/*.h`): `typedef enum cf_relation { CF_REL_REQUIRES = 1, CF_REL_AT_LEAST = 2, CF_REL_ONE_OF = 3, CF_REL_IF_EQUALS = 4 } cf_relation;` and `CF_NODISCARD CF_API cf_bool cf_builder_relation(cf_builder* b, cf_relation kind, const char* key, const char* const* others, size_t n, const char* value, cf_error* err);` (`REQUIRES`: `key` set means every one of `others` is set; `AT_LEAST`: `n` is 1, `key`'s number is at least `others[0]`'s; `ONE_OF`: exactly one of `key` and `others` is set; `IF_EQUALS`: when `key`'s value is `value`, every one of `others` is set; `value` is NULL for the other kinds). An unknown kind, a key not in the contract, or `AT_LEAST` on a non-number is `CF_E_DEFINITION` at the call. The schema reader lowers each keyword to this call, so there is one checker.
+  * Run by the library when the configuration is built (so a program refuses at start-up what the compiler refused at build time), each violation a `CF_E_VALIDATE` (D-223) with both keys and the place of the winning value of each: `'tls.enabled' at app.toml:3 requires 'tls.cert', which no source sets`; `'pool.max' (app.toml:7) must be at least 'pool.min' (site.toml:2)`; `exactly one of 'a', 'b' must be set; both are (app.toml:1, app.toml:2)`. A sensitive key's value is never quoted.
+  * **D-211** ("Relations between keys are a fixed declarative set"): the bullets above; Rejected: recipes only; an expression language; relations over patterns (Y-39-m).
+* **files**: `lib/config/src/bridge/schema.c`, the builder and its build step (`grep -n "cf_builder_create" lib/config/src/*/*.c | head -3`), the header of `cf_builder_schema_file`, `lib/config/tests/test_relation.c` (new) and `lib/config/tests/CMakeLists.txt`, `tests/gen_build/` (a schema with a relation), `cmake/configforge.symbols`; last: `CHANGELOG.md`, `docs/Decisions.md`, `docs/Guide.md`, `docs/Codemap.md`, `docs/API.md` (generated).
 * **steps**:
-  1. Wait for the answer to TO DECIDE D; the opening cold read writes the steps from this card's "decided" on the pattern of Y-25's (the test first, see it fail, the rule, the negative proof).
-* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI.
-* **stop if**: no answer; the answer is (1) or (3).
-* **docs**: when built: `CHANGELOG.md`, "## 1.10.0 — unreleased", "### Added"; `docs/Decisions.md`: D-211.
+  1. `git switch -c work/Y-30-m main` (after Y-24).
+  2. Tests in `test_relation.c`: for each kind, through the C call and through a schema (`cf_builder_schema_file` on a small file the test writes): a configuration that holds passes; one that breaks it is refused with the message above and both places; `AT_LEAST` on a string key is `CF_E_DEFINITION`; a sensitive key's value is not in the message; a schema with `oneOf` of anything but `required` lists is still refused by name; every existing `test_schema` case unchanged. A `tests/gen_build/` case: `gen build` on a source that breaks a relation exits 1 with the message.
+  3. See it fail: `cmake --build --preset default --target test_relation 2>&1 | tail -n 20` (`cf_builder_relation` undeclared).
+  4. Write the call, the check at build, and the schema keywords. `ctest --preset default -R "test_relation|test_schema|gen_build|gate" 2>&1 | tail -n 30`.
+  5. See that the test can fail: skip the `REQUIRES` check behind a run-time-false condition (never a constant); its case fails; put it back.
+  6. The Guide (a paragraph "Relations between keys" in the contract's section, `grep -n "^## " docs/Guide.md | grep -i contract`), D-211, CHANGELOG. `python scripts/work/work.py format`; codemap and apiref, last. Commit `Y-30-m: relations between keys in the contract, a fixed declarative set (D-211)`.
+  7. ACCEPT; push; ACCEPT-CI.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI; `ctest --preset default -R "test_relation|test_schema|gen_build"` exit 0; every existing test unchanged.
+* **stop if**: the builder has no step after precedence where every key's winning value and place are known (report: the check needs a new stage); three failures of the same step.
+* **docs**: `CHANGELOG.md`, "## 2.2.0 — unreleased", "### Added": "`cf_builder_relation` and the schema's `dependentRequired`, `if`/`then`, `oneOf` of `required` and `x-configforge-atleast`: relations between keys (Y-30-m, D-211)"; `docs/Decisions.md`: D-211.
+* **Organiser's answers**:
+  * 2026-11-27, the organiser: opened from "parked". Question D is (2), the research's recommendation, answered once with Y-39-m's question 2; the C call's shape is written above; version 2.2.0, Y-24's (the maintainer's standing approval, 2026-11-27).
 
 ---
 
@@ -1405,20 +1448,30 @@ answer under "Organiser's answers"). Both are copied into
 
 * **id**: Y-32-m
 * **goal**: `configforge gen build --file build.toml` reads the sources, ranks, runtime ranks, profile and targets from a file that is itself read by the library with a contract of the tool's own (so it has the same diagnostics, places and formats as any configuration), instead of from the command line.
-* **why**: `docs/research/config-compiler.md` section 4.2 I and section 5.3 B (**recommended: (3), both, the file later**) and section 6 (`when asked`): the command line comes first (Y-24); a build file is for a repository with many targets.
-* **needs**: Y-24, Y-29; and a user's ask (status: parked)
+* **why**: `docs/research/config-compiler.md` section 4.2 I and section 5.3 B (**recommended: (3), both, the file later**) and section 6 (no version of its own): the command line comes first (Y-24); a build file is for a repository with many targets.
+* **needs**: Y-24, Y-29
 * **size**: medium
-* **version**: 1.10.0
-* **status**: parked: not now
+* **version**: 2.2.0
+* **status**: open
 * **decided**:
-  * **TO DECIDE B (how the build is described).** (1) the command line; (2) a build file read by the library with the tool's own contract; (3) both, the file later. **Recommended: (3)**: Y-24 is (1); this card is the file, built only when asked.
-  * **Shape if built**: the tool's own contract, in `tools/gen/build.schema.json` (committed, and used by `gen build --file` to read its own input through `cf_builder_schema_file`): `schema` (path), `runtime` (list), `profile`, `[[source]]` (path, rank), `[[target]]` (name, kind, out, `with_defaults`, `allow_secrets`, `manifest`); one `gen build --file b.toml` builds every target; relative paths are relative to the file. Any format the library reads works for the build file. The steps are written when it is asked for.
-* **files**: `tools/gen/build.c`, `tools/gen/build.schema.json`, tests; last: `CHANGELOG.md`, `docs/Decisions.md` (D-212), `docs/Tools.md`.
+  * **Decided B (how the build is described): (3), both**: the command line (Y-24) and this card's build file, read by the library with the tool's own contract. **Rejected:** (1) the command line only (a repository with many targets repeats long command lines in scripts); (2) the file only (breaks Y-24's callers).
+  * **The shape**: the tool's own contract, in `tools/gen/build.schema.json` (committed, and used by `gen build --file` to read its own input through `cf_builder_schema_file`): `schema` (path), `runtime` (list), `profile`, `[[source]]` (path, rank), `[[target]]` (name, kind, out, `include` (a list of `defaults` and `secrets`, Y-26's `--include`), `manifest`); one `gen build --file b.toml` builds every target, in the file's order; relative paths are relative to the file. Any format the library reads works for the build file. `--file` with any other build option is a usage error (exit 2): the file is the whole description. A target that fails stops the run with exit 1 and names the target; targets before it are written (each output is written whole or not at all).
+  * Errors (D-223): a build file that does not hold to the tool's contract is exit 2 with the library's own diagnostic (key and place in the build file).
+  * **D-212** ("A build file is a configuration read with the tool's own contract"): the bullets above; Rejected: a format of our own for the build file; options beside `--file`.
+* **files**: `tools/gen/build.c`, `tools/gen/build.schema.json` (new), `tools/gen/CMakeLists.txt` (the schema installed beside the tool or compiled in as a string: compiled in, so the tool has no file to find), `tests/gen_build/` (a `build.toml` with two targets, a bad one), `docs/Tools.md`; last: `CHANGELOG.md`, `docs/Decisions.md` (D-212), `docs/Codemap.md`.
 * **steps**:
-  1. Wait for the ask; the opening cold read writes the steps on Y-24's pattern.
-* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI.
-* **stop if**: no ask has come.
-* **docs**: when built: `CHANGELOG.md`, "## 1.10.0 — unreleased" or the open version, "### Added"; `docs/Decisions.md`: D-212.
+  1. `git switch -c work/Y-32-m main` (after Y-24 and Y-29).
+  2. Tests in `tests/gen_build/` (Y-24's style): (a) `gen build --file build.toml` writes both targets, byte-identical to the same two `gen build` command lines of Y-24 (`cmp`); (b) the same file as YAML gives the same outputs; (c) `--file` with `--target` is exit 2; (d) a build file with `[[target]]` missing `out` is exit 2 naming `target[1].out` and the place; (e) a second target whose source does not exist is exit 1 naming it, the first target written; (f) a target with `include = ["defaults"]` matches `--include defaults`.
+  3. See it fail: `ctest --preset default -R gen_build 2>&1 | tail -n 20` (`--file` is a usage error today).
+  4. Write the schema and the reading in `build.c` (each target lowered to the same internal call the command line makes, so there is one build path). `ctest --preset default -R "gen_build|gen_check"`.
+  5. See that the test can fail: resolve a relative path against the working directory behind a run-time-false condition; (a), run from another directory, fails; put it back.
+  6. `docs/Tools.md`, D-212, CHANGELOG. Format; codemap last. Commit `Y-32-m: gen build --file, a build file read with the tool's own contract (D-212)`.
+  7. ACCEPT; push; ACCEPT-CI.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI; `ctest --preset default -R gen_build` exit 0.
+* **stop if**: Y-24's build cannot be called per target without its command-line parsing (report: the build needs a split first); three failures of the same step.
+* **docs**: `CHANGELOG.md`, "## 2.2.0 — unreleased", "### Added": "`configforge gen build --file`: a build file read with the tool's own contract (Y-32-m, D-212)"; `docs/Decisions.md`: D-212.
+* **Organiser's answers**:
+  * 2026-11-27, the organiser: opened from "parked". Question B is (3), the research's recommendation; the target's `with_defaults` and `allow_secrets` become `include`, after Y-26's answer; version 2.2.0, Y-24's and Y-29's (the maintainer's standing approval, 2026-11-27).
 
 ---
 
@@ -1453,7 +1506,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
-## Y-34 - `gen check --report`: a predicted, value-blind report from files and a contract (TO DECIDE)
+## Y-34 - `gen check --report`: a predicted, value-blind report from files and a contract
 
 * **id**: Y-34
 * **goal**: `configforge gen check --schema app.schema.json [--report out.json] [--unknown warn|reject] <file>...` reads every file as the program would, in order, and with `--report` writes the value-blind report of what the files would configure, marked `"predicted": true`, exiting 0 unless a file cannot be read (2); without `--report` it behaves as today.
@@ -1463,7 +1516,7 @@ answer under "Organiser's answers"). Both are copied into
 * **version**: 2.1.0
 * **status**: open
 * **decided**:
-  * **TO DECIDE 1 (where the static mode lives)**, research section 5, TO DECIDE 1. Options: **(a)** `configforge gen check --report`, then `doctor lint` (no new program; Doctor keeps its non-goal; `gen` is already the contract's program); **(b)** a new `configforge check` (one step; a third meaning of "check" beside `codec check` and `gen check`); **(c)** Doctor reads files itself (rejected: it breaks `docs/Doctor.md:853`, "Resolving configuration itself"). **Recommended: (a).** The steps are (a)'s; for (b) the new program is a thin front over the same function and `tools/gen/CMakeLists.txt` gains a second executable name, which is the maintainer's to ask for; (c) is not offered.
+  * **Decided 1 (where the static mode lives)**, research section 5, question 1: **(a)** `configforge gen check --report`, then `doctor lint` (no new program; Doctor keeps its non-goal; `gen` is already the contract's program). **Rejected:** (b) a new `configforge check` (a third meaning of "check" beside `codec check` and `gen check`); (c) Doctor reads files itself (it breaks `docs/Doctor.md:853`, "Resolving configuration itself").
   * **Where.** `gen_check` (`tools/gen/contract.c:50-100`; its usage text `contract_usage`, 38-46). Its loop gains `--report <path>` and `--unknown warn|reject` (default `reject`, as today at `cf_builder_unknown(b, CF_UNKNOWN_REJECT)`; with `warn` the call is `CF_UNKNOWN_WARN` (`lib/config/include/configforge/cf_define.h:318-322`), so unknown keys are candidates that CFD005 reports); the usage line gains both. An option given twice, or `--report` without a path, is `contract_usage()` (exit 2).
   * **With `--report`**, after `cf_builder_create`: the configuration is built with a builder that keeps going past a refused value when the unknown mode is `warn` (a refused value is a refused candidate in the report: research section 4, Option B). The report is written with `cf_report` (`lib/config/include/configforge/configforge.h:666`) from a `cf_report_info` of `CF_REPORT_BLIND` whose `profile` is NULL, `application` the schema's title when it has one, and `generated` NULL (a file made from the same inputs is the same bytes). The file is written whole or not at all (`cf_platform_write_file`, F-1a) when `--report` names a path, and to stdout when it is `-`.
   * **The mark.** `cf_report_info` gains a last member `cf_bool predicted;` (lib/config/include/configforge/cf_report.h:45-52; its `size` field makes a new last member an addition, the `CF_REPORT_INFO_INIT` at line 55 gains a `CF_FALSE`, `CF_REPORT_INFO_INIT` is `{sizeof(cf_report_info), CF_REPORT_BLIND, NULL, NULL, NULL, NULL, CF_FALSE}`); `cf_report_write` (`lib/config/src/*/report.c`; find `"profile"` with `grep -n '"profile"' lib/config/src/*/report.c`) writes `"predicted": true` beside it only when the field is true and the info's `size` covers it, else nothing (an older caller's report is byte for byte unchanged). The cf_report format version does not change (an added member).
@@ -1471,7 +1524,7 @@ answer under "Organiser's answers"). Both are copied into
   * **D-214** ("A predicted report is the contract's program's, and Doctor judges it"): Question: how a repository checks its configuration files before a release without running the program. Options: recipes only (Y-36, always); a predicted report from `gen check` then Doctor (decided); a new `configforge check`; Doctor reading files (breaks `docs/Doctor.md:853`). Decision: `gen` resolves, Doctor judges; the report says `"predicted": true`; `--unknown warn` makes unknown keys candidates; exit 0 with `--report` unless a file cannot be read. Rejected: findings about the program's own codecs; a checker that touches the machine it runs on (research section 3, failure mode 6).
 * **files**: `tools/gen/contract.c`, `lib/config/include/configforge/cf_report.h`, the report writer (found by the grep above), `tools/gen/tests/` (the gen tool's tests: `ls tools/gen` shows none: put the new cases in `tests/gen_check/` and add `add_test` lines in `tools/gen/CMakeLists.txt` after the existing gen tests: find them with `grep -n add_test tools/gen/CMakeLists.txt`), `tests/gen_check/*` (new: `app.schema.json`, `good.toml`, `bad.toml`, `bad.yaml`), `docs/Tools.md`, `docs/Doctor.md` (a paragraph); last: `CHANGELOG.md`, `docs/Decisions.md`, `docs/Codemap.md`, `docs/API.md` (generated).
 * **steps**:
-  1. Stop here and say so if "Organiser's answers" holds no answer to TO DECIDE 1 (the default is (a): an answer is needed only to choose (b)). `git switch -c work/Y-34 main`.
+  1. `git switch -c work/Y-34 main`.
   2. Make the fixtures: a schema with `server.port` (integer, 1-65535), `log.level` (enum `debug|info|warn`), `db.password` (sensitive string), `old.key` (deprecated); `good.toml` (all four valid), `bad.toml` (`server.prot = 1`, `server.port = 70000`, `log.level = "loud"`, and `old.key = 1`), `bad.yaml` (the same keys in YAML, with `server.port` twice).
   3. Tests (shell-free, through `add_test` with `COMMAND` and `PASS_REGULAR_EXPRESSION` or the gen tool's existing test style): (a) `gen check --schema S good.toml` exits 0 and prints `ok: 1 file(s)`; (b) `gen check --schema S --report r.json --unknown warn bad.toml` exits 0, `r.json` contains `"predicted": true` and `"server.prot"` as a candidate whose place starts `bad.toml:1`; (c) `configforge doctor lint r.json` (after Y-35) is Y-35's test; here a `grep` of `r.json` for CFD-relevant data suffices: `"server.port"` has a refused candidate with `bad.toml:2`; (d) `--report -` writes the JSON to stdout; (e) a file that cannot be read exits 2 and writes no report; (f) two `--report` options exit 2; (g) `bad.yaml`'s duplicate key shows both places; (h) running the same command twice gives byte-identical reports (`cmp`); (i) the report contains no value text: `grep -c "70000" r.json` is 0 (value-blind).
   4. See it fail: `cmake --build --preset default --target gen 2>&1 | tail -n 5 && ctest --preset default -R gen_check 2>&1 | tail -n 20` (`--report` is a usage error today).
@@ -1480,11 +1533,11 @@ answer under "Organiser's answers"). Both are copied into
   7. D-214, docs, CHANGELOG. `python scripts/work/work.py format`; codemap and apiref, last. Commit `Y-34: gen check --report, a predicted report from files (D-214)`.
   8. ACCEPT; push; ACCEPT-CI.
 * **accept**: ACCEPT-LINUX; ACCEPT-WINDOWS; ACCEPT-CI; `ctest --preset default -R "gen_check|test_report"` exit 0.
-* **stop if**: no answer to TO DECIDE 1; an unknown key under `CF_UNKNOWN_WARN` is not in the report as a candidate (the research asks a card to confirm it: report what `cf_report` writes, the card then adds the candidate to the report writer); a refused value under `warn` aborts `cf_builder_create` (report: the builder needs a mode that keeps going, which is a new public choice); the existing report goldens change; three failures of the same step.
+* **stop if**: an unknown key under `CF_UNKNOWN_WARN` is not in the report as a candidate (the research asks a card to confirm it: report what `cf_report` writes, the card then adds the candidate to the report writer); a refused value under `warn` aborts `cf_builder_create` (report: the builder needs a mode that keeps going, which is a new public choice); the existing report goldens change; three failures of the same step.
 * **docs**: `CHANGELOG.md`, "## 1.10.0 — unreleased", "### Added": "`configforge gen check --report`: a predicted, value-blind report from files and a contract, for `doctor lint` (Y-34, D-214)." `docs/Decisions.md`: D-214. `docs/Roadmap.md`: the item "An analysis tool" under "From the maintainer, 2026-11-26" stays 🟨 until Y-37 and Y-40-m.
 
 ---
-* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I approve your recommendations"): TO DECIDE 1 is **(a)**: `gen check --report`, then `doctor lint`; no new program.
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I approve your recommendations"): Decided 1 is **(a)**: `gen check --report`, then `doctor lint`; no new program.
 
 ## Y-35 - Doctor on a predicted report: the rules a running program is needed for are off and named; SARIF columns and fingerprints
 
@@ -1528,7 +1581,7 @@ answer under "Organiser's answers"). Both are copied into
   * **Where**: `docs/Guide.md`, a new section after "11. The editor, the report and Doctor" (heading at line 1315) as a subsection `### Checking files before they ship`; examples in `examples/recipes/` (new): `app.schema.json` (written once with `configforge gen schema --schema <contract>` and committed), `app.yaml` with the modeline `# yaml-language-server: $schema=app.schema.json`, `app.toml` with `#:schema ./app.schema.json` (Taplo's directive), `.taplo.toml` with `[[rule]] include = ["*.toml"] schema.path = "app.schema.json"`, and `policy.rego` for conftest.
   * **conftest over a report**: the recipe converts a report with `jq` so that every candidate carries `_loc` from its `at` (`jq '.keys |= map(. + {_loc: .at})'`: check the report's real member names first with `configforge gen check --report` from Y-34 on a fixture, or with an existing report in `tests/`), then `conftest test --policy policy.rego report.json`; `policy.rego` holds one rule: `deny[msg] { ... }` "`pool.max` is at least `pool.min`" with `msg` formatted with `_loc`. The Guide says what conftest cannot see (a rule that errors passes: research section 3, failure mode 8: write the recipe's rule with a test input that must be denied).
   * **Tests**: the examples are run by the suite only when the tools are on the PATH: `ctest -R recipes` prints `skipped: yaml-language-server not found` etc. (the schema's own validity is checked with the library: `configforge gen check --schema app.schema.json app.toml app.yaml` exits 0 on the good files and 1 on `bad.toml`).
-  * No decision number: documentation. The Guide says: relations between keys are a recipe here (research section 5, relations between keys: option (a), recipes first; **Rejected** for now: relations written in the contract itself); Y-39-m is the parked card for doing them in the contract.
+  * No decision number: documentation. The Guide says: relations between keys are a recipe here (research section 5, relations between keys: option (a), recipes first; **Rejected** for now: relations written in the contract itself); Y-30-m and Y-39-m then add a fixed set of them, and `pattern`, to the contract.
 * **files**: `docs/Guide.md`, `examples/recipes/*` (new), `examples/CMakeLists.txt` (or `tests/CMakeLists.txt`: where the example harness lives, `grep -rn "example\." tests/CMakeLists.txt | head -3`); last: `CHANGELOG.md`.
 * **steps**:
   1. `git switch -c work/Y-36 main`.
@@ -1546,25 +1599,25 @@ answer under "Organiser's answers"). Both are copied into
 ---
 
 * **Organiser's answers**:
-  * 2026-11-27, the organiser: relations between keys are recipes here (the research's option (a)); Y-39-m stays the parked card for the contract itself (the maintainer's standing approval, 2026-11-27).
+  * 2026-11-27, the organiser: relations between keys are recipes here (the research's option (a)); Y-30-m (a fixed set of relations) and Y-39-m (`pattern`) are the open cards for the contract itself (the maintainer's standing approval, 2026-11-27).
 
-## Y-37 - A secret written in a checked file: CFD022 (TO DECIDE)
+## Y-37 - A secret written in a checked file: CFD022
 
 * **id**: Y-37
 * **goal**: `configforge doctor lint` on a predicted report reports CFD022, an error, for each key the contract marks `CF_SENSITIVE` or that is named like a secret (D-84) when a file given to `gen check` holds a value for it; the value is never printed.
-* **why**: `docs/research/analysis-tool.md` section 5, TO DECIDE 3, and section 6 (fifth row). `docs/Doctor.md:430` puts "whether a file is committed to version control" out of CFD007's scope; in the files mode the files are the repository, and a secret in one is the one secret finding that is a fact, not a guess.
+* **why**: `docs/research/analysis-tool.md` section 5, question 3, and section 6 (fifth row). `docs/Doctor.md:430` puts "whether a file is committed to version control" out of CFD007's scope; in the files mode the files are the repository, and a secret in one is the one secret finding that is a fact, not a guess.
 * **needs**: Y-35, C-8b (CFD021 is C-8b's, so this rule takes the next number)
 * **size**: small
 * **version**: 2.1.0
 * **status**: open
 * **decided**:
-  * **TO DECIDE 3.** **(a)** a new rule CFD022: a `CF_SENSITIVE` key, or one named like a secret (D-84), has a value in a file given to `gen check`; error; the value never printed (recommended); **(b)** leave it to gitleaks. With (b) this card is closed unbuilt, and the Guide's Y-36 page says "use gitleaks for secrets in files".
+  * **Decided 3: (a)** a new rule CFD022: a `CF_SENSITIVE` key, or one named like a secret (D-84), has a value in a file given to `gen check`; error; the value never printed. **Rejected:** (b) leave it to gitleaks (a pattern scanner guesses; the contract knows which keys are secret). The Guide still names gitleaks for secrets outside the contract.
   * **The rule** (`tools/doctor/engine.c`, a new `rule_secret_in_file` added to `g_lint_rules` (line 1867) after `rule_sensitive_source`; catalogue entry in `docs/Doctor.md` after CFD021, in the table at line 422): runs only on a predicted report (a report from a running program has CFD007 for its sources); for each key whose definition is sensitive (`sensitive` member of the report's key entry, as `rule_sensitive_source` reads it: copy its test) or whose name `cf_key_looks_secret` (the D-84 check; find its real name with `grep -rn "D-84" lib/*/include | head -3`) says is secret, and whose winning or any candidate comes from a file (an `at` of `path:line` that is not `argv`/`env`), a finding `error`, id `CFD022`, key, place, and the text `'%s' is a secret and holds a value in '%s'; keep secrets out of files that are checked in (give it by the environment, a secrets directory or a credentials source)`. No value, no digest, no length: the report is value-blind already, and the message never quotes the candidate's text (a test greps for it).
   * **Blind-safe**: yes (it reads presence and origin only), so the column in `docs/Doctor.md`'s table says `yes`; default severity `error`; the rule's profile defaults: none.
   * **D-216** ("A secret written in a checked file is a finding of its own"): the bullets above in one paragraph; Rejected: printing the value; a pattern scanner of values (gitleaks' job: research section 2).
 * **files**: `tools/doctor/engine.c`, `docs/Doctor.md`, the Doctor tests, `tests/gen_check/` (a fixture `secret.toml` holding `db.password = "hunter2"`); last: `CHANGELOG.md`, `docs/Decisions.md`, `docs/Roadmap.md`, `docs/Codemap.md`, `docs/API.md` (generated).
 * **steps**:
-  1. Stop here and say so if "Organiser's answers" holds no answer to TO DECIDE 3 (the default is (a): an answer is needed only to choose (b)). `git switch -c work/Y-37 main` (after Y-35 and C-8b).
+  1. `git switch -c work/Y-37 main` (after Y-35 and C-8b).
   2. Tests: (a) `gen check --schema S --report r.json secret.toml` then `doctor lint r.json` prints CFD022 for `db.password` with the place `secret.toml:1` and exit non-zero (the exit rule of `doctor lint` for an error finding: check with `ctest -R doctor`'s existing cases); (b) the output does not contain `hunter2` (`grep -c`); (c) a key named `api_token` that the contract does not mark sensitive but D-84's name check catches is reported; (d) the same file's secret given by the environment (a report from a running program, not predicted) is not CFD022 (CFD007 may speak); (e) with `--severity CFD022=warning` it is a warning.
   3. See it fail: `ctest --preset default -R doctor 2>&1 | tail -n 20`.
   4. Write the rule and the catalogue row. `ctest --preset default -R doctor`.
@@ -1572,29 +1625,29 @@ answer under "Organiser's answers"). Both are copied into
   6. D-216, docs, CHANGELOG. Format; codemap and apiref, last. Commit `Y-37: CFD022, a secret written in a checked file (D-216)`.
   7. ACCEPT; push; ACCEPT-CI.
 * **accept**: ACCEPT-LINUX; ACCEPT-WINDOWS; ACCEPT-CI; `ctest --preset default -R doctor` exit 0.
-* **stop if**: no answer to TO DECIDE 3; C-8b has used a different number for its rule than CFD021 (take the next free number and say so in the commit); a report does not carry which candidate came from which source (the rule cannot tell a file from the environment): report it; three failures of the same step.
+* **stop if**: C-8b has used a different number for its rule than CFD021 (take the next free number and say so in the commit); a report does not carry which candidate came from which source (the rule cannot tell a file from the environment): report it; three failures of the same step.
 * **docs**: `CHANGELOG.md`, "## 1.10.0 — unreleased", "### Added": "Doctor's CFD022: a secret written in a file given to `gen check` (Y-37, D-216)." `docs/Decisions.md`: D-216. `docs/Roadmap.md`: "An analysis tool" 🟩 when Y-38 is done or closed.
 
 ---
-* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I approve your recommendations"): TO DECIDE 3 is **(a)**: the rule CFD022 (a sensitive or secret-named key with a value in a checked file is an error; the value is never printed); the Guide still names gitleaks for secrets outside the contract.
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I approve your recommendations"): Decided 3 is **(a)**: the rule CFD022 (a sensitive or secret-named key with a value in a checked file is an error; the value is never printed); the Guide still names gitleaks for secrets outside the contract.
 
-## Y-38 - Defined but never read, over a set of reports: CFD023 (TO DECIDE)
+## Y-38 - Defined but never read, over a set of reports: CFD023
 
 * **id**: Y-38
 * **goal**: `configforge doctor drift a.json b.json ...` (the command that reads a set of reports, `docs/Doctor.md` section 7e) reports CFD023, `info`, for a contract key that no report given read.
-* **why**: `docs/research/analysis-tool.md` section 4, Option E (E2), section 5 TO DECIDE 4, section 6 (sixth row). CFD018 is "set but never read"; the other half, a definition the program stopped using, is the contract's dead code. One run cannot prove it (failure mode 12); a set of reports can.
+* **why**: `docs/research/analysis-tool.md` section 4, Option E (E2), section 5 question 4, section 6 (sixth row). CFD018 is "set but never read"; the other half, a definition the program stopped using, is the contract's dead code. One run cannot prove it (failure mode 12); a set of reports can.
 * **needs**: C-8a, C-8b (the reports that record reads)
 * **size**: small
 * **version**: 2.1.0
 * **status**: open
 * **decided**:
-  * **TO DECIDE 4.** A rule over a set of reports, `info` (recommended), or not at all. With "not at all" the card is closed unbuilt.
+  * **Decided 4: a rule over a set of reports, severity `info`** (the recommendation). **Rejected:** not at all (the contract's dead code stays invisible); a higher severity (a set of reports can still miss a way the program runs).
   * **The rule**: in `tools/doctor/engine.c`, over the set `drift` already reads (find the set command with `grep -n "drift" tools/doctor/doctor.c | head -5`): for each key in the contract of the first report (its `definitions`, i.e. keys with a default or required flag) such that no report in the set holds a read of it (the report member C-8a adds, which records reads; read C-8a's "decided" for the member's name and copy it), a finding `info`, id `CFD023`, key, and the text `'%s' is defined but no report read it (%d report(s) given); a run that never reads it cannot prove it is unused: give reports from every way the program runs`. It never fires with fewer than 3 reports (the text then says `needs at least 3 reports`: one note, no findings: one run cannot prove it, failure mode 12). A report that does not track reads (no member) makes the rule decline with a note `report <n> did not track reads`, no findings.
   * **Blind-safe**: yes; default severity `info`.
   * **D-217** ("Defined but never read needs a set of reports"): the bullets above; Rejected: a finding from one report; a count of reads.
 * **files**: `tools/doctor/engine.c`, `tools/doctor/doctor.c`, `docs/Doctor.md` (the table after CFD022 and section 7e), the Doctor tests; last: `CHANGELOG.md`, `docs/Decisions.md`, `docs/Codemap.md`, `docs/API.md` (generated).
 * **steps**:
-  1. Stop here and say so if "Organiser's answers" holds no answer to TO DECIDE 4 (the default is the recommendation). `git switch -c work/Y-38 main` (after C-8a, C-8b and Y-37).
+  1. `git switch -c work/Y-38 main` (after C-8a, C-8b and Y-37).
   2. Tests with four hand-made reports (small JSON files in `tests/doctor/`): (a) key `old.knob` read in none of 3 reports: one CFD023 `info`; (b) read in one of them: no finding; (c) 2 reports: the `needs at least 3 reports` note and no finding; (d) one report without the reads member: the note and no finding; (e) a key read in all: nothing.
   3. See it fail: `ctest --preset default -R doctor 2>&1 | tail -n 20`.
   4. Write the rule. `ctest --preset default -R doctor`.
@@ -1602,54 +1655,77 @@ answer under "Organiser's answers"). Both are copied into
   6. D-217, docs, CHANGELOG, Roadmap. Format; codemap and apiref, last. Commit `Y-38: CFD023, defined but never read, over a set of reports (D-217)`.
   7. ACCEPT; push; ACCEPT-CI.
 * **accept**: ACCEPT-LINUX; ACCEPT-WINDOWS; ACCEPT-CI; `ctest --preset default -R doctor` exit 0.
-* **stop if**: no answer to TO DECIDE 4; C-8a records no reads in a report; `drift` takes exactly two reports and cannot take a set (report: the command needs its own card); three failures of the same step.
+* **stop if**: C-8a records no reads in a report; `drift` takes exactly two reports and cannot take a set (report: the command needs its own card); three failures of the same step.
 * **docs**: `CHANGELOG.md`, "## 1.10.0 — unreleased", "### Added": "Doctor's CFD023: a definition that no report in a set read (Y-38, D-217)." `docs/Decisions.md`: D-217. `docs/Roadmap.md`: "An analysis tool" 🟩.
 
 ---
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number.
+  * 2026-11-27, the organiser: question 4 is the recommendation, a rule over a set of reports, `info`; the 3-report floor is an option of the rule whose default is 3, by the answer above (the maintainer's standing approval, 2026-11-27).
 
-## Y-39-m - Relations in the contract: `pattern`, `if`/`then`, `dependentRequired` (TO DECIDE 2)
+## Y-39-m - Relations in the contract: `pattern`, beside Y-30-m's `if`/`then` and `dependentRequired`
 
 * **id**: Y-39-m
-* **goal**: the contract holds relations between keys ("if `tls.enabled` then `tls.cert` is required", "a value matches a pattern") in JSON Schema's words, checked by the library and by every validator that reads the schema, with a bounded C89 regular-expression engine for `pattern`.
-* **why**: `docs/research/analysis-tool.md` section 4, Option D (D2) and section 5, TO DECIDE 2 ("recommended only when a user brings a relation the recipe cannot hold"). Section 6 gives it no version: "after 2.3.0, no row yet".
-* **needs**: Y-36, and a user's ask (status: parked, waits on TO DECIDE 2 answered (b))
+* **goal**: the contract can say that a string value matches a pattern, in JSON Schema's word `pattern`, checked by the library and by every validator that reads the schema, with a bounded C89 regular-expression engine; the relations between keys (`if`/`then`, `dependentRequired`) are Y-30-m's, on the same C call.
+* **why**: `docs/research/analysis-tool.md` section 4, Option D (D2) and section 5, question 2. Section 6 gives it no version: "after 2.3.0, no row yet".
+* **needs**: Y-30-m (the C call `cf_builder_relation`), Y-36
 * **size**: large
 * **version**: 2.3.0
-* **status**: parked: not now
+* **status**: open
 * **decided**:
-  * **TO DECIDE 2 (relations between keys).** **(a)** none in the library: Rego or CUE over the report as a recipe (Y-36) (recommended first: no dependency, no new interface); **(b)** `pattern`, `if`/`then`, `dependentRequired` in the contract, and a C call for the same: a new public interface and a bounded regular-expression engine in C89 (recommended only when a user brings a relation the recipe cannot hold). **Recommended: (a) now; (b) only on a user's ask.** With (a) this card is closed unbuilt.
-  * **Shape if (b)**: the contract's JSON Schema reader (`cf_builder_schema_file`; find with `grep -n cf_builder_schema_file docs/Codemap.md`) reads three more keywords; a bounded regular-expression engine of a subset with no backtracking blow-up (a Thompson-style matcher: literals, classes, `.`, `*`, `+`, `?`, `^`, `$`, alternation, groups; no back-references, no look-around; a step budget of 1,000,000 per match, then a refusal `CF_REASON_BUDGET`), in `lib/text/` or a new `lib/regex/` component (D-100: one directory per component; the maintainer chooses); a C call `cf_builder_relation(b, ...)` whose shape is the maintainer's second TO DECIDE at that time. The steps are written when it is asked for.
-* **files**: `lib/regex/` or `lib/text/`, the schema reader, tests; last: `CHANGELOG.md`, `docs/Decisions.md` (D-218), `docs/Limits.md`.
+  * **Decided 2 (relations between keys): (b), split with Y-30-m**: the relations are Y-30-m's fixed set (decided once with that card's question D); this card adds `pattern` and its engine, behind `option(CF_WITH_PATTERN "the schema's pattern, by a bounded regular-expression engine" OFF)`, OFF by default, ON in the `full` and `server` profiles. Without the option a schema's `pattern` is refused by name, as today, and `CF_REL_MATCHES` is `CF_E_CAPABILITY`. Rego or CUE over the report (Y-36) stay the recipe for anything more. **Rejected:** (a) none in the library (a pattern is the commonest rule a schema states, and refusing the keyword makes such schemas unusable); a dependency (PCRE2, RE2: not C89, not `misra`); a backtracking engine (unbounded time on a hostile pattern).
+  * **Decided (where the engine lives): `lib/text/src/regex.c`**, internal (`CF_INTERNAL_API`, names `cf_regex_*` in `cmake/configforge.internal.symbols`), not a new component: it is a text utility of the same kind as `lib/text/src/escape.c`, and a component of one file would be all directory. **Rejected:** a new `lib/regex/` (D-100 asks a directory per component, not a component per file).
+  * **The engine**: a Thompson-style matcher of a subset with no backtracking blow-up: literals, classes (`[a-z]`, `[^...]`, `\d`, `\w`, `\s`), `.`, `*`, `+`, `?`, `{m,n}` with `n` at most 1000, `^`, `$`, alternation, groups; no back-references, no look-around (refused at compile with the column: `pattern '%s': %s is not supported at column %u`). It matches anywhere unless anchored, as JSON Schema says. A step budget per match whose default is 1,000,000 (D-220), set by `cf_builder_pattern_budget(cf_builder* b, unsigned long steps)` (0 unlimited); one more step is `CF_E_VALIDATE`, `'%s': the pattern needs more than %lu steps`. A compiled pattern lives in the builder's arena.
+  * **The C side**: Y-30-m's enum gains `CF_REL_MATCHES = 5`; `cf_builder_relation(b, CF_REL_MATCHES, key, NULL, 0, pattern, err)` (the pattern is compiled at the call: a bad pattern is `CF_E_DEFINITION` there). A mismatch is `CF_E_VALIDATE` (D-223) with the key and the place: `'%s' at %s does not match the pattern '%s'`; a sensitive key's value is never quoted (the pattern is).
+  * **D-218** ("A pattern is checked by a bounded engine of our own, OFF by default"): the bullets above; Rejected: none in the library; a dependency; backtracking.
+* **files**: `lib/text/src/regex.c` (new), `lib/text/include/configforge/cf_text.h` (the internal declarations; `CF_INTERNAL_API`), `lib/text/CMakeLists.txt`, `lib/config/src/bridge/schema.c` (`k_str` gains `pattern` under the option, line ~318), the relation check of Y-30-m, `lib/text/tests/test_regex.c` (new; `ls lib/text/tests` for the file pattern), `lib/config/tests/test_relation.c`, `tests/fuzz/regex.c` (new) and its CMake entry, `cmake/ConfigForgeOptions.cmake`, `cmake/ConfigForgeProfile.cmake`, `CMakePresets.json`, `cmake/configforge.symbols`, `cmake/configforge.internal.symbols`; last: `CHANGELOG.md`, `docs/Decisions.md` (D-218), `docs/Limits.md` (the budget and `{m,n}` bound), `docs/Codemap.md`, `docs/API.md` (generated).
 * **steps**:
-  1. Wait for the ask; the opening cold read writes the steps from this card's "decided" (tests first, see them fail, the regex engine with a fuzz target and the budget).
-* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI; a fuzz hour on the regex engine with no hang.
-* **stop if**: no ask has come.
-* **docs**: when built: `CHANGELOG.md`, "### Added" of the version then open; `docs/Decisions.md`: D-218.
+  1. `git switch -c work/Y-39-m main` (after Y-30-m).
+  2. Tests first: `test_regex.c` (under `CF_WITH_PATTERN`, otherwise prints `skipped: no pattern`): a table of pattern, text, expected (match, no match, refused at compile with its column), at least 60 rows over every construct; `(a*)*b` on 10,000 `a`s ends inside the default budget with no match (linear time), and with the budget at 100 is refused; a back-reference `\1` is refused. In `test_relation.c`: a schema with `"pattern": "^[a-z]+$"` on `name`: `abc` passes, `aB1` is refused with the place; without the option the schema is refused by name (the existing behaviour, the test guarded the other way).
+  3. See it fail: `cmake -S . -B build-pattern -DCF_WITH_PATTERN=ON && cmake --build build-pattern --target test_regex 2>&1 | tail -n 20`.
+  4. Write `regex.c`. `ctest --test-dir build-pattern -R test_regex 2>&1 | tail -n 20`. Then the keyword in `schema.c`, `CF_REL_MATCHES`, `cf_builder_pattern_budget`. `ctest --test-dir build-pattern -R "test_regex|test_relation|test_schema|gate"`; the default build's `ctest --preset default` unchanged.
+  5. See that the test can fail: drop the step count behind a run-time-false condition (never a constant); the budget case fails; put it back.
+  6. The fuzz target `tests/fuzz/regex.c` (input split at the first NUL into a pattern and a text; never a crash, never more steps than the budget); an hour: `cmake -DMODE=quick -DEXTRA="fuzz" -DFUZZ_SECONDS=3600 -DSOURCE=index -DJOBS=3 -DWORK=$HOME/cfv -P scripts/verify.cmake` with `CF_WITH_PATTERN=ON`.
+  7. `docs/Limits.md`, the Guide's relations paragraph (Y-30-m's) gains `pattern`, D-218, CHANGELOG. `python scripts/work/work.py format`; codemap and apiref, last. Commit `Y-39-m: pattern in the contract, a bounded regular-expression engine, CF_WITH_PATTERN (D-218)`.
+  8. ACCEPT; push; ACCEPT-CI.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI; `ctest --test-dir build-pattern -R "test_regex|test_relation"` exit 0; a fuzz hour on the engine with no hang and no finding.
+* **stop if**: Y-30-m's `cf_builder_relation` is not landed; the `misra` preset refuses the engine with a deviation `docs/Compliance.md` does not list (report the rule); three failures of the same step.
+* **docs**: `CHANGELOG.md`, "## 2.3.0 — unreleased", "### Added": "the schema's `pattern`, checked by a bounded engine, `CF_WITH_PATTERN`, OFF by default (Y-39-m, D-218)"; `docs/Decisions.md`: D-218.
+* **Organiser's answers**:
+  * 2026-11-27, the organiser: opened from "parked". Question 2 is (b), split: the relations are Y-30-m's (its question D, answered once for both), this card is `pattern` behind `CF_WITH_PATTERN`, OFF by default; the engine is in `lib/text`; the C call is Y-30-m's with `CF_REL_MATCHES`; version 2.3.0 kept (the maintainer's standing approval, 2026-11-27).
 
 ---
 
-## Y-40-m - The language server
+## Y-40-m - The editor's hover: the report's origins through the schema, with no server of ours
 
 * **id**: Y-40-m
-* **goal**: a language server driven by the contract: a key's description, default and range on hover, and, from a report, what overrides it in production.
+* **goal**: the editor shows, on hover over a key, the contract's description, default and range, and, from a report, what overrides it in production, through the language servers people already use.
 * **why**: `docs/research/analysis-tool.md` section 5, "Then, in this order" 7 (**F**, the language server, last) and section 6 (last row, 2.3.0, large); the Roadmap's "Later, and large" item (`docs/Roadmap.md:946-948`). The research's reading of the field (yaml-language-server, Taplo, Even Better TOML) is that Y-36's recipes cover completion and hover from the schema already; the server adds what a schema cannot: the report's origins.
-* **needs**: Y-34, Y-36; and a user's ask (status: parked: large, 2.3.0, waits on the analysis tool and a user)
-* **size**: large
+* **needs**: Y-34, Y-36
+* **size**: medium
 * **version**: 2.3.0
-* **status**: parked: not now
+* **status**: open
 * **decided**:
-  * **TO DECIDE (whether to build it).** Options: build a server of our own (a C program speaking LSP over stdio, in `tools/lsp/`, with hover from the schema and the report); extend yaml-language-server and Taplo through the schema's `x-` keywords (no server of ours); never. **Recommended: not before Y-36 has been used, and then the second option's cost is measured first**; the maintainer decides. The steps are written when it is asked for.
-* **files**: `tools/lsp/` (if built), tests; last: `CHANGELOG.md`, `docs/Decisions.md` (D-219), `docs/Tools.md`.
+  * **Decided (whether to build a server): no server of ours.** The existing servers (yaml-language-server, Taplo / Even Better TOML) already show a schema's `description` and `markdownDescription` on hover (Y-36's recipes); what they cannot know is the report's origins. So `configforge gen hover --schema S --report r.json [--out S.hover.json]` writes a copy of the contract's schema whose every key carries a `markdownDescription`: its description, default, range or enum, sensitivity, and, from the report, which source and place set it and what it overrides (value-blind: the report holds no values, and a sensitive key shows only its source). The editor is pointed at `S.hover.json` by Y-36's recipe. A subcommand of `gen`, no new program, no dependency, no public C interface. **Rejected:** a C program speaking LSP over stdio in `tools/lsp/` (a protocol server, its JSON-RPC and its editor plugins for one hover line the existing servers already render; `docs/research/analysis-tool.md` section 5 asks for the second option's cost to be measured first, and this card is that option); never (the report's origins stay out of the editor).
+  * **Where.** `tools/gen/contract.c` beside `gen_schema` (`int gen_hover(int argc, char** argv)`, usage `hover_usage` in `gen_schema`'s style, line ~2713), declared in `tools/gen/gen.h`, dispatched in `gen.c`'s `main` after `schema`. The schema is loaded with `cf_defset_schema_file`; each definition's description is replaced in a copy by the composed text; the result written with `cf_schema_write` (as `sd_write` does) plus a `markdownDescription` member per property (the writer gains it if it has none: an added member, written only when the text is set, so `gen schema`'s output is byte for byte unchanged). The report is read as `doctor` reads one (`grep -n "report" tools/doctor/doctor.c | head`). A key the report does not hold says `not set by any source in this report`. Exit 0 written, 2 unusable input (D-223: the file and the reason).
+  * **D-219** ("The editor's hover comes from the schema, written with the report's origins"): the bullets above; Rejected: a language server of our own; never.
+* **files**: `tools/gen/contract.c`, `tools/gen/gen.c`, `tools/gen/gen.h`, the schema writer (`grep -n "cf_schema_write" lib/config/src/*/*.c`), `tests/gen_hover/` (new: Y-34's `app.schema.json`, a report, the expected `app.hover.json`), `tools/gen/CMakeLists.txt` (the tests), `docs/Tools.md`, `docs/Guide.md` (Y-36's recipe gains the hover file); last: `CHANGELOG.md`, `docs/Decisions.md` (D-219), `docs/Roadmap.md`, `docs/Codemap.md`.
 * **steps**:
-  1. Wait for the ask; the opening cold read writes the steps.
-* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI.
-* **stop if**: no ask has come.
-* **docs**: when built: `CHANGELOG.md`, "## 2.3.0 — unreleased", "### Added"; `docs/Decisions.md`: D-219.
+  1. `git switch -c work/Y-40-m main` (after Y-34 and Y-36).
+  2. Tests (Y-34's `add_test` style): (a) `gen hover --schema app.schema.json --report r.json --out h.json` exits 0 and `h.json` equals the committed `app.hover.json` (`cmp`); (b) `server.port`'s `markdownDescription` names `site.toml:2` and the default it overrides; (c) `db.password`'s names its source and holds no value text; (d) a key not in the report says so; (e) `gen schema` on Y-34's fixtures is byte-identical to before (`cmp` against a golden committed as the card's first commit); (f) a missing report is exit 2.
+  3. See it fail: `ctest --preset default -R gen_hover 2>&1 | tail -n 20` (no `hover` subcommand).
+  4. Write `gen_hover` and the writer's `markdownDescription`. `ctest --preset default -R "gen_hover|gen_schema|gen_check"`.
+  5. See that the test can fail: write the description without the report's origin behind a run-time-false condition; (b) fails; put it back.
+  6. `docs/Tools.md`, the Guide's recipe, D-219, CHANGELOG, the Roadmap's "Later, and large" item (`docs/Roadmap.md:946-948`) marked 🟩 with one line: hover through the schema, no server of ours. Format; codemap last. Commit `Y-40-m: gen hover, the report's origins in the schema's hover text (D-219)`.
+  7. ACCEPT; push; ACCEPT-CI.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI; `ctest --preset default -R "gen_hover|gen_schema"` exit 0.
+* **stop if**: `cf_schema_write` drops a keyword the input schema holds (Y-30-m's relations, `pattern`), so the hover copy would validate less than the contract (report: the writer needs them first); three failures of the same step.
+* **docs**: `CHANGELOG.md`, "## 2.3.0 — unreleased", "### Added": "`configforge gen hover`: a schema whose hover text carries the report's origins, for yaml-language-server and Taplo (Y-40-m, D-219)"; `docs/Decisions.md`: D-219.
+* **Organiser's answers**:
+  * 2026-11-27, the organiser: opened from "parked". No language server of ours: the second option of the card (the existing servers through the schema), built as `gen hover`, since its cost is one subcommand and a writer member; size medium; version 2.3.0 kept (the maintainer's standing approval, 2026-11-27).
 
 ## D-228 - Extensions keep the formats standard (the maintainer, 2026-11-26)
 
-Approved in a side session ("I approve"). Copied into `docs/Decisions.md` by Y-42, the first card that lands under it. Cards: Y-42 (include and import), Y-41-m (simple expressions, parked). Next free id after them: Y-43.
+Approved in a side session ("I approve"). Copied into `docs/Decisions.md` by Y-42, the first card that lands under it. Cards: Y-42 (include and import), Y-41-m (simple expressions, off by default). Next free id after them: Y-43.
 
 1. The syntax always stays valid TOML, JSON or YAML: other tools read our files without an error.
 2. Each extension is enabled by an option of each source, `cf_file_source_options.extensions` (`include`, `import`, `ref`, `expr`), and `--extensions` in `gen build`. `${key}` stays on by default (as today); `include` and `import` are off by default (a file that makes the library read other files is a choice of security).
@@ -1733,11 +1809,11 @@ Approved in a side session ("I approve"). Copied into `docs/Decisions.md` by Y-4
 
 * **id**: Y-41-m
 * **goal**: with `CF_EXT_EXPR` on a source, a string value that holds `${= expression}` is evaluated: string concatenation and `+ - * /` on integers and reals, with no functions, loops or conditions, so that `"${= 8000 + 80}"` is the integer 8080 and `"http://${host}:${= ${base.port} + 80}/"` is a text, every file still valid TOML, JSON or YAML.
-* **why**: D-228: a port derived from another, a timeout in milliseconds written as seconds times 1000: small arithmetic that people otherwise ask a templating language for. Total (it always ends) and tiny, because more power is CUE, Pkl, Jsonnet or Dhall as front ends (Y-31's recipe), never a language of our own. Parked: nobody has asked.
+* **why**: D-228: a port derived from another, a timeout in milliseconds written as seconds times 1000: small arithmetic that people otherwise ask a templating language for. Total (it always ends) and tiny, because more power is CUE, Pkl, Jsonnet or Dhall as front ends (Y-31's recipe), never a language of our own. Off by default: a file is read as today unless the source turns `expr` on.
 * **needs**: Y-42
 * **size**: medium
 * **version**: 2.1.0
-* **status**: parked: not now
+* **status**: open
 * **decided**:
   * **Where.** An extension of D-228 (point 2): the bit `CF_EXT_EXPR` that Y-42 reserves; `cf_file_source_options.extensions` and `cf_extensions_parse("expr")` accept it once this card builds it (they refuse it with `CF_E_CAPABILITY` before), and the double extension `app.cfx.toml` turns it on with include and import. Without the bit a `${=` is read as today (a reference to the key `=...`, refused by the key rules as it is now).
   * **The syntax.** `${=` then an expression then `}`, inside a string value, anywhere in it, any number of times. The expression: integer literals (decimal, optional leading `-`), real literals (a point or an exponent), text literals in single quotes (`'a'`, a quote doubled to write one), parentheses, binary `+ - * /` and unary `-`, with the usual precedence (`* /` above `+ -`, left to right). `${key}` references inside the expression are replaced by their values first, by the machinery that already resolves references after precedence (`CF_CAND_TEMPLATE`), so the expression sees the numbers or the text: `${= ${base.port} + 80}` with `base.port` 8000 is 8080.
@@ -1755,4 +1831,5 @@ Approved in a side session ("I approve"). Copied into `docs/Decisions.md` by Y-4
 * **stop if**: expansion of references cannot hand a number's text to the evaluator without a change to `CF_CAND_TEMPLATE`'s contract (report); a golden file changes with the extension off.
 * **docs**: `CHANGELOG.md`, "### Added": "`${= ...}` simple expressions in strings, off by default (Y-41-m, D-228)"; `docs/Decisions.md`: the next free D-number, "Expressions are total and small: concatenation and four operators, bounded by an option".
 * **Organiser's answers**:
-  * Written under the maintainer's standing approval, 2026-11-27, as a parked card: it opens only when the maintainer or a user asks (docs/plan/Layout.md, "Not now"). It builds on Y-42's option and bit, and changes no default (the maintainer's standing approval, 2026-11-27).
+  * Written under the maintainer's standing approval, 2026-11-27. It builds on Y-42's option and bit, and changes no default (the maintainer's standing approval, 2026-11-27).
+  * 2026-11-27, the organiser: opened from "parked": the card is built as written, the extension off by default; version 2.1.0, Y-42's (the maintainer's standing approval, 2026-11-27).

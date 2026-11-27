@@ -23,8 +23,8 @@ Two Roadmap items are already done in part, with the evidence:
   the tools showing a reason (K-6a, K-6b).
 
 Decisions used here: D-134 (K-1), D-135 (K-2), D-136 (K-3), D-137 (K-4);
-K-5 amends the paragraph of D-109 that says "no one number is exact". A
-card marked **TO DECIDE** has no number until the maintainer answers; D-138
+K-5 amends the paragraph of D-109 that says "no one number is exact". The
+choices these cards left open were decided on 2026-11-27; D-138
 (K-6a and K-6b), D-139 (K-7a) and D-140 (K-8) are kept for them.
 
 ## K-1a - `.properties` read by Java's own `Properties`, and the two compared
@@ -309,23 +309,23 @@ card marked **TO DECIDE** has no number until the maintainer answers; D-138
 * **stop if**: as K-4a.
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added": `fuzz_cbordiff`.
 
-## K-4d - XML against a second parser (TO DECIDE)
+## K-4d - XML against a second parser
 
 * **id**: K-4d
 * **goal**: XML's differential target is answered: either built against a second parser, or the Roadmap item's "XML" closed with the reason.
 * **why**: ConfigForge's XML reader sits on expat (`lib/serialize/src/xml.c:1`, and `bench/compare/libraries.cmake:14-16` says the comparison links the same expat), so expat on the other side compares a library with itself; what can differ is only this reader's own rules (the key mapping, D-23).
 * **needs**: K-4a
-* **size**: medium if built
+* **size**: medium
 * **version**: 2.2.0
 * **status**: open
-* **decided**: if built, as K-4a: the lines `<dotted key>\t<kind>\t<text>` are made from the second parser's events by D-23's mapping (written once in the target, from `lib/serialize/src/xml.c:3-24`), the sides `lib-refuses`, `cf-refuses`, `values`, and the `diffs` job gets `fuzz_xmldiff`; what is only well-formedness is compared as accept or refuse alone.
-* **TO DECIDE** (the maintainer): the second parser is a **new external dependency**, pinned and fetched like the others (`bench/compare/libraries.cmake`: a commit, its date, a licence). Options: (A) none: close the Roadmap item's "XML" with "the reader is expat's; its own mapping is held by `lib/config/tests` and `tests/conformance`", no card. (B) libxml2's SAX2 interface, at its newest release at least 30 days old, used for accept or refuse of well-formedness only (its DOCTYPE and namespace handling differ from what this reader refuses by name, so values are not compared). (C) tinyxml2 or pugixml (C++: the target would be C++). **Recommendation: B**, accept or refuse only, in the `diffs` job: expat and libxml2 have disagreed in places that were CVEs in both, and a well-formedness difference is the confusion the Roadmap names; values stay with D-23's tests. Until answered the card is parked.
-* **files**: (if B) `tests/fuzz/xmldiff.c`, `tests/fuzz/xmldiff.known` (new); `scripts/bench/fetch.cmake` and `bench/compare/libraries.cmake` (a `libxml2` entry, used by the fuzz job only), `tests/fuzz/CMakeLists.txt`, `.github/workflows/ci.yml`; last: `docs/Dependencies.md`, `CHANGELOG.md`, `docs/Roadmap.md`.
-* **steps**: (if B) as K-4a steps 3-6, plus `docs/Dependencies.md`: a row (grep its table for the form) naming libxml2 as a fuzz-job dependency only; Roadmap "Differential fuzzing against the other readers" to 🟩 with "JSON, TOML, XML (well-formedness), CBOR and YAML".
+* **decided**: as K-4a: the lines `<dotted key>\t<kind>\t<text>` are made from the second parser's events by D-23's mapping (written once in the target, from `lib/serialize/src/xml.c:3-24`), the sides `lib-refuses`, `cf-refuses`, `values`, and the `diffs` job gets `fuzz_xmldiff`; what is only well-formedness is compared as accept or refuse alone.
+  * **The second parser** (decided 2026-11-27): (B), libxml2's SAX2 interface at its newest release at least 30 days old, pinned and fetched like the others (`bench/compare/libraries.cmake`: a commit, its date, a licence), used for accept or refuse of well-formedness only (its DOCTYPE and namespace handling differ from what this reader refuses by name, so values are not compared; values stay with D-23's tests). It is an optional dependency, OFF by default: fetched only by `scripts/bench/fetch.cmake` for the `diffs` job and linked only into `fuzz_xmldiff`, never into the library, the tools or a default build. Rejected: (A) closing XML by reason (expat and libxml2 have disagreed in places that were CVEs in both, and a well-formedness difference is the confusion the Roadmap names); (C) tinyxml2 or pugixml (C++: the target would be C++, for no reading the C parser lacks).
+* **files**: `tests/fuzz/xmldiff.c`, `tests/fuzz/xmldiff.known` (new); `scripts/bench/fetch.cmake` and `bench/compare/libraries.cmake` (a `libxml2` entry, used by the fuzz job only), `tests/fuzz/CMakeLists.txt`, `.github/workflows/ci.yml`; last: `docs/Dependencies.md`, `CHANGELOG.md`, `docs/Roadmap.md`.
+* **steps**: as K-4a steps 3-6, plus `docs/Dependencies.md`: a row (grep its table for the form) naming libxml2 as a fuzz-job dependency only; Roadmap "Differential fuzzing against the other readers" to 🟩 with "JSON, TOML, XML (well-formedness), CBOR and YAML".
 * **accept**: as K-4a.
 * **stop if**: as K-4a; the library's licence, or its build, needs more than a C compiler and its own sources.
-* **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added". If A: Roadmap "Differential fuzzing against the other readers" to 🟩 naming K-4a to K-4c and saying XML is closed by reason.
-* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number.
+* **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added".
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number. The second parser: libxml2, optional and OFF by default, in the `diffs` job only (the maintainer's standing approval, 2026-11-27).
 
 ## K-5a - TOML's joined path judged as one number
 
@@ -424,7 +424,7 @@ card marked **TO DECIDE** has no number until the maintainer answers; D-138
 * **Organiser's answers**:
   * 2026-11-27, the organiser: K-6b follows D-223 (one error model): the reason line is always printed, on stderr (the maintainer's standing approval, 2026-11-27).
 
-## K-7a - One table of formats: the lists that copy it read it (TO DECIDE)
+## K-7a - One table of formats: the lists that copy it read it
 
 * **id**: K-7a
 * **goal**: the places that spell a list of formats (`tools/codec/pairs.c:15-17`) takes its names from `cf_formats[]` in `lib/serialize/src/codec.c:320-336`, so that a format added to the table appears in it; and `detect.c`'s order tables (`lib/serialize/src/detect.c:169-176`) are checked against it.
@@ -433,10 +433,10 @@ card marked **TO DECIDE** has no number until the maintainer answers; D-138
 * **size**: medium
 * **version**: 2.2.0
 * **status**: open
-* **decided**: `detect.c`'s tables are an ordered preference, not a list of formats: they stay, with an assertion in `lib/config/tests/test_detect.c` that each name in them is in the table (a name left out fails the test). `pairs.c`'s formats are those with a nonzero `holds` (`cf_format_holds`, `codec.c:354`), which today are exactly its six (`ini json json5 toml yaml cbor`): a loop over the accessor of the TO DECIDE and that call, in table order.
-* **TO DECIDE** (the maintainer): the accessor, a public name. Options: (A) `CF_EXPERIMENTAL(1, 9) const char* cf_format_at(size_t i);`, the format name or `NULL` past the end, in table order, including formats a build left out (as `cf_format_option` knows them, `codec.c:388`). (B) the loop uses `cf_codec_at(i)` (built formats only, `lib/serialize/include/configforge/cf_serialize.h:321`) and the list changes with the build: for the pair test that is not wanted. (C) keep the lists and add a test that checks each against `cf_codec_at`. **Recommendation: A**: one function, experimental as `cf_format_holds` and `cf_format_limits` are; the pair test and the detect test use it. Until answered the card is parked.
-* **files**: (if A) `lib/serialize/include/configforge/cf_serialize.h`, `lib/serialize/src/codec.c`, `tools/codec/pairs.c`, `lib/serialize/tests/test_holds.c`, `lib/config/tests/test_detect.c`; last: `docs/Decisions.md` (D-139), `docs/API.md` (generated), `CHANGELOG.md`, `docs/Roadmap.md`.
-* **steps**: (if A)
+* **decided**: `detect.c`'s tables are an ordered preference, not a list of formats: they stay, with an assertion in `lib/config/tests/test_detect.c` that each name in them is in the table (a name left out fails the test). `pairs.c`'s formats are those with a nonzero `holds` (`cf_format_holds`, `codec.c:354`), which today are exactly its six (`ini json json5 toml yaml cbor`): a loop over `cf_format_at` (below) and that call, in table order.
+  * **The accessor** (decided 2026-11-27): `CF_EXPERIMENTAL(1, 9) const char* cf_format_at(size_t i);`, the format name or `NULL` past the end, in table order, including formats a build left out (as `cf_format_option` knows them, `codec.c:388`): one function, experimental as `cf_format_holds` and `cf_format_limits` are; the pair test and the detect test use it. Rejected: (B) a loop over `cf_codec_at(i)` (built formats only, `lib/serialize/include/configforge/cf_serialize.h:321`: the list would change with the build, which the pair test must not); (C) keeping the lists with a test against `cf_codec_at` (the copies stay, with the same build dependence).
+* **files**: `lib/serialize/include/configforge/cf_serialize.h`, `lib/serialize/src/codec.c`, `tools/codec/pairs.c`, `lib/serialize/tests/test_holds.c`, `lib/config/tests/test_detect.c`; last: `docs/Decisions.md` (D-139), `docs/API.md` (generated), `CHANGELOG.md`, `docs/Roadmap.md`.
+* **steps**:
   1. `git switch -c work/K-7a`. In `test_holds.c`: `cf_format_at(i)` runs through every name of `cf_formats[]`, ends in `NULL`, and every name has a non-NULL `cf_format_option`; **see it fail** (no function).
   2. The function.
   3. The `pairs.c` call site; `ctest --preset default`.
@@ -445,7 +445,7 @@ card marked **TO DECIDE** has no number until the maintainer answers; D-138
 * **accept**: ACCEPT-LINUX; ACCEPT-WINDOWS; ACCEPT-CI; `gate.abi` green.
 * **stop if**: the output of `tools/codec/formats.c` changes (the tools print the table; its text is documented in `docs/Tools.md`).
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added" (experimental in 1.9); D-139; the Roadmap item stays 🟨 (K-7b).
-* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number.
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number. The accessor: `cf_format_at` (the maintainer's standing approval, 2026-11-27).
 
 ## K-7b - The ways a format can be read, in its table entry
 
@@ -468,7 +468,7 @@ card marked **TO DECIDE** has no number until the maintainer answers; D-138
 * **docs**: `CHANGELOG.md` "## 2.4.0 — unreleased", "### Added" (experimental in 2.4); D-139 (K-7a's) gets a sentence for `reads`; the Roadmap item "Formats registered, with what each can do" to 🟩.
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number. (2026-11-27, the organiser, under the maintainer's standing approval): the recommendation, wait for the ways to read, holds, so the card leaves 2.0.0 for 2.4.0, after M-14, M-15 and M-16 (module 6's additions); it needs K-7a (2.2.0); M-17 reads its table instead of making one (the maintainer's standing approval, 2026-11-27).
 
-## K-8 - The YAML reader's three differences from libyaml, fixed to YAML 1.2's text (TO DECIDE, each)
+## K-8 - The YAML reader's three differences from libyaml, fixed to YAML 1.2's text
 
 * **id**: K-8
 * **goal**: each of the three inputs on which the built-in YAML parser and libyaml differ (`tests/fuzz/yamldiff.known`; `docs/Roadmap.md:1510-1518`; N-12's notes 4 and 5, `git show 70ad1c3^:docs/plan/N-next.md`, lines 302-314) is read as YAML 1.2's text says, and the matching rule of `yamldiff.known` is rewritten to say so or removed.
@@ -478,21 +478,21 @@ card marked **TO DECIDE** has no number until the maintainer answers; D-138
 * **version**: 2.2.0
 * **status**: open
 * **decided**: all three are judged by YAML 1.2.2's text. Each part begins with the same step: decode N-12's base64 into a file (`base64 -d`), reduce it by hand to the shortest document that still differs, and run it through both parsers with `codec dump` (the built-in, and the build with `CF_YAML_BACKEND=libyaml`, `docs/Conformance.md:78-85`). The reduced documents go under the card's notes. A recommendation below holds only if the reduced document shows the cause stated; if it shows another, that part's change is not made and the card stops for that part.
-  * **K-8.1 A literal block scalar whose last line is only spaces, with no line break after it** (note 4's input). The built-in parser ends the text with a line feed (`lib/serialize/src/yamlparse.c:905`: "the input's end ends the last line too"); libyaml does not. **TO DECIDE.** Options: (A) follow libyaml and the spec's clip rule read literally: the final break is kept only if there is one (YAML 1.2.2 8.1.3, "clip"; `b-chomped-last` is a line feed or the end of input), so no line feed is added at the end of input: `leading_break` is set only when a break was eaten. (B) keep the added line feed (a value that ends in one is what a user expects of a literal block). **Recommendation: A**: the spec's text and libyaml agree. Check that `yaml-values 110` and `yaml 122 94` in `tests/conformance/floor.txt` do not move and that a suite case ending without a newline in a literal, if there is one (the suite's `in.yaml` files that end without a newline: `grep -L` over them), reads as its `in.json` says.
-  * **K-8.2 A block scalar's header at the mapping's own column** (note 5's first input: `motd :` and then `|` at column 0). The built-in parser refuses it with "expected a key and ':'" (`yamlparse.c:1309`); libyaml accepts. **TO DECIDE.** Options: (A) keep refusing: the value of a block mapping entry that starts on the next line is indented more than the mapping (`s-l+block-node(n, c)` needs `s-separate(n+1, c)`, YAML 1.2.2 8.2.3 and 6.1), so `|` at the mapping's column is not its value; only the message changes, to "a block scalar's header is not indented more than its key" (`CF_REASON_SYNTAX`), and `yamldiff.known` gets a rule on the side `bi-refuses` (the built-in parser refuses, libyaml accepts), key "a block scalar's header", reason "the built-in parser is right: YAML 1.2.2 8.2.3". (B) accept as libyaml does: rejected, it reads 1.1. **Recommendation: A.**
-  * **K-8.3 An anchor followed by a flow indicator, after tabs** (note 5's second input: `&a:-r]:r]:8:` and tabs). The built-in parser refuses it with "a property is followed by white space" (`yamlparse.c:424-426`); libyaml accepts. **TO DECIDE.** Options: (A) keep refusing and correct the message: an anchor's name stops at a flow indicator (`ns-anchor-char` excludes `,[]{}`, YAML 1.2.2 6.9.2), and a property must then be separated from its node by white space, so `]` straight after the name is not a node; the message reads backwards, and becomes "a property is not followed by white space" (a key of `yamldiff.known` that holds the old words, if any, is changed with it: `grep -rn 'property is' tests lib`); the rule goes in `yamldiff.known` on `bi-refuses`, reason "the built-in parser is right: YAML 1.2.2 6.9.2 and 6.9.3, a flow indicator ends an anchor name and no separation follows". (B) accept as libyaml does: rejected. **Recommendation: A.**
-  * A part is carried as soon as its own TO DECIDE is answered; the card is parked until at least one is.
+  * **K-8.1 A literal block scalar whose last line is only spaces, with no line break after it** (note 4's input). The built-in parser ends the text with a line feed (`lib/serialize/src/yamlparse.c:905`: "the input's end ends the last line too"); libyaml does not. **Decided (2026-11-27): (A).** Options were: (A) follow libyaml and the spec's clip rule read literally: the final break is kept only if there is one (YAML 1.2.2 8.1.3, "clip"; `b-chomped-last` is a line feed or the end of input), so no line feed is added at the end of input: `leading_break` is set only when a break was eaten. (B) keep the added line feed (a value that ends in one is what a user expects of a literal block). Chosen because the spec's text and libyaml agree. Rejected: (B), a line feed the input does not have is not in YAML 1.2.2's clip rule. Check that `yaml-values 110` and `yaml 122 94` in `tests/conformance/floor.txt` do not move and that a suite case ending without a newline in a literal, if there is one (the suite's `in.yaml` files that end without a newline: `grep -L` over them), reads as its `in.json` says.
+  * **K-8.2 A block scalar's header at the mapping's own column** (note 5's first input: `motd :` and then `|` at column 0). The built-in parser refuses it with "expected a key and ':'" (`yamlparse.c:1309`); libyaml accepts. **Decided (2026-11-27): (A).** Options were: (A) keep refusing: the value of a block mapping entry that starts on the next line is indented more than the mapping (`s-l+block-node(n, c)` needs `s-separate(n+1, c)`, YAML 1.2.2 8.2.3 and 6.1), so `|` at the mapping's column is not its value; only the message changes, to "a block scalar's header is not indented more than its key" (`CF_REASON_SYNTAX`), and `yamldiff.known` gets a rule on the side `bi-refuses` (the built-in parser refuses, libyaml accepts), key "a block scalar's header", reason "the built-in parser is right: YAML 1.2.2 8.2.3". (B) accept as libyaml does: rejected, it reads 1.1. Rejected: (B), it reads YAML 1.1.
+  * **K-8.3 An anchor followed by a flow indicator, after tabs** (note 5's second input: `&a:-r]:r]:8:` and tabs). The built-in parser refuses it with "a property is followed by white space" (`yamlparse.c:424-426`); libyaml accepts. **Decided (2026-11-27): (A).** Options were: (A) keep refusing and correct the message: an anchor's name stops at a flow indicator (`ns-anchor-char` excludes `,[]{}`, YAML 1.2.2 6.9.2), and a property must then be separated from its node by white space, so `]` straight after the name is not a node; the message reads backwards, and becomes "a property is not followed by white space" (a key of `yamldiff.known` that holds the old words, if any, is changed with it: `grep -rn 'property is' tests lib`); the rule goes in `yamldiff.known` on `bi-refuses`, reason "the built-in parser is right: YAML 1.2.2 6.9.2 and 6.9.3, a flow indicator ends an anchor name and no separation follows". (B) accept as libyaml does: rejected, libyaml's reading is not YAML 1.2.2's.
+  * Each part is carried and committed on its own (step 4).
 * **files**: `lib/serialize/src/yamlparse.c`, `tests/fuzz/yamldiff.known`, `lib/config/tests/test_yaml.c` (a case a part, in the form of its existing cases), `tests/conformance/data/` (the reduced inputs, if that directory takes them: `lib/config/tests/CMakeLists.txt:193-196`); last: `docs/Roadmap.md`, `CHANGELOG.md`, `docs/Conformance.md` (the YAML paragraph, lines 70-85), `docs/Decisions.md`.
 * **steps**:
-  1. `git switch -c work/K-8`. For each part, with its answer: reduce and run both parsers; the reduced input and both results under the card's notes.
+  1. `git switch -c work/K-8`. For each part, as decided: reduce and run both parsers; the reduced input and both results under the card's notes.
   2. Write the case in `lib/config/tests/test_yaml.c`; build; `ctest --preset default -R test_yaml`; **see it fail** (K-8.1: the value ends in a line feed today; K-8.2 and K-8.3: the message is the old one).
   3. Make the change in `yamlparse.c`; see it pass; `ctest --preset default`; `verify -DEXTRA=conformance` (every YAML floor line holds); `fuzz_yamldiff` 60 seconds with the new `yamldiff.known` rule: no abort.
   4. Commit one a part: `K-8.<n>: YAML <what> read as YAML 1.2 says`.
   5. `docs/Roadmap.md:1510-1518` "Three more differences between the YAML readers" removed (the item is done), with the commit; format; generators last; ACCEPT.
 * **accept**: ACCEPT-LINUX with the conformance and `fuzz` extras; ACCEPT-WINDOWS; ACCEPT-CI; the YAML floors in `tests/conformance/floor.txt` unchanged or raised.
 * **stop if**: a part's reduced document shows a cause other than the one stated; a suite case that was valid is refused or read differently after a change (revert that part, the case's id under notes).
-* **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Changed" (K-8.1 if A: a literal block scalar at the end of the input without a final line break no longer gains one; K-8.2 and K-8.3: a message) . **D-140** (text, when answered: the three answers, one sentence each, with YAML 1.2.2's sections); until then the three rules of `yamldiff.known` carry the reasons.
-* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the recommendation for each part: each follows YAML 1.2's text.
+* **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Changed" (K-8.1: a literal block scalar at the end of the input without a final line break no longer gains one; K-8.2 and K-8.3: a message) . **D-140** (text: the three decisions, one sentence each, with YAML 1.2.2's sections); the three rules of `yamldiff.known` carry the reasons.
+* **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the recommendation for each part: each follows YAML 1.2's text. Each part decided (A) (the maintainer's standing approval, 2026-11-27).
 
 ## K-9a - Three failure guarantees: written in every public function's header comment, listed in a table, and held by `gate.guarantees`
 
@@ -895,7 +895,7 @@ feature is only a macro that is empty under C89.
 * **needs**: K-10a, K-10b
 * **size**: large
 * **version**: 2.2.0
-* **status**: parked: not now
+* **status**: open
 * **decided**:
   * **The option (D-220, K-11a).** One member appended to `cf_number_options` (K-10a's struct, `size` first; D-51: read only where `size` reaches it): `int overflow;` with the macros `CF_OVERFLOW_REFUSE` (0, the default and today's behaviour) and `CF_OVERFLOW_TEXT` (1). `cf_number_options_init` sets `CF_OVERFLOW_REFUSE`; a NULL options pointer is the default; `cf_builder_numbers` carries it as it carries K-10a's members. Nothing else about `cf_number_options` changes.
   * **What is read.** Under `CF_OVERFLOW_TEXT` an integer literal that does not fit `int64` (and, for a format that allows it, `uint64`) and a real literal whose value is outside `double` (it reads as infinity; underflow is K-10b's) is stored as a text value holding the literal exactly as the document spelt it, with the entry flag `CF_ENTRY_NUMBER_TEXT` (new, in `lib/config/include/configforge/cf_keyspace.h` beside the other candidate flags; the worker finds where the entry's flags are kept with `grep -n "CF_CAND_TEXTUAL" lib/config/src/core/keyspace.c`). A number that fits is untouched (K-10a's `keep_text` decides whether its text is kept).
@@ -915,5 +915,5 @@ feature is only a macro that is empty under C89.
 * **stop if**: the entry has no word to hold `CF_ENTRY_NUMBER_TEXT` and adding one changes a promised struct (`gate.abi`: report, change nothing); a conformance case changes with the defaults.
 * **docs**: `CHANGELOG.md` under the newest unreleased heading, "### Added": `cf_number_options.overflow` and `CF_OVERFLOW_TEXT` (K-10c-m); the D-number of K-10a extended ("a number beyond 64 bits kept as text when asked").
 * **Organiser's answers**:
-  * Written under the maintainer's standing approval, 2026-11-27, as a parked card: it opens only when the maintainer or a user asks (docs/plan/Layout.md, "Not now"). The option is one member of K-10a's struct, `CF_OVERFLOW_REFUSE` the default, so no default changes (the maintainer's standing approval, 2026-11-27).
+  * Written and opened under the maintainer's standing approval, 2026-11-27: built in its smallest form, the option off by default. The option is one member of K-10a's struct, `CF_OVERFLOW_REFUSE` the default, so no default changes (the maintainer's standing approval, 2026-11-27).
   * A definition of type int or real keeps refusing: a program that declared a 64-bit number must not be handed text under its key (the maintainer's standing approval, 2026-11-27).

@@ -14,13 +14,13 @@ before it opens (docs/Plan.md, "Read again after the layout changes"). Line
 numbers are those of the tree at 2395d65; a card that finds them moved
 finds the symbol by name, and a symbol that is gone is a "stop if".
 
-Five choices are the maintainer's and are marked **TO DECIDE**: the public
+Five choices that were the maintainer's were decided on 2026-11-27 under the
+maintainer's standing approval, each by its card's recommendation: the public
 shape of the file write (F-1b), of the override source (F-2a) and of the
-document edit (F-3j), whether the codec tool may take the internal tier for
-its edit commands (F-3i), and whether `doctor graph` is built at all (F-4b).
-Every card around them is written so that an answer is the only thing
-missing. A card whose TO DECIDE has no answer stops at that step, with
-everything before it done and pushed.
+document edit (F-3j), the internal tier for the codec tool's edit commands
+(F-3i: option A), and whether `doctor graph` is built (F-4b: only for a want
+F-4a's filters do not meet). Each card's "decided" bullets hold the choice
+and what was rejected; no card waits on an answer.
 
 Decisions of this group: D-127 (a file replaced whole or not at all, F-1a),
 D-128 (the override file, F-2a), D-129 (an edit is a splice, checked by
@@ -483,7 +483,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 
 ---
 
-## F-3i - Wave 6, `configforge codec get`, `set` and `unset` (TO DECIDE)
+## F-3i - Wave 6, `configforge codec get`, `set` and `unset`
 
 * **id**: F-3i
 * **goal**: `configforge codec get <file> <key>`, `set <file> <key> <value>` and `unset <file> <key>` read, change and remove a key of a document in any format that has an editor (and CBOR), writing the file in place through F-1a's function.
@@ -493,7 +493,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **version**: 2.3.0
 * **status**: open
 * **decided**:
-  * **TO DECIDE (the internal tier in the codec tool).** `tools/codec/CMakeLists.txt:1-6` says the tool is compiled without the internal tier (D-51, D-88) as the proof that the serialization library is enough, and the engine (F-3a) and `cf_platform_write_file` (F-1a) are declared only under `CF_INTERNAL_API`. Options: **A** `edit.c` alone is compiled with `CF_INTERNAL_API=1` (`set_source_files_properties(edit.c PROPERTIES COMPILE_DEFINITIONS CF_INTERNAL_API=1)`; Doctor's and gen's directories define it for all their files, `bench/CMakeLists.txt:15`); the rest of the tool, and its link line (`configforge_serialize` only), stay as they are. **B** wait for F-3j's public call and make `edit.c` use it (reorders: F-3i needs F-3j, and F-3j loses F-3i as a need; `cf_docedit` lives in `lib/config`, which `configforge_codec` does not link, so the tool would then link the library: against D-51's comment). **C** the tool gets no `set`/`unset`, only `get`. **Recommended: A.** The promise the comment protects is that the tool links `configforge_serialize` and nothing else, which A keeps; the define is scoped to the one file that needs the engine, and the symbols are in `configforge_serialize`'s library already. The steps below are A's; for B or C the maintainer says so under "Organiser's answers" and the card is rewritten.
+  * **Decided (the internal tier in the codec tool): A.** `tools/codec/CMakeLists.txt:1-6` says the tool is compiled without the internal tier (D-51, D-88) as the proof that the serialization library is enough, and the engine (F-3a) and `cf_platform_write_file` (F-1a) are declared only under `CF_INTERNAL_API`. So `edit.c` alone is compiled with `CF_INTERNAL_API=1` (`set_source_files_properties(edit.c PROPERTIES COMPILE_DEFINITIONS CF_INTERNAL_API=1)`; Doctor's and gen's directories define it for all their files, `bench/CMakeLists.txt:15`); the rest of the tool, and its link line (`configforge_serialize` only), stay as they are. The promise the comment protects is that the tool links `configforge_serialize` and nothing else, which A keeps; the define is scoped to the one file that needs the engine, and the symbols are in `configforge_serialize`'s library already. Rejected: **B** wait for F-3j's public call and make `edit.c` use it (it reorders F-3i after F-3j, and `cf_docedit` lives in `lib/config`, which `configforge_codec` does not link, so the tool would link the library: against D-51's comment); **C** `get` only, no `set`/`unset` (the wave would have no command a person can run to change a file).
   * Usage, added to `tools/codec/codec.c:80-92`'s dispatch and its usage text, and to `docs/Tools.md:218-236`:
     ```text
     configforge codec get <file> <key> [--as <format>]
@@ -507,7 +507,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
   * New file `tools/codec/edit.c` (after `convert.c`'s shape, `tools/codec/convert.c:1-294`); the program's source list in `tools/codec/CMakeLists.txt`.
 * **files**: `tools/codec/edit.c` (new), `tools/codec/codec.c`, `tools/codec/codec.h`, `tools/codec/CMakeLists.txt` (`edit.c` in the source list and its `CF_INTERNAL_API=1` definition), `tests/codec/edit.cmake` (new), `tests/codec/CMakeLists.txt` (the `cf_codec_scripts` list, lines 28-36: `edit` is appended beside `convert` in the `if(CF_WITH_EMIT)` block), `tests/codec/usage.cmake`, `docs/Tools.md`; last: `docs/Formats.md` (a sentence under the table), `CHANGELOG.md`, `docs/Codemap.md`, `docs/API.md`.
 * **steps**:
-  1. Stop here and say so if "Organiser's answers" holds no answer to the TO DECIDE. `git switch -c work/F-3i main` (after the cards it needs).
+  1. `git switch -c work/F-3i main` (after the cards it needs).
   2. `tests/codec/edit.cmake`, in the style of `tests/codec/convert.cmake`: for JSON, TOML, YAML, INI and CBOR (each `skipped:` when the format is out of the build): write a document with a comment; `get` a value and compare; `set` an existing key and see only that line changed (`file(READ)` and a string compare of the rest); `set` a new key; `unset`; `set` a key into an array (exit 1, the words); `--out -` leaves the file as it was; a document with a syntax error exits 1 with the reader's message and the file is unchanged; `--type int` on `"x"` writes `x = 7`; `get` of an absent key exits 1; no arguments exits 2 with the usage.
   3. See it fail: `ctest --preset default -R codec.edit 2>&1 | tail -n 15` (the usage text answers).
   4. Write `edit.c` and the dispatch. `ctest --preset default -R "codec"`.
@@ -515,11 +515,12 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
   6. `docs/Tools.md`: the usage lines, a section "Editing a document" after "Converting between formats" (what is kept, the refusals by their words, the exit codes). Format; codemap and apiref, last. Commit `F-3i: configforge codec get, set and unset`.
   7. ACCEPT; push; ACCEPT-CI.
 * **accept**: ACCEPT-LINUX; ACCEPT-WINDOWS; ACCEPT-CI; `ctest --preset default -R "codec"` exit 0 and `codec.usage` includes the three new commands.
-* **stop if**: no answer to the TO DECIDE; `configforge_serialize` alone cannot give `cf_infer_scalar` (it is in `lib/numeric`: if the tool does not link it, take the default type as text and say so); an editor is missing for a format the card lists.
+* **stop if**: `configforge_serialize` alone cannot give `cf_infer_scalar` (it is in `lib/numeric`: if the tool does not link it, take the default type as text and say so); an editor is missing for a format the card lists.
 * **docs**: `CHANGELOG.md`, "## 2.2.0 — unreleased", "### Added": `configforge codec get`, `set` and `unset` (F-3i). `docs/Tools.md`: the commands.
 
 ---
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number.
+  * The internal tier in the codec tool: option A, `edit.c` alone compiled with `CF_INTERNAL_API=1`, the link line unchanged; B and C rejected as the "decided" bullet says (the maintainer's standing approval, 2026-11-27).
 
 ## F-3j - Wave 6, the document edit as a public interface
 
@@ -585,22 +586,22 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 
 ---
 
-## F-4b - `configforge doctor graph` (TO DECIDE: whether it is built at all)
+## F-4b - `configforge doctor graph`, built only for a want F-4a's filters do not meet
 
 * **id**: F-4b
 * **goal**: if F-4a found that jq does not meet a want of the Roadmap's, `configforge doctor graph <report> [--format dot|mermaid]` writes the references, renames and sources of a report as a graph, never a value.
 * **why**: "The references drawn" (`docs/Roadmap.md:760-766`), `docs/Maintaining.md:93-96` and the 1.10.0 row of its versions table (lines 99-114): `doctor graph`, "if asked for".
-* **needs**: F-4a, and the maintainer's yes
+* **needs**: F-4a
 * **size**: medium
-* **version**: 1.10.0
-* **status**: parked: not now
+* **version**: 2.1.0
+* **status**: open
 * **decided**:
-  * **TO DECIDE (whether to build it).** Options: **A** build it, as below. **B** do not: F-4a's filters are the answer, the Roadmap item is closed with them. **Recommended: B unless F-4a's finding names a want the filters do not meet** (the Roadmap's own condition); then A, for that want only. The card stops until the maintainer answers, whatever F-4a found.
+  * **Decided (whether to build it): B, unless F-4a's finding names a want the filters do not meet; then A, for that want only** (the Roadmap's own condition). **B**: F-4a's filters are the answer and the Roadmap item is closed with them (step 1). **A**: the command below, built by steps 2-8. Which one applies is read from F-4a's finding, not asked. Rejected: A whatever F-4a found (a second way to draw what jq already draws, with nothing to show it is wanted); B whatever F-4a found (a want the filters cannot meet would stay unmet).
   * If built (A): the command `configforge doctor graph <report> [--format dot|mermaid] [--key K] [--redact-all]`, in `tools/doctor/doctor.c` beside `history` (line 502), `dot` the default; the edges of F-4a's list and no other; `--key K` limits the graph to the keys reachable from `K` through references and renames; a node is a key name or `source:<name>`; a key that is sensitive is drawn (its name is not a secret) and has no `written` edge (a blind report has none); no value is ever printed (D-86: the same tests `doctor.redact` and `doctor.marker` run over the output with a marked secret). Exit codes as the other commands (`docs/Doctor.md:555-572`): 0 drawn, 1 a report it cannot read, 2 usage. Output is sorted (edges by source then target) so two runs are equal. Written by the library's own report reader (`cf_doctor_*`, `docs/Doctor.md:288-300`), not by a second JSON reader.
-  * **D-132** (after D-131, "Doctor draws the references"): written only if A; Question: whether a report's edges are drawn by Doctor or by jq. Options: jq filters (F-4a); `doctor graph` (this card). Decision: as the maintainer answered; the edges, the formats, the no-value rule.
+  * **D-132** (after D-131, "Doctor draws the references"): written only if A; Question: whether a report's edges are drawn by Doctor or by jq. Options: jq filters (F-4a); `doctor graph` (this card). Decision: Doctor draws them only for the want F-4a's finding names; the edges, the formats, the no-value rule.
 * **files**: (A) `tools/doctor/doctor.c`, `tools/doctor/engine.c`, `tools/doctor/engine.h`, `tests/doctor/graph.cmake` (new), `tests/doctor/CMakeLists.txt`, `docs/Doctor.md` (section 7, the usage block), `docs/Tools.md` if Doctor's usage is repeated there; last: `docs/Decisions.md`, `CHANGELOG.md`, `docs/Roadmap.md`, `docs/Codemap.md`, `docs/API.md`.
 * **steps** (A):
-  1. Stop here and say so if "Organiser's answers" holds no answer to the TO DECIDE; for B, write under "notes" `closed by F-4a, <date>`, mark the Roadmap item `🟩 (F-4a)`, and stop.
+  1. Read F-4a's finding (its notes). If it names no want the filters do not meet (B): write under "notes" `closed by F-4a, <date>`, mark the Roadmap item `🟩 (F-4a)`, commit both to `main` (documents only), and stop: the card is done. Otherwise (A) go on, for that want only.
   2. `git switch -c work/F-4b main` (after F-4a).
   3. `tests/doctor/graph.cmake` over F-4a's `graph.json`: DOT and Mermaid equal to the expected files; `--key` limits; a report with a marked secret prints no value (`doctor.marker`'s marker); an unreadable report exits 1; no arguments exits 2.
   4. See it fail (the usage answers).
@@ -609,7 +610,8 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
   7. D-132, Doctor.md, CHANGELOG, the Roadmap mark; format; codemap and apiref, last. Commit `F-4b: configforge doctor graph (D-132)`.
   8. ACCEPT; push; ACCEPT-CI.
 * **accept**: ACCEPT-LINUX; ACCEPT-WINDOWS; ACCEPT-CI; `ctest --preset default -R "doctor"` exit 0.
-* **stop if**: no answer to the TO DECIDE; the report's reader in the library does not expose a candidate's `written` (then a library change is needed first: say which).
-* **docs**: (A) `CHANGELOG.md`, "## 1.10.0 — unreleased" (as F-4a's), "### Added": `configforge doctor graph` (F-4b, D-132); `docs/Decisions.md`: D-132; `docs/Roadmap.md`: the item headed "The references drawn" becomes 🟩. (B) the Roadmap mark only.
+* **stop if**: the report's reader in the library does not expose a candidate's `written` (then a library change is needed first: say which).
+* **docs**: (A) `CHANGELOG.md`, "## 2.1.0 — unreleased" (as F-4a's), "### Added": `configforge doctor graph` (F-4b, D-132); `docs/Decisions.md`: D-132; `docs/Roadmap.md`: the item headed "The references drawn" becomes 🟩. (B) the Roadmap mark only.
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the recommendation; `doctor graph` is built only when it is asked for, so the card stays parked until then.
+  * 2026-11-27: the card opens at 2.1.0 (F-4a's version): B unless F-4a's finding names a want the filters do not meet, then A for that want; the finding decides, no one is asked (the maintainer's standing approval, 2026-11-27).
 
