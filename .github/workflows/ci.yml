@@ -239,7 +239,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - run: sudo apt-get update && sudo apt-get install -y libkqueue-dev
+      - run: sudo apt-get update; sudo apt-get install -y libkqueue-dev
       - run: cmake -S . -B bk -DCF_WAKE_KQUEUE=ON
       - run: cmake --build bk
       - run: ctest --test-dir bk -R "^unit\." --output-on-failure
@@ -282,7 +282,7 @@ jobs:
         profile: [full, default, minimal, misra, embedded-json, embedded-cbor, server]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - run: sudo apt-get update && sudo apt-get install -y libexpat1-dev libsqlite3-dev cppcheck
+      - run: sudo apt-get update; sudo apt-get install -y libexpat1-dev libsqlite3-dev cppcheck
       - run: cmake --preset ${{ matrix.profile }} && cmake --build --preset ${{ matrix.profile }}
       - run: ctest --preset ${{ matrix.profile }}
 
@@ -311,7 +311,7 @@ jobs:
           fi
           echo "run=$run" >> "$GITHUB_OUTPUT"
       - if: steps.changed.outputs.run == 'true'
-        run: sudo apt-get update && sudo apt-get install -y binutils libexpat1-dev libsqlite3-dev
+        run: sudo apt-get update; sudo apt-get install -y binutils libexpat1-dev libsqlite3-dev
       - if: steps.changed.outputs.run == 'true'
         run: cmake -DCHECK=ON -DWORK="$RUNNER_TEMP/size-builds" -P scripts/check/sizes.cmake
       - id: measure
@@ -379,7 +379,7 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - run: sudo apt-get update && sudo apt-get install -y musl-tools tcc pcc
+      - run: sudo apt-get update; sudo apt-get install -y musl-tools tcc pcc
       - run: cmake -DEXTRA=compilers -DMODE=quick -DJOBS=4 -P scripts/verify.cmake
 
   # musl as a distribution ships it, rather than musl-gcc over glibc's
@@ -408,7 +408,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: >-
-          sudo apt-get update &&
+          sudo apt-get update;
           sudo apt-get install -y libyaml-dev libexpat1-dev libsqlite3-dev
       - run: >-
           cmake -S . -B build -DCF_WITH_YAML=ON -DCF_YAML_BACKEND=libyaml
@@ -425,7 +425,7 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - run: sudo apt-get update && sudo apt-get install -y libfyaml-dev
+      - run: sudo apt-get update; sudo apt-get install -y libfyaml-dev
       - run: >-
           cmake -S . -B build -DCF_WITH_YAML=ON -DCF_YAML_BACKEND=libfyaml &&
           cmake --build build --parallel
@@ -456,7 +456,7 @@ jobs:
         first-test: [1, 2]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - run: sudo apt-get update && sudo apt-get install -y clang llvm libclang-rt-21-dev
+      - run: sudo apt-get update; sudo apt-get install -y clang llvm libclang-rt-21-dev
       - run: cmake --preset msan && cmake --build --preset msan
       # Odd and even positions cover the entire preset's filtered test list.
       - run: setarch "$(uname -m)" -R ctest --preset msan -I "${{ matrix.first-test }},,2" --no-tests=error
@@ -470,7 +470,7 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - run: sudo apt-get update && sudo apt-get install -y clang llvm libclang-rt-21-dev
+      - run: sudo apt-get update; sudo apt-get install -y clang llvm libclang-rt-21-dev
       - run: cmake --preset ubsan-strict && cmake --build --preset ubsan-strict
       - run: ctest --preset ubsan-strict
 
@@ -484,7 +484,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - run: sudo apt-get update && sudo apt-get install -y valgrind
+      - run: sudo apt-get update; sudo apt-get install -y valgrind
       - run: cmake -DEXTRA=valgrind -DMODE=quick -DJOBS=4 -P scripts/verify.cmake
 
   # AFL++ on the libFuzzer harnesses: a second fuzzer, whose mutations
@@ -498,7 +498,7 @@ jobs:
       FUZZ_SECONDS: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 60 || 15 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - run: sudo apt-get update && sudo apt-get install -y afl++ clang llvm
+      - run: sudo apt-get update; sudo apt-get install -y afl++ clang llvm
       - run: cmake -DEXTRA=afl -DFUZZ_SECONDS="$FUZZ_SECONDS" -DMODE=quick -DJOBS=4 -P scripts/verify.cmake
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: failure()
@@ -586,7 +586,7 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - run: sudo apt-get update && sudo apt-get install -y clang libyaml-dev
+      - run: sudo apt-get update; sudo apt-get install -y clang libyaml-dev
       - run: cmake --preset fuzz -B build-yamldiff
       - run: cmake --build build-yamldiff --target fuzz_seeds fuzz_yamldiff -j4
       - name: Seeds, then ten minutes of fuzzing
@@ -609,7 +609,7 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - run: sudo apt-get update && sudo apt-get install -y gcovr
+      - run: sudo apt-get update; sudo apt-get install -y gcovr
       - run: cmake -DEXTRA=coverage -DMODE=quick -DJOBS=4 -P scripts/verify.cmake
 
   # The Doctor action, used the way a project would use it, on reports
@@ -653,7 +653,7 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - run: sudo apt-get update && sudo apt-get install -y cppcheck
+      - run: sudo apt-get update; sudo apt-get install -y cppcheck
       - run: cmake --preset analyze && cmake --build --preset analyze
       - run: ctest --preset analyze
 
@@ -710,7 +710,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Install valgrind and expat
-        run: sudo apt-get update && sudo apt-get install -y valgrind libexpat1-dev
+        run: sudo apt-get update; sudo apt-get install -y valgrind libexpat1-dev
       - name: Build the benchmark that makes the documents
         run: |
           cmake -S . -B build-bench -DCMAKE_BUILD_TYPE=Release -DCF_BUILD_BENCH=ON
@@ -753,7 +753,7 @@ jobs:
         run: python3 scripts/bench/changed.py --before "${{ github.event.before }}"
       - name: Install valgrind and expat
         if: steps.changed.outputs.run == 'true'
-        run: sudo apt-get update && sudo apt-get install -y valgrind libexpat1-dev
+        run: sudo apt-get update; sudo apt-get install -y valgrind libexpat1-dev
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         if: steps.changed.outputs.run == 'true'
         with:
@@ -788,7 +788,7 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - run: sudo apt-get update && sudo apt-get install -y clang clang-tidy clang-format
+      - run: sudo apt-get update; sudo apt-get install -y clang clang-tidy clang-format
       # A second compiler is the cheapest portability test there is, and
       # it found GCC-only warning flags being handed to every compiler
       # before any clang user did.
@@ -855,7 +855,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Install include-what-you-use
-        run: sudo apt-get update && sudo apt-get install -y iwyu
+        run: sudo apt-get update; sudo apt-get install -y iwyu
       - name: Build the libraries under it
         run: |
           cmake -S . -B biwyu -DCMAKE_BUILD_TYPE=Debug             "-DCMAKE_C_INCLUDE_WHAT_YOU_USE=include-what-you-use;-Xiwyu;--error;-Xiwyu;--mapping_file=${{ github.workspace }}/.iwyu.imp;-Wno-unknown-warning-option"
@@ -874,7 +874,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Install clang and what Infer's binary loads
-        run: sudo apt-get update && sudo apt-get install -y clang libffi8 libzstd1 zlib1g
+        run: sudo apt-get update; sudo apt-get install -y clang libffi8 libzstd1 zlib1g
       - name: Install Infer
         # The release tarball setup.sh pins, checked against its checksum.
         run: |

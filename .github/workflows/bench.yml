@@ -80,7 +80,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Install what the comparison needs
-        run: sudo apt-get update && sudo apt-get install -y valgrind libexpat1-dev clang
+        run: sudo apt-get update; sudo apt-get install -y valgrind libexpat1-dev clang
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/cfb-libs
@@ -132,7 +132,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Install what the comparison needs
-        run: sudo apt-get update && sudo apt-get install -y valgrind libexpat1-dev
+        run: sudo apt-get update; sudo apt-get install -y valgrind libexpat1-dev
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/cfb-libs
