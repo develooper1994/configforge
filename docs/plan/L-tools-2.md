@@ -10,7 +10,7 @@ maintainer's own access and are parked (docs/Plan.md, "Waits on the
 maintainer"). Each card is read cold against the tree before it opens;
 every `file:line` is of main at d14db1b (read cold 2026-11-26).
 
-Decisions D-151 to D-158 are written in the cards that decide them; the
+Decisions D-151 to D-158 and D-233 to D-236 (the safety-critical cards L-25 to L-28, written 2026-11-28) are written in the cards that decide them; the
 worker copies each into `docs/Decisions.md` (the table at its top and the
 section at its end).
 
@@ -435,3 +435,133 @@ section at its end).
 * **accept**: `ctest -R "matrix|gate.matrix"` exit 0 and the commit named exists (`git cat-file -t <commit>` prints `commit`).
 * **stop if**: a test fails on the board: a finding (a card of its own), the line is not written as `hardware`.
 * **docs**: `docs/targets.txt`; `docs/Roadmap.md` item "Arm supported well" updated by the maintainer; `docs/Plan.md` "Waits on the maintainer": the row's status.
+
+## L-25 - MC/DC measured by GCC's condition coverage, with a floor that only rises
+
+* **id**: L-25
+* **goal**: `cmake -DEXTRA=mcdc -P scripts/verify.cmake` builds the library with GCC's `-fcondition-coverage`, runs the suite, and fails when the share of covered condition outcomes in `lib/*/src/` falls under `MCDC_MIN`; CI's `coverage` job runs it and uploads the per-file report.
+* **why**: DO-178C level A and ISO 26262 ASIL D ask for MC/DC; `docs/Compliance.md`, "What the library gives a user's safety process", says it "is not measured yet" and names GCC 14's flag. Statement and branch coverage are held today (`scripts/verify.cmake:930-967`, `COVERAGE_MIN` 89, `COVERAGE_BRANCH_MIN` 80); MC/DC is the third number.
+* **needs**: nothing
+* **size**: medium
+* **version**: 2.0.0
+* **status**: open
+* **decided**:
+  * **D-233 (copy into docs/Decisions.md, "MC/DC is measured with GCC and held by a floor")**: *Question*: the tool that measures MC/DC, and what is held. *Options*: (1) GCC 14+ `-fcondition-coverage` (masking MC/DC) read from `gcov`'s JSON; (2) Clang 18+ `-fcoverage-mcdc` read from `llvm-cov`; (3) both. *Decision*: option 1. GCC is already the coverage compiler (`--coverage`, `cmake/ConfigForgeAnalysis.cmake:161-164`), `ubuntu-26.04` and the WSL distro carry GCC 15, and one number from one tool is what a ratchet needs. Clang's MC/DC limits a decision to six conditions and would be a second report to agree with. *Held*: a floor `MCDC_MIN` (percent of condition outcomes covered, all of `lib/*/src/`), set by this card to the measured value rounded down to a whole percent, raised by any card that adds tests, never lowered without the maintainer. 100% is not claimed; the per-file report shows where it is not. *Compatibility*: none.
+  * **The reader**: `scripts/check/mcdc.py <build dir> --filter <regex> --min <n> --report <file>`: Python 3 standard library only. It finds every `.gcda` under the build dir, runs `gcov --json-format --stdout --conditions <gcda>` (from the `.gcda`'s directory, as `gcov` requires), reads each file's `lines[].conditions[]` (`count`: outcomes, `covered`: covered), keeps files whose path (relative to the source root, `/` separators) matches the filter, and sums. It prints `mcdc: <covered>/<count> outcomes (<p>%) in <files> files` and exits 1 when `p < min`. `--report` writes one line a file, worst first: `<p>% <covered>/<count> <path>`. A source file compiled into two targets is summed per line, taking the larger `covered` of the two, as gcovr merges.
+  * **The build**: a `mcdc` configure, build and test preset in `CMakePresets.json` beside `coverage` (`:70-78`, `:205`, `:249`): `binaryDir` `${sourceDir}/build-mcdc`, `CF_COVERAGE` `ON`, `CF_COVERAGE_MCDC` `ON`. `CF_COVERAGE_MCDC` is a new option in `cmake/ConfigForgeAnalysis.cmake` beside `CF_COVERAGE` (`:28`); where `CF_COVERAGE` adds `--coverage` (`:161-164`), `CF_COVERAGE_MCDC` adds `-fcondition-coverage`, and configuring with it under a compiler that is not GCC 14 or later is a `FATAL_ERROR` naming the compiler and version.
+  * **verify**: in `scripts/verify.cmake`, an `elseif(x STREQUAL "mcdc")` branch after `coverage` (`:930-967`), the same shape: skipped with `mcdc                  skipped: no GCC 14` when `gcc -dumpversion` is under 14 or gcc is missing, or on MSVC; `MCDC_MIN` defaulting to the floor; steps "mcdc configure", "mcdc build", "mcdc test", "mcdc >= ${MCDC_MIN}%" (the script, `--filter "lib/[^/]*/src/"`, `--report build-mcdc/mcdc.txt`). The header comment's list of extras (`:68-70`) gets the line.
+  * **CI**: the `coverage` job (`.github/workflows/ci.yml:623-630`) gets a second `run:` with `-DEXTRA=mcdc` and an `actions/upload-artifact` step (the pinned hash the file already uses) of `build-mcdc/mcdc.txt` named `mcdc-report`, `if: always()`.
+  * **Stays out**: object-code coverage (DO-178C's level A extra); Clang's report; tests added to raise the number (other cards do that, and raise the floor).
+* **files**: `scripts/check/mcdc.py` (new), `tests/check/mcdc/` (new: a two-function C file and its `check.cmake`), `cmake/ConfigForgeAnalysis.cmake`, `CMakePresets.json`, `scripts/verify.cmake`, `.github/workflows/ci.yml`, the test registration beside the other `scripts/check` tests (find with `grep -rn "scripts/check/" tests/CMakeLists.txt cmake/ConfigForgeGates.cmake`); last: `docs/Compliance.md`, `docs/Decisions.md`, `CHANGELOG.md`, `docs/Codemap.md`.
+* **steps**:
+  1. `git switch -c work/L-25` from `batch`. In WSL, prove the JSON shape first: compile `int f(int a,int b){return a&&b;}` plus a `main` calling `f(1,1)` with `gcc -fcondition-coverage --coverage`, run, `gcov --json-format --stdout --conditions t.gcda | python3 -m json.tool | grep -A4 conditions`: it shows `count` 4 and `covered` 2 (if the fields have other names, use the real ones and write them under notes; if `gcov` has no `--conditions`, stop).
+  2. Test first: `tests/check/mcdc/` builds that file in a CMake script test `check.mcdc` (skipped with a message when the compiler is not GCC 14+), runs `mcdc.py` with `--min 50` (exit 0) and `--min 51` (exit 1). **See it fail**: no script yet, exit 1.
+  3. Write `mcdc.py`; `ctest -R check.mcdc` exits 0.
+  4. The option, the preset and the verify branch; run `cmake -DEXTRA=mcdc -DMCDC_MIN=0 -DJOBS=4 -P scripts/verify.cmake` in WSL (own work dir `/root/L-25`); read the printed percent; set the default `MCDC_MIN` to it rounded down; run again without `-DMCDC_MIN`: exit 0.
+  5. CI lines; `actionlint .github/workflows/ci.yml` exit 0.
+  6. Documents; format; codemap and apiref last; ACCEPT.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS (the option is off there; `check.mcdc` skips), ACCEPT-CI (the `coverage` job green with the artifact `mcdc-report`); `ctest -R check.mcdc` exit 0 in WSL.
+* **stop if**: `gcov` gives no condition data for the library's objects; the measured share is under 30% (write the number under notes: a sign the reader is wrong, not the tests); 60 turns.
+* **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "MC/DC measured with GCC's condition coverage and held by a floor (EXTRA=mcdc, D-233)"; `docs/Compliance.md`, "What the library gives a user's safety process", the structural-coverage item rewritten with the floor, and "Order of work"'s list of cards to write loses MC/DC; `docs/Decisions.md`: D-233.
+
+## L-26a - Each decision names the tests that hold it: the line, the table and `gate.trace`
+
+* **id**: L-26a
+* **goal**: a `**Tests.**` line in a `docs/Decisions.md` section names, in backticks, the ctest names that hold the decision; `scripts/check/trace.py` checks every named test exists and writes `docs/compliance/Trace.md`; `gate.trace` fails a section with no line that `scripts/check/trace_todo.txt` does not list; this card writes the line for the 17 sections that already have a `**Held to.**` paragraph.
+* **why**: `docs/Compliance.md`, "What the library gives a user's safety process": "every rule in `docs/Decisions.md` names the tests that hold it; a generated table from each D-number to its tests is planned". Requirements traced to tests are what DO-178C, ISO 26262 and IEC 61508 ask first; 17 of 126 sections say it in prose today (`grep -c "^\*\*Held to" docs/Decisions.md`), and nothing checks the prose.
+* **needs**: nothing
+* **size**: medium
+* **version**: 2.0.0
+* **status**: open
+* **decided**:
+  * **D-234 (copy into docs/Decisions.md, "A decision names its tests on one line, and a gate holds the names")**: *Question*: where the link from a decision to its tests lives, and how it is kept true. *Options*: (1) a tag in each test's source naming the D-number; (2) a line in each decision naming the tests; (3) a table kept by hand. *Decision*: option 2. The decision is the requirement, so its reader sees the evidence beside it; a renamed or deleted test fails the gate at once, since ctest's names are checked; tags in tests (option 1) scatter one requirement over many files and cannot say a decision has no test. The line is `**Tests.** ` followed by one or more backticked ctest names separated by `, ` and a full stop, or `**Tests.** none: <reason>.` (reason at least 12 characters) for a decision nothing can run (a naming rule, a document's shape, a decision later withdrawn). The `**Held to.**` prose stays as it is. *Compatibility*: none.
+  * **The checker**: `scripts/check/trace.py <source root> --ctest <file>` (Python 3 standard library): it reads `docs/Decisions.md`, splits it at lines matching `^## D-([0-9]+)`, takes from each section its title (the heading after the number and its dash) and the first `**Tests.**` line, and reads the set of test names from `<file>` (the output of `ctest -N` in a configured build: lines `  Test  #12: gate.index`). It fails (exit 1, one line each) on: a section with no `**Tests.**` line whose number is not in `scripts/check/trace_todo.txt` (one number a line, `D-14`); a number in the to-do list that has a line (stale); a backticked name not in the ctest set; a `none:` reason under 12 characters; two `**Tests.**` lines in one section. With `--write` it writes `docs/compliance/Trace.md`: a header ("generated by `scripts/check/trace.py`; edit docs/Decisions.md, not this page"), a count line (`<n> decisions, <t> traced to tests, <z> with none, <d> to do`), then `| Decision | Title | Tests |` one row a section in number order (to-do rows say `to do`).
+  * **The gate**: `cmake/gates/GateTrace.cmake`, as `cmake/gates/GateGuarantees.cmake` runs `guarantees.py` (`:14`): it runs `${CMAKE_CTEST_COMMAND} -N` in `${BIN}` into `${BIN}/trace-ctest.txt`, then `trace.py ${SRC} --ctest ${BIN}/trace-ctest.txt`, and regenerates `Trace.md` into `${BIN}` and fails when it differs from the committed page. Registered as `gate.trace` in `cmake/ConfigForgeGates.cmake` next to `gate.guarantees`. Only the default build's test names count: a test registered only under an option (libyaml, XML) is not named on the line; the decision names the default-build test and the prose names the rest.
+  * **This card's lines**: the 17 sections with a `**Held to.**` paragraph (`grep -n "^\*\*Held to" docs/Decisions.md`): each paragraph's named tests become the line (a test named by file, `test_wrapper_access`, becomes its ctest name, found with `ctest -N | grep`). Every other section's number goes into `trace_todo.txt` (L-26b empties it).
+  * **Stays out**: the cards' decisions not yet copied into Decisions.md (traced when copied); a test's own quality.
+* **files**: `scripts/check/trace.py` (new), `scripts/check/trace_todo.txt` (new), `cmake/gates/GateTrace.cmake` (new), `cmake/ConfigForgeGates.cmake`, `docs/Decisions.md`, `docs/compliance/Trace.md` (generated), `tests/check/trace/` (new: a three-section `Decisions.md`, a `ctest.txt`, a `todo.txt`, `check.cmake`); last: `docs/Compliance.md`, `CHANGELOG.md`, `docs/Codemap.md`.
+* **steps**:
+  1. `git switch -c work/L-26a` from `batch`.
+  2. Test first: the fixture under `tests/check/trace/`: one section traced, one `none: <reason>`, one with a name ctest lacks; `check.trace` runs `trace.py` and expects exit 1 with exactly that one complaint, then with the bad name fixed expects exit 0. **See it fail**: no script, exit 1.
+  3. Write `trace.py`; `ctest -R check.trace` exit 0.
+  4. The 17 lines; the to-do list (`python scripts/check/trace.py . --ctest <file>` prints nothing); `--write`.
+  5. The gate; `ctest --preset default -R gate.trace` exit 0. **See it fail**: rename one named test in a line to `unit.nothing`, exit 1 naming it; restore.
+  6. Documents; format; codemap last; ACCEPT.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI; `ctest --preset default -R "gate.trace|check.trace"` exit 0; `wc -l < scripts/check/trace_todo.txt` prints 109 or fewer.
+* **stop if**: a `**Held to.**` paragraph names a check that is not a ctest test (a CI job, a fuzzer run): write `none:` only if nothing in ctest holds it, and list the section under notes; 60 turns.
+* **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "Each decision names the tests that hold it; docs/compliance/Trace.md and gate.trace (D-234)"; `docs/Compliance.md`, the "Requirements traced to tests" item: "planned" becomes the page and the gate, with the to-do count; "Order of work"'s list of cards to write loses the table; `docs/Decisions.md`: D-234.
+
+## L-26b - Every decision traced: the to-do list emptied
+
+* **id**: L-26b
+* **goal**: `scripts/check/trace_todo.txt` is empty and deleted, and `gate.trace` fails any section without a `**Tests.**` line.
+* **why**: L-26a leaves about 109 sections on the to-do list; the claim "every decision names its tests" holds only when it is empty.
+* **needs**: L-26a
+* **size**: large (one commit a block of 20 sections)
+* **version**: 2.0.0
+* **status**: open
+* **decided**:
+  * **How a section is traced**: read its decision (the `**Decision.**` or `**Decided` paragraph); find the tests with `grep -rln "D-<n>\b" lib/*/tests tests` and by the names of the functions or files the section cites (`ctest -N | grep -i <word>`); name the tests whose failure would mean the decision no longer holds, at most six; when none exists and one can be written in under 30 lines, write it (its own commit, `L-26b: a test for D-<n>`); when none can, `none: <reason>` says why (a naming rule, a document, a choice of process).
+  * **No test is named to fill a line**: a named test must fail when the decision is broken; in each block of 20 the worker checks one by breaking the code by hand (reverting the relevant line) and running it, and writes which under notes.
+  * **The end**: when the list is empty, `trace.py` treats a missing list as empty; `docs/Compliance.md` may then say "every decision names the tests that hold it".
+* **files**: `docs/Decisions.md`, `scripts/check/trace_todo.txt` (emptied, then deleted), `docs/compliance/Trace.md` (generated), new tests where the first decided item allows; last: `docs/Compliance.md`, `CHANGELOG.md`.
+* **steps**:
+  1. `git switch -c work/L-26b` from `batch` (after L-26a lands).
+  2. Blocks of 20 numbers in order; each: lines written, numbers removed from the list, `trace.py --write`, `ctest -R gate.trace` exit 0, commit `L-26b: D-<a> to D-<b> traced`.
+  3. Delete the list; `ctest --preset default -R gate.trace` exit 0.
+  4. Documents; format; ACCEPT.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI; `test ! -e scripts/check/trace_todo.txt`; fewer than a third of the rows of `docs/compliance/Trace.md` say `none:`.
+* **stop if**: more than a third of the sections come out `none:` (the line is being used to excuse, not to trace: report the count); 60 turns (commits stand; a new card takes the rest of the list).
+* **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "Every decision is traced to its tests (L-26b)"; `docs/Compliance.md`'s item says so without "planned".
+
+## L-27 - The safety manual: the assumptions a user's program must hold, each pointing at its evidence
+
+* **id**: L-27
+* **goal**: `docs/compliance/safety-manual.md` states for which build the evidence holds, what a user's program must do for it to apply, and where each piece of evidence is; `gate.manual` fails when a path or a ctest name it cites does not exist.
+* **why**: `docs/Compliance.md` plans it ("the document ISO 26262 asks of a component developed out of context"; IEC 61508-3's safety manual for a compliant item is the same document); without it, the MISRA record, the proofs and the traces are evidence nobody can apply, because their conditions are not written down.
+* **needs**: L-12c, L-25, L-26a (it cites the report, the MC/DC floor and the trace page, so it is written after them)
+* **size**: medium
+* **version**: 2.0.0
+* **status**: open
+* **decided**:
+  * **D-235 (copy into docs/Decisions.md, "The safety manual is a checked document, and claims nothing it does not cite")**: *Question*: what the manual is, and what keeps it from claiming more than the tree holds. *Options*: (1) a free-text document; (2) a document whose every claim cites a file, a ctest name or a generated page, held by a gate that checks the citations exist; (3) a generated document. *Decision*: option 2: the assumptions are judgement and cannot be generated, but each must point at what shows it, and a citation that rots fails the build. *Compatibility*: none.
+  * **The sections, in order**: (1) *Scope*: the library's C core (`lib/`), not the tools, the bindings or Doctor; the version and commit the manual was last checked at (a line the maintainer updates at each release; the gate does not check it). (2) *The build the evidence is for*: the `misra` preset (`cmake/profiles/misra.cmake`), the compilers CI builds it with, and that any other configuration must be verified again by the user. (3) *Assumptions of use*, one numbered line each with its evidence: memory from a caller-supplied fixed arena (the arena's header and its tests), every `CF_NODISCARD` status checked (`gate.nodiscard`), the library never ends the program (`gate.guarantees`), the thread contract of D-14 (its section, and the TSan job), the stack bound (`docs/Limits.md`, `CF_STACK_BUDGET`), the input limits (`CF_KEY_MAX` and the others of `cmake/ConfigForgeProfile.cmake`), sources left out of the profile not linked, no allocation after initialisation when the arena is the allocator (cite the test, or say "not shown"). (4) *Evidence*: a table `| What | Where | Held by |`: MISRA record and matrix (`docs/compliance/deviations.txt`, `docs/compliance/Matrix.md`, `gate.misra`), the compliance report (L-12c), CERT (L-28's matrix when it exists, the `analyze` preset), proofs (`docs/Safety.md`, its CBMC and EVA rows), coverage (`COVERAGE_MIN`, `MCDC_MIN` in `scripts/verify.cmake`), traces (`docs/compliance/Trace.md`, `gate.trace`), failure guarantees (`docs/Guarantees.md`). (5) *Known limits*: `docs/Safety.md` "Not yet proven", the record's `backlog` count, and that no tool is qualified. (6) *What the user's process must still do*: tool qualification, integration tests on their target, their own hazard analysis. Every sentence that says something holds ends with a citation in backticks.
+  * **An assumption with no evidence**: written with "not shown" and the card that will show it, never left out and never stated as held.
+  * **The gate**: `scripts/check/manual.py <root> --ctest <file>`: every backticked token in the manual that contains `/` or ends in `.md`, `.cmake`, `.txt`, `.h` or `.c` is a path that must exist under the root (a token with `<` or `*` is a pattern and is skipped); every backticked token matching `^(gate|unit|check|gen|misra|compliance)\.[a-z0-9_.]+$` must be in the ctest set (from `ctest -N`, as `gate.trace` reads it). `cmake/gates/GateManual.cmake`, registered as `gate.manual` beside `gate.trace`.
+* **files**: `docs/compliance/safety-manual.md` (new), `scripts/check/manual.py` (new), `cmake/gates/GateManual.cmake` (new), `cmake/ConfigForgeGates.cmake`, `tests/check/manual/` (new: a manual citing one real and one missing path, `check.cmake`); last: `docs/Compliance.md`, `docs/Decisions.md`, `CHANGELOG.md`, `README.md` (one line under its compliance paragraph pointing at the manual), `docs/Codemap.md`.
+* **steps**:
+  1. `git switch -c work/L-27` from `batch` (after L-12c, L-25 and L-26a land).
+  2. Test first: the fixture and `check.manual` expecting exit 1 naming the missing path. **See it fail**: no script.
+  3. Write `manual.py`; `ctest -R check.manual` exit 0.
+  4. Write the manual section by section; each assumption's evidence found by `grep`; `python scripts/check/manual.py . --ctest <file>` exit 0.
+  5. The gate; `ctest --preset default -R gate.manual` exit 0; **see it fail** with one citation broken; restore.
+  6. Documents; format; codemap last; ACCEPT.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI; `ctest --preset default -R "gate.manual|check.manual"` exit 0.
+* **stop if**: an assumption the section list names turns out false in the tree (for example, an allocation after initialisation with the arena): write it as a known limit and report it, never soften it; 60 turns.
+* **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "The safety manual (docs/compliance/safety-manual.md), its citations held by gate.manual (D-235)"; `docs/Compliance.md`: the manual item, and "Order of work" item 6's manual half done; `docs/Decisions.md`: D-235.
+
+## L-28 - The CERT C matrix: every rule, which tool sees it, and the review for the rest
+
+* **id**: L-28
+* **goal**: `docs/compliance/Cert.md` lists every rule of the SEI CERT C Coding Standard (rules, not recommendations) with how this library is checked against it, is generated from `docs/compliance/cert.txt`, and `gate.cert` fails when the page differs from a regeneration or when the clang-tidy column names a check `clang-tidy` does not have or `.clang-tidy` disables.
+* **why**: `docs/Compliance.md:30` and "Order of work" item 4: clang-tidy's `cert-*` checks run as errors (`.clang-tidy:11`), but only some CERT rules have a check; a rule no tool sees looks the same as a rule held, unless a matrix says which is which.
+* **needs**: nothing
+* **size**: medium
+* **version**: 2.0.0
+* **status**: open
+* **decided**:
+  * **D-236 (copy into docs/Decisions.md, "The CERT C matrix is generated, and says what no tool sees")**: D-152's shape for MISRA, applied to CERT C. *Question*: what the matrix holds. *Options*: (1) a page by hand; (2) a page generated from one list with a gate; (3) nothing beyond `.clang-tidy`. *Decision*: option 2: one line a rule in `docs/compliance/cert.txt`: `<rule id> | <checked by> | <note>`; rule ids only (`ARR30-C`), not the standard's titles (the publisher's text, as D-152 decides for MISRA). `<checked by>` is one or more of, separated by `; `: `clang-tidy <check>` (an enabled `cert-*` check, as `clang-tidy --list-checks` prints it), `cppcheck <id>` (a cppcheck message id the `analyze` run treats as an error), `compiler <flag>` (a `-W` flag the build makes an error), `cbmc` or `eva` (a proof row of `docs/Safety.md`), `design D-<n>` (the library never does the thing, by a decision), `review` (a person reads for it at a release: the note says what to read), `n/a` (the library uses no such facility: the note gives the `grep` that shows it, for example `grep -rn "setjmp" lib/*/src` prints nothing). *Compatibility*: none.
+  * **The rule list**: the C rules of the standard by section (PRE, DCL, EXP, INT, FLP, ARR, STR, MEM, FIO, ENV, SIG, ERR, CON, MSC, POS, WIN). The worker builds it from two sources and never from memory: `clang-tidy --list-checks -checks='-*,cert-*'` (a C check names its rule: `cert-err33-c` is ERR33-C) and the standard's public rule index on the SEI wiki (ids only); an id found in only one of the two is checked again and, if still in doubt, is a stop.
+  * **The generator and gate**: `scripts/generate/cert_matrix.cmake` (CMake, the shape of `scripts/generate/limits.cmake`: `-DWRITE=<page>` replaces the page, `-DOUT=<file>` writes elsewhere), writing a header ("generated by `scripts/generate/cert_matrix.cmake`; edit `docs/compliance/cert.txt`"), a count of rules a kind of checking, and `| Rule | Checked by | Note |` a section. `cmake/gates/GateCert.cmake` as `gate.cert`, registered beside `gate.limits` (`cmake/ConfigForgeGates.cmake:146`): regenerates into `${BIN}` and compares; when `clang-tidy` is on the path it also checks that every `clang-tidy <check>` cell is listed by `clang-tidy --list-checks -checks='-*,cert-*'` and is not disabled in `.clang-tidy` (`:22-23` disable two); without clang-tidy it prints `gate.cert: clang-tidy column not checked, no clang-tidy` and passes that part.
+  * **Stays out**: CERT's recommendations (a card of their own if wanted); fixing a rule (a defect found while writing a row is a card of its own).
+* **files**: `docs/compliance/cert.txt` (new), `scripts/generate/cert_matrix.cmake` (new), `cmake/gates/GateCert.cmake` (new), `cmake/ConfigForgeGates.cmake`, `docs/compliance/Cert.md` (generated), `tests/check/cert/` (new fixture: three rules, one each of `clang-tidy`, `review`, `n/a`; its expected page; `check.cmake`); last: `docs/Compliance.md`, `docs/Decisions.md`, `CHANGELOG.md`, `docs/Codemap.md`.
+* **steps**:
+  1. `git switch -c work/L-28` from `batch`.
+  2. Test first: the fixture and `check.cert` comparing the generator's output with the expected page. **See it fail**: no generator.
+  3. The generator; `ctest -R check.cert` exit 0.
+  4. `cert.txt`: the clang-tidy rows first (from the check list), then each section's other rules by reading the code for the facility; `cmake -DWRITE=docs/compliance/Cert.md -P scripts/generate/cert_matrix.cmake`.
+  5. The gate; `ctest --preset default -R gate.cert` exit 0; **see it fail** with a made-up check `cert-xyz99-c` in a row; restore.
+  6. Documents; format; codemap last; ACCEPT.
+* **accept**: ACCEPT-LINUX, ACCEPT-WINDOWS, ACCEPT-CI; `ctest --preset default -R "gate.cert|check.cert"` exit 0; no row's checked-by is empty.
+* **stop if**: a rule with a `clang-tidy` check reports a finding when enabled as `.clang-tidy` enables it (a defect: under notes, a card of its own); 60 turns.
+* **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "The CERT C matrix (docs/compliance/Cert.md): every rule with how it is checked, held by gate.cert (D-236)"; `docs/Compliance.md:30` ("the matrix ... is planned") and "Order of work" item 4 done, the list of cards to write loses the CERT matrix; `docs/Decisions.md`: D-236.

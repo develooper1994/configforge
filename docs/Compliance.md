@@ -193,10 +193,10 @@ critical work (safety-critical, high-integrity), with free tools only,
 each kind of safety added in stages as far as it is feasible. Cards that
 exist for the steps below: L-12a/b/c (MISRA headers, matrix, report),
 M-20/M-21 (the evidence pack), K-2a/b (known weaknesses), K-9a-K-9i
-(failure, thread and signal guarantees). Still to be written as cards:
-MC/DC coverage (GCC 14 `-fcondition-coverage`), the table from each
-D-number to its tests with a gate, the safety manual, and the CERT C
-matrix.
+(failure, thread and signal guarantees), L-25 (MC/DC with GCC's
+`-fcondition-coverage`), L-26a/b (each D-number traced to its tests,
+`gate.trace`), L-27 (the safety manual, `gate.manual`) and L-28 (the
+CERT C matrix, `gate.cert`), written 2026-11-28.
 
 
 1. The MISRA profile preset, and cppcheck's addon run against it to

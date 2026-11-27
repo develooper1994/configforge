@@ -474,15 +474,20 @@ of a card's CI.
 | 189 | P-14 The OpenSSF Scorecard: every finding read, every one the repository can meet met | 2.0.0 | medium | nothing | open |
 | 190 | M-20 The evidence pack: the script that assembles it, with a manifest that never claims what is not there | 2.0.0 | medium | nothing | open |
 | 191 | M-21 The evidence pack in the release | 2.0.0 | small | M-20 | waits: M-20 |
-| 192 | L-17-m The `targets` jobs required | 2.0.0 | small | L-17 | parked: not now |
-| 193 | L-19-m Arm devices run, recorded with their commit | 2.0.0 | small | L-19b | parked: not now |
-| 194 | P-15-m The repository settings the Scorecard waits on (the maintainer's) | 2.0.0 | small | P-14 | parked: not now |
-| 195 | M-19-m OSS-Fuzz: the application (parked) | 2.0.0 | small | M-18 | parked: not now |
-| 196 | M-23-m Registry set-up (parked) | 2.6.0 | small | M-22 | parked: not now |
-| 197 | M-25-m Upstream submissions: vcpkg and ConanCenter (parked) | 2.6.0 | small | M-22 | parked: not now |
-| 198 | M-29-m Submissions and registry accounts (parked) | 2.3.0 | small | M-27, M-28 | parked: not now |
-| 199 | M-30-m The GitHub Action in a repository of its own (parked) | 2.3.0 | small | nothing | parked: not now |
-| 200 | G-9-m Publishing the fork and what it found | 2.3.0 | small | G-9 | parked: not now |
+| 192 | L-28 The CERT C matrix: every rule, which tool sees it, and the review for the rest | 2.0.0 | medium | nothing | open |
+| 193 | L-25 MC/DC measured by GCC's condition coverage, with a floor that only rises | 2.0.0 | medium | nothing | open |
+| 194 | L-26a Each decision names the tests that hold it: the line, the table and `gate.trace` | 2.0.0 | medium | nothing | open |
+| 195 | L-26b Every decision traced: the to-do list emptied | 2.0.0 | large | L-26a | waits: L-26a |
+| 196 | L-27 The safety manual: the assumptions a user's program must hold, each pointing at its evidence | 2.0.0 | medium | L-12c, L-25, L-26a | waits: L-12c |
+| 197 | L-17-m The `targets` jobs required | 2.0.0 | small | L-17 | parked: not now |
+| 198 | L-19-m Arm devices run, recorded with their commit | 2.0.0 | small | L-19b | parked: not now |
+| 199 | P-15-m The repository settings the Scorecard waits on (the maintainer's) | 2.0.0 | small | P-14 | parked: not now |
+| 200 | M-19-m OSS-Fuzz: the application (parked) | 2.0.0 | small | M-18 | parked: not now |
+| 201 | M-23-m Registry set-up (parked) | 2.6.0 | small | M-22 | parked: not now |
+| 202 | M-25-m Upstream submissions: vcpkg and ConanCenter (parked) | 2.6.0 | small | M-22 | parked: not now |
+| 203 | M-29-m Submissions and registry accounts (parked) | 2.3.0 | small | M-27, M-28 | parked: not now |
+| 204 | M-30-m The GitHub Action in a repository of its own (parked) | 2.3.0 | small | nothing | parked: not now |
+| 205 | G-9-m Publishing the fork and what it found | 2.3.0 | small | G-9 | parked: not now |
 <!-- index end -->
 
 ### Waits on the maintainer (skipped by the loop)
