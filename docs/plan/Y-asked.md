@@ -406,7 +406,7 @@ this answer under "Organiser's answers"). Both are copied into
 * **needs**: F-1a
 * **size**: small
 * **version**: 1.9.0
-* **status**: open
+* **status**: done (16b115d)
 * **decided**:
   * **Not inheritable, always.** Y-8 opens files with `_wfopen`'s `N` mode flag; if this card replaces that call it keeps the property: `CreateFileW` with NULL security attributes is not inheritable, and `_open_osfhandle` is given `_O_RDONLY | _O_NOINHERIT`.
   * **A measurement first, and it decides.** The card runs the measurement from a throwaway C file in the scratch directory (not added to the tree), compiled with `cl` in the Visual Studio developer prompt, on Windows: `CreateFileW(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL)`, keeping the handle open; then, from the same process, `MoveFileExW(temp, path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)`; the result and `GetLastError()` are written under the card's "notes" together with the Windows build (`ver`). Also the same with `_wfopen(path, L"rb")` as the control (it must fail, `ERROR_ACCESS_DENIED` or `ERROR_SHARING_VIOLATION`; if it succeeds the control is wrong: stop).

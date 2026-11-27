@@ -288,7 +288,7 @@ of a card's CI.
 | 11 | Y-2 `cf_platform_write_file_if`: the replace refused when the file no longer holds the bytes read (F-1c in the research) | 1.9.0 | small | F-1a | done (82ddc27) |
 | 12 | Y-8 Close-on-exec and non-inheritable everywhere the library opens a file, with a child that lists its descriptors | 1.9.0 | small | F-1a, Y-3 | waits: Y-3 |
 | 13 | Y-5 A stable read: a file read twice and compared, up to 3 reads by default (F-5c in the research) | 1.9.0 | small | nothing | open |
-| 14 | Y-6 Windows readers that share delete access, if a measurement shows a rename then succeeds over an open reader (F-5d in the research) | 1.9.0 | small | F-1a | open |
+| 14 | Y-6 Windows readers that share delete access, if a measurement shows a rename then succeeds over an open reader (F-5d in the research) | 1.9.0 | small | F-1a | done (16b115d) |
 | 15 | Y-3 `cf_locker`: a lock that plugs in, `cf_lock_none` and a kernel lock on a kept sidecar file, `cf_lock_sidecar` (F-5a in the research) | 1.9.0 | medium | F-1a | open |
 | 16 | K-9c Errors that cannot be ignored: `CF_NODISCARD` on every failure, and its gate | 1.9.0 | large | nothing | done (2c03110) |
 | 17 | K-6a A refusal's byte offset (TO DECIDE) | 2.0.0 | medium | nothing | parked |
