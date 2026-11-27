@@ -17,7 +17,7 @@ publishing to crates.io and PyPI is deferred (M-23-m): do not chase it.
    "-DDEFINES=-D__GNUC__=15|-D__GNUC_MINOR__=2" -DWRITE=ON -P
    cmake/gates/GateMisra.cmake`; the helper D:\cf-work\misra-regen.sh is
    not in the repository).
-2. `batch` (D:\cf-workatch) now holds K-9f (0ea8118) and K-9g
+2. `batch` (D:\cf-work\batch) now holds K-9f (0ea8118) and K-9g
    (c898df5), landed after local ACCEPT; no full run yet.
 3. K-9b is in flight: worktree D:\cf-work\K-9b, branch work/K-9b, cut
    from work/K-9g; its D-number is D-237. When it lands, squash it onto
