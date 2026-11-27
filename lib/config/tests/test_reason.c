@@ -341,6 +341,22 @@ static const reason_row rows[] = {
 #endif
 };
 
+/* Whether the format is read by another library (expat for XML, libyaml or
+ * libfyaml for YAML when chosen): the expected offsets are the built-in
+ * readers' own. */
+static int external_reader(const char* format) {
+    if (strcmp(format, "xml") == 0) {
+        return 1;
+    }
+#if (defined(CF_YAML_LIBYAML) && CF_YAML_LIBYAML) ||                                   \
+    (defined(CF_YAML_LIBFYAML) && CF_YAML_LIBFYAML)
+    if (strcmp(format, "yaml") == 0) {
+        return 1;
+    }
+#endif
+    return 0;
+}
+
 static void check_row(const reason_row* row, const cf_error* err) {
     char message[96];
 
@@ -357,7 +373,12 @@ static void check_row(const reason_row* row, const cf_error* err) {
     }
     sprintf(message, "%s %s: byte offset %ld, expected %ld", row->format,
             cf_reason_name(row->reason), (long)err->offset, (long)row->offset);
-    check(err->offset == row->offset, message);
+    if (external_reader(row->format)) {
+        /* the offset is the backend's: unknown, or inside the document */
+        check(err->offset == NOOFF || err->offset <= row->n, message);
+    } else {
+        check(err->offset == row->offset, message);
+    }
 }
 
 static int refuse_row(const reason_row* row) {

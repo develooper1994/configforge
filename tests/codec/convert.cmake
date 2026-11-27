@@ -274,8 +274,7 @@ endwhile()
 string(SUBSTRING "${yaml_long}" 0 ${KEY_MAX} yaml_long)
 math(EXPR yaml_key_len "${KEY_MAX} - 1")
 string(SUBSTRING "${yaml_long}" 0 ${yaml_key_len} yaml_key)
-file(WRITE ${WORK}/long-name.ini
-     "[${yaml_key}]\n${yaml_long} = 1\nkept = 2\n")
+file(WRITE ${WORK}/long-name.ini "[${yaml_key}]\n${yaml_long} = 1\nkept = 2\n")
 if(YAML)
   cv_case(
     yaml_long_key
@@ -287,7 +286,12 @@ if(YAML)
     yaml
     --out
     long-name.yaml)
-  cv_case(yaml_long_key_output 0 "-" check long-name.yaml)
+  cv_case(
+    yaml_long_key_output
+    0
+    "-"
+    check
+    long-name.yaml)
   file(READ ${WORK}/long-name.yaml yaml_out)
   cv_has("${yaml_out}" "${yaml_key}:")
   cv_has("${yaml_out}" "kept:")
@@ -304,7 +308,12 @@ foreach(fmt json5 json)
     ${fmt}
     --out
     long-name.${fmt})
-  cv_case(${fmt}_long_key_output 0 "-" check long-name.${fmt})
+  cv_case(
+    ${fmt}_long_key_output
+    0
+    "-"
+    check
+    long-name.${fmt})
   file(READ ${WORK}/long-name.${fmt} fmt_out)
   cv_has("${fmt_out}" "kept")
   cv_lacks("${fmt_out}" "${yaml_long}")
