@@ -626,7 +626,7 @@ Their decisions take the numbers after D-229 (D-224 to D-229 are F-1b's, F-2a's,
 * **needs**: K-11b
 * **size**: medium
 * **version**: 1.9.0
-* **status**: open
+* **status**: done (52d1cc3)
 * **decided**:
   * **The source of the table**: `docs/platforms.txt`, one row a line, five fields separated by `|`, `#` lines ignored (the shape of `docs/targets.txt`): `feature|probe|posix|win32|none`. `probe` is the `cf_platform_has_*` query that answers for the feature, or `-` for one with no query. Each of the last three is `yes`, `no`, or `<mode>: <text>`, a mode being `E` (the call exists and returns `CF_E_CAPABILITY`, or the query returns `CF_FALSE`) or `L` (not compiled: its use is a link error; the option that turns it off is named in the text). Rows decided now (the worker writes them in this order):
     * `files (cf_platform_fopen)|cf_platform_has_files|yes|yes|E: stdio only; with CF_NO_STDIO the call fails CF_E_CAPABILITY, "this build has no files to read"`
