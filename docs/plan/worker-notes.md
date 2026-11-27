@@ -15,3 +15,5 @@ with every brief (`python scripts/work/brief.py <id>` and this page).
 - Run the gates as ctest runs them (`ctest -R "gate\."` in a configured build, or the full verify), not a tool on the files you changed: L-23 ran cmake-lint on its new script only, and `gate.cmake.lint` then failed on main for two cache names in CMakeLists.txt (an INTERNAL cache name must match `_(CF_)?[A-Z][0-9A-Z_]*`).
 - A full-tier run is cancelled by any later push to the same branch (the workflow's concurrency group): push first, then dispatch the full run, then push nothing until it ends.
 - When two cards touch CHANGELOG.md or docs/Decisions.md at once, a merge conflicts on both sides' additions: keep both, in either order.
+
+- A card's CHANGELOG lines go under the newest `## X.Y.Z — unreleased` heading on main, whatever version the card's `docs` field names (older cards name 1.9.0 or 1.10.0, both past). No such heading yet: ask the organiser; never open a version yourself.

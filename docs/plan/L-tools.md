@@ -46,7 +46,7 @@ second opinion beside cppcheck's.
 * **why**: coverage (`EXTRA=coverage`, 89% of lines) says a line ran, not that a wrong line fails a test. The Roadmap's "Tests that are known to catch" (Suggestions of 2026-11-17) and "Next after 1.8.0" item 5 ask for mutation testing on the core and the readers, its score beside coverage; group 9 above plans Mull; 1.9.0's row in `docs/Maintaining.md` ("Versions") holds it; and the number is evidence `docs/Compliance.md` can cite.
 * **needs**: nothing
 * **size**: medium
-* **version**: 1.9.0
+* **version**: 2.0.0
 * **status**: open
 * **decided**:
   * **Measured before the card** (2026-11-26, WSL `configforge-dev`, Ubuntu 26.04.1, 12 cores, the tree at 2395d65): the plugin build takes 67 s and is clean; 97 unit tests ran under `mull-runner-21` into one SQLite report in 72 minutes; 6,896 distinct mutants in `lib/*/src`, 95.1% killed. Per component, killed of all: base 92/96 (95.8%), config 3,211/3,348 (95.9%), lanes 91/114 (79.8%), numeric 423/446 (94.8%), platform 99/100 (99.0%), port 73/73 (100%), serialize 2,204/2,345 (94.0%), text 364/374 (97.3%). The slowest tests under Mull (seconds): `test_roundtrip` 1126, `test_predict` 560, `test_serialize` 552, `test_toml` 381, `test_live` 288, `test_emit` 163, `test_threads` 147, `test_oom` 127, `test_budget` 118, `test_codec_edges` 108, `test_text_space` 105, `test_yaml` 97; every other under 90. That run used Mull's default mutators (its `mull.yml` was not found from the build directory), so these are the numbers of `cxx_default`.

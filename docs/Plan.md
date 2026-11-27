@@ -277,15 +277,15 @@ of a card's CI.
 <!-- index begin (scripts/work/index.py) -->
 | Order | Card | Version | Size | Needs | Status |
 | ----: | ---- | ------- | ----- | ----- | ------ |
-| 1 | K-6a A refusal's byte offset | 2.0.0 | medium | nothing | open |
-| 2 | K-6b A refusal's reason shown by the tools | 2.0.0 | small | nothing | open |
-| 3 | K-9a Three failure guarantees: written in every public function's header comment, listed in a table, and held by `gate.guarantees` | 2.0.0 | medium | nothing | open |
-| 4 | K-9d Guarantees written for the lower components: base, port, platform, text and serialize | 2.0.0 | medium | K-9a | waits: K-9a |
-| 5 | K-9e Guarantees written for the facade: `configforge.h` | 2.0.0 | medium | K-9a | waits: K-9a |
-| 6 | K-9f Guarantees written for sources and the key space: `cf_source.h`, `cf_keyspace.h`, `cf_entry.h`, `cf_iterate.h` | 2.0.0 | medium | K-9a | waits: K-9a |
-| 7 | K-9g Guarantees written for the rest of the configuration library, and the to-do list closed | 2.0.0 | medium | K-9a, K-9d, K-9e, K-9f | waits: K-9a |
-| 8 | K-9b Allocation faults injected into every load and write path, and what a failure leaves behind checked | 2.0.0 | large | K-9a, K-9d, K-9e, K-9f, K-9g | waits: K-9a |
-| 9 | M-10 The dynamic sizing modes: the interface | 2.0.0 | medium | nothing | open |
+| 1 | M-10 The dynamic sizing modes: the interface | 2.0.0 | medium | nothing | open |
+| 2 | K-6a A refusal's byte offset | 2.0.0 | medium | nothing | open |
+| 3 | K-6b A refusal's reason shown by the tools | 2.0.0 | small | nothing | open |
+| 4 | K-9a Three failure guarantees: written in every public function's header comment, listed in a table, and held by `gate.guarantees` | 2.0.0 | medium | nothing | open |
+| 5 | K-9d Guarantees written for the lower components: base, port, platform, text and serialize | 2.0.0 | medium | K-9a | waits: K-9a |
+| 6 | K-9e Guarantees written for the facade: `configforge.h` | 2.0.0 | medium | K-9a | waits: K-9a |
+| 7 | K-9f Guarantees written for sources and the key space: `cf_source.h`, `cf_keyspace.h`, `cf_entry.h`, `cf_iterate.h` | 2.0.0 | medium | K-9a | waits: K-9a |
+| 8 | K-9g Guarantees written for the rest of the configuration library, and the to-do list closed | 2.0.0 | medium | K-9a, K-9d, K-9e, K-9f | waits: K-9a |
+| 9 | K-9b Allocation faults injected into every load and write path, and what a failure leaves behind checked | 2.0.0 | large | K-9a, K-9d, K-9e, K-9f, K-9g | waits: K-9a |
 | 10 | M-11a Sizing in the readers and the key space | 2.0.0 | medium | M-10 | waits: M-10 |
 | 11 | M-11b `cf_error` owns its text (the 2.0 break) | 2.0.0 | large | M-11a | waits: M-11a |
 | 12 | M-12 The image header's layout, version 2 | 2.0.0 | medium | nothing | open |
@@ -450,30 +450,30 @@ of a card's CI.
 | 171 | L-16b Sequential read advice for a large file, kept only if it pays | 2.7.0 | small | nothing | open |
 | 172 | L-16c Branch hints on the readers' hot paths, kept only where they pay | 2.7.0 | medium | P-3 | waits: P-3 |
 | 173 | Y-11 `cf_live_reader`: a worker's handle that caches a snapshot, its test under ThreadSanitizer, C++ and Rust wrappers | 2.7.0 | medium | Y-10, Y-9 | waits: Y-10 |
-| 174 | L-11 Mutation testing with Mull: the score of every component beside coverage, held above a floor | 1.9.0 | medium | nothing | open |
-| 175 | L-12a The public headers with no record at all | 1.9.0 | large | nothing | open |
-| 176 | L-12b The matrix of every MISRA rule, made from the record | 1.9.0 | medium | L-12a | waits: L-12a |
-| 177 | L-12c The compliance report, attached to each release | 1.9.0 | small | L-12b | waits: L-12b |
-| 178 | L-13 verify sees the version CI sees | 1.9.0 | small | nothing | open |
-| 179 | L-15a The comparison with whole configuration libraries: time to look up | 1.9.0 | medium | nothing | open |
-| 180 | L-15b libconfig in the comparison | 1.9.0 | medium | L-15a | waits: L-15a |
-| 181 | L-17 Byte order and word size in CI: s390x, i386 and armv7 under qemu-user | 1.9.0 | medium | nothing | open |
-| 182 | L-19a A Linux arm64 job | 1.9.0 | small | nothing | open |
-| 183 | L-19b A qemu line carries its date and commit | 1.9.0 | small | L-17 | waits: L-17 |
-| 184 | L-18b The Cortex-M `.text` of each part, in a table and a gate | 1.9.0 | medium | L-18a | open |
-| 185 | P-5 A profile after every weekly benchmark, kept as an artifact and compared | 1.9.0 | medium | nothing | open |
-| 186 | P-6 A cost that should not be there: bytes per instruction across sizes and formats | 1.9.0 | medium | nothing | open |
-| 187 | P-11 Print speed in the comparison: JSON, four libraries | 1.9.0 | large | nothing | open |
-| 188 | P-12 The README leads with the lines ConfigForge wins, made by a script from the numbers | 1.9.0 | medium | P-11, P-11 | waits: P-11 |
-| 189 | P-14 The OpenSSF Scorecard: every finding read, every one the repository can meet met | 1.9.0 | medium | nothing | open |
-| 190 | M-20 The evidence pack: the script that assembles it, with a manifest that never claims what is not there | 1.9.0 | medium | nothing | open |
-| 191 | M-21 The evidence pack in the release | 1.9.0 | small | M-20 | waits: M-20 |
-| 192 | L-17-m The `targets` jobs required | 1.9.0 | small | L-17 | parked: not now |
-| 193 | L-19-m Arm devices run, recorded with their commit | 1.9.0 | small | L-19b | parked: not now |
-| 194 | P-15-m The repository settings the Scorecard waits on (the maintainer's) | 1.9.0 | small | P-14 | parked: not now |
-| 195 | M-19-m OSS-Fuzz: the application (parked) | 1.9.0 | small | M-18 | parked: not now |
-| 196 | M-23-m Registry set-up (parked) | 1.10.0 | small | M-22 | parked: not now |
-| 197 | M-25-m Upstream submissions: vcpkg and ConanCenter (parked) | 1.10.0 | small | M-22 | parked: not now |
+| 174 | L-11 Mutation testing with Mull: the score of every component beside coverage, held above a floor | 2.0.0 | medium | nothing | open |
+| 175 | L-12a The public headers with no record at all | 2.0.0 | large | nothing | open |
+| 176 | L-12b The matrix of every MISRA rule, made from the record | 2.0.0 | medium | L-12a | waits: L-12a |
+| 177 | L-12c The compliance report, attached to each release | 2.0.0 | small | L-12b | waits: L-12b |
+| 178 | L-13 verify sees the version CI sees | 2.0.0 | small | nothing | open |
+| 179 | L-15a The comparison with whole configuration libraries: time to look up | 2.0.0 | medium | nothing | open |
+| 180 | L-15b libconfig in the comparison | 2.0.0 | medium | L-15a | waits: L-15a |
+| 181 | L-17 Byte order and word size in CI: s390x, i386 and armv7 under qemu-user | 2.0.0 | medium | nothing | open |
+| 182 | L-19a A Linux arm64 job | 2.0.0 | small | nothing | open |
+| 183 | L-19b A qemu line carries its date and commit | 2.0.0 | small | L-17 | waits: L-17 |
+| 184 | L-18b The Cortex-M `.text` of each part, in a table and a gate | 2.0.0 | medium | L-18a | open |
+| 185 | P-5 A profile after every weekly benchmark, kept as an artifact and compared | 2.0.0 | medium | nothing | open |
+| 186 | P-6 A cost that should not be there: bytes per instruction across sizes and formats | 2.0.0 | medium | nothing | open |
+| 187 | P-11 Print speed in the comparison: JSON, four libraries | 2.0.0 | large | nothing | open |
+| 188 | P-12 The README leads with the lines ConfigForge wins, made by a script from the numbers | 2.0.0 | medium | P-11, P-11 | waits: P-11 |
+| 189 | P-14 The OpenSSF Scorecard: every finding read, every one the repository can meet met | 2.0.0 | medium | nothing | open |
+| 190 | M-20 The evidence pack: the script that assembles it, with a manifest that never claims what is not there | 2.0.0 | medium | nothing | open |
+| 191 | M-21 The evidence pack in the release | 2.0.0 | small | M-20 | waits: M-20 |
+| 192 | L-17-m The `targets` jobs required | 2.0.0 | small | L-17 | parked: not now |
+| 193 | L-19-m Arm devices run, recorded with their commit | 2.0.0 | small | L-19b | parked: not now |
+| 194 | P-15-m The repository settings the Scorecard waits on (the maintainer's) | 2.0.0 | small | P-14 | parked: not now |
+| 195 | M-19-m OSS-Fuzz: the application (parked) | 2.0.0 | small | M-18 | parked: not now |
+| 196 | M-23-m Registry set-up (parked) | 2.6.0 | small | M-22 | parked: not now |
+| 197 | M-25-m Upstream submissions: vcpkg and ConanCenter (parked) | 2.6.0 | small | M-22 | parked: not now |
 | 198 | M-29-m Submissions and registry accounts (parked) | 2.3.0 | small | M-27, M-28 | parked: not now |
 | 199 | M-30-m The GitHub Action in a repository of its own (parked) | 2.3.0 | small | nothing | parked: not now |
 | 200 | G-9-m Publishing the fork and what it found | 2.3.0 | small | G-9 | parked: not now |
