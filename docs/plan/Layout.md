@@ -81,7 +81,7 @@ C-10d-m (`http://`, `tcp:`), Y-13-m (a shared image across processes),
 Y-21-m (built-in inflate), Y-22-m (xz, lz4), Y-23-m (zstd dictionaries),
 Y-30-m (rules across keys), Y-32-m, Y-39-m, Y-40-m (language server),
 F-4b (`doctor graph`), G-9 and G-9-m (a fork moved onto the library),
-L-15b (libconfig), X-9, X-10, X-11, X-12, X-13, X-14 (until their TO DECIDE is answered), the
+L-15b (libconfig), the
 SIMD backend as a library of its own, the GPU.
 Waiting on the maintainer's own access: L-17-m, L-19-m, P-15-m, M-19-m,
 M-23-m, M-25-m, M-29-m, M-30-m, and the repository settings.

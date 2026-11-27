@@ -402,12 +402,12 @@ of a card's CI.
 | 125 | X-6 Bencode, read only | 2.5.0 | medium | X-5 | waits: X-5 |
 | 126 | X-7 Property lists, the binary form (bplist00) | 2.5.0 | large | X-6, X-1 | waits: X-6 |
 | 127 | X-8 Property lists, the XML form: TO DECIDE (the scanner) | 2.5.0 | large | X-7 | waits: X-7 |
-| 128 | X-9 HCL (HashiCorp Configuration Language 2), the literal subset | 2.5.0 | large | X-8 | parked: not now |
-| 129 | X-10 HOCON, without substitutions and includes | 2.5.0 | large | X-9 | parked: not now |
-| 130 | X-11 KDL (version 2) | 2.5.0 | large | X-10 | parked: not now |
-| 131 | X-12 TLV as the standards have it: DER, SIMPLE-TLV, EMV and KLV | 2.5.0 | large | nothing | parked: not now |
-| 132 | X-13 TLV as devices write it: field order, widths, an implied length, a packed head | 2.5.0 | large | X-12 | parked: not now |
-| 133 | X-14 Formats bound to a schema: Avro's container, and what the rest waits on | 2.5.0 | large | X-13 | parked: not now |
+| 128 | X-9 HCL (HashiCorp Configuration Language 2), the literal subset | 2.5.0 | large | X-8 | waits: X-8 |
+| 129 | X-10 HOCON, without substitutions and includes | 2.5.0 | large | X-9 | waits: X-9 |
+| 130 | X-11 KDL (version 2) | 2.5.0 | large | X-10 | waits: X-10 |
+| 131 | X-12 TLV as the standards have it: DER, SIMPLE-TLV, EMV and KLV | 2.5.0 | large | nothing | open |
+| 132 | X-13 TLV as devices write it: field order, widths, an implied length, a packed head | 2.5.0 | large | X-12 | waits: X-12 |
+| 133 | X-14 Formats bound to a schema: Avro's container, and what the rest waits on | 2.5.0 | large | X-13 | waits: X-13 |
 | 134 | X-15 The benchmark learns the binary formats: MiB/s for each codec | 2.5.0 | medium | X-1, X-7 | waits: X-1 |
 | 135 | X-16 The benchmark learns the text formats and the read-only ones | 2.5.0 | medium | X-15, X-8, X-11, X-5, X-14 | waits: X-15 |
 | 136 | X-17 Text handed to the sink where it lies | 2.5.0 | large | X-16, P-1 | waits: X-16 |
@@ -501,10 +501,6 @@ one that cannot be done is dropped and recorded under "Done" as dropped.
 | K-6a | 1.9.0 | answered (D-223, one error model, docs/plan/K-correctness.md); the card rewritten to it | parked |
 | K-6b | 1.9.0 | answered (D-223, one error model, docs/plan/K-correctness.md); the card rewritten to it | parked |
 | X-21 | 1.9.0 | its TO DECIDE | parked |
-| X-9 | 2.1.0 | its TO DECIDE | parked |
-| X-12 | 2.1.0 | its TO DECIDE | parked |
-| X-13 | 2.1.0 | its TO DECIDE | parked |
-| X-14 | 2.1.0 | its TO DECIDE | parked |
 | L-15b | 1.9.0 | its TO DECIDE | parked |
 | L-17-m | 1.9.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | L-19-m | 1.9.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
