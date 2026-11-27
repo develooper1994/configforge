@@ -557,3 +557,28 @@ section at its end).
   * 2026-11-27 (the worker, by the card's rule on step order: step 2 could not pass as written): a branch push is judged by what that push added (`git diff <before>..HEAD`), not by `origin/main...HEAD`; with the whole branch as the base the scripts-only commit would still carry `ci.yml` and run the core. The first push of a branch, a pull request, and a `before` that does not exist (a force-push) fall back to `origin/main...HEAD`, or to `code` when the diff fails.
   * 2026-11-27 (the worker): `work.py land` runs the full tier after `ship` and before the squash, and skips it when a green `workflow_dispatch` run of the same commit exists. A failed job of any kind refuses the squash (no style exception, as the card says); `land.sh` does the same.
   * 2026-11-27 (the worker, a finding, not a decision): a job-level `if:` that skips a matrix job reports one check named `matrix`, not `matrix (ubuntu-26.04)` and its two siblings. The ruleset requires the three names, so on a pull request a scripts-only push would show them as expected, not passed. No pull request is used (the maintainer's push to `main` bypasses the checks), so nothing stops; if pull requests are used, the ruleset needs the maintainer.
+
+## L-23 - A release's notes say how each archive was built
+
+* **id**: L-23
+* **goal**: the notes of every GitHub release end with a section "How each archive was built": for each archive (linux-musl, windows, macos, the amalgamation), the compiler and its version, the generator, the build type and every `CF_*` option with its value, read from the build itself.
+* **why**: the maintainer, 2026-11-27: "while publishing a release you can also write in its description which options it was built with"; a user picking an archive must know its profile, limits and formats without building it again.
+* **needs**: nothing
+* **size**: small
+* **version**: 1.9.0
+* **status**: open
+* **decided**:
+  * **The record.** `scripts/release/buildinfo.cmake` (new, `cmake -DBUILD=<dir> -DNAME=<archive> -DOUT=<file> -P`): reads `<dir>/CMakeCache.txt` and writes Markdown: a `### <archive>` heading, a line `C compiler: <CMAKE_C_COMPILER_ID> <CMAKE_C_COMPILER_VERSION>` (both written into the cache by a one-line `set(... CACHE INTERNAL "")` in the top `CMakeLists.txt` after `project()`, since the cache does not hold them otherwise), `Generator: <CMAKE_GENERATOR>`, `Build type: <CMAKE_BUILD_TYPE>` (or `multi-config, Release` when it is empty), then a two-column table of every cache entry whose name starts with `CF_` and is not INTERNAL, sorted by name. No other source of truth: what the cache says is what was built.
+  * **The jobs.** In `.github/workflows/release.yml`, the `linux-musl`, `windows` and `macos` jobs run it after their build on the build directory of the published archive and upload `buildinfo-<job>.md` beside their archive in the same artifact; the amalgamation job writes one too, with "the amalgamation: one C file, every option in `cf_build_options.h` at its default" and no table. `publish` appends `## How each archive was built` and the files, in the order musl, windows, macos, amalgamation, to `notes.md` before `gh release create`; the `.md` files are not attached as assets (`dist/*` excludes them: move them out of `dist/` first).
+  * **Tested before a tag.** `tests/release/buildinfo.cmake` (new) as the test `release.buildinfo`: runs the script on the test build's own directory and checks the heading, the three lines and that `CF_PATH_MAX` appears with its value.
+  * **Rejected**: listing options by hand in the CHANGELOG (goes stale); attaching the whole CMakeCache (noise, and it holds runner paths).
+* **files**: `scripts/release/buildinfo.cmake`, `tests/release/buildinfo.cmake` (new), `CMakeLists.txt` (two cache lines; the test registered where the other release tests are, `grep -rn "release\." tests/CMakeLists.txt cmake/*.cmake`), `.github/workflows/release.yml`, then `docs/Maintaining.md` ("Versions": one sentence on the notes), `scripts/README.md`.
+* **steps**:
+  1. `git switch -c work/L-23 main`. Write `tests/release/buildinfo.cmake`; see it fail: `ctest --preset default -R release.buildinfo --output-on-failure | tail -n 5` (no script).
+  2. Write the script and the two cache lines; `ctest --preset default -R release.buildinfo` exit 0.
+  3. The workflow; `ctest --preset default -R gate.actionlint` exit 0.
+  4. Prove the publish step without a tag: run the script by hand on a local Release build and paste its output into the report.
+  5. Format; commit `L-23: a release's notes say how each archive was built`; push; ACCEPT-CI (scripts and workflow: the core runs).
+* **accept**: `ctest --preset default -R "release.buildinfo|gate.actionlint"` exit 0; ACCEPT-CI; the release workflow itself is proved at the next tag (1.9.0), and the organiser reads its notes then.
+* **stop if**: a job's build directory of the published archive is not at hand after its packaging step (report which).
+* **docs**: no CHANGELOG entry needed beyond "### Added: release notes say how each archive was built (L-23)" under the newest unreleased heading; docs/Maintaining.md as in files.
