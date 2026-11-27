@@ -5495,6 +5495,46 @@ guarantees for the internal names (outside the promise); one word per header.
 
 **Status.** Built: K-9a.
 
+## D-237 — Out of memory returns `CF_E_MEMORY` on every path, proved by an exhaustive allocation sweep
+
+**Question.** D-223 point 5 asks that each failure return the right code, and
+D-232 that a failed call leave a stated state. Nothing proved either for memory
+that runs out: `test_oom.c` swept one builder run, the mapped store and the
+write, and no codec on its own, the edit, the image, the live reload, the file
+layer or `cf_derive`.
+
+**Decision.** One failing allocator and one sweep, `tests/support/cf_oom.h`
+(SQLite's test allocator): a case is a function that does the work through an
+allocator it is given; the sweep runs it once with everything allowed, which
+counts the injection points, then once for each with that allocation and every
+one after it refused. Each failure must be `CF_E_MEMORY` with a message and
+leave no block outstanding (the allocator's live count, and LeakSanitizer in the
+`sanitize` preset); the run that is allowed everything must give the same digest
+as the first. A `strong` function's case also checks the state is as it was.
+`scripts/check/oom.py` (`gate.oom`) refuses a public load or write name
+(`_create`, `_load`, `_decode`, `_write`, `_commit`, `_replace`, `_derive`,
+`_reload`, `_emit`, `_open`, `_save`; guarantee `strong` or `basic`) that has no
+line in `lib/config/tests/oom_paths.txt`: a case, an excuse (it allocates
+nothing), or `known:` for a defect not yet fixed (2.0.0 does not release while
+one remains).
+
+Two places took the default allocator and not the caller's, and the sweep could
+not reach them: `cf_edit_begin` now takes the allocator of the configuration it
+edits, and `cf_file_writer_open` takes `cf_file_options.allocator` (appended;
+NULL is `cf_default_allocator()`, as before). What the sweep found and fixed: a
+source or a document that ran out of room was reported as `CF_E_SOURCE`
+("could not be read", "key is not valid"); the arena now remembers a refusal
+(`cfi_arena_refused`) and the loader reports `CF_E_MEMORY`.
+
+Rejected: a hook in `cf_default_allocator()` or a linker interposer (a global
+mutable seam in the library, D-101); injecting I/O failures (a different card);
+a random schedule (the sweep is exhaustive and so reproducible).
+
+**Compatibility.** None for a program that passes no allocator; a program that
+built a configuration with its own now has the edit's memory from it too.
+
+**Status.** Built: K-9b.
+
 ## D-157 — The Cortex-M numbers come from a cross build of the library alone
 
 The Cortex-M build is held to numbers although no device or emulator runs the

@@ -478,6 +478,12 @@ cf_bool cf_flatten_decode(cf_flatten* f, const cf_codec* codec, const cf_blob* b
         cf_error_place(err, CF_REASON_BUDGET, 0, 0);
         return CF_FALSE;
     }
+    if (!ok && cfi_arena_refused(f->ks->arena)) {
+        /* The sink said no because it had no room, and the reader can only
+           say that what it was given was refused: a key not valid. */
+        cf_error_set(err, CF_E_MEMORY, NULL, path, "'%s': no room to read it", path);
+        return CF_FALSE;
+    }
     return ok;
 }
 

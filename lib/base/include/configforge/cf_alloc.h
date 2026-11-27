@@ -85,6 +85,12 @@ CF_API void* cf_arena_calloc(cf_arena* ar, size_t n);
    Guarantee: strong. As cf_arena_alloc; NULL also for a NULL `s`. */
 CF_NODISCARD CF_API char* cf_arena_dup(cf_arena* ar, const char* s, size_t len);
 
+/* Internal: whether the arena ever refused an allocation (the allocator
+   said no, a fixed arena was full, or the size is past what a block
+   holds). A source that failed with no reason of its own was refused
+   memory when this is true, and the error says so (K-9b). */
+cf_bool cfi_arena_refused(const cf_arena* ar);
+
 /* Guarantee: nothrow. */
 CF_API size_t cf_arena_used(const cf_arena* ar);
 /* Guarantee: nothrow. */

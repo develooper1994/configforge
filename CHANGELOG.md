@@ -7,6 +7,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- An allocator that refuses the nth allocation, swept over every load and write path (`tests/support/cf_oom.h`), and `gate.oom`, which refuses a public load or write function with no sweep case or excuse; `cf_file_options` gains `allocator` (K-9b, D-237).
 - `cf_error.offset` and `cf_error_place_at` (experimental in 2.0): a refusal's byte offset,
   as a number, in the JSON, JSON5, TOML, YAML, INI, properties, XML, CBOR and TLV readers;
   `(size_t)-1` when a reader has none (K-6a, D-138).
@@ -44,6 +45,8 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Fixed
 
+- `cf_edit_begin` and `cf_file_writer_open` take the caller's allocator, not malloc's (K-9b).
+- A source or a document that ran out of memory is reported as `CF_E_MEMORY`, not as `CF_E_SOURCE` ("could not be read", "key is not valid") (K-9b).
 - `cf_policy_text` with a NULL buffer and an empty policy, and `cf_fingerprint_step` with a NULL type, no longer read or write through the NULL (K-9g).
 - `cf_arena_alloc`, `cf_arena_calloc` and `cf_arena_dup` refuse a request too large to
   size (`SIZE_MAX` and just below) instead of serving a short block (K-9d).

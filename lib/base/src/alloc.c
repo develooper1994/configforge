@@ -83,6 +83,7 @@ struct cf_arena {
     size_t              capacity; /* bytes owned               */
     cf_bool             fixed;
     cf_bool             owns_self;
+    cf_bool             refused; /* an allocation was refused (cfi_arena_refused) */
 };
 
 static size_t cf_round_up(size_t n) {
@@ -123,6 +124,7 @@ cf_arena* cf_arena_new(const cf_allocator* a, size_t block_size) {
     ar->capacity   = 0;
     ar->fixed      = CF_FALSE;
     ar->owns_self  = CF_TRUE;
+    ar->refused    = CF_FALSE;
     return ar;
 }
 
@@ -177,7 +179,12 @@ cf_arena* cf_arena_fixed(void* buffer, size_t size) {
     ar->capacity   = b->size;
     ar->fixed      = CF_TRUE;
     ar->owns_self  = CF_FALSE;
+    ar->refused    = CF_FALSE;
     return ar;
+}
+
+cf_bool cfi_arena_refused(const cf_arena* ar) {
+    return (ar != NULL) ? ar->refused : CF_FALSE;
 }
 
 const cf_allocator* cf_arena_allocator(const cf_arena* ar) {
@@ -243,6 +250,7 @@ void* cf_arena_alloc(cf_arena* ar, size_t n) {
     }
     /* A size the rounding up would wrap is a size no block holds. */
     if (n > (size_t)-1 - CF_ALIGN_TO) {
+        ar->refused = CF_TRUE;
         return NULL;
     }
     need = cf_round_up(n == 0 ? 1 : n);
@@ -255,6 +263,7 @@ void* cf_arena_alloc(cf_arena* ar, size_t n) {
         return p;
     }
     if (ar->fixed) {
+        ar->refused = CF_TRUE;
         return NULL; /* exhausted; resolution fails cleanly */
     }
     {
@@ -263,11 +272,13 @@ void* cf_arena_alloc(cf_arena* ar, size_t n) {
         cf_block* nb;
 
         if (bs > (size_t)-1 - cf_block_header()) {
+            ar->refused = CF_TRUE;
             return NULL;
         }
         alloc_size = cf_block_header() + bs;
         nb         = (cf_block*)ar->alloc->alloc(ar->alloc->ctx, alloc_size);
         if (nb == NULL) {
+            ar->refused = CF_TRUE;
             return NULL;
         }
         nb->next = ar->head;

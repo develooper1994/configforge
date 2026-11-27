@@ -24,21 +24,22 @@
 - cf_default_allocator 39-41
 - typedef p 53
 - struct cf_block 69-76
-- struct cf_arena 78-86
-- cf_round_up 88-91
-- cf_block_header 94-96
-- cf_arena_new 98-127
-- cf_arena_fixed 129-181
-- cf_arena_allocator 183-185
-- cf_wipe 197-201
-- cf_arena_wipe 203-212
-- cf_arena_free 214-235
-- cf_arena_alloc 237-281
-- cf_arena_calloc 283-289
-- cf_arena_dup 291-306
-- cf_arena_used 308-310
-- cf_arena_capacity 312-314
-- cf_arena_is_fixed 316-318
+- struct cf_arena 78-87
+- cf_round_up 89-92
+- cf_block_header 95-97
+- cf_arena_new 99-129
+- cf_arena_fixed 131-184
+- cfi_arena_refused 186-188
+- cf_arena_allocator 190-192
+- cf_wipe 204-208
+- cf_arena_wipe 210-219
+- cf_arena_free 221-242
+- cf_arena_alloc 244-292
+- cf_arena_calloc 294-300
+- cf_arena_dup 302-317
+- cf_arena_used 319-321
+- cf_arena_capacity 323-325
+- cf_arena_is_fixed 327-329
 `lib/base/src/error.c`
 - cf_code_name 17-26
 - cf_code_description 28-37
@@ -85,7 +86,7 @@
 - struct cf_rank_names 364-367
 `lib/config/include/configforge/cf_edit.h`
 - #define CONFIGFORGE_CF_EDIT_H 26
-- typedef cf_edit 36
+- typedef cf_edit 37
 `lib/config/include/configforge/cf_emit.h`
 - #define CONFIGFORGE_CF_EMIT_H 15
 - enum cf_emit_what 26-37
@@ -308,24 +309,24 @@
 - cf_flatten_lists 436-440
 - cf_decode_budget 442-447
 - cf_flatten_budget 449-454
-- cf_flatten_decode 460-482
-- all_digits 520-531
-- seg_len 534-541
-- count_value 548-562
-- index_value 568-583
-- group_is_array 612-666
-- struct emit_ctx 668-671
-- included 673-681
-- any_included 686-695
-- run_end 699-714
-- too_deep 722-725
-- emit_group 739-766
-- emit_table 768-831
-- emit_array 836-889
-- cf_doc_emit 891-893
-- cf_doc_emit_where 895-914
-- cf_doc_emit 918-920
-- cf_doc_emit_where 922-930
+- cf_flatten_decode 460-488
+- all_digits 526-537
+- seg_len 540-547
+- count_value 554-568
+- index_value 574-589
+- group_is_array 618-672
+- struct emit_ctx 674-677
+- included 679-687
+- any_included 692-701
+- run_end 705-720
+- too_deep 728-731
+- emit_group 745-772
+- emit_table 774-837
+- emit_array 842-895
+- cf_doc_emit 897-899
+- cf_doc_emit_where 901-920
+- cf_doc_emit 924-926
+- cf_doc_emit_where 928-936
 `lib/config/src/bridge/image.c`
 - put_u32 39-44
 - put_u64 46-49
@@ -513,58 +514,59 @@
 - cf_builder_writable 1315-1331
 - config_name_of_rank 1342-1355
 - create_failed 1357-1363
-- cf_builder_create 1365-1674
-- cf_app 1676-1678
-- derive_ghost 1692-1720
-- derive_onto 1722-1830
-- cf_derive 1832-1852
-- cf_derive_in 1854-1861
-- cfi_config_keep_values 1863-1914
-- write_locked 1935-1947
-- write_authorized 1953-2050
-- write_local_keys 2056-2156
-- cf_write 2158-2207
-- cf_watch_count 2224-2226
-- cf_watch_path 2228-2233
-- cf_changed 2235-2254
-- cf_watcher_open 2258-2275
-- cf_watcher_fd 2277-2279
-- cf_watcher_handle 2281-2283
-- cf_watcher_drain 2285-2287
-- cf_watcher_wait 2289-2291
-- cf_watcher_close 2293-2295
-- cf_config_ref 2297-2301
-- cf_config_free 2303-2314
-- lookup 2320-2337
-- cf_get_bool 2339-2342
-- cf_get_int 2344-2347
-- cf_get_text 2349-2352
-- cf_get_text_n 2354-2368
-- cf_get_real 2371-2374
-- try_of 2377-2389
-- cf_try_bool 2391-2398
-- cf_try_int 2400-2407
-- cf_try_text 2409-2422
-- cf_try_real 2425-2432
-- cf_type_of 2435-2438
-- cf_has 2440-2442
-- cf_tracks_reads 2444-2446
-- cf_was_read 2448-2457
-- cf_read_count 2459-2471
-- cf_explain 2477-2486
-- cf_inspect 2488-2496
-- cf_schema 2498-2510
-- cf_digest 2512-2514
-- cf_fingerprint 2516-2519
-- cf_fingerprint_format 2521-2523
-- cf_count 2525-2527
-- cf_apply_stats 2529-2531
-- cf_sources 2533-2535
-- cf_defs 2537-2539
-- cf_explain_json 2541-2551
-- cf_report 2553-2562
-- cf_keys 2564-2566
-- cf_log_level_name 2568-2580
+- cf_builder_create 1365-1680
+- cf_app 1682-1684
+- derive_ghost 1698-1726
+- derive_onto 1728-1836
+- cf_derive 1838-1858
+- cf_derive_in 1860-1867
+- cfi_config_allocator 1869-1871
+- cfi_config_keep_values 1873-1924
+- write_locked 1945-1957
+- write_authorized 1963-2060
+- write_local_keys 2066-2166
+- cf_write 2168-2217
+- cf_watch_count 2234-2236
+- cf_watch_path 2238-2243
+- cf_changed 2245-2264
+- cf_watcher_open 2268-2285
+- cf_watcher_fd 2287-2289
+- cf_watcher_handle 2291-2293
+- cf_watcher_drain 2295-2297
+- cf_watcher_wait 2299-2301
+- cf_watcher_close 2303-2305
+- cf_config_ref 2307-2311
+- cf_config_free 2313-2324
+- lookup 2330-2347
+- cf_get_bool 2349-2352
+- cf_get_int 2354-2357
+- cf_get_text 2359-2362
+- cf_get_text_n 2364-2378
+- cf_get_real 2381-2384
+- try_of 2387-2399
+- cf_try_bool 2401-2408
+- cf_try_int 2410-2417
+- cf_try_text 2419-2432
+- cf_try_real 2435-2442
+- cf_type_of 2445-2448
+- cf_has 2450-2452
+- cf_tracks_reads 2454-2456
+- cf_was_read 2458-2467
+- cf_read_count 2469-2481
+- cf_explain 2487-2496
+- cf_inspect 2498-2506
+- cf_schema 2508-2520
+- cf_digest 2522-2524
+- cf_fingerprint 2526-2529
+- cf_fingerprint_format 2531-2533
+- cf_count 2535-2537
+- cf_apply_stats 2539-2541
+- cf_sources 2543-2545
+- cf_defs 2547-2549
+- cf_explain_json 2551-2561
+- cf_report 2563-2572
+- cf_keys 2574-2576
+- cf_log_level_name 2578-2590
 `lib/config/src/core/define.c`
 - struct cf_list_projection 22-27
 - cf_def_init_sized 29-41
@@ -984,10 +986,10 @@
 - cf_infer_scalar 1014-1036
 `lib/platform/include/configforge/cf_file.h`
 - #define CONFIGFORGE_CF_FILE_H 28
-- enum cf_buf_mode 40-45
-- enum cf_sync_mode 62-68
-- struct cf_file_options 70-83
-- typedef cf_file_writer 105
+- enum cf_buf_mode 41-46
+- enum cf_sync_mode 63-69
+- struct cf_file_options 71-87
+- typedef cf_file_writer 109
 `lib/platform/include/configforge/cf_lock.h`
 - #define CONFIGFORGE_CF_LOCK_H 12
 - struct cf_lock 24-27
@@ -1010,35 +1012,35 @@
 - #define CF_PLATFORM_NONE 53
 `lib/platform/src/file_layer.c`
 - cf_file_options_init 29-40
-- cfi_file_options 42-68
-- cfi_file_fail 70-73
-- file_dot_name 83-120
-- cfi_file_temp_name 122-135
-- cfi_file_lock_name 137-139
-- file_available 142-147
-- cf_file_replace 149-154
-- cfi_file_holds 156-193
-- cf_platform_write_file_if_hook 195-202
-- cf_platform_write_file_if 204-209
-- cf_file_writer_open 216-222
-- cf_file_writer_write 224-231
-- cf_file_writer_flush 233-237
-- cf_file_writer_sync 239-243
-- cf_file_writer_close 245-249
-- cf_platform_writer_syncs 251-254
-- cf_platform_writer_close_counted 256-264
-- cfi_file_why_stdio 268-271
-- struct cf_file_writer 273-284
-- writer_arg 286-291
-- writer_sync 294-307
-- writer_count 310-316
-- cf_file_writer_open 318-405
-- cf_file_writer_write 407-433
-- cf_file_writer_flush 435-446
-- cf_file_writer_sync 448-454
-- cf_platform_writer_syncs 456-458
-- cf_platform_writer_close_counted 460-489
-- cf_file_writer_close 491-493
+- cfi_file_options 42-71
+- cfi_file_fail 73-76
+- file_dot_name 86-123
+- cfi_file_temp_name 125-138
+- cfi_file_lock_name 140-142
+- file_available 145-150
+- cf_file_replace 152-157
+- cfi_file_holds 159-196
+- cf_platform_write_file_if_hook 198-205
+- cf_platform_write_file_if 207-212
+- cf_file_writer_open 219-225
+- cf_file_writer_write 227-234
+- cf_file_writer_flush 236-240
+- cf_file_writer_sync 242-246
+- cf_file_writer_close 248-252
+- cf_platform_writer_syncs 254-257
+- cf_platform_writer_close_counted 259-267
+- cfi_file_why_stdio 271-274
+- struct cf_file_writer 276-287
+- writer_arg 289-294
+- writer_sync 297-310
+- writer_count 313-319
+- cf_file_writer_open 321-408
+- cf_file_writer_write 410-436
+- cf_file_writer_flush 438-449
+- cf_file_writer_sync 451-457
+- cf_platform_writer_syncs 459-461
+- cf_platform_writer_close_counted 463-492
+- cf_file_writer_close 494-496
 `lib/platform/src/file_prim.h`
 - struct cfi_file_guard 50-55
 `lib/platform/src/lock.c`

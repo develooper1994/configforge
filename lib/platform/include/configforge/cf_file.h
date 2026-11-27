@@ -27,6 +27,7 @@
 #ifndef CONFIGFORGE_CF_FILE_H
 #define CONFIGFORGE_CF_FILE_H
 
+#include "configforge/cf_alloc.h"
 #include "configforge/cf_error.h"
 #include "configforge/cf_port.h"
 
@@ -80,6 +81,9 @@ typedef struct cf_file_options {
                                the target; POSIX: ignored; default 2000 */
     cf_bool append; /* cf_file_writer only: append to the file instead of truncating it;
                        default CF_FALSE */
+    /* (2.0) cf_file_writer only: where the writer and its buffer come from.
+       NULL: cf_default_allocator(). Read only where `size` reaches it. */
+    const cf_allocator* allocator;
 } cf_file_options;
 
 /* Sets every member to its default and `size`. A NULL `o` does nothing, and
@@ -87,9 +91,9 @@ typedef struct cf_file_options {
    members above is CF_E_SOURCE, `file options of an unknown size`.
    `sync_ms` needs a clock: a platform with none refuses a writer that asks
    for CF_SYNC_EVERY with sync_ms != 0 (CF_E_CAPABILITY, `this platform has
-   no clock for sync_ms`). `buffer_size` above 0 is a buffer taken from
-   cf_default_allocator() and released at the close; a build with no
-   allocator refuses it (CF_E_CAPABILITY).
+   no clock for sync_ms`). A writer, and its `buffer_size` above 0, are taken
+   from `allocator` (default: cf_default_allocator()) and released at the
+   close; a build with no allocator refuses it (CF_E_CAPABILITY).
    Guarantee: nothrow. */
 CF_API void cf_file_options_init(cf_file_options* o);
 

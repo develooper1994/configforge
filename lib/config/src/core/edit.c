@@ -38,7 +38,7 @@ cf_edit* cf_edit_begin(cf_config* c, const char* target, cf_error* err) {
                      "an edit needs a configuration and a target");
         return NULL;
     }
-    ar = cf_arena_new(cf_default_allocator(), 0);
+    ar = cf_arena_new(cfi_config_allocator(c), 0); /* NULL: the default one */
     e  = (ar != NULL) ? (cf_edit*)cf_arena_calloc(ar, sizeof *e) : NULL;
     if (e == NULL) {
         cf_arena_free(ar);

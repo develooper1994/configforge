@@ -107,6 +107,8 @@ function(configforge_add_gates tgt)
   # top-level token is read-only (scripts/check/fetches.py, permissions.py).
   # Every public function whose result reports a failure is CF_NODISCARD
   # (scripts/check/nodiscard.py).
+  # Every public load or write function has an allocation sweep or an excuse
+  # (scripts/check/oom.py, lib/config/tests/oom_paths.txt).
   # Every public options struct has size first and an _init function, and
   # every CF_MAX_* macro says where its limit went (scripts/check/options.py).
   # Every platform function and query has a row and a definition on each
@@ -117,6 +119,7 @@ function(configforge_add_gates tgt)
     Fetches
     Nodiscard
     Guarantees
+    Oom
     Options
     Platforms
     Permissions

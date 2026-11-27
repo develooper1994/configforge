@@ -23,6 +23,7 @@ foreach(
   port
   numeric
   base
+  platform
   text
   serialize
   config

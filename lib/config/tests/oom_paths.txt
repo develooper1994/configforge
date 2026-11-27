@@ -1,0 +1,33 @@
+# The allocation sweep of every public load or write name (K-9b, D-237):
+#   name|file:function    the case: the function is in lib/*/tests/<file> and calls cf_oom_sweep
+#   name|-|reason         it allocates nothing, or is covered through another name
+#   name|known: why       the sweep found a defect not yet fixed (2.0.0 does not release with one)
+# scripts/check/oom.py reads this; gate.oom refuses a public name that has no line.
+cf_builder_create|test_oom_paths.c:test_builder_document
+cf_builder_open|test_oom_paths.c:test_builder_document
+cf_codec_decode|test_oom_decode.c:sweep_codec
+cf_derive|test_oom_paths.c:test_derive
+cf_derive_in|test_oom_paths.c:test_derive
+cf_edit_commit|test_oom_paths.c:test_edit_commit
+cf_emit|test_oom_paths.c:test_emit
+cf_file_replace|-|allocates nothing: it takes no allocator and names its temporary on the stack
+cf_file_writer_close|test_oom_file.c:test_file_writer
+cf_file_writer_flush|-|allocates nothing: the writer's stream is flushed, no block is taken
+cf_file_writer_open|test_oom_file.c:test_file_writer
+cf_file_writer_sync|-|allocates nothing: the writer's stream is synced, no block is taken
+cf_file_writer_write|test_oom_file.c:test_file_writer
+cf_image_load|test_oom_paths.c:test_image
+cf_image_open|test_oom_paths.c:test_image
+cf_image_write|test_oom_paths.c:test_image
+cf_live_commit|test_oom_paths.c:test_live_commit
+cf_live_open|test_oom_paths.c:test_live_open
+cf_live_open_with|test_oom_paths.c:test_live_open
+cf_live_reload|test_oom.c:test_list_reload_sweep
+cf_platform_has_private_create|-|a query of the platform: allocates nothing
+cf_report_key_write|-|renders into the caller's buffer, and has no allocator argument
+cf_report_write|-|renders into the caller's buffer, and has no allocator argument
+cf_schema_write|-|renders into the caller's buffer, and has no allocator argument
+cf_sink_write|-|writes into the caller's buffer through a cf_sink: allocates nothing
+cf_source_load|-|every source is loaded by cf_builder_create, whose cases sweep the document, file, directory and .env sources
+cf_watcher_open|test_oom_paths.c:test_watcher_open
+cf_write|test_oom.c:test_list_write_sweep

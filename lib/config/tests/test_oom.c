@@ -31,39 +31,7 @@
 
 #include "cf_test.h"
 
-/* ---------------------------------------------------------------- *
- * An allocator that gives up on cue
- * ---------------------------------------------------------------- */
-
-typedef struct failing {
-    size_t budget; /* allocations to allow before refusing */
-    size_t calls;  /* how many were asked for             */
-    size_t live;   /* outstanding blocks, for leak detection */
-} failing;
-
-static void* failing_alloc(void* ctx, size_t n) {
-    failing* f = (failing*)ctx;
-    void*    p;
-
-    ++f->calls;
-    if (f->budget == 0) {
-        return NULL;
-    }
-    --f->budget;
-    p = malloc(n);
-    if (p != NULL) {
-        ++f->live;
-    }
-    return p;
-}
-
-static void failing_release(void* ctx, void* p) {
-    failing* f = (failing*)ctx;
-    if (p != NULL) {
-        --f->live;
-        free(p);
-    }
-}
+#include "cf_oom.h" /* the allocator and the sweep, shared (K-9b) */
 
 /* ---------------------------------------------------------------- *
  * The run under test
@@ -79,8 +47,6 @@ static char  e0[]    = "MYAPP_DB__PASSWORD=secret";
 static char  e1[]    = "MYAPP_LOG__LEVEL=debug";
 static char* g_env[] = {e0, e1, NULL};
 
-typedef enum outcome { OUT_NO_BUILDER = 0, OUT_NO_CONFIG, OUT_COMPLETE } outcome;
-
 /* `extra` is how many additional keys a memory source supplies.
    A small configuration takes five blocks from the allocator, which is
    five injection points; a few hundred keys take dozens, and every one
@@ -91,21 +57,19 @@ typedef enum outcome { OUT_NO_BUILDER = 0, OUT_NO_CONFIG, OUT_COMPLETE } outcome
    a good reason - below that each block spends most of itself on its
    own header - and lowering a floor so a test can reach further is
    bending the library to suit the test. */
-static outcome run_with(failing* f, size_t extra, cf_u64* digest, cf_error* err) {
-    cf_allocator alloc;
-    cf_builder*  b;
-    cf_config*   c;
-    static char  scratch[2048];
-    outcome      result;
-
-    alloc.alloc   = failing_alloc;
-    alloc.release = failing_release;
-    alloc.ctx     = f;
+static int try_build(void* ctx, const cf_allocator* alloc, cf_u64* digest,
+                     cf_error* err) {
+    size_t      extra = *(size_t*)ctx;
+    cf_builder* b;
+    cf_config*  c;
+    static char scratch[2048];
 
     *digest = 0;
-    b       = cf_build(&alloc);
+    b       = cf_build(alloc);
     if (b == NULL) {
-        return OUT_NO_BUILDER;
+        /* No builder to hold a reason: the refusal is the NULL itself. */
+        cf_error_set(err, CF_E_MEMORY, NULL, NULL, "no room for a builder");
+        return CF_OOM_FAILED;
     }
     cf_builder_cli(b, "cli", CF_RANK_CLI, 4, g_argv);
     cf_builder_env(b, "env", CF_RANK_ENV, "MYAPP_", g_env);
@@ -134,7 +98,7 @@ static outcome run_with(failing* f, size_t extra, cf_u64* digest, cf_error* err)
 
     c = cf_builder_create(b, err);
     if (c == NULL) {
-        return OUT_NO_CONFIG;
+        return CF_OOM_FAILED;
     }
 
     /* It said it worked, so everything it promised holds. A snapshot
@@ -155,9 +119,8 @@ static outcome run_with(failing* f, size_t extra, cf_u64* digest, cf_error* err)
     (void)cf_emit(c, "json", CF_EMIT_ALL, 0, scratch, sizeof scratch, err);
 
     *digest = cf_digest(c);
-    result  = OUT_COMPLETE;
     cf_config_free(c);
-    return result;
+    return CF_OOM_DONE;
 }
 
 /* ---------------------------------------------------------------- */
@@ -180,117 +143,59 @@ static void note_count(size_t n) {
 }
 
 static void sweep(size_t extra, const char* what) {
-    cf_u64 reference = 0;
-    cf_u64 digest    = 0;
-    size_t budget;
-    size_t total_calls;
-    size_t first_success   = 0;
-    int    silent_failures = 0;
-    int    leaks           = 0;
-    int    found_success   = 0;
-
-    {
-        failing  f;
-        cf_error err = CF_ERROR_INIT;
-        f.budget     = (size_t)-1;
-        f.calls      = 0;
-        f.live       = 0;
-        check(run_with(&f, extra, &reference, &err) == OUT_COMPLETE, what);
-        check(f.live == 0, "and leaves nothing outstanding");
-        total_calls = f.calls;
-        note_count(total_calls);
-    }
-
     /* Every allocation the library makes, refused in turn. */
-    for (budget = 0; budget <= total_calls + 2; ++budget) {
-        failing  f;
-        cf_error err = CF_ERROR_INIT;
-        outcome  o;
-
-        f.budget = budget;
-        f.calls  = 0;
-        f.live   = 0;
-
-        o = run_with(&f, extra, &digest, &err);
-
-        if (o == OUT_COMPLETE) {
-            if (!found_success) {
-                found_success = 1;
-                first_success = budget;
-            }
-            /* Succeeding with fewer allocations must not mean a
-               different configuration. A digest that moved with the
-               budget would mean something had been dropped quietly. */
-            if (digest != reference) {
-                check(0, "the configuration does not depend on how many "
-                         "allocations were available");
-                break;
-            }
-        } else if (o == OUT_NO_CONFIG && err.message[0] == '\0') {
-            ++silent_failures;
-        }
-
-        /* An arena releases everything it took, including on the paths
-           where construction gave up half way. */
-        if (f.live != 0) {
-            ++leaks;
-        }
-    }
-
-    check(silent_failures == 0, "every refusal came with a reason");
-    check(leaks == 0, "and released every block it had taken");
-    check(found_success, "a large enough budget works");
-    printf("  %s: %u allocations, first success at %u\n", what, (unsigned)total_calls,
-           (unsigned)first_success);
+    note_count(cf_oom_sweep(what, try_build, &extra));
 }
 
 /* The same sweep for the reading side, where a caller supplies the
-   allocator for something built after construction. */
-static void test_sweep_with_sources(void) {
-    size_t budget;
-    int    silent = 0;
-    int    leaks  = 0;
+   allocator for something built after construction. An arena that exists
+   may still refuse everything after its first block, which is the path a
+   source takes when the machine fills up while it is reading. */
+static int try_keyspace(void* ctx, const cf_allocator* alloc, cf_u64* digest,
+                        cf_error* err) {
+    cf_arena*   ar;
+    cf_keyspace ks;
+    cf_value    v;
+    size_t      i;
+    int         rc = CF_OOM_DONE;
 
-    for (budget = 0; budget < 40; ++budget) {
-        failing      f;
-        cf_allocator alloc;
-        cf_arena*    ar;
-
-        f.budget      = budget;
-        f.calls       = 0;
-        f.live        = 0;
-        alloc.alloc   = failing_alloc;
-        alloc.release = failing_release;
-        alloc.ctx     = &f;
-
-        ar = cf_arena_new(&alloc, 0);
-        if (ar != NULL) {
-            cf_keyspace ks;
-            /* An arena that exists may still refuse everything after
-               its first block, which is the path a source takes when
-               the machine fills up while it is reading. */
-            if (cf_ks_init(&ks, ar, 64)) {
-                cf_value v;
-                size_t   i;
-                cf_value_int(&v, 1);
-                for (i = 0; i < 500; ++i) {
-                    char   key[32];
-                    size_t n = cf_fmt(key, sizeof key, "k.%zu", i);
-                    if (!cf_ks_add(&ks, key, n, 0, &v, NULL)) {
-                        break; /* refused, which is the correct answer */
-                    }
-                }
-                (void)cf_ks_resolve(&ks);
-                (void)cf_ks_count(&ks);
-            }
-            cf_arena_free(ar);
-        }
-        if (f.live != 0) {
-            ++leaks;
+    (void)ctx;
+    *digest = 0;
+    ar      = cf_arena_new(alloc, 0);
+    if (ar == NULL) {
+        cf_error_set(err, CF_E_MEMORY, NULL, NULL, "no room for an arena");
+        return CF_OOM_FAILED;
+    }
+    if (!cf_ks_init(&ks, ar, 64)) {
+        cf_error_set(err, CF_E_MEMORY, NULL, NULL, "no room for a key space");
+        cf_arena_free(ar);
+        return CF_OOM_FAILED;
+    }
+    cf_value_int(&v, 1);
+    for (i = 0; i < 500; ++i) {
+        char   key[32];
+        size_t n = cf_fmt(key, sizeof key, "k.%zu", i);
+        if (!cf_ks_add(&ks, key, n, 0, &v, NULL)) {
+            /* refused, which is the correct answer */
+            cf_error_set(err, CF_E_MEMORY, NULL, NULL, "no room for key %u",
+                         (unsigned)i);
+            rc = CF_OOM_FAILED;
+            break;
         }
     }
-    check(silent == 0, "no silent refusal");
-    check(leaks == 0, "an arena releases every block on every path");
+    if (rc == CF_OOM_DONE && !cf_ks_resolve(&ks)) {
+        cf_error_set(err, CF_E_MEMORY, NULL, NULL, "no room to resolve the key space");
+        rc = CF_OOM_FAILED;
+    }
+    if (rc == CF_OOM_DONE) {
+        *digest = (cf_u64)cf_ks_count(&ks);
+    }
+    cf_arena_free(ar);
+    return rc;
+}
+
+static void test_sweep_with_sources(void) {
+    (void)cf_oom_sweep("a key space of five hundred keys", try_keyspace, NULL);
 }
 
 struct oom_list_input {
@@ -324,12 +229,18 @@ static const cf_source_vtable oom_store_vt = {
     sizeof(cf_source_vtable), "test-store", oom_store_load, NULL, NULL,
     oom_store_write};
 
+/* The build function is the caller's, and "no builder" is all it can
+   say to cf_live_reload when cf_build was refused: the library cannot
+   tell that from a caller that declined. The case knows. */
+static int g_build_refused;
+
 static cf_builder* oom_list_build(void* user) {
     struct oom_list_input* input = (struct oom_list_input*)user;
     cf_builder*            b     = cf_build(input->allocator);
     cf_def                 d;
     cf_value               v;
     if (b == NULL) {
+        g_build_refused = 1;
         return NULL;
     }
     cf_def_init(&d, CF_TYPE_TEXT, "tags");
@@ -355,121 +266,112 @@ static cf_builder* oom_list_build(void* user) {
     return b;
 }
 
-static void test_list_reload_sweep(void) {
-    static const cf_pair before[] = {
-        {"tags.count", "1"}, {"tags.0", "$${literal}"}, {"level", "old"}};
-    static const cf_pair after[] = {
-        {"tags.count", "2"}, {"tags.0", "new"}, {"tags.1", "extra"}, {"level", "new"}};
-    size_t  budget, refused = 0;
-    cf_bool complete = CF_FALSE;
-    for (budget = 0; budget < 128; ++budget) {
-        failing               f;
-        cf_allocator          alloc;
-        struct oom_list_input input;
-        cf_live*              live;
-        cf_config*            c;
-        cf_live_result        result;
-        cf_error              err = CF_ERROR_INIT;
-        cf_u64                digest;
-        f.budget = (size_t)-1;
-        f.calls = f.live = 0;
-        alloc.alloc      = failing_alloc;
-        alloc.release    = failing_release;
-        alloc.ctx        = &f;
-        input.allocator  = &alloc;
-        input.pairs      = before;
-        input.count      = 3;
-        input.writable   = CF_FALSE;
-        live = cf_live_open(CF_LIVE_MANUAL, oom_list_build, NULL, &input, &alloc, &err);
-        check(live != NULL, "open the list before injecting reload failures");
-        if (live == NULL) {
-            break;
-        }
-        c      = cf_live_get(live);
-        digest = cf_digest(c);
-        cf_config_free(c);
-        input.pairs = after;
-        input.count = 4;
-        f.budget    = budget;
-        result      = cf_live_reload(live, &err);
-        c           = cf_live_get(live);
-        if (result == CF_LIVE_FAILED) {
-            ++refused;
-            check(err.code != CF_OK && err.message[0] != '\0' &&
-                      cf_digest(c) == digest && cf_live_generation(live) == 1,
-                  "a failed list reload reports why and leaves the running snapshot "
-                  "intact");
-        } else {
-            check(
-                result == CF_LIVE_SWAPPED && cf_get_int(c, "tags.count", -1) == 2 &&
-                    strcmp(cf_get_text(c, "tags.1", ""), "${literal}") == 0 &&
-                    strcmp(cf_get_text(c, "level", ""), "new") == 0,
-                "a successful reload keeps the complete list, never a partial overlay");
-            complete = f.budget > 0;
-        }
-        cf_config_free(c);
-        cf_live_close(live);
-        check(f.live == 0,
-              "every failed or successful list reload releases its allocations");
-        if (complete) {
-            break;
-        }
+static const cf_pair g_reload_before[] = {
+    {"tags.count", "1"}, {"tags.0", "$${literal}"}, {"level", "old"}};
+static const cf_pair g_reload_after[] = {
+    {"tags.count", "2"}, {"tags.0", "new"}, {"tags.1", "extra"}, {"level", "new"}};
+
+/* The configuration is opened with every allocation allowed; only the
+   reload is refused. */
+static int try_list_reload(void* ctx, const cf_allocator* alloc, cf_u64* digest,
+                           cf_error* err) {
+    struct oom_list_input input;
+    cf_live*              live;
+    cf_config*            c;
+    cf_live_result        result;
+    cf_u64                before;
+    int                   rc = CF_OOM_DONE;
+
+    (void)ctx;
+    *digest = 0;
+    cf_oom_pause(alloc);
+    input.allocator = alloc;
+    input.pairs     = g_reload_before;
+    input.count     = 3;
+    input.writable  = CF_FALSE;
+    live = cf_live_open(CF_LIVE_MANUAL, oom_list_build, NULL, &input, alloc, err);
+    check(live != NULL, "open the list before injecting reload failures");
+    if (live == NULL) {
+        return CF_OOM_BAD;
     }
-    check(refused > 0 && complete,
-          "reload sweep reaches failure and unconstrained success");
+    c      = cf_live_get(live);
+    before = cf_digest(c);
+    cf_config_free(c);
+    input.pairs     = g_reload_after;
+    input.count     = 4;
+    g_build_refused = 0;
+    cf_oom_resume(alloc);
+
+    result = cf_live_reload(live, err);
+    c      = cf_live_get(live);
+    if (result == CF_LIVE_FAILED) {
+        if (g_build_refused && err->code == CF_E_SOURCE) {
+            cf_error_set(err, CF_E_MEMORY, NULL, NULL, "no room for a builder");
+        }
+        check(cf_digest(c) == before && cf_live_generation(live) == 1,
+              "a failed list reload leaves the running snapshot intact");
+        rc = CF_OOM_FAILED;
+    } else {
+        check(result == CF_LIVE_SWAPPED && cf_get_int(c, "tags.count", -1) == 2 &&
+                  strcmp(cf_get_text(c, "tags.1", ""), "${literal}") == 0 &&
+                  strcmp(cf_get_text(c, "level", ""), "new") == 0,
+              "a successful reload keeps the complete list, never a partial overlay");
+        *digest = cf_digest(c);
+    }
+    cf_config_free(c);
+    cf_live_close(live);
+    return rc;
+}
+
+static void test_list_reload_sweep(void) {
+    (void)cf_oom_sweep("a list reload", try_list_reload, NULL);
+}
+
+/* The configuration is built with every allocation allowed; only the
+   write is refused. */
+static int try_list_write(void* ctx, const cf_allocator* alloc, cf_u64* digest,
+                          cf_error* err) {
+    struct oom_list_input input;
+    cf_config*            c;
+    cf_write_item         item;
+    cf_u64                before;
+    int                   rc = CF_OOM_DONE;
+
+    (void)ctx;
+    *digest = 0;
+    cf_oom_pause(alloc);
+    memset(&input, 0, sizeof input);
+    input.allocator = alloc;
+    input.writable  = CF_TRUE;
+    c               = cf_builder_create(oom_list_build(&input), err);
+    check(c != NULL, "build the list before injecting write failures");
+    if (c == NULL) {
+        return CF_OOM_BAD;
+    }
+    before   = cf_digest(c);
+    item.key = "tags.1";
+    item.op  = CF_WRITE_SET;
+    cf_value_text(&item.value, "new", 3);
+    g_oom_writes = 0;
+    cf_oom_resume(alloc);
+
+    if (!cf_write(c, "store", &item, 1, NULL, err)) {
+        check(g_oom_writes == 0,
+              "a failed write never calls the source with partial mapped keys");
+        rc = CF_OOM_FAILED;
+    } else {
+        check(g_oom_writes == 1, "a successful write calls its source exactly once");
+    }
+    check(cf_digest(c) == before && cf_get_int(c, "tags.count", -1) == 2 &&
+              strcmp(cf_get_text(c, "tags.1", ""), "stored") == 0,
+          "write authorization and mapping never mutate the read snapshot");
+    *digest = cf_digest(c);
+    cf_config_free(c);
+    return rc;
 }
 
 static void test_list_write_sweep(void) {
-    size_t  budget, refused = 0;
-    cf_bool complete = CF_FALSE;
-    for (budget = 0; budget < 128; ++budget) {
-        failing               f;
-        cf_allocator          alloc;
-        struct oom_list_input input;
-        cf_config*            c;
-        cf_write_item         item;
-        cf_error              err = CF_ERROR_INIT;
-        cf_u64                digest;
-        f.budget = (size_t)-1;
-        f.calls = f.live = 0;
-        alloc.alloc      = failing_alloc;
-        alloc.release    = failing_release;
-        alloc.ctx        = &f;
-        memset(&input, 0, sizeof input);
-        input.allocator = &alloc;
-        input.writable  = CF_TRUE;
-        c               = cf_builder_create(oom_list_build(&input), &err);
-        check(c != NULL, "build the list before injecting write failures");
-        if (c == NULL) {
-            break;
-        }
-        digest   = cf_digest(c);
-        item.key = "tags.1";
-        item.op  = CF_WRITE_SET;
-        cf_value_text(&item.value, "new", 3);
-        g_oom_writes = 0;
-        f.budget     = budget;
-        if (!cf_write(c, "store", &item, 1, NULL, &err)) {
-            ++refused;
-            check(err.code == CF_E_MEMORY && err.message[0] != '\0' &&
-                      g_oom_writes == 0,
-                  "a failed write never calls the source with partial mapped keys");
-        } else {
-            check(g_oom_writes == 1,
-                  "a successful write calls its source exactly once");
-            complete = f.budget > 0;
-        }
-        check(cf_digest(c) == digest && cf_get_int(c, "tags.count", -1) == 2 &&
-                  strcmp(cf_get_text(c, "tags.1", ""), "stored") == 0,
-              "write authorization and mapping never mutate the read snapshot");
-        cf_config_free(c);
-        check(f.live == 0, "a mapped write releases every temporary allocation");
-        if (complete) {
-            break;
-        }
-    }
-    check(refused > 0 && complete,
-          "write sweep reaches failure and unconstrained success");
+    (void)cf_oom_sweep("a mapped write", try_list_write, NULL);
 }
 
 int main(void) {

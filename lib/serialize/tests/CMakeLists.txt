@@ -3,7 +3,7 @@
 cf_component_tests(serialize configforge_serialize)
 
 # D-109: what each format can hold, held to what its codec says.
-cf_unit_tests(test_holds test_text_escape)
+cf_unit_tests(test_holds test_text_escape test_oom_decode)
 # A-7: its YAML cases are the built-in parser's: the test must know when
 # libyaml or libfyaml reads instead.
 if(_CF_YAML_LIBYAML)

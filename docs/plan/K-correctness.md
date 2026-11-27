@@ -689,8 +689,31 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **accept**: ACCEPT-LINUX (including the `sanitize` preset), ACCEPT-WINDOWS, ACCEPT-CI; `ctest --preset default -R "gate.oom|gate.guarantees|test_oom"` exit 0; `gate.abi` shows one addition at most (the appended `cf_file_options` member is not a symbol); the existing `test_oom.c` checks unchanged.
 * **stop if**: the worker passes 60 turns (the commits stand and the cases left go to a second card, K-9b's notes name which); a path cannot be failed by the allocator because it calls `malloc` directly (`gate.symbols` should have refused it: report the file and line, add nothing); a fix needs a change to a public signature (as decided: listed as known, reported); three failures of the same step.
 * **Organiser's answers** (2026-11-28): the D-number is D-237 (D-233 to D-236 are taken by L-25 to L-28, not yet copied into Decisions.md). The branch is cut from work/K-9g, not main (cards land on `batch`).
+* **Organiser's answers** (2026-11-28, under the maintainer's standing approval): `cf_file_replace`, `cf_report_*`, `cf_schema_write`, `cf_file_writer_flush`/`_sync` and `cf_sink_write` allocate nothing and are excuses in `oom_paths.txt`; `cf_image_write` is swept inside the image case; `cf_edit_commit`'s case checks an in-memory target, so it runs in every build; a NULL builder from a caller's build function stays `CF_E_SOURCE` (the library cannot know why) and the live cases map it themselves. Three defects fixed with their cases: a source out of memory reported `CF_E_SOURCE`; a document its sink had no room for reported an invalid key; `cf_edit_begin` and `cf_file_writer_open` took another allocator than the caller's. Two checks left to K-9j.
 * **notes**: K-9f found (2026-11-28): `cf_ks_add_candidate` can return false after the candidate was added, leaving it without its `written` text; the allocation sweep should show it and fix it to strong or keep it basic with a test.
 * **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "An allocator that refuses the nth allocation, swept over every load and write path, and `gate.oom` (K-9b)"; "### Fixed": "`cf_edit_begin` and `cf_file_writer_open` take the caller's allocator, not malloc's (K-9b)" and one line a defect the sweep found; `docs/Safety.md` as above; `docs/Decisions.md`: the next free D-number after K-9a's, "Out of memory returns `CF_E_MEMORY` on every path, proved by an exhaustive allocation sweep".
+
+## K-9j - The two checks K-9b left: a builder given its source again, and a candidate added without its text
+
+* **id**: K-9j
+* **goal**: two cases join the sweep in `lib/config/tests/test_oom_paths.c`: after each refused allocation of `cf_builder_create` with `cf_builder_document`, the same builder is given the same source again under the real allocator and builds the configuration a clean run builds (its `cf_digest` equal); and `cf_ks_add_candidate`, refused at each allocation, either leaves the key space without the candidate or leaves it with its `written` text, never one without the other.
+* **why**: K-9b's card asked for the first ("`cf_builder_create` (`strong` for the builder): the builder can be given its source again") and K-9f found the second (`cf_ks_add_candidate` can return false after the candidate was added); K-9b's sweep does not reach it because a failed build drops the key space.
+* **needs**: K-9b
+* **size**: small
+* **version**: 2.0.0
+* **status**: open
+* **decided**:
+  * **The builder case**: one function `oom_builder_again` with the sweep of `tests/support/cf_oom.h`; the clean digest is taken first; each refused run is followed by the retry; a retry that fails or gives another digest is a defect, fixed (test first) when under 40 lines, else a line `cf_builder_create|known: <why>` in `lib/config/tests/oom_paths.txt` and the card's notes.
+  * **The candidate case**: calls `cf_ks_add_candidate` directly on a key space made from the failing allocator (as `lib/config/tests/test_keyspace.c` makes one; find its helper with `grep -n "cf_ks_" lib/config/tests/test_keyspace.c`); after a refusal the candidate is looked up: absent, or present with `written` set. Present without `written` is the defect K-9f named: the fix adds the candidate only after its text is copied (the order of the two steps in `cf_ks_add_candidate`, `lib/config/src`; find with `grep -rn "cf_ks_add_candidate" lib/config/src`), and its guarantee in `cf_keyspace.h` becomes `strong`.
+* **files**: `lib/config/tests/test_oom_paths.c`, `lib/config/tests/oom_paths.txt`, the key-space source and `lib/config/include/configforge/cf_keyspace.h` if the defect is fixed; `CHANGELOG.md` ("### Fixed" when it is).
+* **steps**:
+  1. `git switch -c work/K-9j` from `batch`.
+  2. The two cases; **see them fail** (or pass, and say so under notes).
+  3. The fixes, each its own commit; `ctest --preset default -R "test_oom|gate.oom|gate.guarantees"` exit 0, and the same in `sanitize`.
+  4. Format; codemap and apiref last; ACCEPT.
+* **accept**: ACCEPT-LINUX (with `sanitize`), ACCEPT-WINDOWS, ACCEPT-CI.
+* **stop if**: a fix needs a signature change (a `known:` line, reported); 60 turns.
+* **docs**: `CHANGELOG.md` when a defect is fixed.
 
 ## K-9h - Thread, signal and allocation lines beside the guarantee, held by `gate.guarantees`
 

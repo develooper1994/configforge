@@ -25,6 +25,7 @@
 #ifndef CONFIGFORGE_CF_EDIT_H
 #define CONFIGFORGE_CF_EDIT_H
 
+#include "configforge/cf_alloc.h"
 #include "configforge/cf_port.h"
 #include "configforge/cf_error.h"
 
@@ -37,8 +38,9 @@ typedef struct cf_edit cf_edit;
 
 /* A change to `target`, a source of `c` by name. The edit keeps its own
    reference to `c`. NULL, with `err` saying why, when `c` or `target`
-   is NULL or there is no memory - an edit allocates from the default
-   allocator, also for a configuration built in an arena. Whether the
+   is NULL or there is no memory - an edit allocates from the allocator the
+   configuration was built with, and from the default one for a
+   configuration built in a fixed buffer, which has none. Whether the
    source exists, can be written and may be, is asked at commit with the
    rest, so every refusal comes from one place.
    Guarantee: strong. The checks come before anything is made: on NULL, `c` is
@@ -77,6 +79,11 @@ CF_API size_t cf_edit_count(const cf_edit* e);
    failure leaves the target as it was and the error is the first refusal, or
    the check's. A NULL edit fails with `err` set. */
 CF_NODISCARD CF_API cf_bool cf_edit_commit(cf_edit* e, const char* note, cf_error* err);
+
+/* Internal: the allocator `c` takes its memory from, NULL for a
+   configuration built in a fixed buffer. The edit's own arena comes from
+   it (K-9b). */
+const cf_allocator* cfi_config_allocator(const struct cf_config* c);
 
 /* Drop the edit; nothing is written.
    Guarantee: nothrow. A NULL edit is accepted; the edit is consumed. */

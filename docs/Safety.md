@@ -134,6 +134,21 @@ alignment.
 
 The float half of `lib/numeric` is outside these harnesses (below).
 
+## Memory that runs out
+
+Every load and write path is swept with an allocator that refuses the 1st,
+2nd, ... nth allocation in turn (`tests/support/cf_oom.h`, D-237). Each case
+checks the failure is `CF_E_MEMORY` with a message, that nothing is left
+outstanding (the allocator's live count, and LeakSanitizer in the `sanitize`
+preset), and, for a function whose guarantee is `strong`, that the state is as
+it was. `gate.oom` refuses a public load or write function that has no case and
+no excuse (`lib/config/tests/oom_paths.txt`). The codecs are swept over their
+decode into an arena the sink lends its workspace from; the builder over a
+document, a file, a directory and a `.env` file; derive, the edit, the image,
+the live open, reload and commit, the watcher and the file writer. What the
+sweep does not do is fail an operating system call: a full disk or a refused
+`open` is a different card.
+
 ## Not yet proven
 
 The floating point parser and printer, the blob's file reader, the

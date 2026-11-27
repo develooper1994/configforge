@@ -1544,6 +1544,12 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
             if (detail != NULL) {
                 return create_failed(b, err, detail);
             }
+            if (cfi_arena_refused(c->arena)) {
+                /* The source had no reason of its own: it ran out of room. */
+                cf_error_set(&e, CF_E_MEMORY, NULL, c->sources[i].name,
+                             "no room to read source '%s'", c->sources[i].name);
+                return create_failed(b, err, &e);
+            }
             cf_error_set(&e, CF_E_SOURCE, NULL, c->sources[i].name,
                          "source '%s' could not be read", c->sources[i].name);
             return create_failed(b, err, &e);
@@ -1858,6 +1864,10 @@ cf_config* cf_derive_in(const cf_config* base, cf_arena* arena, const char* sour
         return NULL;
     }
     return derive_onto(base, arena, CF_FALSE, source_name, pairs, count, NULL, err);
+}
+
+const cf_allocator* cfi_config_allocator(const cf_config* c) {
+    return (c != NULL) ? cf_arena_allocator(c->arena) : NULL;
 }
 
 cf_config* cfi_config_keep_values(const cf_config* base, const cf_config* running,

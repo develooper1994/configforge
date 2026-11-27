@@ -64,6 +64,9 @@ cf_bool cfi_file_options(const cf_file_options* o, cf_file_options* out,
     out->sync_ms     = o->sync_ms;
     out->retry_ms    = o->retry_ms;
     out->append      = o->append;
+    if (o->size >= offsetof(cf_file_options, allocator) + sizeof o->allocator) {
+        out->allocator = o->allocator;
+    }
     return CF_TRUE;
 }
 
@@ -347,7 +350,7 @@ cf_file_writer* cf_file_writer_open(const char* path, const cf_file_options* o,
                            "this platform has no clock for sync_ms");
         return NULL;
     }
-    a = cf_default_allocator();
+    a = (r.allocator != NULL) ? r.allocator : cf_default_allocator();
     if (a == NULL) {
         (void)cf_error_set(err, CF_E_CAPABILITY, NULL, path,
                            "this build has no allocator for a file writer");

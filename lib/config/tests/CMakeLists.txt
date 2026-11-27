@@ -31,6 +31,7 @@ set(CF_UNIT_TESTS
     test_fuzz
     test_starve
     test_oom
+    test_oom_paths
     test_derive
     test_watch
     test_complexity
@@ -91,6 +92,8 @@ set(CF_UNIT_TESTS
 # The directories test_starve's every-source run reads. C89 has no mkdir.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_starve.d
      ${CMAKE_CURRENT_BINARY_DIR}/cf_starve_secrets)
+# And test_oom_paths's, swept with one allocation refused at a time.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_oom.d)
 # And test_codec's drop-in directory of a codec's own files.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cf_codec.d)
 # And test_detect's, whose files have no extension.
