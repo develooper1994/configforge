@@ -145,7 +145,7 @@ CF_API void cf_error_place(cf_error* e, int reason, unsigned int line,
    index of the byte, from 0) where e->size reaches it; (size_t)-1 says the
    reader has none. cf_error_place leaves it (size_t)-1. Experimental in 2.0.
    Guarantee: nothrow. */
-CF_EXPERIMENTAL(2, 0) CF_API void cf_error_place_at(cf_error* e, int reason,
+CF_EXPERIMENTAL(2, 0) void cf_error_place_at(cf_error* e, int reason,
                                                     unsigned int line, unsigned int col,
                                                     size_t offset);
 
