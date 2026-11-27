@@ -474,7 +474,7 @@ answer under "Organiser's answers"). Both are copied into
 * **needs**: F-1a, Y-3 (the test also holds a `cf_file_writer` and a sidecar lock open; their opens are close-on-exec from the start, and this card pins that)
 * **size**: small
 * **version**: 1.9.0
-* **status**: open
+* **status**: done (62812e1)
 * **decided**:
   * **POSIX `cf_platform_fopen`** (`posix/file.c`, C89 plus `open`, `fdopen`, `fcntl`): `fopen(path, mode)` becomes `open` then `fdopen`. The mode string maps as C says: first letter `r` is `O_RDONLY`, `w` is `O_WRONLY | O_CREAT | O_TRUNC`, `a` is `O_WRONLY | O_CREAT | O_APPEND`; a `+` makes it `O_RDWR`; `b` is ignored; any other first letter returns NULL. The permission is `0666` (the umask applies, as `fopen` gave). Flags carry `O_CLOEXEC` where it is defined; where it is not, `fcntl(fd, F_SETFD, FD_CLOEXEC)` right after the `open` (a window of two calls remains and the file's comment says so). `fdopen` failing closes `fd` and returns NULL. Only `"rb"` is passed anywhere today (`grep -rn "cf_platform_fopen" lib tools --include=*.c`); a caller found with another mode string is handled by the mapping above and is not a stop.
   * **`none/file.c`** is plain `fopen` and stays (no descriptors the library can mark).
