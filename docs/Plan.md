@@ -392,16 +392,16 @@ of a card's CI.
 | 115 | Y-4 `cf_file_source_options.lock`, `.wait_ms` and `.write_attempts`, `.read_attempts`, `cf_builder_write_wait`: the lock around `overrides_write`, and the store's wait (F-5b in the research) | 2.3.0 | medium | Y-3, F-2a | waits: Y-3 |
 | 116 | Y-12 `swapped` in `cf_live_options`: workers told of a swap | 2.3.0 | small | nothing | parked |
 | 117 | F-3i Wave 6, `configforge codec get`, `set` and `unset` (TO DECIDE) | 2.3.0 | medium | F-1a, F-3b, F-3c, F-3d, F-3e, F-3f, F-3g, F-3h | waits: F-3b |
-| 118 | M-5 The stream: one interface for reading in pieces, with a fallback every codec has | 2.4.0 | large | nothing | parked |
-| 119 | M-6 The stream, native: CBOR and TLV (the length-prefixed formats first) | 2.4.0 | medium | M-5 | parked |
-| 120 | M-7 The stream, native: JSON, JSON5 and `.properties` | 2.4.0 | large | M-5, M-6 | parked |
-| 121 | M-8 The stream, native: INI and TOML (the readers that look back) | 2.4.0 | large | M-5, M-7 | parked |
-| 122 | M-9 The stream, native: YAML, and the file source that uses it | 2.4.0 | large | M-5, M-7, M-8 | parked |
-| 123 | M-14 Ways to read: the document tree (DOM), a public type of the serialization library | 2.4.0 | large | nothing | parked |
-| 124 | M-15 Ways to read: lazy, a structural index first | 2.4.0 | large | M-14 | parked |
-| 125 | M-16 Ways to read: in-situ strings | 2.4.0 | medium | nothing | parked |
+| 118 | M-5 The stream: one interface for reading in pieces, with a fallback every codec has | 2.4.0 | large | nothing | open |
+| 119 | M-6 The stream, native: CBOR and TLV (the length-prefixed formats first) | 2.4.0 | medium | M-5 | waits: M-5 |
+| 120 | M-7 The stream, native: JSON, JSON5 and `.properties` | 2.4.0 | large | M-5, M-6 | waits: M-5 |
+| 121 | M-8 The stream, native: INI and TOML (the readers that look back) | 2.4.0 | large | M-5, M-7 | waits: M-5 |
+| 122 | M-9 The stream, native: YAML, and the file source that uses it | 2.4.0 | large | M-5, M-7, M-8 | waits: M-5 |
+| 123 | M-14 Ways to read: the document tree (DOM), a public type of the serialization library | 2.4.0 | large | nothing | open |
+| 124 | M-15 Ways to read: lazy, a structural index first | 2.4.0 | large | M-14 | waits: M-14 |
+| 125 | M-16 Ways to read: in-situ strings | 2.4.0 | medium | nothing | open |
 | 126 | K-7b The ways a format can be read, in its table entry | 2.4.0 | small | K-7a, M-14, M-15, M-16 | waits: K-7a |
-| 127 | M-17 Ways to read: the table, and each mode measured | 2.4.0 | medium | M-9, M-14, M-15, M-16, K-7b | parked |
+| 127 | M-17 Ways to read: the table, and each mode measured | 2.4.0 | medium | M-9, M-14, M-15, M-16, K-7b | waits: M-9 |
 | 128 | X-1 MessagePack: reader, writer, vectors, fuzz target | 2.5.0 | large | nothing | open |
 | 129 | X-2 BSON | 2.5.0 | large | X-1 | waits: X-1 |
 | 130 | X-3 UBJSON | 2.5.0 | medium | X-2, X-2 | waits: X-2 |
@@ -419,25 +419,25 @@ of a card's CI.
 | 142 | X-15 The benchmark learns the binary formats: MiB/s for each codec | 2.5.0 | medium | X-1, X-7 | waits: X-1 |
 | 143 | X-16 The benchmark learns the text formats and the read-only ones | 2.5.0 | medium | X-15, X-8, X-11, X-5, X-14 | waits: X-15 |
 | 144 | X-17 Text handed to the sink where it lies | 2.5.0 | large | X-16, P-1 | waits: X-16 |
-| 145 | M-1 Go (cgo): the module over the C library | 2.6.0 | large | M-23-m | parked |
-| 146 | M-2 Go: an example and a CI job | 2.6.0 | medium | M-1 | parked |
-| 147 | M-3 .NET (P/Invoke): the assembly over the C library | 2.6.0 | large | nothing | parked |
-| 148 | M-4 .NET: an example and a CI job | 2.6.0 | medium | M-3 | parked |
+| 145 | M-1 Go (cgo): the module over the C library | 2.6.0 | large | nothing | open |
+| 146 | M-2 Go: an example and a CI job | 2.6.0 | medium | M-1 | waits: M-1 |
+| 147 | M-3 .NET (P/Invoke): the assembly over the C library | 2.6.0 | large | nothing | open |
+| 148 | M-4 .NET: an example and a CI job | 2.6.0 | medium | M-3 | waits: M-3 |
 | 149 | G-3 "Start here" in C, and the gate that keeps every such page true | 2.6.0 | medium | G-1b, G-1b, G-2 | waits: G-1b |
 | 150 | G-4 "Start here" in C++ | 2.6.0 | small | G-3 | waits: G-3 |
 | 151 | G-5 "Start here" in Rust | 2.6.0 | small | G-3 | waits: G-3 |
 | 152 | G-6 "Start here" in Python | 2.6.0 | small | G-2, G-3, G-4, G-5 | waits: G-2 |
 | 153 | G-7 Recipes: reload events as log records, a report in OPA and CUE | 2.6.0 | medium | G-2, G-3 | waits: G-2 |
 | 154 | G-8 A playground on the documentation site | 2.6.0 | large | G-1b, G-3 | waits: G-1b |
-| 155 | M-22 Publishing by trusted publishing: the release workflow's registry jobs | 2.6.0 | large | M-23-m | parked |
-| 156 | M-24 The clean-machine install, in CI | 2.6.0 | medium | M-22, M-23-m, M-25-m | parked |
-| 157 | M-26 Wheels for each platform | 2.6.0 | medium | M-22 | parked |
-| 158 | M-27 Recipes in the tree: Meson WrapDB, the Bazel Central Registry, conda-forge | 2.6.0 | large | M-22 | parked |
-| 159 | M-28 Embedded registries: ESP-IDF, PlatformIO, Zephyr | 2.6.0 | medium | M-27 | parked |
-| 160 | M-31 The monthly count of downloads, traffic and issues | 2.6.0 | small | nothing | parked |
-| 161 | M-32 One digest a purpose: SHA-256 as the fingerprint's option | 2.6.0 | large | nothing | parked |
-| 162 | M-33 A digest function the program gives | 2.6.0 | medium | M-32 | parked |
-| 163 | M-34 A gate built on a SHA-256 fingerprint, in the Guide, with its test | 2.6.0 | small | M-32, M-33 | parked |
+| 155 | M-22 Publishing by trusted publishing: the release workflow's registry jobs | 2.6.0 | large | nothing | open |
+| 156 | M-24 The clean-machine install, in CI | 2.6.0 | medium | M-22, M-23-m, M-25-m | waits: M-22 |
+| 157 | M-26 Wheels for each platform | 2.6.0 | medium | M-22 | waits: M-22 |
+| 158 | M-27 Recipes in the tree: Meson WrapDB, the Bazel Central Registry, conda-forge | 2.6.0 | large | M-22 | waits: M-22 |
+| 159 | M-28 Embedded registries: ESP-IDF, PlatformIO, Zephyr | 2.6.0 | medium | M-27 | waits: M-27 |
+| 160 | M-31 The monthly count of downloads, traffic and issues | 2.6.0 | small | nothing | open |
+| 161 | M-32 One digest a purpose: SHA-256 as the fingerprint's option | 2.6.0 | large | nothing | open |
+| 162 | M-33 A digest function the program gives | 2.6.0 | medium | M-32 | waits: M-32 |
+| 163 | M-34 A gate built on a SHA-256 fingerprint, in the Guide, with its test | 2.6.0 | small | M-32, M-33 | waits: M-32 |
 | 164 | P-3 The readers' scans on lanes' four kept operations, kept only where they win | 2.7.0 | large | P-2 | open |
 | 165 | P-7 Why a real number costs 2000 instructions a byte in JSON and TOML | 2.4.0 | large | P-6 | waits: P-6 |
 | 166 | P-8 CBOR writes a place for every scalar: build it by hand, same bytes | 2.4.0 | small | nothing | open |
@@ -464,9 +464,9 @@ of a card's CI.
 | 187 | P-11 Print speed in the comparison: JSON, four libraries | 1.9.0 | large | nothing | open |
 | 188 | P-12 The README leads with the lines ConfigForge wins, made by a script from the numbers | 1.9.0 | medium | P-11, P-11 | waits: P-11 |
 | 189 | P-14 The OpenSSF Scorecard: every finding read, every one the repository can meet met | 1.9.0 | medium | nothing | open |
-| 190 | M-18 OSS-Fuzz: the project files in the repository | 1.9.0 | small | nothing | parked |
-| 191 | M-20 The evidence pack: the script that assembles it, with a manifest that never claims what is not there | 1.9.0 | medium | nothing | parked |
-| 192 | M-21 The evidence pack in the release | 1.9.0 | small | M-20 | parked |
+| 190 | M-18 OSS-Fuzz: the project files in the repository | 1.9.0 | small | nothing | open |
+| 191 | M-20 The evidence pack: the script that assembles it, with a manifest that never claims what is not there | 1.9.0 | medium | nothing | open |
+| 192 | M-21 The evidence pack in the release | 1.9.0 | small | M-20 | waits: M-20 |
 | 193 | K-10c-m Numbers beyond 64 bits or `double`, accepted as text under an option | 2.2.0 | large | K-10a, K-10b | parked: not now |
 | 194 | Y-41-m Simple expressions: `"${= 8000 + 80}"`, total, inside a string | 2.1.0 | medium | Y-42 | parked: not now |
 | 195 | C-9-m One key split into two: `migrate_from` on the new key's definition | 2.1.0 | medium | C-9 | parked: not now |
@@ -543,36 +543,11 @@ one that cannot be done is dropped and recorded under "Done" as dropped.
 | Y-36 | 1.10.0 | its TO DECIDE | parked |
 | Y-39-m | 2.3.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | Y-40-m | 2.3.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
-| M-1 | 2.3.0 | the maintainer's approval; its TO DECIDE | parked |
-| M-2 | 2.3.0 | the maintainer's approval | parked |
-| M-3 | 2.3.0 | the maintainer's approval; its TO DECIDE | parked |
-| M-4 | 2.3.0 | the maintainer's approval | parked |
-| M-5 | 2.0.0 | the maintainer's approval; its TO DECIDE | parked |
-| M-6 | 2.0.0 | the maintainer's approval | parked |
-| M-7 | 2.0.0 | the maintainer's approval | parked |
-| M-8 | 2.0.0 | the maintainer's approval | parked |
-| M-9 | 2.0.0 | the maintainer's approval | parked |
-| M-14 | 2.0.0 | the maintainer's approval; its TO DECIDE | parked |
-| M-15 | 2.0.0 | the maintainer's approval; its TO DECIDE | parked |
-| M-16 | 2.0.0 | the maintainer's approval; its TO DECIDE | parked |
-| M-17 | 2.0.0 | the maintainer's approval | parked |
-| M-18 | 1.9.0 | the maintainer's approval | parked |
 | M-19-m | 1.9.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
-| M-20 | 1.9.0 | the maintainer's approval | parked |
-| M-21 | 1.9.0 | the maintainer's approval | parked |
-| M-22 | 1.10.0 | the maintainer's approval; its TO DECIDE | parked |
 | M-23-m | 1.10.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
-| M-24 | 1.10.0 | the maintainer's approval | parked |
 | M-25-m | 1.10.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
-| M-26 | 2.3.0 | the maintainer's approval | parked |
-| M-27 | 2.3.0 | the maintainer's approval | parked |
-| M-28 | 2.3.0 | the maintainer's approval | parked |
 | M-29-m | 2.3.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
 | M-30-m | 2.3.0 | the maintainer's own access, or a user's ask (the card's needs) | parked |
-| M-31 | 2.3.0 | the maintainer's approval | parked |
-| M-32 | 1.10.0 | the maintainer's approval; its TO DECIDE | parked |
-| M-33 | 1.10.0 | the maintainer's approval; its TO DECIDE | parked |
-| M-34 | 1.10.0 | the maintainer's approval | parked |
 
 ## Done, their cards removed
 
