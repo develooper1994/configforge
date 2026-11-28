@@ -304,7 +304,7 @@ of a card's CI.
 | 19 | [C-11](plan/C-change-2.md#c-11) A program's files where its platform keeps them: `cf_builder_app_files` | 2.1.0 | medium | nothing | open |
 | 20 | [C-7](plan/C-change-2.md#c-7) Profiles: `--profile` or `NAME_PROFILE` adds `config.<profile>.<ext>` above the base file | 2.1.0 | medium | [C-11](plan/C-change-2.md#c-11) | waits: [C-11](plan/C-change-2.md#c-11) |
 | 21 | [C-10a](plan/C-change-2.md#c-10a) A running program asked for its report: the library answers one request on a descriptor | 2.1.0 | medium | nothing | open |
-| 22 | [F-1b](plan/F-files.md#f-1b) `cf_emit_file`: a configuration written to a file whole or not at all (the file layer's third part) | 2.1.0 | small | F-1a | open |
+| 22 | [F-1b](plan/F-files.md#f-1b) `cf_emit_file`: a configuration written to a file whole or not at all (the file layer's third part) | 2.1.0 | small | F-1a | done (bacd315) |
 | 23 | [Y-42](plan/Y-asked.md#y-42) Include and import, in standard syntax: `"$include"` and `"$import"`, a root, a depth, a loader that plugs in (D-228) | 2.1.0 | large | nothing | open |
 | 24 | [Y-9](plan/Y-asked.md#y-9) A second `cf_live` driver refused, and D-48's sentence checked | 2.1.0 | small | [Y-1](plan/Y-asked.md#y-1) | waits: [Y-1](plan/Y-asked.md#y-1) |
 | 25 | [Y-10](plan/Y-asked.md#y-10) `cf_live_get` and `cf_config_free` under threads on the benchmark's page; `cf_live_generation` without the lock | 2.1.0 | medium | nothing | open |

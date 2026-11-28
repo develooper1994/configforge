@@ -38,7 +38,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **needs**: F-1a
 * **size**: small
 * **version**: 2.1.0
-* **status**: open
+* **status**: done (bacd315)
 * **decided**:
   * **The call (D-224).** In `lib/config/include/configforge/cf_emit.h` after `cf_emit` (lines 56-57, before the `#ifdef __cplusplus` that closes the header; the header adds `#include "configforge/cf_file.h"`):
     ```c
