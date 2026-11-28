@@ -19,12 +19,14 @@ the variable PUBLISH_CRATES is unset): do not chase it.
 
 ## In flight
 
-3. On `batch` (D:\cf-work\batch), ahead of main and not yet in a full run:
-   "Open 2.1.0", L-28 (1d4e24a, the CERT C matrix, gate.cert, D-236), the
-   new card K-9k (CERT CON33-C: `strerror` replaced by the library's own
-   table, D-239). Next full run: after K-9k lands (or alone, if K-9k
-   waits), then `git push origin <green hash>:main`.
-4. If the release workflow 46113423729 was red: read its failed job, fix
+3. On `batch` (D:\cf-workatch), ahead of main, no full run yet:
+   "Open 2.1.0", L-28 (CERT matrix, D-236), K-9k (a3bc664, strerror
+   replaced, D-239) and 3411f27 (`cf_error_place_at` promoted to CF_API:
+   opening 2.1.0 made gate.abi refuse a 2.0 experimental name, D-89).
+   Next: the organiser's local check (item 6; regenerate the MISRA record
+   with WRITE=ON, platform files moved), a full run, then
+   `git push origin <green hash>:main`.
+4. Release 46113423729 was green (crates skipped). If one is ever red: read its failed job, fix
    on batch, and re-tag only by deleting and pushing v2.0.0 again once the
    fix is on main (no release was made then); if green, nothing to do.
 
