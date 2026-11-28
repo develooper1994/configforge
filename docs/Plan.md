@@ -476,7 +476,7 @@ of a card's CI.
 | 191 | P-14 The OpenSSF Scorecard: every finding read, every one the repository can meet met | 2.0.0 | medium | nothing | open |
 | 192 | M-20 The evidence pack: the script that assembles it, with a manifest that never claims what is not there | 2.0.0 | medium | nothing | open |
 | 193 | M-21 The evidence pack in the release | 2.0.0 | small | M-20 | waits: M-20 |
-| 194 | K-9h Thread, signal and allocation lines beside the guarantee, held by `gate.guarantees` | 2.0.0 | medium | K-9a | open |
+| 194 | K-9h Thread, signal and allocation lines beside the guarantee, held by `gate.guarantees` | 2.0.0 | medium | K-9a | done (b424389) |
 | 195 | K-9i Fork, callbacks, durability and inherited descriptors: one table, each row a test | 2.0.0 | small | nothing | done (922a272) |
 | 196 | F-6 The sync a replace needs, by platform: `fdatasync` on Linux, `F_FULLFSYNC` on macOS, kept only if measured | 2.7.0 | small | nothing | open |
 | 197 | F-7 Many small files: measured first, then the cost per file cut where it shows | 2.7.0 | medium | nothing | open |

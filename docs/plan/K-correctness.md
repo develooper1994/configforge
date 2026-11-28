@@ -725,7 +725,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **needs**: K-9a
 * **size**: medium
 * **version**: 2.0.0
-* **status**: open
+* **status**: done (b424389)
 * **decided**:
   * **Only the claim is written** (the organiser, 2026-11-27, under the maintainer's standing approval): the default is the weakest word, so no name needs a line to be honest; a line is written only where it is proved. Rejected: a line on all 314 names (three times K-9d to K-9g's work for the same truth).
   * **The words**: `Thread: safe` (any number of threads may call it on the same objects at once; the readers of a built `cf_config`, D-14), `Thread: distinct objects` (the default), `Thread: unsafe` (touches state shared beyond its arguments: none is expected; the gate prints each). `Signal: safe` (may be called from a signal handler or an interrupt: no allocator, no stdio, no lock, no `errno` left changed). `Alloc: none` (never calls the allocator, directly or through a callee).
