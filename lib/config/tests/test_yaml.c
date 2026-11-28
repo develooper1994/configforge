@@ -117,6 +117,30 @@ static void refused(const char* text, const char* needle, const char* what) {
     cf_config_free(c);
 }
 
+/* An anchor name is ns-anchor-char+ (YAML 1.2, 6.9.2): any non-space
+   character but a flow indicator, `:` included. `&a:ssrss:` is the name
+   `a:ssrss:` on an empty node, not a mapping whose key is `:ssrss` (libyaml
+   keeps the 1.1 rule; tests/fuzz/yamldiff.known). */
+static void test_anchor_names(void) {
+    cf_error   err = CF_ERROR_INIT;
+    cf_config* c   = load("a: &x:y one\nb: *x:y\nc: &k: two\nd: *k:\n", &err);
+
+    check(c != NULL, "anchor names with a colon read");
+    if (c != NULL) {
+        check(strcmp(cf_get_text(c, "b", ""), "one") == 0, "an alias of x:y");
+        check(strcmp(cf_get_text(c, "d", ""), "two") == 0, "an alias of k:");
+        cf_config_free(c);
+    } else {
+        printf("  %s\n", err.message);
+    }
+    c = load("&a:ssrss:", &err);
+    check(c != NULL, "a document of an anchored empty node reads");
+    if (c != NULL) {
+        check(!cf_has(c, ":ssrss") && cf_count(c) == 0, "and holds no key");
+        cf_config_free(c);
+    }
+}
+
 /* Anchors and aliases (D-63): the alias is the anchored node again, and
    each value it holds explains itself at the place it was written. */
 static void test_anchors(void) {
@@ -591,6 +615,7 @@ int main(void) {
     test_reads();
     test_types();
     test_anchors();
+    test_anchor_names();
     test_tags();
     test_refuses();
     test_cr_comment();

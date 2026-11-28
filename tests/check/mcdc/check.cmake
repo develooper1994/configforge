@@ -36,6 +36,20 @@ set(work "${BIN}/work")
 file(REMOVE_RECURSE "${work}")
 file(MAKE_DIRECTORY "${work}")
 file(COPY "${SRC}/tests/check/mcdc/t.c" DESTINATION "${work}")
+# GCC's coverage library is the C library's guest: musl-gcc over glibc's
+# libgcov does not link (gcov_error). A program of nothing, built with
+# --coverage alone, tells that apart from a fixture that is wrong.
+file(WRITE "${work}/probe.c" "int main(void) { return 0; }\n")
+execute_process(
+  COMMAND "${CC}" --coverage -o probe probe.c
+  WORKING_DIRECTORY "${work}"
+  RESULT_VARIABLE rc
+  OUTPUT_QUIET ERROR_QUIET)
+if(NOT rc EQUAL 0)
+  message(STATUS "check.mcdc skipped: ${CC} cannot link GCC's coverage "
+                 "library (musl-gcc)")
+  return()
+endif()
 execute_process(
   COMMAND "${CC}" -fcondition-coverage --coverage -o t t.c
   WORKING_DIRECTORY "${work}"

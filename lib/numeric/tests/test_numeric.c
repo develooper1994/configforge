@@ -274,6 +274,9 @@ static void test_duration(void) {
     char           buf[64];
 
     check(d != NULL && d->parse != NULL && d->format != NULL, "the duration unit");
+    if (d == NULL) {
+        return;
+    }
     check_text(d->name, "duration", "the duration unit's name");
     check(d->options.allow_bare && !d->options.calendar && !d->options.bare_si &&
               d->options.base == CF_UNIT_BASE_DEFAULT,
@@ -392,6 +395,9 @@ static void test_size(void) {
     char           buf[64];
 
     check(z != NULL && z->parse != NULL && z->format != NULL, "the size unit");
+    if (z == NULL) {
+        return;
+    }
     check_text(z->name, "size", "the size unit's name");
 
     unit_ok(z, "512", 512);
