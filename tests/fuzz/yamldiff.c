@@ -8,7 +8,10 @@
  * are written as lines, without a place (two parsers mark one differently,
  * which is not a difference of reading) and compared. Both refusing is
  * agreement. A difference that no rule of yamldiff.known covers aborts, so
- * libFuzzer keeps the input. C89, public headers only.
+ * libFuzzer keeps the input. A fourth side, anchor-colon (key `-`), covers any
+ * difference, whatever its side, on an input in which an anchor or alias name
+ * holds a `:` (YAML 1.2 reads it as a name character, libyaml cuts the name
+ * there); yd_anchor_colon is its scan. C89, public headers only.
  */
 
 #undef CF_INTERNAL_API
@@ -47,6 +50,7 @@ typedef struct yd_rule {
 static yd_rule g_rules[YD_RULES];
 static size_t  g_nrules;
 static int     g_loaded;
+static cf_bool g_anchor_colon;
 
 /* One side: the lines of its events, and the room its reader asked for. */
 typedef struct yd_out {
@@ -143,6 +147,13 @@ static void yd_load(void) {
                 side = (int)k;
             }
         }
+        if (strcmp(line, "anchor-colon") == 0) {
+            if (strcmp(t1 + 1, "-") != 0) {
+                yd_die("the key of anchor-colon is -", no);
+            }
+            g_anchor_colon = CF_TRUE;
+            continue;
+        }
         if (side < 0) {
             yd_die("the side is lib-refuses, bi-refuses or events", no);
         }
@@ -173,11 +184,48 @@ static cf_bool yd_has(const unsigned char* d, size_t n, const char* needle, size
     return CF_FALSE;
 }
 
+/* Whether an anchor or alias name of the input holds a `:`: a `&` or `*` at
+   the start, or after white space, `[`, `{` or `,`, then its run of
+   ns-anchor-char bytes (not white space, not a flow indicator). */
+static cf_bool yd_is_space(unsigned char c) {
+    return (cf_bool)(c == ' ' || c == '\t' || c == '\n' || c == '\r');
+}
+
+static cf_bool yd_anchor_colon(const unsigned char* d, size_t n) {
+    size_t i;
+
+    for (i = 0; i < n; ++i) {
+        unsigned char p;
+
+        if (d[i] != '&' && d[i] != '*') {
+            continue;
+        }
+        p = (i == 0) ? (unsigned char)' ' : d[i - 1];
+        if (!yd_is_space(p) && p != '[' && p != '{' && p != ',') {
+            continue;
+        }
+        for (++i; i < n; ++i) {
+            if (yd_is_space(d[i]) || d[i] == ',' || d[i] == '[' || d[i] == ']' ||
+                d[i] == '{' || d[i] == '}') {
+                break;
+            }
+            if (d[i] == ':') {
+                return CF_TRUE;
+            }
+        }
+    }
+    return CF_FALSE;
+}
+
 /* Whether a rule covers the difference: for a refusal its key is in the
-   message of the side that refuses, for events it is in the input. */
+   message of the side that refuses, for events it is in the input. The
+   anchor-colon rule looks at the input whatever the side. */
 static cf_bool yd_covered(int side, const unsigned char* d, size_t n, const char* msg) {
     size_t r;
 
+    if (g_anchor_colon && yd_anchor_colon(d, n)) {
+        return CF_TRUE;
+    }
     if (side != YD_EVENTS) {
         d = (const unsigned char*)msg;
         n = strlen(msg);

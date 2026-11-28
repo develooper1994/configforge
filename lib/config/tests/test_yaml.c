@@ -122,6 +122,11 @@ static void refused(const char* text, const char* needle, const char* what) {
    `a:ssrss:` on an empty node, not a mapping whose key is `:ssrss` (libyaml
    keeps the 1.1 rule; tests/fuzz/yamldiff.known). */
 static void test_anchor_names(void) {
+#if (defined(CF_YAML_LIBYAML) && CF_YAML_LIBYAML) ||                                   \
+    (defined(CF_YAML_LIBFYAML) && CF_YAML_LIBFYAML)
+    printf("  skipped: the YAML reader of this build is not the built-in parser, "
+           "whose anchor-name rule this tests\n");
+#else
     cf_error   err = CF_ERROR_INIT;
     cf_config* c   = load("a: &x:y one\nb: *x:y\nc: &k: two\nd: *k:\n", &err);
 
@@ -139,6 +144,7 @@ static void test_anchor_names(void) {
         check(!cf_has(c, ":ssrss") && cf_count(c) == 0, "and holds no key");
         cf_config_free(c);
     }
+#endif
 }
 
 /* Anchors and aliases (D-63): the alias is the anchored node again, and

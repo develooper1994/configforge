@@ -200,11 +200,13 @@ if(_CF_YAML_LIBYAML)
   target_compile_definitions(test_reader_corpus PRIVATE CF_YAML_LIBYAML=1)
   target_compile_definitions(test_places PRIVATE CF_YAML_LIBYAML=1)
   target_compile_definitions(test_reason PRIVATE CF_YAML_LIBYAML=1)
+  target_compile_definitions(test_yaml PRIVATE CF_YAML_LIBYAML=1)
 endif()
 if(_CF_YAML_LIBFYAML)
   target_compile_definitions(test_reader_corpus PRIVATE CF_YAML_LIBFYAML=1)
   target_compile_definitions(test_places PRIVATE CF_YAML_LIBFYAML=1)
   target_compile_definitions(test_reason PRIVATE CF_YAML_LIBFYAML=1)
+  target_compile_definitions(test_yaml PRIVATE CF_YAML_LIBFYAML=1)
 endif()
 # And the inputs a YAML parser once hung on, which test_yaml reads: a hang
 # is this test's timeout.
