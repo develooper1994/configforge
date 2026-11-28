@@ -303,7 +303,7 @@ of a card's CI.
 | 18 | [C-9](plan/C-change-2.md#c-9) Values migrated, not only renamed: a function on the old key's definition | 2.1.0 | medium | nothing | done (55574ca) |
 | 19 | [C-11](plan/C-change-2.md#c-11) A program's files where its platform keeps them: `cf_builder_app_files` | 2.1.0 | medium | nothing | open |
 | 20 | [C-7](plan/C-change-2.md#c-7) Profiles: `--profile` or `NAME_PROFILE` adds `config.<profile>.<ext>` above the base file | 2.1.0 | medium | [C-11](plan/C-change-2.md#c-11) | waits: [C-11](plan/C-change-2.md#c-11) |
-| 21 | [C-10a](plan/C-change-2.md#c-10a) A running program asked for its report: the library answers one request on a descriptor | 2.1.0 | medium | nothing | open |
+| 21 | [C-10a](plan/C-change-2.md#c-10a) A running program asked for its report: the library answers one request on a descriptor | 2.1.0 | medium | nothing | done (5d0baa7) |
 | 22 | [F-1b](plan/F-files.md#f-1b) `cf_emit_file`: a configuration written to a file whole or not at all (the file layer's third part) | 2.1.0 | small | F-1a | done (bacd315) |
 | 23 | [Y-42](plan/Y-asked.md#y-42) Include and import, in standard syntax: `"$include"` and `"$import"`, a root, a depth, a loader that plugs in (D-228) | 2.1.0 | large | nothing | open |
 | 24 | [Y-9](plan/Y-asked.md#y-9) A second `cf_live` driver refused, and D-48's sentence checked | 2.1.0 | small | [Y-1](plan/Y-asked.md#y-1) | waits: [Y-1](plan/Y-asked.md#y-1) |
@@ -318,7 +318,7 @@ of a card's CI.
 | 33 | [C-6a](plan/C-change.md#c-6a) Shell completions from the contract: `configforge gen --lang bash\|zsh\|fish\|powershell` | 2.1.0 | medium | nothing | open |
 | 34 | [C-6b](plan/C-change.md#c-6b) A man page and a sample file from the contract: `configforge gen --lang man\|sample-toml\|sample-yaml` | 2.1.0 | medium | [C-6a](plan/C-change.md#c-6a) | waits: [C-6a](plan/C-change.md#c-6a) |
 | 35 | [C-8b](plan/C-change-2.md#c-8b) Doctor's CFD021: a read of a key the contract does not have, in `doctor lint` | 2.1.0 | small | [C-8a](plan/C-change-2.md#c-8a) | open |
-| 36 | [C-10b](plan/C-change-2.md#c-10b) `configforge doctor pull unix:<path>`, and an example that serves from a loop | 2.1.0 | medium | [C-10a](plan/C-change-2.md#c-10a) | waits: [C-10a](plan/C-change-2.md#c-10a) |
+| 36 | [C-10b](plan/C-change-2.md#c-10b) `configforge doctor pull unix:<path>`, and an example that serves from a loop | 2.1.0 | medium | [C-10a](plan/C-change-2.md#c-10a) | open |
 | 37 | [Y-34](plan/Y-asked.md#y-34) `gen check --report`: a predicted, value-blind report from files and a contract | 2.1.0 | medium | nothing | open |
 | 38 | [Y-35](plan/Y-asked.md#y-35) Doctor on a predicted report: the rules a running program is needed for are off and named; SARIF columns and fingerprints | 2.1.0 | small | [Y-34](plan/Y-asked.md#y-34) | waits: [Y-34](plan/Y-asked.md#y-34) |
 | 39 | [Y-37](plan/Y-asked.md#y-37) A secret written in a checked file: CFD022 | 2.1.0 | small | [Y-35](plan/Y-asked.md#y-35), [C-8b](plan/C-change-2.md#c-8b), [C-8b](plan/C-change-2.md#c-8b) | waits: [Y-35](plan/Y-asked.md#y-35) |
@@ -331,7 +331,7 @@ of a card's CI.
 | 46 | [G-1b](plan/G-guides.md#g-1b) Decisions.md split into one file a decision | 2.1.0 | medium | [G-1a](plan/G-guides.md#g-1a) | waits: [G-1a](plan/G-guides.md#g-1a) |
 | 47 | [G-2](plan/G-guides.md#g-2) The Roadmap's finished items on a page of their own | 2.1.0 | medium | [G-1b](plan/G-guides.md#g-1b), [G-2](plan/G-guides.md#g-2) | waits: [G-1b](plan/G-guides.md#g-1b) |
 | 48 | [C-9-m](plan/C-change-2.md#c-9-m) One key split into two: `migrate_from` on the new key's definition | 2.1.0 | medium | [C-9](plan/C-change-2.md#c-9) | open |
-| 49 | [C-10c-m](plan/C-change-2.md#c-10c-m) The report's channel on Windows: an `AF_UNIX` socket behind the platform's descriptor functions | 2.1.0 | medium | [C-10a](plan/C-change-2.md#c-10a), [C-10b](plan/C-change-2.md#c-10b) | waits: [C-10a](plan/C-change-2.md#c-10a) |
+| 49 | [C-10c-m](plan/C-change-2.md#c-10c-m) The report's channel on Windows: an `AF_UNIX` socket behind the platform's descriptor functions | 2.1.0 | medium | [C-10a](plan/C-change-2.md#c-10a), [C-10b](plan/C-change-2.md#c-10b) | waits: [C-10b](plan/C-change-2.md#c-10b) |
 | 50 | [C-10d-m](plan/C-change-2.md#c-10d-m) `configforge doctor pull` reads `http://` and `tcp:` targets, with a timeout and a size as options | 2.1.0 | medium | [C-10b](plan/C-change-2.md#c-10b) | waits: [C-10b](plan/C-change-2.md#c-10b) |
 | 51 | [F-4b](plan/F-files.md#f-4b) `configforge doctor graph`, built only for a want F-4a's filters do not meet | 2.1.0 | medium | [F-4a](plan/F-files.md#f-4a) | waits: [F-4a](plan/F-files.md#f-4a) |
 | 52 | [Y-41-m](plan/Y-asked.md#y-41-m) Simple expressions: `"${= 8000 + 80}"`, total, inside a string | 2.1.0 | medium | [Y-42](plan/Y-asked.md#y-42) | waits: [Y-42](plan/Y-asked.md#y-42) |

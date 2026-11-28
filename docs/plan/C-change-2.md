@@ -347,7 +347,7 @@ Shared by every card here:
 * **needs**: nothing
 * **size**: medium
 * **version**: 2.1.0
-* **status**: open
+* **status**: done (5d0baa7)
 * **decided**:
   * **The function** (`configforge.h`, after `cf_report`, line 666):
     ```c
