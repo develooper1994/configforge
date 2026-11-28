@@ -48,7 +48,7 @@ Left out on purpose, with the reason:
 * **needs**: nothing
 * **size**: medium
 * **status**: open
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **decided**:
   * **D-164 (text to copy into docs/Decisions.md).** "D-164 — The profile follows the benchmark. Each scheduled or manual run of `.github/workflows/bench.yml` ends with a profile of the reader of each format that `cf_bench docs` has a document for (JSON, YAML, TOML, CBOR, INI) on the documents `cf_bench docs <format>` makes (1 MiB and 16 MiB, as `scripts/work/profile.py` takes them), uploaded as the artifact `bench-profile` (JSON, 90 days). Only callgrind's tables are compared: a hosted runner gives `perf` no counters, and the cachegrind and massif output that `profile.py` also takes where valgrind is installed travels in the JSON but `profdiff.py` ignores it. A profile is never a gate: `bench-gate` counts instructions for pass and fail (D-111); the profile says where, and `scripts/bench/profdiff.py` says what moved. Rejected: comparing perf, cachegrind or heaptrack output in CI (it is not stable between runs on a shared machine)."
   * **`profile.py --json <path>`.** `scripts/work/profile.py` gets one more option, `--json <path>`. `Report` (`profile.py:106-136`) gets `self.tables = []` and `self.section = ""`; `Report.add` sets `self.section` to the line without its leading `### ` whenever a line it is given starts with `### ` (the Linux path adds `### <label>: <format>` before each format's tables, `profile.py:~349`, so the section is `linux: json` for `--local`); a table's title is the same for every format (`callgrind, instructions, self`), so the section is what tells the formats apart. `Report.table(title, rows, columns)` appends `{"section": self.section, "title": title, "columns": list(columns), "rows": [[name, share, ...] ...]}` to `self.tables`, where `name` is the function name without backticks and each share a float, unrounded, the rows being the six that are printed (after the sort and the cut), before it writes the Markdown; `Report.save()` writes, when a path was given, `{"schema": 1, "tables": self.tables}` with `json.dump(..., indent=1)` and a final newline. `Report.__init__` takes `json_path=None` as a second parameter after `path`; `main()` passes `a.json` (`ap.add_argument("--json", metavar="path", help="also write the tables as JSON")` beside `--local`, `profile.py:670-672`; the path is used as given, relative to the current directory). Nothing else in profile.py changes; with no `--json` its output is byte for byte what it is.
@@ -80,7 +80,7 @@ Left out on purpose, with the reason:
 * **needs**: nothing
 * **size**: medium
 * **status**: open
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **decided**:
   * **D-165 (text to copy).** "D-165 — Outliers are reported, and the known ones are listed. `scripts/bench/scaling.py` flags a speed cell of ConfigForge whose MiB/s at 256 MiB is below 70% of its MiB/s at 1 MiB (the cost grows with the size: memory, a quadratic loop, a cache), and a quick or full instruction cell whose instructions per byte of the document are five times the median of the same document name in the other formats. A flagged cell that is in `bench/compare/scaling.expected` with a reason is not an error; one that is not there fails the unit test `bench.scaling` on its own fixtures only, never CI's benchmark (which informs, D-111). Rejected: failing the weekly run on a flag (a shared runner's speed varies by tens of percent; the instruction rule alone is stable, and a flag on it is a finding for a card, not a build)."
   * **Input.** One results file, the schema of `scripts/bench/run.py` (`page.py --validate` checks it): `cells` is a list of `{"lib", "format", "doc", "size_mib", "mode", ...}` with `"mib_s"` on `speed` cells and `"instructions"` and `"bytes"` on `count` cells (`bench/compare/main.cpp:338-347,403-406`; `run.py:144-145,190-199`). Only `lib == "configforge"` is read, for both rules. A full run has `speed` cells at 1, 16 and 256 MiB and `count` cells at 1 MiB only; a quick run has `count` cells at 4 MiB (`run.py:156-199`): the size rule needs both `speed` sizes in the file and skips a format that lacks them; the per-byte rule needs the `count` cells and skips a document name found in fewer than three formats.
@@ -245,7 +245,7 @@ Left out on purpose, with the reason:
 * **needs**: nothing
 * **size**: large (an interface, four adapters, a mode)
 * **status**: open
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **decided**:
   * **D-167 (text to copy).** "D-167 — Print speed is timed on a tree that already exists. `cfb_compare --mode write` reads the document once outside the timed region, with the library's own reader into the library's own tree (or, for ConfigForge, into a recorded list of events), then times writing it to a buffer in memory, compact, the way the library's documentation recommends; the output bytes are counted and their FNV-1a recorded. A library is set against another only when both write compact JSON (no indentation), UTF-8, with the same escapes that JSON requires (the bytes differ in a number's digits and a solidus: the line shows the byte count, never compares bytes). Rejected: timing parse and print together (it hides which is slow); indented output (libraries differ in the default)."
   * **The interface.** `struct Adapter` (`bench/compare/touch.h:43-49`) gets one more member at the end, `bool (*write)(const char* p, size_t n, void (*begin)(), void (*end)(), WriteResult& out)`, default `nullptr`; the existing aggregate initialisers (`{"yyjson", "yyjson", "json", CFB_VERSION, parse}`) stay valid (C++ value-initialises a missing trailing member). A new `struct WriteResult { size_t bytes; uint64_t fnv; std::string dump; };` beside `Touch` (`dump` is filled only when `--dump` was given). The adapter's `write` does the read outside the timer, then calls `begin()` immediately before the writing call and `end()` immediately after it and nothing else is inside. A `--mode write` run of an adapter whose `write` is null prints `{"mode":"write","accepted":false,"reason":"no writer"}` and exits 0.
@@ -277,7 +277,7 @@ Left out on purpose, with the reason:
 * **needs**: P-11 (for the print line; the card is written so that without P-11's `write` cells the print lines are absent, not wrong)
 * **size**: medium
 * **status**: open
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **decided**:
   * **D-168 (text to copy).** "D-168 — A lead line is computed, not written. For each format and each of the measures `parse` (the median MiB/s of `speed` cells, `mixed` at 16 MiB, GCC), `memory` (`peak_growth_kib`, `mixed` at 16 MiB) and, where P-11 made them, `print` (`write` cells), ConfigForge is compared with the best other library of that format. It leads when it is at least as fast, or no larger, than that library; a line says the ratio and the library's name, to one decimal. A line where it is behind says 'behind <library> by <ratio>' and is listed after the leads, in the same block. The block is made from `bench/lead.json`, a copy of the newest full results kept in the repository (a schema-1 results file with only the cells this script reads); updating it is a commit that says which run it is from. Rejected: reading the branch bench-history at build time (the README must be right without network)."
   * **`bench/lead.json`**: from the newest `bench-full-gcc` artifact of a run of `bench.yml` that succeeded (`gh run list --workflow bench --status success --limit 1 --json databaseId`; `gh run download <id> -n bench-full-gcc`), cut with `python3 scripts/bench/lead.py --cut bench-full-gcc.json > bench/lead.json` to the `speed`, `memory` and `write` cells of `mixed` at 16 MiB. When no run has succeeded yet, `bench/lead.json` is `{"schema": 1, "kind": "full", "cells": []}` and the block says exactly `No weekly run has finished yet; the lines appear here after the first.` Both cases are tested.
@@ -342,7 +342,7 @@ Left out on purpose, with the reason:
 * **needs**: nothing
 * **size**: medium
 * **status**: open
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **decided**:
   * **D-170 (text to copy).** "D-170 — The Scorecard is read from its API. `scripts/work/scorecard.py` fetches `https://api.scorecard.dev/projects/github.com/develooper1994/configforge` (public, no token) and prints one line a check: name, score, the first line of its reason. `docs/Scorecard.md` records, for each check, one of `met` (with the file), `changed here` (with the commit), `waits on the maintainer` (with the setting, P-15-m) or `not applicable` (with why). A check that the repository can meet by a file is met by a card; one that needs a setting on GitHub or an account elsewhere is the maintainer's and never a step in an agent's card."
   * **What the repository can meet by files, and the worker's reading rules** (read, never assumed; the worker fetches the result first and reads the `reason` and `details` of each check):
@@ -377,7 +377,7 @@ Left out on purpose, with the reason:
 * **needs**: P-14 (its table names the scores)
 * **size**: small (the maintainer's, by hand; no agent card)
 * **status**: parked: not now
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **decided**:
   * **Parked: the loop skips it** (docs/Plan.md, "Waits on the maintainer"). P-14 stands alone.
   * **The settings**, from the Roadmap's "Repository settings" and Scorecard's checks: (1) a ruleset on `main`: require a pull request with one approving review, require the checks of `ci.yml` to pass (`gates`, `portable`, `matrix`, `shared`, `components`, `bench-gate`: the job names are `grep -n "^  [a-z-]*:$" .github/workflows/ci.yml`), require signed commits, no force pushes, no deletions; (2) two-factor authentication on the account; (3) the OpenSSF Best Practices badge: an account at bestpractices.dev, the project's form filled to the passing level, the badge added to README.md; (4) `Maintained` rises with age and activity and is not a setting. Pushing documents straight to `main` (CLAUDE.md, "Habits") needs the ruleset to list the maintainer as a bypass actor.

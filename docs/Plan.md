@@ -458,42 +458,43 @@ of a card's CI.
 | 173 | L-16b Sequential read advice for a large file, kept only if it pays | 2.7.0 | small | nothing | open |
 | 174 | L-16c Branch hints on the readers' hot paths, kept only where they pay | 2.7.0 | medium | P-3 | waits: P-3 |
 | 175 | Y-11 `cf_live_reader`: a worker's handle that caches a snapshot, its test under ThreadSanitizer, C++ and Rust wrappers | 2.7.0 | medium | Y-10, Y-9 | waits: Y-10 |
-| 176 | L-11 Mutation testing with Mull: the score of every component beside coverage, held above a floor | 2.0.0 | medium | nothing | open |
-| 177 | L-12a The public headers with no record at all | 2.0.0 | large | nothing | open |
-| 178 | L-12b The matrix of every MISRA rule, made from the record | 2.0.0 | medium | L-12a | waits: L-12a |
-| 179 | L-12c The compliance report, attached to each release | 2.0.0 | small | L-12b | waits: L-12b |
-| 180 | L-13 verify sees the version CI sees | 2.0.0 | small | nothing | open |
-| 181 | L-15a The comparison with whole configuration libraries: time to look up | 2.0.0 | medium | nothing | open |
-| 182 | L-15b libconfig in the comparison | 2.0.0 | medium | L-15a | waits: L-15a |
-| 183 | L-17 Byte order and word size in CI: s390x, i386 and armv7 under qemu-user | 2.0.0 | medium | nothing | open |
-| 184 | L-19a A Linux arm64 job | 2.0.0 | small | nothing | open |
-| 185 | L-19b A qemu line carries its date and commit | 2.0.0 | small | L-17 | waits: L-17 |
-| 186 | L-18b The Cortex-M `.text` of each part, in a table and a gate | 2.0.0 | medium | L-18a | open |
-| 187 | P-5 A profile after every weekly benchmark, kept as an artifact and compared | 2.0.0 | medium | nothing | open |
-| 188 | P-6 A cost that should not be there: bytes per instruction across sizes and formats | 2.0.0 | medium | nothing | open |
-| 189 | P-11 Print speed in the comparison: JSON, four libraries | 2.0.0 | large | nothing | open |
-| 190 | P-12 The README leads with the lines ConfigForge wins, made by a script from the numbers | 2.0.0 | medium | P-11, P-11 | waits: P-11 |
-| 191 | P-14 The OpenSSF Scorecard: every finding read, every one the repository can meet met | 2.0.0 | medium | nothing | open |
-| 192 | M-20 The evidence pack: the script that assembles it, with a manifest that never claims what is not there | 2.0.0 | medium | nothing | open |
-| 193 | M-21 The evidence pack in the release | 2.0.0 | small | M-20 | waits: M-20 |
+| 176 | L-11 Mutation testing with Mull: the score of every component beside coverage, held above a floor | 2.1.0 | medium | nothing | open |
+| 177 | L-12a The public headers with no record at all | 2.1.0 | large | nothing | open |
+| 178 | L-12b The matrix of every MISRA rule, made from the record | 2.1.0 | medium | L-12a | waits: L-12a |
+| 179 | L-12c The compliance report, attached to each release | 2.1.0 | small | L-12b | waits: L-12b |
+| 180 | L-13 verify sees the version CI sees | 2.1.0 | small | nothing | open |
+| 181 | L-15a The comparison with whole configuration libraries: time to look up | 2.1.0 | medium | nothing | open |
+| 182 | L-15b libconfig in the comparison | 2.1.0 | medium | L-15a | waits: L-15a |
+| 183 | L-17 Byte order and word size in CI: s390x, i386 and armv7 under qemu-user | 2.1.0 | medium | nothing | open |
+| 184 | L-19a A Linux arm64 job | 2.1.0 | small | nothing | open |
+| 185 | L-19b A qemu line carries its date and commit | 2.1.0 | small | L-17 | waits: L-17 |
+| 186 | L-18b The Cortex-M `.text` of each part, in a table and a gate | 2.1.0 | medium | L-18a | open |
+| 187 | P-5 A profile after every weekly benchmark, kept as an artifact and compared | 2.1.0 | medium | nothing | open |
+| 188 | P-6 A cost that should not be there: bytes per instruction across sizes and formats | 2.1.0 | medium | nothing | open |
+| 189 | P-11 Print speed in the comparison: JSON, four libraries | 2.1.0 | large | nothing | open |
+| 190 | P-12 The README leads with the lines ConfigForge wins, made by a script from the numbers | 2.1.0 | medium | P-11, P-11 | waits: P-11 |
+| 191 | P-14 The OpenSSF Scorecard: every finding read, every one the repository can meet met | 2.1.0 | medium | nothing | open |
+| 192 | M-20 The evidence pack: the script that assembles it, with a manifest that never claims what is not there | 2.1.0 | medium | nothing | open |
+| 193 | M-21 The evidence pack in the release | 2.1.0 | small | M-20 | waits: M-20 |
 | 194 | K-9h Thread, signal and allocation lines beside the guarantee, held by `gate.guarantees` | 2.0.0 | medium | K-9a | done (b424389) |
 | 195 | K-9i Fork, callbacks, durability and inherited descriptors: one table, each row a test | 2.0.0 | small | nothing | done (922a272) |
 | 196 | F-6 The sync a replace needs, by platform: `fdatasync` on Linux, `F_FULLFSYNC` on macOS, kept only if measured | 2.7.0 | small | nothing | open |
 | 197 | F-7 Many small files: measured first, then the cost per file cut where it shows | 2.7.0 | medium | nothing | open |
 | 198 | L-28 The CERT C matrix: every rule, which tool sees it, and the review for the rest | 2.0.0 | medium | nothing | done (1d4e24a) |
-| 199 | L-25 MC/DC measured by GCC's condition coverage, with a floor that only rises | 2.0.0 | medium | nothing | open |
-| 200 | L-26a Each decision names the tests that hold it: the line, the table and `gate.trace` | 2.0.0 | medium | nothing | open |
-| 201 | L-26b Every decision traced: the to-do list emptied | 2.0.0 | large | L-26a | waits: L-26a |
-| 202 | L-27 The safety manual: the assumptions a user's program must hold, each pointing at its evidence | 2.0.0 | medium | L-12c, L-25, L-26a | waits: L-12c |
-| 203 | L-17-m The `targets` jobs required | 2.0.0 | small | L-17 | parked: not now |
-| 204 | L-19-m Arm devices run, recorded with their commit | 2.0.0 | small | L-19b | parked: not now |
-| 205 | P-15-m The repository settings the Scorecard waits on (the maintainer's) | 2.0.0 | small | P-14 | parked: not now |
-| 206 | M-19-m OSS-Fuzz: the application (parked) | 2.0.0 | small | M-18 | parked: not now |
-| 207 | M-23-m Registry set-up (parked) | 2.6.0 | small | M-22 | parked: not now |
-| 208 | M-25-m Upstream submissions: vcpkg and ConanCenter (parked) | 2.6.0 | small | M-22 | parked: not now |
-| 209 | M-29-m Submissions and registry accounts (parked) | 2.3.0 | small | M-27, M-28 | parked: not now |
-| 210 | M-30-m The GitHub Action in a repository of its own (parked) | 2.3.0 | small | nothing | parked: not now |
-| 211 | G-9-m Publishing the fork and what it found | 2.3.0 | small | G-9 | parked: not now |
+| 199 | K-9k The text of a system error without `strerror`'s shared buffer (CERT CON33-C) | 2.1.0 | small | L-28 | open |
+| 200 | L-25 MC/DC measured by GCC's condition coverage, with a floor that only rises | 2.1.0 | medium | nothing | open |
+| 201 | L-26a Each decision names the tests that hold it: the line, the table and `gate.trace` | 2.1.0 | medium | nothing | open |
+| 202 | L-26b Every decision traced: the to-do list emptied | 2.1.0 | large | L-26a | waits: L-26a |
+| 203 | L-27 The safety manual: the assumptions a user's program must hold, each pointing at its evidence | 2.1.0 | medium | L-12c, L-25, L-26a | waits: L-12c |
+| 204 | L-17-m The `targets` jobs required | 2.1.0 | small | L-17 | parked: not now |
+| 205 | L-19-m Arm devices run, recorded with their commit | 2.1.0 | small | L-19b | parked: not now |
+| 206 | P-15-m The repository settings the Scorecard waits on (the maintainer's) | 2.1.0 | small | P-14 | parked: not now |
+| 207 | M-19-m OSS-Fuzz: the application (parked) | 2.1.0 | small | M-18 | parked: not now |
+| 208 | M-23-m Registry set-up (parked) | 2.6.0 | small | M-22 | parked: not now |
+| 209 | M-25-m Upstream submissions: vcpkg and ConanCenter (parked) | 2.6.0 | small | M-22 | parked: not now |
+| 210 | M-29-m Submissions and registry accounts (parked) | 2.3.0 | small | M-27, M-28 | parked: not now |
+| 211 | M-30-m The GitHub Action in a repository of its own (parked) | 2.3.0 | small | nothing | parked: not now |
+| 212 | G-9-m Publishing the fork and what it found | 2.3.0 | small | G-9 | parked: not now |
 <!-- index end -->
 
 ### Waits on the maintainer (skipped by the loop)

@@ -507,7 +507,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: `docs/Roadmap.md:1356-1360`; a public, checkable claim.
 * **needs**: M-18; the maintainer's own access
 * **size**: small (the maintainer's)
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: parked: not now
 * **decided**: **Waits on**: the maintainer: a pull request to `google/oss-fuzz` adding `projects/configforge/` with the three files of `oss-fuzz/` (copied as they are, the contact filled), an email address Google accepts for reports (a Google account's address is required for the private bug view), and the application's review by Google. No agent step. When accepted: the README's badge and one line in `docs/Compliance.md` ("What may be said, and when", line 210) naming the date.
 * **files**: none in this repository by an agent; after acceptance the maintainer (or a card) edits `README.md` and `docs/Compliance.md`.
@@ -523,7 +523,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "everything an integrator's safety case asks the library for, from one place and for one commit", "built from what the gates already produce" (`docs/Roadmap.md:1361-1370`); `docs/Compliance.md:162-188` names the items and says which are planned.
 * **needs**: nothing; the items whose producers arrive later (the safety manual, the CWE table, mutation score, MC/DC) are picked up by name when they exist, by the manifest's rule below.
 * **size**: medium
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: open
 * **decided**:
   * **The items, each with its producer in the tree today** (the manifest's keys): `deviations` (`docs/compliance/deviations.txt`, copied); `misra_report` (the Markdown report of `gate.misra`'s run, `docs/Compliance.md:141-160`, "planned": absent until a producer exists); `cert_matrix`, `cwe_table`, `known_weaknesses` (absent until their cards land; each is looked for at `docs/compliance/<key>.md`); `coverage` (gcovr's HTML and Cobertura XML from `cmake -DEXTRA=coverage -DMODE=quick -P scripts/verify.cmake`, the `coverage` job `.github/workflows/ci.yml:466-476`: the script runs it when `--coverage` is given, else takes `--coverage-dir`); `mutation_score` (absent until the mutation card: looked for at `build/mutation/score.json`); `fuzzing` (the corpus directories' file counts and sizes, the `corpus_<reader>` directories `tests/fuzz/CMakeLists.txt:1-9` names, as a JSON table; hours are the sum of `CF_FUZZ_SECONDS` of the runs given by `--fuzz-log`, else absent); `benchmark` (`docs/Performance.md` and the bench JSON, `bench/baseline/instructions.json`); `safety_manual` (`docs/compliance/safety-manual.md`, "planned": absent until it exists); `provenance` (the SPDX SBOM the release already makes, `release.yml:132-134`, and the attestation's bundle path given by `--attestation`); `reproducible_build` (absent until the "release built twice and compared" card writes `build/repro/result.json`).
@@ -550,7 +550,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **why**: "one archive attached to a release" (`docs/Roadmap.md:1361-1370`).
 * **needs**: M-20
 * **size**: small
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: open
 * **decided**:
   * A job `evidence` in `release.yml` (`needs: [check]`, runs on `ubuntu-26.04`, same checkout and action pins as the file's other jobs, `release.yml:195-200`) runs `cmake -DEXTRA=coverage -DMODE=quick -P scripts/verify.cmake`-equivalent (`.github/workflows/ci.yml:466-476`: `apt-get install gcovr` then the same command) and `python scripts/release/evidence.py --out evidence --coverage-dir <that run's coverage output>`; uploads `evidence/` as an artifact `evidence`.

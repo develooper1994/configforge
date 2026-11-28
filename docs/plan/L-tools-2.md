@@ -21,7 +21,7 @@ section at its end).
 * **why**: a user's checker reads `include/` inside every file of theirs that includes it (`docs/Compliance.md`, "The public headers come first"); today 33 record lines (131 reports) of `backlog` sit in 18 headers, so the claim "the headers are clean" cannot be made, and the compliance report (L-12c) cannot carry it.
 * **needs**: nothing
 * **size**: large (131 reports in 15 rules, each a judgement; one commit a rule group)
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: open
 * **decided**:
   * **D-151 (to copy into docs/Decisions.md, "The public headers take no backlog and no deviation")**: *Question*: a header's report may be fixed, or recorded. *Options*: (1) fix every header report; (2) allow `deviation` in headers; (3) fix, or record as `tool` only where the addon is wrong. *Decision*: option 3. A `deviation` in a header is a deviation every user must adopt (`docs/Compliance.md`, "Deviation records": the kind table says "refused in a public header", `cmake/gates/GateMisra.cmake:142-143`); `backlog` there is refused by this card, the new rule beside it. A `tool` line stays allowed: the code complies and the addon is wrong, so nothing is adopted, and the line's reason names the report. *Compatibility*: none for users; a header edit that is a rename is not allowed (the names are the interface): a report that can be removed only by renaming a public name is a design question for the maintainer (a rename breaks callers) and stays unfixed, so the gate cannot pass until it is answered.
@@ -50,7 +50,7 @@ section at its end).
 * **why**: `docs/Compliance.md:29` says "the matrix and the public headers' zero are planned"; an assessor or a user's safety process asks "what of rule 8.13?" and today must read 613 record lines; and a rule the addon does not implement shows in no record at all, so silence looks like compliance.
 * **needs**: L-12a (the headers' status is part of the matrix)
 * **size**: medium
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: open
 * **decided**:
   * **The rule list**: `docs/compliance/rules.txt`, lines `<id> | <kind> | <addon>`: id `D.n.m` for a directive (16: `D.1.1`, `D.2.1`, `D.3.1`, `D.4.1` to `D.4.14`) or `R.n.m` for a rule (143, `R.1.1` to `R.22.10`, Amendment 4's included), kind `directive` or `rule`, `<addon>` `yes` when the addon implements it and `no` when it does not. The numbers only: the standard's titles and categories are the publisher's text and are not copied (decided below). The worker writes the list from the addon's own table, never from memory: `cppcheck --version` (the record says 2.19), `find / -name misra.py -path "*addons*" 2>/dev/null` for the addon, and `grep -o "def misra_[0-9_]*" <misra.py> | sort -u` lists the rules it implements (`misra_8_13` is rule 8.13); the rules the addon lacks are added with `no`. Check: `grep -c "^R\." docs/compliance/rules.txt` prints 143 and `grep -c "^D\." docs/compliance/rules.txt` prints 16; a `def misra_` the file lacks is a stop.
@@ -81,7 +81,7 @@ section at its end).
 * **why**: the Roadmap item's "Done when" is "the compliance report is attached to a release"; `docs/Compliance.md:215` allows saying "the compliance summary is attached to each release" only when it is.
 * **needs**: L-12b
 * **size**: small
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: open
 * **decided**:
   * **D-153 (copy into docs/Decisions.md, "The compliance report is the record and the matrix, one file")**: the report is one Markdown file: a title with the version, tag and commit; "What was checked" (the preset `misra`, cppcheck's version from the record's `tool` line, the profile `cmake/profiles/misra.cmake`); the summary table of `Matrix.md`; the counts of the record by kind; every `deviation` and `tool` line (rule, file, count, reason) in full; the sentence "Nothing here is a certification: no qualified tool has run (docs/Compliance.md)". It is made by `scripts/generate/compliance_report.cmake` from the same two files, through `include()` of `scripts/generate/misra_matrix.cmake`, so it cannot say what the matrix does not. Rejected: the record and the matrix as two attached files (a reader has to join them) and a PDF (nothing here makes one).
@@ -105,7 +105,7 @@ section at its end).
 * **why**: the staged copy is `git archive` of a tree and has no `.git`; `scripts/generate/buildid.cmake:58-65` then finds only the `$Format:%h$` placeholder of `cmake/build-id.txt`, so `cf_build_id()` is empty, and a test of the version passes locally and fails in CI (`gen.version`, 2026-11-17).
 * **needs**: nothing
 * **size**: small
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: open
 * **decided**:
   * **The id**: right after `unset(ENV{GIT_INDEX_FILE})` (`scripts/verify.cmake:334`, the extraction is done and the tree is still in `${incoming}`: the copy that follows carries the file into `${ROOT}`, a fresh tree and a kept one alike), the script writes `${incoming}/cmake/build-id.txt` (the staged tree is made at `:281-372` and copied over a kept one at `:373-`), with the output of `git -C "${REPO}" rev-parse --short=7 HEAD` (the length `buildid.cmake` uses) (the commit the staged work stands on: the new commit does not exist yet, and the file says so in a comment of `verify.cmake`). The file's one line must match `^[0-9a-f]+$` (`buildid.cmake:60-64`). Nothing is written when `git rev-parse` fails; the test below then fails, loudly.
@@ -181,7 +181,7 @@ section at its end).
 * **why**: `bench/compare` (P-1b, D-111) measures parse time, peak memory and the code a library adds (`scripts/bench/page.py:446-456`), but not "time to look up" that the Roadmap item "Measured against the libraries a program would otherwise use" (lines 743-753) asks for, and a configuration library is used by looking up a few keys, not by walking everything.
 * **needs**: nothing
 * **size**: medium
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: open
 * **decided**:
   * **D-155 (copy into docs/Decisions.md, "Lookup is measured on the keys of the document, parse included")**: *Question*: what is a lookup, across libraries whose trees differ? *Options*: (1) the time of one lookup in a built tree; (2) parse, then N lookups by path, timed together and reported as parse alone plus lookups; (3) look up with the library's idiom over a SAX stream. *Decision*: option 2. A library that keeps no tree (a SAX or event reader: expat, libyaml's event API, tinycbor) has no lookup and shows `-`: the page says so, as the "What is not compared" part says for other cells. The keys are the leaves of the document itself: the harness lists every leaf's dotted path (`a.b.0.c`, array indexes as numbers), takes every `k`-th so that at most 1,000 remain (`k = max(1, leaves / 1000)`), and writes them, one a line, next to the document file as `<document file name>.keys` (`json-mixed-16.json.keys`), for the `mixed` document only, so every library looks up the same keys. `cf_bench` writes them in `run_emit_docs` (`bench/bench.c:2219`), after `emit_file` (`:2200`) has written the document: it decodes the bytes it just made with the codec API the benchmark already reads documents with (`cf_codec_decode`, a `cf_doc_sink` whose `scalar` callback records the path), and a leaf whose path would hold a `.` inside one name is not listed. A lookup is `found` when the library returns a value of the leaf's kind; the number of keys found must equal the number asked for or the cell is rejected (as `accepted` is, `bench/compare/main.cpp:338-347`). *Rejected*: option 1 (it hides the cost of building the index lazily in some libraries, a library that builds on first lookup would look free) and option 3 (not a lookup). *Compatibility*: none.
@@ -207,7 +207,7 @@ section at its end).
 * **why**: the Roadmap item names libconfig among the libraries a program would otherwise use (inih, libconfig, cJSON, toml++, libyaml); `bench/compare/libraries.cmake:21-31` (`CFB_LIB_NAMES`) has every other of them and not libconfig.
 * **needs**: L-15a
 * **size**: medium
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: open
 * **decided**:
   * **Decided** (2026-11-27): (a), libconfig (LGPL-2.1-or-later) in the benchmark only: an optional dependency, OFF by default, fetched and pinned like the others only when the comparison's libraries are fetched (`scripts/bench/fetch.cmake`), built only into `cfb_compare`, a tool that is never shipped, and never linked into the library or anything ConfigForge ships; the page names its licence as the other rows do (the `LIB_*_LICENSE` lines, `libraries.cmake:93-97` for inih). The licence's obligations attach to distributing a binary that links it, and `cfb_compare` is not distributed. Rejected: (b) leaving libconfig out with a reason under "What is not compared" (the Roadmap item names it among the libraries a program would otherwise use).
@@ -305,7 +305,7 @@ section at its end).
 * **why**: `docs/targets.txt` lists armv7 and s390x as "planned"; the Roadmap item "Byte order, word size and a bare-metal target in CI" says CI runs only x86-64 and arm64, both little endian, so a wrong swap or a 32-bit `size_t` assumption would pass every job.
 * **needs**: nothing
 * **size**: medium
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: open
 * **decided**:
   * **D-156 (copy into docs/Decisions.md, "Other byte orders and word sizes run under qemu-user in one matrix job")**: *Question*: how does CI run a big-endian and two 32-bit targets? *Options*: (1) emulated full systems (QEMU system mode); (2) qemu-user with the distribution's cross compilers, tests run through `CMAKE_CROSSCOMPILING_EMULATOR`; (3) Docker images with `--platform`. *Decision*: option 2: the cheapest to keep, one job a matrix entry, no image to keep. Rejected: option 1 (a disk image to maintain) and 3 (`binfmt` privileges on the runner and the image's own libc, so what is tested is the image). *Compatibility*: none. Tests that need what qemu-user lacks (inotify, a real clock, file locking) are skipped by name in one list, `scripts/check/targets-skip.txt`, with a reason each; the list is checked: an entry that matches no test fails the job.
@@ -332,7 +332,7 @@ section at its end).
 * **why**: the Roadmap item says "Done when the three jobs are green and required"; a required check is a repository setting that only the maintainer's rights change.
 * **needs**: L-17 (landed, the jobs green on `main`)
 * **size**: small
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: parked: not now
 * **decided**: the maintainer's step, in the repository's Settings, Branches, the rule for `main`, "Require status checks", add the three names exactly as the job lists them in the Actions tab (`gh run view <id> --json jobs --jq '.jobs[].name'` prints them). No agent does it: it is a security setting of a repository (docs/Plan.md, "Waits on the maintainer"). The agent part of this item is L-17, which stands alone.
 * **files**: none (a setting).
@@ -350,7 +350,7 @@ section at its end).
 * **why**: the item says "the README's table gives each part's size, so a user adds up their build before making it" and "its `.text` and largest stack frame on a Cortex-M build are gated, so a new feature that leaks into it fails"; `docs/sizes.txt` and `scripts/check/sizes.cmake` do this for the host (x86-64, `docs/sizes.txt:2`), where Thumb code is a different size.
 * **needs**: L-18a
 * **size**: medium
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: open
 * **decided**:
   * **Reuse, no second tool**: `scripts/check/sizes.cmake` is run with the cross toolchain: its `size_program` (`:112`, `${size_program} -t libconfigforge.a`) is set by a new argument `-DSIZE_PROGRAM=arm-none-eabi-size` (default: the host's `size`, as now), the `tool|...` line (`docs/sizes.txt:2`, `tool|x86_64|GNU 15.2.0|MinSizeRel|03634e2|2026-11-23`, read by the pattern at `sizes.cmake:14-16`) is written with the target's processor and the cross compiler's family and version: `tool|arm|GNU <version>|MinSizeRel|<commit>|<date>`, and the builds it makes use `-DTOOLCHAIN=cmake/toolchains/arm-none-eabi.cmake` (a new argument, passed to each configure as `--toolchain`). The file is `docs/sizes-cortexm.txt`, written by `-DWRITE=ON -DOUT=docs/sizes-cortexm.txt` and read by `-DCHECK=ON -DBASELINE=docs/sizes-cortexm.txt` (the argument `BASELINE` is added; default `docs/sizes.txt`).
@@ -377,7 +377,7 @@ section at its end).
 * **why**: the Roadmap item "Arm supported well" starts from "no Linux arm64 job": arm64 runs only as macOS (`macos-latest`, `ci.yml:60-79`), so glibc and musl on AArch64 (unaligned access, `long double`, the varargs ABI) are not shown.
 * **needs**: nothing
 * **size**: small
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: open
 * **decided**:
   * **The job**: `.github/workflows/ci.yml`, after `minimal`: `arm64` with `runs-on: ubuntu-26.04-arm` (the arm64 twin of the `ubuntu-26.04` the other jobs use). `gh api repos/develooper1994/configforge/actions/runners` lists self-hosted runners only, so the label is not looked up there: if the first run of the job does not start (no runner matches the label, shown by `gh run view`), the label is changed to `ubuntu-24.04-arm` and the label that ran is written under the card's notes; steps as the `matrix` job's Linux steps (`ci.yml:60-79`: checkout, `cmake --preset default`, build, `ctest --preset default`) and a second `sanitize` run on it (`cmake --preset sanitize ...`), where alignment faults would show: the sanitize preset has UBSan's alignment check on (`CMakePresets.json`, `sanitize`).
@@ -400,7 +400,7 @@ section at its end).
 * **why**: the Roadmap item says "the support is listed per target with how it was shown" and "a test run on hardware is recorded with the commit it ran". Read cold 2026-11-26: the list is already read and checked: `cf_targets_read` (`scripts/generate/matrix.cmake:6-`) accepts only `hardware|runner|qemu|built|none`, refuses a job that is not under `jobs:` of `ci.yml`, a duplicate target, a `none` line with a job and a `hardware` line with no board, date (`YYYY-MM-DD`) or commit (7 or more hex digits); the README block `<!-- matrix:begin targets -->` (`README.md:210-222`) is made from the file by `cf_matrix_targets` (`:316-`) and held by `gate.matrix` (`cmake/gates/GateMatrix.cmake`, registered at `cmake/ConfigForgeGates.cmake:143`; its cases are `tests/matrix/matrix.cmake:53-63`). What is missing is the rule for `qemu`: L-17 writes its lines with a date and a commit, and nothing holds them there.
 * **needs**: L-17 (its three `qemu` lines are the ones the rule holds)
 * **size**: small
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: open
 * **decided**:
   * **D-158 (copy into docs/Decisions.md, "A qemu line is recorded with its commit")**: *Question*: which lines of `docs/targets.txt` need a date and a commit? *Options*: (1) only `hardware`, as now; (2) `hardware` and `qemu`; (3) every line but `none`. *Decision*: option 2: both are runs of a named commit that a person can repeat; a `runner` or `built` line names a CI job whose own history is the record, and its date and commit would only go stale. *Rejected*: option 3 (a `runner` line's date goes stale with every push) and a separate gate (`gate.matrix` already reads the file). *Compatibility*: none: L-17's lines already carry both.
@@ -425,7 +425,7 @@ section at its end).
 * **why**: the Roadmap item says a target "moves up the list as a device or an emulator run becomes available, and a test run on hardware is recorded with the commit it ran"; no agent has a board.
 * **needs**: L-19b (the gate that checks the line)
 * **size**: small
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: parked: not now
 * **decided**: the maintainer's step. On a board with a C compiler and CMake (a Raspberry Pi, an Apple-silicon Linux VM is not "hardware" for this list: it is a virtual machine and is `runner`-like: the maintainer says which word fits): `cmake --preset default && cmake --build --preset default && ctest --preset default` exit 0 on the commit named; for a Cortex-M board, the library built by L-18a's toolchain file plus the maintainer's own test program linked for the board's vendor SDK (the project ships none: **the agent part, L-18a, stands alone**).
 * **files**: `docs/targets.txt` (the maintainer's line, replacing the target's `none` line), `README.md` (regenerated).
@@ -443,7 +443,7 @@ section at its end).
 * **why**: DO-178C level A and ISO 26262 ASIL D ask for MC/DC; `docs/Compliance.md`, "What the library gives a user's safety process", says it "is not measured yet" and names GCC 14's flag. Statement and branch coverage are held today (`scripts/verify.cmake:930-967`, `COVERAGE_MIN` 89, `COVERAGE_BRANCH_MIN` 80); MC/DC is the third number.
 * **needs**: nothing
 * **size**: medium
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: open
 * **decided**:
   * **D-233 (copy into docs/Decisions.md, "MC/DC is measured with GCC and held by a floor")**: *Question*: the tool that measures MC/DC, and what is held. *Options*: (1) GCC 14+ `-fcondition-coverage` (masking MC/DC) read from `gcov`'s JSON; (2) Clang 18+ `-fcoverage-mcdc` read from `llvm-cov`; (3) both. *Decision*: option 1. GCC is already the coverage compiler (`--coverage`, `cmake/ConfigForgeAnalysis.cmake:161-164`), `ubuntu-26.04` and the WSL distro carry GCC 15, and one number from one tool is what a ratchet needs. Clang's MC/DC limits a decision to six conditions and would be a second report to agree with. *Held*: a floor `MCDC_MIN` (percent of condition outcomes covered, all of `lib/*/src/`), set by this card to the measured value rounded down to a whole percent, raised by any card that adds tests, never lowered without the maintainer. 100% is not claimed; the per-file report shows where it is not. *Compatibility*: none.
@@ -471,7 +471,7 @@ section at its end).
 * **why**: `docs/Compliance.md`, "What the library gives a user's safety process": "every rule in `docs/Decisions.md` names the tests that hold it; a generated table from each D-number to its tests is planned". Requirements traced to tests are what DO-178C, ISO 26262 and IEC 61508 ask first; 17 of 126 sections say it in prose today (`grep -c "^\*\*Held to" docs/Decisions.md`), and nothing checks the prose.
 * **needs**: nothing
 * **size**: medium
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: open
 * **decided**:
   * **D-234 (copy into docs/Decisions.md, "A decision names its tests on one line, and a gate holds the names")**: *Question*: where the link from a decision to its tests lives, and how it is kept true. *Options*: (1) a tag in each test's source naming the D-number; (2) a line in each decision naming the tests; (3) a table kept by hand. *Decision*: option 2. The decision is the requirement, so its reader sees the evidence beside it; a renamed or deleted test fails the gate at once, since ctest's names are checked; tags in tests (option 1) scatter one requirement over many files and cannot say a decision has no test. The line is `**Tests.** ` followed by one or more backticked ctest names separated by `, ` and a full stop, or `**Tests.** none: <reason>.` (reason at least 12 characters) for a decision nothing can run (a naming rule, a document's shape, a decision later withdrawn). The `**Held to.**` prose stays as it is. *Compatibility*: none.
@@ -498,7 +498,7 @@ section at its end).
 * **why**: L-26a leaves about 109 sections on the to-do list; the claim "every decision names its tests" holds only when it is empty.
 * **needs**: L-26a
 * **size**: large (one commit a block of 20 sections)
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: open
 * **decided**:
   * **How a section is traced**: read its decision (the `**Decision.**` or `**Decided` paragraph); find the tests with `grep -rln "D-<n>\b" lib/*/tests tests` and by the names of the functions or files the section cites (`ctest -N | grep -i <word>`); name the tests whose failure would mean the decision no longer holds, at most six; when none exists and one can be written in under 30 lines, write it (its own commit, `L-26b: a test for D-<n>`); when none can, `none: <reason>` says why (a naming rule, a document, a choice of process).
@@ -521,7 +521,7 @@ section at its end).
 * **why**: `docs/Compliance.md` plans it ("the document ISO 26262 asks of a component developed out of context"; IEC 61508-3's safety manual for a compliant item is the same document); without it, the MISRA record, the proofs and the traces are evidence nobody can apply, because their conditions are not written down.
 * **needs**: L-12c, L-25, L-26a (it cites the report, the MC/DC floor and the trace page, so it is written after them)
 * **size**: medium
-* **version**: 2.0.0
+* **version**: 2.1.0
 * **status**: open
 * **decided**:
   * **D-235 (copy into docs/Decisions.md, "The safety manual is a checked document, and claims nothing it does not cite")**: *Question*: what the manual is, and what keeps it from claiming more than the tree holds. *Options*: (1) a free-text document; (2) a document whose every claim cites a file, a ctest name or a generated page, held by a gate that checks the citations exist; (3) a generated document. *Decision*: option 2: the assumptions are judgement and cannot be generated, but each must point at what shows it, and a citation that rots fails the build. *Compatibility*: none.

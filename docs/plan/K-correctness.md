@@ -717,6 +717,30 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: a fix needs a signature change (a `known:` line, reported); 60 turns.
 * **docs**: `CHANGELOG.md` when a defect is fixed.
 
+## K-9k - The text of a system error without `strerror`'s shared buffer (CERT CON33-C)
+
+* **id**: K-9k
+* **goal**: no file under `lib/` calls `strerror`; a system error's text comes from one internal function `cfi_errno_text(int code, char* buf, size_t cap)` in `lib/platform/src/errno_text.c` that writes a fixed English text for the codes the library meets and `error <n>` for any other, with no shared state; `docs/compliance/cert.txt`'s CON33-C row is `review` no longer but `design D-239`.
+* **why**: L-28's matrix (2026-11-28) found `strerror(errno)` at `lib/platform/src/file_layer.c:273` and `lib/platform/src/posix/posix.c:583`, `:639`, `:682`. `strerror` may return a buffer shared by every thread, and D-14 lets two threads load distinct configurations at once, so the texts can race. `strerror_r` has two incompatible signatures (XSI and GNU) and Windows has `strerror_s`; a table of our own is C89, the same on every platform, and keeps a message the same in every locale (which a test can compare).
+* **needs**: L-28
+* **size**: small
+* **version**: 2.1.0
+* **status**: open
+* **decided**:
+  * **The table**: `ENOENT` "no such file or directory", `EACCES` "permission denied", `EEXIST` "file exists", `ENOTDIR` "not a directory", `EISDIR` "is a directory", `ENOSPC` "no space left on device", `EROFS` "read-only file system", `EMFILE` "too many open files", `ENAMETOOLONG` "file name too long", `EINVAL` "invalid argument", `EIO` "input/output error", `ENOMEM` "out of memory", `EPERM` "operation not permitted", `EBUSY` "device or resource busy", `EXDEV` "cross-device link", `ELOOP` "too many levels of symbolic links" (each under `#ifdef` of its name, so a C89 libc without one still builds); any other: `error <n>`. Lower case, no final stop, as the library's messages are.
+  * **Where**: `lib/platform/src/errno_text.c` (new, in every platform's sources including `none`), declared in the platform's private header beside `cf_platform_*`'s internals (`git grep -n "cfi_" lib/platform/src/*.h`); the four call sites write `cfi_errno_text(errno, ...)` into the buffer they already format into (read `errno` once into a local first).
+  * **Guarantee**: `nothrow`, `Thread: safe`, `Signal: safe`, `Alloc: none` (K-9h's words; it touches no allocator, stdio or lock).
+  * **D-239**: "**D-239 — The library writes a system error's text from its own table.** `strerror` may share one buffer between threads (CERT CON33-C); `strerror_r` differs between XSI, GNU and Windows. A fixed English table, `error <n>` beyond it. Rejected: `strerror_r` with feature macros (two signatures to test on every libc); a lock around `strerror` (a lock in a reader)."
+* **files**: `lib/platform/src/errno_text.c` (new), the platform's private header, `lib/platform/src/file_layer.c`, `lib/platform/src/posix/posix.c`, the CMake list of platform sources (`git grep -n "file_layer.c" -- "*.cmake" CMakeLists.txt`), `lib/platform/tests/` (a test of the table: `ENOENT`'s text, an unknown code's `error 99999`, a buffer of 8 bytes cut and terminated), `docs/compliance/cert.txt` and `docs/compliance/Cert.md` (generated); last: `CHANGELOG.md` ("### Fixed"), `docs/Decisions.md`.
+* **steps**:
+  1. `git switch -c work/K-9k` from `batch`. The test of the table; **see it fail** (no such function).
+  2. `errno_text.c`, the header line, the four call sites; `git grep -n "strerror" lib` prints nothing.
+  3. The CON33-C row; regenerate `Cert.md`; `ctest --preset default -R "platform|file|gate.cert|gate.guarantees"` exit 0; the `none` preset builds and its tests pass.
+  4. Format; codemap and apiref last; ACCEPT.
+* **accept**: ACCEPT's local runs; the `none` and `ubsan-strict` presets; `analyze` builds.
+* **stop if**: a test compares a message that held `strerror`'s text and the new text breaks a golden file outside `lib/` (`git grep -n "No such file" tests tools examples`): update the golden files only when they are the library's own output, else stop and report.
+* **docs**: `CHANGELOG.md`, under the newest unreleased heading, "### Fixed": "a system error's text no longer comes from `strerror`, whose buffer threads may share (K-9k, D-239)".
+
 ## K-9h - Thread, signal and allocation lines beside the guarantee, held by `gate.guarantees`
 
 * **id**: K-9h
