@@ -476,25 +476,26 @@ of a card's CI.
 | 191 | P-14 The OpenSSF Scorecard: every finding read, every one the repository can meet met | 2.1.0 | medium | nothing | open |
 | 192 | M-20 The evidence pack: the script that assembles it, with a manifest that never claims what is not there | 2.1.0 | medium | nothing | open |
 | 193 | M-21 The evidence pack in the release | 2.1.0 | small | M-20 | waits: M-20 |
-| 194 | K-9h Thread, signal and allocation lines beside the guarantee, held by `gate.guarantees` | 2.0.0 | medium | K-9a | done (b424389) |
-| 195 | K-9i Fork, callbacks, durability and inherited descriptors: one table, each row a test | 2.0.0 | small | nothing | done (922a272) |
-| 196 | F-6 The sync a replace needs, by platform: `fdatasync` on Linux, `F_FULLFSYNC` on macOS, kept only if measured | 2.7.0 | small | nothing | open |
-| 197 | F-7 Many small files: measured first, then the cost per file cut where it shows | 2.7.0 | medium | nothing | open |
-| 198 | L-28 The CERT C matrix: every rule, which tool sees it, and the review for the rest | 2.0.0 | medium | nothing | done (1d4e24a) |
-| 199 | K-9k The text of a system error without `strerror`'s shared buffer (CERT CON33-C) | 2.1.0 | small | L-28 | done (a3bc664) |
-| 200 | L-25 MC/DC measured by GCC's condition coverage, with a floor that only rises | 2.1.0 | medium | nothing | open |
-| 201 | L-26a Each decision names the tests that hold it: the line, the table and `gate.trace` | 2.1.0 | medium | nothing | open |
-| 202 | L-26b Every decision traced: the to-do list emptied | 2.1.0 | large | L-26a | waits: L-26a |
-| 203 | L-27 The safety manual: the assumptions a user's program must hold, each pointing at its evidence | 2.1.0 | medium | L-12c, L-25, L-26a | waits: L-12c |
-| 204 | L-17-m The `targets` jobs required | 2.1.0 | small | L-17 | parked: not now |
-| 205 | L-19-m Arm devices run, recorded with their commit | 2.1.0 | small | L-19b | parked: not now |
-| 206 | P-15-m The repository settings the Scorecard waits on (the maintainer's) | 2.1.0 | small | P-14 | parked: not now |
-| 207 | M-19-m OSS-Fuzz: the application (parked) | 2.1.0 | small | M-18 | parked: not now |
-| 208 | M-23-m Registry set-up (parked) | 2.6.0 | small | M-22 | parked: not now |
-| 209 | M-25-m Upstream submissions: vcpkg and ConanCenter (parked) | 2.6.0 | small | M-22 | parked: not now |
-| 210 | M-29-m Submissions and registry accounts (parked) | 2.3.0 | small | M-27, M-28 | parked: not now |
-| 211 | M-30-m The GitHub Action in a repository of its own (parked) | 2.3.0 | small | nothing | parked: not now |
-| 212 | G-9-m Publishing the fork and what it found | 2.3.0 | small | G-9 | parked: not now |
+| 194 | M-35 A card's id is a link, in Plan.md's index and in the Roadmap | 2.1.0 | small | nothing | open |
+| 195 | K-9h Thread, signal and allocation lines beside the guarantee, held by `gate.guarantees` | 2.0.0 | medium | K-9a | done (b424389) |
+| 196 | K-9i Fork, callbacks, durability and inherited descriptors: one table, each row a test | 2.0.0 | small | nothing | done (922a272) |
+| 197 | F-6 The sync a replace needs, by platform: `fdatasync` on Linux, `F_FULLFSYNC` on macOS, kept only if measured | 2.7.0 | small | nothing | open |
+| 198 | F-7 Many small files: measured first, then the cost per file cut where it shows | 2.7.0 | medium | nothing | open |
+| 199 | L-28 The CERT C matrix: every rule, which tool sees it, and the review for the rest | 2.0.0 | medium | nothing | done (1d4e24a) |
+| 200 | K-9k The text of a system error without `strerror`'s shared buffer (CERT CON33-C) | 2.1.0 | small | L-28 | done (a3bc664) |
+| 201 | L-25 MC/DC measured by GCC's condition coverage, with a floor that only rises | 2.1.0 | medium | nothing | open |
+| 202 | L-26a Each decision names the tests that hold it: the line, the table and `gate.trace` | 2.1.0 | medium | nothing | open |
+| 203 | L-26b Every decision traced: the to-do list emptied | 2.1.0 | large | L-26a | waits: L-26a |
+| 204 | L-27 The safety manual: the assumptions a user's program must hold, each pointing at its evidence | 2.1.0 | medium | L-12c, L-25, L-26a | waits: L-12c |
+| 205 | L-17-m The `targets` jobs required | 2.1.0 | small | L-17 | parked: not now |
+| 206 | L-19-m Arm devices run, recorded with their commit | 2.1.0 | small | L-19b | parked: not now |
+| 207 | P-15-m The repository settings the Scorecard waits on (the maintainer's) | 2.1.0 | small | P-14 | parked: not now |
+| 208 | M-19-m OSS-Fuzz: the application (parked) | 2.1.0 | small | M-18 | parked: not now |
+| 209 | M-23-m Registry set-up (parked) | 2.6.0 | small | M-22 | parked: not now |
+| 210 | M-25-m Upstream submissions: vcpkg and ConanCenter (parked) | 2.6.0 | small | M-22 | parked: not now |
+| 211 | M-29-m Submissions and registry accounts (parked) | 2.3.0 | small | M-27, M-28 | parked: not now |
+| 212 | M-30-m The GitHub Action in a repository of its own (parked) | 2.3.0 | small | nothing | parked: not now |
+| 213 | G-9-m Publishing the fork and what it found | 2.3.0 | small | G-9 | parked: not now |
 <!-- index end -->
 
 ### Waits on the maintainer (skipped by the loop)
