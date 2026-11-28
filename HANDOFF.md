@@ -19,7 +19,7 @@ the variable PUBLISH_CRATES is unset): do not chase it.
 
 ## In flight
 
-3. On `batch` (D:\cf-workatch), ahead of main, no full run yet:
+3. On `batch` ahead of main, no full run yet: (the worktree is D:/cf-work/batch)
    "Open 2.1.0", L-28 (CERT matrix, D-236), K-9k (a3bc664, strerror
    replaced, D-239) and 3411f27 (`cf_error_place_at` promoted to CF_API:
    opening 2.1.0 made gate.abi refuse a 2.0 experimental name, D-89).
