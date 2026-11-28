@@ -200,6 +200,14 @@ function(configforge_callgraph tgt)
                                                VERSION_LESS 10)
     return()
   endif()
+  # clang-tidy and include-what-you-use read the GCC command line with
+  # clang's driver, which refuses -fcallgraph-info: those builds have no
+  # call data, and the gate says so.
+  if(CF_CLANG_TIDY
+     OR CMAKE_C_CLANG_TIDY
+     OR CMAKE_C_INCLUDE_WHAT_YOU_USE)
+    return()
+  endif()
   if(CF_LTO AND CF_HAS_IPO)
     return()
   endif()
