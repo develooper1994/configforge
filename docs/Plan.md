@@ -297,8 +297,8 @@ of a card's CI.
 | 12 | [M-11b](plan/M-maintainer.md#m-11b) `cf_error` owns its text (the 2.0 break) | 2.0.0 | large | [M-11a](plan/M-maintainer.md#m-11a) | done (08e6470) |
 | 13 | [M-12](plan/M-maintainer.md#m-12) The image header's layout, version 2 | 2.0.0 | medium | nothing | done (c818cba) |
 | 14 | [M-13](plan/M-maintainer.md#m-13) 2.0, once: the list of what breaks, and the gate that holds it | 2.0.0 | small | [M-11b](plan/M-maintainer.md#m-11b), [M-12](plan/M-maintainer.md#m-12) | done (289121d) |
-| 15 | [C-2a](plan/C-change.md#c-2a) Durations and sizes: the unit on an int definition | 2.1.0 | large | nothing | open |
-| 16 | [C-2b](plan/C-change.md#c-2b) Durations and sizes: the schema, the report, `cf_emit` and every reader | 2.1.0 | medium | [C-2a](plan/C-change.md#c-2a) | waits: [C-2a](plan/C-change.md#c-2a) |
+| 15 | [C-2a](plan/C-change.md#c-2a) Durations and sizes: the unit on an int definition | 2.1.0 | large | nothing | done (5813086) |
+| 16 | [C-2b](plan/C-change.md#c-2b) Durations and sizes: the schema, the report, `cf_emit` and every reader | 2.1.0 | medium | [C-2a](plan/C-change.md#c-2a) | open |
 | 17 | [C-8a](plan/C-change-2.md#c-8a) A read the contract does not have, noticed: the library records it | 2.1.0 | medium | nothing | open |
 | 18 | [C-9](plan/C-change-2.md#c-9) Values migrated, not only renamed: a function on the old key's definition | 2.1.0 | medium | nothing | open |
 | 19 | [C-11](plan/C-change-2.md#c-11) A program's files where its platform keeps them: `cf_builder_app_files` | 2.1.0 | medium | nothing | open |
@@ -310,7 +310,7 @@ of a card's CI.
 | 25 | [Y-10](plan/Y-asked.md#y-10) `cf_live_get` and `cf_config_free` under threads on the benchmark's page; `cf_live_generation` without the lock | 2.1.0 | medium | nothing | open |
 | 26 | [Y-1](plan/Y-asked.md#y-1) The Guide's "At the same time": what is guarded and what is not | 2.1.0 | small | nothing | open |
 | 27 | [C-1a](plan/C-change.md#c-1a) `configforge diff` over arrays of arrays | 2.1.0 | medium | nothing | open |
-| 28 | [C-1b](plan/C-change.md#c-1b) `configforge diff --schema`: units compared as values | 2.1.0 | medium | [C-2a](plan/C-change.md#c-2a), [C-2b](plan/C-change.md#c-2b), [C-1a](plan/C-change.md#c-1a) | waits: [C-2a](plan/C-change.md#c-2a) |
+| 28 | [C-1b](plan/C-change.md#c-1b) `configforge diff --schema`: units compared as values | 2.1.0 | medium | [C-2a](plan/C-change.md#c-2a), [C-2b](plan/C-change.md#c-2b), [C-1a](plan/C-change.md#c-1a) | waits: [C-2b](plan/C-change.md#c-2b) |
 | 29 | [C-3a](plan/C-change.md#c-3a) `configforge diff --schema` flags the keys out of range and the keys that touch a secret | 2.1.0 | medium | [C-1b](plan/C-change.md#c-1b) | waits: [C-1b](plan/C-change.md#c-1b) |
 | 30 | [C-3b](plan/C-change.md#c-3b) The pull request's comment says which keys are out of range and which touch a secret | 2.1.0 | small | [C-3a](plan/C-change.md#c-3a), N-15 | waits: [C-3a](plan/C-change.md#c-3a) |
 | 31 | [C-4a](plan/C-change.md#c-4a) `doctor drift`: the source of a value, and a list file | 2.1.0 | medium | nothing | open |

@@ -84,7 +84,7 @@ rest in any order; the file lists the cards by Roadmap item.
 * **needs**: nothing
 * **size**: large (the unit and its parser, the field and the conversion; the schema, the report and `cf_emit` are C-2b)
 * **version**: 2.1.0
-* **status**: open
+* **status**: done (5813086)
 * **decided**: (D-222, under "Organiser's answers"; options with defaults as D-220 and K-11a: `size_t size` first, `cf_*_options_init`.)
   * **The unit** (`lib/numeric/include/configforge/cf_numeric.h`, public, no internal tier; `lib/numeric` depends on `port` only, so it knows no `cf_def`):
     ```
