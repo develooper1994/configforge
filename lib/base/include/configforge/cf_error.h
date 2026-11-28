@@ -79,7 +79,7 @@ typedef struct cf_error {
     char        cfi_message[CF_MESSAGE_MAX];
     cf_loc      where;  /* (1.8) line and column, 0 when unknown; file is always NULL */
     int         reason; /* (1.8) CF_REASON_*, CF_REASON_NONE when unset */
-    size_t      offset; /* (2.0, experimental) byte offset of the cause, (size_t)-1 if
+    size_t      offset; /* (2.0) byte offset of the cause, (size_t)-1 if
                            unknown */
     char* cfi_heap[3];  /* (2.0) the blocks of key, source, message past the store */
 } cf_error;
@@ -187,10 +187,11 @@ CF_API void cf_error_place(cf_error* e, int reason, unsigned int line,
 
 /* As cf_error_place, and the byte offset of the cause in the input (the
    index of the byte, from 0) where e->size reaches it; (size_t)-1 says the
-   reader has none. cf_error_place leaves it (size_t)-1. Experimental in 2.0.
+   reader has none. cf_error_place leaves it (size_t)-1. Promised since 2.1
+   (experimental in 2.0, D-89).
    Guarantee: nothrow. */
-CF_EXPERIMENTAL(2, 0) void cf_error_place_at(cf_error* e, int reason, unsigned int line,
-                                             unsigned int col, size_t offset);
+CF_API void cf_error_place_at(cf_error* e, int reason, unsigned int line,
+                              unsigned int col, size_t offset);
 
 #ifdef __cplusplus
 }

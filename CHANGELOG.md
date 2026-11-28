@@ -5,11 +5,19 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ## 2.1.0 — unreleased
 
+### Added
+
+- The CERT C matrix (docs/compliance/Cert.md): every rule with how it is checked, held by gate.cert (D-236).
+
+### Changed
+
+- `cf_error_place_at`, experimental in 2.0, is promoted to `CF_API` and listed in
+  `cmake/configforge.symbols` (D-89).
+
 ## 2.0.0 — 2026-11-28
 
 ### Added
 
-- The CERT C matrix (docs/compliance/Cert.md): every rule with how it is checked, held by gate.cert (D-236).
 - `Thread:`, `Signal:` and `Alloc:` lines beside a function's guarantee, the weakest by default, checked by `gate.guarantees`: a word it does not know, and a `Signal: safe` or `Alloc: none` on a function whose call data reaches an allocator, a call through a pointer, stdio or a lock, are refused; `docs/Guarantees.md` lists the three columns, and the `cf_get_*` and `cf_try_*` readers and `cf_key_valid` are the first to carry them (K-9h, D-238).
 - A table in docs/Guarantees.md of what holds across fork, callbacks, a crash and exec, each row with its test; `gate.guarantees` refuses a row naming a test that does not exist (K-9i).
 - `cf_error_set_long`: as `cf_error_set`, with each of the three texts allowed a cap of bytes (0, none) and a text past the old arrays' size held in a block the error owns (M-11b, D-176).

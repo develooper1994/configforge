@@ -115,6 +115,7 @@ cf_environ
 cf_error_clear
 cf_error_copy
 cf_error_place
+cf_error_place_at
 cf_error_set
 cf_error_set_long
 cf_explain
