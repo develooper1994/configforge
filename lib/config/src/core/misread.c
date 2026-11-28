@@ -10,7 +10,9 @@
  */
 
 #include "configforge/cf_report.h"
+#include "configforge/cf_build_options.h"
 #include "configforge/cf_port.h"
+#include "configforge/cf_value.h"
 
 #include <string.h>
 

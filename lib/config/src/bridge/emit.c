@@ -14,10 +14,12 @@
  */
 
 #include "configforge/configforge.h"
+#include "configforge/cf_alloc.h"
 #include "configforge/cf_build_options.h"
 #include "configforge/cf_define.h"
 #include "configforge/cf_emit.h"
 #include "configforge/cf_error.h"
+#include "configforge/cf_file.h"
 #include "configforge/cf_keyspace.h"
 #include "configforge/cf_port.h"
 #include "configforge/cf_text.h"

@@ -1449,7 +1449,13 @@ static size_t unit_put_negative(char* tmp, cf_i64 v) {
 /* Go's time.ParseDuration spellings, C++ chrono's names, and d and w as
    Rust's humantime has them; both mu signs (U+00B5 and U+03BC), in UTF-8. */
 #define DURATION_ROWS                                                                  \
-    {"ns", 1}, {"us", 1000}, {"\xC2\xB5s", 1000}, {"\xCE\xBCs", 1000},                 \
+    {"ns", 1}, {"us", 1000},                                                           \
+        {"\xC2\xB5"                                                                    \
+         "s",                                                                          \
+         1000},                                                                        \
+        {"\xCE\xBC"                                                                    \
+         "s",                                                                          \
+         1000},                                                                        \
         {"ms", 1000000}, {"s", (cf_i64)NS_S}, {"m", (cf_i64)NS_M},                     \
         {"min", (cf_i64)NS_M}, {"h", (cf_i64)NS_H}, {"d", (cf_i64)NS_D}, {             \
         "w", (cf_i64)NS_W                                                              \
@@ -1635,7 +1641,8 @@ static size_t duration_format(const cf_unit* u, cf_i64 v, char* buf, size_t cap)
     }
     base = u->options.base;
     if (v < 0) {
-        return unit_hand_over(tmp, unit_put_negative(tmp, v), buf, cap);
+        at = unit_put_negative(tmp, v);
+        return unit_hand_over(tmp, at, buf, cap);
     }
     if (v == 0) {
         at = unit_put_num(tmp, 0, 0);
@@ -1721,7 +1728,8 @@ static size_t size_format(const cf_unit* u, cf_i64 v, char* buf, size_t cap) {
 
     (void)u;
     if (v < 0) {
-        return unit_hand_over(tmp, unit_put_negative(tmp, v), buf, cap);
+        at = unit_put_negative(tmp, v);
+        return unit_hand_over(tmp, at, buf, cap);
     }
     for (k = 0; v > 0 && k < sizeof size_parts / sizeof size_parts[0]; ++k) {
         if (v % size_parts[k].factor == 0) {

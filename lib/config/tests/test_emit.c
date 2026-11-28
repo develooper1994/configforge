@@ -3,6 +3,7 @@
  */
 
 #include <configforge/configforge.h>
+#include <configforge/cf_platform.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -698,6 +699,14 @@ static void test_emit_file(void) {
 
     if (c == NULL) {
         check(0, "builds");
+        return;
+    }
+    if (cf_platform_write_steps() == 0) {
+        /* A platform with no files (none): the capability error, nothing more. */
+        check(!cf_emit_file(c, "cf_ef.json", NULL, CF_EMIT_CONFIGURED, 0, NULL, &err),
+              "none: a file cannot be written");
+        check(err.code == CF_E_CAPABILITY, "none: CF_E_CAPABILITY");
+        cf_config_free(c);
         return;
     }
     remove("cf_ef.json");

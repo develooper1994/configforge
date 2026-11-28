@@ -1455,7 +1455,7 @@ static int migrate_hook(void* ctx, cf_candidate* c) {
         return CF_KS_CONV_FAIL;
     }
     if (out.type == CF_TYPE_TEXT) {
-        char* copy = cf_arena_dup(m->arena, out.u.t.p, out.u.t.n);
+        const char* copy = cf_arena_dup(m->arena, out.u.t.p, out.u.t.n);
         if (copy == NULL) {
             cf_error_set(m->err, CF_E_MEMORY, old->key, c->at,
                          "no room to migrate '%s'", old->key);

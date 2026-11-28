@@ -310,9 +310,9 @@ CF_NODISCARD CF_API cf_bool cf_ks_rename_list(cf_keyspace* ks, const char* from,
 
 /* A hook run on each copy cf_ks_rename_with makes, before it is pushed. It
    may change the copy's value and flags. */
-#define CF_KS_CONV_OK 1    /* `c` was converted                       */
-#define CF_KS_CONV_SKIP 0  /* leave this candidate out of the new key */
-#define CF_KS_CONV_FAIL -1 /* stop: the hook holds the error          */
+#define CF_KS_CONV_OK 1      /* `c` was converted                       */
+#define CF_KS_CONV_SKIP 0    /* leave this candidate out of the new key */
+#define CF_KS_CONV_FAIL (-1) /* stop: the hook holds the error          */
 typedef int (*cf_ks_convert_fn)(void* ctx, cf_candidate* c);
 
 /* As cf_ks_rename, with `conv` (or NULL) called on each copy; a converted

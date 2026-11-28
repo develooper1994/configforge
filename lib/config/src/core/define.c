@@ -19,7 +19,9 @@
 #define DEF_SIZE_1_0 (offsetof(cf_def, policy) + sizeof(((cf_def*)0)->policy))
 #define DEF_SIZE_LIST                                                                  \
     (offsetof(cf_def, list_default_count) + sizeof(((cf_def*)0)->list_default_count))
-#define DEF_SIZE_UNIT (offsetof(cf_def, unit) + sizeof(((cf_def*)0)->unit))
+/* The unit's size is spelt as a type: sizeof on the member is flagged by
+   bugprone-sizeof-expression (a pointer to a struct). */
+#define DEF_SIZE_UNIT (offsetof(cf_def, unit) + sizeof(const struct cf_unit*))
 #define DEF_SIZE_MIGRATE                                                               \
     (offsetof(cf_def, migrate_user) + sizeof(((cf_def*)0)->migrate_user))
 

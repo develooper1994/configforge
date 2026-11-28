@@ -14,6 +14,7 @@
 #include "configforge/cf_error.h"
 #include "configforge/cf_platform.h"
 #include "configforge/cf_port.h"
+#include "configforge/cf_report.h"
 
 #include <string.h>
 
@@ -31,8 +32,9 @@ typedef enum srv_verdict {
 /* Wiped through a volatile pointer, which a compiler cannot see through. */
 static void srv_wipe(char* p, size_t n) {
     volatile char* v = p;
-    while (n-- > 0) {
+    while (n > 0) {
         *v++ = 0;
+        --n;
     }
 }
 
