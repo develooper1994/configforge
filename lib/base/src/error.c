@@ -143,10 +143,9 @@ static char* text_block(size_t n) {
 }
 
 static void text_release(char* block) {
-    const cf_allocator* a;
-
     if (block != NULL) {
-        a = cf_default_allocator();
+        const cf_allocator* a = cf_default_allocator();
+
         if (a != NULL && a->release != NULL) {
             a->release(a->ctx, block);
         }
@@ -265,8 +264,7 @@ void cf_error_copy(cf_error* dst, const cf_error* src) {
 
 cf_bool cf_error_set(cf_error* e, cf_code code, const char* key, const char* source,
                      const char* fmt, ...) {
-    va_list ap;
-    char    tmp[CF_MESSAGE_MAX];
+    char tmp[CF_MESSAGE_MAX];
 
     /* A NULL error is not a mistake: it means the caller does not want
        the detail. Reporting unconditionally keeps every call site free
@@ -276,6 +274,8 @@ cf_bool cf_error_set(cf_error* e, cf_code code, const char* key, const char* sou
     }
     tmp[0] = '\0';
     if (fmt != NULL) {
+        va_list ap;
+
         va_start(ap, fmt);
         cf_vfmt(tmp, sizeof tmp, fmt, ap);
         va_end(ap);
@@ -291,10 +291,9 @@ cf_bool cf_error_set(cf_error* e, cf_code code, const char* key, const char* sou
 
 cf_bool cf_error_set_long(cf_error* e, cf_code code, const char* key,
                           const char* source, size_t cap, const char* fmt, ...) {
-    va_list ap;
-    char    tmp[CF_MESSAGE_MAX];
-    char*   big = NULL;
-    size_t  want;
+    char   tmp[CF_MESSAGE_MAX];
+    char*  big = NULL;
+    size_t want;
 
     if (e == NULL) {
         return CF_FALSE;
@@ -302,6 +301,8 @@ cf_bool cf_error_set_long(cf_error* e, cf_code code, const char* key,
     tmp[0] = '\0';
     want   = 0;
     if (fmt != NULL) {
+        va_list ap;
+
         va_start(ap, fmt);
         want = cf_vfmt(tmp, sizeof tmp, fmt, ap);
         va_end(ap);

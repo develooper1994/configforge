@@ -30,3 +30,49 @@ INTEGER_OVERFLOW_L1 lib/text/src/refs.c cf_text_ref_widen
 # it, which is the one close(fd) on that path; Infer's model of fdopen
 # takes the descriptor over on both outcomes.
 USE_AFTER_FREE lib/platform/src/posix/file.c cf_platform_fopen
+
+# cf_error owns its text (M-11b, D-176): text_put in lib/base/src/error.c
+# writes at most room - 1 bytes into the inline store its switch picks
+# (sizeof the member) or into a block of n + 1 bytes; Infer does not
+# carry the switch's choice of store and room through cf_error_set and
+# cf_error_copy, so every caller is reported with "Size: 8" or "Size: 32".
+BUFFER_OVERRUN_L2 lib/config/src/bridge/image.c bad
+BUFFER_OVERRUN_L2 lib/config/src/bridge/image.c cf_image_load
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c builder_codecs_copy
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c builder_document
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c builder_dup
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c builder_slot
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c builder_slot_mask
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_app_builder
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_bool
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_codec
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_create
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_credentials
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_define
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_digest_key
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_dir
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_dotenv
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_file
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_file_codec
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_int
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_key
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_limits
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_open
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_preferences
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_real
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_registry
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_replay
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_response_files
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_schema
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_schema_file
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_secrets
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_sizing
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_source
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_store
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_text
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cf_builder_writable
+BUFFER_OVERRUN_L2 lib/config/src/core/config.c cfi_config_keep_values
+BUFFER_OVERRUN_L2 lib/config/src/core/live.c live_build
+BUFFER_OVERRUN_L2 lib/config/src/sources/entry.c cf_cli_expand
+BUFFER_OVERRUN_L2 lib/config/src/sources/entry.c cf_lex_cli
+BUFFER_OVERRUN_L2 lib/config/src/sources/entry.c cf_lex_env

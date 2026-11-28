@@ -2364,7 +2364,7 @@ Guarantee: strong. A pure check; CF_FALSE says the key is not canonical.
 CF_API void cf_error_clear(cf_error* e);
 ```
 
-Implementation: [`cf_error_clear` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L234).
+Implementation: [`cf_error_clear` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L233).
 
 Empties `e`: code CF_OK, key, source, message, place and reason empty, and
 frees a long text it owned. `size` is kept, so a cleared error can be
@@ -2375,7 +2375,7 @@ Guarantee: nothrow.
 CF_API void cf_error_copy(cf_error* dst, const cf_error* src);
 ```
 
-Implementation: [`cf_error_copy` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L245).
+Implementation: [`cf_error_copy` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L244).
 
 What `src` says, copied into `dst`: 1.0's fields always, a later field
 where dst->size covers it. The texts are copied into `dst`'s own store
@@ -2389,7 +2389,7 @@ old array's size; a NULL side is ignored.
 CF_API cf_bool cf_error_set(cf_error* e, cf_code code, const char* key, const char* source, const char* fmt, ...);
 ```
 
-Implementation: [`cf_error_set` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L266).
+Implementation: [`cf_error_set` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L265).
 
 Set code, key, source and a formatted message, clearing place and reason.
 Safe with a NULL

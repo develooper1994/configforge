@@ -52,13 +52,13 @@
 - cf_error_place_at 101-112
 - cf_error_place 114-116
 - text_block 131-143
-- text_release 145-154
-- text_put 160-225
-- text_len 228-232
-- cf_error_clear 234-243
-- cf_error_copy 245-264
-- cf_error_set 266-290
-- cf_error_set_long 292-332
+- text_release 145-153
+- text_put 159-224
+- text_len 227-231
+- cf_error_clear 233-242
+- cf_error_copy 244-263
+- cf_error_set 265-290
+- cf_error_set_long 292-333
 `lib/base/src/key.c`
 - cf_key_valid 11-15
 - cfi_key_valid_n 17-46
