@@ -299,7 +299,7 @@ of a card's CI.
 | 14 | [M-13](plan/M-maintainer.md#m-13) 2.0, once: the list of what breaks, and the gate that holds it | 2.0.0 | small | [M-11b](plan/M-maintainer.md#m-11b), [M-12](plan/M-maintainer.md#m-12) | done (289121d) |
 | 15 | [C-2a](plan/C-change.md#c-2a) Durations and sizes: the unit on an int definition | 2.1.0 | large | nothing | done (5813086) |
 | 16 | [C-2b](plan/C-change.md#c-2b) Durations and sizes: the schema, the report, `cf_emit` and every reader | 2.1.0 | medium | [C-2a](plan/C-change.md#c-2a) | open |
-| 17 | [C-8a](plan/C-change-2.md#c-8a) A read the contract does not have, noticed: the library records it | 2.1.0 | medium | nothing | open |
+| 17 | [C-8a](plan/C-change-2.md#c-8a) A read the contract does not have, noticed: the library records it | 2.1.0 | medium | nothing | done (d68b49e) |
 | 18 | [C-9](plan/C-change-2.md#c-9) Values migrated, not only renamed: a function on the old key's definition | 2.1.0 | medium | nothing | open |
 | 19 | [C-11](plan/C-change-2.md#c-11) A program's files where its platform keeps them: `cf_builder_app_files` | 2.1.0 | medium | nothing | open |
 | 20 | [C-7](plan/C-change-2.md#c-7) Profiles: `--profile` or `NAME_PROFILE` adds `config.<profile>.<ext>` above the base file | 2.1.0 | medium | [C-11](plan/C-change-2.md#c-11) | waits: [C-11](plan/C-change-2.md#c-11) |
@@ -317,12 +317,12 @@ of a card's CI.
 | 32 | [C-4b](plan/C-change.md#c-4b) Drift across N configuration files: `configforge diff --all` | 2.1.0 | medium | [C-1a](plan/C-change.md#c-1a) | waits: [C-1a](plan/C-change.md#c-1a) |
 | 33 | [C-6a](plan/C-change.md#c-6a) Shell completions from the contract: `configforge gen --lang bash\|zsh\|fish\|powershell` | 2.1.0 | medium | nothing | open |
 | 34 | [C-6b](plan/C-change.md#c-6b) A man page and a sample file from the contract: `configforge gen --lang man\|sample-toml\|sample-yaml` | 2.1.0 | medium | [C-6a](plan/C-change.md#c-6a) | waits: [C-6a](plan/C-change.md#c-6a) |
-| 35 | [C-8b](plan/C-change-2.md#c-8b) Doctor's CFD021: a read of a key the contract does not have, in `doctor lint` | 2.1.0 | small | [C-8a](plan/C-change-2.md#c-8a) | waits: [C-8a](plan/C-change-2.md#c-8a) |
+| 35 | [C-8b](plan/C-change-2.md#c-8b) Doctor's CFD021: a read of a key the contract does not have, in `doctor lint` | 2.1.0 | small | [C-8a](plan/C-change-2.md#c-8a) | open |
 | 36 | [C-10b](plan/C-change-2.md#c-10b) `configforge doctor pull unix:<path>`, and an example that serves from a loop | 2.1.0 | medium | [C-10a](plan/C-change-2.md#c-10a) | waits: [C-10a](plan/C-change-2.md#c-10a) |
 | 37 | [Y-34](plan/Y-asked.md#y-34) `gen check --report`: a predicted, value-blind report from files and a contract | 2.1.0 | medium | nothing | open |
 | 38 | [Y-35](plan/Y-asked.md#y-35) Doctor on a predicted report: the rules a running program is needed for are off and named; SARIF columns and fingerprints | 2.1.0 | small | [Y-34](plan/Y-asked.md#y-34) | waits: [Y-34](plan/Y-asked.md#y-34) |
 | 39 | [Y-37](plan/Y-asked.md#y-37) A secret written in a checked file: CFD022 | 2.1.0 | small | [Y-35](plan/Y-asked.md#y-35), [C-8b](plan/C-change-2.md#c-8b), [C-8b](plan/C-change-2.md#c-8b) | waits: [Y-35](plan/Y-asked.md#y-35) |
-| 40 | [Y-38](plan/Y-asked.md#y-38) Defined but never read, over a set of reports: CFD023 | 2.1.0 | small | [C-8a](plan/C-change-2.md#c-8a), [C-8b](plan/C-change-2.md#c-8b) | waits: [C-8a](plan/C-change-2.md#c-8a) |
+| 40 | [Y-38](plan/Y-asked.md#y-38) Defined but never read, over a set of reports: CFD023 | 2.1.0 | small | [C-8a](plan/C-change-2.md#c-8a), [C-8b](plan/C-change-2.md#c-8b) | waits: [C-8b](plan/C-change-2.md#c-8b) |
 | 41 | [F-4a](plan/F-files.md#f-4a) The references drawn, first by jq | 2.1.0 | small | nothing | open |
 | 42 | [C-4c](plan/C-change.md#c-4c) `doctor drift` from Python | 2.1.0 | small | [C-4a](plan/C-change.md#c-4a) | waits: [C-4a](plan/C-change.md#c-4a) |
 | 43 | [Y-7](plan/Y-asked.md#y-7) "Threads and processes" in the Guide: four recipes, compiled in CI, a `fork` test | 2.1.0 | medium | [Y-1](plan/Y-asked.md#y-1), Y-8 | waits: [Y-1](plan/Y-asked.md#y-1) |

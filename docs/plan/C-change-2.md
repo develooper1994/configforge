@@ -112,7 +112,7 @@ Shared by every card here:
 * **needs**: nothing
 * **size**: medium
 * **version**: 2.1.0
-* **status**: open
+* **status**: done (d68b49e)
 * **decided**:
   * **Opt-in.** `CF_EXPERIMENTAL(2, 1) void cf_builder_track_misreads(cf_builder* b)`, beside `cf_builder_track_reads` (`configforge.h:521`); `CF_EXPERIMENTAL(2, 1) cf_bool cf_tracks_misreads(const cf_config* c)`. Off by default: a read costs one pointer test more (`c->misreads != NULL`) and nothing else. Tracking reads and tracking misreads are independent. A derived configuration tracks as its base did (`derive_onto`, `config.c:1737`, beside `track_reads`); the log it makes starts empty.
   * **What is a misread.** A read through `cf_get_bool`, `cf_get_int`, `cf_get_text`, `cf_get_text_n`, `cf_get_real`, `cf_try_bool`, `cf_try_int`, `cf_try_text`, `cf_try_real` (the last under `CF_WITH_REAL`), with `want` the type it asks for, of `key`; not `cf_has`, `cf_type_of`, `cf_explain`, `cf_report`, the iterator or `cf_derive`: those ask what is there, not for a value. In this order:
