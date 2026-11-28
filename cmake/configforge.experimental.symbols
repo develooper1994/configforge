@@ -5,6 +5,8 @@
 cf_builder_track_misreads 2.1
 cf_misread_at 2.1
 cf_misreads 2.1
+cf_serve_options_init 2.1
+cf_serve_report 2.1
 cf_tracks_misreads 2.1
 cf_unit_duration_get 2.1
 cf_unit_format 2.1

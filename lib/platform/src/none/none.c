@@ -31,6 +31,37 @@ char* const* cf_platform_environ(void) {
     return NULL;
 }
 
+cf_bool cf_platform_has_fd_io(void) {
+    return CF_FALSE;
+}
+
+cf_bool cf_platform_fd_is_socket(int fd) {
+    (void)fd;
+    return CF_FALSE;
+}
+
+int cf_platform_fd_nonblock(int fd, int on) {
+    (void)fd;
+    (void)on;
+    return -1;
+}
+
+long cf_platform_fd_read(int fd, void* buf, size_t cap, long timeout_ms) {
+    (void)fd;
+    (void)buf;
+    (void)cap;
+    (void)timeout_ms;
+    return -1;
+}
+
+cf_bool cf_platform_fd_write(int fd, const void* buf, size_t n, long timeout_ms) {
+    (void)fd;
+    (void)buf;
+    (void)n;
+    (void)timeout_ms;
+    return CF_FALSE;
+}
+
 char* const* cf_platform_args(int argc, char* const* argv, cf_arena* arena,
                               int* out_argc) {
     (void)arena;

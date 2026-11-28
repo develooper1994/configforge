@@ -91,6 +91,7 @@ set(CF_UNIT_TESTS
     test_utf8_refused
     test_reader_corpus
     test_places
+    test_serve
     test_misreads)
 
 # The directories test_starve's every-source run reads. C89 has no mkdir.

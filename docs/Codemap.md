@@ -233,7 +233,9 @@
 - enum cf_misread_kind 741-744
 - enum cf_change 796-801
 - typedef cf_diff_fn 808
-- typedef cf_watcher 1084
+- struct cf_serve_options 883-887
+- #define CF_SERVE_OPTIONS_INIT 890
+- typedef cf_watcher 1124
 `lib/config/src/bridge/dir.c`
 - struct dir_state 36-44
 - typedef dir_name 57
@@ -870,6 +872,18 @@
 - cf_source_replay_state_size 1066-1068
 - cf_source_replay 1070-1088
 - cf_source_replay_error 1090-1098
+`lib/config/src/diag/serve.c`
+- enum srv_verdict 24-29
+- srv_wipe 32-37
+- srv_has_blank 40-52
+- srv_read_request 57-77
+- srv_parse 80-127
+- srv_answer 130-145
+- srv_text 147-150
+- srv_report 153-187
+- srv_serve 189-227
+- cf_serve_options_init 229-236
+- cf_serve_report 238-291
 `lib/config/src/diag/usage.c`
 - struct usage_items 30-33
 - item 35-39
@@ -1073,13 +1087,13 @@
 - struct cf_locker 29-42
 `lib/platform/include/configforge/cf_platform.h`
 - #define CONFIGFORGE_CF_PLATFORM_H 29
-- #define CF_PLATFORM_NAME_MAX 100
-- struct cf_platform_reg_value 158-166
-- typedef cf_platform_reg_fn 170
-- struct cf_platform_pref_event 205-218
-- typedef cf_platform_pref_fn 222
-- struct cf_stamp 253-257
-- typedef cf_platform_wake 347
+- #define CF_PLATFORM_NAME_MAX 134
+- struct cf_platform_reg_value 192-200
+- typedef cf_platform_reg_fn 204
+- struct cf_platform_pref_event 239-252
+- typedef cf_platform_pref_fn 256
+- struct cf_stamp 287-291
+- typedef cf_platform_wake 381
 `lib/platform/include/configforge/cf_platform_file.h`
 - #define CONFIGFORGE_CF_PLATFORM_FILE_H 20
 - #define CF_PLATFORM_WIN32 41
@@ -1145,27 +1159,32 @@
 - cf_platform_has_dir_list 22-24
 - cf_platform_has_wide_args 26-28
 - cf_platform_environ 30-32
-- cf_platform_args 34-39
-- cf_platform_lock_take 41-50
-- cf_platform_lock_give 52-56
-- cf_platform_stamp 58-66
-- cf_platform_dir_list 68-75
-- cf_platform_has_trusted_dir 78-80
-- cf_platform_dir_list_trusted 82-85
-- cf_platform_world_readable 87-90
-- cf_platform_has_private_create 92-94
-- cf_platform_create_private 96-100
-- cf_platform_has_registry 104-106
-- cf_platform_registry_walk 108-117
-- cf_platform_has_preferences 121-123
-- cf_platform_preferences_walk 125-140
-- cf_platform_has_wake 142-144
-- cf_platform_wake_open 146-154
-- cf_platform_wake_fd 156-159
-- cf_platform_wake_handle 161-164
-- cf_platform_wake_drain 166-169
-- cf_platform_wake_wait 171-175
-- cf_platform_wake_close 177-179
+- cf_platform_has_fd_io 34-36
+- cf_platform_fd_is_socket 38-41
+- cf_platform_fd_nonblock 43-47
+- cf_platform_fd_read 49-55
+- cf_platform_fd_write 57-63
+- cf_platform_args 65-70
+- cf_platform_lock_take 72-81
+- cf_platform_lock_give 83-87
+- cf_platform_stamp 89-97
+- cf_platform_dir_list 99-106
+- cf_platform_has_trusted_dir 109-111
+- cf_platform_dir_list_trusted 113-116
+- cf_platform_world_readable 118-121
+- cf_platform_has_private_create 123-125
+- cf_platform_create_private 127-131
+- cf_platform_has_registry 135-137
+- cf_platform_registry_walk 139-148
+- cf_platform_has_preferences 152-154
+- cf_platform_preferences_walk 156-171
+- cf_platform_has_wake 173-175
+- cf_platform_wake_open 177-185
+- cf_platform_wake_fd 187-190
+- cf_platform_wake_handle 192-195
+- cf_platform_wake_drain 197-200
+- cf_platform_wake_wait 202-206
+- cf_platform_wake_close 208-210
 `lib/platform/src/posix/file.c`
 - cf_platform_fopen 44-84
 - cf_platform_has_files 86-88
@@ -1183,75 +1202,87 @@
 - cf_platform_write_file_with 358-367
 - cf_platform_write_file_if_with 369-381
 `lib/platform/src/posix/posix.c`
-- cf_platform_name 92-94
-- cf_platform_has_environ 96-98
-- cf_platform_has_dir_list 100-102
-- cf_platform_has_wide_args 104-108
-- cf_platform_environ 110-112
-- cf_platform_args 114-119
-- posix_stamp_dir 123-146
-- cf_platform_stamp 148-168
-- cf_platform_has_registry 172-174
-- cf_platform_registry_walk 176-185
-- cf_platform_has_preferences 195-197
-- struct mac_prefs 199-205
-- mac_prefs_room 207-211
-- mac_prefs_utf8 214-225
-- mac_prefs_path 229-244
-- mac_prefs_emit 246-248
-- mac_prefs_array 254-271
-- mac_prefs_dict 276-331
-- mac_prefs_value 335-395
-- cf_platform_preferences_walk 397-442
-- cf_platform_has_preferences 448-450
-- cf_platform_preferences_walk 452-467
-- cf_platform_world_readable 471-478
-- posix_lock_try 508-543
-- posix_lock_open 546-593
-- cf_platform_lock_take 596-650
-- cf_platform_lock_give 652-661
-- cf_platform_has_private_create 663-665
-- cf_platform_create_private 667-699
-- posix_own_group 718-727
-- posix_group_writes 730-735
-- posix_refuse 738-745
-- posix_dir_list 759-870
-- cf_platform_dir_list 872-875
-- cf_platform_has_trusted_dir 877-883
-- cf_platform_dir_list_trusted 885-892
-- struct posix_target 900-904
-- struct cf_platform_wake 906-916
-- posix_up 920-937
-- posix_dir_of 940-955
-- posix_why 967-978
-- posix_arm 981-1008
-- cf_platform_has_wake 1010-1012
-- cf_platform_wake_open 1014-1061
-- cf_platform_wake_fd 1063-1065
-- cf_platform_wake_handle 1067-1070
-- cf_platform_wake_drain 1077-1123
-- cf_platform_wake_wait 1125-1148
-- cf_platform_wake_close 1150-1158
-- kq_why 1180-1192
-- kq_close_all 1199-1208
-- kq_add 1211-1277
-- kq_add_entries 1281-1304
-- kq_arm 1308-1336
-- kq_arm_all 1338-1350
-- cf_platform_has_wake 1352-1354
-- cf_platform_wake_open 1356-1410
-- cf_platform_wake_fd 1416-1418
-- cf_platform_wake_handle 1420-1423
-- cf_platform_wake_drain 1425-1437
-- cf_platform_wake_wait 1439-1460
-- cf_platform_wake_close 1462-1474
-- cf_platform_has_wake 1478-1480
-- cf_platform_wake_open 1482-1490
-- cf_platform_wake_fd 1492-1495
-- cf_platform_wake_handle 1497-1500
-- cf_platform_wake_drain 1502-1505
-- cf_platform_wake_wait 1507-1511
-- cf_platform_wake_close 1513-1515
+- cf_platform_name 93-95
+- cf_platform_has_environ 97-99
+- cf_platform_has_dir_list 101-103
+- cf_platform_has_wide_args 105-109
+- cf_platform_environ 111-113
+- cf_platform_has_fd_io 119-121
+- cf_platform_fd_is_socket 123-127
+- cf_platform_fd_nonblock 129-143
+- fd_wait_ms 147-152
+- fd_wait 155-168
+- cf_platform_fd_read 170-188
+- cf_platform_fd_write 190-217
+- cf_platform_has_fd_io 221-223
+- cf_platform_fd_is_socket 225-228
+- cf_platform_fd_nonblock 230-234
+- cf_platform_fd_read 236-242
+- cf_platform_fd_write 244-250
+- cf_platform_args 254-259
+- posix_stamp_dir 263-286
+- cf_platform_stamp 288-308
+- cf_platform_has_registry 312-314
+- cf_platform_registry_walk 316-325
+- cf_platform_has_preferences 335-337
+- struct mac_prefs 339-345
+- mac_prefs_room 347-351
+- mac_prefs_utf8 354-365
+- mac_prefs_path 369-384
+- mac_prefs_emit 386-388
+- mac_prefs_array 394-411
+- mac_prefs_dict 416-471
+- mac_prefs_value 475-535
+- cf_platform_preferences_walk 537-582
+- cf_platform_has_preferences 588-590
+- cf_platform_preferences_walk 592-607
+- cf_platform_world_readable 611-618
+- posix_lock_try 648-683
+- posix_lock_open 686-733
+- cf_platform_lock_take 736-790
+- cf_platform_lock_give 792-801
+- cf_platform_has_private_create 803-805
+- cf_platform_create_private 807-839
+- posix_own_group 858-867
+- posix_group_writes 870-875
+- posix_refuse 878-885
+- posix_dir_list 899-1010
+- cf_platform_dir_list 1012-1015
+- cf_platform_has_trusted_dir 1017-1023
+- cf_platform_dir_list_trusted 1025-1032
+- struct posix_target 1040-1044
+- struct cf_platform_wake 1046-1056
+- posix_up 1060-1077
+- posix_dir_of 1080-1095
+- posix_why 1107-1118
+- posix_arm 1121-1148
+- cf_platform_has_wake 1150-1152
+- cf_platform_wake_open 1154-1201
+- cf_platform_wake_fd 1203-1205
+- cf_platform_wake_handle 1207-1210
+- cf_platform_wake_drain 1217-1263
+- cf_platform_wake_wait 1265-1288
+- cf_platform_wake_close 1290-1298
+- kq_why 1320-1332
+- kq_close_all 1339-1348
+- kq_add 1351-1417
+- kq_add_entries 1421-1444
+- kq_arm 1448-1476
+- kq_arm_all 1478-1490
+- cf_platform_has_wake 1492-1494
+- cf_platform_wake_open 1496-1550
+- cf_platform_wake_fd 1556-1558
+- cf_platform_wake_handle 1560-1563
+- cf_platform_wake_drain 1565-1577
+- cf_platform_wake_wait 1579-1600
+- cf_platform_wake_close 1602-1614
+- cf_platform_has_wake 1618-1620
+- cf_platform_wake_open 1622-1630
+- cf_platform_wake_fd 1632-1635
+- cf_platform_wake_handle 1637-1640
+- cf_platform_wake_drain 1642-1645
+- cf_platform_wake_wait 1647-1651
+- cf_platform_wake_close 1653-1655
 `lib/platform/src/win32/file.c`
 - win32f_wide 36-43
 - cf_platform_fopen 45-59
@@ -1314,8 +1345,13 @@
 - win32_reg_value 767-814
 - win32_reg_key 816-884
 - cf_platform_registry_walk 886-933
-- cf_platform_has_preferences 937-939
-- cf_platform_preferences_walk 941-956
+- cf_platform_has_fd_io 935-937
+- cf_platform_fd_is_socket 939-942
+- cf_platform_fd_nonblock 944-948
+- cf_platform_fd_read 950-956
+- cf_platform_fd_write 958-964
+- cf_platform_has_preferences 968-970
+- cf_platform_preferences_walk 972-987
 `lib/port/include/configforge/cf_build_options.h`
 - #define CONFIGFORGE_CF_BUILD_OPTIONS_H 27
 - #define CF_WITH_REAL 30
@@ -2478,21 +2514,21 @@
 - Data flow 84-112
 - Construction is two-phase 113-125
 - Source kinds 126-142
-- Extension points, with recipes 143-333
+- Extension points, with recipes 143-334
 - Adding a format 145-182
 - Adding a platform capability 183-211
-- Features by platform 212-230
-- Writing a configuration out 231-257
-- Adding a flat source 258-274
-- Adding a definition attribute 275-282
-- Adding an error code, a value type, or an outcome 283-290
-- Options with defaults 291-325
-- Adding a Doctor rule 326-333
-- Where things live 334-363
-- The gates 364-391
-- Run time 392-418
-- Compile time 419-443
-- What is deliberately not here 444-461
+- Features by platform 212-231
+- Writing a configuration out 232-258
+- Adding a flat source 259-275
+- Adding a definition attribute 276-283
+- Adding an error code, a value type, or an outcome 284-291
+- Options with defaults 292-326
+- Adding a Doctor rule 327-334
+- Where things live 335-364
+- The gates 365-392
+- Run time 393-419
+- Compile time 420-444
+- What is deliberately not here 445-462
 `scripts/verify.cmake`
 - sizes 471-483
 - profiles 484-516

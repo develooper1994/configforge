@@ -77,6 +77,40 @@ CF_API char* const* cf_platform_environ(void);
 #endif /* CF_INTERNAL_API */
 
 /* ------------------------------------------------------------------ *
+ * A descriptor
+ *
+ * What cf_serve_report needs of a connected stream socket (D-123): a
+ * capability query, a socket test, the non-blocking flag, and a read and
+ * a write each bounded by a time. POSIX only; the other platforms say
+ * no, so that the channel is a part behind an interface (D-229).
+ * ------------------------------------------------------------------ */
+
+/* Guarantee: strong. A capability query; it changes nothing. */
+CF_NODISCARD CF_API cf_bool cf_platform_has_fd_io(void);
+
+#if CF_INTERNAL_API
+/* Guarantee: strong. A query on the descriptor; it changes nothing. */
+CF_NODISCARD CF_API cf_bool cf_platform_fd_is_socket(int fd);
+
+/* Set (`on` true) or clear O_NONBLOCK; returns the flag as it was, 1 or 0, or
+   -1 on failure.
+   Guarantee: basic. The flag may be left as it was found when -1 is returned. */
+CF_API int cf_platform_fd_nonblock(int fd, int on);
+
+/* Bytes read (at most `cap`), 0 at end of stream, -1 on failure, -2 when
+   `timeout_ms` passed with nothing to read; negative: no limit.
+   Guarantee: basic. Nothing but `buf` is written; the descriptor's position is
+   the stream's. */
+CF_API long cf_platform_fd_read(int fd, void* buf, size_t cap, long timeout_ms);
+
+/* Every byte of `buf`, or false: each wait is at most `timeout_ms` (negative:
+   no limit). A peer that went away is a false return and never a signal.
+   Guarantee: basic. Some of the bytes may have been written when false is returned. */
+CF_NODISCARD CF_API cf_bool cf_platform_fd_write(int fd, const void* buf, size_t n,
+                                                 long timeout_ms);
+#endif /* CF_INTERNAL_API */
+
+/* ------------------------------------------------------------------ *
  * The command line in UTF-8
  *
  * On Windows `main`'s argv arrives in the active ANSI code page, so a

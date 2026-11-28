@@ -69,6 +69,10 @@ cf_platform_create_private
 cf_platform_dir_list
 cf_platform_dir_list_trusted
 cf_platform_environ
+cf_platform_fd_is_socket
+cf_platform_fd_nonblock
+cf_platform_fd_read
+cf_platform_fd_write
 cf_platform_fopen
 cf_platform_has_files
 cf_platform_lock_give

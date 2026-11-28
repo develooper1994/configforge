@@ -877,6 +877,46 @@ CF_API size_t cf_fingerprint_format(cf_u64 fp, char* buf, size_t cap);
 CF_API size_t cf_report(const cf_config* c, const cf_report_info* info, char* buf,
                         size_t cap);
 
+/* What cf_serve_report answers with and how long it waits (D-123). Start from
+   cf_serve_options_init or CF_SERVE_OPTIONS_INIT, or pass NULL for the
+   defaults. */
+typedef struct cf_serve_options {
+    size_t                size;       /* sizeof(cf_serve_options) */
+    const cf_report_info* info;       /* NULL: a report that names nothing */
+    long                  timeout_ms; /* each wait; negative: no limit */
+} cf_serve_options;
+
+/* clang-format off */
+#define CF_SERVE_OPTIONS_INIT {sizeof(cf_serve_options), NULL, 2000}
+/* clang-format on */
+
+/* The defaults above. A NULL pointer is accepted and left alone.
+   Guarantee: nothrow. */
+CF_EXPERIMENTAL(2, 1) void cf_serve_options_init(cf_serve_options* o);
+
+/* A running program answers one request for its report (D-123). `fd` is a
+   connected stream socket (AF_UNIX or AF_INET) the program's own loop
+   accepted; it is made non-blocking for the call, restored before return and
+   never closed, and the library accepts, listens, binds and keeps nothing:
+   no thread, no state. One HTTP/1.0 request is read (the headers, at most
+   4096 bytes, each wait at most `timeout_ms`) and one answer written:
+   `GET /report` is 200 with the value-blind report (always blind: an
+   `opt->info` asking for CF_REPORT_FULL is refused with CF_E_POLICY), another
+   target 404, another method 405, a malformed request 400, a build without
+   CF_WITH_REPORT 501. Any of these is an answer and CF_TRUE. CF_FALSE with
+   `err` (CF_E_SOURCE) when nothing could be answered: a timeout, the peer
+   closing first, an I/O error, a descriptor that is not a socket. `opt` that
+   did not start from CF_SERVE_OPTIONS_INIT: CF_FALSE, CF_E_CAPABILITY. A build
+   without a POSIX descriptor: CF_FALSE, CF_E_CAPABILITY.
+   Guarantee: basic. The configuration is untouched; the descriptor stays open
+   and the program's, and a failed call may have written part of an answer.
+   Thread: safe.
+   Signal: unsafe.
+   Alloc: may. */
+CF_EXPERIMENTAL(2, 1) cf_bool cf_serve_report(const cf_config* c, int fd,
+                                              const cf_serve_options* opt,
+                                              cf_error*               err);
+
 /* The configuration's contract as a JSON Schema, closed when it rejects
    unknown keys (CF_UNKNOWN_REJECT). See cf_schema_write.
    Guarantee: strong. The configuration is untouched; the size needed is returned and

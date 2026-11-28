@@ -206,6 +206,7 @@ cf_outcome_can_win
 cf_outcome_name
 cf_platform_has_dir_list
 cf_platform_has_environ
+cf_platform_has_fd_io
 cf_platform_has_preferences
 cf_platform_has_private_create
 cf_platform_has_registry

@@ -220,6 +220,7 @@ translation unit with no build to choose for it — can carry all three.
 | trusted directory (who may write) | `cf_platform_has_trusted_dir` | yes | yes | E: CF_FALSE; a trusted source is refused |
 | private create (a new store) | `cf_platform_has_private_create` | yes | yes | E: CF_FALSE, no permission set |
 | environment | `cf_platform_has_environ` | yes | yes | E: no environment, NULL, not an error |
+| a connected stream socket (cf_platform_fd_read) | `cf_platform_has_fd_io` | yes (not wasi) | no | E: CF_FALSE; cf_serve_report fails CF_E_CAPABILITY, "needs a POSIX descriptor" |
 | UTF-8 arguments | `cf_platform_has_wide_args` | no (argv is UTF-8) | yes | E: CF_FALSE, argv as given |
 | Windows registry | `cf_platform_has_registry` | no | yes | E: CF_FALSE |
 | macOS user defaults | `cf_platform_has_preferences` | CF_WITH_PREFERENCES on macOS | no | E: CF_FALSE |

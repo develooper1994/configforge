@@ -128,6 +128,7 @@ gets reopened every six months.
 | D-113 | A unit on an int definition: `cf_def.unit`, an open `cf_unit`, and the text read in the unit's base | definitions, `cf_numeric.h`, the contract | **Decided** |
 | D-121 | A read that finds no definition, or another type, is recorded and reported | configuration, diagnostics | **Decided** |
 | D-122 | A migration is a function on the deprecated key's definition, run on each value as it is copied | definitions, migration | **Decided** |
+| D-123 | A running program answers one request for its report on a descriptor its own loop accepted | diagnostics, platform | **Decided** |
 | D-222 | A unit is an open value: a name, a parser, a formatter and its own options; a program defines its own | `cf_numeric.h`, `cf_def.unit` | **Decided** |
 | D-230 | Options with defaults are one convention: `size` first, `_init`, NULL the defaults; a fixed limit a public call reaches is an option with its old value as default | public options structs, `gate.options` | **Decided** |
 | D-231 | The platform is a part: `none` is built and tried; what it cannot give answers `CF_E_CAPABILITY` | platform, build options, CI | **Decided** |
@@ -6012,3 +6013,30 @@ published when whole; the rest are lost. No value is recorded.
 **Consequence.** Doctor's CFD021 (C-8b) reads the array.
 
 **Status.** Built: C-8a.
+
+## D-123 — A running program answers one request for its report on a descriptor its own loop accepted
+
+**Question.** Spring Boot's `/actuator/env` shows an operator what a running
+program is configured with. How does ConfigForge offer that when the library
+owns no thread (D-14) and runs no server?
+
+**Options.**
+
+1. A listener thread in the library. Rejected: the rule it would break is
+   the point.
+2. The program writes the report to a file on a signal. Rejected: stale,
+   and a file is a second place the secrets' absence has to be argued.
+3. A function the program's own loop calls on a descriptor it accepted
+   (decided): the library reads one request, writes one answer, returns.
+
+**Decision.** Option 3: `cf_serve_report`. The wire is an HTTP/1.0 subset,
+`GET /report`, so that `curl --unix-socket` and a browser's tooling work;
+the answer is the value-blind report, never the full one, with no option to
+change it. The descriptor stays the program's: the library neither
+accepts nor closes. Each wait is bounded (2 s by default). POSIX only.
+
+**Consequence.** `configforge doctor pull unix:<path>` (C-10b) reads it.
+The socket's access is the program's: a path in a directory only its
+operator can enter is the control; the library adds none.
+
+**Status.** Built: C-10a.

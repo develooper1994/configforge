@@ -369,6 +369,7 @@ allocation words (the default where its header says none).
 | `cf_outcome_name` | `cf_keyspace.h` | nothrow | distinct objects | unsafe | may |
 | `cf_platform_has_dir_list` | `cf_platform.h` | strong | distinct objects | unsafe | may |
 | `cf_platform_has_environ` | `cf_platform.h` | strong | distinct objects | unsafe | may |
+| `cf_platform_has_fd_io` | `cf_platform.h` | strong | distinct objects | unsafe | may |
 | `cf_platform_has_preferences` | `cf_platform.h` | strong | distinct objects | unsafe | may |
 | `cf_platform_has_private_create` | `cf_platform.h` | strong | distinct objects | unsafe | may |
 | `cf_platform_has_registry` | `cf_platform.h` | strong | distinct objects | unsafe | may |
@@ -392,6 +393,8 @@ allocation words (the default where its header says none).
 | `cf_schema_write` | `cf_report.h` | strong | distinct objects | unsafe | may |
 | `cf_serialize_version` | `cf_serialize_version.h` | nothrow | distinct objects | unsafe | may |
 | `cf_serialize_version_number` | `cf_serialize_version.h` | nothrow | distinct objects | unsafe | may |
+| `cf_serve_options_init` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_serve_report` | `configforge.h` | basic | safe | unsafe | may |
 | `cf_sink_fmt` | `cf_serialize.h` | basic | distinct objects | unsafe | may |
 | `cf_sink_init` | `cf_serialize.h` | nothrow | distinct objects | unsafe | may |
 | `cf_sink_json_string` | `cf_serialize.h` | basic | distinct objects | unsafe | may |
@@ -490,8 +493,8 @@ allocation words (the default where its header says none).
 | `cf_watcher_wait` | `configforge.h` | basic | distinct objects | unsafe | may |
 | `cf_write` | `configforge.h` | strong | distinct objects | unsafe | may |
 
-nothrow 150, strong 109, basic 68, not yet 0
+nothrow 151, strong 110, basic 69, not yet 0
 
-thread safe 10, signal safe 10, alloc none 10
+thread safe 11, signal safe 10, alloc none 10
 
 <!-- guarantees:end -->

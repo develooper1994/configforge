@@ -42,6 +42,7 @@
 #include <poll.h>
 #include <pwd.h>
 #include <sys/file.h>
+#include <sys/socket.h>
 #endif
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -110,6 +111,145 @@ cf_bool cf_platform_has_wide_args(void) {
 char* const* cf_platform_environ(void) {
     return (char* const*)environ;
 }
+
+/* A descriptor (D-123). A connected stream socket the program's own loop
+   accepted; wasi has neither poll nor sockets. */
+#if !defined(__wasi__)
+
+cf_bool cf_platform_has_fd_io(void) {
+    return CF_TRUE;
+}
+
+cf_bool cf_platform_fd_is_socket(int fd) {
+    int       type = 0;
+    socklen_t len  = (socklen_t)sizeof type;
+    return getsockopt(fd, SOL_SOCKET, SO_TYPE, &type, &len) == 0 ? CF_TRUE : CF_FALSE;
+}
+
+int cf_platform_fd_nonblock(int fd, int on) {
+    int flags = fcntl(fd, F_GETFL, 0);
+    int was;
+    if (flags < 0) {
+        return -1;
+    }
+    was = (flags & O_NONBLOCK) != 0 ? 1 : 0;
+    if (was != (on != 0 ? 1 : 0)) {
+        flags = (on != 0) ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK);
+        if (fcntl(fd, F_SETFL, flags) < 0) {
+            return -1;
+        }
+    }
+    return was;
+}
+
+/* poll's wait in milliseconds: negative waits for ever, and what an int
+   cannot hold is the longest it can. */
+static int fd_wait_ms(long timeout_ms) {
+    if (timeout_ms < 0) {
+        return -1;
+    }
+    return timeout_ms > 2147483647L ? 2147483647 : (int)timeout_ms;
+}
+
+/* 1 when `events` came, 0 on timeout, -1 on failure. */
+static int fd_wait(int fd, short events, long timeout_ms) {
+    struct pollfd p;
+    int           r;
+    p.fd      = fd;
+    p.events  = events;
+    p.revents = 0;
+    do {
+        r = poll(&p, 1, fd_wait_ms(timeout_ms));
+    } while (r < 0 && errno == EINTR);
+    if (r < 0) {
+        return -1;
+    }
+    return r == 0 ? 0 : 1;
+}
+
+long cf_platform_fd_read(int fd, void* buf, size_t cap, long timeout_ms) {
+    for (;;) {
+        int  w = fd_wait(fd, POLLIN, timeout_ms);
+        long n;
+        if (w < 0) {
+            return -1;
+        }
+        if (w == 0) {
+            return -2;
+        }
+        n = (long)read(fd, buf, cap);
+        if (n >= 0) {
+            return n;
+        }
+        if (errno != EINTR && errno != EAGAIN) {
+            return -1;
+        }
+    }
+}
+
+cf_bool cf_platform_fd_write(int fd, const void* buf, size_t n, long timeout_ms) {
+    const char* p = (const char*)buf;
+#if !defined(MSG_NOSIGNAL) && defined(SO_NOSIGPIPE)
+    int one = 1;
+    (void)setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &one, (socklen_t)sizeof one);
+#endif
+    while (n > 0) {
+        int     w = fd_wait(fd, POLLOUT, timeout_ms);
+        ssize_t k;
+        if (w <= 0) {
+            return CF_FALSE;
+        }
+#if defined(MSG_NOSIGNAL)
+        k = send(fd, p, n, MSG_NOSIGNAL);
+#else
+        k = send(fd, p, n, 0);
+#endif
+        if (k < 0) {
+            if (errno == EINTR || errno == EAGAIN) {
+                continue;
+            }
+            return CF_FALSE;
+        }
+        p += k;
+        n -= (size_t)k;
+    }
+    return CF_TRUE;
+}
+
+#else /* wasi */
+
+cf_bool cf_platform_has_fd_io(void) {
+    return CF_FALSE;
+}
+
+cf_bool cf_platform_fd_is_socket(int fd) {
+    (void)fd;
+    return CF_FALSE;
+}
+
+int cf_platform_fd_nonblock(int fd, int on) {
+    (void)fd;
+    (void)on;
+    return -1;
+}
+
+long cf_platform_fd_read(int fd, void* buf, size_t cap, long timeout_ms) {
+    (void)fd;
+    (void)buf;
+    (void)cap;
+    (void)timeout_ms;
+    return -1;
+}
+
+cf_bool cf_platform_fd_write(int fd, const void* buf, size_t n, long timeout_ms) {
+    (void)fd;
+    (void)buf;
+    (void)n;
+    (void)timeout_ms;
+    return CF_FALSE;
+}
+
+#endif /* wasi */
 
 char* const* cf_platform_args(int argc, char* const* argv, cf_arena* arena,
                               int* out_argc) {

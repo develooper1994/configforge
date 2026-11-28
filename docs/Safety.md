@@ -151,6 +151,19 @@ the live open, reload and commit, the watcher and the file writer. What the
 sweep does not do is fail an operating system call: a full disk or a refused
 `open` is a different card.
 
+## Serving a report
+
+`cf_serve_report` (D-123) answers one `GET /report` on a connected socket the
+program's own loop accepted, and the answer is always the value-blind report:
+a request for the full one is refused, because a socket may be reached by
+whoever its path lets. Who may connect is the program's to decide (a socket
+path in a directory only its operator can enter is the control; the library
+adds none). Each wait is bounded by a timeout, 2 s by default, so a peer that
+sends half a request holds the caller for that long and no longer. The library
+holds nothing between calls: no thread, no listener, no state, and the
+descriptor stays open and the program's. The report is built, written, wiped
+and released before the call returns.
+
 ## Not yet proven
 
 The floating point parser and printer, the blob's file reader, the
