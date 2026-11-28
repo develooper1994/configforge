@@ -8,7 +8,6 @@
  * C89.
  */
 
-#include "configforge/cf_build_options.h"
 #include "configforge/cf_port.h"
 #include "file_prim.h"
 

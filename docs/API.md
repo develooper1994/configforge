@@ -2499,16 +2499,15 @@ is already set, where e->size reaches them. NULL is ignored.
 Guarantee: nothrow.
 
 ```c
-CF_EXPERIMENTAL(2, 0) void cf_error_place_at(cf_error* e, int reason, unsigned int line, unsigned int col, size_t offset);
+CF_API void cf_error_place_at(cf_error* e, int reason, unsigned int line, unsigned int col, size_t offset);
 ```
-
-Experimental since 2.0: outside the 1.x promise until the next minor release makes it promised or removes it.
 
 Implementation: [`cf_error_place_at` (lib/base/src/error.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/error.c#L101).
 
 As cf_error_place, and the byte offset of the cause in the input (the
 index of the byte, from 0) where e->size reaches it; (size_t)-1 says the
-reader has none. cf_error_place leaves it (size_t)-1. Experimental in 2.0.
+reader has none. cf_error_place leaves it (size_t)-1. Promised since 2.1
+(experimental in 2.0, D-89).
 Guarantee: nothrow.
 
 ## cf_explain.h

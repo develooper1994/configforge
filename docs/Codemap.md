@@ -1018,8 +1018,8 @@
 - #define CF_PLATFORM_POSIX 50
 - #define CF_PLATFORM_NONE 53
 `lib/platform/src/errno_text.c`
-- struct cfi_errno_row 22-25
-- cfi_errno_text 81-94
+- struct cfi_errno_row 21-24
+- cfi_errno_text 80-93
 `lib/platform/src/file_layer.c`
 - cf_file_options_init 30-41
 - cfi_file_options 43-72
