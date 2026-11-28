@@ -8,7 +8,8 @@ with defaults"). For every `typedef struct cf_<x>_options {` in
 lib/*/include/configforge/*.h this prints
 `<header>:<line>: cf_<x>_options: <problem>` and exits 1 when
 
-  (a) no `CF_API void cf_<x>_options_init(` is declared in any
+  (a) no `CF_API void cf_<x>_options_init(` (or `CF_EXPERIMENTAL(major,
+      minor)` for `CF_API`, in its first minor release) is declared in any
       lib/*/include header, or
   (b) the first member is not `size_t size;` (a comment is fine).
 
@@ -74,7 +75,9 @@ def main(root):
         for m in STRUCT.finditer(text):
             name = m.group(1)
             line = line_of(text, m.start())
-            init = re.compile(rf"CF_API\s+void\s+{re.escape(name)}_init\s*\(")
+            init = re.compile(
+                rf"(?:CF_API|CF_EXPERIMENTAL\(\d+,\s*\d+\))\s+void\s+{re.escape(name)}_init\s*\("
+            )
             if not init.search(alltext):
                 print(f"{rel}:{line}: {name}: no {name}_init")
                 bad += 1

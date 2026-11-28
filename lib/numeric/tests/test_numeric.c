@@ -239,6 +239,285 @@ static void test_inference(void) {
     check(cf_infer_scalar("hello", 5) == CF_SCALAR_TEXT, "hello is text");
 }
 
+/* ---------------------------------------------------------------- *
+ * Durations and sizes (D-113, D-222)
+ * ---------------------------------------------------------------- */
+
+/* A text that must read as `want`; the text is what a failure shows. */
+static void unit_ok(const cf_unit* u, const char* s, cf_i64 want) {
+    cf_i64      v   = -12345;
+    const char* why = NULL;
+    cf_bool     ok  = cf_unit_parse(u, s, strlen(s), &v, &why);
+
+    check(ok && v == want, s);
+}
+
+/* A text that must be refused, with `reason` when one is given. */
+static void unit_bad(const cf_unit* u, const char* s, const char* reason) {
+    cf_i64      v   = 7;
+    const char* why = "unset";
+    cf_bool     ok  = cf_unit_parse(u, s, strlen(s), &v, &why);
+
+    check(!ok, s);
+    if (reason != NULL) {
+        check_text(why, reason, s);
+    }
+}
+
+static void test_duration(void) {
+    const cf_unit* d = cf_unit_duration_get();
+    cf_unit        cal;
+    cf_unit        bare;
+    cf_unit        secs;
+    cf_unit        micros;
+    cf_i64         v = 0;
+    char           buf[64];
+
+    check(d != NULL && d->parse != NULL && d->format != NULL, "the duration unit");
+    check_text(d->name, "duration", "the duration unit's name");
+    check(d->options.allow_bare && !d->options.calendar && !d->options.bare_si &&
+              d->options.base == CF_UNIT_BASE_DEFAULT,
+          "the duration unit's own defaults");
+
+    unit_ok(d, "30", 30);
+    unit_ok(d, "-1", -1);
+    unit_ok(d, "+30", 30);
+    unit_ok(d, "30s", 30000);
+    unit_ok(d, "1h30m", 5400000);
+    unit_ok(d, "2d12h", 216000000);
+    unit_ok(d, "250ms", 250);
+    unit_ok(d, "1m", 60000);
+    unit_ok(d, "1min", 60000);
+    unit_ok(d, "1s500ms", 1500);
+    unit_ok(d, "1.5h", 5400000);
+    unit_ok(d, "PT1H30M", 5400000);
+    unit_ok(d, "P1DT2H", 93600000);
+    unit_ok(d, "PT1.5S", 1500);
+    unit_ok(d, "P1W", 604800000);
+    unit_ok(d, "1w", 604800000);
+    unit_ok(d, "1d", 86400000);
+    unit_ok(d, "0s", 0);
+    unit_ok(d, "2000us", 2);
+    unit_bad(d, "1500us", "is not a whole number of ms");
+    unit_ok(d, "2000000ns", 2);
+    unit_ok(d, "3000\xC2\xB5s", 3);
+    unit_ok(d, "3000\xCE\xBCs", 3);
+
+    unit_bad(d, "", NULL);
+    unit_bad(d, "+1s", NULL);
+    unit_bad(d, "1 h", NULL);
+    unit_bad(d, "1H", NULL);
+    unit_bad(d, "30m1h", NULL);
+    unit_bad(d, "1h1h", NULL);
+    unit_bad(d, "1m1min", NULL);
+    unit_bad(d, "10x", NULL);
+    unit_bad(d, "s", NULL);
+    unit_bad(d, "1h30", NULL);
+    unit_bad(d, "1.5", NULL);
+    unit_bad(d, "P", NULL);
+    unit_bad(d, "PT", NULL);
+    unit_bad(d, "P1DT", NULL);
+    unit_bad(d, "PT1M1H", NULL);
+    unit_bad(d, "pt1h", NULL);
+    unit_bad(d, "9223372036854775807s", "overflows");
+    unit_bad(d, "9223372036854775808", "overflows");
+    unit_bad(d, "-5s", NULL);
+    unit_bad(d, "1.0005s", "is not a whole number of ms");
+    unit_bad(d, "1y", "is ambiguous: use days");
+    unit_bad(d, "P1M", "is ambiguous: use days");
+    unit_bad(d, "P1Y", "is ambiguous: use days");
+    unit_bad(d, "1mo", "is ambiguous: use days");
+
+    /* A month is 30 days and a year 365 when the unit is told so. */
+    cal                  = *d;
+    cal.options.calendar = CF_TRUE;
+    unit_ok(&cal, "1y", (cf_i64)31536000 * 1000);
+    unit_ok(&cal, "1mo", (cf_i64)2592000 * 1000);
+    unit_ok(&cal, "P1M", (cf_i64)2592000 * 1000);
+    unit_ok(&cal, "P1Y2M", (cf_i64)31536000 * 1000 + (cf_i64)2 * 2592000 * 1000);
+    unit_ok(&cal, "1y1mo1w",
+            (cf_i64)31536000 * 1000 + (cf_i64)2592000 * 1000 + 604800000);
+
+    /* A bare number is refused when the unit is told to. */
+    bare                    = *d;
+    bare.options.allow_bare = CF_FALSE;
+    unit_bad(&bare, "30", NULL);
+    unit_ok(&bare, "30s", 30000);
+
+    /* The base: seconds or microseconds instead of milliseconds. */
+    secs              = *d;
+    secs.options.base = CF_UNIT_BASE_S;
+    unit_ok(&secs, "1h30m", 5400);
+    unit_ok(&secs, "30", 30);
+    unit_bad(&secs, "1500ms", "is not a whole number of s");
+    micros              = *d;
+    micros.options.base = CF_UNIT_BASE_US;
+    unit_ok(&micros, "1s", 1000000);
+    unit_ok(&micros, "250ms", 250000);
+    unit_ok(&micros, "5us", 5);
+    unit_bad(&micros, "1500ns", "is not a whole number of us");
+
+    check(cf_unit_format(d, 5400000, buf, sizeof buf) == 5, "1h30m is five bytes");
+    check_text(buf, "1h30m", "5400000 ms written");
+    check(cf_unit_format(d, 0, buf, sizeof buf) == 3, "zero ms is three bytes");
+    check_text(buf, "0ms", "zero is written with its unit");
+    cf_unit_format(d, 216000000, buf, sizeof buf);
+    check_text(buf, "2d12h", "216000000 ms written");
+    cf_unit_format(d, 1500, buf, sizeof buf);
+    check_text(buf, "1s500ms", "1500 ms written");
+    cf_unit_format(d, -7, buf, sizeof buf);
+    check_text(buf, "-7", "a negative duration is the bare number");
+    cf_unit_format(d, CF_I64_MIN, buf, sizeof buf);
+    check_text(buf, "-9223372036854775808", "the smallest duration is the bare number");
+    cf_unit_format(&secs, 5400, buf, sizeof buf);
+    check_text(buf, "1h30m", "5400 s written");
+    cf_unit_format(&micros, 1500, buf, sizeof buf);
+    check_text(buf, "1ms500us", "1500 us written");
+    check(cf_unit_format(d, 5400000, buf, 5) == 0 && buf[0] == '\0',
+          "too small a buffer writes nothing");
+    check(cf_unit_format(d, 5400000, NULL, 0) == 0, "no buffer, no text");
+    cf_unit_format(d, 93784123, buf, sizeof buf);
+    check(cf_unit_parse(d, buf, strlen(buf), &v, NULL) && v == 93784123,
+          "what is written reads back");
+    cf_unit_format(d, CF_I64_MAX, buf, sizeof buf);
+    check(cf_unit_parse(d, buf, strlen(buf), &v, NULL) && v == CF_I64_MAX,
+          "the largest duration reads back");
+}
+
+static void test_size(void) {
+    const cf_unit* z = cf_unit_size_get();
+    cf_unit        si;
+    cf_unit        bare;
+    cf_i64         v = 0;
+    char           buf[64];
+
+    check(z != NULL && z->parse != NULL && z->format != NULL, "the size unit");
+    check_text(z->name, "size", "the size unit's name");
+
+    unit_ok(z, "512", 512);
+    unit_ok(z, "512B", 512);
+    unit_ok(z, "1kB", 1000);
+    unit_ok(z, "1KB", 1000);
+    unit_ok(z, "1KiB", 1024);
+    unit_ok(z, "512MiB", 536870912);
+    unit_ok(z, "2GB", 2000000000);
+    unit_ok(z, "8TiB", (cf_i64)8 << 40);
+    unit_ok(z, "1PiB", (cf_i64)1 << 50);
+    unit_ok(z, "1PB", (cf_i64)1000000 * 1000000000);
+    unit_ok(z, "0B", 0);
+    unit_ok(z, "1.5KiB", 1536);
+    unit_ok(z, "0.5MB", 500000);
+    unit_ok(z, "1K", 1024);
+    unit_ok(z, "1M", 1048576);
+    unit_ok(z, "1G", 1073741824);
+    unit_ok(z, "1T", (cf_i64)1 << 40);
+    unit_ok(z, "-1", -1);
+
+    unit_bad(z, "", NULL);
+    unit_bad(z, "1 KB", NULL);
+    unit_bad(z, "1kb", NULL);
+    unit_bad(z, "1KiB2B", NULL);
+    unit_bad(z, "9223372036854775807KiB", "overflows");
+    unit_bad(z, "-1KB", NULL);
+    unit_bad(z, "+1KB", NULL);
+    unit_bad(z, "KiB", NULL);
+    unit_bad(z, "1.5B", "is not a whole number of B");
+    unit_bad(z, "1.0001KB", "is not a whole number of B");
+
+    /* A bare K is SI when the unit is told so, and bare numbers can go. */
+    si                 = *z;
+    si.options.bare_si = CF_TRUE;
+    unit_ok(&si, "1K", 1000);
+    unit_ok(&si, "2M", 2000000);
+    unit_ok(&si, "1KiB", 1024);
+    bare                    = *z;
+    bare.options.allow_bare = CF_FALSE;
+    unit_bad(&bare, "512", NULL);
+    unit_ok(&bare, "512B", 512);
+
+    cf_unit_format(z, 536870912, buf, sizeof buf);
+    check_text(buf, "512MiB", "536870912 B written");
+    cf_unit_format(z, 2000000000, buf, sizeof buf);
+    check_text(buf, "2GB", "2000000000 B written");
+    cf_unit_format(z, 1536, buf, sizeof buf);
+    check_text(buf, "1536B", "1536 B has no exact larger suffix");
+    cf_unit_format(z, 1024, buf, sizeof buf);
+    check_text(buf, "1KiB", "1024 B written");
+    cf_unit_format(z, 0, buf, sizeof buf);
+    check_text(buf, "0B", "zero bytes written");
+    cf_unit_format(z, CF_I64_MIN, buf, sizeof buf);
+    check_text(buf, "-9223372036854775808", "the smallest size is the bare number");
+    cf_unit_format(z, 7, buf, sizeof buf);
+    check_text(buf, "7B", "seven bytes written");
+    cf_unit_format(z, CF_I64_MAX, buf, sizeof buf);
+    check(cf_unit_parse(z, buf, strlen(buf), &v, NULL) && v == CF_I64_MAX,
+          "the largest size reads back");
+}
+
+/* A unit of a program's own: a table of two abbreviations. */
+static cf_bool tick_parse(const cf_unit* u, const char* s, size_t n, cf_i64* out,
+                          const char** reason) {
+    static const cf_unit_term terms[] = {{"tk", 1}, {"ktk", 1000}};
+    cf_unit_table             t;
+
+    t.terms      = terms;
+    t.count      = 2;
+    t.per_base   = 1;
+    t.sum        = CF_TRUE;
+    t.allow_bare = u->options.allow_bare;
+    t.not_whole  = "is not a whole number of ticks";
+    t.refused    = NULL;
+    return cf_unit_table_parse(&t, s, n, out, reason);
+}
+
+static size_t tick_format(const cf_unit* u, cf_i64 v, char* buf, size_t cap) {
+    (void)u;
+    (void)v;
+    (void)buf;
+    (void)cap;
+    return 7;
+}
+
+static void test_own_unit(void) {
+    cf_unit tick;
+
+    memset(&tick, 0, sizeof tick);
+    cf_unit_options_init(&tick.options);
+    tick.size   = sizeof tick;
+    tick.name   = "tick";
+    tick.parse  = tick_parse;
+    tick.format = tick_format;
+
+    unit_ok(&tick, "5", 5);
+    unit_ok(&tick, "5tk", 5);
+    unit_ok(&tick, "2ktk", 2000);
+    unit_ok(&tick, "2ktk5tk", 2005);
+    unit_bad(&tick, "5tk2ktk", NULL);
+    unit_bad(&tick, "5s", NULL);
+    unit_bad(&tick, "0.5tk", "is not a whole number of ticks");
+    unit_ok(&tick, "0.5ktk", 500);
+    check(cf_unit_format(&tick, 5, NULL, 0) == 7, "its own formatter is called");
+}
+
+static void test_unit_misc(void) {
+    cf_unit_options o;
+    cf_i64          v = 0;
+
+    memset(&o, 0xAB, sizeof o);
+    cf_unit_options_init(&o);
+    check(o.size == sizeof o && o.base == CF_UNIT_BASE_DEFAULT && o.allow_bare &&
+              !o.calendar && !o.bare_si,
+          "unit options start as the defaults");
+    cf_unit_options_init(NULL);
+
+    check(!cf_unit_parse(NULL, "1s", 2, &v, NULL), "no unit, no parse");
+    check(!cf_unit_parse(cf_unit_duration_get(), NULL, 0, &v, NULL), "no text");
+    check(!cf_unit_parse(cf_unit_duration_get(), "1s", 2, NULL, NULL), "no result");
+    check(cf_unit_parse(cf_unit_duration_get(), "1s", 2, &v, NULL) && v == 1000,
+          "a refusal reason is optional");
+    check(cf_unit_format(NULL, 1, NULL, 0) == 0, "no unit, no text");
+}
+
 /* ---------------------------------------------------------------- */
 
 int main(int argc, char** argv) {
@@ -255,6 +534,10 @@ int main(int argc, char** argv) {
     test_u64();
     test_small_buffer();
     test_inference();
+    test_duration();
+    test_size();
+    test_own_unit();
+    test_unit_misc();
 #if CF_WITH_REAL
     test_f64_format();
     test_f64_parse();

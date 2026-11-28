@@ -7,6 +7,7 @@
 #include "configforge/cf_build_options.h"
 #include "configforge/cf_error.h"
 #include "configforge/cf_keyspace.h"
+#include "configforge/cf_numeric.h"
 #include "configforge/cf_port.h"
 #include "configforge/cf_value.h"
 
@@ -18,6 +19,7 @@
 #define DEF_SIZE_1_0 (offsetof(cf_def, policy) + sizeof(((cf_def*)0)->policy))
 #define DEF_SIZE_LIST                                                                  \
     (offsetof(cf_def, list_default_count) + sizeof(((cf_def*)0)->list_default_count))
+#define DEF_SIZE_UNIT (offsetof(cf_def, unit) + sizeof(((cf_def*)0)->unit))
 
 struct cf_list_projection {
     cf_def                     count;
@@ -211,6 +213,13 @@ static cf_bool def_check(const cf_def* d, cf_error* err) {
                 "'%s' is replaced by '%s', which is not another valid key", d->key,
                 d->replaced_by);
         }
+    }
+    if (d->unit != NULL && d->type != CF_TYPE_INT) {
+        return cf_error_set(err, CF_E_DEFINITION, d->key, NULL, "a unit needs an int");
+    }
+    if (d->unit != NULL && d->unit->parse == NULL) {
+        return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
+                            "a unit needs a parser");
     }
     if (d->has_range && d->type != CF_TYPE_INT && d->type != CF_TYPE_REAL) {
         return cf_error_set(err, CF_E_DEFINITION, d->key, NULL,
@@ -417,6 +426,9 @@ cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err) {
         normalized.list_separator     = 0;
         normalized.list_defaults      = NULL;
         normalized.list_default_count = 0;
+    }
+    if (d->size < DEF_SIZE_UNIT) {
+        normalized.unit = NULL;
     }
     d = &normalized;
     if (!def_check(d, err)) {

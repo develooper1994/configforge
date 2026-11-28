@@ -31,6 +31,9 @@
  *   "'${%S' refers to no key"                    malformed reference (a
  *                                                secret's is the sealed one)
  *   "is not a valid %s"                          type int, bool, real
+ *   "is not a valid %s: %s"                      a unit's text, with the unit's
+ *                                                own reason (test_units has it
+ *                                                for a secret: the sealed form)
  *   "source supplied %s where %s was declared"   typed JSON number, text key
  *   "no room to unescape"                        not reachable: out of memory
  *   "its references lead back to it"             reference cycle

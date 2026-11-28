@@ -40,6 +40,7 @@ set(CF_UNIT_TESTS
     test_unicode
     test_usage
     test_help
+    test_units
     test_toml
     test_json5
     test_codec

@@ -58,6 +58,8 @@ typedef enum cf_list_mode {
     CF_LIST_APPEND
 } cf_list_mode;
 
+struct cf_unit; /* cf_numeric.h */
+
 /* A descriptor rather than a chained builder. C89 has no designated
    initializers, so a positionally filled struct would be fragile and
    one filled only by assignment would be verbose; cf_def_init plus
@@ -131,6 +133,18 @@ typedef struct cf_def {
     char            list_separator;
     const cf_value* list_defaults;
     size_t          list_default_count;
+
+    /* A unit for a key of type int (D-113, D-222): the built-in
+       cf_unit_duration_get() or cf_unit_size_get(), or a cf_unit the program
+       defines (cf_numeric.h). A text such as "1h30m" or "512MiB", from any
+       source, is read as the int in the unit's base, so the range, the
+       default and every read are in that base; explain() shows the number
+       and the text as written. A typed source's quoted string is read the
+       same way for such a key, and for no other. NULL is no unit. A list of
+       ints with a unit converts each element. Any other type, or a unit with
+       no parser, is refused by cf_define. A descriptor built by a 1.8 caller
+       is shorter than this field, and has none. */
+    const struct cf_unit* unit;
 } cf_def;
 
 /* Initialise a descriptor: every field zero, `size` the caller's

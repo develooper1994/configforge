@@ -232,6 +232,38 @@ static const char* reference_syntax(cf_arena* ar, cf_candidate* c, cf_bool secre
  * Applying the whole contract
  * ------------------------------------------------------------------ */
 
+/* A text read in the unit of an int definition (D-113): "1h30m" is 5400000
+   when the unit is a duration. *converted is the int; the text stays as the
+   candidate's `written`, unless a template is already there. A refusal is
+   of kind CF_REFUSAL_TYPE, said as "<text>" is not a valid <unit>, with the
+   unit's own reason after a colon, and for a sensitive key as the kind's
+   fixed wording. */
+static const char* unit_value(const cf_def* d, cf_candidate* c, cf_value* converted,
+                              char* reason, size_t rcap, cf_refusal* kind) {
+    const char* why  = NULL;
+    const char* name = (d->unit->name != NULL) ? d->unit->name : "unit";
+    cf_i64      v    = 0;
+
+    if (!cf_unit_parse(d->unit, c->value.u.t.p, c->value.u.t.n, &v, &why)) {
+        *kind = CF_REFUSAL_TYPE;
+        if ((d->flags & CF_SENSITIVE) != 0) {
+            return sealed(*kind, reason, rcap);
+        }
+        if (why != NULL) {
+            cf_fmt(reason, rcap, "\"%s\" is not a valid %s: %s", c->value.u.t.p, name,
+                   why);
+        } else {
+            cf_fmt(reason, rcap, "\"%s\" is not a valid %s", c->value.u.t.p, name);
+        }
+        return reason;
+    }
+    if (c->written == NULL) {
+        c->written = c->value.u.t.p;
+    }
+    cf_value_int(converted, v);
+    return NULL;
+}
+
 /* One candidate against its definition: converted, type-checked and
    validated. NULL when it passes; a template passes until it is one. */
 static const char* apply_candidate(const cf_def* d, cf_candidate* c,
@@ -247,7 +279,13 @@ static const char* apply_candidate(const cf_def* d, cf_candidate* c,
            that reads the arena (the secrets example does) would read
            what the stack held. MemorySanitizer found it. */
         memset(&converted, 0, sizeof converted);
-        if (!cf_value_from_text(d->type, c->value.u.t.p, c->value.u.t.n, &converted)) {
+        if (d->type == CF_TYPE_INT && d->unit != NULL) {
+            const char* why = unit_value(d, c, &converted, reason, rcap, kind);
+            if (why != NULL) {
+                return why;
+            }
+        } else if (!cf_value_from_text(d->type, c->value.u.t.p, c->value.u.t.n,
+                                       &converted)) {
             *kind = CF_REFUSAL_TYPE;
             if ((d->flags & CF_SENSITIVE) != 0) {
                 return sealed(*kind, reason, rcap);
@@ -260,6 +298,21 @@ static const char* apply_candidate(const cf_def* d, cf_candidate* c,
            text; for the others the value is inline. */
         c->value = converted;
         c->flags &= ~(unsigned)CF_CAND_TEXTUAL;
+        ++rep->converted;
+    } else if (d->type == CF_TYPE_INT && d->unit != NULL &&
+               c->value.type == CF_TYPE_TEXT) {
+        /* A typed source's quoted string for a key whose contract gave a
+           unit: the one coercion a typed source gets, because the
+           definition asked for it. */
+        cf_value    converted;
+        const char* why;
+
+        memset(&converted, 0, sizeof converted);
+        why = unit_value(d, c, &converted, reason, rcap, kind);
+        if (why != NULL) {
+            return why;
+        }
+        c->value = converted;
         ++rep->converted;
     } else if (c->value.type != d->type) {
         /* A typed source said something different from the declaration.

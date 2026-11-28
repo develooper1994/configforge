@@ -9,6 +9,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 - The CERT C matrix (docs/compliance/Cert.md): every rule with how it is checked, held by gate.cert (D-236).
 - MC/DC measured with GCC's condition coverage and held by a floor (EXTRA=mcdc, D-233)
+- A unit on an int definition, durations and sizes: `cf_def.unit` takes `cf_unit_duration_get()`, `cf_unit_size_get()` or a `cf_unit` of the program's own (a name, a parser, a formatter, options; `cf_unit_parse`, `cf_unit_format`, `cf_unit_table_parse`, `cf_unit_options_init`, experimental in 2.1), and a text such as `1h30m` or `512MiB` from any source is read as the int in the unit's base, with `explain()` showing it as written (C-2a, D-113, D-222)
 
 ### Changed
 

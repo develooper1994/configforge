@@ -79,15 +79,15 @@
 - #define CONFIGFORGE_CF_DEFINE_H 16
 - enum cf_on_invalid 45-53
 - enum cf_list_mode 55-59
-- struct cf_def 68-134
-- #define cf_def_init 144
-- #define CF_MAX_OPEN_PREFIXES 158
-- #define CF_EXPAND_MAX 168
-- #define CF_EXPAND_TOTAL_MAX 178
-- struct cf_defset 185-216
-- enum cf_unknown_policy 335-339
-- struct cf_apply_report 341-347
-- struct cf_rank_names 364-367
+- struct cf_def 70-148
+- #define cf_def_init 158
+- #define CF_MAX_OPEN_PREFIXES 172
+- #define CF_EXPAND_MAX 182
+- #define CF_EXPAND_TOTAL_MAX 192
+- struct cf_defset 199-230
+- enum cf_unknown_policy 349-353
+- struct cf_apply_report 355-361
+- struct cf_rank_names 378-381
 `lib/config/include/configforge/cf_edit.h`
 - #define CONFIGFORGE_CF_EDIT_H 26
 - typedef cf_edit 37
@@ -573,46 +573,46 @@
 - cf_keys 2583-2585
 - cf_log_level_name 2587-2599
 `lib/config/src/core/define.c`
-- struct cf_list_projection 22-27
-- cf_def_init_sized 29-41
-- cf_defset_init 43-62
-- defset_grow 64-75
-- index_hash 87-95
-- index_put 97-104
-- index_reserve 107-131
-- index_find 133-144
-- def_check_default 154-174
-- def_check 176-311
-- defset_dup_list 315-339
-- defset_dup 341-351
-- defset_under 353-355
-- defset_project_list 357-391
-- cf_define 393-545
-- cf_def_bool 551-561
-- cf_def_int 563-578
-- cf_def_text 580-590
-- cf_def_real 593-608
-- defset_open_room 617-638
-- cf_defset_open 640-663
-- cf_defset_is_open 665-682
-- def_order 684-688
-- cf_defset_seal 697-708
-- defset_inherit_sensitive 719-749
-- defset_exact 751-785
-- defset_list_projection 788-800
-- cf_defset_find 802-829
-- cf_defset_list 831-834
-- cf_defset_count 836-838
-- cf_defset_at 840-845
-- edit_distance 863-907
-- nearest_cutoff 911-920
-- cfi_defset_nearest_secret 922-948
-- cfi_entry_secret 950-963
-- cf_defset_nearest 965-990
-- fp_mix 1003-1014
-- cf_fingerprint_seed 1016-1018
-- cf_fingerprint_step 1022-1030
-- cf_defset_fingerprint 1032-1061
+- struct cf_list_projection 24-29
+- cf_def_init_sized 31-43
+- cf_defset_init 45-64
+- defset_grow 66-77
+- index_hash 89-97
+- index_put 99-106
+- index_reserve 109-133
+- index_find 135-146
+- def_check_default 156-176
+- def_check 178-320
+- defset_dup_list 324-348
+- defset_dup 350-360
+- defset_under 362-364
+- defset_project_list 366-400
+- cf_define 402-557
+- cf_def_bool 563-573
+- cf_def_int 575-590
+- cf_def_text 592-602
+- cf_def_real 605-620
+- defset_open_room 629-650
+- cf_defset_open 652-675
+- cf_defset_is_open 677-694
+- def_order 696-700
+- cf_defset_seal 709-720
+- defset_inherit_sensitive 731-761
+- defset_exact 763-797
+- defset_list_projection 800-812
+- cf_defset_find 814-841
+- cf_defset_list 843-846
+- cf_defset_count 848-850
+- cf_defset_at 852-857
+- edit_distance 875-919
+- nearest_cutoff 923-932
+- cfi_defset_nearest_secret 934-960
+- cfi_entry_secret 962-975
+- cf_defset_nearest 977-1002
+- fp_mix 1015-1026
+- cf_fingerprint_seed 1028-1030
+- cf_fingerprint_step 1034-1042
+- cf_defset_fingerprint 1044-1073
 `lib/config/src/core/edit.c`
 - struct cf_edit 21-30
 - cf_edit_begin 32-62
@@ -747,32 +747,33 @@
 - ref_next 145-166
 - unescape 169-180
 - reference_syntax 186-229
-- apply_candidate 237-277
-- reject 281-296
-- apply_entry 298-321
-- find_mut 328-333
-- ref_text 336-345
-- expand_fits 351-353
-- expand_build 362-424
-- struct expand_ctx 426-433
-- expand_no_value 438-446
-- expand_entry 452-559
-- expand_all 561-581
-- source_name 604-609
-- policy_index 612-624
-- cf_policy_text 626-639
-- apply_policy 644-703
-- array_member 738-753
-- index_reaches 759-768
-- cut_reason 775-799
-- cut_array 803-853
-- cut_arrays 859-882
-- struct validate_list_plan 884-891
-- validate_policies 893-903
-- validate_part_later 905-912
-- validate_append_lists 914-1032
-- validate_list_shape 1034-1073
-- cf_defs_apply 1075-1238
+- unit_value 241-265
+- apply_candidate 269-330
+- reject 334-349
+- apply_entry 351-374
+- find_mut 381-386
+- ref_text 389-398
+- expand_fits 404-406
+- expand_build 415-477
+- struct expand_ctx 479-486
+- expand_no_value 491-499
+- expand_entry 505-612
+- expand_all 614-634
+- source_name 657-662
+- policy_index 665-677
+- cf_policy_text 679-692
+- apply_policy 697-756
+- array_member 791-806
+- index_reaches 812-821
+- cut_reason 828-852
+- cut_array 856-906
+- cut_arrays 912-935
+- struct validate_list_plan 937-944
+- validate_policies 946-956
+- validate_part_later 958-965
+- validate_append_lists 967-1085
+- validate_list_shape 1087-1126
+- cf_defs_apply 1128-1291
 `lib/config/src/core/version.c`
 - cf_version 13-15
 - cf_version_number 17-19
@@ -955,9 +956,16 @@
 - swar_touch 404-423
 - lanes_swar 431-436
 `lib/numeric/include/configforge/cf_numeric.h`
-- #define CONFIGFORGE_CF_NUMERIC_H 20
-- #define CF_F64_DIGITS 55
-- enum cf_scalar_kind 105-110
+- #define CONFIGFORGE_CF_NUMERIC_H 22
+- #define CF_F64_DIGITS 57
+- enum cf_scalar_kind 107-112
+- #define CF_UNIT_BASE_DEFAULT 139
+- #define CF_UNIT_BASE_S 140
+- #define CF_UNIT_BASE_US 141
+- struct cf_unit_options 143-151
+- struct cf_unit 157-170
+- struct cf_unit_term 198-201
+- struct cf_unit_table 203-213
 `lib/numeric/src/numeric.c`
 - cf_text_to_u64 28-53
 - cf_text_to_i64 55-96
@@ -991,6 +999,40 @@
 - cf_looks_real 949-997
 - cf_has_leading_zero 999-1012
 - cf_infer_scalar 1014-1036
+- struct ubig 1053-1055
+- ubig_zero 1057-1063
+- ubig_muladd 1066-1077
+- ubig_add 1079-1090
+- ubig_mul64 1093-1107
+- ubig_divmod 1110-1121
+- ubig_to_i64 1123-1138
+- struct unit_num 1154-1159
+- unit_digit 1161-1163
+- unit_push 1165-1177
+- unit_number 1180-1223
+- unit_add 1227-1246
+- unit_finish 1249-1254
+- unit_refuse 1256-1261
+- unit_failed 1263-1268
+- unit_is_bare 1271-1284
+- unit_find 1286-1297
+- cf_unit_table_parse 1299-1355
+- cf_unit_options_init 1361-1370
+- cf_unit_parse 1372-1381
+- cf_unit_format 1383-1391
+- unit_put_num 1397-1412
+- unit_put_str 1414-1419
+- unit_hand_over 1421-1428
+- unit_put_negative 1431-1435
+- duration_base 1463-1480
+- iso_designator 1484-1527
+- duration_iso 1532-1583
+- duration_parse 1585-1609
+- duration_format 1625-1657
+- size_parse 1689-1707
+- size_format 1717-1736
+- cf_unit_duration_get 1756-1758
+- cf_unit_size_get 1760-1762
 `lib/platform/include/configforge/cf_file.h`
 - #define CONFIGFORGE_CF_FILE_H 28
 - enum cf_buf_mode 41-46

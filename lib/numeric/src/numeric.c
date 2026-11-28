@@ -1034,3 +1034,729 @@ cf_scalar_kind cf_infer_scalar(const char* s, size_t len) {
     }
     return CF_SCALAR_TEXT;
 }
+
+/* ================================================================== *
+ * Units: durations and sizes (D-113, D-222)
+ *
+ * Everything below is integer arithmetic, so a fraction ("1.5h") is read
+ * exactly, with CF_WITH_REAL off as with it on, and the same on every
+ * platform. A term is a decimal number, kept as its digits and the count
+ * of those after the point, times its factor in the table's finest unit,
+ * in a number of 192 bits: 38 digits and a factor of 2^50 are below that,
+ * so no step of the sum overflows unnoticed. What does not fit a cf_i64
+ * at the end is refused.
+ * ================================================================== */
+
+#define UBIG_LIMBS 6
+#define UNIT_DIGITS 38
+
+typedef struct ubig {
+    cf_u32 w[UBIG_LIMBS]; /* least significant limb first */
+} ubig;
+
+static void ubig_zero(ubig* a) {
+    int i;
+
+    for (i = 0; i < UBIG_LIMBS; ++i) {
+        a->w[i] = 0;
+    }
+}
+
+/* a = a * m + add, CF_FALSE when the result does not fit. */
+static cf_bool ubig_muladd(ubig* a, cf_u32 m, cf_u32 add) {
+    cf_u64 carry = add;
+    int    i;
+
+    for (i = 0; i < UBIG_LIMBS; ++i) {
+        cf_u64 t = (cf_u64)a->w[i] * m + carry;
+
+        a->w[i] = (cf_u32)(t & 0xFFFFFFFFu);
+        carry   = t >> 32;
+    }
+    return (carry == 0) ? CF_TRUE : CF_FALSE;
+}
+
+static cf_bool ubig_add(ubig* a, const ubig* b) {
+    cf_u64 carry = 0;
+    int    i;
+
+    for (i = 0; i < UBIG_LIMBS; ++i) {
+        cf_u64 t = (cf_u64)a->w[i] + b->w[i] + carry;
+
+        a->w[i] = (cf_u32)(t & 0xFFFFFFFFu);
+        carry   = t >> 32;
+    }
+    return (carry == 0) ? CF_TRUE : CF_FALSE;
+}
+
+/* a = a * m. */
+static cf_bool ubig_mul64(ubig* a, cf_u64 m) {
+    ubig high = *a;
+    int  i;
+
+    if (!ubig_muladd(&high, (cf_u32)(m >> 32), 0) || high.w[UBIG_LIMBS - 1] != 0) {
+        return CF_FALSE;
+    }
+    for (i = UBIG_LIMBS - 1; i > 0; --i) {
+        high.w[i] = high.w[i - 1];
+    }
+    high.w[0] = 0;
+    return (ubig_muladd(a, (cf_u32)(m & 0xFFFFFFFFu), 0) && ubig_add(a, &high))
+               ? CF_TRUE
+               : CF_FALSE;
+}
+
+/* a = a / d, and the remainder. */
+static cf_u32 ubig_divmod(ubig* a, cf_u32 d) {
+    cf_u64 rem = 0;
+    int    i;
+
+    for (i = UBIG_LIMBS - 1; i >= 0; --i) {
+        cf_u64 t = (rem << 32) | a->w[i];
+
+        a->w[i] = (cf_u32)(t / d);
+        rem     = t % d;
+    }
+    return (cf_u32)rem;
+}
+
+static cf_bool ubig_to_i64(const ubig* a, cf_i64* out) {
+    cf_u64 v;
+    int    i;
+
+    for (i = 2; i < UBIG_LIMBS; ++i) {
+        if (a->w[i] != 0) {
+            return CF_FALSE;
+        }
+    }
+    v = ((cf_u64)a->w[1] << 32) | a->w[0];
+    if (v > (cf_u64)CF_I64_MAX) {
+        return CF_FALSE;
+    }
+    *out = (cf_i64)v;
+    return CF_TRUE;
+}
+
+/* The reasons a unit gives: static, so a caller may keep the pointer. */
+static const char unit_why_overflow[]    = "overflows";
+static const char unit_why_needs_unit[]  = "needs a unit";
+static const char unit_why_ambiguous[]   = "is ambiguous: use days";
+static const char unit_why_whole_ms[]    = "is not a whole number of ms";
+static const char unit_why_whole_s[]     = "is not a whole number of s";
+static const char unit_why_whole_us[]    = "is not a whole number of us";
+static const char unit_why_whole_b[]     = "is not a whole number of B";
+static const char unit_why_whole_plain[] = "is not a whole number";
+
+#define UNIT_OK 0
+#define UNIT_NOT_WHOLE 1
+#define UNIT_OVERFLOW 2
+
+typedef struct unit_num {
+    ubig    n;     /* the digits, as an integer, leading zeros dropped */
+    int     sig;   /* how many of them */
+    int     scale; /* those after the point, trailing zeros dropped */
+    cf_bool wide;  /* more digits than a ubig is asked to hold */
+} unit_num;
+
+static cf_bool unit_digit(const char* s, size_t n, size_t i) {
+    return (i < n && cf_is_digit((unsigned char)s[i])) ? CF_TRUE : CF_FALSE;
+}
+
+static void unit_push(unit_num* x, char c) {
+    cf_u32 digit = (cf_u32)(c - '0');
+
+    if (x->wide || (x->sig == 0 && digit == 0)) {
+        return;
+    }
+    if (x->sig >= UNIT_DIGITS) {
+        x->wide = CF_TRUE;
+        return;
+    }
+    (void)ubig_muladd(&x->n, 10, digit);
+    ++x->sig;
+}
+
+/* digits [ "." digits ], at *i; CF_FALSE when there is not one. */
+static cf_bool unit_number(const char* s, size_t n, size_t* i, unit_num* x) {
+    size_t a = *i;
+    size_t b = a;
+    size_t f0;
+    size_t f1;
+    size_t k;
+
+    while (unit_digit(s, n, b)) {
+        ++b;
+    }
+    if (b == a) {
+        return CF_FALSE;
+    }
+    f0 = b;
+    f1 = b;
+    if (b < n && s[b] == '.') {
+        f0 = b + 1;
+        f1 = f0;
+        while (unit_digit(s, n, f1)) {
+            ++f1;
+        }
+        if (f1 == f0) {
+            return CF_FALSE;
+        }
+        *i = f1;
+        /* The zeros that end a fraction carry nothing. */
+        while (f1 > f0 && s[f1 - 1] == '0') {
+            --f1;
+        }
+    } else {
+        *i = b;
+    }
+    ubig_zero(&x->n);
+    x->sig   = 0;
+    x->wide  = CF_FALSE;
+    x->scale = ((f1 - f0) > (size_t)UNIT_DIGITS) ? UNIT_DIGITS + 1 : (int)(f1 - f0);
+    for (k = a; k < b; ++k) {
+        unit_push(x, s[k]);
+    }
+    for (k = f0; k < f1; ++k) {
+        unit_push(x, s[k]);
+    }
+    return CF_TRUE;
+}
+
+/* acc += x * factor, where `factor` is the number's unit in the table's
+   finest unit; what the product makes of the fraction must be whole. */
+static int unit_add(ubig* acc, const unit_num* x, cf_u64 factor) {
+    ubig t = x->n;
+    int  k;
+
+    if (x->wide) {
+        return (x->scale == 0) ? UNIT_OVERFLOW : UNIT_NOT_WHOLE;
+    }
+    if (x->scale > UNIT_DIGITS) {
+        return UNIT_NOT_WHOLE;
+    }
+    if (!ubig_mul64(&t, factor)) {
+        return UNIT_OVERFLOW;
+    }
+    for (k = 0; k < x->scale; ++k) {
+        if (ubig_divmod(&t, 10) != 0) {
+            return UNIT_NOT_WHOLE;
+        }
+    }
+    return ubig_add(acc, &t) ? UNIT_OK : UNIT_OVERFLOW;
+}
+
+/* The sum, in base units. */
+static int unit_finish(ubig* acc, cf_u64 per_base, cf_i64* out) {
+    if (ubig_divmod(acc, (cf_u32)per_base) != 0) {
+        return UNIT_NOT_WHOLE;
+    }
+    return ubig_to_i64(acc, out) ? UNIT_OK : UNIT_OVERFLOW;
+}
+
+static cf_bool unit_refuse(const char** reason, const char* why) {
+    if (reason != NULL) {
+        *reason = why;
+    }
+    return CF_FALSE;
+}
+
+static cf_bool unit_failed(int st, const char* not_whole, const char** reason) {
+    if (st == UNIT_OVERFLOW) {
+        return unit_refuse(reason, unit_why_overflow);
+    }
+    return unit_refuse(reason, (not_whole != NULL) ? not_whole : unit_why_whole_plain);
+}
+
+/* [+-] digits, and nothing else. */
+static cf_bool unit_is_bare(const char* s, size_t n) {
+    size_t i = 0;
+
+    if (n > 0 && (s[0] == '-' || s[0] == '+')) {
+        i = 1;
+    }
+    if (i == n) {
+        return CF_FALSE;
+    }
+    while (i < n && cf_is_digit((unsigned char)s[i])) {
+        ++i;
+    }
+    return (i == n) ? CF_TRUE : CF_FALSE;
+}
+
+static const cf_unit_term* unit_find(const cf_unit_table* t, const char* name,
+                                     size_t len) {
+    size_t i;
+
+    for (i = 0; i < t->count; ++i) {
+        if (t->terms[i].name != NULL && strlen(t->terms[i].name) == len &&
+            memcmp(t->terms[i].name, name, len) == 0) {
+            return &t->terms[i];
+        }
+    }
+    return NULL;
+}
+
+cf_bool cf_unit_table_parse(const cf_unit_table* t, const char* s, size_t n,
+                            cf_i64* out, const char** reason) {
+    ubig   acc;
+    size_t i     = 0;
+    cf_u64 prev  = 0;
+    int    terms = 0;
+    int    st;
+
+    if (reason != NULL) {
+        *reason = NULL;
+    }
+    if (t == NULL || t->terms == NULL || s == NULL || out == NULL || n == 0 ||
+        t->per_base < 1 || (cf_u64)t->per_base > (cf_u64)0xFFFFFFFFu) {
+        return CF_FALSE;
+    }
+    if (unit_is_bare(s, n)) {
+        if (!t->allow_bare) {
+            return unit_refuse(reason, unit_why_needs_unit);
+        }
+        return cf_text_to_i64(s, n, out, NULL) ? CF_TRUE
+                                               : unit_refuse(reason, unit_why_overflow);
+    }
+    ubig_zero(&acc);
+    while (i < n) {
+        unit_num            x;
+        const cf_unit_term* term;
+        size_t              from;
+        cf_u64              f;
+
+        if (!unit_number(s, n, &i, &x)) {
+            return CF_FALSE;
+        }
+        from = i;
+        while (i < n && !cf_is_digit((unsigned char)s[i]) && s[i] != '.') {
+            ++i;
+        }
+        term = (i > from) ? unit_find(t, s + from, i - from) : NULL;
+        if (term == NULL || term->factor < 0) {
+            return CF_FALSE;
+        }
+        if (term->factor == 0) {
+            return unit_refuse(reason, t->refused);
+        }
+        f = (cf_u64)term->factor;
+        if (terms > 0 && (!t->sum || f >= prev)) {
+            return CF_FALSE;
+        }
+        st = unit_add(&acc, &x, f);
+        if (st != UNIT_OK) {
+            return unit_failed(st, t->not_whole, reason);
+        }
+        prev = f;
+        ++terms;
+    }
+    st = unit_finish(&acc, (cf_u64)t->per_base, out);
+    return (st == UNIT_OK) ? CF_TRUE : unit_failed(st, t->not_whole, reason);
+}
+
+/* ------------------------------------------------------------------ *
+ * The options, and the front door
+ * ------------------------------------------------------------------ */
+
+void cf_unit_options_init(cf_unit_options* o) {
+    if (o == NULL) {
+        return;
+    }
+    o->size       = sizeof *o;
+    o->base       = CF_UNIT_BASE_DEFAULT;
+    o->allow_bare = CF_TRUE;
+    o->calendar   = CF_FALSE;
+    o->bare_si    = CF_FALSE;
+}
+
+cf_bool cf_unit_parse(const cf_unit* u, const char* s, size_t n, cf_i64* out,
+                      const char** reason) {
+    if (reason != NULL) {
+        *reason = NULL;
+    }
+    if (u == NULL || u->parse == NULL || s == NULL || out == NULL) {
+        return CF_FALSE;
+    }
+    return u->parse(u, s, n, out, reason);
+}
+
+size_t cf_unit_format(const cf_unit* u, cf_i64 v, char* buf, size_t cap) {
+    if (buf != NULL && cap > 0) {
+        buf[0] = '\0';
+    }
+    if (u == NULL || u->format == NULL) {
+        return 0;
+    }
+    return u->format(u, v, buf, cap);
+}
+
+/* A formatter writes into a local buffer and hands it over whole, so that a
+   buffer too small gets nothing rather than the front of a number. */
+#define UNIT_TEXT 64
+
+static size_t unit_put_num(char* tmp, size_t at, cf_u64 v) {
+    char   digits[24];
+    size_t k = 0;
+
+    if (v == 0) {
+        digits[k++] = '0';
+    }
+    while (v != 0) {
+        digits[k++] = (char)('0' + (int)(v % 10));
+        v /= 10;
+    }
+    while (k > 0) {
+        tmp[at++] = digits[--k];
+    }
+    return at;
+}
+
+static size_t unit_put_str(char* tmp, size_t at, const char* s) {
+    while (*s != '\0') {
+        tmp[at++] = *s++;
+    }
+    return at;
+}
+
+static size_t unit_hand_over(const char* tmp, size_t len, char* buf, size_t cap) {
+    if (buf == NULL || cap == 0 || len + 1 > cap) {
+        return 0;
+    }
+    memcpy(buf, tmp, len);
+    buf[len] = '\0';
+    return len;
+}
+
+/* A negative number is the bare number: a suffixed form has no sign. */
+static size_t unit_put_negative(char* tmp, cf_i64 v) {
+    tmp[0] = '-';
+    /* -(v + 1) is representable for every negative v; the magnitude is one more. */
+    return unit_put_num(tmp, 1, (cf_u64)(-(v + 1)) + 1);
+}
+
+/* ------------------------------------------------------------------ *
+ * Durations
+ * ------------------------------------------------------------------ */
+
+#define NS_S ((cf_u64)1000000000)
+#define NS_M ((cf_u64)60 * NS_S)
+#define NS_H ((cf_u64)3600 * NS_S)
+#define NS_D ((cf_u64)86400 * NS_S)
+#define NS_W ((cf_u64)7 * NS_D)
+#define NS_MONTH ((cf_u64)30 * NS_D)
+#define NS_YEAR ((cf_u64)365 * NS_D)
+
+/* Go's time.ParseDuration spellings, C++ chrono's names, and d and w as
+   Rust's humantime has them; both mu signs (U+00B5 and U+03BC), in UTF-8. */
+#define DURATION_ROWS                                                                  \
+    {"ns", 1}, {"us", 1000}, {"\xC2\xB5s", 1000}, {"\xCE\xBCs", 1000},                 \
+        {"ms", 1000000}, {"s", (cf_i64)NS_S}, {"m", (cf_i64)NS_M},                     \
+        {"min", (cf_i64)NS_M}, {"h", (cf_i64)NS_H}, {"d", (cf_i64)NS_D}, {             \
+        "w", (cf_i64)NS_W                                                              \
+    }
+
+static const cf_unit_term duration_terms[] = {
+    DURATION_ROWS, {"mo", (cf_i64)NS_MONTH}, {"y", (cf_i64)NS_YEAR}};
+static const cf_unit_term duration_ambiguous[] = {DURATION_ROWS, {"mo", 0}, {"y", 0}};
+
+/* The finest unit of a duration is the nanosecond. */
+static cf_bool duration_base(int base, cf_i64* per_base, const char** whole) {
+    switch (base) {
+    case CF_UNIT_BASE_DEFAULT:
+        *per_base = 1000000;
+        *whole    = unit_why_whole_ms;
+        return CF_TRUE;
+    case CF_UNIT_BASE_S:
+        *per_base = 1000000000;
+        *whole    = unit_why_whole_s;
+        return CF_TRUE;
+    case CF_UNIT_BASE_US:
+        *per_base = 1000;
+        *whole    = unit_why_whole_us;
+        return CF_TRUE;
+    default:
+        return CF_FALSE;
+    }
+}
+
+/* ISO 8601: the designator after a number, in the date part (Y, M, W, D) or
+   the time part (H, M, S). `idx` is its place in the order they come in. */
+static cf_bool iso_designator(cf_bool in_time, char c, int* idx, cf_u64* factor,
+                              cf_bool* calendar) {
+    *calendar = CF_FALSE;
+    if (!in_time) {
+        switch (c) {
+        case 'Y':
+            *idx      = 0;
+            *factor   = NS_YEAR;
+            *calendar = CF_TRUE;
+            return CF_TRUE;
+        case 'M':
+            *idx      = 1;
+            *factor   = NS_MONTH;
+            *calendar = CF_TRUE;
+            return CF_TRUE;
+        case 'W':
+            *idx    = 2;
+            *factor = NS_W;
+            return CF_TRUE;
+        case 'D':
+            *idx    = 3;
+            *factor = NS_D;
+            return CF_TRUE;
+        default:
+            return CF_FALSE;
+        }
+    }
+    switch (c) {
+    case 'H':
+        *idx    = 4;
+        *factor = NS_H;
+        return CF_TRUE;
+    case 'M':
+        *idx    = 5;
+        *factor = NS_M;
+        return CF_TRUE;
+    case 'S':
+        *idx    = 6;
+        *factor = NS_S;
+        return CF_TRUE;
+    default:
+        return CF_FALSE;
+    }
+}
+
+/* P, then years, months, weeks and days in that order, then T and hours,
+   minutes and seconds in that order, each at most once; a number may have
+   a fraction. */
+static cf_bool duration_iso(const cf_unit_options* o, cf_i64 per_base,
+                            const char* whole, const char* s, size_t n, cf_i64* out,
+                            const char** reason) {
+    ubig    acc;
+    size_t  i       = 1;
+    int     last    = -1;
+    int     parts   = 0;
+    cf_bool in_time = CF_FALSE;
+    int     st;
+
+    if (n < 2) {
+        return CF_FALSE;
+    }
+    ubig_zero(&acc);
+    while (i < n) {
+        unit_num x;
+        int      idx = 0;
+        cf_u64   f   = 0;
+        cf_bool  calendar;
+
+        if (s[i] == 'T') {
+            if (in_time || i + 1 >= n) {
+                return CF_FALSE;
+            }
+            in_time = CF_TRUE;
+            ++i;
+            if (last < 3) {
+                last = 3;
+            }
+            continue;
+        }
+        if (!unit_number(s, n, &i, &x) || i >= n ||
+            !iso_designator(in_time, s[i], &idx, &f, &calendar) || idx <= last) {
+            return CF_FALSE;
+        }
+        ++i;
+        if (calendar && !o->calendar) {
+            return unit_refuse(reason, unit_why_ambiguous);
+        }
+        st = unit_add(&acc, &x, f);
+        if (st != UNIT_OK) {
+            return unit_failed(st, whole, reason);
+        }
+        last = idx;
+        ++parts;
+    }
+    if (parts == 0) {
+        return CF_FALSE;
+    }
+    st = unit_finish(&acc, (cf_u64)per_base, out);
+    return (st == UNIT_OK) ? CF_TRUE : unit_failed(st, whole, reason);
+}
+
+static cf_bool duration_parse(const cf_unit* u, const char* s, size_t n, cf_i64* out,
+                              const char** reason) {
+    cf_unit_table t;
+    const char*   whole = unit_why_whole_ms;
+    cf_i64        per_base;
+
+    if (reason != NULL) {
+        *reason = NULL;
+    }
+    if (u == NULL || s == NULL || out == NULL || n == 0 ||
+        !duration_base(u->options.base, &per_base, &whole)) {
+        return CF_FALSE;
+    }
+    if (s[0] == 'P') {
+        return duration_iso(&u->options, per_base, whole, s, n, out, reason);
+    }
+    t.terms      = u->options.calendar ? duration_terms : duration_ambiguous;
+    t.count      = sizeof duration_terms / sizeof duration_terms[0];
+    t.per_base   = per_base;
+    t.sum        = CF_TRUE;
+    t.allow_bare = u->options.allow_bare;
+    t.not_whole  = whole;
+    t.refused    = unit_why_ambiguous;
+    return cf_unit_table_parse(&t, s, n, out, reason);
+}
+
+/* The parts of a duration, largest first: how many base units make one, in
+   each base, and 0 for a part finer than the base. */
+static const struct {
+    const char* name;
+    cf_i64      per[3]; /* CF_UNIT_BASE_DEFAULT (ms), CF_UNIT_BASE_S, CF_UNIT_BASE_US */
+} duration_parts[] = {{"d", {86400000, 86400, (cf_i64)86400 * 1000000}},
+                      {"h", {3600000, 3600, (cf_i64)3600 * 1000000}},
+                      {"m", {60000, 60, (cf_i64)60 * 1000000}},
+                      {"s", {1000, 1, 1000000}},
+                      {"ms", {1, 0, 1000}},
+                      {"us", {0, 0, 1}}};
+
+static const char* const duration_base_names[3] = {"ms", "s", "us"};
+
+static size_t duration_format(const cf_unit* u, cf_i64 v, char* buf, size_t cap) {
+    char   tmp[UNIT_TEXT];
+    size_t at = 0;
+    size_t k;
+    cf_u64 left;
+    int    base;
+
+    if (u == NULL || u->options.base < CF_UNIT_BASE_DEFAULT ||
+        u->options.base > CF_UNIT_BASE_US) {
+        return 0;
+    }
+    base = u->options.base;
+    if (v < 0) {
+        return unit_hand_over(tmp, unit_put_negative(tmp, v), buf, cap);
+    }
+    if (v == 0) {
+        at = unit_put_num(tmp, 0, 0);
+        at = unit_put_str(tmp, at, duration_base_names[base]);
+        return unit_hand_over(tmp, at, buf, cap);
+    }
+    left = (cf_u64)v;
+    for (k = 0; k < sizeof duration_parts / sizeof duration_parts[0]; ++k) {
+        cf_u64 per = (cf_u64)duration_parts[k].per[base];
+
+        if (per == 0 || left < per) {
+            continue;
+        }
+        at = unit_put_num(tmp, at, left / per);
+        at = unit_put_str(tmp, at, duration_parts[k].name);
+        left %= per;
+    }
+    return unit_hand_over(tmp, at, buf, cap);
+}
+
+/* ------------------------------------------------------------------ *
+ * Sizes
+ * ------------------------------------------------------------------ */
+
+#define SZ_KB ((cf_i64)1000)
+#define SZ_MB ((cf_i64)1000000)
+#define SZ_GB ((cf_i64)1000000000)
+#define SZ_TB (SZ_MB * SZ_MB)
+#define SZ_PB (SZ_TB * SZ_KB)
+#define SZ_KIB ((cf_i64)1 << 10)
+#define SZ_MIB ((cf_i64)1 << 20)
+#define SZ_GIB ((cf_i64)1 << 30)
+#define SZ_TIB ((cf_i64)1 << 40)
+#define SZ_PIB ((cf_i64)1 << 50)
+
+/* IEC 80000-13 (1024^n) and SI (1000^n); kB is the SI spelling and KB is
+   read as it too. */
+#define SIZE_ROWS                                                                      \
+    {"B", 1}, {"kB", SZ_KB}, {"KB", SZ_KB}, {"MB", SZ_MB}, {"GB", SZ_GB},              \
+        {"TB", SZ_TB}, {"PB", SZ_PB}, {"KiB", SZ_KIB}, {"MiB", SZ_MIB},                \
+        {"GiB", SZ_GIB}, {"TiB", SZ_TIB}, {                                            \
+        "PiB", SZ_PIB                                                                  \
+    }
+
+/* The bare K, M, G and T of Kubernetes and the JVM: IEC unless told. */
+static const cf_unit_term size_terms_iec[] = {
+    SIZE_ROWS, {"K", SZ_KIB}, {"M", SZ_MIB}, {"G", SZ_GIB}, {"T", SZ_TIB}};
+static const cf_unit_term size_terms_si[] = {
+    SIZE_ROWS, {"K", SZ_KB}, {"M", SZ_MB}, {"G", SZ_GB}, {"T", SZ_TB}};
+
+static cf_bool size_parse(const cf_unit* u, const char* s, size_t n, cf_i64* out,
+                          const char** reason) {
+    cf_unit_table t;
+
+    if (reason != NULL) {
+        *reason = NULL;
+    }
+    if (u == NULL || s == NULL || out == NULL || n == 0) {
+        return CF_FALSE;
+    }
+    t.terms      = u->options.bare_si ? size_terms_si : size_terms_iec;
+    t.count      = sizeof size_terms_iec / sizeof size_terms_iec[0];
+    t.per_base   = 1;
+    t.sum        = CF_FALSE;
+    t.allow_bare = u->options.allow_bare;
+    t.not_whole  = unit_why_whole_b;
+    t.refused    = NULL;
+    return cf_unit_table_parse(&t, s, n, out, reason);
+}
+
+/* The largest suffix that divides the size exactly, IEC or SI. */
+static const struct {
+    const char* name;
+    cf_i64      factor;
+} size_parts[] = {{"PiB", SZ_PIB}, {"PB", SZ_PB}, {"TiB", SZ_TIB}, {"TB", SZ_TB},
+                  {"GiB", SZ_GIB}, {"GB", SZ_GB}, {"MiB", SZ_MIB}, {"MB", SZ_MB},
+                  {"KiB", SZ_KIB}, {"kB", SZ_KB}};
+
+static size_t size_format(const cf_unit* u, cf_i64 v, char* buf, size_t cap) {
+    char   tmp[UNIT_TEXT];
+    size_t at;
+    size_t k;
+
+    (void)u;
+    if (v < 0) {
+        return unit_hand_over(tmp, unit_put_negative(tmp, v), buf, cap);
+    }
+    for (k = 0; v > 0 && k < sizeof size_parts / sizeof size_parts[0]; ++k) {
+        if (v % size_parts[k].factor == 0) {
+            at = unit_put_num(tmp, 0, (cf_u64)(v / size_parts[k].factor));
+            at = unit_put_str(tmp, at, size_parts[k].name);
+            return unit_hand_over(tmp, at, buf, cap);
+        }
+    }
+    at = unit_put_num(tmp, 0, (cf_u64)v);
+    at = unit_put_str(tmp, at, "B");
+    return unit_hand_over(tmp, at, buf, cap);
+}
+
+/* ------------------------------------------------------------------ *
+ * The built-in units
+ * ------------------------------------------------------------------ */
+
+static const cf_unit unit_duration = {
+    sizeof(cf_unit),
+    "duration",
+    duration_parse,
+    duration_format,
+    {sizeof(cf_unit_options), CF_UNIT_BASE_DEFAULT, CF_TRUE, CF_FALSE, CF_FALSE}};
+
+static const cf_unit unit_size = {
+    sizeof(cf_unit),
+    "size",
+    size_parse,
+    size_format,
+    {sizeof(cf_unit_options), CF_UNIT_BASE_DEFAULT, CF_TRUE, CF_FALSE, CF_FALSE}};
+
+const cf_unit* cf_unit_duration_get(void) {
+    return &unit_duration;
+}
+
+const cf_unit* cf_unit_size_get(void) {
+    return &unit_size;
+}

@@ -454,6 +454,12 @@ allocation words (the default where its header says none).
 | `cf_type_json_name` | `cf_value.h` | nothrow | distinct objects | unsafe | may |
 | `cf_type_name` | `cf_value.h` | nothrow | distinct objects | unsafe | may |
 | `cf_type_of` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_unit_duration_get` | `cf_numeric.h` | nothrow | distinct objects | unsafe | may |
+| `cf_unit_format` | `cf_numeric.h` | nothrow | distinct objects | unsafe | may |
+| `cf_unit_options_init` | `cf_numeric.h` | nothrow | distinct objects | unsafe | may |
+| `cf_unit_parse` | `cf_numeric.h` | strong | distinct objects | unsafe | may |
+| `cf_unit_size_get` | `cf_numeric.h` | nothrow | distinct objects | unsafe | may |
+| `cf_unit_table_parse` | `cf_numeric.h` | strong | distinct objects | unsafe | may |
 | `cf_usage` | `configforge.h` | strong | distinct objects | unsafe | may |
 | `cf_value_bool` | `cf_value.h` | nothrow | distinct objects | unsafe | may |
 | `cf_value_cmp` | `cf_value.h` | nothrow | distinct objects | unsafe | may |
@@ -479,7 +485,7 @@ allocation words (the default where its header says none).
 | `cf_watcher_wait` | `configforge.h` | basic | distinct objects | unsafe | may |
 | `cf_write` | `configforge.h` | strong | distinct objects | unsafe | may |
 
-nothrow 145, strong 103, basic 68, not yet 0
+nothrow 149, strong 105, basic 68, not yet 0
 
 thread safe 10, signal safe 10, alloc none 10
 

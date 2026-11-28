@@ -223,6 +223,72 @@ makes it `CF_REQUIRED`, an array of scalars is a list, and
 same contract. A keyword the library cannot enforce - `$ref`, `allOf`,
 `pattern` and the rest - is refused by name and place, never dropped.
 
+### Durations and sizes
+
+`"30s"`, `"1h30m"` and `"512MiB"` are the commonest values a configuration
+holds. An int definition may carry a unit (D-113, D-222), and then a text
+from any source - the command line, the environment, INI, `.properties`,
+dotenv, a quoted string in JSON, TOML or YAML, a value made by a reference -
+is read as the int in the unit's base, once, where the contract is applied:
+
+```c
+cf_def d;
+cf_def_init(&d, CF_TYPE_INT, "timeout");
+d.unit      = cf_unit_duration_get();    /* the base is the millisecond */
+d.has_range = CF_TRUE;
+d.imin      = 0;
+d.imax      = 86400000;                   /* the range is in the base too */
+cf_builder_define(b, &d);                 /* "1h30m" reads as 5400000 */
+```
+
+`cf_unit_size_get()` is the byte: `"512MiB"` is 536870912. The range, the default
+and every `cf_get_int` are in the base; `explain()` shows the number and the
+text as written (`timeout = 5400000 ... from "1h30m"`). A number a typed
+source gives (`"timeout": 90` in JSON) is the base unit; its string
+(`"timeout": "90s"`) is read as the unit, which is the one coercion a typed
+source gets, because the definition asked for it. A refusal says
+`"soon" is not a valid duration`, with the unit's own reason after a colon
+when it has one (`"1y" is not a valid duration: is ambiguous: use days`), and
+for a `CF_SENSITIVE` key says nothing but the kind's fixed wording.
+
+The notation is case-sensitive, has no whitespace and no locale. A fraction
+(`1.5h`, `0.5MB`) is read when the result is a whole number of base units,
+and refused otherwise, never rounded (`"1.0005s"` is not whole in
+milliseconds). A bare number is the base unit; a suffixed form has no sign.
+A product or a sum that passes the largest 64-bit integer is refused as
+`overflows`. A duration is a sum of terms, each suffix at most once and from
+the longest to the shortest (`1h30m`; `30m1h` and `1h1h` are mistakes); a
+size is one term (`512MiB`).
+
+| Duration | Reads as | Notes |
+|---|---|---|
+| `w` | 7 days | |
+| `d` | 24 hours | |
+| `h` | hour | |
+| `m`, `min` | minute | `ms` is the millisecond, never `m` and `s` |
+| `s` | second | |
+| `ms` | millisecond | |
+| `us`, `µs` (U+00B5 or U+03BC) | microsecond | |
+| `ns` | nanosecond | a whole number of base units only |
+| `mo`, `y` | 30 days, 365 days | refused ("is ambiguous: use days") unless `options.calendar` |
+| `PT1H30M`, `P1DT2H`, `P1W` | ISO 8601 | `Y` `M` `W` `D`, then `T` and `H` `M` `S`, in that order; `Y` and `M` as `mo` and `y` |
+
+| Size | Reads as | Notes |
+|---|---|---|
+| `B` | byte | |
+| `kB`, `KB` | 1000 bytes | SI |
+| `MB`, `GB`, `TB`, `PB` | 1000^2 to 1000^5 bytes | SI |
+| `KiB`, `MiB`, `GiB`, `TiB`, `PiB` | 1024 to 1024^5 bytes | IEC 80000-13 |
+| `K`, `M`, `G`, `T` | 1024 to 1024^4 bytes | as Kubernetes and the JVM read them; SI with `options.bare_si` |
+
+The built-in units have options a program changes on a copy
+(`cf_unit mine = *cf_unit_duration_get();`): `base` (`CF_UNIT_BASE_S` or
+`CF_UNIT_BASE_US` for a duration), `allow_bare` (`CF_FALSE` refuses `"30"`),
+`calendar` and `bare_si`. A unit of a program's own is a `cf_unit` with its
+`parse` and `format`; `cf_unit_table_parse` reads one term or a sum of terms
+over a table of `cf_unit_term` (an abbreviation and its factor), so the program
+writes only the table. The functions are experimental in 2.1 (D-89).
+
 ## 4. Sources and precedence
 
 Every source has a rank, and the lowest rank wins. The library's own

@@ -100,7 +100,7 @@ Document refusals also carry a reason and, where known, a line and column.
 - [`cf_live.h`](#cf_liveh) - 18
 - [`cf_lock.h`](#cf_lockh) - 2
 - [`cf_log.h`](#cf_logh) - 1
-- [`cf_numeric.h`](#cf_numerich) - 9
+- [`cf_numeric.h`](#cf_numerich) - 15
 - [`cf_platform.h`](#cf_platformh) - 26
 - [`cf_platform_file.h`](#cf_platform_fileh) - 10
 - [`cf_port.h`](#cf_porth) - 12
@@ -1388,7 +1388,7 @@ sensitive. None of that can be recovered from the values alone.
 CF_API void cf_def_init_sized(cf_def* d, size_t size, cf_type type, const char* key);
 ```
 
-Implementation: [`cf_def_init_sized` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L29).
+Implementation: [`cf_def_init_sized` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L31).
 
 Initialise a descriptor: every field zero, `size` the caller's
 sizeof(cf_def), so a library from a later 1.x writes no further than
@@ -1406,7 +1406,7 @@ CF_NODISCARD CF_API cf_bool cf_defset_init(cf_defset* ds, cf_arena* arena, size_
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_init` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L43).
+Implementation: [`cf_defset_init` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L45).
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err);
@@ -1414,7 +1414,7 @@ CF_NODISCARD CF_API cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* 
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_define` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L393).
+Implementation: [`cf_define` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L402).
 
 Copies the descriptor. Rejects a definition that contradicts itself:
 a default outside its own range, an empty enum, a range on a type
@@ -1430,7 +1430,7 @@ CF_NODISCARD CF_API cf_bool cf_def_real(cf_defset* ds, const char* key, double d
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_def_bool` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L551), [`cf_def_int` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L563), [`cf_def_text` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L580), [`cf_def_real` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L593).
+Implementation: [`cf_def_bool` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L563), [`cf_def_int` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L575), [`cf_def_text` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L592), [`cf_def_real` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L605).
 
 ```c
 CF_API void cf_defset_seal(cf_defset* ds);
@@ -1438,7 +1438,7 @@ CF_API void cf_defset_seal(cf_defset* ds);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_seal` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L697).
+Implementation: [`cf_defset_seal` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L709).
 
 Sorts for binary lookup; calling twice is harmless.
 
@@ -1448,7 +1448,7 @@ CF_NODISCARD CF_API cf_bool cf_defset_open(cf_defset* ds, const char* prefix, cf
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_open` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L640).
+Implementation: [`cf_defset_open` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L652).
 
 Exempt a prefix from unknown-key rejection.
 
@@ -1487,7 +1487,7 @@ CF_NODISCARD CF_API cf_bool cf_defset_is_open(const cf_defset* ds, const char* k
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_is_open` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L665).
+Implementation: [`cf_defset_is_open` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L677).
 
 Is this key under an exempt prefix? Matches at a segment boundary
 only, so opening "plugins" does not open "pluginsomething".
@@ -1498,7 +1498,7 @@ CF_API const cf_def* cf_defset_find(const cf_defset* ds, const char* key, size_t
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_find` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L802).
+Implementation: [`cf_defset_find` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L814).
 
 Authored descriptors are returned for exact keys. A declared list's
 count and canonical decimal indices return immutable scalar
@@ -1511,7 +1511,7 @@ CF_API const cf_def* cf_defset_list(const cf_defset* ds, const char* key, size_t
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_list` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L831).
+Implementation: [`cf_defset_list` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L843).
 
 The declared list containing a key, including its root. Unlike find,
 this also finds a list whose caller supplied an invalid member name,
@@ -1524,7 +1524,7 @@ CF_API cf_u64 cf_defset_fingerprint(const cf_defset* ds, const cf_keyspace* ks);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_fingerprint` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L1032).
+Implementation: [`cf_defset_fingerprint` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L1044).
 
 The fingerprint of `ks` under these definitions (cf_fingerprint): as
 cf_ks_digest, except that a key defined CF_SENSITIVE enters by its
@@ -1536,7 +1536,7 @@ CF_API cf_u64 cf_fingerprint_seed(void);
 CF_API cf_u64 cf_fingerprint_step(cf_u64 h, const char* key, size_t keylen, const char* type, const char* text, size_t n);
 ```
 
-Implementation: [`cf_fingerprint_seed` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L1016), [`cf_fingerprint_step` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L1022).
+Implementation: [`cf_fingerprint_seed` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L1028), [`cf_fingerprint_step` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L1034).
 
 The fingerprint a step at a time, for a reader that holds keys as text -
 Doctor, recomputing a report's - and not as a key space: start from the
@@ -1553,7 +1553,7 @@ CF_API const cf_def* cf_defset_at(const cf_defset* ds, size_t i);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_count` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L836), [`cf_defset_at` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L840).
+Implementation: [`cf_defset_count` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L848), [`cf_defset_at` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L852).
 
 ```c
 CF_API const cf_def* cf_defset_nearest(const cf_defset* ds, const char* key, size_t keylen, size_t* distance);
@@ -1561,7 +1561,7 @@ CF_API const cf_def* cf_defset_nearest(const cf_defset* ds, const char* key, siz
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_nearest` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L965).
+Implementation: [`cf_defset_nearest` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L977).
 
 Nearest defined key by edit distance, or NULL when nothing is close.
 This is what turns "unknown key server.pot" into "did you mean
@@ -1580,7 +1580,7 @@ down the chain only when that is what the definition asked for.
 CF_API void cf_policy_text(const char* const* policy, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_policy_text` (lib/config/src/core/validate.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/validate.c#L626).
+Implementation: [`cf_policy_text` (lib/config/src/core/validate.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/validate.c#L679).
 
 Renders a policy list as the specification writes it: "env > local".
 Shared because both the rejection message and the coherence check
@@ -1592,7 +1592,7 @@ a NULL `buf` stores nothing, and a NULL or empty policy gives "".
 CF_NODISCARD CF_API cf_bool cf_defs_apply(cf_keyspace* ks, const cf_defset* ds, const cf_rank_names* names, cf_unknown_policy    unknown, cf_apply_report* report, cf_error* err);
 ```
 
-Implementation: [`cf_defs_apply` (lib/config/src/core/validate.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/validate.c#L1075).
+Implementation: [`cf_defs_apply` (lib/config/src/core/validate.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/validate.c#L1128).
 
 Applies the definitions to the key space: types, defaults, policy, lists, arrays.
 Guarantee: basic. `ks` stays valid but may be applied up to the key that failed
@@ -3764,12 +3764,14 @@ Guarantee: nothrow. A static name; "?" for a level out of range.
 
 ## cf_numeric.h
 
-cf_numeric.h - locale-independent numeric conversion.
+cf_numeric.h - locale-independent numeric conversion, and units.
 
-INTERNAL (D-51): exported for ConfigForge Doctor and the tests, and
-outside the 1.x promise - a minor release may change it. Its functions
-are declared only under CF_INTERNAL_API (D-51, D-88). A program uses
-the configforge.h functions instead.
+INTERNAL (D-51), but for the units at the end: the conversions are
+exported for ConfigForge Doctor and the tests, and outside the 1.x
+promise - a minor release may change them. Their functions are declared
+only under CF_INTERNAL_API (D-51, D-88). A program uses the
+configforge.h functions instead. The units ("30s", "512MiB"; D-113,
+D-222) are public, in their first minor release (D-89).
 
 strtod, atoi and printf("%f") all follow the active locale's decimal
 separator, so a configuration file written on one machine would not
@@ -3872,6 +3874,86 @@ CF_API cf_scalar_kind cf_infer_scalar(const char* s, size_t len);
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
 Implementation: [`cf_infer_scalar` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L1014).
+
+### Units: durations and sizes (D-113, D-222)
+
+`"1h30m"` and `"512MiB"` read as the whole number of the unit's base
+(5400000 ms, 536870912 B). A unit is an open value: the two built-in
+ones are reached through cf_unit_duration_get and cf_unit_size_get
+(functions, not data, so that a shared library on every platform
+exports them), and a program writes a cf_unit of its own with its own
+parser. The parsers know no configuration: cf_def.unit (cf_define.h)
+is what binds a key to one. Every abbreviation the two read is a row
+of the table in docs/Guide.md, "Durations and sizes".
+
+Notation: case-sensitive, no whitespace, no locale. A fraction ("1.5h")
+is read when the result is a whole number of base units, and refused
+otherwise, never rounded. A bare number is the base unit. A suffixed
+form has no sign. Every product and sum is checked against the
+largest cf_i64 before it is made; an overflow is a refusal.
+
+```c
+CF_EXPERIMENTAL(2, 1) void cf_unit_options_init(cf_unit_options* o);
+```
+
+Experimental since 2.1: outside the 1.x promise until the next minor release makes it promised or removes it.
+
+Implementation: [`cf_unit_options_init` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L1361).
+
+The defaults above. A NULL pointer is accepted and left alone.
+Guarantee: nothrow.
+
+```c
+CF_EXPERIMENTAL(2, 1) const cf_unit* cf_unit_duration_get(void);
+CF_EXPERIMENTAL(2, 1) const cf_unit* cf_unit_size_get(void);
+```
+
+Experimental since 2.1: outside the 1.x promise until the next minor release makes it promised or removes it.
+
+Implementation: [`cf_unit_duration_get` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L1756), [`cf_unit_size_get` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L1760).
+
+The two built-in units, valid for the life of the program.
+Guarantee: nothrow.
+
+```c
+CF_NODISCARD CF_EXPERIMENTAL(2, 1) cf_bool cf_unit_parse(const cf_unit* u, const char* s, size_t n, cf_i64*      out, const char** reason);
+```
+
+Experimental since 2.1: outside the 1.x promise until the next minor release makes it promised or removes it.
+
+Implementation: [`cf_unit_parse` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L1372).
+
+`u->parse`, usable alone: NULL arguments (no unit, no text, no place for the
+number) are refused. `reason` may be NULL, and is NULL on a refusal that has
+no sentence of its own (the text is not in the unit's notation).
+Guarantee: strong.
+
+```c
+CF_EXPERIMENTAL(2, 1) size_t cf_unit_format(const cf_unit* u, cf_i64 v, char* buf, size_t cap);
+```
+
+Experimental since 2.1: outside the 1.x promise until the next minor release makes it promised or removes it.
+
+Implementation: [`cf_unit_format` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L1383).
+
+`u->format`: a duration as "1h30m", a size as "512MiB" (the largest exact
+suffix), a negative number as the bare number. Returns the length written
+(the text is terminated), or 0 with an empty string when `cap` is too small
+or the unit has no formatter.
+Guarantee: nothrow.
+
+```c
+CF_NODISCARD CF_EXPERIMENTAL(2, 1) cf_bool cf_unit_table_parse(const cf_unit_table* t, const char* s, size_t n, cf_i64*      out, const char** reason);
+```
+
+Experimental since 2.1: outside the 1.x promise until the next minor release makes it promised or removes it.
+
+Implementation: [`cf_unit_table_parse` (lib/numeric/src/numeric.c)](https://github.com/develooper1994/configforge/blob/main/lib/numeric/src/numeric.c#L1299).
+
+One term, or a sum of terms, `number` and an abbreviation, read exactly (no
+floating point): the notation above, over this table. A bare number
+(optionally signed) is the base unit when `allow_bare`.
+Guarantee: strong.
 
 ## cf_platform.h
 

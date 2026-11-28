@@ -125,6 +125,8 @@ gets reopened every six months.
 | D-110 | Generators outside the tree | generators | **Decided** |
 | D-111 | The comparison with other libraries: one set of flags, the same work, and a history kept on its own branch | benchmark, CI | **Decided** |
 | D-112 | The MISRA record is plain text of file and count, three kinds, and the gate fails open nowhere | compliance, CI | **Decided** |
+| D-113 | A unit on an int definition: `cf_def.unit`, an open `cf_unit`, and the text read in the unit's base | definitions, `cf_numeric.h`, the contract | **Decided** |
+| D-222 | A unit is an open value: a name, a parser, a formatter and its own options; a program defines its own | `cf_numeric.h`, `cf_def.unit` | **Decided** |
 | D-230 | Options with defaults are one convention: `size` first, `_init`, NULL the defaults; a fixed limit a public call reaches is an option with its old value as default | public options structs, `gate.options` | **Decided** |
 | D-231 | The platform is a part: `none` is built and tried; what it cannot give answers `CF_E_CAPABILITY` | platform, build options, CI | **Decided** |
 | D-232 | Every public function states one failure guarantee; the library never ends the program | public headers, `docs/Guarantees.md`, `gate.guarantees` | **Decided** |
@@ -5156,6 +5158,70 @@ The matrix of every rule, the compliance report and the public headers' zero
 are later cards.
 
 **Status.** Built: N-19.
+
+## D-113 — A unit on an int definition
+
+**Question.** The `30s` and `512MiB` of a configuration are held without a new
+`cf_type`, which would change the ABI.
+
+**Decision.** `cf_def` gains `unit`, a pointer to an open `cf_unit` (D-222):
+its name, its parser, its formatter and its own options; the built-in duration
+and size are reached through `cf_unit_duration_get()` and `cf_unit_size_get()`
+and a program defines its own; an int definition with a unit accepts the
+unit's grammar and keeps the int in the unit's base; the range is in the base;
+the provenance keeps the text as written; a typed source's string is converted
+for such a key and for no other.
+
+**Held to.** `lib/numeric/tests/test_numeric.c` for the grammar and
+`lib/config/tests/test_units.c` for the contract.
+
+**Choices.** A fraction is read only when whole in the base; a month and a year
+are refused by default; a bare `K` is IEC by default; the suffixes of a
+duration decrease. The two built-in units are functions, not data (the card's
+own fallback, taken at once): a shared library exports data differently on each
+platform (a DLL needs `dllimport`), and `gate.abi` lists functions. The grammar
+is read exactly, in integer arithmetic (a number of 192 bits), so a fraction
+needs no floating point and `minimal` builds the same tests. A bare number is
+what `cf_text_to_i64` takes, so `+30` is 30 and `+30s` is refused. A month is
+`mo`, a year `y`, and in ISO 8601 `P1M` and `P1Y`; with `calendar` off all four
+say "is ambiguous: use days".
+
+**Weighed and not taken.** A closed enum (the maintainer chose the open
+struct), a new `cf_type` (ABI), rounding, locale-dependent spellings.
+
+**Status.** Built: C-2a. The schema keyword, the report and `cf_emit` are
+C-2b.
+
+## D-222 — A unit is an open value: a name, a parser, a formatter and its own options (the maintainer, 2026-11-26)
+
+The maintainer approved an open struct instead of a closed enum: "every unit is
+a `cf_unit` value; a program may add its own unit with its own table of
+abbreviations".
+
+1. `cf_unit` is a struct: its name; `parse` (text to number, with a refusal
+   reason); `format` (number to text, for `explain` and for writing); the
+   unit's own default options (D-220). `cf_def` gains `const cf_unit *unit;` as
+   its last field; NULL is no unit; a caller built before it gets NULL by the
+   size rule (D-51, `DEF_SIZE_UNIT`).
+2. Built-in values for the duration and the size; a program defines its own
+   unit with its own table of abbreviations. The parser is a part usable alone
+   (`cf_unit_parse`); configuration binds to it only through `cf_def.unit`.
+3. Notation, in the maintainer's order (the languages first, then world
+   standards, else explicit, with a table and the most telling abbreviation).
+   Duration: Go's `time.ParseDuration` forms (`1h30m`, `300ms`, `1.5h`); C++
+   `std::chrono`'s names `h`, `min`, `s`, `ms`, `us` and `µs`, `ns` (minutes as
+   `m` or `min`); `d` and `w` as Rust's humantime; ISO 8601 `PT1H30M` also read.
+   Months and years refused by default ("is ambiguous: use days"), allowed by
+   an option. The base unit ms by default; an option for s or us. Size: IEC
+   80000-13 `KiB`, `MiB`, `GiB` (1024^n) and SI `kB`, `MB` (1000^n); bare `K`,
+   `M`, `G` read as IEC by default (as Kubernetes and the JVM read them), an
+   option to change it. A bare number with no unit is the base unit by
+   default, an option to refuse it.
+4. Every abbreviation read is listed in a table in the documents
+   (`docs/Guide.md`, "Durations and sizes").
+
+**Status.** Built: C-2a (the unit and the field); C-2b (the schema, the report,
+`cf_emit`).
 
 ## D-224 — The file layer: options, a writer, a replace, and an emit on top
 
