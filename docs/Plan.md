@@ -481,7 +481,7 @@ of a card's CI.
 | 196 | F-6 The sync a replace needs, by platform: `fdatasync` on Linux, `F_FULLFSYNC` on macOS, kept only if measured | 2.7.0 | small | nothing | open |
 | 197 | F-7 Many small files: measured first, then the cost per file cut where it shows | 2.7.0 | medium | nothing | open |
 | 198 | L-28 The CERT C matrix: every rule, which tool sees it, and the review for the rest | 2.0.0 | medium | nothing | done (1d4e24a) |
-| 199 | K-9k The text of a system error without `strerror`'s shared buffer (CERT CON33-C) | 2.1.0 | small | L-28 | open |
+| 199 | K-9k The text of a system error without `strerror`'s shared buffer (CERT CON33-C) | 2.1.0 | small | L-28 | done (a3bc664) |
 | 200 | L-25 MC/DC measured by GCC's condition coverage, with a floor that only rises | 2.1.0 | medium | nothing | open |
 | 201 | L-26a Each decision names the tests that hold it: the line, the table and `gate.trace` | 2.1.0 | medium | nothing | open |
 | 202 | L-26b Every decision traced: the to-do list emptied | 2.1.0 | large | L-26a | waits: L-26a |

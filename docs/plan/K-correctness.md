@@ -725,7 +725,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **needs**: L-28
 * **size**: small
 * **version**: 2.1.0
-* **status**: open
+* **status**: done (a3bc664)
 * **decided**:
   * **The table**: `ENOENT` "no such file or directory", `EACCES` "permission denied", `EEXIST` "file exists", `ENOTDIR` "not a directory", `EISDIR` "is a directory", `ENOSPC` "no space left on device", `EROFS` "read-only file system", `EMFILE` "too many open files", `ENAMETOOLONG` "file name too long", `EINVAL` "invalid argument", `EIO` "input/output error", `ENOMEM` "out of memory", `EPERM` "operation not permitted", `EBUSY` "device or resource busy", `EXDEV` "cross-device link", `ELOOP` "too many levels of symbolic links" (each under `#ifdef` of its name, so a C89 libc without one still builds); any other: `error <n>`. Lower case, no final stop, as the library's messages are.
   * **Where**: `lib/platform/src/errno_text.c` (new, in every platform's sources including `none`), declared in the platform's private header beside `cf_platform_*`'s internals (`git grep -n "cfi_" lib/platform/src/*.h`); the four call sites write `cfi_errno_text(errno, ...)` into the buffer they already format into (read `errno` once into a local first).
