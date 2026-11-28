@@ -702,7 +702,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **needs**: K-9b
 * **size**: small
 * **version**: 2.0.0
-* **status**: open
+* **status**: done (78d7f39)
 * **decided**:
   * **The builder case**: one function `oom_builder_again` with the sweep of `tests/support/cf_oom.h`; the clean digest is taken first; each refused run is followed by the retry; a retry that fails or gives another digest is a defect, fixed (test first) when under 40 lines, else a line `cf_builder_create|known: <why>` in `lib/config/tests/oom_paths.txt` and the card's notes.
   * **The candidate case**: calls `cf_ks_add_candidate` directly on a key space made from the failing allocator (as `lib/config/tests/test_keyspace.c` makes one; find its helper with `grep -n "cf_ks_" lib/config/tests/test_keyspace.c`); after a refusal the candidate is looked up: absent, or present with `written` set. Present without `written` is the defect K-9f named: the fix adds the candidate only after its text is copied (the order of the two steps in `cf_ks_add_candidate`, `lib/config/src`; find with `grep -rn "cf_ks_add_candidate" lib/config/src`), and its guarantee in `cf_keyspace.h` becomes `strong`.
