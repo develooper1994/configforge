@@ -1,52 +1,40 @@
-# HANDOFF (2026-11-27, evening)
+# HANDOFF (2026-11-28)
 
 State: the plan runs from docs/Plan.md's generated index (order:
-docs/plan/Layout.md). Landed today: L-20, L-21, L-22, L-23, L-24, K-11a,
-K-11b, K-11c, L-18a, F-1a, K-9c, Y-2, Y-3, Y-5, Y-6, Y-8, M-18; 1.9.0
-released. No TO DECIDE is
-left in any card; only nine account-bound cards stay parked (L-17-m, L-19-m,
-P-15-m, M-19-m, M-23-m, M-25-m, M-29-m, M-30-m, G-9-m): prepare their files,
-give the maintainer short steps when one comes up. The maintainer's standing
-approval and release rights: docs/Plan.md "For the maintainer".
+docs/plan/Layout.md). No TO DECIDE is left in any card; only nine
+account-bound cards stay parked (L-17-m, L-19-m, P-15-m, M-19-m, M-23-m,
+M-25-m, M-29-m, M-30-m, G-9-m). The maintainer's standing approval and
+release rights: docs/Plan.md "For the maintainer". 1.9.0 is released;
+publishing to crates.io and PyPI is deferred (M-23-m): do not chase it.
 
 ## In flight
 
-1. 1.9.0 is released (tag v1.9.0, 2026-11-27; GitHub release with its
-   archives and "How each archive was built"). Publishing to crates.io and
-   PyPI is deferred by the maintainer (2026-11-27): the `crates` job waits on
-   the repository variable PUBLISH_CRATES (M-23-m). Do not chase it.
-2. Landed on main for 2.0.0: M-10, K-6b, M-12, K-9a. CI runs once a batch
-   (docs/Plan.md "The loop", 9-11): cards land on branch `batch` after local
-   ACCEPT; one full-tier run on `batch`, then `git push origin batch:main`.
-   `batch` now holds K-9d, M-11a, K-9e, two "Batch:" record fixes and the
-   cards K-9h/K-9i. Its last full run (46058347107) was green but for an
-   afl crash in the `chain` target (inputs: artifact `afl-findings`).
-3. `batch` (D:\cf-work\batch; tip after a6eddd5) also holds the afl `chain`
-   fix (5cdd262: the converter drops an emptied list as it drops an emptied
-   table) and the cards K-9h, K-9i, F-6, F-7. No full run yet since the fix.
-   K-6a landed on `batch` too. Its red run's causes are fixed on batch
-   (2026-11-28): MSVC C4141 (1543a45) and `unit.test_reason` (0945da2:
-   offsets checked only for the built-in readers; expat, libyaml and
-   libfyaml need only an offset inside the document). Full run
-   46071411137 started on 0945da2; green -> `git push origin batch:main`
-   (merge origin/main into batch first if main has only documents).
-   After records change: sizes (scripts/check/sizes.cmake -DWRITE=ON
-   -DTREE=<hash> on a copy without .git), then `cmake -P
-   scripts/generate/matrix.cmake` (README cells), and the MISRA record
-   (gate.misra -DWRITE=ON).
+1. The batch of K-6a, K-9d, M-11a, K-9e (and its fixes) went to main on
+   2026-11-28 (3db1b2e) after full run 46076732675 was green. Lessons
+   now in docs/Plan.md "The loop", step 11: format, codemap, apiref and
+   every `gate.*` in WSL before each full run, and the MISRA record
+   regenerated after code changes (`cmake -DSRC=<tree> -DBIN=<misra build>
+   "-DDEFINES=-D__GNUC__=15|-D__GNUC_MINOR__=2" -DWRITE=ON -P
+   cmake/gates/GateMisra.cmake`; the helper D:\cf-work\misra-regen.sh is
+   not in the repository).
+2. `batch` (D:\cf-work\batch) holds K-9f (0ea8118), K-9g (c898df5) and
+   K-9b (42dc309, D-237) with the MISRA record after them; local check
+   green (314 tests, gate.misra clean; D:\cf-work\batch-check.sh, not in
+   the repository). Full run 46083844789 started; green -> merge
+   origin/main into batch (documents only) and `git push origin
+   batch:main`. Red -> fix on batch ("Batch: ..."), run again.
+3. K-9j (written 2026-11-28) takes the two checks K-9b left: a builder
+   given its source again after a failed create, and
+   `cf_ks_add_candidate`'s partial state.
+4. yamldiff (exploratory, continue-on-error) found an anchor named with
+   `?` alone at the top: card K-8b (2.2.0).
 
 ## Next
 
-4. 2.0.0 in Layout.md's order: K-9f (in flight 2026-11-28, worktree
-   D:\cf-work\K-9f, branch work/K-9f cut from batch), K-9g, K-9b, M-11b, M-13; beside-cards
-   ride along (K-9h, K-9i: the safety inventory of 2026-11-27).
-5. The maintainer wants the library usable in safety-critical work, free
-   tools only, in stages (docs/Compliance.md "Order of work"): write the
-   four missing cards: written 2026-11-28 as L-25 (MC/DC), L-26a/b
-   (traces), L-27 (safety manual), L-28 (CERT matrix), taken after K-9b
-   in Layout.md's order. IO: F-6 and F-7 are written
-   (reading is CPU-bound; the cost is fsync and, with many files, calls
-   per file).
+5. 2.0.0 in Layout.md's order: K-9j, M-11b, M-13; beside-cards ride
+   along (K-9h, K-9i, F-6, F-7), then the safety-critical cards written
+   2026-11-28: L-28 (CERT matrix), L-25 (MC/DC), L-26a, L-26b (traces),
+   L-27 (safety manual, after L-12c). They decide D-233 to D-236.
 6. Measure the batch flow after a few batches (cards a day, red full
    runs, time to fix) into docs/Maintaining.md "Working habits that paid".
 7. Codex's allowance returns 2026-11-29 09:47: give it most cards
