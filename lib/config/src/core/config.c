@@ -1708,17 +1708,18 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
             continue;
         }
         if (d->migrate != NULL) {
+            /* The function's own error, not a second one: two would put
+               the frame over the stack budget (gate.stack). */
             migrate_ctx m;
-            cf_error    me = CF_ERROR_INIT;
-            m.old          = d;
+            m.old   = d;
             m.repl  = cf_defset_find(&c->defs, d->replaced_by, strlen(d->replaced_by));
             m.arena = c->arena;
-            m.err   = &me;
+            m.err   = &e;
             renamed =
                 cf_ks_rename_with(&c->keys, d->key, strlen(d->key), d->replaced_by,
                                   strlen(d->replaced_by), migrate_hook, &m);
-            if (!renamed && me.code != CF_OK) {
-                return create_failed(b, err, &me, &me);
+            if (!renamed && e.code != CF_OK) {
+                return create_failed(b, err, &e, &e);
             }
         } else if (d->list_mode != CF_LIST_NONE) {
             renamed = cf_ks_rename_list(&c->keys, d->key, strlen(d->key),

@@ -11,6 +11,7 @@ cf_derive|test_oom_paths.c:test_derive
 cf_derive_in|test_oom_paths.c:test_derive
 cf_edit_commit|test_oom_paths.c:test_edit_commit
 cf_emit|test_oom_paths.c:test_emit
+cf_emit_file|-|its one buffer comes from cf_default_allocator(), which a sweep cannot fail; what it emits is cf_emit's, swept through cf_emit (test_emit), and the write is cf_file_replace's, which allocates nothing
 cf_file_replace|-|allocates nothing: it takes no allocator and names its temporary on the stack
 cf_file_writer_close|test_oom_file.c:test_file_writer
 cf_file_writer_flush|-|allocates nothing: the writer's stream is flushed, no block is taken
