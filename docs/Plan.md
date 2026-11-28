@@ -483,7 +483,7 @@ of a card's CI.
 | 198 | F-7 Many small files: measured first, then the cost per file cut where it shows | 2.7.0 | medium | nothing | open |
 | 199 | L-28 The CERT C matrix: every rule, which tool sees it, and the review for the rest | 2.0.0 | medium | nothing | done (1d4e24a) |
 | 200 | K-9k The text of a system error without `strerror`'s shared buffer (CERT CON33-C) | 2.1.0 | small | L-28 | done (a3bc664) |
-| 201 | L-25 MC/DC measured by GCC's condition coverage, with a floor that only rises | 2.1.0 | medium | nothing | open |
+| 201 | L-25 MC/DC measured by GCC's condition coverage, with a floor that only rises | 2.1.0 | medium | nothing | done (79296cf) |
 | 202 | L-26a Each decision names the tests that hold it: the line, the table and `gate.trace` | 2.1.0 | medium | nothing | open |
 | 203 | L-26b Every decision traced: the to-do list emptied | 2.1.0 | large | L-26a | waits: L-26a |
 | 204 | L-27 The safety manual: the assumptions a user's program must hold, each pointing at its evidence | 2.1.0 | medium | L-12c, L-25, L-26a | waits: L-12c |
