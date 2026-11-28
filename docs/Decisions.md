@@ -5762,3 +5762,7 @@ M-11b's part: `cf_error`'s `key`, `source` and `message` are `const char*`, "" w
 ## D-177 — Image major 2: a 128-byte header with the build's limits and id
 
 The 12 reserved bytes could not hold them; offsets stay 32-bit; a major 1 image loads (`build_id` NULL); a major 2 image from a build with longer keys is refused naming both limits. Rejected: 64-bit offsets, a section table. Bytes 104-111 are kept for the manifest.
+
+## D-178 — 2.0 breaks once, and says so
+
+The breaks are those D-176 and D-177 name, listed in `docs/Migrating-2.0.md` with before and after; `gate.abi`'s baseline is the 2.0 interface; nothing else breaks in 2.0.

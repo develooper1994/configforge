@@ -60,7 +60,7 @@ beside what is not.
 | ⬜ | Every operation on a file's data, written back in its format | assessment |
 | 🟩 | Converting between formats | D-94 |
 | 🟩 | Code for each binding from a contract | D-95, D-96 |
-| ⬜ | 2.0: what the sizing modes break, once | plan item 10 |
+| 🟩 | 2.0: what the sizing modes break, once | plan item 10 |
 | 🟩 | Sizes and work predicted, then checked: the file buffer and the key space kept, three more measured and left | D-76, plan of the evening |
 | 🟩 | A UTF-8 byte order mark read past by every text reader (`cf_blob_skip_bom`) | 1.5.0 |
 | 🟩 | Checks at compile time where they can be, at run time always: Rust, C++, C11 and `doctor gen`'s output | D-75 |
@@ -151,7 +151,7 @@ short keeps its branch, unmerged, and says so here.
    the layout where the format can. **2.2.0.**
 7. ⬜ **Wave 7**: Go (cgo) and .NET (P/Invoke) bindings, each with its
    tests, an example and a CI job. **2.3.0.**
-8. ⬜ **Wave 8, 2.0**: the stream reader and the dynamic sizing modes
+8. 🟩 **Wave 8, 2.0**: the stream reader and the dynamic sizing modes
    (D-61), and what else waits for a major version (the image header's
    layout), together, once. **2.0.0.**
 

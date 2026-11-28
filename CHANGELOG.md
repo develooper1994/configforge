@@ -34,6 +34,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Changed
 
+- 2.0 breaks once, and `docs/Migrating-2.0.md` lists each break with what to write instead: owned error text and the 128-byte image header below, and the `CF_NODISCARD` results of 1.9.0 and the tools' `reason:` line (D-178, M-13).
 - `cf_error`'s `key`, `source` and `message` are owned text, not arrays (D-176): they are `const char*`, "" when unset, held in an inline store the size of the old arrays and, when a text does not fit, in a block the error owns and `cf_error_clear` frees. `cf_error_set` cuts as it always did; the new `cf_error_set_long` keeps a text up to a cap. A `cf_error` is never copied by value (use `cf_error_copy`); the C++ `Error` copies and frees correctly, and the Rust and Python bindings read the pointers (M-11b).
 - `cf_reason_severity` and `cf_reason_weakness`, experimental in 1.9, are promoted to
   `CF_API` and listed in `cmake/configforge.symbols` (D-89).
