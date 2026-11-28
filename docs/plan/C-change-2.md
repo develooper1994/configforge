@@ -34,6 +34,7 @@ Shared by every card here:
   default -j && ctest --test-dir build -R <name> --output-on-failure`. The
   card is accepted by ACCEPT, not by this.
 
+<a id="c-7"></a>
 ## C-7 - Profiles: `--profile` or `NAME_PROFILE` adds `config.<profile>.<ext>` above the base file
 
 * **id**: C-7
@@ -102,6 +103,7 @@ Shared by every card here:
 * **stop if**: C-11 has not landed or its `cfi_app_places` has no `profile` parameter (nothing is changed; the card waits); the scan of `argv` cannot be made to agree with what `cf_cli` reads for `profile` (a test of case b gives a different value from `explain("profile")`): nothing is changed, the case is written under notes; `cf_report` cannot take a profile without changing a report the existing tests pin (`test_report`, `test_report_edges`): stop.
 * **docs**: `docs/Decisions.md` D-120 and its index row; `docs/Guide.md` as step 7; `CHANGELOG.md` under `## 1.9.0 — unreleased`, `### Added`: "`--profile NAME` or `NAME_PROFILE` (C-7): `cf_builder_app_files` also reads `config.<profile>.<ext>` beside each base file, ranked just above it; `cf_profile` (experimental in 1.9) and the report's `profile` are the library's"; `docs/Roadmap.md:818` the item "**Profiles.**": `⬜` to `🟩` and `(D-120, C-7)` after the bold heading.
 
+<a id="c-8a"></a>
 ## C-8a - A read the contract does not have, noticed: the library records it
 
 * **id**: C-8a
@@ -198,6 +200,7 @@ Shared by every card here:
 * **stop if**: a read's cost without tracking shows in `bench gate` (`scripts/bench/gate.py`, CI) beyond its threshold: the pointer test is moved out of the hot path or the card is handed back with the numbers; `test_golden` or a report test moves with tracking off; `tsan` reports a race on a slot's fields (the publish order is wrong: stop, write it under notes).
 * **docs**: `docs/Decisions.md` D-121 and its row; `docs/Guide.md` as step 8; `CHANGELOG.md` under `## 1.9.0 — unreleased`, `### Added`: "`cf_builder_track_misreads`, `cf_misreads` and `cf_misread_at` (experimental in 1.9, C-8a): a typed read of a key the contract does not define, or of another type, is recorded without a lock, and the report lists it under `\"misreads\"`"; the Roadmap item is marked by C-8b, which finishes it.
 
+<a id="c-8b"></a>
 ## C-8b - Doctor's CFD021: a read of a key the contract does not have, in `doctor lint`
 
 * **id**: C-8b
@@ -231,6 +234,7 @@ Shared by every card here:
 * **stop if**: C-8a has not landed; the array does not come out of `doctor_load` as `misreads.<i>.key` (the flatten spells arrays otherwise: read `sources.%zu.name` at `engine.c:217` and use what it does); a Doctor secret gate (`doctor.marker`) finds a marker in the new output.
 * **docs**: `CHANGELOG.md` under `## 1.9.0 — unreleased`, `### Added`: "Doctor's CFD021 (C-8b): a key a program read that its contract does not define, or read as another type, from a report that carries `misreads` (`warning`; `docs/Doctor.md`)"; `docs/Roadmap.md:823` the item "**A read of a key the contract does not have, noticed.**": `⬜` to `🟩` and `(D-121, C-8a and C-8b)` after the bold heading; `docs/Doctor.md` as step 6.
 
+<a id="c-9"></a>
 ## C-9 - Values migrated, not only renamed: a function on the old key's definition
 
 * **id**: C-9
@@ -334,6 +338,7 @@ Shared by every card here:
 * **docs**: `docs/Decisions.md` D-122 and its row; `docs/Guide.md` as step 9; `CHANGELOG.md` under `## 1.9.0 — unreleased`, `### Added`: "A deprecated key's definition can carry a migration (`cf_def.migrate`, C-9): a function run on each value written under the old name, whose result reaches the new key at the same rank, so `timeout_s = 30` becomes `timeout_ms` 30000; `explain()` says `(from timeout_s, converted)`; `examples/c/migration.c` shows it"; `docs/Roadmap.md:855` the item "**Values migrated, not only renamed.**": `⬜` to `🟩` and `(D-122, C-9)` after the bold heading, with a sentence "Splitting one key in two is left to the maintainer (docs/plan/C-change-2.md, C-9)".
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I approve your recommendations"): splitting one key into two is not built now: it becomes a parked card, C-9-m (on request, to be written), with `migrate_from` on the new key's definition (a function from the old value to the new key's). This card builds as written.
 
+<a id="c-10a"></a>
 ## C-10a - A running program asked for its report: the library answers one request on a descriptor
 
 * **id**: C-10a
@@ -421,6 +426,7 @@ Shared by every card here:
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I approve your recommendations"), written as **D-229**: the channel a report is served on is a part behind an interface (a POSIX descriptor now), so that Windows (an AF_UNIX socket or a named pipe) is added later without touching the library. The Windows part is a parked card, C-10c-m (on request, to be written); `http://` and `tcp:` targets are C-10d-m (on request, to be written). This card builds the interface and the POSIX part.
 * **Organiser's answers** (2026-11-27, the organiser, under the maintainer's standing approval): K-11a's convention: `CF_API void cf_serve_options_init(cf_serve_options* o)` sets `size` and every default, and a NULL options pointer means those defaults; the card's test calls it.
 
+<a id="c-10b"></a>
 ## C-10b - `configforge doctor pull unix:<path>`, and an example that serves from a loop
 
 * **id**: C-10b
@@ -452,6 +458,7 @@ Shared by every card here:
 * **docs**: `docs/Doctor.md` and `docs/Guide.md` as step 7; `CHANGELOG.md` under `## 1.9.0 — unreleased`, `### Added`: "`configforge doctor pull unix:<path>` (C-10b) asks a running program for its value-blind report over a socket and writes it to standard output; `examples/c/serve.c` answers it from a `poll` loop with `cf_serve_report`"; `docs/Roadmap.md:932` the item "**A running program asked for its report.**": `⬜` to `🟩` and `(D-123, C-10a and C-10b)` after the bold heading.
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I approve your recommendations"): as C-10a's (D-229); `unix:` only; `http://` and `tcp:` are C-10d-m.
 
+<a id="c-11"></a>
 ## C-11 - A program's files where its platform keeps them: `cf_builder_app_files`
 
 * **id**: C-11
@@ -559,6 +566,7 @@ Shared by every card here:
 * **stop if**: `cfi_app_places` cannot be made to return the same strings for a Windows environment on a POSIX host (a function of `environment` and the platform argument only; a call to `getenv`, `getcwd` or `stat` inside it is the fault: stop); two places of one call have one rank, or `cf_explain` names the wrong source for a value of `sys1`'s drop-in in case f (then the lookup by rank, `explain.c:17-29`, has changed: stop and write what it says); the example's expected output differs from the old in a value, not in a path.
 * **docs**: `docs/Decisions.md` D-124 and its row; `docs/Guide.md` and `docs/Design.md` as step 8; `CHANGELOG.md` under `## 1.9.0 — unreleased`, `### Added`: "`cf_builder_app_files(b, name, format)` (experimental in 1.9, C-11): a program's system file and `conf.d` and its user's file, read from where its platform keeps them (`$XDG_CONFIG_DIRS` or `/etc` and `$XDG_CONFIG_HOME` or `~/.config`; `%PROGRAMDATA%` and `%APPDATA%`; `/Library/Application Support` and `~/Library/Application Support`), a missing file no error and each path in the report; `cf_app` is unchanged; `examples/c/layers.c` uses it"; `docs/Roadmap.md:805` the item "**A program's files where its platform keeps them.**": `⬜` to `🟩` and `(D-124, C-11)` after the bold heading.
 
+<a id="c-9-m"></a>
 ## C-9-m - One key split into two: `migrate_from` on the new key's definition
 
 * **id**: C-9-m
@@ -586,6 +594,7 @@ Shared by every card here:
 * **Organiser's answers**:
   * Written from C-9's answer of 2026-11-26 (the maintainer: "I approve your recommendations"): option (b), `migrate_from` on the new key's definition. Opened on 2026-11-27 at 2.1.0 (C-9's version): built now, not on request. One function a new key, no chains, and `cf_def` grows by three members only (the maintainer's standing approval, 2026-11-27).
 
+<a id="c-10c-m"></a>
 ## C-10c-m - The report's channel on Windows: an `AF_UNIX` socket behind the platform's descriptor functions
 
 * **id**: C-10c-m
@@ -614,6 +623,7 @@ Shared by every card here:
 * **Organiser's answers**:
   * Written from C-10a's answer of 2026-11-26 (D-229: an `AF_UNIX` socket or a named pipe behind the interface). Opened on 2026-11-27 at 2.1.0 (C-10a's and C-10b's version): built now, not on request. The socket is chosen over the pipe for one wire and one address syntax on every system (the maintainer's standing approval, 2026-11-27).
 
+<a id="c-10d-m"></a>
 ## C-10d-m - `configforge doctor pull` reads `http://` and `tcp:` targets, with a timeout and a size as options
 
 * **id**: C-10d-m

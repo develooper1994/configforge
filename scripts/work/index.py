@@ -7,7 +7,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from brief import sections
+import links
+from brief import ANCHOR, sections
 
 ROOT = Path(__file__).resolve().parents[2]
 BEGIN = "<!-- index begin (scripts/work/index.py) -->"
@@ -118,7 +119,8 @@ def archive(root):
             goal = re.sub(r"(?<!\\)\|", r"\\|", match[2])
             rows.append(f"| {match[1]} | {goal} | {hash_[1]} | {path.name} |")
             moved.append(match[1])
-            drop.append((start, end))
+            # the card's anchor goes with it
+            drop.append((start - 1 if start and ANCHOR.match(lines[start - 1]) else start, end))
         for start, end in reversed(drop):
             del lines[start:end]
         if drop:
@@ -207,6 +209,11 @@ def build(root):
             return DONE.match(cards[need]["status"]) is not None
         return True
 
+    names = {card_id: card["file"].name for card_id, card in cards.items()}
+
+    def link(card_id):
+        return links.link_card(card_id, names)
+
     rows = []
     for number, card_id in enumerate(order, 1):
         card = cards[card_id]
@@ -214,11 +221,11 @@ def build(root):
         if status == "open":
             wait = next((n for n in card["needs"] if not done(n)), None)
             if wait:
-                status = f"waits: {wait}"
+                status = f"waits: {link(wait)}"
         title = re.sub(r"(?<!\\)\|", r"\\|", card["title"])
-        needs = ", ".join(card["needs"]) or "nothing"
+        needs = ", ".join(link(n) for n in card["needs"]) or "nothing"
         rows.append(
-            f"| {number} | {card_id} {title} | {card['version']} | {card['size']}"
+            f"| {number} | {link(card_id)} {title} | {card['version']} | {card['size']}"
             f" | {needs} | {status} |"
         )
     return HEADER + rows, []
@@ -286,8 +293,11 @@ def main():
     first, last = found
     if args.check:
         have = lines[first + 1 : last]
+        stale = links.run(root, write=False)
+        if stale:
+            print("scripts/work/links.py would change " + ", ".join(stale) + ": run index.py")
         if have == table:
-            return 0
+            return 1 if stale else 0
         row = next(
             (
                 (a, b)
@@ -298,6 +308,7 @@ def main():
         print(STALE)
         print(f"first differing row: have {row[0]!r}, would write {row[1]!r}")
         return 1
+    links.run(root, write=True)
     write_lines(plan, lines[: first + 1] + table + lines[last:])
     return 0
 

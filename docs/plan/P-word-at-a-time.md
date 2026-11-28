@@ -86,6 +86,7 @@ The rules every card here keeps:
 
 ---
 
+<a id="p-3"></a>
 ## P-3 - The readers' scans on lanes' four kept operations, kept only where they win
 
 * **id**: P-3

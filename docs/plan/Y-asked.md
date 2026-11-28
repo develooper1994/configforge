@@ -113,6 +113,7 @@ answer under "Organiser's answers"). Both are copied into
      method's defaults, the one-call shortcuts and a test backend; Y-15b,
      streaming and the chain. Both stay 1.10.0.
 
+<a id="y-1"></a>
 ## Y-1 - The Guide's "At the same time": what is guarded and what is not
 
 * **id**: Y-1
@@ -180,6 +181,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
+<a id="y-4"></a>
 ## Y-4 - `cf_file_source_options.lock`, `.wait_ms` and `.write_attempts`, `.read_attempts`, `cf_builder_write_wait`: the lock around `overrides_write`, and the store's wait (F-5b in the research)
 
 * **id**: Y-4
@@ -221,6 +223,7 @@ answer under "Organiser's answers"). Both are copied into
 ---
 * **Organiser's answers** (2026-11-26): the wait and the code are answered by D-227, written under Y-3's "Organiser's answers"; this card was rewritten to it on 2026-11-27.
 
+<a id="y-7"></a>
 ## Y-7 - "Threads and processes" in the Guide: four recipes, compiled in CI, a `fork` test
 
 * **id**: Y-7
@@ -255,6 +258,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
+<a id="y-9"></a>
 ## Y-9 - A second `cf_live` driver refused, and D-48's sentence checked
 
 * **id**: Y-9
@@ -287,6 +291,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
+<a id="y-10"></a>
 ## Y-10 - `cf_live_get` and `cf_config_free` under threads on the benchmark's page; `cf_live_generation` without the lock
 
 * **id**: Y-10
@@ -321,6 +326,7 @@ answer under "Organiser's answers"). Both are copied into
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number.
   * 2026-11-27, the organiser: question 1 is (b), the card's recommendation: `cf_live_generation` lock-free, no new name; the reader handle stays Y-11's (the maintainer's standing approval, 2026-11-27).
 
+<a id="y-11"></a>
 ## Y-11 - `cf_live_reader`: a worker's handle that caches a snapshot, its test under ThreadSanitizer, C++ and Rust wrappers
 
 * **id**: Y-11
@@ -372,6 +378,7 @@ answer under "Organiser's answers"). Both are copied into
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I approve"): the choice 1c is **(c)**: `cf_live_reader`, its borrowed pointer valid until the same thread's next call, a part beside `cf_live_get` (which stays the safe default, unchanged). It is gated by measurement: this card opens only when Y-10's page shows a knee with the number of cores, or a binding asks for it; until then (b), Y-10's generation read without the lock. Held to by its ThreadSanitizer test, and by lifetimes in the C++ and Rust wrappers.
   * 2026-11-27, the organiser: the choice is (c), as the recommendation and the maintainer's "I approve" (2026-11-26) say; the card opens in the sense that it is complete, and its first step waits for Y-10's page (a knee) or a binding's request (the maintainer's standing approval, 2026-11-27).
 
+<a id="y-12"></a>
 ## Y-12 - `swapped` in `cf_live_options`: workers told of a swap
 
 * **id**: Y-12
@@ -422,6 +429,7 @@ answer under "Organiser's answers"). Both are copied into
 * **Organiser's answers**:
   * 2026-11-27, the organiser: the choice 2 is (b), the card's recommendation (the maintainer's standing approval, 2026-11-27).
 
+<a id="y-13-m"></a>
 ## Y-13-m - A shared image across processes: memfd and seals, `shm_open`, a read-only section, the source
 
 * **id**: Y-13-m
@@ -475,6 +483,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
+<a id="y-14"></a>
 ## Y-14 - Compressed input by the program's own zlib: the D-103 recipe, a Guide section and an example
 
 * **id**: Y-14
@@ -506,6 +515,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
+<a id="y-15a"></a>
 ## Y-15a - `lib/compress`: the two interfaces `cf_packer` and `cf_unpacker`, their options with the method's own defaults, the one-call `cf_pack` and `cf_unpack`, and a test backend
 
 * **id**: Y-15a
@@ -601,6 +611,7 @@ answer under "Organiser's answers"). Both are copied into
   * Errors follow D-223: a reason, a code, `CF_NODISCARD`, `CF_E_MEMORY` for an arena with no room; `CF_REASON_NESTED` and `cf_builder_unpacker` belong to Y-18, which is the card that binds a method to a configuration (the maintainer's standing approval, 2026-11-27).
   * The version is 2.3.0, Layout.md's module 4 (the 1.10.0 of D-221 point 7 is the earlier plan's name for it) (the maintainer's standing approval, 2026-11-27).
 
+<a id="y-15b"></a>
 ## Y-15b - Streaming `cf_unpacker` and `cf_packer`, and `cf_unpack_chain`
 
 * **id**: Y-15b
@@ -647,6 +658,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
+<a id="y-16"></a>
 ## Y-16 - gzip through zlib: CF_WITH_ZLIB
 
 * **id**: Y-16
@@ -685,6 +697,7 @@ answer under "Organiser's answers"). Both are copied into
 * **Organiser's answers**:
   * 2026-11-27, the organiser: Y-16 follows D-221: the method is the value `cf_gzip_unpacker` filling the `cf_unpacker` interface in `lib/compress`, with its own default options, not an entry of a registry in `lib/serialize`; choice 2 is both zlib and libzstd, as recommended (the maintainer's standing approval, 2026-11-27).
 
+<a id="y-17"></a>
 ## Y-17 - zstd through libzstd: CF_WITH_ZSTD
 
 * **id**: Y-17
@@ -720,6 +733,7 @@ answer under "Organiser's answers"). Both are copied into
 * **Organiser's answers**:
   * 2026-11-27, the organiser: Y-17 follows D-221: the value `cf_zstd_unpacker` in `lib/compress`, the window limit being the `window` option's resolved value (the maintainer's standing approval, 2026-11-27).
 
+<a id="y-18"></a>
 ## Y-18 - The sources read through the layer: flags, extensions, provenance, bindings
 
 * **id**: Y-18
@@ -756,6 +770,7 @@ answer under "Organiser's answers"). Both are copied into
 ---
   * 2026-11-27, the organiser: Y-18 follows D-221 (the sources call `cf_unpack` and `cf_unpack_detect` of `lib/compress` over the builder's list of `cf_unpacker` values) and choice 3 is (a) (the maintainer's standing approval, 2026-11-27).
 
+<a id="y-19"></a>
 ## Y-19 - `configforge codec` through the layer, and a bomb corpus
 
 * **id**: Y-19
@@ -784,6 +799,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
+<a id="y-20"></a>
 ## Y-20 - Writing: cf_pack, deterministic gzip and zstd, `convert --compress`, a compressed image
 
 * **id**: Y-20
@@ -817,6 +833,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
+<a id="y-21-m"></a>
 ## Y-21-m - A built-in inflate for the embedded presets
 
 * **id**: Y-21-m
@@ -849,6 +866,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
+<a id="y-22-m"></a>
 ## Y-22-m - xz and lz4 frames
 
 * **id**: Y-22-m
@@ -877,6 +895,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
+<a id="y-23-m"></a>
 ## Y-23-m - zstd dictionaries on a source
 
 * **id**: Y-23-m
@@ -908,6 +927,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
+<a id="y-24"></a>
 ## Y-24 - `configforge gen build`: sources by rank, a contract, a target, deterministic output
 
 * **id**: Y-24
@@ -944,6 +964,7 @@ answer under "Organiser's answers"). Both are copied into
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I accept your recommendations"): the choice A is **(1)**: `configforge gen build`, a subcommand of `gen`, no fourth program; `gen --bake` becomes its C target (Y-27). Sources of mixed formats (`base.yaml`, `prod.toml`, `secrets.json`, the environment, the command line) are merged by rank under one contract, with provenance across formats: the Guide and the feature page present it as "mixed-format compilation", and a step of the card checks every claim about CUE, Pkl, Jsonnet, Dhall and dasel against their own documentation before any comparison is written. Extensions follow D-228. The card follows this (2026-11-27).
   * 2026-11-27, the organiser: the choice A is (1), as the maintainer answered (the maintainer's standing approval, 2026-11-27).
 
+<a id="y-25"></a>
 ## Y-25 - The open-key checks: what the compiler can prove about the keys left to run time
 
 * **id**: Y-25
@@ -974,6 +995,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
+<a id="y-26"></a>
 ## Y-26 - `CF_IMAGE_CONFIGURED`: an image that holds only what a source configured, and defaults and secrets out unless asked
 
 * **id**: Y-26
@@ -1004,6 +1026,7 @@ answer under "Organiser's answers"). Both are copied into
 ---
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I accept your recommendations"): Decided F: defaults and secrets stay out of the image unless asked for, by `--include defaults` and `--include secrets`, both off by default; a secret written into an image puts a warning in the report.
 
+<a id="y-27"></a>
 ## Y-27 - The generated C: `gen build --target c` (plain typed code) and `--target c-baked` (the baked tables)
 
 * **id**: Y-27
@@ -1060,6 +1083,7 @@ answer under "Organiser's answers"). Both are copied into
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I accept your recommendations") ("why should it read the data again at run time: it makes C code directly"): two C targets. `--target c`, **the default**: plain typed C89 code, a generated header with `struct app_config { ... }` and `extern const struct app_config APP_CONFIG;` and its `.c`; no library linked, no lookup, no parsing; a misspelled key is a compile error. `--target c-baked`: this card as written (static const tables loaded by the baked reader, `--runtime env,cli` overrides, `explain` works). The card follows this (2026-11-27, below).
   * 2026-11-27, the organiser: Y-27 has the two targets (the plain `--target c` is new; the baked tables are `--target c-baked`), and the public shape of the baked reader is (a), the five functions (the maintainer's standing approval, 2026-11-27).
 
+<a id="y-28"></a>
 ## Y-28 - `cf_builder_errors`: every diagnostic with its place, and `gen build --json` and `gen check --all`
 
 * **id**: Y-28
@@ -1106,6 +1130,7 @@ answer under "Organiser's answers"). Both are copied into
 * **Organiser's answers**:
   * 2026-11-27, the organiser: Y-28 follows D-223 (one error model): the diagnostics are `cf_error`s, the option is `cf_error_options` with `collect` and `handler` (D-223 point 4), choice C is (1) (the maintainer's standing approval, 2026-11-27).
 
+<a id="y-29"></a>
 ## Y-29 - The manifest: inputs and their digests, the contract's digest, version, profile, open keys, the output's digest
 
 * **id**: Y-29
@@ -1138,6 +1163,7 @@ answer under "Organiser's answers"). Both are copied into
 * **Organiser's answers**:
   * 2026-11-27, the organiser: the choice E is (1) now and (2) with Y-33, as the card recommended (the maintainer's standing approval, 2026-11-27).
 
+<a id="y-30-m"></a>
 ## Y-30-m - Rules across keys in the contract: a fixed declarative set
 
 * **id**: Y-30-m
@@ -1170,6 +1196,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
+<a id="y-31"></a>
 ## Y-31 - Guide recipes: CUE, Pkl, Jsonnet, Dhall, Nickel and KCL as front ends
 
 * **id**: Y-31
@@ -1199,6 +1226,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
+<a id="y-32-m"></a>
 ## Y-32-m - A build file read with the tool's own contract
 
 * **id**: Y-32-m
@@ -1230,6 +1258,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
+<a id="y-33"></a>
 ## Y-33 - The manifest inside the image (2.2.0, in the header M-12 reserves for it)
 
 * **id**: Y-33
@@ -1261,6 +1290,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
+<a id="y-34"></a>
 ## Y-34 - `gen check --report`: a predicted, value-blind report from files and a contract
 
 * **id**: Y-34
@@ -1294,6 +1324,7 @@ answer under "Organiser's answers"). Both are copied into
 ---
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I approve your recommendations"): Decided 1 is **(a)**: `gen check --report`, then `doctor lint`; no new program.
 
+<a id="y-35"></a>
 ## Y-35 - Doctor on a predicted report: the rules a running program is needed for are off and named; SARIF columns and fingerprints
 
 * **id**: Y-35
@@ -1323,6 +1354,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
+<a id="y-36"></a>
 ## Y-36 - Recipes: the contract's schema in yaml-language-server and Taplo, conftest over a report with places
 
 * **id**: Y-36
@@ -1356,6 +1388,7 @@ answer under "Organiser's answers"). Both are copied into
 * **Organiser's answers**:
   * 2026-11-27, the organiser: relations between keys are recipes here (the research's option (a)); Y-30-m (a fixed set of relations) and Y-39-m (`pattern`) are the open cards for the contract itself (the maintainer's standing approval, 2026-11-27).
 
+<a id="y-37"></a>
 ## Y-37 - A secret written in a checked file: CFD022
 
 * **id**: Y-37
@@ -1386,6 +1419,7 @@ answer under "Organiser's answers"). Both are copied into
 ---
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I approve your recommendations"): Decided 3 is **(a)**: the rule CFD022 (a sensitive or secret-named key with a value in a checked file is an error; the value is never printed); the Guide still names gitleaks for secrets outside the contract.
 
+<a id="y-38"></a>
 ## Y-38 - Defined but never read, over a set of reports: CFD023
 
 * **id**: Y-38
@@ -1417,6 +1451,7 @@ answer under "Organiser's answers"). Both are copied into
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number.
   * 2026-11-27, the organiser: question 4 is the recommendation, a rule over a set of reports, `info`; the 3-report floor is an option of the rule whose default is 3, by the answer above (the maintainer's standing approval, 2026-11-27).
 
+<a id="y-39-m"></a>
 ## Y-39-m - Relations in the contract: `pattern`, beside Y-30-m's `if`/`then` and `dependentRequired`
 
 * **id**: Y-39-m
@@ -1450,6 +1485,7 @@ answer under "Organiser's answers"). Both are copied into
 
 ---
 
+<a id="y-40-m"></a>
 ## Y-40-m - The editor's hover: the report's origins through the schema, with no server of ours
 
 * **id**: Y-40-m
@@ -1486,6 +1522,7 @@ Approved in a side session ("I approve"). Copied into `docs/Decisions.md` by Y-4
 2. Each extension is enabled by an option of each source, `cf_file_source_options.extensions` (`include`, `import`, `ref`, `expr`), and `--extensions` in `gen build`. `${key}` stays on by default (as today); `include` and `import` are off by default (a file that makes the library read other files is a choice of security).
 3. A double extension, `app.cfx.toml`, turns the extensions on for that file while editors still see `.toml`; no new extensions such as `.tomlx`.
 
+<a id="y-42"></a>
 ## Y-42 - Include and import, in standard syntax: `"$include"` and `"$import"`, a root, a depth, a loader that plugs in (D-228)
 
 * **id**: Y-42
@@ -1560,6 +1597,7 @@ Approved in a side session ("I approve"). Copied into `docs/Decisions.md` by Y-4
   * Position decides precedence inside a document (the later occurrence wins, as the key space already decides for one source), so no second pass and no new rule (the maintainer's standing approval, 2026-11-27).
   * The path check is lexical; symbolic links are not resolved, for want of a platform call, and `docs/Safety.md` says so (the maintainer's standing approval, 2026-11-27).
 
+<a id="y-41-m"></a>
 ## Y-41-m - Simple expressions: `"${= 8000 + 80}"`, total, inside a string
 
 * **id**: Y-41-m

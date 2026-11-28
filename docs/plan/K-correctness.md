@@ -27,6 +27,7 @@ K-5 amends the paragraph of D-109 that says "no one number is exact". The
 choices these cards left open were decided on 2026-11-27; D-138
 (K-6a and K-6b), D-139 (K-7a) and D-140 (K-8) are kept for them.
 
+<a id="k-1a"></a>
 ## K-1a - `.properties` read by Java's own `Properties`, and the two compared
 
 * **id**: K-1a
@@ -57,6 +58,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: `java` cannot run `PropsDump.java` on the machine (no JDK): nothing is changed, say so; Java's output for a case differs between two runs; the library's reader crashes or hangs on a case (a defect of its own: stop, the input under notes).
 * **docs**: `CHANGELOG.md` under "## 1.10.0 — unreleased" (the heading is made above "## 1.10.0 — unreleased" by the first card of that version that lands; later cards add to it), "### Added": the comparison and its score. `docs/Conformance.md:67-70`: a sentence after the INI one. The Roadmap item "`.properties` held to Java's `Properties`" stays ⬜ until K-1b. **D-134** (copy into `docs/Decisions.md` after D-112): *Question.* `.properties` has a reference reader; what is the standard, and what differs on purpose? *Options.* Compare with `load(InputStream)` (Latin-1; rejected: the library reads UTF-8, as every format here does, D-108). Compare with `load(Reader)` over UTF-8 (decided). *Decision.* Java's `Properties.load(Reader)` is the standard; the library follows it everywhere except the rows of `PROPERTIES_CASES` marked by design (an empty key, a key that clashes as a table, a lone surrogate escape, an invalid UTF-8 byte, any key the key space cannot hold), each checked to still differ. *Consequence.* A new difference is a finding, not a note: it lowers the score and fails the floor.
 
+<a id="k-1b"></a>
 ## K-1b - What the comparison with Java found, fixed
 
 * **id**: K-1b
@@ -80,6 +82,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: a fix changes what a case of `lib/config/tests/test_properties.c` that passed before computes; a finding needs a decision about the key space (D-24) rather than the reader.
 * **docs**: `CHANGELOG.md` under "## 1.10.0 — unreleased", "### Fixed" (one line a fix; "### Changed" where a document that read before is refused or the reverse, naming it); `docs/Roadmap.md` "`.properties` held to Java's `Properties`" to 🟩, and in the table of evidence (row E, `docs/Roadmap.md:104`) the parenthesis "Java's `Properties` needs a JVM the machines here do not have, so `.properties` is left to its own tests" becomes "`.properties` against Java's `Properties`, as `scripts/check/PropsDump.java` reads it". (`docs/Maintaining.md`'s 1.10.0 row already names "`.properties` against Java's own reader": no change there.)
 
+<a id="k-2a"></a>
 ## K-2a - The other libraries' known weaknesses, searched and counted, as a table
 
 * **id**: K-2a
@@ -107,6 +110,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: the NVD's API refuses the requests (rate limit after the pauses, or an outage): write what was reached under notes and stop; fewer than ten rows result (the search was wrong).
 * **docs**: `CHANGELOG.md` under "## 1.9.0 — unreleased", "### Added": the table and its count. No Roadmap change (K-2e).
 
+<a id="k-2b"></a>
 ## K-2b - `gate.weaknesses`: each row names a test that exists
 
 * **id**: K-2b
@@ -133,6 +137,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: the first row's weakness cannot be tested through `cf_codec_by_name(...)->decode` (it needs a library the build does not link): take the next row.
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added": `gate.weaknesses`. **D-135** (text for `docs/Decisions.md`): *Question.* How do other libraries' weaknesses become tests that stay true? *Options.* Prose in the CWE table (rejected: nothing checks it); one test a CVE (rejected: a library's twenty CVEs of one cause are one defence); one test a weakness row, named in the table, the name checked by a gate (decided). *Decision.* One row a weakness (`KW-nn`, rule R1-R11), its test a function `kw_nn_slug` in `lib/config/tests/test_weaknesses.c` or a fuzz seed, and `gate.weaknesses` fails a row whose test is not there; a weakness that does not apply is a row too, `n/a` with its reason, so that a reader of the table sees it was considered. *Consequence.* Adding a library's CVE is adding a row and a test; a row cannot stay `todo` once the table is complete.
 
+<a id="k-2c"></a>
 ## K-2c - The weaknesses of expansion, nesting, lengths and time, as tests
 
 * **id**: K-2c
@@ -158,6 +163,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: a case needs more than 2 MiB or 2 seconds in the default preset; two rows cannot be told apart by a test (merge them in the table, one line under notes).
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added": the number of rows now tested.
 
+<a id="k-2d"></a>
 ## K-2d - The weaknesses of truncation, NUL, UTF-8, numbers and duplicates, as tests
 
 * **id**: K-2d
@@ -174,6 +180,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: as K-2c; a case shows a reader accepting a duplicate key or an invalid sequence its format says it refuses: that is an `open` row, not a fix here.
 * **docs**: `CHANGELOG.md` as K-2c.
 
+<a id="k-2e"></a>
 ## K-2e - The last rows, the table closed, the Roadmap item done
 
 * **id**: K-2e
@@ -195,6 +202,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: `gate.limits` fails after the sentence: put it in a part the generator does not own.
 * **docs**: as above; `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added": the table complete.
 
+<a id="k-3a"></a>
 ## K-3a - The blob's file reader proved up to a bound
 
 * **id**: K-3a
@@ -222,6 +230,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: CBMC reports a duplicate symbol for a stubbed libc function that renaming cannot avoid (the fix would be a source change in `blob.c`: stop, write it under notes); a real failure shows (an access outside a buffer): stop, report it as a defect with the input CBMC prints under notes.
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added": the proof; `docs/Safety.md` as step 5. The Roadmap item stays 🟨 until K-3b. **D-136** (text): *Question.* What is "proved" for a reader, and to what bound? *Options.* An unbounded proof (EVA; on the readers it alarms on every loop: rejected for now); a bounded CBMC proof with a stated length (decided). *Decision.* A reader, or the blob, is proved when a harness in `tests/proofs` shows, for every input of up to N bytes, no out-of-bounds access, no signed overflow, no bad pointer and no shift out of range, with every loop unwound far enough that an assertion says so; `docs/Safety.md` names N. Stubs stand only for the operating system (stdio, the arena), never for the library's own code. *Consequence.* "Proved" on that page means a harness here, at a bound it states.
 
+<a id="k-3b"></a>
 ## K-3b - The INI reader proved up to a bound
 
 * **id**: K-3b
@@ -248,6 +257,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: no `N` of 4 or more finishes in 30 minutes (write the measured times under notes and keep K-3a's result only); CBMC shows a real fault (report the input, stop).
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added": the proof; Safety.md and the Roadmap as steps 5-6.
 
+<a id="k-4a"></a>
 ## K-4a - One harness for differential fuzzing, and JSON against yyjson
 
 * **id**: K-4a
@@ -277,6 +287,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: a difference class cannot be judged from the standard (write it as a rule `to decide` with both readings and go on); the move to `diff_known.c` changes `fuzz_yamldiff`'s behaviour (revert the move).
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added": `fuzz_jsondiff` and the shared harness. **D-137** (text): *Question.* What does a difference between two readers mean? *Options.* Any difference is a defect here (rejected: some are the other reader's, some are choices); only a refusal on one side (rejected: a different value is the worse confusion); every difference a recorded rule saying which reading is right and why, an undocumented one aborting (decided, N-12's rule). *Decision.* A differential target compares each side's lines; both refusing is agreement; every difference has a rule in the target's `.known` file with its reason, or the target aborts; a rule starting `to fix` is a defect carded apart. *Consequence.* One rule file form for YAML, JSON, TOML and CBOR; the Roadmap's "which reading is right and why" is the reason column.
 
+<a id="k-4b"></a>
 ## K-4b - TOML against tomlc17
 
 * **id**: K-4b
@@ -293,6 +304,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: as K-4a.
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added": `fuzz_tomldiff`.
 
+<a id="k-4c"></a>
 ## K-4c - CBOR against tinycbor
 
 * **id**: K-4c
@@ -309,6 +321,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: as K-4a.
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added": `fuzz_cbordiff`.
 
+<a id="k-4d"></a>
 ## K-4d - XML against a second parser
 
 * **id**: K-4d
@@ -327,6 +340,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added".
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number. The second parser: libxml2, optional and OFF by default, in the `diffs` job only (the maintainer's standing approval, 2026-11-27).
 
+<a id="k-5a"></a>
 ## K-5a - TOML's joined path judged as one number
 
 * **id**: K-5a
@@ -353,6 +367,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: a toml-test document that was valid is refused (the floor falls): revert, the document under notes.
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Changed": a TOML key line whose header and key together exceed the path limit is refused by name (it was read before and refused later by the key space). D-109's sentence. The Roadmap item "The YAML reader: no second document table" stays 🟨 until K-5b.
 
+<a id="k-5b"></a>
 ## K-5b - INI's reader limits nesting as the others do
 
 * **id**: K-5b
@@ -374,6 +389,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: the pair test finds INI's writer writing a table deeper than the new limit (then the limit is the writer's depth: stop, the numbers under notes); a fixture in `tests/` or `examples/` with a header deeper than 31 segments.
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Changed": INI refuses a header nested deeper than 31 tables, by name (it reached the key space before); D-109's sentence; the Roadmap row.
 
+<a id="k-6a"></a>
 ## K-6a - A refusal's byte offset
 
 * **id**: K-6a
@@ -401,6 +417,7 @@ choices these cards left open were decided on 2026-11-27; D-138
   * 2026-11-27, the worker: `cf_error_place_at` is `CF_EXPERIMENTAL(2, 0)`, not (1, 9): gate.abi refuses a 1.9 experimental name in a 2.0.0 tree (the maintainer's standing approval, 2026-11-27).
   * 2026-11-27, the organiser: K-6a follows D-223 (one error model): option A of the recommendation, the offset a member of `cf_error` beside the place D-223 point 2 names (the maintainer's standing approval, 2026-11-27).
 
+<a id="k-6b"></a>
 ## K-6b - A refusal's reason shown by the tools
 
 * **id**: K-6b
@@ -426,6 +443,7 @@ choices these cards left open were decided on 2026-11-27; D-138
   * 2026-11-27, the organiser: K-6b follows D-223 (one error model): the reason line is always printed, on stderr (the maintainer's standing approval, 2026-11-27).
   * 2026-11-27, the worker: 1.9.0 is released, so the CHANGELOG entry opens "## 2.0.0 — unreleased"; D-138 does not exist in docs/Decisions.md and is left to K-6a; the line is printed by `check`, `dump`, `textconv` (on a refusal) and `recode` (the maintainer's standing approval, 2026-11-27).
 
+<a id="k-7a"></a>
 ## K-7a - One table of formats: the lists that copy it read it
 
 * **id**: K-7a
@@ -449,6 +467,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Added" (experimental in 1.9); D-139; the Roadmap item stays 🟨 (K-7b).
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number. The accessor: `cf_format_at` (the maintainer's standing approval, 2026-11-27).
 
+<a id="k-7b"></a>
 ## K-7b - The ways a format can be read, in its table entry
 
 * **id**: K-7b
@@ -470,6 +489,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **docs**: `CHANGELOG.md` "## 2.4.0 — unreleased", "### Added" (experimental in 2.4); D-139 (K-7a's) gets a sentence for `reads`; the Roadmap item "Formats registered, with what each can do" to 🟩.
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number. (2026-11-27, the organiser, under the maintainer's standing approval): the recommendation, wait for the ways to read, holds, so the card leaves 2.0.0 for 2.4.0, after M-14, M-15 and M-16 (module 6's additions); it needs K-7a (2.2.0); M-17 reads its table instead of making one (the maintainer's standing approval, 2026-11-27).
 
+<a id="k-8"></a>
 ## K-8 - The YAML reader's three differences from libyaml, fixed to YAML 1.2's text
 
 * **id**: K-8
@@ -496,6 +516,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **docs**: `CHANGELOG.md` "## 1.9.0 — unreleased", "### Changed" (K-8.1: a literal block scalar at the end of the input without a final line break no longer gains one; K-8.2 and K-8.3: a message) . **D-140** (text: the three decisions, one sentence each, with YAML 1.2.2's sections); the three rules of `yamldiff.known` carry the reasons.
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the recommendation for each part: each follows YAML 1.2's text. Each part decided (A) (the maintainer's standing approval, 2026-11-27).
 
+<a id="k-8b"></a>
 ## K-8b - An anchor whose name holds `?`, alone at the top: the built-in parser and libyaml differ
 
 * **id**: K-8b
@@ -524,6 +545,7 @@ choices these cards left open were decided on 2026-11-27; D-138
   * A second yamldiff finding (full run 46087822464, 2026-11-28), side `bi-refuses`, the same cause as the rule added on 2026-11-28 for `d: |#` (a comment glued to a block scalar's header, YAML 1.2 8.1.1 and 6.6): the line `motd: |# commesnga: b` is refused with "a mapping cannot start on this line: a value with ': ' in it is quoted", because the check for a second `: ` runs before the block scalar's header is read. This card also takes it: the header is read first (so the refusal is the header's message, which `tests/fuzz/yamldiff.known` already documents), with a test of that line in the YAML reader's tests. Base64: `IyA4b21tZW50IyBjb21tZXNuZ2E6IGIjCToge29uCm5vdGhpbmc6IH4KbW90ZDogfCMgY29tbWVzbmdhOiBiCiAgdHdvIGRjZQ==`.
   * A third yamldiff finding (full run 46108613513, 2026-11-28), side `lib-refuses`: the input (hex `3a 73 77 20 23 31 3a 20 30 0a 62 3a 31 3a 20 30 0a 62 3a 3a`, the lines `:sw #1: 0`, `b:1: 0`, `b::`) is accepted by the built-in parser and refused by libyaml with "a configuration is a mapping at the top, not a single value". libyaml is right: ` #` ends a plain scalar and starts a comment (YAML 1.2 6.6), so the first line is the single value `:sw`. The built-in parser reads `:sw #1` as a key. This card also takes it: the key scan stops at a ` #`, with a test of that line in the YAML reader's tests; if the fix reaches beyond the plain scalar's scan, a rule in `tests/fuzz/yamldiff.known` instead and a line here.
 
+<a id="k-9a"></a>
 ## K-9a - Three failure guarantees: written in every public function's header comment, listed in a table, and held by `gate.guarantees`
 
 * **id**: K-9a
@@ -560,6 +582,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: the nonlocal check finds a call in the library (report the file and line and add no exception: a library that ends the process is a defect for its own card); a name of `configforge.symbols` has no declaration the script can find (`gate.abi` should have refused it: report); `gate.apiref` differs for a reason other than the three comments.
 * **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased" (the heading is added above the newest one when it is not there), "### Added": "`docs/Guarantees.md` and `gate.guarantees`: every public function states one failure guarantee (nothrow, strong or basic) in its header comment, and no library source ends the program (K-9a)"; `docs/Decisions.md`: the D-number above, with its row.
 
+<a id="k-9d"></a>
 ## K-9d - Guarantees written for the lower components: base, port, platform, text and serialize
 
 * **id**: K-9d
@@ -586,6 +609,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "Failure guarantees written for the allocator, the error, the value, the file layer, the text helpers and the format readers (K-9d)", and under "### Fixed" one line a defect fixed.
 * **Organiser's answers**: a `CF_NODISCARD` predicate (`cf_key_valid`, `cf_value_equal`, `cf_sink_overflowed`, `cf_platform_has_*`, ...) cannot be `nothrow`, because the gate refuses it; it is written `strong` (a pure query changes nothing), which the card's `cf_sink_overflowed` line (`nothrow`) gives way to. A defect found: `cf_arena_alloc` and `cf_arena_dup` wrapped on a size near `SIZE_MAX`; fixed with its test (the maintainer's standing approval, 2026-11-27).
 
+<a id="k-9e"></a>
 ## K-9e - Guarantees written for the facade: `configforge.h`
 
 * **id**: K-9e
@@ -610,6 +634,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: the worker passes 60 turns (the commits stand; the rest goes to a new card); a `cf_builder_*` call turns out to fail without holding the failure (a defect: report the name).
 * **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "Failure guarantees written for every call of `configforge.h` (K-9e)".
 
+<a id="k-9f"></a>
 ## K-9f - Guarantees written for sources and the key space: `cf_source.h`, `cf_keyspace.h`, `cf_entry.h`, `cf_iterate.h`
 
 * **id**: K-9f
@@ -634,6 +659,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "Failure guarantees written for the source and key-space calls (K-9f)".
 * **Organiser's answers** (2026-11-28, under the maintainer's standing approval): `cf_iter_keys`, `cf_iter_children`, `cf_iter_next` and `cf_outcome_can_win` are `CF_NODISCARD`, so `strong` (a pure query changes nothing), as K-9d's answer decides; `cf_array_*` stay `nothrow`. Every `cf_source_*` constructor checks its arguments before it touches the struct: `strong`; every `destroy` is empty. `cf_store_set` is `basic` (a store that did not exist can be left, empty). Two findings, for K-9b: `cf_ks_add_candidate` can return false after the candidate was added, without its `written` text (written as `basic`); `cf_cli_args` reads `out_argc` with no NULL check (its comment now says it must not be NULL).
 
+<a id="k-9g"></a>
 ## K-9g - Guarantees written for the rest of the configuration library, and the to-do list closed
 
 * **id**: K-9g
@@ -660,6 +686,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "Every public function states one failure guarantee; `gate.guarantees` refuses one that does not (K-9g)".
 * **Organiser's answers** (2026-11-28, under the maintainer's standing approval): the set was 66 names (also `cf_schema_write`, `cf_source_defaults`, `cf_source_replay*`, `cf_source_image_*`); `cf_image_open` is `basic` (a failed open zeroes the image); `--baseline` is removed from `guarantees.py` (it would recreate the deleted list); `CF_NODISCARD` queries are `strong` as K-9d decides. A defect fixed with its test: `cf_policy_text` wrote through a NULL buffer and `cf_fingerprint_step` read a NULL type.
 
+<a id="k-9b"></a>
 ## K-9b - Allocation faults injected into every load and write path, and what a failure leaves behind checked
 
 * **id**: K-9b
@@ -695,6 +722,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **notes**: K-9f found (2026-11-28): `cf_ks_add_candidate` can return false after the candidate was added, leaving it without its `written` text; the allocation sweep should show it and fix it to strong or keep it basic with a test.
 * **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "An allocator that refuses the nth allocation, swept over every load and write path, and `gate.oom` (K-9b)"; "### Fixed": "`cf_edit_begin` and `cf_file_writer_open` take the caller's allocator, not malloc's (K-9b)" and one line a defect the sweep found; `docs/Safety.md` as above; `docs/Decisions.md`: the next free D-number after K-9a's, "Out of memory returns `CF_E_MEMORY` on every path, proved by an exhaustive allocation sweep".
 
+<a id="k-9j"></a>
 ## K-9j - The two checks K-9b left: a builder given its source again, and a candidate added without its text
 
 * **id**: K-9j
@@ -717,6 +745,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: a fix needs a signature change (a `known:` line, reported); 60 turns.
 * **docs**: `CHANGELOG.md` when a defect is fixed.
 
+<a id="k-9k"></a>
 ## K-9k - The text of a system error without `strerror`'s shared buffer (CERT CON33-C)
 
 * **id**: K-9k
@@ -741,6 +770,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: a test compares a message that held `strerror`'s text and the new text breaks a golden file outside `lib/` (`git grep -n "No such file" tests tools examples`): update the golden files only when they are the library's own output, else stop and report.
 * **docs**: `CHANGELOG.md`, under the newest unreleased heading, "### Fixed": "a system error's text no longer comes from `strerror`, whose buffer threads may share (K-9k, D-239)".
 
+<a id="k-9h"></a>
 ## K-9h - Thread, signal and allocation lines beside the guarantee, held by `gate.guarantees`
 
 * **id**: K-9h
@@ -766,6 +796,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: no compiler on the machine gives call data for the check: stop and report; the words land without the call-graph check only by the organiser's answer.
 * **docs**: `CHANGELOG.md`, under the newest unreleased heading, "### Added": "`Thread:`, `Signal:` and `Alloc:` lines beside a function's guarantee, the weakest by default, checked by `gate.guarantees`".
 
+<a id="k-9i"></a>
 ## K-9i - Fork, callbacks, durability and inherited descriptors: one table, each row a test
 
 * **id**: K-9i
@@ -819,6 +850,7 @@ feature is only a macro that is empty under C89.
    `bugprone-unused-return-value` on the library itself; K-9b's injected
    faults also check that each failure returns the right code.
 
+<a id="k-10a"></a>
 ## K-10a - A number's text, kept when the program asks
 
 * **id**: K-10a
@@ -847,6 +879,7 @@ feature is only a macro that is empty under C89.
 * **stop if**: carrying the literal needs a change to a public sink callback's signature (that is a break: 2.0.0's, reported); the arena grows with the defaults.
 * **docs**: `CHANGELOG.md` under the newest unreleased heading, "### Added": `cf_number_options` and `cf_get_number_text` (K-10a); D-number: the next free one, "A number's text kept on request; defaults unchanged".
 
+<a id="k-10b"></a>
 ## K-10b - Underflow and infinity as options, the defaults as today
 
 * **id**: K-10b
@@ -870,6 +903,7 @@ feature is only a macro that is empty under C89.
 * **stop if**: a conformance case changes with the defaults.
 * **docs**: `CHANGELOG.md`, "### Added": underflow and non-finite options (K-10b); the D-number of K-10a extended.
 
+<a id="k-10c-m"></a>
 ## K-10c-m - Numbers beyond 64 bits or `double`, accepted as text under an option
 
 * **id**: K-10c-m

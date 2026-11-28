@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 INSTRUCTIONS = "The brief every card's subagent gets"
 HEADING = re.compile(r"^(#{1,6})[ \t]+(.+?)[ \t]*$")
+ANCHOR = re.compile(r'^<a id="[^"]+"></a>$')  # links.py: right before a card's heading
 PATH = r"[\w./-]+\.[\w-]+"
 REFERENCE = re.compile(
     rf"`(?P<range_path>{PATH}):(?P<first>\d+)-(?P<last>\d+)`"
@@ -37,6 +38,8 @@ def sections(lines):
             (row for row, depth, _ in headings[index + 1 :] if depth <= level),
             len(lines),
         )
+        if end < len(lines) and ANCHOR.match(lines[end - 1]):
+            end -= 1  # the next card's anchor is not this section's
         yield title, start, end
 
 

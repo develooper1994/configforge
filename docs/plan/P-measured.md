@@ -40,6 +40,7 @@ Left out on purpose, with the reason:
 
 ---
 
+<a id="p-5"></a>
 ## P-5 - A profile after every weekly benchmark, kept as an artifact and compared
 
 * **id**: P-5
@@ -72,6 +73,7 @@ Left out on purpose, with the reason:
 
 ---
 
+<a id="p-6"></a>
 ## P-6 - A cost that should not be there: bytes per instruction across sizes and formats
 
 * **id**: P-6
@@ -104,6 +106,7 @@ Left out on purpose, with the reason:
 
 ---
 
+<a id="p-7"></a>
 ## P-7 - Why a real number costs 2000 instructions a byte in JSON and TOML
 
 * **id**: P-7
@@ -136,6 +139,7 @@ Left out on purpose, with the reason:
 
 ---
 
+<a id="p-8"></a>
 ## P-8 - CBOR writes a place for every scalar: build it by hand, same bytes
 
 * **id**: P-8
@@ -167,6 +171,7 @@ Left out on purpose, with the reason:
 
 ---
 
+<a id="p-9"></a>
 ## P-9 - The second profile: the formats and the lines P-1 did not look at
 
 * **id**: P-9
@@ -195,6 +200,7 @@ Left out on purpose, with the reason:
 
 ---
 
+<a id="p-10"></a>
 ## P-10 - What the fastest libraries do, as a written survey with its numbers
 
 * **id**: P-10
@@ -237,6 +243,7 @@ Left out on purpose, with the reason:
 
 ---
 
+<a id="p-11"></a>
 ## P-11 - Print speed in the comparison: JSON, four libraries
 
 * **id**: P-11
@@ -269,6 +276,7 @@ Left out on purpose, with the reason:
 
 ---
 
+<a id="p-12"></a>
 ## P-12 - The README leads with the lines ConfigForge wins, made by a script from the numbers
 
 * **id**: P-12
@@ -299,6 +307,7 @@ Left out on purpose, with the reason:
 
 ---
 
+<a id="p-13"></a>
 ## P-13 - SSE2 and NEON: the measured case, in numbers and a recommendation
 
 * **id**: P-13
@@ -334,6 +343,7 @@ Left out on purpose, with the reason:
 
 ---
 
+<a id="p-14"></a>
 ## P-14 - The OpenSSF Scorecard: every finding read, every one the repository can meet met
 
 * **id**: P-14
@@ -369,6 +379,7 @@ Left out on purpose, with the reason:
 
 ---
 
+<a id="p-15-m"></a>
 ## P-15-m - The repository settings the Scorecard waits on (the maintainer's)
 
 * **id**: P-15-m
@@ -390,6 +401,7 @@ Left out on purpose, with the reason:
 
 ---
 
+<a id="p-16"></a>
 ## P-16 - Eight digits at a time: a word body for `digits8`, measured in lanes
 
 * **id**: P-16

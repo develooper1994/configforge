@@ -977,7 +977,7 @@ first user meets. In the order proposed:
   checked), and a first run on the serialization sources reports
   `uninitvar` and `variableScope`; turning it on for both libraries, and
   answering what it finds, is this item's first step.
-* 🟨 **Large files, and SIMD as an option** (cards P-1, P-2, P-3 for the
+* 🟨 **Large files, and SIMD as an option** (cards P-1, P-2, [P-3](plan/P-word-at-a-time.md#p-3) for the
   measurement and SWAR; SIMD a card after them). Configuration is small, but
   a format library is also handed documents of megabytes (data in CBOR,
   MessagePack, JSON exports). First measure: 1.8.0's benchmark gains
@@ -1028,7 +1028,7 @@ first user meets. In the order proposed:
     text to value (integer and real), whitespace and comment skips, and
     the line/column count are likely written once per format; one
     internal `scan.c`/`text.c` holds each once, tested once, and is the
-    one place P-3's word-at-a-time scans go.
+    one place [P-3](plan/P-word-at-a-time.md#p-3)'s word-at-a-time scans go.
   * **Group by family**: the text formats (JSON, YAML, TOML, INI,
     properties, XML) and the binary ones (CBOR, TLV, blob) as two
     groups a build can take apart (`CF_WITH_TEXT_FORMATS`,
@@ -1335,7 +1335,7 @@ first user meets. In the order proposed:
   two tolerances come out. The same pass: TOML's reader limits the dotted
   key of a line and INI's reader limits no depth, which
   `cf_format_limits` records and which could be made equal.
-* 🟩 **One diagnostic model across formats** (cards A-10, N-13, K-6a, K-6b: place, reason, severity and weakness, shown by the tools). Each reader reports a
+* 🟩 **One diagnostic model across formats** (cards A-10, N-13, [K-6a](plan/K-correctness.md#k-6a), [K-6b](plan/K-correctness.md#k-6b): place, reason, severity and weakness, shown by the tools). Each reader reports a
   refusal its own way today, as far as the formats differ; a single
   diagnostic record (code, severity, byte offset, line and column, the
   format's own detail, and the CWE or known-weakness id when the
@@ -1343,7 +1343,7 @@ first user meets. In the order proposed:
   so a test of "the same bad input refused the same way in every
   format" can be written, and a user filters by code rather than by
   message text. To check first how far the readers already share one.
-  The byte offset is built (K-6a, D-138: `cf_error.offset`, experimental in 2.0); the tools show it with K-6b.
+  The byte offset is built ([K-6a](plan/K-correctness.md#k-6a), D-138: `cf_error.offset`, experimental in 2.0); the tools show it with [K-6b](plan/K-correctness.md#k-6b).
 * 🟩 **A feature matrix generated from the build** (card A-12; `gate.matrix`). The README's
   tables of options, sizes, profiles and per-target status (Arm entry
   above) are produced by a script from the CMake options, the profile
@@ -1529,7 +1529,7 @@ After the features above (the maintainer, 2026-11-24):
 * **The vector library carried further** (the maintainer, 2026-11-24: it
   can pay). P-2 (on its branch, waiting for 1.9.0) gives lanes a
   word-at-a-time backend; four of six operations won by 1.4 to 7 times on
-  their own. Next, in order: P-3 puts those operations under the readers'
+  their own. Next, in order: [P-3](plan/P-word-at-a-time.md#p-3) puts those operations under the readers'
   own scans (JSON strings, YAML plain scalars, the UTF-8 check) and keeps
   each only where the readers' benchmark shows it; then a measured case
   for SSE2 and NEON backends behind the same `lanes_ops` table (both are

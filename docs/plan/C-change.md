@@ -13,6 +13,7 @@ card: N-16 built it (see the report). Card ids follow the Roadmap items, so
 there is no C-5. Versions (docs/Maintaining.md, "Versions"): C-2a, C-2b and C-1b are 1.10.0 (the row's "durations and sizes"; C-1b needs them); the other cards are in no row yet and ride the newest unreleased CHANGELOG heading when they land (today `## 1.9.0 — unreleased`; 1.8.0 is released, so nothing here is 1.8.0); every "CHANGELOG.md ... ### Added" below means that heading. Order of work: C-1a, C-2a, C-2b, C-1b, C-3a, C-3b, then the
 rest in any order; the file lists the cards by Roadmap item.
 
+<a id="c-1a"></a>
 ## C-1a - `configforge diff` over arrays of arrays
 
 * **id**: C-1a
@@ -42,6 +43,7 @@ rest in any order; the file lists the cards by Roadmap item.
 * **stop if**: a reader delivers an inner array in a way other than `begin_array` with a NULL name inside an array (step 1); a case of the unchanged tests (flat, nested, scalar arrays, tables) changes; the change passes ~200 lines of `main.c`.
 * **docs**: `docs/Tools.md` (section above), `CHANGELOG.md` "### Added", `docs/Roadmap.md:1384-1395` and `1484-1487` as step 6 says; no decision.
 
+<a id="c-1b"></a>
 ## C-1b - `configforge diff --schema`: units compared as values
 
 * **id**: C-1b
@@ -73,6 +75,7 @@ rest in any order; the file lists the cards by Roadmap item.
 * **stop if**: C-2a or C-2b is not landed; `cf_defset_schema_file` refuses `units.schema.json` (the keyword name differs: read C-2b's); linking `configforge` into the diff tool changes `ctest -R front.git` (a size or a startup effect): stop and report which.
 * **docs**: `docs/Tools.md`, D-114, `CHANGELOG.md` "### Added", `docs/Roadmap.md:1384-1395` (heading "`configforge diff a.yaml b.json`: two files, any formats, compared by value"), stays 🟨.
 
+<a id="c-2a"></a>
 ## C-2a - Durations and sizes: the unit on an int definition
 
 * **id**: C-2a
@@ -134,6 +137,7 @@ rest in any order; the file lists the cards by Roadmap item.
     4. Every abbreviation read is listed in a table in the documents.
   * 2026-11-27, the organiser: this card, C-2b and C-1b follow D-222 as above; the members of `cf_unit_options`, the `cf_unit_table_parse` helper, the whole-number rule for a fraction and the accessor fallback are the card's own choices (the maintainer's standing approval, 2026-11-27).
 
+<a id="c-2b"></a>
 ## C-2b - Durations and sizes: the schema, the report, `cf_emit` and every reader
 
 * **id**: C-2b
@@ -163,6 +167,7 @@ rest in any order; the file lists the cards by Roadmap item.
 * **stop if**: a reader delivers the string `1h30m` for a unit key in a way C-2a's conversion does not reach (report which reader, and its test case); `golden_contract.json` changes beyond the `unit` member; the generators' other languages (C++, Rust, Python) fail to build their own tests with the comment added (`ctest -R "gen.rust|gen.python|gen.cpp"`).
 * **docs**: `docs/Tools.md`, `docs/Doctor.md`, `CHANGELOG.md` "### Added", `docs/Roadmap.md:839-846` (heading "**Durations and sizes.**") to 🟩, and the list item at `docs/Roadmap.md:1484-1487` (no change needed).
 
+<a id="c-3a"></a>
 ## C-3a - `configforge diff --schema` flags the keys out of range and the keys that touch a secret
 
 * **id**: C-3a
@@ -191,6 +196,7 @@ rest in any order; the file lists the cards by Roadmap item.
 * **stop if**: `validate_value` needs a keyspace or an apply report to be called (it takes neither today); a flag could only be told apart by printing a value; the `ds` parameter C-1b added to `compare` and `entry_equal` does not reach `write_change` (pass it on, only inside `main.c`).
 * **docs**: `docs/Tools.md`, D-115, `CHANGELOG.md` "### Added", Roadmap rows as step 6 (heading "`configforge diff a.yaml b.json`: two files, any formats, compared by value" to 🟩).
 
+<a id="c-3b"></a>
 ## C-3b - The pull request's comment says which keys are out of range and which touch a secret
 
 * **id**: C-3b
@@ -217,6 +223,7 @@ rest in any order; the file lists the cards by Roadmap item.
 * **stop if**: the action's step does not pass its inputs through `env:` the way `CF_FILES` is passed (a value in `run:` text is injectable); the action's build of `configforge-diff` (`action.yml:120`) has no JSON reader.
 * **docs**: the action's page, `CHANGELOG.md` "### Added", `docs/Roadmap.md:1402-1410` to 🟩; no decision.
 
+<a id="c-4a"></a>
 ## C-4a - `doctor drift`: the source of a value, and a list file
 
 * **id**: C-4a
@@ -244,6 +251,7 @@ rest in any order; the file lists the cards by Roadmap item.
 * **stop if**: a report with no `sources` table makes `origin_kind` fall back to the source's name (`engine.c:1555`): the comparison is then by name; write that under notes and go on; standard input cannot be given to a test on a platform: skip that case there with a note, never drop it.
 * **docs**: `docs/Doctor.md` 7e, D-116, `CHANGELOG.md` "### Added", Roadmap rows as step 6.
 
+<a id="c-4b"></a>
 ## C-4b - Drift across N configuration files: `configforge diff --all`
 
 * **id**: C-4b
@@ -273,6 +281,7 @@ rest in any order; the file lists the cards by Roadmap item.
 * **stop if**: holding 1024 sides exceeds what the sanitizer builds allow: lower the maximum and write it under notes, do not stream; the change passes ~400 lines of `main.c`.
 * **docs**: `docs/Tools.md`, D-117, `CHANGELOG.md` "### Added", Roadmap rows as step 6.
 
+<a id="c-4c"></a>
 ## C-4c - `doctor drift` from Python
 
 * **id**: C-4c
@@ -298,6 +307,7 @@ rest in any order; the file lists the cards by Roadmap item.
 * **stop if**: `doctor drift --format sarif` does not accept `--key`, `--by-source` and `--files-from` in the order the arguments are built (run it once by hand first).
 * **docs**: `bindings/python/README.md`, `CHANGELOG.md` "### Added", `docs/Roadmap.md:1411-1418` (heading "**Drift across many hosts.**") to 🟩 when all three cards are in; no decision.
 
+<a id="c-6a"></a>
 ## C-6a - Shell completions from the contract: `configforge gen --lang bash|zsh|fish|powershell`
 
 * **id**: C-6a
@@ -345,6 +355,7 @@ rest in any order; the file lists the cards by Roadmap item.
 * **stop if**: a layout above cannot be written byte for byte by a C89 `fprintf` program (a golden would then be written from the program: stop and say so); the `gen_lang` struct (`contract.c:515-528`) needs a field the card did not decide; `tools/gen` has no JSON reader where tools are built.
 * **docs**: `docs/Tools.md`, D-118, `CHANGELOG.md` "### Added", `docs/Roadmap.md:832-838` stays 🟨.
 
+<a id="c-6b"></a>
 ## C-6b - A man page and a sample file from the contract: `configforge gen --lang man|sample-toml|sample-yaml`
 
 * **id**: C-6b

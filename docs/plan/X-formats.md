@@ -62,6 +62,7 @@ Common to the codec cards (so a card need not say it again):
 
 ---
 
+<a id="x-1"></a>
 ## X-1 - MessagePack: reader, writer, vectors, fuzz target
 
 * **id**: X-1
@@ -99,6 +100,7 @@ Common to the codec cards (so a card need not say it again):
 * **docs**: `CHANGELOG.md` under `## 2.1.0 — unreleased`, `### Added`: "MessagePack: `CF_WITH_MSGPACK`, a reader and a writer for the JSON model, held to the msgpack-test-suite (D-141)"; `docs/Roadmap.md`, item "Binary formats that describe themselves" (line 168): append "MessagePack done (X-1)", the mark stays ⬜ until X-6; `docs/Decisions.md`: D-141 as written above and its row in the index after D-112; `docs/Formats.md`; `docs/Conformance.md` (row after 54, and 63).
 
 
+<a id="x-2"></a>
 ## X-2 - BSON
 
 * **id**: X-2
@@ -124,6 +126,7 @@ Common to the codec cards (so a card need not say it again):
 * **stop if**: as X-1; and a corpus file of a read kind that the model above cannot read to its extended JSON's value (the card is wrong, not the reader: note it).
 * **docs**: `CHANGELOG.md` under `## 2.1.0 — unreleased`, `### Added`: "BSON: `CF_WITH_BSON`, reader and writer, held to the MongoDB bson-corpus (D-142)"; `docs/Roadmap.md:168` append "BSON done (X-2)"; `docs/Decisions.md` D-142 with the BSON paragraph; `docs/Formats.md`; `docs/Conformance.md`.
 
+<a id="x-3"></a>
 ## X-3 - UBJSON
 
 * **id**: X-3
@@ -145,6 +148,7 @@ Common to the codec cards (so a card need not say it again):
 * **stop if**: as X-1; the draft and `py-ubjson` disagree on an example (write both under notes: the maintainer picks).
 * **docs**: `CHANGELOG.md` `## 2.1.0 — unreleased`, `### Added`: "UBJSON: `CF_WITH_UBJSON` (D-142)"; `docs/Roadmap.md:168` "UBJSON done (X-3)"; D-142's UBJSON paragraph; `docs/Formats.md`.
 
+<a id="x-4"></a>
 ## X-4 - Smile
 
 * **id**: X-4
@@ -169,6 +173,7 @@ Common to the codec cards (so a card need not say it again):
 * **stop if**: as X-1; no JDK and no `pysmile` on any machine (the card cannot have a vector: write it under notes); the specification's table and Jackson's output disagree.
 * **docs**: `CHANGELOG.md` `### Added`: "Smile: `CF_WITH_SMILE`, with shared names and strings read (D-142)"; `docs/Roadmap.md:168` "Smile done (X-4)"; D-142 paragraph; `docs/Formats.md`.
 
+<a id="x-5"></a>
 ## X-5 - Amazon Ion (binary): reader, read only
 
 * **id**: X-5
@@ -193,6 +198,7 @@ Common to the codec cards (so a card need not say it again):
 * **docs**: `CHANGELOG.md` `### Added`: "Amazon Ion: `CF_WITH_ION`, a reader of the binary form with its symbol tables (D-142)"; `docs/Roadmap.md:168` "Ion done (X-5; read only, a writer is a later card)"; D-142 paragraph; `docs/Formats.md` ("write: no").
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number. The writer: read only, a writer later as its own card (the maintainer's standing approval, 2026-11-27).
 
+<a id="x-6"></a>
 ## X-6 - Bencode, read only
 
 * **id**: X-6
@@ -213,6 +219,7 @@ Common to the codec cards (so a card need not say it again):
 * **stop if**: as X-1.
 * **docs**: `CHANGELOG.md` `### Added`: "Bencode: `CF_WITH_BENCODE`, a reader (D-142)"; `docs/Roadmap.md:168-170`: the item is marked 🟩 with the note "Ion and Bencode read only: written back with wave 6"; D-142's last paragraph; `docs/Formats.md`.
 
+<a id="x-7"></a>
 ## X-7 - Property lists, the binary form (bplist00)
 
 * **id**: X-7
@@ -236,6 +243,7 @@ Common to the codec cards (so a card need not say it again):
 * **stop if**: as X-1; `plistlib` and the reader disagree on a fixture and the reader is right by Apple's `CFBinaryPList.c` (note both: the maintainer decides which is the reference).
 * **docs**: `CHANGELOG.md` `## 2.1.0 — unreleased`, `### Added`: "binary property lists: `CF_WITH_PLIST`, a reader (D-143)"; `docs/Roadmap.md:171` "binary plists done (X-7)"; D-143; `docs/Formats.md`; `docs/Dependencies.md` unchanged.
 
+<a id="x-8"></a>
 ## X-8 - Property lists, the XML form, with a built-in scanner
 
 * **id**: X-8
@@ -257,6 +265,7 @@ Common to the codec cards (so a card need not say it again):
 * **docs**: `CHANGELOG.md` `### Added`: "XML property lists: `cf_codec_plist`, a reader that takes either form (D-143)"; `docs/Roadmap.md:171` the item "Formats a configuration is really kept in": "property lists done (X-7, X-8)", the mark stays until X-11; D-143 paragraph; `docs/Formats.md`.
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number. The scanner: built in, no dependency (the maintainer's standing approval, 2026-11-27).
 
+<a id="x-9"></a>
 ## X-9 - HCL (HashiCorp Configuration Language 2), the literal subset
 
 * **id**: X-9
@@ -282,6 +291,7 @@ Common to the codec cards (so a card need not say it again):
 * **stop if**: as X-1; a `specsuite` file that is literal-only and that the model above cannot read to `hcl2json`'s value (the card is wrong: note it).
 * **docs**: `CHANGELOG.md` `### Added`: "HCL: `CF_WITH_HCL`, a reader of the literal subset (D-144)"; `docs/Roadmap.md` item "Formats a configuration is really kept in": "HCL done (X-9)"; D-144; `docs/Formats.md`; `docs/Roadmap.md:572-574` (the "weighed and not taken" note about HCL) gets "taken 2026-11-13 as values only (D-144)".
 
+<a id="x-10"></a>
 ## X-10 - HOCON, without substitutions and includes
 
 * **id**: X-10
@@ -305,6 +315,7 @@ Common to the codec cards (so a card need not say it again):
 * **stop if**: as X-1; an `equiv` file that does not use a substitution, include or append and that the rules above cannot read to its sibling's keys (note it).
 * **docs**: `CHANGELOG.md` `### Added`: "HOCON: `CF_WITH_HOCON`, a reader of one document (D-145)"; `docs/Roadmap.md` item "Formats a configuration is really kept in": "HOCON done (X-10)"; D-145; `docs/Formats.md`.
 
+<a id="x-11"></a>
 ## X-11 - KDL (version 2)
 
 * **id**: X-11
@@ -327,6 +338,7 @@ Common to the codec cards (so a card need not say it again):
 * **stop if**: as X-1; the test cases need a mapping the card does not make (stop, write the file name under notes).
 * **docs**: `CHANGELOG.md` `### Added`: "KDL: `CF_WITH_KDL`, a reader of version 2 (D-146)"; `docs/Roadmap.md` the item "Formats a configuration is really kept in" to 🟩; D-146; `docs/Formats.md`.
 
+<a id="x-12"></a>
 ## X-12 - TLV as the standards have it: DER, SIMPLE-TLV, EMV and KLV
 
 * **id**: X-12
@@ -356,6 +368,7 @@ Common to the codec cards (so a card need not say it again):
 * **stop if**: the KLV choice is wanted inside this card (it is X-12b); a standard's example does not read as the card says (the card is wrong: note the bytes); three failures on the same thing.
 * **docs**: `CHANGELOG.md` under `## 2.1.0 — unreleased`, `### Added`: "TLV layouts: `CF_TLV_DER` and `CF_TLV_SIMPLE` (D-147); EMV shown in the Guide"; `docs/Roadmap.md` the item "TLV as it is met": "standards done (X-12)", the mark stays until X-13; D-147 and its index row; `docs/Formats.md`; `docs/Guide.md`.
 
+<a id="x-13"></a>
 ## X-13 - TLV as devices write it: field order, widths, an implied length, a packed head
 
 * **id**: X-13
@@ -380,6 +393,7 @@ Common to the codec cards (so a card need not say it again):
 * **stop if**: as X-12; a document above does not read as the card says (note it: the card is wrong); `gate.abi` moves.
 * **docs**: `CHANGELOG.md` `### Added`: "TLV layouts: the order of the three fields, widths of 1 to 4 bytes, an implied length and a packed head (D-147)"; `docs/Roadmap.md` the item "TLV as it is met" to 🟩 (KLV excepted, noted: X-12b); D-147's second paragraph; `docs/Formats.md`; `docs/Guide.md`.
 
+<a id="x-14"></a>
 ## X-14 - Formats bound to a schema: Avro's container, and what the rest waits on
 
 * **id**: X-14
@@ -405,6 +419,7 @@ Common to the codec cards (so a card need not say it again):
 * **stop if**: as X-1; the JSON reader cannot build the node table into work storage without a new sink callback (a new public interface: stop, note it); neither `fastavro` nor `avro` exists on any machine (no valid fixtures: note it).
 * **docs**: `CHANGELOG.md` `### Added`: "Avro: `CF_WITH_AVRO`, a reader of the object container file (D-148)"; `docs/Roadmap.md:173-176` "Avro done (X-14); Protobuf, Thrift, FlatBuffers and Cap'n Proto wait on a schema interface (D-148)", the mark stays ⬜; D-148 and its index row; `docs/Formats.md`.
 
+<a id="x-15"></a>
 ## X-15 - The benchmark learns the binary formats: MiB/s for each codec
 
 * **id**: X-15
@@ -434,6 +449,7 @@ Common to the codec cards (so a card need not say it again):
 * **stop if**: a format's `values` differs from JSON's at the same record count (the benchmark writer or the reader is wrong: find which with the codec's own test first); the instruction counts of the five old formats move (the card touched what it must not).
 * **docs**: `CHANGELOG.md` `## 2.1.0 — unreleased`, `### Added`: "the benchmark measures MessagePack, BSON, UBJSON, Smile, bencode and binary property lists (D-149)"; `docs/Roadmap.md:184` "Fast, and without copying where it can be": "benchmark: binary formats done (X-15)", the mark stays until X-17; `docs/Decisions.md` D-149 (first paragraph) and its row; `docs/Performance.md`.
 
+<a id="x-16"></a>
 ## X-16 - The benchmark learns the text formats and the read-only ones
 
 * **id**: X-16
@@ -452,6 +468,7 @@ Common to the codec cards (so a card need not say it again):
 * **stop if**: as X-15; a mapping makes a format's value count differ by design (KDL's null for a bare node: the record has none, so it does not).
 * **docs**: `CHANGELOG.md` `### Added`: "the benchmark measures HCL, HOCON, KDL, property lists, Ion and Avro (D-149)"; `docs/Roadmap.md:184`; `docs/Performance.md`.
 
+<a id="x-17"></a>
 ## X-17 - Text handed to the sink where it lies
 
 * **id**: X-17
@@ -483,6 +500,7 @@ Common to the codec cards (so a card need not say it again):
 * **stop if**: a candidate cannot be made without changing what a reader returns (a value test, a conformance case or a fuzzer finding moves): revert it, note the input, go to the next; no candidate keeps its change: close the card with the table and no code change, D-149's second paragraph saying so; ~60 turns: stop at a pushed commit, the candidates not done become X-17b.
 * **docs**: `CHANGELOG.md` `### Changed`: "readers hand the sink a plain string where it lies (JSON, TOML, YAML, INI; each kept where it measured as paying; D-149)"; `docs/Roadmap.md:184-187` "Fast, and without copying where it can be" to 🟩 (as measured); D-149's second paragraph; `docs/Performance.md`.
 
+<a id="x-18"></a>
 ## X-18 - The helpers each reader writes again: a table, kept true by a gate
 
 * **id**: X-18
@@ -508,6 +526,7 @@ Common to the codec cards (so a card need not say it again):
 * **stop if**: the Codemap does not list a function that `grep` finds (a Codemap generator gap: note the symbol, stop); three failures on the same thing.
 * **docs**: `CHANGELOG.md` under `## 1.9.0 — unreleased` (1.8.0 is released, `CHANGELOG.md:76`; the card belongs to 1.8.0's theme and the heading is the open one), `### Added`: "`docs/Layout.md`: the helpers the readers write again, with `gate.helpers` (D-150)"; `docs/Roadmap.md` "The serialization sources, laid out by what they share" (line 1013): "table done (X-18)", the mark stays until X-21; D-150's first paragraph and its row in the index after D-112.
 
+<a id="x-19"></a>
 ## X-19 - The printers apart: one file a format's writer
 
 * **id**: X-19
@@ -536,6 +555,7 @@ Common to the codec cards (so a card need not say it again):
 * **stop if**: a printer uses a reader's `static` in more than three places (moving it makes the header larger than the printer: note the function names, leave that format whole and record it in D-150); `gate.abi` moves (an internal symbol leaked: fix the visibility, never the gate); three failures on the same thing.
 * **docs**: `CHANGELOG.md` under `## 1.9.0 — unreleased`, `### Changed`: "the writers are files of their own and a read-only build links none (D-150)"; `docs/Roadmap.md` (line 1018, the "Split by stage" bullet): "printers apart done (X-19); the lexer/parser split weighed and not taken (D-150)"; D-150's second paragraph.
 
+<a id="x-20"></a>
 ## X-20 - What repeats, once: the helpers X-18's table says move
 
 * **id**: X-20
@@ -561,6 +581,7 @@ Common to the codec cards (so a card need not say it again):
 * **stop if**: a move changes what a reader returns (a conformance case, a unit case or a fuzzer finding moves): revert it, mark the row `keep` with the input as the reason; every row reverts: close the card with the table and no code change; ~60 turns: stop at a pushed commit, the rows not done become X-20b.
 * **docs**: `CHANGELOG.md` under `## 1.9.0 — unreleased`, `### Changed`: "helpers the readers wrote again are held once in `lib/text` and `lib/numeric` (D-150)"; `docs/Roadmap.md` "Merge what repeats": done (X-20) with the rows kept and reverted; D-150's third paragraph; `docs/Layout.md`.
 
+<a id="x-21"></a>
 ## X-21 - Text and binary formats as two groups a build can take apart
 
 * **id**: X-21

@@ -14,6 +14,7 @@ Decisions D-151 to D-158 and D-233 to D-236 (the safety-critical cards L-25 to L
 worker copies each into `docs/Decisions.md` (the table at its top and the
 section at its end).
 
+<a id="l-12a"></a>
 ## L-12a - The public headers with no record at all
 
 * **id**: L-12a
@@ -43,6 +44,7 @@ section at its end).
 * **stop if**: a report can be removed only by changing a public name, a type's size, an enumerator's value or the ABI (`gate.abi` or `gate.symbols` fails): leave it, write the header, line and rule under notes, and hand the card back (a design question for the maintainer); a fix moves a report instead of removing it (revert it); three failures on the same report.
 * **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Added": "The public headers carry no MISRA C:2012 report of kind backlog or deviation; gate.misra refuses one (D-151)"; `docs/Compliance.md` "Order of work", item 2 marked done and its "Open: 33 record lines" sentence rewritten; `docs/Roadmap.md`, "Critical-system standards, checked by machine" (stays 🟨; "the public headers' zero" struck from what waits); `docs/Decisions.md`: D-151 as decided above.
 
+<a id="l-12b"></a>
 ## L-12b - The matrix of every MISRA rule, made from the record
 
 * **id**: L-12b
@@ -74,6 +76,7 @@ section at its end).
 * **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Added": "The MISRA matrix (docs/compliance/Matrix.md): every rule with its status, generated from the record and held by gate.misramatrix"; `docs/Compliance.md:29` ("the matrix ... planned") rewritten; `docs/Roadmap.md` "Critical-system standards, checked by machine" (what waits: "the matrix of every rule" struck); `docs/Decisions.md`: D-152 as decided above.
 * **Organiser's answers**: the matrix carries rule numbers only; categories and titles stay out (the maintainer's standing approval, 2026-11-27).
 
+<a id="l-12c"></a>
 ## L-12c - The compliance report, attached to each release
 
 * **id**: L-12c
@@ -98,6 +101,7 @@ section at its end).
 * **stop if**: the `amalgamation` job cannot run CMake without a change to what it builds (report what it has).
 * **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Added": "Each release carries its MISRA compliance report (configforge-<version>-compliance.md)"; `docs/Compliance.md` "Order of work" item 6 (the report) marked done; `docs/Roadmap.md` "Critical-system standards, checked by machine": "the compliance report" struck from what waits (the item stays 🟨 for CERT, CWE and MISRA C++); `docs/Decisions.md`: D-153 as decided above.
 
+<a id="l-13"></a>
 ## L-13 - verify sees the version CI sees
 
 * **id**: L-13
@@ -122,6 +126,7 @@ section at its end).
 * **stop if**: after step 3 the build still reports no id because `buildid.cmake` reads a different directory than `${ROOT}` (report the path it reads; do not change `buildid.cmake`'s rule).
 * **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Fixed": "verify's staged copy carries the commit id of the tree it was staged on, so a test of the version fails locally where CI's would"; `docs/Roadmap.md` item "verify sees the version CI sees" marked 🟩; `docs/Maintaining.md`: one sentence where the staged copy is described (`grep -n "staged" docs/Maintaining.md`).
 
+<a id="l-14a"></a>
 ## L-14a - EVA over the float readers: `cf_text_to_f64` and the bit conversions
 
 * **id**: L-14a
@@ -149,6 +154,7 @@ section at its end).
 * **stop if**: both flag trials leave EVA over 10 minutes or with more than 40 imprecise alarms in one function (the fallback, CBMC to a length, is a design question: write the numbers under notes); an alarm that is a fault in a public function's contract (it changes what `cf_text_to_f64` returns for a valid text).
 * **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Added": "Frama-C EVA covers the float readers of lib/numeric (cf_text_to_f64 and the bit conversions)"; `docs/Safety.md`: the harness table (`:110`) gets `eva_numeric_float.c`, the sentence "The float half of `lib/numeric` is outside these harnesses (below)." (`:135`) becomes "The float printer of `lib/numeric` is outside these harnesses (below).", the "Not yet proven" sentence (`:139`) says "The floating point printer" in place of "The floating point parser and printer", the accepted count is updated; `docs/Roadmap.md:69` (the row "EVA over `numeric`'s float half") stays ⬜ until L-14b is done, then 🟩; D-154 as decided above.
 
+<a id="l-14b"></a>
 ## L-14b - EVA over the float printer: `cf_gen_digits` and `cf_f64_to_text`
 
 * **id**: L-14b
@@ -174,6 +180,7 @@ section at its end).
 * **stop if**: as L-14a; the check fires and the cause is EVA's imprecision that no flag removes (write the trial list under notes: the maintainer decides whether CBMC takes this function).
 * **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Added": "Frama-C EVA covers the float printer of lib/numeric"; `docs/Safety.md` harness table and the "Not yet proven" sentence about the floating point parser and printer removed; `docs/Roadmap.md:69` row marked 🟩 (the heading text: "EVA over `numeric`'s float half"); no new decision.
 
+<a id="l-15a"></a>
 ## L-15a - The comparison with whole configuration libraries: time to look up
 
 * **id**: L-15a
@@ -200,6 +207,7 @@ section at its end).
 * **stop if**: an adapter's library has no way to look up by path without walking the tree (mark it `-`, one line in the page: never an adapter that walks); the `quick` scope's cells change (bench-gate fails).
 * **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Added": "The library comparison measures the time to look up a key after a parse (bench/compare, --mode lookup)"; `docs/Maintaining.md` "Measured": the table's row (numbers as measured, whichever way they come out); `docs/Performance.md` as above; `docs/Roadmap.md` "Measured against the libraries a program would otherwise use" stays ⬜ until L-15b is done, then 🟩; D-155 as decided above.
 
+<a id="l-15b"></a>
 ## L-15b - libconfig in the comparison
 
 * **id**: L-15b
@@ -225,6 +233,7 @@ section at its end).
 * **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Added": "libconfig joins the library comparison"; `docs/Performance.md`; `docs/Roadmap.md` "Measured against the libraries a program would otherwise use" marked 🟩 (with L-15a done); no new decision (D-155 covers the lookup).
 * **Organiser's answers**: opened with libconfig in the benchmark only, optional and OFF by default, never linked into anything shipped (the maintainer's standing approval, 2026-11-27).
 
+<a id="l-16a"></a>
 ## L-16a - The emitter sized from the key space it walks, kept only if it pays
 
 * **id**: L-16a
@@ -247,6 +256,7 @@ section at its end).
 * **stop if**: the three lines of the reading do not say what decided says (the emitter was changed after 2026-11-26: write what they say under notes and hand the card back, a design question).
 * **docs**: `docs/Roadmap.md` item "D-76, sizes and work predicted, then checked" as step 2; `docs/Maintaining.md` "Measured" as step 2; no CHANGELOG entry (nothing changed for a user), no decision.
 
+<a id="l-16b"></a>
 ## L-16b - Sequential read advice for a large file, kept only if it pays
 
 * **id**: L-16b
@@ -274,6 +284,7 @@ section at its end).
 * **stop if**: `hyperfine` is absent and cannot be installed without a password the worker may not type (leave the change out; report "not measured"); `cf_platform_fopen` has another caller that opens for reading a file that is not read whole (report it: the advice would be wrong there).
 * **docs**: `CHANGELOG.md`, "## 2.4.0 — unreleased" (add the heading under the open ones if absent), "### Changed" only if kept: "A large file is read with the system told it is read sequentially"; `docs/Maintaining.md` "Measured"; `docs/Roadmap.md` item "D-76, sizes and work predicted, then checked": struck "sequential read advice", kept or not.
 
+<a id="l-16c"></a>
 ## L-16c - Branch hints on the readers' hot paths, kept only where they pay
 
 * **id**: L-16c
@@ -298,6 +309,7 @@ section at its end).
 * **stop if**: a candidate changes what a reader returns (a test, a conformance case or a fuzzer finding moves): revert it and go on; no candidate keeps its change (close the card with the table).
 * **docs**: `CHANGELOG.md`, "## 2.4.0 — unreleased" (add the heading under the open ones if absent), "### Changed" only for kept hints: "Branch hints on the readers' refusal and end-of-input branches"; `docs/Maintaining.md` "Measured"; `docs/Roadmap.md` item "D-76, sizes and work predicted, then checked": with L-16a (closed) and L-16b done the item is marked 🟩 (a measured "no" counts as done).
 
+<a id="l-17"></a>
 ## L-17 - Byte order and word size in CI: s390x, i386 and armv7 under qemu-user
 
 * **id**: L-17
@@ -325,6 +337,7 @@ section at its end).
 * **stop if**: a defect found is in a public format's byte order (a swap wrong in the wire or image format: the format would change; the maintainer decides: stop and report the case); the qemu-user binary of a target crashes on the library's startup for a reason outside the library (report the version); a target needs more than 25 skip entries.
 * **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Added": "CI runs the suite for s390x (big endian), i386 and armv7 under qemu-user (D-156)"; `docs/targets.txt` and the regenerated README block as step 6; `docs/Roadmap.md` item "Byte order, word size and a bare-metal target in CI": the first sentence's jobs done (the bare-metal build is L-18a), the item stays ⬜ until L-18a and L-17-m; D-156 as decided above.
 
+<a id="l-17-m"></a>
 ## L-17-m - The `targets` jobs required
 
 * **id**: L-17-m
@@ -343,6 +356,7 @@ section at its end).
 * **stop if**: a name differs from the job's (the check is then never satisfied and no merge passes): the maintainer removes it and adds the right one.
 * **docs**: `docs/Roadmap.md` item "Byte order, word size and a bare-metal target in CI" marked 🟩 when this and L-18a are done; `docs/Plan.md` "Waits on the maintainer": the row's status "done".
 
+<a id="l-18b"></a>
 ## L-18b - The Cortex-M `.text` of each part, in a table and a gate
 
 * **id**: L-18b
@@ -370,6 +384,7 @@ section at its end).
 * **stop if**: `sizes.cmake`'s per-part builds cannot be made with a toolchain file without a restructure of the script (report the lines); the Thumb numbers differ by more than 5% between two CI runs of the same commit (the gate cannot be written: report).
 * **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Added": "The Cortex-M4 size of each part is in docs/sizes-cortexm.txt and the README, and CI holds it"; `docs/Roadmap.md` item "Small embedded systems, everything optional" marked 🟩 (the `.text` gate was the last thing remaining: the item's own text says so); no new decision (D-157).
 
+<a id="l-19a"></a>
 ## L-19a - A Linux arm64 job
 
 * **id**: L-19a
@@ -393,6 +408,7 @@ section at its end).
 * **stop if**: no arm64 Linux hosted runner is available to this repository (private-repository billing or the label missing): report the label list and stop; a library fault on AArch64 that needs a public format's change.
 * **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Added": "CI runs the suite and the sanitizer preset on Linux arm64"; `docs/targets.txt`; `docs/Roadmap.md` item "Arm supported well": the "no Linux arm64 job" gap closed (stays ⬜ until L-19b); no decision.
 
+<a id="l-19b"></a>
 ## L-19b - A qemu line carries its date and commit
 
 * **id**: L-19b
@@ -418,6 +434,7 @@ section at its end).
 * **stop if**: L-17 has not landed (no `qemu` line exists to hold).
 * **docs**: `CHANGELOG.md`, "## 1.9.0 — unreleased", "### Added": "gate.matrix holds a qemu line of docs/targets.txt to a job, a date and a commit (D-158)"; `docs/Maintaining.md` (the gates list: `grep -n "gate.matrix" docs/Maintaining.md`, one clause); `docs/Roadmap.md` item "Arm supported well, added as devices can be reached": the list done, the item stays ⬜ for hardware (L-19-m) and for NEON and SVE (2.4.0, not this group); D-158 as decided above.
 
+<a id="l-19-m"></a>
 ## L-19-m - Arm devices run, recorded with their commit
 
 * **id**: L-19-m
@@ -436,6 +453,7 @@ section at its end).
 * **stop if**: a test fails on the board: a finding (a card of its own), the line is not written as `hardware`.
 * **docs**: `docs/targets.txt`; `docs/Roadmap.md` item "Arm supported well" updated by the maintainer; `docs/Plan.md` "Waits on the maintainer": the row's status.
 
+<a id="l-25"></a>
 ## L-25 - MC/DC measured by GCC's condition coverage, with a floor that only rises
 
 * **id**: L-25
@@ -464,6 +482,7 @@ section at its end).
 * **stop if**: `gcov` gives no condition data for the library's objects; a build error from a `-Wcoverage-*` warning under `CF_WERROR` (report the file and the decision: a design question, not a flag to turn off); the measured share is under 30% (write the number under notes: a sign the reader is wrong, not the tests); 60 turns.
 * **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "MC/DC measured with GCC's condition coverage and held by a floor (EXTRA=mcdc, D-233)"; `docs/Compliance.md`, "What the library gives a user's safety process", the structural-coverage item rewritten with the floor, and "Order of work"'s list of cards to write loses MC/DC; `docs/Decisions.md`: D-233, with `**Tests.** `check.mcdc`.` if L-26a has landed (else its number goes into `scripts/check/trace_todo.txt` when that exists).
 
+<a id="l-26a"></a>
 ## L-26a - Each decision names the tests that hold it: the line, the table and `gate.trace`
 
 * **id**: L-26a
@@ -491,6 +510,7 @@ section at its end).
 * **stop if**: a `**Held to.**` paragraph names a check that is not a ctest test (a CI job, a fuzzer run): write `none:` only if nothing in ctest holds it, and list the section under notes; 60 turns.
 * **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "Each decision names the tests that hold it; docs/compliance/Trace.md and gate.trace (D-234)"; `docs/Compliance.md`, the "Requirements traced to tests" item: "planned" becomes the page and the gate, with the to-do count; "Order of work"'s list of cards to write loses the table; `docs/Decisions.md`: D-234, with `**Tests.** `check.trace`, `gate.trace`.`
 
+<a id="l-26b"></a>
 ## L-26b - Every decision traced: the to-do list emptied
 
 * **id**: L-26b
@@ -514,6 +534,7 @@ section at its end).
 * **stop if**: a third or more of the sections come out `none:` (the line is being used to excuse, not to trace: report the count); 60 turns (commits stand; a new card takes the rest of the list).
 * **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "Every decision is traced to its tests (L-26b)"; `docs/Compliance.md`'s item says so without "planned".
 
+<a id="l-27"></a>
 ## L-27 - The safety manual: the assumptions a user's program must hold, each pointing at its evidence
 
 * **id**: L-27
@@ -540,6 +561,7 @@ section at its end).
 * **stop if**: an assumption the section list names turns out false in the tree (for example, an allocation after initialisation with the arena): write it as a known limit and report it, never soften it; 60 turns.
 * **docs**: `CHANGELOG.md`, "## 2.0.0 — unreleased", "### Added": "The safety manual (docs/compliance/safety-manual.md), its citations held by gate.manual (D-235)"; `docs/Compliance.md`: the manual item, and "Order of work" item 6's manual half done; `docs/Decisions.md`: D-235, with `**Tests.** `check.manual`, `gate.manual`.`
 
+<a id="l-28"></a>
 ## L-28 - The CERT C matrix: every rule, which tool sees it, and the review for the rest
 
 * **id**: L-28

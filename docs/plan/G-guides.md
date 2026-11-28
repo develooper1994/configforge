@@ -40,6 +40,7 @@ docs/Decisions.md:11-26) and a row in the index of `docs/Decisions.md`.
 Before G-1b it is a section appended to `docs/Decisions.md` and a row in the
 index (docs/Decisions.md:30-132).
 
+<a id="g-1a"></a>
 ## G-1a - The tools that read a decision follow the split
 
 * **id**: G-1a
@@ -74,6 +75,7 @@ index (docs/Decisions.md:30-132).
 * **stop if**: `gate.limits` cannot be made to accept both places without rewriting `limits.cmake`'s output; a tool (a script, a gate, a test; not prose) other than the five finds a decision by a line number into `docs/Decisions.md` (`grep -rn "Decisions\.md" scripts cmake tests .github`; the prose citations by line in `docs/plan`, `docs/research` and `HANDOFF.md` are G-1b's): list it under notes and stop; three failures on the same thing.
 * **docs**: D-159 (text above); CHANGELOG "## 1.9.0 — unreleased" "### Added"; Roadmap "Documents kept short" (the line above).
 
+<a id="g-1b"></a>
 ## G-1b - Decisions.md split into one file a decision
 
 * **id**: G-1b
@@ -107,6 +109,7 @@ index (docs/Decisions.md:30-132).
 * **stop if**: more than 10 anchors are unresolved or the count of step 2 differs from the files made; `mkdocs build --strict` fails on a link the splitter could not decide; the `docs` workflow was red on `main` before the card (read `gh run list --workflow docs --branch main --limit 1`); three failures on the same thing.
 * **docs**: no new D-number (D-159 is G-1a's); CHANGELOG as above; Roadmap: "Documents kept short" stays ⬜ with the line "G-1b done" (G-2 marks it 🟩).
 
+<a id="g-2"></a>
 ## G-2 - The Roadmap's finished items on a page of their own
 
 * **id**: G-2
@@ -135,6 +138,7 @@ index (docs/Decisions.md:30-132).
 * **stop if**: an item marked 🟩 has a part that another item cites by heading and the heading is gone; more than 40 citations; three failures on the same thing.
 * **docs**: no D-number; CHANGELOG as above; Roadmap: "Documents kept short" 🟩 (its heading text: "Documents kept short.").
 
+<a id="g-3"></a>
 ## G-3 - "Start here" in C, and the gate that keeps every such page true
 
 * **id**: G-3
@@ -165,6 +169,7 @@ index (docs/Decisions.md:30-132).
 * **stop if**: no function the example needs is in the Guide's section 2 or `explain_demo.c`; the example's output varies between runs; three failures on the same thing.
 * **docs**: D-160 (text above); CHANGELOG "## 2.3.0 — unreleased" "### Added"; Roadmap `"Start here", one page a language.` (🟨).
 
+<a id="g-4"></a>
 ## G-4 - "Start here" in C++
 
 * **id**: G-4
@@ -189,6 +194,7 @@ index (docs/Decisions.md:30-132).
 * **stop if**: a call the page needs is in neither section 13 nor `tier1.cpp`; three failures on the same thing.
 * **docs**: CHANGELOG "## 2.3.0 — unreleased" "### Added"; no D-number; Roadmap unchanged (🟨).
 
+<a id="g-5"></a>
 ## G-5 - "Start here" in Rust
 
 * **id**: G-5
@@ -213,6 +219,7 @@ index (docs/Decisions.md:30-132).
 * **stop if**: the Guide's Rust section names no way to depend on the crate; three failures on the same thing.
 * **docs**: CHANGELOG "## 2.3.0 — unreleased" "### Added"; no D-number.
 
+<a id="g-6"></a>
 ## G-6 - "Start here" in Python
 
 * **id**: G-6
@@ -237,6 +244,7 @@ index (docs/Decisions.md:30-132).
 * **stop if**: the Python package cannot be built on the machine and no example test can run: report it, do not mark 🟩; three failures on the same thing.
 * **docs**: CHANGELOG "## 2.3.0 — unreleased" "### Added"; Roadmap `"Start here", one page a language.` 🟩.
 
+<a id="g-7"></a>
 ## G-7 - Recipes: reload events as log records, a report in OPA and CUE
 
 * **id**: G-7
@@ -265,6 +273,7 @@ index (docs/Decisions.md:30-132).
 * **stop if**: `secrets.c` cannot be reduced to a program that writes the two reports without a library change; the log-record mapping needs a field `cf_log_event` does not carry (read `cf_log.h`: the card is split instead of the library changed); three failures on the same thing.
 * **docs**: CHANGELOG "## 2.3.0 — unreleased" "### Added"; Roadmap "Recipes, not code" 🟩; no D-number.
 
+<a id="g-8"></a>
 ## G-8 - A playground on the documentation site
 
 * **id**: G-8
@@ -298,6 +307,7 @@ index (docs/Decisions.md:30-132).
 * **stop if**: `cf_builder_document` takes something the page cannot give (see decided); `cf_builder_define` cannot express a row from the five form fields; the wasm file exceeds 1 MiB at `CF_PROFILE=minimal`; the Pages deployment needs a setting only the maintainer has (repository settings: write it under notes as a parked G-8-m, do not change it); three failures on the same thing.
 * **docs**: D-162 (text above); CHANGELOG "## 2.3.0 — unreleased" "### Added"; docs/Dependencies.md; Roadmap "Being found." (🟨).
 
+<a id="g-9"></a>
 ## G-9 - A program not written for the library, moved onto it in a fork
 
 * **id**: G-9
@@ -328,6 +338,7 @@ index (docs/Decisions.md:30-132).
 * **Organiser's answers**:
   * The program is tinyproxy, by the card's criteria and recommendation; inadyn and darkhttpd rejected as the "decided" bullet says. The card opens at 2.3.0; publishing is G-9-m, the maintainer's (the maintainer's standing approval, 2026-11-27).
 
+<a id="g-9-m"></a>
 ## G-9-m - Publishing the fork and what it found
 
 * **id**: G-9-m

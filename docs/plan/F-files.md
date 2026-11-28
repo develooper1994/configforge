@@ -29,6 +29,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 
 ---
 
+<a id="f-1b"></a>
 ## F-1b - `cf_emit_file`: a configuration written to a file whole or not at all (the file layer's third part)
 
 * **id**: F-1b
@@ -75,6 +76,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
     4. The defaults are the compiler's and the platform's, with one exception the maintainer chose: `cf_file_replace`, and so `cf_emit_file`, defaults to `CF_SYNC_COMMIT` (one sync a save, so that "whole or not at all" holds across a power loss, as SQLite and Git do); `cf_file_writer` defaults to `CF_SYNC_PLATFORM`.
     5. F-1a's Windows retry is an option of `cf_file_options`, 2 s by default.
 
+<a id="f-2a"></a>
 ## F-2a - An override file the library owns: a file source that cf_write can commit to
 
 * **id**: F-2a
@@ -115,6 +117,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
   * 2026-11-27, the organiser (the maintainer's standing approval, 2026-11-27): Y-42 (docs/plan/Y-asked.md, module 1, 2.1.0) defines `cf_file_source_options` and `cf_builder_file_with(b, name, rank, path, const cf_file_source_options* o)` first, with `format`, `flags`, `extensions`, `max_depth`, `root` and `loader`; this card appends `writable` and `encoding` to the struct as it stands and does not define it again.
   * 2026-11-27, the organiser: F-2a follows D-225 as above; the missing-file rule (`CF_OPTIONAL` in the shortcut) and `derive_ghost` copying the format are the card's own choices (the maintainer's standing approval, 2026-11-27).
 
+<a id="f-2b"></a>
 ## F-2b - settings.c is the override source's example
 
 * **id**: F-2b
@@ -143,6 +146,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 
 ---
 
+<a id="f-3a"></a>
 ## F-3a - Wave 6, the core: a change spliced into a document and checked by reading it back
 
 * **id**: F-3a
@@ -197,6 +201,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 
 ---
 
+<a id="f-3b"></a>
 ## F-3b - Wave 6, JSON and JSON5: a value changed, a member added or removed
 
 * **id**: F-3b
@@ -227,6 +232,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 
 ---
 
+<a id="f-3c"></a>
 ## F-3c - Wave 6, INI and .properties: a value changed, a line added or removed
 
 * **id**: F-3c
@@ -256,6 +262,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 
 ---
 
+<a id="f-3d"></a>
 ## F-3d - Wave 6, TOML: a value changed, a key removed
 
 * **id**: F-3d
@@ -285,6 +292,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 
 ---
 
+<a id="f-3e"></a>
 ## F-3e - Wave 6, TOML: a key added
 
 * **id**: F-3e
@@ -313,6 +321,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 
 ---
 
+<a id="f-3f"></a>
 ## F-3f - Wave 6, YAML: a value changed, a key removed
 
 * **id**: F-3f
@@ -341,6 +350,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 
 ---
 
+<a id="f-3g"></a>
 ## F-3g - Wave 6, YAML: a key added
 
 * **id**: F-3g
@@ -369,6 +379,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 
 ---
 
+<a id="f-3h"></a>
 ## F-3h - Wave 6, TLV: a value changed, an entry added or removed, the bytes a layout skips kept
 
 * **id**: F-3h
@@ -400,6 +411,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 
 ---
 
+<a id="f-3i"></a>
 ## F-3i - Wave 6, `configforge codec get`, `set` and `unset`
 
 * **id**: F-3i
@@ -439,6 +451,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the card's recommendation, adapted to D-220: a number the recommendation fixes as a hard limit is an option whose default is that number.
   * The internal tier in the codec tool: option A, `edit.c` alone compiled with `CF_INTERNAL_API=1`, the link line unchanged; B and C rejected as the "decided" bullet says (the maintainer's standing approval, 2026-11-27).
 
+<a id="f-3j"></a>
 ## F-3j - Wave 6, the document edit as a public interface
 
 * **id**: F-3j
@@ -475,6 +488,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "I approve"; "files may hold comments, but on request the comments must be removable: another reader may refuse them"), written as **D-226**: option B is the brick and A is built on it. `cf_docedit_bytes(format, in, n, changes, count, out, outn, options, err)` knows neither files nor configuration; `cf_docedit_open`, `_set_*`, `_unset`, `_count`, `_commit`, `_abort` are a thin layer (read, `cf_docedit_bytes`, `cf_file_replace` of D-224) with no logic of its own. An option `cf_docedit_options.comments`: `CF_COMMENTS_KEEP` (the default: comments and layout kept) or `CF_COMMENTS_DROP` (every comment removed); the same option, by the same name, on `cf_emit` and `configforge convert`. A target format that cannot hold comments (JSON, CBOR) drops them even under KEEP, and the report carries a warning: never silently. The card follows D-226.
   * 2026-11-27, the organiser: F-3j follows D-226 as above; the DROP mechanism (a re-emit through the writer), the `dropped` out-parameter and leaving `cf_emit` and `convert` for the card that next changes their options are the card's own choices (the maintainer's standing approval, 2026-11-27).
 
+<a id="f-4a"></a>
 ## F-4a - The references drawn, first by jq
 
 * **id**: F-4a
@@ -503,6 +517,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 
 ---
 
+<a id="f-4b"></a>
 ## F-4b - `configforge doctor graph`, built only for a want F-4a's filters do not meet
 
 * **id**: F-4b
@@ -532,6 +547,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **Organiser's answers** (2026-11-26, the maintainer, relayed from a side session: "apply the best recommendations wherever a recommendation will do"): the recommendation; `doctor graph` is built only when it is asked for, so the card stays parked until then.
   * 2026-11-27: the card opens at 2.1.0 (F-4a's version): B unless F-4a's finding names a want the filters do not meet, then A for that want; the finding decides, no one is asked (the maintainer's standing approval, 2026-11-27).
 
+<a id="f-6"></a>
 ## F-6 - The sync a replace needs, by platform: `fdatasync` on Linux, `F_FULLFSYNC` on macOS, kept only if measured
 
 * **id**: F-6
@@ -554,6 +570,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 * **stop if**: `fdatasync` is slower than `fsync` on the machine: write the numbers and remove the branch.
 * **docs**: `CHANGELOG.md`, under the newest unreleased heading, "### Changed": "a replace syncs with fdatasync on Linux and F_FULLFSYNC on macOS".
 
+<a id="f-7"></a>
 ## F-7 - Many small files: measured first, then the cost per file cut where it shows
 
 * **id**: F-7

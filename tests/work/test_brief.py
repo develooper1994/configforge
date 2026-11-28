@@ -24,9 +24,8 @@ def main():
         fixture_script.parent.mkdir(parents=True)
         (root / "scripts" / "check").mkdir()
         shutil.copyfile(script, fixture_script)
-        shutil.copyfile(
-            script.with_name("index.py"), fixture_script.with_name("index.py")
-        )
+        for name in ("index.py", "links.py"):
+            shutil.copyfile(script.with_name(name), fixture_script.with_name(name))
         shutil.copyfile(
             script.parents[1] / "check" / "ready.py", root / "scripts/check/ready.py"
         )

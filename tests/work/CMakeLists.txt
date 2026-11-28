@@ -16,6 +16,11 @@ if(Python3_Interpreter_FOUND)
       "${CMAKE_SOURCE_DIR}/scripts/work/index.py"
       "${CMAKE_CURRENT_SOURCE_DIR}/data/index" "${CMAKE_CURRENT_BINARY_DIR}")
   add_test(
+    NAME work.links
+    COMMAND
+      "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/test_links.py"
+      "${CMAKE_SOURCE_DIR}/scripts/work/links.py" "${CMAKE_CURRENT_BINARY_DIR}")
+  add_test(
     NAME work.ready
     COMMAND
       "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/test_ready.py"

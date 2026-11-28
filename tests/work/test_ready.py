@@ -66,7 +66,7 @@ def main():
             (scripts / name).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(script, scripts / "check/ready.py")
         source = script.parents[1]
-        for name in ("brief.py", "index.py"):
+        for name in ("brief.py", "index.py", "links.py"):
             shutil.copyfile(source / "work" / name, scripts / "work" / name)
         ready = scripts / "check/ready.py"
 

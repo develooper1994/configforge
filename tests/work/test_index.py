@@ -10,12 +10,15 @@ HEADER = (
     "| Order | Card | Version | Size | Needs | Status |\n"
     "| ----: | ---- | ------- | ----- | ----- | ------ |\n"
 )
+A1, A2 = "[A-1](plan/A-first.md#a-1)", "[A-2](plan/A-first.md#a-2)"
+B1, C1 = "[B-1](plan/B-second.md#b-1)", "[C-1](plan/B-second.md#c-1)"
+A3 = "[A-3](plan/B-second.md#a-3)"
 ROWS = [
-    "| 1 | B-1 Big thing | 2.0.0 | large | A-2, K-9 | parked: not now |",
-    "| 2 | A-2 Second | 1.9.0 | small | A-1 | waits: A-1 |",
-    "| 3 | A-1 First | 1.9.0 | medium | nothing | open |",
-    "| 4 | C-1 Third | 1.9.0 | small | K-9 | open |",
-    "| 5 | A-3 Fourth | 1.9.0 | small | A-2, B-1 | waits: A-2 |",
+    f"| 1 | {B1} Big thing | 2.0.0 | large | {A2}, K-9 | parked: not now |",
+    f"| 2 | {A2} Second | 1.9.0 | small | {A1} | waits: {A1} |",
+    f"| 3 | {A1} First | 1.9.0 | medium | nothing | open |",
+    f"| 4 | {C1} Third | 1.9.0 | small | K-9 | open |",
+    f"| 5 | {A3} Fourth | 1.9.0 | small | {A2}, {B1} | waits: {A2} |",
 ]
 BEGIN = "<!-- index begin (scripts/work/index.py) -->\n"
 END = "<!-- index end -->\n"
@@ -91,9 +94,21 @@ def main():
         assert got.endswith(END + "\nText after the index.\n"), got
         assert b"\r" not in (root / "docs/Plan.md").read_bytes()
 
-        # green
+        # green; the cards are anchored where the index links to them
         rc, out = run(script, root, "--check")
         assert rc == 0, out
+        text = (root / "docs/plan/B-second.md").read_text(encoding="utf-8")
+        assert '\n<a id="a-3"></a>\n## A-3 - Fourth\n' in text, text
+
+        # an anchor lost: --check names links.py's files, the write restores it
+        (root / "docs/plan/B-second.md").write_text(
+            text.replace('<a id="a-3"></a>\n', ""), encoding="utf-8", newline="\n"
+        )
+        rc, out = run(script, root, "--check")
+        assert rc == 1 and "links.py would change docs/plan/B-second.md" in out, (rc, out)
+        rc, out = run(script, root)
+        assert rc == 0, out
+        assert (root / "docs/plan/B-second.md").read_text(encoding="utf-8") == text
 
         # --done: the field, the row, and the card that waited only on it
         rc, out = run(script, root, "--done", "A-1", "abc1234")
@@ -102,8 +117,8 @@ def main():
         assert "* **status**: done (abc1234)\n* **decided**: text" in text, text
         assert text.count("* **status**:") == 2
         rows = table(root).splitlines()
-        assert "| 2 | A-2 Second | 1.9.0 | small | A-1 | open |" in rows, rows
-        assert "| 3 | A-1 First | 1.9.0 | medium | nothing | done (abc1234) |" in rows
+        assert f"| 2 | {A2} Second | 1.9.0 | small | {A1} | open |" in rows, rows
+        assert f"| 3 | {A1} First | 1.9.0 | medium | nothing | done (abc1234) |" in rows
         rc, out = run(script, root, "--check")
         assert rc == 0, out
 
@@ -112,11 +127,12 @@ def main():
         assert rc == 0 and "A-1" in out, (rc, out)
         text = (root / "docs/plan/A-first.md").read_text(encoding="utf-8")
         assert "## A-1 - " not in text and "## A-2 - " in text, text
+        assert 'id="a-1"' not in text and '<a id="a-2"></a>\n## A-2' in text, text
         done = (root / "docs/plan/Done.md").read_text(encoding="utf-8")
         assert "| A-1 | First | abc1234 | A-first.md |" in done, done
         rows = table(root).splitlines()
         assert not any("A-1 First" in row for row in rows), rows
-        assert "| A-2 Second | 1.9.0 | small | A-1 | open |" in " ".join(rows).replace("| 2 ", "| ")
+        assert f"| {A2} Second | 1.9.0 | small | A-1 | open |" in " ".join(rows).replace("| 2 ", "| ")
         rc, out = run(script, root, "--check")
         assert rc == 0, out
         before = {p.name: p.read_bytes() for p in (root / "docs").rglob("*.md")}

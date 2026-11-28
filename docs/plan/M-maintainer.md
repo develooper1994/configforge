@@ -17,6 +17,7 @@ Every card is read cold against the tree before it opens (docs/Plan.md,
 Standard ACCEPT of every agent card below (docs/Plan.md:69-114):
 ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 
+<a id="m-1"></a>
 ## M-1 - Go (cgo): the module over the C library
 
 * **id**: M-1
@@ -47,6 +48,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: `amalgamate.py` cannot produce a header cgo can include (a macro it needs from a build option): stop, write the failing include under notes; a Go test needs more than the C library's own behaviour to pass (the binding would then differ from C): stop.
 * **docs**: `CHANGELOG.md` under "## 2.3.0 — unreleased", "### Added": "Go: the `bindings/go` module over cgo". `docs/Roadmap.md`: "Wave 7" item 7 stays ⬜ until M-2 (CI job) is done; then 🟩. `docs/Decisions.md`: add D-171 (written here) — "**D-171 — The Go binding is cgo over the amalgamation.** The module compiles a committed copy of the amalgamation, so `go get` needs a C compiler only; its surface is Python's builder and config, no more; the C library's refusals pass through unchanged; a `Config` is closed by `Close` and by a finalizer. Rejected: linking a caller-built shared library (a build step Go programs do not expect), a generated binding."
 
+<a id="m-2"></a>
 ## M-2 - Go: an example and a CI job
 
 * **id**: M-2
@@ -71,6 +73,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: cgo cannot compile the amalgamation on Windows with the runner's gcc: stop, note the compiler error, and report it: the binding then ships Linux and macOS only until the maintainer says.
 * **docs**: `CHANGELOG.md` under "## 2.3.0 — unreleased", "### Added": "Go: an example and a CI job on three platforms". `docs/Roadmap.md`: mark "Wave 7" item 7 🟩 only when M-4 is also done (one row, both bindings); until then leave it ⬜ and add nothing.
 
+<a id="m-3"></a>
 ## M-3 - .NET (P/Invoke): the assembly over the C library
 
 * **id**: M-3
@@ -98,6 +101,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: the struct layout of `cf_error` differs between the shared builds of two platforms in a way the interop clause cannot absorb (padding): stop, write the two sizes under notes.
 * **docs**: `CHANGELOG.md` under "## 2.3.0 — unreleased", "### Added": ".NET: the `bindings/dotnet` assembly over P/Invoke". `docs/Decisions.md`: D-172 — "**D-172 — The .NET binding is P/Invoke over a shared library per runtime identifier.** Source-generated `LibraryImport`, handles that free what they own, the library's refusals thrown as one exception type carrying the code, key, source and place; the assembly refuses a native library built with other limits. Rejected: C++/CLI (Windows only), a managed port."
 
+<a id="m-4"></a>
 ## M-4 - .NET: an example and a CI job
 
 * **id**: M-4
@@ -121,6 +125,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: `LibraryImport` source generation fails on macOS arm64 with the runner's SDK: note the error, stop.
 * **docs**: `CHANGELOG.md` under "## 2.3.0 — unreleased", "### Added": ".NET: an example and a CI job". `docs/Roadmap.md`: with M-2 done, the "Wave 7" Go and .NET item (heading "**Wave 7**: Go (cgo) and .NET (P/Invoke) bindings", line 147) to 🟩, and the table row "Go and .NET bindings, when asked" (line 53) to 🟩.
 
+<a id="m-5"></a>
 ## M-5 - The stream: one interface for reading in pieces, with a fallback every codec has
 
 * **id**: M-5
@@ -153,6 +158,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: `cf_codec` cannot grow without changing a size a test pins (`grep -rn "sizeof(cf_codec)" lib tests`); the fallback needs `reserve_work` in a sink the loader does not give (`lib/config/src/bridge/flatten.c`'s).
 * **docs**: `CHANGELOG.md` under "## 2.0.0 — unreleased", "### Added": "`cf_feed`, `cf_codec_decode_stream` and the read window"; "### Changed": "`cf_codec` has a `decode_stream` member (D-173)". `docs/Roadmap.md`: the item "Whole or as a stream, in every format that can" (line 187) stays ⬜ until M-9. `docs/Decisions.md`: D-173 — "**D-173 — A stream is a pull feed and a bounded window.** `cf_feed` is read by the library when its window is empty; `cf_codec` gains `decode_stream`; a codec with none is fed the whole input, so the call works for every format; the window is `CF_STREAM_WINDOW` bytes (default 4096), a value or look-back past it is refused with `CF_REASON_BUDGET` at its first byte, and a refusal names the place the same input has read whole. Rejected: a push parser, a feed as a blob with a callback."
 
+<a id="m-6"></a>
 ## M-6 - The stream, native: CBOR and TLV (the length-prefixed formats first)
 
 * **id**: M-6
@@ -179,6 +185,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: the whole read's refusal message cannot be reproduced at a byte of a stream (an indefinite-length string): stop, note the case; do not change the whole read's.
 * **docs**: `CHANGELOG.md` under "## 2.0.0 — unreleased", "### Added": "CBOR and TLV read as a stream". Roadmap: nothing until M-9.
 
+<a id="m-7"></a>
 ## M-7 - The stream, native: JSON, JSON5 and `.properties`
 
 * **id**: M-7
@@ -204,6 +211,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: a conformance case differs at a feed size (a verdict or a refusal's place): note file and size, stop. A string longer than the window that the whole read accepts and the stream refuses is the card's decision (M-5's refusal), not a stop.
 * **docs**: `CHANGELOG.md` under "## 2.0.0 — unreleased", "### Added": "JSON, JSON5 and `.properties` read as a stream". Roadmap: nothing until M-9.
 
+<a id="m-8"></a>
 ## M-8 - The stream, native: INI and TOML (the readers that look back)
 
 * **id**: M-8
@@ -230,6 +238,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: a TOML date-time or number needs a look-ahead past 64 bytes that a mark cannot give: stop, name the production.
 * **docs**: `CHANGELOG.md` under "## 2.0.0 — unreleased", "### Added": "INI and TOML read as a stream". Roadmap: nothing until M-9.
 
+<a id="m-9"></a>
 ## M-9 - The stream, native: YAML, and the file source that uses it
 
 * **id**: M-9
@@ -254,6 +263,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: the window's wipe cannot be done on every exit path of `file.c`'s load: stop.
 * **docs**: `CHANGELOG.md` under "## 2.0.0 — unreleased", "### Added": "YAML read as a stream; `CF_STREAM` for a file source". `docs/Roadmap.md`: "Whole or as a stream, in every format that can" (line 187) to 🟩; the row "Sizing: transient file bytes done; stream and dynamic modes for 2.0" (line 40) stays 🟨 until M-11. `docs/Decisions.md`: D-174 — "**D-174 — A reader keeps one mark, and a stream refuses what outgrows its window.** TOML and INI look back one line and YAML ahead one line through a window mark; a value, key path or line longer than `CF_STREAM_WINDOW` is refused with `CF_REASON_BUDGET` at its first byte; the whole read of the same input is unchanged. `CF_STREAM` on a file source is never refused: a codec with no stream reads the file whole."
 
+<a id="m-10"></a>
 ## M-10 - The dynamic sizing modes: the interface
 
 * **id**: M-10
@@ -281,6 +291,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: `cf_defset` cannot hold the pair without changing a size a test pins (`grep -rn "sizeof(cf_defset)" lib tests`).
 * **docs**: `CHANGELOG.md` under "## 2.0.0 — unreleased", "### Added": "`cf_builder_sizing` and `cf_sizing_options`: manual, semi- and full-dynamic sizing (D-175)". `docs/Roadmap.md`: nothing until M-11. `docs/Decisions.md`: D-175 — "**D-175 — Sizing is a mode of the builder.** `MANUAL` is the build's limits, as before, and the only mode of a `minimal` build; `SEMI` grows a buffer from the allocator up to the program's cap; `DYNAMIC` has no cap but memory. The mode is stored with the definitions and kept by a derived configuration. What each mode lets grow is D-176."
 
+<a id="m-11a"></a>
 ## M-11a - Sizing in the readers and the key space
 
 * **id**: M-11a
@@ -309,6 +320,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
   * Worker's notes (M-11a): the card's "refused under `MANUAL`" holds for keys only: a 4,000-byte string was already accepted under `MANUAL`, because the loader's sink has supplied `reserve_text` since 1.x, so the test pins that and `SEMI` holds a value to its cap. A reader cannot tell the mode from `reserve_work` alone (and a sink of one's own must read as before), so the loader hands it the key limit in a new last member of `cf_doc_sink`, `key_limit` (0 is the build's; D-176). A cap below the build's key limit leaves the build's (the maintainer's standing approval, 2026-11-27).
 * **docs**: `CHANGELOG.md` under "## 2.0.0 — unreleased", "### Added": "semi- and full-dynamic sizing in the readers and the key space". `docs/Decisions.md`: D-176 (below, with M-11b).
 
+<a id="m-11b"></a>
 ## M-11b - `cf_error` owns its text (the 2.0 break)
 
 * **id**: M-11b
@@ -339,6 +351,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **notes** (M-11b worker, 2026-11-28): (1) The layout differs from the card's wording in one place, for D-51 and for the bindings: the inline store (`cfi_key`, `cfi_source`, `cfi_message`) sits right behind the pointers, where the arrays were, so it is 1.0's region, written whatever `size` says (a `static cf_error` of size 0 and a `size` cut to `offsetof(where)`, as `test_reason` does, still work); only the three block pointers (`cfi_heap`) follow `offset`, and an error whose `size` does not reach them (the Rust and Python bindings' views, which end at `reason`) keeps every text inline and cut. A struct that grows its `size` after being filled with other bytes must zero `cfi_heap` first (`test_reason`). (2) The test cannot count blocks through a counting allocator: `cf_error` takes its blocks from `cf_default_allocator()` (the card's choice) and a test cannot interpose it; `test_sizing.c` checks that the blocks are dropped (`cfi_heap` NULL, texts empty after `cf_error_clear`) and the sanitize preset's leak check does the counting. (3) A struct of zeros has size 0 and NULL pointers and takes a set inline; `cf_error_set_long` allocates only for an error whose `size` reaches `cfi_heap`. (4) Callers that held an error by value or in an arena changed: `builder_fail` copies and clears, `create_failed` clears what it reports from, `cfi_ks_refuse` keeps its texts in the arena, `live.c` clears `last_error` and `scratch` at close, the C++ `Error` got a copy constructor, an assignment and a destructor; `file.c` and `schema.c` no longer `memcpy` the texts by `sizeof`. (5) `cf_error_set_long` is called from the key space's list-append errors and the emitter's two key-bearing errors under `SEMI` and `DYNAMIC`; under `MANUAL` they keep `cf_error_set` (its source text is cut at 63 bytes, a set_long cap would not).
 * **docs**: `CHANGELOG.md` under "## 2.0.0 — unreleased", "### Changed": "`cf_error`'s `key`, `source` and `message` are owned text, not arrays (D-176)". `docs/Roadmap.md`: the row "Sizing: transient file bytes done; stream and dynamic modes for 2.0" (line 40) to 🟩. `docs/Decisions.md`: D-176 as above.
 
+<a id="m-12"></a>
 ## M-12 - The image header's layout, version 2
 
 * **id**: M-12
@@ -366,6 +379,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **Organiser's answers** (2026-11-27, the organiser, under the maintainer's standing approval): option (b), the card's recommendation; bytes 104-111 are reserved for the manifest of Y-33, which moves to 2.2.0 and uses them (the maintainer's standing approval, 2026-11-27).
 * **docs**: `CHANGELOG.md` under "## 2.0.0 — unreleased", "### Changed": "the image header is 128 bytes and carries the limits and the build id; major 1 images still load (D-177)". `docs/Decisions.md`: D-177 — "**D-177 — Image major 2: a 128-byte header with the build's limits and id.** The 12 reserved bytes could not hold them; offsets stay 32-bit; a major 1 image loads (`build_id` NULL); a major 2 image from a build with longer keys is refused naming both limits. Rejected: 64-bit offsets, a section table. Bytes 104-111 are kept for the manifest."
 
+<a id="m-13"></a>
 ## M-13 - 2.0, once: the list of what breaks, and the gate that holds it
 
 * **id**: M-13
@@ -391,6 +405,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **notes** (M-13, worker): step 2 did not fail: M-11b regenerated the baseline (diff `+cf_error_set_long`, already in `cmake/configforge.symbols`) and M-10 opened 2.0.0 (`version.cmake` prints 2.0.0, so no bump was needed). The list of breaks is taken from `git log` and CHANGELOG's Changed entries: owned `cf_error` text (D-176), image major 2 (D-177), `CF_NODISCARD` (K-9c, D-223) and the tools' `reason:` line (K-6b, D-223); K-6a's `cf_error.offset` is additive (Added), so it is under "What does not break".
 * **docs**: `CHANGELOG.md`: the 2.0.0 section's "### Changed" complete. `docs/Roadmap.md`: the rows "2.0: what the sizing modes break, once" (line 58) and "**Wave 8, 2.0**" (line 151) to 🟩. `docs/Decisions.md`: D-178 — "**D-178 — 2.0 breaks once, and says so.** The breaks are those D-176 and D-177 name, listed in `docs/Migrating-2.0.md` with before and after; `gate.abi`'s baseline is the 2.0 interface; nothing else breaks in 2.0."
 
+<a id="m-14"></a>
 ## M-14 - Ways to read: the document tree (DOM), a public type of the serialization library
 
 * **id**: M-14
@@ -421,6 +436,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: `convert_core.c`'s tree cannot be the library's (an extra field the tool needs): leave the tool, note it; a codec's events cannot rebuild its own output (comments, order): note which, do not widen the type.
 * **docs**: `CHANGELOG.md` under "## 2.0.0 — unreleased", "### Added": "`cf_dom`: a read-only document tree (`CF_WITH_DOM`)". `docs/Roadmap.md`: "Ways to read: DOM, SAX, lazy, in-situ" (line 1235) stays ⬜ until M-17. `docs/Decisions.md`: D-179 — "**D-179 — A DOM is a read-only node tree built from the events.** `cf_dom` holds tables, arrays and scalars with their names and places in one arena the tree owns; repeated names are kept; it is written back through any encoder; compiled out by `CF_WITH_DOM`. Rejected: a flat key index (a document is not a key space), mutation (that is `cf_edit`)."
 
+<a id="m-15"></a>
 ## M-15 - Ways to read: lazy, a structural index first
 
 * **id**: M-15
@@ -449,6 +465,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: the index of a JSON string containing `\"` cannot be found without the escape rules (it can: count the backslashes before the quote; if a case defeats that, stop and note it).
 * **docs**: `CHANGELOG.md` under "## 2.0.0 — unreleased", "### Added": "`cf_lazy`: a structural index and values parsed when asked for (`CF_WITH_LAZY`)". `docs/Roadmap.md`: nothing until M-17. `docs/Decisions.md`: D-180 — "**D-180 — Lazy reading indexes structure and parses on request.** JSON and CBOR only; the index is validated for structure at open and a value when touched, so a lazy read accepts what the event read refuses until it is asked for it; the blob is borrowed. Rejected: lazy TOML, YAML and INI (their structure is found by parsing)."
 
+<a id="m-16"></a>
 ## M-16 - Ways to read: in-situ strings
 
 * **id**: M-16
@@ -477,6 +494,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: `js_string`'s capacity checks (`json.c:225-228`) are needed by the in-situ write (the write can never pass `p`: if a case shows otherwise it is a bug in the card: stop).
 * **docs**: `CHANGELOG.md` under "## 2.0.0 — unreleased", "### Added": "`cf_codec_decode_insitu` for JSON and CBOR (`CF_WITH_INSITU`)". `docs/Roadmap.md`: nothing until M-17. `docs/Decisions.md`: D-181 — "**D-181 — In-situ reading gives the buffer up.** JSON strings are unescaped over the caller's own bytes and passed by pointer; no copy, no allocation; the buffer is not the document afterwards. CBOR text strings are passed by pointer, length-delimited. Other codecs refuse."
 
+<a id="m-17"></a>
 ## M-17 - Ways to read: the table, and each mode measured
 
 * **id**: M-17
@@ -500,6 +518,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: a mode is slower than the event read on its own document and the card cannot say why: write the number down anyway; it is a finding, not a stop. Stop only if a cell cannot be built.
 * **docs**: `CHANGELOG.md` under "## 2.0.0 — unreleased", "### Added": "the table of ways to read each format, and a benchmark cell for each". `docs/Roadmap.md`: "**Ways to read: DOM, SAX, lazy, in-situ.**" (line 1235) to 🟩.
 
+<a id="m-19-m"></a>
 ## M-19-m - OSS-Fuzz: the application (parked)
 
 * **id**: M-19-m
@@ -516,6 +535,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: Google declines (too small a user base is the usual reason): drop the card and record it under "Done" in `docs/Plan.md` as dropped; ClusterFuzzLite stays.
 * **docs**: after acceptance, `docs/Roadmap.md` "**OSS-Fuzz.**" (line 1356) to 🟩; `CHANGELOG.md` "### Added" under 1.9.0.
 
+<a id="m-20"></a>
 ## M-20 - The evidence pack: the script that assembles it, with a manifest that never claims what is not there
 
 * **id**: M-20
@@ -543,6 +563,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: a producer's output has no stable path (coverage's directory differs by preset): take it from an argument and say so, do not guess a path.
 * **docs**: `CHANGELOG.md` under "## 1.9.0 — unreleased", "### Added": "`scripts/release/evidence.py`: the evidence pack and its manifest". `docs/Roadmap.md`: the item "**An evidence pack with each release.**" (line 1361) stays ⬜ until M-21. `docs/Decisions.md`: D-182 — "**D-182 — The evidence pack lists what is absent.** A release's pack is assembled from what the gates produce at that commit; an item whose producer is not in the tree is listed as absent with the file it looked for, never replaced by a statement; the archive is reproducible (sorted, fixed times, SHA-256 in the manifest)."
 
+<a id="m-21"></a>
 ## M-21 - The evidence pack in the release
 
 * **id**: M-21
@@ -568,6 +589,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: `gh workflow run` is not allowed on the branch by the repository's rules: note it; the check is then the next tag.
 * **docs**: `CHANGELOG.md` under "## 1.9.0 — unreleased", "### Added": "each release carries its evidence pack". `docs/Roadmap.md`: "**An evidence pack with each release.**" (line 1361) to 🟩. `docs/Compliance.md`: the row "The compliance report ... attached to each release" status "done" only for what the manifest has present (leave "planned" for the rest).
 
+<a id="m-22"></a>
 ## M-22 - Publishing by trusted publishing: the release workflow's registry jobs
 
 * **id**: M-22
@@ -595,6 +617,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: `crates-io-auth-action`'s inputs differ from what this card says (read its README at its pinned commit: fetch it with `gh api`): stop and note them.
 * **docs**: `CHANGELOG.md` under "## 1.10.0 — unreleased", "### Added": "release jobs that publish to PyPI and crates.io by trusted publishing; a Homebrew formula". `docs/Roadmap.md`: "**Published where programs get their libraries.**" (line 787) stays ⬜ until M-24. `docs/Decisions.md`: D-183 — "**D-183 — Registries by trusted publishing, skipped until set up.** The release publishes the wheel and the crate by OIDC from jobs that need a repository variable the maintainer sets; no registry token is kept; `id-token: write` is in those jobs only; with the variables unset the release is unchanged. Recipes (vcpkg, Conan, Homebrew) are in the tree and built by CI; their upstream submission is the maintainer's."
 
+<a id="m-23-m"></a>
 ## M-23-m - Registry set-up (parked)
 
 * **id**: M-23-m
@@ -612,6 +635,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **docs**: `docs/Maintaining.md` records the date and the environment names; nothing else.
 * **Organiser's answers**: 2026-11-27, the maintainer defers publishing to PyPI and crates.io for now ("cargo ve pypi yayınlamalarını ertele"). The 1.9.0 tag's `crates` job failed only because crates.io wants a verified email on the account; `release.yml`'s `crates` job now waits on `vars.PUBLISH_CRATES == 'true'` as M-22 decides, so a release is green without it. Once (2) is done, 1.9.0's crate goes out by `gh run rerun 46010730161 --failed` with the variable set.
 
+<a id="m-24"></a>
 ## M-24 - The clean-machine install, in CI
 
 * **id**: M-24
@@ -638,6 +662,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: PyPI's wheel for a platform is missing (M-26 not done): the `pip` job runs on the platforms that have one; note which.
 * **docs**: `CHANGELOG.md` under "## 1.10.0 — unreleased", "### Added": "a workflow that installs each release from the registries". `docs/Roadmap.md`: "**Published where programs get their libraries.**" (line 787) to 🟩 when the three jobs are green for one release.
 
+<a id="m-25-m"></a>
 ## M-25-m - Upstream submissions: vcpkg and ConanCenter (parked)
 
 * **id**: M-25-m
@@ -654,6 +679,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: an upstream declines (usually for too few users): drop and record under "Done" in `docs/Plan.md` as dropped; the in-tree recipes stay.
 * **docs**: set the repository variable `VCPKG_PORT_MERGED=true` (enables M-24's `vcpkg` job); `docs/Maintaining.md` records the date.
 
+<a id="m-26"></a>
 ## M-26 - Wheels for each platform
 
 * **id**: M-26
@@ -678,6 +704,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: a platform's wheel cannot load its shared library under the test (an rpath): stop, note the platform and the loader error.
 * **docs**: `CHANGELOG.md` under "## 2.3.0 — unreleased", "### Added": "Python wheels for each platform". `docs/Roadmap.md`: "**Distribution, as infrastructure.**" (line 895) stays ⬜ until M-31.
 
+<a id="m-27"></a>
 ## M-27 - Recipes in the tree: Meson WrapDB, the Bazel Central Registry, conda-forge
 
 * **id**: M-27
@@ -703,6 +730,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: the amalgamation lacks a header a consumer needs (a `configforge/` subdirectory of installed headers the CMake install makes): stop and note the missing files.
 * **docs**: `CHANGELOG.md` under "## 2.3.0 — unreleased", "### Added": "recipes for Meson, Bazel and conda-forge, built by CI". `docs/Roadmap.md`: nothing until M-31.
 
+<a id="m-28"></a>
 ## M-28 - Embedded registries: ESP-IDF, PlatformIO, Zephyr
 
 * **id**: M-28
@@ -726,6 +754,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: the freestanding flag does not compile the amalgamation on a host (it needs the port layer's headers): note the error, stop.
 * **docs**: `CHANGELOG.md` under "## 2.3.0 — unreleased", "### Added": "manifests for the ESP-IDF, PlatformIO and Zephyr registries". `docs/Roadmap.md`: nothing until M-31.
 
+<a id="m-29-m"></a>
 ## M-29-m - Submissions and registry accounts (parked)
 
 * **id**: M-29-m
@@ -742,6 +771,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: a registry declines: drop that channel and record it under "Done" in `docs/Plan.md` as dropped.
 * **docs**: `docs/Maintaining.md` records each channel's date.
 
+<a id="m-30-m"></a>
 ## M-30-m - The GitHub Action in a repository of its own (parked)
 
 * **id**: M-30-m
@@ -758,6 +788,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: the maintainer prefers to keep the Action in this repository: drop and record as dropped.
 * **docs**: after the card: `docs/Doctor.md`'s Action section, `docs/Roadmap.md` item.
 
+<a id="m-31"></a>
 ## M-31 - The monthly count of downloads, traffic and issues
 
 * **id**: M-31
@@ -782,6 +813,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: the API's field names differ from the fake's: use the real response (`gh api repos/develooper1994/configforge/releases --jq '.[0].assets[0]'`) and rewrite the fake.
 * **docs**: `CHANGELOG.md` under "## 2.3.0 — unreleased", "### Added": "a monthly count of downloads, traffic and issues". `docs/Roadmap.md`: "**Distribution, as infrastructure.**" (line 895) to 🟩 only when M-26 to M-31 are done and M-29-m and M-30-m are done or dropped.
 
+<a id="m-32"></a>
 ## M-32 - One digest a purpose: SHA-256 as the fingerprint's option
 
 * **id**: M-32
@@ -811,6 +843,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: the report schema's `"fingerprint"` field is read by a consumer that expects 22 characters (`grep -rn "fnv1a:" tools lib tests bindings | head`): list them under notes and change each only if it is a test; stop for a consumer outside the tree.
 * **docs**: `CHANGELOG.md` under "## 1.10.0 — unreleased", "### Added": "SHA-256 as an option of the fingerprint (`cf_builder_fingerprint`, `cf_fingerprint_text`)". `docs/Roadmap.md`: "**One digest a purpose, and a door for the program's own.**" (line 916) stays ⬜ until M-34. `docs/Decisions.md`: D-184 — "**D-184 — One default digest for each job, named by its prefix.** A fingerprint that tells changes is FNV-1a (`fnv1a:`), one that decides is SHA-256 (`sha256:`) chosen by `cf_builder_fingerprint`; both hash the same byte stream; a report holds one kind and Doctor compares two only when their prefixes agree (CFD020 otherwise); a secret enters by its digest text, keyed when the program gave a key (D-85). The u64 `cf_fingerprint` stays FNV-1a. Rejected: a menu of algorithms."
 
+<a id="m-33"></a>
 ## M-33 - A digest function the program gives
 
 * **id**: M-33
@@ -837,6 +870,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: a path computes a fingerprint outside `create` and a reload (`grep -rn "cf_fingerprint(" lib | head`): `lib/config/src/core/live.c:335`, `565`, `714` are the known ones; any other: stop and note it.
 * **docs**: `CHANGELOG.md` under "## 1.10.0 — unreleased", "### Added": "`cf_builder_digest_fn`: a digest function of the program's own". `docs/Roadmap.md`: nothing until M-34. `docs/Decisions.md`: D-185 — "**D-185 — The program's own digest is a streaming triple with a name.** A program gives `init`, `update`, `final`, an output length and a name of its own (never `fnv1a`, `sip24` or `sha256`); the report writes the name as the prefix; the function runs at `create` and at each reload only, so it is never in the read path; a fingerprint has one kind, so it cannot be combined with SHA-256."
 
+<a id="m-34"></a>
 ## M-34 - A gate built on a SHA-256 fingerprint, in the Guide, with its test
 
 * **id**: M-34
@@ -861,6 +895,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **stop if**: the example's output depends on the platform (the fingerprint is "identical on every platform", `configforge.h:630-632`): if the two ACCEPT machines differ, it is a bug in M-32: stop and name both strings.
 * **docs**: `CHANGELOG.md` under "## 1.10.0 — unreleased", "### Added": "a worked gate on a SHA-256 fingerprint". `docs/Roadmap.md`: "**One digest a purpose, and a door for the program's own.**" (line 916) to 🟩.
 
+<a id="m-35"></a>
 ## M-35 - A card's id is a link, in Plan.md's index and in the Roadmap
 
 * **id**: M-35
