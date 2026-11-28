@@ -3,6 +3,8 @@
 Versions follow semantic versioning from 1.0. Before that, `0.x` promises
 nothing: the C interface is not frozen, and a minor bump may change it.
 
+## 2.1.0 — unreleased
+
 ## 2.0.0 — 2026-11-28
 
 ### Added
