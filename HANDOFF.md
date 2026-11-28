@@ -1,4 +1,4 @@
-# HANDOFF (2026-11-28, 05:50 UTC)
+# HANDOFF (2026-11-28, 17:00 UTC)
 
 State: the plan runs from docs/Plan.md's generated index (order:
 docs/plan/Layout.md). No TO DECIDE is left in any card; only the
@@ -9,50 +9,41 @@ the variable PUBLISH_CRATES is unset): do not chase it.
 
 ## Done today
 
-1. 2.0.0 released: tag v2.0.0 on de9fa33 (main), release workflow
-   46113423729. 2.0.0 holds K-6a, K-9d, M-11a, K-9e, K-9f, K-9g, K-9b,
-   K-9j, M-11b (`cf_error` owns its text, D-176), M-13
-   (docs/Migrating-2.0.md, D-178), K-9i, K-9h (D-238). Last green full
-   run: 46112081619 (e0f9e40).
-2. After the tag: 2.1.0 opened (95033fe); the beside-cards still open moved
-   to 2.1.0 (d2b1459).
+1. 2.0.0 released (tag v2.0.0 on de9fa33); 2.1.0 opened.
+2. On main (807685c, green full run 46166195752 on c16244e): L-25, M-35,
+   K-9k, L-28, and the first 2.1.0 feature group: C-2a (units, D-113,
+   D-222), C-8a (misreads, D-121), C-9 (migration, D-122), C-10a
+   (cf_serve_report, D-123), F-1b (cf_emit_file, D-224), with the group's
+   check fixes (stack frame, oom list, tidy, iwyu, cppcheck, ubsan in
+   serve.c, MISRA records, MSVC /analyze, musl and check.mcdc, yamldiff).
+
+## How a group runs (the maintainer, 2026-11-28)
+
+Features first. Write the group's code first: each worker builds the
+default preset and runs only its card's tests and the `gate.*` tests. Then
+verify the group once: `sh scripts/work/check-all.sh` in WSL (every lane in
+parallel on a copy of the tree; MISRA records with
+D:/cf-work/misra-write.sh when counts move; README via
+scripts/generate/matrix.cmake when docs/sizes.txt moves, from CI's `sizes`
+artifact), then one full run (`gh workflow run ci --ref batch -f
+tier=full`), fix, `git push origin <green hash>:main`. The yamldiff job is
+not required: a red one is a new difference to document or fix, not a
+block.
 
 ## In flight
 
-3. On main: everything through bb92ccf (green full run 46127137724).
-   On `batch` (D:/cf-work/batch), not yet verified: L-25 (79296cf, MC/DC,
-   D-233), M-35 (22a3947, card ids as links: scripts/work/links.py), C-11's
-   needs without the cycle. C-2a with a worker in D:/cf-work/C-2a
-   (branch work/C-2a).
-   The maintainer (2026-11-28): features first; write a group's code first
-   (each worker builds the default preset and runs only its card's tests),
-   then verify the group once: the full local check (D:/cf-work/
-   full-check.sh: default, clang, none, ubsan-strict, tidy, iwyu, analyze,
-   MISRA with WRITE=ON when counts move, README via
-   scripts/generate/matrix.cmake when docs/sizes.txt moves), then one full
-   run, fix, `git push origin <green hash>:main`.
-   This group: C-2a, then C-8a, C-9, C-10a, F-1b (all pass ready.py),
-   then the group's check. Next group: Y-42, Y-1, C-11, C-7 (refresh
-   C-11's cited lines first), the qemu cards L-17, L-19a, L-19b (L-17-m
-   opens after L-17 is green: three required checks on main).
-4. Release 46113423729 was green (crates skipped). If one is ever red: read its failed job, fix
-   on batch, and re-tag only by deleting and pushing v2.0.0 again once the
-   fix is on main (no release was made then); if green, nothing to do.
+3. Group 2: Y-42 with a worker in D:/cf-work/Y-42 (branch work/Y-42), then
+   Y-1 (ready). C-11, C-7, L-17, L-19a, L-19b fail ready.py: cited lines
+   moved, and C-11, L-17 and L-19b have an `either` or a `?` in decided
+   that the organiser settles. L-19b needs L-17; L-17-m (three required
+   checks on main) opens after L-17 is green.
+4. yamldiff.known has a new `to decide` rule (`&5?\n 1&:`, "mapping keys
+   are not allowed in this context"): examine its cause in a later card.
 
 ## Next
 
-5. K-9k, then L-25 (MC/DC), L-26a, L-26b (traces), L-27 (after L-12c),
-   then the index's order (2.1.0 module cards: C-2a, C-8a, ...).
-6. The organiser's local check before each full run (docs/Plan.md "The
-   loop", step 11; worker-notes): format, codemap, apiref, every `gate.*`,
-   default with every test, clang, `none`, `ubsan-strict`,
-   `-DCF_CLANG_TIDY=ON`, CI's iwyu line, the MISRA record (regenerate with
-   WRITE=ON when counts move), and the `analyze` preset.
-7. Measure the batch flow into docs/Maintaining.md "Working habits that
-   paid": 2026-11-28 had three red full runs (MSVC/test_reason; clang-tidy,
-   cppcheck and Infer after M-11b; clang-tidy and `-fcallgraph-info` after
-   K-9h), each fixed within the hour.
-8. Codex's allowance returns 2026-11-29 09:47: give it most cards
+5. Beside-cards later: L-26a, L-26b (traces), L-27 (after L-12c).
+6. Codex's allowance returns 2026-11-29 09:47: give it most cards
    (scripts/work/codex-card.sh).
 
 ## Budget
