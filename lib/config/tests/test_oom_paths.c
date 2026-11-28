@@ -377,7 +377,12 @@ static void test_derive(void) {
  * ---------------------------------------------------------------- */
 
 #if CF_WITH_IMAGE
-static char g_image[8192];
+/* Aligned as a linker aligns a const array: the image is read in place
+   (test_image.c's g_img). */
+static union {
+    cf_i64 align;
+    char   b[8192];
+} g_image;
 
 static int try_image(void* ctx, const cf_allocator* a, cf_u64* digest, cf_error* err) {
     cf_config*  c;
@@ -395,9 +400,9 @@ static int try_image(void* ctx, const cf_allocator* a, cf_u64* digest, cf_error*
         check(0, "the configuration the image is made from is built");
         return CF_OOM_BAD;
     }
-    n = cf_image_write(cf_keys(c), NULL, 0, g_image, sizeof g_image);
+    n = cf_image_write(cf_keys(c), NULL, 0, g_image.b, sizeof g_image.b);
     cf_config_free(c);
-    if (n == 0 || !cf_image_open(&img, g_image, n, err)) {
+    if (n == 0 || !cf_image_open(&img, g_image.b, n, err)) {
         check(0, "an image is written and opens");
         return CF_OOM_BAD;
     }

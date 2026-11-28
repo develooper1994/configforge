@@ -65,7 +65,7 @@ cf_bool cfi_file_options(const cf_file_options* o, cf_file_options* out,
     out->sync_ms     = o->sync_ms;
     out->retry_ms    = o->retry_ms;
     out->append      = o->append;
-    if (o->size >= offsetof(cf_file_options, allocator) + sizeof o->allocator) {
+    if (o->size >= offsetof(cf_file_options, allocator) + sizeof(const cf_allocator*)) {
         out->allocator = o->allocator;
     }
     return CF_TRUE;
