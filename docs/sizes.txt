@@ -1,24 +1,24 @@
 # Written by scripts/check/sizes.cmake -DWRITE=ON; do not edit.
-tool|x86_64|GNU 15.2.0|MinSizeRel|01a27c8|2026-11-27
-base|default|270342
-off|CF_WITH_INI|5500
-off|CF_WITH_JSON|16758
-off|CF_WITH_TOML|15908
-off|CF_WITH_PROPERTIES|1816
-off|CF_WITH_CBOR|8452
-off|CF_WITH_TLV|12089
-off|CF_WITH_YAML|24353
+tool|x86_64|GNU 15.2.0|MinSizeRel|be70dd5|2026-11-28
+base|default|275828
+off|CF_WITH_INI|5653
+off|CF_WITH_JSON|16827
+off|CF_WITH_TOML|15937
+off|CF_WITH_PROPERTIES|1862
+off|CF_WITH_CBOR|8576
+off|CF_WITH_TLV|12276
+off|CF_WITH_YAML|24344
 off|CF_WITH_DIR|3072
 off|CF_WITH_DOTENV|1533
-off|CF_WITH_EMIT|11813
+off|CF_WITH_EMIT|11912
 off|CF_WITH_IMAGE|4985
-off|CF_WITH_REPORT|10281
-off|CF_WITH_REAL|7844
-all|parts|212694
-profile|full|279329
-profile|default|270342
-profile|minimal|228179
-profile|misra|227400
-profile|embedded-json|165699
-profile|embedded-cbor|157364
-profile|server|276195
+off|CF_WITH_REPORT|10283
+off|CF_WITH_REAL|7865
+all|parts|217855
+profile|full|284867
+profile|default|275828
+profile|minimal|232940
+profile|misra|232656
+profile|embedded-json|170398
+profile|embedded-cbor|162111
+profile|server|281733

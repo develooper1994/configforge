@@ -30,8 +30,24 @@ endif()
 # The checks clang-tidy knows and .clang-tidy leaves on, read from the source
 # root so that the repository's own file decides.
 find_program(CF_CERT_CLANG_TIDY NAMES clang-tidy)
+# The names are those of the clang-tidy CI pins (22, the job `tidy`): an older
+# one renamed some checks (the analyzer's ArrayBound was alpha before 21), so
+# the column is held only by that version or a newer one.
+set(cert_tidy_major 0)
+if(CF_CERT_CLANG_TIDY)
+  execute_process(
+    COMMAND "${CF_CERT_CLANG_TIDY}" --version
+    RESULT_VARIABLE vrc
+    OUTPUT_VARIABLE vtext)
+  if(vrc EQUAL 0 AND vtext MATCHES "version ([0-9]+)")
+    set(cert_tidy_major "${CMAKE_MATCH_1}")
+  endif()
+endif()
 if(NOT CF_CERT_CLANG_TIDY)
   message("gate.cert: clang-tidy column not checked, no clang-tidy")
+elseif(cert_tidy_major LESS 22)
+  message("gate.cert: clang-tidy column not checked, clang-tidy "
+          "${cert_tidy_major} is older than the 22 the names are from")
 else()
   execute_process(
     COMMAND "${CF_CERT_CLANG_TIDY}" --list-checks
