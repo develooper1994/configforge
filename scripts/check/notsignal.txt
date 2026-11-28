@@ -1,0 +1,19 @@
+# What "Signal: safe" may not reach, besides the allocator, a call through a
+# pointer, stdio and the locks scripts/check/guarantees.py already refuses
+# (docs/Guarantees.md, "Thread, signal and allocation"): one name pattern
+# and the reason a line, name|reason; * stands for any run of characters.
+# A name here is a libc function that POSIX does not list as safe in a
+# signal handler.
+strerror*|returns a string it may build in a shared buffer
+localtime*|takes the time-zone lock and may read files
+gmtime*|may write a shared buffer
+mktime|takes the time-zone lock and may read files
+strftime|reads the locale and the time zone
+setlocale|changes process-wide state
+getenv|reads the environment while another thread may change it
+setenv|changes the environment, and may allocate
+putenv|changes the environment
+qsort*|calls back through a pointer and may allocate
+syslog|takes a lock and formats
+dlopen|loads a library, allocates and takes locks
+getaddrinfo|resolves names, allocates and takes locks

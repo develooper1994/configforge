@@ -21,6 +21,12 @@ if(Python3_Interpreter_FOUND)
       "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/test_ready.py"
       "${CMAKE_SOURCE_DIR}/scripts/check/ready.py"
       "${CMAKE_CURRENT_SOURCE_DIR}/data/ready" "${CMAKE_CURRENT_BINARY_DIR}")
+  add_test(
+    NAME work.guarantees
+    COMMAND
+      "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/test_guarantees.py"
+      "${CMAKE_SOURCE_DIR}/scripts/check/guarantees.py"
+      "${CMAKE_CURRENT_BINARY_DIR}")
 else()
   message(STATUS "work.brief skipped: Python 3 interpreter unavailable")
 endif()

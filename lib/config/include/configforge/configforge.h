@@ -590,25 +590,37 @@ CF_NODISCARD CF_API cf_config* cf_builder_create(cf_builder* b, cf_error* err);
  * callers who want to know, and cf_type_of answers directly.
  * ------------------------------------------------------------------ */
 
-/* Guarantee: nothrow. The fallback for an absent key or another type. */
+/* Guarantee: nothrow. The fallback for an absent key or another type.
+   Thread: safe.
+   Signal: safe.
+   Alloc: none. */
 CF_API cf_bool     cf_get_bool(const cf_config* c, const char* key, cf_bool fallback);
 CF_API cf_i64      cf_get_int(const cf_config* c, const char* key, cf_i64 fallback);
 CF_API const char* cf_get_text(const cf_config* c, const char* key,
                                const char* fallback);
 #if CF_WITH_REAL
-/* Guarantee: nothrow. The fallback for an absent key or another type. */
+/* Guarantee: nothrow. The fallback for an absent key or another type.
+   Thread: safe.
+   Signal: safe.
+   Alloc: none. */
 CF_API double cf_get_real(const cf_config* c, const char* key, double fallback);
 #endif
 
 /* Pointer and length, for text that may contain anything. The stored
    value is NUL-terminated as well, so cf_get_text stays free.
-   Guarantee: nothrow. The fallback for an absent key or another type. */
+   Guarantee: nothrow. The fallback for an absent key or another type.
+   Thread: safe.
+   Signal: safe.
+   Alloc: none. */
 CF_API const char* cf_get_text_n(const cf_config* c, const char* key, size_t* len,
                                  const char* fallback);
 
 /* CF_OK, CF_E_KEY when absent, CF_E_CONVERT on a type mismatch.
    Guarantee: strong. A read; the configuration is untouched and `out` is unspecified
-   unless the result is CF_OK. */
+   unless the result is CF_OK.
+   Thread: safe.
+   Signal: safe.
+   Alloc: none. */
 CF_NODISCARD CF_API cf_code cf_try_bool(const cf_config* c, const char* key,
                                         cf_bool* out);
 CF_NODISCARD CF_API cf_code cf_try_int(const cf_config* c, const char* key,
@@ -617,7 +629,10 @@ CF_NODISCARD CF_API cf_code cf_try_text(const cf_config* c, const char* key,
                                         const char** out, size_t* len);
 #if CF_WITH_REAL
 /* Guarantee: strong. A read; the configuration is untouched and `out` is unspecified
- * unless the result is CF_OK. */
+ * unless the result is CF_OK.
+ * Thread: safe.
+ * Signal: safe.
+ * Alloc: none. */
 CF_NODISCARD CF_API cf_code cf_try_real(const cf_config* c, const char* key,
                                         double* out);
 #endif

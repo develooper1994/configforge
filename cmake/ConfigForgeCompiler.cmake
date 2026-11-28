@@ -177,12 +177,33 @@ function(configforge_apply_warnings tgt)
   # means anything under the sanitiser.
   if(tgt STREQUAL "configforge" OR tgt STREQUAL "configforge_serialize")
     configforge_stack_budget(${tgt})
+    configforge_callgraph(${tgt})
   elseif(NOT CF_INSTRUMENTED AND CF_DEFAULT_LIMITS)
     check_c_compiler_flag("-Wstack-usage=2048" CF_HAS_STACK_USAGE)
     if(CF_HAS_STACK_USAGE)
       target_compile_options(${tgt} PRIVATE -Wstack-usage=2048)
     endif()
   endif()
+endfunction()
+
+# Write the library's call data beside its objects, for gate.guarantees: the
+# Signal: safe and Alloc: none lines of a header are held against what a
+# function calls (scripts/check/guarantees.py, K-9h). GCC 10 and later only;
+# a build with another compiler, or under CF_LTO where a unit's calls are not
+# the whole story, has no *.ci files, and the gate says so and passes.
+#
+# ~~~
+# configforge_callgraph(<target>)
+# ~~~
+function(configforge_callgraph tgt)
+  if(NOT CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_VERSION
+                                               VERSION_LESS 10)
+    return()
+  endif()
+  if(CF_LTO AND CF_HAS_IPO)
+    return()
+  endif()
+  target_compile_options(${tgt} PRIVATE -fcallgraph-info)
 endfunction()
 
 # Measure every frame of the library and check it against

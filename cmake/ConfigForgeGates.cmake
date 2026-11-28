@@ -118,7 +118,6 @@ function(configforge_add_gates tgt)
     gate
     Fetches
     Nodiscard
-    Guarantees
     Oom
     Options
     Platforms
@@ -130,6 +129,14 @@ function(configforge_add_gates tgt)
              COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P
                      ${CMAKE_SOURCE_DIR}/cmake/gates/Gate${gate}.cmake)
   endforeach()
+  # Every public function states a guarantee, and the Signal: safe and
+  # Alloc: none lines hold against the compiler's call data under the build
+  # directory (scripts/check/guarantees.py).
+  add_test(
+    NAME gate.guarantees
+    COMMAND
+      ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR} -P
+      ${CMAKE_SOURCE_DIR}/cmake/gates/GateGuarantees.cmake)
   # OSS-Fuzz's project files agree with ClusterFuzzLite's build (M-18).
   add_test(NAME gate.ossfuzz
            COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -P

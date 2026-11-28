@@ -110,7 +110,10 @@ typedef struct cf_error {
  * --server-port belongs to the source that needs it, not here.
  * ------------------------------------------------------------------ */
 
-/* Guarantee: strong. A pure check; CF_FALSE says the key is not canonical. */
+/* Guarantee: strong. A pure check; CF_FALSE says the key is not canonical.
+   Thread: safe.
+   Signal: safe.
+   Alloc: none. */
 CF_NODISCARD CF_API cf_bool cf_key_valid(const char* key, size_t len);
 
 /* The same rule with the longest key a caller allows: the key space and

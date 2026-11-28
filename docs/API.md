@@ -696,6 +696,9 @@ CF_API const char* cf_get_text(const cf_config* c, const char* key, const char* 
 Implementation: [`cf_get_bool` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2358), [`cf_get_int` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2363), [`cf_get_text` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2368).
 
 Guarantee: nothrow. The fallback for an absent key or another type.
+Thread: safe.
+Signal: safe.
+Alloc: none.
 
 ```c
 CF_API double cf_get_real(const cf_config* c, const char* key, double fallback);
@@ -704,6 +707,9 @@ CF_API double cf_get_real(const cf_config* c, const char* key, double fallback);
 Implementation: [`cf_get_real` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2390).
 
 Guarantee: nothrow. The fallback for an absent key or another type.
+Thread: safe.
+Signal: safe.
+Alloc: none.
 
 ```c
 CF_API const char* cf_get_text_n(const cf_config* c, const char* key, size_t* len, const char* fallback);
@@ -714,6 +720,9 @@ Implementation: [`cf_get_text_n` (lib/config/src/core/config.c)](https://github.
 Pointer and length, for text that may contain anything. The stored
 value is NUL-terminated as well, so cf_get_text stays free.
 Guarantee: nothrow. The fallback for an absent key or another type.
+Thread: safe.
+Signal: safe.
+Alloc: none.
 
 ```c
 CF_NODISCARD CF_API cf_code cf_try_bool(const cf_config* c, const char* key, cf_bool* out);
@@ -726,6 +735,9 @@ Implementation: [`cf_try_bool` (lib/config/src/core/config.c)](https://github.co
 CF_OK, CF_E_KEY when absent, CF_E_CONVERT on a type mismatch.
 Guarantee: strong. A read; the configuration is untouched and `out` is unspecified
 unless the result is CF_OK.
+Thread: safe.
+Signal: safe.
+Alloc: none.
 
 ```c
 CF_NODISCARD CF_API cf_code cf_try_real(const cf_config* c, const char* key, double* out);
@@ -735,6 +747,9 @@ Implementation: [`cf_try_real` (lib/config/src/core/config.c)](https://github.co
 
 Guarantee: strong. A read; the configuration is untouched and `out` is unspecified
 unless the result is CF_OK.
+Thread: safe.
+Signal: safe.
+Alloc: none.
 
 ```c
 CF_API cf_type cf_type_of(const cf_config* c, const char* key);
@@ -2359,6 +2374,9 @@ CF_NODISCARD CF_API cf_bool cf_key_valid(const char* key, size_t len);
 Implementation: [`cf_key_valid` (lib/base/src/key.c)](https://github.com/develooper1994/configforge/blob/main/lib/base/src/key.c#L11).
 
 Guarantee: strong. A pure check; CF_FALSE says the key is not canonical.
+Thread: safe.
+Signal: safe.
+Alloc: none.
 
 ```c
 CF_API void cf_error_clear(cf_error* e);

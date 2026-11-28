@@ -70,9 +70,58 @@ and outside the gate. There is no list of exceptions: every public name has its
 line, and a new one without it is refused.
 
 The gate refuses: a public name with no line; a word that is not one of the
-three; a `CF_NODISCARD` function that claims `nothrow` (a function that can
+three (and a `Thread:`, `Signal:` or `Alloc:` line whose word is not one of its
+own, below); a `CF_NODISCARD` function that claims `nothrow` (a function that can
 report a failure is not `nothrow`); a table that is not what the headers say (`scripts/check/guarantees.py
 --write` rewrites it).
+
+## Thread, signal and allocation claims
+
+Three more lines may stand beside `Guarantee:` in the same comment, each a
+word and a full stop, each on a line of its own. A line left out is the
+weakest word, so no name needs a line to be honest: a line is written only
+where it is proved (the maintainer, 2026-11-27, "which of them can the library
+provide?"; D-238).
+
+| Line | Words | Default | What it says |
+| ---- | ----- | ------- | ------------ |
+| `Thread:` | `safe`, `distinct objects`, `unsafe` | `distinct objects` | `safe`: any number of threads may call it on the same objects at once (the readers of a built `cf_config`, D-14). `distinct objects`: calls on different objects are independent; one object is the caller's to serialise. `unsafe`: it touches state shared beyond its arguments; none is expected, and the gate prints each. |
+| `Signal:` | `safe`, `unsafe` | `unsafe` | `safe`: it may be called from a signal handler or an interrupt: it reaches no allocator, no stdio, no lock, no call through a pointer, and leaves `errno` as it found it. |
+| `Alloc:` | `none`, `may` | `may` | `none`: it never calls the allocator, directly or through a callee. |
+
+```c
+/* Guarantee: nothrow. The fallback for an absent key or another type.
+   Thread: safe.
+   Signal: safe.
+   Alloc: none. */
+```
+
+Interrupt and real-time claims follow from the words and need none of their
+own: a function that is `Signal: safe` with `Alloc: none` and a stated stack
+frame (`gate.stack`) may run in an interrupt handler or in a hard real-time
+loop.
+
+`gate.guarantees` refuses a word that is not in the table, and it holds the
+two words that can be proved. For `Signal: safe` and `Alloc: none` it reads
+the compiler's call data: GCC 10 and later write `*.ci` files beside the
+library's objects when they are given `-fcallgraph-info`, and the build does
+so for `configforge` and `configforge_serialize`. The check follows the calls
+of the function through every file, and refuses, naming the path
+(`cf_x -> helper -> malloc`): a reached `malloc`, `calloc`, `realloc`, `free`
+or the library's arena allocators; a call through a pointer (the allocator's
+own `alloc` and `release` are one, and nothing says what else a pointer
+holds); and, for `Signal: safe` only, stdio (`fopen`, `printf` and its
+relatives, and what GCC turns them into), the locks (`pthread_mutex_*`,
+`mtx_*` and their kin) and every name of `scripts/check/notsignal.txt` (one
+`name|reason` a line, `*` any run of characters). A path of the compiler's own
+(`memcpy`, `__stack_chk_fail`) is not refused. A function the call data does
+not hold (it is not built in this configuration) is said, not refused. On a
+build without call data (another compiler, or `CF_LTO`) the gate prints that
+the two words were not checked, and passes; CI's GCC builds check them.
+
+`Thread: safe` is held by `test_threads` for the readers of a built
+`cf_config`, not by the call data: a function that writes shared state would
+need a race detector to be caught.
 
 ## The library never ends the program
 
@@ -106,327 +155,332 @@ caller's, a crash, an `exec`. Each row names the ctest that holds it
 
 ## The table
 
+One row a public function: its failure guarantee, then its thread, signal and
+allocation words (the default where its header says none).
+
 <!-- guarantees:begin -->
 
-| Function | Header | Guarantee |
-| -------- | ------ | --------- |
-| `cf_app` | `configforge.h` | strong |
-| `cf_app_builder` | `configforge.h` | strong |
-| `cf_apply_stats` | `configforge.h` | nothrow |
-| `cf_arena_alloc` | `cf_alloc.h` | strong |
-| `cf_arena_allocator` | `cf_alloc.h` | nothrow |
-| `cf_arena_calloc` | `cf_alloc.h` | strong |
-| `cf_arena_capacity` | `cf_alloc.h` | nothrow |
-| `cf_arena_dup` | `cf_alloc.h` | strong |
-| `cf_arena_fixed` | `cf_alloc.h` | strong |
-| `cf_arena_free` | `cf_alloc.h` | nothrow |
-| `cf_arena_is_fixed` | `cf_alloc.h` | strong |
-| `cf_arena_new` | `cf_alloc.h` | strong |
-| `cf_arena_used` | `cf_alloc.h` | nothrow |
-| `cf_arena_wipe` | `cf_alloc.h` | nothrow |
-| `cf_array_count` | `cf_iterate.h` | nothrow |
-| `cf_array_key` | `cf_iterate.h` | nothrow |
-| `cf_blob_arena` | `cf_serialize.h` | strong |
-| `cf_blob_arena_done` | `cf_serialize.h` | nothrow |
-| `cf_blob_file` | `cf_serialize.h` | basic |
-| `cf_blob_mem` | `cf_serialize.h` | nothrow |
-| `cf_blob_skip_bom` | `cf_serialize.h` | nothrow |
-| `cf_build` | `configforge.h` | strong |
-| `cf_build_id` | `cf_version.h` | strong |
-| `cf_build_in` | `configforge.h` | strong |
-| `cf_build_limit` | `cf_version.h` | nothrow |
-| `cf_build_profile` | `cf_version.h` | strong |
-| `cf_builder_abort` | `configforge.h` | nothrow |
-| `cf_builder_bool` | `configforge.h` | basic |
-| `cf_builder_cli` | `configforge.h` | basic |
-| `cf_builder_codec` | `configforge.h` | basic |
-| `cf_builder_create` | `configforge.h` | strong |
-| `cf_builder_credentials` | `configforge.h` | basic |
-| `cf_builder_define` | `configforge.h` | basic |
-| `cf_builder_digest_key` | `configforge.h` | basic |
-| `cf_builder_dir` | `configforge.h` | basic |
-| `cf_builder_document` | `configforge.h` | basic |
-| `cf_builder_dotenv` | `configforge.h` | basic |
-| `cf_builder_env` | `configforge.h` | basic |
-| `cf_builder_env_document` | `configforge.h` | basic |
-| `cf_builder_file` | `configforge.h` | basic |
-| `cf_builder_file_codec` | `configforge.h` | basic |
-| `cf_builder_int` | `configforge.h` | basic |
-| `cf_builder_key` | `configforge.h` | basic |
-| `cf_builder_limits` | `configforge.h` | basic |
-| `cf_builder_log` | `configforge.h` | nothrow |
-| `cf_builder_memory` | `configforge.h` | basic |
-| `cf_builder_open` | `configforge.h` | basic |
-| `cf_builder_preferences` | `configforge.h` | basic |
-| `cf_builder_real` | `configforge.h` | basic |
-| `cf_builder_registry` | `configforge.h` | basic |
-| `cf_builder_replay` | `configforge.h` | basic |
-| `cf_builder_response_files` | `configforge.h` | basic |
-| `cf_builder_schema` | `configforge.h` | basic |
-| `cf_builder_schema_file` | `configforge.h` | basic |
-| `cf_builder_secrets` | `configforge.h` | basic |
-| `cf_builder_sizing` | `configforge.h` | basic |
-| `cf_builder_source` | `configforge.h` | basic |
-| `cf_builder_store` | `configforge.h` | basic |
-| `cf_builder_text` | `configforge.h` | basic |
-| `cf_builder_track_reads` | `configforge.h` | nothrow |
-| `cf_builder_unknown` | `configforge.h` | nothrow |
-| `cf_builder_writable` | `configforge.h` | basic |
-| `cf_changed` | `configforge.h` | strong |
-| `cf_cli_args` | `cf_entry.h` | basic |
-| `cf_cli_expand` | `cf_entry.h` | basic |
-| `cf_code_description` | `cf_error.h` | nothrow |
-| `cf_code_name` | `cf_error.h` | nothrow |
-| `cf_codec_among` | `cf_serialize.h` | nothrow |
-| `cf_codec_at` | `cf_serialize.h` | nothrow |
-| `cf_codec_by_name` | `cf_serialize.h` | nothrow |
-| `cf_codec_by_path` | `cf_serialize.h` | nothrow |
-| `cf_codec_can_read` | `cf_serialize.h` | strong |
-| `cf_codec_compose_sized` | `cf_serialize.h` | strong |
-| `cf_codec_count` | `cf_serialize.h` | nothrow |
-| `cf_codec_decode` | `cf_serialize.h` | basic |
-| `cf_codec_detect` | `cf_serialize.h` | basic |
-| `cf_codec_kind` | `cf_serialize.h` | nothrow |
-| `cf_codec_select` | `cf_serialize.h` | nothrow |
-| `cf_config_codec` | `configforge.h` | nothrow |
-| `cf_config_free` | `configforge.h` | nothrow |
-| `cf_config_ref` | `configforge.h` | nothrow |
-| `cf_config_sizing` | `configforge.h` | strong |
-| `cf_count` | `configforge.h` | nothrow |
-| `cf_def_init_sized` | `cf_define.h` | nothrow |
-| `cf_default_allocator` | `cf_alloc.h` | nothrow |
-| `cf_defs` | `configforge.h` | nothrow |
-| `cf_defs_apply` | `cf_define.h` | basic |
-| `cf_derive` | `configforge.h` | strong |
-| `cf_derive_in` | `configforge.h` | strong |
-| `cf_diff` | `configforge.h` | nothrow |
-| `cf_diff_json` | `configforge.h` | strong |
-| `cf_diff_text` | `configforge.h` | strong |
-| `cf_digest` | `configforge.h` | nothrow |
-| `cf_edit_abort` | `cf_edit.h` | nothrow |
-| `cf_edit_begin` | `cf_edit.h` | strong |
-| `cf_edit_commit` | `cf_edit.h` | strong |
-| `cf_edit_count` | `cf_edit.h` | nothrow |
-| `cf_edit_set_bool` | `cf_edit.h` | basic |
-| `cf_edit_set_int` | `cf_edit.h` | basic |
-| `cf_edit_set_real` | `cf_edit.h` | basic |
-| `cf_edit_set_text` | `cf_edit.h` | basic |
-| `cf_edit_unset` | `cf_edit.h` | basic |
-| `cf_emit` | `cf_emit.h` | strong |
-| `cf_encoding_by_name` | `cf_encoding.h` | strong |
-| `cf_encoding_check` | `cf_encoding.h` | strong |
-| `cf_encoding_name` | `cf_encoding.h` | nothrow |
-| `cf_encoding_recode` | `cf_encoding.h` | strong |
-| `cf_env_key` | `cf_source.h` | nothrow |
-| `cf_env_value` | `cf_entry.h` | nothrow |
-| `cf_environ` | `cf_source.h` | nothrow |
-| `cf_error_clear` | `cf_error.h` | nothrow |
-| `cf_error_copy` | `cf_error.h` | nothrow |
-| `cf_error_place` | `cf_error.h` | nothrow |
-| `cf_error_place_at` | `cf_error.h` | nothrow |
-| `cf_error_set` | `cf_error.h` | nothrow |
-| `cf_error_set_long` | `cf_error.h` | nothrow |
-| `cf_explain` | `configforge.h` | strong |
-| `cf_explain_json` | `configforge.h` | strong |
-| `cf_feature_at` | `cf_version.h` | nothrow |
-| `cf_feature_count` | `cf_version.h` | nothrow |
-| `cf_file_options_init` | `cf_file.h` | nothrow |
-| `cf_file_replace` | `cf_file.h` | strong |
-| `cf_file_writer_close` | `cf_file.h` | basic |
-| `cf_file_writer_flush` | `cf_file.h` | basic |
-| `cf_file_writer_open` | `cf_file.h` | basic |
-| `cf_file_writer_sync` | `cf_file.h` | basic |
-| `cf_file_writer_write` | `cf_file.h` | basic |
-| `cf_fingerprint` | `configforge.h` | nothrow |
-| `cf_fingerprint_format` | `configforge.h` | nothrow |
-| `cf_fingerprint_seed` | `cf_define.h` | nothrow |
-| `cf_fingerprint_step` | `cf_define.h` | nothrow |
-| `cf_fmt` | `cf_port.h` | nothrow |
-| `cf_fmt_append` | `cf_port.h` | nothrow |
-| `cf_format_holds` | `cf_serialize.h` | strong |
-| `cf_format_limits` | `cf_serialize.h` | strong |
-| `cf_format_of_path` | `cf_serialize.h` | nothrow |
-| `cf_format_option` | `cf_serialize.h` | nothrow |
-| `cf_get_bool` | `configforge.h` | nothrow |
-| `cf_get_int` | `configforge.h` | nothrow |
-| `cf_get_real` | `configforge.h` | nothrow |
-| `cf_get_text` | `configforge.h` | nothrow |
-| `cf_get_text_n` | `configforge.h` | nothrow |
-| `cf_has` | `configforge.h` | strong |
-| `cf_has_feature` | `cf_version.h` | nothrow |
-| `cf_image_at` | `cf_image.h` | strong |
-| `cf_image_count` | `cf_image.h` | nothrow |
-| `cf_image_get` | `cf_image.h` | strong |
-| `cf_image_load` | `cf_image.h` | basic |
-| `cf_image_open` | `cf_image.h` | basic |
-| `cf_image_write` | `cf_image.h` | strong |
-| `cf_inspect` | `configforge.h` | strong |
-| `cf_iter_children` | `cf_iterate.h` | strong |
-| `cf_iter_keys` | `cf_iterate.h` | strong |
-| `cf_iter_next` | `cf_iterate.h` | strong |
-| `cf_key_cmp` | `cf_keyspace.h` | nothrow |
-| `cf_key_segments` | `cf_keyspace.h` | nothrow |
-| `cf_key_valid` | `cf_error.h` | strong |
-| `cf_keymap_from_key` | `cf_entry.h` | nothrow |
-| `cf_keymap_init` | `cf_entry.h` | nothrow |
-| `cf_keymap_to_key` | `cf_entry.h` | nothrow |
-| `cf_keys` | `configforge.h` | nothrow |
-| `cf_keysink_init` | `cf_entry.h` | strong |
-| `cf_keysink_of` | `cf_entry.h` | nothrow |
-| `cf_ks_add` | `cf_keyspace.h` | basic |
-| `cf_ks_add_authored` | `cf_keyspace.h` | basic |
-| `cf_ks_add_candidate` | `cf_keyspace.h` | strong |
-| `cf_ks_add_default` | `cf_keyspace.h` | basic |
-| `cf_ks_add_resolved` | `cf_keyspace.h` | basic |
-| `cf_ks_add_text` | `cf_keyspace.h` | basic |
-| `cf_ks_arena` | `cf_keyspace.h` | nothrow |
-| `cf_lex_cli` | `cf_entry.h` | basic |
-| `cf_lex_dotenv` | `cf_entry.h` | basic |
-| `cf_lex_env` | `cf_entry.h` | basic |
-| `cf_limit_options_init` | `configforge.h` | nothrow |
-| `cf_listsink_finish` | `cf_entry.h` | basic |
-| `cf_listsink_init` | `cf_entry.h` | strong |
-| `cf_listsink_of` | `cf_entry.h` | nothrow |
-| `cf_live_approve` | `cf_live.h` | strong |
-| `cf_live_close` | `cf_live.h` | nothrow |
-| `cf_live_commit` | `cf_live.h` | strong |
-| `cf_live_confirm` | `cf_live.h` | strong |
-| `cf_live_generation` | `cf_live.h` | nothrow |
-| `cf_live_get` | `cf_live.h` | nothrow |
-| `cf_live_last_error` | `cf_live.h` | strong |
-| `cf_live_open` | `cf_live.h` | strong |
-| `cf_live_open_with` | `cf_live.h` | strong |
-| `cf_live_options_init` | `cf_live.h` | nothrow |
-| `cf_live_pending` | `cf_live.h` | nothrow |
-| `cf_live_poll` | `cf_live.h` | strong |
-| `cf_live_reject` | `cf_live.h` | nothrow |
-| `cf_live_reload` | `cf_live.h` | strong |
-| `cf_live_restarts` | `cf_live.h` | nothrow |
-| `cf_live_rollback` | `cf_live.h` | strong |
-| `cf_live_status_get` | `cf_live.h` | strong |
-| `cf_live_wait` | `cf_live.h` | strong |
-| `cf_loc_text` | `cf_serialize.h` | nothrow |
-| `cf_lock_none` | `cf_lock.h` | nothrow |
-| `cf_lock_sidecar` | `cf_lock.h` | nothrow |
-| `cf_log_level_name` | `cf_log.h` | nothrow |
-| `cf_outcome_can_win` | `cf_keyspace.h` | strong |
-| `cf_outcome_name` | `cf_keyspace.h` | nothrow |
-| `cf_platform_has_dir_list` | `cf_platform.h` | strong |
-| `cf_platform_has_environ` | `cf_platform.h` | strong |
-| `cf_platform_has_preferences` | `cf_platform.h` | strong |
-| `cf_platform_has_private_create` | `cf_platform.h` | strong |
-| `cf_platform_has_registry` | `cf_platform.h` | strong |
-| `cf_platform_has_trusted_dir` | `cf_platform.h` | strong |
-| `cf_platform_has_wake` | `cf_platform.h` | strong |
-| `cf_platform_has_wide_args` | `cf_platform.h` | strong |
-| `cf_platform_name` | `cf_platform.h` | nothrow |
-| `cf_policy_text` | `cf_define.h` | nothrow |
-| `cf_port_description` | `cf_port.h` | nothrow |
-| `cf_read_count` | `configforge.h` | nothrow |
-| `cf_reason_description` | `cf_error.h` | nothrow |
-| `cf_reason_name` | `cf_error.h` | nothrow |
-| `cf_reason_severity` | `cf_error.h` | nothrow |
-| `cf_reason_weakness` | `cf_error.h` | nothrow |
-| `cf_refusal_name` | `cf_keyspace.h` | nothrow |
-| `cf_refusal_text` | `cf_keyspace.h` | nothrow |
-| `cf_report` | `configforge.h` | strong |
-| `cf_report_key_write` | `cf_report.h` | strong |
-| `cf_report_write` | `cf_report.h` | strong |
-| `cf_schema` | `configforge.h` | strong |
-| `cf_schema_write` | `cf_report.h` | strong |
-| `cf_serialize_version` | `cf_serialize_version.h` | nothrow |
-| `cf_serialize_version_number` | `cf_serialize_version.h` | nothrow |
-| `cf_sink_fmt` | `cf_serialize.h` | basic |
-| `cf_sink_init` | `cf_serialize.h` | nothrow |
-| `cf_sink_json_string` | `cf_serialize.h` | basic |
-| `cf_sink_json_value` | `cf_serialize.h` | basic |
-| `cf_sink_overflowed` | `cf_serialize.h` | strong |
-| `cf_sink_putc` | `cf_serialize.h` | basic |
-| `cf_sink_puts` | `cf_serialize.h` | basic |
-| `cf_sink_terminate` | `cf_serialize.h` | basic |
-| `cf_sink_write` | `cf_serialize.h` | basic |
-| `cf_sizing_options_init` | `configforge.h` | nothrow |
-| `cf_source_cli` | `cf_source.h` | strong |
-| `cf_source_cli_defs` | `cf_define.h` | nothrow |
-| `cf_source_defaults` | `cf_define.h` | strong |
-| `cf_source_destroy` | `cf_source.h` | nothrow |
-| `cf_source_dir` | `cf_source.h` | strong |
-| `cf_source_dir_codecs` | `cf_source.h` | nothrow |
-| `cf_source_dir_error` | `cf_source.h` | nothrow |
-| `cf_source_dir_state_size` | `cf_source.h` | nothrow |
-| `cf_source_document` | `cf_source.h` | strong |
-| `cf_source_dotenv` | `cf_source.h` | strong |
-| `cf_source_dotenv_defs` | `cf_define.h` | nothrow |
-| `cf_source_dotenv_error` | `cf_source.h` | nothrow |
-| `cf_source_dotenv_state_size` | `cf_source.h` | nothrow |
-| `cf_source_env` | `cf_source.h` | strong |
-| `cf_source_env_defs` | `cf_define.h` | nothrow |
-| `cf_source_env_document` | `cf_source.h` | strong |
-| `cf_source_file` | `cf_source.h` | strong |
-| `cf_source_file_codec` | `cf_source.h` | strong |
-| `cf_source_file_codecs` | `cf_source.h` | nothrow |
-| `cf_source_file_defs` | `cf_define.h` | nothrow |
-| `cf_source_file_encoding` | `cf_source.h` | nothrow |
-| `cf_source_file_error` | `cf_source.h` | nothrow |
-| `cf_source_file_format` | `cf_source.h` | nothrow |
-| `cf_source_file_state_size` | `cf_source.h` | nothrow |
-| `cf_source_image_error` | `cf_image.h` | nothrow |
-| `cf_source_image_file` | `cf_image.h` | strong |
-| `cf_source_image_mem` | `cf_image.h` | strong |
-| `cf_source_image_state_size` | `cf_image.h` | nothrow |
-| `cf_source_load` | `cf_source.h` | basic |
-| `cf_source_memory` | `cf_source.h` | strong |
-| `cf_source_path` | `cf_source.h` | nothrow |
-| `cf_source_registry` | `cf_source.h` | strong |
-| `cf_source_registry_error` | `cf_source.h` | nothrow |
-| `cf_source_registry_state_size` | `cf_source.h` | nothrow |
-| `cf_source_replay` | `cf_report.h` | strong |
-| `cf_source_replay_error` | `cf_report.h` | nothrow |
-| `cf_source_replay_state_size` | `cf_report.h` | nothrow |
-| `cf_source_secrets` | `cf_source.h` | strong |
-| `cf_source_secrets_error` | `cf_source.h` | nothrow |
-| `cf_source_secrets_state_size` | `cf_source.h` | nothrow |
-| `cf_source_snapshot` | `cf_source.h` | strong |
-| `cf_source_store` | `cf_source.h` | strong |
-| `cf_source_store_error` | `cf_source.h` | nothrow |
-| `cf_source_store_state_size` | `cf_source.h` | nothrow |
-| `cf_sources` | `configforge.h` | nothrow |
-| `cf_store_set` | `cf_source.h` | basic |
-| `cf_text_is_utf8` | `cf_serialize.h` | strong |
-| `cf_tlv_codec_sized` | `cf_serialize.h` | strong |
-| `cf_tracks_reads` | `configforge.h` | strong |
-| `cf_try_bool` | `configforge.h` | strong |
-| `cf_try_int` | `configforge.h` | strong |
-| `cf_try_real` | `configforge.h` | strong |
-| `cf_try_text` | `configforge.h` | strong |
-| `cf_type_json_name` | `cf_value.h` | nothrow |
-| `cf_type_name` | `cf_value.h` | nothrow |
-| `cf_type_of` | `configforge.h` | nothrow |
-| `cf_usage` | `configforge.h` | strong |
-| `cf_value_bool` | `cf_value.h` | nothrow |
-| `cf_value_cmp` | `cf_value.h` | nothrow |
-| `cf_value_equal` | `cf_value.h` | strong |
-| `cf_value_from_text` | `cf_value.h` | strong |
-| `cf_value_infer` | `cf_value.h` | strong |
-| `cf_value_int` | `cf_value.h` | nothrow |
-| `cf_value_null` | `cf_value.h` | nothrow |
-| `cf_value_real` | `cf_value.h` | nothrow |
-| `cf_value_text` | `cf_value.h` | nothrow |
-| `cf_value_to_text` | `cf_value.h` | nothrow |
-| `cf_version` | `cf_version.h` | nothrow |
-| `cf_version_number` | `cf_version.h` | nothrow |
-| `cf_vfmt` | `cf_port.h` | nothrow |
-| `cf_was_read` | `configforge.h` | strong |
-| `cf_watch_count` | `configforge.h` | nothrow |
-| `cf_watch_path` | `configforge.h` | nothrow |
-| `cf_watcher_close` | `configforge.h` | nothrow |
-| `cf_watcher_drain` | `configforge.h` | strong |
-| `cf_watcher_fd` | `configforge.h` | nothrow |
-| `cf_watcher_handle` | `configforge.h` | nothrow |
-| `cf_watcher_open` | `configforge.h` | strong |
-| `cf_watcher_wait` | `configforge.h` | basic |
-| `cf_write` | `configforge.h` | strong |
+| Function | Header | Guarantee | Thread | Signal | Alloc |
+| -------- | ------ | --------- | ------ | ------ | ----- |
+| `cf_app` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_app_builder` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_apply_stats` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_arena_alloc` | `cf_alloc.h` | strong | distinct objects | unsafe | may |
+| `cf_arena_allocator` | `cf_alloc.h` | nothrow | distinct objects | unsafe | may |
+| `cf_arena_calloc` | `cf_alloc.h` | strong | distinct objects | unsafe | may |
+| `cf_arena_capacity` | `cf_alloc.h` | nothrow | distinct objects | unsafe | may |
+| `cf_arena_dup` | `cf_alloc.h` | strong | distinct objects | unsafe | may |
+| `cf_arena_fixed` | `cf_alloc.h` | strong | distinct objects | unsafe | may |
+| `cf_arena_free` | `cf_alloc.h` | nothrow | distinct objects | unsafe | may |
+| `cf_arena_is_fixed` | `cf_alloc.h` | strong | distinct objects | unsafe | may |
+| `cf_arena_new` | `cf_alloc.h` | strong | distinct objects | unsafe | may |
+| `cf_arena_used` | `cf_alloc.h` | nothrow | distinct objects | unsafe | may |
+| `cf_arena_wipe` | `cf_alloc.h` | nothrow | distinct objects | unsafe | may |
+| `cf_array_count` | `cf_iterate.h` | nothrow | distinct objects | unsafe | may |
+| `cf_array_key` | `cf_iterate.h` | nothrow | distinct objects | unsafe | may |
+| `cf_blob_arena` | `cf_serialize.h` | strong | distinct objects | unsafe | may |
+| `cf_blob_arena_done` | `cf_serialize.h` | nothrow | distinct objects | unsafe | may |
+| `cf_blob_file` | `cf_serialize.h` | basic | distinct objects | unsafe | may |
+| `cf_blob_mem` | `cf_serialize.h` | nothrow | distinct objects | unsafe | may |
+| `cf_blob_skip_bom` | `cf_serialize.h` | nothrow | distinct objects | unsafe | may |
+| `cf_build` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_build_id` | `cf_version.h` | strong | distinct objects | unsafe | may |
+| `cf_build_in` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_build_limit` | `cf_version.h` | nothrow | distinct objects | unsafe | may |
+| `cf_build_profile` | `cf_version.h` | strong | distinct objects | unsafe | may |
+| `cf_builder_abort` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_builder_bool` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_cli` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_codec` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_create` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_builder_credentials` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_define` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_digest_key` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_dir` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_document` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_dotenv` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_env` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_env_document` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_file` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_file_codec` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_int` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_key` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_limits` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_log` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_builder_memory` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_open` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_preferences` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_real` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_registry` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_replay` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_response_files` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_schema` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_schema_file` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_secrets` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_sizing` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_source` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_store` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_text` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_track_reads` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_builder_unknown` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_builder_writable` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_changed` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_cli_args` | `cf_entry.h` | basic | distinct objects | unsafe | may |
+| `cf_cli_expand` | `cf_entry.h` | basic | distinct objects | unsafe | may |
+| `cf_code_description` | `cf_error.h` | nothrow | distinct objects | unsafe | may |
+| `cf_code_name` | `cf_error.h` | nothrow | distinct objects | unsafe | may |
+| `cf_codec_among` | `cf_serialize.h` | nothrow | distinct objects | unsafe | may |
+| `cf_codec_at` | `cf_serialize.h` | nothrow | distinct objects | unsafe | may |
+| `cf_codec_by_name` | `cf_serialize.h` | nothrow | distinct objects | unsafe | may |
+| `cf_codec_by_path` | `cf_serialize.h` | nothrow | distinct objects | unsafe | may |
+| `cf_codec_can_read` | `cf_serialize.h` | strong | distinct objects | unsafe | may |
+| `cf_codec_compose_sized` | `cf_serialize.h` | strong | distinct objects | unsafe | may |
+| `cf_codec_count` | `cf_serialize.h` | nothrow | distinct objects | unsafe | may |
+| `cf_codec_decode` | `cf_serialize.h` | basic | distinct objects | unsafe | may |
+| `cf_codec_detect` | `cf_serialize.h` | basic | distinct objects | unsafe | may |
+| `cf_codec_kind` | `cf_serialize.h` | nothrow | distinct objects | unsafe | may |
+| `cf_codec_select` | `cf_serialize.h` | nothrow | distinct objects | unsafe | may |
+| `cf_config_codec` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_config_free` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_config_ref` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_config_sizing` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_count` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_def_init_sized` | `cf_define.h` | nothrow | distinct objects | unsafe | may |
+| `cf_default_allocator` | `cf_alloc.h` | nothrow | distinct objects | unsafe | may |
+| `cf_defs` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_defs_apply` | `cf_define.h` | basic | distinct objects | unsafe | may |
+| `cf_derive` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_derive_in` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_diff` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_diff_json` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_diff_text` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_digest` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_edit_abort` | `cf_edit.h` | nothrow | distinct objects | unsafe | may |
+| `cf_edit_begin` | `cf_edit.h` | strong | distinct objects | unsafe | may |
+| `cf_edit_commit` | `cf_edit.h` | strong | distinct objects | unsafe | may |
+| `cf_edit_count` | `cf_edit.h` | nothrow | distinct objects | unsafe | may |
+| `cf_edit_set_bool` | `cf_edit.h` | basic | distinct objects | unsafe | may |
+| `cf_edit_set_int` | `cf_edit.h` | basic | distinct objects | unsafe | may |
+| `cf_edit_set_real` | `cf_edit.h` | basic | distinct objects | unsafe | may |
+| `cf_edit_set_text` | `cf_edit.h` | basic | distinct objects | unsafe | may |
+| `cf_edit_unset` | `cf_edit.h` | basic | distinct objects | unsafe | may |
+| `cf_emit` | `cf_emit.h` | strong | distinct objects | unsafe | may |
+| `cf_encoding_by_name` | `cf_encoding.h` | strong | distinct objects | unsafe | may |
+| `cf_encoding_check` | `cf_encoding.h` | strong | distinct objects | unsafe | may |
+| `cf_encoding_name` | `cf_encoding.h` | nothrow | distinct objects | unsafe | may |
+| `cf_encoding_recode` | `cf_encoding.h` | strong | distinct objects | unsafe | may |
+| `cf_env_key` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_env_value` | `cf_entry.h` | nothrow | distinct objects | unsafe | may |
+| `cf_environ` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_error_clear` | `cf_error.h` | nothrow | distinct objects | unsafe | may |
+| `cf_error_copy` | `cf_error.h` | nothrow | distinct objects | unsafe | may |
+| `cf_error_place` | `cf_error.h` | nothrow | distinct objects | unsafe | may |
+| `cf_error_place_at` | `cf_error.h` | nothrow | distinct objects | unsafe | may |
+| `cf_error_set` | `cf_error.h` | nothrow | distinct objects | unsafe | may |
+| `cf_error_set_long` | `cf_error.h` | nothrow | distinct objects | unsafe | may |
+| `cf_explain` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_explain_json` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_feature_at` | `cf_version.h` | nothrow | distinct objects | unsafe | may |
+| `cf_feature_count` | `cf_version.h` | nothrow | distinct objects | unsafe | may |
+| `cf_file_options_init` | `cf_file.h` | nothrow | distinct objects | unsafe | may |
+| `cf_file_replace` | `cf_file.h` | strong | distinct objects | unsafe | may |
+| `cf_file_writer_close` | `cf_file.h` | basic | distinct objects | unsafe | may |
+| `cf_file_writer_flush` | `cf_file.h` | basic | distinct objects | unsafe | may |
+| `cf_file_writer_open` | `cf_file.h` | basic | distinct objects | unsafe | may |
+| `cf_file_writer_sync` | `cf_file.h` | basic | distinct objects | unsafe | may |
+| `cf_file_writer_write` | `cf_file.h` | basic | distinct objects | unsafe | may |
+| `cf_fingerprint` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_fingerprint_format` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_fingerprint_seed` | `cf_define.h` | nothrow | distinct objects | unsafe | may |
+| `cf_fingerprint_step` | `cf_define.h` | nothrow | distinct objects | unsafe | may |
+| `cf_fmt` | `cf_port.h` | nothrow | distinct objects | unsafe | may |
+| `cf_fmt_append` | `cf_port.h` | nothrow | distinct objects | unsafe | may |
+| `cf_format_holds` | `cf_serialize.h` | strong | distinct objects | unsafe | may |
+| `cf_format_limits` | `cf_serialize.h` | strong | distinct objects | unsafe | may |
+| `cf_format_of_path` | `cf_serialize.h` | nothrow | distinct objects | unsafe | may |
+| `cf_format_option` | `cf_serialize.h` | nothrow | distinct objects | unsafe | may |
+| `cf_get_bool` | `configforge.h` | nothrow | safe | safe | none |
+| `cf_get_int` | `configforge.h` | nothrow | safe | safe | none |
+| `cf_get_real` | `configforge.h` | nothrow | safe | safe | none |
+| `cf_get_text` | `configforge.h` | nothrow | safe | safe | none |
+| `cf_get_text_n` | `configforge.h` | nothrow | safe | safe | none |
+| `cf_has` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_has_feature` | `cf_version.h` | nothrow | distinct objects | unsafe | may |
+| `cf_image_at` | `cf_image.h` | strong | distinct objects | unsafe | may |
+| `cf_image_count` | `cf_image.h` | nothrow | distinct objects | unsafe | may |
+| `cf_image_get` | `cf_image.h` | strong | distinct objects | unsafe | may |
+| `cf_image_load` | `cf_image.h` | basic | distinct objects | unsafe | may |
+| `cf_image_open` | `cf_image.h` | basic | distinct objects | unsafe | may |
+| `cf_image_write` | `cf_image.h` | strong | distinct objects | unsafe | may |
+| `cf_inspect` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_iter_children` | `cf_iterate.h` | strong | distinct objects | unsafe | may |
+| `cf_iter_keys` | `cf_iterate.h` | strong | distinct objects | unsafe | may |
+| `cf_iter_next` | `cf_iterate.h` | strong | distinct objects | unsafe | may |
+| `cf_key_cmp` | `cf_keyspace.h` | nothrow | distinct objects | unsafe | may |
+| `cf_key_segments` | `cf_keyspace.h` | nothrow | distinct objects | unsafe | may |
+| `cf_key_valid` | `cf_error.h` | strong | safe | safe | none |
+| `cf_keymap_from_key` | `cf_entry.h` | nothrow | distinct objects | unsafe | may |
+| `cf_keymap_init` | `cf_entry.h` | nothrow | distinct objects | unsafe | may |
+| `cf_keymap_to_key` | `cf_entry.h` | nothrow | distinct objects | unsafe | may |
+| `cf_keys` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_keysink_init` | `cf_entry.h` | strong | distinct objects | unsafe | may |
+| `cf_keysink_of` | `cf_entry.h` | nothrow | distinct objects | unsafe | may |
+| `cf_ks_add` | `cf_keyspace.h` | basic | distinct objects | unsafe | may |
+| `cf_ks_add_authored` | `cf_keyspace.h` | basic | distinct objects | unsafe | may |
+| `cf_ks_add_candidate` | `cf_keyspace.h` | strong | distinct objects | unsafe | may |
+| `cf_ks_add_default` | `cf_keyspace.h` | basic | distinct objects | unsafe | may |
+| `cf_ks_add_resolved` | `cf_keyspace.h` | basic | distinct objects | unsafe | may |
+| `cf_ks_add_text` | `cf_keyspace.h` | basic | distinct objects | unsafe | may |
+| `cf_ks_arena` | `cf_keyspace.h` | nothrow | distinct objects | unsafe | may |
+| `cf_lex_cli` | `cf_entry.h` | basic | distinct objects | unsafe | may |
+| `cf_lex_dotenv` | `cf_entry.h` | basic | distinct objects | unsafe | may |
+| `cf_lex_env` | `cf_entry.h` | basic | distinct objects | unsafe | may |
+| `cf_limit_options_init` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_listsink_finish` | `cf_entry.h` | basic | distinct objects | unsafe | may |
+| `cf_listsink_init` | `cf_entry.h` | strong | distinct objects | unsafe | may |
+| `cf_listsink_of` | `cf_entry.h` | nothrow | distinct objects | unsafe | may |
+| `cf_live_approve` | `cf_live.h` | strong | distinct objects | unsafe | may |
+| `cf_live_close` | `cf_live.h` | nothrow | distinct objects | unsafe | may |
+| `cf_live_commit` | `cf_live.h` | strong | distinct objects | unsafe | may |
+| `cf_live_confirm` | `cf_live.h` | strong | distinct objects | unsafe | may |
+| `cf_live_generation` | `cf_live.h` | nothrow | distinct objects | unsafe | may |
+| `cf_live_get` | `cf_live.h` | nothrow | distinct objects | unsafe | may |
+| `cf_live_last_error` | `cf_live.h` | strong | distinct objects | unsafe | may |
+| `cf_live_open` | `cf_live.h` | strong | distinct objects | unsafe | may |
+| `cf_live_open_with` | `cf_live.h` | strong | distinct objects | unsafe | may |
+| `cf_live_options_init` | `cf_live.h` | nothrow | distinct objects | unsafe | may |
+| `cf_live_pending` | `cf_live.h` | nothrow | distinct objects | unsafe | may |
+| `cf_live_poll` | `cf_live.h` | strong | distinct objects | unsafe | may |
+| `cf_live_reject` | `cf_live.h` | nothrow | distinct objects | unsafe | may |
+| `cf_live_reload` | `cf_live.h` | strong | distinct objects | unsafe | may |
+| `cf_live_restarts` | `cf_live.h` | nothrow | distinct objects | unsafe | may |
+| `cf_live_rollback` | `cf_live.h` | strong | distinct objects | unsafe | may |
+| `cf_live_status_get` | `cf_live.h` | strong | distinct objects | unsafe | may |
+| `cf_live_wait` | `cf_live.h` | strong | distinct objects | unsafe | may |
+| `cf_loc_text` | `cf_serialize.h` | nothrow | distinct objects | unsafe | may |
+| `cf_lock_none` | `cf_lock.h` | nothrow | distinct objects | unsafe | may |
+| `cf_lock_sidecar` | `cf_lock.h` | nothrow | distinct objects | unsafe | may |
+| `cf_log_level_name` | `cf_log.h` | nothrow | distinct objects | unsafe | may |
+| `cf_outcome_can_win` | `cf_keyspace.h` | strong | distinct objects | unsafe | may |
+| `cf_outcome_name` | `cf_keyspace.h` | nothrow | distinct objects | unsafe | may |
+| `cf_platform_has_dir_list` | `cf_platform.h` | strong | distinct objects | unsafe | may |
+| `cf_platform_has_environ` | `cf_platform.h` | strong | distinct objects | unsafe | may |
+| `cf_platform_has_preferences` | `cf_platform.h` | strong | distinct objects | unsafe | may |
+| `cf_platform_has_private_create` | `cf_platform.h` | strong | distinct objects | unsafe | may |
+| `cf_platform_has_registry` | `cf_platform.h` | strong | distinct objects | unsafe | may |
+| `cf_platform_has_trusted_dir` | `cf_platform.h` | strong | distinct objects | unsafe | may |
+| `cf_platform_has_wake` | `cf_platform.h` | strong | distinct objects | unsafe | may |
+| `cf_platform_has_wide_args` | `cf_platform.h` | strong | distinct objects | unsafe | may |
+| `cf_platform_name` | `cf_platform.h` | nothrow | distinct objects | unsafe | may |
+| `cf_policy_text` | `cf_define.h` | nothrow | distinct objects | unsafe | may |
+| `cf_port_description` | `cf_port.h` | nothrow | distinct objects | unsafe | may |
+| `cf_read_count` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_reason_description` | `cf_error.h` | nothrow | distinct objects | unsafe | may |
+| `cf_reason_name` | `cf_error.h` | nothrow | distinct objects | unsafe | may |
+| `cf_reason_severity` | `cf_error.h` | nothrow | distinct objects | unsafe | may |
+| `cf_reason_weakness` | `cf_error.h` | nothrow | distinct objects | unsafe | may |
+| `cf_refusal_name` | `cf_keyspace.h` | nothrow | distinct objects | unsafe | may |
+| `cf_refusal_text` | `cf_keyspace.h` | nothrow | distinct objects | unsafe | may |
+| `cf_report` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_report_key_write` | `cf_report.h` | strong | distinct objects | unsafe | may |
+| `cf_report_write` | `cf_report.h` | strong | distinct objects | unsafe | may |
+| `cf_schema` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_schema_write` | `cf_report.h` | strong | distinct objects | unsafe | may |
+| `cf_serialize_version` | `cf_serialize_version.h` | nothrow | distinct objects | unsafe | may |
+| `cf_serialize_version_number` | `cf_serialize_version.h` | nothrow | distinct objects | unsafe | may |
+| `cf_sink_fmt` | `cf_serialize.h` | basic | distinct objects | unsafe | may |
+| `cf_sink_init` | `cf_serialize.h` | nothrow | distinct objects | unsafe | may |
+| `cf_sink_json_string` | `cf_serialize.h` | basic | distinct objects | unsafe | may |
+| `cf_sink_json_value` | `cf_serialize.h` | basic | distinct objects | unsafe | may |
+| `cf_sink_overflowed` | `cf_serialize.h` | strong | distinct objects | unsafe | may |
+| `cf_sink_putc` | `cf_serialize.h` | basic | distinct objects | unsafe | may |
+| `cf_sink_puts` | `cf_serialize.h` | basic | distinct objects | unsafe | may |
+| `cf_sink_terminate` | `cf_serialize.h` | basic | distinct objects | unsafe | may |
+| `cf_sink_write` | `cf_serialize.h` | basic | distinct objects | unsafe | may |
+| `cf_sizing_options_init` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_cli` | `cf_source.h` | strong | distinct objects | unsafe | may |
+| `cf_source_cli_defs` | `cf_define.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_defaults` | `cf_define.h` | strong | distinct objects | unsafe | may |
+| `cf_source_destroy` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_dir` | `cf_source.h` | strong | distinct objects | unsafe | may |
+| `cf_source_dir_codecs` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_dir_error` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_dir_state_size` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_document` | `cf_source.h` | strong | distinct objects | unsafe | may |
+| `cf_source_dotenv` | `cf_source.h` | strong | distinct objects | unsafe | may |
+| `cf_source_dotenv_defs` | `cf_define.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_dotenv_error` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_dotenv_state_size` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_env` | `cf_source.h` | strong | distinct objects | unsafe | may |
+| `cf_source_env_defs` | `cf_define.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_env_document` | `cf_source.h` | strong | distinct objects | unsafe | may |
+| `cf_source_file` | `cf_source.h` | strong | distinct objects | unsafe | may |
+| `cf_source_file_codec` | `cf_source.h` | strong | distinct objects | unsafe | may |
+| `cf_source_file_codecs` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_file_defs` | `cf_define.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_file_encoding` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_file_error` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_file_format` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_file_state_size` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_image_error` | `cf_image.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_image_file` | `cf_image.h` | strong | distinct objects | unsafe | may |
+| `cf_source_image_mem` | `cf_image.h` | strong | distinct objects | unsafe | may |
+| `cf_source_image_state_size` | `cf_image.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_load` | `cf_source.h` | basic | distinct objects | unsafe | may |
+| `cf_source_memory` | `cf_source.h` | strong | distinct objects | unsafe | may |
+| `cf_source_path` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_registry` | `cf_source.h` | strong | distinct objects | unsafe | may |
+| `cf_source_registry_error` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_registry_state_size` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_replay` | `cf_report.h` | strong | distinct objects | unsafe | may |
+| `cf_source_replay_error` | `cf_report.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_replay_state_size` | `cf_report.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_secrets` | `cf_source.h` | strong | distinct objects | unsafe | may |
+| `cf_source_secrets_error` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_secrets_state_size` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_snapshot` | `cf_source.h` | strong | distinct objects | unsafe | may |
+| `cf_source_store` | `cf_source.h` | strong | distinct objects | unsafe | may |
+| `cf_source_store_error` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_source_store_state_size` | `cf_source.h` | nothrow | distinct objects | unsafe | may |
+| `cf_sources` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_store_set` | `cf_source.h` | basic | distinct objects | unsafe | may |
+| `cf_text_is_utf8` | `cf_serialize.h` | strong | distinct objects | unsafe | may |
+| `cf_tlv_codec_sized` | `cf_serialize.h` | strong | distinct objects | unsafe | may |
+| `cf_tracks_reads` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_try_bool` | `configforge.h` | strong | safe | safe | none |
+| `cf_try_int` | `configforge.h` | strong | safe | safe | none |
+| `cf_try_real` | `configforge.h` | strong | safe | safe | none |
+| `cf_try_text` | `configforge.h` | strong | safe | safe | none |
+| `cf_type_json_name` | `cf_value.h` | nothrow | distinct objects | unsafe | may |
+| `cf_type_name` | `cf_value.h` | nothrow | distinct objects | unsafe | may |
+| `cf_type_of` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_usage` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_value_bool` | `cf_value.h` | nothrow | distinct objects | unsafe | may |
+| `cf_value_cmp` | `cf_value.h` | nothrow | distinct objects | unsafe | may |
+| `cf_value_equal` | `cf_value.h` | strong | distinct objects | unsafe | may |
+| `cf_value_from_text` | `cf_value.h` | strong | distinct objects | unsafe | may |
+| `cf_value_infer` | `cf_value.h` | strong | distinct objects | unsafe | may |
+| `cf_value_int` | `cf_value.h` | nothrow | distinct objects | unsafe | may |
+| `cf_value_null` | `cf_value.h` | nothrow | distinct objects | unsafe | may |
+| `cf_value_real` | `cf_value.h` | nothrow | distinct objects | unsafe | may |
+| `cf_value_text` | `cf_value.h` | nothrow | distinct objects | unsafe | may |
+| `cf_value_to_text` | `cf_value.h` | nothrow | distinct objects | unsafe | may |
+| `cf_version` | `cf_version.h` | nothrow | distinct objects | unsafe | may |
+| `cf_version_number` | `cf_version.h` | nothrow | distinct objects | unsafe | may |
+| `cf_vfmt` | `cf_port.h` | nothrow | distinct objects | unsafe | may |
+| `cf_was_read` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_watch_count` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_watch_path` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_watcher_close` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_watcher_drain` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_watcher_fd` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_watcher_handle` | `configforge.h` | nothrow | distinct objects | unsafe | may |
+| `cf_watcher_open` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_watcher_wait` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_write` | `configforge.h` | strong | distinct objects | unsafe | may |
 
 nothrow 145, strong 103, basic 68, not yet 0
+
+thread safe 10, signal safe 10, alloc none 10
 
 <!-- guarantees:end -->

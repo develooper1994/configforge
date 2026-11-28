@@ -128,6 +128,7 @@ gets reopened every six months.
 | D-230 | Options with defaults are one convention: `size` first, `_init`, NULL the defaults; a fixed limit a public call reaches is an option with its old value as default | public options structs, `gate.options` | **Decided** |
 | D-231 | The platform is a part: `none` is built and tried; what it cannot give answers `CF_E_CAPABILITY` | platform, build options, CI | **Decided** |
 | D-232 | Every public function states one failure guarantee; the library never ends the program | public headers, `docs/Guarantees.md`, `gate.guarantees` | **Decided** |
+| D-238 | Thread, signal and allocation claims beside the guarantee, the weakest by default | public headers, `docs/Guarantees.md`, `gate.guarantees` | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -5534,6 +5535,41 @@ a random schedule (the sweep is exhaustive and so reproducible).
 built a configuration with its own now has the edit's memory from it too.
 
 **Status.** Built: K-9b.
+
+## D-238 — Thread, signal and allocation claims beside the guarantee, the weakest by default
+
+**Question.** "There are many safety notions: thread-safe, signal-safe,
+exception-safety ... which of them can the library provide?" (the maintainer,
+2026-11-27). Failure safety was held (D-232), memory (D-237), stack and
+hostile input by gates, and the coarse thread contract was written (D-14,
+`test_threads`); a claim per function about threads, signal handlers,
+interrupts and real-time use was missing.
+
+**Decision.** Three lines may stand beside `Guarantee:` in a public
+declaration's comment, each a word and a full stop: `Thread:` `safe` (any
+number of threads on the same objects, the readers of a built `cf_config`),
+`distinct objects` or `unsafe`; `Signal:` `safe` or `unsafe`; `Alloc:` `none`
+or `may`. A function with no such line is `distinct objects`, `unsafe`, `may`,
+so no name needs a line to be honest and one is written only where it is
+proved. Interrupt and real-time claims follow from `Signal: safe` with
+`Alloc: none` and `gate.stack`, and have no words of their own.
+`scripts/check/guarantees.py` (`gate.guarantees`) refuses a word it does not
+know, and holds `Signal: safe` and `Alloc: none` against the compiler's call
+data (GCC 10+, `-fcallgraph-info`, written beside the objects of `configforge`
+and `configforge_serialize`): a reached allocator (`malloc` and kin, the arena
+allocators) or a call through a pointer is refused for both, and stdio, locks
+and the names of `scripts/check/notsignal.txt` for `Signal: safe`, each naming
+the path. A call through a pointer is refused because the library's allocator
+is one (`cf_error_clear` releases an owned block through it, so it claims
+neither word). Without call data (another compiler, `CF_LTO`) the check says
+it skipped and passes. `docs/Guarantees.md` lists the three columns.
+
+Rejected: a line on every name (three times K-9d to K-9g's work for the same
+truth); a per-function annotation macro (the compiler checks nothing by it);
+trusting an indirect call (it hides the allocator); `Thread: safe` proved by
+the call data (a race needs a race detector; `test_threads` holds the readers).
+
+**Status.** Built: K-9h.
 
 ## D-157 — The Cortex-M numbers come from a cross build of the library alone
 

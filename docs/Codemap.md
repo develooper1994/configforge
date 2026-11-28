@@ -214,17 +214,17 @@
 - #define CF_DEFINE_TEXT 494
 - enum cf_sizing 542-546
 - struct cf_sizing_options 548-553
-- cf_get_int_ 639-649
-- cf_get_long_ 650-660
-- cf_get_llong_ 661-668
-- cf_get_bool_ 669-676
-- cf_get_text_ 677-680
-- #define CF_GET_REAL_ 682
-- #define CF_GET_REAL_ 684
-- #define cf_get 686
-- enum cf_change 746-751
-- typedef cf_diff_fn 758
-- typedef cf_watcher 1034
+- cf_get_int_ 654-664
+- cf_get_long_ 665-675
+- cf_get_llong_ 676-683
+- cf_get_bool_ 684-691
+- cf_get_text_ 692-695
+- #define CF_GET_REAL_ 697
+- #define CF_GET_REAL_ 699
+- #define cf_get 701
+- enum cf_change 761-766
+- typedef cf_diff_fn 773
+- typedef cf_watcher 1049
 `lib/config/src/bridge/dir.c`
 - struct dir_state 36-44
 - typedef dir_name 57
