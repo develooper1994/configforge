@@ -27,7 +27,7 @@ asks for.
 | Standard | Kind | Scope here | Status |
 | -------- | ---- | ---------- | ------ |
 | **MISRA C:2012** (with Amendments 1-4; MISRA C:2023 consolidates them) | coding, C | the library: `lib/` | partly: `gate.misra` runs the addon over the library's sources and every report is recorded (`docs/compliance/deviations.txt`); the matrix and the public headers' zero are planned, below |
-| **SEI CERT C** | coding, C, security | the library, Doctor | partly: clang-tidy's `cert-*` checks run as errors on every build (`.clang-tidy`); the matrix of rules no tool checks is planned |
+| **SEI CERT C** | coding, C, security | the library, Doctor | partly: clang-tidy's `cert-*` checks run as errors on every build (`.clang-tidy`); `docs/compliance/Cert.md` lists every rule with how it is checked or read, held by `gate.cert` |
 | **CWE** (Top 25, and CWE-658, weaknesses of C) | weakness catalogue | everything that reads untrusted bytes | planned: a table from each weakness to the design rule, test, fuzzer or proof that holds it |
 | **MISRA C++:2023** (absorbs AUTOSAR C++14) | coding, C++ | the C++ wrapper, `configforge.hpp` | later: the wrapper is a thin header over the C API |
 | **ISO 26262, IEC 61508, IEC 62304, DO-178C, EN 50128** | process | none by itself | not claimed; what the library can give a user's process is listed at the end |
@@ -145,6 +145,7 @@ What runs, and where. A row is "planned" until its gate is in the tree.
 | Check | Tool | Gate | Runs | Status |
 | ----- | ---- | ---- | ---- | ------ |
 | CERT C rules a tool can see | clang-tidy `cert-*`, warnings as errors | the `analyze` preset, `EXTRA=tidy` | every commit | done |
+| CERT C rules no tool sees | the matrix: each rule's check, proof, decision or review | `gate.cert`: the page is its list regenerated, and a clang-tidy cell names a check `.clang-tidy` leaves on | every commit | done (L-28) |
 | MISRA C rules a free tool can see | cppcheck with its MISRA addon, on the MISRA profile | `gate.misra`: fails a report the record lacks and a record line that matches no report | every commit (tier 1), the `profiles (misra)` job | done (N-19) |
 | Records and suppressions agree | `gate.misra` reads `deviations.txt` and scans `lib/` | there are no suppressions: one fails the gate, and a record no report uses fails as stale | every commit | done (N-19) |
 | The compliance report | the same run, written as Markdown | uploaded as a CI artifact and attached to each release: every rule, its status, its count, its record | each release | planned |
@@ -208,7 +209,7 @@ CERT C matrix, `gate.cert`), written 2026-11-28.
    the sources. Done (N-19): 6,337 reports in 613 lines, 33 of them lines
    in `include/` directories, all `backlog`; the four deviations above are
    recorded, 17.3 is the addon's.
-4. The CERT matrix of rules clang-tidy does not see.
+4. The CERT matrix of rules clang-tidy does not see. Done (L-28): `docs/compliance/Cert.md`, generated from `docs/compliance/cert.txt`, held by `gate.cert`.
 5. The CWE table and `gate.cwe`.
 6. The compliance report as a release artifact, and the safety manual.
 7. MISRA C++:2023 for the wrapper.

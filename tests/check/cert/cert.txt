@@ -1,0 +1,4 @@
+# Three rules, one of each kind a fixture needs.
+ARR39-C | clang-tidy cert-arr39-c | scaled pointer arithmetic
+MSC41-C | review | read every string literal for a secret; pass 1 of the release read
+SIG30-C | n/a | `grep -rn "signal(" lib/*/src` prints nothing

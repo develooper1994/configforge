@@ -157,6 +157,13 @@ function(configforge_add_gates tgt)
     COMMAND
       ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR} -P
       ${CMAKE_SOURCE_DIR}/cmake/gates/GateLimits.cmake)
+  # The CERT C matrix is its list, regenerated, and its clang-tidy cells are
+  # checks that .clang-tidy leaves on (D-236).
+  add_test(
+    NAME gate.cert
+    COMMAND
+      ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR} -DBIN=${CMAKE_BINARY_DIR} -P
+      ${CMAKE_SOURCE_DIR}/cmake/gates/GateCert.cmake)
   # The symbol list is the public interface: against the headers
   # everywhere, and against the built library where nm can read it. A DLL
   # is read through its import library, the linker file: nm reads no

@@ -5496,6 +5496,40 @@ guarantees for the internal names (outside the promise); one word per header.
 
 **Status.** Built: K-9a.
 
+## D-236 — The CERT C matrix is generated, and says what no tool sees
+
+**Question.** Which rules of the SEI CERT C Coding Standard is the library
+held to, and by what? clang-tidy's `cert-*` checks run as errors
+(`.clang-tidy`), but only some rules have a check; a rule no tool sees looks
+the same as a rule held, unless a page says which is which.
+
+**Decision.** `docs/compliance/Cert.md` is generated from one list,
+`docs/compliance/cert.txt`: a line a rule, `<rule id> | <checked by> |
+<note>`, the id alone (`ARR30-C`) and never the standard's title, which is the
+publisher's text (D-152 decides the same for MISRA). Checked by is one or more
+of `clang-tidy <check>`, `cppcheck <id>`, `compiler <flag>`, `cbmc`, `eva`,
+`design D-<n>`, `review` (the note says what a person reads at a release) and
+`n/a` (the library uses no such facility; the note starts with the `grep` that
+shows it, and prints nothing). The list is built from `clang-tidy
+--list-checks -checks=-*,cert-*` and the standard's public rule index, the C rules
+only (122 of them), never from memory. `scripts/generate/cert_matrix.cmake`
+writes the page and refuses an empty field, an unknown kind, a duplicate id,
+an id not ending in `-C`, and an `n/a` row with no grep; `gate.cert`
+regenerates and compares, and when clang-tidy is on the path checks that each
+`clang-tidy` cell is a check `clang-tidy --list-checks` lists in the
+repository's own `.clang-tidy`, so a check the file disables or a name that
+does not exist fails.
+
+Rejected: a page by hand (it drifts, as the limits did); nothing beyond
+`.clang-tidy` (a rule no tool sees would look held). The recommendations of the
+standard are a card of their own; a defect found while writing a row is a card
+of its own too: the matrix records two (`strerror`'s shared buffer, CON33-C,
+and `cf_block`'s `char data[1]`, DCL38-C).
+
+**Tests.** `check.cert`, `gate.cert`.
+
+**Status.** Built: L-28.
+
 ## D-237 — Out of memory returns `CF_E_MEMORY` on every path, proved by an exhaustive allocation sweep
 
 **Question.** D-223 point 5 asks that each failure return the right code, and
