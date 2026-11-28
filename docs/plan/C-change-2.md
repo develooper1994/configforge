@@ -343,7 +343,7 @@ Shared by every card here:
 
 * **id**: C-10a
 * **goal**: `cf_serve_report(cfg, fd, &opt, &err)` reads one request from a connected stream socket the program's own loop accepted, answers it with the value-blind report, and returns, in a build with a POSIX descriptor; the library owns no thread and never closes the descriptor.
-* **why**: Spring Boot's `/actuator/env` lets an operator ask a running program what it is configured with and where each value came from. ConfigForge's report is the same artifact (`cf_report`, `lib/config/include/configforge/configforge.h:842`) and today a program must write the listening, the parsing and the writing itself, or write the report to a file and hope somebody reads it. A function the program calls when its loop says a connection is ready gives the answer without the library running a server.
+* **why**: Spring Boot's `/actuator/env` lets an operator ask a running program what it is configured with and where each value came from. ConfigForge's report is the same artifact (`cf_report`, `lib/config/include/configforge/configforge.h:877`) and today a program must write the listening, the parsing and the writing itself, or write the report to a file and hope somebody reads it. A function the program calls when its loop says a connection is ready gives the answer without the library running a server.
 * **needs**: nothing
 * **size**: medium
 * **version**: 2.1.0
