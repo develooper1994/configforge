@@ -688,12 +688,12 @@ static int port_of(const char* path) {
 }
 
 static void test_emit_file(void) {
-    static char  a1[]   = "--e.count=0";
-    static char* argv[] = {a0, a1, NULL};
-    cf_error     err    = CF_ERROR_INIT;
-    cf_config*   c      = build(&err);
-    cf_builder*  b;
-    cf_config*   arr;
+    static char     a1[]   = "--e.count=0";
+    static char*    argv[] = {a0, a1, NULL};
+    cf_error        err    = CF_ERROR_INIT;
+    cf_config*      c      = build(&err);
+    cf_builder*     b;
+    cf_config*      arr;
     cf_file_options o;
 
     if (c == NULL) {
@@ -739,8 +739,9 @@ static void test_emit_file(void) {
         cf_config_free(arr);
     }
 
-    check(!cf_emit_file(c, "cf_ef_no_such_dir/x.json", NULL, CF_EMIT_ALL, 0, NULL, &err),
-          "a directory that does not exist fails");
+    check(
+        !cf_emit_file(c, "cf_ef_no_such_dir/x.json", NULL, CF_EMIT_ALL, 0, NULL, &err),
+        "a directory that does not exist fails");
     has(err.message, "cannot write", "as a write failure");
     has(err.message, "cf_ef_no_such_dir/x.json", "naming the path");
 

@@ -277,9 +277,9 @@
 - escape_written 189-201
 - literal_scalar 203-228
 - cf_emit 230-344
-- cf_emit_file 346-388
-- cf_emit 392-404
-- cf_emit_file 406-411
+- cf_emit_file 346-389
+- cf_emit 393-405
+- cf_emit_file 407-413
 `lib/config/src/bridge/file.c`
 - struct file_state 38-55
 - cf_file_read_stable 61-86

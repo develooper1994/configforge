@@ -68,8 +68,9 @@ CF_API size_t cf_emit(const struct cf_config* c, const char* format, cf_emit_wha
    Guarantee: strong. A failure leaves `path` as it was and `c` untouched; it
    returns CF_FALSE with `err` set. */
 CF_NODISCARD CF_API cf_bool cf_emit_file(const struct cf_config* c, const char* path,
-                                         const char* format, cf_emit_what what, int rank,
-                                         const cf_file_options* o, cf_error* err);
+                                         const char* format, cf_emit_what what,
+                                         int rank, const cf_file_options* o,
+                                         cf_error* err);
 
 #ifdef __cplusplus
 }

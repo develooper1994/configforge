@@ -56,7 +56,9 @@ static int save(const cf_config* cfg, cf_error* err) {
        freeze them into the file, and a later release could never move
        one for a user who had never touched it. The file is replaced
        whole or not at all: a crash or a full disk leaves the old one. */
-    return cf_emit_file(cfg, SETTINGS_FILE, "json", CF_EMIT_CONFIGURED, 0, NULL, err) ? 1 : 0;
+    return cf_emit_file(cfg, SETTINGS_FILE, "json", CF_EMIT_CONFIGURED, 0, NULL, err)
+               ? 1
+               : 0;
 }
 
 static void print(const cf_config* cfg) {

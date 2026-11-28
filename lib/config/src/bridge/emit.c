@@ -343,8 +343,9 @@ size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int ra
     return out.len;
 }
 
-cf_bool cf_emit_file(const cf_config* c, const char* path, const char* format, cf_emit_what what,
-                   int rank, const cf_file_options* o, cf_error* err) {
+cf_bool cf_emit_file(const cf_config* c, const char* path, const char* format,
+                     cf_emit_what what, int rank, const cf_file_options* o,
+                     cf_error* err) {
     const cf_allocator* al;
     char*               buf;
     size_t              n;
@@ -364,8 +365,8 @@ cf_bool cf_emit_file(const cf_config* c, const char* path, const char* format, c
     n = cf_emit(c, format, what, rank, NULL, 0, err);
     if (n == 0) {
         if (err != NULL && err->code == CF_OK) {
-            return cf_error_set(err, CF_E_SOURCE, NULL, path, "nothing to write to '%s'",
-                                path != NULL ? path : "");
+            return cf_error_set(err, CF_E_SOURCE, NULL, path,
+                                "nothing to write to '%s'", path != NULL ? path : "");
         }
         return CF_FALSE;
     }
@@ -403,8 +404,9 @@ size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int ra
     return 0;
 }
 
-cf_bool cf_emit_file(const cf_config* c, const char* path, const char* format, cf_emit_what what,
-                   int rank, const cf_file_options* o, cf_error* err) {
+cf_bool cf_emit_file(const cf_config* c, const char* path, const char* format,
+                     cf_emit_what what, int rank, const cf_file_options* o,
+                     cf_error* err) {
     (void)path;
     (void)o;
     return cf_emit(c, format, what, rank, NULL, 0, err) != 0 ? CF_TRUE : CF_FALSE;
