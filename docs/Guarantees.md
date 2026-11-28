@@ -221,6 +221,7 @@ allocation words (the default where its header says none).
 | `cf_builder_source` | `configforge.h` | basic | distinct objects | unsafe | may |
 | `cf_builder_store` | `configforge.h` | basic | distinct objects | unsafe | may |
 | `cf_builder_text` | `configforge.h` | basic | distinct objects | unsafe | may |
+| `cf_builder_track_misreads` | `configforge.h` | nothrow | distinct objects | unsafe | may |
 | `cf_builder_track_reads` | `configforge.h` | nothrow | distinct objects | unsafe | may |
 | `cf_builder_unknown` | `configforge.h` | nothrow | distinct objects | unsafe | may |
 | `cf_builder_writable` | `configforge.h` | basic | distinct objects | unsafe | may |
@@ -361,6 +362,8 @@ allocation words (the default where its header says none).
 | `cf_lock_none` | `cf_lock.h` | nothrow | distinct objects | unsafe | may |
 | `cf_lock_sidecar` | `cf_lock.h` | nothrow | distinct objects | unsafe | may |
 | `cf_log_level_name` | `cf_log.h` | nothrow | distinct objects | unsafe | may |
+| `cf_misread_at` | `configforge.h` | strong | distinct objects | unsafe | may |
+| `cf_misreads` | `configforge.h` | strong | distinct objects | unsafe | may |
 | `cf_outcome_can_win` | `cf_keyspace.h` | strong | distinct objects | unsafe | may |
 | `cf_outcome_name` | `cf_keyspace.h` | nothrow | distinct objects | unsafe | may |
 | `cf_platform_has_dir_list` | `cf_platform.h` | strong | distinct objects | unsafe | may |
@@ -446,6 +449,7 @@ allocation words (the default where its header says none).
 | `cf_store_set` | `cf_source.h` | basic | distinct objects | unsafe | may |
 | `cf_text_is_utf8` | `cf_serialize.h` | strong | distinct objects | unsafe | may |
 | `cf_tlv_codec_sized` | `cf_serialize.h` | strong | distinct objects | unsafe | may |
+| `cf_tracks_misreads` | `configforge.h` | strong | distinct objects | unsafe | may |
 | `cf_tracks_reads` | `configforge.h` | strong | distinct objects | unsafe | may |
 | `cf_try_bool` | `configforge.h` | strong | safe | safe | none |
 | `cf_try_int` | `configforge.h` | strong | safe | safe | none |
@@ -485,7 +489,7 @@ allocation words (the default where its header says none).
 | `cf_watcher_wait` | `configforge.h` | basic | distinct objects | unsafe | may |
 | `cf_write` | `configforge.h` | strong | distinct objects | unsafe | may |
 
-nothrow 149, strong 105, basic 68, not yet 0
+nothrow 150, strong 108, basic 68, not yet 0
 
 thread safe 10, signal safe 10, alloc none 10
 

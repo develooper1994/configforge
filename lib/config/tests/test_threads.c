@@ -252,6 +252,43 @@ static void test_concurrent_tracked_reads(void) {
     cf_config_free(c);
 }
 
+/* Many threads recording the same two misreads at once: the log is
+   claimed without a lock, and what it says afterwards is exact. */
+static void* misreader(void* p) {
+    cf_config* c = (cf_config*)p;
+    int        i;
+
+    for (i = 0; i < 10000; ++i) {
+        (void)cf_get_int(c, "server.prot", 0);
+        (void)cf_get_text(c, "server.port", "");
+    }
+    return NULL;
+}
+
+static void test_concurrent_misreads(void) {
+    cf_error    err = CF_ERROR_INIT;
+    cf_builder* b   = cf_build(NULL);
+    cf_config*  c;
+    pthread_t   th[READERS];
+    int         i;
+
+    cf_builder_int(b, "server.port", 9000, 1, 65535, 0);
+    cf_builder_track_misreads(b);
+    c = cf_builder_create(b, &err);
+    if (c == NULL) {
+        check(0, "builds tracking misreads");
+        return;
+    }
+    for (i = 0; i < READERS; ++i) {
+        check(pthread_create(&th[i], NULL, misreader, c) == 0, "misreader started");
+    }
+    for (i = 0; i < READERS; ++i) {
+        pthread_join(th[i], NULL);
+    }
+    check(cf_misreads(c) == 2, "exactly the two misreads, however many threads");
+    cf_config_free(c);
+}
+
 #endif /* CF_TEST_PTHREADS */
 
 #if CF_WITH_REPORT
@@ -350,6 +387,7 @@ int main(void) {
     test_concurrent_reads();
     test_concurrent_release();
     test_concurrent_tracked_reads();
+    test_concurrent_misreads();
 #else
     printf("  (no threads here; the invariants above are what the "
            "contract rests on)\n");

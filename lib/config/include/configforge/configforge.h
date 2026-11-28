@@ -520,6 +520,19 @@ CF_API void cf_builder_log(cf_builder* b, cf_log_fn fn, void* user, cf_log_level
    Guarantee: nothrow. */
 CF_API void cf_builder_track_reads(cf_builder* b);
 
+/* Record the reads the contract does not have (D-121): a typed read
+   (cf_get_*, cf_try_*) of a key the contract does not define and that is
+   under no open prefix, or whose value, or definition when it has no
+   value, has another type than the read asked for. cf_has, cf_type_of
+   and cf_explain ask what is there, and are not reads. Off by default;
+   independent of cf_builder_track_reads. A configuration derived from
+   this one tracks too, from nothing. Sixteen distinct (key, kind,
+   wanted) are kept, claimed without a lock; the rest are lost. No value
+   is recorded. cf_misreads and cf_misread_at answer, and cf_report adds
+   a "misreads" array.
+   Guarantee: nothrow. */
+CF_EXPERIMENTAL(2, 1) void cf_builder_track_misreads(cf_builder* b);
+
 /* Digest every sensitive value under this key (D-85): SipHash-2-4,
    written "sip24:<id>:<16 hex digits>", in place of the unkeyed
    FNV-1a digest, wherever a value-blind report, a full one or the
@@ -723,6 +736,28 @@ CF_NODISCARD CF_API cf_bool cf_was_read(const cf_config* c, const char* key);
 
 /* Guarantee: nothrow. */
 CF_API size_t cf_read_count(const cf_config* c);
+
+/* What a misread was (D-121): no definition for the key, or another type. */
+typedef enum cf_misread_kind {
+    CF_MISREAD_UNDEFINED = 1,
+    CF_MISREAD_TYPE      = 2
+} cf_misread_kind;
+
+/* Misreads (cf_builder_track_misreads). cf_misreads is the number of
+   distinct (key, kind, wanted) recorded, 0 for a configuration that does
+   not track or NULL. cf_misread_at gives the i-th in the order first
+   recorded: CF_FALSE past the end or when not tracking; any out pointer
+   may be NULL; `*key` is owned by the configuration and valid until it
+   is freed (cut at CF_KEY_MAX - 1 bytes). `found` is CF_TYPE_NULL for an
+   undefined key. Neither is itself a read.
+   Guarantee: strong. A query; it changes nothing. */
+CF_EXPERIMENTAL(2, 1) cf_bool cf_tracks_misreads(const cf_config* c);
+/* Guarantee: strong. A query; it changes nothing. */
+CF_EXPERIMENTAL(2, 1) size_t cf_misreads(const cf_config* c);
+/* Guarantee: strong. A query; it changes nothing. */
+CF_EXPERIMENTAL(2, 1) cf_bool cf_misread_at(const cf_config* c, size_t i,
+                                            const char** key, cf_misread_kind* kind,
+                                            cf_type* wanted, cf_type* found);
 
 /* ------------------------------------------------------------------ *
  * Diagnostics

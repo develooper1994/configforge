@@ -80,6 +80,7 @@ SOURCES = [
     "config/src/core/validate.c",
     "config/src/core/config.c", "config/src/core/iterate.c", "config/src/core/live.c",
     "config/src/core/edit.c",
+    "config/src/core/misread.c",
     "serialize/src/blob.c", "serialize/src/codec.c", "serialize/src/detect.c", "serialize/src/ini.c",
     "serialize/src/json.c", "serialize/src/toml.c", "serialize/src/yamlparse.c", "serialize/src/yaml.c", "serialize/src/xml.c", "serialize/src/properties.c", "serialize/src/cbor.c", "serialize/src/tlv.c", "serialize/src/compose.c", "serialize/src/version.c",
     "config/src/sources/entry.c", "config/src/sources/memory.c", "config/src/sources/defaults.c", "config/src/sources/env.c",

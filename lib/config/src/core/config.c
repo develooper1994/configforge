@@ -53,6 +53,7 @@ struct cf_builder {
     cf_defset         defs;
     cf_unknown_policy unknown;
     cf_bool           track_reads;
+    cf_bool           track_misreads;
 
     /* The first failure, held until create reports it. A definition
        block should read as a block rather than as an error check after
@@ -120,6 +121,11 @@ struct cf_config {
        The one thing a read writes, so each flag is atomic and written
        only while clear: a key read on every request costs a load. */
     cf_refcount* reads;
+
+    /* The reads the contract does not have (D-121), NULL unless the
+       builder asked for cf_builder_track_misreads. A fixed table,
+       claimed and published without a lock. */
+    cf_misread_log* misreads;
 
     /* Kept so that deriving inherits it: a derived configuration that
        accepted unknown keys the original refused would be a different
@@ -1115,6 +1121,12 @@ void cf_builder_track_reads(cf_builder* b) {
     }
 }
 
+void cf_builder_track_misreads(cf_builder* b) {
+    if (b != NULL) {
+        b->track_misreads = CF_TRUE;
+    }
+}
+
 cf_bool cf_builder_digest_key(cf_builder* b, const unsigned char* key, size_t n) {
     cf_error       e = CF_ERROR_INIT;
     unsigned char* copy;
@@ -1684,6 +1696,14 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
             return create_failed(b, err, &e, &e);
         }
     }
+    if (b->track_misreads) {
+        c->misreads =
+            (cf_misread_log*)cf_arena_calloc(c->arena, sizeof(cf_misread_log));
+        if (c->misreads == NULL) {
+            cf_error_set(&e, CF_E_MEMORY, NULL, NULL, "no room to track misreads");
+            return create_failed(b, err, &e, &e);
+        }
+    }
     config_log_events(c);
     return c;
 }
@@ -1831,7 +1851,8 @@ static cf_config* derive_onto(const cf_config* base, cf_arena* ar, cf_bool owns,
     b->ncodecs = base->ncodecs;
     /* Tracking travels, the reads do not: each snapshot records what
        was read through it. */
-    b->track_reads = (base->reads != NULL) ? CF_TRUE : CF_FALSE;
+    b->track_reads    = (base->reads != NULL) ? CF_TRUE : CF_FALSE;
+    b->track_misreads = (base->misreads != NULL) ? CF_TRUE : CF_FALSE;
     /* So does the digest key (D-85): a derived configuration's secrets
        are digested as the original's were. */
     if (base->defs.digest_key != NULL) {
@@ -2336,13 +2357,40 @@ void cf_config_free(cf_config* c) {
  * Reading
  * ------------------------------------------------------------------ */
 
-static const cf_value* lookup(const cf_config* c, const char* key) {
+/* Was this typed read one the contract does not have (D-121)? Called
+   only when the configuration tracks and the read asks for a value. */
+static void misread_judge(const cf_config* c, const char* key, size_t keylen,
+                          cf_type want, const cf_entry* e) {
+    const cf_def*   d = cf_defset_find(&c->defs, key, keylen);
+    const cf_value* v = (e != NULL && e->selected != NULL) ? &e->selected->value : NULL;
+
+    if (d == NULL && c->defs.count > 0 && !cf_defset_is_open(&c->defs, key, keylen)) {
+        cfi_misread_record(c->misreads, key, keylen, CF_MISREAD_UNDEFINED, want,
+                           CF_TYPE_NULL);
+    } else if (v != NULL) {
+        if (v->type != want) {
+            cfi_misread_record(c->misreads, key, keylen, CF_MISREAD_TYPE, want,
+                               v->type);
+        }
+    } else if (d != NULL && d->list_mode == CF_LIST_NONE && d->type != want) {
+        cfi_misread_record(c->misreads, key, keylen, CF_MISREAD_TYPE, want, d->type);
+    }
+}
+
+/* `want` is the type the read asks for; CF_TYPE_NULL for a probe, which
+   judges nothing. */
+static const cf_value* lookup_as(const cf_config* c, const char* key, cf_type want) {
     const cf_entry* e;
+    size_t          keylen;
 
     if (c == NULL || key == NULL) {
         return NULL;
     }
-    e = cf_ks_find(&c->keys, key, strlen(key));
+    keylen = strlen(key);
+    e      = cf_ks_find(&c->keys, key, keylen);
+    if (c->misreads != NULL && want != CF_TYPE_NULL) {
+        misread_judge(c, key, keylen, want, e);
+    }
     if (e == NULL) {
         return NULL;
     }
@@ -2356,23 +2404,23 @@ static const cf_value* lookup(const cf_config* c, const char* key) {
 }
 
 cf_bool cf_get_bool(const cf_config* c, const char* key, cf_bool fallback) {
-    const cf_value* v = lookup(c, key);
+    const cf_value* v = lookup_as(c, key, CF_TYPE_BOOL);
     return (v != NULL && v->type == CF_TYPE_BOOL) ? v->u.b : fallback;
 }
 
 cf_i64 cf_get_int(const cf_config* c, const char* key, cf_i64 fallback) {
-    const cf_value* v = lookup(c, key);
+    const cf_value* v = lookup_as(c, key, CF_TYPE_INT);
     return (v != NULL && v->type == CF_TYPE_INT) ? v->u.i : fallback;
 }
 
 const char* cf_get_text(const cf_config* c, const char* key, const char* fallback) {
-    const cf_value* v = lookup(c, key);
+    const cf_value* v = lookup_as(c, key, CF_TYPE_TEXT);
     return (v != NULL && v->type == CF_TYPE_TEXT) ? v->u.t.p : fallback;
 }
 
 const char* cf_get_text_n(const cf_config* c, const char* key, size_t* len,
                           const char* fallback) {
-    const cf_value* v = lookup(c, key);
+    const cf_value* v = lookup_as(c, key, CF_TYPE_TEXT);
 
     if (v != NULL && v->type == CF_TYPE_TEXT) {
         if (len != NULL) {
@@ -2388,14 +2436,14 @@ const char* cf_get_text_n(const cf_config* c, const char* key, size_t* len,
 
 #if CF_WITH_REAL
 double cf_get_real(const cf_config* c, const char* key, double fallback) {
-    const cf_value* v = lookup(c, key);
+    const cf_value* v = lookup_as(c, key, CF_TYPE_REAL);
     return (v != NULL && v->type == CF_TYPE_REAL) ? v->u.r : fallback;
 }
 #endif
 
 static cf_code try_of(const cf_config* c, const char* key, cf_type want,
                       const cf_value** out) {
-    const cf_value* v = lookup(c, key);
+    const cf_value* v = lookup_as(c, key, want);
 
     if (v == NULL) {
         return CF_E_KEY;
@@ -2452,12 +2500,46 @@ cf_code cf_try_real(const cf_config* c, const char* key, double* out) {
 #endif
 
 cf_type cf_type_of(const cf_config* c, const char* key) {
-    const cf_value* v = lookup(c, key);
+    const cf_value* v = lookup_as(c, key, CF_TYPE_NULL);
     return (v != NULL) ? v->type : CF_TYPE_NULL;
 }
 
 cf_bool cf_has(const cf_config* c, const char* key) {
-    return (lookup(c, key) != NULL) ? CF_TRUE : CF_FALSE;
+    return (lookup_as(c, key, CF_TYPE_NULL) != NULL) ? CF_TRUE : CF_FALSE;
+}
+
+cf_bool cf_tracks_misreads(const cf_config* c) {
+    return (c != NULL && c->misreads != NULL) ? CF_TRUE : CF_FALSE;
+}
+
+size_t cf_misreads(const cf_config* c) {
+    return (c != NULL && c->misreads != NULL) ? cfi_misread_count(c->misreads) : 0;
+}
+
+cf_bool cf_misread_at(const cf_config* c, size_t i, const char** key,
+                      cf_misread_kind* kind, cf_type* wanted, cf_type* found) {
+    const cf_misread_slot* s;
+
+    if (c == NULL || c->misreads == NULL) {
+        return CF_FALSE;
+    }
+    s = cfi_misread_at(c->misreads, i);
+    if (s == NULL) {
+        return CF_FALSE;
+    }
+    if (key != NULL) {
+        *key = s->key;
+    }
+    if (kind != NULL) {
+        *kind = (cf_misread_kind)s->kind;
+    }
+    if (wanted != NULL) {
+        *wanted = (cf_type)s->wanted;
+    }
+    if (found != NULL) {
+        *found = (cf_type)s->found;
+    }
+    return CF_TRUE;
 }
 
 cf_bool cf_tracks_reads(const cf_config* c) {
@@ -2577,7 +2659,8 @@ size_t cf_report(const cf_config* c, const cf_report_info* info, char* buf,
         }
         return 0;
     }
-    return cfi_report_reads(&c->keys, &c->defs, &c->sv, info, c->reads, buf, cap);
+    return cfi_report_reads(&c->keys, &c->defs, &c->sv, info, c->reads, c->misreads,
+                            buf, cap);
 }
 
 const cf_keyspace* cf_keys(const cf_config* c) {

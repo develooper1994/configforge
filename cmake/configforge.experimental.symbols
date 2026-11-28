@@ -2,6 +2,10 @@
 # Checked by gate.abi against the headers and the built library;
 # rewrite with cmake -DSRC=. -DWRITE=ON -P cmake/gates/GateAbi.cmake.
 # One line a name, "name major.minor": the release it came in, which the next minor makes promised or removes (D-89).
+cf_builder_track_misreads 2.1
+cf_misread_at 2.1
+cf_misreads 2.1
+cf_tracks_misreads 2.1
 cf_unit_duration_get 2.1
 cf_unit_format 2.1
 cf_unit_options_init 2.1

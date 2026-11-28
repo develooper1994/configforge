@@ -530,6 +530,21 @@ The bindings have the same calls: `Builder.track_reads()`,
 Rust; `Builder::trackReads`, `Config::wasRead` and `Config::readCount`
 in C++.
 
+A read can also be one the contract does not have: `cf_get_int(cfg,
+"server.prot", 8080)` returns 8080 without a word, and so does reading a
+text key as an int. `cf_builder_track_misreads(b)` (experimental in 2.1)
+records each typed read of a key the contract does not define, or whose
+value has another type, once per key and type asked for: sixteen at most,
+claimed without a lock, with no value kept. `cf_has`, `cf_type_of` and
+`cf_explain` are probes, not reads. The report lists them under
+`"misreads"`. It is independent of `cf_builder_track_reads`.
+
+```c
+cf_builder_track_misreads(b);
+/* ... the program runs ... */
+for (i = 0; cf_misread_at(cfg, i, &key, &kind, &wanted, &found); ++i) { /* a typo? */ }
+```
+
 ## 7. Errors
 
 A `cf_error` is a plain struct the caller owns, filled by the call that

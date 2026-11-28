@@ -126,6 +126,7 @@ gets reopened every six months.
 | D-111 | The comparison with other libraries: one set of flags, the same work, and a history kept on its own branch | benchmark, CI | **Decided** |
 | D-112 | The MISRA record is plain text of file and count, three kinds, and the gate fails open nowhere | compliance, CI | **Decided** |
 | D-113 | A unit on an int definition: `cf_def.unit`, an open `cf_unit`, and the text read in the unit's base | definitions, `cf_numeric.h`, the contract | **Decided** |
+| D-121 | A read that finds no definition, or another type, is recorded and reported | configuration, diagnostics | **Decided** |
 | D-222 | A unit is an open value: a name, a parser, a formatter and its own options; a program defines its own | `cf_numeric.h`, `cf_def.unit` | **Decided** |
 | D-230 | Options with defaults are one convention: `size` first, `_init`, NULL the defaults; a fixed limit a public call reaches is an option with its old value as default | public options structs, `gate.options` | **Decided** |
 | D-231 | The platform is a part: `none` is built and tried; what it cannot give answers `CF_E_CAPABILITY` | platform, build options, CI | **Decided** |
@@ -5955,3 +5956,32 @@ Rejected: `strerror_r` with feature macros (two signatures, XSI and GNU, to
 test on every libc); a lock around `strerror` (a lock in a reader).
 
 **Status.** Built: K-9k.
+
+## D-121 — A read that finds no definition, or another type, is recorded and reported
+
+**Question.** `cf_get_int(cfg, "server.prot", 8080)` returns 8080. Reading
+is infallible (Design.md, "One Error Site"), so nothing tells the program,
+the operator or Doctor that the key is a typo or has another type. How is
+it noticed without making a read fail, take a lock or log from any thread?
+
+**Options.**
+
+1. Make a read of an undefined key an error. Rejected: it breaks the rule
+   that reads do not fail, and every program that reads a key its
+   contract leaves to a default.
+2. Log it. Rejected: a read takes no lock and may be on any thread
+   (D-14), and a log line a read at a time is the noise a report avoids.
+3. Record it in a small fixed table beside the read coverage, opt-in, and
+   say it in the report (decided).
+
+**Decision.** Option 3: `cf_builder_track_misreads`, `cf_misreads` and
+`cf_misread_at`, and a `"misreads"` array in the report. A misread is a
+typed read of a key the contract does not define (and is not under an
+open prefix), or whose value, or definition when it has no value, has
+another type; `cf_has` and `cf_type_of` are probes, not reads. Sixteen
+distinct (key, kind, wanted) entries, claimed without a lock and
+published when whole; the rest are lost. No value is recorded.
+
+**Consequence.** Doctor's CFD021 (C-8b) reads the array.
+
+**Status.** Built: C-8a.

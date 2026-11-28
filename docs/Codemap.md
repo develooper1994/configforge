@@ -174,6 +174,9 @@
 - enum cf_report_mode 26-38
 - struct cf_report_info 45-52
 - #define CF_REPORT_INFO_INIT 55
+- #define CF_MISREAD_SLOTS 75
+- struct cf_misread_slot 77-81
+- struct cf_misread_log 83-86
 `lib/config/include/configforge/cf_source.h`
 - #define CONFIGFORGE_CF_SOURCE_H 12
 - typedef cf_source 35
@@ -212,19 +215,20 @@
 - #define CF_C11_CHECKED_ 482
 - #define CF_DEFINE_INT 489
 - #define CF_DEFINE_TEXT 494
-- enum cf_sizing 542-546
-- struct cf_sizing_options 548-553
-- cf_get_int_ 654-664
-- cf_get_long_ 665-675
-- cf_get_llong_ 676-683
-- cf_get_bool_ 684-691
-- cf_get_text_ 692-695
-- #define CF_GET_REAL_ 697
-- #define CF_GET_REAL_ 699
-- #define cf_get 701
-- enum cf_change 761-766
-- typedef cf_diff_fn 773
-- typedef cf_watcher 1049
+- enum cf_sizing 555-559
+- struct cf_sizing_options 561-566
+- cf_get_int_ 667-677
+- cf_get_long_ 678-688
+- cf_get_llong_ 689-696
+- cf_get_bool_ 697-704
+- cf_get_text_ 705-708
+- #define CF_GET_REAL_ 710
+- #define CF_GET_REAL_ 712
+- #define cf_get 714
+- enum cf_misread_kind 741-744
+- enum cf_change 796-801
+- typedef cf_diff_fn 808
+- typedef cf_watcher 1084
 `lib/config/src/bridge/dir.c`
 - struct dir_state 36-44
 - typedef dir_name 57
@@ -452,126 +456,131 @@
 - cf_source_store 348-366
 - cf_source_store_error 368-376
 `lib/config/src/core/config.c`
-- struct cf_builder 49-100
-- struct cf_config 102-150
-- config_ghost_load 162-166
-- config_ghost_path 168-170
-- config_is_ghost 172-174
-- codecs_copy 177-182
-- builder_fail 187-193
-- builder_on 195-221
-- cf_build 223-225
-- cf_build_in 227-232
-- cf_builder_abort 234-238
-- derive_prefix 244-261
-- cf_app_builder 263-287
-- cf_builder_response_files 289-311
-- builder_dup 318-331
-- builder_slot 333-347
-- builder_codecs_copy 353-372
-- builder_slot_mask 378-397
-- builder_slot_flags 399-401
-- builder_slot_file 406-408
-- cf_builder_memory 410-418
-- cf_builder_env 420-429
-- cf_builder_cli 431-439
-- cf_builder_file 441-483
-- builder_document 488-541
-- cf_builder_document 543-547
-- cf_builder_env_document 549-554
-- cf_builder_file_codec 556-589
-- cf_builder_dotenv 591-613
-- cf_builder_secrets 615-637
-- cf_builder_credentials 639-660
-- cf_builder_registry 662-683
-- cf_builder_preferences 685-707
-- cf_builder_store 709-730
-- cf_builder_dir 732-771
-- builder_codec_ok 775-792
-- cf_builder_codec 794-816
-- cf_config_codec 818-826
-- cf_builder_replay 828-849
-- cf_builder_source 851-877
-- cf_builder_open 879-890
-- cf_builder_limits 892-914
-- cf_limit_options_init 916-922
-- cf_builder_schema 924-935
-- cf_builder_schema_file 937-948
-- cf_builder_define 950-961
-- cf_builder_bool 963-973
-- cf_builder_int 975-986
-- cf_builder_text 988-999
-- cf_builder_real 1002-1013
-- key_infer 1018-1032
-- key_bound 1035-1055
-- cf_builder_key 1057-1104
-- cf_builder_unknown 1106-1110
-- cf_builder_track_reads 1112-1116
-- cf_builder_digest_key 1118-1142
-- config_ks_sizing 1148-1161
-- cf_sizing_options_init 1163-1170
-- cf_builder_sizing 1172-1211
-- cf_config_sizing 1213-1221
-- cf_builder_log 1223-1229
-- cfi_builder_expect_like 1231-1235
-- config_log 1241-1259
-- config_log_events 1265-1317
-- cf_builder_writable 1319-1335
-- config_name_of_rank 1346-1359
-- create_failed 1364-1372
-- cf_builder_create 1374-1689
-- cf_app 1691-1693
-- derive_ghost 1707-1735
-- derive_onto 1737-1845
-- cf_derive 1847-1867
-- cf_derive_in 1869-1876
-- cfi_config_allocator 1878-1880
-- cfi_config_keep_values 1882-1933
-- write_locked 1954-1966
-- write_authorized 1972-2069
-- write_local_keys 2075-2175
-- cf_write 2177-2226
-- cf_watch_count 2243-2245
-- cf_watch_path 2247-2252
-- cf_changed 2254-2273
-- cf_watcher_open 2277-2294
-- cf_watcher_fd 2296-2298
-- cf_watcher_handle 2300-2302
-- cf_watcher_drain 2304-2306
-- cf_watcher_wait 2308-2310
-- cf_watcher_close 2312-2314
-- cf_config_ref 2316-2320
-- cf_config_free 2322-2333
-- lookup 2339-2356
-- cf_get_bool 2358-2361
-- cf_get_int 2363-2366
-- cf_get_text 2368-2371
-- cf_get_text_n 2373-2387
-- cf_get_real 2390-2393
-- try_of 2396-2408
-- cf_try_bool 2410-2417
-- cf_try_int 2419-2426
-- cf_try_text 2428-2441
-- cf_try_real 2444-2451
-- cf_type_of 2454-2457
-- cf_has 2459-2461
-- cf_tracks_reads 2463-2465
-- cf_was_read 2467-2476
-- cf_read_count 2478-2490
-- cf_explain 2496-2505
-- cf_inspect 2507-2515
-- cf_schema 2517-2529
-- cf_digest 2531-2533
-- cf_fingerprint 2535-2538
-- cf_fingerprint_format 2540-2542
-- cf_count 2544-2546
-- cf_apply_stats 2548-2550
-- cf_sources 2552-2554
-- cf_defs 2556-2558
-- cf_explain_json 2560-2570
-- cf_report 2572-2581
-- cf_keys 2583-2585
-- cf_log_level_name 2587-2599
+- struct cf_builder 49-101
+- struct cf_config 103-156
+- config_ghost_load 168-172
+- config_ghost_path 174-176
+- config_is_ghost 178-180
+- codecs_copy 183-188
+- builder_fail 193-199
+- builder_on 201-227
+- cf_build 229-231
+- cf_build_in 233-238
+- cf_builder_abort 240-244
+- derive_prefix 250-267
+- cf_app_builder 269-293
+- cf_builder_response_files 295-317
+- builder_dup 324-337
+- builder_slot 339-353
+- builder_codecs_copy 359-378
+- builder_slot_mask 384-403
+- builder_slot_flags 405-407
+- builder_slot_file 412-414
+- cf_builder_memory 416-424
+- cf_builder_env 426-435
+- cf_builder_cli 437-445
+- cf_builder_file 447-489
+- builder_document 494-547
+- cf_builder_document 549-553
+- cf_builder_env_document 555-560
+- cf_builder_file_codec 562-595
+- cf_builder_dotenv 597-619
+- cf_builder_secrets 621-643
+- cf_builder_credentials 645-666
+- cf_builder_registry 668-689
+- cf_builder_preferences 691-713
+- cf_builder_store 715-736
+- cf_builder_dir 738-777
+- builder_codec_ok 781-798
+- cf_builder_codec 800-822
+- cf_config_codec 824-832
+- cf_builder_replay 834-855
+- cf_builder_source 857-883
+- cf_builder_open 885-896
+- cf_builder_limits 898-920
+- cf_limit_options_init 922-928
+- cf_builder_schema 930-941
+- cf_builder_schema_file 943-954
+- cf_builder_define 956-967
+- cf_builder_bool 969-979
+- cf_builder_int 981-992
+- cf_builder_text 994-1005
+- cf_builder_real 1008-1019
+- key_infer 1024-1038
+- key_bound 1041-1061
+- cf_builder_key 1063-1110
+- cf_builder_unknown 1112-1116
+- cf_builder_track_reads 1118-1122
+- cf_builder_track_misreads 1124-1128
+- cf_builder_digest_key 1130-1154
+- config_ks_sizing 1160-1173
+- cf_sizing_options_init 1175-1182
+- cf_builder_sizing 1184-1223
+- cf_config_sizing 1225-1233
+- cf_builder_log 1235-1241
+- cfi_builder_expect_like 1243-1247
+- config_log 1253-1271
+- config_log_events 1277-1329
+- cf_builder_writable 1331-1347
+- config_name_of_rank 1358-1371
+- create_failed 1376-1384
+- cf_builder_create 1386-1709
+- cf_app 1711-1713
+- derive_ghost 1727-1755
+- derive_onto 1757-1866
+- cf_derive 1868-1888
+- cf_derive_in 1890-1897
+- cfi_config_allocator 1899-1901
+- cfi_config_keep_values 1903-1954
+- write_locked 1975-1987
+- write_authorized 1993-2090
+- write_local_keys 2096-2196
+- cf_write 2198-2247
+- cf_watch_count 2264-2266
+- cf_watch_path 2268-2273
+- cf_changed 2275-2294
+- cf_watcher_open 2298-2315
+- cf_watcher_fd 2317-2319
+- cf_watcher_handle 2321-2323
+- cf_watcher_drain 2325-2327
+- cf_watcher_wait 2329-2331
+- cf_watcher_close 2333-2335
+- cf_config_ref 2337-2341
+- cf_config_free 2343-2354
+- misread_judge 2362-2378
+- lookup_as 2382-2404
+- cf_get_bool 2406-2409
+- cf_get_int 2411-2414
+- cf_get_text 2416-2419
+- cf_get_text_n 2421-2435
+- cf_get_real 2438-2441
+- try_of 2444-2456
+- cf_try_bool 2458-2465
+- cf_try_int 2467-2474
+- cf_try_text 2476-2489
+- cf_try_real 2492-2499
+- cf_type_of 2502-2505
+- cf_has 2507-2509
+- cf_tracks_misreads 2511-2513
+- cf_misreads 2515-2517
+- cf_misread_at 2519-2543
+- cf_tracks_reads 2545-2547
+- cf_was_read 2549-2558
+- cf_read_count 2560-2572
+- cf_explain 2578-2587
+- cf_inspect 2589-2597
+- cf_schema 2599-2611
+- cf_digest 2613-2615
+- cf_fingerprint 2617-2620
+- cf_fingerprint_format 2622-2624
+- cf_count 2626-2628
+- cf_apply_stats 2630-2632
+- cf_sources 2634-2636
+- cf_defs 2638-2640
+- cf_explain_json 2642-2652
+- cf_report 2654-2664
+- cf_keys 2666-2668
+- cf_log_level_name 2670-2682
 `lib/config/src/core/define.c`
 - struct cf_list_projection 24-29
 - cf_def_init_sized 31-43
@@ -741,6 +750,14 @@
 - cf_live_last_error 906-922
 - cf_live_generation 924-934
 - cf_live_restarts 936-952
+`lib/config/src/core/misread.c`
+- claimed 17-24
+- slot_ready 26-28
+- same 30-36
+- is_repeat 39-50
+- cfi_misread_count 52-65
+- cfi_misread_at 67-83
+- cfi_misread_record 85-117
 `lib/config/src/core/validate.c`
 - sealed 35-38
 - validate_value 40-116
@@ -809,39 +826,39 @@
 - cf_ks_explain_redacted 163-184
 - cf_ks_inspect_redacted 186-274
 `lib/config/src/diag/report.c`
-- report_quote_z 44-50
-- report_digest 57-66
-- source_of 68-80
-- report_default 82-96
-- report_definition 98-160
-- report_file_of 164-184
-- report_format 190-208
-- report_candidate 210-310
-- report_key 317-380
-- cf_report_key_write 382-411
-- cf_report_write 418-422
-- cfi_report_reads 424-528
-- struct schema_ctx 546-552
-- schema_item 556-574
-- schema_under 577-583
-- schema_segment 585-595
-- schema_indent 597-602
-- schema_annotations 604-623
-- schema_scalar 625-658
-- schema_leaf 660-676
-- schema_object 683-782
-- cf_schema_write 784-818
-- cf_schema_write 822-834
-- cf_report_key_write 836-849
-- cf_report_write 853-857
-- cfi_report_reads 859-871
-- struct replay_state 879-884
-- replay_load 893-1016
-- replay_load 1020-1029
-- replay_destroy 1033-1035
-- cf_source_replay_state_size 1040-1042
-- cf_source_replay 1044-1062
-- cf_source_replay_error 1064-1072
+- report_quote_z 45-51
+- report_digest 58-67
+- source_of 69-81
+- report_default 83-97
+- report_definition 99-161
+- report_file_of 165-185
+- report_format 191-209
+- report_candidate 211-311
+- report_key 318-381
+- cf_report_key_write 383-412
+- cf_report_write 419-423
+- cfi_report_reads 425-552
+- struct schema_ctx 570-576
+- schema_item 580-598
+- schema_under 601-607
+- schema_segment 609-619
+- schema_indent 621-626
+- schema_annotations 628-647
+- schema_scalar 649-682
+- schema_leaf 684-700
+- schema_object 707-806
+- cf_schema_write 808-842
+- cf_schema_write 846-858
+- cf_report_key_write 860-873
+- cf_report_write 877-881
+- cfi_report_reads 883-897
+- struct replay_state 905-910
+- replay_load 919-1042
+- replay_load 1046-1055
+- replay_destroy 1059-1061
+- cf_source_replay_state_size 1066-1068
+- cf_source_replay 1070-1088
+- cf_source_replay_error 1090-1098
 `lib/config/src/diag/usage.c`
 - struct usage_items 30-33
 - item 35-39

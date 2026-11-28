@@ -11,6 +11,7 @@
  * cannot.
  */
 
+#include "configforge/configforge.h"
 #include "configforge/cf_numeric.h"
 #include "configforge/cf_platform.h"
 #include "configforge/cf_report.h"
@@ -418,12 +419,13 @@ size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds,
 size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
                        const cf_source_view* sv, const cf_report_info* info, char* buf,
                        size_t cap) {
-    return cfi_report_reads(ks, ds, sv, info, NULL, buf, cap);
+    return cfi_report_reads(ks, ds, sv, info, NULL, NULL, buf, cap);
 }
 
 size_t cfi_report_reads(const cf_keyspace* ks, const cf_defset* ds,
                         const cf_source_view* sv, const cf_report_info* info,
-                        const cf_refcount* reads, char* buf, size_t cap) {
+                        const cf_refcount* reads, const cf_misread_log* misreads,
+                        char* buf, size_t cap) {
     cf_sink        out;
     size_t         i;
     cf_report_mode mode;
@@ -522,7 +524,29 @@ size_t cfi_report_reads(const cf_keyspace* ks, const cf_defset* ds,
         report_key(&out, ks, e, d, ds, sv, mode, "    ",
                    (reads == NULL) ? -1 : (cf_ref_get(&reads[i]) != 0));
     }
-    cf_sink_puts(&out, "\n  }\n}\n");
+    cf_sink_puts(&out, "\n  }");
+    if (misreads != NULL) {
+        size_t m, n = cfi_misread_count(misreads);
+
+        cf_sink_puts(&out, ",\n  \"misreads\": [");
+        for (m = 0; m < n; ++m) {
+            const cf_misread_slot* sl = cfi_misread_at(misreads, m);
+
+            cf_sink_puts(&out, (m > 0) ? ",\n    " : "\n    ");
+            cf_sink_puts(&out, "{ \"key\": ");
+            cf_sink_json_string(&out, sl->key, strlen(sl->key));
+            cf_sink_fmt(&out, ", \"kind\": \"%s\", \"wanted\": \"%s\"",
+                        (sl->kind == CF_MISREAD_UNDEFINED) ? "undefined" : "type",
+                        cf_type_name((cf_type)sl->wanted));
+            if (sl->kind == CF_MISREAD_TYPE) {
+                cf_sink_fmt(&out, ", \"found\": \"%s\"",
+                            cf_type_name((cf_type)sl->found));
+            }
+            cf_sink_puts(&out, " }");
+        }
+        cf_sink_puts(&out, (n > 0) ? "\n  ]" : "]");
+    }
+    cf_sink_puts(&out, "\n}\n");
     cf_sink_terminate(&out);
     return out.len;
 }
@@ -853,17 +877,19 @@ size_t cf_report_key_write(const cf_keyspace* ks, const cf_defset* ds,
 size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
                        const cf_source_view* sv, const cf_report_info* info, char* buf,
                        size_t cap) {
-    return cfi_report_reads(ks, ds, sv, info, NULL, buf, cap);
+    return cfi_report_reads(ks, ds, sv, info, NULL, NULL, buf, cap);
 }
 
 size_t cfi_report_reads(const cf_keyspace* ks, const cf_defset* ds,
                         const cf_source_view* sv, const cf_report_info* info,
-                        const cf_refcount* reads, char* buf, size_t cap) {
+                        const cf_refcount* reads, const cf_misread_log* misreads,
+                        char* buf, size_t cap) {
     (void)ks;
     (void)ds;
     (void)sv;
     (void)info;
     (void)reads;
+    (void)misreads;
     if (buf != NULL && cap > 0) {
         buf[0] = '\0';
     }

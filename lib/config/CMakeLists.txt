@@ -33,6 +33,7 @@ cf_component(
   src/core/iterate.c
   src/core/live.c
   src/core/edit.c
+  src/core/misread.c
   src/sources/entry.c
   src/sources/memory.c
   src/sources/defaults.c

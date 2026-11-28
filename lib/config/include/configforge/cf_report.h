@@ -68,11 +68,40 @@ CF_API size_t cf_report_write(const cf_keyspace* ks, const cf_defset* ds,
                               const cf_source_view* sv, const cf_report_info* info,
                               char* buf, size_t cap);
 
+/* ------------------------------------------------------------------ *
+ * Misreads (D-121), internal, not exported
+ * ------------------------------------------------------------------ */
+
+#define CF_MISREAD_SLOTS 16
+
+typedef struct cf_misread_slot {
+    cf_refcount   ready; /* 0 until the slot is whole */
+    unsigned char kind, wanted, found;
+    char          key[CF_KEY_MAX]; /* cut at CF_KEY_MAX - 1 bytes */
+} cf_misread_slot;
+
+typedef struct cf_misread_log {
+    cf_refcount     next; /* slots claimed */
+    cf_misread_slot slot[CF_MISREAD_SLOTS];
+} cf_misread_log;
+
+/* Record one misread without a lock: a slot is claimed, written, then
+   published. A repeat of one already recorded, or a seventeenth distinct
+   one, is dropped. */
+void cfi_misread_record(cf_misread_log* log, const char* key, size_t keylen,
+                        unsigned kind, cf_type wanted, cf_type found);
+/* The distinct recorded, and the i-th of them in the order first
+   recorded (NULL past the end). */
+size_t                 cfi_misread_count(const cf_misread_log* log);
+const cf_misread_slot* cfi_misread_at(const cf_misread_log* log, size_t i);
+
 /* Internal to cf_report, not exported: the same, with each key's
-   "read" from one flag per key index, or none when `reads` is NULL. */
+   "read" from one flag per key index, or none when `reads` is NULL, and
+   a "misreads" array when `misreads` is not NULL. */
 size_t cfi_report_reads(const cf_keyspace* ks, const cf_defset* ds,
                         const cf_source_view* sv, const cf_report_info* info,
-                        const cf_refcount* reads, char* buf, size_t cap);
+                        const cf_refcount* reads, const cf_misread_log* misreads,
+                        char* buf, size_t cap);
 
 /* One key as the report writes it, alone - explain() for a machine:
 
