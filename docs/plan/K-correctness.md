@@ -749,7 +749,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **needs**: nothing
 * **size**: small
 * **version**: 2.0.0
-* **status**: open
+* **status**: done (922a272)
 * **decided**:
   * **Fork**: a new `lib/config/tests/test_fork.c`, POSIX only (skipped elsewhere by `cf_platform_has_*`): build, `fork`, the child reads every key and exits 0; the child's `cf_live_reload` answers `CF_E_STATE` (if the library cannot tell it is in a child, the row says "not detected" and the card stops for the organiser's answer instead of adding a pid check).
   * **Callbacks**: a C++ test in `tests/cpp/` whose callback throws, caught by the wrapper before it reaches C; the C contract is one sentence in the table.
