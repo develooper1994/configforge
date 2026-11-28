@@ -50,6 +50,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - `cf_policy_text` with a NULL buffer and an empty policy, and `cf_fingerprint_step` with a NULL type, no longer read or write through the NULL (K-9g).
 - `cf_arena_alloc`, `cf_arena_calloc` and `cf_arena_dup` refuse a request too large to
   size (`SIZE_MAX` and just below) instead of serving a short block (K-9d).
+- `cf_ks_add_candidate` adds the candidate with its `written` text or not at all, so a refusal leaves the key space as it was; its guarantee is now `strong` (K-9j).
 
 ## 1.9.0 — 2026-11-27
 

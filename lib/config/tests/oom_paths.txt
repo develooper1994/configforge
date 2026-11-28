@@ -4,6 +4,7 @@
 #   name|known: why       the sweep found a defect not yet fixed (2.0.0 does not release with one)
 # scripts/check/oom.py reads this; gate.oom refuses a public name that has no line.
 cf_builder_create|test_oom_paths.c:test_builder_document
+# K-9j: test_oom_paths.c:oom_builder_again gives the builder's source again after each refusal; oom_add_candidate sweeps cf_ks_add_candidate (internal).
 cf_builder_open|test_oom_paths.c:test_builder_document
 cf_codec_decode|test_oom_decode.c:sweep_codec
 cf_derive|test_oom_paths.c:test_derive

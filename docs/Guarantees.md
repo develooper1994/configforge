@@ -256,7 +256,7 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_keysink_of` | `cf_entry.h` | nothrow |
 | `cf_ks_add` | `cf_keyspace.h` | basic |
 | `cf_ks_add_authored` | `cf_keyspace.h` | basic |
-| `cf_ks_add_candidate` | `cf_keyspace.h` | basic |
+| `cf_ks_add_candidate` | `cf_keyspace.h` | strong |
 | `cf_ks_add_default` | `cf_keyspace.h` | basic |
 | `cf_ks_add_resolved` | `cf_keyspace.h` | basic |
 | `cf_ks_add_text` | `cf_keyspace.h` | basic |
@@ -408,6 +408,6 @@ crash. That is held at run time by K-9b's tests, not by this gate.
 | `cf_watcher_wait` | `configforge.h` | basic |
 | `cf_write` | `configforge.h` | strong |
 
-nothrow 144, strong 102, basic 69, not yet 0
+nothrow 144, strong 103, basic 68, not yet 0
 
 <!-- guarantees:end -->

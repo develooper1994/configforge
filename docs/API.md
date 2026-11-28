@@ -3115,7 +3115,7 @@ Guarantee: basic. As cf_ks_add.
 CF_NODISCARD CF_API cf_bool cf_ks_add_resolved(cf_keyspace* ks, const char* key, size_t keylen, int source, const cf_value* value, const char* at);
 ```
 
-Implementation: [`cf_ks_add_resolved` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L435).
+Implementation: [`cf_ks_add_resolved` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L440).
 
 Guarantee: basic. As cf_ks_add.
 
@@ -3150,8 +3150,8 @@ Implementation: [`cf_ks_add_candidate` (lib/config/src/core/keyspace.c)](https:/
 Record a copy of another key space's candidate, at its rank, with what
 it was - textual, a default, the template it was made from - and not
 what it was waiting for: it is not read for references again.
-Guarantee: basic. As cf_ks_add; the candidate may be left without its `written`
-text.
+Guarantee: strong. The candidate is added with its `written` text or not at all;
+false leaves the key space as it was.
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_ks_replay(cf_keyspace* ks, const cf_keyspace* base);
@@ -3159,7 +3159,7 @@ CF_NODISCARD CF_API cf_bool cf_ks_replay(cf_keyspace* ks, const cf_keyspace* bas
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_replay` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L475).
+Implementation: [`cf_ks_replay` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L480).
 
 Internal snapshot replay, in original insertion order and at the
 source-local keys of appended lists. Derived counts are not replayed.
@@ -3170,7 +3170,7 @@ CF_NODISCARD CF_API cf_bool cf_ks_append_list(cf_keyspace* ks, const char* key, 
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_append_list` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L499).
+Implementation: [`cf_ks_append_list` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L504).
 
 Internal: plans are collected before this changes the key index.
 Resolve once after applying all plans.
@@ -3181,7 +3181,7 @@ CF_API const char* cf_ks_original_key(const cf_keyspace* ks, const cf_candidate*
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_original_key` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L447).
+Implementation: [`cf_ks_original_key` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L452).
 
 The source-local key before remapping, or NULL if it never moved.
 c must be an owned candidate of this space, not a copied descriptor.
@@ -3192,7 +3192,7 @@ CF_NODISCARD CF_API cf_bool cf_ks_reject(cf_keyspace* ks, const char* key, size_
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_reject` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L583).
+Implementation: [`cf_ks_reject` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L588).
 
 Record a candidate that failed conversion or validation. It never
 wins, and it is never erased: explain() has to be able to say that
@@ -3204,7 +3204,7 @@ CF_NODISCARD CF_API cf_bool cf_ks_resolve(cf_keyspace* ks);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_resolve` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L687).
+Implementation: [`cf_ks_resolve` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L692).
 
 Sorts and groups the candidates. Returns false when there was no room
 to do it, which is not the same as an empty configuration: the caller
@@ -3217,7 +3217,7 @@ CF_API size_t cf_ks_candidate_count(const cf_keyspace* ks);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_candidate_count` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L683).
+Implementation: [`cf_ks_candidate_count` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L688).
 
 Candidates appended so far, which is what an out-of-room message
 should name: the caller sized a buffer, not a key count.
@@ -3228,7 +3228,7 @@ CF_API void cf_ks_infer_untyped(cf_keyspace* ks);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_infer_untyped` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L774).
+Implementation: [`cf_ks_infer_untyped` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L779).
 
 Tier 0 typing. Every textual candidate that no definition claimed
 gets a type by inference, which is deliberately timid: see D-24.
@@ -3245,7 +3245,7 @@ CF_API cf_entry* cf_ks_at_mut(cf_keyspace* ks, size_t i);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_at_mut` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L795).
+Implementation: [`cf_ks_at_mut` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L800).
 
 Mutable access, for the passes that legitimately change outcomes:
 applying definitions marks candidates rejected. Casting away const
@@ -3258,7 +3258,7 @@ CF_API void cf_ks_reselect(cf_keyspace* ks);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_reselect` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L802).
+Implementation: [`cf_ks_reselect` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L807).
 
 Recompute the selected candidate of every entry. Needed after
 anything that changes an outcome, which in practice means after the
@@ -3270,7 +3270,7 @@ CF_API const cf_entry* cf_ks_find(const cf_keyspace* ks, const char* key, size_t
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_find` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L863).
+Implementation: [`cf_ks_find` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L868).
 
 Binary search over the resolved entries. NULL when absent, and NULL
 before cf_ks_resolve: a half-built space has no answer to give, and
@@ -3282,7 +3282,7 @@ CF_API size_t cf_ks_lower_bound(const cf_keyspace* ks, const char* key, size_t k
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_lower_bound` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L843).
+Implementation: [`cf_ks_lower_bound` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L848).
 
 Index of the first key that is not less than `key`, which is where a
 prefix scan starts. Returns cf_ks_count when every key sorts before
@@ -3295,7 +3295,7 @@ CF_API const cf_value* cf_ks_get(const cf_keyspace* ks, const char* key, size_t 
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_get` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L886).
+Implementation: [`cf_ks_get` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L891).
 
 The selected value, or NULL when the key is absent or every
 candidate was rejected.
@@ -3307,7 +3307,7 @@ CF_API const cf_entry* cf_ks_at(const cf_keyspace* ks, size_t i);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_count` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L894), [`cf_ks_at` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L898).
+Implementation: [`cf_ks_count` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L899), [`cf_ks_at` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L903).
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_ks_is_sorted(const cf_keyspace* ks);
@@ -3315,7 +3315,7 @@ CF_NODISCARD CF_API cf_bool cf_ks_is_sorted(const cf_keyspace* ks);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_is_sorted` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L828).
+Implementation: [`cf_ks_is_sorted` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L833).
 
 Verifies the ordering invariant the design depends on.
 
@@ -3325,7 +3325,7 @@ CF_API cf_u64 cf_ks_digest(const cf_keyspace* ks);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_digest` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L1080).
+Implementation: [`cf_ks_digest` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L1085).
 
 Order-independent digest over the resolved space. Two runs that
 produce the same configuration produce the same digest, on every
@@ -3338,7 +3338,7 @@ CF_API cf_u64 cf_ks_value_digest(const cf_value* v);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_value_digest` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L939).
+Implementation: [`cf_ks_value_digest` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L944).
 
 FNV-1a over one value's canonical text: what a value-blind report
 says of a secret, so that "did it change" has an answer and "what is
@@ -3350,7 +3350,7 @@ CF_API size_t cf_ks_digest_text(cf_u64 h, char* buf, size_t cap);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_digest_text` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L949).
+Implementation: [`cf_ks_digest_text` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L954).
 
 A digest as a report writes it, "fnv1a:" and sixteen hex digits, in
 `buf` as far as `cap` allows; the length it needs, 22.
@@ -3361,7 +3361,7 @@ CF_API cf_u64 cf_siphash24(const unsigned char* key, const void* p, size_t n);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_siphash24` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L1009).
+Implementation: [`cf_siphash24` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L1014).
 
 SipHash-2-4 of `n` bytes under the 16-byte `key` (D-85). INTERNAL:
 exported for the tests' vectors.
@@ -3372,7 +3372,7 @@ CF_API size_t cf_ks_secret_digest_text(const cf_value* v, const unsigned char* k
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_secret_digest_text` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L1057).
+Implementation: [`cf_ks_secret_digest_text` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L1062).
 
 The digest a report and the fingerprint stand for a secret's value:
 cf_ks_digest_text(cf_ks_value_digest(v)) when `key` is NULL, else

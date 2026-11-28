@@ -19,6 +19,7 @@
  */
 
 #include <configforge/configforge.h>
+#include <configforge/cf_keyspace.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -655,10 +656,152 @@ static void test_watcher_open(void) {
     (void)cf_oom_sweep("a watcher", try_watcher_open, NULL);
 }
 
+/* ---------------------------------------------------------------- *
+ * K-9j: a builder given its source again after a refusal, and a
+ * candidate added without its text
+ * ---------------------------------------------------------------- */
+
+/* cf_builder_create consumes the builder, refused or not, so "given its
+   source again" is a new builder under the real allocator: it has to
+   build what a clean run builds, whatever the refused run left behind. */
+static int try_builder_again(void* ctx, const cf_allocator* a, cf_u64* digest,
+                             cf_error* err) {
+    const load_case* lc    = (const load_case*)ctx;
+    cf_u64           clean = 0;
+    cf_u64           again = 0;
+    cf_error         e2    = CF_ERROR_INIT;
+    int              rc;
+
+    {
+        cf_builder* b = cf_build(cf_default_allocator());
+        check(b != NULL, "the clean builder exists");
+        if (b == NULL) {
+            return CF_OOM_BAD;
+        }
+        (void)cf_builder_open(b, "open.");
+        (void)cf_builder_document(b, "doc", CF_RANK_USER_FILE, lc->text,
+                                  strlen(lc->text), lc->format, 0);
+        if (finish_create(b, &clean, &e2) != CF_OOM_DONE) {
+            check(0, "the clean run builds");
+            return CF_OOM_BAD;
+        }
+    }
+    rc = try_builder_document(ctx, a, digest, err);
+    if (rc == CF_OOM_FAILED) {
+        cf_builder* b = cf_build(cf_default_allocator());
+
+        check(b != NULL, "the builder after a refusal exists");
+        if (b == NULL) {
+            return CF_OOM_BAD;
+        }
+        (void)cf_builder_open(b, "open.");
+        (void)cf_builder_document(b, "doc", CF_RANK_USER_FILE, lc->text,
+                                  strlen(lc->text), lc->format, 0);
+        if (finish_create(b, &again, &e2) != CF_OOM_DONE || again != clean) {
+            check(0,
+                  "after a refused run the same source builds what a clean run builds");
+            return CF_OOM_BAD;
+        }
+    }
+    return rc;
+}
+
+static void oom_builder_again(void) {
+    static load_case cases[] = {
+        {"json", "{\"server\": {\"port\": 8080}, \"tags\": [\"a\", \"b\"]}", NULL},
+        {"toml", "[server]\nport = 8080\ntags = [\"a\", \"b\"]\n", NULL},
+        {"yaml", "server:\n  port: 8080\ntags:\n  - a\n  - b\n", NULL}};
+    size_t i;
+
+    for (i = 0; i < sizeof cases / sizeof cases[0]; ++i) {
+        char what[64];
+
+        if (cf_codec_by_name(cases[i].format) == NULL) {
+            continue;
+        }
+        cf_fmt(what, sizeof what, "a %s document, then again", cases[i].format);
+        (void)cf_oom_sweep(what, try_builder_again, (void*)&cases[i]);
+    }
+}
+
+/* The key space is made first (paused); the candidate's three texts are
+   each longer than the arena's first block, so each takes an allocation. */
+static int try_add_candidate(void* ctx, const cf_allocator* a, cf_u64* digest,
+                             cf_error* err) {
+    static char     big[1300];
+    cf_arena*       ar;
+    cf_keyspace     ks;
+    cf_candidate    c;
+    cf_value        v;
+    const cf_entry* e;
+    size_t          before;
+    size_t          counted;
+    int             rc = CF_OOM_DONE;
+    int             ok;
+
+    (void)ctx;
+    *digest = 0;
+    memset(big, 'x', sizeof big - 1);
+    big[sizeof big - 1] = '\0';
+
+    cf_oom_pause(a);
+    ar = cf_arena_new(a, 1024);
+    if (ar == NULL || !cf_ks_init(&ks, ar, 1)) {
+        cf_oom_resume(a);
+        if (ar != NULL) {
+            cf_arena_free(ar);
+        }
+        check(0, "the key space is made before the part under test");
+        return CF_OOM_BAD;
+    }
+    cf_value_int(&v, 1);
+    check(cf_ks_add(&ks, "z.first", 7, 0, &v, NULL), "a first candidate");
+    before = cf_ks_candidate_count(&ks);
+
+    memset(&c, 0, sizeof c);
+    cf_value_text(&c.value, big, sizeof big - 1);
+    c.source  = 1;
+    c.at      = big;
+    c.written = big;
+    cf_oom_resume(a);
+
+    ok      = cf_ks_add_candidate(&ks, "a.b", 3, &c);
+    counted = cf_oom_calls(a);
+    cf_oom_pause(a);
+    if (!ok) {
+        cf_error_set(err, CF_E_MEMORY, NULL, NULL, "no room for a candidate");
+        rc = CF_OOM_FAILED;
+    }
+    check(cf_ks_resolve(&ks), "the key space resolves");
+    e = cf_ks_find(&ks, "a.b", 3);
+    if (e == NULL) {
+        check(ok == 0, "a candidate that was added is found");
+        check(cf_ks_candidate_count(&ks) == before,
+              "a refused candidate left the key space as it was");
+    } else {
+        check(e->chain != NULL && e->chain->written != NULL,
+              "a candidate that is in the key space has its written text");
+        if (e->chain == NULL || e->chain->written == NULL) {
+            rc = CF_OOM_BAD;
+        }
+        *digest = 1;
+    }
+    cf_arena_free(ar);
+    /* The checks above allocated (resolve, the lookup): not the sweep's places. */
+    ((cf_oom*)a->ctx)->calls = counted;
+    return rc;
+}
+
+static void oom_add_candidate(void) {
+    (void)cf_oom_sweep("a candidate added", try_add_candidate, NULL);
+}
+
 int main(void) {
     test_edit_uses_the_allocator();
     test_edit_commit();
     test_builder_document();
+    oom_builder_again();
+    oom_add_candidate();
     test_builder_file();
 #if CF_WITH_DIR
     test_builder_dir();

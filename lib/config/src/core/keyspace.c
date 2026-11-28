@@ -415,20 +415,25 @@ cf_bool cf_ks_rename_list(cf_keyspace* ks, const char* from, size_t fromlen,
 
 cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key, size_t keylen,
                             const cf_candidate* c) {
-    if (c == NULL ||
-        !cf_ks_push(ks, key, keylen, c->source, &c->value, c->at, CF_OUT_PENDING, NULL,
+    const char* written = NULL;
+
+    if (c == NULL || ks == NULL) {
+        return CF_FALSE;
+    }
+    /* The text first: the candidate is added only once everything it
+       carries has room, so a refusal leaves the key space as it was. */
+    if (c->written != NULL) {
+        written = cf_arena_dup(ks->arena, c->written, strlen(c->written));
+        if (written == NULL) {
+            return CF_FALSE;
+        }
+    }
+    if (!cf_ks_push(ks, key, keylen, c->source, &c->value, c->at, CF_OUT_PENDING, NULL,
                     c->flags & (CF_CAND_TEXTUAL | CF_CAND_DEFAULT | CF_CAND_RESOLVED |
                                 CF_CAND_PINNED))) {
         return CF_FALSE;
     }
-    if (c->written != NULL) {
-        size_t at = ks->ncand - 1;
-        ks->cands[at].cand.written =
-            cf_arena_dup(ks->arena, c->written, strlen(c->written));
-        if (ks->cands[at].cand.written == NULL) {
-            return CF_FALSE;
-        }
-    }
+    ks->cands[ks->ncand - 1].cand.written = written;
     return CF_TRUE;
 }
 

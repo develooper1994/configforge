@@ -312,8 +312,8 @@ CF_NODISCARD CF_API cf_bool cf_ks_rename_list(cf_keyspace* ks, const char* from,
 /* Record a copy of another key space's candidate, at its rank, with what
    it was - textual, a default, the template it was made from - and not
    what it was waiting for: it is not read for references again.
-   Guarantee: basic. As cf_ks_add; the candidate may be left without its `written`
-   text. */
+   Guarantee: strong. The candidate is added with its `written` text or not at all;
+   false leaves the key space as it was. */
 CF_NODISCARD CF_API cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key,
                                                 size_t keylen, const cf_candidate* c);
 
