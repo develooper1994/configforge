@@ -860,3 +860,26 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **accept**: the standard ACCEPT; `ctest -R fingerprint_gate` exit 0.
 * **stop if**: the example's output depends on the platform (the fingerprint is "identical on every platform", `configforge.h:630-632`): if the two ACCEPT machines differ, it is a bug in M-32: stop and name both strings.
 * **docs**: `CHANGELOG.md` under "## 1.10.0 — unreleased", "### Added": "a worked gate on a SHA-256 fingerprint". `docs/Roadmap.md`: "**One digest a purpose, and a door for the program's own.**" (line 916) to 🟩.
+
+## M-35 - A card's id is a link, in Plan.md's index and in the Roadmap
+
+* **id**: M-35
+* **goal**: every card id in `docs/Plan.md`'s generated index and every card id named in `docs/Roadmap.md` is a link to its card (`plan/<file>.md#<id>` from Plan.md, `plan/<file>.md#<id>` from the Roadmap, both under `docs/`), on GitHub and on the mkdocs site; `scripts/work/index.py --check` refuses a missing anchor or a stale link.
+* **why**: the maintainer (2026-11-28): "Plan.md and Roadmap.md name card numbers but do not link to the cards; it would be good if they did".
+* **needs**: nothing
+* **size**: small
+* **version**: 2.1.0
+* **status**: open
+* **decided**:
+  * **The anchor**: a line `<a id="<id in lower case>"></a>` right before each card's `## <id> - ` heading, written by the script (GitHub's and Python-Markdown's slugs of `## K-9k - The text...` differ, so the heading's own slug is not used; an explicit id is the same on both). `brief.py`, `ready.py` and `index.py` read headings with `^## `: the anchor line is not a heading and they are unchanged except where a test shows otherwise.
+  * **The script**: `scripts/work/links.py` (new, standard library only, a shebang and executable), idempotent: it writes the anchors into `docs/plan/*.md`, and in `docs/Roadmap.md` turns a bare id that names an existing card (`\b[A-Z]-[0-9]+[a-z]?(-m)?\b`, checked against the cards' ids) into `[<id>](plan/<file>.md#<id lower>)`; never inside a code span, a fenced block, a heading, or an existing link `[...](...)`. `index.py` writes its id cell as the same link and calls the anchor writer before it writes; `index.py --check` (already run by a gate: `git grep -n "index.py" cmake tests`) also fails when `links.py --check` would change a file.
+  * **Rejected**: links to GitHub URLs (they break on the site and on a fork); slugs of the full heading (the two renderers disagree).
+* **files**: `scripts/work/links.py` (new), `scripts/work/index.py`, `docs/plan/*.md` (anchors, written by the script), `docs/Plan.md` and `docs/Roadmap.md` (regenerated), a test beside the work scripts' tests (`git grep -n "index.py" tests/work`); last: `CHANGELOG.md` is not touched (a document change).
+* **steps**:
+  1. `git switch -c work/M-35` from `batch`. A test: a card file and a Roadmap fixture in a temporary directory; `links.py` makes the anchor and the link and leaves a code span and an existing link alone; a second run changes nothing; **see it fail** (no script).
+  2. The script; `index.py`'s cell and `--check`.
+  3. Run it on the tree; `python scripts/work/index.py --check` exit 0; `mkdocs build --strict` where mkdocs is installed (else say so); ruff clean.
+  4. Format; codemap and apiref last; ACCEPT.
+* **accept**: ACCEPT's local runs; `ctest --preset default -R "work\.|gate\.plan|gate\.docs"` exit 0 (the names `git grep` finds).
+* **stop if**: an id in the Roadmap names something that is not a card but has a card's shape (a D-number never has it; a rule like `MSC30-C` has a different shape): leave it and list it in the report.
+* **docs**: none beyond the regenerated files.
