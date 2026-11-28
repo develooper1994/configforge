@@ -476,7 +476,7 @@ of a card's CI.
 | 191 | [P-14](plan/P-measured.md#p-14) The OpenSSF Scorecard: every finding read, every one the repository can meet met | 2.1.0 | medium | nothing | open |
 | 192 | [M-20](plan/M-maintainer.md#m-20) The evidence pack: the script that assembles it, with a manifest that never claims what is not there | 2.1.0 | medium | nothing | open |
 | 193 | [M-21](plan/M-maintainer.md#m-21) The evidence pack in the release | 2.1.0 | small | [M-20](plan/M-maintainer.md#m-20) | waits: [M-20](plan/M-maintainer.md#m-20) |
-| 194 | [M-35](plan/M-maintainer.md#m-35) A card's id is a link, in Plan.md's index and in the Roadmap | 2.1.0 | small | nothing | open |
+| 194 | [M-35](plan/M-maintainer.md#m-35) A card's id is a link, in Plan.md's index and in the Roadmap | 2.1.0 | small | nothing | done (22a3947) |
 | 195 | [K-9h](plan/K-correctness.md#k-9h) Thread, signal and allocation lines beside the guarantee, held by `gate.guarantees` | 2.0.0 | medium | [K-9a](plan/K-correctness.md#k-9a) | done (b424389) |
 | 196 | [K-9i](plan/K-correctness.md#k-9i) Fork, callbacks, durability and inherited descriptors: one table, each row a test | 2.0.0 | small | nothing | done (922a272) |
 | 197 | [F-6](plan/F-files.md#f-6) The sync a replace needs, by platform: `fdatasync` on Linux, `F_FULLFSYNC` on macOS, kept only if measured | 2.7.0 | small | nothing | open |

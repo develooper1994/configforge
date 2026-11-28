@@ -904,7 +904,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **needs**: nothing
 * **size**: small
 * **version**: 2.1.0
-* **status**: open
+* **status**: done (22a3947)
 * **decided**:
   * **The anchor**: a line `<a id="<id in lower case>"></a>` right before each card's `## <id> - ` heading, written by the script (GitHub's and Python-Markdown's slugs of `## K-9k - The text...` differ, so the heading's own slug is not used; an explicit id is the same on both). `brief.py`, `ready.py` and `index.py` read headings with `^## `: the anchor line is not a heading and they are unchanged except where a test shows otherwise.
   * **The script**: `scripts/work/links.py` (new, standard library only, a shebang and executable), idempotent: it writes the anchors into `docs/plan/*.md`, and in `docs/Roadmap.md` turns a bare id that names an existing card (`\b[A-Z]-[0-9]+[a-z]?(-m)?\b`, checked against the cards' ids) into `[<id>](plan/<file>.md#<id lower>)`; never inside a code span, a fenced block, a heading, or an existing link `[...](...)`. `index.py` writes its id cell as the same link and calls the anchor writer before it writes; `index.py --check` (already run by a gate: `git grep -n "index.py" cmake tests`) also fails when `links.py --check` would change a file.
