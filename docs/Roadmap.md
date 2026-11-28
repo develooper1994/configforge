@@ -151,7 +151,7 @@ short keeps its branch, unmerged, and says so here.
    the layout where the format can. **2.2.0.**
 7. ⬜ **Wave 7**: Go (cgo) and .NET (P/Invoke) bindings, each with its
    tests, an example and a CI job. **2.3.0.**
-8. 🟩 **Wave 8, 2.0**: the stream reader and the dynamic sizing modes
+8. 🟩 **Wave 8, 2.0**: the dynamic sizing modes and the breaks of 2.0, once (docs/Migrating-2.0.md); the stream reader moved to 2.4.0, additive
    (D-61), and what else waits for a major version (the image header's
    layout), together, once. **2.0.0.**
 
