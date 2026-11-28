@@ -301,7 +301,7 @@ of a card's CI.
 | 16 | C-2b Durations and sizes: the schema, the report, `cf_emit` and every reader | 2.1.0 | medium | C-2a | waits: C-2a |
 | 17 | C-8a A read the contract does not have, noticed: the library records it | 2.1.0 | medium | nothing | open |
 | 18 | C-9 Values migrated, not only renamed: a function on the old key's definition | 2.1.0 | medium | nothing | open |
-| 19 | C-11 A program's files where its platform keeps them: `cf_builder_app_files` | 2.1.0 | medium | C-7 | waits: C-7 |
+| 19 | C-11 A program's files where its platform keeps them: `cf_builder_app_files` | 2.1.0 | medium | nothing | open |
 | 20 | C-7 Profiles: `--profile` or `NAME_PROFILE` adds `config.<profile>.<ext>` above the base file | 2.1.0 | medium | C-11 | waits: C-11 |
 | 21 | C-10a A running program asked for its report: the library answers one request on a descriptor | 2.1.0 | medium | nothing | open |
 | 22 | F-1b `cf_emit_file`: a configuration written to a file whole or not at all (the file layer's third part) | 2.1.0 | small | F-1a | open |

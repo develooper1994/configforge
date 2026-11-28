@@ -457,7 +457,7 @@ Shared by every card here:
 * **id**: C-11
 * **goal**: `cf_builder_app_files(b, "myapp", "toml")` adds the system file at `CF_RANK_SYS_FILE` with its `conf.d` just above it and the user's file at `CF_RANK_USER_FILE`, from the places each platform keeps them; a missing file is no error; `cf_inspect` and the report name each path looked at; the paths of the three platforms are tested with a fixed environment; `examples/c/layers.c` uses it.
 * **why**: Design.md promised that `cf_app` would read the user's and the system's files (`docs/Design.md:309-320`); D-09 closed `cf_app` without them (`docs/Decisions.md:515-535`). So every program writes the XDG, `%APPDATA%` and `~/Library/Application Support` code itself, with its own mistakes (a relative `XDG_CONFIG_HOME` the specification says to ignore, an unset `HOME`): the repeated code this library exists to remove, and the one place a path is wrong without anybody being told.
-* **needs**: nothing (C-7 builds on it)
+* **needs**: nothing (the profiles card builds on it)
 * **size**: medium
 * **version**: 2.1.0
 * **status**: open
