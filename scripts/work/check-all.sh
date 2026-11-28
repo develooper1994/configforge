@@ -83,5 +83,5 @@ tar -C "$tree" --exclude='./build*' -cf - . | tar -C "$src" -xf -
 lanes=${*:-"default misra clang none tidy iwyu ubsan analyze ruff"}
 start=$(date +%s)
 # The longest lanes first, so the last to start is a short one.
-printf '%s\n' $lanes | nice -n 19 ionice -c3 xargs -P "$LANES" -I{} sh "$self" --lane {}
+printf '%s\n' "$lanes" | tr ' ' '\n' | grep . | nice -n 19 ionice -c3 xargs -P "$LANES" -I{} sh "$self" --lane {}
 echo "== all done ($(( $(date +%s) - start ))s)"
