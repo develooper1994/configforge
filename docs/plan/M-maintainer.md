@@ -374,7 +374,7 @@ ACCEPT-LINUX, ACCEPT-WINDOWS and ACCEPT-CI, plus the card's own check.
 * **needs**: M-11b, M-12
 * **size**: small
 * **version**: 2.0.0
-* **status**: open
+* **status**: done (289121d)
 * **decided**:
   * One table, `| What changes | Since | Before | Now | D |`, a row per break and only those M-11b and M-12 made (`cf_error` owned text, D-176; image major 2, D-177; and whatever `gate.abi`'s diff shows: step 2; the `### Changed` entries K-6a, K-6b and K-9c made in the 1.9.0 and 2.0.0 sections are listed too, each with the D-number its card gives). The stream (M-5 to M-9) is not part of 2.0.0: it comes in 2.4.0 and is additive (M-5 grows `cf_codec` with a `decode_stream` member that is read only where `size` reaches it, D-51), so 2.0.0 does not wait for it and the list needs none of its cards. Nor is the manifest in the image (Y-33, 2.2.0): M-12 reserves its place in the header, so it breaks nothing later. M-10 (the sizing interface) and M-11a add and break nothing.
   * The version is bumped by `scripts/release/version.cmake` with the argument its header comment documents (`Cargo.toml:3`, `pyproject.toml:7` and the rest are its job), never by hand. **The tag is not a step of this card** (docs/Plan.md, "For the maintainer": the organiser tags a milestone whose cards are done with CI green).

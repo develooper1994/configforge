@@ -296,7 +296,7 @@ of a card's CI.
 | 11 | M-11a Sizing in the readers and the key space | 2.0.0 | medium | M-10 | done (a2eb91e) |
 | 12 | M-11b `cf_error` owns its text (the 2.0 break) | 2.0.0 | large | M-11a | done (08e6470) |
 | 13 | M-12 The image header's layout, version 2 | 2.0.0 | medium | nothing | done (c818cba) |
-| 14 | M-13 2.0, once: the list of what breaks, and the gate that holds it | 2.0.0 | small | M-11b, M-12 | open |
+| 14 | M-13 2.0, once: the list of what breaks, and the gate that holds it | 2.0.0 | small | M-11b, M-12 | done (289121d) |
 | 15 | C-2a Durations and sizes: the unit on an int definition | 2.1.0 | large | nothing | open |
 | 16 | C-2b Durations and sizes: the schema, the report, `cf_emit` and every reader | 2.1.0 | medium | C-2a | waits: C-2a |
 | 17 | C-8a A read the contract does not have, noticed: the library records it | 2.1.0 | medium | nothing | open |
