@@ -294,9 +294,9 @@ of a card's CI.
 | 9 | K-9b Allocation faults injected into every load and write path, and what a failure leaves behind checked | 2.0.0 | large | K-9a, K-9d, K-9e, K-9f, K-9g | done (42dc309) |
 | 10 | K-9j The two checks K-9b left: a builder given its source again, and a candidate added without its text | 2.0.0 | small | K-9b | done (78d7f39) |
 | 11 | M-11a Sizing in the readers and the key space | 2.0.0 | medium | M-10 | done (a2eb91e) |
-| 12 | M-11b `cf_error` owns its text (the 2.0 break) | 2.0.0 | large | M-11a | open |
+| 12 | M-11b `cf_error` owns its text (the 2.0 break) | 2.0.0 | large | M-11a | done (08e6470) |
 | 13 | M-12 The image header's layout, version 2 | 2.0.0 | medium | nothing | done (c818cba) |
-| 14 | M-13 2.0, once: the list of what breaks, and the gate that holds it | 2.0.0 | small | M-11b, M-12 | waits: M-11b |
+| 14 | M-13 2.0, once: the list of what breaks, and the gate that holds it | 2.0.0 | small | M-11b, M-12 | open |
 | 15 | C-2a Durations and sizes: the unit on an int definition | 2.1.0 | large | nothing | open |
 | 16 | C-2b Durations and sizes: the schema, the report, `cf_emit` and every reader | 2.1.0 | medium | C-2a | waits: C-2a |
 | 17 | C-8a A read the contract does not have, noticed: the library records it | 2.1.0 | medium | nothing | open |
