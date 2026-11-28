@@ -52,26 +52,11 @@ static cf_config* load(int argc, char** argv, cf_error* err) {
 }
 
 static int save(const cf_config* cfg, cf_error* err) {
-    static char buf[8192];
-    FILE*       f;
-    size_t      n;
-
     /* Only what somebody configured. Writing the defaults too would
        freeze them into the file, and a later release could never move
-       one for a user who had never touched it. */
-    n = cf_emit(cfg, "json", CF_EMIT_CONFIGURED, 0, buf, sizeof buf, err);
-    if (n == 0) {
-        return 0;
-    }
-    f = fopen(SETTINGS_FILE, "wb");
-    if (f == NULL) {
-        cf_error_set(err, CF_E_SOURCE, NULL, SETTINGS_FILE, "cannot write '%s'",
-                     SETTINGS_FILE);
-        return 0;
-    }
-    fputs(buf, f);
-    fclose(f);
-    return 1;
+       one for a user who had never touched it. The file is replaced
+       whole or not at all: a crash or a full disk leaves the old one. */
+    return cf_emit_file(cfg, SETTINGS_FILE, "json", CF_EMIT_CONFIGURED, 0, NULL, err) ? 1 : 0;
 }
 
 static void print(const cf_config* cfg) {

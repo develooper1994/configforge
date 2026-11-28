@@ -94,7 +94,7 @@
 - typedef cf_edit 37
 `lib/config/include/configforge/cf_emit.h`
 - #define CONFIGFORGE_CF_EMIT_H 15
-- enum cf_emit_what 26-37
+- enum cf_emit_what 27-38
 `lib/config/include/configforge/cf_entry.h`
 - #define CONFIGFORGE_CF_ENTRY_H 26
 - enum cf_keymap_kind 45-53
@@ -275,7 +275,9 @@
 - escape_written 189-201
 - literal_scalar 203-228
 - cf_emit 230-344
-- cf_emit 348-360
+- cf_emit_file 346-388
+- cf_emit 392-404
+- cf_emit_file 406-411
 `lib/config/src/bridge/file.c`
 - struct file_state 38-55
 - cf_file_read_stable 61-86

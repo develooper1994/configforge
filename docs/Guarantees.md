@@ -266,6 +266,7 @@ allocation words (the default where its header says none).
 | `cf_edit_set_text` | `cf_edit.h` | basic | distinct objects | unsafe | may |
 | `cf_edit_unset` | `cf_edit.h` | basic | distinct objects | unsafe | may |
 | `cf_emit` | `cf_emit.h` | strong | distinct objects | unsafe | may |
+| `cf_emit_file` | `cf_emit.h` | strong | distinct objects | unsafe | may |
 | `cf_encoding_by_name` | `cf_encoding.h` | strong | distinct objects | unsafe | may |
 | `cf_encoding_check` | `cf_encoding.h` | strong | distinct objects | unsafe | may |
 | `cf_encoding_name` | `cf_encoding.h` | nothrow | distinct objects | unsafe | may |
@@ -489,7 +490,7 @@ allocation words (the default where its header says none).
 | `cf_watcher_wait` | `configforge.h` | basic | distinct objects | unsafe | may |
 | `cf_write` | `configforge.h` | strong | distinct objects | unsafe | may |
 
-nothrow 150, strong 108, basic 68, not yet 0
+nothrow 150, strong 109, basic 68, not yet 0
 
 thread safe 10, signal safe 10, alloc none 10
 

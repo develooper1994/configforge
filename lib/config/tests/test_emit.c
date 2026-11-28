@@ -655,9 +655,109 @@ static void test_literal_references(cf_bool arrays) {
     cf_config_free(c);
 }
 
+/* The whole file as text; "" when it cannot be opened. */
+static const char* slurp(const char* path) {
+    static char buf[4096];
+    FILE*       f = fopen(path, "rb");
+    size_t      n = 0;
+
+    if (f != NULL) {
+        n = fread(buf, 1, sizeof buf - 1, f);
+        fclose(f);
+    }
+    buf[n] = '\0';
+    return buf;
+}
+
+/* server.port as a file called `path` gives it; -1 when refused. */
+static int port_of(const char* path) {
+    cf_error    err = CF_ERROR_INIT;
+    cf_builder* b   = cf_build(NULL);
+    cf_config*  c;
+    int         port;
+
+    cf_builder_file(b, "file", CF_RANK_USER_FILE, path, NULL, 0);
+    cf_builder_int(b, "server.port", 8080, 1, 65535, 0);
+    c = cf_builder_create(b, &err);
+    if (c == NULL) {
+        return -1;
+    }
+    port = (int)cf_get_int(c, "server.port", 0);
+    cf_config_free(c);
+    return port;
+}
+
+static void test_emit_file(void) {
+    static char  a1[]   = "--e.count=0";
+    static char* argv[] = {a0, a1, NULL};
+    cf_error     err    = CF_ERROR_INIT;
+    cf_config*   c      = build(&err);
+    cf_builder*  b;
+    cf_config*   arr;
+    cf_file_options o;
+
+    if (c == NULL) {
+        check(0, "builds");
+        return;
+    }
+    remove("cf_ef.json");
+    check(cf_emit_file(c, "cf_ef.json", NULL, CF_EMIT_CONFIGURED, 0, NULL, &err),
+          "a configuration is written to a file");
+    check(port_of("cf_ef.json") == 9000, "and reads back with the same server.port");
+    remove("cf_ef.json");
+
+    remove("cf_ef.toml");
+    check(cf_emit_file(c, "cf_ef.toml", NULL, CF_EMIT_CONFIGURED, 0, NULL, &err),
+          "a NULL format is taken from the name");
+    has(slurp("cf_ef.toml"), "port = 9000", "and a .toml name writes TOML");
+    remove("cf_ef.toml");
+
+    check(!cf_emit_file(c, "cf_ef.nothing", NULL, CF_EMIT_ALL, 0, NULL, &err),
+          "a name with no known extension and no format is refused");
+    has(err.message, "cannot tell the format", "saying so");
+    has(err.message, "cf_ef.nothing", "and naming the file");
+
+    /* A refusal of cf_emit leaves the old bytes. */
+    b = cf_build(NULL);
+    cf_builder_cli(b, "cli", CF_RANK_CLI, 2, argv);
+    arr = cf_builder_create(b, &err);
+    if (arr == NULL) {
+        check(0, "array configuration builds");
+    } else {
+        FILE* f = fopen("cf_ef.ini", "wb");
+
+        if (f != NULL) {
+            fputs("old = 1\n", f);
+            fclose(f);
+        }
+        check(!cf_emit_file(arr, "cf_ef.ini", "ini", CF_EMIT_ALL, 0, NULL, &err),
+              "an ini file asked to hold an empty array is refused");
+        has(err.message, "arrays of values only", "with cf_emit's own message");
+        check(strcmp(slurp("cf_ef.ini"), "old = 1\n") == 0,
+              "and the file written before holds its old bytes");
+        remove("cf_ef.ini");
+        cf_config_free(arr);
+    }
+
+    check(!cf_emit_file(c, "cf_ef_no_such_dir/x.json", NULL, CF_EMIT_ALL, 0, NULL, &err),
+          "a directory that does not exist fails");
+    has(err.message, "cannot write", "as a write failure");
+    has(err.message, "cf_ef_no_such_dir/x.json", "naming the path");
+
+    cf_file_options_init(&o);
+    o.sync      = CF_SYNC_PLATFORM;
+    o.buffering = CF_BUF_FULL;
+    check(cf_emit_file(c, "cf_ef.json", "json", CF_EMIT_CONFIGURED, 0, &o, &err),
+          "options set, the file is written");
+    check(port_of("cf_ef.json") == 9000, "and reads back the same");
+    remove("cf_ef.json");
+    cf_config_free(c);
+}
+
 int main(void) {
     cf_arena* ar = cf_arena_new(NULL, 1 << 16);
 
+    test_emit_file();
     test_configured_only();
     test_round_trip(ar);
     test_arrays_are_all_or_nothing(ar);

@@ -69,6 +69,7 @@ written, F-3h), D-132 (`doctor graph`, F-4b).
 ---
 
 * **Organiser's answers**:
+  * 2026-11-28, the worker: the test's refused ini case is an empty array (`--e.count=0`), the one array INI has no form for, and a write that cf_emit measures as 0 bytes without an error is CF_E_SOURCE `nothing to write to '%s'`.
   * 2026-11-26, the maintainer (relayed from a side session: "option C is better for F-1b"; "do the design without departing from the standards: the compiler's or the platform's rules must be usable"): **option C, in layers**, written as **D-224** (copied into `docs/Decisions.md` by this card). F-1a (its retry became an option), F-1b and F-2b follow D-224 since 2026-11-27, with three readings D-224 leaves, chosen by the writer of the cards and confirmed by the organiser on 2026-11-28: `CF_SYNC_DEFAULT` (so that NULL and an initialised options struct are the same), the clock `cf_platform_now_ms` that `sync_ms` needs, and the public header `cf_file.h` in `lib/platform` (the platform is a part, D-220). D-224:
     1. One options struct, `cf_file_options`, initialised by `cf_file_options_init(&o)` (C89); NULL is the defaults.
     2. Three layers: `cf_file_writer`, a streaming writer (for a program that writes continuously: records, logs); `cf_file_replace(path, bytes, size, options, err)`, built on it: a temporary file, then one atomic replace, usable alone and knowing nothing of configuration; `cf_emit_file(c, path, format, ..., options, err)`: `cf_emit`, then `cf_file_replace`, with no logic of its own.

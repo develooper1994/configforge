@@ -14,6 +14,7 @@
 #ifndef CONFIGFORGE_CF_EMIT_H
 #define CONFIGFORGE_CF_EMIT_H
 
+#include "configforge/cf_file.h"
 #include "configforge/cf_flatten.h"
 #include "configforge/cf_serialize.h"
 
@@ -57,6 +58,18 @@ typedef enum cf_emit_what {
    `err` set and an empty `buf`, and the size needed is returned otherwise. */
 CF_API size_t cf_emit(const struct cf_config* c, const char* format, cf_emit_what what,
                       int rank, char* buf, size_t cap, cf_error* err);
+
+/* cf_emit, then cf_file_replace: `path` holds the whole document or keeps its
+   old bytes. `format` NULL: cf_format_of_path(path), and a name it cannot tell
+   is CF_E_CAPABILITY. `o` NULL: the defaults of cf_file_replace (CF_SYNC_COMMIT,
+   one sync a save). A refusal of cf_emit keeps its own message and writes
+   nothing; a failed write is cf_file_replace's `cannot write '%s': <reason>`.
+   Returns CF_TRUE when the file holds the document.
+   Guarantee: strong. A failure leaves `path` as it was and `c` untouched; it
+   returns CF_FALSE with `err` set. */
+CF_NODISCARD CF_API cf_bool cf_emit_file(const struct cf_config* c, const char* path,
+                                         const char* format, cf_emit_what what, int rank,
+                                         const cf_file_options* o, cf_error* err);
 
 #ifdef __cplusplus
 }

@@ -343,6 +343,50 @@ size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int ra
     return out.len;
 }
 
+cf_bool cf_emit_file(const cf_config* c, const char* path, const char* format, cf_emit_what what,
+                   int rank, const cf_file_options* o, cf_error* err) {
+    const cf_allocator* al;
+    char*               buf;
+    size_t              n;
+    cf_bool             ok;
+
+    if (err != NULL) {
+        cf_error_clear(err);
+    }
+    if (format == NULL && path != NULL) {
+        format = cf_format_of_path(path);
+    }
+    if (format == NULL) {
+        return cf_error_set(err, CF_E_CAPABILITY, NULL, path,
+                            "cannot tell the format of '%s' from its name; name it",
+                            path != NULL ? path : "");
+    }
+    n = cf_emit(c, format, what, rank, NULL, 0, err);
+    if (n == 0) {
+        if (err != NULL && err->code == CF_OK) {
+            return cf_error_set(err, CF_E_SOURCE, NULL, path, "nothing to write to '%s'",
+                                path != NULL ? path : "");
+        }
+        return CF_FALSE;
+    }
+    al = cf_default_allocator();
+    if (al == NULL) {
+        return cf_error_set(err, CF_E_CAPABILITY, NULL, path,
+                            "this build has no allocator to write a file with");
+    }
+    buf = (char*)al->alloc(al->ctx, n + 1);
+    if (buf == NULL) {
+        return cf_error_set(err, CF_E_MEMORY, NULL, path, "out of memory");
+    }
+    if (cf_emit(c, format, what, rank, buf, n + 1, err) != n) {
+        al->release(al->ctx, buf);
+        return CF_FALSE;
+    }
+    ok = cf_file_replace(path, buf, n, o, err);
+    al->release(al->ctx, buf);
+    return ok;
+}
+
 #else /* !CF_WITH_EMIT */
 
 size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int rank,
@@ -357,6 +401,13 @@ size_t cf_emit(const cf_config* c, const char* format, cf_emit_what what, int ra
                  "writing a configuration out needs CF_WITH_EMIT, and this build "
                  "was compiled without it");
     return 0;
+}
+
+cf_bool cf_emit_file(const cf_config* c, const char* path, const char* format, cf_emit_what what,
+                   int rank, const cf_file_options* o, cf_error* err) {
+    (void)path;
+    (void)o;
+    return cf_emit(c, format, what, rank, NULL, 0, err) != 0 ? CF_TRUE : CF_FALSE;
 }
 
 #endif /* CF_WITH_EMIT */

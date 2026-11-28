@@ -87,7 +87,7 @@ Document refusals also carry a reason and, where known, a line and column.
 - [`cf_define.h`](#cf_defineh) - 27
 - [`cf_doctor.h`](#cf_doctorh) - 27
 - [`cf_edit.h`](#cf_edith) - 9
-- [`cf_emit.h`](#cf_emith) - 1
+- [`cf_emit.h`](#cf_emith) - 2
 - [`cf_encoding.h`](#cf_encodingh) - 4
 - [`cf_entry.h`](#cf_entryh) - 14
 - [`cf_error.h`](#cf_errorh) - 13
@@ -2075,6 +2075,21 @@ that was given holds an empty string - not the front of a document
 that the walk had written before it came to the reason.
 Guarantee: strong. The configuration is untouched; a refusal returns 0 with
 `err` set and an empty `buf`, and the size needed is returned otherwise.
+
+```c
+CF_NODISCARD CF_API cf_bool cf_emit_file(const struct cf_config* c, const char* path, const char* format, cf_emit_what what, int rank, const cf_file_options* o, cf_error* err);
+```
+
+Implementation: [`cf_emit_file` (lib/config/src/bridge/emit.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/bridge/emit.c#L346).
+
+cf_emit, then cf_file_replace: `path` holds the whole document or keeps its
+old bytes. `format` NULL: cf_format_of_path(path), and a name it cannot tell
+is CF_E_CAPABILITY. `o` NULL: the defaults of cf_file_replace (CF_SYNC_COMMIT,
+one sync a save). A refusal of cf_emit keeps its own message and writes
+nothing; a failed write is cf_file_replace's `cannot write '%s': &lt;reason>`.
+Returns CF_TRUE when the file holds the document.
+Guarantee: strong. A failure leaves `path` as it was and `c` untouched; it
+returns CF_FALSE with `err` set.
 
 ## cf_encoding.h
 

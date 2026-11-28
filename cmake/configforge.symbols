@@ -105,6 +105,7 @@ cf_edit_set_real real
 cf_edit_set_text
 cf_edit_unset
 cf_emit
+cf_emit_file
 cf_encoding_by_name
 cf_encoding_check
 cf_encoding_name

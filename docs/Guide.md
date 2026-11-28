@@ -1079,8 +1079,11 @@ cf_config* next = cf_derive(cfg, "settings", change, 1, &err);
 
 Writing what somebody configured - and not the defaults, which a later
 release may want to move - is `cf_emit(cfg, "json", CF_EMIT_CONFIGURED,
-0, buf, cap, &err)`. `examples/c/settings.c` is the whole cycle: read,
-explain, set, save, notice the file change.
+0, buf, cap, &err)`. To put it in a file, use `cf_emit_file(cfg, path,
+"json", CF_EMIT_CONFIGURED, 0, NULL, &err)`: the file is replaced whole or
+not at all, with one sync a save by default, and a `cf_file_options` in place
+of the NULL changes how it is buffered and synced. `examples/c/settings.c` is
+the whole cycle: read, explain, set, save, notice the file change.
 
 What is written is the document the keys describe, and it reads back as
 the same keys. A group of keys is written as an array when it is exactly

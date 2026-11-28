@@ -7,6 +7,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- cf_emit_file writes a configuration to a file whole or not at all, on F-1a's cf_file_replace; xamples/c/settings.c uses it (F-1b, D-224)
 - `cf_builder_track_misreads`, `cf_misreads` and `cf_misread_at` (experimental in 2.1, C-8a, D-121): a typed read of a key the contract does not define, or of another type, is recorded without a lock, and the report lists it under `"misreads"`
 - A deprecated key's definition can carry a migration (`cf_def.migrate`, C-9): a function run on each value written under the old name, whose result reaches the new key at the same rank, so `timeout_s = 30` becomes `timeout_ms` 30000; `explain()` says `(from timeout_s, converted)`; `examples/c/migration.c` shows it (D-122)
 - The CERT C matrix (docs/compliance/Cert.md): every rule with how it is checked, held by gate.cert (D-236).
@@ -26,6 +27,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- cf_emit_file writes a configuration to a file whole or not at all, on F-1a's cf_file_replace; xamples/c/settings.c uses it (F-1b, D-224)
 - `Thread:`, `Signal:` and `Alloc:` lines beside a function's guarantee, the weakest by default, checked by `gate.guarantees`: a word it does not know, and a `Signal: safe` or `Alloc: none` on a function whose call data reaches an allocator, a call through a pointer, stdio or a lock, are refused; `docs/Guarantees.md` lists the three columns, and the `cf_get_*` and `cf_try_*` readers and `cf_key_valid` are the first to carry them (K-9h, D-238).
 - A table in docs/Guarantees.md of what holds across fork, callbacks, a crash and exec, each row with its test; `gate.guarantees` refuses a row naming a test that does not exist (K-9i).
 - `cf_error_set_long`: as `cf_error_set`, with each of the three texts allowed a cap of bytes (0, none) and a text past the old arrays' size held in a block the error owns (M-11b, D-176).
@@ -80,6 +82,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- cf_emit_file writes a configuration to a file whole or not at all, on F-1a's cf_file_replace; xamples/c/settings.c uses it (F-1b, D-224)
 - OSS-Fuzz project files (`oss-fuzz/`), the harness build shared with
   ClusterFuzzLite (`scripts/fuzz/build_harnesses.sh`) and `gate.ossfuzz`
   (M-18).
@@ -206,6 +209,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- cf_emit_file writes a configuration to a file whole or not at all, on F-1a's cf_file_replace; xamples/c/settings.c uses it (F-1b, D-224)
 - A `cf_live` swap logs one `"key-changed"` event at debug level for each
   key it changed, naming the key and the source its new value comes from
   and never a value, before the swap's `"reload"` event.
@@ -392,6 +396,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- cf_emit_file writes a configuration to a file whole or not at all, on F-1a's cf_file_replace; xamples/c/settings.c uses it (F-1b, D-224)
 - **`configforge <command>`**: one front door for the tools, as git has
   it - `configforge doctor lint` runs `configforge-doctor` (D-99).
   `cmake --install` installs the tools.
@@ -482,6 +487,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- cf_emit_file writes a configuration to a file whole or not at all, on F-1a's cf_file_replace; xamples/c/settings.c uses it (F-1b, D-224)
 - `CF_WITH_PREFERENCES` (off): the build option for macOS's user
   defaults, which W3-F2c reads. `cf_builder_preferences` reads a domain
   as a source, macOS only, with `CF_WITH_PREFERENCES`; elsewhere it fails
@@ -595,6 +601,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- cf_emit_file writes a configuration to a file whole or not at all, on F-1a's cf_file_replace; xamples/c/settings.c uses it (F-1b, D-224)
 - **What kind of format a codec is**, told to the program (D-97):
   `CF_CODEC_SCHEMA` (cannot be read without a schema or layout the
   program gives; a TLV codec has it), `cf_codec_select` to find the
@@ -741,6 +748,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- cf_emit_file writes a configuration to a file whole or not at all, on F-1a's cf_file_replace; xamples/c/settings.c uses it (F-1b, D-224)
 - **The format of a file is chosen from its name, then its content**
   (D-73). A file with no extension, or one no format claims, is read as
   the format its content turns out to be, decided by reading it with
@@ -790,6 +798,7 @@ change since.
 
 ### Added
 
+- cf_emit_file writes a configuration to a file whole or not at all, on F-1a's cf_file_replace; xamples/c/settings.c uses it (F-1b, D-224)
 - **JSON5, and with it JSONC** (D-66): `.json5` and `.jsonc` files are
   read by the JSON reader in its JSON5 mode - comments, trailing commas,
   unquoted and single-quoted names, single-quoted strings, `\v`, `\0`,
@@ -916,6 +925,7 @@ publishing. What it would have carried is listed under 1.3.1.
 
 ### Added
 
+- cf_emit_file writes a configuration to a file whole or not at all, on F-1a's cf_file_replace; xamples/c/settings.c uses it (F-1b, D-224)
 - MSVC's analyzer (`/analyze`) under `CF_ANALYZER`, on every C target,
   and in verify's Windows quick run (the analyze preset). Of its findings
   in the library and Doctor, five were fixed in the code and five are
@@ -1050,6 +1060,7 @@ publishing. What it would have carried is listed under 1.3.1.
 
 ### Added
 
+- cf_emit_file writes a configuration to a file whole or not at all, on F-1a's cf_file_replace; xamples/c/settings.c uses it (F-1b, D-224)
 - Probation for a reload: with `probation` set in `cf_live_options`, a
   swap keeps the snapshot it replaced for that many polls.
   `cf_live_rollback` returns readers to it, as does a `health` function
@@ -1327,6 +1338,7 @@ key that is both a value and a table (`docs/Guide.md`, section 10;
 
 ### Added
 
+- cf_emit_file writes a configuration to a file whole or not at all, on F-1a's cf_file_replace; xamples/c/settings.c uses it (F-1b, D-224)
 - **The development environment in one command**:
   `scripts/buildenv/dev-setup.sh` (apt, Homebrew, or a container) and
   `dev-setup.ps1` (winget for MSVC and the tools, and the WSL
@@ -1783,6 +1795,7 @@ key that is both a value and a table (`docs/Guide.md`, section 10;
 
 ### Added
 
+- cf_emit_file writes a configuration to a file whole or not at all, on F-1a's cf_file_replace; xamples/c/settings.c uses it (F-1b, D-224)
 - **The version is written in one place** (D-40). `cf_version.h` is the
   source; CMake reads it before `project()`, the Conan recipe reads it,
   and `cmake -DTO=x.y.z -P scripts/version.cmake` rewrites the header,
@@ -1807,6 +1820,7 @@ key that is both a value and a table (`docs/Guide.md`, section 10;
 
 ### Added
 
+- cf_emit_file writes a configuration to a file whole or not at all, on F-1a's cf_file_replace; xamples/c/settings.c uses it (F-1b, D-224)
 - **Releases from a tag** (`.github/workflows/release.yml`): the source,
   the amalgamation, and the library with Doctor for Linux, Windows and
   macOS, each built and tested on its platform before it is packaged,
