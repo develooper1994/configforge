@@ -33,10 +33,12 @@ cf_component(
   SOURCES
   src/${cf_platform_dir}/${cf_platform_dir}.c
   src/${cf_platform_dir}/file.c
+  src/errno_text.c
   src/file_layer.c
   src/lock.c
   SERIALIZE_SOURCES
   src/${cf_platform_dir}/file.c
+  src/errno_text.c
   src/file_layer.c)
 
 if(CF_PLATFORM STREQUAL "none")

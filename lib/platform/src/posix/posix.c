@@ -579,8 +579,11 @@ static int posix_lock_open(const char* path, cf_error* err) {
 #endif
     fd = open(name, flags, mode);
     if (fd < 0) {
+        const int code = errno;
+        char      why[CFI_ERRNO_TEXT_MAX];
+
         (void)cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot lock '%s': %s", path,
-                           strerror(errno));
+                           cfi_errno_text(code, why, sizeof why));
         return -1;
     }
 #if !defined(O_CLOEXEC)
@@ -635,8 +638,11 @@ int cf_platform_lock_take(cf_lock* held, const char* path, unsigned long wait_ms
                            "'%s' is busy: another writer holds its lock; try again",
                            path);
     } else {
+        const int code = errno;
+        char      why[CFI_ERRNO_TEXT_MAX];
+
         (void)cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot lock '%s': %s", path,
-                           strerror(errno));
+                           cfi_errno_text(code, why, sizeof why));
     }
     (void)close(fd);
     return 0;
@@ -675,11 +681,14 @@ int cf_platform_create_private(const char* path, cf_error* err) {
               ,
               0600);
     if (fd < 0) {
-        if (errno == EEXIST) {
+        const int code = errno;
+        char      why[CFI_ERRNO_TEXT_MAX];
+
+        if (code == EEXIST) {
             return 0;
         }
         cf_error_set(err, CF_E_SOURCE, NULL, path, "cannot create '%s': %s", path,
-                     strerror(errno));
+                     cfi_errno_text(code, why, sizeof why));
         return -1;
     }
 #ifndef O_CLOEXEC

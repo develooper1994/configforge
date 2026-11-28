@@ -1017,6 +1017,9 @@
 - #define CF_PLATFORM_WIN32 47
 - #define CF_PLATFORM_POSIX 50
 - #define CF_PLATFORM_NONE 53
+`lib/platform/src/errno_text.c`
+- struct cfi_errno_row 22-25
+- cfi_errno_text 81-94
 `lib/platform/src/file_layer.c`
 - cf_file_options_init 30-41
 - cfi_file_options 43-72
@@ -1036,20 +1039,20 @@
 - cf_file_writer_close 249-253
 - cf_platform_writer_syncs 255-258
 - cf_platform_writer_close_counted 260-268
-- cfi_file_why_stdio 272-275
-- struct cf_file_writer 277-288
-- writer_arg 290-295
-- writer_sync 298-311
-- writer_count 314-320
-- cf_file_writer_open 322-409
-- cf_file_writer_write 411-437
-- cf_file_writer_flush 439-450
-- cf_file_writer_sync 452-458
-- cf_platform_writer_syncs 460-462
-- cf_platform_writer_close_counted 464-493
-- cf_file_writer_close 495-497
+- cfi_file_why_stdio 272-274
+- struct cf_file_writer 276-287
+- writer_arg 289-294
+- writer_sync 297-310
+- writer_count 313-319
+- cf_file_writer_open 321-408
+- cf_file_writer_write 410-436
+- cf_file_writer_flush 438-449
+- cf_file_writer_sync 451-457
+- cf_platform_writer_syncs 459-461
+- cf_platform_writer_close_counted 463-492
+- cf_file_writer_close 494-496
 `lib/platform/src/file_prim.h`
-- struct cfi_file_guard 50-55
+- struct cfi_file_guard 62-67
 `lib/platform/src/lock.c`
 - lock_none_take 17-27
 - lock_none_give 29-34
@@ -1134,51 +1137,51 @@
 - cf_platform_preferences_walk 452-467
 - cf_platform_world_readable 471-478
 - posix_lock_try 508-543
-- posix_lock_open 546-590
-- cf_platform_lock_take 593-644
-- cf_platform_lock_give 646-655
-- cf_platform_has_private_create 657-659
-- cf_platform_create_private 661-690
-- posix_own_group 709-718
-- posix_group_writes 721-726
-- posix_refuse 729-736
-- posix_dir_list 750-861
-- cf_platform_dir_list 863-866
-- cf_platform_has_trusted_dir 868-874
-- cf_platform_dir_list_trusted 876-883
-- struct posix_target 891-895
-- struct cf_platform_wake 897-907
-- posix_up 911-928
-- posix_dir_of 931-946
-- posix_why 958-969
-- posix_arm 972-999
-- cf_platform_has_wake 1001-1003
-- cf_platform_wake_open 1005-1052
-- cf_platform_wake_fd 1054-1056
-- cf_platform_wake_handle 1058-1061
-- cf_platform_wake_drain 1068-1114
-- cf_platform_wake_wait 1116-1139
-- cf_platform_wake_close 1141-1149
-- kq_why 1171-1183
-- kq_close_all 1190-1199
-- kq_add 1202-1268
-- kq_add_entries 1272-1295
-- kq_arm 1299-1327
-- kq_arm_all 1329-1341
-- cf_platform_has_wake 1343-1345
-- cf_platform_wake_open 1347-1401
-- cf_platform_wake_fd 1407-1409
-- cf_platform_wake_handle 1411-1414
-- cf_platform_wake_drain 1416-1428
-- cf_platform_wake_wait 1430-1451
-- cf_platform_wake_close 1453-1465
-- cf_platform_has_wake 1469-1471
-- cf_platform_wake_open 1473-1481
-- cf_platform_wake_fd 1483-1486
-- cf_platform_wake_handle 1488-1491
-- cf_platform_wake_drain 1493-1496
-- cf_platform_wake_wait 1498-1502
-- cf_platform_wake_close 1504-1506
+- posix_lock_open 546-593
+- cf_platform_lock_take 596-650
+- cf_platform_lock_give 652-661
+- cf_platform_has_private_create 663-665
+- cf_platform_create_private 667-699
+- posix_own_group 718-727
+- posix_group_writes 730-735
+- posix_refuse 738-745
+- posix_dir_list 759-870
+- cf_platform_dir_list 872-875
+- cf_platform_has_trusted_dir 877-883
+- cf_platform_dir_list_trusted 885-892
+- struct posix_target 900-904
+- struct cf_platform_wake 906-916
+- posix_up 920-937
+- posix_dir_of 940-955
+- posix_why 967-978
+- posix_arm 981-1008
+- cf_platform_has_wake 1010-1012
+- cf_platform_wake_open 1014-1061
+- cf_platform_wake_fd 1063-1065
+- cf_platform_wake_handle 1067-1070
+- cf_platform_wake_drain 1077-1123
+- cf_platform_wake_wait 1125-1148
+- cf_platform_wake_close 1150-1158
+- kq_why 1180-1192
+- kq_close_all 1199-1208
+- kq_add 1211-1277
+- kq_add_entries 1281-1304
+- kq_arm 1308-1336
+- kq_arm_all 1338-1350
+- cf_platform_has_wake 1352-1354
+- cf_platform_wake_open 1356-1410
+- cf_platform_wake_fd 1416-1418
+- cf_platform_wake_handle 1420-1423
+- cf_platform_wake_drain 1425-1437
+- cf_platform_wake_wait 1439-1460
+- cf_platform_wake_close 1462-1474
+- cf_platform_has_wake 1478-1480
+- cf_platform_wake_open 1482-1490
+- cf_platform_wake_fd 1492-1495
+- cf_platform_wake_handle 1497-1500
+- cf_platform_wake_drain 1502-1505
+- cf_platform_wake_wait 1507-1511
+- cf_platform_wake_close 1513-1515
 `lib/platform/src/win32/file.c`
 - win32f_wide 36-43
 - cf_platform_fopen 45-59

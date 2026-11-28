@@ -40,7 +40,19 @@ cf_bool cfi_file_temp_name(const char* path, unsigned k, char* out, size_t cap);
    as cfi_file_temp_name is. */
 cf_bool cfi_file_lock_name(const char* path, char* out, size_t cap);
 
-/* strerror(errno), into `buf`, for the failure of a C library call. */
+/* ---- errno_text.c ---- */
+
+/* The text of a system error `code` (an errno), into `buf` and cut to `cap`
+   as cf_fmt cuts: a fixed English table, `error <n>` for a code not in it
+   (K-9k, D-239). No shared state: the C library's own text may share a buffer between
+   threads. Guarantee: nothrow. Thread: safe. Signal: safe. Alloc: none.
+   Returns `buf`. */
+const char* cfi_errno_text(int code, char* buf, size_t cap);
+
+/* A buffer for it that holds every text of the table and `error <n>`. */
+#define CFI_ERRNO_TEXT_MAX 64
+
+/* The text of errno, into `buf`, for the failure of a C library call. */
 const char* cfi_file_why_stdio(char* buf, size_t cap);
 
 /* What a replace checks just before it puts the temporary in place
@@ -66,7 +78,7 @@ cf_bool cfi_file_holds(const char* path, const void* expect, size_t size);
 cf_bool cfi_file_sync(void* stream);
 
 /* The reason of the last failure of a system call (not of the C library's:
-   errno's text is cfi_file_why_stdio): POSIX strerror(errno), Windows
+   errno's text is cfi_file_why_stdio): POSIX cfi_errno_text(errno), Windows
    `error <GetLastError()>`. */
 const char* cfi_file_why(char* buf, size_t cap);
 

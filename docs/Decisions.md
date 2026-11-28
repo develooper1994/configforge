@@ -129,6 +129,7 @@ gets reopened every six months.
 | D-231 | The platform is a part: `none` is built and tried; what it cannot give answers `CF_E_CAPABILITY` | platform, build options, CI | **Decided** |
 | D-232 | Every public function states one failure guarantee; the library never ends the program | public headers, `docs/Guarantees.md`, `gate.guarantees` | **Decided** |
 | D-238 | Thread, signal and allocation claims beside the guarantee, the weakest by default | public headers, `docs/Guarantees.md`, `gate.guarantees` | **Decided** |
+| D-239 | The library writes a system error's text from its own table | `lib/platform/src/errno_text.c`, `gate.cert` | **Decided** |
 
 **D-19 is closed.** It was the only decision that changed the shape of all the others,
 and closing it settled D-01, D-02 and D-22 with it. The remaining entries can now be
@@ -5836,3 +5837,24 @@ The 12 reserved bytes could not hold them; offsets stay 32-bit; a major 1 image 
 ## D-178 — 2.0 breaks once, and says so
 
 The breaks are those D-176 and D-177 name, listed in `docs/Migrating-2.0.md` with before and after; `gate.abi`'s baseline is the 2.0 interface; nothing else breaks in 2.0.
+
+---
+
+## D-239 — The library writes a system error's text from its own table
+
+**Question.** `strerror` may return a buffer shared by every thread (CERT
+CON33-C), and D-14 lets two threads load distinct configurations at once;
+which text does the library put in an error?
+
+**Decision.** `cfi_errno_text(code, buf, cap)` in `lib/platform/src/errno_text.c`:
+a fixed English table for the codes the library meets (`ENOENT`, `EACCES`,
+`EEXIST`, `ENOTDIR`, `EISDIR`, `ENOSPC`, `EROFS`, `EMFILE`, `ENAMETOOLONG`,
+`EINVAL`, `EIO`, `ENOMEM`, `EPERM`, `EBUSY`, `EXDEV`, `ELOOP`, each under
+`#ifdef` of its name), `error <n>` for any other. It holds no state, lock or
+allocator, so it is `Thread: safe`, `Signal: safe`, `Alloc: none`. A message
+is the same on every platform and in every locale, which a test can compare.
+
+Rejected: `strerror_r` with feature macros (two signatures, XSI and GNU, to
+test on every libc); a lock around `strerror` (a lock in a reader).
+
+**Status.** Built: K-9k.

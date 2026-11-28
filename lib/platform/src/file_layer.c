@@ -270,8 +270,7 @@ cf_bool cf_platform_writer_close_counted(cf_file_writer* w, unsigned long* syncs
 #else /* stdio */
 
 const char* cfi_file_why_stdio(char* buf, size_t cap) {
-    (void)cf_fmt(buf, cap, "%s", strerror(errno));
-    return buf;
+    return cfi_errno_text(errno, buf, cap);
 }
 
 struct cf_file_writer {

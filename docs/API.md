@@ -3986,7 +3986,7 @@ CF_API int cf_platform_dir_list(const char* path, char (*names)[CF_PLATFORM_NAME
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_dir_list` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L68), [`cf_platform_dir_list` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L863), [`cf_platform_dir_list` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L332).
+Implementation: [`cf_platform_dir_list` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L68), [`cf_platform_dir_list` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L872), [`cf_platform_dir_list` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L332).
 
 Names only, no path, no order, dotfiles already skipped. Returns the
 count, or -1 with `err` set. The caller sorts, because the order
@@ -4007,7 +4007,7 @@ left out could be the one that decides a value.
 CF_NODISCARD CF_API cf_bool cf_platform_has_trusted_dir(void);
 ```
 
-Implementation: [`cf_platform_has_trusted_dir` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L78), [`cf_platform_has_trusted_dir` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L868), [`cf_platform_has_trusted_dir` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L385).
+Implementation: [`cf_platform_has_trusted_dir` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L78), [`cf_platform_has_trusted_dir` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L877), [`cf_platform_has_trusted_dir` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L385).
 
 Whether this platform can say who may write to a directory and its
 files (POSIX: yes; Windows and a build with no operating system:
@@ -4021,7 +4021,7 @@ CF_API int cf_platform_dir_list_trusted(const char* path, char (*names)[CF_PLATF
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_dir_list_trusted` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L82), [`cf_platform_dir_list_trusted` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L876), [`cf_platform_dir_list_trusted` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L389).
+Implementation: [`cf_platform_dir_list_trusted` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L82), [`cf_platform_dir_list_trusted` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L885), [`cf_platform_dir_list_trusted` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L389).
 
 cf_platform_dir_list, and in the same pass the check of D-83: the
 directory, every entry and every file an entry names must be ones
@@ -4121,7 +4121,7 @@ CF_NODISCARD CF_API int cf_platform_lock_take(cf_lock* held, const char* path, u
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_lock_take` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L41), [`cf_platform_lock_take` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L593), [`cf_platform_lock_take` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L167).
+Implementation: [`cf_platform_lock_take` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L41), [`cf_platform_lock_take` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L596), [`cf_platform_lock_take` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L167).
 
 The sidecar lock on `path`.cf-lock: 1 with it held; 0 with err set: CF_E_BUSY
 "'%s' is busy: another writer holds its lock; try again" after `wait_ms`,
@@ -4135,7 +4135,7 @@ CF_API void cf_platform_lock_give(cf_lock* held);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_lock_give` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L52), [`cf_platform_lock_give` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L646), [`cf_platform_lock_give` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L228).
+Implementation: [`cf_platform_lock_give` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L52), [`cf_platform_lock_give` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L652), [`cf_platform_lock_give` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L228).
 
 Releases and closes; does nothing for a lock not held. The lock file is kept.
 
@@ -4184,7 +4184,7 @@ operating system has no answer and reports it.
 CF_NODISCARD CF_API cf_bool cf_platform_has_private_create(void);
 ```
 
-Implementation: [`cf_platform_has_private_create` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L92), [`cf_platform_has_private_create` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L657), [`cf_platform_has_private_create` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L265).
+Implementation: [`cf_platform_has_private_create` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L92), [`cf_platform_has_private_create` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L663), [`cf_platform_has_private_create` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L265).
 
 Guarantee: strong. A capability query; it changes nothing.
 
@@ -4194,7 +4194,7 @@ CF_API int cf_platform_create_private(const char* path, cf_error* err);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_create_private` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L96), [`cf_platform_create_private` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L661), [`cf_platform_create_private` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L269).
+Implementation: [`cf_platform_create_private` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L96), [`cf_platform_create_private` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L667), [`cf_platform_create_private` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L269).
 
 ### A handle to wait on (D-35, option 3)
 
@@ -4219,7 +4219,7 @@ still wakes the caller when it arrives.
 CF_NODISCARD CF_API cf_bool cf_platform_has_wake(void);
 ```
 
-Implementation: [`cf_platform_has_wake` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L142), [`cf_platform_has_wake` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L1001), [`cf_platform_has_wake` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L564).
+Implementation: [`cf_platform_has_wake` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L142), [`cf_platform_has_wake` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L1010), [`cf_platform_has_wake` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L564).
 
 Guarantee: strong. A capability query; it changes nothing.
 
@@ -4229,7 +4229,7 @@ CF_NODISCARD CF_API cf_platform_wake* cf_platform_wake_open(const char* const* p
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_wake_open` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L146), [`cf_platform_wake_open` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L1005), [`cf_platform_wake_open` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L568).
+Implementation: [`cf_platform_wake_open` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L146), [`cf_platform_wake_open` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L1014), [`cf_platform_wake_open` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L568).
 
 NULL with `err` set, naming the path and the reason. The paths are
 copied; nothing passed here need outlive the call.
@@ -4240,7 +4240,7 @@ CF_API int cf_platform_wake_fd(const cf_platform_wake* w);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_wake_fd` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L156), [`cf_platform_wake_fd` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L1054), [`cf_platform_wake_fd` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L617).
+Implementation: [`cf_platform_wake_fd` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L156), [`cf_platform_wake_fd` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L1063), [`cf_platform_wake_fd` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L617).
 
 A descriptor that becomes readable, or -1 where the handle is not a
 descriptor.
@@ -4251,7 +4251,7 @@ CF_API void* cf_platform_wake_handle(const cf_platform_wake* w);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_wake_handle` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L161), [`cf_platform_wake_handle` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L1058), [`cf_platform_wake_handle` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L622).
+Implementation: [`cf_platform_wake_handle` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L161), [`cf_platform_wake_handle` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L1067), [`cf_platform_wake_handle` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L622).
 
 A HANDLE that becomes signalled, or NULL where the handle is not one.
 
@@ -4261,7 +4261,7 @@ CF_NODISCARD CF_API cf_bool cf_platform_wake_drain(cf_platform_wake* w);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_wake_drain` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L166), [`cf_platform_wake_drain` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L1068), [`cf_platform_wake_drain` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L626).
+Implementation: [`cf_platform_wake_drain` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L166), [`cf_platform_wake_drain` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L1077), [`cf_platform_wake_drain` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L626).
 
 Consume what woke the handle and re-arm anything that needs it. False
 when some path can no longer wake it; polling cf_changed still works.
@@ -4272,7 +4272,7 @@ CF_API int cf_platform_wake_wait(cf_platform_wake* w, long timeout_ms);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_wake_wait` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L171), [`cf_platform_wake_wait` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L1116), [`cf_platform_wake_wait` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L658).
+Implementation: [`cf_platform_wake_wait` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L171), [`cf_platform_wake_wait` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L1125), [`cf_platform_wake_wait` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L658).
 
 Wait up to `timeout_ms` (negative: without limit). 1 when woken, and
 then already drained; 0 on timeout; -1 when waiting failed.
@@ -4283,7 +4283,7 @@ CF_API void cf_platform_wake_close(cf_platform_wake* w);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_platform_wake_close` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L177), [`cf_platform_wake_close` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L1141), [`cf_platform_wake_close` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L678).
+Implementation: [`cf_platform_wake_close` (lib/platform/src/none/none.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/none/none.c#L177), [`cf_platform_wake_close` (lib/platform/src/posix/posix.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/posix/posix.c#L1150), [`cf_platform_wake_close` (lib/platform/src/win32/win32.c)](https://github.com/develooper1994/configforge/blob/main/lib/platform/src/win32/win32.c#L678).
 
 ## cf_platform_file.h
 

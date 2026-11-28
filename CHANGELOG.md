@@ -14,6 +14,10 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 - `cf_error_place_at`, experimental in 2.0, is promoted to `CF_API` and listed in
   `cmake/configforge.symbols` (D-89).
 
+### Fixed
+
+- a system error's text no longer comes from `strerror`, whose buffer threads may share (K-9k, D-239)
+
 ## 2.0.0 — 2026-11-28
 
 ### Added

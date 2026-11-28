@@ -69,7 +69,7 @@ SOURCES = [
     "platform/src/posix/posix.c", "platform/src/posix/file.c",
     "platform/src/win32/win32.c", "platform/src/win32/file.c",
     "platform/src/none/none.c", "platform/src/none/file.c",
-    "platform/src/file_layer.c", "platform/src/lock.c",
+    "platform/src/errno_text.c", "platform/src/file_layer.c", "platform/src/lock.c",
     "config/src/core/version.c", "port/src/port.c", "base/src/error.c",
     "base/src/key.c",
     "numeric/src/numeric.c", "base/src/alloc.c",

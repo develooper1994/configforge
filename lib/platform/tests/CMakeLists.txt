@@ -3,4 +3,4 @@
 # configforge/ header it includes (D-100).
 cf_component_tests(platform)
 
-cf_unit_tests(test_oom_file)
+cf_unit_tests(test_oom_file test_errno_text)

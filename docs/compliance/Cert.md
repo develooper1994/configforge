@@ -3,7 +3,7 @@
 
 Every rule of the SEI CERT C Coding Standard (rules, not recommendations), by id, with what checks this library against it (D-236). A rule no tool sees says `review` and what a person reads for it at a release; a rule about a facility the library does not use says `n/a` and the `grep` that shows it.
 
-Rules: 122, of which 56 no tool, proof or decision holds: a person reads for them, or the library does not use the facility.
+Rules: 122, of which 55 no tool, proof or decision holds: a person reads for them, or the library does not use the facility.
 
 | Checked by | Rules |
 | ---------- | ----- |
@@ -12,8 +12,8 @@ Rules: 122, of which 56 no tool, proof or decision holds: a person reads for the
 | `compiler` | 20 |
 | `cbmc` | 3 |
 | `eva` | 3 |
-| `design` | 12 |
-| `review` | 33 |
+| `design` | 13 |
+| `review` | 32 |
 | `n/a` | 41 |
 
 A rule with several kinds counts under each.
@@ -169,7 +169,7 @@ A rule with several kinds counts under each.
 | CON30-C | `n/a` | `grep -rn -e tss_ -e pthread_key lib/*/src lib/*/include` prints nothing |
 | CON31-C | `n/a` | `grep -rn -e mtx_ -e pthread_mutex lib/*/src lib/*/include` prints nothing |
 | CON32-C | `design D-14` | a snapshot is immutable and shared by counting; no field is written by two threads |
-| CON33-C | `review` | strerror is the one library call that shares a buffer between threads; file_layer.c and posix/posix.c copy it at once; a card of its own (strerror_r) if thread-safe error text is wanted |
+| CON33-C | `design D-239` | a system error's text comes from a fixed table of our own (lib/platform/src/errno_text.c), never strerror's shared buffer; `git grep strerror lib` prints nothing |
 | CON34-C | `design D-14` | the shared objects are heap-allocated snapshots and the live handle, never a stack object |
 | CON35-C | `design D-14` | one lock in the library, held for a pointer copy (docs/Safety.md), so no order of locks |
 | CON36-C | `clang-tidy cert-con36-c`; `clang-tidy bugprone-spuriously-wake-up-functions`; `n/a` | `grep -rn -e cnd_ -e pthread_cond lib/*/src lib/*/include` prints nothing |
