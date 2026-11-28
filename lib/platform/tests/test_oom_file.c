@@ -33,7 +33,7 @@ static cf_u64 hash_file(const char* path) {
         return 0;
     }
     while ((c = fgetc(f)) != EOF) {
-        h = h * 131u + (unsigned char)c;
+        h = (h * 131u + (unsigned char)c) & 0xFFFFFFFFu;
     }
     fclose(f);
     return h;

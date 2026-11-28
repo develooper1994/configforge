@@ -78,10 +78,12 @@ static cf_builder* target_build(const cf_allocator* alloc) {
 }
 
 static cf_u64 hash_text(const char* t) {
-    cf_u64 h = 1469598103934665603u;
+    /* 32-bit FNV-1a, kept under 2^32 so that no product wraps
+       (ubsan-strict refuses an unsigned overflow even where C defines it). */
+    cf_u64 h = 2166136261u;
 
     while (*t != '\0') {
-        h = (h ^ (unsigned char)*t++) * 1099511628211u;
+        h = ((h ^ (unsigned char)*t++) * 16777619u) & 0xFFFFFFFFu;
     }
     return h;
 }

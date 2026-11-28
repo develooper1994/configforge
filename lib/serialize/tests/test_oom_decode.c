@@ -41,9 +41,11 @@ typedef struct decode_state {
 static void mix(decode_state* s, const char* p, size_t n) {
     size_t i;
 
-    s->digest = s->digest * 131u + (cf_u64)n;
+    /* Kept under 2^32 so that no product wraps (ubsan-strict refuses an
+       unsigned overflow even where C defines it). */
+    s->digest = (s->digest * 131u + (cf_u64)(n & 0xFFFFu)) & 0xFFFFFFFFu;
     for (i = 0; p != NULL && i < n; ++i) {
-        s->digest = s->digest * 131u + (unsigned char)p[i];
+        s->digest = (s->digest * 131u + (unsigned char)p[i]) & 0xFFFFFFFFu;
     }
 }
 
@@ -64,11 +66,11 @@ static cf_bool on_scalar(void* ctx, const char* name, size_t n, const cf_value* 
     (void)textual;
     (void)at;
     mix(s, name, n);
-    s->digest = s->digest * 131u + (cf_u64)v->type;
+    s->digest = (s->digest * 131u + (cf_u64)v->type) & 0xFFFFFFFFu;
     if (v->type == CF_TYPE_TEXT) {
         mix(s, v->u.t.p, v->u.t.n);
     } else if (v->type == CF_TYPE_INT) {
-        s->digest = s->digest * 131u + (cf_u64)v->u.i;
+        s->digest = (s->digest * 131u + ((cf_u64)v->u.i & 0xFFFFFFFFu)) & 0xFFFFFFFFu;
     }
     return CF_TRUE;
 }
