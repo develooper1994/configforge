@@ -299,13 +299,13 @@ was configured with. `cmake/profiles/` has the files, and
 <!-- matrix:begin profiles -->
 | Profile | Library code | What it is for |
 | ------- | -----------: | -------------- |
-| `full` | 284.9 KB | Every part that builds on a host with expat and sqlite3. |
-| `default` | 275.8 KB | What a plain build gives: the formats that need nothing, reals, threads. |
-| `minimal` | 232.9 KB | Codecs only, short limits, a 1 KB stack budget, unreached code dropped. |
-| `misra` | 232.7 KB | The build a MISRA C checker runs against: minimal, one thread, no reals. |
-| `embedded-json` | 170.4 KB | JSON alone, for a device: no files, no reals, one thread, nesting 16. |
-| `embedded-cbor` | 162.1 KB | CBOR alone, for a device: no files, no reals, one thread, nesting 16. |
-| `server` | 281.7 KB | Every format, XML too, and every source but SQLite and preferences. |
+| `full` | 298.5 KB | Every part that builds on a host with expat and sqlite3. |
+| `default` | 289.4 KB | What a plain build gives: the formats that need nothing, reals, threads. |
+| `minimal` | 245.2 KB | Codecs only, short limits, a 1 KB stack budget, unreached code dropped. |
+| `misra` | 244.9 KB | The build a MISRA C checker runs against: minimal, one thread, no reals. |
+| `embedded-json` | 182.6 KB | JSON alone, for a device: no files, no reals, one thread, nesting 16. |
+| `embedded-cbor` | 174.3 KB | CBOR alone, for a device: no files, no reals, one thread, nesting 16. |
+| `server` | 295.4 KB | Every format, XML too, and every source but SQLite and preferences. |
 <!-- matrix:end profiles -->
 
 What each profile sets:
@@ -381,18 +381,18 @@ drop-in directory a build cannot read never looks like an empty one
 | `CF_WITH_YAML` | the YAML codec | 24.3 KB |
 | `CF_WITH_JSON` | the JSON and JSON5 codec, which Report Replay and Doctor read | 16.8 KB |
 | `CF_WITH_TOML` | the TOML codec | 15.9 KB |
+| `CF_WITH_EMIT` | cf_emit and every encoder | 12.6 KB |
 | `CF_WITH_TLV` | the TLV codecs made from a layout | 12.3 KB |
-| `CF_WITH_EMIT` | cf_emit and every encoder | 11.9 KB |
-| `CF_WITH_REPORT` | the provenance report, Report Replay, the JSON Schema writer - and Doctor | 10.3 KB |
+| `CF_WITH_REPORT` | the provenance report, Report Replay, the JSON Schema writer - and Doctor | 10.7 KB |
 | `CF_WITH_CBOR` | the CBOR codec | 8.6 KB |
-| `CF_WITH_REAL` | floating point and its exact formatter | 7.9 KB |
+| `CF_WITH_REAL` | floating point and its exact formatter | 8.1 KB |
 | `CF_WITH_INI` | the INI codec | 5.7 KB |
 | `CF_WITH_IMAGE` | the binary snapshot image | 5.0 KB |
 | `CF_WITH_DIR` | the drop-in directory source | 3.1 KB |
 | `CF_WITH_PROPERTIES` | the Java .properties reader | 1.9 KB |
 | `CF_WITH_DOTENV` | the .env source | 1.5 KB |
 
-Leaving out TOML, EMIT, REAL, REPORT, IMAGE, INI, DOTENV and DIR together takes the library from 276 KB to 218 KB.
+Leaving out TOML, EMIT, REAL, REPORT, IMAGE, INI, DOTENV and DIR together takes the library from 289 KB to 230 KB.
 <!-- matrix:end parts -->
 
 A static link with `--gc-sections` already drops functions a program never
