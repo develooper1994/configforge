@@ -243,7 +243,7 @@ Shared by every card here:
 * **needs**: nothing
 * **size**: medium
 * **version**: 2.1.0
-* **status**: open
+* **status**: done (55574ca)
 * **decided**:
   * **The function on the definition.** In `lib/config/include/configforge/cf_define.h`, before `cf_def` (line 68):
     ```c

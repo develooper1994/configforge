@@ -857,13 +857,13 @@ first user meets. In the order proposed:
   `arm-none-eabi` build of the `minimal` preset for a Cortex-M, with
   the size of each `CF_WITH_*` part from that build in the README's
   table. Done when the three jobs are green and required.
-* 🟩 **Values migrated, not only renamed** (D-122, C-9). `replaced_by` moves a value
+* 🟩 **Values migrated, not only renamed** (D-122, [C-9](plan/C-change-2.md#c-9)). `replaced_by` moves a value
   to a new name; nothing converts it (`timeout_s` to `timeout_ms`) or
   splits one key into two. A function on the definition, run on the old
   key's winning value, its result offered at the same rank, the
   provenance saying "from timeout_s, converted". Done when
   `migration.c` shows a unit change and `explain()` names the old key.
-  Splitting one key in two is left to the maintainer (docs/plan/C-change-2.md, C-9).
+  Splitting one key in two is left to the maintainer (docs/plan/C-change-2.md, [C-9](plan/C-change-2.md#c-9)).
 * 🟨 **Trust that can be checked from outside.** The OpenSSF Scorecard
   workflow is done (L-2; its badge shows after its first run on `main`),
   and so is the job that builds the Linux musl archive twice and

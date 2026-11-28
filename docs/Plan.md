@@ -300,7 +300,7 @@ of a card's CI.
 | 15 | [C-2a](plan/C-change.md#c-2a) Durations and sizes: the unit on an int definition | 2.1.0 | large | nothing | done (5813086) |
 | 16 | [C-2b](plan/C-change.md#c-2b) Durations and sizes: the schema, the report, `cf_emit` and every reader | 2.1.0 | medium | [C-2a](plan/C-change.md#c-2a) | open |
 | 17 | [C-8a](plan/C-change-2.md#c-8a) A read the contract does not have, noticed: the library records it | 2.1.0 | medium | nothing | done (d68b49e) |
-| 18 | [C-9](plan/C-change-2.md#c-9) Values migrated, not only renamed: a function on the old key's definition | 2.1.0 | medium | nothing | open |
+| 18 | [C-9](plan/C-change-2.md#c-9) Values migrated, not only renamed: a function on the old key's definition | 2.1.0 | medium | nothing | done (55574ca) |
 | 19 | [C-11](plan/C-change-2.md#c-11) A program's files where its platform keeps them: `cf_builder_app_files` | 2.1.0 | medium | nothing | open |
 | 20 | [C-7](plan/C-change-2.md#c-7) Profiles: `--profile` or `NAME_PROFILE` adds `config.<profile>.<ext>` above the base file | 2.1.0 | medium | [C-11](plan/C-change-2.md#c-11) | waits: [C-11](plan/C-change-2.md#c-11) |
 | 21 | [C-10a](plan/C-change-2.md#c-10a) A running program asked for its report: the library answers one request on a descriptor | 2.1.0 | medium | nothing | open |
@@ -330,7 +330,7 @@ of a card's CI.
 | 45 | [G-1a](plan/G-guides.md#g-1a) The tools that read a decision follow the split | 2.1.0 | medium | nothing | open |
 | 46 | [G-1b](plan/G-guides.md#g-1b) Decisions.md split into one file a decision | 2.1.0 | medium | [G-1a](plan/G-guides.md#g-1a) | waits: [G-1a](plan/G-guides.md#g-1a) |
 | 47 | [G-2](plan/G-guides.md#g-2) The Roadmap's finished items on a page of their own | 2.1.0 | medium | [G-1b](plan/G-guides.md#g-1b), [G-2](plan/G-guides.md#g-2) | waits: [G-1b](plan/G-guides.md#g-1b) |
-| 48 | [C-9-m](plan/C-change-2.md#c-9-m) One key split into two: `migrate_from` on the new key's definition | 2.1.0 | medium | [C-9](plan/C-change-2.md#c-9) | waits: [C-9](plan/C-change-2.md#c-9) |
+| 48 | [C-9-m](plan/C-change-2.md#c-9-m) One key split into two: `migrate_from` on the new key's definition | 2.1.0 | medium | [C-9](plan/C-change-2.md#c-9) | open |
 | 49 | [C-10c-m](plan/C-change-2.md#c-10c-m) The report's channel on Windows: an `AF_UNIX` socket behind the platform's descriptor functions | 2.1.0 | medium | [C-10a](plan/C-change-2.md#c-10a), [C-10b](plan/C-change-2.md#c-10b) | waits: [C-10a](plan/C-change-2.md#c-10a) |
 | 50 | [C-10d-m](plan/C-change-2.md#c-10d-m) `configforge doctor pull` reads `http://` and `tcp:` targets, with a timeout and a size as options | 2.1.0 | medium | [C-10b](plan/C-change-2.md#c-10b) | waits: [C-10b](plan/C-change-2.md#c-10b) |
 | 51 | [F-4b](plan/F-files.md#f-4b) `configforge doctor graph`, built only for a want F-4a's filters do not meet | 2.1.0 | medium | [F-4a](plan/F-files.md#f-4a) | waits: [F-4a](plan/F-files.md#f-4a) |
